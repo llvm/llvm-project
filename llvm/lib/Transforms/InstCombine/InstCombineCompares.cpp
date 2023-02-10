@@ -4909,8 +4909,7 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
   return nullptr;
 }
 
-static Instruction *foldICmpWithTrunc(ICmpInst &ICmp,
-                                      InstCombiner::BuilderTy &Builder) {
+Instruction *InstCombinerImpl::foldICmpWithTrunc(ICmpInst &ICmp) {
   ICmpInst::Predicate Pred = ICmp.getPredicate();
   Value *Op0 = ICmp.getOperand(0), *Op1 = ICmp.getOperand(1);
 
@@ -4946,6 +4945,25 @@ static Instruction *foldICmpWithTrunc(ICmpInst &ICmp,
     Constant *MaskC = ConstantInt::get(X->getType(), (*C + 1).zext(SrcBits));
     Value *And = Builder.CreateAnd(X, MaskC);
     return new ICmpInst(ICmpInst::ICMP_EQ, And, MaskC);
+  }
+
+  if (auto *II = dyn_cast<IntrinsicInst>(X)) {
+    if (II->getIntrinsicID() == Intrinsic::cttz ||
+        II->getIntrinsicID() == Intrinsic::ctlz) {
+      unsigned MaxRet = SrcBits;
+      // If the "is_zero_poison" argument is set, then we know at least
+      // one bit is set in the input, so the result is always at least one
+      // less than the full bitwidth of that input.
+      if (match(II->getArgOperand(1), m_One()))
+        MaxRet--;
+
+      // Make sure the destination is wide enough to hold the largest output of
+      // the intrinsic.
+      if (llvm::Log2_32(MaxRet) + 1 <= Op0->getType()->getScalarSizeInBits())
+        if (Instruction *I =
+                foldICmpIntrinsicWithConstant(ICmp, II, C->zext(SrcBits)))
+          return I;
+    }
   }
 
   return nullptr;
@@ -5105,7 +5123,7 @@ Instruction *InstCombinerImpl::foldICmpWithCastOp(ICmpInst &ICmp) {
       return new ICmpInst(ICmp.getPredicate(), Op0Src, NewOp1);
   }
 
-  if (Instruction *R = foldICmpWithTrunc(ICmp, Builder))
+  if (Instruction *R = foldICmpWithTrunc(ICmp))
     return R;
 
   return foldICmpWithZextOrSext(ICmp);
