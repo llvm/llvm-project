@@ -157,59 +157,55 @@ unsigned getCodeObjectVersion(const Module &M) {
   }
 
   // Default code object version.
-  return 4;
+  return AMDHSA_COV4;
 }
 
-unsigned getMultigridSyncArgImplicitArgPosition(unsigned COV) {
-  switch (COV) {
-  case 2:
-  case 3:
-  case 4:
+unsigned getMultigridSyncArgImplicitArgPosition(unsigned CodeObjectVersion) {
+  switch (CodeObjectVersion) {
+  case AMDHSA_COV2:
+  case AMDHSA_COV3:
+  case AMDHSA_COV4:
     return 48;
-  case 5:
-    return AMDGPU::ImplicitArg::MULTIGRID_SYNC_ARG_OFFSET;
+  case AMDHSA_COV5:
   default:
-    llvm_unreachable("Unexpected code object version");
-    return 0;
+    return AMDGPU::ImplicitArg::MULTIGRID_SYNC_ARG_OFFSET;
   }
 }
 
 
 // FIXME: All such magic numbers about the ABI should be in a
 // central TD file.
-unsigned getHostcallImplicitArgPosition(unsigned COV) {
-  switch (COV) {
-  case 2:
-  case 3:
-  case 4:
+unsigned getHostcallImplicitArgPosition(unsigned CodeObjectVersion) {
+  switch (CodeObjectVersion) {
+  case AMDHSA_COV2:
+  case AMDHSA_COV3:
+  case AMDHSA_COV4:
     return 24;
-  case 5:
-    return AMDGPU::ImplicitArg::HOSTCALL_PTR_OFFSET;
+  case AMDHSA_COV5:
   default:
-    llvm_unreachable("Unexpected code object version");
-    return 0;
+    return AMDGPU::ImplicitArg::HOSTCALL_PTR_OFFSET;
   }
 }
 
-unsigned getDefaultQueueImplicitArgPosition(unsigned COV) {
-  switch (COV) {
-  case 2:
-  case 3:
-  case 4:
+unsigned getDefaultQueueImplicitArgPosition(unsigned CodeObjectVersion) {
+  switch (CodeObjectVersion) {
+  case AMDHSA_COV2:
+  case AMDHSA_COV3:
+  case AMDHSA_COV4:
     return 32;
-  case 5:
+  case AMDHSA_COV5:
   default:
     return AMDGPU::ImplicitArg::DEFAULT_QUEUE_OFFSET;
   }
 }
 
-unsigned getCompletionActionImplicitArgPosition(unsigned COV) {
-  switch (COV) {
-  case 2:
-  case 3:
-  case 4:
+unsigned getCompletionActionImplicitArgPosition(unsigned CodeObjectVersion) {
+  switch (CodeObjectVersion) {
+  case AMDHSA_COV2:
+  case AMDHSA_COV3:
+  case AMDHSA_COV4:
     return 40;
-  case 5:
+  case AMDHSA_COV5:
   default:
     return AMDGPU::ImplicitArg::COMPLETION_ACTION_OFFSET;
   }
@@ -634,7 +630,7 @@ namespace IsaInfo {
 
 AMDGPUTargetID::AMDGPUTargetID(const MCSubtargetInfo &STI)
     : STI(STI), XnackSetting(TargetIDSetting::Any),
-      SramEccSetting(TargetIDSetting::Any) {
+      SramEccSetting(TargetIDSetting::Any), CodeObjectVersion(0) {
   if (!STI.getFeatureBits().test(FeatureSupportsXNACK))
     XnackSetting = TargetIDSetting::Unsupported;
   if (!STI.getFeatureBits().test(FeatureSupportsSRAMECC))
@@ -745,9 +741,9 @@ std::string AMDGPUTargetID::toString() const {
                     .str();
 
   std::string Features;
-  if (std::optional<uint8_t> HsaAbiVersion = getHsaAbiVersion(&STI)) {
-    switch (*HsaAbiVersion) {
-    case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
+  if (STI.getTargetTriple().getOS() == Triple::AMDHSA) {
+    switch (CodeObjectVersion) {
+    case AMDGPU::AMDHSA_COV2:
       // Code object V2 only supported specific processors and had fixed
       // settings for the XNACK.
       if (Processor == "gfx600") {
@@ -795,7 +791,7 @@ std::string AMDGPUTargetID::toString() const {
             Twine(Processor));
       }
       break;
-    case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
+    case AMDGPU::AMDHSA_COV3:
       // xnack.
       if (isXnackOnOrAny())
         Features += "+xnack";
@@ -804,8 +800,8 @@ std::string AMDGPUTargetID::toString() const {
       if (isSramEccOnOrAny())
         Features += "+sram-ecc";
       break;
-    case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
-    case ELF::ELFABIVERSION_AMDGPU_HSA_V5:
+    case AMDGPU::AMDHSA_COV4:
+    case AMDGPU::AMDHSA_COV5:
       // sramecc.
       if (getSramEccSetting() == TargetIDSetting::Off)
         Features += ":sramecc-";

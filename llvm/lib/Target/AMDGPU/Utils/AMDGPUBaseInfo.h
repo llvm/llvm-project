@@ -43,6 +43,13 @@ namespace AMDGPU {
 
 struct IsaVersion;
 
+enum {
+  AMDHSA_COV2 = 2,
+  AMDHSA_COV3 = 3,
+  AMDHSA_COV4 = 4,
+  AMDHSA_COV5 = 5
+};
+
 /// \returns HSA OS ABI Version identification.
 std::optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI);
 /// \returns True if HSA OS ABI Version identification is 2,
@@ -120,6 +127,7 @@ private:
   const MCSubtargetInfo &STI;
   TargetIDSetting XnackSetting;
   TargetIDSetting SramEccSetting;
+  unsigned CodeObjectVersion;
 
 public:
   explicit AMDGPUTargetID(const MCSubtargetInfo &STI);
@@ -147,6 +155,10 @@ public:
   /// "Unsupported", "Any", "Off", and "On".
   TargetIDSetting getXnackSetting() const {
     return XnackSetting;
+  }
+
+  void setCodeObjectVersion(unsigned COV) {
+    CodeObjectVersion = COV;
   }
 
   /// Sets xnack setting to \p NewXnackSetting.
