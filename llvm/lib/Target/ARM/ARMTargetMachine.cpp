@@ -9,6 +9,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ARMRandezvousInstrumentor.h"
+#include "ARMRandezvousShadowStack.h"
 #include "ARMTargetMachine.h"
 #include "ARM.h"
 #include "ARMMachineFunctionInfo.h"
@@ -609,6 +611,13 @@ void ARMPassConfig::addPreEmitPass2() {
   // instructions, but the pseudos all have conservative sizes so that block
   // sizes will only be decreased by this pass.
   addPass(createARMLowOverheadLoopsPass());
+
+  // Inserts sxh pass
+
+  // Add Randezvous CodeGen passes
+
+  addPass(createARMRandezvousShadowStack());
+
 
   if (TM->getTargetTriple().isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.

@@ -1506,6 +1506,14 @@ def : T2Pat<(extloadi16 (ARMWrapper tconstpool:$addr)),
 //        not via pattern.
 
 // Indexed loads
+let isReturn = 1, isTerminator = 1, isBarrier = 1, mayLoad = 1,
+    hasSideEffects = 0, isCodeGenOnly = 1 in
+def t2LDR_PRE_RET : T2Ipreldst<0, 0b10, 1, 1, (outs GPR:$Rt, GPR:$Rn_wb),
+                               (ins t2addrmode_imm8_pre:$addr),
+                               AddrModeT2_i8, IndexModePre, IIC_iLoad_iu,
+                               "ldr", "\t$Rt, $addr!", "$addr.base = $Rn_wb",
+                               []>,
+                    Sched<[WriteLd]>;
 
 let mayLoad = 1, hasSideEffects = 0 in {
 def t2LDR_PRE  : T2Ipreldst<0, 0b10, 1, 1, (outs GPR:$Rt, GPR:$Rn_wb),
@@ -2836,6 +2844,19 @@ def t2UBFX: T2TwoRegBitFI<
 // A8.8.247  UDF - Undefined (Encoding T2)
 def t2UDF : T2XI<(outs), (ins imm0_65535:$imm16), IIC_Br, "udf.w\t$imm16",
                  [(int_arm_undefined imm0_65535:$imm16)]> {
+  bits<16> imm16;
+  let Inst{31-29} = 0b111;
+  let Inst{28-27} = 0b10;
+  let Inst{26-20} = 0b1111111;
+  let Inst{19-16} = imm16{15-12};
+  let Inst{15} = 0b1;
+  let Inst{14-12} = 0b010;
+  let Inst{11-0} = imm16{11-0};
+}
+
+let isCodeGenOnly = 1 in
+def t2UDF_ga : T2XI<(outs), (ins imm0_65535_expr:$imm16), IIC_Br,
+                    "udf.w\t$imm16", []>, Sched<[WriteBr]> {
   bits<16> imm16;
   let Inst{31-29} = 0b111;
   let Inst{28-27} = 0b10;

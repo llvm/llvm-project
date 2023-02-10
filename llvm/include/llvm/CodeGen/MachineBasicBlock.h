@@ -185,6 +185,9 @@ private:
   /// Indicate that this basic block is the indirect dest of an INLINEASM_BR.
   bool IsInlineAsmBrIndirectTarget = false;
 
+  /// Indicate that this basic block is a trap block inserted by ARM Randezvous
+  /// Code Layout Randomization pass.
+  bool IsRandezvousTrapBlock = false;
   /// since getSymbol is a relatively heavy-weight operation, the symbol
   /// is only computed once and is cached.
   mutable MCSymbol *CachedMCSymbol = nullptr;
@@ -667,7 +670,18 @@ public:
   void setIsInlineAsmBrIndirectTarget(bool V = true) {
     IsInlineAsmBrIndirectTarget = V;
   }
+  
+  /// Returns true if this is a trap block inserted by ARM Randezvous Code
+  /// Layout Randomization pass.
+  bool isRandezvousTrapBlock() const {
+    return IsRandezvousTrapBlock;
+  }
 
+  /// Indicates if this is a trap block inserted by ARM Randezvous Code Layout
+  /// Randomization pass.
+  void setIsRandezvousTrapBlock(bool V = true) {
+    IsRandezvousTrapBlock = V;
+  }
   /// Returns true if it is legal to hoist instructions into this block.
   bool isLegalToHoistInto() const;
 

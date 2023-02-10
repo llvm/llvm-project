@@ -848,6 +848,18 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
                             ((lo & 0x7000) >> 4) |  // imm3
                             (lo & 0x00ff));         // imm8
   }
+
+  case R_ARM_PRIVATE_14:
+    // Encoding T2: A = imm4:imm12
+    write16le(loc, (read16le(loc) & ~0x000f) | ((val >> 28) & 0x000f));
+    write16le(loc + 2, (read16le(loc + 2) & ~0x0fff) | ((val >> 16) & 0x0fff));
+    break;
+  case R_ARM_PRIVATE_15:
+    // Encoding T2: A = imm4:imm12
+    write16le(loc, (read16le(loc) & ~0x000f) | ((val >> 12) & 0x000f));
+    write16le(loc + 2, (read16le(loc + 2) & ~0x0fff) | (val & 0x0fff));
+    break;
+    
   case R_ARM_ALU_PC_G0:
   case R_ARM_ALU_PC_G0_NC:
   case R_ARM_ALU_PC_G1:

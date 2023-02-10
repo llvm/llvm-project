@@ -1230,6 +1230,10 @@ ARMMCCodeEmitter::getHiLo16ImmOpValue(const MCInst &MI, unsigned OpIdx,
     case ARMMCExpr::VK_ARM_LO16:
       Kind = MCFixupKind(isThumb(STI) ? ARM::fixup_t2_movw_lo16
                                       : ARM::fixup_arm_movw_lo16);
+
+      if (MI.getOpcode() == ARM::t2UDF_ga) {
+        Kind = MCFixupKind(ARM::fixup_t2_udf_lo16);
+      }
       break;
     }
 

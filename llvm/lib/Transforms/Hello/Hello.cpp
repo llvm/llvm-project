@@ -30,8 +30,8 @@ namespace {
     bool runOnFunction(Function &F) override {
       ++HelloCounter;
       errs() << "Hello: ";
+      F.setSectionPrefix("mySection");
       errs().write_escaped(F.getName()) << '\n';
-      F.setSectionPrefix("mySection")
       return false;
     }
   };

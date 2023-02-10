@@ -98,7 +98,8 @@ enum Fixups {
   fixup_arm_movw_lo16, // :lower16:
   fixup_t2_movt_hi16,  // :upper16:
   fixup_t2_movw_lo16,  // :lower16:
-
+  fixup_t2_udf_hi16,   // :upper16:
+  fixup_t2_udf_lo16,   // :lower16:
   // Fixup for mod_imm
   fixup_arm_mod_imm,
 

@@ -155,6 +155,11 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       return ELF::R_ARM_THM_BF12;
     case ARM::fixup_bfl_target:
       return ELF::R_ARM_THM_BF18;
+
+    case ARM::fixup_t2_udf_hi16:
+      return ELF::R_ARM_PRIVATE_14;
+    case ARM::fixup_t2_udf_lo16:
+      return ELF::R_ARM_PRIVATE_15;
     }
   }
   switch (Kind) {
@@ -233,6 +238,8 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
     case MCSymbolRefExpr::VK_ARM_SBREL:
       return ELF::R_ARM_MOVT_BREL;
     }
+
+    
   case ARM::fixup_arm_movw_lo16:
     switch (Modifier) {
     default:
@@ -265,6 +272,11 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
     case MCSymbolRefExpr::VK_ARM_SBREL:
       return ELF::R_ARM_THM_MOVW_BREL_NC;
     }
+
+    case ARM::fixup_t2_udf_hi16:
+      return ELF::R_ARM_PRIVATE_14;
+    case ARM::fixup_t2_udf_lo16:
+      return ELF::R_ARM_PRIVATE_15;
   }
 }
 
