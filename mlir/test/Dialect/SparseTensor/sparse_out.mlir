@@ -153,6 +153,8 @@ func.func @sparse_truly_dynamic(%arga: tensor<10x20xf32, #CSR>) -> tensor<10x20x
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 1 : index
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 0 : i32
+// CHECK-DAG:       %[[VAL_FALSE:.*]] = arith.constant false
+// CHECK-DAG:       %[[VAL_TRUE:.*]] = arith.constant true
 // CHECK:           %[[VAL_5:.*]] = tensor.dim %[[VAL_0]], %[[VAL_2]] : tensor<?x?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed", "compressed" ] }>>
 // CHECK:           %[[VAL_6:.*]] = tensor.dim %[[VAL_0]], %[[VAL_3]] : tensor<?x?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed", "compressed" ] }>>
 // CHECK:           %[[VAL_7:.*]] = bufferization.alloc_tensor(%[[VAL_5]], %[[VAL_6]]) : tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>
@@ -216,13 +218,13 @@ func.func @sparse_truly_dynamic(%arga: tensor<10x20xf32, #CSR>) -> tensor<10x20x
 // CHECK:                   %[[VAL_71:.*]] = memref.load %[[VAL_19]]{{\[}}%[[VAL_58]]] : memref<?xindex>
 // CHECK:                   %[[VAL_72:.*]] = arith.addi %[[VAL_58]], %[[VAL_3]] : index
 // CHECK:                   %[[VAL_73:.*]] = memref.load %[[VAL_19]]{{\[}}%[[VAL_72]]] : memref<?xindex>
-// CHECK:                   %[[VAL_74:.*]]:4 = scf.while (%[[VAL_75:.*]] = %[[VAL_68]], %[[VAL_76:.*]] = %[[VAL_71]], %[[VAL_77:.*]] = %[[VAL_4]], %[[VAL_78:.*]] = %[[VAL_59]]) : (index, index, i32, tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>) -> (index, index, i32, tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>) {
+// CHECK:                   %[[VAL_74:.*]]:5 = scf.while (%[[VAL_75:.*]] = %[[VAL_68]], %[[VAL_76:.*]] = %[[VAL_71]], %[[VAL_77:.*]] = %[[VAL_4]], %[[VAL_200:.*]] = %[[VAL_FALSE]], %[[VAL_78:.*]] = %[[VAL_59]]) : (index, index, i32, i1, tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>) -> (index, index, i32, i1, tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>) {
 // CHECK:                     %[[VAL_79:.*]] = arith.cmpi ult, %[[VAL_75]], %[[VAL_70]] : index
 // CHECK:                     %[[VAL_80:.*]] = arith.cmpi ult, %[[VAL_76]], %[[VAL_73]] : index
 // CHECK:                     %[[VAL_81:.*]] = arith.andi %[[VAL_79]], %[[VAL_80]] : i1
-// CHECK:                     scf.condition(%[[VAL_81]]) %[[VAL_75]], %[[VAL_76]], %[[VAL_77]], %[[VAL_78]] : index, index, i32, tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>
+// CHECK:                     scf.condition(%[[VAL_81]]) %[[VAL_75]], %[[VAL_76]], %[[VAL_77]], %[[VAL_200]], %[[VAL_78]] : index, index, i32, i1, tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>
 // CHECK:                   } do {
-// CHECK:                   ^bb0(%[[VAL_82:.*]]: index, %[[VAL_83:.*]]: index, %[[VAL_84:.*]]: i32, %[[VAL_85:.*]]: tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>):
+// CHECK:                   ^bb0(%[[VAL_82:.*]]: index, %[[VAL_83:.*]]: index, %[[VAL_84:.*]]: i32, %[[VAL_201:.*]]: i1, %[[VAL_85:.*]]: tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>):
 // CHECK:                     %[[VAL_86:.*]] = memref.load %[[VAL_13]]{{\[}}%[[VAL_82]]] : memref<?xindex>
 // CHECK:                     %[[VAL_87:.*]] = memref.load %[[VAL_20]]{{\[}}%[[VAL_83]]] : memref<?xindex>
 // CHECK:                     %[[VAL_88:.*]] = arith.cmpi ult, %[[VAL_87]], %[[VAL_86]] : index
@@ -230,14 +232,14 @@ func.func @sparse_truly_dynamic(%arga: tensor<10x20xf32, #CSR>) -> tensor<10x20x
 // CHECK:                     %[[VAL_90:.*]] = arith.cmpi eq, %[[VAL_86]], %[[VAL_89]] : index
 // CHECK:                     %[[VAL_91:.*]] = arith.cmpi eq, %[[VAL_87]], %[[VAL_89]] : index
 // CHECK:                     %[[VAL_92:.*]] = arith.andi %[[VAL_90]], %[[VAL_91]] : i1
-// CHECK:                     %[[VAL_93:.*]]:2 = scf.if %[[VAL_92]] -> (i32, tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>) {
+// CHECK:                     %[[VAL_93:.*]]:3 = scf.if %[[VAL_92]] -> (i32, i1, tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>) {
 // CHECK:                       %[[VAL_94:.*]] = memref.load %[[VAL_14]]{{\[}}%[[VAL_82]]] : memref<?xi32>
 // CHECK:                       %[[VAL_95:.*]] = memref.load %[[VAL_21]]{{\[}}%[[VAL_83]]] : memref<?xi32>
 // CHECK:                       %[[VAL_96:.*]] = arith.muli %[[VAL_94]], %[[VAL_95]] : i32
 // CHECK:                       %[[VAL_97:.*]] = arith.addi %[[VAL_84]], %[[VAL_96]] : i32
-// CHECK:                       scf.yield %[[VAL_97]], %[[VAL_85]] : i32, tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>
+// CHECK:                       scf.yield %[[VAL_97]], %[[VAL_TRUE]], %[[VAL_85]] : i32, i1, tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>
 // CHECK:                     } else {
-// CHECK:                       scf.yield %[[VAL_84]], %[[VAL_85]] : i32, tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>
+// CHECK:                       scf.yield %[[VAL_84]], %[[VAL_201]], %[[VAL_85]] : i32, i1, tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>
 // CHECK:                     }
 // CHECK:                     %[[VAL_98:.*]] = arith.cmpi eq, %[[VAL_86]], %[[VAL_89]] : index
 // CHECK:                     %[[VAL_99:.*]] = arith.addi %[[VAL_82]], %[[VAL_3]] : index
@@ -245,10 +247,15 @@ func.func @sparse_truly_dynamic(%arga: tensor<10x20xf32, #CSR>) -> tensor<10x20x
 // CHECK:                     %[[VAL_101:.*]] = arith.cmpi eq, %[[VAL_87]], %[[VAL_89]] : index
 // CHECK:                     %[[VAL_102:.*]] = arith.addi %[[VAL_83]], %[[VAL_3]] : index
 // CHECK:                     %[[VAL_103:.*]] = arith.select %[[VAL_101]], %[[VAL_102]], %[[VAL_83]] : index
-// CHECK:                     scf.yield %[[VAL_100]], %[[VAL_103]], %[[VAL_104:.*]]#0, %[[VAL_104]]#1 : index, index, i32, tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>
+// CHECK:                     scf.yield %[[VAL_100]], %[[VAL_103]], %[[VAL_104:.*]]#0, %[[VAL_104]]#1, %[[VAL_104]]#2 : index, index, i32, i1, tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>
 // CHECK:                   }
-// CHECK:                   %[[VAL_105:.*]] = sparse_tensor.insert %[[VAL_106:.*]]#2 into %[[VAL_106]]#3{{\[}}%[[VAL_39]], %[[VAL_63]]] : tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>
-// CHECK:                   scf.yield %[[VAL_105]] : tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>
+// CHECK:                   %[[VAL_202:.*]] = scf.if %[[VAL_74]]#3 -> (tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>) {
+// CHECK:                     %[[VAL_105:.*]] = sparse_tensor.insert %[[VAL_74]]#2 into %[[VAL_74]]#4{{\[}}%[[VAL_39]], %[[VAL_63]]] : tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>
+// CHECK:                     scf.yield %[[VAL_105]] : tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>
+// CHECK:                   } else {
+// CHECK:                     scf.yield %[[VAL_74]]#4 : tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>
+// CHECK:                   }
+// CHECK:                   scf.yield %[[VAL_202]] : tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>
 // CHECK:                 } else {
 // CHECK:                   scf.yield %[[VAL_59]] : tensor<?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>
 // CHECK:                 }

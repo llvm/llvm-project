@@ -132,6 +132,9 @@ public:
   void updateReduc(Value val);
   Value getReduc() const { return redVal; }
   Value endReduc();
+  void setValidLexInsert(Value val);
+  void clearValidLexInsert();
+  Value getValidLexInsert() const { return redValidLexInsert; }
 
   void startCustomReduc(unsigned exp);
   bool isCustomReduc() const { return redCustom != -1u; }
@@ -171,6 +174,11 @@ private:
   Value redVal;
   unsigned redExp;
   unsigned redCustom;
+
+  // Bookkeeping for lex insertion during reductions. Holds the runtime boolean
+  // value of whether any reduction occurred. This is only set during a
+  // reduction and cleared once the reduction is finished.
+  Value redValidLexInsert;
 
   // The root tensor expression of the kernel.
   unsigned tensorExp;
