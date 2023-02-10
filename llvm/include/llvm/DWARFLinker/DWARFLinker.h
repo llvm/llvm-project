@@ -205,8 +205,8 @@ public:
 
 using UnitListTy = std::vector<std::unique_ptr<CompileUnit>>;
 
-/// this class represents DWARF information for source file
-/// and it`s address map.
+/// This class represents DWARF information for source file
+/// and its address map.
 class DWARFFile {
 public:
   DWARFFile(StringRef Name, DWARFContext *Dwarf, AddressesMap *Addresses,
@@ -214,13 +214,16 @@ public:
       : FileName(Name), Dwarf(Dwarf), Addresses(Addresses), Warnings(Warnings) {
   }
 
-  /// object file name.
+  /// The object file name.
   StringRef FileName;
-  /// source DWARF information.
+
+  /// The source DWARF information.
   DWARFContext *Dwarf = nullptr;
-  /// helpful address information(list of valid address ranges, relocations).
+
+  /// Helpful address information(list of valid address ranges, relocations).
   AddressesMap *Addresses = nullptr;
-  /// warnings for object file.
+
+  /// Warnings for this object file.
   const std::vector<std::string> &Warnings;
 };
 

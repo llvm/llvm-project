@@ -86,17 +86,17 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define dso_local noundef i32 @_Z3funii(i32 noundef %a, i32 noundef %b) local_unnamed_addr #0 !dbg !17 {
 entry:
-  %a.addr = alloca i64, align 4, !DIAssignID !58 ; VAR:a
+  %a.addr = alloca i64, align 8, !DIAssignID !58 ; VAR:a
   call void @llvm.dbg.assign(metadata i1 undef, metadata !21, metadata !DIExpression(), metadata !58, metadata ptr %a.addr, metadata !DIExpression()), !dbg !27 ; VAR:a
-  %b.addr = alloca i64, align 4, !DIAssignID !64 ; VAR:b
+  %b.addr = alloca i64, align 8, !DIAssignID !64 ; VAR:b
   call void @llvm.dbg.assign(metadata i1 undef, metadata !22, metadata !DIExpression(), metadata !64, metadata ptr %b.addr, metadata !DIExpression()), !dbg !27 ; VAR:b
-  %c.addr = alloca i64, align 4, !DIAssignID !68 ; VAR:c
+  %c.addr = alloca i64, align 8, !DIAssignID !68 ; VAR:c
   call void @llvm.dbg.assign(metadata i1 undef, metadata !67, metadata !DIExpression(), metadata !68, metadata ptr %c.addr, metadata !DIExpression()), !dbg !27 ; VAR:c
-  %d.addr = alloca i64, align 4, !DIAssignID !73 ; VAR:d
+  %d.addr = alloca i64, align 8, !DIAssignID !73 ; VAR:d
   call void @llvm.dbg.assign(metadata i1 undef, metadata !72, metadata !DIExpression(), metadata !73, metadata ptr %d.addr, metadata !DIExpression()), !dbg !27 ; VAR:d
-  %e.addr = alloca i64, align 4, !DIAssignID !76 ; VAR:e
+  %e.addr = alloca i64, align 8, !DIAssignID !76 ; VAR:e
   call void @llvm.dbg.assign(metadata i1 undef, metadata !75, metadata !DIExpression(), metadata !76, metadata ptr %e.addr, metadata !DIExpression()), !dbg !27 ; VAR:e
-  ;%f.addr = alloca i64, align 4, !DIAssignID !80 ; VAR:f
+  ;%f.addr = alloca i64, align 8, !DIAssignID !80 ; VAR:f
   ;call void @llvm.dbg.assign(metadata i1 undef, metadata !79, metadata !DIExpression(), metadata !80, metadata ptr %f.addr, metadata !DIExpression()), !dbg !27 ; VAR:f
   store i64 1, ptr %a.addr, !DIAssignID !70 ; VAR:a
   call void @llvm.dbg.assign(metadata i64 1, metadata !21, metadata !DIExpression(), metadata !70, metadata ptr %a.addr, metadata !DIExpression()), !dbg !27 ; VAR:a

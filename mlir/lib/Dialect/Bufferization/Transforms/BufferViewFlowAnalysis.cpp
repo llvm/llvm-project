@@ -12,6 +12,7 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/SetVector.h"
 
 using namespace mlir;
 
@@ -40,7 +41,7 @@ BufferViewFlowAnalysis::resolve(Value rootValue) const {
 }
 
 /// Removes the given values from all alias sets.
-void BufferViewFlowAnalysis::remove(const SmallPtrSetImpl<Value> &aliasValues) {
+void BufferViewFlowAnalysis::remove(const SetVector<Value> &aliasValues) {
   for (auto &entry : dependencies)
     llvm::set_subtract(entry.second, aliasValues);
 }

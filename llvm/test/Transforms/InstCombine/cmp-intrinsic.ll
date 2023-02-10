@@ -543,9 +543,8 @@ define i1 @trunc_cttz_ugt_other_i33_i15(i33 %x) {
 
 define i1 @trunc_cttz_ult_other_i33_i6(i33 %x) {
 ; CHECK-LABEL: @trunc_cttz_ult_other_i33_i6(
-; CHECK-NEXT:    [[TZ:%.*]] = tail call i33 @llvm.cttz.i33(i33 [[X:%.*]], i1 true), !range [[RNG1]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i33 [[TZ]] to i6
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i6 [[TRUNC]], 7
+; CHECK-NEXT:    [[TMP1:%.*]] = and i33 [[X:%.*]], 127
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i33 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %tz = tail call i33 @llvm.cttz.i33(i33 %x, i1 true)
@@ -553,6 +552,8 @@ define i1 @trunc_cttz_ult_other_i33_i6(i33 %x) {
   %cmp = icmp ult i6 %trunc, 7
   ret i1 %cmp
 }
+
+; negative case: log2(33 - is_zero_poison ? 1 : 0) + 1 > 5
 
 define i1 @trunc_cttz_ult_other_i33_i5(i33 %x) {
 ; CHECK-LABEL: @trunc_cttz_ult_other_i33_i5(
@@ -569,9 +570,8 @@ define i1 @trunc_cttz_ult_other_i33_i5(i33 %x) {
 
 define i1 @trunc_cttz_true_ult_other_i32_i5(i32 %x) {
 ; CHECK-LABEL: @trunc_cttz_true_ult_other_i32_i5(
-; CHECK-NEXT:    [[TZ:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true), !range [[RNG0]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[TZ]] to i5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i5 [[TRUNC]], 7
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 127
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %tz = tail call i32 @llvm.cttz.i32(i32 %x, i1 true)
@@ -597,9 +597,8 @@ define i1 @trunc_cttz_false_ult_other_i32_i5(i32 %x) {
 
 define i1 @trunc_cttz_false_ult_other_i32_i6(i32 %x) {
 ; CHECK-LABEL: @trunc_cttz_false_ult_other_i32_i6(
-; CHECK-NEXT:    [[TZ:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false), !range [[RNG0]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[TZ]] to i6
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i6 [[TRUNC]], 7
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 127
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %tz = tail call i32 @llvm.cttz.i32(i32 %x, i1 false)
@@ -649,9 +648,7 @@ define i1 @trunc_ctlz_ugt_one_i32(i32 %x) {
 
 define i1 @trunc_ctlz_ugt_other_i33_i6(i33 %x) {
 ; CHECK-LABEL: @trunc_ctlz_ugt_other_i33_i6(
-; CHECK-NEXT:    [[LZ:%.*]] = tail call i33 @llvm.ctlz.i33(i33 [[X:%.*]], i1 true), !range [[RNG1]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i33 [[LZ]] to i6
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i6 [[TRUNC]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i33 [[X:%.*]], 268435456
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %lz = tail call i33 @llvm.ctlz.i33(i33 %x, i1 true)
@@ -659,6 +656,8 @@ define i1 @trunc_ctlz_ugt_other_i33_i6(i33 %x) {
   %cmp = icmp ugt i6 %trunc, 4
   ret i1 %cmp
 }
+
+; negative case: log2(33 - is_zero_poison ? 1 : 0) + 1 > 5
 
 define i1 @trunc_ctlz_ugt_other_i33_i5(i33 %x) {
 ; CHECK-LABEL: @trunc_ctlz_ugt_other_i33_i5(
@@ -675,9 +674,7 @@ define i1 @trunc_ctlz_ugt_other_i33_i5(i33 %x) {
 
 define i1 @trunc_ctlz_true_ugt_other_i32_i5(i32 %x) {
 ; CHECK-LABEL: @trunc_ctlz_true_ugt_other_i32_i5(
-; CHECK-NEXT:    [[LZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true), !range [[RNG0]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[LZ]] to i5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i5 [[TRUNC]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], 134217728
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %lz = tail call i32 @llvm.ctlz.i32(i32 %x, i1 true)
@@ -703,9 +700,7 @@ define i1 @trunc_ctlz_false_ugt_other_i32_i5(i32 %x) {
 
 define i1 @trunc_ctlz_false_ugt_other_i32_i6(i32 %x) {
 ; CHECK-LABEL: @trunc_ctlz_false_ugt_other_i32_i6(
-; CHECK-NEXT:    [[LZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 false), !range [[RNG0]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[LZ]] to i6
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i6 [[TRUNC]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], 134217728
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %lz = tail call i32 @llvm.ctlz.i32(i32 %x, i1 false)
@@ -752,6 +747,8 @@ define i1 @trunc_ctpop_eq_bitwidth_i8(i8 %x) {
   %cmp = icmp eq i5 %trunc, 8
   ret i1 %cmp
 }
+
+; negative case: log2(33) + 1 > 4
 
 define i1 @trunc_negative_destbits_not_enough(i33 %x) {
 ; CHECK-LABEL: @trunc_negative_destbits_not_enough(

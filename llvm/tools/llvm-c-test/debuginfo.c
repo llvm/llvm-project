@@ -225,6 +225,7 @@ int llvm_get_di_tag(void) {
   assert(tag1 == 0x13);
   (void)tag1;
 
+  LLVMDisposeDIBuilder(builder);
   LLVMDisposeModule(m);
 
   return 0;

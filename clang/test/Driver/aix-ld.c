@@ -135,6 +135,8 @@
 // CHECK-LD32-PROF-NOT: "--no-as-needed"
 // CHECK-LD32-PROF-NOT: "-lm"
 // CHECK-LD32-PROF:     "-lc"
+// CHECK-LD32-PROF:     "-L[[SYSROOT]]/lib/profiled"
+// CHECK-LD32-PROF:     "-L[[SYSROOT]]/usr/lib/profiled"
 
 // Check powerpc64-ibm-aix7.1.0.0, 64-bit. Enable profiling.
 // RUN: %clang %s -### 2>&1 \
@@ -162,6 +164,8 @@
 // CHECK-LD64-PROF-NOT: "--no-as-needed"
 // CHECK-LD64-PROF-NOT: "-lm"
 // CHECK-LD64-PROF:     "-lc"
+// CHECK-LD64-PROF:     "-L[[SYSROOT]]/lib/profiled"
+// CHECK-LD64-PROF:     "-L[[SYSROOT]]/usr/lib/profiled
 
 // Check powerpc-ibm-aix7.1.0.0, 32-bit. Enable g-profiling.
 // RUN: %clang %s -### 2>&1 \

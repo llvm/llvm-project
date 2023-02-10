@@ -1873,14 +1873,12 @@ int Driver::ExecuteCompilation(
         C.CleanupFileMap(C.getFailureResultFiles(), JA, true);
     }
 
-#if LLVM_ON_UNIX
-    // llvm/lib/Support/Unix/Signals.inc will exit with a special return code
+    // llvm/lib/Support/*/Signals.inc will exit with a special return code
     // for SIGPIPE. Do not print diagnostics for this case.
     if (CommandRes == EX_IOERR) {
       Res = CommandRes;
       continue;
     }
-#endif
 
     // Print extra information about abnormal failures, if possible.
     //

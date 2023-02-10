@@ -241,7 +241,8 @@ define dso_local void @tbaa(ptr %0) {
 ; // -----
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: error: unsupported access group node: !0 = !{}
+; CHECK-SAME: warning: expected an access group node to be empty and distinct
+; CHECK:      error: unsupported access group node: !0 = !{}
 define void @access_group(ptr %arg1) {
   %1 = load i32, ptr %arg1, !llvm.access.group !0
   ret void
@@ -252,7 +253,8 @@ define void @access_group(ptr %arg1) {
 ; // -----
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: error: unsupported access group node: !1 = distinct !{!"unsupported access group"}
+; CHECK-SAME: warning: expected an access group node to be empty and distinct
+; CHECK:      error: unsupported access group node: !0 = !{!1}
 define void @access_group(ptr %arg1) {
   %1 = load i32, ptr %arg1, !llvm.access.group !0
   ret void
@@ -260,6 +262,18 @@ define void @access_group(ptr %arg1) {
 
 !0 = !{!1}
 !1 = distinct !{!"unsupported access group"}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: expected access group operands to be metadata nodes
+; CHECK:      error: unsupported access group node: !0 = !{i1 false}
+define void @access_group(ptr %arg1) {
+  %1 = load i32, ptr %arg1, !llvm.access.group !0
+  ret void
+}
+
+!0 = !{i1 false}
 
 ; // -----
 

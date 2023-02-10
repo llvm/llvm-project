@@ -50,7 +50,6 @@ let test_transforms () =
            ++ add_constant_merge
            ++ add_dead_arg_elimination
            ++ add_function_attrs
-           ++ add_function_inlining
            ++ add_always_inliner
            ++ add_global_dce
            ++ add_global_optimizer

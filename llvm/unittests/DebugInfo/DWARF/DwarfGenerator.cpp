@@ -582,7 +582,8 @@ StringRef dwarfgen::Generator::generate() {
   StringPool->emit(*Asm, TLOF->getDwarfStrSection(),
                    TLOF->getDwarfStrOffSection());
 
-  AddressPool.emit(*Asm, TLOF->getDwarfAddrSection(), AddrTableStartSym);
+  if (Asm->getDwarfVersion() >= 5)
+    AddressPool.emit(*Asm, TLOF->getDwarfAddrSection(), AddrTableStartSym);
 
   MS->switchSection(TLOF->getDwarfInfoSection());
   for (auto &CU : CompileUnits) {

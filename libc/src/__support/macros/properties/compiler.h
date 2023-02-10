@@ -21,29 +21,4 @@
 #define LIBC_COMPILER_IS_MSC
 #endif
 
-// Compiler builtin-detection.
-// clang.llvm.org/docs/LanguageExtensions.html#has-builtin
-#if defined(LIBC_COMPILER_IS_CLANG) ||                                       \
-    (defined(LIBC_COMPILER_IS_GCC) && (__GNUC__ >= 10))
-#define LIBC_HAS_BUILTIN(BUILTIN) __has_builtin(BUILTIN)
-#else
-#define LIBC_HAS_BUILTIN(BUILTIN) 0
-#endif
-
-// Compiler feature-detection.
-// clang.llvm.org/docs/LanguageExtensions.html#has-feature-and-has-extension
-#if defined(LIBC_COMPILER_IS_CLANG)
-#define LIBC_HAS_FEATURE(FEATURE) __has_feature(FEATURE)
-#else
-#define LIBC_HAS_FEATURE(FEATURE) 0
-#endif
-
-#if defined(LIBC_COMPILER_IS_CLANG)
-#define LIBC_LOOP_NOUNROLL _Pragma("nounroll")
-#elif defined(LIBC_COMPILER_IS_GCC)
-#define LIBC_LOOP_NOUNROLL _Pragma("GCC unroll 0")
-#else
-#define LIBC_LOOP_NOUNROLL
-#endif
-
 #endif // LLVM_LIBC_SUPPORT_MACROS_PROPERTIES_COMPILER_H

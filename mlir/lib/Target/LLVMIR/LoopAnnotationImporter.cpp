@@ -16,11 +16,9 @@ using namespace mlir::LLVM::detail;
 namespace {
 /// Helper class that keeps the state of one metadata to attribute conversion.
 struct LoopMetadataConversion {
-  LoopMetadataConversion(const llvm::MDNode *node, ModuleImport &moduleImport,
-                         Location loc,
+  LoopMetadataConversion(const llvm::MDNode *node, Location loc,
                          LoopAnnotationImporter &loopAnnotationImporter)
-      : node(node), moduleImport(moduleImport), loc(loc),
-        loopAnnotationImporter(loopAnnotationImporter),
+      : node(node), loc(loc), loopAnnotationImporter(loopAnnotationImporter),
         ctx(loc->getContext()){};
   /// Converts this structs loop metadata node into a LoopAnnotationAttr.
   LoopAnnotationAttr convert();
@@ -55,7 +53,6 @@ struct LoopMetadataConversion {
 
   llvm::StringMap<const llvm::MDNode *> propertyMap;
   const llvm::MDNode *node;
-  ModuleImport &moduleImport;
   Location loc;
   LoopAnnotationImporter &loopAnnotationImporter;
   MLIRContext *ctx;
@@ -233,7 +230,7 @@ LoopMetadataConversion::lookupFollowupNode(StringRef name) {
   if (*node == nullptr)
     return LoopAnnotationAttr(nullptr);
 
-  return loopAnnotationImporter.translate(*node, loc);
+  return loopAnnotationImporter.translateLoopAnnotation(*node, loc);
 }
 
 static bool isEmptyOrNull(const Attribute attr) { return !attr; }
@@ -360,7 +357,7 @@ LoopMetadataConversion::convertParallelAccesses() {
   SmallVector<SymbolRefAttr> refs;
   for (llvm::MDNode *node : *nodes) {
     FailureOr<SmallVector<SymbolRefAttr>> accessGroups =
-        moduleImport.lookupAccessGroupAttrs(node);
+        loopAnnotationImporter.lookupAccessGroupAttrs(node);
     if (failed(accessGroups))
       return emitWarning(loc) << "could not lookup access group";
     llvm::append_range(refs, *accessGroups);
@@ -398,8 +395,9 @@ LoopAnnotationAttr LoopMetadataConversion::convert() {
       parallelAccesses);
 }
 
-LoopAnnotationAttr LoopAnnotationImporter::translate(const llvm::MDNode *node,
-                                                     Location loc) {
+LoopAnnotationAttr
+LoopAnnotationImporter::translateLoopAnnotation(const llvm::MDNode *node,
+                                                Location loc) {
   if (!node)
     return {};
 
@@ -409,9 +407,60 @@ LoopAnnotationAttr LoopAnnotationImporter::translate(const llvm::MDNode *node,
   if (it != loopMetadataMapping.end())
     return it->getSecond();
 
-  LoopAnnotationAttr attr =
-      LoopMetadataConversion(node, moduleImport, loc, *this).convert();
+  LoopAnnotationAttr attr = LoopMetadataConversion(node, loc, *this).convert();
 
   mapLoopMetadata(node, attr);
   return attr;
+}
+
+LogicalResult LoopAnnotationImporter::translateAccessGroup(
+    const llvm::MDNode *node, Location loc, MetadataOp metadataOp) {
+  SmallVector<const llvm::MDNode *> accessGroups;
+  if (!node->getNumOperands())
+    accessGroups.push_back(node);
+  for (const llvm::MDOperand &operand : node->operands()) {
+    auto *childNode = dyn_cast<llvm::MDNode>(operand);
+    if (!childNode)
+      return emitWarning(loc)
+             << "expected access group operands to be metadata nodes";
+    accessGroups.push_back(cast<llvm::MDNode>(operand.get()));
+  }
+
+  // Convert all entries of the access group list to access group operations.
+  for (const llvm::MDNode *accessGroup : accessGroups) {
+    if (accessGroupMapping.count(accessGroup))
+      continue;
+    // Verify the access group node is distinct and empty.
+    if (accessGroup->getNumOperands() != 0 || !accessGroup->isDistinct())
+      return emitWarning(loc)
+             << "expected an access group node to be empty and distinct";
+
+    OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToEnd(&metadataOp.getBody().back());
+    auto groupOp = builder.create<AccessGroupMetadataOp>(
+        loc, llvm::formatv("group_{0}", accessGroupMapping.size()).str());
+    // Add a mapping from the access group node to the symbol reference pointing
+    // to the newly created operation.
+    accessGroupMapping[accessGroup] = SymbolRefAttr::get(
+        builder.getContext(), metadataOp.getSymName(),
+        FlatSymbolRefAttr::get(builder.getContext(), groupOp.getSymName()));
+  }
+  return success();
+}
+
+FailureOr<SmallVector<SymbolRefAttr>>
+LoopAnnotationImporter::lookupAccessGroupAttrs(const llvm::MDNode *node) const {
+  // An access group node is either a single access group or an access group
+  // list.
+  SmallVector<SymbolRefAttr> accessGroups;
+  if (!node->getNumOperands())
+    accessGroups.push_back(accessGroupMapping.lookup(node));
+  for (const llvm::MDOperand &operand : node->operands()) {
+    auto *node = cast<llvm::MDNode>(operand.get());
+    accessGroups.push_back(accessGroupMapping.lookup(node));
+  }
+  // Exit if one of the access group node lookups failed.
+  if (llvm::is_contained(accessGroups, nullptr))
+    return failure();
+  return accessGroups;
 }

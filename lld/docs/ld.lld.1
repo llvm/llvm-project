@@ -4,7 +4,7 @@
 .\"
 .\" This man page documents only lld's ELF linking support, obtained originally
 .\" from FreeBSD.
-.Dd May 12, 2019
+.Dd Feb 9, 2023
 .Dt LD.LLD 1
 .Os
 .Sh NAME
@@ -877,6 +877,22 @@ Create a
 segment.
 .El
 .El
+
+.Sh ENVIRONMENT VARIABLES
+.Bl -tag -width LC_CTYPE
+.It Ev LLD_REPRODUCE
+Create a reproduce tarball with the specified filename. If
+.Fl -reproduce
+is specified,
+.Fl -reproduce
+takes precedence.
+.It Ev LLD_VERSION
+ld.lld creates a section named
+.Cm .comment
+containing the LLD version string. The version string can be overridden by this environment variable,
+which is useful to eliminate differences in the binary caused by LLD version number differences.
+.El
+
 .Sh IMPLEMENTATION NOTES
 .Nm Ap s
 handing of archive files (those with a

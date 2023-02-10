@@ -1906,7 +1906,7 @@ outliner::OutlinedFunction RISCVInstrInfo::getOutliningCandidateInfo(
 }
 
 outliner::InstrType
-RISCVInstrInfo::getOutliningType(MachineBasicBlock::iterator &MBBI,
+RISCVInstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MBBI,
                                  unsigned Flags) const {
   MachineInstr &MI = *MBBI;
   MachineBasicBlock *MBB = MI.getParent();
@@ -1914,26 +1914,13 @@ RISCVInstrInfo::getOutliningType(MachineBasicBlock::iterator &MBBI,
       MBB->getParent()->getSubtarget().getRegisterInfo();
   const auto &F = MI.getMF()->getFunction();
 
-  // Positions generally can't safely be outlined.
-  if (MI.isPosition()) {
-    // We can manually strip out CFI instructions later.
-    if (MI.isCFIInstruction())
-      // If current function has exception handling code, we can't outline &
-      // strip these CFI instructions since it may break .eh_frame section
-      // needed in unwinding.
-      return F.needsUnwindTableEntry() ? outliner::InstrType::Illegal
-                                       : outliner::InstrType::Invisible;
-
-    return outliner::InstrType::Illegal;
-  }
-
-  // Don't trust the user to write safe inline assembly.
-  if (MI.isInlineAsm())
-    return outliner::InstrType::Illegal;
-
-  // We can't outline branches to other basic blocks.
-  if (MI.isTerminator() && !MBB->succ_empty())
-    return outliner::InstrType::Illegal;
+  // We can manually strip out CFI instructions later.
+  if (MI.isCFIInstruction())
+    // If current function has exception handling code, we can't outline &
+    // strip these CFI instructions since it may break .eh_frame section
+    // needed in unwinding.
+    return F.needsUnwindTableEntry() ? outliner::InstrType::Illegal
+                                     : outliner::InstrType::Invisible;
 
   // We need support for tail calls to outlined functions before return
   // statements can be allowed.
@@ -1948,8 +1935,6 @@ RISCVInstrInfo::getOutliningType(MachineBasicBlock::iterator &MBBI,
 
   // Make sure the operands don't reference something unsafe.
   for (const auto &MO : MI.operands()) {
-    if (MO.isMBB() || MO.isBlockAddress() || MO.isCPI() || MO.isJTI())
-      return outliner::InstrType::Illegal;
 
     // pcrel-hi and pcrel-lo can't put in separate sections, filter that out
     // if any possible.
@@ -1958,11 +1943,6 @@ RISCVInstrInfo::getOutliningType(MachineBasicBlock::iterator &MBBI,
          F.hasSection()))
       return outliner::InstrType::Illegal;
   }
-
-  // Don't allow instructions which won't be materialized to impact outlining
-  // analysis.
-  if (MI.isMetaInstruction())
-    return outliner::InstrType::Invisible;
 
   return outliner::InstrType::Legal;
 }

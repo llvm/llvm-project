@@ -857,6 +857,80 @@ declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.2d.v4f32.f16.f32(i32, floa
 declare float @llvm.amdgcn.image.sample.c.d.o.2darray.f32.f16.f32(i32, i32, float, half, half, half, half, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 declare <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f16.f32(i32, i32, float, half, half, half, half, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
+define amdgpu_ps <4 x float> @sample_d_1d_g16_a16(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dsdv, half %s) {
+; GFX10-LABEL: sample_d_1d_g16_a16:
+; GFX10:       ; %bb.0: ; %main_body
+; GFX10-NEXT:    image_sample_d_g16 v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX10GISEL-LABEL: sample_d_1d_g16_a16:
+; GFX10GISEL:       ; %bb.0: ; %main_body
+; GFX10GISEL-NEXT:    image_sample_d_g16 v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16
+; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10GISEL-NEXT:    ; return to shader part epilog
+main_body:
+  %v = call <4 x float> @llvm.amdgcn.image.sample.d.1d.v4f32.f16.f16(i32 15, half %dsdh, half %dsdv, half %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  ret <4 x float> %v
+}
+
+define amdgpu_ps <4 x float> @sample_d_2d_g16_a16(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t) {
+; GFX10-LABEL: sample_d_2d_g16_a16:
+; GFX10:       ; %bb.0: ; %main_body
+; GFX10-NEXT:    v_perm_b32 v4, v5, v4, 0x5040100
+; GFX10-NEXT:    v_perm_b32 v3, v3, v2, 0x5040100
+; GFX10-NEXT:    v_perm_b32 v2, v1, v0, 0x5040100
+; GFX10-NEXT:    image_sample_d_g16 v[0:3], v[2:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX10GISEL-LABEL: sample_d_2d_g16_a16:
+; GFX10GISEL:       ; %bb.0: ; %main_body
+; GFX10GISEL-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX10GISEL-NEXT:    v_perm_b32 v1, v3, v2, 0x5040100
+; GFX10GISEL-NEXT:    v_perm_b32 v2, v5, v4, 0x5040100
+; GFX10GISEL-NEXT:    image_sample_d_g16 v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
+; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10GISEL-NEXT:    ; return to shader part epilog
+main_body:
+  %v = call <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f16.f16(i32 15, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  ret <4 x float> %v
+}
+
+define amdgpu_ps <4 x float> @sample_d_3d_g16_a16(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dtdh, half %drdh, half %dsdv, half %dtdv, half %drdv, half %s, half %t, half %r) {
+; GFX10-LABEL: sample_d_3d_g16_a16:
+; GFX10:       ; %bb.0: ; %main_body
+; GFX10-NEXT:    v_mov_b32_e32 v12, v8
+; GFX10-NEXT:    v_mov_b32_e32 v10, v5
+; GFX10-NEXT:    v_mov_b32_e32 v8, v2
+; GFX10-NEXT:    v_perm_b32 v11, v7, v6, 0x5040100
+; GFX10-NEXT:    v_perm_b32 v9, v4, v3, 0x5040100
+; GFX10-NEXT:    v_perm_b32 v7, v1, v0, 0x5040100
+; GFX10-NEXT:    image_sample_d_g16 v[0:3], v[7:12], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_3D a16
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX10GISEL-LABEL: sample_d_3d_g16_a16:
+; GFX10GISEL:       ; %bb.0: ; %main_body
+; GFX10GISEL-NEXT:    v_mov_b32_e32 v9, v3
+; GFX10GISEL-NEXT:    v_mov_b32_e32 v10, v7
+; GFX10GISEL-NEXT:    v_mov_b32_e32 v3, v2
+; GFX10GISEL-NEXT:    v_mov_b32_e32 v7, v8
+; GFX10GISEL-NEXT:    v_perm_b32 v2, v1, v0, 0x5040100
+; GFX10GISEL-NEXT:    v_perm_b32 v4, v4, v9, 0x5040100
+; GFX10GISEL-NEXT:    v_perm_b32 v6, v10, v6, 0x5040100
+; GFX10GISEL-NEXT:    image_sample_d_g16 v[0:3], v[2:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_3D a16
+; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10GISEL-NEXT:    ; return to shader part epilog
+main_body:
+  %v = call <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f16.f16(i32 15, half %dsdh, half %dtdh, half %drdh, half %dsdv, half %dtdv, half %drdv, half %s, half %t, half %r, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  ret <4 x float> %v
+}
+
+declare <4 x float> @llvm.amdgcn.image.sample.d.1d.v4f32.f16.f16(i32, half,  half,  half, <8 x i32>, <4 x i32>, i1, i32, i32)
+declare <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f16.f16(i32, half,  half,  half,  half,  half,  half, <8 x i32>, <4 x i32>, i1, i32, i32)
+declare <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f16.f16(i32, half,  half,  half,  half,  half,  half,  half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32)
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }
 attributes #2 = { nounwind readnone }

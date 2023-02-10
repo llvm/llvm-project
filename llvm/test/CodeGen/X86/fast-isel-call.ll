@@ -59,7 +59,7 @@ define void @test4(ptr %a, ptr %b) {
 %struct.S = type { i8 }
 define void @test5() {
 entry:
-  %s = alloca %struct.S, align 1
+  %s = alloca %struct.S, align 8
 ; CHECK-LABEL: test5:
 ; CHECK: subl $12, %esp
 ; CHECK: leal 8(%esp), %ecx

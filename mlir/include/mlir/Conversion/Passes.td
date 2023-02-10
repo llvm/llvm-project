@@ -311,7 +311,10 @@ def ConvertFuncToLLVM : Pass<"convert-func-to-llvm", "ModuleOp"> {
     Option<"dataLayout", "data-layout", "std::string",
            /*default=*/"\"\"",
            "String description (LLVM format) of the data layout that is "
-           "expected on the produced module">
+           "expected on the produced module">,
+    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
+                       /*default=*/"false", "Generate LLVM IR using opaque pointers "
+                       "instead of typed pointers">,
   ];
 }
 

@@ -121,10 +121,7 @@ static void AddOptimizationPasses(legacy::FunctionPassManager &FPM,
   Builder.OptLevel = OptLevel;
   Builder.SizeLevel = SizeLevel;
 
-  if (OptLevel > 1)
-    Builder.Inliner = createFunctionInliningPass(OptLevel, SizeLevel, false);
-  else
-    Builder.Inliner = createAlwaysInlinerLegacyPass();
+  Builder.Inliner = createAlwaysInlinerLegacyPass();
 
   Builder.populateFunctionPassManager(FPM);
   Builder.populateModulePassManager(FPM);

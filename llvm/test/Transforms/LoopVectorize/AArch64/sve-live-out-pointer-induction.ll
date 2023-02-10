@@ -56,9 +56,9 @@ define ptr @test(ptr %start.1, ptr %start.2, ptr %end) {
 ; CHECK-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[START_2]], i64 [[TMP28]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 0
 ; CHECK-NEXT:    store <vscale x 2 x i64> zeroinitializer, ptr [[TMP29]], align 4
-; CHECK-NEXT:    [[TMP30:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP31:%.*]] = mul i32 [[TMP30]], 2
-; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 [[TMP31]]
+; CHECK-NEXT:    [[TMP30:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP31:%.*]] = mul i64 [[TMP30]], 2
+; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 [[TMP31]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> zeroinitializer, ptr [[TMP32]], align 4
 ; CHECK-NEXT:    [[TMP33:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP34:%.*]] = mul i64 [[TMP33]], 4
@@ -68,8 +68,8 @@ define ptr @test(ptr %start.1, ptr %start.2, ptr %end) {
 ; CHECK-NEXT:    br i1 [[TMP35]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
-; CHECK-NEXT:    [[CAST_CMO:%.*]] = sub i64 [[N_VEC]], 1
-; CHECK-NEXT:    [[TMP36:%.*]] = mul i64 [[CAST_CMO]], 8
+; CHECK-NEXT:    [[CMO:%.*]] = sub i64 [[N_VEC]], 1
+; CHECK-NEXT:    [[TMP36:%.*]] = mul i64 [[CMO]], 8
 ; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = getelementptr i8, ptr [[START_1]], i64 [[TMP36]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -83,7 +83,7 @@ define ptr @test(ptr %start.1, ptr %start.2, ptr %end) {
 ; CHECK-NEXT:    [[IV_2_NEXT]] = getelementptr inbounds ptr, ptr [[IV_2]], i64 1
 ; CHECK-NEXT:    [[IV_1_NEXT]] = getelementptr inbounds ptr, ptr [[IV_1]], i64 1
 ; CHECK-NEXT:    [[CMP_I_I_NOT_I:%.*]] = icmp eq ptr [[IV_2_NEXT]], [[END]]
-; CHECK-NEXT:    br i1 [[CMP_I_I_NOT_I]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP_I_I_NOT_I]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[RES_LCSSA:%.*]] = phi ptr [ [[IV_1]], [[LOOP]] ], [ [[IND_ESCAPE]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret ptr [[RES_LCSSA]]

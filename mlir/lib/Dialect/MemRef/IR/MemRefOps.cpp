@@ -1685,6 +1685,50 @@ OpFoldResult LoadOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// MemorySpaceCastOp
+//===----------------------------------------------------------------------===//
+
+void MemorySpaceCastOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "memspacecast");
+}
+
+bool MemorySpaceCastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  if (inputs.size() != 1 || outputs.size() != 1)
+    return false;
+  Type a = inputs.front(), b = outputs.front();
+  auto aT = a.dyn_cast<MemRefType>();
+  auto bT = b.dyn_cast<MemRefType>();
+
+  auto uaT = a.dyn_cast<UnrankedMemRefType>();
+  auto ubT = b.dyn_cast<UnrankedMemRefType>();
+
+  if (aT && bT) {
+    if (aT.getElementType() != bT.getElementType())
+      return false;
+    if (aT.getLayout() != bT.getLayout())
+      return false;
+    if (aT.getShape() != bT.getShape())
+      return false;
+    return true;
+  }
+  if (uaT && ubT) {
+    return uaT.getElementType() == ubT.getElementType();
+  }
+  return false;
+}
+
+OpFoldResult MemorySpaceCastOp::fold(FoldAdaptor adaptor) {
+  // memory_space_cast(memory_space_cast(v, t1), t2) -> memory_space_cast(v,
+  // t2)
+  if (auto parentCast = getSource().getDefiningOp<MemorySpaceCastOp>()) {
+    getSourceMutable().assign(parentCast.getSource());
+    return getResult();
+  }
+  return Value{};
+}
+
+//===----------------------------------------------------------------------===//
 // PrefetchOp
 //===----------------------------------------------------------------------===//
 

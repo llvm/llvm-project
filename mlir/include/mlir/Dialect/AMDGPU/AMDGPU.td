@@ -25,7 +25,8 @@ def AMDGPU_Dialect : Dialect {
 
 
   let dependentDialects = [
-    "arith::ArithDialect"
+    "arith::ArithDialect",
+    "gpu::GPUDialect"
   ];
   let useDefaultAttributePrinterParser = 1;
 }

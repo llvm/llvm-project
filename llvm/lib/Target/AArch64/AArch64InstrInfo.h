@@ -291,8 +291,8 @@ public:
                                    bool OutlineFromLinkOnceODRs) const override;
   outliner::OutlinedFunction getOutliningCandidateInfo(
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
-  outliner::InstrType getOutliningType(MachineBasicBlock::iterator &MIT,
-                                       unsigned Flags) const override;
+  outliner::InstrType
+  getOutliningTypeImpl(MachineBasicBlock::iterator &MIT, unsigned Flags) const override;
   SmallVector<
       std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
   getOutlinableRanges(MachineBasicBlock &MBB, unsigned &Flags) const override;

@@ -26,11 +26,6 @@ external add_function_attrs
   : [ `Module ] Llvm.PassManager.t -> unit
   = "llvm_add_function_attrs"
 
-(** See the [llvm::createFunctionInliningPass] function. *)
-external add_function_inlining
-  : [ `Module ] Llvm.PassManager.t -> unit
-  = "llvm_add_function_inlining"
-
 (** See the [llvm::createAlwaysInlinerPass] function. *)
 external add_always_inliner
   : [ `Module ] Llvm.PassManager.t -> unit

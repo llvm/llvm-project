@@ -211,6 +211,12 @@ global_load_lds_ubyte v[2:3], off
 global_load_lds_ushort v[2:3], off
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+global_load_tr_b128 v[1:4], v5, s[2:3]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_tr_b64 v[1:2], v[3:4], off
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 image_atomic_fcmpswap v[1:2], v2, s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_1D unorm
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
@@ -1994,4 +2000,16 @@ buffer_atomic_min_num_f32 v5, off, s[8:11], s3 offset:4095
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 global_atomic_sub_clamp_u32 v5, v[1:2], v2, off glc
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_atomic_csub_u32 v1, v[0:1], v2 offset:64 th:TH_ATOMIC_RETURN
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid instruction
+
+flat_atomic_sub_clamp_u32 v1, v[0:1], v2 offset:64 th:TH_ATOMIC_RETURN
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid instruction
+
+ds_sub_clamp_rtn_u32 v5, v1, v2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_sub_clamp_u32 v1, v2
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
