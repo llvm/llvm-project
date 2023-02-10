@@ -2718,7 +2718,7 @@ bool ModuleVisitor::Pre(const parser::Rename::Names &x) {
   const auto &useName{std::get<1>(x.t)};
   AddUseRename(useName.source);
   SymbolRename rename{AddUse(localName.source, useName.source)};
-  if (rename.use) {
+  if (rename.use && localName.source != useName.source) {
     EraseRenamedSymbol(*rename.use);
   }
   Resolve(useName, rename.use);
