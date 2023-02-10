@@ -169,6 +169,21 @@ const char *SBDebugger::GetProgressFromEvent(const lldb::SBEvent &event,
 }
 
 lldb::SBStructuredData
+SBDebugger::GetProgressDataFromEvent(const lldb::SBEvent &event) {
+  LLDB_INSTRUMENT_VA(event);
+
+  StructuredData::DictionarySP dictionary_sp =
+      ProgressEventData::GetAsStructuredData(event.get());
+
+  if (!dictionary_sp)
+    return {};
+
+  SBStructuredData data;
+  data.m_impl_up->SetObjectSP(std::move(dictionary_sp));
+  return data;
+}
+
+lldb::SBStructuredData
 SBDebugger::GetDiagnosticFromEvent(const lldb::SBEvent &event) {
   LLDB_INSTRUMENT_VA(event);
 
