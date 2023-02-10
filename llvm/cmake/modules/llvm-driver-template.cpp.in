@@ -11,4 +11,6 @@
 
 int @TOOL_NAME@_main(int argc, char **, const llvm::ToolContext &);
 
-int main(int argc, char **argv) { return @TOOL_NAME@_main(argc, argv, {}); }
+int main(int argc, char **argv) {
+  return @TOOL_NAME@_main(argc, argv, {argv[0], nullptr, false});
+}

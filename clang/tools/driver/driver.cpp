@@ -211,7 +211,8 @@ extern int cc1_main(ArrayRef<const char *> Argv, const char *Argv0,
 extern int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0,
                       void *MainAddr);
 extern int cc1gen_reproducer_main(ArrayRef<const char *> Argv,
-                                  const char *Argv0, void *MainAddr);
+                                  const char *Argv0, void *MainAddr,
+                                  const llvm::ToolContext &);
 
 static void insertTargetAndModeArgs(const ParsedClangName &NameParts,
                                     SmallVectorImpl<const char *> &ArgVector,
@@ -342,7 +343,8 @@ static void SetInstallDir(SmallVectorImpl<const char *> &argv,
     TheDriver.setInstalledDir(InstalledPathParent);
 }
 
-static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV) {
+static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
+                          const llvm::ToolContext &ToolContext) {
   // If we call the cc1 tool from the clangDriver library (through
   // Driver::CC1Main), we need to clean up the options usage count. The options
   // are currently global, and they might have been used previously by the
@@ -363,14 +365,14 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV) {
     return cc1as_main(ArrayRef(ArgV).slice(2), ArgV[0], GetExecutablePathVP);
   if (Tool == "-cc1gen-reproducer")
     return cc1gen_reproducer_main(ArrayRef(ArgV).slice(2), ArgV[0],
-                                  GetExecutablePathVP);
+                                  GetExecutablePathVP, ToolContext);
   // Reject unknown tools.
   llvm::errs() << "error: unknown integrated tool '" << Tool << "'. "
                << "Valid tools include '-cc1' and '-cc1as'.\n";
   return 1;
 }
 
-int clang_main(int Argc, char **Argv, const llvm::ToolContext &) {
+int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   noteBottomOfStack();
   llvm::InitLLVM X(Argc, Argv);
   llvm::setBugReportMsg("PLEASE submit a bug report to " BUG_REPORT_URL
@@ -386,15 +388,18 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &) {
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver(A);
 
+  const char *ProgName =
+      ToolContext.NeedsPrependArg ? ToolContext.PrependArg : ToolContext.Path;
+
   // Parse response files using the GNU syntax, unless we're in CL mode. There
-  // are two ways to put clang in CL compatibility mode: Args[0] is either
+  // are two ways to put clang in CL compatibility mode: ProgName is either
   // clang-cl or cl, or --driver-mode=cl is on the command line. The normal
   // command line parsing can't happen until after response file parsing, so we
   // have to manually search for a --driver-mode=cl argument the hard way.
   // Finally, our -cc1 tools don't care which tokenization mode we use because
   // response files written by clang will tokenize the same way in either mode.
   bool ClangCLMode =
-      IsClangCL(getDriverMode(Args[0], llvm::ArrayRef(Args).slice(1)));
+      IsClangCL(getDriverMode(ProgName, llvm::ArrayRef(Args).slice(1)));
   enum { Default, POSIX, Windows } RSPQuoting = Default;
   for (const char *F : Args) {
     if (strcmp(F, "--rsp-quoting=posix") == 0)
@@ -433,7 +438,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &) {
       auto newEnd = std::remove(Args.begin(), Args.end(), nullptr);
       Args.resize(newEnd - Args.begin());
     }
-    return ExecuteCC1Tool(Args);
+    return ExecuteCC1Tool(Args, ToolContext);
   }
 
   // Handle options that need handling before the real command line parsing in
@@ -480,7 +485,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &) {
     ApplyQAOverride(Args, OverrideStr, SavedStrings);
   }
 
-  std::string Path = GetExecutablePath(Args[0], CanonicalPrefixes);
+  std::string Path = GetExecutablePath(ToolContext.Path, CanonicalPrefixes);
 
   // Whether the cc1 tool should be called inside the current process, or if we
   // should spawn a new clang subprocess (old behavior).
@@ -498,7 +503,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &) {
 
   TextDiagnosticPrinter *DiagClient
     = new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
-  FixupDiagPrefixExeName(DiagClient, Path);
+  FixupDiagPrefixExeName(DiagClient, ProgName);
 
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
 
@@ -516,8 +521,15 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &) {
 
   Driver TheDriver(Path, llvm::sys::getDefaultTargetTriple(), Diags);
   SetInstallDir(Args, TheDriver, CanonicalPrefixes);
-  auto TargetAndMode = ToolChain::getTargetAndModeFromProgramName(Args[0]);
+  auto TargetAndMode = ToolChain::getTargetAndModeFromProgramName(ProgName);
   TheDriver.setTargetAndMode(TargetAndMode);
+  // If -canonical-prefixes is set, GetExecutablePath will have resolved Path
+  // to the llvm driver binary, not clang. In this case, we need to use
+  // PrependArg which should be clang-*. Checking just CanonicalPrefixes is
+  // safe even in the normal case because PrependArg will be null so
+  // setPrependArg will be a no-op.
+  if (ToolContext.NeedsPrependArg || CanonicalPrefixes)
+    TheDriver.setPrependArg(ToolContext.PrependArg);
 
   insertTargetAndModeArgs(TargetAndMode, Args, SavedStrings);
 
@@ -525,7 +537,9 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &) {
     return 1;
 
   if (!UseNewCC1Process) {
-    TheDriver.CC1Main = &ExecuteCC1Tool;
+    TheDriver.CC1Main = [&ToolContext](SmallVectorImpl<const char *> &ArgV) {
+      return ExecuteCC1Tool(ArgV, ToolContext);
+    };
     // Ensure the CC1Command actually catches cc1 crashes
     llvm::CrashRecoveryContext::Enable();
   }

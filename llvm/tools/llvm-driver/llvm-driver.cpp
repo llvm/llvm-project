@@ -36,7 +36,7 @@ static void printHelpMessage() {
                << "OPTIONS:\n\n  --help - Display this message";
 }
 
-static int findTool(int Argc, char **Argv) {
+static int findTool(int Argc, char **Argv, const char *Argv0) {
   if (!Argc) {
     printHelpMessage();
     return 1;
@@ -62,21 +62,22 @@ static int findTool(int Argc, char **Argv) {
     return false;
   };
 
+  auto MakeDriverArgs = [=]() -> llvm::ToolContext {
+    if (ToolName != Argv0)
+      return {Argv0, ToolName.data(), true};
+    return {Argv0, sys::path::filename(Argv0).data(), false};
+  };
+
 #define LLVM_DRIVER_TOOL(tool, entry)                                          \
   if (Is(tool))                                                                \
-    return entry##_main(Argc, Argv, {});
+    return entry##_main(Argc, Argv, MakeDriverArgs());
 #include "LLVMDriverTools.def"
 
   if (Is("llvm"))
-    return findTool(Argc - 1, Argv + 1);
+    return findTool(Argc - 1, Argv + 1, Argv0);
 
   printHelpMessage();
   return 1;
 }
 
-extern bool IsLLVMDriver;
-
-int main(int Argc, char **Argv) {
-  IsLLVMDriver = true;
-  return findTool(Argc, Argv);
-}
+int main(int Argc, char **Argv) { return findTool(Argc, Argv, Argv[0]); }
