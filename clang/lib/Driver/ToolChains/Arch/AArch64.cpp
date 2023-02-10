@@ -12,8 +12,8 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Support/Host.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/TargetParser.h"
 
 using namespace clang::driver;

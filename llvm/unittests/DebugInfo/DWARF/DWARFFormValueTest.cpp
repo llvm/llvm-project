@@ -12,8 +12,8 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/TargetParser/Host.h"
 #include "gtest/gtest.h"
 #include <climits>
 using namespace llvm;

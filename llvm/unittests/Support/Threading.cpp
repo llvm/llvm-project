@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Threading.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/thread.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 
