@@ -13,6 +13,8 @@ from lldbsuite.test import lldbutil
 
 class ExternalCtorDtorLookupTestCase(TestBase):
 
+    @skipIf(debug_info="dwo")
+    @skipIfWindows
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, 'b\.getWrapper\(\)',
@@ -25,6 +27,6 @@ class ExternalCtorDtorLookupTestCase(TestBase):
 # CHECK:           | `-RecordType {{.*}} 'Foo'
 # CHECK:           |   `-CXXRecord {{.*}} 'Foo'
 # CHECK:           |-CXXConstructorDecl {{.*}} Wrapper 'void ()'
-# CHECK-NEXT:      | `-AsmLabelAttr {{.*}} Implicit "_ZN7WrapperI3FooEC1B4testEv"
+# CHECK-NEXT:      | `-AsmLabelAttr {{.*}} Implicit "_ZN7WrapperI3Foo{{.*}}testEv"
 # CHECK-NEXT:      `-CXXDestructorDecl {{.*}} ~Wrapper 'void ()'
-# CHECK-NEXT:        `-AsmLabelAttr {{.*}} Implicit "_ZN7WrapperI3FooED1B4testEv"
+# CHECK-NEXT:        `-AsmLabelAttr {{.*}} Implicit "_ZN7WrapperI3Foo{{.*}}testEv"
