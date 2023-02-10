@@ -1140,9 +1140,9 @@ bool DWARFExpression::Evaluate(
           uint8_t addr_bytes[8];
           Status error;
 
-          if (exe_ctx->GetTargetRef().ReadMemory(
-                  so_addr, &addr_bytes, size, error,
-                  /*force_live_memory=*/false) == size) {
+          if (target &&
+              target->ReadMemory(so_addr, &addr_bytes, size, error,
+                                 /*force_live_memory=*/false) == size) {
             ObjectFile *objfile = module_sp->GetObjectFile();
 
             stack.back().GetScalar() = DerefSizeExtractDataHelper(
