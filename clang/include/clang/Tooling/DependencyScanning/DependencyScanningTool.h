@@ -106,8 +106,7 @@ public:
   llvm::Expected<P1689Rule>
   getP1689ModuleDependencyFile(
       const clang::tooling::CompileCommand &Command, StringRef CWD,
-      std::string &MakeformatOutput, std::string &MakeformatOutputPath,
-      std::optional<StringRef> ModuleName = std::nullopt);
+      std::string &MakeformatOutput, std::string &MakeformatOutputPath);
 
   /// Given a Clang driver command-line for a translation unit, gather the
   /// modular dependencies and return the information needed for explicit build.
