@@ -3304,11 +3304,6 @@ DWARFASTParserClang::GetClangDeclContextForDIE(const DWARFDIE &die) {
       try_parsing_type = false;
       break;
 
-    case DW_TAG_imported_declaration:
-      decl_ctx = ResolveImportedDeclarationDIE(die);
-      try_parsing_type = false;
-      break;
-
     case DW_TAG_lexical_block:
       decl_ctx = GetDeclContextForBlock(die);
       try_parsing_type = false;
@@ -3468,42 +3463,6 @@ DWARFASTParserClang::ResolveNamespaceDIE(const DWARFDIE &die) {
     }
   }
   return nullptr;
-}
-
-clang::NamespaceDecl *
-DWARFASTParserClang::ResolveImportedDeclarationDIE(const DWARFDIE &die) {
-  assert(die && die.Tag() == DW_TAG_imported_declaration);
-
-  // See if we cached a NamespaceDecl for this imported declaration
-  // already
-  auto it = m_die_to_decl_ctx.find(die.GetDIE());
-  if (it != m_die_to_decl_ctx.end())
-    return static_cast<clang::NamespaceDecl *>(it->getSecond());
-
-  clang::NamespaceDecl *namespace_decl = nullptr;
-
-  const DWARFDIE imported_uid =
-      die.GetAttributeValueAsReferenceDIE(DW_AT_import);
-  if (!imported_uid)
-    return nullptr;
-
-  switch (imported_uid.Tag()) {
-  case DW_TAG_imported_declaration:
-    namespace_decl = ResolveImportedDeclarationDIE(imported_uid);
-    break;
-  case DW_TAG_namespace:
-    namespace_decl = ResolveNamespaceDIE(imported_uid);
-    break;
-  default:
-    return nullptr;
-  }
-
-  if (!namespace_decl)
-    return nullptr;
-
-  LinkDeclContextToDIE(namespace_decl, die);
-
-  return namespace_decl;
 }
 
 clang::DeclContext *DWARFASTParserClang::GetClangDeclContextContainingDIE(
