@@ -18337,10 +18337,38 @@ static SDValue performIntrinsicCombine(SDNode *N,
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_fadd:
     return convertMergedOpToPredOp(N, AArch64ISD::FADD_PRED, DAG);
-  case Intrinsic::aarch64_sve_fsub:
-    return convertMergedOpToPredOp(N, AArch64ISD::FSUB_PRED, DAG);
+  case Intrinsic::aarch64_sve_fadd_u:
+    return DAG.getNode(AArch64ISD::FADD_PRED, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
+  case Intrinsic::aarch64_sve_fdiv_u:
+    return DAG.getNode(AArch64ISD::FDIV_PRED, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
+  case Intrinsic::aarch64_sve_fmax_u:
+    return DAG.getNode(AArch64ISD::FMAX_PRED, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
+  case Intrinsic::aarch64_sve_fmaxnm_u:
+    return DAG.getNode(AArch64ISD::FMAXNM_PRED, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
+  case Intrinsic::aarch64_sve_fmla_u:
+    return DAG.getNode(AArch64ISD::FMA_PRED, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(3), N->getOperand(4),
+                       N->getOperand(2));
+  case Intrinsic::aarch64_sve_fmin_u:
+    return DAG.getNode(AArch64ISD::FMIN_PRED, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
+  case Intrinsic::aarch64_sve_fminnm_u:
+    return DAG.getNode(AArch64ISD::FMINNM_PRED, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_fmul:
     return convertMergedOpToPredOp(N, AArch64ISD::FMUL_PRED, DAG);
+  case Intrinsic::aarch64_sve_fmul_u:
+    return DAG.getNode(AArch64ISD::FMUL_PRED, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
+  case Intrinsic::aarch64_sve_fsub:
+    return convertMergedOpToPredOp(N, AArch64ISD::FSUB_PRED, DAG);
+  case Intrinsic::aarch64_sve_fsub_u:
+    return DAG.getNode(AArch64ISD::FSUB_PRED, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_add:
     return convertMergedOpToPredOp(N, ISD::ADD, DAG, true);
   case Intrinsic::aarch64_sve_add_u:
