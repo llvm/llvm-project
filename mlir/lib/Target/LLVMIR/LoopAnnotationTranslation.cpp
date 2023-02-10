@@ -29,6 +29,7 @@ struct LoopAnnotationConversion {
   /// Conversion functions for different payload attribute kinds.
   void addUnitNode(StringRef name);
   void addUnitNode(StringRef name, BoolAttr attr);
+  void addI32NodeWithVal(StringRef name, uint32_t val);
   void convertBoolNode(StringRef name, BoolAttr attr, bool negated = false);
   void convertI32Node(StringRef name, IntegerAttr attr);
   void convertFollowupNode(StringRef name, LoopAnnotationAttr attr);
@@ -61,6 +62,14 @@ void LoopAnnotationConversion::addUnitNode(StringRef name, BoolAttr attr) {
     addUnitNode(name);
 }
 
+void LoopAnnotationConversion::addI32NodeWithVal(StringRef name, uint32_t val) {
+  llvm::Constant *cstValue = llvm::ConstantInt::get(
+      llvm::IntegerType::get(ctx, /*NumBits=*/32), val, /*isSigned=*/false);
+  metadataNodes.push_back(
+      llvm::MDNode::get(ctx, {llvm::MDString::get(ctx, name),
+                              llvm::ConstantAsMetadata::get(cstValue)}));
+}
+
 void LoopAnnotationConversion::convertBoolNode(StringRef name, BoolAttr attr,
                                                bool negated) {
   if (!attr)
@@ -76,12 +85,7 @@ void LoopAnnotationConversion::convertI32Node(StringRef name,
                                               IntegerAttr attr) {
   if (!attr)
     return;
-  uint32_t val = attr.getInt();
-  llvm::Constant *cstValue = llvm::ConstantInt::get(
-      llvm::IntegerType::get(ctx, /*NumBits=*/32), val, /*isSigned=*/false);
-  metadataNodes.push_back(
-      llvm::MDNode::get(ctx, {llvm::MDString::get(ctx, name),
-                              llvm::ConstantAsMetadata::get(cstValue)}));
+  addI32NodeWithVal(name, attr.getInt());
 }
 
 void LoopAnnotationConversion::convertFollowupNode(StringRef name,
@@ -122,9 +126,12 @@ void LoopAnnotationConversion::convertLoopOptions(LoopUnrollAttr options) {
   convertBoolNode("llvm.loop.unroll.runtime.disable",
                   options.getRuntimeDisable());
   addUnitNode("llvm.loop.unroll.full", options.getFull());
-  convertFollowupNode("llvm.loop.unroll.followup", options.getFollowup());
+  convertFollowupNode("llvm.loop.unroll.followup_unrolled",
+                      options.getFollowupUnrolled());
   convertFollowupNode("llvm.loop.unroll.followup_remainder",
                       options.getFollowupRemainder());
+  convertFollowupNode("llvm.loop.unroll.followup_all",
+                      options.getFollowupAll());
 }
 
 void LoopAnnotationConversion::convertLoopOptions(
@@ -177,6 +184,9 @@ llvm::MDNode *LoopAnnotationConversion::convert() {
 
   addUnitNode("llvm.loop.disable_nonforced", attr.getDisableNonforced());
   addUnitNode("llvm.loop.mustprogress", attr.getMustProgress());
+  // "isvectorized" is encoded as an i32 value.
+  if (BoolAttr isVectorized = attr.getIsVectorized())
+    addI32NodeWithVal("llvm.loop.isvectorized", isVectorized.getValue());
 
   if (auto options = attr.getVectorize())
     convertLoopOptions(options);
