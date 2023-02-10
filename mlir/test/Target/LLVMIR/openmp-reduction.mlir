@@ -15,21 +15,21 @@ combiner {
   omp.yield (%1 : f32)
 }
 atomic {
-^bb2(%arg2: !llvm.ptr<f32>, %arg3: !llvm.ptr<f32>):
-  %2 = llvm.load %arg3 : !llvm.ptr<f32>
-  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr<f32>, f32
+^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
+  %2 = llvm.load %arg3 : !llvm.ptr -> f32
+  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
   omp.yield
 }
 
 // CHECK-LABEL: @simple_reduction
 llvm.func @simple_reduction(%lb : i64, %ub : i64, %step : i64) {
   %c1 = llvm.mlir.constant(1 : i32) : i32
-  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
   omp.parallel {
-    omp.wsloop reduction(@add_f32 -> %0 : !llvm.ptr<f32>)
+    omp.wsloop reduction(@add_f32 -> %0 : !llvm.ptr)
     for (%iv) : i64 = (%lb) to (%ub) step (%step) {
       %1 = llvm.mlir.constant(2.0 : f32) : f32
-      omp.reduction %1, %0 : !llvm.ptr<f32>
+      omp.reduction %1, %0 : f32, !llvm.ptr
       omp.yield
     }
     omp.terminator
@@ -88,9 +88,9 @@ combiner {
   omp.yield (%1 : f32)
 }
 atomic {
-^bb2(%arg2: !llvm.ptr<f32>, %arg3: !llvm.ptr<f32>):
-  %2 = llvm.load %arg3 : !llvm.ptr<f32>
-  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr<f32>, f32
+^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
+  %2 = llvm.load %arg3 : !llvm.ptr -> f32
+  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
   omp.yield
 }
 
@@ -100,14 +100,14 @@ atomic {
 // CHECK-LABEL: @reuse_declaration
 llvm.func @reuse_declaration(%lb : i64, %ub : i64, %step : i64) {
   %c1 = llvm.mlir.constant(1 : i32) : i32
-  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
-  %2 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  %2 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
   omp.parallel {
-    omp.wsloop reduction(@add_f32 -> %0 : !llvm.ptr<f32>, @add_f32 -> %2 : !llvm.ptr<f32>)
+    omp.wsloop reduction(@add_f32 -> %0 : !llvm.ptr, @add_f32 -> %2 : !llvm.ptr)
     for (%iv) : i64 = (%lb) to (%ub) step (%step) {
       %1 = llvm.mlir.constant(2.0 : f32) : f32
-      omp.reduction %1, %0 : !llvm.ptr<f32>
-      omp.reduction %1, %2 : !llvm.ptr<f32>
+      omp.reduction %1, %0 : f32, !llvm.ptr
+      omp.reduction %1, %2 : f32, !llvm.ptr
       omp.yield
     }
     omp.terminator
@@ -176,9 +176,9 @@ combiner {
   omp.yield (%1 : f32)
 }
 atomic {
-^bb2(%arg2: !llvm.ptr<f32>, %arg3: !llvm.ptr<f32>):
-  %2 = llvm.load %arg3 : !llvm.ptr<f32>
-  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr<f32>, f32
+^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
+  %2 = llvm.load %arg3 : !llvm.ptr -> f32
+  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
   omp.yield
 }
 
@@ -186,13 +186,13 @@ atomic {
 // CHECK-LABEL: @missing_omp_reduction
 llvm.func @missing_omp_reduction(%lb : i64, %ub : i64, %step : i64) {
   %c1 = llvm.mlir.constant(1 : i32) : i32
-  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
-  %2 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  %2 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
   omp.parallel {
-    omp.wsloop reduction(@add_f32 -> %0 : !llvm.ptr<f32>, @add_f32 -> %2 : !llvm.ptr<f32>)
+    omp.wsloop reduction(@add_f32 -> %0 : !llvm.ptr, @add_f32 -> %2 : !llvm.ptr)
     for (%iv) : i64 = (%lb) to (%ub) step (%step) {
       %1 = llvm.mlir.constant(2.0 : f32) : f32
-      omp.reduction %1, %0 : !llvm.ptr<f32>
+      omp.reduction %1, %0 : f32, !llvm.ptr
       omp.yield
     }
     omp.terminator
@@ -259,9 +259,9 @@ combiner {
   omp.yield (%1 : f32)
 }
 atomic {
-^bb2(%arg2: !llvm.ptr<f32>, %arg3: !llvm.ptr<f32>):
-  %2 = llvm.load %arg3 : !llvm.ptr<f32>
-  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr<f32>, f32
+^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
+  %2 = llvm.load %arg3 : !llvm.ptr -> f32
+  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
   omp.yield
 }
 
@@ -270,13 +270,13 @@ atomic {
 // CHECK-LABEL: @double_reference
 llvm.func @double_reference(%lb : i64, %ub : i64, %step : i64) {
   %c1 = llvm.mlir.constant(1 : i32) : i32
-  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
   omp.parallel {
-    omp.wsloop reduction(@add_f32 -> %0 : !llvm.ptr<f32>)
+    omp.wsloop reduction(@add_f32 -> %0 : !llvm.ptr)
     for (%iv) : i64 = (%lb) to (%ub) step (%step) {
       %1 = llvm.mlir.constant(2.0 : f32) : f32
-      omp.reduction %1, %0 : !llvm.ptr<f32>
-      omp.reduction %1, %0 : !llvm.ptr<f32>
+      omp.reduction %1, %0 : f32, !llvm.ptr
+      omp.reduction %1, %0 : f32, !llvm.ptr
       omp.yield
     }
     omp.terminator
@@ -338,9 +338,9 @@ combiner {
   omp.yield (%1 : f32)
 }
 atomic {
-^bb2(%arg2: !llvm.ptr<f32>, %arg3: !llvm.ptr<f32>):
-  %2 = llvm.load %arg3 : !llvm.ptr<f32>
-  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr<f32>, f32
+^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
+  %2 = llvm.load %arg3 : !llvm.ptr -> f32
+  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
   omp.yield
 }
 
@@ -359,14 +359,14 @@ combiner {
 // CHECK-LABEL: @no_atomic
 llvm.func @no_atomic(%lb : i64, %ub : i64, %step : i64) {
   %c1 = llvm.mlir.constant(1 : i32) : i32
-  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
-  %2 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  %2 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
   omp.parallel {
-    omp.wsloop reduction(@add_f32 -> %0 : !llvm.ptr<f32>, @mul_f32 -> %2 : !llvm.ptr<f32>)
+    omp.wsloop reduction(@add_f32 -> %0 : !llvm.ptr, @mul_f32 -> %2 : !llvm.ptr)
     for (%iv) : i64 = (%lb) to (%ub) step (%step) {
       %1 = llvm.mlir.constant(2.0 : f32) : f32
-      omp.reduction %1, %0 : !llvm.ptr<f32>
-      omp.reduction %1, %2 : !llvm.ptr<f32>
+      omp.reduction %1, %0 : f32, !llvm.ptr
+      omp.reduction %1, %2 : f32, !llvm.ptr
       omp.yield
     }
     omp.terminator

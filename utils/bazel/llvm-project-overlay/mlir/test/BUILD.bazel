@@ -382,6 +382,18 @@ cc_library(
 )
 
 cc_library(
+    name = "TestLoopLikeInterface",
+    srcs = glob(["lib/Interfaces/LoopLikeInterface/*.cpp"]),
+    deps = [
+        "//llvm:Support",
+        "//mlir:FuncDialect",
+        "//mlir:IR",
+        "//mlir:LoopLikeInterface",
+        "//mlir:Pass",
+    ],
+)
+
+cc_library(
     name = "TestTilingInterface",
     srcs = glob(["lib/Interfaces/TilingInterface/*.cpp"]),
     includes = ["lib/Dialect/Test"],

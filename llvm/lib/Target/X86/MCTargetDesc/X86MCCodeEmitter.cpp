@@ -219,7 +219,7 @@ public:
       return;
     case VEX2:
       emitByte(0xC5, OS);
-      emitByte(~R << 7 | LastPayload, OS);
+      emitByte(((~R) & 1) << 7 | LastPayload, OS);
       return;
     case VEX3:
     case XOP:
