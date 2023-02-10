@@ -14,6 +14,7 @@
 #include "multiply_add.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/UInt.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include <stddef.h>
 

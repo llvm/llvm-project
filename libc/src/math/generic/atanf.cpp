@@ -9,6 +9,7 @@
 #include "src/math/atanf.h"
 #include "math_utils.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/math/generic/inv_trigf_utils.h"
 
 namespace __llvm_libc {
