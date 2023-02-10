@@ -170,7 +170,7 @@ static AffineMap getRegisterIndexToTileOffsetMap(int64_t lineSize,
 }
 
 FailureOr<AffineMap>
-nvgpu::getLaneIdAndValueIdToOperandCoord(Location loc, OpBuilder &builder,
+nvgpu::getLaneIdAndValueIdToOperandCoord(OpBuilder &builder, Location loc,
                                          const WarpMatrixInfo &fragmentType) {
   Type elementType = fragmentType.vectorType.getElementType();
   ArrayRef<int64_t> operandShape = fragmentType.vectorType.getShape();
@@ -235,7 +235,7 @@ nvgpu::getLdMatrixParams(const WarpMatrixInfo &type, bool transpose) {
 }
 
 FailureOr<AffineMap>
-nvgpu::getLaneIdToLdMatrixMatrixCoord(Location loc, OpBuilder &builder,
+nvgpu::getLaneIdToLdMatrixMatrixCoord(OpBuilder &builder, Location loc,
                                       const LdMatrixParams &params) {
   // One thread per 128b row.
   const int bitsPerElement = static_cast<int>(
