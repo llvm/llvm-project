@@ -121,7 +121,7 @@ export module foo;
 
   auto *Callback =
       static_cast<CheckNamedModuleImportingCB *>(PP->getPPCallbacks());
-  EXPECT_EQ(Callback->importNamedModuleNum(), 0);
+  EXPECT_EQ(Callback->importNamedModuleNum(), (size_t)0);
   EXPECT_TRUE(PP->isInNamedModule());
   EXPECT_TRUE(PP->isInNamedInterfaceUnit());
   EXPECT_FALSE(PP->isInImplementationUnit());
@@ -140,7 +140,7 @@ module foo;
 
   auto *Callback =
       static_cast<CheckNamedModuleImportingCB *>(PP->getPPCallbacks());
-  EXPECT_EQ(Callback->importNamedModuleNum(), 0);
+  EXPECT_EQ(Callback->importNamedModuleNum(), (size_t)0);
   EXPECT_TRUE(PP->isInNamedModule());
   EXPECT_FALSE(PP->isInNamedInterfaceUnit());
   EXPECT_TRUE(PP->isInImplementationUnit());
@@ -159,7 +159,7 @@ module foo:part;
 
   auto *Callback =
       static_cast<CheckNamedModuleImportingCB *>(PP->getPPCallbacks());
-  EXPECT_EQ(Callback->importNamedModuleNum(), 0);
+  EXPECT_EQ(Callback->importNamedModuleNum(), (size_t)0);
   EXPECT_TRUE(PP->isInNamedModule());
   EXPECT_FALSE(PP->isInNamedInterfaceUnit());
   EXPECT_FALSE(PP->isInImplementationUnit());
@@ -178,7 +178,7 @@ export module foo:part;
 
   auto *Callback =
       static_cast<CheckNamedModuleImportingCB *>(PP->getPPCallbacks());
-  EXPECT_EQ(Callback->importNamedModuleNum(), 0);
+  EXPECT_EQ(Callback->importNamedModuleNum(), (size_t)0);
   EXPECT_TRUE(PP->isInNamedModule());
   EXPECT_TRUE(PP->isInNamedInterfaceUnit());
   EXPECT_FALSE(PP->isInImplementationUnit());
@@ -197,7 +197,7 @@ export module foo.dot:part.dot;
 
   auto *Callback =
       static_cast<CheckNamedModuleImportingCB *>(PP->getPPCallbacks());
-  EXPECT_EQ(Callback->importNamedModuleNum(), 0);
+  EXPECT_EQ(Callback->importNamedModuleNum(), (size_t)0);
   EXPECT_TRUE(PP->isInNamedModule());
   EXPECT_TRUE(PP->isInNamedInterfaceUnit());
   EXPECT_FALSE(PP->isInImplementationUnit());
@@ -216,7 +216,7 @@ TEST_F(ModuleDeclStateTest, NotModule) {
 
   auto *Callback =
       static_cast<CheckNamedModuleImportingCB *>(PP->getPPCallbacks());
-  EXPECT_EQ(Callback->importNamedModuleNum(), 0);
+  EXPECT_EQ(Callback->importNamedModuleNum(), (size_t)0);
   EXPECT_FALSE(PP->isInNamedModule());
   EXPECT_FALSE(PP->isInNamedInterfaceUnit());
   EXPECT_FALSE(PP->isInImplementationUnit());
@@ -242,7 +242,7 @@ import :another;
 
   auto *Callback =
       static_cast<CheckNamedModuleImportingCB *>(PP->getPPCallbacks());
-  EXPECT_EQ(Callback->importNamedModuleNum(), 2);
+  EXPECT_EQ(Callback->importNamedModuleNum(), (size_t)2);
   EXPECT_TRUE(PP->isInNamedModule());
   EXPECT_TRUE(PP->isInNamedInterfaceUnit());
   EXPECT_FALSE(PP->isInImplementationUnit());
@@ -269,7 +269,7 @@ import :another;
 
   auto *Callback =
       static_cast<CheckNamedModuleImportingCB *>(PP->getPPCallbacks());
-  EXPECT_EQ(Callback->importNamedModuleNum(), 2);
+  EXPECT_EQ(Callback->importNamedModuleNum(), (size_t)2);
   EXPECT_TRUE(PP->isInNamedModule());
   EXPECT_TRUE(PP->isInNamedInterfaceUnit());
   EXPECT_FALSE(PP->isInImplementationUnit());
@@ -295,7 +295,7 @@ import :another;
 
   auto *Callback =
       static_cast<CheckNamedModuleImportingCB *>(PP->getPPCallbacks());
-  EXPECT_EQ(Callback->importNamedModuleNum(), 1);
+  EXPECT_EQ(Callback->importNamedModuleNum(), (size_t)1);
   EXPECT_FALSE(PP->isInNamedModule());
   EXPECT_FALSE(PP->isInNamedInterfaceUnit());
   EXPECT_FALSE(PP->isInImplementationUnit());
@@ -315,7 +315,7 @@ TEST_F(ModuleDeclStateTest, ImportAClangNamedModule) {
 
   auto *Callback =
       static_cast<CheckNamedModuleImportingCB *>(PP->getPPCallbacks());
-  EXPECT_EQ(Callback->importNamedModuleNum(), 1);
+  EXPECT_EQ(Callback->importNamedModuleNum(), (size_t)1);
   EXPECT_FALSE(PP->isInNamedModule());
   EXPECT_FALSE(PP->isInNamedInterfaceUnit());
   EXPECT_FALSE(PP->isInImplementationUnit());
@@ -339,7 +339,7 @@ import M2;
 
   auto *Callback =
       static_cast<CheckNamedModuleImportingCB *>(PP->getPPCallbacks());
-  EXPECT_EQ(Callback->importNamedModuleNum(), 4);
+  EXPECT_EQ(Callback->importNamedModuleNum(), (size_t)4);
   EXPECT_FALSE(PP->isInNamedModule());
   EXPECT_FALSE(PP->isInNamedInterfaceUnit());
   EXPECT_FALSE(PP->isInImplementationUnit());
