@@ -13,12 +13,10 @@
 
 namespace mlir {
 class LLVMTypeConverter;
-class ModuleOp;
-template <typename T>
-class OperationPass;
+class Pass;
 class RewritePatternSet;
 
-#define GEN_PASS_DECL_CONVERTOPENACCTOLLVM
+#define GEN_PASS_DECL_CONVERTOPENACCTOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
 
 static constexpr unsigned kPtrBasePosInDataDescriptor = 0;
@@ -69,10 +67,6 @@ public:
 /// Collect the patterns to convert from the OpenACC dialect LLVMIR dialect.
 void populateOpenACCToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                              RewritePatternSet &patterns);
-
-/// Create a pass to convert the OpenACC dialect into the LLVMIR dialect.
-std::unique_ptr<OperationPass<ModuleOp>> createConvertOpenACCToLLVMPass();
-
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_OPENACCTOLLVM_CONVERTOPENACCTOLLVM_H
