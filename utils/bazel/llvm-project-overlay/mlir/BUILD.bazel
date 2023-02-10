@@ -7033,6 +7033,7 @@ cc_binary(
         "//mlir/test:TestIR",
         "//mlir/test:TestLLVM",
         "//mlir/test:TestLinalg",
+        "//mlir/test:TestLoopLikeInterface",
         "//mlir/test:TestMath",
         "//mlir/test:TestMemRef",
         "//mlir/test:TestNVGPU",
