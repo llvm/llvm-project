@@ -4131,9 +4131,9 @@ basic_regex<_CharT, _Traits>::__parse_equivalence_class(_ForwardIterator __first
 {
     // Found [=
     //   This means =] must exist
-    value_type _Equal_close[2] = {'=', ']'};
-    _ForwardIterator __temp = _VSTD::search(__first, __last, _Equal_close,
-                                                            _Equal_close+2);
+    value_type __equal_close[2] = {'=', ']'};
+    _ForwardIterator __temp = _VSTD::search(__first, __last, __equal_close,
+                                                            __equal_close+2);
     if (__temp == __last)
         __throw_regex_error<regex_constants::error_brack>();
     // [__first, __temp) contains all text in [= ... =]
@@ -4173,9 +4173,9 @@ basic_regex<_CharT, _Traits>::__parse_character_class(_ForwardIterator __first,
 {
     // Found [:
     //   This means :] must exist
-    value_type _Colon_close[2] = {':', ']'};
-    _ForwardIterator __temp = _VSTD::search(__first, __last, _Colon_close,
-                                                            _Colon_close+2);
+    value_type __colon_close[2] = {':', ']'};
+    _ForwardIterator __temp = _VSTD::search(__first, __last, __colon_close,
+                                                            __colon_close+2);
     if (__temp == __last)
         __throw_regex_error<regex_constants::error_brack>();
     // [__first, __temp) contains all text in [: ... :]
@@ -4198,9 +4198,9 @@ basic_regex<_CharT, _Traits>::__parse_collating_symbol(_ForwardIterator __first,
 {
     // Found [.
     //   This means .] must exist
-    value_type _Dot_close[2] = {'.', ']'};
-    _ForwardIterator __temp = _VSTD::search(__first, __last, _Dot_close,
-                                                            _Dot_close+2);
+    value_type __dot_close[2] = {'.', ']'};
+    _ForwardIterator __temp = _VSTD::search(__first, __last, __dot_close,
+                                                            __dot_close+2);
     if (__temp == __last)
         __throw_regex_error<regex_constants::error_brack>();
     // [__first, __temp) contains all text in [. ... .]
@@ -5861,7 +5861,7 @@ basic_regex<_CharT, _Traits>::__match_at_start_posix_nosubs(
 {
     deque<__state> __states;
     ptrdiff_t __highest_j = 0;
-    ptrdiff_t _Np = _VSTD::distance(__first, __last);
+    ptrdiff_t __np = _VSTD::distance(__first, __last);
     __node* __st = __start_.get();
     if (__st)
     {
@@ -5904,7 +5904,7 @@ basic_regex<_CharT, _Traits>::__match_at_start_posix_nosubs(
                 if (!__matched || __highest_j < __s.__current_ - __s.__first_)
                     __highest_j = __s.__current_ - __s.__first_;
                 __matched = true;
-                if (__highest_j == _Np)
+                if (__highest_j == __np)
                     __states.clear();
                 else
                     __states.pop_back();
@@ -5956,7 +5956,7 @@ basic_regex<_CharT, _Traits>::__match_at_start_posix_subs(
     vector<__state> __states;
     __state __best_state;
     ptrdiff_t __highest_j = 0;
-    ptrdiff_t _Np = _VSTD::distance(__first, __last);
+    ptrdiff_t __np = _VSTD::distance(__first, __last);
     __node* __st = __start_.get();
     if (__st)
     {
@@ -6008,7 +6008,7 @@ basic_regex<_CharT, _Traits>::__match_at_start_posix_subs(
                     __best_state = __s;
                 }
                 __matched = true;
-                if (__highest_j == _Np)
+                if (__highest_j == __np)
                     __states.clear();
                 else
                     __states.pop_back();
