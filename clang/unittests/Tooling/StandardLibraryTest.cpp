@@ -62,6 +62,16 @@ TEST(StdlibTest, All) {
               ElementsAre(stdlib::Header::named("<istream>"),
                           stdlib::Header::named("<iostream>"),
                           stdlib::Header::named("<iosfwd>")));
+  EXPECT_THAT(stdlib::Symbol::named("std::", "size_t")->headers(),
+              ElementsAre(stdlib::Header::named("<cstddef>"),
+                          stdlib::Header::named("<cstdlib>"),
+                          stdlib::Header::named("<cstring>"),
+                          stdlib::Header::named("<cwchar>"),
+                          stdlib::Header::named("<cuchar>"),
+                          stdlib::Header::named("<ctime>"),
+                          stdlib::Header::named("<cstdio>")));
+  EXPECT_EQ(stdlib::Symbol::named("std::", "size_t")->header(),
+            stdlib::Header::named("<cstddef>"));
 
   EXPECT_THAT(stdlib::Header::all(), Contains(*VectorH));
   EXPECT_THAT(stdlib::Symbol::all(), Contains(*Vector));

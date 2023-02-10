@@ -716,8 +716,6 @@ llvm::StringRef CanonicalIncludes::mapSymbol(llvm::StringRef Scope,
   // There are two std::move()s, this is by far the most common.
   if (Scope == "std::" && Name == "move")
     return "<utility>";
-  if (Scope == "std::" && Name == "size_t")
-    return "<cstddef>";
   if (auto StdSym = tooling::stdlib::Symbol::named(Scope, Name, Lang))
     return StdSym->header().name();
   return "";

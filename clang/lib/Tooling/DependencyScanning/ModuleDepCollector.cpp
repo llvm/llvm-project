@@ -301,11 +301,12 @@ void ModuleDepCollector::associateWithContextHash(const CompilerInvocation &CI,
   assert(Inserted && "duplicate module mapping");
 }
 
-void ModuleDepCollectorPP::FileChanged(SourceLocation Loc,
-                                       FileChangeReason Reason,
-                                       SrcMgr::CharacteristicKind FileType,
-                                       FileID PrevFID) {
-  if (Reason != PPCallbacks::EnterFile)
+void ModuleDepCollectorPP::LexedFileChanged(FileID FID,
+                                            LexedFileChangeReason Reason,
+                                            SrcMgr::CharacteristicKind FileType,
+                                            FileID PrevFID,
+                                            SourceLocation Loc) {
+  if (Reason != LexedFileChangeReason::EnterFile)
     return;
 
   // This has to be delayed as the context hash can change at the start of
@@ -320,8 +321,7 @@ void ModuleDepCollectorPP::FileChanged(SourceLocation Loc,
   // Dependency generation really does want to go all the way to the
   // file entry for a source location to find out what is depended on.
   // We do not want #line markers to affect dependency generation!
-  if (std::optional<StringRef> Filename =
-          SM.getNonBuiltinFilenameForID(SM.getFileID(SM.getExpansionLoc(Loc))))
+  if (std::optional<StringRef> Filename = SM.getNonBuiltinFilenameForID(FID))
     MDC.addFileDep(llvm::sys::path::remove_leading_dotslash(*Filename));
 }
 

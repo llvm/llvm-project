@@ -1,0 +1,5 @@
+# RUN: %lldb -o 'log enable --log-handler os --file /tmp/foo  gdb-remote packets' 2>&1 | FileCheck %s  --check-prefix UNSUPPORTED-FILE
+# RUN: %lldb -o 'log enable --log-handler os --buffer 10  gdb-remote packets' 2>&1 | FileCheck %s  --check-prefix UNSUPPORTED-BUFFER
+
+# UNSUPPORTED-FILE: a file name can only be specified for the stream handler
+# UNSUPPORTED-BUFFER:  a buffer size can only be specified for the circular and stream buffer handler

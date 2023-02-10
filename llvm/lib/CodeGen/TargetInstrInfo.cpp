@@ -1555,6 +1555,72 @@ void TargetInstrInfo::mergeOutliningCandidateAttributes(
     F.addFnAttr(Attribute::NoUnwind);
 }
 
+outliner::InstrType TargetInstrInfo::getOutliningType(
+    MachineBasicBlock::iterator &MIT, unsigned Flags) const {
+  MachineInstr &MI = *MIT;
+
+  // NOTE: MI.isMetaInstruction() will match CFI_INSTRUCTION, but some targets
+  // have support for outlining those. Special-case that here.
+  if (MI.isCFIInstruction())
+    // Just go right to the target implementation.
+    return getOutliningTypeImpl(MIT, Flags);
+
+  // Don't allow instructions that don't materialize to impact analysis.
+  if (MI.isMetaInstruction())
+    return outliner::InstrType::Invisible;
+
+  // Be conservative about inline assembly.
+  if (MI.isInlineAsm())
+    return outliner::InstrType::Illegal;
+
+  // Labels generally can't safely be outlined.
+  if (MI.isLabel())
+    return outliner::InstrType::Illegal;
+
+  // Is this a terminator for a basic block?
+  if (MI.isTerminator()) {
+    // If this is a branch to another block, we can't outline it.
+    if (!MI.getParent()->succ_empty())
+      return outliner::InstrType::Illegal;
+
+    // Don't outline if the branch is not unconditional.
+    if (isPredicated(MI))
+      return outliner::InstrType::Illegal;
+  }
+
+  // Make sure none of the operands of this instruction do anything that
+  // might break if they're moved outside their current function.
+  // This includes MachineBasicBlock references, BlockAddressses,
+  // Constant pool indices and jump table indices.
+  //
+  // A quick note on MO_TargetIndex:
+  // This doesn't seem to be used in any of the architectures that the
+  // MachineOutliner supports, but it was still filtered out in all of them.
+  // There was one exception (RISC-V), but MO_TargetIndex also isn't used there.
+  // As such, this check is removed both here and in the target-specific
+  // implementations. Instead, we assert to make sure this doesn't
+  // catch anyone off-guard somewhere down the line.
+  for (const MachineOperand &MOP : MI.operands()) {
+    // If you hit this assertion, please remove it and adjust
+    // `getOutliningTypeImpl` for your target appropriately if necessary.
+    // Adding the assertion back to other supported architectures
+    // would be nice too :)
+    assert(!MOP.isTargetIndex() && "This isn't used quite yet!");
+
+    // CFI instructions should already have been filtered out at this point.
+    assert(!MOP.isCFIIndex() && "CFI instructions handled elsewhere!");
+
+    // PrologEpilogInserter should've already run at this point.
+    assert(!MOP.isFI() && "FrameIndex instructions should be gone by now!");
+
+    if (MOP.isMBB() || MOP.isBlockAddress() || MOP.isCPI() || MOP.isJTI())
+      return outliner::InstrType::Illegal;
+  }
+
+  // If we don't know, delegate to the target-specific hook.
+  return getOutliningTypeImpl(MIT, Flags);
+}
+
 bool TargetInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
                                              unsigned &Flags) const {
   // Some instrumentations create special TargetOpcode at the start which

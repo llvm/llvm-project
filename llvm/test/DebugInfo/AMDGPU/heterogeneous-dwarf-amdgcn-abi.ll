@@ -42,7 +42,7 @@ declare void @llvm.dbg.def(metadata, metadata) #1
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_StructEmpty")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
+; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z21Test_Kern_StructEmpty11StructEmpty(ptr addrspace(4) byref(%struct.StructEmpty) align 1 %0) #2 !dbg !33 {
@@ -76,7 +76,7 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_StructSingleElement")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
+; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z29Test_Kern_StructSingleElement19StructSingleElement(i8 %.coerce) #2 !dbg !50 {
@@ -109,7 +109,7 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_StructSingleElementRecursive")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
+; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z38Test_Kern_StructSingleElementRecursive28StructSingleElementRecursive(i8 %.coerce) #2 !dbg !67 {
@@ -142,7 +142,7 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_StructTrivialCopyTrivialMove")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
+; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z38Test_Kern_StructTrivialCopyTrivialMove28StructTrivialCopyTrivialMove(i8 %.coerce) #2 !dbg !94 {
@@ -174,7 +174,7 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_StructNoCopyTrivialMove")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
+; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z33Test_Kern_StructNoCopyTrivialMove23StructNoCopyTrivialMove(i8 %.coerce) #2 !dbg !121 {
@@ -206,7 +206,7 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_StructTrivialCopyNoMove")
 ; CHECK: DW_TAG_formal_parameter
-; DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
+; DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z33Test_Kern_StructTrivialCopyNoMove23StructTrivialCopyNoMove(i8 %.coerce) #2 !dbg !148 {
@@ -236,7 +236,7 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_StructNoCopyNoMove")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
+; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z28Test_Kern_StructNoCopyNoMove18StructNoCopyNoMove(i8 %.coerce) #2 !dbg !175 {
@@ -267,7 +267,7 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_Struct2Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
+; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct2Bytes12StructNBytesILj2EE(ptr addrspace(4) byref(%struct.StructNBytes) align 1 %0) #2 !dbg !198 {
@@ -303,7 +303,7 @@ declare void @llvm.memcpy.p0.p0.i64(i8* noalias nocapture writeonly, i8* noalias
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_Struct3Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
+; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct3Bytes12StructNBytesILj3EE(ptr addrspace(4) byref(%struct.StructNBytes.0) align 1 %0) #2 !dbg !221 {
@@ -333,7 +333,7 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_Struct4Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
+; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct4Bytes12StructNBytesILj4EE(ptr addrspace(4) byref(%struct.StructNBytes.1) align 1 %0) #2 !dbg !244 {
@@ -366,7 +366,7 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_Struct5Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
+; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct5Bytes12StructNBytesILj5EE(ptr addrspace(4) byref(%struct.StructNBytes.2) align 1 %0) #2 !dbg !267 {
@@ -399,7 +399,7 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_Struct6Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
+; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct6Bytes12StructNBytesILj6EE(ptr addrspace(4) byref(%struct.StructNBytes.3) align 1 %0) #2 !dbg !290 {
@@ -432,7 +432,7 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_Struct7Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
+; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct7Bytes12StructNBytesILj7EE(ptr addrspace(4) byref(%struct.StructNBytes.4) align 1 %0) #2 !dbg !313 {
@@ -462,7 +462,7 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_Struct8Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
+; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct8Bytes12StructNBytesILj8EE(ptr addrspace(4) byref(%struct.StructNBytes.5) align 1 %0) #2 !dbg !336 {
@@ -495,7 +495,7 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_Struct9Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
+; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct9Bytes12StructNBytesILj9EE(ptr addrspace(4) byref(%struct.StructNBytes.6) align 1 %0) #2 !dbg !359 {
@@ -524,7 +524,7 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_Struct64Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
+; CHECK: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z23Test_Kern_Struct64Bytes12StructNBytesILj64EE(ptr addrspace(4) byref(%struct.StructNBytes.7) align 1 %0) #2 !dbg !382 {

@@ -419,6 +419,7 @@ LLVM_16 {
 };
 
 LLVM_17 {
+  global:
     clang_CXXMethod_isExplicit;
 };
 

@@ -1462,7 +1462,7 @@ define zeroext i1 @_Z30atomic_cmp_swap_relaxed_stk_i1Rbb(ptr nocapture nonnull a
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = alloca %"struct.std::__1::atomic", align 1
+  %i = alloca %"struct.std::__1::atomic", align 8
   call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %i)
   %i3 = zext i1 %arg1 to i8
   %i4 = load i8, ptr %arg, align 1
@@ -1525,7 +1525,7 @@ define signext i8 @_Z30atomic_cmp_swap_relaxed_stk_i8Rcc(ptr nocapture nonnull a
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = alloca %"struct.std::__1::atomic.0", align 1
+  %i = alloca %"struct.std::__1::atomic.0", align 8
   call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %i)
   %i3 = load i8, ptr %arg, align 1
   %i4 = cmpxchg weak volatile ptr %i, i8 %i3, i8 %arg1 monotonic monotonic, align 1
@@ -1581,7 +1581,7 @@ define zeroext i8 @_Z30atomic_cmp_swap_relaxed_stk_u8Rhh(ptr nocapture nonnull a
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = alloca %"struct.std::__1::atomic.5", align 1
+  %i = alloca %"struct.std::__1::atomic.5", align 8
   call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %i)
   %i3 = load i8, ptr %arg, align 1
   %i4 = cmpxchg weak volatile ptr %i, i8 %i3, i8 %arg1 monotonic monotonic, align 1
@@ -1638,7 +1638,7 @@ define signext i16 @_Z31atomic_cmp_swap_relaxed_stk_i16Rss(ptr nocapture nonnull
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = alloca %"struct.std::__1::atomic.10", align 2
+  %i = alloca %"struct.std::__1::atomic.10", align 8
   call void @llvm.lifetime.start.p0(i64 2, ptr nonnull %i)
   %i4 = load i16, ptr %arg, align 2
   %i5 = cmpxchg weak volatile ptr %i, i16 %i4, i16 %arg1 monotonic monotonic, align 2
@@ -1694,7 +1694,7 @@ define zeroext i16 @_Z31atomic_cmp_swap_relaxed_stk_u16Rtt(ptr nocapture nonnull
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = alloca %"struct.std::__1::atomic.15", align 2
+  %i = alloca %"struct.std::__1::atomic.15", align 8
   call void @llvm.lifetime.start.p0(i64 2, ptr nonnull %i)
   %i4 = load i16, ptr %arg, align 2
   %i5 = cmpxchg weak volatile ptr %i, i16 %i4, i16 %arg1 monotonic monotonic, align 2
@@ -1741,7 +1741,7 @@ define signext i32 @_Z31atomic_cmp_swap_relaxed_stk_i32Rii(ptr nocapture nonnull
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = alloca %"struct.std::__1::atomic.20", align 4
+  %i = alloca %"struct.std::__1::atomic.20", align 8
   call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %i)
   %i4 = load i32, ptr %arg, align 4
   %i5 = cmpxchg weak volatile ptr %i, i32 %i4, i32 %arg1 monotonic monotonic, align 4
@@ -1788,7 +1788,7 @@ define zeroext i32 @_Z31atomic_cmp_swap_relaxed_stk_u32Rjj(ptr nocapture nonnull
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = alloca %"struct.std::__1::atomic.25", align 4
+  %i = alloca %"struct.std::__1::atomic.25", align 8
   call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %i)
   %i4 = load i32, ptr %arg, align 4
   %i5 = cmpxchg weak volatile ptr %i, i32 %i4, i32 %arg1 monotonic monotonic, align 4

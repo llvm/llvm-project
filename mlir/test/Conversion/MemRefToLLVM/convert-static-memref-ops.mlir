@@ -411,3 +411,27 @@ func.func @realloc_static_alignment(%in: memref<2xf32>) -> memref<4xf32>{
   %out = memref.realloc %in {alignment = 8} : memref<2xf32> to memref<4xf32>
   return %out : memref<4xf32>
 }
+
+// -----
+
+// CHECK-LABEL: @memref_memory_space_cast
+func.func @memref_memory_space_cast(%input : memref<?xf32>) -> memref<?xf32, 1> {
+  %cast = memref.memory_space_cast %input : memref<?xf32> to memref<?xf32, 1>
+  return %cast : memref<?xf32, 1>
+}
+// CHECK: [[INPUT:%.*]] = builtin.unrealized_conversion_cast %{{.*}}
+//  CHECK: [[ALLOC:%.*]] = llvm.extractvalue [[INPUT]][0]
+//  CHECK: [[ALIGN:%.*]] = llvm.extractvalue [[INPUT]][1]
+// CHECK: [[OFFSET:%.*]] = llvm.extractvalue [[INPUT]][2]
+//   CHECK: [[SIZE:%.*]] = llvm.extractvalue [[INPUT]][3, 0]
+// CHECK: [[STRIDE:%.*]] = llvm.extractvalue [[INPUT]][4, 0]
+// CHECK: [[CAST_ALLOC:%.*]] = llvm.addrspacecast [[ALLOC]] : !llvm.ptr to !llvm.ptr<1>
+// CHECK: [[CAST_ALIGN:%.*]] = llvm.addrspacecast [[ALIGN]] : !llvm.ptr to !llvm.ptr<1>
+// CHECK: [[RESULT_0:%.*]] = llvm.mlir.undef
+// CHECK: [[RESULT_1:%.*]] = llvm.insertvalue [[CAST_ALLOC]], [[RESULT_0]][0]
+// CHECK: [[RESULT_2:%.*]] = llvm.insertvalue [[CAST_ALIGN]], [[RESULT_1]][1]
+// CHECK: [[RESULT_3:%.*]] = llvm.insertvalue [[OFFSET]], [[RESULT_2]][2]
+// CHECK: [[RESULT_4:%.*]] = llvm.insertvalue [[SIZE]], [[RESULT_3]][3, 0]
+// CHECK: [[RESULT_5:%.*]] = llvm.insertvalue [[STRIDE]], [[RESULT_4]][4, 0]
+// CHECK: [[RESULT:%.*]] = builtin.unrealized_conversion_cast [[RESULT_5]] : {{.*}} to memref<?xf32, 1>
+// CHECK: return [[RESULT]]

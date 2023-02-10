@@ -58,8 +58,8 @@ declare x86_thiscallcc void @"\01??1Dtor@@QAE@XZ"(%struct.Dtor*) #1
 
 define void @nested_cleanup() #0 personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
 entry:
-  %o1 = alloca %struct.Dtor, align 1
-  %o2 = alloca %struct.Dtor, align 1
+  %o1 = alloca %struct.Dtor, align 8
+  %o2 = alloca %struct.Dtor, align 8
   invoke void @f(i32 1)
           to label %invoke.cont unwind label %cleanup.outer
 
