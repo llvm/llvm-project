@@ -20,7 +20,7 @@ class TestQueue(TestBase):
 
         self.runCmd("settings set target.import-std-module true")
 
-        if self.expectedCompilerVersion(['>', '16.0']):
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(['>', '16.0']):
             queue_type = "std::queue<C>"
         else:
             queue_type = "std::queue<C, std::deque<C, std::allocator<C> > >"
@@ -56,7 +56,7 @@ class TestQueue(TestBase):
                          result_value="5")
 
         # Test std::queue functionality with a std::list.
-        if self.expectedCompilerVersion(['>', '16.0']):
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(['>', '16.0']):
             queue_type = "std::queue<C, std::list<C> >"
         else:
             queue_type = "std::queue<C, std::list<C, std::allocator<C> > >"

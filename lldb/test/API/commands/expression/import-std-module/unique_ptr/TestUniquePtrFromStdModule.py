@@ -22,7 +22,7 @@ class TestUniquePtr(TestBase):
 
         self.runCmd("settings set target.import-std-module true")
 
-        if self.expectedCompilerVersion(['>', '16.0']):
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(['>', '16.0']):
             ptr_type = "std::unique_ptr<int>"
         else:
             ptr_type = "std::unique_ptr<int, std::default_delete<int> >"
