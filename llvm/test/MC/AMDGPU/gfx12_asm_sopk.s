@@ -176,3 +176,69 @@ s_call_b64 vcc, 0x1234
 
 s_call_b64 null, 0x1234
 // GFX12: encoding: [0x34,0x12,0x7c,0xba]
+
+s_getreg_b32 s0, hwreg(HW_REG_MODE)
+// GFX12: encoding: [0x01,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_STATUS)
+// GFX12: encoding: [0x02,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_STATE_PRIV)
+// GFX12: encoding: [0x04,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_GPR_ALLOC)
+// GFX12: encoding: [0x05,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_LDS_ALLOC)
+// GFX12: encoding: [0x06,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_IB_STS)
+// GFX12: encoding: [0x07,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_PERF_SNAPSHOT_DATA)
+// GFX12: encoding: [0x0a,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_PERF_SNAPSHOT_PC_LO)
+// GFX12: encoding: [0x0b,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_PERF_SNAPSHOT_PC_HI)
+// GFX12: encoding: [0x0c,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_PERF_SNAPSHOT_DATA1)
+// GFX12: encoding: [0x0f,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_PERF_SNAPSHOT_DATA2)
+// GFX12: encoding: [0x10,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_EXCP_FLAG_PRIV)
+// GFX12: encoding: [0x11,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_EXCP_FLAG_USER)
+// GFX12: encoding: [0x12,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_TRAP_CTRL)
+// GFX12: encoding: [0x13,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_SCRATCH_BASE_LO)
+// GFX12: encoding: [0x14,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_SCRATCH_BASE_HI)
+// GFX12: encoding: [0x15,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_HW_ID1)
+// GFX12: encoding: [0x17,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_HW_ID2)
+// GFX12: encoding: [0x18,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_DVGPR_ALLOC_LO)
+// GFX12: encoding: [0x1f,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_DVGPR_ALLOC_HI)
+// GFX12: encoding: [0x20,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_SHADER_CYCLES_LO)
+// GFX12: encoding: [0x1d,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_SHADER_CYCLES_HI)
+// GFX12: encoding: [0x1e,0xf8,0x80,0xb8]

@@ -2139,6 +2139,10 @@ bool isGFX10(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX10];
 }
 
+bool isGFX10_GFX11(const MCSubtargetInfo &STI) {
+  return isGFX10(STI) || isGFX11(STI);
+}
+
 bool isGFX10Plus(const MCSubtargetInfo &STI) {
   return isGFX10(STI) || isGFX11Plus(STI);
 }
@@ -2157,6 +2161,10 @@ bool isGFX12(const MCSubtargetInfo &STI) {
 
 bool isGFX12Plus(const MCSubtargetInfo &STI) {
   return isGFX12(STI);
+}
+
+bool isNotGFX12Plus(const MCSubtargetInfo &STI) {
+  return !isGFX12Plus(STI);
 }
 
 bool isNotGFX11Plus(const MCSubtargetInfo &STI) {
@@ -2185,6 +2193,10 @@ bool isGFX10_BEncoding(const MCSubtargetInfo &STI) {
 
 bool hasGFX10_3Insts(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX10_3Insts];
+}
+
+bool isGFX10_3_GFX11(const MCSubtargetInfo &STI) {
+  return isGFX10_BEncoding(STI) && !isGFX12Plus(STI);
 }
 
 bool isGFX90A(const MCSubtargetInfo &STI) {
