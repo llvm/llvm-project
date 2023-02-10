@@ -1,16 +1,5 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="bufferize-function-boundaries=1" -split-input-file -verify-diagnostics
 
-func.func private @foo() -> tensor<?xf32>
-
-func.func @bar() -> tensor<?xf32> {
-  %foo = constant @foo : () -> (tensor<?xf32>)
-// expected-error @+1 {{expected a CallOp}}
-  %res = call_indirect %foo() : () -> (tensor<?xf32>)
-  return %res : tensor<?xf32>
-}
-
-// -----
-
 // expected-error @+2 {{cannot bufferize bodiless function that returns a tensor}}
 // expected-error @+1 {{failed to bufferize op}}
 func.func private @foo() -> tensor<?xf32>

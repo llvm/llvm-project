@@ -13142,19 +13142,15 @@ define <4 x float> @min_unordered_v4f32(<4 x float> %x) {
 ; SIMD128-LABEL: min_unordered_v4f32:
 ; SIMD128:         .functype min_unordered_v4f32 (v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    v128.const $push3=, 0x1.4p2, 0x1.4p2, 0x1.4p2, 0x1.4p2
-; SIMD128-NEXT:    local.tee $push2=, $1=, $pop3
-; SIMD128-NEXT:    f32x4.gt $push0=, $0, $1
-; SIMD128-NEXT:    v128.bitselect $push1=, $pop2, $0, $pop0
+; SIMD128-NEXT:    v128.const $push0=, 0x1.4p2, 0x1.4p2, 0x1.4p2, 0x1.4p2
+; SIMD128-NEXT:    f32x4.pmin $push1=, $pop0, $0
 ; SIMD128-NEXT:    return $pop1
 ;
 ; SIMD128-FAST-LABEL: min_unordered_v4f32:
 ; SIMD128-FAST:         .functype min_unordered_v4f32 (v128) -> (v128)
 ; SIMD128-FAST-NEXT:  # %bb.0:
-; SIMD128-FAST-NEXT:    v128.const $push3=, 0x1.4p2, 0x1.4p2, 0x1.4p2, 0x1.4p2
-; SIMD128-FAST-NEXT:    local.tee $push2=, $1=, $pop3
-; SIMD128-FAST-NEXT:    f32x4.gt $push1=, $0, $1
-; SIMD128-FAST-NEXT:    v128.bitselect $push0=, $pop2, $0, $pop1
+; SIMD128-FAST-NEXT:    v128.const $push1=, 0x1.4p2, 0x1.4p2, 0x1.4p2, 0x1.4p2
+; SIMD128-FAST-NEXT:    f32x4.pmin $push0=, $pop1, $0
 ; SIMD128-FAST-NEXT:    return $pop0
 ;
 ; NO-SIMD128-LABEL: min_unordered_v4f32:
@@ -13221,14 +13217,14 @@ define <4 x float> @max_unordered_v4f32(<4 x float> %x) {
 ; SIMD128:         .functype max_unordered_v4f32 (v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    v128.const $push0=, 0x1.4p2, 0x1.4p2, 0x1.4p2, 0x1.4p2
-; SIMD128-NEXT:    f32x4.pmax $push1=, $0, $pop0
+; SIMD128-NEXT:    f32x4.pmax $push1=, $pop0, $0
 ; SIMD128-NEXT:    return $pop1
 ;
 ; SIMD128-FAST-LABEL: max_unordered_v4f32:
 ; SIMD128-FAST:         .functype max_unordered_v4f32 (v128) -> (v128)
 ; SIMD128-FAST-NEXT:  # %bb.0:
 ; SIMD128-FAST-NEXT:    v128.const $push1=, 0x1.4p2, 0x1.4p2, 0x1.4p2, 0x1.4p2
-; SIMD128-FAST-NEXT:    f32x4.pmax $push0=, $0, $pop1
+; SIMD128-FAST-NEXT:    f32x4.pmax $push0=, $pop1, $0
 ; SIMD128-FAST-NEXT:    return $pop0
 ;
 ; NO-SIMD128-LABEL: max_unordered_v4f32:
@@ -13294,19 +13290,15 @@ define <4 x float> @min_ordered_v4f32(<4 x float> %x) {
 ; SIMD128-LABEL: min_ordered_v4f32:
 ; SIMD128:         .functype min_ordered_v4f32 (v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    v128.const $push3=, 0x1.4p2, 0x1.4p2, 0x1.4p2, 0x1.4p2
-; SIMD128-NEXT:    local.tee $push2=, $1=, $pop3
-; SIMD128-NEXT:    f32x4.le $push0=, $1, $0
-; SIMD128-NEXT:    v128.bitselect $push1=, $pop2, $0, $pop0
+; SIMD128-NEXT:    v128.const $push0=, 0x1.4p2, 0x1.4p2, 0x1.4p2, 0x1.4p2
+; SIMD128-NEXT:    f32x4.pmin $push1=, $pop0, $0
 ; SIMD128-NEXT:    return $pop1
 ;
 ; SIMD128-FAST-LABEL: min_ordered_v4f32:
 ; SIMD128-FAST:         .functype min_ordered_v4f32 (v128) -> (v128)
 ; SIMD128-FAST-NEXT:  # %bb.0:
-; SIMD128-FAST-NEXT:    v128.const $push3=, 0x1.4p2, 0x1.4p2, 0x1.4p2, 0x1.4p2
-; SIMD128-FAST-NEXT:    local.tee $push2=, $1=, $pop3
-; SIMD128-FAST-NEXT:    f32x4.le $push1=, $1, $0
-; SIMD128-FAST-NEXT:    v128.bitselect $push0=, $pop2, $0, $pop1
+; SIMD128-FAST-NEXT:    v128.const $push1=, 0x1.4p2, 0x1.4p2, 0x1.4p2, 0x1.4p2
+; SIMD128-FAST-NEXT:    f32x4.pmin $push0=, $pop1, $0
 ; SIMD128-FAST-NEXT:    return $pop0
 ;
 ; NO-SIMD128-LABEL: min_ordered_v4f32:
@@ -13372,19 +13364,15 @@ define <4 x float> @max_ordered_v4f32(<4 x float> %x) {
 ; SIMD128-LABEL: max_ordered_v4f32:
 ; SIMD128:         .functype max_ordered_v4f32 (v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    v128.const $push3=, 0x1.4p2, 0x1.4p2, 0x1.4p2, 0x1.4p2
-; SIMD128-NEXT:    local.tee $push2=, $1=, $pop3
-; SIMD128-NEXT:    f32x4.ge $push0=, $1, $0
-; SIMD128-NEXT:    v128.bitselect $push1=, $pop2, $0, $pop0
+; SIMD128-NEXT:    v128.const $push0=, 0x1.4p2, 0x1.4p2, 0x1.4p2, 0x1.4p2
+; SIMD128-NEXT:    f32x4.pmax $push1=, $pop0, $0
 ; SIMD128-NEXT:    return $pop1
 ;
 ; SIMD128-FAST-LABEL: max_ordered_v4f32:
 ; SIMD128-FAST:         .functype max_ordered_v4f32 (v128) -> (v128)
 ; SIMD128-FAST-NEXT:  # %bb.0:
-; SIMD128-FAST-NEXT:    v128.const $push3=, 0x1.4p2, 0x1.4p2, 0x1.4p2, 0x1.4p2
-; SIMD128-FAST-NEXT:    local.tee $push2=, $1=, $pop3
-; SIMD128-FAST-NEXT:    f32x4.ge $push1=, $1, $0
-; SIMD128-FAST-NEXT:    v128.bitselect $push0=, $pop2, $0, $pop1
+; SIMD128-FAST-NEXT:    v128.const $push1=, 0x1.4p2, 0x1.4p2, 0x1.4p2, 0x1.4p2
+; SIMD128-FAST-NEXT:    f32x4.pmax $push0=, $pop1, $0
 ; SIMD128-FAST-NEXT:    return $pop0
 ;
 ; NO-SIMD128-LABEL: max_ordered_v4f32:
@@ -14240,13 +14228,13 @@ define <4 x float> @pmin_v4f32(<4 x float> %x, <4 x float> %y) {
 ; SIMD128-LABEL: pmin_v4f32:
 ; SIMD128:         .functype pmin_v4f32 (v128, v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    f32x4.pmin $push0=, $0, $1
+; SIMD128-NEXT:    f32x4.pmin $push0=, $1, $0
 ; SIMD128-NEXT:    return $pop0
 ;
 ; SIMD128-FAST-LABEL: pmin_v4f32:
 ; SIMD128-FAST:         .functype pmin_v4f32 (v128, v128) -> (v128)
 ; SIMD128-FAST-NEXT:  # %bb.0:
-; SIMD128-FAST-NEXT:    f32x4.pmin $push0=, $0, $1
+; SIMD128-FAST-NEXT:    f32x4.pmin $push0=, $1, $0
 ; SIMD128-FAST-NEXT:    return $pop0
 ;
 ; NO-SIMD128-LABEL: pmin_v4f32:
@@ -14368,13 +14356,13 @@ define <4 x float> @pmax_v4f32(<4 x float> %x, <4 x float> %y) {
 ; SIMD128-LABEL: pmax_v4f32:
 ; SIMD128:         .functype pmax_v4f32 (v128, v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    f32x4.pmax $push0=, $0, $1
+; SIMD128-NEXT:    f32x4.pmax $push0=, $1, $0
 ; SIMD128-NEXT:    return $pop0
 ;
 ; SIMD128-FAST-LABEL: pmax_v4f32:
 ; SIMD128-FAST:         .functype pmax_v4f32 (v128, v128) -> (v128)
 ; SIMD128-FAST-NEXT:  # %bb.0:
-; SIMD128-FAST-NEXT:    f32x4.pmax $push0=, $0, $1
+; SIMD128-FAST-NEXT:    f32x4.pmax $push0=, $1, $0
 ; SIMD128-FAST-NEXT:    return $pop0
 ;
 ; NO-SIMD128-LABEL: pmax_v4f32:
@@ -14800,19 +14788,15 @@ define <2 x double> @min_unordered_v2f64(<2 x double> %x) {
 ; SIMD128-LABEL: min_unordered_v2f64:
 ; SIMD128:         .functype min_unordered_v2f64 (v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    v128.const $push3=, 0x1.4p2, 0x1.4p2
-; SIMD128-NEXT:    local.tee $push2=, $1=, $pop3
-; SIMD128-NEXT:    f64x2.gt $push0=, $0, $1
-; SIMD128-NEXT:    v128.bitselect $push1=, $pop2, $0, $pop0
+; SIMD128-NEXT:    v128.const $push0=, 0x1.4p2, 0x1.4p2
+; SIMD128-NEXT:    f64x2.pmin $push1=, $pop0, $0
 ; SIMD128-NEXT:    return $pop1
 ;
 ; SIMD128-FAST-LABEL: min_unordered_v2f64:
 ; SIMD128-FAST:         .functype min_unordered_v2f64 (v128) -> (v128)
 ; SIMD128-FAST-NEXT:  # %bb.0:
-; SIMD128-FAST-NEXT:    v128.const $push3=, 0x1.4p2, 0x1.4p2
-; SIMD128-FAST-NEXT:    local.tee $push2=, $1=, $pop3
-; SIMD128-FAST-NEXT:    f64x2.gt $push1=, $0, $1
-; SIMD128-FAST-NEXT:    v128.bitselect $push0=, $pop2, $0, $pop1
+; SIMD128-FAST-NEXT:    v128.const $push1=, 0x1.4p2, 0x1.4p2
+; SIMD128-FAST-NEXT:    f64x2.pmin $push0=, $pop1, $0
 ; SIMD128-FAST-NEXT:    return $pop0
 ;
 ; NO-SIMD128-LABEL: min_unordered_v2f64:
@@ -14855,14 +14839,14 @@ define <2 x double> @max_unordered_v2f64(<2 x double> %x) {
 ; SIMD128:         .functype max_unordered_v2f64 (v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    v128.const $push0=, 0x1.4p2, 0x1.4p2
-; SIMD128-NEXT:    f64x2.pmax $push1=, $0, $pop0
+; SIMD128-NEXT:    f64x2.pmax $push1=, $pop0, $0
 ; SIMD128-NEXT:    return $pop1
 ;
 ; SIMD128-FAST-LABEL: max_unordered_v2f64:
 ; SIMD128-FAST:         .functype max_unordered_v2f64 (v128) -> (v128)
 ; SIMD128-FAST-NEXT:  # %bb.0:
 ; SIMD128-FAST-NEXT:    v128.const $push1=, 0x1.4p2, 0x1.4p2
-; SIMD128-FAST-NEXT:    f64x2.pmax $push0=, $0, $pop1
+; SIMD128-FAST-NEXT:    f64x2.pmax $push0=, $pop1, $0
 ; SIMD128-FAST-NEXT:    return $pop0
 ;
 ; NO-SIMD128-LABEL: max_unordered_v2f64:
@@ -14904,19 +14888,15 @@ define <2 x double> @min_ordered_v2f64(<2 x double> %x) {
 ; SIMD128-LABEL: min_ordered_v2f64:
 ; SIMD128:         .functype min_ordered_v2f64 (v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    v128.const $push3=, 0x1.4p2, 0x1.4p2
-; SIMD128-NEXT:    local.tee $push2=, $1=, $pop3
-; SIMD128-NEXT:    f64x2.le $push0=, $1, $0
-; SIMD128-NEXT:    v128.bitselect $push1=, $pop2, $0, $pop0
+; SIMD128-NEXT:    v128.const $push0=, 0x1.4p2, 0x1.4p2
+; SIMD128-NEXT:    f64x2.pmin $push1=, $pop0, $0
 ; SIMD128-NEXT:    return $pop1
 ;
 ; SIMD128-FAST-LABEL: min_ordered_v2f64:
 ; SIMD128-FAST:         .functype min_ordered_v2f64 (v128) -> (v128)
 ; SIMD128-FAST-NEXT:  # %bb.0:
-; SIMD128-FAST-NEXT:    v128.const $push3=, 0x1.4p2, 0x1.4p2
-; SIMD128-FAST-NEXT:    local.tee $push2=, $1=, $pop3
-; SIMD128-FAST-NEXT:    f64x2.le $push1=, $1, $0
-; SIMD128-FAST-NEXT:    v128.bitselect $push0=, $pop2, $0, $pop1
+; SIMD128-FAST-NEXT:    v128.const $push1=, 0x1.4p2, 0x1.4p2
+; SIMD128-FAST-NEXT:    f64x2.pmin $push0=, $pop1, $0
 ; SIMD128-FAST-NEXT:    return $pop0
 ;
 ; NO-SIMD128-LABEL: min_ordered_v2f64:
@@ -14958,19 +14938,15 @@ define <2 x double> @max_ordered_v2f64(<2 x double> %x) {
 ; SIMD128-LABEL: max_ordered_v2f64:
 ; SIMD128:         .functype max_ordered_v2f64 (v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    v128.const $push3=, 0x1.4p2, 0x1.4p2
-; SIMD128-NEXT:    local.tee $push2=, $1=, $pop3
-; SIMD128-NEXT:    f64x2.ge $push0=, $1, $0
-; SIMD128-NEXT:    v128.bitselect $push1=, $pop2, $0, $pop0
+; SIMD128-NEXT:    v128.const $push0=, 0x1.4p2, 0x1.4p2
+; SIMD128-NEXT:    f64x2.pmax $push1=, $pop0, $0
 ; SIMD128-NEXT:    return $pop1
 ;
 ; SIMD128-FAST-LABEL: max_ordered_v2f64:
 ; SIMD128-FAST:         .functype max_ordered_v2f64 (v128) -> (v128)
 ; SIMD128-FAST-NEXT:  # %bb.0:
-; SIMD128-FAST-NEXT:    v128.const $push3=, 0x1.4p2, 0x1.4p2
-; SIMD128-FAST-NEXT:    local.tee $push2=, $1=, $pop3
-; SIMD128-FAST-NEXT:    f64x2.ge $push1=, $1, $0
-; SIMD128-FAST-NEXT:    v128.bitselect $push0=, $pop2, $0, $pop1
+; SIMD128-FAST-NEXT:    v128.const $push1=, 0x1.4p2, 0x1.4p2
+; SIMD128-FAST-NEXT:    f64x2.pmax $push0=, $pop1, $0
 ; SIMD128-FAST-NEXT:    return $pop0
 ;
 ; NO-SIMD128-LABEL: max_ordered_v2f64:
@@ -15156,13 +15132,13 @@ define <2 x double> @pmin_v2f64(<2 x double> %x, <2 x double> %y) {
 ; SIMD128-LABEL: pmin_v2f64:
 ; SIMD128:         .functype pmin_v2f64 (v128, v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    f64x2.pmin $push0=, $0, $1
+; SIMD128-NEXT:    f64x2.pmin $push0=, $1, $0
 ; SIMD128-NEXT:    return $pop0
 ;
 ; SIMD128-FAST-LABEL: pmin_v2f64:
 ; SIMD128-FAST:         .functype pmin_v2f64 (v128, v128) -> (v128)
 ; SIMD128-FAST-NEXT:  # %bb.0:
-; SIMD128-FAST-NEXT:    f64x2.pmin $push0=, $0, $1
+; SIMD128-FAST-NEXT:    f64x2.pmin $push0=, $1, $0
 ; SIMD128-FAST-NEXT:    return $pop0
 ;
 ; NO-SIMD128-LABEL: pmin_v2f64:
@@ -15244,13 +15220,13 @@ define <2 x double> @pmax_v2f64(<2 x double> %x, <2 x double> %y) {
 ; SIMD128-LABEL: pmax_v2f64:
 ; SIMD128:         .functype pmax_v2f64 (v128, v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    f64x2.pmax $push0=, $0, $1
+; SIMD128-NEXT:    f64x2.pmax $push0=, $1, $0
 ; SIMD128-NEXT:    return $pop0
 ;
 ; SIMD128-FAST-LABEL: pmax_v2f64:
 ; SIMD128-FAST:         .functype pmax_v2f64 (v128, v128) -> (v128)
 ; SIMD128-FAST-NEXT:  # %bb.0:
-; SIMD128-FAST-NEXT:    f64x2.pmax $push0=, $0, $1
+; SIMD128-FAST-NEXT:    f64x2.pmax $push0=, $1, $0
 ; SIMD128-FAST-NEXT:    return $pop0
 ;
 ; NO-SIMD128-LABEL: pmax_v2f64:

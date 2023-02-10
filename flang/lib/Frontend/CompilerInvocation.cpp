@@ -30,10 +30,10 @@
 #include "llvm/Option/OptTable.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include <memory>
 #include <optional>

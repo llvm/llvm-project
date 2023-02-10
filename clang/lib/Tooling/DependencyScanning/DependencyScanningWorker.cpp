@@ -22,7 +22,7 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 #include <optional>
 
 using namespace clang;
