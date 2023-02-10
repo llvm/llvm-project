@@ -76,6 +76,30 @@ static ArrayRef<unsigned> getSupportedMetadataImpl() {
   return convertibleMetadata;
 }
 
+namespace {
+/// Helper class to attach metadata attributes to specific operation types. It
+/// specializes TypeSwitch to take an Operation and return a LogicalResult.
+template <typename... OpTys>
+struct AttributeSetter {
+  AttributeSetter(Operation *op) : op(op) {}
+
+  /// Calls `attachFn` on the provided Operation if it has one of
+  /// the given operation types. Returns failure otherwise.
+  template <typename CallableT>
+  LogicalResult apply(CallableT &&attachFn) {
+    return llvm::TypeSwitch<Operation *, LogicalResult>(op)
+        .Case<OpTys...>([&attachFn](auto concreteOp) {
+          attachFn(concreteOp);
+          return success();
+        })
+        .Default([&](auto) { return failure(); });
+  }
+
+private:
+  Operation *op;
+};
+} // namespace
+
 /// Converts the given profiling metadata `node` to an MLIR profiling attribute
 /// and attaches it to the imported operation if the translation succeeds.
 /// Returns failure otherwise.
@@ -129,16 +153,10 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
     branchWeights.push_back(branchWeight->getZExtValue());
   }
 
-  // Attach the branch weights to the operations that support it.
-  return llvm::TypeSwitch<Operation *, LogicalResult>(op)
-      .Case<CondBrOp, SwitchOp, CallOp, InvokeOp>([&](auto branchWeightOp) {
+  return AttributeSetter<CondBrOp, SwitchOp, CallOp, InvokeOp>(op).apply(
+      [&](auto branchWeightOp) {
         branchWeightOp.setBranchWeightsAttr(
             builder.getI32VectorAttr(branchWeights));
-        return success();
-      })
-      .Default([op](auto) {
-        return op->emitWarning()
-               << op->getName() << " does not support branch weights";
       });
 }
 
@@ -151,9 +169,9 @@ static LogicalResult setTBAAAttr(const llvm::MDNode *node, Operation *op,
   if (!tbaaTagSym)
     return failure();
 
-  op->setAttr(LLVMDialect::getTBAAAttrName(),
-              ArrayAttr::get(op->getContext(), tbaaTagSym));
-  return success();
+  return AttributeSetter<LoadOp, StoreOp>(op).apply([&](auto memOp) {
+    memOp.setTbaaAttr(ArrayAttr::get(memOp.getContext(), tbaaTagSym));
+  });
 }
 
 /// Looks up all the symbol references pointing to the access group operations
@@ -169,9 +187,10 @@ static LogicalResult setAccessGroupAttr(const llvm::MDNode *node, Operation *op,
 
   SmallVector<Attribute> accessGroupAttrs(accessGroups->begin(),
                                           accessGroups->end());
-  op->setAttr(LLVMDialect::getAccessGroupsAttrName(),
-              ArrayAttr::get(op->getContext(), accessGroupAttrs));
-  return success();
+  return AttributeSetter<LoadOp, StoreOp>(op).apply([&](auto memOp) {
+    memOp.setAccessGroupsAttr(
+        ArrayAttr::get(memOp.getContext(), accessGroupAttrs));
+  });
 }
 
 /// Converts the given loop metadata node to an MLIR loop annotation attribute
