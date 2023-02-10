@@ -825,46 +825,10 @@ int main(int argc, const char **argv) {
                                              Errs))
             HadErrors = true;
         } else if (Format == ScanningOutputFormat::P1689) {
-          // It is useful to generate the make-format dependency output during
-          // the scanning for P1689. Otherwise the users need to scan again for
-          // it. We will generate the make-format dependency output if we find
-          // `-MF` in the command lines.
-          std::string MakeformatOutputPath;
-          std::string MakeformatOutput;
-
-          auto MaybeRule = WorkerTools[I]->getP1689ModuleDependencyFile(
-              *Input, CWD, MakeformatOutput, MakeformatOutputPath);
-          HadErrors =
-              handleP1689DependencyToolResult(Filename, MaybeRule, PD, Errs);
-
-          if (!MakeformatOutputPath.empty() && !MakeformatOutput.empty() &&
-              !HadErrors) {
-            static std::mutex Lock;
-            // With compilation database, we may open different files
-            // concurrently or we may write the same file concurrently. So we
-            // use a map here to allow multiple compile commands to write to the
-            // same file. Also we need a lock here to avoid data race.
-            static llvm::StringMap<llvm::raw_fd_ostream> OSs;
-            std::unique_lock<std::mutex> LockGuard(Lock);
-
-            auto OSIter = OSs.find(MakeformatOutputPath);
-            if (OSIter == OSs.end()) {
-              std::error_code EC;
-              OSIter = OSs.try_emplace(MakeformatOutputPath,
-                                       MakeformatOutputPath, EC)
-                           .first;
-              if (EC)
-                llvm::errs()
-                    << "Failed to open P1689 make format output file \""
-                    << MakeformatOutputPath << "\" for " << EC.message()
-                    << "\n";
-            }
-
-            SharedStream MakeformatOS(OSIter->second);
-            llvm::Expected<std::string> MaybeOutput(MakeformatOutput);
-            HadErrors = handleMakeDependencyToolResult(Filename, MaybeOutput,
-                                                       MakeformatOS, Errs);
-          }
+          auto MaybeRule =
+              WorkerTools[I]->getP1689ModuleDependencyFile(*Input, CWD);
+          if (handleP1689DependencyToolResult(Filename, MaybeRule, PD, Errs))
+            HadErrors = true;
         } else if (MaybeModuleName) {
           auto MaybeModuleDepsGraph = WorkerTools[I]->getModuleDependencies(
               *MaybeModuleName, Input->CommandLine, CWD, AlreadySeenModules,
