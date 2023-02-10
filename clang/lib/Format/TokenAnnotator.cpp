@@ -1215,19 +1215,26 @@ private:
              !CurrentToken->isOneOf(tok::l_paren, tok::semi, tok::r_paren)) {
         if (CurrentToken->isOneOf(tok::star, tok::amp))
           CurrentToken->setType(TT_PointerOrReference);
-        consumeToken();
-        if (!CurrentToken)
-          continue;
-        if (CurrentToken->is(tok::comma) &&
-            CurrentToken->Previous->isNot(tok::kw_operator)) {
+        auto Next = CurrentToken->getNextNonComment();
+        if (!Next)
           break;
-        }
-        if (CurrentToken->Previous->isOneOf(TT_BinaryOperator, TT_UnaryOperator,
-                                            tok::comma, tok::star, tok::arrow,
-                                            tok::amp, tok::ampamp) ||
+        if (Next->is(tok::less))
+          next();
+        else
+          consumeToken();
+        if (!CurrentToken)
+          break;
+        auto Previous = CurrentToken->getPreviousNonComment();
+        assert(Previous);
+        if (CurrentToken->is(tok::comma) && Previous->isNot(tok::kw_operator))
+          break;
+        if (Previous->isOneOf(TT_BinaryOperator, TT_UnaryOperator, tok::comma,
+                              tok::star, tok::arrow, tok::amp, tok::ampamp) ||
             // User defined literal.
-            CurrentToken->Previous->TokenText.startswith("\"\"")) {
-          CurrentToken->Previous->setType(TT_OverloadedOperator);
+            Previous->TokenText.startswith("\"\"")) {
+          Previous->setType(TT_OverloadedOperator);
+          if (CurrentToken->isOneOf(tok::less, tok::greater))
+            break;
         }
       }
       if (CurrentToken && CurrentToken->is(tok::l_paren))
@@ -4048,6 +4055,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return true;
 
   if (Style.isCpp()) {
+    if (Left.is(TT_OverloadedOperator) &&
+        Right.isOneOf(TT_TemplateOpener, TT_TemplateCloser)) {
+      return true;
+    }
     // Space between UDL and dot: auto b = 4s .count();
     if (Right.is(tok::period) && Left.is(tok::numeric_constant))
       return true;
