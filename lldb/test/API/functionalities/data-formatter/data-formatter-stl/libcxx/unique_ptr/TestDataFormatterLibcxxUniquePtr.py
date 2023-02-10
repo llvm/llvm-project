@@ -15,13 +15,13 @@ class TestCase(TestBase):
         if qualifiers:
             qualifiers = ' ' + qualifiers
 
-        if self.expectedCompilerVersion(['>', '16.0']):
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(['>', '16.0']):
             return f'std::unique_ptr<{pointee_type}>{qualifiers}'
         else:
             return f'std::unique_ptr<{pointee_type}, std::default_delete<{pointee_type}> >{qualifiers}'
 
     def make_expected_basic_string_ptr(self) -> str:
-        if self.expectedCompilerVersion(['>', '16.0']):
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(['>', '16.0']):
             return f'std::unique_ptr<std::basic_string<char> >'
         else:
             return 'std::unique_ptr<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, ' \

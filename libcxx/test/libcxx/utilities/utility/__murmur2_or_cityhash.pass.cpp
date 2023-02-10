@@ -10,6 +10,10 @@
 
 // UNSUPPORTED: c++03
 
+// In ABI v1, our CityHash implementation is incorrect and fixing it would
+// be an ABI break.
+// REQUIRES: libcpp-abi-version=2
+
 #include <cassert>
 #include <string>
 #include <utility>

@@ -1178,6 +1178,54 @@ def LoadOp : MemRef_Op<"load",
 }
 
 //===----------------------------------------------------------------------===//
+// MemorySpaceCastOp
+//===----------------------------------------------------------------------===//
+def MemRef_MemorySpaceCastOp : MemRef_Op<"memory_space_cast", [
+      DeclareOpInterfaceMethods<CastOpInterface>,
+      DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+      MemRefsNormalizable,
+      Pure,
+      SameOperandsAndResultElementType,
+      SameOperandsAndResultShape,
+      ViewLikeOpInterface
+    ]> {
+  let summary = "memref memory space cast operation";
+  let description = [{
+    This operation casts memref values between memory spaces.
+    The input and result will be memrefs of the same types and shape that alias
+    the same underlying memory, though, for some casts on some targets,
+    the underlying values of the pointer stored in the memref may be affected
+    by the cast.
+
+    The input and result must have the same shape, element type, rank, and layout.
+
+    If the source and target address spaces are the same, this operation is a noop.
+
+    Example:
+
+    ```mlir
+    // Cast a GPU private memory attribution into a generic pointer
+    %2 = memref.memory_space_cast %1 : memref<?xf32, 5> to memref<?xf32>
+    // Cast a generic pointer to workgroup-local memory
+    %4 = memref.memory_space_cast %3 : memref<5x4xi32> to memref<5x34xi32, 3>
+    // Cast between two non-default memory spaces
+    %6 = memref.memory_space_cast %5
+      : memref<*xmemref<?xf32>, 5> to memref<*xmemref<?xf32>, 3>
+    ```
+  }];
+
+  let arguments = (ins AnyRankedOrUnrankedMemRef:$source);
+  let results = (outs AnyRankedOrUnrankedMemRef:$dest);
+  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
+
+  let extraClassDeclaration = [{
+    Value getViewSource() { return getSource(); }
+  }];
+
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // PrefetchOp
 //===----------------------------------------------------------------------===//
 

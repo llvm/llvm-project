@@ -223,6 +223,17 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+/// Converts memref.memory_space_cast to the appropriate spirv cast operations.
+class MemorySpaceCastOpPattern final
+    : public OpConversionPattern<memref::MemorySpaceCastOp> {
+public:
+  using OpConversionPattern<memref::MemorySpaceCastOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::MemorySpaceCastOp addrCastOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 /// Converts memref.store to spirv.Store.
 class StoreOpPattern final : public OpConversionPattern<memref::StoreOp> {
 public:
@@ -552,6 +563,74 @@ IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// MemorySpaceCastOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MemorySpaceCastOpPattern::matchAndRewrite(
+    memref::MemorySpaceCastOp addrCastOp, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  Location loc = addrCastOp.getLoc();
+  auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+  if (!typeConverter.allows(spirv::Capability::Kernel))
+    return rewriter.notifyMatchFailure(
+        loc, "address space casts require kernel capability");
+
+  auto sourceType = addrCastOp.getSource().getType().dyn_cast<MemRefType>();
+  if (!sourceType)
+    return rewriter.notifyMatchFailure(
+        loc, "SPIR-V lowering requires ranked memref types");
+  auto resultType = addrCastOp.getResult().getType().cast<MemRefType>();
+
+  auto sourceStorageClassAttr =
+      sourceType.getMemorySpace().dyn_cast_or_null<spirv::StorageClassAttr>();
+  if (!sourceStorageClassAttr)
+    return rewriter.notifyMatchFailure(loc, [sourceType](Diagnostic &diag) {
+      diag << "source address space " << sourceType.getMemorySpace()
+           << " must be a SPIR-V storage class";
+    });
+  auto resultStorageClassAttr =
+      resultType.getMemorySpace().dyn_cast_or_null<spirv::StorageClassAttr>();
+  if (!resultStorageClassAttr)
+    return rewriter.notifyMatchFailure(loc, [resultType](Diagnostic &diag) {
+      diag << "result address space " << resultType.getMemorySpace()
+           << " must be a SPIR-V storage class";
+    });
+
+  spirv::StorageClass sourceSc = sourceStorageClassAttr.getValue();
+  spirv::StorageClass resultSc = resultStorageClassAttr.getValue();
+
+  Value result = adaptor.getSource();
+  Type resultPtrType = typeConverter.convertType(resultType);
+  Type genericPtrType = resultPtrType;
+  // SPIR-V doesn't have a general address space cast operation. Instead, it has
+  // conversions to and from generic pointers. To implement the general case,
+  // we use specific-to-generic conversions when the source class is not
+  // generic. Then when the result storage class is not generic, we convert the
+  // generic pointer (either the input on ar intermediate result) to theat
+  // class. This also means that we'll need the intermediate generic pointer
+  // type if neither the source or destination have it.
+  if (sourceSc != spirv::StorageClass::Generic &&
+      resultSc != spirv::StorageClass::Generic) {
+    Type intermediateType =
+        MemRefType::get(sourceType.getShape(), sourceType.getElementType(),
+                        sourceType.getLayout(),
+                        rewriter.getAttr<spirv::StorageClassAttr>(
+                            spirv::StorageClass::Generic));
+    genericPtrType = typeConverter.convertType(intermediateType);
+  }
+  if (sourceSc != spirv::StorageClass::Generic) {
+    result =
+        rewriter.create<spirv::PtrCastToGenericOp>(loc, genericPtrType, result);
+  }
+  if (resultSc != spirv::StorageClass::Generic) {
+    result =
+        rewriter.create<spirv::GenericCastToPtrOp>(loc, resultPtrType, result);
+  }
+  rewriter.replaceOp(addrCastOp, result);
+  return success();
+}
+
 LogicalResult
 StoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
                                 ConversionPatternRewriter &rewriter) const {
@@ -577,9 +656,9 @@ StoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
 namespace mlir {
 void populateMemRefToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                    RewritePatternSet &patterns) {
-  patterns
-      .add<AllocaOpPattern, AllocOpPattern, DeallocOpPattern, IntLoadOpPattern,
-           IntStoreOpPattern, LoadOpPattern, StoreOpPattern>(
-          typeConverter, patterns.getContext());
+  patterns.add<AllocaOpPattern, AllocOpPattern, DeallocOpPattern,
+               IntLoadOpPattern, IntStoreOpPattern, LoadOpPattern,
+               MemorySpaceCastOpPattern, StoreOpPattern>(typeConverter,
+                                                         patterns.getContext());
 }
 } // namespace mlir

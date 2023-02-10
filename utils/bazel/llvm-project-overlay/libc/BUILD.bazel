@@ -799,9 +799,10 @@ libc_math_function(
     name = "expm1f",
     additional_deps = [
         ":__support_fputil_fma",
-        ":__support_fputil_nearest_integer",
         ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
+        ":__support_macros_properties_cpu_features",
         ":common_constants",
     ],
 )
@@ -912,9 +913,10 @@ libc_math_function(
     name = "tanhf",
     additional_deps = [
         ":__support_fputil_fma",
-        ":__support_fputil_nearest_integer",
         ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
+        ":__support_macros_properties_cpu_features",
         ":common_constants",
         ":explogxf",
     ],
@@ -962,10 +964,11 @@ libc_math_function(
     name = "asinf",
     additional_deps = [
         ":__support_fputil_fma",
-        ":__support_fputil_nearest_integer",
         ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
         ":__support_fputil_sqrt",
+        ":__support_macros_properties_cpu_features",
         ":inv_trigf_utils",
     ],
 )
@@ -1145,6 +1148,7 @@ libc_math_function(
     additional_deps = [
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
+        ":__support_macros_properties_cpu_features",
         ":sincosf_utils",
     ],
 )
@@ -1154,6 +1158,7 @@ libc_math_function(
     additional_deps = [
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
+        ":__support_macros_properties_cpu_features",
         ":sincosf_utils",
     ],
 )
@@ -1164,6 +1169,7 @@ libc_math_function(
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
+        ":__support_macros_properties_cpu_features",
         ":range_reduction",
         ":sincosf_utils",
     ],
@@ -1176,6 +1182,7 @@ libc_math_function(
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
+        ":__support_macros_properties_cpu_features",
         ":range_reduction",
         ":sincosf_utils",
     ],

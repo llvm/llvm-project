@@ -1260,6 +1260,7 @@ cc_library(
     deps = [
         ":AMDGPUIncGen",
         ":ArithDialect",
+        ":GPUDialect",
         ":IR",
         ":SideEffectInterfaces",
         "//llvm:Core",
