@@ -132,8 +132,11 @@ IntegerLiteralSeparatorFixer::process(const Environment &Env,
       continue;
     if (Start > 0)
       Location = Location.getLocWithOffset(Start);
-    cantFail(Result.add(tooling::Replacement(SourceMgr, Location, Length,
-                                             format(Text, DigitsPerGroup))));
+    if (const auto &Formatted = format(Text, DigitsPerGroup);
+        Formatted != Text) {
+      cantFail(Result.add(
+          tooling::Replacement(SourceMgr, Location, Length, Formatted)));
+    }
   }
 
   return {Result, 0};
