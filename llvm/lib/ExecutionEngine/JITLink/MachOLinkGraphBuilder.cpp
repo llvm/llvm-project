@@ -185,7 +185,7 @@ Error MachOLinkGraphBuilder::createNormalizedSections() {
       Prot = orc::MemProt::Read | orc::MemProt::Write;
 
     auto FullyQualifiedName =
-        G->allocateString(StringRef(NSec.SegName) + "," + NSec.SectName);
+        G->allocateContent(StringRef(NSec.SegName) + "," + NSec.SectName);
     NSec.GraphSection = &G->createSection(
         StringRef(FullyQualifiedName.data(), FullyQualifiedName.size()), Prot);
 

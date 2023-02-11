@@ -712,6 +712,26 @@ TEST(LinkGraphTest, SplitBlock) {
   }
 }
 
+TEST(LinkGraphTest, GraphAllocationMethods) {
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
+              getGenericEdgeKindName);
+
+  // Test allocation of sized, uninitialized buffer.
+  auto Buf1 = G.allocateBuffer(10);
+  EXPECT_EQ(Buf1.size(), 10U);
+
+  // Test allocation of content-backed buffer.
+  ArrayRef<char> Buf2Src = {1, -1, 0, 42};
+  auto Buf2 = G.allocateContent(Buf2Src);
+  EXPECT_EQ(Buf2, Buf2Src);
+
+  // Test c-string allocation from StringRef.
+  StringRef Buf3Src = "hello";
+  auto Buf3 = G.allocateCString(Buf3Src);
+  EXPECT_TRUE(llvm::equal(Buf3.drop_back(1), Buf3Src));
+  EXPECT_EQ(Buf3.back(), '\0');
+}
+
 TEST(LinkGraphTest, IsCStringBlockTest) {
   // Check that the LinkGraph::splitBlock test works as expected.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
