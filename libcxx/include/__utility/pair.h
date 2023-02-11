@@ -63,8 +63,8 @@ struct _LIBCPP_TEMPLATE_VIS pair
 : private __non_trivially_copyable_base<_T1, _T2>
 #endif
 {
-    typedef _T1 first_type;
-    typedef _T2 second_type;
+    using first_type = _T1;
+    using second_type = _T2;
 
     _T1 first;
     _T2 second;
@@ -556,13 +556,13 @@ struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, pair<_T1, _T2> >
 template <class _T1, class _T2>
 struct _LIBCPP_TEMPLATE_VIS tuple_element<0, pair<_T1, _T2> >
 {
-    typedef _LIBCPP_NODEBUG _T1 type;
+    using type _LIBCPP_NODEBUG = _T1;
 };
 
 template <class _T1, class _T2>
 struct _LIBCPP_TEMPLATE_VIS tuple_element<1, pair<_T1, _T2> >
 {
-    typedef _LIBCPP_NODEBUG _T2 type;
+    using type _LIBCPP_NODEBUG = _T2;
 };
 
 template <size_t _Ip> struct __get_pair;
