@@ -830,7 +830,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       return;
     }
 
-    // Only do the remaining transforms if the shift has one use.
+    // Only do the remaining transforms if the AND has one use.
     if (!N0.hasOneUse())
       break;
 
