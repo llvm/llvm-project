@@ -51,6 +51,7 @@ void TestAllForms() {
   const AddrType AddrxValue = (AddrType)0x4231abcd4231abcdULL;
   const AddrType Addrx1Value = (AddrType)0x0000aaaabbbbccccULL;
   const AddrType Addrx2Value = (AddrType)0xf00123f00456f000ULL;
+  const AddrType Addrx3Value = (AddrType)0xABABA000B111C222ULL;
   const AddrType Addrx4Value = (AddrType)0xa1b2c3d4e5f6e5d4ULL;
 
   const uint8_t BlockData[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 0};
@@ -100,14 +101,14 @@ void TestAllForms() {
   const auto Attr_DW_FORM_addrx = static_cast<dwarf::Attribute>(Attr++);
   const auto Attr_DW_FORM_addrx1 = static_cast<dwarf::Attribute>(Attr++);
   const auto Attr_DW_FORM_addrx2 = static_cast<dwarf::Attribute>(Attr++);
-  // TODO: Add Attr_DW_FORM_addrx3 test (this form type is currently
-  // unsupported)
+  const auto Attr_DW_FORM_addrx3 = static_cast<dwarf::Attribute>(Attr++);
   const auto Attr_DW_FORM_addrx4 = static_cast<dwarf::Attribute>(Attr++);
 
   if (Version >= 5) {
     CUDie.addAttribute(Attr_DW_FORM_addrx, DW_FORM_addrx, AddrxValue);
     CUDie.addAttribute(Attr_DW_FORM_addrx1, DW_FORM_addrx1, Addrx1Value);
     CUDie.addAttribute(Attr_DW_FORM_addrx2, DW_FORM_addrx2, Addrx2Value);
+    CUDie.addAttribute(Attr_DW_FORM_addrx3, DW_FORM_addrx3, Addrx3Value);
     CUDie.addAttribute(Attr_DW_FORM_addrx4, DW_FORM_addrx4, Addrx4Value);
   }
 
@@ -274,6 +275,10 @@ void TestAllForms() {
     auto ExtractedAddrx2Value = toAddress(DieDG.find(Attr_DW_FORM_addrx2));
     EXPECT_TRUE(ExtractedAddrx2Value.has_value());
     EXPECT_EQ(Addrx2Value, *ExtractedAddrx2Value);
+
+    auto ExtractedAddrx3Value = toAddress(DieDG.find(Attr_DW_FORM_addrx3));
+    EXPECT_TRUE(ExtractedAddrx3Value.has_value());
+    EXPECT_EQ(Addrx3Value, *ExtractedAddrx3Value);
 
     auto ExtractedAddrx4Value = toAddress(DieDG.find(Attr_DW_FORM_addrx4));
     EXPECT_TRUE(ExtractedAddrx1Value.has_value());

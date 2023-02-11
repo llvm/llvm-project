@@ -119,10 +119,11 @@ public:
     return L1 == L2;
   }
 
-  void transferTypeErased(const CFGElement *Element, TypeErasedLattice &E,
+  void transferTypeErased(const CFGElement &Element, TypeErasedLattice &E,
                           Environment &Env) final {
     Lattice &L = llvm::any_cast<Lattice &>(E.Value);
-    static_cast<Derived *>(this)->transfer(Element, L, Env);
+    // FIXME: change the contract of `transfer` to take a reference.
+    static_cast<Derived *>(this)->transfer(&Element, L, Env);
   }
 
   void transferBranchTypeErased(bool Branch, const Stmt *Stmt,

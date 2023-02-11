@@ -15,7 +15,8 @@
 #include "src/__support/FPUtil/FloatProperties.h"
 #include "src/__support/UInt128.h"
 #include "src/__support/builtin_wrappers.h"
-#include "src/__support/common.h"
+#include "src/__support/macros/attributes.h"   // LIBC_INLINE
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 namespace __llvm_libc {
 namespace fputil {

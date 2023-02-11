@@ -12,6 +12,7 @@
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 namespace __llvm_libc {
 

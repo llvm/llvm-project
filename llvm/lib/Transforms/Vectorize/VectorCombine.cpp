@@ -1660,16 +1660,16 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
           return SSV->getOperand(Op);
     return SV->getOperand(Op);
   };
-  Builder.SetInsertPoint(SVI0A->getNextNode());
+  Builder.SetInsertPoint(SVI0A->getInsertionPointAfterDef());
   Value *NSV0A = Builder.CreateShuffleVector(GetShuffleOperand(SVI0A, 0),
                                              GetShuffleOperand(SVI0A, 1), V1A);
-  Builder.SetInsertPoint(SVI0B->getNextNode());
+  Builder.SetInsertPoint(SVI0B->getInsertionPointAfterDef());
   Value *NSV0B = Builder.CreateShuffleVector(GetShuffleOperand(SVI0B, 0),
                                              GetShuffleOperand(SVI0B, 1), V1B);
-  Builder.SetInsertPoint(SVI1A->getNextNode());
+  Builder.SetInsertPoint(SVI1A->getInsertionPointAfterDef());
   Value *NSV1A = Builder.CreateShuffleVector(GetShuffleOperand(SVI1A, 0),
                                              GetShuffleOperand(SVI1A, 1), V2A);
-  Builder.SetInsertPoint(SVI1B->getNextNode());
+  Builder.SetInsertPoint(SVI1B->getInsertionPointAfterDef());
   Value *NSV1B = Builder.CreateShuffleVector(GetShuffleOperand(SVI1B, 0),
                                              GetShuffleOperand(SVI1B, 1), V2B);
   Builder.SetInsertPoint(Op0);

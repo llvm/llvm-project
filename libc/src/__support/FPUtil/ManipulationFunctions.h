@@ -16,8 +16,8 @@
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/common.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include <limits.h>
 #include <math.h>

@@ -48,8 +48,7 @@ function(compiler_rt_mock_llvm_cmake_config_set_target_triple)
       # support this flag.
       set(DUMPMACHINE_ARG -dumpmachine)
       if(MSVC)
-        # This means we are using clang-cl and it requires
-        # /clang: as prefix for dumpmachine argument.
+        # Use /clang:-dumpmachine for clang-cl.
         set(DUMPMACHINE_ARG /clang:-dumpmachine)
       endif()
       execute_process(

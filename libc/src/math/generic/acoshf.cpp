@@ -12,6 +12,7 @@
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/sqrt.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/math/generic/common_constants.h"
 #include "src/math/generic/explogxf.h"
 

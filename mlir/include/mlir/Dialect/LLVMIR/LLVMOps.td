@@ -350,6 +350,7 @@ def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpBase {
                    OptionalAttr<SymbolRefArrayAttr>:$access_groups,
                    OptionalAttr<SymbolRefArrayAttr>:$alias_scopes,
                    OptionalAttr<SymbolRefArrayAttr>:$noalias_scopes,
+                   OptionalAttr<SymbolRefArrayAttr>:$tbaa,
                    OptionalAttr<I64Attr>:$alignment, UnitAttr:$volatile_,
                    UnitAttr:$nontemporal);
   let results = (outs LLVM_LoadableType:$res);
@@ -390,6 +391,7 @@ def LLVM_StoreOp : LLVM_Op<"store">, MemoryOpBase {
                    OptionalAttr<SymbolRefArrayAttr>:$access_groups,
                    OptionalAttr<SymbolRefArrayAttr>:$alias_scopes,
                    OptionalAttr<SymbolRefArrayAttr>:$noalias_scopes,
+                   OptionalAttr<SymbolRefArrayAttr>:$tbaa,
                    OptionalAttr<I64Attr>:$alignment, UnitAttr:$volatile_,
                    UnitAttr:$nontemporal);
   string llvmInstName = "Store";

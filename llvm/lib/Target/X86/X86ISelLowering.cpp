@@ -55774,6 +55774,22 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       }
       break;
     case ISD::VSELECT:
+      if (!IsSplat && Subtarget.hasAVX512() &&
+          (VT.is256BitVector() ||
+           (VT.is512BitVector() && Subtarget.useAVX512Regs())) &&
+          (EltSizeInBits >= 32 || Subtarget.hasBWI())) {
+        EVT SelVT = Ops[0].getOperand(0).getValueType();
+        if (SelVT.getVectorElementType() == MVT::i1) {
+          SelVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
+                                   Ops.size() * SelVT.getVectorNumElements());
+          if (DAG.getTargetLoweringInfo().isTypeLegal(SelVT))
+            return DAG.getNode(Op0.getOpcode(), DL, VT,
+                               ConcatSubOperand(SelVT.getSimpleVT(), Ops, 0),
+                               ConcatSubOperand(VT, Ops, 1),
+                               ConcatSubOperand(VT, Ops, 2));
+        }
+      }
+      [[fallthrough]];
     case X86ISD::BLENDV:
       if (!IsSplat && VT.is256BitVector() && Ops.size() == 2 &&
           (EltSizeInBits >= 32 || Subtarget.hasInt256()) &&
@@ -55830,13 +55846,28 @@ static SDValue combineCONCAT_VECTORS(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   EVT SrcVT = N->getOperand(0).getValueType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SmallVector<SDValue, 4> Ops(N->op_begin(), N->op_end());
 
-  // Don't do anything for i1 vectors.
-  if (VT.getVectorElementType() == MVT::i1)
+  if (VT.getVectorElementType() == MVT::i1) {
+    // Attempt to constant fold.
+    unsigned SubSizeInBits = SrcVT.getSizeInBits();
+    APInt Constant = APInt::getZero(VT.getSizeInBits());
+    for (unsigned I = 0, E = Ops.size(); I != E; ++I) {
+      auto *C = dyn_cast<ConstantSDNode>(peekThroughBitcasts(Ops[I]));
+      if (!C) break;
+      Constant.insertBits(C->getAPIntValue(), I * SubSizeInBits);
+      if (I == (E - 1)) {
+        EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
+        if (TLI.isTypeLegal(IntVT))
+          return DAG.getBitcast(VT, DAG.getConstant(Constant, SDLoc(N), IntVT));
+      }
+    }
+
+    // Don't do anything else for i1 vectors.
     return SDValue();
+  }
 
   if (Subtarget.hasAVX() && TLI.isTypeLegal(VT) && TLI.isTypeLegal(SrcVT)) {
-    SmallVector<SDValue, 4> Ops(N->op_begin(), N->op_end());
     if (SDValue R = combineConcatVectorOps(SDLoc(N), VT.getSimpleVT(), Ops, DAG,
                                            DCI, Subtarget))
       return R;

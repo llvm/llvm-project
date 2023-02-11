@@ -668,53 +668,60 @@ Type LLVM::GEPOp::getSourceElementType() {
 // Builder, printer and parser for for LLVM::LoadOp.
 //===----------------------------------------------------------------------===//
 
-LogicalResult verifySymbolAttribute(
-    Operation *op, StringRef attributeName,
+/// Verifies the given array attribute contains symbol references and checks the
+/// referenced symbol types using the provided verification function.
+LogicalResult verifyMemOpSymbolRefs(
+    Operation *op, StringRef name, ArrayAttr symbolRefs,
     llvm::function_ref<LogicalResult(Operation *, SymbolRefAttr)>
         verifySymbolType) {
-  if (Attribute attribute = op->getAttr(attributeName)) {
-    // Verify that the attribute is a symbol ref array attribute,
-    // because this constraint is not verified for all attribute
-    // names processed here (e.g. 'tbaa'). This verification
-    // is redundant in some cases.
-    if (!(attribute.isa<ArrayAttr>() &&
-          llvm::all_of(attribute.cast<ArrayAttr>(), [&](Attribute attr) {
-            return attr && attr.isa<SymbolRefAttr>();
-          })))
-      return op->emitOpError("attribute '")
-             << attributeName
-             << "' failed to satisfy constraint: symbol ref array attribute";
+  assert(symbolRefs && "expected a non-null attribute");
 
-    for (SymbolRefAttr symbolRef :
-         attribute.cast<ArrayAttr>().getAsRange<SymbolRefAttr>()) {
-      StringAttr metadataName = symbolRef.getRootReference();
-      StringAttr symbolName = symbolRef.getLeafReference();
-      // We want @metadata::@symbol, not just @symbol
-      if (metadataName == symbolName) {
-        return op->emitOpError() << "expected '" << symbolRef
-                                 << "' to specify a fully qualified reference";
-      }
-      auto metadataOp = SymbolTable::lookupNearestSymbolFrom<LLVM::MetadataOp>(
-          op->getParentOp(), metadataName);
-      if (!metadataOp)
-        return op->emitOpError()
-               << "expected '" << symbolRef << "' to reference a metadata op";
-      Operation *symbolOp =
-          SymbolTable::lookupNearestSymbolFrom(metadataOp, symbolName);
-      if (!symbolOp)
-        return op->emitOpError()
-               << "expected '" << symbolRef << "' to be a valid reference";
-      if (failed(verifySymbolType(symbolOp, symbolRef))) {
-        return failure();
-      }
+  // Verify that the attribute is a symbol ref array attribute,
+  // because this constraint is not verified for all attribute
+  // names processed here (e.g. 'tbaa'). This verification
+  // is redundant in some cases.
+  if (!llvm::all_of(symbolRefs, [](Attribute attr) {
+        return attr && attr.isa<SymbolRefAttr>();
+      }))
+    return op->emitOpError("attribute '")
+           << name
+           << "' failed to satisfy constraint: symbol ref array attribute";
+
+  for (SymbolRefAttr symbolRef : symbolRefs.getAsRange<SymbolRefAttr>()) {
+    StringAttr metadataName = symbolRef.getRootReference();
+    StringAttr symbolName = symbolRef.getLeafReference();
+    // We want @metadata::@symbol, not just @symbol
+    if (metadataName == symbolName) {
+      return op->emitOpError() << "expected '" << symbolRef
+                               << "' to specify a fully qualified reference";
+    }
+    auto metadataOp = SymbolTable::lookupNearestSymbolFrom<LLVM::MetadataOp>(
+        op->getParentOp(), metadataName);
+    if (!metadataOp)
+      return op->emitOpError()
+             << "expected '" << symbolRef << "' to reference a metadata op";
+    Operation *symbolOp =
+        SymbolTable::lookupNearestSymbolFrom(metadataOp, symbolName);
+    if (!symbolOp)
+      return op->emitOpError()
+             << "expected '" << symbolRef << "' to be a valid reference";
+    if (failed(verifySymbolType(symbolOp, symbolRef))) {
+      return failure();
     }
   }
+
   return success();
 }
 
-// Verifies that metadata ops are wired up properly.
+/// Verifies the given array attribute contains symbol references that point to
+/// metadata operations of the given type.
 template <typename OpTy>
-static LogicalResult verifyOpMetadata(Operation *op, StringRef attributeName) {
+static LogicalResult
+verifyMemOpSymbolRefsPointTo(Operation *op, StringRef name,
+                             std::optional<ArrayAttr> symbolRefs) {
+  if (!symbolRefs)
+    return success();
+
   auto verifySymbolType = [op](Operation *symbolOp,
                                SymbolRefAttr symbolRef) -> LogicalResult {
     if (!isa<OpTy>(symbolOp)) {
@@ -724,35 +731,33 @@ static LogicalResult verifyOpMetadata(Operation *op, StringRef attributeName) {
     }
     return success();
   };
-
-  return verifySymbolAttribute(op, attributeName, verifySymbolType);
+  return verifyMemOpSymbolRefs(op, name, *symbolRefs, verifySymbolType);
 }
 
-static LogicalResult verifyMemoryOpMetadata(Operation *op) {
-  // access_groups
-  if (failed(verifyOpMetadata<LLVM::AccessGroupMetadataOp>(
-          op, LLVMDialect::getAccessGroupsAttrName())))
+/// Verifies the types of the metadata operations referenced by aliasing and
+/// access group metadata.
+template <typename OpTy>
+LogicalResult verifyMemOpMetadata(OpTy memOp) {
+  if (failed(verifyMemOpSymbolRefsPointTo<LLVM::AccessGroupMetadataOp>(
+          memOp, memOp.getAccessGroupsAttrName(), memOp.getAccessGroups())))
     return failure();
 
-  // alias_scopes
-  if (failed(verifyOpMetadata<LLVM::AliasScopeMetadataOp>(
-          op, LLVMDialect::getAliasScopesAttrName())))
+  if (failed(verifyMemOpSymbolRefsPointTo<LLVM::AliasScopeMetadataOp>(
+          memOp, memOp.getAliasScopesAttrName(), memOp.getAliasScopes())))
     return failure();
 
-  // noalias_scopes
-  if (failed(verifyOpMetadata<LLVM::AliasScopeMetadataOp>(
-          op, LLVMDialect::getNoAliasScopesAttrName())))
+  if (failed(verifyMemOpSymbolRefsPointTo<LLVM::AliasScopeMetadataOp>(
+          memOp, memOp.getNoaliasScopesAttrName(), memOp.getNoaliasScopes())))
     return failure();
 
-  // tbaa
-  if (failed(verifyOpMetadata<LLVM::TBAATagOp>(op,
-                                               LLVMDialect::getTBAAAttrName())))
+  if (failed(verifyMemOpSymbolRefsPointTo<LLVM::TBAATagOp>(
+          memOp, memOp.getTbaaAttrName(), memOp.getTbaa())))
     return failure();
 
   return success();
 }
 
-LogicalResult LoadOp::verify() { return verifyMemoryOpMetadata(*this); }
+LogicalResult LoadOp::verify() { return verifyMemOpMetadata(*this); }
 
 void LoadOp::build(OpBuilder &builder, OperationState &result, Type t,
                    Value addr, unsigned alignment, bool isVolatile,
@@ -828,7 +833,7 @@ ParseResult LoadOp::parse(OpAsmParser &parser, OperationState &result) {
 // Builder, printer and parser for LLVM::StoreOp.
 //===----------------------------------------------------------------------===//
 
-LogicalResult StoreOp::verify() { return verifyMemoryOpMetadata(*this); }
+LogicalResult StoreOp::verify() { return verifyMemOpMetadata(*this); }
 
 void StoreOp::build(OpBuilder &builder, OperationState &result, Value value,
                     Value addr, unsigned alignment, bool isVolatile,
