@@ -721,7 +721,7 @@ TEST(LinkGraphTest, GraphAllocationMethods) {
   EXPECT_EQ(Buf1.size(), 10U);
 
   // Test allocation of content-backed buffer.
-  ArrayRef<char> Buf2Src = {1, -1, 0, 42};
+  ArrayRef<char> Buf2Src = {1, static_cast<char>(-1), 0, 42};
   auto Buf2 = G.allocateContent(Buf2Src);
   EXPECT_EQ(Buf2, Buf2Src);
 
