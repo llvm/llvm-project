@@ -6,17 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11
+// <utility>
+
+// template <class T1, class T2> struct pair
+
+// template<size_t I, class T1, class T2>
+//     const typename tuple_element<I, std::pair<T1, T2> >::type&
+//     get(const pair<T1, T2>&);
+
 #include <utility>
-#include <complex>
 
-#include <cassert>
-
-int main(int, char**)
-{
-    typedef std::complex<float> cf;
-    auto t1 = std::make_pair<int, double> ( 42, 3.4 );
-    assert (( std::get<cf>(t1) == cf {1,2} ));  // no such type
-
-  return 0;
+void f() {
+  typedef std::pair<int, short> P;
+  const P p(3, 4);
+  std::get<0>(p) = 5; // expected-error {{cannot assign to return value}}
 }

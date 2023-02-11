@@ -32,7 +32,3 @@ std::pair<ImplicitlyDefaultConstructible, ExplicitlyDefaultConstructible> test1(
 std::pair<ExplicitlyDefaultConstructible, ImplicitlyDefaultConstructible> test2() { return {}; } // expected-error 1 {{chosen constructor is explicit in copy-initialization}}
 std::pair<ExplicitlyDefaultConstructible, ExplicitlyDefaultConstructible> test3() { return {}; } // expected-error 1 {{chosen constructor is explicit in copy-initialization}}
 std::pair<ImplicitlyDefaultConstructible, ImplicitlyDefaultConstructible> test4() { return {}; }
-
-int main(int, char**) {
-    return 0;
-}

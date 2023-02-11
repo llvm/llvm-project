@@ -7,16 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11
+
 #include <utility>
 #include <complex>
 
-#include <cassert>
-
-int main(int, char**)
-{
-    typedef std::complex<float> cf;
-    auto t1 = std::make_pair<int, int> ( 42, 43 );
-    assert ( std::get<int>(t1) == 42 ); // two ints
-
-  return 0;
+void f() {
+  typedef std::complex<float> cf;
+  auto t1 = std::make_pair<int, double>(42, 3.4);
+  (void)std::get<cf>(t1); // expected-error {{no matching function for call to 'get'}}
 }

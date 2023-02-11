@@ -16,19 +16,18 @@
 #include <cassert>
 
 struct ExplicitT {
-  constexpr explicit ExplicitT(int x) : value(x) {}
-  constexpr explicit ExplicitT(ExplicitT const& o) : value(o.value) {}
-  int value;
+    constexpr explicit ExplicitT(int x) : value(x) {}
+    constexpr explicit ExplicitT(ExplicitT const& o) : value(o.value) {}
+    int value;
 };
 
 struct ImplicitT {
-  constexpr ImplicitT(int x) : value(x) {}
-  constexpr ImplicitT(ImplicitT const& o) : value(o.value) {}
-  int value;
+    constexpr ImplicitT(int x) : value(x) {}
+    constexpr ImplicitT(ImplicitT const& o) : value(o.value) {}
+    int value;
 };
 
-int main(int, char**)
-{
+void f() {
     {
         using P = std::pair<int, int>;
         constexpr int x = 42;
@@ -53,6 +52,4 @@ int main(int, char**)
         constexpr P U_V = {42, 101}; // expected-error {{must be initialized by a constant expression}}
         constexpr P pair_U_V = other; // expected-error {{must be initialized by a constant expression}}
     }
-
-  return 0;
 }
