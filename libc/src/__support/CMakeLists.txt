@@ -179,7 +179,7 @@ add_header_library(
     .integer_utils
     libc.src.__support.CPP.array
     libc.src.__support.CPP.type_traits
-    libc.src.__support.macros.attributes
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(
