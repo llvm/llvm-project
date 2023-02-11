@@ -3,6 +3,7 @@ static_library("Shared") {
   deps = [ "//llvm/lib/Support" ]
   sources = [
     "AllocationActions.cpp",
+    "ObjectFormats.cpp",
     "OrcError.cpp",
     "OrcRTBridge.cpp",
     "SimpleRemoteEPCUtils.cpp",
