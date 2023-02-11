@@ -194,7 +194,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
         : first(__t1), second(__t2) {}
 
     template <
-#if _LIBCPP_STD_VER > 20 // http://wg21.link/P1951
+#if _LIBCPP_STD_VER >= 23 // http://wg21.link/P1951
         class _U1 = _T1, class _U2 = _T2,
 #else
         class _U1, class _U2,
@@ -208,7 +208,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
         : first(_VSTD::forward<_U1>(__u1)), second(_VSTD::forward<_U2>(__u2)) {}
 
     template <
-#if _LIBCPP_STD_VER > 20 // http://wg21.link/P1951
+#if _LIBCPP_STD_VER >= 23 // http://wg21.link/P1951
         class _U1 = _T1, class _U2 = _T2,
 #else
         class _U1, class _U2,
@@ -221,7 +221,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
                     is_nothrow_constructible<second_type, _U2>::value))
         : first(_VSTD::forward<_U1>(__u1)), second(_VSTD::forward<_U2>(__u2)) {}
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
     template<class _U1, class _U2, __enable_if_t<
             _CheckArgs::template __is_pair_constructible<_U1&, _U2&>()
     >* = nullptr>
@@ -268,7 +268,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
                     is_nothrow_constructible<second_type, _U2&&>::value))
         : first(_VSTD::forward<_U1>(__p.first)), second(_VSTD::forward<_U2>(__p.second)) {}
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
     template<class _U1, class _U2, __enable_if_t<
             _CheckArgs::template __is_pair_constructible<const _U1&&, const _U2&&>()
     >* = nullptr>
@@ -332,7 +332,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
         return *this;
     }
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
     _LIBCPP_HIDE_FROM_ABI constexpr
     const pair& operator=(pair const& __p) const
       noexcept(is_nothrow_copy_assignable_v<const first_type> &&
@@ -385,7 +385,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
         second = _VSTD::get<1>(_VSTD::forward<_Tuple>(__p));
         return *this;
     }
-#endif
+#endif // _LIBCPP_CXX03_LANG
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     void
@@ -397,7 +397,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
         swap(second, __p.second);
     }
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
     _LIBCPP_HIDE_FROM_ABI constexpr
     void swap(const pair& __p) const
         noexcept(__is_nothrow_swappable<const first_type>::value &&
@@ -434,7 +434,7 @@ operator==(const pair<_T1,_T2>& __x, const pair<_T1,_T2>& __y)
     return __x.first == __y.first && __x.second == __y.second;
 }
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 template <class _T1, class _T2>
 _LIBCPP_HIDE_FROM_ABI constexpr
@@ -449,7 +449,7 @@ operator<=>(const pair<_T1,_T2>& __x, const pair<_T1,_T2>& __y)
     return _VSTD::__synth_three_way(__x.second, __y.second);
 }
 
-#else // _LIBCPP_STD_VER > 17
+#else // _LIBCPP_STD_VER >= 20
 
 template <class _T1, class _T2>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
@@ -491,9 +491,9 @@ operator<=(const pair<_T1,_T2>& __x, const pair<_T1,_T2>& __y)
     return !(__y < __x);
 }
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
 template <class _T1, class _T2, class _U1, class _U2, template<class> class _TQual, template<class> class _UQual>
     requires requires { typename pair<common_reference_t<_TQual<_T1>, _UQual<_U1>>,
                                       common_reference_t<_TQual<_T2>, _UQual<_U2>>>; }
@@ -524,7 +524,7 @@ swap(pair<_T1, _T2>& __x, pair<_T1, _T2>& __y)
     __x.swap(__y);
 }
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
 template <class _T1, class _T2>
   requires (__is_swappable<const _T1>::value &&
             __is_swappable<const _T2>::value)
