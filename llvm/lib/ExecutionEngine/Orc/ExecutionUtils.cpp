@@ -528,7 +528,7 @@ DLLImportDefinitionGenerator::createStubsGraph(const SymbolMap &Resolved) {
     // Create __imp_ symbol
     jitlink::Symbol &Ptr =
         jitlink::x86_64::createAnonymousPointer(*G, Sec, &Target);
-    auto NameCopy = G->allocateString(Twine(getImpPrefix()) + *KV.first);
+    auto NameCopy = G->allocateContent(Twine(getImpPrefix()) + *KV.first);
     StringRef NameCopyRef = StringRef(NameCopy.data(), NameCopy.size());
     Ptr.setName(NameCopyRef);
     Ptr.setLinkage(jitlink::Linkage::Strong);
