@@ -144,10 +144,10 @@ eliminated. That is not ideal! What happened is that our pattern replaced the
 last transform with the function input and left behind the now dead transpose
 input. The Canonicalizer knows to clean up dead operations; however, MLIR
 conservatively assumes that operations may have side-effects. We can fix this by
-adding a new trait, `NoMemoryEffect`, to our `TransposeOp`:
+adding a new trait, `Pure`, to our `TransposeOp`:
 
 ```tablegen
-def TransposeOp : Toy_Op<"transpose", [NoMemoryEffect]> {...}
+def TransposeOp : Toy_Op<"transpose", [Pure]> {...}
 ```
 
 Let's retry now `toyc-ch3 test/transpose_transpose.toy -emit=mlir -opt`:
