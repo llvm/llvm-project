@@ -6,6 +6,9 @@
 ; RUN: llc -o /dev/null -mbb-profile-dump=%t %s
 ; RUN: FileCheck --input-file %t %s
 
+; bb profile dump is not supported on NVPTX
+; UNSUPPORTED: target=nvptx{{.*}}
+
 define i64 @f2(i64 %a, i64 %b) {
     %sum = add i64 %a, %b
     ret i64 %sum
