@@ -711,3 +711,28 @@ TEST(LinkGraphTest, SplitBlock) {
     EXPECT_EQ(E2->getOffset(), 4U);
   }
 }
+
+TEST(LinkGraphTest, IsCStringBlockTest) {
+  // Check that the LinkGraph::splitBlock test works as expected.
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
+              getGenericEdgeKindName);
+  auto &Sec =
+      G.createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
+
+  ArrayRef<char> CString = "hello, world!";
+  ArrayRef<char> NotACString = {0, 1, 0, 1, 0};
+
+  auto &CStringBlock =
+      G.createContentBlock(Sec, CString, orc::ExecutorAddr(), 1, 0);
+  auto &NotACStringBlock =
+      G.createContentBlock(Sec, NotACString, orc::ExecutorAddr(), 1, 0);
+  auto &SizeOneZeroFillBlock =
+      G.createZeroFillBlock(Sec, 1, orc::ExecutorAddr(), 1, 0);
+  auto &LargerZeroFillBlock =
+      G.createZeroFillBlock(Sec, 2, orc::ExecutorAddr(), 1, 0);
+
+  EXPECT_TRUE(isCStringBlock(CStringBlock));
+  EXPECT_FALSE(isCStringBlock(NotACStringBlock));
+  EXPECT_TRUE(isCStringBlock(SizeOneZeroFillBlock));
+  EXPECT_FALSE(isCStringBlock(LargerZeroFillBlock));
+}
