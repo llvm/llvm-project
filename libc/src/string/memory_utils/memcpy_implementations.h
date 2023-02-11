@@ -10,7 +10,7 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY_IMPLEMENTATIONS_H
 
 #include "src/__support/common.h"
-#include "src/__support/macros/optimization.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY LIBC_LOOP_NOUNROLL
 #include "src/__support/macros/properties/architectures.h"
 #include "src/string/memory_utils/op_aarch64.h"
 #include "src/string/memory_utils/op_builtin.h"

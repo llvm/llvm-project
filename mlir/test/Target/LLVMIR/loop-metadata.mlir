@@ -26,6 +26,18 @@ llvm.func @mustprogress() {
 
 // -----
 
+// CHECK-LABEL: @isvectorized
+llvm.func @isvectorized() {
+  // CHECK: br {{.*}} !llvm.loop ![[LOOP_NODE:[0-9]+]]
+  llvm.br ^bb1 {llvm.loop = #llvm.loop_annotation<isVectorized = true>}
+^bb1:
+  llvm.return
+}
+
+// CHECK: ![[LOOP_NODE]] = distinct !{![[LOOP_NODE]], !{{[0-9]+}}}
+// CHECK-DAG: ![[VEC_NODE0:[0-9]+]] = !{!"llvm.loop.isvectorized", i32 1}
+
+// -----
 
 #followup = #llvm.loop_annotation<disableNonforced = true>
 
@@ -73,7 +85,7 @@ llvm.func @unrollOptions() {
   // CHECK: br {{.*}} !llvm.loop ![[LOOP_NODE:[0-9]+]]
   llvm.br ^bb1 {llvm.loop = #llvm.loop_annotation<unroll = <
     disable = true, count = 64 : i32, runtimeDisable = false, full = false,
-    followup = #followup, followupRemainder = #followup>
+    followupUnrolled = #followup, followupRemainder = #followup, followupAll = #followup>
   >}
 ^bb1:
   llvm.return
@@ -81,12 +93,13 @@ llvm.func @unrollOptions() {
 
 // CHECK-DAG: ![[NON_FORCED:[0-9]+]] = !{!"llvm.loop.disable_nonforced"}
 // CHECK-DAG: ![[FOLLOWUP:[0-9]+]] = distinct !{![[FOLLOWUP]], ![[NON_FORCED]]}
-// CHECK-DAG: ![[LOOP_NODE]] = distinct !{![[LOOP_NODE]], !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}} 
+// CHECK-DAG: ![[LOOP_NODE]] = distinct !{![[LOOP_NODE]], !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}}
 // CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll.disable"}
 // CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll.count", i32 64}
 // CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll.runtime.disable", i1 false}
-// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll.followup", ![[FOLLOWUP]]}
+// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll.followup_unrolled", ![[FOLLOWUP]]}
 // CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll.followup_remainder", ![[FOLLOWUP]]}
+// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll.followup_all", ![[FOLLOWUP]]}
 
 // -----
 

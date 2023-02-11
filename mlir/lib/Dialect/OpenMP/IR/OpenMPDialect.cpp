@@ -446,7 +446,7 @@ static LogicalResult verifyReductionVarList(Operation *op,
     if (!accumulators.insert(accum).second)
       return op->emitOpError() << "accumulator variable used more than once";
 
-    Type varType = accum.getType().cast<PointerLikeType>();
+    Type varType = accum.getType();
     auto symbolRef = std::get<1>(args).cast<SymbolRefAttr>();
     auto decl =
         SymbolTable::lookupNearestSymbolFrom<ReductionDeclareOp>(op, symbolRef);
@@ -932,7 +932,8 @@ LogicalResult ReductionDeclareOp::verifyRegions() {
                             "arguments of the same type";
   auto ptrType = atomicReductionEntryBlock.getArgumentTypes()[0]
                      .dyn_cast<PointerLikeType>();
-  if (!ptrType || ptrType.getElementType() != getType())
+  if (!ptrType ||
+      (ptrType.getElementType() && ptrType.getElementType() != getType()))
     return emitOpError() << "expects atomic reduction region arguments to "
                             "be accumulators containing the reduction type";
   return success();
@@ -1115,8 +1116,9 @@ LogicalResult AtomicWriteOp::verify() {
           "memory-order must not be acq_rel or acquire for atomic writes");
     }
   }
-  if (getAddress().getType().cast<PointerLikeType>().getElementType() !=
-      getValue().getType())
+  Type elementType =
+      getAddress().getType().cast<PointerLikeType>().getElementType();
+  if (elementType && elementType != getValue().getType())
     return emitError("address must dereference to value type");
   return verifySynchronizationHint(*this, getHintVal());
 }
@@ -1166,8 +1168,8 @@ LogicalResult AtomicUpdateOp::verify() {
   if (getRegion().getNumArguments() != 1)
     return emitError("the region must accept exactly one argument");
 
-  if (getX().getType().cast<PointerLikeType>().getElementType() !=
-      getRegion().getArgument(0).getType()) {
+  Type elementType = getX().getType().cast<PointerLikeType>().getElementType();
+  if (elementType && elementType != getRegion().getArgument(0).getType()) {
     return emitError("the type of the operand must be a pointer type whose "
                      "element type is the same as that of the region argument");
   }

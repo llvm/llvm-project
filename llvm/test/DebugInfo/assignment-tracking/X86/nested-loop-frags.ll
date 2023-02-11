@@ -230,7 +230,7 @@ do.cond4:                                         ; preds = %do.cond
 
 do.end6:                                          ; preds = %do.cond4
   call void @llvm.dbg.assign(metadata i32 3, metadata !21, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32), metadata !63, metadata ptr %a.addr, metadata !DIExpression()), !dbg !27; VAR:a
-  call void @llvm.dbg.assign(metadata i32 0, metadata !21, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata !70, metadata ptr %a.addr, metadata !DIExpression()), !dbg !27; VAR:a
+  call void @llvm.dbg.assign(metadata i32 0, metadata !21, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata !70, metadata ptr %a.addr, metadata !DIExpression(DW_OP_plus_uconst, 32)), !dbg !27; VAR:a
   ;call void @llvm.dbg.assign(metadata i32 3, metadata !21, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata !81, metadata ptr %a.addr, metadata !DIExpression()), !dbg !27; VAR:a
   call void @llvm.dbg.assign(metadata i32 4, metadata !22, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32), metadata !65, metadata ptr %b.addr, metadata !DIExpression()), !dbg !27 ; VAR:b
   call void @llvm.dbg.assign(metadata i32 0, metadata !22, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata !71, metadata ptr %b.addr, metadata !DIExpression()), !dbg !27 ; VAR:b
@@ -240,8 +240,8 @@ do.end6:                                          ; preds = %do.cond4
   ;call void @llvm.dbg.assign(metadata i32 11, metadata !79, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32), metadata !81, metadata ptr %f.addr, metadata !DIExpression()), !dbg !27 ; VAR:f
   ret i32 0, !dbg !53
 ; CHECK-LABEL: bb.7.do.end6:
+; CHECK-NEXT:    DBG_VALUE %stack.0.a.addr, $noreg, ![[a]], !DIExpression(DW_OP_plus_uconst, 32, DW_OP_deref, DW_OP_LLVM_fragment, 32, 32)
 ; CHECK-NEXT:    DBG_VALUE %stack.0.a.addr, $noreg, ![[a]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 32)
-; CHECK-NEXT:    DBG_VALUE %stack.0.a.addr, $noreg, ![[a]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 32, 32)
 ; CHECK-NEXT:    DBG_VALUE 4, $noreg, ![[b]], !DIExpression(DW_OP_LLVM_fragment, 0, 32)
 ; CHECK-NEXT:    DBG_VALUE %stack.1.b.addr, $noreg, ![[b]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 32, 32)
 ; xCHECK-NEXT:    XXX ? DBG_VALUE %stack.3.d.addr, $noreg, ![[d]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 32, 32)
