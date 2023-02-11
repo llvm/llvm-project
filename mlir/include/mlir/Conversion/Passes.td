@@ -276,7 +276,7 @@ def ConvertControlFlowToSPIRV : Pass<"convert-cf-to-spirv"> {
 // FuncToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertFuncToLLVM : Pass<"convert-func-to-llvm", "ModuleOp"> {
+def ConvertFuncToLLVMPass : Pass<"convert-func-to-llvm", "ModuleOp"> {
   let summary = "Convert from the Func dialect to the LLVM dialect";
   let description = [{
     Convert Func dialect operations into the LLVM IR dialect operations.
@@ -300,7 +300,6 @@ def ConvertFuncToLLVM : Pass<"convert-func-to-llvm", "ModuleOp"> {
     returns are updated accordingly. Block argument types are updated to use
     LLVM IR types.
   }];
-  let constructor = "mlir::createConvertFuncToLLVMPass()";
   let dependentDialects = ["LLVM::LLVMDialect"];
   let options = [
     Option<"useBarePtrCallConv", "use-bare-ptr-memref-call-conv", "bool",
