@@ -49,7 +49,6 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if defined(_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR)
 template <class, class>
 struct __non_trivially_copyable_base {
   _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI
@@ -57,7 +56,6 @@ struct __non_trivially_copyable_base {
   _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
   __non_trivially_copyable_base(__non_trivially_copyable_base const&) _NOEXCEPT {}
 };
-#endif
 
 template <class _T1, class _T2>
 struct _LIBCPP_TEMPLATE_VIS pair
