@@ -372,7 +372,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
         second = std::forward<_U2>(__p.second);
         return *this;
     }
-#endif // _LIBCPP_STD_VER > 20
+#endif // _LIBCPP_STD_VER >= 23
 
     template <class _Tuple, typename enable_if<
             _CheckTLC<_Tuple>::template __enable_assign<_Tuple>()
@@ -505,7 +505,7 @@ template <class _T1, class _T2, class _U1, class _U2>
 struct common_type<pair<_T1, _T2>, pair<_U1, _U2>> {
     using type = pair<common_type_t<_T1, _U1>, common_type_t<_T2, _U2>>;
 };
-#endif // _LIBCPP_STD_VER > 20
+#endif // _LIBCPP_STD_VER >= 23
 
 template <class _T1, class _T2>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
