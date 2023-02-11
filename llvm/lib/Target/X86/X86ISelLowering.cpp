@@ -48530,10 +48530,13 @@ static SDValue combineVectorInsert(SDNode *N, SelectionDAG &DAG,
           Opcode == ISD::INSERT_VECTOR_ELT) &&
          "Unexpected vector insertion");
 
+  SDValue Vec = N->getOperand(0);
+  SDValue Scl = N->getOperand(1);
+  SDValue Idx = N->getOperand(2);
+
   // Fold insert_vector_elt(undef, elt, 0) --> scalar_to_vector(elt).
-  if (Opcode == ISD::INSERT_VECTOR_ELT && N->getOperand(0).isUndef() &&
-      isNullConstant(N->getOperand(2)))
-    return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), VT, N->getOperand(1));
+  if (Opcode == ISD::INSERT_VECTOR_ELT && Vec.isUndef() && isNullConstant(Idx))
+    return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), VT, Scl);
 
   if (Opcode == X86ISD::PINSRB || Opcode == X86ISD::PINSRW) {
     unsigned NumBitsPerElt = VT.getScalarSizeInBits();
