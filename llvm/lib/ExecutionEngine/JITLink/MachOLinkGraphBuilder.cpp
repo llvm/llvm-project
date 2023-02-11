@@ -660,7 +660,7 @@ Error MachOLinkGraphBuilder::graphifyCStringSection(
   orc::ExecutorAddrDiff BlockStart = 0;
 
   // Scan section for null characters.
-  for (size_t I = 0; I != NSec.Size; ++I)
+  for (size_t I = 0; I != NSec.Size; ++I) {
     if (NSec.Data[I] == '\0') {
       size_t BlockSize = I + 1 - BlockStart;
       // Create a block for this null terminated string.
@@ -727,6 +727,11 @@ Error MachOLinkGraphBuilder::graphifyCStringSection(
 
       BlockStart += BlockSize;
     }
+  }
+
+  assert(llvm::all_of(NSec.GraphSection->blocks(),
+                      [](Block *B) { return isCStringBlock(*B); }) &&
+         "All blocks in section should hold single c-strings");
 
   return Error::success();
 }
