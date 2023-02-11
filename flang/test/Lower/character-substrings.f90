@@ -40,7 +40,7 @@ end subroutine scalar_substring_embox
 ! CHECK:         %[[VAL_8:.*]] = arith.subi %[[VAL_7]], %[[VAL_4]] : index
 ! CHECK:         %[[VAL_9:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
 ! CHECK:         %[[VAL_10:.*]] = arith.constant 5 : i64
-! CHECK:         %[[VAL_11:.*]] = arith.constant 7 : i64
+! CHECK:         %[[VAL_11:.*]] = arith.constant 5 : i64
 ! CHECK:         %[[VAL_12:.*]] = arith.constant 1 : i64
 ! CHECK:         %[[VAL_13:.*]] = arith.subi %[[VAL_10]], %[[VAL_12]] : i64
 ! CHECK:         %[[VAL_14:.*]] = arith.constant 0 : i64
@@ -63,7 +63,7 @@ subroutine array_substring_embox(arr)
 
   character(7) arr(4)
 
-  call s(arr(:)(5:7))
+  call s(arr(:)(5:5))
 end subroutine array_substring_embox
 
 ! CHECK-LABEL: func @_QPsubstring_assignment(
