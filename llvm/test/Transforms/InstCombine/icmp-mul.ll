@@ -133,12 +133,38 @@ define i1 @ult_rem_zero(i8 %x) {
   ret i1 %b
 }
 
+; Same as above, but with nsw flag too.
+; FIXME: This should be optimized like above.
+define i1 @ult_rem_zero_nsw(i8 %x) {
+; CHECK-LABEL: @ult_rem_zero_nsw(
+; CHECK-NEXT:    [[A:%.*]] = mul nuw nsw i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[B:%.*]] = icmp ult i8 [[A]], 21
+; CHECK-NEXT:    ret i1 [[B]]
+;
+  %a = mul nuw nsw i8 %x, 7
+  %b = icmp ult i8 %a, 21
+  ret i1 %b
+}
+
 define i1 @ult_rem_nz(i8 %x) {
 ; CHECK-LABEL: @ult_rem_nz(
 ; CHECK-NEXT:    [[B:%.*]] = icmp ult i8 [[X:%.*]], 5
 ; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = mul nuw i8 %x, 5
+  %b = icmp ult i8 %a, 21
+  ret i1 %b
+}
+
+; Same as above, but with nsw flag too.
+; FIXME: This should be optimized like above.
+define i1 @ult_rem_nz_nsw(i8 %x) {
+; CHECK-LABEL: @ult_rem_nz_nsw(
+; CHECK-NEXT:    [[A:%.*]] = mul nuw nsw i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[B:%.*]] = icmp ult i8 [[A]], 21
+; CHECK-NEXT:    ret i1 [[B]]
+;
+  %a = mul nuw nsw i8 %x, 5
   %b = icmp ult i8 %a, 21
   ret i1 %b
 }
@@ -185,12 +211,38 @@ define i1 @ugt_rem_zero(i8 %x) {
   ret i1 %b
 }
 
+; Same as above, but with nsw flag too.
+; FIXME: This should be optimized like above.
+define i1 @ugt_rem_zero_nsw(i8 %x) {
+; CHECK-LABEL: @ugt_rem_zero_nsw(
+; CHECK-NEXT:    [[A:%.*]] = mul nuw nsw i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[B:%.*]] = icmp ugt i8 [[A]], 21
+; CHECK-NEXT:    ret i1 [[B]]
+;
+  %a = mul nuw nsw i8 %x, 7
+  %b = icmp ugt i8 %a, 21
+  ret i1 %b
+}
+
 define i1 @ugt_rem_nz(i8 %x) {
 ; CHECK-LABEL: @ugt_rem_nz(
 ; CHECK-NEXT:    [[B:%.*]] = icmp ugt i8 [[X:%.*]], 4
 ; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = mul nuw i8 %x, 5
+  %b = icmp ugt i8 %a, 21
+  ret i1 %b
+}
+
+; Same as above, but with nsw flag too.
+; FIXME: This should be optimized like above.
+define i1 @ugt_rem_nz_nsw(i8 %x) {
+; CHECK-LABEL: @ugt_rem_nz_nsw(
+; CHECK-NEXT:    [[A:%.*]] = mul nuw nsw i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[B:%.*]] = icmp ugt i8 [[A]], 21
+; CHECK-NEXT:    ret i1 [[B]]
+;
+  %a = mul nuw nsw i8 %x, 5
   %b = icmp ugt i8 %a, 21
   ret i1 %b
 }

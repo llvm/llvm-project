@@ -143,14 +143,13 @@ def ConvertArmNeon2dToIntr : Pass<"arm-neon-2d-to-intr"> {
 // AsyncToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertAsyncToLLVM : Pass<"convert-async-to-llvm", "ModuleOp"> {
+def ConvertAsyncToLLVMPass : Pass<"convert-async-to-llvm", "ModuleOp"> {
   let summary = "Convert the operations from the async dialect into the LLVM "
                 "dialect";
   let description = [{
     Convert `async.execute` operations to LLVM coroutines and use async runtime
     API to execute them.
   }];
-  let constructor = "mlir::createConvertAsyncToLLVMPass()";
   let dependentDialects = [
     "arith::ArithDialect",
     "async::AsyncDialect",
@@ -203,9 +202,8 @@ def ConvertBufferizationToMemRef : Pass<"convert-bufferization-to-memref"> {
 // ComplexToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertComplexToLLVM : Pass<"convert-complex-to-llvm"> {
+def ConvertComplexToLLVMPass : Pass<"convert-complex-to-llvm"> {
   let summary = "Convert Complex dialect to LLVM dialect";
-  let constructor = "mlir::createConvertComplexToLLVMPass()";
   let dependentDialects = ["LLVM::LLVMDialect"];
 }
 
@@ -238,7 +236,7 @@ def ConvertComplexToStandard : Pass<"convert-complex-to-standard"> {
 // ControlFlowToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertControlFlowToLLVM : Pass<"convert-cf-to-llvm", "ModuleOp"> {
+def ConvertControlFlowToLLVMPass : Pass<"convert-cf-to-llvm", "ModuleOp"> {
   let summary = "Convert ControlFlow operations to the LLVM dialect";
   let description = [{
     Convert ControlFlow operations into LLVM IR dialect operations.
@@ -247,7 +245,6 @@ def ConvertControlFlowToLLVM : Pass<"convert-cf-to-llvm", "ModuleOp"> {
     IR dialect operations, the pass will fail.  Any LLVM IR operations or types
     already present in the IR will be kept as is.
   }];
-  let constructor = "mlir::cf::createConvertControlFlowToLLVMPass()";
   let dependentDialects = ["LLVM::LLVMDialect"];
   let options = [
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
@@ -345,16 +342,48 @@ def ConvertFuncToSPIRV : Pass<"convert-func-to-spirv"> {
 
 def GpuToLLVMConversionPass : Pass<"gpu-to-llvm", "ModuleOp"> {
   let summary = "Convert GPU dialect to LLVM dialect with GPU runtime calls";
-  let constructor = "mlir::createGpuToLLVMConversionPass()";
+
+  let description = [{
+    Creates a pass to convert a GPU operations into a sequence of GPU runtime
+    calls.
+
+    This pass does not generate code to call GPU runtime APIs directly but
+    instead uses a small wrapper library that exports a stable and conveniently
+    typed ABI on top of GPU runtimes such as CUDA or ROCm (HIP).
+  }];
+
+  let options = [
+    Option<"kernelBarePtrCallConv", "use-bare-pointers-for-kernels", "bool",
+           /*default=*/"false",
+             "Use bare pointers to pass memref arguments to kernels. "
+             "The kernel must use the same setting for this option."
+           >,
+    Option<"gpuBinaryAnnotation", "gpu-binary-annotation", "std::string",
+               /*default=*/"gpu::getDefaultGpuBinaryAnnotation()",
+               "Annotation attribute string for GPU binary"
+               >,
+  ];
+
   let dependentDialects = [
     "LLVM::LLVMDialect",
     "memref::MemRefDialect",
   ];
 }
 
-def LowerHostCodeToLLVM : Pass<"lower-host-to-llvm", "ModuleOp"> {
+def LowerHostCodeToLLVMPass : Pass<"lower-host-to-llvm", "ModuleOp"> {
   let summary = "Lowers the host module code and `gpu.launch_func` to LLVM";
-  let constructor = "mlir::createLowerHostCodeToLLVMPass()";
+
+  let description = [{
+    Creates a pass to emulate `gpu.launch_func` call in LLVM dialect and lower
+    the host module code to LLVM.
+
+    This transformation creates a sequence of global variables that are later
+    linked to the variables in the kernel module, and a series of copies to/from
+    them to emulate the memory transfer from the host or to the device sides. It
+    also converts the remaining Arithmetic, Func, and MemRef dialects into LLVM
+    dialect, emitting C wrappers.
+  }];
+
   let dependentDialects = ["LLVM::LLVMDialect"];
 }
 
@@ -487,10 +516,9 @@ def ConvertIndexToLLVMPass : Pass<"convert-index-to-llvm"> {
 // LinalgToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertLinalgToLLVM : Pass<"convert-linalg-to-llvm", "ModuleOp"> {
+def ConvertLinalgToLLVMPass : Pass<"convert-linalg-to-llvm", "ModuleOp"> {
   let summary = "Convert the operations from the linalg dialect into the LLVM "
                 "dialect";
-  let constructor = "mlir::createConvertLinalgToLLVMPass()";
   let dependentDialects = ["scf::SCFDialect", "LLVM::LLVMDialect"];
 }
 
@@ -526,12 +554,11 @@ def ConvertMathToLibm : Pass<"convert-math-to-libm", "ModuleOp"> {
 // MathToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertMathToLLVM : Pass<"convert-math-to-llvm"> {
+def ConvertMathToLLVMPass : Pass<"convert-math-to-llvm"> {
   let summary = "Convert Math dialect to LLVM dialect";
   let description = [{
     This pass converts supported Math ops to LLVM dialect intrinsics.
   }];
-  let constructor = "mlir::createConvertMathToLLVMPass()";
   let dependentDialects = ["LLVM::LLVMDialect"];
 }
 
@@ -655,9 +682,8 @@ def ConvertOpenACCToSCF : Pass<"convert-openacc-to-scf", "ModuleOp"> {
 // OpenACCToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertOpenACCToLLVM : Pass<"convert-openacc-to-llvm", "ModuleOp"> {
+def ConvertOpenACCToLLVMPass : Pass<"convert-openacc-to-llvm", "ModuleOp"> {
   let summary = "Convert the OpenACC ops to LLVM dialect";
-  let constructor = "mlir::createConvertOpenACCToLLVMPass()";
   let dependentDialects = ["LLVM::LLVMDialect"];
 }
 
@@ -665,9 +691,8 @@ def ConvertOpenACCToLLVM : Pass<"convert-openacc-to-llvm", "ModuleOp"> {
 // OpenMPToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertOpenMPToLLVM : Pass<"convert-openmp-to-llvm", "ModuleOp"> {
+def ConvertOpenMPToLLVMPass : Pass<"convert-openmp-to-llvm", "ModuleOp"> {
   let summary = "Convert the OpenMP ops to OpenMP ops with LLVM dialect";
-  let constructor = "mlir::createConvertOpenMPToLLVMPass()";
   let dependentDialects = ["LLVM::LLVMDialect"];
 }
 
@@ -802,13 +827,12 @@ def ConvertShapeConstraints : Pass<"convert-shape-constraints"> {
 // SPIRVToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertSPIRVToLLVM : Pass<"convert-spirv-to-llvm", "ModuleOp"> {
+def ConvertSPIRVToLLVMPass : Pass<"convert-spirv-to-llvm", "ModuleOp"> {
   let summary = "Convert SPIR-V dialect to LLVM dialect";
   let description = [{
     See https://mlir.llvm.org/docs/SPIRVToLLVMDialectConversion/
     for more details.
   }];
-  let constructor = "mlir::createConvertSPIRVToLLVMPass()";
   let dependentDialects = ["LLVM::LLVMDialect"];
 }
 
@@ -977,7 +1001,7 @@ def ConvertVectorToSCF : Pass<"convert-vector-to-scf"> {
 // VectorToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertVectorToLLVM : Pass<"convert-vector-to-llvm", "ModuleOp"> {
+def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm", "ModuleOp"> {
   let summary = "Lower the operations from the vector dialect into the LLVM "
                 "dialect";
   let description = [{
@@ -990,7 +1014,6 @@ def ConvertVectorToLLVM : Pass<"convert-vector-to-llvm", "ModuleOp"> {
     architectural-neutral vector dialect lowering.
 
   }];
-  let constructor = "mlir::createConvertVectorToLLVMPass()";
   // Override explicitly in C++ to allow conditional dialect dependence.
   // let dependentDialects;
   let options = [

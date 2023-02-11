@@ -770,6 +770,7 @@ cc_test(
         "//llvm:MC",
         "//llvm:MCDisassembler",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//llvm:TestingSupport",
         "//llvm:X86CodeGen",
         "//llvm:X86UtilsAndDesc",

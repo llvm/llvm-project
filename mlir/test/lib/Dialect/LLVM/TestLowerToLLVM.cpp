@@ -65,8 +65,7 @@ void buildTestLowerToLLVM(OpPassManager &pm,
   // Convert vector to LLVM (always needed).
   pm.addPass(createConvertVectorToLLVMPass(
       // TODO: add more options on a per-need basis.
-      LowerVectorToLLVMOptions().enableReassociateFPReductions(
-          options.reassociateFPReductions)));
+      ConvertVectorToLLVMPassOptions{options.reassociateFPReductions}));
   // Convert Math to LLVM (always needed).
   pm.addNestedPass<func::FuncOp>(createConvertMathToLLVMPass());
   // Expand complicated MemRef operations before lowering them.

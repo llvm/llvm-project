@@ -49,6 +49,25 @@ ProgressEventData::GetEventDataFromEvent(const Event *event_ptr) {
   return GetEventDataFromEventImpl<ProgressEventData>(event_ptr);
 }
 
+StructuredData::DictionarySP
+ProgressEventData::GetAsStructuredData(const Event *event_ptr) {
+  const ProgressEventData *progress_data =
+      ProgressEventData::GetEventDataFromEvent(event_ptr);
+
+  if (!progress_data)
+    return {};
+
+  auto dictionary_sp = std::make_shared<StructuredData::Dictionary>();
+  dictionary_sp->AddStringItem("message", progress_data->GetMessage());
+  dictionary_sp->AddIntegerItem("progress_id", progress_data->GetID());
+  dictionary_sp->AddIntegerItem("completed", progress_data->GetCompleted());
+  dictionary_sp->AddIntegerItem("total", progress_data->GetTotal());
+  dictionary_sp->AddBooleanItem("debugger_specific",
+                                progress_data->IsDebuggerSpecific());
+
+  return dictionary_sp;
+}
+
 llvm::StringRef DiagnosticEventData::GetPrefix() const {
   switch (m_type) {
   case Type::Info:

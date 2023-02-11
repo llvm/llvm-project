@@ -19,7 +19,7 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTSPIRVTOLLVM
+#define GEN_PASS_DEF_CONVERTSPIRVTOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -28,8 +28,11 @@ using namespace mlir;
 namespace {
 /// A pass converting MLIR SPIR-V operations into LLVM dialect.
 class ConvertSPIRVToLLVMPass
-    : public impl::ConvertSPIRVToLLVMBase<ConvertSPIRVToLLVMPass> {
+    : public impl::ConvertSPIRVToLLVMPassBase<ConvertSPIRVToLLVMPass> {
   void runOnOperation() override;
+
+public:
+  using Base::Base;
 };
 } // namespace
 
@@ -57,8 +60,4 @@ void ConvertSPIRVToLLVMPass::runOnOperation() {
   target.addLegalOp<ModuleOp>();
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
-}
-
-std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertSPIRVToLLVMPass() {
-  return std::make_unique<ConvertSPIRVToLLVMPass>();
 }

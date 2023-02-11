@@ -15,7 +15,7 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTOPENACCTOLLVM
+#define GEN_PASS_DEF_CONVERTOPENACCTOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -154,7 +154,9 @@ void mlir::populateOpenACCToLLVMConversionPatterns(
 
 namespace {
 struct ConvertOpenACCToLLVMPass
-    : public impl::ConvertOpenACCToLLVMBase<ConvertOpenACCToLLVMPass> {
+    : public impl::ConvertOpenACCToLLVMPassBase<ConvertOpenACCToLLVMPass> {
+  using Base::Base;
+
   void runOnOperation() override;
 };
 } // namespace
@@ -237,9 +239,4 @@ void ConvertOpenACCToLLVMPass::runOnOperation() {
 
   if (failed(applyPartialConversion(op, target, std::move(patterns))))
     signalPassFailure();
-}
-
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createConvertOpenACCToLLVMPass() {
-  return std::make_unique<ConvertOpenACCToLLVMPass>();
 }
