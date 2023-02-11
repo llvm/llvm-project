@@ -82,7 +82,7 @@ if(NOT (libc_compiler_info_result EQUAL "0"))
   message(FATAL_ERROR "libc build: error querying compiler info from the "
                       "compiler: ${libc_compiler_info}")
 endif()
-string(REGEX MATCH "Target: [-_a-z0-9]+[ \r\n]+"
+string(REGEX MATCH "Target: [-_a-z0-9.]+[ \r\n]+"
        libc_compiler_target_info ${libc_compiler_info})
 if(NOT libc_compiler_target_info)
   message(FATAL_ERROR "libc build: could not read compiler target info from:\n"
