@@ -3397,8 +3397,8 @@ define <vscale x 2 x i1> @scalable_non_zero(<vscale x 2 x i32> %x) {
   ret <vscale x 2 x i1> %cmp
 }
 
-define i32 @clamp_zero(i32 %x) {
-; CHECK-LABEL: @clamp_zero(
+define i32 @clamp_umin(i32 %x) {
+; CHECK-LABEL: @clamp_umin(
 ; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.umax.i32(i32 [[X:%.*]], i32 1)
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
@@ -3407,8 +3407,8 @@ define i32 @clamp_zero(i32 %x) {
   ret i32 %sel
 }
 
-define i32 @clamp_zero_use(i32 %x) {
-; CHECK-LABEL: @clamp_zero_use(
+define i32 @clamp_umin_use(i32 %x) {
+; CHECK-LABEL: @clamp_umin_use(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @use1(i1 [[CMP]])
 ; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.umax.i32(i32 [[X]], i32 1)
@@ -3422,8 +3422,8 @@ define i32 @clamp_zero_use(i32 %x) {
 
 ; negative test - wrong cmp constant
 
-define i32 @not_clamp_zero1(i32 %x) {
-; CHECK-LABEL: @not_clamp_zero1(
+define i32 @not_clamp_umin1(i32 %x) {
+; CHECK-LABEL: @not_clamp_umin1(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 1, i32 [[X]]
 ; CHECK-NEXT:    ret i32 [[SEL]]
@@ -3435,8 +3435,8 @@ define i32 @not_clamp_zero1(i32 %x) {
 
 ; negative test - wrong select constant
 
-define i32 @not_clamp_zero2(i32 %x) {
-; CHECK-LABEL: @not_clamp_zero2(
+define i32 @not_clamp_umin2(i32 %x) {
+; CHECK-LABEL: @not_clamp_umin2(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 -1, i32 [[X]]
 ; CHECK-NEXT:    ret i32 [[SEL]]
@@ -3479,5 +3479,92 @@ define i8 @not_clamp_umax2(i8 %x) {
 ;
   %cmp = icmp eq i8 %x, 255
   %sel = select i1 %cmp, i8 1, i8 %x
+  ret i8 %sel
+}
+
+define i8 @clamp_smin(i8 %x) {
+; CHECK-LABEL: @clamp_smin(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], -128
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 -127, i8 [[X]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, -128
+  %sel = select i1 %cmp, i8 -127, i8 %x
+  ret i8 %sel
+}
+
+define i8 @clamp_smin_use(i8 %x) {
+; CHECK-LABEL: @clamp_smin_use(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], -128
+; CHECK-NEXT:    call void @use1(i1 [[CMP]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 -127, i8 [[X]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, -128
+  call void @use1(i1 %cmp)
+  %sel = select i1 %cmp, i8 -127, i8 %x
+  ret i8 %sel
+}
+
+; negative test - wrong cmp constant
+
+define i8 @not_clamp_smin1(i8 %x) {
+; CHECK-LABEL: @not_clamp_smin1(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 127
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 -127, i8 [[X]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, 127
+  %sel = select i1 %cmp, i8 -127, i8 %x
+  ret i8 %sel
+}
+
+; negative test - wrong select constant
+
+define i8 @not_clamp_smin2(i8 %x) {
+; CHECK-LABEL: @not_clamp_smin2(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], -128
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 -1, i8 [[X]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, -128
+  %sel = select i1 %cmp, i8 -1, i8 %x
+  ret i8 %sel
+}
+
+define <2 x i8> @clamp_smaxval(<2 x i8> %x) {
+; CHECK-LABEL: @clamp_smaxval(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 127, i8 127>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> <i8 126, i8 126>, <2 x i8> [[X]]
+; CHECK-NEXT:    ret <2 x i8> [[SEL]]
+;
+  %cmp = icmp eq <2 x i8> %x, <i8 127, i8 127>
+  %sel = select <2 x i1> %cmp, <2 x i8> <i8 126, i8 126>, <2 x i8> %x
+  ret <2 x i8> %sel
+}
+
+; negative test - wrong cmp constant
+
+define i8 @not_clamp_smax1(i8 %x) {
+; CHECK-LABEL: @not_clamp_smax1(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], -128
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 126, i8 [[X]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, -128
+  %sel = select i1 %cmp, i8 126, i8 %x
+  ret i8 %sel
+}
+
+; negative test - wrong select constant
+
+define i8 @not_clamp_smax2(i8 %x) {
+; CHECK-LABEL: @not_clamp_smax2(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 127
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 125, i8 [[X]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, 127
+  %sel = select i1 %cmp, i8 125, i8 %x
   ret i8 %sel
 }
