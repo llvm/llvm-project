@@ -592,6 +592,7 @@ math_test(
 math_test(
     name = "exp2f",
     deps = [
+        "//libc:__support_macros_properties_cpu_features",
         "//libc/utils/MPFRWrapper:mpfr_wrapper",
     ],
 )

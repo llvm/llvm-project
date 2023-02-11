@@ -21,7 +21,9 @@ def OpenMP_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
 
   let methods = [
     InterfaceMethod<
-      /*description=*/"Returns the pointee type.",
+      /*description=*/[{
+        Returns the pointee type or null if the pointer has no pointee type
+      }],
       /*retTy=*/"::mlir::Type",
       /*methodName=*/"getElementType"
     >,

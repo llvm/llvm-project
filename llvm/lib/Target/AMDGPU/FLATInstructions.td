@@ -827,6 +827,9 @@ let SubtargetPredicate = HasFlatAtomicFaddF32Inst in {
   defm FLAT_ATOMIC_ADD_F32       : FLAT_Atomic_Pseudo<"flat_atomic_add_f32",     VGPR_32, f32>;
 } // End SubtargetPredicate = HasFlatAtomicFaddF32Inst
 
+let SubtargetPredicate = isGFX12Plus in
+defm FLAT_ATOMIC_CSUB_U32 : FLAT_Atomic_Pseudo_RTN<"flat_atomic_csub_u32", VGPR_32, i32>;
+
 defm GLOBAL_LOAD_UBYTE    : FLAT_Global_Load_Pseudo <"global_load_ubyte", VGPR_32>;
 defm GLOBAL_LOAD_SBYTE    : FLAT_Global_Load_Pseudo <"global_load_sbyte", VGPR_32>;
 defm GLOBAL_LOAD_USHORT   : FLAT_Global_Load_Pseudo <"global_load_ushort", VGPR_32>;
@@ -2539,6 +2542,10 @@ multiclass VFLAT_Real_Atomics_gfx12<bits<8> op, string ps, string opName, int re
   VFLAT_Real_Base_gfx12<op, ps, opName, renamed, alias>,
   VFLAT_Real_RTN_gfx12<op, ps, opName>;
 
+multiclass VFLAT_Real_Atomics_RTN_gfx12<bits<8> op, string ps, string opName, int renamed = false> :
+  VFLAT_Aliases_gfx12<ps#"_RTN", opName, renamed, "">,
+  VFLAT_Real_RTN_gfx12<op, ps, opName>;
+
 multiclass VGLOBAL_Real_AllAddr_gfx12<bits<8> op, string ps, string opName, int renamed = false, string alias = ""> :
   VFLAT_Real_Base_gfx12<op, ps, opName, renamed, alias>,
   VFLAT_Real_SADDR_gfx12<op, ps, opName>;
@@ -2586,6 +2593,7 @@ defm FLAT_ATOMIC_SWAP_B32        : VFLAT_Real_Atomics_gfx12<0x033, "FLAT_ATOMIC_
 defm FLAT_ATOMIC_CMPSWAP_B32     : VFLAT_Real_Atomics_gfx12<0x034, "FLAT_ATOMIC_CMPSWAP", "flat_atomic_cmpswap_b32", true>;
 defm FLAT_ATOMIC_ADD_U32         : VFLAT_Real_Atomics_gfx12<0x035, "FLAT_ATOMIC_ADD", "flat_atomic_add_u32", true>;
 defm FLAT_ATOMIC_SUB_U32         : VFLAT_Real_Atomics_gfx12<0x036, "FLAT_ATOMIC_SUB", "flat_atomic_sub_u32", true>;
+defm FLAT_ATOMIC_SUB_CLAMP_U32   : VFLAT_Real_Atomics_RTN_gfx12<0x037, "FLAT_ATOMIC_CSUB_U32", "flat_atomic_sub_clamp_u32", true>;
 defm FLAT_ATOMIC_MIN_I32         : VFLAT_Real_Atomics_gfx12<0x038, "FLAT_ATOMIC_SMIN", "flat_atomic_min_i32", true>;
 defm FLAT_ATOMIC_MIN_U32         : VFLAT_Real_Atomics_gfx12<0x039, "FLAT_ATOMIC_UMIN", "flat_atomic_min_u32", true>;
 defm FLAT_ATOMIC_MAX_I32         : VFLAT_Real_Atomics_gfx12<0x03a, "FLAT_ATOMIC_SMAX", "flat_atomic_max_i32", true>;

@@ -28,7 +28,6 @@
 #include "src/__support/common.h"
 #include "src/__support/endian.h"
 #include "src/__support/macros/optimization.h"
-#include "src/__support/macros/properties/compiler.h"
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/utils.h"
 

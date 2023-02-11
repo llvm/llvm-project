@@ -986,12 +986,12 @@ LogicalResult ModuleTranslation::convertFunctions() {
 }
 
 llvm::MDNode *
-ModuleTranslation::getAccessGroup(Operation &opInst,
+ModuleTranslation::getAccessGroup(Operation *op,
                                   SymbolRefAttr accessGroupRef) const {
   auto metadataName = accessGroupRef.getRootReference();
   auto accessGroupName = accessGroupRef.getLeafReference();
   auto metadataOp = SymbolTable::lookupNearestSymbolFrom<LLVM::MetadataOp>(
-      opInst.getParentOp(), metadataName);
+      op->getParentOp(), metadataName);
   auto *accessGroupOp =
       SymbolTable::lookupNearestSymbolFrom(metadataOp, accessGroupName);
   return accessGroupMetadataMapping.lookup(accessGroupOp);
@@ -1010,23 +1010,28 @@ LogicalResult ModuleTranslation::createAccessGroupMetadata() {
 
 void ModuleTranslation::setAccessGroupsMetadata(Operation *op,
                                                 llvm::Instruction *inst) {
-  auto accessGroups =
-      op->getAttrOfType<ArrayAttr>(LLVMDialect::getAccessGroupsAttrName());
-  if (accessGroups && !accessGroups.empty()) {
+  auto populateGroupsMetadata = [&](std::optional<ArrayAttr> groupRefs) {
+    if (!groupRefs || groupRefs->empty())
+      return;
+
     llvm::Module *module = inst->getModule();
-    SmallVector<llvm::Metadata *> metadatas;
-    for (SymbolRefAttr accessGroupRef :
-         accessGroups.getAsRange<SymbolRefAttr>())
-      metadatas.push_back(getAccessGroup(*op, accessGroupRef));
+    SmallVector<llvm::Metadata *> groupMDs;
+    for (SymbolRefAttr groupRef : groupRefs->getAsRange<SymbolRefAttr>())
+      groupMDs.push_back(getAccessGroup(op, groupRef));
 
-    llvm::MDNode *unionMD = nullptr;
-    if (metadatas.size() == 1)
-      unionMD = llvm::cast<llvm::MDNode>(metadatas.front());
-    else if (metadatas.size() >= 2)
-      unionMD = llvm::MDNode::get(module->getContext(), metadatas);
+    llvm::MDNode *node = nullptr;
+    if (groupMDs.size() == 1)
+      node = llvm::cast<llvm::MDNode>(groupMDs.front());
+    else if (groupMDs.size() >= 2)
+      node = llvm::MDNode::get(module->getContext(), groupMDs);
 
-    inst->setMetadata(module->getMDKindID("llvm.access.group"), unionMD);
-  }
+    inst->setMetadata(llvm::LLVMContext::MD_access_group, node);
+  };
+
+  llvm::TypeSwitch<Operation *>(op)
+      .Case<LoadOp, StoreOp>(
+          [&](auto memOp) { populateGroupsMetadata(memOp.getAccessGroups()); })
+      .Default([](auto) { llvm_unreachable("expected LoadOp or StoreOp"); });
 }
 
 LogicalResult ModuleTranslation::createAliasScopeMetadata() {
@@ -1067,12 +1072,12 @@ LogicalResult ModuleTranslation::createAliasScopeMetadata() {
 }
 
 llvm::MDNode *
-ModuleTranslation::getAliasScope(Operation &opInst,
+ModuleTranslation::getAliasScope(Operation *op,
                                  SymbolRefAttr aliasScopeRef) const {
   StringAttr metadataName = aliasScopeRef.getRootReference();
   StringAttr scopeName = aliasScopeRef.getLeafReference();
   auto metadataOp = SymbolTable::lookupNearestSymbolFrom<LLVM::MetadataOp>(
-      opInst.getParentOp(), metadataName);
+      op->getParentOp(), metadataName);
   Operation *aliasScopeOp =
       SymbolTable::lookupNearestSymbolFrom(metadataOp, scopeName);
   return aliasScopeMetadataMapping.lookup(aliasScopeOp);
@@ -1080,50 +1085,63 @@ ModuleTranslation::getAliasScope(Operation &opInst,
 
 void ModuleTranslation::setAliasScopeMetadata(Operation *op,
                                               llvm::Instruction *inst) {
-  auto populateScopeMetadata = [this, op, inst](StringRef attrName,
-                                                StringRef llvmMetadataName) {
-    auto scopes = op->getAttrOfType<ArrayAttr>(attrName);
-    if (!scopes || scopes.empty())
+  auto populateScopeMetadata = [&](std::optional<ArrayAttr> scopeRefs,
+                                   unsigned kind) {
+    if (!scopeRefs || scopeRefs->empty())
       return;
     llvm::Module *module = inst->getModule();
     SmallVector<llvm::Metadata *> scopeMDs;
-    for (SymbolRefAttr scopeRef : scopes.getAsRange<SymbolRefAttr>())
-      scopeMDs.push_back(getAliasScope(*op, scopeRef));
-    llvm::MDNode *unionMD = llvm::MDNode::get(module->getContext(), scopeMDs);
-    inst->setMetadata(module->getMDKindID(llvmMetadataName), unionMD);
+    for (SymbolRefAttr scopeRef : scopeRefs->getAsRange<SymbolRefAttr>())
+      scopeMDs.push_back(getAliasScope(op, scopeRef));
+    llvm::MDNode *node = llvm::MDNode::get(module->getContext(), scopeMDs);
+    inst->setMetadata(kind, node);
   };
 
-  populateScopeMetadata(LLVMDialect::getAliasScopesAttrName(), "alias.scope");
-  populateScopeMetadata(LLVMDialect::getNoAliasScopesAttrName(), "noalias");
+  llvm::TypeSwitch<Operation *>(op)
+      .Case<LoadOp, StoreOp>([&](auto memOp) {
+        populateScopeMetadata(memOp.getAliasScopes(),
+                              llvm::LLVMContext::MD_alias_scope);
+        populateScopeMetadata(memOp.getNoaliasScopes(),
+                              llvm::LLVMContext::MD_noalias);
+      })
+      .Default([](auto) { llvm_unreachable("expected LoadOp or StoreOp"); });
 }
 
-llvm::MDNode *ModuleTranslation::getTBAANode(Operation &memOp,
+llvm::MDNode *ModuleTranslation::getTBAANode(Operation *op,
                                              SymbolRefAttr tagRef) const {
   StringAttr metadataName = tagRef.getRootReference();
   StringAttr tagName = tagRef.getLeafReference();
   auto metadataOp = SymbolTable::lookupNearestSymbolFrom<LLVM::MetadataOp>(
-      memOp.getParentOp(), metadataName);
+      op->getParentOp(), metadataName);
   Operation *tagOp = SymbolTable::lookupNearestSymbolFrom(metadataOp, tagName);
   return tbaaMetadataMapping.lookup(tagOp);
 }
 
 void ModuleTranslation::setTBAAMetadata(Operation *op,
                                         llvm::Instruction *inst) {
-  auto tbaa = op->getAttrOfType<ArrayAttr>(LLVMDialect::getTBAAAttrName());
-  if (!tbaa || tbaa.empty())
-    return;
-  // LLVM IR currently does not support attaching more than one
-  // TBAA access tag to a memory accessing instruction.
-  // It may be useful to support this in future, but for the time being
-  // just ignore the metadata if MLIR operation has multiple access tags.
-  if (tbaa.size() > 1) {
-    op->emitWarning() << "TBAA access tags were not translated, because LLVM "
-                         "IR only supports a single tag per instruction";
-    return;
-  }
-  SymbolRefAttr tagRef = tbaa[0].cast<SymbolRefAttr>();
-  llvm::MDNode *tagNode = getTBAANode(*op, tagRef);
-  inst->setMetadata(llvm::LLVMContext::MD_tbaa, tagNode);
+  auto populateTBAAMetadata = [&](std::optional<ArrayAttr> tagRefs) {
+    if (!tagRefs || tagRefs->empty())
+      return;
+
+    // LLVM IR currently does not support attaching more than one
+    // TBAA access tag to a memory accessing instruction.
+    // It may be useful to support this in future, but for the time being
+    // just ignore the metadata if MLIR operation has multiple access tags.
+    if (tagRefs->size() > 1) {
+      op->emitWarning() << "TBAA access tags were not translated, because LLVM "
+                           "IR only supports a single tag per instruction";
+      return;
+    }
+
+    SymbolRefAttr tagRef = (*tagRefs)[0].cast<SymbolRefAttr>();
+    llvm::MDNode *node = getTBAANode(op, tagRef);
+    inst->setMetadata(llvm::LLVMContext::MD_tbaa, node);
+  };
+
+  llvm::TypeSwitch<Operation *>(op)
+      .Case<LoadOp, StoreOp>(
+          [&](auto memOp) { populateTBAAMetadata(memOp.getTbaa()); })
+      .Default([](auto) { llvm_unreachable("expected LoadOp or StoreOp"); });
 }
 
 LogicalResult ModuleTranslation::createTBAAMetadata() {

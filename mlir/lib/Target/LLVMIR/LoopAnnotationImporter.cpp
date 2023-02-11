@@ -33,6 +33,7 @@ struct LoopMetadataConversion {
   /// specified name, or failure, if the node is ill-formatted.
   FailureOr<BoolAttr> lookupUnitNode(StringRef name);
   FailureOr<BoolAttr> lookupBoolNode(StringRef name, bool negated = false);
+  FailureOr<BoolAttr> lookupIntNodeAsBoolAttr(StringRef name);
   FailureOr<IntegerAttr> lookupIntNode(StringRef name);
   FailureOr<llvm::MDNode *> lookupMDNode(StringRef name);
   FailureOr<SmallVector<llvm::MDNode *>> lookupMDNodes(StringRef name);
@@ -153,6 +154,27 @@ FailureOr<BoolAttr> LoopMetadataConversion::lookupBoolNode(StringRef name,
     return emitNodeWarning();
 
   return BoolAttr::get(ctx, val->getValue().getLimitedValue(1) ^ negated);
+}
+
+FailureOr<BoolAttr>
+LoopMetadataConversion::lookupIntNodeAsBoolAttr(StringRef name) {
+  const llvm::MDNode *property = lookupAndEraseProperty(name);
+  if (!property)
+    return BoolAttr(nullptr);
+
+  auto emitNodeWarning = [&]() {
+    return emitWarning(loc)
+           << "expected metadata node " << name << " to hold an integer value";
+  };
+
+  if (property->getNumOperands() != 2)
+    return emitNodeWarning();
+  llvm::ConstantInt *val =
+      llvm::mdconst::dyn_extract<llvm::ConstantInt>(property->getOperand(1));
+  if (!val || val->getBitWidth() != 32)
+    return emitNodeWarning();
+
+  return BoolAttr::get(ctx, val->getValue().getLimitedValue(1));
 }
 
 FailureOr<IntegerAttr> LoopMetadataConversion::lookupIntNode(StringRef name) {
@@ -287,13 +309,16 @@ FailureOr<LoopUnrollAttr> LoopMetadataConversion::convertUnrollAttr() {
   FailureOr<BoolAttr> runtimeDisable =
       lookupUnitNode("llvm.loop.unroll.runtime.disable");
   FailureOr<BoolAttr> full = lookupUnitNode("llvm.loop.unroll.full");
-  FailureOr<LoopAnnotationAttr> followup =
-      lookupFollowupNode("llvm.loop.unroll.followup");
+  FailureOr<LoopAnnotationAttr> followupUnrolled =
+      lookupFollowupNode("llvm.loop.unroll.followup_unrolled");
   FailureOr<LoopAnnotationAttr> followupRemainder =
       lookupFollowupNode("llvm.loop.unroll.followup_remainder");
+  FailureOr<LoopAnnotationAttr> followupAll =
+      lookupFollowupNode("llvm.loop.unroll.followup_all");
 
   return createIfNonNull<LoopUnrollAttr>(ctx, disable, count, runtimeDisable,
-                                         full, followup, followupRemainder);
+                                         full, followupUnrolled,
+                                         followupRemainder, followupAll);
 }
 
 FailureOr<LoopUnrollAndJamAttr>
@@ -379,6 +404,8 @@ LoopAnnotationAttr LoopMetadataConversion::convert() {
   FailureOr<LoopDistributeAttr> distributeAttr = convertDistributeAttr();
   FailureOr<LoopPipelineAttr> pipelineAttr = convertPipelineAttr();
   FailureOr<BoolAttr> mustProgress = lookupUnitNode("llvm.loop.mustprogress");
+  FailureOr<BoolAttr> isVectorized =
+      lookupIntNodeAsBoolAttr("llvm.loop.isvectorized");
   FailureOr<SmallVector<SymbolRefAttr>> parallelAccesses =
       convertParallelAccesses();
 
@@ -392,7 +419,7 @@ LoopAnnotationAttr LoopMetadataConversion::convert() {
   return createIfNonNull<LoopAnnotationAttr>(
       ctx, disableNonForced, vecAttr, interleaveAttr, unrollAttr,
       unrollAndJamAttr, licmAttr, distributeAttr, pipelineAttr, mustProgress,
-      parallelAccesses);
+      isVectorized, parallelAccesses);
 }
 
 LoopAnnotationAttr

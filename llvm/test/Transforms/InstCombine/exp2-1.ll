@@ -275,31 +275,29 @@ define float @test_simplify10(i8 zeroext %x) {
   ret float %ret
 }
 
-; TODO: FMF could be propagated when transforming.
-
 define float @sitofp_scalar_intrinsic_with_FMF(i8 %x) {
 ; LDEXP32-LABEL: @sitofp_scalar_intrinsic_with_FMF(
 ; LDEXP32-NEXT:    [[TMP1:%.*]] = sext i8 [[X:%.*]] to i32
-; LDEXP32-NEXT:    [[LDEXPF:%.*]] = call float @ldexpf(float 1.000000e+00, i32 [[TMP1]])
+; LDEXP32-NEXT:    [[LDEXPF:%.*]] = tail call nnan float @ldexpf(float 1.000000e+00, i32 [[TMP1]])
 ; LDEXP32-NEXT:    ret float [[LDEXPF]]
 ;
 ; LDEXP16-LABEL: @sitofp_scalar_intrinsic_with_FMF(
 ; LDEXP16-NEXT:    [[TMP1:%.*]] = sext i8 [[X:%.*]] to i16
-; LDEXP16-NEXT:    [[LDEXPF:%.*]] = call float @ldexpf(float 1.000000e+00, i16 [[TMP1]])
+; LDEXP16-NEXT:    [[LDEXPF:%.*]] = tail call nnan float @ldexpf(float 1.000000e+00, i16 [[TMP1]])
 ; LDEXP16-NEXT:    ret float [[LDEXPF]]
 ;
 ; NOLDEXPF-LABEL: @sitofp_scalar_intrinsic_with_FMF(
 ; NOLDEXPF-NEXT:    [[S:%.*]] = sitofp i8 [[X:%.*]] to float
-; NOLDEXPF-NEXT:    [[R:%.*]] = call nnan float @llvm.exp2.f32(float [[S]])
+; NOLDEXPF-NEXT:    [[R:%.*]] = tail call nnan float @llvm.exp2.f32(float [[S]])
 ; NOLDEXPF-NEXT:    ret float [[R]]
 ;
 ; NOLDEXP-LABEL: @sitofp_scalar_intrinsic_with_FMF(
 ; NOLDEXP-NEXT:    [[S:%.*]] = sitofp i8 [[X:%.*]] to float
-; NOLDEXP-NEXT:    [[R:%.*]] = call nnan float @llvm.exp2.f32(float [[S]])
+; NOLDEXP-NEXT:    [[R:%.*]] = tail call nnan float @llvm.exp2.f32(float [[S]])
 ; NOLDEXP-NEXT:    ret float [[R]]
 ;
   %s = sitofp i8 %x to float
-  %r = call nnan float @llvm.exp2.f32(float %s)
+  %r = tail call nnan float @llvm.exp2.f32(float %s)
   ret float %r
 }
 

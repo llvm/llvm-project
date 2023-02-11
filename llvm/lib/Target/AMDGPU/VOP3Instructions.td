@@ -703,6 +703,15 @@ def VOP3_PERMLANE_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, i32]>, VOP3
   let HasExtDPP = 0;
 }
 
+def VOP3_PERMLANE_VAR_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, untyped]>, VOP3_OPSEL> {
+  let InsVOP3OpSel = (ins IntOpSelMods:$src0_modifiers, VRegSrc_32:$src0,
+                          IntOpSelMods:$src1_modifiers, VRegSrc_32:$src1,
+                          VGPR_32:$vdst_in, op_sel0:$op_sel);
+  let HasClamp = 0;
+  let HasExtVOP3DPP = 0;
+  let HasExtDPP = 0;
+}
+
 class PermlanePat<SDPatternOperator permlane,
   Instruction inst> : GCNPat<
   (permlane i32:$vdst_in, i32:$src0, i32:$src1, i32:$src2,
@@ -740,6 +749,14 @@ let SubtargetPredicate = isGFX10Plus in {
   >;
 
 } // End SubtargetPredicate = isGFX10Plus
+
+let SubtargetPredicate = isGFX12Plus in {
+  let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
+    defm V_PERMLANE16_VAR_B32  : VOP3Inst<"v_permlane16_var_b32",  VOP3_PERMLANE_VAR_Profile>;
+    defm V_PERMLANEX16_VAR_B32 : VOP3Inst<"v_permlanex16_var_b32", VOP3_PERMLANE_VAR_Profile>;
+  } // End $vdst = $vdst_in, DisableEncoding $vdst_in
+
+} // End SubtargetPredicate = isGFX12Plus
 
 class DivFmasPat<ValueType vt, Instruction inst, Register CondReg> : GCNPat<
   (AMDGPUdiv_fmas (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
@@ -927,6 +944,8 @@ defm V_MINIMUM_F32        : VOP3Only_Realtriple_gfx12<0x365>;
 defm V_MAXIMUM_F32        : VOP3Only_Realtriple_gfx12<0x366>;
 defm V_MINIMUM_F16        : VOP3Only_Realtriple_t16_gfx12<0x367>;
 defm V_MAXIMUM_F16        : VOP3Only_Realtriple_t16_gfx12<0x368>;
+defm V_PERMLANE16_VAR_B32 : VOP3Only_Real_Base_gfx12<0x30f>;
+defm V_PERMLANEX16_VAR_B32 : VOP3Only_Real_Base_gfx12<0x310>;
 
 //===----------------------------------------------------------------------===//
 // GFX11, GFX12

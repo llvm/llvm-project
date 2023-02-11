@@ -1722,9 +1722,13 @@ static void genOmpAtomicRead(Fortran::lower::AbstractConverter &converter,
       std::get<Fortran::parser::Expr>(std::get<3>(atomicRead.t).statement.t);
   const auto &assignmentStmtVariable = std::get<Fortran::parser::Variable>(
       std::get<3>(atomicRead.t).statement.t);
+
   Fortran::lower::StatementContext stmtCtx;
-  mlir::Value from_address = fir::getBase(converter.genExprAddr(
-      *Fortran::semantics::GetExpr(assignmentStmtExpr), stmtCtx));
+  const Fortran::semantics::SomeExpr &fromExpr =
+      *Fortran::semantics::GetExpr(assignmentStmtExpr);
+  mlir::Type elementType = converter.genType(fromExpr);
+  mlir::Value from_address =
+      fir::getBase(converter.genExprAddr(fromExpr, stmtCtx));
   mlir::Value to_address = fir::getBase(converter.genExprAddr(
       *Fortran::semantics::GetExpr(assignmentStmtVariable), stmtCtx));
   // If no hint clause is specified, the effect is as if
@@ -1735,8 +1739,9 @@ static void genOmpAtomicRead(Fortran::lower::AbstractConverter &converter,
                                         memory_order);
   genOmpAtomicHintAndMemoryOrderClauses(converter, rightHandClauseList, hint,
                                         memory_order);
-  firOpBuilder.create<mlir::omp::AtomicReadOp>(currentLocation, from_address,
-                                               to_address, hint, memory_order);
+  firOpBuilder.create<mlir::omp::AtomicReadOp>(
+      currentLocation, from_address, to_address,
+      mlir::TypeAttr::get(elementType), hint, memory_order);
 }
 
 static void

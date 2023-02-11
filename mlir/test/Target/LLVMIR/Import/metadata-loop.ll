@@ -28,7 +28,7 @@ define void @access_group(ptr %arg1) {
 
 ; // -----
 
-; CHECK: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<disableNonforced = true, mustProgress = true>
+; CHECK: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<disableNonforced = true, mustProgress = true, isVectorized = true>
 
 ; CHECK-LABEL: @simple
 define void @simple(i64 %n, ptr %A) {
@@ -39,9 +39,10 @@ end:
   ret void
 }
 
-!1 = distinct !{!1, !2, !3}
+!1 = distinct !{!1, !2, !3, !4}
 !2 = !{!"llvm.loop.disable_nonforced"}
 !3 = !{!"llvm.loop.mustprogress"}
+!4 = !{!"llvm.loop.isvectorized", i32 1}
 
 ; // -----
 
@@ -90,7 +91,7 @@ end:
 ; // -----
 
 ; CHECK-DAG: #[[FOLLOWUP:.*]] = #llvm.loop_annotation<disableNonforced = true>
-; CHECK-DAG: #[[UNROLL_ATTR:.*]] = #llvm.loop_unroll<disable = false, count = 16 : i32, runtimeDisable = true, full = true, followup = #[[FOLLOWUP]], followupRemainder = #[[FOLLOWUP]]>
+; CHECK-DAG: #[[UNROLL_ATTR:.*]] = #llvm.loop_unroll<disable = false, count = 16 : i32, runtimeDisable = true, full = true, followupUnrolled = #[[FOLLOWUP]], followupRemainder = #[[FOLLOWUP]], followupAll = #[[FOLLOWUP]]>
 ; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<unroll = #[[UNROLL_ATTR]]>
 
 ; CHECK-LABEL: @unroll
@@ -102,16 +103,17 @@ end:
   ret void
 }
 
-!1 = distinct !{!1, !2, !3, !4, !5, !6, !7}
+!1 = distinct !{!1, !2, !3, !4, !5, !6, !7, !8}
 !2 = !{!"llvm.loop.unroll.enable"}
 !3 = !{!"llvm.loop.unroll.count", i32 16}
 !4 = !{!"llvm.loop.unroll.runtime.disable"}
 !5 = !{!"llvm.loop.unroll.full"}
-!6 = !{!"llvm.loop.unroll.followup", !8}
-!7 = !{!"llvm.loop.unroll.followup_remainder", !8}
+!6 = !{!"llvm.loop.unroll.followup_unrolled", !9}
+!7 = !{!"llvm.loop.unroll.followup_remainder", !9}
+!8 = !{!"llvm.loop.unroll.followup_all", !9}
 
-!8 = distinct !{!8, !9}
-!9 = !{!"llvm.loop.disable_nonforced"}
+!9 = distinct !{!9, !10}
+!10 = !{!"llvm.loop.disable_nonforced"}
 
 ; // -----
 

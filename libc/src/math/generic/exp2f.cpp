@@ -13,6 +13,7 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include <errno.h>
 
@@ -69,7 +70,7 @@ LLVM_LIBC_FUNCTION(float, exp2f, (float x)) {
   }
 
   // Check exceptional values.
-  if (LIBC_UNLIKELY(x_u & exval_mask) == exval_mask) {
+  if (LIBC_UNLIKELY((x_u & exval_mask) == exval_mask)) {
     if (LIBC_UNLIKELY(x_u == exval1)) { // x = 0x1.853a6ep-9f
       if (fputil::get_round() == FE_TONEAREST)
         return 0x1.00870ap+0f;
