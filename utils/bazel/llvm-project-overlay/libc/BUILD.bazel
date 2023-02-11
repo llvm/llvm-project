@@ -143,7 +143,7 @@ libc_support_library(
     name = "__support_cpp_cstddef",
     hdrs = ["src/__support/CPP/cstddef.h"],
     deps = [
-        "__support_cpp_type_traits",
+        ":__support_cpp_type_traits",
         ":libc_root",
     ],
 )
@@ -170,8 +170,8 @@ libc_support_library(
     name = "__support_cpp_span",
     hdrs = ["src/__support/CPP/span.h"],
     deps = [
-        "__support_cpp_array",
-        "__support_cpp_type_traits",
+        ":__support_cpp_array",
+        ":__support_cpp_type_traits",
         ":libc_root",
     ],
 )
@@ -213,8 +213,8 @@ libc_support_library(
     name = "__support_number_pair",
     hdrs = ["src/__support/number_pair.h"],
     deps = [
-        "__support_cpp_type_traits",
-        "__support_named_pair",
+        ":__support_cpp_type_traits",
+        ":__support_named_pair",
         ":libc_root",
     ],
 )
@@ -223,10 +223,10 @@ libc_support_library(
     name = "__support_integer_utils",
     hdrs = ["src/__support/integer_utils.h"],
     deps = [
-        "__support_builtin_wrappers",
-        "__support_common",
-        "__support_cpp_type_traits",
-        "__support_number_pair",
+        ":__support_builtin_wrappers",
+        ":__support_common",
+        ":__support_cpp_type_traits",
+        ":__support_number_pair",
         ":libc_root",
     ],
 )
@@ -235,15 +235,15 @@ libc_support_library(
     name = "__support_uint",
     hdrs = ["src/__support/UInt.h"],
     deps = [
-        "__support_builtin_wrappers",
-        "__support_cpp_array",
-        "__support_cpp_limits",
-        "__support_cpp_optional",
-        "__support_cpp_type_traits",
-        "__support_integer_utils",
-        "__support_macros_attributes",
-        "__support_macros_optimization",
-        "__support_number_pair",
+        ":__support_builtin_wrappers",
+        ":__support_cpp_array",
+        ":__support_cpp_limits",
+        ":__support_cpp_optional",
+        ":__support_cpp_type_traits",
+        ":__support_integer_utils",
+        ":__support_macros_attributes",
+        ":__support_macros_optimization",
+        ":__support_number_pair",
         ":libc_root",
     ],
 )
@@ -551,6 +551,7 @@ libc_support_library(
     textual_hdrs = nearest_integer_platform_hdrs,
     deps = [
         ":libc_root",
+        ":__support_macros_optimization",
     ],
 )
 
@@ -851,6 +852,8 @@ libc_math_function(
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
         ":common_constants",
     ],
 )
@@ -861,6 +864,7 @@ libc_math_function(
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
+        ":__support_macros_optimization",
         ":common_constants",
     ],
 )
@@ -871,6 +875,8 @@ libc_math_function(
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
         ":common_constants",
     ],
 )
@@ -881,6 +887,8 @@ libc_math_function(
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
         ":common_constants",
     ],
 )
