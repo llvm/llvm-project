@@ -26,6 +26,7 @@ add_header_library(
     libc.src.__support.FPUtil.float_properties
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.builtin_wrappers
+    libc.src.__support.macros.optimization
     libc.src.__support.uint128
 )
 
@@ -40,5 +41,6 @@ add_header_library(
     libc.src.__support.FPUtil.float_properties
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.builtin_wrappers
+    libc.src.__support.macros.optimization
     libc.src.math.generic.math_utils
 )

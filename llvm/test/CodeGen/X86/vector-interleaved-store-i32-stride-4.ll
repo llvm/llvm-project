@@ -93,65 +93,19 @@ define void @store_i32_stride4_vf2(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-FAST-PERLANE-NEXT:    vzeroupper
 ; AVX2-FAST-PERLANE-NEXT:    retq
 ;
-; AVX512F-SLOW-LABEL: store_i32_stride4_vf2:
-; AVX512F-SLOW:       # %bb.0:
-; AVX512F-SLOW-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512F-SLOW-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX512F-SLOW-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512F-SLOW-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX512F-SLOW-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX512F-SLOW-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512F-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX512F-SLOW-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,2,1,3,4,6,5,7]
-; AVX512F-SLOW-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,1,3]
-; AVX512F-SLOW-NEXT:    vmovaps %ymm0, (%r8)
-; AVX512F-SLOW-NEXT:    vzeroupper
-; AVX512F-SLOW-NEXT:    retq
-;
-; AVX512F-FAST-LABEL: store_i32_stride4_vf2:
-; AVX512F-FAST:       # %bb.0:
-; AVX512F-FAST-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512F-FAST-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX512F-FAST-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512F-FAST-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX512F-FAST-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX512F-FAST-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512F-FAST-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX512F-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = [0,2,4,6,1,3,5,7]
-; AVX512F-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
-; AVX512F-FAST-NEXT:    vmovaps %ymm0, (%r8)
-; AVX512F-FAST-NEXT:    vzeroupper
-; AVX512F-FAST-NEXT:    retq
-;
-; AVX512BW-SLOW-LABEL: store_i32_stride4_vf2:
-; AVX512BW-SLOW:       # %bb.0:
-; AVX512BW-SLOW-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512BW-SLOW-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX512BW-SLOW-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512BW-SLOW-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX512BW-SLOW-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX512BW-SLOW-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512BW-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX512BW-SLOW-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,2,1,3,4,6,5,7]
-; AVX512BW-SLOW-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,1,3]
-; AVX512BW-SLOW-NEXT:    vmovaps %ymm0, (%r8)
-; AVX512BW-SLOW-NEXT:    vzeroupper
-; AVX512BW-SLOW-NEXT:    retq
-;
-; AVX512BW-FAST-LABEL: store_i32_stride4_vf2:
-; AVX512BW-FAST:       # %bb.0:
-; AVX512BW-FAST-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512BW-FAST-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX512BW-FAST-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512BW-FAST-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX512BW-FAST-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX512BW-FAST-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512BW-FAST-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX512BW-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = [0,2,4,6,1,3,5,7]
-; AVX512BW-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
-; AVX512BW-FAST-NEXT:    vmovaps %ymm0, (%r8)
-; AVX512BW-FAST-NEXT:    vzeroupper
-; AVX512BW-FAST-NEXT:    retq
+; AVX512-LABEL: store_i32_stride4_vf2:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX512-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX512-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2,8,10,1,3,9,11]
+; AVX512-NEXT:    vpermi2d %ymm1, %ymm0, %ymm2
+; AVX512-NEXT:    vmovdqa %ymm2, (%r8)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %in.vec0 = load <2 x i32>, ptr %in.vecptr0, align 64
   %in.vec1 = load <2 x i32>, ptr %in.vecptr1, align 64
   %in.vec2 = load <2 x i32>, ptr %in.vecptr2, align 64
@@ -239,14 +193,13 @@ define void @store_i32_stride4_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ;
 ; AVX512-LABEL: store_i32_stride4_vf4:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512-NEXT:    vmovaps (%rdx), %xmm1
-; AVX512-NEXT:    vinsertf128 $1, (%rcx), %ymm1, %ymm1
-; AVX512-NEXT:    vinsertf128 $1, (%rsi), %ymm0, %ymm0
-; AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512-NEXT:    vmovaps {{.*#+}} zmm1 = [0,4,8,12,1,5,9,13,2,6,10,14,3,7,11,15]
-; AVX512-NEXT:    vpermps %zmm0, %zmm1, %zmm0
-; AVX512-NEXT:    vmovaps %zmm0, (%r8)
+; AVX512-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX512-NEXT:    vmovdqa (%rdx), %xmm1
+; AVX512-NEXT:    vinserti128 $1, (%rsi), %ymm0, %ymm0
+; AVX512-NEXT:    vinserti128 $1, (%rcx), %ymm1, %ymm1
+; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,4,16,20,1,5,17,21,2,6,18,22,3,7,19,23]
+; AVX512-NEXT:    vpermi2d %zmm1, %zmm0, %zmm2
+; AVX512-NEXT:    vmovdqa64 %zmm2, (%r8)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %in.vec0 = load <4 x i32>, ptr %in.vecptr0, align 64
@@ -2975,14 +2928,18 @@ define void @store_i32_stride4_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX: {{.*}}
 ; AVX1: {{.*}}
 ; AVX2: {{.*}}
+; AVX512BW-FAST: {{.*}}
 ; AVX512BW-ONLY-FAST: {{.*}}
 ; AVX512BW-ONLY-SLOW: {{.*}}
+; AVX512BW-SLOW: {{.*}}
 ; AVX512DQ-FAST: {{.*}}
 ; AVX512DQ-SLOW: {{.*}}
 ; AVX512DQBW-FAST: {{.*}}
 ; AVX512DQBW-SLOW: {{.*}}
+; AVX512F-FAST: {{.*}}
 ; AVX512F-ONLY-FAST: {{.*}}
 ; AVX512F-ONLY-SLOW: {{.*}}
+; AVX512F-SLOW: {{.*}}
 ; FALLBACK0: {{.*}}
 ; FALLBACK1: {{.*}}
 ; FALLBACK10: {{.*}}

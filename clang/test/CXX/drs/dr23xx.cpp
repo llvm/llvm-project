@@ -169,6 +169,8 @@ void g() {
 } //namespace dr2303
 #endif
 
+// dr2385: na
+
 namespace dr2394 { // dr2394: 15
 
 struct A {};

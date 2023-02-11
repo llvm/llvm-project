@@ -15,7 +15,8 @@
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/attributes.h" // LIBC_UNLIKELY
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/macros/properties/cpu_features.h"
 
 // This is an algorithm for log10(x) in single precision which is
 // correctly rounded for all rounding modes, based on the implementation of
@@ -136,14 +137,14 @@ LLVM_LIBC_FUNCTION(float, log10f, (float x)) {
     return fputil::round_result_slightly_down(0x1.2c9314p+3f);
   case 0x7956'ba5eU: // x = 69683218960000541503257137270226944.0
     return fputil::round_result_slightly_up(0x1.16bebap+5f);
-#ifndef LIBC_TARGET_HAS_FMA
+#ifndef LIBC_TARGET_CPU_HAS_FMA
   case 0x08ae'a356U: // x = 0x1.5d46acp-110f
     return fputil::round_result_slightly_up(-0x1.07d3b4p+5f);
   case 0x1c7d'a337U: // x = 0x1.fb466ep-71f
     return fputil::round_result_slightly_up(-0x1.5137dp+4f);
   case 0x69c8'c583U: // x = 0x1.918b06p+84f
     return fputil::round_result_slightly_down(0x1.97b652p+4f);
-#endif // LIBC_TARGET_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA
   }
 
   int m = -FPBits::EXPONENT_BIAS;
