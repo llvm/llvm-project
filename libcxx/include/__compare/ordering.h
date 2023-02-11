@@ -40,7 +40,7 @@ template<class _Tp, class... _Args>
 inline constexpr bool __one_of_v = (is_same_v<_Tp, _Args> || ...);
 
 struct _CmpUnspecifiedParam {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEVAL
+  _LIBCPP_HIDE_FROM_ABI consteval
   _CmpUnspecifiedParam(int _CmpUnspecifiedParam::*) noexcept {}
 
   template<class _Tp, class = enable_if_t<!__one_of_v<_Tp, int, partial_ordering, weak_ordering, strong_ordering>>>
