@@ -6,18 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03
+
 // <utility>
 
-// template <class T1, class T2> struct pair
+// struct piecewise_construct_t { explicit piecewise_construct_t() = default; };
+// constexpr piecewise_construct_t piecewise_construct = piecewise_construct_t();
 
-// tuple_element<I, pair<T1, T2> >::type
+// This test checks for LWG 2510.
 
 #include <utility>
 
-int main(int, char**)
-{
-    typedef std::pair<int, short> T;
-    std::tuple_element<2, T>::type foo; // expected-error@*:* {{Index out of bounds in std::tuple_element<std::pair<T1, T2>>}}
-
-    return 0;
-}
+std::piecewise_construct_t f() { return {}; } // expected-error 1 {{chosen constructor is explicit in copy-initialization}}
