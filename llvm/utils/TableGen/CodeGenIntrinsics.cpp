@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenIntrinsics.h"
-#include "CodeGenTarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
@@ -21,6 +20,13 @@
 #include <algorithm>
 #include <cassert>
 using namespace llvm;
+using namespace llvm::tmp;
+
+/// getValueType - Return the MVT::SimpleValueType that the specified TableGen
+/// record corresponds to.
+MVT::SimpleValueType llvm::tmp::getValueType(Record *Rec) {
+  return (MVT::SimpleValueType)Rec->getValueAsInt("Value");
+}
 
 //===----------------------------------------------------------------------===//
 // CodeGenIntrinsic Implementation
