@@ -8452,6 +8452,16 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
       Ops.push_back(Sub.getOperand(0));
       return true;
     }
+    // Handle generic INSERT_SUBVECTOR(SRC, SUB) iff its not a widening node.
+    if (!Src.isUndef() || InsertIdx != 0) {
+      Mask.assign(NumElts, SM_SentinelUndef);
+      std::iota(Mask.begin(), Mask.end(), 0);
+      for (int i = 0; i != (int)NumSubElts; ++i)
+        Mask[InsertIdx + i] = NumElts + i;
+      Ops.push_back(Src);
+      Ops.push_back(Sub);
+      return true;
+    }
     // Handle INSERT_SUBVECTOR(SRC0, SHUFFLE(SRC1)).
     SmallVector<int, 64> SubMask;
     SmallVector<SDValue, 2> SubInputs;
@@ -40571,21 +40581,6 @@ static SDValue combineX86ShufflesRecursively(
                 Op, OpScaledDemandedElts, DAG))
       Op = NewOp;
   }
-  // FIXME: should we rerun resolveTargetShuffleInputsAndMask() now?
-
-  // Widen any subvector shuffle inputs we've collected.
-  // TODO: Remove this to avoid generating temporary nodes, we should only
-  // widen once combineX86ShuffleChain has found a match.
-  if (any_of(Ops, [RootSizeInBits](SDValue Op) {
-        return Op.getValueSizeInBits() < RootSizeInBits;
-      })) {
-    for (SDValue &Op : Ops)
-      if (Op.getValueSizeInBits() < RootSizeInBits)
-        Op = widenSubVector(Op, false, Subtarget, DAG, SDLoc(Op),
-                            RootSizeInBits);
-    // Reresolve - we might have repeated subvector sources.
-    resolveTargetShuffleInputsAndMask(Ops, Mask);
-  }
 
   // We can only combine unary and binary shuffle mask cases.
   if (Ops.size() <= 2) {
@@ -55530,6 +55525,16 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
 
     unsigned NumOps = Ops.size();
     switch (Op0.getOpcode()) {
+    case ISD::AssertSext:
+    case ISD::AssertZext: {
+      if (!IsSplat && llvm::all_of(Ops, [&Op0](SDValue Op) {
+            return Op0.getOperand(1) == Op.getOperand(1);
+          })) {
+        return DAG.getNode(Op0.getOpcode(), DL, VT,
+                           ConcatSubOperand(VT, Ops, 0), Op0.getOperand(1));
+      }
+      break;
+    }
     case X86ISD::VBROADCAST: {
       if (!IsSplat && llvm::all_of(Ops, [](SDValue Op) {
             return Op.getOperand(0).getValueType().is128BitVector();
