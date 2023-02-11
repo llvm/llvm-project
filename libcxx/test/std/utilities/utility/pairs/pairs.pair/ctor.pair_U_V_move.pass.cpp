@@ -12,7 +12,8 @@
 
 // template <class T1, class T2> struct pair
 
-// template <class U, class V> pair(pair<U, V>&& p);
+// template <class U, class V>
+//   constexpr explicit(see below) pair(pair<U, V>&& p);
 
 #include <utility>
 #include <memory>
