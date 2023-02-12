@@ -1347,7 +1347,7 @@ void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
 }
 
 static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,
-                                  const std::string &message,
+                                  std::string title, std::string details,
                                   uint64_t completed, uint64_t total,
                                   bool is_debugger_specific) {
   // Only deliver progress events if we have any progress listeners.
@@ -1355,13 +1355,15 @@ static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,
   if (!debugger.GetBroadcaster().EventTypeHasListeners(event_type))
     return;
   EventSP event_sp(new Event(
-      event_type, new ProgressEventData(progress_id, message, completed, total,
-                                        is_debugger_specific)));
+      event_type,
+      new ProgressEventData(progress_id, std::move(title), std::move(details),
+                            completed, total, is_debugger_specific)));
   debugger.GetBroadcaster().BroadcastEvent(event_sp);
 }
 
-void Debugger::ReportProgress(uint64_t progress_id, const std::string &message,
-                              uint64_t completed, uint64_t total,
+void Debugger::ReportProgress(uint64_t progress_id, std::string title,
+                              std::string details, uint64_t completed,
+                              uint64_t total,
                               llvm::Optional<lldb::user_id_t> debugger_id) {
   // Check if this progress is for a specific debugger.
   if (debugger_id) {
@@ -1369,8 +1371,9 @@ void Debugger::ReportProgress(uint64_t progress_id, const std::string &message,
     // still exists.
     DebuggerSP debugger_sp = FindDebuggerWithID(*debugger_id);
     if (debugger_sp)
-      PrivateReportProgress(*debugger_sp, progress_id, message, completed,
-                            total, /*is_debugger_specific*/ true);
+      PrivateReportProgress(*debugger_sp, progress_id, std::move(title),
+                            std::move(details), completed, total,
+                            /*is_debugger_specific*/ true);
     return;
   }
   // The progress event is not debugger specific, iterate over all debuggers
@@ -1379,8 +1382,8 @@ void Debugger::ReportProgress(uint64_t progress_id, const std::string &message,
     std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
     DebuggerList::iterator pos, end = g_debugger_list_ptr->end();
     for (pos = g_debugger_list_ptr->begin(); pos != end; ++pos)
-      PrivateReportProgress(*(*pos), progress_id, message, completed, total,
-                            /*is_debugger_specific*/ false);
+      PrivateReportProgress(*(*pos), progress_id, title, details, completed,
+                            total, /*is_debugger_specific*/ false);
   }
 }
 
