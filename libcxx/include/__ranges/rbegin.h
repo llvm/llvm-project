@@ -17,8 +17,11 @@
 #include <__iterator/readable_traits.h>
 #include <__iterator/reverse_iterator.h>
 #include <__ranges/access.h>
+#include <__type_traits/decay.h>
+#include <__type_traits/is_reference.h>
+#include <__type_traits/remove_cvref.h>
+#include <__type_traits/remove_reference.h>
 #include <__utility/auto_cast.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
