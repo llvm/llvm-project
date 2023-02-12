@@ -115,7 +115,9 @@ static Value getIndexedPtrs(ConversionPatternRewriter &rewriter, Location loc,
          "unsupported memref type");
   auto pType = MemRefDescriptor(llvmMemref).getElementPtrType();
   auto ptrsType = LLVM::getFixedVectorType(pType, vLen);
-  return rewriter.create<LLVM::GEPOp>(loc, ptrsType, base, index);
+  return rewriter.create<LLVM::GEPOp>(
+      loc, ptrsType, typeConverter.convertType(memRefType.getElementType()),
+      base, index);
 }
 
 // Casts a strided element pointer to a vector pointer.  The vector pointer
@@ -123,6 +125,9 @@ static Value getIndexedPtrs(ConversionPatternRewriter &rewriter, Location loc,
 static Value castDataPtr(ConversionPatternRewriter &rewriter, Location loc,
                          Value ptr, MemRefType memRefType, Type vt,
                          LLVMTypeConverter &converter) {
+  if (converter.useOpaquePointers())
+    return ptr;
+
   unsigned addressSpace = *converter.getMemRefAddressSpace(memRefType);
   auto pType = LLVM::LLVMPointerType::get(vt, addressSpace);
   return rewriter.create<LLVM::BitcastOp>(loc, pType, ptr);
@@ -196,7 +201,7 @@ static void replaceLoadOrStoreOp(vector::LoadOp loadOp,
                                  vector::LoadOpAdaptor adaptor,
                                  VectorType vectorTy, Value ptr, unsigned align,
                                  ConversionPatternRewriter &rewriter) {
-  rewriter.replaceOpWithNewOp<LLVM::LoadOp>(loadOp, ptr, align);
+  rewriter.replaceOpWithNewOp<LLVM::LoadOp>(loadOp, vectorTy, ptr, align);
 }
 
 static void replaceLoadOrStoreOp(vector::MaskedLoadOp loadOp,
@@ -1030,12 +1035,16 @@ public:
     Type llvmTargetElementTy = desc.getElementPtrType();
     // Set allocated ptr.
     Value allocated = sourceMemRef.allocatedPtr(rewriter, loc);
-    allocated =
-        rewriter.create<LLVM::BitcastOp>(loc, llvmTargetElementTy, allocated);
+    if (!getTypeConverter()->useOpaquePointers())
+      allocated =
+          rewriter.create<LLVM::BitcastOp>(loc, llvmTargetElementTy, allocated);
     desc.setAllocatedPtr(rewriter, loc, allocated);
+
     // Set aligned ptr.
     Value ptr = sourceMemRef.alignedPtr(rewriter, loc);
-    ptr = rewriter.create<LLVM::BitcastOp>(loc, llvmTargetElementTy, ptr);
+    if (!getTypeConverter()->useOpaquePointers())
+      ptr = rewriter.create<LLVM::BitcastOp>(loc, llvmTargetElementTy, ptr);
+
     desc.setAlignedPtr(rewriter, loc, ptr);
     // Fill offset 0.
     auto attr = rewriter.getIntegerAttr(rewriter.getIndexType(), 0);
