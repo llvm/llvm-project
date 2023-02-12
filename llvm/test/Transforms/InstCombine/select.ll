@@ -3484,8 +3484,7 @@ define i8 @not_clamp_umax2(i8 %x) {
 
 define i8 @clamp_smin(i8 %x) {
 ; CHECK-LABEL: @clamp_smin(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], -128
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 -127, i8 [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 -127)
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
   %cmp = icmp eq i8 %x, -128
@@ -3497,7 +3496,7 @@ define i8 @clamp_smin_use(i8 %x) {
 ; CHECK-LABEL: @clamp_smin_use(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], -128
 ; CHECK-NEXT:    call void @use1(i1 [[CMP]])
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 -127, i8 [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 -127)
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
   %cmp = icmp eq i8 %x, -128
@@ -3534,8 +3533,7 @@ define i8 @not_clamp_smin2(i8 %x) {
 
 define <2 x i8> @clamp_smaxval(<2 x i8> %x) {
 ; CHECK-LABEL: @clamp_smaxval(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 127, i8 127>
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> <i8 126, i8 126>, <2 x i8> [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = call <2 x i8> @llvm.smin.v2i8(<2 x i8> [[X:%.*]], <2 x i8> <i8 126, i8 126>)
 ; CHECK-NEXT:    ret <2 x i8> [[SEL]]
 ;
   %cmp = icmp eq <2 x i8> %x, <i8 127, i8 127>
