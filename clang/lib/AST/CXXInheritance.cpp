@@ -64,14 +64,16 @@ void CXXBasePaths::swap(CXXBasePaths &Other) {
   std::swap(DetectedVirtual, Other.DetectedVirtual);
 }
 
-bool CXXRecordDecl::isDerivedFrom(const CXXRecordDecl *Base) const {
+bool CXXRecordDecl::isDerivedFrom(const CXXRecordDecl *Base,
+                                  bool LookupInDependentTypes) const {
   CXXBasePaths Paths(/*FindAmbiguities=*/false, /*RecordPaths=*/false,
                      /*DetectVirtual=*/false);
-  return isDerivedFrom(Base, Paths);
+  return isDerivedFrom(Base, Paths, LookupInDependentTypes);
 }
 
 bool CXXRecordDecl::isDerivedFrom(const CXXRecordDecl *Base,
-                                  CXXBasePaths &Paths) const {
+                                  CXXBasePaths &Paths,
+                                  bool LookupInDependentTypes) const {
   if (getCanonicalDecl() == Base->getCanonicalDecl())
     return false;
 
@@ -83,7 +85,7 @@ bool CXXRecordDecl::isDerivedFrom(const CXXRecordDecl *Base,
         return Specifier->getType()->getAsRecordDecl() &&
                FindBaseClass(Specifier, Path, BaseDecl);
       },
-      Paths);
+      Paths, LookupInDependentTypes);
 }
 
 bool CXXRecordDecl::isVirtuallyDerivedFrom(const CXXRecordDecl *Base) const {
@@ -246,17 +248,16 @@ bool CXXBasePaths::lookupInBases(ASTContext &Context,
     } else if (VisitBase) {
       CXXRecordDecl *BaseRecord;
       if (LookupInDependent) {
-        BaseRecord = nullptr;
-        const TemplateSpecializationType *TST =
-            BaseSpec.getType()->getAs<TemplateSpecializationType>();
-        if (!TST) {
-          if (auto *RT = BaseSpec.getType()->getAs<RecordType>())
-            BaseRecord = cast<CXXRecordDecl>(RT->getDecl());
-        } else {
-          TemplateName TN = TST->getTemplateName();
-          if (auto *TD =
-                  dyn_cast_or_null<ClassTemplateDecl>(TN.getAsTemplateDecl()))
-            BaseRecord = TD->getTemplatedDecl();
+        BaseRecord = cast_if_present<CXXRecordDecl>(
+            BaseSpec.getType()->getAsRecordDecl());
+        if (!BaseRecord) {
+          if (const TemplateSpecializationType *TST =
+                  BaseSpec.getType()->getAs<TemplateSpecializationType>()) {
+            TemplateName TN = TST->getTemplateName();
+            if (auto *TD =
+                    dyn_cast_or_null<ClassTemplateDecl>(TN.getAsTemplateDecl()))
+              BaseRecord = TD->getTemplatedDecl();
+          }
         }
         if (BaseRecord) {
           if (!BaseRecord->hasDefinition() ||
