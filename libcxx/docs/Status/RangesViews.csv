@@ -33,5 +33,5 @@ C++23,`slide <https://wg21.link/P2442R1>`_,Unassigned,No patch yet,Not started
 C++23,`chunk <https://wg21.link/P2442R1>`_,Unassigned,No patch yet,Not started
 C++23,`chunk_by <https://wg21.link/P2443R1>`_,Unassigned,No patch yet,Not started
 C++23,`as_const <https://wg21.link/P2278R4>`_,Unassigned,No patch yet,Not started
-C++23,`as_rvalue <https://wg21.link/P2446R2>`_,Nikolas Klauser,`D137637 <https://llvm.org/D137637>`_,Complete
+C++23,`as_rvalue <https://wg21.link/P2446R2>`_,Nikolas Klauser,`D137637 <https://llvm.org/D137637>`_,✅
 C++23,`stride <https://wg21.link/P1899R3>`_,Unassigned,No patch yet,Not started
