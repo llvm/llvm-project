@@ -4,8 +4,9 @@
 define i64 @smlsl_i64(i64 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ; CHECK-LABEL: smlsl_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smsubl x8, w4, w3, x0
-; CHECK-NEXT:    smsubl x0, w2, w1, x8
+; CHECK-NEXT:    smull x8, w4, w3
+; CHECK-NEXT:    smaddl x8, w2, w1, x8
+; CHECK-NEXT:    sub x0, x0, x8
 ; CHECK-NEXT:    ret
   %be = sext i32 %b to i64
   %ce = sext i32 %c to i64
@@ -21,8 +22,9 @@ define i64 @smlsl_i64(i64 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 define i64 @umlsl_i64(i64 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ; CHECK-LABEL: umlsl_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umsubl x8, w4, w3, x0
-; CHECK-NEXT:    umsubl x0, w2, w1, x8
+; CHECK-NEXT:    umull x8, w4, w3
+; CHECK-NEXT:    umaddl x8, w2, w1, x8
+; CHECK-NEXT:    sub x0, x0, x8
 ; CHECK-NEXT:    ret
   %be = zext i32 %b to i64
   %ce = zext i32 %c to i64
@@ -38,8 +40,9 @@ define i64 @umlsl_i64(i64 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 define i64 @mls_i64(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) {
 ; CHECK-LABEL: mls_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    msub x8, x4, x3, x0
-; CHECK-NEXT:    msub x0, x2, x1, x8
+; CHECK-NEXT:    mul x8, x2, x1
+; CHECK-NEXT:    madd x8, x4, x3, x8
+; CHECK-NEXT:    sub x0, x0, x8
 ; CHECK-NEXT:    ret
   %m1.neg = mul i64 %c, %b
   %m2.neg = mul i64 %e, %d
@@ -51,8 +54,9 @@ define i64 @mls_i64(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) {
 define i16 @mls_i16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e) {
 ; CHECK-LABEL: mls_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    msub w8, w4, w3, w0
-; CHECK-NEXT:    msub w0, w2, w1, w8
+; CHECK-NEXT:    mul w8, w2, w1
+; CHECK-NEXT:    madd w8, w4, w3, w8
+; CHECK-NEXT:    sub w0, w0, w8
 ; CHECK-NEXT:    ret
   %m1.neg = mul i16 %c, %b
   %m2.neg = mul i16 %e, %d
@@ -93,8 +97,9 @@ define i64 @mls_i64_C(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) {
 define <8 x i16> @smlsl_v8i16(<8 x i16> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %d, <8 x i8> %e) {
 ; CHECK-LABEL: smlsl_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smlsl v0.8h, v4.8b, v3.8b
-; CHECK-NEXT:    smlsl v0.8h, v2.8b, v1.8b
+; CHECK-NEXT:    smull v3.8h, v4.8b, v3.8b
+; CHECK-NEXT:    smlal v3.8h, v2.8b, v1.8b
+; CHECK-NEXT:    sub v0.8h, v0.8h, v3.8h
 ; CHECK-NEXT:    ret
   %be = sext <8 x i8> %b to <8 x i16>
   %ce = sext <8 x i8> %c to <8 x i16>
@@ -110,8 +115,9 @@ define <8 x i16> @smlsl_v8i16(<8 x i16> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %
 define <8 x i16> @umlsl_v8i16(<8 x i16> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %d, <8 x i8> %e) {
 ; CHECK-LABEL: umlsl_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umlsl v0.8h, v4.8b, v3.8b
-; CHECK-NEXT:    umlsl v0.8h, v2.8b, v1.8b
+; CHECK-NEXT:    umull v3.8h, v4.8b, v3.8b
+; CHECK-NEXT:    umlal v3.8h, v2.8b, v1.8b
+; CHECK-NEXT:    sub v0.8h, v0.8h, v3.8h
 ; CHECK-NEXT:    ret
   %be = zext <8 x i8> %b to <8 x i16>
   %ce = zext <8 x i8> %c to <8 x i16>
@@ -127,8 +133,9 @@ define <8 x i16> @umlsl_v8i16(<8 x i16> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %
 define <8 x i16> @mls_v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x i16> %d, <8 x i16> %e) {
 ; CHECK-LABEL: mls_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mls v0.8h, v4.8h, v3.8h
-; CHECK-NEXT:    mls v0.8h, v2.8h, v1.8h
+; CHECK-NEXT:    mul v1.8h, v2.8h, v1.8h
+; CHECK-NEXT:    mla v1.8h, v4.8h, v3.8h
+; CHECK-NEXT:    sub v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %m1.neg = mul <8 x i16> %c, %b
   %m2.neg = mul <8 x i16> %e, %d
@@ -159,8 +166,9 @@ define <vscale x 8 x i16> @smlsl_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i8
 ; CHECK-NEXT:    sxtb z4.h, p0/m, z4.h
 ; CHECK-NEXT:    sxtb z1.h, p0/m, z1.h
 ; CHECK-NEXT:    sxtb z2.h, p0/m, z2.h
-; CHECK-NEXT:    mls z0.h, p0/m, z4.h, z3.h
-; CHECK-NEXT:    mls z0.h, p0/m, z2.h, z1.h
+; CHECK-NEXT:    mul z3.h, z4.h, z3.h
+; CHECK-NEXT:    mla z3.h, p0/m, z2.h, z1.h
+; CHECK-NEXT:    sub z0.h, z0.h, z3.h
 ; CHECK-NEXT:    ret
   %be = sext <vscale x 8 x i8> %b to <vscale x 8 x i16>
   %ce = sext <vscale x 8 x i8> %c to <vscale x 8 x i16>
@@ -176,13 +184,14 @@ define <vscale x 8 x i16> @smlsl_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i8
 define <vscale x 8 x i16> @umlsl_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i8> %b, <vscale x 8 x i8> %c, <vscale x 8 x i8> %d, <vscale x 8 x i8> %e) {
 ; CHECK-LABEL: umlsl_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    and z3.h, z3.h, #0xff
 ; CHECK-NEXT:    and z4.h, z4.h, #0xff
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    and z1.h, z1.h, #0xff
 ; CHECK-NEXT:    and z2.h, z2.h, #0xff
-; CHECK-NEXT:    mls z0.h, p0/m, z4.h, z3.h
-; CHECK-NEXT:    mls z0.h, p0/m, z2.h, z1.h
+; CHECK-NEXT:    mul z3.h, z4.h, z3.h
+; CHECK-NEXT:    mla z3.h, p0/m, z2.h, z1.h
+; CHECK-NEXT:    sub z0.h, z0.h, z3.h
 ; CHECK-NEXT:    ret
   %be = zext <vscale x 8 x i8> %b to <vscale x 8 x i16>
   %ce = zext <vscale x 8 x i8> %c to <vscale x 8 x i16>
@@ -199,8 +208,9 @@ define <vscale x 8 x i16> @mls_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16>
 ; CHECK-LABEL: mls_nxv8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    mls z0.h, p0/m, z4.h, z3.h
-; CHECK-NEXT:    mls z0.h, p0/m, z2.h, z1.h
+; CHECK-NEXT:    mul z3.h, z4.h, z3.h
+; CHECK-NEXT:    mla z3.h, p0/m, z2.h, z1.h
+; CHECK-NEXT:    sub z0.h, z0.h, z3.h
 ; CHECK-NEXT:    ret
   %m1.neg = mul <vscale x 8 x i16> %c, %b
   %m2.neg = mul <vscale x 8 x i16> %e, %d
