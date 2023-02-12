@@ -2698,20 +2698,36 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   // to get this right here so that we don't end up making a
   // spuriously dependent expression if we're inside a dependent
   // instance method.
+  //
+  // We also don't need to do this if R resolved to a member in another
+  // class, which can happen in an unevaluated operand:
+  //
+  // C++ [expr.prim.id]p3.3:
+  //   If that id-expression denotes a non-static data member and it
+  //   appears in an unevaluated operand.
   if (!R.empty() && (*R.begin())->isCXXClassMember()) {
-    bool MightBeImplicitMember;
-    if (!IsAddressOfOperand)
-      MightBeImplicitMember = true;
-    else if (!SS.isEmpty())
-      MightBeImplicitMember = false;
-    else if (R.isOverloadedResult())
-      MightBeImplicitMember = false;
-    else if (R.isUnresolvableResult())
-      MightBeImplicitMember = true;
-    else
-      MightBeImplicitMember = isa<FieldDecl>(R.getFoundDecl()) ||
-                              isa<IndirectFieldDecl>(R.getFoundDecl()) ||
-                              isa<MSPropertyDecl>(R.getFoundDecl());
+    bool MightBeImplicitMember = true, CheckField = true;
+    if (IsAddressOfOperand) {
+      MightBeImplicitMember = SS.isEmpty() && !R.isOverloadedResult();
+      CheckField = !R.isUnresolvableResult();
+    }
+    if (MightBeImplicitMember && CheckField) {
+      if (R.isSingleResult() &&
+          isa<FieldDecl, IndirectFieldDecl, MSPropertyDecl>(R.getFoundDecl())) {
+        auto Class = cast<CXXRecordDecl>((*R.begin())->getDeclContext());
+        for (auto Curr = S->getLookupEntity(); Curr && !Curr->isFileContext();
+             Curr = Curr->getParent()) {
+          if (auto ThisClass = dyn_cast_if_present<CXXRecordDecl>(Curr)) {
+            if ((MightBeImplicitMember =
+                     ThisClass->Equals(Class) ||
+                     ThisClass->isDerivedFrom(Class,
+                                              /*LookupIndependent=*/true)))
+              break;
+          }
+        }
+      } else if (IsAddressOfOperand)
+        MightBeImplicitMember = false;
+    }
 
     if (MightBeImplicitMember)
       return BuildPossibleImplicitMemberExpr(SS, TemplateKWLoc,
