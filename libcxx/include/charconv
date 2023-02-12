@@ -80,13 +80,14 @@ namespace std {
 #include <__debug>
 #include <__errc>
 #include <__memory/addressof.h>
+#include <__type_traits/is_unsigned.h>
 #include <__type_traits/make_32_64_or_128_bit.h>
+#include <__type_traits/make_unsigned.h>
 #include <__utility/unreachable.h>
 #include <cmath> // for log2f
 #include <cstdint>
 #include <cstdlib>
 #include <limits>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -832,6 +833,7 @@ _LIBCPP_POP_MACROS
 #  include <concepts>
 #  include <cstring>
 #  include <iosfwd>
+#  include <type_traits>
 #endif
 
 #endif // _LIBCPP_CHARCONV
