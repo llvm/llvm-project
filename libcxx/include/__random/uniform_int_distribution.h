@@ -120,8 +120,8 @@ template<class _Engine, class _UIntType>
 _UIntType
 __independent_bits_engine<_Engine, _UIntType>::__eval(true_type)
 {
-    const size_t _WRt = numeric_limits<result_type>::digits;
-    result_type _Sp = 0;
+    const size_t __w_rt = numeric_limits<result_type>::digits;
+    result_type __sp = 0;
     for (size_t __k = 0; __k < __n0_; ++__k)
     {
         _Engine_result_type __u;
@@ -129,11 +129,11 @@ __independent_bits_engine<_Engine, _UIntType>::__eval(true_type)
         {
             __u = __e_() - _Engine::min();
         } while (__u >= __y0_);
-        if (__w0_ < _WRt)
-            _Sp <<= __w0_;
+        if (__w0_ < __w_rt)
+            __sp <<= __w0_;
         else
-            _Sp = 0;
-        _Sp += __u & __mask0_;
+            __sp = 0;
+        __sp += __u & __mask0_;
     }
     for (size_t __k = __n0_; __k < __n_; ++__k)
     {
@@ -142,13 +142,13 @@ __independent_bits_engine<_Engine, _UIntType>::__eval(true_type)
         {
             __u = __e_() - _Engine::min();
         } while (__u >= __y1_);
-        if (__w0_ < _WRt - 1)
-            _Sp <<= __w0_ + 1;
+        if (__w0_ < __w_rt - 1)
+            __sp <<= __w0_ + 1;
         else
-            _Sp = 0;
-        _Sp += __u & __mask1_;
+            __sp = 0;
+        __sp += __u & __mask1_;
     }
-    return _Sp;
+    return __sp;
 }
 
 template<class _IntType = int>
@@ -234,22 +234,22 @@ _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
     static_assert(__libcpp_random_is_valid_urng<_URNG>::value, "");
     typedef __conditional_t<sizeof(result_type) <= sizeof(uint32_t), uint32_t, __make_unsigned_t<result_type> >
         _UIntType;
-    const _UIntType _Rp = _UIntType(__p.b()) - _UIntType(__p.a()) + _UIntType(1);
-    if (_Rp == 1)
+    const _UIntType __rp = _UIntType(__p.b()) - _UIntType(__p.a()) + _UIntType(1);
+    if (__rp == 1)
         return __p.a();
-    const size_t _Dt = numeric_limits<_UIntType>::digits;
+    const size_t __dt = numeric_limits<_UIntType>::digits;
     typedef __independent_bits_engine<_URNG, _UIntType> _Eng;
-    if (_Rp == 0)
-        return static_cast<result_type>(_Eng(__g, _Dt)());
-    size_t __w = _Dt - std::__countl_zero(_Rp) - 1;
-    if ((_Rp & (numeric_limits<_UIntType>::max() >> (_Dt - __w))) != 0)
+    if (__rp == 0)
+        return static_cast<result_type>(_Eng(__g, __dt)());
+    size_t __w = __dt - std::__countl_zero(__rp) - 1;
+    if ((__rp & (numeric_limits<_UIntType>::max() >> (__dt - __w))) != 0)
         ++__w;
     _Eng __e(__g, __w);
     _UIntType __u;
     do
     {
         __u = __e();
-    } while (__u >= _Rp);
+    } while (__u >= __rp);
     return static_cast<result_type>(__u + __p.a());
 }
 

@@ -131,32 +131,25 @@ define <32 x i1> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0
 ; AVX256VL-LABEL: shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0:
 ; AVX256VL:       # %bb.0:
 ; AVX256VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX256VL-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
-; AVX256VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX256VL-NEXT:    vpmovsxbd %xmm1, %ymm1
-; AVX256VL-NEXT:    vptestmd %ymm1, %ymm1, %k1
+; AVX256VL-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX256VL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX256VL-NEXT:    vpmovsxbd %xmm1, %ymm1
-; AVX256VL-NEXT:    vptestmd %ymm1, %ymm1, %k2
+; AVX256VL-NEXT:    vptestmd %ymm1, %ymm1, %k1
 ; AVX256VL-NEXT:    vpmovsxbd %xmm0, %ymm0
-; AVX256VL-NEXT:    vptestmd %ymm0, %ymm0, %k3
+; AVX256VL-NEXT:    vptestmd %ymm0, %ymm0, %k2
 ; AVX256VL-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX256VL-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k3} {z}
+; AVX256VL-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k2} {z}
 ; AVX256VL-NEXT:    vpmovdw %ymm1, %xmm1
-; AVX256VL-NEXT:    vmovdqa32 %ymm0, %ymm2 {%k2} {z}
+; AVX256VL-NEXT:    vmovdqa32 %ymm0, %ymm2 {%k1} {z}
 ; AVX256VL-NEXT:    vpmovdw %ymm2, %xmm2
 ; AVX256VL-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX256VL-NEXT:    vpermq {{.*#+}} ymm2 = ymm1[2,3,0,1]
 ; AVX256VL-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1],ymm2[2],ymm1[3],ymm2[4,5],ymm1[6],ymm2[7]
-; AVX256VL-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[6,7,12,13],zero,zero,ymm1[8,9,6,7,14,15,14,15,0,1,22,23,28,29,18,19,26,27,22,23],zero,zero,ymm1[30,31,16,17]
-; AVX256VL-NEXT:    vmovdqa32 %ymm0, %ymm2 {%k1} {z}
-; AVX256VL-NEXT:    vpmovdw %ymm2, %xmm2
-; AVX256VL-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[1,1,1,1]
-; AVX256VL-NEXT:    vpternlogq $220, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm2
-; AVX256VL-NEXT:    vpmovsxwd %xmm2, %ymm1
-; AVX256VL-NEXT:    vpslld $31, %ymm1, %ymm1
-; AVX256VL-NEXT:    vptestmd %ymm1, %ymm1, %k1
-; AVX256VL-NEXT:    vextracti128 $1, %ymm2, %xmm1
+; AVX256VL-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[6,7,12,13,u,u,8,9,6,7,14,15,14,15,0,1,22,23,28,29,18,19,26,27,22,23,u,u,30,31,16,17]
+; AVX256VL-NEXT:    vpmovsxwd %xmm1, %ymm2
+; AVX256VL-NEXT:    vpslld $31, %ymm2, %ymm2
+; AVX256VL-NEXT:    vptestmd %ymm2, %ymm2, %k1
+; AVX256VL-NEXT:    vextracti128 $1, %ymm1, %xmm1
 ; AVX256VL-NEXT:    vpmovsxwd %xmm1, %ymm1
 ; AVX256VL-NEXT:    vpslld $31, %ymm1, %ymm1
 ; AVX256VL-NEXT:    vptestmd %ymm1, %ymm1, %k0

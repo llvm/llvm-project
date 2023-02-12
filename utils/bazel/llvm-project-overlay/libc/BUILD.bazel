@@ -550,8 +550,10 @@ libc_support_library(
     # own.
     textual_hdrs = nearest_integer_platform_hdrs,
     deps = [
-        ":libc_root",
         ":__support_macros_optimization",
+        ":__support_macros_properties_architectures",
+        ":__support_macros_properties_cpu_features",
+        ":libc_root",
     ],
 )
 

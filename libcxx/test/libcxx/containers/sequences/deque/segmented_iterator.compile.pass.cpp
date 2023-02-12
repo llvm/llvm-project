@@ -6,17 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11
-#include <utility>
-#include <complex>
+#include <deque>
 
-#include <cassert>
 
-int main(int, char**)
-{
-    typedef std::complex<float> cf;
-    auto t1 = std::make_pair<int, double> ( 42, 3.4 );
-    assert (( std::get<cf>(t1) == cf {1,2} ));  // no such type
-
-  return 0;
-}
+using DequeIterator = typename std::deque<int>::iterator;
+static_assert(std::__is_segmented_iterator<DequeIterator>::value, "");

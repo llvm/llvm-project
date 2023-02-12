@@ -172,11 +172,11 @@ public:
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     bool try_acquire_until(chrono::time_point<Clock, Duration> const& __abs_time)
     {
-        auto const current = Clock::now();
-        if (current >= __abs_time)
+        auto const __current = Clock::now();
+        if (__current >= __abs_time)
             return try_acquire();
         else
-            return try_acquire_for(__abs_time - current);
+            return try_acquire_for(__abs_time - __current);
     }
 };
 

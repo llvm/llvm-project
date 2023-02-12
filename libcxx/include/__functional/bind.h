@@ -132,8 +132,8 @@ typename enable_if
 >::type
 __mu(_Ti&, _Uj& __uj)
 {
-    const size_t _Indx = is_placeholder<_Ti>::value - 1;
-    return _VSTD::forward<typename tuple_element<_Indx, _Uj>::type>(_VSTD::get<_Indx>(__uj));
+    const size_t __indx = is_placeholder<_Ti>::value - 1;
+    return _VSTD::forward<typename tuple_element<__indx, _Uj>::type>(_VSTD::get<__indx>(__uj));
 }
 
 template <class _Ti, class _Uj>

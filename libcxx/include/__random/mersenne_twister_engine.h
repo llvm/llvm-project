@@ -403,9 +403,9 @@ mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b,
     const size_t __j = (__i_ + 1) % __n;
     const result_type __mask = __r == _Dt ? result_type(~0) :
                                        (result_type(1) << __r) - result_type(1);
-    const result_type _Yp = (__x_[__i_] & ~__mask) | (__x_[__j] & __mask);
+    const result_type __yp = (__x_[__i_] & ~__mask) | (__x_[__j] & __mask);
     const size_t __k = (__i_ + __m) % __n;
-    __x_[__i_] = __x_[__k] ^ __rshift<1>(_Yp) ^ (__a * (_Yp & 1));
+    __x_[__i_] = __x_[__k] ^ __rshift<1>(__yp) ^ (__a * (__yp & 1));
     result_type __z = __x_[__i_] ^ (__rshift<__u>(__x_[__i_]) & __d);
     __i_ = __j;
     __z ^= __lshift<__s>(__z) & __b;

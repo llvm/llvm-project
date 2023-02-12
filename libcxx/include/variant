@@ -594,9 +594,9 @@ private:
   template <class _Fp, class _Vp, class... _Vs>
   _LIBCPP_HIDE_FROM_ABI
   static constexpr auto __make_fdiagonal() {
-    constexpr size_t _Np = __remove_cvref_t<_Vp>::__size();
-    static_assert(__all<(_Np == __remove_cvref_t<_Vs>::__size())...>::value);
-    return __make_fdiagonal_impl<_Fp, _Vp, _Vs...>(make_index_sequence<_Np>{});
+    constexpr size_t __np = __remove_cvref_t<_Vp>::__size();
+    static_assert(__all<(__np == __remove_cvref_t<_Vs>::__size())...>::value);
+    return __make_fdiagonal_impl<_Fp, _Vp, _Vs...>(make_index_sequence<__np>{});
   }
 
   template <class _Fp, class... _Vs, size_t... _Is>

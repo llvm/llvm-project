@@ -6,18 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <utility>
+// UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: !c++experimental
 
-// template <class T1, class T2> struct pair
+#include <ranges>
+#include <vector>
 
-// tuple_element<I, pair<T1, T2> >::type
-
-#include <utility>
-
-int main(int, char**)
-{
-    typedef std::pair<int, short> T;
-    std::tuple_element<2, T>::type foo; // expected-error@*:* {{Index out of bounds in std::tuple_element<std::pair<T1, T2>>}}
-
-    return 0;
-}
+using JoinView = decltype(std::views::join(std::declval<std::vector<std::vector<int>>&>()));
+using JoinIter = std::ranges::iterator_t<JoinView>;
+static_assert(std::__is_segmented_iterator<JoinIter>::value);
