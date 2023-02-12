@@ -623,7 +623,6 @@ void CommandInterpreter::LoadCommandDictionary() {
           "current file\n"
           "                                    // containing text 'break "
           "here'.\n",
-          3,
           CommandCompletions::eSymbolCompletion |
               CommandCompletions::eSourceFileCompletion,
           false));
@@ -677,7 +676,6 @@ void CommandInterpreter::LoadCommandDictionary() {
           "current file\n"
           "                                    // containing text 'break "
           "here'.\n",
-          2,
           CommandCompletions::eSymbolCompletion |
               CommandCompletions::eSourceFileCompletion,
           false));
@@ -705,7 +703,7 @@ void CommandInterpreter::LoadCommandDictionary() {
   std::unique_ptr<CommandObjectRegexCommand> attach_regex_cmd_up(
       new CommandObjectRegexCommand(
           *this, "_regexp-attach", "Attach to process by ID or name.",
-          "_regexp-attach <pid> | <process-name>", 2, 0, false));
+          "_regexp-attach <pid> | <process-name>", 0, false));
   if (attach_regex_cmd_up) {
     if (attach_regex_cmd_up->AddRegexCommand("^([0-9]+)[[:space:]]*$",
                                              "process attach --pid %1") &&
@@ -727,7 +725,7 @@ void CommandInterpreter::LoadCommandDictionary() {
                                     "Select a newer stack frame.  Defaults to "
                                     "moving one frame, a numeric argument can "
                                     "specify an arbitrary number.",
-                                    "_regexp-down [<count>]", 2, 0, false));
+                                    "_regexp-down [<count>]", 0, false));
   if (down_regex_cmd_up) {
     if (down_regex_cmd_up->AddRegexCommand("^$", "frame select -r -1") &&
         down_regex_cmd_up->AddRegexCommand("^([0-9]+)$",
@@ -743,7 +741,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           *this, "_regexp-up",
           "Select an older stack frame.  Defaults to moving one "
           "frame, a numeric argument can specify an arbitrary number.",
-          "_regexp-up [<count>]", 2, 0, false));
+          "_regexp-up [<count>]", 0, false));
   if (up_regex_cmd_up) {
     if (up_regex_cmd_up->AddRegexCommand("^$", "frame select -r 1") &&
         up_regex_cmd_up->AddRegexCommand("^([0-9]+)$", "frame select -r %1")) {
@@ -757,7 +755,7 @@ void CommandInterpreter::LoadCommandDictionary() {
       new CommandObjectRegexCommand(
           *this, "_regexp-display",
           "Evaluate an expression at every stop (see 'help target stop-hook'.)",
-          "_regexp-display expression", 2, 0, false));
+          "_regexp-display expression", 0, false));
   if (display_regex_cmd_up) {
     if (display_regex_cmd_up->AddRegexCommand(
             "^(.+)$", "target stop-hook add -o \"expr -- %1\"")) {
@@ -771,7 +769,7 @@ void CommandInterpreter::LoadCommandDictionary() {
       new CommandObjectRegexCommand(*this, "_regexp-undisplay",
                                     "Stop displaying expression at every "
                                     "stop (specified by stop-hook index.)",
-                                    "_regexp-undisplay stop-hook-number", 2, 0,
+                                    "_regexp-undisplay stop-hook-number", 0,
                                     false));
   if (undisplay_regex_cmd_up) {
     if (undisplay_regex_cmd_up->AddRegexCommand("^([0-9]+)$",
@@ -789,7 +787,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "If no host is specifed, localhost is assumed.\n"
           "gdb-remote is an abbreviation for 'process connect --plugin "
           "gdb-remote connect://<hostname>:<port>'\n",
-          "gdb-remote [<hostname>:]<portnum>", 2, 0, false));
+          "gdb-remote [<hostname>:]<portnum>", 0, false));
   if (connect_gdb_remote_cmd_up) {
     if (connect_gdb_remote_cmd_up->AddRegexCommand(
             "^([^:]+|\\[[0-9a-fA-F:]+.*\\]):([0-9]+)$",
@@ -809,7 +807,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "If no UDP port is specified, port 41139 is assumed.\n"
           "kdp-remote is an abbreviation for 'process connect --plugin "
           "kdp-remote udp://<hostname>:<port>'\n",
-          "kdp-remote <hostname>[:<portnum>]", 2, 0, false));
+          "kdp-remote <hostname>[:<portnum>]", 0, false));
   if (connect_kdp_remote_cmd_up) {
     if (connect_kdp_remote_cmd_up->AddRegexCommand(
             "^([^:]+:[[:digit:]]+)$",
@@ -829,7 +827,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "frames.  The argument 'all' displays all threads.  Use 'settings"
           " set frame-format' to customize the printing of individual frames "
           "and 'settings set thread-format' to customize the thread header.",
-          "bt [<digit> | all]", 2, 0, false));
+          "bt [<digit> | all]", 0, false));
   if (bt_regex_cmd_up) {
     // accept but don't document "bt -c <number>" -- before bt was a regex
     // command if you wanted to backtrace three frames you would do "bt -c 3"
@@ -858,7 +856,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "_regexp-list 0x<address>     // List around specified address\n"
           "_regexp-list -[<count>]      // List previous <count> lines\n"
           "_regexp-list                 // List subsequent lines",
-          2, CommandCompletions::eSourceFileCompletion, false));
+          CommandCompletions::eSourceFileCompletion, false));
   if (list_regex_cmd_up) {
     if (list_regex_cmd_up->AddRegexCommand("^([0-9]+)[[:space:]]*$",
                                            "source list --line %1") &&
@@ -892,7 +890,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "\n"
           "_regexp-env                  // Show environment\n"
           "_regexp-env <name>=<value>   // Set an environment variable",
-          2, 0, false));
+          0, false));
   if (env_regex_cmd_up) {
     if (env_regex_cmd_up->AddRegexCommand("^$",
                                           "settings show target.env-vars") &&
@@ -912,7 +910,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "_regexp-jump +<line-offset> | -<line-offset>\n"
           "_regexp-jump <file>:<line>\n"
           "_regexp-jump *<addr>\n",
-          2, 0, false));
+          0, false));
   if (jump_regex_cmd_up) {
     if (jump_regex_cmd_up->AddRegexCommand("^\\*(.*)$",
                                            "thread jump --addr %1") &&
