@@ -207,6 +207,34 @@ func.func @extract_from_tensor.from_elements_3d()
 
 // -----
 
+// CHECK-LABEL: func.func @extract_from_elements_complex_i() -> tensor<3xcomplex<i32>> {
+// CHECK-NEXT:  %cst = arith.constant dense<[(1,2), (3,2), (1,2)]> : tensor<3xcomplex<i32>>
+// CHECK-NEXT:  return %cst : tensor<3xcomplex<i32>>
+func.func @extract_from_elements_complex_i() -> tensor<3xcomplex<i32>> {
+  %c1 = arith.constant dense<(1, 2)> : tensor<complex<i32>>
+  %complex1 = tensor.extract %c1[] : tensor<complex<i32>>
+  %c2 = arith.constant dense<(3, 2)> : tensor<complex<i32>>
+  %complex2 = tensor.extract %c2[] : tensor<complex<i32>>
+  %tensor = tensor.from_elements %complex1, %complex2, %complex1 : tensor<3xcomplex<i32>>
+  return %tensor : tensor<3xcomplex<i32>>
+}
+
+// -----
+
+// CHECK-LABEL:  func.func @extract_from_elements_complex_f() -> tensor<3xcomplex<f32>> {
+// CHECK-NEXT:   %cst = arith.constant dense<[(1.200000e+00,2.300000e+00), (3.200000e+00,2.100000e+00), (1.200000e+00,2.300000e+00)]> : tensor<3xcomplex<f32>>
+// CHECK-NEXT:   return %cst : tensor<3xcomplex<f32>>
+func.func @extract_from_elements_complex_f() -> tensor<3xcomplex<f32>> {
+  %c1 = arith.constant dense<(1.2, 2.3)> : tensor<complex<f32>>
+  %complex1 = tensor.extract %c1[] : tensor<complex<f32>>
+  %c2 = arith.constant dense<(3.2, 2.1)> : tensor<complex<f32>>
+  %complex2 = tensor.extract %c2[] : tensor<complex<f32>>
+  %tensor = tensor.from_elements %complex1, %complex2, %complex1 : tensor<3xcomplex<f32>>
+  return %tensor : tensor<3xcomplex<f32>>
+}
+
+// -----
+
 // Ensure the optimization doesn't segfault from bad constants
 // CHECK-LABEL: func @extract_negative_from_tensor.from_elements
 func.func @extract_negative_from_tensor.from_elements(%element : index) -> index {
