@@ -26,8 +26,6 @@
 
 using namespace clang;
 
-LLVM_INSTANTIATE_REGISTRY(ParsedAttrInfoRegistry)
-
 IdentifierLoc *IdentifierLoc::create(ASTContext &Ctx, SourceLocation Loc,
                                      IdentifierInfo *Ident) {
   IdentifierLoc *Result = new (Ctx) IdentifierLoc;
