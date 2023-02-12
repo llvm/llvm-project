@@ -19,7 +19,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/ManagedStatic.h"
 #include <cassert>
 #include <cstddef>
 #include <utility>
@@ -118,13 +117,7 @@ const ParsedAttrInfo &ParsedAttrInfo::get(const AttributeCommonInfo &A) {
   if (A.getParsedKind() == AttributeCommonInfo::IgnoredAttribute)
     return IgnoredParsedAttrInfo;
 
-  // Otherwise this may be an attribute defined by a plugin. First instantiate
-  // all plugin attributes if we haven't already done so.
-  static llvm::ManagedStatic<std::list<std::unique_ptr<ParsedAttrInfo>>>
-      PluginAttrInstances;
-  if (PluginAttrInstances->empty())
-    for (auto It : ParsedAttrInfoRegistry::entries())
-      PluginAttrInstances->emplace_back(It.instantiate());
+  // Otherwise this may be an attribute defined by a plugin.
 
   // Search for a ParsedAttrInfo whose name and syntax match.
   std::string FullName = A.getNormalizedFullName();
@@ -132,7 +125,7 @@ const ParsedAttrInfo &ParsedAttrInfo::get(const AttributeCommonInfo &A) {
   if (SyntaxUsed == AttributeCommonInfo::AS_ContextSensitiveKeyword)
     SyntaxUsed = AttributeCommonInfo::AS_Keyword;
 
-  for (auto &Ptr : *PluginAttrInstances)
+  for (auto &Ptr : getAttributePluginInstances())
     for (auto &S : Ptr->Spellings)
       if (S.Syntax == SyntaxUsed && S.NormalizedFullName == FullName)
         return *Ptr;
