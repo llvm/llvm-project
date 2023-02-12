@@ -997,8 +997,7 @@ static int getOperationIdentity(llvm::StringRef reductionOpName,
                                 mlir::Location loc) {
   if (reductionOpName.contains("add"))
     return 0;
-  else if (reductionOpName.contains("multiply") ||
-           reductionOpName.contains("and"))
+  if (reductionOpName.contains("multiply") || reductionOpName.contains("and"))
     return 1;
   TODO(loc, "Reduction of some intrinsic operators is not supported");
 }
