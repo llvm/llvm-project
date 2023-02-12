@@ -102,7 +102,10 @@ libc_support_library(
 libc_support_library(
     name = "__support_macros_sanitizer",
     hdrs = ["src/__support/macros/sanitizer.h"],
-    deps = [":libc_root"],
+    deps = [
+        ":__support_macros_config",
+        ":libc_root",
+    ],
 )
 
 libc_support_library(
@@ -550,6 +553,7 @@ libc_support_library(
     # own.
     textual_hdrs = nearest_integer_platform_hdrs,
     deps = [
+        ":__support_common",
         ":__support_macros_optimization",
         ":__support_macros_properties_architectures",
         ":__support_macros_properties_cpu_features",
