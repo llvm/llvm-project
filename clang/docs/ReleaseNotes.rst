@@ -892,6 +892,7 @@ RISC-V Support in Clang
   `riscv-non-isa/riscv-c-api-doc#31 <https://github.com/riscv-non-isa/riscv-c-api-doc/pull/31>`_.
 - Note that the RISC-V Vector C intrinsics are still under development. The RVV
   C Intrinsic Task Group is working towards a ratified v1.0.
+- The rvv-intrinsic-doc provides `compatible headers <https://github.com/riscv-non-isa/rvv-intrinsic-doc/tree/master/auto-generated/rvv-v0p10-compatible-headers>`_ for transition from the previous implemented version to the current (v0.11) version.
 
 X86 Support in Clang
 --------------------
