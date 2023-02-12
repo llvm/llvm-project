@@ -18,6 +18,7 @@
 #include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/ModRef.h"
 #include <string>
+#include <tuple>
 #include <vector>
 
 namespace llvm {
