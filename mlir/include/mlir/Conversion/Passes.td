@@ -1038,7 +1038,10 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm", "ModuleOp"> {
     Option<"x86Vector", "enable-x86vector",
            "bool", /*default=*/"false",
            "Enables the use of X86Vector dialect while lowering the vector "
-	   "dialect.">
+	   "dialect.">,
+	  Option<"useOpaquePointers", "use-opaque-pointers", "bool",
+               /*default=*/"false", "Generate LLVM IR using opaque pointers "
+               "instead of typed pointers">
   ];
 }
 
