@@ -1589,8 +1589,6 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
     if (!AttrInfo.Name)
       AttrInfo.Name = StringPool.getEntry("(anonymous namespace)");
     Unit.addNamespaceAccelerator(Die, AttrInfo.Name);
-  } else if (Tag == dwarf::DW_TAG_imported_declaration && AttrInfo.Name) {
-    Unit.addNamespaceAccelerator(Die, AttrInfo.Name);
   } else if (isTypeTag(Tag) && !AttrInfo.IsDeclaration &&
              getDIENames(InputDIE, AttrInfo, StringPool) && AttrInfo.Name &&
              AttrInfo.Name.getString()[0]) {
