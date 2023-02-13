@@ -5,6 +5,10 @@ if (MLIR_ENABLE_BINDINGS_PYTHON)
   add_subdirectory(python)
 endif()
 
+if (MLIR_ENABLE_SPIRV_CPU_RUNNER)
+  add_subdirectory(mlir-spirv-cpu-runner)
+endif()
+
 # Provide the MLIR CMake module dir so that the out of tree Standalone
 # dialect and can add it to the module path.
 set(MLIR_CMAKE_DIR
@@ -53,12 +57,39 @@ llvm_canonicalize_cmake_booleans(
   MLIR_RUN_ARM_SVE_TESTS
   )
 
+set(MLIR_RUNNER_UTILS "$<TARGET_FILE:mlir_runner_utils>")
+set(MLIR_C_RUNNER_UTILS "$<TARGET_FILE:mlir_c_runner_utils>")
+set(MLIR_ASYNC_RUNTIME "$<TARGET_FILE:mlir_async_runtime>")
+
+if (MLIR_ENABLE_VULKAN_RUNNER)
+  set(MLIR_VULKAN_RUNTIME_WRAPPERS "$<TARGET_FILE:vulkan-runtime-wrappers>")
+endif ()
+
+if (MLIR_ENABLE_CUDA_RUNNER)
+  set(MLIR_CUDA_RUNTIME "$<TARGET_FILE:mlir_cuda_runtime>")
+endif ()
+
+if (MLIR_ENABLE_ROCM_RUNNER)
+  set(MLIR_ROCM_RUNTIME "$<TARGET_FILE:mlir_rocm_runtime>")
+endif ()
+
+if (MLIR_ENABLE_SPIRV_CPU_RUNNER)
+  set(MLIR_TEST_SPRIV_CPU_RUNNER_C_WRAPPERS "$<TARGET_FILE:mlir_test_spirv_cpu_runner_c_wrappers>")
+endif ()
+
+# configure below runs at configure time and does not support the use of generator expressions.
+# We therefore use it only to substitute the generator expressions above into the lit.site.cfg.py.in.
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
-  ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
+  ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py.in
   MAIN_CONFIG
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
   )
+# GENERATE runs at generation time (so at the beginning of the build) and substitutes the generator expressions
+# with the actual paths of the target binaries.
+file(GENERATE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
+        INPUT ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py.in)
+
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
   ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py
@@ -131,7 +162,6 @@ if(LLVM_BUILD_EXAMPLES)
 endif()
 
 if(MLIR_ENABLE_SPIRV_CPU_RUNNER)
-  add_subdirectory(mlir-spirv-cpu-runner)
   list(APPEND MLIR_TEST_DEPENDS
     mlir-spirv-cpu-runner
     mlir_test_spirv_cpu_runner_c_wrappers
