@@ -71,11 +71,6 @@ public:
     return (Index >= Entries.size()) ? StringRef() : Entries[Index]->getKey();
   }
 
-  static LVStringPool &getInstance() {
-    static LVStringPool Instance;
-    return Instance;
-  }
-
   void print(raw_ostream &OS) const {
     if (!Entries.empty()) {
       OS << "\nString Pool:\n";
@@ -89,8 +84,6 @@ public:
   void dump() const { print(dbgs()); }
 #endif
 };
-
-inline LVStringPool &getStringPool() { return LVStringPool::getInstance(); }
 
 } // namespace logicalview
 } // end namespace llvm
