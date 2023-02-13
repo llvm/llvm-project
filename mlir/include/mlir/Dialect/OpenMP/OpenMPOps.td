@@ -1194,13 +1194,14 @@ def AtomicReadOp : OpenMP_Op<"atomic.read", [AllTypesMatch<["x", "v"]>]> {
 
   let arguments = (ins OpenMP_PointerLikeType:$x,
                        OpenMP_PointerLikeType:$v,
+                       TypeAttr:$element_type,
                        DefaultValuedOptionalAttr<I64Attr, "0">:$hint_val,
                        OptionalAttr<MemoryOrderKindAttr>:$memory_order_val);
   let assemblyFormat = [{
     $v `=` $x
     oilist( `memory_order` `(` custom<ClauseAttr>($memory_order_val) `)`
           | `hint` `(` custom<SynchronizationHint>($hint_val) `)`)
-    `:` type($x) attr-dict
+    `:` type($x) `,` $element_type attr-dict
   }];
   let hasVerifier = 1;
   let extraClassDeclaration = [{
@@ -1535,11 +1536,7 @@ def ReductionDeclareOp : OpenMP_Op<"reduction.declare", [Symbol,
 // 2.19.5.4 reduction clause
 //===----------------------------------------------------------------------===//
 
-def ReductionOp : OpenMP_Op<"reduction", [
-    TypesMatchWith<"value types matches accumulator element type",
-                   "accumulator", "operand",
-                 "$_self.cast<::mlir::omp::PointerLikeType>().getElementType()">
-  ]> {
+def ReductionOp : OpenMP_Op<"reduction"> {
   let summary = "reduction construct";
   let description = [{
     Indicates the value that is produced by the current reduction-participating
@@ -1549,8 +1546,9 @@ def ReductionOp : OpenMP_Op<"reduction", [
   }];
 
   let arguments= (ins AnyType:$operand, OpenMP_PointerLikeType:$accumulator);
-  let assemblyFormat =
-    "$operand `,` $accumulator attr-dict `:` type($accumulator)";
+  let assemblyFormat = [{
+    $operand `,` $accumulator attr-dict `:` type($operand) `,` type($accumulator)
+  }];
   let hasVerifier = 1;
 }
 
