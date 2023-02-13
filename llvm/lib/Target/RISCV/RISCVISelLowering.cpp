@@ -233,7 +233,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::EH_DWARF_CFA, MVT::i32, Custom);
 
-  if (!Subtarget.hasStdExtZbb())
+  if (!Subtarget.hasStdExtZbb() && !Subtarget.hasVendorXTHeadBb())
     setOperationAction(ISD::SIGN_EXTEND_INREG, {MVT::i8, MVT::i16}, Expand);
 
   if (Subtarget.is64Bit()) {
@@ -280,7 +280,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setOperationAction({ISD::SHL_PARTS, ISD::SRL_PARTS, ISD::SRA_PARTS}, XLenVT,
                      Custom);
 
-  if (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb()) {
+  if (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb() ||
+      Subtarget.hasVendorXTHeadBb()) {
     if (Subtarget.is64Bit())
       setOperationAction({ISD::ROTL, ISD::ROTR}, MVT::i32, Custom);
   } else {
@@ -290,7 +291,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   // With Zbb we have an XLen rev8 instruction, but not GREVI. So we'll
   // pattern match it directly in isel.
   setOperationAction(ISD::BSWAP, XLenVT,
-                     (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb())
+                     (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb() ||
+                      Subtarget.hasVendorXTHeadBb())
                          ? Legal
                          : Expand);
   // Zbkb can use rev8+brev8 to implement bitreverse.
@@ -307,6 +309,15 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           MVT::i32, Custom);
   } else {
     setOperationAction({ISD::CTTZ, ISD::CTLZ, ISD::CTPOP}, XLenVT, Expand);
+  }
+
+  if (Subtarget.hasVendorXTHeadBb()) {
+    setOperationAction(ISD::CTLZ, XLenVT, Legal);
+
+    // We need the custom lowering to make sure that the resulting sequence
+    // for the 32bit case is efficient on 64bit targets.
+    if (Subtarget.is64Bit())
+      setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i32, Custom);
   }
 
   if (Subtarget.is64Bit())
@@ -1212,7 +1223,7 @@ bool RISCVTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
 }
 
 bool RISCVTargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
-  return Subtarget.hasStdExtZbb();
+  return Subtarget.hasStdExtZbb() || Subtarget.hasVendorXTHeadBb();
 }
 
 bool RISCVTargetLowering::isMaskAndCmp0FoldingBeneficial(
@@ -1223,7 +1234,7 @@ bool RISCVTargetLowering::isMaskAndCmp0FoldingBeneficial(
   // on the basis that it's possible the sinking+duplication of the AND in
   // CodeGenPrepare triggered by this hook wouldn't decrease the instruction
   // count and would increase code size (e.g. ANDI+BNEZ => BEXTI+BNEZ).
-  if (!Subtarget.hasStdExtZbs())
+  if (!Subtarget.hasStdExtZbs() && !Subtarget.hasVendorXTHeadBs())
     return false;
   ConstantInt *Mask = dyn_cast<ConstantInt>(AndI.getOperand(1));
   if (!Mask)
@@ -1246,8 +1257,11 @@ bool RISCVTargetLowering::hasBitTest(SDValue X, SDValue Y) const {
   // Zbs provides BEXT[_I], which can be used with SEQZ/SNEZ as a bit test.
   if (Subtarget.hasStdExtZbs())
     return X.getValueType().isScalarInteger();
-  // We can use ANDI+SEQZ/SNEZ as a bit test. Y contains the bit position.
   auto *C = dyn_cast<ConstantSDNode>(Y);
+  // XTheadBs provides th.tst (similar to bexti), if Y is a constant
+  if (Subtarget.hasVendorXTHeadBs())
+    return C != nullptr;
+  // We can use ANDI+SEQZ/SNEZ as a bit test. Y contains the bit position.
   return C && C->getAPIntValue().ule(10);
 }
 

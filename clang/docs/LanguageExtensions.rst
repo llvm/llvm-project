@@ -1401,6 +1401,10 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__array_extent(type, dim)`` (Embarcadero):
   The ``dim``'th array bound in the type ``type``, or ``0`` if
   ``dim >= __array_rank(type)``.
+* ``__can_pass_in_regs`` (C++)
+  Returns whether a class can be passed in registers under the current
+  ABI. This type can only be applied to unqualified class types.
+  This is not a portable type trait.
 * ``__has_nothrow_assign`` (GNU, Microsoft, Embarcadero):
   Deprecated, use ``__is_nothrow_assignable`` instead.
 * ``__has_nothrow_move_assign`` (GNU, Microsoft):

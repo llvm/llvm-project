@@ -261,6 +261,7 @@ end
   to apply only to a scalar data-ref, but most compilers don't
   enforce it and the constraint is not necessary for a correct
   implementation.
+* A label may follow a semicolon in fixed form source.
 
 ### Extensions supported when enabled by options
 

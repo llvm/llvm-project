@@ -69,7 +69,7 @@ CSPreInliner::CSPreInliner(SampleContextTracker &Tracker,
   if (!SampleColdCallSiteThreshold.getNumOccurrences())
     SampleColdCallSiteThreshold = 0;
   if (!ProfileInlineLimitMax.getNumOccurrences())
-    ProfileInlineLimitMax = 3000;
+    ProfileInlineLimitMax = 50000;
 }
 
 std::vector<StringRef> CSPreInliner::buildTopDownOrder() {

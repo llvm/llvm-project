@@ -11794,4 +11794,8 @@ def note_unsafe_buffer_variable_fixit : Note<
   "change type of '%0' to '%select{std::span|std::array|std::span::iterator}1' to preserve bounds information">;
 def err_loongarch_builtin_requires_la32 : Error<
   "this builtin requires target: loongarch32">;
+
+def err_builtin_pass_in_regs_non_class : Error<
+  "argument %0 is not an unqualified class type">;
+
 } // end of sema component.

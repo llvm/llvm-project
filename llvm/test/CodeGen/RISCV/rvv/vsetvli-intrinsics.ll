@@ -10,7 +10,7 @@ declare iXLen @llvm.riscv.vsetvlimax.iXLen(iXLen, iXLen)
 define iXLen @test_vsetvli_e8m1(iXLen %avl) nounwind {
 ; CHECK-LABEL: test_vsetvli_e8m1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, a0, e8, m1, ta, ma
 ; CHECK-NEXT:    ret
   %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %avl, iXLen 0, iXLen 0)
   ret iXLen %vl
@@ -19,7 +19,7 @@ define iXLen @test_vsetvli_e8m1(iXLen %avl) nounwind {
 define iXLen @test_vsetvli_e16mf4(iXLen %avl) nounwind {
 ; CHECK-LABEL: test_vsetvli_e16mf4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, a0, e16, mf4, ta, ma
 ; CHECK-NEXT:    ret
   %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %avl, iXLen 1, iXLen 6)
   ret iXLen %vl
@@ -28,7 +28,7 @@ define iXLen @test_vsetvli_e16mf4(iXLen %avl) nounwind {
 define iXLen @test_vsetvli_e64mf8(iXLen %avl) nounwind {
 ; CHECK-LABEL: test_vsetvli_e64mf8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e64, mf8, ta, mu
+; CHECK-NEXT:    vsetvli a0, a0, e64, mf8, ta, ma
 ; CHECK-NEXT:    ret
   %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %avl, iXLen 3, iXLen 5)
   ret iXLen %vl
@@ -37,7 +37,7 @@ define iXLen @test_vsetvli_e64mf8(iXLen %avl) nounwind {
 define iXLen @test_vsetvli_e8mf2_zero_avl() nounwind {
 ; CHECK-LABEL: test_vsetvli_e8mf2_zero_avl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 0, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli a0, 0, e8, mf2, ta, ma
 ; CHECK-NEXT:    ret
   %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen 0, iXLen 0, iXLen 7)
   ret iXLen %vl
@@ -46,7 +46,7 @@ define iXLen @test_vsetvli_e8mf2_zero_avl() nounwind {
 define iXLen @test_vsetvli_e32mf8_zero_avl() nounwind {
 ; CHECK-LABEL: test_vsetvli_e32mf8_zero_avl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 0, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli a0, 0, e16, mf4, ta, ma
 ; CHECK-NEXT:    ret
   %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen 0, iXLen 1, iXLen 6)
   ret iXLen %vl
@@ -55,7 +55,7 @@ define iXLen @test_vsetvli_e32mf8_zero_avl() nounwind {
 define iXLen @test_vsetvlimax_e32m2() nounwind {
 ; CHECK-LABEL: test_vsetvlimax_e32m2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    ret
   %vl = call iXLen @llvm.riscv.vsetvlimax.iXLen(iXLen 2, iXLen 1)
   ret iXLen %vl
@@ -64,7 +64,7 @@ define iXLen @test_vsetvlimax_e32m2() nounwind {
 define iXLen @test_vsetvlimax_e64m4() nounwind {
 ; CHECK-LABEL: test_vsetvlimax_e64m4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    ret
   %vl = call iXLen @llvm.riscv.vsetvlimax.iXLen(iXLen 3, iXLen 2)
   ret iXLen %vl
@@ -73,7 +73,7 @@ define iXLen @test_vsetvlimax_e64m4() nounwind {
 define iXLen @test_vsetvlimax_e64m8() nounwind {
 ; CHECK-LABEL: test_vsetvlimax_e64m8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    ret
   %vl = call iXLen @llvm.riscv.vsetvlimax.iXLen(iXLen 3, iXLen 3)
   ret iXLen %vl
@@ -102,7 +102,7 @@ declare <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32.iXLen(<vscale x 4 x i32>, <vs
 define <vscale x 4 x i32> @redundant_vsetvli(iXLen %avl, <vscale x 4 x i32>* %ptr) nounwind {
 ; CHECK-LABEL: redundant_vsetvli:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    ret
   %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %avl, iXLen 2, iXLen 1)
@@ -117,8 +117,8 @@ define <vscale x 4 x i32> @redundant_vsetvli(iXLen %avl, <vscale x 4 x i32>* %pt
 define <vscale x 4 x i32> @repeated_vsetvli(iXLen %avl, <vscale x 4 x i32>* %ptr) nounwind {
 ; CHECK-LABEL: repeated_vsetvli:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e32, m2, ta, mu
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, a0, e32, m2, ta, ma
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    ret
   %vl0 = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %avl, iXLen 2, iXLen 1)
