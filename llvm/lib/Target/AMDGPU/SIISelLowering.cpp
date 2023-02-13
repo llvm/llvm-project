@@ -2085,7 +2085,8 @@ void SITargetLowering::allocateSpecialInputSGPRs(
     allocateSGPR64Input(CCInfo, ArgInfo.DispatchPtr);
 
   const Module *M = MF.getFunction().getParent();
-  if (Info.hasQueuePtr() && AMDGPU::getCodeObjectVersion(*M) < 5)
+  if (Info.hasQueuePtr() &&
+      AMDGPU::getCodeObjectVersion(*M) < AMDGPU::AMDHSA_COV5)
     allocateSGPR64Input(CCInfo, ArgInfo.QueuePtr);
 
   // Implicit arg ptr takes the place of the kernarg segment pointer. This is a
@@ -2136,7 +2137,8 @@ void SITargetLowering::allocateHSAUserSGPRs(CCState &CCInfo,
   }
 
   const Module *M = MF.getFunction().getParent();
-  if (Info.hasQueuePtr() && AMDGPU::getCodeObjectVersion(*M) < 5) {
+  if (Info.hasQueuePtr() &&
+      AMDGPU::getCodeObjectVersion(*M) < AMDGPU::AMDHSA_COV5) {
     Register QueuePtrReg = Info.addQueuePtr(TRI);
     MF.addLiveIn(QueuePtrReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(QueuePtrReg);
@@ -5437,7 +5439,7 @@ SDValue SITargetLowering::lowerTRAP(SDValue Op, SelectionDAG &DAG) const {
 
   const Module *M = DAG.getMachineFunction().getFunction().getParent();
   unsigned CodeObjectVersion = AMDGPU::getCodeObjectVersion(*M);
-  if (CodeObjectVersion <= 3)
+  if (CodeObjectVersion <= AMDGPU::AMDHSA_COV3)
     return lowerTrapHsaQueuePtr(Op, DAG);
 
   return Subtarget->supportsGetDoorbellID() ? lowerTrapHsa(Op, DAG) :
@@ -5470,7 +5472,7 @@ SDValue SITargetLowering::lowerTrapHsaQueuePtr(
   SDValue QueuePtr;
   // For code object version 5, QueuePtr is passed through implicit kernarg.
   const Module *M = DAG.getMachineFunction().getFunction().getParent();
-  if (AMDGPU::getCodeObjectVersion(*M) >= 5) {
+  if (AMDGPU::getCodeObjectVersion(*M) >= AMDGPU::AMDHSA_COV5) {
     QueuePtr =
         loadImplicitKernelArgument(DAG, MVT::i64, SL, Align(8), QUEUE_PTR);
   } else {
@@ -5574,7 +5576,7 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
   // For code object version 5, private_base and shared_base are passed through
   // implicit kernargs.
   const Module *M = DAG.getMachineFunction().getFunction().getParent();
-  if (AMDGPU::getCodeObjectVersion(*M) >= 5) {
+  if (AMDGPU::getCodeObjectVersion(*M) >= AMDGPU::AMDHSA_COV5) {
     ImplicitParameter Param =
         (AS == AMDGPUAS::LOCAL_ADDRESS) ? SHARED_BASE : PRIVATE_BASE;
     return loadImplicitKernelArgument(DAG, MVT::i32, DL, Align(4), Param);

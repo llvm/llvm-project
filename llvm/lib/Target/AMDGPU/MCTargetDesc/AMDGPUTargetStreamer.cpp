@@ -367,7 +367,7 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     PRINT_FIELD(OS, ".amdhsa_wavefront_size32", KD,
                 kernel_code_properties,
                 amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
-  if (CodeObjectVersion >= 5)
+  if (CodeObjectVersion >= AMDGPU::AMDHSA_COV5)
     PRINT_FIELD(OS, ".amdhsa_uses_dynamic_stack", KD, kernel_code_properties,
                 amdhsa::KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK);
   PRINT_FIELD(OS,
@@ -410,11 +410,11 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   switch (CodeObjectVersion) {
   default:
     break;
-  case 2:
+  case AMDGPU::AMDHSA_COV2:
     break;
-  case 3:
-  case 4:
-  case 5:
+  case AMDGPU::AMDHSA_COV3:
+  case AMDGPU::AMDHSA_COV4:
+  case AMDGPU::AMDHSA_COV5:
     if (getTargetID()->isXnackSupported())
       OS << "\t\t.amdhsa_reserve_xnack_mask " << getTargetID()->isXnackOnOrAny() << '\n';
     break;
