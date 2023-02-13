@@ -210,7 +210,7 @@ llvm::MDNode *LoopAnnotationConversion::convert() {
         llvm::MDString::get(ctx, "llvm.loop.parallel_accesses"));
     for (SymbolRefAttr accessGroupRef : parallelAccessGroups)
       parallelAccess.push_back(
-          moduleTranslation.getAccessGroup(*op, accessGroupRef));
+          moduleTranslation.getAccessGroup(op, accessGroupRef));
     metadataNodes.push_back(llvm::MDNode::get(ctx, parallelAccess));
   }
 

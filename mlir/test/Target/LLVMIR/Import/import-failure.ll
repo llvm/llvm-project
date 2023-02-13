@@ -566,8 +566,6 @@ bb2:
 
 ; // -----
 
-; CHECK:      import-failure.ll
-; CHECK-SAME: warning: llvm.func does not support branch weights
 ; CHECK:      import-failure.ll:{{.*}} warning: unhandled function metadata: !0 = !{!"branch_weights", i32 64}
 define void @cond_br(i1 %arg) !prof !0 {
   ret void

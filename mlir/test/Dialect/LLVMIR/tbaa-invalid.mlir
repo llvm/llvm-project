@@ -8,7 +8,7 @@ module {
   llvm.func @tbaa(%arg0: !llvm.ptr) {
     %0 = llvm.mlir.constant(1 : i8) : i8
     // expected-error@below {{expected '@tbaa_tag_1' to specify a fully qualified reference}}
-    llvm.store %0, %arg0 {llvm.tbaa = [@tbaa_tag_1]} : i8, !llvm.ptr
+    llvm.store %0, %arg0 {tbaa = [@tbaa_tag_1]} : i8, !llvm.ptr
     llvm.return
   }
 }
@@ -17,8 +17,8 @@ module {
 
 llvm.func @tbaa(%arg0: !llvm.ptr) {
   %0 = llvm.mlir.constant(1 : i8) : i8
-  // expected-error@below {{attribute 'llvm.tbaa' failed to satisfy constraint: symbol ref array attribute}}
-  llvm.store %0, %arg0 {llvm.tbaa = ["sym"]} : i8, !llvm.ptr
+  // expected-error@below {{attribute 'tbaa' failed to satisfy constraint: symbol ref array attribute}}
+  llvm.store %0, %arg0 {tbaa = ["sym"]} : i8, !llvm.ptr
   llvm.return
 }
 
@@ -28,7 +28,7 @@ module {
   llvm.func @tbaa(%arg0: !llvm.ptr) {
     %0 = llvm.mlir.constant(1 : i8) : i8
     // expected-error@below {{expected '@metadata::@group1' to resolve to a llvm.tbaa_tag}}
-    llvm.store %0, %arg0 {llvm.tbaa = [@metadata::@group1]} : i8, !llvm.ptr
+    llvm.store %0, %arg0 {tbaa = [@metadata::@group1]} : i8, !llvm.ptr
     llvm.return
   }
   llvm.metadata @metadata {
@@ -42,7 +42,7 @@ module {
   llvm.func @tbaa(%arg0: !llvm.ptr) {
     %0 = llvm.mlir.constant(1 : i8) : i8
     // expected-error@below {{expected '@metadata::@sym' to be a valid reference}}
-    llvm.store %0, %arg0 {llvm.tbaa = [@metadata::@sym]} : i8, !llvm.ptr
+    llvm.store %0, %arg0 {tbaa = [@metadata::@sym]} : i8, !llvm.ptr
     llvm.return
   }
   llvm.metadata @metadata {
@@ -54,7 +54,7 @@ module {
 llvm.func @tbaa(%arg0: !llvm.ptr) {
   %0 = llvm.mlir.constant(1 : i8) : i8
   // expected-error@below {{expected '@tbaa::@sym' to reference a metadata op}}
-  llvm.store %0, %arg0 {llvm.tbaa = [@tbaa::@sym]} : i8, !llvm.ptr
+  llvm.store %0, %arg0 {tbaa = [@tbaa::@sym]} : i8, !llvm.ptr
   llvm.return
 }
 
