@@ -2030,9 +2030,9 @@ define float @v_negated_rcp_f32(float %arg0, float %arg1) #1 {
 ; GCN-LABEL: v_negated_rcp_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_fma_f32 v0, -v0, v1, -2.0
+; GCN-NEXT:    v_fma_f32 v0, v0, v1, 2.0
 ; GCN-NEXT:    v_rcp_f32_e32 v0, v0
-; GCN-NEXT:    v_sub_f32_e32 v0, v1, v0
+; GCN-NEXT:    v_add_f32_e32 v0, v1, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %neg.arg0 = fneg float %arg0
   %fma = call nsz float @llvm.fma.f32(float %neg.arg0, float %arg1, float -2.0)
