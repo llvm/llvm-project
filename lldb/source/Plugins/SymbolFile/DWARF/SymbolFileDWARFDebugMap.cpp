@@ -211,7 +211,7 @@ public:
             // Set the ID of the symbol file DWARF to the index of the OSO
             // shifted left by 32 bits to provide a unique prefix for any
             // UserID's that get created in the symbol file.
-            oso_symfile->SetFileIndex((uint64_t)m_cu_idx + 1ull);
+            oso_symfile->SetID(((uint64_t)m_cu_idx + 1ull) << 32ull);
           }
           return symfile;
         }
@@ -1121,8 +1121,7 @@ void SymbolFileDWARFDebugMap::GetTypes(SymbolContextScope *sc_scope,
 }
 
 std::vector<std::unique_ptr<lldb_private::CallEdge>>
-SymbolFileDWARFDebugMap::ParseCallEdgesInFunction(
-    lldb_private::UserID func_id) {
+SymbolFileDWARFDebugMap::ParseCallEdgesInFunction(UserID func_id) {
   uint32_t oso_idx = GetOSOIndexFromUserID(func_id.GetID());
   SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx);
   if (oso_dwarf)
@@ -1469,8 +1468,7 @@ SymbolFileDWARFDebugMap::AddOSOARanges(SymbolFileDWARF *dwarf2Data,
       for (size_t idx = 0; idx < file_range_map.GetSize(); idx++) {
         const FileRangeMap::Entry *entry = file_range_map.GetEntryAtIndex(idx);
         if (entry) {
-          debug_aranges->AppendRange(*dwarf2Data->GetFileIndex(),
-                                     entry->GetRangeBase(),
+          debug_aranges->AppendRange(dwarf2Data->GetID(), entry->GetRangeBase(),
                                      entry->GetRangeEnd());
           num_line_entries_added++;
         }
