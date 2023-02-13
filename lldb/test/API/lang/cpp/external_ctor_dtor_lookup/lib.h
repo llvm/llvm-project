@@ -8,5 +8,8 @@ public:
   [[gnu::abi_tag("test")]] ~Wrapper(){};
 };
 
-#endif // _H_IN
+struct Foo {};
 
+Wrapper<Foo> getFooWrapper();
+
+#endif // _H_IN
