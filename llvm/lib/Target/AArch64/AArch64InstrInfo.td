@@ -2612,7 +2612,7 @@ def EMITMTETAGGED : Pseudo<(outs), (ins), []>, Sched<[]> {}
 // FIXME: maybe the scratch register used shouldn't be fixed to X1?
 // FIXME: can "hasSideEffects be dropped?
 // This gets lowered to an instruction sequence which takes 16 bytes
-let isCall = 1, Defs = [LR, X0, X1], hasSideEffects = 1, Size = 16,
+let isCall = 1, Defs = [NZCV, LR, X0, X1], hasSideEffects = 1, Size = 16,
     isCodeGenOnly = 1 in
 def TLSDESC_CALLSEQ
     : Pseudo<(outs), (ins i64imm:$sym),
