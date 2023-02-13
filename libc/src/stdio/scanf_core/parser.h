@@ -25,22 +25,22 @@ class Parser {
   size_t cur_pos = 0;
   internal::ArgList args_cur;
 
-#ifndef LLVM_LIBC_SCANF_DISABLE_INDEX_MODE
+#ifndef LIBC_COPT_SCANF_DISABLE_INDEX_MODE
   // args_start stores the start of the va_args, which is used when a previous
   // argument is needed. In that case, we have to read the arguments from the
   // beginning since they don't support reading backwards.
   internal::ArgList args_start;
   size_t args_index = 1;
-#endif // LLVM_LIBC_SCANF_DISABLE_INDEX_MODE
+#endif // LIBC_COPT_SCANF_DISABLE_INDEX_MODE
 
 public:
-#ifndef LLVM_LIBC_SCANF_DISABLE_INDEX_MODE
+#ifndef LIBC_COPT_SCANF_DISABLE_INDEX_MODE
   LIBC_INLINE Parser(const char *__restrict new_str, internal::ArgList &args)
       : str(new_str), args_cur(args), args_start(args) {}
 #else
   LIBC_INLINE Parser(const char *__restrict new_str, internal::ArgList &args)
       : str(new_str), args_cur(args) {}
-#endif // LLVM_LIBC_SCANF_DISABLE_INDEX_MODE
+#endif // LIBC_COPT_SCANF_DISABLE_INDEX_MODE
 
   // get_next_section will parse the format string until it has a fully
   // specified format section. This can either be a raw format section with no
@@ -64,7 +64,7 @@ private:
   // INDEX MODE ONLY FUNCTIONS AFTER HERE:
   //----------------------------------------------------
 
-#ifndef LLVM_LIBC_SCANF_DISABLE_INDEX_MODE
+#ifndef LIBC_COPT_SCANF_DISABLE_INDEX_MODE
 
   // parse_index parses the index of a value inside a format string. It
   // assumes that str[*local_pos] points to character after a '%' or '*', and
@@ -91,7 +91,7 @@ private:
   // case an O(n^2) operation.
   void args_to_index(size_t index);
 
-#endif // LLVM_LIBC_SCANF_DISABLE_INDEX_MODE
+#endif // LIBC_COPT_SCANF_DISABLE_INDEX_MODE
 };
 
 } // namespace scanf_core

@@ -26,7 +26,7 @@ class Parser {
   size_t cur_pos = 0;
   internal::ArgList args_cur;
 
-#ifndef LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
+#ifndef LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
   // args_start stores the start of the va_args, which is allows getting the
   // value of arguments that have already been passed. args_index is tracked so
   // that we know which argument args_cur is on.
@@ -34,7 +34,7 @@ class Parser {
   size_t args_index = 1;
 
   // Defined in printf_config.h
-  static constexpr size_t DESC_ARR_LEN = LLVM_LIBC_PRINTF_INDEX_ARR_LEN;
+  static constexpr size_t DESC_ARR_LEN = LIBC_COPT_PRINTF_INDEX_ARR_LEN;
 
   // desc_arr stores the sizes of the variables in the ArgList. This is used in
   // index mode to reduce repeated string parsing. The sizes are stored as
@@ -45,16 +45,16 @@ class Parser {
 
   // TODO: Look into object stores for optimization.
 
-#endif // LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
+#endif // LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 
 public:
-#ifndef LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
+#ifndef LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
   LIBC_INLINE Parser(const char *__restrict new_str, internal::ArgList &args)
       : str(new_str), args_cur(args), args_start(args) {}
 #else
   LIBC_INLINE Parser(const char *__restrict new_str, internal::ArgList &args)
       : str(new_str), args_cur(args) {}
-#endif // LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
+#endif // LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 
   // get_next_section will parse the format string until it has a fully
   // specified format section. This can either be a raw format section with no
@@ -84,7 +84,7 @@ private:
   // INDEX MODE ONLY FUNCTIONS AFTER HERE:
   //----------------------------------------------------
 
-#ifndef LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
+#ifndef LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 
   // parse_index parses the index of a value inside a format string. It
   // assumes that str[*local_pos] points to character after a '%' or '*', and
@@ -124,7 +124,7 @@ private:
   // modify cur_pos.
   TypeDesc get_type_desc(size_t index);
 
-#endif // LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
+#endif // LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 };
 
 } // namespace printf_core
