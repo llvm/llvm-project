@@ -249,7 +249,7 @@ public:
     typedef _Reference                  reference;
 
     _LIBCPP_HIDE_FROM_ABI __deque_iterator() _NOEXCEPT
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
      : __m_iter_(nullptr), __ptr_(nullptr)
 #endif
      {}
@@ -564,7 +564,7 @@ public:
         : __map_(__pointer_allocator(__a)), __start_(0), __size_(0, __a) {}
 
     explicit _LIBCPP_HIDE_FROM_ABI deque(size_type __n);
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     explicit _LIBCPP_HIDE_FROM_ABI deque(size_type __n, const _Allocator& __a);
 #endif
     _LIBCPP_HIDE_FROM_ABI deque(size_type __n, const value_type& __v);
@@ -713,7 +713,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI void push_front(const value_type& __v);
     _LIBCPP_HIDE_FROM_ABI void push_back(const value_type& __v);
 #ifndef _LIBCPP_CXX03_LANG
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     template <class... _Args> _LIBCPP_HIDE_FROM_ABI reference emplace_front(_Args&&... __args);
     template <class... _Args> _LIBCPP_HIDE_FROM_ABI reference emplace_back (_Args&&... __args);
 #else
@@ -952,7 +952,7 @@ deque<_Tp, _Allocator>::deque(size_type __n)
         __append(__n);
 }
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <class _Tp, class _Allocator>
 deque<_Tp, _Allocator>::deque(size_type __n, const _Allocator& __a)
     : __map_(__pointer_allocator(__a)), __start_(0), __size_(0, __a)
@@ -1314,7 +1314,7 @@ deque<_Tp, _Allocator>::push_back(value_type&& __v)
 
 template <class _Tp, class _Allocator>
 template <class... _Args>
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 typename deque<_Tp, _Allocator>::reference
 #else
 void
@@ -1328,7 +1328,7 @@ deque<_Tp, _Allocator>::emplace_back(_Args&&... __args)
     __alloc_traits::construct(__a, _VSTD::addressof(*end()),
                               _VSTD::forward<_Args>(__args)...);
     ++__size();
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     return *--end();
 #endif
 }
@@ -1349,7 +1349,7 @@ deque<_Tp, _Allocator>::push_front(value_type&& __v)
 
 template <class _Tp, class _Allocator>
 template <class... _Args>
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 typename deque<_Tp, _Allocator>::reference
 #else
 void
@@ -1363,7 +1363,7 @@ deque<_Tp, _Allocator>::emplace_front(_Args&&... __args)
     __alloc_traits::construct(__a, _VSTD::addressof(*--begin()), _VSTD::forward<_Args>(__args)...);
     --__start_;
     ++__size();
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     return *begin();
 #endif
 }
@@ -2391,7 +2391,7 @@ swap(deque<_Tp, _Allocator>& __x, deque<_Tp, _Allocator>& __y)
     __x.swap(__y);
 }
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <class _Tp, class _Allocator, class _Up>
 inline _LIBCPP_HIDE_FROM_ABI typename deque<_Tp, _Allocator>::size_type
 erase(deque<_Tp, _Allocator>& __c, const _Up& __v) {
@@ -2415,11 +2415,11 @@ template <>
 inline constexpr bool __format::__enable_insertable<std::deque<wchar_t>> = true;
 #endif
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace pmr {
 template <class _ValueT>

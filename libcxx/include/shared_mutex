@@ -131,7 +131,7 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 
-#if _LIBCPP_STD_VER > 11 || defined(_LIBCPP_BUILDING_LIBRARY)
+#if _LIBCPP_STD_VER >= 14 || defined(_LIBCPP_BUILDING_LIBRARY)
 
 #include <__mutex_base>
 
@@ -177,7 +177,7 @@ __shared_mutex_base
 };
 
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 class _LIBCPP_TYPE_VIS _LIBCPP_AVAILABILITY_SHARED_MUTEX shared_mutex
 {
     __shared_mutex_base __base_;
@@ -502,7 +502,7 @@ swap(shared_lock<_Mutex>& __x, shared_lock<_Mutex>& __y) _NOEXCEPT
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER > 11
+#endif // _LIBCPP_STD_VER >= 14
 
 _LIBCPP_POP_MACROS
 

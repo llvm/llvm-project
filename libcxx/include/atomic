@@ -586,7 +586,7 @@ enum __legacy_memory_order {
 
 typedef underlying_type<__legacy_memory_order>::type __memory_order_underlying_t;
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 enum class memory_order : __memory_order_underlying_t {
   relaxed = __mo_relaxed,
@@ -615,7 +615,7 @@ typedef enum memory_order {
   memory_order_seq_cst = __mo_seq_cst,
 } memory_order;
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 template <typename _Tp> _LIBCPP_INLINE_VISIBILITY
 bool __cxx_nonatomic_compare_equal(_Tp const& __lhs, _Tp const& __rhs) {
@@ -1608,7 +1608,7 @@ struct __atomic_base  // false
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY void notify_all() _NOEXCEPT
         {std::__cxx_atomic_notify_all(&__a_);}
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     _LIBCPP_INLINE_VISIBILITY constexpr
     __atomic_base() noexcept(is_nothrow_default_constructible_v<_Tp>) : __a_(_Tp()) {}
 #else
@@ -1720,7 +1720,7 @@ struct atomic
     typedef _Tp value_type;
     typedef value_type difference_type;
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     _LIBCPP_INLINE_VISIBILITY
     atomic() = default;
 #else
@@ -2390,7 +2390,7 @@ typedef struct atomic_flag
     void notify_all() _NOEXCEPT
         {__cxx_atomic_notify_all(&__a_);}
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     _LIBCPP_INLINE_VISIBILITY constexpr
     atomic_flag() _NOEXCEPT : __a_(false) {}
 #else
@@ -2656,11 +2656,11 @@ typedef atomic<__libcpp_unsigned_lock_free> atomic_unsigned_lock_free;
 #define ATOMIC_FLAG_INIT {false}
 #define ATOMIC_VAR_INIT(__v) {__v}
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
+#if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
 # if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 1400
 #  pragma clang deprecated(ATOMIC_VAR_INIT)
 # endif
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
+#endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
 
 _LIBCPP_END_NAMESPACE_STD
 

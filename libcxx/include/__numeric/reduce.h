@@ -20,7 +20,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _InputIterator, class _Tp, class _BinaryOp>
 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp reduce(_InputIterator __first, _InputIterator __last,
                                                                    _Tp __init, _BinaryOp __b) {
