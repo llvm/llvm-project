@@ -26,6 +26,10 @@ entry:
 ; CHECK: [MLInlineAdvisor] Nodes:
 ; CHECK-SAME: 2 Edges: 1
 ; CHECK: [MLInlineAdvisor] Nodes:
+; CHECK-SAME: 2 Edges: 1
+; CHECK: [MLInlineAdvisor] Nodes:
+; CHECK-SAME: 2 Edges: 1
+; CHECK: [MLInlineAdvisor] Nodes:
 ; CHECK-SAME: 2 Edges: 0
 ; CHECK-NOT: [MLInlineAdvisor] Nodes:
 
