@@ -36,8 +36,8 @@
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatAdapters.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/TargetParser/Host.h"
 #include <optional>
 
 #ifdef LLDB_ENABLE_SWIFT
