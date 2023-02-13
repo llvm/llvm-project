@@ -145,21 +145,17 @@ define amdgpu_ps <4 x float> @struct_tbuffer_load_v4f32__vgpr_rsrc__sgpr_vindex_
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
-  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub2
-  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub3
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY10]], implicit $exec
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY12]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY1]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY2]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY3]], implicit $exec
   ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
-  ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE1]].sub0_sub1
-  ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE1]].sub2_sub3
-  ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY15]], [[COPY13]], implicit $exec
-  ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY16]], [[COPY14]], implicit $exec
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE1]].sub0_sub1
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE1]].sub2_sub3
+  ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY11]], [[COPY9]], implicit $exec
+  ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY12]], [[COPY10]], implicit $exec
   ; CHECK-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def dead $scc
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY6]], implicit $exec
   ; CHECK-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY6]], implicit $exec
@@ -180,14 +176,14 @@ define amdgpu_ps <4 x float> @struct_tbuffer_load_v4f32__vgpr_rsrc__sgpr_vindex_
   ; CHECK-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
-  ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_XYZW_BOTHEN]].sub0
-  ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_XYZW_BOTHEN]].sub1
-  ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_XYZW_BOTHEN]].sub2
-  ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_XYZW_BOTHEN]].sub3
-  ; CHECK-NEXT:   $vgpr0 = COPY [[COPY17]]
-  ; CHECK-NEXT:   $vgpr1 = COPY [[COPY18]]
-  ; CHECK-NEXT:   $vgpr2 = COPY [[COPY19]]
-  ; CHECK-NEXT:   $vgpr3 = COPY [[COPY20]]
+  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_XYZW_BOTHEN]].sub0
+  ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_XYZW_BOTHEN]].sub1
+  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_XYZW_BOTHEN]].sub2
+  ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_XYZW_BOTHEN]].sub3
+  ; CHECK-NEXT:   $vgpr0 = COPY [[COPY13]]
+  ; CHECK-NEXT:   $vgpr1 = COPY [[COPY14]]
+  ; CHECK-NEXT:   $vgpr2 = COPY [[COPY15]]
+  ; CHECK-NEXT:   $vgpr3 = COPY [[COPY16]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   %val = call <4 x float> @llvm.amdgcn.struct.tbuffer.load.v4f32(<4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 78, i32 0)
   ret <4 x float> %val
