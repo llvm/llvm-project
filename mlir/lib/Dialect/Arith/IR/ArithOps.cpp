@@ -19,8 +19,9 @@
 #include "mlir/IR/TypeUtilities.h"
 
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/TypeSwitch.h"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace mlir;
 using namespace mlir::arith;
@@ -2157,6 +2158,33 @@ OpFoldResult arith::SelectOp::fold(FoldAdaptor adaptor) {
         return pred == arith::CmpIPredicate::ne ? trueVal : falseVal;
     }
   }
+
+  // Constant-fold constant operands over non-splat constant condition.
+  // select %cst_vec, %cst0, %cst1 => %cst2
+  if (auto cond =
+          adaptor.getCondition().dyn_cast_or_null<DenseElementsAttr>()) {
+    if (auto lhs =
+            adaptor.getTrueValue().dyn_cast_or_null<DenseElementsAttr>()) {
+      if (auto rhs =
+              adaptor.getFalseValue().dyn_cast_or_null<DenseElementsAttr>()) {
+        SmallVector<Attribute> results;
+        results.reserve(static_cast<size_t>(cond.getNumElements()));
+        auto condVals = llvm::make_range(cond.value_begin<BoolAttr>(),
+                                         cond.value_end<BoolAttr>());
+        auto lhsVals = llvm::make_range(lhs.value_begin<Attribute>(),
+                                        lhs.value_end<Attribute>());
+        auto rhsVals = llvm::make_range(rhs.value_begin<Attribute>(),
+                                        rhs.value_end<Attribute>());
+
+        for (auto [condVal, lhsVal, rhsVal] :
+             llvm::zip_equal(condVals, lhsVals, rhsVals))
+          results.push_back(condVal.getValue() ? lhsVal : rhsVal);
+
+        return DenseElementsAttr::get(lhs.getType(), results);
+      }
+    }
+  }
+
   return nullptr;
 }
 
