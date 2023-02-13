@@ -600,8 +600,7 @@ DependencyScanningTool::getIncludeTreeFromCompilerInvocation(
 
 llvm::Expected<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
     const CompileCommand &Command, StringRef CWD,
-    std::string &MakeformatOutput, std::string &MakeformatOutputPath,
-    std::optional<StringRef> ModuleName) {
+    std::string &MakeformatOutput, std::string &MakeformatOutputPath) {
   class P1689ModuleDependencyPrinterConsumer
       : public MakeDependencyPrinterConsumer {
   public:
