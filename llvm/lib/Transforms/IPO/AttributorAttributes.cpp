@@ -3595,8 +3595,9 @@ private:
 
 struct AAIntraFnReachabilityFunction final
     : public CachedReachabilityAA<AAIntraFnReachability, Instruction> {
+  using Base = CachedReachabilityAA<AAIntraFnReachability, Instruction>;
   AAIntraFnReachabilityFunction(const IRPosition &IRP, Attributor &A)
-      : CachedReachabilityAA<AAIntraFnReachability, Instruction>(IRP, A) {}
+      : Base(IRP, A) {}
 
   bool isAssumedReachable(
       Attributor &A, const Instruction &From, const Instruction &To,
@@ -3610,6 +3611,20 @@ struct AAIntraFnReachabilityFunction final
     if (!NonConstThis->checkQueryCache(A, StackRQI, Result))
       return NonConstThis->isReachableImpl(A, StackRQI);
     return Result == RQITy::Reachable::Yes;
+  }
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    // We only depend on liveness. DeadEdges is all we care about, check if any
+    // of them changed.
+    auto &LivenessAA =
+        A.getAAFor<AAIsDead>(*this, getIRPosition(), DepClassTy::OPTIONAL);
+    if (llvm::all_of(DeadEdges, [&](const auto &DeadEdge) {
+          return LivenessAA.isEdgeDead(DeadEdge.first, DeadEdge.second);
+        })) {
+      return ChangeStatus::UNCHANGED;
+    }
+    DeadEdges.clear();
+    return Base::updateImpl(A);
   }
 
   bool isReachableImpl(Attributor &A, RQITy &RQI) override {
@@ -3660,6 +3675,7 @@ struct AAIntraFnReachabilityFunction final
     SmallVector<const BasicBlock *, 16> Worklist;
     Worklist.push_back(FromBB);
 
+    DenseSet<std::pair<const BasicBlock *, const BasicBlock *>> LocalDeadEdges;
     auto &LivenessAA =
         A.getAAFor<AAIsDead>(*this, getIRPosition(), DepClassTy::OPTIONAL);
     while (!Worklist.empty()) {
@@ -3667,8 +3683,10 @@ struct AAIntraFnReachabilityFunction final
       if (!Visited.insert(BB).second)
         continue;
       for (const BasicBlock *SuccBB : successors(BB)) {
-        if (LivenessAA.isEdgeDead(BB, SuccBB))
+        if (LivenessAA.isEdgeDead(BB, SuccBB)) {
+          LocalDeadEdges.insert({BB, SuccBB});
           continue;
+        }
         // We checked before if we just need to reach the ToBB block.
         if (SuccBB == ToBB)
           return rememberResult(A, RQITy::Reachable::Yes, RQI,
@@ -3681,11 +3699,17 @@ struct AAIntraFnReachabilityFunction final
       }
     }
 
+    DeadEdges.insert(LocalDeadEdges.begin(), LocalDeadEdges.end());
     return rememberResult(A, RQITy::Reachable::No, RQI, UsedExclusionSet);
   }
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
+
+private:
+  // Set of assumed dead edges we used in the last query. If any changes we
+  // update the state.
+  DenseSet<std::pair<const BasicBlock *, const BasicBlock *>> DeadEdges;
 };
 } // namespace
 
