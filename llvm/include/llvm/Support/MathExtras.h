@@ -455,6 +455,7 @@ constexpr inline uint64_t NextPowerOf2(uint64_t A) {
 
 /// Returns the power of two which is less than or equal to the given value.
 /// Essentially, it is a floor operation across the domain of powers of two.
+LLVM_DEPRECATED("use llvm::bit_floor instead", "llvm::bit_floor")
 inline uint64_t PowerOf2Floor(uint64_t A) {
   return llvm::bit_floor(A);
 }
