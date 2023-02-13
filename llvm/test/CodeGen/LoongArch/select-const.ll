@@ -2,26 +2,17 @@
 ; RUN: llc --mtriple=loongarch32 < %s | FileCheck %s --check-prefix=LA32
 ; RUN: llc --mtriple=loongarch64 < %s | FileCheck %s --check-prefix=LA64
 
-;; TODO: Avoid using masknez + maskeqz when selecting constants that
-;;       can be computed easily.
-
 define signext i32 @select_const_int_one_away(i1 zeroext %a) nounwind {
 ; LA32-LABEL: select_const_int_one_away:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    ori $a1, $zero, 4
-; LA32-NEXT:    masknez $a1, $a1, $a0
-; LA32-NEXT:    ori $a2, $zero, 3
-; LA32-NEXT:    maskeqz $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    sub.w $a0, $a1, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_const_int_one_away:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ori $a1, $zero, 4
-; LA64-NEXT:    masknez $a1, $a1, $a0
-; LA64-NEXT:    ori $a2, $zero, 3
-; LA64-NEXT:    maskeqz $a0, $a2, $a0
-; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    sub.d $a0, $a1, $a0
 ; LA64-NEXT:    ret
   %1 = select i1 %a, i32 3, i32 4
   ret i32 %1
@@ -30,18 +21,12 @@ define signext i32 @select_const_int_one_away(i1 zeroext %a) nounwind {
 define signext i32 @select_const_int_pow2_zero(i1 zeroext %a) nounwind {
 ; LA32-LABEL: select_const_int_pow2_zero:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    masknez $a1, $zero, $a0
-; LA32-NEXT:    ori $a2, $zero, 4
-; LA32-NEXT:    maskeqz $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    slli.w $a0, $a0, 2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_const_int_pow2_zero:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    masknez $a1, $zero, $a0
-; LA64-NEXT:    ori $a2, $zero, 4
-; LA64-NEXT:    maskeqz $a0, $a2, $a0
-; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    slli.d $a0, $a0, 2
 ; LA64-NEXT:    ret
   %1 = select i1 %a, i32 4, i32 0
   ret i32 %1
@@ -52,20 +37,14 @@ define signext i32 @select_eq_zero_negone(i32 signext %a, i32 signext %b) nounwi
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xor $a0, $a0, $a1
 ; LA32-NEXT:    sltui $a0, $a0, 1
-; LA32-NEXT:    masknez $a1, $zero, $a0
-; LA32-NEXT:    addi.w $a2, $zero, -1
-; LA32-NEXT:    maskeqz $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    sub.w $a0, $zero, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_eq_zero_negone:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xor $a0, $a0, $a1
 ; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a1, $zero, $a0
-; LA64-NEXT:    addi.w $a2, $zero, -1
-; LA64-NEXT:    maskeqz $a0, $a2, $a0
-; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    sub.d $a0, $zero, $a0
 ; LA64-NEXT:    ret
   %1 = icmp eq i32 %a, %b
   %2 = select i1 %1, i32 -1, i32 0
@@ -77,20 +56,14 @@ define signext i32 @select_ne_zero_negone(i32 signext %a, i32 signext %b) nounwi
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xor $a0, $a0, $a1
 ; LA32-NEXT:    sltu $a0, $zero, $a0
-; LA32-NEXT:    masknez $a1, $zero, $a0
-; LA32-NEXT:    addi.w $a2, $zero, -1
-; LA32-NEXT:    maskeqz $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    sub.w $a0, $zero, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_ne_zero_negone:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xor $a0, $a0, $a1
 ; LA64-NEXT:    sltu $a0, $zero, $a0
-; LA64-NEXT:    masknez $a1, $zero, $a0
-; LA64-NEXT:    addi.w $a2, $zero, -1
-; LA64-NEXT:    maskeqz $a0, $a2, $a0
-; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    sub.d $a0, $zero, $a0
 ; LA64-NEXT:    ret
   %1 = icmp ne i32 %a, %b
   %2 = select i1 %1, i32 -1, i32 0
@@ -101,19 +74,13 @@ define signext i32 @select_sgt_zero_negone(i32 signext %a, i32 signext %b) nounw
 ; LA32-LABEL: select_sgt_zero_negone:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    slt $a0, $a1, $a0
-; LA32-NEXT:    masknez $a1, $zero, $a0
-; LA32-NEXT:    addi.w $a2, $zero, -1
-; LA32-NEXT:    maskeqz $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    sub.w $a0, $zero, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_sgt_zero_negone:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    slt $a0, $a1, $a0
-; LA64-NEXT:    masknez $a1, $zero, $a0
-; LA64-NEXT:    addi.w $a2, $zero, -1
-; LA64-NEXT:    maskeqz $a0, $a2, $a0
-; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    sub.d $a0, $zero, $a0
 ; LA64-NEXT:    ret
   %1 = icmp sgt i32 %a, %b
   %2 = select i1 %1, i32 -1, i32 0
@@ -124,19 +91,13 @@ define signext i32 @select_slt_zero_negone(i32 signext %a, i32 signext %b) nounw
 ; LA32-LABEL: select_slt_zero_negone:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    slt $a0, $a0, $a1
-; LA32-NEXT:    masknez $a1, $zero, $a0
-; LA32-NEXT:    addi.w $a2, $zero, -1
-; LA32-NEXT:    maskeqz $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    sub.w $a0, $zero, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_slt_zero_negone:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    slt $a0, $a0, $a1
-; LA64-NEXT:    masknez $a1, $zero, $a0
-; LA64-NEXT:    addi.w $a2, $zero, -1
-; LA64-NEXT:    maskeqz $a0, $a2, $a0
-; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    sub.d $a0, $zero, $a0
 ; LA64-NEXT:    ret
   %1 = icmp slt i32 %a, %b
   %2 = select i1 %1, i32 -1, i32 0
@@ -148,20 +109,14 @@ define signext i32 @select_sge_zero_negone(i32 signext %a, i32 signext %b) nounw
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    slt $a0, $a0, $a1
 ; LA32-NEXT:    xori $a0, $a0, 1
-; LA32-NEXT:    masknez $a1, $zero, $a0
-; LA32-NEXT:    addi.w $a2, $zero, -1
-; LA32-NEXT:    maskeqz $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    sub.w $a0, $zero, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_sge_zero_negone:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    slt $a0, $a0, $a1
 ; LA64-NEXT:    xori $a0, $a0, 1
-; LA64-NEXT:    masknez $a1, $zero, $a0
-; LA64-NEXT:    addi.w $a2, $zero, -1
-; LA64-NEXT:    maskeqz $a0, $a2, $a0
-; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    sub.d $a0, $zero, $a0
 ; LA64-NEXT:    ret
   %1 = icmp sge i32 %a, %b
   %2 = select i1 %1, i32 -1, i32 0
@@ -173,20 +128,14 @@ define signext i32 @select_sle_zero_negone(i32 signext %a, i32 signext %b) nounw
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    slt $a0, $a1, $a0
 ; LA32-NEXT:    xori $a0, $a0, 1
-; LA32-NEXT:    masknez $a1, $zero, $a0
-; LA32-NEXT:    addi.w $a2, $zero, -1
-; LA32-NEXT:    maskeqz $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    sub.w $a0, $zero, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_sle_zero_negone:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    slt $a0, $a1, $a0
 ; LA64-NEXT:    xori $a0, $a0, 1
-; LA64-NEXT:    masknez $a1, $zero, $a0
-; LA64-NEXT:    addi.w $a2, $zero, -1
-; LA64-NEXT:    maskeqz $a0, $a2, $a0
-; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    sub.d $a0, $zero, $a0
 ; LA64-NEXT:    ret
   %1 = icmp sle i32 %a, %b
   %2 = select i1 %1, i32 -1, i32 0
@@ -197,19 +146,13 @@ define signext i32 @select_ugt_zero_negone(i32 signext %a, i32 signext %b) nounw
 ; LA32-LABEL: select_ugt_zero_negone:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    sltu $a0, $a1, $a0
-; LA32-NEXT:    masknez $a1, $zero, $a0
-; LA32-NEXT:    addi.w $a2, $zero, -1
-; LA32-NEXT:    maskeqz $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    sub.w $a0, $zero, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_ugt_zero_negone:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    sltu $a0, $a1, $a0
-; LA64-NEXT:    masknez $a1, $zero, $a0
-; LA64-NEXT:    addi.w $a2, $zero, -1
-; LA64-NEXT:    maskeqz $a0, $a2, $a0
-; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    sub.d $a0, $zero, $a0
 ; LA64-NEXT:    ret
   %1 = icmp ugt i32 %a, %b
   %2 = select i1 %1, i32 -1, i32 0
@@ -220,19 +163,13 @@ define signext i32 @select_ult_zero_negone(i32 signext %a, i32 signext %b) nounw
 ; LA32-LABEL: select_ult_zero_negone:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    sltu $a0, $a0, $a1
-; LA32-NEXT:    masknez $a1, $zero, $a0
-; LA32-NEXT:    addi.w $a2, $zero, -1
-; LA32-NEXT:    maskeqz $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    sub.w $a0, $zero, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_ult_zero_negone:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    sltu $a0, $a0, $a1
-; LA64-NEXT:    masknez $a1, $zero, $a0
-; LA64-NEXT:    addi.w $a2, $zero, -1
-; LA64-NEXT:    maskeqz $a0, $a2, $a0
-; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    sub.d $a0, $zero, $a0
 ; LA64-NEXT:    ret
   %1 = icmp ult i32 %a, %b
   %2 = select i1 %1, i32 -1, i32 0
@@ -244,20 +181,14 @@ define signext i32 @select_uge_zero_negone(i32 signext %a, i32 signext %b) nounw
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    sltu $a0, $a0, $a1
 ; LA32-NEXT:    xori $a0, $a0, 1
-; LA32-NEXT:    masknez $a1, $zero, $a0
-; LA32-NEXT:    addi.w $a2, $zero, -1
-; LA32-NEXT:    maskeqz $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    sub.w $a0, $zero, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_uge_zero_negone:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    sltu $a0, $a0, $a1
 ; LA64-NEXT:    xori $a0, $a0, 1
-; LA64-NEXT:    masknez $a1, $zero, $a0
-; LA64-NEXT:    addi.w $a2, $zero, -1
-; LA64-NEXT:    maskeqz $a0, $a2, $a0
-; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    sub.d $a0, $zero, $a0
 ; LA64-NEXT:    ret
   %1 = icmp uge i32 %a, %b
   %2 = select i1 %1, i32 -1, i32 0
@@ -269,20 +200,14 @@ define signext i32 @select_ule_zero_negone(i32 signext %a, i32 signext %b) nounw
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    sltu $a0, $a1, $a0
 ; LA32-NEXT:    xori $a0, $a0, 1
-; LA32-NEXT:    masknez $a1, $zero, $a0
-; LA32-NEXT:    addi.w $a2, $zero, -1
-; LA32-NEXT:    maskeqz $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    sub.w $a0, $zero, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_ule_zero_negone:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    sltu $a0, $a1, $a0
 ; LA64-NEXT:    xori $a0, $a0, 1
-; LA64-NEXT:    masknez $a1, $zero, $a0
-; LA64-NEXT:    addi.w $a2, $zero, -1
-; LA64-NEXT:    maskeqz $a0, $a2, $a0
-; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    sub.d $a0, $zero, $a0
 ; LA64-NEXT:    ret
   %1 = icmp ule i32 %a, %b
   %2 = select i1 %1, i32 -1, i32 0
@@ -295,10 +220,7 @@ define i32 @select_eq_1_2(i32 signext %a, i32 signext %b) {
 ; LA32-NEXT:    xor $a0, $a0, $a1
 ; LA32-NEXT:    sltui $a0, $a0, 1
 ; LA32-NEXT:    ori $a1, $zero, 2
-; LA32-NEXT:    masknez $a1, $a1, $a0
-; LA32-NEXT:    ori $a2, $zero, 1
-; LA32-NEXT:    maskeqz $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    sub.w $a0, $a1, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_eq_1_2:
@@ -306,10 +228,7 @@ define i32 @select_eq_1_2(i32 signext %a, i32 signext %b) {
 ; LA64-NEXT:    xor $a0, $a0, $a1
 ; LA64-NEXT:    sltui $a0, $a0, 1
 ; LA64-NEXT:    ori $a1, $zero, 2
-; LA64-NEXT:    masknez $a1, $a1, $a0
-; LA64-NEXT:    ori $a2, $zero, 1
-; LA64-NEXT:    maskeqz $a0, $a2, $a0
-; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    sub.d $a0, $a1, $a0
 ; LA64-NEXT:    ret
   %1 = icmp eq i32 %a, %b
   %2 = select i1 %1, i32 1, i32 2
@@ -322,10 +241,7 @@ define i32 @select_ne_1_2(i32 signext %a, i32 signext %b) {
 ; LA32-NEXT:    xor $a0, $a0, $a1
 ; LA32-NEXT:    sltu $a0, $zero, $a0
 ; LA32-NEXT:    ori $a1, $zero, 2
-; LA32-NEXT:    masknez $a1, $a1, $a0
-; LA32-NEXT:    ori $a2, $zero, 1
-; LA32-NEXT:    maskeqz $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    sub.w $a0, $a1, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_ne_1_2:
@@ -333,10 +249,7 @@ define i32 @select_ne_1_2(i32 signext %a, i32 signext %b) {
 ; LA64-NEXT:    xor $a0, $a0, $a1
 ; LA64-NEXT:    sltu $a0, $zero, $a0
 ; LA64-NEXT:    ori $a1, $zero, 2
-; LA64-NEXT:    masknez $a1, $a1, $a0
-; LA64-NEXT:    ori $a2, $zero, 1
-; LA64-NEXT:    maskeqz $a0, $a2, $a0
-; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    sub.d $a0, $a1, $a0
 ; LA64-NEXT:    ret
   %1 = icmp ne i32 %a, %b
   %2 = select i1 %1, i32 1, i32 2
@@ -349,11 +262,8 @@ define i32 @select_eq_10000_10001(i32 signext %a, i32 signext %b) {
 ; LA32-NEXT:    xor $a0, $a0, $a1
 ; LA32-NEXT:    sltui $a0, $a0, 1
 ; LA32-NEXT:    lu12i.w $a1, 2
-; LA32-NEXT:    ori $a2, $a1, 1810
-; LA32-NEXT:    masknez $a2, $a2, $a0
-; LA32-NEXT:    ori $a1, $a1, 1809
-; LA32-NEXT:    maskeqz $a0, $a1, $a0
-; LA32-NEXT:    or $a0, $a0, $a2
+; LA32-NEXT:    ori $a1, $a1, 1810
+; LA32-NEXT:    sub.w $a0, $a1, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_eq_10000_10001:
@@ -361,11 +271,8 @@ define i32 @select_eq_10000_10001(i32 signext %a, i32 signext %b) {
 ; LA64-NEXT:    xor $a0, $a0, $a1
 ; LA64-NEXT:    sltui $a0, $a0, 1
 ; LA64-NEXT:    lu12i.w $a1, 2
-; LA64-NEXT:    ori $a2, $a1, 1810
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    ori $a1, $a1, 1809
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
-; LA64-NEXT:    or $a0, $a0, $a2
+; LA64-NEXT:    ori $a1, $a1, 1810
+; LA64-NEXT:    sub.d $a0, $a1, $a0
 ; LA64-NEXT:    ret
   %1 = icmp eq i32 %a, %b
   %2 = select i1 %1, i32 10001, i32 10002
@@ -378,11 +285,8 @@ define i32 @select_ne_10001_10002(i32 signext %a, i32 signext %b) {
 ; LA32-NEXT:    xor $a0, $a0, $a1
 ; LA32-NEXT:    sltu $a0, $zero, $a0
 ; LA32-NEXT:    lu12i.w $a1, 2
-; LA32-NEXT:    ori $a2, $a1, 1810
-; LA32-NEXT:    masknez $a2, $a2, $a0
-; LA32-NEXT:    ori $a1, $a1, 1809
-; LA32-NEXT:    maskeqz $a0, $a1, $a0
-; LA32-NEXT:    or $a0, $a0, $a2
+; LA32-NEXT:    ori $a1, $a1, 1810
+; LA32-NEXT:    sub.w $a0, $a1, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_ne_10001_10002:
@@ -390,11 +294,8 @@ define i32 @select_ne_10001_10002(i32 signext %a, i32 signext %b) {
 ; LA64-NEXT:    xor $a0, $a0, $a1
 ; LA64-NEXT:    sltu $a0, $zero, $a0
 ; LA64-NEXT:    lu12i.w $a1, 2
-; LA64-NEXT:    ori $a2, $a1, 1810
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    ori $a1, $a1, 1809
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
-; LA64-NEXT:    or $a0, $a0, $a2
+; LA64-NEXT:    ori $a1, $a1, 1810
+; LA64-NEXT:    sub.d $a0, $a1, $a0
 ; LA64-NEXT:    ret
   %1 = icmp ne i32 %a, %b
   %2 = select i1 %1, i32 10001, i32 10002
