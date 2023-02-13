@@ -237,7 +237,7 @@ static void removeBufferizationAttributes(BlockArgument bbArg) {
 }
 
 /// Return the func::FuncOp called by `callOp`.
-static func::FuncOp getCalledFunction(CallOpInterface callOp) {
+static func::FuncOp getCalledFunction(func::CallOp callOp) {
   SymbolRefAttr sym = callOp.getCallableForCallee().dyn_cast<SymbolRefAttr>();
   if (!sym)
     return nullptr;
@@ -278,15 +278,15 @@ static void equivalenceAnalysis(func::FuncOp funcOp,
 /// callee-caller order (i.e. callees without callers first).
 /// Store the map of FuncOp to all its callers in `callerMap`.
 /// Return `failure()` if a cycle of calls is detected or if we are unable to
-/// retrieve the called FuncOp from any CallOpInterface.
+/// retrieve the called FuncOp from any func::CallOp.
 static LogicalResult
 getFuncOpsOrderedByCalls(ModuleOp moduleOp,
                          SmallVectorImpl<func::FuncOp> &orderedFuncOps,
                          FuncCallerMap &callerMap) {
   // For each FuncOp, the set of functions called by it (i.e. the union of
-  // symbols of all nested CallOpInterfaceOp).
+  // symbols of all nested func::CallOp).
   DenseMap<func::FuncOp, DenseSet<func::FuncOp>> calledBy;
-  // For each FuncOp, the number of CallOpInterface it contains.
+  // For each FuncOp, the number of func::CallOp it contains.
   DenseMap<func::FuncOp, unsigned> numberCallOpsContainedInFuncOp;
   WalkResult res = moduleOp.walk([&](func::FuncOp funcOp) -> WalkResult {
     if (!funcOp.getBody().empty()) {
@@ -298,10 +298,7 @@ getFuncOpsOrderedByCalls(ModuleOp moduleOp,
     }
 
     numberCallOpsContainedInFuncOp[funcOp] = 0;
-    return funcOp.walk([&](CallOpInterface callOp) -> WalkResult {
-      // Only support CallOp for now.
-      if (!isa<func::CallOp>(callOp.getOperation()))
-        return callOp->emitError() << "expected a CallOp";
+    return funcOp.walk([&](func::CallOp callOp) -> WalkResult {
       func::FuncOp calledFunction = getCalledFunction(callOp);
       assert(calledFunction && "could not retrieved called func::FuncOp");
       callerMap[calledFunction].insert(callOp);
