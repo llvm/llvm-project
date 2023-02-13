@@ -322,6 +322,46 @@ func.func @cmpIExtUIEQ(%arg0: i8, %arg1: i8) -> i1 {
   return %res : i1
 }
 
+// CHECK-LABEL: @cmpIFoldEQ
+//       CHECK:  %[[res:.+]] = arith.constant dense<[true, true, false]> : vector<3xi1>
+//       CHECK:   return %[[res]]
+func.func @cmpIFoldEQ() -> vector<3xi1> {
+  %lhs = arith.constant dense<[1, 2, 3]> : vector<3xi32>
+  %rhs = arith.constant dense<[1, 2, 4]> : vector<3xi32>
+  %res = arith.cmpi eq, %lhs, %rhs : vector<3xi32>
+  return %res : vector<3xi1>
+}
+
+// CHECK-LABEL: @cmpIFoldNE
+//       CHECK:  %[[res:.+]] = arith.constant dense<[false, false, true]> : vector<3xi1>
+//       CHECK:   return %[[res]]
+func.func @cmpIFoldNE() -> vector<3xi1> {
+  %lhs = arith.constant dense<[1, 2, 3]> : vector<3xi32>
+  %rhs = arith.constant dense<[1, 2, 4]> : vector<3xi32>
+  %res = arith.cmpi ne, %lhs, %rhs : vector<3xi32>
+  return %res : vector<3xi1>
+}
+
+// CHECK-LABEL: @cmpIFoldSGE
+//       CHECK:  %[[res:.+]] = arith.constant dense<[true, true, false]> : vector<3xi1>
+//       CHECK:   return %[[res]]
+func.func @cmpIFoldSGE() -> vector<3xi1> {
+  %lhs = arith.constant dense<2> : vector<3xi32>
+  %rhs = arith.constant dense<[1, 2, 4]> : vector<3xi32>
+  %res = arith.cmpi sge, %lhs, %rhs : vector<3xi32>
+  return %res : vector<3xi1>
+}
+
+// CHECK-LABEL: @cmpIFoldULT
+//       CHECK:  %[[res:.+]] = arith.constant dense<false> : vector<3xi1>
+//       CHECK:   return %[[res]]
+func.func @cmpIFoldULT() -> vector<3xi1> {
+  %lhs = arith.constant dense<2> : vector<3xi32>
+  %rhs = arith.constant dense<1> : vector<3xi32>
+  %res = arith.cmpi ult, %lhs, %rhs : vector<3xi32>
+  return %res : vector<3xi1>
+}
+
 // -----
 
 // CHECK-LABEL: @andOfExtSI
