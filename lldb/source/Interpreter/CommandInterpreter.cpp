@@ -15,6 +15,7 @@
 #include "Commands/CommandObjectApropos.h"
 #include "Commands/CommandObjectBreakpoint.h"
 #include "Commands/CommandObjectCommands.h"
+#include "Commands/CommandObjectDWIMPrint.h"
 #include "Commands/CommandObjectDisassemble.h"
 #include "Commands/CommandObjectExpression.h"
 #include "Commands/CommandObjectFrame.h"
@@ -538,6 +539,7 @@ void CommandInterpreter::LoadCommandDictionary() {
   REGISTER_COMMAND_OBJECT("breakpoint", CommandObjectMultiwordBreakpoint);
   REGISTER_COMMAND_OBJECT("command", CommandObjectMultiwordCommands);
   REGISTER_COMMAND_OBJECT("disassemble", CommandObjectDisassemble);
+  REGISTER_COMMAND_OBJECT("dwim-print", CommandObjectDWIMPrint);
   REGISTER_COMMAND_OBJECT("expression", CommandObjectExpression);
   REGISTER_COMMAND_OBJECT("frame", CommandObjectMultiwordFrame);
   REGISTER_COMMAND_OBJECT("gui", CommandObjectGUI);

@@ -14,6 +14,7 @@ add_lldb_library(lldbCommands
   CommandObjectBreakpointCommand.cpp
   CommandObjectCommands.cpp
   CommandObjectDisassemble.cpp
+  CommandObjectDWIMPrint.cpp
   CommandObjectExpression.cpp
   CommandObjectFrame.cpp
   CommandObjectGUI.cpp
