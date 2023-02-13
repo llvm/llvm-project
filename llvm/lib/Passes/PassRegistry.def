@@ -424,6 +424,18 @@ FUNCTION_PASS_WITH_PARAMS("ee-instrument",
                            },
                           parseEntryExitInstrumenterPassOptions,
                           "post-inline")
+FUNCTION_PASS_WITH_PARAMS("hardware-loops",
+                          "HardwareLoopsPass",
+                          [](HardwareLoopOptions Opts) {
+                              return HardwareLoopsPass(Opts);
+                          },
+                          parseHardwareLoopOptions,
+                          "force-hardware-loops;"
+                          "force-hardware-loop-phi;"
+                          "force-nested-hardware-loop;"
+                          "force-hardware-loop-guard;"
+                          "hardware-loop-decrement=N;"
+                          "hardware-loop-counter-bitwidth=N")
 FUNCTION_PASS_WITH_PARAMS("lower-matrix-intrinsics",
                           "LowerMatrixIntrinsicsPass",
                            [](bool Minimal) {
