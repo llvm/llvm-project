@@ -11,12 +11,14 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/WithColor.h"
 
 using namespace llvm;
 
-#define LLVM_DRIVER_TOOL(tool, entry) int entry##_main(int argc, char **argv);
+#define LLVM_DRIVER_TOOL(tool, entry)                                          \
+  int entry##_main(int argc, char **argv, const llvm::ToolContext &);
 #include "LLVMDriverTools.def"
 
 constexpr char subcommands[] =
@@ -62,7 +64,7 @@ static int findTool(int Argc, char **Argv) {
 
 #define LLVM_DRIVER_TOOL(tool, entry)                                          \
   if (Is(tool))                                                                \
-    return entry##_main(Argc, Argv);
+    return entry##_main(Argc, Argv, {});
 #include "LLVMDriverTools.def"
 
   if (Is("llvm"))

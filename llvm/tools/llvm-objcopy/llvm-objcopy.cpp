@@ -43,6 +43,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -223,7 +224,7 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
   return Error::success();
 }
 
-int llvm_objcopy_main(int argc, char **argv) {
+int llvm_objcopy_main(int argc, char **argv, const llvm::ToolContext &) {
   InitLLVM X(argc, argv);
   ToolName = argv[0];
 
