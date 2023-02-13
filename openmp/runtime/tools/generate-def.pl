@@ -128,12 +128,16 @@ sub process(\%) {
 
 }; # sub process
 
-sub generate_output(\%$) {
+sub generate_output(\%$\%) {
 
-    my ( $entries, $output ) = @_;
+    my ( $entries, $output, $defs ) = @_;
+    my $lib = %$defs {'NAME'};
     my $bulk;
 
-    $bulk = "EXPORTS\n";
+    if (defined($lib)) {
+        $bulk = sprintf("NAME %s\n", $lib);
+    }
+    $bulk .= sprintf("EXPORTS\n");
     foreach my $entry ( sort( keys( %$entries ) ) ) {
         if ( not $entries->{ $entry }->{ obsolete } ) {
             $bulk .= sprintf( "    %-40s ", $entry );
@@ -142,7 +146,9 @@ sub generate_output(\%$) {
                 if ( $ordinal eq "DATA" ) {
                     $bulk .= "DATA";
                 } else {
-                    $bulk .= "\@" . $ordinal;
+                    if (not %$defs {'NOORDINALS'}) {
+                        $bulk .= "\@" . $ordinal;
+                    }
                 }; # if
             }; # if
             $bulk .= "\n";
@@ -193,7 +199,7 @@ $input = shift( @ARGV );
 
 my %data = parse_input( $input, %defs );
 %data = process( %data );
-generate_output( %data, $output );
+generate_output( %data, $output, %defs );
 exit( 0 );
 
 __END__
