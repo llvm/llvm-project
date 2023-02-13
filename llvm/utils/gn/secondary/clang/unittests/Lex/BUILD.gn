@@ -17,6 +17,7 @@ unittest("LexTests") {
     "HeaderMapTest.cpp",
     "HeaderSearchTest.cpp",
     "LexerTest.cpp",
+    "ModuleDeclStateTest.cpp",
     "PPCallbacksTest.cpp",
     "PPConditionalDirectiveRecordTest.cpp",
     "PPDependencyDirectivesTest.cpp",
