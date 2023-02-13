@@ -189,11 +189,10 @@ class MemoryOpBase {
   }];
   code setNonTemporalMetadataCode = [{
     if ($nontemporal) {
-      llvm::Module *module = builder.GetInsertBlock()->getModule();
       llvm::MDNode *metadata = llvm::MDNode::get(
           inst->getContext(), llvm::ConstantAsMetadata::get(
               builder.getInt32(1)));
-      inst->setMetadata(module->getMDKindID("nontemporal"), metadata);
+      inst->setMetadata(llvm::LLVMContext::MD_nontemporal, metadata);
     }
   }];
   code setAccessGroupsMetadataCode = [{
@@ -355,6 +354,10 @@ def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpBase {
                    UnitAttr:$nontemporal);
   let results = (outs LLVM_LoadableType:$res);
   string llvmInstName = "Load";
+  let assemblyFormat = [{
+    (`volatile` $volatile_^)? $addr attr-dict `:`
+    custom<LoadType>(type($addr), type($res))
+  }];
   string llvmBuilder = [{
     auto *inst = builder.CreateLoad($_resultType, $addr, $volatile_);
   }] # setAlignmentCode
@@ -365,9 +368,12 @@ def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpBase {
      # [{
     $res = inst;
   }];
-  // FIXME: Import attributes.
   string mlirBuilder = [{
-    $res = $_builder.create<LLVM::LoadOp>($_location, $_resultType, $addr);
+    auto *loadInst = cast<llvm::LoadInst>(inst);
+    unsigned alignment = loadInst->getAlign().value();
+    $res = $_builder.create<LLVM::LoadOp>($_location, $_resultType, $addr,
+        alignment, loadInst->isVolatile(),
+        loadInst->hasMetadata(llvm::LLVMContext::MD_nontemporal));
   }];
   let builders = [
     OpBuilder<(ins "Value":$addr, CArg<"unsigned", "0">:$alignment,
@@ -378,9 +384,10 @@ def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpBase {
                      "when the pointer type is opaque");
       build($_builder, $_state, type, addr, alignment, isVolatile, isNonTemporal);
     }]>,
-    OpBuilder<(ins "Type":$t, "Value":$addr,
+    OpBuilder<(ins "Type":$type, "Value":$addr,
       CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
-      CArg<"bool", "false">:$isNonTemporal)>,];
+      CArg<"bool", "false">:$isNonTemporal)>
+  ];
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
@@ -395,6 +402,10 @@ def LLVM_StoreOp : LLVM_Op<"store">, MemoryOpBase {
                    OptionalAttr<I64Attr>:$alignment, UnitAttr:$volatile_,
                    UnitAttr:$nontemporal);
   string llvmInstName = "Store";
+  let assemblyFormat = [{
+    (`volatile` $volatile_^)? $value `,` $addr attr-dict `:`
+    custom<StoreType>(type($value), type($addr))
+  }];
   string llvmBuilder = [{
     auto *inst = builder.CreateStore($value, $addr, $volatile_);
   }] # setAlignmentCode
@@ -402,16 +413,18 @@ def LLVM_StoreOp : LLVM_Op<"store">, MemoryOpBase {
      # setAccessGroupsMetadataCode
      # setAliasScopeMetadataCode
      # setTBAAMetadataCode;
-  // FIXME: Import attributes.
   string mlirBuilder = [{
-    $_op = $_builder.create<LLVM::StoreOp>($_location, $value, $addr);
+    auto *storeInst = cast<llvm::StoreInst>(inst);
+    unsigned alignment = storeInst->getAlign().value();
+    $_op = $_builder.create<LLVM::StoreOp>($_location, $value, $addr,
+        alignment, storeInst->isVolatile(),
+        storeInst->hasMetadata(llvm::LLVMContext::MD_nontemporal));
   }];
   let builders = [
     OpBuilder<(ins "Value":$value, "Value":$addr,
       CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
       CArg<"bool", "false">:$isNonTemporal)>
-    ];
-  let hasCustomAssemblyFormat = 1;
+  ];
   let hasVerifier = 1;
 }
 
