@@ -16,7 +16,7 @@ define i1 @test_and_ule(i4 %x, i4 %y, i4 %z) {
 ; CHECK: Checking   %t.1 = icmp ule i4 %x, %z
 ; CHECK: Condition   %t.1 = icmp ule i4 %x, %z implied by dominating constraints
 
-; CHECK: Removing %x + -1 * %y <= 0
+; CHECK: Removing %y + -1 * %z <= 0
 ; CHECK: Removing %x + -1 * %y <= 0
 
 entry:
