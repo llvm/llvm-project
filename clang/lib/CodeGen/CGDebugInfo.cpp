@@ -56,6 +56,16 @@
 using namespace clang;
 using namespace clang::CodeGen;
 
+// Temporarily hide new format for btf_type_tags / DW_TAG_LLVM_annotation
+// behind an option to allow transitory period for tooling dependent on
+// this annotation. The goal is to remove this flag after transitory period.
+static llvm::cl::opt<bool> BTFTypeTagV2(
+    "btf-type-tag-v2", llvm::cl::Hidden,
+    llvm::cl::desc("For __attribute__((btf_type_tag(...))) generate "
+                   "DW_TAG_LLVM_annotation tags with DW_AT_name 'btf:type_tag' "
+                   "attached to annotated type itself"),
+    llvm::cl::init(false));
+
 static uint32_t getTypeAlignIfRequired(const Type *Ty, const ASTContext &Ctx) {
   auto TI = Ctx.getTypeInfo(Ty);
   if (TI.isAlignRequired())
@@ -1194,6 +1204,129 @@ CGDebugInfo::getOrCreateRecordFwdDecl(const RecordType *Ty,
   return RetTy;
 }
 
+static QualType collectBTFTypeTagAnnotations(
+    llvm::LLVMContext &Context, llvm::DIBuilder &DBuilder,
+    llvm::SmallVectorImpl<llvm::Metadata *> &Annots,
+    const BTFTagAttributedType *BTFAttrTy, const char *TagName) {
+  QualType WrappedTy;
+
+  do {
+    StringRef TagValue = BTFAttrTy->getAttr()->getBTFTypeTag();
+    if (!TagValue.empty()) {
+      llvm::Metadata *Ops[] = {
+          llvm::MDString::get(Context, TagName),
+          llvm::MDString::get(Context, TagValue),
+      };
+      Annots.insert(Annots.begin(), llvm::MDNode::get(Context, Ops));
+    }
+    WrappedTy = BTFAttrTy->getWrappedType();
+    BTFAttrTy = dyn_cast<BTFTagAttributedType>(WrappedTy);
+  } while (BTFAttrTy);
+
+  return WrappedTy;
+}
+
+static bool retreiveCVR(llvm::DIDerivedType *DTy, QualifierCollector &Qc) {
+  switch (DTy->getTag()) {
+  case llvm::dwarf::DW_TAG_const_type:
+    Qc.addConst();
+    return true;
+  case llvm::dwarf::DW_TAG_volatile_type:
+    Qc.addVolatile();
+    return true;
+  case llvm::dwarf::DW_TAG_restrict_type:
+    Qc.addRestrict();
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Tags returned by QualifierCollector::getNextQualifier() should be
+// applied in the reverse order, thus use recursive function.
+static llvm::DIType *applyQualifiers(llvm::DIBuilder &DBuilder,
+                                     llvm::DIType *Ty, QualifierCollector &Qc) {
+  llvm::dwarf::Tag Tag = getNextQualifier(Qc);
+  if (!Tag)
+    return Ty;
+  Ty = applyQualifiers(DBuilder, Ty, Qc);
+  return DBuilder.createQualifiedType(Tag, Ty);
+}
+
+static bool isAnnotationsPlaceholder(llvm::DIDerivedType *DTy) {
+  return DTy->isTemporary() &&
+         DTy->getTag() == llvm::dwarf::DW_TAG_LLVM_annotation;
+}
+
+llvm::DIType *CGDebugInfo::CreateType(const BTFTagAttributedType *Ty,
+                                      llvm::DIFile *Unit) {
+  SmallVector<llvm::Metadata *, 4> Annotations;
+  auto WrappedTy = collectBTFTypeTagAnnotations(
+      CGM.getLLVMContext(), DBuilder, Annotations, Ty, "btf:type_tag");
+
+  if (!BTFTypeTagV2 || Annotations.empty())
+    return getOrCreateType(WrappedTy, Unit);
+
+  // After discussion with GCC BPF team in [1] it was decided to avoid
+  // attaching BTF type tags to const/volatile/restrict DWARF DIEs.
+  // So, strip qualifiers from WrappedTy and apply those to a final
+  // annotations placeholder instance at the end of this function.
+  //
+  // [1] https://reviews.llvm.org/D143967
+  QualifierCollector Qc;
+  Qc.addCVRQualifiers(WrappedTy.getLocalCVRQualifiers());
+  WrappedTy.removeLocalFastQualifiers(Qualifiers::CVRMask);
+
+  llvm::DIType *WrappedDI = getOrCreateType(WrappedTy, Unit);
+  if (!WrappedDI)
+    WrappedDI = DBuilder.createUnspecifiedType("void");
+
+  // Stripping local CVR qualifiers might not be enough in cases like this:
+  //
+  //   #define __tag __attribute__((btf_type_tag("tag")))
+  //   const int *foo;
+  //   const int *bar(void) {
+  //     return (typeof(*foo) __tag *)(0);
+  //   }
+  //
+  // Here the AST looks like:
+  //
+  //   BTFTagAttributedType
+  //   |  'typeof (*foo) __attribute__((btf_type_tag("tag")))' sugar
+  //   `-TypeOfExprType 'typeof (*foo)' sugar
+  //     |-ParenExpr 'const int' lvalue
+  //     | `- ...
+  //     `-QualType 'const int' const
+  //       `-BuiltinType 'int'
+  //
+  // The BTFTagAttributedType is applied to TypeOfExpr.
+  // For TypeOfExpr the getOrCreateType(), would return instance of
+  // DIDerivedType with tag DW_TAG_const_type.
+  //
+  // To avoid repeating UnwrapTypeForDebugInfo() logic here just
+  // rebuild CVR metadata nodes if necessary.
+  // The above local CVR qualifiers processing is redundant,
+  // but avoids rebuilding metadata nodes in the most common case.
+  while (auto *DTy = dyn_cast<llvm::DIDerivedType>(WrappedDI)) {
+    if (!retreiveCVR(DTy, Qc))
+      break;
+    WrappedDI = DTy->getBaseType();
+  }
+
+  if (auto *DTy = dyn_cast<llvm::DIDerivedType>(WrappedDI))
+    if (isAnnotationsPlaceholder(DTy)) {
+      WrappedDI = DTy->getBaseType();
+      for (llvm::Metadata *O : DTy->getAnnotations()->operands())
+        Annotations.push_back(O);
+    }
+
+  auto *Placeholder = DBuilder.createAnnotationsPlaceholder(
+      WrappedDI, DBuilder.getOrCreateArray(Annotations));
+  AnnotationPlaceholders.push_back(Placeholder);
+
+  return applyQualifiers(DBuilder, Placeholder, Qc);
+}
+
 llvm::DIType *CGDebugInfo::CreatePointerLikeType(llvm::dwarf::Tag Tag,
                                                  const Type *Ty,
                                                  QualType PointeeTy,
@@ -1206,32 +1339,23 @@ llvm::DIType *CGDebugInfo::CreatePointerLikeType(llvm::dwarf::Tag Tag,
       CGM.getTarget().getDWARFAddressSpace(
           CGM.getTypes().getTargetAddressSpace(PointeeTy));
 
-  SmallVector<llvm::Metadata *, 4> Annots;
-  auto *BTFAttrTy = dyn_cast<BTFTagAttributedType>(PointeeTy);
-  while (BTFAttrTy) {
-    StringRef Tag = BTFAttrTy->getAttr()->getBTFTypeTag();
-    if (!Tag.empty()) {
-      llvm::Metadata *Ops[2] = {
-          llvm::MDString::get(CGM.getLLVMContext(), StringRef("btf_type_tag")),
-          llvm::MDString::get(CGM.getLLVMContext(), Tag)};
-      Annots.insert(Annots.begin(),
-                    llvm::MDNode::get(CGM.getLLVMContext(), Ops));
-    }
-    BTFAttrTy = dyn_cast<BTFTagAttributedType>(BTFAttrTy->getWrappedType());
-  }
-
   llvm::DINodeArray Annotations = nullptr;
-  if (Annots.size() > 0)
-    Annotations = DBuilder.getOrCreateArray(Annots);
+  auto *BTFAttrTy = dyn_cast<BTFTagAttributedType>(PointeeTy.getTypePtr());
+  if (!BTFTypeTagV2 && BTFAttrTy) {
+    SmallVector<llvm::Metadata *, 4> AnnotationsVec;
+    collectBTFTypeTagAnnotations(CGM.getLLVMContext(), DBuilder, AnnotationsVec,
+                                 BTFAttrTy, "btf_type_tag");
+    Annotations = DBuilder.getOrCreateArray(AnnotationsVec);
+  }
 
   if (Tag == llvm::dwarf::DW_TAG_reference_type ||
       Tag == llvm::dwarf::DW_TAG_rvalue_reference_type)
     return DBuilder.createReferenceType(Tag, getOrCreateType(PointeeTy, Unit),
                                         Size, Align, DWARFAddressSpace);
-  else
-    return DBuilder.createPointerType(getOrCreateType(PointeeTy, Unit), Size,
-                                      Align, DWARFAddressSpace, StringRef(),
-                                      Annotations);
+
+  return DBuilder.createPointerType(getOrCreateType(PointeeTy, Unit), Size,
+                                    Align, DWARFAddressSpace, StringRef(),
+                                    Annotations);
 }
 
 llvm::DIType *CGDebugInfo::getOrCreateStructPtrType(StringRef Name,
@@ -3552,9 +3676,6 @@ static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
     case Type::Attributed:
       T = cast<AttributedType>(T)->getEquivalentType();
       break;
-    case Type::BTFTagAttributed:
-      T = cast<BTFTagAttributedType>(T)->getWrappedType();
-      break;
     case Type::CountAttributed:
       T = cast<CountAttributedType>(T)->desugar();
       break;
@@ -3754,10 +3875,12 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   case Type::TemplateSpecialization:
     return CreateType(cast<TemplateSpecializationType>(Ty), Unit);
 
+  case Type::BTFTagAttributed:
+    return CreateType(cast<BTFTagAttributedType>(Ty), Unit);
+
   case Type::CountAttributed:
   case Type::Auto:
   case Type::Attributed:
-  case Type::BTFTagAttributed:
   case Type::Adjusted:
   case Type::Decayed:
   case Type::DeducedTemplateSpecialization:
@@ -5930,6 +6053,35 @@ void CGDebugInfo::setDwoId(uint64_t Signature) {
   TheCU->setDWOId(Signature);
 }
 
+static llvm::DIType *copyAnnotations(llvm::DIBuilder &DBuilder,
+                                     llvm::DIDerivedType *Placeholder) {
+  auto *WrappedDI = Placeholder->getBaseType();
+  SmallVector<llvm::Metadata *, 4> Annotations;
+
+  for (const llvm::Metadata *O : Placeholder->getAnnotations()->operands())
+    Annotations.push_back(const_cast<llvm::Metadata *>(O));
+
+  auto AddAnnotations = [&](auto *Type) {
+    if (llvm::DINodeArray OldAnnotations = Type->getAnnotations())
+      for (const llvm::Metadata *O : OldAnnotations->operands())
+        Annotations.push_back(const_cast<llvm::Metadata *>(O));
+    auto Clone = Type->clone();
+    Clone->replaceAnnotations(DBuilder.getOrCreateArray(Annotations));
+    return llvm::MDNode::replaceWithPermanent(std::move(Clone));
+  };
+
+  if (auto *Ty = dyn_cast<llvm::DIBasicType>(WrappedDI))
+    return AddAnnotations(Ty);
+  if (auto *Ty = dyn_cast<llvm::DICompositeType>(WrappedDI))
+    return AddAnnotations(Ty);
+  if (auto *Ty = dyn_cast<llvm::DIDerivedType>(WrappedDI))
+    return AddAnnotations(Ty);
+  if (auto *Ty = dyn_cast<llvm::DISubroutineType>(WrappedDI))
+    return AddAnnotations(Ty);
+
+  return WrappedDI;
+}
+
 void CGDebugInfo::finalize() {
   // Creating types might create further types - invalidating the current
   // element and the size(), so don't cache/reference them.
@@ -6002,6 +6154,10 @@ void CGDebugInfo::finalize() {
   for (auto &RT : RetainedTypes)
     if (auto MD = TypeCache[RT])
       DBuilder.retainType(cast<llvm::DIType>(MD));
+
+  for (auto &Placeholder : AnnotationPlaceholders)
+    DBuilder.replaceTemporary(llvm::TempDIType(Placeholder),
+                              copyAnnotations(DBuilder, Placeholder));
 
   DBuilder.finalize();
 }

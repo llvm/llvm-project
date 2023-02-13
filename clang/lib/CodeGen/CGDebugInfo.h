@@ -171,6 +171,8 @@ class CGDebugInfo {
   /// The key is coroutine real parameters, value is DIVariable in LLVM IR.
   Param2DILocTy ParamDbgMappings;
 
+  std::vector<llvm::DIDerivedType *> AnnotationPlaceholders;
+
   /// Helper functions for getOrCreateType.
   /// @{
   /// Currently the checksum of an interface includes the number of
@@ -218,6 +220,7 @@ class CGDebugInfo {
   llvm::DIType *CreateType(const MemberPointerType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const AtomicType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const PipeType *Ty, llvm::DIFile *F);
+  llvm::DIType *CreateType(const BTFTagAttributedType *Ty, llvm::DIFile *F);
   /// Get enumeration type.
   llvm::DIType *CreateEnumType(const EnumType *Ty);
   llvm::DIType *CreateTypeDefinition(const EnumType *Ty);
