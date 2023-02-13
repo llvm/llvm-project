@@ -203,9 +203,9 @@ define amdgpu_ps float @fneg_fadd_0_f32(float inreg %tmp2, float inreg %tmp6, <4
 ;
 ; SI-NSZ-LABEL: fneg_fadd_0_f32:
 ; SI-NSZ:       ; %bb.0: ; %.entry
-; SI-NSZ-NEXT:    v_div_scale_f32 v0, s[2:3], s1, s1, 1.0
+; SI-NSZ-NEXT:    v_div_scale_f32 v0, s[2:3], s1, s1, -1.0
 ; SI-NSZ-NEXT:    v_rcp_f32_e32 v1, v0
-; SI-NSZ-NEXT:    v_div_scale_f32 v2, vcc, 1.0, s1, 1.0
+; SI-NSZ-NEXT:    v_div_scale_f32 v2, vcc, -1.0, s1, -1.0
 ; SI-NSZ-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
 ; SI-NSZ-NEXT:    v_fma_f32 v3, -v0, v1, 1.0
 ; SI-NSZ-NEXT:    v_fma_f32 v1, v3, v1, v1
@@ -215,8 +215,8 @@ define amdgpu_ps float @fneg_fadd_0_f32(float inreg %tmp2, float inreg %tmp6, <4
 ; SI-NSZ-NEXT:    v_fma_f32 v0, -v0, v3, v2
 ; SI-NSZ-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
 ; SI-NSZ-NEXT:    v_div_fmas_f32 v0, v0, v1, v3
-; SI-NSZ-NEXT:    v_div_fixup_f32 v0, v0, s1, 1.0
-; SI-NSZ-NEXT:    v_mul_f32_e32 v0, 0x80000000, v0
+; SI-NSZ-NEXT:    v_div_fixup_f32 v0, v0, s1, -1.0
+; SI-NSZ-NEXT:    v_mul_f32_e32 v0, 0, v0
 ; SI-NSZ-NEXT:    v_mov_b32_e32 v1, s0
 ; SI-NSZ-NEXT:    v_cmp_nlt_f32_e64 vcc, -v0, s0
 ; SI-NSZ-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
@@ -251,8 +251,8 @@ define amdgpu_ps float @fneg_fadd_0_f32(float inreg %tmp2, float inreg %tmp6, <4
 ;
 ; VI-NSZ-LABEL: fneg_fadd_0_f32:
 ; VI-NSZ:       ; %bb.0: ; %.entry
-; VI-NSZ-NEXT:    v_div_scale_f32 v0, s[2:3], s1, s1, 1.0
-; VI-NSZ-NEXT:    v_div_scale_f32 v1, vcc, 1.0, s1, 1.0
+; VI-NSZ-NEXT:    v_div_scale_f32 v0, s[2:3], s1, s1, -1.0
+; VI-NSZ-NEXT:    v_div_scale_f32 v1, vcc, -1.0, s1, -1.0
 ; VI-NSZ-NEXT:    v_rcp_f32_e32 v2, v0
 ; VI-NSZ-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
 ; VI-NSZ-NEXT:    v_fma_f32 v3, -v0, v2, 1.0
@@ -265,8 +265,8 @@ define amdgpu_ps float @fneg_fadd_0_f32(float inreg %tmp2, float inreg %tmp6, <4
 ; VI-NSZ-NEXT:    v_div_fmas_f32 v0, v0, v2, v3
 ; VI-NSZ-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NSZ-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
-; VI-NSZ-NEXT:    v_div_fixup_f32 v0, v0, s1, 1.0
-; VI-NSZ-NEXT:    v_mul_f32_e32 v0, 0x80000000, v0
+; VI-NSZ-NEXT:    v_div_fixup_f32 v0, v0, s1, -1.0
+; VI-NSZ-NEXT:    v_mul_f32_e32 v0, 0, v0
 ; VI-NSZ-NEXT:    v_cmp_nlt_f32_e64 vcc, -v0, s0
 ; VI-NSZ-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
 ; VI-NSZ-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
@@ -575,32 +575,30 @@ define amdgpu_ps double @fneg_fadd_0_f64(double inreg %tmp2, double inreg %tmp6,
 ; SI-SAFE-NEXT:    s_mov_b32 s0, 0
 ; SI-SAFE-NEXT:    ; return to shader part epilog
 ;
-; SI-NSZ-LABEL: fneg_fadd_0_f64:
-; SI-NSZ:       ; %bb.0: ; %.entry
-; SI-NSZ-NEXT:    v_div_scale_f64 v[0:1], s[4:5], s[2:3], s[2:3], 1.0
-; SI-NSZ-NEXT:    s_mov_b32 s4, 0
-; SI-NSZ-NEXT:    s_brev_b32 s5, 1
-; SI-NSZ-NEXT:    v_rcp_f64_e32 v[2:3], v[0:1]
-; SI-NSZ-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
-; SI-NSZ-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], v[2:3]
-; SI-NSZ-NEXT:    v_div_scale_f64 v[4:5], vcc, 1.0, s[2:3], 1.0
-; SI-NSZ-NEXT:    v_fma_f64 v[6:7], -v[0:1], v[2:3], 1.0
-; SI-NSZ-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[2:3]
-; SI-NSZ-NEXT:    v_mul_f64 v[6:7], v[4:5], v[2:3]
-; SI-NSZ-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[6:7], v[4:5]
-; SI-NSZ-NEXT:    v_div_fmas_f64 v[0:1], v[0:1], v[2:3], v[6:7]
-; SI-NSZ-NEXT:    v_mov_b32_e32 v2, s1
-; SI-NSZ-NEXT:    v_mov_b32_e32 v3, s0
-; SI-NSZ-NEXT:    v_div_fixup_f64 v[0:1], v[0:1], s[2:3], 1.0
-; SI-NSZ-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
-; SI-NSZ-NEXT:    v_cmp_nlt_f64_e64 vcc, -v[0:1], s[0:1]
-; SI-NSZ-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
-; SI-NSZ-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
-; SI-NSZ-NEXT:    v_cmp_nlt_f64_e32 vcc, 0, v[0:1]
-; SI-NSZ-NEXT:    s_and_b64 s[0:1], vcc, exec
-; SI-NSZ-NEXT:    s_cselect_b32 s1, 0, 0x7ff80000
-; SI-NSZ-NEXT:    s_mov_b32 s0, 0
-; SI-NSZ-NEXT:    ; return to shader part epilog
+; GCN-NSZ-LABEL: fneg_fadd_0_f64:
+; GCN-NSZ:       ; %bb.0: ; %.entry
+; GCN-NSZ-NEXT:    v_div_scale_f64 v[0:1], s[4:5], s[2:3], s[2:3], -1.0
+; GCN-NSZ-NEXT:    v_rcp_f64_e32 v[2:3], v[0:1]
+; GCN-NSZ-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
+; GCN-NSZ-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], v[2:3]
+; GCN-NSZ-NEXT:    v_div_scale_f64 v[4:5], vcc, -1.0, s[2:3], -1.0
+; GCN-NSZ-NEXT:    v_fma_f64 v[6:7], -v[0:1], v[2:3], 1.0
+; GCN-NSZ-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[2:3]
+; GCN-NSZ-NEXT:    v_mul_f64 v[6:7], v[4:5], v[2:3]
+; GCN-NSZ-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[6:7], v[4:5]
+; GCN-NSZ-NEXT:    v_div_fmas_f64 v[0:1], v[0:1], v[2:3], v[6:7]
+; GCN-NSZ-NEXT:    v_mov_b32_e32 v2, s1
+; GCN-NSZ-NEXT:    v_mov_b32_e32 v3, s0
+; GCN-NSZ-NEXT:    v_div_fixup_f64 v[0:1], v[0:1], s[2:3], -1.0
+; GCN-NSZ-NEXT:    v_mul_f64 v[0:1], v[0:1], 0
+; GCN-NSZ-NEXT:    v_cmp_nlt_f64_e64 vcc, -v[0:1], s[0:1]
+; GCN-NSZ-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NSZ-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
+; GCN-NSZ-NEXT:    v_cmp_nlt_f64_e32 vcc, 0, v[0:1]
+; GCN-NSZ-NEXT:    s_and_b64 s[0:1], vcc, exec
+; GCN-NSZ-NEXT:    s_cselect_b32 s1, 0, 0x7ff80000
+; GCN-NSZ-NEXT:    s_mov_b32 s0, 0
+; GCN-NSZ-NEXT:    ; return to shader part epilog
 ;
 ; VI-SAFE-LABEL: fneg_fadd_0_f64:
 ; VI-SAFE:       ; %bb.0: ; %.entry
@@ -628,33 +626,6 @@ define amdgpu_ps double @fneg_fadd_0_f64(double inreg %tmp2, double inreg %tmp6,
 ; VI-SAFE-NEXT:    s_cselect_b32 s1, 0, 0x7ff80000
 ; VI-SAFE-NEXT:    s_mov_b32 s0, 0
 ; VI-SAFE-NEXT:    ; return to shader part epilog
-;
-; VI-NSZ-LABEL: fneg_fadd_0_f64:
-; VI-NSZ:       ; %bb.0: ; %.entry
-; VI-NSZ-NEXT:    v_div_scale_f64 v[0:1], s[4:5], s[2:3], s[2:3], 1.0
-; VI-NSZ-NEXT:    v_rcp_f64_e32 v[2:3], v[0:1]
-; VI-NSZ-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
-; VI-NSZ-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], v[2:3]
-; VI-NSZ-NEXT:    v_div_scale_f64 v[4:5], vcc, 1.0, s[2:3], 1.0
-; VI-NSZ-NEXT:    v_fma_f64 v[6:7], -v[0:1], v[2:3], 1.0
-; VI-NSZ-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[2:3]
-; VI-NSZ-NEXT:    v_mul_f64 v[6:7], v[4:5], v[2:3]
-; VI-NSZ-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[6:7], v[4:5]
-; VI-NSZ-NEXT:    v_div_fmas_f64 v[0:1], v[0:1], v[2:3], v[6:7]
-; VI-NSZ-NEXT:    v_mov_b32_e32 v2, s1
-; VI-NSZ-NEXT:    v_mov_b32_e32 v3, s0
-; VI-NSZ-NEXT:    v_div_fixup_f64 v[0:1], v[0:1], s[2:3], 1.0
-; VI-NSZ-NEXT:    s_mov_b32 s2, 0
-; VI-NSZ-NEXT:    s_brev_b32 s3, 1
-; VI-NSZ-NEXT:    v_mul_f64 v[0:1], v[0:1], s[2:3]
-; VI-NSZ-NEXT:    v_cmp_nlt_f64_e64 vcc, -v[0:1], s[0:1]
-; VI-NSZ-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
-; VI-NSZ-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
-; VI-NSZ-NEXT:    v_cmp_nlt_f64_e32 vcc, 0, v[0:1]
-; VI-NSZ-NEXT:    s_and_b64 s[0:1], vcc, exec
-; VI-NSZ-NEXT:    s_cselect_b32 s1, 0, 0x7ff80000
-; VI-NSZ-NEXT:    s_mov_b32 s0, 0
-; VI-NSZ-NEXT:    ; return to shader part epilog
 .entry:
   %tmp7 = fdiv double 1.000000e+00, %tmp6
   %tmp8 = fmul double 0.000000e+00, %tmp7
@@ -691,14 +662,13 @@ define amdgpu_ps double @fneg_fadd_0_nsz_f64(double inreg %tmp2, double inreg %t
 ; SI-NSZ-NEXT:    v_fma_f64 v[0:1], v[2:3], v[0:1], v[0:1]
 ; SI-NSZ-NEXT:    v_fma_f64 v[2:3], -s[2:3], v[0:1], 1.0
 ; SI-NSZ-NEXT:    v_fma_f64 v[0:1], v[2:3], v[0:1], v[0:1]
-; SI-NSZ-NEXT:    v_fma_f64 v[2:3], -s[2:3], v[0:1], 1.0
-; SI-NSZ-NEXT:    s_mov_b32 s2, 0
-; SI-NSZ-NEXT:    v_fma_f64 v[0:1], v[2:3], v[0:1], v[0:1]
-; SI-NSZ-NEXT:    s_brev_b32 s3, 1
-; SI-NSZ-NEXT:    v_mul_f64 v[0:1], v[0:1], s[2:3]
+; SI-NSZ-NEXT:    v_mul_f64 v[2:3], v[0:1], -1.0
+; SI-NSZ-NEXT:    v_fma_f64 v[4:5], -s[2:3], v[2:3], -1.0
+; SI-NSZ-NEXT:    v_fma_f64 v[0:1], v[4:5], v[0:1], v[2:3]
 ; SI-NSZ-NEXT:    v_mov_b32_e32 v2, s1
-; SI-NSZ-NEXT:    v_cmp_nlt_f64_e64 vcc, -v[0:1], s[0:1]
+; SI-NSZ-NEXT:    v_mul_f64 v[0:1], v[0:1], 0
 ; SI-NSZ-NEXT:    v_mov_b32_e32 v3, s0
+; SI-NSZ-NEXT:    v_cmp_nlt_f64_e64 vcc, -v[0:1], s[0:1]
 ; SI-NSZ-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
 ; SI-NSZ-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
 ; SI-NSZ-NEXT:    v_cmp_nlt_f64_e32 vcc, 0, v[0:1]
@@ -714,13 +684,12 @@ define amdgpu_ps double @fneg_fadd_0_nsz_f64(double inreg %tmp2, double inreg %t
 ; VI-NSZ-NEXT:    v_fma_f64 v[0:1], v[2:3], v[0:1], v[0:1]
 ; VI-NSZ-NEXT:    v_fma_f64 v[2:3], -s[2:3], v[0:1], 1.0
 ; VI-NSZ-NEXT:    v_fma_f64 v[0:1], v[2:3], v[0:1], v[0:1]
-; VI-NSZ-NEXT:    v_fma_f64 v[2:3], -s[2:3], v[0:1], 1.0
-; VI-NSZ-NEXT:    s_mov_b32 s2, 0
-; VI-NSZ-NEXT:    s_brev_b32 s3, 1
-; VI-NSZ-NEXT:    v_fma_f64 v[0:1], v[2:3], v[0:1], v[0:1]
+; VI-NSZ-NEXT:    v_mul_f64 v[2:3], v[0:1], -1.0
+; VI-NSZ-NEXT:    v_fma_f64 v[4:5], -s[2:3], v[2:3], -1.0
+; VI-NSZ-NEXT:    v_fma_f64 v[0:1], v[4:5], v[0:1], v[2:3]
 ; VI-NSZ-NEXT:    v_mov_b32_e32 v2, s1
 ; VI-NSZ-NEXT:    v_mov_b32_e32 v3, s0
-; VI-NSZ-NEXT:    v_mul_f64 v[0:1], v[0:1], s[2:3]
+; VI-NSZ-NEXT:    v_mul_f64 v[0:1], v[0:1], 0
 ; VI-NSZ-NEXT:    v_cmp_nlt_f64_e64 vcc, -v[0:1], s[0:1]
 ; VI-NSZ-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
 ; VI-NSZ-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc

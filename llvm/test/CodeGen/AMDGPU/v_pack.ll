@@ -63,7 +63,7 @@ define amdgpu_kernel void @v_pack_b32_v2f16_sub(ptr addrspace(1) %in0, ptr addrs
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    global_load_ushort v2, v0, s[2:3] glc dlc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_subrev_f16_e32 v0, 2.0, v1
+; GCN-NEXT:    v_add_f16_e32 v0, -2.0, v1
 ; GCN-NEXT:    v_add_f16_e32 v1, 2.0, v2
 ; GCN-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GCN-NEXT:    ;;#ASMSTART

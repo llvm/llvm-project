@@ -793,6 +793,13 @@ SDValue AMDGPUTargetLowering::getNegatedExpression(
     NegatibleCost &Cost, unsigned Depth) const {
 
   switch (Op.getOpcode()) {
+  case ISD::ConstantFP: {
+    auto *C = cast<ConstantFPSDNode>(Op);
+    Cost = getConstantNegateCost(C);
+    APFloat V = C->getValueAPF();
+    V.changeSign();
+    return DAG.getConstantFP(V, SDLoc(Op), Op.getValueType());
+  }
   case ISD::FMA:
   case ISD::FMAD: {
     // Negating a fma is not free if it has users without source mods.
