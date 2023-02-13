@@ -392,11 +392,20 @@ public:
     if (Source->getTemplateSpecializationInfo())
       return false;
 
-    // Bail out in templated classes, as it is hard to spell the class name, i.e
-    // if the template parameter is unnamed.
     if (auto *MD = llvm::dyn_cast<CXXMethodDecl>(Source)) {
+      // Bail out in templated classes, as it is hard to spell the class name,
+      // i.e if the template parameter is unnamed.
       if (MD->getParent()->isTemplated())
         return false;
+
+      // The refactoring is meaningless for unnamed classes and definitions
+      // within unnamed namespaces.
+      for (const DeclContext *DC = MD->getParent(); DC; DC = DC->getParent()) {
+        if (auto *ND = llvm::dyn_cast<NamedDecl>(DC)) {
+          if (ND->getDeclName().isEmpty())
+            return false;
+        }
+      }
     }
 
     // Note that we don't check whether an implementation file exists or not in
