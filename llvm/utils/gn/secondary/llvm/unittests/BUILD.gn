@@ -49,6 +49,7 @@ group("unittests") {
     "Testing/ADT:TestingADTTests",
     "Testing/Support:TestingSupportTests",
     "TextAPI:TextAPITests",
+    "Transforms/Coroutines:CoroTests",
     "Transforms/IPO:IPOTests",
     "Transforms/Scalar:ScalarTests",
     "Transforms/Utils:UtilsTests",
