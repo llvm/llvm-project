@@ -671,7 +671,7 @@ public:
 
     typedef typename base::iterator       iterator;
     typedef typename base::const_iterator const_iterator;
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     typedef size_type                                __remove_return_type;
 #else
     typedef void                                     __remove_return_type;
@@ -684,7 +684,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     explicit forward_list(const allocator_type& __a);
     explicit forward_list(size_type __n);
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     explicit forward_list(size_type __n, const allocator_type& __a);
 #endif
     forward_list(size_type __n, const value_type& __v);
@@ -787,7 +787,7 @@ public:
     const_reference front() const {return base::__before_begin()->__next_->__value_;}
 
 #ifndef _LIBCPP_CXX03_LANG
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     template <class... _Args> reference emplace_front(_Args&&... __args);
 #else
     template <class... _Args> void      emplace_front(_Args&&... __args);
@@ -927,7 +927,7 @@ forward_list<_Tp, _Alloc>::forward_list(size_type __n)
     }
 }
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <class _Tp, class _Alloc>
 forward_list<_Tp, _Alloc>::forward_list(size_type __n,
                                         const allocator_type& __base_alloc)
@@ -1119,7 +1119,7 @@ forward_list<_Tp, _Alloc>::assign(initializer_list<value_type> __il)
 
 template <class _Tp, class _Alloc>
 template <class... _Args>
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 typename forward_list<_Tp, _Alloc>::reference
 #else
 void
@@ -1133,7 +1133,7 @@ forward_list<_Tp, _Alloc>::emplace_front(_Args&&... __args)
                                   _VSTD::forward<_Args>(__args)...);
     __h->__next_ = base::__before_begin()->__next_;
     base::__before_begin()->__next_ = __h.release();
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     return base::__before_begin()->__next_->__value_;
 #endif
 }
@@ -1761,7 +1761,7 @@ swap(forward_list<_Tp, _Alloc>& __x, forward_list<_Tp, _Alloc>& __y)
     __x.swap(__y);
 }
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <class _Tp, class _Allocator, class _Predicate>
 inline _LIBCPP_INLINE_VISIBILITY
     typename forward_list<_Tp, _Allocator>::size_type
@@ -1779,7 +1779,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 
 _LIBCPP_END_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace pmr {
 template <class _ValueT>

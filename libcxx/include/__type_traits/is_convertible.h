@@ -98,7 +98,7 @@ template <class _T1, class _T2> struct _LIBCPP_TEMPLATE_VIS is_convertible
 
 #endif // __has_builtin(__is_convertible_to) && !defined(_LIBCPP_USE_IS_CONVERTIBLE_FALLBACK)
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _From, class _To>
 inline constexpr bool is_convertible_v = is_convertible<_From, _To>::value;
 #endif

@@ -62,7 +62,7 @@ public:
 };
 #endif // __has_builtin(__decay)
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <class _Tp> using decay_t = typename decay<_Tp>::type;
 #endif
 

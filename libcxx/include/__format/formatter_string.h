@@ -27,7 +27,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS __formatter_string {
@@ -40,7 +40,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI auto format(basic_string_view<_CharT> __str, auto& __ctx) const -> decltype(__ctx.out()) {
-#  if _LIBCPP_STD_VER > 20
+#  if _LIBCPP_STD_VER >= 23
     if (__parser_.__type_ == __format_spec::__type::__debug)
       return __formatter::__format_escaped_string(__str, __ctx.out(), __parser_.__get_parsed_std_specifications(__ctx));
 #  endif
@@ -48,7 +48,7 @@ public:
     return __formatter::__write_string(__str, __ctx.out(), __parser_.__get_parsed_std_specifications(__ctx));
   }
 
-#  if _LIBCPP_STD_VER > 20
+#  if _LIBCPP_STD_VER >= 23
   _LIBCPP_HIDE_FROM_ABI constexpr void set_debug_format() { __parser_.__type_ = __format_spec::__type::__debug; }
 #  endif
 
@@ -66,7 +66,7 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<const _CharT*,
                           "prevented an invalid pointer.");
 
     __format_spec::__parsed_specifications<_CharT> __specs = _Base::__parser_.__get_parsed_std_specifications(__ctx);
-#  if _LIBCPP_STD_VER > 20
+#  if _LIBCPP_STD_VER >= 23
     if (_Base::__parser_.__type_ == __format_spec::__type::__debug)
       return __formatter::__format_escaped_string(basic_string_view<_CharT>{__str}, __ctx.out(), __specs);
 #  endif
@@ -152,7 +152,7 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<basic_string_v
   }
 };
 
-#endif //_LIBCPP_STD_VER > 17
+#endif //_LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

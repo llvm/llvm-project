@@ -389,7 +389,7 @@ public:
         std::__debug_db_insert_c(this);
     }
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit vector(size_type __n);
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit vector(size_type __n, const allocator_type& __a);
 #endif
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector(size_type __n, const value_type& __x);
@@ -474,7 +474,7 @@ public:
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
     vector(vector&& __x)
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
         noexcept;
 #else
         _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value);
@@ -594,7 +594,7 @@ public:
 
     template <class... _Args>
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
         reference emplace_back(_Args&&... __args);
 #else
         void      emplace_back(_Args&&... __args);
@@ -1083,7 +1083,7 @@ vector<_Tp, _Allocator>::vector(size_type __n)
     __guard.__complete();
 }
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 vector<_Tp, _Allocator>::vector(size_type __n, const allocator_type& __a)
@@ -1216,7 +1216,7 @@ template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 inline _LIBCPP_HIDE_FROM_ABI
 vector<_Tp, _Allocator>::vector(vector&& __x)
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
         noexcept
 #else
         _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
@@ -1588,7 +1588,7 @@ template <class _Tp, class _Allocator>
 template <class... _Args>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 inline
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 typename vector<_Tp, _Allocator>::reference
 #else
 void
@@ -1601,7 +1601,7 @@ vector<_Tp, _Allocator>::emplace_back(_Args&&... __args)
     }
     else
         __emplace_back_slow_path(std::forward<_Args>(__args)...);
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     return this->back();
 #endif
 }
@@ -2123,7 +2123,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 ~vector() { __destroy_vector(*this)(); }
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit vector(size_type __n);
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit vector(size_type __n, const allocator_type& __a);
 #endif
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 vector(size_type __n, const value_type& __v);
@@ -2157,7 +2157,7 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     vector(vector&& __v)
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
         noexcept;
 #else
         _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value);
@@ -2254,16 +2254,16 @@ public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference back()  const {return __make_ref(__size_ - 1);}
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void push_back(const value_type& __x);
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     template <class... _Args>
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference emplace_back(_Args&&... __args)
 #else
     _LIBCPP_HIDE_FROM_ABI void      emplace_back(_Args&&... __args)
 #endif
     {
         push_back ( value_type ( std::forward<_Args>(__args)... ));
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
         return this->back();
 #endif
     }
@@ -2271,7 +2271,7 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void pop_back() {--__size_;}
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     template <class... _Args>
    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator emplace(const_iterator __position, _Args&&... __args)
         { return insert ( __position, value_type ( std::forward<_Args>(__args)... )); }
@@ -2550,7 +2550,7 @@ vector<bool, _Allocator>::vector(size_type __n)
     }
 }
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 vector<bool, _Allocator>::vector(size_type __n, const allocator_type& __a)
@@ -2772,7 +2772,7 @@ vector<bool, _Allocator>::operator=(const vector& __v)
 
 template <class _Allocator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(vector&& __v)
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     _NOEXCEPT
 #else
     _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
@@ -3293,7 +3293,7 @@ swap(vector<_Tp, _Allocator>& __x, vector<_Tp, _Allocator>& __y)
     __x.swap(__y);
 }
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <class _Tp, class _Allocator, class _Up>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 inline _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::size_type
@@ -3319,9 +3319,9 @@ template <>
 inline constexpr bool __format::__enable_insertable<vector<wchar_t>> = true;
 #endif
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
 template <class _Tp, class CharT>
 // Since is-vector-bool-reference is only used once it's inlined here.
   requires same_as<typename _Tp::__container, vector<bool, typename _Tp::__container::allocator_type>>
@@ -3340,11 +3340,11 @@ public:
         return __underlying_.format(__ref, __ctx);
   }
 };
-#endif // _LIBCPP_STD_VER > 20
+#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_END_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace pmr {
 template <class _ValueT>

@@ -39,7 +39,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 namespace __formatter {
 
@@ -384,7 +384,7 @@ _LIBCPP_HIDE_FROM_ABI auto __write_string(
   return __formatter::__write(__str.begin(), __str.end(), _VSTD::move(__out_it), __specs, __size);
 }
 
-#  if _LIBCPP_STD_VER > 20
+#  if _LIBCPP_STD_VER >= 23
 
 struct __nul_terminator {};
 
@@ -561,11 +561,11 @@ __format_escaped_string(basic_string_view<_CharT> __values,
   return __formatter::__write_string(basic_string_view{__str}, _VSTD::move(__out_it), __specs);
 }
 
-#  endif // _LIBCPP_STD_VER > 20
+#  endif // _LIBCPP_STD_VER >= 23
 
 } // namespace __formatter
 
-#endif //_LIBCPP_STD_VER > 17
+#endif //_LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

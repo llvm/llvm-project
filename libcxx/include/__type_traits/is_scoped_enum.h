@@ -21,7 +21,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
 template <class _Tp, bool = is_enum_v<_Tp> >
 struct __is_scoped_enum_helper : false_type {};
 

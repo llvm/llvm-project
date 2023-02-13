@@ -30,7 +30,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // construct_at
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 template <class _Tp, class... _Args, class = decltype(::new(std::declval<void*>()) _Tp(std::declval<_Args>()...))>
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp* construct_at(_Tp* __location, _Args&&... __args) {
@@ -42,7 +42,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp* construct_at(_Tp* __location, _Args&&... __
 
 template <class _Tp, class... _Args, class = decltype(::new(std::declval<void*>()) _Tp(std::declval<_Args>()...))>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp* __construct_at(_Tp* __location, _Args&&... __args) {
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
   return std::construct_at(__location, std::forward<_Args>(__args)...);
 #else
   return _LIBCPP_ASSERT(__location != nullptr, "null pointer given to construct_at"),
@@ -66,7 +66,7 @@ void __destroy_at(_Tp* __loc) {
     __loc->~_Tp();
 }
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <class _Tp, typename enable_if<is_array<_Tp>::value, int>::type = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 void __destroy_at(_Tp* __loc) {
@@ -93,7 +93,7 @@ _BidirectionalIterator __reverse_destroy(_BidirectionalIterator __first, _Bidire
     return __last;
 }
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 
 template <class _Tp, enable_if_t<!is_array_v<_Tp>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -101,7 +101,7 @@ void destroy_at(_Tp* __loc) {
     std::__destroy_at(__loc);
 }
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <class _Tp, enable_if_t<is_array_v<_Tp>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 void destroy_at(_Tp* __loc) {
@@ -123,7 +123,7 @@ _ForwardIterator destroy_n(_ForwardIterator __first, _Size __n) {
     return __first;
 }
 
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -298,12 +298,12 @@ public:
     basic_string_view(const _CharT* __s, size_type __len) _NOEXCEPT
         : __data_(__s), __size_(__len)
     {
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     _LIBCPP_ASSERT(__len == 0 || __s != nullptr, "string_view::string_view(_CharT *, size_t): received nullptr");
 #endif
     }
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     template <contiguous_iterator _It, sized_sentinel_for<_It> _End>
       requires (is_same_v<iter_value_t<_It>, _CharT> && !is_convertible_v<_End, size_type>)
     constexpr _LIBCPP_HIDE_FROM_ABI basic_string_view(_It __begin, _End __end)
@@ -311,9 +311,9 @@ public:
     {
       _LIBCPP_ASSERT((__end - __begin) >= 0, "std::string_view::string_view(iterator, sentinel) received invalid range");
     }
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
     template <class _Range>
       requires (
         !is_same_v<remove_cvref_t<_Range>, basic_string_view> &&
@@ -330,13 +330,13 @@ public:
       )
     constexpr explicit _LIBCPP_HIDE_FROM_ABI
     basic_string_view(_Range&& __r) : __data_(ranges::data(__r)), __size_(ranges::size(__r)) {}
-#endif // _LIBCPP_STD_VER > 20
+#endif // _LIBCPP_STD_VER >= 23
 
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
     basic_string_view(const _CharT* __s)
         : __data_(__s), __size_(_VSTD::__char_traits_length_checked<_Traits>(__s)) {}
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
     basic_string_view(nullptr_t) = delete;
 #endif
 
@@ -691,7 +691,7 @@ public:
             (data(), size(), __s, __pos, traits_type::length(__s));
     }
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     constexpr _LIBCPP_INLINE_VISIBILITY
     bool starts_with(basic_string_view __s) const noexcept
     { return size() >= __s.size() && compare(0, __s.size(), __s) == 0; }
@@ -717,7 +717,7 @@ public:
     { return ends_with(basic_string_view(__s)); }
 #endif
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
     constexpr _LIBCPP_INLINE_VISIBILITY
     bool contains(basic_string_view __sv) const noexcept
     { return find(__sv) != npos; }
@@ -737,23 +737,23 @@ private:
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(basic_string_view);
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <class _CharT, class _Traits>
 inline constexpr bool ranges::enable_view<basic_string_view<_CharT, _Traits>> = true;
 
 template <class _CharT, class _Traits>
 inline constexpr bool ranges::enable_borrowed_range<basic_string_view<_CharT, _Traits> > = true;
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 // [string.view.deduct]
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <contiguous_iterator _It, sized_sentinel_for<_It> _End>
   basic_string_view(_It, _End) -> basic_string_view<iter_value_t<_It>>;
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
 template <ranges::contiguous_range _Range>
   basic_string_view(_Range) -> basic_string_view<ranges::range_value_t<_Range>>;
 #endif
@@ -790,11 +790,11 @@ bool operator==(__type_identity_t<basic_string_view<_CharT, _Traits> > __lhs,
     if (__lhs.size() != __rhs.size()) return false;
     return __lhs.compare(__rhs) == 0;
 }
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 // operator <=>
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 template <class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI constexpr auto
@@ -824,7 +824,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto operator<=>(
     }
 }
 
-#else //  _LIBCPP_STD_VER > 17
+#else //  _LIBCPP_STD_VER >= 20
 
 // operator !=
 template<class _CharT, class _Traits>
@@ -957,7 +957,7 @@ bool operator>=(__type_identity_t<basic_string_view<_CharT, _Traits> > __lhs,
     return __lhs.compare(__rhs) >= 0;
 }
 
-#endif //  _LIBCPP_STD_VER > 17
+#endif //  _LIBCPP_STD_VER >= 20
 
 template<class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
@@ -993,7 +993,7 @@ template <>
 struct hash<basic_string_view<wchar_t, char_traits<wchar_t> > > : __string_view_hash<wchar_t> {};
 #endif
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 inline namespace literals
 {
   inline namespace string_view_literals

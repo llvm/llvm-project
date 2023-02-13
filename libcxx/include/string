@@ -886,7 +886,7 @@ public:
   template <class = __enable_if_t<__is_allocator<_Allocator>::value, nullptr_t> >
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(const _CharT* __s, const _Allocator& __a);
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
   basic_string(nullptr_t) = delete;
 #endif
 
@@ -911,7 +911,7 @@ public:
     std::__debug_db_insert_c(this);
   }
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
   _LIBCPP_HIDE_FROM_ABI constexpr
   basic_string(basic_string&& __str, size_type __pos, const _Allocator& __alloc = _Allocator())
       : basic_string(std::move(__str), __pos, npos, __alloc) {}
@@ -1030,7 +1030,7 @@ public:
 #endif
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     basic_string& operator=(const value_type* __s) {return assign(__s);}
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
     basic_string& operator=(nullptr_t) = delete;
 #endif
     _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& operator=(value_type __c);
@@ -1097,7 +1097,7 @@ public:
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 void reserve(size_type __requested_capacity);
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
     template <class _Op>
     _LIBCPP_HIDE_FROM_ABI constexpr
     void resize_and_overwrite(size_type __n, _Op __op) {
@@ -1460,7 +1460,7 @@ public:
     const value_type* c_str() const _NOEXCEPT {return data();}
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     const value_type* data() const _NOEXCEPT  {return std::__to_address(__get_pointer());}
-#if _LIBCPP_STD_VER > 14 || defined(_LIBCPP_BUILDING_LIBRARY)
+#if _LIBCPP_STD_VER >= 17 || defined(_LIBCPP_BUILDING_LIBRARY)
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     value_type* data()             _NOEXCEPT  {return std::__to_address(__get_pointer());}
 #endif
@@ -1614,7 +1614,7 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX20
     int compare(size_type __pos1, size_type __n1, const value_type* __s, size_type __n2) const;
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     constexpr _LIBCPP_HIDE_FROM_ABI
     bool starts_with(__self_view __sv) const noexcept
     { return __self_view(data(), size()).starts_with(__sv); }
@@ -1640,7 +1640,7 @@ public:
     { return ends_with(__self_view(__s)); }
 #endif
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
     constexpr _LIBCPP_HIDE_FROM_ABI
     bool contains(__self_view __sv) const noexcept
     { return __self_view(data(), size()).contains(__sv); }
@@ -1683,7 +1683,7 @@ private:
     }
 
     static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __begin_lifetime(pointer __begin, size_type __n) {
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
         if (__libcpp_is_constant_evaluated()) {
             for (size_type __i = 0; __i != __n; ++__i)
                 std::construct_at(std::addressof(__begin[__i]));
@@ -1691,7 +1691,7 @@ private:
 #else
         (void)__begin;
         (void)__n;
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
     }
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __default_init() {
@@ -1918,7 +1918,7 @@ private:
         _NOEXCEPT_(__alloc_traits::is_always_equal::value);
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     void __move_assign(basic_string& __str, true_type)
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
         _NOEXCEPT;
 #else
         _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value);
@@ -2555,7 +2555,7 @@ template <class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX20
 void
 basic_string<_CharT, _Traits, _Allocator>::__move_assign(basic_string& __str, true_type)
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     _NOEXCEPT
 #else
     _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value)
@@ -4010,7 +4010,7 @@ bool
 operator==(const basic_string<_CharT, _Traits, _Allocator>& __lhs,
            const basic_string<_CharT, _Traits, _Allocator>& __rhs) _NOEXCEPT
 {
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     return basic_string_view<_CharT, _Traits>(__lhs) == basic_string_view<_CharT, _Traits>(__rhs);
 #else
     size_t __lhs_sz = __lhs.size();
@@ -4060,7 +4060,7 @@ bool
 operator==(const basic_string<_CharT,_Traits,_Allocator>& __lhs,
            const _CharT* __rhs) _NOEXCEPT
 {
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     return basic_string_view<_CharT, _Traits>(__lhs) == basic_string_view<_CharT, _Traits>(__rhs);
 #else
     typedef basic_string<_CharT, _Traits, _Allocator> _String;
@@ -4071,7 +4071,7 @@ operator==(const basic_string<_CharT,_Traits,_Allocator>& __lhs,
 #endif
 }
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI constexpr auto operator<=>(
@@ -4086,7 +4086,7 @@ operator<=>(const basic_string<_CharT, _Traits, _Allocator>& __lhs, const _CharT
     return basic_string_view<_CharT, _Traits>(__lhs) <=> basic_string_view<_CharT, _Traits>(__rhs);
 }
 
-#else // _LIBCPP_STD_VER > 17
+#else // _LIBCPP_STD_VER >= 20
 
 template<class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_HIDE_FROM_ABI
@@ -4230,7 +4230,7 @@ operator>=(const _CharT* __lhs,
 {
     return !(__lhs < __rhs);
 }
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 // operator +
 
@@ -4504,7 +4504,7 @@ basic_istream<_CharT, _Traits>&
 getline(basic_istream<_CharT, _Traits>&& __is,
         basic_string<_CharT, _Traits, _Allocator>& __str);
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <class _CharT, class _Traits, class _Allocator, class _Up>
 inline _LIBCPP_HIDE_FROM_ABI
     typename basic_string<_CharT, _Traits, _Allocator>::size_type
@@ -4562,7 +4562,7 @@ basic_string<_CharT, _Traits, _Allocator>::__subscriptable(const const_iterator*
 
 #endif // _LIBCPP_ENABLE_DEBUG_MODE
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 // Literal suffixes for basic_string [basic.string.literals]
 inline namespace literals
 {
@@ -4604,7 +4604,7 @@ inline namespace literals
   } // namespace string_literals
 } // namespace literals
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <>
 inline constexpr bool __format::__enable_insertable<std::basic_string<char>> = true;
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS

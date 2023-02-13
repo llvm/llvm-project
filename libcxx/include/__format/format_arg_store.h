@@ -27,7 +27,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 namespace __format {
 
@@ -247,7 +247,7 @@ struct _LIBCPP_TEMPLATE_VIS __format_arg_store {
   _Storage __storage;
 };
 
-#endif //_LIBCPP_STD_VER > 17
+#endif //_LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

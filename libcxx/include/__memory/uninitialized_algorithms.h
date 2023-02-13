@@ -180,7 +180,7 @@ _ForwardIterator uninitialized_fill_n(_ForwardIterator __first, _Size __n, const
     return _VSTD::__uninitialized_fill_n<_ValueType>(__first, __n, __x);
 }
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 
 // uninitialized_default_construct
 
@@ -512,7 +512,7 @@ __uninitialized_allocator_value_construct_n_multidimensional(_Alloc& __alloc, _B
     __guard.__complete();
 }
 
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 
 // Destroy all elements in [__first, __last) from left to right using allocator destruction.
 template <class _Alloc, class _Iter, class _Sent>

@@ -572,7 +572,7 @@ __input_c_string(basic_istream<_CharT, _Traits>& __is, _CharT* __p, size_t __n)
     return __is;
 }
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 template<class _CharT, class _Traits, size_t _Np>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -630,7 +630,7 @@ operator>>(basic_istream<char, _Traits>& __is, signed char* __s)
     return __is >> (char*)__s;
 }
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 template<class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&

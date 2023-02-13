@@ -204,7 +204,7 @@ public:
             : c(_VSTD::move(__s.c), __a) {}
 #endif // _LIBCPP_CXX03_LANG
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
     template <class _InputIterator,
               class = __enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>>
     _LIBCPP_HIDE_FROM_ABI
@@ -235,7 +235,7 @@ public:
 
     template <class... _Args>
         _LIBCPP_INLINE_VISIBILITY
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
         decltype(auto) emplace(_Args&&... __args)
         { return c.emplace_back(_VSTD::forward<_Args>(__args)...);}
 #else
@@ -268,7 +268,7 @@ public:
     operator< (const stack<T1, _C1>& __x, const stack<T1, _C1>& __y);
 };
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template<class _Container,
          class = enable_if_t<!__is_allocator<_Container>::value>
 >
@@ -284,7 +284,7 @@ stack(_Container, _Alloc)
     -> stack<typename _Container::value_type, _Container>;
 #endif
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
 template<class _InputIterator,
          class = __enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>>
 stack(_InputIterator, _InputIterator)
