@@ -136,7 +136,7 @@ uint32_t DWARFDebugInfo::FindUnitIndex(DIERef::Section section,
       });
   uint32_t idx = std::distance(m_units.begin(), pos);
   if (idx == 0)
-    return DW_INVALID_INDEX;
+    return DW_INVALID_OFFSET;
   return idx - 1;
 }
 
