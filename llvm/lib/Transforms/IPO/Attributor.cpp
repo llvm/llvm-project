@@ -18,7 +18,6 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
@@ -1969,11 +1968,9 @@ void Attributor::runTillFixpoint() {
                       dbgs() << "[Attributor] InvalidAA: " << *InvalidAA
                              << " has " << InvalidAA->Deps.size()
                              << " required & optional dependences\n");
-      while (!InvalidAA->Deps.empty()) {
-        const auto &Dep = InvalidAA->Deps.back();
-        InvalidAA->Deps.pop_back();
-        AbstractAttribute *DepAA = cast<AbstractAttribute>(Dep.getPointer());
-        if (Dep.getInt() == unsigned(DepClassTy::OPTIONAL)) {
+      for (auto &DepIt : InvalidAA->Deps) {
+        AbstractAttribute *DepAA = cast<AbstractAttribute>(DepIt.getPointer());
+        if (DepIt.getInt() == unsigned(DepClassTy::OPTIONAL)) {
           DEBUG_WITH_TYPE(VERBOSE_DEBUG_TYPE,
                           dbgs() << " - recompute: " << *DepAA);
           Worklist.insert(DepAA);
@@ -1988,16 +1985,16 @@ void Attributor::runTillFixpoint() {
         else
           ChangedAAs.push_back(DepAA);
       }
+      InvalidAA->Deps.clear();
     }
 
     // Add all abstract attributes that are potentially dependent on one that
     // changed to the work list.
-    for (AbstractAttribute *ChangedAA : ChangedAAs)
-      while (!ChangedAA->Deps.empty()) {
-        Worklist.insert(
-            cast<AbstractAttribute>(ChangedAA->Deps.back().getPointer()));
-        ChangedAA->Deps.pop_back();
-      }
+    for (AbstractAttribute *ChangedAA : ChangedAAs) {
+      for (auto &DepIt : ChangedAA->Deps)
+        Worklist.insert(cast<AbstractAttribute>(DepIt.getPointer()));
+      ChangedAA->Deps.clear();
+    }
 
     LLVM_DEBUG(dbgs() << "[Attributor] #Iteration: " << IterationCounter
                       << ", Worklist+Dependent size: " << Worklist.size()
@@ -2068,11 +2065,9 @@ void Attributor::runTillFixpoint() {
       NumAttributesTimedOut++;
     }
 
-    while (!ChangedAA->Deps.empty()) {
-      ChangedAAs.push_back(
-          cast<AbstractAttribute>(ChangedAA->Deps.back().getPointer()));
-      ChangedAA->Deps.pop_back();
-    }
+    for (auto &DepIt : ChangedAA->Deps)
+      ChangedAAs.push_back(cast<AbstractAttribute>(DepIt.getPointer()));
+    ChangedAA->Deps.clear();
   }
 
   LLVM_DEBUG({
@@ -2156,14 +2151,18 @@ ChangeStatus Attributor::manifestAttributes() {
 
   (void)NumFinalAAs;
   if (NumFinalAAs != DG.SyntheticRoot.Deps.size()) {
-    for (unsigned u = NumFinalAAs; u < DG.SyntheticRoot.Deps.size(); ++u)
+    auto DepIt = DG.SyntheticRoot.Deps.begin();
+    for (unsigned u = 0; u < NumFinalAAs; ++u)
+      ++DepIt;
+    for (unsigned u = NumFinalAAs; u < DG.SyntheticRoot.Deps.size();
+         ++u, ++DepIt) {
       errs() << "Unexpected abstract attribute: "
-             << cast<AbstractAttribute>(DG.SyntheticRoot.Deps[u].getPointer())
-             << " :: "
-             << cast<AbstractAttribute>(DG.SyntheticRoot.Deps[u].getPointer())
+             << cast<AbstractAttribute>(DepIt->getPointer()) << " :: "
+             << cast<AbstractAttribute>(DepIt->getPointer())
                     ->getIRPosition()
                     .getAssociatedValue()
              << "\n";
+    }
     llvm_unreachable("Expected the final number of abstract attributes to "
                      "remain unchanged!");
   }
@@ -3126,7 +3125,7 @@ void Attributor::rememberDependences() {
             DI.DepClass == DepClassTy::OPTIONAL) &&
            "Expected required or optional dependence (1 bit)!");
     auto &DepAAs = const_cast<AbstractAttribute &>(*DI.FromAA).Deps;
-    DepAAs.push_back(AbstractAttribute::DepTy(
+    DepAAs.insert(AbstractAttribute::DepTy(
         const_cast<AbstractAttribute *>(DI.ToAA), unsigned(DI.DepClass)));
   }
 }
@@ -3694,11 +3693,11 @@ template <> struct GraphTraits<AADepGraphNode *> {
   using EdgeRef = PointerIntPair<AADepGraphNode *, 1>;
 
   static NodeRef getEntryNode(AADepGraphNode *DGN) { return DGN; }
-  static NodeRef DepGetVal(DepTy &DT) { return DT.getPointer(); }
+  static NodeRef DepGetVal(const DepTy &DT) { return DT.getPointer(); }
 
   using ChildIteratorType =
-      mapped_iterator<TinyPtrVector<DepTy>::iterator, decltype(&DepGetVal)>;
-  using ChildEdgeIteratorType = TinyPtrVector<DepTy>::iterator;
+      mapped_iterator<AADepGraphNode::DepSetTy::iterator, decltype(&DepGetVal)>;
+  using ChildEdgeIteratorType = AADepGraphNode::DepSetTy::iterator;
 
   static ChildIteratorType child_begin(NodeRef N) { return N->child_begin(); }
 
@@ -3710,7 +3709,7 @@ struct GraphTraits<AADepGraph *> : public GraphTraits<AADepGraphNode *> {
   static NodeRef getEntryNode(AADepGraph *DG) { return DG->GetEntryNode(); }
 
   using nodes_iterator =
-      mapped_iterator<TinyPtrVector<DepTy>::iterator, decltype(&DepGetVal)>;
+      mapped_iterator<AADepGraphNode::DepSetTy::iterator, decltype(&DepGetVal)>;
 
   static nodes_iterator nodes_begin(AADepGraph *DG) { return DG->begin(); }
 
