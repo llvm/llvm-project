@@ -311,14 +311,14 @@ public:
     /// the context of distributing mass, L will be the number of loop headers
     /// an early exit edge jumps out of.
     BlockNode getResolvedNode() const {
-      auto L = getPackagedLoop();
+      auto *L = getPackagedLoop();
       return L ? L->getHeader() : Node;
     }
 
     LoopData *getPackagedLoop() const {
       if (!Loop || !Loop->IsPackaged)
         return nullptr;
-      auto L = Loop;
+      auto *L = Loop;
       while (L->Parent && L->Parent->IsPackaged)
         L = L->Parent;
       return L;
@@ -1655,7 +1655,7 @@ template <class BT> struct BlockEdgesAdder {
   void operator()(IrreducibleGraph &G, IrreducibleGraph::IrrNode &Irr,
                   const LoopData *OuterLoop) {
     const BlockT *BB = BFI.RPOT[Irr.Node.Index];
-    for (const auto Succ : children<const BlockT *>(BB))
+    for (const auto *Succ : children<const BlockT *>(BB))
       G.addEdge(Irr, BFI.getNode(Succ), OuterLoop);
   }
 };

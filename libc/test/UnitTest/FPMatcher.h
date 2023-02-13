@@ -83,6 +83,8 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
       __llvm_libc::fputil::testing::getMatcher<__llvm_libc::testing::Cond_EQ>( \
           expected))
 
+#define EXPECT_FP_IS_NAN(actual) EXPECT_TRUE((actual) != (actual))
+
 #define ASSERT_FP_EQ(expected, actual)                                         \
   ASSERT_THAT(                                                                 \
       actual,                                                                  \
@@ -130,6 +132,28 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
   do {                                                                         \
     if (math_errhandling & MATH_ERREXCEPT) {                                   \
       ASSERT_EQ(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT), expected);    \
+    }                                                                          \
+  } while (0)
+
+#define EXPECT_FP_EQ_WITH_EXCEPTION(expected_val, actual_val, expected_except) \
+  do {                                                                         \
+    __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);                          \
+    EXPECT_FP_EQ(expected_val, actual_val);                                    \
+    if (math_errhandling & MATH_ERREXCEPT) {                                   \
+      EXPECT_EQ(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT),               \
+                expected_except);                                              \
+      __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);                        \
+    }                                                                          \
+  } while (0)
+
+#define EXPECT_FP_IS_NAN_WITH_EXCEPTION(actual_val, expected_except)           \
+  do {                                                                         \
+    __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);                          \
+    EXPECT_FP_IS_NAN(actual_val);                                              \
+    if (math_errhandling & MATH_ERREXCEPT) {                                   \
+      EXPECT_EQ(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT),               \
+                expected_except);                                              \
+      __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);                        \
     }                                                                          \
   } while (0)
 

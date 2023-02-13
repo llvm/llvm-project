@@ -23,10 +23,10 @@ DECLARE_SPECIAL_CONSTANTS(float)
 TEST(LlvmLibcLog2fTest, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, __llvm_libc::log2f(aNaN));
   EXPECT_FP_EQ(inf, __llvm_libc::log2f(inf));
-  EXPECT_TRUE(FPBits(__llvm_libc::log2f(neg_inf)).is_nan());
-  EXPECT_FP_EQ(neg_inf, __llvm_libc::log2f(0.0f));
-  EXPECT_FP_EQ(neg_inf, __llvm_libc::log2f(-0.0f));
-  EXPECT_TRUE(FPBits(__llvm_libc::log2f(-1.0f)).is_nan());
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(__llvm_libc::log2f(neg_inf), FE_INVALID);
+  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, __llvm_libc::log2f(0.0f), FE_DIVBYZERO);
+  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, __llvm_libc::log2f(-0.0f), FE_DIVBYZERO);
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(__llvm_libc::log2f(-1.0f), FE_INVALID);
   EXPECT_FP_EQ(zero, __llvm_libc::log2f(1.0f));
 }
 

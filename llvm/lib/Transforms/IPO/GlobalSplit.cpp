@@ -159,33 +159,6 @@ static bool splitGlobals(Module &M) {
   return Changed;
 }
 
-namespace {
-
-struct GlobalSplit : public ModulePass {
-  static char ID;
-
-  GlobalSplit() : ModulePass(ID) {
-    initializeGlobalSplitPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnModule(Module &M) override {
-    if (skipModule(M))
-      return false;
-
-    return splitGlobals(M);
-  }
-};
-
-} // end anonymous namespace
-
-char GlobalSplit::ID = 0;
-
-INITIALIZE_PASS(GlobalSplit, "globalsplit", "Global splitter", false, false)
-
-ModulePass *llvm::createGlobalSplitPass() {
-  return new GlobalSplit;
-}
-
 PreservedAnalyses GlobalSplitPass::run(Module &M, ModuleAnalysisManager &AM) {
   if (!splitGlobals(M))
     return PreservedAnalyses::all();

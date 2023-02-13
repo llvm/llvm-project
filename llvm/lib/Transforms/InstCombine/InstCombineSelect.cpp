@@ -1605,12 +1605,18 @@ static Value *foldSelectInstWithICmpConst(SelectInst &SI, ICmpInst *ICI,
   Value *TVal = SI.getTrueValue();
   Value *FVal = SI.getFalseValue();
   if (Pred == ICmpInst::ICMP_EQ && V == FVal) {
-    // (V == 0) ? 1 : V --> umax(V, 1)
+    // (V == UMIN) ? UMIN+1 : V --> umax(V, UMIN+1)
     if (CmpC->isMinValue() && match(TVal, m_SpecificInt(*CmpC + 1)))
       return Builder.CreateBinaryIntrinsic(Intrinsic::umax, V, TVal);
     // (V == UMAX) ? UMAX-1 : V --> umin(V, UMAX-1)
     if (CmpC->isMaxValue() && match(TVal, m_SpecificInt(*CmpC - 1)))
       return Builder.CreateBinaryIntrinsic(Intrinsic::umin, V, TVal);
+    // (V == SMIN) ? SMIN+1 : V --> smax(V, SMIN+1)
+    if (CmpC->isMinSignedValue() && match(TVal, m_SpecificInt(*CmpC + 1)))
+      return Builder.CreateBinaryIntrinsic(Intrinsic::smax, V, TVal);
+    // (V == SMAX) ? SMAX-1 : V --> smin(V, SMAX-1)
+    if (CmpC->isMaxSignedValue() && match(TVal, m_SpecificInt(*CmpC - 1)))
+      return Builder.CreateBinaryIntrinsic(Intrinsic::smin, V, TVal);
   }
 
   BinaryOperator *BO;

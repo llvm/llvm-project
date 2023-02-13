@@ -150,6 +150,20 @@ define <8 x i16> @mla_v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x i16> 
   ret <8 x i16> %s2
 }
 
+define <8 x i16> @mls_v8i16_C(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x i16> %d, <8 x i16> %e) {
+; CHECK-LABEL: mls_v8i16_C:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v0.8h, #10
+; CHECK-NEXT:    mls v0.8h, v4.8h, v3.8h
+; CHECK-NEXT:    mls v0.8h, v2.8h, v1.8h
+; CHECK-NEXT:    ret
+  %m1.neg = mul <8 x i16> %c, %b
+  %m2.neg = mul <8 x i16> %e, %d
+  %reass.add = add <8 x i16> %m2.neg, %m1.neg
+  %s2 = sub <8 x i16> <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>, %reass.add
+  ret <8 x i16> %s2
+}
+
 
 define <vscale x 8 x i16> @smlsl_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i8> %b, <vscale x 8 x i8> %c, <vscale x 8 x i8> %d, <vscale x 8 x i8> %e) {
 ; CHECK-LABEL: smlsl_nxv8i16:

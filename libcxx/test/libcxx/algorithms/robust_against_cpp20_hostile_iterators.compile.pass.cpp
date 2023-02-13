@@ -138,6 +138,10 @@ void test() {
   (void) std::is_sorted(it, it, pred);
   (void) std::lexicographical_compare(it, it, it, it);
   (void) std::lexicographical_compare(it, it, it, it, pred);
+#if TEST_STD_VER > 17
+  (void)std::lexicographical_compare_three_way(it, it, it, it);
+  (void)std::lexicographical_compare_three_way(it, it, it, it, std::compare_three_way());
+#endif
   (void) std::lower_bound(it, it, 0);
   (void) std::lower_bound(it, it, 0, pred);
   (void) std::make_heap(it, it);

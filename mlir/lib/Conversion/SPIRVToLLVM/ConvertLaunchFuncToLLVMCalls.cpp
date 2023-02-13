@@ -33,7 +33,7 @@
 #include "llvm/Support/FormatVariadic.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_LOWERHOSTCODETOLLVM
+#define GEN_PASS_DEF_LOWERHOSTCODETOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -281,8 +281,11 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
 };
 
 class LowerHostCodeToLLVM
-    : public impl::LowerHostCodeToLLVMBase<LowerHostCodeToLLVM> {
+    : public impl::LowerHostCodeToLLVMPassBase<LowerHostCodeToLLVM> {
 public:
+
+  using Base::Base;
+
   void runOnOperation() override {
     ModuleOp module = getOperation();
 
@@ -327,8 +330,3 @@ public:
   }
 };
 } // namespace
-
-std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
-mlir::createLowerHostCodeToLLVMPass() {
-  return std::make_unique<LowerHostCodeToLLVM>();
-}

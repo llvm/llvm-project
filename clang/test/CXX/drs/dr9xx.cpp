@@ -73,6 +73,7 @@ namespace dr948 { // dr948: 3.7
 }
 
 namespace dr952 { // dr952: yes
+namespace example1 {
 struct A {
   typedef int I; // #dr952-typedef-decl
 };
@@ -98,6 +99,16 @@ struct C : B {
     }
   };
 };
+} // namespace example1
+namespace example2 {
+struct A {
+protected:
+  static int x;
+};
+struct B : A {
+  friend int get(B) { return x; }
+};
+} // namespace example2
 } // namespace dr952
 
 namespace dr974 { // dr974: yes

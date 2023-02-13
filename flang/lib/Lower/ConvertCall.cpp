@@ -19,6 +19,7 @@
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
@@ -26,10 +27,15 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
 #define DEBUG_TYPE "flang-lower-expr"
+
+static llvm::cl::opt<bool> useHlfirIntrinsicOps(
+    "use-hlfir-intrinsic-ops", llvm::cl::init(true),
+    llvm::cl::desc("Lower via HLFIR transformational intrinsic operations such as hlfir.sum"));
 
 /// Helper to package a Value and its properties into an ExtendedValue.
 static fir::ExtendedValue toExtendedValue(mlir::Location loc, mlir::Value base,
@@ -631,7 +637,8 @@ extendedValueToHlfirEntity(mlir::Location loc, fir::FirOpBuilder &builder,
                            const fir::ExtendedValue &exv,
                            llvm::StringRef name) {
   mlir::Value firBase = fir::getBase(exv);
-  if (fir::isa_trivial(firBase.getType()))
+  mlir::Type firBaseTy = firBase.getType();
+  if (fir::isa_trivial(firBaseTy))
     return hlfir::EntityWithAttributes{firBase};
   if (auto charTy = firBase.getType().dyn_cast<fir::CharacterType>()) {
     // CHAR() intrinsic and BIND(C) procedures returning CHARACTER(1)
@@ -1232,6 +1239,56 @@ genIntrinsicRefCore(PreparedActualArguments &loweredActuals,
   return resultEntity;
 }
 
+/// Lower calls to intrinsic procedures with actual arguments that have been
+/// pre-lowered but have not yet been prepared according to the interface.
+static std::optional<hlfir::EntityWithAttributes>
+genHLFIRIntrinsicRefCore(PreparedActualArguments &loweredActuals,
+                         const Fortran::evaluate::SpecificIntrinsic &intrinsic,
+                         const fir::IntrinsicArgumentLoweringRules *argLowering,
+                         CallContext &callContext) {
+  if (!useHlfirIntrinsicOps)
+    return genIntrinsicRefCore(loweredActuals, intrinsic, argLowering, callContext);
+
+  auto getOperandVector =
+    [](PreparedActualArguments &loweredActuals) {
+      llvm::SmallVector<mlir::Value> operands;
+      operands.reserve(loweredActuals.size());
+      for (auto arg : llvm::enumerate(loweredActuals)) {
+        if (!arg.value()) {
+          operands.emplace_back();
+          continue;
+        }
+        hlfir::Entity actual = arg.value()->getOriginalActual();
+        operands.emplace_back(actual.getBase());
+      }
+      return operands;
+    };
+
+  fir::FirOpBuilder &builder = callContext.getBuilder();
+  mlir::Location loc = callContext.loc;
+
+  if (intrinsic.name == "sum") {
+    llvm::SmallVector<mlir::Value> operands = getOperandVector(loweredActuals);
+    assert(operands.size() == 3);
+    mlir::Value array = hlfir::derefPointersAndAllocatables(
+        loc, builder, hlfir::Entity{operands[0]});
+    mlir::Value dim = operands[1];
+    if (dim)
+      dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
+    mlir::Value mask = operands[2];
+    // dim, mask can be NULL if these arguments were not given
+    hlfir::SumOp sumOp = builder.create<hlfir::SumOp>(loc, array, dim, mask,
+                                                      *callContext.resultType);
+    return {hlfir::EntityWithAttributes{sumOp.getResult()}};
+  }
+
+  // TODO add hlfir operations for other transformational intrinsics here
+
+  // fallback to calling the intrinsic via fir.call
+  return genIntrinsicRefCore(loweredActuals, intrinsic, argLowering,
+                             callContext);
+}
+
 namespace {
 template <typename ElementalCallBuilderImpl>
 class ElementalCallBuilder {
@@ -1405,8 +1462,8 @@ public:
   std::optional<hlfir::Entity>
   genElementalKernel(PreparedActualArguments &loweredActuals,
                      CallContext &callContext) {
-    return genIntrinsicRefCore(loweredActuals, intrinsic, argLowering,
-                               callContext);
+    return genHLFIRIntrinsicRefCore(loweredActuals, intrinsic, argLowering,
+                                    callContext);
   }
   // Elemental intrinsic functions cannot modify their arguments.
   bool argMayBeModifiedByCall(int) const { return !isFunction; }
@@ -1512,8 +1569,8 @@ genIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic &intrinsic,
         .genElementalCall(loweredActuals, /*isImpure=*/!isFunction, callContext)
         .value();
   }
-  std::optional<hlfir::EntityWithAttributes> result =
-      genIntrinsicRefCore(loweredActuals, intrinsic, argLowering, callContext);
+  std::optional<hlfir::EntityWithAttributes> result = genHLFIRIntrinsicRefCore(
+      loweredActuals, intrinsic, argLowering, callContext);
   if (result && result->getType().isa<hlfir::ExprType>()) {
     fir::FirOpBuilder *bldr = &callContext.getBuilder();
     callContext.stmtCtx.attachCleanup(

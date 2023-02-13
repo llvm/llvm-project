@@ -36,6 +36,9 @@ module {
   // Main driver.
   //
   func.func @entry() {
+    %c0 = arith.constant 0 : index
+    %f0 = arith.constant 0.0 : f64
+    %i0 = arith.constant 0 : i32
     //
     // Initialize a 3-dim dense tensor.
     //
@@ -94,6 +97,23 @@ module {
         vector.print %2: index
         vector.print %v: f64
      }
+
+
+    %d, %i, %n = sparse_tensor.unpack %s5 : tensor<10x10xf64, #SortedCOOI32>
+                                         to tensor<3xf64>, tensor<3x2xi32>, i32
+
+
+
+    // CHECK-NEXT: ( 1, 2, 3 )
+    %vd = vector.transfer_read %d[%c0], %f0 : tensor<3xf64>, vector<3xf64>
+    vector.print %vd : vector<3xf64>
+
+    // CHECK-NEXT: ( ( 1, 2 ), ( 5, 6 ), ( 7, 8 ) )
+    %vi = vector.transfer_read %i[%c0, %c0], %i0 : tensor<3x2xi32>, vector<3x2xi32>
+    vector.print %vi : vector<3x2xi32>
+
+    // CHECK-NEXT: 3
+    vector.print %n : i32
 
     return
   }

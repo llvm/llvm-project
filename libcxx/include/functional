@@ -222,10 +222,15 @@ template<class Fn, class... BoundArgs>
 template<class R, class Fn, class... BoundArgs>
   constexpr unspecified bind(Fn&&, BoundArgs&&...);  // constexpr in C++20
 
+// [func.invoke]
 template<class F, class... Args>
  constexpr // constexpr in C++20
  invoke_result_t<F, Args...> invoke(F&& f, Args&&... args) // C++17
     noexcept(is_nothrow_invocable_v<F, Args...>);
+
+template<class R, class F, class... Args>
+  constexpr R invoke_r(F&& f, Args&&... args)              // C++23
+    noexcept(is_nothrow_invocable_r_v<R, F, Args...>);
 
 namespace placeholders {
   // M is the implementation-defined number of placeholders

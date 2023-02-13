@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -98,4 +99,44 @@ bool hlfir::isFortranScalarCharacterExprType(mlir::Type type) {
     return exprType.isScalar() &&
            exprType.getElementType().isa<fir::CharacterType>();
   return false;
+}
+
+bool hlfir::isFortranScalarNumericalType(mlir::Type type) {
+  return fir::isa_integer(type) || fir::isa_real(type) ||
+         fir::isa_complex(type);
+}
+
+bool hlfir::isFortranNumericalArrayObject(mlir::Type type) {
+  if (isBoxAddressType(type))
+    return false;
+  if (auto arrayTy =
+          getFortranElementOrSequenceType(type).dyn_cast<fir::SequenceType>())
+    return isFortranScalarNumericalType(arrayTy.getEleTy());
+  return false;
+}
+
+bool hlfir::isPassByRefOrIntegerType(mlir::Type type) {
+  mlir::Type unwrappedType = fir::unwrapPassByRefType(type);
+  return fir::isa_integer(unwrappedType);
+}
+
+bool hlfir::isI1Type(mlir::Type type) {
+  if (mlir::IntegerType integer = type.dyn_cast<mlir::IntegerType>())
+    if (integer.getWidth() == 1)
+      return true;
+  return false;
+}
+
+bool hlfir::isMaskArgument(mlir::Type type) {
+  if (isBoxAddressType(type))
+    return false;
+
+  mlir::Type unwrappedType = fir::unwrapPassByRefType(fir::unwrapRefType(type));
+  mlir::Type elementType = getFortranElementType(unwrappedType);
+  if (unwrappedType != elementType)
+    // input type is an array
+    return mlir::isa<fir::LogicalType>(elementType);
+
+  // input is a scalar, so allow i1 too
+  return mlir::isa<fir::LogicalType>(elementType) || isI1Type(elementType);
 }

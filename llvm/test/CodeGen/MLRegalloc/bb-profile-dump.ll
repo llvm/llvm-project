@@ -1,11 +1,12 @@
-; REQUIRES: have_tflite
-; REQUIRES: default_triple
+; REQUIRES: x86-registered-target
 ;
 ; Check that the basic block profile dump outputs data and in the correct
 ; format.
 ;
-; RUN: llc -o /dev/null -mbb-profile-dump=%t %s
-; RUN: FileCheck --input-file %t %s
+; RUN: llc -mtriple=x86_64-linux-unknown -o /dev/null -mbb-profile-dump=- %s | FileCheck %s
+
+; bb profile dump is not supported on NVPTX
+; UNSUPPORTED: target=nvptx{{.*}}
 
 define i64 @f2(i64 %a, i64 %b) {
     %sum = add i64 %a, %b

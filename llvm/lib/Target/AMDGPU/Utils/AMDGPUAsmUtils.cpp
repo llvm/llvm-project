@@ -115,9 +115,13 @@ const CustomOperand<const MCSubtargetInfo &> Opr[] = {
   {{"HW_REG_HW_ID2"},        ID_HW_ID2,      isGFX10Plus},
   {{"HW_REG_POPS_PACKER"},   ID_POPS_PACKER, isGFX10},
   {{""}},
-  {{""}},
+  {{"HW_REG_PERF_SNAPSHOT_DATA"}, ID_PERF_SNAPSHOT_DATA, isGFX11Plus},
   {{""}},
   {{"HW_REG_SHADER_CYCLES"}, ID_SHADER_CYCLES, isGFX10_BEncoding},
+
+  // Register numbers reused in GFX11+
+  {{"HW_REG_PERF_SNAPSHOT_PC_LO"}, ID_PERF_SNAPSHOT_PC_LO, isGFX11Plus},
+  {{"HW_REG_PERF_SNAPSHOT_PC_HI"}, ID_PERF_SNAPSHOT_PC_HI, isGFX11Plus},
 
   // GFX940 specific registers
   {{"HW_REG_XCC_ID"},                 ID_XCC_ID,                 isGFX940},

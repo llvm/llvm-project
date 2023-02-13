@@ -1911,7 +1911,7 @@ AMDGPUDisassembler::decodeKernelDescriptorDirective(
                       KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
     }
 
-    if (AMDGPU::getAmdhsaCodeObjectVersion() >= 5)
+    if (AMDGPU::getAmdhsaCodeObjectVersion() >= AMDGPU::AMDHSA_COV5)
       PRINT_DIRECTIVE(".amdhsa_uses_dynamic_stack",
                       KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK);
 

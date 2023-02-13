@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #===- lib/dfsan/scripts/build-libc-list.py ---------------------------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -40,11 +40,13 @@ import subprocess
 import sys
 from optparse import OptionParser
 
-def defined_function_list(object):
+
+def defined_function_list(lib):
+  """Get non-local function symbols from lib."""
   functions = []
-  readelf_proc = subprocess.Popen(['readelf', '-s', '-W', object],
+  readelf_proc = subprocess.Popen(['readelf', '-s', '-W', lib],
                                   stdout=subprocess.PIPE)
-  readelf = readelf_proc.communicate()[0].split('\n')
+  readelf = readelf_proc.communicate()[0].decode().split('\n')
   if readelf_proc.returncode != 0:
     raise subprocess.CalledProcessError(readelf_proc.returncode, 'readelf')
   for line in readelf:
@@ -85,8 +87,5 @@ if options.error_missing_lib and missing_lib:
     print('Exiting with failure code due to missing library.', file=sys.stderr)
     exit(1)
 
-functions = list(set(functions))
-functions.sort()
-
-for f in functions:
+for f in sorted(set(functions)):
   print('fun:%s=uninstrumented' % f)

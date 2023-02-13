@@ -20,15 +20,23 @@
 #include "CodeGenRegisters.h"
 #include "InfoByHwMode.h"
 #include "SDNodeProperties.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/MachineValueType.h"
+#include <cassert>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
 
 namespace llvm {
 
 class RecordKeeper;
 class Record;
 class CodeGenInstruction;
-struct CodeGenRegister;
 class CodeGenSchedModels;
-class CodeGenTarget;
 
 /// getValueType - Return the MVT::SimpleValueType that the specified TableGen
 /// record corresponds to.
