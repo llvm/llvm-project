@@ -6511,6 +6511,9 @@ SDValue TargetLowering::BuildVPSDIV(SDNode *N, SelectionDAG &DAG,
       !isOperationLegalOrCustom(ISD::VP_MULHS, VT, IsAfterLegalization))
     return SDValue();
 
+  bool AnyFactorOne = false;
+  bool AnyFactorNegOne = false;
+
   SmallVector<SDValue, 16> MagicFactors, Factors, Shifts, ShiftMasks;
 
   auto BuildSDIVPattern = [&](ConstantSDNode *C) {
@@ -6529,12 +6532,16 @@ SDValue TargetLowering::BuildVPSDIV(SDNode *N, SelectionDAG &DAG,
       magics.Magic = 0;
       magics.ShiftAmount = 0;
       ShiftMask = 0;
+      AnyFactorOne |= Divisor.isOne();
+      AnyFactorNegOne |= Divisor.isAllOnes();
     } else if (Divisor.isStrictlyPositive() && magics.Magic.isNegative()) {
       // If d > 0 and m < 0, add the numerator.
       NumeratorFactor = 1;
+      AnyFactorOne = true;
     } else if (Divisor.isNegative() && magics.Magic.isStrictlyPositive()) {
       // If d < 0 and m > 0, subtract the numerator.
       NumeratorFactor = -1;
+      AnyFactorNegOne = true;
     }
 
     MagicFactors.push_back(DAG.getConstant(magics.Magic, DL, SVT));
@@ -6588,10 +6595,20 @@ SDValue TargetLowering::BuildVPSDIV(SDNode *N, SelectionDAG &DAG,
   Created.push_back(Q.getNode());
 
   // (Optionally) Add/subtract the numerator using Factor.
-  Factor = DAG.getNode(ISD::VP_MUL, DL, VT, N0, Factor, Mask, VL);
-  Created.push_back(Factor.getNode());
-  Q = DAG.getNode(ISD::VP_ADD, DL, VT, Q, Factor, Mask, VL);
-  Created.push_back(Q.getNode());
+  // FIXME: The AnyFactorOne/NegOne flags are a hack around lack of constant
+  // folding for VP_MUL/ADD.
+  if (AnyFactorOne && AnyFactorNegOne) {
+    Factor = DAG.getNode(ISD::VP_MUL, DL, VT, N0, Factor, Mask, VL);
+    Created.push_back(Factor.getNode());
+    Q = DAG.getNode(ISD::VP_ADD, DL, VT, Q, Factor, Mask, VL);
+    Created.push_back(Q.getNode());
+  } else if (AnyFactorOne) {
+    Q = DAG.getNode(ISD::VP_ADD, DL, VT, Q, N0, Mask, VL);
+    Created.push_back(Q.getNode());
+  } else if (AnyFactorNegOne) {
+    Q = DAG.getNode(ISD::VP_SUB, DL, VT, Q, N0, Mask, VL);
+    Created.push_back(Q.getNode());
+  }
 
   // Shift right algebraic by shift value.
   Q = DAG.getNode(ISD::VP_SRA, DL, VT, Q, Shift, Mask, VL);
