@@ -73,6 +73,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
+#include "llvm/CodeGen/HardwareLoops.h"
 #include "llvm/CodeGen/TypePromotion.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -538,6 +539,48 @@ auto parsePassParameters(ParametersParseCallableT &&Parser, StringRef Name,
   assert((Result || Result.template errorIsA<StringError>()) &&
          "Pass parameter parser can only return StringErrors.");
   return Result;
+}
+
+/// Parser of parameters for HardwareLoops  pass.
+Expected<HardwareLoopOptions> parseHardwareLoopOptions(StringRef Params) {
+  HardwareLoopOptions HardwareLoopOpts;
+
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+    if (ParamName.consume_front("hardware-loop-decrement=")) {
+      int Count;
+      if (ParamName.getAsInteger(0, Count))
+        return make_error<StringError>(
+            formatv("invalid HardwareLoopPass parameter '{0}' ", ParamName).str(),
+            inconvertibleErrorCode());
+      HardwareLoopOpts.setDecrement(Count);
+      continue;
+    }
+    if (ParamName.consume_front("hardware-loop-counter-bitwidth=")) {
+      int Count;
+      if (ParamName.getAsInteger(0, Count))
+        return make_error<StringError>(
+            formatv("invalid HardwareLoopPass parameter '{0}' ", ParamName).str(),
+            inconvertibleErrorCode());
+      HardwareLoopOpts.setCounterBitwidth(Count);
+      continue;
+    }
+    if (ParamName == "force-hardware-loops") {
+      HardwareLoopOpts.setForce(true);
+    } else if (ParamName == "force-hardware-loop-phi") {
+      HardwareLoopOpts.setForcePhi(true);
+    } else if (ParamName == "force-nested-hardware-loop") {
+      HardwareLoopOpts.setForceNested(true);
+    } else if (ParamName == "force-hardware-loop-guard") {
+      HardwareLoopOpts.setForceGuard(true);
+    } else {
+      return make_error<StringError>(
+          formatv("invalid HardwarePass parameter '{0}' ", ParamName).str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return HardwareLoopOpts;
 }
 
 /// Parser of parameters for LoopUnroll pass.
