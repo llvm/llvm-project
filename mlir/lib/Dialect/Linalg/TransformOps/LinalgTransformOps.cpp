@@ -665,9 +665,8 @@ transform::FuseIntoContainingOp::apply(transform::TransformResults &results,
   while (!remainingProducers.empty()) {
     auto nextProducer = getNextProducer();
     if (failed(nextProducer)) {
-      Diagnostic diag(containingOp->getLoc(), DiagnosticSeverity::Remark);
-      diag << "could not find next producer to fuse into container";
-      return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
+      return mlir::emitSilenceableFailure(containingOp->getLoc())
+             << "could not find next producer to fuse into container";
     }
 
     Operation *producerOp = *nextProducer;
@@ -886,9 +885,8 @@ DiagnosedSilenceableFailure transform::LowerPackOp::applyToOne(
   rewriter.setInsertionPoint(target);
   FailureOr<LowerPackResult> res = lowerPack(rewriter, target);
   if (failed(res)) {
-    Diagnostic diag(target->getLoc(), DiagnosticSeverity::Error);
-    diag << "cannot lower to pad + expand + transpose";
-    return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
+    return mlir::emitSilenceableFailure(target->getLoc())
+           << "cannot lower to pad + expand + transpose";
   }
   transformResults.push_back(res->padOp);
   transformResults.push_back(res->expandShapeOp);
@@ -996,9 +994,8 @@ DiagnosedSilenceableFailure transform::LowerUnPackOp::applyToOne(
   rewriter.setInsertionPoint(target);
   FailureOr<LowerUnPackOpResult> res = lowerUnPack(rewriter, target);
   if (failed(res)) {
-    Diagnostic diag(target->getLoc(), DiagnosticSeverity::Error);
-    diag << "cannot rewrite to pad + expand + transpose";
-    return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
+    return mlir::emitSilenceableFailure(target->getLoc())
+           << "cannot rewrite to pad + expand + transpose";
   }
   transformResults.push_back(res->emptyOp);
   transformResults.push_back(res->transposeOp);
@@ -2985,15 +2982,13 @@ DiagnosedSilenceableFailure transform::MaskedVectorizeOp::apply(
   for (Operation *target : targets) {
     auto linalgOp = dyn_cast<LinalgOp>(target);
     if (!linalgOp) {
-      Diagnostic diag(target->getLoc(), DiagnosticSeverity::Error);
-      diag << "cannot vectorize non-Linalg op";
-      return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
+      return mlir::emitSilenceableFailure(target->getLoc())
+             << "cannot vectorize non-Linalg op";
     }
 
     if (failed(linalg::vectorize(rewriter, linalgOp, vectorSizes))) {
-      Diagnostic diag(target->getLoc(), DiagnosticSeverity::Error);
-      diag << "failed to vectorize op";
-      return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
+      return mlir::emitSilenceableFailure(target->getLoc())
+             << "failed to vectorize op";
     }
   }
 
