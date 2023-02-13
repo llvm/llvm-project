@@ -221,6 +221,40 @@ end:
 
 ; // -----
 
+; CHECK-DAG: #[[PEELED_ATTR:.*]] = #llvm.loop_peeled<count = 5 : i32>
+; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<peeled = #[[PEELED_ATTR]]>
+
+; CHECK-LABEL: @peeled
+define void @peeled(i64 %n, ptr %A) {
+entry:
+; CHECK: llvm.br ^{{.*}} {llvm.loop = #[[$ANNOT_ATTR]]}
+  br label %end, !llvm.loop !1
+end:
+  ret void
+}
+
+!1 = distinct !{!1, !2}
+!2 = !{!"llvm.loop.peeled.count", i32 5}
+
+; // -----
+
+; CHECK-DAG: #[[UNSWITCH_ATTR:.*]] = #llvm.loop_unswitch<partialDisable = true>
+; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<unswitch = #[[UNSWITCH_ATTR]]>
+
+; CHECK-LABEL: @unswitched
+define void @unswitched(i64 %n, ptr %A) {
+entry:
+; CHECK: llvm.br ^{{.*}} {llvm.loop = #[[$ANNOT_ATTR]]}
+  br label %end, !llvm.loop !1
+end:
+  ret void
+}
+
+!1 = distinct !{!1, !2}
+!2 = !{!"llvm.loop.unswitch.partial.disable"}
+
+; // -----
+
 ; CHECK: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<parallelAccesses = @__llvm_global_metadata::@[[GROUP0:.*]]>
 
 ; CHECK: llvm.metadata @__llvm_global_metadata {
