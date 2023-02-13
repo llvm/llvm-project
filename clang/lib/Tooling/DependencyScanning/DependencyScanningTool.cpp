@@ -27,66 +27,6 @@ DependencyScanningTool::DependencyScanningTool(
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
     : Worker(Service, std::move(FS)) {}
 
-namespace {
-/// Prints out all of the gathered dependencies into a string.
-class MakeDependencyPrinterConsumer : public DependencyConsumer {
-public:
-  void handleBuildCommand(Command) override {}
-
-  void
-  handleDependencyOutputOpts(const DependencyOutputOptions &Opts) override {
-    this->Opts = std::make_unique<DependencyOutputOptions>(Opts);
-  }
-
-  void handleFileDependency(StringRef File) override {
-    Dependencies.push_back(std::string(File));
-  }
-
-  void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) override {
-    // Same as `handleModuleDependency`.
-  }
-
-  void handleModuleDependency(ModuleDeps MD) override {
-    // These are ignored for the make format as it can't support the full
-    // set of deps, and handleFileDependency handles enough for implicitly
-    // built modules to work.
-  }
-
-  void handleContextHash(std::string Hash) override {}
-
-  std::string lookupModuleOutput(const ModuleID &ID,
-                                 ModuleOutputKind Kind) override {
-    llvm::report_fatal_error("unexpected call to lookupModuleOutput");
-  }
-
-  void printDependencies(std::string &S) {
-    assert(Opts && "Handled dependency output options.");
-
-    class DependencyPrinter : public DependencyFileGenerator {
-    public:
-      DependencyPrinter(DependencyOutputOptions &Opts,
-                        ArrayRef<std::string> Dependencies)
-          : DependencyFileGenerator(Opts) {
-        for (const auto &Dep : Dependencies)
-          addDependency(Dep);
-      }
-
-      void printDependencies(std::string &S) {
-        llvm::raw_string_ostream OS(S);
-        outputDependencyFile(OS);
-      }
-    };
-
-    DependencyPrinter Generator(*Opts, Dependencies);
-    Generator.printDependencies(S);
-  }
-
-protected:
-  std::unique_ptr<DependencyOutputOptions> Opts;
-  std::vector<std::string> Dependencies;
-};
-} // anonymous namespace
-
 llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
     const std::vector<std::string> &CommandLine, StringRef CWD) {
   /// Prints out all of the gathered dependencies into a string.
@@ -599,10 +539,8 @@ DependencyScanningTool::getIncludeTreeFromCompilerInvocation(
 }
 
 llvm::Expected<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
-    const CompileCommand &Command, StringRef CWD,
-    std::string &MakeformatOutput, std::string &MakeformatOutputPath) {
-  class P1689ModuleDependencyPrinterConsumer
-      : public MakeDependencyPrinterConsumer {
+    const CompileCommand &Command, StringRef CWD) {
+  class P1689ModuleDependencyPrinterConsumer : public DependencyConsumer {
   public:
     P1689ModuleDependencyPrinterConsumer(P1689Rule &Rule,
                                          const CompileCommand &Command)
@@ -611,6 +549,17 @@ llvm::Expected<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
     }
 
     void handleCASFileSystemRootID(cas::CASID) override {}
+    void
+    handleDependencyOutputOpts(const DependencyOutputOptions &Opts) override {}
+    void handleFileDependency(StringRef File) override {}
+    void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) override {}
+    void handleModuleDependency(ModuleDeps MD) override {}
+    void handleContextHash(std::string Hash) override {}
+    std::string lookupModuleOutput(const ModuleID &ID,
+                                   ModuleOutputKind Kind) override {
+      llvm::report_fatal_error("unexpected call to lookupModuleOutput");
+    }
+
     void handleProvidedAndRequiredStdCXXModules(
         std::optional<P1689ModuleInfo> Provided,
         std::vector<P1689ModuleInfo> Requires) override {
@@ -618,12 +567,6 @@ llvm::Expected<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
       if (Rule.Provides)
         Rule.Provides->SourcePath = Filename.str();
       Rule.Requires = Requires;
-    }
-
-    StringRef getMakeFormatDependencyOutputPath() {
-      if (Opts->OutputFormat != DependencyOutputFormat::Make)
-        return {};
-      return Opts->OutputFile;
     }
 
   private:
@@ -636,10 +579,6 @@ llvm::Expected<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
   auto Result = Worker.computeDependencies(CWD, Command.CommandLine, Consumer);
   if (Result)
     return std::move(Result);
-
-  MakeformatOutputPath = Consumer.getMakeFormatDependencyOutputPath();
-  if (!MakeformatOutputPath.empty())
-    Consumer.printDependencies(MakeformatOutput);
   return Rule;
 }
 
