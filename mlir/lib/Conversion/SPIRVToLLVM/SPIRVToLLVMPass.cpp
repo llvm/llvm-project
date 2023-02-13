@@ -39,7 +39,11 @@ public:
 void ConvertSPIRVToLLVMPass::runOnOperation() {
   MLIRContext *context = &getContext();
   ModuleOp module = getOperation();
-  LLVMTypeConverter converter(&getContext());
+
+  LowerToLLVMOptions options(&getContext());
+  options.useOpaquePointers = useOpaquePointers;
+
+  LLVMTypeConverter converter(&getContext(), options);
 
   // Encode global variable's descriptor set and binding if they exist.
   encodeBindAttribute(module);
