@@ -2025,6 +2025,22 @@ define { float, float } @v_fneg_rcp_multi_use_fneg_f32(float %a, float %c) #0 {
   ret { float, float } %insert.1
 }
 
+; Test getNegatedExpression works for rcp nodes
+define float @v_negated_rcp_f32(float %arg0, float %arg1) #1 {
+; GCN-LABEL: v_negated_rcp_f32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_fma_f32 v0, -v0, v1, -2.0
+; GCN-NEXT:    v_rcp_f32_e32 v0, v0
+; GCN-NEXT:    v_sub_f32_e32 v0, v1, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %neg.arg0 = fneg float %arg0
+  %fma = call nsz float @llvm.fma.f32(float %neg.arg0, float %arg1, float -2.0)
+  %rcp0 = call float @llvm.amdgcn.rcp.f32(float %fma)
+  %mul = fsub nsz float %arg1, %rcp0
+  ret float %mul
+}
+
 ; --------------------------------------------------------------------------------
 ; fmul_legacy tests
 ; --------------------------------------------------------------------------------
@@ -2369,12 +2385,12 @@ define void @v_fneg_copytoreg_f32(ptr addrspace(1) %out, float %a, float %b, flo
 ; SI-NEXT:    v_mul_f32_e32 v2, v2, v3
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v5
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; SI-NEXT:    s_cbranch_execz .LBB117_2
+; SI-NEXT:    s_cbranch_execz .LBB118_2
 ; SI-NEXT:  ; %bb.1: ; %if
 ; SI-NEXT:    v_mul_f32_e64 v3, -v2, v4
 ; SI-NEXT:    flat_store_dword v[0:1], v3
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:  .LBB117_2: ; %endif
+; SI-NEXT:  .LBB118_2: ; %endif
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; SI-NEXT:    flat_store_dword v[0:1], v2
 ; SI-NEXT:    s_waitcnt vmcnt(0)
@@ -2390,12 +2406,12 @@ define void @v_fneg_copytoreg_f32(ptr addrspace(1) %out, float %a, float %b, flo
 ; VI-NEXT:    v_mul_f32_e32 v2, v2, v3
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v5
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; VI-NEXT:    s_cbranch_execz .LBB117_2
+; VI-NEXT:    s_cbranch_execz .LBB118_2
 ; VI-NEXT:  ; %bb.1: ; %if
 ; VI-NEXT:    v_mul_f32_e64 v3, -v2, v4
 ; VI-NEXT:    flat_store_dword v[0:1], v3
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:  .LBB117_2: ; %endif
+; VI-NEXT:  .LBB118_2: ; %endif
 ; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_waitcnt vmcnt(0)
