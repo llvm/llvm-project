@@ -86,9 +86,10 @@ include_directories(AFTER ${CMAKE_CURRENT_BINARY_DIR})
 append(${NO_LTO_FLAGS} CMAKE_C_FLAGS)
 append(${NO_LTO_FLAGS} CMAKE_CXX_FLAGS)
 
-# Disable libstdc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build, to
-# avoid an unwanted dependency on libstdc++.so.
+# Disable libstdc++/libc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build,
+# to avoid an unwanted dependency on libstdc++/libc++.so.
 add_definitions(-U_GLIBCXX_ASSERTIONS)
+add_definitions(-U_LIBCPP_ENABLE_ASSERTIONS)
 
 add_subdirectory(FortranMain)
 
