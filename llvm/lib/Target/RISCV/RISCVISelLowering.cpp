@@ -312,7 +312,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget.hasVendorXTHeadBb()) {
-    setOperationAction({ISD::CTLZ}, XLenVT, Legal);
+    setOperationAction(ISD::CTLZ, XLenVT, Legal);
 
     // We need the custom lowering to make sure that the resulting sequence
     // for the 32bit case is efficient on 64bit targets.
