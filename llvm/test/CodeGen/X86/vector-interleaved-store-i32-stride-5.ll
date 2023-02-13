@@ -87,19 +87,20 @@ define void @store_i32_stride5_vf2(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ;
 ; AVX512-LABEL: store_i32_stride5_vf2:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX512-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX512-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm2 = <0,2,4,6,16,1,3,5,7,17,u,u,u,u,u,u>
-; AVX512-NEXT:    vpermi2d %zmm1, %zmm0, %zmm2
-; AVX512-NEXT:    vextracti32x4 $2, %zmm2, %xmm0
-; AVX512-NEXT:    vmovq %xmm0, 32(%r9)
-; AVX512-NEXT:    vmovdqa %ymm2, (%r9)
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX512-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; AVX512-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX512-NEXT:    vinsertf32x4 $2, %xmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vmovaps {{.*#+}} zmm1 = <0,2,4,6,8,1,3,5,7,9,u,u,u,u,u,u>
+; AVX512-NEXT:    vpermps %zmm0, %zmm1, %zmm0
+; AVX512-NEXT:    vextractf32x4 $2, %zmm0, %xmm1
+; AVX512-NEXT:    vmovlps %xmm1, 32(%r9)
+; AVX512-NEXT:    vmovaps %ymm0, (%r9)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %in.vec0 = load <2 x i32>, ptr %in.vecptr0, align 64

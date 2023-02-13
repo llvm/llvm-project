@@ -2038,7 +2038,7 @@ define void @vec384_i8_widen_to_i24_factor3_broadcast_to_v16i24_factor16(ptr %in
 ; AVX2-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX2-NEXT:    vpshufb {{.*#+}} xmm2 = zero,zero,xmm1[0],zero,zero,xmm1[0],zero,zero,xmm1[0],zero,zero,xmm1[0],zero,zero,xmm1[0],zero
 ; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm2 = mem[2,3],ymm2[0,1]
+; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm2 = mem[2,3],ymm0[2,3]
 ; AVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [0,255,255,0,255,255,0,255,255,0,255,255,0,255,255,0,0,255,255,0,255,255,0,255,255,0,255,255,0,255,255,0]
 ; AVX2-NEXT:    vpblendvb %ymm3, %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} xmm1 = zero,xmm1[0],zero,zero,xmm1[0],zero,zero,xmm1[0],zero,zero,xmm1[0],zero,zero,xmm1[0],zero,zero
@@ -2290,7 +2290,7 @@ define void @vec384_i8_widen_to_i48_factor6_broadcast_to_v8i48_factor8(ptr %in.e
 ; AVX2-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX2-NEXT:    vpshufb {{.*#+}} xmm2 = zero,zero,xmm1[0],zero,zero,zero,zero,zero,xmm1[0],zero,zero,zero,zero,zero,xmm1[0],zero
 ; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm2 = mem[2,3],ymm2[0,1]
+; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm2 = mem[2,3],ymm0[2,3]
 ; AVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [0,255,255,255,255,255,0,255,255,255,255,255,0,255,255,255,0,255,255,255,255,255,0,255,255,255,255,255,0,255,255,255]
 ; AVX2-NEXT:    vpblendvb %ymm3, %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} xmm1 = zero,zero,zero,zero,xmm1[0],zero,zero,zero,zero,zero,xmm1[0],zero,zero,zero,zero,zero
@@ -2542,7 +2542,7 @@ define void @vec384_i8_widen_to_i96_factor12_broadcast_to_v4i96_factor4(ptr %in.
 ; AVX2-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX2-NEXT:    vpshufb {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0],zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm2 = mem[2,3],ymm2[0,1]
+; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm2 = mem[2,3],ymm0[2,3]
 ; AVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [0,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255]
 ; AVX2-NEXT:    vpblendvb %ymm3, %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} xmm1 = zero,zero,zero,zero,xmm1[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
