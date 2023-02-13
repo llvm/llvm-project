@@ -3579,6 +3579,9 @@ private:
                              getAdjustedAlignment(&SI, 0), DL, IRB);
     Splitter.emitSplitOps(V->getType(), V, V->getName() + ".fca");
     Visited.erase(&SI);
+    // The stores replacing SI each have markers describing fragments of the
+    // assignment so delete the assignment markers linked to SI.
+    at::deleteAssignmentMarkers(&SI);
     SI.eraseFromParent();
     return true;
   }
