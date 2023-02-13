@@ -62,8 +62,9 @@ def nm_get_symbols(lib):
         match = re.match("^(\S+)\s+[^AU]\s+\S+\s+\S*$", line)
         if match:
             yield (match.group(1), True)
-        # Look for undefined symbols, which have only name and type (which is U).
-        match = re.match("^(\S+)\s+U\s+$", line)
+        # Look for undefined symbols, which have type U and may or may not
+        # (depending on which nm is being used) have value and size.
+        match = re.match("^(\S+)\s+U\s+(\S+\s+\S*)?$", line)
         if match:
             yield (match.group(1), False)
     process.wait()
