@@ -8164,11 +8164,17 @@ bool SIInstrInfo::splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset,
     }
   }
 
-  // There is a hardware bug in SI and CI which prevents address clamping in
-  // MUBUF instructions from working correctly with SOffsets. The immediate
-  // offset is unaffected.
-  if (Overflow > 0 && ST.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS)
-    return false;
+  if (Overflow > 0) {
+    // There is a hardware bug in SI and CI which prevents address clamping in
+    // MUBUF instructions from working correctly with SOffsets. The immediate
+    // offset is unaffected.
+    if (ST.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS)
+      return false;
+
+    // It is not possible to set immediate in SOffset field on some targets.
+    if (ST.hasRestrictedSOffset())
+      return false;
+  }
 
   ImmOffset = Imm;
   SOffset = Overflow;

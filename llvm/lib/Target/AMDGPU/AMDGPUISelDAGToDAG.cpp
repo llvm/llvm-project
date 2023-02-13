@@ -1245,7 +1245,9 @@ bool AMDGPUDAGToDAGISel::SelectMUBUF(SDValue Addr, SDValue &Ptr, SDValue &VAddr,
   Idxen = CurDAG->getTargetConstant(0, DL, MVT::i1);
   Offen = CurDAG->getTargetConstant(0, DL, MVT::i1);
   Addr64 = CurDAG->getTargetConstant(0, DL, MVT::i1);
-  SOffset = CurDAG->getTargetConstant(0, DL, MVT::i32);
+  SOffset = Subtarget->hasRestrictedSOffset()
+                ? CurDAG->getRegister(AMDGPU::SGPR_NULL, MVT::i32)
+                : CurDAG->getTargetConstant(0, DL, MVT::i32);
 
   ConstantSDNode *C1 = nullptr;
   SDValue N0 = Addr;
@@ -1501,6 +1503,21 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc,
     return true;
   }
   return false;
+}
+
+bool AMDGPUDAGToDAGISel::SelectBUFSOffset(SDValue ByteOffsetNode,
+                                          SDValue &SOffset) const {
+  if (Subtarget->hasRestrictedSOffset()) {
+    if (auto SOffsetConst = dyn_cast<ConstantSDNode>(ByteOffsetNode)) {
+      if (SOffsetConst->isZero()) {
+        SOffset = CurDAG->getRegister(AMDGPU::SGPR_NULL, MVT::i32);
+        return true;
+      }
+    }
+  }
+
+  SOffset = ByteOffsetNode;
+  return true;
 }
 
 // Find a load or store from corresponding pattern root.

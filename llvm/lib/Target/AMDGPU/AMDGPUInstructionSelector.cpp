@@ -4891,6 +4891,14 @@ AMDGPUInstructionSelector::selectMUBUFOffset(MachineOperand &Root) const {
 }
 
 InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectBUFSOffset(MachineOperand &Root) const {
+
+  Register SOffset = Root.getReg();
+  // TODO-GFX12: Generate SGPR_NULL for immediate 0.
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(SOffset); }}};
+}
+
+InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectMUBUFAddr64Atomic(MachineOperand &Root) const {
   Register VAddr;
   Register RSrcReg;
