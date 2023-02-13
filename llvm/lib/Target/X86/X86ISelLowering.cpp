@@ -40064,16 +40064,6 @@ static SDValue combineX86ShufflesRecursively(
     OpMask.assign(NumElts, SM_SentinelUndef);
     std::iota(OpMask.begin(), OpMask.end(), ExtractIdx);
     OpZero = OpUndef = APInt::getNullValue(NumElts);
-  } else if (Op.getOpcode() == ISD::TRUNCATE &&
-             (RootSizeInBits % Op.getOperand(0).getValueSizeInBits()) == 0) {
-    SDValue SrcVec = Op.getOperand(0);
-    unsigned Scale = SrcVec.getValueSizeInBits() / VT.getSizeInBits();
-    unsigned NumElts = VT.getVectorNumElements();
-    OpInputs.assign({SrcVec});
-    OpMask.assign(Scale * NumElts, SM_SentinelUndef);
-    OpZero = OpUndef = APInt::getNullValue(Scale * NumElts);
-    for (unsigned I = 0; I != NumElts; ++I)
-      OpMask[I] = I * Scale;
   } else {
     return SDValue();
   }
@@ -44248,6 +44238,18 @@ static SDValue combinePredicateReduction(SDNode *Extract, SelectionDAG &DAG,
         if ((BinOp == ISD::AND && CC == ISD::CondCode::SETEQ) ||
             (BinOp == ISD::OR && CC == ISD::CondCode::SETNE)) {
           EVT VecVT = Match.getOperand(0).getValueType();
+
+          // If representable as a scalar integer:
+          // For all_of(setcc(x,y,eq)) - use (iX)x == (iX)y.
+          // For any_of(setcc(x,y,ne)) - use (iX)x != (iX)y.
+          EVT IntVT = EVT::getIntegerVT(Ctx, VecVT.getSizeInBits());
+          if (TLI.isTypeLegal(IntVT)) {
+            SDValue LHS = DAG.getFreeze(Match.getOperand(0));
+            SDValue RHS = DAG.getFreeze(Match.getOperand(1));
+            return DAG.getSetCC(DL, ExtractVT, DAG.getBitcast(IntVT, LHS),
+                                DAG.getBitcast(IntVT, RHS), CC);
+          }
+
           EVT VecSVT = VecVT.getScalarType();
           if (VecSVT != MVT::i8 && (VecSVT.getSizeInBits() % 8) == 0) {
             NumElts *= VecSVT.getSizeInBits() / 8;
@@ -55376,11 +55378,16 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       }
       [[fallthrough]];
     case X86ISD::VPERMILPI:
-      if (!IsSplat && NumOps == 2 && (VT == MVT::v8f32 || VT == MVT::v8i32) &&
-          Op0.getOperand(1) == Ops[1].getOperand(1)) {
-        SDValue Res = DAG.getBitcast(MVT::v8f32, ConcatSubOperand(VT, Ops, 0));
-        Res = DAG.getNode(X86ISD::VPERMILPI, DL, MVT::v8f32, Res,
-                          Op0.getOperand(1));
+      if (!IsSplat && VT.getScalarSizeInBits() == 32 &&
+          (VT.is256BitVector() ||
+           (VT.is512BitVector() && Subtarget.useAVX512Regs())) &&
+          all_of(Ops, [&Op0](SDValue Op) {
+            return Op0.getOperand(1) == Op.getOperand(1);
+          })) {
+        MVT FloatVT = VT.changeVectorElementType(MVT::f32);
+        SDValue Res = DAG.getBitcast(FloatVT, ConcatSubOperand(VT, Ops, 0));
+        Res =
+            DAG.getNode(X86ISD::VPERMILPI, DL, FloatVT, Res, Op0.getOperand(1));
         return DAG.getBitcast(VT, Res);
       }
       if (!IsSplat && NumOps == 2 && VT == MVT::v4f64) {

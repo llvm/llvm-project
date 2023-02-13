@@ -484,8 +484,9 @@ protected:
   ///   debugger identifier that this progress should be delivered to. If this
   ///   optional parameter does not have a value, the progress will be
   ///   delivered to all debuggers.
-  static void ReportProgress(uint64_t progress_id, const std::string &message,
-                             uint64_t completed, uint64_t total,
+  static void ReportProgress(uint64_t progress_id, std::string title,
+                             std::string details, uint64_t completed,
+                             uint64_t total,
                              std::optional<lldb::user_id_t> debugger_id);
 
   static void ReportDiagnosticImpl(DiagnosticEventData::Type type,

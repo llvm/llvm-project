@@ -62,27 +62,6 @@ struct ModuleID {
   }
 };
 
-/// P1689ModuleInfo - Represents the needed information of standard C++20
-/// modules for P1689 format.
-struct P1689ModuleInfo {
-  /// The name of the module. This may include `:` for partitions.
-  std::string ModuleName;
-
-  /// Optional. The source path to the module.
-  std::string SourcePath;
-
-  /// If this module is a standard c++ interface unit.
-  bool IsStdCXXModuleInterface = true;
-
-  enum class ModuleType {
-    NamedCXXModule
-    // To be supported
-    // AngleHeaderUnit,
-    // QuoteHeaderUnit
-  };
-  ModuleType Type = ModuleType::NamedCXXModule;
-};
-
 /// An output from a module compilation, such as the path of the module file.
 enum class ModuleOutputKind {
   /// The module file (.pcm). Required.
@@ -202,7 +181,7 @@ public:
   ModuleDepCollector(std::unique_ptr<DependencyOutputOptions> Opts,
                      CompilerInstance &ScanInstance, DependencyConsumer &C,
                      CompilerInvocation OriginalCI, bool OptimizeArgs,
-                     bool EagerLoadModules, bool IsStdModuleP1689Format);
+                     bool EagerLoadModules);
 
   void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
@@ -240,12 +219,6 @@ private:
   bool OptimizeArgs;
   /// Whether to set up command-lines to load PCM files eagerly.
   bool EagerLoadModules;
-  /// If we're generating dependency output in P1689 format
-  /// for standard C++ modules.
-  bool IsStdModuleP1689Format;
-
-  std::optional<P1689ModuleInfo> ProvidedStdCXXModule;
-  std::vector<P1689ModuleInfo> RequiredStdCXXModules;
 
   /// Checks whether the module is known as being prebuilt.
   bool isPrebuiltModule(const Module *M);

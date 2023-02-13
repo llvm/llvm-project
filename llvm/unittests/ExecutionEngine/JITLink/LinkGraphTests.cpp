@@ -721,9 +721,9 @@ TEST(LinkGraphTest, GraphAllocationMethods) {
   EXPECT_EQ(Buf1.size(), 10U);
 
   // Test allocation of content-backed buffer.
-  ArrayRef<char> Buf2Src = {1, static_cast<char>(-1), 0, 42};
-  auto Buf2 = G.allocateContent(Buf2Src);
-  EXPECT_EQ(Buf2, Buf2Src);
+  char Buf2Src[] = {1, static_cast<char>(-1), 0, 42};
+  auto Buf2 = G.allocateContent(ArrayRef<char>(Buf2Src));
+  EXPECT_EQ(Buf2, ArrayRef<char>(Buf2Src));
 
   // Test c-string allocation from StringRef.
   StringRef Buf3Src = "hello";
@@ -739,8 +739,8 @@ TEST(LinkGraphTest, IsCStringBlockTest) {
   auto &Sec =
       G.createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
 
-  ArrayRef<char> CString = "hello, world!";
-  ArrayRef<char> NotACString = {0, 1, 0, 1, 0};
+  char CString[] = "hello, world!";
+  char NotACString[] = {0, 1, 0, 1, 0};
 
   auto &CStringBlock =
       G.createContentBlock(Sec, CString, orc::ExecutorAddr(), 1, 0);

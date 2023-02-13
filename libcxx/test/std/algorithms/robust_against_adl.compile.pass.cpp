@@ -108,7 +108,10 @@ TEST_CONSTEXPR_CXX20 bool all_the_algorithms()
     // RELIES ON ADL SWAP (void)std::iter_swap(first, mid);
     (void)std::lexicographical_compare(first, last, first2, last2);
     (void)std::lexicographical_compare(first, last, first2, last2, std::less<void*>());
-    // TODO: lexicographical_compare_three_way
+#if TEST_STD_VER > 17
+    (void)std::lexicographical_compare_three_way(first, last, first2, last2);
+    (void)std::lexicographical_compare_three_way(first, last, first2, last2, std::compare_three_way());
+#endif
     (void)std::lower_bound(first, last, value);
     (void)std::lower_bound(first, last, value, std::less<void*>());
     (void)std::make_heap(first, last);

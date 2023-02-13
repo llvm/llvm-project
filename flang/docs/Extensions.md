@@ -79,6 +79,11 @@ end
   kind 4, because the grammar of Fortran expressions parses it as a
   negation of a literal constant, not a negative literal constant.
   This compiler accepts it with a portability warning.
+* Construct names like `loop` in `loop: do j=1,n` are defined to
+  be "local identifiers" and should be distinct in the "inclusive
+  scope" -- i.e., not scoped by `BLOCK` constructs.
+  As most (but not all) compilers implement `BLOCK` scoping of construct
+  names, so does f18, with a portability warning.
 
 ## Extensions, deletions, and legacy features supported by default
 

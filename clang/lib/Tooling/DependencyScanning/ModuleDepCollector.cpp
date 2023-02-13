@@ -341,14 +341,6 @@ void ModuleDepCollectorPP::InclusionDirective(
 void ModuleDepCollectorPP::moduleImport(SourceLocation ImportLoc,
                                         ModuleIdPath Path,
                                         const Module *Imported) {
-  if (MDC.ScanInstance.getPreprocessor().isInImportingCXXNamedModules()) {
-    P1689ModuleInfo RequiredModule;
-    RequiredModule.ModuleName = Path[0].first->getName().str();
-    RequiredModule.Type = P1689ModuleInfo::ModuleType::NamedCXXModule;
-    MDC.RequiredStdCXXModules.push_back(RequiredModule);
-    return;
-  }
-
   handleImport(Imported);
 }
 
@@ -371,21 +363,6 @@ void ModuleDepCollectorPP::EndOfMainFile() {
                                  .getFileEntryForID(MainFileID)
                                  ->getName());
 
-  auto &PP = MDC.ScanInstance.getPreprocessor();
-  if (PP.isInNamedModule()) {
-    P1689ModuleInfo ProvidedModule;
-    ProvidedModule.ModuleName = PP.getNamedModuleName();
-    ProvidedModule.Type = P1689ModuleInfo::ModuleType::NamedCXXModule;
-    ProvidedModule.IsStdCXXModuleInterface = PP.isInNamedInterfaceUnit();
-    // Don't put implementation (non partition) unit as Provide.
-    // Put the module as required instead. Since the implementation
-    // unit will import the primary module implicitly.
-    if (PP.isInImplementationUnit())
-      MDC.RequiredStdCXXModules.push_back(ProvidedModule);
-    else
-      MDC.ProvidedStdCXXModule = ProvidedModule;
-  }
-
   if (!MDC.ScanInstance.getPreprocessorOpts().ImplicitPCHInclude.empty())
     MDC.addFileDep(MDC.ScanInstance.getPreprocessorOpts().ImplicitPCHInclude);
 
@@ -398,10 +375,6 @@ void ModuleDepCollectorPP::EndOfMainFile() {
     handleTopLevelModule(M);
 
   MDC.Consumer.handleDependencyOutputOpts(*MDC.Opts);
-
-  if (MDC.IsStdModuleP1689Format)
-    MDC.Consumer.handleProvidedAndRequiredStdCXXModules(
-        MDC.ProvidedStdCXXModule, MDC.RequiredStdCXXModules);
 
   for (auto &&I : MDC.ModularDeps)
     MDC.Consumer.handleModuleDependency(*I.second);
@@ -577,12 +550,10 @@ void ModuleDepCollectorPP::addAffectingClangModule(
 ModuleDepCollector::ModuleDepCollector(
     std::unique_ptr<DependencyOutputOptions> Opts,
     CompilerInstance &ScanInstance, DependencyConsumer &C,
-    CompilerInvocation OriginalCI, bool OptimizeArgs, bool EagerLoadModules,
-    bool IsStdModuleP1689Format)
+    CompilerInvocation OriginalCI, bool OptimizeArgs, bool EagerLoadModules)
     : ScanInstance(ScanInstance), Consumer(C), Opts(std::move(Opts)),
       OriginalInvocation(std::move(OriginalCI)), OptimizeArgs(OptimizeArgs),
-      EagerLoadModules(EagerLoadModules),
-      IsStdModuleP1689Format(IsStdModuleP1689Format) {}
+      EagerLoadModules(EagerLoadModules) {}
 
 void ModuleDepCollector::attachToPreprocessor(Preprocessor &PP) {
   PP.addPPCallbacks(std::make_unique<ModuleDepCollectorPP>(*this));
