@@ -416,6 +416,8 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (isClangCache(DriverMode)) {
     if (std::optional<int> ExitCode = handleClangCacheInvocation(Args, Saver))
       return *ExitCode;
+    // handleClangCacheInvocation resets the ProgName.
+    ProgName = Args[0];
   }
 
   // Parse response files using the GNU syntax, unless we're in CL mode. There
