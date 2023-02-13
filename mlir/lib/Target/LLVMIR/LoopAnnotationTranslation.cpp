@@ -42,6 +42,8 @@ struct LoopAnnotationConversion {
   void convertLoopOptions(LoopLICMAttr options);
   void convertLoopOptions(LoopDistributeAttr options);
   void convertLoopOptions(LoopPipelineAttr options);
+  void convertLoopOptions(LoopPeeledAttr options);
+  void convertLoopOptions(LoopUnswitchAttr options);
 
   LoopAnnotationAttr attr;
   ModuleTranslation &moduleTranslation;
@@ -176,6 +178,15 @@ void LoopAnnotationConversion::convertLoopOptions(LoopPipelineAttr options) {
                  options.getInitiationinterval());
 }
 
+void LoopAnnotationConversion::convertLoopOptions(LoopPeeledAttr options) {
+  convertI32Node("llvm.loop.peeled.count", options.getCount());
+}
+
+void LoopAnnotationConversion::convertLoopOptions(LoopUnswitchAttr options) {
+  addUnitNode("llvm.loop.unswitch.partial.disable",
+              options.getPartialDisable());
+}
+
 llvm::MDNode *LoopAnnotationConversion::convert() {
 
   // Reserve operand 0 for loop id self reference.
@@ -201,6 +212,10 @@ llvm::MDNode *LoopAnnotationConversion::convert() {
   if (auto options = attr.getDistribute())
     convertLoopOptions(options);
   if (auto options = attr.getPipeline())
+    convertLoopOptions(options);
+  if (auto options = attr.getPeeled())
+    convertLoopOptions(options);
+  if (auto options = attr.getUnswitch())
     convertLoopOptions(options);
 
   ArrayRef<SymbolRefAttr> parallelAccessGroups = attr.getParallelAccesses();
