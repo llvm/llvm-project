@@ -383,6 +383,12 @@ def LowerHostCodeToLLVMPass : Pass<"lower-host-to-llvm", "ModuleOp"> {
     dialect, emitting C wrappers.
   }];
 
+  let options = [
+    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
+                 /*default=*/"false", "Generate LLVM IR using opaque pointers "
+                 "instead of typed pointers">
+  ];
+
   let dependentDialects = ["LLVM::LLVMDialect"];
 }
 
@@ -839,6 +845,12 @@ def ConvertSPIRVToLLVMPass : Pass<"convert-spirv-to-llvm", "ModuleOp"> {
     for more details.
   }];
   let dependentDialects = ["LLVM::LLVMDialect"];
+
+  let options = [
+    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
+                 /*default=*/"false", "Generate LLVM IR using opaque pointers "
+                 "instead of typed pointers">
+  ];
 }
 
 //===----------------------------------------------------------------------===//

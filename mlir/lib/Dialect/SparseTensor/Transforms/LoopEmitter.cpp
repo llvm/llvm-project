@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;
@@ -206,7 +207,14 @@ void LoopEmitter::initializeLoopEmit(OpBuilder &builder, Location loc,
     Type elementType = rtp.getElementType();
     if (!enc) {
       // Non-annotated dense tensors.
-      auto denseTp = MemRefType::get(shape, elementType);
+      BaseMemRefType denseTp = MemRefType::get(shape, elementType);
+
+      // TODO: if we unconditionally use fully dynamic layout here, it breaks
+      // some vectorization passes which requires static stride = 1.
+      // Is it possible to call vectorization pass after bufferization?
+      if (llvm::isa_and_nonnull<tensor::ExtractSliceOp>(tensor.getDefiningOp()))
+        denseTp = bufferization::getMemRefTypeWithFullyDynamicLayout(rtp);
+
       Value denseVal =
           builder.create<bufferization::ToMemrefOp>(loc, denseTp, tensor);
       // Dense outputs need special handling.
