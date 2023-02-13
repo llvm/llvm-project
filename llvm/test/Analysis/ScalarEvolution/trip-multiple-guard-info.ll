@@ -40,14 +40,14 @@ exit:
 
 define void @test_trip_multiple_4_guard(i32 %num) {
 ; CHECK-LABEL: 'test_trip_multiple_4_guard'
-; CHECK-NEXT:  Classifying expressions for: @test_trip_multiple_4
+; CHECK-NEXT:  Classifying expressions for: @test_trip_multiple_4_guard
 ; CHECK-NEXT:    %u = urem i32 %num, 4
 ; CHECK-NEXT:    --> (zext i2 (trunc i32 %num to i2) to i32) U: [0,4) S: [0,4)
 ; CHECK-NEXT:    %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,-2147483648) S: [0,-2147483648) Exits: (-1 + %num) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %inc = add nuw nsw i32 %i.010, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body> U: [1,-2147483648) S: [1,-2147483648) Exits: %num LoopDispositions: { %for.body: Computable }
-; CHECK-NEXT:  Determining loop execution counts for: @test_trip_multiple_4
+; CHECK-NEXT:  Determining loop execution counts for: @test_trip_multiple_4_guard
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -2
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
@@ -382,6 +382,117 @@ entry:
   tail call void @llvm.assume(i1 %cmp)
   %cmp.1 = icmp uge i32 %num, 4
   tail call void @llvm.assume(i1 %cmp.1)
+  br label %for.body
+
+for.body:
+  %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %inc = add nuw nsw i32 %i.010, 1
+  %cmp2 = icmp ult i32 %inc, %num
+  br i1 %cmp2, label %for.body, label %exit
+
+exit:
+  ret void
+}
+
+define void @test_trip_multiple_4_upper_lower_bounds(i32 %num) {
+; CHECK-LABEL: 'test_trip_multiple_4_upper_lower_bounds'
+; CHECK-NEXT:  Classifying expressions for: @test_trip_multiple_4_upper_lower_bounds
+; CHECK-NEXT:    %u = urem i32 %num, 4
+; CHECK-NEXT:    --> (zext i2 (trunc i32 %num to i2) to i32) U: [0,4) S: [0,4)
+; CHECK-NEXT:    %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,-2147483648) S: [0,-2147483648) Exits: (-1 + %num) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    %inc = add nuw nsw i32 %i.010, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body> U: [1,-2147483648) S: [1,-2147483648) Exits: %num LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_trip_multiple_4_upper_lower_bounds
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + %num)
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -2
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %for.body: Trip multiple is 1
+;
+entry:
+  %cmp.1 = icmp uge i32 %num, 5
+  tail call void @llvm.assume(i1 %cmp.1)
+  %u = urem i32 %num, 4
+  %cmp = icmp eq i32 %u, 0
+  tail call void @llvm.assume(i1 %cmp)
+  %cmp.2 = icmp ult i32 %num, 59000
+  tail call void @llvm.assume(i1 %cmp.2)
+  br label %for.body
+
+for.body:
+  %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %inc = add nuw nsw i32 %i.010, 1
+  %cmp2 = icmp ult i32 %inc, %num
+  br i1 %cmp2, label %for.body, label %exit
+
+exit:
+  ret void
+}
+
+define void @test_trip_multiple_4_upper_lower_bounds_swapped1(i32 %num) {
+; CHECK-LABEL: 'test_trip_multiple_4_upper_lower_bounds_swapped1'
+; CHECK-NEXT:  Classifying expressions for: @test_trip_multiple_4_upper_lower_bounds_swapped1
+; CHECK-NEXT:    %u = urem i32 %num, 4
+; CHECK-NEXT:    --> (zext i2 (trunc i32 %num to i2) to i32) U: [0,4) S: [0,4)
+; CHECK-NEXT:    %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,-2147483648) S: [0,-2147483648) Exits: (-1 + %num) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    %inc = add nuw nsw i32 %i.010, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body> U: [1,-2147483648) S: [1,-2147483648) Exits: %num LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_trip_multiple_4_upper_lower_bounds_swapped1
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + %num)
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -2
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %for.body: Trip multiple is 1
+;
+entry:
+  %cmp.1 = icmp uge i32 %num, 5
+  tail call void @llvm.assume(i1 %cmp.1)
+  %u = urem i32 %num, 4
+  %cmp = icmp eq i32 %u, 0
+  tail call void @llvm.assume(i1 %cmp)
+  %cmp.2 = icmp ult i32 %num, 59000
+  tail call void @llvm.assume(i1 %cmp.2)
+  br label %for.body
+
+for.body:
+  %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %inc = add nuw nsw i32 %i.010, 1
+  %cmp2 = icmp ult i32 %inc, %num
+  br i1 %cmp2, label %for.body, label %exit
+
+exit:
+  ret void
+}
+
+define void @test_trip_multiple_4_upper_lower_bounds_swapped2(i32 %num) {
+; CHECK-LABEL: 'test_trip_multiple_4_upper_lower_bounds_swapped2'
+; CHECK-NEXT:  Classifying expressions for: @test_trip_multiple_4_upper_lower_bounds_swapped2
+; CHECK-NEXT:    %u = urem i32 %num, 4
+; CHECK-NEXT:    --> (zext i2 (trunc i32 %num to i2) to i32) U: [0,4) S: [0,4)
+; CHECK-NEXT:    %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,-2147483648) S: [0,-2147483648) Exits: (-1 + %num) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    %inc = add nuw nsw i32 %i.010, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body> U: [1,-2147483648) S: [1,-2147483648) Exits: %num LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_trip_multiple_4_upper_lower_bounds_swapped2
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + %num)
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -2
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %for.body: Trip multiple is 1
+;
+entry:
+  %cmp.1 = icmp uge i32 %num, 5
+  tail call void @llvm.assume(i1 %cmp.1)
+  %cmp.2 = icmp ult i32 %num, 59000
+  tail call void @llvm.assume(i1 %cmp.2)
+  %u = urem i32 %num, 4
+  %cmp = icmp eq i32 %u, 0
+  tail call void @llvm.assume(i1 %cmp)
   br label %for.body
 
 for.body:
