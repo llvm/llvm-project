@@ -2658,40 +2658,72 @@ public:
           caller.placeInput(arg, builder.create<mlir::arith::SelectOp>(
                                      loc, isAllocated, convertedBox, absent));
         } else {
-          // Make sure a variable address is only passed if the expression is
-          // actually a variable.
-          mlir::Value box =
-              Fortran::evaluate::IsVariable(*expr)
-                  ? builder.createBox(loc, genBoxArg(*expr),
-                                      fir::isPolymorphicType(argTy))
-                  : builder.createBox(getLoc(), genTempExtAddr(*expr),
-                                      fir::isPolymorphicType(argTy));
+          auto dynamicType = expr->GetType();
+          mlir::Value box;
 
-          if (box.getType().isa<fir::BoxType>() &&
-              fir::isPolymorphicType(argTy)) {
-            // Rebox can only be performed on a present argument.
-            if (arg.isOptional()) {
-              mlir::Value isPresent = genActualIsPresentTest(builder, loc, box);
-              box =
-                  builder
-                      .genIfOp(loc, {argTy}, isPresent, /*withElseRegion=*/true)
-                      .genThen([&]() {
-                        auto rebox = builder
-                                         .create<fir::ReboxOp>(
-                                             loc, argTy, box, mlir::Value{},
-                                             /*slice=*/mlir::Value{})
-                                         .getResult();
-                        builder.create<fir::ResultOp>(loc, rebox);
-                      })
-                      .genElse([&]() {
-                        auto absent = builder.create<fir::AbsentOp>(loc, argTy)
-                                          .getResult();
-                        builder.create<fir::ResultOp>(loc, absent);
-                      })
-                      .getResults()[0];
-            } else {
-              box = builder.create<fir::ReboxOp>(loc, argTy, box, mlir::Value{},
+          // Special case when an intrinsic scalar variable is passed to a
+          // function expecting an optional unlimited polymorphic dummy
+	  // argument.
+          // The presence test needs to be performed before emboxing otherwise
+          // the program will crash.
+          if (dynamicType->category() !=
+                  Fortran::common::TypeCategory::Derived &&
+              expr->Rank() == 0 && fir::isUnlimitedPolymorphicType(argTy) &&
+              arg.isOptional()) {
+            ExtValue opt = lowerIntrinsicArgumentAsInquired(*expr);
+            mlir::Value isPresent = genActualIsPresentTest(builder, loc, opt);
+            box =
+                builder
+                    .genIfOp(loc, {argTy}, isPresent, /*withElseRegion=*/true)
+                    .genThen([&]() {
+                      auto boxed = builder.createBox(
+                          loc, genBoxArg(*expr), fir::isPolymorphicType(argTy));
+                      builder.create<fir::ResultOp>(loc, boxed);
+                    })
+                    .genElse([&]() {
+                      auto absent =
+                          builder.create<fir::AbsentOp>(loc, argTy).getResult();
+                      builder.create<fir::ResultOp>(loc, absent);
+                    })
+                    .getResults()[0];
+          } else {
+            // Make sure a variable address is only passed if the expression is
+            // actually a variable.
+            box = Fortran::evaluate::IsVariable(*expr)
+                      ? builder.createBox(loc, genBoxArg(*expr),
+                                          fir::isPolymorphicType(argTy))
+                      : builder.createBox(getLoc(), genTempExtAddr(*expr),
+                                          fir::isPolymorphicType(argTy));
+
+            if (box.getType().isa<fir::BoxType>() &&
+                fir::isPolymorphicType(argTy)) {
+              // Rebox can only be performed on a present argument.
+              if (arg.isOptional()) {
+                mlir::Value isPresent =
+                    genActualIsPresentTest(builder, loc, box);
+                box = builder
+                          .genIfOp(loc, {argTy}, isPresent,
+                                   /*withElseRegion=*/true)
+                          .genThen([&]() {
+                            auto rebox = builder
+                                             .create<fir::ReboxOp>(
+                                                 loc, argTy, box, mlir::Value{},
+                                                 /*slice=*/mlir::Value{})
+                                             .getResult();
+                            builder.create<fir::ResultOp>(loc, rebox);
+                          })
+                          .genElse([&]() {
+                            auto absent =
+                                builder.create<fir::AbsentOp>(loc, argTy)
+                                    .getResult();
+                            builder.create<fir::ResultOp>(loc, absent);
+                          })
+                          .getResults()[0];
+              } else {
+                box =
+                    builder.create<fir::ReboxOp>(loc, argTy, box, mlir::Value{},
                                                  /*slice=*/mlir::Value{});
+              }
             }
           }
           caller.placeInput(arg, box);

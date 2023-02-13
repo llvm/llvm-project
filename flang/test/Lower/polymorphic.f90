@@ -878,6 +878,27 @@ module polymorphic_test
 ! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[REBOX]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
 ! CHECK: %{{.*}} = fir.call @_FortranAioOutputDescriptor(%{{.*}}, %[[BOX_NONE]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>) -> i1
 
+  subroutine opt_int(i)
+    integer, optional, intent(in) :: i
+    call opt_up(i)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPopt_int(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "i", fir.optional}) {
+! CHECK: %[[IS_PRESENT:.*]] = fir.is_present %[[ARG0]] : (!fir.ref<i32>) -> i1
+! CHECK: %[[ARG:.*]] = fir.if %[[IS_PRESENT]] -> (!fir.class<none>) {
+! CHECK:   %[[EMBOXED:.*]] = fir.embox %[[ARG0]] : (!fir.ref<i32>) -> !fir.class<none>
+! CHECK:   fir.result %[[EMBOXED]] : !fir.class<none>
+! CHECK: } else {
+! CHECK:   %[[ABSENT:.*]] = fir.absent !fir.class<none>
+! CHECK:   fir.result %[[ABSENT]] : !fir.class<none>
+! CHECK: }
+! CHECK: fir.call @_QMpolymorphic_testPopt_up(%[[ARG]]) fastmath<contract> : (!fir.class<none>) -> ()
+
+  subroutine opt_up(up)
+    class(*), optional, intent(in) :: up
+  end subroutine
+
 end module
 
 program test
