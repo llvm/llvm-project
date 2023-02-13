@@ -21492,7 +21492,7 @@ SDValue DAGCombiner::reduceBuildVecTruncToBitCast(SDNode *N) {
   }
 
   // Only cast if the size is the same
-  if (Src.getValueType().getSizeInBits() != VT.getSizeInBits())
+  if (!Src || Src.getValueType().getSizeInBits() != VT.getSizeInBits())
     return SDValue();
 
   return DAG.getBitcast(VT, Src);
