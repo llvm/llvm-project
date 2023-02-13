@@ -374,7 +374,7 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
     }
 
     // User-provided analysis
-    AC.Analysis.transferTypeErased(&Element, State.Lattice, State.Env);
+    AC.Analysis.transferTypeErased(Element, State.Lattice, State.Env);
 
     // Post processing
     if (PostVisitCFG) {
