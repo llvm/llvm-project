@@ -19,6 +19,7 @@ add_llvm_component_library(LLVMInstrumentation
   SanitizerBinaryMetadata.cpp
   ValueProfileCollector.cpp
   ThreadSanitizer.cpp
+  TraceRecorder.cpp
   HWAddressSanitizer.cpp
 
   ADDITIONAL_HEADER_DIRS

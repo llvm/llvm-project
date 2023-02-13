@@ -41,7 +41,7 @@ static const SanitizerMask RequiresPIE =
     SanitizerKind::KCFI;
 static const SanitizerMask NeedsUnwindTables =
     SanitizerKind::Address | SanitizerKind::HWAddress | SanitizerKind::Thread |
-    SanitizerKind::Memory | SanitizerKind::DataFlow;
+    SanitizerKind::Trace | SanitizerKind::Memory | SanitizerKind::DataFlow;
 static const SanitizerMask SupportsCoverage =
     SanitizerKind::Address | SanitizerKind::HWAddress |
     SanitizerKind::KernelAddress | SanitizerKind::KernelHWAddress |
@@ -53,7 +53,8 @@ static const SanitizerMask SupportsCoverage =
     SanitizerKind::DataFlow | SanitizerKind::Fuzzer |
     SanitizerKind::FuzzerNoLink | SanitizerKind::FloatDivideByZero |
     SanitizerKind::SafeStack | SanitizerKind::ShadowCallStack |
-    SanitizerKind::Thread | SanitizerKind::ObjCCast | SanitizerKind::KCFI;
+    SanitizerKind::Thread | SanitizerKind::Trace | SanitizerKind::ObjCCast |
+    SanitizerKind::KCFI;
 static const SanitizerMask RecoverableByDefault =
     SanitizerKind::Undefined | SanitizerKind::Integer |
     SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
@@ -267,13 +268,14 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
 }
 
 bool SanitizerArgs::needsFuzzerInterceptors() const {
-  return needsFuzzer() && !needsAsanRt() && !needsTsanRt() && !needsMsanRt();
+  return needsFuzzer() && !needsAsanRt() && !needsTsanRt() && !needsMsanRt() &&
+         !needsTrecRt();
 }
 
 bool SanitizerArgs::needsUbsanRt() const {
   // All of these include ubsan.
   if (needsAsanRt() || needsMsanRt() || needsHwasanRt() || needsTsanRt() ||
-      needsDfsanRt() || needsLsanRt() || needsCfiDiagRt() ||
+      needsTrecRt() || needsDfsanRt() || needsLsanRt() || needsCfiDiagRt() ||
       (needsScudoRt() && !requiresMinimalRuntime()))
     return false;
 
@@ -482,41 +484,50 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   }
 
   std::pair<SanitizerMask, SanitizerMask> IncompatibleGroups[] = {
-      std::make_pair(SanitizerKind::Address,
-                     SanitizerKind::Thread | SanitizerKind::Memory),
-      std::make_pair(SanitizerKind::Thread, SanitizerKind::Memory),
-      std::make_pair(SanitizerKind::Leak,
-                     SanitizerKind::Thread | SanitizerKind::Memory),
+      std::make_pair(SanitizerKind::Address, SanitizerKind::Thread |
+                                                 SanitizerKind::Memory |
+                                                 SanitizerKind::Trace),
+      std::make_pair(SanitizerKind::Thread | SanitizerKind::Trace,
+                     SanitizerKind::Memory),
+      std::make_pair(SanitizerKind::Leak, SanitizerKind::Thread |
+                                              SanitizerKind::Memory |
+                                              SanitizerKind::Trace),
       std::make_pair(SanitizerKind::KernelAddress,
                      SanitizerKind::Address | SanitizerKind::Leak |
-                         SanitizerKind::Thread | SanitizerKind::Memory),
+                         SanitizerKind::Thread | SanitizerKind::Memory |
+                         SanitizerKind::Trace),
       std::make_pair(SanitizerKind::HWAddress,
                      SanitizerKind::Address | SanitizerKind::Thread |
-                         SanitizerKind::Memory | SanitizerKind::KernelAddress),
+                         SanitizerKind::Trace | SanitizerKind::Memory |
+                         SanitizerKind::KernelAddress),
       std::make_pair(SanitizerKind::Scudo,
                      SanitizerKind::Address | SanitizerKind::HWAddress |
                          SanitizerKind::Leak | SanitizerKind::Thread |
-                         SanitizerKind::Memory | SanitizerKind::KernelAddress),
+                         SanitizerKind::Trace | SanitizerKind::Memory |
+                         SanitizerKind::KernelAddress),
       std::make_pair(SanitizerKind::SafeStack,
                      (TC.getTriple().isOSFuchsia() ? SanitizerMask()
                                                    : SanitizerKind::Leak) |
                          SanitizerKind::Address | SanitizerKind::HWAddress |
                          SanitizerKind::Thread | SanitizerKind::Memory |
-                         SanitizerKind::KernelAddress),
+                         SanitizerKind::Trace | SanitizerKind::KernelAddress),
       std::make_pair(SanitizerKind::KernelHWAddress,
                      SanitizerKind::Address | SanitizerKind::HWAddress |
                          SanitizerKind::Leak | SanitizerKind::Thread |
-                         SanitizerKind::Memory | SanitizerKind::KernelAddress |
+                         SanitizerKind::Trace | SanitizerKind::Memory |
+                         SanitizerKind::KernelAddress |
                          SanitizerKind::SafeStack),
       std::make_pair(SanitizerKind::KernelMemory,
                      SanitizerKind::Address | SanitizerKind::HWAddress |
                          SanitizerKind::Leak | SanitizerKind::Thread |
-                         SanitizerKind::Memory | SanitizerKind::KernelAddress |
-                         SanitizerKind::Scudo | SanitizerKind::SafeStack),
-      std::make_pair(SanitizerKind::MemTag,
-                     SanitizerKind::Address | SanitizerKind::KernelAddress |
-                         SanitizerKind::HWAddress |
-                         SanitizerKind::KernelHWAddress)};
+                         SanitizerKind::Trace | SanitizerKind::Memory |
+                         SanitizerKind::KernelAddress | SanitizerKind::Scudo |
+                         SanitizerKind::SafeStack),
+      std::make_pair(SanitizerKind::MemTag, SanitizerKind::Address |
+                                                SanitizerKind::KernelAddress |
+                                                SanitizerKind::HWAddress |
+                                                SanitizerKind::KernelHWAddress),
+      std::make_pair(SanitizerKind::Thread, SanitizerKind::Trace)};
   // Enable toolchain specific default sanitizers if not explicitly disabled.
   SanitizerMask Default = TC.getDefaultSanitizers() & ~AllRemove;
 
@@ -913,11 +924,11 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     // As a workaround for a bug in gold 2.26 and earlier, dead stripping of
     // globals in ASan is disabled by default on most ELF targets.
     // See https://sourceware.org/bugzilla/show_bug.cgi?id=19002
-    AsanGlobalsDeadStripping = Args.hasFlag(
-        options::OPT_fsanitize_address_globals_dead_stripping,
-        options::OPT_fno_sanitize_address_globals_dead_stripping,
-        !TC.getTriple().isOSBinFormatELF() || TC.getTriple().isOSFuchsia() ||
-            TC.getTriple().isPS());
+    AsanGlobalsDeadStripping =
+        Args.hasFlag(options::OPT_fsanitize_address_globals_dead_stripping,
+                     options::OPT_fno_sanitize_address_globals_dead_stripping,
+                     !TC.getTriple().isOSBinFormatELF() ||
+                         TC.getTriple().isOSFuchsia() || TC.getTriple().isPS());
 
     // Enable ODR indicators which allow better handling of mixed instrumented
     // and uninstrumented globals. Disable them for Windows where weak odr

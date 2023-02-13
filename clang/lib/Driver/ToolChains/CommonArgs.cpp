@@ -1027,6 +1027,8 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     }
     if (SanArgs.needsTsanRt() && SanArgs.linkRuntimes())
       SharedRuntimes.push_back("tsan");
+    if (SanArgs.needsTrecRt() && SanArgs.linkRuntimes())
+      SharedRuntimes.push_back("trec");
     if (SanArgs.needsHwasanRt() && SanArgs.linkRuntimes()) {
       if (SanArgs.needsHwasanAliasesRt())
         SharedRuntimes.push_back("hwasan_aliases");
@@ -1092,6 +1094,12 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     StaticRuntimes.push_back("tsan");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("tsan_cxx");
+  }
+  if (!SanArgs.needsSharedRt() && SanArgs.needsTrecRt() &&
+      SanArgs.linkRuntimes()) {
+    StaticRuntimes.push_back("trec");
+    if (SanArgs.linkCXXRuntimes())
+      StaticRuntimes.push_back("trec_cxx");
   }
   if (!SanArgs.needsSharedRt() && SanArgs.needsUbsanRt() && SanArgs.linkRuntimes()) {
     if (SanArgs.requiresMinimalRuntime()) {

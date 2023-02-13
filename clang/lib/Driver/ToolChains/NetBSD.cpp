@@ -31,7 +31,7 @@ void netbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                      const ArgList &Args,
                                      const char *LinkingOutput) const {
   const toolchains::NetBSD &ToolChain =
-    static_cast<const toolchains::NetBSD &>(getToolChain());
+      static_cast<const toolchains::NetBSD &>(getToolChain());
   const Driver &D = ToolChain.getDriver();
   const llvm::Triple &Triple = ToolChain.getTriple();
 
@@ -119,7 +119,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const ArgList &Args,
                                   const char *LinkingOutput) const {
   const toolchains::NetBSD &ToolChain =
-    static_cast<const toolchains::NetBSD &>(getToolChain());
+      static_cast<const toolchains::NetBSD &>(getToolChain());
   const Driver &D = ToolChain.getDriver();
   const llvm::Triple &Triple = ToolChain.getTriple();
 
@@ -240,11 +240,9 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
                    options::OPT_r)) {
     if (!Args.hasArg(options::OPT_shared)) {
-      CmdArgs.push_back(
-          Args.MakeArgString(ToolChain.GetFilePath("crt0.o")));
+      CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crt0.o")));
     }
-    CmdArgs.push_back(
-        Args.MakeArgString(ToolChain.GetFilePath("crti.o")));
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crti.o")));
     if (Args.hasArg(options::OPT_shared) || Args.hasArg(options::OPT_pie)) {
       CmdArgs.push_back(
           Args.MakeArgString(ToolChain.GetFilePath("crtbeginS.o")));
@@ -336,11 +334,9 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
                    options::OPT_r)) {
     if (Args.hasArg(options::OPT_shared) || Args.hasArg(options::OPT_pie))
-      CmdArgs.push_back(
-          Args.MakeArgString(ToolChain.GetFilePath("crtendS.o")));
+      CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtendS.o")));
     else
-      CmdArgs.push_back(
-          Args.MakeArgString(ToolChain.GetFilePath("crtend.o")));
+      CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtend.o")));
     CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtn.o")));
   }
 
@@ -473,12 +469,12 @@ void NetBSD::AddClangSystemIncludeArgs(
 void NetBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                    llvm::opt::ArgStringList &CC1Args) const {
   const std::string Candidates[] = {
-    // directory relative to build tree
-    getDriver().Dir + "/../include/c++/v1",
-    // system install with full upstream path
-    getDriver().SysRoot + "/usr/include/c++/v1",
-    // system install from src
-    getDriver().SysRoot + "/usr/include/c++",
+      // directory relative to build tree
+      getDriver().Dir + "/../include/c++/v1",
+      // system install with full upstream path
+      getDriver().SysRoot + "/usr/include/c++/v1",
+      // system install from src
+      getDriver().SysRoot + "/usr/include/c++",
   };
 
   for (const auto &IncludePath : Candidates) {
@@ -530,6 +526,7 @@ SanitizerMask NetBSD::getSupportedSanitizers() const {
     Res |= SanitizerKind::KernelMemory;
     Res |= SanitizerKind::Memory;
     Res |= SanitizerKind::Thread;
+    Res |= SanitizerKind::Trace;
   }
   return Res;
 }

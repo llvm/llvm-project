@@ -1,0 +1,12 @@
+__trec_init
+__trec_flush_memory
+__trec_read*
+__trec_write*
+__trec_func*
+__trec_atomic*
+__trec_unaligned*
+__trec_get_current_fiber
+__trec_create_fiber
+__trec_destroy_fiber
+__trec_switch_to_fiber
+__trec_set_fiber_name
