@@ -3844,15 +3844,20 @@ static bool isInv2Pi(const APFloat &APF) {
 
 // 0 and 1.0 / (0.5 * pi) do not have inline immmediates, so there is an
 // additional cost to negate them.
+TargetLowering::NegatibleCost
+AMDGPUTargetLowering::getConstantNegateCost(const ConstantFPSDNode *C) const {
+  if (C->isZero())
+    return C->isNegative() ? NegatibleCost::Cheaper : NegatibleCost::Expensive;
+
+  if (Subtarget->hasInv2PiInlineImm() && isInv2Pi(C->getValueAPF()))
+    return C->isNegative() ? NegatibleCost::Cheaper : NegatibleCost::Expensive;
+
+  return NegatibleCost::Neutral;
+}
+
 bool AMDGPUTargetLowering::isConstantCostlierToNegate(SDValue N) const {
-  if (const ConstantFPSDNode *C = isConstOrConstSplatFP(N)) {
-    if (C->isZero() && !C->isNegative())
-      return true;
-
-    if (Subtarget->hasInv2PiInlineImm() && isInv2Pi(C->getValueAPF()))
-      return true;
-  }
-
+  if (const ConstantFPSDNode *C = isConstOrConstSplatFP(N))
+    return getConstantNegateCost(C) == NegatibleCost::Expensive;
   return false;
 }
 
