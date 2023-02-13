@@ -470,6 +470,13 @@ def HasVendorXTHeadBa : Predicate<"Subtarget->hasVendorXTHeadBa()">,
                                   AssemblerPredicate<(all_of FeatureVendorXTHeadBa),
                                   "'xtheadba' (T-Head address calculation instructions)">;
 
+def FeatureVendorXTHeadBs
+    : SubtargetFeature<"xtheadbs", "HasVendorXTHeadBs", "true",
+                       "'xtheadbs' (T-Head single-bit instructions)">;
+def HasVendorXTHeadBs : Predicate<"Subtarget->hasVendorXTHeadBs()">,
+                                  AssemblerPredicate<(all_of FeatureVendorXTHeadBs),
+                                  "'xtheadbs' (T-Head single-bit instructions)">;
+
 def FeatureVendorXTHeadVdot
     : SubtargetFeature<"xtheadvdot", "HasVendorXTHeadVdot", "true",
                        "'xtheadvdot' (T-Head Vector Extensions for Dot)",
