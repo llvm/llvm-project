@@ -1,7 +1,9 @@
 set(LLVM_LINK_COMPONENTS
   Core
+  Option
   Support
   CAS
+  TargetParser
   )
 
 add_clang_tool(clang-scan-deps
