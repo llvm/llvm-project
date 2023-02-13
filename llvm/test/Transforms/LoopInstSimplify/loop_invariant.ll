@@ -249,3 +249,251 @@ loop:
 exit:
   ret i32 %iv
 }
+
+; TODO: Turn OR to AND and handle accordingly.
+define i32 @test_ult_inv(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_ult_inv(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[IV]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i32 [[IV]], [[INV_2:%.*]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = or i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp ult i32 %iv, %inv_1
+  %cmp_2 = icmp ult i32 %iv, %inv_2
+  %loop_cond = or i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
+
+; TODO: Turn OR to AND and handle accordingly.
+define i32 @test_ule_inv(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_ule_inv(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ule i32 [[IV]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ule i32 [[IV]], [[INV_2:%.*]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = or i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp ule i32 %iv, %inv_1
+  %cmp_2 = icmp ule i32 %iv, %inv_2
+  %loop_cond = or i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
+
+; TODO: Turn OR to AND and handle accordingly.
+define i32 @test_slt_inv(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_slt_inv(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp slt i32 [[IV]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp slt i32 [[IV]], [[INV_2:%.*]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = or i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp slt i32 %iv, %inv_1
+  %cmp_2 = icmp slt i32 %iv, %inv_2
+  %loop_cond = or i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
+
+; TODO: Turn OR to AND and handle accordingly.
+define i32 @test_sle_inv(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_sle_inv(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sle i32 [[IV]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp sle i32 [[IV]], [[INV_2:%.*]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = or i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp sle i32 %iv, %inv_1
+  %cmp_2 = icmp sle i32 %iv, %inv_2
+  %loop_cond = or i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
+
+; TODO: Turn OR to AND and handle accordingly.
+define i32 @test_ugt_inv(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_ugt_inv(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ugt i32 [[IV]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ugt i32 [[IV]], [[INV_2:%.*]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = or i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp ugt i32 %iv, %inv_1
+  %cmp_2 = icmp ugt i32 %iv, %inv_2
+  %loop_cond = or i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
+
+; TODO: Turn OR to AND and handle accordingly.
+define i32 @test_uge_inv(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_uge_inv(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp uge i32 [[IV]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp uge i32 [[IV]], [[INV_2:%.*]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = or i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp uge i32 %iv, %inv_1
+  %cmp_2 = icmp uge i32 %iv, %inv_2
+  %loop_cond = or i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
+
+; TODO: Turn OR to AND and handle accordingly.
+define i32 @test_sgt_inv(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_sgt_inv(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sgt i32 [[IV]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp sgt i32 [[IV]], [[INV_2:%.*]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = or i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp sgt i32 %iv, %inv_1
+  %cmp_2 = icmp sgt i32 %iv, %inv_2
+  %loop_cond = or i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
+
+; TODO: Turn OR to AND and handle accordingly.
+define i32 @test_sge_inv(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_sge_inv(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sge i32 [[IV]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp sge i32 [[IV]], [[INV_2:%.*]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = or i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp sge i32 %iv, %inv_1
+  %cmp_2 = icmp sge i32 %iv, %inv_2
+  %loop_cond = or i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
