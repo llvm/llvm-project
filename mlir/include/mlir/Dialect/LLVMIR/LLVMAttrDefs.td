@@ -95,8 +95,9 @@ def LoopUnrollAttr : LLVM_Attr<"LoopUnroll", "loop_unroll"> {
     OptionalParameter<"IntegerAttr">:$count,
     OptionalParameter<"BoolAttr">:$runtimeDisable,
     OptionalParameter<"BoolAttr">:$full,
-    OptionalParameter<"LoopAnnotationAttr">:$followup,
-    OptionalParameter<"LoopAnnotationAttr">:$followupRemainder
+    OptionalParameter<"LoopAnnotationAttr">:$followupUnrolled,
+    OptionalParameter<"LoopAnnotationAttr">:$followupRemainder,
+    OptionalParameter<"LoopAnnotationAttr">:$followupAll
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
@@ -186,6 +187,7 @@ def LoopAnnotationAttr : LLVM_Attr<"LoopAnnotation", "loop_annotation"> {
     OptionalParameter<"LoopDistributeAttr">:$distribute,
     OptionalParameter<"LoopPipelineAttr">:$pipeline,
     OptionalParameter<"BoolAttr">:$mustProgress,
+    OptionalParameter<"BoolAttr">:$isVectorized,
     OptionalArrayRefParameter<"SymbolRefAttr">:$parallelAccesses
   );
 
