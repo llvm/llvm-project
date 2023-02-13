@@ -350,6 +350,37 @@ template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
   return detail::PopulationCounter<T, sizeof(T)>::count(Value);
 }
 
+// Forward-declare rotr so that rotl can use it.
+template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
+[[nodiscard]] constexpr T rotr(T V, int R);
+
+template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
+[[nodiscard]] constexpr T rotl(T V, int R) {
+  unsigned N = std::numeric_limits<T>::digits;
+
+  R = R % N;
+  if (!R)
+    return V;
+
+  if (R < 0)
+    return llvm::rotr(V, -R);
+
+  return (V << R) | (V >> (N - R));
+}
+
+template <typename T, typename> [[nodiscard]] constexpr T rotr(T V, int R) {
+  unsigned N = std::numeric_limits<T>::digits;
+
+  R = R % N;
+  if (!R)
+    return V;
+
+  if (R < 0)
+    return llvm::rotl(V, -R);
+
+  return (V >> R) | (V << (N - R));
+}
+
 } // namespace llvm
 
 #endif
