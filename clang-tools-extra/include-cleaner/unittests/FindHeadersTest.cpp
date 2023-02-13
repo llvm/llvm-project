@@ -278,25 +278,31 @@ TEST_F(FindHeadersTest, PreferredHeaderHint) {
 
 class HeadersForSymbolTest : public FindHeadersTest {
 protected:
-  llvm::SmallVector<Header> headersForFoo() {
+  llvm::SmallVector<Header> headersFor(llvm::StringRef Name) {
     struct Visitor : public RecursiveASTVisitor<Visitor> {
       const NamedDecl *Out = nullptr;
+      llvm::StringRef Name;
+      Visitor(llvm::StringRef Name) : Name(Name) {}
       bool VisitNamedDecl(const NamedDecl *ND) {
-        if (ND->getName() == "foo") {
+        if (auto *TD = ND->getDescribedTemplate())
+          ND = TD;
+
+        if (ND->getName() == Name) {
           EXPECT_TRUE(Out == nullptr || Out == ND->getCanonicalDecl())
-              << "Found multiple matches for foo.";
+              << "Found multiple matches for " << Name << ".";
           Out = cast<NamedDecl>(ND->getCanonicalDecl());
         }
         return true;
       }
     };
-    Visitor V;
+    Visitor V(Name);
     V.TraverseDecl(AST->context().getTranslationUnitDecl());
     if (!V.Out)
-      ADD_FAILURE() << "Couldn't find any decls named foo.";
+      ADD_FAILURE() << "Couldn't find any decls named " << Name << ".";
     assert(V.Out);
     return headersForSymbol(*V.Out, AST->sourceManager(), &PI);
   }
+  llvm::SmallVector<Header> headersForFoo() { return headersFor("foo"); }
 };
 
 TEST_F(HeadersForSymbolTest, Deduplicates) {
@@ -430,5 +436,55 @@ TEST_F(HeadersForSymbolTest, PreferPublicOverNameMatchOnPrivate) {
   EXPECT_THAT(headersForFoo(), ElementsAre(Header(StringRef("\"public.h\"")),
                                            physicalHeader("foo.h")));
 }
+
+TEST_F(HeadersForSymbolTest, AmbiguousStdSymbols) {
+  struct {
+    llvm::StringRef Code;
+    llvm::StringRef Name;
+
+    llvm::StringRef ExpectedHeader;
+  } TestCases[] = {
+      {
+          R"cpp(
+            namespace std {
+             template <typename InputIt, typename OutputIt>
+             constexpr OutputIt move(InputIt first, InputIt last, OutputIt dest);
+            })cpp",
+          "move",
+          "<algorithm>",
+      },
+      {
+          R"cpp(
+            namespace std {
+              template<typename T> constexpr T move(T&& t) noexcept;
+            })cpp",
+          "move",
+          "<utility>",
+      },
+      {
+          R"cpp(
+            namespace std {
+              template<class ForwardIt, class T>
+              ForwardIt remove(ForwardIt first, ForwardIt last, const T& value);
+            })cpp",
+          "remove",
+          "<algorithm>",
+      },
+      {
+          "namespace std { int remove(const char*); }",
+          "remove",
+          "<cstdio>",
+      },
+  };
+
+  for (const auto &T : TestCases) {
+    Inputs.Code = T.Code;
+    buildAST();
+    EXPECT_THAT(headersFor(T.Name),
+                UnorderedElementsAre(
+                    Header(*tooling::stdlib::Header::named(T.ExpectedHeader))));
+  }
+}
+
 } // namespace
 } // namespace clang::include_cleaner
