@@ -20,8 +20,8 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/PassRegistry.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 
 // Used to skip tests on unsupported architectures and operating systems.

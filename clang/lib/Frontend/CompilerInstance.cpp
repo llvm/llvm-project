@@ -54,7 +54,6 @@
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/LockFileManager.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -65,6 +64,7 @@
 #include "llvm/Support/VirtualOutputBackends.h"
 #include "llvm/Support/VirtualOutputError.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 #include <optional>
 #include <time.h>
 #include <utility>

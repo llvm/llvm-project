@@ -36,7 +36,7 @@
 #include <bsm/audit_session.h>
 #endif
 
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 
 #include <asl.h>
 #include <crt_externs.h>

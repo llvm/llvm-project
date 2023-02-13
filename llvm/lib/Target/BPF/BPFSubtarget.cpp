@@ -13,7 +13,7 @@
 #include "BPFSubtarget.h"
 #include "BPF.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 
 using namespace llvm;
 

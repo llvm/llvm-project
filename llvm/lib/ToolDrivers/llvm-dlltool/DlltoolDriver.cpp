@@ -18,8 +18,8 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/Path.h"
+#include "llvm/TargetParser/Host.h"
 
 #include <optional>
 #include <vector>
