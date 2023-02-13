@@ -341,7 +341,7 @@ void DWARFUnit::SetDwoStrOffsetsBase() {
   if (const llvm::DWARFUnitIndex::Entry *entry = m_header.GetIndexEntry()) {
     if (const auto *contribution =
             entry->getContribution(llvm::DW_SECT_STR_OFFSETS))
-      baseOffset = contribution->getOffset32();
+      baseOffset = contribution->getOffset();
     else
       return;
   }
@@ -489,7 +489,7 @@ void DWARFUnit::SetLoclistsBase(dw_addr_t loclists_base) {
           *GetDWOId());
       return;
     }
-    offset += contribution->getOffset32();
+    offset += contribution->getOffset();
   }
   m_loclists_base = loclists_base;
 
@@ -527,7 +527,7 @@ DWARFDataExtractor DWARFUnit::GetLocationData() const {
   if (const llvm::DWARFUnitIndex::Entry *entry = m_header.GetIndexEntry()) {
     if (const auto *contribution = entry->getContribution(
             GetVersion() >= 5 ? llvm::DW_SECT_LOCLISTS : llvm::DW_SECT_EXT_LOC))
-      return DWARFDataExtractor(data, contribution->getOffset32(),
+      return DWARFDataExtractor(data, contribution->getOffset(),
                                 contribution->getLength32());
     return DWARFDataExtractor();
   }
@@ -540,7 +540,7 @@ DWARFDataExtractor DWARFUnit::GetRnglistData() const {
   if (const llvm::DWARFUnitIndex::Entry *entry = m_header.GetIndexEntry()) {
     if (const auto *contribution =
             entry->getContribution(llvm::DW_SECT_RNGLISTS))
-      return DWARFDataExtractor(data, contribution->getOffset32(),
+      return DWARFDataExtractor(data, contribution->getOffset(),
                                 contribution->getLength32());
     GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
         "Failed to find range list contribution for CU with signature {0:x16}",
@@ -935,7 +935,7 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data,
           llvm::inconvertibleErrorCode(),
           "DWARF package index missing abbreviation column");
     }
-    header.m_abbr_offset = abbr_entry->getOffset32();
+    header.m_abbr_offset = abbr_entry->getOffset();
   }
 
   bool length_OK = data.ValidOffset(header.GetNextUnitOffset() - 1);
