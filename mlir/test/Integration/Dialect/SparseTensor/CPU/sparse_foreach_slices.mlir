@@ -69,25 +69,24 @@ module {
     //
     call @foreach_print_slice(%a) : (tensor<4x4xf64, #CSR_SLICE>) -> ()
 
-    // FIXME: investigate why a tensor copy is inserted for this slice
-//    %dense = tensor.extract_slice %sa[1, 1][4, 4][1, 2] : tensor<8x8xf64> to
-//                                                          tensor<4x4xf64>
-//    %b = sparse_tensor.convert %dense : tensor<4x4xf64> to tensor<4x4xf64, #CSR>
-//    // Foreach on sparse tensor instead of slice they should yield the same result.
-//    //
-//    // C_HECK-NEXT: 1
-//    // C_HECK-NEXT: 0
-//    // C_HECK-NEXT: 2.3
-//    // C_HECK-NEXT: 2
-//    // C_HECK-NEXT: 3
-//    // C_HECK-NEXT: 1
-//    // C_HECK-NEXT: 3
-//    // C_HECK-NEXT: 2
-//    // C_HECK-NEXT: 2.1
-//    //
-//    call @foreach_print_non_slice(%b) : (tensor<4x4xf64, #CSR>) -> ()
-//    bufferization.dealloc_tensor %b : tensor<4x4xf64, #CSR>
+    %dense = tensor.extract_slice %sa[1, 1][4, 4][1, 2] : tensor<8x8xf64> to
+                                                          tensor<4x4xf64>
+    %b = sparse_tensor.convert %dense : tensor<4x4xf64> to tensor<4x4xf64, #CSR>
+    // Foreach on sparse tensor instead of slice should yield the same result.
+    //
+    // CHECK-NEXT: 1
+    // CHECK-NEXT: 0
+    // CHECK-NEXT: 2.3
+    // CHECK-NEXT: 2
+    // CHECK-NEXT: 3
+    // CHECK-NEXT: 1
+    // CHECK-NEXT: 3
+    // CHECK-NEXT: 2
+    // CHECK-NEXT: 2.1
+    //
+    call @foreach_print_non_slice(%b) : (tensor<4x4xf64, #CSR>) -> ()
 
+    bufferization.dealloc_tensor %b : tensor<4x4xf64, #CSR>
     bufferization.dealloc_tensor %tmp : tensor<8x8xf64, #CSR>
     return
   }
