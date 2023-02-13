@@ -56,11 +56,6 @@ Changes to the LLVM IR
 Changes to building LLVM
 ------------------------
 
-* Removed ``LLVM_CCACHE_BUILD``, ``LLVM_CCACHE_MAXSIZE``, ``LLVM_CCACHE_DIR``
-  and ``LLVM_CCACHE_PARAMS`` CMake options. Upstream CMake supports setting
-  ``CMAKE_CXX_COMPILER_LAUNCHER=ccache`` since CMake 3.4 and should be used
-  instead.
-
 Changes to TableGen
 -------------------
 
