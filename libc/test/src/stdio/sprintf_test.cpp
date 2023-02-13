@@ -502,7 +502,7 @@ TEST(LlvmLibcSPrintfTest, OctConv) {
   ASSERT_STREQ(buff, "0077 01000000000000 002   ");
 }
 
-#ifndef LLVM_LIBC_PRINTF_DISABLE_FLOAT
+#ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
 
 TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
   __llvm_libc::testutils::ForceRoundingMode r(
@@ -2662,9 +2662,9 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
   ASSERT_STREQ_LEN(written, buff, "+0.126        0001.26e+03");
 }
 
-#endif // LLVM_LIBC_PRINTF_DISABLE_FLOAT
+#endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
 
-#ifndef LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
+#ifndef LIBC_COPT_PRINTF_DISABLE_WRITE_INT
 TEST(LlvmLibcSPrintfTest, WriteIntConv) {
   char buff[64];
   int written;
@@ -2697,9 +2697,9 @@ TEST(LlvmLibcSPrintfTest, WriteIntConv) {
   written = __llvm_libc::sprintf(buff, "abc123%n", nullptr);
   EXPECT_LT(written, 0);
 }
-#endif // LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
+#endif // LIBC_COPT_PRINTF_DISABLE_WRITE_INT
 
-#ifndef LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
+#ifndef LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 TEST(LlvmLibcSPrintfTest, IndexModeParsing) {
   char buff[64];
   int written;
@@ -2724,4 +2724,4 @@ TEST(LlvmLibcSPrintfTest, IndexModeParsing) {
   EXPECT_EQ(written, 45);
   ASSERT_STREQ(buff, "why would u do this, this is such   a pain. %");
 }
-#endif // LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
+#endif // LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
