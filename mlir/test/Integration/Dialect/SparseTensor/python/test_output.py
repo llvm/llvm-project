@@ -1,4 +1,4 @@
-# RUN: SUPPORT_LIB=%mlir_lib_dir/libmlir_c_runner_utils%shlibext \
+# RUN: env SUPPORT_LIB=%mlir_c_runner_utils \
 # RUN:   %PYTHON %s | FileCheck %s
 
 import ctypes
