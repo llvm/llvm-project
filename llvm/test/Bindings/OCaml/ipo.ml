@@ -52,7 +52,6 @@ let test_transforms () =
            ++ add_function_attrs
            ++ add_always_inliner
            ++ add_global_dce
-           ++ add_ipsccp
            ++ PassManager.run_module m
            ++ PassManager.dispose)
 
