@@ -58,7 +58,7 @@ def SparseTensor_NewOp : SparseTensor_Op<"new", [Pure]>,
   let hasVerifier = 1;
 }
 
-def SparseTensor_PackOp : SparseTensor_Op<"pack">,
+def SparseTensor_PackOp : SparseTensor_Op<"pack", [Pure]>,
     Arguments<(ins AnyRankedTensor:$data,
                    AnyRankedTensor:$indices)>,
     Results<(outs AnySparseTensor: $result)> {
@@ -66,9 +66,9 @@ def SparseTensor_PackOp : SparseTensor_Op<"pack">,
 
   let description = [{
     Packs the data/indices into a COO sparse tensor. The coordinates in `indices`
-    shall not exceed the dimension sizes of the returned sparse tensor.
-    Note that the returned tensor must be statically
-    shaped because it is impossible to infer the shape from sparse coordinates.
+    shall not exceed the dimension sizes of the returned sparse tensor. Note
+    that the returned tensor must be statically shaped because it is impossible
+    to infer the shape from sparse coordinates.
 
     `$indices`: stored via a 2-D tensor of integer elements with shape [N, ndims],
     which specifies the indices of the elements in the sparse tensor that contains
@@ -77,19 +77,19 @@ def SparseTensor_PackOp : SparseTensor_Op<"pack">,
     `$data`: stored via a 1-D tensor with shape [N], that supplies the corresponding
     values for the indices.
 
-    The operation can be used to materialize a sparse tensor from external sources. E.g.,
-    when passing from Python as two numpy arrays for data and indices.
+    The operation can be used to materialize a sparse tensor from external sources.
+    E.g., when passing from Python as two numpy arrays for data and indices.
 
     Example:
     ```mlir
-    %data    = arith.constant dense<[ 1     , 5     ]> : tensor<3xf64>
-    %indices = arith.constant dense<[[0,  0],[1,  2]]> : tensor<3x2xindex>
+    %data    = arith.constant dense<[ 1.1,   2.2,   3.3 ]> : tensor<3xf64>
+    %indices = arith.constant dense<[[0,0], [1,2], [1,3]]> : tensor<3x2xindex>
 
-    %st = sparse_tensor.pack %data, %indices : tensor<6xf64>, tensor<6x2xi32
-                                            to tensor<100x100xf64, #COO>
-    // %st = [[1, 0, 0, 0],
-    //        [0, 0, 5, 0],
-    //        [0, 0, 0, 0]]
+    %st = sparse_tensor.pack %data, %indices : tensor<3xf64>, tensor<3x2xindex
+                                            to tensor<3x4xf64, #COO>
+    // yields COO format |1.1, 0.0, 0.0, 0.0|
+    //     of 3x4 matrix |0.0, 0.0, 2.2, 3.3|
+    //                   |0.0, 0.0, 0.0, 0.0|
     ```
   }];
 
