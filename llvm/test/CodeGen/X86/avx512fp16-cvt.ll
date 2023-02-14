@@ -1027,3 +1027,29 @@ define half @f128_to_half(fp128 %x) nounwind {
   %a = fptrunc fp128 %x to half
   ret half %a
 }
+
+define <8 x half> @s64tof16(<8 x i64> %a) #0 {
+; CHECK-LABEL: s64tof16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcvtqq2ph %ymm1, %xmm1
+; CHECK-NEXT:    vcvtqq2ph %ymm0, %xmm0
+; CHECK-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = sitofp <8 x i64> %a to <8 x half>
+  ret <8 x half> %1
+}
+
+define <8 x half> @u64tof16(<8 x i64> %a) #0 {
+; CHECK-LABEL: u64tof16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcvtuqq2ph %ymm1, %xmm1
+; CHECK-NEXT:    vcvtuqq2ph %ymm0, %xmm0
+; CHECK-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = uitofp <8 x i64> %a to <8 x half>
+  ret <8 x half> %1
+}
+
+attributes #0 = { "min-legal-vector-width"="256" "prefer-vector-width"="256" }

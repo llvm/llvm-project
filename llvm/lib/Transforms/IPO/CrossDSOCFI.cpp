@@ -35,27 +35,15 @@ STATISTIC(NumTypeIds, "Number of unique type identifiers");
 
 namespace {
 
-struct CrossDSOCFI : public ModulePass {
-  static char ID;
-  CrossDSOCFI() : ModulePass(ID) {
-    initializeCrossDSOCFIPass(*PassRegistry::getPassRegistry());
-  }
-
+struct CrossDSOCFI {
   MDNode *VeryLikelyWeights;
 
   ConstantInt *extractNumericTypeId(MDNode *MD);
   void buildCFICheck(Module &M);
-  bool runOnModule(Module &M) override;
+  bool runOnModule(Module &M);
 };
 
 } // anonymous namespace
-
-INITIALIZE_PASS_BEGIN(CrossDSOCFI, "cross-dso-cfi", "Cross-DSO CFI", false,
-                      false)
-INITIALIZE_PASS_END(CrossDSOCFI, "cross-dso-cfi", "Cross-DSO CFI", false, false)
-char CrossDSOCFI::ID = 0;
-
-ModulePass *llvm::createCrossDSOCFIPass() { return new CrossDSOCFI; }
 
 /// Extracts a numeric type identifier from an MDNode containing type metadata.
 ConstantInt *CrossDSOCFI::extractNumericTypeId(MDNode *MD) {

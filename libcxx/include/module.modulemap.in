@@ -286,6 +286,9 @@ module std [system] {
         export *
       }
       module lexicographical_compare         { private header "__algorithm/lexicographical_compare.h" }
+      module lexicographical_compare_three_way {
+        private header "__algorithm/lexicographical_compare_three_way.h"
+      }
       module lower_bound                     { private header "__algorithm/lower_bound.h" }
       module make_heap                       { private header "__algorithm/make_heap.h" }
       module make_projected                  { private header "__algorithm/make_projected.h" }
@@ -596,6 +599,7 @@ module std [system] {
       module stable_partition                { private header "__algorithm/stable_partition.h" }
       module stable_sort                     { private header "__algorithm/stable_sort.h" }
       module swap_ranges                     { private header "__algorithm/swap_ranges.h" }
+      module three_way_comp_ref_type         { private header "__algorithm/three_way_comp_ref_type.h" }
       module transform                       { private header "__algorithm/transform.h" }
       module unique                          { private header "__algorithm/unique.h" }
       module unique_copy                     { private header "__algorithm/unique_copy.h" }

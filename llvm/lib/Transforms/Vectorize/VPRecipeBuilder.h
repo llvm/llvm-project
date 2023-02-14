@@ -136,11 +136,11 @@ public:
   /// A helper function that computes the predicate of the block BB, assuming
   /// that the header block of the loop is set to True. It returns the *entry*
   /// mask for the block BB.
-  VPValue *createBlockInMask(BasicBlock *BB, VPlanPtr &Plan);
+  VPValue *createBlockInMask(BasicBlock *BB, VPlan &Plan);
 
   /// A helper function that computes the predicate of the edge between SRC
   /// and DST.
-  VPValue *createEdgeMask(BasicBlock *Src, BasicBlock *Dst, VPlanPtr &Plan);
+  VPValue *createEdgeMask(BasicBlock *Src, BasicBlock *Dst, VPlan &Plan);
 
   /// Mark given ingredient for recording its recipe once one is created for
   /// it.
@@ -161,7 +161,7 @@ public:
 
   /// Create a replicating region for \p PredRecipe.
   VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
-                                       VPlanPtr &Plan);
+                                       VPlan &Plan);
 
   /// Build a VPReplicationRecipe for \p I and enclose it within a Region if it
   /// is predicated. \return \p VPBB augmented with this new recipe if \p I is
@@ -169,9 +169,8 @@ public:
   /// Region. Update the packing decision of predicated instructions if they
   /// feed \p I. Range.End may be decreased to ensure same recipe behavior from
   /// \p Range.Start to \p Range.End.
-  VPBasicBlock *handleReplication(
-      Instruction *I, VFRange &Range, VPBasicBlock *VPBB,
-      VPlanPtr &Plan);
+  VPBasicBlock *handleReplication(Instruction *I, VFRange &Range,
+                                  VPBasicBlock *VPBB, VPlan &Plan);
 
   /// Add the incoming values from the backedge to reduction & first-order
   /// recurrence cross-iteration phis.

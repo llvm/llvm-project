@@ -4935,6 +4935,7 @@ _LIBCPP_POP_MACROS
 #  include <concepts>
 #  include <cstring>
 #  include <functional>
+#  include <type_traits>
 #endif
 
 #endif // _LIBCPP_VALARRAY

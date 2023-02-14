@@ -14,12 +14,10 @@ namespace mlir {
 class LLVMTypeConverter;
 class ConversionTarget;
 class MLIRContext;
-class ModuleOp;
-template <typename T>
-class OperationPass;
+class Pass;
 class RewritePatternSet;
 
-#define GEN_PASS_DECL_CONVERTOOPENMPTOLLVM
+#define GEN_PASS_DECL_CONVERTOPENMPTOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
 
 /// Configure dynamic conversion legality of regionless operations from OpenMP
@@ -30,10 +28,6 @@ void configureOpenMPToLLVMConversionLegality(ConversionTarget &target,
 /// Populate the given list with patterns that convert from OpenMP to LLVM.
 void populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                             RewritePatternSet &patterns);
-
-/// Create a pass to convert OpenMP operations to the LLVMIR dialect.
-std::unique_ptr<OperationPass<ModuleOp>> createConvertOpenMPToLLVMPass();
-
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_OPENMPTOLLVM_CONVERTOPENMPTOLLVM_H

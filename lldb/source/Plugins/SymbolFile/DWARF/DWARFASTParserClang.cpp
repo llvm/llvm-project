@@ -908,7 +908,8 @@ static char const *FindLinkageName(DWARFDIE die) {
                                  FunctionNameType::eFunctionNameTypeMethod |
                                      FunctionNameType::eFunctionNameTypeFull,
                                  LanguageType::eLanguageTypeUnknown);
-  dwarf->FindFunctions(lookup_info, {}, true, sc_list);
+  dwarf->GetObjectFile()->GetModule()->FindFunctions(lookup_info, {}, {},
+                                                     sc_list);
 
   for (auto const &sc : sc_list.SymbolContexts()) {
     if (auto *func = sc.function) {
@@ -1155,9 +1156,6 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
                   if (attrs.accessibility == eAccessNone)
                     attrs.accessibility = eAccessPublic;
 
-                  // Make sure we find the linkage name here so it gets
-                  // attached to the member function inside
-                  // AddMethodToCXXRecordType below.
                   if (!attrs.mangled_name && attrs.storage == clang::SC_Extern)
                     attrs.mangled_name = FindLinkageName(die);
 

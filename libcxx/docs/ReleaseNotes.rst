@@ -53,6 +53,12 @@ Deprecations and Removals
   has been shipping since LLVM 14, so the Coroutines TS implementation is being removed per our policy
   for removing TSes.
 
+- Several incidental transitive includes have been removed from libc++. Those
+  includes are removed based on the language version used. Incidental transitive
+  inclusions of the following headers have been removed:
+
+  - C++2b: ``type_traits``
+
 Upcoming Deprecations and Removals
 ----------------------------------
 

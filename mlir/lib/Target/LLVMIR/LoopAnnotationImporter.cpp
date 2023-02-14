@@ -50,6 +50,8 @@ struct LoopMetadataConversion {
   FailureOr<LoopLICMAttr> convertLICMAttr();
   FailureOr<LoopDistributeAttr> convertDistributeAttr();
   FailureOr<LoopPipelineAttr> convertPipelineAttr();
+  FailureOr<LoopPeeledAttr> convertPeeledAttr();
+  FailureOr<LoopUnswitchAttr> convertUnswitchAttr();
   FailureOr<SmallVector<SymbolRefAttr>> convertParallelAccesses();
 
   llvm::StringMap<const llvm::MDNode *> propertyMap;
@@ -373,6 +375,17 @@ FailureOr<LoopPipelineAttr> LoopMetadataConversion::convertPipelineAttr() {
   return createIfNonNull<LoopPipelineAttr>(ctx, disable, initiationinterval);
 }
 
+FailureOr<LoopPeeledAttr> LoopMetadataConversion::convertPeeledAttr() {
+  FailureOr<IntegerAttr> count = lookupIntNode("llvm.loop.peeled.count");
+  return createIfNonNull<LoopPeeledAttr>(ctx, count);
+}
+
+FailureOr<LoopUnswitchAttr> LoopMetadataConversion::convertUnswitchAttr() {
+  FailureOr<BoolAttr> partialDisable =
+      lookupUnitNode("llvm.loop.unswitch.partial.disable");
+  return createIfNonNull<LoopUnswitchAttr>(ctx, partialDisable);
+}
+
 FailureOr<SmallVector<SymbolRefAttr>>
 LoopMetadataConversion::convertParallelAccesses() {
   FailureOr<SmallVector<llvm::MDNode *>> nodes =
@@ -403,6 +416,8 @@ LoopAnnotationAttr LoopMetadataConversion::convert() {
   FailureOr<LoopLICMAttr> licmAttr = convertLICMAttr();
   FailureOr<LoopDistributeAttr> distributeAttr = convertDistributeAttr();
   FailureOr<LoopPipelineAttr> pipelineAttr = convertPipelineAttr();
+  FailureOr<LoopPeeledAttr> peeledAttr = convertPeeledAttr();
+  FailureOr<LoopUnswitchAttr> unswitchAttr = convertUnswitchAttr();
   FailureOr<BoolAttr> mustProgress = lookupUnitNode("llvm.loop.mustprogress");
   FailureOr<BoolAttr> isVectorized =
       lookupIntNodeAsBoolAttr("llvm.loop.isvectorized");
@@ -418,8 +433,8 @@ LoopAnnotationAttr LoopMetadataConversion::convert() {
 
   return createIfNonNull<LoopAnnotationAttr>(
       ctx, disableNonForced, vecAttr, interleaveAttr, unrollAttr,
-      unrollAndJamAttr, licmAttr, distributeAttr, pipelineAttr, mustProgress,
-      isVectorized, parallelAccesses);
+      unrollAndJamAttr, licmAttr, distributeAttr, pipelineAttr, peeledAttr,
+      unswitchAttr, mustProgress, isVectorized, parallelAccesses);
 }
 
 LoopAnnotationAttr

@@ -677,12 +677,13 @@ void VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
 
+  SmallVector<VPFirstOrderRecurrencePHIRecipe *> RecurrencePhis;
   for (VPRecipeBase &R :
-       Plan.getVectorLoopRegion()->getEntry()->getEntryBasicBlock()->phis()) {
-    auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R);
-    if (!FOR)
-      continue;
+       Plan.getVectorLoopRegion()->getEntry()->getEntryBasicBlock()->phis())
+    if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R))
+      RecurrencePhis.push_back(FOR);
 
+  for (VPFirstOrderRecurrencePHIRecipe *FOR : RecurrencePhis) {
     SmallPtrSet<VPFirstOrderRecurrencePHIRecipe *, 4> SeenPhis;
     VPRecipeBase *Previous = FOR->getBackedgeValue()->getDefiningRecipe();
     // Fixed-order recurrences do not contain cycles, so this loop is guaranteed

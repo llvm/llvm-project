@@ -143,6 +143,37 @@ struct PackOpInterface
     // ones when packing into a COO format.
     return {{op->getOpResult(0), BufferRelation::Equivalent}};
   }
+
+  BufferRelation bufferRelation(Operation *oo, OpResult opResult,
+                                const AnalysisState &state) const {
+    return BufferRelation::Unknown;
+  }
+};
+
+struct UnpackOpInterface
+    : public BufferizableOpInterface::ExternalModel<UnpackOpInterface,
+                                                    sparse_tensor::UnpackOp> {
+  bool bufferizesToAllocation(Operation *op, OpResult opResult) const {
+    // Similar to InsertOp, reallocation is not considered to allocate a new
+    // piece of memory.
+    return false;
+  }
+
+  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
+                              const AnalysisState &state) const {
+    return true;
+  }
+
+  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
+                               const AnalysisState &state) const {
+    return false;
+  }
+
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
+                                            const AnalysisState &state) const {
+    // Conceptually, UnpackOp equals to a list of toIndices/toValueOp
+    return {};
+  }
 };
 
 struct InsertOpInterface
@@ -285,6 +316,8 @@ void mlir::sparse_tensor::registerBufferizableOpInterfaceExternalModels(
     sparse_tensor::InsertOp::attachInterface<InsertOpInterface>(*ctx);
     sparse_tensor::NumberOfEntriesOp::attachInterface<
         NumberOfEntriesOpInterface>(*ctx);
+    sparse_tensor::PackOp::attachInterface<PackOpInterface>(*ctx);
+    sparse_tensor::UnpackOp::attachInterface<UnpackOpInterface>(*ctx);
     sparse_tensor::ToIndicesBufferOp::attachInterface<
         ToIndicesBufferOpInterface>(*ctx);
     sparse_tensor::ToIndicesOp::attachInterface<ToIndicesOpInterface>(*ctx);

@@ -107,4 +107,19 @@ def IsFortranScalarCharacterExprPred
 def AnyScalarCharacterExpr : Type<IsFortranScalarCharacterExprPred,
     "any character scalar expression type">;
 
+def IsFortranNumericalArrayObjectPred
+        : CPred<"::hlfir::isFortranNumericalArrayObject($_self)">;
+def AnyFortranNumericalArrayObject : Type<IsFortranNumericalArrayObjectPred,
+    "any array-like object containing a numerical type">;
+
+def IsPassByRefOrIntegerTypePred
+        : CPred<"::hlfir::isPassByRefOrIntegerType($_self)">;
+def AnyPassByRefOrIntegerType : Type<IsPassByRefOrIntegerTypePred,
+    "an integer type either by value or by reference">;
+
+def IsMaskArgumentPred
+        : CPred<"::hlfir::isMaskArgument($_self)">;
+def AnyFortranLogicalOrI1ArrayObject : Type<IsMaskArgumentPred,
+    "A scalar i1 or logical or an array-like object containing logicals">;
+
 #endif // FORTRAN_DIALECT_HLFIR_OP_BASE

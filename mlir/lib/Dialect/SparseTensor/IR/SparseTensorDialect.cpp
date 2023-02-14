@@ -424,7 +424,7 @@ static bool isCOOType(SparseTensorEncodingAttr enc, uint64_t s, bool isUnique) {
   return !isUnique || isUniqueDLT(getDimLevelType(enc, rank - 1));
 }
 
-bool mlir::sparse_tensor::isUniqueCOOType(RankedTensorType tp) {
+bool mlir::sparse_tensor::isUniqueCOOType(TensorType tp) {
   SparseTensorEncodingAttr enc = getSparseTensorEncoding(tp);
   return enc && isCOOType(enc, 0, /*isUnique=*/true);
 }
@@ -617,40 +617,47 @@ LogicalResult NewOp::verify() {
   return success();
 }
 
-LogicalResult PackOp::verify() {
-  TensorType dataTp = getData().getType(), idxTp = getIndices().getType();
-  TensorType retTp = getResult().getType();
+static LogicalResult verifyPackUnPack(Operation *op, TensorType cooTp,
+                                      TensorType dataTp, TensorType idxTp) {
+  if (!isUniqueCOOType(cooTp))
+    return op->emitError("must operate on a COO tensor");
 
-  if (!isUniqueCOOType(retTp.cast<RankedTensorType>()))
-    return emitError("must be packed into a COO tensor");
-
-  if (!retTp.hasStaticShape() || !dataTp.hasStaticShape() ||
-      !idxTp.hasStaticShape())
-    return emitError("all input types must be statically shaped");
-
-  if (dataTp.getRank() != 1 || idxTp.getRank() != 2) {
-    return emitError(
-        "requires rank 1 tensor for value and rank 2 tensor for indices");
-  }
-
-  auto enc = getSparseTensorEncoding(retTp);
+  auto enc = getSparseTensorEncoding(cooTp);
   if (idxTp.getElementType() != enc.getIndexType() ||
-      dataTp.getElementType() != retTp.getElementType())
-    return emitError("unmatched type between input and output");
+      dataTp.getElementType() != cooTp.getElementType())
+    return op->emitError("unmatched type between input and output");
 
   auto dNOE = dataTp.getShape()[0];
   auto iNOE = idxTp.getShape()[0];
   if (!ShapedType::isDynamic(dNOE) && !ShapedType::isDynamic(iNOE) &&
       dNOE != iNOE)
-    return emitError("unmatched number of elements in data and indices");
+    return op->emitError("unmatched number of elements in data and indices");
 
   // A tensor<?xNxi32> for indices means the input COO is rank N
   auto inRank = idxTp.getShape()[1];
-  auto ouRank = retTp.getRank();
+  auto ouRank = cooTp.getRank();
   if (!ShapedType::isDynamic(inRank) && inRank != ouRank)
-    return emitError("unmatched rank between input and output");
+    return op->emitError("unmatched rank between input and output");
 
   return success();
+}
+
+LogicalResult PackOp::verify() {
+  TensorType dataTp = getData().getType(), idxTp = getIndices().getType();
+  TensorType retTp = getResult().getType();
+
+  if (!retTp.hasStaticShape() || !dataTp.hasStaticShape() ||
+      !idxTp.hasStaticShape())
+    return emitError("all input types must be statically shaped");
+
+  return verifyPackUnPack(*this, retTp, dataTp, idxTp);
+}
+
+LogicalResult UnpackOp::verify() {
+  TensorType dataTp = getData().getType(), idxTp = getIndices().getType();
+  TensorType srcTp = getTensor().getType();
+
+  return verifyPackUnPack(*this, srcTp, dataTp, idxTp);
 }
 
 LogicalResult ConvertOp::verify() {

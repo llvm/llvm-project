@@ -400,11 +400,11 @@ inline _LIBCPP_HIDE_FROM_ABI void __swap_bitmap_pos(
   // Swap one pair on each iteration as long as both bitsets have at least one
   // element for swapping.
   while (__left_bitset != 0 && __right_bitset != 0) {
-    difference_type tz_left  = __libcpp_ctz(__left_bitset);
-    __left_bitset            = __libcpp_blsr(__left_bitset);
-    difference_type tz_right = __libcpp_ctz(__right_bitset);
-    __right_bitset           = __libcpp_blsr(__right_bitset);
-    _Ops::iter_swap(__first + tz_left, __last - tz_right);
+    difference_type __tz_left  = __libcpp_ctz(__left_bitset);
+    __left_bitset              = __libcpp_blsr(__left_bitset);
+    difference_type __tz_right = __libcpp_ctz(__right_bitset);
+    __right_bitset             = __libcpp_blsr(__right_bitset);
+    _Ops::iter_swap(__first + __tz_left, __last - __tz_right);
   }
 }
 
@@ -469,9 +469,9 @@ inline _LIBCPP_HIDE_FROM_ABI void __bitset_partition_partial_blocks(
   // Record the comparison outcomes for the elements currently on the left side.
   if (__left_bitset == 0) {
     _RandomAccessIterator __iter = __first;
-    for (int j = 0; j < __l_size; j++) {
+    for (int __j = 0; __j < __l_size; __j++) {
       bool __comp_result = !__comp(*__iter, __pivot);
-      __left_bitset |= (static_cast<uint64_t>(__comp_result) << j);
+      __left_bitset |= (static_cast<uint64_t>(__comp_result) << __j);
       ++__iter;
     }
   }
@@ -479,9 +479,9 @@ inline _LIBCPP_HIDE_FROM_ABI void __bitset_partition_partial_blocks(
   // side.
   if (__right_bitset == 0) {
     _RandomAccessIterator __iter = __lm1;
-    for (int j = 0; j < __r_size; j++) {
+    for (int __j = 0; __j < __r_size; __j++) {
       bool __comp_result = __comp(*__iter, __pivot);
-      __right_bitset |= (static_cast<uint64_t>(__comp_result) << j);
+      __right_bitset |= (static_cast<uint64_t>(__comp_result) << __j);
       --__iter;
     }
   }
@@ -501,9 +501,9 @@ inline _LIBCPP_HIDE_FROM_ABI void __swap_bitmap_pos_within(
     while (__left_bitset != 0) {
       difference_type __tz_left = __detail::__block_size - 1 - __libcpp_clz(__left_bitset);
       __left_bitset &= (static_cast<uint64_t>(1) << __tz_left) - 1;
-      _RandomAccessIterator it = __first + __tz_left;
-      if (it != __lm1) {
-        _Ops::iter_swap(it, __lm1);
+      _RandomAccessIterator __it = __first + __tz_left;
+      if (__it != __lm1) {
+        _Ops::iter_swap(__it, __lm1);
       }
       --__lm1;
     }
@@ -514,9 +514,9 @@ inline _LIBCPP_HIDE_FROM_ABI void __swap_bitmap_pos_within(
     while (__right_bitset != 0) {
       difference_type __tz_right = __detail::__block_size - 1 - __libcpp_clz(__right_bitset);
       __right_bitset &= (static_cast<uint64_t>(1) << __tz_right) - 1;
-      _RandomAccessIterator it = __lm1 - __tz_right;
-      if (it != __first) {
-        _Ops::iter_swap(it, __first);
+      _RandomAccessIterator __it = __lm1 - __tz_right;
+      if (__it != __first) {
+        _Ops::iter_swap(__it, __first);
       }
       ++__first;
     }

@@ -52,30 +52,10 @@ namespace {
 class GpuToLLVMConversionPass
     : public impl::GpuToLLVMConversionPassBase<GpuToLLVMConversionPass> {
 public:
-  GpuToLLVMConversionPass() = default;
-
-  GpuToLLVMConversionPass(bool kernelBarePtrCallConv)
-      : GpuToLLVMConversionPass() {
-    if (this->kernelBarePtrCallConv.getNumOccurrences() == 0)
-      this->kernelBarePtrCallConv = kernelBarePtrCallConv;
-  }
-
-  GpuToLLVMConversionPass(const GpuToLLVMConversionPass &other)
-      : GpuToLLVMConversionPassBase(other) {}
+  using Base::Base;
 
   // Run the dialect converter on the module.
   void runOnOperation() override;
-
-private:
-  Option<std::string> gpuBinaryAnnotation{
-      *this, "gpu-binary-annotation",
-      llvm::cl::desc("Annotation attribute string for GPU binary"),
-      llvm::cl::init(gpu::getDefaultGpuBinaryAnnotation())};
-  Option<bool> kernelBarePtrCallConv{
-      *this, "use-bare-pointers-for-kernels",
-      llvm::cl::desc("Use bare pointers to pass memref arguments to kernels. "
-                     "The kernel must use the same setting for this option."),
-      llvm::cl::init(false)};
 };
 
 struct FunctionCallBuilder {
@@ -903,11 +883,6 @@ LogicalResult ConvertSetDefaultDeviceOpToGpuRuntimeCallPattern::matchAndRewrite(
   setDefaultDeviceCallBuilder.create(loc, rewriter, {adaptor.getDevIndex()});
   rewriter.replaceOp(op, {});
   return success();
-}
-
-std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
-mlir::createGpuToLLVMConversionPass(bool kernelBarePtrCallConv) {
-  return std::make_unique<GpuToLLVMConversionPass>(kernelBarePtrCallConv);
 }
 
 void mlir::populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,

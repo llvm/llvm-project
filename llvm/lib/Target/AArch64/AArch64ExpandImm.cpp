@@ -240,7 +240,7 @@ static bool trySequenceOfOnes(uint64_t UImm,
 }
 
 static uint64_t GetRunOfOnesStartingAt(uint64_t V, uint64_t StartPosition) {
-  uint64_t NumOnes = llvm::countTrailingOnes(V >> StartPosition);
+  uint64_t NumOnes = llvm::countr_one(V >> StartPosition);
 
   uint64_t UnshiftedOnes;
   if (NumOnes == 64) {
@@ -286,7 +286,7 @@ static uint64_t MaximallyReplicateSubImmediate(uint64_t V, uint64_t Subset) {
 static uint64_t maximalLogicalImmWithin(uint64_t RemainingBits,
                                         uint64_t OriginalBits) {
   // Find the first set bit.
-  uint32_t Position = llvm::countTrailingZeros(RemainingBits);
+  uint32_t Position = llvm::countr_zero(RemainingBits);
 
   // Get the first run of set bits.
   uint64_t FirstRun = GetRunOfOnesStartingAt(OriginalBits, Position);
@@ -304,7 +304,7 @@ decomposeIntoOrrOfLogicalImmediates(uint64_t UImm) {
     return std::nullopt;
 
   // Make sure we don't have a run of ones split around the rotation boundary.
-  uint32_t InitialTrailingOnes = llvm::countTrailingOnes(UImm);
+  uint32_t InitialTrailingOnes = llvm::countr_one(UImm);
   uint64_t RotatedBits = rotr(UImm, InitialTrailingOnes);
 
   // Find the largest logical immediate that fits within the full immediate.
