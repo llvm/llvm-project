@@ -71,11 +71,7 @@ public:
     return llvm::Error::success();
   }
 
-  virtual void handleProvidedAndRequiredStdCXXModules(
-      std::optional<P1689ModuleInfo> Provided,
-      std::vector<P1689ModuleInfo> Requires) {}
-
-  virtual void handleBuildCommand(Command Cmd) {}
+  virtual void handleBuildCommand(Command Cmd) = 0;
 
   virtual void
   handleDependencyOutputOpts(const DependencyOutputOptions &Opts) = 0;
