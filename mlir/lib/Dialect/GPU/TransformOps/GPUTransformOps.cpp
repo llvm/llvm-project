@@ -427,7 +427,6 @@ static DiagnosedSilenceableFailure rewriteOneForeachThreadToGpuThreads(
 
   // Step 3. Create the gpu.thread ops and map the induction variables to the
   // newly created ops.
-  IndexType indexType = rewriter.getIndexType();
   // Replace ids of dimension size 1 by zero to simplify the IR.
   SmallVector<Value> threadOpsUpdated(threadOps.begin(), threadOps.end());
   assert(threadOps.size() == globalBlockDims.size());
