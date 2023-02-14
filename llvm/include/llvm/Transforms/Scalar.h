@@ -480,12 +480,6 @@ FunctionPass *createNaryReassociatePass();
 
 //===----------------------------------------------------------------------===//
 //
-// LoopDistribute - Distribute loops.
-//
-FunctionPass *createLoopDistributePass();
-
-//===----------------------------------------------------------------------===//
-//
 // LoopFuse - Fuse loops.
 //
 FunctionPass *createLoopFusePass();
