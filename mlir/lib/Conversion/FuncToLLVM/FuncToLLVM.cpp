@@ -48,7 +48,7 @@
 #include <functional>
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTFUNCTOLLVMPASS
+#define GEN_PASS_DEF_CONVERTFUNCTOLLVM
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -711,8 +711,15 @@ void mlir::populateFuncToLLVMConversionPatterns(LLVMTypeConverter &converter,
 namespace {
 /// A pass converting Func operations into the LLVM IR dialect.
 struct ConvertFuncToLLVMPass
-    : public impl::ConvertFuncToLLVMPassBase<ConvertFuncToLLVMPass> {
-  using Base::Base;
+    : public impl::ConvertFuncToLLVMBase<ConvertFuncToLLVMPass> {
+  ConvertFuncToLLVMPass() = default;
+  ConvertFuncToLLVMPass(bool useBarePtrCallConv, unsigned indexBitwidth,
+                        bool useAlignedAlloc,
+                        const llvm::DataLayout &dataLayout) {
+    this->useBarePtrCallConv = useBarePtrCallConv;
+    this->indexBitwidth = indexBitwidth;
+    this->dataLayout = dataLayout.getStringRepresentation();
+  }
 
   /// Run the dialect converter on the module.
   void runOnOperation() override {
@@ -754,3 +761,21 @@ struct ConvertFuncToLLVMPass
   }
 };
 } // namespace
+
+std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertFuncToLLVMPass() {
+  return std::make_unique<ConvertFuncToLLVMPass>();
+}
+
+std::unique_ptr<OperationPass<ModuleOp>>
+mlir::createConvertFuncToLLVMPass(const LowerToLLVMOptions &options) {
+  auto allocLowering = options.allocLowering;
+  // There is no way to provide additional patterns for pass, so
+  // AllocLowering::None will always fail.
+  assert(allocLowering != LowerToLLVMOptions::AllocLowering::None &&
+         "ConvertFuncToLLVMPass doesn't support AllocLowering::None");
+  bool useAlignedAlloc =
+      (allocLowering == LowerToLLVMOptions::AllocLowering::AlignedAlloc);
+  return std::make_unique<ConvertFuncToLLVMPass>(
+      options.useBarePtrCallConv, options.getIndexBitwidth(), useAlignedAlloc,
+      options.dataLayout);
+}
