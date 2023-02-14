@@ -1212,6 +1212,18 @@ const Symbol &ResolveAssociations(const Symbol &original) {
   return symbol;
 }
 
+const Symbol &ResolveAssociationsExceptSelectRank(const Symbol &original) {
+  const Symbol &symbol{original.GetUltimate()};
+  if (const auto *details{symbol.detailsIf<AssocEntityDetails>()}) {
+    if (!details->rank()) {
+      if (const Symbol * nested{UnwrapWholeSymbolDataRef(details->expr())}) {
+        return ResolveAssociations(*nested);
+      }
+    }
+  }
+  return symbol;
+}
+
 // When a construct association maps to a variable, and that variable
 // is not an array with a vector-valued subscript, return the base
 // Symbol of that variable, else nullptr.  Descends into other construct

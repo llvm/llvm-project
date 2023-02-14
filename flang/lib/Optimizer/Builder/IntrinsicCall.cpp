@@ -4967,8 +4967,9 @@ IntrinsicLibrary::genTranspose(mlir::Type resultType,
 
   // Create mutable fir.box to be passed to the runtime for the result.
   mlir::Type resultArrayType = builder.getVarLenSeqTy(resultType, 2);
-  fir::MutableBoxValue resultMutableBox =
-      fir::factory::createTempMutableBox(builder, loc, resultArrayType);
+  fir::MutableBoxValue resultMutableBox = fir::factory::createTempMutableBox(
+      builder, loc, resultArrayType, {},
+      fir::isPolymorphicType(source.getType()) ? source : mlir::Value{});
   mlir::Value resultIrBox =
       fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
   // Call runtime. The runtime is allocating the result.

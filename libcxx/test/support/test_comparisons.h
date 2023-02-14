@@ -24,7 +24,9 @@
 #define TEST_COMPARISONS_H
 
 #include <cassert>
+#include <compare>
 #include <concepts>
+#include <limits>
 #include <type_traits>
 #include <utility>
 
@@ -238,4 +240,33 @@ struct LessAndEqComp {
     return lhs.value == rhs.value;
   }
 };
+
+#if TEST_STD_VER > 17
+struct StrongOrder {
+  int value;
+  constexpr StrongOrder(int v) : value(v) {}
+  friend std::strong_ordering operator<=>(StrongOrder, StrongOrder) = default;
+};
+
+struct WeakOrder {
+  int value;
+  constexpr WeakOrder(int v) : value(v) {}
+  friend std::weak_ordering operator<=>(WeakOrder, WeakOrder) = default;
+};
+
+struct PartialOrder {
+  int value;
+  constexpr PartialOrder(int v) : value(v) {}
+  friend constexpr std::partial_ordering operator<=>(PartialOrder lhs, PartialOrder rhs) {
+    if (lhs.value == std::numeric_limits<int>::min() || rhs.value == std::numeric_limits<int>::min())
+      return std::partial_ordering::unordered;
+    return lhs.value <=> rhs.value;
+  }
+  friend constexpr bool operator==(PartialOrder lhs, PartialOrder rhs) {
+    return (lhs <=> rhs) == std::partial_ordering::equivalent;
+  }
+};
+
+#endif
+
 #endif // TEST_COMPARISONS_H

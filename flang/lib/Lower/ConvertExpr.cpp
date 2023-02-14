@@ -621,8 +621,13 @@ isOptimizableTranspose(const Fortran::evaluate::ProcedureRef &procRef,
                        const Fortran::lower::AbstractConverter &converter) {
   const Fortran::evaluate::SpecificIntrinsic *intrin =
       procRef.proc().GetSpecificIntrinsic();
-  return isTransposeOptEnabled(converter) && intrin &&
-         intrin->name == "transpose";
+  if (isTransposeOptEnabled(converter) && intrin &&
+      intrin->name == "transpose") {
+    const std::optional<Fortran::evaluate::ActualArgument> matrix =
+        procRef.arguments().at(0);
+    return !(matrix && matrix->GetType() && matrix->GetType()->IsPolymorphic());
+  }
+  return false;
 }
 
 template <typename T>

@@ -59,7 +59,7 @@ cl::opt<double> IterativeBFIPrecision(
     "iterative-bfi-precision", cl::init(1e-12), cl::Hidden,
     cl::desc("Iterative inference: delta convergence precision; smaller values "
              "typically lead to better results at the cost of worsen runtime"));
-}
+} // namespace llvm
 
 ScaledNumber<uint64_t> BlockMass::toScaled() const {
   if (isFull())

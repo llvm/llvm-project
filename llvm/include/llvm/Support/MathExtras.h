@@ -66,7 +66,9 @@ constexpr float ef          = 2.71828183F, // (0x1.5bf0a8P+1) https://oeis.org/A
 /// Only unsigned integral types are allowed.
 ///
 /// Returns std::numeric_limits<T>::digits on an input of 0.
-template <typename T> unsigned countTrailingZeros(T Val) {
+template <typename T>
+LLVM_DEPRECATED("Use llvm::countr_zero instead.", "llvm::countr_zero")
+unsigned countTrailingZeros(T Val) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return llvm::countr_zero(Val);
@@ -78,7 +80,9 @@ template <typename T> unsigned countTrailingZeros(T Val) {
 /// Only unsigned integral types are allowed.
 ///
 /// Returns std::numeric_limits<T>::digits on an input of 0.
-template <typename T> unsigned countLeadingZeros(T Val) {
+template <typename T>
+LLVM_DEPRECATED("Use llvm::countl_zero instead.", "llvm::countl_zero")
+unsigned countLeadingZeros(T Val) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return llvm::countl_zero(Val);
@@ -301,7 +305,9 @@ constexpr inline bool isPowerOf2_64(uint64_t Value) {
 /// Only unsigned integral types are allowed.
 ///
 /// Returns std::numeric_limits<T>::digits on an input of all ones.
-template <typename T> unsigned countLeadingOnes(T Value) {
+template <typename T>
+LLVM_DEPRECATED("Use llvm::countl_one instead.", "llvm::countl_one")
+unsigned countLeadingOnes(T Value) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return llvm::countl_one<T>(Value);
@@ -314,7 +320,9 @@ template <typename T> unsigned countLeadingOnes(T Value) {
 /// Only unsigned integral types are allowed.
 ///
 /// Returns std::numeric_limits<T>::digits on an input of all ones.
-template <typename T> unsigned countTrailingOnes(T Value) {
+template <typename T>
+LLVM_DEPRECATED("Use llvm::countr_one instead.", "llvm::countr_one")
+unsigned countTrailingOnes(T Value) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return llvm::countr_one<T>(Value);
@@ -324,6 +332,7 @@ template <typename T> unsigned countTrailingOnes(T Value) {
 /// Ex. countPopulation(0xF000F000) = 8
 /// Returns 0 if the word is zero.
 template <typename T>
+LLVM_DEPRECATED("Use llvm::popcount instead.", "llvm::popcount")
 inline unsigned countPopulation(T Value) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
