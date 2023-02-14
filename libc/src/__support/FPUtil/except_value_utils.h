@@ -48,7 +48,7 @@ template <typename T, size_t N> struct ExceptValues {
 
   Mapping values[N];
 
-  constexpr cpp::optional<T> lookup(UIntType x_bits) const {
+  LIBC_INLINE constexpr cpp::optional<T> lookup(UIntType x_bits) const {
     for (size_t i = 0; i < N; ++i) {
       if (LIBC_UNLIKELY(x_bits == values[i].input)) {
         UIntType out_bits = values[i].rnd_towardzero_result;
@@ -69,7 +69,8 @@ template <typename T, size_t N> struct ExceptValues {
     return cpp::nullopt;
   }
 
-  constexpr cpp::optional<T> lookup_odd(UIntType x_abs, bool sign) const {
+  LIBC_INLINE constexpr cpp::optional<T> lookup_odd(UIntType x_abs,
+                                                    bool sign) const {
     for (size_t i = 0; i < N; ++i) {
       if (LIBC_UNLIKELY(x_abs == values[i].input)) {
         UIntType out_bits = values[i].rnd_towardzero_result;
@@ -96,6 +97,19 @@ template <typename T, size_t N> struct ExceptValues {
     return cpp::nullopt;
   }
 };
+
+// Helper functions to set results for exceptional cases.
+LIBC_INLINE float round_result_slightly_down(float value_rn) {
+  volatile float tmp = value_rn;
+  tmp = tmp - 0x1.0p-100f;
+  return tmp;
+}
+
+LIBC_INLINE float round_result_slightly_up(float value_rn) {
+  volatile float tmp = value_rn;
+  tmp = tmp + 0x1.0p-100f;
+  return tmp;
+}
 
 } // namespace fputil
 

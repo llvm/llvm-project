@@ -391,7 +391,6 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_invoke_r",
     "values": { "c++2b": 202106 },
     "headers": ["functional"],
-    "unimplemented": True,
   }, {
     "name": "__cpp_lib_is_aggregate",
     "values": { "c++17": 201703 },

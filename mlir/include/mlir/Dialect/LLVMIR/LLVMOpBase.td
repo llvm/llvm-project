@@ -35,7 +35,10 @@ def LLVM_Dialect : Dialect {
   let extraClassDeclaration = [{
     /// Name of the data layout attributes.
     static StringRef getDataLayoutAttrName() { return "llvm.data_layout"; }
+    static StringRef getNoAliasScopesAttrName() { return "noalias_scopes"; }
+    static StringRef getAliasScopesAttrName() { return "alias_scopes"; }
     static StringRef getLoopAttrName() { return "llvm.loop"; }
+    static StringRef getAccessGroupsAttrName() { return "access_groups"; }
 
     /// Names of llvm parameter attributes.
     static StringRef getAlignAttrName() { return "llvm.align"; }

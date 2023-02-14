@@ -530,23 +530,19 @@ void RISCVDAGToDAGISel::selectVSETVLI(SDNode *Node) {
   if (!Subtarget->hasVInstructions())
     return;
 
-  assert((Node->getOpcode() == ISD::INTRINSIC_W_CHAIN ||
-          Node->getOpcode() == ISD::INTRINSIC_WO_CHAIN) &&
-         "Unexpected opcode");
+  assert(Node->getOpcode() == ISD::INTRINSIC_WO_CHAIN && "Unexpected opcode");
 
   SDLoc DL(Node);
   MVT XLenVT = Subtarget->getXLenVT();
 
-  bool HasChain = Node->getOpcode() == ISD::INTRINSIC_W_CHAIN;
-  unsigned IntNoOffset = HasChain ? 1 : 0;
-  unsigned IntNo = Node->getConstantOperandVal(IntNoOffset);
+  unsigned IntNo = Node->getConstantOperandVal(0);
 
   assert((IntNo == Intrinsic::riscv_vsetvli ||
           IntNo == Intrinsic::riscv_vsetvlimax) &&
          "Unexpected vsetvli intrinsic");
 
   bool VLMax = IntNo == Intrinsic::riscv_vsetvlimax;
-  unsigned Offset = IntNoOffset + (VLMax ? 1 : 2);
+  unsigned Offset = (VLMax ? 1 : 2);
 
   assert(Node->getNumOperands() == Offset + 2 &&
          "Unexpected number of operands");
@@ -557,12 +553,10 @@ void RISCVDAGToDAGISel::selectVSETVLI(SDNode *Node) {
       Node->getConstantOperandVal(Offset + 1) & 0x7);
 
   unsigned VTypeI = RISCVVType::encodeVTYPE(VLMul, SEW, /*TailAgnostic*/ true,
-                                            /*MaskAgnostic*/ false);
+                                            /*MaskAgnostic*/ true);
   SDValue VTypeIOp = CurDAG->getTargetConstant(VTypeI, DL, XLenVT);
 
   SmallVector<EVT, 2> VTs = {XLenVT};
-  if (HasChain)
-    VTs.push_back(MVT::Other);
 
   SDValue VLOperand;
   unsigned Opcode = RISCV::PseudoVSETVLI;
@@ -570,15 +564,13 @@ void RISCVDAGToDAGISel::selectVSETVLI(SDNode *Node) {
     VLOperand = CurDAG->getRegister(RISCV::X0, XLenVT);
     Opcode = RISCV::PseudoVSETVLIX0;
   } else {
-    VLOperand = Node->getOperand(IntNoOffset + 1);
+    VLOperand = Node->getOperand(1);
 
     if (auto *C = dyn_cast<ConstantSDNode>(VLOperand)) {
       uint64_t AVL = C->getZExtValue();
       if (isUInt<5>(AVL)) {
         SDValue VLImm = CurDAG->getTargetConstant(AVL, DL, XLenVT);
         SmallVector<SDValue, 3> Ops = {VLImm, VTypeIOp};
-        if (HasChain)
-          Ops.push_back(Node->getOperand(0));
         ReplaceNode(
             Node, CurDAG->getMachineNode(RISCV::PseudoVSETIVLI, DL, VTs, Ops));
         return;
@@ -587,8 +579,6 @@ void RISCVDAGToDAGISel::selectVSETVLI(SDNode *Node) {
   }
 
   SmallVector<SDValue, 3> Ops = {VLOperand, VTypeIOp};
-  if (HasChain)
-    Ops.push_back(Node->getOperand(0));
 
   ReplaceNode(Node, CurDAG->getMachineNode(Opcode, DL, VTs, Ops));
 }
@@ -685,6 +675,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   MVT XLenVT = Subtarget->getXLenVT();
   SDLoc DL(Node);
   MVT VT = Node->getSimpleValueType(0);
+
+  bool HasBitTest = Subtarget->hasStdExtZbs() || Subtarget->hasVendorXTHeadBs();
 
   switch (Opcode) {
   case ISD::Constant: {
@@ -830,18 +822,19 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       return;
     }
 
-    // Only do the remaining transforms if the shift has one use.
+    // Only do the remaining transforms if the AND has one use.
     if (!N0.hasOneUse())
       break;
 
-    // If C2 is (1 << ShAmt) use bexti if possible.
-    if (Subtarget->hasStdExtZbs() && ShAmt + 1 == TrailingOnes) {
-      SDNode *BEXTI =
-          CurDAG->getMachineNode(RISCV::BEXTI, DL, VT, N0->getOperand(0),
-                                 CurDAG->getTargetConstant(ShAmt, DL, VT));
+    // If C2 is (1 << ShAmt) use bexti or th.tst if possible.
+    if (HasBitTest && ShAmt + 1 == TrailingOnes) {
+      SDNode *BEXTI = CurDAG->getMachineNode(
+          Subtarget->hasStdExtZbs() ? RISCV::BEXTI : RISCV::TH_TST, DL, VT,
+          N0->getOperand(0), CurDAG->getTargetConstant(ShAmt, DL, VT));
       ReplaceNode(Node, BEXTI);
       return;
     }
+
     unsigned LShAmt = Subtarget->getXLen() - TrailingOnes;
     SDNode *SLLI =
         CurDAG->getMachineNode(RISCV::SLLI, DL, VT, N0->getOperand(0),
@@ -963,8 +956,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
           bool Skip = Subtarget->hasStdExtZba() && Leading == 32 &&
                       X.getOpcode() == ISD::SIGN_EXTEND_INREG &&
                       cast<VTSDNode>(X.getOperand(1))->getVT() == MVT::i32;
-          // Also Skip if we can use bexti.
-          Skip |= Subtarget->hasStdExtZbs() && Leading == XLen - 1;
+          // Also Skip if we can use bexti or th.tst.
+          Skip |= HasBitTest && Leading == XLen - 1;
           if (OneUseOrZExtW && !Skip) {
             SDNode *SLLI = CurDAG->getMachineNode(
                 RISCV::SLLI, DL, VT, X,
@@ -1111,11 +1104,15 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     bool IsANDIOrZExt =
         isInt<12>(C2) ||
         (C2 == UINT64_C(0xFFFF) && Subtarget->hasStdExtZbb());
+    // With XTHeadBb, we can use TH.EXTU.
+    IsANDIOrZExt |= C2 == UINT64_C(0xFFFF) && Subtarget->hasVendorXTHeadBb();
     if (IsANDIOrZExt && (isInt<12>(N1C->getSExtValue()) || !N0.hasOneUse()))
       break;
     // If this can be a ZEXT.w, don't do this if the ZEXT has multiple users or
     // the constant is a simm32.
     bool IsZExtW = C2 == UINT64_C(0xFFFFFFFF) && Subtarget->hasStdExtZba();
+    // With XTHeadBb, we can use TH.EXTU.
+    IsZExtW |= C2 == UINT64_C(0xFFFFFFFF) && Subtarget->hasVendorXTHeadBb();
     if (IsZExtW && (isInt<32>(N1C->getSExtValue()) || !N0.hasOneUse()))
       break;
 
@@ -2393,6 +2390,8 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     case RISCV::FCVT_S_WU:
     case RISCV::FCVT_D_W:
     case RISCV::FCVT_D_WU:
+    case RISCV::TH_REVW:
+    case RISCV::TH_SRRIW:
       if (Bits < 32)
         return false;
       break;

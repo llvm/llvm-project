@@ -120,8 +120,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
              result also bufferizes to a memory write.
 
           3. At least one aliasing OpOperand's value is defined inside the
-             defining op of the given OpResult and it is a memory write or the
-             reverse SSA use-def chain ends in the defining op.
+             defining op of the given OpResult and it is a memory write.
 
              According to this rule, an aliasing OpOperand value that is defined
              inside this op and is bufferizing to a memory write makes the given

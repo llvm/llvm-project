@@ -33,7 +33,7 @@
 #include "llvm/Support/FormatVariadic.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_LOWERHOSTCODETOLLVM
+#define GEN_PASS_DEF_LOWERHOSTCODETOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -262,7 +262,9 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
       // Copy the data from src operand pointer to dst global variable. Save
       // src, dst and size so that we can copy data back after emulating the
       // kernel call.
-      Value dst = rewriter.create<LLVM::AddressOfOp>(loc, dstGlobal);
+      Value dst = rewriter.create<LLVM::AddressOfOp>(
+          loc, typeConverter->convertType(spirvGlobal.getType()),
+          dstGlobal.getSymName());
       copy(loc, dst, src, sizeBytes, rewriter);
 
       CopyInfo info;
@@ -281,8 +283,11 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
 };
 
 class LowerHostCodeToLLVM
-    : public impl::LowerHostCodeToLLVMBase<LowerHostCodeToLLVM> {
+    : public impl::LowerHostCodeToLLVMPassBase<LowerHostCodeToLLVM> {
 public:
+
+  using Base::Base;
+
   void runOnOperation() override {
     ModuleOp module = getOperation();
 
@@ -299,6 +304,8 @@ public:
 
     // Specify options to lower to LLVM and pull in the conversion patterns.
     LowerToLLVMOptions options(module.getContext());
+    options.useOpaquePointers = useOpaquePointers;
+
     auto *context = module.getContext();
     RewritePatternSet patterns(context);
     LLVMTypeConverter typeConverter(context, options);
@@ -327,8 +334,3 @@ public:
   }
 };
 } // namespace
-
-std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
-mlir::createLowerHostCodeToLLVMPass() {
-  return std::make_unique<LowerHostCodeToLLVM>();
-}

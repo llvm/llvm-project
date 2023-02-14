@@ -67,10 +67,6 @@ public:
   static ArrayRef<std::pair<const char *, const char *>>
   standardRuntimeUtilityAliases();
 
-  static bool isInitializerSection(StringRef Name) {
-    return Name.startswith(".CRT");
-  }
-
   static StringRef getSEHFrameSectionName() { return ".pdata"; }
 
 private:

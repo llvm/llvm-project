@@ -118,14 +118,14 @@ struct SparseCompilerOptions
   }
 
   /// Projects out the options for `createConvertVectorToLLVMPass`.
-  LowerVectorToLLVMOptions lowerVectorToLLVMOptions() const {
-    LowerVectorToLLVMOptions opts{};
-    opts.enableReassociateFPReductions(reassociateFPReductions);
-    opts.enableIndexOptimizations(force32BitVectorIndices);
-    opts.enableArmNeon(armNeon);
-    opts.enableArmSVE(armSVE);
-    opts.enableAMX(amx);
-    opts.enableX86Vector(x86Vector);
+  ConvertVectorToLLVMPassOptions lowerVectorToLLVMOptions() const {
+    ConvertVectorToLLVMPassOptions opts{};
+    opts.reassociateFPReductions = reassociateFPReductions;
+    opts.force32BitVectorIndices = force32BitVectorIndices;
+    opts.armNeon = armNeon;
+    opts.armSVE = armSVE;
+    opts.amx = amx;
+    opts.x86Vector = x86Vector;
     return opts;
   }
 };

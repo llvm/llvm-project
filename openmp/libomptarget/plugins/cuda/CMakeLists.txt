@@ -50,7 +50,6 @@ else()
   target_include_directories(omptarget.rtl.cuda PRIVATE dynamic_cuda)
   target_sources(omptarget.rtl.cuda PRIVATE dynamic_cuda/cuda.cpp)
 endif()
-add_dependencies(omptarget.rtl.cuda omptarget.devicertl.nvptx)
 
 # Define the suffix for the runtime messaging dumps.
 target_compile_definitions(omptarget.rtl.cuda PRIVATE TARGET_NAME="CUDA")

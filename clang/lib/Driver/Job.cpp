@@ -38,9 +38,10 @@ using namespace driver;
 Command::Command(const Action &Source, const Tool &Creator,
                  ResponseFileSupport ResponseSupport, const char *Executable,
                  const llvm::opt::ArgStringList &Arguments,
-                 ArrayRef<InputInfo> Inputs, ArrayRef<InputInfo> Outputs)
+                 ArrayRef<InputInfo> Inputs, ArrayRef<InputInfo> Outputs,
+                 const char *PrependArg)
     : Source(Source), Creator(Creator), ResponseSupport(ResponseSupport),
-      Executable(Executable), Arguments(Arguments) {
+      Executable(Executable), PrependArg(PrependArg), Arguments(Arguments) {
   for (const auto &II : Inputs)
     if (II.isFilename())
       InputInfoList.push_back(II);
@@ -144,6 +145,10 @@ void Command::buildArgvForResponseFile(
   for (const auto *InputName : InputFileList)
     Inputs.insert(InputName);
   Out.push_back(Executable);
+
+  if (PrependArg)
+    Out.push_back(PrependArg);
+
   // In a file list, build args vector ignoring parameters that will go in the
   // response file (elements of the InputFileList vector)
   bool FirstInput = true;
@@ -209,6 +214,9 @@ void Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
   if (ResponseFile != nullptr) {
     buildArgvForResponseFile(ArgsRespFile);
     Args = ArrayRef<const char *>(ArgsRespFile).slice(1); // no executable name
+  } else if (PrependArg) {
+    OS << ' ';
+    llvm::sys::printArg(OS, PrependArg, /*Quote=*/true);
   }
 
   bool HaveCrashVFS = CrashInfo && !CrashInfo->VFSPath.empty();
@@ -321,6 +329,8 @@ int Command::Execute(ArrayRef<std::optional<StringRef>> Redirects,
   SmallVector<const char *, 128> Argv;
   if (ResponseFile == nullptr) {
     Argv.push_back(Executable);
+    if (PrependArg)
+      Argv.push_back(PrependArg);
     Argv.append(Arguments.begin(), Arguments.end());
     Argv.push_back(nullptr);
   } else {
@@ -382,9 +392,10 @@ CC1Command::CC1Command(const Action &Source, const Tool &Creator,
                        ResponseFileSupport ResponseSupport,
                        const char *Executable,
                        const llvm::opt::ArgStringList &Arguments,
-                       ArrayRef<InputInfo> Inputs, ArrayRef<InputInfo> Outputs)
+                       ArrayRef<InputInfo> Inputs, ArrayRef<InputInfo> Outputs,
+                       const char *PrependArg)
     : Command(Source, Creator, ResponseSupport, Executable, Arguments, Inputs,
-              Outputs) {
+              Outputs, PrependArg) {
   InProcess = true;
 }
 

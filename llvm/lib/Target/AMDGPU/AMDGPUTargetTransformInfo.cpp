@@ -17,8 +17,10 @@
 #include "AMDGPUTargetTransformInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
@@ -1167,10 +1169,57 @@ bool GCNTTIImpl::areInlineCompatible(const Function *Caller,
   return true;
 }
 
+static unsigned adjustInliningThresholdUsingCallee(const CallBase *CB,
+                                                   const SITargetLowering *TLI,
+                                                   const GCNTTIImpl *TTIImpl) {
+  const int NrOfSGPRUntilSpill = 26;
+  const int NrOfVGPRUntilSpill = 32;
+
+  const DataLayout &DL = TTIImpl->getDataLayout();
+
+  unsigned adjustThreshold = 0;
+  int SGPRsInUse = 0;
+  int VGPRsInUse = 0;
+  for (const Use &A : CB->args()) {
+    SmallVector<EVT, 4> ValueVTs;
+    ComputeValueVTs(*TLI, DL, A.get()->getType(), ValueVTs);
+    for (auto ArgVT : ValueVTs) {
+      unsigned CCRegNum = TLI->getNumRegistersForCallingConv(
+          CB->getContext(), CB->getCallingConv(), ArgVT);
+      if (AMDGPU::isArgPassedInSGPR(CB, CB->getArgOperandNo(&A)))
+        SGPRsInUse += CCRegNum;
+      else
+        VGPRsInUse += CCRegNum;
+    }
+  }
+
+  // The cost of passing function arguments through the stack:
+  //  1 instruction to put a function argument on the stack in the caller.
+  //  1 instruction to take a function argument from the stack in callee.
+  //  1 instruction is explicitly take care of data dependencies in callee
+  //  function.
+  InstructionCost ArgStackCost(1);
+  ArgStackCost += const_cast<GCNTTIImpl *>(TTIImpl)->getMemoryOpCost(
+      Instruction::Store, Type::getInt32Ty(CB->getContext()), Align(4),
+      AMDGPUAS::PRIVATE_ADDRESS, TTI::TCK_SizeAndLatency);
+  ArgStackCost += const_cast<GCNTTIImpl *>(TTIImpl)->getMemoryOpCost(
+      Instruction::Load, Type::getInt32Ty(CB->getContext()), Align(4),
+      AMDGPUAS::PRIVATE_ADDRESS, TTI::TCK_SizeAndLatency);
+
+  // The penalty cost is computed relative to the cost of instructions and does
+  // not model any storage costs.
+  adjustThreshold += std::max(0, SGPRsInUse - NrOfSGPRUntilSpill) *
+                     *ArgStackCost.getValue() * InlineConstants::getInstrCost();
+  adjustThreshold += std::max(0, VGPRsInUse - NrOfVGPRUntilSpill) *
+                     *ArgStackCost.getValue() * InlineConstants::getInstrCost();
+  return adjustThreshold;
+}
+
 unsigned GCNTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
   // If we have a pointer to private array passed into a function
   // it will not be optimized out, leaving scratch usage.
   // Increase the inline threshold to allow inlining in this case.
+  unsigned adjustThreshold = 0;
   uint64_t AllocaSize = 0;
   SmallPtrSet<const AllocaInst *, 8> AIVisited;
   for (Value *PtrArg : CB->args()) {
@@ -1192,9 +1241,10 @@ unsigned GCNTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
       }
     }
   }
-  if (AllocaSize)
-    return ArgAllocaCost;
-  return 0;
+  adjustThreshold +=
+      adjustInliningThresholdUsingCallee(CB, TLI, this);
+  adjustThreshold += AllocaSize ? ArgAllocaCost : AllocaSize;
+  return adjustThreshold;
 }
 
 void GCNTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,

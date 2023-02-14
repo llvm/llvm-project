@@ -614,15 +614,15 @@ struct __policy
     _LIBCPP_INLINE_VISIBILITY
     static const __policy* __create_empty()
     {
-        static const _LIBCPP_CONSTEXPR __policy __policy_ = {nullptr, nullptr,
-                                                             true,
+        static const _LIBCPP_CONSTEXPR __policy __policy = {nullptr, nullptr,
+                                                            true,
 #ifndef _LIBCPP_HAS_NO_RTTI
-                                                             &typeid(void)
+                                                            &typeid(void)
 #else
-                                                             nullptr
+                                                            nullptr
 #endif
         };
-        return &__policy_;
+        return &__policy;
     }
 
   private:
@@ -640,7 +640,7 @@ struct __policy
     template <typename _Fun>
     _LIBCPP_INLINE_VISIBILITY static const __policy*
     __choose_policy(/* is_small = */ false_type) {
-      static const _LIBCPP_CONSTEXPR __policy __policy_ = {
+      static const _LIBCPP_CONSTEXPR __policy __policy = {
           &__large_clone<_Fun>, &__large_destroy<_Fun>, false,
 #ifndef _LIBCPP_HAS_NO_RTTI
           &typeid(typename _Fun::_Target)
@@ -648,14 +648,14 @@ struct __policy
           nullptr
 #endif
       };
-        return &__policy_;
+        return &__policy;
     }
 
     template <typename _Fun>
     _LIBCPP_INLINE_VISIBILITY static const __policy*
         __choose_policy(/* is_small = */ true_type)
     {
-        static const _LIBCPP_CONSTEXPR __policy __policy_ = {
+        static const _LIBCPP_CONSTEXPR __policy __policy = {
             nullptr, nullptr, false,
 #ifndef _LIBCPP_HAS_NO_RTTI
             &typeid(typename _Fun::_Target)
@@ -663,7 +663,7 @@ struct __policy
             nullptr
 #endif
         };
-        return &__policy_;
+        return &__policy;
     }
 };
 

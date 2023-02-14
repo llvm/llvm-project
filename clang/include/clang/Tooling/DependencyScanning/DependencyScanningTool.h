@@ -92,9 +92,21 @@ public:
   llvm::Expected<std::string>
   getDependencyFile(const std::vector<std::string> &CommandLine, StringRef CWD);
 
+  /// Collect the module dependency in P1689 format for C++20 named modules.
+  ///
+  /// \param MakeformatOutput The output parameter for dependency information
+  /// in make format if the command line requires to generate make-format
+  /// dependency information by `-MD -MF <dep_file>`.
+  ///
+  /// \param MakeformatOutputPath The output parameter for the path to
+  /// \param MakeformatOutput.
+  ///
+  /// \returns A \c StringError with the diagnostic output if clang errors
+  /// occurred, P1689 dependency format rules otherwise.
   llvm::Expected<P1689Rule>
-  getP1689ModuleDependencyFile(const CompileCommand &Command,
-                               StringRef CWD);
+  getP1689ModuleDependencyFile(const clang::tooling::CompileCommand &Command,
+                               StringRef CWD, std::string &MakeformatOutput,
+                               std::string &MakeformatOutputPath);
 
   /// Given a Clang driver command-line for a translation unit, gather the
   /// modular dependencies and return the information needed for explicit build.

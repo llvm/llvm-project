@@ -784,12 +784,12 @@ public:
     return {diff.value, overflow};
   }
 
-  // MAX(X-Y, 0)
-  constexpr Integer DIM(const Integer &y) const {
+  // DIM(X,Y)=MAX(X-Y, 0)
+  constexpr ValueWithOverflow DIM(const Integer &y) const {
     if (CompareSigned(y) != Ordering::Greater) {
       return {};
     } else {
-      return SubtractSigned(y).value;
+      return SubtractSigned(y);
     }
   }
 

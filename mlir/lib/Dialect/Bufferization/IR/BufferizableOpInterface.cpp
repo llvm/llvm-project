@@ -896,7 +896,8 @@ bool bufferization::detail::defaultResultBufferizesToMemoryWrite(
     if (!state
              .findValueInReverseUseDefChain(alias.opOperand->get(),
                                             isMemoryWriteInsideOp,
-                                            /*followEquivalentOnly=*/false)
+                                            /*followEquivalentOnly=*/false,
+                                            /*alwaysIncludeLeaves=*/false)
              .empty())
       return true;
   }

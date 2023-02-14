@@ -37,7 +37,7 @@ CodegenEnv::CodegenEnv(linalg::GenericOp linop, SparsificationOptions opts,
       latticeMerger(numTensors, numLoops, numFilterLoops), loopEmitter(),
       topSort(), sparseOut(nullptr), outerParNest(-1u), insChain(), expValues(),
       expFilled(), expAdded(), expCount(), redVal(), redExp(-1u),
-      redCustom(-1u) {}
+      redCustom(-1u), redValidLexInsert() {}
 
 LogicalResult CodegenEnv::initTensorExp() {
   // Builds the tensor expression for the Linalg operation in SSA form.
@@ -70,16 +70,24 @@ std::optional<Operation *> CodegenEnv::genLoopBoundary(
     function_ref<std::optional<Operation *>(MutableArrayRef<Value> parameters)>
         callback) {
   SmallVector<Value> params;
-  if (isReduc())
+  if (isReduc()) {
     params.push_back(redVal);
+    if (redValidLexInsert)
+      params.push_back(redValidLexInsert);
+  } else {
+    assert(!redValidLexInsert);
+  }
   if (isExpand())
     params.push_back(expCount);
   if (insChain != nullptr)
     params.push_back(insChain);
   auto r = callback(params); // may update parameters
   unsigned i = 0;
-  if (isReduc())
+  if (isReduc()) {
     updateReduc(params[i++]);
+    if (redValidLexInsert)
+      setValidLexInsert(params[i++]);
+  }
   if (isExpand())
     updateExpandCount(params[i++]);
   if (insChain != nullptr)
@@ -223,6 +231,16 @@ Value CodegenEnv::endReduc() {
   updateReduc(Value());
   redExp = -1u;
   return val;
+}
+
+void CodegenEnv::setValidLexInsert(Value val) {
+  assert(isReduc() && val);
+  redValidLexInsert = val;
+}
+
+void CodegenEnv::clearValidLexInsert() {
+  assert(!isReduc());
+  redValidLexInsert = Value();
 }
 
 void CodegenEnv::startCustomReduc(unsigned exp) {

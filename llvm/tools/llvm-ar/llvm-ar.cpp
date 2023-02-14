@@ -26,6 +26,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -1425,7 +1426,7 @@ static int ranlib_main(int argc, char **argv) {
   return 0;
 }
 
-int llvm_ar_main(int argc, char **argv) {
+int llvm_ar_main(int argc, char **argv, const llvm::ToolContext &) {
   InitLLVM X(argc, argv);
   ToolName = argv[0];
 

@@ -312,7 +312,9 @@ MaybeExpr ExpressionAnalyzer::ApplySubscripts(
 void ExpressionAnalyzer::CheckConstantSubscripts(ArrayRef &ref) {
   // Fold subscript expressions and check for an empty triplet.
   Shape lb{GetLBOUNDs(foldingContext_, ref.base())};
+  CHECK(lb.size() >= ref.subscript().size());
   Shape ub{GetUBOUNDs(foldingContext_, ref.base())};
+  CHECK(ub.size() >= ref.subscript().size());
   bool anyPossiblyEmptyDim{false};
   int dim{0};
   for (Subscript &ss : ref.subscript()) {
@@ -564,10 +566,10 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Designator &d) {
     std::optional<DataRef> dataRef{ExtractDataRef(std::move(result))};
     if (!dataRef) {
       dataRef = ExtractDataRef(std::move(result), /*intoSubstring=*/true);
-      if (!dataRef) {
-        dataRef = ExtractDataRef(std::move(result),
-            /*intoSubstring=*/false, /*intoComplexPart=*/true);
-      }
+    }
+    if (!dataRef) {
+      dataRef = ExtractDataRef(std::move(result),
+          /*intoSubstring=*/false, /*intoComplexPart=*/true);
     }
     if (dataRef && !CheckDataRef(*dataRef)) {
       result.reset();
@@ -2022,8 +2024,9 @@ MaybeExpr ExpressionAnalyzer::Analyze(
                         "component", "value")};
                 if (checked && *checked && GetRank(*componentShape) > 0 &&
                     GetRank(*valueShape) == 0 &&
-                    !IsExpandableScalar(*converted, GetFoldingContext(),
-                        *componentShape, true /*admit PURE call*/)) {
+                    (IsDeferredShape(*symbol) ||
+                        !IsExpandableScalar(*converted, GetFoldingContext(),
+                            *componentShape, true /*admit PURE call*/))) {
                   AttachDeclaration(
                       Say(expr.source,
                           "Scalar value cannot be expanded to shape of array component '%s'"_err_en_US,
@@ -3409,7 +3412,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr &expr) {
     if (expr.typedExpr) {
       return expr.typedExpr->v;
     }
-    if (!wasIterativelyAnalyzing) {
+    if (!wasIterativelyAnalyzing && !context_.anyDefinedIntrinsicOperator()) {
       iterativelyAnalyzingSubexpressions_ = true;
       result = IterativelyAnalyzeSubexpressions(expr);
     }
@@ -4035,18 +4038,16 @@ std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc() {
     auto restorer{context_.GetContextualMessages().DiscardMessages()};
     if (const Symbol *symbol{scope.FindSymbol(oprName)}) {
       ExpressionAnalyzer::AdjustActuals noAdjustment;
-      auto pair{context_.ResolveGeneric(*symbol, actuals_, noAdjustment, true)};
-      if (pair.first) {
-        proc = pair.first;
-      } else {
-        context_.EmitGenericResolutionError(*symbol, pair.second, true);
-      }
+      proc =
+          context_.ResolveGeneric(*symbol, actuals_, noAdjustment, true).first;
     }
     for (std::size_t i{0}; !proc && i < actuals_.size(); ++i) {
       const Symbol *generic{nullptr};
       if (const Symbol *binding{FindBoundOp(oprName, i, generic, true)}) {
-        if (const Symbol *resolution{
-                GetBindingResolution(GetType(i), *binding)}) {
+        if (CheckAccessibleSymbol(scope, DEREF(generic))) {
+          // ignore inaccessible type-bound ASSIGNMENT(=) generic
+        } else if (const Symbol *
+            resolution{GetBindingResolution(GetType(i), *binding)}) {
           proc = resolution;
         } else {
           proc = binding;

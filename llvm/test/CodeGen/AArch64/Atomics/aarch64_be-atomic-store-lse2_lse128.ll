@@ -131,17 +131,14 @@ define dso_local void @store_atomic_i128_aligned_monotonic(i128 %value, ptr %ptr
 
 define dso_local void @store_atomic_i128_aligned_release(i128 %value, ptr %ptr) {
 ; CHECK-LABEL: store_atomic_i128_aligned_release:
-; CHECK:    dmb ish
-; CHECK:    stp x1, x0, [x2]
+; CHECK:    swppl x0, x1, [x2]
     store atomic i128 %value, ptr %ptr release, align 16
     ret void
 }
 
 define dso_local void @store_atomic_i128_aligned_seq_cst(i128 %value, ptr %ptr) {
 ; CHECK-LABEL: store_atomic_i128_aligned_seq_cst:
-; CHECK:    dmb ish
-; CHECK:    stp x1, x0, [x2]
-; CHECK:    dmb ish
+; CHECK:    swppal x0, x1, [x2]
     store atomic i128 %value, ptr %ptr seq_cst, align 16
     ret void
 }

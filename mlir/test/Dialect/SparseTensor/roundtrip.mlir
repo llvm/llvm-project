@@ -29,6 +29,21 @@ func.func @sparse_pack(%data: tensor<6xf64>, %index: tensor<6x1xi32>)
 
 // -----
 
+#SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"], indexBitWidth=32}>
+
+// CHECK-LABEL: func @sparse_unpack(
+//  CHECK-SAME: %[[T:.*]]: tensor<100xf64, #
+//       CHECK: %[[D:.*]], %[[I:.*]], %[[N:.*]] = sparse_tensor.unpack %[[T]]
+//       CHECK: return %[[D]], %[[I]], %[[N]]
+func.func @sparse_unpack(%sp : tensor<100xf64, #SparseVector>)
+                       -> (tensor<6xf64>, tensor<6x1xi32>, i32) {
+  %data, %indices, %nnz = sparse_tensor.unpack %sp : tensor<100xf64, #SparseVector>
+                                                  to tensor<6xf64>, tensor<6x1xi32>, i32
+  return %data, %indices, %nnz : tensor<6xf64>, tensor<6x1xi32>, i32
+}
+
+// -----
+
 #SparseMatrix = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
 
 // CHECK-LABEL: func @sparse_new_symmetry(

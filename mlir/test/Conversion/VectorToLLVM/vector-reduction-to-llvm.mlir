@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -convert-vector-to-llvm | FileCheck %s
-// RUN: mlir-opt %s -convert-vector-to-llvm='reassociate-fp-reductions' | FileCheck %s --check-prefix=REASSOC
+// RUN: mlir-opt %s -convert-vector-to-llvm='use-opaque-pointers=1' | FileCheck %s
+// RUN: mlir-opt %s -convert-vector-to-llvm='reassociate-fp-reductions use-opaque-pointers=1' | FileCheck %s --check-prefix=REASSOC
 
 //
 // CHECK-LABEL: @reduce_add_f32(

@@ -26,7 +26,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTVECTORTOLLVM
+#define GEN_PASS_DEF_CONVERTVECTORTOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -35,15 +35,10 @@ using namespace mlir::vector;
 
 namespace {
 struct LowerVectorToLLVMPass
-    : public impl::ConvertVectorToLLVMBase<LowerVectorToLLVMPass> {
-  LowerVectorToLLVMPass(const LowerVectorToLLVMOptions &options) {
-    this->reassociateFPReductions = options.reassociateFPReductions;
-    this->force32BitVectorIndices = options.force32BitVectorIndices;
-    this->armNeon = options.armNeon;
-    this->armSVE = options.armSVE;
-    this->amx = options.amx;
-    this->x86Vector = options.x86Vector;
-  }
+    : public impl::ConvertVectorToLLVMPassBase<LowerVectorToLLVMPass> {
+
+  using Base::Base;
+
   // Override explicitly to allow conditional dialect dependence.
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<LLVM::LLVMDialect>();
@@ -79,7 +74,9 @@ void LowerVectorToLLVMPass::runOnOperation() {
   }
 
   // Convert to the LLVM IR dialect.
-  LLVMTypeConverter converter(&getContext());
+  LowerToLLVMOptions options(&getContext());
+  options.useOpaquePointers = useOpaquePointers;
+  LLVMTypeConverter converter(&getContext(), options);
   RewritePatternSet patterns(&getContext());
   populateVectorMaskMaterializationPatterns(patterns, force32BitVectorIndices);
   populateVectorTransferLoweringPatterns(patterns);
@@ -115,9 +112,4 @@ void LowerVectorToLLVMPass::runOnOperation() {
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
     signalPassFailure();
-}
-
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createConvertVectorToLLVMPass(const LowerVectorToLLVMOptions &options) {
-  return std::make_unique<LowerVectorToLLVMPass>(options);
 }
