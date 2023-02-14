@@ -1068,7 +1068,7 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
   if (D->getStorageDuration() == SD_Static) {
     bool ModulesCodegen = false;
     if (Writer.WritingModule &&
-        !D->getDescribedVarTemplate() && !D->getMemberSpecializationInfo()) {
+        !D->getDescribedVarTemplate()) {
       // When building a C++20 module interface unit or a partition unit, a
       // strong definition in the module interface is provided by the
       // compilation of that unit, not by its users. (Inline variables are still
@@ -1077,7 +1077,7 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
           (Writer.WritingModule->isInterfaceOrPartition() ||
            (D->hasAttr<DLLExportAttr>() &&
             Writer.Context->getLangOpts().BuildingPCHWithObjectFile)) &&
-          Writer.Context->GetGVALinkageForVariable(D) == GVA_StrongExternal;
+           Writer.Context->GetGVALinkageForVariable(D) >= GVA_StrongExternal;
     }
     Record.push_back(ModulesCodegen);
     if (ModulesCodegen)
@@ -2550,7 +2550,7 @@ void ASTRecordWriter::AddFunctionDefinition(const FunctionDecl *FD) {
       // compilation of that unit, not by its users. (Inline functions are still
       // emitted in module users.)
       Linkage = Writer->Context->GetGVALinkageForFunction(FD);
-      ModulesCodegen = *Linkage == GVA_StrongExternal;
+      ModulesCodegen = *Linkage >= GVA_StrongExternal;
     }
     if (Writer->Context->getLangOpts().ModulesCodegen ||
         (FD->hasAttr<DLLExportAttr>() &&

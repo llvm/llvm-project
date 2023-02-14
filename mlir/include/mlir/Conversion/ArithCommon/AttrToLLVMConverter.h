@@ -53,28 +53,6 @@ public:
 private:
   NamedAttrList convertedAttr;
 };
-
-// Attribute converter that populates a NamedAttrList by removing the fastmath
-// attribute from the source operation attributes. This may be useful for
-// target operations that do not require the fastmath attribute, or for targets
-// that do not yet support the LLVM fastmath attribute.
-template <typename SourceOp, typename TargetOp>
-class AttrDropFastMath {
-public:
-  AttrDropFastMath(SourceOp srcOp) {
-    // Copy the source attributes.
-    convertedAttr = NamedAttrList{srcOp->getAttrs()};
-    // Get the name of the arith fastmath attribute.
-    llvm::StringRef arithFMFAttrName = SourceOp::getFastMathAttrName();
-    // Remove the source fastmath attribute.
-    convertedAttr.erase(arithFMFAttrName);
-  }
-
-  ArrayRef<NamedAttribute> getAttrs() const { return convertedAttr.getAttrs(); }
-
-private:
-  NamedAttrList convertedAttr;
-};
 } // namespace arith
 } // namespace mlir
 

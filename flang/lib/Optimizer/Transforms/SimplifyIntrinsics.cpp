@@ -217,7 +217,7 @@ genReductionLoop(fir::FirOpBuilder &builder, mlir::func::FuncOp &funcOp,
     auto loop = builder.create<OP>(loc, zeroIdx, loopCount, step,
                                    unorderedOrInitialLoopCond,
                                    /*finalCountValue=*/false, init);
-    init = loop.getRegionIterArgs()[0];
+    init = loop.getRegionIterArgs()[resultIndex];
     indices.push_back(loop.getInductionVar());
     // Set insertion point to the loop body so that the next loop
     // is inserted inside the current one.
@@ -732,17 +732,14 @@ void SimplifyIntrinsicsPass::simplifyLogicalDim0Reduction(
     return;
 
   mlir::Value inputBox = findBoxDef(args[0]);
-  LLVM_DEBUG(llvm::dbgs() << "Boxdef was: " << inputBox << '\n');
 
   mlir::Type elementType = hlfir::getFortranElementType(inputBox.getType());
   mlir::SymbolRefAttr callee = call.getCalleeAttr();
 
   fir::FirOpBuilder builder{getSimplificationBuilder(call, kindMap)};
 
-  LLVM_DEBUG(llvm::dbgs() << "In DIM0 simplify" << '\n');
   // Treating logicals as integers makes things a lot easier
   fir::LogicalType logicalType = {elementType.dyn_cast<fir::LogicalType>()};
-  LLVM_DEBUG(llvm::dbgs() << "Done logical cast, got: " << logicalType << '\n');
   fir::KindTy kind = logicalType.getFKind();
   mlir::Type intElementType =
       mlir::IntegerType::get(builder.getContext(), kind * 8);
@@ -752,8 +749,6 @@ void SimplifyIntrinsicsPass::simplifyLogicalDim0Reduction(
       (mlir::Twine{callee.getLeafReference().getValue(), "Logical"} +
        mlir::Twine{kind} + "x" + mlir::Twine{rank})
           .str();
-
-  LLVM_DEBUG(llvm::dbgs() << "end of DIM0" << '\n');
 
   simplifyReductionBody(call, kindMap, genBodyFunc, builder, funcName,
                         intElementType);
@@ -918,12 +913,10 @@ void SimplifyIntrinsicsPass::runOnOperation() {
           return;
         }
         if (funcName.startswith(RTNAME_STRING(Count))) {
-          LLVM_DEBUG(llvm::dbgs() << "Count" << '\n');
           simplifyLogicalDim0Reduction(call, kindMap, genRuntimeCountBody);
           return;
         }
         if (funcName.startswith(RTNAME_STRING(Any))) {
-          LLVM_DEBUG(llvm::dbgs() << "Any" << '\n');
           simplifyLogicalDim1Reduction(call, kindMap, genRuntimeAnyBody);
           return;
         }
