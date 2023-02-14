@@ -808,7 +808,7 @@ includes all 64-bit and all recent 32-bit processors.
 ``__fp16`` is a storage and interchange format only.  This means that values of
 ``__fp16`` are immediately promoted to (at least) ``float`` when used in arithmetic
 operations, so that e.g. the result of adding two ``__fp16`` values has type ``float``.
-The behavior of ``__fp16`` is specified by the ARM C Language Extensions (`ACLE <http://infocenter.arm.com/help/topic/com.arm.doc.ihi0053d/IHI0053D_acle_2_1.pdf>`_).
+The behavior of ``__fp16`` is specified by the Arm C Language Extensions (`ACLE <https://github.com/ARM-software/acle/releases>`_).
 Clang uses the ``binary16`` format from IEEE 754-2008 for ``__fp16``, not the ARM
 alternative format.
 
@@ -3791,8 +3791,8 @@ ARM/AArch64 Language Extensions
 Memory Barrier Intrinsics
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 Clang implements the ``__dmb``, ``__dsb`` and ``__isb`` intrinsics as defined
-in the `ARM C Language Extensions Release 2.0
-<http://infocenter.arm.com/help/topic/com.arm.doc.ihi0053c/IHI0053C_acle_2_0.pdf>`_.
+in the `Arm C Language Extensions
+<https://github.com/ARM-software/acle/releases>`_.
 Note that these intrinsics are implemented as motion barriers that block
 reordering of memory accesses and side effect instructions. Other instructions
 like simple arithmetic may be reordered around the intrinsic. If you expect to
