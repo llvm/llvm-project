@@ -1058,8 +1058,9 @@ namespace llvm {
     /// and some i16 instructions are slow.
     bool IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const override;
 
-    /// Return true if this is operating on scalar integers.
-    bool
+    /// Return prefered fold type, Abs if this is a vector, AddAnd if its an
+    /// integer, None otherwise.
+    TargetLowering::AndOrSETCCFoldKind
     isDesirableToCombineLogicOpOfSETCC(const SDNode *LogicOp,
                                        const SDNode *SETCC0,
                                        const SDNode *SETCC1) const override;

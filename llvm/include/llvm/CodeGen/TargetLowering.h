@@ -282,6 +282,14 @@ public:
     Expensive = 2   // Negated expression is more expensive.
   };
 
+  /// Enum of different potentially desirable ways to fold (and/or (setcc ...),
+  /// (setcc ...)).
+  enum class AndOrSETCCFoldKind {
+    None,
+    AddAnd,
+    ABS,
+  };
+
   class ArgListEntry {
   public:
     Value *Val = nullptr;
@@ -4002,21 +4010,27 @@ public:
     return true;
   }
 
-  // Return true if its desirable to try and optimize LogicOp(SETCC0, SETCC1).
-  // An example (what is implemented as of writing this) is:
+  // Return AndOrSETCCFoldKind::{AddAnd, ABS} if its desirable to try and
+  // optimize LogicOp(SETCC0, SETCC1). An example (what is implemented as of
+  // writing this) is:
   //    With C as a power of 2 and C != 0 and C != INT_MIN:
-  //       (icmp eq A, C) | (icmp eq A, -C)
+  //    AddAnd:
+  //     (icmp eq A, C) | (icmp eq A, -C)
   //            -> (icmp eq and(add(A, C), ~(C + C)), 0)
   //     (icmp ne A, C) & (icmp ne A, -C)w
   //            -> (icmp ne and(add(A, C), ~(C + C)), 0)
+  //    ABS:
+  //     (icmp eq A, C) | (icmp eq A, -C)
+  //            -> (icmp eq Abs(A), C)
+  //     (icmp ne A, C) & (icmp ne A, -C)w
+  //            -> (icmp ne Abs(A), C)
   //
   // @param LogicOp the logic op
   // @param SETCC0 the first of the SETCC nodes
   // @param SETCC0 the second of the SETCC nodes
-  virtual bool isDesirableToCombineLogicOpOfSETCC(const SDNode *LogicOp,
-                                                  const SDNode *SETCC0,
-                                                  const SDNode *SETCC1) const {
-    return false;
+  virtual AndOrSETCCFoldKind isDesirableToCombineLogicOpOfSETCC(
+      const SDNode *LogicOp, const SDNode *SETCC0, const SDNode *SETCC1) const {
+    return AndOrSETCCFoldKind::None;
   }
 
   /// Return true if it is profitable to combine an XOR of a logical shift
