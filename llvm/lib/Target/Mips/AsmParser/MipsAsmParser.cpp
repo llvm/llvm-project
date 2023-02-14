@@ -3342,9 +3342,9 @@ static uint64_t convertIntToDoubleImm(uint64_t ImmOp64) {
 static uint32_t covertDoubleImmToSingleImm(uint64_t ImmOp64) {
   // Conversion of a double in an uint64_t to a float in a uint32_t,
   // retaining the bit pattern of a float.
-  double DoubleImm = BitsToDouble(ImmOp64);
+  double DoubleImm = llvm::bit_cast<double>(ImmOp64);
   float TmpFloat = static_cast<float>(DoubleImm);
-  return FloatToBits(TmpFloat);
+  return llvm::bit_cast<uint32_t>(TmpFloat);
 }
 
 bool MipsAsmParser::expandLoadSingleImmToGPR(MCInst &Inst, SMLoc IDLoc,

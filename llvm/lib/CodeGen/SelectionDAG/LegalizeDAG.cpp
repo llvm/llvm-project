@@ -2365,10 +2365,10 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(SDNode *Node,
     SDValue Load =
         DAG.getLoad(MVT::f64, dl, MemChain, StackSlot, MachinePointerInfo());
     // FP constant to bias correct the final result
-    SDValue Bias = DAG.getConstantFP(isSigned ?
-                                     BitsToDouble(0x4330000080000000ULL) :
-                                     BitsToDouble(0x4330000000000000ULL),
-                                     dl, MVT::f64);
+    SDValue Bias = DAG.getConstantFP(
+        isSigned ? llvm::bit_cast<double>(0x4330000080000000ULL)
+                 : llvm::bit_cast<double>(0x4330000000000000ULL),
+        dl, MVT::f64);
     // Subtract the bias and get the final result.
     SDValue Sub;
     SDValue Result;

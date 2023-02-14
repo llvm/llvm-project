@@ -476,23 +476,23 @@ void AMDGPUInstPrinter::printImmediate32(uint32_t Imm,
     return;
   }
 
-  if (Imm == FloatToBits(0.0f))
+  if (Imm == llvm::bit_cast<uint32_t>(0.0f))
     O << "0.0";
-  else if (Imm == FloatToBits(1.0f))
+  else if (Imm == llvm::bit_cast<uint32_t>(1.0f))
     O << "1.0";
-  else if (Imm == FloatToBits(-1.0f))
+  else if (Imm == llvm::bit_cast<uint32_t>(-1.0f))
     O << "-1.0";
-  else if (Imm == FloatToBits(0.5f))
+  else if (Imm == llvm::bit_cast<uint32_t>(0.5f))
     O << "0.5";
-  else if (Imm == FloatToBits(-0.5f))
+  else if (Imm == llvm::bit_cast<uint32_t>(-0.5f))
     O << "-0.5";
-  else if (Imm == FloatToBits(2.0f))
+  else if (Imm == llvm::bit_cast<uint32_t>(2.0f))
     O << "2.0";
-  else if (Imm == FloatToBits(-2.0f))
+  else if (Imm == llvm::bit_cast<uint32_t>(-2.0f))
     O << "-2.0";
-  else if (Imm == FloatToBits(4.0f))
+  else if (Imm == llvm::bit_cast<uint32_t>(4.0f))
     O << "4.0";
-  else if (Imm == FloatToBits(-4.0f))
+  else if (Imm == llvm::bit_cast<uint32_t>(-4.0f))
     O << "-4.0";
   else if (Imm == 0x3e22f983 &&
            STI.getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm])
@@ -510,23 +510,23 @@ void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
     return;
   }
 
-  if (Imm == DoubleToBits(0.0))
+  if (Imm == llvm::bit_cast<uint64_t>(0.0))
     O << "0.0";
-  else if (Imm == DoubleToBits(1.0))
+  else if (Imm == llvm::bit_cast<uint64_t>(1.0))
     O << "1.0";
-  else if (Imm == DoubleToBits(-1.0))
+  else if (Imm == llvm::bit_cast<uint64_t>(-1.0))
     O << "-1.0";
-  else if (Imm == DoubleToBits(0.5))
+  else if (Imm == llvm::bit_cast<uint64_t>(0.5))
     O << "0.5";
-  else if (Imm == DoubleToBits(-0.5))
+  else if (Imm == llvm::bit_cast<uint64_t>(-0.5))
     O << "-0.5";
-  else if (Imm == DoubleToBits(2.0))
+  else if (Imm == llvm::bit_cast<uint64_t>(2.0))
     O << "2.0";
-  else if (Imm == DoubleToBits(-2.0))
+  else if (Imm == llvm::bit_cast<uint64_t>(-2.0))
     O << "-2.0";
-  else if (Imm == DoubleToBits(4.0))
+  else if (Imm == llvm::bit_cast<uint64_t>(4.0))
     O << "4.0";
-  else if (Imm == DoubleToBits(-4.0))
+  else if (Imm == llvm::bit_cast<uint64_t>(-4.0))
     O << "-4.0";
   else if (Imm == 0x3fc45f306dc9c882 &&
            STI.getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm])
@@ -752,9 +752,9 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
       int RCID = Desc.operands()[OpNo].RegClass;
       unsigned RCBits = AMDGPU::getRegBitWidth(MRI.getRegClass(RCID));
       if (RCBits == 32)
-        printImmediate32(FloatToBits(Value), STI, O);
+        printImmediate32(llvm::bit_cast<uint32_t>((float)Value), STI, O);
       else if (RCBits == 64)
-        printImmediate64(DoubleToBits(Value), STI, O);
+        printImmediate64(llvm::bit_cast<uint64_t>(Value), STI, O);
       else
         llvm_unreachable("Invalid register class size");
     }
