@@ -309,6 +309,6 @@ def create_diagnose_unwind_options():
 
 def __lldb_init_module(debugger, internal_dict):
     debugger.HandleCommand(
-        'command script add -f %s.diagnose_unwind diagnose-unwind' %
+        'command script add -o -f %s.diagnose_unwind diagnose-unwind' %
         __name__)
     print('The "diagnose-unwind" command has been installed, type "help diagnose-unwind" for detailed help.')

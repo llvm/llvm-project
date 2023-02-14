@@ -10,7 +10,7 @@ from lldb.macosx.crashlog import CrashLog,CrashLogParser
 
 class CrashLogScriptedProcess(ScriptedProcess):
     def parse_crashlog(self):
-        crashlog_parser = CrashLogParser(self.dbg, self.crashlog_path, False)
+        crashlog_parser = CrashLogParser.create(self.dbg, self.crashlog_path, False)
         crash_log = crashlog_parser.parse()
 
         self.pid = crash_log.process_id
@@ -103,7 +103,7 @@ class CrashLogScriptedProcess(ScriptedProcess):
     def get_registers_for_thread(self, tid: int):
         return {}
 
-    def read_memory_at_address(self, addr: int, size: int) -> lldb.SBData:
+    def read_memory_at_address(self, addr: int, size: int, error: lldb.SBError) -> lldb.SBData:
         # NOTE: CrashLogs don't contain any memory.
         return lldb.SBData()
 

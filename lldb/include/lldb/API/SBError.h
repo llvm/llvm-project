@@ -23,6 +23,8 @@ public:
 
   SBError(const lldb::SBError &rhs);
 
+  SBError(const lldb_private::Status &error);
+
   ~SBError();
 
   const SBError &operator=(const lldb::SBError &rhs);

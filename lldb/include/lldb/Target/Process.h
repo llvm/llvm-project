@@ -2133,7 +2133,7 @@ public:
 
   // Queue Queries
 
-  void UpdateQueueListIfNeeded();
+  virtual void UpdateQueueListIfNeeded();
 
   QueueList &GetQueueList() {
     UpdateQueueListIfNeeded();
@@ -2560,6 +2560,8 @@ void PruneThreadPlans();
   ///     otherwise, returns an empty shared pointer.
   lldb::StructuredDataPluginSP
   GetStructuredDataPlugin(ConstString type_name) const;
+
+  virtual void *GetImplementation() { return nullptr; }
 
 protected:
   friend class Trace;

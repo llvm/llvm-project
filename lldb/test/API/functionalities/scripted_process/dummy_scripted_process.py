@@ -20,11 +20,14 @@ class DummyScriptedProcess(ScriptedProcess):
     def get_registers_for_thread(self, tid: int):
         return {}
 
-    def read_memory_at_address(self, addr: int, size: int) -> lldb.SBData:
+    def read_memory_at_address(self, addr: int, size: int, error: lldb.SBError) -> lldb.SBData:
+        debugger = self.target.GetDebugger()
+        index = debugger.GetIndexOfTarget(self.target)
         data = lldb.SBData().CreateDataFromCString(
                                     self.target.GetByteOrder(),
                                     self.target.GetCodeByteSize(),
-                                    "Hello, world!")
+                                    "Hello, target " + str(index))
+
         return data
 
     def get_loaded_images(self):
@@ -41,6 +44,12 @@ class DummyScriptedProcess(ScriptedProcess):
 
     def get_scripted_thread_plugin(self):
         return DummyScriptedThread.__module__ + "." + DummyScriptedThread.__name__
+
+    def my_super_secret_method(self):
+        if hasattr(self, 'my_super_secret_member'):
+            return self.my_super_secret_member
+        else:
+            return None
 
 
 class DummyScriptedThread(ScriptedThread):

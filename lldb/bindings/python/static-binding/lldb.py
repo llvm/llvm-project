@@ -744,6 +744,12 @@ eDynamicCanRunTarget = _lldb.eDynamicCanRunTarget
 
 eDynamicDontRunTarget = _lldb.eDynamicDontRunTarget
 
+eBindAuto = _lldb.eBindAuto
+
+eBind = _lldb.eBind
+
+eDontBind = _lldb.eDontBind
+
 eStopShowColumnAnsiOrCaret = _lldb.eStopShowColumnAnsiOrCaret
 
 eStopShowColumnAnsi = _lldb.eStopShowColumnAnsi
@@ -951,6 +957,8 @@ eArgTypeConnectURL = _lldb.eArgTypeConnectURL
 eArgTypeTargetID = _lldb.eArgTypeTargetID
 
 eArgTypeStopHookID = _lldb.eArgTypeStopHookID
+
+eArgTypeBindGenTypeParamValue = _lldb.eArgTypeBindGenTypeParamValue
 
 eArgTypeLastArg = _lldb.eArgTypeLastArg
 
@@ -1615,6 +1623,12 @@ eTraceCursorSeekTypeBeginning = _lldb.eTraceCursorSeekTypeBeginning
 eTraceCursorSeekTypeCurrent = _lldb.eTraceCursorSeekTypeCurrent
 
 eTraceCursorSeekTypeEnd = _lldb.eTraceCursorSeekTypeEnd
+
+eDWIMPrintVerbosityNone = _lldb.eDWIMPrintVerbosityNone
+
+eDWIMPrintVerbosityExpression = _lldb.eDWIMPrintVerbosityExpression
+
+eDWIMPrintVerbosityFull = _lldb.eDWIMPrintVerbosityFull
 
 class SBAddress(object):
     r"""
@@ -8840,6 +8854,14 @@ class SBProcess(object):
     def GetDescription(self, description):
         r"""GetDescription(SBProcess self, SBStream description) -> bool"""
         return _lldb.SBProcess_GetDescription(self, description)
+
+    def GetScriptedImplementation(self):
+        r"""
+
+        Returns the implementation object of the process plugin if available. None
+        otherwise.
+        """
+        return _lldb.SBProcess_GetScriptedImplementation(self)
 
     def GetExtendedCrashInformation(self):
         r"""

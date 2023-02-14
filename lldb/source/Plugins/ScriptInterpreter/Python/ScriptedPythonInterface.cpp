@@ -26,14 +26,6 @@ ScriptedPythonInterface::ScriptedPythonInterface(
     ScriptInterpreterPythonImpl &interpreter)
     : ScriptedInterface(), m_interpreter(interpreter) {}
 
-Status
-ScriptedPythonInterface::GetStatusFromMethod(llvm::StringRef method_name) {
-  Status error;
-  Dispatch<Status>(method_name, error);
-
-  return error;
-}
-
 template <>
 StructuredData::ArraySP
 ScriptedPythonInterface::ExtractValueFromPythonObject<StructuredData::ArraySP>(
@@ -55,11 +47,11 @@ Status ScriptedPythonInterface::ExtractValueFromPythonObject<Status>(
     python::PythonObject &p, Status &error) {
   if (lldb::SBError *sb_error = reinterpret_cast<lldb::SBError *>(
           LLDBSWIGPython_CastPyObjectToSBError(p.get())))
-    error = m_interpreter.GetStatusFromSBError(*sb_error);
+    return m_interpreter.GetStatusFromSBError(*sb_error);
   else
     error.SetErrorString("Couldn't cast lldb::SBError to lldb::Status.");
 
-  return error;
+  return {};
 }
 
 template <>

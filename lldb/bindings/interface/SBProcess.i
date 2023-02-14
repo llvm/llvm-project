@@ -345,6 +345,12 @@ public:
     GetDescription (lldb::SBStream &description);
 
     %feature("autodoc", "
+    Returns the implementation object of the process plugin if available. None
+    otherwise.") GetScriptedImplementation;
+    ScriptedObject
+    GetScriptedImplementation();
+
+    %feature("autodoc", "
     Returns the process' extended crash information.") GetExtendedCrashInformation;
     lldb::SBStructuredData
     GetExtendedCrashInformation ();

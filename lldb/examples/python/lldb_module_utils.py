@@ -183,9 +183,9 @@ def __lldb_init_module(debugger, dict):
 
     # Add any commands contained in this module to LLDB
     debugger.HandleCommand(
-        'command script add -c %s.DumpLineTables %s' % (__name__,
+        'command script add -o -c %s.DumpLineTables %s' % (__name__,
                                                         DumpLineTables.command_name))
     debugger.HandleCommand(
-        'command script add -c %s.DumpFiles %s' % (__name__, DumpFiles.command_name))
+        'command script add -o -c %s.DumpFiles %s' % (__name__, DumpFiles.command_name))
     print('The "%s" and "%s" commands have been installed.' % (DumpLineTables.command_name,
                                                                DumpFiles.command_name))
