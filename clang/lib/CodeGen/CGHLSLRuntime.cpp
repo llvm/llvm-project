@@ -175,7 +175,7 @@ void CGHLSLRuntime::finishCodeGen() {
   for (auto &Buf : Buffers) {
     layoutBuffer(Buf, DL);
     GlobalVariable *GV = replaceBuffer(Buf);
-    M.insertGlobalVariable(GV);
+    M.getGlobalList().push_back(GV);
     llvm::hlsl::ResourceClass RC = Buf.IsCBuffer
                                        ? llvm::hlsl::ResourceClass::CBuffer
                                        : llvm::hlsl::ResourceClass::SRV;

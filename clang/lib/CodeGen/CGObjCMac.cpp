@@ -7431,7 +7431,7 @@ CGObjCNonFragileABIMac::GetClassGlobal(StringRef Name,
       GV->eraseFromParent();
     }
     GV = NewGV;
-    CGM.getModule().insertGlobalVariable(GV);
+    CGM.getModule().getGlobalList().push_back(GV);
   }
 
   assert(GV->getLinkage() == L);

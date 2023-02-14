@@ -406,7 +406,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
     }
   };
 
-  for (llvm::GlobalVariable &global_var : m_module->globals()) {
+  for (llvm::GlobalVariable &global_var : m_module->getGlobalList()) {
     RegisterOneValue(global_var);
   }
 

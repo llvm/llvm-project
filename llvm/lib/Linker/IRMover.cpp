@@ -1671,16 +1671,15 @@ Error IRLinker::run() {
 
   // Reorder the globals just added to the destination module to match their
   // original order in the source module.
+  Module::GlobalListType &Globals = DstM.getGlobalList();
   for (GlobalVariable &GV : SrcM->globals()) {
     if (GV.hasAppendingLinkage())
       continue;
     Value *NewValue = Mapper.mapValue(GV);
     if (NewValue) {
       auto *NewGV = dyn_cast<GlobalVariable>(NewValue->stripPointerCasts());
-      if (NewGV) {
-        NewGV->removeFromParent();
-        DstM.insertGlobalVariable(NewGV);
-      }
+      if (NewGV)
+        Globals.splice(Globals.end(), Globals, NewGV->getIterator());
     }
   }
 

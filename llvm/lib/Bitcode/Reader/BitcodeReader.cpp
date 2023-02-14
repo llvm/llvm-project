@@ -3693,7 +3693,7 @@ Error BitcodeReader::globalCleanup() {
       UpgradedVariables.emplace_back(&GV, Upgraded);
   for (auto &Pair : UpgradedVariables) {
     Pair.first->eraseFromParent();
-    TheModule->insertGlobalVariable(Pair.second);
+    TheModule->getGlobalList().push_back(Pair.second);
   }
 
   // Force deallocation of memory for these vectors to favor the client that
