@@ -86,6 +86,17 @@ class THShiftW_ri<bits<7> funct7, bits<3> funct3, string opcodestr>
                     (ins GPR:$rs1, uimm5:$shamt),
 		    opcodestr, "$rd, $rs1, $shamt">;
 
+
+let Predicates = [HasVendorXTHeadMac], DecoderNamespace = "THeadMac",
+    hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCommutable = 1 in
+class THMulAccumulate_rr<bits<7> funct7, string opcodestr>
+    : RVInstR<funct7, 0b001, OPC_CUSTOM_0, (outs GPR:$rd_wb),
+	      (ins GPR:$rd, GPR:$rs1, GPR:$rs2),
+	      opcodestr, "$rd, $rs1, $rs2"> {
+  let Constraints = "$rd_wb = $rd";
+}
+
+
 //===----------------------------------------------------------------------===//
 // Combination of instruction classes.
 // Use these multiclasses to define instructions more easily.
@@ -127,6 +138,21 @@ let IsSignExtendingOpW = 1 in
 def TH_TST : RVBShift_ri<0b10001, 0b001, OPC_CUSTOM_0, "th.tst">,
              Sched<[WriteSingleBitImm, ReadSingleBitImm]>;
 } // Predicates = [HasVendorXTHeadBs]
+
+let Predicates = [HasVendorXTHeadMac] in {
+def TH_MULA  : THMulAccumulate_rr<0b0010000, "th.mula">;
+def TH_MULS  : THMulAccumulate_rr<0b0010001, "th.muls">;
+}  // Predicates = [HasVendorXTHeadMac]
+
+let Predicates = [HasVendorXTHeadMac], IsSignExtendingOpW = 1 in {
+def TH_MULAH : THMulAccumulate_rr<0b0010100, "th.mulah">;
+def TH_MULSH : THMulAccumulate_rr<0b0010101, "th.mulsh">;
+} // Predicates = [HasVendorXTHeadMac], IsSignExtendingOpW = 1
+
+let Predicates = [HasVendorXTHeadMac, IsRV64], IsSignExtendingOpW = 1 in {
+def TH_MULAW : THMulAccumulate_rr<0b0010010, "th.mulaw">;
+def TH_MULSW : THMulAccumulate_rr<0b0010011, "th.mulsw">;
+} // Predicates = [HasVendorXTHeadMac, IsRV64]
 
 let Predicates = [HasVendorXTHeadVdot],
     Constraints = "@earlyclobber $vd",
@@ -327,6 +353,34 @@ def : Pat<(seteq (and GPR:$rs1, SingleBitSetMask:$mask), 0),
           (TH_TST (XORI GPR:$rs1, -1), SingleBitSetMask:$mask)>;
 } // Predicates = [HasVendorXTHeadBs]
 
+let Predicates = [HasVendorXTHeadMac] in {
+def : Pat<(add GPR:$rd, (mul GPR:$rs1, GPR:$rs2)), (TH_MULA GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+def : Pat<(sub GPR:$rd, (mul GPR:$rs1, GPR:$rs2)), (TH_MULS GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+} // Predicates = [HasVendorXTHeadMac]
+
+let Predicates = [HasVendorXTHeadMac, IsRV64] in {
+// mulaw, mulsw are available only in RV64.
+def : Pat<(binop_allwusers<add> GPR:$rd, (mul GPR:$rs1, GPR:$rs2)),
+          (TH_MULAW GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+def : Pat<(binop_allwusers<sub> GPR:$rd, (mul GPR:$rs1, GPR:$rs2)),
+          (TH_MULSW GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+// mulah, mulsh produce a sign-extended result.
+def : Pat<(binop_allwusers<add> GPR:$rd, (mul
+            (sexti16 GPR:$rs1),
+            (sexti16 GPR:$rs2))),
+          (TH_MULAH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+def : Pat<(binop_allwusers<sub> GPR:$rd, (mul
+            (sexti16 GPR:$rs1),
+            (sexti16 GPR:$rs2))),
+          (TH_MULSH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+} // Predicates = [HasVendorXTHeadMac, IsRV64]
+
+let Predicates = [HasVendorXTHeadMac, IsRV32] in {
+def : Pat<(add GPR:$rd, (mul (sexti16 GPR:$rs1), (sexti16 GPR:$rs2))),
+	  (TH_MULAH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+def : Pat<(sub GPR:$rd, (mul (sexti16 GPR:$rs1), (sexti16 GPR:$rs2))),
+	  (TH_MULSH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+} // Predicates = [HasVendorXTHeadMac, IsRV32]
 
 defm PseudoTHVdotVMAQA      : VPseudoVMAQA_VV_VX;
 defm PseudoTHVdotVMAQAU     : VPseudoVMAQA_VV_VX;
