@@ -1,4 +1,3 @@
-; REQUIRES: have_tflite
 ; REQUIRES: default_triple
 ;
 ; Check that the basic block profile dump outputs data and in the correct
