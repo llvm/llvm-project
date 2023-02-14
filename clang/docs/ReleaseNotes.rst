@@ -141,6 +141,9 @@ Bug Fixes in This Version
   driver mode and emit an error which suggests using ``/TC`` or ``/TP``
   ``clang-cl`` options instead.
   (`#59307 <https://github.com/llvm/llvm-project/issues/59307>`_)
+- Fix assert that fails when the expression causing the this pointer to be
+  captured by a block is part of a constexpr if statement's branch and
+  instantiation of the enclosing method causes the branch to be discarded.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
