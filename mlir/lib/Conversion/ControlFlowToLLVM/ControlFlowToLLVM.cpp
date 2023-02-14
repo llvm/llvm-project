@@ -27,7 +27,7 @@
 #include <functional>
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTCONTROLFLOWTOLLVM
+#define GEN_PASS_DEF_CONVERTCONTROLFLOWTOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -264,8 +264,9 @@ void mlir::cf::populateAssertToLLVMConversionPattern(
 namespace {
 /// A pass converting MLIR operations into the LLVM IR dialect.
 struct ConvertControlFlowToLLVM
-    : public impl::ConvertControlFlowToLLVMBase<ConvertControlFlowToLLVM> {
-  ConvertControlFlowToLLVM() = default;
+    : public impl::ConvertControlFlowToLLVMPassBase<ConvertControlFlowToLLVM> {
+
+  using Base::Base;
 
   /// Run the dialect converter on the module.
   void runOnOperation() override {
@@ -286,7 +287,3 @@ struct ConvertControlFlowToLLVM
   }
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::cf::createConvertControlFlowToLLVMPass() {
-  return std::make_unique<ConvertControlFlowToLLVM>();
-}
