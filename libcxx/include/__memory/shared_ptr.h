@@ -260,7 +260,10 @@ __shared_ptr_pointer<_Tp, _Dp, _Alloc>::__on_zero_shared_weak() _NOEXCEPT
     __a.deallocate(_PTraits::pointer_to(*this), 1);
 }
 
-struct __default_initialize_tag {};
+// This tag is used to instantiate an allocator type. The various shared_ptr control blocks
+// detect that the allocator has been instantiated for this type and perform alternative
+// initialization/destruction based on that.
+struct __for_overwrite_tag {};
 
 template <class _Tp, class _Alloc>
 struct __shared_ptr_emplace
@@ -271,24 +274,19 @@ struct __shared_ptr_emplace
     explicit __shared_ptr_emplace(_Alloc __a, _Args&& ...__args)
         : __storage_(_VSTD::move(__a))
     {
-#if _LIBCPP_STD_VER > 17
-        using _TpAlloc = typename __allocator_traits_rebind<_Alloc, _Tp>::type;
-        _TpAlloc __tmp(*__get_alloc());
-        allocator_traits<_TpAlloc>::construct(__tmp, __get_elem(), _VSTD::forward<_Args>(__args)...);
+#if _LIBCPP_STD_VER >= 20
+        if constexpr (is_same_v<typename _Alloc::value_type, __for_overwrite_tag>) {
+            static_assert(sizeof...(_Args) == 0, "No argument should be provided to the control block when using _for_overwrite");
+            ::new ((void*)__get_elem()) _Tp;
+        } else {
+            using _TpAlloc = typename __allocator_traits_rebind<_Alloc, _Tp>::type;
+            _TpAlloc __tmp(*__get_alloc());
+            allocator_traits<_TpAlloc>::construct(__tmp, __get_elem(), _VSTD::forward<_Args>(__args)...);
+        }
 #else
         ::new ((void*)__get_elem()) _Tp(_VSTD::forward<_Args>(__args)...);
 #endif
     }
-
-
-#if _LIBCPP_STD_VER >= 20
-    _LIBCPP_HIDE_FROM_ABI
-    explicit __shared_ptr_emplace(__default_initialize_tag, _Alloc __a)
-        : __storage_(std::move(__a))
-    {
-        ::new ((void*)__get_elem()) _Tp;
-    }
-#endif
 
     _LIBCPP_HIDE_FROM_ABI
     _Alloc* __get_alloc() _NOEXCEPT { return __storage_.__get_alloc(); }
@@ -299,9 +297,13 @@ struct __shared_ptr_emplace
 private:
     void __on_zero_shared() _NOEXCEPT override {
 #if _LIBCPP_STD_VER > 17
-        using _TpAlloc = typename __allocator_traits_rebind<_Alloc, _Tp>::type;
-        _TpAlloc __tmp(*__get_alloc());
-        allocator_traits<_TpAlloc>::destroy(__tmp, __get_elem());
+        if constexpr (is_same_v<typename _Alloc::value_type, __for_overwrite_tag>) {
+            __get_elem()->~_Tp();
+        } else {
+            using _TpAlloc = typename __allocator_traits_rebind<_Alloc, _Tp>::type;
+            _TpAlloc __tmp(*__get_alloc());
+            allocator_traits<_TpAlloc>::destroy(__tmp, __get_elem());
+        }
 #else
         __get_elem()->~_Tp();
 #endif
@@ -1008,12 +1010,9 @@ template<class _Tp, class _Alloc, __enable_if_t<!is_array<_Tp>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI
 shared_ptr<_Tp> allocate_shared_for_overwrite(const _Alloc& __a)
 {
-    using _ControlBlock = __shared_ptr_emplace<_Tp, _Alloc>;
-    using _ControlBlockAllocator = typename __allocator_traits_rebind<_Alloc, _ControlBlock>::type;
-    __allocation_guard<_ControlBlockAllocator> __guard(__a, 1);
-    ::new ((void*)_VSTD::addressof(*__guard.__get())) _ControlBlock(__default_initialize_tag{}, __a);
-    auto __control_block = __guard.__release_ptr();
-    return shared_ptr<_Tp>::__create_with_control_block((*__control_block).__get_elem(), _VSTD::addressof(*__control_block));
+    using _ForOverwriteAllocator = __allocator_traits_rebind_t<_Alloc, __for_overwrite_tag>;
+    _ForOverwriteAllocator __alloc(__a);
+    return std::allocate_shared<_Tp>(__alloc);
 }
 
 template<class _Tp, __enable_if_t<!is_array<_Tp>::value, int> = 0>
@@ -1052,19 +1051,18 @@ struct __unbounded_array_control_block<_Tp[], _Alloc> : __shared_weak_count
     explicit __unbounded_array_control_block(_Alloc const& __alloc, size_t __count)
         : __alloc_(__alloc), __count_(__count)
     {
-        std::__uninitialized_allocator_value_construct_n_multidimensional(__alloc_, std::begin(__data_), __count_);
-    }
-
 #if _LIBCPP_STD_VER >= 20
-    _LIBCPP_HIDE_FROM_ABI
-    explicit __unbounded_array_control_block(_Alloc const& __alloc, size_t __count, __default_initialize_tag)
-        : __alloc_(__alloc), __count_(__count)
-    {
-        // We are purposefully not using an allocator-aware default construction because the spec says so.
-        // There's currently no way of expressing default initialization in an allocator-aware manner anyway.
-        std::uninitialized_default_construct_n(std::begin(__data_), __count_);
-    }
+        if constexpr (is_same_v<typename _Alloc::value_type, __for_overwrite_tag>) {
+            // We are purposefully not using an allocator-aware default construction because the spec says so.
+            // There's currently no way of expressing default initialization in an allocator-aware manner anyway.
+            std::uninitialized_default_construct_n(std::begin(__data_), __count_);
+        } else {
+            std::__uninitialized_allocator_value_construct_n_multidimensional(__alloc_, std::begin(__data_), __count_);
+        }
+#else
+        std::__uninitialized_allocator_value_construct_n_multidimensional(__alloc_, std::begin(__data_), __count_);
 #endif
+    }
 
     // Returns the number of bytes required to store a control block followed by the given number
     // of elements of _Tp, with the whole storage being aligned to a multiple of _Tp's alignment.
@@ -1087,8 +1085,17 @@ struct __unbounded_array_control_block<_Tp[], _Alloc> : __shared_weak_count
 
 private:
     void __on_zero_shared() _NOEXCEPT override {
+#if _LIBCPP_STD_VER >= 20
+        if constexpr (is_same_v<typename _Alloc::value_type, __for_overwrite_tag>) {
+            std::__reverse_destroy(__data_, __data_ + __count_);
+        } else {
+            __allocator_traits_rebind_t<_Alloc, _Tp> __value_alloc(__alloc_);
+            std::__allocator_destroy_multidimensional(__value_alloc, __data_, __data_ + __count_);
+        }
+#else
         __allocator_traits_rebind_t<_Alloc, _Tp> __value_alloc(__alloc_);
         std::__allocator_destroy_multidimensional(__value_alloc, __data_, __data_ + __count_);
+#endif
     }
 
     void __on_zero_shared_weak() _NOEXCEPT override {
@@ -1146,25 +1153,35 @@ struct __bounded_array_control_block<_Tp[_Count], _Alloc>
 
     _LIBCPP_HIDE_FROM_ABI
     explicit __bounded_array_control_block(_Alloc const& __alloc) : __alloc_(__alloc) {
-        std::__uninitialized_allocator_value_construct_n_multidimensional(__alloc_, std::addressof(__data_[0]), _Count);
-    }
-
 #if _LIBCPP_STD_VER >= 20
-    _LIBCPP_HIDE_FROM_ABI
-    explicit __bounded_array_control_block(_Alloc const& __alloc, __default_initialize_tag) : __alloc_(__alloc) {
-        // We are purposefully not using an allocator-aware default construction because the spec says so.
-        // There's currently no way of expressing default initialization in an allocator-aware manner anyway.
-        std::uninitialized_default_construct_n(std::addressof(__data_[0]), _Count);
-    }
+        if constexpr (is_same_v<typename _Alloc::value_type, __for_overwrite_tag>) {
+            // We are purposefully not using an allocator-aware default construction because the spec says so.
+            // There's currently no way of expressing default initialization in an allocator-aware manner anyway.
+            std::uninitialized_default_construct_n(std::addressof(__data_[0]), _Count);
+        } else {
+            std::__uninitialized_allocator_value_construct_n_multidimensional(__alloc_, std::addressof(__data_[0]), _Count);
+        }
+#else
+        std::__uninitialized_allocator_value_construct_n_multidimensional(__alloc_, std::addressof(__data_[0]), _Count);
 #endif
+    }
 
     _LIBCPP_HIDE_FROM_ABI_VIRTUAL
     ~__bounded_array_control_block() override { } // can't be `= default` because of the sometimes-non-trivial union member __data_
 
 private:
     void __on_zero_shared() _NOEXCEPT override {
+#if _LIBCPP_STD_VER >= 20
+        if constexpr (is_same_v<typename _Alloc::value_type, __for_overwrite_tag>) {
+            std::__reverse_destroy(__data_, __data_ + _Count);
+        } else {
+            __allocator_traits_rebind_t<_Alloc, _Tp> __value_alloc(__alloc_);
+            std::__allocator_destroy_multidimensional(__value_alloc, __data_, __data_ + _Count);
+        }
+#else
         __allocator_traits_rebind_t<_Alloc, _Tp> __value_alloc(__alloc_);
         std::__allocator_destroy_multidimensional(__value_alloc, __data_, __data_ + _Count);
+#endif
     }
 
     void __on_zero_shared_weak() _NOEXCEPT override {
@@ -1220,7 +1237,9 @@ template<class _Tp, class _Alloc, __enable_if_t<is_bounded_array<_Tp>::value, in
 _LIBCPP_HIDE_FROM_ABI
 shared_ptr<_Tp> allocate_shared_for_overwrite(const _Alloc& __a)
 {
-    return std::__allocate_shared_bounded_array<_Tp>(__a, __default_initialize_tag{});
+    using _ForOverwriteAllocator = __allocator_traits_rebind_t<_Alloc, __for_overwrite_tag>;
+    _ForOverwriteAllocator __alloc(__a);
+    return std::__allocate_shared_bounded_array<_Tp>(__alloc);
 }
 
 template<class _Tp, class = __enable_if_t<is_bounded_array<_Tp>::value>>
@@ -1241,7 +1260,7 @@ template<class _Tp, __enable_if_t<is_bounded_array<_Tp>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI
 shared_ptr<_Tp> make_shared_for_overwrite()
 {
-    return std::__allocate_shared_bounded_array<_Tp>(allocator<_Tp>(), __default_initialize_tag{});
+    return std::__allocate_shared_bounded_array<_Tp>(allocator<__for_overwrite_tag>());
 }
 
 // unbounded array variants
@@ -1263,7 +1282,9 @@ template<class _Tp, class _Alloc, __enable_if_t<is_unbounded_array<_Tp>::value, 
 _LIBCPP_HIDE_FROM_ABI
 shared_ptr<_Tp> allocate_shared_for_overwrite(const _Alloc& __a, size_t __n)
 {
-    return std::__allocate_shared_unbounded_array<_Tp>(__a, __n, __default_initialize_tag{});
+    using _ForOverwriteAllocator = __allocator_traits_rebind_t<_Alloc, __for_overwrite_tag>;
+    _ForOverwriteAllocator __alloc(__a);
+    return std::__allocate_shared_unbounded_array<_Tp>(__alloc, __n);
 }
 
 template<class _Tp, class = __enable_if_t<is_unbounded_array<_Tp>::value>>
@@ -1284,7 +1305,7 @@ template<class _Tp, __enable_if_t<is_unbounded_array<_Tp>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI
 shared_ptr<_Tp> make_shared_for_overwrite(size_t __n)
 {
-    return std::__allocate_shared_unbounded_array<_Tp>(allocator<_Tp>(), __n, __default_initialize_tag{});
+    return std::__allocate_shared_unbounded_array<_Tp>(allocator<__for_overwrite_tag>(), __n);
 }
 
 #endif // _LIBCPP_STD_VER > 17

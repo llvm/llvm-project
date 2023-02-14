@@ -575,5 +575,37 @@ exit:
   ret void
 }
 
+; TODO: Even though %num is known to divide by 4, and the loop's IV advances by 4, SCEV can't compute the trip count.
+define void @test_trip_multiple_4_vectorized_iv(i32 %num) {
+; CHECK-LABEL: 'test_trip_multiple_4_vectorized_iv'
+; CHECK-NEXT:  Classifying expressions for: @test_trip_multiple_4_vectorized_iv
+; CHECK-NEXT:    %u = urem i32 %num, 4
+; CHECK-NEXT:    --> (zext i2 (trunc i32 %num to i2) to i32) U: [0,4) S: [0,4)
+; CHECK-NEXT:    %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+; CHECK-NEXT:    --> {0,+,4}<%for.body> U: [0,-3) S: [-2147483648,2147483645) Exits: <<Unknown>> LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    %inc = add i32 %i.010, 4
+; CHECK-NEXT:    --> {4,+,4}<%for.body> U: [0,-3) S: [-2147483648,2147483645) Exits: <<Unknown>> LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_trip_multiple_4_vectorized_iv
+; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
+;
+entry:
+  %u = urem i32 %num, 4
+  %cmp = icmp eq i32 %u, 0
+  tail call void @llvm.assume(i1 %cmp)
+  br label %for.body
+
+for.body:
+  %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %inc = add i32 %i.010, 4
+  %cmp2 = icmp ult i32 %inc, %num
+  br i1 %cmp2, label %for.body, label %exit
+
+exit:
+  ret void
+}
+
 declare void @llvm.assume(i1)
 declare void @llvm.experimental.guard(i1, ...)

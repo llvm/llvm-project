@@ -143,12 +143,6 @@ TEST(MathExtras, PowerOf2Ceil) {
   EXPECT_EQ(8U, PowerOf2Ceil(7U));
 }
 
-TEST(MathExtras, PowerOf2Floor) {
-  EXPECT_EQ(0U, PowerOf2Floor(0U));
-  EXPECT_EQ(8U, PowerOf2Floor(8U));
-  EXPECT_EQ(4U, PowerOf2Floor(7U));
-}
-
 TEST(MathExtras, CTLog2) {
   EXPECT_EQ(CTLog2<1ULL << 0>(), 0U);
   EXPECT_EQ(CTLog2<1ULL << 1>(), 1U);

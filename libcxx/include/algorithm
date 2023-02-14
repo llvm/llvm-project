@@ -1719,7 +1719,6 @@ template <class BidirectionalIterator, class Compare>
 #include <__config>
 #include <__debug>
 #include <cstddef>
-#include <type_traits>
 #include <version>
 
 #include <__algorithm/adjacent_find.h>
@@ -1933,6 +1932,7 @@ template <class BidirectionalIterator, class Compare>
 #  include <iterator>
 #  include <memory>
 #  include <stdexcept>
+#  include <type_traits>
 #  include <utility>
 #endif
 

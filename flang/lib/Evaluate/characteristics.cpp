@@ -275,7 +275,7 @@ bool DummyDataObject::IsCompatibleWith(
     }
     return false;
   }
-  if (!type.type().IsTkCompatibleWith(actual.type.type())) {
+  if (!type.type().IsTkLenCompatibleWith(actual.type.type())) {
     if (whyNot) {
       *whyNot = "incompatible dummy data object types: "s +
           type.type().AsFortran() + " vs " + actual.type.type().AsFortran();

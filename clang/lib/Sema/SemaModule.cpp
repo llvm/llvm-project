@@ -409,6 +409,8 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     return ConvertDeclToDeclGroup(Import);
   }
 
+  getASTContext().setNamedModuleForCodeGen(Mod);
+
   // FIXME: Create a ModuleDecl.
   return nullptr;
 }

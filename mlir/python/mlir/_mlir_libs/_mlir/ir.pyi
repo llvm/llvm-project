@@ -52,6 +52,8 @@ __all__ = [
     "DictAttr",
     "Float8E4M3FNType",
     "Float8E5M2Type",
+    "Float8E4M3FNUZType",
+    "Float8E5M2FNUZType",
     "F16Type",
     "F32Type",
     "F64Type",
@@ -590,6 +592,20 @@ class Float8E5M2Type(Type):
     def __init__(self, cast_from_type: Type) -> None: ...
     @staticmethod
     def get(*args, **kwargs) -> Float8E5M2Type: ...
+    @staticmethod
+    def isinstance(arg: Any) -> bool: ...
+
+class Float8E4M3FNUZType(Type):
+    def __init__(self, cast_from_type: Type) -> None: ...
+    @staticmethod
+    def get(*args, **kwargs) -> Float8E4M3FNUZType: ...
+    @staticmethod
+    def isinstance(arg: Any) -> bool: ...
+
+class Float8E5M2FNUZType(Type):
+    def __init__(self, cast_from_type: Type) -> None: ...
+    @staticmethod
+    def get(*args, **kwargs) -> Float8E5M2FNUZType: ...
     @staticmethod
     def isinstance(arg: Any) -> bool: ...
 

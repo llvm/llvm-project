@@ -48,12 +48,15 @@ namespace llvm {
 
 /// ByteSwap_16 - This function returns a byte-swapped representation of
 /// the 16-bit argument.
+LLVM_DEPRECATED("use llvm::byteswap instead", "llvm::byteswap")
 inline uint16_t ByteSwap_16(uint16_t value) { return llvm::byteswap(value); }
 
 /// This function returns a byte-swapped representation of the 32-bit argument.
+LLVM_DEPRECATED("use llvm::byteswap instead", "llvm::byteswap")
 inline uint32_t ByteSwap_32(uint32_t value) { return llvm::byteswap(value); }
 
 /// This function returns a byte-swapped representation of the 64-bit argument.
+LLVM_DEPRECATED("use llvm::byteswap instead", "llvm::byteswap")
 inline uint64_t ByteSwap_64(uint64_t value) { return llvm::byteswap(value); }
 
 namespace sys {

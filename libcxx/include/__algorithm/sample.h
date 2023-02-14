@@ -16,8 +16,8 @@
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__random/uniform_int_distribution.h>
+#include <__type_traits/common_type.h>
 #include <__utility/move.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

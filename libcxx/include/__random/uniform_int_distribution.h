@@ -12,12 +12,13 @@
 #include <__config>
 #include <__random/is_valid.h>
 #include <__random/log2.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/make_unsigned.h>
 #include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <iosfwd>
 #include <limits>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

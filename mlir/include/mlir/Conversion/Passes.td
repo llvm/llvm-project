@@ -383,6 +383,12 @@ def LowerHostCodeToLLVMPass : Pass<"lower-host-to-llvm", "ModuleOp"> {
     dialect, emitting C wrappers.
   }];
 
+  let options = [
+    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
+                 /*default=*/"false", "Generate LLVM IR using opaque pointers "
+                 "instead of typed pointers">
+  ];
+
   let dependentDialects = ["LLVM::LLVMDialect"];
 }
 
@@ -746,10 +752,16 @@ def SCFToControlFlow : Pass<"convert-scf-to-cf"> {
 // SCFToOpenMP
 //===----------------------------------------------------------------------===//
 
-def ConvertSCFToOpenMP : Pass<"convert-scf-to-openmp", "ModuleOp"> {
+def ConvertSCFToOpenMPPass : Pass<"convert-scf-to-openmp", "ModuleOp"> {
   let summary = "Convert SCF parallel loop to OpenMP parallel + workshare "
                 "constructs.";
-  let constructor = "mlir::createConvertSCFToOpenMPPass()";
+
+  let options = [
+    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
+                 /*default=*/"false", "Generate LLVM IR using opaque pointers "
+                 "instead of typed pointers">
+  ];
+
   let dependentDialects = ["omp::OpenMPDialect", "LLVM::LLVMDialect",
                            "memref::MemRefDialect"];
 }
@@ -833,6 +845,12 @@ def ConvertSPIRVToLLVMPass : Pass<"convert-spirv-to-llvm", "ModuleOp"> {
     for more details.
   }];
   let dependentDialects = ["LLVM::LLVMDialect"];
+
+  let options = [
+    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
+                 /*default=*/"false", "Generate LLVM IR using opaque pointers "
+                 "instead of typed pointers">
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1038,7 +1056,10 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm", "ModuleOp"> {
     Option<"x86Vector", "enable-x86vector",
            "bool", /*default=*/"false",
            "Enables the use of X86Vector dialect while lowering the vector "
-	   "dialect.">
+	   "dialect.">,
+	  Option<"useOpaquePointers", "use-opaque-pointers", "bool",
+               /*default=*/"false", "Generate LLVM IR using opaque pointers "
+               "instead of typed pointers">
   ];
 }
 

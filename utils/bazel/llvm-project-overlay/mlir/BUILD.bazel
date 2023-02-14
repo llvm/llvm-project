@@ -8797,6 +8797,7 @@ td_library(
         ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
+        ":VectorInterfacesTdFiles",
     ],
 )
 
@@ -9954,6 +9955,7 @@ cc_library(
         ":AffineDialect",
         ":ArithDialect",
         ":IR",
+        ":LoopLikeInterface",
         ":MemRefDialect",
         ":MemRefTransformOpsIncGen",
         ":MemRefTransforms",

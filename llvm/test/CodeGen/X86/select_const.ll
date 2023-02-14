@@ -520,3 +520,68 @@ define float @select_undef_fp(float %x) {
   %f = select i1 undef, float 4.0, float %x
   ret float %f
 }
+
+define i32 @select_eq0_3_2(i32 %X) {
+; CHECK-LABEL: select_eq0_3_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    orl $2, %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp eq i32 %X, 0
+  %sel = select i1 %cmp, i32 3, i32 2
+  ret i32 %sel
+}
+
+define i32 @select_ugt3_2_3(i32 %X) {
+; CHECK-LABEL: select_ugt3_2_3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpl $4, %edi
+; CHECK-NEXT:    setae %al
+; CHECK-NEXT:    xorl $3, %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp ugt i32 %X, 3
+  %sel = select i1 %cmp, i32 2, i32 3
+  ret i32 %sel
+}
+
+define i32 @select_ult9_7_6(i32 %X) {
+; CHECK-LABEL: select_ult9_7_6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpl $9, %edi
+; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    orl $6, %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp ult i32 %X, 9
+  %sel = select i1 %cmp, i32 7, i32 6
+  ret i32 %sel
+}
+
+define i32 @select_ult2_2_3(i32 %X) {
+; CHECK-LABEL: select_ult2_2_3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpl $2, %edi
+; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    xorl $3, %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp ult i32 %X, 2
+  %cond = select i1 %cmp, i32 2, i32 3
+  ret i32 %cond
+}
+
+define i32 @select_ugt2_3_2(i32 %X) {
+; CHECK-LABEL: select_ugt2_3_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpl $4, %edi
+; CHECK-NEXT:    setae %al
+; CHECK-NEXT:    orl $2, %eax
+; CHECK-NEXT:    retq
+  %cmp.inv = icmp ugt i32 %X, 3
+  %cond = select i1 %cmp.inv, i32 3, i32 2
+  ret i32 %cond
+}

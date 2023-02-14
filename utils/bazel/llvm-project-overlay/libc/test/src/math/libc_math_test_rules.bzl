@@ -23,7 +23,7 @@ def math_test(name, hdrs = [], deps = [], **kwargs):
     libc_test(
         name = test_name,
         srcs = [test_name + ".cpp"] + hdrs,
-        libc_function_deps = ["//libc:" + name],
+        libc_function_deps = ["//libc:func_name".replace("func_name", name)],
         deps = [
             "//libc:__support_fputil_basic_operations",
             "//libc:__support_builtin_wrappers",

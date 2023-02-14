@@ -73,6 +73,8 @@ on support follow.
      ``Zicbom``       Assembly Support
      ``Zicbop``       Assembly Support
      ``Zicboz``       Assembly Support
+     ``Zicsr``        (`See Note <#riscv-i2p1-note>`__)
+     ``Zifencei``     (`See Note <#riscv-i2p1-note>`__)
      ``Zihintpause``  Assembly Support
      ``Zkn``          Supported
      ``Zknd``         Supported (`See note <#riscv-scalar-crypto-note2>`__)
@@ -125,6 +127,11 @@ Supported
 ``Zve32x``, ``Zve32f``, ``Zvl32b``
   LLVM currently assumes a minimum VLEN (vector register width) of 64 bits during compilation, and as a result ``Zve32x`` and ``Zve32f`` are supported only for VLEN>=64.  Assembly support doesn't have this restriction.
 
+.. _riscv-i2p1-note:
+
+``zicsr``, ``zifencei``
+  Between versions 2.0 and 2.1 of the base I specification, a backwards incompatible change was made to remove selected instructions and CSRs from the base ISA.  These instructions were grouped into a set of new extensions, but were no longer required by the base ISA.  This change is described in "Preface to Document Version 20190608-Base-Ratified" from the specification document.  LLVM currently implements version 2.0 of the base specification.  Thus, instructions from these extensions are accepted as part of the base ISA, but attempts to explicitly enable the extensions will error.
+
 Experimental Extensions
 =======================
 
@@ -138,14 +145,14 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-zca``
   LLVM implements the `1.0.1 draft specification <https://github.com/riscv/riscv-code-size-reduction/releases/tag/v1.0.1>`_.
 
+``experimental-zcb``
+  LLVM implements the `1.0.1 draft specification <https://github.com/riscv/riscv-code-size-reduction/releases/tag/v1.0.1>`_.
+
 ``experimental-zcd``
   LLVM implements the `1.0.1 draft specification <https://github.com/riscv/riscv-code-size-reduction/releases/tag/v1.0.1>`_.
 
 ``experimental-zcf``
   LLVM implements the `1.0.1 draft specification <https://github.com/riscv/riscv-code-size-reduction/releases/tag/v1.0.1>`_.
-
-``experimental-zcb``
-  LLVM implements the `0.70 draft specification <https://github.com/riscv/riscv-code-size-reduction/releases/tag/V0.70.1-TOOLCHAIN-DEV>`_.
 
 ``experimental-zihintntl``
   LLVM implements the `0.2 draft specification <https://github.com/riscv/riscv-isa-manual/releases/tag/draft-20220831-bf5a151>`_.
@@ -171,6 +178,12 @@ The current vendor extensions supported are:
 
 ``XTHeadBa``
   LLVM implements `the THeadBa (address-generation) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`_  by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
+
+``XTHeadBb``
+  LLVM implements `the THeadBb (basic bit-manipulation) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`_  by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
+
+``XTHeadBs``
+  LLVM implements `the THeadBs (single-bit operations) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`_  by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
 
 ``XTHeadVdot``
   LLVM implements `version 1.0.0 of the THeadV-family custom instructions specification <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.0/xthead-2022-12-04-2.2.0.pdf>`_ by T-HEAD of Alibaba.  All instructions are prefixed with `th.` as described in the specification, and the riscv-toolchain-convention document linked above.

@@ -148,6 +148,8 @@ module m
   subroutine s13
     !CHECK: portability: Result of REPEAT() is too large to compute at compilation time (1.1259e+15 characters)
     print *, repeat(repeat(' ', 2**20), 2**30)
+    !CHECK: error: NCOPIES= argument to REPEAT() should be nonnegative, but is -666
+    print *, repeat(' ', -666)
   end subroutine
   subroutine warnings
     real, parameter :: ok1 = scale(0.0, 99999) ! 0.0
@@ -156,6 +158,10 @@ module m
     real, parameter :: bad1 = scale(1.0, 99999)
     !CHECK: complex ABS intrinsic folding overflow
     real, parameter :: bad2 = abs(cmplx(huge(0.),huge(0.)))
+    !CHECK: warning: DIM intrinsic folding overflow
+    real, parameter :: bad3 = dim(huge(1.),-.5*huge(1.))
+    !CHECK: warning: DIM intrinsic folding overflow
+    integer, parameter :: bad4 = dim(huge(1),-1)
     !CHECK: warning: overflow on REAL(8) to REAL(4) conversion
     x = 1.D40
   end subroutine
