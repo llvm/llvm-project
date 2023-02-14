@@ -2039,6 +2039,12 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
         targetDiag(D->getLocation(), diag::note_defined_here, FD) << D;
     }
 
+    if (Ty->isRVVType(/* Bitwidth */ 16, /* IsFloat */ true) &&
+        !Context.getTargetInfo().hasFeature("experimental-zvfh")) {
+      Diag(Loc, diag::err_riscv_type_requires_extension, FD)
+          << Ty << "zvfh";
+    }
+
     // Don't allow SVE types in functions without a SVE target.
     if (Ty->isSVESizelessBuiltinType() && FD && FD->hasBody()) {
       llvm::StringMap<bool> CallerFeatureMap;

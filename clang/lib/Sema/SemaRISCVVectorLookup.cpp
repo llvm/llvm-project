@@ -171,7 +171,6 @@ void RISCVIntrinsicManagerImpl::InitIntrinsicList() {
   const TargetInfo &TI = Context.getTargetInfo();
   bool HasVectorFloat32 = TI.hasFeature("zve32f");
   bool HasVectorFloat64 = TI.hasFeature("zve64d");
-  bool HasZvfh = TI.hasFeature("experimental-zvfh");
   bool HasRV64 = TI.hasFeature("64bit");
   bool HasFullMultiply = TI.hasFeature("v");
 
@@ -223,9 +222,6 @@ void RISCVIntrinsicManagerImpl::InitIntrinsicList() {
         continue;
 
       // Check requirement.
-      if (BaseType == BasicType::Float16 && !HasZvfh)
-        continue;
-
       if (BaseType == BasicType::Float32 && !HasVectorFloat32)
         continue;
 

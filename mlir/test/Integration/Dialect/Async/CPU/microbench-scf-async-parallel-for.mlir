@@ -14,9 +14,9 @@
 // RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN: -e entry -entry-point-result=void -O3                                  \
-// RUN: -shared-libs=%mlir_runner_utils  \
-// RUN: -shared-libs=%mlir_c_runner_utils\
-// RUN: -shared-libs=%mlir_async_runtime \
+// RUN: -shared-libs=%mlir_lib_dir/libmlir_runner_utils%shlibext  \
+// RUN: -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext\
+// RUN: -shared-libs=%mlir_lib_dir/libmlir_async_runtime%shlibext \
 // RUN: | FileCheck %s --dump-input=always
 
 // RUN:   mlir-opt %s                                                          \
@@ -35,9 +35,9 @@
 // RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN: -e entry -entry-point-result=void -O3                                  \
-// RUN: -shared-libs=%mlir_runner_utils  \
-// RUN: -shared-libs=%mlir_c_runner_utils\
-// RUN: -shared-libs=%mlir_async_runtime \
+// RUN: -shared-libs=%mlir_lib_dir/libmlir_runner_utils%shlibext  \
+// RUN: -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext\
+// RUN: -shared-libs=%mlir_lib_dir/libmlir_async_runtime%shlibext \
 // RUN: | FileCheck %s --dump-input=always
 
 // RUN:   mlir-opt %s                                                          \
@@ -49,9 +49,9 @@
 // RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN: -e entry -entry-point-result=void -O3                                  \
-// RUN: -shared-libs=%mlir_runner_utils  \
-// RUN: -shared-libs=%mlir_c_runner_utils\
-// RUN: -shared-libs=%mlir_async_runtime \
+// RUN: -shared-libs=%mlir_lib_dir/libmlir_runner_utils%shlibext  \
+// RUN: -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext\
+// RUN: -shared-libs=%mlir_lib_dir/libmlir_async_runtime%shlibext \
 // RUN: | FileCheck %s --dump-input=always
 
 #map0 = affine_map<(d0, d1) -> (d0, d1)>

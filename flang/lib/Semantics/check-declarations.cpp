@@ -13,6 +13,7 @@
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
+#include "flang/Parser/characters.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
@@ -2173,6 +2174,18 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
   }
   CheckConflicting(symbol, Attr::BIND_C, Attr::PARAMETER);
   CheckConflicting(symbol, Attr::BIND_C, Attr::ELEMENTAL);
+  if (const std::string * bindName{symbol.GetBindName()};
+      bindName && !bindName->empty()) {
+    bool ok{bindName->front() == '_' || parser::IsLetter(bindName->front())};
+    for (char ch : *bindName) {
+      ok &= ch == '_' || parser::IsLetter(ch) || parser::IsDecimalDigit(ch);
+    }
+    if (!ok) {
+      messages_.Say(symbol.name(),
+          "Symbol has a BIND(C) name that is not a valid C language identifier"_err_en_US);
+      context_.SetError(symbol);
+    }
+  }
   if (symbol.has<ObjectEntityDetails>() && !symbol.owner().IsModule()) {
     messages_.Say(symbol.name(),
         "A variable with BIND(C) attribute may only appear in the specification part of a module"_err_en_US);
