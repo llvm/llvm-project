@@ -31,21 +31,21 @@ define float @fsub_nan_op0(float %x) {
   ret float %r
 }
 
-; Signaling
+; Signaling - make quiet and preserve the payload and signbit
 
 define float @fsub_nan_op1(float %x) {
 ; CHECK-LABEL: @fsub_nan_op1(
-; CHECK-NEXT:    ret float 0x7FF1000000000000
+; CHECK-NEXT:    ret float 0x7FF9000000000000
 ;
   %r = fsub float %x, 0x7FF1000000000000
   ret float %r
 }
 
-; Signaling and signed
+; Signaling and signed - make quiet and preserve the payload and signbit
 
 define double @fmul_nan_op0(double %x) {
 ; CHECK-LABEL: @fmul_nan_op0(
-; CHECK-NEXT:    ret double 0xFFF0000000000001
+; CHECK-NEXT:    ret double 0xFFF8000000000001
 ;
   %r = fmul double 0xFFF0000000000001, %x
   ret double %r
