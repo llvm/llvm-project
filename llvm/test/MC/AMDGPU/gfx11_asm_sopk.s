@@ -530,3 +530,12 @@ s_subvector_loop_end vcc_hi, 0x1234
 
 s_subvector_loop_end m0, 0x1234
 // GFX11: encoding: [0x34,0x12,0xfd,0xbb]
+
+s_getreg_b32 s0, hwreg(HW_REG_PERF_SNAPSHOT_PC_LO)
+// GFX11: encoding: [0x12,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_PERF_SNAPSHOT_PC_HI)
+// GFX11: encoding: [0x13,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_PERF_SNAPSHOT_DATA)
+// GFX11: encoding: [0x1b,0xf8,0x80,0xb8]
