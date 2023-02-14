@@ -514,7 +514,7 @@ GlobalAlias::GlobalAlias(Type *Ty, unsigned AddressSpace, LinkageTypes Link,
                   AddressSpace) {
   setAliasee(Aliasee);
   if (ParentModule)
-    ParentModule->insertAlias(this);
+    ParentModule->getAliasList().push_back(this);
 }
 
 GlobalAlias *GlobalAlias::create(Type *Ty, unsigned AddressSpace,
@@ -546,11 +546,11 @@ GlobalAlias *GlobalAlias::create(const Twine &Name, GlobalValue *Aliasee) {
 }
 
 void GlobalAlias::removeFromParent() {
-  getParent()->removeAlias(this);
+  getParent()->getAliasList().remove(getIterator());
 }
 
 void GlobalAlias::eraseFromParent() {
-  getParent()->eraseAlias(this);
+  getParent()->getAliasList().erase(getIterator());
 }
 
 void GlobalAlias::setAliasee(Constant *Aliasee) {

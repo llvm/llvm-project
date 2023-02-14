@@ -159,44 +159,4 @@ TEST(ModuleTest, setPartialSampleProfileRatio) {
   EXPECT_EQ(Ratio, ProfileSummary->getPartialProfileRatio());
 }
 
-TEST(ModuleTest, AliasList) {
-  // This tests all Module's functions that interact with Module::AliasList.
-  LLVMContext C;
-  SMDiagnostic Err;
-  LLVMContext Context;
-  std::unique_ptr<Module> M = parseAssemblyString(R"(
-declare void @Foo()
-@GA = alias void (), ptr @Foo
-)",
-                                                  Err, Context);
-  Function *Foo = M->getFunction("Foo");
-  auto *GA = M->getNamedAlias("GA");
-  EXPECT_EQ(M->alias_size(), 1u);
-  auto *NewGA =
-      GlobalAlias::create(Foo->getType(), 0, GlobalValue::ExternalLinkage,
-                          "NewGA", Foo, /*Parent=*/nullptr);
-  EXPECT_EQ(M->alias_size(), 1u);
-
-  M->insertAlias(NewGA);
-  EXPECT_EQ(&*std::prev(M->aliases().end()), NewGA);
-
-  M->removeAlias(NewGA);
-  EXPECT_EQ(M->alias_size(), 1u);
-  M->insertAlias(NewGA);
-  EXPECT_EQ(M->alias_size(), 2u);
-  EXPECT_EQ(&*std::prev(M->aliases().end()), NewGA);
-
-  auto Range = M->aliases();
-  EXPECT_EQ(&*Range.begin(), GA);
-  EXPECT_EQ(&*std::next(Range.begin()), NewGA);
-  EXPECT_EQ(std::next(Range.begin(), 2), Range.end());
-
-  M->removeAlias(NewGA);
-  EXPECT_EQ(M->alias_size(), 1u);
-
-  M->insertAlias(NewGA);
-  M->eraseAlias(NewGA);
-  EXPECT_EQ(M->alias_size(), 1u);
-}
-
 } // end namespace

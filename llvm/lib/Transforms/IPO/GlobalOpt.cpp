@@ -2360,7 +2360,7 @@ OptimizeGlobalAliases(Module &M,
       continue;
 
     // Delete the alias.
-    M.eraseAlias(&J);
+    M.getAliasList().erase(&J);
     ++NumAliasesRemoved;
     Changed = true;
   }
