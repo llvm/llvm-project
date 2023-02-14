@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs bufferize-function-boundaries" -drop-equivalent-buffer-results -buffer-deallocation -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs bufferize-function-boundaries" -drop-equivalent-buffer-results -split-input-file | FileCheck %s --check-prefix=CHECK-NO-DEALLOC-PASS
 
 // Run fuzzer with different seeds.
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs test-analysis-only analysis-fuzzer-seed=23 bufferize-function-boundaries" -split-input-file -o /dev/null
@@ -949,4 +950,32 @@ func.func @regression_cast_in_loop() -> tensor<2xindex> {
     scf.yield %cast_0 : tensor<2xindex>
   }
   return %1 : tensor<2xindex>
+}
+
+// -----
+
+// This test does not compute anything meaningful but it tests that
+// bufferizesToMemoryWrite is correctly propagated through regions.
+
+// CHECK-NO-DEALLOC-PASS-LABEL: func @elide_copy_of_non_writing_scf_if(
+func.func @elide_copy_of_non_writing_scf_if(%c: i1, %p1: index, %p2: index, %f: f32)
+  -> (tensor<10xf32>, f32)
+{
+  %r = scf.if %c -> tensor<10xf32> {
+    // CHECK-NO-DEALLOC-PASS: memref.alloc
+    %t1 = bufferization.alloc_tensor() : tensor<10xf32>
+    scf.yield %t1 : tensor<10xf32>
+  } else {
+    // CHECK-NO-DEALLOC-PASS: memref.alloc
+    %t2 = bufferization.alloc_tensor() : tensor<10xf32>
+    scf.yield %t2 : tensor<10xf32>
+  }
+
+  // No copy should be inserted because %r does not bufferize to a memory write.
+  // I.e., %r does not have defined contents and the copy can be elided.
+  // CHECK-NO-DEALLOC-PASS-NOT: memref.alloc
+  // CHECK-NO-DEALLOC-PASS-NOT: memref.copy
+  %r2 = tensor.insert %f into %r[%p1] : tensor<10xf32>
+  %r3 = tensor.extract %r[%p2] : tensor<10xf32>
+  return %r2, %r3 : tensor<10xf32>, f32
 }

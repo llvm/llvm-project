@@ -92,7 +92,7 @@ protected:
   MLIRContext *context = &this->getTypeConverter()->getContext();
 
   Type llvmVoidType = LLVM::LLVMVoidType::get(context);
-  Type llvmPointerType =
+  LLVM::LLVMPointerType llvmPointerType =
       LLVM::LLVMPointerType::get(IntegerType::get(context, 8));
   Type llvmPointerPointerType = LLVM::LLVMPointerType::get(llvmPointerType);
   Type llvmInt8Type = IntegerType::get(context, 8);
@@ -807,6 +807,22 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
   return success();
 }
 
+static Value bitAndAddrspaceCast(Location loc,
+                                 ConversionPatternRewriter &rewriter,
+                                 LLVM::LLVMPointerType destinationType,
+                                 Value sourcePtr,
+                                 LLVMTypeConverter &typeConverter) {
+  auto sourceTy = sourcePtr.getType().cast<LLVM::LLVMPointerType>();
+  if (destinationType.getAddressSpace() != sourceTy.getAddressSpace())
+    sourcePtr = rewriter.create<LLVM::AddrSpaceCastOp>(
+        loc,
+        typeConverter.getPointerType(sourceTy.getElementType(),
+                                     destinationType.getAddressSpace()),
+        sourcePtr);
+
+  return rewriter.create<LLVM::BitcastOp>(loc, destinationType, sourcePtr);
+}
+
 LogicalResult ConvertMemcpyOpToGpuRuntimeCallPattern::matchAndRewrite(
     gpu::MemcpyOp memcpyOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
@@ -829,11 +845,13 @@ LogicalResult ConvertMemcpyOpToGpuRuntimeCallPattern::matchAndRewrite(
   auto sizeBytes =
       rewriter.create<LLVM::PtrToIntOp>(loc, getIndexType(), gepPtr);
 
-  auto src = rewriter.create<LLVM::BitcastOp>(
-      loc, llvmPointerType, srcDesc.alignedPtr(rewriter, loc));
-  auto dst = rewriter.create<LLVM::BitcastOp>(
-      loc, llvmPointerType,
-      MemRefDescriptor(adaptor.getDst()).alignedPtr(rewriter, loc));
+  auto src = bitAndAddrspaceCast(loc, rewriter, llvmPointerType,
+                                 srcDesc.alignedPtr(rewriter, loc),
+                                 *getTypeConverter());
+  auto dst = bitAndAddrspaceCast(
+      loc, rewriter, llvmPointerType,
+      MemRefDescriptor(adaptor.getDst()).alignedPtr(rewriter, loc),
+      *getTypeConverter());
 
   auto stream = adaptor.getAsyncDependencies().front();
   memcpyCallBuilder.create(loc, rewriter, {dst, src, sizeBytes, stream});
@@ -866,8 +884,9 @@ LogicalResult ConvertMemsetOpToGpuRuntimeCallPattern::matchAndRewrite(
 
   auto value =
       rewriter.create<LLVM::BitcastOp>(loc, llvmInt32Type, adaptor.getValue());
-  auto dst = rewriter.create<LLVM::BitcastOp>(
-      loc, llvmPointerType, dstDesc.alignedPtr(rewriter, loc));
+  auto dst = bitAndAddrspaceCast(loc, rewriter, llvmPointerType,
+                                 dstDesc.alignedPtr(rewriter, loc),
+                                 *getTypeConverter());
 
   auto stream = adaptor.getAsyncDependencies().front();
   memsetCallBuilder.create(loc, rewriter, {dst, value, numElements, stream});

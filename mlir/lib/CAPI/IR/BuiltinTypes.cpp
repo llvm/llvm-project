@@ -84,6 +84,22 @@ MlirType mlirFloat8E4M3FNTypeGet(MlirContext ctx) {
   return wrap(FloatType::getFloat8E4M3FN(unwrap(ctx)));
 }
 
+bool mlirTypeIsAFloat8E5M2FNUZ(MlirType type) {
+  return unwrap(type).isFloat8E5M2FNUZ();
+}
+
+MlirType mlirFloat8E5M2FNUZTypeGet(MlirContext ctx) {
+  return wrap(FloatType::getFloat8E5M2FNUZ(unwrap(ctx)));
+}
+
+bool mlirTypeIsAFloat8E4M3FNUZ(MlirType type) {
+  return unwrap(type).isFloat8E4M3FNUZ();
+}
+
+MlirType mlirFloat8E4M3FNUZTypeGet(MlirContext ctx) {
+  return wrap(FloatType::getFloat8E4M3FNUZ(unwrap(ctx)));
+}
+
 bool mlirTypeIsABF16(MlirType type) { return unwrap(type).isBF16(); }
 
 MlirType mlirBF16TypeGet(MlirContext ctx) {

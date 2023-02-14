@@ -888,46 +888,6 @@ ConvertDWARFCallingConventionToClang(const ParsedDWARFTypeAttributes &attrs) {
   return clang::CC_C;
 }
 
-/// Given a DIE with an external definition (and thus no linkage name)
-/// find the definitions by lookup into the DWARF name index.
-/// We check the DW_AT_specification for each DIE in the index with
-/// the same name as the specified 'die' until we find one that references
-/// 'die'. Then return that linkage name. If no such DIE is found in the index,
-/// returns nullptr.
-static char const *FindLinkageName(DWARFDIE die) {
-  auto *dwarf = die.GetDWARF();
-  if (!dwarf)
-    return nullptr;
-
-  ConstString func_name(die.GetName());
-  if (!func_name)
-    return nullptr;
-
-  SymbolContextList sc_list;
-  Module::LookupInfo lookup_info(func_name,
-                                 FunctionNameType::eFunctionNameTypeMethod |
-                                     FunctionNameType::eFunctionNameTypeFull,
-                                 LanguageType::eLanguageTypeUnknown);
-  dwarf->GetObjectFile()->GetModule()->FindFunctions(lookup_info, {}, {},
-                                                     sc_list);
-
-  for (auto const &sc : sc_list.SymbolContexts()) {
-    if (auto *func = sc.function) {
-      auto func_die = dwarf->GetDIE(func->GetID());
-      if (!func_die.IsValid())
-        continue;
-
-      auto spec_die =
-          func_die.GetAttributeValueAsReferenceDIE(DW_AT_specification);
-      if (spec_die.IsValid() && spec_die == die) {
-        return func->GetMangled().GetMangledName().AsCString();
-      }
-    }
-  }
-
-  return nullptr;
-}
-
 TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
                            ParsedDWARFTypeAttributes &attrs) {
   Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
@@ -1155,9 +1115,6 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
                   // Default to public for now...
                   if (attrs.accessibility == eAccessNone)
                     attrs.accessibility = eAccessPublic;
-
-                  if (!attrs.mangled_name && attrs.storage == clang::SC_Extern)
-                    attrs.mangled_name = FindLinkageName(die);
 
                   clang::CXXMethodDecl *cxx_method_decl =
                       m_ast.AddMethodToCXXRecordType(
@@ -3347,6 +3304,11 @@ DWARFASTParserClang::GetClangDeclContextForDIE(const DWARFDIE &die) {
       try_parsing_type = false;
       break;
 
+    case DW_TAG_imported_declaration:
+      decl_ctx = ResolveImportedDeclarationDIE(die);
+      try_parsing_type = false;
+      break;
+
     case DW_TAG_lexical_block:
       decl_ctx = GetDeclContextForBlock(die);
       try_parsing_type = false;
@@ -3506,6 +3468,42 @@ DWARFASTParserClang::ResolveNamespaceDIE(const DWARFDIE &die) {
     }
   }
   return nullptr;
+}
+
+clang::NamespaceDecl *
+DWARFASTParserClang::ResolveImportedDeclarationDIE(const DWARFDIE &die) {
+  assert(die && die.Tag() == DW_TAG_imported_declaration);
+
+  // See if we cached a NamespaceDecl for this imported declaration
+  // already
+  auto it = m_die_to_decl_ctx.find(die.GetDIE());
+  if (it != m_die_to_decl_ctx.end())
+    return static_cast<clang::NamespaceDecl *>(it->getSecond());
+
+  clang::NamespaceDecl *namespace_decl = nullptr;
+
+  const DWARFDIE imported_uid =
+      die.GetAttributeValueAsReferenceDIE(DW_AT_import);
+  if (!imported_uid)
+    return nullptr;
+
+  switch (imported_uid.Tag()) {
+  case DW_TAG_imported_declaration:
+    namespace_decl = ResolveImportedDeclarationDIE(imported_uid);
+    break;
+  case DW_TAG_namespace:
+    namespace_decl = ResolveNamespaceDIE(imported_uid);
+    break;
+  default:
+    return nullptr;
+  }
+
+  if (!namespace_decl)
+    return nullptr;
+
+  LinkDeclContextToDIE(namespace_decl, die);
+
+  return namespace_decl;
 }
 
 clang::DeclContext *DWARFASTParserClang::GetClangDeclContextContainingDIE(

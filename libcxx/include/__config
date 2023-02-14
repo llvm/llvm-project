@@ -686,6 +686,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_HAS_NO_INT128
 #  endif
 
+#  ifndef __cpp_consteval
+#    define _LIBCPP_CONSTEVAL _LIBCPP_CONSTEXPR
+#  else
+#    define _LIBCPP_CONSTEVAL consteval
+#  endif
+
 #  if __has_attribute(__malloc__)
 #    define _LIBCPP_NOALIAS __attribute__((__malloc__))
 #  else

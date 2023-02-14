@@ -36,6 +36,10 @@ class Function;
 class Module;
 class Value;
 
+namespace object {
+class MachOUniversalBinary;
+}
+
 namespace orc {
 
 class ObjectLayer;
@@ -281,11 +285,28 @@ public:
   Load(ObjectLayer &L, const char *FileName, const Triple &TT,
        GetObjectFileInterface GetObjFileInterface = GetObjectFileInterface());
 
+  /// Try to create a StaticLibrarySearchGenerator from the given memory buffer
+  /// and Archive object.
+  static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
+  Create(ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
+         std::unique_ptr<object::Archive> Archive,
+         GetObjectFileInterface GetObjFileInterface = GetObjectFileInterface());
+
   /// Try to create a StaticLibrarySearchGenerator from the given memory buffer.
   /// This call will succeed if the buffer contains a valid archive, otherwise
   /// it will return an error.
   static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
   Create(ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
+         GetObjectFileInterface GetObjFileInterface = GetObjectFileInterface());
+
+  /// Try to create a StaticLibrarySearchGenerator from the given memory buffer.
+  ///
+  /// This call will succeed if the buffer contains a valid static library or a
+  /// MachO universal binary containing a static library that is compatible
+  /// with the given triple. Otherwise it will return an error.
+  static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
+  Create(ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
+         const Triple &TT,
          GetObjectFileInterface GetObjFileInterface = GetObjectFileInterface());
 
   /// Returns a list of filenames of dynamic libraries that this archive has
@@ -302,10 +323,13 @@ public:
 private:
   StaticLibraryDefinitionGenerator(ObjectLayer &L,
                                    std::unique_ptr<MemoryBuffer> ArchiveBuffer,
+                                   std::unique_ptr<object::Archive> Archive,
                                    GetObjectFileInterface GetObjFileInterface,
                                    Error &Err);
-
   Error buildObjectFilesMap();
+
+  static Expected<std::pair<size_t, size_t>>
+  getSliceRangeForArch(object::MachOUniversalBinary &UB, const Triple &TT);
 
   ObjectLayer &L;
   GetObjectFileInterface GetObjFileInterface;

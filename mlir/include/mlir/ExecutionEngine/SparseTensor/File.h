@@ -261,7 +261,19 @@ private:
   /// for the generated library.
   ///
   /// Precondition: `indices` is valid for `getRank()`.
-  char *readCOOIndices(uint64_t *indices);
+  template <typename I>
+  char *readCOOIndices(I *indices) {
+    readLine();
+    // Local variable for tracking the parser's position in the `line` buffer.
+    char *linePtr = line;
+    for (uint64_t dimRank = getRank(), d = 0; d < dimRank; ++d) {
+      // Parse the 1-based index.
+      uint64_t idx = strtoul(linePtr, &linePtr, 10);
+      // Store the 0-based index.
+      indices[d] = static_cast<I>(idx - 1);
+    }
+    return linePtr;
+  }
 
   /// The internal implementation of `readCOO`.  We template over
   /// `IsPattern` and `IsSymmetric` in order to perform LICM without
