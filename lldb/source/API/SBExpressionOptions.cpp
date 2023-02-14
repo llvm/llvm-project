@@ -178,13 +178,13 @@ void SBExpressionOptions::SetGenerateDebugInfo(bool b) {
 bool SBExpressionOptions::GetSuppressPersistentResult() {
   LLDB_INSTRUMENT_VA(this);
 
-  return m_opaque_up->GetResultIsInternal();
+  return m_opaque_up->GetSuppressPersistentResult();
 }
 
 void SBExpressionOptions::SetSuppressPersistentResult(bool b) {
   LLDB_INSTRUMENT_VA(this, b);
 
-  return m_opaque_up->SetResultIsInternal(b);
+  return m_opaque_up->SetSuppressPersistentResult(b);
 }
 
 const char *SBExpressionOptions::GetPrefix() const {
