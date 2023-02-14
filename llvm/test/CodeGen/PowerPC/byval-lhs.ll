@@ -17,6 +17,7 @@ define void @bar1(i64 %a) nounwind {
 ; LE-NEXT:    stdu r1, -48(r1)
 ; LE-NEXT:    std r0, 64(r1)
 ; LE-NEXT:    std r3, 40(r1)
+; LE-NEXT:    ld r3, 40(r1)
 ; LE-NEXT:    bl f0
 ; LE-NEXT:    nop
 ; LE-NEXT:    addi r1, r1, 48
@@ -30,6 +31,7 @@ define void @bar1(i64 %a) nounwind {
 ; AIX-NEXT:    stdu r1, -128(r1)
 ; AIX-NEXT:    std r0, 144(r1)
 ; AIX-NEXT:    std r3, 120(r1)
+; AIX-NEXT:    ld r3, 120(r1)
 ; AIX-NEXT:    bl .f0[PR]
 ; AIX-NEXT:    nop
 ; AIX-NEXT:    addi r1, r1, 128
@@ -47,10 +49,11 @@ define void @bar2(i64 %a) nounwind {
 ; LE:       # %bb.0:
 ; LE-NEXT:    mflr r0
 ; LE-NEXT:    stdu r1, -48(r1)
-; LE-NEXT:    mr r4, r3
 ; LE-NEXT:    std r0, 64(r1)
 ; LE-NEXT:    std r3, 32(r1)
 ; LE-NEXT:    std r3, 40(r1)
+; LE-NEXT:    ld r4, 40(r1)
+; LE-NEXT:    ld r3, 32(r1)
 ; LE-NEXT:    bl f1
 ; LE-NEXT:    nop
 ; LE-NEXT:    addi r1, r1, 48
@@ -62,10 +65,11 @@ define void @bar2(i64 %a) nounwind {
 ; AIX:       # %bb.0:
 ; AIX-NEXT:    mflr r0
 ; AIX-NEXT:    stdu r1, -128(r1)
-; AIX-NEXT:    mr r4, r3
 ; AIX-NEXT:    std r0, 144(r1)
 ; AIX-NEXT:    std r3, 112(r1)
 ; AIX-NEXT:    std r3, 120(r1)
+; AIX-NEXT:    ld r4, 120(r1)
+; AIX-NEXT:    ld r3, 112(r1)
 ; AIX-NEXT:    bl .f1[PR]
 ; AIX-NEXT:    nop
 ; AIX-NEXT:    addi r1, r1, 128
