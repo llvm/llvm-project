@@ -1949,8 +1949,11 @@ ScriptInterpreterPythonImpl::CreateScriptCommandObject(const char *class_name) {
   PythonObject ret_val = LLDBSwigPythonCreateCommandObject(
       class_name, m_dictionary_name.c_str(), debugger_sp);
 
-  return StructuredData::GenericSP(
-      new StructuredPythonObject(std::move(ret_val)));
+  if (ret_val.IsValid())
+    return StructuredData::GenericSP(
+        new StructuredPythonObject(std::move(ret_val)));
+  else
+    return {};
 }
 
 bool ScriptInterpreterPythonImpl::GenerateTypeScriptFunction(
