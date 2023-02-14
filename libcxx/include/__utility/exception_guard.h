@@ -58,7 +58,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 //    }
 //
 
-#ifndef _LIBCPP_NO_EXCEPTIONS
 template <class _Rollback>
 struct __exception_guard_exceptions {
   __exception_guard_exceptions() = delete;
@@ -92,9 +91,6 @@ private:
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(__exception_guard_exceptions);
 
 template <class _Rollback>
-using __exception_guard = __exception_guard_exceptions<_Rollback>;
-#else  // _LIBCPP_NO_EXCEPTIONS
-template <class _Rollback>
 struct __exception_guard_noexceptions {
   __exception_guard_noexceptions() = delete;
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -125,9 +121,13 @@ private:
 
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(__exception_guard_noexceptions);
 
+#ifdef _LIBCPP_NO_EXCEPTIONS
 template <class _Rollback>
 using __exception_guard = __exception_guard_noexceptions<_Rollback>;
-#endif // _LIBCPP_NO_EXCEPTIONS
+#else
+template <class _Rollback>
+using __exception_guard = __exception_guard_exceptions<_Rollback>;
+#endif
 
 template <class _Rollback>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __exception_guard<_Rollback> __make_exception_guard(_Rollback __rollback) {

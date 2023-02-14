@@ -299,32 +299,22 @@ StaticLibraryDefinitionGenerator::Load(
   // If this is a universal binary then search for a slice matching the given
   // Triple.
   if (auto *UB = cast<object::MachOUniversalBinary>(B->getBinary())) {
-    for (const auto &Obj : UB->objects()) {
-      auto ObjTT = Obj.getTriple();
-      if (ObjTT.getArch() == TT.getArch() &&
-          ObjTT.getSubArch() == TT.getSubArch() &&
-          (TT.getVendor() == Triple::UnknownVendor ||
-           ObjTT.getVendor() == TT.getVendor())) {
-        // We found a match. Create an instance from a buffer covering this
-        // slice.
-        auto SliceBuffer = MemoryBuffer::getFileSlice(FileName, Obj.getSize(),
-                                                      Obj.getOffset());
-        if (!SliceBuffer)
-          return make_error<StringError>(
-              Twine("Could not create buffer for ") + TT.str() + " slice of " +
-                  FileName + ": [ " + formatv("{0:x}", Obj.getOffset()) +
-                  " .. " + formatv("{0:x}", Obj.getOffset() + Obj.getSize()) +
-                  ": " + SliceBuffer.getError().message(),
-              SliceBuffer.getError());
-        return Create(L, std::move(*SliceBuffer),
-                      std::move(GetObjFileInterface));
-      }
-    }
 
-    return make_error<StringError>(Twine("Universal binary ") + FileName +
-                                       " does not contain a slice for " +
-                                       TT.str(),
-                                   inconvertibleErrorCode());
+    auto SliceRange = getSliceRangeForArch(*UB, TT);
+    if (!SliceRange)
+      return SliceRange.takeError();
+
+    auto SliceBuffer = MemoryBuffer::getFileSlice(FileName, SliceRange->second,
+                                                  SliceRange->first);
+    if (!SliceBuffer)
+      return make_error<StringError>(
+          Twine("Could not create buffer for ") + TT.str() + " slice of " +
+              FileName + ": [ " + formatv("{0:x}", SliceRange->first) + " .. " +
+              formatv("{0:x}", SliceRange->first + SliceRange->second) + ": " +
+              SliceBuffer.getError().message(),
+          SliceBuffer.getError());
+
+    return Create(L, std::move(*SliceBuffer), std::move(GetObjFileInterface));
   }
 
   return make_error<StringError>(Twine("Unrecognized file type for ") +
@@ -335,17 +325,71 @@ StaticLibraryDefinitionGenerator::Load(
 Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
 StaticLibraryDefinitionGenerator::Create(
     ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
+    std::unique_ptr<object::Archive> Archive,
     GetObjectFileInterface GetObjFileInterface) {
+
   Error Err = Error::success();
 
   std::unique_ptr<StaticLibraryDefinitionGenerator> ADG(
       new StaticLibraryDefinitionGenerator(
-          L, std::move(ArchiveBuffer), std::move(GetObjFileInterface), Err));
+          L, std::move(ArchiveBuffer), std::move(Archive),
+          std::move(GetObjFileInterface), Err));
 
   if (Err)
     return std::move(Err);
 
   return std::move(ADG);
+}
+
+Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
+StaticLibraryDefinitionGenerator::Create(
+    ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
+    GetObjectFileInterface GetObjFileInterface) {
+
+  auto Archive = object::Archive::create(ArchiveBuffer->getMemBufferRef());
+  if (!Archive)
+    return Archive.takeError();
+
+  return Create(L, std::move(ArchiveBuffer), std::move(*Archive),
+                std::move(GetObjFileInterface));
+}
+
+Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
+StaticLibraryDefinitionGenerator::Create(
+    ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
+    const Triple &TT, GetObjectFileInterface GetObjFileInterface) {
+
+  auto B = object::createBinary(ArchiveBuffer->getMemBufferRef());
+  if (!B)
+    return B.takeError();
+
+  // If this is a regular archive then create an instance from it.
+  if (isa<object::Archive>(*B))
+    return Create(L, std::move(ArchiveBuffer), std::move(GetObjFileInterface));
+
+  // If this is a universal binary then search for a slice matching the given
+  // Triple.
+  if (auto *UB = cast<object::MachOUniversalBinary>(B->get())) {
+    auto SliceRange = getSliceRangeForArch(*UB, TT);
+    if (!SliceRange)
+      return SliceRange.takeError();
+
+    MemoryBufferRef SliceRef(
+        StringRef(ArchiveBuffer->getBufferStart() + SliceRange->first,
+                  SliceRange->second),
+        ArchiveBuffer->getBufferIdentifier());
+
+    auto Archive = object::Archive::create(SliceRef);
+    if (!Archive)
+      return Archive.takeError();
+
+    return Create(L, std::move(ArchiveBuffer), std::move(*Archive),
+                  std::move(GetObjFileInterface));
+  }
+
+  return make_error<StringError>(Twine("Unrecognized file type for ") +
+                                     ArchiveBuffer->getBufferIdentifier(),
+                                 inconvertibleErrorCode());
 }
 
 Error StaticLibraryDefinitionGenerator::tryToGenerate(
@@ -417,12 +461,33 @@ Error StaticLibraryDefinitionGenerator::buildObjectFilesMap() {
   return Error::success();
 }
 
+Expected<std::pair<size_t, size_t>>
+StaticLibraryDefinitionGenerator::getSliceRangeForArch(
+    object::MachOUniversalBinary &UB, const Triple &TT) {
+
+  for (const auto &Obj : UB.objects()) {
+    auto ObjTT = Obj.getTriple();
+    if (ObjTT.getArch() == TT.getArch() &&
+        ObjTT.getSubArch() == TT.getSubArch() &&
+        (TT.getVendor() == Triple::UnknownVendor ||
+         ObjTT.getVendor() == TT.getVendor())) {
+      // We found a match. Return the range for the slice.
+      return std::make_pair(Obj.getOffset(), Obj.getSize());
+    }
+  }
+
+  return make_error<StringError>(Twine("Universal binary ") + UB.getFileName() +
+                                     " does not contain a slice for " +
+                                     TT.str(),
+                                 inconvertibleErrorCode());
+}
+
 StaticLibraryDefinitionGenerator::StaticLibraryDefinitionGenerator(
     ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
+    std::unique_ptr<object::Archive> Archive,
     GetObjectFileInterface GetObjFileInterface, Error &Err)
     : L(L), GetObjFileInterface(std::move(GetObjFileInterface)),
-      ArchiveBuffer(std::move(ArchiveBuffer)),
-      Archive(std::make_unique<object::Archive>(*this->ArchiveBuffer, Err)) {
+      ArchiveBuffer(std::move(ArchiveBuffer)), Archive(std::move(Archive)) {
   ErrorAsOutParameter _(&Err);
   if (!this->GetObjFileInterface)
     this->GetObjFileInterface = getObjectFileInterface;

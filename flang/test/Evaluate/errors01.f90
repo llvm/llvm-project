@@ -148,6 +148,8 @@ module m
   subroutine s13
     !CHECK: portability: Result of REPEAT() is too large to compute at compilation time (1.1259e+15 characters)
     print *, repeat(repeat(' ', 2**20), 2**30)
+    !CHECK: error: NCOPIES= argument to REPEAT() should be nonnegative, but is -666
+    print *, repeat(' ', -666)
   end subroutine
   subroutine warnings
     real, parameter :: ok1 = scale(0.0, 99999) ! 0.0

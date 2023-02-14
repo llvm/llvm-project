@@ -2672,8 +2672,8 @@ void ScopeHandler::MakeExternal(Symbol &symbol) {
 
 bool ScopeHandler::CheckDuplicatedAttr(
     SourceName name, const Symbol &symbol, Attr attr) {
-  if (attr == Attr::SAVE || attr == Attr::BIND_C) {
-    // these are checked elsewhere
+  if (attr == Attr::SAVE) {
+    // checked elsewhere
   } else if (symbol.attrs().test(attr)) { // C815
     if (symbol.implicitAttrs().test(attr)) {
       // Implied attribute is now confirmed explicitly
@@ -3175,6 +3175,11 @@ void InterfaceVisitor::Post(const parser::EndInterfaceStmt &) {
 bool InterfaceVisitor::Pre(const parser::GenericSpec &x) {
   if (auto *symbol{FindInScope(GenericSpecInfo{x}.symbolName())}) {
     SetGenericSymbol(*symbol);
+  }
+  if (const auto *opr{std::get_if<parser::DefinedOperator>(&x.u)}; opr &&
+      std::holds_alternative<parser::DefinedOperator::IntrinsicOperator>(
+          opr->u)) {
+    context().set_anyDefinedIntrinsicOperator(true);
   }
   return false;
 }

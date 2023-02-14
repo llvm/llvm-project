@@ -136,17 +136,17 @@ function(_build_gpu_entrypoint_objects fq_target_name)
   #       into a single bitcode file and use that. For now we simply build for
   #       every single one and let the offloading linker handle it.
   get_filename_component(stub_filename ${ADD_GPU_ENTRYPOINT_OBJ_SRCS} NAME)
-  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/${stub_filename} "// Empty file.\n")
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/stubs)
+  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename} "// Empty file.\n")
   add_library(
     ${fq_target_name}
     # We want an object library as the objects will eventually get packaged into
     # an archive (like libcgpu.a).
     EXCLUDE_FROM_ALL
     OBJECT
-    "${CMAKE_CURRENT_BINARY_DIR}/${stub_filename}"
+    "${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename}"
   )
   target_compile_options(${fq_target_name} BEFORE PRIVATE ${common_compile_options}
-                         -DLLVM_LIBC_PUBLIC_PACKAGING
                          -nostdlib -Xclang -fembed-offload-object=${packaged_output_name})
   target_include_directories(${fq_target_name} PRIVATE ${include_dirs})
   add_dependencies(${fq_target_name} ${full_deps_list} ${packaged_target_name})

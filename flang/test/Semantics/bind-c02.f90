@@ -6,10 +6,10 @@
 module m
 
   interface
-    subroutine proc() bind(c)
+    subroutine proc()
     end
   end interface
-  procedure(proc), bind(c) :: pc1
+  procedure(proc) :: pc1
   !ERROR: Only variable and named common block can be in BIND statement
   bind(c) :: proc
   !ERROR: Only variable and named common block can be in BIND statement
