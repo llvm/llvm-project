@@ -165,7 +165,7 @@ define void @store_i32_stride5_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm5
 ; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm6
 ; AVX1-ONLY-NEXT:    vunpcklps {{.*#+}} ymm5 = ymm5[0],ymm6[0],ymm5[1],ymm6[1],ymm5[4],ymm6[4],ymm5[5],ymm6[5]
-; AVX1-ONLY-NEXT:    vpermilpd {{.*#+}} ymm5 = ymm5[0,0,2,3]
+; AVX1-ONLY-NEXT:    vpermilps {{.*#+}} ymm5 = ymm5[u,u,1,0,u,u,u,6]
 ; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm1
 ; AVX1-ONLY-NEXT:    vunpcklps {{.*#+}} ymm7 = ymm4[0],ymm1[0],ymm4[1],ymm1[1],ymm4[4],ymm1[4],ymm4[5],ymm1[5]
 ; AVX1-ONLY-NEXT:    vpermilpd {{.*#+}} ymm7 = ymm7[0,0,3,3]
