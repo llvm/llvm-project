@@ -79,6 +79,23 @@ TEST(StdlibTest, All) {
   EXPECT_FALSE(stdlib::Header::named("<ios646.h>", stdlib::Lang::CXX));
 }
 
+TEST(StdlibTest, Experimental) {
+  EXPECT_FALSE(
+      stdlib::Header::named("<experimental/filesystem>", stdlib::Lang::C));
+  EXPECT_TRUE(
+      stdlib::Header::named("<experimental/filesystem>", stdlib::Lang::CXX));
+
+  auto Symbol = stdlib::Symbol::named("std::experimental::filesystem::",
+                                      "system_complete");
+  EXPECT_TRUE(Symbol);
+  EXPECT_EQ(Symbol->scope(), "std::experimental::filesystem::");
+  EXPECT_EQ(Symbol->name(), "system_complete");
+  EXPECT_EQ(Symbol->header(),
+            stdlib::Header::named("<experimental/filesystem>"));
+  EXPECT_EQ(Symbol->qualifiedName(),
+            "std::experimental::filesystem::system_complete");
+}
+
 TEST(StdlibTest, CCompat) {
   EXPECT_THAT(
       stdlib::Symbol::named("", "int16_t", stdlib::Lang::CXX)->headers(),

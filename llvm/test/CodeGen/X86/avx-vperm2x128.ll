@@ -172,7 +172,8 @@ define <8 x i32> @shuffle_v8i32_u5u7cdef(<8 x i32> %a, <8 x i32> %b) nounwind uw
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsubd %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: shuffle_v8i32_u5u7cdef:

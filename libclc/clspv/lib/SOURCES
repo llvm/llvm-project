@@ -18,7 +18,6 @@ math/nextafter.cl
 ../../generic/lib/math/clc_remainder.cl
 ../../generic/lib/math/clc_remquo.cl
 ../../generic/lib/math/clc_rootn.cl
-../../generic/lib/math/clc_sqrt.cl
 ../../generic/lib/math/clc_tan.cl
 ../../generic/lib/math/erf.cl
 ../../generic/lib/math/erfc.cl
@@ -41,8 +40,6 @@ math/nextafter.cl
 ../../generic/lib/math/remainder.cl
 ../../generic/lib/math/remquo.cl
 ../../generic/lib/math/rootn.cl
-../../generic/lib/math/rsqrt.cl
-../../generic/lib/math/sqrt.cl
 ../../generic/lib/math/tables.cl
 ../../generic/lib/math/tanh.cl
 ../../generic/lib/math/tgamma.cl

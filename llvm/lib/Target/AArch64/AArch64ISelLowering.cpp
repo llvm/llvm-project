@@ -71,6 +71,7 @@
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
@@ -17702,6 +17703,32 @@ static SDValue performAddCombineForShiftedOperands(SDNode *N,
   return SDValue();
 }
 
+// The mid end will reassociate sub(sub(x, m1), m2) to sub(x, add(m1, m2))
+// This reassociates it back to allow the creation of more mls instructions.
+static SDValue performSubAddMULCombine(SDNode *N, SelectionDAG &DAG) {
+  if (N->getOpcode() != ISD::SUB)
+    return SDValue();
+  SDValue Add = N->getOperand(1);
+  if (Add.getOpcode() != ISD::ADD)
+    return SDValue();
+
+  SDValue X = N->getOperand(0);
+  if (DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(X)))
+    return SDValue();
+  SDValue M1 = Add.getOperand(0);
+  SDValue M2 = Add.getOperand(1);
+  if (M1.getOpcode() != ISD::MUL && M1.getOpcode() != AArch64ISD::SMULL &&
+      M1.getOpcode() != AArch64ISD::UMULL)
+    return SDValue();
+  if (M2.getOpcode() != ISD::MUL && M2.getOpcode() != AArch64ISD::SMULL &&
+      M2.getOpcode() != AArch64ISD::UMULL)
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  SDValue Sub = DAG.getNode(ISD::SUB, SDLoc(N), VT, X, M1);
+  return DAG.getNode(ISD::SUB, SDLoc(N), VT, Sub, M2);
+}
+
 static SDValue performAddSubCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     SelectionDAG &DAG) {
@@ -17717,6 +17744,8 @@ static SDValue performAddSubCombine(SDNode *N,
   if (SDValue Val = performVectorAddSubExtCombine(N, DAG))
     return Val;
   if (SDValue Val = performAddCombineForShiftedOperands(N, DAG))
+    return Val;
+  if (SDValue Val = performSubAddMULCombine(N, DAG))
     return Val;
 
   return performAddSubLongCombine(N, DCI, DAG);
@@ -22555,6 +22584,28 @@ bool AArch64TargetLowering::isOpSuitableForLDPSTP(const Instruction *I) const {
   return false;
 }
 
+bool AArch64TargetLowering::isOpSuitableForLSE128(const Instruction *I) const {
+  if (!Subtarget->hasLSE128())
+    return false;
+
+  // Only use SWPP for stores where LSE2 would require a fence. Unlike STP, SWPP
+  // will clobber the two registers.
+  if (const auto *SI = dyn_cast<StoreInst>(I))
+    return SI->getValueOperand()->getType()->getPrimitiveSizeInBits() == 128 &&
+           SI->getAlign() >= Align(16) &&
+           (SI->getOrdering() == AtomicOrdering::Release ||
+            SI->getOrdering() == AtomicOrdering::SequentiallyConsistent);
+
+  if (const auto *RMW = dyn_cast<AtomicRMWInst>(I))
+    return RMW->getValOperand()->getType()->getPrimitiveSizeInBits() == 128 &&
+           RMW->getAlign() >= Align(16) &&
+           (RMW->getOperation() == AtomicRMWInst::Xchg ||
+            RMW->getOperation() == AtomicRMWInst::And ||
+            RMW->getOperation() == AtomicRMWInst::Or);
+
+  return false;
+}
+
 bool AArch64TargetLowering::isOpSuitableForRCPC3(const Instruction *I) const {
   if (!Subtarget->hasLSE2() || !Subtarget->hasRCPC3())
     return false;
@@ -22576,7 +22627,11 @@ bool AArch64TargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
   if (isOpSuitableForRCPC3(I))
     return false;
-  return isOpSuitableForLDPSTP(I);
+  if (isOpSuitableForLSE128(I))
+    return false;
+  if (isOpSuitableForLDPSTP(I))
+    return true;
+  return false;
 }
 
 bool AArch64TargetLowering::shouldInsertTrailingFenceForAtomicStore(
@@ -22609,7 +22664,13 @@ bool AArch64TargetLowering::shouldInsertTrailingFenceForAtomicStore(
 TargetLoweringBase::AtomicExpansionKind
 AArch64TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
   unsigned Size = SI->getValueOperand()->getType()->getPrimitiveSizeInBits();
-  if (Size != 128 || isOpSuitableForLDPSTP(SI) || isOpSuitableForRCPC3(SI))
+  if (Size != 128)
+    return AtomicExpansionKind::None;
+  if (isOpSuitableForRCPC3(SI))
+    return AtomicExpansionKind::None;
+  if (isOpSuitableForLSE128(SI))
+    return AtomicExpansionKind::Expand;
+  if (isOpSuitableForLDPSTP(SI))
     return AtomicExpansionKind::None;
   return AtomicExpansionKind::Expand;
 }
@@ -22621,7 +22682,12 @@ TargetLowering::AtomicExpansionKind
 AArch64TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
   unsigned Size = LI->getType()->getPrimitiveSizeInBits();
 
-  if (Size != 128 || isOpSuitableForLDPSTP(LI) || isOpSuitableForRCPC3(LI))
+  if (Size != 128)
+    return AtomicExpansionKind::None;
+  if (isOpSuitableForRCPC3(LI))
+    return AtomicExpansionKind::None;
+  // No LSE128 loads
+  if (isOpSuitableForLDPSTP(LI))
     return AtomicExpansionKind::None;
 
   // At -O0, fast-regalloc cannot cope with the live vregs necessary to

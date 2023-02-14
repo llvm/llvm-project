@@ -14,6 +14,7 @@ static_library("llvmlibc") {
   sources = [
     "CalleeNamespaceCheck.cpp",
     "ImplementationInNamespaceCheck.cpp",
+    "InlineFunctionDeclCheck.cpp",
     "LLVMLibcTidyModule.cpp",
     "RestrictSystemLibcHeadersCheck.cpp",
   ]

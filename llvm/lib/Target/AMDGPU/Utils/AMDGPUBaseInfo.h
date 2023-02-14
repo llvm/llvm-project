@@ -12,6 +12,7 @@
 #include "SIDefines.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Alignment.h"
 #include <array>
@@ -1259,6 +1260,8 @@ LLVM_READNONE
 bool isFoldableLiteralV216(int32_t Literal, bool HasInv2Pi);
 
 bool isArgPassedInSGPR(const Argument *Arg);
+
+bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo);
 
 LLVM_READONLY
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,

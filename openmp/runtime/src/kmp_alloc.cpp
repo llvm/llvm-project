@@ -1637,6 +1637,36 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
   // Use default allocator if libmemkind is not available
   int use_default_allocator = (__kmp_memkind_available) ? false : true;
 
+  if (KMP_IS_TARGET_MEM_ALLOC(allocator)) {
+    // Use size input directly as the memory may not be accessible on host.
+    // Use default device for now.
+    if (__kmp_target_mem_available) {
+      kmp_int32 device =
+          __kmp_threads[gtid]->th.th_current_task->td_icvs.default_device;
+      if (allocator == llvm_omp_target_host_mem_alloc)
+        ptr = kmp_target_alloc_host(size, device);
+      else if (allocator == llvm_omp_target_shared_mem_alloc)
+        ptr = kmp_target_alloc_shared(size, device);
+      else // allocator == llvm_omp_target_device_mem_alloc
+        ptr = kmp_target_alloc_device(size, device);
+    }
+    return ptr;
+  }
+
+  if (allocator >= kmp_max_mem_alloc && KMP_IS_TARGET_MEM_SPACE(al->memspace)) {
+    if (__kmp_target_mem_available) {
+      kmp_int32 device =
+          __kmp_threads[gtid]->th.th_current_task->td_icvs.default_device;
+      if (al->memspace == llvm_omp_target_host_mem_space)
+        ptr = kmp_target_alloc_host(size, device);
+      else if (al->memspace == llvm_omp_target_shared_mem_space)
+        ptr = kmp_target_alloc_shared(size, device);
+      else // al->memspace == llvm_omp_target_device_mem_space
+        ptr = kmp_target_alloc_device(size, device);
+    }
+    return ptr;
+  }
+
   if (__kmp_memkind_available) {
     if (allocator < kmp_max_mem_alloc) {
       // pre-defined allocator
@@ -1746,28 +1776,6 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
       ptr = __kmp_thread_malloc(__kmp_thread_from_gtid(gtid), desc.size_a);
       use_default_allocator = false;
     }
-  } else if (KMP_IS_TARGET_MEM_SPACE(al->memspace) ||
-             (al->memspace > kmp_max_mem_space &&
-              KMP_IS_TARGET_MEM_SPACE(
-                  RCAST(kmp_memspace_t *, al->memspace)->memspace))) {
-    if (__kmp_target_mem_available) {
-      kmp_int32 device =
-          __kmp_threads[gtid]->th.th_current_task->td_icvs.default_device;
-      if (al->memspace == llvm_omp_target_host_mem_space)
-        ptr = kmp_target_alloc_host(size, device);
-      else if (al->memspace == llvm_omp_target_shared_mem_space)
-        ptr = kmp_target_alloc_shared(size, device);
-      else if (al->memspace == llvm_omp_target_device_mem_space)
-        ptr = kmp_target_alloc_device(size, device);
-      else { // non standard memspace obtained via omp_get_mem_space
-        kmp_memspace_t *ms_t = RCAST(kmp_memspace_t *, al->memspace);
-        ptr =
-            kmp_target_alloc_multi_devices(size, ms_t->num_devs, ms_t->devids);
-      }
-      if (is_pinned && kmp_target_lock_mem)
-        kmp_target_lock_mem(ptr, size, device);
-    }
-    return ptr;
   } else if (al->pool_size > 0) {
     // custom allocator with pool size requested
     kmp_uint64 used =

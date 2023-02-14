@@ -95,6 +95,7 @@ libc_support_library(
     hdrs = ["src/__support/macros/optimization.h"],
     deps = [
         ":__support_macros_config",
+        ":__support_macros_properties_compiler",
         ":libc_root",
     ],
 )

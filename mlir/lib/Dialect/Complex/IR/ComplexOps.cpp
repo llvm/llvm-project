@@ -32,10 +32,16 @@ bool ConstantOp::isBuildableWith(Attribute value, Type type) {
     if (!complexTy || arrAttr.size() != 2)
       return false;
     auto complexEltTy = complexTy.getElementType();
-    auto re = arrAttr[0].dyn_cast<FloatAttr>();
-    auto im = arrAttr[1].dyn_cast<FloatAttr>();
-    return re && im && re.getType() == complexEltTy &&
-           im.getType() == complexEltTy;
+    if (auto fre = arrAttr[0].dyn_cast<FloatAttr>()) {
+      auto im = arrAttr[1].dyn_cast<FloatAttr>();
+      return im && fre.getType() == complexEltTy &&
+             im.getType() == complexEltTy;
+    }
+    if (auto ire = arrAttr[0].dyn_cast<IntegerAttr>()) {
+      auto im = arrAttr[1].dyn_cast<IntegerAttr>();
+      return im && ire.getType() == complexEltTy &&
+             im.getType() == complexEltTy;
+    }
   }
   return false;
 }

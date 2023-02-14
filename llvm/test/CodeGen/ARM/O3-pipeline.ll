@@ -61,7 +61,6 @@
 ; CHECK-NEXT:      Lazy Block Frequency Analysis
 ; CHECK-NEXT:      Optimization Remark Emitter
 ; CHECK-NEXT:      Hardware Loop Insertion
-; CHECK-NEXT:      Scalar Evolution Analysis
 ; CHECK-NEXT:      Loop Pass Manager
 ; CHECK-NEXT:        Transform predicated vector loops to use MVE tail predication
 ; CHECK-NEXT:      A No-Op Barrier Pass

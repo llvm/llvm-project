@@ -126,6 +126,7 @@ def IsLittleEndian : Predicate<"Subtarget->isLittleEndian()">;
 def IsBigEndian : Predicate<"!Subtarget->isLittleEndian()">;
 def IsPPC64 : Predicate<"Subtarget->isPPC64()">;
 def HasOnlySwappingMemOps : Predicate<"!Subtarget->hasP9Vector()">;
+def NoP8Vector : Predicate<"!Subtarget->hasP8Vector()">;
 def HasP8Vector : Predicate<"Subtarget->hasP8Vector()">;
 def HasDirectMove : Predicate<"Subtarget->hasDirectMove()">;
 def NoP9Vector : Predicate<"!Subtarget->hasP9Vector()">;
@@ -2451,6 +2452,7 @@ def DblwdCmp {
 // [HasVSX, NoP9Vector, IsBigEndian]
 // [HasVSX, HasOnlySwappingMemOps]
 // [HasVSX, HasOnlySwappingMemOps, IsBigEndian]
+// [HasVSX, NoP8Vector]
 // [HasVSX, HasP8Vector]
 // [HasVSX, HasP8Vector, IsBigEndian]
 // [HasVSX, HasP8Vector, IsBigEndian, IsPPC64]
@@ -2504,16 +2506,9 @@ def : Pat<(v4i32 (or (and (vnot v4i32:$C), v4i32:$A),
 def : Pat<(f64 (fpimm0neg)),
           (f64 (XSNEGDP (XXLXORdpz)))>;
 
-def : Pat<(f32 (fpimm0neg)),
-          (f32 (COPY_TO_REGCLASS (XSNEGDP (XXLXORdpz)), VSSRC))>;
-
 def : Pat<(f64 (nzFPImmExactInti5:$A)),
           (COPY_TO_REGCLASS (XVCVSXWDP (COPY_TO_REGCLASS
                      (VSPLTISW (getFPAs5BitExactInt fpimm:$A)), VSRC)), VSFRC)>;
-
-def : Pat<(f32 (nzFPImmExactInti5:$A)),
-          (COPY_TO_REGCLASS (XVCVSXWDP (COPY_TO_REGCLASS
-                     (VSPLTISW (getFPAs5BitExactInt fpimm:$A)), VSRC)), VSSRC)>;
 
 // Additional fnmsub pattern for PPC specific ISD opcode
 def : Pat<(PPCfnmsub f64:$A, f64:$B, f64:$C),
@@ -3245,6 +3240,17 @@ let Predicates = [HasVSX, HasOnlySwappingMemOps, IsBigEndian] in {
            (SUBREG_TO_REG (i64 1), (XFLOADf64 ForceXForm:$src), sub_64)>;
 } // HasVSX, HasOnlySwappingMemOps, IsBigEndian
 
+// Target before Power8 with VSX.
+let Predicates = [HasVSX, NoP8Vector] in {
+def : Pat<(f32 (fpimm0neg)),
+          (f32 (COPY_TO_REGCLASS (XSNEGDP (XXLXORdpz)), F4RC))>;
+
+def : Pat<(f32 (nzFPImmExactInti5:$A)),
+          (COPY_TO_REGCLASS (XVCVSXWDP (COPY_TO_REGCLASS
+                     (VSPLTISW (getFPAs5BitExactInt fpimm:$A)), VSRC)), F4RC)>;
+
+} // HasVSX, NoP8Vector
+
 // Any Power8 VSX subtarget.
 let Predicates = [HasVSX, HasP8Vector] in {
 def : Pat<(int_ppc_vsx_xxleqv v4i32:$A, v4i32:$B),
@@ -3255,6 +3261,13 @@ def : Pat<(f32 (fpround (f64 (extloadf32 ForceXForm:$src)))),
           (f32 (XFLOADf32 ForceXForm:$src))>;
 def : Pat<(f64 (any_fpextend f32:$src)),
           (COPY_TO_REGCLASS $src, VSFRC)>;
+
+def : Pat<(f32 (fpimm0neg)),
+          (f32 (COPY_TO_REGCLASS (XSNEGDP (XXLXORdpz)), VSSRC))>;
+
+def : Pat<(f32 (nzFPImmExactInti5:$A)),
+          (COPY_TO_REGCLASS (XVCVSXWDP (COPY_TO_REGCLASS
+                     (VSPLTISW (getFPAs5BitExactInt fpimm:$A)), VSRC)), VSSRC)>;
 
 def : Pat<(f32 (selectcc i1:$lhs, i1:$rhs, f32:$tval, f32:$fval, SETLT)),
           (SELECT_VSSRC (CRANDC $lhs, $rhs), $tval, $fval)>;

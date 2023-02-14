@@ -270,10 +270,11 @@ define <16 x i16> @insert_i16_firstelts(<16 x i16> %x, i16 %s) {
 ; AVX2-LABEL: insert_i16_firstelts:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpinsrw $0, %edi, %xmm0, %xmm1
-; AVX2-NEXT:    vmovd %edi, %xmm2
-; AVX2-NEXT:    vpbroadcastw %xmm2, %ymm2
-; AVX2-NEXT:    vpblendw {{.*#+}} ymm0 = ymm2[0],ymm0[1,2,3,4,5,6,7],ymm2[8],ymm0[9,10,11,12,13,14,15]
 ; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; AVX2-NEXT:    vmovd %edi, %xmm1
+; AVX2-NEXT:    vpbroadcastw %xmm1, %ymm1
+; AVX2-NEXT:    vpblendw {{.*#+}} ymm1 = ymm1[0],ymm0[1,2,3,4,5,6,7],ymm1[8],ymm0[9,10,11,12,13,14,15]
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX2-NEXT:    retq
   %i0 = insertelement <16 x i16> %x, i16 %s, i32 0
   %i1 = insertelement <16 x i16> %i0, i16 %s, i32 8

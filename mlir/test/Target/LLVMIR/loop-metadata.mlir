@@ -207,6 +207,32 @@ llvm.func @pipelineOptions() {
 
 // -----
 
+// CHECK-LABEL: @peeledOptions
+llvm.func @peeledOptions() {
+  // CHECK: br {{.*}} !llvm.loop ![[LOOP_NODE:[0-9]+]]
+  llvm.br ^bb1 {llvm.loop = #llvm.loop_annotation<peeled = <count = 3 : i32>>}
+^bb1:
+  llvm.return
+}
+
+// CHECK: ![[LOOP_NODE]] = distinct !{![[LOOP_NODE]], !{{[0-9]+}}}
+// CHECK-DAG: ![[VEC_NODE0:[0-9]+]] = !{!"llvm.loop.peeled.count", i32 3}
+
+// -----
+
+// CHECK-LABEL: @unswitchOptions
+llvm.func @unswitchOptions() {
+  // CHECK: br {{.*}} !llvm.loop ![[LOOP_NODE:[0-9]+]]
+  llvm.br ^bb1 {llvm.loop = #llvm.loop_annotation<unswitch = <partialDisable = true>>}
+^bb1:
+  llvm.return
+}
+
+// CHECK: ![[LOOP_NODE]] = distinct !{![[LOOP_NODE]], !{{[0-9]+}}}
+// CHECK-DAG: ![[VEC_NODE0:[0-9]+]] = !{!"llvm.loop.unswitch.partial.disable"}
+
+// -----
+
 // CHECK-LABEL: @loopOptions
 llvm.func @loopOptions(%arg1 : i32, %arg2 : i32) {
     %0 = llvm.mlir.constant(0 : i32) : i32

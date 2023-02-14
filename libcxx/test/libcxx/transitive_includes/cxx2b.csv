@@ -8,7 +8,6 @@ algorithm initializer_list
 algorithm iosfwd
 algorithm limits
 algorithm new
-algorithm type_traits
 algorithm version
 any cstddef
 any cstdint
@@ -527,7 +526,6 @@ regex limits
 regex mutex
 regex stdexcept
 regex string
-regex type_traits
 regex vector
 regex version
 scoped_allocator cstddef
@@ -696,7 +694,6 @@ valarray initializer_list
 valarray limits
 valarray new
 valarray stdexcept
-valarray type_traits
 valarray version
 variant compare
 variant cstddef

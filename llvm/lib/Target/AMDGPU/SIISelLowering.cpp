@@ -1866,7 +1866,7 @@ SDValue SITargetLowering::getPreloadedValue(SelectionDAG &DAG,
     return DAG.getUNDEF(VT);
   }
 
-  return CreateLiveInRegister(DAG, RC, Reg->getRegister(), VT);
+  return loadInputValue(DAG, RC, VT, SDLoc(DAG.getEntryNode()), *Reg);
 }
 
 static void processPSInputArgs(SmallVectorImpl<ISD::InputArg> &Splits,
@@ -2181,11 +2181,16 @@ void SITargetLowering::allocateSystemSGPRs(CCState &CCInfo,
                                            SIMachineFunctionInfo &Info,
                                            CallingConv::ID CallConv,
                                            bool IsShader) const {
+  bool HasArchitectedSGPRs = Subtarget->hasArchitectedSGPRs();
   if (Subtarget->hasUserSGPRInit16Bug() && !IsShader) {
     // Note: user SGPRs are handled by the front-end for graphics shaders
     // Pad up the used user SGPRs with dead inputs.
-    unsigned CurrentUserSGPRs = Info.getNumUserSGPRs();
 
+    // TODO: NumRequiredSystemSGPRs computation should be adjusted appropriately
+    // before enabling architected SGPRs for workgroup IDs.
+    assert(!HasArchitectedSGPRs && "Unhandled feature for the subtarget");
+
+    unsigned CurrentUserSGPRs = Info.getNumUserSGPRs();
     // Note we do not count the PrivateSegmentWaveByteOffset. We do not want to
     // rely on it to reach 16 since if we end up having no stack usage, it will
     // not really be added.
@@ -2201,20 +2206,26 @@ void SITargetLowering::allocateSystemSGPRs(CCState &CCInfo,
   }
 
   if (Info.hasWorkGroupIDX()) {
-    Register Reg = Info.addWorkGroupIDX();
-    MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
+    Register Reg = Info.addWorkGroupIDX(HasArchitectedSGPRs);
+    if (!HasArchitectedSGPRs)
+      MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
+
     CCInfo.AllocateReg(Reg);
   }
 
   if (Info.hasWorkGroupIDY()) {
-    Register Reg = Info.addWorkGroupIDY();
-    MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
+    Register Reg = Info.addWorkGroupIDY(HasArchitectedSGPRs);
+    if (!HasArchitectedSGPRs)
+      MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
+
     CCInfo.AllocateReg(Reg);
   }
 
   if (Info.hasWorkGroupIDZ()) {
-    Register Reg = Info.addWorkGroupIDZ();
-    MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
+    Register Reg = Info.addWorkGroupIDZ(HasArchitectedSGPRs);
+    if (!HasArchitectedSGPRs)
+      MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
+
     CCInfo.AllocateReg(Reg);
   }
 

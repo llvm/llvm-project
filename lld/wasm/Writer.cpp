@@ -348,7 +348,12 @@ void Writer::layoutMemory() {
     WasmSym::heapBase->setVA(memoryPtr);
   }
 
-  uint64_t maxMemorySetting = 1ULL << (config->is64.value_or(false) ? 48 : 32);
+  uint64_t maxMemorySetting = 1ULL << 32;
+  if (config->is64.value_or(false)) {
+    // TODO: Update once we decide on a reasonable limit here:
+    // https://github.com/WebAssembly/memory64/issues/33
+    maxMemorySetting = 1ULL << 34;
+  }
 
   if (config->initialMemory != 0) {
     if (config->initialMemory != alignTo(config->initialMemory, WasmPageSize))

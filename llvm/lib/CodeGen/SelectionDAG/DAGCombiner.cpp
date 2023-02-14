@@ -11361,6 +11361,23 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
   if (ISD::isConstantSplatVectorAllZeros(Mask.getNode()))
     return Chain;
 
+  // Remove a masked store if base pointers and masks are equal.
+  if (MaskedStoreSDNode *MST1 = dyn_cast<MaskedStoreSDNode>(Chain)) {
+    if (MST->isUnindexed() && MST->isSimple() && MST1->isUnindexed() &&
+        MST1->isSimple() && MST1->getBasePtr() == Ptr &&
+        !MST->getBasePtr().isUndef() &&
+        ((Mask == MST1->getMask() && MST->getMemoryVT().getStoreSize() ==
+                                         MST1->getMemoryVT().getStoreSize()) ||
+         ISD::isConstantSplatVectorAllOnes(Mask.getNode())) &&
+        TypeSize::isKnownLE(MST1->getMemoryVT().getStoreSize(),
+                            MST->getMemoryVT().getStoreSize())) {
+      CombineTo(MST1, MST1->getChain());
+      if (N->getOpcode() != ISD::DELETED_NODE)
+        AddToWorklist(N);
+      return SDValue(N, 0);
+    }
+  }
+
   // If this is a masked load with an all ones mask, we can use a unmasked load.
   // FIXME: Can we do this for indexed, compressing, or truncating stores?
   if (ISD::isConstantSplatVectorAllOnes(Mask.getNode()) && MST->isUnindexed() &&

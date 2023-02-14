@@ -338,25 +338,20 @@ module polymorphic_test
 
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPpass_trivial_to_up() {
 ! CHECK: %[[CHAR:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,5>>
-! CHECK: %[[EMBOX:.*]] = fir.embox %[[CHAR]] : (!fir.ref<!fir.char<1,5>>) -> !fir.class<!fir.char<1,5>>
-! CHECK: %[[CONVERT:.*]] = fir.convert %[[EMBOX]] : (!fir.class<!fir.char<1,5>>) -> !fir.class<none>
-! CHECK: fir.call @_QMpolymorphic_testPup_input(%[[CONVERT]]) {{.*}} : (!fir.class<none>) -> ()
+! CHECK: %[[BOX_CHAR:.*]] = fir.embox %[[CHAR]] : (!fir.ref<!fir.char<1,5>>) -> !fir.class<none>
+! CHECK: fir.call @_QMpolymorphic_testPup_input(%[[BOX_CHAR]]) {{.*}} : (!fir.class<none>) -> ()
 
-! CHECK: %[[BOX_INT:.*]] = fir.embox %{{.*}} : (!fir.ref<i32>) -> !fir.class<i32>
-! CHECK: %[[UP:.*]] = fir.convert %[[BOX_INT]] : (!fir.class<i32>) -> !fir.class<none>
-! CHECK: fir.call @_QMpolymorphic_testPup_input(%[[UP]]) {{.*}} : (!fir.class<none>) -> ()
+! CHECK: %[[BOX_INT:.*]] = fir.embox %{{.*}} : (!fir.ref<i32>) -> !fir.class<none>
+! CHECK: fir.call @_QMpolymorphic_testPup_input(%[[BOX_INT]]) {{.*}} : (!fir.class<none>) -> ()
 
-! CHECK: %[[BOX_REAL:.*]] = fir.embox %{{.*}} : (!fir.ref<f32>) -> !fir.class<f32>
-! CHECK: %[[UP:.*]] = fir.convert %[[BOX_REAL]] : (!fir.class<f32>) -> !fir.class<none>
-! CHECK: fir.call @_QMpolymorphic_testPup_input(%[[UP]]) {{.*}} : (!fir.class<none>) -> ()
+! CHECK: %[[BOX_REAL:.*]] = fir.embox %{{.*}} : (!fir.ref<f32>) -> !fir.class<none>
+! CHECK: fir.call @_QMpolymorphic_testPup_input(%[[BOX_REAL]]) {{.*}} : (!fir.class<none>) -> ()
 
-! CHECK: %[[BOX_LOG:.*]] = fir.embox %{{.*}} : (!fir.ref<!fir.logical<4>>) -> !fir.class<!fir.logical<4>>
-! CHECK: %[[UP:.*]] = fir.convert %[[BOX_LOG]] : (!fir.class<!fir.logical<4>>) -> !fir.class<none>
-! CHECK: fir.call @_QMpolymorphic_testPup_input(%[[UP]]) {{.*}} : (!fir.class<none>) -> ()
+! CHECK: %[[BOX_LOG:.*]] = fir.embox %{{.*}} : (!fir.ref<!fir.logical<4>>) -> !fir.class<none>
+! CHECK: fir.call @_QMpolymorphic_testPup_input(%[[BOX_LOG]]) {{.*}} : (!fir.class<none>) -> ()
 
-! CHECK: %[[BOX_COMPLEX:.*]] = fir.embox %{{.*}} : (!fir.ref<!fir.complex<4>>) -> !fir.class<!fir.complex<4>>
-! CHECK: %[[UP:.*]] = fir.convert %[[BOX_COMPLEX]] : (!fir.class<!fir.complex<4>>) -> !fir.class<none>
-! CHECK: fir.call @_QMpolymorphic_testPup_input(%[[UP]]) {{.*}} : (!fir.class<none>) -> ()
+! CHECK: %[[BOX_COMPLEX:.*]] = fir.embox %{{.*}} : (!fir.ref<!fir.complex<4>>) -> !fir.class<none>
+! CHECK: fir.call @_QMpolymorphic_testPup_input(%[[BOX_COMPLEX]]) {{.*}} : (!fir.class<none>) -> ()
 
   subroutine assign_polymorphic_allocatable()
     type(p1), target :: t(10,20)
@@ -882,6 +877,27 @@ module polymorphic_test
 ! CHECK: %[[REBOX:.*]] = fir.rebox %[[LOAD_P]](%{{.*}}) [%[[SLICE]]] : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>, !fir.shift<1>, !fir.slice<1>) -> !fir.box<!fir.array<?xi32>>
 ! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[REBOX]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
 ! CHECK: %{{.*}} = fir.call @_FortranAioOutputDescriptor(%{{.*}}, %[[BOX_NONE]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>) -> i1
+
+  subroutine opt_int(i)
+    integer, optional, intent(in) :: i
+    call opt_up(i)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPopt_int(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "i", fir.optional}) {
+! CHECK: %[[IS_PRESENT:.*]] = fir.is_present %[[ARG0]] : (!fir.ref<i32>) -> i1
+! CHECK: %[[ARG:.*]] = fir.if %[[IS_PRESENT]] -> (!fir.class<none>) {
+! CHECK:   %[[EMBOXED:.*]] = fir.embox %[[ARG0]] : (!fir.ref<i32>) -> !fir.class<none>
+! CHECK:   fir.result %[[EMBOXED]] : !fir.class<none>
+! CHECK: } else {
+! CHECK:   %[[ABSENT:.*]] = fir.absent !fir.class<none>
+! CHECK:   fir.result %[[ABSENT]] : !fir.class<none>
+! CHECK: }
+! CHECK: fir.call @_QMpolymorphic_testPopt_up(%[[ARG]]) fastmath<contract> : (!fir.class<none>) -> ()
+
+  subroutine opt_up(up)
+    class(*), optional, intent(in) :: up
+  end subroutine
 
 end module
 

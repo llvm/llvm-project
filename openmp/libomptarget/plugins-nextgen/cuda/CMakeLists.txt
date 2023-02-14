@@ -51,7 +51,6 @@ else()
   target_include_directories(omptarget.rtl.cuda.nextgen PRIVATE ../../plugins/cuda/dynamic_cuda)
   target_sources(omptarget.rtl.cuda.nextgen PRIVATE ../../plugins/cuda/dynamic_cuda/cuda.cpp)
 endif()
-add_dependencies(omptarget.rtl.cuda.nextgen omptarget.devicertl.nvptx)
 
 # Define debug prefix. TODO: This should be automatized in the Debug.h but it
 # requires changing the original plugins.
