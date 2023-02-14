@@ -4002,6 +4002,23 @@ public:
     return true;
   }
 
+  // Return true if its desirable to try and optimize LogicOp(SETCC0, SETCC1).
+  // An example (what is implemented as of writing this) is:
+  //    With C as a power of 2 and C != 0 and C != INT_MIN:
+  //       (icmp eq A, C) | (icmp eq A, -C)
+  //            -> (icmp eq and(add(A, C), ~(C + C)), 0)
+  //     (icmp ne A, C) & (icmp ne A, -C)w
+  //            -> (icmp ne and(add(A, C), ~(C + C)), 0)
+  //
+  // @param LogicOp the logic op
+  // @param SETCC0 the first of the SETCC nodes
+  // @param SETCC0 the second of the SETCC nodes
+  virtual bool isDesirableToCombineLogicOpOfSETCC(const SDNode *LogicOp,
+                                                  const SDNode *SETCC0,
+                                                  const SDNode *SETCC1) const {
+    return false;
+  }
+
   /// Return true if it is profitable to combine an XOR of a logical shift
   /// to create a logical shift of NOT. This transformation may not be desirable
   /// if it disrupts a particularly auspicious target-specific tree (e.g.

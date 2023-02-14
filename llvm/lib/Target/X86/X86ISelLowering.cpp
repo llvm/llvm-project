@@ -57124,6 +57124,12 @@ SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc& dl,
   return TargetLowering::expandIndirectJTBranch(dl, Value, Addr, DAG);
 }
 
+bool X86TargetLowering::isDesirableToCombineLogicOpOfSETCC(
+    const SDNode *LogicOp, const SDNode *SETCC0, const SDNode *SETCC1) const {
+  EVT VT = LogicOp->getValueType(0);
+  return VT.isScalarInteger();
+}
+
 bool X86TargetLowering::IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const {
   EVT VT = Op.getValueType();
   bool Is8BitMulByConstant = VT == MVT::i8 && Op.getOpcode() == ISD::MUL &&

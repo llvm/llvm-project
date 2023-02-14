@@ -1058,6 +1058,12 @@ namespace llvm {
     /// and some i16 instructions are slow.
     bool IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const override;
 
+    /// Return true if this is operating on scalar integers.
+    bool
+    isDesirableToCombineLogicOpOfSETCC(const SDNode *LogicOp,
+                                       const SDNode *SETCC0,
+                                       const SDNode *SETCC1) const override;
+
     /// Return the newly negated expression if the cost is not expensive and
     /// set the cost in \p Cost to indicate that if it is cheaper or neutral to
     /// do the negation.
