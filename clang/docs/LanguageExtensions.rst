@@ -794,6 +794,7 @@ emulation.
 ``_Float16`` will be supported on more targets as they define ABIs for it.
 
 ``__bf16`` is purely a storage format; it is currently only supported on the following targets:
+
 * 32-bit ARM
 * 64-bit ARM (AArch64)
 * X86 (see below)
