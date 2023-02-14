@@ -358,8 +358,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
                          ActiveFeatures[RISCV::FeatureVendorXTHeadBb])) {
     if (unsigned Rotate = extractRotateInfo(Val)) {
       RISCVMatInt::InstSeq TmpSeq;
-      uint64_t NegImm12 =
-          ((uint64_t)Val >> (64 - Rotate)) | ((uint64_t)Val << Rotate);
+      uint64_t NegImm12 = llvm::rotl<uint64_t>(Val, Rotate);
       assert(isInt<12>(NegImm12));
       TmpSeq.emplace_back(RISCV::ADDI, NegImm12);
       TmpSeq.emplace_back(ActiveFeatures[RISCV::FeatureStdExtZbb]
