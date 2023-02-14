@@ -159,9 +159,9 @@ public:
                __a > 0  ? __a >= __b :
                           __a <= __b;
       };
-      if (const auto __M = __bound_sentinel - __i; __magnitude_geq(__n, __M)) {
+      if (const auto __m = __bound_sentinel - __i; __magnitude_geq(__n, __m)) {
         (*this)(__i, __bound_sentinel);
-        return __n - __M;
+        return __n - __m;
       }
 
       // Otherwise, equivalent to `ranges::advance(i, n)`.

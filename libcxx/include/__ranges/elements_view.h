@@ -224,9 +224,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator++(int)
     requires forward_range<_Base>
   {
-    auto temp = *this;
+    auto __temp = *this;
     ++__current_;
-    return temp;
+    return __temp;
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator--()
@@ -239,9 +239,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator--(int)
     requires bidirectional_range<_Base>
   {
-    auto temp = *this;
+    auto __temp = *this;
     --__current_;
-    return temp;
+    return __temp;
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator+=(difference_type __n)
