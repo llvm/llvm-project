@@ -362,6 +362,11 @@ inline orc::ExecutorAddr alignToBlock(orc::ExecutorAddr Addr, Block &B) {
   return orc::ExecutorAddr(alignToBlock(Addr.getValue(), B));
 }
 
+// Returns true if the given blocks contains exactly one valid c-string.
+// Zero-fill blocks of size 1 count as valid empty strings. Content blocks
+// must end with a zero, and contain no zeros before the end.
+bool isCStringBlock(Block &B);
+
 /// Describes symbol linkage. This can be used to make resolve definition
 /// clashes.
 enum class Linkage : uint8_t {
