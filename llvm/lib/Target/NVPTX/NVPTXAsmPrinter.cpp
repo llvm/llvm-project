@@ -826,7 +826,8 @@ void NVPTXAsmPrinter::emitGlobals(const Module &M) {
   for (const GlobalVariable &I : M.globals())
     VisitGlobalVariableForEmission(&I, Globals, GVVisited, GVVisiting);
 
-  assert(GVVisited.size() == M.global_size() && "Missed a global variable");
+  assert(GVVisited.size() == M.getGlobalList().size() &&
+         "Missed a global variable");
   assert(GVVisiting.size() == 0 && "Did not fully process a global variable");
 
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);

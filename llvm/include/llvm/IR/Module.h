@@ -542,24 +542,6 @@ public:
 
   llvm::Error materializeMetadata();
 
-  /// Detach global variable \p GV from the list but don't delete it.
-  void removeGlobalVariable(GlobalVariable *GV) { GlobalList.remove(GV); }
-  /// Remove global variable \p GV from the list and delete it.
-  void eraseGlobalVariable(GlobalVariable *GV) { GlobalList.erase(GV); }
-  /// Insert global variable \p GV at the end of the global variable list and
-  /// take ownership.
-  void insertGlobalVariable(GlobalVariable *GV) {
-    insertGlobalVariable(GlobalList.end(), GV);
-  }
-  /// Insert global variable \p GV into the global variable list before \p
-  /// Where and take ownership.
-  void insertGlobalVariable(GlobalListType::iterator Where, GlobalVariable *GV) {
-    GlobalList.insert(Where, GV);
-  }
-  // Use global_size() to get the total number of global variables.
-  // Use globals() to get the range of all global variables.
-
-private:
 /// @}
 /// @name Direct access to the globals list, functions list, and symbol table
 /// @{
@@ -572,9 +554,7 @@ private:
   static GlobalListType Module::*getSublistAccess(GlobalVariable*) {
     return &Module::GlobalList;
   }
-  friend class llvm::SymbolTableListTraits<llvm::GlobalVariable>;
 
-public:
   /// Get the Module's list of functions (constant).
   const FunctionListType &getFunctionList() const     { return FunctionList; }
   /// Get the Module's list of functions.
