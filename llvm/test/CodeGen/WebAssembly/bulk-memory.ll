@@ -154,7 +154,7 @@ define void @memset_1024(ptr %dest, i8 %val) {
 ; BULK-MEM-NEXT: global.get $push[[L0:[0-9]+]]=, __stack_pointer
 ; BULK-MEM-NEXT: i32.const $push[[L1:[0-9]+]]=, 112
 ; BULK-MEM-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]
-; BULK-MEM-NEXT: i32.const $push[[L3:[0-9]+]]=, 8
+; BULK-MEM-NEXT: i32.const $push[[L3:[0-9]+]]=, 12
 ; BULK-MEM-NEXT: i32.add $push[[L4:[0-9]+]]=, $pop[[L2]], $pop[[L3]]
 ; BULK-MEM-NEXT: i32.const $push[[L5:[0-9]+]]=, 100
 ; BULK-MEM-NEXT: memory.copy 0, 0, $0, $pop[[L4]], $pop[[L5]]
@@ -171,7 +171,7 @@ define void @memcpy_alloca_src(ptr %dst) {
 ; BULK-MEM-NEXT: global.get $push[[L0:[0-9]+]]=, __stack_pointer
 ; BULK-MEM-NEXT: i32.const $push[[L1:[0-9]+]]=, 112
 ; BULK-MEM-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]
-; BULK-MEM-NEXT: i32.const $push[[L3:[0-9]+]]=, 8
+; BULK-MEM-NEXT: i32.const $push[[L3:[0-9]+]]=, 12
 ; BULK-MEM-NEXT: i32.add $push[[L4:[0-9]+]]=, $pop[[L2]], $pop[[L3]]
 ; BULK-MEM-NEXT: i32.const $push[[L5:[0-9]+]]=, 100
 ; BULK-MEM-NEXT: memory.copy 0, 0, $pop[[L4]], $0, $pop[[L5]]
@@ -188,7 +188,7 @@ define void @memcpy_alloca_dst(ptr %src) {
 ; BULK-MEM-NEXT: global.get $push[[L0:[0-9]+]]=, __stack_pointer
 ; BULK-MEM-NEXT: i32.const $push[[L1:[0-9]+]]=, 112
 ; BULK-MEM-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]
-; BULK-MEM-NEXT: i32.const $push[[L3:[0-9]+]]=, 8
+; BULK-MEM-NEXT: i32.const $push[[L3:[0-9]+]]=, 12
 ; BULK-MEM-NEXT: i32.add $push[[L4:[0-9]+]]=, $pop[[L2]], $pop[[L3]]
 ; BULK-MEM-NEXT: i32.const $push[[L5:[0-9]+]]=, 100
 ; BULK-MEM-NEXT: memory.fill 0, $pop[[L4]], $0, $pop[[L5]]
