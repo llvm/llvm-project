@@ -125,6 +125,10 @@ TYPED_TEST(DenseMapTest, EmptyIntMapTest) {
   EXPECT_TRUE(this->Map.find(this->getKey()) == this->Map.end());
   EXPECT_EQ(typename TypeParam::mapped_type(),
             this->Map.lookup(this->getKey()));
+
+  // LookupOrTrap tests
+  EXPECT_DEATH({ this->Map.at(this->getKey()); },
+               "DenseMap::at failed due to a missing key");
 }
 
 // Constant map tests
@@ -156,6 +160,10 @@ TYPED_TEST(DenseMapTest, SingleEntryMapTest) {
   EXPECT_TRUE(this->Map.find(this->getKey()) == this->Map.begin());
   EXPECT_EQ(this->getValue(), this->Map.lookup(this->getKey()));
   EXPECT_EQ(this->getValue(), this->Map[this->getKey()]);
+
+  // LookupOrTrap tests
+  EXPECT_DEATH({ this->Map.at(this->getKey(1)); },
+               "DenseMap::at failed due to a missing key");
 }
 
 // Test clear() method
