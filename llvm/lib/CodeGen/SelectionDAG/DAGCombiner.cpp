@@ -362,10 +362,6 @@ namespace {
     SDValue SplitIndexingFromLoad(LoadSDNode *LD);
     bool SliceUpLoad(SDNode *N);
 
-    // Looks up the chain to find a unique (unaliased) store feeding the passed
-    // load. If no such store is found, returns a nullptr.
-    // Note: This will look past a CALLSEQ_START if the load is chained to it so
-    //       so that it can find stack stores for byval params.
     StoreSDNode *getUniqueStoreFeeding(LoadSDNode *LD, int64_t &Offset);
     // Scalars have size 0 to distinguish from singleton vectors.
     SDValue ForwardStoreValueToDirectLoad(LoadSDNode *LD);
@@ -17636,14 +17632,14 @@ StoreSDNode *DAGCombiner::getUniqueStoreFeeding(LoadSDNode *LD,
         continue;
       BaseIndexOffset BasePtrLD = BaseIndexOffset::match(LD, DAG);
       BaseIndexOffset BasePtrST = BaseIndexOffset::match(Store, DAG);
-      if (!BasePtrST.equalBaseIndex(BasePtrLD, DAG, Offset))
-        continue;
-      // Make sure the store is not aliased with any nodes in TokenFactor.
-      GatherAllAliases(Store, Chain, Aliases);
-      if (Aliases.empty() ||
-          (Aliases.size() == 1 && Aliases.front().getNode() == Store))
-        ST = Store;
-      break;
+      if (BasePtrST.equalBaseIndex(BasePtrLD, DAG, Offset)) {
+        // Make sure the store is not aliased with any nodes in TokenFactor.
+        GatherAllAliases(Store, Chain, Aliases);
+        if (Aliases.empty() ||
+            (Aliases.size() == 1 && Aliases.front().getNode() == Store))
+          ST = Store;
+        break;
+      }
     }
   } else {
     StoreSDNode *Store = dyn_cast<StoreSDNode>(Chain.getNode());
