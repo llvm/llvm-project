@@ -40287,6 +40287,16 @@ static SDValue combineX86ShufflesRecursively(
     OpMask.assign(NumElts, SM_SentinelUndef);
     std::iota(OpMask.begin(), OpMask.end(), ExtractIdx);
     OpZero = OpUndef = APInt::getNullValue(NumElts);
+  } else if (Op.getOpcode() == ISD::TRUNCATE &&
+             (RootSizeInBits % Op.getOperand(0).getValueSizeInBits()) == 0) {
+    SDValue SrcVec = Op.getOperand(0);
+    unsigned Scale = SrcVec.getValueSizeInBits() / VT.getSizeInBits();
+    unsigned NumElts = VT.getVectorNumElements();
+    OpInputs.assign({SrcVec});
+    OpMask.assign(Scale * NumElts, SM_SentinelUndef);
+    OpZero = OpUndef = APInt::getNullValue(Scale * NumElts);
+    for (unsigned I = 0; I != NumElts; ++I)
+      OpMask[I] = I * Scale;
   } else {
     return SDValue();
   }
