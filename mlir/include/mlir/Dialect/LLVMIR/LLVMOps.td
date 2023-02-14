@@ -1010,10 +1010,12 @@ def LLVM_MetadataOp : LLVM_Op<"metadata", [
     llvm.metadata op defines one or more metadata nodes.
 
     Example:
-      llvm.metadata @metadata {
-        llvm.access_group @group1
-        llvm.access_group @group2
-      }
+    ```mlir
+    llvm.metadata @metadata {
+      llvm.access_group @group1
+      llvm.access_group @group2
+    }
+    ```
   }];
   let regions = (region SizedRegion<1>:$body);
 
@@ -1062,25 +1064,27 @@ def LLVM_AliasScopeMetadataOp : LLVM_Op<"alias_scope", [
     memory-affecting operations in another scope.
 
     Example:
-      module {
-        llvm.func @foo(%ptr1 : !llvm.ptr<i32>) {
-            %c0 = llvm.mlir.constant(0 : i32) : i32
-            %c4 = llvm.mlir.constant(4 : i32) : i32
-            %1 = llvm.ptrtoint %ptr1 : !llvm.ptr<i32> to i32
-            %2 = llvm.add %1, %c1 : i32
-            %ptr2 = llvm.inttoptr %2 : i32 to !llvm.ptr<i32>
-            llvm.store %c0, %ptr1 { alias_scopes = [@metadata::@scope1], llvm.noalias = [@metadata::@scope2] } : !llvm.ptr<i32>
-            llvm.store %c4, %ptr2 { alias_scopes = [@metadata::@scope2], llvm.noalias = [@metadata::@scope1] } : !llvm.ptr<i32>
-            llvm.return
-        }
-
-        llvm.metadata @metadata {
-          llvm.alias_scope_domain @unused_domain
-          llvm.alias_scope_domain @domain { description = "Optional domain description"}
-          llvm.alias_scope @scope1 { domain = @domain }
-          llvm.alias_scope @scope2 { domain = @domain, description = "Optional scope description" }
-        }
+    ```mlir
+    module {
+      llvm.func @foo(%ptr1 : !llvm.ptr<i32>) {
+          %c0 = llvm.mlir.constant(0 : i32) : i32
+          %c4 = llvm.mlir.constant(4 : i32) : i32
+          %1 = llvm.ptrtoint %ptr1 : !llvm.ptr<i32> to i32
+          %2 = llvm.add %1, %c1 : i32
+          %ptr2 = llvm.inttoptr %2 : i32 to !llvm.ptr<i32>
+          llvm.store %c0, %ptr1 { alias_scopes = [@metadata::@scope1], llvm.noalias = [@metadata::@scope2] } : !llvm.ptr<i32>
+          llvm.store %c4, %ptr2 { alias_scopes = [@metadata::@scope2], llvm.noalias = [@metadata::@scope1] } : !llvm.ptr<i32>
+          llvm.return
       }
+
+      llvm.metadata @metadata {
+        llvm.alias_scope_domain @unused_domain
+        llvm.alias_scope_domain @domain { description = "Optional domain description"}
+        llvm.alias_scope @scope1 { domain = @domain }
+        llvm.alias_scope @scope2 { domain = @domain, description = "Optional scope description" }
+      }
+    }
+    ```
 
     See the following link for more details:
     https://llvm.org/docs/LangRef.html#noalias-and-alias-scope-metadata
@@ -1120,9 +1124,11 @@ def LLVM_TBAARootMetadataOp : LLVM_Op<"tbaa_root", [
     Defines a TBAA root node.
 
     Example:
-      llvm.metadata @tbaa {
-        llvm.tbaa_root @tbaa_root_0 {identity = "Simple C/C++ TBAA"}
-      }
+    ```mlir
+    llvm.metadata @tbaa {
+      llvm.tbaa_root @tbaa_root_0 {identity = "Simple C/C++ TBAA"}
+    }
+    ```
 
     See the following link for more details:
     https://llvm.org/docs/LangRef.html#tbaa-metadata
@@ -1147,34 +1153,36 @@ def LLVM_TBAATypeDescriptorOp : LLVM_Op<"tbaa_type_desc", [
     Defines a TBAA node describing a type.
 
     Example:
-      llvm.metadata @tbaa {
-        llvm.tbaa_root @tbaa_root_0 {identity = "Simple C/C++ TBAA"}
-        llvm.tbaa_type_desc @tbaa_type_desc_1 {
-            identity = "omnipotent char",
-            members = [@tbaa_root_0],
-            offsets = array<i64: 0>
-        }
-        llvm.tbaa_type_desc @tbaa_type_desc_2 {
-            identity = "long long",
-            members = [@tbaa_type_desc_1],
-            offsets = array<i64: 0>
-        }
-        llvm.tbaa_type_desc @tbaa_type_desc_3 {
-            identity = "agg2_t",
-            members = [@tbaa_type_desc_2, @tbaa_type_desc_2],
-            offsets = array<i64: 0, 8>
-        }
-        llvm.tbaa_type_desc @tbaa_type_desc_5 {
-            identity = "int",
-            members = [@tbaa_type_desc_1],
-            offsets = array<i64: 0>
-        }
-        llvm.tbaa_type_desc @tbaa_type_desc_6 {
-            identity = "agg1_t",
-            members = [@tbaa_type_desc_5, @tbaa_type_desc_5],
-            offsets = array<i64: 0, 4>
-        }
+    ```mlir
+    llvm.metadata @tbaa {
+      llvm.tbaa_root @tbaa_root_0 {identity = "Simple C/C++ TBAA"}
+      llvm.tbaa_type_desc @tbaa_type_desc_1 {
+          identity = "omnipotent char",
+          members = [@tbaa_root_0],
+          offsets = array<i64: 0>
       }
+      llvm.tbaa_type_desc @tbaa_type_desc_2 {
+          identity = "long long",
+          members = [@tbaa_type_desc_1],
+          offsets = array<i64: 0>
+      }
+      llvm.tbaa_type_desc @tbaa_type_desc_3 {
+          identity = "agg2_t",
+          members = [@tbaa_type_desc_2, @tbaa_type_desc_2],
+          offsets = array<i64: 0, 8>
+      }
+      llvm.tbaa_type_desc @tbaa_type_desc_5 {
+          identity = "int",
+          members = [@tbaa_type_desc_1],
+          offsets = array<i64: 0>
+      }
+      llvm.tbaa_type_desc @tbaa_type_desc_6 {
+          identity = "agg1_t",
+          members = [@tbaa_type_desc_5, @tbaa_type_desc_5],
+          offsets = array<i64: 0, 4>
+      }
+    }
+    ```
 
     See the following link for more details:
     https://llvm.org/docs/LangRef.html#tbaa-metadata
@@ -1206,44 +1214,46 @@ def LLVM_TBAATagOp : LLVM_Op<"tbaa_tag", [
     Defines a TBAA node describing a memory access.
 
     Example:
-      llvm.metadata @tbaa {
-        llvm.tbaa_root @tbaa_root_0 {identity = "Simple C/C++ TBAA"}
-        llvm.tbaa_type_desc @tbaa_type_desc_1 {
-            identity = "omnipotent char",
-            members = [@tbaa_root_0],
-            offsets = array<i64: 0>
-        }
-        llvm.tbaa_type_desc @tbaa_type_desc_2 {
-            identity = "long long",
-            members = [@tbaa_type_desc_1],
-            offsets = array<i64: 0>
-        }
-        llvm.tbaa_type_desc @tbaa_type_desc_3 {
-            identity = "agg2_t",
-            members = [@tbaa_type_desc_2, @tbaa_type_desc_2],
-            offsets = array<i64: 0, 8>
-        }
-        llvm.tbaa_tag @tbaa_tag_4 {
-            access_type = @tbaa_type_desc_2,
-            base_type = @tbaa_type_desc_3,
-            offset = 8 : i64
-        }
-        llvm.tbaa_type_desc @tbaa_type_desc_5 {
-            identity = "int",
-            members = [@tbaa_type_desc_1],
-            offsets = array<i64: 0>
-        }
-        llvm.tbaa_type_desc @tbaa_type_desc_6 {
-            identity = "agg1_t",
-            members = [@tbaa_type_desc_5, @tbaa_type_desc_5],
-            offsets = array<i64: 0, 4>
-        }
-        llvm.tbaa_tag @tbaa_tag_7 {
-            access_type = @tbaa_type_desc_5,
-            base_type = @tbaa_type_desc_6,
-            offset = 0 : i64
-        }
+    ```mlir
+    llvm.metadata @tbaa {
+      llvm.tbaa_root @tbaa_root_0 {identity = "Simple C/C++ TBAA"}
+      llvm.tbaa_type_desc @tbaa_type_desc_1 {
+          identity = "omnipotent char",
+          members = [@tbaa_root_0],
+          offsets = array<i64: 0>
       }
+      llvm.tbaa_type_desc @tbaa_type_desc_2 {
+          identity = "long long",
+          members = [@tbaa_type_desc_1],
+          offsets = array<i64: 0>
+      }
+      llvm.tbaa_type_desc @tbaa_type_desc_3 {
+          identity = "agg2_t",
+          members = [@tbaa_type_desc_2, @tbaa_type_desc_2],
+          offsets = array<i64: 0, 8>
+      }
+      llvm.tbaa_tag @tbaa_tag_4 {
+          access_type = @tbaa_type_desc_2,
+          base_type = @tbaa_type_desc_3,
+          offset = 8 : i64
+      }
+      llvm.tbaa_type_desc @tbaa_type_desc_5 {
+          identity = "int",
+          members = [@tbaa_type_desc_1],
+          offsets = array<i64: 0>
+      }
+      llvm.tbaa_type_desc @tbaa_type_desc_6 {
+          identity = "agg1_t",
+          members = [@tbaa_type_desc_5, @tbaa_type_desc_5],
+          offsets = array<i64: 0, 4>
+      }
+      llvm.tbaa_tag @tbaa_tag_7 {
+          access_type = @tbaa_type_desc_5,
+          base_type = @tbaa_type_desc_6,
+          offset = 0 : i64
+      }
+    }
+    ```
 
     See the following link for more details:
     https://llvm.org/docs/LangRef.html#tbaa-metadata
