@@ -2256,9 +2256,38 @@ bool AMDGPULegalizerInfo::legalizeFPTOI(
 
   unsigned Flags = MI.getFlags();
 
-  auto Trunc = B.buildIntrinsicTrunc(S64, Src, Flags);
-  auto K0 = B.buildFConstant(S64, BitsToDouble(UINT64_C(0x3df0000000000000)));
-  auto K1 = B.buildFConstant(S64, BitsToDouble(UINT64_C(0xc1f0000000000000)));
+  // The basic idea of converting a floating point number into a pair of 32-bit
+  // integers is illustrated as follows:
+  //
+  //     tf := trunc(val);
+  //    hif := floor(tf * 2^-32);
+  //    lof := tf - hif * 2^32; // lof is always positive due to floor.
+  //     hi := fptoi(hif);
+  //     lo := fptoi(lof);
+  //
+  auto Trunc = B.buildIntrinsicTrunc(SrcLT, Src, Flags);
+  MachineInstrBuilder Sign;
+  if (Signed && SrcLT == S32) {
+    // However, a 32-bit floating point number has only 23 bits mantissa and
+    // it's not enough to hold all the significant bits of `lof` if val is
+    // negative. To avoid the loss of precision, We need to take the absolute
+    // value after truncating and flip the result back based on the original
+    // signedness.
+    Sign = B.buildAShr(S32, Src, B.buildConstant(S32, 31));
+    Trunc = B.buildFAbs(S32, Trunc, Flags);
+  }
+  MachineInstrBuilder K0, K1;
+  if (SrcLT == S64) {
+    K0 = B.buildFConstant(
+        S64, llvm::bit_cast<double>(UINT64_C(/*2^-32*/ 0x3df0000000000000)));
+    K1 = B.buildFConstant(
+        S64, llvm::bit_cast<double>(UINT64_C(/*-2^32*/ 0xc1f0000000000000)));
+  } else {
+    K0 = B.buildFConstant(
+        S32, llvm::bit_cast<float>(UINT32_C(/*2^-32*/ 0x2f800000)));
+    K1 = B.buildFConstant(
+        S32, llvm::bit_cast<float>(UINT32_C(/*-2^32*/ 0xcf800000)));
+  }
 
   auto Mul = B.buildFMul(S64, Trunc, K0, Flags);
   auto FloorMul = B.buildFFloor(S64, Mul, Flags);
@@ -2268,7 +2297,6 @@ bool AMDGPULegalizerInfo::legalizeFPTOI(
     B.buildFPTOSI(S32, FloorMul) :
     B.buildFPTOUI(S32, FloorMul);
   auto Lo = B.buildFPTOUI(S32, Fma);
-  MachineInstrBuilder Sign;
   if (Signed && SrcLT == S32) {
     // Flip the result based on the signedness, which is either all 0s or 1s.
     Sign = B.buildMergeLikeInstr(S64, {Sign, Sign});
@@ -2810,7 +2838,8 @@ bool AMDGPULegalizerInfo::legalizeFFloor(MachineInstr &MI,
   // shouldn't matter?
   Register ModSrc = stripAnySourceMods(OrigSrc, MRI);
 
-  auto Const = B.buildFConstant(S64, BitsToDouble(0x3fefffffffffffff));
+  auto Const =
+      B.buildFConstant(S64, llvm::bit_cast<double>(0x3fefffffffffffff));
 
   Register Min = MRI.createGenericVirtualRegister(S64);
 
@@ -3411,7 +3440,7 @@ void AMDGPULegalizerInfo::legalizeUnsignedDIV_REM32Impl(MachineIRBuilder &B,
   // Initial estimate of inv(y).
   auto FloatY = B.buildUITOFP(S32, Y);
   auto RcpIFlag = B.buildInstr(AMDGPU::G_AMDGPU_RCP_IFLAG, {S32}, {FloatY});
-  auto Scale = B.buildFConstant(S32, BitsToFloat(0x4f7ffffe));
+  auto Scale = B.buildFConstant(S32, llvm::bit_cast<float>(0x4f7ffffe));
   auto ScaledY = B.buildFMul(S32, RcpIFlag, Scale);
   auto Z = B.buildFPTOUI(S32, ScaledY);
 
@@ -3461,21 +3490,23 @@ static std::pair<Register, Register> emitReciprocalU64(MachineIRBuilder &B,
   auto CvtLo = B.buildUITOFP(S32, Unmerge.getReg(0));
   auto CvtHi = B.buildUITOFP(S32, Unmerge.getReg(1));
 
-  auto Mad = B.buildFMAD(S32, CvtHi, // 2**32
-                         B.buildFConstant(S32, BitsToFloat(0x4f800000)), CvtLo);
+  auto Mad = B.buildFMAD(
+      S32, CvtHi, // 2**32
+      B.buildFConstant(S32, llvm::bit_cast<float>(0x4f800000)), CvtLo);
 
   auto Rcp = B.buildInstr(AMDGPU::G_AMDGPU_RCP_IFLAG, {S32}, {Mad});
-  auto Mul1 =
-      B.buildFMul(S32, Rcp, B.buildFConstant(S32, BitsToFloat(0x5f7ffffc)));
+  auto Mul1 = B.buildFMul(
+      S32, Rcp, B.buildFConstant(S32, llvm::bit_cast<float>(0x5f7ffffc)));
 
   // 2**(-32)
-  auto Mul2 =
-      B.buildFMul(S32, Mul1, B.buildFConstant(S32, BitsToFloat(0x2f800000)));
+  auto Mul2 = B.buildFMul(
+      S32, Mul1, B.buildFConstant(S32, llvm::bit_cast<float>(0x2f800000)));
   auto Trunc = B.buildIntrinsicTrunc(S32, Mul2);
 
   // -(2**32)
-  auto Mad2 = B.buildFMAD(S32, Trunc,
-                          B.buildFConstant(S32, BitsToFloat(0xcf800000)), Mul1);
+  auto Mad2 = B.buildFMAD(
+      S32, Trunc, B.buildFConstant(S32, llvm::bit_cast<float>(0xcf800000)),
+      Mul1);
 
   auto ResultLo = B.buildFPTOUI(S32, Mad2);
   auto ResultHi = B.buildFPTOUI(S32, Trunc);
@@ -4020,7 +4051,7 @@ bool AMDGPULegalizerInfo::legalizeFDIVFastIntrin(MachineInstr &MI,
 
   auto C0 = B.buildConstant(S32, 0x6f800000);
   auto C1 = B.buildConstant(S32, 0x2f800000);
-  auto C2 = B.buildConstant(S32, FloatToBits(1.0f));
+  auto C2 = B.buildConstant(S32, llvm::bit_cast<uint32_t>(1.0f));
 
   auto CmpRes = B.buildFCmp(CmpInst::FCMP_OGT, S1, Abs, C0, Flags);
   auto Sel = B.buildSelect(S32, CmpRes, C1, C2, Flags);

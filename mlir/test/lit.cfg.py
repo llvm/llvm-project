@@ -34,13 +34,6 @@ config.substitutions.append(('%shlibext', config.llvm_shlib_ext))
 config.substitutions.append(("%mlir_src_root", config.mlir_src_root))
 config.substitutions.append(("%host_cxx", config.host_cxx))
 config.substitutions.append(("%host_cc", config.host_cc))
-config.substitutions.append(("%mlir_vulkan_runtime_wrappers", config.mlir_vulkan_runtime_wrappers))
-config.substitutions.append(("%mlir_runner_utils", config.mlir_runner_utils))
-config.substitutions.append(("%mlir_c_runner_utils", config.mlir_c_runner_utils))
-config.substitutions.append(("%mlir_async_runtime", config.mlir_async_runtime))
-config.substitutions.append(("%mlir_cuda_runtime", config.mlir_cuda_runtime))
-config.substitutions.append(("%mlir_rocm_runtime", config.mlir_rocm_runtime))
-config.substitutions.append(("%mlir_test_spirv_cpu_runner_c_wrappers", config.mlir_test_spirv_cpu_runner_c_wrappers))
 
 llvm_config.with_system_environment(
     ['HOME', 'INCLUDE', 'LIB', 'TMP', 'TEMP'])

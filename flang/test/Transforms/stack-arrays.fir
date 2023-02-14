@@ -307,3 +307,20 @@ func.func @omp_placement1() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
+
+// function terminated by stop statement
+func.func @stop_terminator() {
+  %0 = fir.allocmem !fir.array<42xi32>
+  fir.freemem %0 : !fir.heap<!fir.array<42xi32>>
+  %c0_i32 = arith.constant 0 : i32
+  %false = arith.constant false
+  %none = fir.call @_FortranAStopStatement(%c0_i32, %false, %false) : (i32, i1, i1) -> none
+  fir.unreachable
+}
+// CHECK: func.func @stop_terminator() {
+// CHECK-NEXT: fir.alloca !fir.array<42xi32>
+// CHECK-NEXT:  %[[ZERO:.*]] = arith.constant 0 : i32
+// CHECK-NEXT:  %[[FALSE:.*]] = arith.constant false
+// CHECK-NEXT:  %[[NONE:.*]] = fir.call @_FortranAStopStatement(%[[ZERO]], %[[FALSE]], %[[FALSE]]) : (i32, i1, i1) -> none
+// CHECK-NEXT:  fir.unreachable
+// CHECK-NEXT: }

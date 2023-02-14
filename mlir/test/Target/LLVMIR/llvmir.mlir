@@ -1251,6 +1251,20 @@ llvm.func @complexintconstantarray() -> !llvm.array<2 x !llvm.array<2 x !llvm.st
   llvm.return %1 : !llvm.array<2 x !llvm.array<2 x !llvm.struct<(i32, i32)>>>
 }
 
+// CHECK-LABEL: @indexconstantsplat
+llvm.func @indexconstantsplat() -> vector<3xi32> {
+  %1 = llvm.mlir.constant(dense<42> : vector<3xindex>) : vector<3xi32>
+  // CHECK: ret <3 x i32> <i32 42, i32 42, i32 42>
+  llvm.return %1 : vector<3xi32>
+}
+
+// CHECK-LABEL: @indexconstantarray
+llvm.func @indexconstantarray() -> vector<3xi32> {
+  %1 = llvm.mlir.constant(dense<[0, 1, 2]> : vector<3xindex>) : vector<3xi32>
+  // CHECK: ret <3 x i32> <i32 0, i32 1, i32 2> 
+  llvm.return %1 : vector<3xi32>
+}
+
 llvm.func @noreach() {
 // CHECK:    unreachable
   llvm.unreachable

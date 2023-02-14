@@ -8921,6 +8921,7 @@ cc_library(
         ":TosaInterfacesIncGen",
         ":TosaPassIncGen",
         ":TransformUtils",
+        ":VectorInterfaces",
         "//llvm:Support",
     ],
 )

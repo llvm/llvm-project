@@ -1424,6 +1424,65 @@ func.func private @_FortranAAny(!fir.box<none>, !fir.ref<i8>, i32, i32) -> i1 at
 // CHECK-NOT        fir.call @_FortranAAnyLogical4x1_simplified({{.*}})
 
 // -----
+// Check that multi-rank Any cases are properly simplified
+
+func.func @_QPtestAny_2D(%arg0: !fir.ref<!fir.array<10x0x!fir.logical<4>>> {fir.bindc_name = "a"}) -> !fir.logical<4> {
+    %c10 = arith.constant 10 : index
+    %c0 = arith.constant 0 : index
+    %0 = fir.alloca !fir.logical<4> {bindc_name = "testAny_2D", uniq_name = "_QFtestAny_2DEtestAny_2D"}
+    %1 = fir.shape %c10, %c0 : (index, index) -> !fir.shape<2>
+    %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10x0x!fir.logical<4>>>, !fir.shape<2>) -> !fir.box<!fir.array<10x0x!fir.logical<4>>>
+    %c1 = arith.constant 1 : index
+    %3 = fir.address_of(@_QQcl.04ab56883945fd2c21a3b6d132f0bb37) : !fir.ref<!fir.char<1,48>>
+    %c3_i32 = arith.constant 3 : i32
+    %4 = fir.convert %2 : (!fir.box<!fir.array<10x0x!fir.logical<4>>>) -> !fir.box<none>
+    %5 = fir.convert %3 : (!fir.ref<!fir.char<1,48>>) -> !fir.ref<i8>
+    %6 = fir.convert %c1 : (index) -> i32
+    %7 = fir.call @_FortranAAny(%4, %5, %c3_i32, %6) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32, i32) -> i1
+    %8 = fir.convert %7 : (i1) -> !fir.logical<4>
+    fir.store %8 to %0 : !fir.ref<!fir.logical<4>>
+    %9 = fir.load %0 : !fir.ref<!fir.logical<4>>
+    return %9 : !fir.logical<4>
+  }
+
+// CHECK-LABEL:   func.func @_QPtestAny_2D(
+// CHECK-SAME:                                        %[[A:.*]]: !fir.ref<!fir.array<10x0x!fir.logical<4>>> {fir.bindc_name = "a"}) -> !fir.logical<4> {
+// CHECK:           %[[SIZE10:.*]] = arith.constant 10 : index
+// CHECK:           %[[SIZE_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[SHAPE:.*]] = fir.shape %[[SIZE10]], %[[SIZE_0]] : (index, index) -> !fir.shape<2>
+// CHECK:           %[[A_BOX_LOGICAL:.*]] = fir.embox %[[VAL_0]](%[[SHAPE]]) : (!fir.ref<!fir.array<10x0x!fir.logical<4>>>, !fir.shape<2>) -> !fir.box<!fir.array<10x0x!fir.logical<4>>>
+// CHECK:           %[[A_BOX_NONE:.*]] = fir.convert %[[A_BOX_LOGICAL]] : (!fir.box<!fir.array<10x0x!fir.logical<4>>>) -> !fir.box<none>
+// CHECK:           %[[RES:.*]] = fir.call @_FortranAAnyLogical4x2_simplified(%[[A_BOX_NONE]]) fastmath<contract> : (!fir.box<none>) -> i1
+
+// CHECK-LABEL:   func.func private @_FortranAAnyLogical4x2_simplified(
+// CHECK-SAME:                                                         %[[ARR:.*]]: !fir.box<none>) -> i1 attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
+// CHECK:           %[[TRUE:.*]] = arith.constant true
+// CHECK:           %[[CINDEX_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[A_BOX_I32:.*]] = fir.convert %[[VAL_0]] : (!fir.box<none>) -> !fir.box<!fir.array<?x?xi32>>
+// CHECK:           %[[FALSE:.*]] = arith.constant false
+// CHECK:           %[[CINDEX_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[DIMINDEX_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[A_BOX_I32]], %[[DIMINDEX_0]] : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
+// CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
+// CHECK:           %[[DIMINDEX_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[DIMS_1:.*]]:3 = fir.box_dims %[[A_BOX_I32]], %[[DIMINDEX_1]] : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
+// CHECK:           %[[EXTENT1:.*]] = arith.subi %[[DIMS_1]]#1, %[[CINDEX_1]] : index
+// CHECK:           %[[RES:.*]]:2 = fir.iterate_while (%[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT1]] step %[[CINDEX_1]]) and (%[[OK:.*]] = %[[TRUE]]) iter_args(%[[INIT:.*]] = %[[FALSE]]) -> (i1) {
+// CHECK:             %[[INNER_RES:.*]]:2 = fir.iterate_while (%[[ITER_1:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]]) and (%[[OK1:.*]] = %[[TRUE]]) iter_args(%[[INNER_INIT:.*]] = %[[INIT]]) -> (i1) {
+// CHECK:               %[[ITEM:.*]] = fir.coordinate_of %[[A_BOX_I32]], %[[ITER_1]], %[[ITER]] : (!fir.box<!fir.array<?x?xi32>>, index, index) -> !fir.ref<i32>
+// CHECK:               %[[ITEMVAL:.*]] = fir.load %[[ITEM]] : !fir.ref<i32>
+// CHECK:               %[[I32_0:.*]] = arith.constant 0 : i32
+// CHECK:               %[[NEXT_ANY:.*]] = arith.cmpi ne, %[[ITEMVAL]], %[[I32_0]] : i32
+// CHECK:               %[[I1_1:.*]] = arith.constant true
+// CHECK:               %[[CONTINUE:.*]] = arith.xori %[[NEXT_ANY]], %[[I1_1]] : i1
+// CHECK:               fir.result %[[CONTINUE]], %[[NEXT_ANY]] : i1, i1
+// CHECK:             }
+// CHECK:             fir.result %[[RETURN_VALS:.*]]#0, %[[RETURN_VALS]]#1 : i1, i1
+// CHECK:           }
+// CHECK:           return %[[RETURN_VAL:.*]]#1 : i1
+// CHECK:         }
+
+// -----
 // Ensure All is simplified in correct usage
 
 func.func @_QPtestAll_NoDimArg(%arg0: !fir.ref<!fir.array<10x!fir.logical<4>>> {fir.bindc_name = "a"}) -> !fir.logical<4> {
@@ -1476,7 +1535,6 @@ func.func private @_FortranAAll(!fir.box<none>, !fir.ref<i8>, i32, i32) -> i1 at
 
 // -----
 // Ensure All is correctly simplified for different kind logical
-
 
 func.func @_QPtestAll_NoDimArgLogical1(%arg0: !fir.ref<!fir.array<10x!fir.logical<1>>> {fir.bindc_name = "a"}) -> !fir.logical<1> {
   %c10 = arith.constant 10 : index
