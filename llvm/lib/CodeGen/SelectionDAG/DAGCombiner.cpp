@@ -5867,6 +5867,7 @@ SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
 }
 
 static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
+  using AndOrSETCCFoldKind = TargetLowering::AndOrSETCCFoldKind;
   assert(
       (LogicOp->getOpcode() == ISD::AND || LogicOp->getOpcode() == ISD::OR) &&
       "Invalid Op to combine SETCC with");
@@ -5878,8 +5879,10 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
     return SDValue();
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!TLI.isDesirableToCombineLogicOpOfSETCC(LogicOp, LHS.getNode(),
-                                              RHS.getNode()))
+  AndOrSETCCFoldKind TargetPreference = TLI.isDesirableToCombineLogicOpOfSETCC(
+      LogicOp, LHS.getNode(), RHS.getNode());
+
+  if (TargetPreference == AndOrSETCCFoldKind::None)
     return SDValue();
 
   ISD::CondCode CCL = cast<CondCodeSDNode>(LHS.getOperand(2))->get();
@@ -5890,35 +5893,55 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
   SDValue LHS1 = LHS->getOperand(1);
   SDValue RHS1 = RHS->getOperand(1);
 
-  auto *LHS1C = dyn_cast<ConstantSDNode>(LHS1);
-  auto *RHS1C = dyn_cast<ConstantSDNode>(RHS1);
+  // TODO: We don't actually need a splat here, for vectors we just need
+  // LaneLHS[N] == -LaneRHS[N];
+  auto *LHS1C = isConstOrConstSplat(LHS1);
+  auto *RHS1C = isConstOrConstSplat(RHS1);
+
   EVT VT = LogicOp->getValueType(0);
   EVT OpVT = LHS0.getValueType();
   SDLoc DL(LogicOp);
 
-  // With C as a power of 2 and C != 0 and C != INT_MIN:
-  //   (icmp eq A, C) | (icmp eq A, -C)
-  //        -> (icmp eq and(add(A, C), ~(C + C)), 0)
-  //   (icmp ne A, C) & (icmp ne A, -C)w
-  //        -> (icmp ne and(add(A, C), ~(C + C)), 0)
   if (CCL == CCR &&
       CCL == (LogicOp->getOpcode() == ISD::AND ? ISD::SETNE : ISD::SETEQ) &&
       LHS0 == RHS0 && LHS1C && RHS1C && OpVT.isInteger() && LHS.hasOneUse() &&
       RHS.hasOneUse() && LHS1C->getAPIntValue() == (-RHS1C->getAPIntValue())) {
-    const ConstantSDNode *Pow2 = nullptr;
-    if (LHS1C->getAPIntValue().isPowerOf2())
-      Pow2 = LHS1C;
-    else if (RHS1C->getAPIntValue().isPowerOf2())
-      Pow2 = RHS1C;
-    // isPowerOf2 is only for non-zero powers of 2.
-    if (Pow2 != nullptr && !Pow2->getAPIntValue().isMinSignedValue()) {
-      const APInt &C = Pow2->getAPIntValue();
-      SDValue AddOp =
-          DAG.getNode(ISD::ADD, DL, OpVT, LHS0, DAG.getConstant(C, DL, OpVT));
-      SDValue AndOp = DAG.getNode(ISD::AND, DL, OpVT, AddOp,
-                                  DAG.getConstant(~(C + C), DL, OpVT));
-      return DAG.getNode(ISD::SETCC, DL, VT, AndOp,
-                         DAG.getConstant(0, DL, OpVT), LHS.getOperand(2));
+
+    // Preference is to use ISD::ABS or we already have an ISD::ABS (in which
+    // case this is just a compare).
+    if (TargetPreference == AndOrSETCCFoldKind::ABS ||
+        DAG.doesNodeExist(ISD::ABS, DAG.getVTList(OpVT), {LHS0})) {
+      APInt C = LHS1C->getAPIntValue();
+      if (C.isNegative())
+        C = RHS1C->getAPIntValue();
+      // (icmp eq A, C) | (icmp eq A, -C)
+      //    -> (icmp eq Abs(A), C)
+      // (icmp ne A, C) & (icmp ne A, -C)
+      //    -> (icmp ne Abs(A), C)
+      SDValue AbsOp = DAG.getNode(ISD::ABS, DL, OpVT, LHS0);
+      return DAG.getNode(ISD::SETCC, DL, VT, AbsOp,
+                         DAG.getConstant(C, DL, OpVT), LHS.getOperand(2));
+    } else if (TargetPreference == AndOrSETCCFoldKind::AddAnd) {
+      // With C as a power of 2 and C != 0 and C != INT_MIN:
+      //   (icmp eq A, C) | (icmp eq A, -C)
+      //        -> (icmp eq and(add(A, C), ~(C + C)), 0)
+      //   (icmp ne A, C) & (icmp ne A, -C)w
+      //        -> (icmp ne and(add(A, C), ~(C + C)), 0)
+      const ConstantSDNode *Pow2 = nullptr;
+      if (LHS1C->getAPIntValue().isPowerOf2())
+        Pow2 = LHS1C;
+      else if (RHS1C->getAPIntValue().isPowerOf2())
+        Pow2 = RHS1C;
+      // isPowerOf2 is only for non-zero powers of 2.
+      if (Pow2 != nullptr && !Pow2->getAPIntValue().isMinSignedValue()) {
+        const APInt &C = Pow2->getAPIntValue();
+        SDValue AddOp =
+            DAG.getNode(ISD::ADD, DL, OpVT, LHS0, DAG.getConstant(C, DL, OpVT));
+        SDValue AndOp = DAG.getNode(ISD::AND, DL, OpVT, AddOp,
+                                    DAG.getConstant(~(C + C), DL, OpVT));
+        return DAG.getNode(ISD::SETCC, DL, VT, AndOp,
+                           DAG.getConstant(0, DL, OpVT), LHS.getOperand(2));
+      }
     }
   }
 

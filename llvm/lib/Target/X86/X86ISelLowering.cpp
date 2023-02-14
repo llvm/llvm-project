@@ -57147,10 +57147,18 @@ SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc& dl,
   return TargetLowering::expandIndirectJTBranch(dl, Value, Addr, DAG);
 }
 
-bool X86TargetLowering::isDesirableToCombineLogicOpOfSETCC(
+TargetLowering::AndOrSETCCFoldKind
+X86TargetLowering::isDesirableToCombineLogicOpOfSETCC(
     const SDNode *LogicOp, const SDNode *SETCC0, const SDNode *SETCC1) const {
+  using AndOrSETCCFoldKind = TargetLowering::AndOrSETCCFoldKind;
   EVT VT = LogicOp->getValueType(0);
-  return VT.isScalarInteger();
+  EVT OpVT = SETCC0->getOperand(0).getValueType();
+  if (!VT.isInteger())
+    return AndOrSETCCFoldKind::None;
+  if (VT.isVector())
+    return isOperationLegal(ISD::ABS, OpVT) ? AndOrSETCCFoldKind::ABS
+                                            : AndOrSETCCFoldKind::None;
+  return AndOrSETCCFoldKind::AddAnd;
 }
 
 bool X86TargetLowering::IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const {
