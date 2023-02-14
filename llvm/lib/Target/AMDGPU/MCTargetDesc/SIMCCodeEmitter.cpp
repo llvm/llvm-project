@@ -151,28 +151,28 @@ static uint32_t getLit32Encoding(uint32_t Val, const MCSubtargetInfo &STI) {
   if (IntImm != 0)
     return IntImm;
 
-  if (Val == FloatToBits(0.5f))
+  if (Val == llvm::bit_cast<uint32_t>(0.5f))
     return 240;
 
-  if (Val == FloatToBits(-0.5f))
+  if (Val == llvm::bit_cast<uint32_t>(-0.5f))
     return 241;
 
-  if (Val == FloatToBits(1.0f))
+  if (Val == llvm::bit_cast<uint32_t>(1.0f))
     return 242;
 
-  if (Val == FloatToBits(-1.0f))
+  if (Val == llvm::bit_cast<uint32_t>(-1.0f))
     return 243;
 
-  if (Val == FloatToBits(2.0f))
+  if (Val == llvm::bit_cast<uint32_t>(2.0f))
     return 244;
 
-  if (Val == FloatToBits(-2.0f))
+  if (Val == llvm::bit_cast<uint32_t>(-2.0f))
     return 245;
 
-  if (Val == FloatToBits(4.0f))
+  if (Val == llvm::bit_cast<uint32_t>(4.0f))
     return 246;
 
-  if (Val == FloatToBits(-4.0f))
+  if (Val == llvm::bit_cast<uint32_t>(-4.0f))
     return 247;
 
   if (Val == 0x3e22f983 && // 1.0 / (2.0 * pi)
@@ -187,28 +187,28 @@ static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI) {
   if (IntImm != 0)
     return IntImm;
 
-  if (Val == DoubleToBits(0.5))
+  if (Val == llvm::bit_cast<uint64_t>(0.5))
     return 240;
 
-  if (Val == DoubleToBits(-0.5))
+  if (Val == llvm::bit_cast<uint64_t>(-0.5))
     return 241;
 
-  if (Val == DoubleToBits(1.0))
+  if (Val == llvm::bit_cast<uint64_t>(1.0))
     return 242;
 
-  if (Val == DoubleToBits(-1.0))
+  if (Val == llvm::bit_cast<uint64_t>(-1.0))
     return 243;
 
-  if (Val == DoubleToBits(2.0))
+  if (Val == llvm::bit_cast<uint64_t>(2.0))
     return 244;
 
-  if (Val == DoubleToBits(-2.0))
+  if (Val == llvm::bit_cast<uint64_t>(-2.0))
     return 245;
 
-  if (Val == DoubleToBits(4.0))
+  if (Val == llvm::bit_cast<uint64_t>(4.0))
     return 246;
 
-  if (Val == DoubleToBits(-4.0))
+  if (Val == llvm::bit_cast<uint64_t>(-4.0))
     return 247;
 
   if (Val == 0x3fc45f306dc9c882 && // 1.0 / (2.0 * pi)
