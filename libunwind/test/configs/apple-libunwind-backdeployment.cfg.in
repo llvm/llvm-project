@@ -7,7 +7,7 @@
 
 import os, site
 site.addsitedir(os.path.join('@LIBUNWIND_LIBCXX_PATH@', 'utils'))
-import libcxx.test.params, libcxx.test.newconfig, libcxx.test.dsl
+import libcxx.test.params, libcxx.test.config, libcxx.test.dsl
 
 lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
@@ -55,8 +55,8 @@ config.substitutions.append(('%{exec}',
 ))
 
 import os, site
-import libcxx.test.params, libcxx.test.newconfig, libcxx.test.newconfig
-libcxx.test.newconfig.configure(
+import libcxx.test.params, libcxx.test.config, libcxx.test.config
+libcxx.test.config.configure(
     libcxx.test.params.DEFAULT_PARAMETERS + BACKDEPLOYMENT_PARAMETERS,
     libcxx.test.features.DEFAULT_FEATURES,
     config,
