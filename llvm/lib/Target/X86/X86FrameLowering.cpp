@@ -1510,7 +1510,8 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   // Space reserved for stack-based arguments when making a (ABI-guaranteed)
   // tail call.
   unsigned TailCallArgReserveSize = -X86FI->getTCReturnAddrDelta();
-  if (TailCallArgReserveSize  && IsWin64Prologue)
+  if (TailCallArgReserveSize && IsWin64Prologue &&
+      !MF.getFunction().getAttributes().hasAttrSomewhere(Attribute::SwiftAsync))
     report_fatal_error("Can't handle guaranteed tail call under win64 yet");
 
   const bool EmitStackProbeCall =
