@@ -216,6 +216,16 @@ convertDenseElementsAttr(Location loc, DenseElementsAttr denseElementsAttr,
   if (type.getNumElements() == 0)
     return nullptr;
 
+  // Check that the raw data size matches what is expected for the scalar size.
+  // TODO: in theory, we could repack the data here to keep constructing from
+  // raw data.
+  // TODO: we may also need to consider endianness when cross-compiling to an
+  // architecture where it is different.
+  unsigned elementByteSize = denseElementsAttr.getRawData().size() /
+                             denseElementsAttr.getNumElements();
+  if (8 * elementByteSize != innermostLLVMType->getScalarSizeInBits())
+    return nullptr;
+
   // Compute the shape of all dimensions but the innermost. Note that the
   // innermost dimension may be that of the vector element type.
   bool hasVectorElementType = type.getElementType().isa<VectorType>();
