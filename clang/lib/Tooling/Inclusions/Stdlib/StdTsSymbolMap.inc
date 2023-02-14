@@ -1,6 +1,5 @@
-// These are derived from N4100[fs.filesystem.synopsis], final
-// draft for experimental filesystem.
-// clang-format off
+// These are derived from N4100[fs.filesystem.synopsis], final draft for
+// experimental filesystem.
 SYMBOL(absolute, std::experimental::filesystem::, <experimental/filesystem>)
 SYMBOL(canonical, std::experimental::filesystem::, <experimental/filesystem>)
 SYMBOL(copy, std::experimental::filesystem::, <experimental/filesystem>)
@@ -51,4 +50,3 @@ SYMBOL(symlink_status, std::experimental::filesystem::, <experimental/filesystem
 SYMBOL(system_complete, std::experimental::filesystem::, <experimental/filesystem>)
 SYMBOL(temp_directory_path, std::experimental::filesystem::, <experimental/filesystem>)
 SYMBOL(u8path, std::experimental::filesystem::, <experimental/filesystem>)
-// clang-format on
