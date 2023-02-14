@@ -318,6 +318,21 @@ public:
     : MachineTraceMetrics::Ensemble(mtm) {}
 };
 
+/// Pick only the current basic block for the trace and do not choose any
+/// predecessors/successors.
+class LocalEnsemble : public MachineTraceMetrics::Ensemble {
+  const char *getName() const override { return "Local"; }
+  const MachineBasicBlock *pickTracePred(const MachineBasicBlock *) override {
+    return nullptr;
+  };
+  const MachineBasicBlock *pickTraceSucc(const MachineBasicBlock *) override {
+    return nullptr;
+  };
+
+public:
+  LocalEnsemble(MachineTraceMetrics *MTM)
+      : MachineTraceMetrics::Ensemble(MTM) {}
+};
 } // end anonymous namespace
 
 // Select the preferred predecessor for MBB.
@@ -391,6 +406,8 @@ MachineTraceMetrics::getEnsemble(MachineTraceStrategy strategy) {
   switch (strategy) {
   case MachineTraceStrategy::TS_MinInstrCount:
     return (E = new MinInstrCountEnsemble(this));
+  case MachineTraceStrategy::TS_Local:
+    return (E = new LocalEnsemble(this));
   default: llvm_unreachable("Invalid trace strategy enum");
   }
 }
