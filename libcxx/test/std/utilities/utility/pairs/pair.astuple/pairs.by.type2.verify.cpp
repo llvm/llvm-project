@@ -7,16 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11
+
 #include <utility>
 #include <complex>
 
-#include <cassert>
-
-int main(int, char**)
-{
-    typedef std::unique_ptr<int> upint;
-    std::pair<upint, int> t(upint(new int(4)), 23);
-    upint p = std::get<upint>(t);
-
-  return 0;
+void f() {
+  typedef std::complex<float> cf;
+  auto t1 = std::make_pair<int, int> ( 42, 43 );
+  (void)std::get<int>(t1); // expected-error {{call to 'get' is ambiguous}}
 }
