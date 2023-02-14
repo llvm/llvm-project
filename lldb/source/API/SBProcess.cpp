@@ -972,7 +972,12 @@ SBProcess::GetNumSupportedHardwareWatchpoints(lldb::SBError &sb_error) const {
   if (process_sp) {
     std::lock_guard<std::recursive_mutex> guard(
         process_sp->GetTarget().GetAPIMutex());
-    sb_error.SetError(process_sp->GetWatchpointSupportInfo(num));
+    std::optional<uint32_t> actual_num = process_sp->GetWatchpointSlotCount();
+    if (actual_num) {
+      num = *actual_num;
+    } else {
+      sb_error.SetErrorString("Unable to determine number of watchpoints");
+    }
   } else {
     sb_error.SetErrorString("SBProcess is invalid");
   }
