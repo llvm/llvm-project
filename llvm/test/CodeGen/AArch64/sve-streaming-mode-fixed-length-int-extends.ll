@@ -183,14 +183,13 @@ define void @sext_v4i8_v4i64(<4 x i8> %a, ptr %out) #0 {
 ; CHECK-LABEL: sext_v4i8_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    uunpklo z1.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    lsl z1.d, z1.d, #56
-; CHECK-NEXT:    lsl z0.d, z0.d, #56
-; CHECK-NEXT:    asr z1.d, z1.d, #56
-; CHECK-NEXT:    asr z0.d, z0.d, #56
+; CHECK-NEXT:    sxtb z1.d, p0/m, z1.d
+; CHECK-NEXT:    sxtb z0.d, p0/m, z0.d
 ; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
   %b = sext <4 x i8> %a to <4 x i64>
