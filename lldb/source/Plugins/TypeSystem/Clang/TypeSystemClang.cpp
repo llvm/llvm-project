@@ -108,7 +108,6 @@ TypeSystemClangSupportsLanguage(lldb::LanguageType language) {
          lldb_private::Language::LanguageIsPascal(language) ||
          // Use Clang for Rust until there is a proper language plugin for it
          language == eLanguageTypeRust ||
-         language == eLanguageTypeExtRenderScript ||
          // Use Clang for D until there is a proper language plugin for it
          language == eLanguageTypeD ||
          // Open Dylan compiler debug info is designed to be Clang-compatible
@@ -475,7 +474,6 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
     switch (IK.getLanguage()) {
     case clang::Language::Unknown:
     case clang::Language::LLVM_IR:
-    case clang::Language::RenderScript:
       llvm_unreachable("Invalid input kind!");
     case clang::Language::OpenCL:
       LangStd = LangStandard::lang_opencl10;
