@@ -20,11 +20,23 @@ func.func @non_static_pack_ret(%data: tensor<6xf64>, %index: tensor<6x1xi32>)
 
 // -----
 
+#DenseVector = #sparse_tensor.encoding<{dimLevelType = ["dense"], indexBitWidth=32}>
+
+func.func @invalid_pack_dense(%data: tensor<6xf64>, %index: tensor<6x1xi32>)
+                            -> tensor<100xf64, #DenseVector> {
+  // expected-error@+1 {{must operate on a COO tensor}}
+  %0 = sparse_tensor.pack %data, %index : tensor<6xf64>, tensor<6x1xi32>
+                                       to tensor<100xf64, #DenseVector>
+  return %0 : tensor<100xf64, #DenseVector>
+}
+
+// -----
+
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"], indexBitWidth=32}>
 
 func.func @invalid_pack_data(%data: tensor<6x1xf64>, %index: tensor<6x1xi32>)
                             -> tensor<100xf64, #SparseVector> {
-  // expected-error@+1 {{requires rank 1 tensor for value and rank 2 tensor for indices}}
+  // expected-error@+1 {{'sparse_tensor.pack' op operand #0 must be 1D tensor of any type values}}
   %0 = sparse_tensor.pack %data, %index : tensor<6x1xf64>, tensor<6x1xi32>
                                        to tensor<100xf64, #SparseVector>
   return %0 : tensor<100xf64, #SparseVector>
@@ -64,6 +76,42 @@ func.func @invalid_pack_type(%data: tensor<6xf64>, %index: tensor<6x2xi32>)
   %0 = sparse_tensor.pack %data, %index : tensor<6xf64>, tensor<6x2xi32>
                                        to tensor<100xf64, #SparseVector>
   return %0 : tensor<100xf64, #SparseVector>
+}
+
+// -----
+
+#SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"], indexBitWidth=32}>
+
+func.func @invalid_unpack_type(%sp: tensor<100xf32, #SparseVector>)
+                            -> (tensor<6xf64>, tensor<6x1xi32>, i32) {
+  // expected-error@+1 {{unmatched type between input and output}}
+  %d, %i, %n = sparse_tensor.unpack %sp :  tensor<100xf32, #SparseVector>
+                                        to tensor<6xf64>, tensor<6x1xi32>, i32
+  return %d, %i, %n : tensor<6xf64>, tensor<6x1xi32>, i32
+}
+
+// -----
+
+#SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"], indexBitWidth=32}>
+
+func.func @invalid_unpack_type(%sp: tensor<100xf32, #SparseVector>)
+                            -> (tensor<5xf32>, tensor<6x1xi32>, i32) {
+  // expected-error@+1 {{unmatched number of elements in data and indices}}
+  %d, %i, %n = sparse_tensor.unpack %sp :  tensor<100xf32, #SparseVector>
+                                        to tensor<5xf32>, tensor<6x1xi32>, i32
+  return %d, %i, %n : tensor<5xf32>, tensor<6x1xi32>, i32
+}
+
+// -----
+
+#SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"], indexBitWidth=32}>
+
+func.func @invalid_unpack_type(%sp: tensor<100xf32, #SparseVector>)
+                            -> (tensor<6xf32>, tensor<6x2xi32>, i32) {
+  // expected-error@+1 {{unmatched rank between input and output}}
+  %d, %i, %n = sparse_tensor.unpack %sp :  tensor<100xf32, #SparseVector>
+                                        to tensor<6xf32>, tensor<6x2xi32>, i32
+  return %d, %i, %n : tensor<6xf32>, tensor<6x2xi32>, i32
 }
 
 // -----
