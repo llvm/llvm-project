@@ -34,5 +34,5 @@
 // RUN: %clang_cl -fuse-ld=lld --vfsoverlay %s -### -- %s 2>&1 | FileCheck --check-prefix=VFSOVERLAY %s
 // VFSOVERLAY: -cc1"
 // VFSOVERLAY: "--vfsoverlay"
-// VFSOVERLAY: lld-link"
+// VFSOVERLAY: lld-link
 // VFSOVERLAY: "/vfsoverlay:
