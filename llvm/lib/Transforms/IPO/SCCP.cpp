@@ -370,7 +370,7 @@ static bool runIPSCCP(
       SI->eraseFromParent();
       MadeChanges = true;
     }
-    M.getGlobalList().erase(GV);
+    M.eraseGlobalVariable(GV);
     ++NumGlobalConst;
   }
 

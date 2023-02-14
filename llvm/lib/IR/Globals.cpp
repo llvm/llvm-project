@@ -456,17 +456,17 @@ GlobalVariable::GlobalVariable(Module &M, Type *Ty, bool constant,
   }
 
   if (Before)
-    Before->getParent()->getGlobalList().insert(Before->getIterator(), this);
+    Before->getParent()->insertGlobalVariable(Before->getIterator(), this);
   else
-    M.getGlobalList().push_back(this);
+    M.insertGlobalVariable(this);
 }
 
 void GlobalVariable::removeFromParent() {
-  getParent()->getGlobalList().remove(getIterator());
+  getParent()->removeGlobalVariable(this);
 }
 
 void GlobalVariable::eraseFromParent() {
-  getParent()->getGlobalList().erase(getIterator());
+  getParent()->eraseGlobalVariable(this);
 }
 
 void GlobalVariable::setInitializer(Constant *InitVal) {

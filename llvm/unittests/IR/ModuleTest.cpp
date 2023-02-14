@@ -46,8 +46,6 @@ TEST(ModuleTest, sortGlobalsByName) {
 
     // Sort the globals by name.
     EXPECT_FALSE(std::is_sorted(M.global_begin(), M.global_end(), compare));
-    M.getGlobalList().sort(compare);
-    EXPECT_TRUE(std::is_sorted(M.global_begin(), M.global_end(), compare));
   }
 }
 
@@ -271,6 +269,45 @@ TEST(ModuleTest, NamedMDList) {
 
   M->eraseNamedMDNode(NewMDN);
   EXPECT_EQ(M->named_metadata_size(), 2u);
+}
+
+TEST(ModuleTest, GlobalList) {
+  // This tests all Module's functions that interact with Module::GlobalList.
+  LLVMContext C;
+  SMDiagnostic Err;
+  LLVMContext Context;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+@GV = external global i32
+)",
+                                                  Err, Context);
+  auto *GV = cast<GlobalVariable>(M->getNamedValue("GV"));
+  EXPECT_EQ(M->global_size(), 1u);
+  GlobalVariable *NewGV = new GlobalVariable(
+      Type::getInt32Ty(C), /*isConstant=*/true, GlobalValue::InternalLinkage,
+      /*Initializer=*/nullptr, "NewGV");
+  EXPECT_EQ(M->global_size(), 1u);
+  // Insert before
+  M->insertGlobalVariable(M->globals().begin(), NewGV);
+  EXPECT_EQ(M->global_size(), 2u);
+  EXPECT_EQ(&*M->globals().begin(), NewGV);
+  // Insert at end()
+  M->removeGlobalVariable(NewGV);
+  EXPECT_EQ(M->global_size(), 1u);
+  M->insertGlobalVariable(NewGV);
+  EXPECT_EQ(M->global_size(), 2u);
+  EXPECT_EQ(&*std::prev(M->globals().end()), NewGV);
+  // Check globals()
+  auto Range = M->globals();
+  EXPECT_EQ(&*Range.begin(), GV);
+  EXPECT_EQ(&*std::next(Range.begin()), NewGV);
+  EXPECT_EQ(std::next(Range.begin(), 2), Range.end());
+  // Check remove
+  M->removeGlobalVariable(NewGV);
+  EXPECT_EQ(M->global_size(), 1u);
+  // Check erase
+  M->insertGlobalVariable(NewGV);
+  M->eraseGlobalVariable(NewGV);
+  EXPECT_EQ(M->global_size(), 1u);
 }
 
 } // end namespace
