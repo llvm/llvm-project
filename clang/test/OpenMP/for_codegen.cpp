@@ -78,6 +78,7 @@ void loop_with_counter_collapse() {
   // CHECK: br label %[[EXIT]]
   // CHECK: [[EXIT]]:
   // CHECK: [[J_LB_VAL:%.+]] = phi i32 [ [[J_LB_MIN_VAL]], %[[TRUE]] ], [ [[J_LB_MAX_VAL]], %[[FALSE]] ]
+  // CHECK: store i32 [[J_LB_VAL]], ptr [[I_TMP]],
   // CHECK: store i32 [[J_LB_VAL]], ptr [[J_LB:%.+]],
   // CHECK: [[J_UB_VAL:%.+]] = load i32, ptr [[J_UB]],
   // CHECK: [[J_LB_VAL:%.+]] = load i32, ptr [[J_LB]],
