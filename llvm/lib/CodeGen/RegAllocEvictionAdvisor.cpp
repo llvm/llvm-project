@@ -43,6 +43,7 @@ static cl::opt<bool> EnableLocalReassignment(
              "may be compile time intensive"),
     cl::init(false));
 
+namespace llvm {
 cl::opt<unsigned> EvictInterferenceCutoff(
     "regalloc-eviction-max-interference-cutoff", cl::Hidden,
     cl::desc("Number of interferences after which we declare "
@@ -50,6 +51,7 @@ cl::opt<unsigned> EvictInterferenceCutoff(
              "is a compilation cost-saving consideration. To "
              "disable, pass a very large number."),
     cl::init(10));
+}
 
 #define DEBUG_TYPE "regalloc"
 #ifdef LLVM_HAVE_TF_AOT_REGALLOCEVICTMODEL

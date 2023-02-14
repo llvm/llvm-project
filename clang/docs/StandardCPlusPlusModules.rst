@@ -856,6 +856,249 @@ So the final answer for why we don't reuse the interface of Clang modules for he
 there are some differences between header units and Clang modules and that ignoring those
 differences now would likely become a problem in the future.
 
+Discover Dependencies
+=====================
+
+Prior to modules, all the translation units can be compiled parallelly.
+But it is not true for the module units. The presense of module units requires
+us to compile the translation units in a (topological) order.
+
+The clang-scan-deps scanner implemented
+`P1689 paper <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p1689r5.html>`_
+to describe the order. Only named modules are supported now.
+
+We need a compilation database to use clang-scan-deps. See
+`JSON Compilation Database Format Specification <JSONCompilationDatabase.html>`_
+for example. Note that the ``output`` entry is necessary for clang-scan-deps
+to scan P1689 format. Here is an example:
+
+.. code-block:: c++
+
+  //--- M.cppm
+  export module M;
+  export import :interface_part;
+  import :impl_part;
+  export int Hello();
+
+  //--- interface_part.cppm
+  export module M:interface_part;
+  export void World();
+
+  //--- Impl.cpp
+  module;
+  #include <iostream>
+  module M;
+  void Hello() {
+      std::cout << "Hello ";
+  }
+
+  //--- impl_part.cppm
+  module;
+  #include <string>
+  #include <iostream>
+  module M:impl_part;
+  import :interface_part;
+
+  std::string W = "World.";
+  void World() {
+      std::cout << W << std::endl;
+  }
+
+  //--- User.cpp
+  import M;
+  import third_party_module;
+  int main() {
+    Hello();
+    World();
+    return 0;
+  }
+
+And here is the compilation database:
+
+.. code-block:: text
+
+  [
+  {
+      "directory": ".",
+      "command": "<path-to-compiler-executable>/clang++ -std=c++20 M.cppm -c -o M.o",
+      "file": "M.cppm",
+      "output": "M.o"
+  },
+  {
+      "directory": ".",
+      "command": "<path-to-compiler-executable>/clang++ -std=c++20 Impl.cpp -c -o Impl.o",
+      "file": "Impl.cpp",
+      "output": "Impl.o"
+  },
+  {
+      "directory": ".",
+      "command": "<path-to-compiler-executable>/clang++ -std=c++20 impl_part.cppm -c -o impl_part.o",
+      "file": "impl_part.cppm",
+      "output": "impl_part.o"
+  },
+  {
+      "directory": ".",
+      "command": "<path-to-compiler-executable>/clang++ -std=c++20 interface_part.cppm -c -o interface_part.o",
+      "file": "interface_part.cppm",
+      "output": "interface_part.o"
+  },
+  {
+      "directory": ".",
+      "command": "<path-to-compiler-executable>/clang++ -std=c++20 User.cpp -c -o User.o",
+      "file": "User.cpp",
+      "output": "User.o"
+  }
+  ]
+
+And we can get the dependency information in P1689 format by:
+
+.. code-block:: console
+
+  $ clang-scan-deps -format=p1689 -compilation-database P1689.json
+
+And we will get:
+
+.. code-block:: text
+
+  {
+    "revision": 0,
+    "rules": [
+      {
+        "primary-output": "Impl.o",
+        "requires": [
+          {
+            "logical-name": "M",
+            "source-path": "M.cppm"
+          }
+        ]
+      },
+      {
+        "primary-output": "M.o",
+        "provides": [
+          {
+            "is-interface": true,
+            "logical-name": "M",
+            "source-path": "M.cppm"
+          }
+        ],
+        "requires": [
+          {
+            "logical-name": "M:interface_part",
+            "source-path": "interface_part.cppm"
+          },
+          {
+            "logical-name": "M:impl_part",
+            "source-path": "impl_part.cppm"
+          }
+        ]
+      },
+      {
+        "primary-output": "User.o",
+        "requires": [
+          {
+            "logical-name": "M",
+            "source-path": "M.cppm"
+          },
+          {
+            "logical-name": "third_party_module"
+          }
+        ]
+      },
+      {
+        "primary-output": "impl_part.o",
+        "provides": [
+          {
+            "is-interface": false,
+            "logical-name": "M:impl_part",
+            "source-path": "impl_part.cppm"
+          }
+        ],
+        "requires": [
+          {
+            "logical-name": "M:interface_part",
+            "source-path": "interface_part.cppm"
+          }
+        ]
+      },
+      {
+        "primary-output": "interface_part.o",
+        "provides": [
+          {
+            "is-interface": true,
+            "logical-name": "M:interface_part",
+            "source-path": "interface_part.cppm"
+          }
+        ]
+      }
+    ],
+    "version": 1
+  }
+
+See the P1689 paper for the meaning of the fields.
+
+And if the user want a finer-grained control for any reason, e.g., to scan the generated source files,
+the user can choose to get the dependency information per file. For example:
+
+.. code-block:: console
+
+  $ clang-scan-deps -format=p1689 -- <path-to-compiler-executable>/clang++ -std=c++20 impl_part.cppm -c -o impl_part.o
+
+And we'll get:
+
+.. code-block:: text
+
+  {
+    "revision": 0,
+    "rules": [
+      {
+        "primary-output": "impl_part.o",
+        "provides": [
+          {
+            "is-interface": false,
+            "logical-name": "M:impl_part",
+            "source-path": "impl_part.cppm"
+          }
+        ],
+        "requires": [
+          {
+            "logical-name": "M:interface_part"
+          }
+        ]
+      }
+    ],
+    "version": 1
+  }
+
+In this way, we can pass the single command line options after the ``--``.
+Then clang-scan-deps will extract the necessary information from the options.
+Note that we need to specify the path to the compiler executable instead of saying
+``clang++`` simply.
+
+The users may want the scanner to get the tranditional dependency information for headers.
+Otherwise, the users have to scan twice for the project, once for headers and once for modules.
+To address the requirement, clang-scan-deps will recognize the specified preprocessor options
+in the given command line and generate the corresponding dependency informaiton. For example,
+
+.. code-block:: console
+
+  $ clang-scan-deps -format=p1689 -- ../bin/clang++ -std=c++20 impl_part.cppm -c -o impl_part.o -MD -MT impl_part.ddi -MF impl_part.dep
+  $ cat impl_part.dep
+
+We will get:
+
+.. code-block:: text
+
+  impl_part.ddi: \
+    /usr/include/bits/wchar.h /usr/include/bits/types/wint_t.h \
+    /usr/include/bits/types/mbstate_t.h \
+    /usr/include/bits/types/__mbstate_t.h /usr/include/bits/types/__FILE.h \
+    /usr/include/bits/types/FILE.h /usr/include/bits/types/locale_t.h \
+    /usr/include/bits/types/__locale_t.h \
+    ...
+
+When clang-scan-deps detects ``-MF`` option, clang-scan-deps will try to write the
+dependency informaiton for headers to the file specified by ``-MF``.
+
 Possible Questions
 ==================
 

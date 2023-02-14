@@ -83,12 +83,12 @@ static cl::opt<bool> EnableDevelopmentFeatures(
 static const bool EnableDevelopmentFeatures = false;
 #endif // #ifdef LLVM_HAVE_TFLITE
 
-extern cl::opt<unsigned> EvictInterferenceCutoff;
-
 /// The score injection pass.
 /// This pass calculates the score for a function and inserts it in the log, but
 /// this happens only in development mode. It's a no-op otherwise.
 namespace llvm {
+extern cl::opt<unsigned> EvictInterferenceCutoff;
+
 class RegAllocScoring : public MachineFunctionPass {
 public:
   static char ID;

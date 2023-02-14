@@ -46,7 +46,10 @@
 #include <vector>
 
 using namespace llvm;
+
+namespace llvm {
 extern cl::opt<bool> EnableVPlanNativePath;
+}
 
 #define DEBUG_TYPE "vplan"
 
