@@ -49,6 +49,11 @@
 // CHECK-NOT: __riscv_zcd {{.*$}}
 // CHECK-NOT: __riscv_zcf {{.*$}}
 // CHECK-NOT: __riscv_h {{.*$}}
+
+// RUN: %clang -target riscv32-unknown-linux-gnu -march=rv32i -x c -E -dM %s \
+// RUN: -o - | FileCheck %s
+// RUN: %clang -target riscv64-unknown-linux-gnu -march=rv64i -x c -E -dM %s \
+// RUN: -o - | FileCheck %s
 // CHECK: __riscv_i 2000000{{$}}
 
 // RUN: %clang -target riscv32-unknown-linux-gnu -march=rv32im -x c -E -dM %s \
