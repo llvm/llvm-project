@@ -49,6 +49,7 @@
 // CHECK-NOT: __riscv_zcd {{.*$}}
 // CHECK-NOT: __riscv_zcf {{.*$}}
 // CHECK-NOT: __riscv_h {{.*$}}
+// CHECK: __riscv_i 2000000{{$}}
 
 // RUN: %clang -target riscv32-unknown-linux-gnu -march=rv32im -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-M-EXT %s
