@@ -3,52 +3,52 @@
 // RUN: %clang -target riscv64-unknown-linux-gnu -march=rv64i -x c -E -dM %s \
 // RUN: -o - | FileCheck %s
 
-// CHECK-NOT: __riscv_div
-// CHECK-NOT: __riscv_m
-// CHECK-NOT: __riscv_mul
-// CHECK-NOT: __riscv_muldiv
-// CHECK-NOT: __riscv_a 2000000{{$}}
+// CHECK-NOT: __riscv_div {{.*$}}
+// CHECK-NOT: __riscv_m {{.*$}}
+// CHECK-NOT: __riscv_mul {{.*$}}
+// CHECK-NOT: __riscv_muldiv {{.*$}}
+// CHECK-NOT: __riscv_a {{.*$}}
 // CHECK-NOT: __riscv_atomic
-// CHECK-NOT: __riscv_f 2000000{{$}}
-// CHECK-NOT: __riscv_d
-// CHECK-NOT: __riscv_flen
-// CHECK-NOT: __riscv_fdiv
-// CHECK-NOT: __riscv_fsqrt
-// CHECK-NOT: __riscv_c 2000000{{$}}
-// CHECK-NOT: __riscv_compressed
-// CHECK-NOT: __riscv_b
-// CHECK-NOT: __riscv_bitmanip
-// CHECK-NOT: __riscv_zihintntl
-// CHECK-NOT: __riscv_zba
-// CHECK-NOT: __riscv_zbb
-// CHECK-NOT: __riscv_zbc
-// CHECK-NOT: __riscv_zbs
-// CHECK-NOT: __riscv_zfh
-// CHECK-NOT: __riscv_v
-// CHECK-NOT: __riscv_vector
-// CHECK-NOT: __riscv_v_intrinsic
-// CHECK-NOT: __riscv_zbkc
-// CHECK-NOT: __riscv_zbkx
-// CHECK-NOT: __riscv_zbkb
-// CHECK-NOT: __riscv_zkne
-// CHECK-NOT: __riscv_zknd
-// CHECK-NOT: __riscv_zknh
-// CHECK-NOT: __riscv_zksh
-// CHECK-NOT: __riscv_zksed
-// CHECK-NOT: __riscv_zkr
-// CHECK-NOT: __riscv_zkt
-// CHECK-NOT: __riscv_zk
-// CHECK-NOT: __riscv_zicbom
-// CHECK-NOT: __riscv_zicboz
-// CHECK-NOT: __riscv_svnapot
-// CHECK-NOT: __riscv_svpbmt
-// CHECK-NOT: __riscv_svinval
-// CHECK-NOT: __riscv_xventanacondops
-// CHECK-NOT: __riscv_zca
-// CHECK-NOT: __riscv_zcb
-// CHECK-NOT: __riscv_zcd
-// CHECK-NOT: __riscv_zcf
-// CHECK-NOT: __riscv_h
+// CHECK-NOT: __riscv_f {{.*$}}
+// CHECK-NOT: __riscv_d {{.*$}}
+// CHECK-NOT: __riscv_flen {{.*$}}
+// CHECK-NOT: __riscv_fdiv {{.*$}}
+// CHECK-NOT: __riscv_fsqrt {{.*$}}
+// CHECK-NOT: __riscv_c {{.*$}}
+// CHECK-NOT: __riscv_compressed {{.*$}}
+// CHECK-NOT: __riscv_b {{.*$}}
+// CHECK-NOT: __riscv_bitmanip {{.*$}}
+// CHECK-NOT: __riscv_zihintntl {{.*$}}
+// CHECK-NOT: __riscv_zba {{.*$}}
+// CHECK-NOT: __riscv_zbb {{.*$}}
+// CHECK-NOT: __riscv_zbc {{.*$}}
+// CHECK-NOT: __riscv_zbs {{.*$}}
+// CHECK-NOT: __riscv_zfh {{.*$}}
+// CHECK-NOT: __riscv_v {{.*$}}
+// CHECK-NOT: __riscv_vector {{.*$}}
+// CHECK-NOT: __riscv_v_intrinsic {{.*$}}
+// CHECK-NOT: __riscv_zbkc {{.*$}}
+// CHECK-NOT: __riscv_zbkx {{.*$}}
+// CHECK-NOT: __riscv_zbkb {{.*$}}
+// CHECK-NOT: __riscv_zkne {{.*$}}
+// CHECK-NOT: __riscv_zknd {{.*$}}
+// CHECK-NOT: __riscv_zknh {{.*$}}
+// CHECK-NOT: __riscv_zksh {{.*$}}
+// CHECK-NOT: __riscv_zksed {{.*$}}
+// CHECK-NOT: __riscv_zkr {{.*$}}
+// CHECK-NOT: __riscv_zkt {{.*$}}
+// CHECK-NOT: __riscv_zk {{.*$}}
+// CHECK-NOT: __riscv_zicbom {{.*$}}
+// CHECK-NOT: __riscv_zicboz {{.*$}}
+// CHECK-NOT: __riscv_svnapot {{.*$}}
+// CHECK-NOT: __riscv_svpbmt {{.*$}}
+// CHECK-NOT: __riscv_svinval {{.*$}}
+// CHECK-NOT: __riscv_xventanacondops {{.*$}}
+// CHECK-NOT: __riscv_zca {{.*$}}
+// CHECK-NOT: __riscv_zcb {{.*$}}
+// CHECK-NOT: __riscv_zcd {{.*$}}
+// CHECK-NOT: __riscv_zcf {{.*$}}
+// CHECK-NOT: __riscv_h {{.*$}}
 
 // RUN: %clang -target riscv32-unknown-linux-gnu -march=rv32im -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-M-EXT %s
