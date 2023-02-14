@@ -1,5 +1,3 @@
-// UNSUPPORTED: system-windows
-
 // RUN: rm -fr %t
 // RUN: mkdir -p %t
 // RUN: split-file %s %t
