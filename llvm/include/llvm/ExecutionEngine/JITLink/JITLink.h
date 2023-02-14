@@ -1001,12 +1001,42 @@ public:
   /// Note: This Twine-based overload requires an extra string copy and an
   /// extra heap allocation for large strings. The ArrayRef<char> overload
   /// should be preferred where possible.
-  MutableArrayRef<char> allocateString(Twine Source) {
+  MutableArrayRef<char> allocateContent(Twine Source) {
     SmallString<256> TmpBuffer;
     auto SourceStr = Source.toStringRef(TmpBuffer);
     auto *AllocatedBuffer = Allocator.Allocate<char>(SourceStr.size());
     llvm::copy(SourceStr, AllocatedBuffer);
     return MutableArrayRef<char>(AllocatedBuffer, SourceStr.size());
+  }
+
+  /// Allocate a copy of the given string using the LinkGraph's allocator.
+  ///
+  /// The allocated string will be terminated with a null character, and the
+  /// returned MutableArrayRef will include this null character in the last
+  /// position.
+  MutableArrayRef<char> allocateCString(StringRef Source) {
+    char *AllocatedBuffer = Allocator.Allocate<char>(Source.size() + 1);
+    llvm::copy(Source, AllocatedBuffer);
+    AllocatedBuffer[Source.size()] = '\0';
+    return MutableArrayRef<char>(AllocatedBuffer, Source.size() + 1);
+  }
+
+  /// Allocate a copy of the given string using the LinkGraph's allocator.
+  ///
+  /// The allocated string will be terminated with a null character, and the
+  /// returned MutableArrayRef will include this null character in the last
+  /// position.
+  ///
+  /// Note: This Twine-based overload requires an extra string copy and an
+  /// extra heap allocation for large strings. The ArrayRef<char> overload
+  /// should be preferred where possible.
+  MutableArrayRef<char> allocateCString(Twine Source) {
+    SmallString<256> TmpBuffer;
+    auto SourceStr = Source.toStringRef(TmpBuffer);
+    auto *AllocatedBuffer = Allocator.Allocate<char>(SourceStr.size() + 1);
+    llvm::copy(SourceStr, AllocatedBuffer);
+    AllocatedBuffer[SourceStr.size()] = '\0';
+    return MutableArrayRef<char>(AllocatedBuffer, SourceStr.size() + 1);
   }
 
   /// Create a section with the given name, protection flags, and alignment.

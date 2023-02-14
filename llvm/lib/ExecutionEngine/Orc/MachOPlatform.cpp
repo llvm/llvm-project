@@ -148,8 +148,8 @@ private:
     if (G.getEndianness() != support::endian::system_endianness())
       MachO::swapStruct(Hdr);
 
-    auto HeaderContent = G.allocateString(
-        StringRef(reinterpret_cast<const char *>(&Hdr), sizeof(Hdr)));
+    auto HeaderContent = G.allocateContent(
+        ArrayRef<char>(reinterpret_cast<const char *>(&Hdr), sizeof(Hdr)));
 
     return G.createContentBlock(HeaderSection, HeaderContent, ExecutorAddr(), 8,
                                 0);
