@@ -21,6 +21,8 @@
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/Transforms/DialectConversion.h"
 
+#include "llvm/Support/FormatVariadic.h"
+
 using namespace mlir;
 
 namespace mlir {
@@ -41,11 +43,12 @@ public:
     SmallVector<NamedAttribute, 4> globalVarAttrs;
 
     auto ptrType = op.getType().cast<spirv::PointerType>();
-    auto structType = VulkanLayoutUtils::decorateType(
-        ptrType.getPointeeType().cast<spirv::StructType>());
+    auto pointeeType = ptrType.getPointeeType().cast<spirv::StructType>();
+    spirv::StructType structType = VulkanLayoutUtils::decorateType(pointeeType);
 
     if (!structType)
-      return failure();
+      return op->emitError(llvm::formatv(
+          "failed to decorate (unsuported pointee type: '{0}')", pointeeType));
 
     auto decoratedType =
         spirv::PointerType::get(structType, ptrType.getStorageClass());
