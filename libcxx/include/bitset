@@ -795,11 +795,11 @@ bitset<_Size>::bitset(const _CharT* __str,
         if (__str[__i] != __zero && __str[__i] != __one)
             __throw_invalid_argument("bitset string ctor has invalid argument");
 
-    size_t _Mp = _VSTD::min(__rlen, _Size);
+    size_t __mp = _VSTD::min(__rlen, _Size);
     size_t __i = 0;
-    for (; __i < _Mp; ++__i)
+    for (; __i < __mp; ++__i)
     {
-        _CharT __c = __str[_Mp - 1 - __i];
+        _CharT __c = __str[__mp - 1 - __i];
         (*this)[__i] = (__c == __one);
     }
     _VSTD::fill(base::__make_iter(__i), base::__make_iter(_Size), false);
@@ -821,11 +821,11 @@ bitset<_Size>::bitset(const basic_string<_CharT,_Traits,_Allocator>& __str,
         if (!_Traits::eq(__str[__i], __zero) && !_Traits::eq(__str[__i], __one))
             __throw_invalid_argument("bitset string ctor has invalid argument");
 
-    size_t _Mp = _VSTD::min(__rlen, _Size);
+    size_t __mp = _VSTD::min(__rlen, _Size);
     size_t __i = 0;
-    for (; __i < _Mp; ++__i)
+    for (; __i < __mp; ++__i)
     {
-        _CharT __c = __str[__pos + _Mp - 1 - __i];
+        _CharT __c = __str[__pos + __mp - 1 - __i];
         (*this)[__i] = _Traits::eq(__c, __one);
     }
     _VSTD::fill(base::__make_iter(__i), base::__make_iter(_Size), false);
@@ -956,8 +956,8 @@ bitset<_Size>::flip(size_t __pos)
     if (__pos >= _Size)
         __throw_out_of_range("bitset flip argument out of range");
 
-    reference r = base::__make_ref(__pos);
-    r = ~r;
+    reference __r = base::__make_ref(__pos);
+    __r = ~__r;
     return *this;
 }
 

@@ -119,9 +119,6 @@ public:
   static ArrayRef<std::pair<const char *, const char *>>
   standardRuntimeUtilityAliases();
 
-  /// Returns true if the given section name is an initializer section.
-  static bool isInitializerSection(StringRef SecName);
-
 private:
   // The ELFNixPlatformPlugin scans/modifies LinkGraphs to support ELF
   // platform features including initializers, exceptions, TLV, and language

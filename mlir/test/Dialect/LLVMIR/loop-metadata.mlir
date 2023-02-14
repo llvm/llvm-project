@@ -36,6 +36,12 @@
 // CHECK-DAG: #[[PIPELINE:.*]] = #llvm.loop_pipeline<disable = true, initiationinterval = 1 : i32>
 #pipeline = #llvm.loop_pipeline<disable = true, initiationinterval = 1 : i32>
 
+// CHECK-DAG: #[[PEELED:.*]] = #llvm.loop_peeled<count = 8 : i32>
+#peeled = #llvm.loop_peeled<count = 8 : i32>
+
+// CHECK-DAG: #[[UNSWITCH:.*]] = #llvm.loop_unswitch<partialDisable = true>
+#unswitch = #llvm.loop_unswitch<partialDisable = true>
+
 // CHECK: #[[LOOP_ANNOT:.*]] = #llvm.loop_annotation<
 // CHECK-DAG: disableNonforced = false
 // CHECK-DAG: mustProgress = true
@@ -44,6 +50,8 @@
 // CHECK-DAG: licm = #[[LICM]]
 // CHECK-DAG: distribute = #[[DISTRIBUTE]]
 // CHECK-DAG: pipeline = #[[PIPELINE]]
+// CHECK-DAG: peeled = #[[PEELED]]
+// CHECK-DAG: unswitch = #[[UNSWITCH]]
 // CHECK-DAG: isVectorized = false
 // CHECK-DAG: parallelAccesses = @metadata::@group1, @metadata::@group2>
 #loopMD = #llvm.loop_annotation<disableNonforced = false,
@@ -55,6 +63,8 @@
         licm = #licm,
         distribute = #distribute,
         pipeline = #pipeline,
+        peeled = #peeled,
+        unswitch = #unswitch,
         isVectorized = false,
         parallelAccesses = @metadata::@group1, @metadata::@group2>
 

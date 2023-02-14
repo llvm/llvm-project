@@ -102,14 +102,14 @@ contains
 ! CHECK: %[[MASK_BOX_NONE:.*]] = fir.convert %[[EMBOXED_MASK]] : (!fir.box<!fir.array<20x20x!fir.logical<4>>>) -> !fir.box<none>
 ! CHECK: %{{.*}} = fir.call @_FortranAPack(%[[RES_BOX_NONE]], %[[I_BOX_NONE]], %[[MASK_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 
-  subroutine check_unpack(r)
+  subroutine check_rank2(r)
     class(p1), intent(in) :: r(:,:)
   end subroutine
 
   subroutine test_temp_from_unpack(v, m, f)
     class(p1), intent(in) :: v(:), f(:,:)
     logical, intent(in) :: m(:,:)
-    call check_unpack(unpack(v,m,f))
+    call check_rank2(unpack(v,m,f))
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMpoly_tmpPtest_temp_from_unpack(
@@ -172,5 +172,17 @@ contains
 ! CHECK: %[[SOURCE_NONE:.*]] = fir.convert %[[SOURCE]] : (!fir.class<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.box<none>
 ! CHECK: %[[MOLD_NONE:.*]] = fir.convert %[[MOLD]] : (!fir.class<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.box<none>
 ! CHECK: %{{.*}} = fir.call @_FortranATransfer(%[[RES_BOX_NONE]], %[[SOURCE_NONE]], %[[MOLD_NONE]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+
+  subroutine test_temp_from_intrinsic_transpose(matrix)
+    class(p1), intent(in) :: matrix(:,:)
+    call check_rank2(transpose(matrix))
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpoly_tmpPtest_temp_from_intrinsic_transpose(
+! CHECK-SAME: %[[MATRIX:.*]]: !fir.class<!fir.array<?x?x!fir.type<_QMpoly_tmpTp1{a:i32}>>> {fir.bindc_name = "matrix"}) {
+! CHECK: %[[TMP_RES:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>>
+! CHECK: %[[RES_BOX_NONE:.*]] = fir.convert %[[TMP_RES]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[MATRIX_NONE:.*]] = fir.convert %[[MATRIX]] : (!fir.class<!fir.array<?x?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranATranspose(%[[RES_BOX_NONE]], %[[MATRIX_NONE]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 
 end module

@@ -44,8 +44,6 @@ using mlir::LLVM::linkage::getMaxEnumValForLinkage;
 
 #include "mlir/Dialect/LLVMIR/LLVMOpsDialect.cpp.inc"
 
-static constexpr const char kVolatileAttrName[] = "volatile_";
-static constexpr const char kNonTemporalAttrName[] = "nontemporal";
 static constexpr const char kElemTypeAttrName[] = "elem_type";
 
 #include "mlir/Dialect/LLVMIR/LLVMOpsInterfaces.cpp.inc"
@@ -665,7 +663,7 @@ Type LLVM::GEPOp::getSourceElementType() {
 }
 
 //===----------------------------------------------------------------------===//
-// Builder, printer and parser for for LLVM::LoadOp.
+// LoadOp
 //===----------------------------------------------------------------------===//
 
 /// Verifies the given array attribute contains symbol references and checks the
@@ -759,29 +757,13 @@ LogicalResult verifyMemOpMetadata(OpTy memOp) {
 
 LogicalResult LoadOp::verify() { return verifyMemOpMetadata(*this); }
 
-void LoadOp::build(OpBuilder &builder, OperationState &result, Type t,
+void LoadOp::build(OpBuilder &builder, OperationState &state, Type type,
                    Value addr, unsigned alignment, bool isVolatile,
                    bool isNonTemporal) {
-  result.addOperands(addr);
-  result.addTypes(t);
-  if (isVolatile)
-    result.addAttribute(kVolatileAttrName, builder.getUnitAttr());
-  if (isNonTemporal)
-    result.addAttribute(kNonTemporalAttrName, builder.getUnitAttr());
-  if (alignment != 0)
-    result.addAttribute("alignment", builder.getI64IntegerAttr(alignment));
-}
-
-void LoadOp::print(OpAsmPrinter &p) {
-  p << ' ';
-  if (getVolatile_())
-    p << "volatile ";
-  p << getAddr();
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          {kVolatileAttrName, kElemTypeAttrName});
-  p << " : " << getAddr().getType();
-  if (getAddr().getType().cast<LLVMPointerType>().isOpaque())
-    p << " -> " << getType();
+  build(builder, state, type, addr, /*access_groups=*/nullptr,
+        /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
+        alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isVolatile,
+        isNonTemporal);
 }
 
 // Extract the pointee type from the LLVM pointer type wrapped in MLIR. Return
@@ -797,103 +779,83 @@ getLoadStoreElementType(OpAsmParser &parser, Type type, SMLoc trailingTypeLoc) {
   return llvmTy.getElementType();
 }
 
-// <operation> ::= `llvm.load` `volatile` ssa-use attribute-dict? `:` type
-//                 (`->` type)?
-ParseResult LoadOp::parse(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::UnresolvedOperand addr;
-  Type type;
+/// Parses the LoadOp type either using the typed or opaque pointer format.
+// TODO: Drop once the typed pointer assembly format is not needed anymore.
+static ParseResult parseLoadType(OpAsmParser &parser, Type &type,
+                                 Type &elementType) {
   SMLoc trailingTypeLoc;
-
-  if (succeeded(parser.parseOptionalKeyword("volatile")))
-    result.addAttribute(kVolatileAttrName, parser.getBuilder().getUnitAttr());
-
-  if (parser.parseOperand(addr) ||
-      parser.parseOptionalAttrDict(result.attributes) || parser.parseColon() ||
-      parser.getCurrentLocation(&trailingTypeLoc) || parser.parseType(type) ||
-      parser.resolveOperand(addr, type, result.operands))
+  if (parser.getCurrentLocation(&trailingTypeLoc) || parser.parseType(type))
     return failure();
 
-  std::optional<Type> elemTy =
+  std::optional<Type> pointerElementType =
       getLoadStoreElementType(parser, type, trailingTypeLoc);
-  if (!elemTy)
+  if (!pointerElementType)
     return failure();
-  if (*elemTy) {
-    result.addTypes(*elemTy);
+  if (*pointerElementType) {
+    elementType = *pointerElementType;
     return success();
   }
 
-  Type trailingType;
-  if (parser.parseArrow() || parser.parseType(trailingType))
+  if (parser.parseArrow() || parser.parseType(elementType))
     return failure();
-  result.addTypes(trailingType);
   return success();
 }
 
+/// Prints the LoadOp type either using the typed or opaque pointer format.
+// TODO: Drop once the typed pointer assembly format is not needed anymore.
+static void printLoadType(OpAsmPrinter &printer, Operation *op, Type type,
+                          Type elementType) {
+  printer << type;
+  auto pointerType = cast<LLVMPointerType>(type);
+  if (pointerType.isOpaque())
+    printer << " -> " << elementType;
+}
+
 //===----------------------------------------------------------------------===//
-// Builder, printer and parser for LLVM::StoreOp.
+// StoreOp
 //===----------------------------------------------------------------------===//
 
 LogicalResult StoreOp::verify() { return verifyMemOpMetadata(*this); }
 
-void StoreOp::build(OpBuilder &builder, OperationState &result, Value value,
+void StoreOp::build(OpBuilder &builder, OperationState &state, Value value,
                     Value addr, unsigned alignment, bool isVolatile,
                     bool isNonTemporal) {
-  result.addOperands({value, addr});
-  result.addTypes({});
-  if (isVolatile)
-    result.addAttribute(kVolatileAttrName, builder.getUnitAttr());
-  if (isNonTemporal)
-    result.addAttribute(kNonTemporalAttrName, builder.getUnitAttr());
-  if (alignment != 0)
-    result.addAttribute("alignment", builder.getI64IntegerAttr(alignment));
+  build(builder, state, value, addr, /*access_groups=*/nullptr,
+        /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
+        alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isVolatile,
+        isNonTemporal);
 }
 
-void StoreOp::print(OpAsmPrinter &p) {
-  p << ' ';
-  if (getVolatile_())
-    p << "volatile ";
-  p << getValue() << ", " << getAddr();
-  p.printOptionalAttrDict((*this)->getAttrs(), {kVolatileAttrName});
-  p << " : ";
-  if (getAddr().getType().cast<LLVMPointerType>().isOpaque())
-    p << getValue().getType() << ", ";
-  p << getAddr().getType();
-}
-
-// <operation> ::= `llvm.store` `volatile` ssa-use `,` ssa-use
-//                 attribute-dict? `:` type (`,` type)?
-ParseResult StoreOp::parse(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::UnresolvedOperand addr, value;
-  Type type;
+/// Parses the StoreOp type either using the typed or opaque pointer format.
+// TODO: Drop once the typed pointer assembly format is not needed anymore.
+static ParseResult parseStoreType(OpAsmParser &parser, Type &elementType,
+                                  Type &type) {
   SMLoc trailingTypeLoc;
-
-  if (succeeded(parser.parseOptionalKeyword("volatile")))
-    result.addAttribute(kVolatileAttrName, parser.getBuilder().getUnitAttr());
-
-  if (parser.parseOperand(value) || parser.parseComma() ||
-      parser.parseOperand(addr) ||
-      parser.parseOptionalAttrDict(result.attributes) || parser.parseColon() ||
-      parser.getCurrentLocation(&trailingTypeLoc) || parser.parseType(type))
+  if (parser.getCurrentLocation(&trailingTypeLoc) ||
+      parser.parseType(elementType))
     return failure();
 
-  Type operandType;
-  if (succeeded(parser.parseOptionalComma())) {
-    operandType = type;
-    if (parser.parseType(type))
-      return failure();
-  } else {
-    std::optional<Type> maybeOperandType =
-        getLoadStoreElementType(parser, type, trailingTypeLoc);
-    if (!maybeOperandType)
-      return failure();
-    operandType = *maybeOperandType;
-  }
+  if (succeeded(parser.parseOptionalComma()))
+    return parser.parseType(type);
 
-  if (parser.resolveOperand(value, operandType, result.operands) ||
-      parser.resolveOperand(addr, type, result.operands))
+  // Extract the element type from the pointer type.
+  type = elementType;
+  std::optional<Type> pointerElementType =
+      getLoadStoreElementType(parser, type, trailingTypeLoc);
+  if (!pointerElementType)
     return failure();
-
+  elementType = *pointerElementType;
   return success();
+}
+
+/// Prints the StoreOp type either using the typed or opaque pointer format.
+// TODO: Drop once the typed pointer assembly format is not needed anymore.
+static void printStoreType(OpAsmPrinter &printer, Operation *op,
+                           Type elementType, Type type) {
+  auto pointerType = cast<LLVMPointerType>(type);
+  if (pointerType.isOpaque())
+    printer << elementType << ", ";
+  printer << type;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2345,7 +2307,7 @@ LogicalResult FenceOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// Folder for LLVM::BitcastOp
+// Folder and verifier for LLVM::BitcastOp
 //===----------------------------------------------------------------------===//
 
 OpFoldResult LLVM::BitcastOp::fold(FoldAdaptor adaptor) {
@@ -2357,6 +2319,41 @@ OpFoldResult LLVM::BitcastOp::fold(FoldAdaptor adaptor) {
     if (prev.getArg().getType() == getType())
       return prev.getArg();
   return {};
+}
+
+LogicalResult LLVM::BitcastOp::verify() {
+  auto resultType = extractVectorElementType(getResult().getType())
+                        .dyn_cast<LLVMPointerType>();
+  auto sourceType =
+      extractVectorElementType(getArg().getType()).dyn_cast<LLVMPointerType>();
+
+  // If one of the types is a pointer (or vector of pointers), then
+  // both source and result type have to be pointers.
+  if (static_cast<bool>(resultType) != static_cast<bool>(sourceType))
+    return emitOpError("can only cast pointers from and to pointers");
+
+  if (!resultType)
+    return success();
+
+  auto isVector = [](Type type) {
+    return type.isa<VectorType, LLVMScalableVectorType, LLVMFixedVectorType>();
+  };
+
+  // Due to bitcast requiring both operands to be of the same size, it is not
+  // possible for only one of the two to be a pointer of vectors.
+  if (isVector(getResult().getType()) && !isVector(getArg().getType()))
+    return emitOpError("cannot cast pointer to vector of pointers");
+
+  if (!isVector(getResult().getType()) && isVector(getArg().getType()))
+    return emitOpError("cannot cast vector of pointers to pointer");
+
+  // Bitcast cannot cast between pointers of different address spaces.
+  // 'llvm.addrspacecast' must be used for this purpose instead.
+  if (resultType.getAddressSpace() != sourceType.getAddressSpace())
+    return emitOpError("cannot cast pointers of different address spaces, "
+                       "use 'llvm.addrspacecast' instead");
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2704,10 +2701,11 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
               DISubprogramAttr, DISubroutineTypeAttr, LoopAnnotationAttr,
               LoopVectorizeAttr, LoopInterleaveAttr, LoopUnrollAttr,
               LoopUnrollAndJamAttr, LoopLICMAttr, LoopDistributeAttr,
-              LoopPipelineAttr>([&](auto attr) {
-          os << decltype(attr)::getMnemonic();
-          return AliasResult::OverridableAlias;
-        })
+              LoopPipelineAttr, LoopPeeledAttr, LoopUnswitchAttr>(
+            [&](auto attr) {
+              os << decltype(attr)::getMnemonic();
+              return AliasResult::OverridableAlias;
+            })
         .Default([](Attribute) { return AliasResult::NoAlias; });
   }
 };

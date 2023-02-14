@@ -720,6 +720,14 @@ class PermlanePat<SDPatternOperator permlane,
         SCSrc_b32:$src1, 0, SCSrc_b32:$src2, VGPR_32:$vdst_in)
 >;
 
+class PermlaneVarPat<SDPatternOperator permlane,
+  Instruction inst> : GCNPat<
+  (permlane i32:$vdst_in, i32:$src0, i32:$src1,
+            timm:$fi, timm:$bc),
+  (inst (as_i1timm $fi), VGPR_32:$src0, (as_i1timm $bc),
+        VGPR_32:$src1, VGPR_32:$vdst_in)
+>;
+
 
 let SubtargetPredicate = isGFX10Plus in {
   let isCommutable = 1, isReMaterializable = 1 in {
@@ -755,6 +763,9 @@ let SubtargetPredicate = isGFX12Plus in {
     defm V_PERMLANE16_VAR_B32  : VOP3Inst<"v_permlane16_var_b32",  VOP3_PERMLANE_VAR_Profile>;
     defm V_PERMLANEX16_VAR_B32 : VOP3Inst<"v_permlanex16_var_b32", VOP3_PERMLANE_VAR_Profile>;
   } // End $vdst = $vdst_in, DisableEncoding $vdst_in
+
+  def : PermlaneVarPat<int_amdgcn_permlane16_var,  V_PERMLANE16_VAR_B32_e64>;
+  def : PermlaneVarPat<int_amdgcn_permlanex16_var, V_PERMLANEX16_VAR_B32_e64>;
 
 } // End SubtargetPredicate = isGFX12Plus
 

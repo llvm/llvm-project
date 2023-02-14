@@ -293,11 +293,11 @@ shared_timed_mutex::try_lock_shared_until(
     {
         while (true)
         {
-            cv_status status = __base_.__gate1_.wait_until(__lk, __abs_time);
+            cv_status __status = __base_.__gate1_.wait_until(__lk, __abs_time);
             if ((__base_.__state_ & __base_.__write_entered_) == 0 &&
                                        (__base_.__state_ & __base_.__n_readers_) < __base_.__n_readers_)
                 break;
-            if (status == cv_status::timeout)
+            if (__status == cv_status::timeout)
                 return false;
         }
     }

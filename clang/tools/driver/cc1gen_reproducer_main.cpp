@@ -18,6 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -111,7 +112,8 @@ static std::string generateReproducerMetaInfo(const ClangInvocationInfo &Info) {
 /// Generates a reproducer for a set of arguments from a specific invocation.
 static std::optional<driver::Driver::CompilationDiagnosticReport>
 generateReproducerForInvocationArguments(ArrayRef<const char *> Argv,
-                                         const ClangInvocationInfo &Info) {
+                                         const ClangInvocationInfo &Info,
+                                         const llvm::ToolContext &ToolContext) {
   using namespace driver;
   auto TargetAndMode = ToolChain::getTargetAndModeFromProgramName(Argv[0]);
 
@@ -120,8 +122,11 @@ generateReproducerForInvocationArguments(ArrayRef<const char *> Argv,
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, new IgnoringDiagConsumer());
   ProcessWarningOptions(Diags, *DiagOpts, /*ReportDiags=*/false);
-  Driver TheDriver(Argv[0], llvm::sys::getDefaultTargetTriple(), Diags);
+  Driver TheDriver(ToolContext.Path, llvm::sys::getDefaultTargetTriple(),
+                   Diags);
   TheDriver.setTargetAndMode(TargetAndMode);
+  if (ToolContext.NeedsPrependArg)
+    TheDriver.setPrependArg(ToolContext.PrependArg);
 
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(Argv));
   if (C && !C->containsError()) {
@@ -155,7 +160,8 @@ static void printReproducerInformation(
 }
 
 int cc1gen_reproducer_main(ArrayRef<const char *> Argv, const char *Argv0,
-                           void *MainAddr) {
+                           void *MainAddr,
+                           const llvm::ToolContext &ToolContext) {
   if (Argv.size() < 1) {
     llvm::errs() << "error: missing invocation file\n";
     return 1;
@@ -182,7 +188,8 @@ int cc1gen_reproducer_main(ArrayRef<const char *> Argv, const char *Argv0,
   std::string Path = GetExecutablePath(Argv0, /*CanonicalPrefixes=*/true);
   DriverArgs[0] = Path.c_str();
   std::optional<driver::Driver::CompilationDiagnosticReport> Report =
-      generateReproducerForInvocationArguments(DriverArgs, InvocationInfo);
+      generateReproducerForInvocationArguments(DriverArgs, InvocationInfo,
+                                               ToolContext);
 
   // Emit the information about the reproduce files to stdout.
   int Result = 1;

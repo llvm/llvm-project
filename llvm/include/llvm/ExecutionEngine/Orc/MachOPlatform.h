@@ -79,6 +79,12 @@ public:
   /// setting up all aliases (including the required ones).
   static Expected<std::unique_ptr<MachOPlatform>>
   Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
+         JITDylib &PlatformJD, std::unique_ptr<DefinitionGenerator> OrcRuntime,
+         std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
+
+  /// Construct using a path to the ORC runtime.
+  static Expected<std::unique_ptr<MachOPlatform>>
+  Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
          JITDylib &PlatformJD, const char *OrcRuntimePath,
          std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
 
@@ -102,9 +108,6 @@ public:
   /// Returns the array of standard runtime utility aliases for MachO.
   static ArrayRef<std::pair<const char *, const char *>>
   standardRuntimeUtilityAliases();
-
-  /// Returns true if the given section name is an initializer section.
-  static bool isInitializerSection(StringRef SegName, StringRef SectName);
 
 private:
   // Data needed for bootstrap only.

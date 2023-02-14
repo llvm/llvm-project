@@ -33,7 +33,9 @@ ConstString ProgressEventData::GetFlavor() const {
 }
 
 void ProgressEventData::Dump(Stream *s) const {
-  s->Printf(" id = %" PRIu64 ", message = \"%s\"", m_id, m_message.c_str());
+  s->Printf(" id = %" PRIu64 ", title = \"%s\"", m_id, m_title.c_str());
+  if (!m_details.empty())
+    s->Printf(", details = \"%s\"", m_details.c_str());
   if (m_completed == 0 || m_completed == m_total)
     s->Printf(", type = %s", m_completed == 0 ? "start" : "end");
   else
@@ -47,6 +49,27 @@ void ProgressEventData::Dump(Stream *s) const {
 const ProgressEventData *
 ProgressEventData::GetEventDataFromEvent(const Event *event_ptr) {
   return GetEventDataFromEventImpl<ProgressEventData>(event_ptr);
+}
+
+StructuredData::DictionarySP
+ProgressEventData::GetAsStructuredData(const Event *event_ptr) {
+  const ProgressEventData *progress_data =
+      ProgressEventData::GetEventDataFromEvent(event_ptr);
+
+  if (!progress_data)
+    return {};
+
+  auto dictionary_sp = std::make_shared<StructuredData::Dictionary>();
+  dictionary_sp->AddStringItem("title", progress_data->GetTitle());
+  dictionary_sp->AddStringItem("details", progress_data->GetDetails());
+  dictionary_sp->AddStringItem("message", progress_data->GetMessage());
+  dictionary_sp->AddIntegerItem("progress_id", progress_data->GetID());
+  dictionary_sp->AddIntegerItem("completed", progress_data->GetCompleted());
+  dictionary_sp->AddIntegerItem("total", progress_data->GetTotal());
+  dictionary_sp->AddBooleanItem("debugger_specific",
+                                progress_data->IsDebuggerSpecific());
+
+  return dictionary_sp;
 }
 
 llvm::StringRef DiagnosticEventData::GetPrefix() const {

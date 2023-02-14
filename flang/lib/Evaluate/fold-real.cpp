@@ -138,10 +138,14 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
             }));
   } else if (name == "dim") {
     return FoldElementalIntrinsic<T, T, T>(context, std::move(funcRef),
-        ScalarFunc<T, T, T>(
-            [](const Scalar<T> &x, const Scalar<T> &y) -> Scalar<T> {
-              return x.DIM(y).value;
-            }));
+        ScalarFunc<T, T, T>([&context](const Scalar<T> &x,
+                                const Scalar<T> &y) -> Scalar<T> {
+          ValueWithRealFlags<Scalar<T>> result{x.DIM(y)};
+          if (result.flags.test(RealFlag::Overflow)) {
+            context.messages().Say("DIM intrinsic folding overflow"_warn_en_US);
+          }
+          return result.value;
+        }));
   } else if (name == "dot_product") {
     return FoldDotProduct<T>(context, std::move(funcRef));
   } else if (name == "dprod") {

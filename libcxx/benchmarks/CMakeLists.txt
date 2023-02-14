@@ -186,6 +186,7 @@ set(BENCHMARK_TESTS
     formatter_int.bench.cpp
     function.bench.cpp
     join_view.bench.cpp
+    lexicographical_compare_three_way.bench.cpp
     map.bench.cpp
     monotonic_buffer.bench.cpp
     ordered_set.bench.cpp

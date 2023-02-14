@@ -122,6 +122,8 @@ public:
   bool isIndex() const;
   bool isFloat8E5M2() const;
   bool isFloat8E4M3FN() const;
+  bool isFloat8E5M2FNUZ() const;
+  bool isFloat8E4M3FNUZ() const;
   bool isBF16() const;
   bool isF16() const;
   bool isF32() const;

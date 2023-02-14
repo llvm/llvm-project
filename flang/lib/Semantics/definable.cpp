@@ -267,11 +267,10 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
           expr.AsFortran());
     }
     return WhyNotDefinable(at, scope, flags, *dataRef);
-  }
-  if (evaluate::IsVariable(expr)) {
-    return std::nullopt; // result of function returning a pointer - ok
-  }
-  if (flags.test(DefinabilityFlag::PointerDefinition)) {
+  } else if (evaluate::IsNullPointer(expr)) {
+    return parser::Message{
+        at, "'%s' is a null pointer"_because_en_US, expr.AsFortran()};
+  } else if (flags.test(DefinabilityFlag::PointerDefinition)) {
     if (const auto *procDesignator{
             std::get_if<evaluate::ProcedureDesignator>(&expr.u)}) {
       // Defining a procedure pointer
@@ -288,13 +287,14 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
         }
       }
     }
-  }
-  if (evaluate::IsNullPointer(expr)) {
     return parser::Message{
-        at, "'%s' is a null pointer"_because_en_US, expr.AsFortran()};
+        at, "'%s' is not a definable pointer"_because_en_US, expr.AsFortran()};
+  } else if (!evaluate::IsVariable(expr)) {
+    return parser::Message{at,
+        "'%s' is not a variable or pointer"_because_en_US, expr.AsFortran()};
+  } else {
+    return std::nullopt;
   }
-  return parser::Message{
-      at, "'%s' is not a variable or pointer"_because_en_US, expr.AsFortran()};
 }
 
 } // namespace Fortran::semantics

@@ -109,6 +109,10 @@ to be worn by functions containing buffer operations that could cause out of
 bounds memory accesses. It emits warnings at call sites to such functions when
 the flag ``-Wunsafe-buffer-usage`` is enabled.
 
+``__declspec`` attributes can now be used together with the using keyword. Before
+the attributes on ``__declspec`` was ignored, while now it will be forwarded to the
+point where the alias is used.
+
 Windows Support
 ---------------
 
@@ -177,12 +181,15 @@ DWARF Support in Clang
 Arm and AArch64 Support in Clang
 --------------------------------
 
-* The hard-float ABI is now available in Armv8.1-M configurations that
+- The hard-float ABI is now available in Armv8.1-M configurations that
   have integer MVE instructions (and therefore have FP registers) but
   no scalar or vector floating point computation. Previously, trying
   to select the hard-float ABI on such a target (via
   ``-mfloat-abi=hard`` or a triple ending in ``hf``) would silently
   use the soft-float ABI instead.
+
+- Clang builtin ``__arithmetic_fence`` and the command line option ``-fprotect-parens``
+  are now enabled for AArch64.
 
 Floating Point Support in Clang
 -------------------------------

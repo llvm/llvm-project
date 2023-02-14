@@ -74,7 +74,7 @@ define dso_local signext i32 @main() #0 {
 ; CHECK-NEXT:    sw zero, -36(s0)
 ; CHECK-NEXT:    sd zero, -48(s0)
 ; CHECK-NEXT:    sd zero, -56(s0)
-; CHECK-NEXT:    vsetivli a0, 4, e32, m8, ta, mu
+; CHECK-NEXT:    vsetivli a0, 4, e32, m8, ta, ma
 ; CHECK-NEXT:    sd a0, -64(s0)
 ; CHECK-NEXT:    ld a0, -64(s0)
 ; CHECK-NEXT:    addi a1, s0, -56

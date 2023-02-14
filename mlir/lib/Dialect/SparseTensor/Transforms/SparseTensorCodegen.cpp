@@ -1154,6 +1154,53 @@ struct SparsePackOpConverter : public OpConversionPattern<PackOp> {
   }
 };
 
+struct SparseUnpackOpConverter : public OpConversionPattern<UnpackOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(UnpackOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
+    Location loc = op.getLoc();
+    int64_t rank = op.getTensor().getType().getRank();
+
+    assert(isUniqueCOOType(op.getTensor().getType()) &&
+           desc.getFields().size() == 4);
+
+    Value flatBuf = rank == 1 ? desc.getIdxMemRefOrView(rewriter, loc, 0)
+                              : desc.getAOSMemRef();
+    Value dataBuf = desc.getValMemRef();
+
+    // If frontend requests a static buffer, we reallocate the data/indices
+    // to ensure that we meet their need.
+    TensorType dataTp = op.getData().getType();
+    if (dataTp.hasStaticShape()) {
+      dataBuf = rewriter.create<memref::ReallocOp>(
+          loc, MemRefType::get(dataTp.getShape(), dataTp.getElementType()),
+          dataBuf);
+    }
+
+    TensorType indicesTp = op.getIndices().getType();
+    if (indicesTp.hasStaticShape()) {
+      auto len = indicesTp.getShape()[0] * indicesTp.getShape()[1];
+      flatBuf = rewriter.create<memref::ReallocOp>(
+          loc, MemRefType::get({len}, indicesTp.getElementType()), flatBuf);
+    }
+
+    Value idxBuf = rewriter.create<memref::ExpandShapeOp>(
+        loc, MemRefType::get(indicesTp.getShape(), indicesTp.getElementType()),
+        flatBuf, ArrayRef{ReassociationIndices{0, 1}});
+
+    // Converts MemRefs back to Tensors.
+    Value data = rewriter.create<bufferization::ToTensorOp>(loc, dataBuf);
+    Value indices = rewriter.create<bufferization::ToTensorOp>(loc, idxBuf);
+    Value nnz = toType(rewriter, loc, desc.getValMemSize(rewriter, loc),
+                       op.getNnz().getType());
+
+    rewriter.replaceOp(op, {data, indices, nnz});
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -1165,15 +1212,16 @@ struct SparsePackOpConverter : public OpConversionPattern<PackOp> {
 void mlir::populateSparseTensorCodegenPatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     bool enableBufferInitialization) {
-  patterns.add<SparsePackOpConverter, SparseReturnConverter,
-               SparseCallConverter, SparseDimOpConverter, SparseCastConverter,
-               SparseTensorDeallocConverter, SparseExtractSliceCoverter,
-               SparseTensorLoadConverter, SparseExpandConverter,
-               SparseCompressConverter, SparseInsertConverter,
-               SparseToPointersConverter, SparseToIndicesConverter,
-               SparseToIndicesBufferConverter, SparseToValuesConverter,
-               SparseConvertConverter, SparseNumberOfEntriesConverter>(
-      typeConverter, patterns.getContext());
+  patterns.add<SparsePackOpConverter, SparseUnpackOpConverter,
+               SparseReturnConverter, SparseCallConverter, SparseDimOpConverter,
+               SparseCastConverter, SparseTensorDeallocConverter,
+               SparseExtractSliceCoverter, SparseTensorLoadConverter,
+               SparseExpandConverter, SparseCompressConverter,
+               SparseInsertConverter, SparseToPointersConverter,
+               SparseToIndicesConverter, SparseToIndicesBufferConverter,
+               SparseToValuesConverter, SparseConvertConverter,
+               SparseNumberOfEntriesConverter>(typeConverter,
+                                               patterns.getContext());
   patterns.add<SparseTensorAllocConverter>(typeConverter, patterns.getContext(),
                                            enableBufferInitialization);
 }

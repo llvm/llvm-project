@@ -65,7 +65,7 @@ std::string test_concat_message([[maybe_unused]] Args&&... args) {
 [[noreturn]] void test_log_error(const char* condition, const char* file, int line, std::string&& message) {
   const char* msg = condition ? "Assertion failure: " : "Unconditional failure:";
   std::fprintf(stderr, "%s%s %s %d\n%s", msg, condition, file, line, message.c_str());
-  exit(EXIT_FAILURE);
+  std::abort();
 }
 
 inline void test_fail(const char* file, int line, std::string&& message) {
