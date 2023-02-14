@@ -3021,7 +3021,7 @@ injectPendingInvariantConditions(NonTrivialUnswitchCandidate Candidate, Loop &L,
     MSSAU->applyUpdates(DTUpdates, DT);
   L.addBasicBlockToLoop(CheckBlock, LI);
 
-#ifdef EXPENSIVE_CHECKS
+#ifndef NDEBUG
   DT.verify();
   LI.verify(DT);
   if (MSSAU && VerifyMemorySSA)
