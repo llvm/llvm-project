@@ -203,8 +203,12 @@ static LogicalResult setLoopAttr(const llvm::MDNode *node, Operation *op,
   if (!attr)
     return failure();
 
-  op->setAttr(LLVMDialect::getLoopAttrName(), attr);
-  return success();
+  return TypeSwitch<Operation *, LogicalResult>(op)
+      .Case<LLVM::BrOp, LLVM::CondBrOp>([&](auto branchOp) {
+        branchOp.setLoopAnnotationAttr(attr);
+        return success();
+      })
+      .Default([](auto) { return failure(); });
 }
 
 namespace {
