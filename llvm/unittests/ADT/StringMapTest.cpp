@@ -205,6 +205,22 @@ TEST_F(StringMapTest, CopyCtorTest) {
   EXPECT_EQ(5, Map2.lookup("funf"));
 }
 
+TEST_F(StringMapTest, LookupOrTrapTest) {
+  llvm::StringMap<int> Map;
+
+  // key not found on empty map
+  EXPECT_DEATH({ Map.at("a"); }, "StringMap::at failed due to a missing key");
+
+  // keys both found and not found on non-empty map
+  Map["a"] = 1;
+  Map["b"] = 2;
+  Map["c"] = 3;
+  EXPECT_EQ(1, Map.at("a"));
+  EXPECT_EQ(2, Map.at("b"));
+  EXPECT_EQ(3, Map.at("c"));
+  EXPECT_DEATH({ Map.at("d"); }, "StringMap::at failed due to a missing key");
+}
+
 // A more complex iteration test.
 TEST_F(StringMapTest, IterationTest) {
   bool visited[100];
