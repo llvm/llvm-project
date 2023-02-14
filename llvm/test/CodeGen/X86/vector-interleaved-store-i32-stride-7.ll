@@ -226,9 +226,8 @@ define void @store_i32_stride7_vf2(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512F-FAST-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512F-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = <0,2,4,u>
 ; AVX512F-FAST-NEXT:    vpermi2q %ymm3, %ymm0, %ymm1
-; AVX512F-FAST-NEXT:    vinserti64x4 $1, %ymm1, %zmm2, %zmm0
-; AVX512F-FAST-NEXT:    vmovdqa64 {{.*#+}} zmm1 = <0,2,4,6,8,10,12,1,3,5,7,9,11,13,u,u>
-; AVX512F-FAST-NEXT:    vpermd %zmm0, %zmm1, %zmm0
+; AVX512F-FAST-NEXT:    vmovdqa64 {{.*#+}} zmm0 = <0,2,4,6,16,18,20,1,3,5,7,17,19,21,u,u>
+; AVX512F-FAST-NEXT:    vpermi2d %zmm1, %zmm2, %zmm0
 ; AVX512F-FAST-NEXT:    vextracti32x4 $2, %zmm0, 32(%rax)
 ; AVX512F-FAST-NEXT:    vextracti32x4 $3, %zmm0, %xmm1
 ; AVX512F-FAST-NEXT:    vmovq %xmm1, 48(%rax)
@@ -278,9 +277,8 @@ define void @store_i32_stride7_vf2(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512BW-FAST-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512BW-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = <0,2,4,u>
 ; AVX512BW-FAST-NEXT:    vpermi2q %ymm3, %ymm0, %ymm1
-; AVX512BW-FAST-NEXT:    vinserti64x4 $1, %ymm1, %zmm2, %zmm0
-; AVX512BW-FAST-NEXT:    vmovdqa64 {{.*#+}} zmm1 = <0,2,4,6,8,10,12,1,3,5,7,9,11,13,u,u>
-; AVX512BW-FAST-NEXT:    vpermd %zmm0, %zmm1, %zmm0
+; AVX512BW-FAST-NEXT:    vmovdqa64 {{.*#+}} zmm0 = <0,2,4,6,16,18,20,1,3,5,7,17,19,21,u,u>
+; AVX512BW-FAST-NEXT:    vpermi2d %zmm1, %zmm2, %zmm0
 ; AVX512BW-FAST-NEXT:    vextracti32x4 $2, %zmm0, 32(%rax)
 ; AVX512BW-FAST-NEXT:    vextracti32x4 $3, %zmm0, %xmm1
 ; AVX512BW-FAST-NEXT:    vmovq %xmm1, 48(%rax)
@@ -392,7 +390,7 @@ define void @store_i32_stride7_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX1-ONLY-NEXT:    vbroadcastss (%r10), %ymm10
 ; AVX1-ONLY-NEXT:    vblendps {{.*#+}} ymm8 = ymm8[0,1,2,3,4,5],ymm10[6,7]
 ; AVX1-ONLY-NEXT:    vunpcklps {{.*#+}} ymm5 = ymm7[0],ymm5[0],ymm7[1],ymm5[1],ymm7[4],ymm5[4],ymm7[5],ymm5[5]
-; AVX1-ONLY-NEXT:    vshufps {{.*#+}} xmm3 = xmm4[0,0],xmm3[0,0]
+; AVX1-ONLY-NEXT:    vmovlhps {{.*#+}} xmm3 = xmm4[0],xmm3[0]
 ; AVX1-ONLY-NEXT:    vpermilps {{.*#+}} xmm3 = xmm3[0,1,2,0]
 ; AVX1-ONLY-NEXT:    vblendps {{.*#+}} ymm3 = ymm5[0,1],ymm3[2,3],ymm5[4,5,6,7]
 ; AVX1-ONLY-NEXT:    vblendps {{.*#+}} ymm3 = ymm3[0,1,2,3],ymm8[4,5,6],ymm3[7]
