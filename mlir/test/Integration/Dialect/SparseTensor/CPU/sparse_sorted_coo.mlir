@@ -4,7 +4,7 @@
 // DEFINE: TENSOR1="%mlir_src_dir/test/Integration/data/mttkrp_b.tns" \
 // DEFINE: mlir-cpu-runner \
 // DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_c_runner_utils | \
+// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // DEFINE: FileCheck %s
 //
 // RUN: %{compile} | %{run}
