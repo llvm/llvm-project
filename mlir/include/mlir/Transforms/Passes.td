@@ -160,7 +160,7 @@ def LoopInvariantCodeMotion : Pass<"loop-invariant-code-motion"> {
   let constructor = "mlir::createLoopInvariantCodeMotionPass()";
 }
 
-def PrintOpStats : Pass<"print-op-mutations"> {
+def PrintOpMutations : Pass<"print-op-mutations"> {
   let summary = "Print mutations on operations after pass or a pipeline";
   let constructor = "mlir::createPrintOpMutationsPass()";
 }

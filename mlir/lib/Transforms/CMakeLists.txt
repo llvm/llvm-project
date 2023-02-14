@@ -7,6 +7,7 @@ add_mlir_library(MLIRTransforms
   GenerateRuntimeVerification.cpp
   Inliner.cpp
   LocationSnapshot.cpp
+  OpMutations.cpp
   LoopInvariantCodeMotion.cpp
   OpStats.cpp
   SCCP.cpp

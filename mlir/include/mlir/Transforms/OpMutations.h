@@ -20,8 +20,9 @@
 #include <memory>
 
 namespace mlir {
-class Operation;
 class IRMapping;
+class Operation;
+class Pass;
 
 void getOpMutations(Operation *op_before, Operation *op_after,
                     const IRMapping &ir_map);
