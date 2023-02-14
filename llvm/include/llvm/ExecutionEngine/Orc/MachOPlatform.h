@@ -103,9 +103,6 @@ public:
   static ArrayRef<std::pair<const char *, const char *>>
   standardRuntimeUtilityAliases();
 
-  /// Returns true if the given section name is an initializer section.
-  static bool isInitializerSection(StringRef SegName, StringRef SectName);
-
 private:
   // Data needed for bootstrap only.
   struct BootstrapInfo {

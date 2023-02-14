@@ -10,6 +10,7 @@
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 
 #include "llvm/Object/COFF.h"
 
@@ -850,7 +851,7 @@ Error COFFPlatform::COFFPlatformPlugin::preserveInitializerSections(
     jitlink::LinkGraph &G, MaterializationResponsibility &MR) {
   JITLinkSymbolSet InitSectionSymbols;
   for (auto &Sec : G.sections())
-    if (COFFPlatform::isInitializerSection(Sec.getName()))
+    if (isCOFFInitializerSection(Sec.getName()))
       for (auto *B : Sec.blocks())
         if (!B->edges_empty())
           InitSectionSymbols.insert(
@@ -885,7 +886,7 @@ Error COFFPlatform::COFFPlatformPlugin::
 
   // Collect static initializers
   for (auto &S : G.sections())
-    if (COFFPlatform::isInitializerSection(S.getName()))
+    if (isCOFFInitializerSection(S.getName()))
       for (auto *B : S.blocks()) {
         if (B->edges_empty())
           continue;
