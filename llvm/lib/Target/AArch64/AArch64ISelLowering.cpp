@@ -1799,6 +1799,7 @@ void AArch64TargetLowering::addTypeForStreamingSVE(MVT VT) {
   setOperationAction(ISD::SETCC, VT, Custom);
   setOperationAction(ISD::SHL, VT, Custom);
   setOperationAction(ISD::SIGN_EXTEND, VT, Custom);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Custom);
   setOperationAction(ISD::SINT_TO_FP, VT, Custom);
   setOperationAction(ISD::SMAX, VT, Custom);
   setOperationAction(ISD::SMIN, VT, Custom);
