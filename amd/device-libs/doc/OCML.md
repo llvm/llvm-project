@@ -56,7 +56,7 @@ The language runtime can link a specific set of OCLC control libraries to proper
 - Exactly one of `oclc_wavefrontsize64_on.amdgcn.bc` or `oclc_wavefrontsize64_off.amdgcn.bc` depending on the kernel's requirements
 - Exactly one of `oclc_isa_version_XYZ.amdgcn.bc` where XYZ is the suffix of the `gfxXYZ` target name the kernel is being compiled for.
 
-If these rules are not follows, link time or execution time errors may result.
+If these rules are not followed, link time or execution time errors may result.
 
 ### Versioning
 
