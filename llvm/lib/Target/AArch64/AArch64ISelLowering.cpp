@@ -1779,6 +1779,7 @@ void AArch64TargetLowering::addTypeForStreamingSVE(MVT VT) {
   setOperationAction(ISD::FMUL, VT, Custom);
   setOperationAction(ISD::FNEARBYINT, VT, Custom);
   setOperationAction(ISD::FNEG, VT, Custom);
+  setOperationAction(ISD::FP_EXTEND, VT, Custom);
   setOperationAction(ISD::FP_ROUND, VT, Custom);
   setOperationAction(ISD::FP_TO_SINT, VT, Custom);
   setOperationAction(ISD::FP_TO_UINT, VT, Custom);
@@ -1796,6 +1797,7 @@ void AArch64TargetLowering::addTypeForStreamingSVE(MVT VT) {
   setOperationAction(ISD::MULHU, VT, Custom);
   setOperationAction(ISD::OR, VT, Custom);
   setOperationAction(ISD::SDIV, VT, Custom);
+  setOperationAction(ISD::SELECT, VT, Custom);
   setOperationAction(ISD::SETCC, VT, Custom);
   setOperationAction(ISD::SHL, VT, Custom);
   setOperationAction(ISD::SIGN_EXTEND, VT, Custom);
@@ -3881,7 +3883,8 @@ SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
   if (VT.isScalableVector())
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FP_EXTEND_MERGE_PASSTHRU);
 
-  if (useSVEForFixedLengthVectorVT(VT))
+  if (useSVEForFixedLengthVectorVT(VT,
+                                   Subtarget->forceStreamingCompatibleSVE()))
     return LowerFixedLengthFPExtendToSVE(Op, DAG);
 
   assert(Op.getValueType() == MVT::f128 && "Unexpected lowering");
@@ -9282,7 +9285,8 @@ SDValue AArch64TargetLowering::LowerSELECT(SDValue Op,
     return DAG.getNode(ISD::VSELECT, DL, Ty, SplatPred, TVal, FVal);
   }
 
-  if (useSVEForFixedLengthVectorVT(Ty)) {
+  if (useSVEForFixedLengthVectorVT(Ty,
+                                   Subtarget->forceStreamingCompatibleSVE())) {
     // FIXME: Ideally this would be the same as above using i1 types, however
     // for the moment we can't deal with fixed i1 vector types properly, so
     // instead extend the predicate to a result type sized integer vector.
