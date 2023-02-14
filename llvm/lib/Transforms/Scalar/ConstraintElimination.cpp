@@ -18,6 +18,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstraintSystem.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
@@ -26,11 +27,14 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 
 #include <cmath>
 #include <string>
@@ -47,6 +51,10 @@ DEBUG_COUNTER(EliminatedCounter, "conds-eliminated",
 static cl::opt<unsigned>
     MaxRows("constraint-elimination-max-rows", cl::init(500), cl::Hidden,
             cl::desc("Maximum number of rows to keep in constraint system"));
+
+static cl::opt<bool> DumpReproducers(
+    "constraint-elimination-dump-reproducers", cl::init(false), cl::Hidden,
+    cl::desc("Dump IR to reproduce successful transformations."));
 
 static int64_t MaxConstraintValue = std::numeric_limits<int64_t>::max();
 static int64_t MinSignedConstraintValue = std::numeric_limits<int64_t>::min();
@@ -746,7 +754,162 @@ void State::addInfoFor(BasicBlock &BB) {
         FactOrCheck::getFact(DT.getNode(Br->getSuccessor(1)), CmpI, true));
 }
 
-static bool checkAndReplaceCondition(CmpInst *Cmp, ConstraintInfo &Info) {
+namespace {
+/// Helper to keep track of a condition and if it should be treated as negated
+/// for reproducer construction.
+struct ReproducerEntry {
+  CmpInst *Cond;
+  bool IsNot;
+
+  ReproducerEntry(CmpInst *Cond, bool IsNot) : Cond(Cond), IsNot(IsNot) {}
+};
+} // namespace
+
+/// Helper function to generate a reproducer function for simplifying \p Cond.
+/// The reproducer function contains a series of @llvm.assume calls, one for
+/// each condition in \p Stack. For each condition, the operand instruction are
+/// cloned until we reach operands that have an entry in \p Value2Index. Those
+/// will then be added as function arguments. \p DT is used to order cloned
+/// instructions. The reproducer function will get added to \p M, if it is
+/// non-null. Otherwise no reproducer function is generated.
+static void generateReproducer(CmpInst *Cond, Module *M,
+                               ArrayRef<ReproducerEntry> Stack,
+                               ConstraintInfo &Info, DominatorTree &DT) {
+  if (!M)
+    return;
+
+  LLVMContext &Ctx = Cond->getContext();
+
+  LLVM_DEBUG(dbgs() << "Creating reproducer for " << *Cond << "\n");
+
+  ValueToValueMapTy Old2New;
+  SmallVector<Value *> Args;
+  SmallPtrSet<Value *, 8> Seen;
+  // Traverse Cond and its operands recursively until we reach a value that's in
+  // Value2Index or not an instruction, or not a operation that
+  // ConstraintElimination can decompose. Such values will be considered as
+  // external inputs to the reproducer, they are collected and added as function
+  // arguments later.
+  auto CollectArguments = [&](CmpInst *Cond) {
+    if (!Cond)
+      return;
+    auto &Value2Index =
+        Info.getValue2Index(CmpInst::isSigned(Cond->getPredicate()));
+    SmallVector<Value *, 4> WorkList;
+    WorkList.push_back(Cond);
+    while (!WorkList.empty()) {
+      Value *V = WorkList.pop_back_val();
+      if (!Seen.insert(V).second)
+        continue;
+      if (Old2New.find(V) != Old2New.end())
+        continue;
+      if (isa<Constant>(V))
+        continue;
+
+      auto *I = dyn_cast<Instruction>(V);
+      if (Value2Index.find(V) != Value2Index.end() || !I ||
+          !isa<CmpInst, BinaryOperator, GetElementPtrInst, CastInst>(V)) {
+        Old2New[V] = V;
+        Args.push_back(V);
+        LLVM_DEBUG(dbgs() << "  found external input " << *V << "\n");
+      } else {
+        append_range(WorkList, I->operands());
+      }
+    }
+  };
+
+  for (auto &Entry : Stack)
+    CollectArguments(Entry.Cond);
+  CollectArguments(Cond);
+
+  SmallVector<Type *> ParamTys;
+  for (auto *P : Args)
+    ParamTys.push_back(P->getType());
+
+  FunctionType *FTy = FunctionType::get(Cond->getType(), ParamTys,
+                                        /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage,
+                                 Cond->getModule()->getName() +
+                                     Cond->getFunction()->getName() + "repro",
+                                 M);
+  // Add arguments to the reproducer function for each external value collected.
+  for (unsigned I = 0; I < Args.size(); ++I) {
+    F->getArg(I)->setName(Args[I]->getName());
+    Old2New[Args[I]] = F->getArg(I);
+  }
+
+  BasicBlock *Entry = BasicBlock::Create(Ctx, "entry", F);
+  IRBuilder<> Builder(Entry);
+  Builder.CreateRet(Builder.getTrue());
+  Builder.SetInsertPoint(Entry->getTerminator());
+
+  // Clone instructions in \p Ops and their operands recursively until reaching
+  // an value in Value2Index (external input to the reproducer). Update Old2New
+  // mapping for the original and cloned instructions. Sort instructions to
+  // clone by dominance, then insert the cloned instructions in the function.
+  auto CloneInstructions = [&](ArrayRef<Value *> Ops, bool IsSigned) {
+    SmallVector<Value *, 4> WorkList(Ops);
+    SmallVector<Instruction *> ToClone;
+    auto &Value2Index = Info.getValue2Index(IsSigned);
+    while (!WorkList.empty()) {
+      Value *V = WorkList.pop_back_val();
+      if (Old2New.find(V) != Old2New.end())
+        continue;
+
+      auto *I = dyn_cast<Instruction>(V);
+      if (Value2Index.find(V) == Value2Index.end() && I) {
+        Old2New[V] = nullptr;
+        ToClone.push_back(I);
+        append_range(WorkList, I->operands());
+      }
+    }
+
+    sort(ToClone,
+         [&DT](Instruction *A, Instruction *B) { return DT.dominates(A, B); });
+    for (Instruction *I : ToClone) {
+      Instruction *Cloned = I->clone();
+      Old2New[I] = Cloned;
+      Old2New[I]->setName(I->getName());
+      Cloned->insertBefore(&*Builder.GetInsertPoint());
+      Cloned->dropUnknownNonDebugMetadata();
+      Cloned->setDebugLoc({});
+    }
+  };
+
+  // Materialize the assumptions for the reproducer using the entries in Stack.
+  // That is, first clone the operands of the condition recursively until we
+  // reach an external input to the reproducer and add them to the reproducer
+  // function. Then add an ICmp for the condition (with the inverse predicate if
+  // the entry is negated) and an assert using the ICmp.
+  for (auto &Entry : Stack) {
+    if (!Entry.Cond)
+      continue;
+
+    LLVM_DEBUG(dbgs() << "  Materializing assumption " << *Entry.Cond << "\n");
+    CmpInst::Predicate Pred = Entry.Cond->getPredicate();
+    if (Entry.IsNot)
+      Pred = CmpInst::getInversePredicate(Pred);
+
+    CloneInstructions({Entry.Cond->getOperand(0), Entry.Cond->getOperand(1)},
+                      CmpInst::isSigned(Entry.Cond->getPredicate()));
+
+    auto *Cmp = Builder.CreateICmp(Pred, Entry.Cond->getOperand(0),
+                                   Entry.Cond->getOperand(1));
+    Builder.CreateAssumption(Cmp);
+  }
+
+  // Finally, clone the condition to reproduce and remap instruction operands in
+  // the reproducer using Old2New.
+  CloneInstructions(Cond, CmpInst::isSigned(Cond->getPredicate()));
+  Entry->getTerminator()->setOperand(0, Cond);
+  remapInstructionsInBlocks({Entry}, Old2New);
+
+  assert(!verifyFunction(*F, &dbgs()));
+}
+
+static bool checkAndReplaceCondition(
+    CmpInst *Cmp, ConstraintInfo &Info, Module *ReproducerModule,
+    ArrayRef<ReproducerEntry> ReproducerCondStack, DominatorTree &DT) {
   LLVM_DEBUG(dbgs() << "Checking " << *Cmp << "\n");
 
   CmpInst::Predicate Pred = Cmp->getPredicate();
@@ -780,6 +943,7 @@ static bool checkAndReplaceCondition(CmpInst *Cmp, ConstraintInfo &Info) {
       dbgs() << "Condition " << *Cmp << " implied by dominating constraints\n";
       dumpWithNames(CSToUse, Info.getValue2Index(R.IsSigned));
     });
+    generateReproducer(Cmp, ReproducerModule, ReproducerCondStack, Info, DT);
     Constant *TrueC =
         ConstantInt::getTrue(CmpInst::makeCmpResultType(Cmp->getType()));
     Cmp->replaceUsesWithIf(TrueC, [](Use &U) {
@@ -799,6 +963,7 @@ static bool checkAndReplaceCondition(CmpInst *Cmp, ConstraintInfo &Info) {
       dbgs() << "Condition !" << *Cmp << " implied by dominating constraints\n";
       dumpWithNames(CSToUse, Info.getValue2Index(R.IsSigned));
     });
+    generateReproducer(Cmp, ReproducerModule, ReproducerCondStack, Info, DT);
     Constant *FalseC =
         ConstantInt::getFalse(CmpInst::makeCmpResultType(Cmp->getType()));
     Cmp->replaceAllUsesWith(FalseC);
@@ -919,12 +1084,15 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
   return Changed;
 }
 
-static bool eliminateConstraints(Function &F, DominatorTree &DT) {
+static bool eliminateConstraints(Function &F, DominatorTree &DT,
+                                 OptimizationRemarkEmitter &ORE) {
   bool Changed = false;
   DT.updateDFSNumbers();
 
   ConstraintInfo Info(F.getParent()->getDataLayout());
   State S(DT);
+  std::unique_ptr<Module> ReproducerModule(
+      DumpReproducers ? new Module(F.getName(), F.getContext()) : nullptr);
 
   // First, collect conditions implied by branches and blocks with their
   // Dominator DFS in and out numbers.
@@ -968,6 +1136,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
 
   // Finally, process ordered worklist and eliminate implied conditions.
   SmallVector<StackEntry, 16> DFSInStack;
+  SmallVector<ReproducerEntry> ReproducerCondStack;
   for (FactOrCheck &CB : S.WorkList) {
     // First, pop entries from the stack that are out-of-scope for CB. Remove
     // the corresponding entry from the constraint system.
@@ -993,6 +1162,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
         Mapping.erase(V);
       Info.popLastNVariables(E.IsSigned, E.ValuesToRelease.size());
       DFSInStack.pop_back();
+      if (ReproducerModule)
+        ReproducerCondStack.pop_back();
     }
 
     LLVM_DEBUG({
@@ -1010,7 +1181,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
       if (auto *II = dyn_cast<WithOverflowInst>(CB.Inst)) {
         Changed |= tryToSimplifyOverflowMath(II, Info, ToRemove);
       } else if (auto *Cmp = dyn_cast<ICmpInst>(CB.Inst)) {
-        Changed |= checkAndReplaceCondition(Cmp, Info);
+        Changed |= checkAndReplaceCondition(Cmp, Info, ReproducerModule.get(),
+                                            ReproducerCondStack, S.DT);
       }
       continue;
     }
@@ -1032,8 +1204,30 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
         Pred = CmpInst::getInversePredicate(Pred);
 
       Info.addFact(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
+      if (ReproducerModule && DFSInStack.size() > ReproducerCondStack.size())
+        ReproducerCondStack.emplace_back(cast<CmpInst>(Cmp), CB.Not);
+
       Info.transferToOtherSystem(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
+      if (ReproducerModule && DFSInStack.size() > ReproducerCondStack.size()) {
+        // Add dummy entries to ReproducerCondStack to keep it in sync with
+        // DFSInStack.
+        for (unsigned I = 0,
+                      E = (DFSInStack.size() - ReproducerCondStack.size());
+             I < E; ++I) {
+          ReproducerCondStack.emplace_back(nullptr, false);
+        }
+      }
     }
+  }
+
+  if (ReproducerModule && !ReproducerModule->functions().empty()) {
+    std::string S;
+    raw_string_ostream StringS(S);
+    ReproducerModule->print(StringS, nullptr);
+    StringS.flush();
+    OptimizationRemark Rem(DEBUG_TYPE, "Reproducer", &F);
+    Rem << ore::NV("module") << S;
+    ORE.emit(Rem);
   }
 
 #ifndef NDEBUG
@@ -1053,7 +1247,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
 PreservedAnalyses ConstraintEliminationPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  if (!eliminateConstraints(F, DT))
+  auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+  if (!eliminateConstraints(F, DT, ORE))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
