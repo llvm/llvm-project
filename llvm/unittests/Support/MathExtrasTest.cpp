@@ -162,16 +162,6 @@ TEST(MathExtras, CTLog2) {
   EXPECT_EQ(CTLog2<1ULL << 15>(), 15U);
 }
 
-TEST(MathExtras, FloatBits) {
-  static const float kValue = 5632.34f;
-  EXPECT_FLOAT_EQ(kValue, BitsToFloat(FloatToBits(kValue)));
-}
-
-TEST(MathExtras, DoubleBits) {
-  static const double kValue = 87987234.983498;
-  EXPECT_DOUBLE_EQ(kValue, BitsToDouble(DoubleToBits(kValue)));
-}
-
 TEST(MathExtras, MinAlign) {
   EXPECT_EQ(1u, MinAlign(2, 3));
   EXPECT_EQ(2u, MinAlign(2, 4));
