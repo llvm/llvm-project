@@ -50,12 +50,6 @@ value llvm_add_global_dce(LLVMPassManagerRef PM) {
 }
 
 /* [`Module] Llvm.PassManager.t -> unit */
-value llvm_add_global_optimizer(LLVMPassManagerRef PM) {
-  LLVMAddGlobalOptimizerPass(PM);
-  return Val_unit;
-}
-
-/* [`Module] Llvm.PassManager.t -> unit */
 value llvm_add_ipsccp(LLVMPassManagerRef PM) {
   LLVMAddIPSCCPPass(PM);
   return Val_unit;

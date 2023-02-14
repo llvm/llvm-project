@@ -42,9 +42,6 @@ void LLVMAddAlwaysInlinerPass(LLVMPassManagerRef PM);
 /** See llvm::createGlobalDCEPass function. */
 void LLVMAddGlobalDCEPass(LLVMPassManagerRef PM);
 
-/** See llvm::createGlobalOptimizerPass function. */
-void LLVMAddGlobalOptimizerPass(LLVMPassManagerRef PM);
-
 /** See llvm::createIPSCCPPass function. */
 void LLVMAddIPSCCPPass(LLVMPassManagerRef PM);
 
