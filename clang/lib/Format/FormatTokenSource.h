@@ -236,7 +236,7 @@ public:
   }
 
   FormatToken *insertTokens(ArrayRef<FormatToken *> Tokens) override {
-    assert(false && "Cannot insert tokens while parsing a macro.");
+    llvm_unreachable("Cannot insert tokens while parsing a macro.");
   }
 
 private:
