@@ -13,6 +13,7 @@
 #include "gtest/gtest.h"
 
 #include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
+#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "llvm/ADT/StringRef.h"
 #include "swift/Demangling/Demangle.h"
 #include "swift/Demangling/Demangler.h"
@@ -818,4 +819,156 @@ TEST_F(TestTypeSystemSwiftTypeRef, IsTupleType) {
     lldb::opaque_compiler_type_t opaque = t.GetOpaqueQualType();
     ASSERT_FALSE(m_swift_ts->IsTupleType(opaque));
   }
+}
+
+TEST_F(TestTypeSystemSwiftTypeRef, GenericSignature) {
+  {
+    auto maybe_signature = SwiftLanguageRuntime::GetGenericSignature(
+        "$s1a2f42usyx_q_txQp_tq_Rhzr0_lF", *m_swift_ts);
+    ASSERT_TRUE(maybe_signature.hasValue());
+    auto s = *maybe_signature;
+    ASSERT_EQ(s.generic_params.size(), 2);
+    ASSERT_EQ(s.generic_params[0].depth, 0);
+    ASSERT_EQ(s.generic_params[0].index, 0);
+    ASSERT_EQ(s.generic_params[1].depth, 0);
+    ASSERT_EQ(s.generic_params[1].index, 1);
+    ASSERT_TRUE(s.generic_params[0].same_shape[1]);
+    ASSERT_TRUE(s.generic_params[1].same_shape[0]);
+  }
+  {
+    auto maybe_signature = SwiftLanguageRuntime::GetGenericSignature(
+        "$s1a1SV1f2ts1vqd_1_qd__qd__Qp_qd_0_tr1_lF", *m_swift_ts);
+    ASSERT_TRUE(maybe_signature.hasValue());
+    auto s = *maybe_signature;
+    ASSERT_EQ(s.generic_params.size(), 3);
+    ASSERT_EQ(s.generic_params[0].depth, 1);
+    ASSERT_EQ(s.generic_params[0].index, 0);
+    ASSERT_EQ(s.generic_params[1].depth, 1);
+    ASSERT_EQ(s.generic_params[1].index, 1);
+    ASSERT_EQ(s.generic_params[2].depth, 1);
+    ASSERT_EQ(s.generic_params[2].index, 2);
+    ASSERT_FALSE(s.generic_params[0].same_shape[1]);
+    ASSERT_FALSE(s.generic_params[0].same_shape[2]);
+    ASSERT_FALSE(s.generic_params[1].same_shape[0]);
+    ASSERT_FALSE(s.generic_params[1].same_shape[2]);
+    ASSERT_FALSE(s.generic_params[2].same_shape[0]);
+    ASSERT_FALSE(s.generic_params[2].same_shape[1]);
+  }
+  {
+    // public func f1<T...>(ts: repeat each T) {}
+    // define swiftcc void @"$s1a2f12tsyxxQp_tlF"(%swift.opaque** noalias nocapture %0, i64 %1, %swift.type** %T)
+    auto maybe_signature = SwiftLanguageRuntime::GetGenericSignature(
+        "$s1a2f12tsyxxQp_tlF", *m_swift_ts);
+    ASSERT_TRUE(maybe_signature.hasValue());
+    auto s = *maybe_signature;
+    ASSERT_EQ(s.generic_params.size(), 1);
+    ASSERT_EQ(s.pack_expansions.size(), 1);
+    ASSERT_EQ(s.GetNumValuePacks(), 1);
+    ASSERT_EQ(s.GetNumTypePacks(), 1);
+    ASSERT_EQ(s.GetCountForValuePack(0), 0);
+    ASSERT_EQ(s.GetCountForTypePack(0), 0);
+  }
+  {
+    // public func f2<U..., V...>(us: repeat each U, vs: repeat each V) {}
+    // define swiftcc void @"$s1a2f22us2vsyxxQp_q_q_Qptr0_lF"(%swift.opaque** noalias nocapture %0, %swift.opaque** noalias nocapture %1, i64 %2, i64 %3, %swift.type** %U, %swift.type** %V)
+    auto maybe_signature = SwiftLanguageRuntime::GetGenericSignature(
+        "$s1a2f22us2vsyxxQp_q_q_Qptr0_lF", *m_swift_ts);
+    ASSERT_TRUE(maybe_signature.hasValue());
+    auto s = *maybe_signature;
+    ASSERT_EQ(s.generic_params.size(), 2);
+    ASSERT_EQ(s.pack_expansions.size(), 2);
+    ASSERT_EQ(s.GetNumValuePacks(), 2);
+    ASSERT_EQ(s.GetNumTypePacks(), 2);
+    ASSERT_EQ(s.GetCountForValuePack(0), 0);
+    ASSERT_EQ(s.GetCountForValuePack(1), 1);
+    ASSERT_EQ(s.GetCountForTypePack(0), 0);
+    ASSERT_EQ(s.GetCountForTypePack(1), 1);
+  }
+  {
+    // public func f3<T...>(ts: repeat each T, more_ts: repeat each T) {}
+    // define swiftcc void @"$s1a2f32ts05more_B0yxxQp_xxQptlF"(%swift.opaque** noalias nocapture %0, %swift.opaque** noalias nocapture %1, i64 %2, %swift.type** %T)
+
+    auto maybe_signature = SwiftLanguageRuntime::GetGenericSignature(
+        "$s1a2f32ts05more_B0yxxQp_xxQptlF", *m_swift_ts);
+    ASSERT_TRUE(maybe_signature.hasValue());
+    auto s = *maybe_signature;
+    ASSERT_EQ(s.generic_params.size(), 1);
+    ASSERT_EQ(s.pack_expansions.size(), 2);
+    ASSERT_EQ(s.GetNumValuePacks(), 2);
+    ASSERT_EQ(s.GetNumTypePacks(), 1);
+    ASSERT_EQ(s.GetCountForValuePack(0), 0);
+    ASSERT_EQ(s.GetCountForValuePack(1), 0);
+    ASSERT_EQ(s.GetCountForTypePack(0), 0);
+  }
+  {
+    // public func f4<U..., V...>(us: repeat (each U, each V)) {}
+    // define swiftcc void @"$s1a2f42usyx_q_txQp_tq_Rhzr0_lF"(%swift.opaque** noalias nocapture %0, i64 %1, %swift.type** %U, %swift.type** %V)
+
+    auto maybe_signature = SwiftLanguageRuntime::GetGenericSignature(
+        "$s1a2f42usyx_q_txQp_tq_Rhzr0_lF", *m_swift_ts);
+    ASSERT_TRUE(maybe_signature.hasValue());
+    auto s = *maybe_signature;
+    ASSERT_EQ(s.generic_params.size(), 2);
+    ASSERT_EQ(s.pack_expansions.size(), 1);
+    ASSERT_EQ(s.GetNumValuePacks(), 1);
+    ASSERT_EQ(s.GetNumTypePacks(), 2);
+    ASSERT_EQ(s.GetCountForValuePack(0), 0);
+    ASSERT_EQ(s.GetCountForTypePack(0), 0);
+    ASSERT_EQ(s.GetCountForTypePack(1), 0);
+  }
+  {
+    // public func f5<T..., U>(ts: repeat (each T, U)) {}
+    // define swiftcc void @"$s1a2f52tsyx_q_txQp_tr0_lF"(%swift.opaque** noalias nocapture %0, i64 %1, %swift.type** %T, %swift.type* %U) #0 !dbg !112 {
+
+    auto maybe_signature = SwiftLanguageRuntime::GetGenericSignature(
+        "$s1a2f52tsyx_q_txQp_tr0_lF", *m_swift_ts);
+    ASSERT_TRUE(maybe_signature.hasValue());
+    auto s = *maybe_signature;
+    ASSERT_EQ(s.generic_params.size(), 2);
+    ASSERT_EQ(s.pack_expansions.size(), 1);
+    ASSERT_EQ(s.GetNumValuePacks(), 1);
+    ASSERT_EQ(s.GetNumTypePacks(), 1);
+    ASSERT_EQ(s.GetCountForValuePack(0), 0);
+    ASSERT_EQ(s.GetCountForTypePack(0), 0);
+  }
+  {
+    // public func f6<U..., V...>(us: repeat each U, more_us: repeat each U, vs: repeat each V) {}
+    // define swiftcc void @"$s1a2f62us05more_B02vsyxxQp_xxQpq_q_Qptr0_lF"(%swift.opaque** noalias nocapture %0, %swift.opaque** noalias nocapture %1, %swift.opaque** noalias nocapture %2, i64 %3, i64 %4, %swift.type** %U, %swift.type** %V) #0 !dbg !112 {
+
+    auto maybe_signature = SwiftLanguageRuntime::GetGenericSignature(
+        "$s1a2f62us05more_B02vsyxxQp_xxQpq_q_Qptr0_lF", *m_swift_ts);
+    ASSERT_TRUE(maybe_signature.hasValue());
+    auto s = *maybe_signature;
+    ASSERT_EQ(s.generic_params.size(), 2);
+    ASSERT_EQ(s.pack_expansions.size(), 3);
+    ASSERT_EQ(s.GetNumValuePacks(), 3);
+    ASSERT_EQ(s.GetNumTypePacks(), 2);
+    ASSERT_EQ(s.GetCountForValuePack(0), 0);
+    ASSERT_EQ(s.GetCountForValuePack(1), 0);
+    ASSERT_EQ(s.GetCountForValuePack(2), 1);
+    ASSERT_EQ(s.GetCountForTypePack(0), 0);
+    ASSERT_EQ(s.GetCountForTypePack(1), 1);
+  }
+
+  {  
+    // public func f7<U..., V...>(us: repeat each U, vs: repeat each V, more_us: repeat each U, more_vs: repeat each V) {}
+    // define swiftcc void @"$s1a2f72us2vs05more_B00d1_C0yxxQp_q_q_QpxxQpq_q_Qptr0_lF"(%swift.opaque** noalias nocapture %0, %swift.opaque** noalias nocapture %1, %swift.opaque** noalias nocapture %2, %swift.opaque** noalias nocapture %3, i64 %4, i64 %5, %swift.type** %U, %swift.type** %V) #0 !dbg !112 {
+
+    auto maybe_signature = SwiftLanguageRuntime::GetGenericSignature(
+        "$s1a2f72us2vs05more_B00d1_C0yxxQp_q_q_QpxxQpq_q_Qptr0_lF",
+        *m_swift_ts);
+    ASSERT_TRUE(maybe_signature.hasValue());
+    auto s = *maybe_signature;
+    ASSERT_EQ(s.generic_params.size(), 2);
+    ASSERT_EQ(s.pack_expansions.size(), 4);
+    ASSERT_EQ(s.GetNumValuePacks(), 4);
+    ASSERT_EQ(s.GetNumTypePacks(), 2);
+    ASSERT_EQ(s.GetCountForValuePack(0), 0);
+    ASSERT_EQ(s.GetCountForValuePack(1), 1);
+    ASSERT_EQ(s.GetCountForValuePack(2), 0);
+    ASSERT_EQ(s.GetCountForValuePack(3), 1);
+    ASSERT_EQ(s.GetCountForTypePack(0), 0);
+    ASSERT_EQ(s.GetCountForTypePack(1), 1);
+  }
+
 }
