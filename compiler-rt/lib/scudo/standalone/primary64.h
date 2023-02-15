@@ -55,7 +55,7 @@ public:
 
   static uptr getSizeByClassId(uptr ClassId) {
     return (ClassId == SizeClassMap::BatchClassId)
-               ? roundUpTo(sizeof(TransferBatch), 1U << CompactPtrScale)
+               ? roundUp(sizeof(TransferBatch), 1U << CompactPtrScale)
                : SizeClassMap::getSizeByClassId(ClassId);
   }
 
@@ -638,7 +638,7 @@ private:
     if (TotalUserBytes > MappedUser) {
       // Do the mmap for the user memory.
       const uptr MapSize =
-          roundUpTo(TotalUserBytes - MappedUser, MapSizeIncrement);
+          roundUp(TotalUserBytes - MappedUser, MapSizeIncrement);
       const uptr RegionBase = RegionBeg - getRegionBaseByClassId(ClassId);
       if (UNLIKELY(RegionBase + MappedUser + MapSize > RegionSize)) {
         Region->Exhausted = true;
