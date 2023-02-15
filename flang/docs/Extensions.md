@@ -545,6 +545,13 @@ end module
   left-hand side for a pointer assignment statement, and we emit a
   portability warning when it is not.
 
+* F18 allows a `USE` statement to reference a module that is defined later
+  in the same compilation unit, so long as mutual dependencies do not form
+  a cycle.
+  This feature forestalls any risk of such a `USE` statement reading an
+  obsolete module file from a previous compilation and then overwriting
+  that file later.
+
 ## De Facto Standard Features
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the
