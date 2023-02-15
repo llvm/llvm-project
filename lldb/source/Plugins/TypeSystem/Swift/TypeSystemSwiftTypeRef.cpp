@@ -643,6 +643,18 @@ swift::Demangle::NodePointer TypeSystemSwiftTypeRef::Transform(
   return fn(node);
 }
 
+void TypeSystemSwiftTypeRef::PreOrderTraversal(
+    swift::Demangle::NodePointer node,
+    std::function<bool(swift::Demangle::NodePointer)> visitor) {
+  if (!node)
+    return;
+  if (!visitor(node))
+    return;
+
+  for (swift::Demangle::NodePointer child : *node) 
+    PreOrderTraversal(child, visitor);
+}
+
 /// Desugar a sugared type.
 static swift::Demangle::NodePointer
 Desugar(swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
@@ -1264,6 +1276,13 @@ TypeSystemSwiftTypeRef::CollectTypeInfo(swift::Demangle::Demangler &dem,
           CollectTypeInfo(dem, node_clangtype.first, unresolved_typealias);
       return swift_flags;
     }
+    case Node::Kind::PackExpansion:
+      swift_flags |= eTypeIsPack;
+      break;
+    case Node::Kind::SILPackDirect:
+    case Node::Kind::SILPackIndirect:
+      swift_flags |= eTypeIsPack;
+      return swift_flags;
     default:
       break;
     }
@@ -1587,11 +1606,15 @@ template <typename T> bool Equivalent(T l, T r) {
 /// Specialization for GetTypeInfo().
 template <> bool Equivalent<uint32_t>(uint32_t l, uint32_t r) {
   if (l != r) {
+    // The expanded pack types only exist in the typeref typesystem.
+    if ((l & lldb::eTypeIsPack))
+      return true;
+
     // Failure. Dump it for easier debugging.
     llvm::dbgs() << "TypeSystemSwiftTypeRef diverges from SwiftASTContext:\n";
 #define HANDLE_ENUM_CASE(VAL, CASE)                                            \
   if (VAL & CASE)                                                              \
-  llvm::dbgs() << " | " << #CASE
+    llvm::dbgs() << " | " << #CASE
 
     llvm::dbgs() << "l = " << l;
     HANDLE_ENUM_CASE(l, eTypeHasChildren);
@@ -1623,6 +1646,7 @@ template <> bool Equivalent<uint32_t>(uint32_t l, uint32_t r) {
     HANDLE_ENUM_CASE(l, eTypeIsTuple);
     HANDLE_ENUM_CASE(l, eTypeIsMetatype);
     HANDLE_ENUM_CASE(l, eTypeHasUnboundGeneric);
+    HANDLE_ENUM_CASE(l, eTypeIsPack);
     llvm::dbgs() << "\nr = " << r;
 
     HANDLE_ENUM_CASE(r, eTypeHasChildren);
@@ -1654,6 +1678,7 @@ template <> bool Equivalent<uint32_t>(uint32_t l, uint32_t r) {
     HANDLE_ENUM_CASE(r, eTypeIsTuple);
     HANDLE_ENUM_CASE(r, eTypeIsMetatype);
     HANDLE_ENUM_CASE(r, eTypeHasUnboundGeneric);
+    HANDLE_ENUM_CASE(r, eTypeIsPack);
     llvm::dbgs() << "\n";
   }
   return l == r;
@@ -2518,6 +2543,9 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
     if (IsFunctionType(type))
       return GetPointerByteSize() * 8;
 
+    if (IsSILPackType({weak_from_this(), type}))
+      return GetPointerByteSize() * 8;
+
     // Clang types can be resolved even without a process.
     if (CompilerType clang_type = GetAsClangTypeOrNull(type)) {
       // Swift doesn't know pointers: return the size of the object
@@ -3321,6 +3349,77 @@ TypeSystemSwiftTypeRef::GetInstanceType(opaque_compiler_type_t type) {
   };
   VALIDATE_AND_RETURN(impl, GetInstanceType, type, g_no_exe_ctx,
                       (ReconstructType(type)), (ReconstructType(type)));
+}
+
+CompilerType TypeSystemSwiftTypeRef::CreateSILPackType(CompilerType type,
+                                                       bool indirect) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodePointer node =
+      GetDemangledType(dem, type.GetMangledTypeName().GetStringRef());
+  if (!node)
+    return {};
+  NodePointer pack_type = dem.createNode(indirect ? Node::Kind::SILPackIndirect
+                                                  : Node::Kind::SILPackDirect);
+  pack_type->addChild(node, dem);
+  NodePointer type_node = dem.createNode(Node::Kind::Type);
+  type_node->addChild(pack_type, dem);
+  return RemangleAsType(dem, type_node);
+}
+
+static llvm::Optional<TypeSystemSwiftTypeRef::PackTypeInfo>
+decodeSILPackType(swift::Demangle::Demangler dem, CompilerType type,
+                  swift::Demangle::NodePointer &node) {
+  TypeSystemSwiftTypeRef::PackTypeInfo info;
+  node = GetDemangledType(dem, type.GetMangledTypeName().GetStringRef());
+  if (!node)
+    return {};
+  switch (node->getKind()) {
+  case Node::Kind::SILPackIndirect:
+    info.indirect = true;
+    break;
+  case Node::Kind::SILPackDirect:
+    info.indirect = false;
+    break;
+  default:
+    return {};
+  }
+  if (node->getNumChildren() != 1)
+    return {};
+  node = node->getFirstChild();
+  if (node->getKind() != Node::Kind::Type)
+    return {};
+  node = node->getFirstChild();
+  info.expanded = node->getKind() == Node::Kind::Tuple;
+  if (info.expanded)
+    info.count = node->getNumChildren();
+  return info;
+}
+
+llvm::Optional<TypeSystemSwiftTypeRef::PackTypeInfo>
+TypeSystemSwiftTypeRef::IsSILPackType(CompilerType type) {
+  NodePointer node;
+  swift::Demangle::Demangler dem;
+  return decodeSILPackType(dem, type, node);
+}
+
+CompilerType TypeSystemSwiftTypeRef::GetSILPackElementAtIndex(CompilerType type,
+                                                              unsigned i) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodePointer node;
+  if (auto Info = decodeSILPackType(dem, type, node)) {
+    if (node->getNumChildren() < i)
+      return {};
+    node = node->getChild(i);
+    if (!node || node->getKind() != Node::Kind::TupleElement)
+      return {};
+    node = node->getFirstChild();
+    if (!node || node->getKind() != Node::Kind::Type)
+      return {};
+    return RemangleAsType(dem, node);
+  }
+  return {};
 }
 
 CompilerType TypeSystemSwiftTypeRef::CreateTupleType(

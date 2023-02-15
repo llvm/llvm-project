@@ -269,6 +269,15 @@ public:
   CompilerType GetErrorType() override;
   CompilerType GetReferentType(lldb::opaque_compiler_type_t type) override;
   CompilerType GetInstanceType(lldb::opaque_compiler_type_t type) override;
+  /// Wrap type inside a SILPackType.
+  CompilerType CreateSILPackType(CompilerType type, bool indirect);
+  struct PackTypeInfo {
+    unsigned count = 0;
+    bool indirect = false;
+    bool expanded = false;
+  };
+  llvm::Optional<PackTypeInfo> IsSILPackType(CompilerType type);
+  CompilerType GetSILPackElementAtIndex(CompilerType type, unsigned i);
   CompilerType
   CreateTupleType(const std::vector<TupleElement> &elements) override;
   bool IsTupleType(lldb::opaque_compiler_type_t type) override;
@@ -296,7 +305,13 @@ public:
   static swift::Demangle::NodePointer Transform(
       swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
       std::function<swift::Demangle::NodePointer(swift::Demangle::NodePointer)>
-          fn);
+          visitor);
+
+  /// A left-to-right preorder traversal. Don't visit children if
+  /// visitor returns false.
+  static void
+  PreOrderTraversal(swift::Demangle::NodePointer node,
+                    std::function<bool(swift::Demangle::NodePointer)>);
 
   /// Canonicalize Array, Dictionary and Optional to their sugared form.
   static swift::Demangle::NodePointer

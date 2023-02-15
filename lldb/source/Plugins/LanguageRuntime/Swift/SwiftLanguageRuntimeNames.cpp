@@ -1172,5 +1172,172 @@ SwiftLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
                                                    bool stop_others) {
   return ::GetStepThroughTrampolinePlan(thread, stop_others);
 }
+
+llvm::Optional<SwiftLanguageRuntime::GenericSignature>
+SwiftLanguageRuntime::GetGenericSignature(StringRef function_name,
+                                          TypeSystemSwiftTypeRef &ts) {
+  GenericSignature signature;
+  unsigned num_generic_params = 0;
+
+  // Walk to the function type.
+  Context ctx;
+  auto *node = SwiftLanguageRuntime::DemangleSymbolAsNode(function_name, ctx);
+  if (!node)
+    return {};
+  if (node->getKind() != swift::Demangle::Node::Kind::Global)
+    return {};
+  if (node->getNumChildren() != 1)
+    return {};
+  node = node->getFirstChild();
+  for (auto child : *node)
+    if (child->getKind() == swift::Demangle::Node::Kind::Type) {
+      node = child;
+      break;
+    }
+  if (node->getKind() != swift::Demangle::Node::Kind::Type)
+    return {};
+  if (node->getNumChildren() != 1)
+    return {};
+  node = node->getFirstChild();
+
+  // Collect all the generic parameters.
+  // Build a sorted map of (depth, index) -> <idx in signature.generic_params>.
+  std::map<std::pair<unsigned, unsigned>, unsigned> param_idx;
+  ForEachGenericParameter(node, [&](unsigned depth, unsigned index) {
+    param_idx[{depth, index}] = 0;
+  });
+  num_generic_params = param_idx.size();
+  unsigned i = 0;
+  for (auto &p : param_idx) {
+    param_idx[p.first] = i;
+    signature.generic_params.emplace_back(p.first.first, p.first.second,
+                                          num_generic_params);
+    // Every generic parameter has the same shape as itself.
+    signature.generic_params.back().same_shape.set(i);
+    ++i;
+  }
+
+  // Collect the same shape requirements and store them in the
+  // same_shape bit vector.
+  if (node->getKind() != swift::Demangle::Node::Kind::DependentGenericType)
+    return {};
+  if (node->getNumChildren() != 2)
+    return {};
+  auto sig_node = node->getFirstChild();
+  if (sig_node->getKind() !=
+      swift::Demangle::Node::Kind::DependentGenericSignature)
+    return {};
+  for (auto child : *sig_node) {
+    if (child->getKind() ==
+            swift::Demangle::Node::Kind::DependentGenericParamCount &&
+        child->hasIndex()) {
+      if (child->getIndex() != num_generic_params)
+        return {};
+      continue;
+    }
+    if (child->getKind() ==
+        swift::Demangle::Node::Kind::DependentGenericSameShapeRequirement) {
+      if (child->getNumChildren() != 2)
+        return {};
+      llvm::SmallVector<unsigned, 2> idx;
+      ForEachGenericParameter(child, [&](unsigned depth, unsigned index) {
+        idx.push_back(param_idx[{depth, index}]);
+      });
+      if (idx.size() != 2)
+        return {};
+
+      signature.generic_params[idx[0]].same_shape.set(idx[1]);
+      signature.generic_params[idx[1]].same_shape.set(idx[0]);
+    }
+  }
+
+  // Collect the shapes of the packs.
+  node = node->getLastChild();
+  if (node->getKind() != swift::Demangle::Node::Kind::Type)
+    return {};
+  bool error = false;
+  // For each pack_expansion...
+  swift::Demangle::NodePointer type_node = nullptr;
+  TypeSystemSwiftTypeRef::PreOrderTraversal(
+      node, [&](swift::Demangle::NodePointer node) {
+        if (node->getKind() == swift::Demangle::Node::Kind::PackExpansion) {
+          if (node->getNumChildren() != 2) {
+            error = true;
+            return false;
+          }
+          unsigned n = 0;
+          // Store the shape of each pack expansion as index into
+          // signature.generic_params.
+          ForEachGenericParameter(
+              node->getLastChild(), [&](unsigned depth, unsigned index) {
+                unsigned idx = param_idx[{depth, index}];
+                signature.pack_expansions.push_back({num_generic_params, idx});
+                ++n;
+              });
+          if (n != 1)
+            error = true;
+
+          // Record the generic parameters used in this expansion.
+          ForEachGenericParameter(
+              node->getFirstChild(), [&](unsigned depth, unsigned index) {
+                unsigned idx = param_idx[{depth, index}];
+                signature.pack_expansions.back().generic_params.set(idx);
+              });
+
+          // Store the various type packs.
+          swift::Demangle::Demangler dem;
+          auto mangling = swift::Demangle::mangleNode(type_node);
+          if (mangling.isSuccess())
+            signature.pack_expansions.back().mangled_type =
+                ts.RemangleAsType(dem, type_node).GetMangledTypeName();
+
+          // Assuming that there are no nested pack_expansions.
+          return false;
+        }
+        type_node = node;
+        return true;
+      });
+
+  if (error)
+    return {};
   
+  // Build the maps associating value and type packs with their count
+  // arguments.
+  unsigned next_count = 0;
+  unsigned sentinel = num_generic_params;
+  // Lists all shape inidices that were already processed.
+  llvm::BitVector skip(num_generic_params);
+  // Count argument for each shape.
+  llvm::SmallVector<unsigned, 4> value_pack_count(num_generic_params, sentinel);
+  // For each pack_expansion (= value pack) ...
+  for (unsigned j = 0; j < signature.pack_expansions.size(); ++j) {
+    unsigned shape_idx = signature.pack_expansions[j].shape;
+    unsigned count = value_pack_count[shape_idx];
+    // If this pack_expansion doesn't share the shape of a previous
+    // argument, allocate a new count argument.
+    if (count == sentinel) {
+      count = next_count++;
+      // Store the count argument for this shape.
+      value_pack_count[shape_idx] = count;
+    }
+    signature.count_for_value_pack.push_back(count);
+
+    if (skip[shape_idx])
+      continue;
+
+    // All type packs used in this expansion share same count argument.
+    for (unsigned p : signature.pack_expansions[j].generic_params.set_bits())
+      if (signature.generic_params[p].same_shape[shape_idx])
+        signature.count_for_type_pack.push_back(count);
+
+    // Mark all pack_expansions with the same shape for skipping.
+    auto shape = signature.generic_params[shape_idx];
+    skip |= shape.same_shape;
+  }
+  assert(signature.count_for_value_pack.size() ==
+         signature.pack_expansions.size());
+
+  return signature;
+}
+
 } // namespace lldb_private

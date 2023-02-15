@@ -1024,6 +1024,11 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
   if (!ts)
     return {};
 
+  // Deal with the LLDB-only SILPackType variant.
+  if (auto pack_type = ts->IsSILPackType(type))
+    if (pack_type->expanded)
+      return pack_type->count;
+
   // Try the static type metadata.
   const swift::reflection::TypeRef *tr = nullptr;
   auto *ti = GetSwiftRuntimeTypeInfo(type, exe_scope, &tr);
@@ -1348,6 +1353,26 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
   if (!ts)
     return {};
 
+  ExecutionContext exe_ctx;
+  if (valobj)
+    exe_ctx = valobj->GetExecutionContextRef();
+
+  // Deal with the LLDB-only SILPackType variant.
+  if (auto pack_element_type = ts->GetSILPackElementAtIndex(type, idx)) {
+    llvm::raw_string_ostream os(child_name);
+    os << '.' << idx;
+    child_byte_size =
+        GetBitSize(pack_element_type, exe_ctx.GetBestExecutionContextScope())
+            .getValueOr(0);
+    int stack_dir = -1;
+    child_byte_offset = ts->GetPointerByteSize() * idx * stack_dir;
+    child_bitfield_bit_size = 0;
+    child_bitfield_bit_offset = 0;
+    child_is_base_class = false;
+    child_is_deref_of_parent = true;
+    return pack_element_type;
+  }
+
   // The actual conversion from the FieldInfo record.
   auto get_from_field_info =
       [&](const swift::reflection::FieldInfo &field,
@@ -1374,10 +1399,6 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
   };
 
   // Try the static type metadata.
-  ExecutionContext exe_ctx;
-  if (valobj)
-    exe_ctx = valobj->GetExecutionContextRef();
-
   auto *ti =
       GetSwiftRuntimeTypeInfo(type, exe_ctx.GetBestExecutionContextScope());
   if (!ti)
@@ -1626,6 +1647,247 @@ bool SwiftLanguageRuntime::IsSelf(Variable &variable) {
   node_ptr = node_ptr->getFirstChild();
   return node_ptr->getKind() == swift::Demangle::Node::Kind::Constructor ||
          node_ptr->getKind() == swift::Demangle::Node::Kind::Allocator;
+}
+
+/// Strip off SILPack(In)Direct from a mangled type name.
+static ConstString unwrapSILPackType(ConstString mangledName,
+                                     swift::Demangle::Demangler &demangler,
+                                     TypeSystemSwiftTypeRef &ts,
+                                     bool &indirect) {
+  swift::Demangle::Context dem;
+  auto node = dem.demangleSymbolAsNode(mangledName.GetStringRef());
+  if (!node || node->getKind() != swift::Demangle::Node::Kind::Global)
+    return mangledName;
+  if (node->getNumChildren() != 1)
+    return mangledName;
+  node = node->getChild(0);
+  if (!node || node->getKind() != swift::Demangle::Node::Kind::TypeMangling)
+    return mangledName;
+  if (node->getNumChildren() != 1)
+    return mangledName;
+  node = node->getChild(0);
+  if (!node || node->getKind() != swift::Demangle::Node::Kind::Type)
+    return mangledName;
+  if (node->getNumChildren() != 1)
+    return mangledName;
+  node = node->getChild(0);
+  if (!node)
+    return mangledName;
+
+  indirect = false;
+  if (node->getKind() == swift::Demangle::Node::Kind::SILPackIndirect)
+    indirect = true;
+  if (node->getKind() != swift::Demangle::Node::Kind::SILPackIndirect &&
+      node->getKind() != swift::Demangle::Node::Kind::SILPackDirect)
+    return mangledName;
+
+  if (node->getNumChildren() != 1)
+    return mangledName;
+  node = node->getChild(0);
+
+  return ts.RemangleAsType(demangler, node).GetMangledTypeName();
+}
+
+bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Pack(
+    ValueObject &in_value, CompilerType pack_type,
+    lldb::DynamicValueType use_dynamic, TypeAndOrName &pack_type_or_name,
+    Address &address) {
+  Log *log(GetLog(LLDBLog::Types));
+  auto *reflection_ctx = GetReflectionContext();
+  if (!reflection_ctx)
+    return false;
+  
+  // Return a tuple type, with one element per pack element and its
+  // type has all DependentGenericParamType that appear in type packs
+  // substituted.
+
+  StackFrameSP frame = in_value.GetExecutionContextRef().GetFrameSP();
+  if (!frame)
+    return false;
+  ConstString func_name = frame->GetSymbolContext(eSymbolContextFunction)
+                              .GetFunctionName(Mangled::ePreferMangled);
+
+  // Extract the generic signature from the function symbol.
+  auto ts =
+      pack_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
+  if (!ts)
+    return false;
+  auto signature =
+    SwiftLanguageRuntime::GetGenericSignature(func_name.GetStringRef(), *ts);
+  if (!signature) {
+    LLDB_LOG(log, "cannot decode pack_expansion type: failed to decode generic "
+                  "signature from function name");
+    return false;
+  }
+  // This type has already been resolved?
+  if (auto info = ts->IsSILPackType(pack_type))
+    if (info->expanded)
+      return false;
+
+  bool indirect = false;
+  swift::Demangle::Demangler dem;
+  ConstString mangled_pack_type = pack_type.GetMangledTypeName();
+  mangled_pack_type = unwrapSILPackType(mangled_pack_type, dem, *ts, indirect);
+
+  // Find pack_type in the pack_expansions.
+  unsigned i = 0;
+  Target &target = m_process.GetTarget();
+  size_t ptr_size = m_process.GetAddressByteSize();
+  SwiftLanguageRuntime::GenericSignature::PackExpansion *pack_expansion =
+      nullptr;
+  for (auto &pe : signature->pack_expansions) {
+    if (pe.mangled_type == mangled_pack_type) {
+      pack_expansion = &pe;
+      break;
+    }
+    ++i;
+  }
+  if (!pack_expansion) {
+    LLDB_LOGF(log, "cannot decode pack_expansion type: failed to find a "
+                   "matching type in the function signature");
+    return false;
+  }
+
+  // Extract the count.
+  llvm::SmallString<16> buf;
+  llvm::raw_svector_ostream os(buf);
+  os << "$pack_count_" << signature->GetCountForValuePack(i);
+  StringRef count_var = os.str();
+  llvm::Optional<lldb::addr_t> count =
+      GetTypeMetadataForTypeNameAndFrame(count_var, *frame);
+  if (!count) {
+    LLDB_LOGF(log,
+              "cannot decode pack_expansion type: failed to find count "
+              "argument \"%s\" in frame",
+              count_var.str().c_str());
+    return false;
+  }
+
+  // Extract the metadata for the type packs in this value pack.
+  llvm::SmallDenseMap<std::pair<unsigned, unsigned>, lldb::addr_t> type_packs;
+  swift::Demangle::NodePointer dem_pack_type =
+      dem.demangleSymbol(mangled_pack_type.GetStringRef());
+  auto shape = signature->generic_params[pack_expansion->shape];
+  // Filter out all type packs in this value pack.
+  bool error = false;
+  ForEachGenericParameter(dem_pack_type, [&](unsigned depth, unsigned index) {
+    if (type_packs.count({depth, index}))
+      return;
+    for (auto p : shape.same_shape.set_bits()) {
+      // If a generic parameter that shows up in the
+      // pack_expansion has the same shape as the pack expansion
+      // it's a type pack.
+      auto &generic_param = signature->generic_params[p];
+      if (generic_param.depth == depth && generic_param.index == index) {
+        llvm::SmallString<16> buf;
+        llvm::raw_svector_ostream os(buf);
+        os << u8"$\u03C4_" << shape.depth << '_' << shape.index;
+        StringRef mds_var = os.str();
+        llvm::Optional<lldb::addr_t> mds_ptr =
+            GetTypeMetadataForTypeNameAndFrame(mds_var, *frame);
+        if (!mds_ptr) {
+          LLDB_LOGF(log,
+                    "cannot decode pack_expansion type: failed to find "
+                    "metadata "
+                    "for \"%s\" in frame",
+                    mds_var.str().c_str());
+          error = true;
+          return;
+        }
+        type_packs.insert({{depth, index}, *mds_ptr});
+      }
+    }
+  });
+  if (error)
+    return false;
+
+  // Walk the type packs.
+  std::vector<TypeSystemSwift::TupleElement> elements;
+  for (unsigned j = 0; j < *count; ++j) {
+
+    // Build the list of type substitutions.
+    swift::reflection::GenericArgumentMap substitutions;
+    for (auto it : type_packs) {
+      unsigned depth = it.first.first;
+      unsigned index = it.first.second;
+      lldb::addr_t md_ptr = it.second + j * ptr_size;
+
+      // Read the type metadata pointer.
+      Status status;
+      lldb::addr_t md = LLDB_INVALID_ADDRESS;
+      target.ReadMemory(md_ptr, &md, ptr_size, status, true);
+      if (!status.Success()) {
+        LLDB_LOGF(log,
+                  "cannot decode pack_expansion type: failed to read type "
+                  "pack for type %d/%d of type pack with shape %d %d",
+                  j, (unsigned)*count, depth, index);
+        return false;
+      }
+
+      auto *type_ref = reflection_ctx->readTypeFromMetadata(md);
+      if (!type_ref) {
+        LLDB_LOGF(log,
+                  "cannot decode pack_expansion type: failed to decode type "
+                  "metadata for type %d/%d of type pack with shape %d %d",
+                  j, (unsigned)*count, depth, index);
+        return false;
+      }
+      substitutions.insert({{depth, index}, type_ref});
+    }
+    if (substitutions.empty())
+      return false;
+
+    // Replace all pack expansions with a singular type. Otherwise the
+    // reflection context won't accept them.
+    NodePointer pack_element = TypeSystemSwiftTypeRef::Transform(
+        dem, dem_pack_type, [](NodePointer node) {
+          if (node->getKind() != Node::Kind::PackExpansion)
+            return node;
+          assert(node->getNumChildren() == 2);
+          if (node->getNumChildren() != 2)
+            return node;
+          return node->getChild(0);
+        });
+
+    // Build a TypeRef from the demangle tree.
+    auto typeref_or_err =
+        decodeMangledType(reflection_ctx->getBuilder(), pack_element);
+    if (typeref_or_err.isError()) {
+      LLDB_LOG(log, "Couldn't get TypeRef for %s",
+               pack_type.GetMangledTypeName().GetCString());
+      return false;
+    }
+    auto typeref = typeref_or_err.getType();
+
+    // Apply the substitutions.
+    auto bound_typeref =
+        typeref->subst(reflection_ctx->getBuilder(), substitutions);
+    swift::Demangle::NodePointer node = bound_typeref->getDemangling(dem);
+    CompilerType type = ts->RemangleAsType(dem, node);
+
+    // Add the substituted type to the tuple.
+    elements.push_back({{}, type});
+  }
+  // Create a tuple type with all the concrete types in the pack.
+  CompilerType tuple = ts->CreateTupleType(elements);
+  // Wrap the type inside a SILPackType to mark it for GetChildAtIndex.
+  CompilerType sil_pack_type = ts->CreateSILPackType(tuple, indirect);
+  pack_type_or_name.SetCompilerType(sil_pack_type);
+  LLDB_LOGF(log, "decoded pack_expansion type: %s",
+            tuple.GetMangledTypeName().GetCString());
+
+  lldb::addr_t addr = in_value.GetAddressOf();
+  if (indirect) {
+    Status status;
+    addr = m_process.ReadPointerFromMemory(addr, status);
+    if (status.Fail()) {
+      LLDB_LOGF(log, "failed to dereference indirect pack: %s",
+                tuple.GetMangledTypeName().GetCString());
+      return false;
+    }
+  }
+  address.SetRawAddress(addr);
+  return true;
 }
 
 /// Determine whether the scratch SwiftASTContext has been locked.
@@ -2015,9 +2277,9 @@ SwiftLanguageRuntimeImpl::GetPromiseForTypeNameAndFrame(const char *type_name,
   return GetMetadataPromise(metadata_location, *metadata_ptr_var_sp);
 }
 
-static void
-ForEachGenericParameter(swift::Demangle::NodePointer node,
-                        std::function<void(unsigned, unsigned)> callback) {
+void SwiftLanguageRuntime::ForEachGenericParameter(
+    swift::Demangle::NodePointer node,
+    std::function<void(unsigned, unsigned)> callback) {
   if (!node)
     return;
 
@@ -2153,7 +2415,6 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
         GetTypeMetadataForTypeNameAndFrame(mdvar_name.GetString(), stack_frame);
     if (!metadata_location)
       return;
-
     const swift::reflection::TypeRef *type_ref =
         reflection_ctx->readTypeFromMetadata(*metadata_location);
     if (!type_ref)
@@ -2767,6 +3028,9 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress(
   if (is_indirect_enum_case)
     success = GetDynamicTypeAndAddress_IndirectEnumCase(
         in_value, use_dynamic, class_type_or_name, address);
+  else if (type_info.AnySet(eTypeIsPack))
+    success = GetDynamicTypeAndAddress_Pack(in_value, val_type, use_dynamic,
+                                           class_type_or_name, address);
   else if (type_info.AnySet(eTypeIsClass) ||
            type_info.AllSet(eTypeIsBuiltIn | eTypeIsPointer | eTypeHasValue))
     success = GetDynamicTypeAndAddress_Class(in_value, val_type, use_dynamic,
