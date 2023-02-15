@@ -310,6 +310,64 @@ range_check_failed:                               ; preds = %guarded
   ret i32 -2
 }
 
+; Make sure we don't crash if probability overflows
+define i32 @test_01_neg_overflowing_metadata(ptr noundef %p, i32 noundef %n, i32 noundef %limit, ptr noundef %arr, ptr noundef %len_p) {
+; CHECK-LABEL: @test_01_neg_overflowing_metadata(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[LEN_P:%.*]], align 4, !noundef !0
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[P:%.*]], i32 [[IV]]
+; CHECK-NEXT:    [[EL:%.*]] = load i32, ptr [[EL_PTR]], align 4
+; CHECK-NEXT:    [[BOUND_CHECK:%.*]] = icmp ult i32 [[EL]], [[LIMIT:%.*]]
+; CHECK-NEXT:    br i1 [[BOUND_CHECK]], label [[GUARDED:%.*]], label [[COMMON_RET:%.*]], !prof [[PROF4:![0-9]+]]
+; CHECK:       guarded:
+; CHECK-NEXT:    [[RANGE_CHECK:%.*]] = icmp ult i32 [[EL]], [[LEN]]
+; CHECK-NEXT:    br i1 [[RANGE_CHECK]], label [[BACKEDGE]], label [[COMMON_RET]], !prof [[PROF4]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[ARR_PTR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[EL]]
+; CHECK-NEXT:    store i32 [[IV]], ptr [[ARR_PTR]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[COMMON_RET]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 0, [[BACKEDGE]] ], [ -1, [[LOOP]] ], [ -2, [[GUARDED]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+;
+entry:
+  %len = load i32, ptr %len_p, align 4, !noundef !{}
+  br label %loop
+
+loop:                                             ; preds = %backedge, %entry
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %backedge ]
+  %el.ptr = getelementptr i32, ptr %p, i32 %iv
+  %el = load i32, ptr %el.ptr, align 4
+  %bound_check = icmp ult i32 %el, %limit
+  br i1 %bound_check, label %guarded, label %bound_check_failed, !prof !{!"branch_weights", i32 -1, i32 -1000}
+
+guarded:                                          ; preds = %loop
+  %range_check = icmp ult i32 %el, %len
+  br i1 %range_check, label %backedge, label %range_check_failed, !prof !{!"branch_weights", i32 -1, i32 -1000}
+
+backedge:                                         ; preds = %guarded
+  %arr.ptr = getelementptr i32, ptr %arr, i32 %el
+  store i32 %iv, ptr %arr.ptr, align 4
+  %iv.next = add i32 %iv, 1
+  %loop_cond = icmp slt i32 %iv.next, %n
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:                                             ; preds = %backedge
+  ret i32 0
+
+bound_check_failed:                               ; preds = %loop
+  ret i32 -1
+
+range_check_failed:                               ; preds = %guarded
+  ret i32 -2
+}
+
+
 define i32 @test_02(ptr noundef %p, i32 noundef %n, i32 noundef %limit, ptr noundef %arr, ptr noundef %len_p) {
 ; CHECK-LABEL: @test_02(
 ; CHECK-NEXT:  entry:
@@ -376,7 +434,7 @@ define i32 @test_03(ptr noundef %p, i32 noundef %n, i32 noundef %limit, ptr noun
 ; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[P:%.*]], i32 [[IV]]
 ; CHECK-NEXT:    [[EL:%.*]] = load i32, ptr [[EL_PTR]], align 4
 ; CHECK-NEXT:    [[BOUND_CHECK:%.*]] = icmp slt i32 [[EL]], 0
-; CHECK-NEXT:    br i1 [[BOUND_CHECK]], label [[COMMON_RET:%.*]], label [[GUARDED:%.*]], !prof [[PROF4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[BOUND_CHECK]], label [[COMMON_RET:%.*]], label [[GUARDED:%.*]], !prof [[PROF5:![0-9]+]]
 ; CHECK:       guarded:
 ; CHECK-NEXT:    [[RANGE_CHECK:%.*]] = icmp ult i32 [[EL]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[RANGE_CHECK]], label [[BACKEDGE]], label [[COMMON_RET]], !prof [[PROF1]]
@@ -432,7 +490,7 @@ define i32 @test_04(ptr noundef %p, i32 noundef %n, i32 noundef %limit, ptr noun
 ; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 [[IV]]
 ; CHECK-NEXT:    [[EL:%.*]] = load i8, ptr [[EL_PTR]], align 4
 ; CHECK-NEXT:    [[BOUND_CHECK:%.*]] = icmp slt i8 [[EL]], 0
-; CHECK-NEXT:    br i1 [[BOUND_CHECK]], label [[COMMON_RET:%.*]], label [[GUARDED:%.*]], !prof [[PROF4]]
+; CHECK-NEXT:    br i1 [[BOUND_CHECK]], label [[COMMON_RET:%.*]], label [[GUARDED:%.*]], !prof [[PROF5]]
 ; CHECK:       guarded:
 ; CHECK-NEXT:    [[EL_WIDE:%.*]] = zext i8 [[EL]] to i32
 ; CHECK-NEXT:    [[RANGE_CHECK:%.*]] = icmp ult i32 [[EL_WIDE]], [[LEN]]
