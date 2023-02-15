@@ -13,6 +13,9 @@ licenses(["notice"])
 cc_library(
     name = "atoi_test_helper",
     hdrs = ["AtoiTest.h"],
+    deps = [
+        //libc:__support_cpp_type_traits",
+    ],
 )
 
 libc_test(
@@ -61,6 +64,10 @@ libc_test(
 cc_library(
     name = "strtol_test_helper",
     hdrs = ["StrtolTest.h"],
+    deps = [
+        "//libc:__support_cpp_limits",
+        "//libc:__support_cpp_type_traits",
+    ],
 )
 
 libc_test(
