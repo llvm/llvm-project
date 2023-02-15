@@ -145,13 +145,6 @@ Pass *createLoopPredicationPass();
 
 //===----------------------------------------------------------------------===//
 //
-// LoopInterchange - This pass interchanges loops to provide a more
-// cache-friendly memory access patterns.
-//
-Pass *createLoopInterchangePass();
-
-//===----------------------------------------------------------------------===//
-//
 // LoopFlatten - This pass flattens nested loops into a single loop.
 //
 FunctionPass *createLoopFlattenPass();
