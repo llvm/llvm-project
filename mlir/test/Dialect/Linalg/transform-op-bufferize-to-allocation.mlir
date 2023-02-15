@@ -38,6 +38,34 @@ transform.sequence failures(propagate) {
 
 // -----
 
+// CHECK-LABEL: func @tensor_pad_constant(
+//  CHECK-SAME:     %[[t:.*]]: tensor<?x10xindex>
+//       CHECK:   %[[src:.*]] = bufferization.to_memref %[[t]]
+//       CHECK:   %[[alloc:.*]] = memref.alloc
+//       CHECK:   %[[subview:.*]] = memref.subview %[[alloc]]
+//       CHECK:   memref.copy %[[src]], %[[subview]]
+//       CHECK:   bufferization.to_tensor %[[alloc]] restrict writable
+func.func @tensor_pad_constant(%t: tensor<?x10xindex>, %l2: index, %h1: index,
+                               %h2: index) -> tensor<?x?xindex> {
+  %0 = tensor.pad %t low[5, %l2] high[%h1, %h2] {
+  ^bb0(%arg0: index, %arg1: index):
+    %c = arith.constant 50 : index
+    tensor.yield %c : index
+  } : tensor<?x10xindex> to tensor<?x?xindex>
+  return %0 : tensor<?x?xindex>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+  %1 = transform.get_result %0[0] : (!pdl.operation) -> !transform.any_value
+  %2 = transform.structured.bufferize_to_allocation %1
+  // Make sure that One-Shot Bufferize can bufferize the rest.
+  transform.bufferization.one_shot_bufferize %arg1
+}
+
+// -----
+
 // CHECK-LABEL: func @materialization_of_bbarg(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x10xindex>
 //       CHECK:   %[[c0:.*]] = arith.constant 0 : index
@@ -58,4 +86,27 @@ transform.sequence failures(propagate) {
   %0 = transform.structured.match ops{["tensor.extract"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = test_produce_value_handle_to_argument_of_parent_block %0, 0 : (!pdl.operation) -> !transform.any_value
   %2 = transform.structured.bufferize_to_allocation %1 {memory_space = 4}
+}
+
+// -----
+
+// CHECK-LABEL: func @materialization_of_bbarg(
+//  CHECK-SAME:     %[[t:.*]]: tensor<?x10xindex>
+//       CHECK:   %[[m:.*]] = bufferization.to_memref %[[t]]
+//       CHECK:   %[[alloc:.*]] = memref.alloc(%{{.*}}) : memref<?x10xindex, 4>
+//       CHECK:   memref.copy %[[m]], %[[alloc]]
+//       CHECK:   %[[r:.*]] = memref.load %[[alloc]]
+//       CHECK:   return %[[r]]
+func.func @materialization_of_bbarg(%t: tensor<?x10xindex>, %idx: index) -> index {
+  %r = tensor.extract %t[%idx, %idx] : tensor<?x10xindex>
+  return %r : index
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["tensor.extract"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+  %1 = test_produce_value_handle_to_argument_of_parent_block %0, 0 : (!pdl.operation) -> !transform.any_value
+  %2 = transform.structured.bufferize_to_allocation %1 {memory_space = 4}
+  // Make sure that One-Shot Bufferize can bufferize the rest.
+  transform.bufferization.one_shot_bufferize %arg1
 }
