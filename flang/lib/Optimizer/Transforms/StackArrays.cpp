@@ -431,12 +431,14 @@ void StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
   }
 
   LatticePoint point{func};
-  func->walk([&](mlir::func::ReturnOp child) {
-    const LatticePoint *lattice = solver.lookupState<LatticePoint>(child);
+  auto joinOperationLattice = [&](mlir::Operation *op) {
+    const LatticePoint *lattice = solver.lookupState<LatticePoint>(op);
     // there will be no lattice for an unreachable block
     if (lattice)
       point.join(*lattice);
-  });
+  };
+  func->walk([&](mlir::func::ReturnOp child) { joinOperationLattice(child); });
+  func->walk([&](fir::UnreachableOp child) { joinOperationLattice(child); });
   llvm::DenseSet<mlir::Value> freedValues;
   point.appendFreedValues(freedValues);
 

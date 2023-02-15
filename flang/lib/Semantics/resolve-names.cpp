@@ -2672,8 +2672,8 @@ void ScopeHandler::MakeExternal(Symbol &symbol) {
 
 bool ScopeHandler::CheckDuplicatedAttr(
     SourceName name, const Symbol &symbol, Attr attr) {
-  if (attr == Attr::SAVE || attr == Attr::BIND_C) {
-    // these are checked elsewhere
+  if (attr == Attr::SAVE) {
+    // checked elsewhere
   } else if (symbol.attrs().test(attr)) { // C815
     if (symbol.implicitAttrs().test(attr)) {
       // Implied attribute is now confirmed explicitly
@@ -2718,7 +2718,7 @@ bool ModuleVisitor::Pre(const parser::Rename::Names &x) {
   const auto &useName{std::get<1>(x.t)};
   AddUseRename(useName.source);
   SymbolRename rename{AddUse(localName.source, useName.source)};
-  if (rename.use) {
+  if (rename.use && localName.source != useName.source) {
     EraseRenamedSymbol(*rename.use);
   }
   Resolve(useName, rename.use);

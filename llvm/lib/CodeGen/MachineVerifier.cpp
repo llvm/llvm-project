@@ -1746,6 +1746,13 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       report("alignment immediate must be >= 1", MI);
     break;
   }
+  case TargetOpcode::G_CONSTANT_POOL: {
+    if (!MI->getOperand(1).isCPI())
+      report("Src operand 1 must be a constant pool index", MI);
+    if (!MRI->getType(MI->getOperand(0).getReg()).isPointer())
+      report("Dst operand 0 must be a pointer", MI);
+    break;
+  }
   default:
     break;
   }

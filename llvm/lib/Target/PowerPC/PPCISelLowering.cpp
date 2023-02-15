@@ -2550,7 +2550,7 @@ SDValue PPC::get_VSPLTI_elt(SDNode *N, unsigned ByteSize, SelectionDAG &DAG) {
     Value = CN->getZExtValue();
   } else if (ConstantFPSDNode *CN = dyn_cast<ConstantFPSDNode>(OpVal)) {
     assert(CN->getValueType(0) == MVT::f32 && "Only one legal FP vector type!");
-    Value = FloatToBits(CN->getValueAPF().convertToFloat());
+    Value = llvm::bit_cast<uint32_t>(CN->getValueAPF().convertToFloat());
   }
 
   // If the splat value is larger than the element value, then we can never do
@@ -17636,15 +17636,6 @@ bool PPCTargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
 
   // If the function is local then we have a good chance at tail-calling it
   return getTargetMachine().shouldAssumeDSOLocal(*Caller->getParent(), Callee);
-}
-
-bool PPCTargetLowering::hasBitPreservingFPLogic(EVT VT) const {
-  if (!Subtarget.hasVSX())
-    return false;
-  if (Subtarget.hasP9Vector() && VT == MVT::f128)
-    return true;
-  return VT == MVT::f32 || VT == MVT::f64 ||
-    VT == MVT::v4f32 || VT == MVT::v2f64;
 }
 
 bool PPCTargetLowering::

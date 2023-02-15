@@ -1179,21 +1179,21 @@ MCOperand AMDGPUDisassembler::decodeIntImmed(unsigned Imm) {
 static int64_t getInlineImmVal32(unsigned Imm) {
   switch (Imm) {
   case 240:
-    return FloatToBits(0.5f);
+    return llvm::bit_cast<uint32_t>(0.5f);
   case 241:
-    return FloatToBits(-0.5f);
+    return llvm::bit_cast<uint32_t>(-0.5f);
   case 242:
-    return FloatToBits(1.0f);
+    return llvm::bit_cast<uint32_t>(1.0f);
   case 243:
-    return FloatToBits(-1.0f);
+    return llvm::bit_cast<uint32_t>(-1.0f);
   case 244:
-    return FloatToBits(2.0f);
+    return llvm::bit_cast<uint32_t>(2.0f);
   case 245:
-    return FloatToBits(-2.0f);
+    return llvm::bit_cast<uint32_t>(-2.0f);
   case 246:
-    return FloatToBits(4.0f);
+    return llvm::bit_cast<uint32_t>(4.0f);
   case 247:
-    return FloatToBits(-4.0f);
+    return llvm::bit_cast<uint32_t>(-4.0f);
   case 248: // 1 / (2 * PI)
     return 0x3e22f983;
   default:
@@ -1204,21 +1204,21 @@ static int64_t getInlineImmVal32(unsigned Imm) {
 static int64_t getInlineImmVal64(unsigned Imm) {
   switch (Imm) {
   case 240:
-    return DoubleToBits(0.5);
+    return llvm::bit_cast<uint64_t>(0.5);
   case 241:
-    return DoubleToBits(-0.5);
+    return llvm::bit_cast<uint64_t>(-0.5);
   case 242:
-    return DoubleToBits(1.0);
+    return llvm::bit_cast<uint64_t>(1.0);
   case 243:
-    return DoubleToBits(-1.0);
+    return llvm::bit_cast<uint64_t>(-1.0);
   case 244:
-    return DoubleToBits(2.0);
+    return llvm::bit_cast<uint64_t>(2.0);
   case 245:
-    return DoubleToBits(-2.0);
+    return llvm::bit_cast<uint64_t>(-2.0);
   case 246:
-    return DoubleToBits(4.0);
+    return llvm::bit_cast<uint64_t>(4.0);
   case 247:
-    return DoubleToBits(-4.0);
+    return llvm::bit_cast<uint64_t>(-4.0);
   case 248: // 1 / (2 * PI)
     return 0x3fc45f306dc9c882;
   default:

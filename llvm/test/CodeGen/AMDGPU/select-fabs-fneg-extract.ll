@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -enable-no-signed-zeros-fp-math < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs -enable-no-signed-zeros-fp-math < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -enable-no-signed-zeros-fp-math < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs -enable-no-signed-zeros-fp-math < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI %s
 
 ; GCN-LABEL: {{^}}add_select_fabs_fabs_f32:
 ; GCN: buffer_load_dword [[X:v[0-9]+]]
@@ -380,7 +380,7 @@ define amdgpu_kernel void @add_select_fneg_inv2pi_f32(i32 %c) #0 {
   %x = load volatile float, ptr addrspace(1) undef
   %y = load volatile float, ptr addrspace(1) undef
   %cmp = icmp eq i32 %c, 0
-  %fneg.x = fsub float -0.0, %x
+  %fneg.x = fneg float %x
   %select = select i1 %cmp, float %fneg.x, float 0x3FC45F3060000000
   %add = fadd float %select, %y
   store volatile float %add, ptr addrspace(1) undef
@@ -400,7 +400,7 @@ define amdgpu_kernel void @add_select_fneg_neginv2pi_f32(i32 %c) #0 {
   %x = load volatile float, ptr addrspace(1) undef
   %y = load volatile float, ptr addrspace(1) undef
   %cmp = icmp eq i32 %c, 0
-  %fneg.x = fsub float -0.0, %x
+  %fneg.x = fneg float %x
   %select = select i1 %cmp, float %fneg.x, float 0xBFC45F3060000000
   %add = fadd float %select, %y
   store volatile float %add, ptr addrspace(1) undef
@@ -818,6 +818,173 @@ define amdgpu_kernel void @select_fneg_posk_src_rcp_f32(i32 %c) #0 {
   store volatile float %select, ptr addrspace(1) undef
   ret void
 }
+
+; GCN-LABEL: {{^}}mul_select_negfabs_posk_inv2pi_f32:
+; GCN: buffer_load_dword [[X:v[0-9]+]]
+; GCN: buffer_load_dword [[Y:v[0-9]+]]
+
+; GCN-DAG: s_cmp_eq_u32 s{{[0-9]+}}, 0
+; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0xbe22f983
+; GCN: s_cselect_b64  [[VCC:.*]], -1, 0
+; GCN: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], [[K]], |[[X]]|, [[VCC]]
+; GCN: v_mul_f32_e64 v{{[0-9]+}}, -[[SELECT]], [[Y]]
+define amdgpu_kernel void @mul_select_negfabs_posk_inv2pi_f32(i32 %c) #0 {
+  %x = load volatile float, ptr addrspace(1) undef
+  %y = load volatile float, ptr addrspace(1) undef
+  %cmp = icmp eq i32 %c, 0
+  %fabs.x = call float @llvm.fabs.f32(float %x)
+  %fneg.fabs.x = fneg float %fabs.x
+  %select = select i1 %cmp, float %fneg.fabs.x, float 0x3FC45F3060000000
+  %add = fmul float %select, %y
+  store volatile float %add, ptr addrspace(1) undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}mul_select_posk_inv2pi_negfabs_f32:
+; GCN: buffer_load_dword [[X:v[0-9]+]]
+; GCN: buffer_load_dword [[Y:v[0-9]+]]
+
+; GCN-DAG: s_cmp_lg_u32 s{{[0-9]+}}, 0
+; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0xbe22f983
+; GCN: s_cselect_b64  [[VCC:.*]], -1, 0
+; GCN: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], [[K]], |[[X]]|, [[VCC]]
+; GCN: v_mul_f32_e64 v{{[0-9]+}}, -[[SELECT]], [[Y]]
+define amdgpu_kernel void @mul_select_posk_inv2pi_negfabs_f32(i32 %c) #0 {
+  %x = load volatile float, ptr addrspace(1) undef
+  %y = load volatile float, ptr addrspace(1) undef
+  %cmp = icmp eq i32 %c, 0
+  %fabs.x = call float @llvm.fabs.f32(float %x)
+  %fneg.fabs.x = fneg float %fabs.x
+  %select = select i1 %cmp, float 0x3FC45F3060000000, float %fneg.fabs.x
+  %add = fmul float %select, %y
+  store volatile float %add, ptr addrspace(1) undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}mul_select_negfabs_negk_inv2pi_f32:
+; GCN: buffer_load_dword [[X:v[0-9]+]]
+; GCN: buffer_load_dword [[Y:v[0-9]+]]
+; SI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e22f983
+; SI: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], [[K]], [[X]], vcc
+
+; VI: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], 0.15915494, [[X]], vcc
+
+; GCN: v_mul_f32_e64 v{{[0-9]+}}, -|[[SELECT]]|, [[Y]]
+define amdgpu_kernel void @mul_select_negfabs_negk_inv2pi_f32(i32 %c) #0 {
+  %x = load volatile float, ptr addrspace(1) undef
+  %y = load volatile float, ptr addrspace(1) undef
+  %cmp = icmp eq i32 %c, 0
+  %fabs.x = call float @llvm.fabs.f32(float %x)
+  %fneg.fabs.x = fneg float %fabs.x
+  %select = select i1 %cmp, float %fneg.fabs.x, float 0xBFC45F3060000000
+  %add = fmul float %select, %y
+  store volatile float %add, ptr addrspace(1) undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}mul_select_negk_inv2pi_negfabs_f32:
+; GCN: buffer_load_dword [[X:v[0-9]+]]
+; GCN: buffer_load_dword [[Y:v[0-9]+]]
+
+; SI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e22f983
+; GCN: s_cmp_lg_u32
+; GCN: s_cselect_b64 vcc, -1, 0
+; SI: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], [[K]], [[X]], vcc
+
+; VI: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], 0.15915494, [[X]], vcc
+; GCN: v_mul_f32_e64 v{{[0-9]+}}, -|[[SELECT]]|, [[Y]]
+define amdgpu_kernel void @mul_select_negk_inv2pi_negfabs_f32(i32 %c) #0 {
+  %x = load volatile float, ptr addrspace(1) undef
+  %y = load volatile float, ptr addrspace(1) undef
+  %cmp = icmp eq i32 %c, 0
+  %fabs.x = call float @llvm.fabs.f32(float %x)
+  %fneg.fabs.x = fneg float %fabs.x
+  %select = select i1 %cmp, float 0xBFC45F3060000000, float %fneg.fabs.x
+  %add = fmul float %select, %y
+  store volatile float %add, ptr addrspace(1) undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}mul_select_negfabs_posk_0_f32:
+; GCN: buffer_load_dword [[X:v[0-9]+]]
+; GCN: buffer_load_dword [[Y:v[0-9]+]]
+; GCN-DAG: v_bfrev_b32_e32 [[K:v[0-9]+]], 1{{$}}
+; GCN-DAG: s_cmp_eq_u32 s{{[0-9]+}}, 0
+; GCN: s_cselect_b64  [[VCC:.*]], -1, 0
+; GCN: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], [[K]], |[[X]]|, [[VCC]]
+; GCN: v_mul_f32_e64 v{{[0-9]+}}, -[[SELECT]], [[Y]]
+define amdgpu_kernel void @mul_select_negfabs_posk_0_f32(i32 %c) #0 {
+  %x = load volatile float, ptr addrspace(1) undef
+  %y = load volatile float, ptr addrspace(1) undef
+  %cmp = icmp eq i32 %c, 0
+  %fabs.x = call float @llvm.fabs.f32(float %x)
+  %fneg.fabs.x = fneg float %fabs.x
+  %select = select i1 %cmp, float %fneg.fabs.x, float 0.0
+  %add = fmul float %select, %y
+  store volatile float %add, ptr addrspace(1) undef
+  ret void
+}
+
+
+; GCN-LABEL: {{^}}mul_select_posk_0_negfabs_f32:
+; GCN: buffer_load_dword [[X:v[0-9]+]]
+; GCN: buffer_load_dword [[Y:v[0-9]+]]
+
+; GCN-DAG: v_bfrev_b32_e32 [[K:v[0-9]+]], 1{{$}}
+; GCN-DAG: s_cmp_lg_u32 s{{[0-9]+}}, 0
+; GCN: s_cselect_b64  [[VCC:.*]], -1, 0
+; GCN: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], [[K]], |[[X]]|, [[VCC]]
+; GCN: v_mul_f32_e64 v{{[0-9]+}}, -[[SELECT]], [[Y]]
+define amdgpu_kernel void @mul_select_posk_0_negfabs_f32(i32 %c) #0 {
+  %x = load volatile float, ptr addrspace(1) undef
+  %y = load volatile float, ptr addrspace(1) undef
+  %cmp = icmp eq i32 %c, 0
+  %fabs.x = call float @llvm.fabs.f32(float %x)
+  %fneg.fabs.x = fneg float %fabs.x
+  %select = select i1 %cmp, float 0.0, float %fneg.fabs.x
+  %add = fmul float %select, %y
+  store volatile float %add, ptr addrspace(1) undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}mul_select_negfabs_negk_0_f32:
+; GCN: buffer_load_dword [[X:v[0-9]+]]
+; GCN: buffer_load_dword [[Y:v[0-9]+]]
+
+; GCN: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], 0, [[X]], vcc
+; GCN: v_mul_f32_e64 v{{[0-9]+}}, -|[[SELECT]]|, [[Y]]
+define amdgpu_kernel void @mul_select_negfabs_negk_0_f32(i32 %c) #0 {
+  %x = load volatile float, ptr addrspace(1) undef
+  %y = load volatile float, ptr addrspace(1) undef
+  %cmp = icmp eq i32 %c, 0
+  %fabs.x = call float @llvm.fabs.f32(float %x)
+  %fneg.fabs.x = fneg float %fabs.x
+  %select = select i1 %cmp, float %fneg.fabs.x, float -0.0
+  %add = fmul float %select, %y
+  store volatile float %add, ptr addrspace(1) undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}mul_select_negk_0_negfabs_f32:
+; GCN: buffer_load_dword [[X:v[0-9]+]]
+; GCN: buffer_load_dword [[Y:v[0-9]+]]
+
+; GCN: s_cmp_lg_u32
+; GCN: s_cselect_b64 vcc, -1, 0
+; GCN: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], 0, [[X]], vcc
+; GCN: v_mul_f32_e64 v{{[0-9]+}}, -|[[SELECT]]|, [[Y]]
+define amdgpu_kernel void @mul_select_negk_0_negfabs_f32(i32 %c) #0 {
+  %x = load volatile float, ptr addrspace(1) undef
+  %y = load volatile float, ptr addrspace(1) undef
+  %cmp = icmp eq i32 %c, 0
+  %fabs.x = call float @llvm.fabs.f32(float %x)
+  %fneg.fabs.x = fneg float %fabs.x
+  %select = select i1 %cmp, float -0.0, float %fneg.fabs.x
+  %add = fmul float %select, %y
+  store volatile float %add, ptr addrspace(1) undef
+  ret void
+}
+
 
 declare float @llvm.fabs.f32(float) #1
 declare float @llvm.fma.f32(float, float, float) #1

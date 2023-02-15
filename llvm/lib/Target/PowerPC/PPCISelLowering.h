@@ -1468,7 +1468,6 @@ namespace llvm {
     // tail call. This will cause the optimizers to attempt to move, or
     // duplicate return instructions to help enable tail call optimizations.
     bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
-    bool hasBitPreservingFPLogic(EVT VT) const override;
     bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
 
     /// getAddrModeForFlags - Based on the set of address flags, select the most

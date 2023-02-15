@@ -1756,10 +1756,13 @@ void AArch64TargetLowering::addTypeForStreamingSVE(MVT VT) {
   setOperationAction(ISD::ADD, VT, Custom);
   setOperationAction(ISD::AND, VT, Custom);
   setOperationAction(ISD::ANY_EXTEND, VT, Custom);
+  setOperationAction(ISD::BITREVERSE, VT, Custom);
+  setOperationAction(ISD::BSWAP, VT, Custom);
   setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
   setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
   setOperationAction(ISD::CTLZ, VT, Custom);
   setOperationAction(ISD::CTPOP, VT, Custom);
+  setOperationAction(ISD::CTTZ, VT, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
   setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
   setOperationAction(ISD::FABS, VT, Custom);
@@ -1809,15 +1812,20 @@ void AArch64TargetLowering::addTypeForStreamingSVE(MVT VT) {
   setOperationAction(ISD::UMAX, VT, Custom);
   setOperationAction(ISD::UMIN, VT, Custom);
   setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
+  setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
   setOperationAction(ISD::VECREDUCE_FADD, VT, Custom);
   setOperationAction(ISD::VECREDUCE_FMAX, VT, Custom);
   setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
+  setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
   setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
   setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
   setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
   setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
   setOperationAction(ISD::VECREDUCE_UMIN, VT, Custom);
+  setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+  setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
+  setOperationAction(ISD::VSELECT, VT, Custom);
   setOperationAction(ISD::XOR, VT, Custom);
   setOperationAction(ISD::ZERO_EXTEND, VT, Custom);
 }

@@ -362,11 +362,6 @@ namespace {
     SDValue SplitIndexingFromLoad(LoadSDNode *LD);
     bool SliceUpLoad(SDNode *N);
 
-    // Looks up the chain to find a unique (unaliased) store feeding the passed
-    // load. If no such store is found, returns a nullptr.
-    // Note: This will look past a CALLSEQ_START if the load is chained to it so
-    //       so that it can find stack stores for byval params.
-    StoreSDNode *getUniqueStoreFeeding(LoadSDNode *LD, int64_t &Offset);
     // Scalars have size 0 to distinguish from singleton vectors.
     SDValue ForwardStoreValueToDirectLoad(LoadSDNode *LD);
     bool getTruncatedStoreValue(StoreSDNode *ST, SDValue &Val);
@@ -590,6 +585,9 @@ namespace {
     SDValue SimplifyNodeWithTwoResults(SDNode *N, unsigned LoOp,
                                          unsigned HiOp);
     SDValue CombineConsecutiveLoads(SDNode *N, EVT VT);
+    SDValue foldBitcastedFPLogic(SDNode *N, SelectionDAG &DAG,
+                                 const TargetLowering &TLI);
+
     SDValue CombineExtLoad(SDNode *N);
     SDValue CombineZExtLogicopShiftLoad(SDNode *N);
     SDValue combineRepeatedFPDivisors(SDNode *N);
@@ -14404,18 +14402,19 @@ static unsigned getPPCf128HiElementSelector(const SelectionDAG &DAG) {
   return DAG.getDataLayout().isBigEndian() ? 1 : 0;
 }
 
-static SDValue foldBitcastedFPLogic(SDNode *N, SelectionDAG &DAG,
-                                    const TargetLowering &TLI) {
+SDValue DAGCombiner::foldBitcastedFPLogic(SDNode *N, SelectionDAG &DAG,
+                                          const TargetLowering &TLI) {
   // If this is not a bitcast to an FP type or if the target doesn't have
   // IEEE754-compliant FP logic, we're done.
   EVT VT = N->getValueType(0);
-  if (!VT.isFloatingPoint() || !TLI.hasBitPreservingFPLogic(VT))
+  SDValue N0 = N->getOperand(0);
+  EVT SourceVT = N0.getValueType();
+
+  if (!VT.isFloatingPoint())
     return SDValue();
 
   // TODO: Handle cases where the integer constant is a different scalar
   // bitwidth to the FP.
-  SDValue N0 = N->getOperand(0);
-  EVT SourceVT = N0.getValueType();
   if (VT.getScalarSizeInBits() != SourceVT.getScalarSizeInBits())
     return SDValue();
 
@@ -14438,6 +14437,19 @@ static SDValue foldBitcastedFPLogic(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   }
 
+  if (LegalOperations && !TLI.isOperationLegal(FPOpcode, VT))
+    return SDValue();
+
+  // This needs to be the inverse of logic in foldSignChangeInBitcast.
+  // FIXME: I don't think looking for bitcast intrinsically makes sense, but
+  // removing this would require more changes.
+  auto IsBitCastOrFree = [&TLI, FPOpcode](SDValue Op, EVT VT) {
+    if (Op.getOpcode() == ISD::BITCAST && Op.getOperand(0).getValueType() == VT)
+      return true;
+
+    return FPOpcode == ISD::FABS ? TLI.isFAbsFree(VT) : TLI.isFNegFree(VT);
+  };
+
   // Fold (bitcast int (and (bitcast fp X to int), 0x7fff...) to fp) -> fabs X
   // Fold (bitcast int (xor (bitcast fp X to int), 0x8000...) to fp) -> fneg X
   // Fold (bitcast int (or (bitcast fp X to int), 0x8000...) to fp) ->
@@ -14445,9 +14457,9 @@ static SDValue foldBitcastedFPLogic(SDNode *N, SelectionDAG &DAG,
   SDValue LogicOp0 = N0.getOperand(0);
   ConstantSDNode *LogicOp1 = isConstOrConstSplat(N0.getOperand(1), true);
   if (LogicOp1 && LogicOp1->getAPIntValue() == SignMask &&
-      LogicOp0.getOpcode() == ISD::BITCAST &&
-      LogicOp0.getOperand(0).getValueType() == VT) {
-    SDValue FPOp = DAG.getNode(FPOpcode, SDLoc(N), VT, LogicOp0.getOperand(0));
+      IsBitCastOrFree(LogicOp0, VT)) {
+    SDValue CastOp0 = DAG.getNode(ISD::BITCAST, SDLoc(N), VT, LogicOp0);
+    SDValue FPOp = DAG.getNode(FPOpcode, SDLoc(N), VT, CastOp0);
     NumFPLogicOpsConv++;
     if (N0.getOpcode() == ISD::OR)
       return DAG.getNode(ISD::FNEG, SDLoc(N), VT, FPOp);
@@ -17618,53 +17630,11 @@ bool DAGCombiner::extendLoadedValueToExtension(LoadSDNode *LD, SDValue &Val) {
   return false;
 }
 
-StoreSDNode *DAGCombiner::getUniqueStoreFeeding(LoadSDNode *LD,
-                                                int64_t &Offset) {
-  SDValue Chain = LD->getOperand(0);
-
-  // Look through CALLSEQ_START.
-  if (Chain.getOpcode() == ISD::CALLSEQ_START)
-    Chain = Chain->getOperand(0);
-
-  StoreSDNode *ST = nullptr;
-  SmallVector<SDValue, 8> Aliases;
-  if (Chain.getOpcode() == ISD::TokenFactor) {
-    // Look for unique store within the TokenFactor.
-    for (SDValue Op : Chain->ops()) {
-      StoreSDNode *Store = dyn_cast<StoreSDNode>(Op.getNode());
-      if (!Store)
-        continue;
-      BaseIndexOffset BasePtrLD = BaseIndexOffset::match(LD, DAG);
-      BaseIndexOffset BasePtrST = BaseIndexOffset::match(Store, DAG);
-      if (!BasePtrST.equalBaseIndex(BasePtrLD, DAG, Offset))
-        continue;
-      // Make sure the store is not aliased with any nodes in TokenFactor.
-      GatherAllAliases(Store, Chain, Aliases);
-      if (Aliases.empty() ||
-          (Aliases.size() == 1 && Aliases.front().getNode() == Store))
-        ST = Store;
-      break;
-    }
-  } else {
-    StoreSDNode *Store = dyn_cast<StoreSDNode>(Chain.getNode());
-    if (Store) {
-      BaseIndexOffset BasePtrLD = BaseIndexOffset::match(LD, DAG);
-      BaseIndexOffset BasePtrST = BaseIndexOffset::match(Store, DAG);
-      if (BasePtrST.equalBaseIndex(BasePtrLD, DAG, Offset))
-        ST = Store;
-    }
-  }
-
-  return ST;
-}
-
 SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
   if (OptLevel == CodeGenOpt::None || !LD->isSimple())
     return SDValue();
-  SDValue InputChain = LD->getOperand(0);
-  int64_t Offset;
-
-  StoreSDNode *ST = getUniqueStoreFeeding(LD, Offset);
+  SDValue Chain = LD->getOperand(0);
+  StoreSDNode *ST = dyn_cast<StoreSDNode>(Chain.getNode());
   // TODO: Relax this restriction for unordered atomics (see D66309)
   if (!ST || !ST->isSimple() || ST->getAddressSpace() != LD->getAddressSpace())
     return SDValue();
@@ -17690,6 +17660,12 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
   // compile time the absolute size of the vector. Until we've done more
   // analysis on big-endian platforms it seems better to bail out for now.
   if (LdStScalable && DAG.getDataLayout().isBigEndian())
+    return SDValue();
+
+  BaseIndexOffset BasePtrLD = BaseIndexOffset::match(LD, DAG);
+  BaseIndexOffset BasePtrST = BaseIndexOffset::match(ST, DAG);
+  int64_t Offset;
+  if (!BasePtrST.equalBaseIndex(BasePtrLD, DAG, Offset))
     return SDValue();
 
   // Normalize for Endianness. After this Offset=0 will denote that the least
@@ -17734,7 +17710,7 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
   if (Offset == 0 && LDType == STType && STMemType == LDMemType) {
     // Simple case: Direct non-truncating forwarding
     if (LDType.getSizeInBits() == LdMemSize)
-      return ReplaceLd(LD, ST->getValue(), InputChain);
+      return ReplaceLd(LD, ST->getValue(), Chain);
     // Can we model the truncate and extension with an and mask?
     if (STType.isInteger() && LDMemType.isInteger() && !STType.isVector() &&
         !LDMemType.isVector() && LD->getExtensionType() != ISD::SEXTLOAD) {
@@ -17744,7 +17720,7 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
                                                StMemSize.getFixedValue()),
                           SDLoc(ST), STType);
       auto Val = DAG.getNode(ISD::AND, SDLoc(LD), LDType, ST->getValue(), Mask);
-      return ReplaceLd(LD, Val, InputChain);
+      return ReplaceLd(LD, Val, Chain);
     }
   }
 
@@ -17781,7 +17757,7 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
     }
     if (!extendLoadedValueToExtension(LD, Val))
       continue;
-    return ReplaceLd(LD, Val, InputChain);
+    return ReplaceLd(LD, Val, Chain);
   } while (false);
 
   // On failure, cleanup dead nodes we may have created.
@@ -21533,7 +21509,7 @@ SDValue DAGCombiner::reduceBuildVecTruncToBitCast(SDNode *N) {
   }
 
   // Only cast if the size is the same
-  if (Src.getValueType().getSizeInBits() != VT.getSizeInBits())
+  if (!Src || Src.getValueType().getSizeInBits() != VT.getSizeInBits())
     return SDValue();
 
   return DAG.getBitcast(VT, Src);

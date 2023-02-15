@@ -1,4 +1,4 @@
-// RUN: mlir-vulkan-runner %s --shared-libs=%mlir_vulkan_runtime_wrappers,%mlir_runner_utils --entry-point-result=void | FileCheck %s
+// RUN: mlir-vulkan-runner %s --shared-libs=%mlir_lib_dir/libvulkan-runtime-wrappers%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext --entry-point-result=void | FileCheck %s
 
 // CHECK: Compute shader execution time
 // CHECK: Command buffer submit time

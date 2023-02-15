@@ -112,7 +112,6 @@ static cl::list<std::string>
 
 #define DELTA_PASSES_MIR                                                       \
   do {                                                                         \
-    DELTA_PASS("instructions", reduceInstructionsMIRDeltaPass)                 \
     DELTA_PASS("ir-instruction-references",                                    \
                reduceIRInstructionReferencesDeltaPass)                         \
     DELTA_PASS("ir-block-references", reduceIRBlockReferencesDeltaPass)        \
@@ -122,6 +121,7 @@ static cl::list<std::string>
     DELTA_PASS("register-defs", reduceRegisterDefsMIRDeltaPass)                \
     DELTA_PASS("register-hints", reduceVirtualRegisterHintsDeltaPass)          \
     DELTA_PASS("register-masks", reduceRegisterMasksMIRDeltaPass)              \
+    DELTA_PASS("instructions", reduceInstructionsMIRDeltaPass)                 \
   } while (false)
 
 static void runAllDeltaPasses(TestRunner &Tester,

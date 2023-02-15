@@ -17,10 +17,12 @@
 // RUN:  -mabi=ieeelongdouble -stdlib=libc++ -Wno-unsupported-abi 2>&1 | \
 // RUN:  FileCheck %s --check-prefix=NOWARN
 // RUN: %clang -### --driver-mode=g++ -target powerpc64le-linux-gnu %s\
+// RUN:  --dyld-prefix=%S/Inputs/powerpc64le-linux-gnu-tree/gcc-12 \
 // RUN:  -mabi=%if ppc_linux_default_ieeelongdouble %{ieeelongdouble%} \
 // RUN:  %else %{ibmlongdouble%} -stdlib=libc++ 2>&1 | \
 // RUN:  FileCheck %s --check-prefix=NOWARN
 // RUN: %clang -### --driver-mode=g++ -target powerpc64le-linux-gnu %s\
+// RUN:  --dyld-prefix=%S/Inputs/powerpc64le-linux-gnu-tree/gcc-12 \
 // RUN:  -mabi=%if ppc_linux_default_ieeelongdouble %{ibmlongdouble%} \
 // RUN:  %else %{ieeelongdouble%} -stdlib=libc++ 2>&1 | FileCheck %s
 

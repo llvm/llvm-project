@@ -27,7 +27,6 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
@@ -215,6 +214,16 @@ convertDenseElementsAttr(Location loc, DenseElementsAttr denseElementsAttr,
 
   ShapedType type = denseElementsAttr.getType();
   if (type.getNumElements() == 0)
+    return nullptr;
+
+  // Check that the raw data size matches what is expected for the scalar size.
+  // TODO: in theory, we could repack the data here to keep constructing from
+  // raw data.
+  // TODO: we may also need to consider endianness when cross-compiling to an
+  // architecture where it is different.
+  unsigned elementByteSize = denseElementsAttr.getRawData().size() /
+                             denseElementsAttr.getNumElements();
+  if (8 * elementByteSize != innermostLLVMType->getScalarSizeInBits())
     return nullptr;
 
   // Compute the shape of all dimensions but the innermost. Note that the
@@ -1010,13 +1019,13 @@ LogicalResult ModuleTranslation::createAccessGroupMetadata() {
 
 void ModuleTranslation::setAccessGroupsMetadata(Operation *op,
                                                 llvm::Instruction *inst) {
-  auto populateGroupsMetadata = [&](std::optional<ArrayAttr> groupRefs) {
-    if (!groupRefs || groupRefs->empty())
+  auto populateGroupsMetadata = [&](ArrayAttr groupRefs) {
+    if (!groupRefs || groupRefs.empty())
       return;
 
     llvm::Module *module = inst->getModule();
     SmallVector<llvm::Metadata *> groupMDs;
-    for (SymbolRefAttr groupRef : groupRefs->getAsRange<SymbolRefAttr>())
+    for (SymbolRefAttr groupRef : groupRefs.getAsRange<SymbolRefAttr>())
       groupMDs.push_back(getAccessGroup(op, groupRef));
 
     llvm::MDNode *node = nullptr;
@@ -1028,10 +1037,9 @@ void ModuleTranslation::setAccessGroupsMetadata(Operation *op,
     inst->setMetadata(llvm::LLVMContext::MD_access_group, node);
   };
 
-  llvm::TypeSwitch<Operation *>(op)
-      .Case<LoadOp, StoreOp>(
-          [&](auto memOp) { populateGroupsMetadata(memOp.getAccessGroups()); })
-      .Default([](auto) { llvm_unreachable("expected LoadOp or StoreOp"); });
+  auto groupRefs =
+      op->getAttrOfType<ArrayAttr>(LLVMDialect::getAccessGroupsAttrName());
+  populateGroupsMetadata(groupRefs);
 }
 
 LogicalResult ModuleTranslation::createAliasScopeMetadata() {
@@ -1085,26 +1093,24 @@ ModuleTranslation::getAliasScope(Operation *op,
 
 void ModuleTranslation::setAliasScopeMetadata(Operation *op,
                                               llvm::Instruction *inst) {
-  auto populateScopeMetadata = [&](std::optional<ArrayAttr> scopeRefs,
-                                   unsigned kind) {
-    if (!scopeRefs || scopeRefs->empty())
+  auto populateScopeMetadata = [&](ArrayAttr scopeRefs, unsigned kind) {
+    if (!scopeRefs || scopeRefs.empty())
       return;
     llvm::Module *module = inst->getModule();
     SmallVector<llvm::Metadata *> scopeMDs;
-    for (SymbolRefAttr scopeRef : scopeRefs->getAsRange<SymbolRefAttr>())
+    for (SymbolRefAttr scopeRef : scopeRefs.getAsRange<SymbolRefAttr>())
       scopeMDs.push_back(getAliasScope(op, scopeRef));
     llvm::MDNode *node = llvm::MDNode::get(module->getContext(), scopeMDs);
     inst->setMetadata(kind, node);
   };
 
-  llvm::TypeSwitch<Operation *>(op)
-      .Case<LoadOp, StoreOp>([&](auto memOp) {
-        populateScopeMetadata(memOp.getAliasScopes(),
-                              llvm::LLVMContext::MD_alias_scope);
-        populateScopeMetadata(memOp.getNoaliasScopes(),
-                              llvm::LLVMContext::MD_noalias);
-      })
-      .Default([](auto) { llvm_unreachable("expected LoadOp or StoreOp"); });
+  auto aliasScopeRefs =
+      op->getAttrOfType<ArrayAttr>(LLVMDialect::getAliasScopesAttrName());
+  populateScopeMetadata(aliasScopeRefs, llvm::LLVMContext::MD_alias_scope);
+
+  auto noaliasScopeRefs =
+      op->getAttrOfType<ArrayAttr>(LLVMDialect::getNoAliasScopesAttrName());
+  populateScopeMetadata(noaliasScopeRefs, llvm::LLVMContext::MD_noalias);
 }
 
 llvm::MDNode *ModuleTranslation::getTBAANode(Operation *op,
@@ -1238,8 +1244,10 @@ LogicalResult ModuleTranslation::createTBAAMetadata() {
 
 void ModuleTranslation::setLoopMetadata(Operation *op,
                                         llvm::Instruction *inst) {
-  auto attr =
-      op->getAttrOfType<LoopAnnotationAttr>(LLVMDialect::getLoopAttrName());
+  LoopAnnotationAttr attr =
+      TypeSwitch<Operation *, LoopAnnotationAttr>(op)
+          .Case<LLVM::BrOp, LLVM::CondBrOp>(
+              [](auto branchOp) { return branchOp.getLoopAnnotationAttr(); });
   if (!attr)
     return;
   llvm::MDNode *loopMD = loopAnnotationTranslation->translate(attr, op);

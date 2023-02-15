@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -convert-scf-to-cf -convert-vector-to-llvm -finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void \
-// RUN:   -shared-libs=%mlir_c_runner_utils | \
+// RUN:   -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 func.func @compress16(%base: memref<?xf32>,

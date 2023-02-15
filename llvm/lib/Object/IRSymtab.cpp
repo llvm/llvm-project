@@ -41,8 +41,8 @@
 using namespace llvm;
 using namespace irsymtab;
 
-cl::opt<bool> DisableBitcodeVersionUpgrade(
-    "disable-bitcode-version-upgrade", cl::init(false), cl::Hidden,
+static cl::opt<bool> DisableBitcodeVersionUpgrade(
+    "disable-bitcode-version-upgrade", cl::Hidden,
     cl::desc("Disable automatic bitcode upgrade for version mismatch"));
 
 static const char *PreservedSymbols[] = {

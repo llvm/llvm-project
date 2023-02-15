@@ -1,12 +1,9 @@
 // RUN: mlir-opt %s -convert-scf-to-cf -convert-vector-to-llvm -finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts |\
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void \
-// RUN:   -shared-libs=%mlir_c_runner_utils
+// RUN:   -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext
 // RUN: mlir-opt %s -convert-scf-to-cf -convert-vector-to-llvm -finalize-memref-to-llvm='use-aligned-alloc=1' -convert-func-to-llvm -arith-expand -reconcile-unrealized-casts |\
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void \
-// RUN:   -shared-libs=%mlir_c_runner_utils | FileCheck %s
-
-// FIXME: Windows does not have aligned_alloc
-// UNSUPPORTED: system-windows
+// RUN:   -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | FileCheck %s
 
 func.func @entry() {
   // Set up memory.

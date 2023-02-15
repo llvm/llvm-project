@@ -721,12 +721,11 @@ limits the alignment to the given value. Optimizers are not allowed to
 impose a stronger alignment on these variables. The maximum alignment
 is ``1 << 32``.
 
-For global variables declarations, as well as definitions that may be
+For global variable declarations, as well as definitions that may be
 replaced at link time (``linkonce``, ``weak``, ``extern_weak`` and ``common``
-linkage types), LLVM makes no assumptions about the allocation size of the
-variables, except that they may not overlap. The alignment of a global variable
-declaration or replaceable definition must not be greater than the alignment of
-the definition it resolves to.
+linkage types), the allocation size and alignment of the definition it resolves
+to must be greater than or equal to that of the declaration or replaceable
+definition, otherwise the behavior is undefined.
 
 Globals can also have a :ref:`DLL storage class <dllstorageclass>`,
 an optional :ref:`runtime preemption specifier <runtime_preemption_model>`,
