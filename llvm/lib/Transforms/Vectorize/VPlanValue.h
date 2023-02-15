@@ -346,11 +346,11 @@ public:
     VPWidenMemoryInstructionSC,
     VPWidenSC,
     VPWidenSelectSC,
-
-    // Phi-like recipes. Need to be kept together.
+    // START: Phi-like recipes. Need to be kept together.
     VPBlendSC,
     VPPredInstPHISC,
-    // Header-phi recipes. Need to be kept together.
+    // START: SubclassID for recipes that inherit VPHeaderPHIRecipe.
+    // VPHeaderPHIRecipe need to be kept together.
     VPCanonicalIVPHISC,
     VPActiveLaneMaskPHISC,
     VPFirstOrderRecurrencePHISC,
@@ -358,8 +358,11 @@ public:
     VPWidenIntOrFpInductionSC,
     VPWidenPointerInductionSC,
     VPReductionPHISC,
+    // END: SubclassID for recipes that inherit VPHeaderPHIRecipe
+    // END: Phi-like recipes
     VPFirstPHISC = VPBlendSC,
     VPFirstHeaderPHISC = VPCanonicalIVPHISC,
+    VPLastHeaderPHISC = VPReductionPHISC,
     VPLastPHISC = VPReductionPHISC,
   };
 
