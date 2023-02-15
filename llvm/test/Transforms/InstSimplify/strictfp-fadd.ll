@@ -390,41 +390,41 @@ define float @fold_fadd_snan_variable_ebmaytrap(float %x) #0 {
   ret float %add
 }
 
-; FIXME: Exceptions are ignored, so this can be folded, but constrained math requires that SNaN is quieted per IEEE-754 spec.
+; Exceptions are ignored, so this can be folded, but constrained math requires that SNaN is quieted per IEEE-754 spec.
 
 define <2 x float> @fold_fadd_vec_snan_variable_ebignore(<2 x float> %x) #0 {
 ; CHECK-LABEL: @fold_fadd_vec_snan_variable_ebignore(
-; CHECK-NEXT:    ret <2 x float> <float 0x7FF4000000000000, float 0xFFF4000000000000>
+; CHECK-NEXT:    ret <2 x float> <float 0x7FFC000000000000, float 0xFFFC000000000000>
 ;
   %add = call <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float><float 0x7ff4000000000000, float 0xfff4000000000000>, <2 x float> %x, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
   ret <2 x float> %add
 }
 
-; FIXME: Exceptions may (not) trap, so this can be folded, but constrained math requires that SNaN is quieted per IEEE-754 spec.
+; Exceptions may (not) trap, so this can be folded, but constrained math requires that SNaN is quieted per IEEE-754 spec.
 
 define <2 x float> @fold_fadd_vec_snan_variable_ebmaytrap(<2 x float> %x) #0 {
 ; CHECK-LABEL: @fold_fadd_vec_snan_variable_ebmaytrap(
-; CHECK-NEXT:    ret <2 x float> <float 0xFFF4000000000000, float 0x7FF4000000000000>
+; CHECK-NEXT:    ret <2 x float> <float 0xFFFC000000000000, float 0x7FFC000000000000>
 ;
   %add = call <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float><float 0xfff4000000000000, float 0x7ff4000000000000>, <2 x float> %x, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
   ret <2 x float> %add
 }
 
-; FIXME: Exceptions are ignored, so this can be folded, but constrained math requires that SNaN is quieted per IEEE-754 spec.
+; Exceptions are ignored, so this can be folded, but constrained math requires that SNaN is quieted per IEEE-754 spec.
 
 define <2 x float> @fold_fadd_vec_partial_snan_variable_ebignore(<2 x float> %x) #0 {
 ; CHECK-LABEL: @fold_fadd_vec_partial_snan_variable_ebignore(
-; CHECK-NEXT:    ret <2 x float> <float 0x7FF4000000000000, float 0xFFFF000000000000>
+; CHECK-NEXT:    ret <2 x float> <float 0x7FFC000000000000, float 0xFFFF000000000000>
 ;
   %add = call <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float><float 0x7ff4000000000000, float 0xffff000000000000>, <2 x float> %x, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
   ret <2 x float> %add
 }
 
-; FIXME: Exceptions may (not) trap, so this can be folded, but constrained math requires that SNaN is quieted per IEEE-754 spec.
+; Exceptions may (not) trap, so this can be folded, but constrained math requires that SNaN is quieted per IEEE-754 spec.
 
 define <2 x float> @fold_fadd_vec_partial_snan_variable_ebmaytrap(<2 x float> %x) #0 {
 ; CHECK-LABEL: @fold_fadd_vec_partial_snan_variable_ebmaytrap(
-; CHECK-NEXT:    ret <2 x float> <float 0xFFF8000000000000, float 0x7FF4000000000000>
+; CHECK-NEXT:    ret <2 x float> <float 0xFFF8000000000000, float 0x7FFC000000000000>
 ;
   %add = call <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float><float 0xfff8000000000000, float 0x7ff4000000000000>, <2 x float> %x, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
   ret <2 x float> %add

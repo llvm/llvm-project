@@ -43,7 +43,7 @@ define float @fsub_nan_op1(float %x) {
 
 define <2 x float> @fsub_nan_op1_vec(<2 x float> %x) {
 ; CHECK-LABEL: @fsub_nan_op1_vec(
-; CHECK-NEXT:    ret <2 x float> <float 0x7FF1000000000000, float 0xFFF1000000000000>
+; CHECK-NEXT:    ret <2 x float> <float 0x7FF9000000000000, float 0xFFF9000000000000>
 ;
   %r = fsub <2 x float> %x, <float 0x7FF1000000000000, float 0xFFF1000000000000>
   ret <2 x float> %r
@@ -61,7 +61,7 @@ define double @fmul_nan_op0(double %x) {
 
 define <2 x double> @fmul_nan_op0_vec(<2 x double> %x) {
 ; CHECK-LABEL: @fmul_nan_op0_vec(
-; CHECK-NEXT:    ret <2 x double> <double 0xFFF0000000000001, double 0xFFF0DEADDEADDEAD>
+; CHECK-NEXT:    ret <2 x double> <double 0xFFF8000000000001, double 0xFFF8DEADDEADDEAD>
 ;
   %r = fmul <2 x double> <double 0xFFF0000000000001, double 0xFFF0DEADDEADDEAD>, %x
   ret <2 x double> %r
