@@ -5863,8 +5863,7 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
 
 /// If one operand of an icmp is effectively a bool (value range of {0,1}),
 /// then try to reduce patterns based on that limit.
-static Instruction *foldICmpUsingBoolRange(ICmpInst &I,
-                                           InstCombiner::BuilderTy &Builder) {
+Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
   Value *X, *Y;
   ICmpInst::Predicate Pred;
 
@@ -5879,6 +5878,59 @@ static Instruction *foldICmpUsingBoolRange(ICmpInst &I,
   if (match(&I, m_c_ICmp(Pred, m_Value(X), m_OneUse(m_SExt(m_Value(Y))))) &&
       Y->getType()->isIntOrIntVectorTy(1) && Pred == ICmpInst::ICMP_ULE)
     return BinaryOperator::CreateOr(Builder.CreateIsNull(X), Y);
+
+  const APInt *C;
+  if (match(I.getOperand(0),
+            m_OneUse(m_c_Add(m_ZExt(m_Value(X)), m_SExt(m_Value(Y))))) &&
+      match(I.getOperand(1), m_APInt(C)) &&
+      X->getType()->isIntOrIntVectorTy(1) &&
+      Y->getType()->isIntOrIntVectorTy(1)) {
+    unsigned BitWidth = C->getBitWidth();
+    Pred = I.getPredicate();
+    APInt Zero = APInt::getZero(BitWidth);
+    APInt MinusOne = APInt::getAllOnes(BitWidth);
+    APInt One(BitWidth, 1);
+    if ((C->sgt(Zero) && Pred == ICmpInst::ICMP_SGT) ||
+        (C->slt(Zero) && Pred == ICmpInst::ICMP_SLT))
+      return replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
+    if ((C->sgt(One) && Pred == ICmpInst::ICMP_SLT) ||
+        (C->slt(MinusOne) && Pred == ICmpInst::ICMP_SGT))
+      return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
+
+    APInt NewC = *C;
+    // canonicalize predicate to eq/ne
+    if ((*C == Zero && Pred == ICmpInst::ICMP_SLT) ||
+        (*C != Zero && *C != MinusOne && Pred == ICmpInst::ICMP_UGT)) {
+      // x s< 0 in [-1, 1] --> x == -1
+      // x u> 1(or any const !=0 !=-1) in [-1, 1] --> x == -1
+      NewC = MinusOne;
+      Pred = ICmpInst::ICMP_EQ;
+    } else if ((*C == MinusOne && Pred == ICmpInst::ICMP_SGT) ||
+               (*C != Zero && *C != One && Pred == ICmpInst::ICMP_ULT)) {
+      // x s> -1 in [-1, 1] --> x != -1
+      // x u< -1 in [-1, 1] --> x != -1
+      Pred = ICmpInst::ICMP_NE;
+    } else if (*C == Zero && Pred == ICmpInst::ICMP_SGT) {
+      // x s> 0 in [-1, 1] --> x == 1
+      NewC = One;
+      Pred = ICmpInst::ICMP_EQ;
+    } else if (*C == One && Pred == ICmpInst::ICMP_SLT) {
+      // x s< 1 in [-1, 1] --> x != 1
+      Pred = ICmpInst::ICMP_NE;
+    }
+
+    if (NewC == MinusOne) {
+      if (Pred == ICmpInst::ICMP_EQ)
+        return BinaryOperator::CreateAnd(Builder.CreateNot(X), Y);
+      if (Pred == ICmpInst::ICMP_NE)
+        return BinaryOperator::CreateOr(X, Builder.CreateNot(Y));
+    } else if (NewC == One) {
+      if (Pred == ICmpInst::ICMP_EQ)
+        return BinaryOperator::CreateAnd(X, Builder.CreateNot(Y));
+      if (Pred == ICmpInst::ICMP_NE)
+        return BinaryOperator::CreateOr(Builder.CreateNot(X), Y);
+    }
+  }
 
   return nullptr;
 }
@@ -6335,7 +6387,7 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = foldICmpWithDominatingICmp(I))
     return Res;
 
-  if (Instruction *Res = foldICmpUsingBoolRange(I, Builder))
+  if (Instruction *Res = foldICmpUsingBoolRange(I))
     return Res;
 
   if (Instruction *Res = foldICmpUsingKnownBits(I))
