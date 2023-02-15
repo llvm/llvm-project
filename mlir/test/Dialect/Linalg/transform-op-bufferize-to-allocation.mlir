@@ -110,3 +110,25 @@ transform.sequence failures(propagate) {
   // Make sure that One-Shot Bufferize can bufferize the rest.
   transform.bufferization.one_shot_bufferize %arg1
 }
+
+// -----
+
+// CHECK-LABEL: func @materialization_of_opresult(
+//       CHECK:   %[[t:.*]] = "dummy.some_op"
+//       CHECK:   %[[alloc:.*]] = memref.alloc(%{{.*}}) : memref<?x10xindex, 4>
+//       CHECK:   memref.tensor_store %[[t]], %[[alloc]]
+//       CHECK:   %[[r:.*]] = bufferization.to_tensor %[[alloc]]
+//       CHECK:   return %[[r]]
+func.func @materialization_of_opresult(%idx: index) -> tensor<?x10xindex> {
+  %t = "dummy.some_op"() : () -> (tensor<?x10xindex>)
+  return %t : tensor<?x10xindex>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["dummy.some_op"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+  %1 = transform.get_result %0[0] : (!pdl.operation) -> !transform.any_value
+  %2 = transform.structured.bufferize_to_allocation %1 {memory_space = 4}
+}
+
+
