@@ -447,9 +447,9 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, CacheDrain) NO_THREAD_SAFETY_ANALYSIS {
 
   bool UnlockRequired;
   auto *TSD = Allocator->getTSDRegistry()->getTSDAndLock(&UnlockRequired);
-  EXPECT_TRUE(!TSD->Cache.isEmpty());
-  TSD->Cache.drain();
-  EXPECT_TRUE(TSD->Cache.isEmpty());
+  EXPECT_TRUE(!TSD->getCache().isEmpty());
+  TSD->getCache().drain();
+  EXPECT_TRUE(TSD->getCache().isEmpty());
   if (UnlockRequired)
     TSD->unlock();
 }
@@ -738,7 +738,7 @@ TEST(ScudoCombinedTest, BasicTrustyConfig) {
 
   bool UnlockRequired;
   auto *TSD = Allocator->getTSDRegistry()->getTSDAndLock(&UnlockRequired);
-  TSD->Cache.drain();
+  TSD->getCache().drain();
 
   Allocator->releaseToOS();
 }
