@@ -358,7 +358,7 @@ class RegPressureTracker {
   const MachineFunction *MF = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   const RegisterClassInfo *RCI = nullptr;
-  const MachineRegisterInfo *MRI;
+  const MachineRegisterInfo *MRI = nullptr;
   const LiveIntervals *LIS = nullptr;
 
   /// We currently only allow pressure tracking within a block.
