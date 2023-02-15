@@ -11,10 +11,10 @@ entry:
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
-  %0 = load float, ptr %arrayidx, align 4, !tbaa !1
+  %0 = load float, ptr %arrayidx, align 4
   %conv = fptosi float %0 to i32
   %arrayidx2 = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
-  store i32 %conv, ptr %arrayidx2, align 4, !tbaa !5
+  store i32 %conv, ptr %arrayidx2, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1600
   call void @llvm.pseudoprobe(i64 3666282617048535130, i64 2, i32 0, i64 -1)
@@ -45,9 +45,3 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(inaccessib
 !llvm.pseudo_probe_desc = !{!0}
 
 !0 = !{i64 3666282617048535130, i64 52824598631, !"test1"}
-!1 = !{!2, !2, i64 0}
-!2 = !{!"float", !3, i64 0}
-!3 = !{!"omnipotent char", !4, i64 0}
-!4 = !{!"Simple C/C++ TBAA"}
-!5 = !{!6, !6, i64 0}
-!6 = !{!"int", !3, i64 0}
