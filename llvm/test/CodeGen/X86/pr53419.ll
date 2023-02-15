@@ -13,36 +13,17 @@ declare i1 @llvm.vector.reduce.and.v8i1(<8 x i1>)
 ; FIXME: All four versions are semantically equivalent and should produce same asm as scalar version.
 
 define i1 @intrinsic_v2i8(ptr align 1 %arg, ptr align 1 %arg1) {
-; SSE2-LABEL: intrinsic_v2i8:
-; SSE2:       # %bb.0: # %bb
-; SSE2-NEXT:    movzwl (%rsi), %eax
-; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    movzwl (%rdi), %eax
-; SSE2-NEXT:    movd %eax, %xmm1
-; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,2,1,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
-; SSE2-NEXT:    movmskpd %xmm0, %eax
-; SSE2-NEXT:    cmpb $3, %al
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    retq
-;
-; SSE42-LABEL: intrinsic_v2i8:
-; SSE42:       # %bb.0: # %bb
-; SSE42-NEXT:    pmovzxbq {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
-; SSE42-NEXT:    pmovzxbq {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
-; SSE42-NEXT:    psubq %xmm1, %xmm0
-; SSE42-NEXT:    ptest %xmm0, %xmm0
-; SSE42-NEXT:    sete %al
-; SSE42-NEXT:    retq
+; SSE-LABEL: intrinsic_v2i8:
+; SSE:       # %bb.0: # %bb
+; SSE-NEXT:    movzwl (%rdi), %eax
+; SSE-NEXT:    cmpw %ax, (%rsi)
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: intrinsic_v2i8:
 ; AVX:       # %bb.0: # %bb
-; AVX-NEXT:    vpmovzxbq {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
-; AVX-NEXT:    vpmovzxbq {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
-; AVX-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vptest %xmm0, %xmm0
+; AVX-NEXT:    movzwl (%rdi), %eax
+; AVX-NEXT:    cmpw %ax, (%rsi)
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
 ;
@@ -63,10 +44,8 @@ define i1 @intrinsic_v2i8(ptr align 1 %arg, ptr align 1 %arg1) {
 ; X86:       # %bb.0: # %bb
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vpmovzxbq {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
-; X86-NEXT:    vpmovzxbq {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
-; X86-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vptest %xmm0, %xmm0
+; X86-NEXT:    movzwl (%eax), %eax
+; X86-NEXT:    cmpw %ax, (%ecx)
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 bb:
@@ -78,33 +57,17 @@ bb:
 }
 
 define i1 @intrinsic_v4i8(ptr align 1 %arg, ptr align 1 %arg1) {
-; SSE2-LABEL: intrinsic_v4i8:
-; SSE2:       # %bb.0: # %bb
-; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
-; SSE2-NEXT:    movmskps %xmm0, %eax
-; SSE2-NEXT:    cmpb $15, %al
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    retq
-;
-; SSE42-LABEL: intrinsic_v4i8:
-; SSE42:       # %bb.0: # %bb
-; SSE42-NEXT:    pmovzxbd {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
-; SSE42-NEXT:    pmovzxbd {{.*#+}} xmm1 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
-; SSE42-NEXT:    psubd %xmm1, %xmm0
-; SSE42-NEXT:    ptest %xmm0, %xmm0
-; SSE42-NEXT:    sete %al
-; SSE42-NEXT:    retq
+; SSE-LABEL: intrinsic_v4i8:
+; SSE:       # %bb.0: # %bb
+; SSE-NEXT:    movl (%rdi), %eax
+; SSE-NEXT:    cmpl %eax, (%rsi)
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: intrinsic_v4i8:
 ; AVX:       # %bb.0: # %bb
-; AVX-NEXT:    vpmovzxbd {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
-; AVX-NEXT:    vpmovzxbd {{.*#+}} xmm1 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
-; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vptest %xmm0, %xmm0
+; AVX-NEXT:    movl (%rdi), %eax
+; AVX-NEXT:    cmpl %eax, (%rsi)
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
 ;
@@ -123,10 +86,8 @@ define i1 @intrinsic_v4i8(ptr align 1 %arg, ptr align 1 %arg1) {
 ; X86:       # %bb.0: # %bb
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vpmovzxbd {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
-; X86-NEXT:    vpmovzxbd {{.*#+}} xmm1 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
-; X86-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vptest %xmm0, %xmm0
+; X86-NEXT:    movl (%eax), %eax
+; X86-NEXT:    cmpl %eax, (%ecx)
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 bb:
@@ -140,21 +101,15 @@ bb:
 define i1 @intrinsic_v8i8(ptr align 1 %arg, ptr align 1 %arg1) {
 ; SSE-LABEL: intrinsic_v8i8:
 ; SSE:       # %bb.0: # %bb
-; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; SSE-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE-NEXT:    pmovmskb %xmm1, %eax
-; SSE-NEXT:    cmpb $-1, %al
+; SSE-NEXT:    movq (%rdi), %rax
+; SSE-NEXT:    cmpq %rax, (%rsi)
 ; SSE-NEXT:    sete %al
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: intrinsic_v8i8:
 ; AVX:       # %bb.0: # %bb
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpmovmskb %xmm0, %eax
-; AVX-NEXT:    cmpb $-1, %al
+; AVX-NEXT:    movq (%rdi), %rax
+; AVX-NEXT:    cmpq %rax, (%rsi)
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
 ;

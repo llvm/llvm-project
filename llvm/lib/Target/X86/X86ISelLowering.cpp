@@ -44461,6 +44461,18 @@ static SDValue combinePredicateReduction(SDNode *Extract, SelectionDAG &DAG,
         if ((BinOp == ISD::AND && CC == ISD::CondCode::SETEQ) ||
             (BinOp == ISD::OR && CC == ISD::CondCode::SETNE)) {
           EVT VecVT = Match.getOperand(0).getValueType();
+
+          // If representable as a scalar integer:
+          // For all_of(setcc(x,y,eq)) - use (iX)x == (iX)y.
+          // For any_of(setcc(x,y,ne)) - use (iX)x != (iX)y.
+          EVT IntVT = EVT::getIntegerVT(Ctx, VecVT.getSizeInBits());
+          if (TLI.isTypeLegal(IntVT)) {
+            SDValue LHS = DAG.getFreeze(Match.getOperand(0));
+            SDValue RHS = DAG.getFreeze(Match.getOperand(1));
+            return DAG.getSetCC(DL, ExtractVT, DAG.getBitcast(IntVT, LHS),
+                                DAG.getBitcast(IntVT, RHS), CC);
+          }
+
           EVT VecSVT = VecVT.getScalarType();
           if (VecSVT != MVT::i8 && (VecSVT.getSizeInBits() % 8) == 0) {
             NumElts *= VecSVT.getSizeInBits() / 8;
