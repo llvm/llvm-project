@@ -35,4 +35,19 @@ def NVVMOptimizeForTarget : Pass<"llvm-optimize-for-nvvm-target"> {
   let constructor = "::mlir::NVVM::createOptimizeForTargetPass()";
 }
 
+def DIScopeForLLVMFuncOp : Pass<"ensure-debug-info-scope-on-llvm-func", "LLVM::LLVMFuncOp"> {
+  let summary = "Materialize LLVM debug info subprogram attribute on every LLVMFuncOp";
+  let description = [{
+    Having a debug info subprogram attribute on a function is required for
+    emitting line tables from MLIR FileLocCol locations.
+
+    This is not intended to be a proper replacement for frontends to emit
+    complete debug informations, however it is a convenient way to get line
+    tables for debugging purposes. This allow to step trough in a debugger
+    line-by-line or get a backtrace with line numbers.
+  }];
+
+  let constructor = "mlir::LLVM::createDIScopeForLLVMFuncOpPass()";
+}
+
 #endif // MLIR_DIALECT_LLVMIR_TRANSFORMS_PASSES
