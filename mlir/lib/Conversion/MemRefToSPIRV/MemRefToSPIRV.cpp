@@ -10,11 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -182,6 +183,17 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+/// Converts memref.automic_rmw operations to SPIR-V atomic operations.
+class AtomicRMWOpPattern final
+    : public OpConversionPattern<memref::AtomicRMWOp> {
+public:
+  using OpConversionPattern<memref::AtomicRMWOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::AtomicRMWOp atomicOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 /// Removed a deallocation if it is a supported allocation. Currently only
 /// removes deallocation if the memory space is workgroup memory.
 class DeallocOpPattern final : public OpConversionPattern<memref::DeallocOp> {
@@ -300,6 +312,62 @@ AllocOpPattern::matchAndRewrite(memref::AllocOp operation, OpAdaptor adaptor,
 
   // Get pointer to global variable at the current scope.
   rewriter.replaceOpWithNewOp<spirv::AddressOfOp>(operation, varOp);
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// AllocOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
+                                    OpAdaptor adaptor,
+                                    ConversionPatternRewriter &rewriter) const {
+  if (atomicOp.getType().isa<FloatType>())
+    return rewriter.notifyMatchFailure(atomicOp,
+                                       "unimplemented floating-point case");
+
+  auto memrefType = atomicOp.getMemref().getType().cast<MemRefType>();
+  std::optional<spirv::Scope> scope = getAtomicOpScope(memrefType);
+  if (!scope)
+    return rewriter.notifyMatchFailure(atomicOp,
+                                       "unsupported memref memory space");
+
+  auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+  Type resultType = typeConverter.convertType(atomicOp.getType());
+  if (!resultType)
+    return rewriter.notifyMatchFailure(atomicOp,
+                                       "failed to convert result type");
+
+  auto loc = atomicOp.getLoc();
+  Value ptr =
+      spirv::getElementPtr(typeConverter, memrefType, adaptor.getMemref(),
+                           adaptor.getIndices(), loc, rewriter);
+
+  if (!ptr)
+    return failure();
+
+#define ATOMIC_CASE(kind, spirvOp)                                             \
+  case arith::AtomicRMWKind::kind:                                             \
+    rewriter.replaceOpWithNewOp<spirv::spirvOp>(                               \
+        atomicOp, resultType, ptr, *scope,                                     \
+        spirv::MemorySemantics::AcquireRelease, adaptor.getValue());           \
+    break
+
+  switch (atomicOp.getKind()) {
+    ATOMIC_CASE(addi, AtomicIAddOp);
+    ATOMIC_CASE(maxs, AtomicSMaxOp);
+    ATOMIC_CASE(maxu, AtomicUMaxOp);
+    ATOMIC_CASE(mins, AtomicSMinOp);
+    ATOMIC_CASE(minu, AtomicUMinOp);
+    ATOMIC_CASE(ori, AtomicOrOp);
+    ATOMIC_CASE(andi, AtomicAndOp);
+  default:
+    return rewriter.notifyMatchFailure(atomicOp, "unimplemented atomic kind");
+  }
+
+#undef ATOMIC_CASE
+
   return success();
 }
 
@@ -656,9 +724,9 @@ StoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
 namespace mlir {
 void populateMemRefToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                    RewritePatternSet &patterns) {
-  patterns.add<AllocaOpPattern, AllocOpPattern, DeallocOpPattern,
-               IntLoadOpPattern, IntStoreOpPattern, LoadOpPattern,
-               MemorySpaceCastOpPattern, StoreOpPattern>(typeConverter,
-                                                         patterns.getContext());
+  patterns.add<AllocaOpPattern, AllocOpPattern, AtomicRMWOpPattern,
+               DeallocOpPattern, IntLoadOpPattern, IntStoreOpPattern,
+               LoadOpPattern, MemorySpaceCastOpPattern, StoreOpPattern>(
+      typeConverter, patterns.getContext());
 }
 } // namespace mlir
