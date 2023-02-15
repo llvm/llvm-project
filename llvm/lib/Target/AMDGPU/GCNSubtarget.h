@@ -191,6 +191,7 @@ protected:
   bool HasSALUFloatInsts = false;
   bool HasVGPRSingleUseHintInsts = false;
   bool HasPseudoScalarTrans = false;
+  bool HasBitOp3Insts = false;
 
   bool HasVcmpxPermlaneHazard = false;
   bool HasVMEMtoScalarWriteHazard = false;
@@ -1156,6 +1157,8 @@ public:
   bool hasExtendedWaitCounts() const {
     return getGeneration() >= GFX12;
   }
+
+  bool hasBitOp3Insts() const { return HasBitOp3Insts; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs

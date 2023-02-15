@@ -734,6 +734,44 @@ class PermlaneVarPat<SDPatternOperator permlane,
         VGPR_32:$src1, VGPR_32:$vdst_in)
 >;
 
+class VOP3_BITOP3_Profile<VOPProfile pfl, VOP3Features f> : VOP3_Profile<pfl, f> {
+  let HasClamp = 0;
+  let HasOMod = 0;
+  let HasModifiers = 0;
+
+  let Ins64 = !con(getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
+                            0 /* HasIntClamp */, HasModifiers, HasSrc2Mods,
+                            HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret,
+                   (ins bitop3_0:$bitop3));
+
+  field dag InsVOP3DPPBase = getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP,
+                  Src2VOP3DPP, NumSrcArgs, HasClamp,
+                  HasOpSel /* Modifiers */, HasOpSel /* HasSrc2Mods */, HasOMod,
+                  Src0ModVOP3DPP, Src1ModVOP3DPP, Src2ModVOP3DPP, 0 /* HasOpSel */, IsVOP3P>.ret;
+
+  let InsVOP3OpSel = !con(getInsVOP3Base<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs, 0, 1, 1, 0,
+                                         getOpSelMod<Src0VT>.ret, getOpSelMod<Src1VT>.ret,
+                                         getOpSelMod<Src2VT>.ret, 0, 0>.ret,
+                          (ins bitop3_0:$bitop3, op_sel0:$op_sel));
+
+  let InsVOP3DPP16 = !con(getInsVOP3DPPBase<InsVOP3DPPBase, DstRCVOP3DPP, 3, 1>.ret,
+                          (ins bitop3_0:$bitop3),
+                          !if (HasOpSel, (ins op_sel0:$op_sel), (ins)),
+                          (ins dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
+                               bank_mask:$bank_mask, bound_ctrl:$bound_ctrl, FI:$fi));
+  let InsVOP3DPP = InsVOP3DPP16;
+
+  let InsVOP3DPP8 = !con(getInsVOP3DPPBase<InsVOP3DPPBase, DstRCVOP3DPP, 3, 1>.ret,
+                         (ins bitop3_0:$bitop3),
+                         !if (HasOpSel, (ins op_sel0:$op_sel), (ins)),
+                         (ins dpp8:$dpp8, FI:$fi));
+
+  let Asm64 = "$vdst, $src0, $src1, $src2$bitop3";
+  let AsmVOP3OpSel = !subst("$op_sel", "$bitop3$op_sel", getAsmVOP3OpSel<3, 0, 0, 0, 0, 0>.ret);
+  let AsmVOP3DPP16 = getAsmVOP3DPP16<!if(HasOpSel, AsmVOP3OpSel, Asm64)>.ret;
+  let AsmVOP3DPP = AsmVOP3DPP16;
+  let AsmVOP3DPP8 = getAsmVOP3DPP8<!if(HasOpSel, AsmVOP3OpSel, Asm64)>.ret;
+}
 
 let SubtargetPredicate = isGFX10Plus in {
   let isCommutable = 1, isReMaterializable = 1 in {
@@ -774,6 +812,16 @@ let SubtargetPredicate = isGFX12Plus in {
   def : PermlaneVarPat<int_amdgcn_permlanex16_var, V_PERMLANEX16_VAR_B32_e64>;
 
 } // End SubtargetPredicate = isGFX12Plus
+
+let SubtargetPredicate = HasBitOp3Insts in {
+  let isReMaterializable = 1 in {
+    defm V_BITOP3_B16 : VOP3Inst <"v_bitop3_b16",
+                                  VOP3_BITOP3_Profile<VOPProfile_True16<VOPProfile <[i16, i16, i16, i16, i8]>>,
+                                                      VOP3_OPSEL>>;
+    defm V_BITOP3_B32 : VOP3Inst <"v_bitop3_b32",
+                                  VOP3_BITOP3_Profile<VOPProfile <[i32, i32, i32, i32, i8]>, VOP3_REGULAR>>;
+  }
+} // End SubtargetPredicate = HasBitOp3Insts
 
 class DivFmasPat<ValueType vt, Instruction inst, Register CondReg> : GCNPat<
   (AMDGPUdiv_fmas (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
@@ -963,6 +1011,9 @@ defm V_MINIMUM_F16        : VOP3Only_Realtriple_t16_gfx12<0x367>;
 defm V_MAXIMUM_F16        : VOP3Only_Realtriple_t16_gfx12<0x368>;
 defm V_PERMLANE16_VAR_B32 : VOP3Only_Real_Base_gfx12<0x30f>;
 defm V_PERMLANEX16_VAR_B32 : VOP3Only_Real_Base_gfx12<0x310>;
+
+defm V_BITOP3_B16         : VOP3_Real_BITOP3_t16_gfx12<0x233>;
+defm V_BITOP3_B32         : VOP3_Real_BITOP3_gfx12<0x234>;
 
 //===----------------------------------------------------------------------===//
 // GFX11, GFX12

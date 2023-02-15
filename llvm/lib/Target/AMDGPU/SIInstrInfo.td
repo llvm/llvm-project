@@ -1318,6 +1318,9 @@ def wait_exp : NamedIntOperand<i8, "wait_exp", "WaitEXP">;
 def wait_va_vdst : NamedIntOperand<i8, "wait_va_vdst", "WaitVAVDST">;
 def wait_vm_vsrc : NamedIntOperand<i8, "wait_vm_vsrc", "WaitVMVSRC">;
 
+def BitOp3 : CustomOperand<i8, 1, "BitOp3">;
+def bitop3_0 : DefaultOperand_0<BitOp3>;
+
 } // End OperandType = "OPERAND_IMMEDIATE"
 
 class KImmMatchClass<int size> : AsmOperandClass {

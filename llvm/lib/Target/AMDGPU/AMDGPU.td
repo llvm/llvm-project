@@ -785,6 +785,12 @@ def FeaturePseudoScalarTrans : SubtargetFeature<"pseudo-scalar-trans",
   "Has Pseudo Scalar Transcendental instructions"
 >;
 
+def FeatureBitOp3Insts : SubtargetFeature<"bitop3-insts",
+  "HasBitOp3Insts",
+  "true",
+  "Has v_bitop3_b32/v_bitop3_b16 instructions"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1470,7 +1476,8 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
    FeatureSALUFloatInsts,
-   FeaturePseudoScalarTrans]>;
+   FeaturePseudoScalarTrans,
+   FeatureBitOp3Insts]>;
 
 //===----------------------------------------------------------------------===//
 
@@ -1985,6 +1992,9 @@ def HasVGPRSingleUseHintInsts : Predicate<"Subtarget->hasVGPRSingleUseHintInsts(
 
 def HasPseudoScalarTrans : Predicate<"Subtarget->hasPseudoScalarTrans()">,
   AssemblerPredicate<(all_of FeaturePseudoScalarTrans)>;
+
+def HasBitOp3Insts : Predicate<"Subtarget->hasBitOp3Insts()">,
+  AssemblerPredicate<(all_of FeatureBitOp3Insts)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"

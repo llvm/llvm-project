@@ -171,6 +171,7 @@ public:
     ImmTyWaitVMVSRC,
     ImmTyGlobalSReg32,
     ImmTyGlobalSReg64,
+    ImmTyBitOp3,
   };
 
   // Immediate operand kind.
@@ -407,6 +408,7 @@ public:
   bool isHigh() const { return isImmTy(ImmTyHigh); }
   bool isGlobalSReg32Imm() const { return isImmTy(ImmTyGlobalSReg32); }
   bool isGlobalSReg64Imm() const { return isImmTy(ImmTyGlobalSReg64); }
+  bool isBitOp3() const { return isImmTy(ImmTyBitOp3) && isUInt<8>(getImm()); }
 
   bool isRegOrImm() const {
     return isReg() || isImm();
@@ -1118,6 +1120,7 @@ public:
       break;
     case ImmTyGlobalSReg32: OS << "GlobalSReg32"; break;
     case ImmTyGlobalSReg64: OS << "GlobalSReg64"; break;
+    case ImmTyBitOp3: OS << "BitOp3"; break;
     }
   }
 
@@ -1890,6 +1893,9 @@ public:
   AMDGPUOperand::Ptr defaultWaitVAVDST() const;
   AMDGPUOperand::Ptr defaultWaitVMVSRC() const;
   OperandMatchResultTy parseVOPD(OperandVector &Operands);
+
+  OperandMatchResultTy parseBitOp3(OperandVector &Operands);
+  AMDGPUOperand::Ptr defaultBitOp3() const;
 };
 
 } // end anonymous namespace
@@ -8740,6 +8746,11 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
     Inst.addOperand(Inst.getOperand(0));
   }
 
+  int BitOp3Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::bitop3);
+  if (BitOp3Idx != -1) {
+    addOptionalImmOperand(Inst, Operands, OptIdx, AMDGPUOperand::ImmTyBitOp3);
+  }
+
   // FIXME: This is messy. Parse the modifiers as if it was a normal VOP3
   // instruction, and then figure out where to actually put the modifiers
 
@@ -9807,4 +9818,18 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultWaitEXP() const {
 
 bool AMDGPUOperand::isWaitEXP() const {
   return isImmTy(ImmTyWaitEXP) && isUInt<3>(getImm());
+}
+
+//===----------------------------------------------------------------------===//
+// BITOP3
+//===----------------------------------------------------------------------===//
+
+OperandMatchResultTy AMDGPUAsmParser::parseBitOp3(OperandVector &Operands) {
+  OperandMatchResultTy Res =
+      parseIntWithPrefix("bitop3", Operands, AMDGPUOperand::ImmTyBitOp3);
+  return Res;
+}
+
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultBitOp3() const {
+  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyBitOp3);
 }
