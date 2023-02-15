@@ -1376,6 +1376,16 @@ void SeparateConstOffsetFromGEP::swapGEPOperand(GetElementPtrInst *First,
     First->setIsInBounds(true);
 }
 
+void SeparateConstOffsetFromGEPPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<SeparateConstOffsetFromGEPPass> *>(this)
+      ->printPipeline(OS, MapClassName2PassName);
+  OS << "<";
+  if (LowerGEP)
+    OS << "lower-gep";
+  OS << ">";
+}
+
 PreservedAnalyses
 SeparateConstOffsetFromGEPPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
