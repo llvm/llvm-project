@@ -12,7 +12,7 @@
 #include "mlir/IR/PatternMatch.h"
 
 namespace mlir {
-class LogicalResult;
+struct LogicalResult;
 class MLIRContext;
 class Pass;
 class RewritePatternSet;
