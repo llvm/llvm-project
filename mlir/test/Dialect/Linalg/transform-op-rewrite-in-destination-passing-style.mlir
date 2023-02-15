@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -test-linalg-transform-patterns=test-convert-to-destination-style-patterns -canonicalize %s | FileCheck %s
+// RUN: mlir-opt  -test-transform-dialect-interpreter --split-input-file -canonicalize %s | FileCheck %s
 
 // CHECK-LABEL: func @tensor_from_elements_0d(
 //  CHECK-SAME:     %[[arg0:.*]]: index
@@ -8,6 +8,14 @@
 func.func @tensor_from_elements_0d(%arg0: index) -> tensor<index> {
   %0 = tensor.from_elements %arg0 : tensor<index>
   return %0 : tensor<index>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["tensor.from_elements"]} in %arg1
+    : (!pdl.operation) -> !pdl.operation
+  transform.structured.rewrite_in_destination_passing_style %0
+    : (!pdl.operation) -> !pdl.operation
 }
 
 // -----
@@ -23,6 +31,14 @@ func.func @tensor_from_elements_0d(%arg0: index) -> tensor<index> {
 func.func @tensor_from_elements_1d(%arg0: index, %arg1: index) -> tensor<2xindex> {
   %0 = tensor.from_elements %arg0, %arg1 : tensor<2xindex>
   return %0 : tensor<2xindex>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["tensor.from_elements"]} in %arg1
+    : (!pdl.operation) -> !pdl.operation
+  transform.structured.rewrite_in_destination_passing_style %0
+    : (!pdl.operation) -> !pdl.operation
 }
 
 // -----
@@ -44,6 +60,14 @@ func.func @tensor_from_elements_2d(%arg0: index, %arg1: index) -> tensor<3x2xind
   %0 = tensor.from_elements %arg0, %arg1, %arg0, %arg1, %arg0, %arg1
          : tensor<3x2xindex>
   return %0 : tensor<3x2xindex>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["tensor.from_elements"]} in %arg1
+    : (!pdl.operation) -> !pdl.operation
+  transform.structured.rewrite_in_destination_passing_style %0
+    : (!pdl.operation) -> !pdl.operation
 }
 
 // -----
@@ -68,6 +92,14 @@ func.func @tensor_generate(%s1: index, %s2: index) -> tensor<?x?xindex> {
     tensor.yield %1 : index
   } : tensor<?x?xindex>
   return %0 : tensor<?x?xindex>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["tensor.generate"]} in %arg1
+    : (!pdl.operation) -> !pdl.operation
+  transform.structured.rewrite_in_destination_passing_style %0
+    : (!pdl.operation) -> !pdl.operation
 }
 
 // -----
@@ -103,6 +135,14 @@ func.func @tensor_pad(%t1: tensor<?x10xindex>, %l2: index, %h1: index,
   return %0 : tensor<?x?xindex>
 }
 
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
+    : (!pdl.operation) -> !pdl.operation
+  transform.structured.rewrite_in_destination_passing_style %0
+    : (!pdl.operation) -> !pdl.operation
+}
+
 // -----
 
 // CHECK:       #[[$map:.+]] = affine_map<()[s0, s1] -> (s0 + s1 + 5)>
@@ -129,6 +169,14 @@ func.func @tensor_pad_constant(%t1: tensor<?x10xindex>, %l2: index, %h1: index,
   return %0 : tensor<?x?xindex>
 }
 
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
+    : (!pdl.operation) -> !pdl.operation
+  transform.structured.rewrite_in_destination_passing_style %0
+    : (!pdl.operation) -> !pdl.operation
+}
+
 // -----
 
 // CHECK:       #[[$map:.+]] = affine_map<()[s0, s1] -> (s0 + s1 + 5)>
@@ -151,4 +199,40 @@ func.func @tensor_pad_invariant(%t1: tensor<?x10xindex>, %l2: index, %h1: index,
     tensor.yield %padding : index
   } : tensor<?x10xindex> to tensor<?x?xindex>
   return %0 : tensor<?x?xindex>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
+    : (!pdl.operation) -> !pdl.operation
+  transform.structured.rewrite_in_destination_passing_style %0
+    : (!pdl.operation) -> !pdl.operation
+}
+
+// -----
+
+// CHECK-LABEL: func @tensor_pad_nofold(
+//  CHECK-SAME:   %[[t1:.*]]: tensor<?x?xindex>, %[[padding:.*]]: index
+//   CHECK-NOT:   linalg.fill
+//   CHECK-NOT:   generic
+//   CHECK-NOT:   insert_slice
+//       CHECK:   %[[alloc_tensor:.*]] = bufferization.alloc_tensor(%{{.*}}) : tensor<?x?xindex>
+//       CHECK:   %[[copied:.*]] = linalg.copy ins(%[[t1]] : tensor<?x?xindex>) outs(%[[alloc_tensor]] : tensor<?x?xindex>) -> tensor<?x?xindex>
+//       CHECK:   return %[[copied]]
+func.func @tensor_pad_nofold(%t1: tensor<?x?xindex>, %padding: index)
+    -> tensor<?x?xindex> {
+  %c0 = arith.constant 0 : index
+  %0 = tensor.pad %t1 nofold low[0, %c0] high[%c0, 0] {
+  ^bb0(%arg0: index, %arg1: index):
+    tensor.yield %padding : index
+  } : tensor<?x?xindex> to tensor<?x?xindex>
+  return %0: tensor<?x?xindex>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
+    : (!pdl.operation) -> !pdl.operation
+  transform.structured.rewrite_in_destination_passing_style %0
+    : (!pdl.operation) -> !pdl.operation
 }

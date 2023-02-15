@@ -1206,6 +1206,20 @@ packTranspose(RewriterBase &rewriter, tensor::PackOp packOp,
               linalg::LinalgOp linalgOp, tensor::UnPackOp maybeUnPackOp,
               ArrayRef<int64_t> outerPerm, ArrayRef<int64_t> innerPerm);
 
+/// Rewrite tensor.from_elements to linalg.generic.
+FailureOr<Operation *>
+rewriteInDestinationPassingStyle(RewriterBase &rewriter,
+                                 tensor::FromElementsOp fromElementsOp);
+
+/// Rewrite tensor.generate to linalg.generic.
+FailureOr<Operation *>
+rewriteInDestinationPassingStyle(RewriterBase &rewriter,
+                                 tensor::GenerateOp generateOp);
+
+/// Rewrite tensor.pad to linalg.generic + tensor.insert_slice.
+FailureOr<Operation *> rewriteInDestinationPassingStyle(RewriterBase &rewriter,
+                                                        tensor::PadOp padOp);
+
 } // namespace linalg
 } // namespace mlir
 
