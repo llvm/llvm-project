@@ -1232,8 +1232,8 @@ bool SeparateConstOffsetFromGEP::reuniteExts(Instruction *I) {
     }
   } else if (match(I, m_Sub(m_SExt(m_Value(LHS)), m_SExt(m_Value(RHS))))) {
     if (LHS->getType() == RHS->getType()) {
-      const SCEV *Key =
-          SE->getAddExpr(SE->getUnknown(LHS), SE->getUnknown(RHS));
+      const SCEV *Key = SE->getAddExpr(
+          SE->getUnknown(LHS), SE->getNegativeSCEV(SE->getUnknown(RHS)));
       if (auto *Dom = findClosestMatchingDominator(Key, I, DominatingSubs)) {
         Instruction *NewSExt = new SExtInst(Dom, I->getType(), "", I);
         NewSExt->takeName(I);
@@ -1253,8 +1253,8 @@ bool SeparateConstOffsetFromGEP::reuniteExts(Instruction *I) {
     }
   } else if (match(I, m_NSWSub(m_Value(LHS), m_Value(RHS)))) {
     if (programUndefinedIfPoison(I)) {
-      const SCEV *Key =
-          SE->getAddExpr(SE->getUnknown(LHS), SE->getUnknown(RHS));
+      const SCEV *Key = SE->getAddExpr(
+          SE->getUnknown(LHS), SE->getNegativeSCEV(SE->getUnknown(RHS)));
       DominatingSubs[Key].push_back(I);
     }
   }
