@@ -17723,13 +17723,17 @@ static SDValue performAddCombineForShiftedOperands(SDNode *N,
 static SDValue performSubAddMULCombine(SDNode *N, SelectionDAG &DAG) {
   if (N->getOpcode() != ISD::SUB)
     return SDValue();
+
   SDValue Add = N->getOperand(1);
+  SDValue X = N->getOperand(0);
   if (Add.getOpcode() != ISD::ADD)
     return SDValue();
 
-  SDValue X = N->getOperand(0);
+  if (!Add.hasOneUse())
+    return SDValue();
   if (DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(X)))
     return SDValue();
+
   SDValue M1 = Add.getOperand(0);
   SDValue M2 = Add.getOperand(1);
   if (M1.getOpcode() != ISD::MUL && M1.getOpcode() != AArch64ISD::SMULL &&
