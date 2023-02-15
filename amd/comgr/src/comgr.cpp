@@ -1817,7 +1817,7 @@ amd_comgr_populate_mangled_names(amd_comgr_data_t Data,
       }
 
       std::unique_ptr<Module> M = std::move(ModOrError.get());
-      for (llvm::GlobalVariable &global_var : M->getGlobalList())
+      for (llvm::GlobalVariable &global_var : M->globals())
         DataP->MangledNames.push_back(global_var.getName().str());
       for (llvm::Function &function : M->getFunctionList())
         DataP->MangledNames.push_back(function.getName().str());
