@@ -63,7 +63,7 @@
 `2774 <https://wg21.link/LWG2774>`__,"``std::function`` construction vs assignment","June 2021","",""
 `2818 <https://wg21.link/LWG2818>`__,"``::std::`` everywhere rule needs tweaking","June 2021","|Nothing To Do|",""
 `2997 <https://wg21.link/LWG2997>`__,"LWG 491 and the specification of ``{forward_,}list::unique``","June 2021","",""
-`3410 <https://wg21.link/LWG3410>`__,"``lexicographical_compare_three_way`` is overspecified","June 2021","","","|spaceship|"
+`3410 <https://wg21.link/LWG3410>`__,"``lexicographical_compare_three_way`` is overspecified","June 2021","|Complete|","17.0","|spaceship|"
 `3430 <https://wg21.link/LWG3430>`__,"``std::fstream`` & co. should be constructible from string_view","June 2021","",""
 `3462 <https://wg21.link/LWG3462>`__,"§[formatter.requirements]: Formatter requirements forbid use of ``fc.arg()``","June 2021","","","|format|"
 `3481 <https://wg21.link/LWG3481>`__,"``viewable_range`` mishandles lvalue move-only views","June 2021","Superseded by `P2415R2 <https://wg21.link/P2415R2>`__","","|ranges|"
