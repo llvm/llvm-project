@@ -316,6 +316,12 @@ def S_USUBO_PSEUDO : SPseudoInstSI <
   (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1)
 >;
 
+let OtherPredicates = [HasShaderCyclesHiLoRegisters] in
+def GET_SHADERCYCLESHILO : SPseudoInstSI<
+  (outs SReg_64:$sdst), (ins),
+  [(set SReg_64:$sdst, (i64 (readcyclecounter)))]
+>;
+
 } // End usesCustomInserter = 1, Defs = [SCC]
 
 let usesCustomInserter = 1 in {
