@@ -272,9 +272,8 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
   ]> {
   let summary = "memref to tensor operation";
   let description = [{
-    Create a tensor from a `memref`, making an independent copy of the element
-    data. The result value is a tensor whose shape and element type match the
-    memref operand.
+    An operation that creates a tensor from a `memref`. The result value is a
+    tensor whose shape and element type match the memref operand.
 
     The opposite of this op is `to_memref`. Together, these two ops are
     useful for source/target materializations when doing type conversions
@@ -284,15 +283,39 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
 
     ```mlir
     // Produces a value of tensor<4x?xf32> type.
-    %12 = bufferization.to_tensor %10 : memref<4x?xf32, #layout, memspace0>
+    %t = bufferization.to_tensor %m : memref<4x?xf32, #layout, 0>
     ```
 
-    If tensor load is used in the bufferization steps, mutating the source
-    buffer after loading leads to undefined behavior.
+    If the `writable` unit attribute is set, the produced tensor is considered
+    "writable" during bufferization. Otherwise, every OpOperand that bufferizes
+    to a write to the future buffer of the resulting tensor (or an alias
+    thereof) will bufferize out-of-place to prevent emitting any writes to
+    `memref` during bufferization.
+
+    If the given memref does not alias with any other memref passed to another
+    `to_tensor` op, the `restrict` unit attribute can be set. Only such
+    operations are supported by One-Shot Bufferize. (Otherwise, potential memref
+    aliasing relationships would have to be captured in One-Shot Bufferize.)
+
+    Example:
+
+    ```
+    %t = bufferization.to_tensor %m restrict writable : memref<4xf32>
+
+    // %t is writable, so the tensor.insert may bufferize in-place in the
+    // absence of other conflicts.
+    %r = tensor.insert %f into %t[%idx] : tensor<4xf32>
+    ```
+
+    `to_tensor` ops are not bufferized. They are expected to fold away after
+    bufferization. If there are non-bufferizable ops in the IR and
+    `allowUnknownOps` is set, they may be part of the resulting IR and not fold
+    away. However, such IR is no longer bufferizable with One-Shot Bufferize.
   }];
 
   let arguments = (ins Arg<AnyRankedOrUnrankedMemRef,
-                       "the reference to load from", [MemRead]>:$memref);
+                       "the reference to load from", [MemRead]>:$memref,
+                       UnitAttr:$restrict, UnitAttr:$writable);
   let results = (outs AnyTensor:$result);
 
   let extraClassDeclaration = [{
@@ -308,30 +331,13 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     // BufferizableOpInterface implementation
     //===------------------------------------------------------------------===//
 
-    // ToTensorOp conceptually loads a tensor from a memory location. The
-    // One-Shot analysis has no information about the memref that is loaded from
-    // by ToTensorOp. We have to assume that the loaded tensor may after
-    // bufferization potentially alias with any other bufferized tensor. Since
-    // ToTensorOp and ToMemrefOp have no aliasing OpOperand/OpResult pairs, this
-    // cannot be encoded directly in the analysis. However, declaring ToTensorOp
-    // results as not writable enforces a buffer copy and has the same effect.
-
     LogicalResult bufferize(RewriterBase &rewriter,
                             const BufferizationOptions &options) const {
-      // to_tensor cannot be bufferized. However, other ops that are using
-      // to_tensor's result will eventually be bufferized. At that point, they
-      // will start using to_tensor's memref operand. Once all users of
-      // to_tensor are bufferized, the op will not have any users anymore and
-      // DCE away. In case of partial bufferization, to_memref(to_tensor(x))
-      // constructs may be left over. These are folded by the canonicalizer or
-      // FinalizingBufferize.
+      // to_tensor/to_memref pairs fold away after bufferization.
       return success();
     }
 
-    bool isWritable(Value value, const AnalysisState &state) const {
-      // It is unknown whether the memref operand is writable or not.
-      return false;
-    }
+    bool isWritable(Value value, const AnalysisState &state);
 
     FailureOr<BaseMemRefType> getBufferType(
         Value value, const BufferizationOptions &options,
@@ -340,7 +346,10 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     }
   }];
 
-  let assemblyFormat = "$memref attr-dict `:` type($memref)";
+  let assemblyFormat = [{
+    $memref (`restrict` $restrict^)? (`writable` $writable^)? attr-dict
+      `:` type($memref)
+  }];
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
@@ -362,19 +371,19 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
   ]> {
   let summary = "tensor to memref cast operation";
   let description = [{
-    Casts a tensor to a memref.
+    An operation that returns the future buffer of a `tensor`.
 
     ```mlir
-    // Result type is memref<4x?xf32, #layout, 42>
-    %12 = bufferization.to_memref %10 : memref<4x?xf32, #layout, 42>
+    // Result type is memref<4x?xf32, #layout, 0>
+    %m = bufferization.to_memref %t : memref<4x?xf32, #layout, 0>
     ```
 
-    Note, that mutating the result of the `to_memref` operation leads to
-    undefined behavior.
-
     This operation is a specialized variant of the built-in
-    `unrealized_conversion_cast` and is intended for use in the context of
-    gradual bufferization.
+    `unrealized_conversion_cast` and is used to make sure that the IR stays
+    valid at any point during the bufferization.
+
+    IR that contains `to_memref` ops cannot be bufferized with One-Shot
+    Bufferize.
   }];
 
   let arguments = (ins AnyTensor:$tensor);

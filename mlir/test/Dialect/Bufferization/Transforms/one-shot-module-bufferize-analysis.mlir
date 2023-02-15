@@ -1057,9 +1057,9 @@ func.func @main_func(%A : tensor<?xf32> {bufferization.writable = true},
 
 // CHECK-LABEL: func @to_tensor_op_not_writable
 func.func @to_tensor_op_not_writable(%m: memref<?xf32>, %v:  vector<5xf32>,
-                                %idx1: index, %idx2: index)
+                                     %idx1: index, %idx2: index)
     -> vector<10xf32> {
-  %0 = bufferization.to_tensor %m : memref<?xf32>
+  %0 = bufferization.to_tensor %m restrict : memref<?xf32>
 
   // Write to the tensor. Cannot be inplace due to tensor_load.
   //      CHECK: vector.transfer_write
