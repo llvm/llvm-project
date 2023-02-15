@@ -284,20 +284,6 @@ class RVBShiftW_ri<bits<7> imm11_5, bits<3> funct3, RISCVOpcode opcode,
                     (ins GPR:$rs1, uimm5:$shamt), opcodestr,
                     "$rd, $rs1, $shamt">;
 
-// Using RVInstIShiftW since it allocates 5 bits instead of 6 to shamt.
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVBShfl_ri<bits<7> imm11_5, bits<3> funct3, RISCVOpcode opcode,
-                 string opcodestr>
-    : RVInstIShiftW<imm11_5, funct3, opcode, (outs GPR:$rd),
-                    (ins GPR:$rs1, shfl_uimm:$shamt), opcodestr,
-                    "$rd, $rs1, $shamt">;
-
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVBTernaryR<bits<2> funct2, bits<3> funct3, RISCVOpcode opcode,
-                  string opcodestr, string argstr>
-    : RVInstR4<funct2, funct3, opcode, (outs GPR:$rd),
-               (ins GPR:$rs1, GPR:$rs2, GPR:$rs3), opcodestr, argstr>;
-
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
