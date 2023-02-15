@@ -79,6 +79,12 @@ public:
   /// setting up all aliases (including the required ones).
   static Expected<std::unique_ptr<MachOPlatform>>
   Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
+         JITDylib &PlatformJD, std::unique_ptr<DefinitionGenerator> OrcRuntime,
+         std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
+
+  /// Construct using a path to the ORC runtime.
+  static Expected<std::unique_ptr<MachOPlatform>>
+  Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
          JITDylib &PlatformJD, const char *OrcRuntimePath,
          std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
 
