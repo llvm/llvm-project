@@ -6170,6 +6170,7 @@ cc_library(
         "lib/Conversion/MemRefToSPIRV",
     ],
     deps = [
+        ":ArithDialect",
         ":ConversionPassIncGen",
         ":FuncDialect",
         ":IR",
