@@ -395,9 +395,7 @@ define <2 x i64> @test24(ptr %P) {
 
 define i16 @load_from_zero_with_dynamic_offset(i64 %idx) {
 ; CHECK-LABEL: @load_from_zero_with_dynamic_offset(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr @GLOBAL, i64 [[IDX:%.*]]
-; CHECK-NEXT:    [[V:%.*]] = load i16, ptr [[GEP]], align 2
-; CHECK-NEXT:    ret i16 [[V]]
+; CHECK-NEXT:    ret i16 0
 ;
   %gep = getelementptr i16, ptr @GLOBAL, i64 %idx
   %v = load i16, ptr %gep
@@ -408,10 +406,7 @@ declare ptr @llvm.strip.invariant.group.p0(ptr %p)
 
 define i32 @load_via_strip_invariant_group() {
 ; CHECK-LABEL: @load_via_strip_invariant_group(
-; CHECK-NEXT:    [[A:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr nonnull @Y)
-; CHECK-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[A]], i64 8
-; CHECK-NEXT:    [[D:%.*]] = load i32, ptr [[B]], align 4
-; CHECK-NEXT:    ret i32 [[D]]
+; CHECK-NEXT:    ret i32 37
 ;
   %a = call ptr @llvm.strip.invariant.group.p0(ptr @Y)
   %b = getelementptr i8, ptr %a, i64 8
