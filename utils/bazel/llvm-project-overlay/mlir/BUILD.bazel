@@ -9904,6 +9904,7 @@ cc_library(
         ":ArithDialect",
         ":ArithTransforms",
         ":ArithUtils",
+        ":BufferizationDialect",
         ":ControlFlowDialect",
         ":DialectUtils",
         ":FuncDialect",
