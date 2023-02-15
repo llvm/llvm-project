@@ -6577,22 +6577,27 @@ static Value *simplifyLoadInst(LoadInst *LI, Value *PtrOp,
   if (LI->isVolatile())
     return nullptr;
 
-  APInt Offset(Q.DL.getIndexTypeSizeInBits(PtrOp->getType()), 0);
-  auto *PtrOpC = dyn_cast<Constant>(PtrOp);
+  if (auto *PtrOpC = dyn_cast<Constant>(PtrOp))
+    return ConstantFoldLoadFromConstPtr(PtrOpC, LI->getType(), Q.DL);
+
+  // We can only fold the load if it is from a constant global with definitive
+  // initializer. Skip expensive logic if this is not the case.
+  auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(PtrOp));
+  if (!GV || !GV->isConstant() || !GV->hasDefinitiveInitializer())
+    return nullptr;
+
   // Try to convert operand into a constant by stripping offsets while looking
-  // through invariant.group intrinsics. Don't bother if the underlying object
-  // is not constant, as calculating GEP offsets is expensive.
-  if (!PtrOpC && isa<Constant>(getUnderlyingObject(PtrOp))) {
-    PtrOp = PtrOp->stripAndAccumulateConstantOffsets(
-        Q.DL, Offset, /* AllowNonInbounts */ true,
-        /* AllowInvariantGroup */ true);
+  // through invariant.group intrinsics.
+  APInt Offset(Q.DL.getIndexTypeSizeInBits(PtrOp->getType()), 0);
+  PtrOp = PtrOp->stripAndAccumulateConstantOffsets(
+      Q.DL, Offset, /* AllowNonInbounts */ true,
+      /* AllowInvariantGroup */ true);
+  if (PtrOp == GV) {
     // Index size may have changed due to address space casts.
     Offset = Offset.sextOrTrunc(Q.DL.getIndexTypeSizeInBits(PtrOp->getType()));
-    PtrOpC = dyn_cast<Constant>(PtrOp);
+    return ConstantFoldLoadFromConstPtr(GV, LI->getType(), Offset, Q.DL);
   }
 
-  if (PtrOpC)
-    return ConstantFoldLoadFromConstPtr(PtrOpC, LI->getType(), Offset, Q.DL);
   return nullptr;
 }
 
