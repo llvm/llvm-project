@@ -107,7 +107,7 @@ static memory_resource* __default_memory_resource(bool set = false, memory_resou
     new_res = new_res ? new_res : new_delete_resource();
     lock_guard<mutex> guard(res_lock);
     memory_resource* old_res = res;
-    res = new_res;
+    res                      = new_res;
     return old_res;
   } else {
     lock_guard<mutex> guard(res_lock);
