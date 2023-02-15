@@ -264,6 +264,7 @@ Value linalg::bufferizeToAllocation(RewriterBase &rewriter, PadOp padOp,
   // Create buffer allocation.
   Value alloc =
       createAllocationForTensor(rewriter, loc, padOp.getResult(), memorySpace);
+  rewriter.setInsertionPointAfter(alloc.getDefiningOp());
 
   // Create linalg.fill or linalg.generic.
   Operation *fillOp = movePaddingToFillOrGenericOp(rewriter, loc, padOp, alloc);
@@ -344,7 +345,7 @@ Value linalg::bufferizeToAllocation(RewriterBase &rewriter, Value value,
   if (auto bbArg = value.dyn_cast<BlockArgument>()) {
     rewriter.setInsertionPointToStart(bbArg.getOwner());
   } else {
-    rewriter.setInsertionPoint(value.getDefiningOp());
+    rewriter.setInsertionPointAfter(value.getDefiningOp());
   }
   Location loc = value.getLoc();
 
@@ -352,6 +353,7 @@ Value linalg::bufferizeToAllocation(RewriterBase &rewriter, Value value,
   Value alloc = createAllocationForTensor(rewriter, loc, value, memorySpace);
 
   // Create memref.tensor_store.
+  rewriter.setInsertionPointAfter(alloc.getDefiningOp());
   rewriter.create<memref::TensorStoreOp>(loc, value, alloc);
 
   // Create bufferization.to_tensor with "restrict" and "writable". The returned
