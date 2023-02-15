@@ -663,8 +663,8 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("sve2-sha3", FPU & SveMode && HasSVE2SHA3)
       .Case("sve2-sm4", FPU & SveMode && HasSVE2SM4)
       .Case("sme", HasSME)
-      .Case("sme-f64f64", HasSMEF64)
-      .Case("sme-i16i64", HasSMEI64)
+      .Case("sme-f64f64", HasSMEF64F64)
+      .Case("sme-i16i64", HasSMEI16I64)
       .Cases("memtag", "memtag2", HasMTE)
       .Case("sb", HasSB)
       .Case("predres", HasPredRes)
@@ -780,12 +780,12 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     }
     if (Feature == "+sme-f64f64") {
       HasSME = true;
-      HasSMEF64 = true;
+      HasSMEF64F64 = true;
       HasBFloat16 = true;
     }
     if (Feature == "+sme-i16i64") {
       HasSME = true;
-      HasSMEI64 = true;
+      HasSMEI16I64 = true;
       HasBFloat16 = true;
     }
     if (Feature == "+sb")
