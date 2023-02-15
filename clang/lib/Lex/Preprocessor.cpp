@@ -865,7 +865,7 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
   // keyword when we're in a caching lexer, because caching lexers only get
   // used in contexts where import declarations are disallowed.
   //
-  // Likewise if this is the C++ Modules TS import keyword.
+  // Likewise if this is the standard C++ import keyword.
   if (((LastTokenWasAt && II.isModulesImport()) ||
        Identifier.is(tok::kw_import)) &&
       !InMacroArgs && !DisableMacroExpansion &&
@@ -1279,7 +1279,7 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
 
   // If we're expecting a '.' or a ';', and we got a '.', then wait until we
   // see the next identifier. (We can also see a '[[' that begins an
-  // attribute-specifier-seq here under the C++ Modules TS.)
+  // attribute-specifier-seq here under the Standard C++ Modules.)
   if (!ModuleImportExpectsIdentifier && Result.getKind() == tok::period) {
     ModuleImportExpectsIdentifier = true;
     CurLexerKind = CLK_LexAfterModuleImport;
@@ -1304,12 +1304,12 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
     SemiLoc = Suffix.back().getLocation();
   }
 
-  // Under the Modules TS, the dot is just part of the module name, and not
-  // a real hierarchy separator. Flatten such module names now.
+  // Under the standard C++ Modules, the dot is just part of the module name,
+  // and not a real hierarchy separator. Flatten such module names now.
   //
   // FIXME: Is this the right level to be performing this transformation?
   std::string FlatModuleName;
-  if (getLangOpts().ModulesTS || getLangOpts().CPlusPlusModules) {
+  if (getLangOpts().CPlusPlusModules) {
     for (auto &Piece : NamedModuleImportPath) {
       // If the FlatModuleName ends with colon, it implies it is a partition.
       if (!FlatModuleName.empty() && FlatModuleName.back() != ':')

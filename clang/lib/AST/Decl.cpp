@@ -601,22 +601,14 @@ static bool isExportedFromModuleInterfaceUnit(const NamedDecl *D) {
 }
 
 static LinkageInfo getInternalLinkageFor(const NamedDecl *D) {
-  // (for the modules ts) Internal linkage declarations within a module
-  // interface unit are modeled as "module-internal linkage", which means that
-  // they have internal linkage formally but can be indirectly accessed from
-  // outside the module via inline functions and templates defined within the
-  // module.
-  if (isInModulePurview(D) && D->getASTContext().getLangOpts().ModulesTS)
-    return LinkageInfo(ModuleInternalLinkage, DefaultVisibility, false);
-
   return LinkageInfo::internal();
 }
 
 static LinkageInfo getExternalLinkageFor(const NamedDecl *D) {
-  // C++ Modules TS [basic.link]/6.8:
-  //   - A name declared at namespace scope that does not have internal linkage
-  //     by the previous rules and that is introduced by a non-exported
-  //     declaration has module linkage.
+  // C++ [basic.link]p4.8:
+  //   - if the declaration of the name is attached to a named module and is not
+  //   exported
+  //     the name has module linkage;
   //
   // [basic.namespace.general]/p2
   //   A namespace is never attached to a named module and never has a name with
