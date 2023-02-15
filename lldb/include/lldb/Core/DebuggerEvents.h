@@ -21,10 +21,11 @@ class Stream;
 
 class ProgressEventData : public EventData {
 public:
-  ProgressEventData(uint64_t progress_id, const std::string &message,
+  ProgressEventData(uint64_t progress_id, std::string title, std::string update,
                     uint64_t completed, uint64_t total, bool debugger_specific)
-      : m_message(message), m_id(progress_id), m_completed(completed),
-        m_total(total), m_debugger_specific(debugger_specific) {}
+      : m_title(std::move(title)), m_details(std::move(update)),
+        m_id(progress_id), m_completed(completed), m_total(total),
+        m_debugger_specific(debugger_specific) {}
 
   static ConstString GetFlavorString();
 
@@ -41,12 +42,30 @@ public:
   bool IsFinite() const { return m_total != UINT64_MAX; }
   uint64_t GetCompleted() const { return m_completed; }
   uint64_t GetTotal() const { return m_total; }
-  const std::string &GetMessage() const { return m_message; }
+  std::string GetMessage() const {
+    std::string message = m_title;
+    if (!m_details.empty()) {
+      message.append(": ");
+      message.append(m_details);
+    }
+    return message;
+  }
+  const std::string &GetTitle() const { return m_title; }
+  const std::string &GetDetails() const { return m_details; }
   bool IsDebuggerSpecific() const { return m_debugger_specific; }
 
 private:
-  std::string m_message;
+  /// The title of this progress event. The value is expected to remain stable
+  /// for a given progress ID.
+  std::string m_title;
+
+  /// Details associated with this progress event update. The value is expected
+  /// to change between progress events.
+  std::string m_details;
+
+  /// Unique ID used to associate progress events.
   const uint64_t m_id;
+
   uint64_t m_completed;
   const uint64_t m_total;
   const bool m_debugger_specific;
