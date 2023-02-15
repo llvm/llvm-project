@@ -109,7 +109,7 @@ void DemandedBits::determineLiveOperandBits(
   default: break;
   case Instruction::Call:
   case Instruction::Invoke:
-    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(UserI)) {
+    if (const auto *II = dyn_cast<IntrinsicInst>(UserI)) {
       switch (II->getIntrinsicID()) {
       default: break;
       case Intrinsic::bswap:
@@ -206,7 +206,7 @@ void DemandedBits::determineLiveOperandBits(
 
         // If the shift is nuw/nsw, then the high bits are not dead
         // (because we've promised that they *must* be zero).
-        const ShlOperator *S = cast<ShlOperator>(UserI);
+        const auto *S = cast<ShlOperator>(UserI);
         if (S->hasNoSignedWrap())
           AB |= APInt::getHighBitsSet(BitWidth, ShiftAmt+1);
         else if (S->hasNoUnsignedWrap())
@@ -353,7 +353,7 @@ void DemandedBits::performAnalysis() {
 
     // Non-integer-typed instructions...
     for (Use &OI : I.operands()) {
-      if (Instruction *J = dyn_cast<Instruction>(OI)) {
+      if (auto *J = dyn_cast<Instruction>(OI)) {
         Type *T = J->getType();
         if (T->isIntOrIntVectorTy())
           AliveBits[J] = APInt::getAllOnes(T->getScalarSizeInBits());
@@ -394,7 +394,7 @@ void DemandedBits::performAnalysis() {
     for (Use &OI : UserI->operands()) {
       // We also want to detect dead uses of arguments, but will only store
       // demanded bits for instructions.
-      Instruction *I = dyn_cast<Instruction>(OI);
+      auto *I = dyn_cast<Instruction>(OI);
       if (!I && !isa<Argument>(OI))
         continue;
 
@@ -447,7 +447,7 @@ APInt DemandedBits::getDemandedBits(Instruction *I) {
 
 APInt DemandedBits::getDemandedBits(Use *U) {
   Type *T = (*U)->getType();
-  Instruction *UserI = cast<Instruction>(U->getUser());
+  auto *UserI = cast<Instruction>(U->getUser());
   const DataLayout &DL = UserI->getModule()->getDataLayout();
   unsigned BitWidth = DL.getTypeSizeInBits(T->getScalarType());
 
@@ -485,7 +485,7 @@ bool DemandedBits::isUseDead(Use *U) {
     return false;
 
   // Uses by always-live instructions are never dead.
-  Instruction *UserI = cast<Instruction>(U->getUser());
+  auto *UserI = cast<Instruction>(U->getUser());
   if (isAlwaysLive(UserI))
     return false;
 
