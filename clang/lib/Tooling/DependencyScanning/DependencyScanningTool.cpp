@@ -548,6 +548,7 @@ llvm::Expected<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
       Rule.PrimaryOutput = Command.Output;
     }
 
+    void handleCASFileSystemRootID(cas::CASID ID) override {}
     void
     handleDependencyOutputOpts(const DependencyOutputOptions &Opts) override {}
     void handleFileDependency(StringRef File) override {}
