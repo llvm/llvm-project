@@ -14,9 +14,17 @@
 # RUN: ld.lld a.o b.o c.o -o out2
 # RUN: llvm-readobj --arch-specific out2 | FileCheck %s --check-prefix=CHECK2
 
-# RUN: llvm-mc -filetype=obj -triple=riscv64 invalid_ext.s -o invalid_ext.o
-# RUN: not ld.lld invalid_ext.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=INVALID_EXT --implicit-check-not=error:
-# INVALID_EXT: error: invalid_ext.o:(.riscv.attributes): rv64i2p0_y2p0: invalid standard user-level extension 'y'
+# RUN: llvm-mc -filetype=obj -triple=riscv64 unrecognized_ext1.s -o unrecognized_ext1.o
+# RUN: not ld.lld unrecognized_ext1.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=UNRECOGNIZED_EXT1 --implicit-check-not=error:
+# UNRECOGNIZED_EXT1: error: unrecognized_ext1.o:(.riscv.attributes): rv64i2p0_y2p0: invalid standard user-level extension 'y'
+
+# RUN: llvm-mc -filetype=obj -triple=riscv64 unrecognized_ext2.s -o unrecognized_ext2.o
+# RUN: not ld.lld unrecognized_ext2.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=UNRECOGNIZED_EXT2 --implicit-check-not=error:
+# UNRECOGNIZED_EXT2: error: unrecognized_ext2.o:(.riscv.attributes): rv64i2p0_zmadeup1p0: unsupported version number 1.0 for extension 'zmadeup'
+
+# RUN: llvm-mc -filetype=obj -triple=riscv64 unrecognized_version.s -o unrecognized_version.o
+# RUN: not ld.lld unrecognized_version.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=UNRECOGNIZED_VERSION --implicit-check-not=error:
+# UNRECOGNIZED_VERSION: error: unrecognized_version.o:(.riscv.attributes): rv64i99p0: unsupported version number 99.0 for extension 'i'
 
 ## A zero value attribute is not printed.
 # RUN: llvm-mc -filetype=obj -triple=riscv64 unaligned_access_0.s -o unaligned_access_0.o
@@ -127,7 +135,7 @@
 .attribute priv_spec, 2
 .attribute priv_spec_minor, 2
 
-#--- invalid_ext.s
+#--- unrecognized_ext1.s
 .section .riscv.attributes,"",@0x70000003
 .byte 0x41
 .long .Lend-.riscv.attributes-1
@@ -137,6 +145,30 @@
 .long .Lend-.Lbegin
 .byte 5  # Tag_RISCV_arch
 .asciz "rv64i2p0_y2p0"
+.Lend:
+
+#--- unrecognized_ext2.s
+.section .riscv.attributes,"",@0x70000003
+.byte 0x41
+.long .Lend-.riscv.attributes-1
+.asciz "riscv"  # vendor
+.Lbegin:
+.byte 1  # Tag_File
+.long .Lend-.Lbegin
+.byte 5  # Tag_RISCV_arch
+.asciz "rv64i2p0_zmadeup1p0"
+.Lend:
+
+#--- unrecognized_version.s
+.section .riscv.attributes,"",@0x70000003
+.byte 0x41
+.long .Lend-.riscv.attributes-1
+.asciz "riscv"  # vendor
+.Lbegin:
+.byte 1  # Tag_File
+.long .Lend-.Lbegin
+.byte 5  # Tag_RISCV_arch
+.asciz "rv64i99p0"
 .Lend:
 
 #--- unaligned_access_0.s
