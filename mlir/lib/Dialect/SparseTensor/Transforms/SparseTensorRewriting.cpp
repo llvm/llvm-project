@@ -785,7 +785,7 @@ private:
     const Dimension dimRank = dstTp.getDimRank();
     // This assertion should be guaranteed by validity of the op,
     // but just for paranoia's sake.
-    assert(srcRTT.getRank() == dimRank);
+    assert(static_cast<Dimension>(srcRTT.getRank()) == dimRank);
 
     SmallVector<Value> srcSizes;
     sizesForTensor(rewriter, srcSizes, loc, srcRTT, src);
@@ -807,7 +807,7 @@ private:
       srcRTT =
           getUnorderedCOOFromTypeWithOrdering(srcRTT, dstTp.getDimToLvlMap());
       // Ensure that mutating `srcRTT` didn't invalidate `dimRank`.
-      assert(srcRTT.getRank() == dimRank);
+      assert(static_cast<Dimension>(srcRTT.getRank()) == dimRank);
       tmpCoo = rewriter
                    .create<AllocTensorOp>(loc, srcRTT, dynSrcSizes, Value(),
                                           /*sizeHint=*/nnz, Attribute())

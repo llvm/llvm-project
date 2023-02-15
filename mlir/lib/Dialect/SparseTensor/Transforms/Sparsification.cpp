@@ -276,7 +276,7 @@ static bool findSparseAnnotations(CodegenEnv &env) {
       annotated = true;
     const Level lvlRank = map.getNumResults();
     assert(!enc || lvlRank == enc.getLvlRank());
-    assert(env.op().getRank(&t) == lvlRank);
+    assert(static_cast<Level>(env.op().getRank(&t)) == lvlRank);
     for (Level l = 0; l < lvlRank; l++) {
       const unsigned tensor = t.getOperandNumber();
       // FIXME: `toOrigDim` is deprecated.
