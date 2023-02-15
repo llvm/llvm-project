@@ -8126,8 +8126,9 @@ bool SIInstrInfo::isBufferSMRD(const MachineInstr &MI) const {
 
 // Depending on the used address space and instructions, some immediate offsets
 // are allowed and some are not.
-// In general, flat instruction offsets can only be non-negative, global and
-// scratch instruction offsets can also be negative.
+// Pre-GFX12, flat instruction offsets can only be non-negative, global and
+// scratch instruction offsets can also be negative. On GFX12, offsets can be
+// negative for all variants.
 //
 // There are several bugs related to these offsets:
 // On gfx10.1, flat instructions that go into the global address space cannot
@@ -8165,7 +8166,8 @@ bool SIInstrInfo::isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,
        AddrSpace == AMDGPUAS::GLOBAL_ADDRESS))
     return false;
 
-  bool AllowNegative = FlatVariant != SIInstrFlags::FLAT;
+  bool AllowNegative =
+      FlatVariant != SIInstrFlags::FLAT || AMDGPU::isGFX12Plus(ST);
   if (ST.hasNegativeScratchOffsetBug() &&
       FlatVariant == SIInstrFlags::FlatScratch)
     AllowNegative = false;
