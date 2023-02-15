@@ -114,18 +114,19 @@ SparseTensorDimSliceAttr::verify(function_ref<InFlightDiagnostic()> emitError,
          << "expect positive value or ? for slice offset/size/stride";
 }
 
-static Type getIntegerOrIndexType(MLIRContext *ctx, unsigned bitwidth) {
+Type mlir::sparse_tensor::detail::getIntegerOrIndexType(MLIRContext *ctx,
+                                                        unsigned bitwidth) {
   if (bitwidth)
     return IntegerType::get(ctx, bitwidth);
   return IndexType::get(ctx);
 }
 
 Type SparseTensorEncodingAttr::getPointerType() const {
-  return getIntegerOrIndexType(getContext(), getPointerBitWidth());
+  return detail::getIntegerOrIndexType(getContext(), getPointerBitWidth());
 }
 
 Type SparseTensorEncodingAttr::getIndexType() const {
-  return getIntegerOrIndexType(getContext(), getIndexBitWidth());
+  return detail::getIntegerOrIndexType(getContext(), getIndexBitWidth());
 }
 
 SparseTensorEncodingAttr SparseTensorEncodingAttr::withoutOrdering() const {
