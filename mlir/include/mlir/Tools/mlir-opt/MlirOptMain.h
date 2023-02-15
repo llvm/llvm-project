@@ -78,6 +78,17 @@ public:
   }
   bool shouldEmitBytecode() const { return emitBytecodeFlag; }
 
+  /// Enable the debugger action hook: it makes the debugger able to intercept
+  /// MLIR Actions.
+  void enableDebuggerActionHook(bool enabled = true) {
+    enableDebuggerActionHookFlag = enabled;
+  }
+
+  /// Return true if the Debugger action hook is enabled.
+  bool isDebuggerActionHookEnabled() const {
+    return enableDebuggerActionHookFlag;
+  }
+
   /// Set the IRDL file to load before processing the input.
   MlirOptMainConfig &setIrdlFile(StringRef file) {
     irdlFileFlag = file;
@@ -179,6 +190,9 @@ protected:
 
   /// Emit bytecode instead of textual assembly when generating output.
   bool emitBytecodeFlag = false;
+
+  /// Enable the Debugger action hook: Debugger can intercept MLIR Actions.
+  bool enableDebuggerActionHookFlag = false;
 
   /// IRDL file to register before processing the input.
   std::string irdlFileFlag = "";

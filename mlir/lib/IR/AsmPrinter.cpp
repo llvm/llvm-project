@@ -225,8 +225,8 @@ OpPrintingFlags &OpPrintingFlags::printGenericOpForm() {
 }
 
 /// Always skip Regions.
-OpPrintingFlags &OpPrintingFlags::skipRegions() {
-  skipRegionsFlag = true;
+OpPrintingFlags &OpPrintingFlags::skipRegions(bool skip) {
+  skipRegionsFlag = skip;
   return *this;
 }
 
