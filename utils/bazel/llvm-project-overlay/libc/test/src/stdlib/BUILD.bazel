@@ -46,6 +46,15 @@ libc_test(
 )
 
 libc_test(
+    name = "atof_test",
+    srcs = ["atof_test.cpp"],
+    deps = ["//libc:__support_fputil_fp_bits"],
+    libc_function_deps = [
+        "//libc:atof",
+    ],
+)
+
+libc_test(
     name = "bsearch_test",
     srcs = ["bsearch_test.cpp"],
     libc_function_deps = [
@@ -103,5 +112,41 @@ libc_test(
     deps = [":strtol_test_helper"],
     libc_function_deps = [
         "//libc:strtoull",
+    ],
+)
+
+libc_test(
+    name = "strtof_test",
+    srcs = ["strtof_test.cpp"],
+    deps = [
+        "//libc:__support_fputil_fp_bits",
+        "//libc/utils/testutils:libc_test_utils",
+    ],
+    libc_function_deps = [
+        "//libc:strtof",
+    ],
+)
+
+libc_test(
+    name = "strtod_test",
+    srcs = ["strtod_test.cpp"],
+    deps = [
+        "//libc:__support_fputil_fp_bits",
+        "//libc/utils/testutils:libc_test_utils",
+    ],
+    libc_function_deps = [
+        "//libc:strtod",
+    ],
+)
+
+libc_test(
+    name = "strtold_test",
+    srcs = ["strtold_test.cpp"],
+    deps = [
+        "//libc:__support_fputil_fp_bits",
+        "//libc:__support_uint128",
+    ],
+    libc_function_deps = [
+        "//libc:strtold",
     ],
 )
