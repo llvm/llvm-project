@@ -20,6 +20,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -3088,8 +3089,8 @@ Attribute TypeConverter::AttributeConversionResult::getResult() const {
   return impl.getPointer();
 }
 
-Optional<Attribute> TypeConverter::convertTypeAttribute(Type type,
-                                                        Attribute attr) {
+std::optional<Attribute> TypeConverter::convertTypeAttribute(Type type,
+                                                             Attribute attr) {
   for (TypeAttributeConversionCallbackFn &fn :
        llvm::reverse(typeAttributeConversions)) {
     AttributeConversionResult res = fn(type, attr);

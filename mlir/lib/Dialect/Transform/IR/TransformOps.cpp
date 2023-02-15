@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "transform-dialect"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "] ")
@@ -26,7 +27,7 @@
 using namespace mlir;
 
 static ParseResult parseSequenceOpOperands(
-    OpAsmParser &parser, Optional<OpAsmParser::UnresolvedOperand> &root,
+    OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &root,
     Type &rootType,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &extraBindings,
     SmallVectorImpl<Type> &extraBindingTypes);
@@ -666,7 +667,7 @@ transform::SequenceOp::apply(transform::TransformResults &results,
 }
 
 static ParseResult parseSequenceOpOperands(
-    OpAsmParser &parser, Optional<OpAsmParser::UnresolvedOperand> &root,
+    OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &root,
     Type &rootType,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &extraBindings,
     SmallVectorImpl<Type> &extraBindingTypes) {
