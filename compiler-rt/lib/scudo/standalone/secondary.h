@@ -456,8 +456,9 @@ public:
     Mutex.unlock();
   }
 
-  template <typename F>
-  void iterateOverBlocks(F Callback) const NO_THREAD_SAFETY_ANALYSIS {
+  template <typename F> void iterateOverBlocks(F Callback) const {
+    Mutex.assertHeld();
+
     for (const auto &H : InUseBlocks) {
       uptr Ptr = reinterpret_cast<uptr>(&H) + LargeBlock::getHeaderSize();
       if (allocatorSupportsMemoryTagging<Config>())

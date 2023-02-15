@@ -238,7 +238,10 @@ INTERFACE WEAK int SCUDO_PREFIX(malloc_info)(UNUSED int options, FILE *stream) {
     if (size < max_size)
       sizes[size]++;
   };
+
+  SCUDO_ALLOCATOR.disable();
   SCUDO_ALLOCATOR.iterateOverChunks(0, -1ul, callback, sizes);
+  SCUDO_ALLOCATOR.enable();
 
   fputs("<malloc version=\"scudo-1\">\n", stream);
   for (scudo::uptr i = 0; i != max_size; ++i)
