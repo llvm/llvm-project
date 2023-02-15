@@ -25,9 +25,6 @@
 namespace scudo {
 
 template <class Allocator> struct alignas(SCUDO_CACHE_LINE_SIZE) TSD {
-  // TODO: Add thread-safety annotation on `Cache` and `QuarantineCache`.
-  typename Allocator::CacheT Cache;
-  typename Allocator::QuarantineCacheT QuarantineCache;
   using ThisT = TSD<Allocator>;
   u8 DestructorIterations = 0;
 
@@ -60,9 +57,29 @@ template <class Allocator> struct alignas(SCUDO_CACHE_LINE_SIZE) TSD {
     Instance->commitBack(this);
   }
 
+  // Ideally, we may want to assert that all the operations on
+  // Cache/QuarantineCache always have the `Mutex` acquired. However, the
+  // current architecture of accessing TSD is not easy to cooperate with the
+  // thread-safety analysis because of pointer aliasing. So now we just add the
+  // assertion on the getters of Cache/QuarantineCache.
+  //
+  // TODO(chiahungduan): Ideally, we want to do `Mutex.assertHeld` but acquiring
+  // TSD doesn't always require holding the lock. Add this assertion while the
+  // lock is always acquired.
+  typename Allocator::CacheT &getCache() ASSERT_CAPABILITY(Mutex) {
+    return Cache;
+  }
+  typename Allocator::QuarantineCacheT &getQuarantineCache()
+      ASSERT_CAPABILITY(Mutex) {
+    return QuarantineCache;
+  }
+
 private:
   HybridMutex Mutex;
   atomic_uptr Precedence = {};
+
+  typename Allocator::CacheT Cache GUARDED_BY(Mutex);
+  typename Allocator::QuarantineCacheT QuarantineCache GUARDED_BY(Mutex);
 };
 
 } // namespace scudo
