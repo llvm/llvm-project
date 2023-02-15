@@ -810,7 +810,7 @@ public:
   }
 
   /// Get the module that owns this declaration for linkage purposes.
-  /// There only ever is such a module under the C++ Modules TS.
+  /// There only ever is such a standard C++ module.
   ///
   /// \param IgnoreLinkage Ignore the linkage of the entity; assume that
   /// all declarations in a global module fragment are unowned.

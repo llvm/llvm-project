@@ -1024,16 +1024,6 @@ void Sema::ActOnStartOfTranslationUnit() {
   if (getLangOpts().CPlusPlusModules &&
       getLangOpts().getCompilingModule() == LangOptions::CMK_HeaderUnit)
     HandleStartOfHeaderUnit();
-  else if (getLangOpts().ModulesTS &&
-           (getLangOpts().getCompilingModule() ==
-                LangOptions::CMK_ModuleInterface ||
-            getLangOpts().getCompilingModule() == LangOptions::CMK_None)) {
-    // We start in an implied global module fragment.
-    SourceLocation StartOfTU =
-        SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID());
-    ActOnGlobalModuleFragmentDecl(StartOfTU);
-    ModuleScopes.back().ImplicitGlobalModuleFragment = true;
-  }
 }
 
 void Sema::ActOnEndOfTranslationUnitFragment(TUFragmentKind Kind) {
