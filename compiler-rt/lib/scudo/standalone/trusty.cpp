@@ -37,7 +37,7 @@ void *map(UNUSED void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
   uptr Start;
   uptr End;
 
-  Start = roundUpTo(ProgramBreak, SBRK_ALIGN);
+  Start = roundUp(ProgramBreak, SBRK_ALIGN);
   // Don't actually extend the heap if MAP_NOACCESS flag is set since this is
   // the case where Scudo tries to reserve a memory region without mapping
   // physical pages.
@@ -45,7 +45,7 @@ void *map(UNUSED void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
     return reinterpret_cast<void *>(Start);
 
   // Attempt to extend the heap by Size bytes using _trusty_brk.
-  End = roundUpTo(Start + Size, SBRK_ALIGN);
+  End = roundUp(Start + Size, SBRK_ALIGN);
   ProgramBreak =
       reinterpret_cast<uptr>(_trusty_brk(reinterpret_cast<void *>(End)));
   if (ProgramBreak < End) {

@@ -244,7 +244,7 @@ public:
           continue;
         const uptr CommitSize = Entries[I].CommitSize;
         const uptr AllocPos =
-            roundDownTo(CommitBase + CommitSize - Size, Alignment);
+            roundDown(CommitBase + CommitSize - Size, Alignment);
         HeaderPos =
             AllocPos - Chunk::getHeaderSize() - LargeBlock::getHeaderSize();
         if (HeaderPos > CommitBase + CommitSize)
@@ -510,9 +510,9 @@ void *MapAllocator<Config>::allocate(Options Options, uptr Size, uptr Alignment,
   Alignment = Max(Alignment, uptr(1U) << SCUDO_MIN_ALIGNMENT_LOG);
   const uptr PageSize = getPageSizeCached();
   uptr RoundedSize =
-      roundUpTo(roundUpTo(Size, Alignment) + LargeBlock::getHeaderSize() +
-                    Chunk::getHeaderSize(),
-                PageSize);
+      roundUp(roundUp(Size, Alignment) + LargeBlock::getHeaderSize() +
+                  Chunk::getHeaderSize(),
+              PageSize);
   if (Alignment > PageSize)
     RoundedSize += Alignment - PageSize;
 
@@ -559,7 +559,7 @@ void *MapAllocator<Config>::allocate(Options Options, uptr Size, uptr Alignment,
     // For alignments greater than or equal to a page, the user pointer (eg: the
     // pointer that is returned by the C or C++ allocation APIs) ends up on a
     // page boundary , and our headers will live in the preceding page.
-    CommitBase = roundUpTo(MapBase + PageSize + 1, Alignment) - PageSize;
+    CommitBase = roundUp(MapBase + PageSize + 1, Alignment) - PageSize;
     const uptr NewMapBase = CommitBase - PageSize;
     DCHECK_GE(NewMapBase, MapBase);
     // We only trim the extra memory on 32-bit platforms: 64-bit platforms
@@ -569,7 +569,7 @@ void *MapAllocator<Config>::allocate(Options Options, uptr Size, uptr Alignment,
       MapBase = NewMapBase;
     }
     const uptr NewMapEnd =
-        CommitBase + PageSize + roundUpTo(Size, PageSize) + PageSize;
+        CommitBase + PageSize + roundUp(Size, PageSize) + PageSize;
     DCHECK_LE(NewMapEnd, MapEnd);
     if (SCUDO_WORDSIZE == 32U && NewMapEnd != MapEnd) {
       unmap(reinterpret_cast<void *>(NewMapEnd), MapEnd - NewMapEnd, 0, &Data);
@@ -578,7 +578,7 @@ void *MapAllocator<Config>::allocate(Options Options, uptr Size, uptr Alignment,
   }
 
   const uptr CommitSize = MapEnd - PageSize - CommitBase;
-  const uptr AllocPos = roundDownTo(CommitBase + CommitSize - Size, Alignment);
+  const uptr AllocPos = roundDown(CommitBase + CommitSize - Size, Alignment);
   mapSecondary<Config>(Options, CommitBase, CommitSize, AllocPos, 0, &Data);
   const uptr HeaderPos =
       AllocPos - Chunk::getHeaderSize() - LargeBlock::getHeaderSize();

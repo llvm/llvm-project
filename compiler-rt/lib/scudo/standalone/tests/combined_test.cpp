@@ -39,7 +39,7 @@ bool isPrimaryAllocation(scudo::uptr Size, scudo::uptr Alignment) {
   if (Alignment < MinAlignment)
     Alignment = MinAlignment;
   const scudo::uptr NeededSize =
-      scudo::roundUpTo(Size, MinAlignment) +
+      scudo::roundUp(Size, MinAlignment) +
       ((Alignment > MinAlignment) ? Alignment : scudo::Chunk::getHeaderSize());
   return AllocatorT::PrimaryT::canAllocate(NeededSize);
 }
@@ -48,7 +48,7 @@ template <class AllocatorT>
 void checkMemoryTaggingMaybe(AllocatorT *Allocator, void *P, scudo::uptr Size,
                              scudo::uptr Alignment) {
   const scudo::uptr MinAlignment = 1UL << SCUDO_MIN_ALIGNMENT_LOG;
-  Size = scudo::roundUpTo(Size, MinAlignment);
+  Size = scudo::roundUp(Size, MinAlignment);
   if (Allocator->useMemoryTaggingTestOnly())
     EXPECT_DEATH(
         {

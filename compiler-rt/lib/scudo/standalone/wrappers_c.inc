@@ -91,7 +91,7 @@ INTERFACE WEAK void *SCUDO_PREFIX(memalign)(size_t alignment, size_t size) {
       alignment = 1U;
     } else {
       if (UNLIKELY(!scudo::isPowerOfTwo(alignment)))
-        alignment = scudo::roundUpToPowerOfTwo(alignment);
+        alignment = scudo::roundUpPowerOfTwo(alignment);
     }
   } else {
     if (UNLIKELY(!scudo::isPowerOfTwo(alignment))) {
@@ -131,9 +131,9 @@ INTERFACE WEAK void *SCUDO_PREFIX(pvalloc)(size_t size) {
     scudo::reportPvallocOverflow(size);
   }
   // pvalloc(0) should allocate one page.
-  return scudo::setErrnoOnNull(SCUDO_ALLOCATOR.allocate(
-      size ? scudo::roundUpTo(size, PageSize) : PageSize,
-      scudo::Chunk::Origin::Memalign, PageSize));
+  return scudo::setErrnoOnNull(
+      SCUDO_ALLOCATOR.allocate(size ? scudo::roundUp(size, PageSize) : PageSize,
+                               scudo::Chunk::Origin::Memalign, PageSize));
 }
 
 INTERFACE WEAK void *SCUDO_PREFIX(realloc)(void *ptr, size_t size) {
