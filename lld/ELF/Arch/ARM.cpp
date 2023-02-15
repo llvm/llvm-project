@@ -15,6 +15,7 @@
 
 using namespace llvm;
 using namespace llvm::support::endian;
+using namespace llvm::support;
 using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
@@ -194,16 +195,14 @@ void ARM::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
 // Long form PLT Header that does not have any restrictions on the displacement
 // of the .plt from the .got.plt.
 static void writePltHeaderLong(uint8_t *buf) {
-  const uint8_t pltData[] = {
-      0x04, 0xe0, 0x2d, 0xe5, //     str lr, [sp,#-4]!
-      0x04, 0xe0, 0x9f, 0xe5, //     ldr lr, L2
-      0x0e, 0xe0, 0x8f, 0xe0, // L1: add lr, pc, lr
-      0x08, 0xf0, 0xbe, 0xe5, //     ldr pc, [lr, #8]
-      0x00, 0x00, 0x00, 0x00, // L2: .word   &(.got.plt) - L1 - 8
-      0xd4, 0xd4, 0xd4, 0xd4, //     Pad to 32-byte boundary
-      0xd4, 0xd4, 0xd4, 0xd4, //     Pad to 32-byte boundary
-      0xd4, 0xd4, 0xd4, 0xd4};
-  memcpy(buf, pltData, sizeof(pltData));
+  write32(buf + 0, 0xe52de004);   //     str lr, [sp,#-4]!
+  write32(buf + 4, 0xe59fe004);   //     ldr lr, L2
+  write32(buf + 8, 0xe08fe00e);   // L1: add lr, pc, lr
+  write32(buf + 12, 0xe5bef008);  //     ldr pc, [lr, #8]
+  write32(buf + 16, 0x00000000);  // L2: .word   &(.got.plt) - L1 - 8
+  write32(buf + 20, 0xd4d4d4d4);  //     Pad to 32-byte boundary
+  write32(buf + 24, 0xd4d4d4d4);  //     Pad to 32-byte boundary
+  write32(buf + 28, 0xd4d4d4d4);
   uint64_t gotPlt = in.gotPlt->getVA();
   uint64_t l1 = in.plt->getVA() + 8;
   write32le(buf + 16, gotPlt - l1 - 8);
@@ -248,13 +247,10 @@ void ARM::addPltHeaderSymbols(InputSection &isec) const {
 // of the .plt from the .got.plt.
 static void writePltLong(uint8_t *buf, uint64_t gotPltEntryAddr,
                          uint64_t pltEntryAddr) {
-  const uint8_t pltData[] = {
-      0x04, 0xc0, 0x9f, 0xe5, //     ldr ip, L2
-      0x0f, 0xc0, 0x8c, 0xe0, // L1: add ip, ip, pc
-      0x00, 0xf0, 0x9c, 0xe5, //     ldr pc, [ip]
-      0x00, 0x00, 0x00, 0x00, // L2: .word   Offset(&(.got.plt) - L1 - 8
-  };
-  memcpy(buf, pltData, sizeof(pltData));
+  write32(buf + 0, 0xe59fc004);   //     ldr ip, L2
+  write32(buf + 4, 0xe08cc00f);   // L1: add ip, ip, pc
+  write32(buf + 8, 0xe59cf000);   //     ldr pc, [ip]
+  write32(buf + 12, 0x00000000);  // L2: .word   Offset(&(.got.plt) - L1 - 8
   uint64_t l1 = pltEntryAddr + 4;
   write32le(buf + 12, gotPltEntryAddr - l1 - 8);
 }
