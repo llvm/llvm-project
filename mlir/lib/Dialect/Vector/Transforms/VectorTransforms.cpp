@@ -147,13 +147,13 @@ static SmallVector<IntType> extractVector(ArrayAttr arrayAttr) {
 }
 
 /// Helper to create arithmetic operation associated with a kind of contraction.
-static std::optional<Value> createContractArithOp(Location loc, Value x,
-                                                  Value y, Value acc,
-                                                  vector::CombiningKind kind,
-                                                  PatternRewriter &rewriter,
-                                                  bool isInt) {
+static std::optional<Value>
+createContractArithOp(Location loc, Value x, Value y, Value acc,
+                      vector::CombiningKind kind, PatternRewriter &rewriter,
+                      bool isInt, Optional<Value> maybeMask = std::nullopt) {
   using vector::CombiningKind;
   Value mul;
+
   if (isInt) {
     if (kind == CombiningKind::MINF || kind == CombiningKind::MAXF)
       // Only valid for floating point types.
@@ -169,11 +169,17 @@ static std::optional<Value> createContractArithOp(Location loc, Value x,
       return std::nullopt;
     // Special case for fused multiply-add.
     if (acc && acc.getType().isa<VectorType>() && kind == CombiningKind::ADD) {
-      return std::optional<Value>(
-          rewriter.create<vector::FMAOp>(loc, x, y, acc));
+      Operation *fmaOp = rewriter.create<vector::FMAOp>(loc, x, y, acc);
+      if (maybeMask.has_value() && maybeMask.value())
+        fmaOp = maskOperation(rewriter, fmaOp, maybeMask.value());
+      return fmaOp->getResult(0);
     }
     mul = rewriter.create<arith::MulFOp>(loc, x, y);
   }
+
+  assert((!maybeMask.has_value() || !maybeMask.value()) &&
+         "Unsupported masked case");
+
   if (!acc)
     return std::optional<Value>(mul);
   return makeArithReduction(rewriter, loc, kind, mul, acc);
@@ -550,14 +556,27 @@ public:
     Value acc = (op.getAcc().empty()) ? nullptr : op.getAcc()[0];
     vector::CombiningKind kind = op.getKind();
 
+    // Vector mask setup.
+    OpBuilder::InsertionGuard guard(rewriter);
+    auto maskableOp = cast<vector::MaskableOpInterface>(op.getOperation());
+    Operation *rootOp;
+    Value mask;
+    if (maskableOp.isMasked()) {
+      rewriter.setInsertionPoint(maskableOp.getMaskingOp());
+      rootOp = maskableOp.getMaskingOp();
+      mask = maskableOp.getMaskingOp().getMask();
+    } else {
+      rootOp = op;
+    }
+
     if (!rhsType) {
       // Special case: AXPY operation.
       Value b = rewriter.create<vector::BroadcastOp>(loc, lhsType, op.getRhs());
       std::optional<Value> mult = createContractArithOp(
-          loc, op.getLhs(), b, acc, kind, rewriter, isInt);
+          loc, op.getLhs(), b, acc, kind, rewriter, isInt, mask);
       if (!mult.has_value())
         return failure();
-      rewriter.replaceOp(op, *mult);
+      rewriter.replaceOp(rootOp, *mult);
       return success();
     }
 
@@ -571,13 +590,14 @@ public:
       Value r = nullptr;
       if (acc)
         r = rewriter.create<vector::ExtractOp>(loc, rhsType, acc, pos);
-      std::optional<Value> m =
-          createContractArithOp(loc, a, op.getRhs(), r, kind, rewriter, isInt);
+      std::optional<Value> m = createContractArithOp(
+          loc, a, op.getRhs(), r, kind, rewriter, isInt, mask);
       if (!m.has_value())
         return failure();
       result = rewriter.create<vector::InsertOp>(loc, resType, *m, result, pos);
     }
-    rewriter.replaceOp(op, result);
+
+    rewriter.replaceOp(rootOp, result);
     return success();
   }
 };
@@ -601,7 +621,12 @@ struct ContractOpToElementwise
 
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {
-    // TODO: implement masks
+    // TODO: Support vector.mask.
+    auto maskableOp = cast<MaskableOpInterface>(contractOp.getOperation());
+    if (maskableOp.isMasked())
+      return failure();
+
+    // TODO: Remove native masks from contraction op?
     if (!contractOp.getMasks().empty())
       return failure();
 
@@ -1429,7 +1454,12 @@ namespace mlir {
 LogicalResult
 ContractionOpToMatmulOpLowering::matchAndRewrite(vector::ContractionOp op,
                                                  PatternRewriter &rew) const {
-  // TODO: implement masks
+  // TODO: Support vector.mask.
+  auto maskableOp = cast<MaskableOpInterface>(op.getOperation());
+  if (maskableOp.isMasked())
+    return failure();
+
+  // TODO: Remove native masks from contraction op?
   if (!op.getMasks().empty())
     return failure();
   if (vectorTransformOptions.vectorContractLowering !=
@@ -1525,10 +1555,16 @@ struct UnrolledOuterProductGenerator
   UnrolledOuterProductGenerator(RewriterBase &b, vector::ContractionOp op)
       : StructuredGenerator<vector::ContractionOp, vector::IteratorType>(b, op),
         kind(op.getKind()), lhs(op.getLhs()), rhs(op.getRhs()),
-        res(op.getAcc()), lhsType(op.getLhsType()) {}
+        res(op.getAcc()), lhsType(op.getLhsType()) {
+    auto maskableOp = cast<MaskableOpInterface>(op.getOperation());
+    if (maskableOp.isMasked())
+      mask = maskableOp.getMaskingOp().getMask();
+  }
 
   Value t(Value v) {
     static constexpr std::array<int64_t, 2> perm = {1, 0};
+    if (!v)
+      return v;
     return rewriter.create<vector::TransposeOp>(loc, v, perm);
   }
 
@@ -1547,16 +1583,27 @@ struct UnrolledOuterProductGenerator
     return rewriter.create<arith::ExtSIOp>(loc, promotedType, v);
   }
 
-  Value outerProd(Value lhs, Value rhs, Value res, int reductionSize) {
+  FailureOr<Value> outerProd(Value lhs, Value rhs, Value res, int reductionSize,
+                             Optional<Value> maybeMask = std::nullopt) {
     assert(reductionSize > 0);
+    // Incremental support for masking.
+    if (mask && !maybeMask.has_value())
+      return failure();
+
     Type resElementType = res.getType().cast<VectorType>().getElementType();
     for (int64_t k = 0; k < reductionSize; ++k) {
       Value extractA = rewriter.create<vector::ExtractOp>(loc, lhs, k);
       Value extractB = rewriter.create<vector::ExtractOp>(loc, rhs, k);
       extractA = promote(extractA, resElementType);
       extractB = promote(extractB, resElementType);
-      res = rewriter.create<vector::OuterProductOp>(loc, res.getType(), extractA,
-                                             extractB, res, kind);
+      Value extractMask;
+      if (maybeMask.has_value() && maybeMask.value())
+        extractMask =
+            rewriter.create<vector::ExtractOp>(loc, maybeMask.value(), k);
+
+      Operation *outerProdOp = rewriter.create<vector::OuterProductOp>(
+          loc, res.getType(), extractA, extractB, res, kind);
+      res = maskOperation(rewriter, outerProdOp, extractMask)->getResult(0);
     }
     return res;
   }
@@ -1607,7 +1654,7 @@ struct UnrolledOuterProductGenerator
 
     // Case mat-vec: transpose.
     if (layout({{m, k}, {k}, {m}}))
-      return outerProd(t(lhs), rhs, res, lhsType.getDimSize(1));
+      return outerProd(t(lhs), rhs, res, lhsType.getDimSize(1), t(mask));
     // Case mat-trans-vec: ready to go.
     if (layout({{k, m}, {k}, {m}}))
       return outerProd(lhs, rhs, res, lhsType.getDimSize(0));
@@ -1646,7 +1693,7 @@ struct UnrolledOuterProductGenerator
 
 private:
   vector::CombiningKind kind;
-  Value lhs, rhs, res;
+  Value lhs, rhs, res, mask;
   VectorType lhsType;
 };
 } // namespace
@@ -1668,7 +1715,7 @@ private:
 /// otherwise supports any layout permutation of the matrix-multiply.
 LogicalResult ContractionOpToOuterProductOpLowering::matchAndRewrite(
     vector::ContractionOp op, PatternRewriter &rewriter) const {
-  // TODO: implement masks
+  // TODO: Remove native masks from contraction op?
   if (!op.getMasks().empty())
     return failure();
 
@@ -1679,20 +1726,31 @@ LogicalResult ContractionOpToOuterProductOpLowering::matchAndRewrite(
   if (failed(filter(op)))
     return failure();
 
+  // Vector mask setup.
+  OpBuilder::InsertionGuard guard(rewriter);
+  auto maskableOp = cast<vector::MaskableOpInterface>(op.getOperation());
+  Operation *rootOp;
+  if (maskableOp.isMasked()) {
+    rewriter.setInsertionPoint(maskableOp.getMaskingOp());
+    rootOp = maskableOp.getMaskingOp();
+  } else {
+    rootOp = op;
+  }
+
   UnrolledOuterProductGenerator e(rewriter, op);
   FailureOr<Value> matmatRes = e.matmat();
   if (succeeded(matmatRes)) {
-    rewriter.replaceOp(op, *matmatRes);
+    rewriter.replaceOp(rootOp, *matmatRes);
     return success();
   }
   FailureOr<Value> matvecRes = e.matvec();
   if (succeeded(matvecRes)) {
-    rewriter.replaceOp(op, *matvecRes);
+    rewriter.replaceOp(rootOp, *matvecRes);
     return success();
   }
   FailureOr<Value> tmatvecRes = e.tmatvec();
   if (succeeded(tmatvecRes)) {
-    rewriter.replaceOp(op, *tmatvecRes);
+    rewriter.replaceOp(rootOp, *tmatvecRes);
     return success();
   }
 
@@ -1702,7 +1760,12 @@ LogicalResult ContractionOpToOuterProductOpLowering::matchAndRewrite(
 LogicalResult
 ContractionOpToDotLowering::matchAndRewrite(vector::ContractionOp op,
                                             PatternRewriter &rewriter) const {
-  // TODO: implement masks
+  // TODO: Support vector.mask.
+  auto maskableOp = cast<MaskableOpInterface>(op.getOperation());
+  if (maskableOp.isMasked())
+    return failure();
+
+  // TODO: Remove native masks from contraction op?
   if (!op.getMasks().empty())
     return failure();
 
@@ -1834,7 +1897,12 @@ ContractionOpToDotLowering::matchAndRewrite(vector::ContractionOp op,
 LogicalResult
 ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
                                        PatternRewriter &rewriter) const {
-  // TODO: implement masks.
+  // TODO: Support vector.mask.
+  auto maskableOp = cast<MaskableOpInterface>(op.getOperation());
+  if (maskableOp.isMasked())
+    return failure();
+
+  // TODO: Remove native masks from contraction op?
   if (!op.getMasks().empty())
     return failure();
 
