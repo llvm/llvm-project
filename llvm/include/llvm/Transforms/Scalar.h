@@ -203,12 +203,6 @@ Pass *createLoopIdiomPass();
 
 //===----------------------------------------------------------------------===//
 //
-// LoopVersioningLICM - This pass is a loop versioning pass for LICM.
-//
-Pass *createLoopVersioningLICMPass();
-
-//===----------------------------------------------------------------------===//
-//
 // DemoteRegisterToMemoryPass - This pass is used to demote registers to memory
 // references. In basically undoes the PromoteMemoryToRegister pass to make cfg
 // hacking easier.
