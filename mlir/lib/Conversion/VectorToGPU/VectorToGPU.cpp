@@ -721,7 +721,7 @@ createNonLdMatrixLoads(RewriterBase &rewriter, vector::TransferReadOp op,
   FailureOr<nvgpu::FragmentElementInfo> regInfo =
       nvgpu::getMmaSyncRegisterType(*warpMatrixInfo);
   if (failed(regInfo)) {
-    rewriter.notifyMatchFailure(
+    return rewriter.notifyMatchFailure(
         op, "Failed to deduce register fragment type during "
             "conversion to distributed non-ldmatrix compatible load");
   }
