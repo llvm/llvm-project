@@ -10,6 +10,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/Debug.h"
 
 #include <string>
@@ -111,10 +112,23 @@ bool ConstraintSystem::mayHaveSolutionImpl() {
   return all_of(Constraints, [](auto &R) { return R[0] >= 0; });
 }
 
-void ConstraintSystem::dump(ArrayRef<std::string> Names) const {
+SmallVector<std::string> ConstraintSystem::getVarNamesList() const {
+  SmallVector<std::string> Names(Value2Index.size(), "");
+  for (auto &[V, Index] : Value2Index) {
+    std::string OperandName;
+    if (V->getName().empty())
+      OperandName = V->getNameOrAsOperand();
+    else
+      OperandName = std::string("%") + V->getName().str();
+    Names[Index - 1] = OperandName;
+  }
+  return Names;
+}
+
+void ConstraintSystem::dump() const {
   if (Constraints.empty())
     return;
-
+  SmallVector<std::string> Names = getVarNamesList();
   for (const auto &Row : Constraints) {
     SmallVector<std::string, 16> Parts;
     for (unsigned I = 1, S = Row.size(); I < S; ++I) {
@@ -131,15 +145,8 @@ void ConstraintSystem::dump(ArrayRef<std::string> Names) const {
   }
 }
 
-void ConstraintSystem::dump() const {
-  SmallVector<std::string, 16> Names;
-  for (unsigned i = 1; i < Constraints.back().size(); ++i)
-    Names.push_back("x" + std::to_string(i));
-  LLVM_DEBUG(dbgs() << "---\n");
-  dump(Names);
-}
-
 bool ConstraintSystem::mayHaveSolution() {
+  LLVM_DEBUG(dbgs() << "---\n");
   LLVM_DEBUG(dump());
   bool HasSolution = mayHaveSolutionImpl();
   LLVM_DEBUG(dbgs() << (HasSolution ? "sat" : "unsat") << "\n");
