@@ -114,6 +114,7 @@ bool ConstraintSystem::mayHaveSolutionImpl() {
 
 SmallVector<std::string> ConstraintSystem::getVarNamesList() const {
   SmallVector<std::string> Names(Value2Index.size(), "");
+#ifndef NDEBUG
   for (auto &[V, Index] : Value2Index) {
     std::string OperandName;
     if (V->getName().empty())
@@ -122,10 +123,12 @@ SmallVector<std::string> ConstraintSystem::getVarNamesList() const {
       OperandName = std::string("%") + V->getName().str();
     Names[Index - 1] = OperandName;
   }
+#endif
   return Names;
 }
 
 void ConstraintSystem::dump() const {
+#ifndef NDEBUG
   if (Constraints.empty())
     return;
   SmallVector<std::string> Names = getVarNamesList();
@@ -143,6 +146,7 @@ void ConstraintSystem::dump() const {
     LLVM_DEBUG(dbgs() << join(Parts, std::string(" + "))
                       << " <= " << std::to_string(Row[0]) << "\n");
   }
+#endif
 }
 
 bool ConstraintSystem::mayHaveSolution() {
