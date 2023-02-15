@@ -126,6 +126,11 @@ static inline bool RangesOverlap(const char *aStart, const char *aEnd,
 // possibly overlap in memory?  Note that the descriptors themeselves
 // are included in the test.
 static bool MayAlias(const Descriptor &x, const Descriptor &y) {
+  const char *xBase{x.OffsetElement()};
+  const char *yBase{y.OffsetElement()};
+  if (!xBase || !yBase) {
+    return false; // not both allocated
+  }
   const char *xDesc{reinterpret_cast<const char *>(&x)};
   const char *xDescLast{xDesc + x.SizeInBytes()};
   const char *yDesc{reinterpret_cast<const char *>(&y)};
@@ -133,8 +138,6 @@ static bool MayAlias(const Descriptor &x, const Descriptor &y) {
   std::int64_t xLeast, xMost, yLeast, yMost;
   MaximalByteOffsetRange(x, xLeast, xMost);
   MaximalByteOffsetRange(y, yLeast, yMost);
-  const char *xBase{x.OffsetElement()};
-  const char *yBase{y.OffsetElement()};
   if (RangesOverlap(xDesc, xDescLast, yBase + yLeast, yBase + yMost) ||
       RangesOverlap(yDesc, yDescLast, xBase + xLeast, xBase + xMost)) {
     // A descriptor overlaps with the storage described by the other;
