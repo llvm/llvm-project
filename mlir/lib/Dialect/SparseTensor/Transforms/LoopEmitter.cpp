@@ -166,37 +166,41 @@ void LoopEmitter::initializeLoopEmit(OpBuilder &builder, Location loc,
   // For every tensor, find lower and upper bound on dimensions, set the
   // same bounds on loop indices, and obtain dense or sparse buffer(s).
   for (size_t t = 0, e = tensors.size(); t < e; t++) {
-    auto tensor = tensors[t];
-    auto rtp = tensor.getType().dyn_cast<RankedTensorType>();
+    const auto tensor = tensors[t];
+    const auto rtp = tensor.getType().dyn_cast<RankedTensorType>();
     if (!rtp)
       // Skips only scalar, zero ranked tensor still need to be bufferized and
       // (probably) filled with zeros by users.
       continue;
-    auto rank = rtp.getRank();
-    auto shape = rtp.getShape();
-    auto enc = getSparseTensorEncoding(rtp);
-    uint64_t cooStart = enc ? getCOOStart(enc) : rank;
-    // Scan all dimensions of current tensor.
-    for (int64_t d = 0; d < rank; d++) {
+    // FIXME: the definition of `lvlRank` looks more like a dim-rank;
+    // but the variable is used as a level everywhere below, which
+    // suggests there may be some dim/lvl confusion going on here.
+    const Level lvlRank = rtp.getRank();
+    const auto shape = rtp.getShape();
+    const auto enc = getSparseTensorEncoding(rtp);
+    const Level cooStart = enc ? getCOOStart(enc) : lvlRank;
+    // Scan all levels of current tensor.
+    for (Level l = 0; l < lvlRank; l++) {
       // This should be called only once at beginning.
-      assert(!ptrBuffer[t][d] && !idxBuffer[t][d] && !highs[t][d]);
+      assert(!ptrBuffer[t][l] && !idxBuffer[t][l] && !highs[t][l]);
+      const auto dlt = dimTypes[t][l];
       // Handle sparse storage schemes.
-      if (isCompressedDLT(dimTypes[t][d])) {
+      if (isCompressedDLT(dlt)) {
         // Generate sparse primitives to obtains pointer and indices.
-        ptrBuffer[t][d] = genToPointers(builder, loc, tensor, d);
-        idxBuffer[t][d] = genToIndices(builder, loc, tensor, d, cooStart);
-      } else if (isSingletonDLT(dimTypes[t][d])) {
+        ptrBuffer[t][l] = genToPointers(builder, loc, tensor, l);
+        idxBuffer[t][l] = genToIndices(builder, loc, tensor, l, cooStart);
+      } else if (isSingletonDLT(dlt)) {
         // Singleton dimension, fetch indices.
-        idxBuffer[t][d] = genToIndices(builder, loc, tensor, d, cooStart);
+        idxBuffer[t][l] = genToIndices(builder, loc, tensor, l, cooStart);
       } else {
         // Dense dimension, nothing to fetch.
-        assert(isDenseDLT(dimTypes[t][d]));
+        assert(isDenseDLT(dlt));
       }
 
       // Find upper bound in current dimension.
-      unsigned p = toOrigDim(enc, d);
-      Value up = mlir::linalg::createOrFoldDimOp(builder, loc, tensor, p);
-      highs[t][d] = up;
+      // FIXME: `toOrigDim` is deprecated
+      const Dimension d = toOrigDim(enc, l);
+      highs[t][l] = mlir::linalg::createOrFoldDimOp(builder, loc, tensor, d);
     }
 
     // Perform the required bufferization. Dense inputs materialize

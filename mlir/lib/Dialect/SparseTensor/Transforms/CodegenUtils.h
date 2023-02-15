@@ -228,8 +228,7 @@ void storeIndices(OpBuilder &builder, Location loc, unsigned rank, Value ind,
 /// to match the shape of the corresponding dense tensor to support direct
 /// access of the buffer through indices.
 Value reshapeValuesToLevels(OpBuilder &builder, Location loc,
-                            SparseTensorEncodingAttr enc,
-                            const SmallVectorImpl<Value> &dimSizes,
+                            SparseTensorEncodingAttr enc, ValueRange dimSizes,
                             Value valuesBuffer, Value idxBuffer);
 
 //===----------------------------------------------------------------------===//
@@ -345,13 +344,13 @@ inline bool isZeroRankedTensorOrScalar(Type type) {
 }
 
 /// Infers the result type and generates ToPointersOp.
-Value genToPointers(OpBuilder &builder, Location loc, Value tensor, uint64_t d);
+Value genToPointers(OpBuilder &builder, Location loc, Value tensor, Level lvl);
 
-/// Infers the result type and generates ToIndicesOp. If the dim is within a COO
+/// Infers the result type and generates ToIndicesOp. If the lvl is within a COO
 /// region, the result type is a memref with unknown stride and offset.
 /// Otherwise, the result type is a memref without any specified layout.
-Value genToIndices(OpBuilder &builder, Location loc, Value tensor, uint64_t d,
-                   uint64_t cooStart);
+Value genToIndices(OpBuilder &builder, Location loc, Value tensor, Level lvl,
+                   Level cooStart);
 
 /// Infers the result type and generates ToValuesOp.
 Value genToValues(OpBuilder &builder, Location loc, Value tensor);
