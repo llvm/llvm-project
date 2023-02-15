@@ -781,6 +781,19 @@ void OptionGroupOptions::Append(OptionGroup *group, uint32_t src_mask,
   }
 }
 
+void OptionGroupOptions::Append(
+    OptionGroup *group, llvm::ArrayRef<llvm::StringRef> exclude_long_options) {
+  auto group_option_defs = group->GetDefinitions();
+  for (uint32_t i = 0; i < group_option_defs.size(); ++i) {
+    const auto &definition = group_option_defs[i];
+    if (llvm::is_contained(exclude_long_options, definition.long_option))
+      continue;
+
+    m_option_infos.push_back(OptionInfo(group, i));
+    m_option_defs.push_back(definition);
+  }
+}
+
 void OptionGroupOptions::Finalize() {
   m_did_finalize = true;
 }
