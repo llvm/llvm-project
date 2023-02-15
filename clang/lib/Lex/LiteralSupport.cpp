@@ -263,7 +263,8 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
         ThisTokBuf++;
         continue;
       }
-      if (ResultChar & 0x020000000)
+      // Check if one of the top three bits is set before shifting them out.
+      if (ResultChar & 0xE0000000)
         Overflow = true;
 
       ResultChar <<= 3;
