@@ -14,6 +14,7 @@
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/Debug/Counter.h"
+#include "mlir/Debug/DebuggerExecutionContextHook.h"
 #include "mlir/Debug/ExecutionContext.h"
 #include "mlir/Debug/Observers/ActionLogging.h"
 #include "mlir/Dialect/IRDL/IR/IRDL.h"
@@ -76,6 +77,11 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         "irdl-file",
         cl::desc("IRDL file to register before processing the input"),
         cl::location(irdlFileFlag), cl::init(""), cl::value_desc("filename"));
+
+    static cl::opt<bool, /*ExternalStorage=*/true> enableDebuggerHook(
+        "mlir-enable-debugger-hook",
+        cl::desc("Enable Debugger hook for debugging MLIR Actions"),
+        cl::location(enableDebuggerActionHookFlag), cl::init(false));
 
     static cl::opt<bool, /*ExternalStorage=*/true> explicitModule(
         "no-implicit-module",
@@ -217,30 +223,38 @@ void MlirOptMainConfigCLOptions::setDialectPluginsCallback(
 class InstallDebugHandler {
 public:
   InstallDebugHandler(MLIRContext &context, const MlirOptMainConfig &config) {
-    if (config.getLogActionsTo().empty()) {
+    if (config.getLogActionsTo().empty() &&
+        !config.isDebuggerActionHookEnabled()) {
       if (tracing::DebugCounter::isActivated())
         context.registerActionHandler(tracing::DebugCounter());
       return;
     }
+    llvm::errs() << "ExecutionContext registered on the context";
     if (tracing::DebugCounter::isActivated())
       emitError(UnknownLoc::get(&context),
-                "Debug counters are incompatible with --log-actions-to option "
-                "and are disabled");
-    std::string errorMessage;
-    logActionsFile = openOutputFile(config.getLogActionsTo(), &errorMessage);
-    if (!logActionsFile) {
-      emitError(UnknownLoc::get(&context),
-                "Opening file for --log-actions-to failed: ")
-          << errorMessage << "\n";
-      return;
+                "Debug counters are incompatible with --log-actions-to and "
+                "--mlir-enable-debugger-hook options and are disabled");
+    if (!config.getLogActionsTo().empty()) {
+      std::string errorMessage;
+      logActionsFile = openOutputFile(config.getLogActionsTo(), &errorMessage);
+      if (!logActionsFile) {
+        emitError(UnknownLoc::get(&context),
+                  "Opening file for --log-actions-to failed: ")
+            << errorMessage << "\n";
+        return;
+      }
+      logActionsFile->keep();
+      raw_fd_ostream &logActionsStream = logActionsFile->os();
+      actionLogger = std::make_unique<tracing::ActionLogger>(logActionsStream);
+      for (const auto *locationBreakpoint : config.getLogActionsLocFilters())
+        actionLogger->addBreakpointManager(locationBreakpoint);
+      executionContext.registerObserver(actionLogger.get());
     }
-    logActionsFile->keep();
-    raw_fd_ostream &logActionsStream = logActionsFile->os();
-    actionLogger = std::make_unique<tracing::ActionLogger>(logActionsStream);
-    for (const auto *locationBreakpoint : config.getLogActionsLocFilters())
-      actionLogger->addBreakpointManager(locationBreakpoint);
-
-    executionContext.registerObserver(actionLogger.get());
+    if (config.isDebuggerActionHookEnabled()) {
+      llvm::errs() << " (with Debugger hook)";
+      setupDebuggerExecutionContextHook(executionContext);
+    }
+    llvm::errs() << "\n";
     context.registerActionHandler(executionContext);
   }
 
