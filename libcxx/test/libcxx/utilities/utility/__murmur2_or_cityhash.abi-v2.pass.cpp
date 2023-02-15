@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Test the CityHash implementation is correct.
-
 // UNSUPPORTED: c++03
 
+// Test that the CityHash implementation is correct.
+//
 // In ABI v1, our CityHash implementation is incorrect and fixing it would
 // be an ABI break.
 // REQUIRES: libcpp-abi-version=2
