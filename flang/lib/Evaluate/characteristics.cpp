@@ -925,10 +925,32 @@ bool FunctionResult::IsCompatibleWith(
         if (whyNot) {
           *whyNot = "function results have distinct constant extents";
         }
-      } else if (!ifaceTypeShape->type().IsTkLenCompatibleWith(
-                     actualTypeShape->type())) {
+      } else if (ifaceTypeShape->type() != actualTypeShape->type()) {
+        if (ifaceTypeShape->type().category() ==
+            actualTypeShape->type().category()) {
+          if (ifaceTypeShape->type().category() == TypeCategory::Character) {
+            if (ifaceTypeShape->type().kind() ==
+                actualTypeShape->type().kind()) {
+              auto ifaceLen{ifaceTypeShape->type().knownLength()};
+              auto actualLen{actualTypeShape->type().knownLength()};
+              if (!ifaceLen || !actualLen || *ifaceLen == *actualLen) {
+                return true;
+              }
+            }
+          } else if (ifaceTypeShape->type().category() ==
+              TypeCategory::Derived) {
+            if (ifaceTypeShape->type().IsPolymorphic() ==
+                    actualTypeShape->type().IsPolymorphic() &&
+                !ifaceTypeShape->type().IsUnlimitedPolymorphic() &&
+                !actualTypeShape->type().IsUnlimitedPolymorphic() &&
+                AreSameDerivedType(ifaceTypeShape->type().GetDerivedTypeSpec(),
+                    actualTypeShape->type().GetDerivedTypeSpec())) {
+              return true;
+            }
+          }
+        }
         if (whyNot) {
-          *whyNot = "function results have incompatible types: "s +
+          *whyNot = "function results have distinct types: "s +
               ifaceTypeShape->type().AsFortran() + " vs "s +
               actualTypeShape->type().AsFortran();
         }
