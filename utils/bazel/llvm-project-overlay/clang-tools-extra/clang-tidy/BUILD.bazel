@@ -161,6 +161,7 @@ clang_tidy_library(
     deps = [
         ":lib",
         ":portability",
+        ":utils",
     ],
 )
 
