@@ -35,6 +35,12 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override;
 
+    /// Return the appropriate expression options used for evaluating the
+    /// expression in the given target.
+    EvaluateExpressionOptions GetEvaluateExpressionOptions(
+        const Target &target,
+        const OptionGroupValueObjectDisplay &display_opts);
+
     bool top_level;
     bool unwind_on_error;
     bool ignore_breakpoints;
@@ -66,10 +72,6 @@ protected:
                                 StringList &lines) override;
 
   bool DoExecute(llvm::StringRef command, CommandReturnObject &result) override;
-
-  /// Return the appropriate expression options used for evaluating the
-  /// expression in the given target.
-  EvaluateExpressionOptions GetEvalOptions(const Target &target);
 
   /// Evaluates the given expression.
   /// \param output_stream The stream to which the evaluation result will be
