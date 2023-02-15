@@ -1266,8 +1266,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     Opc = AArch64::BLR_RVMARKER;
   // A call to a returns twice function like setjmp must be followed by a bti
   // instruction.
-  else if (Info.CB &&
-           Info.CB->getAttributes().hasFnAttr(Attribute::ReturnsTwice) &&
+  else if (Info.CB && Info.CB->hasFnAttr(Attribute::ReturnsTwice) &&
            !Subtarget.noBTIAtReturnTwice() &&
            MF.getInfo<AArch64FunctionInfo>()->branchTargetEnforcement())
     Opc = AArch64::BLR_BTI;

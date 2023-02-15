@@ -7173,7 +7173,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   bool IsSibCall = false;
   bool GuardWithBTI = false;
 
-  if (CLI.CB && CLI.CB->getAttributes().hasFnAttr(Attribute::ReturnsTwice) &&
+  if (CLI.CB && CLI.CB->hasFnAttr(Attribute::ReturnsTwice) &&
       !Subtarget->noBTIAtReturnTwice()) {
     GuardWithBTI = FuncInfo->branchTargetEnforcement();
   }
