@@ -103,3 +103,10 @@ class TestCase(TestBase):
         lldbutil.run_to_name_breakpoint(self, "main")
         self._expect_cmd(f"dwim-print -T -- argc", "frame variable")
         self._expect_cmd(f"dwim-print -T -- argc + 1", "expression")
+
+    def test_expression_language(self):
+        """Test that the language flag doesn't affect the choice of command."""
+        self.build()
+        lldbutil.run_to_name_breakpoint(self, "main")
+        self._expect_cmd(f"dwim-print -l c++ -- argc", "frame variable")
+        self._expect_cmd(f"dwim-print -l c++ -- argc + 1", "expression")
