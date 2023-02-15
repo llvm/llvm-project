@@ -7,11 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/OpMutations.h"
-#include "PassDetail.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LocationSnapshot.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_PRINTOPMUTATIONS
+#include "mlir/Transforms/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -141,14 +146,15 @@ void mlir::getOpMutations(Operation *op_before, Operation *op_after,
 }
 
 namespace {
-struct OpMutationsPass : public OpMutationsBase<OpMutationsPass> {
-  OpMutationsPass() = default;
+struct PrintOpMutationsPass
+    : public impl::PrintOpMutationsBase<PrintOpMutationsPass> {
+  PrintOpMutationsPass() = default;
 
   void runOnOperation() override {
     Operation *op = getOperation();
 
     // Print Op Mutations
-    getOpMutations(module_op_prev, op, ir_map_prev);
+    getOpMutations(module_op_prev, op, createIRMapping());
 
     // Create snapshots of the locations
     OpPrintingFlags flags;
@@ -158,18 +164,20 @@ struct OpMutationsPass : public OpMutationsBase<OpMutationsPass> {
     }
 
     // Store the state of the Module for a later pass
-    ir_map_prev = mlir::IRMapping{};
-    module_op_prev = op->clone(ir_map_prev);
+    createIRMapping() = mlir::IRMapping{};
+    module_op_prev = op->clone(createIRMapping());
   }
 
   static mlir::Operation *module_op_prev;
-  static mlir::IRMapping ir_map_prev;
+  static mlir::IRMapping &createIRMapping() {
+    static mlir::IRMapping ir_map_prev;
+    return ir_map_prev;
+  }
 };
 
-mlir::Operation *LocationSnapshotPass::module_op_prev = nullptr;
-mlir::IRMapping LocationSnapshotPass::ir_map_prev = mlir::IRMapping{};
+mlir::Operation *PrintOpMutationsPass::module_op_prev = nullptr;
 } // namespace
 
-std::unique_ptr<Pass> mlir::createOpMutationsPass() {
-  return std::make_unique<OpMutationsPass>();
+std::unique_ptr<Pass> mlir::createPrintOpMutationsPass() {
+  return std::make_unique<PrintOpMutationsPass>();
 }

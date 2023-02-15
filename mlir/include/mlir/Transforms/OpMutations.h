@@ -1,4 +1,4 @@
-//===- LocationSnapshot.h - Location Snapshot Utilities ---------*- C++ -*-===//
+//===- OpMutations.h - Location Snapshot Utilities ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,6 +23,9 @@ namespace mlir {
 class IRMapping;
 class Operation;
 class Pass;
+
+#define GEN_PASS_DECL_PRINTOPMUTATIONS
+#include "mlir/Transforms/Passes.h.inc"
 
 void getOpMutations(Operation *op_before, Operation *op_after,
                     const IRMapping &ir_map);
