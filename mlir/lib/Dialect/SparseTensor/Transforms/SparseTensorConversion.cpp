@@ -1414,20 +1414,18 @@ public:
           createOrFoldDimCall(rewriter, loc, srcTp, adaptedOp, concatDim);
       offset = rewriter.create<arith::AddIOp>(loc, offset, curDim);
     }
-    if (dstTp.hasEncoding()) {
-      if (!allDense) {
-        // In sparse output case, the destination holds the COO.
-        Value coo = dst;
-        dst = params.genNewCall(Action::kFromCOO, coo);
-        // Release resources.
-        genDelCOOCall(rewriter, loc, elemTp, coo);
-      } else {
-        dst = dstTensor;
-      }
-      rewriter.replaceOp(op, dst);
-    } else {
+    if (!dstTp.hasEncoding()) {
       rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(
           op, dstTp.getRankedTensorType(), dst);
+    } else if (allDense) {
+      rewriter.replaceOp(op, dstTensor);
+    } else {
+      // In sparse output case, the destination holds the COO.
+      Value coo = dst;
+      dst = params.genNewCall(Action::kFromCOO, coo);
+      // Release resources.
+      genDelCOOCall(rewriter, loc, elemTp, coo);
+      rewriter.replaceOp(op, dst);
     }
     return success();
   }
