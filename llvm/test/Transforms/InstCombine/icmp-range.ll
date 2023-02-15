@@ -629,6 +629,81 @@ define i1 @ashr_uge_sub(i8 %b, i8 %x, i8 %y) {
   ret i1 %r
 }
 
+define i1 @zext_sext_add_icmp_slt_minus1(i1 %a, i1 %b) {
+; CHECK-LABEL: @zext_sext_add_icmp_slt_minus1(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
+; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[ADD]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %zext.a = zext i1 %a to i8
+  %sext.b = sext i1 %b to i8
+  %add = add i8 %zext.a, %sext.b
+  %r = icmp slt i8 %add, -1
+  ret i1 %r
+}
+
+define i1 @zext_sext_add_icmp_sgt_1(i1 %a, i1 %b) {
+; CHECK-LABEL: @zext_sext_add_icmp_sgt_1(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
+; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[ADD]], 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %zext.a = zext i1 %a to i8
+  %sext.b = sext i1 %b to i8
+  %add = add i8 %zext.a, %sext.b
+  %r = icmp sgt i8 %add, 1
+  ret i1 %r
+}
+
+define i1 @zext_sext_add_icmp_sgt_minus2(i1 %a, i1 %b) {
+; CHECK-LABEL: @zext_sext_add_icmp_sgt_minus2(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
+; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[ADD]], -2
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %zext.a = zext i1 %a to i8
+  %sext.b = sext i1 %b to i8
+  %add = add i8 %zext.a, %sext.b
+  %r = icmp sgt i8 %add, -2
+  ret i1 %r
+}
+
+define i1 @zext_sext_add_icmp_slt_2(i1 %a, i1 %b) {
+; CHECK-LABEL: @zext_sext_add_icmp_slt_2(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
+; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[ADD]], 2
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %zext.a = zext i1 %a to i8
+  %sext.b = sext i1 %b to i8
+  %add = add i8 %zext.a, %sext.b
+  %r = icmp slt i8 %add, 2
+  ret i1 %r
+}
+
+define i1 @zext_sext_add_icmp_i128(i1 %a, i1 %b) {
+; CHECK-LABEL: @zext_sext_add_icmp_i128(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i128
+; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i128
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i128 [[ZEXT_A]], [[SEXT_B]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i128 [[ADD]], 9223372036854775808
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %zext.a = zext i1 %a to i128
+  %sext.b = sext i1 %b to i128
+  %add = add i128 %zext.a, %sext.b
+  %r = icmp sgt i128 %add, 9223372036854775808
+  ret i1 %r
+}
+
 define i1 @zext_sext_add_icmp_eq_minus1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_eq_minus1(
 ; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
