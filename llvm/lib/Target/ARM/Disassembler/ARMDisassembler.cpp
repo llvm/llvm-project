@@ -4910,7 +4910,7 @@ static DecodeStatus DecodeT2SOImm(MCInst &Inst, unsigned Val, uint64_t Address,
   } else {
     unsigned unrot = fieldFromInstruction(Val, 0, 7) | 0x80;
     unsigned rot = fieldFromInstruction(Val, 7, 5);
-    unsigned imm = (unrot >> rot) | (unrot << ((32-rot)&31));
+    unsigned imm = llvm::rotr<uint32_t>(unrot, rot);
     Inst.addOperand(MCOperand::createImm(imm));
   }
 

@@ -495,8 +495,9 @@ transform.with_pdl_patterns {
 
 // -----
 
+// This should not fail.
+
 func.func @foo() {
-  // expected-note @below {{when applied to this op}}
   "op" () : () -> ()
   return
 }
@@ -513,7 +514,6 @@ transform.with_pdl_patterns {
   transform.sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
     %0 = pdl_match @some in %arg1 : (!pdl.operation) -> !pdl.operation
-    // expected-error @below {{null result #0 produced}}
     transform.test_mixed_null_and_non_null_results %0
   }
 }
@@ -1053,11 +1053,11 @@ module {
 
 // -----
 
-// expected-note @below {{when applied to this op}}
+// Should not fail.
+
 module {
   transform.sequence failures(propagate) {
   ^bb0(%arg0: !transform.any_op):
-    // expected-error @below {{null result #0 produced}}
     transform.test_produce_transform_param_or_forward_operand %arg0
       { first_result_is_null }
       : (!transform.any_op) -> (!transform.any_op, !transform.param<i64>)
@@ -1074,6 +1074,19 @@ module {
     transform.test_produce_transform_param_or_forward_operand %arg0
       { second_result_is_handle }
       : (!transform.any_op) -> (!transform.any_op, !transform.param<i64>)
+  }
+}
+
+// -----
+
+// expected-note @below {{when applied to this op}}
+module {
+  transform.sequence failures(propagate) {
+  ^bb0(%arg0: !transform.any_op):
+    // expected-error @below {{expected to produce a Value for result #0}}
+    transform.test_produce_transform_param_or_forward_operand %arg0
+      { second_result_is_handle }
+      : (!transform.any_op) -> (!transform.any_value, !transform.param<i64>)
   }
 }
 

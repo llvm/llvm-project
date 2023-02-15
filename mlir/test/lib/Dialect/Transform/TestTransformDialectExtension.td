@@ -371,7 +371,7 @@ def TestProduceTransformParamOrForwardOperandOp
                        UnitAttr:$first_result_is_param,
                        UnitAttr:$first_result_is_null,
                        UnitAttr:$second_result_is_handle);
-  let results = (outs TransformHandleTypeInterface:$out,
+  let results = (outs AnyType:$out,
                       TransformParamTypeInterface:$param);
   let assemblyFormat = "$in attr-dict `:` functional-type(operands, results)";
   let cppNamespace = "::mlir::test";

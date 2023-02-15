@@ -445,7 +445,7 @@ bool MipsLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
         MIRBuilder.buildMergeLikeInstr(s64, {Src, C_HiMask.getReg(0)});
 
     MachineInstrBuilder TwoP52FP = MIRBuilder.buildFConstant(
-        s64, BitsToDouble(UINT64_C(0x4330000000000000)));
+        s64, llvm::bit_cast<double>(UINT64_C(0x4330000000000000)));
 
     if (DstTy == s64)
       MIRBuilder.buildFSub(Dst, Bitcast, TwoP52FP);

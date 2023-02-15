@@ -1015,6 +1015,8 @@ mlir::transform::TransformEachOpTrait<OpTy>::apply(
     for (OpResult r : this->getOperation()->getResults()) {
       if (r.getType().isa<TransformParamTypeInterface>())
         transformResults.setParams(r, emptyParams);
+      else if (r.getType().isa<TransformValueHandleTypeInterface>())
+        transformResults.setValues(r, ValueRange());
       else
         transformResults.set(r, emptyPayload);
     }

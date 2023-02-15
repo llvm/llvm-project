@@ -38,8 +38,8 @@ def uimm2_lsb0 : Operand<XLenVT>,
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVZcArith_r<bits<5> funct5, string OpcodeStr> :
-  RVInst16CSZN<0b100111, funct5, 0b01, (outs GPRC:$rd_wb), (ins GPRC:$rd),
-               OpcodeStr, "$rd"> {
+  RVInst16CU<0b100111, funct5, 0b01, (outs GPRC:$rd_wb), (ins GPRC:$rd),
+             OpcodeStr, "$rd"> {
   let Constraints = "$rd = $rd_wb";
 }
 
