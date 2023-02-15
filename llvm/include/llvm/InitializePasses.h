@@ -222,7 +222,6 @@ void initializeLoopRotateLegacyPassPass(PassRegistry&);
 void initializeLoopSimplifyCFGLegacyPassPass(PassRegistry&);
 void initializeLoopSimplifyPass(PassRegistry&);
 void initializeLoopStrengthReducePass(PassRegistry&);
-void initializeLoopUnrollAndJamPass(PassRegistry&);
 void initializeLoopUnrollPass(PassRegistry&);
 void initializeLoopVectorizePass(PassRegistry&);
 void initializeLoopVersioningLICMLegacyPassPass(PassRegistry &);
