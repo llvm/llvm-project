@@ -260,22 +260,45 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     /// reset to the default/identity.
     SparseTensorEncodingAttr withoutOrdering() const;
 
-    /// Return true if every level is dense in the encoding.
+    /// Returns true if every level is dense.  Also returns true for
+    /// the null encoding (since dense-tensors are always all-dense).
     bool isAllDense() const;
 
-    /// Return true if the encoding has an identity dimension ordering.
+    /// Returns true if every level is ordered.  Also returns true for
+    /// the null encoding (since dense-tensors are always all-ordered).
+    bool isAllOrdered() const;
+
+    /// Returns true if the encoding has an identity dimension ordering.
+    /// Also returns true for the null encoding (since dense-tensors
+    /// always have the identity ordering).
     bool hasIdDimOrdering() const;
+
+    /// Returns the number of storage levels.  Asserts that the encoding
+    /// is non-null (since there is no fixed result that's valid for
+    /// every dense-tensor).
+    ::mlir::sparse_tensor::Level getLvlRank() const;
+
+    /// Safely looks up the level-type for the requested level.  (Returns
+    /// `DimLevelType::Dense` for the null encoding, since dense-tensors
+    /// are always all-dense.)
+    ::mlir::sparse_tensor::DimLevelType getLvlType(::mlir::sparse_tensor::Level l) const;
+
+    bool isDenseLvl(::mlir::sparse_tensor::Level l) const { return isDenseDLT(getLvlType(l)); }
+    bool isCompressedLvl(::mlir::sparse_tensor::Level l) const { return isCompressedDLT(getLvlType(l)); }
+    bool isSingletonLvl(::mlir::sparse_tensor::Level l) const { return isSingletonDLT(getLvlType(l)); }
+    bool isOrderedLvl(::mlir::sparse_tensor::Level l) const { return isOrderedDLT(getLvlType(l)); }
+    bool isUniqueLvl(::mlir::sparse_tensor::Level l) const { return isUniqueDLT(getLvlType(l)); }
 
     bool isSlice() const {
       return !getDimSlices().empty();
     }
 
-    std::optional<uint64_t> getStaticDimSliceOffset(unsigned dim) const;
-    std::optional<uint64_t> getStaticDimSliceSize(unsigned dim) const;
-    std::optional<uint64_t> getStaticDimSliceStride(unsigned dim) const;
-    std::optional<uint64_t> getStaticLvlSliceOffset(unsigned lvl) const;
-    std::optional<uint64_t> getStaticLvlSliceSize(unsigned lvl) const;
-    std::optional<uint64_t> getStaticLvlSliceStride(unsigned lvl) const;
+    std::optional<uint64_t> getStaticDimSliceOffset(::mlir::sparse_tensor::Dimension dim) const;
+    std::optional<uint64_t> getStaticDimSliceSize(::mlir::sparse_tensor::Dimension dim) const;
+    std::optional<uint64_t> getStaticDimSliceStride(::mlir::sparse_tensor::Dimension dim) const;
+    std::optional<uint64_t> getStaticLvlSliceOffset(::mlir::sparse_tensor::Level lvl) const;
+    std::optional<uint64_t> getStaticLvlSliceSize(::mlir::sparse_tensor::Level lvl) const;
+    std::optional<uint64_t> getStaticLvlSliceStride(::mlir::sparse_tensor::Level lvl) const;
   }];
 
   let genVerifyDecl = 1;

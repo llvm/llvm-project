@@ -227,7 +227,7 @@ func.func @mismatch_values_types(%arg0: tensor<?xf64, #SparseVector>) -> memref<
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
 
 func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>) -> i64 {
-  // expected-error@+1 {{redundant dimension argument for querying value memory size}}
+  // expected-error@+1 {{redundant level argument for querying value memory size}}
   %0 = sparse_tensor.storage_specifier.get %arg0 val_mem_sz at 0
        : !sparse_tensor.storage_specifier<#SparseVector> to i64
   return %0 : i64
@@ -238,7 +238,7 @@ func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>)
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
 
 func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>) -> i64 {
-  // expected-error@+1 {{missing dimension argument}}
+  // expected-error@+1 {{missing level argument}}
   %0 = sparse_tensor.storage_specifier.get %arg0 idx_mem_sz
        : !sparse_tensor.storage_specifier<#SparseVector> to i64
   return %0 : i64
@@ -249,7 +249,7 @@ func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>)
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
 
 func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>) -> i64 {
-  // expected-error@+1 {{requested dimension out of bound}}
+  // expected-error@+1 {{requested level out of bound}}
   %0 = sparse_tensor.storage_specifier.get %arg0 dim_sz at 1
        : !sparse_tensor.storage_specifier<#SparseVector> to i64
   return %0 : i64
@@ -654,7 +654,7 @@ func.func @invalid_concat_less_inputs(%arg: tensor<9x4xf64, #DC>) -> tensor<9x4x
 func.func @invalid_concat_dim(%arg0: tensor<2x4xf64, #DC>,
                               %arg1: tensor<3x4xf64, #DC>,
                               %arg2: tensor<4x4xf64, #DC>) -> tensor<9x4xf64, #DC> {
-  // expected-error@+1 {{Failed to concatentate tensors with rank=2 on dimension=4}}
+  // expected-error@+1 {{Concat-dimension is out of bounds for dimension-rank (4 >= 2)}}
   %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 {dimension = 4 : index}
        : tensor<2x4xf64, #DC>,
          tensor<3x4xf64, #DC>,
@@ -670,7 +670,7 @@ func.func @invalid_concat_dim(%arg0: tensor<2x4xf64, #DC>,
 func.func @invalid_concat_rank_mismatch(%arg0: tensor<2xf64, #C>,
                                         %arg1: tensor<3x4xf64, #DC>,
                                         %arg2: tensor<4x4x4xf64, #DCC>) -> tensor<9x4xf64, #DC> {
-  // expected-error@+1 {{The input tensor $0 has a different rank (rank=1) from the output tensor (rank=2)}}
+  // expected-error@+1 {{Input tensor $0 has a different rank (rank=1) from the output tensor (rank=2)}}
   %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 {dimension = 0 : index}
        : tensor<2xf64, #C>,
          tensor<3x4xf64, #DC>,
@@ -684,7 +684,7 @@ func.func @invalid_concat_rank_mismatch(%arg0: tensor<2xf64, #C>,
 func.func @invalid_concat_size_mismatch_dyn(%arg0: tensor<?x4xf64, #DC>,
                                             %arg1: tensor<5x4xf64, #DC>,
                                             %arg2: tensor<4x4xf64, #DC>) -> tensor<9x4xf64, #DC> {
-  // expected-error@+1 {{Only statically-sized input tensors are supported.}}
+  // expected-error@+1 {{Input tensor $0 has dynamic shape}}
   %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 {dimension = 0 : index}
        : tensor<?x4xf64, #DC>,
          tensor<5x4xf64, #DC>,
