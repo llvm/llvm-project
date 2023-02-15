@@ -16,6 +16,10 @@
 #include "llvm/Support/CachePruning.h"
 #include <optional>
 
+namespace llvm::CodeGenOpt {
+enum Level : int;
+} // namespace llvm::CodeGenOpt
+
 namespace lld {
 namespace wasm {
 
@@ -63,6 +67,7 @@ struct Configuration {
   uint64_t zStackSize;
   unsigned ltoPartitions;
   unsigned ltoo;
+  llvm::CodeGenOpt::Level ltoCgo;
   unsigned optimize;
   llvm::StringRef thinLTOJobs;
   bool ltoDebugPassManager;
