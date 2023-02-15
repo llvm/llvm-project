@@ -447,6 +447,7 @@ private:
   bool WorkGroupIDY : 1;
   bool WorkGroupIDZ : 1;
   bool WorkGroupInfo : 1;
+  bool WaveID : 1;
   bool LDSKernelId : 1;
   bool PrivateSegmentWaveByteOffset : 1;
 
@@ -781,6 +782,14 @@ public:
     NumSystemSGPRs += 1;
     return ArgInfo.WorkGroupInfo.getRegister();
   }
+
+  // Supported for GFX12+.
+  Register addWaveID() {
+    ArgInfo.WaveID = ArgDescriptor::createRegister(AMDGPU::TTMP8, 0x1f << 25);
+    return ArgInfo.WaveID.getRegister();
+  }
+
+  bool hasWaveID() const { return WaveID; }
 
   bool hasLDSKernelId() const { return LDSKernelId; }
 

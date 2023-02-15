@@ -6922,6 +6922,9 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_workgroup_id_z:
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
+  case Intrinsic::amdgcn_wave_id:
+    return legalizePreloadedArgIntrin(MI, MRI, B,
+                                      AMDGPUFunctionArgInfo::WAVE_ID);
   case Intrinsic::amdgcn_lds_kernel_id:
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::LDS_KERNEL_ID);

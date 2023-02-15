@@ -39,10 +39,10 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
                                              const GCNSubtarget *STI)
     : AMDGPUMachineFunction(F, *STI), Mode(F, *STI), GWSResourcePSV(getTM(STI)),
       UserSGPRInfo(F, *STI), WorkGroupIDX(false), WorkGroupIDY(false),
-      WorkGroupIDZ(false), WorkGroupInfo(false), LDSKernelId(false),
-      PrivateSegmentWaveByteOffset(false), WorkItemIDX(false),
-      WorkItemIDY(false), WorkItemIDZ(false), ImplicitArgPtr(false),
-      GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0) {
+      WorkGroupIDZ(false), WorkGroupInfo(false), WaveID(false),
+      LDSKernelId(false), PrivateSegmentWaveByteOffset(false),
+      WorkItemIDX(false), WorkItemIDY(false), WorkItemIDZ(false),
+      ImplicitArgPtr(false), GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0) {
   const GCNSubtarget &ST = *static_cast<const GCNSubtarget *>(STI);
   FlatWorkGroupSizes = ST.getFlatWorkGroupSizes(F);
   WavesPerEU = ST.getWavesPerEU(F);
@@ -107,8 +107,9 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
       MayNeedAGPRs = false; // We will select all MAI with VGPR operands.
   }
 
-  if (!AMDGPU::isGraphics(CC) ||
-      (CC == CallingConv::AMDGPU_CS && ST.hasArchitectedSGPRs())) {
+  bool HasArchitectedSGPRs =
+      CC == CallingConv::AMDGPU_CS && ST.hasArchitectedSGPRs();
+  if (!AMDGPU::isGraphics(CC) || HasArchitectedSGPRs) {
     if (IsKernel || !F.hasFnAttribute("amdgpu-no-workgroup-id-x"))
       WorkGroupIDX = true;
 
@@ -134,6 +135,10 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     if (!IsKernel && !F.hasFnAttribute("amdgpu-no-lds-kernel-id"))
       LDSKernelId = true;
   }
+
+  // For GFX12+.
+  if (HasArchitectedSGPRs)
+    WaveID = true;
 
   if (isEntryFunction()) {
     // X, XY, and XYZ are the only supported combinations, so make sure Y is

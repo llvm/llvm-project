@@ -2491,6 +2491,10 @@ def int_amdgcn_flat_atomic_fmax_num   : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
 def int_amdgcn_global_atomic_fmin_num : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
 def int_amdgcn_global_atomic_fmax_num : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
 
+// i32 @llvm.amdgcn.wave.id()
+def int_amdgcn_wave_id :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
+
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//

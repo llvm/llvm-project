@@ -111,6 +111,7 @@ struct AMDGPUFunctionArgInfo {
     WORKGROUP_ID_X      = 10,
     WORKGROUP_ID_Y      = 11,
     WORKGROUP_ID_Z      = 12,
+    WAVE_ID             = 13,
     PRIVATE_SEGMENT_WAVE_BYTE_OFFSET = 14,
     IMPLICIT_BUFFER_PTR = 15,
     IMPLICIT_ARG_PTR = 16,
@@ -141,6 +142,7 @@ struct AMDGPUFunctionArgInfo {
   ArgDescriptor WorkGroupIDY;
   ArgDescriptor WorkGroupIDZ;
   ArgDescriptor WorkGroupInfo;
+  ArgDescriptor WaveID;
   ArgDescriptor PrivateSegmentWaveByteOffset;
 
   // Pointer with offset from kernargsegmentptr to where special ABI arguments
