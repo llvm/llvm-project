@@ -144,6 +144,10 @@ DEPRECATED Level toStoredDim(RankedTensorType type, Dimension d);
 
 #undef DEPRECATED
 
+namespace detail {
+Type getIntegerOrIndexType(MLIRContext *ctx, unsigned bitwidth);
+} // namespace detail
+
 } // namespace sparse_tensor
 } // namespace mlir
 

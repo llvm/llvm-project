@@ -234,6 +234,16 @@ public:
     return enc ? enc.getPointerBitWidth() : 0;
   }
 
+  /// Returns the index-overhead MLIR type, defaulting to `IndexType`.
+  Type getIndexType() const {
+    return detail::getIntegerOrIndexType(getContext(), getIndexBitWidth());
+  }
+
+  /// Returns the pointer-overhead MLIR type, defaulting to `IndexType`.
+  Type getPointerType() const {
+    return detail::getIntegerOrIndexType(getContext(), getPointerBitWidth());
+  }
+
 private:
   // These two must be const, to ensure coherence of the memoized fields.
   const RankedTensorType rtp;
