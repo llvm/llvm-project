@@ -5564,7 +5564,6 @@ define void @PR11210(<4 x float> %x, ptr %ptr, <4 x float> %y, <2 x i64> %mask) 
 ;
 ; AVX1OR2-LABEL: PR11210:
 ; AVX1OR2:       ## %bb.0:
-; AVX1OR2-NEXT:    vmaskmovps %xmm0, %xmm2, (%rdi)
 ; AVX1OR2-NEXT:    vmaskmovps %xmm1, %xmm2, (%rdi)
 ; AVX1OR2-NEXT:    retq
 ;
@@ -5572,12 +5571,10 @@ define void @PR11210(<4 x float> %x, ptr %ptr, <4 x float> %y, <2 x i64> %mask) 
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    ## kill: def $xmm2 killed $xmm2 def $zmm2
 ; AVX512F-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX512F-NEXT:    vpcmpgtd %zmm2, %zmm3, %k0
+; AVX512F-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512F-NEXT:    vpcmpgtd %zmm2, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
-; AVX512F-NEXT:    vmovups %zmm0, (%rdi) {%k1}
 ; AVX512F-NEXT:    vmovups %zmm1, (%rdi) {%k1}
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -5585,15 +5582,13 @@ define void @PR11210(<4 x float> %x, ptr %ptr, <4 x float> %y, <2 x i64> %mask) 
 ; AVX512VLDQ-LABEL: PR11210:
 ; AVX512VLDQ:       ## %bb.0:
 ; AVX512VLDQ-NEXT:    vpmovd2m %xmm2, %k1
-; AVX512VLDQ-NEXT:    vmovups %xmm0, (%rdi) {%k1}
 ; AVX512VLDQ-NEXT:    vmovups %xmm1, (%rdi) {%k1}
 ; AVX512VLDQ-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: PR11210:
 ; AVX512VLBW:       ## %bb.0:
-; AVX512VLBW-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX512VLBW-NEXT:    vpcmpgtd %xmm2, %xmm3, %k1
-; AVX512VLBW-NEXT:    vmovups %xmm0, (%rdi) {%k1}
+; AVX512VLBW-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512VLBW-NEXT:    vpcmpgtd %xmm2, %xmm0, %k1
 ; AVX512VLBW-NEXT:    vmovups %xmm1, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    retq
 ;
@@ -5601,7 +5596,6 @@ define void @PR11210(<4 x float> %x, ptr %ptr, <4 x float> %y, <2 x i64> %mask) 
 ; X86-AVX512:       ## %bb.0:
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vpmovd2m %xmm2, %k1
-; X86-AVX512-NEXT:    vmovups %xmm0, (%eax) {%k1}
 ; X86-AVX512-NEXT:    vmovups %xmm1, (%eax) {%k1}
 ; X86-AVX512-NEXT:    retl
   %bc = bitcast <2 x i64> %mask to <4 x i32>

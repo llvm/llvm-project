@@ -29,9 +29,18 @@ class AssociateOp;
 class ElementalOp;
 class YieldElementOp;
 
+/// Is this an SSA value type for the value of a Fortran procedure
+/// designator ?
+inline bool isFortranProcedureValue(mlir::Type type) {
+  return type.isa<fir::BoxProcType>() ||
+         (type.isa<mlir::TupleType>() &&
+          fir::isCharacterProcedureTuple(type, /*acceptRawFunc=*/false));
+}
+
 /// Is this an SSA value type for the value of a Fortran expression?
 inline bool isFortranValueType(mlir::Type type) {
-  return type.isa<hlfir::ExprType>() || fir::isa_trivial(type);
+  return type.isa<hlfir::ExprType>() || fir::isa_trivial(type) ||
+         isFortranProcedureValue(type);
 }
 
 /// Is this the value of a Fortran expression in an SSA value form?
@@ -77,6 +86,10 @@ public:
   bool isBoxAddressOrValue() const {
     return hlfir::isBoxAddressOrValueType(getType());
   }
+
+  /// Is this entity a procedure designator?
+  bool isProcedure() const { return isFortranProcedureValue(getType()); }
+
   /// Is this an array or an assumed ranked entity?
   bool isArray() const { return getRank() != 0; }
 
@@ -280,6 +293,16 @@ genBounds(mlir::Location loc, fir::FirOpBuilder &builder, mlir::Value shape);
 mlir::Value genShape(mlir::Location loc, fir::FirOpBuilder &builder,
                      Entity entity);
 
+/// Compute the extent of \p entity in dimension \p dim. Crashes
+/// if dim is bigger than the entity's rank.
+mlir::Value genExtent(mlir::Location loc, fir::FirOpBuilder &builder,
+                      hlfir::Entity entity, unsigned dim);
+
+/// Compute the lower bound of \p entity in dimension \p dim. Crashes
+/// if dim is bigger than the entity's rank.
+mlir::Value genLBound(mlir::Location loc, fir::FirOpBuilder &builder,
+                      hlfir::Entity entity, unsigned dim);
+
 /// Generate a vector of extents with index type from a fir.shape
 /// of fir.shape_shift value.
 llvm::SmallVector<mlir::Value> getIndexExtents(mlir::Location loc,
@@ -338,6 +361,18 @@ hlfir::YieldElementOp inlineElementalOp(mlir::Location loc,
                                         fir::FirOpBuilder &builder,
                                         hlfir::ElementalOp elemental,
                                         mlir::ValueRange oneBasedIndices);
+
+std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
+convertToValue(mlir::Location loc, fir::FirOpBuilder &builder,
+               const hlfir::Entity &entity);
+
+std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
+convertToAddress(mlir::Location loc, fir::FirOpBuilder &builder,
+                 const hlfir::Entity &entity, mlir::Type targetType);
+
+std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
+convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
+             const hlfir::Entity &entity, mlir::Type targetType);
 
 } // namespace hlfir
 

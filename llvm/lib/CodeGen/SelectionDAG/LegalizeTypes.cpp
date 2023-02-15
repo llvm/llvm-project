@@ -245,8 +245,7 @@ bool DAGTypeLegalizer::run() {
     // types are illegal.
     for (unsigned i = 0, NumResults = N->getNumValues(); i < NumResults; ++i) {
       EVT ResultVT = N->getValueType(i);
-      LLVM_DEBUG(dbgs() << "Analyzing result type: " << ResultVT.getEVTString()
-                        << "\n");
+      LLVM_DEBUG(dbgs() << "Analyzing result type: " << ResultVT << "\n");
       switch (getTypeAction(ResultVT)) {
       case TargetLowering::TypeLegal:
         LLVM_DEBUG(dbgs() << "Legal result type\n");

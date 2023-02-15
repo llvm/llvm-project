@@ -26,8 +26,8 @@
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
-#include "src/__support/compiler_features.h"
 #include "src/__support/endian.h"
+#include "src/__support/macros/optimization.h"
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/utils.h"
 
@@ -123,7 +123,7 @@ static_assert((UINTPTR_MAX == 4294967295U) ||
                   (UINTPTR_MAX == 18446744073709551615UL),
               "We currently only support 32- or 64-bit platforms");
 
-#if defined(LLVM_LIBC_ARCH_X86_64) || defined(LLVM_LIBC_ARCH_AARCH64)
+#if defined(LIBC_TARGET_ARCH_IS_X86_64) || defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #define LLVM_LIBC_HAS_UINT64
 #endif
 
@@ -470,7 +470,7 @@ template <size_t Size, size_t MaxSize> struct Memmove {
     const size_t tail_offset = count - Size;
     const auto tail_value = T::load(src + tail_offset);
     size_t offset = 0;
-    LLVM_LIBC_LOOP_NOUNROLL
+    LIBC_LOOP_NOUNROLL
     do {
       block(dst + offset, src + offset);
       offset += Size;
@@ -497,7 +497,7 @@ template <size_t Size, size_t MaxSize> struct Memmove {
     static_assert(Size > 1, "a loop of size 1 does not need tail");
     const auto head_value = T::load(src);
     ptrdiff_t offset = count - Size;
-    LLVM_LIBC_LOOP_NOUNROLL
+    LIBC_LOOP_NOUNROLL
     do {
       block(dst + offset, src + offset);
       offset -= Size;

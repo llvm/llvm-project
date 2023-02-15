@@ -127,3 +127,16 @@ define void @dse_strncpy_memcpy_chk_test2(ptr noalias %out, ptr noalias %in, i64
   %call.1 = tail call ptr @__memcpy_chk(ptr %out, ptr %in, i64 100, i64 %n)
   ret void
 }
+
+define void @test_memcpy_intrinsic_and_memcpy_chk(ptr %A, ptr %B, ptr noalias %C) {
+; CHECK-LABEL: @test_memcpy_intrinsic_and_memcpy_chk(
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[A:%.*]], ptr [[B:%.*]], i64 48, i1 false)
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr @__memcpy_chk(ptr [[A]], ptr [[C:%.*]], i64 1, i64 10)
+; CHECK-NEXT:    ret void
+;
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %A, ptr %B, i64 48, i1 false)
+  %call = call ptr @__memcpy_chk(ptr %A, ptr %C, i64 1, i64 10)
+  ret void
+}
+
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)

@@ -14,7 +14,6 @@
 #include "llvm/Transforms/IPO/CrossDSOCFI.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalObject.h"
@@ -25,6 +24,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO.h"
 
 using namespace llvm;
@@ -35,27 +35,15 @@ STATISTIC(NumTypeIds, "Number of unique type identifiers");
 
 namespace {
 
-struct CrossDSOCFI : public ModulePass {
-  static char ID;
-  CrossDSOCFI() : ModulePass(ID) {
-    initializeCrossDSOCFIPass(*PassRegistry::getPassRegistry());
-  }
-
+struct CrossDSOCFI {
   MDNode *VeryLikelyWeights;
 
   ConstantInt *extractNumericTypeId(MDNode *MD);
   void buildCFICheck(Module &M);
-  bool runOnModule(Module &M) override;
+  bool runOnModule(Module &M);
 };
 
 } // anonymous namespace
-
-INITIALIZE_PASS_BEGIN(CrossDSOCFI, "cross-dso-cfi", "Cross-DSO CFI", false,
-                      false)
-INITIALIZE_PASS_END(CrossDSOCFI, "cross-dso-cfi", "Cross-DSO CFI", false, false)
-char CrossDSOCFI::ID = 0;
-
-ModulePass *llvm::createCrossDSOCFIPass() { return new CrossDSOCFI; }
 
 /// Extracts a numeric type identifier from an MDNode containing type metadata.
 ConstantInt *CrossDSOCFI::extractNumericTypeId(MDNode *MD) {

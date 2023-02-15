@@ -386,8 +386,8 @@ entry:
 ; CHECK: bl get_struct_large_char2
 ; CHECK: strb r0, [sp, #106]
 ; CHECK: bl end_struct_large_char2
-  %a = alloca %struct.struct_small_char, align 1
-  %b = alloca %struct.struct_large_char2, align 1
+  %a = alloca %struct.struct_small_char, align 4
+  %b = alloca %struct.struct_large_char2, align 4
   %d1 = alloca %struct.struct_large_nonchar, align 8
   %d2 = alloca %struct.struct_small_nonchar, align 2
   %call = call signext i8 @get_struct_small_char()

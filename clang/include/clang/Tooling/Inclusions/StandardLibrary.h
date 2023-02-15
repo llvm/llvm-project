@@ -108,7 +108,7 @@ public:
 
 private:
   using NSSymbolMap = llvm::DenseMap<llvm::StringRef, unsigned>;
-  NSSymbolMap *namespaceSymbols(const NamespaceDecl *D);
+  NSSymbolMap *namespaceSymbols(const DeclContext *DC, Lang L);
   llvm::DenseMap<const DeclContext *, NSSymbolMap *> NamespaceCache;
 };
 

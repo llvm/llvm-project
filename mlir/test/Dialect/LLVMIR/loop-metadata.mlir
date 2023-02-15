@@ -12,10 +12,10 @@
 // CHECK-DAG: #[[INTERLEAVE:.*]] = #llvm.loop_interleave<count = 32 : i32>
 #interleave = #llvm.loop_interleave<count = 32 : i32>
 
-// CHECK-DAG: #[[UNROLL:.*]] = #llvm.loop_unroll<disable = true, count = 32 : i32, runtimeDisable = true, full = false, followup = #[[FOLLOWUP]], followupRemainder = #[[FOLLOWUP]]>
+// CHECK-DAG: #[[UNROLL:.*]] = #llvm.loop_unroll<disable = true, count = 32 : i32, runtimeDisable = true, full = false, followupUnrolled = #[[FOLLOWUP]], followupRemainder = #[[FOLLOWUP]], followupAll = #[[FOLLOWUP]]>
 #unroll = #llvm.loop_unroll<
   disable = true, count = 32 : i32, runtimeDisable = true, full = false,
-  followup = #followup, followupRemainder = #followup
+  followupUnrolled = #followup, followupRemainder = #followup, followupAll = #followup
 >
 
 // CHECK-DAG: #[[UNROLL_AND_JAM:.*]] = #llvm.loop_unroll_and_jam<disable = false, count = 16 : i32, followupOuter = #[[FOLLOWUP]], followupInner = #[[FOLLOWUP]], followupRemainderOuter = #[[FOLLOWUP]], followupRemainderInner = #[[FOLLOWUP]], followupAll = #[[FOLLOWUP]]>
@@ -36,6 +36,12 @@
 // CHECK-DAG: #[[PIPELINE:.*]] = #llvm.loop_pipeline<disable = true, initiationinterval = 1 : i32>
 #pipeline = #llvm.loop_pipeline<disable = true, initiationinterval = 1 : i32>
 
+// CHECK-DAG: #[[PEELED:.*]] = #llvm.loop_peeled<count = 8 : i32>
+#peeled = #llvm.loop_peeled<count = 8 : i32>
+
+// CHECK-DAG: #[[UNSWITCH:.*]] = #llvm.loop_unswitch<partialDisable = true>
+#unswitch = #llvm.loop_unswitch<partialDisable = true>
+
 // CHECK: #[[LOOP_ANNOT:.*]] = #llvm.loop_annotation<
 // CHECK-DAG: disableNonforced = false
 // CHECK-DAG: mustProgress = true
@@ -44,6 +50,9 @@
 // CHECK-DAG: licm = #[[LICM]]
 // CHECK-DAG: distribute = #[[DISTRIBUTE]]
 // CHECK-DAG: pipeline = #[[PIPELINE]]
+// CHECK-DAG: peeled = #[[PEELED]]
+// CHECK-DAG: unswitch = #[[UNSWITCH]]
+// CHECK-DAG: isVectorized = false
 // CHECK-DAG: parallelAccesses = @metadata::@group1, @metadata::@group2>
 #loopMD = #llvm.loop_annotation<disableNonforced = false,
         mustProgress = true,
@@ -54,6 +63,9 @@
         licm = #licm,
         distribute = #distribute,
         pipeline = #pipeline,
+        peeled = #peeled,
+        unswitch = #unswitch,
+        isVectorized = false,
         parallelAccesses = @metadata::@group1, @metadata::@group2>
 
 // CHECK: llvm.func @loop_annotation

@@ -8,7 +8,7 @@
 
 #include "src/stdio/printf.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcPrintfTest, PrintOut) {
   int written;

@@ -104,7 +104,10 @@ class PredicateControl {
 }
 
 class AMDGPUPat<dag pattern, dag result> : Pat<pattern, result>,
-      PredicateControl;
+      PredicateControl, GISelFlags;
+
+let GIIgnoreCopies = 1 in
+class AMDGPUPatIgnoreCopies<dag pattern, dag result> : AMDGPUPat<pattern, result>;
 
 let RecomputePerFunction = 1 in {
 def FP16Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().allFP64FP16Denormals()">;
@@ -144,10 +147,6 @@ def u16imm : Operand<i16> {
 def s16imm : Operand<i16> {
   let PrintMethod = "printU16ImmOperand";
   let ParserMatchClass = s16ImmTarget;
-}
-
-def u8imm : Operand<i8> {
-  let PrintMethod = "printU8ImmOperand";
 }
 
 } // End OperandType = "OPERAND_IMMEDIATE"

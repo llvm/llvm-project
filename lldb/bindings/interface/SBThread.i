@@ -434,8 +434,11 @@ public:
                 return 0
 
             def __getitem__(self, key):
-                if type(key) is int and key < self.sbthread.GetNumFrames():
-                    return self.sbthread.GetFrameAtIndex(key)
+                if isinstance(key, int):
+                    count = len(self)
+                    if -count <= key < count:
+                        key %= count
+                        return self.sbthread.GetFrameAtIndex(key)
                 return None
 
         def get_frames_access_object(self):

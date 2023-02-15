@@ -12,8 +12,8 @@
 
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 using namespace dwarf;
@@ -737,6 +737,7 @@ std::optional<uint8_t> llvm::dwarf::getFixedFormByteSize(dwarf::Form Form,
     return 2;
 
   case DW_FORM_strx3:
+  case DW_FORM_addrx3:
     return 3;
 
   case DW_FORM_data4:

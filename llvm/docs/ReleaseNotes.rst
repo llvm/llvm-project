@@ -108,6 +108,9 @@ Changes to the RISC-V Backend
 * Zca, Zcf, and Zcd extensions were upgraded to version 1.0.1.
 * vsetvli intrinsics no longer have side effects. They may now be combined,
   moved, deleted, etc. by optimizations.
+* Adds support for the vendor-defined XTHeadBa (address-generation) extension.
+* Adds support for the vendor-defined XTHeadBb (basic bit-manipulation) extension.
+* Adds support for the vendor-defined XTHeadBs (single-bit) extension.
 
 Changes to the WebAssembly Backend
 ----------------------------------

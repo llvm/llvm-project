@@ -160,9 +160,11 @@ bool DWARFFormValue::skipValue(dwarf::Form Form, DataExtractor DebugInfoData,
     case DW_FORM_ref_sup8:
     case DW_FORM_strx1:
     case DW_FORM_strx2:
+    case DW_FORM_strx3:
     case DW_FORM_strx4:
     case DW_FORM_addrx1:
     case DW_FORM_addrx2:
+    case DW_FORM_addrx3:
     case DW_FORM_addrx4:
     case DW_FORM_sec_offset:
     case DW_FORM_strp:
@@ -300,6 +302,7 @@ bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
       Value.uval = Data.getU16(OffsetPtr, &Err);
       break;
     case DW_FORM_strx3:
+    case DW_FORM_addrx3:
       Value.uval = Data.getU24(OffsetPtr, &Err);
       break;
     case DW_FORM_data4:

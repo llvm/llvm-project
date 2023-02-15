@@ -12,6 +12,7 @@
 #include "FEnvImpl.h"
 #include "FPBits.h"
 #include "src/__support/CPP/optional.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 namespace __llvm_libc {
 
@@ -29,7 +30,7 @@ namespace fputil {
 //   };
 //
 // Check for exceptional inputs:
-//   if (auto r = Excepts.lookup(x_bits); unlikely(r.has_value()))
+//   if (auto r = Excepts.lookup(x_bits); LIBC_UNLIKELY(r.has_value()))
 //     return r.value();
 
 template <typename T, size_t N> struct ExceptValues {
@@ -47,9 +48,9 @@ template <typename T, size_t N> struct ExceptValues {
 
   Mapping values[N];
 
-  constexpr cpp::optional<T> lookup(UIntType x_bits) const {
+  LIBC_INLINE constexpr cpp::optional<T> lookup(UIntType x_bits) const {
     for (size_t i = 0; i < N; ++i) {
-      if (unlikely(x_bits == values[i].input)) {
+      if (LIBC_UNLIKELY(x_bits == values[i].input)) {
         UIntType out_bits = values[i].rnd_towardzero_result;
         switch (fputil::get_round()) {
         case FE_UPWARD:
@@ -68,9 +69,10 @@ template <typename T, size_t N> struct ExceptValues {
     return cpp::nullopt;
   }
 
-  constexpr cpp::optional<T> lookup_odd(UIntType x_abs, bool sign) const {
+  LIBC_INLINE constexpr cpp::optional<T> lookup_odd(UIntType x_abs,
+                                                    bool sign) const {
     for (size_t i = 0; i < N; ++i) {
-      if (unlikely(x_abs == values[i].input)) {
+      if (LIBC_UNLIKELY(x_abs == values[i].input)) {
         UIntType out_bits = values[i].rnd_towardzero_result;
         switch (fputil::get_round()) {
         case FE_UPWARD:
@@ -95,6 +97,19 @@ template <typename T, size_t N> struct ExceptValues {
     return cpp::nullopt;
   }
 };
+
+// Helper functions to set results for exceptional cases.
+LIBC_INLINE float round_result_slightly_down(float value_rn) {
+  volatile float tmp = value_rn;
+  tmp = tmp - 0x1.0p-100f;
+  return tmp;
+}
+
+LIBC_INLINE float round_result_slightly_up(float value_rn) {
+  volatile float tmp = value_rn;
+  tmp = tmp + 0x1.0p-100f;
+  return tmp;
+}
 
 } // namespace fputil
 

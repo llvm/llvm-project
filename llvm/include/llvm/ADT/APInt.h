@@ -1665,7 +1665,7 @@ public:
   /// The conversion does not do a translation from integer to double, it just
   /// re-interprets the bits as a double. Note that it is valid to do this on
   /// any bit width. Exactly 64 bits will be translated.
-  double bitsToDouble() const { return BitsToDouble(getWord(0)); }
+  double bitsToDouble() const { return llvm::bit_cast<double>(getWord(0)); }
 
   /// Converts APInt bits to a float
   ///
@@ -1673,7 +1673,7 @@ public:
   /// re-interprets the bits as a float. Note that it is valid to do this on
   /// any bit width. Exactly 32 bits will be translated.
   float bitsToFloat() const {
-    return BitsToFloat(static_cast<uint32_t>(getWord(0)));
+    return llvm::bit_cast<float>(static_cast<uint32_t>(getWord(0)));
   }
 
   /// Converts a double to APInt bits.
@@ -1681,7 +1681,7 @@ public:
   /// The conversion does not do a translation from double to integer, it just
   /// re-interprets the bits of the double.
   static APInt doubleToBits(double V) {
-    return APInt(sizeof(double) * CHAR_BIT, DoubleToBits(V));
+    return APInt(sizeof(double) * CHAR_BIT, llvm::bit_cast<uint64_t>(V));
   }
 
   /// Converts a float to APInt bits.
@@ -1689,7 +1689,7 @@ public:
   /// The conversion does not do a translation from float to integer, it just
   /// re-interprets the bits of the float.
   static APInt floatToBits(float V) {
-    return APInt(sizeof(float) * CHAR_BIT, FloatToBits(V));
+    return APInt(sizeof(float) * CHAR_BIT, llvm::bit_cast<uint32_t>(V));
   }
 
   /// @}

@@ -902,6 +902,12 @@ def FeatureArchitectedFlatScratch : SubtargetFeature<"architected-flat-scratch",
   "Flat Scratch register is a readonly SPI initialized architected register"
 >;
 
+def FeatureArchitectedSGPRs : SubtargetFeature<"architected-sgprs",
+  "HasArchitectedSGPRs",
+  "true",
+  "Enable the architected SGPRs"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -1429,7 +1435,6 @@ def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
    FeatureLDSBankCount32,
    FeatureDLInsts,
-   FeatureFmacF64Inst,
    FeatureDot5Insts,
    FeatureDot7Insts,
    FeatureDot8Insts,

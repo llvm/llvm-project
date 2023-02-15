@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
 add_clang_library(clangTidyLLVMLibcModule
   CalleeNamespaceCheck.cpp
   ImplementationInNamespaceCheck.cpp
+  InlineFunctionDeclCheck.cpp
   LLVMLibcTidyModule.cpp
   RestrictSystemLibcHeadersCheck.cpp
 

@@ -30,6 +30,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -970,7 +971,7 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
                    bool UseMD5, bool GenPartialProfile, bool GenCSNestedProfile,
                    bool SampleMergeColdContext, bool SampleTrimColdContext,
                    bool SampleColdContextFrameDepth, FailureMode FailMode,
-                   bool DropProfileSymbolList) {
+                   bool DropProfileSymbolList, size_t OutputSizeLimit) {
   using namespace sampleprof;
   SampleProfileMap ProfileMap;
   SmallVector<std::unique_ptr<sampleprof::SampleProfileReader>, 5> Readers;
@@ -1064,7 +1065,10 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
   auto Buffer = getInputFileBuf(ProfileSymbolListFile);
   handleExtBinaryWriter(*Writer, OutputFormat, Buffer.get(), WriterList,
                         CompressAllSections, UseMD5, GenPartialProfile);
-  if (std::error_code EC = Writer->write(ProfileMap))
+
+  // If OutputSizeLimit is 0 (default), it is the same as write().
+  if (std::error_code EC =
+          Writer->writeWithSizeLimit(ProfileMap, OutputSizeLimit))
     exitWithErrorCode(std::move(EC));
 }
 
@@ -1207,6 +1211,11 @@ static int merge_main(int argc, const char *argv[]) {
       "sample-frame-depth-for-cold-context", cl::init(1),
       cl::desc("Keep the last K frames while merging cold profile. 1 means the "
                "context-less base profile"));
+  cl::opt<size_t> OutputSizeLimit(
+      "output-size-limit", cl::init(0), cl::Hidden,
+      cl::desc("Trim cold functions until profile size is below specified "
+               "limit in bytes. This uses a heursitic and functions may be "
+               "excessively trimmed"));
   cl::opt<bool> GenPartialProfile(
       "gen-partial-profile", cl::init(false), cl::Hidden,
       cl::desc("Generate a partial profile (only meaningful for -extbinary)"));
@@ -1293,7 +1302,8 @@ static int merge_main(int argc, const char *argv[]) {
         WeightedInputs, Remapper.get(), OutputFilename, OutputFormat,
         ProfileSymbolListFile, CompressAllSections, UseMD5, GenPartialProfile,
         GenCSNestedProfile, SampleMergeColdContext, SampleTrimColdContext,
-        SampleColdContextFrameDepth, FailureMode, DropProfileSymbolList);
+        SampleColdContextFrameDepth, FailureMode, DropProfileSymbolList,
+        OutputSizeLimit);
   return 0;
 }
 
@@ -2979,7 +2989,8 @@ static int show_main(int argc, const char *argv[]) {
   return showMemProfProfile(Filename, ProfiledBinary, SFormat, OS);
 }
 
-int llvm_profdata_main(int argc, char **argvNonConst) {
+int llvm_profdata_main(int argc, char **argvNonConst,
+                       const llvm::ToolContext &) {
   const char **argv = const_cast<const char **>(argvNonConst);
   InitLLVM X(argc, argv);
 

@@ -1048,6 +1048,12 @@ LogicalResult transform::WithPDLPatternsOp::verify() {
     return diag;
   }
 
+  if (!topLevelOp) {
+    InFlightDiagnostic diag = emitOpError()
+                              << "expects at least one non-pattern op";
+    return diag;
+  }
+
   return success();
 }
 

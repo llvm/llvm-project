@@ -3671,93 +3671,95 @@ define <2 x i64> @stest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    vorr d0, d9, d9
 ; CHECK-NEXT:    bl __fixdfti
 ; CHECK-NEXT:    str r0, [sp, #12] @ 4-byte Spill
-; CHECK-NEXT:    cmn r1, #-2147483647
-; CHECK-NEXT:    mvn r0, #-2147483648
-; CHECK-NEXT:    mvn r5, #-2147483648
-; CHECK-NEXT:    movlo r0, r1
 ; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    mov r0, r3
+; CHECK-NEXT:    mov r10, #0
+; CHECK-NEXT:    andne r0, r2, r0, asr #31
 ; CHECK-NEXT:    mov r11, r1
-; CHECK-NEXT:    movmi r5, r1
-; CHECK-NEXT:    orrs r1, r2, r3
-; CHECK-NEXT:    mov r8, #0
-; CHECK-NEXT:    moveq r5, r0
+; CHECK-NEXT:    movmi r10, r3
+; CHECK-NEXT:    and r1, r0, r10
+; CHECK-NEXT:    cmn r11, #-2147483647
+; CHECK-NEXT:    mvn r0, #-2147483648
+; CHECK-NEXT:    movlo r0, r11
 ; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    and r0, r2, r3, asr #31
-; CHECK-NEXT:    movmi r8, r3
-; CHECK-NEXT:    str r1, [sp, #8] @ 4-byte Spill
-; CHECK-NEXT:    and r1, r0, r8
+; CHECK-NEXT:    mvn r8, #-2147483648
 ; CHECK-NEXT:    vorr d0, d8, d8
-; CHECK-NEXT:    cmn r8, #1
+; CHECK-NEXT:    movmi r8, r11
+; CHECK-NEXT:    orrs r2, r2, r3
+; CHECK-NEXT:    moveq r8, r0
+; CHECK-NEXT:    cmn r10, #1
 ; CHECK-NEXT:    mov r0, #-2147483648
-; CHECK-NEXT:    mov r10, #-2147483648
-; CHECK-NEXT:    movgt r0, r5
-; CHECK-NEXT:    cmp r5, #-2147483648
-; CHECK-NEXT:    movhi r10, r5
+; CHECK-NEXT:    mov r9, #-2147483648
+; CHECK-NEXT:    movgt r0, r8
+; CHECK-NEXT:    cmp r8, #-2147483648
+; CHECK-NEXT:    movhi r9, r8
 ; CHECK-NEXT:    cmn r1, #1
-; CHECK-NEXT:    mov r9, r3
+; CHECK-NEXT:    mov r6, r3
+; CHECK-NEXT:    str r1, [sp, #8] @ 4-byte Spill
 ; CHECK-NEXT:    mvn r7, #-2147483648
-; CHECK-NEXT:    str r1, [sp, #4] @ 4-byte Spill
-; CHECK-NEXT:    movne r10, r0
+; CHECK-NEXT:    str r2, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    movne r9, r0
 ; CHECK-NEXT:    bl __fixdfti
 ; CHECK-NEXT:    cmn r1, #-2147483647
-; CHECK-NEXT:    mvn r6, #0
-; CHECK-NEXT:    movlo r6, r0
+; CHECK-NEXT:    mvn r5, #0
+; CHECK-NEXT:    movlo r5, r0
 ; CHECK-NEXT:    mvn r4, #0
-; CHECK-NEXT:    moveq r6, r0
+; CHECK-NEXT:    moveq r5, r0
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    movpl r0, r4
 ; CHECK-NEXT:    orrs r12, r2, r3
-; CHECK-NEXT:    moveq r0, r6
+; CHECK-NEXT:    moveq r0, r5
 ; CHECK-NEXT:    cmn r1, #-2147483647
-; CHECK-NEXT:    mvn r6, #-2147483648
-; CHECK-NEXT:    and r2, r2, r3, asr #31
-; CHECK-NEXT:    movlo r6, r1
+; CHECK-NEXT:    mvn r5, #-2147483648
+; CHECK-NEXT:    movlo r5, r1
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    movmi r7, r1
 ; CHECK-NEXT:    cmp r12, #0
-; CHECK-NEXT:    moveq r7, r6
+; CHECK-NEXT:    moveq r7, r5
 ; CHECK-NEXT:    cmp r7, #-2147483648
+; CHECK-NEXT:    mov r1, #0
+; CHECK-NEXT:    ldr r5, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    movhi r1, r0
 ; CHECK-NEXT:    mov r12, #0
-; CHECK-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    movhi r12, r0
+; CHECK-NEXT:    moveq r1, r0
+; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    mvn r6, #0
-; CHECK-NEXT:    moveq r12, r0
-; CHECK-NEXT:    cmp r9, #0
-; CHECK-NEXT:    movmi r6, r1
+; CHECK-NEXT:    movmi r6, r5
 ; CHECK-NEXT:    cmn r11, #-2147483647
-; CHECK-NEXT:    movlo r4, r1
-; CHECK-NEXT:    moveq r4, r1
-; CHECK-NEXT:    ldr r1, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    ldr r1, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    movlo r4, r5
+; CHECK-NEXT:    moveq r4, r5
+; CHECK-NEXT:    ldr r5, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    cmp r5, #0
+; CHECK-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    movne r4, r6
-; CHECK-NEXT:    cmp r5, #-2147483648
+; CHECK-NEXT:    cmp r8, #-2147483648
 ; CHECK-NEXT:    mov r6, #0
-; CHECK-NEXT:    mov r5, #0
 ; CHECK-NEXT:    movhi r6, r4
 ; CHECK-NEXT:    moveq r6, r4
-; CHECK-NEXT:    cmn r8, #1
-; CHECK-NEXT:    movle r4, r5
-; CHECK-NEXT:    cmn r1, #1
+; CHECK-NEXT:    cmn r10, #1
+; CHECK-NEXT:    movle r4, r12
+; CHECK-NEXT:    cmn r5, #1
 ; CHECK-NEXT:    moveq r4, r6
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    mov r6, #0
 ; CHECK-NEXT:    vmov.32 d1[0], r4
 ; CHECK-NEXT:    movmi r6, r3
 ; CHECK-NEXT:    cmn r6, #1
-; CHECK-NEXT:    and r2, r2, r6
-; CHECK-NEXT:    movle r0, r5
+; CHECK-NEXT:    movle r0, r12
+; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    andne r3, r2, r3, asr #31
+; CHECK-NEXT:    and r2, r3, r6
 ; CHECK-NEXT:    cmn r2, #1
-; CHECK-NEXT:    mov r1, #-2147483648
-; CHECK-NEXT:    moveq r0, r12
+; CHECK-NEXT:    moveq r0, r1
 ; CHECK-NEXT:    cmn r6, #1
+; CHECK-NEXT:    mov r1, #-2147483648
 ; CHECK-NEXT:    vmov.32 d0[0], r0
 ; CHECK-NEXT:    movgt r1, r7
 ; CHECK-NEXT:    cmp r7, #-2147483648
 ; CHECK-NEXT:    mov r0, #-2147483648
+; CHECK-NEXT:    vmov.32 d1[1], r9
 ; CHECK-NEXT:    movls r7, r0
 ; CHECK-NEXT:    cmn r2, #1
-; CHECK-NEXT:    vmov.32 d1[1], r10
 ; CHECK-NEXT:    movne r7, r1
 ; CHECK-NEXT:    vmov.32 d0[1], r7
 ; CHECK-NEXT:    add sp, sp, #16
@@ -3945,93 +3947,95 @@ define <2 x i64> @stest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    vmov.f32 s0, s17
 ; CHECK-NEXT:    bl __fixsfti
 ; CHECK-NEXT:    str r0, [sp, #12] @ 4-byte Spill
+; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    mov r0, r3
+; CHECK-NEXT:    mov r10, #0
 ; CHECK-NEXT:    vmov.f32 s0, s16
-; CHECK-NEXT:    cmn r1, #-2147483647
-; CHECK-NEXT:    mvn r0, #-2147483648
-; CHECK-NEXT:    movlo r0, r1
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    mvn r5, #-2147483648
+; CHECK-NEXT:    andne r0, r2, r0, asr #31
 ; CHECK-NEXT:    mov r11, r1
-; CHECK-NEXT:    movmi r5, r1
-; CHECK-NEXT:    orrs r1, r2, r3
-; CHECK-NEXT:    moveq r5, r0
+; CHECK-NEXT:    movmi r10, r3
+; CHECK-NEXT:    and r1, r0, r10
+; CHECK-NEXT:    cmn r11, #-2147483647
+; CHECK-NEXT:    mvn r0, #-2147483648
+; CHECK-NEXT:    mvn r8, #-2147483648
+; CHECK-NEXT:    movlo r0, r11
 ; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    mov r8, #0
-; CHECK-NEXT:    and r0, r2, r3, asr #31
-; CHECK-NEXT:    movmi r8, r3
-; CHECK-NEXT:    str r1, [sp, #8] @ 4-byte Spill
-; CHECK-NEXT:    and r1, r0, r8
-; CHECK-NEXT:    cmn r8, #1
+; CHECK-NEXT:    movmi r8, r11
+; CHECK-NEXT:    orrs r2, r2, r3
+; CHECK-NEXT:    moveq r8, r0
+; CHECK-NEXT:    cmn r10, #1
 ; CHECK-NEXT:    mov r0, #-2147483648
-; CHECK-NEXT:    mov r10, #-2147483648
-; CHECK-NEXT:    movgt r0, r5
-; CHECK-NEXT:    cmp r5, #-2147483648
-; CHECK-NEXT:    movhi r10, r5
+; CHECK-NEXT:    mov r9, #-2147483648
+; CHECK-NEXT:    movgt r0, r8
+; CHECK-NEXT:    cmp r8, #-2147483648
+; CHECK-NEXT:    movhi r9, r8
 ; CHECK-NEXT:    cmn r1, #1
-; CHECK-NEXT:    mov r9, r3
+; CHECK-NEXT:    mov r6, r3
+; CHECK-NEXT:    str r1, [sp, #8] @ 4-byte Spill
 ; CHECK-NEXT:    mvn r7, #-2147483648
-; CHECK-NEXT:    str r1, [sp, #4] @ 4-byte Spill
-; CHECK-NEXT:    movne r10, r0
+; CHECK-NEXT:    str r2, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    movne r9, r0
 ; CHECK-NEXT:    bl __fixsfti
 ; CHECK-NEXT:    cmn r1, #-2147483647
-; CHECK-NEXT:    mvn r6, #0
-; CHECK-NEXT:    movlo r6, r0
+; CHECK-NEXT:    mvn r5, #0
+; CHECK-NEXT:    movlo r5, r0
 ; CHECK-NEXT:    mvn r4, #0
-; CHECK-NEXT:    moveq r6, r0
+; CHECK-NEXT:    moveq r5, r0
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    movpl r0, r4
 ; CHECK-NEXT:    orrs r12, r2, r3
-; CHECK-NEXT:    moveq r0, r6
+; CHECK-NEXT:    moveq r0, r5
 ; CHECK-NEXT:    cmn r1, #-2147483647
-; CHECK-NEXT:    mvn r6, #-2147483648
-; CHECK-NEXT:    and r2, r2, r3, asr #31
-; CHECK-NEXT:    movlo r6, r1
+; CHECK-NEXT:    mvn r5, #-2147483648
+; CHECK-NEXT:    movlo r5, r1
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    movmi r7, r1
 ; CHECK-NEXT:    cmp r12, #0
-; CHECK-NEXT:    moveq r7, r6
+; CHECK-NEXT:    moveq r7, r5
 ; CHECK-NEXT:    cmp r7, #-2147483648
+; CHECK-NEXT:    mov r1, #0
+; CHECK-NEXT:    ldr r5, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    movhi r1, r0
 ; CHECK-NEXT:    mov r12, #0
-; CHECK-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    movhi r12, r0
+; CHECK-NEXT:    moveq r1, r0
+; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    mvn r6, #0
-; CHECK-NEXT:    moveq r12, r0
-; CHECK-NEXT:    cmp r9, #0
-; CHECK-NEXT:    movmi r6, r1
+; CHECK-NEXT:    movmi r6, r5
 ; CHECK-NEXT:    cmn r11, #-2147483647
-; CHECK-NEXT:    movlo r4, r1
-; CHECK-NEXT:    moveq r4, r1
-; CHECK-NEXT:    ldr r1, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    ldr r1, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    movlo r4, r5
+; CHECK-NEXT:    moveq r4, r5
+; CHECK-NEXT:    ldr r5, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    cmp r5, #0
+; CHECK-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    movne r4, r6
-; CHECK-NEXT:    cmp r5, #-2147483648
+; CHECK-NEXT:    cmp r8, #-2147483648
 ; CHECK-NEXT:    mov r6, #0
-; CHECK-NEXT:    mov r5, #0
 ; CHECK-NEXT:    movhi r6, r4
 ; CHECK-NEXT:    moveq r6, r4
-; CHECK-NEXT:    cmn r8, #1
-; CHECK-NEXT:    movle r4, r5
-; CHECK-NEXT:    cmn r1, #1
+; CHECK-NEXT:    cmn r10, #1
+; CHECK-NEXT:    movle r4, r12
+; CHECK-NEXT:    cmn r5, #1
 ; CHECK-NEXT:    moveq r4, r6
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    mov r6, #0
 ; CHECK-NEXT:    vmov.32 d1[0], r4
 ; CHECK-NEXT:    movmi r6, r3
 ; CHECK-NEXT:    cmn r6, #1
-; CHECK-NEXT:    and r2, r2, r6
-; CHECK-NEXT:    movle r0, r5
+; CHECK-NEXT:    movle r0, r12
+; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    andne r3, r2, r3, asr #31
+; CHECK-NEXT:    and r2, r3, r6
 ; CHECK-NEXT:    cmn r2, #1
-; CHECK-NEXT:    mov r1, #-2147483648
-; CHECK-NEXT:    moveq r0, r12
+; CHECK-NEXT:    moveq r0, r1
 ; CHECK-NEXT:    cmn r6, #1
+; CHECK-NEXT:    mov r1, #-2147483648
 ; CHECK-NEXT:    vmov.32 d0[0], r0
 ; CHECK-NEXT:    movgt r1, r7
 ; CHECK-NEXT:    cmp r7, #-2147483648
 ; CHECK-NEXT:    mov r0, #-2147483648
+; CHECK-NEXT:    vmov.32 d1[1], r9
 ; CHECK-NEXT:    movls r7, r0
 ; CHECK-NEXT:    cmn r2, #1
-; CHECK-NEXT:    vmov.32 d1[1], r10
 ; CHECK-NEXT:    movne r7, r1
 ; CHECK-NEXT:    vmov.32 d0[1], r7
 ; CHECK-NEXT:    add sp, sp, #16
@@ -4220,100 +4224,100 @@ define <2 x i64> @stest_f16i64_mm(<2 x half> %x) {
 ; CHECK-NEON-NEXT:    bl __aeabi_h2f
 ; CHECK-NEON-NEXT:    vmov s0, r0
 ; CHECK-NEON-NEXT:    bl __fixsfti
-; CHECK-NEON-NEXT:    mov r5, r0
-; CHECK-NEON-NEXT:    cmn r1, #-2147483647
+; CHECK-NEON-NEXT:    str r0, [sp, #12] @ 4-byte Spill
+; CHECK-NEON-NEXT:    cmp r3, #0
+; CHECK-NEON-NEXT:    mov r0, r3
+; CHECK-NEON-NEXT:    mov r10, #0
+; CHECK-NEON-NEXT:    andne r0, r2, r0, asr #31
+; CHECK-NEON-NEXT:    mov r11, r1
+; CHECK-NEON-NEXT:    movmi r10, r3
+; CHECK-NEON-NEXT:    and r1, r0, r10
+; CHECK-NEON-NEXT:    cmn r11, #-2147483647
 ; CHECK-NEON-NEXT:    mvn r0, #-2147483648
-; CHECK-NEON-NEXT:    mvn r11, #-2147483648
-; CHECK-NEON-NEXT:    movlo r0, r1
+; CHECK-NEON-NEXT:    movlo r0, r11
 ; CHECK-NEON-NEXT:    cmp r3, #0
-; CHECK-NEON-NEXT:    str r1, [sp, #8] @ 4-byte Spill
-; CHECK-NEON-NEXT:    movmi r11, r1
-; CHECK-NEON-NEXT:    orrs r1, r2, r3
-; CHECK-NEON-NEXT:    mov r8, #0
-; CHECK-NEON-NEXT:    moveq r11, r0
-; CHECK-NEON-NEXT:    cmp r3, #0
-; CHECK-NEON-NEXT:    and r0, r2, r3, asr #31
-; CHECK-NEON-NEXT:    movmi r8, r3
-; CHECK-NEON-NEXT:    str r1, [sp, #12] @ 4-byte Spill
-; CHECK-NEON-NEXT:    and r1, r0, r8
-; CHECK-NEON-NEXT:    cmn r8, #1
+; CHECK-NEON-NEXT:    mvn r8, #-2147483648
+; CHECK-NEON-NEXT:    mov r9, #-2147483648
+; CHECK-NEON-NEXT:    movmi r8, r11
+; CHECK-NEON-NEXT:    orrs r2, r2, r3
+; CHECK-NEON-NEXT:    moveq r8, r0
+; CHECK-NEON-NEXT:    cmn r10, #1
 ; CHECK-NEON-NEXT:    mov r0, #-2147483648
-; CHECK-NEON-NEXT:    movgt r0, r11
-; CHECK-NEON-NEXT:    cmp r11, #-2147483648
-; CHECK-NEON-NEXT:    mov r2, #-2147483648
-; CHECK-NEON-NEXT:    mov r9, r3
-; CHECK-NEON-NEXT:    movhi r2, r11
+; CHECK-NEON-NEXT:    mov r6, r3
+; CHECK-NEON-NEXT:    movgt r0, r8
+; CHECK-NEON-NEXT:    cmp r8, #-2147483648
+; CHECK-NEON-NEXT:    movhi r9, r8
 ; CHECK-NEON-NEXT:    cmn r1, #1
-; CHECK-NEON-NEXT:    movne r2, r0
+; CHECK-NEON-NEXT:    movne r9, r0
 ; CHECK-NEON-NEXT:    vmov r0, s16
-; CHECK-NEON-NEXT:    mvn r10, #-2147483648
-; CHECK-NEON-NEXT:    str r1, [sp] @ 4-byte Spill
+; CHECK-NEON-NEXT:    str r1, [sp, #8] @ 4-byte Spill
+; CHECK-NEON-NEXT:    mvn r7, #-2147483648
 ; CHECK-NEON-NEXT:    str r2, [sp, #4] @ 4-byte Spill
 ; CHECK-NEON-NEXT:    bl __aeabi_h2f
 ; CHECK-NEON-NEXT:    vmov s0, r0
 ; CHECK-NEON-NEXT:    bl __fixsfti
 ; CHECK-NEON-NEXT:    cmn r1, #-2147483647
-; CHECK-NEON-NEXT:    mvn r6, #0
-; CHECK-NEON-NEXT:    movlo r6, r0
+; CHECK-NEON-NEXT:    mvn r5, #0
+; CHECK-NEON-NEXT:    movlo r5, r0
 ; CHECK-NEON-NEXT:    mvn r4, #0
-; CHECK-NEON-NEXT:    moveq r6, r0
+; CHECK-NEON-NEXT:    moveq r5, r0
 ; CHECK-NEON-NEXT:    cmp r3, #0
 ; CHECK-NEON-NEXT:    movpl r0, r4
 ; CHECK-NEON-NEXT:    orrs r12, r2, r3
-; CHECK-NEON-NEXT:    moveq r0, r6
+; CHECK-NEON-NEXT:    moveq r0, r5
 ; CHECK-NEON-NEXT:    cmn r1, #-2147483647
-; CHECK-NEON-NEXT:    mvn r6, #-2147483648
-; CHECK-NEON-NEXT:    ldr r7, [sp, #8] @ 4-byte Reload
-; CHECK-NEON-NEXT:    movlo r6, r1
+; CHECK-NEON-NEXT:    mvn r5, #-2147483648
+; CHECK-NEON-NEXT:    movlo r5, r1
 ; CHECK-NEON-NEXT:    cmp r3, #0
-; CHECK-NEON-NEXT:    movmi r10, r1
+; CHECK-NEON-NEXT:    movmi r7, r1
 ; CHECK-NEON-NEXT:    cmp r12, #0
-; CHECK-NEON-NEXT:    moveq r10, r6
-; CHECK-NEON-NEXT:    cmp r10, #-2147483648
+; CHECK-NEON-NEXT:    moveq r7, r5
+; CHECK-NEON-NEXT:    cmp r7, #-2147483648
 ; CHECK-NEON-NEXT:    mov r1, #0
-; CHECK-NEON-NEXT:    mvn r6, #0
-; CHECK-NEON-NEXT:    movhi r1, r0
-; CHECK-NEON-NEXT:    and r2, r2, r3, asr #31
-; CHECK-NEON-NEXT:    moveq r1, r0
-; CHECK-NEON-NEXT:    cmp r9, #0
-; CHECK-NEON-NEXT:    movmi r6, r5
-; CHECK-NEON-NEXT:    cmn r7, #-2147483647
-; CHECK-NEON-NEXT:    movlo r4, r5
-; CHECK-NEON-NEXT:    ldr r7, [sp] @ 4-byte Reload
-; CHECK-NEON-NEXT:    moveq r4, r5
 ; CHECK-NEON-NEXT:    ldr r5, [sp, #12] @ 4-byte Reload
+; CHECK-NEON-NEXT:    movhi r1, r0
+; CHECK-NEON-NEXT:    mov r12, #0
+; CHECK-NEON-NEXT:    moveq r1, r0
+; CHECK-NEON-NEXT:    cmp r6, #0
+; CHECK-NEON-NEXT:    mvn r6, #0
+; CHECK-NEON-NEXT:    movmi r6, r5
+; CHECK-NEON-NEXT:    cmn r11, #-2147483647
+; CHECK-NEON-NEXT:    movlo r4, r5
+; CHECK-NEON-NEXT:    moveq r4, r5
+; CHECK-NEON-NEXT:    ldr r5, [sp, #4] @ 4-byte Reload
 ; CHECK-NEON-NEXT:    cmp r5, #0
-; CHECK-NEON-NEXT:    mov r5, #0
+; CHECK-NEON-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
 ; CHECK-NEON-NEXT:    movne r4, r6
-; CHECK-NEON-NEXT:    cmp r11, #-2147483648
+; CHECK-NEON-NEXT:    cmp r8, #-2147483648
 ; CHECK-NEON-NEXT:    mov r6, #0
 ; CHECK-NEON-NEXT:    movhi r6, r4
 ; CHECK-NEON-NEXT:    moveq r6, r4
-; CHECK-NEON-NEXT:    cmn r8, #1
-; CHECK-NEON-NEXT:    movle r4, r5
-; CHECK-NEON-NEXT:    cmn r7, #1
+; CHECK-NEON-NEXT:    cmn r10, #1
+; CHECK-NEON-NEXT:    movle r4, r12
+; CHECK-NEON-NEXT:    cmn r5, #1
 ; CHECK-NEON-NEXT:    moveq r4, r6
 ; CHECK-NEON-NEXT:    cmp r3, #0
 ; CHECK-NEON-NEXT:    mov r6, #0
 ; CHECK-NEON-NEXT:    vmov.32 d1[0], r4
 ; CHECK-NEON-NEXT:    movmi r6, r3
 ; CHECK-NEON-NEXT:    cmn r6, #1
-; CHECK-NEON-NEXT:    and r2, r2, r6
-; CHECK-NEON-NEXT:    movle r0, r5
+; CHECK-NEON-NEXT:    movle r0, r12
+; CHECK-NEON-NEXT:    cmp r3, #0
+; CHECK-NEON-NEXT:    andne r3, r2, r3, asr #31
+; CHECK-NEON-NEXT:    and r2, r3, r6
 ; CHECK-NEON-NEXT:    cmn r2, #1
 ; CHECK-NEON-NEXT:    moveq r0, r1
 ; CHECK-NEON-NEXT:    cmn r6, #1
 ; CHECK-NEON-NEXT:    mov r1, #-2147483648
 ; CHECK-NEON-NEXT:    vmov.32 d0[0], r0
-; CHECK-NEON-NEXT:    movgt r1, r10
-; CHECK-NEON-NEXT:    cmp r10, #-2147483648
+; CHECK-NEON-NEXT:    movgt r1, r7
+; CHECK-NEON-NEXT:    cmp r7, #-2147483648
 ; CHECK-NEON-NEXT:    mov r0, #-2147483648
-; CHECK-NEON-NEXT:    movls r10, r0
-; CHECK-NEON-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
+; CHECK-NEON-NEXT:    vmov.32 d1[1], r9
+; CHECK-NEON-NEXT:    movls r7, r0
 ; CHECK-NEON-NEXT:    cmn r2, #1
-; CHECK-NEON-NEXT:    movne r10, r1
-; CHECK-NEON-NEXT:    vmov.32 d1[1], r0
-; CHECK-NEON-NEXT:    vmov.32 d0[1], r10
+; CHECK-NEON-NEXT:    movne r7, r1
+; CHECK-NEON-NEXT:    vmov.32 d0[1], r7
 ; CHECK-NEON-NEXT:    add sp, sp, #16
 ; CHECK-NEON-NEXT:    vpop {d8}
 ; CHECK-NEON-NEXT:    add sp, sp, #4
@@ -4334,94 +4338,96 @@ define <2 x i64> @stest_f16i64_mm(<2 x half> %x) {
 ; CHECK-FP16-NEXT:    vmov s0, r0
 ; CHECK-FP16-NEXT:    bl __fixhfti
 ; CHECK-FP16-NEXT:    str r0, [sp, #12] @ 4-byte Spill
-; CHECK-FP16-NEXT:    cmn r1, #-2147483647
-; CHECK-FP16-NEXT:    mvn r0, #-2147483648
-; CHECK-FP16-NEXT:    mvn r5, #-2147483648
-; CHECK-FP16-NEXT:    movlo r0, r1
 ; CHECK-FP16-NEXT:    cmp r3, #0
+; CHECK-FP16-NEXT:    mov r0, r3
+; CHECK-FP16-NEXT:    mov r10, #0
+; CHECK-FP16-NEXT:    andne r0, r2, r0, asr #31
 ; CHECK-FP16-NEXT:    mov r11, r1
-; CHECK-FP16-NEXT:    movmi r5, r1
-; CHECK-FP16-NEXT:    orrs r1, r2, r3
-; CHECK-FP16-NEXT:    mov r8, #0
-; CHECK-FP16-NEXT:    moveq r5, r0
+; CHECK-FP16-NEXT:    movmi r10, r3
+; CHECK-FP16-NEXT:    and r1, r0, r10
+; CHECK-FP16-NEXT:    cmn r11, #-2147483647
+; CHECK-FP16-NEXT:    mvn r0, #-2147483648
+; CHECK-FP16-NEXT:    movlo r0, r11
 ; CHECK-FP16-NEXT:    cmp r3, #0
-; CHECK-FP16-NEXT:    and r0, r2, r3, asr #31
-; CHECK-FP16-NEXT:    movmi r8, r3
-; CHECK-FP16-NEXT:    str r1, [sp, #8] @ 4-byte Spill
-; CHECK-FP16-NEXT:    and r1, r0, r8
-; CHECK-FP16-NEXT:    cmn r8, #1
+; CHECK-FP16-NEXT:    mvn r8, #-2147483648
+; CHECK-FP16-NEXT:    mov r9, #-2147483648
+; CHECK-FP16-NEXT:    movmi r8, r11
+; CHECK-FP16-NEXT:    orrs r2, r2, r3
+; CHECK-FP16-NEXT:    moveq r8, r0
+; CHECK-FP16-NEXT:    cmn r10, #1
 ; CHECK-FP16-NEXT:    mov r0, #-2147483648
-; CHECK-FP16-NEXT:    movgt r0, r5
-; CHECK-FP16-NEXT:    cmp r5, #-2147483648
-; CHECK-FP16-NEXT:    mov r10, #-2147483648
-; CHECK-FP16-NEXT:    mov r9, r3
-; CHECK-FP16-NEXT:    movhi r10, r5
+; CHECK-FP16-NEXT:    mov r6, r3
+; CHECK-FP16-NEXT:    movgt r0, r8
+; CHECK-FP16-NEXT:    cmp r8, #-2147483648
+; CHECK-FP16-NEXT:    movhi r9, r8
 ; CHECK-FP16-NEXT:    cmn r1, #1
-; CHECK-FP16-NEXT:    movne r10, r0
+; CHECK-FP16-NEXT:    movne r9, r0
 ; CHECK-FP16-NEXT:    vmov.u16 r0, d8[0]
+; CHECK-FP16-NEXT:    str r1, [sp, #8] @ 4-byte Spill
 ; CHECK-FP16-NEXT:    mvn r7, #-2147483648
-; CHECK-FP16-NEXT:    str r1, [sp, #4] @ 4-byte Spill
+; CHECK-FP16-NEXT:    str r2, [sp, #4] @ 4-byte Spill
 ; CHECK-FP16-NEXT:    vmov s0, r0
 ; CHECK-FP16-NEXT:    bl __fixhfti
 ; CHECK-FP16-NEXT:    cmn r1, #-2147483647
-; CHECK-FP16-NEXT:    mvn r6, #0
-; CHECK-FP16-NEXT:    movlo r6, r0
+; CHECK-FP16-NEXT:    mvn r5, #0
+; CHECK-FP16-NEXT:    movlo r5, r0
 ; CHECK-FP16-NEXT:    mvn r4, #0
-; CHECK-FP16-NEXT:    moveq r6, r0
+; CHECK-FP16-NEXT:    moveq r5, r0
 ; CHECK-FP16-NEXT:    cmp r3, #0
 ; CHECK-FP16-NEXT:    movpl r0, r4
 ; CHECK-FP16-NEXT:    orrs r12, r2, r3
-; CHECK-FP16-NEXT:    moveq r0, r6
+; CHECK-FP16-NEXT:    moveq r0, r5
 ; CHECK-FP16-NEXT:    cmn r1, #-2147483647
-; CHECK-FP16-NEXT:    mvn r6, #-2147483648
-; CHECK-FP16-NEXT:    and r2, r2, r3, asr #31
-; CHECK-FP16-NEXT:    movlo r6, r1
+; CHECK-FP16-NEXT:    mvn r5, #-2147483648
+; CHECK-FP16-NEXT:    movlo r5, r1
 ; CHECK-FP16-NEXT:    cmp r3, #0
 ; CHECK-FP16-NEXT:    movmi r7, r1
 ; CHECK-FP16-NEXT:    cmp r12, #0
-; CHECK-FP16-NEXT:    moveq r7, r6
+; CHECK-FP16-NEXT:    moveq r7, r5
 ; CHECK-FP16-NEXT:    cmp r7, #-2147483648
+; CHECK-FP16-NEXT:    mov r1, #0
+; CHECK-FP16-NEXT:    ldr r5, [sp, #12] @ 4-byte Reload
+; CHECK-FP16-NEXT:    movhi r1, r0
 ; CHECK-FP16-NEXT:    mov r12, #0
-; CHECK-FP16-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
-; CHECK-FP16-NEXT:    movhi r12, r0
+; CHECK-FP16-NEXT:    moveq r1, r0
+; CHECK-FP16-NEXT:    cmp r6, #0
 ; CHECK-FP16-NEXT:    mvn r6, #0
-; CHECK-FP16-NEXT:    moveq r12, r0
-; CHECK-FP16-NEXT:    cmp r9, #0
-; CHECK-FP16-NEXT:    movmi r6, r1
+; CHECK-FP16-NEXT:    movmi r6, r5
 ; CHECK-FP16-NEXT:    cmn r11, #-2147483647
-; CHECK-FP16-NEXT:    movlo r4, r1
-; CHECK-FP16-NEXT:    moveq r4, r1
-; CHECK-FP16-NEXT:    ldr r1, [sp, #8] @ 4-byte Reload
-; CHECK-FP16-NEXT:    cmp r1, #0
-; CHECK-FP16-NEXT:    ldr r1, [sp, #4] @ 4-byte Reload
+; CHECK-FP16-NEXT:    movlo r4, r5
+; CHECK-FP16-NEXT:    moveq r4, r5
+; CHECK-FP16-NEXT:    ldr r5, [sp, #4] @ 4-byte Reload
+; CHECK-FP16-NEXT:    cmp r5, #0
+; CHECK-FP16-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
 ; CHECK-FP16-NEXT:    movne r4, r6
-; CHECK-FP16-NEXT:    cmp r5, #-2147483648
+; CHECK-FP16-NEXT:    cmp r8, #-2147483648
 ; CHECK-FP16-NEXT:    mov r6, #0
-; CHECK-FP16-NEXT:    mov r5, #0
 ; CHECK-FP16-NEXT:    movhi r6, r4
 ; CHECK-FP16-NEXT:    moveq r6, r4
-; CHECK-FP16-NEXT:    cmn r8, #1
-; CHECK-FP16-NEXT:    movle r4, r5
-; CHECK-FP16-NEXT:    cmn r1, #1
+; CHECK-FP16-NEXT:    cmn r10, #1
+; CHECK-FP16-NEXT:    movle r4, r12
+; CHECK-FP16-NEXT:    cmn r5, #1
 ; CHECK-FP16-NEXT:    moveq r4, r6
 ; CHECK-FP16-NEXT:    cmp r3, #0
 ; CHECK-FP16-NEXT:    mov r6, #0
 ; CHECK-FP16-NEXT:    vmov.32 d1[0], r4
 ; CHECK-FP16-NEXT:    movmi r6, r3
 ; CHECK-FP16-NEXT:    cmn r6, #1
-; CHECK-FP16-NEXT:    and r2, r2, r6
-; CHECK-FP16-NEXT:    movle r0, r5
+; CHECK-FP16-NEXT:    movle r0, r12
+; CHECK-FP16-NEXT:    cmp r3, #0
+; CHECK-FP16-NEXT:    andne r3, r2, r3, asr #31
+; CHECK-FP16-NEXT:    and r2, r3, r6
 ; CHECK-FP16-NEXT:    cmn r2, #1
-; CHECK-FP16-NEXT:    mov r1, #-2147483648
-; CHECK-FP16-NEXT:    moveq r0, r12
+; CHECK-FP16-NEXT:    moveq r0, r1
 ; CHECK-FP16-NEXT:    cmn r6, #1
+; CHECK-FP16-NEXT:    mov r1, #-2147483648
 ; CHECK-FP16-NEXT:    vmov.32 d0[0], r0
 ; CHECK-FP16-NEXT:    movgt r1, r7
 ; CHECK-FP16-NEXT:    cmp r7, #-2147483648
 ; CHECK-FP16-NEXT:    mov r0, #-2147483648
+; CHECK-FP16-NEXT:    vmov.32 d1[1], r9
 ; CHECK-FP16-NEXT:    movls r7, r0
 ; CHECK-FP16-NEXT:    cmn r2, #1
-; CHECK-FP16-NEXT:    vmov.32 d1[1], r10
 ; CHECK-FP16-NEXT:    movne r7, r1
 ; CHECK-FP16-NEXT:    vmov.32 d0[1], r7
 ; CHECK-FP16-NEXT:    add sp, sp, #16

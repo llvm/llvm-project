@@ -329,6 +329,12 @@ https://gcc.gnu.org/onlinedocs/gcc-3.0.2/cpp_9.html.
 How to specify the dependent BMIs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+There are 3 methods to specify the dependent BMIs:
+
+* (1) ``-fprebuilt-module-path=<path/to/direcotry>``.
+* (2) ``-fmodule-file=<path/to/BMI>``.
+* (3) ``-fmodule-file=<module-name>=<path/to/BMI>``.
+
 The option ``-fprebuilt-module-path`` tells the compiler the path where to search for dependent BMIs.
 It may be used multiple times just like ``-I`` for specifying paths for header files. The look up rule here is:
 
@@ -337,16 +343,21 @@ It may be used multiple times just like ``-I`` for specifying paths for header f
 * (2) When we import partition module unit M:P. The compiler would look up M-P.pcm in the
   directories specified by ``-fprebuilt-module-path``.
 
-Another way to specify the dependent BMIs is to use ``-fmodule-file``. The main difference
-is that ``-fprebuilt-module-path`` takes a directory, whereas ``-fmodule-file`` requires a
-specific file. In case both the ``-fprebuilt-module-path`` and ``-fmodule-file`` exist, the 
-``-fmodule-file`` option takes higher precedence. In another word, if the compiler finds the wanted
-BMI specified by ``-fmodule-file``, the compiler wouldn't look up again in the directories specified
-by ``-fprebuilt-module-path``.
+The option ``-fmodule-file=<path/to/BMI>`` tells the compiler to load the specified BMI directly.
+The option ``-fmodule-file=<module-name>=<path/to/BMI>`` tells the compiler to load the specified BMI
+for the module specified by ``<module-name>`` when necessary. The main difference is that
+``-fmodule-file=<path/to/BMI>`` will load the BMI eagerly, whereas
+``-fmodule-file=<module-name>=<path/to/BMI>`` will only load the BMI lazily, which is similar
+with ``-fprebuilt-module-path``.
 
-When we compile a ``module implementation unit``, we must pass the BMI of the corresponding
-``primary module interface unit`` by ``-fmodule-file``
-since the language specification says a module implementation unit implicitly imports
+In case all ``-fprebuilt-module-path=<path/to/direcotry>``, ``-fmodule-file=<path/to/BMI>`` and
+``-fmodule-file=<module-name>=<path/to/BMI>`` exist, the ``-fmodule-file=<path/to/BMI>`` option
+takes highest precedence and ``-fmodule-file=<module-name>=<path/to/BMI>`` will take the second
+highest precedence.
+
+When we compile a ``module implementation unit``, we must specify the BMI of the corresponding
+``primary module interface unit``.
+Since the language specification says a module implementation unit implicitly imports
 the primary module interface unit.
 
   [module.unit]p8
@@ -354,13 +365,15 @@ the primary module interface unit.
   A module-declaration that contains neither an export-keyword nor a module-partition implicitly
   imports the primary module interface unit of the module as if by a module-import-declaration.
 
-Again, the option ``-fmodule-file`` may occur multiple times.
+All of the 3 options ``-fprebuilt-module-path=<path/to/direcotry>``, ``-fmodule-file=<path/to/BMI>``
+and ``-fmodule-file=<module-name>=<path/to/BMI>`` may occur multiple times.
 For example, the command line to compile ``M.cppm`` in
 the above example could be rewritten into:
 
 .. code-block:: console
 
   $ clang++ -std=c++20 M.cppm --precompile -fmodule-file=M-interface_part.pcm -fmodule-file=M-impl_part.pcm -o M.pcm
+  $ clang++ -std=c++20 M.cppm --precompile -fmodule-file=M:interface_part=M-interface_part.pcm -fmodule-file=M:impl_part=M-impl_part.pcm -o M.pcm
 
 ``-fprebuilt-module-path`` is more convenient and ``-fmodule-file`` is faster since
 it saves time for file lookup.
@@ -842,6 +855,249 @@ If we decide to reuse Clang's modulemap, we may get in trouble once we need to i
 So the final answer for why we don't reuse the interface of Clang modules for header units is that
 there are some differences between header units and Clang modules and that ignoring those
 differences now would likely become a problem in the future.
+
+Discover Dependencies
+=====================
+
+Prior to modules, all the translation units can be compiled parallelly.
+But it is not true for the module units. The presense of module units requires
+us to compile the translation units in a (topological) order.
+
+The clang-scan-deps scanner implemented
+`P1689 paper <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p1689r5.html>`_
+to describe the order. Only named modules are supported now.
+
+We need a compilation database to use clang-scan-deps. See
+`JSON Compilation Database Format Specification <JSONCompilationDatabase.html>`_
+for example. Note that the ``output`` entry is necessary for clang-scan-deps
+to scan P1689 format. Here is an example:
+
+.. code-block:: c++
+
+  //--- M.cppm
+  export module M;
+  export import :interface_part;
+  import :impl_part;
+  export int Hello();
+
+  //--- interface_part.cppm
+  export module M:interface_part;
+  export void World();
+
+  //--- Impl.cpp
+  module;
+  #include <iostream>
+  module M;
+  void Hello() {
+      std::cout << "Hello ";
+  }
+
+  //--- impl_part.cppm
+  module;
+  #include <string>
+  #include <iostream>
+  module M:impl_part;
+  import :interface_part;
+
+  std::string W = "World.";
+  void World() {
+      std::cout << W << std::endl;
+  }
+
+  //--- User.cpp
+  import M;
+  import third_party_module;
+  int main() {
+    Hello();
+    World();
+    return 0;
+  }
+
+And here is the compilation database:
+
+.. code-block:: text
+
+  [
+  {
+      "directory": ".",
+      "command": "<path-to-compiler-executable>/clang++ -std=c++20 M.cppm -c -o M.o",
+      "file": "M.cppm",
+      "output": "M.o"
+  },
+  {
+      "directory": ".",
+      "command": "<path-to-compiler-executable>/clang++ -std=c++20 Impl.cpp -c -o Impl.o",
+      "file": "Impl.cpp",
+      "output": "Impl.o"
+  },
+  {
+      "directory": ".",
+      "command": "<path-to-compiler-executable>/clang++ -std=c++20 impl_part.cppm -c -o impl_part.o",
+      "file": "impl_part.cppm",
+      "output": "impl_part.o"
+  },
+  {
+      "directory": ".",
+      "command": "<path-to-compiler-executable>/clang++ -std=c++20 interface_part.cppm -c -o interface_part.o",
+      "file": "interface_part.cppm",
+      "output": "interface_part.o"
+  },
+  {
+      "directory": ".",
+      "command": "<path-to-compiler-executable>/clang++ -std=c++20 User.cpp -c -o User.o",
+      "file": "User.cpp",
+      "output": "User.o"
+  }
+  ]
+
+And we can get the dependency information in P1689 format by:
+
+.. code-block:: console
+
+  $ clang-scan-deps -format=p1689 -compilation-database P1689.json
+
+And we will get:
+
+.. code-block:: text
+
+  {
+    "revision": 0,
+    "rules": [
+      {
+        "primary-output": "Impl.o",
+        "requires": [
+          {
+            "logical-name": "M",
+            "source-path": "M.cppm"
+          }
+        ]
+      },
+      {
+        "primary-output": "M.o",
+        "provides": [
+          {
+            "is-interface": true,
+            "logical-name": "M",
+            "source-path": "M.cppm"
+          }
+        ],
+        "requires": [
+          {
+            "logical-name": "M:interface_part",
+            "source-path": "interface_part.cppm"
+          },
+          {
+            "logical-name": "M:impl_part",
+            "source-path": "impl_part.cppm"
+          }
+        ]
+      },
+      {
+        "primary-output": "User.o",
+        "requires": [
+          {
+            "logical-name": "M",
+            "source-path": "M.cppm"
+          },
+          {
+            "logical-name": "third_party_module"
+          }
+        ]
+      },
+      {
+        "primary-output": "impl_part.o",
+        "provides": [
+          {
+            "is-interface": false,
+            "logical-name": "M:impl_part",
+            "source-path": "impl_part.cppm"
+          }
+        ],
+        "requires": [
+          {
+            "logical-name": "M:interface_part",
+            "source-path": "interface_part.cppm"
+          }
+        ]
+      },
+      {
+        "primary-output": "interface_part.o",
+        "provides": [
+          {
+            "is-interface": true,
+            "logical-name": "M:interface_part",
+            "source-path": "interface_part.cppm"
+          }
+        ]
+      }
+    ],
+    "version": 1
+  }
+
+See the P1689 paper for the meaning of the fields.
+
+And if the user want a finer-grained control for any reason, e.g., to scan the generated source files,
+the user can choose to get the dependency information per file. For example:
+
+.. code-block:: console
+
+  $ clang-scan-deps -format=p1689 -- <path-to-compiler-executable>/clang++ -std=c++20 impl_part.cppm -c -o impl_part.o
+
+And we'll get:
+
+.. code-block:: text
+
+  {
+    "revision": 0,
+    "rules": [
+      {
+        "primary-output": "impl_part.o",
+        "provides": [
+          {
+            "is-interface": false,
+            "logical-name": "M:impl_part",
+            "source-path": "impl_part.cppm"
+          }
+        ],
+        "requires": [
+          {
+            "logical-name": "M:interface_part"
+          }
+        ]
+      }
+    ],
+    "version": 1
+  }
+
+In this way, we can pass the single command line options after the ``--``.
+Then clang-scan-deps will extract the necessary information from the options.
+Note that we need to specify the path to the compiler executable instead of saying
+``clang++`` simply.
+
+The users may want the scanner to get the tranditional dependency information for headers.
+Otherwise, the users have to scan twice for the project, once for headers and once for modules.
+To address the requirement, clang-scan-deps will recognize the specified preprocessor options
+in the given command line and generate the corresponding dependency informaiton. For example,
+
+.. code-block:: console
+
+  $ clang-scan-deps -format=p1689 -- ../bin/clang++ -std=c++20 impl_part.cppm -c -o impl_part.o -MD -MT impl_part.ddi -MF impl_part.dep
+  $ cat impl_part.dep
+
+We will get:
+
+.. code-block:: text
+
+  impl_part.ddi: \
+    /usr/include/bits/wchar.h /usr/include/bits/types/wint_t.h \
+    /usr/include/bits/types/mbstate_t.h \
+    /usr/include/bits/types/__mbstate_t.h /usr/include/bits/types/__FILE.h \
+    /usr/include/bits/types/FILE.h /usr/include/bits/types/locale_t.h \
+    /usr/include/bits/types/__locale_t.h \
+    ...
+
+When clang-scan-deps detects ``-MF`` option, clang-scan-deps will try to write the
+dependency informaiton for headers to the file specified by ``-MF``.
 
 Possible Questions
 ==================

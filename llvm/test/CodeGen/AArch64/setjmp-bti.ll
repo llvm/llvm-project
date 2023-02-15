@@ -1,6 +1,9 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefix=BTI
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel < %s | FileCheck %s --check-prefix=BTI
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -fast-isel < %s | FileCheck %s --check-prefix=BTI
+; RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+harden-sls-blr< %s | FileCheck %s --check-prefix=BTISLS
+; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel -mattr=+harden-sls-blr< %s | FileCheck %s --check-prefix=BTISLS
+; RUN: llc -mtriple=aarch64-none-linux-gnu -fast-isel   -mattr=+harden-sls-blr< %s | FileCheck %s --check-prefix=BTISLS
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+no-bti-at-return-twice < %s | \
 ; RUN: FileCheck %s --check-prefix=NOBTI
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel -mattr=+no-bti-at-return-twice < %s | \
@@ -28,6 +31,14 @@ define void @bbb() {
 ; BTI-NEXT:  hint #36
 ; BTI:       bl notsetjmp
 ; BTI-NOT:   hint #36
+
+; BTISLS-LABEL: bbb:
+; BTISLS:       bl setjmp
+; BTISLS-NEXT:  hint #36
+; BTISLS:       bl __llvm_slsblr_thunk_x{{[0-9]+}}
+; BTISLS-NEXT:  hint #36
+; BTISLS:       bl notsetjmp
+; BTISLS-NOT:   hint #36
 
 ; NOBTI-LABEL: bbb:
 ; NOBTI:     bl setjmp

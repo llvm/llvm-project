@@ -120,15 +120,14 @@ public:
   /// in these blocks.
   void forgetMapping(Region &region);
 
-  /// Returns the LLVM metadata corresponding to a reference to an mlir LLVM
-  /// dialect access group operation.
-  llvm::MDNode *getAccessGroup(Operation &opInst,
+  /// Returns the LLVM metadata corresponding to a symbol reference to an mlir
+  /// LLVM dialect access group operation.
+  llvm::MDNode *getAccessGroup(Operation *op,
                                SymbolRefAttr accessGroupRef) const;
 
-  /// Returns the LLVM metadata corresponding to a reference to an mlir LLVM
-  /// dialect alias scope operation
-  llvm::MDNode *getAliasScope(Operation &opInst,
-                              SymbolRefAttr aliasScopeRef) const;
+  /// Returns the LLVM metadata corresponding to a symbol reference to an mlir
+  /// LLVM dialect alias scope operation
+  llvm::MDNode *getAliasScope(Operation *op, SymbolRefAttr aliasScopeRef) const;
 
   // Sets LLVM metadata for memory operations that are in a parallel loop.
   void setAccessGroupsMetadata(Operation *op, llvm::Instruction *inst);
@@ -287,9 +286,9 @@ private:
   /// metadata nodes for them and their domains.
   LogicalResult createAliasScopeMetadata();
 
-  /// Returns the LLVM metadata corresponding to a reference to an mlir LLVM
-  /// dialect TBAATagOp operation.
-  llvm::MDNode *getTBAANode(Operation &memOp, SymbolRefAttr tagRef) const;
+  /// Returns the LLVM metadata corresponding to a symbol reference to an mlir
+  /// LLVM dialect TBAATagOp operation.
+  llvm::MDNode *getTBAANode(Operation *op, SymbolRefAttr tagRef) const;
 
   /// Process tbaa LLVM Metadata operations and create LLVM
   /// metadata nodes for them.

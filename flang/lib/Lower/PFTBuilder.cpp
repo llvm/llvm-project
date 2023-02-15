@@ -511,7 +511,7 @@ private:
       auto branchTargetMatch = [&]() {
         if (const parser::Label targetLabel =
                 ifCandidateStack.back().ifTargetLabel)
-          if (targetLabel == *targetEval.label)
+          if (targetEval.label && targetLabel == *targetEval.label)
             return true; // goto target match
         if (targetEvalIsEndDoStmt && ifCandidateStack.back().isCycleStmt)
           return true; // cycle target match

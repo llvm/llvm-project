@@ -9,9 +9,9 @@ add_libc_unittest(
     ${LIBC_COMPILE_OPTIONS_NATIVE}
     -ffreestanding
   DEPENDS
-    libc.src.__support.compiler_features
     libc.src.__support.CPP.array
     libc.src.__support.CPP.cstddef
     libc.src.__support.CPP.span
+    libc.src.__support.macros.sanitizer
     libc.src.string.memory_utils.memory_utils
 )

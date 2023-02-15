@@ -32,15 +32,16 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/Process.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdlib>
 #include <optional>
 
@@ -214,7 +215,7 @@ static unsigned inTestVerbosity() {
   return v;
 }
 
-int lld_main(int argc, char **argv) {
+int lld_main(int argc, char **argv, const llvm::ToolContext &) {
   InitLLVM x(argc, argv);
   sys::Process::UseANSIEscapeCodes(true);
 

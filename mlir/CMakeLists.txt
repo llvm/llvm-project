@@ -22,6 +22,7 @@ endif()
 
 # Must go below project(..)
 include(GNUInstallDirs)
+set(CMAKE_CXX_STANDARD 17)
 
 if(MLIR_STANDALONE_BUILD)
   find_package(LLVM CONFIG REQUIRED)

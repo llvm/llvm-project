@@ -145,6 +145,14 @@ public:
     return *this;
   }
 
+  bool anyDefinedIntrinsicOperator() const {
+    return anyDefinedIntrinsicOperator_;
+  }
+  SemanticsContext &set_anyDefinedIntrinsicOperator(bool yes = true) {
+    anyDefinedIntrinsicOperator_ = yes;
+    return *this;
+  }
+
   const DeclTypeSpec &MakeNumericType(TypeCategory, int kind = 0);
   const DeclTypeSpec &MakeLogicalType(int kind = 0);
 
@@ -270,6 +278,7 @@ private:
   const Scope *builtinsScope_{nullptr}; // module __Fortran_builtins
   std::list<parser::Program> modFileParseTrees_;
   std::unique_ptr<CommonBlockMap> commonBlockMap_;
+  bool anyDefinedIntrinsicOperator_{false};
 };
 
 class Semantics {

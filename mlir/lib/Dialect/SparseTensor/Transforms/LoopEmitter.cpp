@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;
@@ -42,6 +43,50 @@ static Value genIndexLoad(OpBuilder &builder, Location loc, Value ptr,
   return load;
 }
 
+// TODO: Support dynamic sized slice.
+static Value getSliceOffset(OpBuilder &builder, Location loc,
+                            SparseTensorEncodingAttr enc, unsigned lvl) {
+  return constantIndex(builder, loc, *enc.getStaticLvlSliceOffset(lvl));
+}
+
+static Value getSliceSize(OpBuilder &builder, Location loc,
+                          SparseTensorEncodingAttr enc, unsigned lvl) {
+  return constantIndex(builder, loc, *enc.getStaticLvlSliceSize(lvl));
+}
+
+static Value getSliceStride(OpBuilder &builder, Location loc,
+                            SparseTensorEncodingAttr enc, unsigned lvl) {
+  return constantIndex(builder, loc, *enc.getStaticLvlSliceStride(lvl));
+}
+
+// Converts a coordinate relative to the slice to the coordinate relative
+// to the underlying tensor.
+static Value toSliceCoord(OpBuilder &builder, Location loc, Value v,
+                          SparseTensorEncodingAttr enc, unsigned lvl) {
+
+  Value stride = getSliceStride(builder, loc, enc, lvl);
+  Value offset = getSliceOffset(builder, loc, enc, lvl);
+  // iv = iv * stride + offset
+  v = builder.create<arith::MulIOp>(loc, v, stride);
+  v = builder.create<arith::AddIOp>(loc, v, offset);
+  return v;
+}
+
+// Converts a coordinate relative to the underlying tensor to the coordinate
+// relative to the slice, returns a extra reminder value
+static std::pair<Value, Value> fromSliceCoord(OpBuilder &builder, Location loc,
+                                              Value v,
+                                              SparseTensorEncodingAttr enc,
+                                              unsigned lvl) {
+  Value stride = getSliceStride(builder, loc, enc, lvl);
+  Value offset = getSliceOffset(builder, loc, enc, lvl);
+  // iv = (iv - offset) / stride
+  v = builder.create<arith::SubIOp>(loc, v, offset);
+  Value rem = builder.create<arith::RemUIOp>(loc, v, stride);
+  v = builder.create<arith::DivUIOp>(loc, v, stride);
+  return std::make_pair(v, rem);
+}
+
 //===----------------------------------------------------------------------===//
 // Sparse tensor loop emitter class implementations
 //===----------------------------------------------------------------------===//
@@ -50,6 +95,10 @@ Value LoopEmitter::genAddress(OpBuilder &builder, Location loc, size_t tid,
                               size_t dim, Value iv) {
   Value p = dim == 0 ? constantIndex(builder, loc, 0) : pidxs[tid][dim - 1];
   Value mul = builder.create<arith::MulIOp>(loc, highs[tid][dim], p);
+  if (isSparseSlices[tid]) {
+    auto enc = getSparseTensorEncoding(tensors[tid].getType());
+    iv = toSliceCoord(builder, loc, iv, enc, dim);
+  }
   Value add = builder.create<arith::AddIOp>(loc, mul, iv);
   return add;
 }
@@ -67,6 +116,7 @@ void LoopEmitter::initialize(ValueRange tensors, StringAttr loopTag,
   this->hasOutput = hasOutput;
   this->isSparseOut = isSparseOut;
   this->tensors.assign(tensors.begin(), tensors.end());
+  this->isSparseSlices.assign(tensors.size(), false);
   this->dimTypes.assign(tensors.size(), std::vector<DimLevelType>());
   this->pidxs.assign(tensors.size(), std::vector<Value>());
   this->coord.assign(tensors.size(), std::vector<Value>());
@@ -87,10 +137,11 @@ void LoopEmitter::initialize(ValueRange tensors, StringAttr loopTag,
     auto enc = getSparseTensorEncoding(rtp);
     // We always treat sparse output tensor as dense so that we always iterate
     // it based on dim size.
-    if (enc && !(isOutputTensor(tid) && isSparseOut))
+    if (enc && !(isOutputTensor(tid) && isSparseOut)) {
+      isSparseSlices[tid] = enc.isSlice();
       for (auto dimTp : enc.getDimLevelType())
         dimTypes[tid].push_back(dimTp);
-    else
+    } else
       dimTypes[tid].assign(rank, DimLevelType::Dense);
 
     // Initialize using empty value.
@@ -156,7 +207,14 @@ void LoopEmitter::initializeLoopEmit(OpBuilder &builder, Location loc,
     Type elementType = rtp.getElementType();
     if (!enc) {
       // Non-annotated dense tensors.
-      auto denseTp = MemRefType::get(shape, elementType);
+      BaseMemRefType denseTp = MemRefType::get(shape, elementType);
+
+      // TODO: if we unconditionally use fully dynamic layout here, it breaks
+      // some vectorization passes which requires static stride = 1.
+      // Is it possible to call vectorization pass after bufferization?
+      if (llvm::isa_and_nonnull<tensor::ExtractSliceOp>(tensor.getDefiningOp()))
+        denseTp = bufferization::getMemRefTypeWithFullyDynamicLayout(rtp);
+
       Value denseVal =
           builder.create<bufferization::ToMemrefOp>(loc, denseTp, tensor);
       // Dense outputs need special handling.
@@ -218,7 +276,6 @@ Operation *LoopEmitter::enterLoopOverTensorAtDim(
     ArrayRef<size_t> dims, MutableArrayRef<Value> reduc, bool isParallel) {
   // TODO: support multiple return on parallel for?
   assert(!isParallel || reduc.size() <= 1);
-
   bool isSparseInput = false;
   size_t tid = tids.front(), dim = dims.front();
   for (auto [t, d] : llvm::zip(tids, dims)) {
@@ -239,10 +296,13 @@ Operation *LoopEmitter::enterLoopOverTensorAtDim(
     isSparseInput = isSparseInput || isSparse;
   }
 
+  auto enc = getSparseTensorEncoding(tensors[tid].getType());
+  // TODO: support dynamic slices.
   Value step = constantIndex(builder, loc, 1);
   Value lo = isSparseInput ? pidxs[tid][dim]      // current offset
-                           : loopSeqStack.back(); // univeral tid
+                           : loopSeqStack.back(); // universal index
   Value hi = highs[tid][dim];
+
   Operation *loop = nullptr;
   Value iv;
   if (isParallel) {
@@ -275,15 +335,64 @@ Operation *LoopEmitter::enterLoopOverTensorAtDim(
   }
   assert(loop && iv);
 
+  Value c;
   if (isSparseInput) {
     pidxs[tid][dim] = iv;
     // Generating a load on the indices array yields the coordinate.
     Value ptr = idxBuffer[tid][dim];
-    coord[tid][dim] = genIndexLoad(builder, loc, ptr, iv);
+    c = genIndexLoad(builder, loc, ptr, iv);
   } else {
     // Dense tensor, the coordinates is the inducation variable.
-    coord[tid][dim] = iv;
+    c = iv;
   }
+
+  if (isSparseSlices[tid] && isSparseInput) {
+    // For sparse level slices, we need to filter out invalid coordinates that
+    // are not included in the slice.
+    std::pair<Value, Value> trans = fromSliceCoord(builder, loc, c, enc, dim);
+    SmallVector<Type> types;
+    for (Value red : reduc)
+      types.push_back(red.getType());
+
+    // First, coord >= offset (TODO: seems unsigned >= 0 won't be folded, skip
+    // the check if the offset is zero).
+    auto geOff =
+        builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::uge, c,
+                                      getSliceOffset(builder, loc, enc, dim));
+    // Second, coords < length
+    auto ltLen = builder.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::ult, trans.first,
+        getSliceSize(builder, loc, enc, dim));
+
+    // Third, rem == 0; confirmed that (a % 1) will be folded to 0
+    auto fitStride = builder.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::eq, trans.second,
+        constantIndex(builder, loc, 0));
+
+    auto pred = builder.create<arith::AndIOp>(loc, geOff, ltLen);
+    pred = builder.create<arith::AndIOp>(loc, pred, fitStride);
+    bool hasReduc = !types.empty();
+    scf::IfOp ifOp =
+        builder.create<scf::IfOp>(loc, types, pred, /*else*/ hasReduc);
+    if (hasReduc) {
+      // scf.for (a) -> v
+      //  %s = scf.if (a) -> v
+      //    user-generated code.
+      //  else
+      //    yield a
+      //  yield %s
+      builder.create<scf::YieldOp>(loc, ifOp.getResults());
+      builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+      // On mismatch.
+      builder.create<scf::YieldOp>(loc, reduc);
+    }
+    // Set the insertion point to matched branch.
+    builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+    c = trans.first;
+  }
+
+  assert(c);
+  coord[tid][dim] = c;
   // NOTE: we can also prepare for next dim here in advance
   // Push the loop into stack
   loopStack.emplace_back(ArrayRef<size_t>(tid), ArrayRef<size_t>(dim), loop,

@@ -26,11 +26,6 @@ external add_function_attrs
   : [ `Module ] Llvm.PassManager.t -> unit
   = "llvm_add_function_attrs"
 
-(** See the [llvm::createFunctionInliningPass] function. *)
-external add_function_inlining
-  : [ `Module ] Llvm.PassManager.t -> unit
-  = "llvm_add_function_inlining"
-
 (** See the [llvm::createAlwaysInlinerPass] function. *)
 external add_always_inliner
   : [ `Module ] Llvm.PassManager.t -> unit
@@ -50,18 +45,3 @@ external add_global_optimizer
 external add_ipsccp
   : [ `Module ] Llvm.PassManager.t -> unit
   = "llvm_add_ipsccp"
-
-(** See the [llvm::createInternalizePass] function. *)
-external add_internalize
-  : [ `Module ] Llvm.PassManager.t -> all_but_main:bool -> unit
-  = "llvm_add_internalize"
-
-(** See the [llvm::createStripDeadPrototypesPass] function. *)
-external add_strip_dead_prototypes
-  : [ `Module ] Llvm.PassManager.t -> unit
-  = "llvm_add_strip_dead_prototypes"
-
-(** See the [llvm::createStripSymbolsPass] function. *)
-external add_strip_symbols
-  : [ `Module ] Llvm.PassManager.t -> unit
-  = "llvm_add_strip_symbols"

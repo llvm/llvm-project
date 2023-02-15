@@ -301,11 +301,12 @@ void ModuleDepCollector::associateWithContextHash(const CompilerInvocation &CI,
   assert(Inserted && "duplicate module mapping");
 }
 
-void ModuleDepCollectorPP::FileChanged(SourceLocation Loc,
-                                       FileChangeReason Reason,
-                                       SrcMgr::CharacteristicKind FileType,
-                                       FileID PrevFID) {
-  if (Reason != PPCallbacks::EnterFile)
+void ModuleDepCollectorPP::LexedFileChanged(FileID FID,
+                                            LexedFileChangeReason Reason,
+                                            SrcMgr::CharacteristicKind FileType,
+                                            FileID PrevFID,
+                                            SourceLocation Loc) {
+  if (Reason != LexedFileChangeReason::EnterFile)
     return;
 
   // This has to be delayed as the context hash can change at the start of
@@ -320,8 +321,7 @@ void ModuleDepCollectorPP::FileChanged(SourceLocation Loc,
   // Dependency generation really does want to go all the way to the
   // file entry for a source location to find out what is depended on.
   // We do not want #line markers to affect dependency generation!
-  if (std::optional<StringRef> Filename =
-          SM.getNonBuiltinFilenameForID(SM.getFileID(SM.getExpansionLoc(Loc))))
+  if (std::optional<StringRef> Filename = SM.getNonBuiltinFilenameForID(FID))
     MDC.addFileDep(llvm::sys::path::remove_leading_dotslash(*Filename));
 }
 
@@ -341,6 +341,14 @@ void ModuleDepCollectorPP::InclusionDirective(
 void ModuleDepCollectorPP::moduleImport(SourceLocation ImportLoc,
                                         ModuleIdPath Path,
                                         const Module *Imported) {
+  if (MDC.ScanInstance.getPreprocessor().isInImportingCXXNamedModules()) {
+    P1689ModuleInfo RequiredModule;
+    RequiredModule.ModuleName = Path[0].first->getName().str();
+    RequiredModule.Type = P1689ModuleInfo::ModuleType::NamedCXXModule;
+    MDC.RequiredStdCXXModules.push_back(RequiredModule);
+    return;
+  }
+
   handleImport(Imported);
 }
 
@@ -363,6 +371,21 @@ void ModuleDepCollectorPP::EndOfMainFile() {
                                  .getFileEntryForID(MainFileID)
                                  ->getName());
 
+  auto &PP = MDC.ScanInstance.getPreprocessor();
+  if (PP.isInNamedModule()) {
+    P1689ModuleInfo ProvidedModule;
+    ProvidedModule.ModuleName = PP.getNamedModuleName();
+    ProvidedModule.Type = P1689ModuleInfo::ModuleType::NamedCXXModule;
+    ProvidedModule.IsStdCXXModuleInterface = PP.isInNamedInterfaceUnit();
+    // Don't put implementation (non partition) unit as Provide.
+    // Put the module as required instead. Since the implementation
+    // unit will import the primary module implicitly.
+    if (PP.isInImplementationUnit())
+      MDC.RequiredStdCXXModules.push_back(ProvidedModule);
+    else
+      MDC.ProvidedStdCXXModule = ProvidedModule;
+  }
+
   if (!MDC.ScanInstance.getPreprocessorOpts().ImplicitPCHInclude.empty())
     MDC.addFileDep(MDC.ScanInstance.getPreprocessorOpts().ImplicitPCHInclude);
 
@@ -375,6 +398,10 @@ void ModuleDepCollectorPP::EndOfMainFile() {
     handleTopLevelModule(M);
 
   MDC.Consumer.handleDependencyOutputOpts(*MDC.Opts);
+
+  if (MDC.IsStdModuleP1689Format)
+    MDC.Consumer.handleProvidedAndRequiredStdCXXModules(
+        MDC.ProvidedStdCXXModule, MDC.RequiredStdCXXModules);
 
   for (auto &&I : MDC.ModularDeps)
     MDC.Consumer.handleModuleDependency(*I.second);
@@ -550,10 +577,12 @@ void ModuleDepCollectorPP::addAffectingClangModule(
 ModuleDepCollector::ModuleDepCollector(
     std::unique_ptr<DependencyOutputOptions> Opts,
     CompilerInstance &ScanInstance, DependencyConsumer &C,
-    CompilerInvocation OriginalCI, bool OptimizeArgs, bool EagerLoadModules)
+    CompilerInvocation OriginalCI, bool OptimizeArgs, bool EagerLoadModules,
+    bool IsStdModuleP1689Format)
     : ScanInstance(ScanInstance), Consumer(C), Opts(std::move(Opts)),
       OriginalInvocation(std::move(OriginalCI)), OptimizeArgs(OptimizeArgs),
-      EagerLoadModules(EagerLoadModules) {}
+      EagerLoadModules(EagerLoadModules),
+      IsStdModuleP1689Format(IsStdModuleP1689Format) {}
 
 void ModuleDepCollector::attachToPreprocessor(Preprocessor &PP) {
   PP.addPPCallbacks(std::make_unique<ModuleDepCollectorPP>(*this));

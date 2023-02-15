@@ -58,7 +58,7 @@ class TestCase(TestBase):
         self.assertRegex(valobj.summary, r"^10( strong=1)? weak=1$")
         self.assertNotEqual(valobj.child[0].unsigned, 0)
 
-        if self.expectedCompilerVersion(['>', '16.0']):
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(['>', '16.0']):
             string_type = "std::basic_string<char>"
         else:
             string_type = "std::basic_string<char, std::char_traits<char>, std::allocator<char> >"

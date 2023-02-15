@@ -127,8 +127,8 @@ void genFinalization(fir::FirOpBuilder &builder, mlir::Location loc,
 void genInlinedAllocation(fir::FirOpBuilder &builder, mlir::Location loc,
                           const fir::MutableBoxValue &box,
                           mlir::ValueRange lbounds, mlir::ValueRange extents,
-                          mlir::ValueRange lenParams,
-                          llvm::StringRef allocName);
+                          mlir::ValueRange lenParams, llvm::StringRef allocName,
+                          bool mustBeHeap = false);
 
 void genInlinedDeallocate(fir::FirOpBuilder &builder, mlir::Location loc,
                           const fir::MutableBoxValue &box);

@@ -8,7 +8,7 @@
 
 #include "src/setjmp/longjmp.h"
 #include "src/setjmp/setjmp_impl.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 jmp_buf buf;
 constexpr int MAX_LOOP = 123;

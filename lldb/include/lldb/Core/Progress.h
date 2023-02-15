@@ -87,10 +87,12 @@ public:
   /// anything nor send any progress updates.
   ///
   /// @param [in] amount The amount to increment m_completed by.
-  void Increment(uint64_t amount = 1);
+  ///
+  /// @param [in] an optional message associated with this update.
+  void Increment(uint64_t amount = 1, std::string update = {});
 
 private:
-  void ReportProgress();
+  void ReportProgress(std::string update = {});
   static std::atomic<uint64_t> g_id;
   /// The title of the progress activity.
   std::string m_title;

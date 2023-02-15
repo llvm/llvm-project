@@ -15,7 +15,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -36,13 +35,19 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/SpecialCaseList.h"
+#include "llvm/Support/StringSaver.h"
+#include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #include <array>
 #include <cstdint>
+#include <memory>
 
 using namespace llvm;
 
@@ -52,7 +57,7 @@ namespace {
 
 //===--- Constants --------------------------------------------------------===//
 
-constexpr uint32_t kVersionBase = 1;                // occupies lower 16 bits
+constexpr uint32_t kVersionBase = 2;                // occupies lower 16 bits
 constexpr uint32_t kVersionPtrSizeRel = (1u << 16); // offsets are pointer-sized
 constexpr int kCtorDtorPriority = 2;
 
@@ -119,9 +124,11 @@ transformOptionsFromCl(SanitizerBinaryMetadataOptions &&Opts) {
 
 class SanitizerBinaryMetadata {
 public:
-  SanitizerBinaryMetadata(Module &M, SanitizerBinaryMetadataOptions Opts)
+  SanitizerBinaryMetadata(Module &M, SanitizerBinaryMetadataOptions Opts,
+                          std::unique_ptr<SpecialCaseList> Ignorelist)
       : Mod(M), Options(transformOptionsFromCl(std::move(Opts))),
-        TargetTriple(M.getTargetTriple()), IRB(M.getContext()) {
+        Ignorelist(std::move(Ignorelist)), TargetTriple(M.getTargetTriple()),
+        IRB(M.getContext()) {
     // FIXME: Make it work with other formats.
     assert(TargetTriple.isOSBinFormatELF() && "ELF only");
   }
@@ -147,7 +154,7 @@ private:
   // to determine if a memory operation is atomic or not in modules compiled
   // with SanitizerBinaryMetadata.
   bool runOn(Instruction &I, MetadataInfoSet &MIS, MDBuilder &MDB,
-             uint32_t &FeatureMask);
+             uint64_t &FeatureMask);
 
   // Get start/end section marker pointer.
   GlobalVariable *getSectionMarker(const Twine &MarkerName, Type *Ty);
@@ -166,8 +173,11 @@ private:
 
   Module &Mod;
   const SanitizerBinaryMetadataOptions Options;
+  std::unique_ptr<SpecialCaseList> Ignorelist;
   const Triple TargetTriple;
   IRBuilder<> IRB;
+  BumpPtrAllocator Alloc;
+  UniqueStringSaver StringPool{Alloc};
 };
 
 bool SanitizerBinaryMetadata::run() {
@@ -212,17 +222,23 @@ bool SanitizerBinaryMetadata::run() {
             (MI->FunctionPrefix + "_del").str(), InitTypes, InitArgs,
             /*VersionCheckName=*/StringRef(), /*Weak=*/ClWeakCallbacks)
             .first;
-    Constant *CtorData = nullptr;
-    Constant *DtorData = nullptr;
+    Constant *CtorComdatKey = nullptr;
+    Constant *DtorComdatKey = nullptr;
     if (TargetTriple.supportsCOMDAT()) {
-      // Use COMDAT to deduplicate constructor/destructor function.
+      // Use COMDAT to deduplicate constructor/destructor function. The COMDAT
+      // key needs to be a non-local linkage.
       Ctor->setComdat(Mod.getOrInsertComdat(Ctor->getName()));
       Dtor->setComdat(Mod.getOrInsertComdat(Dtor->getName()));
-      CtorData = Ctor;
-      DtorData = Dtor;
+      Ctor->setLinkage(GlobalValue::ExternalLinkage);
+      Dtor->setLinkage(GlobalValue::ExternalLinkage);
+      // DSOs should _not_ call another constructor/destructor!
+      Ctor->setVisibility(GlobalValue::HiddenVisibility);
+      Dtor->setVisibility(GlobalValue::HiddenVisibility);
+      CtorComdatKey = Ctor;
+      DtorComdatKey = Dtor;
     }
-    appendToGlobalCtors(Mod, Ctor, kCtorDtorPriority, CtorData);
-    appendToGlobalDtors(Mod, Dtor, kCtorDtorPriority, DtorData);
+    appendToGlobalCtors(Mod, Ctor, kCtorDtorPriority, CtorComdatKey);
+    appendToGlobalDtors(Mod, Dtor, kCtorDtorPriority, DtorComdatKey);
   }
 
   return true;
@@ -233,6 +249,8 @@ void SanitizerBinaryMetadata::runOn(Function &F, MetadataInfoSet &MIS) {
     return;
   if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
     return;
+  if (Ignorelist && Ignorelist->inSection("metadata", "fun", F.getName()))
+    return;
   // Don't touch available_externally functions, their actual body is elsewhere.
   if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage)
     return;
@@ -241,7 +259,7 @@ void SanitizerBinaryMetadata::runOn(Function &F, MetadataInfoSet &MIS) {
 
   // The metadata features enabled for this function, stored along covered
   // metadata (if enabled).
-  uint32_t FeatureMask = 0;
+  uint64_t FeatureMask = 0;
   // Don't emit unnecessary covered metadata for all functions to save space.
   bool RequiresCovered = false;
 
@@ -266,9 +284,8 @@ void SanitizerBinaryMetadata::runOn(Function &F, MetadataInfoSet &MIS) {
     const auto *MI = &MetadataInfo::Covered;
     MIS.insert(MI);
     const StringRef Section = getSectionName(MI->SectionSuffix);
-    // The feature mask will be placed after the size (32 bit) of the function,
-    // so in total one covered entry will use `sizeof(void*) + 4 + 4`.
-    Constant *CFM = IRB.getInt32(FeatureMask);
+    // The feature mask will be placed after the function size.
+    Constant *CFM = IRB.getInt64(FeatureMask);
     F.setMetadata(LLVMContext::MD_pcsections,
                   MDB.createPCSections({{Section, {CFM}}}));
   }
@@ -375,7 +392,7 @@ bool maybeSharedMutable(const Value *Addr) {
 }
 
 bool SanitizerBinaryMetadata::runOn(Instruction &I, MetadataInfoSet &MIS,
-                                    MDBuilder &MDB, uint32_t &FeatureMask) {
+                                    MDBuilder &MDB, uint64_t &FeatureMask) {
   SmallVector<const MetadataInfo *, 1> InstMetadata;
   bool RequiresCovered = false;
 
@@ -430,8 +447,9 @@ SanitizerBinaryMetadata::getSectionMarker(const Twine &MarkerName, Type *Ty) {
 }
 
 StringRef SanitizerBinaryMetadata::getSectionName(StringRef SectionSuffix) {
-  // FIXME: Other TargetTriple (req. string pool)
-  return SectionSuffix;
+  // FIXME: Other TargetTriples.
+  // Request ULEB128 encoding for all integer constants.
+  return StringPool.save(SectionSuffix + "!C");
 }
 
 Twine SanitizerBinaryMetadata::getSectionStart(StringRef SectionSuffix) {
@@ -445,12 +463,20 @@ Twine SanitizerBinaryMetadata::getSectionEnd(StringRef SectionSuffix) {
 } // namespace
 
 SanitizerBinaryMetadataPass::SanitizerBinaryMetadataPass(
-    SanitizerBinaryMetadataOptions Opts)
-    : Options(std::move(Opts)) {}
+    SanitizerBinaryMetadataOptions Opts, ArrayRef<std::string> IgnorelistFiles)
+    : Options(std::move(Opts)), IgnorelistFiles(std::move(IgnorelistFiles)) {}
 
 PreservedAnalyses
 SanitizerBinaryMetadataPass::run(Module &M, AnalysisManager<Module> &AM) {
-  SanitizerBinaryMetadata Pass(M, Options);
+  std::unique_ptr<SpecialCaseList> Ignorelist;
+  if (!IgnorelistFiles.empty()) {
+    Ignorelist = SpecialCaseList::createOrDie(IgnorelistFiles,
+                                              *vfs::getRealFileSystem());
+    if (Ignorelist->inSection("metadata", "src", M.getSourceFileName()))
+      return PreservedAnalyses::all();
+  }
+
+  SanitizerBinaryMetadata Pass(M, Options, std::move(Ignorelist));
   if (Pass.run())
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();

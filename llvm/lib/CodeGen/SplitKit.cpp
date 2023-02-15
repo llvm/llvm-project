@@ -1365,7 +1365,7 @@ void SplitEditor::rewriteAssigned(bool ExtendRanges) {
         // The point we want to extend is 0d to 16e not 16r in this case, but if
         // we use 16r here we will extend nothing because that already contained
         // in [16e, 32d).
-        unsigned OpIdx = MI->getOperandNo(&MO);
+        unsigned OpIdx = MO.getOperandNo();
         unsigned DefOpIdx = MI->findTiedOperandIdx(OpIdx);
         const MachineOperand &DefOp = MI->getOperand(DefOpIdx);
         IsEarlyClobber = DefOp.isEarlyClobber();

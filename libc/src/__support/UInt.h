@@ -14,8 +14,8 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/builtin_wrappers.h"
-#include "src/__support/common.h"
 #include "src/__support/integer_utils.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/number_pair.h"
 
 #include <stddef.h> // For size_t
@@ -365,7 +365,7 @@ template <size_t Bits> struct UInt {
       return;
     }
 #endif // __SIZEOF_INT128__
-    if (unlikely(s == 0))
+    if (LIBC_UNLIKELY(s == 0))
       return;
 
     const size_t drop = s / 64;  // Number of words to drop
@@ -420,7 +420,7 @@ template <size_t Bits> struct UInt {
     }
 #endif // __SIZEOF_INT128__
 
-    if (unlikely(s == 0))
+    if (LIBC_UNLIKELY(s == 0))
       return;
     const size_t drop = s / 64;  // Number of words to drop
     const size_t shift = s % 64; // Bit shift in the remaining words.

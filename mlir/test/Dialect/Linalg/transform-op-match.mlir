@@ -13,11 +13,11 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %match_name = transform.structured.match ops{["arith.constant"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   transform.test_print_remark_at_operand %match_name, "matched op name" : !pdl.operation
-  transform.test_consume_operand %match_name
+  transform.test_consume_operand %match_name : !pdl.operation
 
   %match_attr = transform.structured.match ops{["arith.constant"]} attributes{my_attr} in %arg1 : (!pdl.operation) -> !pdl.operation
   transform.test_print_remark_at_operand %match_attr, "matched attr name" : !pdl.operation
-  transform.test_consume_operand %match_attr
+  transform.test_consume_operand %match_attr : !pdl.operation
 }
 
 // -----
@@ -34,7 +34,7 @@ transform.sequence failures(propagate) {
   %match_name = transform.structured.match
     ops{["arith.constant"]} filter_result_type = f32 in %arg1 : (!pdl.operation) -> !pdl.operation
   transform.test_print_remark_at_operand %match_name, "matched op name" : !pdl.operation
-  transform.test_consume_operand %match_name
+  transform.test_consume_operand %match_name : !pdl.operation
 }
 
 // -----
@@ -65,7 +65,7 @@ transform.sequence failures(propagate) {
         #linalg.iterator_type<parallel>]}
       in %arg1 : (!pdl.operation) -> !pdl.operation
   transform.test_print_remark_at_operand %match_attr, "matched complex attr" : !pdl.operation
-  transform.test_consume_operand %match_attr
+  transform.test_consume_operand %match_attr : !pdl.operation
 
   %no_match = transform.structured.match
       attributes{iterator_types = [

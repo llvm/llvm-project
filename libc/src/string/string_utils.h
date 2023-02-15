@@ -15,7 +15,7 @@
 #define LIBC_SRC_STRING_STRING_UTILS_H
 
 #include "src/__support/CPP/bitset.h"
-#include "src/__support/common.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/string/memory_utils/bzero_implementations.h"
 #include "src/string/memory_utils/memcpy_implementations.h"
 #include <stddef.h> // For size_t
@@ -185,7 +185,7 @@ LIBC_INLINE char *string_token(char *__restrict src,
                                const char *__restrict delimiter_string,
                                char **__restrict saveptr) {
   // Return nullptr immediately if both src AND saveptr are nullptr
-  if (unlikely(src == nullptr && ((src = *saveptr) == nullptr)))
+  if (LIBC_UNLIKELY(src == nullptr && ((src = *saveptr) == nullptr)))
     return nullptr;
 
   cpp::bitset<256> delimiter_set;

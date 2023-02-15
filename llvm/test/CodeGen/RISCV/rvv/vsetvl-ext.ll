@@ -7,7 +7,7 @@ declare i64 @llvm.riscv.vsetvli(
 define signext i32 @vsetvl_sext() {
 ; CHECK-LABEL: vsetvl_sext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli a0, 1, e16, m2, ta, ma
 ; CHECK-NEXT:    ret
   %a = call i64 @llvm.riscv.vsetvli(i64 1, i64 1, i64 1)
   %b = trunc i64 %a to i32
@@ -17,7 +17,7 @@ define signext i32 @vsetvl_sext() {
 define zeroext i32 @vsetvl_zext() {
 ; CHECK-LABEL: vsetvl_zext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli a0, 1, e16, m2, ta, ma
 ; CHECK-NEXT:    ret
   %a = call i64 @llvm.riscv.vsetvli(i64 1, i64 1, i64 1)
   %b = trunc i64 %a to i32
@@ -27,7 +27,7 @@ define zeroext i32 @vsetvl_zext() {
 define i64 @vsetvl_and17bits() {
 ; CHECK-LABEL: vsetvl_and17bits:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli a0, 1, e16, m2, ta, ma
 ; CHECK-NEXT:    ret
   %a = call i64 @llvm.riscv.vsetvli(i64 1, i64 1, i64 1)
   %b = and i64 %a, 131071

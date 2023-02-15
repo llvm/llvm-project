@@ -186,11 +186,11 @@ round(const duration<_Rep, _Period>& __d)
 {
     _ToDuration __lower = chrono::floor<_ToDuration>(__d);
     _ToDuration __upper = __lower + _ToDuration{1};
-    auto __lowerDiff = __d - __lower;
-    auto __upperDiff = __upper - __d;
-    if (__lowerDiff < __upperDiff)
+    auto __lower_diff   = __d - __lower;
+    auto __upper_diff   = __upper - __d;
+    if (__lower_diff < __upper_diff)
         return __lower;
-    if (__lowerDiff > __upperDiff)
+    if (__lower_diff > __upper_diff)
         return __upper;
     return __lower.count() & 1 ? __upper : __lower;
 }

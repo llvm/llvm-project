@@ -94,6 +94,13 @@ void RTNAME(AllocatableApplyMold)(
   descriptor.set_base_addr(nullptr);
   descriptor.raw().attribute = CFI_attribute_allocatable;
   descriptor.raw().rank = rank;
+  if (auto *descAddendum{descriptor.Addendum()}) {
+    if (const auto *moldAddendum{mold.Addendum()}) {
+      if (const auto *derived{moldAddendum->derivedType()}) {
+        descAddendum->set_derivedType(derived);
+      }
+    }
+  }
 }
 
 int RTNAME(AllocatableAllocate)(Descriptor &descriptor, bool hasStat,

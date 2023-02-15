@@ -13,13 +13,13 @@
 #ifndef LLVM_EXECUTIONENGINE_JITLINK_COFFDIRECTIVEPARSER_H
 #define LLVM_EXECUTIONENGINE_JITLINK_COFFDIRECTIVEPARSER_H
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 namespace jitlink {

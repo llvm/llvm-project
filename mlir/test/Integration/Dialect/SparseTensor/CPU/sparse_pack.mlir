@@ -1,12 +1,23 @@
 // DEFINE: %{option} = enable-runtime-library=false
-// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
-// DEFINE: mlir-cpu-runner \
+// DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
+// DEFINE: %{run} = mlir-cpu-runner \
 // DEFINE:  -e entry -entry-point-result=void  \
 // DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // DEFINE: FileCheck %s
 //
-// RUN: %{command}
+// RUN: %{compile} | %{run}
 //
+
+// Do the same run, but now with direct IR generation and, if available, VLA
+// vectorization.
+// REDEFINE: %{option} = "enable-runtime-library=false vl=4 enable-arm-sve=%ENABLE_VLA"
+// REDEFINE: %{run} = %lli \
+// REDEFINE:   --entry-function=entry_lli \
+// REDEFINE:   --extra-module=%S/Inputs/main_for_lli.ll \
+// REDEFINE:   %VLA_ARCH_ATTR_OPTIONS \
+// REDEFINE:   --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext | \
+// REDEFINE: FileCheck %s
+// RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
 
 // TODO: Pack only support CodeGen Path
 
@@ -25,6 +36,9 @@ module {
   // Main driver.
   //
   func.func @entry() {
+    %c0 = arith.constant 0 : index
+    %f0 = arith.constant 0.0 : f64
+    %i0 = arith.constant 0 : i32
     //
     // Initialize a 3-dim dense tensor.
     //
@@ -83,6 +97,23 @@ module {
         vector.print %2: index
         vector.print %v: f64
      }
+
+
+    %d, %i, %n = sparse_tensor.unpack %s5 : tensor<10x10xf64, #SortedCOOI32>
+                                         to tensor<3xf64>, tensor<3x2xi32>, i32
+
+
+
+    // CHECK-NEXT: ( 1, 2, 3 )
+    %vd = vector.transfer_read %d[%c0], %f0 : tensor<3xf64>, vector<3xf64>
+    vector.print %vd : vector<3xf64>
+
+    // CHECK-NEXT: ( ( 1, 2 ), ( 5, 6 ), ( 7, 8 ) )
+    %vi = vector.transfer_read %i[%c0, %c0], %i0 : tensor<3x2xi32>, vector<3x2xi32>
+    vector.print %vi : vector<3x2xi32>
+
+    // CHECK-NEXT: 3
+    vector.print %n : i32
 
     return
   }

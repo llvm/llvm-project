@@ -11,17 +11,24 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include <string>
 
 namespace llvm {
 
+class Value;
+
 class ConstraintSystem {
   /// Current linear constraints in the system.
   /// An entry of the form c0, c1, ... cn represents the following constraint:
   ///   c0 >= v0 * c1 + .... + v{n-1} * cn
   SmallVector<SmallVector<int64_t, 8>, 4> Constraints;
+
+  /// A map of variables (IR values) to their corresponding index in the
+  /// constraint system.
+  DenseMap<Value *, unsigned> Value2Index;
 
   /// Current greatest common divisor for all coefficients in the system.
   uint32_t GCD = 1;
@@ -52,6 +59,11 @@ public:
     return true;
   }
 
+  DenseMap<Value *, unsigned> &getValue2Index() { return Value2Index; }
+  const DenseMap<Value *, unsigned> &getValue2Index() const {
+    return Value2Index;
+  }
+
   bool addVariableRowFill(ArrayRef<int64_t> R) {
     // If all variable coefficients are 0, the constraint does not provide any
     // usable information.
@@ -79,7 +91,7 @@ public:
 
   bool isConditionImplied(SmallVector<int64_t, 8> R) const;
 
-  ArrayRef<int64_t> getLastConstraint() { return Constraints[0]; }
+  ArrayRef<int64_t> getLastConstraint() { return Constraints.back(); }
   void popLastConstraint() { Constraints.pop_back(); }
   void popLastNVariables(unsigned N) {
     for (auto &C : Constraints) {

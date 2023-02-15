@@ -16,6 +16,7 @@ namespace mlir {
 namespace bufferization {
 class AnalysisState;
 struct BufferizationStatistics;
+class OneShotAnalysisState;
 struct OneShotBufferizationOptions;
 
 /// A function that matches anchor OpOperands for tensor::EmptyOp elimination.
@@ -36,7 +37,7 @@ using RewriteFn = std::function<Value(OpBuilder &, Location, OpOperand &)>;
 ///   following the aliasing  OpOperand, that eventually ends at a single
 ///   tensor::EmptyOp.
 LogicalResult eliminateEmptyTensors(RewriterBase &rewriter, Operation *op,
-                                    bufferization::AnalysisState &state,
+                                    OneShotAnalysisState &state,
                                     AnchorMatchFn anchorMatchFunc,
                                     RewriteFn rewriteFunc);
 
@@ -44,7 +45,7 @@ LogicalResult eliminateEmptyTensors(RewriterBase &rewriter, Operation *op,
 /// InsertSliceOp, i.e., if it is eventually inserted into another tensor
 /// (and some other conditions are met).
 LogicalResult insertSliceAnchoredEmptyTensorEliminationStep(
-    RewriterBase &rewriter, Operation *op, bufferization::AnalysisState &state);
+    RewriterBase &rewriter, Operation *op, OneShotAnalysisState &state);
 
 /// Resolve RaW and other conflicts by inserting bufferization.alloc_tensor ops.
 /// After applying this transform, the IR can be bufferized without inserting

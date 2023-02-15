@@ -12,8 +12,8 @@
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/cstddef.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/common.h"
-#include "src/__support/compiler_features.h"
+#include "src/__support/macros/attributes.h"          //LIBC_INLINE
+#include "src/__support/macros/config.h"              // LIBC_HAS_BUILTIN
 
 #include <stddef.h> // size_t
 #include <stdint.h> // intptr_t / uintptr_t
@@ -82,11 +82,11 @@ template <size_t alignment, typename T> static T *assume_aligned(T *ptr) {
   return reinterpret_cast<T *>(__builtin_assume_aligned(ptr, alignment));
 }
 
-#if LLVM_LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
+#if LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
 #define LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
 #endif
 
-#if LLVM_LIBC_HAS_BUILTIN(__builtin_memset_inline)
+#if LIBC_HAS_BUILTIN(__builtin_memset_inline)
 #define LLVM_LIBC_HAS_BUILTIN_MEMSET_INLINE
 #endif
 

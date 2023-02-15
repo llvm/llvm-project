@@ -880,7 +880,7 @@ protected:
     Status error;
     auto name = command[0].ref();
     m_regex_cmd_up = std::make_unique<CommandObjectRegexCommand>(
-        m_interpreter, name, m_options.GetHelp(), m_options.GetSyntax(), 10, 0,
+        m_interpreter, name, m_options.GetHelp(), m_options.GetSyntax(), 0,
         true);
 
     if (argc == 1) {

@@ -32,8 +32,6 @@ void addInitSymbol(MaterializationUnit::Interface &I, ExecutionSession &ES,
 Expected<MaterializationUnit::Interface>
 getObjectFileInterface(ExecutionSession &ES, MemoryBufferRef ObjBuffer);
 
-bool hasInitializerSection(jitlink::LinkGraph &G);
-
 } // End namespace orc
 } // End namespace llvm
 

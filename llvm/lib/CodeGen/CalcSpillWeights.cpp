@@ -133,7 +133,7 @@ bool VirtRegAuxInfo::isLiveAtStatepointVarArg(LiveInterval &LI) {
     MachineInstr *MI = MO.getParent();
     if (MI->getOpcode() != TargetOpcode::STATEPOINT)
       return false;
-    return StatepointOpers(MI).getVarIdx() <= MI->getOperandNo(&MO);
+    return StatepointOpers(MI).getVarIdx() <= MO.getOperandNo();
   });
 }
 

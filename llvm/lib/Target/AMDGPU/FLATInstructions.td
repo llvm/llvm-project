@@ -538,7 +538,7 @@ class FLAT_AtomicRet_Pseudo<string opName, dag outs, dag ins,
   let PseudoInstr = NAME # "_RTN";
 }
 
-multiclass FLAT_Atomic_Pseudo<
+multiclass FLAT_Atomic_Pseudo_NO_RTN<
   string opName,
   RegisterClass vdst_rc,
   ValueType vt,
@@ -556,7 +556,16 @@ multiclass FLAT_Atomic_Pseudo<
     let FPAtomic = isFP;
     let AddedComplexity = -1; // Prefer global atomics if available
   }
+}
 
+multiclass FLAT_Atomic_Pseudo_RTN<
+  string opName,
+  RegisterClass vdst_rc,
+  ValueType vt,
+  ValueType data_vt = vt,
+  RegisterClass data_rc = vdst_rc,
+  bit isFP = isFloatType<data_vt>.ret,
+  RegisterOperand data_op = getLdStRegisterOperand<data_rc>.ret> {
   def _RTN : FLAT_AtomicRet_Pseudo <opName,
     (outs getLdStRegisterOperand<vdst_rc>.ret:$vdst),
     (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_GLC1:$cpol),
@@ -566,6 +575,18 @@ multiclass FLAT_Atomic_Pseudo<
     let FPAtomic = isFP;
     let AddedComplexity = -1; // Prefer global atomics if available
   }
+}
+
+multiclass FLAT_Atomic_Pseudo<
+  string opName,
+  RegisterClass vdst_rc,
+  ValueType vt,
+  ValueType data_vt = vt,
+  RegisterClass data_rc = vdst_rc,
+  bit isFP = isFloatType<data_vt>.ret,
+  RegisterOperand data_op = getLdStRegisterOperand<data_rc>.ret> {
+  defm "" : FLAT_Atomic_Pseudo_NO_RTN<opName, vdst_rc, vt, data_vt, data_rc, isFP, data_op>;
+  defm "" : FLAT_Atomic_Pseudo_RTN<opName, vdst_rc, vt, data_vt, data_rc, isFP, data_op>;
 }
 
 multiclass FLAT_Global_Atomic_Pseudo_NO_RTN<
@@ -806,6 +827,9 @@ let SubtargetPredicate = HasFlatAtomicFaddF32Inst in {
   defm FLAT_ATOMIC_ADD_F32       : FLAT_Atomic_Pseudo<"flat_atomic_add_f32",     VGPR_32, f32>;
 } // End SubtargetPredicate = HasFlatAtomicFaddF32Inst
 
+let SubtargetPredicate = isGFX12Plus in
+defm FLAT_ATOMIC_CSUB_U32 : FLAT_Atomic_Pseudo_RTN<"flat_atomic_csub_u32", VGPR_32, i32>;
+
 defm GLOBAL_LOAD_UBYTE    : FLAT_Global_Load_Pseudo <"global_load_ubyte", VGPR_32>;
 defm GLOBAL_LOAD_SBYTE    : FLAT_Global_Load_Pseudo <"global_load_sbyte", VGPR_32>;
 defm GLOBAL_LOAD_USHORT   : FLAT_Global_Load_Pseudo <"global_load_ushort", VGPR_32>;
@@ -973,12 +997,18 @@ defm SCRATCH_LOAD_LDS_DWORD  : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_d
 
 } // End SubtargetPredicate = HasFlatScratchInsts
 
-let SubtargetPredicate = isGFX12Plus, Uses = [M0] in {
-defm GLOBAL_LOAD_BLOCK  : FLAT_Global_Load_Pseudo <"global_load_block", VReg_1024>;
-defm GLOBAL_STORE_BLOCK  : FLAT_Global_Store_Pseudo <"global_store_block", VReg_1024>;
-defm SCRATCH_LOAD_BLOCK : FLAT_Scratch_Load_Pseudo <"scratch_load_block", VReg_1024>;
-defm SCRATCH_STORE_BLOCK : FLAT_Scratch_Store_Pseudo <"scratch_store_block", VReg_1024>;
-} // End SubtargetPredicate = isGFX12Plus, Uses = [M0]
+let SubtargetPredicate = isGFX12Plus in {
+  let Uses = [EXEC, M0] in {
+    defm GLOBAL_LOAD_BLOCK  : FLAT_Global_Load_Pseudo <"global_load_block", VReg_1024>;
+    defm GLOBAL_STORE_BLOCK  : FLAT_Global_Store_Pseudo <"global_store_block", VReg_1024>;
+  }
+  let Uses = [EXEC, FLAT_SCR, M0] in {
+    defm SCRATCH_LOAD_BLOCK : FLAT_Scratch_Load_Pseudo <"scratch_load_block", VReg_1024>;
+    defm SCRATCH_STORE_BLOCK : FLAT_Scratch_Store_Pseudo <"scratch_store_block", VReg_1024>;
+  }
+  defm GLOBAL_LOAD_TR_B128  : FLAT_Global_Load_Pseudo <"global_load_tr_b128", VReg_128>;
+  defm GLOBAL_LOAD_TR_B64   : FLAT_Global_Load_Pseudo <"global_load_tr_b64", VReg_64>;
+} // End SubtargetPredicate = isGFX12Plus
 
 let SubtargetPredicate = isGFX10Plus, is_flat_global = 1 in {
   defm GLOBAL_ATOMIC_FCMPSWAP :
@@ -2512,6 +2542,10 @@ multiclass VFLAT_Real_Atomics_gfx12<bits<8> op, string ps, string opName, int re
   VFLAT_Real_Base_gfx12<op, ps, opName, renamed, alias>,
   VFLAT_Real_RTN_gfx12<op, ps, opName>;
 
+multiclass VFLAT_Real_Atomics_RTN_gfx12<bits<8> op, string ps, string opName, int renamed = false> :
+  VFLAT_Aliases_gfx12<ps#"_RTN", opName, renamed, "">,
+  VFLAT_Real_RTN_gfx12<op, ps, opName>;
+
 multiclass VGLOBAL_Real_AllAddr_gfx12<bits<8> op, string ps, string opName, int renamed = false, string alias = ""> :
   VFLAT_Real_Base_gfx12<op, ps, opName, renamed, alias>,
   VFLAT_Real_SADDR_gfx12<op, ps, opName>;
@@ -2559,6 +2593,7 @@ defm FLAT_ATOMIC_SWAP_B32        : VFLAT_Real_Atomics_gfx12<0x033, "FLAT_ATOMIC_
 defm FLAT_ATOMIC_CMPSWAP_B32     : VFLAT_Real_Atomics_gfx12<0x034, "FLAT_ATOMIC_CMPSWAP", "flat_atomic_cmpswap_b32", true>;
 defm FLAT_ATOMIC_ADD_U32         : VFLAT_Real_Atomics_gfx12<0x035, "FLAT_ATOMIC_ADD", "flat_atomic_add_u32", true>;
 defm FLAT_ATOMIC_SUB_U32         : VFLAT_Real_Atomics_gfx12<0x036, "FLAT_ATOMIC_SUB", "flat_atomic_sub_u32", true>;
+defm FLAT_ATOMIC_SUB_CLAMP_U32   : VFLAT_Real_Atomics_RTN_gfx12<0x037, "FLAT_ATOMIC_CSUB_U32", "flat_atomic_sub_clamp_u32", true>;
 defm FLAT_ATOMIC_MIN_I32         : VFLAT_Real_Atomics_gfx12<0x038, "FLAT_ATOMIC_SMIN", "flat_atomic_min_i32", true>;
 defm FLAT_ATOMIC_MIN_U32         : VFLAT_Real_Atomics_gfx12<0x039, "FLAT_ATOMIC_UMIN", "flat_atomic_min_u32", true>;
 defm FLAT_ATOMIC_MAX_I32         : VFLAT_Real_Atomics_gfx12<0x03a, "FLAT_ATOMIC_SMAX", "flat_atomic_max_i32", true>;
@@ -2645,6 +2680,9 @@ defm GLOBAL_ATOMIC_CMPSWAP_F32   : VGLOBAL_Real_Atomics_gfx12<0x050, "GLOBAL_ATO
 defm GLOBAL_ATOMIC_MIN_NUM_F32   : VGLOBAL_Real_Atomics_gfx12<0x051, "GLOBAL_ATOMIC_FMIN", "global_atomic_min_num_f32", true, "global_atomic_min_f32">;
 defm GLOBAL_ATOMIC_MAX_NUM_F32   : VGLOBAL_Real_Atomics_gfx12<0x052, "GLOBAL_ATOMIC_FMAX", "global_atomic_max_num_f32", true, "global_atomic_max_f32">;
 defm GLOBAL_ATOMIC_ADD_F32       : VGLOBAL_Real_Atomics_gfx12<0x056, "GLOBAL_ATOMIC_ADD_F32", "global_atomic_add_f32">;
+defm GLOBAL_LOAD_TR_B128         : VGLOBAL_Real_AllAddr_gfx12<0x057, "GLOBAL_LOAD_TR_B128", "global_load_tr_b128">;
+defm GLOBAL_LOAD_TR_B64          : VGLOBAL_Real_AllAddr_gfx12<0x058, "GLOBAL_LOAD_TR_B64", "global_load_tr_b64">;
+
 
 defm GLOBAL_INV                  : VFLAT_Real_Base_gfx12<0x02b, "GLOBAL_INV", "global_inv">;
 defm GLOBAL_WB                   : VFLAT_Real_Base_gfx12<0x02c, "GLOBAL_WB", "global_wb">;

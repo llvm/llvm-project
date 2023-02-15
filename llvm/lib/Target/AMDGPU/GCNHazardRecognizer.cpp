@@ -16,7 +16,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 
 using namespace llvm;
 
@@ -163,7 +163,9 @@ static bool isSendMsgTraceDataOrGDS(const SIInstrInfo &TII,
 static bool isPermlane(const MachineInstr &MI) {
   unsigned Opcode = MI.getOpcode();
   return Opcode == AMDGPU::V_PERMLANE16_B32_e64 ||
-         Opcode == AMDGPU::V_PERMLANEX16_B32_e64;
+         Opcode == AMDGPU::V_PERMLANEX16_B32_e64 ||
+         Opcode == AMDGPU::V_PERMLANE16_VAR_B32_e64 ||
+         Opcode == AMDGPU::V_PERMLANEX16_VAR_B32_e64;
 }
 
 static bool isLdsDma(const MachineInstr &MI) {
@@ -2053,7 +2055,7 @@ int GCNHazardRecognizer::checkMAIHazards908(MachineInstr *MI) {
                                                    MaxWaitStates);
     int NeedWaitStates = MFMAWritesAGPROverlappedSrcABWaitStates;
     int SrcCIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
-    int OpNo = MI->getOperandNo(&Op);
+    int OpNo = Op.getOperandNo();
     if (OpNo == SrcCIdx) {
       NeedWaitStates = MFMAWritesAGPROverlappedSrcCWaitStates;
     } else if (Opc == AMDGPU::V_ACCVGPR_READ_B32_e64) {
@@ -2232,7 +2234,7 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
     if (NumWaitStates == std::numeric_limits<int>::max())
       continue;
 
-    int OpNo = MI->getOperandNo(&Use);
+    int OpNo = Use.getOperandNo();
     unsigned Opc1 = MI1->getOpcode();
     int NeedWaitStates = 0;
     if (OpNo == SrcCIdx) {

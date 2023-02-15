@@ -11,7 +11,7 @@
 
 #include <__config>
 #include <__functional/invoke.h>
-#include <type_traits>
+#include <__type_traits/remove_cvref.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

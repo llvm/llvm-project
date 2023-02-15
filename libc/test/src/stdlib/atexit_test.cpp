@@ -10,7 +10,7 @@
 #include "src/__support/CPP/utility.h"
 #include "src/stdlib/atexit.h"
 #include "src/stdlib/exit.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 static int a;
 TEST(LlvmLibcAtExit, Basic) {

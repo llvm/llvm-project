@@ -48,7 +48,7 @@ module m
   external :: a, b, c, d
   !ERROR: EXTERNAL attribute not allowed on 'm'
   external :: m
-  !ERROR: EXTERNAL attribute not allowed on 'foo'
+  !WARNING: EXTERNAL attribute was already specified on 'foo'
   external :: foo
   !ERROR: EXTERNAL attribute not allowed on 'bar'
   external :: bar

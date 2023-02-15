@@ -444,6 +444,12 @@ public:
     return true;
   }
 
+  // Return true if op(vecreduce(x), vecreduce(y)) should be reassociated to
+  // vecreduce(op(x, y)) for the reduction opcode RedOpc.
+  virtual bool shouldReassociateReduction(unsigned RedOpc, EVT VT) const {
+    return true;
+  }
+
   /// Return true if it is profitable to convert a select of FP constants into
   /// a constant pool load whose address depends on the select condition. The
   /// parameter may be used to differentiate a select with FP compare from
@@ -1926,10 +1932,10 @@ public:
   /// the object whose address is being passed. If so then MinSize is set to the
   /// minimum size the object must be to be aligned and PrefAlign is set to the
   /// preferred alignment.
-  virtual bool shouldAlignPointerArgs(CallInst * /*CI*/, unsigned & /*MinSize*/,
-                                      Align & /*PrefAlign*/) const {
-    return false;
-  }
+  virtual bool
+  shouldUpdatePointerArgAlignment(const CallInst *CI, unsigned &MinSize,
+                                  Align &PrefAlign,
+                                  const TargetTransformInfo &TTI) const;
 
   //===--------------------------------------------------------------------===//
   /// \name Helpers for TargetTransformInfo implementations

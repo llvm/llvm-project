@@ -244,8 +244,7 @@ class VectorType;
     VADDLVAps, // Same as VADDLVp[su] but with a v4i1 predicate mask
     VADDLVApu,
     VMLAVs, // sign- or zero-extend the elements of two vectors to i32, multiply
-            // them
-    VMLAVu, //   and add the results together, returning an i32 of their sum
+    VMLAVu, //   them and add the results together, returning an i32 of their sum
     VMLAVps, // Same as VMLAV[su] with a v4i1 predicate mask
     VMLAVpu,
     VMLALVs,  // Same as VMLAV but with i64, returning the low and
@@ -573,8 +572,9 @@ class VectorType;
     const TargetRegisterClass *
     getRegClassFor(MVT VT, bool isDivergent = false) const override;
 
-    bool shouldAlignPointerArgs(CallInst *CI, unsigned &MinSize,
-                                Align &PrefAlign) const override;
+    bool shouldUpdatePointerArgAlignment(
+        const CallInst *CI, unsigned &MinSize, Align &PrefAlign,
+        const TargetTransformInfo &TTI) const override;
 
     /// createFastISel - This method returns a target specific FastISel object,
     /// or null if the target does not support "fast" ISel.
@@ -616,6 +616,10 @@ class VectorType;
                               bool MathUsed) const override {
       // Using overflow ops for overflow checks only should beneficial on ARM.
       return TargetLowering::shouldFormOverflowOp(Opcode, VT, true);
+    }
+
+    bool shouldReassociateReduction(unsigned Opc, EVT VT) const override {
+      return Opc != ISD::VECREDUCE_ADD;
     }
 
     /// Returns true if an argument of type Ty needs to be passed in a

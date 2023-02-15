@@ -536,6 +536,22 @@ contains
 ! CHECK: %[[BOX_NONE_10:.*]] = fir.convert %[[EMBOX_10]] : (!fir.box<i32>) -> !fir.box<none>
 ! CHECK: %{{.*}} = fir.call @_FortranAAllocatableAllocateSource(%[[A_BOX_NONE]], %[[BOX_NONE_10]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
+  subroutine test_allocatable_up_character()
+    class(*), allocatable :: a
+    allocate(character*10::a)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolyPtest_allocatable_up_character() {
+! CHECK: %[[A:.*]] = fir.alloca !fir.class<!fir.heap<none>> {bindc_name = "a", uniq_name = "_QMpolyFtest_allocatable_up_characterEa"}
+! CHECK: %[[LEN:.*]] = arith.constant 10 : i64
+! CHECK: %[[A_NONE:.*]] = fir.convert %[[A]] : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[KIND:.*]] = arith.constant 1 : i32
+! CHECK: %[[RANK:.*]] = arith.constant 0 : i32
+! CHECK: %[[CORANK:.*]] = arith.constant 0 : i32
+! CHECK: %{{.*}} = fir.call @_FortranAAllocatableInitCharacter(%[[A_NONE]], %[[LEN]], %[[KIND]], %[[RANK]], %[[CORANK]]) {{.*}} : (!fir.ref<!fir.box<none>>, i64, i32, i32, i32) -> none
+! CHECK: %[[A_NONE:.*]] = fir.convert %[[A:.*]] : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %{{.*}} = fir.call @_FortranAAllocatableAllocate(%[[A_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+
 end module
 
 

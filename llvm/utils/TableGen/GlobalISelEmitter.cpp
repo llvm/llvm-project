@@ -38,6 +38,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LowLevelTypeImpl.h"
 #include "llvm/Support/MachineValueType.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -673,6 +674,12 @@ class OperandMatcher;
 class MatchAction;
 class PredicateMatcher;
 
+enum {
+  GISF_IgnoreCopies = 0x1,
+};
+
+using GISelFlags = std::uint16_t;
+
 class Matcher {
 public:
   virtual ~Matcher() = default;
@@ -864,6 +871,9 @@ protected:
   /// ID for the next temporary register ID allocated with allocateTempRegID()
   unsigned NextTempRegID;
 
+  /// Current GISelFlags
+  GISelFlags Flags = 0;
+
   std::vector<Record *> RequiredFeatures;
   std::vector<std::unique_ptr<PredicateMatcher>> EpilogueMatchers;
 
@@ -884,6 +894,18 @@ protected:
   uint64_t RuleID;
   static uint64_t NextRuleID;
 
+  GISelFlags updateGISelFlag(GISelFlags CurFlags, const Record *R,
+                             StringRef FlagName, GISelFlags FlagBit) {
+    // If the value of a flag is unset, ignore it.
+    // If it's set, it always takes precedence over the existing value so
+    // clear/set the corresponding bit.
+    bool Unset = false;
+    bool Value = R->getValueAsBitOrUnset("GIIgnoreCopies", Unset);
+    if (!Unset)
+      return Value ? (CurFlags | FlagBit) : (CurFlags & ~FlagBit);
+    return CurFlags;
+  }
+
 public:
   RuleMatcher(ArrayRef<SMLoc> SrcLoc)
       : NextInsnVarID(0), NextOutputInsnID(0), NextTempRegID(0), SrcLoc(SrcLoc),
@@ -900,6 +922,23 @@ public:
   template <class Kind, class... Args> Kind &addAction(Args &&... args);
   template <class Kind, class... Args>
   action_iterator insertAction(action_iterator InsertPt, Args &&... args);
+
+  // Update the active GISelFlags based on the GISelFlags Record R.
+  // A SaveAndRestore object is returned so the old GISelFlags are restored
+  // at the end of the scope.
+  SaveAndRestore<GISelFlags> setGISelFlags(const Record *R) {
+    if (!R || !R->isSubClassOf("GISelFlags"))
+      return {Flags, Flags};
+
+    assert((R->isSubClassOf("PatFrags") || R->isSubClassOf("Pattern")) &&
+           "GISelFlags is only expected on Pattern/PatFrags!");
+
+    GISelFlags NewFlags =
+        updateGISelFlag(Flags, R, "GIIgnoreCopies", GISF_IgnoreCopies);
+    return {Flags, NewFlags};
+  }
+
+  GISelFlags getGISelFlags() const { return Flags; }
 
   /// Define an instruction without emitting any code to do so.
   unsigned implicitlyDefineInsnVar(InstructionMatcher &Matcher);
@@ -1216,11 +1255,13 @@ class SameOperandMatcher : public OperandPredicateMatcher {
   std::string MatchingName;
   unsigned OrigOpIdx;
 
+  GISelFlags Flags;
+
 public:
   SameOperandMatcher(unsigned InsnVarID, unsigned OpIdx, StringRef MatchingName,
-                     unsigned OrigOpIdx)
+                     unsigned OrigOpIdx, GISelFlags Flags)
       : OperandPredicateMatcher(OPM_SameOperand, InsnVarID, OpIdx),
-        MatchingName(MatchingName), OrigOpIdx(OrigOpIdx) {}
+        MatchingName(MatchingName), OrigOpIdx(OrigOpIdx), Flags(Flags) {}
 
   static bool classof(const PredicateMatcher *P) {
     return P->getKind() == OPM_SameOperand;
@@ -2481,12 +2522,15 @@ class InstructionOperandMatcher : public OperandPredicateMatcher {
 protected:
   std::unique_ptr<InstructionMatcher> InsnMatcher;
 
+  GISelFlags Flags;
+
 public:
   InstructionOperandMatcher(unsigned InsnVarID, unsigned OpIdx,
                             RuleMatcher &Rule, StringRef SymbolicName,
                             bool NumOpsCheck = true)
       : OperandPredicateMatcher(OPM_Instruction, InsnVarID, OpIdx),
-        InsnMatcher(new InstructionMatcher(Rule, SymbolicName, NumOpsCheck)) {}
+        InsnMatcher(new InstructionMatcher(Rule, SymbolicName, NumOpsCheck)),
+        Flags(Rule.getGISelFlags()) {}
 
   static bool classof(const PredicateMatcher *P) {
     return P->getKind() == OPM_Instruction;
@@ -2496,7 +2540,9 @@ public:
 
   void emitCaptureOpcodes(MatchTable &Table, RuleMatcher &Rule) const {
     const unsigned NewInsnVarID = InsnMatcher->getInsnVarID();
-    Table << MatchTable::Opcode("GIM_RecordInsn")
+    const bool IgnoreCopies = Flags & GISF_IgnoreCopies;
+    Table << MatchTable::Opcode(IgnoreCopies ? "GIM_RecordInsnIgnoreCopies"
+                                             : "GIM_RecordInsn")
           << MatchTable::Comment("DefineMI")
           << MatchTable::IntValue(NewInsnVarID) << MatchTable::Comment("MI")
           << MatchTable::IntValue(getInsnVarID())
@@ -3325,8 +3371,10 @@ void RuleMatcher::defineOperand(StringRef SymbolicName, OperandMatcher &OM) {
 
   // If the operand is already defined, then we must ensure both references in
   // the matcher have the exact same node.
+  RuleMatcher &RM = OM.getInstructionMatcher().getRuleMatcher();
   OM.addPredicate<SameOperandMatcher>(
-      OM.getSymbolicName(), getOperandMatcher(OM.getSymbolicName()).getOpIdx());
+      OM.getSymbolicName(), getOperandMatcher(OM.getSymbolicName()).getOpIdx(),
+      RM.getGISelFlags());
 }
 
 void RuleMatcher::definePhysRegOperand(Record *Reg, OperandMatcher &OM) {
@@ -3534,15 +3582,16 @@ void SameOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
   const OperandMatcher &OtherOM = Rule.getOperandMatcher(MatchingName);
   unsigned OtherInsnVarID = Rule.getInsnVarID(OtherOM.getInstructionMatcher());
   assert(OtherInsnVarID == OtherOM.getInstructionMatcher().getInsnVarID());
-
-  Table << MatchTable::Opcode("GIM_CheckIsSameOperand")
+  const bool IgnoreCopies = Flags & GISF_IgnoreCopies;
+  Table << MatchTable::Opcode(IgnoreCopies
+                                  ? "GIM_CheckIsSameOperandIgnoreCopies"
+                                  : "GIM_CheckIsSameOperand")
         << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
         << MatchTable::Comment("OpIdx") << MatchTable::IntValue(OpIdx)
         << MatchTable::Comment("OtherMI")
         << MatchTable::IntValue(OtherInsnVarID)
         << MatchTable::Comment("OtherOpIdx")
-        << MatchTable::IntValue(OtherOM.getOpIdx())
-        << MatchTable::LineBreak;
+        << MatchTable::IntValue(OtherOM.getOpIdx()) << MatchTable::LineBreak;
 }
 
 //===- GlobalISelEmitter class --------------------------------------------===//
@@ -3984,6 +4033,8 @@ Expected<InstructionMatcher &> GlobalISelEmitter::addBuiltinPredicates(
 Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     RuleMatcher &Rule, InstructionMatcher &InsnMatcher,
     const TreePatternNode *Src, unsigned &TempOpIdx) {
+  const auto SavedFlags = Rule.setGISelFlags(Src->getGISelFlagsRecord());
+
   Record *SrcGIEquivOrNull = nullptr;
   const CodeGenInstruction *SrcGIOrNull = nullptr;
 
@@ -5208,6 +5259,9 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   // before their first use.)
   InstructionMatcher &InsnMatcherTemp = M.addInstructionMatcher(Src->getName());
   unsigned TempOpIdx = 0;
+
+  const auto SavedFlags = M.setGISelFlags(P.getSrcRecord());
+
   auto InsnMatcherOrError =
       createAndImportSelDAGMatcher(M, InsnMatcherTemp, Src, TempOpIdx);
   if (auto Error = InsnMatcherOrError.takeError())

@@ -2025,6 +2025,22 @@ define { float, float } @v_fneg_rcp_multi_use_fneg_f32(float %a, float %c) #0 {
   ret { float, float } %insert.1
 }
 
+; Test getNegatedExpression works for rcp nodes
+define float @v_negated_rcp_f32(float %arg0, float %arg1) #1 {
+; GCN-LABEL: v_negated_rcp_f32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_fma_f32 v0, v0, v1, 2.0
+; GCN-NEXT:    v_rcp_f32_e32 v0, v0
+; GCN-NEXT:    v_add_f32_e32 v0, v1, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %neg.arg0 = fneg float %arg0
+  %fma = call nsz float @llvm.fma.f32(float %neg.arg0, float %arg1, float -2.0)
+  %rcp0 = call float @llvm.amdgcn.rcp.f32(float %fma)
+  %mul = fsub nsz float %arg1, %rcp0
+  ret float %mul
+}
+
 ; --------------------------------------------------------------------------------
 ; fmul_legacy tests
 ; --------------------------------------------------------------------------------
@@ -2369,12 +2385,12 @@ define void @v_fneg_copytoreg_f32(ptr addrspace(1) %out, float %a, float %b, flo
 ; SI-NEXT:    v_mul_f32_e32 v2, v2, v3
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v5
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; SI-NEXT:    s_cbranch_execz .LBB117_2
+; SI-NEXT:    s_cbranch_execz .LBB118_2
 ; SI-NEXT:  ; %bb.1: ; %if
 ; SI-NEXT:    v_mul_f32_e64 v3, -v2, v4
 ; SI-NEXT:    flat_store_dword v[0:1], v3
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:  .LBB117_2: ; %endif
+; SI-NEXT:  .LBB118_2: ; %endif
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; SI-NEXT:    flat_store_dword v[0:1], v2
 ; SI-NEXT:    s_waitcnt vmcnt(0)
@@ -2390,12 +2406,12 @@ define void @v_fneg_copytoreg_f32(ptr addrspace(1) %out, float %a, float %b, flo
 ; VI-NEXT:    v_mul_f32_e32 v2, v2, v3
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v5
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; VI-NEXT:    s_cbranch_execz .LBB117_2
+; VI-NEXT:    s_cbranch_execz .LBB118_2
 ; VI-NEXT:  ; %bb.1: ; %if
 ; VI-NEXT:    v_mul_f32_e64 v3, -v2, v4
 ; VI-NEXT:    flat_store_dword v[0:1], v3
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:  .LBB117_2: ; %endif
+; VI-NEXT:  .LBB118_2: ; %endif
 ; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -2837,6 +2853,187 @@ define float @v_fneg_select_infloop_regression_f32(float %arg, i1 %arg1) {
   %i = select i1 %arg1, float 0.0, float %arg
   %i2 = fneg float %i
   %i3 = select i1 %arg1, float 0.0, float %i2
+  ret float %i3
+}
+
+define float @v_fneg_select_infloop_regression_f32_commute0(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_f32_commute0:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GCN-NEXT:    v_bfrev_b32_e32 v1, 1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float %arg, float 0.0
+  %i2 = fneg float %i
+  %i3 = select i1 %arg1, float 0.0, float %i2
+  ret float %i3
+}
+
+define float @v_fneg_select_infloop_regression_f32_commute1(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_f32_commute1:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; GCN-NEXT:    v_bfrev_b32_e32 v1, 1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float 0.0, float %arg
+  %i2 = fneg float %i
+  %i3 = select i1 %arg1, float %i2, float 0.0
+  ret float %i3
+}
+
+define float @v_fneg_select_infloop_regression_f32_commute2(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_f32_commute2:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GCN-NEXT:    v_bfrev_b32_e32 v1, 1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float %arg, float 0.0
+  %i2 = fneg float %i
+  %i3 = select i1 %arg1, float %i2, float 0.0
+  ret float %i3
+}
+
+; Check with an inline constant that's equally cheap to negate
+define float @v_fneg_select_infloop_regression_inline_imm_f32(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_inline_imm_f32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 2.0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, -2.0, vcc
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float 2.0, float %arg
+  %i2 = fneg float %i
+  %i3 = select i1 %arg1, float 2.0, float %i2
+  ret float %i3
+}
+
+define float @v_fneg_select_infloop_regression_inline_imm_f32_commute0(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_inline_imm_f32_commute0:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, -2.0, vcc
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float %arg, float 2.0
+  %i2 = fneg float %i
+  %i3 = select i1 %arg1, float 2.0, float %i2
+  ret float %i3
+}
+
+define float @v_fneg_select_infloop_regression_inline_imm_f32_commute1(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_inline_imm_f32_commute1:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 2.0, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v0, -2.0, v0, vcc
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float 2.0, float %arg
+  %i2 = fneg float %i
+  %i3 = select i1 %arg1, float %i2, float 2.0
+  ret float %i3
+}
+
+define float @v_fneg_select_infloop_regression_inline_imm_f32_commute2(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_inline_imm_f32_commute2:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v0, -2.0, v0, vcc
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float %arg, float 2.0
+  %i2 = fneg float %i
+  %i3 = select i1 %arg1, float %i2, float 2.0
+  ret float %i3
+}
+
+; Check with an inline constant that's equally cheap to negate
+define float @v_fneg_select_infloop_regression_neg_inline_imm_f32(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_neg_inline_imm_f32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, -2.0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 2.0, vcc
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float -2.0, float %arg
+  %i2 = fneg float %i
+  %i3 = select i1 %arg1, float -2.0, float %i2
+  ret float %i3
+}
+
+define float @v_fneg_select_infloop_regression_neg_inline_imm_f32_commute0(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_neg_inline_imm_f32_commute0:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, -2.0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 2.0, vcc
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float %arg, float -2.0
+  %i2 = fneg float %i
+  %i3 = select i1 %arg1, float -2.0, float %i2
+  ret float %i3
+}
+
+define float @v_fneg_select_infloop_regression_neg_inline_imm_f32_commute1(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_neg_inline_imm_f32_commute1:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, -2.0, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float -2.0, float %arg
+  %i2 = fneg float %i
+  %i3 = select i1 %arg1, float %i2, float -2.0
+  ret float %i3
+}
+
+define float @v_fneg_select_infloop_regression_neg_inline_imm_f32_commute2(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_neg_inline_imm_f32_commute2:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, -2.0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float %arg, float -2.0
+  %i2 = fneg float %i
+  %i3 = select i1 %arg1, float %i2, float -2.0
   ret float %i3
 }
 

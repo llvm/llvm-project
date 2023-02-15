@@ -64,6 +64,9 @@ Bug Fixes
   driver mode and emit an error which suggests using ``/TC`` or ``/TP``
   ``clang-cl`` options instead. This fixes
   `Issue 59307 <https://github.com/llvm/llvm-project/issues/59307>`_.
+- Fix crash when evaluating consteval constructor of derived class whose base
+  has more than one field. This fixes
+  `Issue 60166 <https://github.com/llvm/llvm-project/issues/60166>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -105,6 +108,10 @@ Introduced a new function attribute ``__attribute__((unsafe_buffer_usage))``
 to be worn by functions containing buffer operations that could cause out of
 bounds memory accesses. It emits warnings at call sites to such functions when
 the flag ``-Wunsafe-buffer-usage`` is enabled.
+
+``__declspec`` attributes can now be used together with the using keyword. Before
+the attributes on ``__declspec`` was ignored, while now it will be forwarded to the
+point where the alias is used.
 
 Windows Support
 ---------------
@@ -174,16 +181,21 @@ DWARF Support in Clang
 Arm and AArch64 Support in Clang
 --------------------------------
 
-* The hard-float ABI is now available in Armv8.1-M configurations that
+- The hard-float ABI is now available in Armv8.1-M configurations that
   have integer MVE instructions (and therefore have FP registers) but
   no scalar or vector floating point computation. Previously, trying
   to select the hard-float ABI on such a target (via
   ``-mfloat-abi=hard`` or a triple ending in ``hf``) would silently
   use the soft-float ABI instead.
 
+- Clang builtin ``__arithmetic_fence`` and the command line option ``-fprotect-parens``
+  are now enabled for AArch64.
+
 Floating Point Support in Clang
 -------------------------------
 - Add ``__builtin_elementwise_log`` builtin for floating point types only.
+- Add ``__builtin_elementwise_log10`` builtin for floating point types only.
+- Add ``__builtin_elementwise_log2`` builtin for floating point types only.
 
 Internal API Changes
 --------------------
@@ -207,6 +219,10 @@ clang-extdef-mapping
 
 libclang
 --------
+
+- Introduced the new function ``clang_CXXMethod_isExplicit``,
+  which identifies whether a constructor or conversion function cursor
+  was marked with the explicit identifier.
 
 Static Analyzer
 ---------------

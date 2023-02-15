@@ -629,6 +629,12 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       EmitCharAndAdvance(tokens, nch);
     } else if (ch == '/') {
       slashInCurrentStatement_ = true;
+    } else if (ch == ';' && InFixedFormSource()) {
+      SkipSpaces();
+      if (IsDecimalDigit(*at_)) {
+        Say(GetProvenanceRange(at_, at_ + 1),
+            "Label should be in the label field"_port_en_US);
+      }
     }
   }
   tokens.CloseToken();

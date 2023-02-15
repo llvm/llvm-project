@@ -10,6 +10,7 @@
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <string>
 #include <vector>
@@ -21,6 +22,22 @@ using namespace llvm::jitlink;
 using namespace llvm::orc;
 
 namespace {
+
+bool hasInitializerSection(jitlink::LinkGraph &G) {
+  bool IsMachO = G.getTargetTriple().isOSBinFormatMachO();
+  bool IsElf = G.getTargetTriple().isOSBinFormatELF();
+  if (!IsMachO && !IsElf)
+    return false;
+
+  for (auto &Sec : G.sections()) {
+    if (IsMachO && isMachOInitializerSection(Sec.getName()))
+      return true;
+    if (IsElf && isELFInitializerSection(Sec.getName()))
+      return true;
+  }
+
+  return false;
+}
 
 JITSymbolFlags getJITSymbolFlagsForSymbol(Symbol &Sym) {
   JITSymbolFlags Flags;

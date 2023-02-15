@@ -29,7 +29,6 @@ def ArmSVE_Dialect : Dialect {
     scalable vector operations.
   }];
 
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 //===----------------------------------------------------------------------===//

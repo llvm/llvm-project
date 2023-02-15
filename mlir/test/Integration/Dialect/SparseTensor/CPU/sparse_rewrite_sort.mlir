@@ -1,8 +1,22 @@
-// RUN: mlir-opt %s --sparse-compiler=enable-runtime-library=false | \
-// RUN: mlir-cpu-runner \
-// RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// DEFINE: %{option} = enable-runtime-library=false
+// DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
+// DEFINE: %{run} = mlir-cpu-runner \
+// DEFINE:  -e entry -entry-point-result=void  \
+// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext | \
+// DEFINE: FileCheck %s
+//
+// RUN: %{compile} | %{run}
+
+// Do the same run, but now with direct IR generation and, if available, VLA
+// vectorization.
+// REDEFINE: %{option} = "enable-runtime-library=false vl=4 enable-arm-sve=%ENABLE_VLA"
+// REDEFINE: %{run} = %lli \
+// REDEFINE:   --entry-function=entry_lli \
+// REDEFINE:   --extra-module=%S/Inputs/main_for_lli.ll \
+// REDEFINE:   %VLA_ARCH_ATTR_OPTIONS \
+// REDEFINE:   --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext --dlopen=%mlir_lib_dir/libmlir_runner_utils%shlibext | \
+// REDEFINE: FileCheck %s
+// RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
 
 module {
   func.func private @printMemref1dI32(%ptr : memref<?xi32>) attributes { llvm.emit_c_interface }
@@ -49,8 +63,9 @@ module {
       : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
 
     // Sort 0 elements.
+    // Quick sort.
     // CHECK: [10,  2,  0,  5,  1]
-    sparse_tensor.sort hybrid_quick_sort %i0, %x0 : memref<?xi32>
+    sparse_tensor.sort quick_sort %i0, %x0 : memref<?xi32>
     call @printMemref1dI32(%x0) : (memref<?xi32>) -> ()
     // Stable sort.
     // CHECK: [10,  2,  0,  5,  1]
@@ -60,10 +75,15 @@ module {
     // CHECK: [10,  2,  0,  5,  1]
     sparse_tensor.sort heap_sort %i0, %x0 : memref<?xi32>
     call @printMemref1dI32(%x0) : (memref<?xi32>) -> ()
+    // Hybrid sort.
+    // CHECK: [10,  2,  0,  5,  1]
+    sparse_tensor.sort hybrid_quick_sort %i0, %x0 : memref<?xi32>
+    call @printMemref1dI32(%x0) : (memref<?xi32>) -> ()
 
     // Sort the first 4 elements, with the last valid value untouched.
+    // Quick sort.
     // CHECK: [0,  2,  5, 10,  1]
-    sparse_tensor.sort hybrid_quick_sort %i4, %x0 : memref<?xi32>
+    sparse_tensor.sort quick_sort %i4, %x0 : memref<?xi32>
     call @printMemref1dI32(%x0) : (memref<?xi32>) -> ()
     // Stable sort.
     // CHECK: [0,  2,  5,  10,  1]
@@ -76,6 +96,10 @@ module {
     call @storeValuesTo(%x0, %c10, %c2, %c0, %c5, %c1)
       : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
     sparse_tensor.sort heap_sort %i4, %x0 : memref<?xi32>
+    call @printMemref1dI32(%x0) : (memref<?xi32>) -> ()
+    // Hybrid sort.
+    // CHECK: [0,  2,  5, 10,  1]
+    sparse_tensor.sort hybrid_quick_sort %i4, %x0 : memref<?xi32>
     call @printMemref1dI32(%x0) : (memref<?xi32>) -> ()
 
     // Prepare more buffers of different dimensions.
@@ -99,7 +123,7 @@ module {
       : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
     call @storeValuesTo(%y0, %c6, %c10, %c8, %c9, %c7)
       : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
-    sparse_tensor.sort hybrid_quick_sort %i5, %x0, %x1, %x2 jointly %y0
+    sparse_tensor.sort quick_sort %i5, %x0, %x1, %x2 jointly %y0
       : memref<?xi32>, memref<?xi32>, memref<?xi32> jointly memref<?xi32>
     call @printMemref1dI32(%x0) : (memref<?xi32>) -> ()
     call @printMemref1dI32(%x1) : (memref<?xi32>) -> ()

@@ -193,7 +193,5 @@ module Clang_ToolingCore {
 module Clang_ToolingInclusions {
   requires cplusplus
   umbrella "Tooling/Inclusions"
-  textual header "Tooling/Inclusions/CSymbolMap.inc"
-  textual header "Tooling/Inclusions/StdSymbolMap.inc"
   module * { export * }
 }

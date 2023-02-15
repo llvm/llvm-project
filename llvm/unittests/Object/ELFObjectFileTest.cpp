@@ -14,8 +14,8 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
-#include "llvm/Support/Host.h"
 #include "llvm/Support/thread.h"
+#include "llvm/TargetParser/Host.h"
 
 using namespace llvm;
 using namespace llvm::object;

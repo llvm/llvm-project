@@ -111,6 +111,7 @@ cc_library(
     hdrs = ["memory_utils/memory_check_utils.h"],
     deps = [
         "//libc:__support_cpp_span",
+        "//libc:__support_macros_sanitizer",
         "//libc:string_memory_utils",
     ],
 )
@@ -142,7 +143,7 @@ libc_test(
     ],
     deps = [
         "//libc:__support_cpp_span",
-        "//libc/utils/UnitTest:memory_matcher",
+        "//libc/test/UnitTest:memory_matcher",
     ],
 )
 
@@ -154,7 +155,7 @@ libc_test(
     ],
     deps = [
         "//libc:__support_cpp_span",
-        "//libc/utils/UnitTest:memory_matcher",
+        "//libc/test/UnitTest:memory_matcher",
     ],
 )
 
