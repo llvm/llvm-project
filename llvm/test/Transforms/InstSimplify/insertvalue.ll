@@ -9,15 +9,6 @@ define {i32, i32} @insert_poison({i32, i32} %x) {
   ret {i32, i32} %v
 }
 
-define {i32, i32} @insert_into_poison({i32, i32} %x) {
-; CHECK-LABEL: @insert_into_poison(
-; CHECK-NEXT:    ret { i32, i32 } [[X:%.*]]
-;
-  %elem = extractvalue {i32, i32} %x, 0
-  %v = insertvalue {i32, i32} poison, i32 %elem, 0
-  ret {i32, i32} %v
-}
-
 define {i32, i32} @insert_undef({i32, i32} %x) {
 ; CHECK-LABEL: @insert_undef(
 ; CHECK-NEXT:    [[V:%.*]] = insertvalue { i32, i32 } [[X:%.*]], i32 undef, 0
@@ -32,5 +23,32 @@ define {i32, i32} @insert_undef_into_non_poison({i32, i32} noundef %x) {
 ; CHECK-NEXT:    ret { i32, i32 } [[X:%.*]]
 ;
   %v = insertvalue {i32, i32} %x, i32 undef, 0
+  ret {i32, i32} %v
+}
+
+define {i32, i32} @insert_into_poison({i32, i32} %x) {
+; CHECK-LABEL: @insert_into_poison(
+; CHECK-NEXT:    ret { i32, i32 } [[X:%.*]]
+;
+  %elem = extractvalue {i32, i32} %x, 0
+  %v = insertvalue {i32, i32} poison, i32 %elem, 0
+  ret {i32, i32} %v
+}
+
+define {i32, i32} @insert_into_undef({i32, i32} %x) {
+; CHECK-LABEL: @insert_into_undef(
+; CHECK-NEXT:    ret { i32, i32 } [[X:%.*]]
+;
+  %elem = extractvalue {i32, i32} %x, 0
+  %v = insertvalue {i32, i32} undef, i32 %elem, 0
+  ret {i32, i32} %v
+}
+
+define {i32, i32} @insert_non_poison_into_undef({i32, i32} noundef %x) {
+; CHECK-LABEL: @insert_non_poison_into_undef(
+; CHECK-NEXT:    ret { i32, i32 } [[X:%.*]]
+;
+  %elem = extractvalue {i32, i32} %x, 0
+  %v = insertvalue {i32, i32} undef, i32 %elem, 0
   ret {i32, i32} %v
 }
