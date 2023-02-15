@@ -813,7 +813,7 @@ SDValue AMDGPUTargetLowering::getNegatedExpression(
     SDLoc SL(Op);
 
     SDValue NegSrc = getNegatedExpression(Src, DAG, LegalOperations,
-                                          ForCodeSize, Cost, Depth);
+                                          ForCodeSize, Cost, Depth + 1);
     if (NegSrc)
       return DAG.getNode(AMDGPUISD::RCP, SL, VT, NegSrc, Op->getFlags());
     return SDValue();
