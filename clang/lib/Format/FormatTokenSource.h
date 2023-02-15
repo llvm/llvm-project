@@ -18,6 +18,7 @@
 #include "FormatToken.h"
 #include "UnwrappedLineParser.h"
 #include "llvm/ADT/DenseMap.h"
+#include <cstddef>
 
 #define DEBUG_TYPE "format-token-source"
 
@@ -237,6 +238,7 @@ public:
 
   FormatToken *insertTokens(ArrayRef<FormatToken *> Tokens) override {
     llvm_unreachable("Cannot insert tokens while parsing a macro.");
+    return nullptr;
   }
 
 private:
