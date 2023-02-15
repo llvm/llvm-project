@@ -216,11 +216,6 @@ void PassManagerBuilder::addVectorPasses(legacy::PassManagerBase &PM,
                                 ForgetAllSCEVInLoopUnroll));
   }
 
-  if (!IsFullLTO) {
-    // Eliminate loads by forwarding stores from the previous iteration to loads
-    // of the current iteration.
-    PM.add(createLoopLoadEliminationPass());
-  }
   // Cleanup after the loop optimization passes.
   PM.add(createInstructionCombiningPass());
 
