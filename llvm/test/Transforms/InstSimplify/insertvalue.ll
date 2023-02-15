@@ -37,7 +37,9 @@ define {i32, i32} @insert_into_poison({i32, i32} %x) {
 
 define {i32, i32} @insert_into_undef({i32, i32} %x) {
 ; CHECK-LABEL: @insert_into_undef(
-; CHECK-NEXT:    ret { i32, i32 } [[X:%.*]]
+; CHECK-NEXT:    [[ELEM:%.*]] = extractvalue { i32, i32 } [[X:%.*]], 0
+; CHECK-NEXT:    [[V:%.*]] = insertvalue { i32, i32 } undef, i32 [[ELEM]], 0
+; CHECK-NEXT:    ret { i32, i32 } [[V]]
 ;
   %elem = extractvalue {i32, i32} %x, 0
   %v = insertvalue {i32, i32} undef, i32 %elem, 0
