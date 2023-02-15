@@ -22,6 +22,7 @@
 #include <format>
 #include <algorithm>
 #include <cassert>
+#include <iterator>
 #include <list>
 #include <vector>
 

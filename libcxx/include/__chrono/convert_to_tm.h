@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___CHRONO_CONVERT_TO_TM_H
 #define _LIBCPP___CHRONO_CONVERT_TO_TM_H
 
+#include <__chrono/concepts.h>
 #include <__chrono/day.h>
 #include <__chrono/duration.h>
 #include <__chrono/hh_mm_ss.h>
@@ -26,13 +27,18 @@
 #include <__chrono/year_month_weekday.h>
 #include <__concepts/same_as.h>
 #include <__config>
+#include <__format/format_error.h>
 #include <__memory/addressof.h>
 #include <cstdint>
 #include <ctime>
+#include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -114,6 +120,16 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _ChronoT& __value) {
   } else if constexpr (same_as<_ChronoT, chrono::year_month_weekday> ||
                        same_as<_ChronoT, chrono::year_month_weekday_last>) {
     return std::__convert_to_tm<_Tm>(chrono::year_month_day{static_cast<chrono::sys_days>(__value)}, __value.weekday());
+  } else if constexpr (__is_hh_mm_ss<_ChronoT>) {
+    __result.tm_sec = __value.seconds().count();
+    __result.tm_min = __value.minutes().count();
+    // In libc++ hours is stored as a long. The type in std::tm is an int. So
+    // the overflow can only occur when hour uses more bits than an int
+    // provides.
+    if constexpr (sizeof(std::chrono::hours::rep) > sizeof(__result.tm_hour))
+      if (__value.hours().count() > std::numeric_limits<decltype(__result.tm_hour)>::max())
+        std::__throw_format_error("Formatting hh_mm_ss, encountered an hour overflow");
+    __result.tm_hour = __value.hours().count();
   } else
     static_assert(sizeof(_ChronoT) == 0, "Add the missing type specialization");
 
@@ -123,5 +139,7 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _ChronoT& __value) {
 #endif //if _LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___CHRONO_CONVERT_TO_TM_H

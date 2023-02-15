@@ -88,14 +88,13 @@ if(WIN32 OR LLVM_WINSYSROOT)
       ${LLVM_WINSYSROOT})
     string(REPLACE ";" " " WINDOWS_COMPILER_FLAGS "${WINDOWS_COMPILER_FLAGS}")
     set(WINDOWS_LINK_FLAGS
-        /vfsoverlay:${LLVM_VFSOVERLAY}
-        # TODO: On Windows, linker is invoked by cmake instead of the clang-cl driver,
-        # so we have to manually set the libpath. We use clang-cl driver if we can
-        # and remove these libpath flags.
-        -libpath:"${LLVM_WINSYSROOT}/VC/Tools/MSVC/14.34.31933/lib/x64"
-        -libpath:"${LLVM_WINSYSROOT}/VC/Tools/MSVC/14.34.31933/atlmfc/lib/x64"
-        -libpath:"${LLVM_WINSYSROOT}/Windows Kits/10/Lib/10.0.19041.0/ucrt/x64"
-        -libpath:"${LLVM_WINSYSROOT}/Windows Kits/10/Lib/10.0.19041.0/um/x64")
+      # TODO: lld-link has a bug that it cannot infer the machine type
+      # correctly when /winsysroot is set while Windows libraries search paths
+      # are not explicitly defined.
+      # Explicitly set the machine type for now.
+      /machine:X64
+      /vfsoverlay:${LLVM_VFSOVERLAY}
+      /winsysroot:${LLVM_WINSYSROOT})
     string(REPLACE ";" " " WINDOWS_LINK_FLAGS "${WINDOWS_LINK_FLAGS}")
   endif()
 

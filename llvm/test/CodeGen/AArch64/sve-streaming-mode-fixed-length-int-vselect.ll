@@ -212,16 +212,14 @@ define void @select_v8i32(ptr %a, ptr %b) #0 {
 define <1 x i64> @select_v1i64(<1 x i64> %op1, <1 x i64> %op2, <1 x i1> %mask) #0 {
 ; CHECK-LABEL: select_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    tst w0, #0x1
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    and x8, x0, #0x1
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    csetm x8, ne
-; CHECK-NEXT:    mvn x9, x8
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    mov z3.d, x9
-; CHECK-NEXT:    and z0.d, z0.d, z2.d
-; CHECK-NEXT:    and z1.d, z1.d, z3.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    cmpne p0.d, p0/z, z2.d, #0
+; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %sel = select <1 x i1> %mask, <1 x i64> %op1, <1 x i64> %op2

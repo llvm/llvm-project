@@ -23,6 +23,7 @@
 #include <format>
 #include <cassert>
 #include <concepts>
+#include <iterator>
 #include <type_traits>
 
 #include "make_string.h"

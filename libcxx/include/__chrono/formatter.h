@@ -11,6 +11,7 @@
 #define _LIBCPP___CHRONO_FORMATTER_H
 
 #include <__chrono/calendar.h>
+#include <__chrono/concepts.h>
 #include <__chrono/convert_to_tm.h>
 #include <__chrono/day.h>
 #include <__chrono/duration.h>
@@ -75,13 +76,15 @@ namespace __formatter {
 // For tiny ratios it's not possible to convert a duration to a hh_mm_ss. This
 // fails compile-time due to the limited precision of the ratio (64-bit is too
 // small). Therefore a duration uses its own conversion.
-template <class _CharT, class _Tp>
-  requires(chrono::__is_duration<_Tp>::value)
-_LIBCPP_HIDE_FROM_ABI void __format_sub_seconds(const _Tp& __value, basic_stringstream<_CharT>& __sstr) {
+template <class _CharT, class _Rep, class _Period>
+_LIBCPP_HIDE_FROM_ABI void
+__format_sub_seconds(const chrono::duration<_Rep, _Period>& __value, basic_stringstream<_CharT>& __sstr) {
   __sstr << std::use_facet<numpunct<_CharT>>(__sstr.getloc()).decimal_point();
 
+  using __duration = chrono::duration<_Rep, _Period>;
+
   auto __fraction = __value - chrono::duration_cast<chrono::seconds>(__value);
-  if constexpr (chrono::treat_as_floating_point_v<typename _Tp::rep>)
+  if constexpr (chrono::treat_as_floating_point_v<_Rep>)
     // When the floating-point value has digits itself they are ignored based
     // on the wording in [tab:time.format.spec]
     //   If the precision of the input cannot be exactly represented with
@@ -97,18 +100,36 @@ _LIBCPP_HIDE_FROM_ABI void __format_sub_seconds(const _Tp& __value, basic_string
     std::format_to(std::ostreambuf_iterator<_CharT>{__sstr},
                    _LIBCPP_STATICALLY_WIDEN(_CharT, "{:0{}.0f}"),
                    __fraction.count(),
-                   chrono::hh_mm_ss<_Tp>::fractional_width);
+                   chrono::hh_mm_ss<__duration>::fractional_width);
   else
     std::format_to(std::ostreambuf_iterator<_CharT>{__sstr},
                    _LIBCPP_STATICALLY_WIDEN(_CharT, "{:0{}}"),
                    __fraction.count(),
-                   chrono::hh_mm_ss<_Tp>::fractional_width);
+                   chrono::hh_mm_ss<__duration>::fractional_width);
+}
+
+template <class _CharT, class _Duration>
+_LIBCPP_HIDE_FROM_ABI void
+__format_sub_seconds(const chrono::hh_mm_ss<_Duration>& __value, basic_stringstream<_CharT>& __sstr) {
+  __sstr << std::use_facet<numpunct<_CharT>>(__sstr.getloc()).decimal_point();
+  if constexpr (chrono::treat_as_floating_point_v<typename _Duration::rep>)
+    std::format_to(std::ostreambuf_iterator<_CharT>{__sstr},
+                   _LIBCPP_STATICALLY_WIDEN(_CharT, "{:0{}.0f}"),
+                   __value.subseconds().count(),
+                   __value.fractional_width);
+  else
+    std::format_to(std::ostreambuf_iterator<_CharT>{__sstr},
+                   _LIBCPP_STATICALLY_WIDEN(_CharT, "{:0{}}"),
+                   __value.subseconds().count(),
+                   __value.fractional_width);
 }
 
 template <class _Tp>
 consteval bool __use_fraction() {
   if constexpr (chrono::__is_duration<_Tp>::value)
     return chrono::hh_mm_ss<_Tp>::fractional_width;
+  else if constexpr (__is_hh_mm_ss<_Tp>)
+    return _Tp::fractional_width;
   else
     return false;
 }
@@ -322,6 +343,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __weekday_ok(const _Tp& __value) {
     return __value.weekday().ok();
   else if constexpr (same_as<_Tp, chrono::year_month_weekday_last>)
     return __value.weekday().ok();
+  else if constexpr (__is_hh_mm_ss<_Tp>)
+    return true;
   else
     static_assert(sizeof(_Tp) == 0, "Add the missing type specialization");
 }
@@ -358,6 +381,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __weekday_name_ok(const _Tp& __value) {
     return __value.weekday().ok();
   else if constexpr (same_as<_Tp, chrono::year_month_weekday_last>)
     return __value.weekday().ok();
+  else if constexpr (__is_hh_mm_ss<_Tp>)
+    return true;
   else
     static_assert(sizeof(_Tp) == 0, "Add the missing type specialization");
 }
@@ -394,6 +419,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __date_ok(const _Tp& __value) {
     return __value.ok();
   else if constexpr (same_as<_Tp, chrono::year_month_weekday_last>)
     return __value.ok();
+  else if constexpr (__is_hh_mm_ss<_Tp>)
+    return true;
   else
     static_assert(sizeof(_Tp) == 0, "Add the missing type specialization");
 }
@@ -430,6 +457,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __month_name_ok(const _Tp& __value) {
     return __value.month().ok();
   else if constexpr (same_as<_Tp, chrono::year_month_weekday_last>)
     return __value.month().ok();
+  else if constexpr (__is_hh_mm_ss<_Tp>)
+    return true;
   else
     static_assert(sizeof(_Tp) == 0, "Add the missing type specialization");
 }
@@ -477,6 +506,29 @@ __format_chrono(const _Tp& __value,
 
       if (__specs.__chrono_.__month_name_ && !__formatter::__month_name_ok(__value))
         std::__throw_format_error("formatting a month name from an invalid month number");
+
+      if constexpr (__is_hh_mm_ss<_Tp>) {
+        // Note this is a pedantic intepretation of the Standard. A hh_mm_ss
+        // is no longer a time_of_day and can store an arbitrary number of
+        // hours. A number of hours in a 12 or 24 hour clock can't represent
+        // 24 hours or more. The functions std::chrono::make12 and
+        // std::chrono::make24 reaffirm this view point.
+        //
+        // Interestingly this will be the only output stream function that
+        // throws.
+        //
+        // TODO FMT The wording probably needs to be adapted to
+        // - The displayed hours is hh_mm_ss.hours() % 24
+        // - It should probably allow %j in the same fashion as duration.
+        // - The stream formatter should change its output when hours >= 24
+        //   - Write it as not valid,
+        //   - or write the number of days.
+        if (__specs.__chrono_.__hour_ && __value.hours().count() > 23)
+          std::__throw_format_error("formatting a hour needs a valid value");
+
+        if (__value.is_negative())
+          __sstr << _CharT('-');
+      }
 
       __formatter::__format_chrono_using_chrono_specs(__value, __sstr, __chrono_specs);
     }
@@ -709,6 +761,16 @@ public:
   }
 };
 
+template <class _Duration, __fmt_char_type _CharT>
+struct formatter<chrono::hh_mm_ss<_Duration>, _CharT> : public __formatter_chrono<_CharT> {
+public:
+  using _Base = __formatter_chrono<_CharT>;
+
+  _LIBCPP_HIDE_FROM_ABI constexpr auto parse(basic_format_parse_context<_CharT>& __parse_ctx)
+      -> decltype(__parse_ctx.begin()) {
+    return _Base::__parse(__parse_ctx, __format_spec::__fields_chrono, __format_spec::__flags::__time);
+  }
+};
 #endif // if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
 
 _LIBCPP_END_NAMESPACE_STD

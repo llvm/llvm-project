@@ -5309,28 +5309,33 @@ Value *llvm::simplifyFNegInst(Value *Op, FastMathFlags FMF,
 /// Try to propagate existing NaN values when possible. If not, replace the
 /// constant or elements in the constant with a canonical NaN.
 static Constant *propagateNaN(Constant *In) {
-  if (auto *VecTy = dyn_cast<FixedVectorType>(In->getType())) {
+  Type *Ty = In->getType();
+  if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
     unsigned NumElts = VecTy->getNumElements();
     SmallVector<Constant *, 32> NewC(NumElts);
     for (unsigned i = 0; i != NumElts; ++i) {
       Constant *EltC = In->getAggregateElement(i);
-      // Poison and existing NaN elements propagate.
+      // Poison elements propagate. NaN propagates except signaling is quieted.
       // Replace unknown or undef elements with canonical NaN.
-      if (EltC && (isa<PoisonValue>(EltC) || EltC->isNaN()))
+      if (EltC && isa<PoisonValue>(EltC))
         NewC[i] = EltC;
+      else if (EltC && EltC->isNaN())
+        NewC[i] = ConstantFP::get(
+            EltC->getType(), cast<ConstantFP>(EltC)->getValue().makeQuiet());
       else
-        NewC[i] = (ConstantFP::getNaN(VecTy->getElementType()));
+        NewC[i] = ConstantFP::getNaN(VecTy->getElementType());
     }
     return ConstantVector::get(NewC);
   }
 
-  // It is not a fixed vector, but not a simple NaN either?
+  // If it is not a fixed vector, but not a simple NaN either, return a
+  // canonical NaN.
   if (!In->isNaN())
-    return ConstantFP::getNaN(In->getType());
+    return ConstantFP::getNaN(Ty);
 
-  // Propagate the existing NaN constant when possible.
-  // TODO: Should we quiet a signaling NaN?
-  return In;
+  // Propagate an existing QNaN constant. If it is an SNaN, make it quiet, but
+  // preserve the sign/payload.
+  return ConstantFP::get(Ty, cast<ConstantFP>(In)->getValue().makeQuiet());
 }
 
 /// Perform folds that are common to any floating-point operation. This implies

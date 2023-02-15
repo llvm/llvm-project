@@ -6,7 +6,7 @@
 ; CHECK: br i1 [[COND1:%.*]], label %for.end.loopexit.unr-lcssa.loopexit, label %for.body, !prof ![[#PROF:]], !llvm.loop ![[#LOOP:]]
 ; CHECK-LABEL: for.body.epil:
 ; CHECK: br i1 [[COND2:%.*]], label  %for.body.epil, label %for.end.loopexit.epilog-lcssa, !prof ![[#PROF2:]], !llvm.loop ![[#LOOP2:]]
-; CHECK: ![[#PROF]] = !{!"branch_weights", i32 1, i32 9999}
+; CHECK: ![[#PROF]] = !{!"branch_weights", i32 1, i32 2499}
 ; CHECK: ![[#PROF2]] = !{!"branch_weights", i32 3, i32 1}
 
 define i3 @test(ptr %a, i3 %n) {

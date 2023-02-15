@@ -216,11 +216,6 @@ void PassManagerBuilder::addVectorPasses(legacy::PassManagerBase &PM,
                                 ForgetAllSCEVInLoopUnroll));
   }
 
-  if (!IsFullLTO) {
-    // Eliminate loads by forwarding stores from the previous iteration to loads
-    // of the current iteration.
-    PM.add(createLoopLoadEliminationPass());
-  }
   // Cleanup after the loop optimization passes.
   PM.add(createInstructionCombiningPass());
 
@@ -310,9 +305,6 @@ void PassManagerBuilder::populateModulePassManager(
   if (OptLevel > 2)
     MPM.add(createCallSiteSplittingPass());
 
-  MPM.add(createIPSCCPPass());          // IP SCCP
-
-  MPM.add(createGlobalOptimizerPass()); // Optimize out global vars
   // Promote any localized global vars.
   MPM.add(createPromoteMemoryToRegisterPass());
 
@@ -364,7 +356,6 @@ void PassManagerBuilder::populateModulePassManager(
   // benefits generally outweight the cost, making the whole pipeline
   // faster.
   if (RunInliner) {
-    MPM.add(createGlobalOptimizerPass());
     MPM.add(createGlobalDCEPass());
   }
 
@@ -392,12 +383,6 @@ void PassManagerBuilder::populateModulePassManager(
   // rotated form due to GVN or other transformations, and the vectorizer relies
   // on the rotated form. Disable header duplication at -Oz.
   MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1, false));
-
-  // Distribute loops to allow partial vectorization.  I.e. isolate dependences
-  // into separate loop that would otherwise inhibit vectorization.  This is
-  // currently only performed for loops marked with the metadata
-  // llvm.loop.distribute=true or when -enable-loop-distribute is specified.
-  MPM.add(createLoopDistributePass());
 
   addVectorPasses(MPM, /* IsFullLTO */ false);
 
