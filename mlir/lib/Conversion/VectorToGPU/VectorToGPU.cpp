@@ -444,13 +444,13 @@ struct CombineTransferReadOpTranspose final
                                 PatternRewriter &rewriter) const override {
     // Look through integer extend ops.
     Value source = op.getVector();
-    auto resultType = op.getVectorType();
+    Type resultType = op.getType();
     Operation *extOp;
     if ((extOp = source.getDefiningOp<arith::ExtSIOp>()) ||
         (extOp = source.getDefiningOp<arith::ExtUIOp>())) {
       source = extOp->getOperand(0);
       resultType =
-          VectorType::get(resultType.getShape(),
+          VectorType::get(resultType.cast<VectorType>().getShape(),
                           source.getType().cast<VectorType>().getElementType());
     }
 
