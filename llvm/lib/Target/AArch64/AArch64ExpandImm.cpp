@@ -251,27 +251,13 @@ static uint64_t GetRunOfOnesStartingAt(uint64_t V, uint64_t StartPosition) {
   return UnshiftedOnes << StartPosition;
 }
 
-static uint64_t rotl(uint64_t n, uint64_t d) {
-  d %= 64;
-  if (d == 0)
-    return n;
-  return (n << d) | (n >> (64 - d));
-}
-
-static uint64_t rotr(uint64_t n, uint64_t d) {
-  d %= 64;
-  if (d == 0)
-    return n;
-  return (n >> d) | (n << (64 - d));
-}
-
 static uint64_t MaximallyReplicateSubImmediate(uint64_t V, uint64_t Subset) {
   uint64_t Result = Subset;
 
   // 64, 32, 16, 8, 4, 2
   for (uint64_t i = 0; i < 6; ++i) {
     uint64_t Rotation = 1ULL << (6 - i);
-    uint64_t Closure = Result | rotl(Result, Rotation);
+    uint64_t Closure = Result | llvm::rotl<uint64_t>(Result, Rotation);
     if (Closure != (Closure & V)) {
       break;
     }
@@ -305,7 +291,7 @@ decomposeIntoOrrOfLogicalImmediates(uint64_t UImm) {
 
   // Make sure we don't have a run of ones split around the rotation boundary.
   uint32_t InitialTrailingOnes = llvm::countr_one(UImm);
-  uint64_t RotatedBits = rotr(UImm, InitialTrailingOnes);
+  uint64_t RotatedBits = llvm::rotr<uint64_t>(UImm, InitialTrailingOnes);
 
   // Find the largest logical immediate that fits within the full immediate.
   uint64_t MaximalImm1 = maximalLogicalImmWithin(RotatedBits, RotatedBits);

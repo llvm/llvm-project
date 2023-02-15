@@ -800,6 +800,17 @@ SDValue AMDGPUTargetLowering::getNegatedExpression(
       return SDValue();
     break;
   }
+  case AMDGPUISD::RCP: {
+    SDValue Src = Op.getOperand(0);
+    EVT VT = Op.getValueType();
+    SDLoc SL(Op);
+
+    SDValue NegSrc = getNegatedExpression(Src, DAG, LegalOperations,
+                                          ForCodeSize, Cost, Depth);
+    if (NegSrc)
+      return DAG.getNode(AMDGPUISD::RCP, SL, VT, NegSrc, Op->getFlags());
+    return SDValue();
+  }
   default:
     break;
   }
@@ -2710,15 +2721,17 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT64(SDValue Op, SelectionDAG &DAG,
 
   SDValue K0, K1;
   if (SrcVT == MVT::f64) {
-    K0 = DAG.getConstantFP(BitsToDouble(UINT64_C(/*2^-32*/ 0x3df0000000000000)),
-                           SL, SrcVT);
-    K1 = DAG.getConstantFP(BitsToDouble(UINT64_C(/*-2^32*/ 0xc1f0000000000000)),
-                           SL, SrcVT);
+    K0 = DAG.getConstantFP(
+        llvm::bit_cast<double>(UINT64_C(/*2^-32*/ 0x3df0000000000000)), SL,
+        SrcVT);
+    K1 = DAG.getConstantFP(
+        llvm::bit_cast<double>(UINT64_C(/*-2^32*/ 0xc1f0000000000000)), SL,
+        SrcVT);
   } else {
-    K0 = DAG.getConstantFP(BitsToFloat(UINT32_C(/*2^-32*/ 0x2f800000)), SL,
-                           SrcVT);
-    K1 = DAG.getConstantFP(BitsToFloat(UINT32_C(/*-2^32*/ 0xcf800000)), SL,
-                           SrcVT);
+    K0 = DAG.getConstantFP(
+        llvm::bit_cast<float>(UINT32_C(/*2^-32*/ 0x2f800000)), SL, SrcVT);
+    K1 = DAG.getConstantFP(
+        llvm::bit_cast<float>(UINT32_C(/*-2^32*/ 0xcf800000)), SL, SrcVT);
   }
   // TODO: Should this propagate fast-math-flags?
   SDValue Mul = DAG.getNode(ISD::FMUL, SL, SrcVT, Trunc, K0);

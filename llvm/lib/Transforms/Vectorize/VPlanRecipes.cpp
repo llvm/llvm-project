@@ -34,7 +34,9 @@ using namespace llvm;
 
 using VectorParts = SmallVector<Value *, 2>;
 
+namespace llvm {
 extern cl::opt<bool> EnableVPlanNativePath;
+}
 
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME

@@ -73,7 +73,7 @@ static bool isLoopDead(Loop *L, ScalarEvolution &SE,
   // of the loop.
   bool AllEntriesInvariant = true;
   bool AllOutgoingValuesSame = true;
-  if (!L->hasNoExitBlocks()) {
+  if (ExitBlock) {
     for (PHINode &P : ExitBlock->phis()) {
       Value *incoming = P.getIncomingValueForBlock(ExitingBlocks[0]);
 

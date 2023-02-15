@@ -34,6 +34,7 @@ STATISTIC(
 // The switches specify inline thresholds used in SampleProfileLoader inlining.
 // TODO: the actual threshold to be tuned here because the size here is based
 // on machine code not LLVM IR.
+namespace llvm {
 extern cl::opt<int> SampleHotCallSiteThreshold;
 extern cl::opt<int> SampleColdCallSiteThreshold;
 extern cl::opt<int> ProfileInlineGrowthLimit;
@@ -49,6 +50,7 @@ cl::opt<bool> EnableCSPreInliner(
 cl::opt<bool> UseContextCostForPreInliner(
     "use-context-cost-for-preinliner", cl::Hidden, cl::init(true),
     cl::desc("Use context-sensitive byte size cost for preinliner decisions"));
+} // namespace llvm
 
 static cl::opt<bool> SamplePreInlineReplay(
     "csspgo-replay-preinline", cl::Hidden, cl::init(false),

@@ -3,16 +3,50 @@
 
 ; See that we only spilled one value for f
 ; CHECK: %f.Frame = type { ptr, ptr, i32, i1 }
+; CHECK: %f_optnone.Frame = type { ptr, ptr, i32, i32, i1 }
 ; Check other variants where different levels of materialization are achieved
 ; CHECK: %f_multiple_remat.Frame = type { ptr, ptr, i32, i1 }
 ; CHECK: %f_common_def.Frame = type { ptr, ptr, i32, i1 }
 ; CHECK: %f_common_def_multi_result.Frame = type { ptr, ptr, i32, i1 }
 ; CHECK-LABEL: @f(
+; CHECK-LABEL: @f_optnone
 ; CHECK-LABEL: @f_multiple_remat(
 ; CHECK-LABEL: @f_common_def(
 ; CHECK-LABEL: @f_common_def_multi_result(
 
 define ptr @f(i32 %n) presplitcoroutine {
+entry:
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %size = call i32 @llvm.coro.size.i32()
+  %alloc = call ptr @malloc(i32 %size)
+  %hdl = call ptr @llvm.coro.begin(token %id, ptr %alloc)
+
+  %inc1 = add i32 %n, 1
+  %sp1 = call i8 @llvm.coro.suspend(token none, i1 false)
+  switch i8 %sp1, label %suspend [i8 0, label %resume1
+                                  i8 1, label %cleanup]
+resume1:
+  %inc2 = add i32 %inc1, 1
+  %sp2 = call i8 @llvm.coro.suspend(token none, i1 false)
+  switch i8 %sp1, label %suspend [i8 0, label %resume2
+                                  i8 1, label %cleanup]
+
+resume2:
+  call void @print(i32 %inc1)
+  call void @print(i32 %inc2)
+  br label %cleanup
+
+cleanup:
+  %mem = call ptr @llvm.coro.free(token %id, ptr %hdl)
+  call void @free(ptr %mem)
+  br label %suspend
+suspend:
+  call i1 @llvm.coro.end(ptr %hdl, i1 0)
+  ret ptr %hdl
+}
+
+; Checks that we won't transform functions with optnone.
+define ptr @f_optnone(i32 %n) presplitcoroutine optnone noinline {
 entry:
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %size = call i32 @llvm.coro.size.i32()

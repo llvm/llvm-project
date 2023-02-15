@@ -564,31 +564,37 @@ LogicalResult mlir::normalizeAffineFor(AffineForOp op, bool promoteSingleIter) {
   OpBuilder opBuilder(op);
   int64_t origLoopStep = op.getStep();
 
+  AffineBound lb = op.getLowerBound();
+  AffineMap originalLbMap = lb.getMap();
+  SmallVector<Value, 4> origLbOperands;
+  llvm::append_range(origLbOperands, lb.getOperands());
+
+  AffineBound ub = op.getUpperBound();
+  AffineMap originalUbMap = ub.getMap();
+  SmallVector<Value, 4> origUbOperands;
+  llvm::append_range(origUbOperands, ub.getOperands());
+
   // Calculate upperBound for normalized loop.
   SmallVector<Value, 4> ubOperands;
-  AffineBound lb = op.getLowerBound();
-  AffineBound ub = op.getUpperBound();
   ubOperands.reserve(ub.getNumOperands() + lb.getNumOperands());
-  AffineMap origLbMap = lb.getMap();
-  AffineMap origUbMap = ub.getMap();
 
   // Add dimension operands from upper/lower bound.
-  for (unsigned j = 0, e = origUbMap.getNumDims(); j < e; ++j)
+  for (unsigned j = 0, e = originalUbMap.getNumDims(); j < e; ++j)
     ubOperands.push_back(ub.getOperand(j));
-  for (unsigned j = 0, e = origLbMap.getNumDims(); j < e; ++j)
+  for (unsigned j = 0, e = originalLbMap.getNumDims(); j < e; ++j)
     ubOperands.push_back(lb.getOperand(j));
 
   // Add symbol operands from upper/lower bound.
-  for (unsigned j = 0, e = origUbMap.getNumSymbols(); j < e; ++j)
-    ubOperands.push_back(ub.getOperand(origUbMap.getNumDims() + j));
-  for (unsigned j = 0, e = origLbMap.getNumSymbols(); j < e; ++j)
-    ubOperands.push_back(lb.getOperand(origLbMap.getNumDims() + j));
+  for (unsigned j = 0, e = originalUbMap.getNumSymbols(); j < e; ++j)
+    ubOperands.push_back(ub.getOperand(originalUbMap.getNumDims() + j));
+  for (unsigned j = 0, e = originalLbMap.getNumSymbols(); j < e; ++j)
+    ubOperands.push_back(lb.getOperand(originalLbMap.getNumDims() + j));
 
   // Add original result expressions from lower/upper bound map.
-  SmallVector<AffineExpr, 1> origLbExprs(origLbMap.getResults().begin(),
-                                         origLbMap.getResults().end());
-  SmallVector<AffineExpr, 2> origUbExprs(origUbMap.getResults().begin(),
-                                         origUbMap.getResults().end());
+  SmallVector<AffineExpr, 1> origLbExprs(originalLbMap.getResults().begin(),
+                                         originalLbMap.getResults().end());
+  SmallVector<AffineExpr, 2> origUbExprs(originalUbMap.getResults().begin(),
+                                         originalUbMap.getResults().end());
   SmallVector<AffineExpr, 4> newUbExprs;
 
   // The original upperBound can have more than one result. For the new
@@ -607,15 +613,15 @@ LogicalResult mlir::normalizeAffineFor(AffineForOp op, bool promoteSingleIter) {
   }
 
   // Construct newUbMap.
-  AffineMap newUbMap =
-      AffineMap::get(origLbMap.getNumDims() + origUbMap.getNumDims(),
-                     origLbMap.getNumSymbols() + origUbMap.getNumSymbols(),
-                     newUbExprs, opBuilder.getContext());
+  AffineMap newUbMap = AffineMap::get(
+      originalLbMap.getNumDims() + originalUbMap.getNumDims(),
+      originalLbMap.getNumSymbols() + originalUbMap.getNumSymbols(), newUbExprs,
+      opBuilder.getContext());
   canonicalizeMapAndOperands(&newUbMap, &ubOperands);
 
   SmallVector<Value, 4> lbOperands(lb.getOperands().begin(),
                                    lb.getOperands().begin() +
-                                       lb.getMap().getNumDims());
+                                       originalLbMap.getNumDims());
 
   // Normalize the loop.
   op.setUpperBound(ubOperands, newUbMap);
@@ -628,13 +634,14 @@ LogicalResult mlir::normalizeAffineFor(AffineForOp op, bool promoteSingleIter) {
   // Add an extra dim operand for loopIV.
   lbOperands.push_back(op.getInductionVar());
   // Add symbol operands from lower bound.
-  for (unsigned j = 0, e = origLbMap.getNumSymbols(); j < e; ++j)
-    lbOperands.push_back(lb.getOperand(origLbMap.getNumDims() + j));
+  for (unsigned j = 0, e = originalLbMap.getNumSymbols(); j < e; ++j)
+    lbOperands.push_back(origLbOperands[originalLbMap.getNumDims() + j]);
 
-  AffineExpr origIVExpr = opBuilder.getAffineDimExpr(lb.getMap().getNumDims());
-  AffineExpr newIVExpr = origIVExpr * origLoopStep + origLbMap.getResult(0);
-  AffineMap ivMap = AffineMap::get(origLbMap.getNumDims() + 1,
-                                   origLbMap.getNumSymbols(), newIVExpr);
+  AffineExpr origIVExpr =
+      opBuilder.getAffineDimExpr(originalLbMap.getNumDims());
+  AffineExpr newIVExpr = origIVExpr * origLoopStep + originalLbMap.getResult(0);
+  AffineMap ivMap = AffineMap::get(originalLbMap.getNumDims() + 1,
+                                   originalLbMap.getNumSymbols(), newIVExpr);
   canonicalizeMapAndOperands(&ivMap, &lbOperands);
   Operation *newIV = opBuilder.create<AffineApplyOp>(loc, ivMap, lbOperands);
   op.getInductionVar().replaceAllUsesExcept(newIV->getResult(0), newIV);

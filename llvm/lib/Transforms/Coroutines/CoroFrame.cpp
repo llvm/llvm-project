@@ -2688,6 +2688,9 @@ static void sinkSpillUsesAfterCoroBegin(Function &F,
 /// hence minimizing the amount of data we end up putting on the frame.
 static void sinkLifetimeStartMarkers(Function &F, coro::Shape &Shape,
                                      SuspendCrossingInfo &Checker) {
+  if (F.hasOptNone())
+    return;
+
   DominatorTree DT(F);
 
   // Collect all possible basic blocks which may dominate all uses of allocas.
@@ -2892,6 +2895,9 @@ void coro::salvageDebugInfo(
 static void doRematerializations(
     Function &F, SuspendCrossingInfo &Checker,
     const std::function<bool(Instruction &)> &MaterializableCallback) {
+  if (F.hasOptNone())
+    return;
+
   SpillInfo Spills;
 
   // See if there are materializable instructions across suspend points

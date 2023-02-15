@@ -399,7 +399,7 @@ void llvm::emitT2RegPlusImmediate(MachineBasicBlock &MBB,
       // Use one T2 instruction to reduce NumBytes
       // FIXME: Move this to ARMAddressingModes.h?
       unsigned RotAmt = llvm::countl_zero(ThisVal);
-      ThisVal = ThisVal & ARM_AM::rotr32(0xff000000U, RotAmt);
+      ThisVal = ThisVal & llvm::rotr<uint32_t>(0xff000000U, RotAmt);
       NumBytes &= ~ThisVal;
       assert(ARM_AM::getT2SOImmVal(ThisVal) != -1 &&
              "Bit extraction didn't work?");
@@ -604,7 +604,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
     // Otherwise, extract 8 adjacent bits from the immediate into this
     // t2ADDri/t2SUBri.
     unsigned RotAmt = llvm::countl_zero<unsigned>(Offset);
-    unsigned ThisImmVal = Offset & ARM_AM::rotr32(0xff000000U, RotAmt);
+    unsigned ThisImmVal = Offset & llvm::rotr<uint32_t>(0xff000000U, RotAmt);
 
     // We will handle these bits from offset, clear them.
     Offset &= ~ThisImmVal;

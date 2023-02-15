@@ -2963,6 +2963,8 @@ injectPendingInvariantConditions(NonTrivialUnswitchCandidate Candidate, Loop &L,
   assert(Candidate.hasPendingInjection() && "Nothing to inject!");
   BasicBlock *Preheader = L.getLoopPreheader();
   assert(Preheader && "Loop is not in simplified form?");
+  assert(LI.getLoopFor(Candidate.TI->getParent()) == &L &&
+         "Unswitching branch of inner loop!");
 
   auto Pred = Candidate.PendingInjection->Pred;
   auto *LHS = Candidate.PendingInjection->LHS;
@@ -3021,7 +3023,7 @@ injectPendingInvariantConditions(NonTrivialUnswitchCandidate Candidate, Loop &L,
     MSSAU->applyUpdates(DTUpdates, DT);
   L.addBasicBlockToLoop(CheckBlock, LI);
 
-#ifdef EXPENSIVE_CHECKS
+#ifndef NDEBUG
   DT.verify();
   LI.verify(DT);
   if (MSSAU && VerifyMemorySSA)
@@ -3112,6 +3114,9 @@ static bool collectUnswitchCandidatesWithInjections(
     Value *LHS = nullptr, *RHS = nullptr;
     BasicBlock *IfTrue = nullptr, *IfFalse = nullptr;
     auto *BB = DTN->getBlock();
+    // Ignore inner loops.
+    if (LI.getLoopFor(BB) != &L)
+      continue;
     auto *Term = BB->getTerminator();
     if (!match(Term, m_Br(m_ICmp(Pred, m_Value(LHS), m_Value(RHS)),
                           m_BasicBlock(IfTrue), m_BasicBlock(IfFalse))))

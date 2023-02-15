@@ -42,6 +42,31 @@ bool isaContractionOpInterface(LinalgOp linalgOp);
 
 namespace detail {
 
+/// Result of matching a Linalg generic against the predicates of it being a
+/// convolution.
+enum class MatchConvolutionResult;
+
+/// Positions of a Linalg op loops that correspond to different kinds of a
+/// convolution dimension.
+struct ConvolutionDimensions {
+  SmallVector<unsigned, 2> batch;
+  SmallVector<unsigned, 2> outputImage;
+  SmallVector<unsigned, 2> outputChannel;
+  SmallVector<unsigned, 2> filterLoop;
+  SmallVector<unsigned, 2> inputChannel;
+  SmallVector<unsigned, 2> depth;
+};
+
+/// Checks whether `op` conforms to ConvolutionOpInterface and populates
+/// `dimensions` with indexes of the different kinds of dimensions when present.
+MatchConvolutionResult
+isConvolutionInterfaceImpl(Operation *op,
+                           ConvolutionDimensions *dimensions = nullptr);
+
+/// Returns the error message corresponding to the convolution checking return
+/// code.
+StringRef getMatchConvolutionMessage(MatchConvolutionResult res);
+
 /// Verify that `op` conforms to ContractionOpInterface.
 LogicalResult verifyContractionInterface(Operation *op);
 
