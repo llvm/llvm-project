@@ -133,10 +133,8 @@ struct TypeCloner {
         return S;
       }
       case LLVMArrayTypeKind:
-        return LLVMArrayType(
-          Clone(LLVMGetElementType(Src)),
-          LLVMGetArrayLength(Src)
-        );
+        return LLVMArrayType2(Clone(LLVMGetElementType(Src)),
+                              LLVMGetArrayLength2(Src));
       case LLVMPointerTypeKind:
         if (LLVMPointerTypeIsOpaque(Src))
           return LLVMPointerTypeInContext(Ctx, LLVMGetPointerAddressSpace(Src));
@@ -309,9 +307,9 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
                               ? LLVMConstantArrayValueKind
                               : LLVMConstantDataArrayValueKind);
     LLVMTypeRef Ty = TypeCloner(M).Clone(Cst);
-    unsigned EltCount = LLVMGetArrayLength(Ty);
+    uint64_t EltCount = LLVMGetArrayLength2(Ty);
     SmallVector<LLVMValueRef, 8> Elts;
-    for (unsigned i = 0; i < EltCount; i++)
+    for (uint64_t i = 0; i < EltCount; i++)
       Elts.push_back(clone_constant(LLVMGetAggregateElement(Cst, i), M));
     return LLVMConstArray(LLVMGetElementType(Ty), Elts.data(), EltCount);
   }

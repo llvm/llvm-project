@@ -587,7 +587,7 @@ LLVMTypeRef llvm_vector_type(LLVMTypeRef ElementTy, value Count) {
 
 /* lltype -> int */
 value llvm_array_length(LLVMTypeRef ArrayTy) {
-  return Val_int(LLVMGetArrayLength(ArrayTy));
+  return Val_int(LLVMGetArrayLength2(ArrayTy));
 }
 
 /* lltype -> int */
