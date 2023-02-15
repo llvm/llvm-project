@@ -92,14 +92,6 @@ INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete[](
     void *ptr, std::nothrow_t const &) {
   OPERATOR_DELETE_BODY;
 }
-INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete(
-    void *ptr, size_t) NOEXCEPT {
-  OPERATOR_DELETE_BODY;
-}
-INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete[](
-    void *ptr, size_t) NOEXCEPT {
-  OPERATOR_DELETE_BODY;
-}
 
 #endif  // OPERATOR_NEW_BODY
 
@@ -140,14 +132,6 @@ INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete(
 }
 INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete[](
     void *ptr, std::align_val_t, std::nothrow_t const &) NOEXCEPT {
-  OPERATOR_DELETE_BODY;
-}
-INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete(
-    void *ptr, size_t, std::align_val_t, std::nothrow_t const &) NOEXCEPT {
-  OPERATOR_DELETE_BODY;
-}
-INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete[](
-    void *ptr, size_t, std::align_val_t, std::nothrow_t const &) NOEXCEPT {
   OPERATOR_DELETE_BODY;
 }
 
