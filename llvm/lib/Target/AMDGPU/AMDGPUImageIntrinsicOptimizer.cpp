@@ -203,7 +203,7 @@ bool optimizeSection(std::list<std::list<IntrinsicInst *>> &MergeableInsts) {
     ConstantInt *DMask = cast<ConstantInt>(
         IIList.front()->getArgOperand(ImageDimIntr->DMaskIndex));
     unsigned DMaskVal = DMask->getZExtValue() & 0xf;
-    unsigned NumElts = countPopulation(DMaskVal);
+    unsigned NumElts = popcount(DMaskVal);
 
     // Number of instructions and the number of vaddr/vdata dword transfers
     // should be reduced.
@@ -228,7 +228,7 @@ bool optimizeSection(std::list<std::list<IntrinsicInst *>> &MergeableInsts) {
     // Create the new image_msaa_load intrinsic.
     SmallVector<Instruction *, 4> NewCalls;
     while (DMaskVal != 0) {
-      unsigned NewMaskVal = 1 << countTrailingZeros(DMaskVal);
+      unsigned NewMaskVal = 1 << countr_zero(DMaskVal);
 
       Intrinsic::ID NewIntrinID;
       if (IntrinID == Intrinsic::amdgcn_image_load_2dmsaa)

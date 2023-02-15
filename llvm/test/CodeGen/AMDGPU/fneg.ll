@@ -120,8 +120,7 @@ define i32 @v_fneg_i32(i32 %in) {
 
 ; FUNC-LABEL: {{^}}s_fneg_i32_fp_use:
 ; GCN: s_load_dword [[IN:s[0-9]+]]
-; GCN: s_xor_b32 [[FNEG:s[0-9]+]], [[IN]], 0x80000000
-; GCN: v_add_f32_e64 v{{[0-9]+}}, [[FNEG]], 2.0
+; GCN: v_sub_f32_e64 v{{[0-9]+}}, 2.0, [[IN]]
 define amdgpu_kernel void @s_fneg_i32_fp_use(ptr addrspace(1) %out, i32 %in) {
   %fneg = xor i32 %in, -2147483648
   %bitcast = bitcast i32 %fneg to float
@@ -132,8 +131,7 @@ define amdgpu_kernel void @s_fneg_i32_fp_use(ptr addrspace(1) %out, i32 %in) {
 
 ; FUNC-LABEL: {{^}}v_fneg_i32_fp_use:
 ; GCN: s_waitcnt
-; GCN-NEXT: v_xor_b32_e32 v0, 0x80000000, v0
-; GCN-NEXT: v_add_f32_e32 v0, 2.0, v0
+; GCN-NEXT: v_sub_f32_e32 v0, 2.0, v0
 ; GCN-NEXT: s_setpc_b64
 define float @v_fneg_i32_fp_use(i32 %in) {
   %fneg = xor i32 %in, -2147483648
@@ -160,8 +158,7 @@ define i64 @v_fneg_i64(i64 %in) {
 }
 
 ; FUNC-LABEL: {{^}}s_fneg_i64_fp_use:
-; GCN: s_xor_b32 s[[NEG_HI:[0-9]+]], s{{[0-9]+}}, 0x80000000
-; GCN: v_add_f64 v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 2.0
+; GCN: v_add_f64 v{{\[[0-9]+:[0-9]+\]}}, -s{{\[[0-9]+:[0-9]+\]}}, 2.0
 define amdgpu_kernel void @s_fneg_i64_fp_use(ptr addrspace(1) %out, i64 %in) {
   %fneg = xor i64 %in, -9223372036854775808
   %bitcast = bitcast i64 %fneg to double
@@ -172,8 +169,7 @@ define amdgpu_kernel void @s_fneg_i64_fp_use(ptr addrspace(1) %out, i64 %in) {
 
 ; FUNC-LABEL: {{^}}v_fneg_i64_fp_use:
 ; GCN: s_waitcnt
-; GCN-NEXT: v_xor_b32_e32 v1, 0x80000000, v1
-; GCN-NEXT: v_add_f64 v[0:1], v[0:1], 2.0
+; GCN-NEXT: v_add_f64 v[0:1], -v[0:1], 2.0
 ; GCN-NEXT: s_setpc_b64
 define double @v_fneg_i64_fp_use(i64 %in) {
   %fneg = xor i64 %in, -9223372036854775808
@@ -197,9 +193,7 @@ define i16 @v_fneg_i16(i16 %in) {
 ; SI: v_cvt_f16_f32_e32 [[CVT1:v[0-9]+]], [[ADD]]
 
 ; VI: s_load_dword [[IN:s[0-9]+]]
-; VI: v_mov_b32_e32 [[K:v[0-9]+]], 0xffff8000
-; VI: v_xor_b32_e32 [[NEG:v[0-9]+]], [[IN]], [[K]]
-; VI: v_add_f16_e32 v{{[0-9]+}}, 2.0, [[NEG]]
+; VI: v_sub_f16_e64 v{{[0-9]+}}, 2.0, [[IN]]
 define amdgpu_kernel void @s_fneg_i16_fp_use(ptr addrspace(1) %out, i16 %in) {
   %fneg = xor i16 %in, -32768
   %bitcast = bitcast i16 %fneg to half
@@ -215,8 +209,7 @@ define amdgpu_kernel void @s_fneg_i16_fp_use(ptr addrspace(1) %out, i16 %in) {
 ; SI-NEXT: s_setpc_b64
 
 ; VI: s_waitcnt
-; VI-NEXT: v_xor_b32_e32 v0, 0xffff8000, v0
-; VI-NEXT: v_add_f16_e32 v0, 2.0, v0
+; VI-NEXT: v_sub_f16_e32 v0, 2.0, v0
 ; VI-NEXT: s_setpc_b64
 define half @v_fneg_i16_fp_use(i16 %in) {
   %fneg = xor i16 %in, -32768
@@ -291,10 +284,9 @@ define amdgpu_kernel void @s_fneg_v2i16_fp_use(ptr addrspace(1) %out, i32 %arg) 
 ; SI: v_add_f32_e32 v1, 2.0, v1
 
 ; VI: s_waitcnt
-; VI: v_xor_b32_e32 v0, 0x80008000, v0
 ; VI: v_mov_b32_e32 v1, 0x4000
-; VI: v_add_f16_sdwa v1, v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; VI: v_add_f16_e32 v0, 2.0, v0
+; VI: v_sub_f16_sdwa v1, v1, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; VI: v_sub_f16_e32 v0, 2.0, v0
 ; VI: v_or_b32_e32 v0, v0, v1
 ; VI: s_setpc_b64
 define <2 x half> @v_fneg_v2i16_fp_use(i32 %arg) {
