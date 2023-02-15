@@ -36,13 +36,17 @@ class ConstraintSystem {
   // Eliminate constraints from the system using Fourier–Motzkin elimination.
   bool eliminateUsingFM();
 
-  /// Print the constraints in the system, using x0...xn as variable names.
-  void dump() const;
-
   /// Returns true if there may be a solution for the constraints in the system.
   bool mayHaveSolutionImpl();
 
+  /// Get list of variable names from the Value2Index map.
+  SmallVector<std::string> getVarNamesList() const;
+
 public:
+  ConstraintSystem() {}
+  ConstraintSystem(const DenseMap<Value *, unsigned> &Value2Index)
+      : Value2Index(Value2Index) {}
+
   bool addVariableRow(ArrayRef<int64_t> R) {
     assert(Constraints.empty() || R.size() == Constraints.back().size());
     // If all variable coefficients are 0, the constraint does not provide any
@@ -103,8 +107,8 @@ public:
   /// Returns the number of rows in the constraint system.
   unsigned size() const { return Constraints.size(); }
 
-  /// Print the constraints in the system, using \p Names as variable names.
-  void dump(ArrayRef<std::string> Names) const;
+  /// Print the constraints in the system.
+  void dump() const;
 };
 } // namespace llvm
 
