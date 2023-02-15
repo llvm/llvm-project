@@ -76,7 +76,8 @@ define <16 x i8> @ugt_1_v16i8(<16 x i8> %0) {
 ; BITALG-LABEL: ugt_1_v16i8:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
-; BITALG-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2b %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %0)
   %3 = icmp ugt <16 x i8> %2, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
@@ -115,8 +116,8 @@ define <16 x i8> @ult_2_v16i8(<16 x i8> %0) {
 ; BITALG-LABEL: ult_2_v16i8:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
-; BITALG-NEXT:    vmovdqa {{.*#+}} xmm1 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
-; BITALG-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2b %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %0)
   %3 = icmp ult <16 x i8> %2, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
@@ -165,34 +166,36 @@ define <16 x i8> @ugt_2_v16i8(<16 x i8> %0) {
 ;
 ; SSSE3-LABEL: ugt_2_v16i8:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; SSSE3-NEXT:    movdqa %xmm0, %xmm3
-; SSSE3-NEXT:    pand %xmm2, %xmm3
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; SSSE3-NEXT:    movdqa %xmm1, %xmm4
-; SSSE3-NEXT:    pshufb %xmm3, %xmm4
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; SSSE3-NEXT:    movdqa %xmm0, %xmm2
+; SSSE3-NEXT:    pand %xmm1, %xmm2
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; SSSE3-NEXT:    movdqa %xmm3, %xmm4
+; SSSE3-NEXT:    pshufb %xmm2, %xmm4
 ; SSSE3-NEXT:    psrlw $4, %xmm0
-; SSSE3-NEXT:    pand %xmm2, %xmm0
-; SSSE3-NEXT:    pshufb %xmm0, %xmm1
-; SSSE3-NEXT:    paddb %xmm4, %xmm1
-; SSSE3-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSSE3-NEXT:    movdqa %xmm1, %xmm0
+; SSSE3-NEXT:    pand %xmm1, %xmm0
+; SSSE3-NEXT:    pshufb %xmm0, %xmm3
+; SSSE3-NEXT:    paddb %xmm4, %xmm3
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3]
+; SSSE3-NEXT:    pmaxub %xmm3, %xmm0
+; SSSE3-NEXT:    pcmpeqb %xmm3, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: ugt_2_v16i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; SSE41-NEXT:    movdqa %xmm0, %xmm3
-; SSE41-NEXT:    pand %xmm2, %xmm3
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; SSE41-NEXT:    movdqa %xmm1, %xmm4
-; SSE41-NEXT:    pshufb %xmm3, %xmm4
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    pand %xmm1, %xmm2
+; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; SSE41-NEXT:    movdqa %xmm3, %xmm4
+; SSE41-NEXT:    pshufb %xmm2, %xmm4
 ; SSE41-NEXT:    psrlw $4, %xmm0
-; SSE41-NEXT:    pand %xmm2, %xmm0
-; SSE41-NEXT:    pshufb %xmm0, %xmm1
-; SSE41-NEXT:    paddb %xmm4, %xmm1
-; SSE41-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE41-NEXT:    movdqa %xmm1, %xmm0
+; SSE41-NEXT:    pand %xmm1, %xmm0
+; SSE41-NEXT:    pshufb %xmm0, %xmm3
+; SSE41-NEXT:    paddb %xmm4, %xmm3
+; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3]
+; SSE41-NEXT:    pmaxub %xmm3, %xmm0
+; SSE41-NEXT:    pcmpeqb %xmm3, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: ugt_2_v16i8:
@@ -205,7 +208,8 @@ define <16 x i8> @ugt_2_v16i8(<16 x i8> %0) {
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
 ; AVX1-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpmaxub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: ugt_2_v16i8:
@@ -218,7 +222,8 @@ define <16 x i8> @ugt_2_v16i8(<16 x i8> %0) {
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
 ; AVX2-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpmaxub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VPOPCNTDQ-LABEL: ugt_2_v16i8:
@@ -250,7 +255,8 @@ define <16 x i8> @ugt_2_v16i8(<16 x i8> %0) {
 ; BITALG-LABEL: ugt_2_v16i8:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
-; BITALG-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2b %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %0)
   %3 = icmp ugt <16 x i8> %2, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
@@ -311,8 +317,9 @@ define <16 x i8> @ult_3_v16i8(<16 x i8> %0) {
 ; SSSE3-NEXT:    pand %xmm1, %xmm0
 ; SSSE3-NEXT:    pshufb %xmm0, %xmm3
 ; SSSE3-NEXT:    paddb %xmm4, %xmm3
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3]
-; SSSE3-NEXT:    pcmpgtb %xmm3, %xmm0
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; SSSE3-NEXT:    pminub %xmm3, %xmm0
+; SSSE3-NEXT:    pcmpeqb %xmm3, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: ult_3_v16i8:
@@ -327,8 +334,9 @@ define <16 x i8> @ult_3_v16i8(<16 x i8> %0) {
 ; SSE41-NEXT:    pand %xmm1, %xmm0
 ; SSE41-NEXT:    pshufb %xmm0, %xmm3
 ; SSE41-NEXT:    paddb %xmm4, %xmm3
-; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3]
-; SSE41-NEXT:    pcmpgtb %xmm3, %xmm0
+; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; SSE41-NEXT:    pminub %xmm3, %xmm0
+; SSE41-NEXT:    pcmpeqb %xmm3, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: ult_3_v16i8:
@@ -341,8 +349,8 @@ define <16 x i8> @ult_3_v16i8(<16 x i8> %0) {
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
 ; AVX1-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3]
-; AVX1-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: ult_3_v16i8:
@@ -355,8 +363,8 @@ define <16 x i8> @ult_3_v16i8(<16 x i8> %0) {
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
 ; AVX2-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3]
-; AVX2-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VPOPCNTDQ-LABEL: ult_3_v16i8:
@@ -391,8 +399,8 @@ define <16 x i8> @ult_3_v16i8(<16 x i8> %0) {
 ; BITALG-LABEL: ult_3_v16i8:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
-; BITALG-NEXT:    vmovdqa {{.*#+}} xmm1 = [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3]
-; BITALG-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2b %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %0)
   %3 = icmp ult <16 x i8> %2, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
@@ -441,34 +449,36 @@ define <16 x i8> @ugt_3_v16i8(<16 x i8> %0) {
 ;
 ; SSSE3-LABEL: ugt_3_v16i8:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; SSSE3-NEXT:    movdqa %xmm0, %xmm3
-; SSSE3-NEXT:    pand %xmm2, %xmm3
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; SSSE3-NEXT:    movdqa %xmm1, %xmm4
-; SSSE3-NEXT:    pshufb %xmm3, %xmm4
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; SSSE3-NEXT:    movdqa %xmm0, %xmm2
+; SSSE3-NEXT:    pand %xmm1, %xmm2
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; SSSE3-NEXT:    movdqa %xmm3, %xmm4
+; SSSE3-NEXT:    pshufb %xmm2, %xmm4
 ; SSSE3-NEXT:    psrlw $4, %xmm0
-; SSSE3-NEXT:    pand %xmm2, %xmm0
-; SSSE3-NEXT:    pshufb %xmm0, %xmm1
-; SSSE3-NEXT:    paddb %xmm4, %xmm1
-; SSSE3-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSSE3-NEXT:    movdqa %xmm1, %xmm0
+; SSSE3-NEXT:    pand %xmm1, %xmm0
+; SSSE3-NEXT:    pshufb %xmm0, %xmm3
+; SSSE3-NEXT:    paddb %xmm4, %xmm3
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
+; SSSE3-NEXT:    pmaxub %xmm3, %xmm0
+; SSSE3-NEXT:    pcmpeqb %xmm3, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: ugt_3_v16i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; SSE41-NEXT:    movdqa %xmm0, %xmm3
-; SSE41-NEXT:    pand %xmm2, %xmm3
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; SSE41-NEXT:    movdqa %xmm1, %xmm4
-; SSE41-NEXT:    pshufb %xmm3, %xmm4
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    pand %xmm1, %xmm2
+; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; SSE41-NEXT:    movdqa %xmm3, %xmm4
+; SSE41-NEXT:    pshufb %xmm2, %xmm4
 ; SSE41-NEXT:    psrlw $4, %xmm0
-; SSE41-NEXT:    pand %xmm2, %xmm0
-; SSE41-NEXT:    pshufb %xmm0, %xmm1
-; SSE41-NEXT:    paddb %xmm4, %xmm1
-; SSE41-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE41-NEXT:    movdqa %xmm1, %xmm0
+; SSE41-NEXT:    pand %xmm1, %xmm0
+; SSE41-NEXT:    pshufb %xmm0, %xmm3
+; SSE41-NEXT:    paddb %xmm4, %xmm3
+; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
+; SSE41-NEXT:    pmaxub %xmm3, %xmm0
+; SSE41-NEXT:    pcmpeqb %xmm3, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: ugt_3_v16i8:
@@ -481,7 +491,8 @@ define <16 x i8> @ugt_3_v16i8(<16 x i8> %0) {
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
 ; AVX1-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpmaxub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: ugt_3_v16i8:
@@ -494,7 +505,8 @@ define <16 x i8> @ugt_3_v16i8(<16 x i8> %0) {
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
 ; AVX2-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpmaxub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VPOPCNTDQ-LABEL: ugt_3_v16i8:
@@ -526,7 +538,8 @@ define <16 x i8> @ugt_3_v16i8(<16 x i8> %0) {
 ; BITALG-LABEL: ugt_3_v16i8:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
-; BITALG-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2b %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %0)
   %3 = icmp ugt <16 x i8> %2, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
@@ -587,8 +600,9 @@ define <16 x i8> @ult_4_v16i8(<16 x i8> %0) {
 ; SSSE3-NEXT:    pand %xmm1, %xmm0
 ; SSSE3-NEXT:    pshufb %xmm0, %xmm3
 ; SSSE3-NEXT:    paddb %xmm4, %xmm3
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
-; SSSE3-NEXT:    pcmpgtb %xmm3, %xmm0
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3]
+; SSSE3-NEXT:    pminub %xmm3, %xmm0
+; SSSE3-NEXT:    pcmpeqb %xmm3, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: ult_4_v16i8:
@@ -603,8 +617,9 @@ define <16 x i8> @ult_4_v16i8(<16 x i8> %0) {
 ; SSE41-NEXT:    pand %xmm1, %xmm0
 ; SSE41-NEXT:    pshufb %xmm0, %xmm3
 ; SSE41-NEXT:    paddb %xmm4, %xmm3
-; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
-; SSE41-NEXT:    pcmpgtb %xmm3, %xmm0
+; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3]
+; SSE41-NEXT:    pminub %xmm3, %xmm0
+; SSE41-NEXT:    pcmpeqb %xmm3, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: ult_4_v16i8:
@@ -617,8 +632,8 @@ define <16 x i8> @ult_4_v16i8(<16 x i8> %0) {
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
 ; AVX1-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
-; AVX1-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: ult_4_v16i8:
@@ -631,8 +646,8 @@ define <16 x i8> @ult_4_v16i8(<16 x i8> %0) {
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
 ; AVX2-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
-; AVX2-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VPOPCNTDQ-LABEL: ult_4_v16i8:
@@ -667,8 +682,8 @@ define <16 x i8> @ult_4_v16i8(<16 x i8> %0) {
 ; BITALG-LABEL: ult_4_v16i8:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
-; BITALG-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
-; BITALG-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2b %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %0)
   %3 = icmp ult <16 x i8> %2, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
@@ -717,34 +732,36 @@ define <16 x i8> @ugt_4_v16i8(<16 x i8> %0) {
 ;
 ; SSSE3-LABEL: ugt_4_v16i8:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; SSSE3-NEXT:    movdqa %xmm0, %xmm3
-; SSSE3-NEXT:    pand %xmm2, %xmm3
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; SSSE3-NEXT:    movdqa %xmm1, %xmm4
-; SSSE3-NEXT:    pshufb %xmm3, %xmm4
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; SSSE3-NEXT:    movdqa %xmm0, %xmm2
+; SSSE3-NEXT:    pand %xmm1, %xmm2
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; SSSE3-NEXT:    movdqa %xmm3, %xmm4
+; SSSE3-NEXT:    pshufb %xmm2, %xmm4
 ; SSSE3-NEXT:    psrlw $4, %xmm0
-; SSSE3-NEXT:    pand %xmm2, %xmm0
-; SSSE3-NEXT:    pshufb %xmm0, %xmm1
-; SSSE3-NEXT:    paddb %xmm4, %xmm1
-; SSSE3-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSSE3-NEXT:    movdqa %xmm1, %xmm0
+; SSSE3-NEXT:    pand %xmm1, %xmm0
+; SSSE3-NEXT:    pshufb %xmm0, %xmm3
+; SSSE3-NEXT:    paddb %xmm4, %xmm3
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5]
+; SSSE3-NEXT:    pmaxub %xmm3, %xmm0
+; SSSE3-NEXT:    pcmpeqb %xmm3, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: ugt_4_v16i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; SSE41-NEXT:    movdqa %xmm0, %xmm3
-; SSE41-NEXT:    pand %xmm2, %xmm3
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; SSE41-NEXT:    movdqa %xmm1, %xmm4
-; SSE41-NEXT:    pshufb %xmm3, %xmm4
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    pand %xmm1, %xmm2
+; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; SSE41-NEXT:    movdqa %xmm3, %xmm4
+; SSE41-NEXT:    pshufb %xmm2, %xmm4
 ; SSE41-NEXT:    psrlw $4, %xmm0
-; SSE41-NEXT:    pand %xmm2, %xmm0
-; SSE41-NEXT:    pshufb %xmm0, %xmm1
-; SSE41-NEXT:    paddb %xmm4, %xmm1
-; SSE41-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE41-NEXT:    movdqa %xmm1, %xmm0
+; SSE41-NEXT:    pand %xmm1, %xmm0
+; SSE41-NEXT:    pshufb %xmm0, %xmm3
+; SSE41-NEXT:    paddb %xmm4, %xmm3
+; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5]
+; SSE41-NEXT:    pmaxub %xmm3, %xmm0
+; SSE41-NEXT:    pcmpeqb %xmm3, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: ugt_4_v16i8:
@@ -757,7 +774,8 @@ define <16 x i8> @ugt_4_v16i8(<16 x i8> %0) {
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
 ; AVX1-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpmaxub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: ugt_4_v16i8:
@@ -770,7 +788,8 @@ define <16 x i8> @ugt_4_v16i8(<16 x i8> %0) {
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
 ; AVX2-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpmaxub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VPOPCNTDQ-LABEL: ugt_4_v16i8:
@@ -802,7 +821,8 @@ define <16 x i8> @ugt_4_v16i8(<16 x i8> %0) {
 ; BITALG-LABEL: ugt_4_v16i8:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
-; BITALG-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2b %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %0)
   %3 = icmp ugt <16 x i8> %2, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
@@ -863,8 +883,9 @@ define <16 x i8> @ult_5_v16i8(<16 x i8> %0) {
 ; SSSE3-NEXT:    pand %xmm1, %xmm0
 ; SSSE3-NEXT:    pshufb %xmm0, %xmm3
 ; SSSE3-NEXT:    paddb %xmm4, %xmm3
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5]
-; SSSE3-NEXT:    pcmpgtb %xmm3, %xmm0
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
+; SSSE3-NEXT:    pminub %xmm3, %xmm0
+; SSSE3-NEXT:    pcmpeqb %xmm3, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: ult_5_v16i8:
@@ -879,8 +900,9 @@ define <16 x i8> @ult_5_v16i8(<16 x i8> %0) {
 ; SSE41-NEXT:    pand %xmm1, %xmm0
 ; SSE41-NEXT:    pshufb %xmm0, %xmm3
 ; SSE41-NEXT:    paddb %xmm4, %xmm3
-; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5]
-; SSE41-NEXT:    pcmpgtb %xmm3, %xmm0
+; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
+; SSE41-NEXT:    pminub %xmm3, %xmm0
+; SSE41-NEXT:    pcmpeqb %xmm3, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: ult_5_v16i8:
@@ -893,8 +915,8 @@ define <16 x i8> @ult_5_v16i8(<16 x i8> %0) {
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
 ; AVX1-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5]
-; AVX1-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: ult_5_v16i8:
@@ -907,8 +929,8 @@ define <16 x i8> @ult_5_v16i8(<16 x i8> %0) {
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
 ; AVX2-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5]
-; AVX2-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VPOPCNTDQ-LABEL: ult_5_v16i8:
@@ -943,8 +965,8 @@ define <16 x i8> @ult_5_v16i8(<16 x i8> %0) {
 ; BITALG-LABEL: ult_5_v16i8:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
-; BITALG-NEXT:    vmovdqa {{.*#+}} xmm1 = [5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5]
-; BITALG-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2b %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %0)
   %3 = icmp ult <16 x i8> %2, <i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5>
@@ -993,34 +1015,36 @@ define <16 x i8> @ugt_5_v16i8(<16 x i8> %0) {
 ;
 ; SSSE3-LABEL: ugt_5_v16i8:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; SSSE3-NEXT:    movdqa %xmm0, %xmm3
-; SSSE3-NEXT:    pand %xmm2, %xmm3
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; SSSE3-NEXT:    movdqa %xmm1, %xmm4
-; SSSE3-NEXT:    pshufb %xmm3, %xmm4
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; SSSE3-NEXT:    movdqa %xmm0, %xmm2
+; SSSE3-NEXT:    pand %xmm1, %xmm2
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; SSSE3-NEXT:    movdqa %xmm3, %xmm4
+; SSSE3-NEXT:    pshufb %xmm2, %xmm4
 ; SSSE3-NEXT:    psrlw $4, %xmm0
-; SSSE3-NEXT:    pand %xmm2, %xmm0
-; SSSE3-NEXT:    pshufb %xmm0, %xmm1
-; SSSE3-NEXT:    paddb %xmm4, %xmm1
-; SSSE3-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSSE3-NEXT:    movdqa %xmm1, %xmm0
+; SSSE3-NEXT:    pand %xmm1, %xmm0
+; SSSE3-NEXT:    pshufb %xmm0, %xmm3
+; SSSE3-NEXT:    paddb %xmm4, %xmm3
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6]
+; SSSE3-NEXT:    pmaxub %xmm3, %xmm0
+; SSSE3-NEXT:    pcmpeqb %xmm3, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: ugt_5_v16i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; SSE41-NEXT:    movdqa %xmm0, %xmm3
-; SSE41-NEXT:    pand %xmm2, %xmm3
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; SSE41-NEXT:    movdqa %xmm1, %xmm4
-; SSE41-NEXT:    pshufb %xmm3, %xmm4
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    pand %xmm1, %xmm2
+; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; SSE41-NEXT:    movdqa %xmm3, %xmm4
+; SSE41-NEXT:    pshufb %xmm2, %xmm4
 ; SSE41-NEXT:    psrlw $4, %xmm0
-; SSE41-NEXT:    pand %xmm2, %xmm0
-; SSE41-NEXT:    pshufb %xmm0, %xmm1
-; SSE41-NEXT:    paddb %xmm4, %xmm1
-; SSE41-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE41-NEXT:    movdqa %xmm1, %xmm0
+; SSE41-NEXT:    pand %xmm1, %xmm0
+; SSE41-NEXT:    pshufb %xmm0, %xmm3
+; SSE41-NEXT:    paddb %xmm4, %xmm3
+; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6]
+; SSE41-NEXT:    pmaxub %xmm3, %xmm0
+; SSE41-NEXT:    pcmpeqb %xmm3, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: ugt_5_v16i8:
@@ -1033,7 +1057,8 @@ define <16 x i8> @ugt_5_v16i8(<16 x i8> %0) {
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
 ; AVX1-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpmaxub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: ugt_5_v16i8:
@@ -1046,7 +1071,8 @@ define <16 x i8> @ugt_5_v16i8(<16 x i8> %0) {
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
 ; AVX2-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpmaxub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VPOPCNTDQ-LABEL: ugt_5_v16i8:
@@ -1078,7 +1104,8 @@ define <16 x i8> @ugt_5_v16i8(<16 x i8> %0) {
 ; BITALG-LABEL: ugt_5_v16i8:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
-; BITALG-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2b %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %0)
   %3 = icmp ugt <16 x i8> %2, <i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5>
@@ -1139,8 +1166,9 @@ define <16 x i8> @ult_6_v16i8(<16 x i8> %0) {
 ; SSSE3-NEXT:    pand %xmm1, %xmm0
 ; SSSE3-NEXT:    pshufb %xmm0, %xmm3
 ; SSSE3-NEXT:    paddb %xmm4, %xmm3
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6]
-; SSSE3-NEXT:    pcmpgtb %xmm3, %xmm0
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5]
+; SSSE3-NEXT:    pminub %xmm3, %xmm0
+; SSSE3-NEXT:    pcmpeqb %xmm3, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: ult_6_v16i8:
@@ -1155,8 +1183,9 @@ define <16 x i8> @ult_6_v16i8(<16 x i8> %0) {
 ; SSE41-NEXT:    pand %xmm1, %xmm0
 ; SSE41-NEXT:    pshufb %xmm0, %xmm3
 ; SSE41-NEXT:    paddb %xmm4, %xmm3
-; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6]
-; SSE41-NEXT:    pcmpgtb %xmm3, %xmm0
+; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5]
+; SSE41-NEXT:    pminub %xmm3, %xmm0
+; SSE41-NEXT:    pcmpeqb %xmm3, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: ult_6_v16i8:
@@ -1169,8 +1198,8 @@ define <16 x i8> @ult_6_v16i8(<16 x i8> %0) {
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
 ; AVX1-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6]
-; AVX1-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: ult_6_v16i8:
@@ -1183,8 +1212,8 @@ define <16 x i8> @ult_6_v16i8(<16 x i8> %0) {
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
 ; AVX2-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6]
-; AVX2-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VPOPCNTDQ-LABEL: ult_6_v16i8:
@@ -1219,8 +1248,8 @@ define <16 x i8> @ult_6_v16i8(<16 x i8> %0) {
 ; BITALG-LABEL: ult_6_v16i8:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
-; BITALG-NEXT:    vmovdqa {{.*#+}} xmm1 = [6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6]
-; BITALG-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2b %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %0)
   %3 = icmp ult <16 x i8> %2, <i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6>
@@ -1269,34 +1298,36 @@ define <16 x i8> @ugt_6_v16i8(<16 x i8> %0) {
 ;
 ; SSSE3-LABEL: ugt_6_v16i8:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; SSSE3-NEXT:    movdqa %xmm0, %xmm3
-; SSSE3-NEXT:    pand %xmm2, %xmm3
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; SSSE3-NEXT:    movdqa %xmm1, %xmm4
-; SSSE3-NEXT:    pshufb %xmm3, %xmm4
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; SSSE3-NEXT:    movdqa %xmm0, %xmm2
+; SSSE3-NEXT:    pand %xmm1, %xmm2
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; SSSE3-NEXT:    movdqa %xmm3, %xmm4
+; SSSE3-NEXT:    pshufb %xmm2, %xmm4
 ; SSSE3-NEXT:    psrlw $4, %xmm0
-; SSSE3-NEXT:    pand %xmm2, %xmm0
-; SSSE3-NEXT:    pshufb %xmm0, %xmm1
-; SSSE3-NEXT:    paddb %xmm4, %xmm1
-; SSSE3-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSSE3-NEXT:    movdqa %xmm1, %xmm0
+; SSSE3-NEXT:    pand %xmm1, %xmm0
+; SSSE3-NEXT:    pshufb %xmm0, %xmm3
+; SSSE3-NEXT:    paddb %xmm4, %xmm3
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
+; SSSE3-NEXT:    pmaxub %xmm3, %xmm0
+; SSSE3-NEXT:    pcmpeqb %xmm3, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: ugt_6_v16i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; SSE41-NEXT:    movdqa %xmm0, %xmm3
-; SSE41-NEXT:    pand %xmm2, %xmm3
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; SSE41-NEXT:    movdqa %xmm1, %xmm4
-; SSE41-NEXT:    pshufb %xmm3, %xmm4
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    pand %xmm1, %xmm2
+; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; SSE41-NEXT:    movdqa %xmm3, %xmm4
+; SSE41-NEXT:    pshufb %xmm2, %xmm4
 ; SSE41-NEXT:    psrlw $4, %xmm0
-; SSE41-NEXT:    pand %xmm2, %xmm0
-; SSE41-NEXT:    pshufb %xmm0, %xmm1
-; SSE41-NEXT:    paddb %xmm4, %xmm1
-; SSE41-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE41-NEXT:    movdqa %xmm1, %xmm0
+; SSE41-NEXT:    pand %xmm1, %xmm0
+; SSE41-NEXT:    pshufb %xmm0, %xmm3
+; SSE41-NEXT:    paddb %xmm4, %xmm3
+; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
+; SSE41-NEXT:    pmaxub %xmm3, %xmm0
+; SSE41-NEXT:    pcmpeqb %xmm3, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: ugt_6_v16i8:
@@ -1309,7 +1340,8 @@ define <16 x i8> @ugt_6_v16i8(<16 x i8> %0) {
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
 ; AVX1-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpmaxub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: ugt_6_v16i8:
@@ -1322,7 +1354,8 @@ define <16 x i8> @ugt_6_v16i8(<16 x i8> %0) {
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
 ; AVX2-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpmaxub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VPOPCNTDQ-LABEL: ugt_6_v16i8:
@@ -1354,7 +1387,8 @@ define <16 x i8> @ugt_6_v16i8(<16 x i8> %0) {
 ; BITALG-LABEL: ugt_6_v16i8:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
-; BITALG-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2b %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %0)
   %3 = icmp ugt <16 x i8> %2, <i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6>
@@ -1415,8 +1449,9 @@ define <16 x i8> @ult_7_v16i8(<16 x i8> %0) {
 ; SSSE3-NEXT:    pand %xmm1, %xmm0
 ; SSSE3-NEXT:    pshufb %xmm0, %xmm3
 ; SSSE3-NEXT:    paddb %xmm4, %xmm3
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
-; SSSE3-NEXT:    pcmpgtb %xmm3, %xmm0
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6]
+; SSSE3-NEXT:    pminub %xmm3, %xmm0
+; SSSE3-NEXT:    pcmpeqb %xmm3, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: ult_7_v16i8:
@@ -1431,8 +1466,9 @@ define <16 x i8> @ult_7_v16i8(<16 x i8> %0) {
 ; SSE41-NEXT:    pand %xmm1, %xmm0
 ; SSE41-NEXT:    pshufb %xmm0, %xmm3
 ; SSE41-NEXT:    paddb %xmm4, %xmm3
-; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
-; SSE41-NEXT:    pcmpgtb %xmm3, %xmm0
+; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6]
+; SSE41-NEXT:    pminub %xmm3, %xmm0
+; SSE41-NEXT:    pcmpeqb %xmm3, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: ult_7_v16i8:
@@ -1445,8 +1481,8 @@ define <16 x i8> @ult_7_v16i8(<16 x i8> %0) {
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
 ; AVX1-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
-; AVX1-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: ult_7_v16i8:
@@ -1459,8 +1495,8 @@ define <16 x i8> @ult_7_v16i8(<16 x i8> %0) {
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
 ; AVX2-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
-; AVX2-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VPOPCNTDQ-LABEL: ult_7_v16i8:
@@ -1495,8 +1531,8 @@ define <16 x i8> @ult_7_v16i8(<16 x i8> %0) {
 ; BITALG-LABEL: ult_7_v16i8:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
-; BITALG-NEXT:    vmovdqa {{.*#+}} xmm1 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
-; BITALG-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2b %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %0)
   %3 = icmp ult <16 x i8> %2, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
@@ -1569,7 +1605,8 @@ define <8 x i16> @ugt_1_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ugt_1_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vpcmpgtw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ugt <8 x i16> %2, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
@@ -1608,8 +1645,8 @@ define <8 x i16> @ult_2_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ult_2_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vmovdqa {{.*#+}} xmm1 = [2,2,2,2,2,2,2,2]
-; BITALG-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ult <8 x i16> %2, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
@@ -1763,7 +1800,8 @@ define <8 x i16> @ugt_2_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ugt_2_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vpcmpgtw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ugt <8 x i16> %2, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
@@ -1926,8 +1964,8 @@ define <8 x i16> @ult_3_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ult_3_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vmovdqa {{.*#+}} xmm1 = [3,3,3,3,3,3,3,3]
-; BITALG-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ult <8 x i16> %2, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
@@ -2081,7 +2119,8 @@ define <8 x i16> @ugt_3_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ugt_3_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vpcmpgtw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ugt <8 x i16> %2, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
@@ -2244,8 +2283,8 @@ define <8 x i16> @ult_4_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ult_4_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,4,4,4,4,4,4,4]
-; BITALG-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ult <8 x i16> %2, <i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4>
@@ -2399,7 +2438,8 @@ define <8 x i16> @ugt_4_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ugt_4_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vpcmpgtw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ugt <8 x i16> %2, <i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4>
@@ -2562,8 +2602,8 @@ define <8 x i16> @ult_5_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ult_5_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vmovdqa {{.*#+}} xmm1 = [5,5,5,5,5,5,5,5]
-; BITALG-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ult <8 x i16> %2, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
@@ -2717,7 +2757,8 @@ define <8 x i16> @ugt_5_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ugt_5_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vpcmpgtw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ugt <8 x i16> %2, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
@@ -2880,8 +2921,8 @@ define <8 x i16> @ult_6_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ult_6_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vmovdqa {{.*#+}} xmm1 = [6,6,6,6,6,6,6,6]
-; BITALG-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ult <8 x i16> %2, <i16 6, i16 6, i16 6, i16 6, i16 6, i16 6, i16 6, i16 6>
@@ -3035,7 +3076,8 @@ define <8 x i16> @ugt_6_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ugt_6_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vpcmpgtw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ugt <8 x i16> %2, <i16 6, i16 6, i16 6, i16 6, i16 6, i16 6, i16 6, i16 6>
@@ -3198,8 +3240,8 @@ define <8 x i16> @ult_7_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ult_7_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vmovdqa {{.*#+}} xmm1 = [7,7,7,7,7,7,7,7]
-; BITALG-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ult <8 x i16> %2, <i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7>
@@ -3353,7 +3395,8 @@ define <8 x i16> @ugt_7_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ugt_7_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vpcmpgtw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ugt <8 x i16> %2, <i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7>
@@ -3516,8 +3559,8 @@ define <8 x i16> @ult_8_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ult_8_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vmovdqa {{.*#+}} xmm1 = [8,8,8,8,8,8,8,8]
-; BITALG-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ult <8 x i16> %2, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
@@ -3671,7 +3714,8 @@ define <8 x i16> @ugt_8_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ugt_8_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vpcmpgtw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ugt <8 x i16> %2, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
@@ -3834,8 +3878,8 @@ define <8 x i16> @ult_9_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ult_9_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vmovdqa {{.*#+}} xmm1 = [9,9,9,9,9,9,9,9]
-; BITALG-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ult <8 x i16> %2, <i16 9, i16 9, i16 9, i16 9, i16 9, i16 9, i16 9, i16 9>
@@ -3989,7 +4033,8 @@ define <8 x i16> @ugt_9_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ugt_9_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vpcmpgtw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ugt <8 x i16> %2, <i16 9, i16 9, i16 9, i16 9, i16 9, i16 9, i16 9, i16 9>
@@ -4152,8 +4197,8 @@ define <8 x i16> @ult_10_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ult_10_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vmovdqa {{.*#+}} xmm1 = [10,10,10,10,10,10,10,10]
-; BITALG-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ult <8 x i16> %2, <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>
@@ -4307,7 +4352,8 @@ define <8 x i16> @ugt_10_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ugt_10_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vpcmpgtw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ugt <8 x i16> %2, <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>
@@ -4470,8 +4516,8 @@ define <8 x i16> @ult_11_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ult_11_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vmovdqa {{.*#+}} xmm1 = [11,11,11,11,11,11,11,11]
-; BITALG-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ult <8 x i16> %2, <i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11>
@@ -4625,7 +4671,8 @@ define <8 x i16> @ugt_11_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ugt_11_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vpcmpgtw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ugt <8 x i16> %2, <i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11>
@@ -4788,8 +4835,8 @@ define <8 x i16> @ult_12_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ult_12_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vmovdqa {{.*#+}} xmm1 = [12,12,12,12,12,12,12,12]
-; BITALG-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ult <8 x i16> %2, <i16 12, i16 12, i16 12, i16 12, i16 12, i16 12, i16 12, i16 12>
@@ -4943,7 +4990,8 @@ define <8 x i16> @ugt_12_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ugt_12_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vpcmpgtw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ugt <8 x i16> %2, <i16 12, i16 12, i16 12, i16 12, i16 12, i16 12, i16 12, i16 12>
@@ -5106,8 +5154,8 @@ define <8 x i16> @ult_13_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ult_13_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vmovdqa {{.*#+}} xmm1 = [13,13,13,13,13,13,13,13]
-; BITALG-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ult <8 x i16> %2, <i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13>
@@ -5261,7 +5309,8 @@ define <8 x i16> @ugt_13_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ugt_13_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vpcmpgtw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ugt <8 x i16> %2, <i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13>
@@ -5424,8 +5473,8 @@ define <8 x i16> @ult_14_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ult_14_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vmovdqa {{.*#+}} xmm1 = [14,14,14,14,14,14,14,14]
-; BITALG-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ult <8 x i16> %2, <i16 14, i16 14, i16 14, i16 14, i16 14, i16 14, i16 14, i16 14>
@@ -5579,7 +5628,8 @@ define <8 x i16> @ugt_14_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ugt_14_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vpcmpgtw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ugt <8 x i16> %2, <i16 14, i16 14, i16 14, i16 14, i16 14, i16 14, i16 14, i16 14>
@@ -5742,8 +5792,8 @@ define <8 x i16> @ult_15_v8i16(<8 x i16> %0) {
 ; BITALG-LABEL: ult_15_v8i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %xmm0, %xmm0
-; BITALG-NEXT:    vmovdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15]
-; BITALG-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %xmm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   %3 = icmp ult <8 x i16> %2, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
@@ -5795,8 +5845,9 @@ define <4 x i32> @ugt_1_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_1_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_1_v4i32:
@@ -5866,8 +5917,9 @@ define <4 x i32> @ult_2_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_2_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2,2,2,2]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_2_v4i32:
@@ -6041,8 +6093,9 @@ define <4 x i32> @ugt_2_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_2_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2,2,2,2]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_2_v4i32:
@@ -6069,8 +6122,9 @@ define <4 x i32> @ugt_2_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2,2,2,2]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 2, i32 2, i32 2, i32 2>
@@ -6230,8 +6284,9 @@ define <4 x i32> @ult_3_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_3_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [3,3,3,3]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_3_v4i32:
@@ -6258,8 +6313,9 @@ define <4 x i32> @ult_3_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [3,3,3,3]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 3, i32 3, i32 3, i32 3>
@@ -6415,8 +6471,9 @@ define <4 x i32> @ugt_3_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_3_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [3,3,3,3]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_3_v4i32:
@@ -6443,8 +6500,9 @@ define <4 x i32> @ugt_3_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [3,3,3,3]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 3, i32 3, i32 3, i32 3>
@@ -6604,8 +6662,9 @@ define <4 x i32> @ult_4_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_4_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4,4,4,4]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_4_v4i32:
@@ -6632,8 +6691,9 @@ define <4 x i32> @ult_4_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4,4,4,4]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 4, i32 4, i32 4, i32 4>
@@ -6789,8 +6849,9 @@ define <4 x i32> @ugt_4_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_4_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4,4,4,4]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_4_v4i32:
@@ -6817,8 +6878,9 @@ define <4 x i32> @ugt_4_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4,4,4,4]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 4, i32 4, i32 4, i32 4>
@@ -6978,8 +7040,9 @@ define <4 x i32> @ult_5_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_5_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [5,5,5,5]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_5_v4i32:
@@ -7006,8 +7069,9 @@ define <4 x i32> @ult_5_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [5,5,5,5]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 5, i32 5, i32 5, i32 5>
@@ -7163,8 +7227,9 @@ define <4 x i32> @ugt_5_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_5_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [5,5,5,5]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_5_v4i32:
@@ -7191,8 +7256,9 @@ define <4 x i32> @ugt_5_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [5,5,5,5]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 5, i32 5, i32 5, i32 5>
@@ -7352,8 +7418,9 @@ define <4 x i32> @ult_6_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_6_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [6,6,6,6]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_6_v4i32:
@@ -7380,8 +7447,9 @@ define <4 x i32> @ult_6_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [6,6,6,6]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 6, i32 6, i32 6, i32 6>
@@ -7537,8 +7605,9 @@ define <4 x i32> @ugt_6_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_6_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [6,6,6,6]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_6_v4i32:
@@ -7565,8 +7634,9 @@ define <4 x i32> @ugt_6_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [6,6,6,6]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 6, i32 6, i32 6, i32 6>
@@ -7726,8 +7796,9 @@ define <4 x i32> @ult_7_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_7_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [7,7,7,7]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_7_v4i32:
@@ -7754,8 +7825,9 @@ define <4 x i32> @ult_7_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [7,7,7,7]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 7, i32 7, i32 7, i32 7>
@@ -7911,8 +7983,9 @@ define <4 x i32> @ugt_7_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_7_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [7,7,7,7]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_7_v4i32:
@@ -7939,8 +8012,9 @@ define <4 x i32> @ugt_7_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [7,7,7,7]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 7, i32 7, i32 7, i32 7>
@@ -8100,8 +8174,9 @@ define <4 x i32> @ult_8_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_8_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [8,8,8,8]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_8_v4i32:
@@ -8128,8 +8203,9 @@ define <4 x i32> @ult_8_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [8,8,8,8]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 8, i32 8, i32 8, i32 8>
@@ -8285,8 +8361,9 @@ define <4 x i32> @ugt_8_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_8_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [8,8,8,8]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_8_v4i32:
@@ -8313,8 +8390,9 @@ define <4 x i32> @ugt_8_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [8,8,8,8]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 8, i32 8, i32 8, i32 8>
@@ -8474,8 +8552,9 @@ define <4 x i32> @ult_9_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_9_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [9,9,9,9]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_9_v4i32:
@@ -8502,8 +8581,9 @@ define <4 x i32> @ult_9_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [9,9,9,9]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 9, i32 9, i32 9, i32 9>
@@ -8659,8 +8739,9 @@ define <4 x i32> @ugt_9_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_9_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [9,9,9,9]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_9_v4i32:
@@ -8687,8 +8768,9 @@ define <4 x i32> @ugt_9_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [9,9,9,9]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 9, i32 9, i32 9, i32 9>
@@ -8848,8 +8930,9 @@ define <4 x i32> @ult_10_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_10_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [10,10,10,10]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_10_v4i32:
@@ -8876,8 +8959,9 @@ define <4 x i32> @ult_10_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [10,10,10,10]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 10, i32 10, i32 10, i32 10>
@@ -9033,8 +9117,9 @@ define <4 x i32> @ugt_10_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_10_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [10,10,10,10]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_10_v4i32:
@@ -9061,8 +9146,9 @@ define <4 x i32> @ugt_10_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [10,10,10,10]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 10, i32 10, i32 10, i32 10>
@@ -9222,8 +9308,9 @@ define <4 x i32> @ult_11_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_11_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [11,11,11,11]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_11_v4i32:
@@ -9250,8 +9337,9 @@ define <4 x i32> @ult_11_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [11,11,11,11]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 11, i32 11, i32 11, i32 11>
@@ -9407,8 +9495,9 @@ define <4 x i32> @ugt_11_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_11_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [11,11,11,11]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_11_v4i32:
@@ -9435,8 +9524,9 @@ define <4 x i32> @ugt_11_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [11,11,11,11]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 11, i32 11, i32 11, i32 11>
@@ -9596,8 +9686,9 @@ define <4 x i32> @ult_12_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_12_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [12,12,12,12]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_12_v4i32:
@@ -9624,8 +9715,9 @@ define <4 x i32> @ult_12_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [12,12,12,12]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 12, i32 12, i32 12, i32 12>
@@ -9781,8 +9873,9 @@ define <4 x i32> @ugt_12_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_12_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [12,12,12,12]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_12_v4i32:
@@ -9809,8 +9902,9 @@ define <4 x i32> @ugt_12_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [12,12,12,12]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 12, i32 12, i32 12, i32 12>
@@ -9970,8 +10064,9 @@ define <4 x i32> @ult_13_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_13_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [13,13,13,13]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_13_v4i32:
@@ -9998,8 +10093,9 @@ define <4 x i32> @ult_13_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [13,13,13,13]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 13, i32 13, i32 13, i32 13>
@@ -10155,8 +10251,9 @@ define <4 x i32> @ugt_13_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_13_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [13,13,13,13]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_13_v4i32:
@@ -10183,8 +10280,9 @@ define <4 x i32> @ugt_13_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [13,13,13,13]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 13, i32 13, i32 13, i32 13>
@@ -10344,8 +10442,9 @@ define <4 x i32> @ult_14_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_14_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [14,14,14,14]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_14_v4i32:
@@ -10372,8 +10471,9 @@ define <4 x i32> @ult_14_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [14,14,14,14]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 14, i32 14, i32 14, i32 14>
@@ -10529,8 +10629,9 @@ define <4 x i32> @ugt_14_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_14_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [14,14,14,14]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_14_v4i32:
@@ -10557,8 +10658,9 @@ define <4 x i32> @ugt_14_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [14,14,14,14]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 14, i32 14, i32 14, i32 14>
@@ -10718,8 +10820,9 @@ define <4 x i32> @ult_15_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_15_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_15_v4i32:
@@ -10746,8 +10849,9 @@ define <4 x i32> @ult_15_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 15, i32 15, i32 15, i32 15>
@@ -10903,8 +11007,9 @@ define <4 x i32> @ugt_15_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_15_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_15_v4i32:
@@ -10931,8 +11036,9 @@ define <4 x i32> @ugt_15_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 15, i32 15, i32 15, i32 15>
@@ -11092,8 +11198,9 @@ define <4 x i32> @ult_16_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_16_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [16,16,16,16]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_16_v4i32:
@@ -11120,8 +11227,9 @@ define <4 x i32> @ult_16_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [16,16,16,16]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 16, i32 16, i32 16, i32 16>
@@ -11277,8 +11385,9 @@ define <4 x i32> @ugt_16_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_16_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [16,16,16,16]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_16_v4i32:
@@ -11305,8 +11414,9 @@ define <4 x i32> @ugt_16_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [16,16,16,16]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 16, i32 16, i32 16, i32 16>
@@ -11466,8 +11576,9 @@ define <4 x i32> @ult_17_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_17_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [17,17,17,17]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_17_v4i32:
@@ -11494,8 +11605,9 @@ define <4 x i32> @ult_17_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [17,17,17,17]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 17, i32 17, i32 17, i32 17>
@@ -11651,8 +11763,9 @@ define <4 x i32> @ugt_17_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_17_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [17,17,17,17]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_17_v4i32:
@@ -11679,8 +11792,9 @@ define <4 x i32> @ugt_17_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [17,17,17,17]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 17, i32 17, i32 17, i32 17>
@@ -11840,8 +11954,9 @@ define <4 x i32> @ult_18_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_18_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [18,18,18,18]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_18_v4i32:
@@ -11868,8 +11983,9 @@ define <4 x i32> @ult_18_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [18,18,18,18]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 18, i32 18, i32 18, i32 18>
@@ -12025,8 +12141,9 @@ define <4 x i32> @ugt_18_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_18_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [18,18,18,18]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_18_v4i32:
@@ -12053,8 +12170,9 @@ define <4 x i32> @ugt_18_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [18,18,18,18]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 18, i32 18, i32 18, i32 18>
@@ -12214,8 +12332,9 @@ define <4 x i32> @ult_19_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_19_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [19,19,19,19]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_19_v4i32:
@@ -12242,8 +12361,9 @@ define <4 x i32> @ult_19_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [19,19,19,19]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 19, i32 19, i32 19, i32 19>
@@ -12399,8 +12519,9 @@ define <4 x i32> @ugt_19_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_19_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [19,19,19,19]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_19_v4i32:
@@ -12427,8 +12548,9 @@ define <4 x i32> @ugt_19_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [19,19,19,19]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 19, i32 19, i32 19, i32 19>
@@ -12588,8 +12710,9 @@ define <4 x i32> @ult_20_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_20_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [20,20,20,20]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_20_v4i32:
@@ -12616,8 +12739,9 @@ define <4 x i32> @ult_20_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [20,20,20,20]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 20, i32 20, i32 20, i32 20>
@@ -12773,8 +12897,9 @@ define <4 x i32> @ugt_20_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_20_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [20,20,20,20]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_20_v4i32:
@@ -12801,8 +12926,9 @@ define <4 x i32> @ugt_20_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [20,20,20,20]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 20, i32 20, i32 20, i32 20>
@@ -12962,8 +13088,9 @@ define <4 x i32> @ult_21_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_21_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [21,21,21,21]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_21_v4i32:
@@ -12990,8 +13117,9 @@ define <4 x i32> @ult_21_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [21,21,21,21]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 21, i32 21, i32 21, i32 21>
@@ -13147,8 +13275,9 @@ define <4 x i32> @ugt_21_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_21_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [21,21,21,21]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_21_v4i32:
@@ -13175,8 +13304,9 @@ define <4 x i32> @ugt_21_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [21,21,21,21]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 21, i32 21, i32 21, i32 21>
@@ -13336,8 +13466,9 @@ define <4 x i32> @ult_22_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_22_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [22,22,22,22]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_22_v4i32:
@@ -13364,8 +13495,9 @@ define <4 x i32> @ult_22_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [22,22,22,22]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 22, i32 22, i32 22, i32 22>
@@ -13521,8 +13653,9 @@ define <4 x i32> @ugt_22_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_22_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [22,22,22,22]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_22_v4i32:
@@ -13549,8 +13682,9 @@ define <4 x i32> @ugt_22_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [22,22,22,22]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 22, i32 22, i32 22, i32 22>
@@ -13710,8 +13844,9 @@ define <4 x i32> @ult_23_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_23_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [23,23,23,23]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_23_v4i32:
@@ -13738,8 +13873,9 @@ define <4 x i32> @ult_23_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [23,23,23,23]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 23, i32 23, i32 23, i32 23>
@@ -13895,8 +14031,9 @@ define <4 x i32> @ugt_23_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_23_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [23,23,23,23]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_23_v4i32:
@@ -13923,8 +14060,9 @@ define <4 x i32> @ugt_23_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [23,23,23,23]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 23, i32 23, i32 23, i32 23>
@@ -14084,8 +14222,9 @@ define <4 x i32> @ult_24_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_24_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [24,24,24,24]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_24_v4i32:
@@ -14112,8 +14251,9 @@ define <4 x i32> @ult_24_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [24,24,24,24]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 24, i32 24, i32 24, i32 24>
@@ -14269,8 +14409,9 @@ define <4 x i32> @ugt_24_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_24_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [24,24,24,24]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_24_v4i32:
@@ -14297,8 +14438,9 @@ define <4 x i32> @ugt_24_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [24,24,24,24]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 24, i32 24, i32 24, i32 24>
@@ -14458,8 +14600,9 @@ define <4 x i32> @ult_25_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_25_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [25,25,25,25]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_25_v4i32:
@@ -14486,8 +14629,9 @@ define <4 x i32> @ult_25_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [25,25,25,25]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 25, i32 25, i32 25, i32 25>
@@ -14643,8 +14787,9 @@ define <4 x i32> @ugt_25_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_25_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [25,25,25,25]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_25_v4i32:
@@ -14671,8 +14816,9 @@ define <4 x i32> @ugt_25_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [25,25,25,25]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 25, i32 25, i32 25, i32 25>
@@ -14832,8 +14978,9 @@ define <4 x i32> @ult_26_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_26_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [26,26,26,26]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_26_v4i32:
@@ -14860,8 +15007,9 @@ define <4 x i32> @ult_26_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [26,26,26,26]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 26, i32 26, i32 26, i32 26>
@@ -15017,8 +15165,9 @@ define <4 x i32> @ugt_26_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_26_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [26,26,26,26]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_26_v4i32:
@@ -15045,8 +15194,9 @@ define <4 x i32> @ugt_26_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [26,26,26,26]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 26, i32 26, i32 26, i32 26>
@@ -15206,8 +15356,9 @@ define <4 x i32> @ult_27_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_27_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [27,27,27,27]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_27_v4i32:
@@ -15234,8 +15385,9 @@ define <4 x i32> @ult_27_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [27,27,27,27]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 27, i32 27, i32 27, i32 27>
@@ -15391,8 +15543,9 @@ define <4 x i32> @ugt_27_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_27_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [27,27,27,27]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_27_v4i32:
@@ -15419,8 +15572,9 @@ define <4 x i32> @ugt_27_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [27,27,27,27]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 27, i32 27, i32 27, i32 27>
@@ -15580,8 +15734,9 @@ define <4 x i32> @ult_28_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_28_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [28,28,28,28]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_28_v4i32:
@@ -15608,8 +15763,9 @@ define <4 x i32> @ult_28_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [28,28,28,28]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 28, i32 28, i32 28, i32 28>
@@ -15765,8 +15921,9 @@ define <4 x i32> @ugt_28_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_28_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [28,28,28,28]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_28_v4i32:
@@ -15793,8 +15950,9 @@ define <4 x i32> @ugt_28_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [28,28,28,28]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 28, i32 28, i32 28, i32 28>
@@ -15954,8 +16112,9 @@ define <4 x i32> @ult_29_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_29_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [29,29,29,29]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_29_v4i32:
@@ -15982,8 +16141,9 @@ define <4 x i32> @ult_29_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [29,29,29,29]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 29, i32 29, i32 29, i32 29>
@@ -16139,8 +16299,9 @@ define <4 x i32> @ugt_29_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_29_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [29,29,29,29]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_29_v4i32:
@@ -16167,8 +16328,9 @@ define <4 x i32> @ugt_29_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [29,29,29,29]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 29, i32 29, i32 29, i32 29>
@@ -16328,8 +16490,9 @@ define <4 x i32> @ult_30_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_30_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [30,30,30,30]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_30_v4i32:
@@ -16356,8 +16519,9 @@ define <4 x i32> @ult_30_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [30,30,30,30]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 30, i32 30, i32 30, i32 30>
@@ -16513,8 +16677,9 @@ define <4 x i32> @ugt_30_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_30_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [30,30,30,30]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_30_v4i32:
@@ -16541,8 +16706,9 @@ define <4 x i32> @ugt_30_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [30,30,30,30]
-; BITALG-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ugt <4 x i32> %2, <i32 30, i32 30, i32 30, i32 30>
@@ -16702,8 +16868,9 @@ define <4 x i32> @ult_31_v4i32(<4 x i32> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_31_v4i32:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [31,31,31,31]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_31_v4i32:
@@ -16730,8 +16897,9 @@ define <4 x i32> @ult_31_v4i32(<4 x i32> %0) {
 ; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [31,31,31,31]
-; BITALG-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ult <4 x i32> %2, <i32 31, i32 31, i32 31, i32 31>
@@ -16821,8 +16989,9 @@ define <2 x i64> @ugt_1_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_1_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [1,1]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_1_v2i64:
@@ -16925,8 +17094,9 @@ define <2 x i64> @ult_2_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_2_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [2,2]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_2_v2i64:
@@ -17098,8 +17268,9 @@ define <2 x i64> @ugt_2_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_2_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [2,2]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_2_v2i64:
@@ -17117,8 +17288,9 @@ define <2 x i64> @ugt_2_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [2,2]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 2, i64 2>
@@ -17279,8 +17451,9 @@ define <2 x i64> @ult_3_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_3_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [3,3]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_3_v2i64:
@@ -17299,8 +17472,9 @@ define <2 x i64> @ult_3_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [3,3]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 3, i64 3>
@@ -17454,8 +17628,9 @@ define <2 x i64> @ugt_3_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_3_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [3,3]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_3_v2i64:
@@ -17473,8 +17648,9 @@ define <2 x i64> @ugt_3_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [3,3]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 3, i64 3>
@@ -17635,8 +17811,9 @@ define <2 x i64> @ult_4_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_4_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4,4]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_4_v2i64:
@@ -17655,8 +17832,9 @@ define <2 x i64> @ult_4_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4,4]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 4, i64 4>
@@ -17810,8 +17988,9 @@ define <2 x i64> @ugt_4_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_4_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4,4]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_4_v2i64:
@@ -17829,8 +18008,9 @@ define <2 x i64> @ugt_4_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4,4]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 4, i64 4>
@@ -17991,8 +18171,9 @@ define <2 x i64> @ult_5_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_5_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [5,5]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_5_v2i64:
@@ -18011,8 +18192,9 @@ define <2 x i64> @ult_5_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [5,5]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 5, i64 5>
@@ -18166,8 +18348,9 @@ define <2 x i64> @ugt_5_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_5_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [5,5]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_5_v2i64:
@@ -18185,8 +18368,9 @@ define <2 x i64> @ugt_5_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [5,5]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 5, i64 5>
@@ -18347,8 +18531,9 @@ define <2 x i64> @ult_6_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_6_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [6,6]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_6_v2i64:
@@ -18367,8 +18552,9 @@ define <2 x i64> @ult_6_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [6,6]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 6, i64 6>
@@ -18522,8 +18708,9 @@ define <2 x i64> @ugt_6_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_6_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [6,6]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_6_v2i64:
@@ -18541,8 +18728,9 @@ define <2 x i64> @ugt_6_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [6,6]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 6, i64 6>
@@ -18703,8 +18891,9 @@ define <2 x i64> @ult_7_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_7_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [7,7]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_7_v2i64:
@@ -18723,8 +18912,9 @@ define <2 x i64> @ult_7_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [7,7]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 7, i64 7>
@@ -18878,8 +19068,9 @@ define <2 x i64> @ugt_7_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_7_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [7,7]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_7_v2i64:
@@ -18897,8 +19088,9 @@ define <2 x i64> @ugt_7_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [7,7]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 7, i64 7>
@@ -19059,8 +19251,9 @@ define <2 x i64> @ult_8_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_8_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [8,8]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_8_v2i64:
@@ -19079,8 +19272,9 @@ define <2 x i64> @ult_8_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [8,8]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 8, i64 8>
@@ -19234,8 +19428,9 @@ define <2 x i64> @ugt_8_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_8_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [8,8]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_8_v2i64:
@@ -19253,8 +19448,9 @@ define <2 x i64> @ugt_8_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [8,8]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 8, i64 8>
@@ -19415,8 +19611,9 @@ define <2 x i64> @ult_9_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_9_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [9,9]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_9_v2i64:
@@ -19435,8 +19632,9 @@ define <2 x i64> @ult_9_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [9,9]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 9, i64 9>
@@ -19590,8 +19788,9 @@ define <2 x i64> @ugt_9_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_9_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [9,9]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_9_v2i64:
@@ -19609,8 +19808,9 @@ define <2 x i64> @ugt_9_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [9,9]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 9, i64 9>
@@ -19771,8 +19971,9 @@ define <2 x i64> @ult_10_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_10_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [10,10]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_10_v2i64:
@@ -19791,8 +19992,9 @@ define <2 x i64> @ult_10_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [10,10]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 10, i64 10>
@@ -19946,8 +20148,9 @@ define <2 x i64> @ugt_10_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_10_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [10,10]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_10_v2i64:
@@ -19965,8 +20168,9 @@ define <2 x i64> @ugt_10_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [10,10]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 10, i64 10>
@@ -20127,8 +20331,9 @@ define <2 x i64> @ult_11_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_11_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [11,11]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_11_v2i64:
@@ -20147,8 +20352,9 @@ define <2 x i64> @ult_11_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [11,11]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 11, i64 11>
@@ -20302,8 +20508,9 @@ define <2 x i64> @ugt_11_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_11_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [11,11]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_11_v2i64:
@@ -20321,8 +20528,9 @@ define <2 x i64> @ugt_11_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [11,11]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 11, i64 11>
@@ -20483,8 +20691,9 @@ define <2 x i64> @ult_12_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_12_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [12,12]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_12_v2i64:
@@ -20503,8 +20712,9 @@ define <2 x i64> @ult_12_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [12,12]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 12, i64 12>
@@ -20658,8 +20868,9 @@ define <2 x i64> @ugt_12_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_12_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [12,12]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_12_v2i64:
@@ -20677,8 +20888,9 @@ define <2 x i64> @ugt_12_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [12,12]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 12, i64 12>
@@ -20839,8 +21051,9 @@ define <2 x i64> @ult_13_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_13_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [13,13]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_13_v2i64:
@@ -20859,8 +21072,9 @@ define <2 x i64> @ult_13_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [13,13]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 13, i64 13>
@@ -21014,8 +21228,9 @@ define <2 x i64> @ugt_13_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_13_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [13,13]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_13_v2i64:
@@ -21033,8 +21248,9 @@ define <2 x i64> @ugt_13_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [13,13]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 13, i64 13>
@@ -21195,8 +21411,9 @@ define <2 x i64> @ult_14_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_14_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [14,14]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_14_v2i64:
@@ -21215,8 +21432,9 @@ define <2 x i64> @ult_14_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [14,14]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 14, i64 14>
@@ -21370,8 +21588,9 @@ define <2 x i64> @ugt_14_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_14_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [14,14]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_14_v2i64:
@@ -21389,8 +21608,9 @@ define <2 x i64> @ugt_14_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [14,14]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 14, i64 14>
@@ -21551,8 +21771,9 @@ define <2 x i64> @ult_15_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_15_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [15,15]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_15_v2i64:
@@ -21571,8 +21792,9 @@ define <2 x i64> @ult_15_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [15,15]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 15, i64 15>
@@ -21726,8 +21948,9 @@ define <2 x i64> @ugt_15_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_15_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [15,15]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_15_v2i64:
@@ -21745,8 +21968,9 @@ define <2 x i64> @ugt_15_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [15,15]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 15, i64 15>
@@ -21907,8 +22131,9 @@ define <2 x i64> @ult_16_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_16_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [16,16]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_16_v2i64:
@@ -21927,8 +22152,9 @@ define <2 x i64> @ult_16_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [16,16]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 16, i64 16>
@@ -22082,8 +22308,9 @@ define <2 x i64> @ugt_16_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_16_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [16,16]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_16_v2i64:
@@ -22101,8 +22328,9 @@ define <2 x i64> @ugt_16_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [16,16]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 16, i64 16>
@@ -22263,8 +22491,9 @@ define <2 x i64> @ult_17_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_17_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [17,17]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_17_v2i64:
@@ -22283,8 +22512,9 @@ define <2 x i64> @ult_17_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [17,17]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 17, i64 17>
@@ -22438,8 +22668,9 @@ define <2 x i64> @ugt_17_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_17_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [17,17]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_17_v2i64:
@@ -22457,8 +22688,9 @@ define <2 x i64> @ugt_17_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [17,17]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 17, i64 17>
@@ -22619,8 +22851,9 @@ define <2 x i64> @ult_18_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_18_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [18,18]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_18_v2i64:
@@ -22639,8 +22872,9 @@ define <2 x i64> @ult_18_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [18,18]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 18, i64 18>
@@ -22794,8 +23028,9 @@ define <2 x i64> @ugt_18_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_18_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [18,18]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_18_v2i64:
@@ -22813,8 +23048,9 @@ define <2 x i64> @ugt_18_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [18,18]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 18, i64 18>
@@ -22975,8 +23211,9 @@ define <2 x i64> @ult_19_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_19_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [19,19]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_19_v2i64:
@@ -22995,8 +23232,9 @@ define <2 x i64> @ult_19_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [19,19]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 19, i64 19>
@@ -23150,8 +23388,9 @@ define <2 x i64> @ugt_19_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_19_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [19,19]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_19_v2i64:
@@ -23169,8 +23408,9 @@ define <2 x i64> @ugt_19_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [19,19]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 19, i64 19>
@@ -23331,8 +23571,9 @@ define <2 x i64> @ult_20_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_20_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [20,20]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_20_v2i64:
@@ -23351,8 +23592,9 @@ define <2 x i64> @ult_20_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [20,20]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 20, i64 20>
@@ -23506,8 +23748,9 @@ define <2 x i64> @ugt_20_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_20_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [20,20]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_20_v2i64:
@@ -23525,8 +23768,9 @@ define <2 x i64> @ugt_20_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [20,20]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 20, i64 20>
@@ -23687,8 +23931,9 @@ define <2 x i64> @ult_21_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_21_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [21,21]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_21_v2i64:
@@ -23707,8 +23952,9 @@ define <2 x i64> @ult_21_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [21,21]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 21, i64 21>
@@ -23862,8 +24108,9 @@ define <2 x i64> @ugt_21_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_21_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [21,21]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_21_v2i64:
@@ -23881,8 +24128,9 @@ define <2 x i64> @ugt_21_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [21,21]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 21, i64 21>
@@ -24043,8 +24291,9 @@ define <2 x i64> @ult_22_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_22_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [22,22]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_22_v2i64:
@@ -24063,8 +24312,9 @@ define <2 x i64> @ult_22_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [22,22]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 22, i64 22>
@@ -24218,8 +24468,9 @@ define <2 x i64> @ugt_22_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_22_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [22,22]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_22_v2i64:
@@ -24237,8 +24488,9 @@ define <2 x i64> @ugt_22_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [22,22]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 22, i64 22>
@@ -24399,8 +24651,9 @@ define <2 x i64> @ult_23_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_23_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [23,23]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_23_v2i64:
@@ -24419,8 +24672,9 @@ define <2 x i64> @ult_23_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [23,23]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 23, i64 23>
@@ -24574,8 +24828,9 @@ define <2 x i64> @ugt_23_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_23_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [23,23]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_23_v2i64:
@@ -24593,8 +24848,9 @@ define <2 x i64> @ugt_23_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [23,23]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 23, i64 23>
@@ -24755,8 +25011,9 @@ define <2 x i64> @ult_24_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_24_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [24,24]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_24_v2i64:
@@ -24775,8 +25032,9 @@ define <2 x i64> @ult_24_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [24,24]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 24, i64 24>
@@ -24930,8 +25188,9 @@ define <2 x i64> @ugt_24_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_24_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [24,24]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_24_v2i64:
@@ -24949,8 +25208,9 @@ define <2 x i64> @ugt_24_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [24,24]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 24, i64 24>
@@ -25111,8 +25371,9 @@ define <2 x i64> @ult_25_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_25_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [25,25]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_25_v2i64:
@@ -25131,8 +25392,9 @@ define <2 x i64> @ult_25_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [25,25]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 25, i64 25>
@@ -25286,8 +25548,9 @@ define <2 x i64> @ugt_25_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_25_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [25,25]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_25_v2i64:
@@ -25305,8 +25568,9 @@ define <2 x i64> @ugt_25_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [25,25]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 25, i64 25>
@@ -25467,8 +25731,9 @@ define <2 x i64> @ult_26_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_26_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [26,26]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_26_v2i64:
@@ -25487,8 +25752,9 @@ define <2 x i64> @ult_26_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [26,26]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 26, i64 26>
@@ -25642,8 +25908,9 @@ define <2 x i64> @ugt_26_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_26_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [26,26]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_26_v2i64:
@@ -25661,8 +25928,9 @@ define <2 x i64> @ugt_26_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [26,26]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 26, i64 26>
@@ -25823,8 +26091,9 @@ define <2 x i64> @ult_27_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_27_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [27,27]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_27_v2i64:
@@ -25843,8 +26112,9 @@ define <2 x i64> @ult_27_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [27,27]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 27, i64 27>
@@ -25998,8 +26268,9 @@ define <2 x i64> @ugt_27_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_27_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [27,27]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_27_v2i64:
@@ -26017,8 +26288,9 @@ define <2 x i64> @ugt_27_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [27,27]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 27, i64 27>
@@ -26179,8 +26451,9 @@ define <2 x i64> @ult_28_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_28_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [28,28]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_28_v2i64:
@@ -26199,8 +26472,9 @@ define <2 x i64> @ult_28_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [28,28]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 28, i64 28>
@@ -26354,8 +26628,9 @@ define <2 x i64> @ugt_28_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_28_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [28,28]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_28_v2i64:
@@ -26373,8 +26648,9 @@ define <2 x i64> @ugt_28_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [28,28]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 28, i64 28>
@@ -26535,8 +26811,9 @@ define <2 x i64> @ult_29_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_29_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [29,29]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_29_v2i64:
@@ -26555,8 +26832,9 @@ define <2 x i64> @ult_29_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [29,29]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 29, i64 29>
@@ -26710,8 +26988,9 @@ define <2 x i64> @ugt_29_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_29_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [29,29]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_29_v2i64:
@@ -26729,8 +27008,9 @@ define <2 x i64> @ugt_29_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [29,29]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 29, i64 29>
@@ -26891,8 +27171,9 @@ define <2 x i64> @ult_30_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_30_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [30,30]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_30_v2i64:
@@ -26911,8 +27192,9 @@ define <2 x i64> @ult_30_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [30,30]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 30, i64 30>
@@ -27066,8 +27348,9 @@ define <2 x i64> @ugt_30_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_30_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [30,30]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_30_v2i64:
@@ -27085,8 +27368,9 @@ define <2 x i64> @ugt_30_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [30,30]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 30, i64 30>
@@ -27247,8 +27531,9 @@ define <2 x i64> @ult_31_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_31_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [31,31]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_31_v2i64:
@@ -27267,8 +27552,9 @@ define <2 x i64> @ult_31_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [31,31]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 31, i64 31>
@@ -27422,8 +27708,9 @@ define <2 x i64> @ugt_31_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_31_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [31,31]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_31_v2i64:
@@ -27441,8 +27728,9 @@ define <2 x i64> @ugt_31_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [31,31]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 31, i64 31>
@@ -27603,8 +27891,9 @@ define <2 x i64> @ult_32_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_32_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [32,32]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_32_v2i64:
@@ -27623,8 +27912,9 @@ define <2 x i64> @ult_32_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [32,32]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 32, i64 32>
@@ -27778,8 +28068,9 @@ define <2 x i64> @ugt_32_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_32_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [32,32]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_32_v2i64:
@@ -27797,8 +28088,9 @@ define <2 x i64> @ugt_32_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [32,32]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 32, i64 32>
@@ -27959,8 +28251,9 @@ define <2 x i64> @ult_33_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_33_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [33,33]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_33_v2i64:
@@ -27979,8 +28272,9 @@ define <2 x i64> @ult_33_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [33,33]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 33, i64 33>
@@ -28134,8 +28428,9 @@ define <2 x i64> @ugt_33_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_33_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [33,33]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_33_v2i64:
@@ -28153,8 +28448,9 @@ define <2 x i64> @ugt_33_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [33,33]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 33, i64 33>
@@ -28315,8 +28611,9 @@ define <2 x i64> @ult_34_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_34_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [34,34]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_34_v2i64:
@@ -28335,8 +28632,9 @@ define <2 x i64> @ult_34_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [34,34]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 34, i64 34>
@@ -28490,8 +28788,9 @@ define <2 x i64> @ugt_34_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_34_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [34,34]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_34_v2i64:
@@ -28509,8 +28808,9 @@ define <2 x i64> @ugt_34_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [34,34]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 34, i64 34>
@@ -28671,8 +28971,9 @@ define <2 x i64> @ult_35_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_35_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [35,35]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_35_v2i64:
@@ -28691,8 +28992,9 @@ define <2 x i64> @ult_35_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [35,35]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 35, i64 35>
@@ -28846,8 +29148,9 @@ define <2 x i64> @ugt_35_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_35_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [35,35]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_35_v2i64:
@@ -28865,8 +29168,9 @@ define <2 x i64> @ugt_35_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [35,35]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 35, i64 35>
@@ -29027,8 +29331,9 @@ define <2 x i64> @ult_36_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_36_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [36,36]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_36_v2i64:
@@ -29047,8 +29352,9 @@ define <2 x i64> @ult_36_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [36,36]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 36, i64 36>
@@ -29202,8 +29508,9 @@ define <2 x i64> @ugt_36_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_36_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [36,36]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_36_v2i64:
@@ -29221,8 +29528,9 @@ define <2 x i64> @ugt_36_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [36,36]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 36, i64 36>
@@ -29383,8 +29691,9 @@ define <2 x i64> @ult_37_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_37_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [37,37]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_37_v2i64:
@@ -29403,8 +29712,9 @@ define <2 x i64> @ult_37_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [37,37]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 37, i64 37>
@@ -29558,8 +29868,9 @@ define <2 x i64> @ugt_37_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_37_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [37,37]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_37_v2i64:
@@ -29577,8 +29888,9 @@ define <2 x i64> @ugt_37_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [37,37]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 37, i64 37>
@@ -29739,8 +30051,9 @@ define <2 x i64> @ult_38_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_38_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [38,38]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_38_v2i64:
@@ -29759,8 +30072,9 @@ define <2 x i64> @ult_38_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [38,38]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 38, i64 38>
@@ -29914,8 +30228,9 @@ define <2 x i64> @ugt_38_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_38_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [38,38]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_38_v2i64:
@@ -29933,8 +30248,9 @@ define <2 x i64> @ugt_38_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [38,38]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 38, i64 38>
@@ -30095,8 +30411,9 @@ define <2 x i64> @ult_39_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_39_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [39,39]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_39_v2i64:
@@ -30115,8 +30432,9 @@ define <2 x i64> @ult_39_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [39,39]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 39, i64 39>
@@ -30270,8 +30588,9 @@ define <2 x i64> @ugt_39_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_39_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [39,39]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_39_v2i64:
@@ -30289,8 +30608,9 @@ define <2 x i64> @ugt_39_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [39,39]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 39, i64 39>
@@ -30451,8 +30771,9 @@ define <2 x i64> @ult_40_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_40_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [40,40]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_40_v2i64:
@@ -30471,8 +30792,9 @@ define <2 x i64> @ult_40_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [40,40]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 40, i64 40>
@@ -30626,8 +30948,9 @@ define <2 x i64> @ugt_40_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_40_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [40,40]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_40_v2i64:
@@ -30645,8 +30968,9 @@ define <2 x i64> @ugt_40_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [40,40]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 40, i64 40>
@@ -30807,8 +31131,9 @@ define <2 x i64> @ult_41_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_41_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [41,41]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_41_v2i64:
@@ -30827,8 +31152,9 @@ define <2 x i64> @ult_41_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [41,41]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 41, i64 41>
@@ -30982,8 +31308,9 @@ define <2 x i64> @ugt_41_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_41_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [41,41]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_41_v2i64:
@@ -31001,8 +31328,9 @@ define <2 x i64> @ugt_41_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [41,41]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 41, i64 41>
@@ -31163,8 +31491,9 @@ define <2 x i64> @ult_42_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_42_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [42,42]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_42_v2i64:
@@ -31183,8 +31512,9 @@ define <2 x i64> @ult_42_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [42,42]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 42, i64 42>
@@ -31338,8 +31668,9 @@ define <2 x i64> @ugt_42_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_42_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [42,42]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_42_v2i64:
@@ -31357,8 +31688,9 @@ define <2 x i64> @ugt_42_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [42,42]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 42, i64 42>
@@ -31519,8 +31851,9 @@ define <2 x i64> @ult_43_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_43_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [43,43]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_43_v2i64:
@@ -31539,8 +31872,9 @@ define <2 x i64> @ult_43_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [43,43]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 43, i64 43>
@@ -31694,8 +32028,9 @@ define <2 x i64> @ugt_43_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_43_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [43,43]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_43_v2i64:
@@ -31713,8 +32048,9 @@ define <2 x i64> @ugt_43_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [43,43]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 43, i64 43>
@@ -31875,8 +32211,9 @@ define <2 x i64> @ult_44_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_44_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [44,44]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_44_v2i64:
@@ -31895,8 +32232,9 @@ define <2 x i64> @ult_44_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [44,44]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 44, i64 44>
@@ -32050,8 +32388,9 @@ define <2 x i64> @ugt_44_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_44_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [44,44]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_44_v2i64:
@@ -32069,8 +32408,9 @@ define <2 x i64> @ugt_44_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [44,44]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 44, i64 44>
@@ -32231,8 +32571,9 @@ define <2 x i64> @ult_45_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_45_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [45,45]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_45_v2i64:
@@ -32251,8 +32592,9 @@ define <2 x i64> @ult_45_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [45,45]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 45, i64 45>
@@ -32406,8 +32748,9 @@ define <2 x i64> @ugt_45_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_45_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [45,45]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_45_v2i64:
@@ -32425,8 +32768,9 @@ define <2 x i64> @ugt_45_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [45,45]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 45, i64 45>
@@ -32587,8 +32931,9 @@ define <2 x i64> @ult_46_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_46_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [46,46]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_46_v2i64:
@@ -32607,8 +32952,9 @@ define <2 x i64> @ult_46_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [46,46]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 46, i64 46>
@@ -32762,8 +33108,9 @@ define <2 x i64> @ugt_46_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_46_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [46,46]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_46_v2i64:
@@ -32781,8 +33128,9 @@ define <2 x i64> @ugt_46_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [46,46]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 46, i64 46>
@@ -32943,8 +33291,9 @@ define <2 x i64> @ult_47_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_47_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [47,47]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_47_v2i64:
@@ -32963,8 +33312,9 @@ define <2 x i64> @ult_47_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [47,47]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 47, i64 47>
@@ -33118,8 +33468,9 @@ define <2 x i64> @ugt_47_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_47_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [47,47]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_47_v2i64:
@@ -33137,8 +33488,9 @@ define <2 x i64> @ugt_47_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [47,47]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 47, i64 47>
@@ -33299,8 +33651,9 @@ define <2 x i64> @ult_48_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_48_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [48,48]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_48_v2i64:
@@ -33319,8 +33672,9 @@ define <2 x i64> @ult_48_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [48,48]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 48, i64 48>
@@ -33474,8 +33828,9 @@ define <2 x i64> @ugt_48_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_48_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [48,48]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_48_v2i64:
@@ -33493,8 +33848,9 @@ define <2 x i64> @ugt_48_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [48,48]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 48, i64 48>
@@ -33655,8 +34011,9 @@ define <2 x i64> @ult_49_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_49_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [49,49]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_49_v2i64:
@@ -33675,8 +34032,9 @@ define <2 x i64> @ult_49_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [49,49]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 49, i64 49>
@@ -33830,8 +34188,9 @@ define <2 x i64> @ugt_49_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_49_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [49,49]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_49_v2i64:
@@ -33849,8 +34208,9 @@ define <2 x i64> @ugt_49_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [49,49]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 49, i64 49>
@@ -34011,8 +34371,9 @@ define <2 x i64> @ult_50_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_50_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [50,50]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_50_v2i64:
@@ -34031,8 +34392,9 @@ define <2 x i64> @ult_50_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [50,50]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 50, i64 50>
@@ -34186,8 +34548,9 @@ define <2 x i64> @ugt_50_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_50_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [50,50]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_50_v2i64:
@@ -34205,8 +34568,9 @@ define <2 x i64> @ugt_50_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [50,50]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 50, i64 50>
@@ -34367,8 +34731,9 @@ define <2 x i64> @ult_51_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_51_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [51,51]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_51_v2i64:
@@ -34387,8 +34752,9 @@ define <2 x i64> @ult_51_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [51,51]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 51, i64 51>
@@ -34542,8 +34908,9 @@ define <2 x i64> @ugt_51_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_51_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [51,51]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_51_v2i64:
@@ -34561,8 +34928,9 @@ define <2 x i64> @ugt_51_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [51,51]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 51, i64 51>
@@ -34723,8 +35091,9 @@ define <2 x i64> @ult_52_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_52_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [52,52]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_52_v2i64:
@@ -34743,8 +35112,9 @@ define <2 x i64> @ult_52_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [52,52]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 52, i64 52>
@@ -34898,8 +35268,9 @@ define <2 x i64> @ugt_52_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_52_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [52,52]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_52_v2i64:
@@ -34917,8 +35288,9 @@ define <2 x i64> @ugt_52_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [52,52]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 52, i64 52>
@@ -35079,8 +35451,9 @@ define <2 x i64> @ult_53_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_53_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [53,53]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_53_v2i64:
@@ -35099,8 +35472,9 @@ define <2 x i64> @ult_53_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [53,53]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 53, i64 53>
@@ -35254,8 +35628,9 @@ define <2 x i64> @ugt_53_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_53_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [53,53]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_53_v2i64:
@@ -35273,8 +35648,9 @@ define <2 x i64> @ugt_53_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [53,53]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 53, i64 53>
@@ -35435,8 +35811,9 @@ define <2 x i64> @ult_54_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_54_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [54,54]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_54_v2i64:
@@ -35455,8 +35832,9 @@ define <2 x i64> @ult_54_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [54,54]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 54, i64 54>
@@ -35610,8 +35988,9 @@ define <2 x i64> @ugt_54_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_54_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [54,54]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_54_v2i64:
@@ -35629,8 +36008,9 @@ define <2 x i64> @ugt_54_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [54,54]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 54, i64 54>
@@ -35791,8 +36171,9 @@ define <2 x i64> @ult_55_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_55_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [55,55]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_55_v2i64:
@@ -35811,8 +36192,9 @@ define <2 x i64> @ult_55_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [55,55]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 55, i64 55>
@@ -35966,8 +36348,9 @@ define <2 x i64> @ugt_55_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_55_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [55,55]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_55_v2i64:
@@ -35985,8 +36368,9 @@ define <2 x i64> @ugt_55_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [55,55]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 55, i64 55>
@@ -36147,8 +36531,9 @@ define <2 x i64> @ult_56_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_56_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [56,56]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_56_v2i64:
@@ -36167,8 +36552,9 @@ define <2 x i64> @ult_56_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [56,56]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 56, i64 56>
@@ -36322,8 +36708,9 @@ define <2 x i64> @ugt_56_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_56_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [56,56]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_56_v2i64:
@@ -36341,8 +36728,9 @@ define <2 x i64> @ugt_56_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [56,56]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 56, i64 56>
@@ -36503,8 +36891,9 @@ define <2 x i64> @ult_57_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_57_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [57,57]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_57_v2i64:
@@ -36523,8 +36912,9 @@ define <2 x i64> @ult_57_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [57,57]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 57, i64 57>
@@ -36678,8 +37068,9 @@ define <2 x i64> @ugt_57_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_57_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [57,57]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_57_v2i64:
@@ -36697,8 +37088,9 @@ define <2 x i64> @ugt_57_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [57,57]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 57, i64 57>
@@ -36859,8 +37251,9 @@ define <2 x i64> @ult_58_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_58_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [58,58]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_58_v2i64:
@@ -36879,8 +37272,9 @@ define <2 x i64> @ult_58_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [58,58]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 58, i64 58>
@@ -37034,8 +37428,9 @@ define <2 x i64> @ugt_58_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_58_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [58,58]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_58_v2i64:
@@ -37053,8 +37448,9 @@ define <2 x i64> @ugt_58_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [58,58]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 58, i64 58>
@@ -37215,8 +37611,9 @@ define <2 x i64> @ult_59_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_59_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [59,59]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_59_v2i64:
@@ -37235,8 +37632,9 @@ define <2 x i64> @ult_59_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [59,59]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 59, i64 59>
@@ -37390,8 +37788,9 @@ define <2 x i64> @ugt_59_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_59_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [59,59]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_59_v2i64:
@@ -37409,8 +37808,9 @@ define <2 x i64> @ugt_59_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [59,59]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 59, i64 59>
@@ -37571,8 +37971,9 @@ define <2 x i64> @ult_60_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_60_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [60,60]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_60_v2i64:
@@ -37591,8 +37992,9 @@ define <2 x i64> @ult_60_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [60,60]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 60, i64 60>
@@ -37746,8 +38148,9 @@ define <2 x i64> @ugt_60_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_60_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [60,60]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_60_v2i64:
@@ -37765,8 +38168,9 @@ define <2 x i64> @ugt_60_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [60,60]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 60, i64 60>
@@ -37927,8 +38331,9 @@ define <2 x i64> @ult_61_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_61_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [61,61]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_61_v2i64:
@@ -37947,8 +38352,9 @@ define <2 x i64> @ult_61_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [61,61]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 61, i64 61>
@@ -38102,8 +38508,9 @@ define <2 x i64> @ugt_61_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_61_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [61,61]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_61_v2i64:
@@ -38121,8 +38528,9 @@ define <2 x i64> @ugt_61_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [61,61]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 61, i64 61>
@@ -38283,8 +38691,9 @@ define <2 x i64> @ult_62_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_62_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [62,62]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_62_v2i64:
@@ -38303,8 +38712,9 @@ define <2 x i64> @ult_62_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [62,62]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 62, i64 62>
@@ -38458,8 +38868,9 @@ define <2 x i64> @ugt_62_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ugt_62_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [62,62]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_62_v2i64:
@@ -38477,8 +38888,9 @@ define <2 x i64> @ugt_62_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [62,62]
-; BITALG-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ugt <2 x i64> %2, <i64 62, i64 62>
@@ -38639,8 +39051,9 @@ define <2 x i64> @ult_63_v2i64(<2 x i64> %0) {
 ; AVX512VPOPCNTDQVL-LABEL: ult_63_v2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
 ; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [63,63]
-; AVX512VPOPCNTDQVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ult_63_v2i64:
@@ -38659,8 +39072,9 @@ define <2 x i64> @ult_63_v2i64(<2 x i64> %0) {
 ; BITALG-NEXT:    vpopcntb %xmm0, %xmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [63,63]
-; BITALG-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; BITALG-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
+; BITALG-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; BITALG-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ult <2 x i64> %2, <i64 63, i64 63>
