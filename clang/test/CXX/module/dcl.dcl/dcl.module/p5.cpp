@@ -1,10 +1,14 @@
-// RUN: rm -f %t
-// RUN: %clang_cc1 -std=c++1z -fmodules-ts -emit-module-interface %s -o %t -DINTERFACE
-// RUN: %clang_cc1 -std=c++1z -fmodules-ts -fmodule-file=%t %s -verify -DIMPLEMENTATION
-// RUN: %clang_cc1 -std=c++1z -fmodules-ts -fmodule-file=%t %s -verify -DEARLY_IMPLEMENTATION
-// RUN: %clang_cc1 -std=c++1z -fmodules-ts -fmodule-file=%t %s -verify -DUSER
+// RUN: rm -rf %t
+// RUN: %clang_cc1 -std=c++20 -emit-module-interface %s -o %t -DINTERFACE
+// RUN: %clang_cc1 -std=c++20 -fmodule-file=%t %s -verify -DIMPLEMENTATION
+// RUN: %clang_cc1 -std=c++20 -fmodule-file=%t %s -verify -DEARLY_IMPLEMENTATION
+// RUN: %clang_cc1 -std=c++20 -fmodule-file=%t %s -verify -DUSER
 
 // expected-no-diagnostics
+
+#if defined(INTERFACE) || defined(EARLY_IMPLEMENTATION) || defined(IMPLEMENTATION)
+module;
+#endif
 
 #ifdef USER
 import Foo;
