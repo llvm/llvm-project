@@ -79,9 +79,12 @@ DIExprBuilder::Iterator AMDGPUFrameLowering::insertFrameLocation(
       Context, MF.getTarget().getPointerSizeInBits(AllocaAddrSpace));
   ConstantData *WavefrontSizeLog2 = static_cast<ConstantData *>(
       ConstantInt::get(IntPtrTy, ST.getWavefrontSizeLog2(), false));
-  std::initializer_list<DIOp::Variant> IL = {
-      DIOp::Referrer(IntPtrTy), DIOp::Constant(WavefrontSizeLog2), DIOp::Shr(),
-      DIOp::Reinterpret(PointerType::get(ResultType, AllocaAddrSpace)),
-      DIOp::Deref(ResultType)};
-  return Builder.insert(BI, IL) + IL.size();
+
+  SmallVector<DIOp::Variant> FL = { DIOp::Referrer(IntPtrTy) };
+  if (!ST.enableFlatScratch())
+    FL.append({ DIOp::Constant(WavefrontSizeLog2), DIOp::Shr() });
+  FL.append(
+      { DIOp::Reinterpret(PointerType::get(ResultType, AllocaAddrSpace)),
+        DIOp::Deref(ResultType) });
+  return Builder.insert(BI, FL) + FL.size();
 }

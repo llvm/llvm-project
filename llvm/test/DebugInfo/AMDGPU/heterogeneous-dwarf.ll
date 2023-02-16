@@ -1,4 +1,5 @@
-; RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -verify-machineinstrs -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -verify-machineinstrs -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck --check-prefixes=COMMON,FLAT-SCR-DIS %s
+; RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -verify-machineinstrs -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck --check-prefixes=COMMON,FLAT-SCR-ENA %s
 
 source_filename = "heterogeneous-dwarf.cl"
 target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7"
@@ -12,13 +13,20 @@ target triple = "amdgcn-amd-amdhsa"
 ; CHECK-NEXT: DW_AT_location [DW_FORM_exprloc]      (DW_OP_regx SGPR33_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit16, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
 ; CHECK-NEXT: DW_AT_name {{.*}}"B"
 
+; COMMON: {{.*}}DW_TAG_variable
+; FLAT-SCR-DIS: DW_AT_location [DW_FORM_exprloc]      (DW_OP_regx SGPR33_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit20, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
+; FLAT-SCR-ENA: DW_AT_location [DW_FORM_exprloc]      (DW_OP_regx SGPR33_LO16, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit16, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
+; COMMON: DW_AT_name {{.*}}"C"
+
 define protected amdgpu_kernel void @testKernel(i32 addrspace(1)* %A) #0 !dbg !11 !kernel_arg_addr_space !17 !kernel_arg_access_qual !18 !kernel_arg_type !19 !kernel_arg_base_type !19 !kernel_arg_type_qual !20 {
 entry:
   %A.addr = alloca i32 addrspace(1)*, align 8, addrspace(5)
   %B = alloca i32, align 4, addrspace(5)
+  %C = alloca i32, align 4, addrspace(5)
   store i32 addrspace(1)* %A, i32 addrspace(1)* addrspace(5)* %A.addr, align 8
   call void @llvm.dbg.def(metadata !21, metadata i32 addrspace(1)* addrspace(5)* %A.addr), !dbg !23
   call void @llvm.dbg.def(metadata !24, metadata i32 addrspace(5)* %B), !dbg !26
+  call void @llvm.dbg.def(metadata !31, metadata ptr addrspace(5) %C), !dbg !34
   store i32 777, i32 addrspace(5)* %B, align 4, !dbg !26
   %0 = load i32, i32 addrspace(5)* %B, align 4, !dbg !27
   %1 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(5)* %A.addr, align 8, !dbg !28
@@ -28,7 +36,7 @@ entry:
 
 declare void @llvm.dbg.def(metadata, metadata) #1
 
-attributes #0 = { convergent noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,256" "amdgpu-implicitarg-num-bytes"="56" "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx906" "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot7-insts,+dpp,+flat-address-space,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst" "uniform-work-group-size"="true" }
+attributes #0 = { convergent noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,256" "amdgpu-implicitarg-num-bytes"="56" "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
 attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }
 
 !llvm.dbg.cu = !{!0}
@@ -67,3 +75,7 @@ attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }
 !28 = !DILocation(line: 3, column: 4, scope: !11)
 !29 = !DILocation(line: 3, column: 6, scope: !11)
 !30 = !DILocation(line: 4, column: 1, scope: !11)
+!31 = distinct !DILifetime(object: !32, location: !DIExpr(DIOpReferrer(ptr addrspace(5)), DIOpDeref(i32)))
+!32 = !DILocalVariable(name: "C", scope: !11, file: !1, line: 1, type: !33)
+!33 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
+!34 = !DILocation(line: 5, column: 1, scope: !11)
