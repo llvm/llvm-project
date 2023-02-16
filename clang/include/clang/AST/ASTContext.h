@@ -447,8 +447,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   };
   llvm::DenseMap<Module*, PerModuleInitializers*> ModuleInitializers;
 
-  /// For module code-gen cases, this is the top-level module we are building.
-  Module *TopLevelModule = nullptr;
+  /// For module code-gen cases, this is the top-level (C++20) Named module
+  /// we are building.
+  Module *TopLevelCXXNamedModule = nullptr;
 
   static constexpr unsigned ConstantArrayTypesLog2InitSize = 8;
   static constexpr unsigned GeneralTypesLog2InitSize = 9;
@@ -1051,10 +1052,10 @@ public:
   ArrayRef<Decl*> getModuleInitializers(Module *M);
 
   /// Set the (C++20) module we are building.
-  void setModuleForCodeGen(Module *M) { TopLevelModule = M; }
+  void setNamedModuleForCodeGen(Module *M) { TopLevelCXXNamedModule = M; }
 
   /// Get module under construction, nullptr if this is not a C++20 module.
-  Module *getModuleForCodeGen() const { return TopLevelModule; }
+  Module *getNamedModuleForCodeGen() const { return TopLevelCXXNamedModule; }
 
   TranslationUnitDecl *getTranslationUnitDecl() const {
     return TUDecl->getMostRecentDecl();
