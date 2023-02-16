@@ -144,6 +144,9 @@ private:
   /// blocks may contain out of date or incorrect information.
   bool IsValid{true};
 
+  /// Last computed hash value.
+  mutable uint64_t Hash{0};
+
 private:
   BinaryBasicBlock() = delete;
   BinaryBasicBlock(const BinaryBasicBlock &) = delete;
@@ -939,6 +942,9 @@ public:
   /// Check if the block has a jump table instruction.
   bool hasJumpTable() const { return getJumpTable() != nullptr; }
 
+  /// Returns the last computed hash value of the block.
+  uint64_t getHash() const { return Hash; }
+
 private:
   void adjustNumPseudos(const MCInst &Inst, int Sign);
 
@@ -962,6 +968,9 @@ private:
 
   /// Set the index of this basic block.
   void setIndex(unsigned I) { Index = I; }
+
+  /// Sets the hash value of the basic block.
+  void setHash(uint64_t Value) const { Hash = Value; }
 
   template <typename T> void clearList(T &List) {
     T TempList;
