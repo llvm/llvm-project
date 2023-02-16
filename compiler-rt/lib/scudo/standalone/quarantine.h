@@ -215,7 +215,8 @@ public:
     recycle(0, Cb);
   }
 
-  void getStats(ScopedString *Str) const {
+  void getStats(ScopedString *Str) {
+    ScopedLock L(CacheMutex);
     // It assumes that the world is stopped, just as the allocator's printStats.
     Cache.getStats(Str);
     Str->append("Quarantine limits: global: %zuK; thread local: %zuK\n",

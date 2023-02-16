@@ -199,6 +199,7 @@ public:
     uptr PushedBlocks = 0;
     for (uptr I = 0; I < NumClasses; I++) {
       RegionInfo *Region = getRegionInfo(I);
+      ScopedLock L(Region->Mutex);
       if (Region->MappedUser)
         TotalMapped += Region->MappedUser;
       PoppedBlocks += Region->Stats.PoppedBlocks;
@@ -209,8 +210,11 @@ public:
                 TotalMapped >> 20, 0U, PoppedBlocks,
                 PoppedBlocks - PushedBlocks);
 
-    for (uptr I = 0; I < NumClasses; I++)
+    for (uptr I = 0; I < NumClasses; I++) {
+      RegionInfo *Region = getRegionInfo(I);
+      ScopedLock L(Region->Mutex);
       getStats(Str, I, 0);
+    }
   }
 
   bool setOption(Option O, sptr Value) {
@@ -577,7 +581,11 @@ private:
         if (!Region->Exhausted) {
           Region->Exhausted = true;
           ScopedString Str;
-          getStats(&Str);
+          // FIXME: getStats() needs to go over all the regions and
+          // will take the locks of them. Which means we will try to recursively
+          // acquire the `Region->Mutex` which is not supported. It will be
+          // better to log this somewhere else.
+          // getStats(&Str);
           Str.append(
               "Scudo OOM: The process has exhausted %zuM for size class %zu.\n",
               RegionSize >> 20, Size);
