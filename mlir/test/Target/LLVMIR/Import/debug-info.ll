@@ -112,10 +112,10 @@ define i32 @lexical_block_file(i32 %arg1) {
 
 ; // -----
 
-; CHECK-DAG: #[[VOID:.+]] = #llvm.di_void_result_type
+; CHECK-DAG: #[[NULL:.+]] = #llvm.di_null_type
 ; CHECK-DAG: #[[INT1:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int1">
 ; CHECK-DAG: #[[INT2:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int2", sizeInBits = 32, encoding = DW_ATE_signed>
-; CHECK-DAG: #llvm.di_subroutine_type<types = #[[VOID]], #[[INT1]], #[[INT2]]>
+; CHECK-DAG: #llvm.di_subroutine_type<types = #[[NULL]], #[[INT1]], #[[INT2]]>
 
 define void @basic_type() !dbg !3 {
   ret void
@@ -328,3 +328,19 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !7 = !DILocalVariable(scope: !8, name: "class_field", file: !2, type: !5);
 !8 = distinct !DISubprogram(name: "class_field", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
 !9 = !DILocation(line: 1, column: 2, scope: !8)
+
+; // -----
+
+; CHECK-DAG: #[[NULL:.+]] = #llvm.di_null_type
+; CHECK-DAG: #llvm.di_subroutine_type<types = #[[NULL]], #[[NULL]]>
+
+declare !dbg !3 void @variadic_func()
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "debug-info.ll", directory: "/")
+!3 = !DISubprogram(name: "variadic_func", scope: !2, file: !2, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, type: !4)
+!4 = !DISubroutineType(types: !5)
+!5 = !{null, null}
