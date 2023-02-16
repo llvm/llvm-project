@@ -3,18 +3,19 @@
 # Also checks that llvm-bolt disassembler and CFG builder is working properly.
 
 RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
-RUN: llvm-bolt %t.exe -o /dev/null --data %p/Inputs/blarge.fdata --print-cfg
+RUN: llvm-bolt %t.exe -o /dev/null --data %p/Inputs/blarge.fdata --print-cfg | FileCheck %s
 
 CHECK:    Binary Function "usqrt"
 CHECK:      State       : CFG constructed
 CHECK:      Address     : 0x401170
 CHECK:      Size        : 0x43
-CHECK:      MaxSize     : 0x50
-CHECK:      Offset      : 0x1170
+CHECK:      MaxSize     : 0x43
+CHECK:      Offset      : 0xcb0
 CHECK:      Section     : .text
 CHECK:      IsSimple    : 1
 CHECK:      BB Count    : 5
 CHECK:      Exec Count  : 199
+CHECK:      Branch Count: 7689
 CHECK:    }
 CHECK:    .LBB{{.*}}
 CHECK:      Exec Count : 199
