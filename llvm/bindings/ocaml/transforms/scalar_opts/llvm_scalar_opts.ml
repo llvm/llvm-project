@@ -51,9 +51,6 @@ external add_loop_idiom
 external add_loop_rotation
   : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
   = "llvm_add_loop_rotate"
-external add_loop_reroll
-  : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
-  = "llvm_add_loop_reroll"
 external add_loop_unroll
   : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
   = "llvm_add_loop_unroll"
