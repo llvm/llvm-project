@@ -90,7 +90,7 @@ module {
     %c1 = arith.constant 1 : index
     %t1 = arith.constant sparse<
       [ [0,0], [0,1], [0,63], [1,0], [1,1], [31,0], [31,63] ],
-        [ 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0 ]> : tensor<32x64xf64>
+       [ 1.0,   2.0,   3.0,    4.0,   5.0,   6.0,    7.0 ]> : tensor<32x64xf64>
     %t2 = tensor.cast %t1 : tensor<32x64xf64> to tensor<?x?xf64>
 
     // Dense to sparse.

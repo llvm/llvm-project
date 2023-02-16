@@ -216,7 +216,7 @@ Operation *getTop(Operation *op);
 /// callback({%c3}, %v3)
 void foreachInSparseConstant(
     Location loc, RewriterBase &rewriter, SparseElementsAttr attr,
-    function_ref<void(ArrayRef<Value>, Value)> callback);
+    AffineMap order, function_ref<void(ArrayRef<Value>, Value)> callback);
 
 /// Converts the vector indices and store it into the memory pointed by
 /// `ind`, apply (optional) `offset` on `offsetDim`.
