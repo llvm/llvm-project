@@ -14,6 +14,7 @@
 #include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 
 using namespace mlir;
 
@@ -21,15 +22,33 @@ using namespace mlir;
 // MemRefMultiBufferOp
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilenceableFailure transform::MemRefMultiBufferOp::applyToOne(
-    memref::AllocOp target, transform::ApplyToEachResultList &results,
+DiagnosedSilenceableFailure transform::MemRefMultiBufferOp::apply(
+    transform::TransformResults &transformResults,
     transform::TransformState &state) {
-  auto newBuffer = memref::multiBuffer(target, getFactor());
-  if (failed(newBuffer))
-    return emitSilenceableFailure(target->getLoc())
-           << "op failed to multibuffer";
+  SmallVector<Operation *> results;
+  ArrayRef<Operation *> payloadOps = state.getPayloadOps(getTarget());
+  for (auto *op : payloadOps) {
+    bool canApplyMultiBuffer = true;
+    auto target = cast<memref::AllocOp>(op);
+    // Skip allocations not used in a loop.
+    for (Operation *user : target->getUsers()) {
+      auto loop = user->getParentOfType<LoopLikeOpInterface>();
+      if (!loop) {
+        canApplyMultiBuffer = false;
+        break;
+      }
+    }
+    if (!canApplyMultiBuffer)
+      continue;
 
-  results.push_back(*newBuffer);
+    auto newBuffer = memref::multiBuffer(target, getFactor());
+    if (failed(newBuffer))
+      return emitSilenceableFailure(target->getLoc())
+             << "op failed to multibuffer";
+
+    results.push_back(*newBuffer);
+  }
+  transformResults.set(getResult().cast<OpResult>(), results);
   return DiagnosedSilenceableFailure::success();
 }
 
