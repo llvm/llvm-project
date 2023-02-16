@@ -12,8 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CodeGenHwModes.h"
 #include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
+#include "InfoByHwMode.h"
 #include "SequenceToOffsetTable.h"
 #include "Types.h"
 #include "llvm/ADT/ArrayRef.h"
