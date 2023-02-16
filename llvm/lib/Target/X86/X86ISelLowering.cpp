@@ -49891,6 +49891,215 @@ static SDValue foldMaskedMerge(SDNode *Node, SelectionDAG &DAG) {
   return SDValue();
 }
 
+/// If this is an add or subtract where one operand is produced by a cmp+setcc,
+/// then try to convert it to an ADC or SBB. This replaces TEST+SET+{ADD/SUB}
+/// with CMP+{ADC, SBB}.
+/// Also try (ADD/SUB)+(AND(SRL,1)) bit extraction pattern with BT+{ADC, SBB}.
+static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
+                                         SDValue X, SDValue Y,
+                                         SelectionDAG &DAG,
+                                         bool ZeroSecondOpOnly = false) {
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
+    return SDValue();
+
+  // Look through a one-use zext.
+  if (Y.getOpcode() == ISD::ZERO_EXTEND && Y.hasOneUse())
+    Y = Y.getOperand(0);
+
+  X86::CondCode CC;
+  SDValue EFLAGS;
+  if (Y.getOpcode() == X86ISD::SETCC && Y.hasOneUse()) {
+    CC = (X86::CondCode)Y.getConstantOperandVal(0);
+    EFLAGS = Y.getOperand(1);
+  } else if (Y.getOpcode() == ISD::AND && isOneConstant(Y.getOperand(1)) &&
+             Y.hasOneUse()) {
+    EFLAGS = LowerAndToBT(Y, ISD::SETNE, DL, DAG, CC);
+  }
+
+  if (!EFLAGS)
+    return SDValue();
+
+  // If X is -1 or 0, then we have an opportunity to avoid constants required in
+  // the general case below.
+  auto *ConstantX = dyn_cast<ConstantSDNode>(X);
+  if (ConstantX && !ZeroSecondOpOnly) {
+    if ((!IsSub && CC == X86::COND_AE && ConstantX->isAllOnes()) ||
+        (IsSub && CC == X86::COND_B && ConstantX->isZero())) {
+      // This is a complicated way to get -1 or 0 from the carry flag:
+      // -1 + SETAE --> -1 + (!CF) --> CF ? -1 : 0 --> SBB %eax, %eax
+      //  0 - SETB  -->  0 -  (CF) --> CF ? -1 : 0 --> SBB %eax, %eax
+      return DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
+                         DAG.getTargetConstant(X86::COND_B, DL, MVT::i8),
+                         EFLAGS);
+    }
+
+    if ((!IsSub && CC == X86::COND_BE && ConstantX->isAllOnes()) ||
+        (IsSub && CC == X86::COND_A && ConstantX->isZero())) {
+      if (EFLAGS.getOpcode() == X86ISD::SUB && EFLAGS.hasOneUse() &&
+          EFLAGS.getValueType().isInteger() &&
+          !isa<ConstantSDNode>(EFLAGS.getOperand(1))) {
+        // Swap the operands of a SUB, and we have the same pattern as above.
+        // -1 + SETBE (SUB A, B) --> -1 + SETAE (SUB B, A) --> SUB + SBB
+        //  0 - SETA  (SUB A, B) -->  0 - SETB  (SUB B, A) --> SUB + SBB
+        SDValue NewSub = DAG.getNode(
+            X86ISD::SUB, SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
+            EFLAGS.getOperand(1), EFLAGS.getOperand(0));
+        SDValue NewEFLAGS = SDValue(NewSub.getNode(), EFLAGS.getResNo());
+        return DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
+                           DAG.getTargetConstant(X86::COND_B, DL, MVT::i8),
+                           NewEFLAGS);
+      }
+    }
+  }
+
+  if (CC == X86::COND_B) {
+    // X + SETB Z --> adc X, 0
+    // X - SETB Z --> sbb X, 0
+    return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL,
+                       DAG.getVTList(VT, MVT::i32), X,
+                       DAG.getConstant(0, DL, VT), EFLAGS);
+  }
+
+  if (ZeroSecondOpOnly)
+    return SDValue();
+
+  if (CC == X86::COND_A) {
+    // Try to convert COND_A into COND_B in an attempt to facilitate
+    // materializing "setb reg".
+    //
+    // Do not flip "e > c", where "c" is a constant, because Cmp instruction
+    // cannot take an immediate as its first operand.
+    //
+    if (EFLAGS.getOpcode() == X86ISD::SUB && EFLAGS.getNode()->hasOneUse() &&
+        EFLAGS.getValueType().isInteger() &&
+        !isa<ConstantSDNode>(EFLAGS.getOperand(1))) {
+      SDValue NewSub =
+          DAG.getNode(X86ISD::SUB, SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
+                      EFLAGS.getOperand(1), EFLAGS.getOperand(0));
+      SDValue NewEFLAGS = NewSub.getValue(EFLAGS.getResNo());
+      return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL,
+                         DAG.getVTList(VT, MVT::i32), X,
+                         DAG.getConstant(0, DL, VT), NewEFLAGS);
+    }
+  }
+
+  if (CC == X86::COND_AE) {
+    // X + SETAE --> sbb X, -1
+    // X - SETAE --> adc X, -1
+    return DAG.getNode(IsSub ? X86ISD::ADC : X86ISD::SBB, DL,
+                       DAG.getVTList(VT, MVT::i32), X,
+                       DAG.getConstant(-1, DL, VT), EFLAGS);
+  }
+
+  if (CC == X86::COND_BE) {
+    // X + SETBE --> sbb X, -1
+    // X - SETBE --> adc X, -1
+    // Try to convert COND_BE into COND_AE in an attempt to facilitate
+    // materializing "setae reg".
+    //
+    // Do not flip "e <= c", where "c" is a constant, because Cmp instruction
+    // cannot take an immediate as its first operand.
+    //
+    if (EFLAGS.getOpcode() == X86ISD::SUB && EFLAGS.getNode()->hasOneUse() &&
+        EFLAGS.getValueType().isInteger() &&
+        !isa<ConstantSDNode>(EFLAGS.getOperand(1))) {
+      SDValue NewSub =
+          DAG.getNode(X86ISD::SUB, SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
+                      EFLAGS.getOperand(1), EFLAGS.getOperand(0));
+      SDValue NewEFLAGS = NewSub.getValue(EFLAGS.getResNo());
+      return DAG.getNode(IsSub ? X86ISD::ADC : X86ISD::SBB, DL,
+                         DAG.getVTList(VT, MVT::i32), X,
+                         DAG.getConstant(-1, DL, VT), NewEFLAGS);
+    }
+  }
+
+  if (CC != X86::COND_E && CC != X86::COND_NE)
+    return SDValue();
+
+  if (EFLAGS.getOpcode() != X86ISD::CMP || !EFLAGS.hasOneUse() ||
+      !X86::isZeroNode(EFLAGS.getOperand(1)) ||
+      !EFLAGS.getOperand(0).getValueType().isInteger())
+    return SDValue();
+
+  SDValue Z = EFLAGS.getOperand(0);
+  EVT ZVT = Z.getValueType();
+
+  // If X is -1 or 0, then we have an opportunity to avoid constants required in
+  // the general case below.
+  if (ConstantX) {
+    // 'neg' sets the carry flag when Z != 0, so create 0 or -1 using 'sbb' with
+    // fake operands:
+    //  0 - (Z != 0) --> sbb %eax, %eax, (neg Z)
+    // -1 + (Z == 0) --> sbb %eax, %eax, (neg Z)
+    if ((IsSub && CC == X86::COND_NE && ConstantX->isZero()) ||
+        (!IsSub && CC == X86::COND_E && ConstantX->isAllOnes())) {
+      SDValue Zero = DAG.getConstant(0, DL, ZVT);
+      SDVTList X86SubVTs = DAG.getVTList(ZVT, MVT::i32);
+      SDValue Neg = DAG.getNode(X86ISD::SUB, DL, X86SubVTs, Zero, Z);
+      return DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
+                         DAG.getTargetConstant(X86::COND_B, DL, MVT::i8),
+                         SDValue(Neg.getNode(), 1));
+    }
+
+    // cmp with 1 sets the carry flag when Z == 0, so create 0 or -1 using 'sbb'
+    // with fake operands:
+    //  0 - (Z == 0) --> sbb %eax, %eax, (cmp Z, 1)
+    // -1 + (Z != 0) --> sbb %eax, %eax, (cmp Z, 1)
+    if ((IsSub && CC == X86::COND_E && ConstantX->isZero()) ||
+        (!IsSub && CC == X86::COND_NE && ConstantX->isAllOnes())) {
+      SDValue One = DAG.getConstant(1, DL, ZVT);
+      SDVTList X86SubVTs = DAG.getVTList(ZVT, MVT::i32);
+      SDValue Cmp1 = DAG.getNode(X86ISD::SUB, DL, X86SubVTs, Z, One);
+      return DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
+                         DAG.getTargetConstant(X86::COND_B, DL, MVT::i8),
+                         Cmp1.getValue(1));
+    }
+  }
+
+  // (cmp Z, 1) sets the carry flag if Z is 0.
+  SDValue One = DAG.getConstant(1, DL, ZVT);
+  SDVTList X86SubVTs = DAG.getVTList(ZVT, MVT::i32);
+  SDValue Cmp1 = DAG.getNode(X86ISD::SUB, DL, X86SubVTs, Z, One);
+
+  // Add the flags type for ADC/SBB nodes.
+  SDVTList VTs = DAG.getVTList(VT, MVT::i32);
+
+  // X - (Z != 0) --> sub X, (zext(setne Z, 0)) --> adc X, -1, (cmp Z, 1)
+  // X + (Z != 0) --> add X, (zext(setne Z, 0)) --> sbb X, -1, (cmp Z, 1)
+  if (CC == X86::COND_NE)
+    return DAG.getNode(IsSub ? X86ISD::ADC : X86ISD::SBB, DL, VTs, X,
+                       DAG.getConstant(-1ULL, DL, VT), Cmp1.getValue(1));
+
+  // X - (Z == 0) --> sub X, (zext(sete  Z, 0)) --> sbb X, 0, (cmp Z, 1)
+  // X + (Z == 0) --> add X, (zext(sete  Z, 0)) --> adc X, 0, (cmp Z, 1)
+  return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL, VTs, X,
+                     DAG.getConstant(0, DL, VT), Cmp1.getValue(1));
+}
+
+/// If this is an add or subtract where one operand is produced by a cmp+setcc,
+/// then try to convert it to an ADC or SBB. This replaces TEST+SET+{ADD/SUB}
+/// with CMP+{ADC, SBB}.
+static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
+  bool IsSub = N->getOpcode() == ISD::SUB;
+  SDValue X = N->getOperand(0);
+  SDValue Y = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  if (SDValue ADCOrSBB = combineAddOrSubToADCOrSBB(IsSub, DL, VT, X, Y, DAG))
+    return ADCOrSBB;
+
+  // Commute and try again (negate the result for subtracts).
+  if (SDValue ADCOrSBB = combineAddOrSubToADCOrSBB(IsSub, DL, VT, Y, X, DAG)) {
+    if (IsSub)
+      ADCOrSBB =
+          DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), ADCOrSBB);
+    return ADCOrSBB;
+  }
+
+  return SDValue();
+}
+
 static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
                          TargetLowering::DAGCombinerInfo &DCI,
                          const X86Subtarget &Subtarget) {
@@ -54445,215 +54654,6 @@ static bool onlyZeroFlagUsed(SDValue Flags) {
   }
 
   return true;
-}
-
-/// If this is an add or subtract where one operand is produced by a cmp+setcc,
-/// then try to convert it to an ADC or SBB. This replaces TEST+SET+{ADD/SUB}
-/// with CMP+{ADC, SBB}.
-/// Also try (ADD/SUB)+(AND(SRL,1)) bit extraction pattern with BT+{ADC, SBB}.
-static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
-                                         SDValue X, SDValue Y,
-                                         SelectionDAG &DAG,
-                                         bool ZeroSecondOpOnly = false) {
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
-    return SDValue();
-
-  // Look through a one-use zext.
-  if (Y.getOpcode() == ISD::ZERO_EXTEND && Y.hasOneUse())
-    Y = Y.getOperand(0);
-
-  X86::CondCode CC;
-  SDValue EFLAGS;
-  if (Y.getOpcode() == X86ISD::SETCC && Y.hasOneUse()) {
-    CC = (X86::CondCode)Y.getConstantOperandVal(0);
-    EFLAGS = Y.getOperand(1);
-  } else if (Y.getOpcode() == ISD::AND && isOneConstant(Y.getOperand(1)) &&
-             Y.hasOneUse()) {
-    EFLAGS = LowerAndToBT(Y, ISD::SETNE, DL, DAG, CC);
-  }
-
-  if (!EFLAGS)
-    return SDValue();
-
-  // If X is -1 or 0, then we have an opportunity to avoid constants required in
-  // the general case below.
-  auto *ConstantX = dyn_cast<ConstantSDNode>(X);
-  if (ConstantX && !ZeroSecondOpOnly) {
-    if ((!IsSub && CC == X86::COND_AE && ConstantX->isAllOnes()) ||
-        (IsSub && CC == X86::COND_B && ConstantX->isZero())) {
-      // This is a complicated way to get -1 or 0 from the carry flag:
-      // -1 + SETAE --> -1 + (!CF) --> CF ? -1 : 0 --> SBB %eax, %eax
-      //  0 - SETB  -->  0 -  (CF) --> CF ? -1 : 0 --> SBB %eax, %eax
-      return DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
-                         DAG.getTargetConstant(X86::COND_B, DL, MVT::i8),
-                         EFLAGS);
-    }
-
-    if ((!IsSub && CC == X86::COND_BE && ConstantX->isAllOnes()) ||
-        (IsSub && CC == X86::COND_A && ConstantX->isZero())) {
-      if (EFLAGS.getOpcode() == X86ISD::SUB && EFLAGS.hasOneUse() &&
-          EFLAGS.getValueType().isInteger() &&
-          !isa<ConstantSDNode>(EFLAGS.getOperand(1))) {
-        // Swap the operands of a SUB, and we have the same pattern as above.
-        // -1 + SETBE (SUB A, B) --> -1 + SETAE (SUB B, A) --> SUB + SBB
-        //  0 - SETA  (SUB A, B) -->  0 - SETB  (SUB B, A) --> SUB + SBB
-        SDValue NewSub = DAG.getNode(
-            X86ISD::SUB, SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
-            EFLAGS.getOperand(1), EFLAGS.getOperand(0));
-        SDValue NewEFLAGS = SDValue(NewSub.getNode(), EFLAGS.getResNo());
-        return DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
-                           DAG.getTargetConstant(X86::COND_B, DL, MVT::i8),
-                           NewEFLAGS);
-      }
-    }
-  }
-
-  if (CC == X86::COND_B) {
-    // X + SETB Z --> adc X, 0
-    // X - SETB Z --> sbb X, 0
-    return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL,
-                       DAG.getVTList(VT, MVT::i32), X,
-                       DAG.getConstant(0, DL, VT), EFLAGS);
-  }
-
-  if (ZeroSecondOpOnly)
-    return SDValue();
-
-  if (CC == X86::COND_A) {
-    // Try to convert COND_A into COND_B in an attempt to facilitate
-    // materializing "setb reg".
-    //
-    // Do not flip "e > c", where "c" is a constant, because Cmp instruction
-    // cannot take an immediate as its first operand.
-    //
-    if (EFLAGS.getOpcode() == X86ISD::SUB && EFLAGS.getNode()->hasOneUse() &&
-        EFLAGS.getValueType().isInteger() &&
-        !isa<ConstantSDNode>(EFLAGS.getOperand(1))) {
-      SDValue NewSub =
-          DAG.getNode(X86ISD::SUB, SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
-                      EFLAGS.getOperand(1), EFLAGS.getOperand(0));
-      SDValue NewEFLAGS = NewSub.getValue(EFLAGS.getResNo());
-      return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL,
-                         DAG.getVTList(VT, MVT::i32), X,
-                         DAG.getConstant(0, DL, VT), NewEFLAGS);
-    }
-  }
-
-  if (CC == X86::COND_AE) {
-    // X + SETAE --> sbb X, -1
-    // X - SETAE --> adc X, -1
-    return DAG.getNode(IsSub ? X86ISD::ADC : X86ISD::SBB, DL,
-                       DAG.getVTList(VT, MVT::i32), X,
-                       DAG.getConstant(-1, DL, VT), EFLAGS);
-  }
-
-  if (CC == X86::COND_BE) {
-    // X + SETBE --> sbb X, -1
-    // X - SETBE --> adc X, -1
-    // Try to convert COND_BE into COND_AE in an attempt to facilitate
-    // materializing "setae reg".
-    //
-    // Do not flip "e <= c", where "c" is a constant, because Cmp instruction
-    // cannot take an immediate as its first operand.
-    //
-    if (EFLAGS.getOpcode() == X86ISD::SUB && EFLAGS.getNode()->hasOneUse() &&
-        EFLAGS.getValueType().isInteger() &&
-        !isa<ConstantSDNode>(EFLAGS.getOperand(1))) {
-      SDValue NewSub =
-          DAG.getNode(X86ISD::SUB, SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
-                      EFLAGS.getOperand(1), EFLAGS.getOperand(0));
-      SDValue NewEFLAGS = NewSub.getValue(EFLAGS.getResNo());
-      return DAG.getNode(IsSub ? X86ISD::ADC : X86ISD::SBB, DL,
-                         DAG.getVTList(VT, MVT::i32), X,
-                         DAG.getConstant(-1, DL, VT), NewEFLAGS);
-    }
-  }
-
-  if (CC != X86::COND_E && CC != X86::COND_NE)
-    return SDValue();
-
-  if (EFLAGS.getOpcode() != X86ISD::CMP || !EFLAGS.hasOneUse() ||
-      !X86::isZeroNode(EFLAGS.getOperand(1)) ||
-      !EFLAGS.getOperand(0).getValueType().isInteger())
-    return SDValue();
-
-  SDValue Z = EFLAGS.getOperand(0);
-  EVT ZVT = Z.getValueType();
-
-  // If X is -1 or 0, then we have an opportunity to avoid constants required in
-  // the general case below.
-  if (ConstantX) {
-    // 'neg' sets the carry flag when Z != 0, so create 0 or -1 using 'sbb' with
-    // fake operands:
-    //  0 - (Z != 0) --> sbb %eax, %eax, (neg Z)
-    // -1 + (Z == 0) --> sbb %eax, %eax, (neg Z)
-    if ((IsSub && CC == X86::COND_NE && ConstantX->isZero()) ||
-        (!IsSub && CC == X86::COND_E && ConstantX->isAllOnes())) {
-      SDValue Zero = DAG.getConstant(0, DL, ZVT);
-      SDVTList X86SubVTs = DAG.getVTList(ZVT, MVT::i32);
-      SDValue Neg = DAG.getNode(X86ISD::SUB, DL, X86SubVTs, Zero, Z);
-      return DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
-                         DAG.getTargetConstant(X86::COND_B, DL, MVT::i8),
-                         SDValue(Neg.getNode(), 1));
-    }
-
-    // cmp with 1 sets the carry flag when Z == 0, so create 0 or -1 using 'sbb'
-    // with fake operands:
-    //  0 - (Z == 0) --> sbb %eax, %eax, (cmp Z, 1)
-    // -1 + (Z != 0) --> sbb %eax, %eax, (cmp Z, 1)
-    if ((IsSub && CC == X86::COND_E && ConstantX->isZero()) ||
-        (!IsSub && CC == X86::COND_NE && ConstantX->isAllOnes())) {
-      SDValue One = DAG.getConstant(1, DL, ZVT);
-      SDVTList X86SubVTs = DAG.getVTList(ZVT, MVT::i32);
-      SDValue Cmp1 = DAG.getNode(X86ISD::SUB, DL, X86SubVTs, Z, One);
-      return DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
-                         DAG.getTargetConstant(X86::COND_B, DL, MVT::i8),
-                         Cmp1.getValue(1));
-    }
-  }
-
-  // (cmp Z, 1) sets the carry flag if Z is 0.
-  SDValue One = DAG.getConstant(1, DL, ZVT);
-  SDVTList X86SubVTs = DAG.getVTList(ZVT, MVT::i32);
-  SDValue Cmp1 = DAG.getNode(X86ISD::SUB, DL, X86SubVTs, Z, One);
-
-  // Add the flags type for ADC/SBB nodes.
-  SDVTList VTs = DAG.getVTList(VT, MVT::i32);
-
-  // X - (Z != 0) --> sub X, (zext(setne Z, 0)) --> adc X, -1, (cmp Z, 1)
-  // X + (Z != 0) --> add X, (zext(setne Z, 0)) --> sbb X, -1, (cmp Z, 1)
-  if (CC == X86::COND_NE)
-    return DAG.getNode(IsSub ? X86ISD::ADC : X86ISD::SBB, DL, VTs, X,
-                       DAG.getConstant(-1ULL, DL, VT), Cmp1.getValue(1));
-
-  // X - (Z == 0) --> sub X, (zext(sete  Z, 0)) --> sbb X, 0, (cmp Z, 1)
-  // X + (Z == 0) --> add X, (zext(sete  Z, 0)) --> adc X, 0, (cmp Z, 1)
-  return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL, VTs, X,
-                     DAG.getConstant(0, DL, VT), Cmp1.getValue(1));
-}
-
-/// If this is an add or subtract where one operand is produced by a cmp+setcc,
-/// then try to convert it to an ADC or SBB. This replaces TEST+SET+{ADD/SUB}
-/// with CMP+{ADC, SBB}.
-static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
-  bool IsSub = N->getOpcode() == ISD::SUB;
-  SDValue X = N->getOperand(0);
-  SDValue Y = N->getOperand(1);
-  EVT VT = N->getValueType(0);
-  SDLoc DL(N);
-
-  if (SDValue ADCOrSBB = combineAddOrSubToADCOrSBB(IsSub, DL, VT, X, Y, DAG))
-    return ADCOrSBB;
-
-  // Commute and try again (negate the result for subtracts).
-  if (SDValue ADCOrSBB = combineAddOrSubToADCOrSBB(IsSub, DL, VT, Y, X, DAG)) {
-    if (IsSub)
-      ADCOrSBB =
-          DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), ADCOrSBB);
-    return ADCOrSBB;
-  }
-
-  return SDValue();
 }
 
 static SDValue combineCMP(SDNode *N, SelectionDAG &DAG) {
