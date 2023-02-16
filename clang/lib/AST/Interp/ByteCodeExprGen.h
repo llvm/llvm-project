@@ -224,9 +224,9 @@ private:
                       llvm::function_ref<bool(PrimType)> Indirect);
 
   /// Emits an APSInt constant.
-  bool emitConst(const APSInt &Value, const Expr *E);
-  bool emitConst(const APInt &Value, const Expr *E) {
-    return emitConst(static_cast<APSInt>(Value), E);
+  bool emitConst(const llvm::APSInt &Value, const Expr *E);
+  bool emitConst(const llvm::APInt &Value, const Expr *E) {
+    return emitConst(static_cast<llvm::APSInt>(Value), E);
   }
 
   /// Emits an integer constant.
