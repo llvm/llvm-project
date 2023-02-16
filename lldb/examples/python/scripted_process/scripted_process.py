@@ -55,7 +55,6 @@ class ScriptedProcess(metaclass=ABCMeta):
         """
         return self.capabilities
 
-    @abstractmethod
     def get_memory_region_containing_address(self, addr):
         """ Get the memory region for the scripted process, containing a
             specific address.
@@ -68,7 +67,7 @@ class ScriptedProcess(metaclass=ABCMeta):
             lldb.SBMemoryRegionInfo: The memory region containing the address.
                 None if out of bounds.
         """
-        pass
+        return None
 
     def get_threads_info(self):
         """ Get the dictionary describing the process' Scripted Threads.
@@ -79,35 +78,6 @@ class ScriptedProcess(metaclass=ABCMeta):
             The dictionary can be empty.
         """
         return self.threads
-
-    @abstractmethod
-    def get_thread_with_id(self, tid):
-        """ Get the scripted process thread with a specific ID.
-
-        Args:
-            tid (int): Thread ID to look for in the scripted process.
-
-        Returns:
-            Dict: The thread represented as a dictionary, with the
-                tid thread ID. None if tid doesn't match any of the scripted
-                process threads.
-        """
-        pass
-
-    @abstractmethod
-    def get_registers_for_thread(self, tid):
-        """ Get the register context dictionary for a certain thread of
-            the scripted process.
-
-        Args:
-            tid (int): Thread ID for the thread's register context.
-
-        Returns:
-            Dict: The register context represented as a dictionary, for the
-                tid thread. None if tid doesn't match any of the scripted
-                process threads.
-        """
-        pass
 
     @abstractmethod
     def read_memory_at_address(self, addr, size, error):

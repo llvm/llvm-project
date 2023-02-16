@@ -94,15 +94,6 @@ class CrashLogScriptedProcess(ScriptedProcess):
         self.extended_thread_info = None
         self.parse_crashlog()
 
-    def get_memory_region_containing_address(self, addr: int) -> lldb.SBMemoryRegionInfo:
-        return None
-
-    def get_thread_with_id(self, tid: int):
-        return {}
-
-    def get_registers_for_thread(self, tid: int):
-        return {}
-
     def read_memory_at_address(self, addr: int, size: int, error: lldb.SBError) -> lldb.SBData:
         # NOTE: CrashLogs don't contain any memory.
         return lldb.SBData()

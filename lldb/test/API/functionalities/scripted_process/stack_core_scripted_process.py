@@ -59,12 +59,6 @@ class StackCoreScriptedProcess(ScriptedProcess):
             return None
         return mem_region
 
-    def get_thread_with_id(self, tid: int):
-        return {}
-
-    def get_registers_for_thread(self, tid: int):
-        return {}
-
     def read_memory_at_address(self, addr: int, size: int, error: lldb.SBError) -> lldb.SBData:
         data = lldb.SBData()
         bytes_read = self.corefile_process.ReadMemory(addr, size, error)

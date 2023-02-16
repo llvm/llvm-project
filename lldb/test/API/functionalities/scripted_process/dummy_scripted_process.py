@@ -11,15 +11,6 @@ class DummyScriptedProcess(ScriptedProcess):
         super().__init__(target, args)
         self.threads[0] = DummyScriptedThread(self, None)
 
-    def get_memory_region_containing_address(self, addr: int) -> lldb.SBMemoryRegionInfo:
-        return None
-
-    def get_thread_with_id(self, tid: int):
-        return {}
-
-    def get_registers_for_thread(self, tid: int):
-        return {}
-
     def read_memory_at_address(self, addr: int, size: int, error: lldb.SBError) -> lldb.SBData:
         debugger = self.target.GetDebugger()
         index = debugger.GetIndexOfTarget(self.target)
