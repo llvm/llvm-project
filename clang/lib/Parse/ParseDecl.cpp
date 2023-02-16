@@ -56,6 +56,18 @@ TypeResult Parser::ParseTypeName(SourceRange *Range, DeclaratorContext Context,
   if (OwnedType)
     *OwnedType = DS.isTypeSpecOwned() ? DS.getRepAsDecl() : nullptr;
 
+  // Move declspec attributes to ParsedAttributes
+  if (Attrs) {
+    llvm::SmallVector<ParsedAttr *, 1> ToBeMoved;
+    for (ParsedAttr &AL : DS.getAttributes()) {
+      if (AL.isDeclspecAttribute())
+        ToBeMoved.push_back(&AL);
+    }
+
+    for (ParsedAttr *AL : ToBeMoved)
+      Attrs->takeOneFrom(DS.getAttributes(), AL);
+  }
+
   // Parse the abstract-declarator, if present.
   Declarator DeclaratorInfo(DS, ParsedAttributesView::none(), Context);
   ParseDeclarator(DeclaratorInfo);

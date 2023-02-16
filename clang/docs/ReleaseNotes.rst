@@ -109,6 +109,10 @@ to be worn by functions containing buffer operations that could cause out of
 bounds memory accesses. It emits warnings at call sites to such functions when
 the flag ``-Wunsafe-buffer-usage`` is enabled.
 
+``__declspec`` attributes can now be used together with the using keyword. Before
+the attributes on ``__declspec`` was ignored, while now it will be forwarded to the
+point where the alias is used.
+
 Windows Support
 ---------------
 
