@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-windows-msvc18.0.0 -fcoroutines-ts -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc18.0.0 -fcoroutines-ts -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
 
 void *myAlloc(long long);
 
@@ -8,37 +8,36 @@ void f(int n) {
   // CHECK: %promise = alloca i32
   int promise;
 
-  // CHECK: %[[PROM_ADDR:.+]] = bitcast i32* %promise to i8*
-  // CHECK-NEXT: %[[COROID:.+]] = call token @llvm.coro.id(i32 32, i8* %[[PROM_ADDR]], i8* null, i8* null)
+  // CHECK: %[[COROID:.+]] = call token @llvm.coro.id(i32 32, ptr %promise, ptr null, ptr null)
   __builtin_coro_id(32, &promise, 0, 0);
 
   // CHECK-NEXT: call i1 @llvm.coro.alloc(token %[[COROID]])
   __builtin_coro_alloc();
 
-  // CHECK-NEXT: call i8* @llvm.coro.noop()
+  // CHECK-NEXT: call ptr @llvm.coro.noop()
   __builtin_coro_noop();
 
   // CHECK-NEXT: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK-NEXT: %[[MEM:.+]] = call i8* @myAlloc(i64 noundef %[[SIZE]])
-  // CHECK-NEXT: %[[FRAME:.+]] = call i8* @llvm.coro.begin(token %[[COROID]], i8* %[[MEM]])
+  // CHECK-NEXT: %[[MEM:.+]] = call ptr @myAlloc(i64 noundef %[[SIZE]])
+  // CHECK-NEXT: %[[FRAME:.+]] = call ptr @llvm.coro.begin(token %[[COROID]], ptr %[[MEM]])
   __builtin_coro_begin(myAlloc(__builtin_coro_size()));
 
-  // CHECK-NEXT: call void @llvm.coro.resume(i8* %[[FRAME]])
+  // CHECK-NEXT: call void @llvm.coro.resume(ptr %[[FRAME]])
   __builtin_coro_resume(__builtin_coro_frame());
 
-  // CHECK-NEXT: call void @llvm.coro.destroy(i8* %[[FRAME]])
+  // CHECK-NEXT: call void @llvm.coro.destroy(ptr %[[FRAME]])
   __builtin_coro_destroy(__builtin_coro_frame());
 
-  // CHECK-NEXT: call i1 @llvm.coro.done(i8* %[[FRAME]])
+  // CHECK-NEXT: call i1 @llvm.coro.done(ptr %[[FRAME]])
   __builtin_coro_done(__builtin_coro_frame());
 
-  // CHECK-NEXT: call i8* @llvm.coro.promise(i8* %[[FRAME]], i32 48, i1 false)
+  // CHECK-NEXT: call ptr @llvm.coro.promise(ptr %[[FRAME]], i32 48, i1 false)
   __builtin_coro_promise(__builtin_coro_frame(), 48, 0);
 
-  // CHECK-NEXT: call i8* @llvm.coro.free(token %[[COROID]], i8* %[[FRAME]])
+  // CHECK-NEXT: call ptr @llvm.coro.free(token %[[COROID]], ptr %[[FRAME]])
   __builtin_coro_free(__builtin_coro_frame());
 
-  // CHECK-NEXT: call i1 @llvm.coro.end(i8* %[[FRAME]], i1 false)
+  // CHECK-NEXT: call i1 @llvm.coro.end(ptr %[[FRAME]], i1 false)
   __builtin_coro_end(__builtin_coro_frame(), 0);
 
   // CHECK-NEXT: call i8 @llvm.coro.suspend(token none, i1 true)
