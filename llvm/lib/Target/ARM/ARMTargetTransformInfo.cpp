@@ -2441,3 +2441,16 @@ InstructionCost ARMTTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
   }
   return -1;
 }
+
+bool ARMTTIImpl::hasArmWideBranch(bool Thumb) const {
+  if (Thumb) {
+    // B.W is available in any Thumb2-supporting target, and also in every
+    // version of Armv8-M, even Baseline which does not include the rest of
+    // Thumb2.
+    return ST->isThumb2() || ST->hasV8MBaselineOps();
+  } else {
+    // B is available in all versions of the Arm ISA, so the only question is
+    // whether that ISA is available at all.
+    return ST->hasARMOps();
+  }
+}
