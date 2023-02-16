@@ -1762,12 +1762,22 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
 // Variety of transform for (urem/srem (mul/shl X, Y), (mul/shl X, Z))
 static Instruction *simplifyIRemMulShl(BinaryOperator &I,
                                        InstCombinerImpl &IC) {
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1), *X;
-  const APInt *Y, *Z;
-  if (!(match(Op0, m_Mul(m_Value(X), m_APInt(Y))) &&
-        match(Op1, m_c_Mul(m_Specific(X), m_APInt(Z)))) &&
-      !(match(Op0, m_Mul(m_APInt(Y), m_Value(X))) &&
-        match(Op1, m_c_Mul(m_Specific(X), m_APInt(Z)))))
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1), *X = nullptr;
+  APInt Y, Z;
+
+  // If V is not nullptr, it will be matched using m_Specific.
+  auto MatchShiftOrMul = [](Value *Op, Value *&V, APInt &C) -> bool {
+    const APInt *Tmp = nullptr;
+    if ((!V && match(Op, m_Mul(m_Value(V), m_APInt(Tmp)))) ||
+        (V && match(Op, m_Mul(m_Specific(V), m_APInt(Tmp)))))
+      C = *Tmp;
+    else if ((!V && match(Op, m_Shl(m_Value(V), m_APInt(Tmp)))) ||
+             (V && match(Op, m_Shl(m_Specific(V), m_APInt(Tmp)))))
+      C = APInt(Tmp->getBitWidth(), 1) << *Tmp;
+    return Tmp != nullptr;
+  };
+
+  if (!MatchShiftOrMul(Op0, X, Y) || !MatchShiftOrMul(Op1, X, Z))
     return nullptr;
 
   bool IsSRem = I.getOpcode() == Instruction::SRem;
@@ -1779,7 +1789,7 @@ static Instruction *simplifyIRemMulShl(BinaryOperator &I,
   bool BO0HasNUW = BO0->hasNoUnsignedWrap();
   bool BO0NoWrap = IsSRem ? BO0HasNSW : BO0HasNUW;
 
-  APInt RemYZ = IsSRem ? Y->srem(*Z) : Y->urem(*Z);
+  APInt RemYZ = IsSRem ? Y.srem(Z) : Y.urem(Z);
   // (rem (mul nuw/nsw X, Y), (mul X, Z))
   //      if (rem Y, Z) == 0
   //          -> 0
@@ -1793,9 +1803,9 @@ static Instruction *simplifyIRemMulShl(BinaryOperator &I,
   // (rem (mul X, Y), (mul nuw/nsw X, Z))
   //      if (rem Y, Z) == Y
   //          -> (mul nuw/nsw X, Y)
-  if (RemYZ == *Y && BO1NoWrap) {
+  if (RemYZ == Y && BO1NoWrap) {
     BinaryOperator *BO =
-        BinaryOperator::CreateMul(X, ConstantInt::get(I.getType(), *Y));
+        BinaryOperator::CreateMul(X, ConstantInt::get(I.getType(), Y));
     // Copy any overflow flags from Op0.
     BO->setHasNoSignedWrap(IsSRem || BO0HasNSW);
     BO->setHasNoUnsignedWrap(!IsSRem || BO0HasNUW);
@@ -1805,7 +1815,7 @@ static Instruction *simplifyIRemMulShl(BinaryOperator &I,
   // (rem (mul nuw/nsw X, Y), (mul {nsw} X, Z))
   //      if Y >= Z
   //          -> (mul {nuw} nsw X, (rem Y, Z))
-  if (Y->uge(*Z) && (IsSRem ? (BO0HasNSW && BO1HasNSW) : BO0HasNUW)) {
+  if (Y.uge(Z) && (IsSRem ? (BO0HasNSW && BO1HasNSW) : BO0HasNUW)) {
     BinaryOperator *BO =
         BinaryOperator::CreateMul(X, ConstantInt::get(I.getType(), RemYZ));
     BO->setHasNoSignedWrap();
