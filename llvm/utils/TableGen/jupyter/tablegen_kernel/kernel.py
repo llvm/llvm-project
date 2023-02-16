@@ -64,8 +64,7 @@ class TableGenKernel(Kernel):
     def banner(self):
         return "llvm-tblgen kernel %s" % __version__
 
-    @property
-    def executable(self):
+    def get_executable(self):
         """If this is the first run, search for llvm-tblgen.
         Otherwise return the cached path to it."""
         if self._executable is None:
@@ -75,7 +74,10 @@ class TableGenKernel(Kernel):
             else:
                 path = shutil.which("llvm-tblgen")
                 if path is None:
-                    raise OSError("llvm-tblgen not found, please see README")
+                    raise OSError(
+                        "llvm-tblgen not found. Put it on your PATH or set the"
+                        " environment variable LLVM_TBLGEN_EXECUTABLE to point to it."
+                    )
                 self._executable = path
 
         return self._executable
@@ -157,17 +159,43 @@ class TableGenKernel(Kernel):
 
         return self._previous_code, self._previous_magic.get("args", [])
 
+    def make_status(self):
+        return {
+            "status": "ok",
+            "execution_count": self.execution_count,
+            "payload": [],
+            "user_expressions": {},
+        }
+
+    def send_stream(self, name, content):
+        self.send_response(self.iopub_socket, "stream", {"name": name, "text": content})
+
+        return self.make_status()
+
+    def send_stderr(self, stderr):
+        return self.send_stream("stderr", stderr)
+
+    def send_stdout(self, stdout):
+        return self.send_stream("stdout", stdout)
+
     def do_execute(
         self, code, silent, store_history=True, user_expressions=None, allow_stdin=False
     ):
         """Execute user code using llvm-tblgen binary."""
         all_code, args = self.get_code_and_args(code)
 
+        # If we cannot find llvm-tblgen, propogate the error to the notebook.
+        # (in case the user is not able to see the output from the Jupyter server)
+        try:
+            executable = self.get_executable()
+        except Exception as e:
+            return self.send_stderr(str(e))
+
         with tempfile.TemporaryFile("w+") as f:
             f.write(all_code)
             f.seek(0)
             got = subprocess.run(
-                [self.executable, *args],
+                [executable, *args],
                 stdin=f,
                 stderr=subprocess.PIPE,
                 stdout=subprocess.PIPE,
@@ -176,20 +204,11 @@ class TableGenKernel(Kernel):
 
         if not silent:
             if got.stderr:
-                self.send_response(
-                    self.iopub_socket, "stream", {"name": "stderr", "text": got.stderr}
-                )
+                return self.send_stderr(got.stderr)
             else:
-                self.send_response(
-                    self.iopub_socket, "stream", {"name": "stdout", "text": got.stdout}
-                )
-
-        return {
-            "status": "ok",
-            "execution_count": self.execution_count,
-            "payload": [],
-            "user_expressions": {},
-        }
+                return self.send_stdout(got.stdout)
+        else:
+            return self.make_status()
 
 
 if __name__ == "__main__":
