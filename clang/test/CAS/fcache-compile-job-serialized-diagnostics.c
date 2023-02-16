@@ -1,7 +1,7 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: llvm-cas --cas %t/cas --ingest --data %s > %t/casid
 
-// RUN: %clang -cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -faction-cache-path %t/cache \
+// RUN: %clang -cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas \
 // RUN:   -fcas-fs @%t/casid -fcache-compile-job \
 // RUN:   -Wimplicit-function-declaration \
 // RUN:   -Wno-error=implicit-function-declaration \
@@ -13,7 +13,7 @@
 
 // RUN: ls %t/output.o && rm %t/output.o
 
-// RUN: %clang -cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -faction-cache-path %t/cache \
+// RUN: %clang -cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas \
 // RUN:   -fcas-fs @%t/casid -fcache-compile-job \
 // RUN:   -Wimplicit-function-declaration \
 // RUN:   -Wno-error=implicit-function-declaration \

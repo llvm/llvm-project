@@ -32,13 +32,7 @@ void clang_experimental_cas_Options_dispose(CXCASOptions Opts) {
 void clang_experimental_cas_Options_setOnDiskPath(CXCASOptions COpts,
                                                   const char *Path) {
   CASOptions &Opts = *unwrap(COpts);
-  SmallString<256> PathBuf;
-  PathBuf = Path;
-  llvm::sys::path::append(PathBuf, "cas");
-  Opts.CASPath = std::string(PathBuf);
-  llvm::sys::path::remove_filename(PathBuf);
-  llvm::sys::path::append(PathBuf, "cache");
-  Opts.CachePath = std::string(PathBuf);
+  Opts.CASPath = Path;
 }
 
 CXCASDatabases clang_experimental_cas_Databases_create(CXCASOptions COpts,

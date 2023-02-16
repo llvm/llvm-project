@@ -93,21 +93,11 @@ static void addCommonArgs(bool ForDriver, SmallVectorImpl<const char *> &Args,
     Args.push_back("-fdepscan-include-tree");
   }
   if (auto CASPath = llvm::sys::Process::GetEnv("LLVM_CACHE_CAS_PATH")) {
-    llvm::SmallString<256> CASArg(*CASPath);
-    llvm::sys::path::append(CASArg, "cas");
     if (ForDriver) {
-      Args.append({"-Xclang", "-fcas-path", "-Xclang",
-                   Saver.save(CASArg.str()).data()});
+      Args.append(
+          {"-Xclang", "-fcas-path", "-Xclang", Saver.save(*CASPath).data()});
     } else {
-      Args.append({"-fcas-path", Saver.save(CASArg.str()).data()});
-    }
-    llvm::SmallString<256> CacheArg(*CASPath);
-    llvm::sys::path::append(CacheArg, "actioncache");
-    if (ForDriver) {
-      Args.append({"-Xclang", "-faction-cache-path", "-Xclang",
-                   Saver.save(CacheArg.str()).data()});
-    } else {
-      Args.append({"-faction-cache-path", Saver.save(CacheArg.str()).data()});
+      Args.append({"-fcas-path", Saver.save(*CASPath).data()});
     }
   }
 }

@@ -9,6 +9,7 @@
 #include "BuiltinCAS.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CAS/BuiltinObjectHasher.h"
+#include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
@@ -78,4 +79,11 @@ Error BuiltinCAS::validate(const CASID &ID) {
     return createCorruptObjectError(ID);
 
   return Error::success();
+}
+
+Expected<std::unique_ptr<ondisk::UnifiedOnDiskCache>>
+cas::builtin::createBuiltinUnifiedOnDiskCache(StringRef Path) {
+  return ondisk::UnifiedOnDiskCache::open(Path, /*SizeLimit=*/std::nullopt,
+                                          BuiltinCASContext::getHashName(),
+                                          sizeof(HashType));
 }

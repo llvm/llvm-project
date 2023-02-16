@@ -54,11 +54,10 @@ public:
   /// - "auto" is an alias for an automatically chosen location in the user's
   ///   system cache.
   std::string CASPath;
-  std::string CachePath;
 
   friend bool operator==(const CASConfiguration &LHS,
                          const CASConfiguration &RHS) {
-    return LHS.CASPath == RHS.CASPath && LHS.CachePath == RHS.CachePath;
+    return LHS.CASPath == RHS.CASPath;
   }
   friend bool operator!=(const CASConfiguration &LHS,
                          const CASConfiguration &RHS) {

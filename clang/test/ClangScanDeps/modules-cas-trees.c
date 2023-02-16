@@ -8,13 +8,13 @@
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 
 // RUN: clang-scan-deps -compilation-database %t/cdb.json \
-// RUN:   -cas-path %t/cas -action-cache-path %t/cache -module-files-dir %t/outputs \
+// RUN:   -cas-path %t/cas -module-files-dir %t/outputs \
 // RUN:   -format experimental-full -mode preprocess-dependency-directives \
 // RUN:   > %t/deps.json
 
 // Full and tree-full modes are identical here.
 // RUN: clang-scan-deps -compilation-database %t/cdb.json \
-// RUN:   -cas-path %t/cas -action-cache-path %t/cache -module-files-dir %t/outputs \
+// RUN:   -cas-path %t/cas -module-files-dir %t/outputs \
 // RUN:   -format experimental-tree-full -mode preprocess-dependency-directives \
 // RUN:   > %t/deps_tree.json
 // RUN: diff -u %t/deps_tree.json %t/deps.json
@@ -29,7 +29,7 @@
 // NO_CAS-NOT: faction-cache
 // NO_CAS-NOT: fcache-compile-job
 // RUN: clang-scan-deps -compilation-database %t/cdb.json \
-// RUN:   -cas-path %t/cas -action-cache-path %t/cache -module-files-dir %t/outputs \
+// RUN:   -cas-path %t/cas -module-files-dir %t/outputs \
 // RUN:   -format experimental-full -mode preprocess-dependency-directives \
 // RUN:   > %t/deps_cas_2.json
 // RUN: diff -u %t/deps_cas_2.json %t/deps.json
@@ -74,8 +74,6 @@
 // CHECK-NEXT:         "-cc1"
 // CHECK:              "-fcas-path"
 // CHECK-NEXT:         "[[PREFIX]]{{.}}cas"
-// CHECK:              "-faction-cache-path"
-// CHECK-NEXT:         "[[PREFIX]]{{.}}cache"
 // CHECK:              "-fcas-fs"
 // CHECK-NEXT:         "[[LEFT_ROOT_ID]]"
 // CHECK:              "-o"
@@ -102,8 +100,6 @@
 // CHECK-NEXT:         "-cc1"
 // CHECK:              "-fcas-path"
 // CHECK-NEXT:         "[[PREFIX]]{{.}}cas"
-// CHECK:              "-faction-cache-path"
-// CHECK-NEXT:         "[[PREFIX]]{{.}}cache"
 // CHECK:              "-fcas-fs"
 // CHECK-NEXT:         "[[RIGHT_ROOT_ID]]"
 // CHECK:              "-o"
@@ -126,8 +122,6 @@
 // CHECK-NEXT:         "-cc1"
 // CHECK:              "-fcas-path"
 // CHECK-NEXT:         "[[PREFIX]]{{.}}cas"
-// CHECK:              "-faction-cache-path"
-// CHECK-NEXT:         "[[PREFIX]]{{.}}cache"
 // CHECK:              "-fcas-fs"
 // CHECK-NEXT:         "[[TOP_ROOT_ID]]"
 // CHECK:              "-o"
@@ -159,8 +153,6 @@
 // CHECK-NEXT:             "-cc1"
 // CHECK:                  "-fcas-path"
 // CHECK-NEXT:             "[[PREFIX]]{{.}}cas"
-// CHECK:                  "-faction-cache-path"
-// CHECK-NEXT:             "[[PREFIX]]{{.}}cache"
 // CHECK:                  "-fcas-fs"
 // CHECK-NEXT:             "[[TU_ROOT_ID]]"
 // CHECK:                  "-fcache-compile-job"

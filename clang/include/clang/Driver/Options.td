@@ -6774,12 +6774,6 @@ def fcas_path : Separate<["-"], "fcas-path">,
              " '-fcas-path=auto' chooses a path in the user's system cache.">,
     MarshallingInfoString<CASOpts<"CASPath">>;
 
-def faction_cache_path : Separate<["-"], "faction-cache-path">,
-    Group<f_Group>, MetaVarName<"<dir>|auto">,
-    HelpText<"Path to a persistent on-disk backing store for the builtin Cache."
-             " '-faction-cache-path=auto' chooses a path in the user's system cache.">,
-    MarshallingInfoString<CASOpts<"CachePath">>;
-
 // FIXME: Add to driver once it's supported by -fdepscan.
 def fcas_fs : Separate<["-"], "fcas-fs">,
     Group<f_Group>, MetaVarName<"<tree>">,

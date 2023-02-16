@@ -11,7 +11,7 @@
 // RUN: not env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
 // RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t.o -Wl,-none --serialize-diagnostics %t/t2.diag \
 // RUN:   2>&1 | FileCheck %s -check-prefix=ERROR -check-prefix=DRIVER
-// RUN: not env LLVM_CACHE_CAS_PATH=%t/cas %clang -cc1depscand -execute %{clang-daemon-dir}/%basename_t -cas-args -fcas-path %t/cas/cas -faction-cache-path %t/cas/cache -- \
+// RUN: not env LLVM_CACHE_CAS_PATH=%t/cas %clang -cc1depscand -execute %{clang-daemon-dir}/%basename_t -cas-args -fcas-path %t/cas -- \
 // RUN: %clang-cache \
 // RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t.o -Wl,-none --serialize-diagnostics %t/t3.diag \
 // RUN:   2>&1 | FileCheck %s -check-prefix=ERROR -check-prefix=DRIVER
@@ -28,7 +28,7 @@
 // RUN: echo "int y;" > %t/b.c
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
 // RUN:   %clang -target x86_64-apple-macos11 -c %t/a.c -o %t.o --serialize-diagnostics %t/t2.diag
-// RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang -cc1depscand -execute %{clang-daemon-dir}/%basename_t -cas-args -fcas-path %t/cas/cas -faction-cache-path %t/cas/cache -- \
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang -cc1depscand -execute %{clang-daemon-dir}/%basename_t -cas-args -fcas-path %t/cas -- \
 // RUN: %clang-cache \
 // RUN:   %clang -target x86_64-apple-macos11 -c %t/b.c -o %t.o --serialize-diagnostics %t/t3.diag
 
@@ -49,7 +49,7 @@
 // RUN: not env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
 // RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t.o -fdiagnostics-color=always -fansi-escape-codes \
 // RUN:   2>&1 | FileCheck %s -check-prefix=COLOR-DIAG
-// RUN: not env LLVM_CACHE_CAS_PATH=%t/cas %clang -cc1depscand -execute %{clang-daemon-dir}/%basename_t -cas-args -fcas-path %t/cas/cas -faction-cache-path %t/cas/cache -- \
+// RUN: not env LLVM_CACHE_CAS_PATH=%t/cas %clang -cc1depscand -execute %{clang-daemon-dir}/%basename_t -cas-args -fcas-path %t/cas -- \
 // RUN: %clang-cache \
 // RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t.o -fdiagnostics-color=always -fansi-escape-codes \
 // RUN:   2>&1 | FileCheck %s -check-prefix=COLOR-DIAG

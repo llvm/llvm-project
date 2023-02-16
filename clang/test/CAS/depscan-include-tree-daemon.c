@@ -3,9 +3,9 @@
 // RUN: split-file %s %t
 
 // RUN: %clang -cc1depscan -o %t/inline.rsp -fdepscan=inline -fdepscan-include-tree -cc1-args -cc1 -triple x86_64-apple-macos11.0 \
-// RUN:     -fsyntax-only %t/t.c -I %t/includes -isysroot %S/Inputs/SDK -fcas-path %t/cas -faction-cache-path %t/cache -DSOME_MACRO -dependency-file %t/inline.d -MT deps
+// RUN:     -fsyntax-only %t/t.c -I %t/includes -isysroot %S/Inputs/SDK -fcas-path %t/cas -DSOME_MACRO -dependency-file %t/inline.d -MT deps
 
-// RUN: %clang -cc1depscand -execute %{clang-daemon-dir}/%basename_t -cas-args -fdepscan-include-tree -fcas-path %t/cas -faction-cache-path %t/cache -- \
+// RUN: %clang -cc1depscand -execute %{clang-daemon-dir}/%basename_t -cas-args -fdepscan-include-tree -fcas-path %t/cas -- \
 // RUN:   %clang -cc1depscan -o %t/daemon.rsp -fdepscan=daemon -fdepscan-daemon=%{clang-daemon-dir}/%basename_t -fdepscan-include-tree \
 // RUN:     -cc1-args -cc1 -triple x86_64-apple-macos11.0 \
 // RUN:     -fsyntax-only %t/t.c -I %t/includes -isysroot %S/Inputs/SDK -fcas-path %t/cas -DSOME_MACRO -dependency-file %t/daemon.d -MT deps

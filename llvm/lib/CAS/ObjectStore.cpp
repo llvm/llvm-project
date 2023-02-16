@@ -7,8 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/ObjectStore.h"
+#include "BuiltinCAS.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/CAS/ActionCache.h"
+#include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -178,11 +181,24 @@ cas::createCASFromIdentifier(StringRef Path) {
   if (Path == "auto")
     return createOnDiskCAS(getDefaultOnDiskCASPath());
 
-  // Fallback is to create OnDiskCAS.
-  return createOnDiskCAS(Path);
+  // Fallback is to create UnifiedOnDiskCache.
+  auto UniDB = builtin::createBuiltinUnifiedOnDiskCache(Path);
+  if (!UniDB)
+    return UniDB.takeError();
+  return builtin::createObjectStoreFromUnifiedOnDiskCache(std::move(*UniDB));
 }
 
 void cas::registerCASURLScheme(StringRef Prefix,
                                ObjectStoreCreateFuncTy *Func) {
   getRegisteredScheme().insert({Prefix, Func});
+}
+
+Expected<std::pair<std::unique_ptr<ObjectStore>, std::unique_ptr<ActionCache>>>
+cas::createOnDiskUnifiedCASDatabases(StringRef Path) {
+  std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB;
+  if (Error E = builtin::createBuiltinUnifiedOnDiskCache(Path).moveInto(UniDB))
+    return std::move(E);
+  auto CAS = builtin::createObjectStoreFromUnifiedOnDiskCache(UniDB);
+  auto AC = builtin::createActionCacheFromUnifiedOnDiskCache(std::move(UniDB));
+  return std::make_pair(std::move(CAS), std::move(AC));
 }

@@ -37,7 +37,7 @@
 // Print a key containing an include-tree.
 
 // RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree -o %t/inc.rsp -cc1-args -cc1 -triple x86_64-apple-macos11 -emit-obj \
-// RUN:   %s -o %t/output.o -fcas-path %t/cas -faction-cache-path %t/cache
+// RUN:   %s -o %t/output.o -fcas-path %t/cas
 // RUN: %clang @%t/inc.rsp -Rcompile-job-cache 2> %t/output-tree.txt
 
 // RUN: cat %t/output-tree.txt | sed \
