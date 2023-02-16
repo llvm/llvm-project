@@ -10,12 +10,11 @@ target triple = "aarch64-unknown-linux-gnu"
 define <4 x i8> @ashr_v4i8(<4 x i8> %op1, <4 x i8> %op2) #0 {
 ; CHECK-LABEL: ashr_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    lsl z0.h, z0.h, #8
+; CHECK-NEXT:    sxtb z0.h, p0/m, z0.h
 ; CHECK-NEXT:    and z1.h, z1.h, #0xff
-; CHECK-NEXT:    asr z0.h, z0.h, #8
 ; CHECK-NEXT:    asr z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -69,12 +68,11 @@ define void @ashr_v32i8(ptr %a, ptr %b) #0 {
 define <2 x i16> @ashr_v2i16(<2 x i16> %op1, <2 x i16> %op2) #0 {
 ; CHECK-LABEL: ashr_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    sxth z0.s, p0/m, z0.s
 ; CHECK-NEXT:    and z1.s, z1.s, #0xffff
-; CHECK-NEXT:    asr z0.s, z0.s, #16
 ; CHECK-NEXT:    asr z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret

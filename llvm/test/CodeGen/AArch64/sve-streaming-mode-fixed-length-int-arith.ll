@@ -589,8 +589,7 @@ define <4 x i8> @abs_v4i8(<4 x i8> %op1) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    lsl z0.h, z0.h, #8
-; CHECK-NEXT:    asr z0.h, z0.h, #8
+; CHECK-NEXT:    sxtb z0.h, p0/m, z0.h
 ; CHECK-NEXT:    abs z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -642,8 +641,7 @@ define <2 x i16> @abs_v2i16(<2 x i16> %op1) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    asr z0.s, z0.s, #16
+; CHECK-NEXT:    sxth z0.s, p0/m, z0.s
 ; CHECK-NEXT:    abs z0.s, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret

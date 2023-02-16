@@ -4508,10 +4508,6 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   }
 }
 
-bool SITargetLowering::hasBitPreservingFPLogic(EVT VT) const {
-  return isTypeLegal(VT.getScalarType());
-}
-
 bool SITargetLowering::hasAtomicFaddRtnForTy(SDValue &Op) const {
   switch (Op.getValue(0).getSimpleValueType().SimpleTy) {
   case MVT::f32:

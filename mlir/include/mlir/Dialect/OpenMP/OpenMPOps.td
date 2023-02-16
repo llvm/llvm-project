@@ -478,6 +478,26 @@ def YieldOp : OpenMP_Op<"yield",
 // 2.10.1 task Construct
 //===----------------------------------------------------------------------===//
 
+def ClauseTaskDependIn    : I32EnumAttrCase<"taskdependin",    0>;
+def ClauseTaskDependOut   : I32EnumAttrCase<"taskdependout",   1>;
+def ClauseTaskDependInOut : I32EnumAttrCase<"taskdependinout", 2>;
+
+def ClauseTaskDepend : I32EnumAttr<
+    "ClauseTaskDepend",
+    "task depend clause",
+    [ClauseTaskDependIn, ClauseTaskDependOut, ClauseTaskDependInOut]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::omp";
+}
+def ClauseTaskDependAttr :
+  EnumAttr<OpenMP_Dialect, ClauseTaskDepend, "clause_task_depend"> {
+  let assemblyFormat = "`(` $value `)`";
+}
+def TaskDependArrayAttr :
+  TypedArrayAttrBase<ClauseTaskDependAttr, "clause_task_depend array attr"> {
+    let constBuilderCall = ?;
+  }
+
 def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
                        OutlineableOpenMPOpInterface, AutomaticAllocationScope,
                        ReductionClauseInterface]> {
@@ -518,6 +538,10 @@ def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
     default priority-value when no priority clause is specified should be
     assumed to be zero (the lowest priority).
 
+    The `depends` and `depend_vars` arguments are variadic lists of values
+    that specify the dependencies of this particular task in relation to
+    other tasks.
+
     The `allocators_vars` and `allocate_vars` arguments are a variadic list of
     values that specify the memory allocator to be used to obtain storage for
     private values.
@@ -532,6 +556,8 @@ def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
                        Variadic<OpenMP_PointerLikeType>:$in_reduction_vars,
                        OptionalAttr<SymbolRefArrayAttr>:$in_reductions,
                        Optional<I32>:$priority,
+                       OptionalAttr<TaskDependArrayAttr>:$depends,
+                       Variadic<OpenMP_PointerLikeType>:$depend_vars,
                        Variadic<AnyType>:$allocate_vars,
                        Variadic<AnyType>:$allocators_vars);
   let regions = (region AnyRegion:$region);
@@ -549,6 +575,10 @@ def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
               custom<AllocateAndAllocator>(
                 $allocate_vars, type($allocate_vars),
                 $allocators_vars, type($allocators_vars)
+              ) `)`
+          |`depend` `(`
+              custom<DependVarList>(
+                $depend_vars, type($depend_vars), $depends
               ) `)`
     ) $region attr-dict
   }];

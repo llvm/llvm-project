@@ -575,7 +575,7 @@ GlobalIFunc::GlobalIFunc(Type *Ty, unsigned AddressSpace, LinkageTypes Link,
                    AddressSpace) {
   setResolver(Resolver);
   if (ParentModule)
-    ParentModule->getIFuncList().push_back(this);
+    ParentModule->insertIFunc(this);
 }
 
 GlobalIFunc *GlobalIFunc::create(Type *Ty, unsigned AddressSpace,
@@ -584,13 +584,9 @@ GlobalIFunc *GlobalIFunc::create(Type *Ty, unsigned AddressSpace,
   return new GlobalIFunc(Ty, AddressSpace, Link, Name, Resolver, ParentModule);
 }
 
-void GlobalIFunc::removeFromParent() {
-  getParent()->getIFuncList().remove(getIterator());
-}
+void GlobalIFunc::removeFromParent() { getParent()->removeIFunc(this); }
 
-void GlobalIFunc::eraseFromParent() {
-  getParent()->getIFuncList().erase(getIterator());
-}
+void GlobalIFunc::eraseFromParent() { getParent()->eraseIFunc(this); }
 
 const Function *GlobalIFunc::getResolverFunction() const {
   return dyn_cast<Function>(getResolver()->stripPointerCastsAndAliases());

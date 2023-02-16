@@ -575,7 +575,7 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
   // Check if the block is in a loop.
   const MachineLoop *ML = MLI->getLoopFor(MBB);
   if (!MinInstr)
-    MinInstr = Traces->getEnsemble(MachineTraceMetrics::TS_MinInstrCount);
+    MinInstr = Traces->getEnsemble(MachineTraceStrategy::TS_MinInstrCount);
 
   SparseSet<LiveRegUnit> RegUnits;
   RegUnits.setUniverse(TRI->getNumRegUnits());

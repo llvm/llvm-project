@@ -4668,11 +4668,12 @@ static DeclRefExpr *buildCapture(Sema &S, ValueDecl *D, Expr *CaptureExpr,
                           CaptureExpr->getExprLoc());
 }
 
-static ExprResult buildCapture(Sema &S, Expr *CaptureExpr, DeclRefExpr *&Ref) {
+static ExprResult buildCapture(Sema &S, Expr *CaptureExpr, DeclRefExpr *&Ref,
+                               StringRef Name) {
   CaptureExpr = S.DefaultLvalueConversion(CaptureExpr).get();
   if (!Ref) {
     OMPCapturedExprDecl *CD = buildCaptureDecl(
-        S, &S.getASTContext().Idents.get(".capture_expr."), CaptureExpr,
+        S, &S.getASTContext().Idents.get(Name), CaptureExpr,
         /*WithInit=*/true, S.CurContext, /*AsExpression=*/true);
     Ref = buildDeclRefExpr(S, CD, CD->getType().getNonReferenceType(),
                            CaptureExpr->getExprLoc());
@@ -8441,7 +8442,8 @@ bool OpenMPIterationSpaceChecker::checkAndSetInc(Expr *S) {
 
 static ExprResult
 tryBuildCapture(Sema &SemaRef, Expr *Capture,
-                llvm::MapVector<const Expr *, DeclRefExpr *> &Captures) {
+                llvm::MapVector<const Expr *, DeclRefExpr *> &Captures,
+                StringRef Name = ".capture_expr.") {
   if (SemaRef.CurContext->isDependentContext() || Capture->containsErrors())
     return Capture;
   if (Capture->isEvaluatable(SemaRef.Context, Expr::SE_AllowSideEffects))
@@ -8450,9 +8452,9 @@ tryBuildCapture(Sema &SemaRef, Expr *Capture,
         /*AllowExplicit=*/true);
   auto I = Captures.find(Capture);
   if (I != Captures.end())
-    return buildCapture(SemaRef, Capture, I->second);
+    return buildCapture(SemaRef, Capture, I->second, Name);
   DeclRefExpr *Ref = nullptr;
-  ExprResult Res = buildCapture(SemaRef, Capture, Ref);
+  ExprResult Res = buildCapture(SemaRef, Capture, Ref, Name);
   Captures[Capture] = Ref;
   return Res;
 }
@@ -8464,7 +8466,7 @@ calculateNumIters(Sema &SemaRef, Scope *S, SourceLocation DefaultLoc,
                   Expr *Lower, Expr *Upper, Expr *Step, QualType LCTy,
                   bool TestIsStrictOp, bool RoundToStep,
                   llvm::MapVector<const Expr *, DeclRefExpr *> &Captures) {
-  ExprResult NewStep = tryBuildCapture(SemaRef, Step, Captures);
+  ExprResult NewStep = tryBuildCapture(SemaRef, Step, Captures, ".new_step");
   if (!NewStep.isUsable())
     return nullptr;
   llvm::APSInt LRes, SRes;
@@ -8640,8 +8642,8 @@ Expr *OpenMPIterationSpaceChecker::buildNumIterations(
     return nullptr;
   Expr *LBVal = LB;
   Expr *UBVal = UB;
-  // LB = TestIsLessOp.getValue() ? min(LB(MinVal), LB(MaxVal)) :
-  // max(LB(MinVal), LB(MaxVal))
+  // OuterVar = (LB = TestIsLessOp.getValue() ? min(LB(MinVal), LB(MaxVal)) :
+  // max(LB(MinVal), LB(MaxVal)))
   if (InitDependOnLC) {
     const LoopIterationSpace &IS = ResultIterSpaces[*InitDependOnLC - 1];
     if (!IS.MinValue || !IS.MaxValue)
@@ -8686,8 +8688,10 @@ Expr *OpenMPIterationSpaceChecker::buildNumIterations(
     if (!LBMaxVal.isUsable())
       return nullptr;
 
-    Expr *LBMin = tryBuildCapture(SemaRef, LBMinVal.get(), Captures).get();
-    Expr *LBMax = tryBuildCapture(SemaRef, LBMaxVal.get(), Captures).get();
+    Expr *LBMin =
+        tryBuildCapture(SemaRef, LBMinVal.get(), Captures, ".lb_min").get();
+    Expr *LBMax =
+        tryBuildCapture(SemaRef, LBMaxVal.get(), Captures, ".lb_max").get();
     if (!LBMin || !LBMax)
       return nullptr;
     // LB(MinVal) < LB(MaxVal)
@@ -8696,7 +8700,8 @@ Expr *OpenMPIterationSpaceChecker::buildNumIterations(
     if (!MinLessMaxRes.isUsable())
       return nullptr;
     Expr *MinLessMax =
-        tryBuildCapture(SemaRef, MinLessMaxRes.get(), Captures).get();
+        tryBuildCapture(SemaRef, MinLessMaxRes.get(), Captures, ".min_less_max")
+            .get();
     if (!MinLessMax)
       return nullptr;
     if (*TestIsLessOp) {
@@ -8716,6 +8721,12 @@ Expr *OpenMPIterationSpaceChecker::buildNumIterations(
         return nullptr;
       LBVal = MaxLB.get();
     }
+    // OuterVar = LB
+    LBMinVal =
+        SemaRef.BuildBinOp(S, DefaultLoc, BO_Assign, IS.CounterVar, LBVal);
+    if (!LBMinVal.isUsable())
+      return nullptr;
+    LBVal = LBMinVal.get();
   }
   // UB = TestIsLessOp.getValue() ? max(UB(MinVal), UB(MaxVal)) :
   // min(UB(MinVal), UB(MaxVal))
@@ -8763,8 +8774,10 @@ Expr *OpenMPIterationSpaceChecker::buildNumIterations(
     if (!UBMaxVal.isUsable())
       return nullptr;
 
-    Expr *UBMin = tryBuildCapture(SemaRef, UBMinVal.get(), Captures).get();
-    Expr *UBMax = tryBuildCapture(SemaRef, UBMaxVal.get(), Captures).get();
+    Expr *UBMin =
+        tryBuildCapture(SemaRef, UBMinVal.get(), Captures, ".ub_min").get();
+    Expr *UBMax =
+        tryBuildCapture(SemaRef, UBMaxVal.get(), Captures, ".ub_max").get();
     if (!UBMin || !UBMax)
       return nullptr;
     // UB(MinVal) > UB(MaxVal)
@@ -8772,8 +8785,9 @@ Expr *OpenMPIterationSpaceChecker::buildNumIterations(
         SemaRef.BuildBinOp(S, DefaultLoc, BO_GT, UBMin, UBMax);
     if (!MinGreaterMaxRes.isUsable())
       return nullptr;
-    Expr *MinGreaterMax =
-        tryBuildCapture(SemaRef, MinGreaterMaxRes.get(), Captures).get();
+    Expr *MinGreaterMax = tryBuildCapture(SemaRef, MinGreaterMaxRes.get(),
+                                          Captures, ".min_greater_max")
+                              .get();
     if (!MinGreaterMax)
       return nullptr;
     if (*TestIsLessOp) {
@@ -8796,8 +8810,8 @@ Expr *OpenMPIterationSpaceChecker::buildNumIterations(
   }
   Expr *UBExpr = *TestIsLessOp ? UBVal : LBVal;
   Expr *LBExpr = *TestIsLessOp ? LBVal : UBVal;
-  Expr *Upper = tryBuildCapture(SemaRef, UBExpr, Captures).get();
-  Expr *Lower = tryBuildCapture(SemaRef, LBExpr, Captures).get();
+  Expr *Upper = tryBuildCapture(SemaRef, UBExpr, Captures, ".upper").get();
+  Expr *Lower = tryBuildCapture(SemaRef, LBExpr, Captures, ".lower").get();
   if (!Upper || !Lower)
     return nullptr;
 
@@ -8891,7 +8905,7 @@ std::pair<Expr *, Expr *> OpenMPIterationSpaceChecker::buildMinMaxValues(
   if (!Diff.isUsable())
     return std::make_pair(nullptr, nullptr);
 
-  ExprResult NewStep = tryBuildCapture(SemaRef, Step, Captures);
+  ExprResult NewStep = tryBuildCapture(SemaRef, Step, Captures, ".new_step");
   if (!NewStep.isUsable())
     return std::make_pair(nullptr, nullptr);
   Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Mul, Diff.get(), NewStep.get());

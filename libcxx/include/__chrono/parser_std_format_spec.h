@@ -214,6 +214,7 @@ private:
     case _CharT('p'): // TODO FMT does the formater require an hour or a time?
     case _CharT('H'):
     case _CharT('I'):
+      __parser_.__hour_ = true;
       __validate_hour(__flags);
       break;
 
@@ -221,6 +222,7 @@ private:
     case _CharT('R'):
     case _CharT('T'):
     case _CharT('X'):
+      __parser_.__hour_ = true;
       __format_spec::__validate_time(__flags);
       break;
 
@@ -313,6 +315,7 @@ private:
 
     switch (*__begin) {
     case _CharT('X'):
+      __parser_.__hour_ = true;
       __format_spec::__validate_time(__flags);
       break;
 
@@ -361,6 +364,7 @@ private:
 
     case _CharT('I'):
     case _CharT('H'):
+      __parser_.__hour_ = true;
       __format_spec::__validate_hour(__flags);
       break;
 

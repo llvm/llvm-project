@@ -2165,15 +2165,29 @@ bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
   return true;
 }
 
-bool RISCVDAGToDAGISel::selectSExti32(SDValue N, SDValue &Val) {
+bool RISCVDAGToDAGISel::selectSExtBits(SDValue N, unsigned Bits, SDValue &Val) {
   if (N.getOpcode() == ISD::SIGN_EXTEND_INREG &&
-      cast<VTSDNode>(N.getOperand(1))->getVT() == MVT::i32) {
+      cast<VTSDNode>(N.getOperand(1))->getVT().getSizeInBits() == Bits) {
     Val = N.getOperand(0);
     return true;
   }
+
+  auto UnwrapShlSra = [](SDValue N, unsigned ShiftAmt) {
+    if (N.getOpcode() != ISD::SRA || !isa<ConstantSDNode>(N.getOperand(1)))
+      return N;
+
+    SDValue N0 = N.getOperand(0);
+    if (N0.getOpcode() == ISD::SHL && isa<ConstantSDNode>(N0.getOperand(1)) &&
+        N.getConstantOperandVal(1) == ShiftAmt &&
+        N0.getConstantOperandVal(1) == ShiftAmt)
+      return N0.getOperand(0);
+
+    return N;
+  };
+
   MVT VT = N.getSimpleValueType();
-  if (CurDAG->ComputeNumSignBits(N) > (VT.getSizeInBits() - 32)) {
-    Val = N;
+  if (CurDAG->ComputeNumSignBits(N) > (VT.getSizeInBits() - Bits)) {
+    Val = UnwrapShlSra(N, VT.getSizeInBits() - Bits);
     return true;
   }
 
@@ -2681,6 +2695,10 @@ bool RISCVDAGToDAGISel::doPeepholeSExtW(SDNode *N) {
   case RISCV::MULW:
   case RISCV::SLLIW:
   case RISCV::PACKW:
+  case RISCV::TH_MULAW:
+  case RISCV::TH_MULAH:
+  case RISCV::TH_MULSW:
+  case RISCV::TH_MULSH:
     // Result is already sign extended just remove the sext.w.
     // NOTE: We only handle the nodes that are selected with hasAllWUsers.
     ReplaceUses(N, N0.getNode());
