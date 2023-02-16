@@ -382,14 +382,27 @@ struct DeallocOpLowering : public ConvertOpToLLVMPattern<memref::DeallocOp> {
     // Insert the `free` declaration if it is not already present.
     LLVM::LLVMFuncOp freeFunc =
         getFreeFn(getTypeConverter(), op->getParentOfType<ModuleOp>());
-    MemRefDescriptor memref(adaptor.getMemref());
-    Value allocatedPtr = memref.allocatedPtr(rewriter, op.getLoc());
-    Value casted = allocatedPtr;
+    Value allocatedPtr;
+    if (auto unrankedTy =
+            llvm::dyn_cast<UnrankedMemRefType>(op.getMemref().getType())) {
+      Type elementType = unrankedTy.getElementType();
+      Type llvmElementTy = getTypeConverter()->convertType(elementType);
+      LLVM::LLVMPointerType elementPtrTy = getTypeConverter()->getPointerType(
+          llvmElementTy, unrankedTy.getMemorySpaceAsInt());
+      allocatedPtr = UnrankedMemRefDescriptor::allocatedPtr(
+          rewriter, op.getLoc(),
+          UnrankedMemRefDescriptor(adaptor.getMemref())
+              .memRefDescPtr(rewriter, op.getLoc()),
+          elementPtrTy);
+    } else {
+      allocatedPtr = MemRefDescriptor(adaptor.getMemref())
+                         .allocatedPtr(rewriter, op.getLoc());
+    }
     if (!getTypeConverter()->useOpaquePointers())
-      casted = rewriter.create<LLVM::BitcastOp>(op.getLoc(), getVoidPtrType(),
-                                                allocatedPtr);
+      allocatedPtr = rewriter.create<LLVM::BitcastOp>(
+          op.getLoc(), getVoidPtrType(), allocatedPtr);
 
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, freeFunc, casted);
+    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, freeFunc, allocatedPtr);
     return success();
   }
 };
