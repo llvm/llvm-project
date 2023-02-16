@@ -239,4 +239,38 @@ declare void @Foo()
   EXPECT_EQ(M->ifunc_size(), 1u);
 }
 
+TEST(ModuleTest, NamedMDList) {
+  // This tests all Module's functions that interact with Module::NamedMDList.
+  LLVMContext C;
+  SMDiagnostic Err;
+  LLVMContext Context;
+  auto M = std::make_unique<Module>("M", C);
+  NamedMDNode *MDN1 = M->getOrInsertNamedMetadata("MDN1");
+  EXPECT_EQ(M->named_metadata_size(), 1u);
+  NamedMDNode *MDN2 = M->getOrInsertNamedMetadata("MDN2");
+  EXPECT_EQ(M->named_metadata_size(), 2u);
+  auto *NewMDN = M->getOrInsertNamedMetadata("NewMDN");
+  EXPECT_EQ(M->named_metadata_size(), 3u);
+
+  M->removeNamedMDNode(NewMDN);
+  EXPECT_EQ(M->named_metadata_size(), 2u);
+
+  M->insertNamedMDNode(NewMDN);
+  EXPECT_EQ(&*std::prev(M->named_metadata().end()), NewMDN);
+
+  M->removeNamedMDNode(NewMDN);
+  M->insertNamedMDNode(NewMDN);
+  EXPECT_EQ(M->named_metadata_size(), 3u);
+  EXPECT_EQ(&*std::prev(M->named_metadata().end()), NewMDN);
+
+  auto Range = M->named_metadata();
+  EXPECT_EQ(&*Range.begin(), MDN1);
+  EXPECT_EQ(&*std::next(Range.begin(), 1), MDN2);
+  EXPECT_EQ(&*std::next(Range.begin(), 2), NewMDN);
+  EXPECT_EQ(std::next(Range.begin(), 3), Range.end());
+
+  M->eraseNamedMDNode(NewMDN);
+  EXPECT_EQ(M->named_metadata_size(), 2u);
+}
+
 } // end namespace
