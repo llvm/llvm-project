@@ -73,10 +73,6 @@ lldb_plugins += [
     "AppleObjCRuntime",
   ],
   [
-    "//lldb/source/Plugins/LanguageRuntime/RenderScript/RenderScriptRuntime",
-    "RenderScriptRuntime",
-  ],
-  [
     "//lldb/source/Plugins/ObjectContainer/BSD-Archive",
     "ObjectContainerBSDArchive",
   ],
