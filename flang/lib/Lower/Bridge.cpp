@@ -2179,6 +2179,19 @@ private:
     unsigned typeGuardIdx = 0;
     std::size_t defaultAttrPos = std::numeric_limits<size_t>::max();
     bool hasLocalScope = false;
+    llvm::SmallVector<const Fortran::semantics::Scope *> typeCaseScopes;
+
+    const auto &typeCaseList =
+        std::get<std::list<Fortran::parser::SelectTypeConstruct::TypeCase>>(
+            selectTypeConstruct.t);
+    for (const auto &typeCase : typeCaseList) {
+      const auto &stmt =
+          std::get<Fortran::parser::Statement<Fortran::parser::TypeGuardStmt>>(
+              typeCase.t);
+      const Fortran::semantics::Scope &scope =
+          bridge.getSemanticsContext().FindScope(stmt.source);
+      typeCaseScopes.push_back(&scope);
+    }
 
     for (Fortran::lower::pft::Evaluation &eval :
          getEval().getNestedEvaluations()) {
@@ -2275,13 +2288,11 @@ private:
                "TypeGuard attribute missing");
         mlir::Attribute typeGuardAttr = attrList[typeGuardIdx];
         mlir::Block *typeGuardBlock = blockList[typeGuardIdx];
-        const Fortran::semantics::Scope &guardScope =
-            bridge.getSemanticsContext().FindScope(eval.position);
         mlir::OpBuilder::InsertPoint crtInsPt = builder->saveInsertionPoint();
         builder->setInsertionPointToStart(typeGuardBlock);
 
         auto addAssocEntitySymbol = [&](fir::ExtendedValue exv) {
-          for (auto &symbol : guardScope.GetSymbols()) {
+          for (auto &symbol : typeCaseScopes[typeGuardIdx]->GetSymbols()) {
             if (symbol->GetUltimate()
                     .detailsIf<Fortran::semantics::AssocEntityDetails>()) {
               addSymbol(symbol, exv);
