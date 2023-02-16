@@ -114,6 +114,16 @@ TEST(YAMLIO, TestMalformedMapRead) {
   EXPECT_TRUE(!!yin.error());
 }
 
+TEST(YAMLIO, TestMapDuplicatedKeysRead) {
+  auto testDiagnostic = [](const llvm::SMDiagnostic &Error, void *) {
+    EXPECT_EQ(Error.getMessage(), "duplicated mapping key 'foo'");
+  };
+  FooBar doc;
+  Input yin("{foo: 3, bar: 5, foo: 4}", nullptr, testDiagnostic);
+  yin >> doc;
+  EXPECT_TRUE(!!yin.error());
+}
+
 //
 // Test the reading of a yaml sequence of mappings
 //
