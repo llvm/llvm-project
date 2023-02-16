@@ -1,7 +1,7 @@
-// RUN:     %clang_cc1 -std=c++1z -fmodules-ts -emit-module-interface %s -o %t.0.pcm -verify -DTEST=0
-// RUN:     %clang_cc1 -std=c++1z -fmodules-ts -emit-module-interface %s -o %t.1.pcm -verify -DTEST=1
-// RUN:     %clang_cc1 -std=c++1z -fmodules-ts -emit-module-interface %s -fmodule-file=%t.0.pcm -o %t.2.pcm -verify -DTEST=2
-// RUN:     %clang_cc1 -std=c++1z -fmodules-ts -emit-module-interface %s -fmodule-file=%t.0.pcm -o %t.3.pcm -verify -Dfoo=bar -DTEST=3
+// RUN:     %clang_cc1 -std=c++20 -emit-module-interface %s -o %t.0.pcm -verify -DTEST=0
+// RUN:     %clang_cc1 -std=c++20 -emit-module-interface %s -o %t.1.pcm -verify -DTEST=1
+// RUN:     %clang_cc1 -std=c++20 -emit-module-interface %s -fmodule-file=%t.0.pcm -o %t.2.pcm -verify -DTEST=2
+// RUN:     %clang_cc1 -std=c++20 -emit-module-interface %s -fmodule-file=%t.0.pcm -o %t.3.pcm -verify -Dfoo=bar -DTEST=3
 
 #if TEST == 0
 // expected-no-diagnostics
@@ -10,7 +10,7 @@
 export module foo;
 #if TEST == 2
 // expected-error@-2 {{redefinition of module 'foo'}}
-// expected-note@modules-ts.cppm:* {{loaded from}}
+// expected-note@modules.cppm:* {{loaded from}}
 #endif
 
 static int m;
@@ -18,14 +18,14 @@ static int m;
 // expected-error@-2 {{redefinition of '}}
 // expected-note@-3 {{unguarded header; consider using #ifdef guards or #pragma once}}
 // FIXME: We should drop the "header from" in this diagnostic.
-// expected-note-re@modules-ts.cppm:1 {{'{{.*}}modules-ts.cppm' included multiple times, additional include site in header from module 'foo'}}
+// expected-note-re@modules.cppm:1 {{'{{.*}}modules.cppm' included multiple times, additional include site in header from module 'foo'}}
 #endif
 int n;
 #if TEST == 2
 // expected-error@-2 {{redefinition of '}}
 // expected-note@-3 {{unguarded header; consider using #ifdef guards or #pragma once}}
 // FIXME: We should drop the "header from" in this diagnostic.
-// expected-note-re@modules-ts.cppm:1 {{'{{.*}}modules-ts.cppm' included multiple times, additional include site in header from module 'foo'}}
+// expected-note-re@modules.cppm:1 {{'{{.*}}modules.cppm' included multiple times, additional include site in header from module 'foo'}}
 #endif
 
 #if TEST == 0
@@ -47,9 +47,9 @@ int use_a = a; // expected-error {{declaration of 'a' must be imported from modu
 // expected-note@-14 {{declaration here is not visible}}
 
 #undef foo
-import foo;
+import foo; // expected-error {{imports must immediately follow the module declaration}}
 
-export {} // expected-error {{export declaration cannot be empty}}
+export {}
 export {  // expected-note {{begins here}}
   ;       // expected-warning {{ISO C++20 does not permit an empty declaration to appear in an export block}}
 }
@@ -78,10 +78,10 @@ struct S {
 // language rules right now, but (per personal correspondence between zygoloid
 // and gdr) is the intent.
 #if TEST == 1
-export { // expected-note {{export block begins here}}
+export {
   extern "C++" {
   namespace NestedExport {
-  export { // expected-error {{appears within another export}}
+  export { // expected-error {{export declaration can only be used within a module interface unit after the module declaration}}
     int q;
   }
   } // namespace NestedExport
