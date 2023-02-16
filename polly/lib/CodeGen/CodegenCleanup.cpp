@@ -85,7 +85,6 @@ public:
     FPM->add(createInstructionCombiningPass(true));
     FPM->add(createIndVarSimplifyPass());
     FPM->add(createLoopIdiomPass());
-    FPM->add(createLoopDeletionPass());
     FPM->add(createCFGSimplificationPass());
     FPM->add(createSimpleLoopUnrollPass(3));
     FPM->add(createMergedLoadStoreMotionPass());
