@@ -83,6 +83,12 @@ struct TranslationUnitDeps {
   std::vector<std::string> DriverCommandLine;
 };
 
+struct P1689Rule {
+  std::string PrimaryOutput;
+  std::optional<P1689ModuleInfo> Provides;
+  std::vector<P1689ModuleInfo> Requires;
+};
+
 /// The high-level implementation of the dependency discovery tool that runs on
 /// an individual worker thread.
 class DependencyScanningTool {
@@ -131,6 +137,9 @@ public:
       StringRef CWD, const DepscanPrefixMapping &PrefixMapping,
       DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
       bool DiagGenerationAsCompilation);
+
+  llvm::Expected<P1689Rule>
+  getP1689ModuleDependencyFile(const CompileCommand &Command, StringRef CWD);
 
   /// Given a Clang driver command-line for a translation unit, gather the
   /// modular dependencies and return the information needed for explicit build.
