@@ -61,8 +61,9 @@ static int countSymbols(Lang Language) {
 #include "CSymbolMap.inc"
     break;
   case Lang::CXX:
-#include "StdSymbolMap.inc"
 #include "StdSpecialSymbolMap.inc"
+#include "StdSymbolMap.inc"
+#include "StdTsSymbolMap.inc"
     break;
   }
 #undef SYMBOL
@@ -130,8 +131,9 @@ static int initialize(Lang Language) {
 #include "CSymbolMap.inc"
     break;
   case Lang::CXX:
-#include "StdSymbolMap.inc"
 #include "StdSpecialSymbolMap.inc"
+#include "StdSymbolMap.inc"
+#include "StdTsSymbolMap.inc"
     break;
   }
 #undef SYMBOL
