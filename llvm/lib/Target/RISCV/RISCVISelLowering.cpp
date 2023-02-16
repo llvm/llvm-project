@@ -353,8 +353,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtZfhOrZfhmin()) {
     if (Subtarget.hasStdExtZfh()) {
       setOperationAction(FPLegalNodeTypes, MVT::f16, Legal);
-      setOperationAction(FPRndMode, MVT::f16, 
-                         Subtarget.hasStdExtZfa() ? Legal : Custom);
+      setOperationAction(FPRndMode, MVT::f16, Custom);
       setOperationAction(ISD::SELECT, MVT::f16, Custom);
     } else {
       static const unsigned ZfhminPromoteOps[] = {
@@ -383,9 +382,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SELECT_CC, MVT::f16, Expand);
     setOperationAction(ISD::BR_CC, MVT::f16, Expand);
 
-    setOperationAction(ISD::FNEARBYINT, MVT::f16, 
-                       Subtarget.hasStdExtZfa() ? Legal : Promote);
-    setOperationAction({ISD::FREM, ISD::FPOW, ISD::FPOWI,
+    setOperationAction({ISD::FREM, ISD::FNEARBYINT, ISD::FPOW, ISD::FPOWI,
                         ISD::FCOS, ISD::FSIN, ISD::FSINCOS, ISD::FEXP,
                         ISD::FEXP2, ISD::FLOG, ISD::FLOG2, ISD::FLOG10},
                        MVT::f16, Promote);
@@ -405,8 +402,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasStdExtF()) {
     setOperationAction(FPLegalNodeTypes, MVT::f32, Legal);
-    setOperationAction(FPRndMode, MVT::f32, 
-                       Subtarget.hasStdExtZfa() ? Legal : Custom);
+    setOperationAction(FPRndMode, MVT::f32, Custom);
     setCondCodeAction(FPCCToExpand, MVT::f32, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
     setOperationAction(ISD::SELECT, MVT::f32, Custom);
@@ -414,9 +410,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(FPOpToExpand, MVT::f32, Expand);
     setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
     setTruncStoreAction(MVT::f32, MVT::f16, Expand);
-
-    if (Subtarget.hasStdExtZfa())
-      setOperationAction(ISD::FNEARBYINT, MVT::f32, Legal);
   }
 
   if (Subtarget.hasStdExtF() && Subtarget.is64Bit())
@@ -424,17 +417,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasStdExtD()) {
     setOperationAction(FPLegalNodeTypes, MVT::f64, Legal);
-    if (Subtarget.hasStdExtZfa()) {
-      setOperationAction(FPRndMode, MVT::f64, Legal);
-      setOperationAction(ISD::FNEARBYINT, MVT::f64, Legal);
-      setOperationAction(ISD::BITCAST, MVT::i64, Custom);
-      setOperationAction(ISD::BITCAST, MVT::f64, Custom);
+    if (Subtarget.is64Bit()) {
+      setOperationAction(FPRndMode, MVT::f64, Custom);
     }
-
-    if (Subtarget.is64Bit())
-      setOperationAction(FPRndMode, MVT::f64, 
-                         Subtarget.hasStdExtZfa() ? Legal : Custom);
-
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Legal);
     setCondCodeAction(FPCCToExpand, MVT::f64, Expand);
@@ -3826,16 +3811,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       SDValue FPConv =
           DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, NewOp0);
       return FPConv;
-    }
-    if (VT == MVT::f64 && Op0VT == MVT::i64 && XLenVT == MVT::i32 &&
-        Subtarget.hasStdExtZfa()) {
-      SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Op0,
-                               DAG.getConstant(0, DL, MVT::i32));
-      SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Op0,
-                               DAG.getConstant(1, DL, MVT::i32));
-      SDValue RetReg =
-          DAG.getNode(RISCVISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
-      return RetReg;
     }
 
     // Consider other scalar<->scalar casts as legal if the types are legal.
@@ -8045,14 +8020,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue FPConv =
           DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Op0);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, FPConv));
-    } else if (VT == MVT::i64 && Op0VT == MVT::f64 && XLenVT == MVT::i32 &&
-               Subtarget.hasStdExtZfa()) {
-        SDValue NewReg = DAG.getNode(RISCVISD::SplitF64, DL,
-                                     DAG.getVTList(MVT::i32, MVT::i32), Op0);
-        SDValue Lo = NewReg.getValue(0);
-        SDValue Hi = NewReg.getValue(1);
-        SDValue RetReg = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Lo, Hi);
-        Results.push_back(RetReg);
     } else if (!VT.isVector() && Op0VT.isFixedLengthVector() &&
                isTypeLegal(Op0VT)) {
       // Custom-legalize bitcasts from fixed-length vector types to illegal
@@ -11157,8 +11124,7 @@ static MachineBasicBlock *emitReadCycleWidePseudo(MachineInstr &MI,
 }
 
 static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
-                                             MachineBasicBlock *BB,
-                                             const RISCVSubtarget &Subtarget) {
+                                             MachineBasicBlock *BB) {
   assert(MI.getOpcode() == RISCV::SplitF64Pseudo && "Unexpected instruction");
 
   MachineFunction &MF = *BB->getParent();
@@ -11168,13 +11134,6 @@ static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
   Register LoReg = MI.getOperand(0).getReg();
   Register HiReg = MI.getOperand(1).getReg();
   Register SrcReg = MI.getOperand(2).getReg();
-  if (Subtarget.hasStdExtD() && Subtarget.hasStdExtZfa() && !Subtarget.is64Bit()) {
-    BuildMI(*BB, MI, DL, TII.get(RISCV::FMV_X_W_FPR64), LoReg).addReg(SrcReg);
-    BuildMI(*BB, MI, DL, TII.get(RISCV::FMVH_X_D), HiReg).addReg(SrcReg);
-    MI.eraseFromParent(); // The pseudo instruction is gone now.
-    return BB;
-  }
-  
   const TargetRegisterClass *SrcRC = &RISCV::FPR64RegClass;
   int FI = MF.getInfo<RISCVMachineFunctionInfo>()->getMoveF64FrameIndex(MF);
 
@@ -11198,8 +11157,7 @@ static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
 }
 
 static MachineBasicBlock *emitBuildPairF64Pseudo(MachineInstr &MI,
-                                                 MachineBasicBlock *BB,
-                                                 const RISCVSubtarget &Subtarget) {
+                                                 MachineBasicBlock *BB) {
   assert(MI.getOpcode() == RISCV::BuildPairF64Pseudo &&
          "Unexpected instruction");
 
@@ -11210,14 +11168,6 @@ static MachineBasicBlock *emitBuildPairF64Pseudo(MachineInstr &MI,
   Register DstReg = MI.getOperand(0).getReg();
   Register LoReg = MI.getOperand(1).getReg();
   Register HiReg = MI.getOperand(2).getReg();
-  if (Subtarget.hasStdExtD() && Subtarget.hasStdExtZfa() && !Subtarget.is64Bit()) {
-    BuildMI(*BB, MI, DL, TII.get(RISCV::FMVP_D_X), DstReg)
-        .addReg(LoReg)
-        .addReg(HiReg);
-    MI.eraseFromParent();
-    return BB;
-  }
-
   const TargetRegisterClass *DstRC = &RISCV::FPR64RegClass;
   int FI = MF.getInfo<RISCVMachineFunctionInfo>()->getMoveF64FrameIndex(MF);
 
@@ -11733,9 +11683,9 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case RISCV::Select_FPR64_Using_CC_GPR:
     return emitSelectPseudo(MI, BB, Subtarget);
   case RISCV::BuildPairF64Pseudo:
-    return emitBuildPairF64Pseudo(MI, BB, Subtarget);
+    return emitBuildPairF64Pseudo(MI, BB);
   case RISCV::SplitF64Pseudo:
-    return emitSplitF64Pseudo(MI, BB, Subtarget);
+    return emitSplitF64Pseudo(MI, BB);
   case RISCV::PseudoQuietFLE_H:
     return emitQuietFCMP(MI, BB, RISCV::FLE_H, RISCV::FEQ_H, Subtarget);
   case RISCV::PseudoQuietFLT_H:

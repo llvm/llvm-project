@@ -85,10 +85,6 @@ def FMVH_X_D : FPUnaryOp_r<0b1110001, 0b00001, 0b000, GPR, FPR64, "fmvh.x.d">,
                Sched<[WriteFMovF32ToI32, ReadFMovF32ToI32]>;
 def FMVP_D_X : FPBinaryOp_rr<0b1011001, 0b000, FPR64, GPR, "fmvp.d.x">,
                Sched<[WriteFMovI32ToF32, ReadFMovI32ToF32]>;
-let isCodeGenOnly = 1, mayRaiseFPException = 0 in {
-    def FMV_X_W_FPR64 : FPUnaryOp_r<0b1110000, 0b00000, 0b000, GPR, FPR64, "fmv.x.w">,
-                        Sched<[WriteFMovF32ToI32, ReadFMovF32ToI32]>;
-}
 } // Predicates = [HasStdExtZfa, HasStdExtD, IsRV32]
 
 let Predicates = [HasStdExtZfa, HasStdExtZfh] in {
@@ -100,77 +96,4 @@ def FROUNDNX_H : FPUnaryOp_r_frm<0b0100010, 0b00101, FPR16, FPR16, "froundnx.h">
 
 def FLTQ_H : FPCmp_rr<0b1010010, 0b101, "fltq.h", FPR16, /*Commutable*/ 1>;
 def FLEQ_H : FPCmp_rr<0b1010010, 0b100, "fleq.h", FPR16, /*Commutable*/ 1>;
-} // Predicates = [HasStdExtZfa, HasStdExtZfh]
-
-
-//===----------------------------------------------------------------------===//
-// Codegen patterns
-//===----------------------------------------------------------------------===//
-
-let Predicates = [HasStdExtZfa] in {
-def: PatFprFpr<fminimum, FMINM_S, FPR32>;
-def: PatFprFpr<fmaximum, FMAXM_S, FPR32>;
-
-// frint rounds according to the current rounding mode and detects
-// inexact conditions.
-def: Pat<(any_frint FPR32 : $rs1), (FROUNDNX_S FPR32 : $rs1, 0b111)>;
-
-// fnearbyint is like frint but does not detect inexact conditions.
-def: Pat<(any_fnearbyint FPR32 : $rs1), (FROUND_S FPR32 : $rs1, 0b111)>;
-
-def: Pat<(any_fround FPR32 : $rs1), (FROUND_S FPR32 : $rs1, 0b100)>;
-def: Pat<(any_ffloor FPR32 : $rs1), (FROUND_S FPR32 : $rs1, 0b011)>;
-def: Pat<(any_fceil FPR32 : $rs1), (FROUND_S FPR32 : $rs1, 0b010)>;
-def: Pat<(any_ftrunc FPR32 : $rs1), (FROUND_S FPR32 : $rs1, 0b001)>;
-
-def: PatSetCC<FPR32, strict_fsetcc, SETLT, FLTQ_S>;
-def: PatSetCC<FPR32, strict_fsetcc, SETOLT, FLTQ_S>;
-def: PatSetCC<FPR32, strict_fsetcc, SETLE, FLEQ_S>;
-def: PatSetCC<FPR32, strict_fsetcc, SETOLE, FLEQ_S>;
-} // Predicates = [HasStdExtZfa]
-
-let Predicates = [HasStdExtZfa, HasStdExtD] in {
-def: PatFprFpr<fminimum, FMINM_D, FPR64>;
-def: PatFprFpr<fmaximum, FMAXM_D, FPR64>;
-
-// frint rounds according to the current rounding mode and detects
-// inexact conditions.
-def: Pat<(any_frint FPR64 : $rs1), (FROUNDNX_D FPR64 : $rs1, 0b111)>;
-
-// fnearbyint is like frint but does not detect inexact conditions.
-def: Pat<(any_fnearbyint FPR64 : $rs1), (FROUND_D FPR64 : $rs1, 0b111)>;
-
-def: Pat<(any_fround FPR64 : $rs1), (FROUND_D FPR64 : $rs1, 0b100)>;
-def: Pat<(any_froundeven FPR64 : $rs1), (FROUND_D FPR64 : $rs1, 0b000)>;
-def: Pat<(any_ffloor FPR64 : $rs1), (FROUND_D FPR64 : $rs1, 0b011)>;
-def: Pat<(any_fceil FPR64 : $rs1), (FROUND_D FPR64 : $rs1, 0b010)>;
-def: Pat<(any_ftrunc FPR64 : $rs1), (FROUND_D FPR64 : $rs1, 0b001)>;
-
-def: PatSetCC<FPR64, strict_fsetcc, SETLT, FLTQ_D>;
-def: PatSetCC<FPR64, strict_fsetcc, SETOLT, FLTQ_D>;
-def: PatSetCC<FPR64, strict_fsetcc, SETLE, FLEQ_D>;
-def: PatSetCC<FPR64, strict_fsetcc, SETOLE, FLEQ_D>;
-} // Predicates = [HasStdExtZfa, HasStdExtD]
-
-let Predicates = [HasStdExtZfa, HasStdExtZfh] in {
-def: PatFprFpr<fminimum, FMINM_H, FPR16>;
-def: PatFprFpr<fmaximum, FMAXM_H, FPR16>;
-
-// frint rounds according to the current rounding mode and detects
-// inexact conditions.
-def: Pat<(any_frint FPR16 : $rs1), (FROUNDNX_H FPR16 : $rs1, 0b111)>;
-
-// fnearbyint is like frint but does not detect inexact conditions.
-def: Pat<(any_fnearbyint FPR16 : $rs1), (FROUND_H FPR16 : $rs1, 0b111)>;
-
-def: Pat<(any_fround FPR16 : $rs1), (FROUND_H FPR16 : $rs1, 0b100)>;
-def: Pat<(any_froundeven FPR16 : $rs1), (FROUND_H FPR16 : $rs1, 0b000)>;
-def: Pat<(any_ffloor FPR16 : $rs1), (FROUND_H FPR16 : $rs1, 0b011)>;
-def: Pat<(any_fceil FPR16 : $rs1), (FROUND_H FPR16 : $rs1, 0b010)>;
-def: Pat<(any_ftrunc FPR16 : $rs1), (FROUND_H FPR16 : $rs1, 0b001)>;
-
-def: PatSetCC<FPR16, strict_fsetcc, SETLT, FLTQ_H>;
-def: PatSetCC<FPR16, strict_fsetcc, SETOLT, FLTQ_H>;
-def: PatSetCC<FPR16, strict_fsetcc, SETLE, FLEQ_H>;
-def: PatSetCC<FPR16, strict_fsetcc, SETOLE, FLEQ_H>;
 } // Predicates = [HasStdExtZfa, HasStdExtZfh]
