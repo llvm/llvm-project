@@ -563,16 +563,6 @@ public:
     return &Module::FunctionList;
   }
 
-  /// Detach \p Alias from the list but don't delete it.
-  void removeAlias(GlobalAlias *Alias) { AliasList.remove(Alias); }
-  /// Remove \p Alias from the list and delete it.
-  void eraseAlias(GlobalAlias *Alias) { AliasList.erase(Alias); }
-  /// Insert \p Alias at the end of the alias list and take ownership.
-  void insertAlias(GlobalAlias *Alias) { AliasList.insert(AliasList.end(), Alias); }
-  // Use alias_size() to get the size of AliasList.
-  // Use aliases() to get a range of all Alias objects in AliasList.
-
-private: // Please use functions like insertAlias(), removeAlias() etc.
   /// Get the Module's list of aliases (constant).
   const AliasListType    &getAliasList() const        { return AliasList; }
   /// Get the Module's list of aliases.
@@ -581,9 +571,7 @@ private: // Please use functions like insertAlias(), removeAlias() etc.
   static AliasListType Module::*getSublistAccess(GlobalAlias*) {
     return &Module::AliasList;
   }
-  friend class llvm::SymbolTableListTraits<llvm::GlobalAlias>;
 
-public:
   /// Get the Module's list of ifuncs (constant).
   const IFuncListType    &getIFuncList() const        { return IFuncList; }
   /// Get the Module's list of ifuncs.
