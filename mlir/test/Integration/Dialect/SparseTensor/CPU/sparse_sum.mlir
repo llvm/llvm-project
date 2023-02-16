@@ -28,6 +28,9 @@
 // REDEFINE: FileCheck %s
 // RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
 
+// TODO: The test currently only operates on the triangular part of the
+// symmetric matrix.
+
 !Filename = !llvm.ptr<i8>
 
 #SparseMatrix = #sparse_tensor.encoding<{
@@ -79,7 +82,7 @@ module {
 
     // Read the sparse matrix from file, construct sparse storage.
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
-    %a = sparse_tensor.new expand_symmetry %fileName : !Filename to tensor<?x?xf64, #SparseMatrix>
+    %a = sparse_tensor.new %fileName : !Filename to tensor<?x?xf64, #SparseMatrix>
 
     // Call the kernel.
     %0 = call @kernel_sum_reduce(%a, %x)
@@ -87,7 +90,7 @@ module {
 
     // Print the result for verification.
     //
-    // CHECK: 30.2
+    // CHECK: 24.1
     //
     %v = tensor.extract %0[] : tensor<f64>
     vector.print %v : f64

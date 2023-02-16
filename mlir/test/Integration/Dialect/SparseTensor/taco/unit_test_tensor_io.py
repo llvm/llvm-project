@@ -21,18 +21,12 @@ _DENSE = mlir_pytaco.ModeFormat.DENSE
 
 
 _FORMAT = mlir_pytaco.Format([_COMPRESSED, _COMPRESSED])
-_MTX_DATA_TEMPLATE = Template(
-    """%%MatrixMarket matrix coordinate real $general_or_symmetry
+_MTX_DATA = """%%MatrixMarket matrix coordinate real general
 3 3 3
 3 1 3
 1 2 2
 3 2 4
-""")
-
-
-def _get_mtx_data(value):
-  mtx_data = _MTX_DATA_TEMPLATE
-  return mtx_data.substitute(general_or_symmetry=value)
+"""
 
 
 # CHECK-LABEL: test_read_mtx_matrix_general
@@ -41,7 +35,7 @@ def test_read_mtx_matrix_general():
   with tempfile.TemporaryDirectory() as test_dir:
     file_name = os.path.join(test_dir, "data.mtx")
     with open(file_name, "w") as file:
-      file.write(_get_mtx_data("general"))
+      file.write(_MTX_DATA)
     a = mlir_pytaco_io.read(file_name, _FORMAT)
   passed = 0
   # The value of a is stored as an MLIR sparse tensor.
@@ -51,29 +45,6 @@ def test_read_mtx_matrix_general():
   coords, values = a.get_coordinates_and_values()
   passed += np.array_equal(coords, [[0, 1], [2, 0], [2, 1]])
   passed += np.allclose(values, [2.0, 3.0, 4.0])
-  # CHECK: 4
-  print(passed)
-
-
-# CHECK-LABEL: test_read_mtx_matrix_symmetry
-@testing_utils.run_test
-def test_read_mtx_matrix_symmetry():
-  with tempfile.TemporaryDirectory() as test_dir:
-    file_name = os.path.join(test_dir, "data.mtx")
-    with open(file_name, "w") as file:
-      file.write(_get_mtx_data("symmetric"))
-    a = mlir_pytaco_io.read(file_name, _FORMAT)
-  passed = 0
-  # The value of a is stored as an MLIR sparse tensor.
-  passed += (not a.is_unpacked())
-  a.unpack()
-  passed += (a.is_unpacked())
-  coords, values = a.get_coordinates_and_values()
-  print(coords)
-  print(values)
-  passed += np.array_equal(coords,
-                           [[0, 1], [0, 2], [1, 0], [1, 2], [2, 0], [2, 1]])
-  passed += np.allclose(values, [2.0, 3.0, 2.0, 4.0, 3.0, 4.0])
   # CHECK: 4
   print(passed)
 
