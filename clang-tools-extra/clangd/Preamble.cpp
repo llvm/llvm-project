@@ -671,10 +671,10 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
     // We are only interested in newly added includes, record the ones in
     // Baseline for exclusion.
     llvm::DenseMap<std::pair<tok::PPKeywordKind, llvm::StringRef>,
-                   /*Resolved=*/llvm::StringRef>
+                   const Inclusion *>
         ExistingIncludes;
     for (const auto &Inc : Baseline.Includes.MainFileIncludes)
-      ExistingIncludes[{Inc.Directive, Inc.Written}] = Inc.Resolved;
+      ExistingIncludes[{Inc.Directive, Inc.Written}] = &Inc;
     // There might be includes coming from disabled regions, record these for
     // exclusion too. note that we don't have resolved paths for those.
     for (const auto &Inc : BaselineScan->Includes)
@@ -685,8 +685,13 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
       // Include already present in the baseline preamble. Set resolved path and
       // put into preamble includes.
       if (It != ExistingIncludes.end()) {
-        Inc.Resolved = It->second.str();
-        PP.PreambleIncludes.push_back(Inc);
+        auto &PatchedInc = PP.PreambleIncludes.emplace_back();
+        // Copy everything from existing include, apart from the location, when
+        // it's coming from baseline preamble.
+        if (It->second)
+          PatchedInc = *It->second;
+        PatchedInc.HashLine = Inc.HashLine;
+        PatchedInc.HashOffset = Inc.HashOffset;
         continue;
       }
       // Include is new in the modified preamble. Inject it into the patch and
@@ -696,6 +701,11 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
       Patch << llvm::formatv(
           "#{0} {1}\n", spellingForIncDirective(Inc.Directive), Inc.Written);
     }
+  } else {
+    // Make sure we have the full set of includes available even when we're not
+    // patching. As these are used by features we provide afterwards like hover,
+    // go-to-def or include-cleaner when preamble is stale.
+    PP.PreambleIncludes = Baseline.Includes.MainFileIncludes;
   }
 
   if (DirectivesChanged) {
