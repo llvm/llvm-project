@@ -2211,13 +2211,21 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
               "A derived type with the BIND attribute cannot have a pointer or allocatable component"_err_en_US);
           context_.SetError(symbol);
           break;
-        } else if (component->GetType() && component->GetType()->AsDerived() &&
-            !component->GetType()->AsDerived()->typeSymbol().attrs().test(
-                Attr::BIND_C)) {
-          messages_.Say(component->GetType()->AsDerived()->typeSymbol().name(),
-              "The component of the interoperable derived type must have the BIND attribute"_err_en_US);
-          context_.SetError(symbol);
-          break;
+        } else if (const auto *type{component->GetType()}) {
+          if (const auto *derived{type->AsDerived()}) {
+            if (!derived->typeSymbol().attrs().test(Attr::BIND_C)) {
+              messages_.Say(
+                  component->GetType()->AsDerived()->typeSymbol().name(),
+                  "The component of the interoperable derived type must have the BIND attribute"_err_en_US);
+              context_.SetError(symbol);
+              break;
+            }
+          } else if (!IsInteroperableIntrinsicType(*type)) {
+            messages_.Say(component->name(),
+                "Each component of an interoperable derived type must have an interoperable type"_err_en_US);
+            context_.SetError(symbol);
+            break;
+          }
         }
       }
     }
