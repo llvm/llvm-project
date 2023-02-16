@@ -29,6 +29,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/TableGenBackend.h"
 #include <memory>
 #include <string>
 #include <system_error>
@@ -131,7 +132,10 @@ int llvm::TableGenMain(const char *argv0,
   std::string OutString;
   raw_string_ostream Out(OutString);
   unsigned status = 0;
-  if (MainFn)
+  TableGen::Emitter::FnT ActionFn = TableGen::Emitter::Action->getValue();
+  if (ActionFn)
+    ActionFn(Records, Out);
+  else if (MainFn)
     status = MainFn(Out, Records);
   else
     return 1;
