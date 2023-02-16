@@ -21,10 +21,34 @@ namespace llvm {
 class Value;
 
 class ConstraintSystem {
+  struct Entry {
+    int64_t Coefficient;
+    uint16_t Id;
+
+    Entry(int64_t Coefficient, uint16_t Id)
+        : Coefficient(Coefficient), Id(Id) {}
+  };
+
+  static int64_t getConstPart(const Entry &E) {
+    if (E.Id == 0)
+      return E.Coefficient;
+    return 0;
+  }
+
+  static int64_t getLastCoefficient(ArrayRef<Entry> Row, uint16_t Id) {
+    if (Row.empty())
+      return 0;
+    if (Row.back().Id == Id)
+      return Row.back().Coefficient;
+    return 0;
+  }
+
+  size_t NumVariables = 0;
+
   /// Current linear constraints in the system.
   /// An entry of the form c0, c1, ... cn represents the following constraint:
   ///   c0 >= v0 * c1 + .... + v{n-1} * cn
-  SmallVector<SmallVector<int64_t, 8>, 4> Constraints;
+  SmallVector<SmallVector<Entry, 8>, 4> Constraints;
 
   /// A map of variables (IR values) to their corresponding index in the
   /// constraint system.
@@ -48,18 +72,25 @@ public:
       : Value2Index(Value2Index) {}
 
   bool addVariableRow(ArrayRef<int64_t> R) {
-    assert(Constraints.empty() || R.size() == Constraints.back().size());
+    assert(Constraints.empty() || R.size() == NumVariables);
     // If all variable coefficients are 0, the constraint does not provide any
     // usable information.
     if (all_of(ArrayRef(R).drop_front(1), [](int64_t C) { return C == 0; }))
       return false;
 
-    for (const auto &C : R) {
+    SmallVector<Entry, 4> NewRow;
+    for (const auto &[Idx, C] : enumerate(R)) {
+      if (C == 0)
+        continue;
       auto A = std::abs(C);
       GCD = APIntOps::GreatestCommonDivisor({32, (uint32_t)A}, {32, GCD})
                 .getZExtValue();
+
+      NewRow.emplace_back(C, Idx);
     }
-    Constraints.emplace_back(R.begin(), R.end());
+    if (Constraints.empty())
+      NumVariables = R.size();
+    Constraints.push_back(std::move(NewRow));
     return true;
   }
 
@@ -74,10 +105,7 @@ public:
     if (all_of(ArrayRef(R).drop_front(1), [](int64_t C) { return C == 0; }))
       return false;
 
-    for (auto &CR : Constraints) {
-      while (CR.size() != R.size())
-        CR.push_back(0);
-    }
+    NumVariables = std::max(R.size(), NumVariables);
     return addVariableRow(R);
   }
 
@@ -95,13 +123,18 @@ public:
 
   bool isConditionImplied(SmallVector<int64_t, 8> R) const;
 
-  ArrayRef<int64_t> getLastConstraint() { return Constraints.back(); }
+  SmallVector<int64_t> getLastConstraint() const {
+    assert(!Constraints.empty() && "Constraint system is empty");
+    SmallVector<int64_t> Result(NumVariables, 0);
+    for (auto &Entry : Constraints.back())
+      Result[Entry.Id] = Entry.Coefficient;
+    return Result;
+  }
+
   void popLastConstraint() { Constraints.pop_back(); }
   void popLastNVariables(unsigned N) {
-    for (auto &C : Constraints) {
-      for (unsigned i = 0; i < N; i++)
-        C.pop_back();
-    }
+    assert(NumVariables > N);
+    NumVariables -= N;
   }
 
   /// Returns the number of rows in the constraint system.
