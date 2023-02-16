@@ -778,7 +778,10 @@ def LLVM_FreezeOp : LLVM_Op<"freeze", [SameOperandsAndResultType]> {
 // Terminators.
 def LLVM_BrOp : LLVM_TerminatorOp<"br",
     [DeclareOpInterfaceMethods<BranchOpInterface>, Pure]> {
-  let arguments = (ins Variadic<LLVM_Type>:$destOperands);
+  let arguments = (ins
+    Variadic<LLVM_Type>:$destOperands,
+    OptionalAttr<LoopAnnotationAttr>:$loop_annotation
+  );
   let successors = (successor AnySuccessor:$dest);
   let assemblyFormat = [{
     $dest (`(` $destOperands^ `:` type($destOperands) `)`)? attr-dict
@@ -787,8 +790,12 @@ def LLVM_BrOp : LLVM_TerminatorOp<"br",
     OpBuilder<(ins "Block *":$dest), [{
       build($_builder, $_state, ValueRange(), dest);
     }]>,
+    OpBuilder<(ins "ValueRange":$operands, "Block *":$dest), [{
+      build($_builder, $_state, operands, /*loop_annotation=*/{}, dest);
+    }]>,
     LLVM_TerminatorPassthroughOpBuilder
   ];
+  let hasVerifier = 1;
 }
 def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br",
     [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BranchOpInterface>,
@@ -796,7 +803,8 @@ def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br",
   let arguments = (ins I1:$condition,
                    Variadic<LLVM_Type>:$trueDestOperands,
                    Variadic<LLVM_Type>:$falseDestOperands,
-                   OptionalAttr<ElementsAttr>:$branch_weights);
+                   OptionalAttr<ElementsAttr>:$branch_weights,
+                   OptionalAttr<LoopAnnotationAttr>:$loop_annotation);
   let successors = (successor AnySuccessor:$trueDest, AnySuccessor:$falseDest);
   let assemblyFormat = [{
     $condition ( `weights` `(` $branch_weights^ `)` )? `,`
@@ -809,23 +817,20 @@ def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br",
     OpBuilder<(ins "Value":$condition, "Block *":$trueDest,
       "ValueRange":$trueOperands, "Block *":$falseDest,
       "ValueRange":$falseOperands,
-      CArg<"std::optional<std::pair<uint32_t, uint32_t>>", "{}">:$weights),
-    [{
-        ElementsAttr weightsAttr;
-        if (weights) {
-          weightsAttr =
-              $_builder.getI32VectorAttr({static_cast<int32_t>(weights->first),
-                                       static_cast<int32_t>(weights->second)});
-        }
-        build($_builder, $_state, condition, trueOperands, falseOperands, weightsAttr,
-              trueDest, falseDest);
-  }]>,
+      CArg<"std::optional<std::pair<uint32_t, uint32_t>>", "{}">:$weights)>,
   OpBuilder<(ins "Value":$condition, "Block *":$trueDest,
     "Block *":$falseDest, CArg<"ValueRange", "{}">:$falseOperands),
   [{
       build($_builder, $_state, condition, trueDest, ValueRange(), falseDest,
             falseOperands);
+  }]>,
+  OpBuilder<(ins "Value":$condition, "ValueRange":$trueOperands, "ValueRange":$falseOperands,
+    "ElementsAttr":$branchWeights, "Block *":$trueDest, "Block *":$falseDest),
+  [{
+      build($_builder, $_state, condition, trueOperands, falseOperands, branchWeights,
+      {}, trueDest, falseDest);
   }]>, LLVM_TerminatorPassthroughOpBuilder];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
