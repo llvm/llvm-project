@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCContext.h"
@@ -219,7 +220,8 @@ static unsigned getDwarfRegNum(unsigned Reg, const TargetRegisterInfo *TRI) {
 MachineInstr::const_mop_iterator
 StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
                         MachineInstr::const_mop_iterator MOE,
-                        LiveVarsVec &LiveVars, LiveOutVec &LiveOuts) const {
+                        LiveVarsVec &LiveVars, LiveOutVec &LiveOuts,
+                        std::map<Register, int64_t> SpillOffsets) const {
   LocationVec &Locs = LiveVars.back();
   const TargetRegisterInfo *TRI = AP.MF->getSubtarget().getRegisterInfo();
   if (MOI->isImm()) {
@@ -282,7 +284,27 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(MOI->getReg());
     assert(!MOI->getSubReg() && "Physical subreg still around.");
 
-    unsigned Offset = 0;
+
+    signed Offset = 0;
+    // Check if there are any mappings for this register in the spillmap. If so,
+    // encode the additional location in the offset field of the stackmap record
+    // (which is unused for register locations). Note that this assumes that
+    // there can only be one additional location for each value, which may turn
+    // out to be false.
+    if (MOI->isReg()) {
+      Register R = MOI->getReg();
+      if (SpillOffsets.count(R) > 0) {
+        Offset = SpillOffsets[R];
+        assert(SpillOffsets[R] != 0);
+        if (Offset > 0) {
+          // If the additional location is another register encode its DWARF id.
+          // Also temporarily add 1 since 0 is used to mean there is no
+          // additional location.
+          Offset = getDwarfRegNum(Offset, TRI) + 1;
+        }
+      }
+    }
+
     unsigned DwarfRegNum = getDwarfRegNum(MOI->getReg(), TRI);
     unsigned LLVMRegNum = *TRI->getLLVMRegNum(DwarfRegNum, false);
     unsigned SubRegIdx = TRI->getSubRegIndex(LLVMRegNum, MOI->getReg());
@@ -520,6 +542,7 @@ void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
                                     const MachineInstr &MI, uint64_t ID,
                                     MachineInstr::const_mop_iterator MOI,
                                     MachineInstr::const_mop_iterator MOE,
+                                    std::map<Register, int64_t> SpillOffsets,
                                     bool recordResult) {
   MCContext &OutContext = AP.OutStreamer->getContext();
 
@@ -529,7 +552,7 @@ void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
   if (recordResult) {
     assert(PatchPointOpers(&MI).hasDef() && "Stackmap has no return value.");
     parseOperand(MI.operands_begin(), std::next(MI.operands_begin()), LiveVars,
-                 LiveOuts);
+                 LiveOuts, SpillOffsets);
     LiveVars.push_back(LocationVec());
   }
 
@@ -538,7 +561,7 @@ void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
     parseStatepointOpers(MI, MOI, MOE, LiveVars, LiveOuts);
   else
     while (MOI != MOE)
-      MOI = parseOperand(MOI, MOE, LiveVars, LiveOuts);
+      MOI = parseOperand(MOI, MOE, LiveVars, LiveOuts, SpillOffsets);
 
   // Move large constants into the constant pool.
   for (auto &Locations : LiveVars) {
@@ -611,14 +634,14 @@ void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
   }
 }
 
-void StackMaps::recordStackMap(const MCSymbol &L, const MachineInstr &MI) {
+void StackMaps::recordStackMap(const MCSymbol &L, const MachineInstr &MI, std::map<Register, int64_t> SpillOffsets) {
   assert(MI.getOpcode() == TargetOpcode::STACKMAP && "expected stackmap");
 
   StackMapOpers opers(&MI);
   const int64_t ID = MI.getOperand(PatchPointOpers::IDPos).getImm();
   recordStackMapOpers(L, MI, ID,
                       std::next(MI.operands_begin(), opers.getVarIdx()),
-                      MI.operands_end());
+                      MI.operands_end(), SpillOffsets);
 }
 
 void StackMaps::recordPatchPoint(const MCSymbol &L, const MachineInstr &MI) {
@@ -627,7 +650,7 @@ void StackMaps::recordPatchPoint(const MCSymbol &L, const MachineInstr &MI) {
   PatchPointOpers opers(&MI);
   const int64_t ID = opers.getID();
   auto MOI = std::next(MI.operands_begin(), opers.getStackMapStartIdx());
-  recordStackMapOpers(L, MI, ID, MOI, MI.operands_end(),
+  recordStackMapOpers(L, MI, ID, MOI, MI.operands_end(), {},
                       opers.isAnyReg() && opers.hasDef());
 
 #ifndef NDEBUG
@@ -648,7 +671,7 @@ void StackMaps::recordStatepoint(const MCSymbol &L, const MachineInstr &MI) {
   StatepointOpers opers(&MI);
   const unsigned StartIdx = opers.getVarIdx();
   recordStackMapOpers(L, MI, opers.getID(), MI.operands_begin() + StartIdx,
-                      MI.operands_end(), false);
+                      MI.operands_end(), {}, false);
 }
 
 /// Emit the stackmap header.

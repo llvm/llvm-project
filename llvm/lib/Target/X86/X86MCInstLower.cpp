@@ -1502,7 +1502,7 @@ void X86AsmPrinter::LowerSTACKMAP(const MachineInstr &MI) {
     MILabel = Ctx.createTempSymbol();
     OutStreamer->emitLabel(MILabel);
   }
-  SM.recordStackMap(*MILabel, MI);
+  SM.recordStackMap(*MILabel, MI, StackmapSpillMaps[&MI]);
   unsigned NumShadowBytes = MI.getOperand(1).getImm();
   SMShadowTracker.reset(NumShadowBytes);
 }
