@@ -24,7 +24,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Attributes.h"
@@ -407,15 +406,6 @@ class LowerTypeTestsModule {
   Triple::OSType OS;
   Triple::ObjectFormatType ObjectFormat;
 
-  // Determines which kind of Thumb jump table we generate. If arch is
-  // either 'arm' or 'thumb' we need to find this out, because
-  // selectJumpTableArmEncoding may decide to use Thumb in either case.
-  bool CanUseArmJumpTable = false, CanUseThumbBWJumpTable = false;
-
-  // The jump table type we ended up deciding on. (Usually the same as
-  // Arch, except that 'arm' and 'thumb' are often interchangeable.)
-  Triple::ArchType JumpTableArch = Triple::UnknownArch;
-
   IntegerType *Int1Ty = Type::getInt1Ty(M.getContext());
   IntegerType *Int8Ty = Type::getInt8Ty(M.getContext());
   PointerType *Int8PtrTy = Type::getInt8PtrTy(M.getContext());
@@ -491,8 +481,6 @@ class LowerTypeTestsModule {
 
   void buildBitSetsFromGlobalVariables(ArrayRef<Metadata *> TypeIds,
                                        ArrayRef<GlobalTypeMember *> Globals);
-  Triple::ArchType
-  selectJumpTableArmEncoding(ArrayRef<GlobalTypeMember *> Functions);
   unsigned getJumpTableEntrySize();
   Type *getJumpTableEntryType();
   void createJumpTableEntry(raw_ostream &AsmOS, raw_ostream &ConstraintOS,
@@ -530,8 +518,7 @@ class LowerTypeTestsModule {
   void replaceDirectCalls(Value *Old, Value *New);
 
 public:
-  LowerTypeTestsModule(Module &M, ModuleAnalysisManager &AM,
-                       ModuleSummaryIndex *ExportSummary,
+  LowerTypeTestsModule(Module &M, ModuleSummaryIndex *ExportSummary,
                        const ModuleSummaryIndex *ImportSummary,
                        bool DropTypeTests);
 
@@ -539,7 +526,7 @@ public:
 
   // Lower the module using the action and summary passed as command line
   // arguments. For testing purposes only.
-  static bool runForTesting(Module &M, ModuleAnalysisManager &AM);
+  static bool runForTesting(Module &M);
 };
 } // end anonymous namespace
 
@@ -1195,36 +1182,31 @@ static const unsigned kX86JumpTableEntrySize = 8;
 static const unsigned kX86IBTJumpTableEntrySize = 16;
 static const unsigned kARMJumpTableEntrySize = 4;
 static const unsigned kARMBTIJumpTableEntrySize = 8;
-static const unsigned kARMv6MJumpTableEntrySize = 16;
 static const unsigned kRISCVJumpTableEntrySize = 8;
 
 unsigned LowerTypeTestsModule::getJumpTableEntrySize() {
-  switch (JumpTableArch) {
-  case Triple::x86:
-  case Triple::x86_64:
-    if (const auto *MD = mdconst::extract_or_null<ConstantInt>(
+  switch (Arch) {
+    case Triple::x86:
+    case Triple::x86_64:
+      if (const auto *MD = mdconst::extract_or_null<ConstantInt>(
             M.getModuleFlag("cf-protection-branch")))
-      if (MD->getZExtValue())
-        return kX86IBTJumpTableEntrySize;
-    return kX86JumpTableEntrySize;
-  case Triple::arm:
-    return kARMJumpTableEntrySize;
-  case Triple::thumb:
-    if (CanUseThumbBWJumpTable)
+        if (MD->getZExtValue())
+          return kX86IBTJumpTableEntrySize;
+      return kX86JumpTableEntrySize;
+    case Triple::arm:
+    case Triple::thumb:
       return kARMJumpTableEntrySize;
-    else
-      return kARMv6MJumpTableEntrySize;
-  case Triple::aarch64:
-    if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
+    case Triple::aarch64:
+      if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
             M.getModuleFlag("branch-target-enforcement")))
-      if (BTE->getZExtValue())
-        return kARMBTIJumpTableEntrySize;
-    return kARMJumpTableEntrySize;
-  case Triple::riscv32:
-  case Triple::riscv64:
-    return kRISCVJumpTableEntrySize;
-  default:
-    report_fatal_error("Unsupported architecture for jump tables");
+        if (BTE->getZExtValue())
+          return kARMBTIJumpTableEntrySize;
+      return kARMJumpTableEntrySize;
+    case Triple::riscv32:
+    case Triple::riscv64:
+      return kRISCVJumpTableEntrySize;
+    default:
+      report_fatal_error("Unsupported architecture for jump tables");
   }
 }
 
@@ -1258,32 +1240,7 @@ void LowerTypeTestsModule::createJumpTableEntry(
         AsmOS << "bti c\n";
     AsmOS << "b $" << ArgIndex << "\n";
   } else if (JumpTableArch == Triple::thumb) {
-    if (!CanUseThumbBWJumpTable) {
-      // In Armv6-M, this sequence will generate a branch without corrupting
-      // any registers. We use two stack words; in the second, we construct the
-      // address we'll pop into pc, and the first is used to save and restore
-      // r0 which we use as a temporary register.
-      //
-      // To support position-independent use cases, the offset of the target
-      // function is stored as a relative offset (which will expand into an
-      // R_ARM_REL32 relocation in ELF, and presumably the equivalent in other
-      // object file types), and added to pc after we load it. (The alternative
-      // B.W is automatically pc-relative.)
-      //
-      // There are five 16-bit Thumb instructions here, so the .balign 4 adds a
-      // sixth halfword of padding, and then the offset consumes a further 4
-      // bytes, for a total of 16, which is very convenient since entries in
-      // this jump table need to have power-of-two size.
-      AsmOS << "push {r0,r1}\n"
-            << "ldr r0, 1f\n"
-            << "0: add r0, r0, pc\n"
-            << "str r0, [sp, #4]\n"
-            << "pop {r0,pc}\n"
-            << ".balign 4\n"
-            << "1: .word $" << ArgIndex << " - (0b + 4)\n";
-    } else {
-      AsmOS << "b.w $" << ArgIndex << "\n";
-    }
+    AsmOS << "b.w $" << ArgIndex << "\n";
   } else if (JumpTableArch == Triple::riscv32 ||
              JumpTableArch == Triple::riscv64) {
     AsmOS << "tail $" << ArgIndex << "@plt\n";
@@ -1395,19 +1352,12 @@ static bool isThumbFunction(Function *F, Triple::ArchType ModuleArch) {
 // Each jump table must be either ARM or Thumb as a whole for the bit-test math
 // to work. Pick one that matches the majority of members to minimize interop
 // veneers inserted by the linker.
-Triple::ArchType LowerTypeTestsModule::selectJumpTableArmEncoding(
-    ArrayRef<GlobalTypeMember *> Functions) {
-  if (Arch != Triple::arm && Arch != Triple::thumb)
-    return Arch;
+static Triple::ArchType
+selectJumpTableArmEncoding(ArrayRef<GlobalTypeMember *> Functions,
+                           Triple::ArchType ModuleArch) {
+  if (ModuleArch != Triple::arm && ModuleArch != Triple::thumb)
+    return ModuleArch;
 
-  if (!CanUseThumbBWJumpTable && CanUseArmJumpTable) {
-    // In architectures that provide Arm and Thumb-1 but not Thumb-2,
-    // we should always prefer the Arm jump table format, because the
-    // Thumb-1 one is larger and slower.
-    return Triple::arm;
-  }
-
-  // Otherwise, go with majority vote.
   unsigned ArmCount = 0, ThumbCount = 0;
   for (const auto GTM : Functions) {
     if (!GTM->isJumpTableCanonical()) {
@@ -1418,7 +1368,7 @@ Triple::ArchType LowerTypeTestsModule::selectJumpTableArmEncoding(
     }
 
     Function *F = cast<Function>(GTM->getGlobal());
-    ++(isThumbFunction(F, Arch) ? ThumbCount : ArmCount);
+    ++(isThumbFunction(F, ModuleArch) ? ThumbCount : ArmCount);
   }
 
   return ArmCount > ThumbCount ? Triple::arm : Triple::thumb;
@@ -1430,6 +1380,8 @@ void LowerTypeTestsModule::createJumpTable(
   raw_string_ostream AsmOS(AsmStr), ConstraintOS(ConstraintStr);
   SmallVector<Value *, 16> AsmArgs;
   AsmArgs.reserve(Functions.size() * 2);
+
+  Triple::ArchType JumpTableArch = selectJumpTableArmEncoding(Functions, Arch);
 
   for (GlobalTypeMember *GTM : Functions)
     createJumpTableEntry(AsmOS, ConstraintOS, JumpTableArch, AsmArgs,
@@ -1447,11 +1399,9 @@ void LowerTypeTestsModule::createJumpTable(
     F->addFnAttr("target-features", "-thumb-mode");
   if (JumpTableArch == Triple::thumb) {
     F->addFnAttr("target-features", "+thumb-mode");
-    if (CanUseThumbBWJumpTable) {
-      // Thumb jump table assembly needs Thumb2. The following attribute is
-      // added by Clang for -march=armv7.
-      F->addFnAttr("target-cpu", "cortex-a8");
-    }
+    // Thumb jump table assembly needs Thumb2. The following attribute is added
+    // by Clang for -march=armv7.
+    F->addFnAttr("target-cpu", "cortex-a8");
   }
   // When -mbranch-protection= is used, the inline asm adds a BTI. Suppress BTI
   // for the function to avoid double BTI. This is a no-op without
@@ -1570,10 +1520,6 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
 
   // FIXME: find a better way to represent the jumptable in the IR.
   assert(!Functions.empty());
-
-  // Decide on the jump table encoding, so that we know how big the
-  // entries will be.
-  JumpTableArch = selectJumpTableArmEncoding(Functions);
 
   // Build a simple layout based on the regular layout of jump tables.
   DenseMap<GlobalTypeMember *, uint64_t> GlobalLayout;
@@ -1760,31 +1706,18 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
 
 /// Lower all type tests in this module.
 LowerTypeTestsModule::LowerTypeTestsModule(
-    Module &M, ModuleAnalysisManager &AM, ModuleSummaryIndex *ExportSummary,
+    Module &M, ModuleSummaryIndex *ExportSummary,
     const ModuleSummaryIndex *ImportSummary, bool DropTypeTests)
     : M(M), ExportSummary(ExportSummary), ImportSummary(ImportSummary),
       DropTypeTests(DropTypeTests || ClDropTypeTests) {
   assert(!(ExportSummary && ImportSummary));
   Triple TargetTriple(M.getTargetTriple());
   Arch = TargetTriple.getArch();
-  if (Arch == Triple::arm)
-    CanUseArmJumpTable = true;
-  if (Arch == Triple::arm || Arch == Triple::thumb) {
-    auto &FAM =
-        AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-    for (Function &F : M) {
-      auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
-      if (TTI.hasArmWideBranch(false))
-        CanUseArmJumpTable = true;
-      if (TTI.hasArmWideBranch(true))
-        CanUseThumbBWJumpTable = true;
-    }
-  }
   OS = TargetTriple.getOS();
   ObjectFormat = TargetTriple.getObjectFormat();
 }
 
-bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
+bool LowerTypeTestsModule::runForTesting(Module &M) {
   ModuleSummaryIndex Summary(/*HaveGVs=*/false);
 
   // Handle the command-line summary arguments. This code is for testing
@@ -1802,8 +1735,7 @@ bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
 
   bool Changed =
       LowerTypeTestsModule(
-          M, AM,
-          ClSummaryAction == PassSummaryAction::Export ? &Summary : nullptr,
+          M, ClSummaryAction == PassSummaryAction::Export ? &Summary : nullptr,
           ClSummaryAction == PassSummaryAction::Import ? &Summary : nullptr,
           /*DropTypeTests*/ false)
           .lower();
@@ -2366,10 +2298,10 @@ PreservedAnalyses LowerTypeTestsPass::run(Module &M,
                                           ModuleAnalysisManager &AM) {
   bool Changed;
   if (UseCommandLine)
-    Changed = LowerTypeTestsModule::runForTesting(M, AM);
+    Changed = LowerTypeTestsModule::runForTesting(M);
   else
     Changed =
-        LowerTypeTestsModule(M, AM, ExportSummary, ImportSummary, DropTypeTests)
+        LowerTypeTestsModule(M, ExportSummary, ImportSummary, DropTypeTests)
             .lower();
   if (!Changed)
     return PreservedAnalyses::all();
