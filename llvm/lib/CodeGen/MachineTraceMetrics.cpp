@@ -380,15 +380,17 @@ MinInstrCountEnsemble::pickTraceSucc(const MachineBasicBlock *MBB) {
 
 // Get an Ensemble sub-class for the requested trace strategy.
 MachineTraceMetrics::Ensemble *
-MachineTraceMetrics::getEnsemble(MachineTraceMetrics::Strategy strategy) {
-  assert(strategy < TS_NumStrategies && "Invalid trace strategy enum");
-  Ensemble *&E = Ensembles[strategy];
+MachineTraceMetrics::getEnsemble(MachineTraceStrategy strategy) {
+  assert(strategy < MachineTraceStrategy::TS_NumStrategies &&
+         "Invalid trace strategy enum");
+  Ensemble *&E = Ensembles[static_cast<size_t>(strategy)];
   if (E)
     return E;
 
   // Allocate new Ensemble on demand.
   switch (strategy) {
-  case TS_MinInstrCount: return (E = new MinInstrCountEnsemble(this));
+  case MachineTraceStrategy::TS_MinInstrCount:
+    return (E = new MinInstrCountEnsemble(this));
   default: llvm_unreachable("Invalid trace strategy enum");
   }
 }

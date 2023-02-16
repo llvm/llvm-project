@@ -17,6 +17,7 @@
 #include <list>
 #include <ranges>
 #include <span>
+#include <tuple>
 #include <vector>
 
 #include "format.functions.common.h"

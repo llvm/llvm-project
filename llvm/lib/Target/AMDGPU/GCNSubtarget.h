@@ -168,6 +168,7 @@ protected:
   bool HasGetWaveIdInst = false;
   bool HasSMemTimeInst = false;
   bool HasShaderCyclesRegister = false;
+  bool HasShaderCyclesHiLoRegisters = false;
   bool HasVOP3Literal = false;
   bool HasNoDataDepHazard = false;
   bool FlatAddressSpace = false;
@@ -799,6 +800,10 @@ public:
 
   bool hasShaderCyclesRegister() const {
     return HasShaderCyclesRegister;
+  }
+
+  bool hasShaderCyclesHiLoRegisters() const {
+    return HasShaderCyclesHiLoRegisters;
   }
 
   bool hasVOP3Literal() const {

@@ -37,7 +37,6 @@
 
 
 // rdar://10529259
-#define IBAction void)__attribute__((ibaction)
 
 @interface Foo 
 - (void)doSomething1:(id)sender;

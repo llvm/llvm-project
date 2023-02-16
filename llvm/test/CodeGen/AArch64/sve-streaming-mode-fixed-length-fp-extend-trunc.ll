@@ -4,6 +4,81 @@
 target triple = "aarch64-unknown-linux-gnu"
 
 ;
+; FCVT H -> S; Without load instr
+;
+
+define void @fcvt_v2f16_to_v2f32(<2 x half> %a, ptr %b) #0 {
+; CHECK-LABEL: fcvt_v2f16_to_v2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    fcvt z0.s, p0/m, z0.h
+; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    ret
+  %res = fpext <2 x half> %a to <2 x float>
+  store <2 x float> %res, ptr %b
+  ret void
+}
+
+define void @fcvt_v4f16_to_v4f32(<4 x half> %a, ptr %b) #0 {
+; CHECK-LABEL: fcvt_v4f16_to_v4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    fcvt z0.s, p0/m, z0.h
+; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    ret
+  %res = fpext <4 x half> %a to <4 x float>
+  store <4 x float> %res, ptr %b
+  ret void
+}
+
+define void @fcvt_v8f16_to_v8f32(<8 x half> %a, ptr %b) #0 {
+; CHECK-LABEL: fcvt_v8f16_to_v8f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    uunpklo z1.s, z0.h
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    fcvt z1.s, p0/m, z1.h
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    fcvt z0.s, p0/m, z0.h
+; CHECK-NEXT:    stp q1, q0, [x0]
+; CHECK-NEXT:    ret
+  %res = fpext <8 x half> %a to <8 x float>
+  store <8 x float> %res, ptr %b
+  ret void
+}
+
+define void @fcvt_v16f16_to_v16f32(<16 x half> %a, ptr %b) #0 {
+; CHECK-LABEL: fcvt_v16f16_to_v16f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    uunpklo z2.s, z1.h
+; CHECK-NEXT:    uunpklo z3.s, z0.h
+; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    fcvt z1.s, p0/m, z1.h
+; CHECK-NEXT:    fcvt z2.s, p0/m, z2.h
+; CHECK-NEXT:    fcvt z0.s, p0/m, z0.h
+; CHECK-NEXT:    stp q2, q1, [x0, #32]
+; CHECK-NEXT:    movprfx z1, z3
+; CHECK-NEXT:    fcvt z1.s, p0/m, z3.h
+; CHECK-NEXT:    stp q1, q0, [x0]
+; CHECK-NEXT:    ret
+  %res = fpext <16 x half> %a to <16 x float>
+  store <16 x float> %res, ptr %b
+  ret void
+}
+
+;
+;
 ; FCVT H -> S
 ;
 

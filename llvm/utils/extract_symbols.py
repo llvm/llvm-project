@@ -52,14 +52,13 @@ def nm_get_symbols(lib):
                                universal_newlines=True)
     process.stdin.close()
     for line in process.stdout:
-        # Look for external symbols that are defined in some section, i.e.
-        # symbols that aren't absolute, local, or undefined.
+        # Look for external symbols that are defined in some section
         # The POSIX format is:
         #   name   type   value   size
         # The -P flag displays the size field for symbols only when applicable,
         # so the last field is optional. There's no space after the value field,
         # but \s+ match newline also, so \s+\S* will match the optional size field.
-        match = re.match("^(\S+)\s+[^AU]\s+\S+\s+\S*$", line)
+        match = re.match("^(\S+)\s+[BDGRSTVW]\s+\S+\s+\S*$", line)
         if match:
             yield (match.group(1), True)
         # Look for undefined symbols, which have type U and may or may not
