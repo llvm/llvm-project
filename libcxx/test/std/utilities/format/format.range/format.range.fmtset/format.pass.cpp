@@ -26,6 +26,7 @@
 
 #include <cassert>
 #include <concepts>
+#include <iterator>
 #include <format>
 #include <set>
 

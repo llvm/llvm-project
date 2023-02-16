@@ -197,6 +197,7 @@ module m2
     !ERROR: ALLOCATABLE dummy argument 'b=' must be associated with an ALLOCATABLE actual argument
     call smb(x(:))
 
+    !ERROR: Rank of dummy argument is 1, but actual argument has rank 0
     !ERROR: ALLOCATABLE dummy argument 'b=' must be associated with an ALLOCATABLE actual argument
     call smb(x(2))
 

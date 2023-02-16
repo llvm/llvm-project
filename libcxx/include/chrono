@@ -656,6 +656,10 @@ public:
     constexpr          precision to_duration() const noexcept;
 };
 
+template<class charT, class traits, class Duration>
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const hh_mm_ss<Duration>& hms); // C++20
+
 // 26.10, 12/24 hour functions
 constexpr bool is_am(hours const& h) noexcept;
 constexpr bool is_pm(hours const& h) noexcept;
@@ -691,6 +695,8 @@ namespace std {
   template<class charT> struct formatter<chrono::year_month_day_last, charT>;     // C++20
   template<class charT> struct formatter<chrono::year_month_weekday, charT>;      // C++20
   template<class charT> struct formatter<chrono::year_month_weekday_last, charT>; // C++20
+  template<class Rep, class Period, class charT>
+    struct formatter<chrono::hh_mm_ss<duration<Rep, Period>>, charT>;             // C++20
 } // namespace std
 
 namespace chrono {

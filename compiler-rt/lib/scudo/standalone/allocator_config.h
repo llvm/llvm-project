@@ -26,7 +26,7 @@ namespace scudo {
 // allocator.
 //
 // struct ExampleConfig {
-//   // SizeClasMmap to use with the Primary.
+//   // SizeClassMap to use with the Primary.
 //   using SizeClassMap = DefaultSizeClassMap;
 //   // Indicates possible support for Memory Tagging.
 //   static const bool MaySupportMemoryTagging = false;

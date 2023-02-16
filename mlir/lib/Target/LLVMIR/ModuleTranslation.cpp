@@ -1244,8 +1244,10 @@ LogicalResult ModuleTranslation::createTBAAMetadata() {
 
 void ModuleTranslation::setLoopMetadata(Operation *op,
                                         llvm::Instruction *inst) {
-  auto attr =
-      op->getAttrOfType<LoopAnnotationAttr>(LLVMDialect::getLoopAttrName());
+  LoopAnnotationAttr attr =
+      TypeSwitch<Operation *, LoopAnnotationAttr>(op)
+          .Case<LLVM::BrOp, LLVM::CondBrOp>(
+              [](auto branchOp) { return branchOp.getLoopAnnotationAttr(); });
   if (!attr)
     return;
   llvm::MDNode *loopMD = loopAnnotationTranslation->translate(attr, op);

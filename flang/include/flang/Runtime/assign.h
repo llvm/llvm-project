@@ -17,8 +17,8 @@
 // must arrive here.
 //
 // Non-type-bound generic INTERFACE ASSIGNMENT(=) is resolved in semantics and
-// need not be handled here in the runtime; ditto for type conversions on
-// intrinsic assignments.
+// need not be handled here in the runtime apart from derived type components;
+// ditto for type conversions on intrinsic assignments.
 
 #ifndef FORTRAN_RUNTIME_ASSIGN_H_
 #define FORTRAN_RUNTIME_ASSIGN_H_
@@ -31,6 +31,10 @@ class Descriptor;
 extern "C" {
 // API for lowering assignment
 void RTNAME(Assign)(Descriptor &to, const Descriptor &from,
+    const char *sourceFile = nullptr, int sourceLine = 0);
+// This variant has no finalization, defined assignment, or allocatable
+// reallocation.
+void RTNAME(AssignTemporary)(Descriptor &to, const Descriptor &from,
     const char *sourceFile = nullptr, int sourceLine = 0);
 } // extern "C"
 } // namespace Fortran::runtime

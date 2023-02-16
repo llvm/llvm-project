@@ -195,6 +195,12 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // Basic type & rank checking
   parser::ContextualMessages &messages{context.messages()};
   CheckCharacterActual(actual, dummy, actualType, context, messages);
+  bool dummyIsAllocatable{
+      dummy.attrs.test(characteristics::DummyDataObject::Attr::Allocatable)};
+  bool dummyIsPointer{
+      dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer)};
+  bool dummyIsAllocatableOrPointer{dummyIsAllocatable || dummyIsPointer};
+  allowActualArgumentConversions &= !dummyIsAllocatableOrPointer;
   if (allowActualArgumentConversions) {
     ConvertIntegerActual(actual, dummy.type, actualType, messages);
   }
@@ -215,7 +221,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     if (isElemental) {
     } else if (dummy.type.attrs().test(
                    characteristics::TypeAndShape::Attr::AssumedRank)) {
-    } else if (dummy.type.Rank() > 0 &&
+    } else if (dummy.type.Rank() > 0 && !dummyIsAllocatableOrPointer &&
         !dummy.type.attrs().test(
             characteristics::TypeAndShape::Attr::AssumedShape) &&
         !dummy.type.attrs().test(
@@ -229,7 +235,9 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       // Let CheckConformance accept actual scalars; storage association
       // cases are checked here below.
       CheckConformance(messages, dummy.type.shape(), actualType.shape(),
-          evaluate::CheckConformanceFlags::RightScalarExpandable,
+          dummyIsAllocatableOrPointer
+              ? evaluate::CheckConformanceFlags::None
+              : evaluate::CheckConformanceFlags::RightScalarExpandable,
           "dummy argument", "actual argument");
     }
   } else {
@@ -357,7 +365,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           "Assumed-size array may not be associated with assumed-shape %s"_err_en_US,
           dummyName);
     }
-  } else if (actualRank == 0 && dummy.type.Rank() > 0) {
+  } else if (actualRank == 0 && dummy.type.Rank() > 0 &&
+      !dummyIsAllocatableOrPointer) {
     // Actual is scalar, dummy is an array.  15.5.2.4(14), 15.5.2.11
     if (actualIsCoindexed) {
       messages.Say(
@@ -411,8 +420,6 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   } else if (dummy.intent == common::Intent::InOut) {
     reason = "INTENT(IN OUT)";
   }
-  bool dummyIsPointer{
-      dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer)};
   if (reason && scope) {
     // Problems with polymorphism are caught in the callee's definition.
     DefinabilityFlags flags{DefinabilityFlag::PolymorphicOkInPure};
@@ -465,8 +472,6 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   }
 
   // 15.5.2.6 -- dummy is ALLOCATABLE
-  bool dummyIsAllocatable{
-      dummy.attrs.test(characteristics::DummyDataObject::Attr::Allocatable)};
   bool actualIsAllocatable{evaluate::IsAllocatableDesignator(actual)};
   if (dummyIsAllocatable) {
     if (!actualIsAllocatable) {

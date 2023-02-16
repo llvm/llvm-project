@@ -66,16 +66,20 @@ inline_memcpy_x86_maybe_interpose_repmovsb(Ptr __restrict dst,
                                            CPtr __restrict src, size_t count) {
   // Whether to use rep;movsb exclusively, not at all, or only above a certain
   // threshold.
-#ifndef LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE
-#define LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE -1
+#ifndef LIBC_COPT_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE
+#define LIBC_COPT_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE -1
 #endif
 
 #ifdef LLVM_LIBC_MEMCPY_X86_USE_ONLY_REPMOVSB
-#error LLVM_LIBC_MEMCPY_X86_USE_ONLY_REPMOVSB is deprecated use LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE=0 instead.
+#error LLVM_LIBC_MEMCPY_X86_USE_ONLY_REPMOVSB is deprecated use LIBC_COPT_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE=0 instead.
 #endif // LLVM_LIBC_MEMCPY_X86_USE_ONLY_REPMOVSB
 
+#ifdef LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE
+#error LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE is deprecated use LIBC_COPT_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE=0 instead.
+#endif // LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE
+
   static constexpr size_t kRepMovsbThreshold =
-      LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE;
+      LIBC_COPT_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE;
   if constexpr (kRepMovsbThreshold == 0) {
     return x86::Memcpy::repmovsb(dst, src, count);
   } else if constexpr (kRepMovsbThreshold == size_t(-1)) {
@@ -121,14 +125,13 @@ inline_memcpy_aarch64(Ptr __restrict dst, CPtr __restrict src, size_t count) {
 LIBC_INLINE void inline_memcpy(Ptr __restrict dst, CPtr __restrict src,
                                size_t count) {
   using namespace __llvm_libc::builtin;
-#if defined(LIBC_TARGET_ARCH_IS_X86)
+#if defined(LIBC_COPT_MEMCPY_USE_EMBEDDED_TINY) ||                             \
+    defined(LIBC_TARGET_ARCH_IS_ARM) || defined(LIBC_TARGET_ARCH_IS_GPU)
+  return inline_memcpy_embedded_tiny(dst, src, count);
+#elif defined(LIBC_TARGET_ARCH_IS_X86)
   return inline_memcpy_x86_maybe_interpose_repmovsb(dst, src, count);
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
   return inline_memcpy_aarch64(dst, src, count);
-#elif defined(LIBC_TARGET_ARCH_IS_ARM)
-  return inline_memcpy_embedded_tiny(dst, src, count);
-#elif defined(LIBC_TARGET_ARCH_IS_GPU)
-  return inline_memcpy_embedded_tiny(dst, src, count);
 #else
 #error "Unsupported platform"
 #endif

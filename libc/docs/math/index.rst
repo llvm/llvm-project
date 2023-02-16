@@ -4,7 +4,7 @@
 Math Functions
 ==============
 
-.. include:: check.rst
+.. include:: ../check.rst
 
 .. raw:: html
 
@@ -15,7 +15,7 @@ Math Functions
 .. toctree::
   :hidden:
 
-  math/log.rst
+  log.rst
 
 
 .. contents:: Table of Contents
@@ -271,7 +271,7 @@ Performance
 Algorithms + Implementation Details
 ===================================
 
-* :doc:`math/log`
+* :doc:`log`
 
 References
 ==========

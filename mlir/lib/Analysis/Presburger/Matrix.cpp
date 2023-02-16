@@ -367,9 +367,11 @@ bool Matrix::hasConsistentState() const {
     return false;
   if (nColumns > nReservedColumns)
     return false;
+#ifdef EXPENSIVE_CHECKS
   for (unsigned r = 0; r < nRows; ++r)
     for (unsigned c = nColumns; c < nReservedColumns; ++c)
       if (data[r * nReservedColumns + c] != 0)
         return false;
+#endif
   return true;
 }

@@ -409,7 +409,6 @@ public:
   /// should be stack expanded.
   bool isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
 
-  bool hasBitPreservingFPLogic(EVT VT) const override;
   bool isMultiStoresCheaperThanBitsMerge(EVT LTy, EVT HTy) const override {
     // If the pair to store is a mixture of float and int values, we will
     // save two bitwise instructions and one float-to-int instruction and
@@ -425,6 +424,7 @@ public:
     // out until we get testcase to prove it is a win.
     return false;
   }
+
   bool
   shouldExpandBuildVectorWithShuffles(EVT VT,
                                       unsigned DefinedValues) const override;

@@ -66,3 +66,17 @@ unittest("ScudoCxxUnitTest") {
   }
   has_custom_main = true
 }
+
+unittest("ScudoHooksUnitTest") {
+  configs += [ "//llvm/utils/gn/build:crt_code" ]
+  cflags = test_cflags
+  deps = [
+    "//compiler-rt/lib/scudo/standalone:c_wrapper_sources",
+    "//compiler-rt/lib/scudo/standalone:sources",
+  ]
+  sources = [
+    "scudo_hooks_test.cpp",
+    "scudo_unit_test_main.cpp",
+  ]
+  has_custom_main = true
+}
