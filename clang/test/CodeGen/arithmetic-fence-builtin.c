@@ -3,13 +3,24 @@
 // RUN: -mreassociate \
 // RUN: -o - %s | FileCheck --check-prefixes CHECK,CHECKFAST,CHECKNP %s
 //
+// RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -emit-llvm -DFAST \
+// RUN: -mreassociate \
+// RUN: -o - %s | FileCheck --check-prefixes CHECK,CHECKFAST,CHECKNP %s
+//
 // Test with fast math and fprotect-parens
 // RUN: %clang_cc1 -triple i386-pc-linux-gnu -emit-llvm -DFAST \
 // RUN: -mreassociate -fprotect-parens -ffp-contract=on\
 // RUN: -o - %s | FileCheck --check-prefixes CHECK,CHECKFAST,CHECKPP %s
 //
+// RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -emit-llvm -DFAST \
+// RUN: -mreassociate -fprotect-parens -ffp-contract=on\
+// RUN: -o - %s | FileCheck --check-prefixes CHECK,CHECKFAST,CHECKPP %s
+//
 // Test without fast math: llvm intrinsic not created
 // RUN: %clang_cc1 -triple i386-pc-linux-gnu -emit-llvm -fprotect-parens\
+// RUN: -o - %s | FileCheck --implicit-check-not="llvm.arithmetic.fence" %s
+//
+// RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -emit-llvm -fprotect-parens\
 // RUN: -o - %s | FileCheck --implicit-check-not="llvm.arithmetic.fence" %s
 //
 // Test with fast math on spir target
