@@ -64,13 +64,14 @@ define void @store_i64_stride4_vf2(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ;
 ; AVX512-LABEL: store_i64_stride4_vf2:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512-NEXT:    vmovdqa (%rdx), %xmm1
-; AVX512-NEXT:    vinserti128 $1, (%rsi), %ymm0, %ymm0
-; AVX512-NEXT:    vinserti128 $1, (%rcx), %ymm1, %ymm1
-; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,2,8,10,1,3,9,11]
-; AVX512-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
-; AVX512-NEXT:    vmovdqa64 %zmm2, (%r8)
+; AVX512-NEXT:    vmovaps (%rdi), %xmm0
+; AVX512-NEXT:    vmovaps (%rdx), %xmm1
+; AVX512-NEXT:    vinsertf128 $1, (%rcx), %ymm1, %ymm1
+; AVX512-NEXT:    vinsertf128 $1, (%rsi), %ymm0, %ymm0
+; AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    vmovaps {{.*#+}} zmm1 = [0,2,4,6,1,3,5,7]
+; AVX512-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
+; AVX512-NEXT:    vmovaps %zmm0, (%r8)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %in.vec0 = load <2 x i64>, ptr %in.vecptr0, align 64

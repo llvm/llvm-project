@@ -690,18 +690,20 @@ define <16 x i16> @insert_v16i16(<16 x i16> %x, i16 %y, ptr %ptr) {
 ; KNL-LABEL: insert_v16i16:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpinsrw $1, (%rsi), %xmm0, %xmm1
-; KNL-NEXT:    vmovd %edi, %xmm2
-; KNL-NEXT:    vpbroadcastw %xmm2, %ymm2
-; KNL-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm2[1],ymm0[2,3,4,5,6,7,8],ymm2[9],ymm0[10,11,12,13,14,15]
 ; KNL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; KNL-NEXT:    vmovd %edi, %xmm1
+; KNL-NEXT:    vpbroadcastw %xmm1, %ymm1
+; KNL-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0],ymm1[1],ymm0[2,3,4,5,6,7,8],ymm1[9],ymm0[10,11,12,13,14,15]
+; KNL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: insert_v16i16:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpinsrw $1, (%rsi), %xmm0, %xmm1
-; SKX-NEXT:    vpbroadcastw %edi, %ymm2
-; SKX-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm2[1],ymm0[2,3,4,5,6,7,8],ymm2[9],ymm0[10,11,12,13,14,15]
 ; SKX-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; SKX-NEXT:    vpbroadcastw %edi, %ymm1
+; SKX-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0],ymm1[1],ymm0[2,3,4,5,6,7,8],ymm1[9],ymm0[10,11,12,13,14,15]
+; SKX-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; SKX-NEXT:    retq
   %val = load i16, ptr %ptr
   %r1 = insertelement <16 x i16> %x, i16 %val, i32 1
