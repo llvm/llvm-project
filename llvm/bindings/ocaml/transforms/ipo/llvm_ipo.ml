@@ -21,9 +21,6 @@ external add_always_inliner
 external add_global_dce
   : [ `Module ] Llvm.PassManager.t -> unit
   = "llvm_add_global_dce"
-external add_global_optimizer
-  : [ `Module ] Llvm.PassManager.t -> unit
-  = "llvm_add_global_optimizer"
 external add_ipsccp
   : [ `Module ] Llvm.PassManager.t -> unit
   = "llvm_add_ipsccp"
