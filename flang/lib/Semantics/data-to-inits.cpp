@@ -448,6 +448,11 @@ bool DataInitializationCompiler<DSV>::InitElement(
       case evaluate::InitialImage::OutOfRange:
         OutOfRangeError();
         break;
+      case evaluate::InitialImage::SizeMismatch:
+        exprAnalyzer_.Say(
+            "DATA statement value '%s' for '%s' has the wrong length"_warn_en_US,
+            folded.AsFortran(), DescribeElement());
+        break;
       default:
         CHECK(exprAnalyzer_.context().AnyFatalError());
         break;
