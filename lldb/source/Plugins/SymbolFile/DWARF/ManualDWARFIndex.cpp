@@ -208,6 +208,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
     case DW_TAG_enumeration_type:
     case DW_TAG_inlined_subroutine:
     case DW_TAG_namespace:
+    case DW_TAG_imported_declaration:
     case DW_TAG_string_type:
     case DW_TAG_structure_type:
     case DW_TAG_subprogram:
@@ -354,6 +355,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
       break;
 
     case DW_TAG_namespace:
+    case DW_TAG_imported_declaration:
       if (name)
         set.namespaces.Insert(ConstString(name), ref);
       break;
