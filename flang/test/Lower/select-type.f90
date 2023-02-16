@@ -756,6 +756,23 @@ contains
 ! CHECK: ^bb6:
 ! CHECK: ^bb7:
 
+  subroutine select_type14(a, b)
+    class(p1) :: a, b
+
+    select type(a)
+      type is (p2)
+        select type (b)
+          type is (p2)
+            print*,a%c,b%C
+        end select
+      class default
+        print*,a%a
+    end select
+  end subroutine
+
+  ! Just makes sure the example can be lowered.
+  ! CHECK-LABEL: func.func @_QMselect_type_lower_testPselect_type14
+   
 end module
 
 program test_select_type
