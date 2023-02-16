@@ -344,3 +344,26 @@ declare !dbg !3 void @variadic_func()
 !3 = !DISubprogram(name: "variadic_func", scope: !2, file: !2, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, type: !4)
 !4 = !DISubroutineType(types: !5)
 !5 = !{null, null}
+
+; // -----
+
+define void @dbg_use_before_def(ptr %arg) {
+  call void @llvm.dbg.value(metadata ptr %dbg_arg, metadata !7, metadata !DIExpression()), !dbg !9
+  %dbg_arg = getelementptr double, ptr %arg, i64 16
+  ret void
+}
+
+declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "debug-info.ll", directory: "/")
+!3 = !DICompositeType(tag: DW_TAG_class_type, name: "class_field", file: !2, line: 42, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !4)
+!4 = !{!6}
+!5 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !3, flags: DIFlagArtificial | DIFlagObjectPointer)
+!6 = !DIDerivedType(tag: DW_TAG_member, name: "call_field", file: !2, baseType: !5)
+!7 = !DILocalVariable(scope: !8, name: "var", file: !2, type: !5);
+!8 = distinct !DISubprogram(name: "dbg_use_before_def", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!9 = !DILocation(line: 1, column: 2, scope: !8)
