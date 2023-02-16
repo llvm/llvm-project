@@ -1,6 +1,5 @@
-# RUN: llc -O0 -x mir -start-after=livedebugvalues -filetype=obj < %s > %t.o
-# RUN: ld.lld -shared %t.o -o %t.so
-# RUN: llvm-dwarfdump %t.so | FileCheck %s
+# RUN: llc -O0 -x mir -mcpu=gfx900 -start-after=livedebugvalues -filetype=obj < %s > %t.o
+# RUN: llvm-dwarfdump %t.o | FileCheck %s
 
 # Confirm we emit a non-loclist location when the same lifetime is "live
 # through" the entire function, even when there are meta instructions preceding
@@ -10,10 +9,10 @@
 # CHECK: DW_TAG_subprogram
 # CHECK:   DW_AT_name      ("live_through")
 # CHECK:   DW_TAG_variable
-# CHECK:     DW_AT_location        (DW_OP_regx 0x40, {{.*}})
+# CHECK:     DW_AT_location        (DW_OP_regx SGPR32_LO16, {{.*}})
 # CHECK:     DW_AT_name    ("x")
 # CHECK:   DW_TAG_variable
-# CHECK:     DW_AT_location        (DW_OP_regx 0x40, {{.*}})
+# CHECK:     DW_AT_location        (DW_OP_regx SGPR32_LO16, {{.*}})
 # CHECK:     DW_AT_name    ("y")
 
 # Also confirm that we correctly fall back to the complete loclist when there
@@ -24,12 +23,12 @@
 # CHECK:   DW_AT_name      ("not_live_through")
 # CHECK:   DW_TAG_variable
 # CHECK:     DW_AT_location        (0x[[#%x,]]:
-# CHECK-NEXT:  [0x[[#%x,]], 0x[[#%x,]]): DW_OP_regx 0x40, {{.*}}
-# CHECK-NEXT:  [0x[[#%x,]], 0x[[#%x,]]): DW_OP_regx 0x40, {{.*}})
+# CHECK-NEXT:  [0x[[#%x,]], 0x[[#%x,]]): DW_OP_regx SGPR32_LO16, {{.*}}
+# CHECK-NEXT:  [0x[[#%x,]], 0x[[#%x,]]): DW_OP_regx SGPR32_LO16, {{.*}})
 # CHECK:     DW_AT_name    ("x")
 # CHECK:   DW_TAG_variable
 # CHECK:     DW_AT_location        (0x[[#%x,]]:
-# CHECK-NEXT:  [0x[[#%x,]], 0x[[#%x,]]): DW_OP_regx 0x40, {{.*}})
+# CHECK-NEXT:  [0x[[#%x,]], 0x[[#%x,]]): DW_OP_regx SGPR32_LO16, {{.*}})
 # CHECK:     DW_AT_name    ("y")
 
 --- |
