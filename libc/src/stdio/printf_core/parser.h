@@ -20,24 +20,30 @@
 namespace __llvm_libc {
 namespace printf_core {
 
+#ifndef LIBC_COPT_MOCK_ARG_LIST
+using ArgProvider = internal::ArgList;
+#else  // not defined LIBC_COPT_MOCK_ARG_LIST
+using ArgProvider = internal::MockArgList;
+#endif // LIBC_COPT_MOCK_ARG_LIST
+
 class Parser {
   const char *__restrict str;
 
   size_t cur_pos = 0;
-  internal::ArgList args_cur;
+  ArgProvider args_cur;
 
 #ifndef LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
   // args_start stores the start of the va_args, which is allows getting the
   // value of arguments that have already been passed. args_index is tracked so
   // that we know which argument args_cur is on.
-  internal::ArgList args_start;
+  ArgProvider args_start;
   size_t args_index = 1;
 
   // Defined in printf_config.h
   static constexpr size_t DESC_ARR_LEN = LIBC_COPT_PRINTF_INDEX_ARR_LEN;
 
-  // desc_arr stores the sizes of the variables in the ArgList. This is used in
-  // index mode to reduce repeated string parsing. The sizes are stored as
+  // desc_arr stores the sizes of the variables in the ArgProvider. This is used
+  // in index mode to reduce repeated string parsing. The sizes are stored as
   // TypeDesc objects, which store the size as well as minimal type information.
   // This is necessary because some systems separate the floating point and
   // integer values in va_args.
@@ -49,10 +55,10 @@ class Parser {
 
 public:
 #ifndef LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
-  LIBC_INLINE Parser(const char *__restrict new_str, internal::ArgList &args)
+  LIBC_INLINE Parser(const char *__restrict new_str, ArgProvider &args)
       : str(new_str), args_cur(args), args_start(args) {}
 #else
-  LIBC_INLINE Parser(const char *__restrict new_str, internal::ArgList &args)
+  LIBC_INLINE Parser(const char *__restrict new_str, ArgProvider &args)
       : str(new_str), args_cur(args) {}
 #endif // LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 
@@ -111,7 +117,7 @@ private:
     return get_next_arg_value<T>();
   }
 
-  // the ArgList can only return the next item in the list. This function is
+  // the ArgProvider can only return the next item in the list. This function is
   // used in index mode when the item that needs to be read is not the next one.
   // It moves cur_args to the index requested so the the appropriate value may
   // be read. This may involve parsing the format string, and is in the worst
