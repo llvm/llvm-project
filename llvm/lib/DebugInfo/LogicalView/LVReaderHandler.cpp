@@ -32,31 +32,26 @@ Error LVReaderHandler::process() {
   return Error::success();
 }
 
-void LVReaderHandler::destroyReaders() {
-  LLVM_DEBUG(dbgs() << "destroyReaders\n");
-  for (const LVReader *Reader : TheReaders)
-    delete Reader;
-}
-
 Error LVReaderHandler::createReader(StringRef Filename, LVReaders &Readers,
                                     PdbOrObj &Input, StringRef FileFormatName,
                                     StringRef ExePath) {
-  auto CreateOneReader = [&]() -> LVReader * {
+  auto CreateOneReader = [&]() -> std::unique_ptr<LVReader> {
     if (Input.is<ObjectFile *>()) {
       ObjectFile &Obj = *Input.get<ObjectFile *>();
       if (Obj.isELF() || Obj.isMachO())
-        return new LVELFReader(Filename, FileFormatName, Obj, W);
+        return std::make_unique<LVELFReader>(Filename, FileFormatName, Obj, W);
     }
     return nullptr;
   };
 
-  LVReader *Reader = CreateOneReader();
-  if (!Reader)
+  std::unique_ptr<LVReader> ReaderObj = CreateOneReader();
+  if (!ReaderObj)
     return createStringError(errc::invalid_argument,
                              "unable to create reader for: '%s'",
                              Filename.str().c_str());
 
-  Readers.push_back(Reader);
+  LVReader *Reader = ReaderObj.get();
+  Readers.emplace_back(std::move(ReaderObj));
   return Reader->doLoad();
 }
 
@@ -158,7 +153,9 @@ Error LVReaderHandler::createReaders() {
     LVReaders Readers;
     if (Error Err = createReader(Object, Readers))
       return Err;
-    TheReaders.insert(TheReaders.end(), Readers.begin(), Readers.end());
+    TheReaders.insert(TheReaders.end(),
+                      std::make_move_iterator(Readers.begin()),
+                      std::make_move_iterator(Readers.end()));
   }
 
   return Error::success();
@@ -167,7 +164,7 @@ Error LVReaderHandler::createReaders() {
 Error LVReaderHandler::printReaders() {
   LLVM_DEBUG(dbgs() << "printReaders\n");
   if (options().getPrintExecute())
-    for (LVReader *Reader : TheReaders)
+    for (const std::unique_ptr<LVReader> &Reader : TheReaders)
       if (Error Err = Reader->doPrint())
         return Err;
 
@@ -182,7 +179,8 @@ Error LVReaderHandler::compareReaders() {
     size_t ViewPairs = ReadersCount / 2;
     LVCompare Compare(OS);
     for (size_t Pair = 0, Index = 0; Pair < ViewPairs; ++Pair) {
-      if (Error Err = Compare.execute(TheReaders[Index], TheReaders[Index + 1]))
+      if (Error Err = Compare.execute(TheReaders[Index].get(),
+                                      TheReaders[Index + 1].get()))
         return Err;
       Index += 2;
     }

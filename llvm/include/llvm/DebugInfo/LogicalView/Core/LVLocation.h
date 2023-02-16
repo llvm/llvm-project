@@ -172,7 +172,7 @@ public:
 
 class LVLocationSymbol final : public LVLocation {
   // Location descriptors for the active range.
-  LVAutoOperations *Entries = nullptr;
+  std::unique_ptr<LVOperations> Entries;
 
   void updateKind() override;
 
@@ -180,7 +180,7 @@ public:
   LVLocationSymbol() : LVLocation() {}
   LVLocationSymbol(const LVLocationSymbol &) = delete;
   LVLocationSymbol &operator=(const LVLocationSymbol &) = delete;
-  ~LVLocationSymbol() { delete Entries; };
+  ~LVLocationSymbol() = default;
 
   void addObject(LVAddress LowPC, LVAddress HighPC, LVUnsigned SectionOffset,
                  uint64_t LocDescOffset) override;
