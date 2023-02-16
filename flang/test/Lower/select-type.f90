@@ -19,10 +19,24 @@ module select_type_lower_test
     integer :: d
   end type
 
+  type :: p5
+    integer :: a
+  contains
+    procedure :: negate
+    generic :: operator(-) => negate
+  end type
+
 contains
 
   function get_class()
     class(p1), pointer :: get_class
+  end function
+
+  function negate(this)
+    class(p5), intent(in) :: this
+    class(p5), allocatable :: negate
+    allocate(negate, source=this)
+    negate%a = -this%a
   end function
   
   subroutine select_type1(a)
@@ -772,7 +786,24 @@ contains
 
   ! Just makes sure the example can be lowered.
   ! CHECK-LABEL: func.func @_QMselect_type_lower_testPselect_type14
-   
+
+  subroutine select_type15(a)
+    class(p5) :: a
+
+    select type(x => -a)
+      type is (p5)
+        print*, x%a
+    end select
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMselect_type_lower_testPselect_type15(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>> {fir.bindc_name = "a"}) {
+! CHECK: %[[RES:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>> {bindc_name = ".result"}
+! CHECK: %[[TMP_RES:.*]] = fir.dispatch "negate"(%[[ARG0]] : !fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>) (%[[ARG0]] : !fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>) -> !fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>> {pass_arg_pos = 0 : i32}
+! CHECK: fir.save_result %[[TMP_RES]] to %[[RES]] : !fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>>>
+! CHECK: %[[LOAD_RES:.*]] = fir.load %[[RES]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>>>
+! CHECK: fir.select_type %[[LOAD_RES]] : !fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>> [#fir.type_is<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>, ^bb1, unit, ^bb2]
+
 end module
 
 program test_select_type
