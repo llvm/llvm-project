@@ -145,8 +145,21 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
     break;
   }
 
-  // BEGIN SWIFT
   case '\x01': {
+    bool success;
+    bool persist_result =
+        OptionArgParser::ToBoolean(option_arg, true, &success);
+    if (success)
+      suppress_persistent_result = !persist_result;
+    else
+      error.SetErrorStringWithFormat(
+          "could not convert \"%s\" to a boolean value.",
+          option_arg.str().c_str());
+    break;
+  }
+
+  // BEGIN SWIFT
+  case '\x31': {
     int32_t result;
     result = OptionArgParser::ToOptionEnum(option_arg, BindGenTypeParamValue(),
                                            0, error);
@@ -184,6 +197,7 @@ void CommandObjectExpression::CommandOptions::OptionParsingStarting(
   auto_apply_fixits = eLazyBoolCalculate;
   top_level = false;
   allow_jit = true;
+  suppress_persistent_result = false;
   // BEGIN SWIFT
   bind_generic_types = eBindAuto;
   // END SWIFT
@@ -199,7 +213,11 @@ CommandObjectExpression::CommandOptions::GetEvaluateExpressionOptions(
     const Target &target, const OptionGroupValueObjectDisplay &display_opts) {
   EvaluateExpressionOptions options;
   options.SetCoerceToId(display_opts.use_objc);
-  if (m_verbosity == eLanguageRuntimeDescriptionDisplayVerbosityCompact)
+  // Explicitly disabling persistent results takes precedence over the
+  // m_verbosity/use_objc logic.
+  if (suppress_persistent_result)
+    options.SetSuppressPersistentResult(true);
+  else if (m_verbosity == eLanguageRuntimeDescriptionDisplayVerbosityCompact)
     options.SetSuppressPersistentResult(display_opts.use_objc);
   options.SetUnwindOnError(unwind_on_error);
   options.SetIgnoreBreakpoints(ignore_breakpoints);
@@ -432,10 +450,10 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
     return false;
   }
 
-  const EvaluateExpressionOptions options =
+  const EvaluateExpressionOptions eval_options =
       m_command_options.GetEvaluateExpressionOptions(target, m_varobj_options);
   ExpressionResults success = target.EvaluateExpression(
-      expr, frame, result_valobj_sp, options, &m_fixed_expression);
+      expr, frame, result_valobj_sp, eval_options, &m_fixed_expression);
 
   // We only tell you about the FixIt if we applied it.  The compiler errors
   // will suggest the FixIt if it parsed.
@@ -464,6 +482,7 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
 
         DumpValueObjectOptions options(m_varobj_options.GetAsDumpOptions(
             m_command_options.m_verbosity, format));
+        options.SetHideName(eval_options.GetSuppressPersistentResult());
         options.SetVariableFormatDisplayLanguage(
             result_valobj_sp->GetPreferredDisplayLanguage());
 

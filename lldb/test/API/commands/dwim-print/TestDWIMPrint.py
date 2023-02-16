@@ -16,7 +16,8 @@ class TestCase(TestBase):
         self.ci.HandleCommand(cmd, result)
         return result.GetOutput().rstrip()
 
-    PERSISTENT_VAR = re.compile(r"\$\d+")
+    VAR_IDENT_RAW = r"(?:\$\d+|\w+) = "
+    VAR_IDENT = re.compile(VAR_IDENT_RAW)
 
     def _mask_persistent_var(self, string: str) -> str:
         """
@@ -24,8 +25,9 @@ class TestCase(TestBase):
         that matches any persistent result (r'\$\d+'). The returned string can
         be matched against other `expression` results.
         """
-        before, after = self.PERSISTENT_VAR.split(string, maxsplit=1)
-        return re.escape(before) + r"\$\d+" + re.escape(after)
+        before, after = self.VAR_IDENT.split(string, maxsplit=1)
+        # Support either a frame variable (\w+) or a persistent result (\$\d+).
+        return re.escape(before) + self.VAR_IDENT_RAW + re.escape(after)
 
     def _expect_cmd(
         self,
@@ -51,7 +53,7 @@ class TestCase(TestBase):
         substrs = [f"note: ran `{resolved_cmd}`"]
         patterns = []
 
-        if actual_cmd == "expression" and self.PERSISTENT_VAR.search(expected_output):
+        if self.VAR_IDENT.search(expected_output):
             patterns.append(self._mask_persistent_var(expected_output))
         else:
             substrs.append(expected_output)

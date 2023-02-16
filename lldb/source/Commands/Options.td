@@ -387,8 +387,13 @@ let Command = "expression" in {
     Arg<"Boolean">,
     Desc<"Controls whether the expression can fall back to being JITted if it's "
     "not supported by the interpreter (defaults to true).">;
+  def persistent_result : Option<"persistent-result", "\\x01">, Groups<[1,2]>,
+    Arg<"Boolean">,
+    Desc<"Persist expression result in a variable for subsequent use. "
+    "Expression results will be labeled with $-prefixed variables, e.g. $0, "
+    "$1, etc. Defaults to true.">;
   // BEGIN SWIFT
-  def bind_generic_types : Option<"bind-generic-types", "\\x01">,
+  def bind_generic_types : Option<"bind-generic-types", "\\x31">,
     EnumArg<"BindGenTypeParamValue">, Desc<"Controls whether any "
     "generic types in the current context should be bound to their dynamic "
     "type before evaluating. Defaults to auto.">;
