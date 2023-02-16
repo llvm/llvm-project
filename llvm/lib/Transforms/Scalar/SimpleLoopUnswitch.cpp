@@ -125,7 +125,7 @@ static cl::opt<bool> InjectInvariantConditions(
     "simple-loop-unswitch-inject-invariant-conditions", cl::Hidden,
     cl::desc("Whether we should inject new invariants and unswitch them to "
              "eliminate some existing (non-invariant) conditions."),
-    cl::init(true));
+    cl::init(false));
 
 static cl::opt<unsigned> InjectInvariantConditionHotnesThreshold(
     "simple-loop-unswitch-inject-invariant-condition-hotness-threshold",
