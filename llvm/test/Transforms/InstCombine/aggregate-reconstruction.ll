@@ -305,13 +305,7 @@ end:
 ; Like test2 but with a poison base.
 define [3 x i32] @poison_base([3 x i32] %srcagg) {
 ; CHECK-LABEL: @poison_base(
-; CHECK-NEXT:    [[I0:%.*]] = extractvalue [3 x i32] [[SRCAGG:%.*]], 0
-; CHECK-NEXT:    [[I1:%.*]] = extractvalue [3 x i32] [[SRCAGG]], 1
-; CHECK-NEXT:    [[I2:%.*]] = extractvalue [3 x i32] [[SRCAGG]], 2
-; CHECK-NEXT:    [[I3:%.*]] = insertvalue [3 x i32] poison, i32 [[I0]], 0
-; CHECK-NEXT:    [[I4:%.*]] = insertvalue [3 x i32] [[I3]], i32 [[I1]], 1
-; CHECK-NEXT:    [[I5:%.*]] = insertvalue [3 x i32] [[I4]], i32 [[I2]], 2
-; CHECK-NEXT:    ret [3 x i32] [[I5]]
+; CHECK-NEXT:    ret [3 x i32] [[SRCAGG:%.*]]
 ;
   %i0 = extractvalue [3 x i32] %srcagg, 0
   %i1 = extractvalue [3 x i32] %srcagg, 1
