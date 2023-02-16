@@ -1,4 +1,4 @@
-; RUN: opt -S -place-safepoints < %s -enable-new-pm=0 | FileCheck %s
+; RUN: opt -S -passes=place-safepoints < %s | FileCheck %s
 
 ; Libcalls will not contain a safepoint poll, so check that we insert
 ; a safepoint in a loop containing a libcall.
