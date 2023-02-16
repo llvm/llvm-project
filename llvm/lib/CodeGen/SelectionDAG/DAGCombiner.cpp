@@ -362,7 +362,6 @@ namespace {
     SDValue SplitIndexingFromLoad(LoadSDNode *LD);
     bool SliceUpLoad(SDNode *N);
 
-    StoreSDNode *getUniqueStoreFeeding(LoadSDNode *LD, int64_t &Offset);
     // Scalars have size 0 to distinguish from singleton vectors.
     SDValue ForwardStoreValueToDirectLoad(LoadSDNode *LD);
     bool getTruncatedStoreValue(StoreSDNode *ST, SDValue &Val);
@@ -17614,53 +17613,11 @@ bool DAGCombiner::extendLoadedValueToExtension(LoadSDNode *LD, SDValue &Val) {
   return false;
 }
 
-StoreSDNode *DAGCombiner::getUniqueStoreFeeding(LoadSDNode *LD,
-                                                int64_t &Offset) {
-  SDValue Chain = LD->getOperand(0);
-
-  // Look through CALLSEQ_START.
-  if (Chain.getOpcode() == ISD::CALLSEQ_START)
-    Chain = Chain->getOperand(0);
-
-  StoreSDNode *ST = nullptr;
-  SmallVector<SDValue, 8> Aliases;
-  if (Chain.getOpcode() == ISD::TokenFactor) {
-    // Look for unique store within the TokenFactor.
-    for (SDValue Op : Chain->ops()) {
-      StoreSDNode *Store = dyn_cast<StoreSDNode>(Op.getNode());
-      if (!Store)
-        continue;
-      BaseIndexOffset BasePtrLD = BaseIndexOffset::match(LD, DAG);
-      BaseIndexOffset BasePtrST = BaseIndexOffset::match(Store, DAG);
-      if (BasePtrST.equalBaseIndex(BasePtrLD, DAG, Offset)) {
-        // Make sure the store is not aliased with any nodes in TokenFactor.
-        GatherAllAliases(Store, Chain, Aliases);
-        if (Aliases.empty() ||
-            (Aliases.size() == 1 && Aliases.front().getNode() == Store))
-          ST = Store;
-        break;
-      }
-    }
-  } else {
-    StoreSDNode *Store = dyn_cast<StoreSDNode>(Chain.getNode());
-    if (Store) {
-      BaseIndexOffset BasePtrLD = BaseIndexOffset::match(LD, DAG);
-      BaseIndexOffset BasePtrST = BaseIndexOffset::match(Store, DAG);
-      if (BasePtrST.equalBaseIndex(BasePtrLD, DAG, Offset))
-        ST = Store;
-    }
-  }
-
-  return ST;
-}
-
 SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
   if (OptLevel == CodeGenOpt::None || !LD->isSimple())
     return SDValue();
-  SDValue InputChain = LD->getOperand(0);
-  int64_t Offset;
-
-  StoreSDNode *ST = getUniqueStoreFeeding(LD, Offset);
+  SDValue Chain = LD->getOperand(0);
+  StoreSDNode *ST = dyn_cast<StoreSDNode>(Chain.getNode());
   // TODO: Relax this restriction for unordered atomics (see D66309)
   if (!ST || !ST->isSimple() || ST->getAddressSpace() != LD->getAddressSpace())
     return SDValue();
@@ -17686,6 +17643,12 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
   // compile time the absolute size of the vector. Until we've done more
   // analysis on big-endian platforms it seems better to bail out for now.
   if (LdStScalable && DAG.getDataLayout().isBigEndian())
+    return SDValue();
+
+  BaseIndexOffset BasePtrLD = BaseIndexOffset::match(LD, DAG);
+  BaseIndexOffset BasePtrST = BaseIndexOffset::match(ST, DAG);
+  int64_t Offset;
+  if (!BasePtrST.equalBaseIndex(BasePtrLD, DAG, Offset))
     return SDValue();
 
   // Normalize for Endianness. After this Offset=0 will denote that the least
@@ -17730,7 +17693,7 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
   if (Offset == 0 && LDType == STType && STMemType == LDMemType) {
     // Simple case: Direct non-truncating forwarding
     if (LDType.getSizeInBits() == LdMemSize)
-      return ReplaceLd(LD, ST->getValue(), InputChain);
+      return ReplaceLd(LD, ST->getValue(), Chain);
     // Can we model the truncate and extension with an and mask?
     if (STType.isInteger() && LDMemType.isInteger() && !STType.isVector() &&
         !LDMemType.isVector() && LD->getExtensionType() != ISD::SEXTLOAD) {
@@ -17740,7 +17703,7 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
                                                StMemSize.getFixedValue()),
                           SDLoc(ST), STType);
       auto Val = DAG.getNode(ISD::AND, SDLoc(LD), LDType, ST->getValue(), Mask);
-      return ReplaceLd(LD, Val, InputChain);
+      return ReplaceLd(LD, Val, Chain);
     }
   }
 
@@ -17777,7 +17740,7 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
     }
     if (!extendLoadedValueToExtension(LD, Val))
       continue;
-    return ReplaceLd(LD, Val, InputChain);
+    return ReplaceLd(LD, Val, Chain);
   } while (false);
 
   // On failure, cleanup dead nodes we may have created.
