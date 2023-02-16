@@ -66,13 +66,13 @@ define <16 x i16> @blendw_to_blendd_32(<16 x i16> %x, <16 x i16> %y, <16 x i16> 
 ; X86-AVX512-LABEL: blendw_to_blendd_32:
 ; X86-AVX512:       # %bb.0:
 ; X86-AVX512-NEXT:    vpaddw %ymm2, %ymm0, %ymm0
-; X86-AVX512-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7],ymm0[8,9],ymm1[10,11],ymm0[12,13],ymm1[14,15]
+; X86-AVX512-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
 ; X86-AVX512-NEXT:    retl
 ;
 ; X64-AVX512-LABEL: blendw_to_blendd_32:
 ; X64-AVX512:       # %bb.0:
 ; X64-AVX512-NEXT:    vpaddw %ymm2, %ymm0, %ymm0
-; X64-AVX512-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7],ymm0[8,9],ymm1[10,11],ymm0[12,13],ymm1[14,15]
+; X64-AVX512-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
 ; X64-AVX512-NEXT:    retq
   %x1 = add <16 x i16> %x, %z
   %shuffle = shufflevector <16 x i16> %x1, <16 x i16> %y, <16 x i32> <i32 0, i32 1, i32 18, i32 19, i32 4, i32 5, i32 22, i32 23, i32 8, i32 9, i32 26, i32 27, i32 12, i32 13, i32 30, i32 31>
@@ -119,13 +119,13 @@ define <8 x i16> @blendw_to_blendd_16(<8 x i16> %x, <8 x i16> %y, <8 x i16> %z) 
 ; X86-AVX512-LABEL: blendw_to_blendd_16:
 ; X86-AVX512:       # %bb.0:
 ; X86-AVX512-NEXT:    vpaddw %xmm2, %xmm0, %xmm0
-; X86-AVX512-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
+; X86-AVX512-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; X86-AVX512-NEXT:    retl
 ;
 ; X64-AVX512-LABEL: blendw_to_blendd_16:
 ; X64-AVX512:       # %bb.0:
 ; X64-AVX512-NEXT:    vpaddw %xmm2, %xmm0, %xmm0
-; X64-AVX512-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
+; X64-AVX512-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; X64-AVX512-NEXT:    retq
   %x1 = add <8 x i16> %x, %z
   %shuffle = shufflevector <8 x i16> %x1, <8 x i16> %y, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
