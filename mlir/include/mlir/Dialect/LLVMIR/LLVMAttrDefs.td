@@ -168,6 +168,32 @@ def LoopPipelineAttr : LLVM_Attr<"LoopPipeline", "loop_pipeline"> {
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
+def LoopPeeledAttr : LLVM_Attr<"LoopPeeled", "loop_peeled"> {
+  let description = [{
+    This attribute defines pipelining specific loop annotations that map to
+    the "!llvm.loop.peeled" metadata.
+  }];
+
+  let parameters = (ins
+    OptionalParameter<"IntegerAttr">:$count
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def LoopUnswitchAttr : LLVM_Attr<"LoopUnswitch", "loop_unswitch"> {
+  let description = [{
+    This attribute defines pipelining specific loop annotations that map to
+    the "!llvm.loop.unswitch" metadata.
+  }];
+
+  let parameters = (ins
+    OptionalParameter<"BoolAttr">:$partialDisable
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 def LoopAnnotationAttr : LLVM_Attr<"LoopAnnotation", "loop_annotation"> {
   let description = [{
     This attributes encapsulates "loop metadata". It is meant to decorate
@@ -186,6 +212,8 @@ def LoopAnnotationAttr : LLVM_Attr<"LoopAnnotation", "loop_annotation"> {
     OptionalParameter<"LoopLICMAttr">:$licm,
     OptionalParameter<"LoopDistributeAttr">:$distribute,
     OptionalParameter<"LoopPipelineAttr">:$pipeline,
+    OptionalParameter<"LoopPeeledAttr">:$peeled,
+    OptionalParameter<"LoopUnswitchAttr">:$unswitch,
     OptionalParameter<"BoolAttr">:$mustProgress,
     OptionalParameter<"BoolAttr">:$isVectorized,
     OptionalArrayRefParameter<"SymbolRefAttr">:$parallelAccesses
