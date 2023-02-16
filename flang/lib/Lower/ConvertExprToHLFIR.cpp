@@ -14,6 +14,7 @@
 #include "flang/Evaluate/shape.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/CallInterface.h"
+#include "flang/Lower/ConvertArrayConstructor.h"
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/ConvertConstant.h"
 #include "flang/Lower/ConvertProcedureDesignator.h"
@@ -1074,8 +1075,9 @@ private:
 
   template <typename T>
   hlfir::EntityWithAttributes
-  gen(const Fortran::evaluate::ArrayConstructor<T> &expr) {
-    TODO(getLoc(), "lowering ArrayCtor to HLFIR");
+  gen(const Fortran::evaluate::ArrayConstructor<T> &arrayCtor) {
+    return Fortran::lower::ArrayConstructorBuilder<T>::gen(
+        getLoc(), getConverter(), arrayCtor, getSymMap(), getStmtCtx());
   }
 
   template <typename D, typename R, typename O>
@@ -1208,7 +1210,9 @@ private:
 
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::ImpliedDoIndex &var) {
-    TODO(getLoc(), "lowering implied do index to HLFIR");
+    mlir::Value value = symMap.lookupImpliedDo(toStringRef(var.name));
+    assert(value && "impled do was not mapped");
+    return hlfir::EntityWithAttributes{value};
   }
 
   hlfir::EntityWithAttributes
