@@ -11777,7 +11777,7 @@ static GVALinkage basicGVALinkageForVariable(const ASTContext &Context,
   llvm_unreachable("Invalid Linkage!");
 }
 
-GVALinkage ASTContext::GetGVALinkageForVariable(const VarDecl *VD) {
+GVALinkage ASTContext::GetGVALinkageForVariable(const VarDecl *VD) const {
   return adjustGVALinkageForExternalDefinitionKind(*this, VD,
            adjustGVALinkageForAttributes(*this, VD,
              basicGVALinkageForVariable(*this, VD)));
