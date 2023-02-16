@@ -3,7 +3,7 @@
 // CHECK-LABEL: @disableNonForced
 llvm.func @disableNonForced() {
   // CHECK: br {{.*}} !llvm.loop ![[LOOP_NODE:[0-9]+]]
-  llvm.br ^bb1 {llvm.loop = #llvm.loop_annotation<disableNonforced = true>}
+  llvm.br ^bb1 {loop_annotation = #llvm.loop_annotation<disableNonforced = true>}
 ^bb1:
   llvm.return
 }
@@ -16,7 +16,7 @@ llvm.func @disableNonForced() {
 // CHECK-LABEL: @mustprogress
 llvm.func @mustprogress() {
   // CHECK: br {{.*}} !llvm.loop ![[LOOP_NODE:[0-9]+]]
-  llvm.br ^bb1 {llvm.loop = #llvm.loop_annotation<mustProgress = true>}
+  llvm.br ^bb1 {loop_annotation = #llvm.loop_annotation<mustProgress = true>}
 ^bb1:
   llvm.return
 }
@@ -29,7 +29,7 @@ llvm.func @mustprogress() {
 // CHECK-LABEL: @isvectorized
 llvm.func @isvectorized() {
   // CHECK: br {{.*}} !llvm.loop ![[LOOP_NODE:[0-9]+]]
-  llvm.br ^bb1 {llvm.loop = #llvm.loop_annotation<isVectorized = true>}
+  llvm.br ^bb1 {loop_annotation = #llvm.loop_annotation<isVectorized = true>}
 ^bb1:
   llvm.return
 }
@@ -44,7 +44,7 @@ llvm.func @isvectorized() {
 // CHECK-LABEL: @vectorizeOptions
 llvm.func @vectorizeOptions() {
   // CHECK: br {{.*}} !llvm.loop ![[LOOP_NODE:[0-9]+]]
-  llvm.br ^bb1 {llvm.loop = #llvm.loop_annotation<vectorize = <
+  llvm.br ^bb1 {loop_annotation = #llvm.loop_annotation<vectorize = <
     disable = false, predicateEnable = true, scalableEnable = false, width = 16 : i32, 
     followupVectorized = #followup, followupEpilogue = #followup, followupAll = #followup>
   >}
@@ -68,7 +68,7 @@ llvm.func @vectorizeOptions() {
 // CHECK-LABEL: @interleaveOptions
 llvm.func @interleaveOptions() {
   // CHECK: br {{.*}} !llvm.loop ![[LOOP_NODE:[0-9]+]]
-  llvm.br ^bb1 {llvm.loop = #llvm.loop_annotation<interleave = <count = 32 : i32>>}
+  llvm.br ^bb1 {loop_annotation = #llvm.loop_annotation<interleave = <count = 32 : i32>>}
 ^bb1:
   llvm.return
 }
@@ -83,7 +83,7 @@ llvm.func @interleaveOptions() {
 // CHECK-LABEL: @unrollOptions
 llvm.func @unrollOptions() {
   // CHECK: br {{.*}} !llvm.loop ![[LOOP_NODE:[0-9]+]]
-  llvm.br ^bb1 {llvm.loop = #llvm.loop_annotation<unroll = <
+  llvm.br ^bb1 {loop_annotation = #llvm.loop_annotation<unroll = <
     disable = true, count = 64 : i32, runtimeDisable = false, full = false,
     followupUnrolled = #followup, followupRemainder = #followup, followupAll = #followup>
   >}
@@ -106,7 +106,7 @@ llvm.func @unrollOptions() {
 // CHECK-LABEL: @unrollOptions2
 llvm.func @unrollOptions2() {
   // CHECK: br {{.*}} !llvm.loop ![[LOOP_NODE:[0-9]+]]
-  llvm.br ^bb1 {llvm.loop = #llvm.loop_annotation<unroll = <disable = false, full = true>>}
+  llvm.br ^bb1 {loop_annotation = #llvm.loop_annotation<unroll = <disable = false, full = true>>}
 ^bb1:
   llvm.return
 }
@@ -122,7 +122,7 @@ llvm.func @unrollOptions2() {
 // CHECK-LABEL: @unrollAndJamOptions
 llvm.func @unrollAndJamOptions() {
   // CHECK: br {{.*}} !llvm.loop ![[LOOP_NODE:[0-9]+]]
-  llvm.br ^bb1 {llvm.loop = #llvm.loop_annotation<unrollAndJam = <
+  llvm.br ^bb1 {loop_annotation = #llvm.loop_annotation<unrollAndJam = <
     disable = false, count = 8 : i32, followupOuter = #followup, followupInner = #followup,
     followupRemainderOuter = #followup, followupRemainderInner = #followup, followupAll = #followup>
   >}
@@ -146,7 +146,7 @@ llvm.func @unrollAndJamOptions() {
 // CHECK-LABEL: @licmOptions
 llvm.func @licmOptions() {
   // CHECK: br {{.*}} !llvm.loop ![[LOOP_NODE:[0-9]+]]
-  llvm.br ^bb1 {llvm.loop = #llvm.loop_annotation<licm = <disable = false, versioningDisable = true>>}
+  llvm.br ^bb1 {loop_annotation = #llvm.loop_annotation<licm = <disable = false, versioningDisable = true>>}
 ^bb1:
   llvm.return
 }
@@ -159,7 +159,7 @@ llvm.func @licmOptions() {
 // CHECK-LABEL: @licmOptions2
 llvm.func @licmOptions2() {
   // CHECK: br {{.*}} !llvm.loop ![[LOOP_NODE:[0-9]+]]
-  llvm.br ^bb1 {llvm.loop = #llvm.loop_annotation<licm = <disable = true, versioningDisable = false>>}
+  llvm.br ^bb1 {loop_annotation = #llvm.loop_annotation<licm = <disable = true, versioningDisable = false>>}
 ^bb1:
   llvm.return
 }
@@ -174,7 +174,7 @@ llvm.func @licmOptions2() {
 // CHECK-LABEL: @distributeOptions
 llvm.func @distributeOptions() {
   // CHECK: br {{.*}} !llvm.loop ![[LOOP_NODE:[0-9]+]]
-  llvm.br ^bb1 {llvm.loop = #llvm.loop_annotation<distribute = <
+  llvm.br ^bb1 {loop_annotation = #llvm.loop_annotation<distribute = <
     disable = true, followupCoincident = #followup, followupSequential = #followup,
     followupFallback = #followup, followupAll = #followup>
   >}
@@ -196,7 +196,7 @@ llvm.func @distributeOptions() {
 // CHECK-LABEL: @pipelineOptions
 llvm.func @pipelineOptions() {
   // CHECK: br {{.*}} !llvm.loop ![[LOOP_NODE:[0-9]+]]
-  llvm.br ^bb1 {llvm.loop = #llvm.loop_annotation<pipeline = <disable = false, initiationinterval = 1 : i32>>}
+  llvm.br ^bb1 {loop_annotation = #llvm.loop_annotation<pipeline = <disable = false, initiationinterval = 1 : i32>>}
 ^bb1:
   llvm.return
 }
@@ -210,7 +210,7 @@ llvm.func @pipelineOptions() {
 // CHECK-LABEL: @peeledOptions
 llvm.func @peeledOptions() {
   // CHECK: br {{.*}} !llvm.loop ![[LOOP_NODE:[0-9]+]]
-  llvm.br ^bb1 {llvm.loop = #llvm.loop_annotation<peeled = <count = 3 : i32>>}
+  llvm.br ^bb1 {loop_annotation = #llvm.loop_annotation<peeled = <count = 3 : i32>>}
 ^bb1:
   llvm.return
 }
@@ -223,7 +223,7 @@ llvm.func @peeledOptions() {
 // CHECK-LABEL: @unswitchOptions
 llvm.func @unswitchOptions() {
   // CHECK: br {{.*}} !llvm.loop ![[LOOP_NODE:[0-9]+]]
-  llvm.br ^bb1 {llvm.loop = #llvm.loop_annotation<unswitch = <partialDisable = true>>}
+  llvm.br ^bb1 {loop_annotation = #llvm.loop_annotation<unswitch = <partialDisable = true>>}
 ^bb1:
   llvm.return
 }
@@ -241,7 +241,7 @@ llvm.func @loopOptions(%arg1 : i32, %arg2 : i32) {
   ^bb3(%1: i32):
     %2 = llvm.icmp "slt" %1, %arg1 : i32
     // CHECK: br i1 {{.*}} !llvm.loop ![[LOOP_NODE:[0-9]+]]
-    llvm.cond_br %2, ^bb4, ^bb5 {llvm.loop = #llvm.loop_annotation<
+    llvm.cond_br %2, ^bb4, ^bb5 {loop_annotation = #llvm.loop_annotation<
           licm = <disable = true>,
           interleave = <count = 1>,
           unroll = <disable = true>, pipeline = <disable = true, initiationinterval = 2>,
@@ -251,7 +251,7 @@ llvm.func @loopOptions(%arg1 : i32, %arg2 : i32) {
     // CHECK: = load i32, ptr %{{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE:[0-9]+]]
     %5 = llvm.load %4 { access_groups = [@metadata::@group1, @metadata::@group2] } : !llvm.ptr<i32>
     // CHECK: br label {{.*}} !llvm.loop ![[LOOP_NODE]]
-    llvm.br ^bb3(%3 : i32) {llvm.loop = #llvm.loop_annotation<
+    llvm.br ^bb3(%3 : i32) {loop_annotation = #llvm.loop_annotation<
           licm = <disable = true>,
           interleave = <count = 1>,
           unroll = <disable = true>, pipeline = <disable = true, initiationinterval = 2>,

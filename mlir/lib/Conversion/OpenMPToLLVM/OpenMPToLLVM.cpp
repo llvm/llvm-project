@@ -113,10 +113,10 @@ struct LegalizeDataOpForLLVMTranslation : public ConvertOpToLLVMPattern<Op> {
 
 void mlir::configureOpenMPToLLVMConversionLegality(
     ConversionTarget &target, LLVMTypeConverter &typeConverter) {
-  target.addDynamicallyLegalOp<mlir::omp::CriticalOp, mlir::omp::ParallelOp,
-                               mlir::omp::WsLoopOp, mlir::omp::SimdLoopOp,
-                               mlir::omp::MasterOp, mlir::omp::SectionsOp,
-                               mlir::omp::SingleOp>([&](Operation *op) {
+  target.addDynamicallyLegalOp<
+      mlir::omp::CriticalOp, mlir::omp::ParallelOp, mlir::omp::WsLoopOp,
+      mlir::omp::SimdLoopOp, mlir::omp::MasterOp, mlir::omp::SectionsOp,
+      mlir::omp::SingleOp, mlir::omp::TaskOp>([&](Operation *op) {
     return typeConverter.isLegal(&op->getRegion(0)) &&
            typeConverter.isLegal(op->getOperandTypes()) &&
            typeConverter.isLegal(op->getResultTypes());
@@ -142,6 +142,7 @@ void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
       RegionOpConversion<omp::MasterOp>, RegionOpConversion<omp::ParallelOp>,
       RegionOpConversion<omp::WsLoopOp>, RegionOpConversion<omp::SectionsOp>,
       RegionOpConversion<omp::SimdLoopOp>, RegionOpConversion<omp::SingleOp>,
+      RegionOpConversion<omp::TaskOp>,
       RegionLessOpWithVarOperandsConversion<omp::AtomicReadOp>,
       RegionLessOpWithVarOperandsConversion<omp::AtomicWriteOp>,
       RegionLessOpWithVarOperandsConversion<omp::FlushOp>,

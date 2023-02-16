@@ -790,19 +790,18 @@ bool Target::ProcessIsValid() {
 }
 
 static bool CheckIfWatchpointsSupported(Target *target, Status &error) {
-  uint32_t num_supported_hardware_watchpoints;
-  Status rc = target->GetProcessSP()->GetWatchpointSupportInfo(
-      num_supported_hardware_watchpoints);
+  std::optional<uint32_t> num_supported_hardware_watchpoints =
+      target->GetProcessSP()->GetWatchpointSlotCount();
 
   // If unable to determine the # of watchpoints available,
   // assume they are supported.
-  if (rc.Fail())
+  if (!num_supported_hardware_watchpoints)
     return true;
 
   if (num_supported_hardware_watchpoints == 0) {
     error.SetErrorStringWithFormat(
         "Target supports (%u) hardware watchpoint slots.\n",
-        num_supported_hardware_watchpoints);
+        *num_supported_hardware_watchpoints);
     return false;
   }
   return true;

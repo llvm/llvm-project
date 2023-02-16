@@ -403,12 +403,14 @@ inline unsigned Log2_64_Ceil(uint64_t Value) {
 }
 
 /// This function takes a 64-bit integer and returns the bit equivalent double.
+LLVM_DEPRECATED("use llvm::bit_cast instead", "llvm::bit_cast<double>")
 inline double BitsToDouble(uint64_t Bits) {
   static_assert(sizeof(uint64_t) == sizeof(double), "Unexpected type sizes");
   return llvm::bit_cast<double>(Bits);
 }
 
 /// This function takes a 32-bit integer and returns the bit equivalent float.
+LLVM_DEPRECATED("use llvm::bit_cast instead", "llvm::bit_cast<float>")
 inline float BitsToFloat(uint32_t Bits) {
   static_assert(sizeof(uint32_t) == sizeof(float), "Unexpected type sizes");
   return llvm::bit_cast<float>(Bits);
@@ -417,6 +419,7 @@ inline float BitsToFloat(uint32_t Bits) {
 /// This function takes a double and returns the bit equivalent 64-bit integer.
 /// Note that copying doubles around changes the bits of NaNs on some hosts,
 /// notably x86, so this routine cannot be used if these bits are needed.
+LLVM_DEPRECATED("use llvm::bit_cast instead", "llvm::bit_cast<uint64_t>")
 inline uint64_t DoubleToBits(double Double) {
   static_assert(sizeof(uint64_t) == sizeof(double), "Unexpected type sizes");
   return llvm::bit_cast<uint64_t>(Double);
@@ -425,6 +428,7 @@ inline uint64_t DoubleToBits(double Double) {
 /// This function takes a float and returns the bit equivalent 32-bit integer.
 /// Note that copying floats around changes the bits of NaNs on some hosts,
 /// notably x86, so this routine cannot be used if these bits are needed.
+LLVM_DEPRECATED("use llvm::bit_cast instead", "llvm::bit_cast<uint32_t>")
 inline uint32_t FloatToBits(float Float) {
   static_assert(sizeof(uint32_t) == sizeof(float), "Unexpected type sizes");
   return llvm::bit_cast<uint32_t>(Float);

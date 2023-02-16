@@ -60,6 +60,8 @@ static NVVM::MMATypes getElementType(gpu::MMAMatrixType type) {
 
   if (type.getElementType().isSignedInteger(8))
     return NVVM::MMATypes::s8;
+  if (type.getElementType().isUnsignedInteger(8))
+    return NVVM::MMATypes::u8;
   // Accumulator type is signless and implies signed.
   if (type.getElementType().isInteger(32))
     return NVVM::MMATypes::s32;
@@ -112,11 +114,8 @@ struct WmmaLoadOpToNVVMLowering
     }
     NVVM::MMAFrag frag = convertOperand(retType.getOperand());
     // Check that there is an exisiting instruction for the combination we need.
-    if (NVVM::WMMALoadOp::getIntrinsicID(m, n, k, layout, eltype, frag) == 0) {
-      llvm::errs() << "No matching intrinsic " << m << " " << n << " " << k
-                   << "\n";
+    if (NVVM::WMMALoadOp::getIntrinsicID(m, n, k, layout, eltype, frag) == 0)
       return rewriter.notifyMatchFailure(op, kInvalidCaseStr);
-    }
 
     Type resType = convertMMAToLLVMType(retType);
     Location loc = op->getLoc();
@@ -244,6 +243,12 @@ struct WmmaMmaOpToNVVMLowering
     if (NVVM::WMMAMmaOp::getIntrinsicID(m, n, k, aLayout, bLayout, sourceType,
                                         destType) == 0)
       return rewriter.notifyMatchFailure(op, kInvalidCaseStr);
+
+    NVVM::MMATypes bElementType = getElementType(
+        subgroupMmaComputeOp.getOpB().getType().cast<gpu::MMAMatrixType>());
+    if (bElementType != sourceType)
+      return rewriter.notifyMatchFailure(
+          op, "WMMA compute op input matrix element types must match.");
 
     unpackOp(adaptor.getOpA());
     unpackOp(adaptor.getOpB());

@@ -1238,6 +1238,16 @@ func.func @omp_single(%data_var : memref<i32>) -> () {
 
 // -----
 
+func.func @omp_task_depend(%data_var: memref<i32>) {
+  // expected-error @below {{op expected as many depend values as depend variables}}
+    "omp.task"(%data_var) ({
+      "omp.terminator"() : () -> ()
+    }) {depends = [], operand_segment_sizes = array<i32: 0, 0, 0, 0, 1, 0, 0>} : (memref<i32>) -> ()
+   "func.return"() : () -> ()
+}
+
+// -----
+
 func.func @omp_task(%ptr: !llvm.ptr<f32>) {
   // expected-error @below {{op expected symbol reference @add_f32 to point to a reduction declaration}}
   omp.task in_reduction(@add_f32 -> %ptr : !llvm.ptr<f32>) {
