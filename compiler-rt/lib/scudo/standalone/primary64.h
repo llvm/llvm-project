@@ -100,17 +100,39 @@ public:
   TransferBatch *popBatch(CacheT *C, uptr ClassId) {
     DCHECK_LT(ClassId, NumClasses);
     RegionInfo *Region = getRegionInfo(ClassId);
-    ScopedLock L(Region->Mutex);
-    TransferBatch *B = popBatchImpl(C, ClassId);
-    if (UNLIKELY(!B)) {
-      if (UNLIKELY(!populateFreeList(C, ClassId, Region)))
-        return nullptr;
-      B = popBatchImpl(C, ClassId);
-      // if `populateFreeList` succeeded, we are supposed to get free blocks.
-      DCHECK_NE(B, nullptr);
+    bool PrintStats = false;
+    {
+      ScopedLock L(Region->Mutex);
+      TransferBatch *B = popBatchImpl(C, ClassId);
+      if (LIKELY(B)) {
+        Region->Stats.PoppedBlocks += B->getCount();
+        return B;
+      }
+
+      const bool RegionIsExhausted = Region->Exhausted;
+      if (UNLIKELY(RegionIsExhausted ||
+                   !populateFreeList(C, ClassId, Region))) {
+        PrintStats = !RegionIsExhausted && Region->Exhausted;
+      } else {
+        B = popBatchImpl(C, ClassId);
+        // if `populateFreeList` succeeded, we are supposed to get free blocks.
+        DCHECK_NE(B, nullptr);
+        Region->Stats.PoppedBlocks += B->getCount();
+        return B;
+      }
     }
-    Region->Stats.PoppedBlocks += B->getCount();
-    return B;
+
+    // Note that `getStats()` requires locking each region so we can't call it
+    // while locking the Region->Mutex in the above.
+    if (UNLIKELY(PrintStats)) {
+      ScopedString Str;
+      getStats(&Str);
+      Str.append(
+          "Scudo OOM: The process has exhausted %zuM for size class %zu.\n",
+          RegionSize >> 20, getSizeByClassId(ClassId));
+      Str.output();
+    }
+    return nullptr;
   }
 
   // Push the array of free blocks to the designated batch group.
@@ -120,17 +142,41 @@ public:
 
     RegionInfo *Region = getRegionInfo(ClassId);
     if (ClassId == SizeClassMap::BatchClassId) {
-      ScopedLock L(Region->Mutex);
-      // Constructing a batch group in the free list will use two blocks in
-      // BatchClassId. If we are pushing BatchClassId blocks, we will use the
-      // blocks in the array directly (can't delegate local cache which will
-      // cause a recursive allocation). However, The number of free blocks may
-      // be less than two. Therefore, populate the free list before inserting
-      // the blocks.
-      if (Size == 1 && UNLIKELY(!populateFreeList(C, ClassId, Region)))
-        return;
-      pushBlocksImpl(C, ClassId, Array, Size);
-      Region->Stats.PushedBlocks += Size;
+      bool PrintStats = false;
+      {
+        ScopedLock L(Region->Mutex);
+        // Constructing a batch group in the free list will use two blocks in
+        // BatchClassId. If we are pushing BatchClassId blocks, we will use the
+        // blocks in the array directly (can't delegate local cache which will
+        // cause a recursive allocation). However, The number of free blocks may
+        // be less than two. Therefore, populate the free list before inserting
+        // the blocks.
+        if (Size >= 2U) {
+          pushBlocksImpl(C, SizeClassMap::BatchClassId, Array, Size);
+          Region->Stats.PushedBlocks += Size;
+        } else {
+          const bool RegionIsExhausted = Region->Exhausted;
+          if (UNLIKELY(
+                  RegionIsExhausted ||
+                  !populateFreeList(C, SizeClassMap::BatchClassId, Region))) {
+            PrintStats = !RegionIsExhausted && Region->Exhausted;
+          }
+        }
+      }
+
+      // Note that `getStats()` requires the lock of each region so we can't
+      // call it while locking the Region->Mutex in the above.
+      if (UNLIKELY(PrintStats)) {
+        ScopedString Str;
+        getStats(&Str);
+        Str.append(
+            "Scudo OOM: The process has exhausted %zuM for size class %zu.\n",
+            RegionSize >> 20, getSizeByClassId(ClassId));
+        Str.output();
+        // Theoretically, BatchClass shouldn't be used up. Abort immediately
+        // when it happens.
+        reportOutOfBatchClass();
+      }
       return;
     }
 
@@ -578,19 +624,7 @@ private:
           roundUpTo(TotalUserBytes - MappedUser, MapSizeIncrement);
       const uptr RegionBase = RegionBeg - getRegionBaseByClassId(ClassId);
       if (UNLIKELY(RegionBase + MappedUser + MapSize > RegionSize)) {
-        if (!Region->Exhausted) {
-          Region->Exhausted = true;
-          ScopedString Str;
-          // FIXME: getStats() needs to go over all the regions and
-          // will take the locks of them. Which means we will try to recursively
-          // acquire the `Region->Mutex` which is not supported. It will be
-          // better to log this somewhere else.
-          // getStats(&Str);
-          Str.append(
-              "Scudo OOM: The process has exhausted %zuM for size class %zu.\n",
-              RegionSize >> 20, Size);
-          Str.output();
-        }
+        Region->Exhausted = true;
         return false;
       }
       if (MappedUser == 0)
