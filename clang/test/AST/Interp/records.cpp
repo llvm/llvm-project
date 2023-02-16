@@ -689,5 +689,52 @@ namespace CtorDtor {
                                 // ref-note {{initializer of 'D2' is not a constant expression}}
 
 }
+
+namespace VirtualFunctionPointers {
+  struct S {
+    virtual constexpr int func() const { return 1; }
+  };
+
+  struct Middle : S {
+    constexpr Middle(int i) : i(i) {}
+    int i;
+  };
+
+  struct Other {
+    constexpr Other(int k) : k(k) {}
+    int k;
+  };
+
+  struct S2 : Middle, Other {
+    int j;
+    constexpr S2(int i, int j, int k) : Middle(i), Other(k), j(j) {}
+    virtual constexpr int func() const { return i + j + k  + S::func(); }
+  };
+
+  constexpr S s;
+  constexpr decltype(&S::func) foo = &S::func;
+  constexpr int value = (s.*foo)();
+  static_assert(value == 1);
+
+
+  constexpr S2 s2(1, 2, 3);
+  static_assert(s2.i == 1);
+  static_assert(s2.j == 2);
+  static_assert(s2.k == 3);
+
+  constexpr int value2 = s2.func();
+  constexpr int value3 = (s2.*foo)();
+  static_assert(value3 == 7);
+
+  constexpr int dynamicDispatch(const S &s) {
+    constexpr decltype(&S::func) SFunc = &S::func;
+
+    return (s.*SFunc)();
+  }
+
+  static_assert(dynamicDispatch(s) == 1);
+  static_assert(dynamicDispatch(s2) == 7);
+};
+
 };
 #endif

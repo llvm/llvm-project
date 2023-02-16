@@ -207,13 +207,13 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   const Expr *LHS = BO->getLHS();
   const Expr *RHS = BO->getRHS();
 
+  if (BO->isPtrMemOp())
+    return this->visit(RHS);
+
   // Typecheck the args.
   std::optional<PrimType> LT = classify(LHS->getType());
   std::optional<PrimType> RT = classify(RHS->getType());
   std::optional<PrimType> T = classify(BO->getType());
-  if (!LT || !RT || !T) {
-    return this->bail(BO);
-  }
 
   auto Discard = [this, T, BO](bool Result) {
     if (!Result)
@@ -227,6 +227,9 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
       return false;
     return Discard(this->visit(RHS));
   }
+
+  if (!LT || !RT || !T)
+    return this->bail(BO);
 
   // Pointer arithmetic special case.
   if (BO->getOpcode() == BO_Add || BO->getOpcode() == BO_Sub) {

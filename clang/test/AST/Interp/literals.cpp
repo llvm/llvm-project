@@ -149,13 +149,10 @@ namespace SizeOf {
                                     // ref-error{{to a function type}}
 
 
-
-  /// FIXME: The following code should be accepted.
   struct S {
     void func();
   };
-  constexpr void (S::*Func)() = &S::func; // expected-error {{must be initialized by a constant expression}} \
-                                          // expected-error {{interpreter failed to evaluate an expression}}
+  constexpr void (S::*Func)() = &S::func;
   static_assert(sizeof(Func) == sizeof(&S::func), "");
 
 
