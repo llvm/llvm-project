@@ -311,8 +311,6 @@ void PassManagerBuilder::populateModulePassManager(
   if (OptLevel > 2)
     MPM.add(createCallSiteSplittingPass());
 
-  MPM.add(createIPSCCPPass());          // IP SCCP
-
   // Promote any localized global vars.
   MPM.add(createPromoteMemoryToRegisterPass());
 
