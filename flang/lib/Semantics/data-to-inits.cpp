@@ -436,26 +436,25 @@ bool DataInitializationCompiler<DSV>::InitElement(
             DescribeElement(), designatorType->AsFortran());
       }
       auto folded{evaluate::Fold(context, std::move(converted->first))};
-      switch (GetImage().Add(
-          offsetSymbol.offset(), offsetSymbol.size(), folded, context)) {
-      case evaluate::InitialImage::Ok:
+      // Rewritten from a switch() in order to avoid getting complaints
+      // about a missing "default:" from some compilers and complaints
+      // about a redundant "default:" from others.
+      auto status{GetImage().Add(
+          offsetSymbol.offset(), offsetSymbol.size(), folded, context)};
+      if (status == evaluate::InitialImage::Ok) {
         return true;
-      case evaluate::InitialImage::NotAConstant:
+      } else if (status == evaluate::InitialImage::NotAConstant) {
         exprAnalyzer_.Say(
             "DATA statement value '%s' for '%s' is not a constant"_err_en_US,
             folded.AsFortran(), DescribeElement());
-        break;
-      case evaluate::InitialImage::OutOfRange:
+      } else if (status == evaluate::InitialImage::OutOfRange) {
         OutOfRangeError();
-        break;
-      case evaluate::InitialImage::SizeMismatch:
+      } else if (status == evaluate::InitialImage::SizeMismatch) {
         exprAnalyzer_.Say(
             "DATA statement value '%s' for '%s' has the wrong length"_warn_en_US,
             folded.AsFortran(), DescribeElement());
-        break;
-      default:
+      } else {
         CHECK(exprAnalyzer_.context().AnyFatalError());
-        break;
       }
     } else {
       exprAnalyzer_.context().Say(
