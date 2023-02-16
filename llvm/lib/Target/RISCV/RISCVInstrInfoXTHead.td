@@ -91,8 +91,8 @@ let Predicates = [HasVendorXTHeadMac], DecoderNamespace = "THeadMac",
     hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCommutable = 1 in
 class THMulAccumulate_rr<bits<7> funct7, string opcodestr>
     : RVInstR<funct7, 0b001, OPC_CUSTOM_0, (outs GPR:$rd_wb),
-	      (ins GPR:$rd, GPR:$rs1, GPR:$rs2),
-	      opcodestr, "$rd, $rs1, $rs2"> {
+              (ins GPR:$rd, GPR:$rs1, GPR:$rs2),
+              opcodestr, "$rd, $rs1, $rs2"> {
   let Constraints = "$rd_wb = $rd";
 }
 
