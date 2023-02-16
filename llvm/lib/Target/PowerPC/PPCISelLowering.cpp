@@ -7843,15 +7843,15 @@ SDValue PPCTargetLowering::LowerTRUNCATEVector(SDValue Op,
   EVT EltVT = TrgVT.getVectorElementType();
   if (!isOperationCustom(Op.getOpcode(), TrgVT) ||
       TrgVT.getSizeInBits() > 128 || !isPowerOf2_32(TrgNumElts) ||
-      !isPowerOf2_32(EltVT.getSizeInBits()))
+      !llvm::has_single_bit<uint32_t>(EltVT.getSizeInBits()))
     return SDValue();
 
   SDValue N1 = Op.getOperand(0);
   EVT SrcVT = N1.getValueType();  
   unsigned SrcSize = SrcVT.getSizeInBits();
-  if (SrcSize > 256 ||
-      !isPowerOf2_32(SrcVT.getVectorNumElements()) ||
-      !isPowerOf2_32(SrcVT.getVectorElementType().getSizeInBits()))
+  if (SrcSize > 256 || !isPowerOf2_32(SrcVT.getVectorNumElements()) ||
+      !llvm::has_single_bit<uint32_t>(
+          SrcVT.getVectorElementType().getSizeInBits()))
     return SDValue();
   if (SrcSize == 256 && SrcVT.getVectorNumElements() < 2)
     return SDValue();

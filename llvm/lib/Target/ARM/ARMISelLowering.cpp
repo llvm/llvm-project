@@ -14089,7 +14089,7 @@ static SDValue PerformMULCombine(SDNode *N,
   MulAmt >>= ShiftAmt;
 
   if (MulAmt >= 0) {
-    if (isPowerOf2_32(MulAmt - 1)) {
+    if (llvm::has_single_bit<uint32_t>(MulAmt - 1)) {
       // (mul x, 2^N + 1) => (add (shl x, N), x)
       Res = DAG.getNode(ISD::ADD, DL, VT,
                         V,
@@ -14097,7 +14097,7 @@ static SDValue PerformMULCombine(SDNode *N,
                                     V,
                                     DAG.getConstant(Log2_32(MulAmt - 1), DL,
                                                     MVT::i32)));
-    } else if (isPowerOf2_32(MulAmt + 1)) {
+    } else if (llvm::has_single_bit<uint32_t>(MulAmt + 1)) {
       // (mul x, 2^N - 1) => (sub (shl x, N), x)
       Res = DAG.getNode(ISD::SUB, DL, VT,
                         DAG.getNode(ISD::SHL, DL, VT,
@@ -14109,7 +14109,7 @@ static SDValue PerformMULCombine(SDNode *N,
       return SDValue();
   } else {
     uint64_t MulAmtAbs = -MulAmt;
-    if (isPowerOf2_32(MulAmtAbs + 1)) {
+    if (llvm::has_single_bit<uint32_t>(MulAmtAbs + 1)) {
       // (mul x, -(2^N - 1)) => (sub x, (shl x, N))
       Res = DAG.getNode(ISD::SUB, DL, VT,
                         V,
@@ -14117,7 +14117,7 @@ static SDValue PerformMULCombine(SDNode *N,
                                     V,
                                     DAG.getConstant(Log2_32(MulAmtAbs + 1), DL,
                                                     MVT::i32)));
-    } else if (isPowerOf2_32(MulAmtAbs - 1)) {
+    } else if (llvm::has_single_bit<uint32_t>(MulAmtAbs - 1)) {
       // (mul x, -(2^N + 1)) => - (add (shl x, N), x)
       Res = DAG.getNode(ISD::ADD, DL, VT,
                         V,

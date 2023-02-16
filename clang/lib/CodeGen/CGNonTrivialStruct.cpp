@@ -522,7 +522,8 @@ struct GenBinaryFunc : CopyStructVisitor<Derived, IsMove>,
     Address SrcAddr = this->getAddrWithOffset(Addrs[SrcIdx], this->Start);
 
     // Emit memcpy.
-    if (Size.getQuantity() >= 16 || !llvm::isPowerOf2_32(Size.getQuantity())) {
+    if (Size.getQuantity() >= 16 ||
+        !llvm::has_single_bit<uint32_t>(Size.getQuantity())) {
       llvm::Value *SizeVal =
           llvm::ConstantInt::get(this->CGF->SizeTy, Size.getQuantity());
       DstAddr =
