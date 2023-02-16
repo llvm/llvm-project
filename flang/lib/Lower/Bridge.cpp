@@ -2203,9 +2203,8 @@ private:
         const auto &s = std::get<Fortran::parser::Selector>(selectTypeStmt->t);
         if (const auto *v = std::get_if<Fortran::parser::Variable>(&s.u))
           selector = genExprBox(loc, *Fortran::semantics::GetExpr(*v), stmtCtx);
-        else
-          fir::emitFatalError(
-              loc, "selector with expr not expected in select type statement");
+        else if (const auto *e = std::get_if<Fortran::parser::Expr>(&s.u))
+          selector = genExprBox(loc, *Fortran::semantics::GetExpr(*e), stmtCtx);
 
         // Going through the controlSuccessor first to create the
         // fir.select_type operation.
