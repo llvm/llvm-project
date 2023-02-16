@@ -61,7 +61,7 @@ private:
   llvm::DIFile *translateFile(StringRef fileName);
 
   /// Translate the given attribute to the corresponding llvm debug metadata.
-  llvm::DIType *translateImpl(DIVoidResultTypeAttr attr);
+  llvm::DIType *translateImpl(DINullTypeAttr attr);
   llvm::DIBasicType *translateImpl(DIBasicTypeAttr attr);
   llvm::DICompileUnit *translateImpl(DICompileUnitAttr attr);
   llvm::DICompositeType *translateImpl(DICompositeTypeAttr attr);

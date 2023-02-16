@@ -1300,12 +1300,6 @@ func.func @extract_scalable_from_fixed_length_vector(%arg0 : vector<16xf32>) {
 
 // -----
 
-#void = #llvm.di_void_result_type
-// expected-error@below {{expected subroutine to have non-void argument types}}
-#void_argument_type = #llvm.di_subroutine_type<types = #void, #void>
-
-// -----
-
 func.func @invalid_bitcast_ptr_to_i64(%arg : !llvm.ptr) {
   // expected-error@+1 {{can only cast pointers from and to pointers}}
   %1 = llvm.bitcast %arg : !llvm.ptr to i64
