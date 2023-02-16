@@ -1132,11 +1132,8 @@ FailureOr<Value> ModuleImport::convertConstantExpr(llvm::Constant *constant) {
 }
 
 FailureOr<Value> ModuleImport::convertValue(llvm::Value *value) {
-  // A value may be wrapped as metadata, for example, when passed to a debug
-  // intrinsic. Unwrap these values before the conversion.
-  if (auto *nodeAsVal = dyn_cast<llvm::MetadataAsValue>(value))
-    if (auto *node = dyn_cast<llvm::ValueAsMetadata>(nodeAsVal->getMetadata()))
-      value = node->getValue();
+  assert(!isa<llvm::MetadataAsValue>(value) &&
+         "expected value to not be metadata");
 
   // Return the mapped value if it has been converted before.
   if (valueMapping.count(value))
@@ -1150,6 +1147,27 @@ FailureOr<Value> ModuleImport::convertValue(llvm::Value *value) {
   if (auto *inst = dyn_cast<llvm::Instruction>(value))
     loc = translateLoc(inst->getDebugLoc());
   return emitError(loc) << "unhandled value: " << diag(*value);
+}
+
+FailureOr<Value> ModuleImport::convertMetadataValue(llvm::Value *value) {
+  // A value may be wrapped as metadata, for example, when passed to a debug
+  // intrinsic. Unwrap these values before the conversion.
+  auto *nodeAsVal = dyn_cast<llvm::MetadataAsValue>(value);
+  if (!nodeAsVal)
+    return failure();
+  auto *node = dyn_cast<llvm::ValueAsMetadata>(nodeAsVal->getMetadata());
+  if (!node)
+    return failure();
+  value = node->getValue();
+
+  // Return the mapped value if it has been converted before.
+  if (valueMapping.count(value))
+    return lookupValue(value);
+
+  // Convert constants such as immediate values that have no mapping yet.
+  if (auto *constant = dyn_cast<llvm::Constant>(value))
+    return convertConstantExpr(constant);
+  return failure();
 }
 
 FailureOr<SmallVector<Value>>
