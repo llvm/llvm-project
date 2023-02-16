@@ -10,6 +10,7 @@ add_startup_object(
     -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE}
     -emit-llvm # AMDGPU's intermediate object file format is bitcode.
     --target=${LIBC_GPU_TARGET_TRIPLE}
+  NO_GPU_BUNDLE # Compile this file directly without special GPU handling.
 )
 get_fq_target_name(crt1 fq_name)
 
