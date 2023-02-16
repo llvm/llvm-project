@@ -47,6 +47,7 @@
 using namespace llvm;
 #define DEBUG_TYPE "code-layout"
 
+namespace llvm {
 cl::opt<bool> EnableExtTspBlockPlacement(
     "enable-ext-tsp-block-placement", cl::Hidden, cl::init(false),
     cl::desc("Enable machine block placement based on the ext-tsp model, "
@@ -56,6 +57,7 @@ cl::opt<bool> ApplyExtTspWithoutProfile(
     "ext-tsp-apply-without-profile",
     cl::desc("Whether to apply ext-tsp placement for instances w/o profile"),
     cl::init(true), cl::Hidden);
+} // namespace llvm
 
 // Algorithm-specific params. The values are tuned for the best performance
 // of large-scale front-end bound binaries.
