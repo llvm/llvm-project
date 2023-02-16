@@ -982,17 +982,10 @@ LogicalResult CompressOp::verify() {
 
 void ForeachOp::build(
     OpBuilder &builder, OperationState &result, Value tensor,
+    ValueRange initArgs, AffineMapAttr order,
     function_ref<void(OpBuilder &, Location, ValueRange, Value, ValueRange)>
         bodyBuilder) {
-  build(builder, result, tensor, std::nullopt, bodyBuilder);
-}
-
-void ForeachOp::build(
-    OpBuilder &builder, OperationState &result, Value tensor,
-    ValueRange initArgs,
-    function_ref<void(OpBuilder &, Location, ValueRange, Value, ValueRange)>
-        bodyBuilder) {
-  build(builder, result, initArgs.getTypes(), tensor, initArgs);
+  build(builder, result, initArgs.getTypes(), tensor, initArgs, order);
   // Builds foreach body.
   if (!bodyBuilder)
     return;
@@ -1022,6 +1015,10 @@ LogicalResult ForeachOp::verify() {
   const auto t = getSparseTensorType(getTensor());
   const Dimension dimRank = t.getDimRank();
   const auto args = getBody()->getArguments();
+
+  if (getOrder().has_value() &&
+      (t.getEncoding() || !getOrder()->isPermutation()))
+    return emitError("Only support permuted order on non encoded dense tensor");
 
   if (static_cast<size_t>(dimRank) + 1 + getInitArgs().size() != args.size())
     return emitError("Unmatched number of arguments in the block");
