@@ -110,6 +110,12 @@ New checks
 
   Warns when lambda specify a capture default and capture ``this``.
 
+- New :doc: `llvmlibc-inline-function-decl
+  <clang-tidy/checks/llvmlibc/inline-function-decl>` check.
+
+  Checks that all implicit and explicit inline functions in header files are
+  tagged with the ``LIBC_INLINE`` macro.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
