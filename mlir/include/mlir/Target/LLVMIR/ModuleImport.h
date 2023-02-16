@@ -176,6 +176,12 @@ public:
   LoopAnnotationAttr translateLoopAnnotationAttr(const llvm::MDNode *node,
                                                  Location loc) const;
 
+  /// Returns the symbol references pointing to the alias scope operations that
+  /// map to the alias scope nodes starting from the metadata `node`. Returns
+  /// failure, if any of the symbol references cannot be found.
+  FailureOr<SmallVector<SymbolRefAttr>>
+  lookupAliasScopeAttrs(const llvm::MDNode *node) const;
+
 private:
   /// Clears the block and value mapping before processing a new region.
   void clearBlockAndValueMapping() {
@@ -268,6 +274,12 @@ private:
   /// symbol pointing to the translated operation. Returns success if all
   /// conversions succeed and failure otherwise.
   LogicalResult processAccessGroupMetadata(const llvm::MDNode *node);
+  /// Converts all LLVM alias scopes and domains starting from `node` to MLIR
+  /// alias scope and domain operations and stores a mapping from every nested
+  /// alias scope or alias domain node to the symbol pointing to the translated
+  /// operation. Returns success if all conversions succeed and failure
+  /// otherwise.
+  LogicalResult processAliasScopeMetadata(const llvm::MDNode *node);
 
   /// Builder pointing at where the next instruction should be generated.
   OpBuilder builder;
@@ -298,9 +310,11 @@ private:
   /// operations for all operations that return no result. All operations that
   /// return a result have a valueMapping entry instead.
   DenseMap<llvm::Instruction *, Operation *> noResultOpMapping;
-  /// Mapping between LLVM TBAA metadata nodes and symbol references
-  /// to the LLVMIR dialect TBAA operations corresponding to these
-  /// nodes.
+  /// Mapping between LLVM alias scope and domain metadata nodes and symbol
+  /// references to the LLVM dialect operations corresponding to these nodes.
+  DenseMap<const llvm::MDNode *, SymbolRefAttr> aliasScopeMapping;
+  /// Mapping between LLVM TBAA metadata nodes and symbol references to the LLVM
+  /// dialect TBAA operations corresponding to these nodes.
   DenseMap<const llvm::MDNode *, SymbolRefAttr> tbaaMapping;
   /// The stateful type translator (contains named structs).
   LLVM::TypeFromLLVMIRTranslator typeTranslator;
