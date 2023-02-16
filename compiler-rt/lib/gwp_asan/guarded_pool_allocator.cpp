@@ -245,9 +245,16 @@ void *GuardedPoolAllocator::allocate(size_t Size, size_t Alignment) {
   // page, we can improve overflow detection by leaving the unused pages as
   // unmapped.
   const size_t PageSize = State.PageSize;
-  allocateInGuardedPool(
+  bool success = allocateInGuardedPool(
       reinterpret_cast<void *>(getPageAddr(UserPtr, PageSize)),
       roundUpTo(Size, PageSize));
+
+  if (!success)
+  {
+    ScopedLock L(PoolMutex);
+    freeSlot(Index);
+    return nullptr;
+  }
 
   Meta->RecordAllocation(UserPtr, Size);
   {
