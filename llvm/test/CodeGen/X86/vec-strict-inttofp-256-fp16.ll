@@ -146,10 +146,9 @@ define <4 x half> @uitofp_v4i64_v4f16(<4 x i64> %x) #0 {
 define <8 x half> @sitofp_v8i64_v8f16(<8 x i64> %x) #1 {
 ; CHECK-LABEL: sitofp_v8i64_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcvtqq2ps %ymm0, %xmm0
-; CHECK-NEXT:    vcvtqq2ps %ymm1, %xmm1
-; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; CHECK-NEXT:    vcvtps2phx %ymm0, %xmm0
+; CHECK-NEXT:    vcvtqq2ph %ymm1, %xmm1
+; CHECK-NEXT:    vcvtqq2ph %ymm0, %xmm0
+; CHECK-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}
  %result = call <8 x half> @llvm.experimental.constrained.sitofp.v8f16.v8i64(<8 x i64> %x,
@@ -161,10 +160,9 @@ define <8 x half> @sitofp_v8i64_v8f16(<8 x i64> %x) #1 {
 define <8 x half> @uitofp_v8i64_v8f16(<8 x i64> %x) #1 {
 ; CHECK-LABEL: uitofp_v8i64_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcvtuqq2ps %ymm0, %xmm0
-; CHECK-NEXT:    vcvtuqq2ps %ymm1, %xmm1
-; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; CHECK-NEXT:    vcvtps2phx %ymm0, %xmm0
+; CHECK-NEXT:    vcvtuqq2ph %ymm1, %xmm1
+; CHECK-NEXT:    vcvtuqq2ph %ymm0, %xmm0
+; CHECK-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}
  %result = call <8 x half> @llvm.experimental.constrained.uitofp.v8f16.v8i64(<8 x i64> %x,
