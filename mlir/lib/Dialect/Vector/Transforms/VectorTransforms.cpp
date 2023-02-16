@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 
+#include <optional>
 #include <type_traits>
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -150,7 +151,8 @@ static SmallVector<IntType> extractVector(ArrayAttr arrayAttr) {
 static std::optional<Value>
 createContractArithOp(Location loc, Value x, Value y, Value acc,
                       vector::CombiningKind kind, PatternRewriter &rewriter,
-                      bool isInt, Optional<Value> maybeMask = std::nullopt) {
+                      bool isInt,
+                      std::optional<Value> maybeMask = std::nullopt) {
   using vector::CombiningKind;
   Value mul;
 
@@ -1584,7 +1586,7 @@ struct UnrolledOuterProductGenerator
   }
 
   FailureOr<Value> outerProd(Value lhs, Value rhs, Value res, int reductionSize,
-                             Optional<Value> maybeMask = std::nullopt) {
+                             std::optional<Value> maybeMask = std::nullopt) {
     assert(reductionSize > 0);
     // Incremental support for masking.
     if (mask && !maybeMask.has_value())
