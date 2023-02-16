@@ -2818,16 +2818,12 @@ Status ProcessGDBRemote::DoGetMemoryRegionInfo(addr_t load_addr,
   return error;
 }
 
-Status ProcessGDBRemote::GetWatchpointSupportInfo(uint32_t &num) {
-
-  Status error(m_gdb_comm.GetWatchpointSupportInfo(num));
-  return error;
+std::optional<uint32_t> ProcessGDBRemote::GetWatchpointSlotCount() {
+  return m_gdb_comm.GetWatchpointSlotCount();
 }
 
-Status ProcessGDBRemote::GetWatchpointSupportInfo(uint32_t &num, bool &after) {
-  Status error(m_gdb_comm.GetWatchpointSupportInfo(
-      num, after, GetTarget().GetArchitecture()));
-  return error;
+std::optional<bool> ProcessGDBRemote::DoGetWatchpointReportedAfter() {
+  return m_gdb_comm.GetWatchpointReportedAfter();
 }
 
 Status ProcessGDBRemote::DoDeallocateMemory(lldb::addr_t addr) {

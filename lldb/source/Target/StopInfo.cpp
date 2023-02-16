@@ -823,16 +823,8 @@ protected:
     // stop
 
     ProcessSP process_sp = exe_ctx.GetProcessSP();
-    uint32_t num;
-    bool wp_triggers_after;
+    bool wp_triggers_after = process_sp->GetWatchpointReportedAfter();
 
-    if (!process_sp->GetWatchpointSupportInfo(num, wp_triggers_after)
-            .Success()) {
-      m_should_stop_is_valid = true;
-      m_should_stop = true;
-      return m_should_stop;
-    }
-            
     if (!wp_triggers_after) {
       // We have to step over the watchpoint before we know what to do:   
       StopInfoWatchpointSP me_as_siwp_sp 
