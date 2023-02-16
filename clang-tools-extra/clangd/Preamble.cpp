@@ -685,13 +685,16 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
       // Include already present in the baseline preamble. Set resolved path and
       // put into preamble includes.
       if (It != ExistingIncludes.end()) {
-        auto &PatchedInc = PP.PreambleIncludes.emplace_back();
-        // Copy everything from existing include, apart from the location, when
-        // it's coming from baseline preamble.
-        if (It->second)
+        if (It->second) {
+          // If this header is included in an active region of the baseline
+          // preamble, preserve it.
+          auto &PatchedInc = PP.PreambleIncludes.emplace_back();
+          // Copy everything from existing include, apart from the location,
+          // when it's coming from baseline preamble.
           PatchedInc = *It->second;
-        PatchedInc.HashLine = Inc.HashLine;
-        PatchedInc.HashOffset = Inc.HashOffset;
+          PatchedInc.HashLine = Inc.HashLine;
+          PatchedInc.HashOffset = Inc.HashOffset;
+        }
         continue;
       }
       // Include is new in the modified preamble. Inject it into the patch and
