@@ -9050,10 +9050,10 @@ SDValue SITargetLowering::lowerFDIV_FAST(SDValue Op, SelectionDAG &DAG) const {
 
   SDValue r1 = DAG.getNode(ISD::FABS, SL, MVT::f32, RHS);
 
-  const APFloat K0Val(BitsToFloat(0x6f800000));
+  const APFloat K0Val(llvm::bit_cast<float>(0x6f800000));
   const SDValue K0 = DAG.getConstantFP(K0Val, SL, MVT::f32);
 
-  const APFloat K1Val(BitsToFloat(0x2f800000));
+  const APFloat K1Val(llvm::bit_cast<float>(0x2f800000));
   const SDValue K1 = DAG.getConstantFP(K1Val, SL, MVT::f32);
 
   const SDValue One = DAG.getConstantFP(1.0, SL, MVT::f32);

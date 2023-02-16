@@ -1147,7 +1147,7 @@ Value *AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
   Value *FloatY = Builder.CreateUIToFP(Y, F32Ty);
   Function *Rcp = Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_rcp, F32Ty);
   Value *RcpY = Builder.CreateCall(Rcp, {FloatY});
-  Constant *Scale = ConstantFP::get(F32Ty, BitsToFloat(0x4F7FFFFE));
+  Constant *Scale = ConstantFP::get(F32Ty, llvm::bit_cast<float>(0x4F7FFFFE));
   Value *ScaledY = Builder.CreateFMul(RcpY, Scale);
   Value *Z = Builder.CreateFPToUI(ScaledY, I32Ty);
 

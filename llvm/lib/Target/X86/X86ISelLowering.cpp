@@ -21666,8 +21666,8 @@ static SDValue LowerUINT_TO_FP_i32(SDValue Op, SelectionDAG &DAG,
   unsigned OpNo = Op.getNode()->isStrictFPOpcode() ? 1 : 0;
   SDLoc dl(Op);
   // FP constant to bias correct the final result.
-  SDValue Bias = DAG.getConstantFP(BitsToDouble(0x4330000000000000ULL), dl,
-                                   MVT::f64);
+  SDValue Bias = DAG.getConstantFP(
+      llvm::bit_cast<double>(0x4330000000000000ULL), dl, MVT::f64);
 
   // Load the 32-bit value into an XMM register.
   SDValue Load =
@@ -21752,8 +21752,8 @@ static SDValue lowerUINT_TO_FP_v2i32(SDValue Op, SelectionDAG &DAG,
   // since double has 52-bits of mantissa. Then subtract 2^52 in floating
   // point leaving just our i32 integers in double format.
   SDValue ZExtIn = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::v2i64, N0);
-  SDValue VBias =
-      DAG.getConstantFP(BitsToDouble(0x4330000000000000ULL), DL, MVT::v2f64);
+  SDValue VBias = DAG.getConstantFP(
+      llvm::bit_cast<double>(0x4330000000000000ULL), DL, MVT::v2f64);
   SDValue Or = DAG.getNode(ISD::OR, DL, MVT::v2i64, ZExtIn,
                            DAG.getBitcast(MVT::v2i64, VBias));
   Or = DAG.getBitcast(MVT::v2f64, Or);
@@ -34127,8 +34127,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
 
     assert(Subtarget.hasSSE2() && "Requires at least SSE2!");
     SDValue ZExtIn = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::v2i64, Src);
-    SDValue VBias =
-        DAG.getConstantFP(BitsToDouble(0x4330000000000000ULL), dl, MVT::v2f64);
+    SDValue VBias = DAG.getConstantFP(
+        llvm::bit_cast<double>(0x4330000000000000ULL), dl, MVT::v2f64);
     SDValue Or = DAG.getNode(ISD::OR, dl, MVT::v2i64, ZExtIn,
                              DAG.getBitcast(MVT::v2i64, VBias));
     Or = DAG.getBitcast(MVT::v2f64, Or);
