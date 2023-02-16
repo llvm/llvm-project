@@ -90,7 +90,12 @@ public:
 
   /// Returns the name of the function decl this code
   /// was generated for.
-  const std::string getName() const { return F->getNameInfo().getAsString(); }
+  const std::string getName() const {
+    if (!F)
+      return "<<expr>>";
+
+    return F->getQualifiedNameAsString();
+  }
 
   /// Returns the location.
   SourceLocation getLoc() const { return Loc; }
