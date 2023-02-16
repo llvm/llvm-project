@@ -27,12 +27,12 @@ end subroutine
 ! CHECK:  fir.call @_FortranAioOutputDescriptor(%{{.*}}, %[[BOX_CAST]])
 
 ! check we can box a trivial value
-subroutine sumMask(s, a)
+subroutine productMask(s, a)
   integer :: s
   integer :: a(:)
-  s = sum(a, mask=.true.)
+  s = product(a, mask=.true.)
 endsubroutine
-! CHECK-LABEL: func.func @_QPsummask(
+! CHECK-LABEL: func.func @_QPproductmask(
 ! CHECK:      %[[TRUE:.*]] = arith.constant true
 ! CHECK:      %[[ALLOC:.*]] = fir.alloca !fir.logical<4>
 ! CHECK:      %[[TRUE_L4:.*]] = fir.convert %[[TRUE]] : (i1) -> !fir.logical<4>
