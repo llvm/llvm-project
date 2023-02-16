@@ -783,8 +783,6 @@ Expected<std::vector<BBAddrMap>> ELFObjectFileBase::readBBAddrMap(
     return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex);
   if (const auto *Obj = dyn_cast<ELF32BEObjectFile>(this))
     return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex);
-  if (const auto *Obj = cast<ELF64BEObjectFile>(this))
-    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex);
-  else
-    llvm_unreachable("Unsupported binary format");
+  return readBBAddrMapImpl(cast<ELF64BEObjectFile>(this)->getELFFile(),
+                           TextSectionIndex);
 }
