@@ -22,7 +22,7 @@ module A; // #module-decl
 #endif
 
 #ifndef INTERFACE
-export int b; // expected-error {{export declaration can only be used within a module interface unit}}
+export int b; // expected-error {{export declaration can only be used within a module purview}}
 #ifdef IMPLEMENTATION
 // expected-note@#module-decl {{add 'export' here}}
 #endif
