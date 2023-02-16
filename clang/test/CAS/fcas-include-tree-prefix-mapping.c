@@ -5,7 +5,7 @@
 // RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree \
 // RUN:   -fdepscan-prefix-map=%t/src=/^src -fdepscan-prefix-map=%t/out=/^out -fdepscan-prefix-map-toolchain=/^toolchain -fdepscan-prefix-map-sdk=/^sdk \
 // RUN:   -o %t/t1.rsp -cc1-args \
-// RUN:     -cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -faction-cache-path %t/cache -Rcompile-job-cache \
+// RUN:     -cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -Rcompile-job-cache \
 // RUN:       -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
 // RUN:       -isysroot %S/Inputs/SDK -internal-externc-isystem %S/Inputs/SDK/usr/include \
 // RUN:       -debug-info-kind=standalone -dwarf-version=4 -debugger-tuning=lldb -fdebug-compilation-dir=%t/out \
@@ -43,7 +43,7 @@
 // RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree \
 // RUN:   -fdepscan-prefix-map=%t/src2=/^src -fdepscan-prefix-map=%t/out2=/^out -fdepscan-prefix-map-toolchain=/^toolchain -fdepscan-prefix-map-sdk=/^sdk \
 // RUN:   -o %t/t2.rsp -cc1-args \
-// RUN:     -cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -faction-cache-path %t/cache -Rcompile-job-cache \
+// RUN:     -cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -Rcompile-job-cache \
 // RUN:       -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
 // RUN:       -isysroot %S/Inputs/SDK -internal-externc-isystem %S/Inputs/SDK/usr/include \
 // RUN:       -debug-info-kind=standalone -dwarf-version=4 -debugger-tuning=lldb -fdebug-compilation-dir=%t/out2 \
@@ -79,7 +79,7 @@
 // RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree \
 // RUN:   -fdepscan-prefix-map=%t/src=/^src -fdepscan-prefix-map=%t/out=/^out -fdepscan-prefix-map-toolchain=/^toolchain -fdepscan-prefix-map-sdk=/^sdk \
 // RUN:   -o %t/pch1.rsp -cc1-args \
-// RUN:     -cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -faction-cache-path %t/cache -Rcompile-job-cache \
+// RUN:     -cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -Rcompile-job-cache \
 // RUN:       -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
 // RUN:       -isysroot %S/Inputs/SDK -internal-externc-isystem %S/Inputs/SDK/usr/include \
 // RUN:       -debug-info-kind=standalone -dwarf-version=4 -debugger-tuning=lldb -fdebug-compilation-dir=%t/out \
@@ -90,7 +90,7 @@
 // RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree \
 // RUN:   -fdepscan-prefix-map=%t/src2=/^src -fdepscan-prefix-map=%t/out2=/^out -fdepscan-prefix-map-toolchain=/^toolchain -fdepscan-prefix-map-sdk=/^sdk \
 // RUN:   -o %t/pch2.rsp -cc1-args \
-// RUN:     -cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas2 -faction-cache-path %t/cache2 -Rcompile-job-cache \
+// RUN:     -cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas2 -Rcompile-job-cache \
 // RUN:       -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
 // RUN:       -isysroot %S/Inputs/SDK -internal-externc-isystem %S/Inputs/SDK/usr/include \
 // RUN:       -debug-info-kind=standalone -dwarf-version=4 -debugger-tuning=lldb -fdebug-compilation-dir=%t/out2 \
@@ -102,7 +102,7 @@
 // RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree \
 // RUN:   -fdepscan-prefix-map=%t/src=/^src -fdepscan-prefix-map=%t/out=/^out -fdepscan-prefix-map-toolchain=/^toolchain -fdepscan-prefix-map-sdk=/^sdk \
 // RUN:   -o %t/t3.rsp -cc1-args \
-// RUN:     -cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -faction-cache-path %t/cache -Rcompile-job-cache \
+// RUN:     -cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -Rcompile-job-cache \
 // RUN:       -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
 // RUN:       -isysroot %S/Inputs/SDK -internal-externc-isystem %S/Inputs/SDK/usr/include \
 // RUN:       -debug-info-kind=standalone -dwarf-version=4 -debugger-tuning=lldb -fdebug-compilation-dir=%t/out \
@@ -117,7 +117,7 @@
 // RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree \
 // RUN:   -fdepscan-prefix-map=%t/src2=/^src -fdepscan-prefix-map=%t/out2=/^out -fdepscan-prefix-map-toolchain=/^toolchain -fdepscan-prefix-map-sdk=/^sdk \
 // RUN:   -o %t/t4.rsp -cc1-args \
-// RUN:     -cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -faction-cache-path %t/cache -Rcompile-job-cache \
+// RUN:     -cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -Rcompile-job-cache \
 // RUN:       -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
 // RUN:       -isysroot %S/Inputs/SDK -internal-externc-isystem %S/Inputs/SDK/usr/include \
 // RUN:       -debug-info-kind=standalone -dwarf-version=4 -debugger-tuning=lldb -fdebug-compilation-dir=%t/out2 \
@@ -135,7 +135,7 @@
 // Check dependencies.
 
 // Baseline for comparison.
-// RUN: %clang_cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -faction-cache-path %t/cache -Rcompile-job-cache \
+// RUN: %clang_cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -Rcompile-job-cache \
 // RUN:   -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
 // RUN:   -isysroot %S/Inputs/SDK -internal-externc-isystem %S/Inputs/SDK/usr/include \
 // RUN:   -emit-pch -x c-header %t/src/prefix.h -o %t/out/reg-prefix.h.pch -include %t/src/prefix.h -I %t/src/inc
@@ -144,7 +144,7 @@
 // RUN:   -isysroot %S/Inputs/SDK -internal-externc-isystem %S/Inputs/SDK/usr/include \
 // RUN:   -emit-obj %t/src/main.c -o %t/out/main.o -include-pch %t/out/reg-prefix.h.pch -I %t/src/inc \
 // RUN:   -MT deps -dependency-file %t/regular1.pch.d
-// RUN: %clang_cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -faction-cache-path %t/cache -Rcompile-job-cache \
+// RUN: %clang_cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -Rcompile-job-cache \
 // RUN:   -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
 // RUN:   -isysroot %S/Inputs/SDK -internal-externc-isystem %S/Inputs/SDK/usr/include \
 // RUN:   -emit-pch -x c-header %t/src2/prefix.h -o %t/out2/reg-prefix.h.pch -include %t/src2/prefix.h -I %t/src2/inc

@@ -8,7 +8,7 @@
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.in > %t/cdb.json
 // RUN: ln -s module %t/include/symlink-to-module
 
-// RUN: clang-scan-deps -cas-path %t/cas -action-cache-path %t/cache  -compilation-database %t/cdb.json -j 1 \
+// RUN: clang-scan-deps -cas-path %t/cas -compilation-database %t/cdb.json -j 1 \
 // RUN:   -format experimental-full  -mode=preprocess-dependency-directives \
 // RUN:   -optimize-args -module-files-dir %t/build > %t/deps.json
 

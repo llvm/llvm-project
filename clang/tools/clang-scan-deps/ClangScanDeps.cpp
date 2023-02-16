@@ -239,10 +239,6 @@ llvm::cl::list<std::string>
     PrefixMaps("prefix-map",
                llvm::cl::desc("Path to remap, as \"<old>=<new>\"."),
                llvm::cl::cat(DependencyScannerCategory));
-llvm::cl::opt<std::string>
-    ActionCachePath("action-cache-path",
-                    llvm::cl::desc("Path for on-disk action cache."),
-                    llvm::cl::cat(DependencyScannerCategory));
 
 #ifndef NDEBUG
 static constexpr bool DoRoundTripDefault = true;
@@ -884,8 +880,6 @@ int main(int argc, const char **argv) {
       else
         CASOpts.ensurePersistentCAS();
     }
-    if (!ActionCachePath.empty())
-      CASOpts.CachePath = ActionCachePath;
 
     CAS = CASOpts.getOrCreateObjectStore(Diags);
     Cache = CASOpts.getOrCreateActionCache(Diags);

@@ -8,6 +8,7 @@
 
 #include "BuiltinCAS.h"
 #include "llvm/CAS/OnDiskGraphDB.h"
+#include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "llvm/Support/Path.h"
 
 using namespace llvm;
@@ -33,6 +34,9 @@ public:
   void print(raw_ostream &OS) const final;
 
   static Expected<std::unique_ptr<OnDiskCAS>> open(StringRef Path);
+
+  OnDiskCAS(std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB_)
+      : UniDB(std::move(UniDB_)), DB(&UniDB->getGraphDB()) {}
 
 private:
   ObjectHandle convertHandle(ondisk::ObjectHandle Node) const {
@@ -62,9 +66,12 @@ private:
   Error forEachRef(ObjectHandle Node,
                    function_ref<Error(ObjectRef)> Callback) const final;
 
-  OnDiskCAS(std::unique_ptr<ondisk::OnDiskGraphDB> DB) : DB(std::move(DB)) {}
+  OnDiskCAS(std::unique_ptr<ondisk::OnDiskGraphDB> DB_)
+      : OwnedDB(std::move(DB_)), DB(OwnedDB.get()) {}
 
-  std::unique_ptr<ondisk::OnDiskGraphDB> DB;
+  std::unique_ptr<ondisk::OnDiskGraphDB> OwnedDB;
+  std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB;
+  ondisk::OnDiskGraphDB *DB;
 };
 
 } // end anonymous namespace
@@ -148,9 +155,21 @@ Expected<std::unique_ptr<ObjectStore>> cas::createOnDiskCAS(const Twine &Path) {
   return OnDiskCAS::open(AbsPath);
 }
 
+std::unique_ptr<ObjectStore>
+cas::builtin::createObjectStoreFromUnifiedOnDiskCache(
+    std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB) {
+  return std::make_unique<OnDiskCAS>(std::move(UniDB));
+}
+
 #else /* LLVM_ENABLE_ONDISK_CAS */
 
 Expected<std::unique_ptr<ObjectStore>> cas::createOnDiskCAS(const Twine &Path) {
+  return createStringError(inconvertibleErrorCode(), "OnDiskCAS is disabled");
+}
+
+std::unique_ptr<ObjectStore>
+cas::builtin::createObjectStoreFromUnifiedOnDiskCache(
+    std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB) {
   return createStringError(inconvertibleErrorCode(), "OnDiskCAS is disabled");
 }
 

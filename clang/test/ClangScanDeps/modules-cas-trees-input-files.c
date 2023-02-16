@@ -9,7 +9,7 @@
 
 // == Scan PCH
 // RUN: clang-scan-deps -compilation-database %t/cdb_pch.json \
-// RUN:   -cas-path %t/cas -action-cache-path %t/cache -module-files-dir %t/outputs \
+// RUN:   -cas-path %t/cas -module-files-dir %t/outputs \
 // RUN:   -format experimental-full -mode preprocess-dependency-directives \
 // RUN:   > %t/deps_pch.json
 
@@ -22,7 +22,7 @@
 
 // == Scan TU, including PCH
 // RUN: clang-scan-deps -compilation-database %t/cdb.json \
-// RUN:   -cas-path %t/cas -action-cache-path %t/cache -module-files-dir %t/outputs \
+// RUN:   -cas-path %t/cas -module-files-dir %t/outputs \
 // RUN:   -format experimental-full -mode preprocess-dependency-directives \
 // RUN:   > %t/deps.json
 

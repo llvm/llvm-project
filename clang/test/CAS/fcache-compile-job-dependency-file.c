@@ -1,10 +1,10 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: split-file %s %t
-// RUN: llvm-cas --cas %t/cas --ingest --data %t > %t/casid
+// RUN: split-file %s %t/src
+// RUN: llvm-cas --cas %t/cas --ingest --data %t/src > %t/casid
 //
 // RUN: %clang -cc1 -triple x86_64-apple-macos11 \
-// RUN:   -fcas-path %t/cas -faction-cache-path %t/cache -fcas-fs @%t/casid -fcache-compile-job \
-// RUN:   -Rcompile-job-cache %t/main.c -emit-obj -o %t/output.o -isystem %t/sys \
+// RUN:   -fcas-path %t/cas -fcas-fs @%t/casid -fcache-compile-job \
+// RUN:   -Rcompile-job-cache %t/src/main.c -emit-obj -o %t/output.o -isystem %t/src/sys \
 // RUN:   -dependency-file %t/deps1.d -MT depends 2>&1 \
 // RUN:   | FileCheck %s --allow-empty --check-prefix=CACHE-MISS
 //
@@ -17,8 +17,8 @@
 // RUN: ls %t/output.o && rm %t/output.o
 //
 // RUN: %clang -cc1 -triple x86_64-apple-macos11 \
-// RUN:   -fcas-path %t/cas -faction-cache-path %t/cache -fcas-fs @%t/casid -fcache-compile-job \
-// RUN:   -Rcompile-job-cache %t/main.c -emit-obj -o %t/output.o -isystem %t/sys \
+// RUN:   -fcas-path %t/cas -fcas-fs @%t/casid -fcache-compile-job \
+// RUN:   -Rcompile-job-cache %t/src/main.c -emit-obj -o %t/output.o -isystem %t/src/sys \
 // RUN:   -dependency-file %t/deps2.d -MT depends 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CACHE-HIT
 //
@@ -29,8 +29,8 @@
 // CACHE-MISS-NOT: remark: compile job cache hit
 
 // RUN: %clang -cc1 -triple x86_64-apple-macos11 \
-// RUN:   -fcas-path %t/cas -faction-cache-path %t/cache -fcas-fs @%t/casid -fcache-compile-job \
-// RUN:   -Rcompile-job-cache %t/main.c -emit-obj -o %t/output.o -isystem %t/sys \
+// RUN:   -fcas-path %t/cas -fcas-fs @%t/casid -fcache-compile-job \
+// RUN:   -Rcompile-job-cache %t/src/main.c -emit-obj -o %t/output.o -isystem %t/src/sys \
 // RUN:   -dependency-file %t/deps3.d -MT other1 -MT other2 -MP -fdepfile-entry=extra-depfile.json 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CACHE-HIT
 
@@ -43,8 +43,8 @@
 // DEPS_OTHER: my_header.h:
 
 // RUN: %clang -cc1 -triple x86_64-apple-macos11 \
-// RUN:   -fcas-path %t/cas -faction-cache-path %t/cache -fcas-fs @%t/casid -fcache-compile-job \
-// RUN:   -Rcompile-job-cache %t/main.c -emit-obj -o %t/output.o -isystem %t/sys \
+// RUN:   -fcas-path %t/cas -fcas-fs @%t/casid -fcache-compile-job \
+// RUN:   -Rcompile-job-cache %t/src/main.c -emit-obj -o %t/output.o -isystem %t/src/sys \
 // RUN:   -sys-header-deps -dependency-file %t/deps4.d -MT depends 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CACHE-MISS
 
@@ -57,11 +57,12 @@
 // DEPS_SYS: my_header.h
 // DEPS_SYS: sys.h
 
-// Using another cache path to avoid reusing artifacts.
+// Using another cas path to avoid reusing artifacts.
+// RUN: llvm-cas --cas %t/cas2 --ingest --data %t/src
 
 // RUN: %clang -cc1 -triple x86_64-apple-macos11 \
-// RUN:   -fcas-path %t/cas -faction-cache-path %t/cache2 -fcas-fs @%t/casid -fcache-compile-job \
-// RUN:   -Rcompile-job-cache %t/main.c -emit-obj -o %t/output.o -isystem %t/sys \
+// RUN:   -fcas-path %t/cas2 -fcas-fs @%t/casid -fcache-compile-job \
+// RUN:   -Rcompile-job-cache %t/src/main.c -emit-obj -o %t/output.o -isystem %t/src/sys \
 // RUN:   -dependency-file %t/deps-depfile1.d -MT deps -fdepfile-entry=extra-depfile.json -fdepfile-entry=%t/main.c 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CACHE-MISS
 
@@ -71,8 +72,8 @@
 // DEPS_DEPFILE1: main.c
 
 // RUN: %clang -cc1 -triple x86_64-apple-macos11 \
-// RUN:   -fcas-path %t/cas -faction-cache-path %t/cache2 -fcas-fs @%t/casid -fcache-compile-job \
-// RUN:   -Rcompile-job-cache %t/main.c -emit-obj -o %t/output.o -isystem %t/sys \
+// RUN:   -fcas-path %t/cas2 -fcas-fs @%t/casid -fcache-compile-job \
+// RUN:   -Rcompile-job-cache %t/src/main.c -emit-obj -o %t/output.o -isystem %t/src/sys \
 // RUN:   -dependency-file %t/deps-depfile2.d -MT deps 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CACHE-HIT
 

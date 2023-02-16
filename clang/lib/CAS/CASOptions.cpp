@@ -17,17 +17,16 @@ using namespace clang;
 using namespace llvm::cas;
 
 static std::shared_ptr<llvm::cas::ObjectStore>
-createObjectStore(const CASConfiguration &Config, DiagnosticsEngine &Diags) {
+createObjectStoreWithoutPath(const CASConfiguration &Config,
+                             DiagnosticsEngine &Diags) {
   if (Config.CASPath.empty())
     return llvm::cas::createInMemoryCAS();
 
+  assert(Config.CASPath == "auto");
   // Compute the path.
   SmallString<128> Storage;
-  StringRef Path = Config.CASPath;
-  if (Path == "auto") {
-    llvm::cas::getDefaultOnDiskCASPath(Storage);
-    Path = Storage;
-  }
+  llvm::cas::getDefaultOnDiskCASPath(Storage);
+  StringRef Path = Storage;
 
   // FIXME: Pass on the actual error from the CAS.
   if (auto MaybeCAS =
@@ -73,20 +72,17 @@ void CASOptions::freezeConfig(DiagnosticsEngine &Diags) {
     CurrentConfig.CASPath =
         Cache.CAS->getContext().getHashSchemaIdentifier().str();
   }
-  if (Cache.AC)
-    CurrentConfig.CachePath = "";
 }
 
 static std::shared_ptr<llvm::cas::ActionCache>
-createCache(ObjectStore &CAS, const CASConfiguration &Config,
-            DiagnosticsEngine &Diags) {
-  if (Config.CachePath.empty())
+createCacheWithoutPath(const CASConfiguration &Config,
+                       DiagnosticsEngine &Diags) {
+  if (Config.CASPath.empty())
     return llvm::cas::createInMemoryActionCache();
 
+  assert(Config.CASPath == "auto");
   // Compute the path.
-  std::string Path = Config.CachePath;
-  if (Path == "auto")
-    Path = getDefaultOnDiskActionCachePath();
+  std::string Path = getDefaultOnDiskActionCachePath();
 
   // FIXME: Pass on the actual error from the CAS.
   if (auto MaybeCache =
@@ -119,7 +115,6 @@ void CASOptions::ensurePersistentCAS() {
       llvm_unreachable("Cannot ensure persistent CAS if it's unknown / frozen");
   case InMemoryCAS:
     CASPath = "auto";
-    CachePath = "auto";
     break;
   case OnDiskCAS:
     break;
@@ -132,6 +127,17 @@ void CASOptions::initCache(DiagnosticsEngine &Diags) const {
     return;
 
   Cache.Config = CurrentConfig;
-  Cache.CAS = createObjectStore(Cache.Config, Diags);
-  Cache.AC = createCache(*Cache.CAS, Cache.Config, Diags);
+  StringRef CASPath = Cache.Config.CASPath;
+  if (!CASPath.empty() && CASPath != "auto") {
+    std::pair<std::unique_ptr<ObjectStore>, std::unique_ptr<ActionCache>> DBs;
+    if (llvm::Error E =
+            createOnDiskUnifiedCASDatabases(CASPath).moveInto(DBs)) {
+      Diags.Report(diag::err_builtin_cas_cannot_be_initialized) << CASPath;
+      return;
+    }
+    std::tie(Cache.CAS, Cache.AC) = std::move(DBs);
+  } else {
+    Cache.CAS = createObjectStoreWithoutPath(Cache.Config, Diags);
+    Cache.AC = createCacheWithoutPath(Cache.Config, Diags);
+  }
 }

@@ -32,7 +32,6 @@
 // CHECK-NEXT:     build-args:
 // CHECK-SAME:       -cc1
 // CHECK-SAME:       -fcas-path
-// CHECK-SAME:       -faction-cache-path
 // CHECK-SAME:       -fcas-fs llvmcas://{{[[:xdigit:]]+}}
 // CHECK-SAME:       -fcache-compile-job
 // CHECK-SAME:       -emit-module
@@ -49,7 +48,6 @@
 // CHECK-NEXT:     build-args:
 // CHECK-SAME:       -cc1
 // CHECK-SAME:       -fcas-path
-// CHECK-SAME:       -faction-cache-path
 // CHECK-SAME:       -fcas-fs llvmcas://{{[[:xdigit:]]+}}
 // CHECK-SAME:       -fcache-compile-job
 // CHECK-SAME:       -fmodule-file-cache-key=[[PCM:.*ModA_.*pcm]]=llvmcas://{{[[:xdigit:]]+}}

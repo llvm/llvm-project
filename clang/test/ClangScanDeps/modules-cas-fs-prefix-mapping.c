@@ -8,7 +8,7 @@
 // RUN: sed -e "s|DIR|%t|g" -e "s|CLANG|%clang|g" -e "s|SDK|%S/Inputs/SDK|g" %t/cdb.json.template > %t/cdb.json
 
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full \
-// RUN:    -cas-path %t/cas -action-cache-path %t/cache -module-files-dir %t/modules \
+// RUN:    -cas-path %t/cas -module-files-dir %t/modules \
 // RUN:    -prefix-map=%t/modules=/^modules -prefix-map=%t=/^src -prefix-map-sdk=/^sdk -prefix-map-toolchain=/^tc \
 // RUN:  > %t/full_result.txt
 
@@ -58,8 +58,6 @@
 // CHECK:            "command-line": [
 // CHECK:              "-fcas-path"
 // CHECK:              "[[PREFIX]]/cas"
-// CHECK:              "-faction-cache-path"
-// CHECK:              "[[PREFIX]]/cache"
 // CHECK:              "-fcas-fs"
 // CHECK:              "[[A_ROOT_ID]]"
 // CHECK:              "-fcas-fs-working-directory"
@@ -94,8 +92,6 @@
 // CHECK:            "command-line": [
 // CHECK:              "-fcas-path"
 // CHECK:              "[[PREFIX]]/cas"
-// CHECK:              "-faction-cache-path"
-// CHECK:              "[[PREFIX]]/cache"
 // CHECK:              "-fcas-fs"
 // CHECK:              "[[B_ROOT_ID]]"
 // CHECK:              "-fcas-fs-working-directory"
@@ -138,8 +134,6 @@
 // CHECK:                "command-line": [
 // CHECK:                  "-fcas-path"
 // CHECK:                  "[[PREFIX]]/cas"
-// CHECK:                  "-faction-cache-path"
-// CHECK:                  "[[PREFIX]]/cache"
 // CHECK:                  "-fcas-fs"
 // CHECK:                  "[[TU_ROOT_ID]]"
 // CHECK:                  "-fcas-fs-working-directory"
