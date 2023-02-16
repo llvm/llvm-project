@@ -19,20 +19,16 @@ define internal i32 @table_switch(i32 %x) {
 ; CHECK-NEXT:    .byte (.LBB0_7-(.LCPI0_0+4))/2
 ; CHECK-NEXT:    .p2align 1
 ; CHECK-NEXT:  .LBB0_3: @ %bb2
-; CHECK-NEXT:    bti
 ; CHECK-NEXT:    movs r0, #2
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:  .LBB0_4: @ %sw.epilog
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:  .LBB0_5: @ %return
-; CHECK-NEXT:    bti
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:  .LBB0_6: @ %bb3
-; CHECK-NEXT:    bti
 ; CHECK-NEXT:    movs r0, #3
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:  .LBB0_7: @ %bb4
-; CHECK-NEXT:    bti
 ; CHECK-NEXT:    movs r0, #4
 ; CHECK-NEXT:    bx lr
 entry:
