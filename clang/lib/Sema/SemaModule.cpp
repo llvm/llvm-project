@@ -125,7 +125,6 @@ void Sema::HandleStartOfHeaderUnit() {
   ModuleScopes.back().BeginLoc = StartOfTU;
   ModuleScopes.back().Module = Mod;
   ModuleScopes.back().ModuleInterface = true;
-  ModuleScopes.back().IsPartition = false;
   VisibleModules.setVisible(Mod, StartOfTU);
 
   // From now on, we have an owning module for all declarations we see.
@@ -373,7 +372,6 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   ModuleScopes.back().BeginLoc = StartLoc;
   ModuleScopes.back().Module = Mod;
   ModuleScopes.back().ModuleInterface = MDK != ModuleDeclKind::Implementation;
-  ModuleScopes.back().IsPartition = IsPartition;
   VisibleModules.setVisible(Mod, ModuleLoc);
 
   // From now on, we have an owning module for all declarations we see.
@@ -601,9 +599,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
     // [module.interface]p1:
     // An export-declaration shall inhabit a namespace scope and appear in the
     // purview of a module interface unit.
-    Diag(ExportLoc, diag::err_export_not_in_module_interface)
-        << (!ModuleScopes.empty() &&
-            !ModuleScopes.back().ImplicitGlobalModuleFragment);
+    Diag(ExportLoc, diag::err_export_not_in_module_interface);
   }
 
   // In some cases we need to know if an entity was present in a directly-
@@ -980,8 +976,6 @@ Module *Sema::PushGlobalModuleFragment(SourceLocation BeginLoc,
   // Enter the scope of the global module.
   ModuleScopes.push_back({BeginLoc, GlobalModuleFragment,
                           /*ModuleInterface=*/false,
-                          /*IsPartition=*/false,
-                          /*ImplicitGlobalModuleFragment=*/IsImplicit,
                           /*OuterVisibleModules=*/{}});
   VisibleModules.setVisible(GlobalModuleFragment, BeginLoc);
 

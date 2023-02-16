@@ -81,7 +81,7 @@ struct S {
 export {
   extern "C++" {
   namespace NestedExport {
-  export { // expected-error {{export declaration can only be used within a module interface unit after the module declaration}}
+  export { // expected-error {{export declaration can only be used within a module purview}}
     int q;
   }
   } // namespace NestedExport
