@@ -624,7 +624,7 @@ define <8 x i64> @neg_scalar_broadcast_v8i64(i64 %a0, <2 x i64> %a1) {
 ; AVX1-LABEL: neg_scalar_broadcast_v8i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[0,1,0,1]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,3]
@@ -790,7 +790,7 @@ define <2 x i64> @casted_neg_scalar_broadcast_v2i64(<2 x i32> %a0, <2 x i64> %a1
 ;
 ; AVX1-LABEL: casted_neg_scalar_broadcast_v2i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vandnps %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;

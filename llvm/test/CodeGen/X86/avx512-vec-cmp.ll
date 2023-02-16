@@ -1211,7 +1211,7 @@ define <2 x i64> @test46(<2 x float> %x, <2 x float> %y) #0 {
 ; AVX512-LABEL: test46:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf8,0xc2,0xc1,0x00]
-; AVX512-NEXT:    vpermilps $212, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x04,0xc0,0xd4]
+; AVX512-NEXT:    vshufps $212, %xmm0, %xmm0, %xmm0 ## encoding: [0xc5,0xf8,0xc6,0xc0,0xd4]
 ; AVX512-NEXT:    ## xmm0 = xmm0[0,1,1,3]
 ; AVX512-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 ## encoding: [0xc5,0xf8,0x54,0x05,A,A,A,A]
 ; AVX512-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte

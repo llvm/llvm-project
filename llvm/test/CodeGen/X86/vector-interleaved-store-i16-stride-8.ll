@@ -1174,8 +1174,8 @@ define void @store_i16_stride8_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX1-ONLY-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0],ymm3[1],ymm2[2,3,4],ymm3[5],ymm2[6,7]
 ; AVX1-ONLY-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1],ymm1[2,3],ymm2[4,5],ymm1[6,7]
 ; AVX1-ONLY-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpermilps {{.*#+}} xmm2 = xmm3[0,0,0,0]
-; AVX1-ONLY-NEXT:    vpermilps {{.*#+}} xmm3 = xmm3[0,1,0,1]
+; AVX1-ONLY-NEXT:    vshufps {{.*#+}} xmm2 = xmm3[0,0,0,0]
+; AVX1-ONLY-NEXT:    vshufps {{.*#+}} xmm3 = xmm3[0,1,0,1]
 ; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
 ; AVX1-ONLY-NEXT:    vmovdqu (%rsp), %ymm5 # 32-byte Reload
 ; AVX1-ONLY-NEXT:    vpshufd {{.*#+}} xmm3 = xmm5[0,1,0,1]
@@ -1183,10 +1183,10 @@ define void @store_i16_stride8_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm5, %ymm3, %ymm3
 ; AVX1-ONLY-NEXT:    vblendps {{.*#+}} ymm2 = ymm3[0,1,2],ymm2[3],ymm3[4,5,6],ymm2[7]
 ; AVX1-ONLY-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm5 # 32-byte Reload
-; AVX1-ONLY-NEXT:    vpermilps {{.*#+}} xmm3 = xmm5[1,1,1,1]
+; AVX1-ONLY-NEXT:    vshufps {{.*#+}} xmm3 = xmm5[1,1,1,1]
 ; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm3, %ymm5, %ymm3
 ; AVX1-ONLY-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpermilps {{.*#+}} xmm5 = xmm6[0,0,1,1]
+; AVX1-ONLY-NEXT:    vshufps {{.*#+}} xmm5 = xmm6[0,0,1,1]
 ; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm6, %ymm5, %ymm5
 ; AVX1-ONLY-NEXT:    vblendps {{.*#+}} ymm3 = ymm3[0],ymm5[1],ymm3[2,3,4],ymm5[5],ymm3[6,7]
 ; AVX1-ONLY-NEXT:    vblendps {{.*#+}} ymm2 = ymm3[0,1],ymm2[2,3],ymm3[4,5],ymm2[6,7]

@@ -288,16 +288,16 @@ define void @vselect_concat_splat() {
 ; AVX1-LABEL: vselect_concat_splat:
 ; AVX1:       ## %bb.0: ## %entry
 ; AVX1-NEXT:    vmovups (%rax), %xmm0
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[0,3,2,1]
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,0,3,2]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[0,3,2,1]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,0,3,2]
 ; AVX1-NEXT:    vmovups 16, %xmm2
 ; AVX1-NEXT:    vmovups 32, %xmm3
 ; AVX1-NEXT:    vblendps {{.*#+}} xmm4 = mem[0],xmm3[1],mem[2,3]
 ; AVX1-NEXT:    vblendps {{.*#+}} xmm4 = xmm4[0,1],xmm2[2],xmm4[3]
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm4 = xmm4[0,3,2,1]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm4 = xmm4[0,3,2,1]
 ; AVX1-NEXT:    vblendps {{.*#+}} xmm3 = mem[0,1],xmm3[2,3]
 ; AVX1-NEXT:    vblendps {{.*#+}} xmm2 = xmm2[0],xmm3[1,2],xmm2[3]
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[1,0,3,2]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[1,0,3,2]
 ; AVX1-NEXT:    vxorps %xmm3, %xmm3, %xmm3
 ; AVX1-NEXT:    vcmpneqps %xmm3, %xmm1, %xmm3
 ; AVX1-NEXT:    vblendvps %xmm3, %xmm4, %xmm1, %xmm1

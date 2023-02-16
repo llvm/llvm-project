@@ -2748,8 +2748,8 @@ define <4 x i32> @umulo_v4i24(<4 x i24> %a0, <4 x i24> %a1, ptr %p2) nounwind {
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [16777215,16777215,16777215,16777215]
 ; AVX1-NEXT:    vandps %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vandps %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm2 = xmm1[1,1,3,3]
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm3 = xmm0[1,1,3,3]
 ; AVX1-NEXT:    vpmuludq %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpmuludq %xmm1, %xmm0, %xmm3
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]

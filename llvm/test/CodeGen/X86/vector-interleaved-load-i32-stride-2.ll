@@ -28,8 +28,8 @@ define void @load_i32_stride2_vf2(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) nou
 ; AVX-LABEL: load_i32_stride2_vf2:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps (%rdi), %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[0,2,2,3]
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,3,2,3]
+; AVX-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[0,2,2,3]
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3,2,3]
 ; AVX-NEXT:    vmovlps %xmm1, (%rsi)
 ; AVX-NEXT:    vmovlps %xmm0, (%rdx)
 ; AVX-NEXT:    retq
