@@ -31,7 +31,7 @@ define void @test_mscatter_v16f16(ptr %base, <16 x i32> %index, <16 x half> %val
 ; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vpextrq $1, %xmm4, %rax
 ; CHECK-NEXT:    vmovsh %xmm3, (%rax)
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm3 = xmm1[3,3,3,3]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[3,3,3,3]
 ; CHECK-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
 ; CHECK-NEXT:    vmovq %xmm0, %rax
 ; CHECK-NEXT:    vmovsh %xmm3, (%rax)
@@ -58,7 +58,7 @@ define void @test_mscatter_v16f16(ptr %base, <16 x i32> %index, <16 x half> %val
 ; CHECK-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vpextrq $1, %xmm3, %rax
 ; CHECK-NEXT:    vmovsh %xmm1, (%rax)
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[3,3,3,3]
 ; CHECK-NEXT:    vextracti32x4 $3, %zmm2, %xmm2
 ; CHECK-NEXT:    vmovq %xmm2, %rax
 ; CHECK-NEXT:    vmovsh %xmm1, (%rax)

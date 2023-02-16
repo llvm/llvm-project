@@ -1526,8 +1526,8 @@ define <4 x i32> @vector_variable_shift_right(<4 x i1> %cond, <4 x i32> %x, <4 x
 ; XOPAVX1-LABEL: vector_variable_shift_right:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vpslld $31, %xmm0, %xmm0
-; XOPAVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; XOPAVX1-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[0,0,0,0]
+; XOPAVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; XOPAVX1-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; XOPAVX1-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
 ; XOPAVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; XOPAVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0

@@ -16,7 +16,7 @@ define <8 x float> @expand(<4 x float> %a) {
 ;
 ; KNL-LABEL: expand:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; KNL-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
 ; KNL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3,4,5,6,7]
 ; KNL-NEXT:    ret{{[l|q]}}
@@ -291,7 +291,7 @@ define <8 x float> @expand15(<4 x float> %a) {
 ;
 ; KNL-LABEL: expand15:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; KNL-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
 ; KNL-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,1,3]
 ; KNL-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1],ymm0[2],mem[3],ymm0[4],mem[5,6,7]
 ; KNL-NEXT:    ret{{[l|q]}}
