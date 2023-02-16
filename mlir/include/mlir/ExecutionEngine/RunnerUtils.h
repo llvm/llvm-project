@@ -34,18 +34,14 @@
 #include <assert.h>
 #include <cmath>
 #include <complex>
-#include <iomanip>
 #include <iostream>
 
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
 
 template <typename T, typename StreamType>
 void printMemRefMetaData(StreamType &os, const DynamicMemRefType<T> &v) {
-  // Make the printed pointer format platform independent by casting it to an
-  // integer and manually formatting it to a hex with prefix as tests expect.
-  os << "base@ = " << std::hex << std::showbase
-     << reinterpret_cast<std::intptr_t>(v.data) << std::dec << std::noshowbase
-     << " rank = " << v.rank << " offset = " << v.offset;
+  os << "base@ = " << reinterpret_cast<void *>(v.data) << " rank = " << v.rank
+     << " offset = " << v.offset;
   auto print = [&](const int64_t *ptr) {
     if (v.rank == 0)
       return;

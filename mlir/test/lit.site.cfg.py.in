@@ -23,14 +23,6 @@ config.mlir_tools_dir = "@MLIR_TOOLS_DIR@"
 config.mlir_cmake_dir = "@MLIR_CMAKE_DIR@"
 config.mlir_lib_dir = "@MLIR_LIB_DIR@"
 
-config.mlir_vulkan_runtime_wrappers = "@MLIR_VULKAN_RUNTIME_WRAPPERS@"
-config.mlir_runner_utils = "@MLIR_RUNNER_UTILS@"
-config.mlir_c_runner_utils = "@MLIR_C_RUNNER_UTILS@"
-config.mlir_async_runtime = "@MLIR_ASYNC_RUNTIME@"
-config.mlir_cuda_runtime = "@MLIR_CUDA_RUNTIME@"
-config.mlir_rocm_runtime = "@MLIR_ROCM_RUNTIME@"
-config.mlir_test_spirv_cpu_runner_c_wrappers = "@MLIR_TEST_SPRIV_CPU_RUNNER_C_WRAPPERS@"
-
 config.build_examples = @LLVM_BUILD_EXAMPLES@
 config.run_cuda_tests = @MLIR_ENABLE_CUDA_CONVERSIONS@
 config.enable_cuda_runner = @MLIR_ENABLE_CUDA_RUNNER@
