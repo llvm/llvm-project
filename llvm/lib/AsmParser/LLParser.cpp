@@ -1143,7 +1143,7 @@ bool LLParser::parseAliasOrIFunc(const std::string &Name, LocTy NameLoc,
   if (IsAlias)
     M->insertAlias(GA.release());
   else
-    M->getIFuncList().push_back(GI.release());
+    M->insertIFunc(GI.release());
   assert(GV->getName() == Name && "Should not be a name conflict!");
 
   return false;
