@@ -15445,6 +15445,11 @@ static SDValue lowerV4F32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   assert(V2.getSimpleValueType() == MVT::v4f32 && "Bad operand type!");
   assert(Mask.size() == 4 && "Unexpected mask size for v4 shuffle!");
 
+  if (Subtarget.hasSSE41())
+    if (SDValue Blend = lowerShuffleAsBlend(DL, MVT::v4f32, V1, V2, Mask,
+                                            Zeroable, Subtarget, DAG))
+      return Blend;
+
   int NumV2Elements = count_if(Mask, [](int M) { return M >= 4; });
 
   if (NumV2Elements == 0) {
@@ -15498,10 +15503,6 @@ static SDValue lowerV4F32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
       return V;
 
   if (Subtarget.hasSSE41()) {
-    if (SDValue Blend = lowerShuffleAsBlend(DL, MVT::v4f32, V1, V2, Mask,
-                                            Zeroable, Subtarget, DAG))
-      return Blend;
-
     // Use INSERTPS if we can complete the shuffle efficiently.
     if (SDValue V = lowerShuffleAsInsertPS(DL, V1, V2, Mask, Zeroable, DAG))
       return V;
@@ -19081,6 +19082,10 @@ static SDValue lowerV16F32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     // Otherwise, fall back to a SHUFPS sequence.
     return lowerShuffleWithSHUFPS(DL, MVT::v16f32, RepeatedMask, V1, V2, DAG);
   }
+
+  if (SDValue Blend = lowerShuffleAsBlend(DL, MVT::v16f32, V1, V2, Mask,
+                                          Zeroable, Subtarget, DAG))
+    return Blend;
 
   // Try to create an in-lane repeating shuffle mask and then shuffle the
   // results into the target lanes.
