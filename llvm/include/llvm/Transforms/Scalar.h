@@ -172,12 +172,6 @@ Pass *createSimpleLoopUnrollPass(int OptLevel = 2, bool OnlyWhenForced = false,
 
 //===----------------------------------------------------------------------===//
 //
-// LoopReroll - This pass is a simple loop rerolling pass.
-//
-Pass *createLoopRerollPass();
-
-//===----------------------------------------------------------------------===//
-//
 // LoopRotate - This pass is a simple loop rotating pass.
 //
 Pass *createLoopRotatePass(int MaxHeaderSize = -1, bool PrepareForLTO = false);
