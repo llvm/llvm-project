@@ -24025,7 +24025,7 @@ static SDValue LowerVectorAllZero(const SDLoc &DL, SDValue V, ISD::CondCode CC,
   }
 
   // Quit if not splittable to 128/256-bit vector.
-  if (!isPowerOf2_32(VT.getSizeInBits()))
+  if (!llvm::has_single_bit<uint32_t>(VT.getSizeInBits()))
     return SDValue();
 
   // Split down to 128/256-bit vector.
@@ -24095,7 +24095,8 @@ static SDValue MatchVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
            "Reduction source vector mismatch");
 
     // Quit if less than 128-bits or not splittable to 128/256-bit vector.
-    if (VT.getSizeInBits() < 128 || !isPowerOf2_32(VT.getSizeInBits()))
+    if (VT.getSizeInBits() < 128 ||
+        !llvm::has_single_bit<uint32_t>(VT.getSizeInBits()))
       return SDValue();
 
     // If more than one full vector is evaluated, OR them first before PTEST.
@@ -40361,9 +40362,10 @@ static SDValue combineX86ShufflesRecursively(
     // This function can be performance-critical, so we rely on the power-of-2
     // knowledge that we have about the mask sizes to replace div/rem ops with
     // bit-masks and shifts.
-    assert(isPowerOf2_32(RootMask.size()) &&
+    assert(llvm::has_single_bit<uint32_t>(RootMask.size()) &&
            "Non-power-of-2 shuffle mask sizes");
-    assert(isPowerOf2_32(OpMask.size()) && "Non-power-of-2 shuffle mask sizes");
+    assert(llvm::has_single_bit<uint32_t>(OpMask.size()) &&
+           "Non-power-of-2 shuffle mask sizes");
     unsigned RootMaskSizeLog2 = llvm::countr_zero(RootMask.size());
     unsigned OpMaskSizeLog2 = llvm::countr_zero(OpMask.size());
 
