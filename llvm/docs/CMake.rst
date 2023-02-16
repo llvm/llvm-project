@@ -402,14 +402,6 @@ enabled sub-projects. Nearly all of these variable names begin with
   example, you can build *llvm-as* with a Makefile-based system by executing *make
   llvm-as* at the root of your build directory.
 
-**LLVM_CCACHE_BUILD**:BOOL
-  If enabled and the ``ccache`` program is available, then LLVM will be
-  built using ``ccache`` to speed up rebuilds of LLVM and its components.
-  Defaults to OFF.  The size and location of the cache maintained
-  by ``ccache`` can be adjusted via the LLVM_CCACHE_MAXSIZE and LLVM_CCACHE_DIR
-  options, which are passed to the CCACHE_MAXSIZE and CCACHE_DIR environment
-  variables, respectively.
-
 **LLVM_CREATE_XCODE_TOOLCHAIN**:BOOL
   macOS Only: If enabled CMake will generate a target named
   'install-xcode-toolchain'. This target will create a directory at
