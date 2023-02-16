@@ -8798,7 +8798,7 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
       // before passing it to the ADR instruction.
       unsigned Enc = Inst.getOperand(2).getImm();
       TmpInst.addOperand(MCOperand::createImm(
-        ARM_AM::rotr32(Enc & 0xFF, (Enc & 0xF00) >> 7)));
+          llvm::rotr<uint32_t>(Enc & 0xFF, (Enc & 0xF00) >> 7)));
     } else {
       // Turn PC-relative expression into absolute expression.
       // Reading PC provides the start of the current instruction + 8 and
