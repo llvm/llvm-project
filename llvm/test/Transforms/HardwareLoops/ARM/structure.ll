@@ -1,8 +1,8 @@
-; RUN: opt -mtriple=thumbv8.1m.main-none-none-eabi -hardware-loops %s -S -o - | \
+; RUN: opt -mtriple=thumbv8.1m.main-none-none-eabi -passes=hardware-loops %s -S -o - | \
 ; RUN:     FileCheck %s
 ; RUN: opt -mtriple=thumbv8.1m.main -passes=loop-unroll -unroll-remainder=false -S < %s | \
 ; RUN:     llc -mtriple=thumbv8.1m.main | FileCheck %s --check-prefix=CHECK-UNROLL
-; RUN: opt -mtriple=thumbv8.1m.main-none-none-eabi -hardware-loops \
+; RUN: opt -mtriple=thumbv8.1m.main-none-none-eabi -passes=hardware-loops \
 ; RUN:     -pass-remarks-analysis=hardware-loops  %s -S -o - 2>&1 | \
 ; RUN:     FileCheck %s --check-prefix=CHECK-REMARKS
 
@@ -14,7 +14,7 @@
 ; CHECK-REMARKS: remark: <unknown>:0:0: hardware-loop not created: it's not profitable to create a hardware-loop
 ; CHECK-REMARKS: remark: <unknown>:0:0: hardware-loop not created: it's not profitable to create a hardware-loop
 ; CHECK-REMARKS: remark: <unknown>:0:0: hardware-loop not created: loop is not a candidate
-; CHECK-REMARKS: remark: <unknown>:0:0: hardware-loop not created: nested hardware-loops not supported
+; CHECK-REMARKS: remark: <unknown>:0:0: hardware-loop not created: loop is not a candidate
 ; CHECK-REMARKS: remark: <unknown>:0:0: hardware-loop not created: it's not profitable to create a hardware-loop
 ; CHECK-REMARKS: remark: <unknown>:0:0: hardware-loop not created: it's not profitable to create a hardware-loop
 

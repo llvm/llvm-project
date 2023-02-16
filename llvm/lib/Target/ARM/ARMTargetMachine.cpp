@@ -481,7 +481,7 @@ bool ARMPassConfig::addPreISel() {
   }
 
   if (TM->getOptLevel() != CodeGenOpt::None) {
-    addPass(createHardwareLoopsPass());
+    addPass(createHardwareLoopsLegacyPass());
     addPass(createMVETailPredicationPass());
     // FIXME: IR passes can delete address-taken basic blocks, deleting
     // corresponding blockaddresses. ARMConstantPoolConstant holds references to
