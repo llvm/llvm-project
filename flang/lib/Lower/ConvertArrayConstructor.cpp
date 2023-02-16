@@ -201,7 +201,89 @@ private:
 };
 using InlinedTempStrategy = InlinedTempStrategyImpl<InMemoryCounter>;
 
-// TODO: add and implement AsElementalStrategy.
+/// Class that implements the "as function of the indices" lowering strategy.
+/// It will lower [(scalar_expr(i), i=l,u,s)] to:
+/// ```
+///   %extent = max((%u-%l+1)/%s, 0)
+///   %shape = fir.shape %extent
+///   %elem = hlfir.elemental %shape {
+///     ^bb0(%pos:index):
+///      %i = %l+(%i-1)*%s
+///      %value = scalar_expr(%i)
+///       hlfir.yield_element %value
+///    }
+/// ```
+/// That way, no temporary is created in lowering, and if the array constructor
+/// is part of a more complex elemental expression, or an assignment, it will be
+/// trivial to "inline" it in the expression or assignment loops if allowed by
+/// alias analysis.
+/// This lowering is however only possible for the form of array constructors as
+/// in the illustration above. It could be extended to deeper independent
+/// implied-do nest and wrapped in an hlfir.reshape to a rank 1 array. But this
+/// op does not exist yet, so this is left for the future if it appears
+/// profitable.
+class AsElementalStrategy {
+public:
+  /// The constructor only gathers the operands to create the hlfir.elemental.
+  AsElementalStrategy(mlir::Location loc, fir::FirOpBuilder &builder,
+                      fir::SequenceType declaredType, mlir::Value extent,
+                      llvm::ArrayRef<mlir::Value> lengths)
+      : shape{builder.genShape(loc, {extent})},
+        lengthParams{lengths.begin(), lengths.end()}, exprType{getExprType(
+                                                          declaredType)} {}
+
+  static hlfir::ExprType getExprType(fir::SequenceType declaredType) {
+    // Note: 7.8 point 4: the dynamic type of an array constructor is its static
+    // type, it is not polymorphic.
+    return hlfir::ExprType::get(declaredType.getContext(),
+                                declaredType.getShape(),
+                                declaredType.getEleTy(),
+                                /*isPolymorphic=*/false);
+  }
+
+  /// Create the hlfir.elemental and compute the ac-implied-do-index value
+  /// given the lower bound and stride (compute "%i" in the illustration above).
+  mlir::Value startImpliedDo(mlir::Location loc, fir::FirOpBuilder &builder,
+                             mlir::Value lower, mlir::Value upper,
+                             mlir::Value stride) {
+    assert(!elementalOp && "expected only one implied-do");
+    mlir::Value one =
+        builder.createIntegerConstant(loc, builder.getIndexType(), 1);
+    elementalOp =
+        builder.create<hlfir::ElementalOp>(loc, exprType, shape, lengthParams);
+    builder.setInsertionPointToStart(elementalOp.getBody());
+    // implied-do-index = lower+((i-1)*stride)
+    mlir::Value diff = builder.create<mlir::arith::SubIOp>(
+        loc, elementalOp.getIndices()[0], one);
+    mlir::Value mul = builder.create<mlir::arith::MulIOp>(loc, diff, stride);
+    mlir::Value add = builder.create<mlir::arith::AddIOp>(loc, lower, mul);
+    return add;
+  }
+
+  /// Create the elemental hlfir.yield_element with the scalar ac-value.
+  void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
+                 hlfir::Entity value) {
+    assert(value.isScalar() && "cannot use hlfir.elemental with array values");
+    assert(elementalOp && "array constructor must contain an outer implied-do");
+    mlir::Value elementResult = value;
+    if (fir::isa_trivial(elementResult.getType()))
+      elementResult =
+          builder.createConvert(loc, exprType.getElementType(), elementResult);
+    builder.create<hlfir::YieldElementOp>(loc, elementResult);
+  }
+
+  /// Return the created hlfir.elemental.
+  hlfir::Entity finishArrayCtorLowering(mlir::Location loc,
+                                        fir::FirOpBuilder &builder) {
+    return hlfir::Entity{elementalOp};
+  }
+
+private:
+  mlir::Value shape;
+  llvm::SmallVector<mlir::Value> lengthParams;
+  hlfir::ExprType exprType;
+  hlfir::ElementalOp elementalOp{};
+};
 
 // TODO: add and implement RuntimeTempStrategy.
 
@@ -237,7 +319,9 @@ public:
   }
 
 private:
-  std::variant<InlinedTempStrategy, LooplessInlinedTempStrategy> implVariant;
+  std::variant<InlinedTempStrategy, LooplessInlinedTempStrategy,
+               AsElementalStrategy>
+      implVariant;
 };
 } // namespace
 
@@ -312,17 +396,20 @@ namespace {
 struct ArrayCtorAnalysis {
   template <typename T>
   ArrayCtorAnalysis(
+      Fortran::evaluate::FoldingContext &,
       const Fortran::evaluate::ArrayConstructor<T> &arrayCtorExpr);
 
   // Can the array constructor easily be rewritten into an hlfir.elemental ?
-  bool isSingleImpliedDoWithOneScalarExpr() const {
+  bool isSingleImpliedDoWithOneScalarPureExpr() const {
     return !anyArrayExpr && isPerfectLoopNest &&
-           innerNumberOfExprIfPrefectNest == 1 && depthIfPerfectLoopNest == 1;
+           innerNumberOfExprIfPrefectNest == 1 && depthIfPerfectLoopNest == 1 &&
+           innerExprIsPureIfPerfectNest;
   }
 
-  bool anyImpliedDo{false};
-  bool anyArrayExpr{false};
-  bool isPerfectLoopNest{true};
+  bool anyImpliedDo = false;
+  bool anyArrayExpr = false;
+  bool isPerfectLoopNest = true;
+  bool innerExprIsPureIfPerfectNest = false;
   std::int64_t innerNumberOfExprIfPrefectNest = 0;
   std::int64_t depthIfPerfectLoopNest = 0;
 };
@@ -330,6 +417,7 @@ struct ArrayCtorAnalysis {
 
 template <typename T>
 ArrayCtorAnalysis::ArrayCtorAnalysis(
+    Fortran::evaluate::FoldingContext &foldingContext,
     const Fortran::evaluate::ArrayConstructor<T> &arrayCtorExpr) {
   llvm::SmallVector<const Fortran::evaluate::ArrayConstructorValues<T> *>
       arrayValueListStack{&arrayCtorExpr};
@@ -339,8 +427,10 @@ ArrayCtorAnalysis::ArrayCtorAnalysis(
     std::int64_t localNumberOfExpr = 0;
     // Loop though the ac-value of an ac-value list, and add any nested
     // ac-value-list of ac-implied-do to the stack.
+    const Fortran::evaluate::ArrayConstructorValues<T> *currentArrayValueList =
+        arrayValueListStack.pop_back_val();
     for (const Fortran::evaluate::ArrayConstructorValue<T> &acValue :
-         *arrayValueListStack.pop_back_val())
+         *currentArrayValueList)
       std::visit(Fortran::common::visitors{
                      [&](const Fortran::evaluate::ImpliedDo<T> &impledDo) {
                        arrayValueListStack.push_back(&impledDo.values());
@@ -355,11 +445,16 @@ ArrayCtorAnalysis::ArrayCtorAnalysis(
 
     if (localNumberOfImpliedDo == 0) {
       // Leaf ac-value-list in the array constructor ac-value tree.
-      if (isPerfectLoopNest)
+      if (isPerfectLoopNest) {
         // This this the only leaf of the array-constructor (the array
         // constructor is a nest of single implied-do with a list of expression
         // in the last deeper implied do). e.g: "[((i+j, i=1,n)j=1,m)]".
         innerNumberOfExprIfPrefectNest = localNumberOfExpr;
+        if (localNumberOfExpr == 1)
+          innerExprIsPureIfPerfectNest = !Fortran::evaluate::FindImpureCall(
+              foldingContext, toEvExpr(std::get<Fortran::evaluate::Expr<T>>(
+                                  currentArrayValueList->begin()->u)));
+      }
     } else if (localNumberOfImpliedDo == 1 && localNumberOfExpr == 0) {
       // Perfect implied-do nest new level.
       ++depthIfPerfectLoopNest;
@@ -432,7 +527,7 @@ static ArrayCtorLoweringStrategy selectArrayCtorLoweringStrategy(
   mlir::Type elementType = LengthAndTypeCollector<T>::collect(
       loc, converter, arrayCtorExpr, symMap, stmtCtx, lengths);
   // Run an analysis of the array constructor ac-value.
-  ArrayCtorAnalysis analysis(arrayCtorExpr);
+  ArrayCtorAnalysis analysis(converter.getFoldingContext(), arrayCtorExpr);
   bool needToEvaluateOneExprToGetLengthParameters =
       failedToGatherLengthParameters(elementType, lengths);
 
@@ -443,8 +538,11 @@ static ArrayCtorLoweringStrategy selectArrayCtorLoweringStrategy(
     TODO(loc, "Lowering of array constructor requiring the runtime");
 
   auto declaredType = fir::SequenceType::get({typeExtent}, elementType);
-  if (analysis.isSingleImpliedDoWithOneScalarExpr())
-    TODO(loc, "Lowering of array constructor as hlfir.elemental");
+  // Note: array constructors containing impure ac-value expr are currently not
+  // rewritten to hlfir.elemental because impure expressions should be evaluated
+  // in order, and hlfir.elemental currently misses a way to indicate that.
+  if (analysis.isSingleImpliedDoWithOneScalarPureExpr())
+    return AsElementalStrategy(loc, builder, declaredType, extent, lengths);
 
   if (analysis.anyImpliedDo)
     return InlinedTempStrategy(loc, builder, declaredType, extent, lengths);
