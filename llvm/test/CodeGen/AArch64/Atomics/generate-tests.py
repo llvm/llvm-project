@@ -112,7 +112,6 @@ class Feature(enum.Flag):
     lse2 = enum.auto()  # FEAT_LSE2
     outline_atomics = enum.auto()  # -moutline-atomics
     rcpc3 = enum.auto()  # FEAT_LSE2 + FEAT_LRCPC3
-    lse128 = enum.auto()  # FEAT_LSE128
     lse2_lse128 = enum.auto()  # FEAT_LSE2 + FEAT_LSE128
 
     @property
