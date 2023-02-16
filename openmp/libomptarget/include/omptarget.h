@@ -17,6 +17,7 @@
 #include <cstdint>
 #include <deque>
 #include <functional>
+#include <optional>
 #include <stddef.h>
 #include <stdint.h>
 #include <type_traits>
@@ -247,8 +248,8 @@ public:
   /// functions will be executed once and unregistered afterwards.
   ///
   /// \returns true if there is no pending asynchronous operations, false
-  /// otherwise.
-  bool isDone();
+  /// otherwise. We return a null value in the case of an error from the plugin.
+  std::optional<bool> isDone();
 
   /// Add a new post-processing function to be executed after synchronization.
   ///
