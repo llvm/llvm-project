@@ -42,14 +42,14 @@ def dumpbin_get_symbols(lib):
     process.wait()
 
 def nm_get_symbols(lib):
+    # -P means the output is in portable format, and -g means we only get global
+    # symbols.
+    cmd = ['nm','-P','-g']
     if sys.platform.startswith('aix'):
-        process = subprocess.Popen(['nm','-P','-Xany','-C','-p',lib], bufsize=1,
-                                   stdout=subprocess.PIPE, stdin=subprocess.PIPE,
-                                   universal_newlines=True)
-    else:
-        process = subprocess.Popen(['nm','-P',lib], bufsize=1,
-                                   stdout=subprocess.PIPE, stdin=subprocess.PIPE,
-                                   universal_newlines=True)
+        cmd += ['-Xany','-C','-p']
+    process = subprocess.Popen(cmd+[lib], bufsize=1,
+                               stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+                               universal_newlines=True)
     process.stdin.close()
     for line in process.stdout:
         # Look for external symbols that are defined in some section, i.e.
@@ -59,7 +59,7 @@ def nm_get_symbols(lib):
         # The -P flag displays the size field for symbols only when applicable,
         # so the last field is optional. There's no space after the value field,
         # but \s+ match newline also, so \s+\S* will match the optional size field.
-        match = re.match("^(\S+)\s+[^AabdtU]\s+\S+\s+\S*$", line)
+        match = re.match("^(\S+)\s+[^AU]\s+\S+\s+\S*$", line)
         if match:
             yield (match.group(1), True)
         # Look for undefined symbols, which have only name and type (which is U).
