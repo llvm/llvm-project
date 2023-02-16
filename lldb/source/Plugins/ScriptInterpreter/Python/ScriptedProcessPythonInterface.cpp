@@ -122,25 +122,6 @@ StructuredData::DictionarySP ScriptedProcessPythonInterface::GetThreadsInfo() {
   return dict;
 }
 
-StructuredData::DictionarySP
-ScriptedProcessPythonInterface::GetThreadWithID(lldb::tid_t tid) {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("get_thread_with_id", error, tid);
-
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
-    return {};
-
-  StructuredData::DictionarySP dict{obj->GetAsDictionary()};
-
-  return dict;
-}
-
-StructuredData::DictionarySP
-ScriptedProcessPythonInterface::GetRegistersForThread(lldb::tid_t tid) {
-  // TODO: Implement
-  return {};
-}
-
 lldb::DataExtractorSP ScriptedProcessPythonInterface::ReadMemoryAtAddress(
     lldb::addr_t address, size_t size, Status &error) {
   Status py_error;
