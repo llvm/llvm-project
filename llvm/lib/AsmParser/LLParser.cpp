@@ -1141,7 +1141,7 @@ bool LLParser::parseAliasOrIFunc(const std::string &Name, LocTy NameLoc,
 
   // Insert into the module, we know its name won't collide now.
   if (IsAlias)
-    M->getAliasList().push_back(GA.release());
+    M->insertAlias(GA.release());
   else
     M->getIFuncList().push_back(GI.release());
   assert(GV->getName() == Name && "Should not be a name conflict!");
