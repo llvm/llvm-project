@@ -74,10 +74,19 @@ class alignas(8) Operation final
       private llvm::TrailingObjects<Operation, detail::OperandStorage,
                                     BlockOperand, Region, OpOperand> {
 public:
-  /// Create a new Operation with the specific fields.
+  /// Create a new Operation with the specific fields. This constructor
+  /// populates the provided attribute list with default attributes if
+  /// necessary.
   static Operation *create(Location location, OperationName name,
                            TypeRange resultTypes, ValueRange operands,
                            NamedAttrList &&attributes, BlockRange successors,
+                           unsigned numRegions);
+
+  /// Create a new Operation with the specific fields. This constructor uses an
+  /// existing attribute dictionary to avoid uniquing a list of attributes.
+  static Operation *create(Location location, OperationName name,
+                           TypeRange resultTypes, ValueRange operands,
+                           DictionaryAttr attributes, BlockRange successors,
                            unsigned numRegions);
 
   /// Create a new Operation from the fields stored in `state`.
@@ -506,9 +515,9 @@ public:
 
   /// Sets default attributes on unset attributes.
   void populateDefaultAttrs() {
-      NamedAttrList attrs(getAttrDictionary());
-      name.populateDefaultAttrs(attrs);
-      setAttrs(attrs.getDictionary(getContext()));
+    NamedAttrList attrs(getAttrDictionary());
+    name.populateDefaultAttrs(attrs);
+    setAttrs(attrs.getDictionary(getContext()));
   }
 
   //===--------------------------------------------------------------------===//
