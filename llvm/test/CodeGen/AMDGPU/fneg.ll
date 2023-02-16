@@ -188,8 +188,8 @@ define i16 @v_fneg_i16(i16 %in) {
 }
 
 ; FUNC-LABEL: {{^}}s_fneg_i16_fp_use:
-; SI: v_cvt_f32_f16_e64 [[CVT0:v[0-9]+]], -s{{[0-9]+}}
-; SI: v_add_f32_e32 [[ADD:v[0-9]+]], 2.0, [[CVT0]]
+; SI: v_cvt_f32_f16_e32 [[CVT0:v[0-9]+]], s{{[0-9]+}}
+; SI: v_sub_f32_e32 [[ADD:v[0-9]+]], 2.0, [[CVT0]]
 ; SI: v_cvt_f16_f32_e32 [[CVT1:v[0-9]+]], [[ADD]]
 
 ; VI: s_load_dword [[IN:s[0-9]+]]
@@ -204,8 +204,8 @@ define amdgpu_kernel void @s_fneg_i16_fp_use(ptr addrspace(1) %out, i16 %in) {
 
 ; FUNC-LABEL: {{^}}v_fneg_i16_fp_use:
 ; SI: s_waitcnt
-; SI-NEXT: v_cvt_f32_f16_e64 v0, -v0
-; SI-NEXT: v_add_f32_e32 v0, 2.0, v0
+; SI-NEXT: v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT: v_sub_f32_e32 v0, 2.0, v0
 ; SI-NEXT: s_setpc_b64
 
 ; VI: s_waitcnt
@@ -257,8 +257,10 @@ define <2 x i16> @v_fneg_v2i16(<2 x i16> %in) {
 
 ; FUNC-LABEL: {{^}}s_fneg_v2i16_fp_use:
 ; SI: s_lshr_b32 s3, s2, 16
-; SI: v_cvt_f32_f16_e64 v0, -s3
-; SI: v_cvt_f32_f16_e64 v1, -s2
+; SI: v_cvt_f32_f16_e32 v0, s3
+; SI: v_cvt_f32_f16_e32 v1, s2
+; SI: v_sub_f32_e32 v0, 2.0, v0
+; SI: v_sub_f32_e32 v1, 2.0, v1
 
 ; VI: s_lshr_b32 s5, s4, 16
 ; VI: s_xor_b32 s5, s5, 0x8000
@@ -278,10 +280,10 @@ define amdgpu_kernel void @s_fneg_v2i16_fp_use(ptr addrspace(1) %out, i32 %arg) 
 
 ; FUNC-LABEL: {{^}}v_fneg_v2i16_fp_use:
 ; SI: v_lshrrev_b32_e32 v1, 16, v0
-; SI: v_cvt_f32_f16_e64 v0, -v0
-; SI: v_cvt_f32_f16_e64 v1, -v1
-; SI: v_add_f32_e32 v0, 2.0, v0
-; SI: v_add_f32_e32 v1, 2.0, v1
+; SI: v_cvt_f32_f16_e32 v0, v0
+; SI: v_cvt_f32_f16_e32 v1, v1
+; SI: v_sub_f32_e32 v0, 2.0, v0
+; SI: v_sub_f32_e32 v1, 2.0, v1
 
 ; VI: s_waitcnt
 ; VI: v_mov_b32_e32 v1, 0x4000

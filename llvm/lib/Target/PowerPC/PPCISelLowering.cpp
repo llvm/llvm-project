@@ -17638,15 +17638,6 @@ bool PPCTargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   return getTargetMachine().shouldAssumeDSOLocal(*Caller->getParent(), Callee);
 }
 
-bool PPCTargetLowering::hasBitPreservingFPLogic(EVT VT) const {
-  if (!Subtarget.hasVSX())
-    return false;
-  if (Subtarget.hasP9Vector() && VT == MVT::f128)
-    return true;
-  return VT == MVT::f32 || VT == MVT::f64 ||
-    VT == MVT::v4f32 || VT == MVT::v2f64;
-}
-
 bool PPCTargetLowering::
 isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const {
   const Value *Mask = AndI.getOperand(1);

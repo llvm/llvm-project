@@ -1525,12 +1525,6 @@ bool RISCVTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
   return Index == 0 || Index == ResElts;
 }
 
-bool RISCVTargetLowering::hasBitPreservingFPLogic(EVT VT) const {
-  return (VT == MVT::f16 && Subtarget.hasStdExtZfhOrZfhmin()) ||
-         (VT == MVT::f32 && Subtarget.hasStdExtF()) ||
-         (VT == MVT::f64 && Subtarget.hasStdExtD());
-}
-
 MVT RISCVTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
                                                       CallingConv::ID CC,
                                                       EVT VT) const {
