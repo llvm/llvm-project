@@ -12,16 +12,17 @@ define <2 x half> @select_v2f16(<2 x half> %op1, <2 x half> %op2, <2 x i1> %mask
 ; CHECK-NEXT:    mov z3.s, z2.s[1]
 ; CHECK-NEXT:    fmov w8, s2
 ; CHECK-NEXT:    fmov w9, s3
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    strh w8, [sp, #8]
 ; CHECK-NEXT:    strh w9, [sp, #10]
 ; CHECK-NEXT:    ldr d2, [sp, #8]
 ; CHECK-NEXT:    lsl z2.h, z2.h, #15
 ; CHECK-NEXT:    asr z2.h, z2.h, #15
-; CHECK-NEXT:    bic z1.d, z1.d, z2.d
-; CHECK-NEXT:    and z0.d, z0.d, z2.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    and z2.h, z2.h, #0x1
+; CHECK-NEXT:    cmpne p0.h, p0/z, z2.h, #0
+; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
@@ -33,13 +34,14 @@ define <4 x half> @select_v4f16(<4 x half> %op1, <4 x half> %op2, <4 x i1> %mask
 ; CHECK-LABEL: select_v4f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $z2
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    lsl z2.h, z2.h, #15
 ; CHECK-NEXT:    asr z2.h, z2.h, #15
-; CHECK-NEXT:    bic z1.d, z1.d, z2.d
-; CHECK-NEXT:    and z0.d, z0.d, z2.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    and z2.h, z2.h, #0x1
+; CHECK-NEXT:    cmpne p0.h, p0/z, z2.h, #0
+; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %sel = select <4 x i1> %mask, <4 x half> %op1, <4 x half> %op2
@@ -50,14 +52,15 @@ define <8 x half> @select_v8f16(<8 x half> %op1, <8 x half> %op2, <8 x i1> %mask
 ; CHECK-LABEL: select_v8f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $z2
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    uunpklo z2.h, z2.b
 ; CHECK-NEXT:    lsl z2.h, z2.h, #15
 ; CHECK-NEXT:    asr z2.h, z2.h, #15
-; CHECK-NEXT:    bic z1.d, z1.d, z2.d
-; CHECK-NEXT:    and z0.d, z0.d, z2.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    and z2.h, z2.h, #0x1
+; CHECK-NEXT:    cmpne p0.h, p0/z, z2.h, #0
+; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %sel = select <8 x i1> %mask, <8 x half> %op1, <8 x half> %op2
@@ -69,17 +72,11 @@ define void @select_v16f16(ptr %a, ptr %b) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    ldp q3, q2, [x1]
-; CHECK-NEXT:    fcmeq p1.h, p0/z, z0.h, z2.h
-; CHECK-NEXT:    fcmeq p0.h, p0/z, z1.h, z3.h
-; CHECK-NEXT:    mov z4.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov z5.h, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    bic z2.d, z2.d, z4.d
-; CHECK-NEXT:    bic z3.d, z3.d, z5.d
-; CHECK-NEXT:    and z1.d, z1.d, z5.d
-; CHECK-NEXT:    and z0.d, z0.d, z4.d
-; CHECK-NEXT:    orr z1.d, z1.d, z3.d
-; CHECK-NEXT:    orr z0.d, z0.d, z2.d
+; CHECK-NEXT:    ldp q2, q3, [x1]
+; CHECK-NEXT:    fcmeq p1.h, p0/z, z1.h, z2.h
+; CHECK-NEXT:    sel z1.h, p1, z1.h, z2.h
+; CHECK-NEXT:    fcmeq p0.h, p0/z, z0.h, z3.h
+; CHECK-NEXT:    sel z0.h, p0, z0.h, z3.h
 ; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
@@ -94,13 +91,14 @@ define <2 x float> @select_v2f32(<2 x float> %op1, <2 x float> %op2, <2 x i1> %m
 ; CHECK-LABEL: select_v2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $z2
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    lsl z2.s, z2.s, #31
 ; CHECK-NEXT:    asr z2.s, z2.s, #31
-; CHECK-NEXT:    bic z1.d, z1.d, z2.d
-; CHECK-NEXT:    and z0.d, z0.d, z2.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    and z2.s, z2.s, #0x1
+; CHECK-NEXT:    cmpne p0.s, p0/z, z2.s, #0
+; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %sel = select <2 x i1> %mask, <2 x float> %op1, <2 x float> %op2
@@ -111,14 +109,15 @@ define <4 x float> @select_v4f32(<4 x float> %op1, <4 x float> %op2, <4 x i1> %m
 ; CHECK-LABEL: select_v4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $z2
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    uunpklo z2.s, z2.h
 ; CHECK-NEXT:    lsl z2.s, z2.s, #31
 ; CHECK-NEXT:    asr z2.s, z2.s, #31
-; CHECK-NEXT:    bic z1.d, z1.d, z2.d
-; CHECK-NEXT:    and z0.d, z0.d, z2.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    and z2.s, z2.s, #0x1
+; CHECK-NEXT:    cmpne p0.s, p0/z, z2.s, #0
+; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %sel = select <4 x i1> %mask, <4 x float> %op1, <4 x float> %op2
@@ -130,17 +129,11 @@ define void @select_v8f32(ptr %a, ptr %b) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    ldp q3, q2, [x1]
-; CHECK-NEXT:    fcmeq p1.s, p0/z, z0.s, z2.s
-; CHECK-NEXT:    fcmeq p0.s, p0/z, z1.s, z3.s
-; CHECK-NEXT:    mov z4.s, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov z5.s, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    bic z2.d, z2.d, z4.d
-; CHECK-NEXT:    bic z3.d, z3.d, z5.d
-; CHECK-NEXT:    and z1.d, z1.d, z5.d
-; CHECK-NEXT:    and z0.d, z0.d, z4.d
-; CHECK-NEXT:    orr z1.d, z1.d, z3.d
-; CHECK-NEXT:    orr z0.d, z0.d, z2.d
+; CHECK-NEXT:    ldp q2, q3, [x1]
+; CHECK-NEXT:    fcmeq p1.s, p0/z, z1.s, z2.s
+; CHECK-NEXT:    sel z1.s, p1, z1.s, z2.s
+; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, z3.s
+; CHECK-NEXT:    sel z0.s, p0, z0.s, z3.s
 ; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x float>, ptr %a
@@ -174,14 +167,15 @@ define <2 x double> @select_v2f64(<2 x double> %op1, <2 x double> %op2, <2 x i1>
 ; CHECK-LABEL: select_v2f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $z2
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    uunpklo z2.d, z2.s
 ; CHECK-NEXT:    lsl z2.d, z2.d, #63
 ; CHECK-NEXT:    asr z2.d, z2.d, #63
-; CHECK-NEXT:    bic z1.d, z1.d, z2.d
-; CHECK-NEXT:    and z0.d, z0.d, z2.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    and z2.d, z2.d, #0x1
+; CHECK-NEXT:    cmpne p0.d, p0/z, z2.d, #0
+; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %sel = select <2 x i1> %mask, <2 x double> %op1, <2 x double> %op2
@@ -193,17 +187,11 @@ define void @select_v4f64(ptr %a, ptr %b) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ldp q3, q2, [x1]
-; CHECK-NEXT:    fcmeq p1.d, p0/z, z0.d, z2.d
-; CHECK-NEXT:    fcmeq p0.d, p0/z, z1.d, z3.d
-; CHECK-NEXT:    mov z4.d, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov z5.d, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    bic z2.d, z2.d, z4.d
-; CHECK-NEXT:    bic z3.d, z3.d, z5.d
-; CHECK-NEXT:    and z1.d, z1.d, z5.d
-; CHECK-NEXT:    and z0.d, z0.d, z4.d
-; CHECK-NEXT:    orr z1.d, z1.d, z3.d
-; CHECK-NEXT:    orr z0.d, z0.d, z2.d
+; CHECK-NEXT:    ldp q2, q3, [x1]
+; CHECK-NEXT:    fcmeq p1.d, p0/z, z1.d, z2.d
+; CHECK-NEXT:    sel z1.d, p1, z1.d, z2.d
+; CHECK-NEXT:    fcmeq p0.d, p0/z, z0.d, z3.d
+; CHECK-NEXT:    sel z0.d, p0, z0.d, z3.d
 ; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x double>, ptr %a

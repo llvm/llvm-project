@@ -85,6 +85,7 @@ private:
     chrono::seconds __s_;
     precision       __f_;
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(hh_mm_ss);
 
 _LIBCPP_HIDE_FROM_ABI constexpr bool is_am(const hours& __h) noexcept { return __h >= hours( 0) && __h < hours(12); }
 _LIBCPP_HIDE_FROM_ABI constexpr bool is_pm(const hours& __h) noexcept { return __h >= hours(12) && __h < hours(24); }

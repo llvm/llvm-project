@@ -19,6 +19,7 @@
 #include <format>
 
 #include <cassert>
+#include <cstring>
 #include <string_view>
 
 #include "test_macros.h"
@@ -39,8 +40,7 @@ void test_exception() {
       context.check_arg_id(0);
       assert(false);
     } catch ([[maybe_unused]] const std::format_error& e) {
-      LIBCPP_ASSERT(strcmp(e.what(), "Using manual argument numbering in automatic "
-                                     "argument numbering mode") == 0);
+      LIBCPP_ASSERT(std::strcmp(e.what(), "Using manual argument numbering in automatic argument numbering mode") == 0);
       return;
     }
     assert(false);

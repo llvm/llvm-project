@@ -6001,10 +6001,6 @@ bool X86TargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
   return Subtarget.hasLZCNT();
 }
 
-bool X86TargetLowering::hasBitPreservingFPLogic(EVT VT) const {
-  return VT == MVT::f32 || VT == MVT::f64 || VT.isVector();
-}
-
 bool X86TargetLowering::ShouldShrinkFPConstant(EVT VT) const {
   // Don't shrink FP constpool if SSE2 is available since cvtss2sd is more
   // expensive than a straight movsd. On the other hand, it's important to

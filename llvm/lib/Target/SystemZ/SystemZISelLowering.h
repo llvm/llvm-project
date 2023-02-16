@@ -1,3 +1,4 @@
+
 //===-- SystemZISelLowering.h - SystemZ DAG lowering interface --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -423,10 +424,6 @@ public:
   }
   bool isCheapToSpeculateCtlz(Type *) const override { return true; }
   bool preferZeroCompareBranch() const override { return true; }
-  bool hasBitPreservingFPLogic(EVT VT) const override {
-    EVT ScVT = VT.getScalarType();
-    return ScVT == MVT::f32 || ScVT == MVT::f64 || ScVT == MVT::f128;
-  }
   bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override {
     ConstantInt* Mask = dyn_cast<ConstantInt>(AndI.getOperand(1));
     return Mask && Mask->getValue().isIntN(16);
