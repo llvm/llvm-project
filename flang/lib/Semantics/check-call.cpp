@@ -98,34 +98,48 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
   }
 }
 
-// When a scalar CHARACTER actual argument is known to be short,
-// we extend it on the right with spaces and a warning if it is an
-// expression, and emit an error if it is a variable.
+// When a CHARACTER actual argument is known to be short,
+// we extend it on the right with spaces and a warning if
+// possible.  When it is long, and not required to be equal,
+// the usage conforms to the standard and no warning is needed.
 static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
-    const characteristics::TypeAndShape &dummyType,
+    const characteristics::DummyDataObject &dummy,
     characteristics::TypeAndShape &actualType,
     evaluate::FoldingContext &context, parser::ContextualMessages &messages) {
-  if (dummyType.type().category() == TypeCategory::Character &&
+  if (dummy.type.type().category() == TypeCategory::Character &&
       actualType.type().category() == TypeCategory::Character &&
-      dummyType.type().kind() == actualType.type().kind() &&
-      GetRank(actualType.shape()) == 0) {
-    if (dummyType.LEN() && actualType.LEN()) {
-      auto dummyLength{ToInt64(Fold(context, common::Clone(*dummyType.LEN())))};
+      dummy.type.type().kind() == actualType.type().kind()) {
+    if (dummy.type.LEN() && actualType.LEN()) {
+      auto dummyLength{
+          ToInt64(Fold(context, common::Clone(*dummy.type.LEN())))};
       auto actualLength{
           ToInt64(Fold(context, common::Clone(*actualType.LEN())))};
-      if (dummyLength && actualLength && *actualLength < *dummyLength) {
-        if (evaluate::IsVariable(actual)) {
+      if (dummyLength && actualLength && *actualLength != *dummyLength) {
+        if (dummy.attrs.test(
+                characteristics::DummyDataObject::Attr::Allocatable) ||
+            dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer) ||
+            dummy.type.attrs().test(
+                characteristics::TypeAndShape::Attr::AssumedRank) ||
+            dummy.type.attrs().test(
+                characteristics::TypeAndShape::Attr::AssumedShape)) {
+          // See 15.5.2.4 paragraph 4., 15.5.2.5.
           messages.Say(
-              "Actual argument variable length '%jd' is less than expected length '%jd'"_err_en_US,
+              "Actual argument variable length '%jd' does not match the expected length '%jd'"_err_en_US,
               *actualLength, *dummyLength);
-        } else {
-          messages.Say(
-              "Actual argument expression length '%jd' is less than expected length '%jd'"_warn_en_US,
-              *actualLength, *dummyLength);
-          auto converted{ConvertToType(dummyType.type(), std::move(actual))};
-          CHECK(converted);
-          actual = std::move(*converted);
-          actualType.set_LEN(SubscriptIntExpr{*dummyLength});
+        } else if (*actualLength < *dummyLength) {
+          if (evaluate::IsVariable(actual)) {
+            messages.Say(
+                "Actual argument variable length '%jd' is less than expected length '%jd'"_warn_en_US,
+                *actualLength, *dummyLength);
+          } else {
+            messages.Say(
+                "Actual argument expression length '%jd' is less than expected length '%jd'"_warn_en_US,
+                *actualLength, *dummyLength);
+            auto converted{ConvertToType(dummy.type.type(), std::move(actual))};
+            CHECK(converted);
+            actual = std::move(*converted);
+            actualType.set_LEN(SubscriptIntExpr{*dummyLength});
+          }
         }
       }
     }
@@ -180,7 +194,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
 
   // Basic type & rank checking
   parser::ContextualMessages &messages{context.messages()};
-  CheckCharacterActual(actual, dummy.type, actualType, context, messages);
+  CheckCharacterActual(actual, dummy, actualType, context, messages);
   if (allowActualArgumentConversions) {
     ConvertIntegerActual(actual, dummy.type, actualType, messages);
   }
@@ -1154,7 +1168,7 @@ bool CheckArguments(const characteristics::Procedure &proc,
     auto buffer{CheckExplicitInterface(
         proc, actuals, context, &scope, intrinsic, true)};
     if (!buffer.empty()) {
-      if (treatingExternalAsImplicit && !buffer.empty()) {
+      if (treatingExternalAsImplicit) {
         if (auto *msg{messages.Say(
                 "If the procedure's interface were explicit, this reference would be in error"_warn_en_US)}) {
           buffer.AttachTo(*msg, parser::Severity::Because);
