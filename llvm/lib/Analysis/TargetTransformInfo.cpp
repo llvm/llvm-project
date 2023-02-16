@@ -1170,10 +1170,6 @@ TargetTransformInfo::getVPLegalizationStrategy(const VPIntrinsic &VPI) const {
   return TTIImpl->getVPLegalizationStrategy(VPI);
 }
 
-bool TargetTransformInfo::hasArmWideBranch(bool Thumb) const {
-  return TTIImpl->hasArmWideBranch(Thumb);
-}
-
 bool TargetTransformInfo::shouldExpandReduction(const IntrinsicInst *II) const {
   return TTIImpl->shouldExpandReduction(II);
 }
