@@ -399,8 +399,7 @@ template <class CharT, class TestFunction, class ExceptionTest>
 void test_bool(TestFunction check, ExceptionTest check_exception) {
   std::array input{true, true, false};
   test_bool<CharT>(check, check_exception, std::queue{input.begin(), input.end()});
-  // TODO FMT Use std::vector<bool> after it has been implemented.
-  test_bool<CharT>(check, check_exception, std::priority_queue<bool, std::deque<bool>>{input.begin(), input.end()});
+  test_bool<CharT>(check, check_exception, std::priority_queue{input.begin(), input.end()});
   test_bool<CharT>(check, check_exception, std::stack{input.begin(), input.end()});
 }
 
