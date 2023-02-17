@@ -81,22 +81,33 @@ __substitute_arg_id(basic_format_arg<_Context> __format_arg) {
   return _VSTD::__visit_format_arg(
       [](auto __arg) -> uint32_t {
         using _Type = decltype(__arg);
-        if constexpr (integral<_Type>) {
+        if constexpr (same_as<_Type, monostate>)
+          std::__throw_format_error("Argument index out of bounds");
+
+        // [format.string.std]/8
+        // If { arg-idopt } is used in a width or precision, the value of the
+        // corresponding formatting argument is used in its place. If the
+        // corresponding formatting argument is not of standard signed or unsigned
+        // integer type, or its value is negative for precision or non-positive for
+        // width, an exception of type format_error is thrown.
+        //
+        // When an integral is used in a format function, it is stored as one of
+        // the types checked below. Other integral types are promoted. For example,
+        // a signed char is stored as an int.
+        if constexpr (same_as<_Type, int> || same_as<_Type, unsigned int> || //
+                      same_as<_Type, long long> || same_as<_Type, unsigned long long>) {
           if constexpr (signed_integral<_Type>) {
             if (__arg < 0)
               std::__throw_format_error("A format-spec arg-id replacement shouldn't have a negative value");
           }
 
           using _CT = common_type_t<_Type, decltype(__format::__number_max)>;
-          if (static_cast<_CT>(__arg) >
-              static_cast<_CT>(__format::__number_max))
+          if (static_cast<_CT>(__arg) > static_cast<_CT>(__format::__number_max))
             std::__throw_format_error("A format-spec arg-id replacement exceeds the maximum supported value");
 
           return __arg;
-        } else if constexpr (same_as<_Type, monostate>)
-          std::__throw_format_error("Argument index out of bounds");
-        else
-          std::__throw_format_error("A format-spec arg-id replacement argument isn't an integral type");
+        } else
+          std::__throw_format_error("Replacement argument isn't a standard signed or unsigned integer type");
       },
       __format_arg);
 }
