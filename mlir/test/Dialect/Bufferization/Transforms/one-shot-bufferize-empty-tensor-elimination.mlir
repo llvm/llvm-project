@@ -151,7 +151,7 @@ func.func @parallel_insert_slice(
   %f0 = arith.constant 0.0: f32
   %c512 = arith.constant 512 : index
 
-  %r1 = scf.foreach_thread (%iv) in (%c512) shared_outs(%o = %t) -> (tensor<?xf32>) {
+  %r1 = scf.forall (%iv) in (%c512) shared_outs(%o = %t) -> (tensor<?xf32>) {
     // tensor.empty itself does not alloc but forwards to the insert_slice.
     // EmptyTensorOpElimination replaces the tensor.empty with an inplace
     // extract_slice.
@@ -162,7 +162,7 @@ func.func @parallel_insert_slice(
     %f = linalg.fill ins(%f0 : f32) outs(%a : tensor<?xf32>) -> tensor<?xf32>
 
     // Self-copy canonicalizes away later.
-    scf.foreach_thread.perform_concurrently {
+    scf.forall.in_parallel {
       tensor.parallel_insert_slice %f into %o[42][%sz][1]: tensor<?xf32> into tensor<?xf32>
     }
   }

@@ -108,23 +108,23 @@ func.func @scf_while_non_equiv_condition_and_body(%A: tensor<5xi1>,
 
 // -----
 
-// CHECK-LABEL: func @scf_foreach_thread_out_of_place(
+// CHECK-LABEL: func @scf_forall_out_of_place(
 //  CHECK-SAME:     %[[arg0:.*]]: tensor<100xf32>, %[[arg1:.*]]: tensor<100xf32>
-// CHECK-FUNC-LABEL: func @scf_foreach_thread_out_of_place(
-func.func @scf_foreach_thread_out_of_place(%in: tensor<100xf32>,
+// CHECK-FUNC-LABEL: func @scf_forall_out_of_place(
+func.func @scf_forall_out_of_place(%in: tensor<100xf32>,
                                            %out: tensor<100xf32>) {
   %c1 = arith.constant 1 : index
   %num_threads = arith.constant 100 : index
 
   // CHECK-FUNC-NOT: alloc_tensor
   // CHECK: %[[alloc:.*]] = bufferization.alloc_tensor() copy(%[[arg1]]) {bufferization.escape = [false]} : tensor<100xf32>
-  // CHECK: scf.foreach_thread {{.*}} shared_outs(%[[o:.*]] = %[[alloc]])
-  %result = scf.foreach_thread (%thread_idx) in (%num_threads) shared_outs(%o = %out) -> tensor<100xf32> {
+  // CHECK: scf.forall {{.*}} shared_outs(%[[o:.*]] = %[[alloc]])
+  %result = scf.forall (%thread_idx) in (%num_threads) shared_outs(%o = %out) -> tensor<100xf32> {
       // CHECK: tensor.extract_slice
-      // CHECK: scf.foreach_thread.perform_concurrently
+      // CHECK: scf.forall.in_parallel
       // CHECK: tensor.parallel_insert_slice %{{.*}} into %[[o]]
       %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
-      scf.foreach_thread.perform_concurrently {
+      scf.forall.in_parallel {
         tensor.parallel_insert_slice %1 into %o[%thread_idx][1][1] :
           tensor<1xf32> into tensor<100xf32>
       }
