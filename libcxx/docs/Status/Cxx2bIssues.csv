@@ -264,7 +264,7 @@
 "`3819 <https://wg21.link/LWG3819>`__","``reference_meows_from_temporary`` should not use ``is_meowible``","February 2023","","",""
 "`3821 <https://wg21.link/LWG3821>`__","``uses_allocator_construction_args`` should have overload for ``pair-like``","February 2023","","",""
 "`3834 <https://wg21.link/LWG3834>`__","Missing ``constexpr`` for ``std::intmax_t`` math functions in ``<cinttypes>``","February 2023","","",""
-"`3839 <https://wg21.link/LWG3839>`__","``range_formatter``'s ``set_separator``, ``set_brackets``, and ``underlying`` functions should be ``noexcept``","February 2023","","","|format|"
+"`3839 <https://wg21.link/LWG3839>`__","``range_formatter``'s ``set_separator``, ``set_brackets``, and ``underlying`` functions should be ``noexcept``","February 2023","|Complete|","17.0","|format|"
 "`3841 <https://wg21.link/LWG3841>`__","``<version>`` should not be ""all freestanding""","February 2023","","",""
 "`3842 <https://wg21.link/LWG3842>`__","Unclear wording for ``precision`` in ``chrono-format-spec``","February 2023","","","|format|"
 "`3848 <https://wg21.link/LWG3848>`__","``adjacent_view``, ``adjacent_transform_view`` and ``slide_view`` missing ``base`` accessor","February 2023","","","|ranges|"

@@ -41,17 +41,17 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp, class _CharT = char>
   requires same_as<remove_cvref_t<_Tp>, _Tp> && formattable<_Tp, _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT range_formatter {
-  _LIBCPP_HIDE_FROM_ABI constexpr void set_separator(basic_string_view<_CharT> __separator) {
+  _LIBCPP_HIDE_FROM_ABI constexpr void set_separator(basic_string_view<_CharT> __separator) noexcept {
     __separator_ = __separator;
   }
   _LIBCPP_HIDE_FROM_ABI constexpr void
-  set_brackets(basic_string_view<_CharT> __opening_bracket, basic_string_view<_CharT> __closing_bracket) {
+  set_brackets(basic_string_view<_CharT> __opening_bracket, basic_string_view<_CharT> __closing_bracket) noexcept {
     __opening_bracket_ = __opening_bracket;
     __closing_bracket_ = __closing_bracket;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr formatter<_Tp, _CharT>& underlying() { return __underlying_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr const formatter<_Tp, _CharT>& underlying() const { return __underlying_; }
+  _LIBCPP_HIDE_FROM_ABI constexpr formatter<_Tp, _CharT>& underlying() noexcept { return __underlying_; }
+  _LIBCPP_HIDE_FROM_ABI constexpr const formatter<_Tp, _CharT>& underlying() const noexcept { return __underlying_; }
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __parse_ctx) {
