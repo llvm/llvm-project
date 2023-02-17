@@ -66,6 +66,9 @@ enum FileType : unsigned {
   /// Text-based stub file (.tbd) version 4.0
   TBD_V4  = 1U <<  3,
 
+  /// Text-based stub file (.tbd) version 5.0
+  TBD_V5  = 1U <<  4,
+
   All     = ~0U,
 
   LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/All),
