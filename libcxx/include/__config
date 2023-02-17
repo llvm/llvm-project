@@ -50,6 +50,7 @@
 #    define _LIBCPP_FREESTANDING
 #  endif
 
+// NOLINTBEGIN(libcpp-cpp-version-check)
 #  ifndef _LIBCPP_STD_VER
 #    if __cplusplus <= 201103L
 #      define _LIBCPP_STD_VER 11
@@ -64,6 +65,7 @@
 #      define _LIBCPP_STD_VER 23
 #    endif
 #  endif // _LIBCPP_STD_VER
+// NOLINTEND(libcpp-cpp-version-check)
 
 #  if defined(__ELF__)
 #    define _LIBCPP_OBJECT_FORMAT_ELF 1
@@ -181,6 +183,7 @@
 #  define _LIBCPP_TOSTRING2(x) #x
 #  define _LIBCPP_TOSTRING(x) _LIBCPP_TOSTRING2(x)
 
+// NOLINTNEXTLINE(libcpp-cpp-version-check)
 #  if __cplusplus < 201103L
 #    define _LIBCPP_CXX03_LANG
 #  endif
