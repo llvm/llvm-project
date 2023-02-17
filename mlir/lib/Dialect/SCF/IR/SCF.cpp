@@ -1430,11 +1430,45 @@ struct DimOfForallOp : public OpRewritePattern<tensor::DimOp> {
     return success();
   }
 };
+
+class ForallOpControlOperandsFolder : public OpRewritePattern<ForallOp> {
+public:
+  using OpRewritePattern<ForallOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ForallOp op,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<OpFoldResult> mixedLowerBound(op.getMixedLowerBound());
+    SmallVector<OpFoldResult> mixedUpperBound(op.getMixedUpperBound());
+    SmallVector<OpFoldResult> mixedStep(op.getMixedStep());
+    if (failed(foldDynamicIndexList(rewriter, mixedLowerBound)) &&
+        failed(foldDynamicIndexList(rewriter, mixedUpperBound)) &&
+        failed(foldDynamicIndexList(rewriter, mixedStep)))
+      return failure();
+
+    SmallVector<Value> dynamicLowerBound, dynamicUpperBound, dynamicStep;
+    SmallVector<int64_t> staticLowerBound, staticUpperBound, staticStep;
+    dispatchIndexOpFoldResults(mixedLowerBound, dynamicLowerBound,
+                               staticLowerBound);
+    op.getDynamicLowerBoundMutable().assign(dynamicLowerBound);
+    op.setStaticLowerBound(staticLowerBound);
+
+    dispatchIndexOpFoldResults(mixedUpperBound, dynamicUpperBound,
+                               staticUpperBound);
+    op.getDynamicUpperBoundMutable().assign(dynamicUpperBound);
+    op.setStaticUpperBound(staticUpperBound);
+
+    dispatchIndexOpFoldResults(mixedStep, dynamicStep, staticStep);
+    op.getDynamicStepMutable().assign(dynamicStep);
+    op.setStaticStep(staticStep);
+    return success();
+  }
+};
+
 } // namespace
 
 void ForallOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.add<DimOfForallOp>(context);
+  results.add<DimOfForallOp, ForallOpControlOperandsFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//
