@@ -13,9 +13,6 @@ declare_args() {
   # Set this to the path to Android NDK r21. If set, cross compilation targeting
   # Android will be enabled.
   android_ndk_path = ""
-
-  # Set this to the path of the Win SDK. Only used for cross compilation. If set, cross compilation targeting Windows will be enabled.
-  win_sysroot = ""
 }
 
 declare_args() {
@@ -26,7 +23,3 @@ declare_args() {
   # Set this to true to link with LLD instead of the default linker.
   use_lld = clang_base_path != ""
 }
-
-assert(
-    !(host_os == "win" && win_sysroot != ""),
-    "win_sysroot should only be used for cross compilation, use sysroot on Windows")
