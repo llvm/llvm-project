@@ -1136,6 +1136,14 @@ public:
     return Value;
   }
 
+  /// Assuming this is an IEEE-754 NaN value, quiet its signaling bit.
+  /// This preserves the sign and payload bits.
+  APFloat makeQuiet() const {
+    APFloat Result(*this);
+    Result.getIEEE().makeQuiet();
+    return Result;
+  }
+
   opStatus convert(const fltSemantics &ToSemantics, roundingMode RM,
                    bool *losesInfo);
   opStatus convertToInteger(MutableArrayRef<integerPart> Input,
