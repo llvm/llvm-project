@@ -526,6 +526,10 @@ public:
   /// \p IntMinIsPoison is false.
   ConstantRange abs(bool IntMinIsPoison = false) const;
 
+  /// Calculate ctlz range. If \p ZeroIsPoison is set, the range is computed
+  /// ignoring a possible zero value contained in the input range.
+  ConstantRange ctlz(bool ZeroIsPoison = false) const;
+
   /// Represents whether an operation on the given constant range is known to
   /// always or never overflow.
   enum class OverflowResult {
