@@ -321,3 +321,35 @@ func.func private @_QPwork()
 // CHECK:        }
 // CHECK:        llvm.func @_QPwork() attributes {sym_visibility = "private"}
 // CHECK:      }
+
+// -----
+
+func.func @_QPs() {
+  %0 = fir.address_of(@_QFsEc) : !fir.ref<i32>
+  omp.atomic.update   %0 : !fir.ref<i32> {
+  ^bb0(%arg0: i32):
+    %c1_i32 = arith.constant 1 : i32
+    %1 = arith.addi %arg0, %c1_i32 : i32
+    omp.yield(%1 : i32)
+  }
+  return
+}
+fir.global internal @_QFsEc : i32 {
+  %c10_i32 = arith.constant 10 : i32
+  fir.has_value %c10_i32 : i32
+}
+
+// CHECK-LABEL:  llvm.func @_QPs() {
+// CHECK:    %[[GLOBAL_VAR:.*]] = llvm.mlir.addressof @[[GLOBAL:.*]] : !llvm.ptr<i32>
+// CHECK:    omp.atomic.update   %[[GLOBAL_VAR]] : !llvm.ptr<i32> {
+// CHECK:    ^bb0(%[[IN_VAL:.*]]: i32):
+// CHECK:      %[[CONST_1:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK:      %[[OUT_VAL:.*]] = llvm.add %[[IN_VAL]], %[[CONST_1]]  : i32
+// CHECK:      omp.yield(%[[OUT_VAL]] : i32)
+// CHECK:    }
+// CHECK:    llvm.return
+// CHECK:  }
+// CHECK:  llvm.mlir.global internal @[[GLOBAL]]() {{.*}} : i32 {
+// CHECK:    %[[INIT_10:.*]] = llvm.mlir.constant(10 : i32) : i32
+// CHECK:    llvm.return %[[INIT_10]] : i32
+// CHECK:  }

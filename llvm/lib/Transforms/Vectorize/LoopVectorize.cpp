@@ -1155,6 +1155,8 @@ struct ElementCountComparator {
 };
 using ElementCountSet = SmallSet<ElementCount, 16, ElementCountComparator>;
 
+using InstructionVFPair = std::pair<Instruction *, ElementCount>;
+
 /// LoopVectorizationCostModel - estimates the expected speedups due to
 /// vectorization.
 /// In many cases vectorization is not profitable. This can happen because of
@@ -1285,6 +1287,12 @@ public:
 
   /// Returns true if \p I is known to be uniform after vectorization.
   bool isUniformAfterVectorization(Instruction *I, ElementCount VF) const {
+    // Pseudo probe needs to be duplicated for each unrolled iteration and
+    // vector lane so that profiled loop trip count can be accurately
+    // accumulated instead of being under counted.
+    if (isa<PseudoProbeInst>(I))
+      return false;
+
     if (VF.isScalar())
       return true;
 
@@ -1651,7 +1659,6 @@ private:
   /// the factor width. If \p Invalid is not nullptr, this function
   /// will add a pair(Instruction*, ElementCount) to \p Invalid for
   /// each instruction that has an Invalid cost for the given VF.
-  using InstructionVFPair = std::pair<Instruction *, ElementCount>;
   VectorizationCostTy
   expectedCost(ElementCount VF,
                SmallVectorImpl<InstructionVFPair> *Invalid = nullptr);
@@ -5356,6 +5363,70 @@ bool LoopVectorizationCostModel::isMoreProfitable(
   return (CostA * EstimatedWidthB) < (CostB * EstimatedWidthA);
 }
 
+static void emitInvalidCostRemarks(SmallVector<InstructionVFPair> InvalidCosts,
+                                   OptimizationRemarkEmitter *ORE,
+                                   Loop *TheLoop) {
+  if (InvalidCosts.empty())
+    return;
+
+  // Emit a report of VFs with invalid costs in the loop.
+
+  // Group the remarks per instruction, keeping the instruction order from
+  // InvalidCosts.
+  std::map<Instruction *, unsigned> Numbering;
+  unsigned I = 0;
+  for (auto &Pair : InvalidCosts)
+    if (!Numbering.count(Pair.first))
+      Numbering[Pair.first] = I++;
+
+  // Sort the list, first on instruction(number) then on VF.
+  sort(InvalidCosts, [&Numbering](InstructionVFPair &A, InstructionVFPair &B) {
+    if (Numbering[A.first] != Numbering[B.first])
+      return Numbering[A.first] < Numbering[B.first];
+    ElementCountComparator ECC;
+    return ECC(A.second, B.second);
+  });
+
+  // For a list of ordered instruction-vf pairs:
+  //   [(load, vf1), (load, vf2), (store, vf1)]
+  // Group the instructions together to emit separate remarks for:
+  //   load  (vf1, vf2)
+  //   store (vf1)
+  auto Tail = ArrayRef<InstructionVFPair>(InvalidCosts);
+  auto Subset = ArrayRef<InstructionVFPair>();
+  do {
+    if (Subset.empty())
+      Subset = Tail.take_front(1);
+
+    Instruction *I = Subset.front().first;
+
+    // If the next instruction is different, or if there are no other pairs,
+    // emit a remark for the collated subset. e.g.
+    //   [(load, vf1), (load, vf2))]
+    // to emit:
+    //  remark: invalid costs for 'load' at VF=(vf, vf2)
+    if (Subset == Tail || Tail[Subset.size()].first != I) {
+      std::string OutString;
+      raw_string_ostream OS(OutString);
+      assert(!Subset.empty() && "Unexpected empty range");
+      OS << "Instruction with invalid costs prevented vectorization at VF=(";
+      for (const auto &Pair : Subset)
+        OS << (Pair.second == Subset.front().second ? "" : ", ") << Pair.second;
+      OS << "):";
+      if (auto *CI = dyn_cast<CallInst>(I))
+        OS << " call to " << CI->getCalledFunction()->getName();
+      else
+        OS << " " << I->getOpcodeName();
+      OS.flush();
+      reportVectorizationInfo(OutString, "InvalidCost", ORE, TheLoop, I);
+      Tail = Tail.drop_front(Subset.size());
+      Subset = {};
+    } else
+      // Grow the subset by one element
+      Subset = Tail.take_front(Subset.size() + 1);
+  } while (!Tail.empty());
+}
+
 VectorizationFactor LoopVectorizationCostModel::selectVectorizationFactor(
     const ElementCountSet &VFCandidates) {
   InstructionCost ExpectedCost = expectedCost(ElementCount::getFixed(1)).first;
@@ -5416,65 +5487,7 @@ VectorizationFactor LoopVectorizationCostModel::selectVectorizationFactor(
       ChosenFactor = Candidate;
   }
 
-  // Emit a report of VFs with invalid costs in the loop.
-  if (!InvalidCosts.empty()) {
-    // Group the remarks per instruction, keeping the instruction order from
-    // InvalidCosts.
-    std::map<Instruction *, unsigned> Numbering;
-    unsigned I = 0;
-    for (auto &Pair : InvalidCosts)
-      if (!Numbering.count(Pair.first))
-        Numbering[Pair.first] = I++;
-
-    // Sort the list, first on instruction(number) then on VF.
-    llvm::sort(InvalidCosts,
-               [&Numbering](InstructionVFPair &A, InstructionVFPair &B) {
-                 if (Numbering[A.first] != Numbering[B.first])
-                   return Numbering[A.first] < Numbering[B.first];
-                 ElementCountComparator ECC;
-                 return ECC(A.second, B.second);
-               });
-
-    // For a list of ordered instruction-vf pairs:
-    //   [(load, vf1), (load, vf2), (store, vf1)]
-    // Group the instructions together to emit separate remarks for:
-    //   load  (vf1, vf2)
-    //   store (vf1)
-    auto Tail = ArrayRef<InstructionVFPair>(InvalidCosts);
-    auto Subset = ArrayRef<InstructionVFPair>();
-    do {
-      if (Subset.empty())
-        Subset = Tail.take_front(1);
-
-      Instruction *I = Subset.front().first;
-
-      // If the next instruction is different, or if there are no other pairs,
-      // emit a remark for the collated subset. e.g.
-      //   [(load, vf1), (load, vf2))]
-      // to emit:
-      //  remark: invalid costs for 'load' at VF=(vf, vf2)
-      if (Subset == Tail || Tail[Subset.size()].first != I) {
-        std::string OutString;
-        raw_string_ostream OS(OutString);
-        assert(!Subset.empty() && "Unexpected empty range");
-        OS << "Instruction with invalid costs prevented vectorization at VF=(";
-        for (const auto &Pair : Subset)
-          OS << (Pair.second == Subset.front().second ? "" : ", ")
-             << Pair.second;
-        OS << "):";
-        if (auto *CI = dyn_cast<CallInst>(I))
-          OS << " call to " << CI->getCalledFunction()->getName();
-        else
-          OS << " " << I->getOpcodeName();
-        OS.flush();
-        reportVectorizationInfo(OutString, "InvalidCost", ORE, TheLoop, I);
-        Tail = Tail.drop_front(Subset.size());
-        Subset = {};
-      } else
-        // Grow the subset by one element
-        Subset = Tail.take_front(Subset.size() + 1);
-    } while (!Tail.empty());
-  }
+  emitInvalidCostRemarks(InvalidCosts, ORE, TheLoop);
 
   if (!EnableCondStoresVectorization && NumPredStores) {
     reportVectorizationFailure("There are conditional stores.",
@@ -8939,7 +8952,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
 
     // Introduce each ingredient into VPlan.
     // TODO: Model and preserve debug intrinsics in VPlan.
-    for (Instruction &I : BB->instructionsWithoutDebug()) {
+    for (Instruction &I : BB->instructionsWithoutDebug(false)) {
       Instruction *Instr = &I;
 
       // First filter out irrelevant instructions, to ensure no recipes are

@@ -937,6 +937,11 @@ Expected<bool> parseDependenceAnalysisPrinterOptions(StringRef Params) {
                                "DependenceAnalysisPrinter");
 }
 
+Expected<bool> parseSeparateConstOffsetFromGEPPassOptions(StringRef Params) {
+  return parseSinglePassOption(Params, "lower-gep",
+                               "SeparateConstOffsetFromGEP");
+}
+
 } // namespace
 
 /// Tests whether a pass name starts with a valid prefix for a default pipeline

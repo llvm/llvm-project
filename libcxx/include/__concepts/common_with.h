@@ -23,7 +23,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 // [concept.common]
 
@@ -43,7 +43,7 @@ concept common_with =
       add_lvalue_reference_t<const _Tp>,
       add_lvalue_reference_t<const _Up>>>;
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -96,6 +96,7 @@
 ; GCN-O0-NEXT:        Loop-Closed SSA Form Pass
 ; GCN-O0-NEXT:      DummyCGSCCPass
 ; GCN-O0-NEXT:      FunctionPass Manager
+; GCN-O0-NEXT:        Prepare callbr
 ; GCN-O0-NEXT:        Safe Stack instrumentation pass
 ; GCN-O0-NEXT:        Insert stack protectors
 ; GCN-O0-NEXT:        Dominator Tree Construction
@@ -293,6 +294,7 @@
 ; GCN-O1-NEXT:        Loop-Closed SSA Form Pass
 ; GCN-O1-NEXT:      DummyCGSCCPass
 ; GCN-O1-NEXT:      FunctionPass Manager
+; GCN-O1-NEXT:        Prepare callbr
 ; GCN-O1-NEXT:        Safe Stack instrumentation pass
 ; GCN-O1-NEXT:        Insert stack protectors
 ; GCN-O1-NEXT:        Dominator Tree Construction
@@ -595,6 +597,7 @@
 ; GCN-O1-OPTS-NEXT:        Loop-Closed SSA Form Pass
 ; GCN-O1-OPTS-NEXT:      DummyCGSCCPass
 ; GCN-O1-OPTS-NEXT:      FunctionPass Manager
+; GCN-O1-OPTS-NEXT:        Prepare callbr
 ; GCN-O1-OPTS-NEXT:        Safe Stack instrumentation pass
 ; GCN-O1-OPTS-NEXT:        Insert stack protectors
 ; GCN-O1-OPTS-NEXT:        Dominator Tree Construction
@@ -907,6 +910,7 @@
 ; GCN-O2-NEXT:      Analysis if a function is memory bound
 ; GCN-O2-NEXT:      DummyCGSCCPass
 ; GCN-O2-NEXT:      FunctionPass Manager
+; GCN-O2-NEXT:        Prepare callbr
 ; GCN-O2-NEXT:        Safe Stack instrumentation pass
 ; GCN-O2-NEXT:        Insert stack protectors
 ; GCN-O2-NEXT:        Dominator Tree Construction
@@ -1231,6 +1235,7 @@
 ; GCN-O3-NEXT:      Analysis if a function is memory bound
 ; GCN-O3-NEXT:      DummyCGSCCPass
 ; GCN-O3-NEXT:      FunctionPass Manager
+; GCN-O3-NEXT:        Prepare callbr
 ; GCN-O3-NEXT:        Safe Stack instrumentation pass
 ; GCN-O3-NEXT:        Insert stack protectors
 ; GCN-O3-NEXT:        Dominator Tree Construction

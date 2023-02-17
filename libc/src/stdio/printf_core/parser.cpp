@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// #define LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE 1 // This will be a compile flag.
+// #define LIBC_COPT_PRINTF_DISABLE_INDEX_MODE 1 // This will be a compile flag.
 
 #include "parser.h"
 
@@ -22,11 +22,11 @@
 namespace __llvm_libc {
 namespace printf_core {
 
-#ifndef LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
+#ifndef LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 #define GET_ARG_VAL_SIMPLEST(arg_type, index) get_arg_value<arg_type>(index)
 #else
 #define GET_ARG_VAL_SIMPLEST(arg_type, _) get_next_arg_value<arg_type>()
-#endif // LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
+#endif // LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 
 FormatSection Parser::get_next_section() {
   FormatSection section;
@@ -38,9 +38,9 @@ FormatSection Parser::get_next_section() {
     ++cur_pos;
     [[maybe_unused]] size_t conv_index = 0;
 
-#ifndef LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
+#ifndef LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
     conv_index = parse_index(&cur_pos);
-#endif // LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
+#endif // LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 
     section.flags = parse_flags(&cur_pos);
 
@@ -120,7 +120,7 @@ FormatSection Parser::get_next_section() {
         break;
       }
       break;
-#ifndef LLVM_LIBC_PRINTF_DISABLE_FLOAT
+#ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
     case ('f'):
     case ('F'):
     case ('e'):
@@ -137,10 +137,10 @@ FormatSection Parser::get_next_section() {
             cpp::bit_cast<fputil::FPBits<long double>::UIntType>(
                 GET_ARG_VAL_SIMPLEST(long double, conv_index));
       break;
-#endif // LLVM_LIBC_PRINTF_DISABLE_FLOAT
-#ifndef LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
+#endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
+#ifndef LIBC_COPT_PRINTF_DISABLE_WRITE_INT
     case ('n'):
-#endif // LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
+#endif // LIBC_COPT_PRINTF_DISABLE_WRITE_INT
     case ('p'):
     case ('s'):
       section.conv_val_ptr = GET_ARG_VAL_SIMPLEST(void *, conv_index);
@@ -233,7 +233,7 @@ LengthModifier Parser::parse_length_modifier(size_t *local_pos) {
 // INDEX MODE ONLY FUNCTIONS AFTER HERE:
 //----------------------------------------------------
 
-#ifndef LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
+#ifndef LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 
 size_t Parser::parse_index(size_t *local_pos) {
   if (internal::isdigit(str[*local_pos])) {
@@ -343,7 +343,7 @@ TypeDesc Parser::get_type_desc(size_t index) {
           break;
         }
         break;
-#ifndef LLVM_LIBC_PRINTF_DISABLE_FLOAT
+#ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
       case ('f'):
       case ('F'):
       case ('e'):
@@ -357,10 +357,10 @@ TypeDesc Parser::get_type_desc(size_t index) {
         else
           conv_size = type_desc_from_type<long double>();
         break;
-#endif // LLVM_LIBC_PRINTF_DISABLE_FLOAT
-#ifndef LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
+#endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
+#ifndef LIBC_COPT_PRINTF_DISABLE_WRITE_INT
       case ('n'):
-#endif // LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
+#endif // LIBC_COPT_PRINTF_DISABLE_WRITE_INT
       case ('p'):
       case ('s'):
         conv_size = type_desc_from_type<void *>();
@@ -403,13 +403,13 @@ void Parser::args_to_index(size_t index) {
       args_cur.next_var<uint32_t>();
     else if (cur_type_desc == type_desc_from_type<uint64_t>())
       args_cur.next_var<uint64_t>();
-#ifndef LLVM_LIBC_PRINTF_DISABLE_FLOAT
+#ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
     // Floating point numbers are stored separately from the other arguments.
     else if (cur_type_desc == type_desc_from_type<double>())
       args_cur.next_var<double>();
     else if (cur_type_desc == type_desc_from_type<long double>())
       args_cur.next_var<long double>();
-#endif // LLVM_LIBC_PRINTF_DISABLE_FLOAT
+#endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
     // pointers may be stored separately from normal values.
     else if (cur_type_desc == type_desc_from_type<void *>())
       args_cur.next_var<void *>();
@@ -420,7 +420,7 @@ void Parser::args_to_index(size_t index) {
   }
 }
 
-#endif // LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
+#endif // LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 
 } // namespace printf_core
 } // namespace __llvm_libc

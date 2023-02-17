@@ -283,7 +283,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   default:
     return make_error<JITLinkError>(
         "In graph " + G.getName() + ", section " + B.getSection().getName() +
-        "unsupported edge kind" + getEdgeKindName(E.getKind()));
+        " unsupported edge kind " + getEdgeKindName(E.getKind()));
   }
 
   return Error::success();

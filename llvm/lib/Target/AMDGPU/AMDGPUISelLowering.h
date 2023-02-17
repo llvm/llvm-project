@@ -99,6 +99,9 @@ protected:
                              SDValue RHS, DAGCombinerInfo &DCI) const;
   SDValue performSelectCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
+  TargetLowering::NegatibleCost
+  getConstantNegateCost(const ConstantFPSDNode *C) const;
+
   bool isConstantCostlierToNegate(SDValue N) const;
   SDValue performFNegCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFAbsCombine(SDNode *N, DAGCombinerInfo &DCI) const;

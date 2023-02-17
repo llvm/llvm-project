@@ -467,7 +467,7 @@ void __unlock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3) {
 
 #endif // _LIBCPP_CXX03_LANG
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class ..._Mutexes>
 class _LIBCPP_TEMPLATE_VIS scoped_lock;
 
@@ -544,7 +544,7 @@ private:
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(scoped_lock);
 
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 #endif // !_LIBCPP_HAS_NO_THREADS
 
 struct _LIBCPP_TEMPLATE_VIS once_flag;

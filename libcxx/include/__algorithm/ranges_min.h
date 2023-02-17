@@ -26,7 +26,7 @@
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
@@ -87,6 +87,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_STD_VER > 17 &&
+#endif // _LIBCPP_STD_VER >= 20 &&
 
 #endif // _LIBCPP___ALGORITHM_RANGES_MIN_H

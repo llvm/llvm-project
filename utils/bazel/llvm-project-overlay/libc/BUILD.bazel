@@ -292,6 +292,24 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_str_to_float",
+    hdrs = [
+        "src/__support/detailed_powers_of_ten.h",
+        "src/__support/high_precision_decimal.h",
+        "src/__support/str_to_float.h",
+    ],
+    deps = [
+        ":__support_builtin_wrappers",
+        ":__support_common",
+        ":__support_cpp_limits",
+        ":__support_ctype_utils",
+        ":__support_fputil_fp_bits",
+        ":__support_str_to_integer",
+        ":__support_uint128",
+    ],
+)
+
+libc_support_library(
     name = "__support_fputil_basic_operations",
     hdrs = ["src/__support/FPUtil/BasicOperations.h"],
     deps = [
@@ -1324,6 +1342,16 @@ libc_function(
 )
 
 libc_function(
+    name = "atof",
+    srcs = ["src/stdlib/atof.cpp"],
+    hdrs = ["src/stdlib/atof.h"],
+    deps = [
+        ":__support_common",
+        ":__support_str_to_float",
+    ],
+)
+
+libc_function(
     name = "bsearch",
     srcs = ["src/stdlib/bsearch.cpp"],
     hdrs = ["src/stdlib/bsearch.h"],
@@ -1381,6 +1409,36 @@ libc_function(
     ],
 )
 
+libc_function(
+    name = "strtof",
+    srcs = ["src/stdlib/strtof.cpp"],
+    hdrs = ["src/stdlib/strtof.h"],
+    deps = [
+        ":__support_common",
+        ":__support_str_to_float",
+    ],
+)
+
+libc_function(
+    name = "strtod",
+    srcs = ["src/stdlib/strtod.cpp"],
+    hdrs = ["src/stdlib/strtod.h"],
+    deps = [
+        ":__support_common",
+        ":__support_str_to_float",
+    ],
+)
+
+libc_function(
+    name = "strtold",
+    srcs = ["src/stdlib/strtold.cpp"],
+    hdrs = ["src/stdlib/strtold.h"],
+    deps = [
+        ":__support_common",
+        ":__support_str_to_float",
+    ],
+)
+
 ############################### string targets ###############################
 
 no_sanitize_features = [
@@ -1404,6 +1462,8 @@ libc_support_library(
         "src/string/memory_utils/bzero_implementations.h",
         "src/string/memory_utils/memcmp_implementations.h",
         "src/string/memory_utils/memcpy_implementations.h",
+        "src/string/memory_utils/aarch64/memcpy_implementations.h",
+        "src/string/memory_utils/x86_64/memcpy_implementations.h",
         "src/string/memory_utils/memmove_implementations.h",
         "src/string/memory_utils/memset_implementations.h",
         "src/string/memory_utils/strcmp_implementations.h",
@@ -1418,6 +1478,7 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_optimization",
+        ":__support_macros_properties_architectures",
         ":__support_macros_properties_cpu_features",
         ":libc_root",
     ],

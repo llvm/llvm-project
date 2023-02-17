@@ -488,7 +488,7 @@ struct __invoke_void_return_wrapper<_Ret, true>
     }
 };
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 
 // is_invocable
 
@@ -539,7 +539,7 @@ invoke(_Fn&& __f, _Args&&... __args)
     return _VSTD::__invoke(_VSTD::forward<_Fn>(__f), _VSTD::forward<_Args>(__args)...);
 }
 
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 
 #if _LIBCPP_STD_VER >= 23
 template <class _Result, class _Fn, class... _Args>

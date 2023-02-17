@@ -49,6 +49,11 @@
 // CHECK-NOT: __riscv_zcd {{.*$}}
 // CHECK-NOT: __riscv_zcf {{.*$}}
 // CHECK-NOT: __riscv_h {{.*$}}
+
+// RUN: %clang -target riscv32-unknown-linux-gnu -march=rv32i -x c -E -dM %s \
+// RUN: -o - | FileCheck %s
+// RUN: %clang -target riscv64-unknown-linux-gnu -march=rv64i -x c -E -dM %s \
+// RUN: -o - | FileCheck %s
 // CHECK: __riscv_i 2000000{{$}}
 
 // RUN: %clang -target riscv32-unknown-linux-gnu -march=rv32im -x c -E -dM %s \
@@ -489,3 +494,15 @@
 // RUN: %clang -target riscv32 -march=rv32izcf1p0 -menable-experimental-extensions \
 // RUN: -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-ZCF-EXT %s
 // CHECK-ZCF-EXT: __riscv_zcf 1000000{{$}}
+
+// RUN: %clang -target riscv32-unknown-linux-gnu -march=rv32izicsr2p0 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZICSR-EXT %s
+// RUN: %clang -target riscv64-unknown-linux-gnu -march=rv64izicsr2p0 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZICSR-EXT %s
+// CHECK-ZICSR-EXT: __riscv_zicsr 2000000{{$}}
+
+// RUN: %clang -target riscv32-unknown-linux-gnu -march=rv32izifencei2p0 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZIFENCEI-EXT %s
+// RUN: %clang -target riscv64-unknown-linux-gnu -march=rv64izifencei2p0 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZIFENCEI-EXT %s
+// CHECK-ZIFENCEI-EXT: __riscv_zifencei 2000000{{$}}

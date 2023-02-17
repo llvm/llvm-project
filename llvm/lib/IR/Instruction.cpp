@@ -139,8 +139,9 @@ Instruction *Instruction::getInsertionPointAfterDef() {
     InsertBB = II->getNormalDest();
     InsertPt = InsertBB->getFirstInsertionPt();
   } else if (auto *CB = dyn_cast<CallBrInst>(this)) {
-    InsertBB = CB->getDefaultDest();
-    InsertPt = InsertBB->getFirstInsertionPt();
+    // Def is available in multiple successors, there's no single dominating
+    // insertion point.
+    return nullptr;
   } else {
     assert(!isTerminator() && "Only invoke/callbr terminators return value");
     InsertBB = getParent();

@@ -602,12 +602,12 @@ struct UnrollTransposePattern : public OpRewritePattern<vector::TransposeOp> {
 
   LogicalResult matchAndRewrite(vector::TransposeOp transposeOp,
                                 PatternRewriter &rewriter) const override {
-    if (transposeOp.getResultType().getRank() == 0)
+    if (transposeOp.getResultVectorType().getRank() == 0)
       return failure();
     auto targetShape = getTargetShape(options, transposeOp);
     if (!targetShape)
       return failure();
-    auto originalVectorType = transposeOp.getResultType();
+    auto originalVectorType = transposeOp.getResultVectorType();
     SmallVector<int64_t> strides(targetShape->size(), 1);
     Location loc = transposeOp.getLoc();
     ArrayRef<int64_t> originalSize = originalVectorType.getShape();

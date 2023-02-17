@@ -16,8 +16,7 @@ define half @Const0() {
 ;
 ; CHECK-NOFP16-LABEL: Const0:
 ; CHECK-NOFP16:       // %bb.0: // %entry
-; CHECK-NOFP16-NEXT:    adrp x8, .LCPI0_0
-; CHECK-NOFP16-NEXT:    ldr h0, [x8, :lo12:.LCPI0_0]
+; CHECK-NOFP16-NEXT:    movi d0, #0000000000000000
 ; CHECK-NOFP16-NEXT:    ret
 entry:
   ret half 0xH0000

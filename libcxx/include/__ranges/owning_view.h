@@ -29,7 +29,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 namespace ranges {
   template<range _Rp>
@@ -76,7 +76,7 @@ public:
 
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

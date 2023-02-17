@@ -37,6 +37,7 @@ if (current_toolchain != host_toolchain) {
       "//llvm/tools/llvm-readobj($host_toolchain)",
       "//llvm/tools/llvm-symbolizer($host_toolchain)",
       "//llvm/utils/FileCheck($host_toolchain)",
+      "//llvm/utils/count($host_toolchain)",
       "//llvm/utils/llvm-lit($host_toolchain)",
       "//llvm/utils/not($host_toolchain)",
     ]

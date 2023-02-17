@@ -31,7 +31,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Iter1, class _Sent1, class _Iter2, class _Sent2, class = void>
 struct _ConstTimeDistance : false_type {};
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 template <class _Iter1, class _Sent1, class _Iter2, class _Sent2>
 struct _ConstTimeDistance<_Iter1, _Sent1, _Iter2, _Sent2, __enable_if_t<
@@ -47,7 +47,7 @@ struct _ConstTimeDistance<_Iter1, _Iter1, _Iter2, _Iter2, __enable_if_t<
     is_same<typename iterator_traits<_Iter2>::iterator_category, random_access_iterator_tag>::value
 > > : true_type {};
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 // Internal functions
 
@@ -202,7 +202,7 @@ is_permutation(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIt
   return std::is_permutation(__first1, __last1, __first2, __equal_to());
 }
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 
 // 2+2 iterators
 template <class _ForwardIterator1, class _ForwardIterator2>
@@ -231,7 +231,7 @@ is_permutation(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIt
       __pred, __identity(), __identity());
 }
 
-#endif // _LIBCPP_STD_VER > 11
+#endif // _LIBCPP_STD_VER >= 14
 
 _LIBCPP_END_NAMESPACE_STD
 

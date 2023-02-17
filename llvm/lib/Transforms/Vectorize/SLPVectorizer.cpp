@@ -5010,7 +5010,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                                                    return isa<UndefValue>(V) ||
                                                           !isConstant(V);
                                                  })) ||
-          !llvm::isPowerOf2_32(NumUniqueScalarValues)) {
+          !llvm::has_single_bit<uint32_t>(NumUniqueScalarValues)) {
         LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
         newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
         return false;

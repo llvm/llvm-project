@@ -6164,7 +6164,7 @@ AArch64InstructionSelector::selectExtendedSHL(
   // Since we're going to pull this into a shift, the constant value must be
   // a power of 2. If we got a multiply, then we need to check this.
   if (OffsetOpc == TargetOpcode::G_MUL) {
-    if (!isPowerOf2_32(ImmVal))
+    if (!llvm::has_single_bit<uint32_t>(ImmVal))
       return std::nullopt;
 
     // Got a power of 2. So, the amount we'll shift is the log base-2 of that.

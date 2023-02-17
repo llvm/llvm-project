@@ -37,7 +37,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 template <class _OutIt, class _CharT>
 requires output_iterator<_OutIt, const _CharT&>
@@ -216,7 +216,7 @@ private:
 };
 
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(basic_format_context);
-#endif //_LIBCPP_STD_VER > 17
+#endif //_LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

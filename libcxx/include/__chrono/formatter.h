@@ -51,7 +51,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
+#if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
 
 namespace __formatter {
 
@@ -771,7 +771,7 @@ public:
     return _Base::__parse(__parse_ctx, __format_spec::__fields_chrono, __format_spec::__flags::__time);
   }
 };
-#endif // if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
+#endif // if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
 
 _LIBCPP_END_NAMESPACE_STD
 

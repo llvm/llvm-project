@@ -376,23 +376,19 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
       printType(*T);
   }
 
-  OS << "#if (__riscv_v_elen_fp >= 32)\n";
   for (int Log2LMUL : Log2LMULs) {
     auto T = TypeCache.computeType(BasicType::Float32, Log2LMUL,
                                    PrototypeDescriptor::Vector);
     if (T)
       printType(*T);
   }
-  OS << "#endif\n";
 
-  OS << "#if (__riscv_v_elen_fp >= 64)\n";
   for (int Log2LMUL : Log2LMULs) {
     auto T = TypeCache.computeType(BasicType::Float64, Log2LMUL,
                                    PrototypeDescriptor::Vector);
     if (T)
       printType(*T);
   }
-  OS << "#endif\n\n";
 
   OS << "#define __riscv_v_intrinsic_overloading 1\n";
 

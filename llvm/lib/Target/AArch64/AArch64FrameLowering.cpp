@@ -3074,9 +3074,18 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // won't include them.
   unsigned EstimatedStackSizeLimit = estimateRSStackSizeLimit(MF);
 
+  // We may address some of the stack above the canonical frame address, either
+  // for our own arguments or during a call. Include that in calculating whether
+  // we have complicated addressing concerns.
+  int64_t CalleeStackUsed = 0;
+  for (int I = MFI.getObjectIndexBegin(); I != 0; ++I) {
+    int64_t FixedOff = MFI.getObjectOffset(I);
+    if (FixedOff > CalleeStackUsed) CalleeStackUsed = FixedOff;
+  }
+
   // Conservatively always assume BigStack when there are SVE spills.
-  bool BigStack = SVEStackSize ||
-                  (EstimatedStackSize + CSStackSize) > EstimatedStackSizeLimit;
+  bool BigStack = SVEStackSize || (EstimatedStackSize + CSStackSize +
+                                   CalleeStackUsed) > EstimatedStackSizeLimit;
   if (BigStack || !CanEliminateFrame || RegInfo->cannotEliminateFrame(MF))
     AFI->setHasStackFrame(true);
 

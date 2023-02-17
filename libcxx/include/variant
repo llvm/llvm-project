@@ -266,7 +266,7 @@ public:
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 
 // Light N-dimensional array of function pointers. Used in place of std::array to avoid
 // adding a dependency.
@@ -660,7 +660,7 @@ struct __variant {
         _VSTD::forward<_Vs>(__vs)...);
   }
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
   template <class _Rp, class _Visitor, class... _Vs>
   _LIBCPP_HIDE_FROM_ABI
   static constexpr _Rp __visit_value(_Visitor&& __visitor,
@@ -692,7 +692,7 @@ private:
     _Visitor&& __visitor;
   };
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
   template <class _Rp, class _Visitor>
   struct __value_visitor_return_type {
     template <class... _Alts>
@@ -721,7 +721,7 @@ private:
     return __value_visitor<_Visitor>{_VSTD::forward<_Visitor>(__visitor)};
   }
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
   template <class _Rp, class _Visitor>
   _LIBCPP_HIDE_FROM_ABI
   static constexpr auto __make_value_visitor(_Visitor&& __visitor) {
@@ -1652,7 +1652,7 @@ constexpr bool operator==(const variant<_Types...>& __lhs,
   return __variant::__visit_value_at(__lhs.index(), __convert_to_bool<equal_to<>>{}, __lhs, __rhs);
 }
 
-#  if _LIBCPP_STD_VER > 17
+#  if _LIBCPP_STD_VER >= 20
 
 template <class... _Types> requires (three_way_comparable<_Types> && ...)
 _LIBCPP_HIDE_FROM_ABI constexpr common_comparison_category_t<compare_three_way_result_t<_Types>...>
@@ -1671,7 +1671,7 @@ operator<=>(const variant<_Types...>& __lhs, const variant<_Types...>& __rhs) {
   return __variant::__visit_value_at(__lhs.index(), __three_way, __lhs, __rhs);
 }
 
-#  endif // _LIBCPP_STD_VER > 17
+#  endif // _LIBCPP_STD_VER >= 20
 
 template <class... _Types>
 _LIBCPP_HIDE_FROM_ABI
@@ -1757,7 +1757,7 @@ constexpr decltype(auto) visit(_Visitor&& __visitor, _Vs&&... __vs) {
                                   _VSTD::forward<_Vs>(__vs)...);
 }
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <
     class _Rp, class _Visitor, class... _Vs,
     typename = void_t<decltype(_VSTD::__as_variant(std::declval<_Vs>()))...> >
@@ -1824,7 +1824,7 @@ constexpr auto&& __unchecked_get(variant<_Types...>& __v) noexcept {
   return std::__unchecked_get<__find_exactly_one_t<_Tp, _Types...>::value>(__v);
 }
 
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
 

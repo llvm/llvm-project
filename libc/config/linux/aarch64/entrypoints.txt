@@ -318,6 +318,10 @@ set(TARGET_LIBM_ENTRYPOINTS
 
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # network.h entrypoints
+    libc.src.network.htonl
+    libc.src.network.htons
+
     # pthread.h entrypoints
     libc.src.pthread.pthread_atfork
     libc.src.pthread.pthread_attr_destroy

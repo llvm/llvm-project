@@ -908,7 +908,7 @@ public:
     return Op;
   }
 
-  void addExpr(MCInst &Inst, const MCExpr *Expr) const {
+  static void addExpr(MCInst &Inst, const MCExpr *Expr) {
     assert(Expr && "Expr shouldn't be null!");
     int64_t Imm = 0;
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;

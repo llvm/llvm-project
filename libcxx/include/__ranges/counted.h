@@ -30,7 +30,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 namespace ranges::views {
 
@@ -75,7 +75,7 @@ inline namespace __cpo {
 
 } // namespace ranges::views
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

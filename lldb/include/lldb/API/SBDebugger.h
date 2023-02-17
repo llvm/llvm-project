@@ -16,6 +16,7 @@
 
 namespace lldb {
 
+#ifndef SWIG
 class LLDB_API SBInputReader {
 public:
   SBInputReader() = default;
@@ -30,6 +31,7 @@ public:
   void SetIsDone(bool);
   bool IsActive() const;
 };
+#endif
 
 class LLDB_API SBDebugger {
 public:
@@ -43,7 +45,9 @@ public:
 
   SBDebugger(const lldb::SBDebugger &rhs);
 
+#ifndef SWIG
   SBDebugger(const lldb::DebuggerSP &debugger_sp);
+#endif
 
   ~SBDebugger();
 
@@ -78,10 +82,17 @@ public:
   ///
   /// \return The message for the progress. If the returned value is NULL, then
   ///   \a event was not a eBroadcastBitProgress event.
+#ifdef SWIG
+  static const char *GetProgressFromEvent(const lldb::SBEvent &event,
+                                          uint64_t &OUTPUT,
+                                          uint64_t &OUTPUT, uint64_t &OUTPUT,
+                                          bool &OUTPUT);
+#else
   static const char *GetProgressFromEvent(const lldb::SBEvent &event,
                                           uint64_t &progress_id,
                                           uint64_t &completed, uint64_t &total,
                                           bool &is_debugger_specific);
+#endif
 
   static lldb::SBStructuredData
   GetProgressDataFromEvent(const lldb::SBEvent &event);
@@ -143,17 +154,21 @@ public:
 
   void SkipAppInitFiles(bool b);
 
+#ifndef SWIG
   void SetInputFileHandle(FILE *f, bool transfer_ownership);
 
   void SetOutputFileHandle(FILE *f, bool transfer_ownership);
 
   void SetErrorFileHandle(FILE *f, bool transfer_ownership);
+#endif
 
+#ifndef SWIG
   FILE *GetInputFileHandle();
 
   FILE *GetOutputFileHandle();
 
   FILE *GetErrorFileHandle();
+#endif
 
   SBError SetInputString(const char *data);
 
@@ -185,15 +200,22 @@ public:
 
   lldb::SBListener GetListener();
 
+#ifndef SWIG
   void HandleProcessEvent(const lldb::SBProcess &process,
                           const lldb::SBEvent &event, FILE *out,
                           FILE *err); // DEPRECATED
+#endif
 
   void HandleProcessEvent(const lldb::SBProcess &process,
                           const lldb::SBEvent &event, SBFile out, SBFile err);
 
+#ifdef SWIG
+  void HandleProcessEvent(const lldb::SBProcess &process,
+                          const lldb::SBEvent &event, FileSP BORROWED, FileSP BORROWED);
+#else
   void HandleProcessEvent(const lldb::SBProcess &process,
                           const lldb::SBEvent &event, FileSP out, FileSP err);
+#endif
 
   lldb::SBTarget CreateTarget(const char *filename, const char *target_triple,
                               const char *platform_name,
@@ -295,7 +317,9 @@ public:
   void SetLoggingCallback(lldb::LogOutputCallback log_callback, void *baton);
 
   // DEPRECATED
+#ifndef SWIG
   void DispatchInput(void *baton, const void *data, size_t data_len);
+#endif
 
   void DispatchInput(const void *data, size_t data_len);
 
@@ -303,7 +327,9 @@ public:
 
   void DispatchInputEndOfFile();
 
+#ifndef SWIG
   void PushInputReader(lldb::SBInputReader &reader);
+#endif
 
   const char *GetInstanceName();
 
@@ -365,6 +391,7 @@ public:
 
   SBTypeSynthetic GetSyntheticForType(SBTypeNameSpecifier);
 
+#ifndef SWIG
   /// Run the command interpreter.
   ///
   /// \param[in] auto_handle_events
@@ -377,6 +404,7 @@ public:
   ///     and overrides the corresponding option in
   ///     SBCommandInterpreterRunOptions.
   void RunCommandInterpreter(bool auto_handle_events, bool spawn_thread);
+#endif
 
   /// Run the command interpreter.
   ///
@@ -401,13 +429,20 @@ public:
   ///
   /// \param[out] stopped_for_crash
   ///     Whether the interpreter stopped for a crash.
+#ifdef SWIG
+  %apply int& INOUT { int& num_errors };
+  %apply bool& INOUT { bool& quit_requested };
+  %apply bool& INOUT { bool& stopped_for_crash };
+#endif
   void RunCommandInterpreter(bool auto_handle_events, bool spawn_thread,
                              SBCommandInterpreterRunOptions &options,
                              int &num_errors, bool &quit_requested,
                              bool &stopped_for_crash);
 
+#ifndef SWIG
   SBCommandInterpreterRunResult
   RunCommandInterpreter(const SBCommandInterpreterRunOptions &options);
+#endif
 
   SBError RunREPL(lldb::LanguageType language, const char *repl_options);
 

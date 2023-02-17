@@ -168,3 +168,65 @@ class RVInst16CU<bits<6> funct6, bits<5> funct5, bits<2> opcode, dag outs,
   let Inst{6-2} = funct5;
   let Inst{1-0} = opcode;
 }
+
+// The immediate value encoding differs for each instruction, so each subclass
+// is responsible for setting the appropriate bits in the Inst field.
+// The bits Inst{6-5} must be set for each instruction.
+class RVInst16CLB<bits<6> funct6, bits<2> opcode, dag outs, dag ins,
+                  string opcodestr, string argstr>
+    : RVInst16<outs, ins, opcodestr, argstr, [], InstFormatCLB> {
+  bits<3> rd;
+  bits<3> rs1;
+
+  let Inst{15-10} = funct6;
+  let Inst{9-7} = rs1;
+  let Inst{4-2} = rd;
+  let Inst{1-0} = opcode;
+}
+
+// The immediate value encoding differs for each instruction, so each subclass
+// is responsible for setting the appropriate bits in the Inst field.
+// The bits Inst{5} must be set for each instruction.
+class RVInst16CLH<bits<6> funct6, bit funct1, bits<2> opcode, dag outs,
+                  dag ins, string opcodestr, string argstr>
+    : RVInst16<outs, ins, opcodestr, argstr, [], InstFormatCLH> {
+  bits<3> rd;
+  bits<3> rs1;
+
+  let Inst{15-10} = funct6;
+  let Inst{9-7} = rs1;
+  let Inst{6} = funct1;
+  let Inst{4-2} = rd;
+  let Inst{1-0} = opcode;
+}
+
+// The immediate value encoding differs for each instruction, so each subclass
+// is responsible for setting the appropriate bits in the Inst field.
+// The bits Inst{6-5} must be set for each instruction.
+class RVInst16CSB<bits<6> funct6, bits<2> opcode, dag outs, dag ins,
+                  string opcodestr, string argstr>
+    : RVInst16<outs, ins, opcodestr, argstr, [], InstFormatCSB> {
+  bits<3> rs2;
+  bits<3> rs1;
+
+  let Inst{15-10} = funct6;
+  let Inst{9-7} = rs1;
+  let Inst{4-2} = rs2;
+  let Inst{1-0} = opcode;
+}
+
+// The immediate value encoding differs for each instruction, so each subclass
+// is responsible for setting the appropriate bits in the Inst field.
+// The bits Inst{5} must be set for each instruction.
+class RVInst16CSH<bits<6> funct6, bit funct1, bits<2> opcode, dag outs,
+                  dag ins, string opcodestr, string argstr>
+    : RVInst16<outs, ins, opcodestr, argstr, [], InstFormatCSH> {
+  bits<3> rs2;
+  bits<3> rs1;
+
+  let Inst{15-10} = funct6;
+  let Inst{9-7} = rs1;
+  let Inst{6} = funct1;
+  let Inst{4-2} = rs2;
+  let Inst{1-0} = opcode;
+}

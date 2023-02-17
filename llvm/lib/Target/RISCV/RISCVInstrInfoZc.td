@@ -36,6 +36,46 @@ def uimm2_lsb0 : Operand<XLenVT>,
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
 
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+class CLoadB_ri<bits<6> funct6, string OpcodeStr>
+    : RVInst16CLB<funct6, 0b00, (outs GPRC:$rd),
+                  (ins GPRCMem:$rs1, uimm2:$imm),
+                  OpcodeStr, "$rd, ${imm}(${rs1})"> {
+  bits<2> imm;
+
+  let Inst{6-5} = imm{0,1};
+}
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+class CLoadH_ri<bits<6> funct6, bit funct1, string OpcodeStr>
+    : RVInst16CLH<funct6, funct1, 0b00, (outs GPRC:$rd),
+                  (ins GPRCMem:$rs1, uimm2_lsb0:$imm),
+                  OpcodeStr, "$rd, ${imm}(${rs1})"> {
+  bits<2> imm;
+
+  let Inst{5} = imm{1};
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
+class CStoreB_rri<bits<6> funct6, string OpcodeStr>
+    : RVInst16CSB<funct6, 0b00, (outs),
+                  (ins GPRC:$rs2, GPRCMem:$rs1, uimm2:$imm),
+                  OpcodeStr, "$rs2, ${imm}(${rs1})"> {
+  bits<2> imm;
+
+  let Inst{6-5} = imm{0,1};
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
+class CStoreH_rri<bits<6> funct6, bit funct1, string OpcodeStr>
+    : RVInst16CSH<funct6, funct1, 0b00, (outs),
+                  (ins GPRC:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm),
+                  OpcodeStr, "$rs2, ${imm}(${rs1})"> {
+  bits<2> imm;
+
+  let Inst{5} = imm{1};
+}
+
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVZcArith_r<bits<5> funct5, string OpcodeStr> :
   RVInst16CU<0b100111, funct5, 0b01, (outs GPRC:$rd_wb), (ins GPRC:$rd),
@@ -72,48 +112,17 @@ let Predicates = [HasStdExtZcb] in {
 def C_NOT : RVZcArith_r<0b11101 , "c.not">,
             Sched<[WriteIALU, ReadIALU]>;
 
-def C_LBU : CLoad_ri<0b100, "c.lbu", GPRC, uimm2>,
-            Sched<[WriteLDB, ReadMemBase]> {
-  bits<2> imm;
+def C_LBU : CLoadB_ri<0b100000, "c.lbu">,
+            Sched<[WriteLDB, ReadMemBase]>;
+def C_LHU : CLoadH_ri<0b100001, 0b0, "c.lhu">,
+            Sched<[WriteLDH, ReadMemBase]>;
+def C_LH  : CLoadH_ri<0b100001, 0b1, "c.lh">,
+            Sched<[WriteLDH, ReadMemBase]>;
 
-  let Inst{12-10} = 0b000;
-  let Inst{6-5} = imm{0,1};
-}
-
-def C_LHU : CLoad_ri<0b100, "c.lhu", GPRC, uimm2_lsb0>,
-            Sched<[WriteLDH, ReadMemBase]> {
-  bits<2> imm;
-
-  let Inst{12-10} = 0b001;
-  let Inst{6} = 0b0;
-  let Inst{5} = imm{1};
-}
-
-def C_LH  : CLoad_ri<0b100, "c.lh", GPRC, uimm2_lsb0>,
-            Sched<[WriteLDH, ReadMemBase]> {
-  bits<2> imm;
-
-  let Inst{12-10} = 0b001;
-  let Inst{6} = 0b1;
-  let Inst{5} = imm{1};
-}
-
-def C_SB : CStore_rri<0b100, "c.sb", GPRC, uimm2>,
-           Sched<[WriteSTB, ReadStoreData, ReadMemBase]> {
-  bits<2> imm;
-
-  let Inst{12-10} = 0b010;
-  let Inst{6-5} = imm{0,1};
-}
-
-def C_SH : CStore_rri<0b100, "c.sh", GPRC, uimm2_lsb0>, 
-           Sched<[WriteSTH, ReadStoreData, ReadMemBase]> {
-  bits<2> imm;
-
-  let Inst{12-10} = 0b011;
-  let Inst{6} = 0b1;
-  let Inst{5} = imm{1};
-}
+def C_SB : CStoreB_rri<0b100010, "c.sb">,
+           Sched<[WriteSTB, ReadStoreData, ReadMemBase]>;
+def C_SH : CStoreH_rri<0b100011, 0b1, "c.sh">,
+           Sched<[WriteSTH, ReadStoreData, ReadMemBase]>;
 }
 
 let Predicates = [HasStdExtZcb, HasStdExtMOrZmmul] in{

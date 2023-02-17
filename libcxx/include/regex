@@ -6214,7 +6214,7 @@ regex_search(const basic_string<_CharT, _ST, _SA>& __s,
     return __r;
 }
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <class _ST, class _SA, class _Ap, class _Cp, class _Tp>
 bool
 regex_search(const basic_string<_Cp, _ST, _SA>&& __s,
@@ -6277,7 +6277,7 @@ regex_match(const basic_string<_CharT, _ST, _SA>& __s,
     return _VSTD::regex_match(__s.begin(), __s.end(), __m, __e, __flags);
 }
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <class _ST, class _SA, class _Allocator, class _CharT, class _Traits>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -6350,7 +6350,7 @@ public:
                    const regex_type& __re,
                    regex_constants::match_flag_type __m
                                               = regex_constants::match_default);
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     regex_iterator(_BidirectionalIterator __a, _BidirectionalIterator __b,
                    const regex_type&& __re,
                    regex_constants::match_flag_type __m
@@ -6482,7 +6482,7 @@ public:
                          const regex_type& __re, int __submatch = 0,
                          regex_constants::match_flag_type __m =
                                                 regex_constants::match_default);
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     regex_token_iterator(_BidirectionalIterator __a, _BidirectionalIterator __b,
                          const regex_type&& __re, int __submatch = 0,
                          regex_constants::match_flag_type __m =
@@ -6493,7 +6493,7 @@ public:
                          const regex_type& __re, const vector<int>& __submatches,
                          regex_constants::match_flag_type __m =
                                                 regex_constants::match_default);
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     regex_token_iterator(_BidirectionalIterator __a, _BidirectionalIterator __b,
                          const regex_type&& __re, const vector<int>& __submatches,
                          regex_constants::match_flag_type __m =
@@ -6507,7 +6507,7 @@ public:
                          regex_constants::match_flag_type __m =
                                                 regex_constants::match_default);
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     regex_token_iterator(_BidirectionalIterator __a, _BidirectionalIterator __b,
                          const regex_type&& __re,
                          initializer_list<int> __submatches,
@@ -6522,7 +6522,7 @@ public:
                              const int (&__submatches)[_Np],
                              regex_constants::match_flag_type __m =
                                                 regex_constants::match_default);
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     template <size_t _Np>
         regex_token_iterator(_BidirectionalIterator __a,
                              _BidirectionalIterator __b,
@@ -6844,7 +6844,7 @@ regex_replace(const _CharT* __s,
 
 _LIBCPP_END_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace pmr {
 template <class _BidirT>

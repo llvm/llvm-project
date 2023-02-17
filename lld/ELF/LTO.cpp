@@ -127,7 +127,7 @@ static lto::Config createConfig() {
   c.OptLevel = config->ltoo;
   c.CPU = getCPUStr();
   c.MAttrs = getMAttrs();
-  c.CGOptLevel = args::getCGOptLevel(config->ltoo);
+  c.CGOptLevel = config->ltoCgo;
 
   c.PTO.LoopVectorization = c.OptLevel > 1;
   c.PTO.SLPVectorization = c.OptLevel > 1;

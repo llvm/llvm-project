@@ -208,7 +208,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 
 // clang-format off
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 # define __cpp_lib_chrono_udls                          201304L
 # define __cpp_lib_complex_udls                         201309L
 # define __cpp_lib_exchange_function                    201304L
@@ -233,7 +233,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_tuples_by_type                       201304L
 #endif
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 # define __cpp_lib_addressof_constexpr                  201603L
 # define __cpp_lib_allocator_traits_is_always_equal     201411L
 # define __cpp_lib_any                                  201606L
@@ -292,7 +292,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_void_t                               201411L
 #endif
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 # undef  __cpp_lib_array_constexpr
 # define __cpp_lib_array_constexpr                      201811L
 # define __cpp_lib_assume_aligned                       201811L
@@ -329,7 +329,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_constexpr_utility                    201811L
 # define __cpp_lib_constexpr_vector                     201907L
 # define __cpp_lib_coroutine                            201902L
-# if _LIBCPP_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
+# if _LIBCPP_STD_VER >= 20 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
 #   define __cpp_lib_destroying_delete                  201806L
 # endif
 # define __cpp_lib_endian                               201907L
@@ -381,7 +381,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_unwrap_ref                           201811L
 #endif
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
 # define __cpp_lib_adaptor_iterator_pair_constructor    202106L
 # define __cpp_lib_allocate_at_least                    202106L
 // # define __cpp_lib_associative_heterogeneous_erasure    202110L

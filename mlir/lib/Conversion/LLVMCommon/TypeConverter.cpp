@@ -11,6 +11,7 @@
 #include "mlir/Conversion/LLVMCommon/MemRefBuilder.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include <optional>
 
 using namespace mlir;
 
@@ -398,7 +399,7 @@ FailureOr<unsigned>
 LLVMTypeConverter::getMemRefAddressSpace(BaseMemRefType type) {
   if (!type.getMemorySpace()) // Default memory space -> 0.
     return 0;
-  Optional<Attribute> converted =
+  std::optional<Attribute> converted =
       convertTypeAttribute(type, type.getMemorySpace());
   if (!converted)
     return failure();

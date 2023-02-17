@@ -18,7 +18,6 @@ clang_target_link_libraries(LexTests
   PRIVATE
   clangAST
   clangBasic
-  clangFrontend
   clangLex
   clangParse
   clangSema

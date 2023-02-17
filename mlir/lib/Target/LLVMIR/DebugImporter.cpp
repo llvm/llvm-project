@@ -151,11 +151,11 @@ DebugImporter::translateImpl(llvm::DISubroutineType *node) {
   SmallVector<DITypeAttr> types;
   for (llvm::DIType *type : node->getTypeArray()) {
     if (!type) {
-      // A nullptr entry at the beginning of the subroutine types list models a
-      // void result type. Translate the nullptr to an explicit
-      // DIVoidResultTypeAttr since the attribute list cannot contain a nullptr
-      // entry.
-      types.push_back(DIVoidResultTypeAttr::get(context));
+      // A nullptr entry may appear at the beginning or the end of the
+      // subroutine types list modeling either a void result type or the type of
+      // a variadic argument. Translate the nullptr to an explicit
+      // DINullTypeAttr since the attribute list cannot contain a nullptr entry.
+      types.push_back(DINullTypeAttr::get(context));
       continue;
     }
     types.push_back(translate(type));

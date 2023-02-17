@@ -729,26 +729,23 @@ Constant *llvm::ConstantFoldLoadFromConst(Constant *C, Type *Ty,
 Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
                                              APInt Offset,
                                              const DataLayout &DL) {
+  // We can only fold loads from constant globals with a definitive initializer.
+  // Check this upfront, to skip expensive offset calculations.
+  auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(C));
+  if (!GV || !GV->isConstant() || !GV->hasDefinitiveInitializer())
+    return nullptr;
+
   C = cast<Constant>(C->stripAndAccumulateConstantOffsets(
           DL, Offset, /* AllowNonInbounds */ true));
 
-  if (auto *GV = dyn_cast<GlobalVariable>(C))
-    if (GV->isConstant() && GV->hasDefinitiveInitializer())
-      if (Constant *Result = ConstantFoldLoadFromConst(GV->getInitializer(), Ty,
-                                                       Offset, DL))
-        return Result;
+  if (C == GV)
+    if (Constant *Result = ConstantFoldLoadFromConst(GV->getInitializer(), Ty,
+                                                     Offset, DL))
+      return Result;
 
   // If this load comes from anywhere in a uniform constant global, the value
   // is always the same, regardless of the loaded offset.
-  if (auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(C))) {
-    if (GV->isConstant() && GV->hasDefinitiveInitializer()) {
-      if (Constant *Res =
-              ConstantFoldLoadFromUniformValue(GV->getInitializer(), Ty))
-        return Res;
-    }
-  }
-
-  return nullptr;
+  return ConstantFoldLoadFromUniformValue(GV->getInitializer(), Ty);
 }
 
 Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,

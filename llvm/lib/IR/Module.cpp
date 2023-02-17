@@ -262,7 +262,7 @@ NamedMDNode *Module::getOrInsertNamedMetadata(StringRef Name) {
   if (!NMD) {
     NMD = new NamedMDNode(Name);
     NMD->setParent(this);
-    NamedMDList.push_back(NMD);
+    insertNamedMDNode(NMD);
   }
   return NMD;
 }
@@ -271,7 +271,7 @@ NamedMDNode *Module::getOrInsertNamedMetadata(StringRef Name) {
 /// delete it.
 void Module::eraseNamedMetadata(NamedMDNode *NMD) {
   NamedMDSymTab.erase(NMD->getName());
-  NamedMDList.erase(NMD->getIterator());
+  eraseNamedMDNode(NMD);
 }
 
 bool Module::isValidModFlagBehavior(Metadata *MD, ModFlagBehavior &MFB) {

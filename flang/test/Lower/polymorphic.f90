@@ -353,6 +353,40 @@ module polymorphic_test
 ! CHECK: %[[BOX_COMPLEX:.*]] = fir.embox %{{.*}} : (!fir.ref<!fir.complex<4>>) -> !fir.class<none>
 ! CHECK: fir.call @_QMpolymorphic_testPup_input(%[[BOX_COMPLEX]]) {{.*}} : (!fir.class<none>) -> ()
 
+  subroutine up_arr_input(a)
+    class(*), intent(in) :: a(2)
+  end subroutine
+
+  subroutine pass_trivial_arr_to_up()
+    character :: c(2)
+    integer :: i(2)
+    real :: r(2)
+    logical :: l(2)
+    complex :: cx(2)
+
+    call up_arr_input(c)
+    call up_arr_input(i)
+    call up_arr_input(r)
+    call up_arr_input(l)
+    call up_arr_input(cx)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPpass_trivial_arr_to_up() {
+! CHECK: %[[BOX_CHAR:.*]] = fir.embox %{{.*}}(%{{.*}}) : (!fir.ref<!fir.array<2x!fir.char<1>>>, !fir.shape<1>) -> !fir.class<!fir.array<2xnone>>
+! CHECK: fir.call @_QMpolymorphic_testPup_arr_input(%[[BOX_CHAR]]) {{.*}} : (!fir.class<!fir.array<2xnone>>) -> ()
+
+! CHECK: %[[BOX_INT:.*]] = fir.embox %{{.*}}(%{{.*}}) : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>) -> !fir.class<!fir.array<2xnone>>
+! CHECK: fir.call @_QMpolymorphic_testPup_arr_input(%[[BOX_INT]]) {{.*}} : (!fir.class<!fir.array<2xnone>>) -> ()
+
+! CHECK: %[[BOX_REAL:.*]] = fir.embox %{{.*}}(%{{.*}}) : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> !fir.class<!fir.array<2xnone>>
+! CHECK: fir.call @_QMpolymorphic_testPup_arr_input(%[[BOX_REAL]]) {{.*}} : (!fir.class<!fir.array<2xnone>>) -> ()
+
+! CHECK: %[[BOX_LOG:.*]] = fir.embox %{{.*}}(%{{.*}}) : (!fir.ref<!fir.array<2x!fir.logical<4>>>, !fir.shape<1>) -> !fir.class<!fir.array<2xnone>>
+! CHECK: fir.call @_QMpolymorphic_testPup_arr_input(%[[BOX_LOG]]) {{.*}} : (!fir.class<!fir.array<2xnone>>) -> ()
+
+! CHECK: %[[BOX_COMPLEX:.*]] = fir.embox %{{.*}}(%{{.*}}) : (!fir.ref<!fir.array<2x!fir.complex<4>>>, !fir.shape<1>) -> !fir.class<!fir.array<2xnone>>
+! CHECK: fir.call @_QMpolymorphic_testPup_arr_input(%[[BOX_COMPLEX]]) {{.*}} : (!fir.class<!fir.array<2xnone>>) -> ()
+
   subroutine assign_polymorphic_allocatable()
     type(p1), target :: t(10,20)
     class(p1), allocatable :: c(:,:)

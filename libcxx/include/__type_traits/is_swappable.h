@@ -108,7 +108,7 @@ struct __is_nothrow_swappable
 {
 };
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 
 template <class _Tp, class _Up>
 struct _LIBCPP_TEMPLATE_VIS is_swappable_with
@@ -158,7 +158,7 @@ inline constexpr bool is_nothrow_swappable_with_v = is_nothrow_swappable_with<_T
 template <class _Tp>
 inline constexpr bool is_nothrow_swappable_v = is_nothrow_swappable<_Tp>::value;
 
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
 

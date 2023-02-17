@@ -24,7 +24,7 @@ namespace scudo {
 
 template <class Allocator, u32 TSDsArraySize, u32 DefaultTSDCount>
 struct TSDRegistrySharedT {
-  void init(Allocator *Instance) {
+  void init(Allocator *Instance) REQUIRES(Mutex) {
     DCHECK(!Initialized);
     Instance->init();
     for (u32 I = 0; I < TSDsArraySize; I++)
@@ -35,19 +35,20 @@ struct TSDRegistrySharedT {
     Initialized = true;
   }
 
-  void initOnceMaybe(Allocator *Instance) {
+  void initOnceMaybe(Allocator *Instance) EXCLUDES(Mutex) {
     ScopedLock L(Mutex);
     if (LIKELY(Initialized))
       return;
     init(Instance); // Sets Initialized.
   }
 
-  void unmapTestOnly(Allocator *Instance) {
+  void unmapTestOnly(Allocator *Instance) EXCLUDES(Mutex) {
     for (u32 I = 0; I < TSDsArraySize; I++) {
       TSDs[I].commitBack(Instance);
       TSDs[I] = {};
     }
     setCurrentTSD(nullptr);
+    ScopedLock L(Mutex);
     Initialized = false;
   }
 
@@ -58,7 +59,10 @@ struct TSDRegistrySharedT {
     initThread(Instance);
   }
 
-  ALWAYS_INLINE TSD<Allocator> *getTSDAndLock(bool *UnlockRequired) {
+  // TSDs is an array of locks and which is not supported for marking
+  // thread-safety capability.
+  ALWAYS_INLINE TSD<Allocator> *
+  getTSDAndLock(bool *UnlockRequired) NO_THREAD_SAFETY_ANALYSIS {
     TSD<Allocator> *TSD = getCurrentTSD();
     DCHECK(TSD);
     *UnlockRequired = true;
@@ -75,13 +79,13 @@ struct TSDRegistrySharedT {
     return getTSDAndLockSlow(TSD);
   }
 
-  void disable() {
+  void disable() NO_THREAD_SAFETY_ANALYSIS {
     Mutex.lock();
     for (u32 I = 0; I < TSDsArraySize; I++)
       TSDs[I].lock();
   }
 
-  void enable() {
+  void enable() NO_THREAD_SAFETY_ANALYSIS {
     for (s32 I = static_cast<s32>(TSDsArraySize - 1); I >= 0; I--)
       TSDs[I].unlock();
     Mutex.unlock();
@@ -119,7 +123,7 @@ private:
     return reinterpret_cast<TSD<Allocator> *>(*getTlsPtr() & ~1ULL);
   }
 
-  bool setNumberOfTSDs(u32 N) {
+  bool setNumberOfTSDs(u32 N) EXCLUDES(MutexTSDs) {
     ScopedLock L(MutexTSDs);
     if (N < NumberOfTSDs)
       return false;
@@ -150,7 +154,7 @@ private:
     *getTlsPtr() |= B;
   }
 
-  NOINLINE void initThread(Allocator *Instance) {
+  NOINLINE void initThread(Allocator *Instance) NO_THREAD_SAFETY_ANALYSIS {
     initOnceMaybe(Instance);
     // Initial context assignment is done in a plain round-robin fashion.
     const u32 Index = atomic_fetch_add(&CurrentIndex, 1U, memory_order_relaxed);
@@ -158,7 +162,10 @@ private:
     Instance->callPostInitCallback();
   }
 
-  NOINLINE TSD<Allocator> *getTSDAndLockSlow(TSD<Allocator> *CurrentTSD) {
+  // TSDs is an array of locks which is not supported for marking thread-safety
+  // capability.
+  NOINLINE TSD<Allocator> *getTSDAndLockSlow(TSD<Allocator> *CurrentTSD)
+      EXCLUDES(MutexTSDs) {
     // Use the Precedence of the current TSD as our random seed. Since we are
     // in the slow path, it means that tryLock failed, and as a result it's
     // very likely that said Precedence is non-zero.
@@ -202,10 +209,10 @@ private:
   }
 
   atomic_u32 CurrentIndex = {};
-  u32 NumberOfTSDs = 0;
-  u32 NumberOfCoPrimes = 0;
-  u32 CoPrimes[TSDsArraySize] = {};
-  bool Initialized = false;
+  u32 NumberOfTSDs GUARDED_BY(MutexTSDs) = 0;
+  u32 NumberOfCoPrimes GUARDED_BY(MutexTSDs) = 0;
+  u32 CoPrimes[TSDsArraySize] GUARDED_BY(MutexTSDs) = {};
+  bool Initialized GUARDED_BY(Mutex) = false;
   HybridMutex Mutex;
   HybridMutex MutexTSDs;
   TSD<Allocator> TSDs[TSDsArraySize];
