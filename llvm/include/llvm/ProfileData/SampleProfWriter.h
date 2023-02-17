@@ -463,7 +463,6 @@ protected:
   std::error_code writeFuncOffsetTable();
 };
 
-
 } // end namespace sampleprof
 } // end namespace llvm
 
