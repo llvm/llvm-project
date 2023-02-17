@@ -271,6 +271,9 @@ Bug Fixes
   `Issue 59100 <https://github.com/llvm/llvm-project/issues/59100>`_
 - Fix issue using __attribute__((format)) on non-variadic functions that expect
   more than one formatted argument.
+- Fix assert that fails when the expression causing the this pointer to be
+  captured by a block is part of a constexpr if statement's branch and
+  instantiation of the enclosing method causes the branch to be discarded.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
