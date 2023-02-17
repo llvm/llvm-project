@@ -428,6 +428,9 @@ def parseOptionsAndInitTestdirs():
         configuration.clang_module_cache_dir = os.path.join(
             configuration.test_build_dir, 'module-cache-clang')
 
+    if args.swift_libs_dir:
+        configuration.swift_libs_dir = args.swift_libs_dir
+
     if args.lldb_libs_dir:
         configuration.lldb_libs_dir = args.lldb_libs_dir
 

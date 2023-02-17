@@ -218,6 +218,12 @@ public:
                                 TypeAndOrName &class_type_or_name,
                                 Address &address,
                                 Value::ValueType &value_type) override;
+
+  /// Extract the value object which contains the Swift type's "contents".
+  /// Returns null if this is not a C++ wrapping a Swift type. 
+  static lldb::ValueObjectSP
+  ExtractSwiftValueObjectFromCxxWrapper(ValueObject &valobj);
+
   TypeAndOrName FixUpDynamicType(const TypeAndOrName &type_and_or_name,
                                  ValueObject &static_value) override;
   lldb::BreakpointResolverSP CreateExceptionResolver(const lldb::BreakpointSP &bkpt,
@@ -402,6 +408,10 @@ public:
 
   lldb::SyntheticChildrenSP
   GetBridgedSyntheticChildProvider(ValueObject &valobj);
+
+  /// Get the synthethic child provider that displays Swift in C++ frames.
+  lldb::SyntheticChildrenSP
+  GetCxxBridgedSyntheticChildProvider(lldb::ValueObjectSP valobj);
 
   /// Expression Callbacks.
   /// \{
