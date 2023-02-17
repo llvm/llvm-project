@@ -1660,8 +1660,14 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_UIMM8_LSB000:
           Ok = isShiftedUInt<5, 3>(Imm);
           break;
+        case RISCVOp::OPERAND_UIMM9_LSB000:
+          Ok = isShiftedUInt<6, 3>(Imm);
+          break;
         case RISCVOp::OPERAND_SIMM10_LSB0000_NONZERO:
           Ok = isShiftedInt<6, 4>(Imm) && (Imm != 0);
+          break;
+        case RISCVOp::OPERAND_UIMM10_LSB00_NONZERO:
+          Ok = isShiftedUInt<8, 2>(Imm) && (Imm != 0);
           break;
         case RISCVOp::OPERAND_ZERO:
           Ok = Imm == 0;
@@ -1696,6 +1702,10 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_UIMMLOG2XLEN_NONZERO:
           Ok = STI.is64Bit() ? isUInt<6>(Imm) : isUInt<5>(Imm);
           Ok = Ok && Imm != 0;
+          break;
+        case RISCVOp::OPERAND_CLUI_IMM:
+          Ok = (isUInt<5>(Imm) && Imm != 0) ||
+               (Imm >= 0xfffe0 && Imm <= 0xfffff);
           break;
         case RISCVOp::OPERAND_RVKRNUM:
           Ok = Imm >= 0 && Imm <= 10;
