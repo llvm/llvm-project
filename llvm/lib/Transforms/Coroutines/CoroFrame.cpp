@@ -1405,7 +1405,7 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
 // function call or any of the memory intrinsics, we check whether this
 // instruction is prior to CoroBegin. To answer question 3, we track the offsets
 // of all aliases created for the alloca prior to CoroBegin but used after
-// CoroBegin. llvm::Optional is used to be able to represent the case when the
+// CoroBegin. std::optional is used to be able to represent the case when the
 // offset is unknown (e.g. when you have a PHINode that takes in different
 // offset values). We cannot handle unknown offsets and will assert. This is the
 // potential issue left out. An ideal solution would likely require a
