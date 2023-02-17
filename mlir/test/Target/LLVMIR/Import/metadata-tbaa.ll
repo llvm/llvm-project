@@ -1,12 +1,12 @@
 ; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
 
-// -----
-
 ; CHECK-LABEL: llvm.metadata @__llvm_global_metadata {
-; CHECK-NEXT:    llvm.tbaa_root @[[R0:tbaa_root_[0-9]+]] {id = "Simple C/C++ TBAA"}
-; CHECK-NEXT:    llvm.tbaa_tag @[[T0:tbaa_tag_[0-9]+]] {access_type = @[[R0]], base_type = @[[R0]], offset = 0 : i64}
-; CHECK-NEXT:    llvm.tbaa_root @[[R1:tbaa_root_[0-9]+]] {id = "Other language TBAA"}
-; CHECK-NEXT:    llvm.tbaa_tag @[[T1:tbaa_tag_[0-9]+]] {access_type = @[[R1]], base_type = @[[R1]], offset = 0 : i64}
+; CHECK-DAG:    llvm.tbaa_root @[[R0:tbaa_root_[0-9]+]] {id = "Simple C/C++ TBAA"}
+; CHECK-DAG:    llvm.tbaa_type_desc @[[D0:tbaa_type_desc_[0-9]+]] {id = "scalar type", members = {<@[[R0]], 0>}}
+; CHECK-DAG:    llvm.tbaa_tag @[[T0:tbaa_tag_[0-9]+]] {access_type = @[[D0]], base_type = @[[D0]], offset = 0 : i64}
+; CHECK-DAG:    llvm.tbaa_root @[[R1:tbaa_root_[0-9]+]] {id = "Other language TBAA"}
+; CHECK-DAG:    llvm.tbaa_type_desc @[[D1:tbaa_type_desc_[0-9]+]] {id = "other scalar type", members = {<@[[R1]], 0>}}
+; CHECK-DAG:    llvm.tbaa_tag @[[T1:tbaa_tag_[0-9]+]] {access_type = @[[D1]], base_type = @[[D1]], offset = 0 : i64}
 ; CHECK-NEXT:  }
 ; CHECK:       llvm.func @tbaa1
 ; CHECK:         llvm.store %{{.*}}, %{{.*}} {
@@ -16,15 +16,18 @@
 ; CHECK-SAME:        tbaa = [@__llvm_global_metadata::@[[T1]]]
 ; CHECK-SAME:    } : i8, !llvm.ptr
 define dso_local void @tbaa1(ptr %0, ptr %1) {
-  store i8 1, ptr %0, align 4, !tbaa !1
+  store i8 1, ptr %0, align 4, !tbaa !0
   store i8 1, ptr %1, align 4, !tbaa !3
   ret void
 }
 
-!0 = !{!"Simple C/C++ TBAA"}
-!1 = !{!0, !0, i64 0}
-!2 = !{!"Other language TBAA"}
-!3 = !{!2, !2, i64 0}
+!0 = !{!1, !1, i64 0}
+!1 = !{!"scalar type", !2, i64 0}
+!2 = !{!"Simple C/C++ TBAA"}
+
+!3 = !{!4, !4, i64 0}
+!4 = !{!"other scalar type", !5, i64 0}
+!5 = !{!"Other language TBAA"}
 
 // -----
 

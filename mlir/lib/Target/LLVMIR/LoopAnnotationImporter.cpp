@@ -463,8 +463,7 @@ LogicalResult LoopAnnotationImporter::translateAccessGroup(
   for (const llvm::MDOperand &operand : node->operands()) {
     auto *childNode = dyn_cast<llvm::MDNode>(operand);
     if (!childNode)
-      return emitWarning(loc)
-             << "expected access group operands to be metadata nodes";
+      return failure();
     accessGroups.push_back(cast<llvm::MDNode>(operand.get()));
   }
 
