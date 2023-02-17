@@ -502,6 +502,15 @@ func.func @unsignedExtendConstantVector() -> vector<4xi16> {
   return %ext : vector<4xi16>
 }
 
+// CHECK-LABEL: @extFPConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 1.000000e+00 : f64
+//       CHECK:   return %[[cres]]
+func.func @extFPConstant() -> f64 {
+  %cst = arith.constant 1.000000e+00 : f32
+  %0 = arith.extf %cst : f32 to f64
+  return %0 : f64
+}
+
 // CHECK-LABEL: @truncConstant
 //       CHECK:   %[[cres:.+]] = arith.constant -2 : i16
 //       CHECK:   return %[[cres]]
