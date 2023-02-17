@@ -62,6 +62,7 @@ tools = [
     'apinotes-test', 'c-index-test', 'cache-build-session',
     'clang-diff', 'clang-format', 'clang-repl', 'clang-offload-packager',
     'clang-tblgen', 'clang-scan-deps', 'opt', 'llvm-ifs', 'yaml2obj', 'clang-linker-wrapper',
+    'llvm-lto', 'llvm-lto2', 'llvm-profdata',
     ToolSubst('%clang-cache', command=FindTool('clang-cache')),
     ToolSubst('%clang_extdef_map', command=FindTool(
         'clang-extdef-mapping'), unresolved='ignore'),
