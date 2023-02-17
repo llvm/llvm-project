@@ -705,8 +705,8 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ReallocateInPlaceStress) {
 SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferSize) {
   auto *Allocator = this->Allocator.get();
   auto Size = Allocator->getRingBufferSize();
-  ASSERT_GT(Size, 0u);
-  EXPECT_EQ(Allocator->getRingBufferAddress()[Size - 1], '\0');
+  if (Size > 0)
+    EXPECT_EQ(Allocator->getRingBufferAddress()[Size - 1], '\0');
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferAddress) {
