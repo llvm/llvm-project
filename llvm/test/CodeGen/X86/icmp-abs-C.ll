@@ -13,32 +13,29 @@ define i64 @eq_or_with_dom_abs(i64 %x) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %edx, %eax
+; X86-NEXT:    sarl $31, %eax
+; X86-NEXT:    xorl %eax, %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, %edi
-; X86-NEXT:    sarl $31, %edi
-; X86-NEXT:    movl %esi, %edx
-; X86-NEXT:    xorl %edi, %edx
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    xorl %edi, %eax
-; X86-NEXT:    subl %edi, %eax
-; X86-NEXT:    sbbl %edi, %edx
+; X86-NEXT:    xorl %eax, %esi
+; X86-NEXT:    subl %eax, %esi
+; X86-NEXT:    sbbl %eax, %edx
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    xorl $12312, %eax # imm = 0x3018
-; X86-NEXT:    addl $64, %ecx
-; X86-NEXT:    adcl $0, %esi
-; X86-NEXT:    andl $-129, %ecx
-; X86-NEXT:    xorl %ebx, %ebx
-; X86-NEXT:    orl %esi, %ecx
-; X86-NEXT:    sete %cl
+; X86-NEXT:    xorl $64, %esi
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    orl %edx, %esi
+; X86-NEXT:    sete %bl
 ; X86-NEXT:    xorl %esi, %esi
 ; X86-NEXT:    movl $2344, %edi # imm = 0x928
 ; X86-NEXT:    cmpl %eax, %edi
 ; X86-NEXT:    sbbl %edx, %esi
 ; X86-NEXT:    jb .LBB0_2
 ; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movb %cl, %bl
+; X86-NEXT:    movb %bl, %cl
 ; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    movl %ebx, %eax
+; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:  .LBB0_2:
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
@@ -50,13 +47,13 @@ define i64 @eq_or_with_dom_abs(i64 %x) nounwind {
 ; X64-NEXT:    movq %rdi, %rcx
 ; X64-NEXT:    negq %rcx
 ; X64-NEXT:    cmovsq %rdi, %rcx
-; X64-NEXT:    xorq $12312, %rcx # imm = 0x3018
-; X64-NEXT:    addq $64, %rdi
+; X64-NEXT:    movq %rcx, %rdx
+; X64-NEXT:    xorq $12312, %rdx # imm = 0x3018
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    testq $-129, %rdi
+; X64-NEXT:    cmpq $64, %rcx
 ; X64-NEXT:    sete %al
-; X64-NEXT:    cmpq $2345, %rcx # imm = 0x929
-; X64-NEXT:    cmovaeq %rcx, %rax
+; X64-NEXT:    cmpq $2345, %rdx # imm = 0x929
+; X64-NEXT:    cmovaeq %rdx, %rax
 ; X64-NEXT:    retq
   %absx = call i64 @llvm.abs.i64(i64 %x, i1 true)
   %foo = xor i64 %absx, 12312
@@ -73,21 +70,20 @@ define i32 @eq_or_with_dom_abs_non_po2(i32 %x) nounwind {
 ; X86-LABEL: eq_or_with_dom_abs_non_po2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:    sarl $31, %ecx
 ; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    xorl %ecx, %eax
-; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    sarl $31, %eax
+; X86-NEXT:    xorl %eax, %edx
+; X86-NEXT:    subl %eax, %edx
+; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    xorl $12312, %eax # imm = 0x3018
+; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    cmpl $123, %edx
-; X86-NEXT:    sete %cl
-; X86-NEXT:    cmpl $-123, %edx
 ; X86-NEXT:    sete %dl
 ; X86-NEXT:    cmpl $2345, %eax # imm = 0x929
 ; X86-NEXT:    jae .LBB1_2
 ; X86-NEXT:  # %bb.1:
-; X86-NEXT:    orb %dl, %cl
-; X86-NEXT:    movzbl %cl, %eax
+; X86-NEXT:    movb %dl, %cl
+; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:  .LBB1_2:
 ; X86-NEXT:    retl
 ;
@@ -96,15 +92,13 @@ define i32 @eq_or_with_dom_abs_non_po2(i32 %x) nounwind {
 ; X64-NEXT:    movl %edi, %ecx
 ; X64-NEXT:    negl %ecx
 ; X64-NEXT:    cmovsl %edi, %ecx
-; X64-NEXT:    xorl $12312, %ecx # imm = 0x3018
-; X64-NEXT:    cmpl $123, %edi
+; X64-NEXT:    movl %ecx, %edx
+; X64-NEXT:    xorl $12312, %edx # imm = 0x3018
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    cmpl $123, %ecx
 ; X64-NEXT:    sete %al
-; X64-NEXT:    cmpl $-123, %edi
-; X64-NEXT:    sete %dl
-; X64-NEXT:    orb %al, %dl
-; X64-NEXT:    cmpl $2345, %ecx # imm = 0x929
-; X64-NEXT:    movzbl %dl, %eax
-; X64-NEXT:    cmovael %ecx, %eax
+; X64-NEXT:    cmpl $2345, %edx # imm = 0x929
+; X64-NEXT:    cmovael %edx, %eax
 ; X64-NEXT:    retq
   %absx = call i32 @llvm.abs.i32(i32 %x, i1 true)
   %foo = xor i32 %absx, 12312
@@ -120,21 +114,18 @@ define i32 @eq_or_with_dom_abs_non_po2(i32 %x) nounwind {
 define i8 @ne_and_with_dom_abs_non_pow2(i8 %x) nounwind {
 ; X86-LABEL: ne_and_with_dom_abs_non_pow2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:    sarb $7, %cl
-; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    xorb %cl, %al
-; X86-NEXT:    subb %cl, %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    sarb $7, %al
+; X86-NEXT:    xorb %al, %cl
+; X86-NEXT:    subb %al, %cl
+; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    xorb $12, %al
-; X86-NEXT:    cmpb $121, %dl
+; X86-NEXT:    cmpb $121, %cl
 ; X86-NEXT:    setne %cl
-; X86-NEXT:    cmpb $-121, %dl
-; X86-NEXT:    setne %dl
 ; X86-NEXT:    cmpb $24, %al
 ; X86-NEXT:    jae .LBB2_2
 ; X86-NEXT:  # %bb.1:
-; X86-NEXT:    andb %dl, %cl
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:  .LBB2_2:
 ; X86-NEXT:    retl
@@ -143,19 +134,16 @@ define i8 @ne_and_with_dom_abs_non_pow2(i8 %x) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    sarb $7, %al
+; X64-NEXT:    xorb %al, %dil
+; X64-NEXT:    subb %al, %dil
 ; X64-NEXT:    movl %edi, %ecx
-; X64-NEXT:    xorb %al, %cl
-; X64-NEXT:    subb %al, %cl
 ; X64-NEXT:    xorb $12, %cl
+; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpb $121, %dil
 ; X64-NEXT:    setne %al
-; X64-NEXT:    cmpb $-121, %dil
-; X64-NEXT:    setne %dl
-; X64-NEXT:    andb %al, %dl
 ; X64-NEXT:    cmpb $24, %cl
-; X64-NEXT:    movzbl %dl, %edx
-; X64-NEXT:    movzbl %cl, %eax
-; X64-NEXT:    cmovbl %edx, %eax
+; X64-NEXT:    movzbl %cl, %ecx
+; X64-NEXT:    cmovael %ecx, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %absx = call i8 @llvm.abs.i8(i8 %x, i1 true)
@@ -173,17 +161,16 @@ define i16 @ne_and_with_dom_abs(i16 %x) nounwind {
 ; X86-LABEL: ne_and_with_dom_abs:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movswl %cx, %edx
-; X86-NEXT:    sarl $15, %edx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movswl %cx, %eax
+; X86-NEXT:    sarl $15, %eax
+; X86-NEXT:    xorl %eax, %ecx
+; X86-NEXT:    subl %eax, %ecx
 ; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    xorl %edx, %eax
-; X86-NEXT:    subl %edx, %eax
 ; X86-NEXT:    xorl $12312, %eax # imm = 0x3018
 ; X86-NEXT:    movzwl %ax, %esi
-; X86-NEXT:    addl $64, %ecx
 ; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    testl $65407, %ecx # imm = 0xFF7F
+; X86-NEXT:    cmpw $64, %cx
 ; X86-NEXT:    setne %cl
 ; X86-NEXT:    cmpl $2345, %esi # imm = 0x929
 ; X86-NEXT:    jae .LBB3_2
@@ -200,14 +187,14 @@ define i16 @ne_and_with_dom_abs(i16 %x) nounwind {
 ; X64-NEXT:    movl %edi, %ecx
 ; X64-NEXT:    negw %cx
 ; X64-NEXT:    cmovsw %di, %cx
-; X64-NEXT:    xorl $12312, %ecx # imm = 0x3018
-; X64-NEXT:    movzwl %cx, %edx
-; X64-NEXT:    addl $64, %edi
+; X64-NEXT:    movl %ecx, %edx
+; X64-NEXT:    xorl $12312, %edx # imm = 0x3018
+; X64-NEXT:    movzwl %dx, %esi
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    testl $65407, %edi # imm = 0xFF7F
+; X64-NEXT:    cmpw $64, %cx
 ; X64-NEXT:    setne %al
-; X64-NEXT:    cmpl $2345, %edx # imm = 0x929
-; X64-NEXT:    cmovael %ecx, %eax
+; X64-NEXT:    cmpl $2345, %esi # imm = 0x929
+; X64-NEXT:    cmovael %edx, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %absx = call i16 @llvm.abs.i16(i16 %x, i1 true)
