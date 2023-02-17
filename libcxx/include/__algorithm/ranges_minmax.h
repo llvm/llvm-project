@@ -13,11 +13,13 @@
 #include <__algorithm/minmax_element.h>
 #include <__assert>
 #include <__concepts/copyable.h>
+#include <__concepts/same_as.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__functional/invoke.h>
 #include <__functional/ranges_operations.h>
 #include <__iterator/concepts.h>
+#include <__iterator/next.h>
 #include <__iterator/projected.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
@@ -76,6 +78,18 @@ struct __fn {
     _LIBCPP_ASSERT(__first != __last, "range has to contain at least one element");
 
     if constexpr (forward_range<_Range>) {
+      // Special-case the one element case. Avoid repeatedly initializing objects from the result of an iterator
+      // dereference when doing so might not be idempotent. The `if constexpr` avoids the extra branch in cases where
+      // it's not needed.
+      if constexpr (!same_as<remove_cvref_t<range_reference_t<_Range>>, _ValueT> ||
+                    is_rvalue_reference_v<range_reference_t<_Range>>) {
+        if (ranges::next(__first) == __last) {
+          // During initialization, members are allowed to refer to already initialized members
+          // (see http://eel.is/c++draft/dcl.init.aggr#6)
+          minmax_result<_ValueT> __result = {*__first, __result.min};
+          return __result;
+        }
+      }
       auto __result = std::__minmax_element_impl(__first, __last, __comp, __proj);
       return {*__result.first, *__result.second};
     } else {
@@ -86,6 +100,8 @@ struct __fn {
                                    std::invoke(__proj, std::forward<decltype(__b)>(__b)));
       };
 
+      // During initialization, members are allowed to refer to already initialized members
+      // (see http://eel.is/c++draft/dcl.init.aggr#6)
       ranges::minmax_result<_ValueT> __result = {*__first, __result.min};
       if (__first == __last || ++__first == __last)
         return __result;
