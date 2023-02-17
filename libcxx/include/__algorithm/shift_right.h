@@ -22,7 +22,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 template <class _ForwardIterator>
 inline _LIBCPP_INLINE_VISIBILITY constexpr
@@ -94,7 +94,7 @@ shift_right(_ForwardIterator __first, _ForwardIterator __last,
     }
 }
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

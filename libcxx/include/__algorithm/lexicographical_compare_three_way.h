@@ -29,7 +29,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 // Fast path for random access iterators which computes the number of loop iterations up-front and
 // then skips the iterator comparisons inside the loop.
@@ -116,7 +116,7 @@ _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto lexicographical_compa
       std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), std::compare_three_way());
 }
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

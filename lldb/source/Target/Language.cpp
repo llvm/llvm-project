@@ -196,7 +196,6 @@ struct language_name_pair language_names[] = {
     {"fortran08", eLanguageTypeFortran08},
     // Vendor Extensions
     {"assembler", eLanguageTypeMipsAssembler},
-    {"renderscript", eLanguageTypeExtRenderScript},
     // Now synonyms, in arbitrary order
     {"objc", eLanguageTypeObjC},
     {"objc++", eLanguageTypeObjC_plus_plus},
@@ -350,7 +349,6 @@ LanguageType Language::GetPrimaryLanguage(LanguageType language) {
   case eLanguageTypeJulia:
   case eLanguageTypeDylan:
   case eLanguageTypeMipsAssembler:
-  case eLanguageTypeExtRenderScript:
   case eLanguageTypeUnknown:
   default:
     return language;

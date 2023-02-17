@@ -614,7 +614,7 @@ func.func @same_enclosing_repetitive_region(%2: tensor<320xf32>,
   %c0 = arith.constant 0 : index
   %cst = arith.constant -0.000000e+00 : f32
   %c320 = arith.constant 320 : index
-  %4 = scf.foreach_thread (%arg0) in (%c320) shared_outs(%arg1 = %2) -> (tensor<320xf32>) {
+  %4 = scf.forall (%arg0) in (%c320) shared_outs(%arg1 = %2) -> (tensor<320xf32>) {
     // CHECK: tensor.extract_slice {{.*}} {__inplace_operands_attr__ = ["true", "none"]}
     %5 = tensor.extract_slice %3[%arg0, 0] [1, 10240] [1, 1]  : tensor<320x10240xf32> to tensor<1x10240xf32>
     // CHECK: tensor.extract_slice {{.*}} {__inplace_operands_attr__ = ["true", "none"]}
@@ -624,7 +624,7 @@ func.func @same_enclosing_repetitive_region(%2: tensor<320xf32>,
     // CHECK: linalg.fill {__inplace_operands_attr__ = ["none", "true"]}
     %8 = linalg.fill ins(%cst : f32) outs(%7 : tensor<1xf32>) -> tensor<1xf32>
 
-    scf.foreach_thread.perform_concurrently {
+    scf.forall.in_parallel {
       // CHECK: tensor.parallel_insert_slice {{.*}} {__inplace_operands_attr__ = ["true", "true", "none"]}
       tensor.parallel_insert_slice %8 into %arg1[%arg0] [1] [1] : tensor<1xf32> into tensor<320xf32>
     }

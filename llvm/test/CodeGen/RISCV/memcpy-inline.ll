@@ -295,34 +295,49 @@ entry:
 }
 
 define void @t6() nounwind {
-; RV32-LABEL: t6:
-; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    lui a0, %hi(spool.splbuf)
-; RV32-NEXT:    li a1, 88
-; RV32-NEXT:    sh a1, %lo(spool.splbuf+12)(a0)
-; RV32-NEXT:    lui a1, 361862
-; RV32-NEXT:    addi a1, a1, -1960
-; RV32-NEXT:    sw a1, %lo(spool.splbuf+8)(a0)
-; RV32-NEXT:    lui a1, 362199
-; RV32-NEXT:    addi a1, a1, 559
-; RV32-NEXT:    sw a1, %lo(spool.splbuf+4)(a0)
-; RV32-NEXT:    lui a1, 460503
-; RV32-NEXT:    addi a1, a1, 1071
-; RV32-NEXT:    sw a1, %lo(spool.splbuf)(a0)
-; RV32-NEXT:    ret
+; RV32ALIGNED-LABEL: t6:
+; RV32ALIGNED:       # %bb.0: # %entry
+; RV32ALIGNED-NEXT:    addi sp, sp, -16
+; RV32ALIGNED-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ALIGNED-NEXT:    lui a0, %hi(spool.splbuf)
+; RV32ALIGNED-NEXT:    addi a0, a0, %lo(spool.splbuf)
+; RV32ALIGNED-NEXT:    lui a1, %hi(.L.str6)
+; RV32ALIGNED-NEXT:    addi a1, a1, %lo(.L.str6)
+; RV32ALIGNED-NEXT:    li a2, 14
+; RV32ALIGNED-NEXT:    call memcpy@plt
+; RV32ALIGNED-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ALIGNED-NEXT:    addi sp, sp, 16
+; RV32ALIGNED-NEXT:    ret
 ;
 ; RV64ALIGNED-LABEL: t6:
 ; RV64ALIGNED:       # %bb.0: # %entry
+; RV64ALIGNED-NEXT:    addi sp, sp, -16
+; RV64ALIGNED-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64ALIGNED-NEXT:    lui a0, %hi(spool.splbuf)
-; RV64ALIGNED-NEXT:    li a1, 88
-; RV64ALIGNED-NEXT:    sh a1, %lo(spool.splbuf+12)(a0)
-; RV64ALIGNED-NEXT:    lui a1, %hi(.LCPI6_0)
-; RV64ALIGNED-NEXT:    ld a1, %lo(.LCPI6_0)(a1)
-; RV64ALIGNED-NEXT:    lui a2, 361862
-; RV64ALIGNED-NEXT:    addiw a2, a2, -1960
-; RV64ALIGNED-NEXT:    sw a2, %lo(spool.splbuf+8)(a0)
-; RV64ALIGNED-NEXT:    sd a1, %lo(spool.splbuf)(a0)
+; RV64ALIGNED-NEXT:    addi a0, a0, %lo(spool.splbuf)
+; RV64ALIGNED-NEXT:    lui a1, %hi(.L.str6)
+; RV64ALIGNED-NEXT:    addi a1, a1, %lo(.L.str6)
+; RV64ALIGNED-NEXT:    li a2, 14
+; RV64ALIGNED-NEXT:    call memcpy@plt
+; RV64ALIGNED-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ALIGNED-NEXT:    addi sp, sp, 16
 ; RV64ALIGNED-NEXT:    ret
+;
+; RV32UNALIGNED-LABEL: t6:
+; RV32UNALIGNED:       # %bb.0: # %entry
+; RV32UNALIGNED-NEXT:    lui a0, %hi(spool.splbuf)
+; RV32UNALIGNED-NEXT:    li a1, 88
+; RV32UNALIGNED-NEXT:    sh a1, %lo(spool.splbuf+12)(a0)
+; RV32UNALIGNED-NEXT:    lui a1, 361862
+; RV32UNALIGNED-NEXT:    addi a1, a1, -1960
+; RV32UNALIGNED-NEXT:    sw a1, %lo(spool.splbuf+8)(a0)
+; RV32UNALIGNED-NEXT:    lui a1, 362199
+; RV32UNALIGNED-NEXT:    addi a1, a1, 559
+; RV32UNALIGNED-NEXT:    sw a1, %lo(spool.splbuf+4)(a0)
+; RV32UNALIGNED-NEXT:    lui a1, 460503
+; RV32UNALIGNED-NEXT:    addi a1, a1, 1071
+; RV32UNALIGNED-NEXT:    sw a1, %lo(spool.splbuf)(a0)
+; RV32UNALIGNED-NEXT:    ret
 ;
 ; RV64UNALIGNED-LABEL: t6:
 ; RV64UNALIGNED:       # %bb.0: # %entry

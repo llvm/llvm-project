@@ -113,6 +113,11 @@ def IsFortranNumericalArrayObjectPred
 def AnyFortranNumericalArrayObject : Type<IsFortranNumericalArrayObjectPred,
     "any array-like object containing a numerical type">;
 
+def IsFortranNumericalOrLogicalArrayObjectPred
+        : CPred<"::hlfir::isFortranNumericalOrLogicalArrayObject($_self)">;
+def AnyFortranNumericalOrLogicalArrayObject : Type<IsFortranNumericalOrLogicalArrayObjectPred,
+    "any array-like object containing a numerical or logical type">;
+
 def IsPassByRefOrIntegerTypePred
         : CPred<"::hlfir::isPassByRefOrIntegerType($_self)">;
 def AnyPassByRefOrIntegerType : Type<IsPassByRefOrIntegerTypePred,

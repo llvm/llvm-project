@@ -248,7 +248,7 @@ void TextOutputSection::finalize() {
     // grows. So leave room for a bunch of thunks.
     unsigned slop = 256 * thunkSize;
     while (finalIdx < endIdx) {
-      size_t expectedNewSize = alignTo(addr + size, inputs[finalIdx]->align) +
+      uint64_t expectedNewSize = alignTo(addr + size, inputs[finalIdx]->align) +
                                inputs[finalIdx]->getSize();
       if (expectedNewSize >= isecVA + forwardBranchRange - slop)
         break;

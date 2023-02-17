@@ -19,7 +19,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 
 struct _LIBCPP_TYPE_VIS in_place_t {
     explicit in_place_t() = default;
@@ -52,7 +52,7 @@ template <size_t _Idx> struct __is_inplace_index_imp<in_place_index_t<_Idx>> : t
 template <class _Tp>
 using __is_inplace_index = __is_inplace_index_imp<__remove_cvref_t<_Tp>>;
 
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
 

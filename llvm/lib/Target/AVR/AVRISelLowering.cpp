@@ -282,7 +282,7 @@ SDValue AVRTargetLowering::LowerShifts(SDValue Op, SelectionDAG &DAG) const {
   const SDNode *N = Op.getNode();
   EVT VT = Op.getValueType();
   SDLoc dl(N);
-  assert(isPowerOf2_32(VT.getSizeInBits()) &&
+  assert(llvm::has_single_bit<uint32_t>(VT.getSizeInBits()) &&
          "Expected power-of-2 shift amount");
 
   if (VT.getSizeInBits() == 32) {

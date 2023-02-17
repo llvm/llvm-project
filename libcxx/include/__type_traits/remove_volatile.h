@@ -33,7 +33,7 @@ template <class _Tp>
 using __remove_volatile_t = typename remove_volatile<_Tp>::type;
 #endif // __has_builtin(__remove_volatile)
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <class _Tp> using remove_volatile_t = __remove_volatile_t<_Tp>;
 #endif
 

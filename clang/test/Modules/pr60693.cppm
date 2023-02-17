@@ -16,7 +16,14 @@ constexpr bool f() {
 	return true;
 }
 
-export template<typename>
+template <typename T>
+struct u {
+    T unit() {
+        return T();
+    }
+};
+
+export template<typename T>
 struct s {
 	static constexpr auto a = f();
 	static constexpr auto b = f();
@@ -27,6 +34,9 @@ struct s {
     }
     int bar() {
         return 44;
+    }
+    T zoo() {
+        return u<T>().unit();
     }
 };
 
@@ -46,9 +56,15 @@ extern "C" long use2() {
     return _.foo();
 }
 
+extern "C" long use3() {
+    s<long> _;
+    return _.zoo();
+}
+
 // CHECK: define{{.*}}@use(
 // CHECK-NOT: }
 // CHECK: ret{{.*}} 4
 
 // CHECK: declare{{.*}}@_ZNW1a1sIlE3fooEv
 // CHECK-NOT: _ZNW1a1sIlE3barEv
+// CHECK: declare{{.*}}_ZNW1a1sIlE3zooEv

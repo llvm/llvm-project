@@ -24,7 +24,6 @@ static_library("Clang") {
     #"//lldb/source/Plugins/Language/CPlusPlus", # 3-hop dependency cycle
     "//lldb/source/Plugins/LanguageRuntime/CPlusPlus",
     "//lldb/source/Plugins/LanguageRuntime/ObjC",
-    "//lldb/source/Plugins/LanguageRuntime/RenderScript/RenderScriptRuntime",
     "//lldb/source/Symbol",
     "//lldb/source/Target",
     "//lldb/source/Utility",

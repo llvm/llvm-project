@@ -126,15 +126,18 @@ static inline bool RangesOverlap(const char *aStart, const char *aEnd,
 // possibly overlap in memory?  Note that the descriptors themeselves
 // are included in the test.
 static bool MayAlias(const Descriptor &x, const Descriptor &y) {
+  const char *xBase{x.OffsetElement()};
+  const char *yBase{y.OffsetElement()};
+  if (!xBase || !yBase) {
+    return false; // not both allocated
+  }
   const char *xDesc{reinterpret_cast<const char *>(&x)};
   const char *xDescLast{xDesc + x.SizeInBytes()};
-  const char *yDesc{reinterpret_cast<const char *>(&x)};
+  const char *yDesc{reinterpret_cast<const char *>(&y)};
   const char *yDescLast{yDesc + y.SizeInBytes()};
   std::int64_t xLeast, xMost, yLeast, yMost;
   MaximalByteOffsetRange(x, xLeast, xMost);
   MaximalByteOffsetRange(y, yLeast, yMost);
-  const char *xBase{x.OffsetElement()};
-  const char *yBase{y.OffsetElement()};
   if (RangesOverlap(xDesc, xDescLast, yBase + yLeast, yBase + yMost) ||
       RangesOverlap(yDesc, yDescLast, xBase + xLeast, xBase + xMost)) {
     // A descriptor overlaps with the storage described by the other;
@@ -310,15 +313,16 @@ static void Assign(Descriptor &to, const Descriptor &from,
         "Assign: mismatching element sizes (to %zd bytes != from %zd bytes)",
         elementBytes, from.ElementBytes());
   }
-  if (toDerived) {
+  if (const typeInfo::DerivedType *
+      updatedToDerived{toAddendum ? toAddendum->derivedType() : nullptr}) {
     // Derived type intrinsic assignment, which is componentwise and elementwise
     // for all components, including parent components (10.2.1.2-3).
     // The target is first finalized if still necessary (7.5.6.3(1))
     if (needFinalization) {
-      Finalize(to, *toDerived);
+      Finalize(to, *updatedToDerived);
     }
     // Copy the data components (incl. the parent) first.
-    const Descriptor &componentDesc{toDerived->component()};
+    const Descriptor &componentDesc{updatedToDerived->component()};
     std::size_t numComponents{componentDesc.Elements()};
     for (std::size_t k{0}; k < numComponents; ++k) {
       const auto &comp{
@@ -391,7 +395,7 @@ static void Assign(Descriptor &to, const Descriptor &from,
       }
     }
     // Copy procedure pointer components
-    const Descriptor &procPtrDesc{toDerived->procPtr()};
+    const Descriptor &procPtrDesc{updatedToDerived->procPtr()};
     std::size_t numProcPtrs{procPtrDesc.Elements()};
     for (std::size_t k{0}; k < numProcPtrs; ++k) {
       const auto &procPtr{

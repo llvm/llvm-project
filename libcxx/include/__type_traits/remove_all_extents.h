@@ -38,7 +38,7 @@ template <class _Tp>
 using __remove_all_extents_t = typename remove_all_extents<_Tp>::type;
 #endif // __has_builtin(__remove_all_extents)
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <class _Tp> using remove_all_extents_t = __remove_all_extents_t<_Tp>;
 #endif
 

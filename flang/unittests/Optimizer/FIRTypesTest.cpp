@@ -146,3 +146,73 @@ TEST_F(FIRTypesTest, isBoxedRecordType) {
   EXPECT_FALSE(fir::isBoxedRecordType(fir::BoxType::get(
       fir::ReferenceType::get(mlir::IntegerType::get(&context, 32)))));
 }
+
+TEST_F(FIRTypesTest, updateTypeForUnlimitedPolymorphic) {
+  // RecordType are not changed.
+
+  // !fir.tyep<T> -> !fir.type<T>
+  mlir::Type recTy = fir::RecordType::get(&context, "dt");
+  EXPECT_EQ(recTy, fir::updateTypeForUnlimitedPolymorphic(recTy));
+
+  // !fir.array<2x!fir.type<T>> -> !fir.array<2x!fir.type<T>>
+  mlir::Type arrRecTy = fir::SequenceType::get({2}, recTy);
+  EXPECT_EQ(arrRecTy, fir::updateTypeForUnlimitedPolymorphic(arrRecTy));
+
+  // !fir.heap<!fir.type<T>> -> !fir.heap<!fir.type<T>>
+  mlir::Type heapTy = fir::HeapType::get(recTy);
+  EXPECT_EQ(heapTy, fir::updateTypeForUnlimitedPolymorphic(heapTy));
+  // !fir.heap<!fir.array<2x!fir.type<T>>> ->
+  // !fir.heap<!fir.array<2x!fir.type<T>>>
+  mlir::Type heapArrTy = fir::HeapType::get(arrRecTy);
+  EXPECT_EQ(heapArrTy, fir::updateTypeForUnlimitedPolymorphic(heapArrTy));
+
+  // !fir.ptr<!fir.type<T>> -> !fir.ptr<!fir.type<T>>
+  mlir::Type ptrTy = fir::PointerType::get(recTy);
+  EXPECT_EQ(ptrTy, fir::updateTypeForUnlimitedPolymorphic(ptrTy));
+  // !fir.ptr<!fir.array<2x!fir.type<T>>> ->
+  // !fir.ptr<!fir.array<2x!fir.type<T>>>
+  mlir::Type ptrArrTy = fir::PointerType::get(arrRecTy);
+  EXPECT_EQ(ptrArrTy, fir::updateTypeForUnlimitedPolymorphic(ptrArrTy));
+
+  // When updating intrinsic types the array, pointer and heap types are kept.
+  // only the inner element type is changed to `none`.
+  mlir::Type none = mlir::NoneType::get(&context);
+  mlir::Type arrNone = fir::SequenceType::get({10}, none);
+  mlir::Type heapNone = fir::HeapType::get(none);
+  mlir::Type heapArrNone = fir::HeapType::get(arrNone);
+  mlir::Type ptrNone = fir::PointerType::get(none);
+  mlir::Type ptrArrNone = fir::PointerType::get(arrNone);
+
+  mlir::Type i32Ty = mlir::IntegerType::get(&context, 32);
+  mlir::Type f32Ty = mlir::FloatType::getF32(&context);
+  mlir::Type l1Ty = fir::LogicalType::get(&context, 1);
+  mlir::Type cplx4Ty = fir::ComplexType::get(&context, 4);
+  mlir::Type char1Ty = fir::CharacterType::get(&context, 1, 10);
+  llvm::SmallVector<mlir::Type> intrinsicTypes = {
+      i32Ty, f32Ty, l1Ty, cplx4Ty, char1Ty};
+
+  for (mlir::Type ty : intrinsicTypes) {
+    // `ty` -> none
+    EXPECT_EQ(none, fir::updateTypeForUnlimitedPolymorphic(ty));
+
+    // !fir.array<10xTY> -> !fir.array<10xnone>
+    mlir::Type arrTy = fir::SequenceType::get({10}, ty);
+    EXPECT_EQ(arrNone, fir::updateTypeForUnlimitedPolymorphic(arrTy));
+
+    // !fir.heap<TY> -> !fir.heap<none>
+    mlir::Type heapTy = fir::HeapType::get(ty);
+    EXPECT_EQ(heapNone, fir::updateTypeForUnlimitedPolymorphic(heapTy));
+
+    // !fir.heap<!fir.array<10xTY>> -> !fir.heap<!fir.array<10xnone>>
+    mlir::Type heapArrTy = fir::HeapType::get(arrTy);
+    EXPECT_EQ(heapArrNone, fir::updateTypeForUnlimitedPolymorphic(heapArrTy));
+
+    // !fir.ptr<TY> -> !fir.ptr<none>
+    mlir::Type ptrTy = fir::PointerType::get(ty);
+    EXPECT_EQ(ptrNone, fir::updateTypeForUnlimitedPolymorphic(ptrTy));
+
+    // !fir.ptr<!fir.array<10xTY>> -> !fir.ptr<!fir.array<10xnone>>
+    mlir::Type ptrArrTy = fir::PointerType::get(arrTy);
+    EXPECT_EQ(ptrArrNone, fir::updateTypeForUnlimitedPolymorphic(ptrArrTy));
+  }
+}

@@ -731,8 +731,7 @@ define dso_local <4 x i32> @replace_undefs_in_splat(<4 x i32> %a) local_unnamed_
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r3, r2, .LCPI15_0@toc@ha
 ; CHECK-P8-NEXT:    addi r3, r3, .LCPI15_0@toc@l
-; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-NEXT:    xxswapd v3, vs0
+; CHECK-P8-NEXT:    lxvd2x v3, 0, r3
 ; CHECK-P8-NEXT:    vmrgow v2, v3, v2
 ; CHECK-P8-NEXT:    blr
 ;

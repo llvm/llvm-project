@@ -42,7 +42,9 @@ public:
 
   SBTarget(const lldb::SBTarget &rhs);
 
+#ifndef SWIG
   SBTarget(const lldb::TargetSP &target_sp);
+#endif
 
   // Destructor
   ~SBTarget();
@@ -596,6 +598,29 @@ public:
       lldb::LanguageType symbol_language,
       const SBFileSpecList &module_list, const SBFileSpecList &comp_unit_list);
 
+#ifdef SWIG
+  lldb::SBBreakpoint BreakpointCreateByNames(
+      const char **symbol_name, uint32_t num_names,
+      uint32_t
+          name_type_mask, // Logical OR one or more FunctionNameType enum bits
+      const SBFileSpecList &module_list,
+      const SBFileSpecList &comp_unit_list);
+
+  lldb::SBBreakpoint BreakpointCreateByNames(
+      const char **symbol_name, uint32_t num_names,
+      uint32_t
+          name_type_mask, // Logical OR one or more FunctionNameType enum bits
+      lldb::LanguageType symbol_language,
+      const SBFileSpecList &module_list, const SBFileSpecList &comp_unit_list);
+
+  lldb::SBBreakpoint BreakpointCreateByNames(
+      const char **symbol_name, uint32_t num_names,
+      uint32_t
+          name_type_mask, // Logical OR one or more FunctionNameType enum bits
+      lldb::LanguageType symbol_language,
+      lldb::addr_t offset, const SBFileSpecList &module_list,
+      const SBFileSpecList &comp_unit_list);
+#else
   lldb::SBBreakpoint BreakpointCreateByNames(
       const char *symbol_name[], uint32_t num_names,
       uint32_t
@@ -617,6 +642,7 @@ public:
       lldb::LanguageType symbol_language,
       lldb::addr_t offset, const SBFileSpecList &module_list,
       const SBFileSpecList &comp_unit_list);
+#endif
 
   lldb::SBBreakpoint BreakpointCreateByRegex(const char *symbol_name_regex,
                                              const char *module_name = nullptr);
@@ -816,13 +842,14 @@ public:
                                                     const void *buf,
                                                     size_t size);
 
+#ifndef SWIG
   lldb::SBInstructionList GetInstructions(lldb::addr_t base_addr,
                                           const void *buf, size_t size);
-
   lldb::SBInstructionList GetInstructionsWithFlavor(lldb::addr_t base_addr,
                                                     const char *flavor_string,
                                                     const void *buf,
                                                     size_t size);
+#endif
 
   lldb::SBSymbolContextList FindSymbols(const char *name,
                                         lldb::SymbolType type = eSymbolTypeAny);

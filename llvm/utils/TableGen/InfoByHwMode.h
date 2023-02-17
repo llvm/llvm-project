@@ -16,10 +16,16 @@
 
 #include "CodeGenHwModes.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MachineValueType.h"
-
+#include <cassert>
+#include <limits>
 #include <map>
 #include <string>
+#include <tuple>
+#include <utility>
 
 namespace llvm {
 

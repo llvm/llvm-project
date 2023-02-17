@@ -79,7 +79,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_destructible<_Tp[]>
 
 #endif
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_nothrow_destructible_v = is_nothrow_destructible<_Tp>::value;
 #endif

@@ -58,6 +58,8 @@ void octal(void) {
 #if __WCHAR_MAX__ > 0xFFFF
   unsigned d = L'\o{37777777777}'; // ext-warning {{extension}} cxx2b-warning {{C++2b}}
   unsigned e = L'\o{40000000000}'; // expected-error {{octal escape sequence out of range}}
+  unsigned f = L'\o{100000000000}'; // expected-error {{octal escape sequence out of range}}
+  unsigned g = L'\o{200000000000}'; // expected-error {{octal escape sequence out of range}}
 #else
   unsigned d = L'\o{177777}'; // ext-warning {{extension}} cxx2b-warning {{C++2b}}
   unsigned e = L'\o{200000}'; // expected-error {{octal escape sequence out of range}}

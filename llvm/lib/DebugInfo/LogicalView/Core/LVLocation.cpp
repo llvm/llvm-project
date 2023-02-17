@@ -579,8 +579,8 @@ void LVLocationSymbol::addObject(LVAddress LowPC, LVAddress HighPC,
 void LVLocationSymbol::addObject(LVSmall Opcode, LVUnsigned Operand1,
                                  LVUnsigned Operand2) {
   if (!Entries)
-    Entries = new LVAutoOperations();
-  Entries->emplace_back(new LVOperation(Opcode, Operand1, Operand2));
+    Entries = std::make_unique<LVOperations>();
+  Entries->push_back(getReader().createOperation(Opcode, Operand1, Operand2));
 }
 
 // Based on the DWARF attribute, define the location kind.
@@ -606,8 +606,7 @@ void LVLocation::setKind() {
 void LVLocationSymbol::updateKind() {
   // Update the location type for simple ones.
   if (Entries && Entries->size() == 1) {
-    LVOperation *Operation = Entries->front();
-    if (dwarf::DW_OP_fbreg == Operation->getOpcode())
+    if (dwarf::DW_OP_fbreg == Entries->front()->getOpcode())
       setIsStackOffset();
   }
 }

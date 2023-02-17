@@ -528,6 +528,8 @@ public:
   NODE_ENUM(OmpScheduleClause, ScheduleType)
   NODE(parser, OmpDeviceClause)
   NODE_ENUM(OmpDeviceClause, DeviceModifier)
+  NODE(parser, OmpDeviceTypeClause)
+  NODE_ENUM(OmpDeviceTypeClause, Type)
   NODE(parser, OmpScheduleModifier)
   NODE(OmpScheduleModifier, Modifier1)
   NODE(OmpScheduleModifier, Modifier2)

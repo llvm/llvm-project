@@ -832,10 +832,10 @@ UncheckedOptionalAccessModel::UncheckedOptionalAccessModel(ASTContext &Ctx)
     : DataflowAnalysis<UncheckedOptionalAccessModel, NoopLattice>(Ctx),
       TransferMatchSwitch(buildTransferMatchSwitch()) {}
 
-void UncheckedOptionalAccessModel::transfer(const CFGElement *Elt,
+void UncheckedOptionalAccessModel::transfer(const CFGElement &Elt,
                                             NoopLattice &L, Environment &Env) {
   LatticeTransferState State(L, Env);
-  TransferMatchSwitch(*Elt, getASTContext(), State);
+  TransferMatchSwitch(Elt, getASTContext(), State);
 }
 
 ComparisonResult UncheckedOptionalAccessModel::compare(

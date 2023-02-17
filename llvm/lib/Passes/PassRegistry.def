@@ -515,6 +515,13 @@ FUNCTION_PASS_WITH_PARAMS("print<da>",
                            },
                           parseDependenceAnalysisPrinterOptions,
                           "normalized-results")
+FUNCTION_PASS_WITH_PARAMS("separate-const-offset-from-gep",
+                          "SeparateConstOffsetFromGEPPass",
+                           [](bool LowerGEP) {
+                             return SeparateConstOffsetFromGEPPass(LowerGEP);
+                           },
+                          parseSeparateConstOffsetFromGEPPassOptions,
+                          "lower-gep")
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOPNEST_PASS

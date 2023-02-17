@@ -115,6 +115,18 @@ bool hlfir::isFortranNumericalArrayObject(mlir::Type type) {
   return false;
 }
 
+bool hlfir::isFortranNumericalOrLogicalArrayObject(mlir::Type type) {
+  if (isBoxAddressType(type))
+    return false;
+  if (auto arrayTy =
+          getFortranElementOrSequenceType(type).dyn_cast<fir::SequenceType>()) {
+    mlir::Type eleTy = arrayTy.getEleTy();
+    return isFortranScalarNumericalType(eleTy) ||
+           mlir::isa<fir::LogicalType>(eleTy);
+  }
+  return false;
+}
+
 bool hlfir::isPassByRefOrIntegerType(mlir::Type type) {
   mlir::Type unwrappedType = fir::unwrapPassByRefType(type);
   return fir::isa_integer(unwrappedType);

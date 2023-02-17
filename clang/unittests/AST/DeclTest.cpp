@@ -244,14 +244,14 @@ TEST(Decl, ModuleAndInternalLinkage) {
   EXPECT_EQ(g->getLinkageInternal(), ModuleLinkage);
 
   AST = tooling::buildASTFromCodeWithArgs(
-      Code.code(), /*Args=*/{"-std=c++20", "-fmodules-ts"});
+      Code.code(), /*Args=*/{"-std=c++20"});
   ASTContext &CtxTS = AST->getASTContext();
   a = selectFirst<VarDecl>("a", match(varDecl(hasName("a")).bind("a"), CtxTS));
   f = selectFirst<FunctionDecl>(
       "f", match(functionDecl(hasName("f")).bind("f"), CtxTS));
 
-  EXPECT_EQ(a->getLinkageInternal(), ModuleInternalLinkage);
-  EXPECT_EQ(f->getLinkageInternal(), ModuleInternalLinkage);
+  EXPECT_EQ(a->getLinkageInternal(), InternalLinkage);
+  EXPECT_EQ(f->getLinkageInternal(), InternalLinkage);
 
   b = selectFirst<VarDecl>("b", match(varDecl(hasName("b")).bind("b"), CtxTS));
   g = selectFirst<FunctionDecl>(

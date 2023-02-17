@@ -402,9 +402,12 @@ struct UnPackOpTiling
                                     unpackOp.getDestType().getElementType());
     }
 
-    Operation *tiledUnpackOp =
-        b.create<UnPackOp>(loc, TypeRange{sliceDest.getType()},
-                           ValueRange{sliceSource, sliceDest}, op->getAttrs());
+    SmallVector<Value> tiledOperands = {sliceSource, sliceDest};
+    for (auto tile : unpackOp.getInnerTiles())
+      tiledOperands.push_back(tile);
+
+    Operation *tiledUnpackOp = b.create<UnPackOp>(
+        loc, TypeRange{sliceDest.getType()}, tiledOperands, op->getAttrs());
 
     if (isPerfectTilingCase)
       return {tiledUnpackOp};

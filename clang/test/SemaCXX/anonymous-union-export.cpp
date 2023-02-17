@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++17 -fmodules-ts -emit-obj -verify -o %t.pcm %s
+// RUN: %clang_cc1 -std=c++20 -emit-obj -verify -o %t.pcm %s
 
 export module M;
 export { // expected-note 2{{export block begins here}}

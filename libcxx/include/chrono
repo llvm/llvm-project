@@ -775,7 +775,7 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 // [time.syn]
 #include <compare>
 
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT) && _LIBCPP_STD_VER > 17
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT) && _LIBCPP_STD_VER >= 20
 #  include <__chrono/formatter.h>
 #  include <__chrono/ostream.h>
 #  include <__chrono/parser_std_format_spec.h>

@@ -278,7 +278,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     queue(const queue& __q) : c(__q.c) {}
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
     template <class _InputIterator,
               class = __enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>>
     _LIBCPP_HIDE_FROM_ABI
@@ -363,7 +363,7 @@ public:
     void push(value_type&& __v)      {c.push_back(_VSTD::move(__v));}
     template <class... _Args>
         _LIBCPP_INLINE_VISIBILITY
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
         decltype(auto) emplace(_Args&&... __args)
             { return c.emplace_back(_VSTD::forward<_Args>(__args)...);}
 #else
@@ -397,7 +397,7 @@ public:
     operator< (const queue<_T1, _C1>& __x,const queue<_T1, _C1>& __y);
 };
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template<class _Container,
          class = enable_if_t<!__is_allocator<_Container>::value>
 >
@@ -413,7 +413,7 @@ queue(_Container, _Alloc)
     -> queue<typename _Container::value_type, _Container>;
 #endif
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
 template <class _InputIterator,
           class = __enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>>
 queue(_InputIterator, _InputIterator)

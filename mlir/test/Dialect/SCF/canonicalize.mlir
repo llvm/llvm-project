@@ -1486,8 +1486,8 @@ func.func @canonicalize_parallel_insert_slice_indices(
   // CHECK: %[[c1:.*]] = arith.constant 1 : index
   %c1 = arith.constant 1 : index
 
-  %2 = scf.foreach_thread (%tidx) in (%num_threads) shared_outs(%o = %arg1) -> (tensor<?x?xf32>) {
-    scf.foreach_thread.perform_concurrently {
+  %2 = scf.forall (%tidx) in (%num_threads) shared_outs(%o = %arg1) -> (tensor<?x?xf32>) {
+    scf.forall.in_parallel {
       tensor.parallel_insert_slice %arg0 into %o[%tidx, 0] [1, 5] [1, 1] : tensor<1x5xf32> into tensor<?x?xf32>
     }
   }

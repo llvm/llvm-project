@@ -368,7 +368,6 @@ void DerivedTypeSpec::Instantiate(Scope &containingScope) {
   }
   // Instantiate every non-parameter symbol from the original derived
   // type's scope into the new instance.
-  newScope.AddSourceRange(typeScope.sourceRange());
   auto restorer2{foldingContext.messages().SetContext(contextMessage)};
   if (PlumbPDTInstantiationDepth(&containingScope) > 100) {
     foldingContext.messages().Say(

@@ -29,7 +29,6 @@ void llvm::initializeIPO(PassRegistry &Registry) {
   initializeDAHPass(Registry);
   initializeForceFunctionAttrsLegacyPassPass(Registry);
   initializeGlobalDCELegacyPassPass(Registry);
-  initializeGlobalOptLegacyPassPass(Registry);
   initializeAlwaysInlinerLegacyPassPass(Registry);
   initializeInferFunctionAttrsLegacyPassPass(Registry);
   initializeLoopExtractorLegacyPassPass(Registry);
@@ -37,7 +36,6 @@ void llvm::initializeIPO(PassRegistry &Registry) {
   initializeAttributorLegacyPassPass(Registry);
   initializeAttributorCGSCCLegacyPassPass(Registry);
   initializePostOrderFunctionAttrsLegacyPassPass(Registry);
-  initializeIPSCCPLegacyPassPass(Registry);
   initializeBarrierNoopPass(Registry);
   initializeEliminateAvailableExternallyLegacyPassPass(Registry);
 }
@@ -64,12 +62,4 @@ void LLVMAddAlwaysInlinerPass(LLVMPassManagerRef PM) {
 
 void LLVMAddGlobalDCEPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createGlobalDCEPass());
-}
-
-void LLVMAddGlobalOptimizerPass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createGlobalOptimizerPass());
-}
-
-void LLVMAddIPSCCPPass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createIPSCCPPass());
 }

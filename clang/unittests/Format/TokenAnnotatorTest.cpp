@@ -574,6 +574,71 @@ TEST_F(TokenAnnotatorTest, UnderstandsOverloadedOperators) {
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_OverloadedOperatorLParen);
 }
 
+TEST_F(TokenAnnotatorTest, OverloadedOperatorInTemplate) {
+  struct {
+    const char *Text;
+    tok::TokenKind Kind;
+  } Operators[] = {{"+", tok::plus},
+                   {"-", tok::minus},
+                   // FIXME:
+                   // {"*", tok::star},
+                   {"/", tok::slash},
+                   {"%", tok::percent},
+                   {"^", tok::caret},
+                   // FIXME:
+                   // {"&", tok::amp},
+                   {"|", tok::pipe},
+                   {"~", tok::tilde},
+                   {"!", tok::exclaim},
+                   {"=", tok::equal},
+                   // FIXME:
+                   // {"<", tok::less},
+                   {">", tok::greater},
+                   {"+=", tok::plusequal},
+                   {"-=", tok::minusequal},
+                   {"*=", tok::starequal},
+                   {"/=", tok::slashequal},
+                   {"%=", tok::percentequal},
+                   {"^=", tok::caretequal},
+                   {"&=", tok::ampequal},
+                   {"|=", tok::pipeequal},
+                   {"<<", tok::lessless},
+                   {">>", tok::greatergreater},
+                   {">>=", tok::greatergreaterequal},
+                   {"<<=", tok::lesslessequal},
+                   {"==", tok::equalequal},
+                   {"!=", tok::exclaimequal},
+                   {"<=", tok::lessequal},
+                   {">=", tok::greaterequal},
+                   {"<=>", tok::spaceship},
+                   {"&&", tok::ampamp},
+                   {"||", tok::pipepipe},
+                   {"++", tok::plusplus},
+                   {"--", tok::minusminus},
+                   {",", tok::comma},
+                   {"->*", tok::arrowstar},
+                   {"->", tok::arrow}};
+
+  for (const auto &Operator : Operators) {
+    std::string Input("C<&operator");
+    Input += Operator.Text;
+    Input += " > a;";
+    auto Tokens = annotate(std::string(Input));
+    ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+    EXPECT_TOKEN(Tokens[1], tok::less, TT_TemplateOpener);
+    EXPECT_TOKEN(Tokens[4], Operator.Kind, TT_OverloadedOperator);
+    EXPECT_TOKEN(Tokens[5], tok::greater, TT_TemplateCloser);
+  }
+
+  auto Tokens = annotate("C<&operator< <X>> lt;");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[4], tok::less, TT_OverloadedOperator);
+  EXPECT_TOKEN(Tokens[5], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[7], tok::greater, TT_TemplateCloser);
+  EXPECT_TOKEN(Tokens[8], tok::greater, TT_TemplateCloser);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   auto Tokens = annotate("template <typename T>\n"
                          "concept C = (Foo && Bar) && (Bar && Baz);");

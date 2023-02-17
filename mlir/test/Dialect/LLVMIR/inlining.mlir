@@ -83,7 +83,7 @@ llvm.func internal fastcc @callee() -> (i32) attributes { function_entry_count =
 // CHECK-NEXT: llvm.return %[[CST]]
 llvm.func @caller() -> (i32) {
   // Include all call attributes that don't prevent inlining.
-  %0 = llvm.call @callee() { fastmathFlags = #llvm.fastmath<nnan, ninf> } : () -> (i32)
+  %0 = llvm.call @callee() { fastmathFlags = #llvm.fastmath<nnan, ninf>, branch_weights = dense<42> : vector<1xi32> } : () -> (i32)
   llvm.return %0 : i32
 }
 
@@ -147,32 +147,42 @@ llvm.func @caller() -> (i32) {
 
 // -----
 
-llvm.func @callee() -> (i32) attributes { passthrough = ["foo"] } {
-  %0 = llvm.mlir.constant(42 : i32) : i32
-  llvm.return %0 : i32
+llvm.func @callee() attributes { passthrough = ["foo", "bar"] } {
+  llvm.return
 }
 
 // CHECK-LABEL: llvm.func @caller
-// CHECK-NEXT: llvm.call @callee
-// CHECK-NEXT: return
-llvm.func @caller() -> (i32) {
-  %0 = llvm.call @callee() : () -> (i32)
-  llvm.return %0 : i32
+// CHECK-NEXT: llvm.return
+llvm.func @caller() {
+  llvm.call @callee() : () -> ()
+  llvm.return
 }
 
 // -----
 
-llvm.func @callee() -> (i32) attributes { garbageCollector = "foo" } {
-  %0 = llvm.mlir.constant(42 : i32) : i32
-  llvm.return %0 : i32
-}
+llvm.func @callee_noinline() attributes { passthrough = ["noinline"] }
+llvm.func @callee_optnone() attributes { passthrough = ["optnone"] }
+llvm.func @callee_noduplicate() attributes { passthrough = ["noduplicate"] }
+llvm.func @callee_presplitcoroutine() attributes { passthrough = ["presplitcoroutine"] }
+llvm.func @callee_returns_twice() attributes { passthrough = ["returns_twice"] }
+llvm.func @callee_strictfp() attributes { passthrough = ["strictfp"] }
 
 // CHECK-LABEL: llvm.func @caller
-// CHECK-NEXT: llvm.call @callee
-// CHECK-NEXT: return
-llvm.func @caller() -> (i32) {
-  %0 = llvm.call @callee() : () -> (i32)
-  llvm.return %0 : i32
+// CHECK-NEXT: llvm.call @callee_noinline
+// CHECK-NEXT: llvm.call @callee_optnone
+// CHECK-NEXT: llvm.call @callee_noduplicate
+// CHECK-NEXT: llvm.call @callee_presplitcoroutine
+// CHECK-NEXT: llvm.call @callee_returns_twice
+// CHECK-NEXT: llvm.call @callee_strictfp
+// CHECK-NEXT: llvm.return
+llvm.func @caller() {
+  llvm.call @callee_noinline() : () -> ()
+  llvm.call @callee_optnone() : () -> ()
+  llvm.call @callee_noduplicate() : () -> ()
+  llvm.call @callee_presplitcoroutine() : () -> ()
+  llvm.call @callee_returns_twice() : () -> ()
+  llvm.call @callee_strictfp() : () -> ()
+  llvm.return
 }
 
 // -----
@@ -187,20 +197,6 @@ llvm.func @callee(%ptr : !llvm.ptr {llvm.byval = !llvm.ptr}) -> (!llvm.ptr) {
 llvm.func @caller(%ptr : !llvm.ptr) -> (!llvm.ptr) {
   %0 = llvm.call @callee(%ptr) : (!llvm.ptr) -> (!llvm.ptr)
   llvm.return %0 : !llvm.ptr
-}
-
-// -----
-
-llvm.func @callee() {
-  llvm.return
-}
-
-// CHECK-LABEL: llvm.func @caller
-// CHECK-NEXT: llvm.call @callee
-// CHECK-NEXT: llvm.return
-llvm.func @caller() {
-  llvm.call @callee() { branch_weights = dense<42> : vector<1xi32> } : () -> ()
-  llvm.return
 }
 
 // -----
