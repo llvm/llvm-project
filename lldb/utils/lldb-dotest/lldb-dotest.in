@@ -18,6 +18,7 @@ has_libcxx = @LLDB_HAS_LIBCXX@
 libcxx_libs_dir = "@LIBCXX_LIBRARY_DIR@"
 libcxx_include_dir = "@LIBCXX_GENERATED_INCLUDE_DIR@"
 libcxx_include_target_dir = "@LIBCXX_GENERATED_INCLUDE_TARGET_DIR@"
+swift_libs_dir = '@LLDB_SWIFT_LIBS@' 
 
 if __name__ == '__main__':
     wrapper_args = sys.argv[1:]

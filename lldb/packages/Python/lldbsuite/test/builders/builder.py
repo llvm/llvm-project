@@ -143,6 +143,12 @@ class Builder:
             return libcpp_args
         return []
 
+    def getLLDBSwiftLibs(self):
+        if configuration.swift_libs_dir:
+            return ["SWIFT_LIBS_DIR={}".format(
+                configuration.swift_libs_dir)]
+        return []
+
     def _getDebugInfoArgs(self, debug_info):
         if debug_info is None:
             return []
@@ -167,7 +173,8 @@ class Builder:
             self.getSwiftTargetFlags(architecture), self.getCCSpec(compiler),
             self.getSwiftCSpec(), self.getExtraMakeArgs(),
             self.getSDKRootSpec(), self.getModuleCacheSpec(),
-            self.getLibCxxArgs(), self.getCmdLine(dictionary)]
+            self.getLibCxxArgs(), self.getLLDBSwiftLibs(), 
+            self.getCmdLine(dictionary)]
         command = list(itertools.chain(*command_parts))
 
         return command
