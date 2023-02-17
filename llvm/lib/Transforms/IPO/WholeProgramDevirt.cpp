@@ -313,9 +313,10 @@ void wholeprogramdevirt::setAfterReturnValues(
   }
 }
 
-VirtualCallTarget::VirtualCallTarget(Function *Fn, const TypeMemberInfo *TM)
+VirtualCallTarget::VirtualCallTarget(GlobalValue *Fn, const TypeMemberInfo *TM)
     : Fn(Fn), TM(TM),
-      IsBigEndian(Fn->getParent()->getDataLayout().isBigEndian()), WasDevirt(false) {}
+      IsBigEndian(Fn->getParent()->getDataLayout().isBigEndian()),
+      WasDevirt(false) {}
 
 namespace {
 
@@ -1009,7 +1010,13 @@ bool DevirtModule::tryFindVirtualCallTargets(
     if (!Ptr)
       return false;
 
-    auto Fn = dyn_cast<Function>(Ptr->stripPointerCasts());
+    auto C = Ptr->stripPointerCasts();
+    // Make sure this is a function or alias to a function.
+    auto Fn = dyn_cast<Function>(C);
+    auto A = dyn_cast<GlobalAlias>(C);
+    if (!Fn && A)
+      Fn = dyn_cast<Function>(A->getAliasee());
+
     if (!Fn)
       return false;
 
@@ -1026,7 +1033,11 @@ bool DevirtModule::tryFindVirtualCallTargets(
     if (mustBeUnreachableFunction(Fn, ExportSummary))
       continue;
 
-    TargetsForSlot.push_back({Fn, &TM});
+    // Save the symbol used in the vtable to use as the devirtualization
+    // target.
+    auto GV = dyn_cast<GlobalValue>(C);
+    assert(GV);
+    TargetsForSlot.push_back({GV, &TM});
   }
 
   // Give up if we couldn't find any targets.
@@ -1207,7 +1218,7 @@ bool DevirtModule::trySingleImplDevirt(
     WholeProgramDevirtResolution *Res) {
   // See if the program contains a single implementation of this virtual
   // function.
-  Function *TheFn = TargetsForSlot[0].Fn;
+  auto *TheFn = TargetsForSlot[0].Fn;
   for (auto &&Target : TargetsForSlot)
     if (TheFn != Target.Fn)
       return false;
@@ -1453,23 +1464,30 @@ bool DevirtModule::tryEvaluateFunctionsWithArgs(
   // Evaluate each function and store the result in each target's RetVal
   // field.
   for (VirtualCallTarget &Target : TargetsForSlot) {
-    if (Target.Fn->arg_size() != Args.size() + 1)
+    // TODO: Skip for now if the vtable symbol was an alias to a function,
+    // need to evaluate whether it would be correct to analyze the aliasee
+    // function for this optimization.
+    auto Fn = dyn_cast<Function>(Target.Fn);
+    if (!Fn)
+      return false;
+
+    if (Fn->arg_size() != Args.size() + 1)
       return false;
 
     Evaluator Eval(M.getDataLayout(), nullptr);
     SmallVector<Constant *, 2> EvalArgs;
     EvalArgs.push_back(
-        Constant::getNullValue(Target.Fn->getFunctionType()->getParamType(0)));
+        Constant::getNullValue(Fn->getFunctionType()->getParamType(0)));
     for (unsigned I = 0; I != Args.size(); ++I) {
-      auto *ArgTy = dyn_cast<IntegerType>(
-          Target.Fn->getFunctionType()->getParamType(I + 1));
+      auto *ArgTy =
+          dyn_cast<IntegerType>(Fn->getFunctionType()->getParamType(I + 1));
       if (!ArgTy)
         return false;
       EvalArgs.push_back(ConstantInt::get(ArgTy, Args[I]));
     }
 
     Constant *RetVal;
-    if (!Eval.EvaluateFunction(Target.Fn, RetVal, EvalArgs) ||
+    if (!Eval.EvaluateFunction(Fn, RetVal, EvalArgs) ||
         !isa<ConstantInt>(RetVal))
       return false;
     Target.RetVal = cast<ConstantInt>(RetVal)->getZExtValue();
@@ -1690,8 +1708,14 @@ void DevirtModule::applyVirtualConstProp(CallSiteInfo &CSInfo, StringRef FnName,
 bool DevirtModule::tryVirtualConstProp(
     MutableArrayRef<VirtualCallTarget> TargetsForSlot, VTableSlotInfo &SlotInfo,
     WholeProgramDevirtResolution *Res, VTableSlot Slot) {
+  // TODO: Skip for now if the vtable symbol was an alias to a function,
+  // need to evaluate whether it would be correct to analyze the aliasee
+  // function for this optimization.
+  auto Fn = dyn_cast<Function>(TargetsForSlot[0].Fn);
+  if (!Fn)
+    return false;
   // This only works if the function returns an integer.
-  auto RetType = dyn_cast<IntegerType>(TargetsForSlot[0].Fn->getReturnType());
+  auto RetType = dyn_cast<IntegerType>(Fn->getReturnType());
   if (!RetType)
     return false;
   unsigned BitWidth = RetType->getBitWidth();
@@ -1709,11 +1733,18 @@ bool DevirtModule::tryVirtualConstProp(
   // inline all implementations of the virtual function into each call site,
   // rather than using function attributes to perform local optimization.
   for (VirtualCallTarget &Target : TargetsForSlot) {
-    if (Target.Fn->isDeclaration() ||
-        !computeFunctionBodyMemoryAccess(*Target.Fn, AARGetter(*Target.Fn))
+    // TODO: Skip for now if the vtable symbol was an alias to a function,
+    // need to evaluate whether it would be correct to analyze the aliasee
+    // function for this optimization.
+    auto Fn = dyn_cast<Function>(Target.Fn);
+    if (!Fn)
+      return false;
+
+    if (Fn->isDeclaration() ||
+        !computeFunctionBodyMemoryAccess(*Fn, AARGetter(*Fn))
              .doesNotAccessMemory() ||
-        Target.Fn->arg_empty() || !Target.Fn->arg_begin()->use_empty() ||
-        Target.Fn->getReturnType() != RetType)
+        Fn->arg_empty() || !Fn->arg_begin()->use_empty() ||
+        Fn->getReturnType() != RetType)
       return false;
   }
 
@@ -2221,7 +2252,7 @@ bool DevirtModule::run() {
 
   // For each (type, offset) pair:
   bool DidVirtualConstProp = false;
-  std::map<std::string, Function*> DevirtTargets;
+  std::map<std::string, GlobalValue *> DevirtTargets;
   for (auto &S : CallSlots) {
     // Search each of the members of the type identifier for the virtual
     // function implementation at offset S.first.ByteOffset, and add to
@@ -2276,7 +2307,14 @@ bool DevirtModule::run() {
   if (RemarksEnabled) {
     // Generate remarks for each devirtualized function.
     for (const auto &DT : DevirtTargets) {
-      Function *F = DT.second;
+      GlobalValue *GV = DT.second;
+      auto F = dyn_cast<Function>(GV);
+      if (!F) {
+        auto A = dyn_cast<GlobalAlias>(GV);
+        assert(A && isa<Function>(A->getAliasee()));
+        F = dyn_cast<Function>(A->getAliasee());
+        assert(F);
+      }
 
       using namespace ore;
       OREGetter(F).emit(OptimizationRemark(DEBUG_TYPE, "Devirtualized", F)
