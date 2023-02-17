@@ -353,7 +353,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtZfhOrZfhmin()) {
     if (Subtarget.hasStdExtZfh()) {
       setOperationAction(FPLegalNodeTypes, MVT::f16, Legal);
-      setOperationAction(FPRndMode, MVT::f16, Custom);
+      setOperationAction(FPRndMode, MVT::f16,
+                         Subtarget.hasStdExtZfa() ? Legal : Custom);
       setOperationAction(ISD::SELECT, MVT::f16, Custom);
     } else {
       static const unsigned ZfhminPromoteOps[] = {
@@ -382,7 +383,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SELECT_CC, MVT::f16, Expand);
     setOperationAction(ISD::BR_CC, MVT::f16, Expand);
 
-    setOperationAction({ISD::FREM, ISD::FNEARBYINT, ISD::FPOW, ISD::FPOWI,
+    setOperationAction(ISD::FNEARBYINT, MVT::f16,
+                       Subtarget.hasStdExtZfa() ? Legal : Promote);
+    setOperationAction({ISD::FREM, ISD::FPOW, ISD::FPOWI,
                         ISD::FCOS, ISD::FSIN, ISD::FSINCOS, ISD::FEXP,
                         ISD::FEXP2, ISD::FLOG, ISD::FLOG2, ISD::FLOG10},
                        MVT::f16, Promote);
@@ -402,7 +405,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasStdExtF()) {
     setOperationAction(FPLegalNodeTypes, MVT::f32, Legal);
-    setOperationAction(FPRndMode, MVT::f32, Custom);
+    setOperationAction(FPRndMode, MVT::f32,
+                       Subtarget.hasStdExtZfa() ? Legal : Custom);
     setCondCodeAction(FPCCToExpand, MVT::f32, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
     setOperationAction(ISD::SELECT, MVT::f32, Custom);
@@ -410,6 +414,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(FPOpToExpand, MVT::f32, Expand);
     setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
     setTruncStoreAction(MVT::f32, MVT::f16, Expand);
+
+    if (Subtarget.hasStdExtZfa())
+      setOperationAction(ISD::FNEARBYINT, MVT::f32, Legal);
   }
 
   if (Subtarget.hasStdExtF() && Subtarget.is64Bit())
@@ -417,9 +424,18 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasStdExtD()) {
     setOperationAction(FPLegalNodeTypes, MVT::f64, Legal);
-    if (Subtarget.is64Bit()) {
-      setOperationAction(FPRndMode, MVT::f64, Custom);
+
+    if (Subtarget.hasStdExtZfa()) {
+      setOperationAction(FPRndMode, MVT::f64, Legal);
+      setOperationAction(ISD::FNEARBYINT, MVT::f64, Legal);
+      setOperationAction(ISD::BITCAST, MVT::i64, Custom);
+      setOperationAction(ISD::BITCAST, MVT::f64, Custom);
     }
+
+    if (Subtarget.is64Bit())
+      setOperationAction(FPRndMode, MVT::f64,
+                         Subtarget.hasStdExtZfa() ? Legal : Custom);
+
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Legal);
     setCondCodeAction(FPCCToExpand, MVT::f64, Expand);
@@ -1014,7 +1030,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   // Function alignments.
   const Align FunctionAlignment(Subtarget.hasStdExtCOrZca() ? 2 : 4);
   setMinFunctionAlignment(FunctionAlignment);
-  setPrefFunctionAlignment(FunctionAlignment);
+  // Set preferred alignments.
+  setPrefFunctionAlignment(Subtarget.getPrefFunctionAlignment());
+  setPrefLoopAlignment(Subtarget.getPrefLoopAlignment());
 
   setMinimumJumpTableEntries(5);
 
@@ -2899,13 +2917,20 @@ static SDValue lowerScalarInsert(SDValue Scalar, SDValue VL,
 
 }
 
-static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, bool &SwapSources,
-                                const RISCVSubtarget &Subtarget) {
+/// Is this shuffle interleaving contiguous elements from one vector into the
+/// even elements and contiguous elements from another vector into the odd
+/// elements. \p Src1 will contain the element that should be in the first even
+/// element. \p Src2 will contain the element that should be in the first odd
+/// element. These can be the first element in a source or the element half
+/// way through the source.
+static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, int &EvenSrc,
+                                int &OddSrc, const RISCVSubtarget &Subtarget) {
   // We need to be able to widen elements to the next larger integer type.
   if (VT.getScalarSizeInBits() >= Subtarget.getELEN())
     return false;
 
   int Size = Mask.size();
+  int HalfSize = Size / 2;
   assert(Size == (int)VT.getVectorNumElements() && "Unexpected mask size");
 
   int Srcs[] = {-1, -1};
@@ -2917,8 +2942,8 @@ static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, bool &SwapSources,
     // Is this an even or odd element.
     int Pol = i % 2;
 
-    // Ensure we consistently use the same source for this element polarity.
-    int Src = Mask[i] / Size;
+    // Ensure we consistently use the same half source for this polarity.
+    int Src = alignDown(Mask[i], HalfSize);
     if (Srcs[Pol] < 0)
       Srcs[Pol] = Src;
     if (Srcs[Pol] != Src)
@@ -2926,17 +2951,24 @@ static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, bool &SwapSources,
 
     // Make sure the element within the source is appropriate for this element
     // in the destination.
-    int Elt = Mask[i] % Size;
+    int Elt = Mask[i] % HalfSize;
     if (Elt != i / 2)
       return false;
   }
 
-  // We need to find a source for each polarity and they can't be the same.
-  if (Srcs[0] < 0 || Srcs[1] < 0 || Srcs[0] == Srcs[1])
+  // One source should be low half of first vector.
+  if (Srcs[0] != 0 && Srcs[1] != 0)
     return false;
 
-  // Swap the sources if the second source was in the even polarity.
-  SwapSources = Srcs[0] > Srcs[1];
+  // Other source should be the upper half of the first source or the lower
+  // half of the second source.
+  // FIXME: This is only a heuristic to avoid regressions.
+  if (Srcs[0] != HalfSize && Srcs[0] != Size && Srcs[1] != HalfSize &&
+      Srcs[1] != Size)
+    return false;
+
+  EvenSrc = Srcs[0];
+  OddSrc = Srcs[1];
 
   return true;
 }
@@ -3336,18 +3368,22 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
 
   // Detect an interleave shuffle and lower to
   // (vmaccu.vx (vwaddu.vx lohalf(V1), lohalf(V2)), lohalf(V2), (2^eltbits - 1))
-  bool SwapSources;
-  if (isInterleaveShuffle(Mask, VT, SwapSources, Subtarget)) {
-    // Swap sources if needed.
-    if (SwapSources)
-      std::swap(V1, V2);
-
-    // Extract the lower half of the vectors.
+  int EvenSrc, OddSrc;
+  if (isInterleaveShuffle(Mask, VT, EvenSrc, OddSrc, Subtarget)) {
+    // Extract the halves of the vectors.
     MVT HalfVT = VT.getHalfNumVectorElementsVT();
-    V1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, V1,
-                     DAG.getConstant(0, DL, XLenVT));
-    V2 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, V2,
-                     DAG.getConstant(0, DL, XLenVT));
+
+    int Size = Mask.size();
+    SDValue EvenV, OddV;
+    assert(EvenSrc >= 0 && "Undef source?");
+    EvenV = (EvenSrc / Size) == 0 ? V1 : V2;
+    EvenV = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, EvenV,
+                        DAG.getConstant(EvenSrc % Size, DL, XLenVT));
+
+    assert(OddSrc >= 0 && "Undef source?");
+    OddV = (OddSrc / Size) == 0 ? V1 : V2;
+    OddV = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, OddV,
+                       DAG.getConstant(OddSrc % Size, DL, XLenVT));
 
     // Double the element width and halve the number of elements in an int type.
     unsigned EltBits = VT.getScalarSizeInBits();
@@ -3363,36 +3399,37 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     // larger type.
     MVT HalfContainerVT = MVT::getVectorVT(
         VT.getVectorElementType(), WideIntContainerVT.getVectorElementCount());
-    V1 = convertToScalableVector(HalfContainerVT, V1, DAG, Subtarget);
-    V2 = convertToScalableVector(HalfContainerVT, V2, DAG, Subtarget);
+    EvenV = convertToScalableVector(HalfContainerVT, EvenV, DAG, Subtarget);
+    OddV = convertToScalableVector(HalfContainerVT, OddV, DAG, Subtarget);
 
     // Cast sources to integer.
     MVT IntEltVT = MVT::getIntegerVT(EltBits);
     MVT IntHalfVT =
         MVT::getVectorVT(IntEltVT, HalfContainerVT.getVectorElementCount());
-    V1 = DAG.getBitcast(IntHalfVT, V1);
-    V2 = DAG.getBitcast(IntHalfVT, V2);
+    EvenV = DAG.getBitcast(IntHalfVT, EvenV);
+    OddV = DAG.getBitcast(IntHalfVT, OddV);
 
-    // Freeze V2 since we use it twice and we need to be sure that the add and
+    // Freeze OddV since we use it twice and we need to be sure that the add and
     // multiply see the same value.
-    V2 = DAG.getFreeze(V2);
+    OddV = DAG.getFreeze(OddV);
 
     // Recreate TrueMask using the widened type's element count.
     TrueMask = getAllOnesMask(HalfContainerVT, VL, DL, DAG);
 
-    // Widen V1 and V2 with 0s and add one copy of V2 to V1.
+    // Widen EvenV and OddV with 0s and add one copy of OddV to EvenV.
     SDValue Add =
-        DAG.getNode(RISCVISD::VWADDU_VL, DL, WideIntContainerVT, V1, V2,
+        DAG.getNode(RISCVISD::VWADDU_VL, DL, WideIntContainerVT, EvenV, OddV,
                     DAG.getUNDEF(WideIntContainerVT), TrueMask, VL);
-    // Create 2^eltbits - 1 copies of V2 by multiplying by the largest integer.
+    // Create 2^eltbits - 1 copies of OddV by multiplying by the largest
+    // integer.
     SDValue Multiplier = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, IntHalfVT,
                                      DAG.getUNDEF(IntHalfVT),
                                      DAG.getAllOnesConstant(DL, XLenVT), VL);
     SDValue WidenMul =
-        DAG.getNode(RISCVISD::VWMULU_VL, DL, WideIntContainerVT, V2, Multiplier,
-                    DAG.getUNDEF(WideIntContainerVT), TrueMask, VL);
+        DAG.getNode(RISCVISD::VWMULU_VL, DL, WideIntContainerVT, OddV,
+                    Multiplier, DAG.getUNDEF(WideIntContainerVT), TrueMask, VL);
     // Add the new copies to our previous addition giving us 2^eltbits copies of
-    // V2. This is equivalent to shifting V2 left by eltbits. This should
+    // OddV. This is equivalent to shifting OddV left by eltbits. This should
     // combine with the vwmulu.vv above to form vwmaccu.vv.
     Add = DAG.getNode(RISCVISD::ADD_VL, DL, WideIntContainerVT, Add, WidenMul,
                       DAG.getUNDEF(WideIntContainerVT), TrueMask, VL);
@@ -3553,10 +3590,9 @@ bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
 
   MVT SVT = VT.getSimpleVT();
 
-  bool SwapSources;
-  int LoSrc, HiSrc;
-  return (isElementRotate(LoSrc, HiSrc, M) > 0) ||
-         isInterleaveShuffle(M, SVT, SwapSources, Subtarget);
+  int Dummy1, Dummy2;
+  return (isElementRotate(Dummy1, Dummy2, M) > 0) ||
+         isInterleaveShuffle(M, SVT, Dummy1, Dummy2, Subtarget);
 }
 
 // Lower CTLZ_ZERO_UNDEF or CTTZ_ZERO_UNDEF by converting to FP and extracting
@@ -3811,6 +3847,16 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       SDValue FPConv =
           DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, NewOp0);
       return FPConv;
+    }
+    if (VT == MVT::f64 && Op0VT == MVT::i64 && XLenVT == MVT::i32 &&
+        Subtarget.hasStdExtZfa()) {
+      SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Op0,
+                               DAG.getConstant(0, DL, MVT::i32));
+      SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Op0,
+                               DAG.getConstant(1, DL, MVT::i32));
+      SDValue RetReg =
+          DAG.getNode(RISCVISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
+      return RetReg;
     }
 
     // Consider other scalar<->scalar casts as legal if the types are legal.
@@ -8020,6 +8066,13 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue FPConv =
           DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Op0);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, FPConv));
+    } else if (VT == MVT::i64 && Op0VT == MVT::f64 && XLenVT == MVT::i32 &&
+               Subtarget.hasStdExtZfa()) {
+      SDValue NewReg = DAG.getNode(RISCVISD::SplitF64, DL,
+                                   DAG.getVTList(MVT::i32, MVT::i32), Op0);
+      SDValue RetReg = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64,
+                                   NewReg.getValue(0), NewReg.getValue(1));
+      Results.push_back(RetReg);
     } else if (!VT.isVector() && Op0VT.isFixedLengthVector() &&
                isTypeLegal(Op0VT)) {
       // Custom-legalize bitcasts from fixed-length vector types to illegal
@@ -11124,7 +11177,8 @@ static MachineBasicBlock *emitReadCycleWidePseudo(MachineInstr &MI,
 }
 
 static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
-                                             MachineBasicBlock *BB) {
+                                             MachineBasicBlock *BB,
+                                             const RISCVSubtarget &Subtarget) {
   assert(MI.getOpcode() == RISCV::SplitF64Pseudo && "Unexpected instruction");
 
   MachineFunction &MF = *BB->getParent();
@@ -11134,6 +11188,14 @@ static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
   Register LoReg = MI.getOperand(0).getReg();
   Register HiReg = MI.getOperand(1).getReg();
   Register SrcReg = MI.getOperand(2).getReg();
+  if (Subtarget.hasStdExtD() && Subtarget.hasStdExtZfa() &&
+      !Subtarget.is64Bit()) {
+    BuildMI(*BB, MI, DL, TII.get(RISCV::FMV_X_W_FPR64), LoReg).addReg(SrcReg);
+    BuildMI(*BB, MI, DL, TII.get(RISCV::FMVH_X_D), HiReg).addReg(SrcReg);
+    MI.eraseFromParent(); // The pseudo instruction is gone now.
+    return BB;
+  }
+
   const TargetRegisterClass *SrcRC = &RISCV::FPR64RegClass;
   int FI = MF.getInfo<RISCVMachineFunctionInfo>()->getMoveF64FrameIndex(MF);
 
@@ -11157,7 +11219,8 @@ static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
 }
 
 static MachineBasicBlock *emitBuildPairF64Pseudo(MachineInstr &MI,
-                                                 MachineBasicBlock *BB) {
+                                                 MachineBasicBlock *BB,
+                                                 const RISCVSubtarget &Subtarget) {
   assert(MI.getOpcode() == RISCV::BuildPairF64Pseudo &&
          "Unexpected instruction");
 
@@ -11168,6 +11231,15 @@ static MachineBasicBlock *emitBuildPairF64Pseudo(MachineInstr &MI,
   Register DstReg = MI.getOperand(0).getReg();
   Register LoReg = MI.getOperand(1).getReg();
   Register HiReg = MI.getOperand(2).getReg();
+  if (Subtarget.hasStdExtD() && Subtarget.hasStdExtZfa() &&
+      !Subtarget.is64Bit()) {
+    BuildMI(*BB, MI, DL, TII.get(RISCV::FMVP_D_X), DstReg)
+        .addReg(LoReg)
+        .addReg(HiReg);
+    MI.eraseFromParent();
+    return BB;
+  }
+
   const TargetRegisterClass *DstRC = &RISCV::FPR64RegClass;
   int FI = MF.getInfo<RISCVMachineFunctionInfo>()->getMoveF64FrameIndex(MF);
 
@@ -11683,9 +11755,9 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case RISCV::Select_FPR64_Using_CC_GPR:
     return emitSelectPseudo(MI, BB, Subtarget);
   case RISCV::BuildPairF64Pseudo:
-    return emitBuildPairF64Pseudo(MI, BB);
+    return emitBuildPairF64Pseudo(MI, BB, Subtarget);
   case RISCV::SplitF64Pseudo:
-    return emitSplitF64Pseudo(MI, BB);
+    return emitSplitF64Pseudo(MI, BB, Subtarget);
   case RISCV::PseudoQuietFLE_H:
     return emitQuietFCMP(MI, BB, RISCV::FLE_H, RISCV::FEQ_H, Subtarget);
   case RISCV::PseudoQuietFLT_H:

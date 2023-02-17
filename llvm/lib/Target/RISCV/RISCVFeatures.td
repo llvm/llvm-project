@@ -145,6 +145,14 @@ def HasStdExtZhinxOrZhinxmin
                                    "'Zhinx' (Half Float in Integer) or "
                                    "'Zhinxmin' (Half Float in Integer Minimal)">;
 
+def FeatureStdExtZfa
+    : SubtargetFeature<"experimental-zfa", "HasStdExtZfa", "true",
+                       "'Zfa' (Additional Floating-Point)",
+                       [FeatureStdExtF]>;
+def HasStdExtZfa : Predicate<"Subtarget->hasStdExtZfa()">,
+                             AssemblerPredicate<(all_of FeatureStdExtZfa),
+                             "'Zfa' (Additional Floating-Point)">;
+
 def FeatureStdExtC
     : SubtargetFeature<"c", "HasStdExtC", "true",
                        "'C' (Compressed Instructions)">;

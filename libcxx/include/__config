@@ -448,7 +448,7 @@ typedef __char32_t char32_t;
 #  endif
 
 #  if !defined(__cpp_exceptions) || __cpp_exceptions < 199711L
-#    define _LIBCPP_NO_EXCEPTIONS
+#    define _LIBCPP_HAS_NO_EXCEPTIONS
 #  endif
 
 #  define _LIBCPP_PREFERRED_ALIGNOF(_Tp) __alignof(_Tp)

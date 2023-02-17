@@ -1879,13 +1879,13 @@ deque<_Tp, _Allocator>::__add_front_capacity(size_type __n)
             __buf(std::max<size_type>(2* __map_.capacity(),
                                       __nb + __map_.size()),
                   0, __map_.__alloc());
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             for (; __nb > 0; --__nb)
                 __buf.push_back(__alloc_traits::allocate(__a, __block_size));
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
@@ -1894,7 +1894,7 @@ deque<_Tp, _Allocator>::__add_front_capacity(size_type __n)
                 __alloc_traits::deallocate(__a, *__i, __block_size);
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
         for (; __back_capacity > 0; --__back_capacity)
         {
             __buf.push_back(__map_.back());
@@ -2021,13 +2021,13 @@ deque<_Tp, _Allocator>::__add_back_capacity(size_type __n)
                                       __nb + __map_.size()),
                   __map_.size() - __front_capacity,
                   __map_.__alloc());
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             for (; __nb > 0; --__nb)
                 __buf.push_back(__alloc_traits::allocate(__a, __block_size));
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
@@ -2036,7 +2036,7 @@ deque<_Tp, _Allocator>::__add_back_capacity(size_type __n)
                 __alloc_traits::deallocate(__a, *__i, __block_size);
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
         for (; __front_capacity > 0; --__front_capacity)
         {
             __buf.push_back(__map_.front());

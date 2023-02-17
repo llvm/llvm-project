@@ -48,8 +48,9 @@ supported_toolchains = []
 if (host_os == "linux") {
   supported_toolchains += [ "//llvm/utils/gn/build/toolchain:stage2_unix" ]
 } else if (host_os == "win") {
-  supported_toolchains += [ "//llvm/utils/gn/build/toolchain:stage2_win" ]
+  supported_toolchains += [ "//llvm/utils/gn/build/toolchain:stage2_win_x64" ]
 }
+
 group("asan") {
   deps = []
   foreach(toolchain, supported_toolchains) {

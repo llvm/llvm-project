@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___ATOMIC_CXX_ATOMIC_IMPL_H
 #define _LIBCPP___ATOMIC_CXX_ATOMIC_IMPL_H
 
+#include <__atomic/is_always_lock_free.h>
 #include <__atomic/memory_order.h>
 #include <__config>
 #include <__type_traits/is_assignable.h>
