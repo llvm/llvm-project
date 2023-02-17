@@ -1003,11 +1003,6 @@ mlir::linalg::vectorizeLinalgOpPrecondition(LinalgOp linalgOp,
         "static sizes");
   }
 
-  // TODO: Masking is only supported for dynamic shapes so input vector sizes
-  // must be empty if the op is not dynamic.
-  if (!linalgOp.hasDynamicShape() && !inputVectorSizes.empty())
-    return failure();
-
   if (linalgOp.hasDynamicShape() &&
       failed(vectorizeDynamicLinalgOpPrecondition(linalgOp))) {
     LDBG("Dynamically-shaped op failed vectorization pre-conditions\n");
@@ -1092,8 +1087,10 @@ LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, LinalgOp linalgOp,
   LLVM_DEBUG(llvm::dbgs() << "\n");
 
   if (failed(vectorizeLinalgOpPrecondition(linalgOp, inputVectorSizes,
-                                           vectorizeNDExtract)))
+                                           vectorizeNDExtract))) {
+    LDBG("Vectorization pre-conditions failed\n");
     return failure();
+  }
 
   // Initialize vectorization state.
   VectorizationState state(rewriter);
