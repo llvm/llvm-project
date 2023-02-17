@@ -12,20 +12,16 @@ define i1 @eq_pow_or(i32 %0) nounwind {
 ; X86-LABEL: eq_pow_or:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl $32, %eax
-; X86-NEXT:    sete %cl
-; X86-NEXT:    cmpl $-32, %eax
+; X86-NEXT:    addl $32, %eax
+; X86-NEXT:    testl $-65, %eax
 ; X86-NEXT:    sete %al
-; X86-NEXT:    orb %cl, %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: eq_pow_or:
 ; X64:       # %bb.0:
-; X64-NEXT:    cmpl $32, %edi
-; X64-NEXT:    sete %cl
-; X64-NEXT:    cmpl $-32, %edi
+; X64-NEXT:    addl $32, %edi
+; X64-NEXT:    testl $-65, %edi
 ; X64-NEXT:    sete %al
-; X64-NEXT:    orb %cl, %al
 ; X64-NEXT:    retq
   %2 = icmp eq i32 %0, 32
   %3 = icmp eq i32 %0, -32
@@ -37,20 +33,16 @@ define i1 @ne_pow_and(i8 %0) nounwind {
 ; X86-LABEL: ne_pow_and:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpb $16, %al
-; X86-NEXT:    setne %cl
-; X86-NEXT:    cmpb $-16, %al
+; X86-NEXT:    addb $16, %al
+; X86-NEXT:    testb $-33, %al
 ; X86-NEXT:    setne %al
-; X86-NEXT:    andb %cl, %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: ne_pow_and:
 ; X64:       # %bb.0:
-; X64-NEXT:    cmpb $16, %dil
-; X64-NEXT:    setne %cl
-; X64-NEXT:    cmpb $-16, %dil
+; X64-NEXT:    addb $16, %dil
+; X64-NEXT:    testb $-33, %dil
 ; X64-NEXT:    setne %al
-; X64-NEXT:    andb %cl, %al
 ; X64-NEXT:    retq
   %2 = icmp ne i8 %0, 16
   %3 = icmp ne i8 %0, -16
