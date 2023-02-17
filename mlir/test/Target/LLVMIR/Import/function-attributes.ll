@@ -29,8 +29,6 @@ attributes #0 = { readnone }
 ; CHECK-LABEL: @func_arg_attrs
 ; CHECK-SAME:  !llvm.ptr {llvm.byval = i64}
 ; CHECK-SAME:  !llvm.ptr {llvm.byref = i64}
-; CHECK-SAME:  !llvm.ptr {llvm.sret = i64}
-; CHECK-SAME:  !llvm.ptr {llvm.inalloca = i64}
 ; CHECK-SAME:  !llvm.ptr {llvm.noalias}
 ; CHECK-SAME:  !llvm.ptr {llvm.readonly}
 ; CHECK-SAME:  !llvm.ptr {llvm.nest}
@@ -50,8 +48,6 @@ attributes #0 = { readnone }
 define ptr @func_arg_attrs(
     ptr byval(i64) %arg0,
     ptr byref(i64) %arg1,
-    ptr sret(i64) %arg2,
-    ptr inalloca(i64) %arg3,
     ptr noalias %arg4,
     ptr readonly %arg5,
     ptr nest %arg6,
@@ -69,6 +65,18 @@ define ptr @func_arg_attrs(
     ptr alignstack(32) %arg18,
     ptr writeonly %arg19) {
   ret ptr %arg17
+}
+
+; CHECK-LABEL: @sret
+; CHECK-SAME:  !llvm.ptr {llvm.sret = i64}
+define void @sret(ptr sret(i64) %arg0) {
+  ret void
+}
+
+; CHECK-LABEL: @inalloca
+; CHECK-SAME:  !llvm.ptr {llvm.inalloca = i64}
+define void @inalloca(ptr inalloca(i64) %arg0) {
+  ret void
 }
 
 ; CHECK-LABEL: @allocator
