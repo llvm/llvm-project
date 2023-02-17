@@ -24,11 +24,11 @@ namespace {
 static SmallVector<Type, 2> getSpecifierFields(StorageSpecifierType tp) {
   MLIRContext *ctx = tp.getContext();
   auto enc = tp.getEncoding();
-  unsigned rank = enc.getDimLevelType().size();
+  const Level lvlRank = enc.getLvlRank();
 
   SmallVector<Type, 2> result;
   auto indexType = tp.getSizesType();
-  auto dimSizes = LLVM::LLVMArrayType::get(ctx, indexType, rank);
+  auto dimSizes = LLVM::LLVMArrayType::get(ctx, indexType, lvlRank);
   auto memSizes = LLVM::LLVMArrayType::get(ctx, indexType,
                                            getNumDataFieldsFromEncoding(enc));
   result.push_back(dimSizes);

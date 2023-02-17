@@ -70,13 +70,13 @@ mlirSparseTensorEncodingAttrGetHigherOrdering(MlirAttribute attr) {
 }
 
 intptr_t mlirSparseTensorEncodingGetNumDimLevelTypes(MlirAttribute attr) {
-  return unwrap(attr).cast<SparseTensorEncodingAttr>().getDimLevelType().size();
+  return unwrap(attr).cast<SparseTensorEncodingAttr>().getLvlRank();
 }
 
 MlirSparseTensorDimLevelType
-mlirSparseTensorEncodingAttrGetDimLevelType(MlirAttribute attr, intptr_t pos) {
+mlirSparseTensorEncodingAttrGetDimLevelType(MlirAttribute attr, intptr_t lvl) {
   return static_cast<MlirSparseTensorDimLevelType>(
-      unwrap(attr).cast<SparseTensorEncodingAttr>().getDimLevelType()[pos]);
+      unwrap(attr).cast<SparseTensorEncodingAttr>().getLvlType(lvl));
 }
 
 int mlirSparseTensorEncodingAttrGetPointerBitWidth(MlirAttribute attr) {
