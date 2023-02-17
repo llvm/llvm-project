@@ -24,6 +24,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include <cstddef>
+#include <optional>
 
 #include "mlir/Dialect/OpenMP/OpenMPOpsDialect.cpp.inc"
 #include "mlir/Dialect/OpenMP/OpenMPOpsEnums.cpp.inc"
@@ -512,7 +513,7 @@ static void printDependVarList(OpAsmPrinter &p, Operation *op,
 
 /// Verifies Depend clause
 static LogicalResult verifyDependVarList(Operation *op,
-                                         Optional<ArrayAttr> depends,
+                                         std::optional<ArrayAttr> depends,
                                          OperandRange dependVars) {
   if (!dependVars.empty()) {
     if (!depends || depends->size() != dependVars.size())
