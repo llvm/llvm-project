@@ -611,16 +611,6 @@ llvm::Expected<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
     }
 
     void handleCASFileSystemRootID(cas::CASID ID) override {}
-    void
-    handleDependencyOutputOpts(const DependencyOutputOptions &Opts) override {}
-    void handleFileDependency(StringRef File) override {}
-    void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) override {}
-    void handleModuleDependency(ModuleDeps MD) override {}
-    void handleContextHash(std::string Hash) override {}
-    std::string lookupModuleOutput(const ModuleID &ID,
-                                   ModuleOutputKind Kind) override {
-      llvm::report_fatal_error("unexpected call to lookupModuleOutput");
-    }
 
     void handleProvidedAndRequiredStdCXXModules(
         std::optional<P1689ModuleInfo> Provided,
