@@ -42,8 +42,11 @@ namespace gpu {
 /// supported. Dynamic block dim sizes are currently not supported.
 DiagnosedSilenceableFailure mapNestedForeachToThreadsImpl(
     RewriterBase &rewriter, Operation *target,
-    const SmallVectorImpl<int64_t> &blockDim, bool syncAfterDistribute,
-    std::optional<TransformOpInterface> transformOp,
+    const SmallVectorImpl<int64_t> &blockDim,
+    function_ref<void(RewriterBase &, scf::ForeachThreadOp,
+                      SmallVectorImpl<Value> &)>
+        threadIdGenerator,
+    bool syncAfterDistribute, std::optional<TransformOpInterface> transformOp,
     const ArrayRef<DeviceMappingAttrInterface> &threadMappingAttributes);
 
 /// Maps the top level `scf.foreach_thread` op to GPU Thread Blocks. Mapping is
