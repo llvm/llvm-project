@@ -73,6 +73,8 @@ C++ Language Changes
 - Improved ``-O0`` code generation for calls to ``std::forward_like``. Similarly to
   ``std::move, std::forward`` et al. it is now treated as a compiler builtin and implemented
   directly rather than instantiating the definition from the standard library.
+- Implemented `CWG2518 <https://wg21.link/CWG2518>`_ which allows ``static_assert(false)``
+  to not be ill-formed when its condition is evaluated in the context of a template definition.
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
