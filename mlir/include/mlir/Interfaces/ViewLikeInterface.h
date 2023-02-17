@@ -48,8 +48,10 @@ namespace mlir {
 /// in `integers` is `dynVal` or (2) the next value otherwise. This allows
 /// idiomatic printing of mixed value and integer attributes in a list. E.g.
 /// `[%arg0, 7, 42, %arg42]`.
-void printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
-                           OperandRange values, ArrayRef<int64_t> integers);
+void printDynamicIndexList(
+    OpAsmPrinter &printer, Operation *op, OperandRange values,
+    ArrayRef<int64_t> integers,
+    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square);
 
 /// Pasrer hook for custom directive in assemblyFormat.
 ///
@@ -64,10 +66,11 @@ void printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
 /// E.g. after parsing "[%arg0, 7, 42, %arg42]":
 ///   1. `result` is filled with the i64 ArrayAttr "[`dynVal`, 7, 42, `dynVal`]"
 ///   2. `ssa` is filled with "[%arg0, %arg1]".
-ParseResult
-parseDynamicIndexList(OpAsmParser &parser,
-                      SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-                      DenseI64ArrayAttr &integers);
+ParseResult parseDynamicIndexList(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
+    DenseI64ArrayAttr &integers,
+    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square);
 
 /// Verify that a the `values` has as many elements as the number of entries in
 /// `attr` for which `isDynamic` evaluates to true.

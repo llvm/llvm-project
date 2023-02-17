@@ -180,10 +180,10 @@ struct AffineOpSCFCanonicalizationPattern : public OpRewritePattern<OpTy> {
       if (scf::ForeachThreadOp foreachThreadOp =
               scf::getForeachThreadOpThreadIndexOwner(iv)) {
         for (int64_t idx = 0; idx < foreachThreadOp.getRank(); ++idx) {
-          if (foreachThreadOp.getThreadIndices()[idx] == iv) {
-            lb = OpBuilder(iv.getContext()).getIndexAttr(0);
-            ub = foreachThreadOp.getNumThreads()[idx];
-            step = OpBuilder(iv.getContext()).getIndexAttr(1);
+          if (foreachThreadOp.getInductionVar(idx) == iv) {
+            lb = foreachThreadOp.getMixedLowerBound()[idx];
+            ub = foreachThreadOp.getMixedUpperBound()[idx];
+            step = foreachThreadOp.getMixedStep()[idx];
             return success();
           }
         }

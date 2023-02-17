@@ -353,16 +353,16 @@ def ForOp : SCF_Op<"for",
 
 def ForeachThreadOp : SCF_Op<"foreach_thread", [
        AttrSizedOperandSegments,
-       SingleBlockImplicitTerminator<"scf::PerformConcurrentlyOp">,
-       RecursiveMemoryEffects,
        AutomaticAllocationScope,
-      ]> {
+       RecursiveMemoryEffects,
+       SingleBlockImplicitTerminator<"scf::PerformConcurrentlyOp">,
+     ]> {
   let summary = "evaluate a block multiple times in parallel";
   let description = [{
     `scf.foreach_thread` is a target-independent multi-dimensional parallel
     region application operation. It has exactly one block that represents the
-    parallel body and it takes index operands that indicate how many parallel
-    instances of that function are created.
+    parallel body and it takes index operands that specify lower bounds, upper
+    bounds and steps.
 
     The op also takes a variadic number of tensor operands (`shared_outs`).
     The future buffers corresponding to these tensors are shared among all
@@ -404,7 +404,12 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     When the parallel function body has side effects, their order is unspecified
     across threads.
 
-    Example:
+    `scf.foreach_thread` can be printed in two different ways depending on
+    whether the loop is normalized or not. The loop is 'normalized' when all
+    lower bounds are equal to zero and steps are equal to one. In that case,
+    `lowerBound` and `step` operands will be omitted during printing.
+
+    Normalized loop example:
 
     ```mlir
     //
@@ -435,6 +440,38 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
 
         scf.foreach_thread.parallel_insert_slice %spointwise into %o2[i((%thread_id_1, %thread_id_2))]:
           tensor<?xT> into tensor<?xT>
+      }
+    }
+    // Implicit synchronization point.
+    // Sequential context.
+    //
+    ```
+
+    Loop with loop bounds example:
+
+    ```mlir
+    //
+    // Sequential context.
+    //
+    %pointwise = scf.foreach_thread (%i, %j) = (0, 0) to (%dim1, %dim2)
+      step (%tileSize1, %tileSize2) shared_outs(%o1 = %out)
+      -> (tensor<?x?xT>, tensor<?xT>) {
+      //
+      // Parallel context.
+      //
+      %sA = tensor.extract_slice %A[%i, %j][%tileSize1, %tileSize2][1, 1]
+        : tensor<?x?xT> to tensor<?x?xT>
+      %sB = tensor.extract_slice %B[%i, %j][%tileSize1, %tileSize2][1, 1]
+        : tensor<?x?xT> to tensor<?x?xT>
+      %sC = tensor.extract_slice %o[%i, %j][%tileSize1, %tileSize2][1, 1]
+        : tensor<?x?xT> to tensor<?x?xT>
+
+      %add = map {"arith.addf"} ins(%sA, %sB) outs(%sC)
+
+      scf.foreach_thread.perform_concurrently {
+        scf.foreach_thread.parallel_insert_slice %add into
+          %o[%i, %j][%tileSize1, %tileSize2][1, 1]
+          : tensor<?x?xT> into tensor<?x?xT>
       }
     }
     // Implicit synchronization point.
@@ -481,9 +518,15 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     }
     ```
   }];
-  let arguments = (ins Variadic<Index>:$num_threads,
-                       Variadic<AnyRankedTensor>:$outputs,
-                       OptionalAttr<DeviceMappingArrayAttr>:$mapping);
+  let arguments = (ins
+    Variadic<Index>:$dynamicLowerBound,
+    Variadic<Index>:$dynamicUpperBound,
+    Variadic<Index>:$dynamicStep,
+    DenseI64ArrayAttr:$staticLowerBound,
+    DenseI64ArrayAttr:$staticUpperBound,
+    DenseI64ArrayAttr:$staticStep,
+    Variadic<AnyRankedTensor>:$outputs,
+    OptionalAttr<DeviceMappingArrayAttr>:$mapping);
 
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$region);
@@ -495,57 +538,113 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
   // The default builder does not add the proper body BBargs, roll our own.
   let skipDefaultBuilders = 1;
   let builders = [
-    // Bodyless builder, outputs must be specified.
-    OpBuilder<(ins "ValueRange":$outputs, "ValueRange":$num_threads,
-                   "std::optional<ArrayAttr>":$mapping)>,
-    // Builder that takes a bodyBuilder lambda.
-    OpBuilder<(ins "ValueRange":$outputs, "ValueRange":$num_threads,
-                   "ArrayRef<Attribute>":$mapping,
-                   "function_ref<void(OpBuilder &, Location, ValueRange)>":$bodyBuilder)>
+    // Builder that takes loop bounds.
+    OpBuilder<(ins "ArrayRef<OpFoldResult>":$lbs,
+       "ArrayRef<OpFoldResult>":$ubs, "ArrayRef<OpFoldResult>":$steps,
+       "ValueRange":$outputs, "std::optional<ArrayAttr>":$mapping,
+       CArg<"function_ref<void(OpBuilder &, Location, ValueRange)>",
+            "nullptr"> :$bodyBuilderFn)>,
+
+    // Builder for normalized loop that takes only upper bounds.
+    OpBuilder<(ins "ArrayRef<OpFoldResult>":$ubs,
+       "ValueRange":$outputs, "std::optional<ArrayAttr>":$mapping,
+       CArg<"function_ref<void(OpBuilder &, Location, ValueRange)>",
+            "nullptr"> :$bodyBuilderFn)>,
   ];
+
   let extraClassDeclaration = [{
-    int64_t getRank() { return getNumThreads().size(); }
+    // Get lower bounds as OpFoldResult.
+    SmallVector<OpFoldResult> getMixedLowerBound() {
+      Builder b(getOperation()->getContext());
+      return getMixedValues(getStaticLowerBound(), getDynamicLowerBound(), b);
+    }
+
+    // Get upper bounds as OpFoldResult.
+    SmallVector<OpFoldResult> getMixedUpperBound() {
+      Builder b(getOperation()->getContext());
+      return getMixedValues(getStaticUpperBound(), getDynamicUpperBound(), b);
+    }
+
+    // Get steps as OpFoldResult.
+    SmallVector<OpFoldResult> getMixedStep() {
+      Builder b(getOperation()->getContext());
+      return getMixedValues(getStaticStep(), getDynamicStep(), b);
+    }
+
+    /// Get lower bounds as values.
+    SmallVector<Value> getLowerBound(OpBuilder &b) {
+      return getAsValues(b, getLoc(), getMixedLowerBound());
+    }
+
+    /// Get upper bounds as values.
+    SmallVector<Value> getUpperBound(OpBuilder &b) {
+      return getAsValues(b, getLoc(), getMixedUpperBound());
+    }
+
+    /// Get steps as values.
+    SmallVector<Value> getStep(OpBuilder &b) {
+      return getAsValues(b, getLoc(), getMixedStep());
+    }
+
+    int64_t getRank() { return getStaticLowerBound().size(); }
+
+    /// Number of operands controlling the loop: lbs, ubs, steps
+    unsigned getNumControlOperands() { return 3 * getRank(); }
+
+    /// Number of dynamic operands controlling the loop: lbs, ubs, steps
+    unsigned getNumDynamicControlOperands() {
+      return getODSOperandIndexAndLength(3).first;
+    }
 
     OpResult getTiedOpResult(OpOperand *opOperand) {
-      assert(opOperand->getOperandNumber() >= getRank() && "invalid operand");
+      assert(opOperand->getOperandNumber() >= getNumDynamicControlOperands() &&
+             "invalid operand");
       return getOperation()->getOpResult(
-          opOperand->getOperandNumber() - getRank());
+          opOperand->getOperandNumber() - getNumDynamicControlOperands());
     }
 
     /// Return the num_threads operand that is tied to the given thread id
     /// block argument.
     OpOperand *getTiedOpOperand(BlockArgument bbArg) {
       assert(bbArg.getArgNumber() >= getRank() && "invalid bbArg");
-      return &getOperation()->getOpOperand(bbArg.getArgNumber());
+
+      return &getOperation()->getOpOperand(getNumDynamicControlOperands() +
+                                           bbArg.getArgNumber() - getRank());
     }
 
     /// Return the shared_outs operand that is tied to the given OpResult.
     OpOperand *getTiedOpOperand(OpResult opResult) {
       assert(opResult.getDefiningOp() == getOperation() && "invalid OpResult");
-      return &getOperation()->getOpOperand(
-          opResult.getResultNumber() + getRank());
+      return &getOperation()->getOpOperand(getNumDynamicControlOperands() +
+                                           opResult.getResultNumber());
     }
 
     BlockArgument getTiedBlockArgument(OpOperand *opOperand) {
-      assert(opOperand->getOperandNumber() >= getRank() && "invalid operand");
-      return getBody()->getArgument(opOperand->getOperandNumber());
+      assert(opOperand->getOperandNumber() >= getNumDynamicControlOperands() &&
+             "invalid operand");
+
+      return getBody()->getArgument(opOperand->getOperandNumber() -
+                                    getNumDynamicControlOperands() + getRank());
     }
 
     ArrayRef<BlockArgument> getOutputBlockArguments() {
       return getBody()->getArguments().drop_front(getRank());
     }
 
-    ::mlir::ValueRange getThreadIndices() {
+    ::mlir::ValueRange getInductionVars() {
       return getBody()->getArguments().take_front(getRank());
     }
 
-    ::mlir::Value getThreadIndex(int64_t idx) {
-      return getThreadIndices()[idx];
+    ::mlir::Value getInductionVar(int64_t idx) {
+      return getInductionVars()[idx];
     }
 
     ::mlir::Block::BlockArgListType getRegionOutArgs() {
       return getBody()->getArguments().drop_front(getRank());
     }
+
+    /// Checks if the lbs are zeros and steps are ones.
+    bool isNormalized();
 
     /// Helper to sort `values` according to matching `keys`.
     /// Take a custom `compare` binary comparator which returns true if the first
@@ -559,7 +658,8 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     // The ensureTerminator method generated by SingleBlockImplicitTerminator is
     // unaware of the fact that our terminator also needs a region to be
     // well-formed. We override it here to ensure that we do the right thing.
-    static void ensureTerminator(Region &region, OpBuilder &builder, Location loc);
+    static void ensureTerminator(Region & region, OpBuilder & builder,
+                                 Location loc);
 
     PerformConcurrentlyOp getTerminator();
   }];
