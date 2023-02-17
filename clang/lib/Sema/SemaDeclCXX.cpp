@@ -11386,21 +11386,6 @@ NamespaceDecl *Sema::getStdNamespace() const {
   return cast_or_null<NamespaceDecl>(
                                  StdNamespace.get(Context.getExternalSource()));
 }
-
-NamespaceDecl *Sema::lookupStdExperimentalNamespace() {
-  if (!StdExperimentalNamespaceCache) {
-    if (auto Std = getStdNamespace()) {
-      LookupResult Result(*this, &PP.getIdentifierTable().get("experimental"),
-                          SourceLocation(), LookupNamespaceName);
-      if (!LookupQualifiedName(Result, Std) ||
-          !(StdExperimentalNamespaceCache =
-                Result.getAsSingle<NamespaceDecl>()))
-        Result.suppressDiagnostics();
-    }
-  }
-  return StdExperimentalNamespaceCache;
-}
-
 namespace {
 
 enum UnsupportedSTLSelect {
