@@ -64,7 +64,7 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
         "[{0:x16}]: invalid abbreviation code {1}, "
         "please file a bug and "
         "attach the file at the start of this error message",
-        (uint64_t)m_offset, (unsigned)abbr_idx);
+        m_offset, (unsigned)abbr_idx);
     // WE can't parse anymore if the DWARF is borked...
     *offset_ptr = UINT32_MAX;
     return false;
@@ -195,7 +195,7 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
               "[{0:x16}]: Unsupported DW_FORM_{1:x}, please file a bug "
               "and "
               "attach the file at the start of this error message",
-              (uint64_t)m_offset, (unsigned)form);
+              m_offset, (unsigned)form);
           *offset_ptr = m_offset;
           return false;
         }

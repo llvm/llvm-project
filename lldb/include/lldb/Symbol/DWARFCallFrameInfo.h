@@ -128,7 +128,7 @@ private:
 
   void GetFDEIndex();
 
-  bool FDEToUnwindPlan(dw_offset_t offset, Address startaddr,
+  bool FDEToUnwindPlan(uint32_t offset, Address startaddr,
                        UnwindPlan &unwind_plan);
 
   const CIE *GetCIE(dw_offset_t cie_offset);
@@ -159,7 +159,7 @@ private:
   Type m_type;
 
   CIESP
-  ParseCIE(const dw_offset_t cie_offset);
+  ParseCIE(const uint32_t cie_offset);
 
   lldb::RegisterKind GetRegisterKind() const {
     return m_type == EH ? lldb::eRegisterKindEHFrame : lldb::eRegisterKindDWARF;

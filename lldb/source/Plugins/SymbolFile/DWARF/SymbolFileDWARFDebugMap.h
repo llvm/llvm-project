@@ -9,7 +9,6 @@
 #ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARFDEBUGMAP_H
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARFDEBUGMAP_H
 
-#include "DIERef.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Utility/RangeMap.h"
 #include "llvm/Support/Chrono.h"
@@ -210,9 +209,7 @@ protected:
   lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
 
   static uint32_t GetOSOIndexFromUserID(lldb::user_id_t uid) {
-    std::optional<uint32_t> OsoNum = DIERef(uid).file_index();
-    lldbassert(OsoNum && "Invalid OSO Index");
-    return *OsoNum;
+    return (uint32_t)((uid >> 32ull) - 1ull);
   }
 
   static SymbolFileDWARF *GetSymbolFileAsSymbolFileDWARF(SymbolFile *sym_file);

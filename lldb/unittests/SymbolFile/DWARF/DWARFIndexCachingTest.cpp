@@ -45,26 +45,6 @@ TEST(DWARFIndexCachingTest, DIERefEncodeDecode) {
   EncodeDecode(DIERef(200, DIERef::Section::DebugTypes, 0x11223344));
 }
 
-TEST(DWARFIndexCachingTest, DIERefEncodeDecodeMax) {
-  // Tests DIERef::Encode(...) and DIERef::Decode(...)
-  EncodeDecode(DIERef(std::nullopt, DIERef::Section::DebugInfo,
-                      DIERef::k_die_offset_mask - 1));
-  EncodeDecode(DIERef(std::nullopt, DIERef::Section::DebugTypes,
-                      DIERef::k_die_offset_mask - 1));
-  EncodeDecode(
-      DIERef(100, DIERef::Section::DebugInfo, DIERef::k_die_offset_mask - 1));
-  EncodeDecode(
-      DIERef(200, DIERef::Section::DebugTypes, DIERef::k_die_offset_mask - 1));
-  EncodeDecode(DIERef(DIERef::k_file_index_mask, DIERef::Section::DebugInfo,
-                      DIERef::k_file_index_mask));
-  EncodeDecode(DIERef(DIERef::k_file_index_mask, DIERef::Section::DebugTypes,
-                      DIERef::k_file_index_mask));
-  EncodeDecode(DIERef(DIERef::k_file_index_mask, DIERef::Section::DebugInfo,
-                      0x11223344));
-  EncodeDecode(DIERef(DIERef::k_file_index_mask, DIERef::Section::DebugTypes,
-                      0x11223344));
-}
-
 static void EncodeDecode(const NameToDIE &object, ByteOrder byte_order) {
   const uint8_t addr_size = 8;
   DataEncoder encoder(byte_order, addr_size);
