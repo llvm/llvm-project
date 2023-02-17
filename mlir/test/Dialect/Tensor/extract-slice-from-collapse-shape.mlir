@@ -24,12 +24,11 @@ func.func @extract_slice_static(%input: tensor<3x5x7x11xf32>) -> tensor<20x11xf3
 //     CHECK: return %[[tile]]
 
 //     FOREACH: func.func @extract_slice_static(%[[arg0:.+]]:
-// FOREACH-DAG: %[[c20:.+]] = arith.constant 20 : index
 // FOREACH-DAG: %[[c3:.+]] = arith.constant 3 : index
 // FOREACH-DAG: %[[c5:.+]] = arith.constant 5 : index
 // FOREACH-DAG: %[[c7:.+]] = arith.constant 7 : index
 // FOREACH-DAG: %[[init:.+]] = tensor.empty() : tensor<20x11xf32>
-//     FOREACH: %[[tile:.+]] = scf.foreach_thread (%[[iv:.+]]) in (%[[c20]]) shared_outs(%[[dest:.+]] = %[[init]])
+//     FOREACH: %[[tile:.+]] = scf.foreach_thread (%[[iv:.+]]) in (20) shared_outs(%[[dest:.+]] = %[[init]])
 //     FOREACH:   %[[multiIndex:.+]]:3 = affine.delinearize_index %[[iv]] into (%[[c3]], %[[c5]], %[[c7]]
 //     FOREACH:   %[[slice:.+]] = tensor.extract_slice %[[arg0]][%[[multiIndex]]#0, %[[multiIndex]]#1, %[[multiIndex]]#2, 0] [1, 1, 1, 11] [1, 1, 1, 1] :
 //     FOREACH:   %[[sliceFlat:.+]] = tensor.collapse_shape %[[slice]] {{\[}}[0, 1, 2], [3]{{\]}} :

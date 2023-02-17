@@ -180,16 +180,19 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapForeachToBlocksImpl(
   // transform op does not apply to individual ForeachThreadOp.
   Location loc = foreachThreadOp->getLoc();
 
+  if (!foreachThreadOp.isNormalized())
+    return transformOp.emitSilenceableError()
+           << "unsupported non-normalized loops";
   if (foreachThreadOp.getNumResults() > 0)
     return transformOp.emitSilenceableError()
            << "only bufferized scf.foreach_thread lowers to "
               "gpu.block_id";
-  if (foreachThreadOp.getNumThreads().size() > 3)
+  if (foreachThreadOp.getRank() > 3)
     return transformOp.emitSilenceableError()
            << "scf.foreach_thread with rank > 3 does not lower to "
               "gpu.block_id";
-  if (llvm::any_of(foreachThreadOp.getNumThreads(), [](Value v) {
-        return !v.getDefiningOp<arith::ConstantIndexOp>();
+  if (llvm::any_of(foreachThreadOp.getMixedUpperBound(), [](OpFoldResult ofr) {
+        return !getConstantIntValue(ofr).has_value();
       })) {
     return transformOp.emitSilenceableError()
            << "unsupported dynamic griddim size";
@@ -198,8 +201,7 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapForeachToBlocksImpl(
       llvm::to_vector(foreachThreadOp.getMapping()->getValue());
 
   // Step 1. Complete the blockMapping to a full mapping (with 1s) if necessary.
-  SmallVector<Value> numBlocks =
-      llvm::to_vector(foreachThreadOp.getNumThreads());
+  SmallVector<Value> numBlocks = foreachThreadOp.getUpperBound(rewriter);
   // Ensure we have 3 block sizes, one for each id.
   Value one;
   for (auto attr : mappingAttributes) {
@@ -227,7 +229,7 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapForeachToBlocksImpl(
   blockIdGenerator(rewriter, foreachThreadOp, blockOps);
   IRMapping bvm;
   for (auto [blockIdx, blockDim] :
-       llvm::zip(foreachThreadOp.getThreadIndices(), blockMapping)) {
+       llvm::zip(foreachThreadOp.getInductionVars(), blockMapping)) {
     bvm.map(blockIdx,
             blockOps[static_cast<int64_t>(
                 blockDim.cast<DeviceMappingAttrInterface>().getMappingId())]);
@@ -243,7 +245,7 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapForeachToBlocksImpl(
                                       sourceBlock.getOperations());
 
   // Step 5. RAUW thread indices to thread ops.
-  for (Value loopIndex : foreachThreadOp.getThreadIndices()) {
+  for (Value loopIndex : foreachThreadOp.getInductionVars()) {
     Value blockIdx = bvm.lookup(loopIndex);
     rewriter.replaceAllUsesWith(loopIndex, blockIdx);
   }
@@ -381,14 +383,16 @@ static DiagnosedSilenceableFailure rewriteOneForeachThreadToGpuThreads(
     return emitDefiniteFailure(foreachThreadOp, message);
   };
   Location loc = foreachThreadOp->getLoc();
+  if (!foreachThreadOp.isNormalized())
+    return failureHelper("unsupported non-normalized loops");
   if (foreachThreadOp.getNumResults() > 0)
     return failureHelper(
         "only bufferized scf.foreach_thread lowers to gpu.thread_id");
-  if (foreachThreadOp.getNumThreads().size() > 3)
+  if (foreachThreadOp.getRank() > 3)
     return failureHelper(
         "scf.foreach_thread with rank > 3 does not lower to gpu.thread_id");
-  if (llvm::any_of(foreachThreadOp.getNumThreads(), [](Value v) {
-        return !v.getDefiningOp<arith::ConstantIndexOp>();
+  if (llvm::any_of(foreachThreadOp.getMixedUpperBound(), [](OpFoldResult ofr) {
+        return !getConstantIntValue(ofr).has_value();
       })) {
     return failureHelper("unsupported dynamic blockdim size");
   }
@@ -399,8 +403,7 @@ static DiagnosedSilenceableFailure rewriteOneForeachThreadToGpuThreads(
 
   // Step 1. Complete the threadMapping to a full mapping (with 1s) if
   // necessary.
-  SmallVector<Value> numThreads =
-      llvm::to_vector(foreachThreadOp.getNumThreads());
+  SmallVector<Value> numThreads = foreachThreadOp.getUpperBound(rewriter);
   // Ensure we have 3 block sizes, one for each id.
   Value one;
   for (auto attr : threadMappingAttributes) {
@@ -437,7 +440,7 @@ static DiagnosedSilenceableFailure rewriteOneForeachThreadToGpuThreads(
   }
   IRMapping bvm;
   for (auto [blockIdx, blockDim] :
-       llvm::zip(foreachThreadOp.getThreadIndices(), threadMapping)) {
+       llvm::zip(foreachThreadOp.getInductionVars(), threadMapping)) {
     bvm.map(blockIdx,
             threadOpsUpdated[blockDim.cast<DeviceMappingAttrInterface>()
                                  .getMappingId()]);
@@ -484,7 +487,7 @@ static DiagnosedSilenceableFailure rewriteOneForeachThreadToGpuThreads(
                                       sourceBlock.getOperations());
 
   // Step 6. RAUW thread indices to thread ops.
-  for (Value loopIndex : foreachThreadOp.getThreadIndices()) {
+  for (Value loopIndex : foreachThreadOp.getInductionVars()) {
     Value threadIdx = bvm.lookup(loopIndex);
     rewriter.replaceAllUsesWith(loopIndex, threadIdx);
   }

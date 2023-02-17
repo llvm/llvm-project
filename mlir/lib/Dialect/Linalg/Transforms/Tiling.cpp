@@ -253,7 +253,7 @@ static void calculateTileOffsetsAndSizes(
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPointToStart(foreachThreadOp.getBody(0));
 
-  ValueRange threadIds = foreachThreadOp.getThreadIndices();
+  ValueRange threadIds = foreachThreadOp.getInductionVars();
   SmallVector<OpFoldResult> nonZeroNumThreads =
       llvm::to_vector(llvm::make_filter_range(numThreads, [](OpFoldResult ofr) {
         return !isConstantIntValue(ofr, 0);
@@ -360,7 +360,7 @@ static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
   // version because we require the use of RewriterBase in the body, so we
   // manually move the insertion point to the body below.
   scf::ForeachThreadOp foreachThreadOp = b.create<scf::ForeachThreadOp>(
-      loc, dest, ValueRange(materializedNonZeroNumThreads), mapping);
+      loc, getAsOpFoldResult((materializedNonZeroNumThreads)), dest, mapping);
 
   // 2. Fill out the ForeachThreadOp body.
   SmallVector<OpFoldResult> tiledOffsets, tiledSizes;
@@ -681,8 +681,8 @@ linalg::tileReductionUsingForeachThread(RewriterBase &b,
 
   // 2. Create the ForeachThreadOp with an empty region.
   scf::ForeachThreadOp foreachThreadOp = b.create<scf::ForeachThreadOp>(
-      loc, (*identityTensor)->getResults(),
-      ValueRange(materializedNonZeroNumThreads), mapping);
+      loc, getAsOpFoldResult(materializedNonZeroNumThreads),
+      (*identityTensor)->getResults(), mapping);
 
   // 3. Calculate the tile offsets and sizes for the subsequent loop that will
   // be nested under `foreachThreadOp`.
@@ -712,7 +712,7 @@ linalg::tileReductionUsingForeachThread(RewriterBase &b,
                                            b.getIndexAttr(0));
       SmallVector<OpFoldResult> sizes = tiledSizes;
       sizes[reductionDim] = b.getIndexAttr(1);
-      outOffsets[reductionDim] = foreachThreadOp.getThreadIndices().front();
+      outOffsets[reductionDim] = foreachThreadOp.getInductionVars().front();
       // TODO: use SubsetExtractOpInterface once it is available.
       tiledDpsInitOperands.push_back(b.create<tensor::ExtractSliceOp>(
           loc, initOperand->get().getType().cast<RankedTensorType>(),
@@ -746,7 +746,7 @@ linalg::tileReductionUsingForeachThread(RewriterBase &b,
       if (failed(maybeTiled))
         return b.notifyMatchFailure(op, "failed tileLinalgOpImpl");
 
-      SmallVector<Value> ids = foreachThreadOp.getThreadIndices();
+      SmallVector<Value> ids = foreachThreadOp.getInductionVars();
       mapLoopToProcessorIds(cast<scf::ForOp>(maybeTiled->loops.back()), ids,
                             materializedNonZeroNumThreads);
       assert(maybeTiled->loops.size() == 1 &&
@@ -774,7 +774,7 @@ linalg::tileReductionUsingForeachThread(RewriterBase &b,
     int64_t sizeIdx = 0;
     for (int64_t i = 0, e = numThreads.size(); i < e; ++i) {
       if (i == reductionDim) {
-        resultOffsetsRank.push_back(foreachThreadOp.getThreadIndices().front());
+        resultOffsetsRank.push_back(foreachThreadOp.getInductionVars().front());
         resultSizesRank.push_back(b.getIndexAttr(1));
         continue;
       }
