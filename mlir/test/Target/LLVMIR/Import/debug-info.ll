@@ -367,3 +367,25 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !7 = !DILocalVariable(scope: !8, name: "var", file: !2, type: !5);
 !8 = distinct !DISubprogram(name: "dbg_use_before_def", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
 !9 = !DILocation(line: 1, column: 2, scope: !8)
+
+; // -----
+
+; CHECK-DAG: #[[NAMESPACE:.+]] = #llvm.di_namespace<name = "std", exportSymbols = false>
+; CHECK-DAG: #[[SUBPROGRAM:.+]] =  #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #[[NAMESPACE]], name = "namespace"
+
+define void @namespace(ptr %arg) {
+  call void @llvm.dbg.value(metadata ptr %arg, metadata !7, metadata !DIExpression()), !dbg !9
+  ret void
+}
+
+declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "debug-info.ll", directory: "/")
+!7 = !DILocalVariable(scope: !8, name: "var")
+!8 = distinct !DISubprogram(name: "namespace", scope: !10, file: !2, unit: !1);
+!9 = !DILocation(line: 1, column: 2, scope: !8)
+!10 = !DINamespace(name: "std", scope: null)

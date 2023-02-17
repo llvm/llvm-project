@@ -50,9 +50,19 @@
   elements = #llvm.di_subrange<count = 4>
 >
 
-// CHECK-DAG: #[[COMP2:.*]] = #llvm.di_composite_type<tag = DW_TAG_class_type, name = "class_name", file = #[[FILE]], scope = #[[FILE]], flags = "TypePassByReference|NonTrivial">
+// CHECK-DAG: #[[TOPLEVEL:.*]] = #llvm.di_namespace<name = "toplevel", exportSymbols = true>
+#toplevel_namespace = #llvm.di_namespace<
+  name = "toplevel", exportSymbols = true
+>
+
+// CHECK-DAG: #[[NESTED:.*]] = #llvm.di_namespace<name = "nested", scope = #[[TOPLEVEL]], exportSymbols = false>
+#nested_namespace = #llvm.di_namespace<
+  name = "nested", scope = #toplevel_namespace, exportSymbols = false
+>
+
+// CHECK-DAG: #[[COMP2:.*]] = #llvm.di_composite_type<tag = DW_TAG_class_type, name = "class_name", file = #[[FILE]], scope = #[[NESTED]], flags = "TypePassByReference|NonTrivial">
 #comp2 = #llvm.di_composite_type<
-  tag = DW_TAG_class_type, name = "class_name", file = #file, scope = #file,
+  tag = DW_TAG_class_type, name = "class_name", file = #file, scope = #nested_namespace,
   flags = "TypePassByReference|NonTrivial"
 >
 
