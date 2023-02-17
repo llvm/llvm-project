@@ -512,7 +512,7 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #include <__compare/compare_three_way.h>
 #include <__config>
 #include <__debug>
-#include <__functional/binary_function.h> // TODO: deprecate
+#include <__functional/binary_function.h>
 #include <__functional/binary_negate.h>
 #include <__functional/bind.h>
 #include <__functional/bind_back.h>
@@ -534,7 +534,7 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #include <__functional/pointer_to_unary_function.h>
 #include <__functional/ranges_operations.h>
 #include <__functional/reference_wrapper.h>
-#include <__functional/unary_function.h> // TODO: deprecate
+#include <__functional/unary_function.h>
 #include <__functional/unary_negate.h>
 #include <__functional/unwrap_ref.h>
 #include <__utility/forward.h>
