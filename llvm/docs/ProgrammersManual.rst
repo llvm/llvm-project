@@ -3429,13 +3429,16 @@ Important Public Members of the ``Module`` class
 
 * | ``Module::global_iterator`` - Typedef for global variable list iterator
   | ``Module::const_global_iterator`` - Typedef for const_iterator.
-  | ``Module::insertGlobalVariable()`` - Inserts a global variable to the list.
-  | ``Module::removeGlobalVariable()`` - Removes a global variable frome the list.
-  | ``Module::eraseGlobalVariable()`` - Removes a global variable frome the list and deletes it.
   | ``global_begin()``, ``global_end()``, ``global_size()``, ``global_empty()``
 
   These are forwarding methods that make it easy to access the contents of a
   ``Module`` object's GlobalVariable_ list.
+
+* ``Module::GlobalListType &getGlobalList()``
+
+  Returns the list of GlobalVariable_\ s.  This is necessary to use when you
+  need to update the list or perform a complex action that doesn't have a
+  forwarding method.
 
 ----------------
 
