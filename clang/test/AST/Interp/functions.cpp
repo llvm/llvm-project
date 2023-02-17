@@ -9,10 +9,27 @@ constexpr int gimme5() {
 static_assert(gimme5() == 5, "");
 
 
-template<typename T> constexpr T identity(T t) { return t; }
+template<typename T> constexpr T identity(T t) {
+  static_assert(true);
+  return t;
+}
 static_assert(identity(true), "");
 static_assert(identity(true), ""); /// Compiled bytecode should be cached
 static_assert(!identity(false), "");
+
+template<typename A, typename B>
+constexpr bool sameSize() {
+  static_assert(sizeof(A) == sizeof(B), ""); // expected-error {{static assertion failed}} \
+                                             // ref-error {{static assertion failed}} \
+                                             // expected-note {{evaluates to}} \
+                                             // ref-note {{evaluates to}}
+  return true;
+}
+static_assert(sameSize<int, int>(), "");
+static_assert(sameSize<unsigned int, int>(), "");
+static_assert(sameSize<char, long>(), ""); // expected-note {{in instantiation of function template specialization}} \
+                                           // ref-note {{in instantiation of function template specialization}}
+
 
 constexpr auto add(int a, int b) -> int {
   return identity(a) + identity(b);
