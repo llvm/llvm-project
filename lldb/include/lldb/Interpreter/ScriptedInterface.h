@@ -40,9 +40,12 @@ public:
                               LLDBLog log_caterogy = LLDBLog::Process) {
     LLDB_LOGF(GetLog(log_caterogy), "%s ERROR = %s", caller_name.data(),
               error_msg.data());
-    error.SetErrorString(llvm::Twine(caller_name + llvm::Twine(" ERROR = ") +
-                                     llvm::Twine(error_msg))
-                             .str());
+    llvm::Twine err = llvm::Twine(caller_name + llvm::Twine(" ERROR = ") +
+                                  llvm::Twine(error_msg));
+    if (const char *detailed_error = error.AsCString())
+      err.concat(llvm::Twine(" (") + llvm::Twine(detailed_error) +
+                 llvm::Twine(")"));
+    error.SetErrorString(err.str());
     return {};
   }
 
