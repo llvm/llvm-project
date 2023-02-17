@@ -25,6 +25,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Assumptions.h"
@@ -2809,13 +2810,40 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       FTy, AsmString, Constraints, HasSideEffect,
       /* IsAlignStack */ false, AsmDialect, HasUnwindClobber);
   std::vector<llvm::Value*> RegResults;
+  llvm::CallBrInst *CBR;
+  llvm::DenseMap<llvm::BasicBlock *, SmallVector<llvm::Value *, 4>>
+      CBRRegResults;
   if (IsGCCAsmGoto) {
-    llvm::CallBrInst *Result =
-        Builder.CreateCallBr(IA, Fallthrough, Transfer, Args);
+    CBR = Builder.CreateCallBr(IA, Fallthrough, Transfer, Args);
     EmitBlock(Fallthrough);
-    UpdateAsmCallInst(*Result, HasSideEffect, false, ReadOnly, ReadNone,
+    UpdateAsmCallInst(*CBR, HasSideEffect, false, ReadOnly, ReadNone,
                       InNoMergeAttributedStmt, S, ResultRegTypes, ArgElemTypes,
                       *this, RegResults);
+    // Because we are emitting code top to bottom, we don't have enough
+    // information at this point to know precisely whether we have a critical
+    // edge. If we have outputs, split all indirect destinations.
+    if (!RegResults.empty()) {
+      unsigned i = 0;
+      for (llvm::BasicBlock *Dest : CBR->getIndirectDests()) {
+        llvm::Twine SynthName = Dest->getName() + ".split";
+        llvm::BasicBlock *SynthBB = createBasicBlock(SynthName);
+        llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
+        Builder.SetInsertPoint(SynthBB);
+
+        if (ResultRegTypes.size() == 1) {
+          CBRRegResults[SynthBB].push_back(CBR);
+        } else {
+          for (unsigned j = 0, e = ResultRegTypes.size(); j != e; ++j) {
+            llvm::Value *Tmp = Builder.CreateExtractValue(CBR, j, "asmresult");
+            CBRRegResults[SynthBB].push_back(Tmp);
+          }
+        }
+
+        EmitBranch(Dest);
+        EmitBlock(SynthBB);
+        CBR->setIndirectDest(i++, SynthBB);
+      }
+    }
   } else if (HasUnwindClobber) {
     llvm::CallBase *Result = EmitCallOrInvoke(IA, Args, "");
     UpdateAsmCallInst(*Result, HasSideEffect, true, ReadOnly, ReadNone,
@@ -2832,6 +2860,19 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   EmitAsmStores(*this, S, RegResults, ResultRegTypes, ResultTruncRegTypes,
                 ResultRegDests, ResultRegQualTys, ResultTypeRequiresCast,
                 ResultRegIsFlagReg);
+
+  // If this is an asm goto with outputs, repeat EmitAsmStores, but with a
+  // different insertion point; one for each indirect destination and with
+  // CBRRegResults rather than RegResults.
+  if (IsGCCAsmGoto && !CBRRegResults.empty()) {
+    for (llvm::BasicBlock *Succ : CBR->getIndirectDests()) {
+      llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
+      Builder.SetInsertPoint(Succ, --(Succ->end()));
+      EmitAsmStores(*this, S, CBRRegResults[Succ], ResultRegTypes,
+                    ResultTruncRegTypes, ResultRegDests, ResultRegQualTys,
+                    ResultTypeRequiresCast, ResultRegIsFlagReg);
+    }
+  }
 }
 
 LValue CodeGenFunction::InitCapturedStruct(const CapturedStmt &S) {

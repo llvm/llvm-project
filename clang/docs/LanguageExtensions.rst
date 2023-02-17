@@ -1588,25 +1588,8 @@ Query for this feature with ``__has_extension(blocks)``.
 ASM Goto with Output Constraints
 ================================
 
-.. note::
-
-  Clang's implementation of ASM goto differs from `GCC's
-  implementation <https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html>`_ in
-  that Clang doesn't yet support outputs on the indirect branch. Use of an
-  output on the indirect branch may result in undefined behavior and should be
-  avoided. E.g., in the following `z` isn't valid when used and may have
-  different values depending on optimization levels. (Clang may not warn about
-  such constructs.)
-
-  .. code-block:: c++
-
-    int foo(int x) {
-      int y, z;
-      asm goto(... : "=r"(y), "=r"(z): "r"(x) : : err);
-      return y;
-    err:
-      return z;
-    }
+Outputs may be used along any branches from the ``asm goto`` whether the
+branches are taken or not.
 
 When using tied-outputs (i.e. outputs that are inputs and outputs, not just
 outputs) with the `+r` constraint, there is a hidden input that's created
