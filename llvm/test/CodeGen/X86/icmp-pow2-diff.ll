@@ -311,12 +311,9 @@ define i1 @andnot_ne_i32(i32 %x) nounwind {
 define i1 @addand_ne_i16(i16 %x) nounwind {
 ; CHECK-LABEL: addand_ne_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmpw $-3, %di
-; CHECK-NEXT:    setne %cl
-; CHECK-NEXT:    movzwl %di, %eax
-; CHECK-NEXT:    cmpl $16381, %eax # imm = 0x3FFD
+; CHECK-NEXT:    addl $3, %edi
+; CHECK-NEXT:    testl $49151, %edi # imm = 0xBFFF
 ; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    andb %cl, %al
 ; CHECK-NEXT:    retq
   %cmp1 = icmp ne i16 %x, -3
   %cmp2 = icmp ne i16 %x, 16381
@@ -362,11 +359,9 @@ define <8 x i1> @addand_ne_v8i16_fail(<8 x i16> %x) nounwind {
 define i1 @addand_eq_i32(i32 %x) nounwind {
 ; CHECK-LABEL: addand_eq_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmpl $-1, %edi
-; CHECK-NEXT:    sete %cl
-; CHECK-NEXT:    cmpl $7, %edi
+; CHECK-NEXT:    incl %edi
+; CHECK-NEXT:    testl $-9, %edi
 ; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    orb %cl, %al
 ; CHECK-NEXT:    retq
   %cmp1 = icmp eq i32 %x, -1
   %cmp2 = icmp eq i32 %x, 7
@@ -393,11 +388,9 @@ define i1 @addand_eq_i8_fail_abs_p2_minmax_not(i8 %x) nounwind {
 define i1 @addand_ne_i8(i8 %x) nounwind {
 ; CHECK-LABEL: addand_ne_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmpb $59, %dil
-; CHECK-NEXT:    setne %cl
-; CHECK-NEXT:    cmpb $-5, %dil
+; CHECK-NEXT:    addb $5, %dil
+; CHECK-NEXT:    testb $-65, %dil
 ; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    andb %cl, %al
 ; CHECK-NEXT:    retq
   %cmp1 = icmp ne i8 %x, 59
   %cmp2 = icmp ne i8 %x, -5
@@ -424,11 +417,9 @@ define i1 @addand_eq_i64_fail_non_p2_dif(i64 %x) nounwind {
 define i1 @addand_eq_i64(i64 %x) nounwind {
 ; CHECK-LABEL: addand_eq_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmpq $768, %rdi # imm = 0x300
-; CHECK-NEXT:    setne %cl
-; CHECK-NEXT:    cmpq $-256, %rdi
+; CHECK-NEXT:    addq $256, %rdi # imm = 0x100
+; CHECK-NEXT:    testq $-1025, %rdi # imm = 0xFBFF
 ; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    andb %cl, %al
 ; CHECK-NEXT:    retq
   %cmp1 = icmp ne i64 %x, 768
   %cmp2 = icmp ne i64 %x, -256
