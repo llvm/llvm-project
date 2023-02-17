@@ -629,13 +629,11 @@ define i1 @ashr_uge_sub(i8 %b, i8 %x, i8 %y) {
   ret i1 %r
 }
 
+; (zext i1 a) + (sext i1 b)) s< -1 --> false
+
 define i1 @zext_sext_add_icmp_slt_minus1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_slt_minus1(
-; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
-; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[ADD]], -1
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %zext.a = zext i1 %a to i8
   %sext.b = sext i1 %b to i8
@@ -644,13 +642,11 @@ define i1 @zext_sext_add_icmp_slt_minus1(i1 %a, i1 %b) {
   ret i1 %r
 }
 
+; (zext i1 a) + (sext i1 b)) s> 1 --> false
+
 define i1 @zext_sext_add_icmp_sgt_1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_sgt_1(
-; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
-; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[ADD]], 1
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %zext.a = zext i1 %a to i8
   %sext.b = sext i1 %b to i8
@@ -659,13 +655,11 @@ define i1 @zext_sext_add_icmp_sgt_1(i1 %a, i1 %b) {
   ret i1 %r
 }
 
+; (zext i1 a) + (sext i1 b)) s> -2 --> true
+
 define i1 @zext_sext_add_icmp_sgt_minus2(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_sgt_minus2(
-; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
-; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[ADD]], -2
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %zext.a = zext i1 %a to i8
   %sext.b = sext i1 %b to i8
@@ -674,13 +668,11 @@ define i1 @zext_sext_add_icmp_sgt_minus2(i1 %a, i1 %b) {
   ret i1 %r
 }
 
+; (zext i1 a) + (sext i1 b)) s< 2 --> true
+
 define i1 @zext_sext_add_icmp_slt_2(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_slt_2(
-; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
-; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[ADD]], 2
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %zext.a = zext i1 %a to i8
   %sext.b = sext i1 %b to i8
@@ -689,13 +681,11 @@ define i1 @zext_sext_add_icmp_slt_2(i1 %a, i1 %b) {
   ret i1 %r
 }
 
+; test case with i128
+
 define i1 @zext_sext_add_icmp_i128(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_i128(
-; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i128
-; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i128
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i128 [[ZEXT_A]], [[SEXT_B]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i128 [[ADD]], 9223372036854775808
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %zext.a = zext i1 %a to i128
   %sext.b = sext i1 %b to i128
@@ -704,12 +694,12 @@ define i1 @zext_sext_add_icmp_i128(i1 %a, i1 %b) {
   ret i1 %r
 }
 
+; (zext i1 a) + (sext i1 b)) == -1 --> ~a & b
+
 define i1 @zext_sext_add_icmp_eq_minus1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_eq_minus1(
-; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
-; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[ADD]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[A:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zext.a = zext i1 %a to i8
@@ -719,12 +709,13 @@ define i1 @zext_sext_add_icmp_eq_minus1(i1 %a, i1 %b) {
   ret i1 %r
 }
 
+
+; (zext i1 a) + (sext i1 b)) != -1 --> a | ~b
+
 define i1 @zext_sext_add_icmp_ne_minus1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_ne_minus1(
-; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
-; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[ADD]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[B:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[A:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zext.a = zext i1 %a to i8
@@ -734,10 +725,12 @@ define i1 @zext_sext_add_icmp_ne_minus1(i1 %a, i1 %b) {
   ret i1 %r
 }
 
+; (zext i1 a) + (sext i1 b)) s> -1 --> a | ~b
+
 define i1 @zext_sext_add_icmp_sgt_minus1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_sgt_minus1(
-; CHECK-NEXT:    [[B_NOT:%.*]] = xor i1 [[B:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[B_NOT]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[B:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[A:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zext.a = zext i1 %a to i8
@@ -747,12 +740,12 @@ define i1 @zext_sext_add_icmp_sgt_minus1(i1 %a, i1 %b) {
   ret i1 %r
 }
 
+; (zext i1 a) + (sext i1 b)) u< -1 --> a | ~b
+
 define i1 @zext_sext_add_icmp_ult_minus1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_ult_minus1(
-; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
-; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[ADD]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[B:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[A:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zext.a = zext i1 %a to i8
@@ -762,12 +755,12 @@ define i1 @zext_sext_add_icmp_ult_minus1(i1 %a, i1 %b) {
   ret i1 %r
 }
 
+; (zext i1 a) + (sext i1 b)) s> 0 --> a & ~b
+
 define i1 @zext_sext_add_icmp_sgt_0(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_sgt_0(
-; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
-; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[ADD]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[B:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[A:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zext.a = zext i1 %a to i8
@@ -777,11 +770,13 @@ define i1 @zext_sext_add_icmp_sgt_0(i1 %a, i1 %b) {
   ret i1 %r
 }
 
+; (zext i1 a) + (sext i1 b)) s< 0 --> ~a & b
+
 define i1 @zext_sext_add_icmp_slt_0(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_slt_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zext.a = zext i1 %a to i8
   %sext.b = sext i1 %b to i8
@@ -790,12 +785,12 @@ define i1 @zext_sext_add_icmp_slt_0(i1 %a, i1 %b) {
   ret i1 %r
 }
 
+; (zext i1 a) + (sext i1 b)) == 1 --> a & ~b
+
 define i1 @zext_sext_add_icmp_eq_1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_eq_1(
-; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
-; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[ADD]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[B:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[A:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zext.a = zext i1 %a to i8
@@ -805,12 +800,12 @@ define i1 @zext_sext_add_icmp_eq_1(i1 %a, i1 %b) {
   ret i1 %r
 }
 
+; (zext i1 a) + (sext i1 b)) != 1 --> ~a | b
+
 define i1 @zext_sext_add_icmp_ne_1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_ne_1(
-; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
-; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[ADD]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[A:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zext.a = zext i1 %a to i8
@@ -820,12 +815,12 @@ define i1 @zext_sext_add_icmp_ne_1(i1 %a, i1 %b) {
   ret i1 %r
 }
 
+; (zext i1 a) + (sext i1 b)) s< 1 --> ~a | b
+
 define i1 @zext_sext_add_icmp_slt_1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_slt_1(
-; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
-; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[ADD]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[A:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zext.a = zext i1 %a to i8
@@ -835,11 +830,13 @@ define i1 @zext_sext_add_icmp_slt_1(i1 %a, i1 %b) {
   ret i1 %r
 }
 
+; (zext i1 a) + (sext i1 b)) u> 1 --> ~a & b
+
 define i1 @zext_sext_add_icmp_ugt_1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_ugt_1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zext.a = zext i1 %a to i8
   %sext.b = sext i1 %b to i8
@@ -850,10 +847,8 @@ define i1 @zext_sext_add_icmp_ugt_1(i1 %a, i1 %b) {
 
 define <2 x i1> @vector_zext_sext_add_icmp_slt_1(<2 x i1> %a, <2 x i1> %b) {
 ; CHECK-LABEL: @vector_zext_sext_add_icmp_slt_1(
-; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext <2 x i1> [[A:%.*]] to <2 x i8>
-; CHECK-NEXT:    [[SEXT_B:%.*]] = sext <2 x i1> [[B:%.*]] to <2 x i8>
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw <2 x i8> [[ZEXT_A]], [[SEXT_B]]
-; CHECK-NEXT:    [[R:%.*]] = icmp slt <2 x i8> [[ADD]], <i8 1, i8 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %zext.a = zext <2 x i1> %a to <2 x i8>
@@ -878,6 +873,8 @@ define <2 x i1> @vector_zext_sext_add_icmp_slt_1_poison(<2 x i1> %a, <2 x i1> %b
   ret <2 x i1> %r
 }
 
+; Negative test, more than one use for icmp LHS
+
 define i1 @zext_sext_add_icmp_slt_1_no_oneuse(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_slt_1_no_oneuse(
 ; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
@@ -895,6 +892,8 @@ define i1 @zext_sext_add_icmp_slt_1_no_oneuse(i1 %a, i1 %b) {
   ret i1 %r
 }
 
+; Negative test, icmp RHS is not a constant
+
 define i1 @zext_sext_add_icmp_slt_1_rhs_not_const(i1 %a, i1 %b, i8 %c) {
 ; CHECK-LABEL: @zext_sext_add_icmp_slt_1_rhs_not_const(
 ; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
@@ -909,6 +908,8 @@ define i1 @zext_sext_add_icmp_slt_1_rhs_not_const(i1 %a, i1 %b, i8 %c) {
   %r = icmp slt i8 %add, %c
   ret i1 %r
 }
+
+; Negative test, ext source is not i1
 
 define i1 @zext_sext_add_icmp_slt_1_type_not_i1(i2 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_slt_1_type_not_i1(
