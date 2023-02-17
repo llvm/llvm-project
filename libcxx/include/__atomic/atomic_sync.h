@@ -43,7 +43,7 @@ struct __libcpp_atomic_wait_backoff_impl {
     _Atp* __a;
     _Fn __test_fn;
     _LIBCPP_AVAILABILITY_SYNC
-    _LIBCPP_INLINE_VISIBILITY bool operator()(chrono::nanoseconds __elapsed) const
+    _LIBCPP_HIDE_FROM_ABI bool operator()(chrono::nanoseconds __elapsed) const
     {
         if(__elapsed > chrono::microseconds(64))
         {
@@ -62,7 +62,7 @@ struct __libcpp_atomic_wait_backoff_impl {
 
 template <class _Atp, class _Fn>
 _LIBCPP_AVAILABILITY_SYNC
-_LIBCPP_INLINE_VISIBILITY bool __cxx_atomic_wait(_Atp* __a, _Fn && __test_fn)
+_LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_wait(_Atp* __a, _Fn && __test_fn)
 {
     __libcpp_atomic_wait_backoff_impl<_Atp, typename decay<_Fn>::type> __backoff_fn = {__a, __test_fn};
     return std::__libcpp_thread_poll_with_backoff(__test_fn, __backoff_fn);
@@ -71,20 +71,20 @@ _LIBCPP_INLINE_VISIBILITY bool __cxx_atomic_wait(_Atp* __a, _Fn && __test_fn)
 #else // _LIBCPP_HAS_NO_THREADS
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY void __cxx_atomic_notify_all(__cxx_atomic_impl<_Tp> const volatile*) { }
+_LIBCPP_HIDE_FROM_ABI void __cxx_atomic_notify_all(__cxx_atomic_impl<_Tp> const volatile*) { }
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY void __cxx_atomic_notify_one(__cxx_atomic_impl<_Tp> const volatile*) { }
+_LIBCPP_HIDE_FROM_ABI void __cxx_atomic_notify_one(__cxx_atomic_impl<_Tp> const volatile*) { }
 template <class _Atp, class _Fn>
-_LIBCPP_INLINE_VISIBILITY bool __cxx_atomic_wait(_Atp*, _Fn && __test_fn)
+_LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_wait(_Atp*, _Fn && __test_fn)
 {
     return __libcpp_thread_poll_with_backoff(__test_fn, __spinning_backoff_policy());
 }
 
 #endif // _LIBCPP_HAS_NO_THREADS
 
-template <typename _Tp> _LIBCPP_INLINE_VISIBILITY
+template <typename _Tp> _LIBCPP_HIDE_FROM_ABI
 bool __cxx_nonatomic_compare_equal(_Tp const& __lhs, _Tp const& __rhs) {
-    return _VSTD::memcmp(&__lhs, &__rhs, sizeof(_Tp)) == 0;
+    return std::memcmp(&__lhs, &__rhs, sizeof(_Tp)) == 0;
 }
 
 template <class _Atp, class _Tp>
@@ -92,7 +92,7 @@ struct __cxx_atomic_wait_test_fn_impl {
     _Atp* __a;
     _Tp __val;
     memory_order __order;
-    _LIBCPP_INLINE_VISIBILITY bool operator()() const
+    _LIBCPP_HIDE_FROM_ABI bool operator()() const
     {
         return !std::__cxx_nonatomic_compare_equal(std::__cxx_atomic_load(__a, __order), __val);
     }
@@ -100,7 +100,7 @@ struct __cxx_atomic_wait_test_fn_impl {
 
 template <class _Atp, class _Tp>
 _LIBCPP_AVAILABILITY_SYNC
-_LIBCPP_INLINE_VISIBILITY bool __cxx_atomic_wait(_Atp* __a, _Tp const __val, memory_order __order)
+_LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_wait(_Atp* __a, _Tp const __val, memory_order __order)
 {
     __cxx_atomic_wait_test_fn_impl<_Atp, _Tp> __test_fn = {__a, __val, __order};
     return std::__cxx_atomic_wait(__a, __test_fn);
