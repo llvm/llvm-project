@@ -111,8 +111,10 @@ public:
   std::pair<const MachineOperand *, int> isOMod(const MachineInstr &MI) const;
   bool tryFoldOMod(MachineInstr &MI);
   bool tryFoldRegSequence(MachineInstr &MI);
-  bool tryFoldLCSSAPhi(MachineInstr &MI);
+  bool tryFoldPhiAGPR(MachineInstr &MI);
   bool tryFoldLoad(MachineInstr &MI);
+
+  bool tryOptimizeAGPRPhis(MachineBasicBlock &MBB);
 
 public:
   SIFoldOperands() : MachineFunctionPass(ID) {
@@ -137,6 +139,16 @@ INITIALIZE_PASS(SIFoldOperands, DEBUG_TYPE,
 char SIFoldOperands::ID = 0;
 
 char &llvm::SIFoldOperandsID = SIFoldOperands::ID;
+
+static const TargetRegisterClass *getRegOpRC(const MachineRegisterInfo &MRI,
+                                             const TargetRegisterInfo &TRI,
+                                             const MachineOperand &MO) {
+  const TargetRegisterClass *RC = MRI.getRegClass(MO.getReg());
+  if (const TargetRegisterClass *SubRC =
+          TRI.getSubRegisterClass(RC, MO.getSubReg()))
+    RC = SubRC;
+  return RC;
+}
 
 // Map multiply-accumulate opcode to corresponding multiply-add opcode if any.
 static unsigned macToMad(unsigned Opc) {
@@ -1631,52 +1643,133 @@ bool SIFoldOperands::tryFoldRegSequence(MachineInstr &MI) {
   return true;
 }
 
-// Try to hoist an AGPR to VGPR copy out of the loop across a LCSSA PHI.
+// Try to hoist an AGPR to VGPR copy across a PHI.
 // This should allow folding of an AGPR into a consumer which may support it.
-// I.e.:
 //
-// loop:                             // loop:
-//   %1:vreg = COPY %0:areg          // exit:
-// exit:                          => //   %1:areg = PHI %0:areg, %loop
-//   %2:vreg = PHI %1:vreg, %loop    //   %2:vreg = COPY %1:areg
-bool SIFoldOperands::tryFoldLCSSAPhi(MachineInstr &PHI) {
+// Example 1: LCSSA PHI
+//      loop:
+//        %1:vreg = COPY %0:areg
+//      exit:
+//        %2:vreg = PHI %1:vreg, %loop
+//  =>
+//      loop:
+//      exit:
+//        %1:areg = PHI %0:areg, %loop
+//        %2:vreg = COPY %1:areg
+//
+// Example 2: PHI with multiple incoming values:
+//      entry:
+//        %1:vreg = GLOBAL_LOAD(..)
+//      loop:
+//        %2:vreg = PHI %1:vreg, %entry, %5:vreg, %loop
+//        %3:areg = COPY %2:vreg
+//        %4:areg = (instr using %3:areg)
+//        %5:vreg = COPY %4:areg
+//  =>
+//      entry:
+//        %1:vreg = GLOBAL_LOAD(..)
+//        %2:areg = COPY %1:vreg
+//      loop:
+//        %3:areg = PHI %2:areg, %entry, %X:areg,
+//        %4:areg = (instr using %3:areg)
+bool SIFoldOperands::tryFoldPhiAGPR(MachineInstr &PHI) {
   assert(PHI.isPHI());
 
-  if (PHI.getNumExplicitOperands() != 3) // Single input LCSSA PHI
-    return false;
-
-  Register PhiIn = PHI.getOperand(1).getReg();
   Register PhiOut = PHI.getOperand(0).getReg();
-  if (PHI.getOperand(1).getSubReg() ||
-      !TRI->isVGPR(*MRI, PhiIn) || !TRI->isVGPR(*MRI, PhiOut))
+  if (!TRI->isVGPR(*MRI, PhiOut))
     return false;
 
-  // A single use should not matter for correctness, but if it has another use
-  // inside the loop we may perform copy twice in a worst case.
-  if (!MRI->hasOneNonDBGUse(PhiIn))
+  // Iterate once over all incoming values of the PHI to check if this PHI is
+  // eligible, and determine the exact AGPR RC we'll target.
+  const TargetRegisterClass *ARC = nullptr;
+  for (unsigned K = 1; K < PHI.getNumExplicitOperands(); K += 2) {
+    MachineOperand &MO = PHI.getOperand(K);
+
+    Register PhiIn = MO.getReg();
+    if (MO.getSubReg() || !TRI->isVGPR(*MRI, PhiIn))
+      return false;
+
+    MachineInstr *Copy = MRI->getVRegDef(PhiIn);
+    if (!Copy || !Copy->isCopy())
+      continue;
+
+    Register CopyIn = Copy->getOperand(1).getReg();
+    if (CopyIn.isVirtual() && TRI->isAGPR(*MRI, CopyIn)) {
+      const TargetRegisterClass *CopyInRC =
+          getRegOpRC(*MRI, *TRI, Copy->getOperand(1));
+      if (ARC && !ARC->hasSubClassEq(CopyInRC))
+        return false;
+      ARC = CopyInRC;
+    }
+  }
+
+  if (!ARC)
     return false;
 
-  MachineInstr *Copy = MRI->getVRegDef(PhiIn);
-  if (!Copy || !Copy->isCopy())
-    return false;
+  // Rewrite the PHI's incoming values to ARC.
+  LLVM_DEBUG(dbgs() << "Folding AGPR copies into: " << PHI);
+  for (unsigned K = 1; K < PHI.getNumExplicitOperands(); K += 2) {
+    MachineOperand &MO = PHI.getOperand(K);
+    Register Reg = MO.getReg();
 
-  Register CopyIn = Copy->getOperand(1).getReg();
-  if (!TRI->isAGPR(*MRI, CopyIn) || Copy->getOperand(1).getSubReg())
-    return false;
+    MachineBasicBlock::iterator InsertPt;
+    MachineBasicBlock *InsertMBB = nullptr;
 
-  const TargetRegisterClass *ARC = MRI->getRegClass(CopyIn);
+    // Look at the def of Reg, ignoring all copies.
+    bool UseAccVGPRWrite = false;
+    if (MachineInstr *Def = MRI->getVRegDef(Reg)) {
+
+      // Look at pre-existing COPY instructions from ARC: Steal the operand. If
+      // the copy was single-use, it will be removed by DCE later.
+      if (Def->isCopy()) {
+        MachineOperand &CopyIn = Def->getOperand(1);
+        if (CopyIn.getReg().isVirtual() &&
+            getRegOpRC(*MRI, *TRI, CopyIn)->hasSubClassEq(ARC)) {
+          MO.setReg(CopyIn.getReg());
+          MO.setSubReg(CopyIn.getSubReg());
+          continue;
+        }
+
+        // If this is a multi-use SGPR -> VGPR copy, use V_ACCVGPR_WRITE on
+        // GFX908 directly instead of a COPY. Otherwise, SIFoldOperand may try
+        // to fold the sgpr -> vgpr -> agpr copy into a sgpr -> agpr copy which
+        // is unlikely to be profitable.
+        if (!ST->hasGFX90AInsts() && !MRI->hasOneNonDBGUse(Reg) &&
+            TRI->isSGPRReg(*MRI, CopyIn.getReg()))
+          UseAccVGPRWrite = true;
+      }
+
+      InsertPt = ++Def->getIterator();
+      InsertMBB = Def->getParent();
+    } else {
+      InsertMBB = PHI.getOperand(MO.getOperandNo() + 1).getMBB();
+      InsertPt = InsertMBB->getFirstTerminator();
+    }
+
+    const unsigned CopyOpc =
+        UseAccVGPRWrite ? AMDGPU::V_ACCVGPR_WRITE_B32_e64 : AMDGPU::COPY;
+    Register NewReg = MRI->createVirtualRegister(ARC);
+    MachineInstr *MI = BuildMI(*InsertMBB, InsertPt, PHI.getDebugLoc(),
+                               TII->get(CopyOpc), NewReg)
+                           .addReg(Reg);
+    MO.setReg(NewReg);
+
+    (void)MI;
+    LLVM_DEBUG(dbgs() << "  Created COPY: " << *MI);
+  }
+
+  // Replace the PHI's result with a new register.
   Register NewReg = MRI->createVirtualRegister(ARC);
-  PHI.getOperand(1).setReg(CopyIn);
   PHI.getOperand(0).setReg(NewReg);
 
+  // COPY that new register back to the original PhiOut register. This COPY will
+  // usually be folded out later.
   MachineBasicBlock *MBB = PHI.getParent();
-  BuildMI(*MBB, MBB->getFirstNonPHI(), Copy->getDebugLoc(),
+  BuildMI(*MBB, MBB->getFirstNonPHI(), PHI.getDebugLoc(),
           TII->get(AMDGPU::COPY), PhiOut)
-    .addReg(NewReg, RegState::Kill);
-  Copy->eraseFromParent(); // We know this copy had a single use.
+      .addReg(NewReg);
 
-  LLVM_DEBUG(dbgs() << "Folded " << PHI);
-
+  LLVM_DEBUG(dbgs() << "  Done: Folded " << PHI);
   return true;
 }
 
@@ -1736,6 +1829,101 @@ bool SIFoldOperands::tryFoldLoad(MachineInstr &MI) {
   return true;
 }
 
+// tryFoldPhiAGPR will aggressively try to create AGPR PHIs.
+// For GFX90A and later, this is pretty much always a good thing, but for GFX908
+// there's cases where it can create a lot more AGPR-AGPR copies, which are
+// expensive on this architecture due to the lack of V_ACCVGPR_MOV.
+//
+// This function looks at all AGPR PHIs in a basic block and collects their
+// operands. Then, it checks for register that are used more than once across
+// all PHIs and caches them in a VGPR. This prevents ExpandPostRAPseudo from
+// having to create one VGPR temporary per use, which can get very messy if
+// these PHIs come from a broken-up large PHI (e.g. 32 AGPR phis, one per vector
+// element).
+//
+// Example
+//      a:
+//        %in:agpr_256 = COPY %foo:vgpr_256
+//      c:
+//        %x:agpr_32 = ..
+//      b:
+//        %0:areg = PHI %in.sub0:agpr_32, %a, %x, %c
+//        %1:areg = PHI %in.sub0:agpr_32, %a, %y, %c
+//        %2:areg = PHI %in.sub0:agpr_32, %a, %z, %c
+//  =>
+//      a:
+//        %in:agpr_256 = COPY %foo:vgpr_256
+//        %tmp:vgpr_32 = V_ACCVGPR_READ_B32_e64 %in.sub0:agpr_32
+//        %tmp_agpr:agpr_32 = COPY %tmp
+//      c:
+//        %x:agpr_32 = ..
+//      b:
+//        %0:areg = PHI %tmp_agpr, %a, %x, %c
+//        %1:areg = PHI %tmp_agpr, %a, %y, %c
+//        %2:areg = PHI %tmp_agpr, %a, %z, %c
+bool SIFoldOperands::tryOptimizeAGPRPhis(MachineBasicBlock &MBB) {
+  // This is only really needed on GFX908 where AGPR-AGPR copies are
+  // unreasonably difficult.
+  if (ST->hasGFX90AInsts())
+    return false;
+
+  // Look at all AGPR Phis and collect the register + subregister used.
+  DenseMap<std::pair<Register, unsigned>, std::vector<MachineOperand *>>
+      RegToMO;
+
+  for (auto &MI : MBB) {
+    if (!MI.isPHI())
+      break;
+
+    if (!TRI->isAGPR(*MRI, MI.getOperand(0).getReg()))
+      continue;
+
+    for (unsigned K = 1; K < MI.getNumOperands(); K += 2) {
+      MachineOperand &PhiMO = MI.getOperand(K);
+      RegToMO[{PhiMO.getReg(), PhiMO.getSubReg()}].push_back(&PhiMO);
+    }
+  }
+
+  // For all (Reg, SubReg) pair that are used more than once, cache the value in
+  // a VGPR.
+  bool Changed = false;
+  for (const auto &[Entry, MOs] : RegToMO) {
+    if (MOs.size() == 1)
+      continue;
+
+    const auto [Reg, SubReg] = Entry;
+    MachineInstr *Def = MRI->getVRegDef(Reg);
+    MachineBasicBlock *DefMBB = Def->getParent();
+
+    // Create a copy in a VGPR using V_ACCVGPR_READ_B32_e64 so it's not folded
+    // out.
+    const TargetRegisterClass *ARC = getRegOpRC(*MRI, *TRI, *MOs.front());
+    Register TempVGPR =
+        MRI->createVirtualRegister(TRI->getEquivalentVGPRClass(ARC));
+    MachineInstr *VGPRCopy =
+        BuildMI(*DefMBB, ++Def->getIterator(), Def->getDebugLoc(),
+                TII->get(AMDGPU::V_ACCVGPR_READ_B32_e64), TempVGPR)
+            .addReg(Reg, /* flags */ 0, SubReg);
+
+    // Copy back to an AGPR and use that instead of the AGPR subreg in all MOs.
+    Register TempAGPR = MRI->createVirtualRegister(ARC);
+    BuildMI(*DefMBB, ++VGPRCopy->getIterator(), Def->getDebugLoc(),
+            TII->get(AMDGPU::COPY), TempAGPR)
+        .addReg(TempVGPR);
+
+    LLVM_DEBUG(dbgs() << "Caching AGPR into VGPR: " << *VGPRCopy);
+    for (MachineOperand *MO : MOs) {
+      MO->setReg(TempAGPR);
+      MO->setSubReg(AMDGPU::NoSubRegister);
+      LLVM_DEBUG(dbgs() << "  Changed PHI Operand: " << *MO << "\n");
+    }
+
+    Changed = true;
+  }
+
+  return Changed;
+}
+
 bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -1769,7 +1957,7 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
         continue;
       }
 
-      if (MI.isPHI() && tryFoldLCSSAPhi(MI)) {
+      if (MI.isPHI() && tryFoldPhiAGPR(MI)) {
         Changed = true;
         continue;
       }
@@ -1794,6 +1982,8 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
           !tryFoldOMod(MI))
         Changed |= tryFoldClamp(MI);
     }
+
+    Changed |= tryOptimizeAGPRPhis(*MBB);
   }
 
   return Changed;
