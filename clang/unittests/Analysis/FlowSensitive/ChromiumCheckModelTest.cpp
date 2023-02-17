@@ -118,7 +118,7 @@ public:
 
   static NoopLattice initialElement() { return NoopLattice(); }
 
-  void transfer(const CFGElement *E, NoopLattice &, Environment &Env) {
+  void transfer(const CFGElement &E, NoopLattice &, Environment &Env) {
     M.transfer(E, Env);
   }
 

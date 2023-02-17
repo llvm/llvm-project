@@ -89,3 +89,7 @@
 ; RUN: opt -disable-output -passes='default<O1>' < %s
 ; RUN: opt -disable-output -passes='default<O2>' < %s
 ; RUN: opt -disable-output -passes='default<O3>' < %s
+
+;; Test SeparateConstOffsetFromGEPPass option.
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='separate-const-offset-from-gep<lower-gep>' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-27
+; CHECK-27: function(separate-const-offset-from-gep<lower-gep>)

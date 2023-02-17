@@ -65,6 +65,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenInstruction.h"
+#include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/SmallVector.h"

@@ -27,7 +27,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 ///
 /// The restriction is the same as the integral version of to_char.
 template <class _Tp>
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
   requires (is_signed_v<_Tp> || is_unsigned_v<_Tp> || is_same_v<_Tp, char>)
 #endif
 using __make_32_64_or_128_bit_t =

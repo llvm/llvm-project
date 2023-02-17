@@ -165,20 +165,9 @@ static cl::opt<bool> PerformMandatoryInliningsFirst(
     cl::desc("Perform mandatory inlinings module-wide, before performing "
              "inlining"));
 
-static cl::opt<bool> EnableO3NonTrivialUnswitching(
-    "enable-npm-O3-nontrivial-unswitch", cl::init(true), cl::Hidden,
-    cl::desc("Enable non-trivial loop unswitching for -O3"));
-
 static cl::opt<bool> EnableEagerlyInvalidateAnalyses(
     "eagerly-invalidate-analyses", cl::init(true), cl::Hidden,
     cl::desc("Eagerly invalidate more analyses in default pipelines"));
-
-static cl::opt<bool> EnableNoRerunSimplificationPipeline(
-    "enable-no-rerun-simplification-pipeline", cl::init(true), cl::Hidden,
-    cl::desc(
-        "Prevent running the simplification pipeline on a function more "
-        "than once in the case that SCC mutations cause a function to be "
-        "visited multiple times as long as the function has not been changed"));
 
 static cl::opt<bool> EnableMergeFunctions(
     "enable-merge-functions", cl::init(false), cl::Hidden,
@@ -574,8 +563,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   LPM1.addPass(LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
                         /*AllowSpeculation=*/true));
   LPM1.addPass(
-      SimpleLoopUnswitchPass(/* NonTrivial */ Level == OptimizationLevel::O3 &&
-                             EnableO3NonTrivialUnswitching));
+      SimpleLoopUnswitchPass(/* NonTrivial */ Level == OptimizationLevel::O3));
   if (EnableLoopFlatten)
     LPM1.addPass(LoopFlattenPass());
 
@@ -683,15 +671,6 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
                                   .sinkCommonInsts(true)));
   FPM.addPass(InstCombinePass());
   invokePeepholeEPCallbacks(FPM, Level);
-
-  // Don't add CHR pass for CSIRInstr build in PostLink as the profile
-  // is still the same as the PreLink compilation.
-  if (EnableCHR && Level == OptimizationLevel::O3 && PGOOpt &&
-      ((PGOOpt->Action == PGOOptions::IRUse &&
-        (Phase != ThinOrFullLTOPhase::ThinLTOPostLink ||
-         PGOOpt->CSAction != PGOOptions::CSIRInstr)) ||
-       PGOOpt->Action == PGOOptions::SampleUse))
-    FPM.addPass(ControlHeightReductionPass());
 
   return FPM;
 }
@@ -876,13 +855,12 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
   // CGSCC walk.
   MainCGPipeline.addPass(createCGSCCToFunctionPassAdaptor(
       buildFunctionSimplificationPipeline(Level, Phase),
-      PTO.EagerlyInvalidateAnalyses, EnableNoRerunSimplificationPipeline));
+      PTO.EagerlyInvalidateAnalyses, /*NoRerun=*/true));
 
   MainCGPipeline.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
 
-  if (EnableNoRerunSimplificationPipeline)
-    MIWP.addLateModulePass(createModuleToFunctionPassAdaptor(
-        InvalidateAnalysisPass<ShouldNotRunFunctionPassesAnalysis>()));
+  MIWP.addLateModulePass(createModuleToFunctionPassAdaptor(
+      InvalidateAnalysisPass<ShouldNotRunFunctionPassesAnalysis>()));
 
   return MIWP;
 }
@@ -1309,6 +1287,11 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
     OptimizePM.addPass(LowerMatrixIntrinsicsPass());
     OptimizePM.addPass(EarlyCSEPass());
   }
+
+  if (EnableCHR && Level == OptimizationLevel::O3 && PGOOpt &&
+      (PGOOpt->Action == PGOOptions::IRUse ||
+       PGOOpt->Action == PGOOptions::SampleUse))
+    OptimizePM.addPass(ControlHeightReductionPass());
 
   // FIXME: We need to run some loop optimizations to re-rotate loops after
   // simplifycfg and others undo their rotation.

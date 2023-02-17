@@ -23,8 +23,8 @@
 # Theses numbers are available in all runners, making it easier to update the
 # version number.
 env:
-    LLVM_STABLE_VERSION: "15"
-    LLVM_HEAD_VERSION: "16"
+    LLVM_STABLE_VERSION: "16"
+    LLVM_HEAD_VERSION: "17"
     GCC_STABLE_VERSION: "12"
 steps:
   #
@@ -56,7 +56,9 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
-        CLANG_FORMAT: "clang-format-${LLVM_STABLE_VERSION}"
+        # TODO ENABLE
+        # CLANG_FORMAT: "/usr/bin/clang-format-${LLVM_STABLE_VERSION}"
+        CLANG_FORMAT: "clang-format-15"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -254,14 +256,14 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "Clang 14"
+  - label: "Clang 15"
     command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
     env:
-        CC: "clang-14"
-        CXX: "clang++-14"
+        CC: "clang-15"
+        CXX: "clang++-15"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -271,14 +273,14 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "Clang 15"
+  - label: "Clang 16"
     command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
     env:
-        CC: "clang-15"
-        CXX: "clang++-15"
+        CC: "clang-16"
+        CXX: "clang++-16"
     agents:
       queue: "libcxx-builders"
       os: "linux"

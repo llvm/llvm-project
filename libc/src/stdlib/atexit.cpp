@@ -28,7 +28,7 @@ struct AtExitUnit {
   constexpr AtExitUnit(AtExitCallback *c, void *p) : callback(c), payload(p) {}
 };
 
-#ifdef LLVM_LIBC_PUBLIC_PACKAGING
+#ifdef LIBC_COPT_PUBLIC_PACKAGING
 using ExitCallbackList = cpp::ReverseOrderBlockStore<AtExitUnit, 32>;
 #else
 // BlockStore uses dynamic memory allocation. To avoid dynamic memory
@@ -40,7 +40,7 @@ using ExitCallbackList = cpp::ReverseOrderBlockStore<AtExitUnit, 32>;
 // deps also (some of which are not yet available in LLVM libc) into the
 // integration tests.
 using ExitCallbackList = FixedVector<AtExitUnit, CALLBACK_LIST_SIZE_FOR_TESTS>;
-#endif // LLVM_LIBC_PUBLIC_PACKAGING
+#endif // LIBC_COPT_PUBLIC_PACKAGING
 
 constinit ExitCallbackList exit_callbacks;
 

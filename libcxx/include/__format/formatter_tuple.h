@@ -36,7 +36,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
 
 template <__fmt_char_type _CharT, class _Tuple, formattable<_CharT>... _Args>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT __formatter_tuple {
@@ -171,7 +171,7 @@ template <__fmt_char_type _CharT, formattable<_CharT>... _Args>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<tuple<_Args...>, _CharT>
     : public __formatter_tuple<_CharT, tuple<_Args...>, _Args...> {};
 
-#endif //_LIBCPP_STD_VER > 20
+#endif //_LIBCPP_STD_VER >= 23
 
 _LIBCPP_END_NAMESPACE_STD
 

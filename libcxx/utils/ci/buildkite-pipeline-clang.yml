@@ -14,7 +14,7 @@
 # in various configurations.
 #
 env:
-    LLVM_HEAD_VERSION: "16"
+    LLVM_HEAD_VERSION: "17"
 steps:
   - label: "Building clang"
     commands:

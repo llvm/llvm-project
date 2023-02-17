@@ -27,6 +27,58 @@ def TransformParamTypeOrAnyHandle : Type<
     "transform 'param' type or any handle type">;
 
 //===----------------------------------------------------------------------===//
+// BufferizeToAllocationOp
+//===----------------------------------------------------------------------===//
+
+def BufferizeToAllocationOp : Op<Transform_Dialect,
+    "structured.bufferize_to_allocation",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let description = [{
+    This transform materializes an allocation for the targeted tensor value. It
+    replaces all original uses of the target with the newly allocated buffer,
+    wrapped in a `bufferization.to_tensor` op. It returns a handle to the result
+    of the `to_tensor` op.
+
+    Example:
+    ```
+    %0 = "some_op"() : () -> (tensor<10xf32>)
+    "some_use"(%0) : (tensor<10xf32>) -> ()
+    ```
+
+    Is rewritten to:
+    ```
+    %0 = "some_op"() : () -> (tensor<10xf32>)
+    %1 = memref.alloc() : memref<10xf32>
+    memref.tensor_store %0, %1 : memref<10xf32>
+    %2 = bufferization.to_tensor %1 restrict writable : memref<10xf32>
+    "some_use"(%2) : (tensor<10xf32>) -> ()
+    ```
+
+    This transform has optimized lowerings for certain targets that are results
+    of non-DPS ops. For such targets, not only a buffer allocation is emitted
+    but also the defining op is bufferized. This is to avoid a second
+    allocation for the missing destination of the non-DPS op (when subsequently
+    running a bufferization pass/transform). Currently supported ops with
+    optimized lowerings:
+    - tensor.pad
+
+    An optional memory space attribute can be specified for the materialized
+    buffer allocation.
+
+    #### Return modes
+
+    This operation consumes the `target` handle and produces the `transformed`
+    handle. It always succeeds.
+  }];
+
+  let arguments = (ins Transform_AnyValue:$target,
+                       OptionalAttr<AnyAttr>:$memory_space);
+  let results = (outs Transform_AnyValue:$transformed);
+  let assemblyFormat = "$target attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
 // DecomposeOp
 //===----------------------------------------------------------------------===//
 
@@ -822,6 +874,45 @@ def ScalarizeOp : Op<Transform_Dialect, "structured.scalarize",
 }
 
 //===----------------------------------------------------------------------===//
+// RewriteInDestinationPassingStyleOp.
+//===----------------------------------------------------------------------===//
+
+def RewriteInDestinationPassingStyleOp : Op<
+    Transform_Dialect, "structured.rewrite_in_destination_passing_style",
+    [MemoryEffectsOpInterface,
+     NavigationTransformOpTrait,
+     DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let description = [{
+    Rewrite a supported tensor operation that is not in destination-passing style
+    into a form that is in destination-passing style.
+    Currently supported operations are:
+      - tensor.pad
+      - tensor.generate
+      - tensor.from_elements
+    This dichotomy hints at a future interface, for now the implementation just 
+    switches between different implementation.
+
+    #### Return modes
+
+    This operation ignores non-unsupported ops and drops them from the return.
+    If all the operations referred to by the `target` PDLOperation generalize
+    properly, the transform succeeds. Otherwise the transform silently fails.
+    The return handle points to a subset of successfully produced operations:
+      - tensor.pad case, the returned handle points to the tensor.insert_slice.
+      - tensor.generate case, the returned handle points to the linalg.generic.
+      - tensor.from_elements case, the returned handle points to the last 
+        tensor.insert.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs TransformHandleTypeInterface:$transformed);
+  let assemblyFormat = [{
+    $target attr-dict
+    `:` functional-type($target, results)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // SplitOp
 //===----------------------------------------------------------------------===//
 
@@ -1106,7 +1197,7 @@ def TileReductionUsingScfOp : Op<Transform_Dialect, "structured.tile_reduction_u
     ```
   }];
 
-  // TODO: support mixed static-dynamic (see TileToForeachThreadOp).
+  // TODO: support mixed static-dynamic (see TileToForallOp).
   let arguments = (ins PDL_Operation:$target,
                    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$tile_sizes);
   let results = (outs PDL_Operation:$for_op,
@@ -1134,31 +1225,31 @@ def TileReductionUsingScfOp : Op<Transform_Dialect, "structured.tile_reduction_u
 }
 
 //===----------------------------------------------------------------------===//
-// TileReductionUsingForeachThreadOp
+// TileReductionUsingForallOp
 //===----------------------------------------------------------------------===//
 
-def TileReductionUsingForeachThreadOp :
-  Op<Transform_Dialect, "structured.tile_reduction_using_foreach_thread",
+def TileReductionUsingForallOp :
+  Op<Transform_Dialect, "structured.tile_reduction_using_forall",
        [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
         TransformEachOpTrait, TransformOpInterface]> {
   let description = [{
-    Tile a PartialReductionOpInterface op to a tiled `scf.foreach_thread` doing
+    Tile a PartialReductionOpInterface op to a tiled `scf.forall` doing
     partial reduction.
 
     This transformation tiles the `target` along the reduction dimensions. It
     creates a tensor initialized with the identity value. Then it creates a
-    `scf.foreach_thread` loops with the number threads given by `num_threads`.
+    `scf.forall` loops with the number threads given by `num_threads`.
     The op is tiled op with a size equal to `floordiv(size, num_threads)`.
     All the partial reduction value is are parallel inserted to create a new
     tensor. After the loop a merge operation is created to do a final reduction
     with the partial reductions tensor.
     If an extra `tile_sizes` parameter is passed the tiles are cyclically
-    distributed on the threads of the `scf.foreach_threads` loop.
+    distributed on the threads of the `scf.foralls` loop.
 
     #### Return modes
 
     This 4 returned handles point to:
-      - the parent foreach_thread op,
+      - the parent forall op,
       - the fill op used to initialize the neutral element,
       - the parallel tiled op and
       - the result-combining op.
@@ -1183,7 +1274,7 @@ def TileReductionUsingForeachThreadOp :
     ```
       %0 = tensor.empty(%dim_1) : tensor<?x5xf32>
       %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<?x5xf32>) -> tensor<?x5xf32>
-      %2 = scf.foreach_thread (%arg2) in (%c5) shared_outs(%arg3 = %1) -> (tensor<?x5xf32>) {
+      %2 = scf.forall (%arg2) in (%c5) shared_outs(%arg3 = %1) -> (tensor<?x5xf32>) {
         %4 = affine.min #map(%arg2)[%dim_0]
         %5 = affine.max #map1(%4)
         %extracted_slice = tensor.extract_slice %arg3[0, %arg2] [%dim, 1] [1, 1] : tensor<?x5xf32> to tensor<?xf32>
@@ -1195,7 +1286,7 @@ def TileReductionUsingForeachThreadOp :
           %9 = arith.addf %in, %out : f32
           linalg.yield %9 : f32
         } -> tensor<?xf32>
-        scf.foreach_thread.perform_concurrently {
+        scf.forall.in_parallel {
           tensor.parallel_insert_slice %7 into %arg3[0, %arg2] [%dim, 1] [1, 1] : tensor<?xf32> into tensor<?x5xf32>
         }
       } {mapping = []}
@@ -1207,12 +1298,12 @@ def TileReductionUsingForeachThreadOp :
     ```
   }];
 
-  // TODO: support mixed static-dynamic (see TileToForeachThreadOp).
+  // TODO: support mixed static-dynamic (see TileToForallOp).
   let arguments = (ins PDL_Operation:$target,
                    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$num_threads,
                    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$tile_sizes,
                    OptionalAttr<DeviceMappingArrayAttr>:$mapping);
-  let results = (outs PDL_Operation:$foreach_thread_op,
+  let results = (outs PDL_Operation:$forall_op,
                       PDL_Operation:$fill_op,
                       PDL_Operation:$split_linalg_op,
                       PDL_Operation:$combining_linalg_op);
@@ -1321,16 +1412,16 @@ def TileOp : Op<Transform_Dialect, "structured.tile",
 }
 
 //===----------------------------------------------------------------------===//
-// TileToForeachThreadOp
+// TileToForallOp
 //===----------------------------------------------------------------------===//
 
-def TileToForeachThreadOp :
-    Op<Transform_Dialect, "structured.tile_to_foreach_thread_op",
+def TileToForallOp :
+    Op<Transform_Dialect, "structured.tile_to_forall_op",
       [AttrSizedOperandSegments,
        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
        TransformOpInterface]> {
   let description = [{
-    Tile a TilingInterface op to a tiled `scf.foreach_thread`.
+    Tile a TilingInterface op to a tiled `scf.forall`.
 
     Tiling is applied by either specifying `num_threads` or `tile_size`. If
     `num_threads` is specified, then the tile size for each dimension `i` is
@@ -1347,7 +1438,7 @@ def TileToForeachThreadOp :
     e.g. in the Linalg case).
 
     If non-empty, the `mapping` is added as an attribute to the
-    resulting `scf.foreach_thread`.
+    resulting `scf.forall`.
 
     Note: `tile_sizes` and `num_threads` are variadic. Each tile size/number of
     threads can be an index attribute or a transform handle that is mapped to
@@ -1366,14 +1457,14 @@ def TileToForeachThreadOp :
     tiled operations, which can all be empty.
 
     These two returned handles point to:
-      - the new scf.foreach_thread op,
+      - the new scf.forall op,
       - the tiled op that implements TilingInterface.
 
     #### Example using `num_threads`
 
     ```
     %0 = pdl_match @match_matmul in %arg1
-    %3:2 = transform.structured.tile_to_foreach_thread_op %0 num_threads [10, 20]
+    %3:2 = transform.structured.tile_to_forall_op %0 num_threads [10, 20]
     ```
 
     #### Example using `tile_sizes`
@@ -1381,7 +1472,7 @@ def TileToForeachThreadOp :
     ```
     %0 = pdl_match @match_matmul in %arg1
     %sz = pdl_match @match_size_op in %arg1
-    %3:2 = transform.structured.tile_to_foreach_thread_op %0 tile_sizes [0, %sz, 20]
+    %3:2 = transform.structured.tile_to_forall_op %0 tile_sizes [0, %sz, 20]
     ```
   }];
 
@@ -1393,7 +1484,7 @@ def TileToForeachThreadOp :
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_num_threads,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_tile_sizes,
                    OptionalAttr<DeviceMappingArrayAttr>:$mapping);
-  let results = (outs PDL_Operation:$foreach_thread_op,
+  let results = (outs PDL_Operation:$forall_op,
                       PDL_Operation:$tiled_op);
 
   let builders = [
@@ -1594,6 +1685,7 @@ def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
 
   let arguments = (ins PDL_Operation:$target,
                        Variadic<PDL_Operation>:$vector_sizes,
+                       UnitAttr:$vectorize_nd_extract,
                        DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:
                           $static_vector_sizes);
   let results = (outs);

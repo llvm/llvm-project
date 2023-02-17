@@ -188,6 +188,20 @@ func.func @static_memref_dim(%static : memref<42x32x15x13x27xf32>) {
 
 // -----
 
+// CHECK-LABEL: func @static_out_of_bound_memref_dim
+func.func @static_out_of_bound_memref_dim(%static : memref<42x32x15x13x27xf32>) -> index {
+// CHECK: %[[C_MINUS_7:.*]] = arith.constant -7 : index
+// CHECK: %[[C_MINUS_7_I64:.*]] = builtin.unrealized_conversion_cast %[[C_MINUS_7]] : index to i64
+// CHECK: %[[UB_IDX:.*]] = llvm.getelementptr %{{.*}}[0, %[[C_MINUS_7_I64]]] : (!llvm.ptr, i64) -> !llvm.ptr
+// CHECK: %[[UB_DIM_I64:.*]] = llvm.load %[[UB_IDX]] : !llvm.ptr
+// CHECK: %[[UB_DIM:.*]] = builtin.unrealized_conversion_cast %[[UB_DIM_I64]] : i64 to index
+// CHECK: return %[[UB_DIM]] : index
+  %c-7 = arith.constant -7 : index
+  %1 = memref.dim %static, %c-7 : memref<42x32x15x13x27xf32>
+  return %1 : index
+}
+// -----
+
 // Check that consistent types are emitted in address arithemic in presence of
 // a data layout specification.
 module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32>> } {

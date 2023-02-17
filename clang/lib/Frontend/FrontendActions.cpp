@@ -251,11 +251,6 @@ GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
 
 bool GenerateModuleInterfaceAction::BeginSourceFileAction(
     CompilerInstance &CI) {
-  if (!CI.getLangOpts().ModulesTS && !CI.getLangOpts().CPlusPlusModules) {
-    CI.getDiagnostics().Report(diag::err_module_interface_requires_cpp_modules);
-    return false;
-  }
-
   CI.getLangOpts().setCompilingModule(LangOptions::CMK_ModuleInterface);
 
   return GenerateModuleAction::BeginSourceFileAction(CI);

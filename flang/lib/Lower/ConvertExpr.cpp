@@ -2663,7 +2663,7 @@ public:
 
           // Special case when an intrinsic scalar variable is passed to a
           // function expecting an optional unlimited polymorphic dummy
-	  // argument.
+          // argument.
           // The presence test needs to be performed before emboxing otherwise
           // the program will crash.
           if (dynamicType->category() !=
@@ -4305,11 +4305,13 @@ private:
   fir::ArrayLoadOp
   createAndLoadSomeArrayTemp(mlir::Type type,
                              llvm::ArrayRef<mlir::Value> shape) {
+    mlir::Location loc = getLoc();
+    if (fir::isPolymorphicType(type))
+      TODO(loc, "polymorphic array temporary");
     if (ccLoadDest)
       return (*ccLoadDest)(shape);
     auto seqTy = type.dyn_cast<fir::SequenceType>();
     assert(seqTy && "must be an array");
-    mlir::Location loc = getLoc();
     // TODO: Need to thread the LEN parameters here. For character, they may
     // differ from the operands length (e.g concatenation). So the array loads
     // type parameters are not enough.

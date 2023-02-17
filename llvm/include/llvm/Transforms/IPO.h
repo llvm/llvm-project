@@ -44,12 +44,6 @@ ModulePass *createAnnotation2MetadataLegacyPass();
 ModulePass *createConstantMergePass();
 
 //===----------------------------------------------------------------------===//
-/// createGlobalOptimizerPass - This function returns a new pass that optimizes
-/// non-address taken internal globals.
-///
-ModulePass *createGlobalOptimizerPass();
-
-//===----------------------------------------------------------------------===//
 /// createGlobalDCEPass - This transform is designed to eliminate unreachable
 /// internal globals (functions or global variables)
 ///
@@ -81,13 +75,6 @@ ModulePass *createDeadArgEliminationPass();
 /// functions as well.  This is definitely not safe, and should only be used by
 /// bugpoint.
 ModulePass *createDeadArgHackingPass();
-
-//===----------------------------------------------------------------------===//
-/// createIPSCCPPass - This pass propagates constants from call sites into the
-/// bodies of functions, and keeps track of whether basic blocks are executable
-/// in the process.
-///
-ModulePass *createIPSCCPPass();
 
 //===----------------------------------------------------------------------===//
 //

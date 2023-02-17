@@ -1716,52 +1716,6 @@ bool LoopInterchangeTransform::adjustLoopLinks() {
   return Changed;
 }
 
-namespace {
-/// Main LoopInterchange Pass.
-struct LoopInterchangeLegacyPass : public LoopPass {
-  static char ID;
-
-  LoopInterchangeLegacyPass() : LoopPass(ID) {
-    initializeLoopInterchangeLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<DependenceAnalysisWrapperPass>();
-    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-
-    getLoopAnalysisUsage(AU);
-  }
-
-  bool runOnLoop(Loop *L, LPPassManager &LPM) override {
-    if (skipLoop(L))
-      return false;
-
-    auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-    auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    auto *DI = &getAnalysis<DependenceAnalysisWrapperPass>().getDI();
-    auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    auto *ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
-    std::unique_ptr<CacheCost> CC = nullptr;
-    return LoopInterchange(SE, LI, DI, DT, CC, ORE).run(L);
-  }
-};
-} // namespace
-
-char LoopInterchangeLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(LoopInterchangeLegacyPass, "loop-interchange",
-                      "Interchanges loops for cache reuse", false, false)
-INITIALIZE_PASS_DEPENDENCY(LoopPass)
-INITIALIZE_PASS_DEPENDENCY(DependenceAnalysisWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
-
-INITIALIZE_PASS_END(LoopInterchangeLegacyPass, "loop-interchange",
-                    "Interchanges loops for cache reuse", false, false)
-
-Pass *llvm::createLoopInterchangePass() {
-  return new LoopInterchangeLegacyPass();
-}
-
 PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
                                            LoopAnalysisManager &AM,
                                            LoopStandardAnalysisResults &AR,

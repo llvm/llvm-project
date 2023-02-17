@@ -28,7 +28,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT __formatter_char {
@@ -44,7 +44,7 @@ public:
     if (__parser_.__type_ == __format_spec::__type::__default || __parser_.__type_ == __format_spec::__type::__char)
       return __formatter::__format_char(__value, __ctx.out(), __parser_.__get_parsed_std_specifications(__ctx));
 
-#  if _LIBCPP_STD_VER > 20
+#  if _LIBCPP_STD_VER >= 23
     if (__parser_.__type_ == __format_spec::__type::__debug)
       return __formatter::__format_escaped_char(__value, __ctx.out(), __parser_.__get_parsed_std_specifications(__ctx));
 #  endif
@@ -66,7 +66,7 @@ public:
     return format(static_cast<wchar_t>(__value), __ctx);
   }
 
-#  if _LIBCPP_STD_VER > 20
+#  if _LIBCPP_STD_VER >= 23
   _LIBCPP_HIDE_FROM_ABI constexpr void set_debug_format() { __parser_.__type_ = __format_spec::__type::__debug; }
 #  endif
 
@@ -86,7 +86,7 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<wchar_t, wchar
 
 #  endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
-#endif //_LIBCPP_STD_VER > 17
+#endif //_LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

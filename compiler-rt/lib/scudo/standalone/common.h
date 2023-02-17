@@ -27,16 +27,30 @@ template <class Dest, class Source> inline Dest bit_cast(const Source &S) {
   return D;
 }
 
-inline constexpr uptr roundUpTo(uptr X, uptr Boundary) {
+inline constexpr bool isPowerOfTwo(uptr X) { return (X & (X - 1)) == 0; }
+
+inline constexpr uptr roundUp(uptr X, uptr Boundary) {
+  DCHECK(isPowerOfTwo(Boundary));
   return (X + Boundary - 1) & ~(Boundary - 1);
 }
+inline constexpr uptr roundUpSlow(uptr X, uptr Boundary) {
+  return ((X + Boundary - 1) / Boundary) * Boundary;
+}
 
-inline constexpr uptr roundDownTo(uptr X, uptr Boundary) {
+inline constexpr uptr roundDown(uptr X, uptr Boundary) {
+  DCHECK(isPowerOfTwo(Boundary));
   return X & ~(Boundary - 1);
+}
+inline constexpr uptr roundDownSlow(uptr X, uptr Boundary) {
+  return (X / Boundary) * Boundary;
 }
 
 inline constexpr bool isAligned(uptr X, uptr Alignment) {
+  DCHECK(isPowerOfTwo(Alignment));
   return (X & (Alignment - 1)) == 0;
+}
+inline constexpr bool isAlignedSlow(uptr X, uptr Alignment) {
+  return X % Alignment == 0;
 }
 
 template <class T> constexpr T Min(T A, T B) { return A < B ? A : B; }
@@ -49,14 +63,12 @@ template <class T> void Swap(T &A, T &B) {
   B = Tmp;
 }
 
-inline bool isPowerOfTwo(uptr X) { return (X & (X - 1)) == 0; }
-
 inline uptr getMostSignificantSetBitIndex(uptr X) {
   DCHECK_NE(X, 0U);
   return SCUDO_WORDSIZE - 1U - static_cast<uptr>(__builtin_clzl(X));
 }
 
-inline uptr roundUpToPowerOfTwo(uptr Size) {
+inline uptr roundUpPowerOfTwo(uptr Size) {
   DCHECK(Size);
   if (isPowerOfTwo(Size))
     return Size;

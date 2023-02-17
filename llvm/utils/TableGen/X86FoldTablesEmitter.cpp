@@ -11,10 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
 #include "X86RecognizableInstr.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/TableGen/Error.h"
+#include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
 using namespace llvm;

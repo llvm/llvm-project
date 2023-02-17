@@ -1359,6 +1359,18 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update",
     /// Returns the new value if the operation is equivalent to just a write
     /// operation. Otherwise, returns nullptr.
     Value getWriteOpVal();
+
+    /// The number of variable operands.
+    unsigned getNumVariableOperands() {
+      assert(getX() && "expected 'x' operand");
+      return 1;
+    }
+
+    /// The i-th variable operand passed.
+    Value getVariableOperand(unsigned i) {
+      assert(i == 0 && "invalid index position for an operand");
+      return getX();
+    }
   }];
 }
 

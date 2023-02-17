@@ -2714,6 +2714,16 @@ class sme2_mla_ll_array_single<string mnemonic, bits<4> op,
   let Constraints = "$ZAda = $_ZAda";
 }
 
+multiclass sme2_mla_ll_array_single<string mnemonic, bits<4> op,
+                                    MatrixOperand matrix_ty, ZPRRegOp vector_ty,
+                                    ZPRRegOp zpr_ty, ValueType vt, SDPatternOperator intrinsic> {
+  def NAME : sme2_mla_ll_array_single<mnemonic, op, matrix_ty, vector_ty, zpr_ty>, SMEPseudo2Instr<NAME, 1>;
+
+  def NAME # _PSEUDO : sme2_za_array_2op_multi_single_pseudo<NAME, uimm2s4range, vector_ty, zpr_ty, SMEMatrixArray>;
+
+  def : SME2_ZA_TwoOp_Multi_Single_Pat<NAME, intrinsic, uimm2s4range, zpr_ty, vt, tileslicerange2s4>;
+}
+
 class sme2_mla_ll_array_vg24_single<bits<5> op, MatrixOperand matrix_ty,
                                     RegisterOperand vector_ty, ZPRRegOp zpr_ty,
                                     string mnemonic>
@@ -2749,10 +2759,31 @@ multiclass sme2_mla_ll_array_vg24_single<string mnemonic, bits<5> op,
                                           RegisterOperand multi_vector_ty,
                                           ZPRRegOp zpr_ty> {
   def NAME: sme2_mla_ll_array_vg24_single<op, matrix_ty, multi_vector_ty,
-                                          zpr_ty, mnemonic>;
+                                          zpr_ty, mnemonic>, SMEPseudo2Instr<NAME, 1>;
+
+  def NAME # _PSEUDO : sme2_za_array_2op_multi_single_pseudo<NAME, uimm1s4range, multi_vector_ty, zpr_ty, SMEMatrixArray>;
 
   def : InstAlias<mnemonic # "\t$ZAd[$Rv, $imm], $Zn, $Zm",
                  (!cast<Instruction>(NAME) matrix_ty:$ZAd,  MatrixIndexGPR32Op8_11:$Rv, uimm1s4range:$imm, multi_vector_ty:$Zn, zpr_ty:$Zm), 0>;
+}
+
+multiclass sme2_mla_ll_array_vg2_single<string mnemonic, bits<5> op,
+                                        MatrixOperand matrix_ty,
+                                        RegisterOperand multi_vector_ty,
+                                        ZPRRegOp zpr_ty, ValueType vt, SDPatternOperator intrinsic> {
+
+  defm NAME: sme2_mla_ll_array_vg24_single<mnemonic, op, matrix_ty, multi_vector_ty, zpr_ty>;
+
+  def : SME2_ZA_TwoOp_VG2_Multi_Single_Pat<NAME, intrinsic, uimm1s4range, zpr_ty, vt, tileslicerange1s4>;
+}
+
+multiclass sme2_mla_ll_array_vg4_single<string mnemonic, bits<5> op,
+                                        MatrixOperand matrix_ty,
+                                        RegisterOperand multi_vector_ty,
+                                        ZPRRegOp zpr_ty, ValueType vt, SDPatternOperator intrinsic> {
+  defm NAME: sme2_mla_ll_array_vg24_single<mnemonic, op, matrix_ty, multi_vector_ty, zpr_ty>;
+
+  def : SME2_ZA_TwoOp_VG4_Multi_Single_Pat<NAME, intrinsic, uimm1s4range, zpr_ty, vt, tileslicerange1s4>;
 }
 
 // SME2 multiple vectors long long MLA two sources

@@ -726,8 +726,11 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                      options::OPT_fno_sanitize_cfi_canonical_jump_tables, true);
   }
 
-  if (AllAddedKinds & SanitizerKind::KCFI && DiagnoseErrors) {
-    if (AllAddedKinds & SanitizerKind::CFI)
+  if (AllAddedKinds & SanitizerKind::KCFI) {
+    CfiICallNormalizeIntegers =
+        Args.hasArg(options::OPT_fsanitize_cfi_icall_normalize_integers);
+
+    if (AllAddedKinds & SanitizerKind::CFI && DiagnoseErrors)
       D.Diag(diag::err_drv_argument_not_allowed_with)
           << "-fsanitize=kcfi"
           << lastArgumentForMask(D, Args, SanitizerKind::CFI);

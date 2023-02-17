@@ -13,7 +13,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
-#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleLoader.h"
@@ -57,23 +56,25 @@ protected:
   ModuleDeclStateTest()
       : FileMgr(FileMgrOpts), DiagID(new DiagnosticIDs()),
         Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
-        SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions), Invocation() {
+        SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     TargetOpts->Triple = "x86_64-unknown-linux-gnu";
     Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
   }
 
-  LangOptions &getLangOpts(ArrayRef<const char *> CommandLineArgs) {
-    CompilerInvocation::CreateFromArgs(Invocation, CommandLineArgs, Diags);
-    return *Invocation.getLangOpts();
-  }
-
   std::unique_ptr<Preprocessor>
-  getPreprocessor(const char *source, ArrayRef<const char *> CommandLineArgs) {
+  getPreprocessor(const char *source, Language Lang) {
     std::unique_ptr<llvm::MemoryBuffer> Buf =
         llvm::MemoryBuffer::getMemBuffer(source);
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
 
-    LangOptions &LangOpts = getLangOpts(CommandLineArgs);
+    std::vector<std::string> Includes;
+    LangOptions::setLangDefaults(LangOpts, Lang, Target->getTriple(), Includes, LangStandard::lang_cxx20);
+    LangOpts.CPlusPlusModules = true;
+    if (Lang != Language::CXX) {
+      LangOpts.Modules = true;
+      LangOpts.ImplicitModules = true;
+    }
+
     HeaderInfo.emplace(std::make_shared<HeaderSearchOptions>(), SourceMgr,
                        Diags, LangOpts, Target.get());
 
@@ -104,7 +105,7 @@ protected:
   SourceManager SourceMgr;
   std::shared_ptr<TargetOptions> TargetOpts;
   IntrusiveRefCntPtr<TargetInfo> Target;
-  CompilerInvocation Invocation;
+  LangOptions LangOpts;
   TrivialModuleLoader ModLoader;
   std::optional<HeaderSearch> HeaderInfo;
 };
@@ -113,7 +114,7 @@ TEST_F(ModuleDeclStateTest, NamedModuleInterface) {
   const char *source = R"(
 export module foo;
   )";
-  std::unique_ptr<Preprocessor> PP = getPreprocessor(source, "-std=c++20");
+  std::unique_ptr<Preprocessor> PP = getPreprocessor(source, Language::CXX);
 
   std::initializer_list<bool> ImportKinds = {};
   preprocess(*PP,
@@ -132,7 +133,7 @@ TEST_F(ModuleDeclStateTest, NamedModuleImplementation) {
   const char *source = R"(
 module foo;
   )";
-  std::unique_ptr<Preprocessor> PP = getPreprocessor(source, "-std=c++20");
+  std::unique_ptr<Preprocessor> PP = getPreprocessor(source, Language::CXX);
 
   std::initializer_list<bool> ImportKinds = {};
   preprocess(*PP,
@@ -151,7 +152,7 @@ TEST_F(ModuleDeclStateTest, ModuleImplementationPartition) {
   const char *source = R"(
 module foo:part;
   )";
-  std::unique_ptr<Preprocessor> PP = getPreprocessor(source, "-std=c++20");
+  std::unique_ptr<Preprocessor> PP = getPreprocessor(source, Language::CXX);
 
   std::initializer_list<bool> ImportKinds = {};
   preprocess(*PP,
@@ -170,7 +171,7 @@ TEST_F(ModuleDeclStateTest, ModuleInterfacePartition) {
   const char *source = R"(
 export module foo:part;
   )";
-  std::unique_ptr<Preprocessor> PP = getPreprocessor(source, "-std=c++20");
+  std::unique_ptr<Preprocessor> PP = getPreprocessor(source, Language::CXX);
 
   std::initializer_list<bool> ImportKinds = {};
   preprocess(*PP,
@@ -189,7 +190,7 @@ TEST_F(ModuleDeclStateTest, ModuleNameWithDot) {
   const char *source = R"(
 export module foo.dot:part.dot;
   )";
-  std::unique_ptr<Preprocessor> PP = getPreprocessor(source, "-std=c++20");
+  std::unique_ptr<Preprocessor> PP = getPreprocessor(source, Language::CXX);
 
   std::initializer_list<bool> ImportKinds = {};
   preprocess(*PP,
@@ -208,7 +209,7 @@ TEST_F(ModuleDeclStateTest, NotModule) {
   const char *source = R"(
 // export module foo:part;
   )";
-  std::unique_ptr<Preprocessor> PP = getPreprocessor(source, "-std=c++20");
+  std::unique_ptr<Preprocessor> PP = getPreprocessor(source, Language::CXX);
 
   std::initializer_list<bool> ImportKinds = {};
   preprocess(*PP,
@@ -234,7 +235,7 @@ import "HU";
 import M;
 import :another;
   )";
-  std::unique_ptr<Preprocessor> PP = getPreprocessor(source, "-std=c++20");
+  std::unique_ptr<Preprocessor> PP = getPreprocessor(source, Language::CXX);
 
   std::initializer_list<bool> ImportKinds = {true, true};
   preprocess(*PP,
@@ -261,7 +262,7 @@ import "HU";
 import M;
 import :another;
   )";
-  std::unique_ptr<Preprocessor> PP = getPreprocessor(source, "-std=c++20");
+  std::unique_ptr<Preprocessor> PP = getPreprocessor(source, Language::CXX);
 
   std::initializer_list<bool> ImportKinds = {true, true};
   preprocess(*PP,
@@ -287,7 +288,7 @@ import M;
 // We can't import a partition in non-module TU.
 import :another;
   )";
-  std::unique_ptr<Preprocessor> PP = getPreprocessor(source, "-std=c++20");
+  std::unique_ptr<Preprocessor> PP = getPreprocessor(source, Language::CXX);
 
   std::initializer_list<bool> ImportKinds = {true};
   preprocess(*PP,
@@ -305,9 +306,7 @@ TEST_F(ModuleDeclStateTest, ImportAClangNamedModule) {
   const char *source = R"(
 @import anything;
   )";
-  std::unique_ptr<Preprocessor> PP =
-      getPreprocessor(source, {"-fmodules", "-fimplicit-module-maps", "-x",
-                               "objective-c++", "-std=c++20"});
+  std::unique_ptr<Preprocessor> PP = getPreprocessor(source, Language::ObjCXX);
 
   std::initializer_list<bool> ImportKinds = {false};
   preprocess(*PP,
@@ -329,9 +328,7 @@ import M;
 @import another;
 import M2;
   )";
-  std::unique_ptr<Preprocessor> PP =
-      getPreprocessor(source, {"-fmodules", "-fimplicit-module-maps", "-x",
-                               "objective-c++", "-std=c++20"});
+  std::unique_ptr<Preprocessor> PP = getPreprocessor(source, Language::ObjCXX);
 
   std::initializer_list<bool> ImportKinds = {false, true, false, true};
   preprocess(*PP,

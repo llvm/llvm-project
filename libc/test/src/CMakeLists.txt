@@ -50,6 +50,7 @@ endif()
 
 add_subdirectory(dirent)
 add_subdirectory(assert)
+add_subdirectory(network)
 add_subdirectory(setjmp)
 add_subdirectory(signal)
 add_subdirectory(spawn)

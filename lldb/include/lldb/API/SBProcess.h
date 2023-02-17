@@ -36,7 +36,9 @@ public:
 
   const lldb::SBProcess &operator=(const lldb::SBProcess &rhs);
 
+#ifndef SWIG
   SBProcess(const lldb::ProcessSP &process_sp);
+#endif
 
   ~SBProcess();
 
@@ -65,11 +67,13 @@ public:
 
   size_t GetAsyncProfileData(char *dst, size_t dst_len) const;
 
+#ifndef SWIG
   void ReportEventState(const lldb::SBEvent &event, FILE *out) const;
+#endif
 
   void ReportEventState(const lldb::SBEvent &event, SBFile file) const;
 
-  void ReportEventState(const lldb::SBEvent &event, FileSP file) const;
+  void ReportEventState(const lldb::SBEvent &event, FileSP BORROWED) const;
 
   void AppendEventStateReport(const lldb::SBEvent &event,
                               lldb::SBCommandReturnObject &result);
@@ -111,6 +115,7 @@ public:
   // Queue related functions
   uint32_t GetNumQueues();
 
+  // TODO: This technically takes a uint32_t in the interface file.
   lldb::SBQueue GetQueueAtIndex(size_t index);
 
   // Stepping related functions
@@ -187,7 +192,7 @@ public:
   size_t WriteMemory(addr_t addr, const void *buf, size_t size,
                      lldb::SBError &error);
 
-  size_t ReadCStringFromMemory(addr_t addr, void *buf, size_t size,
+  size_t ReadCStringFromMemory(addr_t addr, void *char_buf, size_t size,
                                lldb::SBError &error);
 
   uint64_t ReadUnsignedFromMemory(addr_t addr, uint32_t byte_size,

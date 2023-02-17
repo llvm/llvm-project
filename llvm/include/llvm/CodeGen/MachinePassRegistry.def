@@ -123,6 +123,7 @@ DUMMY_FUNCTION_PASS("cfguard-dispatch", CFGuardDispatchPass, ())
 DUMMY_FUNCTION_PASS("cfguard-check", CFGuardCheckPass, ())
 DUMMY_FUNCTION_PASS("gc-info-printer", GCInfoPrinterPass, ())
 DUMMY_FUNCTION_PASS("select-optimize", SelectOptimizePass, ())
+DUMMY_FUNCTION_PASS("callbrprepare", CallBrPrepare, ())
 #undef DUMMY_FUNCTION_PASS
 
 #ifndef DUMMY_MODULE_PASS

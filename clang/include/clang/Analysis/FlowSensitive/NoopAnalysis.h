@@ -38,7 +38,7 @@ public:
 
   static NoopLattice initialElement() { return {}; }
 
-  void transfer(const CFGElement *E, NoopLattice &L, Environment &Env) {}
+  void transfer(const CFGElement &E, NoopLattice &L, Environment &Env) {}
 };
 
 } // namespace dataflow

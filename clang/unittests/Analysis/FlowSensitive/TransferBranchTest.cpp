@@ -44,7 +44,7 @@ public:
   explicit TestPropagationAnalysis(ASTContext &Context)
       : DataflowAnalysis<TestPropagationAnalysis, TestLattice>(Context) {}
   static TestLattice initialElement() { return TestLattice::bottom(); }
-  void transfer(const CFGElement *, TestLattice &, Environment &) {}
+  void transfer(const CFGElement &, TestLattice &, Environment &) {}
   void transferBranch(bool Branch, const Stmt *S, TestLattice &L,
                       Environment &Env) {
     L.Branch = Branch;

@@ -48,8 +48,8 @@ llvm.func @func_no_debug() {
   baseType = #si64, flags = Vector,
   elements = #llvm.di_subrange<lowerBound = 0, upperBound = 4, stride = 1>
 >
-#void = #llvm.di_void_result_type
-#spType0 = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #void, #si64, #ptr, #named, #composite, #vector>
+#null = #llvm.di_null_type
+#spType0 = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #null, #si64, #ptr, #named, #composite, #vector>
 #sp0 = #llvm.di_subprogram<
   compileUnit = #cu, scope = #file, name = "func_with_debug", linkageName = "func_with_debug",
   file = #file, line = 3, scopeLine = 3, subprogramFlags = "Definition|Optimized", type = #spType0

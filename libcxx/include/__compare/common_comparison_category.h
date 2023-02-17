@@ -20,7 +20,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 namespace __comp_detail {
 
@@ -88,7 +88,7 @@ struct _LIBCPP_TEMPLATE_VIS common_comparison_category {
 template<class... _Ts>
 using common_comparison_category_t = typename common_comparison_category<_Ts...>::type;
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -3804,8 +3804,7 @@ define <2 x i64> @spltConst1ll() {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r3, r2, .LCPI65_0@toc@ha
 ; P8LE-NEXT:    addi r3, r3, .LCPI65_0@toc@l
-; P8LE-NEXT:    lxvd2x vs0, 0, r3
-; P8LE-NEXT:    xxswapd v2, vs0
+; P8LE-NEXT:    lxvd2x v2, 0, r3
 ; P8LE-NEXT:    blr
 entry:
   ret <2 x i64> <i64 1, i64 1>
@@ -3837,8 +3836,7 @@ define <2 x i64> @spltConst16kll() {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r3, r2, .LCPI66_0@toc@ha
 ; P8LE-NEXT:    addi r3, r3, .LCPI66_0@toc@l
-; P8LE-NEXT:    lxvd2x vs0, 0, r3
-; P8LE-NEXT:    xxswapd v2, vs0
+; P8LE-NEXT:    lxvd2x v2, 0, r3
 ; P8LE-NEXT:    blr
 entry:
   ret <2 x i64> <i64 32767, i64 32767>
@@ -3870,8 +3868,7 @@ define <2 x i64> @spltConst32kll() {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r3, r2, .LCPI67_0@toc@ha
 ; P8LE-NEXT:    addi r3, r3, .LCPI67_0@toc@l
-; P8LE-NEXT:    lxvd2x vs0, 0, r3
-; P8LE-NEXT:    xxswapd v2, vs0
+; P8LE-NEXT:    lxvd2x v2, 0, r3
 ; P8LE-NEXT:    blr
 entry:
   ret <2 x i64> <i64 65535, i64 65535>
@@ -4267,8 +4264,7 @@ define <2 x i64> @spltCnstConvftoll() {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r3, r2, .LCPI78_0@toc@ha
 ; P8LE-NEXT:    addi r3, r3, .LCPI78_0@toc@l
-; P8LE-NEXT:    lxvd2x vs0, 0, r3
-; P8LE-NEXT:    xxswapd v2, vs0
+; P8LE-NEXT:    lxvd2x v2, 0, r3
 ; P8LE-NEXT:    blr
 entry:
   ret <2 x i64> <i64 4, i64 4>
@@ -4629,8 +4625,7 @@ define <2 x i64> @spltCnstConvdtoll() {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r3, r2, .LCPI87_0@toc@ha
 ; P8LE-NEXT:    addi r3, r3, .LCPI87_0@toc@l
-; P8LE-NEXT:    lxvd2x vs0, 0, r3
-; P8LE-NEXT:    xxswapd v2, vs0
+; P8LE-NEXT:    lxvd2x v2, 0, r3
 ; P8LE-NEXT:    blr
 entry:
   ret <2 x i64> <i64 4, i64 4>
@@ -4991,8 +4986,7 @@ define <2 x i64> @spltConst1ull() {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r3, r2, .LCPI97_0@toc@ha
 ; P8LE-NEXT:    addi r3, r3, .LCPI97_0@toc@l
-; P8LE-NEXT:    lxvd2x vs0, 0, r3
-; P8LE-NEXT:    xxswapd v2, vs0
+; P8LE-NEXT:    lxvd2x v2, 0, r3
 ; P8LE-NEXT:    blr
 entry:
   ret <2 x i64> <i64 1, i64 1>
@@ -5024,8 +5018,7 @@ define <2 x i64> @spltConst16kull() {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r3, r2, .LCPI98_0@toc@ha
 ; P8LE-NEXT:    addi r3, r3, .LCPI98_0@toc@l
-; P8LE-NEXT:    lxvd2x vs0, 0, r3
-; P8LE-NEXT:    xxswapd v2, vs0
+; P8LE-NEXT:    lxvd2x v2, 0, r3
 ; P8LE-NEXT:    blr
 entry:
   ret <2 x i64> <i64 32767, i64 32767>
@@ -5057,8 +5050,7 @@ define <2 x i64> @spltConst32kull() {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r3, r2, .LCPI99_0@toc@ha
 ; P8LE-NEXT:    addi r3, r3, .LCPI99_0@toc@l
-; P8LE-NEXT:    lxvd2x vs0, 0, r3
-; P8LE-NEXT:    xxswapd v2, vs0
+; P8LE-NEXT:    lxvd2x v2, 0, r3
 ; P8LE-NEXT:    blr
 entry:
   ret <2 x i64> <i64 65535, i64 65535>
@@ -5454,8 +5446,7 @@ define <2 x i64> @spltCnstConvftoull() {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r3, r2, .LCPI110_0@toc@ha
 ; P8LE-NEXT:    addi r3, r3, .LCPI110_0@toc@l
-; P8LE-NEXT:    lxvd2x vs0, 0, r3
-; P8LE-NEXT:    xxswapd v2, vs0
+; P8LE-NEXT:    lxvd2x v2, 0, r3
 ; P8LE-NEXT:    blr
 entry:
   ret <2 x i64> <i64 4, i64 4>
@@ -5816,8 +5807,7 @@ define <2 x i64> @spltCnstConvdtoull() {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r3, r2, .LCPI119_0@toc@ha
 ; P8LE-NEXT:    addi r3, r3, .LCPI119_0@toc@l
-; P8LE-NEXT:    lxvd2x vs0, 0, r3
-; P8LE-NEXT:    xxswapd v2, vs0
+; P8LE-NEXT:    lxvd2x v2, 0, r3
 ; P8LE-NEXT:    blr
 entry:
   ret <2 x i64> <i64 4, i64 4>

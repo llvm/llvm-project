@@ -941,25 +941,6 @@ Speculation::Speculatability DimOp::getSpeculatability() {
   return Speculation::Speculatable;
 }
 
-LogicalResult DimOp::verify() {
-  // Assume unknown index to be in range.
-  std::optional<int64_t> index = getConstantIndex();
-  if (!index)
-    return success();
-
-  // Check that constant index is not knowingly out of range.
-  auto type = getSource().getType();
-  if (auto memrefType = type.dyn_cast<MemRefType>()) {
-    if (*index >= memrefType.getRank())
-      return emitOpError("index is out of range");
-  } else if (type.isa<UnrankedMemRefType>()) {
-    // Assume index to be in range.
-  } else {
-    llvm_unreachable("expected operand with memref type");
-  }
-  return success();
-}
-
 /// Return a map with key being elements in `vals` and data being number of
 /// occurences of it. Use std::map, since the `vals` here are strides and the
 /// dynamic stride value is the same as the tombstone value for
@@ -1065,6 +1046,12 @@ OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
   // Folding for unranked types (UnrankedMemRefType) is not supported.
   auto memrefType = getSource().getType().dyn_cast<MemRefType>();
   if (!memrefType)
+    return {};
+
+  // Out of bound indices produce undefined behavior but are still valid IR.
+  // Don't choke on them.
+  int64_t indexVal = index.getInt();
+  if (indexVal < 0 || indexVal >= memrefType.getRank())
     return {};
 
   // Fold if the shape extent along the given index is known.

@@ -42,7 +42,6 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
@@ -949,42 +948,6 @@ bool TargetLoweringBase::isFreeAddrSpaceCast(unsigned SrcAS,
   return TM.isNoopAddrSpaceCast(SrcAS, DestAS);
 }
 
-bool TargetLoweringBase::shouldUpdatePointerArgAlignment(
-    const CallInst *CI, unsigned &MinSize, Align &PrefAlign,
-    const TargetTransformInfo &TTI) const {
-  // For now, we only adjust alignment for memcpy/memmove/memset calls.
-  auto *MemCI = dyn_cast<MemIntrinsic>(CI);
-  if (!MemCI)
-    return false;
-  auto AddrSpace = MemCI->getDestAddressSpace();
-  // We assume that scalar register sized values can be loaded/stored
-  // efficiently. If this is not the case for a given target it should override
-  // this function.
-  auto PrefSizeBits =
-      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_Scalar).getFixedValue();
-  PrefAlign = Align(PrefSizeBits / 8);
-  // When building with -Oz, we only increase the alignment if the object is
-  // at least 8 bytes in size to avoid increased stack/global padding.
-  // Otherwise, we require at least PrefAlign bytes to be copied.
-  MinSize = PrefAlign.value();
-  if (CI->getFunction()->hasMinSize())
-    MinSize = std::max(MinSize, 8u);
-
-  // XXX: we could determine the MachineMemOperand flags instead of assuming
-  // load+store (but it probably makes no difference for supported targets).
-  unsigned FastUnalignedAccess = 0;
-  if (allowsMisalignedMemoryAccesses(
-          LLT::scalar(PrefSizeBits), AddrSpace, Align(1),
-          MachineMemOperand::MOStore | MachineMemOperand::MOLoad,
-          &FastUnalignedAccess) &&
-      FastUnalignedAccess) {
-    // If unaligned loads&stores are fast, there is no need to adjust
-    // alignment.
-    return false;
-  }
-  return true; // unaligned accesses are not possible or slow.
-}
-
 void TargetLoweringBase::setJumpIsExpensive(bool isExpensive) {
   // If the command-line option was specified, ignore this request.
   if (!JumpIsExpensiveOverride.getNumOccurrences())
@@ -1663,7 +1626,7 @@ unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context,
   if (EVT(DestVT).bitsLT(NewVT)) {  // Value is expanded, e.g. i64 -> i16.
     TypeSize NewVTSize = NewVT.getSizeInBits();
     // Convert sizes such as i33 to i64.
-    if (!isPowerOf2_32(NewVTSize.getKnownMinValue()))
+    if (!llvm::has_single_bit<uint32_t>(NewVTSize.getKnownMinValue()))
       NewVTSize = NewVTSize.coefficientNextPowerOf2();
     return NumVectorRegs*(NewVTSize/DestVT.getSizeInBits());
   }

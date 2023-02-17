@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/Passes.h"
@@ -109,6 +110,29 @@ public:
   }
 };
 
+/// Lowers a masked `vector.gather` operation.
+struct MaskedGatherOpPattern : public MaskOpRewritePattern<GatherOp> {
+public:
+  using MaskOpRewritePattern<GatherOp>::MaskOpRewritePattern;
+
+  LogicalResult
+  matchAndRewriteMaskableOp(GatherOp gatherOp, MaskingOpInterface maskingOp,
+                            PatternRewriter &rewriter) const override {
+    Value passthru = maskingOp.hasPassthru()
+                         ? maskingOp.getPassthru()
+                         : rewriter.create<arith::ConstantOp>(
+                               gatherOp.getLoc(),
+                               rewriter.getZeroAttr(gatherOp.getVectorType()));
+
+    // Replace the `vector.mask` operation.
+    rewriter.replaceOpWithNewOp<GatherOp>(
+        maskingOp.getOperation(), gatherOp.getVectorType(), gatherOp.getBase(),
+        gatherOp.getIndices(), gatherOp.getIndexVec(), maskingOp.getMask(),
+        passthru);
+    return success();
+  }
+};
+
 struct LowerVectorMaskPass
     : public vector::impl::LowerVectorMaskPassBase<LowerVectorMaskPass> {
   using Base::Base;
@@ -136,8 +160,8 @@ struct LowerVectorMaskPass
 /// not its nested `MaskableOpInterface`.
 void vector::populateVectorMaskLoweringPatternsForSideEffectingOps(
     RewritePatternSet &patterns) {
-  patterns.add<MaskedTransferReadOpPattern, MaskedTransferWriteOpPattern>(
-      patterns.getContext());
+  patterns.add<MaskedTransferReadOpPattern, MaskedTransferWriteOpPattern,
+               MaskedGatherOpPattern>(patterns.getContext());
 }
 
 std::unique_ptr<Pass> mlir::vector::createLowerVectorMaskPass() {

@@ -1261,7 +1261,7 @@ llvm.func @indexconstantsplat() -> vector<3xi32> {
 // CHECK-LABEL: @indexconstantarray
 llvm.func @indexconstantarray() -> vector<3xi32> {
   %1 = llvm.mlir.constant(dense<[0, 1, 2]> : vector<3xindex>) : vector<3xi32>
-  // CHECK: ret <3 x i32> <i32 0, i32 1, i32 2> 
+  // CHECK: ret <3 x i32> <i32 0, i32 1, i32 2>
   llvm.return %1 : vector<3xi32>
 }
 
@@ -1777,6 +1777,18 @@ llvm.func @nontemporal_store_and_load() {
 }
 
 // CHECK: ![[NODE]] = !{i32 1}
+
+// -----
+
+llvm.func @atomic_load(%ptr : !llvm.ptr) {
+  // CHECK: load atomic
+  // CHECK-SAME:  monotonic, align 4
+  %1 = llvm.load %ptr atomic monotonic {alignment = 4 : i64} : !llvm.ptr -> f32
+  // CHECK: load atomic
+  // CHECK-SAME:  syncscope("singlethread") monotonic, align 4
+  %2 = llvm.load %ptr atomic syncscope("singlethread") monotonic {alignment = 4 : i64} : !llvm.ptr -> f32
+  llvm.return
+}
 
 // -----
 

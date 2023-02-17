@@ -1109,22 +1109,3 @@ func.func @vector_insert_2d_broadcast(%laneid: index) -> (vector<4x96xf32>) {
   }
   return %r : vector<4x96xf32>
 }
-// -----
-
-// Verify that we don't duplicate the reduction.
-// CHECK-PROP-LABEL: func @vector_reduction_no_duplicate(
-//  CHECK-PROP-SAME:     %[[laneid:.*]]: index)
-//       CHECK-PROP:   %[[warp_op:.*]] = vector.warp_execute_on_lane_0(%[[laneid]])[32] -> (f32) {
-//       CHECK-PROP:     vector.reduction
-//       CHECK-PROP:     vector.yield %{{.*}} : f32
-//       CHECK-PROP:   }
-//  CHECK-PROP-NEXT:   return %{{.*}} : f32
-func.func @vector_reduction_no_duplicate(%laneid: index) -> (f32) {
-  %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (f32) {
-    %0 = "some_def"() : () -> (vector<32xf32>)
-    %1 = vector.reduction <add>, %0 : vector<32xf32> into f32
-    "some_blocking_use"(%1) : (f32) -> ()
-    vector.yield %1 : f32
-  }
-  return %r : f32
-}

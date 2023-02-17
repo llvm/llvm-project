@@ -512,8 +512,7 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
   mlir::Type boxTy = fir::BoxType::get(elementType);
   mlir::Value tdesc;
   if (isPolymorphic) {
-    if (!elementType.isa<mlir::NoneType, fir::RecordType>())
-      elementType = mlir::NoneType::get(elementType.getContext());
+    elementType = fir::updateTypeForUnlimitedPolymorphic(elementType);
     boxTy = fir::ClassType::get(elementType);
   }
 

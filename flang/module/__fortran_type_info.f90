@@ -23,7 +23,7 @@ module __Fortran_type_info
     ! "TBP" bindings appear first.  Inherited bindings, with overrides already
     ! applied, appear in the initial entries in the same order as they
     ! appear in the parent type's bindings, if any.  They are followed
-    ! by new local bindings in alphabetic order of theing binding names.
+    ! by new local bindings in alphabetic order of their binding names.
     type(Binding), pointer, contiguous :: binding(:)
     character(len=:), pointer :: name
     integer(kind=int64) :: sizeInBytes

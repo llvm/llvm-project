@@ -36,7 +36,7 @@ equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first
   return std::equal(__first1, __last1, __first2, __equal_to());
 }
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <class _BinaryPredicate, class _InputIterator1, class _InputIterator2>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 __equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _InputIterator2 __last2,

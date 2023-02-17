@@ -1249,37 +1249,73 @@ genHLFIRIntrinsicRefCore(PreparedActualArguments &loweredActuals,
   if (!useHlfirIntrinsicOps)
     return genIntrinsicRefCore(loweredActuals, intrinsic, argLowering, callContext);
 
-  auto getOperandVector =
-    [](PreparedActualArguments &loweredActuals) {
-      llvm::SmallVector<mlir::Value> operands;
-      operands.reserve(loweredActuals.size());
-      for (auto arg : llvm::enumerate(loweredActuals)) {
-        if (!arg.value()) {
-          operands.emplace_back();
-          continue;
-        }
-        hlfir::Entity actual = arg.value()->getOriginalActual();
-        operands.emplace_back(actual.getBase());
-      }
-      return operands;
-    };
-
   fir::FirOpBuilder &builder = callContext.getBuilder();
   mlir::Location loc = callContext.loc;
+
+  auto getOperandVector = [&](PreparedActualArguments &loweredActuals) {
+    llvm::SmallVector<mlir::Value> operands;
+    operands.reserve(loweredActuals.size());
+
+    for (size_t i = 0; i < loweredActuals.size(); ++i) {
+      std::optional<PreparedActualArgument> arg = loweredActuals[i];
+      if (!arg) {
+        operands.emplace_back();
+        continue;
+      }
+      hlfir::Entity actual = arg->getOriginalActual();
+      mlir::Value valArg;
+
+      fir::ArgLoweringRule argRules =
+          fir::lowerIntrinsicArgumentAs(*argLowering, i);
+      if (!argRules.handleDynamicOptional &&
+          argRules.lowerAs != fir::LowerIntrinsicArgAs::Inquired)
+        valArg = hlfir::derefPointersAndAllocatables(loc, builder, actual);
+      else
+        valArg = actual.getBase();
+
+      operands.emplace_back(valArg);
+    }
+    return operands;
+  };
+
+  auto computeResultType = [&](mlir::Value argArray,
+                               mlir::Type stmtResultType) -> mlir::Type {
+    hlfir::ExprType::Shape resultShape;
+    mlir::Type normalisedResult =
+        hlfir::getFortranElementOrSequenceType(stmtResultType);
+    mlir::Type elementType;
+    if (auto array = normalisedResult.dyn_cast<fir::SequenceType>()) {
+      resultShape = hlfir::ExprType::Shape{array.getShape()};
+      elementType = array.getEleTy();
+    } else {
+      elementType = normalisedResult;
+    }
+    return hlfir::ExprType::get(builder.getContext(), resultShape, elementType,
+                                /*polymorphic=*/false);
+  };
 
   if (intrinsic.name == "sum") {
     llvm::SmallVector<mlir::Value> operands = getOperandVector(loweredActuals);
     assert(operands.size() == 3);
-    mlir::Value array = hlfir::derefPointersAndAllocatables(
-        loc, builder, hlfir::Entity{operands[0]});
+    mlir::Value array = operands[0];
     mlir::Value dim = operands[1];
     if (dim)
       dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
     mlir::Value mask = operands[2];
+    mlir::Type resultTy = computeResultType(array, *callContext.resultType);
     // dim, mask can be NULL if these arguments were not given
-    hlfir::SumOp sumOp = builder.create<hlfir::SumOp>(loc, array, dim, mask,
-                                                      *callContext.resultType);
+    hlfir::SumOp sumOp =
+        builder.create<hlfir::SumOp>(loc, resultTy, array, dim, mask);
     return {hlfir::EntityWithAttributes{sumOp.getResult()}};
+  }
+  if (intrinsic.name == "matmul") {
+    llvm::SmallVector<mlir::Value> operands = getOperandVector(loweredActuals);
+    mlir::Type resultTy =
+        computeResultType(operands[0], *callContext.resultType);
+    hlfir::MatmulOp matmulOp = builder.create<hlfir::MatmulOp>(
+        loc, resultTy, operands[0], operands[1]);
+
+    return {hlfir::EntityWithAttributes{matmulOp.getResult()}};
   }
 
   // TODO add hlfir operations for other transformational intrinsics here

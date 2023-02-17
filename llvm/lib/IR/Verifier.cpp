@@ -5824,6 +5824,35 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "isdata argument to llvm.aarch64.prefetch must be 0 or 1", Call);
     break;
   }
+  case Intrinsic::callbr_landingpad: {
+    const auto *CBR = dyn_cast<CallBrInst>(Call.getOperand(0));
+    Check(CBR, "intrinstic requires callbr operand", &Call);
+    if (!CBR)
+      break;
+
+    const BasicBlock *LandingPadBB = Call.getParent();
+    const BasicBlock *PredBB = LandingPadBB->getUniquePredecessor();
+    if (!PredBB) {
+      CheckFailed("Intrinsic in block must have 1 unique predecessor", &Call);
+      break;
+    }
+    if (!isa<CallBrInst>(PredBB->getTerminator())) {
+      CheckFailed("Intrinsic must have corresponding callbr in predecessor",
+                  &Call);
+      break;
+    }
+    Check(llvm::any_of(CBR->getIndirectDests(),
+                       [LandingPadBB](const BasicBlock *IndDest) {
+                         return IndDest == LandingPadBB;
+                       }),
+          "Intrinsic's corresponding callbr must have intrinsic's parent basic "
+          "block in indirect destination list",
+          &Call);
+    const Instruction &First = *LandingPadBB->begin();
+    Check(&First == &Call, "No other instructions may proceed intrinsic",
+          &Call);
+    break;
+  }
   };
 
   // Verify that there aren't any unmediated control transfers between funclets.

@@ -7173,7 +7173,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   bool IsSibCall = false;
   bool GuardWithBTI = false;
 
-  if (CLI.CB && CLI.CB->getAttributes().hasFnAttr(Attribute::ReturnsTwice) &&
+  if (CLI.CB && CLI.CB->hasFnAttr(Attribute::ReturnsTwice) &&
       !Subtarget->noBTIAtReturnTwice()) {
     GuardWithBTI = FuncInfo->branchTargetEnforcement();
   }
@@ -9772,14 +9772,16 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     IsLegal = AArch64_AM::getFP64Imm(ImmInt) != -1 || Imm.isPosZero();
   else if (VT == MVT::f32)
     IsLegal = AArch64_AM::getFP32Imm(ImmInt) != -1 || Imm.isPosZero();
-  else if (VT == MVT::f16 && Subtarget->hasFullFP16())
-    IsLegal = AArch64_AM::getFP16Imm(ImmInt) != -1 || Imm.isPosZero();
-  // TODO: fmov h0, w0 is also legal, however on't have an isel pattern to
-  //       generate that fmov.
+  else if (VT == MVT::f16)
+    IsLegal =
+        (Subtarget->hasFullFP16() && AArch64_AM::getFP16Imm(ImmInt) != -1) ||
+        Imm.isPosZero();
 
   // If we can not materialize in immediate field for fmov, check if the
   // value can be encoded as the immediate operand of a logical instruction.
   // The immediate value will be created with either MOVZ, MOVN, or ORR.
+  // TODO: fmov h0, w0 is also legal, however we don't have an isel pattern to
+  //       generate that fmov.
   if (!IsLegal && (VT == MVT::f64 || VT == MVT::f32)) {
     // The cost is actually exactly the same for mov+fmov vs. adrp+ldr;
     // however the mov+fmov sequence is always better because of the reduced
@@ -17721,13 +17723,17 @@ static SDValue performAddCombineForShiftedOperands(SDNode *N,
 static SDValue performSubAddMULCombine(SDNode *N, SelectionDAG &DAG) {
   if (N->getOpcode() != ISD::SUB)
     return SDValue();
+
   SDValue Add = N->getOperand(1);
+  SDValue X = N->getOperand(0);
   if (Add.getOpcode() != ISD::ADD)
     return SDValue();
 
-  SDValue X = N->getOperand(0);
+  if (!Add.hasOneUse())
+    return SDValue();
   if (DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(X)))
     return SDValue();
+
   SDValue M1 = Add.getOperand(0);
   SDValue M2 = Add.getOperand(1);
   if (M1.getOpcode() != ISD::MUL && M1.getOpcode() != AArch64ISD::SMULL &&
@@ -21893,9 +21899,10 @@ bool AArch64TargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   return CI->isTailCall();
 }
 
-bool AArch64TargetLowering::getIndexedAddressParts(
-    SDNode *N, SDNode *Op, SDValue &Base, SDValue &Offset,
-    ISD::MemIndexedMode &AM, bool &IsInc, SelectionDAG &DAG) const {
+bool AArch64TargetLowering::getIndexedAddressParts(SDNode *N, SDNode *Op,
+                                                   SDValue &Base,
+                                                   SDValue &Offset,
+                                                   SelectionDAG &DAG) const {
   if (Op->getOpcode() != ISD::ADD && Op->getOpcode() != ISD::SUB)
     return false;
 
@@ -21934,8 +21941,9 @@ bool AArch64TargetLowering::getIndexedAddressParts(
       RHSC = -(uint64_t)RHSC;
     if (!isInt<9>(RHSC))
       return false;
-    IsInc = (Op->getOpcode() == ISD::ADD);
-    Offset = Op->getOperand(1);
+    // Always emit pre-inc/post-inc addressing mode. Use negated constant offset
+    // when dealing with subtraction.
+    Offset = DAG.getConstant(RHSC, SDLoc(N), RHS->getValueType(0));
     return true;
   }
   return false;
@@ -21956,10 +21964,9 @@ bool AArch64TargetLowering::getPreIndexedAddressParts(SDNode *N, SDValue &Base,
   } else
     return false;
 
-  bool IsInc;
-  if (!getIndexedAddressParts(N, Ptr.getNode(), Base, Offset, AM, IsInc, DAG))
+  if (!getIndexedAddressParts(N, Ptr.getNode(), Base, Offset, DAG))
     return false;
-  AM = IsInc ? ISD::PRE_INC : ISD::PRE_DEC;
+  AM = ISD::PRE_INC;
   return true;
 }
 
@@ -21977,14 +21984,13 @@ bool AArch64TargetLowering::getPostIndexedAddressParts(
   } else
     return false;
 
-  bool IsInc;
-  if (!getIndexedAddressParts(N, Op, Base, Offset, AM, IsInc, DAG))
+  if (!getIndexedAddressParts(N, Op, Base, Offset, DAG))
     return false;
   // Post-indexing updates the base, so it's not a valid transform
   // if that's not the same as the load's pointer.
   if (Ptr != Base)
     return false;
-  AM = IsInc ? ISD::POST_INC : ISD::POST_DEC;
+  AM = ISD::POST_INC;
   return true;
 }
 

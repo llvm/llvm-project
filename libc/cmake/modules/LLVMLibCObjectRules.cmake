@@ -108,7 +108,7 @@ function(_build_gpu_entrypoint_objects fq_target_name)
     target_compile_options(${gpu_target_name} PRIVATE ${compile_options})
     target_include_directories(${gpu_target_name} PRIVATE ${include_dirs})
     add_dependencies(${gpu_target_name} ${ADD_GPU_ENTRYPOINT_OBJ_DEPENDS})
-    target_compile_definitions(${gpu_target_name} PRIVATE LLVM_LIBC_PUBLIC_PACKAGING)
+    target_compile_definitions(${gpu_target_name} PRIVATE LIBC_COPT_PUBLIC_PACKAGING)
 
     # Append this target to a list of images to package into a single binary.
     set(input_file $<TARGET_OBJECTS:${gpu_target_name}>)
@@ -521,7 +521,7 @@ function(create_entrypoint_object fq_target_name)
       ${ADD_ENTRYPOINT_OBJ_SRCS}
       ${ADD_ENTRYPOINT_OBJ_HDRS}
     )
-    target_compile_options(${fq_target_name} BEFORE PRIVATE ${common_compile_options} -DLLVM_LIBC_PUBLIC_PACKAGING)
+    target_compile_options(${fq_target_name} BEFORE PRIVATE ${common_compile_options} -DLIBC_COPT_PUBLIC_PACKAGING)
     target_include_directories(${fq_target_name} PRIVATE ${include_dirs})
     add_dependencies(${fq_target_name} ${full_deps_list})
 

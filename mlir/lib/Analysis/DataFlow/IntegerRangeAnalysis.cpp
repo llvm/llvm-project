@@ -128,6 +128,11 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
     ArrayRef<IntegerValueRangeLattice *> argLattices, unsigned firstIndex) {
   if (auto inferrable = dyn_cast<InferIntRangeInterface>(op)) {
     LLVM_DEBUG(llvm::dbgs() << "Inferring ranges for " << *op << "\n");
+    // If the lattice on any operand is unitialized, bail out.
+    if (llvm::any_of(op->getOperands(), [&](Value value) {
+          return getLatticeElementFor(op, value)->getValue().isUninitialized();
+        }))
+      return;
     SmallVector<ConstantIntRanges> argRanges(
         llvm::map_range(op->getOperands(), [&](Value value) {
           return getLatticeElementFor(op, value)->getValue().getValue();

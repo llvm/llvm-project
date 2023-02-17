@@ -130,7 +130,7 @@ Supported
 .. _riscv-i2p1-note:
 
 ``zicsr``, ``zifencei``
-  Between versions 2.0 and 2.1 of the base I specification, a backwards incompatible change was made to remove selected instructions and CSRs from the base ISA.  These instructions were grouped into a set of new extensions, but were no longer required by the base ISA.  This change is described in "Preface to Document Version 20190608-Base-Ratified" from the specification document.  LLVM currently implements version 2.0 of the base specification.  Thus, instructions from these extensions are accepted as part of the base ISA, but attempts to explicitly enable the extensions will error.
+  Between versions 2.0 and 2.1 of the base I specification, a backwards incompatible change was made to remove selected instructions and CSRs from the base ISA.  These instructions were grouped into a set of new extensions, but were no longer required by the base ISA.  This change is described in "Preface to Document Version 20190608-Base-Ratified" from the specification document.  LLVM currently implements version 2.0 of the base specification.  Thus, instructions from these extensions are accepted as part of the base ISA.  LLVM also allows the explicit specification of the extensions in an march string.
 
 Experimental Extensions
 =======================
