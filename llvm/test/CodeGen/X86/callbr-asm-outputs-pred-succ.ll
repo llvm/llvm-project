@@ -22,7 +22,7 @@
 
 ; Check the first INLINEASM_BR target block is predecessed by the block with
 ; the first INLINEASM_BR.
-; CHECK: bb.4 (%ir-block.11, machine-block-address-taken, inlineasm-br-indirect-target):
+; CHECK: bb.4 (%ir-block.12, machine-block-address-taken, inlineasm-br-indirect-target):
 ; CHECK-NEXT: predecessors: %bb.0
 
 @.str = private unnamed_addr constant [26 x i8] c"inline asm#1 returned %d\0A\00", align 1
