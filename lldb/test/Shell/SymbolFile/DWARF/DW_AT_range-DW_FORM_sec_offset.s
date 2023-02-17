@@ -8,7 +8,7 @@
 # RUN:   -o exit | FileCheck %s
 
 # Failure was the block range 1..2 was not printed plus:
-# error: DW_AT_range-DW_FORM_sec_offset.s.tmp {0x000000000000003f}: DIE has DW_AT_ranges(0xc) attribute, but range extraction failed (missing or invalid range list table), please file a bug and attach the file at the start of this error message
+# error: DW_AT_range-DW_FORM_sec_offset.s.tmp {0x0000003f}: DIE has DW_AT_ranges(0xc) attribute, but range extraction failed (missing or invalid range list table), please file a bug and attach the file at the start of this error message
 
 # CHECK-LABEL: image lookup -v -s lookup_rnglists
 # CHECK:  Function: id = {0x00000029}, name = "rnglists", range = [0x0000000000000000-0x0000000000000003)

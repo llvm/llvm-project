@@ -29,7 +29,7 @@ SymbolFileDWARFDwo::SymbolFileDWARFDwo(SymbolFileDWARF &base_symbol_file,
     : SymbolFileDWARF(objfile, objfile->GetSectionList(
                                    /*update_module_section_list*/ false)),
       m_base_symbol_file(base_symbol_file) {
-  SetFileIndex(id);
+  SetID(user_id_t(id) << 32);
 
   // Parsing of the dwarf unit index is not thread-safe, so we need to prime it
   // to enable subsequent concurrent lookups.
@@ -42,7 +42,7 @@ DWARFCompileUnit *SymbolFileDWARFDwo::GetDWOCompileUnitForHash(uint64_t hash) {
       if (auto *unit_contrib = entry->getContribution())
         return llvm::dyn_cast_or_null<DWARFCompileUnit>(
             DebugInfo().GetUnitAtOffset(DIERef::Section::DebugInfo,
-                                        unit_contrib->getOffset()));
+                                        unit_contrib->getOffset32()));
     }
     return nullptr;
   }
@@ -137,7 +137,7 @@ SymbolFileDWARFDwo::GetTypeSystemForLanguage(LanguageType language) {
 
 DWARFDIE
 SymbolFileDWARFDwo::GetDIE(const DIERef &die_ref) {
-  if (die_ref.file_index() == GetFileIndex())
+  if (die_ref.dwo_num() == GetDwoNum())
     return DebugInfo().GetDIE(die_ref);
   return GetBaseSymbolFile().GetDIE(die_ref);
 }
