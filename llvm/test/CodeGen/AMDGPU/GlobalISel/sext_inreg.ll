@@ -889,7 +889,7 @@ define amdgpu_ps <2 x i32> @s_sext_inreg_v4i16_14(<4 x i16> inreg %value) {
 ;
 ; GFX8-LABEL: s_sext_inreg_v4i16_14:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_bfe_u32 s0, 0, 0x100000
+; GFX8-NEXT:    s_bfe_u32 s0, -1, 0x100000
 ; GFX8-NEXT:    s_mov_b32 s1, s0
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
@@ -978,7 +978,7 @@ define <4 x float> @v_sext_inreg_v8i16_11(<8 x i16> %value) {
 ; GFX8-LABEL: v_sext_inreg_v8i16_11:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    s_bfe_u32 s4, 0, 0x100000
+; GFX8-NEXT:    s_bfe_u32 s4, -1, 0x100000
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s4

@@ -121,10 +121,8 @@ body:             |
     ; CHECK-LABEL: name: narrow_ashr_s64_64
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[COPY]], [[C]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[ASHR]](s64)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[DEF]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_CONSTANT i32 64
     %2:_(s64) = G_ASHR %0, %1
@@ -141,10 +139,8 @@ body:             |
     ; CHECK-LABEL: name: narrow_ashr_s64_65
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[COPY]], [[C]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[ASHR]](s64)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[DEF]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_CONSTANT i32 65
     %2:_(s64) = G_ASHR %0, %1
