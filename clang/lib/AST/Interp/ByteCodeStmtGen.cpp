@@ -224,6 +224,9 @@ bool ByteCodeStmtGen<Emitter>::visitCompoundStmt(
 template <class Emitter>
 bool ByteCodeStmtGen<Emitter>::visitDeclStmt(const DeclStmt *DS) {
   for (auto *D : DS->decls()) {
+    if (isa<StaticAssertDecl>(D))
+      continue;
+
     const auto *VD = dyn_cast<VarDecl>(D);
     if (!VD)
       return false;
