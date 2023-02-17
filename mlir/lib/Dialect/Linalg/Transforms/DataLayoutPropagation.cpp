@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -298,16 +299,41 @@ static FailureOr<GenericOp>
 bubbleUpPackOpThroughElemGenericOp(RewriterBase &rewriter,
                                    tensor::PackOp packOp) {
   auto genericOp = packOp.getSource().getDefiningOp<GenericOp>();
-  if (!genericOp)
-    return failure();
-
-  if (!isElementwise(genericOp))
+  if (!genericOp || !isElementwise(genericOp))
     return failure();
 
   // TODO: Relax the restriction. We are able to bubble up the pack op through
   // multi-result generic op. It just needs more work.
   if (genericOp.getNumResults() != 1)
     return failure();
+
+  // Bail-out if the result of the generic has multiple uses, as bubbling up
+  // creates recomputation if the generic has multiple users.
+  if (!genericOp->getResult(0).hasOneUse())
+    return failure();
+
+  // We want to move the pack not the generic.
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPoint(genericOp);
+
+  // We need to handle two cases:
+  // 1) The tensor.pack destination is a tensor.empty. If this is the case, we
+  // create a new tensor.empty to avoid breaking dominance, as we are moving the
+  // tensor.pack above the linalg.generic.
+  // 2) The destination is not a tensor.empty. In this case we can replace only
+  // if the destination of the tensor.pack dominates the linalg.generic.
+  Value packOpDest = packOp.getDest();
+  if (!packOpDest.hasOneUse())
+    return failure();
+  if (auto emptyOp = packOpDest.getDefiningOp<tensor::EmptyOp>()) {
+    packOpDest = rewriter.create<tensor::EmptyOp>(
+        genericOp->getLoc(), emptyOp.getMixedSizes(),
+        emptyOp.getType().getElementType());
+  } else {
+    DominanceInfo dom(genericOp);
+    if (!dom.properlyDominates(packOpDest, genericOp))
+      return failure();
+  }
 
   // TODO: Add an option for allowing padding values. It could introduce
   // undefined behavior if we unconditionally propagate pack op through all
@@ -330,7 +356,7 @@ bubbleUpPackOpThroughElemGenericOp(RewriterBase &rewriter,
   // If it has users we need to pack the init operand too and replace the init
   // with the packing result.
   Value dest = (genericOp.getRegionOutputArgs()[0].use_empty())
-                   ? packOp.getDest()
+                   ? packOpDest
                    : packedOutOperand;
 
   return packElementWiseOp(rewriter, genericOp, dest, packedOutIndexingMap,

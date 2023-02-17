@@ -621,3 +621,34 @@ func.func @pad_along_unpacked_dim(%arg0: tensor<1x2x56x56x32xf32>) -> tensor<1x5
 // CHECK-SAME:  outer_dims_perm = [0, 3, 1, 2] inner_dims_pos = [3] inner_tiles = [32] 
 // CHECK-SAME:  into %[[EMPTY]] : tensor<1x2x56x56x32xf32> -> tensor<1x56x56x64xf32>
 // CHECK: %[[PADDED:.+]] = tensor.pad %[[UNPACK]] low[0, 1, 1, 1] high[0, 1, 1, 1]
+
+// -----
+
+#map0 = affine_map<(d0, d1) -> (d0, d1)>
+func.func @would_break_dominance(%arg0: tensor<128x256xi32>) -> tensor<4x16x16x32xi32>{
+  %init = tensor.empty() : tensor<128x256xi32>
+  %elem = linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel", "parallel"]}
+      ins(%arg0 : tensor<128x256xi32>)
+      outs(%init : tensor<128x256xi32>) {
+    ^bb0(%arg3: i32, %arg4: i32):
+      %4 = arith.addi %arg3, %arg3 : i32
+      linalg.yield %4 : i32
+  } -> tensor<128x256xi32>
+  %dest = bufferization.alloc_tensor() : tensor<4x16x16x32xi32>
+  %pack = tensor.pack %elem
+    inner_dims_pos = [1, 0]
+    inner_tiles = [16, 32]
+    into %dest : tensor<128x256xi32> -> tensor<4x16x16x32xi32>
+  return %pack : tensor<4x16x16x32xi32>
+}
+
+// CHECK: func.func @would_break_dominance(
+// CHECK-SAME: %[[ARG0:.+]]: tensor<128x256xi32>)
+// CHECK: %[[EMPTY:.+]] = tensor.empty() : tensor<128x256xi32>
+// CHECK-NEXT: %[[GEN:.+]] = linalg.generic
+// CHECK-SAME:  ins(%[[ARG0]]
+// CHECK-SAME:  outs(%[[EMPTY]]
+// CHECK: %[[ALLOC:.+]] = bufferization.alloc_tensor() : tensor<4x16x16x32xi32>
+// CHECK-NEXT: %{{.+}} = tensor.pack %[[GEN]]
+// CHECK-SAME:  inner_dims_pos = [1, 0] inner_tiles = [16, 32] 
+// CHECK-SAME:  into %[[ALLOC]]
