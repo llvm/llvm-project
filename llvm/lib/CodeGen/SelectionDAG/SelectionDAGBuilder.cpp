@@ -2123,7 +2123,8 @@ void SelectionDAGBuilder::CopyToExportRegsIfNeeded(const Value *V) {
 
   DenseMap<const Value *, Register>::iterator VMI = FuncInfo.ValueMap.find(V);
   if (VMI != FuncInfo.ValueMap.end()) {
-    assert(!V->use_empty() && "Unused value assigned virtual registers!");
+    assert((!V->use_empty() || isa<CallBrInst>(V)) &&
+           "Unused value assigned virtual registers!");
     CopyValueToVirtualRegister(V, VMI->second);
   }
 }
@@ -7317,6 +7318,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::experimental_vector_splice:
     visitVectorSplice(I);
     return;
+  case Intrinsic::callbr_landingpad:
+    visitCallBrLandingPad(I);
+    return;
   }
 }
 
@@ -11591,4 +11595,114 @@ void SelectionDAGBuilder::visitVectorSplice(const CallInst &I) {
   for (unsigned i = 0; i < NumElts; ++i)
     Mask.push_back(Idx + i);
   setValue(&I, DAG.getVectorShuffle(VT, DL, V1, V2, Mask));
+}
+
+// Consider the following MIR after SelectionDAG, which produces output in
+// phyregs in the first case or virtregs in the second case.
+//
+// INLINEASM_BR ..., implicit-def $ebx, ..., implicit-def $edx
+// %5:gr32 = COPY $ebx
+// %6:gr32 = COPY $edx
+// %1:gr32 = COPY %6:gr32
+// %0:gr32 = COPY %5:gr32
+//
+// INLINEASM_BR ..., def %5:gr32, ..., def %6:gr32
+// %1:gr32 = COPY %6:gr32
+// %0:gr32 = COPY %5:gr32
+//
+// Given %0, we'd like to return $ebx in the first case and %5 in the second.
+// Given %1, we'd like to return $edx in the first case and %6 in the second.
+//
+// If a callbr has outputs, it will have a single mapping in FuncInfo.ValueMap
+// to a single virtreg (such as %0). The remaining outputs monotonically
+// increase in virtreg number from there. If a callbr has no outputs, then it
+// should not have a corresponding callbr landingpad; in fact, the callbr
+// landingpad would not even be able to refer to such a callbr.
+static Register FollowCopyChain(MachineRegisterInfo &MRI, Register Reg) {
+  MachineInstr *MI = MRI.def_begin(Reg)->getParent();
+  // There is definitely at least one copy.
+  assert(MI->getOpcode() == TargetOpcode::COPY &&
+         "start of copy chain MUST be COPY");
+  Reg = MI->getOperand(1).getReg();
+  MI = MRI.def_begin(Reg)->getParent();
+  // There may be an optional second copy.
+  if (MI->getOpcode() == TargetOpcode::COPY) {
+    assert(Reg.isVirtual() && "expected COPY of virtual register");
+    Reg = MI->getOperand(1).getReg();
+    assert(Reg.isPhysical() && "expected COPY of physical register");
+    MI = MRI.def_begin(Reg)->getParent();
+  }
+  // The start of the chain must be an INLINEASM_BR.
+  assert(MI->getOpcode() == TargetOpcode::INLINEASM_BR &&
+         "end of copy chain MUST be INLINEASM_BR");
+  return Reg;
+}
+
+// We must do this walk rather than the simpler
+//   setValue(&I, getCopyFromRegs(CBR, CBR->getType()));
+// otherwise we will end up with copies of virtregs only valid along direct
+// edges.
+void SelectionDAGBuilder::visitCallBrLandingPad(const CallInst &I) {
+  SmallVector<EVT, 8> ResultVTs;
+  SmallVector<SDValue, 8> ResultValues;
+  const auto *CBR =
+      cast<CallBrInst>(I.getParent()->getUniquePredecessor()->getTerminator());
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  const TargetRegisterInfo *TRI = DAG.getSubtarget().getRegisterInfo();
+  MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
+
+  unsigned InitialDef = FuncInfo.ValueMap[CBR];
+  SDValue Chain = DAG.getRoot();
+
+  // Re-parse the asm constraints string.
+  TargetLowering::AsmOperandInfoVector TargetConstraints =
+      TLI.ParseConstraints(DAG.getDataLayout(), TRI, *CBR);
+  for (auto &T : TargetConstraints) {
+    SDISelAsmOperandInfo OpInfo(T);
+    if (OpInfo.Type != InlineAsm::isOutput)
+      continue;
+
+    // Pencil in OpInfo.ConstraintType and OpInfo.ConstraintVT based on the
+    // individual constraint.
+    TLI.ComputeConstraintToUse(OpInfo, OpInfo.CallOperand, &DAG);
+
+    switch (OpInfo.ConstraintType) {
+    case TargetLowering::C_Register:
+    case TargetLowering::C_RegisterClass: {
+      // Fill in OpInfo.AssignedRegs.Regs.
+      getRegistersForValue(DAG, getCurSDLoc(), OpInfo, OpInfo);
+
+      // getRegistersForValue may produce 1 to many registers based on whether
+      // the OpInfo.ConstraintVT is legal on the target or not.
+      for (size_t i = 0, e = OpInfo.AssignedRegs.Regs.size(); i != e; ++i) {
+        Register OriginalDef = FollowCopyChain(MRI, InitialDef++);
+        if (Register::isPhysicalRegister(OriginalDef))
+          FuncInfo.MBB->addLiveIn(OriginalDef);
+        // Update the assigned registers to use the original defs.
+        OpInfo.AssignedRegs.Regs[i] = OriginalDef;
+      }
+
+      SDValue V = OpInfo.AssignedRegs.getCopyFromRegs(
+          DAG, FuncInfo, getCurSDLoc(), Chain, nullptr, CBR);
+      ResultValues.push_back(V);
+      ResultVTs.push_back(OpInfo.ConstraintVT);
+      break;
+    }
+    case TargetLowering::C_Other: {
+      SDValue Flag;
+      SDValue V = TLI.LowerAsmOutputForConstraint(Chain, Flag, getCurSDLoc(),
+                                                  OpInfo, DAG);
+      ++InitialDef;
+      ResultValues.push_back(V);
+      ResultVTs.push_back(OpInfo.ConstraintVT);
+      break;
+    }
+    default:
+      break;
+    }
+  }
+  SDValue V = DAG.getNode(ISD::MERGE_VALUES, getCurSDLoc(),
+                          DAG.getVTList(ResultVTs), ResultValues);
+  setValue(&I, V);
 }
