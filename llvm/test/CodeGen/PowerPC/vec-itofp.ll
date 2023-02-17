@@ -249,8 +249,6 @@ define void @stest8(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    addi r4, r4, .LCPI3_1@toc@l
 ; CHECK-P8-NEXT:    addi r5, r5, .LCPI3_4@toc@l
-; CHECK-P8-NEXT:    lxvd2x vs0, 0, r4
-; CHECK-P8-NEXT:    li r4, 48
 ; CHECK-P8-NEXT:    lxvd2x vs4, 0, r5
 ; CHECK-P8-NEXT:    xxswapd v3, vs1
 ; CHECK-P8-NEXT:    xxswapd v5, vs3
@@ -261,7 +259,8 @@ define void @stest8(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P8-NEXT:    vperm v4, v2, v2, v4
 ; CHECK-P8-NEXT:    vperm v5, v2, v2, v5
 ; CHECK-P8-NEXT:    vperm v2, v2, v2, v0
-; CHECK-P8-NEXT:    xxswapd v0, vs0
+; CHECK-P8-NEXT:    lxvd2x v0, 0, r4
+; CHECK-P8-NEXT:    li r4, 48
 ; CHECK-P8-NEXT:    vsld v3, v3, v0
 ; CHECK-P8-NEXT:    vsld v4, v4, v0
 ; CHECK-P8-NEXT:    vsld v5, v5, v0
@@ -370,13 +369,12 @@ define void @stest4(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P8-NEXT:    addis r4, r2, .LCPI4_1@toc@ha
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    addi r4, r4, .LCPI4_1@toc@l
-; CHECK-P8-NEXT:    lxvd2x vs0, 0, r4
-; CHECK-P8-NEXT:    li r4, 16
 ; CHECK-P8-NEXT:    xxswapd v3, vs1
 ; CHECK-P8-NEXT:    xxswapd v4, vs2
 ; CHECK-P8-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-P8-NEXT:    vperm v2, v2, v2, v4
-; CHECK-P8-NEXT:    xxswapd v4, vs0
+; CHECK-P8-NEXT:    lxvd2x v4, 0, r4
+; CHECK-P8-NEXT:    li r4, 16
 ; CHECK-P8-NEXT:    vsld v3, v3, v4
 ; CHECK-P8-NEXT:    vsld v2, v2, v4
 ; CHECK-P8-NEXT:    vsrad v3, v3, v4
@@ -443,10 +441,9 @@ define void @stest2(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P8-NEXT:    addi r4, r4, .LCPI5_1@toc@l
 ; CHECK-P8-NEXT:    lxvd2x vs1, 0, r5
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
-; CHECK-P8-NEXT:    lxvd2x vs0, 0, r4
 ; CHECK-P8-NEXT:    xxswapd v3, vs1
 ; CHECK-P8-NEXT:    vperm v2, v2, v2, v3
-; CHECK-P8-NEXT:    xxswapd v3, vs0
+; CHECK-P8-NEXT:    lxvd2x v3, 0, r4
 ; CHECK-P8-NEXT:    vsld v2, v2, v3
 ; CHECK-P8-NEXT:    vsrad v2, v2, v3
 ; CHECK-P8-NEXT:    xvcvsxddp vs0, v2
