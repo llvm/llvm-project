@@ -37,6 +37,11 @@
 //
 // Check that we can generate multiple make-style dependency information with compilation database.
 // RUN: cat %t/P1689.dep | FileCheck %t/Checks.cpp -DPREFIX=%/t --check-prefix=CHECK-MAKE
+//
+// Check that we can mix the use of -format=p1689 and -fmodules.
+// RUN: clang-scan-deps -format=p1689 \
+// RUN:   -- %clang++ -std=c++20 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache -serialize-diagnostics -c %t/impl_part.cppm -o %t/impl_part.o \
+// RUN:   | FileCheck %t/impl_part.cppm -DPREFIX=%/t
 
 //--- P1689.json.in
 [
@@ -298,5 +303,8 @@ int main() {
 // CHECK-MAKE-DAG: [[PREFIX]]/Impl.o.ddi: \
 // CHECK-MAKE-DAG-NEXT:   [[PREFIX]]/Impl.cpp \
 // CHECK-MAKE-DAG-NEXT:   [[PREFIX]]/header.mock
+
+//--- module.modulemap
+module Mock { header "header.mock" }
 
 //--- header.mock
