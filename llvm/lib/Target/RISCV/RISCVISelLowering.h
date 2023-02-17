@@ -336,12 +336,6 @@ enum NodeType : unsigned {
   // Load address.
   LA = ISD::FIRST_TARGET_MEMORY_OPCODE,
   LA_TLS_IE,
-
-  TH_LWD,
-  TH_LWUD,
-  TH_LDD,
-  TH_SWD,
-  TH_SDD,
 };
 } // namespace RISCVISD
 
