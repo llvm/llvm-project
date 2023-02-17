@@ -5315,13 +5315,15 @@ static Constant *propagateNaN(Constant *In) {
     SmallVector<Constant *, 32> NewC(NumElts);
     for (unsigned i = 0; i != NumElts; ++i) {
       Constant *EltC = In->getAggregateElement(i);
-      // Poison and existing NaN elements propagate.
+      // Poison elements propagate. NaN propagates except signaling is quieted.
       // Replace unknown or undef elements with canonical NaN.
-      // TODO: Quiet a signaling NaN element.
-      if (EltC && (isa<PoisonValue>(EltC) || EltC->isNaN()))
+      if (EltC && isa<PoisonValue>(EltC))
         NewC[i] = EltC;
+      else if (EltC && EltC->isNaN())
+        NewC[i] = ConstantFP::get(
+            EltC->getType(), cast<ConstantFP>(EltC)->getValue().makeQuiet());
       else
-        NewC[i] = (ConstantFP::getNaN(VecTy->getElementType()));
+        NewC[i] = ConstantFP::getNaN(VecTy->getElementType());
     }
     return ConstantVector::get(NewC);
   }
