@@ -1143,10 +1143,6 @@ public:
   /// standard library.
   LazyDeclPtr StdAlignValT;
 
-  /// The C++ "std::experimental" namespace, where the experimental parts
-  /// of the standard library resides.
-  NamespaceDecl *StdExperimentalNamespaceCache;
-
   /// The C++ "std::initializer_list" template, which is defined in
   /// \<initializer_list>.
   ClassTemplateDecl *StdInitializerList;
@@ -1154,10 +1150,6 @@ public:
   /// The C++ "std::coroutine_traits" template, which is defined in
   /// \<coroutine_traits>
   ClassTemplateDecl *StdCoroutineTraitsCache;
-  /// The namespace where coroutine components are defined. In standard,
-  /// they are defined in std namespace. And in the previous implementation,
-  /// they are defined in std::experimental namespace.
-  NamespaceDecl *CoroTraitsNamespaceCache;
 
   /// The C++ "type_info" declaration, which is defined in \<typeinfo>.
   RecordDecl *CXXTypeInfoDecl;
@@ -6092,9 +6084,6 @@ public:
   NamespaceDecl *getStdNamespace() const;
   NamespaceDecl *getOrCreateStdNamespace();
 
-  NamespaceDecl *lookupStdExperimentalNamespace();
-  NamespaceDecl *getCachedCoroNamespace() { return CoroTraitsNamespaceCache; }
-
   CXXRecordDecl *getStdBadAlloc() const;
   EnumDecl *getStdAlignValT() const;
 
@@ -10911,8 +10900,7 @@ public:
   /// Lookup 'coroutine_traits' in std namespace and std::experimental
   /// namespace. The namespace found is recorded in Namespace.
   ClassTemplateDecl *lookupCoroutineTraits(SourceLocation KwLoc,
-                                           SourceLocation FuncLoc,
-                                           NamespaceDecl *&Namespace);
+                                           SourceLocation FuncLoc);
   /// Check that the expression co_await promise.final_suspend() shall not be
   /// potentially-throwing.
   bool checkFinalSuspendNoThrow(const Stmt *FinalSuspend);
