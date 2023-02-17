@@ -82,7 +82,7 @@ TEST(ScudoTSDTest, TSDRegistryInit) {
   EXPECT_FALSE(Allocator->isInitialized());
 
   auto Registry = Allocator->getTSDRegistry();
-  Registry->init(Allocator.get());
+  Registry->initOnceMaybe(Allocator.get());
   EXPECT_TRUE(Allocator->isInitialized());
 }
 
