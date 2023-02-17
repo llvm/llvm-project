@@ -804,15 +804,65 @@ LogicalResult verifyMemOpMetadata(OpTy memOp) {
   return success();
 }
 
-LogicalResult LoadOp::verify() { return verifyMemOpMetadata(*this); }
+/// Returns true if the given type is supported by atomic operations. All
+/// integer and float types with limited bit width are supported. Additionally,
+/// depending on the operation pointers may be supported as well.
+static bool isTypeCompatibleWithAtomicOp(Type type, bool isPointerTypeAllowed) {
+  if (type.isa<LLVMPointerType>())
+    return isPointerTypeAllowed;
+
+  std::optional<unsigned> bitWidth = std::nullopt;
+  if (auto floatType = type.dyn_cast<FloatType>()) {
+    if (!isCompatibleFloatingPointType(type))
+      return false;
+    bitWidth = floatType.getWidth();
+  }
+  if (auto integerType = type.dyn_cast<IntegerType>())
+    bitWidth = integerType.getWidth();
+  // The type is neither an integer, float, or pointer type.
+  if (!bitWidth)
+    return false;
+  return *bitWidth == 8 || *bitWidth == 16 || *bitWidth == 32 ||
+         *bitWidth == 64;
+}
+
+LogicalResult LoadOp::verify() {
+  if (getOrdering() != AtomicOrdering::not_atomic) {
+    if (!isTypeCompatibleWithAtomicOp(getResult().getType(),
+                                      /*isPointerTypeAllowed=*/true))
+      return emitOpError("unsupported type ")
+             << getResult().getType() << " for atomic access";
+    if (getOrdering() == AtomicOrdering::release ||
+        getOrdering() == AtomicOrdering::acq_rel)
+      return emitOpError("unsupported ordering '")
+             << stringifyAtomicOrdering(getOrdering()) << "'";
+    if (!getAlignment())
+      return emitOpError("expected alignment for atomic access");
+  } else if (getSyncscope()) {
+    return emitOpError("expected syncscope to be null for non-atomic access");
+  }
+  return verifyMemOpMetadata(*this);
+}
+
+void LoadOp::build(OpBuilder &builder, OperationState &state, Value addr,
+                   unsigned alignment, bool isVolatile, bool isNonTemporal) {
+  auto type = addr.getType().cast<LLVMPointerType>().getElementType();
+  assert(type && "must provide explicit element type to the constructor "
+                 "when the pointer type is opaque");
+  build(builder, state, type, addr, alignment, isVolatile, isNonTemporal);
+}
 
 void LoadOp::build(OpBuilder &builder, OperationState &state, Type type,
                    Value addr, unsigned alignment, bool isVolatile,
-                   bool isNonTemporal) {
-  build(builder, state, type, addr, /*access_groups=*/nullptr,
-        /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
+                   bool isNonTemporal, AtomicOrdering ordering,
+                   StringRef syncscope) {
+  build(builder, state, type, addr,
+        /*access_groups=*/nullptr,
+        /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr,
+        /*tbaa=*/nullptr,
         alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isVolatile,
-        isNonTemporal);
+        isNonTemporal, ordering,
+        syncscope.empty() ? nullptr : builder.getStringAttr(syncscope));
 }
 
 // Extract the pointee type from the LLVM pointer type wrapped in MLIR. Return
@@ -2266,12 +2316,7 @@ LogicalResult AtomicRMWOp::verify() {
     if (!mlir::LLVM::isCompatibleFloatingPointType(valType))
       return emitOpError("expected LLVM IR floating point type");
   } else if (getBinOp() == AtomicBinOp::xchg) {
-    auto intType = valType.dyn_cast<IntegerType>();
-    unsigned intBitWidth = intType ? intType.getWidth() : 0;
-    if (intBitWidth != 8 && intBitWidth != 16 && intBitWidth != 32 &&
-        intBitWidth != 64 && !valType.isa<BFloat16Type>() &&
-        !valType.isa<Float16Type>() && !valType.isa<Float32Type>() &&
-        !valType.isa<Float64Type>())
+    if (!isTypeCompatibleWithAtomicOp(valType, /*isPointerTypeAllowed=*/false))
       return emitOpError("unexpected LLVM IR type for 'xchg' bin_op");
   } else {
     auto intType = valType.dyn_cast<IntegerType>();
@@ -2320,12 +2365,8 @@ LogicalResult AtomicCmpXchgOp::verify() {
   if (!ptrType.isOpaque() && valType != ptrType.getElementType())
     return emitOpError("expected LLVM IR element type for operand #0 to "
                        "match type for all other operands");
-  auto intType = valType.dyn_cast<IntegerType>();
-  unsigned intBitWidth = intType ? intType.getWidth() : 0;
-  if (!valType.isa<LLVMPointerType>() && intBitWidth != 8 &&
-      intBitWidth != 16 && intBitWidth != 32 && intBitWidth != 64 &&
-      !valType.isa<BFloat16Type>() && !valType.isa<Float16Type>() &&
-      !valType.isa<Float32Type>() && !valType.isa<Float64Type>())
+  if (!isTypeCompatibleWithAtomicOp(valType,
+                                    /*isPointerTypeAllowed=*/true))
     return emitOpError("unexpected LLVM IR type");
   if (getSuccessOrdering() < AtomicOrdering::monotonic ||
       getFailureOrdering() < AtomicOrdering::monotonic)
