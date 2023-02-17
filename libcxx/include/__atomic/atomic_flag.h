@@ -24,7 +24,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-typedef struct atomic_flag
+struct atomic_flag
 {
     __cxx_atomic_impl<_LIBCPP_ATOMIC_FLAG_TYPE> __a_;
 
@@ -82,8 +82,7 @@ typedef struct atomic_flag
     atomic_flag& operator=(const atomic_flag&) = delete;
     atomic_flag& operator=(const atomic_flag&) volatile = delete;
 
-} atomic_flag;
-
+};
 
 inline _LIBCPP_HIDE_FROM_ABI
 bool
