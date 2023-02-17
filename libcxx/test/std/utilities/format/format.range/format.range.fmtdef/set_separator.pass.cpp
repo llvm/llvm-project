@@ -17,45 +17,47 @@
 
 // <format>
 
-// class range_formatter
-// template<class charT, formattable<charT>... Ts>
-//   struct formatter<pair-or-tuple<Ts...>, charT>
+// template<ranges::input_range R, class charT>
+//   struct range-default-formatter<range_format::sequence, R, charT>
 
 // constexpr void set_separator(basic_string_view<charT> sep) noexcept;
 
-// Note this tests the basics of this function. It's tested in more detail in
-// the format functions tests.
-
 #include <format>
-#include <tuple>
-#include <utility>
+#include <cassert>
+#include <iterator>
+#include <type_traits>
+#include <vector>
 
 #include "make_string.h"
+#include "test_format_context.h"
 
 #define SV(S) MAKE_STRING_VIEW(CharT, S)
 
-template <class CharT, class Arg>
-constexpr void test() {
-  std::formatter<Arg, CharT> formatter;
+template <class CharT>
+constexpr void test_setter() {
+  std::formatter<std::vector<int>, CharT> formatter;
   formatter.set_separator(SV("sep"));
   // Note the SV macro may throw, so can't use it.
   static_assert(noexcept(formatter.set_separator(std::basic_string_view<CharT>{})));
 
   // Note there is no direct way to validate this function modified the object.
-}
+  if (!std::is_constant_evaluated()) {
+    using String     = std::basic_string<CharT>;
+    using OutIt      = std::back_insert_iterator<String>;
+    using FormatCtxT = std::basic_format_context<OutIt, CharT>;
 
-template <class CharT>
-constexpr void test() {
-  test<CharT, std::tuple<int>>();
-  test<CharT, std::tuple<int, CharT>>();
-  test<CharT, std::pair<int, CharT>>();
-  test<CharT, std::tuple<int, CharT, double>>();
+    String result;
+    OutIt out             = std::back_inserter(result);
+    FormatCtxT format_ctx = test_format_context_create<OutIt, CharT>(out, std::make_format_args<FormatCtxT>());
+    formatter.format(std::vector<int>{0, 42, 99}, format_ctx);
+    assert(result == SV("[0sep42sep99]"));
+  }
 }
 
 constexpr bool test() {
-  test<char>();
+  test_setter<char>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  test<wchar_t>();
+  test_setter<wchar_t>();
 #endif
 
   return true;

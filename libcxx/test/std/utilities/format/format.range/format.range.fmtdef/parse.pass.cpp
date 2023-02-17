@@ -17,45 +17,48 @@
 
 // <format>
 
-// class range_formatter
-// template<class charT, formattable<charT>... Ts>
-//   struct formatter<pair-or-tuple<Ts...>, charT>
+// template<ranges::input_range R, class charT>
+//   struct range-default-formatter<range_format::sequence, R, charT>
 
-// constexpr void set_separator(basic_string_view<charT> sep) noexcept;
+// template<class ParseContext>
+//   constexpr typename ParseContext::iterator
+//     parse(ParseContext& ctx);
 
-// Note this tests the basics of this function. It's tested in more detail in
-// the format functions tests.
-
+#include <array>
+#include <cassert>
+#include <concepts>
 #include <format>
-#include <tuple>
-#include <utility>
 
+#include "test_format_context.h"
+#include "test_macros.h"
 #include "make_string.h"
 
 #define SV(S) MAKE_STRING_VIEW(CharT, S)
 
-template <class CharT, class Arg>
-constexpr void test() {
-  std::formatter<Arg, CharT> formatter;
-  formatter.set_separator(SV("sep"));
-  // Note the SV macro may throw, so can't use it.
-  static_assert(noexcept(formatter.set_separator(std::basic_string_view<CharT>{})));
+template <class StringViewT>
+constexpr void test_parse(StringViewT fmt) {
+  using CharT    = typename StringViewT::value_type;
+  auto parse_ctx = std::basic_format_parse_context<CharT>(fmt);
+  std::formatter<std::array<int, 2>, CharT> formatter;
+  static_assert(std::semiregular<decltype(formatter)>);
 
-  // Note there is no direct way to validate this function modified the object.
+  std::same_as<typename StringViewT::iterator> auto it = formatter.parse(parse_ctx);
+  assert(it == fmt.end() - (!fmt.empty() && fmt.back() == '}'));
 }
 
 template <class CharT>
-constexpr void test() {
-  test<CharT, std::tuple<int>>();
-  test<CharT, std::tuple<int, CharT>>();
-  test<CharT, std::pair<int, CharT>>();
-  test<CharT, std::tuple<int, CharT, double>>();
+constexpr void test_fmt() {
+  test_parse(SV(""));
+  test_parse(SV(":5"));
+
+  test_parse(SV("}"));
+  test_parse(SV(":5}"));
 }
 
 constexpr bool test() {
-  test<char>();
+  test_fmt<char>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  test<wchar_t>();
+  test_fmt<wchar_t>();
 #endif
 
   return true;
