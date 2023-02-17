@@ -879,8 +879,8 @@ int ChildFormattedIoStatementState<DIR, CHAR>::EndIoStatement() {
 }
 
 template <Direction DIR, typename CHAR>
-bool ChildFormattedIoStatementState<DIR, CHAR>::AdvanceRecord(int) {
-  return false; // no can do in a child I/O
+bool ChildFormattedIoStatementState<DIR, CHAR>::AdvanceRecord(int n) {
+  return this->child().parent().AdvanceRecord(n);
 }
 
 template <Direction DIR>

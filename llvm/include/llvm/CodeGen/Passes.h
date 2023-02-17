@@ -597,6 +597,8 @@ namespace llvm {
 
   /// This pass converts conditional moves to conditional jumps when profitable.
   FunctionPass *createSelectOptimizePass();
+
+  FunctionPass *createCallBrPass();
 } // End llvm namespace
 
 #endif

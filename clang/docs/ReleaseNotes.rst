@@ -40,6 +40,16 @@ code bases.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
+- Indirect edges of asm goto statements under certain circumstances may now be
+  split. In previous releases of clang, that means for the following code the
+  two inputs may have compared equal in the inline assembly.  This is no longer
+  guaranteed (and necessary to support outputs along indirect edges, which is
+  now supported as of this release). This change is more consistent with the
+  behavior of GCC.
+
+  .. code-block:: c
+
+    foo: asm goto ("# %0 %1"::"i"(&&foo)::foo);
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
@@ -71,6 +81,9 @@ Resolutions to C++ Defect Reports
 
 C Language Changes
 ------------------
+- Support for outputs from asm goto statements along indirect edges has been
+  added. This fixes
+  `Issue 53562 <https://github.com/llvm/llvm-project/issues/53562>`_.
 
 C2x Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -128,6 +141,9 @@ Bug Fixes in This Version
   driver mode and emit an error which suggests using ``/TC`` or ``/TP``
   ``clang-cl`` options instead.
   (`#59307 <https://github.com/llvm/llvm-project/issues/59307>`_)
+- Fix assert that fails when the expression causing the this pointer to be
+  captured by a block is part of a constexpr if statement's branch and
+  instantiation of the enclosing method causes the branch to be discarded.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

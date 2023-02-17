@@ -153,6 +153,41 @@ func.func @load_non_ptr_type(%foo : f32) {
 
 // -----
 
+func.func @load_syncscope(%ptr : !llvm.ptr) {
+  // expected-error@below {{expected syncscope to be null for non-atomic access}}
+  %1 = "llvm.load"(%ptr) {syncscope = "singlethread"} : (!llvm.ptr) -> (f32)
+}
+
+// -----
+
+func.func @load_unsupported_ordering(%ptr : !llvm.ptr) {
+  // expected-error@below {{unsupported ordering 'release'}}
+  %1 = llvm.load %ptr atomic release {alignment = 4 : i64} : !llvm.ptr -> f32
+}
+
+// -----
+
+func.func @load_unsupported_type(%ptr : !llvm.ptr) {
+  // expected-error@below {{unsupported type 'f80' for atomic access}}
+  %1 = llvm.load %ptr atomic monotonic {alignment = 16 : i64} : !llvm.ptr -> f80
+}
+
+// -----
+
+func.func @load_unsupported_type(%ptr : !llvm.ptr) {
+  // expected-error@below {{unsupported type 'i1' for atomic access}}
+  %1 = llvm.load %ptr atomic monotonic {alignment = 16 : i64} : !llvm.ptr -> i1
+}
+
+// -----
+
+func.func @load_unaligned_atomic(%ptr : !llvm.ptr) {
+  // expected-error@below {{expected alignment for atomic access}}
+  %1 = llvm.load %ptr atomic monotonic : !llvm.ptr -> f32
+}
+
+// -----
+
 func.func @store_non_llvm_type(%foo : memref<f32>, %bar : f32) {
   // expected-error@+1 {{expected LLVM pointer type}}
   llvm.store %bar, %foo : memref<f32>

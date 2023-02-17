@@ -398,7 +398,7 @@ void X86IntelInstPrinter::printMemReference(const MCInst *MI, unsigned Op,
 
   if (IndexReg.getReg()) {
     if (NeedPlus) O << " + ";
-    if (ScaleVal != 1)
+    if (ScaleVal != 1 || !BaseReg.getReg())
       O << ScaleVal << '*';
     printOperand(MI, Op+X86::AddrIndexReg, O);
     NeedPlus = true;

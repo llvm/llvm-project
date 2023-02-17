@@ -41,6 +41,8 @@ public:
   DWARFDIE
   GetDIE(const DIERef &die_ref) override;
 
+  std::optional<uint32_t> GetDwoNum() override { return GetID() >> 32; }
+
   lldb::offset_t
   GetVendorDWARFOpcodeSize(const lldb_private::DataExtractor &data,
                            const lldb::offset_t data_offset,

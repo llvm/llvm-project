@@ -477,6 +477,15 @@ FUNCTION_PASS_WITH_PARAMS("loop-vectorize",
                           parseLoopVectorizeOptions,
                           "no-interleave-forced-only;interleave-forced-only;"
                           "no-vectorize-forced-only;vectorize-forced-only")
+FUNCTION_PASS_WITH_PARAMS("instcombine",
+                          "InstCombinePass",
+                           [](InstCombineOptions Opts) {
+                             return InstCombinePass(Opts);
+                           },
+                          parseInstCombineOptions,
+                          "no-use-loop-info;use-loop-info;"
+                          "max-iterations=N"
+                          )
 FUNCTION_PASS_WITH_PARAMS("mldst-motion",
                           "MergedLoadStoreMotionPass",
                            [](MergedLoadStoreMotionOptions Opts) {

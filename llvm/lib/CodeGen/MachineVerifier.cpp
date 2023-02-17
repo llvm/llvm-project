@@ -627,8 +627,11 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
     // it is an entry block or landing pad.
     for (const auto &LI : MBB->liveins()) {
       if (isAllocatable(LI.PhysReg) && !MBB->isEHPad() &&
-          MBB->getIterator() != MBB->getParent()->begin()) {
-        report("MBB has allocatable live-in, but isn't entry or landing-pad.", MBB);
+          MBB->getIterator() != MBB->getParent()->begin() &&
+          !MBB->isInlineAsmBrIndirectTarget()) {
+        report("MBB has allocatable live-in, but isn't entry, landing-pad, or "
+               "inlineasm-br-indirect-target.",
+               MBB);
         report_context(LI.PhysReg);
       }
     }

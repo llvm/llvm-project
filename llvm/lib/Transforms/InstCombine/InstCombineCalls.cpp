@@ -3477,12 +3477,16 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
 }
 
 /// If the callee is a constexpr cast of a function, attempt to move the cast to
-/// the arguments of the call/callbr/invoke.
+/// the arguments of the call/invoke.
+/// CallBrInst is not supported.
 bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
   auto *Callee =
       dyn_cast<Function>(Call.getCalledOperand()->stripPointerCasts());
   if (!Callee)
     return false;
+
+  assert(!isa<CallBrInst>(Call) &&
+         "CallBr's don't have a single point after a def to insert at");
 
   // If this is a call to a thunk function, don't remove the cast. Thunks are
   // used to transparently forward all incoming parameters and outgoing return
@@ -3529,7 +3533,7 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
         return false;   // Attribute not compatible with transformed value.
     }
 
-    // If the callbase is an invoke/callbr instruction, and the return value is
+    // If the callbase is an invoke instruction, and the return value is
     // used by a PHI node in a successor, we cannot change the return type of
     // the call because there is no place to put the cast instruction (without
     // breaking the critical edge).  Bail out in this case.
@@ -3537,8 +3541,6 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
       BasicBlock *PhisNotSupportedBlock = nullptr;
       if (auto *II = dyn_cast<InvokeInst>(Caller))
         PhisNotSupportedBlock = II->getNormalDest();
-      if (auto *CB = dyn_cast<CallBrInst>(Caller))
-        PhisNotSupportedBlock = CB->getDefaultDest();
       if (PhisNotSupportedBlock)
         for (User *U : Caller->users())
           if (PHINode *PN = dyn_cast<PHINode>(U))
@@ -3722,9 +3724,6 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
   if (InvokeInst *II = dyn_cast<InvokeInst>(Caller)) {
     NewCall = Builder.CreateInvoke(Callee, II->getNormalDest(),
                                    II->getUnwindDest(), Args, OpBundles);
-  } else if (CallBrInst *CBI = dyn_cast<CallBrInst>(Caller)) {
-    NewCall = Builder.CreateCallBr(Callee, CBI->getDefaultDest(),
-                                   CBI->getIndirectDests(), Args, OpBundles);
   } else {
     NewCall = Builder.CreateCall(Callee, Args, OpBundles);
     cast<CallInst>(NewCall)->setTailCallKind(

@@ -49,6 +49,7 @@ atomic cmath
 atomic compare
 atomic cstddef
 atomic cstdint
+atomic cstdlib
 atomic cstring
 atomic ctime
 atomic iosfwd
@@ -333,7 +334,6 @@ filesystem system_error
 filesystem type_traits
 filesystem version
 format array
-format bit
 format charconv
 format cstddef
 format cstdint

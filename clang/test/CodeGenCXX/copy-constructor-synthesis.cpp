@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck %s
 
 extern "C" int printf(...);
 
@@ -21,7 +21,7 @@ struct P {
 };
 
 
-// CHECK-LABEL: define linkonce_odr void @_ZN1XC1ERKS_(%struct.X* {{[^,]*}} %this, %struct.X* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0) unnamed_addr
+// CHECK-LABEL: define linkonce_odr void @_ZN1XC1ERKS_(ptr {{[^,]*}} %this, ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0) unnamed_addr
 struct X  : M, N, P { // ...
   X() : f1(1.0), d1(2.0), i1(3), name("HELLO"), bf1(0xff), bf2(0xabcd),
         au_i1(1234), au1_4("MASKED") {}
@@ -136,17 +136,15 @@ void f(B b1) {
   B b2 = b1;
 }
 
-// CHECK:    define linkonce_odr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[A:%.*]]* @_ZN12rdar138169401AaSERKS0_(
-// CHECK:      [[THIS:%.*]] = load [[A]]*, [[A]]**
-// CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[A]], [[A]]* [[THIS]], i32 0, i32 1
-// CHECK-NEXT: [[OTHER:%.*]] = load [[A]]*, [[A]]**
-// CHECK-NEXT: [[T2:%.*]] = getelementptr inbounds [[A]], [[A]]* [[OTHER]], i32 0, i32 1
-// CHECK-NEXT: [[T4:%.*]] = bitcast i16* [[T0]] to i8*
-// CHECK-NEXT: [[T5:%.*]] = bitcast i16* [[T2]] to i8*
-// CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[T4]], i8* align 8 [[T5]], i64 8, i1 false)
-// CHECK-NEXT: ret [[A]]* [[THIS]]
+// CHECK:    define linkonce_odr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN12rdar138169401AaSERKS0_(
+// CHECK:      [[THIS:%.*]] = load ptr, ptr
+// CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[A:%.*]], ptr [[THIS]], i32 0, i32 1
+// CHECK-NEXT: [[OTHER:%.*]] = load ptr, ptr
+// CHECK-NEXT: [[T2:%.*]] = getelementptr inbounds [[A]], ptr [[OTHER]], i32 0, i32 1
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[T0]], ptr align 8 [[T2]], i64 8, i1 false)
+// CHECK-NEXT: ret ptr [[THIS]]
 
-// CHECK-LABEL: define linkonce_odr void @_ZN6PR66281BC2ERKS0_(%"struct.PR6628::B"* {{[^,]*}} %this, %"struct.PR6628::B"* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0) unnamed_addr
+// CHECK-LABEL: define linkonce_odr void @_ZN6PR66281BC2ERKS0_(ptr {{[^,]*}} %this, ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0) unnamed_addr
 // CHECK: call void @_ZN6PR66281TC1Ev
 // CHECK: call void @_ZN6PR66281TC1Ev
 // CHECK: call void @_ZN6PR66281AC2ERKS0_RKNS_1TES5_
@@ -164,15 +162,12 @@ void f(B b1) {
 // CHECK: call void @_ZN6PR66281TD1Ev
 
 // CHECK-LABEL:    define linkonce_odr void @_ZN12rdar138169401AC2ERKS0_(
-// CHECK:      [[THIS:%.*]] = load [[A]]*, [[A]]**
-// CHECK-NEXT: [[T0:%.*]] = bitcast [[A]]* [[THIS]] to i32 (...)***
-// CHECK-NEXT: store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTVN12rdar138169401AE, i32 0, inrange i32 0, i32 2) to i32 (...)**), i32 (...)*** [[T0]]
-// CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[A]], [[A]]* [[THIS]], i32 0, i32 1
-// CHECK-NEXT: [[OTHER:%.*]] = load [[A]]*, [[A]]**
-// CHECK-NEXT: [[T2:%.*]] = getelementptr inbounds [[A]], [[A]]* [[OTHER]], i32 0, i32 1
-// CHECK-NEXT: [[T4:%.*]] = bitcast i16* [[T0]] to i8*
-// CHECK-NEXT: [[T5:%.*]] = bitcast i16* [[T2]] to i8*
-// CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[T4]], i8* align 8 [[T5]], i64 8, i1 false)
+// CHECK:      [[THIS:%.*]] = load ptr, ptr
+// CHECK-NEXT: store ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTVN12rdar138169401AE, i32 0, inrange i32 0, i32 2), ptr [[THIS]]
+// CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[A]], ptr [[THIS]], i32 0, i32 1
+// CHECK-NEXT: [[OTHER:%.*]] = load ptr, ptr
+// CHECK-NEXT: [[T2:%.*]] = getelementptr inbounds [[A]], ptr [[OTHER]], i32 0, i32 1
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[T0]], ptr align 8 [[T2]], i64 8, i1 false)
 // CHECK-NEXT: ret void
 }
 

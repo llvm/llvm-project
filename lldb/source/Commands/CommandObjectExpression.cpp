@@ -21,6 +21,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
+#include "lldb/lldb-private-enumerations.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -346,6 +347,9 @@ EvaluateExpressionOptions
 CommandObjectExpression::GetEvalOptions(const Target &target) {
   EvaluateExpressionOptions options;
   options.SetCoerceToId(m_varobj_options.use_objc);
+  if (m_command_options.m_verbosity ==
+      eLanguageRuntimeDescriptionDisplayVerbosityCompact)
+    options.SetSuppressPersistentResult(m_varobj_options.use_objc);
   options.SetUnwindOnError(m_command_options.unwind_on_error);
   options.SetIgnoreBreakpoints(m_command_options.ignore_breakpoints);
   options.SetKeepInMemory(true);

@@ -352,24 +352,28 @@ def AArch64fmul_p_oneuse : PatFrag<(ops node:$pred, node:$src1, node:$src2),
 }]>;
 
 
-def AArch64fabd_p : PatFrag<(ops node:$pg, node:$op1, node:$op2),
-                            (AArch64fabs_mt node:$pg, (AArch64fsub_p node:$pg, node:$op1, node:$op2), undef)>;
+def AArch64fabd_p : PatFrags<(ops node:$pg, node:$op1, node:$op2),
+                             [(int_aarch64_sve_fabd_u node:$pg, node:$op1, node:$op2),
+                              (AArch64fabs_mt node:$pg, (AArch64fsub_p node:$pg, node:$op1, node:$op2), undef)]>;
 
 def AArch64fmla_p : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
                              [(AArch64fma_p node:$pg, node:$zn, node:$zm, node:$za),
                               (vselect node:$pg, (AArch64fma_p (AArch64ptrue 31), node:$zn, node:$zm, node:$za), node:$za)]>;
 
 def AArch64fmls_p : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
-                             [(AArch64fma_p node:$pg, (AArch64fneg_mt node:$pg, node:$zn, (undef)), node:$zm, node:$za),
+                             [(int_aarch64_sve_fmls_u node:$pg, node:$za, node:$zn, node:$zm),
+                              (AArch64fma_p node:$pg, (AArch64fneg_mt node:$pg, node:$zn, (undef)), node:$zm, node:$za),
                               (AArch64fma_p node:$pg, node:$zm, (AArch64fneg_mt node:$pg, node:$zn, (undef)), node:$za),
                               (vselect node:$pg, (AArch64fma_p (AArch64ptrue 31), (AArch64fneg_mt (AArch64ptrue 31), node:$zn, (undef)), node:$zm, node:$za), node:$za)]>;
 
 def AArch64fnmla_p : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
-                              [(AArch64fma_p node:$pg, (AArch64fneg_mt node:$pg, node:$zn, (undef)), node:$zm, (AArch64fneg_mt node:$pg, node:$za, (undef))),
+                              [(int_aarch64_sve_fnmla_u node:$pg, node:$za, node:$zn, node:$zm),
+                               (AArch64fma_p node:$pg, (AArch64fneg_mt node:$pg, node:$zn, (undef)), node:$zm, (AArch64fneg_mt node:$pg, node:$za, (undef))),
                                (AArch64fneg_mt_nsz node:$pg, (AArch64fma_p node:$pg, node:$zn, node:$zm, node:$za), (undef))]>;
 
 def AArch64fnmls_p : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
-                              [(AArch64fma_p node:$pg, node:$zn, node:$zm, (AArch64fneg_mt node:$pg, node:$za, (undef)))]>;
+                              [(int_aarch64_sve_fnmls_u node:$pg, node:$za, node:$zn, node:$zm),
+                               (AArch64fma_p node:$pg, node:$zn, node:$zm, (AArch64fneg_mt node:$pg, node:$za, (undef)))]>;
 
 def AArch64fsubr_p : PatFrag<(ops node:$pg, node:$op1, node:$op2),
                              (AArch64fsub_p node:$pg, node:$op2, node:$op1)>;
@@ -623,6 +627,7 @@ let Predicates = [HasSVEorSME] in {
   defm FMAX_ZPZZ   : sve_fp_bin_pred_hfd<AArch64fmax_p>;
   defm FMIN_ZPZZ   : sve_fp_bin_pred_hfd<AArch64fmin_p>;
   defm FABD_ZPZZ   : sve_fp_bin_pred_hfd<AArch64fabd_p>;
+  defm FMULX_ZPZZ  : sve_fp_bin_pred_hfd<int_aarch64_sve_fmulx_u>;
   defm FDIV_ZPZZ   : sve_fp_bin_pred_hfd<AArch64fdiv_p>;
 } // End HasSVEorSME
 

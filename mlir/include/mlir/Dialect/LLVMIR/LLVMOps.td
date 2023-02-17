@@ -187,6 +187,9 @@ class MemoryOpBase {
       inst->setSyncScopeID(llvmContext.getOrInsertSyncScopeID(*$syncscope));
     }
   }];
+  code setOrderingCode = [{
+    inst->setAtomic(convertAtomicOrderingToLLVM($ordering));
+  }];
   code setNonTemporalMetadataCode = [{
     if ($nontemporal) {
       llvm::MDNode *metadata = llvm::MDNode::get(
@@ -350,17 +353,48 @@ def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpBase {
                    OptionalAttr<SymbolRefArrayAttr>:$alias_scopes,
                    OptionalAttr<SymbolRefArrayAttr>:$noalias_scopes,
                    OptionalAttr<SymbolRefArrayAttr>:$tbaa,
-                   OptionalAttr<I64Attr>:$alignment, UnitAttr:$volatile_,
-                   UnitAttr:$nontemporal);
+                   OptionalAttr<I64Attr>:$alignment,
+                   UnitAttr:$volatile_,
+                   UnitAttr:$nontemporal,
+                   DefaultValuedAttr<AtomicOrdering,
+                                     "AtomicOrdering::not_atomic">:$ordering,
+                   OptionalAttr<StrAttr>:$syncscope);
   let results = (outs LLVM_LoadableType:$res);
   string llvmInstName = "Load";
+  let description = [{
+    The `load` operation is used to read from memory. A load may be marked as
+    atomic, volatile, and/or nontemporal, and takes a number of optional
+    attributes that specify aliasing information.
+
+    An atomic load only supports a limited set of pointer, integer, and
+    floating point types, and requires an explicit alignment.
+
+    Examples:
+    ```mlir
+    // A volatile load of a float variable.
+    %0 = llvm.load volatile %ptr : !llvm.ptr -> f32
+
+    // A nontemporal load of a float variable.
+    %0 = llvm.load %ptr {nontemporal} : !llvm.ptr -> f32
+
+    // An atomic load of an integer variable.
+    %0 = llvm.load %ptr atomic monotonic {alignment = 8 : i64}
+        : !llvm.ptr -> i64
+    ```
+
+    See the following link for more details:
+    https://llvm.org/docs/LangRef.html#load-instruction
+  }];
   let assemblyFormat = [{
-    (`volatile` $volatile_^)? $addr attr-dict `:`
-    custom<LoadType>(type($addr), type($res))
+    (`volatile` $volatile_^)? $addr
+    (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
+    attr-dict `:` custom<LoadType>(type($addr), type($res))
   }];
   string llvmBuilder = [{
     auto *inst = builder.CreateLoad($_resultType, $addr, $volatile_);
-  }] # setAlignmentCode
+  }] # setOrderingCode
+     # setSyncScopeCode
+     # setAlignmentCode
      # setNonTemporalMetadataCode
      # setAccessGroupsMetadataCode
      # setAliasScopeMetadataCode
@@ -373,22 +407,19 @@ def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpBase {
     unsigned alignment = loadInst->getAlign().value();
     $res = $_builder.create<LLVM::LoadOp>($_location, $_resultType, $addr,
         alignment, loadInst->isVolatile(),
-        loadInst->hasMetadata(llvm::LLVMContext::MD_nontemporal));
+        loadInst->hasMetadata(llvm::LLVMContext::MD_nontemporal),
+        convertAtomicOrderingFromLLVM(loadInst->getOrdering()),
+        getLLVMSyncScope(loadInst));
   }];
   let builders = [
     OpBuilder<(ins "Value":$addr, CArg<"unsigned", "0">:$alignment,
-      CArg<"bool", "false">:$isVolatile, CArg<"bool", "false">:$isNonTemporal),
-    [{
-      auto type = addr.getType().cast<LLVMPointerType>().getElementType();
-      assert(type && "must provide explicit element type to the constructor "
-                     "when the pointer type is opaque");
-      build($_builder, $_state, type, addr, alignment, isVolatile, isNonTemporal);
-    }]>,
+      CArg<"bool", "false">:$isVolatile, CArg<"bool", "false">:$isNonTemporal)>,
     OpBuilder<(ins "Type":$type, "Value":$addr,
       CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
-      CArg<"bool", "false">:$isNonTemporal)>
+      CArg<"bool", "false">:$isNonTemporal,
+      CArg<"AtomicOrdering", "AtomicOrdering::not_atomic">:$ordering,
+      CArg<"StringRef", "StringRef()">:$syncscope)>
   ];
-  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 

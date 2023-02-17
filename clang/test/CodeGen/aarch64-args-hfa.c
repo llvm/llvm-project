@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-none-eabi -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-AAPCS
-// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-ios7.0 -target-abi darwinpcs -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-DARWIN
-// RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-linux-gnu -emit-llvm -o - -x c %s | FileCheck %s --check-prefixes=CHECK,CHECK-AAPCS
+// RUN: %clang_cc1 -triple aarch64-none-eabi -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-AAPCS
+// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-DARWIN
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -emit-llvm -o - -x c %s | FileCheck %s --check-prefixes=CHECK,CHECK-AAPCS
 
 typedef struct {
   float v[2];
@@ -12,7 +12,7 @@ float f0(S0 h) {
 }
 
 // CHECK: define{{.*}} float @f0_call()
-// CHECK: %call = call float @f0([2 x float] %1)
+// CHECK: %call = call float @f0([2 x float] %0)
 float f0_call(void) {
   S0 h = {1.0f, 2.0f};
   return f0(h);
@@ -27,7 +27,7 @@ double f1(S1 h) {
 }
 
 // CHECK: define{{.*}} double @f1_call()
-// CHECK: %call = call double @f1([2 x double] %1
+// CHECK: %call = call double @f1([2 x double] %0
 double f1_call(void) {
   S1 h = {1.0, 2.0};
   return f1(h);
@@ -43,8 +43,8 @@ double f2(S2 h) {
 }
 
 // CHECK: define{{.*}} double @f2_call()
-// CHECK-AAPCS:  %call = call double @f2([2 x double] alignstack(16) %1)
-// CHECK-DARWIN: %call = call double @f2([2 x double] %1
+// CHECK-AAPCS:  %call = call double @f2([2 x double] alignstack(16) %0)
+// CHECK-DARWIN: %call = call double @f2([2 x double] %0
 double f2_call(void) {
   S2 h = {1.0, 2.0};
   return f2(h);
@@ -61,8 +61,8 @@ double f3(S3 h) {
 }
 
 // CHECK: define{{.*}} double @f3_call()
-// CHECK-AAPCS:  %call = call double @f3([4 x double] alignstack(16) %1)
-// CHECK-DARWIN: %call = call double @f3([4 x double] %1
+// CHECK-AAPCS:  %call = call double @f3([4 x double] alignstack(16) %0)
+// CHECK-DARWIN: %call = call double @f3([4 x double] %0
 double f3_call(void) {
   S3 h = {1.0, 2.0};
   return f3(h);

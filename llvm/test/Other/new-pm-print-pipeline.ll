@@ -93,3 +93,7 @@
 ;; Test SeparateConstOffsetFromGEPPass option.
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='separate-const-offset-from-gep<lower-gep>' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-27
 ; CHECK-27: function(separate-const-offset-from-gep<lower-gep>)
+
+;; Test InstCombine options - the first pass checks default settings, and the second checks customized options.
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(instcombine,instcombine<use-loop-info;max-iterations=42>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-28
+; CHECK-28: function(instcombine<max-iterations=1000;no-use-loop-info>,instcombine<max-iterations=42;use-loop-info>)

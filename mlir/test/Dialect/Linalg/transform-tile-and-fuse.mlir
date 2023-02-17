@@ -4,7 +4,7 @@
 
 module {
   // CHECK: func @foo
-  // CHECK:   scf.foreach_thread {{.*}} {
+  // CHECK:   scf.forall {{.*}} {
   // CHECK:     linalg.fill
   // CHECK:     linalg.matmul
   // CHECK:     linalg.generic
@@ -47,21 +47,21 @@ module {
     %producers = transform.structured.match attributes{"__producer__"} in %arg1 : (!pdl.operation) -> !pdl.operation
 
     // Tile the root.
-    %foreach_thread_op, %tiled_op = transform.structured.tile_to_foreach_thread_op %root num_threads [10, 20]
+    %forall_op, %tiled_op = transform.structured.tile_to_forall_op %root num_threads [10, 20]
 
     // Fuse all producers.
-    transform.structured.fuse_into_containing_op %producers into %foreach_thread_op
+    transform.structured.fuse_into_containing_op %producers into %forall_op
   }
 }
 
 // -----
 
-// Inverse the order of the payload ops passed to the tile_to_foreach_thread_op
+// Inverse the order of the payload ops passed to the tile_to_forall_op
 // op. Fusion should still work.
 
 module {
   // CHECK: func @foo
-  // CHECK:   scf.foreach_thread {{.*}} {
+  // CHECK:   scf.forall {{.*}} {
   // CHECK:     linalg.fill
   // CHECK:     linalg.matmul
   // CHECK:     linalg.generic
@@ -105,9 +105,9 @@ module {
     %reversed_producers = transform.test_reverse_payload_ops %producers
 
     // Tile the root.
-    %foreach_thread_op, %tiled_op = transform.structured.tile_to_foreach_thread_op %root num_threads [10, 20]
+    %forall_op, %tiled_op = transform.structured.tile_to_forall_op %root num_threads [10, 20]
 
     // Fuse all producers.
-    transform.structured.fuse_into_containing_op %reversed_producers into %foreach_thread_op
+    transform.structured.fuse_into_containing_op %reversed_producers into %forall_op
   }
 }

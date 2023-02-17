@@ -6,16 +6,18 @@ define i64 @foo(i32 %tmp7) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 poison, i32 0>, i32 [[TMP7:%.*]], i32 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub <4 x i32> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 2, i32 3, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 undef, i32 6
-; CHECK-NEXT:    [[TMP4:%.*]] = sub nsw <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 undef, i32 0, i32 undef, i32 0>, [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 undef, i32 0, i32 undef, i32 0>, [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> [[TMP5]], <8 x i32> <i32 0, i32 9, i32 2, i32 3, i32 12, i32 13, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP7:%.*]] = add <8 x i32> zeroinitializer, [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = xor <8 x i32> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP8]])
-; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> zeroinitializer)
-; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    [[TMP24:%.*]] = sub i32 undef, 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 poison, i32 poison, i32 undef, i32 0>, i32 [[TMP24]], i32 4
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 0, i32 5
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 2, i32 3, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[TMP24]], i32 6
+; CHECK-NEXT:    [[TMP6:%.*]] = sub nsw <8 x i32> [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <8 x i32> [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i32> [[TMP6]], <8 x i32> [[TMP7]], <8 x i32> <i32 0, i32 9, i32 2, i32 3, i32 12, i32 13, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP9:%.*]] = add <8 x i32> zeroinitializer, [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = xor <8 x i32> [[TMP9]], zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP10]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP11]], 0
 ; CHECK-NEXT:    [[TMP64:%.*]] = zext i32 [[OP_RDX]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP64]]
 ;

@@ -1,5 +1,5 @@
 // REQUIRES: bpf-registered-target
-// RUN: %clang_cc1 -no-opaque-pointers -triple bpf -emit-llvm -debug-info-kind=limited -disable-llvm-passes %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple bpf -emit-llvm -debug-info-kind=limited -disable-llvm-passes %s -o - | FileCheck %s
 
 #define __reloc__ __attribute__((preserve_access_index))
 
@@ -17,8 +17,8 @@ int test(__s1 *arg) {
   return arg->a[2] + arg->c[2];
 }
 
-// CHECK: call [3 x i32]* @llvm.preserve.struct.access.index.p0a3i32.p0s_struct.s1s(%struct.s1* elementtype(%struct.s1) %{{[0-9a-z]+}}, i32 0, i32 0)
-// CHECK: call i32* @llvm.preserve.array.access.index.p0i32.p0a3i32([3 x i32]* elementtype([3 x i32]) %{{[0-9a-z]+}}, i32 1, i32 2)
-// CHECK: call %union.anon* @llvm.preserve.struct.access.index.p0s_union.anons.p0s_struct.s1s(%struct.s1* elementtype(%struct.s1) %{{[0-9a-z]+}}, i32 1, i32 1)
-// CHECK: call %union.anon* @llvm.preserve.union.access.index.p0s_union.anons.p0s_union.anons(%union.anon* %{{[0-9a-z]+}}, i32 1)
-// CHECK: call i32* @llvm.preserve.array.access.index.p0i32.p0a4i32([4 x i32]* elementtype([4 x i32]) %{{[0-9a-z]+}}, i32 1, i32 2)
+// CHECK: call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.s1) %{{[0-9a-z]+}}, i32 0, i32 0)
+// CHECK: call ptr @llvm.preserve.array.access.index.p0.p0(ptr elementtype([3 x i32]) %{{[0-9a-z]+}}, i32 1, i32 2)
+// CHECK: call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.s1) %{{[0-9a-z]+}}, i32 1, i32 1)
+// CHECK: call ptr @llvm.preserve.union.access.index.p0.p0(ptr %{{[0-9a-z]+}}, i32 1)
+// CHECK: call ptr @llvm.preserve.array.access.index.p0.p0(ptr elementtype([4 x i32]) %{{[0-9a-z]+}}, i32 1, i32 2)

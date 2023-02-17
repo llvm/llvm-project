@@ -395,7 +395,6 @@ ClangExpressionParser::ClangExpressionParser(
 
   lldb::LanguageType frame_lang =
       expr.Language(); // defaults to lldb::eLanguageTypeUnknown
-  lldb_private::LanguageRuntime *lang_rt = nullptr;
 
   std::string abi;
   ArchSpec target_arch;
@@ -415,7 +414,6 @@ ClangExpressionParser::ClangExpressionParser(
     frame_lang = frame_sp->GetLanguage();
 
   if (process_sp && frame_lang != lldb::eLanguageTypeUnknown) {
-    lang_rt = process_sp->GetLanguageRuntime(frame_lang);
     LLDB_LOGF(log, "Frame has language of type %s",
               Language::GetNameForLanguageType(frame_lang));
   }
