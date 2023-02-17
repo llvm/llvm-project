@@ -2800,17 +2800,17 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
 
   AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
     return TypeSwitch<Attribute, AliasResult>(attr)
-        .Case<DINullTypeAttr, DIBasicTypeAttr, DICompileUnitAttr,
-              DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr,
-              DILexicalBlockAttr, DILexicalBlockFileAttr, DILocalVariableAttr,
-              DISubprogramAttr, DISubroutineTypeAttr, LoopAnnotationAttr,
-              LoopVectorizeAttr, LoopInterleaveAttr, LoopUnrollAttr,
-              LoopUnrollAndJamAttr, LoopLICMAttr, LoopDistributeAttr,
-              LoopPipelineAttr, LoopPeeledAttr, LoopUnswitchAttr>(
-            [&](auto attr) {
-              os << decltype(attr)::getMnemonic();
-              return AliasResult::OverridableAlias;
-            })
+        .Case<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
+              DIDerivedTypeAttr, DIFileAttr, DILexicalBlockAttr,
+              DILexicalBlockFileAttr, DILocalVariableAttr, DINamespaceAttr,
+              DINullTypeAttr, DISubprogramAttr, DISubroutineTypeAttr,
+              LoopAnnotationAttr, LoopVectorizeAttr, LoopInterleaveAttr,
+              LoopUnrollAttr, LoopUnrollAndJamAttr, LoopLICMAttr,
+              LoopDistributeAttr, LoopPipelineAttr, LoopPeeledAttr,
+              LoopUnswitchAttr>([&](auto attr) {
+          os << decltype(attr)::getMnemonic();
+          return AliasResult::OverridableAlias;
+        })
         .Default([](Attribute) { return AliasResult::NoAlias; });
   }
 };
