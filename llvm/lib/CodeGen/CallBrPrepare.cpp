@@ -147,17 +147,18 @@ static bool IsInSameBasicBlock(const Use &U, const BasicBlock *BB) {
   return I && I->getParent() == BB;
 }
 
+#ifndef NDEBUG
 static void PrintDebugDomInfo(const DominatorTree &DT, const Use &U,
                               const BasicBlock *BB, bool IsDefaultDest) {
   if (!isa<Instruction>(U.getUser()))
     return;
-  const bool IsDominated = DT.dominates(BB, U);
   LLVM_DEBUG(dbgs() << "Use: " << *U.getUser() << ", in block "
                     << cast<Instruction>(U.getUser())->getParent()->getName()
-                    << ", is " << (IsDominated ? "" : "NOT ") << "dominated by "
-                    << BB->getName() << " (" << (IsDefaultDest ? "in" : "")
-                    << "direct)\n");
+                    << ", is " << (DT.dominates(BB, U) ? "" : "NOT ")
+                    << "dominated by " << BB->getName() << " ("
+                    << (IsDefaultDest ? "in" : "") << "direct)\n");
 }
+#endif
 
 void CallBrPrepare::UpdateSSA(DominatorTree &DT, CallBrInst *CBR,
                               CallInst *Intrinsic,
