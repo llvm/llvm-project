@@ -21,3 +21,8 @@
 # CHECK-NO-RV32: error: instruction requires the following: RV32I Base Instruction Set{{$}}
 # CHECK-NO-RV32-AND-EXT: error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores), RV32I Base Instruction Set{{$}}
 c.jal 2046
+
+# CHECK-OBJ: c.addi a1, -1
+# CHECK-ASM: c.addi a1, -1
+# CHECK-ASM: encoding: [0xfd,0x15]
+c.addi a1, 0xffffffff
