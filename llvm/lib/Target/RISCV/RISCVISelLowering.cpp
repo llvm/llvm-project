@@ -2901,13 +2901,20 @@ static SDValue lowerScalarInsert(SDValue Scalar, SDValue VL,
 
 }
 
-static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, bool &SwapSources,
-                                const RISCVSubtarget &Subtarget) {
+/// Is this shuffle interleaving contiguous elements from one vector into the
+/// even elements and contiguous elements from another vector into the odd
+/// elements. \p Src1 will contain the element that should be in the first even
+/// element. \p Src2 will contain the element that should be in the first odd
+/// element. These can be the first element in a source or the element half
+/// way through the source.
+static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, int &EvenSrc,
+                                int &OddSrc, const RISCVSubtarget &Subtarget) {
   // We need to be able to widen elements to the next larger integer type.
   if (VT.getScalarSizeInBits() >= Subtarget.getELEN())
     return false;
 
   int Size = Mask.size();
+  int HalfSize = Size / 2;
   assert(Size == (int)VT.getVectorNumElements() && "Unexpected mask size");
 
   int Srcs[] = {-1, -1};
@@ -2919,8 +2926,8 @@ static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, bool &SwapSources,
     // Is this an even or odd element.
     int Pol = i % 2;
 
-    // Ensure we consistently use the same source for this element polarity.
-    int Src = Mask[i] / Size;
+    // Ensure we consistently use the same half source for this polarity.
+    int Src = alignDown(Mask[i], HalfSize);
     if (Srcs[Pol] < 0)
       Srcs[Pol] = Src;
     if (Srcs[Pol] != Src)
@@ -2928,17 +2935,24 @@ static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, bool &SwapSources,
 
     // Make sure the element within the source is appropriate for this element
     // in the destination.
-    int Elt = Mask[i] % Size;
+    int Elt = Mask[i] % HalfSize;
     if (Elt != i / 2)
       return false;
   }
 
-  // We need to find a source for each polarity and they can't be the same.
-  if (Srcs[0] < 0 || Srcs[1] < 0 || Srcs[0] == Srcs[1])
+  // One source should be low half of first vector.
+  if (Srcs[0] != 0 && Srcs[1] != 0)
     return false;
 
-  // Swap the sources if the second source was in the even polarity.
-  SwapSources = Srcs[0] > Srcs[1];
+  // Other source should be the upper half of the first source or the lower
+  // half of the second source.
+  // FIXME: This is only a heuristic to avoid regressions.
+  if (Srcs[0] != HalfSize && Srcs[0] != Size && Srcs[1] != HalfSize &&
+      Srcs[1] != Size)
+    return false;
+
+  EvenSrc = Srcs[0];
+  OddSrc = Srcs[1];
 
   return true;
 }
@@ -3338,18 +3352,22 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
 
   // Detect an interleave shuffle and lower to
   // (vmaccu.vx (vwaddu.vx lohalf(V1), lohalf(V2)), lohalf(V2), (2^eltbits - 1))
-  bool SwapSources;
-  if (isInterleaveShuffle(Mask, VT, SwapSources, Subtarget)) {
-    // Swap sources if needed.
-    if (SwapSources)
-      std::swap(V1, V2);
-
-    // Extract the lower half of the vectors.
+  int EvenSrc, OddSrc;
+  if (isInterleaveShuffle(Mask, VT, EvenSrc, OddSrc, Subtarget)) {
+    // Extract the halves of the vectors.
     MVT HalfVT = VT.getHalfNumVectorElementsVT();
-    V1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, V1,
-                     DAG.getConstant(0, DL, XLenVT));
-    V2 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, V2,
-                     DAG.getConstant(0, DL, XLenVT));
+
+    int Size = Mask.size();
+    SDValue EvenV, OddV;
+    assert(EvenSrc >= 0 && "Undef source?");
+    EvenV = (EvenSrc / Size) == 0 ? V1 : V2;
+    EvenV = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, EvenV,
+                        DAG.getConstant(EvenSrc % Size, DL, XLenVT));
+
+    assert(OddSrc >= 0 && "Undef source?");
+    OddV = (OddSrc / Size) == 0 ? V1 : V2;
+    OddV = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, OddV,
+                       DAG.getConstant(OddSrc % Size, DL, XLenVT));
 
     // Double the element width and halve the number of elements in an int type.
     unsigned EltBits = VT.getScalarSizeInBits();
@@ -3365,36 +3383,37 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     // larger type.
     MVT HalfContainerVT = MVT::getVectorVT(
         VT.getVectorElementType(), WideIntContainerVT.getVectorElementCount());
-    V1 = convertToScalableVector(HalfContainerVT, V1, DAG, Subtarget);
-    V2 = convertToScalableVector(HalfContainerVT, V2, DAG, Subtarget);
+    EvenV = convertToScalableVector(HalfContainerVT, EvenV, DAG, Subtarget);
+    OddV = convertToScalableVector(HalfContainerVT, OddV, DAG, Subtarget);
 
     // Cast sources to integer.
     MVT IntEltVT = MVT::getIntegerVT(EltBits);
     MVT IntHalfVT =
         MVT::getVectorVT(IntEltVT, HalfContainerVT.getVectorElementCount());
-    V1 = DAG.getBitcast(IntHalfVT, V1);
-    V2 = DAG.getBitcast(IntHalfVT, V2);
+    EvenV = DAG.getBitcast(IntHalfVT, EvenV);
+    OddV = DAG.getBitcast(IntHalfVT, OddV);
 
-    // Freeze V2 since we use it twice and we need to be sure that the add and
+    // Freeze OddV since we use it twice and we need to be sure that the add and
     // multiply see the same value.
-    V2 = DAG.getFreeze(V2);
+    OddV = DAG.getFreeze(OddV);
 
     // Recreate TrueMask using the widened type's element count.
     TrueMask = getAllOnesMask(HalfContainerVT, VL, DL, DAG);
 
-    // Widen V1 and V2 with 0s and add one copy of V2 to V1.
+    // Widen EvenV and OddV with 0s and add one copy of OddV to EvenV.
     SDValue Add =
-        DAG.getNode(RISCVISD::VWADDU_VL, DL, WideIntContainerVT, V1, V2,
+        DAG.getNode(RISCVISD::VWADDU_VL, DL, WideIntContainerVT, EvenV, OddV,
                     DAG.getUNDEF(WideIntContainerVT), TrueMask, VL);
-    // Create 2^eltbits - 1 copies of V2 by multiplying by the largest integer.
+    // Create 2^eltbits - 1 copies of OddV by multiplying by the largest
+    // integer.
     SDValue Multiplier = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, IntHalfVT,
                                      DAG.getUNDEF(IntHalfVT),
                                      DAG.getAllOnesConstant(DL, XLenVT), VL);
     SDValue WidenMul =
-        DAG.getNode(RISCVISD::VWMULU_VL, DL, WideIntContainerVT, V2, Multiplier,
-                    DAG.getUNDEF(WideIntContainerVT), TrueMask, VL);
+        DAG.getNode(RISCVISD::VWMULU_VL, DL, WideIntContainerVT, OddV,
+                    Multiplier, DAG.getUNDEF(WideIntContainerVT), TrueMask, VL);
     // Add the new copies to our previous addition giving us 2^eltbits copies of
-    // V2. This is equivalent to shifting V2 left by eltbits. This should
+    // OddV. This is equivalent to shifting OddV left by eltbits. This should
     // combine with the vwmulu.vv above to form vwmaccu.vv.
     Add = DAG.getNode(RISCVISD::ADD_VL, DL, WideIntContainerVT, Add, WidenMul,
                       DAG.getUNDEF(WideIntContainerVT), TrueMask, VL);
@@ -3555,10 +3574,9 @@ bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
 
   MVT SVT = VT.getSimpleVT();
 
-  bool SwapSources;
-  int LoSrc, HiSrc;
-  return (isElementRotate(LoSrc, HiSrc, M) > 0) ||
-         isInterleaveShuffle(M, SVT, SwapSources, Subtarget);
+  int Dummy1, Dummy2;
+  return (isElementRotate(Dummy1, Dummy2, M) > 0) ||
+         isInterleaveShuffle(M, SVT, Dummy1, Dummy2, Subtarget);
 }
 
 // Lower CTLZ_ZERO_UNDEF or CTTZ_ZERO_UNDEF by converting to FP and extracting
