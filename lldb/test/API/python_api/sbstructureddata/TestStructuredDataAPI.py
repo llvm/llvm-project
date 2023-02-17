@@ -9,6 +9,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+import json
 
 class TestStructuredDataAPI(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
@@ -19,8 +20,15 @@ class TestStructuredDataAPI(TestBase):
     def structured_data_api_test(self):
         error = lldb.SBError()
         s = lldb.SBStream()
-        s.Print(
-            "{\"key_dict\":{\"key_string\":\"STRING\",\"key_int\":3,\"key_float\":2.99,\"key_bool\":true,\"key_array\":[\"23\",\"arr\"]}}")
+
+        dict_str = json.dumps(
+                {"key_dict":
+                 {"key_string":"STRING",
+                  "key_uint":0xffffffff00000000,
+                  "key_float":2.99,
+                  "key_bool":True,
+                  "key_array":["23","arr"]}})
+        s.Print(dict_str)
         example = lldb.SBStructuredData()
 
         # Check SetFromJSON API for dictionaries, integers, floating point
@@ -49,7 +57,7 @@ class TestStructuredDataAPI(TestBase):
         self.string_struct_test(dict_struct)
 
         # Tests for integer data type
-        self.int_struct_test(dict_struct)
+        self.uint_struct_test(dict_struct)
 
         # Tests for floating point data type
         self.double_struct_test(dict_struct)
@@ -110,25 +118,27 @@ class TestStructuredDataAPI(TestBase):
                 str(output) +
                 " returned for a string object")
 
-    def int_struct_test(self, dict_struct):
-        # Check a valid SBStructuredData containing an 'integer' by
-        int_struct = lldb.SBStructuredData()
-        int_struct = dict_struct.GetValueForKey("key_int")
-        if not int_struct.IsValid():
+    def uint_struct_test(self, dict_struct):
+        # Check a valid SBStructuredData containing an unsigned integer.
+        # We intentionally make this larger than what an int64_t can hold but
+        # still small enough to fit a uint64_t
+        uint_struct = lldb.SBStructuredData()
+        uint_struct = dict_struct.GetValueForKey("key_uint")
+        if not uint_struct.IsValid():
             self.fail("A valid object should have been returned")
 
         # Check Type API
-        if not int_struct.GetType() == lldb.eStructuredDataTypeInteger:
-            self.fail("Wrong type returned: " + str(int_struct.GetType()))
+        if not uint_struct.GetType() == lldb.eStructuredDataTypeInteger:
+            self.fail("Wrong type returned: " + str(uint_struct.GetType()))
 
         # Check API returning 'integer' value
-        output = int_struct.GetIntegerValue()
-        if not output == 3:
+        output = uint_struct.GetIntegerValue()
+        if not output == 0xffffffff00000000:
             self.fail("wrong output: " + str(output))
 
         # Calling wrong API on a SBStructuredData
         # (e.g. getting a string value from an integer type structure)
-        output = int_struct.GetStringValue(25)
+        output = uint_struct.GetStringValue(25)
         if output:
             self.fail(
                 "Valid string " +
