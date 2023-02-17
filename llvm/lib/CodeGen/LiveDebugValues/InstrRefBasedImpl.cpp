@@ -1461,10 +1461,9 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
       }
     }
 
-  if (convertToSwiftAsyncEntryValue && Expr) {
-    const_cast<MachineInstr *>(&MI)
-        ->getOperand(MI.isDebugValueList() ? 1 : 3)
-        .setMetadata(DIExpression::prepend(Expr, DIExpression::EntryValue));
+  if (convertToSwiftAsyncEntryValue && Expr && !MI.isDebugValueList()) {
+    const_cast<MachineInstr *>(&MI)->getOperand(3).setMetadata(
+        DIExpression::prepend(Expr, DIExpression::EntryValue));
     Properties.DIExpr = MI.getDebugExpression();
   }
   // END SWIFT

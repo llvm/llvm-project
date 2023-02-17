@@ -2304,10 +2304,12 @@ bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF,
     if (MI.isDebugValue()) {
       // In Swift async functions entry values are preferred, since they
       // can be evaluated in both live frames and virtual backtraces.
-      if (SeenDebugVars.insert(DebugVariable(MI.getDebugVariable(),
-                                             MI.getDebugExpression(),
-                                             MI.getDebugLoc()->getInlinedAt())).second  &&
-          isSwiftAsyncContext(MI)) {
+      if (SeenDebugVars
+              .insert(DebugVariable(MI.getDebugVariable(),
+                                    MI.getDebugExpression(),
+                                    MI.getDebugLoc()->getInlinedAt()))
+              .second &&
+          isSwiftAsyncContext(MI) && !MI.isDebugValueList()) {
         // If our instruction is not an entry value yet, make it an entry value.
         if (!MI.getDebugExpression()->isEntryValue()) {
           MI.getOperand(3).setMetadata(DIExpression::prepend(
