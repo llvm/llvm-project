@@ -208,7 +208,7 @@ public:
 
   const DerivedType *GetParentType() const;
 
-  // Finds a data component by name in this derived type or tis ancestors.
+  // Finds a data component by name in this derived type or its ancestors.
   const Component *FindDataComponent(
       const char *name, std::size_t nameLen) const;
 

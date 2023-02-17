@@ -1555,8 +1555,8 @@ bool PPCFastISel::fastLowerCall(CallLoweringInfo &CLI) {
   if (!Callee && !Symbol)
     return false;
 
-  // Allow SelectionDAG isel to handle tail calls.
-  if (IsTailCall)
+  // Allow SelectionDAG isel to handle tail calls and long calls.
+  if (IsTailCall || Subtarget->useLongCalls())
     return false;
 
   // Let SDISel handle vararg functions.

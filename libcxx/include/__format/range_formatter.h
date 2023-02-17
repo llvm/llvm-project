@@ -36,7 +36,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
 
 template <class _Tp, class _CharT = char>
   requires same_as<remove_cvref_t<_Tp>, _Tp> && formattable<_Tp, _CharT>
@@ -249,7 +249,7 @@ private:
   basic_string_view<_CharT> __closing_bracket_ = _LIBCPP_STATICALLY_WIDEN(_CharT, "]");
 };
 
-#endif //_LIBCPP_STD_VER > 20
+#endif //_LIBCPP_STD_VER >= 23
 
 _LIBCPP_END_NAMESPACE_STD
 

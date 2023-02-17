@@ -22,6 +22,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/Support/FIRContext.h"
@@ -29,6 +30,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include <mlir/Support/LogicalResult.h>
 #include <optional>
 
 namespace hlfir {
@@ -518,7 +520,6 @@ protected:
                  const llvm::ArrayRef<IntrinsicArgument> &args,
                  mlir::ConversionPatternRewriter &rewriter,
                  const fir::IntrinsicArgumentLoweringRules *argLowering) const {
-    assert(args.size() == 3 && "Transformational intrinsics have 3 args");
     mlir::Location loc = op->getLoc();
     fir::KindMapping kindMapping{rewriter.getContext()};
     fir::FirOpBuilder builder{rewriter, kindMapping};
@@ -648,6 +649,39 @@ struct SumOpConversion : public HlfirIntrinsicConversion<hlfir::SumOp> {
   }
 };
 
+struct MatmulOpConversion : public HlfirIntrinsicConversion<hlfir::MatmulOp> {
+  using HlfirIntrinsicConversion<hlfir::MatmulOp>::HlfirIntrinsicConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(hlfir::MatmulOp matmul, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    fir::KindMapping kindMapping{rewriter.getContext()};
+    fir::FirOpBuilder builder{rewriter, kindMapping};
+    const mlir::Location &loc = matmul->getLoc();
+    HLFIRListener listener{builder, rewriter};
+    builder.setListener(&listener);
+
+    mlir::Value lhs = matmul.getLhs();
+    mlir::Value rhs = matmul.getRhs();
+    llvm::SmallVector<IntrinsicArgument, 2> inArgs;
+    inArgs.push_back({lhs, lhs.getType()});
+    inArgs.push_back({rhs, rhs.getType()});
+
+    auto *argLowering = fir::getIntrinsicArgumentLowering("matmul");
+    llvm::SmallVector<fir::ExtendedValue, 2> args =
+        lowerArguments(matmul, inArgs, rewriter, argLowering);
+
+    mlir::Type scalarResultType =
+        hlfir::getFortranElementType(matmul.getType());
+
+    auto [resultExv, mustBeFreed] =
+        fir::genIntrinsicCall(builder, loc, "matmul", scalarResultType, args);
+
+    processReturnValue(matmul, resultExv, mustBeFreed, builder, rewriter);
+    return mlir::success();
+  }
+};
+
 class BufferizeHLFIR : public hlfir::impl::BufferizeHLFIRBase<BufferizeHLFIR> {
 public:
   void runOnOperation() override {
@@ -661,12 +695,11 @@ public:
     auto module = this->getOperation();
     auto *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns
-        .insert<ApplyOpConversion, AsExprOpConversion, AssignOpConversion,
-                AssociateOpConversion, ConcatOpConversion, DestroyOpConversion,
-                ElementalOpConversion, EndAssociateOpConversion,
-                NoReassocOpConversion, SetLengthOpConversion, SumOpConversion>(
-            context);
+    patterns.insert<
+        ApplyOpConversion, AsExprOpConversion, AssignOpConversion,
+        AssociateOpConversion, ConcatOpConversion, DestroyOpConversion,
+        ElementalOpConversion, EndAssociateOpConversion, MatmulOpConversion,
+        NoReassocOpConversion, SetLengthOpConversion, SumOpConversion>(context);
     mlir::ConversionTarget target(*context);
     target.addIllegalOp<hlfir::ApplyOp, hlfir::AssociateOp, hlfir::ElementalOp,
                         hlfir::EndAssociateOp, hlfir::SetLengthOp,

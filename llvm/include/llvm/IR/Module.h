@@ -542,6 +542,24 @@ public:
 
   llvm::Error materializeMetadata();
 
+  /// Detach global variable \p GV from the list but don't delete it.
+  void removeGlobalVariable(GlobalVariable *GV) { GlobalList.remove(GV); }
+  /// Remove global variable \p GV from the list and delete it.
+  void eraseGlobalVariable(GlobalVariable *GV) { GlobalList.erase(GV); }
+  /// Insert global variable \p GV at the end of the global variable list and
+  /// take ownership.
+  void insertGlobalVariable(GlobalVariable *GV) {
+    insertGlobalVariable(GlobalList.end(), GV);
+  }
+  /// Insert global variable \p GV into the global variable list before \p
+  /// Where and take ownership.
+  void insertGlobalVariable(GlobalListType::iterator Where, GlobalVariable *GV) {
+    GlobalList.insert(Where, GV);
+  }
+  // Use global_size() to get the total number of global variables.
+  // Use globals() to get the range of all global variables.
+
+private:
 /// @}
 /// @name Direct access to the globals list, functions list, and symbol table
 /// @{
@@ -554,7 +572,9 @@ public:
   static GlobalListType Module::*getSublistAccess(GlobalVariable*) {
     return &Module::GlobalList;
   }
+  friend class llvm::SymbolTableListTraits<llvm::GlobalVariable>;
 
+public:
   /// Get the Module's list of functions (constant).
   const FunctionListType &getFunctionList() const     { return FunctionList; }
   /// Get the Module's list of functions.
@@ -581,6 +601,17 @@ public:
   // Use ifunc_size() to get the number of functions in IFuncList.
   // Use ifuncs() to get the range of all IFuncs.
 
+  /// Detach \p MDNode from the list but don't delete it.
+  void removeNamedMDNode(NamedMDNode *MDNode) { NamedMDList.remove(MDNode); }
+  /// Remove \p MDNode from the list and delete it.
+  void eraseNamedMDNode(NamedMDNode *MDNode) { NamedMDList.erase(MDNode); }
+  /// Insert \p MDNode at the end of the alias list and take ownership.
+  void insertNamedMDNode(NamedMDNode *MDNode) {
+    NamedMDList.push_back(MDNode);
+  }
+  // Use named_metadata_size() to get the size of the named meatadata list.
+  // Use named_metadata() to get the range of all named metadata.
+
 private: // Please use functions like insertAlias(), removeAlias() etc.
   /// Get the Module's list of aliases (constant).
   const AliasListType    &getAliasList() const        { return AliasList; }
@@ -592,7 +623,6 @@ private: // Please use functions like insertAlias(), removeAlias() etc.
   }
   friend class llvm::SymbolTableListTraits<llvm::GlobalAlias>;
 
-public:
   /// Get the Module's list of ifuncs (constant).
   const IFuncListType    &getIFuncList() const        { return IFuncList; }
   /// Get the Module's list of ifuncs.
@@ -603,7 +633,6 @@ public:
   }
   friend class llvm::SymbolTableListTraits<llvm::GlobalIFunc>;
 
-public:
   /// Get the Module's list of named metadata (constant).
   const NamedMDListType  &getNamedMDList() const      { return NamedMDList; }
   /// Get the Module's list of named metadata.
@@ -613,6 +642,7 @@ public:
     return &Module::NamedMDList;
   }
 
+public:
   /// Get the symbol table of global variable and function identifiers
   const ValueSymbolTable &getValueSymbolTable() const { return *ValSymTab; }
   /// Get the Module's symbol table of global variable and function identifiers.

@@ -549,7 +549,7 @@ TEST(LlvmLibcScanfParserTest, EvalThreeArgs) {
   ASSERT_SFORMAT_EQ(expected2, format_arr[2]);
 }
 
-#ifndef LLVM_LIBC_SCANF_DISABLE_INDEX_MODE
+#ifndef LIBC_COPT_SCANF_DISABLE_INDEX_MODE
 
 TEST(LlvmLibcScanfParserTest, IndexModeOneArg) {
   __llvm_libc::scanf_core::FormatSection format_arr[10];
@@ -756,4 +756,4 @@ TEST(LlvmLibcScanfParserTest, IndexModeComplexParsing) {
   EXPECT_SFORMAT_EQ(expected10, format_arr[10]);
 }
 
-#endif // LLVM_LIBC_SCANF_DISABLE_INDEX_MODE
+#endif // LIBC_COPT_SCANF_DISABLE_INDEX_MODE

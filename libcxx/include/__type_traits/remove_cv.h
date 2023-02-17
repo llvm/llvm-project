@@ -35,7 +35,7 @@ template <class _Tp>
 using __remove_cv_t = __remove_volatile_t<__remove_const_t<_Tp> >;
 #endif // __has_builtin(__remove_cv)
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <class _Tp> using remove_cv_t = __remove_cv_t<_Tp>;
 #endif
 

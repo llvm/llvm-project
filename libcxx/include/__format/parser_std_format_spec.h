@@ -45,7 +45,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 namespace __format_spec {
 
@@ -140,7 +140,7 @@ inline constexpr __fields __fields_floating_point{
 inline constexpr __fields __fields_string{.__precision_ = true, .__type_ = true};
 inline constexpr __fields __fields_pointer{.__type_ = true};
 
-#  if _LIBCPP_STD_VER > 20
+#  if _LIBCPP_STD_VER >= 23
 inline constexpr __fields __fields_tuple{.__type_ = false, .__allow_colon_in_fill_ = true};
 inline constexpr __fields __fields_range{.__type_ = false, .__allow_colon_in_fill_ = true};
 #  endif
@@ -582,7 +582,7 @@ private:
     case 'x':
       __type_ = __type::__hexadecimal_lower_case;
       break;
-#  if _LIBCPP_STD_VER > 20
+#  if _LIBCPP_STD_VER >= 23
     case '?':
       __type_ = __type::__debug;
       break;
@@ -959,7 +959,7 @@ __estimate_column_width(basic_string_view<_CharT> __str, size_t __maximum, __col
 
 } // namespace __format_spec
 
-#endif //_LIBCPP_STD_VER > 17
+#endif //_LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

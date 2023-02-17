@@ -140,7 +140,7 @@ template <class _Tp>
 struct __is_simple_comparator<less<_Tp>&> : true_type {};
 template <class _Tp>
 struct __is_simple_comparator<greater<_Tp>&> : true_type {};
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <>
 struct __is_simple_comparator<ranges::less&> : true_type {};
 template <>

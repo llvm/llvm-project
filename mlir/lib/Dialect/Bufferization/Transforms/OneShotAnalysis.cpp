@@ -942,8 +942,19 @@ static LogicalResult checkAliasInfoConsistency(Operation *op,
     // Input IR may not contain any ToMemrefOps. These are not supported because
     // the analysis cannot follow the data flow through memrefs.
     if (isa<ToMemrefOp>(op.getOperation())) {
-      op->emitError("to_memref ops not supported during One-Shot Analysis");
+      op->emitError("to_memref ops are not supported by One-Shot Analysis");
       return WalkResult::interrupt();
+    }
+
+    // Input IR may not contain any ToTensorOps without the "restrict"
+    // attribute. Such tensors may alias any other tensor, which is currently
+    // not handled in the analysis.
+    if (auto toTensorOp = dyn_cast<ToTensorOp>(op.getOperation())) {
+      if (!toTensorOp.getRestrict()) {
+        op->emitError("to_tensor ops without `restrict` are not supported by "
+                      "One-Shot Analysis");
+        return WalkResult::interrupt();
+      }
     }
 
     for (OpOperand &opOperand : op->getOpOperands()) {

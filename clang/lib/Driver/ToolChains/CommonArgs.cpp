@@ -567,6 +567,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                           ArgStringList &CmdArgs, const InputInfo &Output,
                           const InputInfo &Input, bool IsThinLTO) {
   const bool IsOSAIX = ToolChain.getTriple().isOSAIX();
+  const bool IsAMDGCN = ToolChain.getTriple().isAMDGCN();
   const char *Linker = Args.MakeArgString(ToolChain.GetLinkerPath());
   const Driver &D = ToolChain.getDriver();
   if (llvm::sys::path::filename(Linker) != "ld.lld" &&
@@ -631,9 +632,12 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
         OOpt = "2";
     } else if (A->getOption().matches(options::OPT_O0))
       OOpt = "0";
-    if (!OOpt.empty())
+    if (!OOpt.empty()) {
       CmdArgs.push_back(
           Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash + "O" + OOpt));
+      if (IsAMDGCN)
+        CmdArgs.push_back(Args.MakeArgString(Twine("--lto-CGO") + OOpt));
+    }
   }
 
   if (Args.hasArg(options::OPT_gsplit_dwarf))

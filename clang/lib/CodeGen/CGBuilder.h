@@ -160,7 +160,8 @@ public:
     assert(cast<llvm::PointerType>(Ty)->isOpaqueOrPointeeTypeMatches(
                Addr.getElementType()) &&
            "Should not change the element type");
-    return Addr.withPointer(CreateAddrSpaceCast(Addr.getPointer(), Ty, Name));
+    return Addr.withPointer(CreateAddrSpaceCast(Addr.getPointer(), Ty, Name),
+                            Addr.isKnownNonNull());
   }
 
   /// Cast the element type of the given address to a different type,
@@ -169,7 +170,7 @@ public:
                                const llvm::Twine &Name = "") {
     auto *PtrTy = Ty->getPointerTo(Addr.getAddressSpace());
     return Address(CreateBitCast(Addr.getPointer(), PtrTy, Name), Ty,
-                   Addr.getAlignment());
+                   Addr.getAlignment(), Addr.isKnownNonNull());
   }
 
   using CGBuilderBaseTy::CreatePointerBitCastOrAddrSpaceCast;
@@ -178,7 +179,7 @@ public:
                                               const llvm::Twine &Name = "") {
     llvm::Value *Ptr =
         CreatePointerBitCastOrAddrSpaceCast(Addr.getPointer(), Ty, Name);
-    return Address(Ptr, ElementTy, Addr.getAlignment());
+    return Address(Ptr, ElementTy, Addr.getAlignment(), Addr.isKnownNonNull());
   }
 
   /// Given
@@ -199,7 +200,7 @@ public:
     return Address(
         CreateStructGEP(Addr.getElementType(), Addr.getPointer(), Index, Name),
         ElTy->getElementType(Index),
-        Addr.getAlignment().alignmentAtOffset(Offset));
+        Addr.getAlignment().alignmentAtOffset(Offset), Addr.isKnownNonNull());
   }
 
   /// Given
@@ -221,7 +222,8 @@ public:
         CreateInBoundsGEP(Addr.getElementType(), Addr.getPointer(),
                           {getSize(CharUnits::Zero()), getSize(Index)}, Name),
         ElTy->getElementType(),
-        Addr.getAlignment().alignmentAtOffset(Index * EltSize));
+        Addr.getAlignment().alignmentAtOffset(Index * EltSize),
+        Addr.isKnownNonNull());
   }
 
   /// Given
@@ -237,8 +239,8 @@ public:
 
     return Address(CreateInBoundsGEP(Addr.getElementType(), Addr.getPointer(),
                                      getSize(Index), Name),
-                   ElTy,
-                   Addr.getAlignment().alignmentAtOffset(Index * EltSize));
+                   ElTy, Addr.getAlignment().alignmentAtOffset(Index * EltSize),
+                   Addr.isKnownNonNull());
   }
 
   /// Given
@@ -255,7 +257,8 @@ public:
     return Address(CreateGEP(Addr.getElementType(), Addr.getPointer(),
                              getSize(Index), Name),
                    Addr.getElementType(),
-                   Addr.getAlignment().alignmentAtOffset(Index * EltSize));
+                   Addr.getAlignment().alignmentAtOffset(Index * EltSize),
+                   NotKnownNonNull);
   }
 
   /// Create GEP with single dynamic index. The address alignment is reduced
@@ -270,7 +273,7 @@ public:
     return Address(
         CreateGEP(Addr.getElementType(), Addr.getPointer(), Index, Name),
         Addr.getElementType(),
-        Addr.getAlignment().alignmentOfArrayElement(EltSize));
+        Addr.getAlignment().alignmentOfArrayElement(EltSize), NotKnownNonNull);
   }
 
   /// Given a pointer to i8, adjust it by a given constant offset.
@@ -280,7 +283,8 @@ public:
     return Address(CreateInBoundsGEP(Addr.getElementType(), Addr.getPointer(),
                                      getSize(Offset), Name),
                    Addr.getElementType(),
-                   Addr.getAlignment().alignmentAtOffset(Offset));
+                   Addr.getAlignment().alignmentAtOffset(Offset),
+                   Addr.isKnownNonNull());
   }
   Address CreateConstByteGEP(Address Addr, CharUnits Offset,
                              const llvm::Twine &Name = "") {
@@ -288,7 +292,8 @@ public:
     return Address(CreateGEP(Addr.getElementType(), Addr.getPointer(),
                              getSize(Offset), Name),
                    Addr.getElementType(),
-                   Addr.getAlignment().alignmentAtOffset(Offset));
+                   Addr.getAlignment().alignmentAtOffset(Offset),
+                   NotKnownNonNull);
   }
 
   using CGBuilderBaseTy::CreateConstInBoundsGEP2_32;
@@ -305,7 +310,8 @@ public:
       llvm_unreachable("offset of GEP with constants is always computable");
     return Address(GEP, GEP->getResultElementType(),
                    Addr.getAlignment().alignmentAtOffset(
-                       CharUnits::fromQuantity(Offset.getSExtValue())));
+                       CharUnits::fromQuantity(Offset.getSExtValue())),
+                   Addr.isKnownNonNull());
   }
 
   using CGBuilderBaseTy::CreateMemCpy;
@@ -369,7 +375,8 @@ public:
 
   using CGBuilderBaseTy::CreateLaunderInvariantGroup;
   Address CreateLaunderInvariantGroup(Address Addr) {
-    return Addr.withPointer(CreateLaunderInvariantGroup(Addr.getPointer()));
+    return Addr.withPointer(CreateLaunderInvariantGroup(Addr.getPointer()),
+                            Addr.isKnownNonNull());
   }
 };
 

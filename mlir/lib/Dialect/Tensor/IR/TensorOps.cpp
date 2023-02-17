@@ -399,25 +399,6 @@ Speculation::Speculatability DimOp::getSpeculatability() {
   return Speculation::Speculatable;
 }
 
-LogicalResult DimOp::verify() {
-  // Assume unknown index to be in range.
-  std::optional<int64_t> index = getConstantIndex();
-  if (!index)
-    return success();
-
-  // Check that constant index is not knowingly out of range.
-  auto type = getSource().getType();
-  if (auto tensorType = type.dyn_cast<RankedTensorType>()) {
-    if (*index >= tensorType.getRank())
-      return emitOpError("index is out of range");
-  } else if (type.isa<UnrankedTensorType>()) {
-    // Assume index to be in range.
-  } else {
-    llvm_unreachable("expected operand with tensor type");
-  }
-  return success();
-}
-
 OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
   // All forms of folding require a known index.
   auto index = adaptor.getIndex().dyn_cast_or_null<IntegerAttr>();
@@ -427,6 +408,12 @@ OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
   // Folding for unranked types (UnrankedTensorType) is not supported.
   auto tensorType = getSource().getType().dyn_cast<RankedTensorType>();
   if (!tensorType)
+    return {};
+
+  // Out of bound indices produce undefined behavior but are still valid IR.
+  // Don't choke on them.
+  int64_t indexVal = index.getInt();
+  if (indexVal < 0 || indexVal >= tensorType.getRank())
     return {};
 
   // Fold if the shape extent along the given index is known.

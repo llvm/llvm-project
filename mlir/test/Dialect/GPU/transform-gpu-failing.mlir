@@ -21,7 +21,7 @@ func.func @map_nested_foreach_to_threads_excessive_threads(%x: memref<2 x 32 x f
   %name = gpu.launch async[%stream] blocks(%arg3, %arg4, %arg5) in (%arg9 = %one, %arg10 = %one, %arg11 = %one)
             threads(%arg6, %arg7, %arg8) in (%arg12 = %one, %arg13 = %one, %arg14 = %one)
   {
-    scf.foreach_thread (%i, %j) in (%c7, %c900) {
+    scf.forall (%i, %j) in (%c7, %c900) {
         %4 = memref.load %x[%i, %j] : memref<2 x 32 x f32>
         %5 = memref.load %y[%i, %j] : memref<2 x 32 x f32>
         %6 = math.fma %alpha, %4, %5 : f32
@@ -33,7 +33,7 @@ func.func @map_nested_foreach_to_threads_excessive_threads(%x: memref<2 x 32 x f
   %name2 = gpu.launch async[%stream] blocks(%arg3, %arg4, %arg5) in (%arg9 = %one, %arg10 = %one, %arg11 = %one)
             threads(%arg6, %arg7, %arg8) in (%arg12 = %one, %arg13 = %one, %arg14 = %one)
   {
-    scf.foreach_thread (%i, %j) in (%c7, %c9) {
+    scf.forall (%i, %j) in (%c7, %c9) {
         %4 = memref.load %x[%i, %j] : memref<2 x 32 x f32>
         %5 = memref.load %y[%i, %j] : memref<2 x 32 x f32>
         %6 = math.fma %alpha, %4, %5 : f32
@@ -62,7 +62,7 @@ func.func @map_nested_foreach_to_threads_fewer_threads(%x: memref<2 x 32 x f32>,
   %name = gpu.launch async[%stream] blocks(%arg3, %arg4, %arg5) in (%arg9 = %one, %arg10 = %one, %arg11 = %one)
             threads(%arg6, %arg7, %arg8) in (%arg12 = %one, %arg13 = %one, %arg14 = %one)
   {
-    scf.foreach_thread (%i, %j) in (%c7, %c900) {
+    scf.forall (%i, %j) in (%c7, %c900) {
         %4 = memref.load %x[%i, %j] : memref<2 x 32 x f32>
         %5 = memref.load %y[%i, %j] : memref<2 x 32 x f32>
         %6 = math.fma %alpha, %4, %5 : f32
@@ -74,7 +74,7 @@ func.func @map_nested_foreach_to_threads_fewer_threads(%x: memref<2 x 32 x f32>,
   %name2 = gpu.launch async[%stream] blocks(%arg3, %arg4, %arg5) in (%arg9 = %one, %arg10 = %one, %arg11 = %one)
             threads(%arg6, %arg7, %arg8) in (%arg12 = %one, %arg13 = %one, %arg14 = %one)
   {
-    scf.foreach_thread (%i, %j) in (%c7, %c9) {
+    scf.forall (%i, %j) in (%c7, %c9) {
         %4 = memref.load %x[%i, %j] : memref<2 x 32 x f32>
         %5 = memref.load %y[%i, %j] : memref<2 x 32 x f32>
         %6 = math.fma %alpha, %4, %5 : f32
@@ -89,7 +89,7 @@ func.func @map_nested_foreach_to_threads_fewer_threads(%x: memref<2 x 32 x f32>,
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
-  // expected-error @below {{The requested GPU threads are fewer than the number of loop trip counts. Try to tile scf.foreach_thread before mapping or set small blockDim.}}
+  // expected-error @below {{The requested GPU threads are fewer than the number of loop trip counts. Try to tile scf.forall before mapping or set small blockDim.}}
   transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [128, 4, 1] }
 }
 
@@ -101,7 +101,7 @@ func.func @map_nested_foreach_to_threads_dynamic_trip_count(%x: memref<2 x 32 x 
   %name = gpu.launch async[%stream] blocks(%arg3, %arg4, %arg5) in (%arg9 = %one, %arg10 = %one, %arg11 = %one)
             threads(%arg6, %arg7, %arg8) in (%arg12 = %one, %arg13 = %one, %arg14 = %one)
   {
-    scf.foreach_thread (%i, %j) in (%c7, %c900) {
+    scf.forall (%i, %j) in (%c7, %c900) {
         %4 = memref.load %x[%i, %j] : memref<2 x 32 x f32>
         %5 = memref.load %y[%i, %j] : memref<2 x 32 x f32>
         %6 = math.fma %alpha, %4, %5 : f32
@@ -135,9 +135,9 @@ func.func @map_nested_foreach_to_threads_not_buffer(%x: tensor<32x32xf32>, %y: t
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
   %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg0 : (!pdl.operation) -> !pdl.operation
-  %foreach, %tiled = transform.structured.tile_to_foreach_thread_op %matmul num_threads [10, 20, 30] (mapping = [ #gpu.thread<y>, #gpu.thread<x>, #gpu.thread<z> ] )
+  %foreach, %tiled = transform.structured.tile_to_forall_op %matmul num_threads [10, 20, 30] (mapping = [ #gpu.thread<y>, #gpu.thread<x>, #gpu.thread<z> ] )
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
-  // expected-error @below {{only bufferized scf.foreach_thread lowers to gpu.thread_id}}
+  // expected-error @below {{only bufferized scf.forall lowers to gpu.thread_id}}
   transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [128, 4, 1] }
 }
 
@@ -167,14 +167,14 @@ func.func @map_foreach_to_blocks_not_unique(%x: memref<2 x 32 x f32>, %y: memref
   %name = gpu.launch async[%stream] blocks(%arg3, %arg4, %arg5) in (%arg9 = %one, %arg10 = %one, %arg11 = %one)
             threads(%arg6, %arg7, %arg8) in (%arg12 = %one, %arg13 = %one, %arg14 = %one)
   {
-    scf.foreach_thread (%i, %j) in (%c7, %c900) {
+    scf.forall (%i, %j) in (%c7, %c900) {
         %4 = memref.load %x[%i, %j] : memref<2 x 32 x f32>
         %5 = memref.load %y[%i, %j] : memref<2 x 32 x f32>
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i, %j] : memref<2 x 32 x f32>
      }  { mapping = [#gpu.thread<y>, #gpu.thread<x>] }
 
-    scf.foreach_thread (%i, %j) in (%c7, %c9) {
+    scf.forall (%i, %j) in (%c7, %c9) {
         %4 = memref.load %x[%i, %j] : memref<2 x 32 x f32>
         %5 = memref.load %y[%i, %j] : memref<2 x 32 x f32>
         %6 = math.fma %alpha, %4, %5 : f32
@@ -189,7 +189,7 @@ func.func @map_foreach_to_blocks_not_unique(%x: memref<2 x 32 x f32>, %y: memref
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
-  // expected-error @below {{could not find a unique topLevel scf.foreach_thread}}
+  // expected-error @below {{could not find a unique topLevel scf.forall}}
   %1 = transform.gpu.map_foreach_to_blocks %funcop
 }
 
@@ -202,14 +202,14 @@ func.func @map_foreach_to_blocks_large_loop(%x: memref<2 x 32 x f32>, %y: memref
   %c9 = arith.constant 9 : index
   %c7 = arith.constant 7 : index
 
-  scf.foreach_thread (%i, %j) in (%c7, %c65537) {
+  scf.forall (%i, %j) in (%c7, %c65537) {
       %4 = memref.load %x[%i, %j] : memref<2 x 32 x f32>
       %5 = memref.load %y[%i, %j] : memref<2 x 32 x f32>
       %6 = math.fma %alpha, %4, %5 : f32
       memref.store %6, %y[%i, %j] : memref<2 x 32 x f32>
   }  { mapping = [#gpu.thread<x>, #gpu.thread<y>] }
 
-  scf.foreach_thread (%i, %j) in (%c7, %c9) {
+  scf.forall (%i, %j) in (%c7, %c9) {
       %4 = memref.load %x[%i, %j] : memref<2 x 32 x f32>
       %5 = memref.load %y[%i, %j] : memref<2 x 32 x f32>
       %6 = math.fma %alpha, %4, %5 : f32
@@ -222,7 +222,7 @@ func.func @map_foreach_to_blocks_large_loop(%x: memref<2 x 32 x f32>, %y: memref
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
   %funcop = transform.structured.match ops{["func.func"]} in %arg0 : (!pdl.operation) -> !pdl.operation
-  // expected-error @below {{could not find a unique topLevel scf.foreach_thread}}
+  // expected-error @below {{could not find a unique topLevel scf.forall}}
   %1 = transform.gpu.map_foreach_to_blocks %funcop { generate_gpu_launch }
 }
 
@@ -231,7 +231,7 @@ transform.sequence failures(propagate) {
 func.func @map_foreach_to_blocks_large_loop(%x: memref<2 x 32 x f32>, %y: memref<2 x 32 x f32>, %t: memref<32 x f32>, %alpha : f32, %stream : !gpu.async.token) -> memref<2 x 32 x f32> {
   %one = arith.constant 1 : index
   %c65535 = arith.constant 65535 : index
-  scf.foreach_thread (%i, %j) in (%c65535, %c65535) {
+  scf.forall (%i, %j) in (%c65535, %c65535) {
       %4 = memref.load %x[%i, %j] : memref<2 x 32 x f32>
       %5 = memref.load %y[%i, %j] : memref<2 x 32 x f32>
       %6 = math.fma %alpha, %4, %5 : f32
@@ -256,7 +256,7 @@ func.func @saxpy2d_singleloop(%x: !type, %y: !type, %stream : !gpu.async.token) 
   %name = gpu.launch async[%stream] blocks(%arg3, %arg4, %arg5) in (%arg9 = %one, %arg10 = %one, %arg11 = %one)
             threads(%arg6, %arg7, %arg8) in (%arg12 = %one, %arg13 = %one, %arg14 = %one)
   {
-    scf.foreach_thread (%i, %j) in (%c32, %c32) {
+    scf.forall (%i, %j) in (%c32, %c32) {
         %4 = memref.load %x[%i, %j] : !type
         %5 = memref.load %y[%i, %j] : !type
         %6 = arith.mulf %4, %5 : f32
@@ -300,6 +300,6 @@ func.func @tiling_buffer_semantic_op(%x: memref<32x32xf32>, %y: memref<32x32xf32
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
   %matmul = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!pdl.operation) -> !pdl.operation
-  // expected-error @below {{transform.structured.tile_to_foreach_thread_op failed to apply}}
-  %foreach, %tiled = transform.structured.tile_to_foreach_thread_op %matmul num_threads [10, 20, 30] (mapping = [ #gpu.thread<y>, #gpu.thread<x>, #gpu.thread<z> ] )
+  // expected-error @below {{transform.structured.tile_to_forall_op failed to apply}}
+  %foreach, %tiled = transform.structured.tile_to_forall_op %matmul num_threads [10, 20, 30] (mapping = [ #gpu.thread<y>, #gpu.thread<x>, #gpu.thread<z> ] )
 }

@@ -5,6 +5,9 @@
 // RUN:      --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
+// %mlir_native_utils_lib_dir is incorrect on Windows
+// UNSUPPORTED: system-windows
+
 memref.global "private" @gv_i32 : memref<20xi32> =
     dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
            10, 11, 12, 13, 14, 15, 16, 17, 18, 19]>

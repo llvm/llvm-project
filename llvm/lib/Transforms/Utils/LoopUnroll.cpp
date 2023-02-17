@@ -310,6 +310,9 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   const unsigned MaxTripCount = SE->getSmallConstantMaxTripCount(L);
   const bool MaxOrZero = SE->isBackedgeTakenCountMaxOrZero(L);
+  unsigned EstimatedLoopInvocationWeight = 0;
+  std::optional<unsigned> OriginalTripCount =
+      llvm::getLoopEstimatedTripCount(L, &EstimatedLoopInvocationWeight);
 
   // Effectively "DCE" unrolled iterations that are beyond the max tripcount
   // and will never be executed.
@@ -830,8 +833,16 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   Loop *OuterL = L->getParentLoop();
   // Update LoopInfo if the loop is completely removed.
-  if (CompletelyUnroll)
+  if (CompletelyUnroll) {
     LI->erase(L);
+    // We shouldn't try to use `L` anymore.
+    L = nullptr;
+  } else if (OriginalTripCount) {
+    // Update the trip count. Note that the remainder has already logic
+    // computing it in `UnrollRuntimeLoopRemainder`.
+    setLoopEstimatedTripCount(L, *OriginalTripCount / ULO.Count,
+                              EstimatedLoopInvocationWeight);
+  }
 
   // LoopInfo should not be valid, confirm that.
   if (UnrollVerifyLoopInfo)

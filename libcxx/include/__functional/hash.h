@@ -640,7 +640,7 @@ struct _LIBCPP_TEMPLATE_VIS hash : public __enum_hash<_Tp>
 {
 };
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<nullptr_t>
@@ -667,7 +667,7 @@ using __has_enabled_hash _LIBCPP_NODEBUG = integral_constant<bool,
     is_default_constructible<_Hash>::value
 >;
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Type, class>
 using __enable_hash_helper_imp _LIBCPP_NODEBUG = _Type;
 

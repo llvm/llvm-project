@@ -25,7 +25,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_fundamental : _BoolConstant<__is_fundamental(_Tp)> { };
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_fundamental_v = __is_fundamental(_Tp);
 #endif
@@ -37,7 +37,7 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_fundamental
                                      __is_nullptr_t<_Tp>::value ||
                                      is_arithmetic<_Tp>::value> {};
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_fundamental_v = is_fundamental<_Tp>::value;
 #endif

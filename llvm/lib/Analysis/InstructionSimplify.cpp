@@ -4892,8 +4892,11 @@ static Value *simplifyInsertValueInst(Value *Agg, Value *Val,
   if (ExtractValueInst *EV = dyn_cast<ExtractValueInst>(Val))
     if (EV->getAggregateOperand()->getType() == Agg->getType() &&
         EV->getIndices() == Idxs) {
-      // insertvalue undef, (extractvalue y, n), n -> y
-      if (Q.isUndefValue(Agg))
+      // insertvalue poison, (extractvalue y, n), n -> y
+      // insertvalue undef, (extractvalue y, n), n -> y if y cannot be poison
+      if (isa<PoisonValue>(Agg) ||
+          (Q.isUndefValue(Agg) &&
+           isGuaranteedNotToBePoison(EV->getAggregateOperand())))
         return EV->getAggregateOperand();
 
       // insertvalue y, (extractvalue y, n), n -> y
@@ -5309,28 +5312,33 @@ Value *llvm::simplifyFNegInst(Value *Op, FastMathFlags FMF,
 /// Try to propagate existing NaN values when possible. If not, replace the
 /// constant or elements in the constant with a canonical NaN.
 static Constant *propagateNaN(Constant *In) {
-  if (auto *VecTy = dyn_cast<FixedVectorType>(In->getType())) {
+  Type *Ty = In->getType();
+  if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
     unsigned NumElts = VecTy->getNumElements();
     SmallVector<Constant *, 32> NewC(NumElts);
     for (unsigned i = 0; i != NumElts; ++i) {
       Constant *EltC = In->getAggregateElement(i);
-      // Poison and existing NaN elements propagate.
+      // Poison elements propagate. NaN propagates except signaling is quieted.
       // Replace unknown or undef elements with canonical NaN.
-      if (EltC && (isa<PoisonValue>(EltC) || EltC->isNaN()))
+      if (EltC && isa<PoisonValue>(EltC))
         NewC[i] = EltC;
+      else if (EltC && EltC->isNaN())
+        NewC[i] = ConstantFP::get(
+            EltC->getType(), cast<ConstantFP>(EltC)->getValue().makeQuiet());
       else
-        NewC[i] = (ConstantFP::getNaN(VecTy->getElementType()));
+        NewC[i] = ConstantFP::getNaN(VecTy->getElementType());
     }
     return ConstantVector::get(NewC);
   }
 
-  // It is not a fixed vector, but not a simple NaN either?
+  // If it is not a fixed vector, but not a simple NaN either, return a
+  // canonical NaN.
   if (!In->isNaN())
-    return ConstantFP::getNaN(In->getType());
+    return ConstantFP::getNaN(Ty);
 
-  // Propagate the existing NaN constant when possible.
-  // TODO: Should we quiet a signaling NaN?
-  return In;
+  // Propagate an existing QNaN constant. If it is an SNaN, make it quiet, but
+  // preserve the sign/payload.
+  return ConstantFP::get(Ty, cast<ConstantFP>(In)->getValue().makeQuiet());
 }
 
 /// Perform folds that are common to any floating-point operation. This implies
@@ -6569,22 +6577,27 @@ static Value *simplifyLoadInst(LoadInst *LI, Value *PtrOp,
   if (LI->isVolatile())
     return nullptr;
 
-  APInt Offset(Q.DL.getIndexTypeSizeInBits(PtrOp->getType()), 0);
-  auto *PtrOpC = dyn_cast<Constant>(PtrOp);
+  if (auto *PtrOpC = dyn_cast<Constant>(PtrOp))
+    return ConstantFoldLoadFromConstPtr(PtrOpC, LI->getType(), Q.DL);
+
+  // We can only fold the load if it is from a constant global with definitive
+  // initializer. Skip expensive logic if this is not the case.
+  auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(PtrOp));
+  if (!GV || !GV->isConstant() || !GV->hasDefinitiveInitializer())
+    return nullptr;
+
   // Try to convert operand into a constant by stripping offsets while looking
-  // through invariant.group intrinsics. Don't bother if the underlying object
-  // is not constant, as calculating GEP offsets is expensive.
-  if (!PtrOpC && isa<Constant>(getUnderlyingObject(PtrOp))) {
-    PtrOp = PtrOp->stripAndAccumulateConstantOffsets(
-        Q.DL, Offset, /* AllowNonInbounts */ true,
-        /* AllowInvariantGroup */ true);
+  // through invariant.group intrinsics.
+  APInt Offset(Q.DL.getIndexTypeSizeInBits(PtrOp->getType()), 0);
+  PtrOp = PtrOp->stripAndAccumulateConstantOffsets(
+      Q.DL, Offset, /* AllowNonInbounts */ true,
+      /* AllowInvariantGroup */ true);
+  if (PtrOp == GV) {
     // Index size may have changed due to address space casts.
     Offset = Offset.sextOrTrunc(Q.DL.getIndexTypeSizeInBits(PtrOp->getType()));
-    PtrOpC = dyn_cast<Constant>(PtrOp);
+    return ConstantFoldLoadFromConstPtr(GV, LI->getType(), Offset, Q.DL);
   }
 
-  if (PtrOpC)
-    return ConstantFoldLoadFromConstPtr(PtrOpC, LI->getType(), Offset, Q.DL);
   return nullptr;
 }
 

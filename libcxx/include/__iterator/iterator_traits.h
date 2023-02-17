@@ -43,7 +43,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 template <class _Tp>
 using __with_reference = _Tp&;
@@ -62,7 +62,7 @@ concept __dereferenceable = requires(_Tp& __t) {
 template<__dereferenceable _Tp>
 using iter_reference_t = decltype(*std::declval<_Tp&>());
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 template <class _Iter>
 struct _LIBCPP_TEMPLATE_VIS iterator_traits;
@@ -72,7 +72,7 @@ struct _LIBCPP_TEMPLATE_VIS output_iterator_tag {};
 struct _LIBCPP_TEMPLATE_VIS forward_iterator_tag       : public input_iterator_tag {};
 struct _LIBCPP_TEMPLATE_VIS bidirectional_iterator_tag : public forward_iterator_tag {};
 struct _LIBCPP_TEMPLATE_VIS random_access_iterator_tag : public bidirectional_iterator_tag {};
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 struct _LIBCPP_TEMPLATE_VIS contiguous_iterator_tag    : public random_access_iterator_tag {};
 #endif
 
@@ -157,7 +157,7 @@ public:
     static const bool value = decltype(__test<_Tp>(nullptr))::value;
 };
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 // The `cpp17-*-iterator` exposition-only concepts have very similar names to the `Cpp17*Iterator` named requirements
 // from `[iterator.cpp17]`. To avoid confusion between the two, the exposition-only concepts have been banished to
@@ -381,7 +381,7 @@ struct iterator_traits : __iterator_traits<_Ip> {
   using __primary_template = iterator_traits;
 };
 
-#else // _LIBCPP_STD_VER > 17
+#else // _LIBCPP_STD_VER >= 20
 
 template <class _Iter, bool> struct __iterator_traits {};
 
@@ -418,10 +418,10 @@ struct _LIBCPP_TEMPLATE_VIS iterator_traits
 
   using __primary_template = iterator_traits;
 };
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 template<class _Tp>
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 requires is_object_v<_Tp>
 #endif
 struct _LIBCPP_TEMPLATE_VIS iterator_traits<_Tp*>
@@ -431,7 +431,7 @@ struct _LIBCPP_TEMPLATE_VIS iterator_traits<_Tp*>
     typedef _Tp* pointer;
     typedef _Tp& reference;
     typedef random_access_iterator_tag iterator_category;
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     typedef contiguous_iterator_tag    iterator_concept;
 #endif
 };
@@ -471,7 +471,7 @@ struct __is_cpp17_random_access_iterator : public __has_iterator_category_conver
 // Such iterators receive special "contiguous" optimizations in
 // std::copy and std::sort.
 //
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <class _Tp>
 struct __is_cpp17_contiguous_iterator : _Or<
     __has_iterator_category_convertible_to<_Tp, contiguous_iterator_tag>,

@@ -35,6 +35,19 @@ config.substitutions.append(("%mlir_src_root", config.mlir_src_root))
 config.substitutions.append(("%host_cxx", config.host_cxx))
 config.substitutions.append(("%host_cc", config.host_cc))
 
+
+# Searches for a runtime library with the given name and returns a tool
+# substitution of the same name and the found path.
+# Correctly handles the platforms shared library directory and naming conventions.
+def add_runtime(name):
+    path = ''
+    for prefix in ['', 'lib']:
+        path = os.path.join(config.llvm_shlib_dir, f'{prefix}{name}{config.llvm_shlib_ext}')
+        if os.path.isfile(path):
+            break
+    return ToolSubst(f'%{name}', path)
+
+
 llvm_config.with_system_environment(
     ['HOME', 'INCLUDE', 'LIB', 'TMP', 'TEMP'])
 
@@ -65,6 +78,9 @@ tools = [
     'mlir-capi-sparse-tensor-test',
     'mlir-capi-transform-test',
     'mlir-cpu-runner',
+    add_runtime('mlir_runner_utils'),
+    add_runtime('mlir_c_runner_utils'),
+    add_runtime('mlir_async_runtime'),
     'mlir-linalg-ods-yaml-gen',
     'mlir-reduce',
     'mlir-pdll',
@@ -72,7 +88,16 @@ tools = [
 ]
 
 if config.enable_spirv_cpu_runner:
-  tools.extend(['mlir-spirv-cpu-runner'])
+    tools.extend(['mlir-spirv-cpu-runner', add_runtime('mlir_test_spirv_cpu_runner_c_wrappers')])
+
+if config.enable_vulkan_runner:
+    tools.extend([add_runtime('vulkan-runtime-wrappers')])
+
+if config.enable_rocm_runner:
+    tools.extend([add_runtime('mlir_rocm_runtime')])
+
+if config.enable_cuda_runner:
+    tools.extend([add_runtime('mlir_cuda_runtime')])
 
 # The following tools are optional
 tools.extend([

@@ -42,7 +42,7 @@ template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_member_function_pointer
     : _BoolConstant<__is_member_function_pointer(_Tp)> { };
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_member_function_pointer_v = __is_member_function_pointer(_Tp);
 #endif
@@ -52,7 +52,7 @@ inline constexpr bool is_member_function_pointer_v = __is_member_function_pointe
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_member_function_pointer
     : public _BoolConstant< __libcpp_is_member_pointer<__remove_cv_t<_Tp> >::__is_func > {};
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_member_function_pointer_v = is_member_function_pointer<_Tp>::value;
 #endif

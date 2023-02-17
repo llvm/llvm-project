@@ -413,9 +413,11 @@ public:
 
   uint32_t GetPoundLineLine() const { return m_pound_line_line; }
 
-  void SetResultIsInternal(bool b) { m_result_is_internal = b; }
+  void SetSuppressPersistentResult(bool b) { m_suppress_persistent_result = b; }
 
-  bool GetResultIsInternal() const { return m_result_is_internal; }
+  bool GetSuppressPersistentResult() const {
+    return m_suppress_persistent_result;
+  }
 
   void SetAutoApplyFixIts(bool b) { m_auto_apply_fixits = b; }
 
@@ -446,7 +448,7 @@ private:
   bool m_repl = false;
   bool m_generate_debug_info = false;
   bool m_ansi_color_errors = false;
-  bool m_result_is_internal = false;
+  bool m_suppress_persistent_result = false;
   bool m_auto_apply_fixits = true;
   uint64_t m_retries_with_fixits = 1;
   /// True if the executed code should be treated as utility code that is only

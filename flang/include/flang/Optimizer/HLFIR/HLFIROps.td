@@ -280,11 +280,28 @@ def hlfir_SumOp : hlfir_Op<"sum", [AttrSizedOperandSegments,
     $array (`dim` $dim^)? (`mask` $mask^)? attr-dict `:` functional-type(operands, results)
   }];
 
-  // dim and mask can be NULL, array must not be.
-  let builders = [OpBuilder<(ins "mlir::Value":$array,
-                                 "mlir::Value":$dim,
-                                 "mlir::Value":$mask,
-                                 "mlir::Type":$resultType)>];
+  let hasVerifier = 1;
+}
+
+def hlfir_MatmulOp : hlfir_Op<"matmul",
+    [DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+  let summary = "MATMUL transformational intrinsic";
+  let description = [{
+    Matrix multiplication
+  }];
+
+  let arguments = (ins
+    AnyFortranNumericalOrLogicalArrayObject:$lhs,
+    AnyFortranNumericalOrLogicalArrayObject:$rhs,
+    DefaultValuedAttr<Arith_FastMathAttr,
+                      "::mlir::arith::FastMathFlags::none">:$fastmath
+  );
+
+  let results = (outs hlfir_ExprType);
+
+  let assemblyFormat = [{
+    $lhs $rhs attr-dict `:` functional-type(operands, results)
+  }];
 
   let hasVerifier = 1;
 }

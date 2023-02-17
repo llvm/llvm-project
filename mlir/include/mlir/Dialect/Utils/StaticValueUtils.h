@@ -21,6 +21,10 @@
 
 namespace mlir {
 
+/// Return true if `v` is an IntegerAttr with value `0` of a ConstantIndexOp
+/// with attribute with value `0`.
+bool isZeroIndex(OpFoldResult v);
+
 /// Represents a range (offset, size, and stride) where each element of the
 /// triple may be dynamic or static.
 struct Range {
@@ -30,8 +34,8 @@ struct Range {
 };
 
 /// Given an array of Range values, return a tuple of (offset vector, sizes
-/// vector, and strides vector) formed by separating out the individual elements
-/// of each range.
+/// vector, and strides vector) formed by separating out the individual
+/// elements of each range.
 std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>,
            SmallVector<OpFoldResult>>
 getOffsetsSizesAndStrides(ArrayRef<Range> ranges);
@@ -40,14 +44,15 @@ getOffsetsSizesAndStrides(ArrayRef<Range> ranges);
 ///   a) it is an IntegerAttr
 /// In other cases, the OpFoldResult is dispached to the `dynamicVec`.
 /// In such dynamic cases, ShapedType::kDynamic is also pushed to
-/// `staticVec`. This is useful to extract mixed static and dynamic entries that
-/// come from an AttrSizedOperandSegments trait.
+/// `staticVec`. This is useful to extract mixed static and dynamic entries
+/// that come from an AttrSizedOperandSegments trait.
 void dispatchIndexOpFoldResult(OpFoldResult ofr,
                                SmallVectorImpl<Value> &dynamicVec,
                                SmallVectorImpl<int64_t> &staticVec);
 
-/// Helper function to dispatch multiple OpFoldResults according to the behavior
-/// of `dispatchIndexOpFoldResult(OpFoldResult ofr` for a single OpFoldResult.
+/// Helper function to dispatch multiple OpFoldResults according to the
+/// behavior of `dispatchIndexOpFoldResult(OpFoldResult ofr` for a single
+/// OpFoldResult.
 void dispatchIndexOpFoldResults(ArrayRef<OpFoldResult> ofrs,
                                 SmallVectorImpl<Value> &dynamicVec,
                                 SmallVectorImpl<int64_t> &staticVec);
@@ -72,27 +77,28 @@ std::optional<int64_t> getConstantIntValue(OpFoldResult ofr);
 /// Return true if `ofr` is constant integer equal to `value`.
 bool isConstantIntValue(OpFoldResult ofr, int64_t value);
 
-/// Return true if ofr1 and ofr2 are the same integer constant attribute values
-/// or the same SSA value.
-/// Ignore integer bitwitdh and type mismatch that come from the fact there is
-/// no IndexAttr and that IndexType have no bitwidth.
+/// Return true if ofr1 and ofr2 are the same integer constant attribute
+/// values or the same SSA value. Ignore integer bitwitdh and type mismatch
+/// that come from the fact there is no IndexAttr and that IndexType have no
+/// bitwidth.
 bool isEqualConstantIntOrValue(OpFoldResult ofr1, OpFoldResult ofr2);
 
 /// Helper function to convert a vector of `OpFoldResult`s into a vector of
-/// `Value`s. For each `OpFoldResult` in `valueOrAttrVec` return the fold result
-/// if it casts to  a `Value` or create an index-type constant if it casts to
-/// `IntegerAttr`. No other attribute types are supported.
+/// `Value`s. For each `OpFoldResult` in `valueOrAttrVec` return the fold
+/// result if it casts to  a `Value` or create an index-type constant if it
+/// casts to `IntegerAttr`. No other attribute types are supported.
 SmallVector<Value> getAsValues(OpBuilder &b, Location loc,
                                ArrayRef<OpFoldResult> valueOrAttrVec);
 
-/// Return a vector of OpFoldResults with the same size a staticValues, but all
-/// elements for which ShapedType::isDynamic is true, will be replaced by
+/// Return a vector of OpFoldResults with the same size a staticValues, but
+/// all elements for which ShapedType::isDynamic is true, will be replaced by
 /// dynamicValues.
 SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
                                          ValueRange dynamicValues, Builder &b);
 
-/// Decompose a vector of mixed static or dynamic values into the corresponding
-/// pair of arrays. This is the inverse function of `getMixedValues`.
+/// Decompose a vector of mixed static or dynamic values into the
+/// corresponding pair of arrays. This is the inverse function of
+/// `getMixedValues`.
 std::pair<ArrayAttr, SmallVector<Value>>
 decomposeMixedValues(Builder &b,
                      const SmallVectorImpl<OpFoldResult> &mixedValues);

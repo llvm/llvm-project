@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 template <typename T>
 struct Foo {

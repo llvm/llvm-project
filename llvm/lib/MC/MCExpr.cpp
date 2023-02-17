@@ -885,18 +885,19 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
         !ABE->getRHS()->evaluateAsRelocatableImpl(RHSValue, Asm, Layout, Fixup,
                                                   Addrs, InSet)) {
       // Check if both are Target Expressions, see if we can compare them.
-      if (const MCTargetExpr *L = dyn_cast<MCTargetExpr>(ABE->getLHS()))
-        if (const MCTargetExpr *R = cast<MCTargetExpr>(ABE->getRHS())) {
-          switch (ABE->getOpcode()) {
-          case MCBinaryExpr::EQ:
-            Res = MCValue::get((L->isEqualTo(R)) ? -1 : 0);
-            return true;
-          case MCBinaryExpr::NE:
-            Res = MCValue::get((R->isEqualTo(R)) ? 0 : -1);
-            return true;
-          default: break;
-          }
+      if (const MCTargetExpr *L = dyn_cast<MCTargetExpr>(ABE->getLHS())) {
+        const MCTargetExpr *R = cast<MCTargetExpr>(ABE->getRHS());
+        switch (ABE->getOpcode()) {
+        case MCBinaryExpr::EQ:
+          Res = MCValue::get(L->isEqualTo(R) ? -1 : 0);
+          return true;
+        case MCBinaryExpr::NE:
+          Res = MCValue::get(R->isEqualTo(R) ? 0 : -1);
+          return true;
+        default:
+          break;
         }
+      }
       return false;
     }
 

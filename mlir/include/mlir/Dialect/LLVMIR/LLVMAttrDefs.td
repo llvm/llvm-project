@@ -261,11 +261,11 @@ def LLVM_DITagParameter : LLVM_DIParameter<
 >;
 
 //===----------------------------------------------------------------------===//
-// DIVoidResultTypeAttr
+// DINullTypeAttr
 //===----------------------------------------------------------------------===//
 
-def LLVM_DIVoidResultTypeAttr : LLVM_Attr<"DIVoidResultType", "di_void_result_type",
-                                          /*traits=*/[], "DITypeAttr"> {
+def LLVM_DINullTypeAttr : LLVM_Attr<"DINullType", "di_null_type",
+                                    /*traits=*/[], "DITypeAttr"> {
   let parameters = (ins);
 }
 
@@ -442,7 +442,7 @@ def LLVM_DILocalVariableAttr : LLVM_Attr<"DILocalVariable", "di_local_variable",
 def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
                                       /*traits=*/[], "DIScopeAttr"> {
   let parameters = (ins
-    "DICompileUnitAttr":$compileUnit,
+    OptionalParameter<"DICompileUnitAttr">:$compileUnit,
     "DIScopeAttr":$scope,
     "StringAttr":$name,
     OptionalParameter<"StringAttr">:$linkageName,
@@ -500,7 +500,6 @@ def LLVM_DISubroutineTypeAttr : LLVM_Attr<"DISubroutineType", "di_subroutine_typ
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
-  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -84,6 +84,10 @@ def lto_O: Joined<["--"], "lto-O">,
     HelpText<"Set optimization level for LTO (default: 2)">,
     MetaVarName<"<opt-level>">,
     Group<grp_lld>;
+def lto_CGO: Joined<["--"], "lto-CGO">,
+    HelpText<"Set codegen optimization level for LTO (default: 2)">,
+    MetaVarName<"<cgopt-level>">,
+    Group<grp_lld>;
 def thinlto_cache_policy_eq: Joined<["--"], "thinlto-cache-policy=">,
     HelpText<"Pruning policy for the ThinLTO cache">,
     Group<grp_lld>;

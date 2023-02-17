@@ -650,8 +650,6 @@ bool equivalent(file_status A, file_status B) {
   return A.FileIndexHigh == B.FileIndexHigh &&
          A.FileIndexLow == B.FileIndexLow && A.FileSizeHigh == B.FileSizeHigh &&
          A.FileSizeLow == B.FileSizeLow &&
-         A.LastAccessedTimeHigh == B.LastAccessedTimeHigh &&
-         A.LastAccessedTimeLow == B.LastAccessedTimeLow &&
          A.LastWriteTimeHigh == B.LastWriteTimeHigh &&
          A.LastWriteTimeLow == B.LastWriteTimeLow &&
          A.VolumeSerialNumber == B.VolumeSerialNumber;

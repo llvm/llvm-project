@@ -13,5 +13,12 @@ Check the same for a 64-bit input .obj.
 # RUN:          /defaultlib:std64 /entry:main
 
 Check that when /winsysroot is specified, %LIB% is ignored.
-# RUN: env LIB=foo.dir/sysroot/VC/Tools/MSVC/1.1.1.1/lib/x86 not lld-link %t.obj /winsysroot:%t.dir/doesnotexist /defaultlib:std32 2>&1 | FileCheck -check-prefix=LIBIGNORED %s
+# RUN: env LIB=%t.dir/sysroot/VC/Tools/MSVC/1.1.1.1/lib/x86 not lld-link %t.obj /winsysroot:%t.dir/doesnotexist /defaultlib:std32 2>&1 | FileCheck -check-prefix=LIBIGNORED %s
 LIBIGNORED: could not open 'std32.lib'
+
+Check that when -lldmingw is specified, %LIB% is ignored.
+# RUN: env LIB=%t.dir/sysroot/VC/Tools/MSVC/1.1.1.1/lib/x86 not lld-link -lldmingw %t.obj /defaultlib:std32 2>&1 | FileCheck -check-prefix=LIBIGNORED_MINGW %s
+LIBIGNORED_MINGW: could not open 'libstd32.a'
+
+# RUN: not lld-link -lldmingw %t.obj /defaultlib:std32 /winsysroot:%t.dir/sysroot 2>&1 | FileCheck -check-prefix=IGNORED_ARG %s
+IGNORED_ARG: warning: ignoring /vctoolsdir or /winsysroot flags in MinGW mode

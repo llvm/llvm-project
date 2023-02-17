@@ -25,7 +25,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_void : _BoolConstant<__is_void(_Tp)> { };
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_void_v = __is_void(_Tp);
 #endif
@@ -35,7 +35,7 @@ inline constexpr bool is_void_v = __is_void(_Tp);
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_void
     : public is_same<__remove_cv_t<_Tp>, void> {};
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_void_v = is_void<_Tp>::value;
 #endif

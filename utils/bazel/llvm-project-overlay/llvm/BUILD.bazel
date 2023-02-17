@@ -204,6 +204,7 @@ cc_library(
         "lib/Support/BLAKE3/blake3.c",
         "lib/Support/BLAKE3/blake3_dispatch.c",
         "lib/Support/BLAKE3/blake3_portable.c",
+        "lib/Support/BLAKE3/llvm_blake3_prefix.h",
     ] + select({
         "@platforms//cpu:aarch64": [
             "lib/Support/BLAKE3/blake3_neon.c",

@@ -31,6 +31,10 @@
 
 #include "CodeGenDAGPatterns.h"
 #include "CodeGenInstruction.h"
+#include "CodeGenIntrinsics.h"
+#include "CodeGenRegisters.h"
+#include "CodeGenTarget.h"
+#include "InfoByHwMode.h"
 #include "SubtargetFeatureInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CodeGenCoverage.h"

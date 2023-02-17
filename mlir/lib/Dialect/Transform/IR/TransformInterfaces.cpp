@@ -722,6 +722,8 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
 
       if (opResult.getType().isa<TransformParamTypeInterface>())
         results.setParams(opResult, {});
+      else if (opResult.getType().isa<TransformValueHandleTypeInterface>())
+        results.setValues(opResult, {});
       else
         results.set(opResult, {});
     }
@@ -831,7 +833,7 @@ void transform::TransformResults::setParams(
 void transform::TransformResults::setValues(OpResult handle,
                                             ValueRange values) {
   int64_t position = handle.getResultNumber();
-  assert(position < static_cast<int64_t>(values.size()) &&
+  assert(position < static_cast<int64_t>(this->values.size()) &&
          "setting values for a non-existent handle");
   assert(this->values[position].data() == nullptr && "values already set");
   assert(operations[position].data() == nullptr &&
@@ -861,8 +863,8 @@ transform::TransformResults::getParams(unsigned resultNumber) const {
 
 ArrayRef<Value>
 transform::TransformResults::getValues(unsigned resultNumber) const {
-  assert(resultNumber < params.size() &&
-         "querying params for a non-existent handle");
+  assert(resultNumber < values.size() &&
+         "querying values for a non-existent handle");
   assert(values[resultNumber].data() != nullptr &&
          "querying unset values (ops or params expected?)");
   return values[resultNumber];
