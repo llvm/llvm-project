@@ -311,21 +311,21 @@ func.func @execute_region() -> i64 {
   return %res : i64
 }
 
-// CHECK-LABEL: func.func @normalized_foreach_thread
-func.func @normalized_foreach_thread(%in: tensor<100xf32>, %out: tensor<100xf32>) {
+// CHECK-LABEL: func.func @normalized_forall
+func.func @normalized_forall(%in: tensor<100xf32>, %out: tensor<100xf32>) {
   %c1 = arith.constant 1 : index
   %num_threads = arith.constant 100 : index
 
-  //      CHECK:    scf.foreach_thread
+  //      CHECK:    scf.forall
   // CHECK-NEXT:  tensor.extract_slice
-  // CHECK-NEXT:  scf.foreach_thread.perform_concurrently
+  // CHECK-NEXT:  scf.forall.in_parallel
   // CHECK-NEXT:  tensor.parallel_insert_slice
   // CHECK-NEXT:  }
   // CHECK-NEXT:  }
   // CHECK-NEXT:  return
-  %result = scf.foreach_thread (%thread_idx) in (%num_threads) shared_outs(%o = %out) -> tensor<100xf32> {
+  %result = scf.forall (%thread_idx) in (%num_threads) shared_outs(%o = %out) -> tensor<100xf32> {
       %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
-      scf.foreach_thread.perform_concurrently {
+      scf.forall.in_parallel {
         tensor.parallel_insert_slice %1 into %o[%thread_idx][1][1] :
           tensor<1xf32> into tensor<100xf32>
       }
@@ -333,23 +333,23 @@ func.func @normalized_foreach_thread(%in: tensor<100xf32>, %out: tensor<100xf32>
   return
 }
 
-// CHECK-LABEL: func.func @explicit_loop_bounds_foreach_thread
-func.func @explicit_loop_bounds_foreach_thread(%in: tensor<100xf32>,
+// CHECK-LABEL: func.func @explicit_loop_bounds_forall
+func.func @explicit_loop_bounds_forall(%in: tensor<100xf32>,
     %out: tensor<100xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %num_threads = arith.constant 100 : index
 
-  //      CHECK:    scf.foreach_thread
+  //      CHECK:    scf.forall
   // CHECK-NEXT:  tensor.extract_slice
-  // CHECK-NEXT:  scf.foreach_thread.perform_concurrently
+  // CHECK-NEXT:  scf.forall.in_parallel
   // CHECK-NEXT:  tensor.parallel_insert_slice
   // CHECK-NEXT:  }
   // CHECK-NEXT:  }
   // CHECK-NEXT:  return
-  %result = scf.foreach_thread (%thread_idx) =  (%c0) to (%num_threads) step (%c1) shared_outs(%o = %out) -> tensor<100xf32> {
+  %result = scf.forall (%thread_idx) =  (%c0) to (%num_threads) step (%c1) shared_outs(%o = %out) -> tensor<100xf32> {
       %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
-      scf.foreach_thread.perform_concurrently {
+      scf.forall.in_parallel {
         tensor.parallel_insert_slice %1 into %o[%thread_idx][1][1] :
           tensor<1xf32> into tensor<100xf32>
       }
@@ -357,32 +357,32 @@ func.func @explicit_loop_bounds_foreach_thread(%in: tensor<100xf32>,
   return
 }
 
-// CHECK-LABEL: func.func @normalized_foreach_thread_elide_terminator
-func.func @normalized_foreach_thread_elide_terminator() -> () {
+// CHECK-LABEL: func.func @normalized_forall_elide_terminator
+func.func @normalized_forall_elide_terminator() -> () {
   %num_threads = arith.constant 100 : index
 
-  //      CHECK:    scf.foreach_thread
+  //      CHECK:    scf.forall
   // CHECK-NEXT:  } {mapping = [#gpu.thread<x>]}
   // CHECK-NEXT:  return
-  scf.foreach_thread (%thread_idx) in (%num_threads) {
-    scf.foreach_thread.perform_concurrently {
+  scf.forall (%thread_idx) in (%num_threads) {
+    scf.forall.in_parallel {
     }
   } {mapping = [#gpu.thread<x>]}
   return
 
 }
 
-// CHECK-LABEL: func.func @explicit_loop_bounds_foreach_thread_elide_terminator
-func.func @explicit_loop_bounds_foreach_thread_elide_terminator() -> () {
+// CHECK-LABEL: func.func @explicit_loop_bounds_forall_elide_terminator
+func.func @explicit_loop_bounds_forall_elide_terminator() -> () {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %num_threads = arith.constant 100 : index
 
-  //      CHECK:    scf.foreach_thread
+  //      CHECK:    scf.forall
   // CHECK-NEXT:  } {mapping = [#gpu.thread<x>]}
   // CHECK-NEXT:  return
-  scf.foreach_thread (%thread_idx) = (%c0) to (%num_threads) step (%c1) {
-    scf.foreach_thread.perform_concurrently {
+  scf.forall (%thread_idx) = (%c0) to (%num_threads) step (%c1) {
+    scf.forall.in_parallel {
     }
   } {mapping = [#gpu.thread<x>]}
   return

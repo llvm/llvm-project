@@ -28,11 +28,11 @@ func.func @extract_slice_static(%input: tensor<3x5x7x11xf32>) -> tensor<20x11xf3
 // FOREACH-DAG: %[[c5:.+]] = arith.constant 5 : index
 // FOREACH-DAG: %[[c7:.+]] = arith.constant 7 : index
 // FOREACH-DAG: %[[init:.+]] = tensor.empty() : tensor<20x11xf32>
-//     FOREACH: %[[tile:.+]] = scf.foreach_thread (%[[iv:.+]]) in (20) shared_outs(%[[dest:.+]] = %[[init]])
+//     FOREACH: %[[tile:.+]] = scf.forall (%[[iv:.+]]) in (20) shared_outs(%[[dest:.+]] = %[[init]])
 //     FOREACH:   %[[multiIndex:.+]]:3 = affine.delinearize_index %[[iv]] into (%[[c3]], %[[c5]], %[[c7]]
 //     FOREACH:   %[[slice:.+]] = tensor.extract_slice %[[arg0]][%[[multiIndex]]#0, %[[multiIndex]]#1, %[[multiIndex]]#2, 0] [1, 1, 1, 11] [1, 1, 1, 1] :
 //     FOREACH:   %[[sliceFlat:.+]] = tensor.collapse_shape %[[slice]] {{\[}}[0, 1, 2], [3]{{\]}} :
-//     FOREACH:   perform_concurrently
+//     FOREACH:   in_parallel
 // FOREACH-NEXT:   tensor.parallel_insert_slice %[[sliceFlat]] into %[[dest]][%[[iv]], 0] [1, 11] [1, 1] :
 //     FOREACH: return %[[tile]]
 
@@ -136,14 +136,14 @@ func.func @extract_slice_dynamic_multidim(%input: tensor<3x?x?x11x?xf32>, %offt0
 // FOREACH-DAG:     %[[d1:.+]] = tensor.dim %[[arg0]], %[[c1]] :
 // FOREACH-DAG:     %[[d2:.+]] = tensor.dim %[[arg0]], %[[c2]] :
 // FOREACH-DAG:     %[[d4:.+]] = tensor.dim %[[arg0]], %[[c4]] :
-//     FOREACH:     %[[tile1:.+]] = scf.foreach_thread (%[[tid1:.+]], %[[tid2:.+]]) in (%[[sz1]], %[[sz2]]) shared_outs(%[[dest:.+]] = %[[init]])
+//     FOREACH:     %[[tile1:.+]] = scf.forall (%[[tid1:.+]], %[[tid2:.+]]) in (%[[sz1]], %[[sz2]]) shared_outs(%[[dest:.+]] = %[[init]])
 // FOREACH-DAG:       %[[iv1:.+]] = affine.apply #[[map1]](%[[tid1]])[%[[lb1]]]
 //     FOREACH:       %[[multiIndex1:.+]]:3 = affine.delinearize_index %[[iv1]] into (%[[c3]], %[[d1]], %[[d2]]) :
 // FOREACH-DAG:       %[[iv2:.+]] = affine.apply #[[map1]](%[[tid2]])[%[[lb2]]]
 //     FOREACH:       %[[multiIndex2:.+]]:2 = affine.delinearize_index %[[iv2]] into (%[[c11]], %[[d4]]) :
 //     FOREACH:       %[[slice:.+]] = tensor.extract_slice %[[arg0]][%[[multiIndex1]]#0, %[[multiIndex1]]#1, %[[multiIndex1]]#2, %[[multiIndex2]]#0, %[[multiIndex2]]#1] [1, 1, 1, 1, 1] [1, 1, 1, 1, 1] :
 //     FOREACH:       %[[sliceFlat:.+]] = tensor.collapse_shape %[[slice]] {{\[}}[0, 1, 2], [3, 4]{{\]}} :
-//     FOREACH:       perform_concurrently
+//     FOREACH:       in_parallel
 //FOREACH-NEXT:         tensor.parallel_insert_slice %[[sliceFlat]] into %[[dest]][%[[tid1]], %[[tid2]]] [1, 1] [1, 1] :
 
 // -----

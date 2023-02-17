@@ -196,10 +196,10 @@ func.func @rank_reducing_parallel_insert_slice(%in: tensor<100xf32>, %out: tenso
   %c1 = arith.constant 1 : index
   %num_threads = arith.constant 100 : index
 
-  // CHECK: scf.foreach_thread {{.*}} {
-  %result = scf.foreach_thread (%thread_idx) in (%num_threads) shared_outs (%o = %out) -> tensor<200x100xf32> {
+  // CHECK: scf.forall {{.*}} {
+  %result = scf.forall (%thread_idx) in (%num_threads) shared_outs (%o = %out) -> tensor<200x100xf32> {
       %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
-      scf.foreach_thread.perform_concurrently {
+      scf.forall.in_parallel {
         // CHECK: memref.subview %{{.*}}[%{{.*}}] [1] [1] : memref<100xf32, strided<[?], offset: ?>> to memref<1xf32, strided<[?], offset: ?>>
         // CHECK: memref.subview %{{.*}}[1, %{{.*}}] [1, 1] [1, 1] : memref<200x100xf32, strided<[?, ?], offset: ?>> to memref<1xf32, strided<[?], offset: ?>>
         tensor.parallel_insert_slice %1 into %o[1, %thread_idx][1, 1][1, 1] :

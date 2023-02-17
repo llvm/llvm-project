@@ -82,7 +82,7 @@ struct TestTensorTransforms
   Option<bool> useForeach{
       *this, "use-foreach",
       llvm::cl::desc(
-          "Use the scf.foreach_thread operation when generating loop nests for "
+          "Use the scf.forall operation when generating loop nests for "
           "the extract_slice of collapse_shape pattern"),
       llvm::cl::init(false)};
 
@@ -247,7 +247,7 @@ struct RewriteExtractSliceFromCollapseShapeUsingScfForeach
                                 tensor::ExtractSliceFromCollapseHelper &helper,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    auto foreachThreadOp = rewriter.create<scf::ForeachThreadOp>(
+    auto forallOp = rewriter.create<scf::ForallOp>(
         loc, /*numThreads=*/getAsOpFoldResult(helper.getIterationSpaceSizes()),
         /*outputs=*/dest,
         /*mapping=*/std::nullopt,
@@ -263,12 +263,12 @@ struct RewriteExtractSliceFromCollapseShapeUsingScfForeach
           auto [tile, insertParams] =
               helper.emitLoopNestBody(nestedBuilder, loc, outputIvs);
           // Insert the slice into the destination.
-          auto term = nestedBuilder.create<scf::PerformConcurrentlyOp>(loc);
+          auto term = nestedBuilder.create<scf::InParallelOp>(loc);
           nestedBuilder.setInsertionPointToStart(term.getBody());
           nestedBuilder.create<tensor::ParallelInsertSliceOp>(
               loc, tile, outputArgs[0], insertParams);
         });
-    rewriter.replaceOp(op, foreachThreadOp->getResult(0));
+    rewriter.replaceOp(op, forallOp->getResult(0));
     return success();
   }
 };

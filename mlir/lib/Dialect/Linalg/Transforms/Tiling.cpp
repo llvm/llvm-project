@@ -244,16 +244,16 @@ static OpFoldResult buildMin(OpBuilder &b, Location loc,
 /// Fill out the `tiledOffsets` and `tiledSizes` to be used to tile to a given
 /// number of threads.
 static void calculateTileOffsetsAndSizes(
-    RewriterBase &b, Location loc, scf::ForeachThreadOp foreachThreadOp,
+    RewriterBase &b, Location loc, scf::ForallOp forallOp,
     ArrayRef<OpFoldResult> numThreads, SmallVector<Range> loopRanges,
     bool omitTileOffsetBoundsCheck,
     std::optional<ArrayRef<OpFoldResult>> nominalTileSizes,
     SmallVector<OpFoldResult> &tiledOffsets,
     SmallVector<OpFoldResult> &tiledSizes) {
   OpBuilder::InsertionGuard g(b);
-  b.setInsertionPointToStart(foreachThreadOp.getBody(0));
+  b.setInsertionPointToStart(forallOp.getBody(0));
 
-  ValueRange threadIds = foreachThreadOp.getInductionVars();
+  ValueRange threadIds = forallOp.getInductionVars();
   SmallVector<OpFoldResult> nonZeroNumThreads =
       llvm::to_vector(llvm::make_filter_range(numThreads, [](OpFoldResult ofr) {
         return !isConstantIntValue(ofr, 0);
@@ -314,19 +314,19 @@ static void calculateTileOffsetsAndSizes(
   }
 }
 
-/// Rewrite a TilingInterface `op` to a tiled `scf.foreach_thread`. The
+/// Rewrite a TilingInterface `op` to a tiled `scf.forall`. The
 /// tiling is specified by the number of tiles/threads `numThreads` and the
 /// optional nominal tile size `nominalTileSizes`. If `nominalTilSizes` is
 /// not specified, then  it is derived from `numThreads` as `ceilDiv(dimSize[i],
 /// numThreads[i])`. If non-empty, the `mapping` is added as an
-/// attribute to the resulting `scf.foreach_thread`. A zero tile sizes indicate
+/// attribute to the resulting `scf.forall`. A zero tile sizes indicate
 /// that the dimension is not tiled, and can be thought of as tiling by the full
 /// size of data.
 /// It is the user's responsibility to ensure that `numThreads` is a valid
 /// tiling specification (i.e. that only tiles parallel dimensions, e.g. in the
 /// Linalg case). If `omitTileOffsetBoundsCheck` is true, then the function will
 /// assume that `tileSize[i] * (numThread[i] -1) <= dimSize[i]` holds.
-static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
+static FailureOr<ForallTilingResult> tileToForallOpImpl(
     RewriterBase &b, TilingInterface op, ArrayRef<OpFoldResult> numThreads,
     std::optional<ArrayRef<OpFoldResult>> nominalTileSizes,
     std::optional<ArrayAttr> mapping, bool omitTileOffsetBoundsCheck) {
@@ -356,26 +356,25 @@ static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
 
   Operation *tiledOp = nullptr;
 
-  // 1. Create the ForeachThreadOp. We don't use the lambda body-builder
+  // 1. Create the ForallOp. We don't use the lambda body-builder
   // version because we require the use of RewriterBase in the body, so we
   // manually move the insertion point to the body below.
-  scf::ForeachThreadOp foreachThreadOp = b.create<scf::ForeachThreadOp>(
+  scf::ForallOp forallOp = b.create<scf::ForallOp>(
       loc, getAsOpFoldResult((materializedNonZeroNumThreads)), dest, mapping);
 
-  // 2. Fill out the ForeachThreadOp body.
+  // 2. Fill out the ForallOp body.
   SmallVector<OpFoldResult> tiledOffsets, tiledSizes;
-  calculateTileOffsetsAndSizes(b, loc, foreachThreadOp, numThreads, loopRanges,
+  calculateTileOffsetsAndSizes(b, loc, forallOp, numThreads, loopRanges,
                                omitTileOffsetBoundsCheck, nominalTileSizes,
                                tiledOffsets, tiledSizes);
 
   // 3. Clone the tileable op and update its destination operands to use the
-  // output bbArgs of the ForeachThreadOp.
-  ArrayRef<BlockArgument> destBbArgs =
-      foreachThreadOp.getOutputBlockArguments();
+  // output bbArgs of the ForallOp.
+  ArrayRef<BlockArgument> destBbArgs = forallOp.getOutputBlockArguments();
   {
-    // 3.a. RAII guard, inserting within foreachThreadOp, before terminator.
+    // 3.a. RAII guard, inserting within forallOp, before terminator.
     OpBuilder::InsertionGuard g(b);
-    b.setInsertionPoint(foreachThreadOp.getTerminator());
+    b.setInsertionPoint(forallOp.getTerminator());
     Operation *clonedOp = b.clone(*op.getOperation());
     auto destinationStyleOp = dyn_cast<DestinationStyleOpInterface>(clonedOp);
     if (destinationStyleOp) {
@@ -404,7 +403,7 @@ static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
                            tilingInterfaceOp->getResults(), destBbArgs)) {
     // 5.a. Partial subset information is inserted just before the terminator.
     OpBuilder::InsertionGuard g(b);
-    b.setInsertionPoint(foreachThreadOp.getTerminator());
+    b.setInsertionPoint(forallOp.getTerminator());
 
     SmallVector<OpFoldResult> resultOffsets, resultSizes;
     if (failed(op.getResultTilePosition(b, std::get<0>(it), tiledOffsets,
@@ -415,27 +414,27 @@ static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
 
     // 5.b. Parallel insertions are inserted at the end of the combining
     // terminator.
-    b.setInsertionPointToEnd(foreachThreadOp.getTerminator().getBody());
+    b.setInsertionPointToEnd(forallOp.getTerminator().getBody());
     b.create<tensor::ParallelInsertSliceOp>(loc, std::get<1>(it),
                                             std::get<2>(it), resultOffsets,
                                             resultSizes, strides);
   }
-  return ForeachThreadTilingResult{foreachThreadOp, tiledOp};
+  return ForallTilingResult{forallOp, tiledOp};
 }
 
-FailureOr<ForeachThreadTilingResult>
-linalg::tileToForeachThreadOp(RewriterBase &b, TilingInterface op,
-                              ArrayRef<OpFoldResult> numThreads,
-                              std::optional<ArrayAttr> mapping) {
-  return tileToForeachThreadOpImpl(b, op, numThreads,
-                                   /*nominalTileSizes=*/std::nullopt, mapping,
-                                   /*omitTileOffsetBoundsCheck=*/false);
+FailureOr<ForallTilingResult>
+linalg::tileToForallOp(RewriterBase &b, TilingInterface op,
+                       ArrayRef<OpFoldResult> numThreads,
+                       std::optional<ArrayAttr> mapping) {
+  return tileToForallOpImpl(b, op, numThreads,
+                            /*nominalTileSizes=*/std::nullopt, mapping,
+                            /*omitTileOffsetBoundsCheck=*/false);
 }
 
-FailureOr<ForeachThreadTilingResult>
-linalg::tileToForeachThreadOpUsingTileSizes(RewriterBase &b, TilingInterface op,
-                                            ArrayRef<OpFoldResult> tileSizes,
-                                            std::optional<ArrayAttr> mapping) {
+FailureOr<ForallTilingResult>
+linalg::tileToForallOpUsingTileSizes(RewriterBase &b, TilingInterface op,
+                                     ArrayRef<OpFoldResult> tileSizes,
+                                     std::optional<ArrayAttr> mapping) {
   SmallVector<Range> loopRanges = op.getIterationDomain(b);
   unsigned nLoops = loopRanges.size();
   SmallVector<OpFoldResult> numThreads;
@@ -450,9 +449,9 @@ linalg::tileToForeachThreadOpUsingTileSizes(RewriterBase &b, TilingInterface op,
           b, op.getLoc(), divExpr, {std::get<1>(it).size, std::get<0>(it)});
     numThreads.push_back(numTiles);
   }
-  return tileToForeachThreadOpImpl(b, op, numThreads,
-                                   /*nominalTileSizes=*/tileSizes, mapping,
-                                   /*omitTileOffsetBoundsCheck=*/true);
+  return tileToForallOpImpl(b, op, numThreads,
+                            /*nominalTileSizes=*/tileSizes, mapping,
+                            /*omitTileOffsetBoundsCheck=*/true);
 }
 
 template <typename LoopTy>
@@ -608,12 +607,10 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
       res, loops, outermostLoop ? outermostLoop->getResults() : tensorResults};
 }
 
-FailureOr<linalg::ForeachThreadReductionTilingResult>
-linalg::tileReductionUsingForeachThread(RewriterBase &b,
-                                        PartialReductionOpInterface op,
-                                        ArrayRef<OpFoldResult> numThreads,
-                                        ArrayRef<OpFoldResult> tileSizes,
-                                        std::optional<ArrayAttr> mapping) {
+FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
+    RewriterBase &b, PartialReductionOpInterface op,
+    ArrayRef<OpFoldResult> numThreads, ArrayRef<OpFoldResult> tileSizes,
+    std::optional<ArrayAttr> mapping) {
   Location loc = op.getLoc();
   OpBuilder::InsertionGuard g(b);
 
@@ -679,28 +676,27 @@ linalg::tileReductionUsingForeachThread(RewriterBase &b,
   SmallVector<Value> materializedNonZeroNumThreads =
       getAsValues(b, loc, nonZeroNumThreads);
 
-  // 2. Create the ForeachThreadOp with an empty region.
-  scf::ForeachThreadOp foreachThreadOp = b.create<scf::ForeachThreadOp>(
+  // 2. Create the ForallOp with an empty region.
+  scf::ForallOp forallOp = b.create<scf::ForallOp>(
       loc, getAsOpFoldResult(materializedNonZeroNumThreads),
       (*identityTensor)->getResults(), mapping);
 
   // 3. Calculate the tile offsets and sizes for the subsequent loop that will
-  // be nested under `foreachThreadOp`.
+  // be nested under `forallOp`.
   SmallVector<OpFoldResult> tiledOffsets, tiledSizes;
-  calculateTileOffsetsAndSizes(
-      b, loc, foreachThreadOp, numThreads, iterationDomain,
-      /*omitTileOffsetBoundsCheck =*/false,
-      /*nominalTileSizes=*/std::nullopt, tiledOffsets, tiledSizes);
+  calculateTileOffsetsAndSizes(b, loc, forallOp, numThreads, iterationDomain,
+                               /*omitTileOffsetBoundsCheck =*/false,
+                               /*nominalTileSizes=*/std::nullopt, tiledOffsets,
+                               tiledSizes);
 
   // 4. Clone the tileable op and update its destination operands to use the
-  // output bbArgs of the ForeachThreadOp.
+  // output bbArgs of the ForallOp.
   ValueRange tilingResults;
-  ArrayRef<BlockArgument> destBbArgs =
-      foreachThreadOp.getOutputBlockArguments();
+  ArrayRef<BlockArgument> destBbArgs = forallOp.getOutputBlockArguments();
   {
-    // 4.a. RAII guard, inserting within foreachThreadOp, before terminator.
+    // 4.a. RAII guard, inserting within forallOp, before terminator.
     OpBuilder::InsertionGuard g(b);
-    b.setInsertionPoint(foreachThreadOp.getTerminator());
+    b.setInsertionPoint(forallOp.getTerminator());
 
     SmallVector<Value> tiledDpsInitOperands;
     for (OpOperand *initOperand : destinationStyleOp.getDpsInitOperands()) {
@@ -712,7 +708,7 @@ linalg::tileReductionUsingForeachThread(RewriterBase &b,
                                            b.getIndexAttr(0));
       SmallVector<OpFoldResult> sizes = tiledSizes;
       sizes[reductionDim] = b.getIndexAttr(1);
-      outOffsets[reductionDim] = foreachThreadOp.getInductionVars().front();
+      outOffsets[reductionDim] = forallOp.getInductionVars().front();
       // TODO: use SubsetExtractOpInterface once it is available.
       tiledDpsInitOperands.push_back(b.create<tensor::ExtractSliceOp>(
           loc, initOperand->get().getType().cast<RankedTensorType>(),
@@ -746,7 +742,7 @@ linalg::tileReductionUsingForeachThread(RewriterBase &b,
       if (failed(maybeTiled))
         return b.notifyMatchFailure(op, "failed tileLinalgOpImpl");
 
-      SmallVector<Value> ids = foreachThreadOp.getInductionVars();
+      SmallVector<Value> ids = forallOp.getInductionVars();
       mapLoopToProcessorIds(cast<scf::ForOp>(maybeTiled->loops.back()), ids,
                             materializedNonZeroNumThreads);
       assert(maybeTiled->loops.size() == 1 &&
@@ -763,7 +759,7 @@ linalg::tileReductionUsingForeachThread(RewriterBase &b,
            llvm::seq<unsigned>(0, dest.size()), tilingResults, destBbArgs)) {
     // 6.a. Partial subset information is inserted just before the terminator.
     OpBuilder::InsertionGuard g(b);
-    b.setInsertionPoint(foreachThreadOp.getTerminator());
+    b.setInsertionPoint(forallOp.getTerminator());
 
     SmallVector<OpFoldResult> resultOffsets, resultSizes;
     if (failed(tilingInterfaceOp.getResultTilePosition(
@@ -774,7 +770,7 @@ linalg::tileReductionUsingForeachThread(RewriterBase &b,
     int64_t sizeIdx = 0;
     for (int64_t i = 0, e = numThreads.size(); i < e; ++i) {
       if (i == reductionDim) {
-        resultOffsetsRank.push_back(foreachThreadOp.getInductionVars().front());
+        resultOffsetsRank.push_back(forallOp.getInductionVars().front());
         resultSizesRank.push_back(b.getIndexAttr(1));
         continue;
       }
@@ -786,21 +782,21 @@ linalg::tileReductionUsingForeachThread(RewriterBase &b,
 
     // 6.b. Parallel insertions are inserted at the end of the combining
     // terminator.
-    b.setInsertionPointToEnd(foreachThreadOp.getTerminator().getBody());
+    b.setInsertionPointToEnd(forallOp.getTerminator().getBody());
     b.create<tensor::ParallelInsertSliceOp>(
         loc, result, bbArg, resultOffsetsRank, resultSizesRank, strides);
   }
 
   // 7. Merge the partial reductions.
-  b.setInsertionPointAfter(foreachThreadOp);
+  b.setInsertionPointAfter(forallOp);
   Operation *mergeOp =
-      op.mergeReductions(b, loc, foreachThreadOp->getResults(), reductionDim);
+      op.mergeReductions(b, loc, forallOp->getResults(), reductionDim);
   b.replaceOp(op, mergeOp->getResults());
 
   // 8. Return.
-  ForeachThreadReductionTilingResult results;
+  ForallReductionTilingResult results;
   results.initialOp = *identityTensor;
-  results.loops = foreachThreadOp;
+  results.loops = forallOp;
   results.parallelTiledOp = tiledOp;
   results.mergeOp = mergeOp;
   return results;

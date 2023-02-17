@@ -22,30 +22,30 @@ def MapNestedForeachToThreads :
      TransformEachOpTrait,
      TransformOpInterface]> {
   let description = [{
-      Target the `gpu.launch op` and rewrite all `scf.foreach_thread`
+      Target the `gpu.launch op` and rewrite all `scf.forall`
       nested in it to distributed `gpu.thread_id` attribute.
 
-      The operation searches for `scf.foreach_thread` ops nested under `target`
+      The operation searches for `scf.forall` ops nested under `target`
       and maps each such op to GPU threads. Mapping is one-to-one and the
-      induction variables of `scf.foreach_thread` are rewritten to
+      induction variables of `scf.forall` are rewritten to
       `gpu.thread_id` according to the `mapping` attribute.
 
-      Sibling `scf.foreach_thread` are supported in which case, the union of
+      Sibling `scf.forall` are supported in which case, the union of
       the number of threads is computed and may result in predication.
 
-      Multiple scf.foreach_thread are supported per `gpu.launch` in which case,
+      Multiple scf.forall are supported per `gpu.launch` in which case,
       the max of all the threads is computed and taken for the global
-      `gpu.thread_id`. If necessary, `scf.foreach_thread` that do not use the
+      `gpu.thread_id`. If necessary, `scf.forall` that do not use the
       whole thread range result in predicated computations.
 
-      Dynamic `scf.foreach_thread` trip counts are currently not supported.
+      Dynamic `scf.forall` trip counts are currently not supported.
       Dynamic block dim sizes are currently not supported.
 
-      Only **bufferized** `scf.foreach_thread` are currently supported.
-      Only `scf.foreach_thread` distributed to **at most 3 dimensions** are
+      Only **bufferized** `scf.forall` are currently supported.
+      Only `scf.forall` distributed to **at most 3 dimensions** are
       currently supported.
 
-      Barriers are inserted after each scf.foreach_thread op for now.
+      Barriers are inserted after each scf.forall op for now.
 
       The operation alters the block size of the given gpu_launch using
       blockDim argument.
@@ -54,15 +54,15 @@ def MapNestedForeachToThreads :
 
       This operation ignores non-gpu_launch ops and drops them in the return.
 
-      If any scf.foreach_thread with tensors is found, the transform definitely
+      If any scf.forall with tensors is found, the transform definitely
       fails.
 
-      If all the scf.foreach_thread operations with gpu.thread mapping contained
+      If all the scf.forall operations with gpu.thread mapping contained
       within the LaunchOp referred to by the `target` PDLOperation lower to GPU
       properly, the transform succeeds. Otherwise the transform definitely
       fails.
 
-      scf.foreach_thread operations with mappings other than gpu.thread are
+      scf.forall operations with mappings other than gpu.thread are
       ignored.
 
       The returned handle points to the same LaunchOp operand, consuming it and
@@ -74,10 +74,10 @@ def MapNestedForeachToThreads :
       ```
       gpu.launch blocks(%bx, %by, %bz) in (%x = %0, %y = %1, %z = %2)
                  threads(%tx, %ty, %tz) in (%tx = %3, %ty = %4, %tz = %5) {
-        scf.foreach_thread (%i, %j) in (7, 9) {
+        scf.forall (%i, %j) in (7, 9) {
           ... // body 1
         } {mapping = [#gpu.thread<x>, #gpu.thread<y>, #gpu.thread<z>]}
-        scf.foreach_thread (%i) in (12) {
+        scf.forall (%i) in (12) {
           ... // body 2
         } {mapping = [#gpu.thread<x>]}
         gpu.terminator
@@ -125,21 +125,21 @@ def MapForeachToBlocks :
      TransformOpInterface,
      TransformEachOpTrait]> {
   let description = [{
-    Target the gpu_launch op and rewrite the top level `scf.foreach_thread`
+    Target the gpu_launch op and rewrite the top level `scf.forall`
     to distributed gpu.block_id attribute. If `generate_gpu_launch` attribute
     is set, then first generates `gpu_launch` and moves the top level
-    `scf.foreach_thread` inside.
+    `scf.forall` inside.
 
-    The operation searches top level `scf.foreach_thread` ops under
+    The operation searches top level `scf.forall` ops under
     `gpu_launch` and maps each such op to GPU blocks. Mapping is
-    one-to-one and the induction variables of `scf.foreach_thread` are
+    one-to-one and the induction variables of `scf.forall` are
     rewritten to gpu.block_id according to the `thread_dim_mapping` attribute.
 
-    Dynamic, `scf.foreach_thread` trip counts are currently not supported.
+    Dynamic, `scf.forall` trip counts are currently not supported.
     Dynamic block dim sizes are currently not supported.
 
-    Only **bufferized** scf.foreach_thread are currently supported.
-    Only scf.foreach_thread distributed to **at most 3 dimensions** are
+    Only **bufferized** scf.forall are currently supported.
+    Only scf.forall distributed to **at most 3 dimensions** are
     currently supported.
 
     The operation alters the block size of the given gpu_launch using
@@ -149,10 +149,10 @@ def MapForeachToBlocks :
 
     This operation ignores non-gpu_launch ops and drops them in the return.
 
-    If any scf.foreach_thread with tensors is found, the transform definitely
+    If any scf.forall with tensors is found, the transform definitely
     fails.
 
-    If all the scf.foreach_thread operations contained within the LaunchOp
+    If all the scf.forall operations contained within the LaunchOp
     referred to by the `target` PDLOperation lower to GPU properly, the
     transform succeeds. Otherwise the transform definitely fails.
 

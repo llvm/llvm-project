@@ -30,7 +30,7 @@ def DeviceMappingAttrInterface : AttrInterface<"DeviceMappingAttrInterface"> {
     can be used by the device-specific code generators and the desired regions
     can be connected to the given processing unit.
 
-    Currently, `scf.foreach_thread` uses this interface to express the mapping
+    Currently, `scf.forall` uses this interface to express the mapping
     of the loops it contains to the GPU's parallelism units such as threads and
     thread blocks.
   }];

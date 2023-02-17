@@ -348,18 +348,18 @@ def ForOp : SCF_Op<"for",
 }
 
 //===----------------------------------------------------------------------===//
-// ForeachThreadOp
+// ForallOp
 //===----------------------------------------------------------------------===//
 
-def ForeachThreadOp : SCF_Op<"foreach_thread", [
+def ForallOp : SCF_Op<"forall", [
        AttrSizedOperandSegments,
        AutomaticAllocationScope,
        RecursiveMemoryEffects,
-       SingleBlockImplicitTerminator<"scf::PerformConcurrentlyOp">,
+       SingleBlockImplicitTerminator<"scf::InParallelOp">,
      ]> {
   let summary = "evaluate a block multiple times in parallel";
   let description = [{
-    `scf.foreach_thread` is a target-independent multi-dimensional parallel
+    `scf.forall` is a target-independent multi-dimensional parallel
     region application operation. It has exactly one block that represents the
     parallel body and it takes index operands that specify lower bounds, upper
     bounds and steps.
@@ -389,22 +389,22 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     the op is lowered to, or to ignore it when the specification is ill-formed
     or unsupported for a particular target.
 
-    The only allowed terminator is `scf.foreach_thread.perform_concurrently`.
-    `scf.foreach_thread` returns one value per `shared_out` operand. The
-    actions of the `perform_concurrently` terminators specify how to combine the
+    The only allowed terminator is `scf.forall.in_parallel`.
+    `scf.forall` returns one value per `shared_out` operand. The
+    actions of the `in_parallel` terminators specify how to combine the
     partial results of all parallel invocations into a full value, in some
     unspecified order. The "destination" of each such op must be a `shared_out`
-    block argument of the `scf.foreach_thread` op.
+    block argument of the `scf.forall` op.
 
     The actions involved in constructing the return values are further described
     by `tensor.parallel_insert_slice`.
 
-    `scf.foreach_thread` acts as an implicit synchronization point.
+    `scf.forall` acts as an implicit synchronization point.
 
     When the parallel function body has side effects, their order is unspecified
     across threads.
 
-    `scf.foreach_thread` can be printed in two different ways depending on
+    `scf.forall` can be printed in two different ways depending on
     whether the loop is normalized or not. The loop is 'normalized' when all
     lower bounds are equal to zero and steps are equal to one. In that case,
     `lowerBound` and `step` operands will be omitted during printing.
@@ -415,7 +415,7 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     //
     // Sequential context.
     //
-    %matmul_and_pointwise:2 = scf.foreach_thread (%thread_id_1, %thread_id_2) in
+    %matmul_and_pointwise:2 = scf.forall (%thread_id_1, %thread_id_2) in
         (%num_threads_1, %numthread_id_2) shared_outs(%o1 = %C, %o2 = %pointwise)
       -> (tensor<?x?xT>, tensor<?xT>) {
       //
@@ -434,11 +434,11 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
         tensor<?xT> to tensor<?xT>
       %sE = add ins(%spointwise) outs(%sD)
 
-      scf.foreach_thread.perform_concurrently {
-        scf.foreach_thread.parallel_insert_slice %sD into %o1[h((%thread_id_1, %thread_id_2))]:
+      scf.forall.in_parallel {
+        scf.forall.parallel_insert_slice %sD into %o1[h((%thread_id_1, %thread_id_2))]:
           tensor<?x?xT> into tensor<?x?xT>
 
-        scf.foreach_thread.parallel_insert_slice %spointwise into %o2[i((%thread_id_1, %thread_id_2))]:
+        scf.forall.parallel_insert_slice %spointwise into %o2[i((%thread_id_1, %thread_id_2))]:
           tensor<?xT> into tensor<?xT>
       }
     }
@@ -453,7 +453,7 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     //
     // Sequential context.
     //
-    %pointwise = scf.foreach_thread (%i, %j) = (0, 0) to (%dim1, %dim2)
+    %pointwise = scf.forall (%i, %j) = (0, 0) to (%dim1, %dim2)
       step (%tileSize1, %tileSize2) shared_outs(%o1 = %out)
       -> (tensor<?x?xT>, tensor<?xT>) {
       //
@@ -468,8 +468,8 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
 
       %add = map {"arith.addf"} ins(%sA, %sB) outs(%sC)
 
-      scf.foreach_thread.perform_concurrently {
-        scf.foreach_thread.parallel_insert_slice %add into
+      scf.forall.in_parallel {
+        scf.forall.parallel_insert_slice %add into
           %o[%i, %j][%tileSize1, %tileSize2][1, 1]
           : tensor<?x?xT> into tensor<?x?xT>
       }
@@ -486,14 +486,14 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     // Sequential context. Here `mapping` is expressed as GPU thread mapping
     // attributes
     //
-    %matmul_and_pointwise:2 = scf.foreach_thread (%thread_id_1, %thread_id_2) in
+    %matmul_and_pointwise:2 = scf.forall (%thread_id_1, %thread_id_2) in
         (%num_threads_1, %numthread_id_2) shared_outs(...)
       -> (tensor<?x?xT>, tensor<?xT>) {
       //
       // Parallel context, each thread with id = **(%thread_id_2, %thread_id_1)**
       // runs its version of the code.
       //
-       scf.foreach_thread.perform_concurrently {
+       scf.forall.in_parallel {
          ...
       }
     } { mapping = [#gpu.thread<y>, #gpu.thread<x>] }
@@ -507,9 +507,9 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     ```mlir
     %t0 = ...
     %t1 = ...
-    %r = scf.foreach_thread ... shared_outs(%o = t0) -> tensor<?xf32> {
+    %r = scf.forall ... shared_outs(%o = t0) -> tensor<?xf32> {
       // %t0 and %t1 are privatized. %t0 is definitely copied for each thread
-      // because the scf.foreach_thread op's %t0 use bufferizes to a memory
+      // because the scf.forall op's %t0 use bufferizes to a memory
       // write. In the absence of other conflicts, %t1 is copied only if there
       // are uses of %t1 in the body that bufferize to a memory read and to a
       // memory write.
@@ -661,28 +661,28 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     static void ensureTerminator(Region & region, OpBuilder & builder,
                                  Location loc);
 
-    PerformConcurrentlyOp getTerminator();
+    InParallelOp getTerminator();
   }];
 }
 
 //===----------------------------------------------------------------------===//
-// PerformConcurrentlyOp
+// InParallelOp
 //===----------------------------------------------------------------------===//
 
-def PerformConcurrentlyOp : SCF_Op<"foreach_thread.perform_concurrently", [
+def InParallelOp : SCF_Op<"forall.in_parallel", [
        Pure,
        Terminator,
        DeclareOpInterfaceMethods<ParallelCombiningOpInterface>,
-       HasParent<"ForeachThreadOp">,
+       HasParent<"ForallOp">,
       ] # GraphRegionNoTerminator.traits> {
-  let summary = "terminates a `foreach_thread` block";
+  let summary = "terminates a `forall` block";
   let description = [{
-    `scf.foreach_thread.perform_concurrently` is a designated terminator for
-    the `scf.foreach_thread` operation.
+    `scf.forall.in_parallel` is a designated terminator for
+    the `scf.forall` operation.
 
     It has a single region with a single block that contains a flat list of ops.
     Each such op participates in the aggregate formation of a single result of
-    the enclosing `scf.foreach_thread`.
+    the enclosing `scf.forall`.
     The result number corresponds to the position of the op in the terminator.
   }];
 
@@ -697,8 +697,8 @@ def PerformConcurrentlyOp : SCF_Op<"foreach_thread.perform_concurrently", [
     OpBuilder<(ins)>,
   ];
 
-  // TODO: Add a `PerformConcurrentlyOpInterface` interface for ops that can
-  // appear inside perform_concurrently.
+  // TODO: Add a `InParallelOpInterface` interface for ops that can
+  // appear inside in_parallel.
   let extraClassDeclaration = [{
     ::llvm::SmallVector<::mlir::BlockArgument> getDests();
     ::llvm::iterator_range<::mlir::Block::iterator> getYieldingOps();
