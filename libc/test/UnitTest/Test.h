@@ -9,8 +9,10 @@
 #ifndef LLVM_LIBC_UTILS_UNITTEST_TEST_H
 #define LLVM_LIBC_UTILS_UNITTEST_TEST_H
 
-#ifdef LLVM_LIBC_TEST_USE_FUCHSIA
+#ifdef LIBC_COPT_TEST_USE_FUCHSIA
 #include "FuchsiaTest.h"
+#elif defined(LIBC_COPT_TEST_USE_PIGWEED)
+#include "PigweedTest.h"
 #else
 #include "LibcTest.h"
 #endif

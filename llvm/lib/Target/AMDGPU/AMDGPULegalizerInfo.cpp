@@ -1580,7 +1580,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         const LLT &EltTy = Ty.getElementType();
         if (EltTy.getSizeInBits() < 8 || EltTy.getSizeInBits() > 512)
           return true;
-        if (!isPowerOf2_32(EltTy.getSizeInBits()))
+        if (!llvm::has_single_bit<uint32_t>(EltTy.getSizeInBits()))
           return true;
       }
       return false;
@@ -1628,8 +1628,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     Builder.widenScalarIf(
       [=](const LegalityQuery &Query) {
         const LLT Ty = Query.Types[BigTyIdx];
-        return !isPowerOf2_32(Ty.getSizeInBits()) &&
-          Ty.getSizeInBits() % 16 != 0;
+        return !llvm::has_single_bit<uint32_t>(Ty.getSizeInBits()) &&
+               Ty.getSizeInBits() % 16 != 0;
       },
       [=](const LegalityQuery &Query) {
         // Pick the next power of 2, or a multiple of 64 over 128.

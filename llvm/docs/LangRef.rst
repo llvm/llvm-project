@@ -3284,15 +3284,17 @@ seq\_cst total orderings of other operations that are not marked
 Floating-Point Environment
 --------------------------
 
-The default LLVM floating-point environment assumes that floating-point
-instructions do not have side effects. Results assume the round-to-nearest
-rounding mode. No floating-point exception state is maintained in this
-environment. Therefore, there is no attempt to create or preserve invalid
-operation (SNaN) or division-by-zero exceptions.
+The default LLVM floating-point environment assumes that traps are disabled and
+status flags are not observable. Therefore, floating-point math operations do
+not have side effects and may be speculated freely. Results assume the
+round-to-nearest rounding mode.
 
-The benefit of this exception-free assumption is that floating-point
-operations may be speculated freely without any other fast-math relaxations
-to the floating-point model.
+Floating-point math operations are allowed to treat all NaNs as if they were
+quiet NaNs. For example, "pow(1.0, SNaN)" may be simplified to 1.0. This also
+means that SNaN may be passed through a math operation without quieting. For
+example, "fmul SNaN, 1.0" may be simplified to SNaN rather than QNaN. However,
+SNaN values are never created by math operations. They may only occur when
+provided as a program input value.
 
 Code that requires different behavior than this should use the
 :ref:`Constrained Floating-Point Intrinsics <constrainedfp>`.

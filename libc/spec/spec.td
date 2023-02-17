@@ -64,6 +64,9 @@ def LongDoublePtr : PtrType<LongDoubleType>;
 def IntMaxTType : NamedType<"intmax_t">;
 def UIntMaxTType : NamedType<"uintmax_t">;
 
+def UInt16Type : NamedType<"uint16_t">;
+def UInt32Type : NamedType<"uint32_t">;
+
 def OffTType : NamedType<"off_t">;
 def OffTPtr : PtrType<OffTType>;
 def SSizeTType : NamedType<"ssize_t">;

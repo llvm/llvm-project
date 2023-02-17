@@ -76,7 +76,7 @@ TEST(ScudoHooksTest, AllocateHooks) {
 
     EXPECT_EQ(Ptr, NewPtr);
     EXPECT_EQ(nullptr, LastAllocatedPtr);
-    EXPECT_EQ(0, LastRequestSize);
+    EXPECT_EQ(0U, LastRequestSize);
     EXPECT_EQ(nullptr, LastDeallocatedPtr);
   }
 
@@ -104,7 +104,7 @@ TEST(ScudoHooksTest, AllocateHooks) {
         EXPECT_EQ(Ptr, LastDeallocatedPtr);
       } else {
         EXPECT_EQ(nullptr, LastAllocatedPtr);
-        EXPECT_EQ(0, LastRequestSize);
+        EXPECT_EQ(0U, LastRequestSize);
         EXPECT_EQ(nullptr, LastDeallocatedPtr);
       }
 

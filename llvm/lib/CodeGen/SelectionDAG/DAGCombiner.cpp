@@ -5866,6 +5866,88 @@ SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
   return SDValue();
 }
 
+static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
+  using AndOrSETCCFoldKind = TargetLowering::AndOrSETCCFoldKind;
+  assert(
+      (LogicOp->getOpcode() == ISD::AND || LogicOp->getOpcode() == ISD::OR) &&
+      "Invalid Op to combine SETCC with");
+
+  // TODO: Search past casts/truncates.
+  SDValue LHS = LogicOp->getOperand(0);
+  SDValue RHS = LogicOp->getOperand(1);
+  if (LHS->getOpcode() != ISD::SETCC || RHS->getOpcode() != ISD::SETCC)
+    return SDValue();
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  AndOrSETCCFoldKind TargetPreference = TLI.isDesirableToCombineLogicOpOfSETCC(
+      LogicOp, LHS.getNode(), RHS.getNode());
+
+  if (TargetPreference == AndOrSETCCFoldKind::None)
+    return SDValue();
+
+  ISD::CondCode CCL = cast<CondCodeSDNode>(LHS.getOperand(2))->get();
+  ISD::CondCode CCR = cast<CondCodeSDNode>(RHS.getOperand(2))->get();
+
+  SDValue LHS0 = LHS->getOperand(0);
+  SDValue RHS0 = RHS->getOperand(0);
+  SDValue LHS1 = LHS->getOperand(1);
+  SDValue RHS1 = RHS->getOperand(1);
+
+  // TODO: We don't actually need a splat here, for vectors we just need
+  // LaneLHS[N] == -LaneRHS[N];
+  auto *LHS1C = isConstOrConstSplat(LHS1);
+  auto *RHS1C = isConstOrConstSplat(RHS1);
+
+  EVT VT = LogicOp->getValueType(0);
+  EVT OpVT = LHS0.getValueType();
+  SDLoc DL(LogicOp);
+
+  if (CCL == CCR &&
+      CCL == (LogicOp->getOpcode() == ISD::AND ? ISD::SETNE : ISD::SETEQ) &&
+      LHS0 == RHS0 && LHS1C && RHS1C && OpVT.isInteger() && LHS.hasOneUse() &&
+      RHS.hasOneUse() && LHS1C->getAPIntValue() == (-RHS1C->getAPIntValue())) {
+
+    // Preference is to use ISD::ABS or we already have an ISD::ABS (in which
+    // case this is just a compare).
+    if (TargetPreference == AndOrSETCCFoldKind::ABS ||
+        DAG.doesNodeExist(ISD::ABS, DAG.getVTList(OpVT), {LHS0})) {
+      APInt C = LHS1C->getAPIntValue();
+      if (C.isNegative())
+        C = RHS1C->getAPIntValue();
+      // (icmp eq A, C) | (icmp eq A, -C)
+      //    -> (icmp eq Abs(A), C)
+      // (icmp ne A, C) & (icmp ne A, -C)
+      //    -> (icmp ne Abs(A), C)
+      SDValue AbsOp = DAG.getNode(ISD::ABS, DL, OpVT, LHS0);
+      return DAG.getNode(ISD::SETCC, DL, VT, AbsOp,
+                         DAG.getConstant(C, DL, OpVT), LHS.getOperand(2));
+    } else if (TargetPreference == AndOrSETCCFoldKind::AddAnd) {
+      // With C as a power of 2 and C != 0 and C != INT_MIN:
+      //   (icmp eq A, C) | (icmp eq A, -C)
+      //        -> (icmp eq and(add(A, C), ~(C + C)), 0)
+      //   (icmp ne A, C) & (icmp ne A, -C)w
+      //        -> (icmp ne and(add(A, C), ~(C + C)), 0)
+      const ConstantSDNode *Pow2 = nullptr;
+      if (LHS1C->getAPIntValue().isPowerOf2())
+        Pow2 = LHS1C;
+      else if (RHS1C->getAPIntValue().isPowerOf2())
+        Pow2 = RHS1C;
+      // isPowerOf2 is only for non-zero powers of 2.
+      if (Pow2 != nullptr && !Pow2->getAPIntValue().isMinSignedValue()) {
+        const APInt &C = Pow2->getAPIntValue();
+        SDValue AddOp =
+            DAG.getNode(ISD::ADD, DL, OpVT, LHS0, DAG.getConstant(C, DL, OpVT));
+        SDValue AndOp = DAG.getNode(ISD::AND, DL, OpVT, AddOp,
+                                    DAG.getConstant(~(C + C), DL, OpVT));
+        return DAG.getNode(ISD::SETCC, DL, VT, AndOp,
+                           DAG.getConstant(0, DL, OpVT), LHS.getOperand(2));
+      }
+    }
+  }
+
+  return SDValue();
+}
+
 /// This contains all DAGCombine rules which reduce two values combined by
 /// an And operation to a single value. This makes them reusable in the context
 /// of visitSELECT(). Rules involving constants are not included as
@@ -6566,6 +6648,9 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   ConstantSDNode *N1C = isConstOrConstSplat(N1);
   if (N1C && DAG.MaskedValueIsZero(SDValue(N, 0), APInt::getAllOnes(BitWidth)))
     return DAG.getConstant(0, SDLoc(N), VT);
+
+  if (SDValue R = foldAndOrOfSETCC(N, DAG))
+    return R;
 
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
@@ -7456,6 +7541,9 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
   ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
   if (N1C && DAG.MaskedValueIsZero(N0, ~N1C->getAPIntValue()))
     return N1;
+
+  if (SDValue R = foldAndOrOfSETCC(N, DAG))
+    return R;
 
   if (SDValue Combined = visitORLike(N0, N1, N))
     return Combined;
@@ -11138,6 +11226,67 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
         SDValue UAO = DAG.getNode(ISD::UADDO, DL, VTs, Cond0, N2.getOperand(1));
         return DAG.getSelect(DL, VT, UAO.getValue(1), N1, UAO.getValue(0));
       }
+    }
+
+    // If we have a chain of two selects, which share a true/false value and
+    // both are controlled from the two setcc nodes which cannot produce the
+    // same value, we can fold away N.
+    // select (setcc X), Y, (select (setcc X), Z, Y) -> select (setcc X), Z, Y
+    auto IsSelect = [](SDValue Op) {
+      return Op->getOpcode() == ISD::SELECT;
+    };
+    if ((IsSelect(N1) || IsSelect(N2)) && (N1.getOpcode() != N2.getOpcode())) {
+      auto AreSame = [](SDValue Op0, SDValue Op1) {
+        if (Op0 == Op1)
+          return true;
+        auto *C0 = dyn_cast<ConstantSDNode>(Op0);
+        auto *C1 = dyn_cast<ConstantSDNode>(Op1);
+        return C0 && C1 &&
+               APInt::isSameValue(C0->getAPIntValue(), C1->getAPIntValue());
+      };
+
+      SDValue OtherSelect;
+      bool SelectsShareOp = false;
+      if (IsSelect(N1)) {
+        OtherSelect = N1;
+        SelectsShareOp = AreSame(OtherSelect.getOperand(1), N2);
+      } else {
+        OtherSelect = N2;
+        SelectsShareOp = AreSame(OtherSelect.getOperand(2), N1);
+      }
+
+      auto CanNeverBeEqual = [](SDValue SetCC0, SDValue SetCC1) {
+        if (SetCC0->getOpcode() != ISD::SETCC ||
+            SetCC1->getOpcode() != ISD::SETCC ||
+            SetCC0->getOperand(0) != SetCC1->getOperand(0))
+          return false;
+
+        ISD::CondCode CC0 = cast<CondCodeSDNode>(SetCC0.getOperand(2))->get();
+        ISD::CondCode CC1 = cast<CondCodeSDNode>(SetCC1.getOperand(2))->get();
+        auto *C0 = dyn_cast<ConstantSDNode>(SetCC0.getOperand(1));
+        auto *C1 = dyn_cast<ConstantSDNode>(SetCC1.getOperand(1));
+        if (!C0 || !C1)
+          return false;
+
+        bool AreInverse = ISD::getSetCCInverse(CC0, C0->getValueType(0)) == CC1;
+        bool ConstantsAreSame =
+          APInt::isSameValue(C0->getAPIntValue(), C1->getAPIntValue());
+        auto IsEqual = [](ISD::CondCode CC) {
+          return CC == ISD::SETEQ;
+        };
+
+        if (ConstantsAreSame && AreInverse)
+          return true;
+        if (!ConstantsAreSame && IsEqual(CC0) && IsEqual(CC1))
+          return true;
+
+        return false;
+      };
+
+      SDValue SetCC0 = N0;
+      SDValue SetCC1 = OtherSelect.getOperand(0);
+      if (SelectsShareOp && CanNeverBeEqual(SetCC0, SetCC1))
+        return OtherSelect;
     }
 
     if (TLI.isOperationLegal(ISD::SELECT_CC, VT) ||
@@ -21377,9 +21526,10 @@ SDValue DAGCombiner::reduceBuildVecExtToExtBuildVec(SDNode *N) {
   // same source type and all of the inputs must be any or zero extend.
   // Scalar sizes must be a power of two.
   EVT OutScalarTy = VT.getScalarType();
-  bool ValidTypes = SourceType != MVT::Other &&
-                 isPowerOf2_32(OutScalarTy.getSizeInBits()) &&
-                 isPowerOf2_32(SourceType.getSizeInBits());
+  bool ValidTypes =
+      SourceType != MVT::Other &&
+      llvm::has_single_bit<uint32_t>(OutScalarTy.getSizeInBits()) &&
+      llvm::has_single_bit<uint32_t>(SourceType.getSizeInBits());
 
   // Create a new simpler BUILD_VECTOR sequence which other optimizations can
   // turn into a single shuffle instruction.

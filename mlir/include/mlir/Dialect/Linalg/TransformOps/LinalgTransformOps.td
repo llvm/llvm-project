@@ -27,6 +27,58 @@ def TransformParamTypeOrAnyHandle : Type<
     "transform 'param' type or any handle type">;
 
 //===----------------------------------------------------------------------===//
+// BufferizeToAllocationOp
+//===----------------------------------------------------------------------===//
+
+def BufferizeToAllocationOp : Op<Transform_Dialect,
+    "structured.bufferize_to_allocation",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let description = [{
+    This transform materializes an allocation for the targeted tensor value. It
+    replaces all original uses of the target with the newly allocated buffer,
+    wrapped in a `bufferization.to_tensor` op. It returns a handle to the result
+    of the `to_tensor` op.
+
+    Example:
+    ```
+    %0 = "some_op"() : () -> (tensor<10xf32>)
+    "some_use"(%0) : (tensor<10xf32>) -> ()
+    ```
+
+    Is rewritten to:
+    ```
+    %0 = "some_op"() : () -> (tensor<10xf32>)
+    %1 = memref.alloc() : memref<10xf32>
+    memref.tensor_store %0, %1 : memref<10xf32>
+    %2 = bufferization.to_tensor %1 restrict writable : memref<10xf32>
+    "some_use"(%2) : (tensor<10xf32>) -> ()
+    ```
+
+    This transform has optimized lowerings for certain targets that are results
+    of non-DPS ops. For such targets, not only a buffer allocation is emitted
+    but also the defining op is bufferized. This is to avoid a second
+    allocation for the missing destination of the non-DPS op (when subsequently
+    running a bufferization pass/transform). Currently supported ops with
+    optimized lowerings:
+    - tensor.pad
+
+    An optional memory space attribute can be specified for the materialized
+    buffer allocation.
+
+    #### Return modes
+
+    This operation consumes the `target` handle and produces the `transformed`
+    handle. It always succeeds.
+  }];
+
+  let arguments = (ins Transform_AnyValue:$target,
+                       OptionalAttr<AnyAttr>:$memory_space);
+  let results = (outs Transform_AnyValue:$transformed);
+  let assemblyFormat = "$target attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
 // DecomposeOp
 //===----------------------------------------------------------------------===//
 
@@ -822,6 +874,45 @@ def ScalarizeOp : Op<Transform_Dialect, "structured.scalarize",
 }
 
 //===----------------------------------------------------------------------===//
+// RewriteInDestinationPassingStyleOp.
+//===----------------------------------------------------------------------===//
+
+def RewriteInDestinationPassingStyleOp : Op<
+    Transform_Dialect, "structured.rewrite_in_destination_passing_style",
+    [MemoryEffectsOpInterface,
+     NavigationTransformOpTrait,
+     DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let description = [{
+    Rewrite a supported tensor operation that is not in destination-passing style
+    into a form that is in destination-passing style.
+    Currently supported operations are:
+      - tensor.pad
+      - tensor.generate
+      - tensor.from_elements
+    This dichotomy hints at a future interface, for now the implementation just 
+    switches between different implementation.
+
+    #### Return modes
+
+    This operation ignores non-unsupported ops and drops them from the return.
+    If all the operations referred to by the `target` PDLOperation generalize
+    properly, the transform succeeds. Otherwise the transform silently fails.
+    The return handle points to a subset of successfully produced operations:
+      - tensor.pad case, the returned handle points to the tensor.insert_slice.
+      - tensor.generate case, the returned handle points to the linalg.generic.
+      - tensor.from_elements case, the returned handle points to the last 
+        tensor.insert.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs TransformHandleTypeInterface:$transformed);
+  let assemblyFormat = [{
+    $target attr-dict
+    `:` functional-type($target, results)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // SplitOp
 //===----------------------------------------------------------------------===//
 
@@ -1594,6 +1685,7 @@ def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
 
   let arguments = (ins PDL_Operation:$target,
                        Variadic<PDL_Operation>:$vector_sizes,
+                       UnitAttr:$vectorize_nd_extract,
                        DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:
                           $static_vector_sizes);
   let results = (outs);

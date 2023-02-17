@@ -981,8 +981,8 @@ bool AArch64LegalizerInfo::legalizeVectorTrunc(
   Register SrcReg = MI.getOperand(1).getReg();
   LLT DstTy = MRI.getType(DstReg);
   LLT SrcTy = MRI.getType(SrcReg);
-  assert(isPowerOf2_32(DstTy.getSizeInBits()) &&
-         isPowerOf2_32(SrcTy.getSizeInBits()));
+  assert(llvm::has_single_bit<uint32_t>(DstTy.getSizeInBits()) &&
+         llvm::has_single_bit<uint32_t>(SrcTy.getSizeInBits()));
 
   // Split input type.
   LLT SplitSrcTy =

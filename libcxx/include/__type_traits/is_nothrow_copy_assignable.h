@@ -28,7 +28,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_copy_assignable
               __add_lvalue_reference_t<_Tp>,
               __add_lvalue_reference_t<typename add_const<_Tp>::type>)> {};
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_nothrow_copy_assignable_v = is_nothrow_copy_assignable<_Tp>::value;
 #endif

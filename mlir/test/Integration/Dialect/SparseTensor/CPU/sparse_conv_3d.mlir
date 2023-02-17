@@ -1,8 +1,13 @@
+// UNSUPPORTED: target={{.*}}
+// FIXME: The test case is disabled (for now) because affine index on sparse tensor
+// are not handled efficiently by sparse compiler, the test case will be re-enabled
+// after new algorithm is implemented.
+
 // DEFINE: %{option} = enable-runtime-library=true
 // DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
 // DEFINE: %{run} = mlir-cpu-runner \
 // DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// DEFINE:  -shared-libs=%mlir_c_runner_utils | \
 // DEFINE: FileCheck %s
 //
 // RUN: %{compile} | %{run}

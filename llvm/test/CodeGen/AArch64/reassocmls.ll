@@ -64,13 +64,14 @@ define i16 @mls_i16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e) {
 define i64 @mla_i64(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) {
 ; CHECK-LABEL: mla_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    madd x8, x2, x1, x0
-; CHECK-NEXT:    madd x0, x4, x3, x8
+; CHECK-NEXT:    mul x8, x4, x3
+; CHECK-NEXT:    madd x8, x2, x1, x8
+; CHECK-NEXT:    add x0, x8, x0
 ; CHECK-NEXT:    ret
   %m1 = mul i64 %c, %b
   %m2 = mul i64 %e, %d
-  %s1 = add i64 %m1, %a
-  %s2 = add i64 %s1, %m2
+  %s1 = add i64 %m1, %m2
+  %s2 = add i64 %s1, %a
   ret i64 %s2
 }
 
@@ -86,6 +87,89 @@ define i64 @mls_i64_C(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) {
   %m2.neg = mul i64 %e, %d
   %reass.add = add i64 %m2.neg, %m1.neg
   %s2 = sub i64 10, %reass.add
+  ret i64 %s2
+}
+
+define i64 @umlsl_i64_muls(i64 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
+; CHECK-LABEL: umlsl_i64_muls:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umull x8, w2, w3
+; CHECK-NEXT:    umsubl x8, w4, w3, x8
+; CHECK-NEXT:    umsubl x0, w2, w1, x8
+; CHECK-NEXT:    ret
+  %be = zext i32 %b to i64
+  %ce = zext i32 %c to i64
+  %de = zext i32 %d to i64
+  %ee = zext i32 %e to i64
+  %m1.neg = mul nuw i64 %ce, %be
+  %m2.neg = mul nuw i64 %ee, %de
+  %m3 = mul nuw i64 %ce, %de
+  %reass.add = add i64 %m2.neg, %m1.neg
+  %s2 = sub i64 %m3, %reass.add
+  ret i64 %s2
+}
+
+define i64 @umlsl_i64_uses(i64 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
+; CHECK-LABEL: umlsl_i64_uses:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umull x8, w4, w3
+; CHECK-NEXT:    umaddl x8, w2, w1, x8
+; CHECK-NEXT:    sub x9, x0, x8
+; CHECK-NEXT:    and x0, x8, x9
+; CHECK-NEXT:    ret
+  %be = zext i32 %b to i64
+  %ce = zext i32 %c to i64
+  %de = zext i32 %d to i64
+  %ee = zext i32 %e to i64
+  %m1.neg = mul nuw i64 %ce, %be
+  %m2.neg = mul nuw i64 %ee, %de
+  %reass.add = add i64 %m2.neg, %m1.neg
+  %s2 = sub i64 %a, %reass.add
+  %o = and i64 %reass.add, %s2
+  ret i64 %o
+}
+
+define i64 @mla_i64_C(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) {
+; CHECK-LABEL: mla_i64_C:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mul x8, x2, x1
+; CHECK-NEXT:    madd x8, x4, x3, x8
+; CHECK-NEXT:    add x0, x8, #10
+; CHECK-NEXT:    ret
+  %m1.neg = mul i64 %c, %b
+  %m2.neg = mul i64 %e, %d
+  %reass.add = add i64 %m2.neg, %m1.neg
+  %s2 = add i64 10, %reass.add
+  ret i64 %s2
+}
+
+define i64 @mla_i64_uses(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) {
+; CHECK-LABEL: mla_i64_uses:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mul x8, x2, x1
+; CHECK-NEXT:    madd x8, x4, x3, x8
+; CHECK-NEXT:    add x9, x0, x8
+; CHECK-NEXT:    eor x0, x8, x9
+; CHECK-NEXT:    ret
+  %m1.neg = mul i64 %c, %b
+  %m2.neg = mul i64 %e, %d
+  %reass.add = add i64 %m2.neg, %m1.neg
+  %s2 = add i64 %a, %reass.add
+  %o = xor i64 %reass.add, %s2
+  ret i64 %o
+}
+
+define i64 @mla_i64_mul(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) {
+; CHECK-LABEL: mla_i64_mul:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mul x8, x2, x1
+; CHECK-NEXT:    madd x9, x4, x3, x8
+; CHECK-NEXT:    add x0, x8, x9
+; CHECK-NEXT:    ret
+  %m1.neg = mul i64 %c, %b
+  %m2.neg = mul i64 %e, %d
+  %reass.add = add i64 %m2.neg, %m1.neg
+  %s2 = add i64 %m1.neg, %reass.add
   ret i64 %s2
 }
 
@@ -140,13 +224,14 @@ define <8 x i16> @mls_v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x i16> 
 define <8 x i16> @mla_v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x i16> %d, <8 x i16> %e) {
 ; CHECK-LABEL: mla_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mla v0.8h, v2.8h, v1.8h
-; CHECK-NEXT:    mla v0.8h, v4.8h, v3.8h
+; CHECK-NEXT:    mul v3.8h, v4.8h, v3.8h
+; CHECK-NEXT:    mla v3.8h, v2.8h, v1.8h
+; CHECK-NEXT:    add v0.8h, v3.8h, v0.8h
 ; CHECK-NEXT:    ret
   %m1 = mul <8 x i16> %c, %b
   %m2 = mul <8 x i16> %e, %d
-  %s1 = add <8 x i16> %m1, %a
-  %s2 = add <8 x i16> %s1, %m2
+  %s1 = add <8 x i16> %m1, %m2
+  %s2 = add <8 x i16> %s1, %a
   ret <8 x i16> %s2
 }
 
@@ -161,6 +246,21 @@ define <8 x i16> @mls_v8i16_C(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x i16
   %m2.neg = mul <8 x i16> %e, %d
   %reass.add = add <8 x i16> %m2.neg, %m1.neg
   %s2 = sub <8 x i16> <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>, %reass.add
+  ret <8 x i16> %s2
+}
+
+define <8 x i16> @mla_v8i16_C(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x i16> %d, <8 x i16> %e) {
+; CHECK-LABEL: mla_v8i16_C:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mul v1.8h, v2.8h, v1.8h
+; CHECK-NEXT:    movi v0.8h, #10
+; CHECK-NEXT:    mla v1.8h, v4.8h, v3.8h
+; CHECK-NEXT:    add v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    ret
+  %m1.neg = mul <8 x i16> %c, %b
+  %m2.neg = mul <8 x i16> %e, %d
+  %reass.add = add <8 x i16> %m2.neg, %m1.neg
+  %s2 = add <8 x i16> <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>, %reass.add
   ret <8 x i16> %s2
 }
 
@@ -227,12 +327,13 @@ define <vscale x 8 x i16> @mla_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16>
 ; CHECK-LABEL: mla_nxv8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    mla z0.h, p0/m, z2.h, z1.h
-; CHECK-NEXT:    mla z0.h, p0/m, z4.h, z3.h
+; CHECK-NEXT:    mul z1.h, z2.h, z1.h
+; CHECK-NEXT:    mla z1.h, p0/m, z4.h, z3.h
+; CHECK-NEXT:    add z0.h, z1.h, z0.h
 ; CHECK-NEXT:    ret
   %m1 = mul <vscale x 8 x i16> %c, %b
   %m2 = mul <vscale x 8 x i16> %e, %d
-  %s1 = add <vscale x 8 x i16> %m1, %a
-  %s2 = add <vscale x 8 x i16> %s1, %m2
+  %s1 = add <vscale x 8 x i16> %m1, %m2
+  %s2 = add <vscale x 8 x i16> %s1, %a
   ret <vscale x 8 x i16> %s2
 }

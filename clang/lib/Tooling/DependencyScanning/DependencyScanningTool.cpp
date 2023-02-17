@@ -117,6 +117,12 @@ llvm::Expected<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
       return Opts->OutputFile;
     }
 
+    // The lookupModuleOutput is for clang modules. P1689 format don't need it.
+    std::string lookupModuleOutput(const ModuleID &ID,
+                                 ModuleOutputKind Kind) override {
+      return "";
+    }
+
   private:
     StringRef Filename;
     P1689Rule &Rule;

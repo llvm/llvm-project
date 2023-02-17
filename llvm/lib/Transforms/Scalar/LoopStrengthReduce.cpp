@@ -4982,6 +4982,29 @@ void LSRInstance::NarrowSearchSpaceByDeletingCostlyFormulas() {
   LLVM_DEBUG(dbgs() << "After pre-selection:\n"; print_uses(dbgs()));
 }
 
+// Check if Best and Reg are SCEVs separated by a constant amount C, and if so
+// would the addressing offset +C would be legal where the negative offset -C is
+// not.
+static bool IsSimplerBaseSCEVForTarget(const TargetTransformInfo &TTI,
+                                       ScalarEvolution &SE, const SCEV *Best,
+                                       const SCEV *Reg,
+                                       MemAccessTy AccessType) {
+  if (Best->getType() != Reg->getType())
+    return false;
+  const auto *Diff = dyn_cast<SCEVConstant>(SE.getMinusSCEV(Best, Reg));
+  if (!Diff)
+    return false;
+
+  return TTI.isLegalAddressingMode(
+             AccessType.MemTy, /*BaseGV=*/nullptr,
+             /*BaseOffset=*/Diff->getAPInt().getSExtValue(),
+             /*HasBaseReg=*/false, /*Scale=*/0, AccessType.AddrSpace) &&
+         !TTI.isLegalAddressingMode(
+             AccessType.MemTy, /*BaseGV=*/nullptr,
+             /*BaseOffset=*/-Diff->getAPInt().getSExtValue(),
+             /*HasBaseReg=*/false, /*Scale=*/0, AccessType.AddrSpace);
+}
+
 /// Pick a register which seems likely to be profitable, and then in any use
 /// which has any reference to that register, delete all formulae which do not
 /// reference that register.
@@ -5009,6 +5032,19 @@ void LSRInstance::NarrowSearchSpaceByPickingWinnerRegs() {
         if (Count > BestNum) {
           Best = Reg;
           BestNum = Count;
+        }
+
+        // If the scores are the same, but the Reg is simpler for the target
+        // (for example {x,+,1} as opposed to {x+C,+,1}, where the target can
+        // handle +C but not -C), opt for the simpler formula.
+        if (Count == BestNum) {
+          int LUIdx = RegUses.getUsedByIndices(Reg).find_first();
+          if (LUIdx >= 0 && Uses[LUIdx].Kind == LSRUse::Address &&
+              IsSimplerBaseSCEVForTarget(TTI, SE, Best, Reg,
+                                         Uses[LUIdx].AccessTy)) {
+            Best = Reg;
+            BestNum = Count;
+          }
         }
       }
     }

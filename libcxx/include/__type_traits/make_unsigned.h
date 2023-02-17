@@ -79,7 +79,7 @@ struct make_unsigned {
   using type _LIBCPP_NODEBUG = __make_unsigned_t<_Tp>;
 };
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <class _Tp> using make_unsigned_t = __make_unsigned_t<_Tp>;
 #endif
 

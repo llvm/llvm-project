@@ -39,6 +39,7 @@
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 
 using namespace mlir;
@@ -207,6 +208,30 @@ static PackingMetadata computePackingMetadata(int64_t packedRank,
     ++i;
   }
   return res;
+}
+
+//===----------------------------------------------------------------------===//
+// BufferizeToAllocationOp
+//===----------------------------------------------------------------------===//
+DiagnosedSilenceableFailure
+transform::BufferizeToAllocationOp::apply(transform::TransformResults &results,
+                                          transform::TransformState &state) {
+  Attribute memorySpace =
+      getMemorySpace().has_value() ? getMemorySpace().value() : Attribute();
+  IRRewriter rewriter(getContext());
+  auto transformed = llvm::to_vector(
+      llvm::map_range(state.getPayloadValues(getTarget()), [&](Value v) {
+        return linalg::bufferizeToAllocation(rewriter, v, memorySpace);
+      }));
+  results.setValues(getTransformed().cast<OpResult>(), transformed);
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::BufferizeToAllocationOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  consumesHandle(getTarget(), effects);
+  producesHandle(getTransformed(), effects);
+  modifiesPayload(effects);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1896,6 +1921,32 @@ transform::ScalarizeOp::applyToOne(LinalgOp target,
 }
 
 //===----------------------------------------------------------------------===//
+// RewriteInDestinationPassingStyleOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::RewriteInDestinationPassingStyleOp::apply(
+    transform::TransformResults &results, transform::TransformState &state) {
+  SmallVector<Operation *> res;
+  ArrayRef<Operation *> targetOps = state.getPayloadOps(getTarget());
+  for (Operation *target : targetOps) {
+    IRRewriter rewriter(target->getContext());
+    rewriter.setInsertionPoint(target);
+    FailureOr<Operation *> maybeResult =
+        TypeSwitch<Operation *, FailureOr<Operation *>>(target)
+            .Case<tensor::FromElementsOp, tensor::GenerateOp, tensor::PadOp>(
+                [&rewriter](auto op) {
+                  return rewriteInDestinationPassingStyle(rewriter, op);
+                });
+    if (failed(maybeResult))
+      return emitDefaultSilenceableFailure(target);
+    res.push_back(*maybeResult);
+  }
+  results.set(getResult().cast<OpResult>(), res);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // SplitOp
 //===----------------------------------------------------------------------===//
 
@@ -2986,7 +3037,8 @@ DiagnosedSilenceableFailure transform::MaskedVectorizeOp::apply(
              << "cannot vectorize non-Linalg op";
     }
 
-    if (failed(linalg::vectorize(rewriter, linalgOp, vectorSizes))) {
+    if (failed(linalg::vectorize(rewriter, linalgOp, vectorSizes,
+                                 getVectorizeNdExtract()))) {
       return mlir::emitSilenceableFailure(target->getLoc())
              << "failed to vectorize op";
     }

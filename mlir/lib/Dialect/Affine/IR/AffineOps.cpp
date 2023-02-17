@@ -23,6 +23,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include <numeric>
+#include <optional>
 
 using namespace mlir;
 
@@ -683,7 +684,7 @@ static std::optional<int64_t> getLowerBound(Value iv) {
 }
 
 /// Gets the constant upper bound on an affine.for `iv`.
-static Optional<int64_t> getUpperBound(Value iv) {
+static std::optional<int64_t> getUpperBound(Value iv) {
   AffineForOp forOp = getForInductionVarOwner(iv);
   if (!forOp || !forOp.hasConstantUpperBound())
     return std::nullopt;
@@ -708,8 +709,9 @@ static Optional<int64_t> getUpperBound(Value iv) {
 /// will lead a none being returned.
 static std::optional<int64_t>
 getBoundForExpr(AffineExpr expr, unsigned numDims, unsigned numSymbols,
-                ArrayRef<Optional<int64_t>> constLowerBounds,
-                ArrayRef<Optional<int64_t>> constUpperBounds, bool isUpper) {
+                ArrayRef<std::optional<int64_t>> constLowerBounds,
+                ArrayRef<std::optional<int64_t>> constUpperBounds,
+                bool isUpper) {
   // Handle divs and mods.
   if (auto binOpExpr = expr.dyn_cast<AffineBinaryOpExpr>()) {
     // If the LHS of a floor or ceil is bounded and the RHS is a constant, we
@@ -787,11 +789,11 @@ getBoundForExpr(AffineExpr expr, unsigned numDims, unsigned numSymbols,
 /// Determine a constant upper bound for `expr` if one exists while exploiting
 /// values in `operands`. Note that the upper bound is an inclusive one. `expr`
 /// is guaranteed to be less than or equal to it.
-static Optional<int64_t> getUpperBound(AffineExpr expr, unsigned numDims,
-                                       unsigned numSymbols,
-                                       ArrayRef<Value> operands) {
+static std::optional<int64_t> getUpperBound(AffineExpr expr, unsigned numDims,
+                                            unsigned numSymbols,
+                                            ArrayRef<Value> operands) {
   // Get the constant lower or upper bounds on the operands.
-  SmallVector<Optional<int64_t>> constLowerBounds, constUpperBounds;
+  SmallVector<std::optional<int64_t>> constLowerBounds, constUpperBounds;
   constLowerBounds.reserve(operands.size());
   constUpperBounds.reserve(operands.size());
   for (Value operand : operands) {
@@ -810,11 +812,11 @@ static Optional<int64_t> getUpperBound(AffineExpr expr, unsigned numDims,
 /// Determine a constant lower bound for `expr` if one exists while exploiting
 /// values in `operands`. Note that the upper bound is an inclusive one. `expr`
 /// is guaranteed to be less than or equal to it.
-static Optional<int64_t> getLowerBound(AffineExpr expr, unsigned numDims,
-                                       unsigned numSymbols,
-                                       ArrayRef<Value> operands) {
+static std::optional<int64_t> getLowerBound(AffineExpr expr, unsigned numDims,
+                                            unsigned numSymbols,
+                                            ArrayRef<Value> operands) {
   // Get the constant lower or upper bounds on the operands.
-  SmallVector<Optional<int64_t>> constLowerBounds, constUpperBounds;
+  SmallVector<std::optional<int64_t>> constLowerBounds, constUpperBounds;
   constLowerBounds.reserve(operands.size());
   constUpperBounds.reserve(operands.size());
   for (Value operand : operands) {
@@ -822,7 +824,7 @@ static Optional<int64_t> getLowerBound(AffineExpr expr, unsigned numDims,
     constUpperBounds.push_back(getUpperBound(operand));
   }
 
-  Optional<int64_t> lowerBound;
+  std::optional<int64_t> lowerBound;
   if (auto constExpr = expr.dyn_cast<AffineConstantExpr>()) {
     lowerBound = constExpr.getValue();
   } else {

@@ -2,7 +2,7 @@
 // DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
 // DEFINE: %{run} = mlir-cpu-runner \
 // DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext | \
+// DEFINE:  -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils | \
 // DEFINE: FileCheck %s
 //
 // RUN: %{compile} | %{run}
@@ -90,7 +90,7 @@ module {
     %c1 = arith.constant 1 : index
     %t1 = arith.constant sparse<
       [ [0,0], [0,1], [0,63], [1,0], [1,1], [31,0], [31,63] ],
-        [ 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0 ]> : tensor<32x64xf64>
+       [ 1.0,   2.0,   3.0,    4.0,   5.0,   6.0,    7.0 ]> : tensor<32x64xf64>
     %t2 = tensor.cast %t1 : tensor<32x64xf64> to tensor<?x?xf64>
 
     // Dense to sparse.

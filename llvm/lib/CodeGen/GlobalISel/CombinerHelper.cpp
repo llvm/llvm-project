@@ -535,7 +535,7 @@ bool CombinerHelper::matchCombineExtendingLoads(MachineInstr &MI,
 
   // For non power-of-2 types, they will very likely be legalized into multiple
   // loads. Don't bother trying to match them into extending loads.
-  if (!isPowerOf2_32(LoadValueTy.getSizeInBits()))
+  if (!llvm::has_single_bit<uint32_t>(LoadValueTy.getSizeInBits()))
     return false;
 
   // Find the preferred type aside from the any-extends (unless it's the only

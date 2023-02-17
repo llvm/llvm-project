@@ -23835,7 +23835,7 @@ static SDValue LowerVectorAllZero(const SDLoc &DL, SDValue V, ISD::CondCode CC,
   }
 
   // Quit if not splittable to 128/256-bit vector.
-  if (!isPowerOf2_32(VT.getSizeInBits()))
+  if (!llvm::has_single_bit<uint32_t>(VT.getSizeInBits()))
     return SDValue();
 
   // Split down to 128/256-bit vector.
@@ -23905,7 +23905,8 @@ static SDValue MatchVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
            "Reduction source vector mismatch");
 
     // Quit if less than 128-bits or not splittable to 128/256-bit vector.
-    if (VT.getSizeInBits() < 128 || !isPowerOf2_32(VT.getSizeInBits()))
+    if (VT.getSizeInBits() < 128 ||
+        !llvm::has_single_bit<uint32_t>(VT.getSizeInBits()))
       return SDValue();
 
     // If more than one full vector is evaluated, OR them first before PTEST.
@@ -40137,9 +40138,10 @@ static SDValue combineX86ShufflesRecursively(
     // This function can be performance-critical, so we rely on the power-of-2
     // knowledge that we have about the mask sizes to replace div/rem ops with
     // bit-masks and shifts.
-    assert(isPowerOf2_32(RootMask.size()) &&
+    assert(llvm::has_single_bit<uint32_t>(RootMask.size()) &&
            "Non-power-of-2 shuffle mask sizes");
-    assert(isPowerOf2_32(OpMask.size()) && "Non-power-of-2 shuffle mask sizes");
+    assert(llvm::has_single_bit<uint32_t>(OpMask.size()) &&
+           "Non-power-of-2 shuffle mask sizes");
     unsigned RootMaskSizeLog2 = llvm::countr_zero(RootMask.size());
     unsigned OpMaskSizeLog2 = llvm::countr_zero(OpMask.size());
 
@@ -53744,6 +53746,29 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
           return DAG.getSetCC(DL, VT, LHS.getOperand(0),
                               DAG.getConstant(0, DL, SrcVT), CC);
       }
+
+      // With C as a power of 2 and C != 0 and C != INT_MIN:
+      //    icmp eq Abs(X) C ->
+      //        (icmp eq A, C) | (icmp eq A, -C)
+      //    icmp ne Abs(X) C ->
+      //        (icmp ne A, C) & (icmp ne A, -C)
+      // Both of these patterns can be better optimized in
+      // DAGCombiner::foldAndOrOfSETCC. Note this only applies for scalar
+      // integers which is checked above.
+      if (LHS.getOpcode() == ISD::ABS && LHS.hasOneUse()) {
+        if (auto *C = dyn_cast<ConstantSDNode>(RHS)) {
+          const APInt &CInt = C->getAPIntValue();
+          // We can better optimize this case in DAGCombiner::foldAndOrOfSETCC.
+          if (CInt.isPowerOf2() && !CInt.isMinSignedValue()) {
+            SDValue BaseOp = LHS.getOperand(0);
+            SDValue SETCC0 = DAG.getSetCC(DL, VT, BaseOp, RHS, CC);
+            SDValue SETCC1 = DAG.getSetCC(
+                DL, VT, BaseOp, DAG.getConstant(-CInt, DL, OpVT), CC);
+            return DAG.getNode(CC == ISD::SETEQ ? ISD::OR : ISD::AND, DL, VT,
+                               SETCC0, SETCC1);
+          }
+        }
+      }
     }
   }
 
@@ -56809,6 +56834,20 @@ SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc& dl,
   }
 
   return TargetLowering::expandIndirectJTBranch(dl, Value, Addr, DAG);
+}
+
+TargetLowering::AndOrSETCCFoldKind
+X86TargetLowering::isDesirableToCombineLogicOpOfSETCC(
+    const SDNode *LogicOp, const SDNode *SETCC0, const SDNode *SETCC1) const {
+  using AndOrSETCCFoldKind = TargetLowering::AndOrSETCCFoldKind;
+  EVT VT = LogicOp->getValueType(0);
+  EVT OpVT = SETCC0->getOperand(0).getValueType();
+  if (!VT.isInteger())
+    return AndOrSETCCFoldKind::None;
+  if (VT.isVector())
+    return isOperationLegal(ISD::ABS, OpVT) ? AndOrSETCCFoldKind::ABS
+                                            : AndOrSETCCFoldKind::None;
+  return AndOrSETCCFoldKind::AddAnd;
 }
 
 bool X86TargetLowering::IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const {

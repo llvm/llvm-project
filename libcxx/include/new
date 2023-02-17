@@ -189,14 +189,14 @@ enum align_val_t { __zero = 0, __max = (size_t)-1 };
 #endif
 #endif
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 // Enable the declaration even if the compiler doesn't support the language
 // feature.
 struct destroying_delete_t {
   explicit destroying_delete_t() = default;
 };
 inline constexpr destroying_delete_t destroying_delete{};
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 } // namespace std
 
@@ -341,7 +341,7 @@ _LIBCPP_CONSTEXPR _Tp* __launder(_Tp* __p) _NOEXCEPT
     return __builtin_launder(__p);
 }
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 _LIBCPP_NODISCARD_AFTER_CXX17 inline _LIBCPP_HIDE_FROM_ABI
 constexpr _Tp* launder(_Tp* __p) noexcept
@@ -350,7 +350,7 @@ constexpr _Tp* launder(_Tp* __p) noexcept
 }
 #endif
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 
 #if defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)
 
@@ -359,7 +359,7 @@ inline constexpr size_t hardware_constructive_interference_size = __GCC_CONSTRUC
 
 #endif // defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)
 
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
 

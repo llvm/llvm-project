@@ -12,9 +12,11 @@
 #define LLVM_UTILS_TABLEGEN_CODEGENHWMODES_H
 
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include <cassert>
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 // HwModeId -> list of predicates (definition)

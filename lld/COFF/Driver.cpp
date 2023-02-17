@@ -1768,6 +1768,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       } else if (s.consume_front("lldlto=")) {
         if (s.getAsInteger(10, config->ltoo) || config->ltoo > 3)
           error("/opt:lldlto: invalid optimization level: " + s);
+      } else if (s.consume_front("lldltocgo=")) {
+        config->ltoCgo.emplace();
+        if (s.getAsInteger(10, *config->ltoCgo) || *config->ltoCgo > 3)
+          error("/opt:lldltocgo: invalid codegen optimization level: " + s);
       } else if (s.consume_front("lldltojobs=")) {
         if (!get_threadpool_strategy(s))
           error("/opt:lldltojobs: invalid job count: " + s);

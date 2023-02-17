@@ -835,7 +835,7 @@ public:
     typedef typename base::const_iterator                  const_iterator;
     typedef _VSTD::reverse_iterator<iterator>              reverse_iterator;
     typedef _VSTD::reverse_iterator<const_iterator>        const_reverse_iterator;
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     typedef size_type                                      __remove_return_type;
 #else
     typedef void                                           __remove_return_type;
@@ -857,7 +857,7 @@ public:
         _VSTD::__debug_db_insert_c(this);
     }
     explicit list(size_type __n);
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     explicit list(size_type __n, const allocator_type& __a);
 #endif
     list(size_type __n, const value_type& __x);
@@ -986,13 +986,13 @@ public:
     void push_back(value_type&& __x);
 
     template <class... _Args>
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
        reference emplace_front(_Args&&... __args);
 #else
        void      emplace_front(_Args&&... __args);
 #endif
     template <class... _Args>
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
         reference emplace_back(_Args&&... __args);
 #else
        void       emplace_back(_Args&&... __args);
@@ -1200,7 +1200,7 @@ list<_Tp, _Alloc>::list(size_type __n)
 #endif
 }
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <class _Tp, class _Alloc>
 list<_Tp, _Alloc>::list(size_type __n, const allocator_type& __a) : base(__a)
 {
@@ -1563,7 +1563,7 @@ list<_Tp, _Alloc>::push_back(value_type&& __x)
 
 template <class _Tp, class _Alloc>
 template <class... _Args>
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 typename list<_Tp, _Alloc>::reference
 #else
 void
@@ -1575,7 +1575,7 @@ list<_Tp, _Alloc>::emplace_front(_Args&&... __args)
     __node_alloc_traits::construct(__na, _VSTD::addressof(__hold->__value_), _VSTD::forward<_Args>(__args)...);
     __link_nodes_at_front(__hold.get()->__as_link(), __hold.get()->__as_link());
     ++base::__sz();
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     return __hold.release()->__value_;
 #else
     __hold.release();
@@ -1584,7 +1584,7 @@ list<_Tp, _Alloc>::emplace_front(_Args&&... __args)
 
 template <class _Tp, class _Alloc>
 template <class... _Args>
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 typename list<_Tp, _Alloc>::reference
 #else
 void
@@ -1597,7 +1597,7 @@ list<_Tp, _Alloc>::emplace_back(_Args&&... __args)
     __link_pointer __nl = __hold->__as_link();
     __link_nodes_at_back(__nl, __nl);
     ++base::__sz();
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     return __hold.release()->__value_;
 #else
     __hold.release();
@@ -2338,7 +2338,7 @@ swap(list<_Tp, _Alloc>& __x, list<_Tp, _Alloc>& __y)
     __x.swap(__y);
 }
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <class _Tp, class _Allocator, class _Predicate>
 inline _LIBCPP_INLINE_VISIBILITY typename list<_Tp, _Allocator>::size_type
 erase_if(list<_Tp, _Allocator>& __c, _Predicate __pred) {
@@ -2358,11 +2358,11 @@ template <>
 inline constexpr bool __format::__enable_insertable<std::list<wchar_t>> = true;
 #endif
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace pmr {
 template <class _ValueT>

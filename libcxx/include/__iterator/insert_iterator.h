@@ -24,7 +24,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <class _Container>
 using __insert_iterator_iter_t = ranges::iterator_t<_Container>;
 #else
@@ -46,7 +46,7 @@ protected:
 public:
     typedef output_iterator_tag iterator_category;
     typedef void value_type;
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     typedef ptrdiff_t difference_type;
 #else
     typedef void difference_type;

@@ -56,7 +56,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 // TODO FMT Evaluate which templates should be external templates. This
 // improves the efficiency of the header. However since the header is still
@@ -657,7 +657,7 @@ formatted_size(locale __loc, wformat_string<_Args...> __fmt, _Args&&... __args) 
 #endif // _LIBCPP_HAS_NO_LOCALIZATION
 
 
-#endif //_LIBCPP_STD_VER > 17
+#endif //_LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

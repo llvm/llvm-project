@@ -556,7 +556,7 @@ bool
 operator>=(const unique_ptr<_T1, _D1>& __x, const unique_ptr<_T2, _D2>& __y) {return !(__x < __y);}
 
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <class _T1, class _D1, class _T2, class _D2>
 requires three_way_comparable_with<typename unique_ptr<_T1, _D1>::pointer,
                                    typename unique_ptr<_T2, _D2>::pointer>
@@ -650,7 +650,7 @@ operator>=(nullptr_t, const unique_ptr<_T1, _D1>& __x) {
   return !(nullptr < __x);
 }
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <class _T1, class _D1>
   requires three_way_comparable<
       typename unique_ptr<_T1, _D1>::pointer> _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
@@ -660,7 +660,7 @@ operator<=>(const unique_ptr<_T1, _D1>& __x, nullptr_t) {
 }
 #endif
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 
 template<class _Tp>
 struct __unique_if
@@ -697,7 +697,7 @@ template<class _Tp, class... _Args>
     typename __unique_if<_Tp>::__unique_array_known_bound
     make_unique(_Args&&...) = delete;
 
-#endif // _LIBCPP_STD_VER > 11
+#endif // _LIBCPP_STD_VER >= 14
 
 #if _LIBCPP_STD_VER >= 20
 

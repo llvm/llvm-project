@@ -624,7 +624,7 @@ __quoted(basic_string<_CharT, _Traits, _Allocator>& __s, _CharT __delim = _CharT
 
 #endif // _LIBCPP_STD_VER >= 11
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 
 template <class _CharT>
 _LIBCPP_HIDE_FROM_ABI
@@ -656,7 +656,7 @@ auto quoted(basic_string_view<_CharT, _Traits> __sv, _CharT __delim = _CharT('"'
     return __quoted_output_proxy<_CharT, _Traits>(__sv.data(), __sv.data() + __sv.size(), __delim, __escape);
 }
 
-#endif // _LIBCPP_STD_VER > 11
+#endif // _LIBCPP_STD_VER >= 14
 
 _LIBCPP_END_NAMESPACE_STD
 

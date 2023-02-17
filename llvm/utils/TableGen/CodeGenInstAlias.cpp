@@ -12,6 +12,7 @@
 
 #include "CodeGenInstAlias.h"
 #include "CodeGenInstruction.h"
+#include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/TableGen/Error.h"

@@ -331,6 +331,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.dirent.opendir
     libc.src.dirent.readdir
 
+    # network.h entrypoints
+    libc.src.network.htonl
+    libc.src.network.htons
+
     # pthread.h entrypoints
     libc.src.pthread.pthread_atfork
     libc.src.pthread.pthread_attr_destroy

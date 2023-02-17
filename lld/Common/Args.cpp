@@ -19,28 +19,8 @@
 using namespace llvm;
 using namespace lld;
 
-// TODO(sbc): Remove this once CGOptLevel can be set completely based on bitcode
-// function metadata.
-CodeGenOpt::Level lld::args::getCGOptLevel(int optLevelLTO) {
-  // TODO(slinder1): Workaround for HeterogeneousDWARF to support `-fgpu-rdc
-  // -O0 -g`. Remove this when we support higher optimization levels.
-  if (llvm::AMDGPU::parseArchAMDGCN(llvm::codegen::getCPUStr())) {
-    switch (optLevelLTO) {
-    case 0:
-      return CodeGenOpt::None;
-    case 1:
-      return CodeGenOpt::Less;
-    case 2:
-      return CodeGenOpt::Default;
-    case 3:
-      return CodeGenOpt::Aggressive;
-    }
-    llvm_unreachable("Invalid optimization level");
-  }
-  if (optLevelLTO == 3)
-    return CodeGenOpt::Aggressive;
-  assert(optLevelLTO < 3);
-  return CodeGenOpt::Default;
+int lld::args::getCGOptLevel(int optLevelLTO) {
+  return std::clamp(optLevelLTO, 2, 3);
 }
 
 static int64_t getInteger(opt::InputArgList &args, unsigned key,

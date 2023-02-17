@@ -184,7 +184,9 @@ public:
 
   bool GetDescription(lldb::SBStream &description);
 
+#ifndef SWIG
   SBFrame(const lldb::StackFrameSP &lldb_object_sp);
+#endif
 
 protected:
   friend class SBBlock;

@@ -1,7 +1,8 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
+// expected-error@+1 {{expected a non-empty array for level types}}
 #a = #sparse_tensor.encoding<{dimLevelType = []}>
-func.func private @scalar(%arg0: tensor<f64, #a>) -> () // expected-error {{expected non-scalar sparse tensor}}
+func.func private @scalar(%arg0: tensor<f64, #a>) -> ()
 
 // -----
 
@@ -35,7 +36,8 @@ func.func private @tensor_highorder_mismatch(%arg0: tensor<8xi32, #a>) -> ()
 
 // -----
 
-#a = #sparse_tensor.encoding<{dimOrdering = affine_map<(i,j) -> (i,i)>}> // expected-error {{expected a permutation affine map for dimension ordering}}
+// expected-error@+1 {{expected a permutation affine map for dimension ordering}}
+#a = #sparse_tensor.encoding<{dimLevelType = ["dense", "compressed"], dimOrdering = affine_map<(i,j) -> (i,i)>}>
 func.func private @tensor_no_permutation(%arg0: tensor<16x32xf32, #a>) -> ()
 
 // -----

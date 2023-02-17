@@ -24,7 +24,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_pointer : _BoolConstant<__is_pointer(_Tp)> { };
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_pointer_v = __is_pointer(_Tp);
 #endif
@@ -45,7 +45,7 @@ template <class _Tp> struct __libcpp_remove_objc_qualifiers<_Tp __unsafe_unretai
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_pointer
     : public __libcpp_is_pointer<typename __libcpp_remove_objc_qualifiers<__remove_cv_t<_Tp> >::type> {};
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_pointer_v = is_pointer<_Tp>::value;
 #endif

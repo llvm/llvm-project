@@ -300,7 +300,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
         __enable_if_t<!__has_construct<allocator_type, _Tp*, _Args...>::value> >
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
     static void construct(allocator_type&, _Tp* __p, _Args&&... __args) {
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
         _VSTD::construct_at(__p, _VSTD::forward<_Args>(__args)...);
 #else
         ::new ((void*)__p) _Tp(_VSTD::forward<_Args>(__args)...);
@@ -319,7 +319,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
         __enable_if_t<!__has_destroy<allocator_type, _Tp*>::value> >
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
     static void destroy(allocator_type&, _Tp* __p) {
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
         _VSTD::destroy_at(__p);
 #else
         __p->~_Tp();

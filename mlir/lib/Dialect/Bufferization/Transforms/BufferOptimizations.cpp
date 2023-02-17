@@ -356,7 +356,7 @@ public:
       Operation *allocOp = alloc.getDefiningOp();
       Operation *alloca = builder.create<memref::AllocaOp>(
           alloc.getLoc(), alloc.getType().cast<MemRefType>(),
-          allocOp->getOperands());
+          allocOp->getOperands(), allocOp->getAttrs());
 
       // Replace the original alloc by a newly created alloca.
       allocOp->replaceAllUsesWith(alloca);

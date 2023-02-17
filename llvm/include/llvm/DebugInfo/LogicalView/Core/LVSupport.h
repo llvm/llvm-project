@@ -31,25 +31,6 @@ namespace logicalview {
 // Returns the unique string pool instance.
 LVStringPool &getStringPool();
 
-template <typename T>
-using TypeIsValid = std::bool_constant<std::is_pointer<T>::value>;
-
-// Utility class to help memory management and perform an automatic cleaning.
-template <typename T, unsigned N = 8>
-class LVAutoSmallVector : public SmallVector<T, N> {
-  static_assert(TypeIsValid<T>::value, "T must be a pointer type");
-
-public:
-  using iterator = typename SmallVector<T, N>::iterator;
-  LVAutoSmallVector() : SmallVector<T, N>::SmallVector() {}
-
-  ~LVAutoSmallVector() {
-    // Destroy the constructed elements in the vector.
-    for (auto *Item : *this)
-      delete Item;
-  }
-};
-
 // Used to record specific characteristics about the objects.
 template <typename T> class LVProperties {
   SmallBitVector Bits = SmallBitVector(static_cast<unsigned>(T::LastEntry) + 1);
@@ -147,25 +128,10 @@ std::string formatAttributes(const StringRef First, Args... Others) {
   return Stream.str();
 }
 
-// Add an item to a map with second being a list.
-template <typename MapType, typename ListType, typename KeyType,
-          typename ValueType>
+// Add an item to a map with second being a small vector.
+template <typename MapType, typename KeyType, typename ValueType>
 void addItem(MapType *Map, KeyType Key, ValueType Value) {
-  ListType *List = nullptr;
-  typename MapType::const_iterator Iter = Map->find(Key);
-  if (Iter != Map->end())
-    List = Iter->second;
-  else {
-    List = new ListType();
-    Map->emplace(Key, List);
-  }
-  List->push_back(Value);
-}
-
-// Delete the map contained list.
-template <typename MapType> void deleteList(MapType &Map) {
-  for (typename MapType::const_reference Entry : Map)
-    delete Entry.second;
+  (*Map)[Key].push_back(Value);
 }
 
 // Double map data structure.
@@ -174,32 +140,25 @@ class LVDoubleMap {
   static_assert(std::is_pointer<ValueType>::value,
                 "ValueType must be a pointer.");
   using LVSecondMapType = std::map<SecondKeyType, ValueType>;
-  using LVFirstMapType = std::map<FirstKeyType, LVSecondMapType *>;
+  using LVFirstMapType =
+      std::map<FirstKeyType, std::unique_ptr<LVSecondMapType>>;
   using LVAuxMapType = std::map<SecondKeyType, FirstKeyType>;
   using LVValueTypes = std::vector<ValueType>;
   LVFirstMapType FirstMap;
   LVAuxMapType AuxMap;
 
 public:
-  LVDoubleMap() = default;
-  ~LVDoubleMap() {
-    for (auto &Entry : FirstMap)
-      delete Entry.second;
-  }
-
   void add(FirstKeyType FirstKey, SecondKeyType SecondKey, ValueType Value) {
-    LVSecondMapType *SecondMap = nullptr;
     typename LVFirstMapType::iterator FirstIter = FirstMap.find(FirstKey);
     if (FirstIter == FirstMap.end()) {
-      SecondMap = new LVSecondMapType();
-      FirstMap.emplace(FirstKey, SecondMap);
+      auto SecondMapSP = std::make_unique<LVSecondMapType>();
+      SecondMapSP->emplace(SecondKey, Value);
+      FirstMap.emplace(FirstKey, std::move(SecondMapSP));
     } else {
-      SecondMap = FirstIter->second;
+      LVSecondMapType *SecondMap = FirstIter->second.get();
+      if (SecondMap->find(SecondKey) == SecondMap->end())
+        SecondMap->emplace(SecondKey, Value);
     }
-
-    assert(SecondMap && "SecondMap is null.");
-    if (SecondMap && SecondMap->find(SecondKey) == SecondMap->end())
-      SecondMap->emplace(SecondKey, Value);
 
     typename LVAuxMapType::iterator AuxIter = AuxMap.find(SecondKey);
     if (AuxIter == AuxMap.end()) {
@@ -212,8 +171,7 @@ public:
     if (FirstIter == FirstMap.end())
       return nullptr;
 
-    LVSecondMapType *SecondMap = FirstIter->second;
-    return SecondMap;
+    return FirstIter->second.get();
   }
 
   ValueType find(FirstKeyType FirstKey, SecondKeyType SecondKey) const {
@@ -239,8 +197,8 @@ public:
     if (FirstMap.empty())
       return Values;
     for (typename LVFirstMapType::const_reference FirstEntry : FirstMap) {
-      LVSecondMapType *SecondMap = FirstEntry.second;
-      for (typename LVSecondMapType::const_reference SecondEntry : *SecondMap)
+      LVSecondMapType &SecondMap = *FirstEntry.second;
+      for (typename LVSecondMapType::const_reference SecondEntry : SecondMap)
         Values.push_back(SecondEntry.second);
     }
     return Values;

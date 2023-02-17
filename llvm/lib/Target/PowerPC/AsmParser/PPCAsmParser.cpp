@@ -441,8 +441,10 @@ public:
 
   bool isEvenRegNumber() const { return isRegNumber() && (getImm() & 1) == 0; }
 
-  bool isCRBitMask() const { return Kind == Immediate && isUInt<8>(getImm()) &&
-                                    isPowerOf2_32(getImm()); }
+  bool isCRBitMask() const {
+    return Kind == Immediate && isUInt<8>(getImm()) &&
+           llvm::has_single_bit<uint32_t>(getImm());
+  }
   bool isATBitsAsHint() const { return false; }
   bool isMem() const override { return false; }
   bool isReg() const override { return false; }

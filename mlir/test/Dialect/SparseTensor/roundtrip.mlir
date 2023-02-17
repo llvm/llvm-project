@@ -44,19 +44,6 @@ func.func @sparse_unpack(%sp : tensor<100xf64, #SparseVector>)
 
 // -----
 
-#SparseMatrix = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
-
-// CHECK-LABEL: func @sparse_new_symmetry(
-// CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
-//       CHECK: %[[T:.*]] = sparse_tensor.new expand_symmetry %[[A]] : !llvm.ptr<i8> to tensor<?x?xf64, #{{.*}}>
-//       CHECK: return %[[T]] : tensor<?x?xf64, #{{.*}}>
-func.func @sparse_new_symmetry(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf64, #SparseMatrix> {
-  %0 = sparse_tensor.new expand_symmetry %arg0 : !llvm.ptr<i8> to tensor<?x?xf64, #SparseMatrix>
-  return %0 : tensor<?x?xf64, #SparseMatrix>
-}
-
-// -----
-
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
 
 // CHECK-LABEL: func @sparse_dealloc(
@@ -144,6 +131,38 @@ func.func @sparse_indices(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xind
 func.func @sparse_values(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xf64> {
   %0 = sparse_tensor.values %arg0 : tensor<128xf64, #SparseVector> to memref<?xf64>
   return %0 : memref<?xf64>
+}
+
+// -----
+
+#CSR_SLICE = #sparse_tensor.encoding<{
+  dimLevelType = [ "dense", "compressed" ],
+  slice = [ (1, 4, 1), (1, 4, 2) ]
+}>
+
+// CHECK-LABEL: func @sparse_slice_offset(
+//  CHECK-SAME: %[[A:.*]]: tensor<2x8xf64, #{{.*}}>)
+//       CHECK: %[[T:.*]] = sparse_tensor.slice.offset %[[A]] at 1 : tensor<2x8xf64, #{{.*}}>
+//       CHECK: return %[[T]] : index
+func.func @sparse_slice_offset(%arg0: tensor<2x8xf64, #CSR_SLICE>) -> index {
+  %0 = sparse_tensor.slice.offset %arg0 at 1 : tensor<2x8xf64, #CSR_SLICE>
+  return %0 : index
+}
+
+// -----
+
+#CSR_SLICE = #sparse_tensor.encoding<{
+  dimLevelType = [ "dense", "compressed" ],
+  slice = [ (1, 4, 1), (1, 4, 2) ]
+}>
+
+// CHECK-LABEL: func @sparse_slice_stride(
+//  CHECK-SAME: %[[A:.*]]: tensor<2x8xf64, #{{.*}}>)
+//       CHECK: %[[T:.*]] = sparse_tensor.slice.stride %[[A]] at 1 : tensor<2x8xf64, #{{.*}}>
+//       CHECK: return %[[T]] : index
+func.func @sparse_slice_stride(%arg0: tensor<2x8xf64, #CSR_SLICE>) -> index {
+  %0 = sparse_tensor.slice.stride %arg0 at 1 : tensor<2x8xf64, #CSR_SLICE>
+  return %0 : index
 }
 
 // -----
