@@ -1591,6 +1591,12 @@ ASM Goto with Output Constraints
 Outputs may be used along any branches from the ``asm goto`` whether the
 branches are taken or not.
 
+Query for this feature with ``__has_extension(gnu_asm_goto_with_outputs)``.
+
+Prior to clang-16, the output may only be used safely when the indirect
+branches are not taken.  Query for this difference with
+``__has_extension(gnu_asm_goto_with_outputs_full)``.
+
 When using tied-outputs (i.e. outputs that are inputs and outputs, not just
 outputs) with the `+r` constraint, there is a hidden input that's created
 before the label, so numeric references to operands must account for that.
@@ -1617,8 +1623,6 @@ references can be used instead of numeric references.
     err:
       return -1;
   }
-
-Query for this feature with ``__has_extension(gnu_asm_goto_with_outputs)``.
 
 Objective-C Features
 ====================
