@@ -32,13 +32,13 @@ define void @call_result_align_1() {
   ; CHECK-NEXT:   [[PRED_COPY4:%[0-9]+]]:sgpr_32 = PRED_COPY $sgpr12
   ; CHECK-NEXT:   [[PRED_COPY5:%[0-9]+]]:sgpr_64 = PRED_COPY $sgpr10_sgpr11
   ; CHECK-NEXT:   [[PRED_COPY6:%[0-9]+]]:sgpr_64 = PRED_COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[PRED_COPY7:%[0-9]+]]:sgpr_64 = PRED_COPY $sgpr6_sgpr7
+  ; CHECK-NEXT:   [[PRED_COPY7:%[0-9]+]]:sgpr_64(p4) = PRED_COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[PRED_COPY8:%[0-9]+]]:sgpr_64 = PRED_COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @returns_ptr
   ; CHECK-NEXT:   [[PRED_COPY9:%[0-9]+]]:_(p4) = PRED_COPY [[PRED_COPY8]]
-  ; CHECK-NEXT:   [[PRED_COPY10:%[0-9]+]]:_(p4) = PRED_COPY [[PRED_COPY7]]
+  ; CHECK-NEXT:   [[PRED_COPY10:%[0-9]+]]:_(p4) = PRED_COPY [[PRED_COPY7]](p4)
   ; CHECK-NEXT:   [[PRED_COPY11:%[0-9]+]]:_(p4) = PRED_COPY [[PRED_COPY6]]
   ; CHECK-NEXT:   [[PRED_COPY12:%[0-9]+]]:_(s64) = PRED_COPY [[PRED_COPY5]]
   ; CHECK-NEXT:   [[PRED_COPY13:%[0-9]+]]:_(s32) = PRED_COPY [[PRED_COPY4]]
@@ -81,13 +81,13 @@ define void @call_result_align_8() {
   ; CHECK-NEXT:   [[PRED_COPY4:%[0-9]+]]:sgpr_32 = PRED_COPY $sgpr12
   ; CHECK-NEXT:   [[PRED_COPY5:%[0-9]+]]:sgpr_64 = PRED_COPY $sgpr10_sgpr11
   ; CHECK-NEXT:   [[PRED_COPY6:%[0-9]+]]:sgpr_64 = PRED_COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[PRED_COPY7:%[0-9]+]]:sgpr_64 = PRED_COPY $sgpr6_sgpr7
+  ; CHECK-NEXT:   [[PRED_COPY7:%[0-9]+]]:sgpr_64(p4) = PRED_COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[PRED_COPY8:%[0-9]+]]:sgpr_64 = PRED_COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @returns_ptr
   ; CHECK-NEXT:   [[PRED_COPY9:%[0-9]+]]:_(p4) = PRED_COPY [[PRED_COPY8]]
-  ; CHECK-NEXT:   [[PRED_COPY10:%[0-9]+]]:_(p4) = PRED_COPY [[PRED_COPY7]]
+  ; CHECK-NEXT:   [[PRED_COPY10:%[0-9]+]]:_(p4) = PRED_COPY [[PRED_COPY7]](p4)
   ; CHECK-NEXT:   [[PRED_COPY11:%[0-9]+]]:_(p4) = PRED_COPY [[PRED_COPY6]]
   ; CHECK-NEXT:   [[PRED_COPY12:%[0-9]+]]:_(s64) = PRED_COPY [[PRED_COPY5]]
   ; CHECK-NEXT:   [[PRED_COPY13:%[0-9]+]]:_(s32) = PRED_COPY [[PRED_COPY4]]
@@ -131,13 +131,13 @@ define void @declaration_result_align_8() {
   ; CHECK-NEXT:   [[PRED_COPY4:%[0-9]+]]:sgpr_32 = PRED_COPY $sgpr12
   ; CHECK-NEXT:   [[PRED_COPY5:%[0-9]+]]:sgpr_64 = PRED_COPY $sgpr10_sgpr11
   ; CHECK-NEXT:   [[PRED_COPY6:%[0-9]+]]:sgpr_64 = PRED_COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[PRED_COPY7:%[0-9]+]]:sgpr_64 = PRED_COPY $sgpr6_sgpr7
+  ; CHECK-NEXT:   [[PRED_COPY7:%[0-9]+]]:sgpr_64(p4) = PRED_COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[PRED_COPY8:%[0-9]+]]:sgpr_64 = PRED_COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @returns_ptr_align8
   ; CHECK-NEXT:   [[PRED_COPY9:%[0-9]+]]:_(p4) = PRED_COPY [[PRED_COPY8]]
-  ; CHECK-NEXT:   [[PRED_COPY10:%[0-9]+]]:_(p4) = PRED_COPY [[PRED_COPY7]]
+  ; CHECK-NEXT:   [[PRED_COPY10:%[0-9]+]]:_(p4) = PRED_COPY [[PRED_COPY7]](p4)
   ; CHECK-NEXT:   [[PRED_COPY11:%[0-9]+]]:_(p4) = PRED_COPY [[PRED_COPY6]]
   ; CHECK-NEXT:   [[PRED_COPY12:%[0-9]+]]:_(s64) = PRED_COPY [[PRED_COPY5]]
   ; CHECK-NEXT:   [[PRED_COPY13:%[0-9]+]]:_(s32) = PRED_COPY [[PRED_COPY4]]
@@ -181,11 +181,11 @@ define ptr addrspace(1) @tail_call_assert_align() {
   ; CHECK-NEXT:   [[PRED_COPY4:%[0-9]+]]:sgpr_32 = PRED_COPY $sgpr12
   ; CHECK-NEXT:   [[PRED_COPY5:%[0-9]+]]:sgpr_64 = PRED_COPY $sgpr10_sgpr11
   ; CHECK-NEXT:   [[PRED_COPY6:%[0-9]+]]:sgpr_64 = PRED_COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[PRED_COPY7:%[0-9]+]]:sgpr_64 = PRED_COPY $sgpr6_sgpr7
+  ; CHECK-NEXT:   [[PRED_COPY7:%[0-9]+]]:sgpr_64(p4) = PRED_COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[PRED_COPY8:%[0-9]+]]:sgpr_64 = PRED_COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:ccr_sgpr_64(p0) = G_GLOBAL_VALUE @returns_ptr_align8
   ; CHECK-NEXT:   [[PRED_COPY9:%[0-9]+]]:_(p4) = PRED_COPY [[PRED_COPY8]]
-  ; CHECK-NEXT:   [[PRED_COPY10:%[0-9]+]]:_(p4) = PRED_COPY [[PRED_COPY7]]
+  ; CHECK-NEXT:   [[PRED_COPY10:%[0-9]+]]:_(p4) = PRED_COPY [[PRED_COPY7]](p4)
   ; CHECK-NEXT:   [[PRED_COPY11:%[0-9]+]]:_(p4) = PRED_COPY [[PRED_COPY6]]
   ; CHECK-NEXT:   [[PRED_COPY12:%[0-9]+]]:_(s64) = PRED_COPY [[PRED_COPY5]]
   ; CHECK-NEXT:   [[PRED_COPY13:%[0-9]+]]:_(s32) = PRED_COPY [[PRED_COPY4]]

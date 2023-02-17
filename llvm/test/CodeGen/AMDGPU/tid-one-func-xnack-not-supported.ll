@@ -8,7 +8,7 @@
 ; ASM:    - 1
 
 ; ELF:      OS/ABI: AMDGPU_HSA (0x40)
-; ELF:      ABIVersion: 2
+; ELF:      ABIVersion: 3
 ; ELF:      Flags [ (0x22)
 ; ELF-NEXT:   EF_AMDGPU_MACH_AMDGCN_GFX700 (0x22)
 ; ELF-NEXT: ]

@@ -11,10 +11,10 @@ define amdgpu_kernel void @extract_w_offset_vgpr(ptr addrspace(1) %out) {
   ; GCN-LABEL: name: extract_w_offset_vgpr
   ; GCN: bb.0.entry:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
-  ; GCN-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; GCN-NEXT:   liveins: $vgpr0, $sgpr2_sgpr3
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   SI_SPILL_V32_SAVE killed $vgpr0, %stack.3, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.3, addrspace 5)
-  ; GCN-NEXT:   renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
+  ; GCN-NEXT:   renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr2_sgpr3, 36, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
   ; GCN-NEXT:   renamable $sgpr6 = PRED_COPY renamable $sgpr1
   ; GCN-NEXT:   renamable $sgpr0 = PRED_COPY renamable $sgpr0, implicit killed $sgpr0_sgpr1
   ; GCN-NEXT:   renamable $sgpr4 = S_MOV_B32 61440

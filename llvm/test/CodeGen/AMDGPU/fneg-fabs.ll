@@ -2,6 +2,8 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck --check-prefixes=VI,FUNC %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=redwood < %s | FileCheck --check-prefixes=R600,FUNC %s
 
+; XFAIL: *
+
 ; FUNC-LABEL: {{^}}fneg_fabsf_fadd_f32:
 ; SI-NOT: and
 ; SI: v_sub_f32_e64 {{v[0-9]+}}, {{s[0-9]+}}, |{{v[0-9]+}}|

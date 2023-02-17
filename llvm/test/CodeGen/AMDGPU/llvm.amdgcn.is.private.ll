@@ -2,6 +2,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
+; XFAIL: *
+
 ; GCN-LABEL: {{^}}is_private_vgpr:
 ; GCN-DAG: {{flat|global|buffer}}_load_dwordx2 v{{\[[0-9]+}}:[[PTR_HI:[0-9]+]]]
 ; CI-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x11

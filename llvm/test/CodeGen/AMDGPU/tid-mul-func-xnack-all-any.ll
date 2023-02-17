@@ -8,7 +8,7 @@
 ; ASM:    - 1
 
 ; ELF:      OS/ABI: AMDGPU_HSA (0x40)
-; ELF:      ABIVersion: 2
+; ELF:      ABIVersion: 3
 ; ELF:      Flags [ (0x12C)
 ; ELF-NEXT:   EF_AMDGPU_FEATURE_XNACK_ANY_V4 (0x100)
 ; ELF-NEXT:   EF_AMDGPU_MACH_AMDGCN_GFX900   (0x2C)
