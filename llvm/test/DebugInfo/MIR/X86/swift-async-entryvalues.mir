@@ -211,14 +211,15 @@ machineFunctionInfo: {}
 body:             |
   bb.0 (%ir-block.3):
     liveins: $rdi, $rsi, $r14
-  
+
     DBG_VALUE renamable $r14, 0, !59, !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 64, DW_OP_plus_uconst, 24, DW_OP_deref), debug-location !61
     frame-setup PUSH64r $r14, implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 16
     $rsp = frame-setup SUB64ri8 $rsp, 32, implicit-def dead $eflags
     CFI_INSTRUCTION def_cfa_offset 48
     CFI_INSTRUCTION offset $r14, -16
-    DBG_VALUE renamable $r14, 0, !54, !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 64, DW_OP_plus_uconst, 32), debug-location !58
+    ; This isn't supported, but it also shouldn't crash.
+    DBG_VALUE_LIST !54, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_deref, DW_OP_plus_uconst, 64, DW_OP_plus_uconst, 32, DW_OP_stack_value), renamable $r14, debug-location !58
     $rcx = MOV64rr killed $rsi
     renamable $rax = MOV64rm renamable $r14, 1, $noreg, 0, $noreg, debug-location !47 :: (load 8 from %ir.4)
     MOV64mr $rsp, 1, $noreg, 24, $noreg, $rax :: (store 8 into %stack.0)
