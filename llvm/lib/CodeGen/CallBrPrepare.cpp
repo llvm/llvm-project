@@ -34,6 +34,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -46,6 +47,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/SSAUpdater.h"
 
 using namespace llvm;
 
@@ -55,6 +57,10 @@ namespace {
 
 class CallBrPrepare : public FunctionPass {
   bool SplitCriticalEdges(ArrayRef<CallBrInst *> CBRs, DominatorTree &DT);
+  bool InsertIntrinsicCalls(ArrayRef<CallBrInst *> CBRs,
+                            DominatorTree &DT) const;
+  void UpdateSSA(DominatorTree &DT, CallBrInst *CBR, CallInst *Intrinsic,
+                 SSAUpdater &SSAUpdate) const;
 
 public:
   CallBrPrepare() : FunctionPass(ID) {}
@@ -108,21 +114,87 @@ bool CallBrPrepare::SplitCriticalEdges(ArrayRef<CallBrInst *> CBRs,
   return Changed;
 }
 
-static bool InsertIntrinsicCalls(ArrayRef<CallBrInst *> CBRs) {
+bool CallBrPrepare::InsertIntrinsicCalls(ArrayRef<CallBrInst *> CBRs,
+                                         DominatorTree &DT) const {
   bool Changed = false;
   SmallPtrSet<const BasicBlock *, 4> Visited;
   IRBuilder<> Builder(CBRs[0]->getContext());
   for (CallBrInst *CBR : CBRs) {
+    if (!CBR->getNumIndirectDests())
+      continue;
+
+    SSAUpdater SSAUpdate;
+    SSAUpdate.Initialize(CBR->getType(), CBR->getName());
+    SSAUpdate.AddAvailableValue(CBR->getParent(), CBR);
+    SSAUpdate.AddAvailableValue(CBR->getDefaultDest(), CBR);
+
     for (BasicBlock *IndDest : CBR->getIndirectDests()) {
       if (!Visited.insert(IndDest).second)
         continue;
       Builder.SetInsertPoint(&*IndDest->begin());
-      Builder.CreateIntrinsic(CBR->getType(), Intrinsic::callbr_landingpad,
-                              {CBR});
+      CallInst *Intrinsic = Builder.CreateIntrinsic(
+          CBR->getType(), Intrinsic::callbr_landingpad, {CBR});
+      SSAUpdate.AddAvailableValue(IndDest, Intrinsic);
+      UpdateSSA(DT, CBR, Intrinsic, SSAUpdate);
       Changed = true;
     }
   }
   return Changed;
+}
+
+static bool IsInSameBasicBlock(const Use &U, const BasicBlock *BB) {
+  const auto *I = dyn_cast<Instruction>(U.getUser());
+  return I && I->getParent() == BB;
+}
+
+static void PrintDebugDomInfo(const DominatorTree &DT, const Use &U,
+                              const BasicBlock *BB, bool IsDefaultDest) {
+  if (!isa<Instruction>(U.getUser()))
+    return;
+  const bool IsDominated = DT.dominates(BB, U);
+  LLVM_DEBUG(dbgs() << "Use: " << *U.getUser() << ", in block "
+                    << cast<Instruction>(U.getUser())->getParent()->getName()
+                    << ", is " << (IsDominated ? "" : "NOT ") << "dominated by "
+                    << BB->getName() << " (" << (IsDefaultDest ? "in" : "")
+                    << "direct)\n");
+}
+
+void CallBrPrepare::UpdateSSA(DominatorTree &DT, CallBrInst *CBR,
+                              CallInst *Intrinsic,
+                              SSAUpdater &SSAUpdate) const {
+
+  SmallPtrSet<Use *, 4> Visited;
+  BasicBlock *DefaultDest = CBR->getDefaultDest();
+  BasicBlock *LandingPad = Intrinsic->getParent();
+
+  SmallVector<Use *, 4> Uses(make_pointer_range(CBR->uses()));
+  for (Use *U : Uses) {
+    if (!Visited.insert(U).second)
+      continue;
+
+#ifndef NDEBUG
+    PrintDebugDomInfo(DT, *U, LandingPad, /*IsDefaultDest*/ false);
+    PrintDebugDomInfo(DT, *U, DefaultDest, /*IsDefaultDest*/ true);
+#endif
+
+    // Don't rewrite the use in the newly inserted intrinsic.
+    if (const auto *II = dyn_cast<IntrinsicInst>(U->getUser()))
+      if (II->getIntrinsicID() == Intrinsic::callbr_landingpad)
+        continue;
+
+    // If the Use is in the same BasicBlock as the Intrinsic call, replace
+    // the Use with the value of the Intrinsic call.
+    if (IsInSameBasicBlock(*U, LandingPad)) {
+      U->set(Intrinsic);
+      continue;
+    }
+
+    // If the Use is dominated by the default dest, do not touch it.
+    if (DT.dominates(DefaultDest, *U))
+      continue;
+
+    SSAUpdate.RewriteUse(*U);
+  }
 }
 
 bool CallBrPrepare::runOnFunction(Function &Fn) {
@@ -151,7 +223,7 @@ bool CallBrPrepare::runOnFunction(Function &Fn) {
   if (SplitCriticalEdges(CBRs, *DT))
     Changed = true;
 
-  if (InsertIntrinsicCalls(CBRs))
+  if (InsertIntrinsicCalls(CBRs, *DT))
     Changed = true;
 
   return Changed;
