@@ -84,10 +84,13 @@ public:
   void do_infinity_and_na_n_test(RoundToIntegerFunc func) {
     test_one_input(func, inf, INTEGER_MAX, true);
     test_one_input(func, neg_inf, INTEGER_MIN, true);
-#if LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR
+    // This is currently never enabled, the
+    // LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR CMake option in
+    // libc/CMakeLists.txt is not forwarded to C++.
+#if LIBC_COPT_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR
     // Result is not well-defined, we always returns INTEGER_MAX
     test_one_input(func, nan, INTEGER_MAX, true);
-#endif
+#endif // LIBC_COPT_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR
   }
 
   void testInfinityAndNaN(RoundToIntegerFunc func) {

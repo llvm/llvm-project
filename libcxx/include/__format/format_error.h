@@ -20,7 +20,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 class _LIBCPP_EXCEPTION_ABI format_error : public runtime_error {
 public:
@@ -48,7 +48,7 @@ __throw_format_error(const char* __s) {
 #endif
 }
 
-#endif //_LIBCPP_STD_VER > 17
+#endif //_LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

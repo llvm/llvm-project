@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/STLExtras.h"
@@ -574,19 +575,12 @@ bool ScalarType::classof(Type type) {
   return false;
 }
 
-bool ScalarType::isValid(FloatType type) { return !type.isBF16(); }
+bool ScalarType::isValid(FloatType type) {
+  return llvm::is_contained({16u, 32u, 64u}, type.getWidth()) && !type.isBF16();
+}
 
 bool ScalarType::isValid(IntegerType type) {
-  switch (type.getWidth()) {
-  case 1:
-  case 8:
-  case 16:
-  case 32:
-  case 64:
-    return true;
-  default:
-    return false;
-  }
+  return llvm::is_contained({1u, 8u, 16u, 32u, 64u}, type.getWidth());
 }
 
 void ScalarType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,

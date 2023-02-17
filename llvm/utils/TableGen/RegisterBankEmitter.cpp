@@ -11,14 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CodeGenRegisters.h"
+#include "CodeGenTarget.h"
+#include "InfoByHwMode.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
-
-#include "CodeGenRegisters.h"
-#include "CodeGenTarget.h"
 
 #define DEBUG_TYPE "register-bank-emitter"
 

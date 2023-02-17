@@ -1509,9 +1509,17 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   searchPaths.emplace_back("");
   for (auto *arg : args.filtered(OPT_libpath))
     searchPaths.push_back(arg->getValue());
-  detectWinSysRoot(args);
-  if (!args.hasArg(OPT_lldignoreenv) && !args.hasArg(OPT_winsysroot))
-    addLibSearchPaths();
+  if (!config->mingw) {
+    // Don't automatically deduce the lib path from the environment or MSVC
+    // installations when operating in mingw mode. (This also makes LLD ignore
+    // winsysroot and vctoolsdir arguments.)
+    detectWinSysRoot(args);
+    if (!args.hasArg(OPT_lldignoreenv) && !args.hasArg(OPT_winsysroot))
+      addLibSearchPaths();
+  } else {
+    if (args.hasArg(OPT_vctoolsdir, OPT_winsysroot))
+      warn("ignoring /vctoolsdir or /winsysroot flags in MinGW mode");
+  }
 
   // Handle /ignore
   for (auto *arg : args.filtered(OPT_ignore)) {
@@ -1768,6 +1776,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       } else if (s.consume_front("lldlto=")) {
         if (s.getAsInteger(10, config->ltoo) || config->ltoo > 3)
           error("/opt:lldlto: invalid optimization level: " + s);
+      } else if (s.consume_front("lldltocgo=")) {
+        config->ltoCgo.emplace();
+        if (s.getAsInteger(10, *config->ltoCgo) || *config->ltoCgo > 3)
+          error("/opt:lldltocgo: invalid codegen optimization level: " + s);
       } else if (s.consume_front("lldltojobs=")) {
         if (!get_threadpool_strategy(s))
           error("/opt:lldltojobs: invalid job count: " + s);

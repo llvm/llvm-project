@@ -586,28 +586,6 @@ public:
           continue;
         }
 
-        if (AtPredExit == MayUninitialized) {
-          // If the predecessor's terminator is an "asm goto" that initializes
-          // the variable, then don't count it as "initialized" on the indirect
-          // paths.
-          CFGTerminator term = Pred->getTerminator();
-          if (const auto *as = dyn_cast_or_null<GCCAsmStmt>(term.getStmt())) {
-            const CFGBlock *fallthrough = *Pred->succ_begin();
-            if (as->isAsmGoto() &&
-                llvm::any_of(as->outputs(), [&](const Expr *output) {
-                    return vd == findVar(output).getDecl() &&
-                        llvm::any_of(as->labels(),
-                                     [&](const AddrLabelExpr *label) {
-                          return label->getLabel()->getStmt() == B->Label &&
-                              B != fallthrough;
-                        });
-                })) {
-              Use.setUninitAfterDecl();
-              continue;
-            }
-          }
-        }
-
         unsigned &SV = SuccsVisited[Pred->getBlockID()];
         if (!SV) {
           // When visiting the first successor of a block, mark all NULL
@@ -820,7 +798,8 @@ void TransferFunctions::VisitGCCAsmStmt(GCCAsmStmt *as) {
     // it's used on an indirect path, where it's not guaranteed to be
     // defined.
     if (const VarDecl *VD = findVar(Ex).getDecl())
-      vals[VD] = MayUninitialized;
+      if (vals[VD] != Initialized)
+        vals[VD] = MayUninitialized;
   }
 }
 

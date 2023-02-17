@@ -35,7 +35,7 @@ template <class _Tp>
 using __libcpp_remove_reference_t = typename remove_reference<_Tp>::type;
 #endif // __has_builtin(__remove_reference_t)
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <class _Tp> using remove_reference_t = __libcpp_remove_reference_t<_Tp>;
 #endif
 

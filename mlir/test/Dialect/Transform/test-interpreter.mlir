@@ -1190,3 +1190,35 @@ transform.sequence failures(propagate) {
   // expected-error @below {{unexpectedly consumed a value that is not a handle as operand #0}}
   test_consume_operand %0 : !transform.test_dialect_param
 }
+
+// -----
+
+func.func @get_result_of_op(%arg0: index, %arg1: index) -> index {
+  // expected-remark @below {{addi result}}
+  // expected-note @below {{value handle points to an op result #0}}
+  %r = arith.addi %arg0, %arg1 : index
+  return %r : index
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %addi = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %result = transform.get_result %addi[0] : (!transform.any_op) -> !transform.any_value
+  transform.test_print_remark_at_operand_value %result, "addi result" : !transform.any_value
+}
+
+// -----
+
+func.func @get_out_of_bounds_result_of_op(%arg0: index, %arg1: index) -> index {
+  // expected-note @below {{target op}}
+  %r = arith.addi %arg0, %arg1 : index
+  return %r : index
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %addi = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  // expected-error @below {{targeted op does not have enough results}}
+  %result = transform.get_result %addi[1] : (!transform.any_op) -> !transform.any_value
+  transform.test_print_remark_at_operand_value %result, "addi result" : !transform.any_value
+}

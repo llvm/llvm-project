@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu -emit-llvm -fcoroutines-ts \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fcoroutines-ts \
 // RUN:   -O0 %s -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu -emit-llvm -fcoroutines-ts \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fcoroutines-ts \
 // RUN:   -fno-inline -O0 %s -o - | FileCheck %s
 
 namespace std {
@@ -35,13 +35,9 @@ struct coroutine_traits {
 
 // CHECK-LABEL: @_Z3foov
 // CHECK-LABEL: entry:
-// CHECK: [[CAST0:%[0-9]+]] = bitcast %"struct.std::experimental::awaitable"* %ref.tmp{{.*}} to i8*
-// CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 1, i8* [[CAST0]])
-// CHECK: [[CAST1:%[0-9]+]] = bitcast %"struct.std::experimental::awaitable"* %ref.tmp{{.*}} to i8*
-// CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 1, i8* [[CAST1]])
+// CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %ref.tmp{{.*}})
+// CHECK: call void @llvm.lifetime.end.p0(i64 1, ptr %ref.tmp{{.*}})
 
-// CHECK: [[CAST2:%[0-9]+]] = bitcast %"struct.std::experimental::awaitable"* %ref.tmp{{.*}} to i8*
-// CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 1, i8* [[CAST2]])
-// CHECK: [[CAST3:%[0-9]+]] = bitcast %"struct.std::experimental::awaitable"* %ref.tmp{{.*}} to i8*
-// CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 1, i8* [[CAST3]])
+// CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %ref.tmp{{.*}})
+// CHECK: call void @llvm.lifetime.end.p0(i64 1, ptr %ref.tmp{{.*}})
 void foo() { co_return; }

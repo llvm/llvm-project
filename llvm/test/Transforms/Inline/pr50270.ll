@@ -10,17 +10,17 @@ declare { ptr } @opaque_callee()
 
 define { ptr } @callee(ptr %x) {
 ; CHECK-LABEL: @callee(
-; CHECK-NEXT:    [[RES:%.*]] = insertvalue { ptr } undef, ptr [[X:%.*]], 0
+; CHECK-NEXT:    [[RES:%.*]] = insertvalue { ptr } poison, ptr [[X:%.*]], 0
 ; CHECK-NEXT:    ret { ptr } [[RES]]
 ;
-  %res = insertvalue { ptr } undef, ptr %x, 0
+  %res = insertvalue { ptr } poison, ptr %x, 0
   ret { ptr } %res
 }
 
 ; @opaque_callee() should not receive noalias metadata here.
 define void @caller() {
 ; CHECK-LABEL: @caller(
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata !0)
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META0:![0-9]+]])
 ; CHECK-NEXT:    [[S:%.*]] = call { ptr } @opaque_callee()
 ; CHECK-NEXT:    [[X:%.*]] = extractvalue { ptr } [[S]], 0
 ; CHECK-NEXT:    ret void
@@ -36,16 +36,16 @@ define void @caller() {
 ; else branch, not as the load in the if branch.
 define { ptr } @self_caller(i1 %c, ptr %a) {
 ; CHECK-LABEL: @self_caller(
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata !0)
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META0]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[S:%.*]] = call { ptr } @opaque_callee(), !noalias !0
 ; CHECK-NEXT:    [[X:%.*]] = extractvalue { ptr } [[S]], 0
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata !3)
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META3:![0-9]+]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = load volatile i64, ptr [[X]], align 4, !alias.scope !3
 ; CHECK-NEXT:    ret { ptr } [[S]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[R2:%.*]] = insertvalue { ptr } undef, ptr [[A:%.*]], 0
+; CHECK-NEXT:    [[R2:%.*]] = insertvalue { ptr } poison, ptr [[A:%.*]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load volatile i64, ptr [[A]], align 4, !alias.scope !0
 ; CHECK-NEXT:    ret { ptr } [[R2]]
 ;
@@ -59,7 +59,7 @@ if:
   ret { ptr } %r
 
 else:
-  %r2 = insertvalue { ptr } undef, ptr %a, 0
+  %r2 = insertvalue { ptr } poison, ptr %a, 0
   load volatile i64, ptr %a, !alias.scope !0
   ret { ptr } %r2
 }

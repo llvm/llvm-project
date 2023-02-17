@@ -58,7 +58,7 @@ add_libc_fuzzer(
     libc.src.stdlib.strtoul
     libc.src.stdlib.strtoull
   COMPILE_OPTIONS
-    -DLLVM_LIBC_FUZZ_ATOI_CLEANER_INPUT
+    -DLIBC_COPT_FUZZ_ATOI_CLEANER_INPUT
 )
 
 add_libc_fuzzer(

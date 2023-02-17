@@ -27,11 +27,11 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 namespace __unicode {
 
-#  if _LIBCPP_STD_VER > 20
+#  if _LIBCPP_STD_VER >= 23
 
 /// The result of consuming a code point using P2286' semantics
 ///
@@ -47,7 +47,7 @@ struct __consume_p2286_result {
   char32_t __value;
 };
 
-#  endif // _LIBCPP_STD_VER > 20
+#  endif // _LIBCPP_STD_VER >= 23
 
 #  ifndef _LIBCPP_HAS_NO_UNICODE
 
@@ -150,7 +150,7 @@ public:
     return __replacement_character;
   }
 
-#    if _LIBCPP_STD_VER > 20
+#    if _LIBCPP_STD_VER >= 23
   _LIBCPP_HIDE_FROM_ABI constexpr __consume_p2286_result __consume_p2286() noexcept {
     _LIBCPP_ASSERT(__first_ != __last_, "can't move beyond the end of input");
 
@@ -212,7 +212,7 @@ public:
     // "in sync" after a few code units.
     return {1, static_cast<unsigned char>(*__first_++)};
   }
-#    endif // _LIBCPP_STD_VER > 20
+#    endif // _LIBCPP_STD_VER >= 23
 
 private:
   _Iterator __first_;
@@ -273,7 +273,7 @@ public:
     }
   }
 
-#      if _LIBCPP_STD_VER > 20
+#      if _LIBCPP_STD_VER >= 23
   _LIBCPP_HIDE_FROM_ABI constexpr __consume_p2286_result __consume_p2286() noexcept {
     _LIBCPP_ASSERT(__first_ != __last_, "can't move beyond the end of input");
 
@@ -299,7 +299,7 @@ public:
 
     return {0, __result};
   }
-#      endif // _LIBCPP_STD_VER > 20
+#      endif // _LIBCPP_STD_VER >= 23
 
 private:
   _Iterator __first_;
@@ -479,13 +479,13 @@ public:
     return *__first_++;
   }
 
-#    if _LIBCPP_STD_VER > 20
+#    if _LIBCPP_STD_VER >= 23
   _LIBCPP_HIDE_FROM_ABI constexpr __consume_p2286_result __consume_p2286() noexcept {
     _LIBCPP_ASSERT(__first_ != __last_, "can't move beyond the end of input");
 
     return {0, std::make_unsigned_t<_CharT>(*__first_++)};
   }
-#    endif // _LIBCPP_STD_VER > 20
+#    endif // _LIBCPP_STD_VER >= 23
 
 private:
   _Iterator __first_;
@@ -496,7 +496,7 @@ private:
 
 } // namespace __unicode
 
-#endif //_LIBCPP_STD_VER > 17
+#endif //_LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

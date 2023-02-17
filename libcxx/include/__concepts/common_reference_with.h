@@ -20,7 +20,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 // [concept.commonref]
 
@@ -30,7 +30,7 @@ concept common_reference_with =
   convertible_to<_Tp, common_reference_t<_Tp, _Up>> &&
   convertible_to<_Up, common_reference_t<_Tp, _Up>>;
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -153,6 +153,41 @@ func.func @load_non_ptr_type(%foo : f32) {
 
 // -----
 
+func.func @load_syncscope(%ptr : !llvm.ptr) {
+  // expected-error@below {{expected syncscope to be null for non-atomic access}}
+  %1 = "llvm.load"(%ptr) {syncscope = "singlethread"} : (!llvm.ptr) -> (f32)
+}
+
+// -----
+
+func.func @load_unsupported_ordering(%ptr : !llvm.ptr) {
+  // expected-error@below {{unsupported ordering 'release'}}
+  %1 = llvm.load %ptr atomic release {alignment = 4 : i64} : !llvm.ptr -> f32
+}
+
+// -----
+
+func.func @load_unsupported_type(%ptr : !llvm.ptr) {
+  // expected-error@below {{unsupported type 'f80' for atomic access}}
+  %1 = llvm.load %ptr atomic monotonic {alignment = 16 : i64} : !llvm.ptr -> f80
+}
+
+// -----
+
+func.func @load_unsupported_type(%ptr : !llvm.ptr) {
+  // expected-error@below {{unsupported type 'i1' for atomic access}}
+  %1 = llvm.load %ptr atomic monotonic {alignment = 16 : i64} : !llvm.ptr -> i1
+}
+
+// -----
+
+func.func @load_unaligned_atomic(%ptr : !llvm.ptr) {
+  // expected-error@below {{expected alignment for atomic access}}
+  %1 = llvm.load %ptr atomic monotonic : !llvm.ptr -> f32
+}
+
+// -----
+
 func.func @store_non_llvm_type(%foo : memref<f32>, %bar : f32) {
   // expected-error@+1 {{expected LLVM pointer type}}
   llvm.store %bar, %foo : memref<f32>
@@ -964,6 +999,28 @@ module {
 
 // -----
 
+module {
+  llvm.metadata @metadata {
+    llvm.access_group @group
+    // expected-error@below {{expected 'group' to reference a domain operation in the same region}}
+    llvm.alias_scope @scope { domain = @group }
+  }
+}
+
+// -----
+
+module {
+  llvm.metadata @metadata {
+    // expected-error@below {{expected 'domain' to reference a domain operation in the same region}}
+    llvm.alias_scope @scope { domain = @domain }
+  }
+  llvm.metadata @other_metadata {
+    llvm.alias_scope_domain @domain
+  }
+}
+
+// -----
+
 llvm.func @wmmaLoadOp_invalid_mem_space(%arg0: !llvm.ptr<i32, 5>, %arg1: i32) {
   // expected-error@+1 {{'nvvm.wmma.load' op expected source pointer in memory space 0, 1, 3}}
   %0 = nvvm.wmma.load %arg0, %arg1
@@ -1275,12 +1332,6 @@ func.func @extract_scalable_from_fixed_length_vector(%arg0 : vector<16xf32>) {
   // expected-error@+1 {{op failed to verify that it is not extracting scalable from fixed-length vectors.}}
   %0 = llvm.intr.vector.extract %arg0[0] : vector<[8]xf32> from vector<16xf32>
 }
-
-// -----
-
-#void = #llvm.di_void_result_type
-// expected-error@below {{expected subroutine to have non-void argument types}}
-#void_argument_type = #llvm.di_subroutine_type<types = #void, #void>
 
 // -----
 

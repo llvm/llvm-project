@@ -279,7 +279,7 @@ TEST(LlvmLibcPrintfParserTest, EvalThreeArgs) {
   ASSERT_PFORMAT_EQ(expected2, format_arr[2]);
 }
 
-#ifndef LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
+#ifndef LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 
 TEST(LlvmLibcPrintfParserTest, IndexModeOneArg) {
   __llvm_libc::printf_core::FormatSection format_arr[10];
@@ -474,4 +474,4 @@ TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
   EXPECT_PFORMAT_EQ(expected9, format_arr[9]);
 }
 
-#endif // LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
+#endif // LIBC_COPT_PRINTF_DISABLE_INDEX_MODE

@@ -8114,7 +8114,6 @@ CXLinkageKind clang_getCursorLinkage(CXCursor cursor) {
     case NoLinkage:
     case VisibleNoLinkage:
       return CXLinkage_NoLinkage;
-    case ModuleInternalLinkage:
     case InternalLinkage:
       return CXLinkage_Internal;
     case UniqueExternalLinkage:

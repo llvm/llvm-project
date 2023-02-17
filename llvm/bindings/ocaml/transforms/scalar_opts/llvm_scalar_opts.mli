@@ -71,11 +71,6 @@ external add_licm
   : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
   = "llvm_add_licm"
 
-(** See the [llvm::createLoopDeletionPass] function. *)
-external add_loop_deletion
-  : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
-  = "llvm_add_loop_deletion"
-
 (** See the [llvm::createLoopIdiomPass] function. *)
 external add_loop_idiom
   : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
@@ -85,11 +80,6 @@ external add_loop_idiom
 external add_loop_rotation
   : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
   = "llvm_add_loop_rotate"
-
-(** See the [llvm::createLoopRerollPass] function. *)
-external add_loop_reroll
-  : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
-  = "llvm_add_loop_reroll"
 
 (** See the [llvm::createLoopUnrollPass] function. *)
 external add_loop_unroll

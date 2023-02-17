@@ -102,23 +102,19 @@ unsigned StructLayout::getElementContainingOffset(uint64_t Offset) const {
 // LayoutAlignElem, LayoutAlign support
 //===----------------------------------------------------------------------===//
 
-LayoutAlignElem LayoutAlignElem::get(AlignTypeEnum align_type, Align abi_align,
-                                     Align pref_align, uint32_t bit_width) {
-  assert(abi_align <= pref_align && "Preferred alignment worse than ABI!");
+LayoutAlignElem LayoutAlignElem::get(Align ABIAlign, Align PrefAlign,
+                                     uint32_t BitWidth) {
+  assert(ABIAlign <= PrefAlign && "Preferred alignment worse than ABI!");
   LayoutAlignElem retval;
-  retval.AlignType = align_type;
-  retval.ABIAlign = abi_align;
-  retval.PrefAlign = pref_align;
-  retval.TypeBitWidth = bit_width;
+  retval.ABIAlign = ABIAlign;
+  retval.PrefAlign = PrefAlign;
+  retval.TypeBitWidth = BitWidth;
   return retval;
 }
 
-bool
-LayoutAlignElem::operator==(const LayoutAlignElem &rhs) const {
-  return (AlignType == rhs.AlignType
-          && ABIAlign == rhs.ABIAlign
-          && PrefAlign == rhs.PrefAlign
-          && TypeBitWidth == rhs.TypeBitWidth);
+bool LayoutAlignElem::operator==(const LayoutAlignElem &rhs) const {
+  return ABIAlign == rhs.ABIAlign && PrefAlign == rhs.PrefAlign &&
+         TypeBitWidth == rhs.TypeBitWidth;
 }
 
 //===----------------------------------------------------------------------===//
@@ -162,19 +158,18 @@ const char *DataLayout::getManglingComponent(const Triple &T) {
   return "-m:e";
 }
 
-static const LayoutAlignElem DefaultAlignments[] = {
-    {INTEGER_ALIGN, 1, Align(1), Align(1)},    // i1
-    {INTEGER_ALIGN, 8, Align(1), Align(1)},    // i8
-    {INTEGER_ALIGN, 16, Align(2), Align(2)},   // i16
-    {INTEGER_ALIGN, 32, Align(4), Align(4)},   // i32
-    {INTEGER_ALIGN, 64, Align(4), Align(8)},   // i64
-    {FLOAT_ALIGN, 16, Align(2), Align(2)},     // half, bfloat
-    {FLOAT_ALIGN, 32, Align(4), Align(4)},     // float
-    {FLOAT_ALIGN, 64, Align(8), Align(8)},     // double
-    {FLOAT_ALIGN, 128, Align(16), Align(16)},  // ppcf128, quad, ...
-    {VECTOR_ALIGN, 64, Align(8), Align(8)},    // v2i32, v1i64, ...
-    {VECTOR_ALIGN, 128, Align(16), Align(16)}, // v16i8, v8i16, v4i32, ...
-    {AGGREGATE_ALIGN, 0, Align(1), Align(8)}   // struct
+static const std::pair<AlignTypeEnum, LayoutAlignElem> DefaultAlignments[] = {
+    {INTEGER_ALIGN, {1, Align(1), Align(1)}},    // i1
+    {INTEGER_ALIGN, {8, Align(1), Align(1)}},    // i8
+    {INTEGER_ALIGN, {16, Align(2), Align(2)}},   // i16
+    {INTEGER_ALIGN, {32, Align(4), Align(4)}},   // i32
+    {INTEGER_ALIGN, {64, Align(4), Align(8)}},   // i64
+    {FLOAT_ALIGN, {16, Align(2), Align(2)}},     // half, bfloat
+    {FLOAT_ALIGN, {32, Align(4), Align(4)}},     // float
+    {FLOAT_ALIGN, {64, Align(8), Align(8)}},     // double
+    {FLOAT_ALIGN, {128, Align(16), Align(16)}},  // ppcf128, quad, ...
+    {VECTOR_ALIGN, {64, Align(8), Align(8)}},    // v2i32, v1i64, ...
+    {VECTOR_ALIGN, {128, Align(16), Align(16)}}, // v16i8, v8i16, v4i32, ...
 };
 
 void DataLayout::reset(StringRef Desc) {
@@ -190,11 +185,12 @@ void DataLayout::reset(StringRef Desc) {
   TheFunctionPtrAlignType = FunctionPtrAlignType::Independent;
   ManglingMode = MM_None;
   NonIntegralAddressSpaces.clear();
+  StructAlignment = LayoutAlignElem::get(Align(1), Align(8), 0);
 
   // Default alignments
-  for (const LayoutAlignElem &E : DefaultAlignments) {
-    if (Error Err = setAlignment((AlignTypeEnum)E.AlignType, E.ABIAlign,
-                                 E.PrefAlign, E.TypeBitWidth))
+  for (const auto &[Kind, Layout] : DefaultAlignments) {
+    if (Error Err = setAlignment(Kind, Layout.ABIAlign, Layout.PrefAlign,
+                                 Layout.TypeBitWidth))
       return report_fatal_error(std::move(Err));
   }
   if (Error Err = setPointerAlignmentInBits(0, Align(8), Align(8), 64, 64))
@@ -550,43 +546,63 @@ bool DataLayout::operator==(const DataLayout &Other) const {
              TheFunctionPtrAlignType == Other.TheFunctionPtrAlignType &&
              ManglingMode == Other.ManglingMode &&
              LegalIntWidths == Other.LegalIntWidths &&
-             Alignments == Other.Alignments && Pointers == Other.Pointers;
+             IntAlignments == Other.IntAlignments &&
+             FloatAlignments == Other.FloatAlignments &&
+             VectorAlignments == Other.VectorAlignments &&
+             StructAlignment == Other.StructAlignment &&
+             Pointers == Other.Pointers;
   // Note: getStringRepresentation() might differs, it is not canonicalized
   return Ret;
 }
 
-DataLayout::AlignmentsTy::iterator
-DataLayout::findAlignmentLowerBound(AlignTypeEnum AlignType,
-                                    uint32_t BitWidth) {
-  auto Pair = std::make_pair((unsigned)AlignType, BitWidth);
-  return partition_point(Alignments, [=](const LayoutAlignElem &E) {
-    return std::make_pair(E.AlignType, E.TypeBitWidth) < Pair;
+static SmallVectorImpl<LayoutAlignElem>::const_iterator
+findAlignmentLowerBound(const SmallVectorImpl<LayoutAlignElem> &Alignments,
+                        uint32_t BitWidth) {
+  return partition_point(Alignments, [BitWidth](const LayoutAlignElem &E) {
+    return E.TypeBitWidth < BitWidth;
   });
 }
 
-Error DataLayout::setAlignment(AlignTypeEnum align_type, Align abi_align,
-                               Align pref_align, uint32_t bit_width) {
+Error DataLayout::setAlignment(AlignTypeEnum AlignType, Align ABIAlign,
+                               Align PrefAlign, uint32_t BitWidth) {
   // AlignmentsTy::ABIAlign and AlignmentsTy::PrefAlign were once stored as
   // uint16_t, it is unclear if there are requirements for alignment to be less
   // than 2^16 other than storage. In the meantime we leave the restriction as
   // an assert. See D67400 for context.
-  assert(Log2(abi_align) < 16 && Log2(pref_align) < 16 && "Alignment too big");
-  if (!isUInt<24>(bit_width))
+  assert(Log2(ABIAlign) < 16 && Log2(PrefAlign) < 16 && "Alignment too big");
+  if (!isUInt<24>(BitWidth))
     return reportError("Invalid bit width, must be a 24bit integer");
-  if (pref_align < abi_align)
+  if (PrefAlign < ABIAlign)
     return reportError(
         "Preferred alignment cannot be less than the ABI alignment");
 
-  AlignmentsTy::iterator I = findAlignmentLowerBound(align_type, bit_width);
-  if (I != Alignments.end() &&
-      I->AlignType == (unsigned)align_type && I->TypeBitWidth == bit_width) {
+  SmallVectorImpl<LayoutAlignElem> *Alignments;
+  switch (AlignType) {
+  case AGGREGATE_ALIGN:
+    StructAlignment.ABIAlign = ABIAlign;
+    StructAlignment.PrefAlign = PrefAlign;
+    return Error::success();
+  case INTEGER_ALIGN:
+    Alignments = &IntAlignments;
+    break;
+  case FLOAT_ALIGN:
+    Alignments = &FloatAlignments;
+    break;
+  case VECTOR_ALIGN:
+    Alignments = &VectorAlignments;
+    break;
+  }
+
+  auto I = partition_point(*Alignments, [BitWidth](const LayoutAlignElem &E) {
+    return E.TypeBitWidth < BitWidth;
+  });
+  if (I != Alignments->end() && I->TypeBitWidth == BitWidth) {
     // Update the abi, preferred alignments.
-    I->ABIAlign = abi_align;
-    I->PrefAlign = pref_align;
+    I->ABIAlign = ABIAlign;
+    I->PrefAlign = PrefAlign;
   } else {
     // Insert before I to keep the vector sorted.
-    Alignments.insert(I, LayoutAlignElem::get(align_type, abi_align,
-                                              pref_align, bit_width));
+    Alignments->insert(I, LayoutAlignElem::get(ABIAlign, PrefAlign, BitWidth));
   }
   return Error::success();
 }
@@ -633,13 +649,12 @@ Error DataLayout::setPointerAlignmentInBits(uint32_t AddrSpace, Align ABIAlign,
 
 Align DataLayout::getIntegerAlignment(uint32_t BitWidth,
                                       bool abi_or_pref) const {
-  auto I = findAlignmentLowerBound(INTEGER_ALIGN, BitWidth);
+  auto I = findAlignmentLowerBound(IntAlignments, BitWidth);
   // If we don't have an exact match, use alignment of next larger integer
   // type. If there is none, use alignment of largest integer type by going
   // back one element.
-  if (I == Alignments.end() || I->AlignType != INTEGER_ALIGN)
+  if (I == IntAlignments.end())
     --I;
-  assert(I->AlignType == INTEGER_ALIGN && "Must be integer alignment");
   return abi_or_pref ? I->ABIAlign : I->PrefAlign;
 }
 
@@ -668,7 +683,9 @@ public:
 
 void DataLayout::clear() {
   LegalIntWidths.clear();
-  Alignments.clear();
+  IntAlignments.clear();
+  FloatAlignments.clear();
+  VectorAlignments.clear();
   Pointers.clear();
   delete static_cast<StructLayoutMap *>(LayoutMap);
   LayoutMap = nullptr;
@@ -768,11 +785,8 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
 
     // Get the layout annotation... which is lazily created on demand.
     const StructLayout *Layout = getStructLayout(cast<StructType>(Ty));
-    const LayoutAlignElem &AggregateAlign = Alignments[0];
-    assert(AggregateAlign.AlignType == AGGREGATE_ALIGN &&
-           "Aggregate alignment must be first alignment entry");
     const Align Align =
-        abi_or_pref ? AggregateAlign.ABIAlign : AggregateAlign.PrefAlign;
+        abi_or_pref ? StructAlignment.ABIAlign : StructAlignment.PrefAlign;
     return std::max(Align, Layout->getAlignment());
   }
   case Type::IntegerTyID:
@@ -787,9 +801,8 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   case Type::FP128TyID:
   case Type::X86_FP80TyID: {
     unsigned BitWidth = getTypeSizeInBits(Ty).getFixedValue();
-    auto I = findAlignmentLowerBound(FLOAT_ALIGN, BitWidth);
-    if (I != Alignments.end() && I->AlignType == FLOAT_ALIGN &&
-        I->TypeBitWidth == BitWidth)
+    auto I = findAlignmentLowerBound(FloatAlignments, BitWidth);
+    if (I != FloatAlignments.end() && I->TypeBitWidth == BitWidth)
       return abi_or_pref ? I->ABIAlign : I->PrefAlign;
 
     // If we still couldn't find a reasonable default alignment, fall back
@@ -804,9 +817,8 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   case Type::FixedVectorTyID:
   case Type::ScalableVectorTyID: {
     unsigned BitWidth = getTypeSizeInBits(Ty).getKnownMinValue();
-    auto I = findAlignmentLowerBound(VECTOR_ALIGN, BitWidth);
-    if (I != Alignments.end() && I->AlignType == VECTOR_ALIGN &&
-        I->TypeBitWidth == BitWidth)
+    auto I = findAlignmentLowerBound(VectorAlignments, BitWidth);
+    if (I != VectorAlignments.end() && I->TypeBitWidth == BitWidth)
       return abi_or_pref ? I->ABIAlign : I->PrefAlign;
 
     // By default, use natural alignment for vector types. This is consistent

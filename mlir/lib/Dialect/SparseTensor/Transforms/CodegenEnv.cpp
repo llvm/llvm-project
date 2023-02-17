@@ -10,7 +10,9 @@
 
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+
 #include <optional>
 
 using namespace mlir;
@@ -114,10 +116,9 @@ bool CodegenEnv::isAdmissibleTensorExp(unsigned exp) {
 
   OpOperand *lhs = linalgOp.getDpsInitOperand(0);
   unsigned tensor = lhs->getOperandNumber();
-  auto enc = getSparseTensorEncoding(lhs->get().getType());
   // An non-annotated output tensor is assumed dense, and becomes a random
   // access n-dim memref. Admissible since insertions cannot occur.
-  if (!enc || enc.isAllDense())
+  if (getSparseTensorType(lhs->get()).isAllDense())
     return true;
 
   // A tensor expression with a sparse output tensor that changes its values

@@ -416,6 +416,18 @@ func.func @outerproduct_add(%arg0: vector<2xf32>, %arg1: vector<3xf32>, %arg2: v
 // CHECK:       %[[T19:.*]] = builtin.unrealized_conversion_cast %[[T18]] : !llvm.array<2 x vector<3xf32>> to vector<2x3xf32>
 // CHECK:       return %[[T19]] : vector<2x3xf32>
 
+// -----
+
+func.func @masked_vector_contract(%arg0: vector<2xf32>, %arg1: f32, %arg2: vector<2xf32>, %m: vector<2xi1>) -> vector<2xf32> {
+  %0 = vector.mask %m { vector.outerproduct %arg0, %arg1, %arg2 {kind = #vector.kind<add>} : vector<2xf32>, f32 } : vector<2xi1> -> vector<2xf32>
+  return %0 : vector<2xf32>
+}
+
+// We can't check for the intermediate 'vector.mask { vector.fma }' state so we
+// just make sure the vector.fma is lowered.
+
+// CHECK:           llvm.intr.fmuladd
+// CHECK:           llvm.select
 
 // -----
 
@@ -2145,3 +2157,17 @@ func.func @vector_scalable_extract(%vec: vector<[4]xf32>) -> vector<8xf32> {
   %0 = vector.scalable.extract %vec[0] : vector<8xf32> from vector<[4]xf32>
   return %0 : vector<8xf32>
 }
+
+// -----
+
+// CHECK-LABEL:   func.func @masked_vector_fma(
+// CHECK-SAME:                                 %[[INPUT:.*]]: vector<8xf32>,
+// CHECK-SAME:                                 %[[MASK:.*]]: vector<8xi1>) -> vector<8xf32>
+// CHECK:           %[[FMA:.*]] = llvm.intr.fmuladd(%[[INPUT]], %[[INPUT]], %[[INPUT]])  : (vector<8xf32>, vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+// CHECK:           llvm.select %[[MASK]], %[[FMA]], %[[INPUT]] : vector<8xi1>, vector<8xf32>
+
+func.func @masked_vector_fma(%a: vector<8xf32>, %m: vector<8xi1>) -> vector<8xf32> {
+  %0 = vector.mask %m { vector.fma %a, %a, %a : vector<8xf32> } : vector<8xi1> -> vector<8xf32>
+  return %0 : vector<8xf32>
+}
+

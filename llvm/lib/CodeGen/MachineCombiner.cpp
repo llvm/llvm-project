@@ -70,7 +70,7 @@ class MachineCombiner : public MachineFunctionPass {
   MachineRegisterInfo *MRI;
   MachineLoopInfo *MLI; // Current MachineLoopInfo
   MachineTraceMetrics *Traces;
-  MachineTraceMetrics::Ensemble *MinInstr;
+  MachineTraceMetrics::Ensemble *TraceEnsemble;
   MachineBlockFrequencyInfo *MBFI;
   ProfileSummaryInfo *PSI;
   RegisterClassInfo RegClassInfo;
@@ -483,20 +483,19 @@ bool MachineCombiner::preservesResourceLen(
 /// \param MI current machine instruction
 /// \param InsInstrs new instructions to insert in \p MBB
 /// \param DelInstrs instruction to delete from \p MBB
-/// \param MinInstr is a pointer to the machine trace information
+/// \param TraceEnsemble is a pointer to the machine trace information
 /// \param RegUnits set of live registers, needed to compute instruction depths
 /// \param TII is target instruction info, used to call target hook
 /// \param Pattern is used to call target hook finalizeInsInstrs
 /// \param IncrementalUpdate if true, compute instruction depths incrementally,
 ///                          otherwise invalidate the trace
-static void insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
-                                     SmallVector<MachineInstr *, 16> InsInstrs,
-                                     SmallVector<MachineInstr *, 16> DelInstrs,
-                                     MachineTraceMetrics::Ensemble *MinInstr,
-                                     SparseSet<LiveRegUnit> &RegUnits,
-                                     const TargetInstrInfo *TII,
-                                     MachineCombinerPattern Pattern,
-                                     bool IncrementalUpdate) {
+static void insertDeleteInstructions(
+    MachineBasicBlock *MBB, MachineInstr &MI,
+    SmallVector<MachineInstr *, 16> InsInstrs,
+    SmallVector<MachineInstr *, 16> DelInstrs,
+    MachineTraceMetrics::Ensemble *TraceEnsemble,
+    SparseSet<LiveRegUnit> &RegUnits, const TargetInstrInfo *TII,
+    MachineCombinerPattern Pattern, bool IncrementalUpdate) {
   // If we want to fix up some placeholder for some target, do it now.
   // We need this because in genAlternativeCodeSequence, we have not decided the
   // better pattern InsInstrs or DelInstrs, so we don't want generate some
@@ -522,9 +521,9 @@ static void insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
 
   if (IncrementalUpdate)
     for (auto *InstrPtr : InsInstrs)
-      MinInstr->updateDepth(MBB, *InstrPtr, RegUnits);
+      TraceEnsemble->updateDepth(MBB, *InstrPtr, RegUnits);
   else
-    MinInstr->invalidate(MBB);
+    TraceEnsemble->invalidate(MBB);
 
   NumInstCombined++;
 }
@@ -550,7 +549,7 @@ void MachineCombiner::verifyPatternOrder(
 
     unsigned NewRootLatency, RootLatency;
     std::tie(NewRootLatency, RootLatency) = getLatenciesForInstrSequences(
-        Root, InsInstrs, DelInstrs, MinInstr->getTrace(MBB));
+        Root, InsInstrs, DelInstrs, TraceEnsemble->getTrace(MBB));
     long CurrentLatencyDiff = ((long)RootLatency) - ((long)NewRootLatency);
     assert(CurrentLatencyDiff <= PrevLatencyDiff &&
            "Current pattern is better than previous pattern.");
@@ -574,8 +573,8 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
   decltype(BlockIter) LastUpdate;
   // Check if the block is in a loop.
   const MachineLoop *ML = MLI->getLoopFor(MBB);
-  if (!MinInstr)
-    MinInstr = Traces->getEnsemble(MachineTraceStrategy::TS_MinInstrCount);
+  if (!TraceEnsemble)
+    TraceEnsemble = Traces->getEnsemble(MachineTraceStrategy::TS_MinInstrCount);
 
   SparseSet<LiveRegUnit> RegUnits;
   RegUnits.setUniverse(TRI->getNumRegUnits());
@@ -647,7 +646,7 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
 
       if (IncrementalUpdate && LastUpdate != BlockIter) {
         // Update depths since the last incremental update.
-        MinInstr->updateDepths(LastUpdate, BlockIter, RegUnits);
+        TraceEnsemble->updateDepths(LastUpdate, BlockIter, RegUnits);
         LastUpdate = BlockIter;
       }
 
@@ -661,7 +660,7 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
         }
         if (reduceRegisterPressure(MI, MBB, InsInstrs, DelInstrs, P)) {
           // Replace DelInstrs with InsInstrs.
-          insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, MinInstr,
+          insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, TraceEnsemble,
                                    RegUnits, TII, P, IncrementalUpdate);
           Changed |= true;
 
@@ -674,7 +673,7 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
 
       if (ML && TII->isThroughputPattern(P)) {
         LLVM_DEBUG(dbgs() << "\t Replacing due to throughput pattern in loop\n");
-        insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, MinInstr,
+        insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, TraceEnsemble,
                                  RegUnits, TII, P, IncrementalUpdate);
         // Eagerly stop after the first pattern fires.
         Changed = true;
@@ -683,7 +682,7 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
         LLVM_DEBUG(dbgs() << "\t Replacing due to OptForSize ("
                           << InsInstrs.size() << " < "
                           << DelInstrs.size() << ")\n");
-        insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, MinInstr,
+        insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, TraceEnsemble,
                                  RegUnits, TII, P, IncrementalUpdate);
         // Eagerly stop after the first pattern fires.
         Changed = true;
@@ -694,7 +693,7 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
         // instruction depths incrementally.
         // NOTE: Only the instruction depths up to MI are accurate. All other
         // trace information is not updated.
-        MachineTraceMetrics::Trace BlockTrace = MinInstr->getTrace(MBB);
+        MachineTraceMetrics::Trace BlockTrace = TraceEnsemble->getTrace(MBB);
         Traces->verifyAnalysis();
         if (improvesCriticalPathLen(MBB, &MI, BlockTrace, InsInstrs, DelInstrs,
                                     InstrIdxForVirtReg, P,
@@ -706,7 +705,7 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
             LastUpdate = BlockIter;
           }
 
-          insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, MinInstr,
+          insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, TraceEnsemble,
                                    RegUnits, TII, P, IncrementalUpdate);
 
           // Eagerly stop after the first pattern fires.
@@ -741,7 +740,7 @@ bool MachineCombiner::runOnMachineFunction(MachineFunction &MF) {
   MBFI = (PSI && PSI->hasProfileSummary()) ?
          &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI() :
          nullptr;
-  MinInstr = nullptr;
+  TraceEnsemble = nullptr;
   OptSize = MF.getFunction().hasOptSize();
   RegClassInfo.runOnMachineFunction(MF);
 

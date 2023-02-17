@@ -296,7 +296,7 @@ struct __shared_ptr_emplace
 
 private:
     void __on_zero_shared() _NOEXCEPT override {
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
         if constexpr (is_same_v<typename _Alloc::value_type, __for_overwrite_tag>) {
             __get_elem()->~_Tp();
         } else {
@@ -459,7 +459,7 @@ template<class _Tp>
 class _LIBCPP_SHARED_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS shared_ptr
 {
 public:
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     typedef weak_ptr<_Tp> weak_type;
     typedef remove_extent_t<_Tp> element_type;
 #else
@@ -699,7 +699,7 @@ public:
     shared_ptr(unique_ptr<_Yp, _Dp>&& __r)
         : __ptr_(__r.get())
     {
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
         if (__ptr_ == nullptr)
             __cntrl_ = nullptr;
         else
@@ -722,7 +722,7 @@ public:
     shared_ptr(unique_ptr<_Yp, _Dp>&& __r)
         : __ptr_(__r.get())
     {
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
         if (__ptr_ == nullptr)
             __cntrl_ = nullptr;
         else
@@ -895,7 +895,7 @@ public:
         return __cntrl_ == __p.__cntrl_;
     }
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     _LIBCPP_HIDE_FROM_ABI
     __add_lvalue_reference_t<element_type> operator[](ptrdiff_t __i) const
     {
@@ -975,7 +975,7 @@ private:
     template <class _Up> friend class _LIBCPP_TEMPLATE_VIS weak_ptr;
 };
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template<class _Tp>
 shared_ptr(weak_ptr<_Tp>) -> shared_ptr<_Tp>;
 template<class _Tp, class _Dp>
@@ -1024,7 +1024,7 @@ shared_ptr<_Tp> make_shared_for_overwrite()
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 
 template <size_t _Alignment>
 struct __sp_aligned_storage {
@@ -1214,9 +1214,9 @@ shared_ptr<_Array> __allocate_shared_bounded_array(const _Alloc& __a, _Arg&& ...
     return shared_ptr<_Array>::__create_with_control_block(__control_block->__get_data(), __control_block);
 }
 
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 // bounded array variants
 template<class _Tp, class _Alloc, class = __enable_if_t<is_bounded_array<_Tp>::value>>
@@ -1308,7 +1308,7 @@ shared_ptr<_Tp> make_shared_for_overwrite(size_t __n)
     return std::__allocate_shared_unbounded_array<_Tp>(allocator<__for_overwrite_tag>(), __n);
 }
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 template<class _Tp, class _Up>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -1368,7 +1368,7 @@ operator>=(const shared_ptr<_Tp>& __x, const shared_ptr<_Up>& __y) _NOEXCEPT
 
 #endif // _LIBCPP_STD_VER <= 17
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template<class _Tp, class _Up>
 _LIBCPP_HIDE_FROM_ABI strong_ordering
 operator<=>(shared_ptr<_Tp> const& __x, shared_ptr<_Up> const& __y) noexcept
@@ -1477,7 +1477,7 @@ operator>=(nullptr_t, const shared_ptr<_Tp>& __x) _NOEXCEPT
 
 #endif // _LIBCPP_STD_VER <= 17
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template<class _Tp>
 _LIBCPP_HIDE_FROM_ABI strong_ordering
 operator<=>(shared_ptr<_Tp> const& __x, nullptr_t) noexcept
@@ -1547,7 +1547,7 @@ template<class _Tp>
 class _LIBCPP_SHARED_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS weak_ptr
 {
 public:
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     typedef remove_extent_t<_Tp> element_type;
 #else
     typedef _Tp element_type;
@@ -1632,7 +1632,7 @@ public:
     template <class _Up> friend class _LIBCPP_TEMPLATE_VIS shared_ptr;
 };
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template<class _Tp>
 weak_ptr(shared_ptr<_Tp>) -> weak_ptr<_Tp>;
 #endif
@@ -1808,7 +1808,7 @@ weak_ptr<_Tp>::lock() const _NOEXCEPT
     return __r;
 }
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp = void> struct owner_less;
 #else
 template <class _Tp> struct owner_less;
@@ -1845,7 +1845,7 @@ struct _LIBCPP_TEMPLATE_VIS owner_less<weak_ptr<_Tp> >
         {return __x.owner_before(__y);}
 };
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <>
 struct _LIBCPP_TEMPLATE_VIS owner_less<void>
 {
@@ -1891,7 +1891,7 @@ public:
     shared_ptr<_Tp const> shared_from_this() const
         {return shared_ptr<const _Tp>(__weak_this_);}
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     _LIBCPP_INLINE_VISIBILITY
     weak_ptr<_Tp> weak_from_this() _NOEXCEPT
        { return __weak_this_; }
@@ -1899,7 +1899,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     weak_ptr<const _Tp> weak_from_this() const _NOEXCEPT
         { return __weak_this_; }
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 
     template <class _Up> friend class shared_ptr;
 };
