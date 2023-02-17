@@ -61,9 +61,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVDisassembler() {
 static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint32_t RegNo,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder) {
-  const FeatureBitset &FeatureBits =
-      Decoder->getSubtargetInfo().getFeatureBits();
-  bool IsRV32E = FeatureBits[RISCV::FeatureRV32E];
+  bool IsRV32E = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureRV32E);
 
   if (RegNo >= 32 || (IsRV32E && RegNo >= 16))
     return MCDisassembler::Fail;
@@ -448,8 +446,8 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
     Insn = support::endian::read32le(Bytes.data());
 
-    if (STI.getFeatureBits()[RISCV::FeatureStdExtZdinx] &&
-        !STI.getFeatureBits()[RISCV::Feature64Bit]) {
+    if (STI.hasFeature(RISCV::FeatureStdExtZdinx) &&
+        !STI.hasFeature(RISCV::Feature64Bit)) {
       LLVM_DEBUG(dbgs() << "Trying RV32Zdinx table (Double in Integer and"
                            "rv32)\n");
       Result = decodeInstruction(DecoderTableRV32Zdinx32, MI, Insn, Address,
@@ -457,49 +455,49 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       if (Result != MCDisassembler::Fail)
         return Result;
     }
-    if (STI.getFeatureBits()[RISCV::FeatureStdExtZfinx]) {
+    if (STI.hasFeature(RISCV::FeatureStdExtZfinx)) {
       LLVM_DEBUG(dbgs() << "Trying RVZfinx table (Float in Integer):\n");
       Result = decodeInstruction(DecoderTableRVZfinx32, MI, Insn, Address, this,
                                  STI);
       if (Result != MCDisassembler::Fail)
         return Result;
     }
-    if (STI.getFeatureBits()[RISCV::FeatureVendorXVentanaCondOps]) {
+    if (STI.hasFeature(RISCV::FeatureVendorXVentanaCondOps)) {
       LLVM_DEBUG(dbgs() << "Trying Ventana custom opcode table:\n");
       Result = decodeInstruction(DecoderTableVentana32, MI, Insn, Address, this,
                                  STI);
       if (Result != MCDisassembler::Fail)
         return Result;
     }
-    if (STI.getFeatureBits()[RISCV::FeatureVendorXTHeadBa]) {
+    if (STI.hasFeature(RISCV::FeatureVendorXTHeadBa)) {
       LLVM_DEBUG(dbgs() << "Trying XTHeadBa custom opcode table:\n");
       Result = decodeInstruction(DecoderTableTHeadBa32, MI, Insn, Address, this,
                                  STI);
       if (Result != MCDisassembler::Fail)
         return Result;
     }
-    if (STI.getFeatureBits()[RISCV::FeatureVendorXTHeadBb]) {
+    if (STI.hasFeature(RISCV::FeatureVendorXTHeadBb)) {
       LLVM_DEBUG(dbgs() << "Trying XTHeadBb custom opcode table:\n");
       Result = decodeInstruction(DecoderTableTHeadBb32, MI, Insn, Address, this,
                                  STI);
       if (Result != MCDisassembler::Fail)
         return Result;
     }
-    if (STI.getFeatureBits()[RISCV::FeatureVendorXTHeadBs]) {
+    if (STI.hasFeature(RISCV::FeatureVendorXTHeadBs)) {
       LLVM_DEBUG(dbgs() << "Trying XTHeadBs custom opcode table:\n");
       Result = decodeInstruction(DecoderTableTHeadBs32, MI, Insn, Address, this,
                                  STI);
       if (Result != MCDisassembler::Fail)
         return Result;
     }
-    if (STI.getFeatureBits()[RISCV::FeatureVendorXTHeadMac]) {
+    if (STI.hasFeature(RISCV::FeatureVendorXTHeadMac)) {
       LLVM_DEBUG(dbgs() << "Trying XTHeadMac custom opcode table:\n");
       Result = decodeInstruction(DecoderTableTHeadMac32, MI, Insn, Address,
                                  this, STI);
       if (Result != MCDisassembler::Fail)
         return Result;
     }
-    if (STI.getFeatureBits()[RISCV::FeatureVendorXTHeadVdot]) {
+    if (STI.hasFeature(RISCV::FeatureVendorXTHeadVdot)) {
       LLVM_DEBUG(dbgs() << "Trying XTHeadVdot custom opcode table:\n");
       Result =
           decodeInstruction(DecoderTableTHeadV32, MI, Insn, Address, this, STI);
@@ -519,7 +517,7 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
   Insn = support::endian::read16le(Bytes.data());
 
-  if (!STI.getFeatureBits()[RISCV::Feature64Bit]) {
+  if (!STI.hasFeature(RISCV::Feature64Bit)) {
     LLVM_DEBUG(
         dbgs() << "Trying RISCV32Only_16 table (16-bit Instruction):\n");
     // Calling the auto-generated decoder function.

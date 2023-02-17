@@ -134,7 +134,7 @@ bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
     return true;
   }
 
-  return STI.getFeatureBits()[RISCV::FeatureRelax] || ForceRelocs;
+  return STI.hasFeature(RISCV::FeatureRelax) || ForceRelocs;
 }
 
 bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
@@ -374,11 +374,11 @@ bool RISCVAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
     Count -= 1;
   }
 
-  bool HasStdExtC = STI->getFeatureBits()[RISCV::FeatureStdExtC];
-  bool HasStdExtZca = STI->getFeatureBits()[RISCV::FeatureExtZca];
+  bool UseCompressedNop = STI->hasFeature(RISCV::FeatureStdExtC) ||
+                          STI->hasFeature(RISCV::FeatureExtZca);
   // The canonical nop on RVC is c.nop.
   if (Count % 4 == 2) {
-    OS.write((HasStdExtC || HasStdExtZca) ? "\x01\0" : "\0\0", 2);
+    OS.write(UseCompressedNop ? "\x01\0" : "\0\0", 2);
     Count -= 2;
   }
 
@@ -602,11 +602,11 @@ bool RISCVAsmBackend::shouldInsertExtraNopBytesForCodeAlign(
     const MCAlignFragment &AF, unsigned &Size) {
   // Calculate Nops Size only when linker relaxation enabled.
   const MCSubtargetInfo *STI = AF.getSubtargetInfo();
-  if (!STI->getFeatureBits()[RISCV::FeatureRelax])
+  if (!STI->hasFeature(RISCV::FeatureRelax))
     return false;
 
-  bool UseCompressedNop = STI->getFeatureBits()[RISCV::FeatureStdExtC] ||
-                          STI->getFeatureBits()[RISCV::FeatureExtZca];
+  bool UseCompressedNop = STI->hasFeature(RISCV::FeatureStdExtC) ||
+                          STI->hasFeature(RISCV::FeatureExtZca);
   unsigned MinNopLen = UseCompressedNop ? 2 : 4;
 
   if (AF.getAlignment() <= MinNopLen) {
@@ -627,7 +627,7 @@ bool RISCVAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
                                                     MCAlignFragment &AF) {
   // Insert the fixup only when linker relaxation enabled.
   const MCSubtargetInfo *STI = AF.getSubtargetInfo();
-  if (!STI->getFeatureBits()[RISCV::FeatureRelax])
+  if (!STI->hasFeature(RISCV::FeatureRelax))
     return false;
 
   // Calculate total Nops we need to insert. If there are none to insert
