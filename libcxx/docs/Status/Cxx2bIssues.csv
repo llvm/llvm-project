@@ -286,7 +286,7 @@
 "`3772 <https://wg21.link/LWG3772>`__","``repeat_view``'s ``piecewise`` constructor is missing Postconditions","February 2023","","","|ranges|"
 "`3786 <https://wg21.link/LWG3786>`__","Flat maps' deduction guide needs to default ``Allocator`` to be useful","February 2023","","",""
 "`3803 <https://wg21.link/LWG3803>`__","``flat_foo`` constructors taking ``KeyContainer`` lack ``KeyCompare`` parameter","February 2023","","",""
-"`3810 <https://wg21.link/LWG3810>`__","CTAD for ``std::basic_format_args``","February 2023","","","|format|"
+"`3810 <https://wg21.link/LWG3810>`__","CTAD for ``std::basic_format_args``","February 2023","|Complete|","17.0","|format|"
 "`3827 <https://wg21.link/LWG3827>`__","Deprecate ``<stdalign.h>`` and ``<stdbool.h>`` macros","February 2023","","",""
 "`3828 <https://wg21.link/LWG3828>`__","Sync ``intmax_t`` and ``uintmax_t`` with C2x","February 2023","","",""
 "`3833 <https://wg21.link/LWG3833>`__","Remove specialization ``template<size_t N> struct formatter<const charT[N], charT>``","February 2023","","","|format|"
