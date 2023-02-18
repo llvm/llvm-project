@@ -309,14 +309,6 @@ void RewriterBase::mergeBlocks(Block *source, Block *dest,
   source->erase();
 }
 
-/// Find uses of `from` and replace it with `to`
-void RewriterBase::replaceAllUsesWith(Value from, Value to) {
-  for (OpOperand &operand : llvm::make_early_inc_range(from.getUses())) {
-    Operation *op = operand.getOwner();
-    updateRootInPlace(op, [&]() { operand.set(to); });
-  }
-}
-
 /// Find uses of `from` and replace them with `to` if the `functor` returns
 /// true. It also marks every modified uses and notifies the rewriter that an
 /// in-place operation modification is about to happen.
