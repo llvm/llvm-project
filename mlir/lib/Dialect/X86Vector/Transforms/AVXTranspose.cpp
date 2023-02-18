@@ -252,7 +252,7 @@ public:
 
     // Check if the source vector type is supported. AVX2 patterns can only be
     // applied to f32 vector types with two dimensions greater than one.
-    VectorType srcType = op.getVectorType();
+    VectorType srcType = op.getSourceVectorType();
     if (!srcType.getElementType().isF32())
       return rewriter.notifyMatchFailure(op, "Unsupported vector element type");
 
@@ -287,7 +287,7 @@ public:
       // Reshape the n-D input vector with only two dimensions greater than one
       // to a 2-D vector.
       auto flattenedType =
-          VectorType::get({n * m}, op.getVectorType().getElementType());
+          VectorType::get({n * m}, op.getSourceVectorType().getElementType());
       auto reshInputType = VectorType::get({m, n}, srcType.getElementType());
       auto reshInput =
           ib.create<vector::ShapeCastOp>(flattenedType, op.getVector());
@@ -315,7 +315,7 @@ public:
       // We have to transpose their dimensions and retrieve its original rank
       // (e.g., 1x8x1x4x1).
       res = ib.create<vector::ShapeCastOp>(flattenedType, res);
-      res = ib.create<vector::ShapeCastOp>(op.getResultType(), res);
+      res = ib.create<vector::ShapeCastOp>(op.getResultVectorType(), res);
       rewriter.replaceOp(op, res);
       return success();
     };

@@ -939,7 +939,7 @@ public:
     auto loc = shuffleOp->getLoc();
     auto v1Type = shuffleOp.getV1VectorType();
     auto v2Type = shuffleOp.getV2VectorType();
-    auto vectorType = shuffleOp.getVectorType();
+    auto vectorType = shuffleOp.getResultVectorType();
     Type llvmType = typeConverter->convertType(vectorType);
     auto maskArrayAttr = shuffleOp.getMask();
 
@@ -1002,7 +1002,7 @@ public:
   LogicalResult
   matchAndRewrite(vector::ExtractElementOp extractEltOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto vectorType = extractEltOp.getVectorType();
+    auto vectorType = extractEltOp.getSourceVectorType();
     auto llvmType = typeConverter->convertType(vectorType.getElementType());
 
     // Bail if result type cannot be lowered.

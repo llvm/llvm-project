@@ -203,7 +203,7 @@ static bool constantSupportsMMAMatrixType(arith::ConstantOp constantOp) {
 
 /// Return true if this is a broadcast from scalar to a 2D vector.
 static bool broadcastSupportsMMAMatrixType(vector::BroadcastOp broadcastOp) {
-  return broadcastOp.getVectorType().getRank() == 2;
+  return broadcastOp.getResultVectorType().getRank() == 2;
 }
 
 /// Return true if this integer extend op can be folded into a contract op.
@@ -949,7 +949,7 @@ convertExtractStridedSlice(RewriterBase &rewriter,
 
   SmallVector<int64_t> sizes;
   populateFromInt64AttrArray(op.getSizes(), sizes);
-  ArrayRef<int64_t> warpVectorShape = op.getVectorType().getShape();
+  ArrayRef<int64_t> warpVectorShape = op.getSourceVectorType().getShape();
 
   // Compute offset in vector registers. Note that the mma.sync vector registers
   // are shaped as numberOfFragments x numberOfRegistersPerfFragment. The vector
@@ -1045,7 +1045,7 @@ convertBroadcastOp(RewriterBase &rewriter, vector::BroadcastOp op,
   assert(broadcastSupportsMMAMatrixType(op));
 
   const char *fragType = inferFragType(op);
-  auto vecType = op.getVectorType();
+  auto vecType = op.getResultVectorType();
   gpu::MMAMatrixType type = gpu::MMAMatrixType::get(
       vecType.getShape(), vecType.getElementType(), llvm::StringRef(fragType));
   auto matrix = rewriter.create<gpu::SubgroupMmaConstantMatrixOp>(
