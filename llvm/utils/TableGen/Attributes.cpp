@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TableGenBackends.h"
 #include "llvm/TableGen/Record.h"
 #include <vector>
 using namespace llvm;

@@ -21,6 +21,7 @@
 #include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
 #include "InfoByHwMode.h"
+#include "TableGenBackends.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Error.h"

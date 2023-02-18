@@ -100,6 +100,7 @@
 #include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
 #include "SubtargetFeatureInfo.h"
+#include "TableGenBackends.h"
 #include "Types.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/PointerUnion.h"
