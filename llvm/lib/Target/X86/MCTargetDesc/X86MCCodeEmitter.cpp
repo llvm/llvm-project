@@ -1247,8 +1247,7 @@ PrefixKind X86MCCodeEmitter::emitREXPrefix(int MemOperand, const MCInst &MI,
     Prefix.setB(MI, CurOp++);
     break;
   case X86II::MRMr0:
-    Prefix.setR(MI, CurOp++);
-    break;
+    llvm_unreachable("MRMr0 format never need REX prefix!");
   case X86II::MRMDestMemFSIB:
     llvm_unreachable("FSIB format never need REX prefix!");
   }
