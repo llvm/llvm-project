@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -fmodules-ts %s -verify -o /dev/null
-// RUN: %clang_cc1 -fmodules-ts %s -DINTERFACE -verify -emit-module-interface -o %t
-// RUN: %clang_cc1 -fmodules-ts %s -DIMPLEMENTATION -verify -fmodule-file=%t -o /dev/null
+// RUN: %clang_cc1 -std=c++20 %s -verify -o /dev/null
+// RUN: %clang_cc1 -std=c++20 %s -DINTERFACE -verify -emit-module-interface -o %t
+// RUN: %clang_cc1 -std=c++20 %s -DIMPLEMENTATION -verify -fmodule-file=%t -o /dev/null
 //
-// RUN: %clang_cc1 -fmodules-ts %s -DBUILT_AS_INTERFACE -emit-module-interface -verify -o /dev/null
-// RUN: %clang_cc1 -fmodules-ts %s -DINTERFACE -DBUILT_AS_INTERFACE -emit-module-interface -verify -o /dev/null
-// RUN: %clang_cc1 -fmodules-ts %s -DIMPLEMENTATION -DBUILT_AS_INTERFACE -emit-module-interface -verify -o /dev/null
+// RUN: %clang_cc1 -std=c++20 %s -DBUILT_AS_INTERFACE -emit-module-interface -verify -o /dev/null
+// RUN: %clang_cc1 -std=c++20 %s -DINTERFACE -DBUILT_AS_INTERFACE -emit-module-interface -verify -o /dev/null
+// RUN: %clang_cc1 -std=c++20 %s -DIMPLEMENTATION -DBUILT_AS_INTERFACE -emit-module-interface -verify -o /dev/null
 
 #if INTERFACE
 // expected-no-diagnostics
