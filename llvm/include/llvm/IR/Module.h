@@ -623,7 +623,6 @@ private: // Please use functions like insertAlias(), removeAlias() etc.
   }
   friend class llvm::SymbolTableListTraits<llvm::GlobalAlias>;
 
-public:
   /// Get the Module's list of ifuncs (constant).
   const IFuncListType    &getIFuncList() const        { return IFuncList; }
   /// Get the Module's list of ifuncs.
