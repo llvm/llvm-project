@@ -104,6 +104,7 @@ public:
   /// @param Stmt The condition which is responsible for the split in the CFG.
   /// @param Branch True if the edge goes to the basic block where the
   /// condition is true.
+  // FIXME: Change `Stmt` argument to a reference.
   virtual void transferBranchTypeErased(bool Branch, const Stmt *,
                                         TypeErasedLattice &, Environment &) = 0;
 
