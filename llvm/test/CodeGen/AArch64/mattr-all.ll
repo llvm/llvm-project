@@ -6,8 +6,7 @@
 define half @bf16() nounwind {
 ; CHECK-LABEL: bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI0_0
-; CHECK-NEXT:    ldr h0, [x8, :lo12:.LCPI0_0]
+; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    ret
   ret half 0xH0000
 }
