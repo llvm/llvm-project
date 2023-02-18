@@ -38,7 +38,7 @@ using namespace llvm;
 
 static bool getMCRDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
                                   std::string &Info) {
-  if (STI.getFeatureBits()[llvm::ARM::HasV7Ops] &&
+  if (STI.hasFeature(llvm::ARM::HasV7Ops) &&
       (MI.getOperand(0).isImm() && MI.getOperand(0).getImm() == 15) &&
       (MI.getOperand(1).isImm() && MI.getOperand(1).getImm() == 0) &&
       // Checks for the deprecated CP15ISB encoding:
@@ -65,7 +65,7 @@ static bool getMCRDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
       return true;
     }
   }
-  if (STI.getFeatureBits()[llvm::ARM::HasV7Ops] &&
+  if (STI.hasFeature(llvm::ARM::HasV7Ops) &&
       ((MI.getOperand(0).isImm() && MI.getOperand(0).getImm() == 10) ||
        (MI.getOperand(0).isImm() && MI.getOperand(0).getImm() == 11))) {
     Info = "since v7, cp10 and cp11 are reserved for advanced SIMD or floating "
@@ -77,7 +77,7 @@ static bool getMCRDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
 
 static bool getMRCDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
                                   std::string &Info) {
-  if (STI.getFeatureBits()[llvm::ARM::HasV7Ops] &&
+  if (STI.hasFeature(llvm::ARM::HasV7Ops) &&
       ((MI.getOperand(0).isImm() && MI.getOperand(0).getImm() == 10) ||
        (MI.getOperand(0).isImm() && MI.getOperand(0).getImm() == 11))) {
     Info = "since v7, cp10 and cp11 are reserved for advanced SIMD or floating "
@@ -89,7 +89,7 @@ static bool getMRCDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
 
 static bool getARMStoreDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
                                        std::string &Info) {
-  assert(!STI.getFeatureBits()[llvm::ARM::ModeThumb] &&
+  assert(!STI.hasFeature(llvm::ARM::ModeThumb) &&
          "cannot predicate thumb instructions");
 
   assert(MI.getNumOperands() >= 4 && "expected >= 4 arguments");
@@ -105,7 +105,7 @@ static bool getARMStoreDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
 
 static bool getARMLoadDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
                                       std::string &Info) {
-  assert(!STI.getFeatureBits()[llvm::ARM::ModeThumb] &&
+  assert(!STI.hasFeature(llvm::ARM::ModeThumb) &&
          "cannot predicate thumb instructions");
 
   assert(MI.getNumOperands() >= 4 && "expected >= 4 arguments");
@@ -598,7 +598,7 @@ std::optional<uint64_t> ARMMCInstrAnalysis::evaluateMemoryOperandAddress(
   // VLDR* instructions share the same opcode (and thus the same form) for Arm
   // and Thumb. Use a bit longer route through STI in that case.
   case ARMII::VFPLdStFrm:
-    Addr += STI->getFeatureBits()[ARM::ModeThumb] ? 4 : 8;
+    Addr += STI->hasFeature(ARM::ModeThumb) ? 4 : 8;
     break;
   }
 

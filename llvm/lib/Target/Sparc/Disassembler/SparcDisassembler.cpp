@@ -302,7 +302,7 @@ DecodeStatus SparcDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
 
   // Calling the auto-generated decoder function.
 
-  if (STI.getFeatureBits()[Sparc::FeatureV9])
+  if (STI.hasFeature(Sparc::FeatureV9))
   {
     Result = decodeInstruction(DecoderTableSparcV932, Instr, Insn, Address, this, STI);
   }

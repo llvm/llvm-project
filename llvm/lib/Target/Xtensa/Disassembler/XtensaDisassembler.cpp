@@ -39,7 +39,7 @@ public:
       : MCDisassembler(STI, Ctx), IsLittleEndian(isLE) {}
 
   bool hasDensity() const {
-    return STI.getFeatureBits()[Xtensa::FeatureDensity];
+    return STI.hasFeature(Xtensa::FeatureDensity);
   }
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
