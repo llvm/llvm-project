@@ -2504,8 +2504,14 @@ bool mlir::isAffineForInductionVar(Value val) {
   return getForInductionVarOwner(val) != AffineForOp();
 }
 
-/// Returns the loop parent of an induction variable. If the provided value is
-/// not an induction variable, then return nullptr.
+bool mlir::isAffineParallelInductionVar(Value val) {
+  return getAffineParallelInductionVarOwner(val) != nullptr;
+}
+
+bool mlir::isAffineInductionVar(Value val) {
+  return isAffineForInductionVar(val) || isAffineParallelInductionVar(val);
+}
+
 AffineForOp mlir::getForInductionVarOwner(Value val) {
   auto ivArg = val.dyn_cast<BlockArgument>();
   if (!ivArg || !ivArg.getOwner())
@@ -2515,6 +2521,17 @@ AffineForOp mlir::getForInductionVarOwner(Value val) {
     // Check to make sure `val` is the induction variable, not an iter_arg.
     return forOp.getInductionVar() == val ? forOp : AffineForOp();
   return AffineForOp();
+}
+
+AffineParallelOp mlir::getAffineParallelInductionVarOwner(Value val) {
+  auto ivArg = val.dyn_cast<BlockArgument>();
+  if (!ivArg || !ivArg.getOwner())
+    return nullptr;
+  Operation *containingOp = ivArg.getOwner()->getParentOp();
+  auto parallelOp = dyn_cast<AffineParallelOp>(containingOp);
+  if (parallelOp && llvm::is_contained(parallelOp.getIVs(), val))
+    return parallelOp;
+  return nullptr;
 }
 
 /// Extracts the induction variables from a list of AffineForOps and returns
