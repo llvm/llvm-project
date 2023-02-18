@@ -141,7 +141,7 @@ public:
   X86FoldTablesEmitter(RecordKeeper &R) : Records(R), Target(R) {}
 
   // run - Generate the 6 X86 memory fold tables.
-  void run(formatted_raw_ostream &OS);
+  void run(raw_ostream &OS);
 
 private:
   // Decides to which table to add the entry with the given instructions.
@@ -522,7 +522,8 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInstr,
   }
 }
 
-void X86FoldTablesEmitter::run(formatted_raw_ostream &OS) {
+void X86FoldTablesEmitter::run(raw_ostream &o) {
+  formatted_raw_ostream OS(o);
   emitSourceFileHeader("X86 fold tables", OS);
 
   // Holds all memory instructions
@@ -615,8 +616,7 @@ void X86FoldTablesEmitter::run(formatted_raw_ostream &OS) {
 
 namespace llvm {
 
-void EmitX86FoldTables(RecordKeeper &RK, raw_ostream &o) {
-  formatted_raw_ostream OS(o);
+void EmitX86FoldTables(RecordKeeper &RK, raw_ostream &OS) {
   X86FoldTablesEmitter(RK).run(OS);
 }
 } // namespace llvm

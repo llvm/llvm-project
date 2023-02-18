@@ -18,7 +18,7 @@ namespace {
 class Attributes {
 public:
   Attributes(RecordKeeper &R) : Records(R) {}
-  void emit(raw_ostream &OS);
+  void run(raw_ostream &OS);
 
 private:
   void emitTargetIndependentNames(raw_ostream &OS);
@@ -124,7 +124,7 @@ void Attributes::emitAttributeProperties(raw_ostream &OS) {
   OS << "#endif\n";
 }
 
-void Attributes::emit(raw_ostream &OS) {
+void Attributes::run(raw_ostream &OS) {
   emitTargetIndependentNames(OS);
   emitFnAttrCompatCheck(OS, false);
   emitAttributeProperties(OS);
@@ -133,7 +133,7 @@ void Attributes::emit(raw_ostream &OS) {
 namespace llvm {
 
 void EmitAttributes(RecordKeeper &RK, raw_ostream &OS) {
-  Attributes(RK).emit(OS);
+  Attributes(RK).run(OS);
 }
 
 } // namespace llvm

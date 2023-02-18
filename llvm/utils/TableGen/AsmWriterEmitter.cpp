@@ -1303,6 +1303,7 @@ void AsmWriterEmitter::run(raw_ostream &O) {
   std::vector<std::vector<std::string>> TableDrivenOperandPrinters;
   unsigned BitsLeft = 0;
   unsigned AsmStrBits = 0;
+  emitSourceFileHeader("Assembly Writer Source Fragment", O);
   EmitGetMnemonic(O, TableDrivenOperandPrinters, BitsLeft, AsmStrBits);
   EmitPrintInstruction(O, TableDrivenOperandPrinters, BitsLeft, AsmStrBits);
   EmitGetRegisterName(O);
@@ -1312,7 +1313,6 @@ void AsmWriterEmitter::run(raw_ostream &O) {
 namespace llvm {
 
 void EmitAsmWriter(RecordKeeper &RK, raw_ostream &OS) {
-  emitSourceFileHeader("Assembly Writer Source Fragment", OS);
   AsmWriterEmitter(RK).run(OS);
 }
 
