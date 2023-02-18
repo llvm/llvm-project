@@ -186,7 +186,7 @@ static GetoptContext ctx{
     &impl::optopt, &optpos,
     impl::opterr,  reinterpret_cast<FILE *>(__llvm_libc::stderr)};
 
-#ifndef LLVM_LIBC_PUBLIC_PACKAGING
+#ifndef LIBC_COPT_PUBLIC_PACKAGING
 // This is used exclusively in tests.
 void set_getopt_state(char **optarg, int *optind, int *optopt, unsigned *optpos,
                       int opterr, FILE *errstream) {
