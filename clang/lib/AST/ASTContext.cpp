@@ -4093,8 +4093,8 @@ QualType ASTContext::getWebAssemblyExternrefType() const {
     return SingletonId;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
   }
-  assert(false &&
-         "shouldn't try to generate type externref outside WebAssembly target");
+  llvm_unreachable(
+      "shouldn't try to generate type externref outside WebAssembly target");
 }
 
 /// getScalableVectorType - Return the unique reference to a scalable vector
