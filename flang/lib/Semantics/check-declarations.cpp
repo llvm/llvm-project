@@ -1374,6 +1374,14 @@ void CheckHelper::CheckSpecificsAreDistinguishable(
   GenericKind kind{details.kind()};
   DistinguishabilityHelper helper{context_};
   for (const Symbol &specific : details.specificProcs()) {
+    if (specific.attrs().test(Attr::ABSTRACT)) {
+      if (auto *msg{messages_.Say(generic.name(),
+              "Generic interface '%s' must not use abstract interface '%s' as a specific procedure"_err_en_US,
+              generic.name(), specific.name())}) {
+        msg->Attach(
+            specific.name(), "Definition of '%s'"_en_US, specific.name());
+      }
+    }
     if (const Procedure *procedure{Characterize(specific)}) {
       if (procedure->HasExplicitInterface()) {
         helper.Add(generic, kind, specific, *procedure);
