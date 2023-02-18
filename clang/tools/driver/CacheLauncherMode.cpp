@@ -91,13 +91,24 @@ static void addCommonArgs(bool ForDriver, SmallVectorImpl<const char *> &Args,
   if (!llvm::sys::Process::GetEnv("CLANG_CACHE_USE_CASFS_DEPSCAN")) {
     Args.push_back("-fdepscan-include-tree");
   }
-  if (auto CASPath = llvm::sys::Process::GetEnv("LLVM_CACHE_CAS_PATH")) {
-    if (ForDriver) {
-      Args.append(
-          {"-Xclang", "-fcas-path", "-Xclang", Saver.save(*CASPath).data()});
-    } else {
-      Args.append({"-fcas-path", Saver.save(*CASPath).data()});
+  auto addCC1Args = [&](ArrayRef<const char *> NewArgs) {
+    for (const char *Arg : NewArgs) {
+      if (ForDriver) {
+        Args.append({"-Xclang", Arg});
+      } else {
+        Args.push_back(Arg);
+      }
     }
+  };
+  if (auto CASPath = llvm::sys::Process::GetEnv("LLVM_CACHE_CAS_PATH")) {
+    addCC1Args({"-fcas-path", Saver.save(*CASPath).data()});
+  }
+  if (auto PluginPath = llvm::sys::Process::GetEnv("LLVM_CACHE_PLUGIN_PATH")) {
+    addCC1Args({"-fcas-plugin-path", Saver.save(*PluginPath).data()});
+  }
+  if (auto PluginOpts =
+          llvm::sys::Process::GetEnv("LLVM_CACHE_PLUGIN_OPTIONS")) {
+    addCC1Args({"-fcas-plugin-options", Saver.save(*PluginOpts).data()});
   }
 }
 
