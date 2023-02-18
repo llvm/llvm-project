@@ -40,5 +40,5 @@ Section,Description,Dependencies,Assignee,Status,First released version
 `[format.range.fmtstr] <https://wg21.link/format.range.fmtstr>`_,"Formatting for ranges: strings",,Mark de Wever,|In Progress|,
 `[format.range.fmtstr] <https://wg21.link/format.range.fmtstr>`_,"Formatting for ranges: strings",,Mark de Wever,|In Progress|,
 "`P2693R1 <https://wg21.link/P2693R1>`__","Formatting ``thread::id`` and ``stacktrace``"
-`[thread.thread.id] <https://wg21.link/thread.thread.id>`_,"Formatting ``thread::id``",,Mark de Wever,|In Progress|,
+`[thread.thread.id] <https://wg21.link/thread.thread.id>`_,"Formatting ``thread::id``",,Mark de Wever,|Complete|,Clang 17
 `[stacktrace.format] <https://wg21.link/stacktrace.format>`_,"Formatting ``stacktrace``",A ``<stacktrace>`` implementation,Mark de Wever,,

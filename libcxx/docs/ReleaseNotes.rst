@@ -39,6 +39,7 @@ Implemented Papers
 ------------------
 - P2520R0 - ``move_iterator<T*>`` should be a random access iterator
 - P1328R1 - ``constexpr type_info::operator==()``
+- P1413R3 - Formatting ``thread::id`` (the ``stacktrace`` is not done yet)
 
 Improvements and New Features
 -----------------------------
