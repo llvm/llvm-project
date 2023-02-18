@@ -61,7 +61,7 @@ struct __can_use_pristine_comp : false_type {};
 template <class _Pred, class _Proj>
 struct __can_use_pristine_comp<_Pred, _Proj, __enable_if_t<
     !is_member_pointer<typename decay<_Pred>::type>::value && (
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
       is_same<typename decay<_Proj>::type, identity>::value ||
 #endif
       is_same<typename decay<_Proj>::type, __identity>::value
@@ -93,7 +93,7 @@ __make_projected(_Pred& __pred, _Proj&) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -121,6 +121,6 @@ decltype(auto) __make_projected_comp(_Comp& __comp, _Proj1& __proj1, _Proj2& __p
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___ALGORITHM_MAKE_PROJECTED_H

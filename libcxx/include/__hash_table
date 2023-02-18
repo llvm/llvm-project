@@ -826,7 +826,7 @@ public:
     template <class> friend class __hash_map_node_destructor;
 };
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _NodeType, class _Alloc>
 struct __generic_container_node_destructor;
 
@@ -1121,7 +1121,7 @@ public:
         return __emplace_unique_key_args(_NodeTypes::__get_key(__x), __x);
     }
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     template <class _NodeHandle, class _InsertReturnType>
     _LIBCPP_INLINE_VISIBILITY
     _InsertReturnType __node_handle_insert_unique(_NodeHandle&& __nh);
@@ -2088,7 +2088,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_hint_multi(
     return __r;
 }
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 template <class _NodeHandle, class _InsertReturnType>
 _LIBCPP_INLINE_VISIBILITY
@@ -2218,7 +2218,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_merge_multi(
         __node_insert_multi_perform(__src_ptr, __pn);
     }
 }
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 template <bool _UniqueKeys>

@@ -81,7 +81,7 @@ struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, __tuple_types<_Types...> >
     typedef _LIBCPP_NODEBUG __type_pack_element<_Ip, _Types...> type;
 };
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <size_t _Ip, class ..._Tp>
 using tuple_element_t _LIBCPP_NODEBUG = typename tuple_element <_Ip, _Tp...>::type;
 #endif

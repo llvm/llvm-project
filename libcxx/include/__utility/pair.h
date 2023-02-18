@@ -417,7 +417,7 @@ private:
 #endif
 };
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template<class _T1, class _T2>
 pair(_T1, _T2) -> pair<_T1, _T2>;
 #endif
@@ -655,7 +655,7 @@ get(const pair<_T1, _T2>&& __p) _NOEXCEPT
     return __get_pair<_Ip>::get(std::move(__p));
 }
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <class _T1, class _T2>
 inline _LIBCPP_HIDE_FROM_ABI
 constexpr _T1 & get(pair<_T1, _T2>& __p) _NOEXCEPT
@@ -712,7 +712,7 @@ constexpr _T1 const && get(pair<_T2, _T1> const&& __p) _NOEXCEPT
     return __get_pair<1>::get(std::move(__p));
 }
 
-#endif // _LIBCPP_STD_VER > 11
+#endif // _LIBCPP_STD_VER >= 14
 
 _LIBCPP_END_NAMESPACE_STD
 

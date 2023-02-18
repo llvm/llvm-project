@@ -21,7 +21,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 // [concept.equalitycomparable]
 
@@ -47,7 +47,7 @@ concept equality_comparable_with =
       __make_const_lvalue_ref<_Up>>> &&
   __weakly_equality_comparable_with<_Tp, _Up>;
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

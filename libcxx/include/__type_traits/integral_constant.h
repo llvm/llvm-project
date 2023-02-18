@@ -25,7 +25,7 @@ struct _LIBCPP_TEMPLATE_VIS integral_constant
   typedef integral_constant type;
   _LIBCPP_INLINE_VISIBILITY
   _LIBCPP_CONSTEXPR operator value_type() const _NOEXCEPT {return value;}
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
   _LIBCPP_INLINE_VISIBILITY
   constexpr value_type operator ()() const _NOEXCEPT {return value;}
 #endif
@@ -40,7 +40,7 @@ typedef integral_constant<bool, false> false_type;
 template <bool _Val>
 using _BoolConstant _LIBCPP_NODEBUG = integral_constant<bool, _Val>;
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <bool __b>
 using bool_constant = integral_constant<bool, __b>;
 #endif

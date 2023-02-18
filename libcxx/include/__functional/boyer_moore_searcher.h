@@ -25,7 +25,7 @@
 #include <unordered_map>
 #include <vector>
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
@@ -310,6 +310,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___FUNCTIONAL_BOYER_MOORE_SEARCHER_H

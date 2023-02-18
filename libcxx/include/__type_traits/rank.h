@@ -36,7 +36,7 @@ template <class _Tp, size_t _Np> struct _LIBCPP_TEMPLATE_VIS rank<_Tp[_Np]>
 
 #endif // __has_builtin(__array_rank)
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr size_t rank_v = rank<_Tp>::value;
 #endif
