@@ -918,20 +918,6 @@ static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   return DoFlattenLoopPair(FI, DT, LI, SE, AC, TTI, U, MSSAU);
 }
 
-bool Flatten(LoopNest &LN, DominatorTree *DT, LoopInfo *LI, ScalarEvolution *SE,
-             AssumptionCache *AC, TargetTransformInfo *TTI, LPMUpdater *U,
-             MemorySSAUpdater *MSSAU) {
-  bool Changed = false;
-  for (Loop *InnerLoop : LN.getLoops()) {
-    auto *OuterLoop = InnerLoop->getParentLoop();
-    if (!OuterLoop)
-      continue;
-    FlattenInfo FI(OuterLoop, InnerLoop);
-    Changed |= FlattenLoopPair(FI, DT, LI, SE, AC, TTI, U, MSSAU);
-  }
-  return Changed;
-}
-
 PreservedAnalyses LoopFlattenPass::run(LoopNest &LN, LoopAnalysisManager &LAM,
                                        LoopStandardAnalysisResults &AR,
                                        LPMUpdater &U) {
@@ -949,8 +935,14 @@ PreservedAnalyses LoopFlattenPass::run(LoopNest &LN, LoopAnalysisManager &LAM,
   // in simplified form, and also needs LCSSA. Running
   // this pass will simplify all loops that contain inner loops,
   // regardless of whether anything ends up being flattened.
-  Changed |= Flatten(LN, &AR.DT, &AR.LI, &AR.SE, &AR.AC, &AR.TTI, &U,
-                     MSSAU ? &*MSSAU : nullptr);
+  for (Loop *InnerLoop : LN.getLoops()) {
+    auto *OuterLoop = InnerLoop->getParentLoop();
+    if (!OuterLoop)
+      continue;
+    FlattenInfo FI(OuterLoop, InnerLoop);
+    Changed |= FlattenLoopPair(FI, &AR.DT, &AR.LI, &AR.SE, &AR.AC, &AR.TTI, &U,
+                               MSSAU ? &*MSSAU : nullptr);
+  }
 
   if (!Changed)
     return PreservedAnalyses::all();
