@@ -170,8 +170,8 @@ public:
 private:
   struct LoopLevelInfo {
     LoopLevelInfo(ArrayRef<size_t> tids, ArrayRef<size_t> dims, Operation *loop,
-                  Value iv, StringAttr loopTag)
-        : tids(tids), dims(dims), loop(loop), iv(iv) {
+                  Block *userBlock, Value iv, StringAttr loopTag)
+        : tids(tids), dims(dims), loop(loop), userCodeBlock(userBlock), iv(iv) {
       // Attached a special tag to loop emitter generated loop.
       if (loopTag)
         loop->setAttr(LoopEmitter::getLoopEmitterLoopAttrName(), loopTag);
@@ -181,8 +181,9 @@ private:
     const llvm::SmallVector<size_t> tids;
     // The corresponding dims for the tensors
     const llvm::SmallVector<size_t> dims;
-    const Operation *loop; // the loop operation
-    const Value iv;        // the induction variable for the loop
+    const Operation *loop;      // the loop operation
+    Block *const userCodeBlock; // the block holding users' generated code.
+    const Value iv;             // the induction variable for the loop
   };
 
   /// Linearizes address for dense dimension (i.e., p = (i * d0) + j).
