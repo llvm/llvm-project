@@ -1018,7 +1018,7 @@ void IRTranslator::emitBitTestHeader(SwitchCG::BitTestBlock &B,
 
   LLT MaskTy = SwitchOpTy;
   if (MaskTy.getSizeInBits() > PtrTy.getSizeInBits() ||
-      !isPowerOf2_32(MaskTy.getSizeInBits()))
+      !llvm::has_single_bit<uint32_t>(MaskTy.getSizeInBits()))
     MaskTy = LLT::scalar(PtrTy.getSizeInBits());
   else {
     // Ensure that the type will fit the mask value.
