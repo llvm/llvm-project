@@ -230,6 +230,25 @@ def GetProducerOfOperand : TransformDialectOp<"get_producer_of_operand",
                        "functional-type(operands, results)";
 }
 
+def GetResultOp : TransformDialectOp<"get_result",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     NavigationTransformOpTrait, MemoryEffectsOpInterface]> {
+  let summary = "Get handle to the a result of the targeted op";
+  let description = [{
+    The handle defined by this Transform op corresponds to the OpResult with
+    `result_number` that is defined by the given `target` operation.
+    
+    This transform fails silently if the targeted operation does not have enough
+    results. It reads the target handle and produces the result handle.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                       I64Attr:$result_number);
+  let results = (outs TransformValueHandleTypeInterface:$result);
+  let assemblyFormat = "$target `[` $result_number `]` attr-dict `:` "
+                       "functional-type(operands, results)";
+}
+
 def MergeHandlesOp : TransformDialectOp<"merge_handles",
     [DeclareOpInterfaceMethods<TransformOpInterface, ["allowsRepeatedHandleOperands"]>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
