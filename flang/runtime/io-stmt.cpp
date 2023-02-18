@@ -186,7 +186,12 @@ ExternalIoStatementBase::ExternalIoStatementBase(
     ExternalFileUnit &unit, const char *sourceFile, int sourceLine)
     : IoStatementBase{sourceFile, sourceLine}, unit_{unit} {}
 
-MutableModes &ExternalIoStatementBase::mutableModes() { return unit_.modes; }
+MutableModes &ExternalIoStatementBase::mutableModes() {
+  if (const ChildIo * child{unit_.GetChildIo()}) {
+    return child->parent().mutableModes();
+  }
+  return unit_.modes;
+}
 
 ConnectionState &ExternalIoStatementBase::GetConnectionState() { return unit_; }
 
@@ -981,8 +986,8 @@ bool InquireUnitState::Inquire(
   case HashInquiryKeyword("BLANK"):
     str = !unit().IsConnected() || unit().isUnformatted.value_or(true)
         ? "UNDEFINED"
-        : unit().modes.editingFlags & blankZero ? "ZERO"
-                                                : "NULL";
+        : mutableModes().editingFlags & blankZero ? "ZERO"
+                                                  : "NULL";
     break;
   case HashInquiryKeyword("CARRIAGECONTROL"):
     str = "LIST";
@@ -993,14 +998,14 @@ bool InquireUnitState::Inquire(
   case HashInquiryKeyword("DECIMAL"):
     str = !unit().IsConnected() || unit().isUnformatted.value_or(true)
         ? "UNDEFINED"
-        : unit().modes.editingFlags & decimalComma ? "COMMA"
-                                                   : "POINT";
+        : mutableModes().editingFlags & decimalComma ? "COMMA"
+                                                     : "POINT";
     break;
   case HashInquiryKeyword("DELIM"):
     if (!unit().IsConnected() || unit().isUnformatted.value_or(true)) {
       str = "UNDEFINED";
     } else {
-      switch (unit().modes.delim) {
+      switch (mutableModes().delim) {
       case '\'':
         str = "APOSTROPHE";
         break;
@@ -1046,8 +1051,8 @@ bool InquireUnitState::Inquire(
   case HashInquiryKeyword("PAD"):
     str = !unit().IsConnected() || unit().isUnformatted.value_or(true)
         ? "UNDEFINED"
-        : unit().modes.pad ? "YES"
-                           : "NO";
+        : mutableModes().pad ? "YES"
+                             : "NO";
     break;
   case HashInquiryKeyword("POSITION"):
     if (!unit().IsConnected() || unit().access == Access::Direct) {
@@ -1078,7 +1083,7 @@ bool InquireUnitState::Inquire(
     if (!unit().IsConnected() || unit().isUnformatted.value_or(true)) {
       str = "UNDEFINED";
     } else {
-      switch (unit().modes.round) {
+      switch (mutableModes().round) {
       case decimal::FortranRounding::RoundNearest:
         str = "NEAREST";
         break;
@@ -1107,8 +1112,8 @@ bool InquireUnitState::Inquire(
   case HashInquiryKeyword("SIGN"):
     str = !unit().IsConnected() || unit().isUnformatted.value_or(true)
         ? "UNDEFINED"
-        : unit().modes.editingFlags & signPlus ? "PLUS"
-                                               : "SUPPRESS";
+        : mutableModes().editingFlags & signPlus ? "PLUS"
+                                                 : "SUPPRESS";
     break;
   case HashInquiryKeyword("STREAM"):
     str = !unit().IsConnected()           ? "UNKNOWN"
