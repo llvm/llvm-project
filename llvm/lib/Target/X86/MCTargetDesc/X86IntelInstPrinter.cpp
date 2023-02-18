@@ -44,7 +44,7 @@ void X86IntelInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 
   // In 16-bit mode, print data16 as data32.
   if (MI->getOpcode() == X86::DATA16_PREFIX &&
-      STI.getFeatureBits()[X86::Is16Bit]) {
+      STI.hasFeature(X86::Is16Bit)) {
     OS << "\tdata32";
   } else if (!printAliasInstr(MI, Address, OS) && !printVecCompareInstr(MI, OS))
     printInstruction(MI, Address, OS);
