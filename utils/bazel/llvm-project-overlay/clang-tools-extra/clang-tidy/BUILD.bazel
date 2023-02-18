@@ -1,0 +1,372 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@bazel_skylib//rules:native_binary.bzl", "native_binary")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("defs.bzl", "clang_tidy_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
+)
+
+licenses(["notice"])
+
+# Include static analyzer checks in clang-tidy. Usage:
+#   $ bazel build --@llvm-project//clang-tools-extra/clang-tidy:enable_static_analyzer=true //...
+#   $ bazel build --@llvm-project//clang-tools-extra/clang-tidy:enable_static_analyzer=false //...
+bool_flag(
+    name = "enable_static_analyzer",
+    build_setting_default = True,
+)
+
+config_setting(
+    name = "static_analyzer_enabled",
+    flag_values = {
+        ":enable_static_analyzer": "true",
+    },
+)
+
+expand_template(
+    name = "config",
+    out = "clang-tidy-config.h",
+    substitutions = select({
+        ":static_analyzer_enabled": {
+            "#cmakedefine01 CLANG_TIDY_ENABLE_STATIC_ANALYZER": "#define CLANG_TIDY_ENABLE_STATIC_ANALYZER 1",
+        },
+        "//conditions:default": {
+            "#cmakedefine01 CLANG_TIDY_ENABLE_STATIC_ANALYZER": "#define CLANG_TIDY_ENABLE_STATIC_ANALYZER 0",
+        },
+    }),
+    template = "clang-tidy-config.h.cmake",
+    visibility = ["//visibility:private"],
+)
+
+cc_binary(
+    name = "confusable_table_builder",
+    srcs = ["misc/ConfusableTable/BuildConfusableTable.cpp"],
+    visibility = ["//visibility:private"],
+    deps = ["//llvm:Support"],
+)
+
+genrule(
+    name = "confusables_inc",
+    srcs = ["misc/ConfusableTable/confusables.txt"],
+    outs = ["Confusables.inc"],
+    cmd = "$(location :confusable_table_builder) $(SRCS) $(OUTS)",
+    exec_tools = [":confusable_table_builder"],
+    visibility = ["//visibility:private"],
+)
+
+cc_library(
+    name = "confusables",
+    hdrs = [":confusables_inc"],
+    include_prefix = ".",
+)
+
+clang_tidy_library(
+    name = "lib",
+    srcs = glob(["*.cpp"]) + [":config"],
+    hdrs = glob(["*.h"]),
+    includes = ["."],
+    deps = [
+        "//clang:analysis",
+        "//clang:format",
+        "//clang:frontend_rewrite",
+        "//clang:rewrite",
+        "//clang:sema",
+        "//clang:serialization",
+        "//clang:tooling",
+        "//clang:tooling_core",
+    ] + select({
+        ":static_analyzer_enabled": [
+            "//clang:static_analyzer_core",
+            "//clang:static_analyzer_frontend",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+clang_tidy_library(
+    name = "misc",
+    deps = [
+        ":confusables",
+        ":lib",
+        ":utils",
+        "//clang:analysis",
+        "//clang:serialization",
+        "//clang:tooling",
+    ],
+)
+
+clang_tidy_library(
+    name = "portability",
+    deps = [
+        ":lib",
+        "//llvm:TargetParser",
+    ],
+)
+
+clang_tidy_library(
+    name = "utils",
+    deps = [
+        ":lib",
+        "//clang:sema",
+        "//clang:tooling",
+        "//clang:transformer",
+    ],
+)
+
+clang_tidy_library(
+    name = "readability",
+    deps = [
+        ":lib",
+        ":utils",
+        "//clang:analysis",
+        "//clang:tooling",
+    ],
+)
+
+clang_tidy_library(
+    name = "google",
+    deps = [
+        ":lib",
+        ":readability",
+    ],
+)
+
+clang_tidy_library(
+    name = "fuchsia",
+    deps = [
+        ":google",
+        ":lib",
+    ],
+)
+
+clang_tidy_library(
+    name = "llvm",
+    deps = [
+        ":lib",
+        ":readability",
+        ":utils",
+        "//clang:tooling",
+    ],
+)
+
+clang_tidy_library(
+    name = "llvmlibc",
+    deps = [
+        ":lib",
+        ":portability",
+    ],
+)
+
+clang_tidy_library(
+    name = "abseil",
+    deps = [
+        ":lib",
+        ":utils",
+        "//clang:tooling",
+        "//clang:transformer",
+    ],
+)
+
+clang_tidy_library(
+    name = "altera",
+    deps = [":lib"],
+)
+
+clang_tidy_library(
+    name = "android",
+    deps = [
+        ":lib",
+        ":utils",
+    ],
+)
+
+clang_tidy_library(
+    name = "boost",
+    deps = [":lib"],
+)
+
+clang_tidy_library(
+    name = "concurrency",
+    deps = [":lib"],
+)
+
+clang_tidy_library(
+    name = "darwin",
+    deps = [":lib"],
+)
+
+clang_tidy_library(
+    name = "linuxkernel",
+    deps = [":lib"],
+)
+
+clang_tidy_library(
+    name = "modernize",
+    deps = [
+        ":lib",
+        ":utils",
+        "//clang:tooling",
+    ],
+)
+
+clang_tidy_library(
+    name = "mpi",
+    deps = [
+        ":lib",
+        "//clang:static_analyzer_core",
+        "//clang:static_analyzer_frontend",
+        "//clang:tooling",
+    ],
+)
+
+clang_tidy_library(
+    name = "objc",
+    deps = [
+        ":lib",
+        ":utils",
+    ],
+)
+
+clang_tidy_library(
+    name = "openmp",
+    deps = [
+        ":lib",
+        ":utils",
+    ],
+)
+
+clang_tidy_library(
+    name = "zircon",
+    deps = [
+        ":lib",
+        ":utils",
+    ],
+)
+
+clang_tidy_library(
+    name = "cppcoreguidelines",
+    deps = [
+        ":lib",
+        ":misc",
+        ":modernize",
+        ":readability",
+        ":utils",
+    ],
+)
+
+clang_tidy_library(
+    name = "bugprone",
+    deps = [
+        ":cppcoreguidelines",
+        ":lib",
+        ":utils",
+        "//clang:analysis",
+        "//clang:tooling",
+        "//clang:transformer",
+    ],
+)
+
+clang_tidy_library(
+    name = "performance",
+    deps = [
+        ":lib",
+        ":utils",
+        "//clang:analysis",
+        "//clang:tooling",
+    ],
+)
+
+clang_tidy_library(
+    name = "cert",
+    deps = [
+        ":bugprone",
+        ":concurrency",
+        ":google",
+        ":lib",
+        ":misc",
+        ":performance",
+        ":readability",
+        ":utils",
+    ],
+)
+
+clang_tidy_library(
+    name = "hicpp",
+    deps = [
+        ":bugprone",
+        ":cppcoreguidelines",
+        ":google",
+        ":lib",
+        ":misc",
+        ":modernize",
+        ":performance",
+        ":readability",
+    ],
+)
+
+clang_tidy_library(
+    name = "plugin",
+    deps = [":lib"],
+)
+
+CHECKS = [
+    ":abseil",
+    ":altera",
+    ":android",
+    ":boost",
+    ":bugprone",
+    ":cert",
+    ":concurrency",
+    ":cppcoreguidelines",
+    ":darwin",
+    ":fuchsia",
+    ":google",
+    ":hicpp",
+    ":linuxkernel",
+    ":llvm",
+    ":llvmlibc",
+    ":misc",
+    ":modernize",
+    ":objc",
+    ":openmp",
+    ":performance",
+    ":portability",
+    ":readability",
+    ":zircon",
+] + select({
+    ":static_analyzer_enabled": [":mpi"],
+    "//conditions:default": [],
+})
+
+cc_library(
+    name = "tool",
+    srcs = ["tool/ClangTidyMain.cpp"],
+    hdrs = ["tool/ClangTidyMain.h"],
+    deps = CHECKS + [
+        ":lib",
+        ":utils",
+        "//clang:tooling",
+        "//llvm:Support",
+    ],
+)
+
+cc_binary(
+    name = "clang-tidy",
+    srcs = ["tool/ClangTidyToolMain.cpp"],
+    stamp = 0,
+    deps = [":tool"],
+)
+
+native_binary(
+    name = "run-clang-tidy",
+    src = "tool/run-clang-tidy.py",
+    out = "run-clang-tidy",
+    data = [":clang-tidy"],
+)
