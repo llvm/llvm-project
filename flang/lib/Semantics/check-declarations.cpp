@@ -1935,10 +1935,20 @@ void CheckHelper::CheckProcBinding(
           }
         }
       }
-      if (symbol.attrs().test(Attr::PRIVATE) &&
-          overridden->attrs().test(Attr::PUBLIC)) {
-        SayWithDeclaration(*overridden,
-            "A PRIVATE procedure may not override a PUBLIC procedure"_err_en_US);
+      if (symbol.attrs().test(Attr::PRIVATE)) {
+        if (FindModuleContaining(dtScope) ==
+            FindModuleContaining(overridden->owner())) {
+          // types declared in same madule
+          if (overridden->attrs().test(Attr::PUBLIC)) {
+            SayWithDeclaration(*overridden,
+                "A PRIVATE procedure may not override a PUBLIC procedure"_err_en_US);
+          }
+        } else { // types declared in distinct madules
+          if (!CheckAccessibleSymbol(dtScope.parent(), *overridden)) {
+            SayWithDeclaration(*overridden,
+                "A PRIVATE procedure may not override an accessible procedure"_err_en_US);
+          }
+        }
       }
     } else {
       SayWithDeclaration(*overridden,
