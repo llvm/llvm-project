@@ -41,17 +41,17 @@ void test_log(const char* condition, const char* file, int line, const F& functo
 }
 
 template <class Arg>
-[[noreturn]] void test_fail(const char* file, int line, Arg&& arg) {
-  test_log("", file, line, std::forward<Arg>(arg));
+[[noreturn]] void test_fail(const char* file, int line, const Arg& arg) {
+  test_log("", file, line, arg);
   std::abort();
 }
 
 template <class Arg>
-void test_require(bool condition, const char* condition_str, const char* file, int line, Arg&& arg) {
+void test_require(bool condition, const char* condition_str, const char* file, int line, const Arg& arg) {
   if (condition)
     return;
 
-  test_log(condition_str, file, line, std::forward<Arg>(arg));
+  test_log(condition_str, file, line, arg);
   std::abort();
 }
 
