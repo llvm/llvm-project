@@ -342,7 +342,7 @@ public:
     // to be sure that there will be an address in the block that will satisfy
     // the alignment.
     const uptr NeededSize =
-        roundUpTo(Size, MinAlignment) +
+        roundUp(Size, MinAlignment) +
         ((Alignment > MinAlignment) ? Alignment : Chunk::getHeaderSize());
 
     // Takes care of extravagantly large sizes as well as integer overflows.
@@ -402,7 +402,7 @@ public:
 
     const uptr BlockUptr = reinterpret_cast<uptr>(Block);
     const uptr UnalignedUserPtr = BlockUptr + Chunk::getHeaderSize();
-    const uptr UserPtr = roundUpTo(UnalignedUserPtr, Alignment);
+    const uptr UserPtr = roundUp(UnalignedUserPtr, Alignment);
 
     void *Ptr = reinterpret_cast<void *>(UserPtr);
     void *TaggedPtr = Ptr;
@@ -461,7 +461,7 @@ public:
             PrevUserPtr == UserPtr &&
             (TaggedUserPtr = loadTag(UserPtr)) != UserPtr) {
           uptr PrevEnd = TaggedUserPtr + Header.SizeOrUnusedBytes;
-          const uptr NextPage = roundUpTo(TaggedUserPtr, getPageSizeCached());
+          const uptr NextPage = roundUp(TaggedUserPtr, getPageSizeCached());
           if (NextPage < PrevEnd && loadTag(NextPage) != NextPage)
             PrevEnd = NextPage;
           TaggedPtr = reinterpret_cast<void *>(TaggedUserPtr);
@@ -474,8 +474,8 @@ public:
             // was freed, it would not have been retagged and thus zeroed, and
             // therefore it needs to be zeroed now.
             memset(TaggedPtr, 0,
-                   Min(Size, roundUpTo(PrevEnd - TaggedUserPtr,
-                                       archMemoryTagGranuleSize())));
+                   Min(Size, roundUp(PrevEnd - TaggedUserPtr,
+                                     archMemoryTagGranuleSize())));
           } else if (Size) {
             // Clear any stack metadata that may have previously been stored in
             // the chunk data.
@@ -1241,15 +1241,15 @@ private:
 
   void resizeTaggedChunk(uptr OldPtr, uptr NewPtr, uptr NewSize,
                          uptr BlockEnd) {
-    uptr RoundOldPtr = roundUpTo(OldPtr, archMemoryTagGranuleSize());
+    uptr RoundOldPtr = roundUp(OldPtr, archMemoryTagGranuleSize());
     uptr RoundNewPtr;
     if (RoundOldPtr >= NewPtr) {
       // If the allocation is shrinking we just need to set the tag past the end
       // of the allocation to 0. See explanation in storeEndMarker() above.
-      RoundNewPtr = roundUpTo(NewPtr, archMemoryTagGranuleSize());
+      RoundNewPtr = roundUp(NewPtr, archMemoryTagGranuleSize());
     } else {
       // Set the memory tag of the region
-      // [RoundOldPtr, roundUpTo(NewPtr, archMemoryTagGranuleSize()))
+      // [RoundOldPtr, roundUp(NewPtr, archMemoryTagGranuleSize()))
       // to the pointer tag stored in OldPtr.
       RoundNewPtr = storeTags(RoundOldPtr, NewPtr);
     }
@@ -1505,7 +1505,8 @@ private:
     MapPlatformData Data = {};
     RawRingBuffer = static_cast<char *>(
         map(/*Addr=*/nullptr,
-            roundUpTo(ringBufferSizeInBytes(AllocationRingBufferSize), getPageSizeCached()),
+            roundUp(ringBufferSizeInBytes(AllocationRingBufferSize),
+                    getPageSizeCached()),
             "AllocatorRingBuffer", /*Flags=*/0, &Data));
     auto *RingBuffer = reinterpret_cast<AllocationRingBuffer *>(RawRingBuffer);
     RingBuffer->Size = AllocationRingBufferSize;

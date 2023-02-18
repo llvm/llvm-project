@@ -29,7 +29,7 @@ TEST(ScudoReleaseTest, RegionPageMap) {
     // Verify the packing ratio, the counter is Expected to be packed into the
     // closest power of 2 bits.
     scudo::RegionPageMap PageMap(1U, SCUDO_WORDSIZE, 1UL << I);
-    EXPECT_EQ(sizeof(scudo::uptr) * scudo::roundUpToPowerOfTwo(I + 1),
+    EXPECT_EQ(sizeof(scudo::uptr) * scudo::roundUpPowerOfTwo(I + 1),
               PageMap.getBufferSize());
   }
 
@@ -238,7 +238,7 @@ template <class SizeClassMap> void testReleaseFreeMemoryToOS() {
           InFreeRange = false;
           // Verify that all entire memory pages covered by this range of free
           // chunks were released.
-          scudo::uptr P = scudo::roundUpTo(CurrentFreeRangeStart, PageSize);
+          scudo::uptr P = scudo::roundUp(CurrentFreeRangeStart, PageSize);
           while (P + PageSize <= CurrentBlock) {
             const bool PageReleased =
                 Recorder.ReportedPages.find(P) != Recorder.ReportedPages.end();
@@ -254,9 +254,9 @@ template <class SizeClassMap> void testReleaseFreeMemoryToOS() {
     }
 
     if (InFreeRange) {
-      scudo::uptr P = scudo::roundUpTo(CurrentFreeRangeStart, PageSize);
+      scudo::uptr P = scudo::roundUp(CurrentFreeRangeStart, PageSize);
       const scudo::uptr EndPage =
-          scudo::roundUpTo(MaxBlocks * BlockSize, PageSize);
+          scudo::roundUp(MaxBlocks * BlockSize, PageSize);
       while (P + PageSize <= EndPage) {
         const bool PageReleased =
             Recorder.ReportedPages.find(P) != Recorder.ReportedPages.end();

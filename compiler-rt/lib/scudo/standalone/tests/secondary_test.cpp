@@ -64,7 +64,7 @@ template <typename Config> static void testSecondaryBasic(void) {
   P = L->allocate(Options, Size + Align, Align);
   EXPECT_NE(P, nullptr);
   void *AlignedP = reinterpret_cast<void *>(
-      scudo::roundUpTo(reinterpret_cast<scudo::uptr>(P), Align));
+      scudo::roundUp(reinterpret_cast<scudo::uptr>(P), Align));
   memset(AlignedP, 'A', Size);
   L->deallocate(Options, P);
 
@@ -122,7 +122,7 @@ struct MapAllocatorTest : public Test {
 // combined allocator.
 TEST_F(MapAllocatorTest, SecondaryCombinations) {
   constexpr scudo::uptr MinAlign = FIRST_32_SECOND_64(8, 16);
-  constexpr scudo::uptr HeaderSize = scudo::roundUpTo(8, MinAlign);
+  constexpr scudo::uptr HeaderSize = scudo::roundUp(8, MinAlign);
   for (scudo::uptr SizeLog = 0; SizeLog <= 20; SizeLog++) {
     for (scudo::uptr AlignLog = FIRST_32_SECOND_64(3, 4); AlignLog <= 16;
          AlignLog++) {
@@ -131,13 +131,13 @@ TEST_F(MapAllocatorTest, SecondaryCombinations) {
         if (static_cast<scudo::sptr>(1U << SizeLog) + Delta <= 0)
           continue;
         const scudo::uptr UserSize =
-            scudo::roundUpTo((1U << SizeLog) + Delta, MinAlign);
+            scudo::roundUp((1U << SizeLog) + Delta, MinAlign);
         const scudo::uptr Size =
             HeaderSize + UserSize + (Align > MinAlign ? Align - HeaderSize : 0);
         void *P = Allocator->allocate(Options, Size, Align);
         EXPECT_NE(P, nullptr);
         void *AlignedP = reinterpret_cast<void *>(
-            scudo::roundUpTo(reinterpret_cast<scudo::uptr>(P), Align));
+            scudo::roundUp(reinterpret_cast<scudo::uptr>(P), Align));
         memset(AlignedP, 0xff, UserSize);
         Allocator->deallocate(Options, P);
       }

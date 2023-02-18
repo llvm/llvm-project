@@ -341,7 +341,7 @@ private:
       else
         MapSize = RegionSize;
     } else {
-      Region = roundUpTo(MapBase, RegionSize);
+      Region = roundUp(MapBase, RegionSize);
       unmap(reinterpret_cast<void *>(MapBase), Region - MapBase);
       MapSize = RegionSize;
     }

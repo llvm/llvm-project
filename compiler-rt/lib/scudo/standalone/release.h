@@ -73,7 +73,7 @@ public:
       Mutex.unlock();
     else
       unmap(reinterpret_cast<void *>(Buffer),
-            roundUpTo(BufferSize, getPageSizeCached()));
+            roundUp(BufferSize, getPageSizeCached()));
     Buffer = nullptr;
   }
 
@@ -94,7 +94,7 @@ public:
     // Rounding counter storage size up to the power of two allows for using
     // bit shifts calculating particular counter's Index and offset.
     const uptr CounterSizeBits =
-        roundUpToPowerOfTwo(getMostSignificantSetBitIndex(MaxValue) + 1);
+        roundUpPowerOfTwo(getMostSignificantSetBitIndex(MaxValue) + 1);
     DCHECK_LE(CounterSizeBits, MaxCounterBits);
     CounterSizeBitsLog = getLog2(CounterSizeBits);
     CounterMask = ~(static_cast<uptr>(0)) >> (MaxCounterBits - CounterSizeBits);
@@ -105,7 +105,7 @@ public:
     BitOffsetMask = PackingRatio - 1;
 
     SizePerRegion =
-        roundUpTo(NumCounters, static_cast<uptr>(1U) << PackingRatioLog) >>
+        roundUp(NumCounters, static_cast<uptr>(1U) << PackingRatioLog) >>
         PackingRatioLog;
     BufferSize = SizePerRegion * sizeof(*Buffer) * Regions;
     if (BufferSize <= (StaticBufferCount * sizeof(Buffer[0])) &&
@@ -120,7 +120,7 @@ public:
       const uptr MmapFlags =
           MAP_ALLOWNOMEM | (SCUDO_FUCHSIA ? MAP_PRECOMMIT : 0);
       Buffer = reinterpret_cast<uptr *>(
-          map(nullptr, roundUpTo(BufferSize, getPageSizeCached()),
+          map(nullptr, roundUp(BufferSize, getPageSizeCached()),
               "scudo:counters", MmapFlags, &MapData));
     }
   }
@@ -266,7 +266,7 @@ struct PageReleaseContext {
       }
     }
 
-    PagesCount = roundUpTo(RegionSize, PageSize) / PageSize;
+    PagesCount = roundUp(RegionSize, PageSize) / PageSize;
     PageSizeLog = getLog2(PageSize);
     RoundedRegionSize = PagesCount << PageSizeLog;
     RoundedSize = NumberOfRegions * RoundedRegionSize;
