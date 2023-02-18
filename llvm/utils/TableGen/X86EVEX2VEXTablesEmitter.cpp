@@ -238,10 +238,10 @@ void X86EVEX2VEXTablesEmitter::run(raw_ostream &OS) {
   // Print CheckVEXInstPredicate function.
   printCheckPredicate(EVEX2VEXPredicates, OS);
 }
-}
+} // namespace
 
 namespace llvm {
 void EmitX86EVEX2VEXTables(RecordKeeper &RK, raw_ostream &OS) {
   X86EVEX2VEXTablesEmitter(RK).run(OS);
 }
-}
+} // namespace llvm

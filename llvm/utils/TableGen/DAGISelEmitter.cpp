@@ -193,4 +193,4 @@ void EmitDAGISel(RecordKeeper &RK, raw_ostream &OS) {
   DAGISelEmitter(RK).run(OS);
 }
 
-} // End llvm namespace
+} // namespace llvm

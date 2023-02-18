@@ -828,4 +828,4 @@ void EmitSearchableTables(RecordKeeper &RK, raw_ostream &OS) {
   SearchableTableEmitter(RK).run(OS);
 }
 
-} // End llvm namespace.
+} // namespace llvm

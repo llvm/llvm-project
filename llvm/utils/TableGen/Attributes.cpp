@@ -135,4 +135,4 @@ void EmitAttributes(RecordKeeper &RK, raw_ostream &OS) {
   Attributes(RK).emit(OS);
 }
 
-} // End llvm namespace.
+} // namespace llvm

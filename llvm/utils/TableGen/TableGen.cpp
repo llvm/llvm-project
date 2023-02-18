@@ -221,8 +221,7 @@ bool LLVMTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
   case GenOptRST:
     EmitOptRST(Records, OS);
     break;
-  case PrintEnums:
-  {
+  case PrintEnums: {
     for (Record *Rec : Records.getAllDerivedDefinitions(Class))
       OS << Rec->getName() << ", ";
     OS << "\n";
