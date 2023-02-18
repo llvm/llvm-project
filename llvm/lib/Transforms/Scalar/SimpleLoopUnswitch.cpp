@@ -2929,8 +2929,8 @@ bool shouldTryInjectBasingOnMetadata(const BranchInst *BI,
   size_t Idx = BI->getSuccessor(0) == TakenSucc ? 0 : 1;
   auto Num = Weights[Idx];
   auto Denom = Weights[0] + Weights[1];
-  // Degenerate metadata.
-  if (Denom == 0)
+  // Degenerate or overflowed metadata.
+  if (Denom == 0 || Num > Denom)
     return false;
   BranchProbability ActualTaken(Num, Denom);
   if (LikelyTaken > ActualTaken)
