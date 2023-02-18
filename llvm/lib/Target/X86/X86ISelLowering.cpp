@@ -53900,6 +53900,8 @@ static SDValue combineVectorSizedSetCCEquality(SDNode *SetCC, SelectionDAG &DAG,
 /// If we have AVX512, but not BWI and this is a vXi16/vXi8 setcc, just
 /// pre-promote its result type since vXi1 vectors don't get promoted
 /// during type legalization.
+/// NOTE: The element count check is to ignore operand types that need to
+/// go through type promotion to a 128-bit vector.
 static SDValue truncateAVX512SetCCNoBWI(EVT VT, EVT OpVT, SDValue LHS,
                                         SDValue RHS, ISD::CondCode CC, SDLoc DL,
                                         SelectionDAG &DAG,
