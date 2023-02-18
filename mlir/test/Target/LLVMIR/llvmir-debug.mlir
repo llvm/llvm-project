@@ -88,11 +88,9 @@ llvm.func @func_with_debug(%arg: i64) {
   %alloc = llvm.alloca %allocCount x i64 : (i32) -> !llvm.ptr<i64>
 
   // CHECK: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[VAR_LOC:[0-9]+]], metadata !DIExpression())
-  // CHECK: call void @llvm.dbg.addr(metadata ptr %[[ALLOC]], metadata ![[ADDR_LOC:[0-9]+]], metadata !DIExpression())
-  // CHECK: call void @llvm.dbg.declare(metadata ptr %[[ALLOC]], metadata ![[ADDR_LOC]], metadata !DIExpression())
+  // CHECK: call void @llvm.dbg.declare(metadata ptr %[[ALLOC]], metadata ![[ADDR_LOC:[0-9]+]], metadata !DIExpression())
   // CHECK: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[NO_NAME_VAR:[0-9]+]], metadata !DIExpression())
   llvm.intr.dbg.value #variable = %arg : i64
-  llvm.intr.dbg.addr #variableAddr = %alloc : !llvm.ptr<i64>
   llvm.intr.dbg.declare #variableAddr = %alloc : !llvm.ptr<i64>
   llvm.intr.dbg.value #noNameVariable= %arg : i64
 
