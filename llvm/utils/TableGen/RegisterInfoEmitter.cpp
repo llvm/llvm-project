@@ -17,6 +17,7 @@
 #include "CodeGenTarget.h"
 #include "InfoByHwMode.h"
 #include "SequenceToOffsetTable.h"
+#include "TableGenBackends.h"
 #include "Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
