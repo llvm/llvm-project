@@ -9,6 +9,9 @@
 #include "CodeCompletionStrings.h"
 #include "clang-c/Index.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/CommentLexer.h"
+#include "clang/AST/CommentParser.h"
+#include "clang/AST/CommentSema.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
@@ -314,6 +317,27 @@ std::string getReturnType(const CodeCompletionString &CCS) {
     if (Chunk.Kind == CodeCompletionString::CK_ResultType)
       return Chunk.Text;
   return "";
+}
+
+comments::FullComment *parseComment(llvm::StringRef Comment,
+                                    llvm::BumpPtrAllocator &Allocator,
+                                    comments::CommandTraits &Traits) {
+  // The comment lexer expects markers, so add them back
+  auto CommentWithMarkers = "/*" + Comment.str() + "*/";
+
+  SourceManagerForFile SourceMgrForFile("mock_file.cpp", CommentWithMarkers);
+  SourceManager &SourceMgr = SourceMgrForFile.get();
+
+  comments::Lexer L(Allocator, SourceMgr.getDiagnostics(), Traits,
+                    SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID()),
+                    CommentWithMarkers.data(),
+                    CommentWithMarkers.data() + CommentWithMarkers.size());
+  comments::Sema S(Allocator, SourceMgr, SourceMgr.getDiagnostics(), Traits,
+                   nullptr);
+  comments::Parser P(L, S, Allocator, SourceMgr, SourceMgr.getDiagnostics(),
+                     Traits);
+
+  return P.parseFullComment();
 }
 
 } // namespace clangd
