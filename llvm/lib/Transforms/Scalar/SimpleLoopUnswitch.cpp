@@ -2885,6 +2885,36 @@ static bool collectUnswitchCandidates(
   return !UnswitchCandidates.empty();
 }
 
+/// Tries to canonicalize condition described by:
+///
+///   br (LHS pred RHS), label IfTrue, label IfFalse
+///
+/// into its equivalent where `Pred` is something that we support for injected
+/// invariants (so far it is limited to ult), LHS in canonicalized form is
+/// non-invariant and RHS is an invariant.
+static void canonicalizeForInvariantConditionInjection(
+    ICmpInst::Predicate &Pred, Value *&LHS, Value *&RHS, BasicBlock *&IfTrue,
+    BasicBlock *&IfFalse, const Loop &L) {
+  if (!L.contains(IfTrue)) {
+    Pred = ICmpInst::getInversePredicate(Pred);
+    std::swap(IfTrue, IfFalse);
+  }
+
+  // Move loop-invariant argument to RHS position.
+  if (L.isLoopInvariant(LHS)) {
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+    std::swap(LHS, RHS);
+  }
+
+  if (Pred == ICmpInst::ICMP_SGE && match(RHS, m_Zero())) {
+    // Turn "x >=s 0" into "x <u UMIN_INT"
+    Pred = ICmpInst::ICMP_ULT;
+    RHS = ConstantInt::get(
+        RHS->getContext(),
+        APInt::getSignedMinValue(RHS->getType()->getIntegerBitWidth()));
+  }
+}
+
 /// Returns true, if predicate described by ( \p Pred, \p LHS, \p RHS )
 /// succeeding into blocks ( \p IfTrue, \p IfFalse) can be optimized by
 /// injecting a loop-invariant condition.
@@ -3121,6 +3151,8 @@ static bool collectUnswitchCandidatesWithInjections(
     if (!match(Term, m_Br(m_ICmp(Pred, m_Value(LHS), m_Value(RHS)),
                           m_BasicBlock(IfTrue), m_BasicBlock(IfFalse))))
       continue;
+    canonicalizeForInvariantConditionInjection(Pred, LHS, RHS, IfTrue, IfFalse,
+                                               L);
     if (!shouldTryInjectInvariantCondition(Pred, LHS, RHS, IfTrue, IfFalse, L))
       continue;
     if (!shouldTryInjectBasingOnMetadata(cast<BranchInst>(Term), IfTrue))
