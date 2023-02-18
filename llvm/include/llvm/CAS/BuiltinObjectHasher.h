@@ -11,7 +11,6 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CAS/ObjectStore.h"
-#include "llvm/CAS/TreeEntry.h"
 #include "llvm/Support/Endian.h"
 
 namespace llvm {

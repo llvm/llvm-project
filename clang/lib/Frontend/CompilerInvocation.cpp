@@ -403,6 +403,31 @@ static void denormalizeStringVector(SmallVectorImpl<const char *> &Args,
   }
 }
 
+using StringPair = std::pair<std::string, std::string>;
+
+static std::optional<std::vector<std::pair<std::string, std::string>>>
+normalizeStringPairVector(OptSpecifier Opt, int, const ArgList &Args,
+                          DiagnosticsEngine &) {
+  std::vector<std::pair<std::string, std::string>> Pairs;
+  for (StringRef Arg : Args.getAllArgValues(Opt)) {
+    auto [L, R] = Arg.split('=');
+    Pairs.emplace_back(std::string(L), std::string(R));
+  }
+  return Pairs;
+}
+
+static void denormalizeStringPairVector(
+    SmallVectorImpl<const char *> &Args, const char *Spelling,
+    CompilerInvocation::StringAllocator SA, Option::OptionClass OptClass,
+    unsigned TableIndex,
+    const std::vector<std::pair<std::string, std::string>> &Values) {
+  std::vector<std::string> Joined;
+  for (const auto &Pair : Values) {
+    Joined.push_back(Pair.first + "=" + Pair.second);
+  }
+  denormalizeStringVector(Args, Spelling, SA, OptClass, TableIndex, Joined);
+}
+
 static std::optional<std::string> normalizeTriple(OptSpecifier Opt,
                                                   int TableIndex,
                                                   const ArgList &Args,
