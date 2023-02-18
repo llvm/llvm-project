@@ -16,11 +16,10 @@
 
 namespace llvm {
 struct ExportedSymbol {
-  MachO::SymbolKind Kind = MachO::SymbolKind::GlobalSymbol;
-  std::string Name = {};
-  bool Weak = false;
-  bool ThreadLocalValue = false;
-  MachO::TargetList Targets = {};
+  llvm::MachO::SymbolKind Kind;
+  std::string Name;
+  bool WeakDefined;
+  bool ThreadLocalValue;
 };
 
 using ExportedSymbolSeq = std::vector<ExportedSymbol>;
@@ -33,8 +32,8 @@ inline bool operator<(const ExportedSymbol &LHS, const ExportedSymbol &RHS) {
 }
 
 inline bool operator==(const ExportedSymbol &LHS, const ExportedSymbol &RHS) {
-  return std::tie(LHS.Kind, LHS.Name, LHS.Weak, LHS.ThreadLocalValue) ==
-         std::tie(RHS.Kind, RHS.Name, RHS.Weak, RHS.ThreadLocalValue);
+  return std::tie(LHS.Kind, LHS.Name, LHS.WeakDefined, LHS.ThreadLocalValue) ==
+         std::tie(RHS.Kind, RHS.Name, RHS.WeakDefined, RHS.ThreadLocalValue);
 }
 
 inline std::string stripWhitespace(std::string S) {

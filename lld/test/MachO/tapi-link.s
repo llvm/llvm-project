@@ -121,6 +121,7 @@ exports:
     re-exports: [ 'libNested.dylib' ]
 ...
 
+## This tests that weak and thread-local symbols are imported as such.
 #--- libTlvWeak.tbd
 --- !tapi-tbd
 tbd-version:      4
@@ -130,8 +131,8 @@ uuids:
     value:        00000000-0000-0000-0000-000000000000
 install-name:     '/usr/lib/libTlvWeak.dylib'
 current-version:  0001.001.1
-exports:                            # Validate weak & thread-local symbols 
+exports:
   - targets:      [ x86_64-macos ]
     weak-symbols: [ _weak ]
     thread-local-symbols: [ _tlv ]
-...
+---
