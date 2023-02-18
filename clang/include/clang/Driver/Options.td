@@ -2468,11 +2468,8 @@ defm implicit_module_maps : BoolFOption<"implicit-module-maps",
   HeaderSearchOpts<"ImplicitModuleMaps">, DefaultFalse,
   PosFlag<SetTrue, [CoreOption], "Implicitly search the file system for module map files.">,
   NegFlag<SetFalse>, BothFlags<[NoXarchOption, CC1Option]>>;
-def fmodules_ts : Flag <["-"], "fmodules-ts">, Group<f_Group>,
-  Flags<[CC1Option]>, HelpText<"Enable support for the C++ Modules TS">,
-  MarshallingInfoFlag<LangOpts<"ModulesTS">>;
 defm modules : BoolFOption<"modules",
-  LangOpts<"Modules">, Default<!strconcat(fmodules_ts.KeyPath, "||", fcxx_modules.KeyPath)>,
+  LangOpts<"Modules">, Default<fcxx_modules.KeyPath>,
   PosFlag<SetTrue, [CC1Option], "Enable the 'modules' language feature">,
   NegFlag<SetFalse>, BothFlags<[NoXarchOption, CoreOption]>>;
 def fmodule_maps : Flag <["-"], "fmodule-maps">, Flags<[CoreOption]>, Alias<fimplicit_module_maps>;
@@ -6054,7 +6051,7 @@ defm fimplicit_modules_use_lock : BoolOption<"f", "implicit-modules-use-lock",
   PosFlag<SetTrue, [],
           "Use filesystem locks for implicit modules builds to avoid "
           "duplicating work in competing clang invocations.">>;
-// FIXME: We only need this in C++ modules / Modules TS if we might textually
+// FIXME: We only need this in C++ modules if we might textually
 // enter a different module (eg, when building a header unit).
 defm modules_local_submodule_visibility :
   BoolFOption<"modules-local-submodule-visibility",

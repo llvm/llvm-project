@@ -21526,9 +21526,10 @@ SDValue DAGCombiner::reduceBuildVecExtToExtBuildVec(SDNode *N) {
   // same source type and all of the inputs must be any or zero extend.
   // Scalar sizes must be a power of two.
   EVT OutScalarTy = VT.getScalarType();
-  bool ValidTypes = SourceType != MVT::Other &&
-                 isPowerOf2_32(OutScalarTy.getSizeInBits()) &&
-                 isPowerOf2_32(SourceType.getSizeInBits());
+  bool ValidTypes =
+      SourceType != MVT::Other &&
+      llvm::has_single_bit<uint32_t>(OutScalarTy.getSizeInBits()) &&
+      llvm::has_single_bit<uint32_t>(SourceType.getSizeInBits());
 
   // Create a new simpler BUILD_VECTOR sequence which other optimizations can
   // turn into a single shuffle instruction.
