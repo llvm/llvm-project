@@ -17,7 +17,6 @@
 #include <cstdint>
 #include <deque>
 #include <functional>
-#include <optional>
 #include <stddef.h>
 #include <stdint.h>
 #include <type_traits>
@@ -244,12 +243,12 @@ public:
 
   /// Check if all asynchronous operations are completed.
   ///
-  /// \note if the operations are completed, the registered post-processing
-  /// functions will be executed once and unregistered afterwards.
+  /// \note only a lightweight check. If needed, use synchronize() to query the
+  /// status of AsyncInfo before checking.
   ///
   /// \returns true if there is no pending asynchronous operations, false
-  /// otherwise. We return a null value in the case of an error from the plugin.
-  std::optional<bool> isDone();
+  /// otherwise.
+  bool isDone() const;
 
   /// Add a new post-processing function to be executed after synchronization.
   ///
