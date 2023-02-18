@@ -413,17 +413,21 @@ void CommandInterpreter::Initialize() {
 
   alias_arguments_vector_sp = std::make_shared<OptionArgVector>();
 
-  cmd_obj_sp = GetCommandSPExact("expression");
+  cmd_obj_sp = GetCommandSPExact("dwim-print");
   if (cmd_obj_sp) {
     AddAlias("p", cmd_obj_sp, "--")->SetHelpLong("");
     AddAlias("print", cmd_obj_sp, "--")->SetHelpLong("");
-    AddAlias("call", cmd_obj_sp, "--")->SetHelpLong("");
     if (auto *po = AddAlias("po", cmd_obj_sp, "-O --")) {
       po->SetHelp("Evaluate an expression on the current thread.  Displays any "
                   "returned value with formatting "
                   "controlled by the type's author.");
       po->SetHelpLong("");
     }
+  }
+
+  cmd_obj_sp = GetCommandSPExact("expression");
+  if (cmd_obj_sp) {
+    AddAlias("call", cmd_obj_sp, "--")->SetHelpLong("");
     CommandAlias *parray_alias =
         AddAlias("parray", cmd_obj_sp, "--element-count %1 --");
     if (parray_alias) {
