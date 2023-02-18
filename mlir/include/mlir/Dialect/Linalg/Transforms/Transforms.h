@@ -44,6 +44,35 @@ struct LinalgTilingOptions;
 //===----------------------------------------------------------------------===//
 using LinalgLoops = SmallVector<Operation *, 4>;
 
+/// Materialize a buffer allocation for the given tensor.pad op and lower the
+/// op to linalg.fill/linalg.generic + memref.tensor_store. E.g.:
+///
+/// %0 = tensor.pad low[%l] high[%h] %t ...
+///
+/// is lowered to:
+///
+/// %alloc = memref.alloc
+/// linalg.fill ... outs(%alloc)
+/// %subview = memref.subview %alloc [%l] [...] [1]
+/// memref.tensor_store %t, %subview
+/// %0 = bufferization.to_tensor %alloc restrict writable
+///
+/// In addition to rewriting the IR as shown above, the result of the
+/// bufferization.to_tensor op is returned.
+Value bufferizeToAllocation(RewriterBase &rewriter, tensor::PadOp padOp,
+                            Attribute memorySpace = {});
+
+/// Materialize a buffer allocation for the given tensor value. E.g.:
+///
+/// %alloc = memref.alloc
+/// memref.tensor_store %value, %alloc
+/// %0 = bufferization.to_tensor %alloc restrict writable
+///
+/// In case `value` is a tensor.pad result, the corresponding overload is used
+/// internally to produce a better bufferization.
+Value bufferizeToAllocation(RewriterBase &rewriter, Value value,
+                            Attribute memorySpace = {});
+
 void populatePadTensorTilingPatterns(RewritePatternSet &patterns,
                                      const LinalgTilingOptions &options);
 
