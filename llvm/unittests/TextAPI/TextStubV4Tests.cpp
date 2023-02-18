@@ -90,9 +90,9 @@ TEST(TBDv4, ReadFile) {
       Target(AK_x86_64, PLATFORM_MACOS),
       Target(AK_x86_64, PLATFORM_IOS),
   };
-  UUIDs uuids = {{Targets[0], "00000000-0000-0000-0000-000000000000"},
-                 {Targets[1], "11111111-1111-1111-1111-111111111111"},
-                 {Targets[2], "11111111-1111-1111-1111-111111111111"}};
+  TargetToAttr uuids = {{Targets[0], "00000000-0000-0000-0000-000000000000"},
+                        {Targets[1], "11111111-1111-1111-1111-111111111111"},
+                        {Targets[2], "11111111-1111-1111-1111-111111111111"}};
   EXPECT_EQ(Archs, File->getArchitectures());
   EXPECT_EQ(uuids, File->uuids());
   EXPECT_EQ(Platforms.size(), File->getPlatforms().size());
@@ -225,7 +225,7 @@ TEST(TBDv4, ReadMultipleDocuments) {
   for (auto &&Arch : Archs)
     for (auto &&Platform : Platforms)
       Targets.emplace_back(Target(Arch, Platform));
-  UUIDs Uuids = {
+  TargetToAttr Uuids = {
       {Targets[0], "00000000-0000-0000-0000-000000000000"},
       {Targets[1], "00000000-0000-0000-0000-000000000002"},
       {Targets[2], "11111111-1111-1111-1111-111111111111"},
@@ -356,8 +356,8 @@ TEST(TBDv4, WriteFile) {
       Target(AK_i386, PLATFORM_MACOS),
       Target(AK_x86_64, PLATFORM_IOSSIMULATOR),
   };
-  UUIDs uuids = {{Targets[0], "00000000-0000-0000-0000-000000000000"},
-                 {Targets[1], "11111111-1111-1111-1111-111111111111"}};
+  TargetToAttr uuids = {{Targets[0], "00000000-0000-0000-0000-000000000000"},
+                        {Targets[1], "11111111-1111-1111-1111-111111111111"}};
   File.setInstallName("Umbrella.framework/Umbrella");
   File.setFileType(FileType::TBD_V4);
   File.addTargets(Targets);
@@ -424,8 +424,8 @@ TEST(TBDv4, WriteMultipleDocuments) {
       Target(AK_i386, Platform),
       Target(AK_x86_64, Platform),
   };
-  UUIDs Uuids = {{Targets[0], "00000000-0000-0000-0000-000000000002"},
-                 {Targets[1], "11111111-1111-1111-1111-111111111112"}};
+  TargetToAttr Uuids = {{Targets[0], "00000000-0000-0000-0000-000000000002"},
+                        {Targets[1], "11111111-1111-1111-1111-111111111112"}};
   File.setInstallName("/System/Library/Frameworks/Umbrella.framework/Umbrella");
   File.setFileType(FileType::TBD_V4);
   File.addTargets(Targets);

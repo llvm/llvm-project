@@ -348,6 +348,18 @@ public:
     return Documents;
   }
 
+  /// Set the runpath search paths.
+  /// \param InputTarget The target applicable to runpath search path.
+  /// \param RPath The name of runpath.
+  void addRPath(const Target &InputTarget, StringRef RPath);
+
+  /// Get the list of runpath search paths.
+  ///
+  /// \return Returns a list of the rpaths per target.
+  const std::vector<std::pair<Target, std::string>> &rpaths() const {
+    return RPaths;
+  }
+
   /// Add a symbol to the symbols list or extend an existing one.
   void addSymbol(SymbolKind Kind, StringRef Name, const TargetList &Targets,
                  SymbolFlags Flags = SymbolFlags::None);
@@ -435,6 +447,7 @@ private:
   std::vector<InterfaceFileRef> ReexportedLibraries;
   std::vector<std::shared_ptr<InterfaceFile>> Documents;
   std::vector<std::pair<Target, std::string>> UUIDs;
+  std::vector<std::pair<Target, std::string>> RPaths;
   SymbolMapType Symbols;
   InterfaceFile *Parent = nullptr;
 };
