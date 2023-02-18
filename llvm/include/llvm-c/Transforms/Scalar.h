@@ -97,6 +97,9 @@ void LLVMAddPartiallyInlineLibCallsPass(LLVMPassManagerRef PM);
 /** See llvm::createReassociatePass function. */
 void LLVMAddReassociatePass(LLVMPassManagerRef PM);
 
+/** See llvm::createSCCPPass function. */
+void LLVMAddSCCPPass(LLVMPassManagerRef PM);
+
 /** See llvm::createSROAPass function. */
 void LLVMAddScalarReplAggregatesPass(LLVMPassManagerRef PM);
 
