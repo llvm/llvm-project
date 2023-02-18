@@ -2663,7 +2663,7 @@ public:
 
           // Special case when an intrinsic scalar variable is passed to a
           // function expecting an optional unlimited polymorphic dummy
-	  // argument.
+          // argument.
           // The presence test needs to be performed before emboxing otherwise
           // the program will crash.
           if (dynamicType->category() !=
