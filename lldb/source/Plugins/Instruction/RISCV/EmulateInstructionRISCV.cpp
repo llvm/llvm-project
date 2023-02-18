@@ -636,7 +636,7 @@ std::optional<DecodeResult> EmulateInstructionRISCV::Decode(uint32_t inst) {
     if ((inst & pat.type_mask) == pat.eigen &&
         (inst_type & pat.inst_type) != 0) {
       LLDB_LOGF(
-          log, "EmulateInstructionRISCV::%s: inst(%x at %lx) was decoded to %s",
+          log, "EmulateInstructionRISCV::%s: inst(%x at %" PRIx64 ") was decoded to %s",
           __FUNCTION__, inst, m_addr, pat.name);
       auto decoded = is_rvc ? pat.decode(try_rvc) : pat.decode(inst);
       return DecodeResult{decoded, inst, is_rvc, pat};
