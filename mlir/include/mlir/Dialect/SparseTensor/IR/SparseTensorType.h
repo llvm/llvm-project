@@ -105,6 +105,16 @@ public:
   /// implicit conversion.
   RankedTensorType getRankedTensorType() const { return rtp; }
 
+  bool operator==(const SparseTensorType &other) const {
+    // All other fields are derived from `rtp` and therefore don't need
+    // to be checked.
+    return rtp == other.rtp;
+  }
+
+  bool operator!=(const SparseTensorType &other) const {
+    return !(*this == other);
+  }
+
   MLIRContext *getContext() const { return rtp.getContext(); }
 
   Type getElementType() const { return rtp.getElementType(); }
@@ -130,6 +140,8 @@ public:
   bool isIdentity() const { return !dim2lvl; }
 
   /// Returns the dimToLvl mapping (or the null-map for the identity).
+  /// If you intend to compare the results of this method for equality,
+  /// see `hasSameDimToLvlMap` instead.
   AffineMap getDimToLvlMap() const { return dim2lvl; }
 
   /// Returns the dimToLvl mapping, where the identity map is expanded out
@@ -140,6 +152,17 @@ public:
     return dim2lvl
                ? dim2lvl
                : AffineMap::getMultiDimIdentityMap(getDimRank(), getContext());
+  }
+
+  /// Returns true iff the two types have the same mapping.  This method
+  /// takes care to handle identity maps properly, so it should be preferred
+  /// over using `getDimToLvlMap` followed by `AffineMap::operator==`.
+  bool hasSameDimToLvlMap(const SparseTensorType &other) const {
+    // If the maps are the identity, then we need to check the rank
+    // to be sure they're the same size identity.  (And since identity
+    // means dimRank==lvlRank, we use lvlRank as a minor optimization.)
+    return isIdentity() ? (other.isIdentity() && lvlRank == other.lvlRank)
+                        : (dim2lvl == other.dim2lvl);
   }
 
   /// Returns the dimension-rank.

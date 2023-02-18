@@ -48,12 +48,6 @@ static bool isSparseTensor(OpOperand *op) {
          llvm::is_contained(enc.getDimLevelType(), DimLevelType::Compressed);
 }
 
-static bool hasSameDimOrdering(RankedTensorType rtp1, RankedTensorType rtp2) {
-  assert(rtp1.getRank() == rtp2.getRank());
-  return SparseTensorType(rtp1).getDimToLvlMap() ==
-         SparseTensorType(rtp2).getDimToLvlMap();
-}
-
 // Helper method to find zero/uninitialized allocation.
 static bool isAlloc(OpOperand *op, bool isZero) {
   Value val = op->get();
@@ -796,8 +790,9 @@ private:
     // 2. the src tensor is not ordered in the same way as the target
     // tensor (e.g., src tensor is not ordered or src tensor haves a different
     // dimOrdering).
-    if (!isUniqueCOOType(srcRTT) && !(SparseTensorType(srcRTT).isAllOrdered() &&
-                                      hasSameDimOrdering(srcRTT, dstTp))) {
+    if (const SparseTensorType srcTp(srcRTT);
+        !isUniqueCOOType(srcRTT) &&
+        !(srcTp.isAllOrdered() && srcTp.hasSameDimToLvlMap(dstTp))) {
       // Construct a COO tensor from the src tensor.
       // TODO: there may be cases for which more efficiently without
       // going through an intermediate COO, such as cases that only change
@@ -841,7 +836,7 @@ private:
       // Sort the COO tensor so that its elements are ordered via increasing
       // indices for the storage ordering of the dst tensor. Use SortCoo if the
       // COO tensor has the same dim ordering as the dst tensor.
-      if (dimRank > 1 && hasSameDimOrdering(srcTp, dstTp)) {
+      if (dimRank > 1 && srcTp.hasSameDimToLvlMap(dstTp)) {
         MemRefType indTp =
             get1DMemRefType(getIndexOverheadType(rewriter, encSrc),
                             /*withLayout=*/false);
