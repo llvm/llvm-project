@@ -3205,6 +3205,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   Record *AsmParser = Target.getAsmParser();
   StringRef ClassName = AsmParser->getValueAsString("AsmParserClassName");
 
+  emitSourceFileHeader("Assembly Matcher Source Fragment", OS);
+
   // Compute the information on the instructions to match.
   AsmMatcherInfo Info(AsmParser, Target, Records);
   Info.buildInfo();
@@ -4005,7 +4007,6 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
 namespace llvm {
 
 void EmitAsmMatcher(RecordKeeper &RK, raw_ostream &OS) {
-  emitSourceFileHeader("Assembly Matcher Source Fragment", OS);
   AsmMatcherEmitter(RK).run(OS);
 }
 

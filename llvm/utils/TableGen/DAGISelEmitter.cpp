@@ -125,6 +125,7 @@ struct PatternSortingPredicate {
 
 
 void DAGISelEmitter::run(raw_ostream &OS) {
+  Records.startTimer("Parse patterns");
   emitSourceFileHeader("DAG Instruction Selector for the " +
                        CGP.getTargetInfo().getName().str() + " target", OS);
 
@@ -190,7 +191,6 @@ void DAGISelEmitter::run(raw_ostream &OS) {
 namespace llvm {
 
 void EmitDAGISel(RecordKeeper &RK, raw_ostream &OS) {
-  RK.startTimer("Parse patterns");
   DAGISelEmitter(RK).run(OS);
 }
 

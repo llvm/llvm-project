@@ -206,6 +206,7 @@ void DFAPacketizerEmitter::createScheduleClasses(unsigned ItineraryIdx,
 // Run the worklist algorithm to generate the DFA.
 //
 void DFAPacketizerEmitter::run(raw_ostream &OS) {
+  emitSourceFileHeader("Target DFA Packetizer Tables", OS);
   OS << "\n"
      << "#include \"llvm/CodeGen/DFAPacketizer.h\"\n";
   OS << "namespace llvm {\n";
@@ -356,7 +357,6 @@ void DFAPacketizerEmitter::emitForItineraries(
 namespace llvm {
 
 void EmitDFAPacketizer(RecordKeeper &RK, raw_ostream &OS) {
-  emitSourceFileHeader("Target DFA Packetizer Tables", OS);
   DFAPacketizerEmitter(RK).run(OS);
 }
 
