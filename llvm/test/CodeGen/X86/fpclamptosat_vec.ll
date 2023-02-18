@@ -2766,8 +2766,6 @@ define <2 x i64> @utest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    cmoveq %rcx, %rax
 ; CHECK-NEXT:    testq %r14, %r14
 ; CHECK-NEXT:    cmovneq %rcx, %rbx
-; CHECK-NEXT:    cmpq $1, %r14
-; CHECK-NEXT:    cmoveq %rcx, %rbx
 ; CHECK-NEXT:    movq %rbx, %xmm0
 ; CHECK-NEXT:    movq %rax, %xmm1
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -2930,8 +2928,6 @@ define <2 x i64> @utest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    cmoveq %rcx, %rax
 ; CHECK-NEXT:    testq %r14, %r14
 ; CHECK-NEXT:    cmovneq %rcx, %rbx
-; CHECK-NEXT:    cmpq $1, %r14
-; CHECK-NEXT:    cmoveq %rcx, %rbx
 ; CHECK-NEXT:    movq %rbx, %xmm0
 ; CHECK-NEXT:    movq %rax, %xmm1
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -3095,8 +3091,6 @@ define <2 x i64> @utesth_f16i64_mm(<2 x half> %x) {
 ; CHECK-NEXT:    cmoveq %rcx, %rax
 ; CHECK-NEXT:    testq %r14, %r14
 ; CHECK-NEXT:    cmovneq %rcx, %rbx
-; CHECK-NEXT:    cmpq $1, %r14
-; CHECK-NEXT:    cmoveq %rcx, %rbx
 ; CHECK-NEXT:    movq %rbx, %xmm0
 ; CHECK-NEXT:    movq %rax, %xmm1
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
