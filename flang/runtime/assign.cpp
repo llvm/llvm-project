@@ -128,7 +128,7 @@ static inline bool RangesOverlap(const char *aStart, const char *aEnd,
 static bool MayAlias(const Descriptor &x, const Descriptor &y) {
   const char *xDesc{reinterpret_cast<const char *>(&x)};
   const char *xDescLast{xDesc + x.SizeInBytes()};
-  const char *yDesc{reinterpret_cast<const char *>(&x)};
+  const char *yDesc{reinterpret_cast<const char *>(&y)};
   const char *yDescLast{yDesc + y.SizeInBytes()};
   std::int64_t xLeast, xMost, yLeast, yMost;
   MaximalByteOffsetRange(x, xLeast, xMost);
