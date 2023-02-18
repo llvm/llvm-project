@@ -644,12 +644,20 @@ struct State {
 } // namespace
 
 #ifndef NDEBUG
+static void dumpWithNames(const ConstraintSystem &CS,
+                          DenseMap<Value *, unsigned> &Value2Index) {
+  SmallVector<std::string> Names(Value2Index.size(), "");
+  for (auto &KV : Value2Index) {
+    Names[KV.second - 1] = std::string("%") + KV.first->getName().str();
+  }
+  CS.dump(Names);
+}
 
-static void dumpConstraint(ArrayRef<int64_t> C,
-                           const DenseMap<Value *, unsigned> &Value2Index) {
-  ConstraintSystem CS(Value2Index);
+static void dumpWithNames(ArrayRef<int64_t> C,
+                          DenseMap<Value *, unsigned> &Value2Index) {
+  ConstraintSystem CS;
   CS.addVariableRowFill(C);
-  CS.dump();
+  dumpWithNames(CS, Value2Index);
 }
 #endif
 
@@ -933,7 +941,7 @@ static bool checkAndReplaceCondition(
 
     LLVM_DEBUG({
       dbgs() << "Condition " << *Cmp << " implied by dominating constraints\n";
-      CSToUse.dump();
+      dumpWithNames(CSToUse, Info.getValue2Index(R.IsSigned));
     });
     generateReproducer(Cmp, ReproducerModule, ReproducerCondStack, Info, DT);
     Constant *TrueC =
@@ -953,7 +961,7 @@ static bool checkAndReplaceCondition(
 
     LLVM_DEBUG({
       dbgs() << "Condition !" << *Cmp << " implied by dominating constraints\n";
-      CSToUse.dump(); 
+      dumpWithNames(CSToUse, Info.getValue2Index(R.IsSigned));
     });
     generateReproducer(Cmp, ReproducerModule, ReproducerCondStack, Info, DT);
     Constant *FalseC =
@@ -997,7 +1005,7 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
 
     LLVM_DEBUG({
       dbgs() << "  constraint: ";
-      dumpConstraint(R.Coefficients, getValue2Index(R.IsSigned));
+      dumpWithNames(R.Coefficients, getValue2Index(R.IsSigned));
       dbgs() << "\n";
     });
 
@@ -1142,8 +1150,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT,
         break;
       LLVM_DEBUG({
         dbgs() << "Removing ";
-        dumpConstraint(Info.getCS(E.IsSigned).getLastConstraint(),
-                       Info.getValue2Index(E.IsSigned));
+        dumpWithNames(Info.getCS(E.IsSigned).getLastConstraint(),
+                      Info.getValue2Index(E.IsSigned));
         dbgs() << "\n";
       });
 
