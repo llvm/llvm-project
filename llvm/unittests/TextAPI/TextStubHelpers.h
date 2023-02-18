@@ -20,11 +20,12 @@ struct ExportedSymbol {
   std::string Name = {};
   bool Weak = false;
   bool ThreadLocalValue = false;
+  bool isData = false;
   MachO::TargetList Targets = {};
 };
 
 using ExportedSymbolSeq = std::vector<ExportedSymbol>;
-using UUIDs = std::vector<std::pair<llvm::MachO::Target, std::string>>;
+using TargetToAttr = std::vector<std::pair<llvm::MachO::Target, std::string>>;
 using TBDFile = std::unique_ptr<MachO::InterfaceFile>;
 using TBDReexportFile = std::shared_ptr<MachO::InterfaceFile>;
 

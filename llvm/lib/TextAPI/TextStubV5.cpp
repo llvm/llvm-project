@@ -115,6 +115,8 @@ enum TBDKey : size_t {
   ObjCClass,
   ObjCEHType,
   ObjCIvar,
+  RPath,
+  Paths,
 };
 
 std::array<StringRef, 64> Keys = {
@@ -151,6 +153,8 @@ std::array<StringRef, 64> Keys = {
     "objc_class",
     "objc_eh_type",
     "objc_ivar",
+    "rpaths",
+    "paths",
 };
 
 static llvm::SmallString<128> getParseErrorMsg(TBDKey Key) {
@@ -273,11 +277,19 @@ Expected<TargetList> getTargetsSection(const Object *Section) {
         getRequiredValue<StringRef>(TBDKey::Target, Obj, &Object::getString);
     if (!TargetStr)
       return make_error<JSONStubError>(getParseErrorMsg(TBDKey::Target));
+    auto VersionStr = getRequiredValue<StringRef>(TBDKey::Deployment, Obj,
+                                                  &Object::getString);
+    if (!VersionStr)
+      return make_error<JSONStubError>(getParseErrorMsg(TBDKey::Deployment));
+    VersionTuple Version;
+    if (Version.tryParse(*VersionStr))
+      return make_error<JSONStubError>(getParseErrorMsg(TBDKey::Deployment));
     auto TargetOrErr = Target::create(*TargetStr);
     if (!TargetOrErr)
       return make_error<JSONStubError>(getParseErrorMsg(TBDKey::Target));
+    TargetOrErr->MinDeployment = Version;
+
     IFTargets.push_back(*TargetOrErr);
-    // TODO: Implement Deployment Version.
   }
   return std::move(IFTargets);
 }
@@ -321,15 +333,11 @@ Error collectSymbolsFromSegment(const Object *Segment, TargetsToSymbols &Result,
   SymbolFlags WeakFlag = SectionFlag | (SectionFlag == SymbolFlags::Undefined
                                             ? SymbolFlags::WeakReferenced
                                             : SymbolFlags::WeakDefined);
-  Err = collectFromArray(TBDKey::Weak, Segment,
-                         [&Result, WeakFlag](StringRef Name) {
-                           JSONSymbol Sym = {
-                               SymbolKind::GlobalSymbol,
-                               Name.str(),
-                               WeakFlag,
-                           };
-                           Result.back().second.emplace_back(Sym);
-                         });
+  Err = collectFromArray(
+      TBDKey::Weak, Segment, [&Result, WeakFlag](StringRef Name) {
+        JSONSymbol Sym = {SymbolKind::GlobalSymbol, Name.str(), WeakFlag};
+        Result.back().second.emplace_back(Sym);
+      });
   if (Err)
     return Err;
 
@@ -402,12 +410,14 @@ Expected<TargetsToSymbols> getSymbolSection(const Object *File, TBDKey Key,
       return make_error<JSONStubError>(getParseErrorMsg(Key));
 
     if (DataSection) {
-      auto Err = collectSymbolsFromSegment(DataSection, Result, SectionFlag);
+      auto Err = collectSymbolsFromSegment(DataSection, Result,
+                                           SectionFlag | SymbolFlags::Data);
       if (Err)
         return std::move(Err);
     }
     if (TextSection) {
-      auto Err = collectSymbolsFromSegment(TextSection, Result, SectionFlag);
+      auto Err = collectSymbolsFromSegment(TextSection, Result,
+                                           SectionFlag | SymbolFlags::Text);
       if (Err)
         return std::move(Err);
     }
@@ -605,6 +615,11 @@ Expected<IFPtr> parseToInterfaceFile(const Object *File) {
     return RLOrErr.takeError();
   AttrToTargets ReexportLibs = std::move(*RLOrErr);
 
+  auto RPathsOrErr = getLibSection(File, TBDKey::RPath, TBDKey::Paths, Targets);
+  if (!RPathsOrErr)
+    return RPathsOrErr.takeError();
+  AttrToTargets RPaths = std::move(*RPathsOrErr);
+
   auto ExportsOrErr = getSymbolSection(File, TBDKey::Exports, Targets);
   if (!ExportsOrErr)
     return ExportsOrErr.takeError();
@@ -639,6 +654,9 @@ Expected<IFPtr> parseToInterfaceFile(const Object *File) {
   for (auto &[Lib, Targets] : Umbrellas)
     for (auto Target : Targets)
       F->addParentUmbrella(Target, Lib);
+  for (auto &[Path, Targets] : RPaths)
+    for (auto Target : Targets)
+      F->addRPath(Target, Path);
   for (auto &[Targets, Symbols] : Exports)
     for (auto &Sym : Symbols)
       F->addSymbol(Sym.Kind, Sym.Name, Targets, Sym.Flags);

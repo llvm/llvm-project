@@ -191,9 +191,9 @@ TEST(TBDv5, ReadFile) {
   EXPECT_EQ(std::string("/S/L/F/Foo.framework/Foo"), File->getInstallName());
 
   TargetList AllTargets = {
-      Target(AK_x86_64, PLATFORM_MACOS),
-      Target(AK_arm64, PLATFORM_MACOS),
-      Target(AK_arm64, PLATFORM_MACCATALYST),
+      Target(AK_x86_64, PLATFORM_MACOS, VersionTuple(10, 14)),
+      Target(AK_arm64, PLATFORM_MACOS, VersionTuple(10, 14)),
+      Target(AK_arm64, PLATFORM_MACCATALYST, VersionTuple(12, 1)),
   };
   EXPECT_EQ(mapToPlatformSet(AllTargets), File->getPlatforms());
   EXPECT_EQ(mapToArchitectureSet(AllTargets), File->getArchitectures());
@@ -216,19 +216,26 @@ TEST(TBDv5, ReadFile) {
   EXPECT_EQ(ReexportA, File->reexportedLibraries().at(0));
   EXPECT_EQ(ReexportB, File->reexportedLibraries().at(1));
 
-  std::vector<std::pair<Target, std::string>> Umbrellas = {
-      {Target(AK_x86_64, PLATFORM_MACOS), "System"},
-      {Target(AK_arm64, PLATFORM_MACOS), "System"},
-      {Target(AK_arm64, PLATFORM_MACCATALYST), "System"}};
+  TargetToAttr RPaths = {
+      {Target(AK_x86_64, PLATFORM_MACOS), "@executable_path/.../Frameworks"},
+  };
+  EXPECT_EQ(RPaths, File->rpaths());
+
+  TargetToAttr Umbrellas = {{Target(AK_x86_64, PLATFORM_MACOS), "System"},
+                            {Target(AK_arm64, PLATFORM_MACOS), "System"},
+                            {Target(AK_arm64, PLATFORM_MACCATALYST), "System"}};
   EXPECT_EQ(Umbrellas, File->umbrellas());
 
   ExportedSymbolSeq Exports, Reexports, Undefineds;
   for (const auto *Sym : File->symbols()) {
     TargetList SymTargets{Sym->targets().begin(), Sym->targets().end()};
     ExportedSymbol Temp =
-        ExportedSymbol{Sym->getKind(), std::string(Sym->getName()),
+        ExportedSymbol{Sym->getKind(),
+                       std::string(Sym->getName()),
                        Sym->isWeakDefined() || Sym->isWeakReferenced(),
-                       Sym->isThreadLocalValue(), SymTargets};
+                       Sym->isThreadLocalValue(),
+                       Sym->isData(),
+                       SymTargets};
     if (Sym->isUndefined())
       Undefineds.emplace_back(std::move(Temp));
     else
@@ -243,54 +250,63 @@ TEST(TBDv5, ReadFile) {
                              Target(AK_arm64, PLATFORM_MACOS)};
 
   std::vector<ExportedSymbol> ExpectedExportedSymbols = {
-      {SymbolKind::GlobalSymbol, "_func", false, false, MacOSTargets},
+      {SymbolKind::GlobalSymbol, "_func", false, false, false, MacOSTargets},
       {SymbolKind::GlobalSymbol,
        "_funcFoo",
        false,
        false,
+       false,
        {Target(AK_x86_64, PLATFORM_MACOS)}},
-      {SymbolKind::GlobalSymbol, "_global", false, false, MacOSTargets},
+      {SymbolKind::GlobalSymbol, "_global", false, false, true, MacOSTargets},
       {SymbolKind::GlobalSymbol,
        "_globalVar",
        false,
        false,
+       true,
        {Target(AK_x86_64, PLATFORM_MACOS)}},
-      {SymbolKind::ObjectiveCClass, "ClassA", false, false, MacOSTargets},
+      {SymbolKind::ObjectiveCClass, "ClassA", false, false, true, MacOSTargets},
       {SymbolKind::ObjectiveCClass,
        "ClassData",
        false,
        false,
+       true,
        {Target(AK_x86_64, PLATFORM_MACOS)}},
       {SymbolKind::ObjectiveCClassEHType,
        "ClassA",
        false,
        false,
+       true,
        {Target(AK_x86_64, PLATFORM_MACOS)}},
       {SymbolKind::ObjectiveCClassEHType,
        "ClassB",
        false,
        false,
+       true,
        {Target(AK_x86_64, PLATFORM_MACOS)}},
       {SymbolKind::ObjectiveCInstanceVariable,
        "ClassA.ivar1",
        false,
        false,
+       true,
        {Target(AK_x86_64, PLATFORM_MACOS)}},
       {SymbolKind::ObjectiveCInstanceVariable,
        "ClassA.ivar2",
        false,
        false,
+       true,
        {Target(AK_x86_64, PLATFORM_MACOS)}},
       {SymbolKind::ObjectiveCInstanceVariable,
        "ClassC.ivar1",
        false,
        false,
+       true,
        {Target(AK_x86_64, PLATFORM_MACOS)}},
   };
   std::vector<ExportedSymbol> ExpectedReexportedSymbols = {
-      {SymbolKind::GlobalSymbol, "_funcA", false, false, MacOSTargets},
-      {SymbolKind::GlobalSymbol, "_globalRe", false, false, MacOSTargets},
-      {SymbolKind::ObjectiveCClass, "ClassRexport", false, false, MacOSTargets},
+      {SymbolKind::GlobalSymbol, "_funcA", false, false, false, MacOSTargets},
+      {SymbolKind::GlobalSymbol, "_globalRe", false, false, true, MacOSTargets},
+      {SymbolKind::ObjectiveCClass, "ClassRexport", false, false, true,
+       MacOSTargets},
   };
 
   std::vector<ExportedSymbol> ExpectedUndefinedSymbols = {
@@ -298,11 +314,13 @@ TEST(TBDv5, ReadFile) {
        "_globalBind",
        false,
        false,
+       true,
        {Target(AK_x86_64, PLATFORM_MACOS)}},
       {SymbolKind::GlobalSymbol,
        "referenced_sym",
        true,
        false,
+       true,
        {Target(AK_x86_64, PLATFORM_MACOS)}},
   };
 
@@ -368,9 +386,9 @@ TEST(TBDv5, ReadMultipleTargets) {
   EXPECT_EQ(8U, File->getSwiftABIVersion());
 
   TargetList AllTargets = {
-      Target(AK_x86_64, PLATFORM_MACOS),
-      Target(AK_arm64, PLATFORM_MACOS),
-      Target(AK_arm64, PLATFORM_MACCATALYST),
+      Target(AK_x86_64, PLATFORM_MACOS, VersionTuple(10, 14)),
+      Target(AK_arm64, PLATFORM_MACOS, VersionTuple(10, 14)),
+      Target(AK_arm64, PLATFORM_MACCATALYST, VersionTuple(12, 1)),
   };
   EXPECT_EQ(mapToPlatformSet(AllTargets), File->getPlatforms());
   EXPECT_EQ(mapToArchitectureSet(AllTargets), File->getArchitectures());
@@ -443,7 +461,7 @@ TEST(TBDv5, ReadMultipleDocuments) {
   EXPECT_TRUE(File->isApplicationExtensionSafe());
 
   TargetList Targets(File->targets().begin(), File->targets().end());
-  Target iOSTarget(AK_armv7, PLATFORM_IOS);
+  Target iOSTarget(AK_armv7, PLATFORM_IOS, VersionTuple(11, 0));
   EXPECT_EQ(TargetList{iOSTarget}, Targets);
   std::vector<const Symbol *> Symbols(File->symbols().begin(),
                                       File->symbols().end());
@@ -470,15 +488,31 @@ TEST(TBDv5, ReadMultipleDocuments) {
                        std::string(Sym->getName()),
                        Sym->isWeakDefined() || Sym->isWeakReferenced(),
                        Sym->isThreadLocalValue(),
+                       Sym->isData(),
                        {iOSTarget}});
 
   llvm::sort(Exports);
   ExportedSymbolSeq ExpectedExports = {
-      {SymbolKind::GlobalSymbol, "_funcFoo", false, false, {iOSTarget}},
-      {SymbolKind::GlobalSymbol, "_globalVar", false, true, {iOSTarget}},
-      {SymbolKind::ObjectiveCClass, "ClassData", false, false, {iOSTarget}},
-      {SymbolKind::ObjectiveCClassEHType, "ClassA", false, false, {iOSTarget}},
-      {SymbolKind::ObjectiveCClassEHType, "ClassB", false, false, {iOSTarget}},
+      {SymbolKind::GlobalSymbol, "_funcFoo", false, false, false, {iOSTarget}},
+      {SymbolKind::GlobalSymbol, "_globalVar", false, true, true, {iOSTarget}},
+      {SymbolKind::ObjectiveCClass,
+       "ClassData",
+       false,
+       false,
+       true,
+       {iOSTarget}},
+      {SymbolKind::ObjectiveCClassEHType,
+       "ClassA",
+       false,
+       false,
+       true,
+       {iOSTarget}},
+      {SymbolKind::ObjectiveCClassEHType,
+       "ClassB",
+       false,
+       false,
+       true,
+       {iOSTarget}},
   };
 
   EXPECT_EQ(ExpectedExports.size(), Exports.size());
