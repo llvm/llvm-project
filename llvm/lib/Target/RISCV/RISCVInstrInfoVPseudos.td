@@ -149,14 +149,13 @@ class log2<int num> {
 }
 
 class octuple_to_str<int octuple> {
-  string ret = !if(!eq(octuple, 1), "MF8",
-                   !if(!eq(octuple, 2), "MF4",
-                   !if(!eq(octuple, 4), "MF2",
-                   !if(!eq(octuple, 8), "M1",
-                   !if(!eq(octuple, 16), "M2",
-                   !if(!eq(octuple, 32), "M4",
-                   !if(!eq(octuple, 64), "M8",
-                   "NoDef")))))));
+  string ret = !cond(!eq(octuple, 1): "MF8",
+                     !eq(octuple, 2): "MF4",
+                     !eq(octuple, 4): "MF2",
+                     !eq(octuple, 8): "M1",
+                     !eq(octuple, 16): "M2",
+                     !eq(octuple, 32): "M4",
+                     !eq(octuple, 64): "M8");
 }
 
 def VLOpFrag : PatFrag<(ops), (XLenVT (VLOp (XLenVT AVL:$vl)))>;
