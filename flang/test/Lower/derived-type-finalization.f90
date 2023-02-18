@@ -212,7 +212,7 @@ program p
   print *, 'end of program'
 end program
 
-! CHECK-LABEL: func.func @_QQmain() {
+! CHECK-LABEL: func.func @_QQmain() attributes {fir.bindc_name = "p"} {
 ! CHECK: %[[T:.*]] = fir.alloca !fir.type<_QMderived_type_finalizationTt1{a:i32}> {bindc_name = "t", uniq_name = "_QFEt"}
 ! CHECK: cf.cond_br %{{.*}}, ^bb1, ^bb2
 ! CHECK: ^bb1:

@@ -80,6 +80,8 @@ class CGDebugInfo {
 #define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
   llvm::DIType *Id##Ty = nullptr;
 #include "clang/Basic/OpenCLExtensionTypes.def"
+#define WASM_TYPE(Name, Id, SingletonId) llvm::DIType *SingletonId = nullptr;
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
 
   /// Cache of previously constructed Types.
   llvm::DenseMap<const void *, llvm::TrackingMDRef> TypeCache;

@@ -516,86 +516,86 @@ class ARMAsmParser : public MCTargetAsmParser {
 
   bool isThumb() const {
     // FIXME: Can tablegen auto-generate this?
-    return getSTI().getFeatureBits()[ARM::ModeThumb];
+    return getSTI().hasFeature(ARM::ModeThumb);
   }
 
   bool isThumbOne() const {
-    return isThumb() && !getSTI().getFeatureBits()[ARM::FeatureThumb2];
+    return isThumb() && !getSTI().hasFeature(ARM::FeatureThumb2);
   }
 
   bool isThumbTwo() const {
-    return isThumb() && getSTI().getFeatureBits()[ARM::FeatureThumb2];
+    return isThumb() && getSTI().hasFeature(ARM::FeatureThumb2);
   }
 
   bool hasThumb() const {
-    return getSTI().getFeatureBits()[ARM::HasV4TOps];
+    return getSTI().hasFeature(ARM::HasV4TOps);
   }
 
   bool hasThumb2() const {
-    return getSTI().getFeatureBits()[ARM::FeatureThumb2];
+    return getSTI().hasFeature(ARM::FeatureThumb2);
   }
 
   bool hasV6Ops() const {
-    return getSTI().getFeatureBits()[ARM::HasV6Ops];
+    return getSTI().hasFeature(ARM::HasV6Ops);
   }
 
   bool hasV6T2Ops() const {
-    return getSTI().getFeatureBits()[ARM::HasV6T2Ops];
+    return getSTI().hasFeature(ARM::HasV6T2Ops);
   }
 
   bool hasV6MOps() const {
-    return getSTI().getFeatureBits()[ARM::HasV6MOps];
+    return getSTI().hasFeature(ARM::HasV6MOps);
   }
 
   bool hasV7Ops() const {
-    return getSTI().getFeatureBits()[ARM::HasV7Ops];
+    return getSTI().hasFeature(ARM::HasV7Ops);
   }
 
   bool hasV8Ops() const {
-    return getSTI().getFeatureBits()[ARM::HasV8Ops];
+    return getSTI().hasFeature(ARM::HasV8Ops);
   }
 
   bool hasV8MBaseline() const {
-    return getSTI().getFeatureBits()[ARM::HasV8MBaselineOps];
+    return getSTI().hasFeature(ARM::HasV8MBaselineOps);
   }
 
   bool hasV8MMainline() const {
-    return getSTI().getFeatureBits()[ARM::HasV8MMainlineOps];
+    return getSTI().hasFeature(ARM::HasV8MMainlineOps);
   }
   bool hasV8_1MMainline() const {
-    return getSTI().getFeatureBits()[ARM::HasV8_1MMainlineOps];
+    return getSTI().hasFeature(ARM::HasV8_1MMainlineOps);
   }
   bool hasMVE() const {
-    return getSTI().getFeatureBits()[ARM::HasMVEIntegerOps];
+    return getSTI().hasFeature(ARM::HasMVEIntegerOps);
   }
   bool hasMVEFloat() const {
-    return getSTI().getFeatureBits()[ARM::HasMVEFloatOps];
+    return getSTI().hasFeature(ARM::HasMVEFloatOps);
   }
   bool hasCDE() const {
-    return getSTI().getFeatureBits()[ARM::HasCDEOps];
+    return getSTI().hasFeature(ARM::HasCDEOps);
   }
   bool has8MSecExt() const {
-    return getSTI().getFeatureBits()[ARM::Feature8MSecExt];
+    return getSTI().hasFeature(ARM::Feature8MSecExt);
   }
 
   bool hasARM() const {
-    return !getSTI().getFeatureBits()[ARM::FeatureNoARM];
+    return !getSTI().hasFeature(ARM::FeatureNoARM);
   }
 
   bool hasDSP() const {
-    return getSTI().getFeatureBits()[ARM::FeatureDSP];
+    return getSTI().hasFeature(ARM::FeatureDSP);
   }
 
   bool hasD32() const {
-    return getSTI().getFeatureBits()[ARM::FeatureD32];
+    return getSTI().hasFeature(ARM::FeatureD32);
   }
 
   bool hasV8_1aOps() const {
-    return getSTI().getFeatureBits()[ARM::HasV8_1aOps];
+    return getSTI().hasFeature(ARM::HasV8_1aOps);
   }
 
   bool hasRAS() const {
-    return getSTI().getFeatureBits()[ARM::FeatureRAS];
+    return getSTI().hasFeature(ARM::FeatureRAS);
   }
 
   void SwitchMode() {
@@ -607,7 +607,7 @@ class ARMAsmParser : public MCTargetAsmParser {
   void FixModeAfterArchChange(bool WasThumb, SMLoc Loc);
 
   bool isMClass() const {
-    return getSTI().getFeatureBits()[ARM::FeatureMClass];
+    return getSTI().hasFeature(ARM::FeatureMClass);
   }
 
   /// @name Auto-generated Match Functions

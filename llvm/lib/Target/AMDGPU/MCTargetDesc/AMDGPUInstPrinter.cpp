@@ -452,7 +452,7 @@ void AMDGPUInstPrinter::printImmediate16(uint32_t Imm,
   else if (Imm == 0xC400)
     O<< "-4.0";
   else if (Imm == 0x3118 &&
-           STI.getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm]) {
+           STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm)) {
     O << "0.15915494";
   } else {
     uint64_t Imm16 = static_cast<uint16_t>(Imm);
@@ -495,7 +495,7 @@ void AMDGPUInstPrinter::printImmediate32(uint32_t Imm,
   else if (Imm == llvm::bit_cast<uint32_t>(-4.0f))
     O << "-4.0";
   else if (Imm == 0x3e22f983 &&
-           STI.getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm])
+           STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm))
     O << "0.15915494";
   else
     O << formatHex(static_cast<uint64_t>(Imm));
@@ -529,7 +529,7 @@ void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
   else if (Imm == llvm::bit_cast<uint64_t>(-4.0))
     O << "-4.0";
   else if (Imm == 0x3fc45f306dc9c882 &&
-           STI.getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm])
+           STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm))
     O << "0.15915494309189532";
   else {
     assert(isUInt<32>(Imm) || isInt<32>(Imm));
@@ -587,7 +587,7 @@ void AMDGPUInstPrinter::printDefaultVccOperand(bool FirstOperand,
                                                raw_ostream &O) {
   if (!FirstOperand)
     O << ", ";
-  printRegOperand(STI.getFeatureBits()[AMDGPU::FeatureWavefrontSize64]
+  printRegOperand(STI.hasFeature(AMDGPU::FeatureWavefrontSize64)
                       ? AMDGPU::VCC
                       : AMDGPU::VCC_LO,
                   O, MRI);
@@ -708,7 +708,7 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     case AMDGPU::OPERAND_REG_IMM_V2INT16:
     case AMDGPU::OPERAND_REG_IMM_V2FP16:
       if (!isUInt<16>(Op.getImm()) &&
-          STI.getFeatureBits()[AMDGPU::FeatureVOP3Literal]) {
+          STI.hasFeature(AMDGPU::FeatureVOP3Literal)) {
         printImmediate32(Op.getImm(), STI, O);
         break;
       }

@@ -11800,4 +11800,10 @@ def err_loongarch_builtin_requires_la32 : Error<
 def err_builtin_pass_in_regs_non_class : Error<
   "argument %0 is not an unqualified class type">;
 
+
+// WebAssembly reference type and table diagnostics.
+def err_wasm_reference_pr : Error<
+  "%select{pointer|reference}0 to WebAssembly reference type is not allowed">;
+def err_wasm_ca_reference : Error<
+  "cannot %select{capture|take address of}0 WebAssembly reference">;
 } // end of sema component.

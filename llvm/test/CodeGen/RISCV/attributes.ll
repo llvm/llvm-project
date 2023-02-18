@@ -48,6 +48,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zcf %s -o - | FileCheck --check-prefixes=CHECK,RV32ZCF %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zicsr %s -o - | FileCheck --check-prefixes=CHECK,RV32ZICSR %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zifencei %s -o - | FileCheck --check-prefixes=CHECK,RV32ZIFENCEI %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-zfa %s -o - | FileCheck --check-prefixes=CHECK,RV32ZFA %s
 
 ; RUN: llc -mtriple=riscv64 %s -o - | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+m %s -o - | FileCheck --check-prefixes=CHECK,RV64M %s
@@ -103,6 +104,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zcd %s -o - | FileCheck --check-prefixes=CHECK,RV64ZCD %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zicsr %s -o - | FileCheck --check-prefixes=CHECK,RV64ZICSR %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zifencei %s -o - | FileCheck --check-prefixes=CHECK,RV64ZIFENCEI %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-zfa %s -o - | FileCheck --check-prefixes=CHECK,RV64ZFA %s
 
 ; CHECK: .attribute 4, 16
 
@@ -153,6 +155,7 @@
 ; RV32ZCF: .attribute 5, "rv32i2p0_zcf1p0"
 ; RV32ZICSR: .attribute 5, "rv32i2p0_zicsr2p0"
 ; RV32ZIFENCEI: .attribute 5, "rv32i2p0_zifencei2p0"
+; RV32ZFA: .attribute 5, "rv32i2p0_f2p0_zfa0p1"
 
 ; RV64M: .attribute 5, "rv64i2p0_m2p0"
 ; RV64ZMMUL: .attribute 5, "rv64i2p0_zmmul1p0"
@@ -207,6 +210,7 @@
 ; RV64ZCD: .attribute 5, "rv64i2p0_zcd1p0"
 ; RV64ZICSR: .attribute 5, "rv64i2p0_zicsr2p0"
 ; RV64ZIFENCEI: .attribute 5, "rv64i2p0_zifencei2p0"
+; RV64ZFA: .attribute 5, "rv64i2p0_f2p0_zfa0p1"
 
 define i32 @addi(i32 %a) {
   %1 = add i32 %a, 1

@@ -835,7 +835,7 @@ bool CSKYAsmParser::processLRW(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out) {
     if (isUInt<8>(Inst.getOperand(1).getImm()) &&
         Inst.getOperand(0).getReg() <= CSKY::R7) {
       Opcode = CSKY::MOVI16;
-    } else if (getSTI().getFeatureBits()[CSKY::HasE2] &&
+    } else if (getSTI().hasFeature(CSKY::HasE2) &&
                isUInt<16>(Inst.getOperand(1).getImm())) {
       Opcode = CSKY::MOVI32;
     } else {

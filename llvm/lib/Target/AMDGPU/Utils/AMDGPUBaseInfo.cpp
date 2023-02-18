@@ -1919,44 +1919,44 @@ bool isKernelCC(const Function *Func) {
 }
 
 bool hasXNACK(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureXNACK];
+  return STI.hasFeature(AMDGPU::FeatureXNACK);
 }
 
 bool hasSRAMECC(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureSRAMECC];
+  return STI.hasFeature(AMDGPU::FeatureSRAMECC);
 }
 
 bool hasMIMG_R128(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureMIMG_R128] && !STI.getFeatureBits()[AMDGPU::FeatureR128A16];
+  return STI.hasFeature(AMDGPU::FeatureMIMG_R128) && !STI.hasFeature(AMDGPU::FeatureR128A16);
 }
 
 bool hasA16(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureA16];
+  return STI.hasFeature(AMDGPU::FeatureA16);
 }
 
 bool hasG16(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureG16];
+  return STI.hasFeature(AMDGPU::FeatureG16);
 }
 
 bool hasPackedD16(const MCSubtargetInfo &STI) {
-  return !STI.getFeatureBits()[AMDGPU::FeatureUnpackedD16VMem] && !isCI(STI) &&
+  return !STI.hasFeature(AMDGPU::FeatureUnpackedD16VMem) && !isCI(STI) &&
          !isSI(STI);
 }
 
 bool isSI(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureSouthernIslands];
+  return STI.hasFeature(AMDGPU::FeatureSouthernIslands);
 }
 
 bool isCI(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureSeaIslands];
+  return STI.hasFeature(AMDGPU::FeatureSeaIslands);
 }
 
 bool isVI(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureVolcanicIslands];
+  return STI.hasFeature(AMDGPU::FeatureVolcanicIslands);
 }
 
 bool isGFX9(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX9];
+  return STI.hasFeature(AMDGPU::FeatureGFX9);
 }
 
 bool isGFX9_GFX10(const MCSubtargetInfo &STI) {
@@ -1976,7 +1976,7 @@ bool isGFX9Plus(const MCSubtargetInfo &STI) {
 }
 
 bool isGFX10(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX10];
+  return STI.hasFeature(AMDGPU::FeatureGFX10);
 }
 
 bool isGFX10Plus(const MCSubtargetInfo &STI) {
@@ -1984,7 +1984,7 @@ bool isGFX10Plus(const MCSubtargetInfo &STI) {
 }
 
 bool isGFX11(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX11];
+  return STI.hasFeature(AMDGPU::FeatureGFX11);
 }
 
 bool isGFX11Plus(const MCSubtargetInfo &STI) {
@@ -2004,39 +2004,39 @@ bool isGFX10Before1030(const MCSubtargetInfo &STI) {
 }
 
 bool isGCN3Encoding(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGCN3Encoding];
+  return STI.hasFeature(AMDGPU::FeatureGCN3Encoding);
 }
 
 bool isGFX10_AEncoding(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX10_AEncoding];
+  return STI.hasFeature(AMDGPU::FeatureGFX10_AEncoding);
 }
 
 bool isGFX10_BEncoding(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX10_BEncoding];
+  return STI.hasFeature(AMDGPU::FeatureGFX10_BEncoding);
 }
 
 bool hasGFX10_3Insts(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX10_3Insts];
+  return STI.hasFeature(AMDGPU::FeatureGFX10_3Insts);
 }
 
 bool isGFX90A(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX90AInsts];
+  return STI.hasFeature(AMDGPU::FeatureGFX90AInsts);
 }
 
 bool isGFX940(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX940Insts];
+  return STI.hasFeature(AMDGPU::FeatureGFX940Insts);
 }
 
 bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureArchitectedFlatScratch];
+  return STI.hasFeature(AMDGPU::FeatureArchitectedFlatScratch);
 }
 
 bool hasMAIInsts(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureMAIInsts];
+  return STI.hasFeature(AMDGPU::FeatureMAIInsts);
 }
 
 bool hasVOPD(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureVOPD];
+  return STI.hasFeature(AMDGPU::FeatureVOPD);
 }
 
 int32_t getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR,
