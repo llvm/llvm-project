@@ -404,12 +404,12 @@ Expected<TargetsToSymbols> getSymbolSection(const Object *File, TBDKey Key,
     if (DataSection) {
       auto Err = collectSymbolsFromSegment(DataSection, Result, SectionFlag);
       if (Err)
-        return Err;
+        return std::move(Err);
     }
     if (TextSection) {
       auto Err = collectSymbolsFromSegment(TextSection, Result, SectionFlag);
       if (Err)
-        return Err;
+        return std::move(Err);
     }
   }
 
@@ -442,7 +442,7 @@ Expected<AttrToTargets> getLibSection(const Object *File, TBDKey Key,
           Result[Key.str()] = MappedTargets;
         });
     if (Err)
-      return Err;
+      return std::move(Err);
   }
 
   return Result;
@@ -548,7 +548,7 @@ Expected<TBDFlags> getFlags(const Object *File) {
         });
 
     if (FlagsOrErr)
-      return FlagsOrErr;
+      return std::move(FlagsOrErr);
 
     return Flags;
   }
