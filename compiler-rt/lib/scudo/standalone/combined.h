@@ -249,9 +249,9 @@ public:
   // - unlinking the local stats from the global ones (destroying the cache does
   //   the last two items).
   void commitBack(TSD<ThisT> *TSD) {
-    Quarantine.drain(&TSD->QuarantineCache,
-                     QuarantineCallback(*this, TSD->Cache));
-    TSD->Cache.destroy(&Stats);
+    Quarantine.drain(&TSD->getQuarantineCache(),
+                     QuarantineCallback(*this, TSD->getCache()));
+    TSD->getCache().destroy(&Stats);
   }
 
   ALWAYS_INLINE void *getHeaderTaggedPointer(void *Ptr) {
@@ -375,14 +375,14 @@ public:
       DCHECK_NE(ClassId, 0U);
       bool UnlockRequired;
       auto *TSD = TSDRegistry.getTSDAndLock(&UnlockRequired);
-      Block = TSD->Cache.allocate(ClassId);
+      Block = TSD->getCache().allocate(ClassId);
       // If the allocation failed, the most likely reason with a 32-bit primary
       // is the region being full. In that event, retry in each successively
       // larger class until it fits. If it fails to fit in the largest class,
       // fallback to the Secondary.
       if (UNLIKELY(!Block)) {
         while (ClassId < SizeClassMap::LargestClassId && !Block)
-          Block = TSD->Cache.allocate(++ClassId);
+          Block = TSD->getCache().allocate(++ClassId);
         if (!Block)
           ClassId = 0;
       }
@@ -1168,7 +1168,7 @@ private:
       if (LIKELY(ClassId)) {
         bool UnlockRequired;
         auto *TSD = TSDRegistry.getTSDAndLock(&UnlockRequired);
-        TSD->Cache.deallocate(ClassId, BlockBegin);
+        TSD->getCache().deallocate(ClassId, BlockBegin);
         if (UnlockRequired)
           TSD->unlock();
       } else {
@@ -1180,8 +1180,8 @@ private:
     } else {
       bool UnlockRequired;
       auto *TSD = TSDRegistry.getTSDAndLock(&UnlockRequired);
-      Quarantine.put(&TSD->QuarantineCache,
-                     QuarantineCallback(*this, TSD->Cache), Ptr, Size);
+      Quarantine.put(&TSD->getQuarantineCache(),
+                     QuarantineCallback(*this, TSD->getCache()), Ptr, Size);
       if (UnlockRequired)
         TSD->unlock();
     }
