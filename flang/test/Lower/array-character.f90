@@ -53,7 +53,7 @@ subroutine issue(c1, c2)
   ! CHECK:       }
 end subroutine
 
-! CHECK-LABEL: func @_QQmain() {
+! CHECK-LABEL: func @_QQmain() attributes {fir.bindc_name = "p"} {
 program p
   ! CHECK-DAG: %[[VAL_0:.*]] = arith.constant 4 : index
   ! CHECK-DAG: %[[VAL_1:.*]] = arith.constant 3 : index

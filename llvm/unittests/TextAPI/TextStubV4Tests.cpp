@@ -903,7 +903,8 @@ TEST(TBDv4, MalformedFile2) {
                                             "tbd-version: 4\n"
                                             "targets: [ x86_64-macos ]\n"
                                             "install-name: Test.dylib\n"
-                                            "foobar: \"unsupported key\"\n";
+                                            "foobar: \"unsupported key\"\n"
+                                            "...\n";
 
   Expected<TBDFile> Result =
       TextAPIReader::get(MemoryBufferRef(TBDv4MalformedFile2, "Test.tbd"));

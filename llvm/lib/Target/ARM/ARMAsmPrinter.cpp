@@ -466,7 +466,7 @@ bool ARMAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 }
 
 static bool isThumb(const MCSubtargetInfo& STI) {
-  return STI.getFeatureBits()[ARM::ModeThumb];
+  return STI.hasFeature(ARM::ModeThumb);
 }
 
 void ARMAsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,

@@ -258,16 +258,6 @@ struct UUIDv4 {
   UUIDv4(const Target &TargetID, const std::string &Value)
       : TargetID(TargetID), Value(Value) {}
 };
-
-// clang-format off
-enum TBDFlags : unsigned {
-  None                         = 0U,
-  FlatNamespace                = 1U << 0,
-  NotApplicationExtensionSafe  = 1U << 1,
-  InstallAPI                   = 1U << 2,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/InstallAPI),
-};
-// clang-format on
 } // end anonymous namespace.
 
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(Architecture)
@@ -1105,10 +1095,49 @@ static void DiagHandler(const SMDiagnostic &Diag, void *Context) {
   File->ErrorMessage = ("malformed file\n" + Message).str();
 }
 
+namespace {
+
+Expected<FileType> canReadFileType(MemoryBufferRef InputBuffer) {
+  auto TAPIFile = InputBuffer.getBuffer().trim();
+  if (TAPIFile.startswith("{") && TAPIFile.endswith("}"))
+    return FileType::TBD_V5;
+
+  if (!TAPIFile.endswith("..."))
+    return createStringError(std::errc::not_supported, "unsupported file type");
+
+  if (TAPIFile.startswith("--- !tapi-tbd\n"))
+    return FileType::TBD_V4;
+
+  if (TAPIFile.startswith("--- !tapi-tbd-v3\n"))
+    return FileType::TBD_V3;
+
+  if (TAPIFile.startswith("--- !tapi-tbd-v2\n"))
+    return FileType::TBD_V2;
+
+  if (TAPIFile.startswith("--- !tapi-tbd-v1\n") ||
+      TAPIFile.startswith("---\narchs:"))
+    return FileType::TBD_V1;
+
+  return createStringError(std::errc::not_supported, "unsupported file type");
+}
+} // namespace
+
 Expected<std::unique_ptr<InterfaceFile>>
 TextAPIReader::get(MemoryBufferRef InputBuffer) {
   TextAPIContext Ctx;
   Ctx.Path = std::string(InputBuffer.getBufferIdentifier());
+  if (auto FTOrErr = canReadFileType(InputBuffer))
+    Ctx.FileKind = *FTOrErr;
+  else
+    return FTOrErr.takeError();
+
+  // Handle JSON Format.
+  if (Ctx.FileKind >= FileType::TBD_V5) {
+    auto FileOrErr = getInterfaceFileFromJSON(InputBuffer.getBuffer());
+    if (!FileOrErr)
+      return FileOrErr.takeError();
+    return std::move(*FileOrErr);
+  }
   yaml::Input YAMLIn(InputBuffer.getBuffer(), &Ctx, DiagHandler, &Ctx);
 
   // Fill vector with interface file objects created by parsing the YAML file.

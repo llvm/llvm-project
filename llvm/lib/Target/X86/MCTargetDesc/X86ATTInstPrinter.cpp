@@ -55,7 +55,7 @@ void X86ATTInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   // InstrInfo.td as soon as Requires clause is supported properly
   // for InstAlias.
   if (MI->getOpcode() == X86::CALLpcrel32 &&
-      (STI.getFeatureBits()[X86::Is64Bit])) {
+      (STI.hasFeature(X86::Is64Bit))) {
     OS << "\tcallq\t";
     printPCRelImm(MI, Address, 0, OS);
   }
@@ -65,7 +65,7 @@ void X86ATTInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   // 0x66 to be interpreted as "data16" by the asm printer.
   // Thus we add an adjustment here in order to print the "right" instruction.
   else if (MI->getOpcode() == X86::DATA16_PREFIX &&
-           STI.getFeatureBits()[X86::Is16Bit]) {
+           STI.hasFeature(X86::Is16Bit)) {
     OS << "\tdata32";
   }
   // Try to print any aliases first.

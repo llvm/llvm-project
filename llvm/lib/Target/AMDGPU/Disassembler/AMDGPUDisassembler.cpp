@@ -51,7 +51,7 @@ AMDGPUDisassembler::AMDGPUDisassembler(const MCSubtargetInfo &STI,
   TargetMaxInstBytes(Ctx.getAsmInfo()->getMaxInstLength(&STI)) {
 
   // ToDo: AMDGPUDisassembler supports only VI ISA.
-  if (!STI.getFeatureBits()[AMDGPU::FeatureGCN3Encoding] && !isGFX10Plus())
+  if (!STI.hasFeature(AMDGPU::FeatureGCN3Encoding) && !isGFX10Plus())
     report_fatal_error("Disassembly not yet supported for subtarget");
 }
 
@@ -456,7 +456,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     if (Bytes.size() >= 8) {
       const uint64_t QW = eatBytes<uint64_t>(Bytes);
 
-      if (STI.getFeatureBits()[AMDGPU::FeatureGFX10_BEncoding]) {
+      if (STI.hasFeature(AMDGPU::FeatureGFX10_BEncoding)) {
         Res = tryDecodeInst(DecoderTableGFX10_B64, MI, QW, Address);
         if (Res) {
           if (AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::dpp8)
@@ -497,7 +497,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       Res = tryDecodeInst(DecoderTableSDWA1064, MI, QW, Address);
       if (Res) { IsSDWA = true;  break; }
 
-      if (STI.getFeatureBits()[AMDGPU::FeatureUnpackedD16VMem]) {
+      if (STI.hasFeature(AMDGPU::FeatureUnpackedD16VMem)) {
         Res = tryDecodeInst(DecoderTableGFX80_UNPACKED64, MI, QW, Address);
         if (Res)
           break;
@@ -506,7 +506,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       // Some GFX9 subtargets repurposed the v_mad_mix_f32, v_mad_mixlo_f16 and
       // v_mad_mixhi_f16 for FMA variants. Try to decode using this special
       // table first so we print the correct name.
-      if (STI.getFeatureBits()[AMDGPU::FeatureFmaMixInsts]) {
+      if (STI.hasFeature(AMDGPU::FeatureFmaMixInsts)) {
         Res = tryDecodeInst(DecoderTableGFX9_DL64, MI, QW, Address);
         if (Res)
           break;
@@ -528,13 +528,13 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     Res = tryDecodeInst(DecoderTableGFX932, MI, DW, Address);
     if (Res) break;
 
-    if (STI.getFeatureBits()[AMDGPU::FeatureGFX90AInsts]) {
+    if (STI.hasFeature(AMDGPU::FeatureGFX90AInsts)) {
       Res = tryDecodeInst(DecoderTableGFX90A32, MI, DW, Address);
       if (Res)
         break;
     }
 
-    if (STI.getFeatureBits()[AMDGPU::FeatureGFX10_BEncoding]) {
+    if (STI.hasFeature(AMDGPU::FeatureGFX10_BEncoding)) {
       Res = tryDecodeInst(DecoderTableGFX10_B32, MI, DW, Address);
       if (Res) break;
     }
@@ -548,13 +548,13 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     if (Bytes.size() < 4) break;
     const uint64_t QW = ((uint64_t)eatBytes<uint32_t>(Bytes) << 32) | DW;
 
-    if (STI.getFeatureBits()[AMDGPU::FeatureGFX940Insts]) {
+    if (STI.hasFeature(AMDGPU::FeatureGFX940Insts)) {
       Res = tryDecodeInst(DecoderTableGFX94064, MI, QW, Address);
       if (Res)
         break;
     }
 
-    if (STI.getFeatureBits()[AMDGPU::FeatureGFX90AInsts]) {
+    if (STI.hasFeature(AMDGPU::FeatureGFX90AInsts)) {
       Res = tryDecodeInst(DecoderTableGFX90A64, MI, QW, Address);
       if (Res)
         break;
@@ -604,7 +604,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
   if (Res && (MCII->get(MI.getOpcode()).TSFlags &
               (SIInstrFlags::MTBUF | SIInstrFlags::MUBUF)) &&
-             (STI.getFeatureBits()[AMDGPU::FeatureGFX90AInsts])) {
+             (STI.hasFeature(AMDGPU::FeatureGFX90AInsts))) {
     // GFX90A lost TFE, its place is occupied by ACC.
     int TFEOpIdx =
         AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::tfe);
@@ -691,7 +691,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 }
 
 DecodeStatus AMDGPUDisassembler::convertEXPInst(MCInst &MI) const {
-  if (STI.getFeatureBits()[AMDGPU::FeatureGFX11]) {
+  if (STI.hasFeature(AMDGPU::FeatureGFX11)) {
     // The MCInst still has these fields even though they are no longer encoded
     // in the GFX11 instruction.
     insertNamedMCOperand(MI, MCOperand::createImm(0), AMDGPU::OpName::vm);
@@ -713,12 +713,12 @@ DecodeStatus AMDGPUDisassembler::convertVINTERPInst(MCInst &MI) const {
 }
 
 DecodeStatus AMDGPUDisassembler::convertSDWAInst(MCInst &MI) const {
-  if (STI.getFeatureBits()[AMDGPU::FeatureGFX9] ||
-      STI.getFeatureBits()[AMDGPU::FeatureGFX10]) {
+  if (STI.hasFeature(AMDGPU::FeatureGFX9) ||
+      STI.hasFeature(AMDGPU::FeatureGFX10)) {
     if (AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::sdst))
       // VOPC - insert clamp
       insertNamedMCOperand(MI, MCOperand::createImm(0), AMDGPU::OpName::clamp);
-  } else if (STI.getFeatureBits()[AMDGPU::FeatureVolcanicIslands]) {
+  } else if (STI.hasFeature(AMDGPU::FeatureVolcanicIslands)) {
     int SDst = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::sdst);
     if (SDst != -1) {
       // VOPC - insert VCC register as sdst
@@ -1517,8 +1517,8 @@ MCOperand AMDGPUDisassembler::decodeSDWASrc(const OpWidthTy Width,
   using namespace AMDGPU::SDWA;
   using namespace AMDGPU::EncValues;
 
-  if (STI.getFeatureBits()[AMDGPU::FeatureGFX9] ||
-      STI.getFeatureBits()[AMDGPU::FeatureGFX10]) {
+  if (STI.hasFeature(AMDGPU::FeatureGFX9) ||
+      STI.hasFeature(AMDGPU::FeatureGFX10)) {
     // XXX: cast to int is needed to avoid stupid warning:
     // compare with unsigned is always true
     if (int(SDWA9EncValues::SRC_VGPR_MIN) <= int(Val) &&
@@ -1547,7 +1547,7 @@ MCOperand AMDGPUDisassembler::decodeSDWASrc(const OpWidthTy Width,
       return decodeFPImmed(ImmWidth, SVal);
 
     return decodeSpecialReg32(SVal);
-  } else if (STI.getFeatureBits()[AMDGPU::FeatureVolcanicIslands]) {
+  } else if (STI.hasFeature(AMDGPU::FeatureVolcanicIslands)) {
     return createRegOperand(getVgprClassId(Width), Val);
   }
   llvm_unreachable("unsupported target");
@@ -1564,11 +1564,11 @@ MCOperand AMDGPUDisassembler::decodeSDWASrc32(unsigned Val) const {
 MCOperand AMDGPUDisassembler::decodeSDWAVopcDst(unsigned Val) const {
   using namespace AMDGPU::SDWA;
 
-  assert((STI.getFeatureBits()[AMDGPU::FeatureGFX9] ||
-          STI.getFeatureBits()[AMDGPU::FeatureGFX10]) &&
+  assert((STI.hasFeature(AMDGPU::FeatureGFX9) ||
+          STI.hasFeature(AMDGPU::FeatureGFX10)) &&
          "SDWAVopcDst should be present only on GFX9+");
 
-  bool IsWave64 = STI.getFeatureBits()[AMDGPU::FeatureWavefrontSize64];
+  bool IsWave64 = STI.hasFeature(AMDGPU::FeatureWavefrontSize64);
 
   if (Val & SDWA9EncValues::VOPC_DST_VCC_MASK) {
     Val &= SDWA9EncValues::VOPC_DST_SGPR_MASK;
@@ -1589,19 +1589,19 @@ MCOperand AMDGPUDisassembler::decodeSDWAVopcDst(unsigned Val) const {
 }
 
 MCOperand AMDGPUDisassembler::decodeBoolReg(unsigned Val) const {
-  return STI.getFeatureBits()[AMDGPU::FeatureWavefrontSize64]
+  return STI.hasFeature(AMDGPU::FeatureWavefrontSize64)
              ? decodeSrcOp(OPW64, Val)
              : decodeSrcOp(OPW32, Val);
 }
 
 bool AMDGPUDisassembler::isVI() const {
-  return STI.getFeatureBits()[AMDGPU::FeatureVolcanicIslands];
+  return STI.hasFeature(AMDGPU::FeatureVolcanicIslands);
 }
 
 bool AMDGPUDisassembler::isGFX9() const { return AMDGPU::isGFX9(STI); }
 
 bool AMDGPUDisassembler::isGFX90A() const {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX90AInsts];
+  return STI.hasFeature(AMDGPU::FeatureGFX90AInsts);
 }
 
 bool AMDGPUDisassembler::isGFX9Plus() const { return AMDGPU::isGFX9Plus(STI); }
@@ -1613,7 +1613,7 @@ bool AMDGPUDisassembler::isGFX10Plus() const {
 }
 
 bool AMDGPUDisassembler::isGFX11() const {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX11];
+  return STI.hasFeature(AMDGPU::FeatureGFX11);
 }
 
 bool AMDGPUDisassembler::isGFX11Plus() const {
@@ -1622,7 +1622,7 @@ bool AMDGPUDisassembler::isGFX11Plus() const {
 
 
 bool AMDGPUDisassembler::hasArchitectedFlatScratch() const {
-  return STI.getFeatureBits()[AMDGPU::FeatureArchitectedFlatScratch];
+  return STI.hasFeature(AMDGPU::FeatureArchitectedFlatScratch);
 }
 
 //===----------------------------------------------------------------------===//

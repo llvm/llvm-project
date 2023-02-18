@@ -2025,6 +2025,9 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case llvm::Triple::loongarch32:
   case llvm::Triple::loongarch64:
     return CheckLoongArchBuiltinFunctionCall(TI, BuiltinID, TheCall);
+  case llvm::Triple::wasm32:
+  case llvm::Triple::wasm64:
+    return CheckWebAssemblyBuiltinFunctionCall(TI, BuiltinID, TheCall);
   }
 }
 
@@ -4718,6 +4721,17 @@ bool Sema::CheckSystemZBuiltinFunctionCall(unsigned BuiltinID,
   return SemaBuiltinConstantArgRange(TheCall, i, l, u);
 }
 
+bool Sema::CheckWebAssemblyBuiltinFunctionCall(const TargetInfo &TI,
+                                               unsigned BuiltinID,
+                                               CallExpr *TheCall) {
+  switch (BuiltinID) {
+  case WebAssembly::BI__builtin_wasm_ref_null_extern:
+    return BuiltinWasmRefNullExtern(TheCall);
+  }
+
+  return false;
+}
+
 /// SemaBuiltinCpuSupports - Handle __builtin_cpu_supports(char *).
 /// This checks that the target supports __builtin_cpu_supports and
 /// that the string argument is constant and valid.
@@ -6735,6 +6749,15 @@ static bool checkBuiltinArgument(Sema &S, CallExpr *E, unsigned ArgIndex) {
     return true;
 
   E->setArg(ArgIndex, Arg.get());
+  return false;
+}
+
+bool Sema::BuiltinWasmRefNullExtern(CallExpr *TheCall) {
+  if (TheCall->getNumArgs() != 0)
+    return true;
+
+  TheCall->setType(Context.getWebAssemblyExternrefType());
+
   return false;
 }
 

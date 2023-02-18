@@ -1096,6 +1096,9 @@ enum PredefinedTypeIDs {
 // \brief RISC-V V types with auto numeration
 #define RVV_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/RISCVVTypes.def"
+// \brief WebAssembly reference types with auto numeration
+#define WASM_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
 };
 
 /// The number of predefined type IDs that are reserved for
