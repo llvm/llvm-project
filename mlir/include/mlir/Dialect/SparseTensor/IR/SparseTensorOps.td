@@ -294,6 +294,61 @@ def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [Pure]>,
   let hasVerifier = 1;
 }
 
+def SparseTensor_ToSliceOffsetOp : SparseTensor_Op<"slice.offset", [Pure]>,
+    Arguments<(ins AnySparseTensorSlice:$slice, IndexAttr:$dim)>,
+    Results<(outs Index:$offset)> {
+  let summary = "Extracts the offset of the sparse tensor slice at the given dimension";
+  let description = [{
+    Extracts the offset of the sparse tensor slice at the given dimension.
+
+    Currently, sparse tensor slices are still a work in progress, and only
+    works when runtime library is disabled (i.e., running sparse compiler
+    with `enable-runtime-library=false`).
+
+    Example:
+
+    ```mlir
+    %0 = tensor.extract_slice %s[%v1, %v2][64, 64][1, 1] : tensor<128x128xf64, #DCSR>
+                                                        to tensor<64x64xf64, #Slice>
+
+    %1 = sparse_tensor.slice.offset %0 at 0 : tensor<64x64xf64, #Slice>
+    %2 = sparse_tensor.slice.offset %0 at 1 : tensor<64x64xf64, #Slice>
+    // %1 = %v1
+    // %2 = %v2
+    ```
+  }];
+  let assemblyFormat = "$slice `at` $dim attr-dict `:` type($slice)";
+  let hasVerifier = 1;
+}
+
+def SparseTensor_ToSliceStrideOp : SparseTensor_Op<"slice.stride", [Pure]>,
+    Arguments<(ins AnySparseTensorSlice:$slice, IndexAttr:$dim)>,
+    Results<(outs Index:$stride)> {
+  let summary = "Extracts the stride of the sparse tensor slice at the given dimension";
+  let description = [{
+    Extracts the stride of the sparse tensor slice at the given dimension.
+
+    Currently, sparse tensor slices are still a work in progress, and only
+    works when runtime library is disabled (i.e., running sparse compiler
+    with `enable-runtime-library=false`).
+
+    Example:
+
+    ```mlir
+    %0 = tensor.extract_slice %s[%v1, %v2][64, 64][%s1, %s2] : tensor<128x128xf64, #DCSR>
+                                                            to tensor<64x64xf64, #Slice>
+
+    %1 = sparse_tensor.slice.stride %0 at 0 : tensor<64x64xf64, #Slice>
+    %2 = sparse_tensor.slice.stride %0 at 1 : tensor<64x64xf64, #Slice>
+    // %1 = %s1
+    // %2 = %s2
+
+    ```
+  }];
+  let assemblyFormat = "$slice `at` $dim attr-dict `:` type($slice)";
+  let hasVerifier = 1;
+}
+
 def SparseTensor_StorageSpecifierInitOp : SparseTensor_Op<"storage_specifier.init", [Pure]>,
     Results<(outs SparseTensorStorageSpecifier:$result)> {
   let summary = "";
