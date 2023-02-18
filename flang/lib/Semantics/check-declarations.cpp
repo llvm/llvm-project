@@ -1044,6 +1044,15 @@ void CheckHelper::CheckSubprogram(
     if (auto msg{evaluate::CheckStatementFunction(
             symbol, *stmtFunction, context_.foldingContext())}) {
       SayWithDeclaration(symbol, std::move(*msg));
+    } else if (details.result().flags().test(Symbol::Flag::Implicit)) {
+      // 15.6.4 p2 weird requirement
+      if (const Symbol *
+          host{symbol.owner().parent().FindSymbol(symbol.name())}) {
+        evaluate::AttachDeclaration(
+            messages_.Say(symbol.name(),
+                "An implicitly typed statement function should not appear when the same symbol is available in its host scope"_port_en_US),
+            *host);
+      }
     }
   }
   if (IsElementalProcedure(symbol)) {
