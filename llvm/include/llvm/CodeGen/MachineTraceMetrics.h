@@ -86,6 +86,10 @@ struct LiveRegUnit {
 enum class MachineTraceStrategy {
   /// Select the trace through a block that has the fewest instructions.
   TS_MinInstrCount,
+  /// Select the trace that contains only the current basic block. For instance,
+  /// this strategy can be used by MachineCombiner to make better decisions when
+  /// we estimate critical path for in-order cores.
+  TS_Local,
   TS_NumStrategies
 };
 
