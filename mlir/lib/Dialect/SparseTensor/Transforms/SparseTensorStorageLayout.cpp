@@ -179,14 +179,13 @@ void sparse_tensor::foreachFieldAndTypeInSparseTensor(
     llvm::function_ref<bool(Type, FieldIndex, SparseTensorFieldKind, Level,
                             DimLevelType)>
         callback) {
-  const auto enc = stt.getEncoding();
-  assert(enc);
+  assert(stt.hasEncoding());
   // Construct the basic types.
-  Type idxType = enc.getIndexType();
-  Type ptrType = enc.getPointerType();
+  Type idxType = stt.getIndexType();
+  Type ptrType = stt.getPointerType();
   Type eltType = stt.getElementType();
 
-  Type metaDataType = StorageSpecifierType::get(enc);
+  Type metaDataType = StorageSpecifierType::get(stt.getEncoding());
   // memref<? x ptr>  pointers
   Type ptrMemType = MemRefType::get({ShapedType::kDynamic}, ptrType);
   // memref<? x idx>  indices
@@ -195,7 +194,7 @@ void sparse_tensor::foreachFieldAndTypeInSparseTensor(
   Type valMemType = MemRefType::get({ShapedType::kDynamic}, eltType);
 
   foreachFieldInSparseTensor(
-      enc,
+      stt.getEncoding(),
       [metaDataType, ptrMemType, idxMemType, valMemType,
        callback](FieldIndex fieldIdx, SparseTensorFieldKind fieldKind,
                  Level lvl, DimLevelType dlt) -> bool {
