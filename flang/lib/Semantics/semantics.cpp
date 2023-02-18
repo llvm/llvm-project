@@ -42,6 +42,8 @@
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace Fortran::semantics {
 
@@ -468,6 +470,12 @@ void SemanticsContext::UseFortranBuiltinsModule() {
   }
 }
 
+void SemanticsContext::UsePPCFortranBuiltinsModule() {
+  if (ppcBuiltinsScope_ == nullptr) {
+    ppcBuiltinsScope_ = GetBuiltinModule("__fortran_ppc_intrinsics");
+  }
+}
+
 parser::Program &SemanticsContext::SaveParseTree(parser::Program &&tree) {
   return modFileParseTrees_.emplace_back(std::move(tree));
 }
@@ -480,11 +488,20 @@ bool Semantics::Perform() {
     const auto *frontModule{std::get_if<common::Indirection<parser::Module>>(
         &program_.v.front().u)};
     if (frontModule &&
-        std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
-                .statement.v.source == "__fortran_builtins") {
+        (std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
+                    .statement.v.source == "__fortran_builtins" ||
+            std::get<parser::Statement<parser::ModuleStmt>>(
+                frontModule->value().t)
+                    .statement.v.source == "__fortran_ppc_intrinsics")) {
       // Don't try to read the builtins module when we're actually building it.
     } else {
       context_.UseFortranBuiltinsModule();
+      llvm::Triple targetTriple{llvm::Triple(
+          llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple()))};
+      // Only use __Fortran_PPC_intrinsics module when targetting PowerPC arch
+      if (targetTriple.isPPC()) {
+        context_.UsePPCFortranBuiltinsModule();
+      }
     }
   }
   return ValidateLabels(context_, program_) &&
