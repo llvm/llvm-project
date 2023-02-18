@@ -86,11 +86,6 @@ external add_loop_rotation
   : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
   = "llvm_add_loop_rotate"
 
-(** See the [llvm::createLoopRerollPass] function. *)
-external add_loop_reroll
-  : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
-  = "llvm_add_loop_reroll"
-
 (** See the [llvm::createLoopUnrollPass] function. *)
 external add_loop_unroll
   : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit

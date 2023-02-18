@@ -110,12 +110,6 @@ value llvm_add_loop_rotate(LLVMPassManagerRef PM) {
 }
 
 /* [<Llvm.PassManager.any] Llvm.PassManager.t -> unit */
-value llvm_add_loop_reroll(LLVMPassManagerRef PM) {
-  LLVMAddLoopRerollPass(PM);
-  return Val_unit;
-}
-
-/* [<Llvm.PassManager.any] Llvm.PassManager.t -> unit */
 value llvm_add_loop_unroll(LLVMPassManagerRef PM) {
   LLVMAddLoopUnrollPass(PM);
   return Val_unit;

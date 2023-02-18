@@ -85,9 +85,6 @@ void LLVMAddLoopIdiomPass(LLVMPassManagerRef PM);
 /** See llvm::createLoopRotatePass function. */
 void LLVMAddLoopRotatePass(LLVMPassManagerRef PM);
 
-/** See llvm::createLoopRerollPass function. */
-void LLVMAddLoopRerollPass(LLVMPassManagerRef PM);
-
 /** See llvm::createLoopUnrollPass function. */
 void LLVMAddLoopUnrollPass(LLVMPassManagerRef PM);
 
