@@ -661,6 +661,73 @@ bool RISCVDAGToDAGISel::tryShrinkShlLogicImm(SDNode *Node) {
   return true;
 }
 
+bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
+  // Only supported with XTHeadBb at the moment.
+  if (!Subtarget->hasVendorXTHeadBb())
+    return false;
+
+  auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
+  if (!N1C)
+    return false;
+
+  SDValue N0 = Node->getOperand(0);
+  if (!N0.hasOneUse())
+    return false;
+
+  auto BitfieldExtract = [&](SDValue N0, unsigned Msb, unsigned Lsb, SDLoc DL,
+                             MVT VT) {
+    return CurDAG->getMachineNode(RISCV::TH_EXT, DL, VT, N0.getOperand(0),
+                                  CurDAG->getTargetConstant(Msb, DL, VT),
+                                  CurDAG->getTargetConstant(Lsb, DL, VT));
+  };
+
+  SDLoc DL(Node);
+  MVT VT = Node->getSimpleValueType(0);
+  const unsigned RightShAmt = N1C->getZExtValue();
+
+  // Transform (sra (shl X, C1) C2) with C1 < C2
+  //        -> (TH.EXT X, msb, lsb)
+  if (N0.getOpcode() == ISD::SHL) {
+    auto *N01C = dyn_cast<ConstantSDNode>(N0->getOperand(1));
+    if (!N01C)
+      return false;
+
+    const unsigned LeftShAmt = N01C->getZExtValue();
+    // Make sure that this is a bitfield extraction (i.e., the shift-right
+    // amount can not be less than the left-shift).
+    if (LeftShAmt > RightShAmt)
+      return false;
+
+    const unsigned MsbPlusOne = VT.getSizeInBits() - LeftShAmt;
+    const unsigned Msb = MsbPlusOne - 1;
+    const unsigned Lsb = RightShAmt - LeftShAmt;
+
+    SDNode *TH_EXT = BitfieldExtract(N0, Msb, Lsb, DL, VT);
+    ReplaceNode(Node, TH_EXT);
+    return true;
+  }
+
+  // Transform (sra (sext_inreg X, _), C) ->
+  //           (TH.EXT X, msb, lsb)
+  if (N0.getOpcode() == ISD::SIGN_EXTEND_INREG) {
+    unsigned ExtSize =
+        cast<VTSDNode>(N0.getOperand(1))->getVT().getSizeInBits();
+
+    // ExtSize of 32 should use sraiw via tablegen pattern.
+    if (ExtSize == 32)
+      return false;
+
+    const unsigned Msb = ExtSize - 1;
+    const unsigned Lsb = RightShAmt;
+
+    SDNode *TH_EXT = BitfieldExtract(N0, Msb, Lsb, DL, VT);
+    ReplaceNode(Node, TH_EXT);
+    return true;
+  }
+
+  return false;
+}
+
 void RISCVDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we have already selected.
   if (Node->isMachineOpcode()) {
@@ -846,6 +913,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case ISD::SRA: {
+    if (trySignedBitfieldExtract(Node))
+      return;
+
     // Optimize (sra (sext_inreg X, i16), C) ->
     //          (srai (slli X, (XLen-16), (XLen-16) + C)
     // And      (sra (sext_inreg X, i8), C) ->
@@ -886,8 +956,24 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
     if (!N1C)
       break;
+    uint64_t C1 = N1C->getZExtValue();
+    const bool isC1Mask = isMask_64(C1);
+    const bool isC1ANDI = isInt<12>(C1);
 
     SDValue N0 = Node->getOperand(0);
+
+    auto tryUnsignedBitfieldExtract = [&](SDNode *Node, SDLoc DL, MVT VT,
+                                          SDValue X, unsigned Msb,
+                                          unsigned Lsb) {
+      if (!Subtarget->hasVendorXTHeadBb())
+        return false;
+
+      SDNode *TH_EXTU = CurDAG->getMachineNode(
+          RISCV::TH_EXTU, DL, VT, X, CurDAG->getTargetConstant(Msb, DL, VT),
+          CurDAG->getTargetConstant(Lsb, DL, VT));
+      ReplaceNode(Node, TH_EXTU);
+      return true;
+    };
 
     bool LeftShift = N0.getOpcode() == ISD::SHL;
     if (LeftShift || N0.getOpcode() == ISD::SRL) {
@@ -897,8 +983,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       unsigned C2 = C->getZExtValue();
       unsigned XLen = Subtarget->getXLen();
       assert((C2 > 0 && C2 < XLen) && "Unexpected shift amount!");
-
-      uint64_t C1 = N1C->getZExtValue();
 
       // Keep track of whether this is a c.andi. If we can't use c.andi, the
       // shift pair might offer more compression opportunities.
@@ -922,7 +1006,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
       // Turn (and (srl x, c2) c1) -> (srli (slli x, c3-c2), c3) if c1 is a mask
       // with c3 leading zeros.
-      if (!LeftShift && isMask_64(C1)) {
+      if (!LeftShift && isC1Mask) {
         unsigned Leading = XLen - llvm::bit_width(C1);
         if (C2 < Leading) {
           // If the number of leading zeros is C2+32 this can be SRLIW.
@@ -950,6 +1034,18 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
             ReplaceNode(Node, SRLIW);
             return;
           }
+
+          // Try to use an unsigned bitfield extract (e.g., th.extu) if
+          // available.
+          // Transform (and (srl x, C2), C1)
+          //        -> (<bfextract> x, msb, lsb)
+          //
+          // Make sure to keep this below the SRLIW cases, as we always want to
+          // prefer the more common instruction.
+          const unsigned Msb = llvm::bit_width(C1) + C2 - 1;
+          const unsigned Lsb = C2;
+          if (tryUnsignedBitfieldExtract(Node, DL, VT, X, Msb, Lsb))
+            return;
 
           // (srli (slli x, c3-c2), c3).
           // Skip if we could use (zext.w (sraiw X, C2)).
@@ -1066,6 +1162,17 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
           return;
         }
       }
+    }
+
+    // If C1 masks off the upper bits only (but can't be formed as an
+    // ANDI), use an unsigned bitfield extract (e.g., th.extu), if
+    // available.
+    // Transform (and x, C1)
+    //        -> (<bfextract> x, msb, lsb)
+    if (isC1Mask && !isC1ANDI) {
+      const unsigned Msb = llvm::bit_width(C1) - 1;
+      if (tryUnsignedBitfieldExtract(Node, DL, VT, N0, Msb, 0))
+        return;
     }
 
     if (tryShrinkShlLogicImm(Node))

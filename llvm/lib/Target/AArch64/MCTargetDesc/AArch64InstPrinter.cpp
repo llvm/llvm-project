@@ -213,8 +213,7 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
     int ImmS = MI->getOperand(4).getImm();
 
     if ((Op2.getReg() == AArch64::WZR || Op2.getReg() == AArch64::XZR) &&
-        (ImmR == 0 || ImmS < ImmR) &&
-        STI.getFeatureBits()[AArch64::HasV8_2aOps]) {
+        (ImmR == 0 || ImmS < ImmR) && STI.hasFeature(AArch64::HasV8_2aOps)) {
       // BFC takes precedence over its entire range, sligtly differently to BFI.
       int BitWidth = Opcode == AArch64::BFMXri ? 64 : 32;
       int LSB = (BitWidth - ImmR) % BitWidth;

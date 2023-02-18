@@ -338,6 +338,23 @@ define i32 @sexth_i32(i32 %a) nounwind {
   ret i32 %shr
 }
 
+define i32 @no_sexth_i32(i32 %a) nounwind {
+; RV32I-LABEL: no_sexth_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 17
+; RV32I-NEXT:    srai a0, a0, 16
+; RV32I-NEXT:    ret
+;
+; RV32XTHEADBB-LABEL: no_sexth_i32:
+; RV32XTHEADBB:       # %bb.0:
+; RV32XTHEADBB-NEXT:    slli a0, a0, 17
+; RV32XTHEADBB-NEXT:    srai a0, a0, 16
+; RV32XTHEADBB-NEXT:    ret
+  %shl = shl i32 %a, 17
+  %shr = ashr exact i32 %shl, 16
+  ret i32 %shr
+}
+
 define i64 @sexth_i64(i64 %a) nounwind {
 ; RV32I-LABEL: sexth_i64:
 ; RV32I:       # %bb.0:
@@ -352,6 +369,25 @@ define i64 @sexth_i64(i64 %a) nounwind {
 ; RV32XTHEADBB-NEXT:    srai a1, a0, 31
 ; RV32XTHEADBB-NEXT:    ret
   %shl = shl i64 %a, 48
+  %shr = ashr exact i64 %shl, 48
+  ret i64 %shr
+}
+
+define i64 @no_sexth_i64(i64 %a) nounwind {
+; RV32I-LABEL: no_sexth_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a1, a0, 17
+; RV32I-NEXT:    srai a0, a1, 16
+; RV32I-NEXT:    srai a1, a1, 31
+; RV32I-NEXT:    ret
+;
+; RV32XTHEADBB-LABEL: no_sexth_i64:
+; RV32XTHEADBB:       # %bb.0:
+; RV32XTHEADBB-NEXT:    slli a1, a0, 17
+; RV32XTHEADBB-NEXT:    srai a0, a1, 16
+; RV32XTHEADBB-NEXT:    srai a1, a1, 31
+; RV32XTHEADBB-NEXT:    ret
+  %shl = shl i64 %a, 49
   %shr = ashr exact i64 %shl, 48
   ret i64 %shr
 }

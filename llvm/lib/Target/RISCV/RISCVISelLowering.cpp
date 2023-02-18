@@ -12704,8 +12704,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
   case CallingConv::Fast:
     break;
   case CallingConv::GHC:
-    if (!MF.getSubtarget().getFeatureBits()[RISCV::FeatureStdExtF] ||
-        !MF.getSubtarget().getFeatureBits()[RISCV::FeatureStdExtD])
+    if (!Subtarget.hasStdExtF() || !Subtarget.hasStdExtD())
       report_fatal_error(
         "GHC calling convention requires the F and D instruction set extensions");
   }
