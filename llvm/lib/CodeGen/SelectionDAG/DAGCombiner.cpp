@@ -18187,7 +18187,7 @@ struct LoadedSlice {
 
   /// Get the size of the slice to be loaded in bytes.
   unsigned getLoadedSize() const {
-    unsigned SliceSize = getUsedBits().countPopulation();
+    unsigned SliceSize = getUsedBits().popcount();
     assert(!(SliceSize & 0x7) && "Size is not a multiple of a byte.");
     return SliceSize / 8;
   }
@@ -24034,7 +24034,7 @@ static SDValue combineShuffleOfSplatVal(ShuffleVectorSDNode *Shuf,
       assert((unsigned)Idx < NumElts && "Out-of-bounds shuffle indice?");
       DemandedElts.setBit(Idx);
     }
-    assert(DemandedElts.countPopulation() > 1 && "Is a splat shuffle already?");
+    assert(DemandedElts.popcount() > 1 && "Is a splat shuffle already?");
     APInt UndefElts;
     if (DAG.isSplatValue(Shuf->getOperand(0), DemandedElts, UndefElts)) {
       // Even if all demanded elements are splat, some of them could be undef.
@@ -26109,7 +26109,7 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
       N0->getValueType(0) == VT && isNullConstant(N1) && isNullConstant(N2)) {
     SDValue AndLHS = N0->getOperand(0);
     auto *ConstAndRHS = dyn_cast<ConstantSDNode>(N0->getOperand(1));
-    if (ConstAndRHS && ConstAndRHS->getAPIntValue().countPopulation() == 1) {
+    if (ConstAndRHS && ConstAndRHS->getAPIntValue().popcount() == 1) {
       // Shift the tested bit over the sign bit.
       const APInt &AndMask = ConstAndRHS->getAPIntValue();
       unsigned ShCt = AndMask.getBitWidth() - 1;
