@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenTarget.h"
-#include "TableGenBackends.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -429,10 +428,5 @@ void CallingConvEmitter::EmitArgRegisterLists(raw_ostream &O) {
   }
 }
 
-namespace llvm {
-
-void EmitCallingConv(RecordKeeper &RK, raw_ostream &OS) {
-  CallingConvEmitter(RK).run(OS);
-}
-
-} // namespace llvm
+static TableGen::Emitter::OptClass<CallingConvEmitter>
+    X("gen-callingconv", "Generate calling convention descriptions");

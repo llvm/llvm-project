@@ -17,7 +17,6 @@
 #include "CodeGenSchedule.h"
 #include "CodeGenTarget.h"
 #include "DFAEmitter.h"
-#include "TableGenBackends.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -354,10 +353,5 @@ void DFAPacketizerEmitter::emitForItineraries(
      << "\n}\n\n";
 }
 
-namespace llvm {
-
-void EmitDFAPacketizer(RecordKeeper &RK, raw_ostream &OS) {
-  DFAPacketizerEmitter(RK).run(OS);
-}
-
-} // end namespace llvm
+static TableGen::Emitter::OptClass<DFAPacketizerEmitter>
+    X("gen-dfa-packetizer", "Generate DFA Packetizer for VLIW targets");

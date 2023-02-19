@@ -13,7 +13,6 @@
 
 #include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
-#include "TableGenBackends.h"
 #include "X86RecognizableInstr.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/FormattedStream.h"
@@ -614,9 +613,5 @@ void X86FoldTablesEmitter::run(raw_ostream &o) {
   printTable(Table4, "Table4", OS);
 }
 
-namespace llvm {
-
-void EmitX86FoldTables(RecordKeeper &RK, raw_ostream &OS) {
-  X86FoldTablesEmitter(RK).run(OS);
-}
-} // namespace llvm
+static TableGen::Emitter::OptClass<X86FoldTablesEmitter>
+    X("gen-x86-fold-tables", "Generate X86 fold tables");
