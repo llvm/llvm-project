@@ -296,3 +296,30 @@ entry:
   store atomic i32 0, ptr %add.ptr.i.i38 release, align 4
   ret void
 }
+
+; Here store of 9 and 15 can be merged, but the store of 0 prevents the store
+; of 5 from being considered. This checks a corner case where we would skip
+; doing an alias check because of a >= vs > bug, due to the presence of a
+; non-aliasing instruction, in this case the load %safeld.
+define i32 @test_alias_3xs16(ptr %ptr, ptr %ptr2, ptr %ptr3, ptr noalias %safe_ptr) {
+; CHECK-LABEL: test_alias_3xs16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov x10, #9
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    ldr w0, [x3]
+; CHECK-NEXT:    mov w9, #5
+; CHECK-NEXT:    movk x10, #14, lsl #32
+; CHECK-NEXT:    str w9, [x8, #4]
+; CHECK-NEXT:    strh wzr, [x8, #4]
+; CHECK-NEXT:    str x10, [x8, #8]
+; CHECK-NEXT:    ret
+  %safeld = load i32, ptr %safe_ptr
+  %addr2 = getelementptr i32, ptr %ptr, i64 1
+  store i32 5, ptr %addr2
+  store i16 0, ptr %addr2 ; aliases directly with store above.
+  %addr3 = getelementptr i32, ptr %ptr, i64 2
+  store i32 9, ptr %addr3
+  %addr4 = getelementptr i32, ptr %ptr, i64 3
+  store i32 14, ptr %addr4
+  ret i32 %safeld
+}
