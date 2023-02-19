@@ -26,6 +26,10 @@
 # RUN: not ld.lld unrecognized_version.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=UNRECOGNIZED_VERSION --implicit-check-not=error:
 # UNRECOGNIZED_VERSION: error: unrecognized_version.o:(.riscv.attributes): rv64i99p0: unsupported version number 99.0 for extension 'i'
 
+# RUN: llvm-mc -filetype=obj -triple=riscv64 invalid_arch1.s -o invalid_arch1.o
+# RUN: ld.lld -e 0 invalid_arch1.o -o invalid_arch1
+# RUN: llvm-readobj --arch-specific invalid_arch1 | FileCheck %s --check-prefix=INVALID_ARCH1
+
 ## A zero value attribute is not printed.
 # RUN: llvm-mc -filetype=obj -triple=riscv64 unaligned_access_0.s -o unaligned_access_0.o
 # RUN: ld.lld -e 0 --fatal-warnings a.o unaligned_access_0.o -o unaligned_access_0
@@ -169,6 +173,34 @@
 .long .Lend-.Lbegin
 .byte 5  # Tag_RISCV_arch
 .asciz "rv64i99p0"
+.Lend:
+
+#--- invalid_arch1.s
+# INVALID_ARCH1:      BuildAttributes {
+# INVALID_ARCH1-NEXT:   FormatVersion: 0x41
+# INVALID_ARCH1-NEXT:   Section 1 {
+# INVALID_ARCH1-NEXT:     SectionLength: 25
+# INVALID_ARCH1-NEXT:     Vendor: riscv
+# INVALID_ARCH1-NEXT:     Tag: Tag_File (0x1)
+# INVALID_ARCH1-NEXT:     Size: 15
+# INVALID_ARCH1-NEXT:     FileAttributes {
+# INVALID_ARCH1-NEXT:       Attribute {
+# INVALID_ARCH1-NEXT:         Tag: 5
+# INVALID_ARCH1-NEXT:         TagName: arch
+# INVALID_ARCH1-NEXT:         Value: rv64i2p0
+# INVALID_ARCH1-NEXT:       }
+# INVALID_ARCH1-NEXT:     }
+# INVALID_ARCH1-NEXT:   }
+# INVALID_ARCH1-NEXT: }
+.section .riscv.attributes,"",@0x70000003
+.byte 0x41
+.long .Lend-.riscv.attributes-1
+.asciz "riscv"  # vendor
+.Lbegin:
+.byte 1  # Tag_File
+.long .Lend-.Lbegin
+.byte 5  # Tag_RISCV_arch
+.asciz "rv64i2"
 .Lend:
 
 #--- unaligned_access_0.s
