@@ -176,10 +176,20 @@ fcvtmod.w.d a1, ft1, rtz
 # CHECK-NO-EXT: error: instruction requires the following: 'Zfa' (Additional Floating-Point){{$}}
 fltq.s a1, fs1, fs2
 
-# CHECK-ASM-AND-OBJ: fleq.s a1, ft1, ft1
-# CHECK-ASM: encoding: [0xd3,0xc5,0x10,0xa0]
+# CHECK-ASM-AND-OBJ: fleq.s a1, ft1, ft2
+# CHECK-ASM: encoding: [0xd3,0xc5,0x20,0xa0]
 # CHECK-NO-EXT: error: instruction requires the following: 'Zfa' (Additional Floating-Point){{$}}
-fleq.s a1, ft1, ft1
+fleq.s a1, ft1, ft2
+
+# CHECK-ASM-AND-OBJ: fltq.s a1, fs2, fs1
+# CHECK-ASM: encoding: [0xd3,0x55,0x99,0xa0]
+# CHECK-NO-EXT: error: instruction requires the following: 'Zfa' (Additional Floating-Point){{$}}
+fgtq.s a1, fs1, fs2
+
+# CHECK-ASM-AND-OBJ: fleq.s a1, ft2, ft1
+# CHECK-ASM: encoding: [0xd3,0x45,0x11,0xa0]
+# CHECK-NO-EXT: error: instruction requires the following: 'Zfa' (Additional Floating-Point){{$}}
+fgeq.s a1, ft1, ft2
 
 # CHECK-ASM-AND-OBJ: fltq.d a1, fs1, fs2
 # CHECK-ASM: encoding: [0xd3,0xd5,0x24,0xa3]
@@ -191,6 +201,16 @@ fltq.d a1, fs1, fs2
 # CHECK-NO-EXT: error: instruction requires the following: 'Zfa' (Additional Floating-Point){{$}}
 fleq.d a1, ft1, ft2
 
+# CHECK-ASM-AND-OBJ: fltq.d a1, fs2, fs1
+# CHECK-ASM: encoding: [0xd3,0x55,0x99,0xa2]
+# CHECK-NO-EXT: error: instruction requires the following: 'Zfa' (Additional Floating-Point){{$}}
+fgtq.d a1, fs1, fs2
+
+# CHECK-ASM-AND-OBJ: fleq.d a1, ft2, ft1
+# CHECK-ASM: encoding: [0xd3,0x45,0x11,0xa2]
+# CHECK-NO-EXT: error: instruction requires the following: 'Zfa' (Additional Floating-Point){{$}}
+fgeq.d a1, ft1, ft2
+
 # CHECK-ASM-AND-OBJ: fltq.h a1, fs1, fs2
 # CHECK-ASM: encoding: [0xd3,0xd5,0x24,0xa5]
 # CHECK-NO-EXT: error: instruction requires the following: 'Zfa' (Additional Floating-Point){{$}}
@@ -200,3 +220,13 @@ fltq.h a1, fs1, fs2
 # CHECK-ASM: encoding: [0xd3,0xc5,0x20,0xa4]
 # CHECK-NO-EXT: error: instruction requires the following: 'Zfa' (Additional Floating-Point){{$}}
 fleq.h a1, ft1, ft2
+
+# CHECK-ASM-AND-OBJ: fltq.h a1, fs2, fs1
+# CHECK-ASM: encoding: [0xd3,0x55,0x99,0xa4]
+# CHECK-NO-EXT: error: instruction requires the following: 'Zfa' (Additional Floating-Point){{$}}
+fgtq.h a1, fs1, fs2
+
+# CHECK-ASM-AND-OBJ: fleq.h a1, ft2, ft1
+# CHECK-ASM: encoding: [0xd3,0x45,0x11,0xa4]
+# CHECK-NO-EXT: error: instruction requires the following: 'Zfa' (Additional Floating-Point){{$}}
+fgeq.h a1, ft1, ft2
