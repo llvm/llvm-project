@@ -41,19 +41,23 @@ TEST(LlvmLibcExpfTest, SpecialNumbers) {
 
 TEST(LlvmLibcExpfTest, Overflow) {
   errno = 0;
-  EXPECT_FP_EQ(inf, __llvm_libc::expf(float(FPBits(0x7f7fffffU))));
+  EXPECT_FP_EQ_WITH_EXCEPTION(
+      inf, __llvm_libc::expf(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
-  EXPECT_FP_EQ(inf, __llvm_libc::expf(float(FPBits(0x42cffff8U))));
+  EXPECT_FP_EQ_WITH_EXCEPTION(
+      inf, __llvm_libc::expf(float(FPBits(0x42cffff8U))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
-  EXPECT_FP_EQ(inf, __llvm_libc::expf(float(FPBits(0x42d00008U))));
+  EXPECT_FP_EQ_WITH_EXCEPTION(
+      inf, __llvm_libc::expf(float(FPBits(0x42d00008U))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 }
 
 TEST(LlvmLibcExpfTest, Underflow) {
   errno = 0;
-  EXPECT_FP_EQ(0.0f, __llvm_libc::expf(float(FPBits(0xff7fffffU))));
+  EXPECT_FP_EQ_WITH_EXCEPTION(
+      0.0f, __llvm_libc::expf(float(FPBits(0xff7fffffU))), FE_UNDERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   float x = float(FPBits(0xc2cffff8U));
