@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TableGenBackends.h"
 #include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/TableGenBackend.h"
 
 using namespace llvm;
 
@@ -47,7 +47,7 @@ static std::string getMArch(const Record &Rec) {
   return (*ISAInfo)->toString();
 }
 
-void llvm::EmitRISCVTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
+static void EmitRISCVTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   OS << "#ifndef PROC\n"
      << "#define PROC(ENUM, NAME, DEFAULT_MARCH)\n"
      << "#endif\n\n";
@@ -80,3 +80,6 @@ void llvm::EmitRISCVTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
 
   OS << "\n#undef TUNE_PROC\n";
 }
+
+static TableGen::Emitter::Opt X("gen-riscv-target-def", EmitRISCVTargetDef,
+                                "Generate the list of CPU for RISCV");

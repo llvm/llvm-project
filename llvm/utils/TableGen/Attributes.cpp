@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TableGenBackends.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/TableGenBackend.h"
 #include <vector>
 using namespace llvm;
 
@@ -130,10 +130,5 @@ void Attributes::run(raw_ostream &OS) {
   emitAttributeProperties(OS);
 }
 
-namespace llvm {
-
-void EmitAttributes(RecordKeeper &RK, raw_ostream &OS) {
-  Attributes(RK).run(OS);
-}
-
-} // namespace llvm
+static TableGen::Emitter::OptClass<Attributes> X("gen-attrs",
+                                                 "Generate attributes");

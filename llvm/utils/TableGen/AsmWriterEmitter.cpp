@@ -17,7 +17,6 @@
 #include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
 #include "SequenceToOffsetTable.h"
-#include "TableGenBackends.h"
 #include "Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -1310,10 +1309,5 @@ void AsmWriterEmitter::run(raw_ostream &O) {
   EmitPrintAliasInstruction(O);
 }
 
-namespace llvm {
-
-void EmitAsmWriter(RecordKeeper &RK, raw_ostream &OS) {
-  AsmWriterEmitter(RK).run(OS);
-}
-
-} // end namespace llvm
+static TableGen::Emitter::OptClass<AsmWriterEmitter>
+    X("gen-asm-writer", "Generate assembly writer");

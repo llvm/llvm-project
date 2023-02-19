@@ -16,7 +16,6 @@
 #include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
 #include "InfoByHwMode.h"
-#include "TableGenBackends.h"
 #include "VarLenCodeEmitterGen.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -504,10 +503,5 @@ void CodeEmitterGen::run(raw_ostream &o) {
 
 } // end anonymous namespace
 
-namespace llvm {
-
-void EmitCodeEmitter(RecordKeeper &RK, raw_ostream &OS) {
-  CodeEmitterGen(RK).run(OS);
-}
-
-} // end namespace llvm
+static TableGen::Emitter::OptClass<CodeEmitterGen>
+    X("gen-emitter", "Generate machine code emitter");
