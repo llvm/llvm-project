@@ -49,6 +49,8 @@ namespace std::ranges {
     using range_reference_t = iter_reference_t<iterator_t<R>>;
   template<range R>
     using range_rvalue_reference_t = iter_rvalue_reference_t<iterator_t<R>>;
+  template <range R>
+    using range_common_reference_t = iter_common_reference_t<iterator_t<R>>;
 
   // [range.sized], sized ranges
   template<class>

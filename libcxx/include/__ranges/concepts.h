@@ -73,6 +73,9 @@ namespace ranges {
   template <range _Rp>
   using range_rvalue_reference_t = iter_rvalue_reference_t<iterator_t<_Rp>>;
 
+  template <range _Rp>
+  using range_common_reference_t = iter_common_reference_t<iterator_t<_Rp>>;
+
   // [range.sized]
   template <class _Tp>
   concept sized_range = range<_Tp> && requires(_Tp& __t) { ranges::size(__t); };
