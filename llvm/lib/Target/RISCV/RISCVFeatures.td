@@ -467,9 +467,8 @@ def HasStdExtZtso : Predicate<"Subtarget->hasStdExtZTso()">,
                               AssemblerPredicate<(all_of FeatureStdExtZtso),
                               "'Ztso' (Memory Model - Total Store Order)">;
 
-def FeatureStdExtZawrs
-    : SubtargetFeature<"experimental-zawrs", "HasStdExtZawrs", "true",
-                       "'Zawrs' (Wait on Reservation Set)">;
+def FeatureStdExtZawrs : SubtargetFeature<"zawrs", "HasStdExtZawrs", "true",
+                                          "'Zawrs' (Wait on Reservation Set)">;
 def HasStdExtZawrs : Predicate<"Subtarget->hasStdExtZawrs()">,
                                AssemblerPredicate<(all_of FeatureStdExtZawrs),
                                "'Zawrs' (Wait on Reservation Set)">;
