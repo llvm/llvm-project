@@ -111,6 +111,7 @@ memcpy U
 memmove U
 memset U
 mkdir U
+modf U
 munmap U
 newlocale U
 perror U
@@ -154,12 +155,15 @@ strncmp U
 strncpy U
 strrchr U
 strsep U
+strtod U
 strtod_l U
 strtof_l U
 strtok_r U
 strtol U
 strtold_l U
+strtoll U
 strtoll_l U
+strtoull U
 strtoull_l U
 syscall U
 sysconf U
