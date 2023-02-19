@@ -1077,6 +1077,22 @@ static void computeKnownBitsFromOperator(const Operator *I,
     computeKnownBits(I->getOperand(1), DemandedElts, Known, Depth + 1, Q);
     computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
 
+    Value *X = nullptr, *Y = nullptr;
+    // and(x, -x) is a common idiom for clearing all but lowest set bit. If we
+    // have a single known bit in x, we can clear all bits above it.
+    // TODO: instcombine often reassociates independent `and` which can hide
+    // this pattern. Try to match and(x, and(-x, y)) / and(and(x, y), -x).
+    if (!Known.One.isZero() || !Known2.One.isZero()) {
+      if (match(I, m_c_BinOp(m_Value(X), m_Neg(m_Deferred(X))))) {
+        // -(-x) == x so pick whichever we can get a better result with.
+        if (Known.countMaxTrailingZeros() <= Known2.countMaxTrailingZeros())
+          Known = Known.blsi();
+        else
+          Known = Known2.blsi();
+
+        break;
+      }
+    }
     Known &= Known2;
 
     // and(x, add (x, -1)) is a common idiom that always clears the low bit;
@@ -1084,7 +1100,6 @@ static void computeKnownBitsFromOperator(const Operator *I,
     // matching the form add(x, add(x, y)) where y is odd.
     // TODO: This could be generalized to clearing any bit set in y where the
     // following bit is known to be unset in y.
-    Value *X = nullptr, *Y = nullptr;
     if (!Known.Zero[0] && !Known.One[0] &&
         match(I, m_c_BinOp(m_Value(X), m_Add(m_Deferred(X), m_Value(Y))))) {
       Known2.resetAll();
@@ -1100,12 +1115,26 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
     Known |= Known2;
     break;
-  case Instruction::Xor:
+  case Instruction::Xor: {
     computeKnownBits(I->getOperand(1), DemandedElts, Known, Depth + 1, Q);
     computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
 
-    Known ^= Known2;
-    break;
+    Value *X = nullptr;
+    // xor(x, x + -1) is a common idiom that will clear all bits above
+    // the lowest set bit. We can safely say any bit past the lowest
+    // known one must be zero.
+    // TODO: `x + -1` is often shrunk `x + C` which `C` is minimum bits needed
+    // for demanded. This can cause us to miss this pattern. Expand to account
+    // for `x + -1` in the context of demanded bits.
+    if ((!Known.One.isZero() || !Known2.One.isZero()) &&
+        match(I, m_c_BinOp(m_Value(X), m_c_Add(m_Deferred(X), m_AllOnes())))) {
+      // Known2 is confusingly LHS.
+      const KnownBits &XBits = I->getOperand(0) == X ? Known2 : Known;
+      Known = XBits.blsmsk();
+    } else {
+      Known ^= Known2;
+    }
+  } break;
   case Instruction::Mul: {
     bool NSW = Q.IIQ.hasNoSignedWrap(cast<OverflowingBinaryOperator>(I));
     computeKnownBitsMul(I->getOperand(0), I->getOperand(1), NSW, DemandedElts,
@@ -2578,6 +2607,12 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
             Q.DL.getTypeSizeInBits(I->getType()).getFixedValue())
       return isKnownNonZero(I->getOperand(0), Depth, Q);
     break;
+  case Instruction::Sub:
+    if (auto *C = dyn_cast<Constant>(I->getOperand(0)))
+      if (C->isNullValue() &&
+          isKnownNonZero(I->getOperand(1), DemandedElts, Depth, Q))
+        return true;
+    break;
   case Instruction::Or:
     // X | Y != 0 if X != 0 or Y != 0.
     return isKnownNonZero(I->getOperand(0), DemandedElts, Depth, Q) ||
@@ -2722,8 +2757,26 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
            isGuaranteedNotToBePoison(I->getOperand(0), Q.AC, Q.CxtI, Q.DT,
                                      Depth);
   case Instruction::Call:
-    if (cast<CallInst>(I)->getIntrinsicID() == Intrinsic::vscale)
-      return true;
+    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::abs:
+      case Intrinsic::bitreverse:
+      case Intrinsic::bswap:
+      case Intrinsic::ctpop:
+        if (isKnownNonZero(II->getArgOperand(0), DemandedElts, Depth, Q))
+          return true;
+        break;
+      case Intrinsic::uadd_sat:
+        if (isKnownNonZero(II->getArgOperand(0), DemandedElts, Depth, Q) ||
+            isKnownNonZero(II->getArgOperand(1), DemandedElts, Depth, Q))
+          return true;
+        break;
+      case Intrinsic::vscale:
+        return true;
+      default:
+        break;
+      }
+    }
     break;
   }
 

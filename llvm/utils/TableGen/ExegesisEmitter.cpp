@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TableGenBackends.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"

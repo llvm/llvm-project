@@ -114,8 +114,8 @@ private:
 
 } // end anonymous namespace
 
-static void PrintDefList(const std::vector<Record*> &Uses,
-                         unsigned Num, raw_ostream &OS) {
+static void PrintDefList(const std::vector<Record *> &Uses, unsigned Num,
+                         raw_ostream &OS) {
   OS << "static const MCPhysReg ImplicitList" << Num << "[] = { ";
   for (auto [Idx, U] : enumerate(Uses))
     OS << (Idx ? ", " : "") << getQualifiedName(U);

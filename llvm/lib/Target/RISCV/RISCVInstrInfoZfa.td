@@ -152,6 +152,11 @@ def: PatSetCC<FPR64, strict_fsetcc, SETLE, FLEQ_D>;
 def: PatSetCC<FPR64, strict_fsetcc, SETOLE, FLEQ_D>;
 } // Predicates = [HasStdExtZfa, HasStdExtD]
 
+let Predicates = [HasStdExtZfa, HasStdExtD, IsRV32] in {
+def : Pat<(RISCVBuildPairF64 GPR:$rs1, GPR:$rs2),
+          (FMVP_D_X GPR:$rs1, GPR:$rs2)>;
+}
+
 let Predicates = [HasStdExtZfa, HasStdExtZfh] in {
 def: PatFprFpr<fminimum, FMINM_H, FPR16>;
 def: PatFprFpr<fmaximum, FMAXM_H, FPR16>;

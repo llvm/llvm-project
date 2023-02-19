@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenIntrinsics.h"
+#include "TableGenBackends.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -828,4 +829,4 @@ void EmitSearchableTables(RecordKeeper &RK, raw_ostream &OS) {
   SearchableTableEmitter(RK).run(OS);
 }
 
-} // End llvm namespace.
+} // namespace llvm

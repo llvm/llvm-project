@@ -118,3 +118,28 @@ define i32 @fcmp_ole_q(half %a, half %b) nounwind strictfp {
   %2 = zext i1 %1 to i32
   ret i32 %2
 }
+
+define i32 @fcmp_one_q(half %a, half %b) nounwind strictfp {
+; CHECK-LABEL: fcmp_one_q:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fltq.h a0, fa0, fa1
+; CHECK-NEXT:    fltq.h a1, fa1, fa0
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    ret
+  %1 = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half %b, metadata !"one", metadata !"fpexcept.strict") strictfp
+  %2 = zext i1 %1 to i32
+  ret i32 %2
+}
+
+define i32 @fcmp_ueq_q(half %a, half %b) nounwind strictfp {
+; CHECK-LABEL: fcmp_ueq_q:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fltq.h a0, fa0, fa1
+; CHECK-NEXT:    fltq.h a1, fa1, fa0
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    xori a0, a0, 1
+; CHECK-NEXT:    ret
+  %1 = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half %b, metadata !"ueq", metadata !"fpexcept.strict") strictfp
+  %2 = zext i1 %1 to i32
+  ret i32 %2
+}
