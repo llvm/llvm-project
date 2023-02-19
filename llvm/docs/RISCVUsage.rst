@@ -57,6 +57,7 @@ on support follow.
      ``Svnapot``      Assembly Support
      ``Svpbmt``       Supported
      ``V``            Supported
+     ``Zawrs``        Assembly Support
      ``Zba``          Supported
      ``Zbb``          Supported
      ``Zbc``          Supported
@@ -138,9 +139,6 @@ Experimental Extensions
 LLVM supports (to various degrees) a number of experimental extensions.  All experimental extensions have ``experimental-`` as a prefix.  There is explicitly no compatibility promised between versions of the toolchain, and regular users are strongly advised *not* to make use of experimental extensions before they reach ratification.
 
 The primary goal of experimental support is to assist in the process of ratification by providing an existence proof of an implementation, and simplifying efforts to validate the value of a proposed extension against large code bases.  Experimental extensions are expected to either transition to ratified status, or be eventually removed.  The decision on whether to accept an experimental extension is currently done on an entirely case by case basis; if you want to propose one, attending the bi-weekly RISC-V sync-up call is strongly advised.
-
-``experimental-zawrs``
-  LLVM implements the `1.0-rc3 draft specification <https://github.com/riscv/riscv-zawrs/releases/download/V1.0-rc3/Zawrs.pdf>`_.  Note that have been backwards incompatible changes made between release candidates for the 1.0 draft.
 
 ``experimental-zca``
   LLVM implements the `1.0.1 draft specification <https://github.com/riscv/riscv-code-size-reduction/releases/tag/v1.0.1>`_.
