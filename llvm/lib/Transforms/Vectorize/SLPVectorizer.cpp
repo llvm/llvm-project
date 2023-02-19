@@ -337,9 +337,9 @@ static SmallBitVector isUndefVector(const Value *V,
     if (!ShuffleMask.empty()) {
       const Value *Base = V;
       while (auto *II = dyn_cast<InsertElementInst>(Base)) {
+        Base = II->getOperand(0);
         if (isa<T>(II->getOperand(1)))
           continue;
-        Base = II->getOperand(0);
         Optional<unsigned> Idx = getInsertIndex(II);
         if (!Idx)
           continue;
