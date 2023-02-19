@@ -9401,14 +9401,14 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
     LoadMask.setBit(i);
     LastLoadedElt = i;
   }
-  assert((ZeroMask.countPopulation() + UndefMask.countPopulation() +
-          LoadMask.countPopulation()) == NumElems &&
+  assert((ZeroMask.popcount() + UndefMask.popcount() + LoadMask.popcount()) ==
+             NumElems &&
          "Incomplete element masks");
 
   // Handle Special Cases - all undef or undef/zero.
-  if (UndefMask.countPopulation() == NumElems)
+  if (UndefMask.popcount() == NumElems)
     return DAG.getUNDEF(VT);
-  if ((ZeroMask.countPopulation() + UndefMask.countPopulation()) == NumElems)
+  if ((ZeroMask.popcount() + UndefMask.popcount()) == NumElems)
     return VT.isInteger() ? DAG.getConstant(0, DL, VT)
                           : DAG.getConstantFP(0.0, DL, VT);
 
@@ -11269,7 +11269,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   // our source BUILD_VECTOR, create another FREEZE-UNDEF splat BUILD_VECTOR,
   // and blend the FREEZE-UNDEF operands back in.
   // FIXME: is this worthwhile even for a single FREEZE-UNDEF operand?
-  if (unsigned NumFrozenUndefElts = FrozenUndefMask.countPopulation();
+  if (unsigned NumFrozenUndefElts = FrozenUndefMask.popcount();
       NumFrozenUndefElts >= 2 && NumFrozenUndefElts < NumElems) {
     SmallVector<int, 16> BlendMask(NumElems, -1);
     SmallVector<SDValue, 16> Elts(NumElems, DAG.getUNDEF(OpEltVT));
@@ -11320,8 +11320,8 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   if (SDValue BitOp = lowerBuildVectorToBitOp(BV, Subtarget, DAG))
     return BitOp;
 
-  unsigned NumZero = ZeroMask.countPopulation();
-  unsigned NumNonZero = NonZeroMask.countPopulation();
+  unsigned NumZero = ZeroMask.popcount();
+  unsigned NumNonZero = NonZeroMask.popcount();
 
   // If we are inserting one variable into a vector of non-zero constants, try
   // to avoid loading each constant element as a scalar. Load the constants as a
@@ -38089,7 +38089,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   case X86ISD::PEXT: {
     Known = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     // The result has as many leading zeros as the number of zeroes in the mask.
-    unsigned Count = Known.Zero.countPopulation();
+    unsigned Count = Known.Zero.popcount();
     Known.Zero = APInt::getHighBitsSet(BitWidth, Count);
     Known.One.clearAllBits();
     break;
@@ -43298,7 +43298,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     // operand 0 used. Undemanded bits from the mask don't matter so filter
     // them before counting.
     KnownBits Known2;
-    uint64_t Count = (~Known.Zero & LoMask).countPopulation();
+    uint64_t Count = (~Known.Zero & LoMask).popcount();
     APInt DemandedMask(APInt::getLowBitsSet(BitWidth, Count));
     if (SimplifyDemandedBits(Op0, DemandedMask, Known2, TLO, Depth + 1))
       return true;
@@ -43411,7 +43411,7 @@ SDValue X86TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
         if (IdentityOp == 0)
           break;
       }
-      assert((IdentityOp == 0 || IdentityOp.countPopulation() == 1) &&
+      assert((IdentityOp == 0 || IdentityOp.popcount() == 1) &&
              "Multiple identity shuffles detected");
 
       if (IdentityOp != 0)
