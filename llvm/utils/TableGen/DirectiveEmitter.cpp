@@ -37,9 +37,6 @@ private:
   StringRef Name;
   raw_ostream &OS;
 };
-} // end anonymous namespace
-
-namespace llvm {
 
 // Generate enum class
 void GenerateEnumClass(const std::vector<Record *> &Records, raw_ostream &OS,
@@ -163,6 +160,8 @@ bool HasDuplicateClausesInDirectives(const std::vector<Record *> &Directives) {
   return HasDuplicate;
 }
 
+} // namespace
+
 // Check consitency of records. Return true if an error has been detected.
 // Return false if the records are valid.
 bool DirectiveLanguage::HasValidityErrors() const {
@@ -173,6 +172,8 @@ bool DirectiveLanguage::HasValidityErrors() const {
 
   return HasDuplicateClausesInDirectives(getDirectives());
 }
+
+namespace llvm {
 
 // Generate the declaration section for the enumeration in the directive
 // language
@@ -244,6 +245,10 @@ void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
 
   OS << "#endif // LLVM_" << DirLang.getName() << "_INC\n";
 }
+
+} // namespace llvm
+
+namespace {
 
 // Generate function implementation for get<Enum>Name(StringRef Str)
 void GenerateGetName(const std::vector<Record *> &Records, raw_ostream &OS,
@@ -868,6 +873,10 @@ void EmitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
   // isAllowedClauseForDirective(Directive D, Clause C, unsigned Version)
   GenerateIsAllowedClause(DirLang, OS);
 }
+
+} // namespace
+
+namespace llvm {
 
 // Generate the implemenation section for the enumeration in the directive
 // language.
