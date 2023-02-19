@@ -428,7 +428,7 @@ Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context) {
                      : nullptr;
 }
 
-/// Parse a C++ Modules TS export-declaration.
+/// Parse a standard C++ Modules export-declaration.
 ///
 ///       export-declaration:
 ///         'export' declaration
@@ -455,13 +455,6 @@ Decl *Parser::ParseExportDeclaration() {
 
   BalancedDelimiterTracker T(*this, tok::l_brace);
   T.consumeOpen();
-
-  // The Modules TS draft says "An export-declaration shall declare at least one
-  // entity", but the intent is that it shall contain at least one declaration.
-  if (Tok.is(tok::r_brace) && getLangOpts().ModulesTS) {
-    Diag(ExportLoc, diag::err_export_empty)
-        << SourceRange(ExportLoc, Tok.getLocation());
-  }
 
   while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) &&
          Tok.isNot(tok::eof)) {

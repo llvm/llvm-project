@@ -399,7 +399,7 @@ COROUTINES_KEYWORD(co_await)
 COROUTINES_KEYWORD(co_return)
 COROUTINES_KEYWORD(co_yield)
 
-// C++ modules TS keywords
+// C++20 keywords
 MODULES_KEYWORD(module)
 MODULES_KEYWORD(import)
 

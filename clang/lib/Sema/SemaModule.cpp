@@ -74,16 +74,6 @@ static std::string stringFromPath(ModuleIdPath Path) {
 
 Sema::DeclGroupPtrTy
 Sema::ActOnGlobalModuleFragmentDecl(SourceLocation ModuleLoc) {
-  if (!ModuleScopes.empty() &&
-      ModuleScopes.back().Module->Kind == Module::GlobalModuleFragment) {
-    // Under -std=c++2a -fmodules-ts, we can find an explicit 'module;' after
-    // already implicitly entering the global module fragment. That's OK.
-    assert(getLangOpts().CPlusPlusModules && getLangOpts().ModulesTS &&
-           "unexpectedly encountered multiple global module fragment decls");
-    ModuleScopes.back().BeginLoc = ModuleLoc;
-    return nullptr;
-  }
-
   // We start in the global module; all those declarations are implicitly
   // module-private (though they do not have module linkage).
   Module *GlobalModule =
@@ -179,8 +169,8 @@ Sema::DeclGroupPtrTy
 Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
                       ModuleDeclKind MDK, ModuleIdPath Path,
                       ModuleIdPath Partition, ModuleImportState &ImportState) {
-  assert((getLangOpts().ModulesTS || getLangOpts().CPlusPlusModules) &&
-         "should only have module decl in Modules TS or C++20");
+  assert(getLangOpts().CPlusPlusModules &&
+         "should only have module decl in standard C++ modules");
 
   bool IsFirstDecl = ImportState == ModuleImportState::FirstDecl;
   bool SeenGMF = ImportState == ModuleImportState::GlobalFragment;
@@ -244,7 +234,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     return nullptr;
   }
 
-  assert((!getLangOpts().CPlusPlusModules || getLangOpts().ModulesTS ||
+  assert((!getLangOpts().CPlusPlusModules ||
           SeenGMF == (bool)this->GlobalModuleFragment) &&
          "mismatched global module state");
 
@@ -484,9 +474,8 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
                                    SourceLocation ExportLoc,
                                    SourceLocation ImportLoc, ModuleIdPath Path,
                                    bool IsPartition) {
-
-  bool Cxx20Mode = getLangOpts().CPlusPlusModules || getLangOpts().ModulesTS;
-  assert((!IsPartition || Cxx20Mode) && "partition seen in non-C++20 code?");
+  assert((!IsPartition || getLangOpts().CPlusPlusModules) &&
+         "partition seen in non-C++20 code?");
 
   // For a C++20 module name, flatten into a single identifier with the source
   // location of the first component.
@@ -504,7 +493,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
     ModuleName += stringFromPath(Path);
     ModuleNameLoc = {PP.getIdentifierInfo(ModuleName), Path[0].second};
     Path = ModuleIdPath(ModuleNameLoc);
-  } else if (Cxx20Mode) {
+  } else if (getLangOpts().CPlusPlusModules) {
     ModuleName = stringFromPath(Path);
     ModuleNameLoc = {PP.getIdentifierInfo(ModuleName), Path[0].second};
     Path = ModuleIdPath(ModuleNameLoc);
@@ -552,8 +541,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   // of the same top-level module. Until we do, make it an error rather than
   // silently ignoring the import.
   // FIXME: Should we warn on a redundant import of the current module?
-  if (Mod->isForBuilding(getLangOpts()) &&
-      (getLangOpts().isCompilingModule() || !getLangOpts().ModulesTS)) {
+  if (Mod->isForBuilding(getLangOpts())) {
     Diag(ImportLoc, getLangOpts().isCompilingModule()
                         ? diag::err_module_self_import
                         : diag::err_module_import_in_implementation)

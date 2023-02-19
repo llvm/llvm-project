@@ -96,6 +96,8 @@ Modified Compiler Flags
 
 Removed Compiler Flags
 -------------------------
+- The deprecated flag `-fmodules-ts` is removed. Please use ``-std=c++20``
+  or higher to use standard C++ modules instead.
 
 Attribute Changes in Clang
 --------------------------
