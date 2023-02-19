@@ -48,7 +48,8 @@ LLVM_LIBC_FUNCTION(float, exp2f, (float x)) {
         if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
           return static_cast<float>(FPBits(FPBits::MAX_NORMAL));
 
-        errno = ERANGE;
+        fputil::set_errno_if_required(ERANGE);
+        fputil::raise_except_if_required(FE_OVERFLOW);
       }
       // x is +inf or nan
       return x + FPBits::inf().get_val();
@@ -63,8 +64,10 @@ LLVM_LIBC_FUNCTION(float, exp2f, (float x)) {
         return x;
       if (fputil::get_round() == FE_UPWARD)
         return FPBits(FPBits::MIN_SUBNORMAL).get_val();
-      if (x != 0.0f)
-        errno = ERANGE;
+      if (x != 0.0f) {
+        fputil::set_errno_if_required(ERANGE);
+        fputil::raise_except_if_required(FE_UNDERFLOW);
+      }
       return 0.0f;
     }
   }
