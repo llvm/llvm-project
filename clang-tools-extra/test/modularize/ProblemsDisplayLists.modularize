@@ -12,5 +12,5 @@
 
 # CHECK: These are the combined files, with problem files preceded by #:
 
-# CHECK: {{.*}}Inputs/CompileError/HasError.h
 # CHECK: Inputs/CompileError/Level1A.h
+# CHECK: {{.*}}Inputs/CompileError/HasError.h
