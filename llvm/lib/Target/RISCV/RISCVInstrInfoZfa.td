@@ -102,6 +102,30 @@ def FLTQ_H : FPCmp_rr<0b1010010, 0b101, "fltq.h", FPR16>;
 def FLEQ_H : FPCmp_rr<0b1010010, 0b100, "fleq.h", FPR16>;
 } // Predicates = [HasStdExtZfa, HasStdExtZfh]
 
+//===----------------------------------------------------------------------===//
+// Pseudo-instructions and codegen patterns
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtZfa] in {
+def : InstAlias<"fgtq.s $rd, $rs, $rt",
+                (FLTQ_S GPR:$rd, FPR32:$rt, FPR32:$rs), 0>;
+def : InstAlias<"fgeq.s $rd, $rs, $rt",
+                (FLEQ_S GPR:$rd, FPR32:$rt, FPR32:$rs), 0>;
+}
+
+let Predicates = [HasStdExtZfa, HasStdExtD] in {
+def : InstAlias<"fgtq.d $rd, $rs, $rt",
+                (FLTQ_D GPR:$rd, FPR64:$rt, FPR64:$rs), 0>;
+def : InstAlias<"fgeq.d $rd, $rs, $rt",
+                (FLEQ_D GPR:$rd, FPR64:$rt, FPR64:$rs), 0>;
+}
+
+let Predicates = [HasStdExtZfa, HasStdExtZfh] in {
+def : InstAlias<"fgtq.h $rd, $rs, $rt",
+                (FLTQ_H GPR:$rd, FPR16:$rt, FPR16:$rs), 0>;
+def : InstAlias<"fgeq.h $rd, $rs, $rt",
+                (FLEQ_H GPR:$rd, FPR16:$rt, FPR16:$rs), 0>;
+}
 
 //===----------------------------------------------------------------------===//
 // Codegen patterns
