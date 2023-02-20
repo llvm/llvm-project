@@ -18,7 +18,7 @@ define i32 @test0() {
 ; CHECK:       direct2:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       indirect:
-; CHECK-NEXT:    [[OUT3:%.*]] = phi i32 [ [[OUT]], [[ENTRY_INDIRECT_CRIT_EDGE:%.*]] ], [ [[OUT2]], [[DIRECT_INDIRECT_CRIT_EDGE:%.*]] ]
+; CHECK-NEXT:    [[OUT3:%.*]] = phi i32 [ [[TMP0]], [[ENTRY_INDIRECT_CRIT_EDGE:%.*]] ], [ [[TMP1]], [[DIRECT_INDIRECT_CRIT_EDGE:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[OUT3]]
 ;
 entry:
@@ -61,6 +61,8 @@ y:
 ; Don't split edges unless they are critical, and callbr produces output, and
 ; that output is used.
 ; Here we have output, but no critical edge.
+; That said, we ought to insert a callbr landing pad intrinsic call and update
+; to use the correct SSA value.
 define i32 @dont_split1() {
 ; CHECK-LABEL: @dont_split1(
 ; CHECK-NEXT:  entry:
@@ -70,7 +72,7 @@ define i32 @dont_split1() {
 ; CHECK-NEXT:    ret i32 42
 ; CHECK:       y:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.callbr.landingpad.i32(i32 [[TMP0]])
-; CHECK-NEXT:    ret i32 [[TMP0]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
   %0 = callbr i32 asm "", "=r,!i"()
@@ -146,7 +148,7 @@ define i32 @split_me0() {
 ; CHECK:       x:
 ; CHECK-NEXT:    br label [[Y]]
 ; CHECK:       y:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP0]], [[ENTRY_Y_CRIT_EDGE:%.*]] ], [ 42, [[X]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP1]], [[ENTRY_Y_CRIT_EDGE:%.*]] ], [ 42, [[X]] ]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
@@ -177,7 +179,7 @@ define i32 @split_me1(i1 %z) {
 ; CHECK:       x:
 ; CHECK-NEXT:    ret i32 42
 ; CHECK:       v:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP0]], [[W_V_CRIT_EDGE]] ], [ undef, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP1]], [[W_V_CRIT_EDGE]] ], [ undef, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
@@ -210,7 +212,7 @@ define i32 @split_me2(i1 %z) {
 ; CHECK:       x:
 ; CHECK-NEXT:    ret i32 42
 ; CHECK:       v:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP0]], [[W_V_CRIT_EDGE]] ], [ 42, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP1]], [[W_V_CRIT_EDGE]] ], [ 42, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
@@ -225,5 +227,206 @@ x:
 
 v:
   %1 = phi i32 [ %0, %w ], [ 42, %entry ], [ %0, %w ]
+  ret i32 %1
+}
+
+; Here we have a diamond with no phi.
+define i32 @dont_split4() {
+; CHECK-LABEL: @dont_split4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = callbr i32 asm "", "=r,!i"()
+; CHECK-NEXT:    to label [[X:%.*]] [label %y]
+; CHECK:       x:
+; CHECK-NEXT:    br label [[OUT:%.*]]
+; CHECK:       y:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.callbr.landingpad.i32(i32 [[TMP0]])
+; CHECK-NEXT:    br label [[OUT]]
+; CHECK:       out:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP1]], [[Y:%.*]] ], [ [[TMP0]], [[X]] ]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+entry:
+  %0 = callbr i32 asm "", "=r,!i"()
+  to label %x [label %y]
+
+x:
+  br label %out
+
+y:
+  br label %out
+
+out:
+  ret i32 %0
+}
+
+; Triangle with no phi.
+define i32 @dont_split5() {
+; CHECK-LABEL: @dont_split5(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = callbr i32 asm "", "=r,!i"()
+; CHECK-NEXT:    to label [[OUT:%.*]] [label %y]
+; CHECK:       y:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.callbr.landingpad.i32(i32 [[TMP0]])
+; CHECK-NEXT:    br label [[OUT]]
+; CHECK:       out:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP1]], [[Y:%.*]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+entry:
+  %0 = callbr i32 asm "", "=r,!i"()
+  to label %out [label %y]
+
+y:
+  br label %out
+
+out:
+  ret i32 %0
+}
+
+; Triangle the other way with no phi.
+define i32 @split_me3() {
+; CHECK-LABEL: @split_me3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = callbr i32 asm "", "=r,!i"()
+; CHECK-NEXT:    to label [[Y:%.*]] [label %entry.out_crit_edge]
+; CHECK:       entry.out_crit_edge:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.callbr.landingpad.i32(i32 [[TMP0]])
+; CHECK-NEXT:    br label [[OUT:%.*]]
+; CHECK:       y:
+; CHECK-NEXT:    br label [[OUT]]
+; CHECK:       out:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP1]], [[ENTRY_OUT_CRIT_EDGE:%.*]] ], [ [[TMP0]], [[Y]] ]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+entry:
+  %0 = callbr i32 asm "", "=r,!i"()
+  to label %y [label %out]
+
+y:
+  br label %out
+
+out:
+  ret i32 %0
+}
+
+; Test callbr looping back on itself.
+define i32 @dont_split6(i32 %0) {
+; CHECK-LABEL: @dont_split6(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ [[TMP0:%.*]], [[ENTRY:%.*]] ], [ [[TMP3:%.*]], [[LOOP_LOOP_CRIT_EDGE:%.*]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = callbr i32 asm "", "=r,0,!i"(i32 [[TMP1]])
+; CHECK-NEXT:    to label [[EXIT:%.*]] [label %loop.loop_crit_edge]
+; CHECK:       loop.loop_crit_edge:
+; CHECK-NEXT:    [[TMP3]] = call i32 @llvm.callbr.landingpad.i32(i32 [[TMP2]])
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %loop
+loop:
+  %1 = phi i32 [%0, %entry], [%2, %loop]
+  %2 = callbr i32 asm "", "=r,0,!i"(i32 %1) to label %exit [label %loop]
+exit:
+  ret i32 0
+}
+
+; Test same direct+indirect dest no phi.
+define i32 @split_me4() {
+; CHECK-LABEL: @split_me4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = callbr i32 asm "", "=r,!i"()
+; CHECK-NEXT:    to label [[SAME:%.*]] [label %entry.same_crit_edge]
+; CHECK:       entry.same_crit_edge:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.callbr.landingpad.i32(i32 [[TMP0]])
+; CHECK-NEXT:    br label [[SAME]]
+; CHECK:       same:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP1]], [[ENTRY_SAME_CRIT_EDGE:%.*]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+entry:
+  %0 = callbr i32 asm "", "=r,!i"() to label %same [label %same]
+same:
+  ret i32 %0
+}
+
+; Test same direct+indirect dest w/ phi.
+define i32 @split_me5() {
+; CHECK-LABEL: @split_me5(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = callbr i32 asm "", "=r,!i"()
+; CHECK-NEXT:    to label [[SAME:%.*]] [label %entry.same_crit_edge]
+; CHECK:       entry.same_crit_edge:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.callbr.landingpad.i32(i32 [[TMP0]])
+; CHECK-NEXT:    br label [[SAME]]
+; CHECK:       same:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP1]], [[ENTRY_SAME_CRIT_EDGE:%.*]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+entry:
+  %0 = callbr i32 asm "", "=r,!i"() to label %same [label %same]
+same:
+  %1 = phi i32 [%0, %entry], [%0, %entry]
+  ret i32 %1
+}
+
+; "The Devil's cross" (i.e. two asm goto with conflicting physreg constraints
+; going to the same destination).
+define i64 @split_me6() {
+; CHECK-LABEL: @split_me6(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = callbr i64 asm "# $0 $1", "={dx},!i"()
+; CHECK-NEXT:    to label [[ASM_FALLTHROUGH:%.*]] [label %entry.foo_crit_edge]
+; CHECK:       entry.foo_crit_edge:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.callbr.landingpad.i64(i64 [[TMP0]])
+; CHECK-NEXT:    br label [[FOO:%.*]]
+; CHECK:       asm.fallthrough:
+; CHECK-NEXT:    [[TMP2:%.*]] = callbr i64 asm "# $0 $1", "={bx},!i"()
+; CHECK-NEXT:    to label [[FOO]] [label %asm.fallthrough.foo_crit_edge]
+; CHECK:       asm.fallthrough.foo_crit_edge:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.callbr.landingpad.i64(i64 [[TMP2]])
+; CHECK-NEXT:    br label [[FOO]]
+; CHECK:       foo:
+; CHECK-NEXT:    [[X_0:%.*]] = phi i64 [ [[TMP1]], [[ENTRY_FOO_CRIT_EDGE:%.*]] ], [ [[TMP3]], [[ASM_FALLTHROUGH_FOO_CRIT_EDGE:%.*]] ], [ [[TMP2]], [[ASM_FALLTHROUGH]] ]
+; CHECK-NEXT:    ret i64 [[X_0]]
+;
+entry:
+  %0 = callbr i64 asm "# $0 $1", "={dx},!i"()
+  to label %asm.fallthrough [label %foo]
+
+asm.fallthrough:
+  %1 = callbr i64 asm "# $0 $1", "={bx},!i"()
+  to label %foo [label %foo]
+
+foo:
+  %x.0 = phi i64 [ %0, %entry ], [ %1, %asm.fallthrough ], [ %1, %asm.fallthrough ]
+  ret i64 %x.0
+}
+
+; Test the result of the callbr having multiple uses to avoid iterator
+; invalidation bugs in CallBrPrepare::UpdateSSA.
+define i32 @multiple_split() {
+; CHECK-LABEL: @multiple_split(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = callbr i32 asm "", "=r,!i"()
+; CHECK-NEXT:    to label [[X:%.*]] [label %y]
+; CHECK:       x:
+; CHECK-NEXT:    ret i32 42
+; CHECK:       y:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.callbr.landingpad.i32(i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+entry:
+  %0 = callbr i32 asm "", "=r,!i"()
+  to label %x [label %y]
+
+x:
+  ret i32 42
+
+y:
+  %1 = add nsw i32 %0, %0
   ret i32 %1
 }
