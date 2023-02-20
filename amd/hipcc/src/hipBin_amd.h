@@ -712,7 +712,7 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
     // Important to have all of '-Xlinker' in the set of unquoted characters.
     // Windows needs different quoting, ignore for now
     if (os != windows && escapeArg) {
-      regex reg("[^-a-zA-Z0-9_=+,.\/]");
+      regex reg("[^-a-zA-Z0-9_=+,.\\/]");
       arg = regex_replace(arg, reg, "\\$&");
     }
     if (!swallowArg)

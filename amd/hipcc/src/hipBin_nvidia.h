@@ -540,7 +540,7 @@ void HipBinNvidia::executeHipCCCmd(vector<string> argv) {
     }
     // Windows needs different quoting, ignore for now
     if (os != windows && escapeArg) {
-      regex reg("[^-a-zA-Z0-9_=+,.\/]");
+      regex reg("[^-a-zA-Z0-9_=+,.\\/]");
       arg = regex_replace(arg, reg, "\\$&");
     }
     if (!swallowArg)
