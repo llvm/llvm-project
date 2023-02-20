@@ -46,7 +46,7 @@ class LVSymbol final : public LVElement {
 
   // Reference to DW_AT_specification, DW_AT_abstract_origin attribute.
   LVSymbol *Reference = nullptr;
-  LVAutoLocations *Locations = nullptr;
+  std::unique_ptr<LVLocations> Locations;
   LVLocation *CurrentLocation = nullptr;
 
   // Bitfields length.
@@ -60,8 +60,8 @@ class LVSymbol final : public LVElement {
   float CoveragePercentage = 0;
 
   // Add a location gap into the location list.
-  LVAutoLocations::iterator addLocationGap(LVAutoLocations::iterator Pos,
-                                           LVAddress LowPC, LVAddress HighPC);
+  LVLocations::iterator addLocationGap(LVLocations::iterator Pos,
+                                       LVAddress LowPC, LVAddress HighPC);
 
   // Find the current symbol in the given 'Targets'.
   LVSymbol *findIn(const LVSymbols *Targets) const;
@@ -73,7 +73,7 @@ public:
   }
   LVSymbol(const LVSymbol &) = delete;
   LVSymbol &operator=(const LVSymbol &) = delete;
-  ~LVSymbol() { delete Locations; }
+  ~LVSymbol() = default;
 
   static bool classof(const LVElement *Element) {
     return Element->getSubclassID() == LVSubclassID::LV_SYMBOL;
