@@ -479,7 +479,7 @@ void llvm::computeKnownBitsFromRangeMetadata(const MDNode &Ranges,
 
     // The first CommonPrefixBits of all values in Range are equal.
     unsigned CommonPrefixBits =
-        (Range.getUnsignedMax() ^ Range.getUnsignedMin()).countLeadingZeros();
+        (Range.getUnsignedMax() ^ Range.getUnsignedMin()).countl_zero();
     APInt Mask = APInt::getHighBitsSet(BitWidth, CommonPrefixBits);
     APInt UnsignedMax = Range.getUnsignedMax().zextOrTrunc(BitWidth);
     Known.One &= UnsignedMax & Mask;
@@ -1301,7 +1301,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
     // Trailing zeros of a right-shifted constant never decrease.
     const APInt *C;
     if (match(I->getOperand(0), m_APInt(C)))
-      Known.Zero.setLowBits(C->countTrailingZeros());
+      Known.Zero.setLowBits(C->countr_zero());
     break;
   }
   case Instruction::LShr: {
@@ -1313,7 +1313,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
     // Leading zeros of a left-shifted constant never decrease.
     const APInt *C;
     if (match(I->getOperand(0), m_APInt(C)))
-      Known.Zero.setHighBits(C->countLeadingZeros());
+      Known.Zero.setHighBits(C->countl_zero());
     break;
   }
   case Instruction::AShr: {
@@ -1601,10 +1601,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
                 Known2 = KnownBits::makeConstant(*RHSC);
                 break;
               case CmpInst::Predicate::ICMP_ULE:
-                Known2.Zero.setHighBits(RHSC->countLeadingZeros());
+                Known2.Zero.setHighBits(RHSC->countl_zero());
                 break;
               case CmpInst::Predicate::ICMP_ULT:
-                Known2.Zero.setHighBits((*RHSC - 1).countLeadingZeros());
+                Known2.Zero.setHighBits((*RHSC - 1).countl_zero());
                 break;
               default:
                 // TODO - add additional integer predicate handling.
@@ -7171,7 +7171,7 @@ static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
     } else if (match(BO.getOperand(0), m_APInt(C))) {
       unsigned ShiftAmount = Width - 1;
       if (!C->isZero() && IIQ.isExact(&BO))
-        ShiftAmount = C->countTrailingZeros();
+        ShiftAmount = C->countr_zero();
       if (C->isNegative()) {
         // 'ashr C, x' produces [C, C >> (Width-1)]
         Lower = *C;
@@ -7192,7 +7192,7 @@ static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
       // 'lshr C, x' produces [C >> (Width-1), C].
       unsigned ShiftAmount = Width - 1;
       if (!C->isZero() && IIQ.isExact(&BO))
-        ShiftAmount = C->countTrailingZeros();
+        ShiftAmount = C->countr_zero();
       Lower = C->lshr(ShiftAmount);
       Upper = *C + 1;
     }
@@ -7203,16 +7203,16 @@ static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
       if (IIQ.hasNoUnsignedWrap(&BO)) {
         // 'shl nuw C, x' produces [C, C << CLZ(C)]
         Lower = *C;
-        Upper = Lower.shl(Lower.countLeadingZeros()) + 1;
+        Upper = Lower.shl(Lower.countl_zero()) + 1;
       } else if (BO.hasNoSignedWrap()) { // TODO: What if both nuw+nsw?
         if (C->isNegative()) {
           // 'shl nsw C, x' produces [C << CLO(C)-1, C]
-          unsigned ShiftAmount = C->countLeadingOnes() - 1;
+          unsigned ShiftAmount = C->countl_one() - 1;
           Lower = C->shl(ShiftAmount);
           Upper = *C + 1;
         } else {
           // 'shl nsw C, x' produces [C, C << CLZ(C)-1]
-          unsigned ShiftAmount = C->countLeadingZeros() - 1;
+          unsigned ShiftAmount = C->countl_zero() - 1;
           Lower = *C;
           Upper = C->shl(ShiftAmount) + 1;
         }
@@ -7229,7 +7229,7 @@ static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
         //    where C != -1 and C != 0 and C != 1
         Lower = IntMin + 1;
         Upper = IntMax + 1;
-      } else if (C->countLeadingZeros() < Width - 1) {
+      } else if (C->countl_zero() < Width - 1) {
         // 'sdiv x, C' produces [INT_MIN / C, INT_MAX / C]
         //    where C != -1 and C != 0 and C != 1
         Lower = IntMin.sdiv(*C);

@@ -2802,7 +2802,7 @@ static bool handleIntIntBinOp(EvalInfo &Info, const Expr *E, const APSInt &LHS,
       // E1 x 2^E2 module 2^N.
       if (LHS.isNegative())
         Info.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << LHS;
-      else if (LHS.countLeadingZeros() < SA)
+      else if (LHS.countl_zero() < SA)
         Info.CCEDiag(E, diag::note_constexpr_lshift_discards);
     }
     Result = LHS << SA;
@@ -12021,7 +12021,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!Val)
       return Error(E);
 
-    return Success(Val.countLeadingZeros(), E);
+    return Success(Val.countl_zero(), E);
   }
 
   case Builtin::BI__builtin_constant_p: {
@@ -12067,7 +12067,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!Val)
       return Error(E);
 
-    return Success(Val.countTrailingZeros(), E);
+    return Success(Val.countr_zero(), E);
   }
 
   case Builtin::BI__builtin_eh_return_data_regno: {
@@ -12087,7 +12087,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
 
-    unsigned N = Val.countTrailingZeros();
+    unsigned N = Val.countr_zero();
     return Success(N == Val.getBitWidth() ? 0 : N + 1, E);
   }
 

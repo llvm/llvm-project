@@ -816,8 +816,7 @@ ConstantRange ConstantRange::truncate(uint32_t DstTySize) const {
   if (isUpperWrapped()) {
     // If Upper is greater than or equal to MaxValue(DstTy), it covers the whole
     // truncated range.
-    if (Upper.getActiveBits() > DstTySize ||
-        Upper.countTrailingOnes() == DstTySize)
+    if (Upper.getActiveBits() > DstTySize || Upper.countr_one() == DstTySize)
       return getFull(DstTySize);
 
     Union = ConstantRange(APInt::getMaxValue(DstTySize),Upper.trunc(DstTySize));
@@ -1455,7 +1454,7 @@ ConstantRange::shl(const ConstantRange &Other) const {
     if (RHS->uge(BW))
       return getEmpty();
 
-    unsigned EqualLeadingBits = (Min ^ Max).countLeadingZeros();
+    unsigned EqualLeadingBits = (Min ^ Max).countl_zero();
     if (RHS->ule(EqualLeadingBits))
       return getNonEmpty(Min << *RHS, (Max << *RHS) + 1);
 
@@ -1466,7 +1465,7 @@ ConstantRange::shl(const ConstantRange &Other) const {
   APInt OtherMax = Other.getUnsignedMax();
 
   // There's overflow!
-  if (OtherMax.ugt(Max.countLeadingZeros()))
+  if (OtherMax.ugt(Max.countl_zero()))
     return getFull();
 
   // FIXME: implement the other tricky cases
@@ -1695,12 +1694,12 @@ ConstantRange ConstantRange::ctlz(bool ZeroIsPoison) const {
 
       // Compute the resulting range by excluding zero from Lower.
       return ConstantRange(
-          APInt(getBitWidth(), (getUpper() - 1).countLeadingZeros()),
-          APInt(getBitWidth(), (getLower() + 1).countLeadingZeros() + 1));
+          APInt(getBitWidth(), (getUpper() - 1).countl_zero()),
+          APInt(getBitWidth(), (getLower() + 1).countl_zero() + 1));
     } else if ((getUpper() - 1).isZero()) {
       // Compute the resulting range by excluding zero from Upper.
-      return ConstantRange(
-          Zero, APInt(getBitWidth(), getLower().countLeadingZeros() + 1));
+      return ConstantRange(Zero,
+                           APInt(getBitWidth(), getLower().countl_zero() + 1));
     } else {
       return ConstantRange(Zero, APInt(getBitWidth(), getBitWidth()));
     }
@@ -1708,9 +1707,8 @@ ConstantRange ConstantRange::ctlz(bool ZeroIsPoison) const {
 
   // Zero is either safe or not in the range. The output range is composed by
   // the result of countLeadingZero of the two extremes.
-  return getNonEmpty(
-      APInt(getBitWidth(), getUnsignedMax().countLeadingZeros()),
-      APInt(getBitWidth(), getUnsignedMin().countLeadingZeros() + 1));
+  return getNonEmpty(APInt(getBitWidth(), getUnsignedMax().countl_zero()),
+                     APInt(getBitWidth(), getUnsignedMin().countl_zero() + 1));
 }
 
 ConstantRange::OverflowResult ConstantRange::unsignedAddMayOverflow(

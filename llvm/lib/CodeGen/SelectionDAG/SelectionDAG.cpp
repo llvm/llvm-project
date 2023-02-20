@@ -200,10 +200,10 @@ bool ISD::isConstantSplatVectorAllOnes(const SDNode *N, bool BuildVectorOnly) {
   SDValue NotZero = N->getOperand(i);
   unsigned EltSize = N->getValueType(0).getScalarSizeInBits();
   if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(NotZero)) {
-    if (CN->getAPIntValue().countTrailingOnes() < EltSize)
+    if (CN->getAPIntValue().countr_one() < EltSize)
       return false;
   } else if (ConstantFPSDNode *CFPN = dyn_cast<ConstantFPSDNode>(NotZero)) {
-    if (CFPN->getValueAPF().bitcastToAPInt().countTrailingOnes() < EltSize)
+    if (CFPN->getValueAPF().bitcastToAPInt().countr_one() < EltSize)
       return false;
   } else
     return false;
@@ -244,10 +244,10 @@ bool ISD::isConstantSplatVectorAllZeros(const SDNode *N, bool BuildVectorOnly) {
     // constants are.
     unsigned EltSize = N->getValueType(0).getScalarSizeInBits();
     if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Op)) {
-      if (CN->getAPIntValue().countTrailingZeros() < EltSize)
+      if (CN->getAPIntValue().countr_zero() < EltSize)
         return false;
     } else if (ConstantFPSDNode *CFPN = dyn_cast<ConstantFPSDNode>(Op)) {
-      if (CFPN->getValueAPF().bitcastToAPInt().countTrailingZeros() < EltSize)
+      if (CFPN->getValueAPF().bitcastToAPInt().countr_zero() < EltSize)
         return false;
     } else
       return false;
@@ -2833,7 +2833,7 @@ SDValue SelectionDAG::getSplatSourceVector(SDValue V, int &SplatIdx) {
           SplatIdx = 0;
           return getUNDEF(VT);
         }
-        SplatIdx = (UndefElts & DemandedElts).countTrailingOnes();
+        SplatIdx = (UndefElts & DemandedElts).countr_one();
       }
       return V;
     }
@@ -5268,11 +5268,11 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                          C->isOpaque());
     case ISD::CTLZ:
     case ISD::CTLZ_ZERO_UNDEF:
-      return getConstant(Val.countLeadingZeros(), DL, VT, C->isTargetOpcode(),
+      return getConstant(Val.countl_zero(), DL, VT, C->isTargetOpcode(),
                          C->isOpaque());
     case ISD::CTTZ:
     case ISD::CTTZ_ZERO_UNDEF:
-      return getConstant(Val.countTrailingZeros(), DL, VT, C->isTargetOpcode(),
+      return getConstant(Val.countr_zero(), DL, VT, C->isTargetOpcode(),
                          C->isOpaque());
     case ISD::FP16_TO_FP:
     case ISD::BF16_TO_FP: {
@@ -11025,7 +11025,7 @@ bool llvm::isBitwiseNot(SDValue V, bool AllowUndefs) {
   unsigned NumBits = V.getScalarValueSizeInBits();
   ConstantSDNode *C =
       isConstOrConstSplat(V, AllowUndefs, /*AllowTruncation*/ true);
-  return C && (C->getAPIntValue().countTrailingOnes() >= NumBits);
+  return C && (C->getAPIntValue().countr_one() >= NumBits);
 }
 
 ConstantSDNode *llvm::isConstOrConstSplat(SDValue N, bool AllowUndefs,
@@ -11829,7 +11829,7 @@ SDValue BuildVectorSDNode::getSplatValue(const APInt &DemandedElts,
   }
 
   if (!Splatted) {
-    unsigned FirstDemandedIdx = DemandedElts.countTrailingZeros();
+    unsigned FirstDemandedIdx = DemandedElts.countr_zero();
     assert(getOperand(FirstDemandedIdx).isUndef() &&
            "Can only have a splat without a constant for all undefs.");
     return getOperand(FirstDemandedIdx);
