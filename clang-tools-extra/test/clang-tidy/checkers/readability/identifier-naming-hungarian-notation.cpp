@@ -1,5 +1,4 @@
-// RUN: clang-tidy %s --config-file=%S/Inputs/identifier-naming/hungarian-notation2/.clang-tidy 2>&1 \
-// RUN:   | FileCheck -check-prefixes=CHECK-MESSAGES %s
+// RUN: %check_clang_tidy %s readability-identifier-naming %t -- --config-file=%S/Inputs/identifier-naming/hungarian-notation1/.clang-tidy
 
 // clang-format off
 typedef signed char         int8_t;     // NOLINT
