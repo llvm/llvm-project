@@ -298,13 +298,6 @@ FunctionPass *createMemCpyOptPass();
 
 //===----------------------------------------------------------------------===//
 //
-// LoopDeletion - This pass performs DCE of non-infinite loops that it
-// can prove are dead.
-//
-Pass *createLoopDeletionPass();
-
-//===----------------------------------------------------------------------===//
-//
 // ConstantHoisting - This pass prepares a function for expensive constants.
 //
 FunctionPass *createConstantHoistingPass();
