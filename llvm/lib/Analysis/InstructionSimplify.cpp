@@ -4892,8 +4892,11 @@ static Value *simplifyInsertValueInst(Value *Agg, Value *Val,
   if (ExtractValueInst *EV = dyn_cast<ExtractValueInst>(Val))
     if (EV->getAggregateOperand()->getType() == Agg->getType() &&
         EV->getIndices() == Idxs) {
-      // insertvalue undef, (extractvalue y, n), n -> y
-      if (Q.isUndefValue(Agg))
+      // insertvalue poison, (extractvalue y, n), n -> y
+      // insertvalue undef, (extractvalue y, n), n -> y if y cannot be poison
+      if (isa<PoisonValue>(Agg) ||
+          (Q.isUndefValue(Agg) &&
+           isGuaranteedNotToBePoison(EV->getAggregateOperand())))
         return EV->getAggregateOperand();
 
       // insertvalue y, (extractvalue y, n), n -> y
