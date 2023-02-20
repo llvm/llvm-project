@@ -45,7 +45,7 @@ static bool startsWithInitStatement(const AnnotatedLine &Line) {
 /// invokes @selector(...)). So, we allow treat any identifier or
 /// keyword as a potential Objective-C selector component.
 static bool canBeObjCSelectorComponent(const FormatToken &Tok) {
-  return Tok.Tok.getIdentifierInfo() != nullptr;
+  return Tok.Tok.getIdentifierInfo();
 }
 
 /// With `Left` being '(', check if we're at either `[...](` or
@@ -1314,7 +1314,7 @@ private:
           Tok->Next->isNot(tok::l_paren)) {
         Tok->setType(TT_CSharpGenericTypeConstraint);
         parseCSharpGenericTypeConstraint();
-        if (Tok->getPreviousNonComment() == nullptr)
+        if (!Tok->getPreviousNonComment())
           Line.IsContinuation = true;
       }
       break;
@@ -2975,7 +2975,7 @@ void TokenAnnotator::setCommentLineLevels(
 
 static unsigned maxNestingDepth(const AnnotatedLine &Line) {
   unsigned Result = 0;
-  for (const auto *Tok = Line.First; Tok != nullptr; Tok = Tok->Next)
+  for (const auto *Tok = Line.First; Tok; Tok = Tok->Next)
     Result = std::max(Result, Tok->NestingLevel);
   return Result;
 }
@@ -3291,7 +3291,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
 
   calculateUnbreakableTailLengths(Line);
   unsigned IndentLevel = Line.Level;
-  for (Current = Line.First; Current != nullptr; Current = Current->Next) {
+  for (Current = Line.First; Current; Current = Current->Next) {
     if (Current->Role)
       Current->Role->precomputeFormattingInfos(Current);
     if (Current->MatchingParen &&
@@ -3331,10 +3331,10 @@ void TokenAnnotator::calculateArrayInitializerColumnList(
   auto *CurrentToken = Line.First;
   CurrentToken->ArrayInitializerLineStart = true;
   unsigned Depth = 0;
-  while (CurrentToken != nullptr && CurrentToken != Line.Last) {
+  while (CurrentToken && CurrentToken != Line.Last) {
     if (CurrentToken->is(tok::l_brace)) {
       CurrentToken->IsArrayInitializer = true;
-      if (CurrentToken->Next != nullptr)
+      if (CurrentToken->Next)
         CurrentToken->Next->MustBreakBefore = true;
       CurrentToken =
           calculateInitializerColumnList(Line, CurrentToken->Next, Depth + 1);
@@ -3346,14 +3346,14 @@ void TokenAnnotator::calculateArrayInitializerColumnList(
 
 FormatToken *TokenAnnotator::calculateInitializerColumnList(
     AnnotatedLine &Line, FormatToken *CurrentToken, unsigned Depth) const {
-  while (CurrentToken != nullptr && CurrentToken != Line.Last) {
+  while (CurrentToken && CurrentToken != Line.Last) {
     if (CurrentToken->is(tok::l_brace))
       ++Depth;
     else if (CurrentToken->is(tok::r_brace))
       --Depth;
     if (Depth == 2 && CurrentToken->isOneOf(tok::l_brace, tok::comma)) {
       CurrentToken = CurrentToken->Next;
-      if (CurrentToken == nullptr)
+      if (!CurrentToken)
         break;
       CurrentToken->StartsColumn = true;
       CurrentToken = CurrentToken->Previous;
