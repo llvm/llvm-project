@@ -1623,8 +1623,7 @@ define signext i64 @rotl_64_mask_shared(i64 signext %a, i64 signext %b, i64 sign
 ;
 ; RV32XTHEADBB-LABEL: rotl_64_mask_shared:
 ; RV32XTHEADBB:       # %bb.0:
-; RV32XTHEADBB-NEXT:    slli a5, a4, 26
-; RV32XTHEADBB-NEXT:    srli a5, a5, 31
+; RV32XTHEADBB-NEXT:    th.extu a5, a4, 5, 5
 ; RV32XTHEADBB-NEXT:    mv a7, a0
 ; RV32XTHEADBB-NEXT:    bnez a5, .LBB17_2
 ; RV32XTHEADBB-NEXT:  # %bb.1:
@@ -2098,8 +2097,7 @@ define i64 @rotl_64_mask_multiple(i64 %a, i64 %b, i64 %amt) nounwind {
 ;
 ; RV32XTHEADBB-LABEL: rotl_64_mask_multiple:
 ; RV32XTHEADBB:       # %bb.0:
-; RV32XTHEADBB-NEXT:    slli a5, a4, 26
-; RV32XTHEADBB-NEXT:    srli a5, a5, 31
+; RV32XTHEADBB-NEXT:    th.extu a5, a4, 5, 5
 ; RV32XTHEADBB-NEXT:    mv a6, a1
 ; RV32XTHEADBB-NEXT:    bnez a5, .LBB21_2
 ; RV32XTHEADBB-NEXT:  # %bb.1:

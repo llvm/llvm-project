@@ -11,6 +11,7 @@
 #define _LIBCPP___FORMAT_UNICODE_H
 
 #include <__assert>
+#include <__bit/countl.h>
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__format/extended_grapheme_cluster_table.h>
@@ -18,7 +19,6 @@
 #include <__iterator/readable_traits.h> // iter_value_t
 #include <__type_traits/make_unsigned.h>
 #include <__utility/unreachable.h>
-#include <bit>
 #include <string_view>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

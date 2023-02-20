@@ -315,13 +315,10 @@ bool JumpThreading::runOnFunction(Function &F) {
   auto DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto LVI = &getAnalysis<LazyValueInfoWrapperPass>().getLVI();
   auto AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  std::unique_ptr<BlockFrequencyInfo> BFI;
-  std::unique_ptr<BranchProbabilityInfo> BPI;
-  if (F.hasProfileData()) {
-    LoopInfo LI{*DT};
-    BPI.reset(new BranchProbabilityInfo(F, LI, TLI));
-    BFI.reset(new BlockFrequencyInfo(F, *BPI, LI));
-  }
+
+  LoopInfo LI{*DT};
+  auto BPI = std::make_unique<BranchProbabilityInfo>(F, LI, TLI);
+  auto BFI = std::make_unique<BlockFrequencyInfo>(F, *BPI, LI);
 
   JumpThreadingPass Impl;
   bool Changed = Impl.runImpl(F, nullptr, TLI, TTI, LVI, AA,

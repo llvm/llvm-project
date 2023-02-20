@@ -16,7 +16,7 @@ namespace clang::tidy::misc {
 
 namespace {
 
-AST_MATCHER_P(NamedDecl, usesHeaderFileExtension, utils::FileExtensionsSet,
+AST_MATCHER_P(NamedDecl, usesHeaderFileExtension, FileExtensionsSet,
               HeaderFileExtensions) {
   return utils::isExpansionLocInHeaderFile(
       Node.getBeginLoc(), Finder->getASTContext().getSourceManager(),
@@ -28,15 +28,20 @@ AST_MATCHER_P(NamedDecl, usesHeaderFileExtension, utils::FileExtensionsSet,
 DefinitionsInHeadersCheck::DefinitionsInHeadersCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      UseHeaderFileExtension(Options.get("UseHeaderFileExtension", true)),
-      RawStringHeaderFileExtensions(Options.getLocalOrGlobal(
-          "HeaderFileExtensions", utils::defaultHeaderFileExtensions())) {
-  if (!utils::parseFileExtensions(RawStringHeaderFileExtensions,
-                                  HeaderFileExtensions,
-                                  utils::defaultFileExtensionDelimiters())) {
-    this->configurationDiag("Invalid header file extension: '%0'")
-        << RawStringHeaderFileExtensions;
-  }
+      UseHeaderFileExtension(Options.get("UseHeaderFileExtension", true)) {
+  std::optional<StringRef> HeaderFileExtensionsOption =
+      Options.get("HeaderFileExtensions");
+  RawStringHeaderFileExtensions =
+      HeaderFileExtensionsOption.value_or(utils::defaultHeaderFileExtensions());
+  if (HeaderFileExtensionsOption) {
+    if (!utils::parseFileExtensions(RawStringHeaderFileExtensions,
+                                    HeaderFileExtensions,
+                                    utils::defaultFileExtensionDelimiters())) {
+      this->configurationDiag("Invalid header file extension: '%0'")
+          << RawStringHeaderFileExtensions;
+    }
+  } else
+    HeaderFileExtensions = Context->getHeaderFileExtensions();
 }
 
 void DefinitionsInHeadersCheck::storeOptions(

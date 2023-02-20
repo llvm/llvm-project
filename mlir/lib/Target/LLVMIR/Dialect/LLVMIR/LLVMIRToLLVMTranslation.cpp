@@ -107,30 +107,25 @@ private:
 static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
                                       Operation *op,
                                       LLVM::ModuleImport &moduleImport) {
-  // Return success for empty metadata nodes since there is nothing to import.
+  // Return failure for empty metadata nodes since there is nothing to import.
   if (!node->getNumOperands())
-    return op->emitWarning() << "expected non-empty profiling metadata node";
+    return failure();
 
   auto *name = dyn_cast<llvm::MDString>(node->getOperand(0));
   if (!name)
-    return op->emitWarning()
-           << "expected profiling metadata node to have a string identifier";
+    return failure();
 
   // Handle function entry count metadata.
   if (name->getString().equals("function_entry_count")) {
-    auto emitNodeWarning = [&]() {
-      return op->emitWarning()
-             << "expected function_entry_count to hold a single i64 value";
-    };
 
     // TODO support function entry count metadata with GUID fields.
     if (node->getNumOperands() != 2)
-      return emitNodeWarning();
+      return failure();
 
     llvm::ConstantInt *entryCount =
         llvm::mdconst::dyn_extract<llvm::ConstantInt>(node->getOperand(1));
     if (!entryCount)
-      return emitNodeWarning();
+      return failure();
     if (auto funcOp = dyn_cast<LLVMFuncOp>(op)) {
       funcOp.setFunctionEntryCount(entryCount->getZExtValue());
       return success();
@@ -140,8 +135,7 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
   }
 
   if (!name->getString().equals("branch_weights"))
-    return op->emitWarning()
-           << "unknown profiling metadata node " << name->getString();
+    return failure();
 
   // Handle branch weights metadata.
   SmallVector<int32_t> branchWeights;
@@ -150,7 +144,7 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
     llvm::ConstantInt *branchWeight =
         llvm::mdconst::dyn_extract<llvm::ConstantInt>(node->getOperand(i));
     if (!branchWeight)
-      return op->emitWarning() << "expected branch weights to be integers";
+      return failure();
     branchWeights.push_back(branchWeight->getZExtValue());
   }
 

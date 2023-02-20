@@ -206,6 +206,7 @@
 #include "llvm/Transforms/Scalar/NaryReassociate.h"
 #include "llvm/Transforms/Scalar/NewGVN.h"
 #include "llvm/Transforms/Scalar/PartiallyInlineLibCalls.h"
+#include "llvm/Transforms/Scalar/PlaceSafepoints.h"
 #include "llvm/Transforms/Scalar/Reassociate.h"
 #include "llvm/Transforms/Scalar/Reg2Mem.h"
 #include "llvm/Transforms/Scalar/RewriteStatepointsForGC.h"
@@ -772,6 +773,33 @@ Expected<SimplifyCFGOptions> parseSimplifyCFGOptions(StringRef Params) {
     } else {
       return make_error<StringError>(
           formatv("invalid SimplifyCFG pass parameter '{0}' ", ParamName).str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
+}
+
+Expected<InstCombineOptions> parseInstCombineOptions(StringRef Params) {
+  InstCombineOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    bool Enable = !ParamName.consume_front("no-");
+    if (ParamName == "use-loop-info") {
+      Result.setUseLoopInfo(Enable);
+    } else if (Enable && ParamName.consume_front("max-iterations=")) {
+      APInt MaxIterations;
+      if (ParamName.getAsInteger(0, MaxIterations))
+        return make_error<StringError>(
+            formatv("invalid argument to InstCombine pass max-iterations "
+                    "parameter: '{0}' ",
+                    ParamName).str(),
+            inconvertibleErrorCode());
+      Result.setMaxIterations((unsigned)MaxIterations.getZExtValue());
+    } else {
+      return make_error<StringError>(
+          formatv("invalid InstCombine pass parameter '{0}' ", ParamName).str(),
           inconvertibleErrorCode());
     }
   }

@@ -18,15 +18,13 @@
 #include <type_traits>
 #include <cassert>
 
+#include "assert_macros.h"
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
 
 using namespace fs;
 
-TEST_SUITE(is_directory_test_suite)
-
-TEST_CASE(signature_test)
+static void signature_test()
 {
     file_status s; ((void)s);
     const path p; ((void)p);
@@ -36,7 +34,7 @@ TEST_CASE(signature_test)
     ASSERT_NOT_NOEXCEPT(is_directory(p));
 }
 
-TEST_CASE(is_directory_status_test)
+static void is_directory_status_test()
 {
     struct TestCase {
         file_type type;
@@ -56,26 +54,26 @@ TEST_CASE(is_directory_status_test)
     };
     for (auto& TC : testCases) {
         file_status s(TC.type);
-        TEST_CHECK(is_directory(s) == TC.expect);
+        assert(is_directory(s) == TC.expect);
     }
 }
 
-TEST_CASE(test_exist_not_found)
+static void test_exist_not_found()
 {
     static_test_env static_env;
     const path p = static_env.DNE;
-    TEST_CHECK(is_directory(p) == false);
+    assert(is_directory(p) == false);
 }
 
-TEST_CASE(static_env_test)
+static void static_env_test()
 {
     static_test_env static_env;
-    TEST_CHECK(is_directory(static_env.Dir));
-    TEST_CHECK(is_directory(static_env.SymlinkToDir));
-    TEST_CHECK(!is_directory(static_env.File));
+    assert(is_directory(static_env.Dir));
+    assert(is_directory(static_env.SymlinkToDir));
+    assert(!is_directory(static_env.File));
 }
 
-TEST_CASE(test_is_directory_fails)
+static void test_is_directory_fails()
 {
     scoped_test_env env;
 #ifdef _WIN32
@@ -84,7 +82,7 @@ TEST_CASE(test_is_directory_fails)
     // instead.
     const path p = GetWindowsInaccessibleDir();
     if (p.empty())
-        TEST_UNSUPPORTED();
+        return;
 #else
     const path dir = env.create_dir("dir");
     const path p = env.create_dir("dir/dir2");
@@ -92,10 +90,18 @@ TEST_CASE(test_is_directory_fails)
 #endif
 
     std::error_code ec;
-    TEST_CHECK(is_directory(p, ec) == false);
-    TEST_CHECK(ec);
+    assert(is_directory(p, ec) == false);
+    assert(ec);
 
-    TEST_CHECK_THROW(filesystem_error, is_directory(p));
+    TEST_THROWS_TYPE(filesystem_error, is_directory(p));
 }
 
-TEST_SUITE_END()
+int main(int, char**) {
+    signature_test();
+    is_directory_status_test();
+    test_exist_not_found();
+    static_env_test();
+    test_is_directory_fails();
+
+    return 0;
+}

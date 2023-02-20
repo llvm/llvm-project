@@ -442,7 +442,7 @@ SuccessorOperands CondBranchOp::getSuccessorOperands(unsigned index) {
 
 Block *CondBranchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
   if (IntegerAttr condAttr = operands.front().dyn_cast_or_null<IntegerAttr>())
-    return condAttr.getValue().isOneValue() ? getTrueDest() : getFalseDest();
+    return condAttr.getValue().isOne() ? getTrueDest() : getFalseDest();
   return nullptr;
 }
 

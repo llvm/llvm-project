@@ -26,6 +26,9 @@ set(LLVM_USE_RELATIVE_PATHS_IN_FILES ON CACHE BOOL "")
 
 if(WIN32)
   set(LLVM_USE_CRT_RELEASE "MT" CACHE STRING "")
+else()
+  set(LLVM_TOOL_LLVM_DRIVER_BUILD ON CACHE BOOL "")
+  set(LLVM_DRIVER_TARGET llvm-driver)
 endif()
 
 set(CLANG_DEFAULT_CXX_STDLIB libc++ CACHE STRING "")
@@ -292,6 +295,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-cxxfilt
   llvm-debuginfod-find
   llvm-dlltool
+  ${LLVM_DRIVER_TARGET}
   llvm-dwarfdump
   llvm-dwp
   llvm-ifs

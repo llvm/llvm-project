@@ -636,7 +636,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "dump-collected-objects", cl::Optional, cl::Hidden,
       cl::desc("Show the collected coverage object files"));
 
-  cl::list<std::string> InputSourceFiles(cl::Positional,
+  cl::list<std::string> InputSourceFiles("sources", cl::Positional,
                                          cl::desc("<Source files>"));
 
   cl::opt<bool> DebugDumpCollectedPaths(

@@ -33,6 +33,7 @@
 #include "flang/Optimizer/Builder/Runtime/Transformational.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
+#include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Runtime/entry-names.h"
@@ -948,6 +949,16 @@ static mlir::FunctionType genF128F128F128FuncType(mlir::MLIRContext *context) {
   return mlir::FunctionType::get(context, {t, t}, {t});
 }
 
+static mlir::FunctionType genF32F32F32F32FuncType(mlir::MLIRContext *context) {
+  auto t = mlir::FloatType::getF32(context);
+  return mlir::FunctionType::get(context, {t, t, t}, {t});
+}
+
+static mlir::FunctionType genF64F64F64F64FuncType(mlir::MLIRContext *context) {
+  auto t = mlir::FloatType::getF64(context);
+  return mlir::FunctionType::get(context, {t, t, t}, {t});
+}
+
 template <int Bits>
 static mlir::FunctionType genIntF64FuncType(mlir::MLIRContext *context) {
   auto t = mlir::FloatType::getF64(context);
@@ -1329,6 +1340,21 @@ static constexpr MathOperation mathOperations[] = {
      genComplexMathOp<mlir::complex::TanhOp>},
 };
 
+static constexpr MathOperation ppcMathOperations[] = {
+    {"__ppc_fmadd", "llvm.fma.f32", genF32F32F32F32FuncType,
+     genMathOp<mlir::math::FmaOp>},
+    {"__ppc_fmadd", "llvm.fma.f64", genF64F64F64F64FuncType,
+     genMathOp<mlir::math::FmaOp>},
+    {"__ppc_fmsub", "llvm.ppc.fmsubs", genF32F32F32F32FuncType, genLibCall},
+    {"__ppc_fmsub", "llvm.ppc.fmsub", genF64F64F64F64FuncType, genLibCall},
+    {"__ppc_fnmadd", "llvm.ppc.fnmadds", genF32F32F32F32FuncType, genLibCall},
+    {"__ppc_fnmadd", "llvm.ppc.fnmadd", genF64F64F64F64FuncType, genLibCall},
+    {"__ppc_fnmsub", "llvm.ppc.fnmsub.f32", genF32F32F32F32FuncType,
+     genLibCall},
+    {"__ppc_fnmsub", "llvm.ppc.fnmsub.f64", genF64F64F64F64FuncType,
+     genLibCall},
+};
+
 // This helper class computes a "distance" between two function types.
 // The distance measures how many narrowing conversions of actual arguments
 // and result of "from" must be made in order to use "to" instead of "from".
@@ -1473,6 +1499,10 @@ using RtMap = Fortran::common::StaticMultimapView<MathOperation>;
 static constexpr RtMap mathOps(mathOperations);
 static_assert(mathOps.Verify() && "map must be sorted");
 
+// PPC
+static constexpr RtMap ppcMathOps(ppcMathOperations);
+static_assert(ppcMathOps.Verify() && "map must be sorted");
+
 /// Look for a MathOperation entry specifying how to lower a mathematical
 /// operation defined by \p name with its result' and operands' types
 /// specified in the form of a FunctionType \p funcType.
@@ -1490,6 +1520,12 @@ searchMathOperation(fir::FirOpBuilder &builder, llvm::StringRef name,
                     const MathOperation **bestNearMatch,
                     FunctionDistance &bestMatchDistance) {
   auto range = mathOps.equal_range(name);
+  auto mod = builder.getModule();
+
+  // Search ppcMathOps only if targetting PowerPC arch
+  if (fir::getTargetTriple(mod).isPPC() && range.first == range.second) {
+    range = ppcMathOps.equal_range(name);
+  }
   for (auto iter = range.first; iter != range.second && iter; ++iter) {
     const auto &impl = *iter;
     auto implType = impl.typeGenerator(builder.getContext());
@@ -1619,7 +1655,7 @@ mlir::Value toValue(const fir::ExtendedValue &val, fir::FirOpBuilder &builder,
 
 static bool isIntrinsicModuleProcedure(llvm::StringRef name) {
   return name.startswith("c_") || name.startswith("compiler_") ||
-         name.startswith("ieee_");
+         name.startswith("ieee_") || name.startswith("__ppc_");
 }
 
 /// Return the generic name of an intrinsic module procedure specific name.

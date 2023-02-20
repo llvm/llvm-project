@@ -2209,8 +2209,8 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
   case CallingConv::Fast:
     break;
   case CallingConv::GHC:
-    if (!MF.getSubtarget().getFeatureBits()[LoongArch::FeatureBasicF] ||
-        !MF.getSubtarget().getFeatureBits()[LoongArch::FeatureBasicD])
+    if (!MF.getSubtarget().hasFeature(LoongArch::FeatureBasicF) ||
+        !MF.getSubtarget().hasFeature(LoongArch::FeatureBasicD))
       report_fatal_error(
         "GHC calling convention requires the F and D extensions");
   }

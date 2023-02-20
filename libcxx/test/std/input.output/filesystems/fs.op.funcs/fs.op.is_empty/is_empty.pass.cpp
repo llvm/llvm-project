@@ -17,15 +17,13 @@
 #include <type_traits>
 #include <cassert>
 
+#include "assert_macros.h"
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
 
 using namespace fs;
 
-TEST_SUITE(is_empty_test_suite)
-
-TEST_CASE(signature_test)
+static void signature_test()
 {
     const path p; ((void)p);
     std::error_code ec; ((void)ec);
@@ -33,39 +31,39 @@ TEST_CASE(signature_test)
     ASSERT_NOT_NOEXCEPT(is_empty(p));
 }
 
-TEST_CASE(test_exist_not_found)
+static void test_exist_not_found()
 {
     static_test_env static_env;
     const path p = static_env.DNE;
     std::error_code ec;
-    TEST_CHECK(is_empty(p, ec) == false);
-    TEST_CHECK(ec);
-    TEST_CHECK_THROW(filesystem_error, is_empty(p));
+    assert(is_empty(p, ec) == false);
+    assert(ec);
+    TEST_THROWS_TYPE(filesystem_error, is_empty(p));
 }
 
-TEST_CASE(test_is_empty_directory)
+static void test_is_empty_directory()
 {
     static_test_env static_env;
-    TEST_CHECK(!is_empty(static_env.Dir));
-    TEST_CHECK(!is_empty(static_env.SymlinkToDir));
+    assert(!is_empty(static_env.Dir));
+    assert(!is_empty(static_env.SymlinkToDir));
 }
 
-TEST_CASE(test_is_empty_directory_dynamic)
+static void test_is_empty_directory_dynamic()
 {
     scoped_test_env env;
-    TEST_CHECK(is_empty(env.test_root));
+    assert(is_empty(env.test_root));
     env.create_file("foo", 42);
-    TEST_CHECK(!is_empty(env.test_root));
+    assert(!is_empty(env.test_root));
 }
 
-TEST_CASE(test_is_empty_file)
+static void test_is_empty_file()
 {
     static_test_env static_env;
-    TEST_CHECK(is_empty(static_env.EmptyFile));
-    TEST_CHECK(!is_empty(static_env.NonEmptyFile));
+    assert(is_empty(static_env.EmptyFile));
+    assert(!is_empty(static_env.NonEmptyFile));
 }
 
-TEST_CASE(test_is_empty_fails)
+static void test_is_empty_fails()
 {
     scoped_test_env env;
 #ifdef _WIN32
@@ -74,7 +72,7 @@ TEST_CASE(test_is_empty_fails)
     // instead.
     const path p = GetWindowsInaccessibleDir();
     if (p.empty())
-        TEST_UNSUPPORTED();
+        return;
 #else
     const path dir = env.create_dir("dir");
     const path p = env.create_dir("dir/dir2");
@@ -82,13 +80,13 @@ TEST_CASE(test_is_empty_fails)
 #endif
 
     std::error_code ec;
-    TEST_CHECK(is_empty(p, ec) == false);
-    TEST_CHECK(ec);
+    assert(is_empty(p, ec) == false);
+    assert(ec);
 
-    TEST_CHECK_THROW(filesystem_error, is_empty(p));
+    TEST_THROWS_TYPE(filesystem_error, is_empty(p));
 }
 
-TEST_CASE(test_directory_access_denied)
+static void test_directory_access_denied()
 {
     scoped_test_env env;
 #ifdef _WIN32
@@ -97,7 +95,7 @@ TEST_CASE(test_directory_access_denied)
     // instead.
     const path dir = GetWindowsInaccessibleDir();
     if (dir.empty())
-        TEST_UNSUPPORTED();
+        return;
 #else
     const path dir = env.create_dir("dir");
     const path file1 = env.create_file("dir/file", 42);
@@ -105,27 +103,40 @@ TEST_CASE(test_directory_access_denied)
 #endif
 
     std::error_code ec = GetTestEC();
-    TEST_CHECK(is_empty(dir, ec) == false);
-    TEST_CHECK(ec);
-    TEST_CHECK(ec != GetTestEC());
+    assert(is_empty(dir, ec) == false);
+    assert(ec);
+    assert(ec != GetTestEC());
 
-    TEST_CHECK_THROW(filesystem_error, is_empty(dir));
+    TEST_THROWS_TYPE(filesystem_error, is_empty(dir));
 }
 
 
 #ifndef _WIN32
-TEST_CASE(test_fifo_fails)
+static void test_fifo_fails()
 {
     scoped_test_env env;
     const path fifo = env.create_fifo("fifo");
 
     std::error_code ec = GetTestEC();
-    TEST_CHECK(is_empty(fifo, ec) == false);
-    TEST_CHECK(ec);
-    TEST_CHECK(ec != GetTestEC());
+    assert(is_empty(fifo, ec) == false);
+    assert(ec);
+    assert(ec != GetTestEC());
 
-    TEST_CHECK_THROW(filesystem_error, is_empty(fifo));
+    TEST_THROWS_TYPE(filesystem_error, is_empty(fifo));
 }
+#endif // _WIN32
+
+int main(int, char**) {
+    signature_test();
+    test_exist_not_found();
+    test_is_empty_directory();
+    test_is_empty_directory_dynamic();
+    test_is_empty_file();
+    test_is_empty_fails();
+    test_directory_access_denied();
+#ifndef _WIN32
+    test_fifo_fails();
 #endif
 
-TEST_SUITE_END()
+    return 0;
+}

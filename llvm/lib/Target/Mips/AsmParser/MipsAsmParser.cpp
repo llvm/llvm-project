@@ -482,7 +482,7 @@ class MipsAsmParser : public MCTargetAsmParser {
   }
 
   void setFeatureBits(uint64_t Feature, StringRef FeatureString) {
-    if (!(getSTI().getFeatureBits()[Feature])) {
+    if (!(getSTI().hasFeature(Feature))) {
       MCSubtargetInfo &STI = copySTI();
       setAvailableFeatures(
           ComputeAvailableFeatures(STI.ToggleFeature(FeatureString)));
@@ -491,7 +491,7 @@ class MipsAsmParser : public MCTargetAsmParser {
   }
 
   void clearFeatureBits(uint64_t Feature, StringRef FeatureString) {
-    if (getSTI().getFeatureBits()[Feature]) {
+    if (getSTI().hasFeature(Feature)) {
       MCSubtargetInfo &STI = copySTI();
       setAvailableFeatures(
           ComputeAvailableFeatures(STI.ToggleFeature(FeatureString)));
@@ -576,11 +576,11 @@ public:
   bool hasEightFccRegisters() const { return hasMips4() || hasMips32(); }
 
   bool isGP64bit() const {
-    return getSTI().getFeatureBits()[Mips::FeatureGP64Bit];
+    return getSTI().hasFeature(Mips::FeatureGP64Bit);
   }
 
   bool isFP64bit() const {
-    return getSTI().getFeatureBits()[Mips::FeatureFP64Bit];
+    return getSTI().hasFeature(Mips::FeatureFP64Bit);
   }
 
   bool isJalrRelocAvailable(const MCExpr *JalExpr) {
@@ -601,99 +601,99 @@ public:
   bool isABI_N64() const { return ABI.IsN64(); }
   bool isABI_O32() const { return ABI.IsO32(); }
   bool isABI_FPXX() const {
-    return getSTI().getFeatureBits()[Mips::FeatureFPXX];
+    return getSTI().hasFeature(Mips::FeatureFPXX);
   }
 
   bool useOddSPReg() const {
-    return !(getSTI().getFeatureBits()[Mips::FeatureNoOddSPReg]);
+    return !(getSTI().hasFeature(Mips::FeatureNoOddSPReg));
   }
 
   bool inMicroMipsMode() const {
-    return getSTI().getFeatureBits()[Mips::FeatureMicroMips];
+    return getSTI().hasFeature(Mips::FeatureMicroMips);
   }
 
   bool hasMips1() const {
-    return getSTI().getFeatureBits()[Mips::FeatureMips1];
+    return getSTI().hasFeature(Mips::FeatureMips1);
   }
 
   bool hasMips2() const {
-    return getSTI().getFeatureBits()[Mips::FeatureMips2];
+    return getSTI().hasFeature(Mips::FeatureMips2);
   }
 
   bool hasMips3() const {
-    return getSTI().getFeatureBits()[Mips::FeatureMips3];
+    return getSTI().hasFeature(Mips::FeatureMips3);
   }
 
   bool hasMips4() const {
-    return getSTI().getFeatureBits()[Mips::FeatureMips4];
+    return getSTI().hasFeature(Mips::FeatureMips4);
   }
 
   bool hasMips5() const {
-    return getSTI().getFeatureBits()[Mips::FeatureMips5];
+    return getSTI().hasFeature(Mips::FeatureMips5);
   }
 
   bool hasMips32() const {
-    return getSTI().getFeatureBits()[Mips::FeatureMips32];
+    return getSTI().hasFeature(Mips::FeatureMips32);
   }
 
   bool hasMips64() const {
-    return getSTI().getFeatureBits()[Mips::FeatureMips64];
+    return getSTI().hasFeature(Mips::FeatureMips64);
   }
 
   bool hasMips32r2() const {
-    return getSTI().getFeatureBits()[Mips::FeatureMips32r2];
+    return getSTI().hasFeature(Mips::FeatureMips32r2);
   }
 
   bool hasMips64r2() const {
-    return getSTI().getFeatureBits()[Mips::FeatureMips64r2];
+    return getSTI().hasFeature(Mips::FeatureMips64r2);
   }
 
   bool hasMips32r3() const {
-    return (getSTI().getFeatureBits()[Mips::FeatureMips32r3]);
+    return (getSTI().hasFeature(Mips::FeatureMips32r3));
   }
 
   bool hasMips64r3() const {
-    return (getSTI().getFeatureBits()[Mips::FeatureMips64r3]);
+    return (getSTI().hasFeature(Mips::FeatureMips64r3));
   }
 
   bool hasMips32r5() const {
-    return (getSTI().getFeatureBits()[Mips::FeatureMips32r5]);
+    return (getSTI().hasFeature(Mips::FeatureMips32r5));
   }
 
   bool hasMips64r5() const {
-    return (getSTI().getFeatureBits()[Mips::FeatureMips64r5]);
+    return (getSTI().hasFeature(Mips::FeatureMips64r5));
   }
 
   bool hasMips32r6() const {
-    return getSTI().getFeatureBits()[Mips::FeatureMips32r6];
+    return getSTI().hasFeature(Mips::FeatureMips32r6);
   }
 
   bool hasMips64r6() const {
-    return getSTI().getFeatureBits()[Mips::FeatureMips64r6];
+    return getSTI().hasFeature(Mips::FeatureMips64r6);
   }
 
   bool hasDSP() const {
-    return getSTI().getFeatureBits()[Mips::FeatureDSP];
+    return getSTI().hasFeature(Mips::FeatureDSP);
   }
 
   bool hasDSPR2() const {
-    return getSTI().getFeatureBits()[Mips::FeatureDSPR2];
+    return getSTI().hasFeature(Mips::FeatureDSPR2);
   }
 
   bool hasDSPR3() const {
-    return getSTI().getFeatureBits()[Mips::FeatureDSPR3];
+    return getSTI().hasFeature(Mips::FeatureDSPR3);
   }
 
   bool hasMSA() const {
-    return getSTI().getFeatureBits()[Mips::FeatureMSA];
+    return getSTI().hasFeature(Mips::FeatureMSA);
   }
 
   bool hasCnMips() const {
-    return (getSTI().getFeatureBits()[Mips::FeatureCnMips]);
+    return (getSTI().hasFeature(Mips::FeatureCnMips));
   }
 
   bool hasCnMipsP() const {
-    return (getSTI().getFeatureBits()[Mips::FeatureCnMipsP]);
+    return (getSTI().hasFeature(Mips::FeatureCnMipsP));
   }
 
   bool inPicMode() {
@@ -701,30 +701,30 @@ public:
   }
 
   bool inMips16Mode() const {
-    return getSTI().getFeatureBits()[Mips::FeatureMips16];
+    return getSTI().hasFeature(Mips::FeatureMips16);
   }
 
   bool useTraps() const {
-    return getSTI().getFeatureBits()[Mips::FeatureUseTCCInDIV];
+    return getSTI().hasFeature(Mips::FeatureUseTCCInDIV);
   }
 
   bool useSoftFloat() const {
-    return getSTI().getFeatureBits()[Mips::FeatureSoftFloat];
+    return getSTI().hasFeature(Mips::FeatureSoftFloat);
   }
   bool hasMT() const {
-    return getSTI().getFeatureBits()[Mips::FeatureMT];
+    return getSTI().hasFeature(Mips::FeatureMT);
   }
 
   bool hasCRC() const {
-    return getSTI().getFeatureBits()[Mips::FeatureCRC];
+    return getSTI().hasFeature(Mips::FeatureCRC);
   }
 
   bool hasVirt() const {
-    return getSTI().getFeatureBits()[Mips::FeatureVirt];
+    return getSTI().hasFeature(Mips::FeatureVirt);
   }
 
   bool hasGINV() const {
-    return getSTI().getFeatureBits()[Mips::FeatureGINV];
+    return getSTI().hasFeature(Mips::FeatureGINV);
   }
 
   /// Warn if RegIndex is the same as the current AT.
@@ -2924,7 +2924,7 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
         (Res.getSymA()->getSymbol().isELF() &&
          cast<MCSymbolELF>(Res.getSymA()->getSymbol()).getBinding() ==
              ELF::STB_LOCAL);
-    bool UseXGOT = STI->getFeatureBits()[Mips::FeatureXGOT] && !IsLocalSym;
+    bool UseXGOT = STI->hasFeature(Mips::FeatureXGOT) && !IsLocalSym;
 
     // The case where the result register is $25 is somewhat special. If the
     // symbol in the final relocation is external and not modified with a

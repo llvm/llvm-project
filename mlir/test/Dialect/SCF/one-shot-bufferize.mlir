@@ -658,7 +658,7 @@ func.func @scf_foreach_private_var(%t: tensor<10xf32>) -> f32 {
   // CHECK: %[[t_copy:.*]] = memref.alloc() {{.*}} : memref<10xf32>
   // CHECK: memref.copy %[[t]], %[[t_copy]]
 
-  // CHECK: scf.forall (%{{.*}}) in (%{{.*}}) {
+  // CHECK: scf.forall (%{{.*}}) in (2) {
 
   // Load from the copy and store into the shared output.
   // CHECK:   %[[subview:.*]] = memref.subview %[[t]]

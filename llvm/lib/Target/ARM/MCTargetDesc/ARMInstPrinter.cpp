@@ -750,7 +750,7 @@ void ARMInstPrinter::printMemBOption(const MCInst *MI, unsigned OpNum,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {
   unsigned val = MI->getOperand(OpNum).getImm();
-  O << ARM_MB::MemBOptToString(val, STI.getFeatureBits()[ARM::HasV8Ops]);
+  O << ARM_MB::MemBOptToString(val, STI.hasFeature(ARM::HasV8Ops));
 }
 
 void ARMInstPrinter::printInstSyncBOption(const MCInst *MI, unsigned OpNum,

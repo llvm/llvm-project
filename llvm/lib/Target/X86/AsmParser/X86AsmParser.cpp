@@ -1210,15 +1210,15 @@ private:
 
   bool is64BitMode() const {
     // FIXME: Can tablegen auto-generate this?
-    return getSTI().getFeatureBits()[X86::Is64Bit];
+    return getSTI().hasFeature(X86::Is64Bit);
   }
   bool is32BitMode() const {
     // FIXME: Can tablegen auto-generate this?
-    return getSTI().getFeatureBits()[X86::Is32Bit];
+    return getSTI().hasFeature(X86::Is32Bit);
   }
   bool is16BitMode() const {
     // FIXME: Can tablegen auto-generate this?
-    return getSTI().getFeatureBits()[X86::Is16Bit];
+    return getSTI().hasFeature(X86::Is16Bit);
   }
   void SwitchMode(unsigned mode) {
     MCSubtargetInfo &STI = copySTI();
@@ -4045,13 +4045,13 @@ void X86AsmParser::applyLVILoadHardeningMitigation(MCInst &Inst,
 void X86AsmParser::emitInstruction(MCInst &Inst, OperandVector &Operands,
                                    MCStreamer &Out) {
   if (LVIInlineAsmHardening &&
-      getSTI().getFeatureBits()[X86::FeatureLVIControlFlowIntegrity])
+      getSTI().hasFeature(X86::FeatureLVIControlFlowIntegrity))
     applyLVICFIMitigation(Inst, Out);
 
   Out.emitInstruction(Inst, getSTI());
 
   if (LVIInlineAsmHardening &&
-      getSTI().getFeatureBits()[X86::FeatureLVILoadHardening])
+      getSTI().hasFeature(X86::FeatureLVILoadHardening))
     applyLVILoadHardeningMitigation(Inst, Out);
 }
 

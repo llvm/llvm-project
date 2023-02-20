@@ -20,7 +20,7 @@
 
 int main(int, char**)
 {
-  // expected-error@atomic:*1 {{_Atomic cannot be applied to integer type '_BitInt(32)'}}
+  // expected-error@*:*1 {{_Atomic cannot be applied to integer type '_BitInt(32)'}}
   std::atomic<_BitInt(32)> x(42);
 
   return 0;

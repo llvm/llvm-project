@@ -288,7 +288,7 @@ BasicValueFactory::evalAPSInt(BinaryOperator::Opcode Op,
         if (V1.isSigned() && V1.isNegative())
           return nullptr;
 
-        if (V1.isSigned() && Amt > V1.countLeadingZeros())
+        if (V1.isSigned() && Amt > V1.countl_zero())
           return nullptr;
       }
 

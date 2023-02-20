@@ -5,6 +5,8 @@ Testing libc++
 .. contents::
   :local:
 
+.. _testing:
+
 Getting Started
 ===============
 
@@ -121,7 +123,7 @@ modifying files on your local machine will also modify what the Docker container
 This is useful for editing source files as you're testing your code in the Docker container.
 
 Writing Tests
--------------
+=============
 
 When writing tests for the libc++ test suite, you should follow a few guidelines.
 This will ensure that your tests can run on a wide variety of hardware and under
@@ -142,6 +144,189 @@ few requirements to the test suite. Here's some stuff you should know:
   For example, requiring Python to run a test is bad, since Python is not
   necessarily available on all devices we may want to run the tests on (even
   though supporting Python is probably trivial for the build-host).
+
+Structure of the testing related directories
+--------------------------------------------
+
+The tests of libc++ are stored in libc++'s testing related subdirectories:
+
+- ``libcxx/test/support`` This directory contains several helper headers with
+  generic parts for the tests. The most important header is ``test_macros.h``.
+  This file contains configuration information regarding the platform used.
+  This is similar to the ``__config`` file in libc++'s ``include`` directory.
+  Since libc++'s tests are used by other Standard libraries, tests should use
+  the ``TEST_FOO`` macros instead of the ``_LIBCPP_FOO`` macros, which are
+  specific to libc++.
+- ``libcxx/test/std`` This directory contains the tests that validate the library under
+  test conforms to the C++ Standard. The paths and the names of the test match
+  the section names in the C++ Standard. Note that the C++ Standard sometimes
+  reorganises its structure, therefore some tests are at a location based on
+  where they appeared historically in the standard. We try to strike a balance
+  between keeping things at up-to-date locations and unnecessary churn.
+- ``libcxx/test/libcxx`` This directory contains the tests that validate libc++
+  specific behavior and implementation details. For example, libc++ has
+  "wrapped iterators" that perform bounds checks. Since those are specific to
+  libc++ and not mandated by the Standard, tests for those are located under
+  ``libcxx/test/libcxx``. The structure of this directories follows the
+  structure of ``libcxx/test/std``.
+
+Structure of a test
+-------------------
+
+Some platforms where libc++ is tested have requirement on the signature of
+``main`` and require ``main`` to explicitly return a value. Therefore the
+typical ``main`` function should look like:
+
+.. code-block:: cpp
+
+  int main(int, char**) {
+    ...
+    return 0;
+  }
+
+
+The C++ Standard has ``constexpr`` requirements. The typical way to test that,
+is to create a helper ``test`` function that returns a ``bool`` and use the
+following ``main`` function:
+
+.. code-block:: cpp
+
+  constexpr bool test() {
+    ...
+    return true;
+  }
+
+  int main(int, char**) {
+    test()
+    static_assert(test());
+
+    return 0;
+  }
+
+Tests in libc++ mainly use ``assert`` and ``static_assert`` for testing. There
+are a few helper macros and function that can be used to make it easier to
+write common tests.
+
+libcxx/test/support/assert_macros.h
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The header contains several macros with user specified log messages. This is
+useful when a normal assertion failure lacks the information to easily
+understand why the test has failed. This usually happens when the test is in a
+helper function. For example the ``std::format`` tests use a helper function
+for its validation. When the test fails it will give the line in the helper
+function with the condition ``out == expected`` failed. Without knowing what
+the value of ``format string``, ``out`` and ``expected`` are it is not easy to
+understand why the test has failed. By logging these three values the point of
+failure can be found without resorting to a debugger.
+
+Several of these macros are documented to take an ``ARG``. This ``ARG``:
+
+ - if it is a ``const char*`` or ``std::string`` its contents are written to
+   the ``stderr``,
+ - otherwise it must be a callable that is invoked without any additional
+   arguments and is expected to produce useful output to e.g. ``stderr``.
+
+This makes it possible to write additional information when a test fails,
+either by supplying a hard-coded string or generate it at runtime.
+
+TEST_FAIL(ARG)
+^^^^^^^^^^^^^^
+
+This macro is an unconditional failure with a log message ``ARG``. The main
+use-case is to fail when code is reached that should be unreachable.
+
+
+TEST_REQUIRE(CONDITION, ARG)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This macro requires its ``CONDITION`` to evaluate to ``true``. If that fails it
+will fail the test with a log message ``ARG``.
+
+
+TEST_LIBCPP_REQUIRE((CONDITION, ARG)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If the library under test is libc++ it behaves like ``TEST_REQUIRE``, else it
+is a no-op. This makes it possible to test libc++ specific behaviour. For
+example testing whether the ``what()`` of an exception thrown matches libc++'s
+expectations. (Usually the Standard requires certain exceptions to be thrown,
+but not the contents of its ``what()`` message.)
+
+
+TEST_DOES_NOT_THROW(EXPR)
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Validates execution of ``EXPR`` does not throw an exception.
+
+TEST_THROWS_TYPE(TYPE, EXPR)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Validates the execution of ``EXPR`` throws an exception of the type ``TYPE``.
+
+
+TEST_VALIDATE_EXCEPTION(TYPE, PRED, EXPR)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Validates the execution of ``EXPR`` throws an exception of the type ``TYPE``
+which passes validation of ``PRED``. Using this macro makes it easier to write
+tests using exceptions. The code to write a test manually would be:
+
+
+.. code-block:: cpp
+
+  void test_excption([[maybe_unused]] int arg) {
+  #ifndef TEST_HAS_NO_EXCEPTIONS // do nothing when tests are disabled
+    try {
+      foo(arg);
+      assert(false); // validates foo really throws
+    } catch ([[maybe_unused]] const bar& e) {
+      LIBCPP_ASSERT(e.what() == what);
+      return;
+    }
+    assert(false); // validates bar was thrown
+  #endif
+    }
+
+The same test using a macro:
+
+.. code-block:: cpp
+
+  void test_excption([[maybe_unused]] int arg) {
+    TEST_VALIDATE_EXCEPTION(bar,
+                            [](const bar& e) {
+                              LIBCPP_ASSERT(e.what() == what);
+                            },
+                            foo(arg));
+    }
+
+
+libcxx/test/support/concat_macros.h
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This file contains a helper macro ``TEST_WRITE_CONCATENATED`` to lazily
+concatenate its arguments to a ``std::string`` and write it to ``stderr``. When
+the output can't be concatenated a default message will be written to
+``stderr``. This is useful for tests where the arguments use different
+character types like ``char`` and ``wchar_t``, the latter can't simply be
+written to ``stderrr``.
+
+This macro is in a different header as ``assert_macros.h`` since it pulls in
+additional headers.
+
+ .. note: This macro can only be used in test using C++20 or newer. The macro
+          was added at a time where most of lib++'s C++17 support was complete.
+          Since it is not expected to add this to existing tests no effort was
+          taken to make it work in earlier language versions.
+
+
+Additional reading
+------------------
+
+The function ``CxxStandardLibraryTest`` in the file
+``libcxx/utils/libcxx/test/format.py`` has documentation about writing test. It
+explains the difference between the test named  ``foo.pass.cpp`` and named
+``foo.verify.cpp`` are.
 
 Benchmarks
 ==========

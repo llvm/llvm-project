@@ -67,6 +67,7 @@
 #include "CodeGenInstruction.h"
 #include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
+#include "TableGenBackends.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"

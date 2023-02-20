@@ -251,7 +251,7 @@ multiclass FPUnaryOp_r_frm_m<bits<7> funct7, bits<5> rs2val,
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1,
     IsSignExtendingOpW = 1 in
 class FPCmp_rr<bits<7> funct7, bits<3> funct3, string opcodestr,
-               DAGOperand rty, bit Commutable>
+               DAGOperand rty, bit Commutable = 0>
     : RVInstR<funct7, funct3, OPC_OP_FP, (outs GPR:$rd),
               (ins rty:$rs1, rty:$rs2), opcodestr, "$rd, $rs1, $rs2"> {
   let isCommutable = Commutable;

@@ -114,4 +114,10 @@ if (android_ndk_path != "") {
     supported_android_toolchains +=
         [ "//llvm/utils/gn/build/toolchain:stage2_android_arm" ]
   }
+  if (llvm_build_X86) {
+    supported_android_toolchains += [
+      "//llvm/utils/gn/build/toolchain:stage2_android_x64",
+      "//llvm/utils/gn/build/toolchain:stage2_android_x86",
+    ]
+  }
 }

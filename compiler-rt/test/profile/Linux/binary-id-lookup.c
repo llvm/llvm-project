@@ -9,6 +9,9 @@
 // RUN: cp %t.main %t/.build-id/ab/cd1234.debug
 // RUN: llvm-profdata merge -o %t.profdata %t.profdir/default_*.profraw
 // RUN: llvm-cov show -instr-profile %t.profdata -debug-file-directory %t | FileCheck %s
+// RUN: llvm-cov show -instr-profile %t.profdata %t/libfoo.so -sources %t/foo.c -object %t.main | FileCheck %s --check-prefix=FOO-ONLY
+// RUN: llvm-cov show -instr-profile %t.profdata -debug-file-directory %t -sources %t/foo.c | FileCheck %s --check-prefix=FOO-ONLY
+// RUN: llvm-cov show -instr-profile %t.profdata -debug-file-directory %t %t/libfoo.so -sources %t/foo.c | FileCheck %s --check-prefix=FOO-ONLY
 // RUN: echo "bad" > %t/.build-id/ab/cd1234.debug
 // RUN: llvm-cov show -instr-profile %t.profdata -debug-file-directory %t %t.main | FileCheck %s
 // RUN: not llvm-cov show -instr-profile %t.profdata -debug-file-directory %t/empty 2>&1 | FileCheck %s --check-prefix=NODATA
@@ -17,6 +20,7 @@
 // CHECK: 2| 1|void bar(void) {}
 // CHECK: 3| 1|int main() {
 
+// FOO-ONLY: 1| 1|void foo(void) {}
 // NODATA: error: Failed to load coverage: '': No coverage data found
 
 //--- foo.c

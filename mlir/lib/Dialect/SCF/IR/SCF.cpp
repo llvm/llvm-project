@@ -1430,11 +1430,45 @@ struct DimOfForallOp : public OpRewritePattern<tensor::DimOp> {
     return success();
   }
 };
+
+class ForallOpControlOperandsFolder : public OpRewritePattern<ForallOp> {
+public:
+  using OpRewritePattern<ForallOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ForallOp op,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<OpFoldResult> mixedLowerBound(op.getMixedLowerBound());
+    SmallVector<OpFoldResult> mixedUpperBound(op.getMixedUpperBound());
+    SmallVector<OpFoldResult> mixedStep(op.getMixedStep());
+    if (failed(foldDynamicIndexList(rewriter, mixedLowerBound)) &&
+        failed(foldDynamicIndexList(rewriter, mixedUpperBound)) &&
+        failed(foldDynamicIndexList(rewriter, mixedStep)))
+      return failure();
+
+    SmallVector<Value> dynamicLowerBound, dynamicUpperBound, dynamicStep;
+    SmallVector<int64_t> staticLowerBound, staticUpperBound, staticStep;
+    dispatchIndexOpFoldResults(mixedLowerBound, dynamicLowerBound,
+                               staticLowerBound);
+    op.getDynamicLowerBoundMutable().assign(dynamicLowerBound);
+    op.setStaticLowerBound(staticLowerBound);
+
+    dispatchIndexOpFoldResults(mixedUpperBound, dynamicUpperBound,
+                               staticUpperBound);
+    op.getDynamicUpperBoundMutable().assign(dynamicUpperBound);
+    op.setStaticUpperBound(staticUpperBound);
+
+    dispatchIndexOpFoldResults(mixedStep, dynamicStep, staticStep);
+    op.getDynamicStepMutable().assign(dynamicStep);
+    op.setStaticStep(staticStep);
+    return success();
+  }
+};
+
 } // namespace
 
 void ForallOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.add<DimOfForallOp>(context);
+  results.add<DimOfForallOp, ForallOpControlOperandsFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1712,7 +1746,7 @@ void IfOp::getSuccessorRegions(std::optional<unsigned> index,
   // Otherwise, the successor is dependent on the condition.
   bool condition;
   if (auto condAttr = operands.front().dyn_cast_or_null<IntegerAttr>()) {
-    condition = condAttr.getValue().isOneValue();
+    condition = condAttr.getValue().isOne();
   } else {
     // If the condition isn't constant, both regions may be executed.
     regions.push_back(RegionSuccessor(&getThenRegion()));
