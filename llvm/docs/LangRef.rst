@@ -17737,7 +17737,7 @@ The argument is a vector whose type corresponds to the logical concatenation of
 the two result types.
 
 '``llvm.experimental.vector.interleave2``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
