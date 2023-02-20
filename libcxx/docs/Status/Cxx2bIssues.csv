@@ -272,7 +272,7 @@
 "`3850 <https://wg21.link/LWG3850>`__","``views::as_const`` on ``empty_view<T>`` should return ``empty_view<const T>``","February 2023","","","|ranges|"
 "`3851 <https://wg21.link/LWG3851>`__","``chunk_view::inner-iterator`` missing custom ``iter_move`` and ``iter_swap``","February 2023","","","|ranges|"
 "`3853 <https://wg21.link/LWG3853>`__","``basic_const_iterator<volatile int*>::operator->`` is ill-formed","February 2023","","",""
-"`3857 <https://wg21.link/LWG3857>`__","``basic_string_view`` should allow explicit conversion when only traits vary","February 2023","","",""
+"`3857 <https://wg21.link/LWG3857>`__","``basic_string_view`` should allow explicit conversion when only traits vary","February 2023","|Complete|","17.0",""
 "`3860 <https://wg21.link/LWG3860>`__","``range_common_reference_t`` is missing","February 2023","","","|ranges|"
 "`3866 <https://wg21.link/LWG3866>`__","Bad Mandates for ``expected::transform_error`` overloads","February 2023","","",""
 "`3867 <https://wg21.link/LWG3867>`__","Should ``std::basic_osyncstream``'s move assignment operator be ``noexcept``?","February 2023","","",""

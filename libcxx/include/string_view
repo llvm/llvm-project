@@ -323,10 +323,7 @@ public:
         !is_convertible_v<_Range, const _CharT*> &&
         (!requires(remove_cvref_t<_Range>& __d) {
           __d.operator _VSTD::basic_string_view<_CharT, _Traits>();
-        }) &&
-        (!requires {
-         typename remove_reference_t<_Range>::traits_type;
-        } || is_same_v<typename remove_reference_t<_Range>::traits_type, _Traits>)
+        })
       )
     constexpr explicit _LIBCPP_HIDE_FROM_ABI
     basic_string_view(_Range&& __r) : __data_(ranges::data(__r)), __size_(ranges::size(__r)) {}
