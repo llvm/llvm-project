@@ -15,10 +15,17 @@
 #define LLVM_UTILS_TABLEGEN_CODEGENSCHEDULE_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/SetTheory.h"
+#include <cassert>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace llvm {
 
