@@ -53,6 +53,8 @@ C/C++ Language Potentially Breaking Changes
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
+- Clang won't search for coroutine_traits in std::experimental namespace any more.
+  Clang will only search for std::coroutine_traits for coroutines then.
 
 ABI Changes in This Version
 ---------------------------
