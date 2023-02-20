@@ -10,37 +10,6 @@ include(HandleFlags)
 
 unset(add_flag_if_supported)
 
-# Add a list of flags to all of 'CMAKE_CXX_FLAGS', 'CMAKE_C_FLAGS',
-# 'LIBUNWIND_COMPILE_FLAGS' and 'LIBUNWIND_LINK_FLAGS'.
-macro(add_target_flags)
-  foreach(value ${ARGN})
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${value}")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${value}")
-    list(APPEND LIBUNWIND_COMPILE_FLAGS ${value})
-    list(APPEND LIBUNWIND_LINK_FLAGS ${value})
-  endforeach()
-endmacro()
-
-# If the specified 'condition' is true then add a list of flags to
-# all of 'CMAKE_CXX_FLAGS', 'CMAKE_C_FLAGS', 'LIBUNWIND_COMPILE_FLAGS'
-# and 'LIBUNWIND_LINK_FLAGS'.
-macro(add_target_flags_if condition)
-  if (${condition})
-    add_target_flags(${ARGN})
-  endif()
-endmacro()
-
-# Add all the flags supported by the compiler to all of
-# 'CMAKE_CXX_FLAGS', 'CMAKE_C_FLAGS', 'LIBUNWIND_COMPILE_FLAGS'
-# and 'LIBUNWIND_LINK_FLAGS'.
-macro(add_target_flags_if_supported)
-  foreach(flag ${ARGN})
-    mangle_name("${flag}" flagname)
-    check_cxx_compiler_flag("${flag}" "CXX_SUPPORTS_${flagname}_FLAG")
-    add_target_flags_if(CXX_SUPPORTS_${flagname}_FLAG ${flag})
-  endforeach()
-endmacro()
-
 # Add a specified list of flags to both 'LIBUNWIND_COMPILE_FLAGS' and
 # 'LIBUNWIND_LINK_FLAGS'.
 macro(add_flags)

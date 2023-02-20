@@ -246,11 +246,11 @@ include(HandleLibcxxabiFlags)
 
 # Configure target flags
 if(ZOS)
-  add_target_flags_if_supported("-fzos-le-char-mode=ebcdic")
+  add_flags_if_supported("-fzos-le-char-mode=ebcdic")
 endif()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
-  add_target_flags_if_supported("-mdefault-visibility-export-mapping=explicit")
+  add_flags_if_supported("-mdefault-visibility-export-mapping=explicit")
   set(CMAKE_AIX_EXPORT_ALL_SYMBOLS OFF)
 endif()
 add_compile_flags("${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
