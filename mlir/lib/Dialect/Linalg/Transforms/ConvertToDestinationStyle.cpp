@@ -19,8 +19,10 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 
 using namespace mlir;
@@ -49,94 +51,6 @@ static Value createInserts(RewriterBase &rewriter, Location loc, int dim,
   }
   return destination;
 }
-
-namespace {
-
-/// Lower tensor.from_elements to a sequence of chained tensor.insert.
-struct FromElementsOpConverter : public OpRewritePattern<FromElementsOp> {
-  using OpRewritePattern<FromElementsOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(FromElementsOp elementsOp,
-                                PatternRewriter &rewriter) const override {
-    Location loc = elementsOp.getLoc();
-    RankedTensorType tensorType = elementsOp.getType().cast<RankedTensorType>();
-    auto shape = tensorType.getShape();
-
-    // Create tensor.empty.
-    auto emptyOp = rewriter.create<EmptyOp>(loc, tensorType, ValueRange());
-
-    // Case: tensor<elem_type>.
-    if (shape.empty()) {
-      rewriter.replaceOpWithNewOp<tensor::InsertOp>(
-          elementsOp, elementsOp.getElements().front(), emptyOp.getResult(),
-          ValueRange());
-      return success();
-    }
-
-    // Create constants for the range of possible indices [0, max{shape_i}).
-    auto maxDim = *std::max_element(shape.begin(), shape.end());
-    SmallVector<Value, 2> constants;
-    constants.reserve(maxDim);
-    for (int i = 0; i < maxDim; ++i)
-      constants.push_back(rewriter.create<arith::ConstantIndexOp>(loc, i));
-
-    // Traverse all elements and create tensor.insert ops.
-    auto elementIt = elementsOp.getElements().begin();
-    SmallVector<Value, 2> indices(tensorType.getRank(), constants[0]);
-    Value result = createInserts(rewriter, loc, /*dim=*/0, emptyOp.getResult(),
-                                 shape, constants, elementIt, indices);
-
-    // Replace tensor.from_elements.
-    rewriter.replaceOp(elementsOp, result);
-    return success();
-  }
-};
-
-/// Lower tensor.generate to linalg.generic.
-struct GenerateOpConverter : public OpRewritePattern<GenerateOp> {
-  using OpRewritePattern<GenerateOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(GenerateOp generateOp,
-                                PatternRewriter &rewriter) const override {
-    // Only ops with exactly one block are supported.
-    if (!generateOp.getBody().hasOneBlock())
-      return failure();
-
-    Location loc = generateOp.getLoc();
-    RankedTensorType tensorType = generateOp.getType().cast<RankedTensorType>();
-
-    // Create tensor.empty.
-    auto emptyOp = rewriter.create<EmptyOp>(loc, tensorType,
-                                            generateOp.getDynamicExtents());
-
-    // Create linalg.generic.
-    SmallVector<utils::IteratorType> iteratorTypes(
-        tensorType.getRank(), utils::IteratorType::parallel);
-    SmallVector<AffineMap> indexingMaps(
-        1, rewriter.getMultiDimIdentityMap(tensorType.getRank()));
-    auto genericOp = rewriter.create<linalg::GenericOp>(
-        loc, tensorType, /*inputs=*/ValueRange(),
-        /*outputs=*/ValueRange{emptyOp.getResult()}, /*indexingMaps=*/
-        indexingMaps, iteratorTypes);
-    Block *body = rewriter.createBlock(&genericOp->getRegion(0), {},
-                                       tensorType.getElementType(), loc);
-    rewriter.setInsertionPointToStart(body);
-    SmallVector<Value> bbArgReplacements;
-    for (int64_t i = 0; i < tensorType.getRank(); ++i)
-      bbArgReplacements.push_back(rewriter.create<linalg::IndexOp>(loc, i));
-    rewriter.mergeBlocks(&generateOp.getBody().front(), body,
-                         bbArgReplacements);
-
-    // Update terminator.
-    auto yieldOp = cast<tensor::YieldOp>(body->getTerminator());
-    rewriter.replaceOpWithNewOp<linalg::YieldOp>(yieldOp, yieldOp.getValue());
-
-    // Replace tensor.generate.
-    rewriter.replaceOp(generateOp, genericOp->getResult(0));
-    return success();
-  }
-};
-} // namespace
 
 static Operation *movePaddingToFillOrGenericOp(RewriterBase &rewriter,
                                                Location loc, PadOp padOp,
@@ -287,49 +201,133 @@ Value linalg::bufferizeToAllocation(RewriterBase &rewriter, PadOp padOp,
   return toTensorOp;
 }
 
-namespace {
-/// Lower tensor.pad to linalg.generic + tensor.insert_slice.
-struct PadOpConverter : public OpRewritePattern<PadOp> {
-  using OpRewritePattern<PadOp>::OpRewritePattern;
+/// Lower tensor.from_elements to a sequence of chained tensor.insert.
+FailureOr<Operation *> mlir::linalg::rewriteInDestinationPassingStyle(
+    RewriterBase &rewriter, tensor::FromElementsOp fromElementsOp) {
+  Location loc = fromElementsOp.getLoc();
+  RankedTensorType tensorType =
+      fromElementsOp.getType().cast<RankedTensorType>();
+  auto shape = tensorType.getShape();
 
-  LogicalResult matchAndRewrite(PadOp padOp,
-                                PatternRewriter &rewriter) const override {
-    // Only ops with exactly one block are supported.
-    if (!padOp.getBodyRegion().hasOneBlock())
-      return failure();
+  // Create tensor.empty.
+  auto emptyOp = rewriter.create<EmptyOp>(loc, tensorType, ValueRange());
 
-    // Create tensor.empty.
-    Location loc = padOp.getLoc();
-    RankedTensorType resultType = padOp.getResultType();
-    ReifiedRankedShapedTypeDims reifiedShape;
-    if (failed(cast<ReifyRankedShapedTypeOpInterface>(padOp.getOperation())
-                   .reifyResultShapes(rewriter, reifiedShape)))
-      return rewriter.notifyMatchFailure(
-          padOp, "failed to reify tensor.pad op result shape");
-    SmallVector<Value> dynamicSizes;
-    for (int64_t i = 0; i < resultType.getRank(); ++i)
-      if (resultType.isDynamicDim(i))
-        dynamicSizes.push_back(reifiedShape[0][i]);
-    auto emptyOp = rewriter.create<EmptyOp>(loc, resultType, dynamicSizes);
-
-    // Create linalg.fill or linalg.generic.
-    Operation *fillOp =
-        movePaddingToFillOrGenericOp(rewriter, loc, padOp, emptyOp.getResult());
-    rewriter.setInsertionPointAfter(fillOp);
-
-    // Create tensor::InsertSliceOp.
-    SmallVector<OpFoldResult> sliceSizes =
-        getMixedSizes(rewriter, loc, padOp.getSource());
-    SmallVector<OpFoldResult> sliceStrides(resultType.getRank(),
-                                           rewriter.getIndexAttr(1));
-    rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
-        padOp, padOp.getSource(), fillOp->getResult(0),
-        /*offsets=*/padOp.getMixedLowPad(), sliceSizes, sliceStrides);
-
-    return success();
+  // Case: tensor<elem_type>.
+  if (shape.empty()) {
+    Operation *res = rewriter.replaceOpWithNewOp<tensor::InsertOp>(
+        fromElementsOp, fromElementsOp.getElements().front(),
+        emptyOp.getResult(), ValueRange());
+    return res;
   }
-};
-} // namespace
+
+  // Create constants for the range of possible indices [0, max{shape_i}).
+  auto maxDim = *std::max_element(shape.begin(), shape.end());
+  SmallVector<Value, 2> constants;
+  constants.reserve(maxDim);
+  for (int i = 0; i < maxDim; ++i)
+    constants.push_back(rewriter.create<arith::ConstantIndexOp>(loc, i));
+
+  // Traverse all elements and create tensor.insert ops.
+  auto elementIt = fromElementsOp.getElements().begin();
+  SmallVector<Value, 2> indices(tensorType.getRank(), constants[0]);
+  Value result = createInserts(rewriter, loc, /*dim=*/0, emptyOp.getResult(),
+                               shape, constants, elementIt, indices);
+
+  // Replace tensor.from_elements.
+  rewriter.replaceOp(fromElementsOp, result);
+  return result.getDefiningOp();
+}
+
+/// Lower tensor.generate to linalg.generic.
+FailureOr<Operation *>
+mlir::linalg::rewriteInDestinationPassingStyle(RewriterBase &rewriter,
+                                               tensor::GenerateOp generateOp) {
+  // Only ops with exactly one block are supported.
+  if (!generateOp.getBody().hasOneBlock())
+    return failure();
+
+  Location loc = generateOp.getLoc();
+  RankedTensorType tensorType = generateOp.getType().cast<RankedTensorType>();
+
+  // Create tensor.empty.
+  auto emptyOp =
+      rewriter.create<EmptyOp>(loc, tensorType, generateOp.getDynamicExtents());
+
+  // Create linalg.generic.
+  SmallVector<utils::IteratorType> iteratorTypes(tensorType.getRank(),
+                                                 utils::IteratorType::parallel);
+  SmallVector<AffineMap> indexingMaps(
+      1, rewriter.getMultiDimIdentityMap(tensorType.getRank()));
+  auto genericOp = rewriter.create<linalg::GenericOp>(
+      loc, tensorType, /*inputs=*/ValueRange(),
+      /*outputs=*/ValueRange{emptyOp.getResult()}, /*indexingMaps=*/
+      indexingMaps, iteratorTypes);
+  Block *body = rewriter.createBlock(&genericOp->getRegion(0), {},
+                                     tensorType.getElementType(), loc);
+  rewriter.setInsertionPointToStart(body);
+  SmallVector<Value> bbArgReplacements;
+  for (int64_t i = 0; i < tensorType.getRank(); ++i)
+    bbArgReplacements.push_back(rewriter.create<linalg::IndexOp>(loc, i));
+  rewriter.mergeBlocks(&generateOp.getBody().front(), body, bbArgReplacements);
+
+  // Update terminator.
+  auto yieldOp = cast<tensor::YieldOp>(body->getTerminator());
+  rewriter.replaceOpWithNewOp<linalg::YieldOp>(yieldOp, yieldOp.getValue());
+
+  // Replace tensor.generate.
+  rewriter.replaceOp(generateOp, genericOp->getResult(0));
+  return genericOp.getOperation();
+}
+
+/// Lower tensor.pad to linalg.generic + tensor.insert_slice.
+FailureOr<Operation *>
+mlir::linalg::rewriteInDestinationPassingStyle(RewriterBase &rewriter,
+                                               tensor::PadOp padOp) {
+  // Only ops with exactly one block are supported.
+  if (!padOp.getBodyRegion().hasOneBlock())
+    return failure();
+
+  // Create tensor.empty.
+  Location loc = padOp.getLoc();
+  RankedTensorType resultType = padOp.getResultType();
+  ReifiedRankedShapedTypeDims reifiedShape;
+  if (failed(cast<ReifyRankedShapedTypeOpInterface>(padOp.getOperation())
+                 .reifyResultShapes(rewriter, reifiedShape)))
+    return rewriter.notifyMatchFailure(
+        padOp, "failed to reify tensor.pad op result shape");
+  SmallVector<Value> dynamicSizes;
+  for (int64_t i = 0; i < resultType.getRank(); ++i)
+    if (resultType.isDynamicDim(i))
+      dynamicSizes.push_back(reifiedShape[0][i]);
+
+  // If the `padOp` has a nofold attribute and all paddings are known to be 0,
+  // explicitly insert a `linalg.copy`.
+  if (padOp.getNofoldAttr() &&
+      llvm::all_of(padOp.getMixedLowPad(), isZeroIndex) &&
+      llvm::all_of(padOp.getMixedHighPad(), isZeroIndex)) {
+    using bufferization::AllocTensorOp;
+    Value allocated =
+        rewriter.create<AllocTensorOp>(loc, resultType, dynamicSizes);
+    auto copyOp = rewriter.replaceOpWithNewOp<linalg::CopyOp>(
+        padOp, padOp.getSource(), allocated);
+    return copyOp.getOperation();
+  }
+
+  Value empty = rewriter.create<EmptyOp>(loc, resultType, dynamicSizes);
+  // Create linalg.fill or linalg.generic.
+  Operation *fillOp = movePaddingToFillOrGenericOp(rewriter, loc, padOp, empty);
+  rewriter.setInsertionPointAfter(fillOp);
+
+  // Create tensor::InsertSliceOp.
+  SmallVector<OpFoldResult> sliceSizes =
+      getMixedSizes(rewriter, loc, padOp.getSource());
+  SmallVector<OpFoldResult> sliceStrides(resultType.getRank(),
+                                         rewriter.getIndexAttr(1));
+  auto insertSliceOp = rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
+      padOp, padOp.getSource(), fillOp->getResult(0),
+      /*offsets=*/padOp.getMixedLowPad(), sliceSizes, sliceStrides);
+  return insertSliceOp.getOperation();
+}
 
 Value linalg::bufferizeToAllocation(RewriterBase &rewriter, Value value,
                                     Attribute memorySpace) {
@@ -367,6 +365,45 @@ Value linalg::bufferizeToAllocation(RewriterBase &rewriter, Value value,
 
   return toTensorOp;
 }
+
+namespace {
+/// Lower tensor.from_elements to a sequence of chained tensor.insert.
+struct FromElementsOpConverter : public OpRewritePattern<FromElementsOp> {
+  using OpRewritePattern<FromElementsOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(FromElementsOp fromElementsOp,
+                                PatternRewriter &rewriter) const override {
+    if (failed(
+            linalg::rewriteInDestinationPassingStyle(rewriter, fromElementsOp)))
+      return failure();
+    return success();
+  }
+};
+
+/// Lower tensor.generate to linalg.generic.
+struct GenerateOpConverter : public OpRewritePattern<GenerateOp> {
+  using OpRewritePattern<GenerateOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(GenerateOp generateOp,
+                                PatternRewriter &rewriter) const override {
+    if (failed(linalg::rewriteInDestinationPassingStyle(rewriter, generateOp)))
+      return failure();
+    return success();
+  }
+};
+
+/// Lower tensor.pad to linalg.generic + tensor.insert_slice.
+struct PadOpConverter : public OpRewritePattern<PadOp> {
+  using OpRewritePattern<PadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(PadOp padOp,
+                                PatternRewriter &rewriter) const override {
+    if (failed(linalg::rewriteInDestinationPassingStyle(rewriter, padOp)))
+      return failure();
+    return success();
+  }
+};
+} // namespace
 
 void linalg::populateConvertToDestinationStylePatterns(
     RewritePatternSet &patterns) {
