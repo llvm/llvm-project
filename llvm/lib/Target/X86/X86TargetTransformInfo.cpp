@@ -4468,7 +4468,7 @@ X86TTIImpl::getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
         for (unsigned I = 0; I != NumLanesTotal; ++I) {
           APInt LaneEltMask = WidenedDemandedElts.extractBits(
               NumEltsPerLane, NumEltsPerLane * I);
-          if (LaneEltMask.isNullValue())
+          if (LaneEltMask.isZero())
             continue;
           // FIXME: we don't need to extract if all non-demanded elements
           //        are legalization-inserted padding.
@@ -4549,7 +4549,7 @@ X86TTIImpl::getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
         for (unsigned I = 0; I != NumLanesTotal; ++I) {
           APInt LaneEltMask = WidenedDemandedElts.extractBits(
               NumEltsPerLane, I * NumEltsPerLane);
-          if (LaneEltMask.isNullValue())
+          if (LaneEltMask.isZero())
             continue;
           Cost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, std::nullopt,
                                  CostKind, I * NumEltsPerLane, LaneTy);
