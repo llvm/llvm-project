@@ -4468,8 +4468,8 @@ bool X86DAGToDAGISel::shrinkAndImmediate(SDNode *And) {
 
   // If a negative constant would not allow a smaller encoding, there's no need
   // to continue. Only change the constant when we know it's a win.
-  unsigned MinWidth = NegMaskVal.getMinSignedBits();
-  if (MinWidth > 32 || (MinWidth > 8 && MaskVal.getMinSignedBits() <= 32))
+  unsigned MinWidth = NegMaskVal.getSignificantBits();
+  if (MinWidth > 32 || (MinWidth > 8 && MaskVal.getSignificantBits() <= 32))
     return false;
 
   // Extend masks if we truncated above.

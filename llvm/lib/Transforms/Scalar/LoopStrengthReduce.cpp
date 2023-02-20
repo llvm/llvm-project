@@ -799,7 +799,7 @@ static const SCEV *getExactSDiv(const SCEV *LHS, const SCEV *RHS,
 /// value, and mutate S to point to a new SCEV with that value excluded.
 static int64_t ExtractImmediate(const SCEV *&S, ScalarEvolution &SE) {
   if (const SCEVConstant *C = dyn_cast<SCEVConstant>(S)) {
-    if (C->getAPInt().getMinSignedBits() <= 64) {
+    if (C->getAPInt().getSignificantBits() <= 64) {
       S = SE.getConstant(C->getType(), 0);
       return C->getValue()->getSExtValue();
     }
@@ -1414,7 +1414,7 @@ void Cost::RateFormula(const Formula &F,
       C.ImmCost += 64; // Handle symbolic values conservatively.
                      // TODO: This should probably be the pointer size.
     else if (Offset != 0)
-      C.ImmCost += APInt(64, Offset, true).getMinSignedBits();
+      C.ImmCost += APInt(64, Offset, true).getSignificantBits();
 
     // Check with target if this offset with this instruction is
     // specifically not supported.
@@ -2498,7 +2498,7 @@ LSRInstance::OptimizeLoopTermCond() {
             if (C->isOne() || C->isMinusOne())
               goto decline_post_inc;
             // Avoid weird situations.
-            if (C->getValue().getMinSignedBits() >= 64 ||
+            if (C->getValue().getSignificantBits() >= 64 ||
                 C->getValue().isMinSignedValue())
               goto decline_post_inc;
             // Check for possible scaled-address reuse.
@@ -2740,13 +2740,13 @@ void LSRInstance::CollectInterestingTypesAndFactors() {
       if (const SCEVConstant *Factor =
             dyn_cast_or_null<SCEVConstant>(getExactSDiv(NewStride, OldStride,
                                                         SE, true))) {
-        if (Factor->getAPInt().getMinSignedBits() <= 64 && !Factor->isZero())
+        if (Factor->getAPInt().getSignificantBits() <= 64 && !Factor->isZero())
           Factors.insert(Factor->getAPInt().getSExtValue());
       } else if (const SCEVConstant *Factor =
                    dyn_cast_or_null<SCEVConstant>(getExactSDiv(OldStride,
                                                                NewStride,
                                                                SE, true))) {
-        if (Factor->getAPInt().getMinSignedBits() <= 64 && !Factor->isZero())
+        if (Factor->getAPInt().getSignificantBits() <= 64 && !Factor->isZero())
           Factors.insert(Factor->getAPInt().getSExtValue());
       }
     }
@@ -3175,7 +3175,7 @@ static bool canFoldIVIncExpr(const SCEV *IncExpr, Instruction *UserInst,
   if (!IncConst || !isAddressUse(TTI, UserInst, Operand))
     return false;
 
-  if (IncConst->getAPInt().getMinSignedBits() > 64)
+  if (IncConst->getAPInt().getSignificantBits() > 64)
     return false;
 
   MemAccessTy AccessTy = getAccessType(TTI, UserInst, Operand);
@@ -6063,7 +6063,7 @@ struct SCEVDbgValueBuilder {
   }
 
   bool pushConst(const SCEVConstant *C) {
-    if (C->getAPInt().getMinSignedBits() > 64)
+    if (C->getAPInt().getSignificantBits() > 64)
       return false;
     Expr.push_back(llvm::dwarf::DW_OP_consts);
     Expr.push_back(C->getAPInt().getSExtValue());
@@ -6152,7 +6152,7 @@ struct SCEVDbgValueBuilder {
   /// SCEV constant value is an identity function.
   bool isIdentityFunction(uint64_t Op, const SCEV *S) {
     if (const SCEVConstant *C = dyn_cast<SCEVConstant>(S)) {
-      if (C->getAPInt().getMinSignedBits() > 64)
+      if (C->getAPInt().getSignificantBits() > 64)
         return false;
       int64_t I = C->getAPInt().getSExtValue();
       switch (Op) {
@@ -6500,7 +6500,7 @@ static bool SalvageDVI(llvm::Loop *L, ScalarEvolution &SE,
     // less DWARF ops than an iteration count-based expression.
     if (std::optional<APInt> Offset =
             SE.computeConstantDifference(DVIRec.SCEVs[i], SCEVInductionVar)) {
-      if (Offset->getMinSignedBits() <= 64)
+      if (Offset->getSignificantBits() <= 64)
         SalvageExpr->createOffsetExpr(Offset->getSExtValue(), LSRInductionVar);
     } else if (!SalvageExpr->createIterCountExpr(DVIRec.SCEVs[i], IterCountExpr,
                                                  SE))

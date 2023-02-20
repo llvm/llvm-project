@@ -713,7 +713,7 @@ Constant *llvm::ConstantFoldLoadFromConst(Constant *C, Type *Ty,
     return Result;
 
   // Try hard to fold loads from bitcasted strange and non-type-safe things.
-  if (Offset.getMinSignedBits() <= 64)
+  if (Offset.getSignificantBits() <= 64)
     if (Constant *Result =
             FoldReinterpretLoadFromConst(C, Ty, Offset.getSExtValue(), DL))
       return Result;

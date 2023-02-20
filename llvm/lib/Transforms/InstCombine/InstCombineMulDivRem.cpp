@@ -1359,7 +1359,8 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
     // (sext X) sdiv C --> sext (X sdiv C)
     Value *Op0Src;
     if (match(Op0, m_OneUse(m_SExt(m_Value(Op0Src)))) &&
-        Op0Src->getType()->getScalarSizeInBits() >= Op1C->getMinSignedBits()) {
+        Op0Src->getType()->getScalarSizeInBits() >=
+            Op1C->getSignificantBits()) {
 
       // In the general case, we need to make sure that the dividend is not the
       // minimum signed value because dividing that by -1 is UB. But here, we
