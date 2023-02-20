@@ -270,6 +270,8 @@ enum NodeType : unsigned {
   VWSUB_W_VL,
   VWSUBU_W_VL,
 
+  // Narrowing logical shift right.
+  // Operands are (source, shift, passthru, mask, vl)
   VNSRL_VL,
 
   // Vector compare producing a mask. Fourth operand is input mask. Fifth
