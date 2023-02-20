@@ -830,7 +830,7 @@ void sys::CleanupOnSignal(uintptr_t Context) {
   //
   // 0xE0000000 is combined with the return code in the exception raised in
   // CrashRecoveryContext::HandleExit().
-  int RetCode = (int)EP->ExceptionRecord->ExceptionCode;
+  unsigned RetCode = EP->ExceptionRecord->ExceptionCode;
   if (RetCode == (0xE0000000 | EX_IOERR))
     return;
   LLVMUnhandledExceptionFilter(EP);
