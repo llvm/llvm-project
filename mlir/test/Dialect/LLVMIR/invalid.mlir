@@ -964,6 +964,28 @@ module {
 
 // -----
 
+module {
+  llvm.metadata @metadata {
+    llvm.access_group @group
+    // expected-error@below {{expected 'group' to reference a domain operation in the same region}}
+    llvm.alias_scope @scope { domain = @group }
+  }
+}
+
+// -----
+
+module {
+  llvm.metadata @metadata {
+    // expected-error@below {{expected 'domain' to reference a domain operation in the same region}}
+    llvm.alias_scope @scope { domain = @domain }
+  }
+  llvm.metadata @other_metadata {
+    llvm.alias_scope_domain @domain
+  }
+}
+
+// -----
+
 llvm.func @wmmaLoadOp_invalid_mem_space(%arg0: !llvm.ptr<i32, 5>, %arg1: i32) {
   // expected-error@+1 {{'nvvm.wmma.load' op expected source pointer in memory space 0, 1, 3}}
   %0 = nvvm.wmma.load %arg0, %arg1

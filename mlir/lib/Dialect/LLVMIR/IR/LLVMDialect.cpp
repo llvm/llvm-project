@@ -2735,6 +2735,21 @@ LogicalResult TBAATypeDescriptorOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// AliasScopeMetadataOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AliasScopeMetadataOp::verify() {
+  Operation *domainOp = SymbolTable::lookupNearestSymbolFrom(
+      this->getOperation(), getDomainAttr());
+  if (!isa_and_nonnull<AliasScopeDomainMetadataOp>(domainOp)) {
+    return this->emitOpError()
+           << "expected '" << getDomain()
+           << "' to reference a domain operation in the same region";
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // OpAsmDialectInterface
 //===----------------------------------------------------------------------===//
 

@@ -1095,6 +1095,7 @@ def LLVM_AliasScopeMetadataOp : LLVM_Op<"alias_scope", [
     https://llvm.org/docs/LangRef.html#noalias-and-alias-scope-metadata
   }];
   let assemblyFormat = "$sym_name attr-dict";
+  let hasVerifier = 1;
 }
 
 def LLVM_AccessGroupMetadataOp : LLVM_Op<"access_group", [

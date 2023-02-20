@@ -572,3 +572,39 @@ define void @cond_br(i1 %arg) !prof !0 {
 }
 
 !0 = !{!"branch_weights", i32 64}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: error: unsupported alias scope node: ![[NODE:[0-9]+]] = distinct !{![[NODE]]}
+define void @alias_scope(ptr %arg1) {
+  %1 = load i32, ptr %arg1, !alias.scope !0
+  ret void
+}
+
+!0 = !{!0}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: error: unsupported alias scope node: ![[NODE:[0-9]+]] = distinct !{![[NODE]], !"The domain"}
+define void @alias_scope(ptr %arg1) {
+  %1 = load i32, ptr %arg1, !alias.scope !1
+  ret void
+}
+
+!0 = distinct !{!0, !"The domain"}
+!1 = !{!1, !0}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: error: unsupported alias domain node: ![[NODE:[0-9]+]] = distinct !{![[NODE]], ![[NODE]]}
+define void @alias_scope_domain(ptr %arg1) {
+  %1 = load i32, ptr %arg1, !alias.scope !2
+  ret void
+}
+
+!0 = distinct !{!0, !0}
+!1 = !{!1, !0}
+!2 = !{!1}
