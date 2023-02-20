@@ -978,7 +978,7 @@ void TargetPassConfig::addISelPrepare() {
   if (requiresCodeGenSCCOrder())
     addPass(new DummyCGSCCPass);
 
-  // addPass(createCallBrPass()); // TODO(ndesaulniers): impl pass
+  addPass(createCallBrPass());
 
   // Add both the safe stack and the stack protection passes: each of them will
   // only protect functions that have corresponding attributes.
