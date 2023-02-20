@@ -627,6 +627,23 @@ define signext i32 @sexth_i32(i32 signext %a) nounwind {
   ret i32 %shr
 }
 
+define signext i32 @no_sexth_i32(i32 signext %a) nounwind {
+; RV64I-LABEL: no_sexth_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 49
+; RV64I-NEXT:    srai a0, a0, 48
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBB-LABEL: no_sexth_i32:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    slli a0, a0, 49
+; RV64XTHEADBB-NEXT:    srai a0, a0, 48
+; RV64XTHEADBB-NEXT:    ret
+  %shl = shl i32 %a, 17
+  %shr = ashr exact i32 %shl, 16
+  ret i32 %shr
+}
+
 define i64 @sexth_i64(i64 %a) nounwind {
 ; RV64I-LABEL: sexth_i64:
 ; RV64I:       # %bb.0:
@@ -639,6 +656,23 @@ define i64 @sexth_i64(i64 %a) nounwind {
 ; RV64XTHEADBB-NEXT:    th.ext a0, a0, 15, 0
 ; RV64XTHEADBB-NEXT:    ret
   %shl = shl i64 %a, 48
+  %shr = ashr exact i64 %shl, 48
+  ret i64 %shr
+}
+
+define i64 @no_sexth_i64(i64 %a) nounwind {
+; RV64I-LABEL: no_sexth_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 49
+; RV64I-NEXT:    srai a0, a0, 48
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBB-LABEL: no_sexth_i64:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    slli a0, a0, 49
+; RV64XTHEADBB-NEXT:    srai a0, a0, 48
+; RV64XTHEADBB-NEXT:    ret
+  %shl = shl i64 %a, 49
   %shr = ashr exact i64 %shl, 48
   ret i64 %shr
 }
@@ -670,6 +704,37 @@ define i64 @zexth_i64(i64 %a) nounwind {
 ; RV64XTHEADBB-NEXT:    th.extu a0, a0, 15, 0
 ; RV64XTHEADBB-NEXT:    ret
   %and = and i64 %a, 65535
+  ret i64 %and
+}
+
+define i64 @zext_bf_i64(i64 %a) nounwind {
+; RV64I-LABEL: zext_bf_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 47
+; RV64I-NEXT:    srli a0, a0, 48
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBB-LABEL: zext_bf_i64:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    th.extu a0, a0, 16, 1
+; RV64XTHEADBB-NEXT:    ret
+  %1 = lshr i64 %a, 1
+  %and = and i64 %1, 65535
+  ret i64 %and
+}
+
+define i64 @zext_i64_srliw(i64 %a) nounwind {
+; RV64I-LABEL: zext_i64_srliw:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srliw a0, a0, 16
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBB-LABEL: zext_i64_srliw:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    srliw a0, a0, 16
+; RV64XTHEADBB-NEXT:    ret
+  %1 = lshr i64 %a, 16
+  %and = and i64 %1, 65535
   ret i64 %and
 }
 

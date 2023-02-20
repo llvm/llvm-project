@@ -8665,7 +8665,8 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     return;
   }
 
-  if (!NewVD->hasLocalStorage() && T->isSizelessType()) {
+  if (!NewVD->hasLocalStorage() && T->isSizelessType() &&
+      !T->isWebAssemblyReferenceType()) {
     Diag(NewVD->getLocation(), diag::err_sizeless_nonlocal) << T;
     NewVD->setInvalidDecl();
     return;
@@ -19059,7 +19060,7 @@ static bool isRepresentableIntegerValue(ASTContext &Context,
       --BitWidth;
     return Value.getActiveBits() <= BitWidth;
   }
-  return Value.getMinSignedBits() <= BitWidth;
+  return Value.getSignificantBits() <= BitWidth;
 }
 
 // Given an integral type, return the next larger integral type
@@ -19594,8 +19595,8 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
       unsigned ActiveBits = InitVal.getActiveBits();
       NumPositiveBits = std::max({NumPositiveBits, ActiveBits, 1u});
     } else {
-      NumNegativeBits = std::max(NumNegativeBits,
-                                 (unsigned)InitVal.getMinSignedBits());
+      NumNegativeBits =
+          std::max(NumNegativeBits, (unsigned)InitVal.getSignificantBits());
     }
   }
 

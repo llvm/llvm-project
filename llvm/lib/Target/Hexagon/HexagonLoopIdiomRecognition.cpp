@@ -1280,7 +1280,7 @@ bool PolynomialMultiplyRecognize::keepsHighBitsZero(Value *V,
   // Assume that all inputs to the value have the high bits zero.
   // Check if the value itself preserves the zeros in the high bits.
   if (auto *C = dyn_cast<ConstantInt>(V))
-    return C->getValue().countLeadingZeros() >= IterCount;
+    return C->getValue().countl_zero() >= IterCount;
 
   if (auto *I = dyn_cast<Instruction>(V)) {
     switch (I->getOpcode()) {

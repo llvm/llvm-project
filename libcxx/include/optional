@@ -208,7 +208,7 @@ _LIBCPP_NORETURN
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS
 void __throw_bad_optional_access() {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         throw bad_optional_access();
 #else
         _VSTD::abort();

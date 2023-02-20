@@ -107,7 +107,7 @@ static std::pair<Type *, bool> computeRecurrenceType(Instruction *Exit,
     // must be positive (i.e., IsSigned = false), because if this were not the
     // case, the sign bit would have been demanded.
     auto Mask = DB->getDemandedBits(Exit);
-    MaxBitWidth = Mask.getBitWidth() - Mask.countLeadingZeros();
+    MaxBitWidth = Mask.getBitWidth() - Mask.countl_zero();
   }
 
   if (MaxBitWidth == DL.getTypeSizeInBits(Exit->getType()) && AC && DT) {

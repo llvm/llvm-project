@@ -53,7 +53,6 @@ let test_transforms () =
            ++ add_instruction_combination
            ++ add_jump_threading
            ++ add_licm
-           ++ add_loop_idiom
            ++ add_loop_rotation
            ++ add_loop_unroll
            ++ add_memcpy_opt

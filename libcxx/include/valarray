@@ -2818,20 +2818,20 @@ valarray<_Tp>::valarray(size_t __n)
     if (__n)
     {
         __begin_ = __end_ = allocator<value_type>().allocate(__n);
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             for (size_t __n_left = __n; __n_left; --__n_left, ++__end_)
                 ::new ((void*)__end_) value_type();
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
             __clear(__n);
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
     }
 }
 
@@ -2852,20 +2852,20 @@ valarray<_Tp>::valarray(const value_type* __p, size_t __n)
     if (__n)
     {
         __begin_ = __end_ = allocator<value_type>().allocate(__n);
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             for (size_t __n_left = __n; __n_left; ++__end_, ++__p, --__n_left)
                 ::new ((void*)__end_) value_type(*__p);
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
             __clear(__n);
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
     }
 }
 
@@ -2877,20 +2877,20 @@ valarray<_Tp>::valarray(const valarray& __v)
     if (__v.size())
     {
         __begin_ = __end_ = allocator<value_type>().allocate(__v.size());
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             for (value_type* __p = __v.__begin_; __p != __v.__end_; ++__end_, ++__p)
                 ::new ((void*)__end_) value_type(*__p);
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
             __clear(__v.size());
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
     }
 }
 
@@ -2914,21 +2914,21 @@ valarray<_Tp>::valarray(initializer_list<value_type> __il)
     if (__n)
     {
         __begin_ = __end_ = allocator<value_type>().allocate(__n);
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             size_t __n_left = __n;
             for (const value_type* __p = __il.begin(); __n_left; ++__end_, ++__p, --__n_left)
                 ::new ((void*)__end_) value_type(*__p);
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
             __clear(__n);
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
     }
 }
 
@@ -2943,21 +2943,21 @@ valarray<_Tp>::valarray(const slice_array<value_type>& __sa)
     if (__n)
     {
         __begin_ = __end_ = allocator<value_type>().allocate(__n);
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             size_t __n_left = __n;
             for (const value_type* __p = __sa.__vp_; __n_left; ++__end_, __p += __sa.__stride_, --__n_left)
                 ::new ((void*)__end_) value_type(*__p);
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
             __clear(__n);
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
     }
 }
 
@@ -2970,23 +2970,23 @@ valarray<_Tp>::valarray(const gslice_array<value_type>& __ga)
     if (__n)
     {
         __begin_ = __end_ = allocator<value_type>().allocate(__n);
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             typedef const size_t* _Ip;
             const value_type* __s = __ga.__vp_;
             for (_Ip __i = __ga.__1d_.__begin_, __e = __ga.__1d_.__end_;
                     __i != __e; ++__i, ++__end_)
                 ::new ((void*)__end_) value_type(__s[*__i]);
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
             __clear(__n);
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
     }
 }
 
@@ -2999,23 +2999,23 @@ valarray<_Tp>::valarray(const mask_array<value_type>& __ma)
     if (__n)
     {
         __begin_ = __end_ = allocator<value_type>().allocate(__n);
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             typedef const size_t* _Ip;
             const value_type* __s = __ma.__vp_;
             for (_Ip __i = __ma.__1d_.__begin_, __e = __ma.__1d_.__end_;
                     __i != __e; ++__i, ++__end_)
                 ::new ((void*)__end_) value_type(__s[*__i]);
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
             __clear(__n);
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
     }
 }
 
@@ -3028,23 +3028,23 @@ valarray<_Tp>::valarray(const indirect_array<value_type>& __ia)
     if (__n)
     {
         __begin_ = __end_ = allocator<value_type>().allocate(__n);
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             typedef const size_t* _Ip;
             const value_type* __s = __ia.__vp_;
             for (_Ip __i = __ia.__1d_.__begin_, __e = __ia.__1d_.__end_;
                     __i != __e; ++__i, ++__end_)
                 ::new ((void*)__end_) value_type(__s[*__i]);
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
             __clear(__n);
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
     }
 }
 
@@ -3753,20 +3753,20 @@ valarray<_Tp>::resize(size_t __n, value_type __x)
     if (__n)
     {
         __begin_ = __end_ = allocator<value_type>().allocate(__n);
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             for (size_t __n_left = __n; __n_left; --__n_left, ++__end_)
                 ::new ((void*)__end_) value_type(__x);
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
             __clear(__n);
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
     }
 }
 

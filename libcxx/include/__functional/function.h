@@ -68,7 +68,7 @@ _LIBCPP_DIAGNOSTIC_POP
 _LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
 void __throw_bad_function_call()
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw bad_function_call();
 #else
     _VSTD::abort();

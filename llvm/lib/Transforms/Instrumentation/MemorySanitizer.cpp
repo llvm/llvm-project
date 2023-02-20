@@ -2487,7 +2487,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         if (ConstantInt *Elt =
                 dyn_cast<ConstantInt>(ConstArg->getAggregateElement(Idx))) {
           const APInt &V = Elt->getValue();
-          APInt V2 = APInt(V.getBitWidth(), 1) << V.countTrailingZeros();
+          APInt V2 = APInt(V.getBitWidth(), 1) << V.countr_zero();
           Elements.push_back(ConstantInt::get(EltTy, V2));
         } else {
           Elements.push_back(ConstantInt::get(EltTy, 1));
@@ -2497,7 +2497,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     } else {
       if (ConstantInt *Elt = dyn_cast<ConstantInt>(ConstArg)) {
         const APInt &V = Elt->getValue();
-        APInt V2 = APInt(V.getBitWidth(), 1) << V.countTrailingZeros();
+        APInt V2 = APInt(V.getBitWidth(), 1) << V.countr_zero();
         ShadowMul = ConstantInt::get(Ty, V2);
       } else {
         ShadowMul = ConstantInt::get(Ty, 1);

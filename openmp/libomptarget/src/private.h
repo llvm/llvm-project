@@ -250,13 +250,9 @@ public:
     if (AsyncInfo == &LocalAsyncInfo)
       return;
 
-    auto DoneOrErr = AsyncInfo->isDone();
-    if (!DoneOrErr)
-      FATAL_MESSAGE0(1,
-                     "Error while querying the async queue for completion.\n");
     // If the are device operations still pending, return immediately without
     // deallocating the handle.
-    if (!*DoneOrErr)
+    if (!AsyncInfo->isDone())
       return;
 
     // Delete the handle and unset it from the OpenMP task data.

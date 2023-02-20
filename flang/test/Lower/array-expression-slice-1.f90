@@ -1,6 +1,6 @@
 ! RUN: bbc -o - --outline-intrinsics %s | FileCheck %s
 
-! CHECK-LABEL: func @_QQmain() {
+! CHECK-LABEL: func @_QQmain() attributes {fir.bindc_name = "p"} {
 ! CHECK-DAG:         %[[VAL_0:.*]] = arith.constant 10 : index
 ! CHECK-DAG:         %[[VAL_4:.*]] = arith.constant 2 : index
 ! CHECK-DAG:         %[[VAL_5:.*]] = arith.constant 1 : index

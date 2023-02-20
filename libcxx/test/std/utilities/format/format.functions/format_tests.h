@@ -2673,7 +2673,6 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   check_exception("The format string contains an invalid escape sequence", SV("{:}-}"), 42);
 
   check_exception("The format string contains an invalid escape sequence", SV("} "));
-
   check_exception("The arg-id of the format-spec starts with an invalid character", SV("{-"), 42);
   check_exception("Argument index out of bounds", SV("hello {}"));
   check_exception("Argument index out of bounds", SV("hello {0}"));

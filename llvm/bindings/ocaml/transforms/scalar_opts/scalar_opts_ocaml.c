@@ -92,12 +92,6 @@ value llvm_add_licm(LLVMPassManagerRef PM) {
 }
 
 /* [<Llvm.PassManager.any] Llvm.PassManager.t -> unit */
-value llvm_add_loop_idiom(LLVMPassManagerRef PM) {
-  LLVMAddLoopIdiomPass(PM);
-  return Val_unit;
-}
-
-/* [<Llvm.PassManager.any] Llvm.PassManager.t -> unit */
 value llvm_add_loop_rotate(LLVMPassManagerRef PM) {
   LLVMAddLoopRotatePass(PM);
   return Val_unit;

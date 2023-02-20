@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
+#include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/ScoreboardHazardRecognizer.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -1047,6 +1048,10 @@ void TargetInstrInfo::genAlternativeCodeSequence(
   assert(Prev && "Unknown pattern for machine combiner");
 
   reassociateOps(Root, *Prev, Pattern, InsInstrs, DelInstrs, InstIdxForVirtReg);
+}
+
+MachineTraceStrategy TargetInstrInfo::getMachineCombinerTraceStrategy() const {
+  return MachineTraceStrategy::TS_MinInstrCount;
 }
 
 bool TargetInstrInfo::isReallyTriviallyReMaterializableGeneric(

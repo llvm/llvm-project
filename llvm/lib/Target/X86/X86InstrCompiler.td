@@ -1680,12 +1680,12 @@ def : Pat<(and GR64:$src, 0xff),
 
 def BTRXForm : SDNodeXForm<imm, [{
   // Transformation function: Find the lowest 0.
-  return getI64Imm((uint8_t)N->getAPIntValue().countTrailingOnes(), SDLoc(N));
+  return getI64Imm((uint8_t)N->getAPIntValue().countr_one(), SDLoc(N));
 }]>;
 
 def BTCBTSXForm : SDNodeXForm<imm, [{
   // Transformation function: Find the lowest 1.
-  return getI64Imm((uint8_t)N->getAPIntValue().countTrailingZeros(), SDLoc(N));
+  return getI64Imm((uint8_t)N->getAPIntValue().countr_zero(), SDLoc(N));
 }]>;
 
 def BTRMask64 : ImmLeaf<i64, [{

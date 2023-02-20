@@ -1,5 +1,5 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_30 -mattr=+ptx40 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_30 -mattr=+ptx40 | %ptxas-verify %if !ptxas-11.0 %{-arch=sm_30%} %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_30 -mattr=+ptx40 | %ptxas-verify %}
 
 ; RUN: not --crash llc < %s -march=nvptx -mcpu=sm_20 2>&1 | FileCheck %s --check-prefix ERROR
 ; ERROR: LLVM ERROR: .attribute(.managed) requires PTX version >= 4.0 and sm_30

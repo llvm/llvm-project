@@ -400,7 +400,9 @@ bool LoadStoreOpt::doSingleStoreMerge(SmallVectorImpl<GStore *> &Stores) {
   auto NewStore =
       Builder.buildStore(WideReg, FirstStore->getPointerReg(), *WideMMO);
   (void) NewStore;
-  LLVM_DEBUG(dbgs() << "Created merged store: " << *NewStore);
+  LLVM_DEBUG(dbgs() << "Merged " << Stores.size()
+                    << " stores into merged store: " << *NewStore);
+  LLVM_DEBUG(for (auto *MI : Stores) dbgs() << "  " << *MI;);
   NumStoresMerged += Stores.size();
 
   MachineOptimizationRemarkEmitter MORE(*MF, nullptr);
@@ -445,19 +447,18 @@ bool LoadStoreOpt::processMergeCandidate(StoreMergeCandidate &C) {
     for (auto AliasInfo : reverse(C.PotentialAliases)) {
       MachineInstr *PotentialAliasOp = AliasInfo.first;
       unsigned PreCheckedIdx = AliasInfo.second;
-      if (static_cast<unsigned>(Idx) > PreCheckedIdx) {
-        // Need to check this alias.
-        if (GISelAddressing::instMayAlias(CheckStore, *PotentialAliasOp, *MRI,
-                                          AA)) {
-          LLVM_DEBUG(dbgs() << "Potential alias " << *PotentialAliasOp
-                            << " detected\n");
-          return true;
-        }
-      } else {
+      if (static_cast<unsigned>(Idx) < PreCheckedIdx) {
         // Once our store index is lower than the index associated with the
         // potential alias, we know that we've already checked for this alias
         // and all of the earlier potential aliases too.
         return false;
+      }
+      // Need to check this alias.
+      if (GISelAddressing::instMayAlias(CheckStore, *PotentialAliasOp, *MRI,
+                                        AA)) {
+        LLVM_DEBUG(dbgs() << "Potential alias " << *PotentialAliasOp
+                          << " detected\n");
+        return true;
       }
     }
     return false;

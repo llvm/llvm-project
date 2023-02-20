@@ -143,12 +143,12 @@ public:
   decltype(auto) operator++(int) {
     _LIBCPP_ASSERT(__count_ > 0, "Iterator already at or past end.");
     --__count_;
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try { return __current_++; }
     catch(...) { ++__count_; throw; }
 #else
     return __current_++;
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
   }
 
   _LIBCPP_HIDE_FROM_ABI

@@ -67,13 +67,39 @@ struct FEnv {
            (status & INEXACT ? FE_INEXACT : 0);
   }
 
-  static uint32_t getControlWord() { return __arm_rsr("fpcr"); }
+  static uint32_t getControlWord() {
+#ifdef __clang__
+    // GCC does not currently support __arm_rsr.
+    return __arm_rsr("fpcr");
+#else
+    return __builtin_aarch64_get_fpcr();
+#endif
+  }
 
-  static void writeControlWord(uint32_t fpcr) { __arm_wsr("fpcr", fpcr); }
+  static void writeControlWord(uint32_t fpcr) {
+#ifdef __clang__
+    // GCC does not currently support __arm_wsr.
+    __arm_wsr("fpcr", fpcr);
+#else
+    __builtin_aarch64_set_fpcr(fpcr);
+#endif
+  }
 
-  static uint32_t getStatusWord() { return __arm_rsr("fpsr"); }
+  static uint32_t getStatusWord() {
+#ifdef __clang__
+    return __arm_rsr("fpsr");
+#else
+    return __builtin_aarch64_get_fpsr();
+#endif
+  }
 
-  static void writeStatusWord(uint32_t fpsr) { __arm_wsr("fpsr", fpsr); }
+  static void writeStatusWord(uint32_t fpsr) {
+#ifdef __clang__
+    __arm_wsr("fpsr", fpsr);
+#else
+    __builtin_aarch64_set_fpsr(fpsr);
+#endif
+  }
 };
 
 LIBC_INLINE int enable_except(int excepts) {

@@ -1,6 +1,6 @@
 // REQUIRES: arm-registered-target
-// RUN: %clang_cc1 -no-opaque-pointers -triple armv7-apple-darwin9 -target-feature +neon -target-abi apcs-gnu -emit-llvm -w -o - %s | FileCheck -check-prefix=APCS-GNU %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple armv7-apple-darwin9 -target-feature +neon -target-abi aapcs -emit-llvm -w -o - %s | FileCheck -check-prefix=AAPCS %s
+// RUN: %clang_cc1 -triple armv7-apple-darwin9 -target-feature +neon -target-abi apcs-gnu -emit-llvm -w -o - %s | FileCheck -check-prefix=APCS-GNU %s
+// RUN: %clang_cc1 -triple armv7-apple-darwin9 -target-feature +neon -target-abi aapcs -emit-llvm -w -o - %s | FileCheck -check-prefix=AAPCS %s
 
 // APCS-GNU-LABEL: define{{.*}} signext i8 @f0()
 // AAPCS-LABEL: define{{.*}} arm_aapcscc signext i8 @f0()
@@ -29,13 +29,13 @@ struct s4 { struct s4_0 { int f0; } f0; };
 struct s4 f4(void) {}
 
 // APCS-GNU-LABEL: define{{.*}} void @f5(
-// APCS-GNU: struct.s5* noalias sret
+// APCS-GNU: ptr noalias sret
 // AAPCS-LABEL: define{{.*}} arm_aapcscc i32 @f5()
 struct s5 { struct { } f0; int f1; };
 struct s5 f5(void) {}
 
 // APCS-GNU-LABEL: define{{.*}} void @f6(
-// APCS-GNU: struct.s6* noalias sret
+// APCS-GNU: ptr noalias sret
 // AAPCS-LABEL: define{{.*}} arm_aapcscc i32 @f6()
 struct s6 { int f0[1]; };
 struct s6 f6(void) {}
@@ -46,7 +46,7 @@ struct s7 { struct { int : 0; } f0; };
 struct s7 f7(void) {}
 
 // APCS-GNU-LABEL: define{{.*}} void @f8(
-// APCS-GNU: struct.s8* noalias sret
+// APCS-GNU: ptr noalias sret
 // AAPCS-LABEL: define{{.*}} arm_aapcscc void @f8()
 struct s8 { struct { int : 0; } f0[1]; };
 struct s8 f8(void) {}
@@ -62,7 +62,7 @@ struct s10 { int f0; int : 0; int : 0; };
 struct s10 f10(void) {}
 
 // APCS-GNU-LABEL: define{{.*}} void @f11(
-// APCS-GNU: struct.s11* noalias sret
+// APCS-GNU: ptr noalias sret
 // AAPCS-LABEL: define{{.*}} arm_aapcscc i32 @f11()
 struct s11 { int : 0; int f0; };
 struct s11 f11(void) {}
@@ -73,7 +73,7 @@ union u12 { char f0; short f1; int f2; };
 union u12 f12(void) {}
 
 // APCS-GNU-LABEL: define{{.*}} void @f13(
-// APCS-GNU: struct.s13* noalias sret
+// APCS-GNU: ptr noalias sret
 
 // FIXME: This should return a float.
 // AAPCS-FIXME: darm_aapcscc efine float @f13()
@@ -81,7 +81,7 @@ struct s13 { float f0; };
 struct s13 f13(void) {}
 
 // APCS-GNU-LABEL: define{{.*}} void @f14(
-// APCS-GNU: union.u14* noalias sret
+// APCS-GNU: ptr noalias sret
 // AAPCS-LABEL: define{{.*}} arm_aapcscc i32 @f14()
 union u14 { float f0; };
 union u14 f14(void) {}
@@ -105,13 +105,13 @@ struct s18 { short f0; char f1 : 4; };
 struct s18 f18(void) {}
 
 // APCS-GNU-LABEL: define{{.*}} void @f19(
-// APCS-GNU: struct.s19* noalias sret
+// APCS-GNU: ptr noalias sret
 // AAPCS-LABEL: define{{.*}} arm_aapcscc i32 @f19()
 struct s19 { int f0; struct s8 f1; };
 struct s19 f19(void) {}
 
 // APCS-GNU-LABEL: define{{.*}} void @f20(
-// APCS-GNU: struct.s20* noalias sret
+// APCS-GNU: ptr noalias sret
 // AAPCS-LABEL: define{{.*}} arm_aapcscc i32 @f20()
 struct s20 { struct s8 f1; int f0; };
 struct s20 f20(void) {}
@@ -161,11 +161,11 @@ void f31(struct s31 s) { }
 // AAPCS: @f31([1 x i32] %s.coerce)
 // AAPCS: %s = alloca %struct.s31, align 1
 // AAPCS: [[TEMP:%.*]] = alloca [1 x i32], align 4
-// AAPCS: store [1 x i32] %s.coerce, [1 x i32]* [[TEMP]], align 4
+// AAPCS: store [1 x i32] %s.coerce, ptr [[TEMP]], align 4
 // APCS-GNU: @f31([1 x i32] %s.coerce)
 // APCS-GNU: %s = alloca %struct.s31, align 1
 // APCS-GNU: [[TEMP:%.*]] = alloca [1 x i32], align 4
-// APCS-GNU: store [1 x i32] %s.coerce, [1 x i32]* [[TEMP]], align 4
+// APCS-GNU: store [1 x i32] %s.coerce, ptr [[TEMP]], align 4
 
 // PR13562
 struct s32 { double x; };
@@ -176,16 +176,16 @@ void f32(struct s32 s) { }
 // PR13350
 struct s33 { char buf[32*32]; };
 void f33(struct s33 s) { }
-// APCS-GNU-LABEL: define{{.*}} void @f33(%struct.s33* noundef byval(%struct.s33) align 4 %s)
-// AAPCS-LABEL: define{{.*}} arm_aapcscc void @f33(%struct.s33* noundef byval(%struct.s33) align 4 %s)
+// APCS-GNU-LABEL: define{{.*}} void @f33(ptr noundef byval(%struct.s33) align 4 %s)
+// AAPCS-LABEL: define{{.*}} arm_aapcscc void @f33(ptr noundef byval(%struct.s33) align 4 %s)
 
 // PR14048
 struct s34 { char c; };
 void f34(struct s34 s);
 void g34(struct s34 *s) { f34(*s); }
-// AAPCS: @g34(%struct.s34* noundef %s)
+// AAPCS: @g34(ptr noundef %s)
 // AAPCS: %[[a:.*]] = alloca [1 x i32]
-// AAPCS: load [1 x i32], [1 x i32]* %[[a]]
+// AAPCS: load [1 x i32], ptr %[[a]]
 
 // rdar://12596507
 struct s35
@@ -204,20 +204,15 @@ float32x4_t f35(int i, s35_with_align s1, s35_with_align s2) {
                             *(float32x4_t *)&s2);
   return v;
 }
-// APCS-GNU-LABEL: define{{.*}} <4 x float> @f35(i32 noundef %i, %struct.s35* noundef byval(%struct.s35) align 4 %0, %struct.s35* noundef byval(%struct.s35) align 4 %1)
+// APCS-GNU-LABEL: define{{.*}} <4 x float> @f35(i32 noundef %i, ptr noundef byval(%struct.s35) align 4 %0, ptr noundef byval(%struct.s35) align 4 %1)
 // APCS-GNU: %[[a:.*]] = alloca %struct.s35, align 16
-// APCS-GNU: %[[b:.*]] = bitcast %struct.s35* %[[a]] to i8*
-// APCS-GNU: %[[c:.*]] = bitcast %struct.s35* %0 to i8*
-// APCS-GNU: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align {{[0-9]+}} %[[b]], i8* align {{[0-9]+}} %[[c]]
-// APCS-GNU: %[[d:.*]] = bitcast %struct.s35* %[[a]] to <4 x float>*
-// APCS-GNU: load <4 x float>, <4 x float>* %[[d]], align 16
+// APCS-GNU: call void @llvm.memcpy.p0.p0.i32(ptr align {{[0-9]+}} %[[a]], ptr align {{[0-9]+}} %0
+// APCS-GNU: load <4 x float>, ptr %[[a]], align 16
 
-// AAPCS-LABEL: define{{.*}} arm_aapcscc <4 x float> @f35(i32 noundef %i, %struct.s35* noundef byval(%struct.s35) align 4 %s1, %struct.s35* noundef byval(%struct.s35) align 4 %s2)
+// AAPCS-LABEL: define{{.*}} arm_aapcscc <4 x float> @f35(i32 noundef %i, ptr noundef byval(%struct.s35) align 4 %s1, ptr noundef byval(%struct.s35) align 4 %s2)
 // AAPCS: %[[a_addr:.*]] = alloca <4 x float>, align 16
 // AAPCS: %[[b_addr:.*]] = alloca <4 x float>, align 16
-// AAPCS: %[[p1:.*]] = bitcast %struct.s35* %s1 to <4 x float>*
-// AAPCS: %[[a:.*]] = load <4 x float>, <4 x float>* %[[p1]], align 4
-// AAPCS: %[[p2:.*]] = bitcast %struct.s35* %s2 to <4 x float>*
-// AAPCS: %[[b:.*]] = load <4 x float>, <4 x float>* %[[p2]], align 4
-// AAPCS: store <4 x float> %[[a]], <4 x float>* %[[a_addr]], align 16
-// AAPCS: store <4 x float> %[[b]], <4 x float>* %[[b_addr]], align 16
+// AAPCS: %[[a:.*]] = load <4 x float>, ptr %s1, align 4
+// AAPCS: %[[b:.*]] = load <4 x float>, ptr %s2, align 4
+// AAPCS: store <4 x float> %[[a]], ptr %[[a_addr]], align 16
+// AAPCS: store <4 x float> %[[b]], ptr %[[b_addr]], align 16

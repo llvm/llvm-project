@@ -145,6 +145,14 @@ def HasStdExtZhinxOrZhinxmin
                                    "'Zhinx' (Half Float in Integer) or "
                                    "'Zhinxmin' (Half Float in Integer Minimal)">;
 
+def FeatureStdExtZfa
+    : SubtargetFeature<"experimental-zfa", "HasStdExtZfa", "true",
+                       "'Zfa' (Additional Floating-Point)",
+                       [FeatureStdExtF]>;
+def HasStdExtZfa : Predicate<"Subtarget->hasStdExtZfa()">,
+                             AssemblerPredicate<(all_of FeatureStdExtZfa),
+                             "'Zfa' (Additional Floating-Point)">;
+
 def FeatureStdExtC
     : SubtargetFeature<"c", "HasStdExtC", "true",
                        "'C' (Compressed Instructions)">;
@@ -459,9 +467,8 @@ def HasStdExtZtso : Predicate<"Subtarget->hasStdExtZTso()">,
                               AssemblerPredicate<(all_of FeatureStdExtZtso),
                               "'Ztso' (Memory Model - Total Store Order)">;
 
-def FeatureStdExtZawrs
-    : SubtargetFeature<"experimental-zawrs", "HasStdExtZawrs", "true",
-                       "'Zawrs' (Wait on Reservation Set)">;
+def FeatureStdExtZawrs : SubtargetFeature<"zawrs", "HasStdExtZawrs", "true",
+                                          "'Zawrs' (Wait on Reservation Set)">;
 def HasStdExtZawrs : Predicate<"Subtarget->hasStdExtZawrs()">,
                                AssemblerPredicate<(all_of FeatureStdExtZawrs),
                                "'Zawrs' (Wait on Reservation Set)">;

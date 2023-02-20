@@ -11283,15 +11283,7 @@ def err_coroutine_invalid_func_context : Error<
   "|a consteval function}0">;
 def err_implied_coroutine_type_not_found : Error<
   "%0 type was not found; include <coroutine> before defining "
-  "a coroutine; include <experimental/coroutine> if your version "
-  "of libcxx is less than 14.0">;
-def warn_deprecated_coroutine_namespace : Warning<
-  "support for 'std::experimental::%0' will be removed in Clang 17; "
-  "use 'std::%0' instead">,
-  InGroup<DeprecatedExperimentalCoroutine>;
-def err_mixed_use_std_and_experimental_namespace_for_coroutine : Error<
-  "conflicting mixed use of std and std::experimental namespaces for "
-  "coroutine components">;
+  "a coroutine">;
 def err_implicit_coroutine_std_nothrow_type_not_found : Error<
   "std::nothrow was not found; include <new> before defining a coroutine which "
   "uses get_return_object_on_allocation_failure()">;
@@ -11800,4 +11792,10 @@ def err_loongarch_builtin_requires_la32 : Error<
 def err_builtin_pass_in_regs_non_class : Error<
   "argument %0 is not an unqualified class type">;
 
+
+// WebAssembly reference type and table diagnostics.
+def err_wasm_reference_pr : Error<
+  "%select{pointer|reference}0 to WebAssembly reference type is not allowed">;
+def err_wasm_ca_reference : Error<
+  "cannot %select{capture|take address of}0 WebAssembly reference">;
 } // end of sema component.

@@ -16033,7 +16033,7 @@ PPCTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
   SDValue N0 = N->getOperand(0);
 
   bool IsNegPow2 = Divisor.isNegatedPowerOf2();
-  unsigned Lg2 = (IsNegPow2 ? -Divisor : Divisor).countTrailingZeros();
+  unsigned Lg2 = (IsNegPow2 ? -Divisor : Divisor).countr_zero();
   SDValue ShiftAmt = DAG.getConstant(Lg2, DL, VT);
 
   SDValue Op = DAG.getNode(PPCISD::SRA_ADDZE, DL, VT, N0, ShiftAmt);

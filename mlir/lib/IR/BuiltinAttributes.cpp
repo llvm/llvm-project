@@ -530,7 +530,7 @@ static void writeBits(char *rawData, size_t bitPos, APInt value) {
 
   // If the bitwidth is 1 we just toggle the specific bit.
   if (bitWidth == 1)
-    return setBit(rawData, bitPos, value.isOneValue());
+    return setBit(rawData, bitPos, value.isOne());
 
   // Otherwise, the bit position is guaranteed to be byte aligned.
   assert((bitPos % CHAR_BIT) == 0 && "expected bitPos to be 8-bit aligned");

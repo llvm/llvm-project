@@ -37,7 +37,7 @@
   declare void @llvm.dbg.value(metadata, metadata, metadata)
   declare void @llvm.stackprotector(i8*, i8**)
 
-  attributes #0 = { "disable-tail-calls"="false" "frame-pointer"="all" }
+  attributes #0 = { "disable-tail-calls"="false" "frame-pointer"="all" "target-features"="+thumb-mode,+vfp2" }
 
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!10, !11, !12, !13, !14}

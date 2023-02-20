@@ -347,7 +347,7 @@ def extract_lines(patch_file):
     line = convert_string(line)
     match = re.search(r'^\+\+\+\ [^/]+/(.*)', line)
     if match:
-      filename = match.group(1).rstrip('\r\n')
+      filename = match.group(1).rstrip('\r\n\t')
     match = re.search(r'^@@ -[0-9,]+ \+(\d+)(,(\d+))?', line)
     if match:
       start_line = int(match.group(1))

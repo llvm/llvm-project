@@ -4698,7 +4698,7 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
           if (ConstantInt *CI =
                   dyn_cast<ConstantInt>(AddrInst->getOperand(i))) {
             const APInt &CVal = CI->getValue();
-            if (CVal.getMinSignedBits() <= 64) {
+            if (CVal.getSignificantBits() <= 64) {
               ConstantOffset += CVal.getSExtValue() * TypeSize;
               continue;
             }

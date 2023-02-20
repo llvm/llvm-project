@@ -3149,7 +3149,7 @@ static bool tryBitfieldInsertOpFromOrAndImm(SDNode *N, SelectionDAG *CurDAG) {
 
   // BFI/BFXIL dst, src, #lsb, #width.
   int LSB = llvm::countr_one(NotKnownZero);
-  int Width = BitWidth - APInt(BitWidth, NotKnownZero).countPopulation();
+  int Width = BitWidth - APInt(BitWidth, NotKnownZero).popcount();
 
   // BFI/BFXIL is an alias of BFM, so translate to BFM operands.
   unsigned ImmR = (BitWidth - LSB) % BitWidth;
@@ -3378,8 +3378,8 @@ static bool tryBitfieldInsertOpFromOr(SDNode *N, const APInt &UsefulBits,
   // Because of simplify-demanded-bits in DAGCombine, involved masks may not
   // have the expected shape. Try to undo that.
 
-  unsigned NumberOfIgnoredLowBits = UsefulBits.countTrailingZeros();
-  unsigned NumberOfIgnoredHighBits = UsefulBits.countLeadingZeros();
+  unsigned NumberOfIgnoredLowBits = UsefulBits.countr_zero();
+  unsigned NumberOfIgnoredHighBits = UsefulBits.countl_zero();
 
   // Given a OR operation, check if we have the following pattern
   // ubfm c, b, imm, imm2 (or something that does the same jobs, see
@@ -3505,7 +3505,7 @@ static bool tryBitfieldInsertOpFromOr(SDNode *N, const APInt &UsefulBits,
     SDValue Src = And1->getOperand(0);
     SDValue Dst = And0->getOperand(0);
     unsigned LSB = llvm::countr_zero(Mask1Imm);
-    int Width = BitWidth - APInt(BitWidth, Mask0Imm).countPopulation();
+    int Width = BitWidth - APInt(BitWidth, Mask0Imm).popcount();
 
     // The BFXIL inserts the low-order bits from a source register, so right
     // shift the needed bits into place.

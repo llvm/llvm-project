@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -S -emit-llvm %s -triple x86_64-unknown-linux-gnu -o - | FileCheck %s
+// RUN: %clang_cc1 -S -emit-llvm %s -triple x86_64-unknown-linux-gnu -o - | FileCheck %s
 
 class A {
 public:
@@ -74,10 +74,14 @@ void something_else_again() {
 // CHECK: call noundef zeroext i1 @_Z3barv() #[[ATTR0]]
 // CHECK: call void asm sideeffect "nop"{{.*}} #[[ATTR1:[0-9]+]]
 // CHECK: call noundef zeroext i1 @_Z3barv(){{$}}
-// CHECK: %[[AG:.*]] = load void (%class.A*)*, void (%class.A*)**
-// CHECK-NEXT: call void %[[AG]](%class.A* {{.*}}) #[[ATTR0]]
-// CHECK: %[[BG:.*]] = load void (%class.B*)*, void (%class.B*)**
-// CHECK-NEXT: call void %[[BG]](%class.B* noundef{{.*}}
+// CHECK: load ptr, ptr
+// CHECK: load ptr, ptr
+// CHECK: %[[AG:.*]] = load ptr, ptr
+// CHECK-NEXT: call void %[[AG]](ptr {{.*}}) #[[ATTR0]]
+// CHECK: load ptr, ptr
+// CHECK: load ptr, ptr
+// CHECK: %[[BG:.*]] = load ptr, ptr
+// CHECK-NEXT: call void %[[BG]](ptr noundef{{.*}}
 // CHECK: call void @_ZN1AC1Ev({{.*}}) #[[ATTR0]]
 // CHECK: call void @_ZN1A1fEv({{.*}}) #[[ATTR0]]
 // CHECK: call void @_ZN1A1gEv({{.*}}) #[[ATTR0]]
@@ -85,9 +89,11 @@ void something_else_again() {
 // CHECK: call void @_ZN1BC1Ev({{.*}}){{$}}
 // CHECK: call void @_ZN1B1gEv({{.*}}){{$}}
 // CHECK: call void @_ZN1BC1Ev({{.*}}){{$}}
-// CHECK: %[[AG:.*]] = load void (%class.A*)*, void (%class.A*)**
-// CHECK-NEXT: call void %[[AG]](%class.A* {{.*}}) #[[ATTR1]]
-// CHECK: call void  @_ZN1AD1Ev(%class.A* {{.*}}) #[[ATTR1]]
+// CHECK: load ptr, ptr
+// CHECK: load ptr, ptr
+// CHECK: %[[AG:.*]] = load ptr, ptr
+// CHECK-NEXT: call void %[[AG]](ptr {{.*}}) #[[ATTR1]]
+// CHECK: call void  @_ZN1AD1Ev(ptr {{.*}}) #[[ATTR1]]
 
 // CHECK-DAG: attributes #[[ATTR0]] = {{{.*}}nomerge{{.*}}}
 // CHECK-DAG: attributes #[[ATTR1]] = {{{.*}}nomerge{{.*}}}

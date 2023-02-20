@@ -797,7 +797,7 @@ llvm::ConstantFoldCTLZ(Register Src, const MachineRegisterInfo &MRI) {
     auto MaybeCst = getIConstantVRegVal(R, MRI);
     if (!MaybeCst)
       return std::nullopt;
-    return MaybeCst->countLeadingZeros();
+    return MaybeCst->countl_zero();
   };
   if (Ty.isVector()) {
     // Try to constant fold each element.

@@ -69,11 +69,9 @@ define i32 @invokeLandingpad() personality ptr @__gxx_personality_v0 {
   invoke void @foo(ptr %1) to label %4 unwind label %2
 
 ; CHECK: ^bb1:
-  ; CHECK: %{{[0-9]+}} = llvm.landingpad (catch %{{[0-9]+}} : !llvm.ptr) (catch %[[a1]] : !llvm.ptr) (filter %{{[0-9]+}} : !llvm.array<1 x i8>) : !llvm.struct<(ptr, i32)>
+  ; CHECK: %{{[0-9]+}} = llvm.landingpad (catch %{{[0-9]+}} : !llvm.ptr) (catch %[[a1]] : !llvm.ptr) (filter %{{[0-9]+}} : !llvm.array<1 x i1>) : !llvm.struct<(ptr, i32)>
   %3 = landingpad { ptr, i32 } catch ptr @_ZTIi catch ptr @_ZTIii
-  ; FIXME: Change filter to a constant array once they are handled.
-  ; Currently, even though it parses this, LLVM module is broken
-          filter [1 x i8] [i8 1]
+          filter [1 x i1] [i1 1]
   resume { ptr, i32 } %3
 
 ; CHECK: ^bb2:

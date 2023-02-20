@@ -198,6 +198,11 @@ llvm::DISubprogram *DebugTranslation::translateImpl(DISubprogramAttr attr) {
       translate(attr.getCompileUnit()));
 }
 
+llvm::DINamespace *DebugTranslation::translateImpl(DINamespaceAttr attr) {
+  return llvm::DINamespace::get(llvmCtx, translate(attr.getScope()),
+                                attr.getName(), attr.getExportSymbols());
+}
+
 llvm::DISubrange *DebugTranslation::translateImpl(DISubrangeAttr attr) {
   auto getMetadataOrNull = [&](IntegerAttr attr) -> llvm::Metadata * {
     if (!attr)
@@ -235,10 +240,11 @@ llvm::DINode *DebugTranslation::translate(DINodeAttr attr) {
 
   llvm::DINode *node =
       TypeSwitch<DINodeAttr, llvm::DINode *>(attr)
-          .Case<DINullTypeAttr, DIBasicTypeAttr, DICompileUnitAttr,
-                DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr,
-                DILexicalBlockAttr, DILexicalBlockFileAttr, DILocalVariableAttr,
-                DISubprogramAttr, DISubrangeAttr, DISubroutineTypeAttr>(
+          .Case<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
+                DIDerivedTypeAttr, DIFileAttr, DILexicalBlockAttr,
+                DILexicalBlockFileAttr, DILocalVariableAttr, DINamespaceAttr,
+                DINullTypeAttr, DISubprogramAttr, DISubrangeAttr,
+                DISubroutineTypeAttr>(
               [&](auto attr) { return translateImpl(attr); });
   attrToNode.insert({attr, node});
   return node;

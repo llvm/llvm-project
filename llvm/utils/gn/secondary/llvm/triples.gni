@@ -3,6 +3,8 @@ if (current_cpu == "x86") {
     llvm_current_triple = "i386-unknown-linux-gnu"
   } else if (current_os == "win") {
     llvm_current_triple = "i386-pc-windows-msvc"
+  } else if (current_os == "android") {
+    llvm_current_triple = "i686-linux-android29"
   }
 } else if (current_cpu == "x64") {
   if (current_os == "freebsd") {
@@ -13,6 +15,8 @@ if (current_cpu == "x86") {
     llvm_current_triple = "x86_64-apple-darwin"
   } else if (current_os == "win") {
     llvm_current_triple = "x86_64-pc-windows-msvc"
+  } else if (current_os == "android") {
+    llvm_current_triple = "x86_64-linux-android29"
   }
 } else if (current_cpu == "arm") {
   if (current_os == "android") {

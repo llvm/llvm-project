@@ -226,6 +226,10 @@ define amdgpu_kernel void @v_fneg_add_multi_use_fneg_x_f32(ptr addrspace(1) %out
 ; GCN-SAFE-DAG: v_mad_f32 [[A:v[0-9]+]],
 ; GCN-SAFE-DAG: v_cmp_ngt_f32_e32 {{.*}}, [[A]]
 ; GCN-SAFE-DAG: v_cndmask_b32_e64 v{{[0-9]+}}, -[[A]]
+
+; GCN-NSZ-DAG: v_mul_f32_e32 v{{[0-9]+}}, 0, v
+; GCN-NSZ: v_cmp_ngt_f32
+; GCN-NSZ: v_cndmask_b32_e64 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}
 define amdgpu_ps float @fneg_fadd_0(float inreg %tmp2, float inreg %tmp6, <4 x i32> %arg) local_unnamed_addr #0 {
 .entry:
   %tmp7 = fdiv float 1.000000e+00, %tmp6
@@ -246,9 +250,12 @@ define amdgpu_ps float @fneg_fadd_0(float inreg %tmp2, float inreg %tmp6, <4 x i
 ; GCN-LABEL: {{^}}fneg_fadd_0_nsz:
 ; GCN-NSZ-DAG: v_rcp_f32_e32 [[A:v[0-9]+]],
 ; GCN-NSZ-DAG: v_mov_b32_e32 [[B:v[0-9]+]],
-; GCN-NSZ-DAG: v_mov_b32_e32 [[C:v[0-9]+]],
-; GCN-NSZ-DAG: v_mul_f32_e32 [[D:v[0-9]+]],
-; GCN-NSZ-DAG: v_cmp_nlt_f32_e64 {{.*}}, -[[D]]
+; GCN-NSZ-DAG: v_mov_b32_e32 [[C:v[0-9]+]], 0x7fc00000
+; GCN-NSZ-DAG: v_mul_f32_e32 [[D:v[0-9]+]], 0, [[A]]
+; GCN-NSZ-DAG: v_cmp_ngt_f32_e32 {{.*}}, s{{[0-9]+}}, [[D]]
+; GCN-NSZ-DAG: v_cndmask_b32_e64 [[E:v[0-9]+]], -[[D]], v{{[0-9]+}},
+; GCN-NSZ-DAG: v_cmp_nlt_f32_e32 {{.*}}, 0
+; GCN-NSZ-DAG: v_cndmask_b32_e64 v{{[0-9]+}}, [[C]], 0,
 define amdgpu_ps float @fneg_fadd_0_nsz(float inreg %tmp2, float inreg %tmp6, <4 x i32> %arg) local_unnamed_addr #2 {
 .entry:
   %tmp7 = fdiv afn float 1.000000e+00, %tmp6
@@ -2729,6 +2736,79 @@ define <2 x half> @fadd_select_fneg_fneg_v2f16(i32 %arg0, <2 x half> %x, <2 x ha
   %select = select i1 %cmp, <2 x half> %neg.x, <2 x half> %neg.y
   %add = fadd <2 x half> %select, %z
   ret <2 x half> %add
+}
+
+; FIXME: This fneg should fold into select
+; GCN-LABEL: {{^}}v_fneg_select_f32:
+; GCN: s_waitcnt
+; GCN-NEXT: v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN-NEXT: v_cndmask_b32_e32 v0, v2, v1, vcc
+; GCN-NEXT: v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT: s_setpc_b64
+define float @v_fneg_select_f32(i32 %arg0, float %a, float %b, float %c) {
+  %cond = icmp eq i32 %arg0, 0
+  %select = select i1 %cond, float %a, float %b
+  %fneg = fneg float %select
+  ret float %fneg
+}
+
+; FIXME: This fneg should fold into select
+; GCN-LABEL: {{^}}v_fneg_select_2_f32:
+; GCN: s_waitcnt
+; GCN-NSZ-NEXT: v_add_f32_e32 [[ADD2:v[0-9]+]], 2.0, v1
+; GCN-NSZ-NEXT: v_add_f32_e32 [[ADD4:v[0-9]+]], 4.0, v2
+; GCN-NSZ-NEXT: v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN-NSZ-NEXT: v_cndmask_b32_e32 v0, [[ADD4]], [[ADD2]], vcc
+; GCN-NSZ-NEXT: v_xor_b32_e32 v0, 0x80000000, v0
+
+; GCN-SAFE-NEXT: v_add_f32_e32 [[ADD2:v[0-9]+]], 2.0, v1
+; GCN-SAFE-NEXT: v_add_f32_e32 [[ADD4:v[0-9]+]], 4.0, v2
+; GCN-SAFE-NEXT: v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN-SAFE-NEXT: v_cndmask_b32_e32 v0, [[ADD4]], [[ADD2]], vcc
+; GCN-SAFE-NEXT: v_xor_b32_e32 v0, 0x80000000, v0
+
+; GCN-NEXT: s_setpc_b64
+define float @v_fneg_select_2_f32(i32 %arg0, float %a, float %b, float %c) {
+  %cond = icmp eq i32 %arg0, 0
+  %add.0 = fadd float %a, 2.0
+  %add.1 = fadd float %b, 4.0
+  %select = select i1 %cond, float %add.0, float %add.1
+  %neg.select = fneg float %select
+  ret float %neg.select
+}
+
+; GCN-LABEL: {{^}}v_fneg_posk_select_f32:
+; GCN: v_cmp_ne_u32_e32 vcc, 0, v0
+; GCN-NEXT: v_cndmask_b32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}, vcc
+; GCN-NEXT: v_xor_b32_e32 v0, 0x80000000, v0
+define amdgpu_kernel void @v_fneg_posk_select_f32(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr) {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid.ext = sext i32 %tid to i64
+  %a.gep = getelementptr inbounds float, ptr addrspace(1) %a.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
+  %a = load volatile float, ptr addrspace(1) %a.gep
+  %cond = icmp eq i32 %tid, 0
+  %select = select i1 %cond, float 4.0, float %a
+  %fneg = fneg float %select
+  store float %fneg, ptr addrspace(1) %out.gep
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_fneg_negk_select_f32:
+; GCN: v_cmp_ne_u32_e32 vcc, 0, v0
+; GCN-NEXT: v_cndmask_b32_e32 v{{[0-9]+}}, -4.0, v{{[0-9]+}}, vcc
+; GCN-NEXT: v_xor_b32_e32 v0, 0x80000000, v0
+define amdgpu_kernel void @v_fneg_negk_select_f32(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr) {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid.ext = sext i32 %tid to i64
+  %a.gep = getelementptr inbounds float, ptr addrspace(1) %a.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
+  %a = load volatile float, ptr addrspace(1) %a.gep
+  %cond = icmp eq i32 %tid, 0
+  %select = select i1 %cond, float -4.0, float %a
+  %fneg = fneg float %select
+  store float %fneg, ptr addrspace(1) %out.gep
+  ret void
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
