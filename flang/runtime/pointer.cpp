@@ -121,6 +121,13 @@ void RTNAME(PointerAssociateRemapping)(Descriptor &pointer,
                      "pointer (%zd > %zd)",
         pointer.Elements(), target.Elements());
   }
+  if (auto *pointerAddendum{pointer.Addendum()}) {
+    if (const auto *targetAddendum{target.Addendum()}) {
+      if (const auto *derived{targetAddendum->derivedType()}) {
+        pointerAddendum->set_derivedType(derived);
+      }
+    }
+  }
 }
 
 int RTNAME(PointerAllocate)(Descriptor &pointer, bool hasStat,
