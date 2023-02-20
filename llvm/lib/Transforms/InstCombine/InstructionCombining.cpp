@@ -4221,23 +4221,6 @@ bool InstCombinerImpl::run() {
     if (!DebugCounter::shouldExecute(VisitCounter))
       continue;
 
-    // Instruction isn't dead, see if we can constant propagate it.
-    if (!I->use_empty() &&
-        (I->getNumOperands() == 0 || isa<Constant>(I->getOperand(0)))) {
-      if (Constant *C = ConstantFoldInstruction(I, DL, &TLI)) {
-        LLVM_DEBUG(dbgs() << "IC: ConstFold to: " << *C << " from: " << *I
-                          << '\n');
-
-        // Add operands to the worklist.
-        replaceInstUsesWith(*I, C);
-        ++NumConstProp;
-        if (isInstructionTriviallyDead(I, &TLI))
-          eraseInstFromFunction(*I);
-        MadeIRChange = true;
-        continue;
-      }
-    }
-
     // See if we can trivially sink this instruction to its user if we can
     // prove that the successor is not executed more frequently than our block.
     // Return the UserBlock if successful.
