@@ -1787,6 +1787,17 @@ Instruction *InstCombinerImpl::visitURem(BinaryOperator &I) {
     return SelectInst::Create(Cmp, ConstantInt::getNullValue(Ty), Op0);
   }
 
+  // For "(X + 1) % Op1" and if (X u< Op1) => (X + 1) == Op1 ? 0 : X + 1 .
+  if (match(Op0, m_Add(m_Value(X), m_One()))) {
+    Value *Val =
+        simplifyICmpInst(ICmpInst::ICMP_ULT, X, Op1, SQ.getWithInstruction(&I));
+    if (Val && match(Val, m_One())) {
+      Value *FrozenOp0 = Builder.CreateFreeze(Op0, Op0->getName() + ".frozen");
+      Value *Cmp = Builder.CreateICmpEQ(FrozenOp0, Op1);
+      return SelectInst::Create(Cmp, ConstantInt::getNullValue(Ty), FrozenOp0);
+    }
+  }
+
   return nullptr;
 }
 
