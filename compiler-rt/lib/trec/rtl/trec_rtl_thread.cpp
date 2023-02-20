@@ -89,6 +89,7 @@ bool ThreadContext::state_restore() {
 void ThreadContext::flush_trace() {
   char filepath[TREC_DIR_PATH_LEN];
 
+  open_dir_mutex.Lock();
   struct stat _st = {0};
   internal_snprintf(filepath, 2 * TREC_DIR_PATH_LEN - 1, "%s/trec_%llu",
                     ctx->trace_dir, internal_getpid(), tid);
@@ -98,6 +99,7 @@ void ThreadContext::flush_trace() {
     ctx->pid = internal_getpid();
     ctx->open_directory(ctx->trace_dir);
   }
+  open_dir_mutex.Unlock();
 
   internal_snprintf(filepath, TREC_DIR_PATH_LEN - 1, "%s/trec_%d/trace/%d.bin",
                     ctx->trace_dir, internal_getpid(), this->tid);
@@ -127,6 +129,7 @@ void ThreadContext::flush_trace() {
 void ThreadContext::flush_metadata() {
   char filepath[TREC_DIR_PATH_LEN];
 
+  open_dir_mutex.Lock();
   struct stat _st = {0};
   internal_snprintf(filepath, 2 * TREC_DIR_PATH_LEN - 1, "%s/trec_%llu",
                     ctx->trace_dir, internal_getpid(), tid);
@@ -136,6 +139,7 @@ void ThreadContext::flush_metadata() {
     ctx->pid = internal_getpid();
     ctx->open_directory(ctx->trace_dir);
   }
+  open_dir_mutex.Unlock();
 
   internal_snprintf(filepath, TREC_DIR_PATH_LEN - 1,
                     "%s/trec_%d/metadata/%d.bin", ctx->trace_dir,
@@ -172,6 +176,7 @@ void ThreadContext::flush_debug_info() {
     return;
   char filepath[TREC_DIR_PATH_LEN];
 
+  open_dir_mutex.Lock();
   struct stat _st = {0};
   internal_snprintf(filepath, 2 * TREC_DIR_PATH_LEN - 1, "%s/trec_%llu",
                     ctx->trace_dir, internal_getpid(), tid);
@@ -181,6 +186,7 @@ void ThreadContext::flush_debug_info() {
     ctx->pid = internal_getpid();
     ctx->open_directory(ctx->trace_dir);
   }
+  open_dir_mutex.Unlock();
 
   internal_snprintf(filepath, TREC_DIR_PATH_LEN - 1, "%s/trec_%d/debug/%d.bin",
                     ctx->trace_dir, internal_getpid(), thr->tid);
@@ -237,8 +243,7 @@ void ThreadContext::flush_module() {
   uptr idx = 0;
   bool found = false;
   for (auto &item : modules) {
-    if (item.full_name() && item.base_address() &&
-        item.max_address() &&
+    if (item.full_name() && item.base_address() && item.max_address() &&
         internal_strstr(item.full_name(), "(deleted)") == nullptr) {
       if (!found) {
         internal_strlcpy(thr->tctx->header.binary_path, item.full_name(),
@@ -246,9 +251,9 @@ void ThreadContext::flush_module() {
         found = true;
       }
       internal_memset(write_buff, 0, sizeof(write_buff));
-      int bufflen = internal_snprintf(
-          write_buff, 2 * TREC_DIR_PATH_LEN - 1, "%s %p-%p\n", item.full_name(),
-          item.base_address(), item.max_address());
+      int bufflen = internal_snprintf(write_buff, 2 * TREC_DIR_PATH_LEN - 1,
+                                      "%s %p-%p\n", item.full_name(),
+                                      item.base_address(), item.max_address());
       uptr need_write_bytes = bufflen;
       char *buff_pos = (char *)write_buff;
       while (need_write_bytes > 0) {
@@ -270,6 +275,19 @@ void ThreadContext::flush_module() {
 
 void ThreadContext::flush_header() {
   char filepath[TREC_DIR_PATH_LEN];
+
+  open_dir_mutex.Lock();
+  struct stat _st = {0};
+  internal_snprintf(filepath, 2 * TREC_DIR_PATH_LEN - 1, "%s/trec_%llu",
+                    ctx->trace_dir, internal_getpid(), tid);
+  uptr IS_EXIST = __sanitizer::internal_stat(filepath, &_st);
+  if (IS_EXIST != 0) {
+    ctx->ppid = ctx->pid;
+    ctx->pid = internal_getpid();
+    ctx->open_directory(ctx->trace_dir);
+  }
+  open_dir_mutex.Unlock();
+
   internal_snprintf(filepath, TREC_DIR_PATH_LEN - 1, "%s/trec_%d/header/%d.bin",
                     ctx->trace_dir, internal_getpid(), thr->tid);
 
@@ -298,10 +316,10 @@ void ThreadContext::flush_header() {
 
 void ThreadContext::put_trace(void *msg, uptr len) {
   {
-      isFuncEnterMetaVaild = false;
-      isFuncExitMetaVaild = false;
-      parammetas.Resize(0);
-      dbg_temp_buffer_size = 0;
+    isFuncEnterMetaVaild = false;
+    isFuncExitMetaVaild = false;
+    parammetas.Resize(0);
+    dbg_temp_buffer_size = 0;
   }
   if (UNLIKELY(trace_buffer == nullptr)) {
     trace_buffer = (char *)internal_alloc(MBlockShadowStack, TREC_BUFFER_SIZE);

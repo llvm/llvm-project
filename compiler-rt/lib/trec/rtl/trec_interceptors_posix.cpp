@@ -482,6 +482,12 @@ TREC_INTERCEPTOR(void, cfree, void *p) {
   SCOPED_INTERCEPTOR_RAW(cfree, p);
   user_free(thr, caller_pc, p, true, true);
 }
+
+TREC_INTERCEPTOR(uptr, malloc_usable_size, void *p) {
+  SCOPED_INTERCEPTOR_RAW(malloc_usable_size, p);
+  return user_alloc_usable_size(p);
+}
+
 #endif
 
 TREC_INTERCEPTOR(char *, strcpy, char *dst, const char *src) {

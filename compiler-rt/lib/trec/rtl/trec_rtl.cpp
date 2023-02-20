@@ -226,8 +226,8 @@ void Context::open_directory(const char *dirpath) {
   uptr IS_EXISTS = __sanitizer::internal_stat(path, &_st);
   char filepath[TREC_DIR_PATH_LEN];
   if (IS_EXISTS != 0 || !S_ISDIR(_st.st_mode)) {
-    if (mkdir(path, S_IRWXU) != 0) {
-      Report("Could not create directory at %s", path);
+    if (mkdir(path, ACCESSPERMS) != 0) {
+      Report("Could not create directory at %s, errno=%d", path, errno);
       Die();
     }
   }
@@ -235,8 +235,9 @@ void Context::open_directory(const char *dirpath) {
     internal_snprintf(filepath, TREC_DIR_PATH_LEN - 1, "%s/%s", path, "trace");
     IS_EXISTS = __sanitizer::internal_stat(filepath, &_st);
     if (IS_EXISTS != 0 || !S_ISDIR(_st.st_mode)) {
-      if (mkdir(filepath, S_IRWXU) != 0) {
-        Report("Could not create trace directory at %s\n", filepath);
+      if (mkdir(filepath, ACCESSPERMS) != 0) {
+        Report("Could not create trace directory at %s, errno=%d\n", filepath,
+               errno);
         Die();
       }
     }
@@ -244,16 +245,18 @@ void Context::open_directory(const char *dirpath) {
                       "metadata");
     IS_EXISTS = __sanitizer::internal_stat(filepath, &_st);
     if (IS_EXISTS != 0 || !S_ISDIR(_st.st_mode)) {
-      if (mkdir(filepath, S_IRWXU) != 0) {
-        Report("Could not create metadata directory at %s\n", filepath);
+      if (mkdir(filepath, ACCESSPERMS) != 0) {
+        Report("Could not create metadata directory at %s, errno=%d\n",
+               filepath, errno);
         Die();
       }
     }
     internal_snprintf(filepath, TREC_DIR_PATH_LEN - 1, "%s/%s", path, "header");
     IS_EXISTS = __sanitizer::internal_stat(filepath, &_st);
     if (IS_EXISTS != 0 || !S_ISDIR(_st.st_mode)) {
-      if (mkdir(filepath, S_IRWXU) != 0) {
-        Report("Could not create header directory at %s\n", filepath);
+      if (mkdir(filepath, ACCESSPERMS) != 0) {
+        Report("Could not create header directory at %s, errno=%d\n", filepath,
+               errno);
         Die();
       }
     }
@@ -262,8 +265,9 @@ void Context::open_directory(const char *dirpath) {
                         "debug");
       IS_EXISTS = __sanitizer::internal_stat(filepath, &_st);
       if (IS_EXISTS != 0 || !S_ISDIR(_st.st_mode)) {
-        if (mkdir(filepath, S_IRWXU) != 0) {
-          Report("Could not create debug directory at %s\n", filepath);
+        if (mkdir(filepath, ACCESSPERMS) != 0) {
+          Report("Could not create debug directory at %s, errno=%d\n", filepath,
+                 errno);
           Die();
         }
       }
@@ -447,7 +451,7 @@ void Initialize(ThreadState *thr) {
   InitializePlatform();
 #if !SANITIZER_GO
   InitializeAllocatorLate();
-  InstallDeadlySignalHandlers(TrecOnDeadlySignal);
+  // InstallDeadlySignalHandlers(TrecOnDeadlySignal);
 #endif
   // Setup correct file descriptor for error reports.
   // __sanitizer_set_report_path(common_flags()->log_path);

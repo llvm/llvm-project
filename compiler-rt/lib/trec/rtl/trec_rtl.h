@@ -204,6 +204,7 @@ class ThreadContext final : public ThreadContextBase {
   __trec_metadata::FuncExitMeta exit_meta;
   char dbg_temp_buffer[sizeof(__trec_debug_info::InstDebugInfo) + 512];
   __sanitizer::u64 dbg_temp_buffer_size;
+  Mutex open_dir_mutex;
 
   // Override superclass callbacks.
   void OnDead() override;
