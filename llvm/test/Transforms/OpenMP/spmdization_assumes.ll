@@ -25,6 +25,7 @@ target triple = "nvptx64"
 ; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
 ; CHECK: @[[__OMP_OFFLOADING_FD02_404433C2_MAIN_L5_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
 ; CHECK: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [1 x ptr] [ptr @__omp_offloading_fd02_404433c2_main_l5_exec_mode], section "llvm.metadata"
+; CHECK: @[[__OMP_OFFLOADING_FD02_404433C2_MAIN_L5_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ; CHECK: @[[GLOB2:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 ;.
 define weak void @__omp_offloading_fd02_404433c2_main_l5(ptr nonnull align 8 dereferenceable(8) %x) local_unnamed_addr #0 {
