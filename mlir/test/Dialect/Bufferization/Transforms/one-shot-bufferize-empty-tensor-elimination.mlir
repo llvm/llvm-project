@@ -204,3 +204,20 @@ func.func @eleminate_multiple_ops(%t: tensor<?xf32> {bufferization.buffer_layout
   %r1 = tensor.insert_slice %if into %t[42][%sz][1]: tensor<?xf32> into tensor<?xf32>
   return %r1: tensor<?xf32>
 }
+
+// -----
+
+// This is a regression test. Make sure that the tensor.extract_slice is not
+// eliminated.
+
+// CHECK-LABEL: func.func @regression_do_not_eliminate_non_empty(
+//       CHECK:   memref.subview
+//       CHECK:   memref.subview
+//       CHECK:   memref.copy
+func.func @regression_do_not_eliminate_non_empty(
+    %t: tensor<10xf32>, %t2: tensor<10xf32>) -> tensor<10xf32> {
+  %1 = tensor.extract_slice %t[0] [5] [1] : tensor<10xf32> to tensor<5xf32>
+  %2 = tensor.insert_slice %1 into %t2[1] [5] [1]
+      : tensor<5xf32> into tensor<10xf32>
+  return %2 : tensor<10xf32>
+}
