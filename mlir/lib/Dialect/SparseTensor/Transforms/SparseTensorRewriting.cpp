@@ -158,7 +158,7 @@ static LogicalResult genForeachOnSparseConstant(ForeachOp op,
 
   // Foreach on constant.
   foreachInSparseConstant(
-      loc, rewriter, attr,
+      loc, rewriter, attr, op.getOrder().value_or(AffineMap()),
       [&reduc, &rewriter, op](ArrayRef<Value> coords, Value v) mutable {
         SmallVector<Value> args;
         args.append(coords.begin(), coords.end());
@@ -669,19 +669,16 @@ private:
     }
 
     const auto encDst = dstTp.getEncoding();
-    // We don't need a temporary COO tensor if the destination has an identity
-    // ordering. Otherwise, we use the destination ordering for the temporary
-    // COO tensor.
-    // TODO: enhance foreachOp to take ordering to remove the need of a
-    // temporary COO tensor here.
-    const RankedTensorType bufferTp = dstTp.isIdentity()
-                                          ? dstTp.getRankedTensorType()
-                                          : getUnorderedCOOFromTypeWithOrdering(
-                                                dstTp, dstTp.getDimToLvlMap());
+    // We don't need a temporary COO tensor for dense => sparse conversion.
+    const RankedTensorType bufferTp = dstTp.getRankedTensorType();
     auto buffer =
         rewriter.create<AllocTensorOp>(loc, bufferTp, dynSizes).getResult();
+    AffineMapAttr foreachOrder = nullptr;
+    if (encDst.getDimOrdering())
+      foreachOrder = AffineMapAttr::get(encDst.getDimOrdering());
+
     auto foreachOp = rewriter.create<ForeachOp>(
-        loc, src, buffer,
+        loc, src, buffer, foreachOrder,
         [&](OpBuilder &builder, Location loc, ValueRange indices, Value v,
             ValueRange reduc) {
           Value input = reduc.front();
@@ -709,14 +706,8 @@ private:
         });
     rewriter.setInsertionPointAfter(op);
     src = rewriter.create<LoadOp>(loc, foreachOp.getResult(0), true);
-    if (bufferTp != dstTp) {
-      rewriter.replaceOpWithNewOp<ConvertOp>(op, dstTp.getRankedTensorType(),
-                                             src);
-      rewriter.create<DeallocTensorOp>(loc, src);
-    } else {
-      rewriter.replaceOp(op, src);
-    }
 
+    rewriter.replaceOp(op, src);
     return success();
   }
 
@@ -928,16 +919,28 @@ public:
     for (Dimension d = 0; d < dimRank; d++) {
       // TODO: provide utility function for loop sequences that only contains
       // one for loop?
-      loopEmitter.enterNewLoopSeq(rewriter, loc, 0, static_cast<size_t>(d));
+      Dimension ld =
+          op.getOrder()
+              ? op.getOrder()->getResult(d).cast<AffineDimExpr>().getPosition()
+              : d;
+      loopEmitter.enterNewLoopSeq(rewriter, loc, 0, static_cast<size_t>(ld));
       // Note that reduc will be taken care of by loop emitter and get updated
       // in place.
-      loopEmitter.enterLoopOverTensorAtDim(rewriter, loc, 0, d, reduc);
+
+      loopEmitter.enterLoopOverTensorAtDim(rewriter, loc, 0, ld, reduc);
     }
 
     SmallVector<Value> coords;
     coords.reserve(dimRank);
     loopEmitter.getCoordinateArray(coords);
 
+    if (op.getOrder()) {
+      SmallVector<Value> tmp = coords; // keep a copy
+      for (Dimension d = 0; d < dimRank; d++) {
+        auto l = op.getOrder()->getDimPosition(d);
+        coords[l] = tmp[d];
+      }
+    }
     Value vals = loopEmitter.getValBuffer()[0];
     Value pidx = loopEmitter.getPidxs()[0].back();
     // Loads the value from sparse tensor using pointer index;
