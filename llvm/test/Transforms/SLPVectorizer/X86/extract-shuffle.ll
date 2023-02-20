@@ -3,12 +3,9 @@
 
 define <2 x i8> @g(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @g(
-; CHECK-NEXT:    [[X0:%.*]] = extractelement <2 x i8> [[X:%.*]], i32 0
-; CHECK-NEXT:    [[Y1:%.*]] = extractelement <2 x i8> [[Y:%.*]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> poison, i8 [[X0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i8> [[TMP1]], i8 [[Y1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = mul <2 x i8> [[TMP2]], [[TMP2]]
-; CHECK-NEXT:    ret <2 x i8> [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <2 x i8> [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i8> [[TMP2]]
 ;
   %x0 = extractelement <2 x i8> %x, i32 0
   %y1 = extractelement <2 x i8> %y, i32 1
