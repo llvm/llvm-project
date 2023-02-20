@@ -5,14 +5,14 @@
 module;
 
 #ifdef ERRORS
-export int a; // expected-error {{after the module declaration}}
+export int a; // expected-error {{export declaration can only be used within a module purview}}
 #endif
 
 #ifndef IMPLEMENTATION
 export
 #else
-// expected-error@#1 {{can only be used within a module interface unit}}
-// expected-error@#2 {{can only be used within a module interface unit}}
+// expected-error@#1 {{export declaration can only be used within a module purview}}
+// expected-error@#2 {{export declaration can only be used within a module purview}}
 // expected-note@+2 1+{{add 'export'}}
 #endif
 module M;
