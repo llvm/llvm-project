@@ -2115,7 +2115,7 @@ bool AArch64TargetLowering::targetShrinkDemandedConstant(
          "i32 or i64 is expected after legalization.");
 
   // Exit early if we demand all bits.
-  if (DemandedBits.countPopulation() == Size)
+  if (DemandedBits.popcount() == Size)
     return false;
 
   unsigned NewOpc;

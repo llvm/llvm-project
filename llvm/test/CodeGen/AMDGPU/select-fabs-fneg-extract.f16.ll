@@ -993,20 +993,20 @@ define half @mul_select_negfabs_posk_f16(i32 %c, half %x, half %y) {
 ; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; CI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; CI-NEXT:    v_cvt_f32_f16_e64 v1, |v1|
+; CI-NEXT:    v_cvt_f32_f16_e64 v1, -|v1|
 ; CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; CI-NEXT:    v_cndmask_b32_e32 v0, -4.0, v1, vcc
-; CI-NEXT:    v_mul_f32_e64 v0, -v0, v2
+; CI-NEXT:    v_cndmask_b32_e32 v0, 4.0, v1, vcc
+; CI-NEXT:    v_mul_f32_e32 v0, v0, v2
 ; CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: mul_select_negfabs_posk_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_and_b32_e32 v1, 0x7fff, v1
-; VI-NEXT:    v_mov_b32_e32 v3, 0xc400
+; VI-NEXT:    v_or_b32_e32 v1, 0x8000, v1
+; VI-NEXT:    v_mov_b32_e32 v3, 0x4400
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
-; VI-NEXT:    v_mul_f16_e64 v0, -v0, v2
+; VI-NEXT:    v_mul_f16_e32 v0, v0, v2
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %cmp = icmp eq i32 %c, 0
   %fabs.x = call half @llvm.fabs.f16(half %x)
@@ -1023,20 +1023,20 @@ define half @mul_select_posk_negfabs_f16(i32 %c, half %x, half %y) {
 ; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; CI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; CI-NEXT:    v_cvt_f32_f16_e64 v1, |v1|
+; CI-NEXT:    v_cvt_f32_f16_e64 v1, -|v1|
 ; CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; CI-NEXT:    v_cndmask_b32_e32 v0, -4.0, v1, vcc
-; CI-NEXT:    v_mul_f32_e64 v0, -v0, v2
+; CI-NEXT:    v_cndmask_b32_e32 v0, 4.0, v1, vcc
+; CI-NEXT:    v_mul_f32_e32 v0, v0, v2
 ; CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: mul_select_posk_negfabs_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_and_b32_e32 v1, 0x7fff, v1
-; VI-NEXT:    v_mov_b32_e32 v3, 0xc400
+; VI-NEXT:    v_or_b32_e32 v1, 0x8000, v1
+; VI-NEXT:    v_mov_b32_e32 v3, 0x4400
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
-; VI-NEXT:    v_mul_f16_e64 v0, -v0, v2
+; VI-NEXT:    v_mul_f16_e32 v0, v0, v2
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %cmp = icmp eq i32 %c, 0
   %fabs.x = call half @llvm.fabs.f16(half %x)
@@ -1053,19 +1053,20 @@ define half @mul_select_negfabs_negk_f16(i32 %c, half %x, half %y) {
 ; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; CI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; CI-NEXT:    v_cvt_f32_f16_e64 v1, -|v1|
 ; CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; CI-NEXT:    v_cndmask_b32_e32 v0, 4.0, v1, vcc
-; CI-NEXT:    v_mul_f32_e64 v0, -|v0|, v2
+; CI-NEXT:    v_cndmask_b32_e32 v0, -4.0, v1, vcc
+; CI-NEXT:    v_mul_f32_e32 v0, v0, v2
 ; CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: mul_select_negfabs_negk_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v3, 0x4400
+; VI-NEXT:    v_or_b32_e32 v1, 0x8000, v1
+; VI-NEXT:    v_mov_b32_e32 v3, 0xc400
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
-; VI-NEXT:    v_mul_f16_e64 v0, -|v0|, v2
+; VI-NEXT:    v_mul_f16_e32 v0, v0, v2
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %cmp = icmp eq i32 %c, 0
   %fabs.x = call half @llvm.fabs.f16(half %x)
@@ -1082,19 +1083,20 @@ define half @mul_select_negk_negfabs_f16(i32 %c, half %x, half %y) {
 ; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; CI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; CI-NEXT:    v_cvt_f32_f16_e64 v1, -|v1|
 ; CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; CI-NEXT:    v_cndmask_b32_e32 v0, 4.0, v1, vcc
-; CI-NEXT:    v_mul_f32_e64 v0, -|v0|, v2
+; CI-NEXT:    v_cndmask_b32_e32 v0, -4.0, v1, vcc
+; CI-NEXT:    v_mul_f32_e32 v0, v0, v2
 ; CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: mul_select_negk_negfabs_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v3, 0x4400
+; VI-NEXT:    v_or_b32_e32 v1, 0x8000, v1
+; VI-NEXT:    v_mov_b32_e32 v3, 0xc400
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
-; VI-NEXT:    v_mul_f16_e64 v0, -|v0|, v2
+; VI-NEXT:    v_mul_f16_e32 v0, v0, v2
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %cmp = icmp eq i32 %c, 0
   %fabs.x = call half @llvm.fabs.f16(half %x)

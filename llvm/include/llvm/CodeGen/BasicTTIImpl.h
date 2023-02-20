@@ -1508,7 +1508,7 @@ public:
           // SelectionDAGBuilder.
           APInt Exponent = RHSC->getValue().abs();
           unsigned ActiveBits = Exponent.getActiveBits();
-          unsigned PopCount = Exponent.countPopulation();
+          unsigned PopCount = Exponent.popcount();
           InstructionCost Cost = (ActiveBits + PopCount - 2) *
                                  thisT()->getArithmeticInstrCost(
                                      Instruction::FMul, RetTy, CostKind);
