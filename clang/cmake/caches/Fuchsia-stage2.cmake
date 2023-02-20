@@ -294,7 +294,6 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-cxxfilt
   llvm-debuginfod-find
   llvm-dlltool
-  llvm-driver
   llvm-dwarfdump
   llvm-dwp
   llvm-ifs
@@ -322,6 +321,10 @@ set(LLVM_TOOLCHAIN_TOOLS
   sancov
   scan-build-py
   CACHE STRING "")
+
+if(NOT WIN32)
+  list(APPEND LLVM_TOOLCHAIN_TOOLS llvm-driver)
+endif()
 
 set(_FUCHSIA_DISTRIBUTION_COMPONENTS
   clang
