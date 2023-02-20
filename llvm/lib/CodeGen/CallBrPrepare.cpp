@@ -31,12 +31,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
 
@@ -45,31 +50,85 @@ using namespace llvm;
 namespace {
 
 class CallBrPrepare : public FunctionPass {
+  bool SplitCriticalEdges(ArrayRef<CallBrInst *> CBRs, DominatorTree &DT);
+
 public:
   CallBrPrepare() : FunctionPass(ID) {}
-  static char ID;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &Fn) override;
+  static char ID;
 };
 
 } // end anonymous namespace
 
 char CallBrPrepare::ID = 0;
-INITIALIZE_PASS(CallBrPrepare, DEBUG_TYPE, "Prepare callbr", false, false)
+INITIALIZE_PASS_BEGIN(CallBrPrepare, DEBUG_TYPE, "Prepare callbr", false, false)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_END(CallBrPrepare, DEBUG_TYPE, "Prepare callbr", false, false)
 
 FunctionPass *llvm::createCallBrPass() { return new CallBrPrepare(); }
 
 void CallBrPrepare::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.setPreservesAll();
+  AU.addPreserved<DominatorTreeWrapperPass>();
+}
+
+static SmallVector<CallBrInst *, 2> FindCallBrs(Function &Fn) {
+  SmallVector<CallBrInst *, 2> CBRs;
+  for (BasicBlock &BB : Fn)
+    if (auto *CBR = dyn_cast<CallBrInst>(BB.getTerminator()))
+      if (!CBR->getType()->isVoidTy() && !CBR->use_empty())
+        CBRs.push_back(CBR);
+  return CBRs;
+}
+
+bool CallBrPrepare::SplitCriticalEdges(ArrayRef<CallBrInst *> CBRs,
+                                       DominatorTree &DT) {
+  bool Changed = false;
+  CriticalEdgeSplittingOptions Options(&DT);
+  Options.setMergeIdenticalEdges();
+
+  // The indirect destination might be duplicated between another parameter...
+  //   %0 = callbr ... [label %x, label %x]
+  // ...hence MergeIdenticalEdges and AllowIndentical edges, but we don't need
+  // to split the default destination if it's duplicated between an indirect
+  // destination...
+  //   %1 = callbr ... to label %x [label %x]
+  // ...hence starting at 1 and checking against successor 0 (aka the default
+  // destination).
+  for (CallBrInst *CBR : CBRs)
+    for (unsigned i = 1, e = CBR->getNumSuccessors(); i != e; ++i)
+      if (CBR->getSuccessor(i) == CBR->getSuccessor(0) ||
+          isCriticalEdge(CBR, i, /*AllowIdenticalEdges*/ true))
+        if (SplitKnownCriticalEdge(CBR, i, Options))
+          Changed = true;
+  return Changed;
 }
 
 bool CallBrPrepare::runOnFunction(Function &Fn) {
-  for (BasicBlock &BB : Fn) {
-    auto *CBR = dyn_cast<CallBrInst>(BB.getTerminator());
-    if (!CBR)
-      continue;
-    // TODO: something interesting.
-    // https://discourse.llvm.org/t/rfc-syncing-asm-goto-with-outputs-with-gcc/65453/8
+  bool Changed = false;
+  SmallVector<CallBrInst *, 2> CBRs = FindCallBrs(Fn);
+
+  if (CBRs.empty())
+    return Changed;
+
+  // It's highly likely that most programs do not contain CallBrInsts. Follow a
+  // similar pattern from SafeStackLegacyPass::runOnFunction to reuse previous
+  // domtree analysis if available, otherwise compute it lazily. This avoids
+  // forcing Dominator Tree Construction at -O0 for programs that likely do not
+  // contain CallBrInsts. It does pessimize programs with callbr at higher
+  // optimization levels, as the DominatorTree created here is not reused by
+  // subsequent passes.
+  DominatorTree *DT;
+  std::optional<DominatorTree> LazilyComputedDomTree;
+  if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
+    DT = &DTWP->getDomTree();
+  else {
+    LazilyComputedDomTree.emplace(Fn);
+    DT = &*LazilyComputedDomTree;
   }
-  return false;
+
+  if (SplitCriticalEdges(CBRs, *DT))
+    Changed = true;
+
+  return Changed;
 }
