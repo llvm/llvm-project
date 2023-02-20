@@ -16363,7 +16363,7 @@ Decl *Sema::ActOnStartLinkageSpecification(Scope *S, SourceLocation ExternLoc,
   /// need to attach it again.
   if (getLangOpts().CPlusPlusModules && isCurrentModulePurview()) {
     Module *GlobalModule =
-        PushGlobalModuleFragment(ExternLoc, /*IsImplicit=*/true);
+        PushGlobalModuleFragment(ExternLoc);
     /// According to [module.reach]p3.2,
     /// The declaration in global module fragment is reachable if it is not
     /// discarded. And the discarded declaration should be deleted. So it
