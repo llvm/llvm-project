@@ -276,10 +276,10 @@ define amdgpu_kernel void @div_v4_c_by_x_25ulp(ptr addrspace(1) %arg) {
 }
 
 ; GCN-LABEL: {{^}}div_v4_c_by_minus_x_25ulp:
-; GCN-DENORM-DAG: v_div_scale_f32 {{.*}}, s{{[0-9]+}}, s{{[0-9]+}}, -2.0{{$}}
-; GCN-DENORM-DAG: v_div_scale_f32 {{.*}}, s{{[0-9]+}}, s{{[0-9]+}}, 2.0{{$}}
-; GCN-DENORM-DAG: v_div_scale_f32 {{.*}}, -2.0, s{{[0-9]+}}, -2.0{{$}}
-; GCN-DENORM-DAG: v_div_scale_f32 {{.*}}, 2.0, s{{[0-9]+}}, 2.0{{$}}
+; GCN-DENORM-DAG: v_div_scale_f32 {{.*}}, -2.0{{$}}
+; GCN-DENORM-DAG: v_div_scale_f32 {{.*}}, -2.0{{$}}
+; GCN-DENORM-DAG: v_div_scale_f32 {{.*}}, -2.0{{$}}
+; GCN-DENORM-DAG: v_div_scale_f32 {{.*}}, -2.0{{$}}
 ; GCN-DENORM-DAG: v_rcp_f32_e32
 ; GCN-DENORM-DAG: v_rcp_f32_e32
 
@@ -301,7 +301,7 @@ define amdgpu_kernel void @div_v4_c_by_x_25ulp(ptr addrspace(1) %arg) {
 ; GCN-DENORM-DAG: v_div_fmas_f32
 ; GCN-DENORM-DAG: v_div_fmas_f32
 ; GCN-DENORM-DAG: v_div_fixup_f32 {{.*}}, -2.0{{$}}
-; GCN-DENORM-DAG: v_div_fixup_f32 {{.*}}, 2.0{{$}}
+; GCN-DENORM-DAG: v_div_fixup_f32 {{.*}}, -2.0{{$}}
 
 ; GCN-FLUSH-DAG:  v_rcp_f32_e32
 ; GCN-FLUSH-DAG:  v_rcp_f32_e64
