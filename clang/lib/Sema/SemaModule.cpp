@@ -602,11 +602,6 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
     Diag(ExportLoc, diag::err_export_not_in_module_interface);
   }
 
-  // In some cases we need to know if an entity was present in a directly-
-  // imported module (as opposed to a transitive import).  This avoids
-  // searching both Imports and Exports.
-  DirectModuleImports.insert(Mod);
-
   return Import;
 }
 
