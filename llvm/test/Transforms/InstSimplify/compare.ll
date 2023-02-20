@@ -2877,13 +2877,13 @@ define i1 @neg_icmp_lshr_known_non_zero_ult_no_nuw(i8 %x) {
 ; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], 1
 ; CHECK-NEXT:    [[X1:%.*]] = shl i8 [[OR]], 1
 ; CHECK-NEXT:    [[X2:%.*]] = shl i8 [[OR]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X1]], [[X2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X1]], [[X2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %or = or i8 %x, 1
   %x1 = shl i8 %or, 1
   %x2 = shl i8 %or, 2
-  %cmp = icmp slt i8 %x1, %x2
+  %cmp = icmp ult i8 %x1, %x2
   ret i1 %cmp
 }
 
