@@ -6,7 +6,7 @@ set(hipcc_NAME "${PROJECT_NAME}")
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 
-find_package(ROCM)
+find_package(ROCM QUIET)
 if(ROCM_FOUND)
   include(ROCMSetupVersion)
   rocm_setup_version(VERSION "${hipcc_VERSION}")
@@ -106,12 +106,14 @@ install(TARGETS ${HIPCC_BIN}
 install(TARGETS ${HIPCONFIG_BIN}
   COMPONENT ${hipcc_NAME}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-# TODO: WIN32 check need to be removed if backward compatibility is required for WIN32
+
+# TODO: WIN32 check need to be removed if backward
+# compatibility is required for WIN32.
 option(HIPCC_BACKWARD_COMPATIBILITY "Enable HIPCC backward compatibility" ON)
 if(NOT WIN32)
-    if(HIPCC_BACKWARD_COMPATIBILITY)
-        include(hipcc-backward-compat.cmake)
-    endif()
+  if(HIPCC_BACKWARD_COMPATIBILITY)
+    include(hipcc-backward-compat.cmake)
+  endif()
 endif()
 
 include(CPack)
