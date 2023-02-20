@@ -62,6 +62,7 @@ set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 
 # Debian-specific packaging variables.
 set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libfile-basedir-perl, libfile-copy-recursive-perl, libfile-listing-perl, libfile-which-perl, liburi-encode-perl, perl (>= 5.0)")
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/ROCm-Developer-Tools/HIPCC")
 if(DEFINED ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
   set(CPACK_DEBIAN_PACKAGE_RELEASE $ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
@@ -72,6 +73,7 @@ endif()
 # RPM-specific packaging variables.
 set(CPACK_RPM_FILE_NAME "RPM-DEFAULT")
 set(CPACK_RPM_PACKAGE_LICENSE "NCSA")
+set(CPACK_RPM_PACKAGE_REQUIRES "perl >= 5.0, perl-File-BaseDir, perl-File-Listing, perl-File-Which, perl-URI-Encode")
 if(DEFINED ENV{CPACK_RPM_PACKAGE_RELEASE})
   set(CPACK_RPM_PACKAGE_RELEASE $ENV{CPACK_RPM_PACKAGE_RELEASE})
 else()
