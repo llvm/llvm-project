@@ -2614,18 +2614,8 @@ SDValue NVPTXTargetLowering::LowerSTOREi1(SDValue Op, SelectionDAG &DAG) const {
 // passing variable arguments.
 SDValue NVPTXTargetLowering::getParamSymbol(SelectionDAG &DAG, int idx,
                                             EVT v) const {
-  std::string ParamSym;
-  raw_string_ostream ParamStr(ParamSym);
-
-  ParamStr << DAG.getMachineFunction().getName();
-
-  if (idx < 0)
-    ParamStr << "_vararg";
-  else
-    ParamStr << "_param_" << idx;
-
-  StringRef SavedStr =
-    nvTM->getStrPool().save(ParamSym);
+  StringRef SavedStr = nvTM->getStrPool().save(
+      getParamName(&DAG.getMachineFunction().getFunction(), idx));
   return DAG.getTargetExternalSymbol(SavedStr.data(), v);
 }
 
@@ -4520,6 +4510,23 @@ Align NVPTXTargetLowering::getFunctionByValParamAlign(
   ArgAlign = std::max(ArgAlign, Align(4));
 
   return ArgAlign;
+}
+
+// Helper for getting a function parameter name. Name is composed from
+// its index and the function name. Negative index corresponds to special
+// parameter (unsized array) used for passing variable arguments.
+std::string NVPTXTargetLowering::getParamName(const Function *F,
+                                              int Idx) const {
+  std::string ParamName;
+  raw_string_ostream ParamStr(ParamName);
+
+  ParamStr << getTargetMachine().getSymbol(F)->getName();
+  if (Idx < 0)
+    ParamStr << "_vararg";
+  else
+    ParamStr << "_param_" << Idx;
+
+  return ParamName;
 }
 
 /// isLegalAddressingMode - Return true if the addressing mode represented
