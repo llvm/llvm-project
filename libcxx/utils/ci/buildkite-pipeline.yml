@@ -56,9 +56,7 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
-        # TODO ENABLE
-        # CLANG_FORMAT: "/usr/bin/clang-format-${LLVM_STABLE_VERSION}"
-        CLANG_FORMAT: "clang-format-15"
+        CLANG_FORMAT: "/usr/bin/clang-format-${LLVM_STABLE_VERSION}"
     agents:
       queue: "libcxx-builders"
       os: "linux"

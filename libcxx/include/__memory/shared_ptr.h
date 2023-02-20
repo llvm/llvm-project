@@ -118,7 +118,7 @@ public:
 _LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
 void __throw_bad_weak_ptr()
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw bad_weak_ptr();
 #else
     _VSTD::abort();
@@ -508,10 +508,10 @@ public:
     shared_ptr(_Yp* __p, _Dp __d)
         : __ptr_(__p)
     {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
             typedef __shared_ptr_pointer<_Yp*, _Dp, _AllocT> _CntrlBlk;
 #ifndef _LIBCPP_CXX03_LANG
@@ -520,14 +520,14 @@ public:
             __cntrl_ = new _CntrlBlk(__p, __d, _AllocT());
 #endif // not _LIBCPP_CXX03_LANG
             __enable_weak_this(__p, __p);
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
             __d(__p);
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
     }
 
     template<class _Yp, class _Dp, class _Alloc, class = __enable_if_t<__shared_ptr_deleter_ctor_reqs<_Dp, _Yp, _Tp>::value> >
@@ -535,10 +535,10 @@ public:
     shared_ptr(_Yp* __p, _Dp __d, _Alloc __a)
         : __ptr_(__p)
     {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             typedef __shared_ptr_pointer<_Yp*, _Dp, _Alloc> _CntrlBlk;
             typedef typename __allocator_traits_rebind<_Alloc, _CntrlBlk>::type _A2;
             typedef __allocator_destructor<_A2> _D2;
@@ -552,14 +552,14 @@ public:
 #endif // not _LIBCPP_CXX03_LANG
             __cntrl_ = _VSTD::addressof(*__hold2.release());
             __enable_weak_this(__p, __p);
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
             __d(__p);
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
     }
 
     template<class _Dp>
@@ -567,10 +567,10 @@ public:
     shared_ptr(nullptr_t __p, _Dp __d)
         : __ptr_(nullptr)
     {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             typedef typename __shared_ptr_default_allocator<_Tp>::type _AllocT;
             typedef __shared_ptr_pointer<nullptr_t, _Dp, _AllocT> _CntrlBlk;
 #ifndef _LIBCPP_CXX03_LANG
@@ -578,14 +578,14 @@ public:
 #else
             __cntrl_ = new _CntrlBlk(__p, __d, _AllocT());
 #endif // not _LIBCPP_CXX03_LANG
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
             __d(__p);
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
     }
 
     template<class _Dp, class _Alloc>
@@ -593,10 +593,10 @@ public:
     shared_ptr(nullptr_t __p, _Dp __d, _Alloc __a)
         : __ptr_(nullptr)
     {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             typedef __shared_ptr_pointer<nullptr_t, _Dp, _Alloc> _CntrlBlk;
             typedef typename __allocator_traits_rebind<_Alloc, _CntrlBlk>::type _A2;
             typedef __allocator_destructor<_A2> _D2;
@@ -609,14 +609,14 @@ public:
                 _CntrlBlk(__p, __d, __a);
 #endif // not _LIBCPP_CXX03_LANG
             __cntrl_ = _VSTD::addressof(*__hold2.release());
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
             __d(__p);
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
     }
 
     template<class _Yp>

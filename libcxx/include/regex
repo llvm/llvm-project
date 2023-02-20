@@ -1012,7 +1012,7 @@ template <regex_constants::error_type _Ev>
 _LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
 void __throw_regex_error()
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw regex_error(_Ev);
 #else
     _VSTD::abort();

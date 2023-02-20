@@ -15553,7 +15553,7 @@ support all bit widths or vector types, however.
 ::
 
       declare i8  @llvm.fshl.i8 (i8 %a, i8 %b, i8 %c)
-      declare i67 @llvm.fshl.i67(i67 %a, i67 %b, i67 %c)
+      declare i64 @llvm.fshl.i64(i64 %a, i64 %b, i64 %c)
       declare <2 x i32> @llvm.fshl.v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c)
 
 Overview:
@@ -15601,7 +15601,7 @@ support all bit widths or vector types, however.
 ::
 
       declare i8  @llvm.fshr.i8 (i8 %a, i8 %b, i8 %c)
-      declare i67 @llvm.fshr.i67(i67 %a, i67 %b, i67 %c)
+      declare i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 %c)
       declare <2 x i32> @llvm.fshr.v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c)
 
 Overview:

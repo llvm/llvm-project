@@ -7374,7 +7374,7 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
   APInt AllOneMantissa = APFloat::getLargest(Semantics).bitcastToAPInt() & ~Inf;
   APInt QNaNBitMask =
       APInt::getOneBitSet(BitSize, AllOneMantissa.getActiveBits() - 1);
-  APInt InvertionMask = APInt::getAllOnesValue(DstTy.getScalarSizeInBits());
+  APInt InvertionMask = APInt::getAllOnes(DstTy.getScalarSizeInBits());
 
   auto SignBitC = MIRBuilder.buildConstant(IntTy, SignBit);
   auto ValueMaskC = MIRBuilder.buildConstant(IntTy, ValueMask);

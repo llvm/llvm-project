@@ -7188,6 +7188,11 @@ QualType ASTReader::GetType(TypeID ID) {
       T = Context.SingletonId; \
       break;
 #include "clang/Basic/RISCVVTypes.def"
+#define WASM_TYPE(Name, Id, SingletonId)                                       \
+  case PREDEF_TYPE_##Id##_ID:                                                  \
+    T = Context.SingletonId;                                                   \
+    break;
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
     }
 
     assert(!T.isNull() && "Unknown predefined type");

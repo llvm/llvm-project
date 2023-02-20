@@ -315,10 +315,6 @@ def : Pat<(rotr GPR:$rs1, GPR:$rs2),
 def : Pat<(rotl GPR:$rs1, GPR:$rs2),
            (OR (SLL GPR:$rs1, GPR:$rs2),
                (SRL GPR:$rs1, (SUB X0, GPR:$rs2)))>;
-//def : Pat<(and GPR:$rs1, 1), (TH_EXTU GPR:$rs1, 0, 0)>;
-//def : Pat<(and GPR:$rs1, 0xff), (TH_EXTU GPR:$rs1, 7, 0)>;
-def : Pat<(and GPR:$rs1, 0xffff), (TH_EXTU GPR:$rs1, 15, 0)>;
-def : Pat<(and GPR:$rs1, 0xffffffff), (TH_EXTU GPR:$rs1, 31, 0)>;
 def : Pat<(sext_inreg GPR:$rs1, i32), (TH_EXT GPR:$rs1, 31, 0)>;
 def : Pat<(sext_inreg GPR:$rs1, i16), (TH_EXT GPR:$rs1, 15, 0)>;
 def : Pat<(sext_inreg GPR:$rs1, i8), (TH_EXT GPR:$rs1, 7, 0)>;

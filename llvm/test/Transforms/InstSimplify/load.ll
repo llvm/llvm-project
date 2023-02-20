@@ -4,6 +4,11 @@
 @zeroinit = constant {} zeroinitializer
 @poison = constant {} poison
 
+@constzeroarray = internal constant [4 x i32] zeroinitializer
+
+@constarray = internal constant [4 x i32] [i32 1, i32 1, i32 1, i32 1]
+@constarrayi8 = internal constant [2 x i8] [i8 1, i8 1]
+
 define i32 @crash_on_zeroinit() {
 ; CHECK-LABEL: @crash_on_zeroinit(
 ; CHECK-NEXT:    ret i32 poison
@@ -39,4 +44,52 @@ define <3 x float> @load_vec3() {
 ;
   %1 = load <3 x float>, ptr getelementptr inbounds (<3 x float>, ptr @constvec, i64 1)
   ret <3 x float> %1
+}
+
+define i32 @load_gep_const_zero_array(i64 %idx) {
+; CHECK-LABEL: @load_gep_const_zero_array(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [4 x i32], ptr @constzeroarray, i64 0, i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret i32 [[LOAD]]
+;
+  %gep = getelementptr inbounds [4 x i32], ptr @constzeroarray, i64 0, i64 %idx
+  %load = load i32, ptr %gep
+  ret i32 %load
+}
+
+define i8 @load_i8_multi_gep_const_zero_array(i64 %idx1, i64 %idx2) {
+; CHECK-LABEL: @load_i8_multi_gep_const_zero_array(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr @constzeroarray, i64 [[IDX1:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[GEP1]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP]], align 1
+; CHECK-NEXT:    ret i8 [[LOAD]]
+;
+  %gep1 = getelementptr inbounds i8, ptr @constzeroarray, i64 %idx1
+  %gep = getelementptr inbounds i8, ptr %gep1, i64 %idx2
+  %load = load i8, ptr %gep
+  ret i8 %load
+}
+
+define i32 @load_gep_const_array(i64 %idx) {
+; CHECK-LABEL: @load_gep_const_array(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [4 x i32], ptr @constarray, i64 0, i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret i32 [[LOAD]]
+;
+  %gep = getelementptr inbounds [4 x i32], ptr @constarray, i64 0, i64 %idx
+  %load = load i32, ptr %gep
+  ret i32 %load
+}
+
+define i8 @load_i8_multi_gep_const_array(i64 %idx1, i64 %idx2) {
+; CHECK-LABEL: @load_i8_multi_gep_const_array(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr @constarrayi8, i64 [[IDX1:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[GEP1]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP]], align 1
+; CHECK-NEXT:    ret i8 [[LOAD]]
+;
+  %gep1 = getelementptr inbounds i8, ptr @constarrayi8, i64 %idx1
+  %gep = getelementptr inbounds i8, ptr %gep1, i64 %idx2
+  %load = load i8, ptr %gep
+  ret i8 %load
 }

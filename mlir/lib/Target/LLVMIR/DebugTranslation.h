@@ -73,6 +73,7 @@ private:
   llvm::DILocalVariable *translateImpl(DILocalVariableAttr attr);
   llvm::DIScope *translateImpl(DIScopeAttr attr);
   llvm::DISubprogram *translateImpl(DISubprogramAttr attr);
+  llvm::DINamespace *translateImpl(DINamespaceAttr attr);
   llvm::DISubrange *translateImpl(DISubrangeAttr attr);
   llvm::DISubroutineType *translateImpl(DISubroutineTypeAttr attr);
   llvm::DIType *translateImpl(DITypeAttr attr);

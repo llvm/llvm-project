@@ -216,6 +216,9 @@ public:
   void UseFortranBuiltinsModule();
   const Scope *GetBuiltinsScope() const { return builtinsScope_; }
 
+  void UsePPCFortranBuiltinsModule();
+  const Scope *GetPPCBuiltinsScope() const { return ppcBuiltinsScope_; }
+
   // Saves a module file's parse tree so that it remains available
   // during semantics.
   parser::Program &SaveParseTree(parser::Program &&);
@@ -276,6 +279,7 @@ private:
   UnorderedSymbolSet errorSymbols_;
   std::set<std::string> tempNames_;
   const Scope *builtinsScope_{nullptr}; // module __Fortran_builtins
+  const Scope *ppcBuiltinsScope_{nullptr}; // module __Fortran_PPC_intrinsics
   std::list<parser::Program> modFileParseTrees_;
   std::unique_ptr<CommonBlockMap> commonBlockMap_;
   bool anyDefinedIntrinsicOperator_{false};

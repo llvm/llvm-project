@@ -797,7 +797,7 @@ static Value *checkForNegativeOperand(BinaryOperator &I,
   // LHS = XOR(Y, C1), Y = AND(Z, C2), C1 == (C2 + 1) => LHS == NEG(OR(Z, ~C2))
   // ADD(LHS, RHS) == SUB(RHS, OR(Z, ~C2))
   if (match(LHS, m_Xor(m_Value(Y), m_APInt(C1))))
-    if (C1->countTrailingZeros() == 0)
+    if (C1->countr_zero() == 0)
       if (match(Y, m_And(m_Value(Z), m_APInt(C2))) && *C1 == (*C2 + 1)) {
         Value *NewOr = Builder.CreateOr(Z, ~(*C2));
         return Builder.CreateSub(RHS, NewOr, "sub");
@@ -1449,7 +1449,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
 
   // (A & 2^C1) + A => A & (2^C1 - 1) iff bit C1 in A is a sign bit
   if (match(&I, m_c_Add(m_And(m_Value(A), m_APInt(C1)), m_Deferred(A))) &&
-      C1->isPowerOf2() && (ComputeNumSignBits(A) > C1->countLeadingZeros())) {
+      C1->isPowerOf2() && (ComputeNumSignBits(A) > C1->countl_zero())) {
     Constant *NewMask = ConstantInt::get(RHS->getType(), *C1 - 1);
     return BinaryOperator::CreateAnd(A, NewMask);
   }
@@ -1525,7 +1525,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   const APInt *NegPow2C;
   if (match(&I, m_c_Add(m_OneUse(m_Mul(m_Value(A), m_NegatedPower2(NegPow2C))),
                         m_Value(B)))) {
-    Constant *ShiftAmtC = ConstantInt::get(Ty, NegPow2C->countTrailingZeros());
+    Constant *ShiftAmtC = ConstantInt::get(Ty, NegPow2C->countr_zero());
     Value *Shl = Builder.CreateShl(A, ShiftAmtC);
     return BinaryOperator::CreateSub(B, Shl);
   }
@@ -2335,7 +2335,7 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   const APInt *AddC, *AndC;
   if (match(Op0, m_Add(m_Value(X), m_APInt(AddC))) &&
       match(Op1, m_And(m_Specific(X), m_APInt(AndC)))) {
-    unsigned Cttz = AddC->countTrailingZeros();
+    unsigned Cttz = AddC->countr_zero();
     APInt HighMask(APInt::getHighBitsSet(BitWidth, BitWidth - Cttz));
     if ((HighMask & *AndC).isZero())
       return BinaryOperator::CreateAnd(Op0, ConstantInt::get(Ty, ~(*AndC)));

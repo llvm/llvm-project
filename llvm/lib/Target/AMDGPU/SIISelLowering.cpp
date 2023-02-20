@@ -9699,7 +9699,7 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
         (Bits == 8 || Bits == 16) && isShiftedMask_64(Mask) && !(Mask & 1)) {
       if (auto *CShift = dyn_cast<ConstantSDNode>(LHS->getOperand(1))) {
         unsigned Shift = CShift->getZExtValue();
-        unsigned NB = CRHS->getAPIntValue().countTrailingZeros();
+        unsigned NB = CRHS->getAPIntValue().countr_zero();
         unsigned Offset = NB + Shift;
         if ((Offset & (Bits - 1)) == 0) { // Starts at a byte or word boundary.
           SDLoc SL(N);

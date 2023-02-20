@@ -362,6 +362,9 @@ public:
     return nullptr;
   }
 
+  /// Return the WebAssembly externref reference type.
+  virtual llvm::Type *getWasmExternrefReferenceType() const { return nullptr; }
+
   /// Emit the device-side copy of the builtin surface type.
   virtual bool emitCUDADeviceBuiltinSurfaceDeviceCopy(CodeGenFunction &CGF,
                                                       LValue Dst,

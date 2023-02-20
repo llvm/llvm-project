@@ -6,7 +6,6 @@
 // RUN: not llvm-profdata show --debug-info=%t.no.dbg 2>&1 | FileCheck %s --check-prefix NO-DBG
 // NO-DBG: unable to correlate profile: could not find any profile metadata in debug info
 
-// CHECK: a
 // YAML: Probes:
 // YAML:   - Function Name:   a
 // YAML:     Linkage Name:    a
@@ -17,7 +16,6 @@
 // YAML:     Line:            [[@LINE+1]]
 void a() {}
 
-// CHECK: b
 // YAML:   - Function Name:   b
 // YAML:     Linkage Name:    b
 // YAML:     CFG Hash:        0x[[#%.1X,HASH:]]
@@ -27,7 +25,6 @@ void a() {}
 // YAML:     Line:            [[@LINE+1]]
 void b() {}
 
-// CHECK: main
 // YAML:   - Function Name:   main
 // YAML:     Linkage Name:    main
 // YAML:     CFG Hash:        0x[[#%.1X,HASH:]]
@@ -37,5 +34,8 @@ void b() {}
 // YAML:     Line:            [[@LINE+1]]
 int main() { return 0; }
 
+// CHECK: main
+// CHECK: a
+// CHECK: b
 // CHECK: Counters section size: 0x18 bytes
 // CHECK: Found 3 functions

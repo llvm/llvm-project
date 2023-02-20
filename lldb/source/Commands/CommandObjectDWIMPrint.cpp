@@ -36,6 +36,8 @@ CommandObjectDWIMPrint::CommandObjectDWIMPrint(CommandInterpreter &interpreter)
                         OptionGroupFormat::OPTION_GROUP_FORMAT |
                             OptionGroupFormat::OPTION_GROUP_GDB_FMT,
                         LLDB_OPT_SET_1);
+  StringRef exclude_expr_options[] = {"debug", "top-level"};
+  m_option_group.Append(&m_expr_options, exclude_expr_options);
   m_option_group.Append(&m_varobj_options, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
   m_option_group.Finalize();
 }
@@ -57,16 +59,27 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
                                   m_cmd_name);
     return false;
   }
+
   auto verbosity = GetDebugger().GetDWIMPrintVerbosity();
 
+  Target *target_ptr = m_exe_ctx.GetTargetPtr();
+  // Fallback to the dummy target, which can allow for expression evaluation.
+  Target &target = target_ptr ? *target_ptr : GetDummyTarget();
+
+  const EvaluateExpressionOptions eval_options =
+      m_expr_options.GetEvaluateExpressionOptions(target, m_varobj_options);
+
   DumpValueObjectOptions dump_options = m_varobj_options.GetAsDumpOptions(
-      eLanguageRuntimeDescriptionDisplayVerbosityFull,
-      m_format_options.GetFormat());
+      m_expr_options.m_verbosity, m_format_options.GetFormat());
+  dump_options.SetHideName(eval_options.GetSuppressPersistentResult());
 
   // First, try `expr` as the name of a frame variable.
   if (StackFrame *frame = m_exe_ctx.GetFramePtr()) {
     auto valobj_sp = frame->FindVariable(ConstString(expr));
     if (valobj_sp && valobj_sp->GetError().Success()) {
+      if (!eval_options.GetSuppressPersistentResult())
+        valobj_sp = valobj_sp->Persist();
+
       if (verbosity == eDWIMPrintVerbosityFull) {
         StringRef flags;
         if (args.HasArgs())
@@ -74,6 +87,7 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
         result.AppendMessageWithFormatv("note: ran `frame variable {0}{1}`",
                                         flags, expr);
       }
+
       valobj_sp->Dump(result.GetOutputStream(), dump_options);
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return true;
@@ -82,14 +96,11 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
 
   // Second, also lastly, try `expr` as a source expression to evaluate.
   {
-    Target *target_ptr = m_exe_ctx.GetTargetPtr();
-    // Fallback to the dummy target, which can allow for expression evaluation.
-    Target &target = target_ptr ? *target_ptr : GetDummyTarget();
-
     auto *exe_scope = m_exe_ctx.GetBestExecutionContextScope();
     ValueObjectSP valobj_sp;
-    if (target.EvaluateExpression(expr, exe_scope, valobj_sp) ==
-        eExpressionCompleted) {
+    ExpressionResults expr_result =
+        target.EvaluateExpression(expr, exe_scope, valobj_sp, eval_options);
+    if (expr_result == eExpressionCompleted) {
       if (verbosity != eDWIMPrintVerbosityNone) {
         StringRef flags;
         if (args.HasArgs())
@@ -97,6 +108,7 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
         result.AppendMessageWithFormatv("note: ran `expression {0}{1}`", flags,
                                         expr);
       }
+
       valobj_sp->Dump(result.GetOutputStream(), dump_options);
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return true;

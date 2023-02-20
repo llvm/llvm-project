@@ -42,9 +42,6 @@ external add_jump_threading
 external add_licm
   : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
   = "llvm_add_licm"
-external add_loop_idiom
-  : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
-  = "llvm_add_loop_idiom"
 external add_loop_rotation
   : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
   = "llvm_add_loop_rotate"

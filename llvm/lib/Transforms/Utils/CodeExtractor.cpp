@@ -1091,32 +1091,20 @@ static void insertLifetimeMarkersSurroundingCall(
     Module *M, ArrayRef<Value *> LifetimesStart, ArrayRef<Value *> LifetimesEnd,
     CallInst *TheCall) {
   LLVMContext &Ctx = M->getContext();
-  auto Int8PtrTy = Type::getInt8PtrTy(Ctx);
   auto NegativeOne = ConstantInt::getSigned(Type::getInt64Ty(Ctx), -1);
   Instruction *Term = TheCall->getParent()->getTerminator();
 
-  // The memory argument to a lifetime marker must be a i8*. Cache any bitcasts
-  // needed to satisfy this requirement so they may be reused.
-  DenseMap<Value *, Value *> Bitcasts;
-
   // Emit lifetime markers for the pointers given in \p Objects. Insert the
   // markers before the call if \p InsertBefore, and after the call otherwise.
-  auto insertMarkers = [&](Function *MarkerFunc, ArrayRef<Value *> Objects,
+  auto insertMarkers = [&](Intrinsic::ID MarkerFunc, ArrayRef<Value *> Objects,
                            bool InsertBefore) {
     for (Value *Mem : Objects) {
       assert((!isa<Instruction>(Mem) || cast<Instruction>(Mem)->getFunction() ==
                                             TheCall->getFunction()) &&
              "Input memory not defined in original function");
-      Value *&MemAsI8Ptr = Bitcasts[Mem];
-      if (!MemAsI8Ptr) {
-        if (Mem->getType() == Int8PtrTy)
-          MemAsI8Ptr = Mem;
-        else
-          MemAsI8Ptr =
-              CastInst::CreatePointerCast(Mem, Int8PtrTy, "lt.cast", TheCall);
-      }
 
-      auto Marker = CallInst::Create(MarkerFunc, {NegativeOne, MemAsI8Ptr});
+      Function *Func = Intrinsic::getDeclaration(M, MarkerFunc, Mem->getType());
+      auto Marker = CallInst::Create(Func, {NegativeOne, Mem});
       if (InsertBefore)
         Marker->insertBefore(TheCall);
       else
@@ -1125,15 +1113,13 @@ static void insertLifetimeMarkersSurroundingCall(
   };
 
   if (!LifetimesStart.empty()) {
-    auto StartFn = llvm::Intrinsic::getDeclaration(
-        M, llvm::Intrinsic::lifetime_start, Int8PtrTy);
-    insertMarkers(StartFn, LifetimesStart, /*InsertBefore=*/true);
+    insertMarkers(Intrinsic::lifetime_start, LifetimesStart,
+                  /*InsertBefore=*/true);
   }
 
   if (!LifetimesEnd.empty()) {
-    auto EndFn = llvm::Intrinsic::getDeclaration(
-        M, llvm::Intrinsic::lifetime_end, Int8PtrTy);
-    insertMarkers(EndFn, LifetimesEnd, /*InsertBefore=*/false);
+    insertMarkers(Intrinsic::lifetime_end, LifetimesEnd,
+                  /*InsertBefore=*/false);
   }
 }
 
