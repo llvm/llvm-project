@@ -27,6 +27,11 @@ class AMDGPUPALMetadata {
   msgpack::DocNode Registers;
   msgpack::DocNode HwStages;
   msgpack::DocNode ShaderFunctions;
+  bool VersionChecked = false;
+  msgpack::DocNode Version;
+  // From PAL version >= 3.0
+  msgpack::DocNode ComputeRegisters;
+  msgpack::DocNode GraphicsRegisters;
 
 public:
   // Read the amdgpu.pal.metadata supplied by the frontend, ready for
@@ -129,6 +134,26 @@ public:
   // Set legacy PAL metadata format.
   void setLegacy();
 
+  unsigned getPALMajorVersion();
+  unsigned getPALMinorVersion();
+
+  void setHwStage(unsigned CC, StringRef field, unsigned Val);
+  void setHwStage(unsigned CC, StringRef field, bool Val);
+
+  void setComputeRegisters(StringRef field, unsigned Val);
+  void setComputeRegisters(StringRef field, bool Val);
+
+  // If the field does not exist will return nullptr rather than creating a new
+  // entry (which is the behaviour of the other functions).
+  msgpack::DocNode *refComputeRegister(StringRef field);
+  bool checkComputeRegisters(StringRef field, unsigned Val);
+  bool checkComputeRegisters(StringRef field, bool Val);
+
+  void setGraphicsRegisters(StringRef field, unsigned Val);
+  void setGraphicsRegisters(StringRef field, bool Val);
+  void setGraphicsRegisters(StringRef field1, StringRef field2, unsigned Val);
+  void setGraphicsRegisters(StringRef field1, StringRef field2, bool Val);
+
   // Erase all PAL metadata.
   void reset();
 
@@ -151,9 +176,28 @@ private:
   // Get (create if necessary) a function in the shader functions map.
   msgpack::MapDocNode getShaderFunction(StringRef Name);
 
+  // Reference (create if necessary) the node for the compute_registers map.
+  msgpack::DocNode &refComputeRegisters();
+
+  // Get (create if necessary) the .compute_registers entry.
+  msgpack::MapDocNode getComputeRegisters();
+
+  // Reference (create if necessary) the node for the graphics registers map.
+  msgpack::DocNode &refGraphicsRegisters();
+
+  // Get (create if necessary) the .graphics_registers entry.
+  msgpack::MapDocNode getGraphicsRegisters();
+
+  // Reference (create if necessary) the node for the hardware_stages map.
+  msgpack::DocNode &refHwStage();
+
   // Get (create if necessary) the .hardware_stages entry for the given calling
   // convention.
   msgpack::MapDocNode getHwStage(unsigned CC);
+
+  // Get the PAL version major (idx 0) or minor (idx 1). This is an internal
+  // helper for the public wrapper functions that request Major or Minor
+  unsigned getPALVersion(unsigned idx);
 
   bool setFromLegacyBlob(StringRef Blob);
   bool setFromMsgPackBlob(StringRef Blob);
