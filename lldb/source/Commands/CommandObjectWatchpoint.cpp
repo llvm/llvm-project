@@ -209,13 +209,13 @@ protected:
     Target *target = &GetSelectedTarget();
 
     if (target->GetProcessSP() && target->GetProcessSP()->IsAlive()) {
-      uint32_t num_supported_hardware_watchpoints;
-      Status error = target->GetProcessSP()->GetWatchpointSupportInfo(
-          num_supported_hardware_watchpoints);
-      if (error.Success())
+      std::optional<uint32_t> num_supported_hardware_watchpoints =
+          target->GetProcessSP()->GetWatchpointSlotCount();
+
+      if (num_supported_hardware_watchpoints)
         result.AppendMessageWithFormat(
             "Number of supported hardware watchpoints: %u\n",
-            num_supported_hardware_watchpoints);
+            *num_supported_hardware_watchpoints);
     }
 
     const WatchpointList &watchpoints = target->GetWatchpointList();

@@ -158,7 +158,7 @@ public:
 
   Status DisableWatchpoint(Watchpoint *wp, bool notify = true) override;
 
-  Status GetWatchpointSupportInfo(uint32_t &num) override;
+  std::optional<uint32_t> GetWatchpointSlotCount() override;
 
   llvm::Expected<TraceSupportedResponse> TraceSupported() override;
 
@@ -171,7 +171,7 @@ public:
   llvm::Expected<std::vector<uint8_t>>
   TraceGetBinaryData(const TraceGetBinaryDataRequest &request) override;
 
-  Status GetWatchpointSupportInfo(uint32_t &num, bool &after) override;
+  std::optional<bool> DoGetWatchpointReportedAfter() override;
 
   bool StartNoticingNewThreads() override;
 
