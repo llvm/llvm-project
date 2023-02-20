@@ -213,8 +213,8 @@ define void @test16(ptr %x, ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[X1:%.*]] = load float, ptr [[X:%.*]], align 4
 ; CHECK-NEXT:    store float [[X1]], ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    store float [[X1]], ptr [[B:%.*]], align 4
-; CHECK-NEXT:    [[X2:%.*]] = load float, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    store float [[X2]], ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[X2:%.*]] = load float, ptr [[X]], align 4
+; CHECK-NEXT:    store float [[X2]], ptr [[B]], align 4
 ; CHECK-NEXT:    store float [[X2]], ptr [[C:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -238,8 +238,8 @@ define void @test16-vect(ptr %x, ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[X1:%.*]] = load <4 x i8>, ptr [[X:%.*]], align 4
 ; CHECK-NEXT:    store <4 x i8> [[X1]], ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    store <4 x i8> [[X1]], ptr [[B:%.*]], align 4
-; CHECK-NEXT:    [[X2:%.*]] = load <4 x i8>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    store <4 x i8> [[X2]], ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[X2:%.*]] = load <4 x i8>, ptr [[X]], align 4
+; CHECK-NEXT:    store <4 x i8> [[X2]], ptr [[B]], align 4
 ; CHECK-NEXT:    store <4 x i8> [[X2]], ptr [[C:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -353,8 +353,8 @@ define i64 @test21(ptr %P) {
 
 define i64 @test22(ptr %P) {
 ; CHECK-LABEL: @test22(
-; CHECK-NEXT:    [[X:%.*]] = load i64, ptr [[P]], align 8
-; CHECK-NEXT:    [[Y:%.*]] = load ptr addrspace(1), ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[X:%.*]] = load i64, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[Y:%.*]] = load ptr addrspace(1), ptr [[P]], align 8
 ; CHECK-NEXT:    call void @use.p1(ptr addrspace(1) [[Y]])
 ; CHECK-NEXT:    ret i64 [[X]]
 ;
@@ -369,8 +369,8 @@ declare void @use.v2.p1(<2 x ptr addrspace(1)>)
 
 define <2 x i64> @test23(ptr %P) {
 ; CHECK-LABEL: @test23(
-; CHECK-NEXT:    [[X:%.*]] = load <2 x i64>, ptr [[P]], align 16
-; CHECK-NEXT:    [[Y:%.*]] = load <2 x ptr>, ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[X:%.*]] = load <2 x i64>, ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[Y:%.*]] = load <2 x ptr>, ptr [[P]], align 16
 ; CHECK-NEXT:    call void @use.v2.p0(<2 x ptr> [[Y]])
 ; CHECK-NEXT:    ret <2 x i64> [[X]]
 ;
@@ -382,8 +382,8 @@ define <2 x i64> @test23(ptr %P) {
 
 define <2 x i64> @test24(ptr %P) {
 ; CHECK-LABEL: @test24(
-; CHECK-NEXT:    [[X:%.*]] = load <2 x i64>, ptr [[P]], align 16
-; CHECK-NEXT:    [[Y:%.*]] = load <2 x ptr addrspace(1)>, ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[X:%.*]] = load <2 x i64>, ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[Y:%.*]] = load <2 x ptr addrspace(1)>, ptr [[P]], align 16
 ; CHECK-NEXT:    call void @use.v2.p1(<2 x ptr addrspace(1)> [[Y]])
 ; CHECK-NEXT:    ret <2 x i64> [[X]]
 ;
@@ -391,4 +391,30 @@ define <2 x i64> @test24(ptr %P) {
   %Y = load <2 x ptr addrspace(1)>, ptr %P
   call void @use.v2.p1(<2 x ptr addrspace(1)> %Y)
   ret <2 x i64> %X
+}
+
+define i16 @load_from_zero_with_dynamic_offset(i64 %idx) {
+; CHECK-LABEL: @load_from_zero_with_dynamic_offset(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr @GLOBAL, i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[V:%.*]] = load i16, ptr [[GEP]], align 2
+; CHECK-NEXT:    ret i16 [[V]]
+;
+  %gep = getelementptr i16, ptr @GLOBAL, i64 %idx
+  %v = load i16, ptr %gep
+  ret i16 %v
+}
+
+declare ptr @llvm.strip.invariant.group.p0(ptr %p)
+
+define i32 @load_via_strip_invariant_group() {
+; CHECK-LABEL: @load_via_strip_invariant_group(
+; CHECK-NEXT:    [[A:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr nonnull @Y)
+; CHECK-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[D:%.*]] = load i32, ptr [[B]], align 4
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %a = call ptr @llvm.strip.invariant.group.p0(ptr @Y)
+  %b = getelementptr i8, ptr %a, i64 8
+  %d = load i32, ptr %b
+  ret i32 %d
 }
