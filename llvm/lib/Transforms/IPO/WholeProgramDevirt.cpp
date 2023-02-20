@@ -379,6 +379,7 @@ namespace {
 // conditions
 //   1) All summaries are live.
 //   2) All function summaries indicate it's unreachable
+//   3) There is no non-function with the same GUID (which is rare)
 bool mustBeUnreachableFunction(ValueInfo TheFnVI) {
   if ((!TheFnVI) || TheFnVI.getSummaryList().empty()) {
     // Returns false if ValueInfo is absent, or the summary list is empty
@@ -391,12 +392,13 @@ bool mustBeUnreachableFunction(ValueInfo TheFnVI) {
     // In general either all summaries should be live or all should be dead.
     if (!Summary->isLive())
       return false;
-    if (auto *FS = dyn_cast<FunctionSummary>(Summary.get())) {
+    if (auto *FS = dyn_cast<FunctionSummary>(Summary->getBaseObject())) {
       if (!FS->fflags().MustBeUnreachable)
         return false;
     }
-    // Do nothing if a non-function has the same GUID (which is rare).
-    // This is correct since non-function summaries are not relevant.
+    // Be conservative if a non-function has the same GUID (which is rare).
+    else
+      return false;
   }
   // All function summaries are live and all of them agree that the function is
   // unreachble.
