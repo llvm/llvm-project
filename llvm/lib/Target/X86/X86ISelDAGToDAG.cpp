@@ -487,11 +487,11 @@ namespace {
       assert(N->getOpcode() == ISD::AND && "Unexpected opcode");
       const APInt &Val = cast<ConstantSDNode>(N->getOperand(1))->getAPIntValue();
 
-      if (Val.countTrailingOnes() >= Width)
+      if (Val.countr_one() >= Width)
         return true;
 
       APInt Mask = Val | CurDAG->computeKnownBits(N->getOperand(0)).Zero;
-      return Mask.countTrailingOnes() >= Width;
+      return Mask.countr_one() >= Width;
     }
 
     /// Return an SDNode that returns the value of the global base register.
@@ -4452,7 +4452,7 @@ bool X86DAGToDAGISel::shrinkAndImmediate(SDNode *And) {
   // implicit zeroing of 32 bit ops. So we should check if the lower 32 bits
   // are negative too.
   APInt MaskVal = And1C->getAPIntValue();
-  unsigned MaskLZ = MaskVal.countLeadingZeros();
+  unsigned MaskLZ = MaskVal.countl_zero();
   if (!MaskLZ || (VT == MVT::i64 && MaskLZ == 32))
     return false;
 

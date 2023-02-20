@@ -3540,8 +3540,8 @@ void ARMDAGToDAGISel::SelectCMP_SWAP(SDNode *N) {
 
 static std::optional<std::pair<unsigned, unsigned>>
 getContiguousRangeOfSetBits(const APInt &A) {
-  unsigned FirstOne = A.getBitWidth() - A.countLeadingZeros() - 1;
-  unsigned LastOne = A.countTrailingZeros();
+  unsigned FirstOne = A.getBitWidth() - A.countl_zero() - 1;
+  unsigned LastOne = A.countr_zero();
   if (A.popcount() != (FirstOne - LastOne + 1))
     return std::nullopt;
   return std::make_pair(FirstOne, LastOne);

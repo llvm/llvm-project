@@ -2113,16 +2113,16 @@ static Instruction *canonicalizeLogicFirst(BinaryOperator &I,
     return nullptr;
 
   unsigned Width = Ty->getScalarSizeInBits();
-  unsigned LastOneMath = Width - C2->countTrailingZeros();
+  unsigned LastOneMath = Width - C2->countr_zero();
 
   switch (OpC) {
   case Instruction::And:
-    if (C->countLeadingOnes() < LastOneMath)
+    if (C->countl_one() < LastOneMath)
       return nullptr;
     break;
   case Instruction::Xor:
   case Instruction::Or:
-    if (C->countLeadingZeros() < LastOneMath)
+    if (C->countl_zero() < LastOneMath)
       return nullptr;
     break;
   default:
@@ -2240,7 +2240,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     if (match(Op0, m_Add(m_Value(X), m_APInt(AddC)))) {
       // If we add zeros to every bit below a mask, the add has no effect:
       // (X + AddC) & LowMaskC --> X & LowMaskC
-      unsigned Ctlz = C->countLeadingZeros();
+      unsigned Ctlz = C->countl_zero();
       APInt LowMask(APInt::getLowBitsSet(Width, Width - Ctlz));
       if ((*AddC & LowMask).isZero())
         return BinaryOperator::CreateAnd(X, Op1);
@@ -2357,7 +2357,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     const APInt *C3 = C;
     Value *X;
     if (C3->isPowerOf2()) {
-      Constant *Log2C3 = ConstantInt::get(Ty, C3->countTrailingZeros());
+      Constant *Log2C3 = ConstantInt::get(Ty, C3->countr_zero());
       if (match(Op0, m_OneUse(m_LShr(m_Shl(m_ImmConstant(C1), m_Value(X)),
                                      m_ImmConstant(C2)))) &&
           match(C1, m_Power2())) {

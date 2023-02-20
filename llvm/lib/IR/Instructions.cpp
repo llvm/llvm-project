@@ -2501,10 +2501,10 @@ bool ShuffleVectorInst::isInsertSubvectorMask(ArrayRef<int> Mask,
 
   // Determine lo/hi span ranges.
   // TODO: How should we handle undefs at the start of subvector insertions?
-  int Src0Lo = Src0Elts.countTrailingZeros();
-  int Src1Lo = Src1Elts.countTrailingZeros();
-  int Src0Hi = NumMaskElts - Src0Elts.countLeadingZeros();
-  int Src1Hi = NumMaskElts - Src1Elts.countLeadingZeros();
+  int Src0Lo = Src0Elts.countr_zero();
+  int Src1Lo = Src1Elts.countr_zero();
+  int Src0Hi = NumMaskElts - Src0Elts.countl_zero();
+  int Src1Hi = NumMaskElts - Src1Elts.countl_zero();
 
   // If src0 is in place, see if the src1 elements is inplace within its own
   // span.

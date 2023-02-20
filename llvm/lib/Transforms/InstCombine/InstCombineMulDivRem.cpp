@@ -270,7 +270,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     if (match(Op0, m_ZExtOrSExt(m_Value(X))) &&
         match(Op1, m_APIntAllowUndef(NegPow2C))) {
       unsigned SrcWidth = X->getType()->getScalarSizeInBits();
-      unsigned ShiftAmt = NegPow2C->countTrailingZeros();
+      unsigned ShiftAmt = NegPow2C->countr_zero();
       if (ShiftAmt >= BitWidth - SrcWidth) {
         Value *N = Builder.CreateNeg(X, X->getName() + ".neg");
         Value *Z = Builder.CreateZExt(N, Ty, N->getName() + ".z");
@@ -1402,7 +1402,7 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
   KnownBits KnownDividend = computeKnownBits(Op0, 0, &I);
   if (!I.isExact() &&
       (match(Op1, m_Power2(Op1C)) || match(Op1, m_NegatedPower2(Op1C))) &&
-      KnownDividend.countMinTrailingZeros() >= Op1C->countTrailingZeros()) {
+      KnownDividend.countMinTrailingZeros() >= Op1C->countr_zero()) {
     I.setIsExact();
     return &I;
   }

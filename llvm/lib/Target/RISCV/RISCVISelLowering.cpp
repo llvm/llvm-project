@@ -9899,7 +9899,7 @@ static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
       return SDValue();
 
     // AddC needs to have at least 32 trailing zeros.
-    if (AddC->getAPIntValue().countTrailingZeros() < 32)
+    if (AddC->getAPIntValue().countr_zero() < 32)
       return SDValue();
 
     // All users should be a shift by constant less than or equal to 32. This
@@ -14138,8 +14138,8 @@ bool RISCVTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
         return false;
       // Break the MUL to two SLLI instructions and an ADD/SUB, if Imm needs
       // a pair of LUI/ADDI.
-      if (!Imm.isSignedIntN(12) && Imm.countTrailingZeros() < 12) {
-        APInt ImmS = Imm.ashr(Imm.countTrailingZeros());
+      if (!Imm.isSignedIntN(12) && Imm.countr_zero() < 12) {
+        APInt ImmS = Imm.ashr(Imm.countr_zero());
         if ((ImmS + 1).isPowerOf2() || (ImmS - 1).isPowerOf2() ||
             (1 - ImmS).isPowerOf2())
           return true;
