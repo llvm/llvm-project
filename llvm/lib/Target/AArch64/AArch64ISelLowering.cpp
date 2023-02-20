@@ -1228,6 +1228,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
          {MVT::nxv16i1, MVT::nxv8i1, MVT::nxv4i1, MVT::nxv2i1, MVT::nxv1i1}) {
       setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
+      setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
+      setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
     }
   }
 
@@ -1273,6 +1275,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
+      setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
+      setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
 
       setOperationAction(ISD::UMUL_LOHI, VT, Expand);
       setOperationAction(ISD::SMUL_LOHI, VT, Expand);
@@ -1414,6 +1418,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
+      setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
+      setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
 
       setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction(ISD::FREM, VT, Expand);
@@ -6106,6 +6112,10 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerCTTZ(Op, DAG);
   case ISD::VECTOR_SPLICE:
     return LowerVECTOR_SPLICE(Op, DAG);
+  case ISD::VECTOR_DEINTERLEAVE:
+    return LowerVECTOR_DEINTERLEAVE(Op, DAG);
+  case ISD::VECTOR_INTERLEAVE:
+    return LowerVECTOR_INTERLEAVE(Op, DAG);
   case ISD::STRICT_LROUND:
   case ISD::STRICT_LLROUND:
   case ISD::STRICT_LRINT:
@@ -24049,6 +24059,34 @@ AArch64TargetLowering::LowerFixedLengthIntToFPToSVE(SDValue Op,
     Val = DAG.getNode(ISD::TRUNCATE, DL, VT.changeTypeToInteger(), Val);
     return DAG.getNode(ISD::BITCAST, DL, VT, Val);
   }
+}
+
+SDValue
+AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT OpVT = Op.getValueType();
+  assert(OpVT.isScalableVector() &&
+         "Expected scalable vector in LowerVECTOR_DEINTERLEAVE.");
+  SDValue Even = DAG.getNode(AArch64ISD::UZP1, DL, OpVT, Op.getOperand(0),
+                             Op.getOperand(1));
+  SDValue Odd = DAG.getNode(AArch64ISD::UZP2, DL, OpVT, Op.getOperand(0),
+                            Op.getOperand(1));
+  return DAG.getMergeValues({Even, Odd}, DL);
+}
+
+SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
+                                                      SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT OpVT = Op.getValueType();
+  assert(OpVT.isScalableVector() &&
+         "Expected scalable vector in LowerVECTOR_INTERLEAVE.");
+
+  SDValue Lo = DAG.getNode(AArch64ISD::ZIP1, DL, OpVT, Op.getOperand(0),
+                           Op.getOperand(1));
+  SDValue Hi = DAG.getNode(AArch64ISD::ZIP2, DL, OpVT, Op.getOperand(0),
+                           Op.getOperand(1));
+  return DAG.getMergeValues({Lo, Hi}, DL);
 }
 
 SDValue
