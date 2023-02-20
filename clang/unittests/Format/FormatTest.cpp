@@ -10663,6 +10663,14 @@ TEST_F(FormatTest, UnderstandsOverloadedOperators) {
   verifyFormat("foo() { ::operator new(n * sizeof(foo)); }");
 }
 
+TEST_F(FormatTest, SpaceBeforeTemplateCloser) {
+  verifyFormat("C<&operator- > minus;");
+  verifyFormat("C<&operator> > gt;");
+  verifyFormat("C<&operator>= > ge;");
+  verifyFormat("C<&operator<= > le;");
+  verifyFormat("C<&operator< <X>> lt;");
+}
+
 TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
   verifyFormat("void A::b() && {}");
   verifyFormat("void A::b() && noexcept {}");
