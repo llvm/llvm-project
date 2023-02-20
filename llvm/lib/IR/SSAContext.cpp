@@ -75,9 +75,9 @@ bool SSAContext::comesBefore(const Instruction *lhs, const Instruction *rhs) {
   return lhs->comesBefore(rhs);
 }
 
-bool SSAContext::isConstantValuePhi(const Instruction &Instr) {
+bool SSAContext::isConstantOrUndefValuePhi(const Instruction &Instr) {
   if (auto *Phi = dyn_cast<PHINode>(&Instr))
-    return Phi->hasConstantValue();
+    return Phi->hasConstantOrUndefValue();
   return false;
 }
 
