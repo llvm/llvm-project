@@ -6053,12 +6053,13 @@ defm fimplicit_modules_use_lock : BoolOption<"f", "implicit-modules-use-lock",
           "duplicating work in competing clang invocations.">>;
 // FIXME: We only need this in C++ modules if we might textually
 // enter a different module (eg, when building a header unit).
-def fmodules_local_submodule_visibility :
-  Flag<["-"], "fmodules-local-submodule-visibility">,
-  HelpText<"Enforce name visibility rules across submodules of the same "
-           "top-level module.">,
-  MarshallingInfoFlag<LangOpts<"ModulesLocalVisibility">>,
-  ImpliedByAnyOf<[fcxx_modules.KeyPath]>;
+defm modules_local_submodule_visibility :
+   BoolFOption<"modules-local-submodule-visibility",
+     LangOpts<"ModulesLocalVisibility">,
+     Default<fcxx_modules.KeyPath>,
+     PosFlag<SetTrue, [], "Enforce">,
+     NegFlag<SetFalse, [], "Do not enforce">,
+     BothFlags<[], " name visibility rules across submodules of the same top-level module">>;
 def fmodules_codegen :
   Flag<["-"], "fmodules-codegen">,
   HelpText<"Generate code for uses of this module that assumes an explicit "

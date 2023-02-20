@@ -11,10 +11,6 @@
 // RUN:   -fmodules-cache-path=%t -fsyntax-only -I %t/include -x objective-c++ \
 // RUN:   %t/driver.mm -fno-modules-local-submodule-visibility 2>&1 \
 // RUN:   | FileCheck %t/driver.mm -check-prefix=CPP20
-// RUN: not %clang_cc1 -std=c++20 -fmodules-ts -fimplicit-module-maps \
-// RUN:   -fmodules-cache-path=%t -fsyntax-only -I %t/include -x objective-c++ \
-// RUN:   %t/driver.mm -fno-modules-local-submodule-visibility 2>&1 \
-// RUN:   | FileCheck %t/driver.mm -check-prefix=TS
 
 //--- include/module.modulemap
 
@@ -44,5 +40,4 @@ int i = B;
 @import M; // expected-error {{could not build module 'M'}}
 
 //--- driver.mm
-// CPP20: error: C++20 modules require the -fmodules-local-submodule-visibility -cc1 option
-// TS: error: Modules TS modules require the -fmodules-local-submodule-visibility -cc1 option
+// CPP20: error: standard C++ modules require the -fmodules-local-submodule-visibility -cc1 option

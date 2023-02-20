@@ -499,7 +499,7 @@ def err_test_module_file_extension_format : Error<
 def err_drv_module_output_with_multiple_arch : Error<
   "option '-fmodule-output' can't be used with multiple arch options">;
 
-def err_modules_no_lsv : Error<"%select{C++20|Modules TS}0 modules require "
+def err_modules_no_lsv : Error<"standard C++ modules require "
   "the -fmodules-local-submodule-visibility -cc1 option">;
 
 def err_drv_extract_api_wrong_kind : Error<
