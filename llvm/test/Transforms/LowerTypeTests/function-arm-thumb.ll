@@ -2,7 +2,7 @@
 
 target datalayout = "e-p:64:64"
 
-define void @f1() "target-features"="+thumb-mode" !type !0 {
+define void @f1() "target-features"="+thumb-mode,+v6t2" !type !0 {
   ret void
 }
 
