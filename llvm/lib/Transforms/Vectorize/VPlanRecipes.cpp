@@ -919,6 +919,7 @@ void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
     O << " (with final reduction value stored in invariant address sank "
          "outside of loop)";
 }
+#endif
 
 bool VPReplicateRecipe::shouldPack() const {
   // Find if the recipe is used by a widened recipe via an intervening
@@ -930,6 +931,8 @@ bool VPReplicateRecipe::shouldPack() const {
     return false;
   });
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
   O << Indent << (IsUniform ? "CLONE " : "REPLICATE ");
