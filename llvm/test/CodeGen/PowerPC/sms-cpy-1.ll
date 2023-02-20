@@ -13,18 +13,16 @@ define void @print_res() nounwind {
 ; CHECK-NEXT:    lwz 3, 0(3)
 ; CHECK-NEXT:    addi 3, 3, -1
 ; CHECK-NEXT:    clrldi 4, 3, 32
-; CHECK-NEXT:    cmplwi 3, 1
-; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    iselgt 3, 4, 3
-; CHECK-NEXT:    li 4, 2
-; CHECK-NEXT:    addi 3, 3, -1
-; CHECK-NEXT:    cmpldi 3, 2
-; CHECK-NEXT:    isellt 3, 3, 4
+; CHECK-NEXT:    cmplwi 3, 3
+; CHECK-NEXT:    li 3, 3
+; CHECK-NEXT:    isellt 3, 4, 3
+; CHECK-NEXT:    li 4, 1
+; CHECK-NEXT:    cmpldi 3, 1
+; CHECK-NEXT:    iselgt 3, 3, 4
 ; CHECK-NEXT:    li 4, 0
-; CHECK-NEXT:    addi 3, 3, 1
 ; CHECK-NEXT:    li 5, 0
-; CHECK-NEXT:    li 7, -1
 ; CHECK-NEXT:    mtctr 3
+; CHECK-NEXT:    li 7, -1
 ; CHECK-NEXT:    lbz 5, 0(5)
 ; CHECK-NEXT:    li 3, 1
 ; CHECK-NEXT:    bdz .LBB0_6
