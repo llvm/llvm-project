@@ -119,6 +119,11 @@ public:
   /// LLVM values.
   FailureOr<Value> convertValue(llvm::Value *value);
 
+  /// Converts an LLVM metadata value to an MLIR value, or returns failure if
+  /// the conversion fails. Uses the `convertConstant` method to translate
+  /// constant LLVM values.
+  FailureOr<Value> convertMetadataValue(llvm::Value *value);
+
   /// Converts a range of LLVM values to a range of MLIR values using the
   /// `convertValue` method, or returns failure if the conversion fails.
   FailureOr<SmallVector<Value>> convertValues(ArrayRef<llvm::Value *> values);
