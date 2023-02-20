@@ -451,7 +451,11 @@ void Initialize(ThreadState *thr) {
   InitializePlatform();
 #if !SANITIZER_GO
   InitializeAllocatorLate();
+
+  // Do not install SEGV handler
   // InstallDeadlySignalHandlers(TrecOnDeadlySignal);
+  if (common_flags()->use_sigaltstack)
+    SetAlternateSignalStack();
 #endif
   // Setup correct file descriptor for error reports.
   // __sanitizer_set_report_path(common_flags()->log_path);
