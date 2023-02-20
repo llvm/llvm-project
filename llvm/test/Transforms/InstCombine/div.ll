@@ -1492,11 +1492,11 @@ define i8 @sdiv_udiv_mul_nsw(i8 %x, i8 %y, i8 %z) {
   ret i8 %r
 }
 
+; ((X * C2) + C1) / C2 --> X + C1/C2
+
 define i6 @sdiv_distribute_mul_nsw_add_nsw(i6 %x) {
 ; CHECK-LABEL: @sdiv_distribute_mul_nsw_add_nsw(
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i6 [[X:%.*]], 3
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i6 [[MUL]], -15
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i6 [[ADD]], 3
+; CHECK-NEXT:    [[DIV:%.*]] = add nsw i6 [[X:%.*]], -5
 ; CHECK-NEXT:    ret i6 [[DIV]]
 ;
   %mul = mul nsw i6 %x, 3
@@ -1505,13 +1505,15 @@ define i6 @sdiv_distribute_mul_nsw_add_nsw(i6 %x) {
   ret i6 %div
 }
 
+; extra uses are ok
+
 define i32 @sdiv_distribute_mul_nsw_add_nsw_uses(i32 %x) {
 ; CHECK-LABEL: @sdiv_distribute_mul_nsw_add_nsw_uses(
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[X:%.*]], 42
 ; CHECK-NEXT:    call void @use(i32 [[MUL]])
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[MUL]], 126
 ; CHECK-NEXT:    call void @use(i32 [[ADD]])
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[ADD]], 42
+; CHECK-NEXT:    [[DIV:%.*]] = add nsw i32 [[X]], 3
 ; CHECK-NEXT:    ret i32 [[DIV]]
 ;
   %mul = mul nsw i32 %x, 42
@@ -1522,11 +1524,11 @@ define i32 @sdiv_distribute_mul_nsw_add_nsw_uses(i32 %x) {
   ret i32 %div
 }
 
+; vector splats work
+
 define <2 x i6> @udiv_distribute_mul_nuw_add_nuw(<2 x i6> %x) {
 ; CHECK-LABEL: @udiv_distribute_mul_nuw_add_nuw(
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw <2 x i6> [[X:%.*]], <i6 3, i6 3>
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw <2 x i6> [[MUL]], <i6 15, i6 15>
-; CHECK-NEXT:    [[DIV:%.*]] = udiv <2 x i6> [[ADD]], <i6 3, i6 3>
+; CHECK-NEXT:    [[DIV:%.*]] = add nuw <2 x i6> [[X:%.*]], <i6 5, i6 5>
 ; CHECK-NEXT:    ret <2 x i6> [[DIV]]
 ;
   %mul = mul nuw <2 x i6> %x, <i6 3, i6 3>
@@ -1534,6 +1536,8 @@ define <2 x i6> @udiv_distribute_mul_nuw_add_nuw(<2 x i6> %x) {
   %div = udiv <2 x i6> %add, <i6 3, i6 3>
   ret <2 x i6> %div
 }
+
+; negative test - constants must be evenly divisible
 
 define i6 @sdiv_distribute_mul_nsw_add_nsw_not_multiple_offset(i6 %x) {
 ; CHECK-LABEL: @sdiv_distribute_mul_nsw_add_nsw_not_multiple_offset(
@@ -1548,6 +1552,8 @@ define i6 @sdiv_distribute_mul_nsw_add_nsw_not_multiple_offset(i6 %x) {
   ret i6 %div
 }
 
+; negative test - constants must be evenly divisible
+
 define i6 @udiv_distribute_mul_nuw_add_nuw_not_multiple_offset(i6 %x) {
 ; CHECK-LABEL: @udiv_distribute_mul_nuw_add_nuw_not_multiple_offset(
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i6 [[X:%.*]], 3
@@ -1561,6 +1567,8 @@ define i6 @udiv_distribute_mul_nuw_add_nuw_not_multiple_offset(i6 %x) {
   ret i6 %div
 }
 
+; negative test - wrong no-wrap
+
 define i6 @sdiv_distribute_mul_nuw_add_nsw(i6 %x) {
 ; CHECK-LABEL: @sdiv_distribute_mul_nuw_add_nsw(
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i6 [[X:%.*]], 3
@@ -1573,6 +1581,8 @@ define i6 @sdiv_distribute_mul_nuw_add_nsw(i6 %x) {
   %div = sdiv i6 %add, 3
   ret i6 %div
 }
+
+; negative test - wrong no-wrap
 
 define i6 @udiv_distribute_mul_nsw_add_nuw(i6 %x) {
 ; CHECK-LABEL: @udiv_distribute_mul_nsw_add_nuw(
