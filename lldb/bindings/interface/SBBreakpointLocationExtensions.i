@@ -1,0 +1,1 @@
+STRING_EXTENSION_LEVEL_OUTSIDE(SBBreakpointLocation, lldb::eDescriptionLevelFull)

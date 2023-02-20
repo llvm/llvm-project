@@ -23,7 +23,9 @@ public:
 
   SBError(const lldb::SBError &rhs);
 
+#ifndef SWIG
   SBError(const lldb_private::Status &error);
+#endif
 
   ~SBError();
 
@@ -53,8 +55,14 @@ public:
 
   void SetErrorString(const char *err_str);
 
-  int SetErrorStringWithFormat(const char *format, ...)
-      __attribute__((format(printf, 2, 3)));
+#ifndef SWIG
+  __attribute__((format(printf, 2, 3)))
+#else
+  // clang-format off
+  %varargs(3, char *str = NULL) SetErrorStringWithFormat;
+  // clang-format on
+#endif
+  int SetErrorStringWithFormat(const char *format, ...);
 
   explicit operator bool() const;
 
