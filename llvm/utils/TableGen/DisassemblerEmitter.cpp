@@ -96,9 +96,6 @@ using namespace llvm::X86Disassembler;
 
 namespace llvm {
 
-extern void EmitDecoder(RecordKeeper &RK, raw_ostream &OS,
-                        const std::string &PredicateNamespace);
-
 void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
   CodeGenTarget Target(Records);
   emitSourceFileHeader(" * " + Target.getName().str() + " Disassembler", OS);
