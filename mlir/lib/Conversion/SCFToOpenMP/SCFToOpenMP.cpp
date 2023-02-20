@@ -176,7 +176,7 @@ static Attribute minMaxValueForSignedInt(Type type, bool min) {
 static Attribute minMaxValueForUnsignedInt(Type type, bool min) {
   auto intType = type.cast<IntegerType>();
   unsigned bitwidth = intType.getWidth();
-  return IntegerAttr::get(type, min ? llvm::APInt::getNullValue(bitwidth)
+  return IntegerAttr::get(type, min ? llvm::APInt::getZero(bitwidth)
                                     : llvm::APInt::getAllOnesValue(bitwidth));
 }
 
