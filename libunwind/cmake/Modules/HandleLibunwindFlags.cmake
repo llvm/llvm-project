@@ -10,33 +10,6 @@ include(HandleFlags)
 
 unset(add_flag_if_supported)
 
-# Add a specified list of flags to both 'LIBUNWIND_COMPILE_FLAGS' and
-# 'LIBUNWIND_LINK_FLAGS'.
-macro(add_flags)
-  foreach(value ${ARGN})
-    list(APPEND LIBUNWIND_COMPILE_FLAGS ${value})
-    list(APPEND LIBUNWIND_LINK_FLAGS ${value})
-  endforeach()
-endmacro()
-
-# If the specified 'condition' is true then add a list of flags to both
-# 'LIBUNWIND_COMPILE_FLAGS' and 'LIBUNWIND_LINK_FLAGS'.
-macro(add_flags_if condition)
-  if (${condition})
-    add_flags(${ARGN})
-  endif()
-endmacro()
-
-# Add each flag in the list to LIBUNWIND_COMPILE_FLAGS and LIBUNWIND_LINK_FLAGS
-# if that flag is supported by the current compiler.
-macro(add_flags_if_supported)
-  foreach(flag ${ARGN})
-      mangle_name("${flag}" flagname)
-      check_cxx_compiler_flag("${flag}" "CXX_SUPPORTS_${flagname}_FLAG")
-      add_flags_if(CXX_SUPPORTS_${flagname}_FLAG ${flag})
-  endforeach()
-endmacro()
-
 # Add a list of flags to 'LIBUNWIND_COMPILE_FLAGS'.
 macro(add_compile_flags)
   foreach(f ${ARGN})
@@ -75,16 +48,6 @@ macro(add_c_flags_if condition)
   if (${condition})
     add_c_flags(${ARGN})
   endif()
-endmacro()
-
-# For each specified flag, add that flag to 'LIBUNWIND_C_FLAGS' if the
-# flag is supported by the C compiler.
-macro(add_c_compile_flags_if_supported)
-  foreach(flag ${ARGN})
-      mangle_name("${flag}" flagname)
-      check_c_compiler_flag("${flag}" "C_SUPPORTS_${flagname}_FLAG")
-      add_c_flags_if(C_SUPPORTS_${flagname}_FLAG ${flag})
-  endforeach()
 endmacro()
 
 # Add a list of flags to 'LIBUNWIND_CXX_FLAGS'.
