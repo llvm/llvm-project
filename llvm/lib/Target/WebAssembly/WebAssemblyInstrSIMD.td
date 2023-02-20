@@ -971,6 +971,12 @@ def : Pat<(wasm_shr_s (v4i32 V128:$lhs), (and I32:$rhs, 31)),
 def : Pat<(wasm_shr_u (v4i32 V128:$lhs), (and I32:$rhs, 31)),
           (SHR_U_I32x4 V128:$lhs, I32:$rhs)>;
 
+def : Pat<(wasm_shl (v2i64 V128:$lhs), (and I32:$rhs, 63)),
+          (SHL_I64x2 V128:$lhs, I32:$rhs)>;
+def : Pat<(wasm_shr_s (v2i64 V128:$lhs), (and I32:$rhs, 63)),
+          (SHR_S_I64x2 V128:$lhs, I32:$rhs)>;
+def : Pat<(wasm_shr_u (v2i64 V128:$lhs), (and I32:$rhs, 63)),
+          (SHR_U_I64x2 V128:$lhs, I32:$rhs)>;
 def : Pat<(wasm_shl (v2i64 V128:$lhs), (trunc (and I64:$rhs, 63))),
           (SHL_I64x2 V128:$lhs, (I32_WRAP_I64 I64:$rhs))>;
 def : Pat<(wasm_shr_s (v2i64 V128:$lhs), (trunc (and I64:$rhs, 63))),
