@@ -366,15 +366,15 @@ int *DataIntPtr[1] = {0};
 
 void *BufferPtr1;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for global pointer 'BufferPtr1' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}void *pBufferPtr1;
+// CHECK-FIXES: {{^}}void *pvBufferPtr1;
 
 void **BufferPtr2;
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for global pointer 'BufferPtr2' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}void **ppBufferPtr2;
+// CHECK-FIXES: {{^}}void **ppvBufferPtr2;
 
 void **pBufferPtr3;
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for global pointer 'pBufferPtr3' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}void **ppBufferPtr3;
+// CHECK-FIXES: {{^}}void **ppvBufferPtr3;
 
 int *pBufferPtr4;
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: invalid case style for global pointer 'pBufferPtr4' [readability-identifier-naming]
@@ -387,7 +387,7 @@ FUNC_PTR_HELLO Hello = NULL;
 
 void *ValueVoidPtr = NULL;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for global pointer 'ValueVoidPtr' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}void *pValueVoidPtr = NULL;
+// CHECK-FIXES: {{^}}void *pvValueVoidPtr = NULL;
 
 ptrdiff_t PtrDiff = NULL;
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: invalid case style for global variable 'PtrDiff' [readability-identifier-naming]
@@ -403,7 +403,7 @@ uint8_t *ValueU8Ptr;
 
 void MyFunc2(void* Val){}
 // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: invalid case style for pointer parameter 'Val' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}void MyFunc2(void* pVal){}
+// CHECK-FIXES: {{^}}void MyFunc2(void* pvVal){}
 
 
 //===----------------------------------------------------------------------===//
@@ -566,6 +566,10 @@ unsigned short ValueUnsignedShort = 0;
 unsigned int ValueUnsignedInt = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: invalid case style for global variable 'ValueUnsignedInt' [readability-identifier-naming]
 // CHECK-FIXES: {{^}}unsigned int uiValueUnsignedInt = 0;
+
+unsigned char ValueUnsignedChar = 0;
+// CHECK-MESSAGES: :[[@LINE-1]]:15: warning: invalid case style for global variable 'ValueUnsignedChar' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}unsigned char ucValueUnsignedChar = 0;
 
 long int ValueLongInt = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: invalid case style for global variable 'ValueLongInt' [readability-identifier-naming]
