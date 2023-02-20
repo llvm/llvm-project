@@ -1132,7 +1132,7 @@ OpFoldResult DivOp::fold(FoldAdaptor adaptor) {
   // negative. Rather, APInt rounds toward zero.
   APInt quotient, remainder;
   APInt::sdivrem(lhs.getValue(), rhs.getValue(), quotient, remainder);
-  if (quotient.isNegative() && !remainder.isNullValue()) {
+  if (quotient.isNegative() && !remainder.isZero()) {
     quotient -= 1;
   }
 

@@ -214,7 +214,7 @@ ParseResult AllocaOp::parse(OpAsmParser &parser, OperationState &result) {
     if (!alignmentInt)
       return parser.emitError(parser.getNameLoc(),
                               "expected integer alignment");
-    if (alignmentInt.getValue().isNullValue())
+    if (alignmentInt.getValue().isZero())
       result.attributes.erase("alignment");
   }
 
@@ -826,21 +826,35 @@ static bool isTypeCompatibleWithAtomicOp(Type type, bool isPointerTypeAllowed) {
          *bitWidth == 64;
 }
 
-LogicalResult LoadOp::verify() {
-  if (getOrdering() != AtomicOrdering::not_atomic) {
-    if (!isTypeCompatibleWithAtomicOp(getResult().getType(),
+/// Verifies the attributes and the type of atomic memory access operations.
+template <typename OpTy>
+LogicalResult verifyAtomicMemOp(OpTy memOp, Type valueType,
+                                ArrayRef<AtomicOrdering> unsupportedOrderings) {
+  if (memOp.getOrdering() != AtomicOrdering::not_atomic) {
+    if (!isTypeCompatibleWithAtomicOp(valueType,
                                       /*isPointerTypeAllowed=*/true))
-      return emitOpError("unsupported type ")
-             << getResult().getType() << " for atomic access";
-    if (getOrdering() == AtomicOrdering::release ||
-        getOrdering() == AtomicOrdering::acq_rel)
-      return emitOpError("unsupported ordering '")
-             << stringifyAtomicOrdering(getOrdering()) << "'";
-    if (!getAlignment())
-      return emitOpError("expected alignment for atomic access");
-  } else if (getSyncscope()) {
-    return emitOpError("expected syncscope to be null for non-atomic access");
+      return memOp.emitOpError("unsupported type ")
+             << valueType << " for atomic access";
+    if (llvm::is_contained(unsupportedOrderings, memOp.getOrdering()))
+      return memOp.emitOpError("unsupported ordering '")
+             << stringifyAtomicOrdering(memOp.getOrdering()) << "'";
+    if (!memOp.getAlignment())
+      return memOp.emitOpError("expected alignment for atomic access");
+    return success();
   }
+  if (memOp.getSyncscope())
+    return memOp.emitOpError(
+        "expected syncscope to be null for non-atomic access");
+  return success();
+}
+
+LogicalResult LoadOp::verify() {
+  Type valueType = getResult().getType();
+  if (failed(verifyAtomicMemOp(
+          *this, valueType,
+          {AtomicOrdering::release, AtomicOrdering::acq_rel})))
+    return failure();
+
   return verifyMemOpMetadata(*this);
 }
 
@@ -914,15 +928,25 @@ static void printLoadType(OpAsmPrinter &printer, Operation *op, Type type,
 // StoreOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult StoreOp::verify() { return verifyMemOpMetadata(*this); }
+LogicalResult StoreOp::verify() {
+  Type valueType = getValue().getType();
+  if (failed(verifyAtomicMemOp(
+          *this, valueType,
+          {AtomicOrdering::acquire, AtomicOrdering::acq_rel})))
+    return failure();
+
+  return verifyMemOpMetadata(*this);
+}
 
 void StoreOp::build(OpBuilder &builder, OperationState &state, Value value,
                     Value addr, unsigned alignment, bool isVolatile,
-                    bool isNonTemporal) {
+                    bool isNonTemporal, AtomicOrdering ordering,
+                    StringRef syncscope) {
   build(builder, state, value, addr, /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
         alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isVolatile,
-        isNonTemporal);
+        isNonTemporal, ordering,
+        syncscope.empty() ? nullptr : builder.getStringAttr(syncscope));
 }
 
 /// Parses the StoreOp type either using the typed or opaque pointer format.
@@ -1842,7 +1866,7 @@ ParseResult GlobalOp::parse(OpAsmParser &parser, OperationState &result) {
 
 static bool isZeroAttribute(Attribute value) {
   if (auto intValue = value.dyn_cast<IntegerAttr>())
-    return intValue.getValue().isNullValue();
+    return intValue.getValue().isZero();
   if (auto fpValue = value.dyn_cast<FloatAttr>())
     return fpValue.getValue().isZero();
   if (auto splatValue = value.dyn_cast<SplatElementsAttr>())

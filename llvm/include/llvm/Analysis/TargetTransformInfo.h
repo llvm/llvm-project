@@ -1570,6 +1570,17 @@ public:
   VPLegalization getVPLegalizationStrategy(const VPIntrinsic &PI) const;
   /// @}
 
+  /// \returns Whether a 32-bit branch instruction is available in Arm or Thumb
+  /// state.
+  ///
+  /// Used by the LowerTypeTests pass, which constructs an IR inline assembler
+  /// node containing a jump table in a format suitable for the target, so it
+  /// needs to know what format of jump table it can legally use.
+  ///
+  /// For non-Arm targets, this function isn't used. It defaults to returning
+  /// false, but it shouldn't matter what it returns anyway.
+  bool hasArmWideBranch(bool Thumb) const;
+
   /// @}
 
 private:
@@ -1927,6 +1938,7 @@ public:
                                      Align Alignment) const = 0;
   virtual VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const = 0;
+  virtual bool hasArmWideBranch(bool Thumb) const = 0;
 };
 
 template <typename T>
@@ -2605,6 +2617,10 @@ public:
   VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const override {
     return Impl.getVPLegalizationStrategy(PI);
+  }
+
+  bool hasArmWideBranch(bool Thumb) const override {
+    return Impl.hasArmWideBranch(Thumb);
   }
 };
 

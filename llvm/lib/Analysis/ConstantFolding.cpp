@@ -713,7 +713,7 @@ Constant *llvm::ConstantFoldLoadFromConst(Constant *C, Type *Ty,
     return Result;
 
   // Try hard to fold loads from bitcasted strange and non-type-safe things.
-  if (Offset.getMinSignedBits() <= 64)
+  if (Offset.getSignificantBits() <= 64)
     if (Constant *Result =
             FoldReinterpretLoadFromConst(C, Ty, Offset.getSExtValue(), DL))
       return Result;
@@ -2801,9 +2801,9 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
       if (!C0)
         return Constant::getNullValue(Ty);
       if (IntrinsicID == Intrinsic::cttz)
-        return ConstantInt::get(Ty, C0->countTrailingZeros());
+        return ConstantInt::get(Ty, C0->countr_zero());
       else
-        return ConstantInt::get(Ty, C0->countLeadingZeros());
+        return ConstantInt::get(Ty, C0->countl_zero());
 
     case Intrinsic::abs:
       assert(C1 && "Must be constant int");

@@ -1687,9 +1687,9 @@ bool MachineConstEvaluator::evaluateCLBi(const APInt &A1, bool Zeros,
     return false;
   unsigned Count = 0;
   if (Zeros && (Count == 0))
-    Count = A1.countLeadingZeros();
+    Count = A1.countl_zero();
   if (Ones && (Count == 0))
-    Count = A1.countLeadingOnes();
+    Count = A1.countl_one();
   Result = APInt(BW, static_cast<uint64_t>(Count), false);
   return true;
 }
@@ -1722,9 +1722,9 @@ bool MachineConstEvaluator::evaluateCTBi(const APInt &A1, bool Zeros,
     return false;
   unsigned Count = 0;
   if (Zeros && (Count == 0))
-    Count = A1.countTrailingZeros();
+    Count = A1.countr_zero();
   if (Ones && (Count == 0))
-    Count = A1.countTrailingOnes();
+    Count = A1.countr_one();
   Result = APInt(BW, static_cast<uint64_t>(Count), false);
   return true;
 }

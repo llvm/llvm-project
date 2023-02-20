@@ -454,7 +454,9 @@ INTERCEPTOR(char*, strdup, const char *s) {
   }
   GET_STACK_TRACE_MALLOC;
   void *new_mem = asan_malloc(length + 1, &stack);
-  REAL(memcpy)(new_mem, s, length + 1);
+  if (new_mem) {
+    REAL(memcpy)(new_mem, s, length + 1);
+  }
   return reinterpret_cast<char*>(new_mem);
 }
 
@@ -470,7 +472,9 @@ INTERCEPTOR(char*, __strdup, const char *s) {
   }
   GET_STACK_TRACE_MALLOC;
   void *new_mem = asan_malloc(length + 1, &stack);
-  REAL(memcpy)(new_mem, s, length + 1);
+  if (new_mem) {
+    REAL(memcpy)(new_mem, s, length + 1);
+  }
   return reinterpret_cast<char*>(new_mem);
 }
 #endif // ASAN_INTERCEPT___STRDUP

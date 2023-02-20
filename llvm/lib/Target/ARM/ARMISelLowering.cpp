@@ -13838,7 +13838,7 @@ static SDValue PerformSHLSimplify(SDNode *N,
 
   // The immediates are encoded as an 8-bit value that can be rotated.
   auto LargeImm = [](const APInt &Imm) {
-    unsigned Zeros = Imm.countLeadingZeros() + Imm.countTrailingZeros();
+    unsigned Zeros = Imm.countl_zero() + Imm.countr_zero();
     return Imm.getBitWidth() - Zeros > 8;
   };
 
@@ -14706,8 +14706,8 @@ static SDValue ParseBFI(SDNode *N, APInt &ToMask, APInt &FromMask) {
 //
 // Neither A nor B must be zero.
 static bool BitsProperlyConcatenate(const APInt &A, const APInt &B) {
-  unsigned LastActiveBitInA =  A.countTrailingZeros();
-  unsigned FirstActiveBitInB = B.getBitWidth() - B.countLeadingZeros() - 1;
+  unsigned LastActiveBitInA = A.countr_zero();
+  unsigned FirstActiveBitInB = B.getBitWidth() - B.countl_zero() - 1;
   return LastActiveBitInA - 1 == FirstActiveBitInB;
 }
 
@@ -14785,9 +14785,8 @@ static SDValue PerformBFICombine(SDNode *N, SelectionDAG &DAG) {
     SDLoc dl(N);
 
     if (NewFromMask[0] == 0)
-      From1 = DAG.getNode(
-          ISD::SRL, dl, VT, From1,
-          DAG.getConstant(NewFromMask.countTrailingZeros(), dl, VT));
+      From1 = DAG.getNode(ISD::SRL, dl, VT, From1,
+                          DAG.getConstant(NewFromMask.countr_zero(), dl, VT));
     return DAG.getNode(ARMISD::BFI, dl, VT, CombineBFI.getOperand(0), From1,
                        DAG.getConstant(~NewToMask, dl, VT));
   }
@@ -14801,7 +14800,7 @@ static SDValue PerformBFICombine(SDNode *N, SelectionDAG &DAG) {
     APInt ToMask2 = ~N0.getConstantOperandAPInt(2);
 
     if (!N0.hasOneUse() || (ToMask1 & ToMask2) != 0 ||
-        ToMask1.countLeadingZeros() < ToMask2.countLeadingZeros())
+        ToMask1.countl_zero() < ToMask2.countl_zero())
       return SDValue();
 
     EVT VT = N->getValueType(0);
@@ -17736,10 +17735,10 @@ static SDValue PerformMinMaxToSatCombine(SDValue Op, SelectionDAG &DAG,
   SDLoc DL(Op);
   if (MinC == ~MaxC)
     return DAG.getNode(ARMISD::SSAT, DL, VT, Input,
-                       DAG.getConstant(MinC.countTrailingOnes(), DL, VT));
+                       DAG.getConstant(MinC.countr_one(), DL, VT));
   if (MaxC == 0)
     return DAG.getNode(ARMISD::USAT, DL, VT, Input,
-                       DAG.getConstant(MinC.countTrailingOnes(), DL, VT));
+                       DAG.getConstant(MinC.countr_one(), DL, VT));
 
   return SDValue();
 }
