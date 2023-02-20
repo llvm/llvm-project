@@ -567,6 +567,10 @@ unsigned int ValueUnsignedInt = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: invalid case style for global variable 'ValueUnsignedInt' [readability-identifier-naming]
 // CHECK-FIXES: {{^}}unsigned int uiValueUnsignedInt = 0;
 
+unsigned char ValueUnsignedChar = 0;
+// CHECK-MESSAGES: :[[@LINE-1]]:15: warning: invalid case style for global variable 'ValueUnsignedChar' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}unsigned char ucValueUnsignedChar = 0;
+
 long int ValueLongInt = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: invalid case style for global variable 'ValueLongInt' [readability-identifier-naming]
 // CHECK-FIXES: {{^}}long int liValueLongInt = 0;
