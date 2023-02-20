@@ -73,16 +73,15 @@ Error GenericGlobalHandlerTy::moveGlobalBetweenDeviceAndHost(
     return Err;
 
   // Perform the actual transfer.
-  return moveGlobalBetweenDeviceAndHost(Device, Image, HostGlobal, DeviceGlobal,
+  return moveGlobalBetweenDeviceAndHost(Device, HostGlobal, DeviceGlobal,
                                         Device2Host);
 }
 
 /// Actually move memory between host and device. See readGlobalFromDevice and
 /// writeGlobalToDevice for the interface description.
 Error GenericGlobalHandlerTy::moveGlobalBetweenDeviceAndHost(
-    GenericDeviceTy &Device, DeviceImageTy &DeviceImage,
-    const GlobalTy &HostGlobal, const GlobalTy &DeviceGlobal,
-    bool Device2Host) {
+    GenericDeviceTy &Device, const GlobalTy &HostGlobal,
+    const GlobalTy &DeviceGlobal, bool Device2Host) {
 
   // Transfer the data from the source to the destination.
   if (Device2Host) {
