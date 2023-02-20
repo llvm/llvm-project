@@ -27,7 +27,7 @@ class SparseTensor_Op<string mnemonic, list<Trait> traits = []>
 //===----------------------------------------------------------------------===//
 
 def SparseTensor_NewOp : SparseTensor_Op<"new", [Pure]>,
-    Arguments<(ins AnyType:$source, UnitAttr:$expandSymmetry)>,
+    Arguments<(ins AnyType:$source)>,
     Results<(outs AnySparseTensor:$result)> {
   string summary = "Materializes a new sparse tensor from given source";
   string description = [{
@@ -40,12 +40,9 @@ def SparseTensor_NewOp : SparseTensor_Op<"new", [Pure]>,
     code. The operation is provided as an anchor that materializes a properly
     typed sparse tensor with inital contents into a computation.
 
-    An optional attribute `expandSymmetry` can be used to extend this operation
-    to make symmetry in external formats explicit in the storage. That is, when
-    the attribute presents and a non-zero value is discovered at (i, j) where
-    i!=j, we add the same value to (j, i). This claims more storage than a pure
-    symmetric storage, and thus may cause a bad performance hit. True symmetric
-    storage is planned for the future.
+    Reading in a symmetric matrix will result in just the lower/upper triangular
+    part of the matrix (so that only relevant information is stored). Proper
+    symmetry support for operating on symmetric matrices is still TBD.
 
     Example:
 
@@ -53,9 +50,7 @@ def SparseTensor_NewOp : SparseTensor_Op<"new", [Pure]>,
     sparse_tensor.new %source : !Source to tensor<1024x1024xf64, #CSR>
     ```
   }];
-  let assemblyFormat = "(`expand_symmetry` $expandSymmetry^)? $source attr-dict"
-                       "`:` type($source) `to` type($result)";
-  let hasVerifier = 1;
+  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($result)";
 }
 
 def SparseTensor_PackOp : SparseTensor_Op<"pack", [Pure]>,

@@ -276,14 +276,14 @@ private:
   }
 
   /// The internal implementation of `readCOO`.  We template over
-  /// `IsPattern` and `IsSymmetric` in order to perform LICM without
-  /// needing to duplicate the source code.
+  /// `IsPattern` in order to perform LICM without needing to duplicate the
+  /// source code.
   //
   // TODO: We currently take the `dim2lvl` argument as a `PermutationRef`
   // since that's what `readCOO` creates.  Once we update `readCOO` to
   // functionalize the mapping, then this helper will just take that
   // same function.
-  template <typename V, bool IsPattern, bool IsSymmetric>
+  template <typename V, bool IsPattern>
   void readCOOLoop(uint64_t lvlRank, detail::PermutationRef dim2lvl,
                    SparseTensorCOO<V> *lvlCOO);
 
@@ -323,21 +323,16 @@ SparseTensorCOO<V> *SparseTensorReader::readCOO(uint64_t lvlRank,
   auto *lvlCOO = new SparseTensorCOO<V>(lvlRank, lvlSizes, getNNZ());
   // Do some manual LICM, to avoid assertions in the for-loop.
   const bool IsPattern = isPattern();
-  const bool IsSymmetric = (isSymmetric() && getRank() == 2);
-  if (IsPattern && IsSymmetric)
-    readCOOLoop<V, true, true>(lvlRank, d2l, lvlCOO);
-  else if (IsPattern)
-    readCOOLoop<V, true, false>(lvlRank, d2l, lvlCOO);
-  else if (IsSymmetric)
-    readCOOLoop<V, false, true>(lvlRank, d2l, lvlCOO);
+  if (IsPattern)
+    readCOOLoop<V, true>(lvlRank, d2l, lvlCOO);
   else
-    readCOOLoop<V, false, false>(lvlRank, d2l, lvlCOO);
+    readCOOLoop<V, false>(lvlRank, d2l, lvlCOO);
   // Close the file and return the COO.
   closeFile();
   return lvlCOO;
 }
 
-template <typename V, bool IsPattern, bool IsSymmetric>
+template <typename V, bool IsPattern>
 void SparseTensorReader::readCOOLoop(uint64_t lvlRank,
                                      detail::PermutationRef dim2lvl,
                                      SparseTensorCOO<V> *lvlCOO) {
@@ -353,16 +348,6 @@ void SparseTensorReader::readCOOLoop(uint64_t lvlRank,
     dim2lvl.pushforward(dimRank, dimInd.data(), lvlInd.data());
     // TODO: <https://github.com/llvm/llvm-project/issues/54179>
     lvlCOO->add(lvlInd, value);
-    // We currently chose to deal with symmetric matrices by fully
-    // constructing them.  In the future, we may want to make symmetry
-    // implicit for storage reasons.
-    if constexpr (IsSymmetric)
-      if (dimInd[0] != dimInd[1]) {
-        // Must recompute `lvlInd`, since arbitrary maps don't preserve swap.
-        std::swap(dimInd[0], dimInd[1]);
-        dim2lvl.pushforward(dimRank, dimInd.data(), lvlInd.data());
-        lvlCOO->add(lvlInd, value);
-      }
   }
 }
 

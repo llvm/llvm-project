@@ -44,19 +44,6 @@ func.func @sparse_unpack(%sp : tensor<100xf64, #SparseVector>)
 
 // -----
 
-#SparseMatrix = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
-
-// CHECK-LABEL: func @sparse_new_symmetry(
-// CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
-//       CHECK: %[[T:.*]] = sparse_tensor.new expand_symmetry %[[A]] : !llvm.ptr<i8> to tensor<?x?xf64, #{{.*}}>
-//       CHECK: return %[[T]] : tensor<?x?xf64, #{{.*}}>
-func.func @sparse_new_symmetry(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf64, #SparseMatrix> {
-  %0 = sparse_tensor.new expand_symmetry %arg0 : !llvm.ptr<i8> to tensor<?x?xf64, #SparseMatrix>
-  return %0 : tensor<?x?xf64, #SparseMatrix>
-}
-
-// -----
-
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
 
 // CHECK-LABEL: func @sparse_dealloc(

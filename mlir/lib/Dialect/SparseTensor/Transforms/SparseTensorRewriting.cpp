@@ -1047,16 +1047,6 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
                                    /*sizeHint=*/nnz, Attribute())
             .getResult();
 
-    // The verifier ensures only 2D tensors can have the expandSymmetry flag.
-    Value symmetric;
-    if (dimRank == 2 && op.getExpandSymmetry()) {
-      symmetric =
-          createFuncCall(rewriter, loc, "getSparseTensorReaderIsSymmetric",
-                         {rewriter.getI1Type()}, {reader}, EmitCInterface::Off)
-              .getResult(0);
-    } else {
-      symmetric = Value();
-    }
     Type eltTp = dstTp.getElementType();
     Value value = genAllocaScalar(rewriter, loc, eltTp);
     scf::ForOp forOp = rewriter.create<scf::ForOp>(loc, c0, nnz, c1,
@@ -1077,21 +1067,6 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
     Value v = rewriter.create<memref::LoadOp>(loc, value);
     Value t = rewriter.create<InsertOp>(loc, v, forOp.getRegionIterArg(0),
                                         indicesArray);
-    if (symmetric) {
-      Value eq = rewriter.create<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::ne, indicesArray[0], indicesArray[1]);
-      Value cond = rewriter.create<arith::AndIOp>(loc, symmetric, eq);
-      scf::IfOp ifOp =
-          rewriter.create<scf::IfOp>(loc, t.getType(), cond, /*else*/ true);
-      rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
-      rewriter.create<scf::YieldOp>(
-          loc, Value(rewriter.create<InsertOp>(
-                   loc, v, t, ValueRange{indicesArray[1], indicesArray[0]})));
-      rewriter.setInsertionPointToStart(&ifOp.getElseRegion().front());
-      rewriter.create<scf::YieldOp>(loc, t);
-      t = ifOp.getResult(0);
-      rewriter.setInsertionPointAfter(ifOp);
-    }
     rewriter.create<scf::YieldOp>(loc, ArrayRef<Value>(t));
     rewriter.setInsertionPointAfter(forOp);
     // Link SSA chain.

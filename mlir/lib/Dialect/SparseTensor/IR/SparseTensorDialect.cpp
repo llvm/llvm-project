@@ -651,12 +651,6 @@ static LogicalResult verifySparsifierGetterSetter(
   return success();
 }
 
-LogicalResult NewOp::verify() {
-  if (getExpandSymmetry() && getDimRank(getResult()) != 2)
-    return emitOpError("expand_symmetry can only be used for 2D tensors");
-  return success();
-}
-
 static LogicalResult verifyPackUnPack(Operation *op, TensorType cooTp,
                                       TensorType dataTp, TensorType idxTp) {
   if (!isUniqueCOOType(cooTp))
