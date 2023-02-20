@@ -202,7 +202,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       VisContext(nullptr), PragmaAttributeCurrentTargetDecl(nullptr),
       IsBuildingRecoveryCallExpr(false), LateTemplateParser(nullptr),
       LateTemplateParserCleanup(nullptr), OpaqueParser(nullptr), IdResolver(pp),
-      StdExperimentalNamespaceCache(nullptr), StdInitializerList(nullptr),
+      StdInitializerList(nullptr),
       StdCoroutineTraitsCache(nullptr), CXXTypeInfoDecl(nullptr),
       MSVCGuidDecl(nullptr), StdSourceLocationImplDecl(nullptr),
       NSNumberDecl(nullptr), NSValueDecl(nullptr), NSStringDecl(nullptr),
@@ -442,6 +442,13 @@ void Sema::Initialize() {
 #define RVV_TYPE(Name, Id, SingletonId)                                        \
   addImplicitTypedef(Name, Context.SingletonId);
 #include "clang/Basic/RISCVVTypes.def"
+  }
+
+  if (Context.getTargetInfo().getTriple().isWasm() &&
+      Context.getTargetInfo().hasFeature("reference-types")) {
+#define WASM_TYPE(Name, Id, SingletonId)                                       \
+  addImplicitTypedef(Name, Context.SingletonId);
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
   }
 
   if (Context.getTargetInfo().hasBuiltinMSVaList()) {

@@ -285,7 +285,7 @@ _LIBCPP_NORETURN
 inline _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
 void __throw_bad_variant_access() {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         throw bad_variant_access();
 #else
         _VSTD::abort();
@@ -1187,7 +1187,7 @@ public:
         _VSTD::swap(__lhs, __rhs);
       }
       __impl __tmp(_VSTD::move(*__rhs));
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
       if constexpr (__all<is_nothrow_move_constructible_v<_Types>...>::value) {
         this->__generic_construct(*__rhs, _VSTD::move(*__lhs));
       } else {

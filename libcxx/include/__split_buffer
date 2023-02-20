@@ -463,10 +463,10 @@ __split_buffer<_Tp, _Allocator>::shrink_to_fit() _NOEXCEPT
 {
     if (capacity() > size())
     {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             __split_buffer<value_type, __alloc_rr&> __t(size(), 0, __alloc());
             __t.__construct_at_end(move_iterator<pointer>(__begin_),
                                    move_iterator<pointer>(__end_));
@@ -475,12 +475,12 @@ __split_buffer<_Tp, _Allocator>::shrink_to_fit() _NOEXCEPT
             _VSTD::swap(__begin_, __t.__begin_);
             _VSTD::swap(__end_, __t.__end_);
             _VSTD::swap(__end_cap(), __t.__end_cap());
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
     }
 }
 

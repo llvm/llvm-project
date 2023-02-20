@@ -399,7 +399,8 @@ namespace {
 
 /// Select a preference between two uses. CurrentUse is the current preference
 /// while *ForCandidate is attributes of the candidate under consideration.
-PreferredTuple ChoosePreferredUse(PreferredTuple &CurrentUse,
+PreferredTuple ChoosePreferredUse(MachineInstr &LoadMI,
+                                  PreferredTuple &CurrentUse,
                                   const LLT TyForCandidate,
                                   unsigned OpcodeForCandidate,
                                   MachineInstr *MIForCandidate) {
@@ -425,8 +426,10 @@ PreferredTuple ChoosePreferredUse(PreferredTuple &CurrentUse,
     return {TyForCandidate, OpcodeForCandidate, MIForCandidate};
 
   // Prefer sign extensions to zero extensions as sign-extensions tend to be
-  // more expensive.
-  if (CurrentUse.Ty == TyForCandidate) {
+  // more expensive. Don't do this if the load is already a zero-extend load
+  // though, otherwise we'll rewrite a zero-extend load into a sign-extend
+  // later.
+  if (!isa<GZExtLoad>(LoadMI) && CurrentUse.Ty == TyForCandidate) {
     if (CurrentUse.ExtendOpcode == TargetOpcode::G_SEXT &&
         OpcodeForCandidate == TargetOpcode::G_ZEXT)
       return CurrentUse;
@@ -566,7 +569,7 @@ bool CombinerHelper::matchCombineExtendingLoads(MachineInstr &MI,
                 .Action != LegalizeActions::Legal)
           continue;
       }
-      Preferred = ChoosePreferredUse(Preferred,
+      Preferred = ChoosePreferredUse(MI, Preferred,
                                      MRI.getType(UseMI.getOperand(0).getReg()),
                                      UseMI.getOpcode(), &UseMI);
     }
@@ -727,7 +730,7 @@ bool CombinerHelper::matchCombineLoadWithAndMask(MachineInstr &MI,
   Register PtrReg = LoadMI->getPointerReg();
   unsigned RegSize = RegTy.getSizeInBits();
   uint64_t LoadSizeBits = LoadMI->getMemSizeInBits();
-  unsigned MaskSizeBits = MaskVal.countTrailingOnes();
+  unsigned MaskSizeBits = MaskVal.countr_one();
 
   // The mask may not be larger than the in-memory type, as it might cover sign
   // extended bits
@@ -1679,7 +1682,7 @@ bool CombinerHelper::matchCombineShlOfExtend(MachineInstr &MI,
   MatchData.Reg = ExtSrc;
   MatchData.Imm = ShiftAmt;
 
-  unsigned MinLeadingZeros = KB->getKnownZeroes(ExtSrc).countLeadingOnes();
+  unsigned MinLeadingZeros = KB->getKnownZeroes(ExtSrc).countl_one();
   return MinLeadingZeros >= ShiftAmt;
 }
 
@@ -4404,7 +4407,7 @@ bool CombinerHelper::matchBitfieldExtractFromAnd(
   if (static_cast<uint64_t>(LSBImm) >= Size)
     return false;
 
-  uint64_t Width = APInt(Size, AndImm).countTrailingOnes();
+  uint64_t Width = APInt(Size, AndImm).countr_one();
   MatchInfo = [=](MachineIRBuilder &B) {
     auto WidthCst = B.buildConstant(ExtractTy, Width);
     auto LSBCst = B.buildConstant(ExtractTy, LSBImm);
@@ -4775,7 +4778,7 @@ bool CombinerHelper::matchNarrowBinopFeedingAnd(
     return false;
 
   // No point in combining if there's nothing to truncate.
-  unsigned NarrowWidth = Mask.countTrailingOnes();
+  unsigned NarrowWidth = Mask.countr_one();
   if (NarrowWidth == WideTy.getSizeInBits())
     return false;
   LLT NarrowTy = LLT::scalar(NarrowWidth);
@@ -4965,7 +4968,7 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
     // Magic algorithm doesn't work for division by 1. We need to emit a select
     // at the end.
     // TODO: Use undef values for divisor of 1.
-    if (!Divisor.isOneValue()) {
+    if (!Divisor.isOne()) {
       UnsignedDivisionByConstantInfo magics =
           UnsignedDivisionByConstantInfo::get(Divisor);
 
@@ -5153,7 +5156,7 @@ MachineInstr *CombinerHelper::buildSDivUsingMul(MachineInstr &MI) {
 
     auto *CI = cast<ConstantInt>(C);
     APInt Divisor = CI->getValue();
-    unsigned Shift = Divisor.countTrailingZeros();
+    unsigned Shift = Divisor.countr_zero();
     if (Shift) {
       Divisor.ashrInPlace(Shift);
       UseSRA = true;
@@ -6192,6 +6195,16 @@ bool CombinerHelper::matchRedundantBinOpInEquality(MachineInstr &MI,
     B.buildICmp(Pred, Dst, Y, Zero);
   };
   return CmpInst::isEquality(Pred) && Y.isValid();
+}
+
+bool CombinerHelper::matchShiftsTooBig(MachineInstr &MI) {
+  Register ShiftReg = MI.getOperand(2).getReg();
+  LLT ResTy = MRI.getType(MI.getOperand(0).getReg());
+  auto IsShiftTooBig = [&](const Constant *C) {
+    auto *CI = dyn_cast<ConstantInt>(C);
+    return CI && CI->uge(ResTy.getScalarSizeInBits());
+  };
+  return matchUnaryPredicate(MRI, ShiftReg, IsShiftTooBig);
 }
 
 bool CombinerHelper::tryCombine(MachineInstr &MI) {

@@ -82,8 +82,9 @@ static Value getOrCreateValue(OpFoldResult res, OpBuilder &builder,
 // Returns success if the transformation happened and failure otherwise.
 // This is not a pattern as it requires propagating the new memref type to its
 // uses and requires updating subview ops.
-FailureOr<memref::AllocOp> mlir::memref::multiBuffer(memref::AllocOp allocOp,
-                                                     unsigned multiplier) {
+FailureOr<memref::AllocOp>
+mlir::memref::multiBuffer(memref::AllocOp allocOp, unsigned multiplier,
+                          bool skipOverrideAnalysis) {
   LLVM_DEBUG(DBGS() << "Try multibuffer: " << allocOp << "\n");
   DominanceInfo dom(allocOp->getParentOp());
   LoopLikeOpInterface candidateLoop;
@@ -93,17 +94,29 @@ FailureOr<memref::AllocOp> mlir::memref::multiBuffer(memref::AllocOp allocOp,
       LLVM_DEBUG(DBGS() << "Skip user: no parent loop\n");
       return failure();
     }
-    /// Make sure there is no loop-carried dependency on the allocation.
-    if (!overrideBuffer(user, allocOp.getResult())) {
-      LLVM_DEBUG(DBGS() << "Skip user: found loop-carried dependence\n");
-      continue;
-    }
-    // If this user doesn't dominate all the other users keep looking.
-    if (llvm::any_of(allocOp->getUsers(), [&](Operation *otherUser) {
-          return !dom.dominates(user, otherUser);
-        })) {
-      LLVM_DEBUG(DBGS() << "Skip user: does not dominate all other users\n");
-      continue;
+    if (!skipOverrideAnalysis) {
+      /// Make sure there is no loop-carried dependency on the allocation.
+      if (!overrideBuffer(user, allocOp.getResult())) {
+        LLVM_DEBUG(DBGS() << "Skip user: found loop-carried dependence\n");
+        continue;
+      }
+      // If this user doesn't dominate all the other users keep looking.
+      if (llvm::any_of(allocOp->getUsers(), [&](Operation *otherUser) {
+            return !dom.dominates(user, otherUser);
+          })) {
+        LLVM_DEBUG(DBGS() << "Skip user: does not dominate all other users\n");
+        continue;
+      }
+    } else {
+      if (llvm::any_of(allocOp->getUsers(), [&](Operation *otherUser) {
+            return !isa<memref::DeallocOp>(otherUser) &&
+                   !parentLoop->isProperAncestor(otherUser);
+          })) {
+        LLVM_DEBUG(
+            DBGS()
+            << "Skip user: not all other users are in the parent loop\n");
+        continue;
+      }
     }
     candidateLoop = parentLoop;
     break;

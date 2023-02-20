@@ -348,6 +348,15 @@ func.func @atomic_load(%ptr : !llvm.ptr) {
   llvm.return
 }
 
+// CHECK-LABEL: @atomic_store
+func.func @atomic_store(%val : f32, %ptr : !llvm.ptr) {
+  // CHECK: llvm.store %{{.*}}, %{{.*}} atomic monotonic {alignment = 4 : i64} : f32, !llvm.ptr
+  llvm.store %val, %ptr atomic monotonic {alignment = 4 : i64} : f32, !llvm.ptr
+  // CHECK: llvm.store volatile %{{.*}}, %{{.*}} atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : f32, !llvm.ptr
+  llvm.store volatile %val, %ptr atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : f32, !llvm.ptr
+  llvm.return
+}
+
 // CHECK-LABEL: @atomicrmw
 func.func @atomicrmw(%ptr : !llvm.ptr, %val : f32) {
   // CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} monotonic : !llvm.ptr, f32

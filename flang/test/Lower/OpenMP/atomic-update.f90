@@ -10,7 +10,7 @@ program OmpAtomicUpdate
     a=>c
     b=>d
 
-!CHECK: func.func @_QQmain() {
+!CHECK: func.func @_QQmain() attributes {fir.bindc_name = "ompatomicupdate"} {
 !CHECK: %[[A:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "a", uniq_name = "_QFEa"}
 !CHECK: %[[A_ADDR:.*]] = fir.alloca !fir.ptr<i32> {uniq_name = "_QFEa.addr"}
 !CHECK: %{{.*}} = fir.zero_bits !fir.ptr<i32>

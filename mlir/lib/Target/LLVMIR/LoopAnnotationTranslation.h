@@ -21,14 +21,28 @@ namespace mlir {
 namespace LLVM {
 namespace detail {
 
-/// A helper class that converts a LoopAnnotationAttr into a corresponding
-/// llvm::MDNode.
+/// A helper class that converts LoopAnnotationAttrs and AccessGroupMetadataOps
+/// into a corresponding llvm::MDNodes.
 class LoopAnnotationTranslation {
 public:
-  LoopAnnotationTranslation(LLVM::ModuleTranslation &moduleTranslation)
-      : moduleTranslation(moduleTranslation) {}
+  LoopAnnotationTranslation(Operation *mlirModule, llvm::Module &llvmModule)
+      : mlirModule(mlirModule), llvmModule(llvmModule) {}
 
-  llvm::MDNode *translate(LoopAnnotationAttr attr, Operation *op);
+  llvm::MDNode *translateLoopAnnotation(LoopAnnotationAttr attr, Operation *op);
+
+  /// Traverses the global access group metadata operation in the `mlirModule`
+  /// and creates corresponding LLVM metadata nodes.
+  LogicalResult createAccessGroupMetadata();
+
+  /// Returns the LLVM metadata corresponding to a symbol reference to an mlir
+  /// LLVM dialect access group operation.
+  llvm::MDNode *getAccessGroup(Operation *op,
+                               SymbolRefAttr accessGroupRef) const;
+
+  /// Returns the LLVM metadata corresponding to a list of symbol reference to
+  /// an mlir LLVM dialect access group operation. Returns nullptr if
+  /// `accessGroupRefs` is null or empty.
+  llvm::MDNode *getAccessGroups(Operation *op, ArrayAttr accessGroupRefs) const;
 
 private:
   /// Returns the LLVM metadata corresponding to a llvm loop metadata attribute.
@@ -47,7 +61,13 @@ private:
   /// The metadata is attached to Latch block branches with this attribute.
   DenseMap<Attribute, llvm::MDNode *> loopMetadataMapping;
 
-  LLVM::ModuleTranslation &moduleTranslation;
+  /// Mapping from an access group metadata operation to its LLVM metadata.
+  /// This map is populated on module entry and is used to annotate loops (as
+  /// identified via their branches) and contained memory accesses.
+  DenseMap<Operation *, llvm::MDNode *> accessGroupMetadataMapping;
+
+  Operation *mlirModule;
+  llvm::Module &llvmModule;
 };
 
 } // namespace detail

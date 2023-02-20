@@ -1237,17 +1237,17 @@ forward_list<_Tp, _Alloc>::insert_after(const_iterator __p, size_type __n,
         __node_traits::construct(__a, _VSTD::addressof(__h->__value_), __v);
         __node_pointer __first = __h.release();
         __node_pointer __last = __first;
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             for (--__n; __n != 0; --__n, __last = __last->__next_)
             {
                 __h.reset(__node_traits::allocate(__a, 1));
                 __node_traits::construct(__a, _VSTD::addressof(__h->__value_), __v);
                 __last->__next_ = __h.release();
             }
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
@@ -1260,7 +1260,7 @@ forward_list<_Tp, _Alloc>::insert_after(const_iterator __p, size_type __n,
             }
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
         __last->__next_ = __r->__next_;
         __r->__next_ = __first;
         __r = static_cast<__begin_node_pointer>(__last);
@@ -1283,17 +1283,17 @@ forward_list<_Tp, _Alloc>::insert_after(const_iterator __p,
         __node_traits::construct(__a, _VSTD::addressof(__h->__value_), *__f);
         __node_pointer __first = __h.release();
         __node_pointer __last = __first;
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             for (++__f; __f != __l; ++__f, ((void)(__last = __last->__next_)))
             {
                 __h.reset(__node_traits::allocate(__a, 1));
                 __node_traits::construct(__a, _VSTD::addressof(__h->__value_), *__f);
                 __last->__next_ = __h.release();
             }
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
@@ -1306,7 +1306,7 @@ forward_list<_Tp, _Alloc>::insert_after(const_iterator __p,
             }
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
         __last->__next_ = __r->__next_;
         __r->__next_ = __first;
         __r = static_cast<__begin_node_pointer>(__last);

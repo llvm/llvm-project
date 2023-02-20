@@ -22,6 +22,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Attr.h"
+#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
@@ -222,12 +223,30 @@ void ClangTidyContext::setSourceManager(SourceManager *SourceMgr) {
   DiagEngine->setSourceManager(SourceMgr);
 }
 
+static bool parseFileExtensions(llvm::ArrayRef<std::string> AllFileExtensions,
+                                FileExtensionsSet &FileExtensions) {
+  FileExtensions.clear();
+  for (StringRef Suffix : AllFileExtensions) {
+    StringRef Extension = Suffix.trim();
+    if (!llvm::all_of(Extension, isAlphanumeric))
+      return false;
+    FileExtensions.insert(Extension);
+  }
+  return true;
+}
+
 void ClangTidyContext::setCurrentFile(StringRef File) {
   CurrentFile = std::string(File);
   CurrentOptions = getOptionsForFile(CurrentFile);
   CheckFilter = std::make_unique<CachedGlobList>(*getOptions().Checks);
   WarningAsErrorFilter =
       std::make_unique<CachedGlobList>(*getOptions().WarningsAsErrors);
+  if (!parseFileExtensions(*getOptions().HeaderFileExtensions,
+                           HeaderFileExtensions))
+    this->configurationDiag("Invalid header file extensions");
+  if (!parseFileExtensions(*getOptions().ImplementationFileExtensions,
+                           ImplementationFileExtensions))
+    this->configurationDiag("Invalid implementation file extensions");
 }
 
 void ClangTidyContext::setASTContext(ASTContext *Context) {

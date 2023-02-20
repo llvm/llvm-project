@@ -1423,10 +1423,10 @@ list<_Tp, _Alloc>::insert(const_iterator __p, size_type __n, const value_type& _
         __r = iterator(__hold->__as_link(), this);
         __hold.release();
         iterator __e = __r;
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             for (--__n; __n != 0; --__n, (void) ++__e, ++__ds)
             {
                 __hold.reset(__node_alloc_traits::allocate(__na, 1));
@@ -1435,7 +1435,7 @@ list<_Tp, _Alloc>::insert(const_iterator __p, size_type __n, const value_type& _
                 __hold->__prev_ = __e.__ptr_;
                 __hold.release();
             }
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
@@ -1450,7 +1450,7 @@ list<_Tp, _Alloc>::insert(const_iterator __p, size_type __n, const value_type& _
             }
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
         __link_nodes(__p.__ptr_, __r.__ptr_, __e.__ptr_);
         base::__sz() += __ds;
     }
@@ -1476,10 +1476,10 @@ list<_Tp, _Alloc>::insert(const_iterator __p, _InpIter __f, _InpIter __l,
         __r = iterator(__hold.get()->__as_link(), this);
         __hold.release();
         iterator __e = __r;
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             for (++__f; __f != __l; ++__f, (void) ++__e, ++__ds)
             {
                 __hold.reset(__node_alloc_traits::allocate(__na, 1));
@@ -1488,7 +1488,7 @@ list<_Tp, _Alloc>::insert(const_iterator __p, _InpIter __f, _InpIter __l,
                 __hold->__prev_ = __e.__ptr_;
                 __hold.release();
             }
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
@@ -1503,7 +1503,7 @@ list<_Tp, _Alloc>::insert(const_iterator __p, _InpIter __f, _InpIter __l,
             }
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
         __link_nodes(__p.__ptr_, __r.__ptr_, __e.__ptr_);
         base::__sz() += __ds;
     }
@@ -1787,10 +1787,10 @@ list<_Tp, _Alloc>::resize(size_type __n)
         ++__ds;
         iterator __r = iterator(__hold.release()->__as_link(), this);
         iterator __e = __r;
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             for (--__n; __n != 0; --__n, (void) ++__e, ++__ds)
             {
                 __hold.reset(__node_alloc_traits::allocate(__na, 1));
@@ -1799,7 +1799,7 @@ list<_Tp, _Alloc>::resize(size_type __n)
                 __hold->__prev_ = __e.__ptr_;
                 __hold.release();
             }
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
@@ -1814,7 +1814,7 @@ list<_Tp, _Alloc>::resize(size_type __n)
             }
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
         __link_nodes_at_back(__r.__ptr_, __e.__ptr_);
         base::__sz() += __ds;
     }
@@ -1837,10 +1837,10 @@ list<_Tp, _Alloc>::resize(size_type __n, const value_type& __x)
         __link_pointer __nl = __hold.release()->__as_link();
         iterator __r = iterator(__nl, this);
         iterator __e = __r;
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             for (--__n; __n != 0; --__n, (void) ++__e, ++__ds)
             {
                 __hold.reset(__node_alloc_traits::allocate(__na, 1));
@@ -1849,7 +1849,7 @@ list<_Tp, _Alloc>::resize(size_type __n, const value_type& __x)
                 __hold->__prev_ = __e.__ptr_;
                 __hold.release();
             }
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
@@ -1864,7 +1864,7 @@ list<_Tp, _Alloc>::resize(size_type __n, const value_type& __x)
             }
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
         __link_nodes(base::__end_as_link(), __r.__ptr_, __e.__ptr_);
         base::__sz() += __ds;
     }

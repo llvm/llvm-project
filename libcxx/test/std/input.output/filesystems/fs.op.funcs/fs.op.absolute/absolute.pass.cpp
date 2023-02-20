@@ -17,14 +17,11 @@
 #include <cassert>
 
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
 
 using namespace fs;
 
-TEST_SUITE(filesystem_absolute_path_test_suite)
-
-TEST_CASE(absolute_signature_test)
+static void absolute_signature_test()
 {
     const path p; ((void)p);
     std::error_code ec;
@@ -33,7 +30,7 @@ TEST_CASE(absolute_signature_test)
 }
 
 
-TEST_CASE(basic_test)
+static void basic_test()
 {
     const fs::path cwd = fs::current_path();
     const struct {
@@ -48,11 +45,16 @@ TEST_CASE(basic_test)
     for (auto& TC : TestCases) {
         std::error_code ec = GetTestEC();
         const path ret = absolute(TC.input, ec);
-        TEST_CHECK(!ec);
-        TEST_CHECK(ret.is_absolute());
-        TEST_CHECK(PathEqIgnoreSep(ret, TC.expect));
-        LIBCPP_ONLY(TEST_CHECK(PathEq(ret, TC.expect)));
+        assert(!ec);
+        assert(ret.is_absolute());
+        assert(PathEqIgnoreSep(ret, TC.expect));
+        LIBCPP_ONLY(assert(PathEq(ret, TC.expect)));
     }
 }
 
-TEST_SUITE_END()
+int main(int, char**) {
+    absolute_signature_test();
+    basic_test();
+
+    return 0;
+}

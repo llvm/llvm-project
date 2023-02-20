@@ -71,6 +71,19 @@ void InterfaceFile::addParentUmbrella(const Target &Target_, StringRef Parent) {
   ParentUmbrellas.emplace(Iter, Target_, std::string(Parent));
 }
 
+void InterfaceFile::addRPath(const Target &InputTarget, StringRef RPath) {
+  auto Iter = lower_bound(RPaths, InputTarget,
+                          [](const std::pair<Target, std::string> &LHS,
+                             Target RHS) { return LHS.first < RHS; });
+
+  if ((Iter != RPaths.end()) && !(InputTarget < Iter->first)) {
+    Iter->second = std::string(RPath);
+    return;
+  }
+
+  RPaths.emplace(Iter, InputTarget, std::string(RPath));
+}
+
 void InterfaceFile::addUUID(const Target &Target_, StringRef UUID) {
   auto Iter = lower_bound(UUIDs, Target_,
                           [](const std::pair<Target, std::string> &LHS,

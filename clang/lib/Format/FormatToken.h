@@ -152,8 +152,12 @@ namespace format {
   TYPE(VerilogDimensionedTypeName)                                             \
   /* for the base in a number literal, not including the quote */              \
   TYPE(VerilogNumberBase)                                                      \
+  /* like `(strong1, pull0)` */                                                \
+  TYPE(VerilogStrength)                                                        \
   /* Things inside the table in user-defined primitives. */                    \
   TYPE(VerilogTableItem)                                                       \
+  /* those that separate ports of different types */                           \
+  TYPE(VerilogTypeComma)                                                       \
   TYPE(Unknown)
 
 /// Determines the semantic type of a syntactic token, e.g. whether "<" is a
@@ -1790,6 +1794,27 @@ struct AdditionalKeywords {
            (Tok.is(tok::kw_default) &&
             !(Next && Next->isOneOf(tok::colon, tok::semi, kw_clocking, kw_iff,
                                     kw_input, kw_output, kw_sequence)));
+  }
+
+  bool isVerilogQualifier(const FormatToken &Tok) const {
+    switch (Tok.Tok.getKind()) {
+    case tok::kw_extern:
+    case tok::kw_signed:
+    case tok::kw_static:
+    case tok::kw_unsigned:
+    case tok::kw_virtual:
+      return true;
+    case tok::identifier:
+      return Tok.isOneOf(
+          kw_let, kw_var, kw_ref, kw_automatic, kw_bins, kw_coverpoint,
+          kw_ignore_bins, kw_illegal_bins, kw_inout, kw_input, kw_interconnect,
+          kw_local, kw_localparam, kw_output, kw_parameter, kw_pure, kw_rand,
+          kw_randc, kw_scalared, kw_specparam, kw_tri, kw_tri0, kw_tri1,
+          kw_triand, kw_trior, kw_trireg, kw_uwire, kw_vectored, kw_wand,
+          kw_wildcard, kw_wire, kw_wor);
+    default:
+      return false;
+    }
   }
 
 private:

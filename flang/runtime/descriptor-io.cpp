@@ -50,6 +50,13 @@ std::optional<bool> DefinedFormattedIo(IoStatementState &io,
     int unit{external->unitNumber()};
     int ioStat{IostatOk};
     char ioMsg[100];
+    std::optional<std::int64_t> startPos;
+    if (edit.descriptor == DataEdit::DefinedDerivedType &&
+        special.which() == typeInfo::SpecialBinding::Which::ReadFormatted) {
+      // DT is an edit descriptor so everything that the child
+      // I/O subroutine reads counts towards READ(SIZE=).
+      startPos = io.InquirePos();
+    }
     if (special.IsArgDescriptor(0)) {
       auto *p{special.GetProc<void (*)(const Descriptor &, int &, char *,
           const Descriptor &, int &, char *, std::size_t, std::size_t)>()};
@@ -68,6 +75,9 @@ std::optional<bool> DefinedFormattedIo(IoStatementState &io,
       auto *closing{external->LookUpForClose(external->unitNumber())};
       RUNTIME_CHECK(handler, external == closing);
       external->DestroyClosed();
+    }
+    if (startPos) {
+      io.GotChar(io.InquirePos() - *startPos);
     }
     return handler.GetIoStat() == IostatOk;
   } else {

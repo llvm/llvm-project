@@ -13,6 +13,7 @@
 
 #include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
+#include "TableGenBackends.h"
 #include "X86RecognizableInstr.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/TableGen/Record.h"

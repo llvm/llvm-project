@@ -4432,12 +4432,12 @@ bool AMDGPUInstructionSelector::isUnneededShiftMask(const MachineInstr &MI,
   if (!RHS)
     return false;
 
-  if (RHS->countTrailingOnes() >= ShAmtBits)
+  if (RHS->countr_one() >= ShAmtBits)
     return true;
 
   const APInt &LHSKnownZeros =
       KnownBits->getKnownZeroes(MI.getOperand(1).getReg());
-  return (LHSKnownZeros | *RHS).countTrailingOnes() >= ShAmtBits;
+  return (LHSKnownZeros | *RHS).countr_one() >= ShAmtBits;
 }
 
 // Return the wave level SGPR base address if this is a wave address.
@@ -5165,7 +5165,7 @@ void AMDGPUInstructionSelector::renderPopcntImm(MachineInstrBuilder &MIB,
                                                 int OpIdx) const {
   assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
          "Expected G_CONSTANT");
-  MIB.addImm(MI.getOperand(1).getCImm()->getValue().countPopulation());
+  MIB.addImm(MI.getOperand(1).getCImm()->getValue().popcount());
 }
 
 /// This only really exists to satisfy DAG type checking machinery, so is a

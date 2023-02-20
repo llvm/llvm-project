@@ -8,7 +8,7 @@
 //
 /// \file
 /// This tablegen backend emits code for use by the GlobalISel instruction
-/// selector. See include/llvm/CodeGen/TargetGlobalISel.td.
+/// selector. See include/llvm/Target/GlobalISel/Target.td.
 ///
 /// This file analyzes the patterns recognized by the SelectionDAGISel tablegen
 /// backend, filters out the ones that are unsupported, maps
@@ -36,6 +36,7 @@
 #include "CodeGenTarget.h"
 #include "InfoByHwMode.h"
 #include "SubtargetFeatureInfo.h"
+#include "TableGenBackends.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CodeGenCoverage.h"
 #include "llvm/Support/CommandLine.h"
@@ -6366,4 +6367,4 @@ namespace llvm {
 void EmitGlobalISel(RecordKeeper &RK, raw_ostream &OS) {
   GlobalISelEmitter(RK).run(OS);
 }
-} // End llvm namespace
+} // namespace llvm

@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -43,6 +44,16 @@ using namespace llvm;
 static cl::opt<bool> PreferWholeRegisterMove(
     "riscv-prefer-whole-register-move", cl::init(false), cl::Hidden,
     cl::desc("Prefer whole register move for vector registers."));
+
+static cl::opt<MachineTraceStrategy> ForceMachineCombinerStrategy(
+    "riscv-force-machine-combiner-strategy", cl::Hidden,
+    cl::desc("Force machine combiner to use a specific strategy for machine "
+             "trace metrics evaluation."),
+    cl::init(MachineTraceStrategy::TS_NumStrategies),
+    cl::values(clEnumValN(MachineTraceStrategy::TS_Local, "local",
+                          "Local strategy."),
+               clEnumValN(MachineTraceStrategy::TS_MinInstrCount, "min-instr",
+                          "MinInstrCount strategy.")));
 
 namespace llvm::RISCVVPseudosTable {
 
@@ -1257,6 +1268,20 @@ RISCVInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   return std::nullopt;
 }
 
+MachineTraceStrategy RISCVInstrInfo::getMachineCombinerTraceStrategy() const {
+  if (ForceMachineCombinerStrategy.getNumOccurrences() == 0) {
+    // The option is unused. Choose Local strategy only for in-order cores. When
+    // scheduling model is unspecified, use MinInstrCount strategy as more
+    // generic one.
+    const auto &SchedModel = STI.getSchedModel();
+    return (!SchedModel.hasInstrSchedModel() || SchedModel.isOutOfOrder())
+               ? MachineTraceStrategy::TS_MinInstrCount
+               : MachineTraceStrategy::TS_Local;
+  }
+  // The strategy was forced by the option.
+  return ForceMachineCombinerStrategy;
+}
+
 void RISCVInstrInfo::setSpecialOperandAttr(MachineInstr &OldMI1,
                                            MachineInstr &OldMI2,
                                            MachineInstr &NewMI1,
@@ -1635,8 +1660,14 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_UIMM8_LSB000:
           Ok = isShiftedUInt<5, 3>(Imm);
           break;
+        case RISCVOp::OPERAND_UIMM9_LSB000:
+          Ok = isShiftedUInt<6, 3>(Imm);
+          break;
         case RISCVOp::OPERAND_SIMM10_LSB0000_NONZERO:
           Ok = isShiftedInt<6, 4>(Imm) && (Imm != 0);
+          break;
+        case RISCVOp::OPERAND_UIMM10_LSB00_NONZERO:
+          Ok = isShiftedUInt<8, 2>(Imm) && (Imm != 0);
           break;
         case RISCVOp::OPERAND_ZERO:
           Ok = Imm == 0;
@@ -1671,6 +1702,10 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_UIMMLOG2XLEN_NONZERO:
           Ok = STI.is64Bit() ? isUInt<6>(Imm) : isUInt<5>(Imm);
           Ok = Ok && Imm != 0;
+          break;
+        case RISCVOp::OPERAND_CLUI_IMM:
+          Ok = (isUInt<5>(Imm) && Imm != 0) ||
+               (Imm >= 0xfffe0 && Imm <= 0xfffff);
           break;
         case RISCVOp::OPERAND_RVKRNUM:
           Ok = Imm >= 0 && Imm <= 10;
@@ -2067,6 +2102,14 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
     return false;
 
   switch (MI.getOpcode()) {
+  case RISCV::TH_MULA:
+  case RISCV::TH_MULAW:
+  case RISCV::TH_MULAH:
+  case RISCV::TH_MULS:
+  case RISCV::TH_MULSW:
+  case RISCV::TH_MULSH:
+    // Operands 2 and 3 are commutable.
+    return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 2, 3);
   case RISCV::PseudoCCMOVGPR:
     // Operands 4 and 5 are commutable.
     return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 4, 5);

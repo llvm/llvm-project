@@ -11386,21 +11386,6 @@ NamespaceDecl *Sema::getStdNamespace() const {
   return cast_or_null<NamespaceDecl>(
                                  StdNamespace.get(Context.getExternalSource()));
 }
-
-NamespaceDecl *Sema::lookupStdExperimentalNamespace() {
-  if (!StdExperimentalNamespaceCache) {
-    if (auto Std = getStdNamespace()) {
-      LookupResult Result(*this, &PP.getIdentifierTable().get("experimental"),
-                          SourceLocation(), LookupNamespaceName);
-      if (!LookupQualifiedName(Result, Std) ||
-          !(StdExperimentalNamespaceCache =
-                Result.getAsSingle<NamespaceDecl>()))
-        Result.suppressDiagnostics();
-    }
-  }
-  return StdExperimentalNamespaceCache;
-}
-
 namespace {
 
 enum UnsupportedSTLSelect {
@@ -16378,7 +16363,7 @@ Decl *Sema::ActOnStartLinkageSpecification(Scope *S, SourceLocation ExternLoc,
   /// need to attach it again.
   if (getLangOpts().CPlusPlusModules && isCurrentModulePurview()) {
     Module *GlobalModule =
-        PushGlobalModuleFragment(ExternLoc, /*IsImplicit=*/true);
+        PushGlobalModuleFragment(ExternLoc);
     /// According to [module.reach]p3.2,
     /// The declaration in global module fragment is reachable if it is not
     /// discarded. And the discarded declaration should be deleted. So it

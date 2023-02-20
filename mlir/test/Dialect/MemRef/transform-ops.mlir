@@ -185,3 +185,37 @@ transform.sequence failures(propagate) {
   // Verify that the returned handle is usable.
   transform.test_print_remark_at_operand %1, "transformed" : !pdl.operation
 }
+
+// -----
+
+
+// CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0) -> ((d0 floordiv 4) mod 2)>
+
+// CHECK-LABEL: func @multi_buffer
+func.func @multi_buffer_no_analysis(%in: memref<16xf32>) {
+  // CHECK: %[[A:.*]] = memref.alloc() : memref<2x4xf32>
+  // expected-remark @below {{transformed}}
+  %tmp = memref.alloc() : memref<4xf32>
+
+  // CHECK: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK: %[[C4:.*]] = arith.constant 4 : index
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %c16 = arith.constant 16 : index
+
+  // CHECK: scf.for %[[IV:.*]] = %[[C0]]
+  scf.for %i0 = %c0 to %c16 step %c4 {
+  // CHECK: %[[I:.*]] = affine.apply #[[$MAP0]](%[[IV]])
+  // CHECK: %[[SV:.*]] = memref.subview %[[A]][%[[I]], 0] [1, 4] [1, 1] : memref<2x4xf32> to memref<4xf32, strided<[1], offset: ?>>
+    "some_write_read"(%tmp) : (memref<4xf32>) ->()
+  }
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!pdl.operation) -> !transform.op<"memref.alloc">
+  %1 = transform.memref.multibuffer %0 {factor = 2 : i64, skip_analysis} : (!transform.op<"memref.alloc">) -> !pdl.operation
+  // Verify that the returned handle is usable.
+  transform.test_print_remark_at_operand %1, "transformed" : !pdl.operation
+}

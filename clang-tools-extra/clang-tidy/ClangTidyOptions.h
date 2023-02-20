@@ -71,6 +71,14 @@ struct ClangTidyOptions {
   /// WarningsAsErrors filter.
   std::optional<std::string> WarningsAsErrors;
 
+  /// File extensions to consider to determine if a given diagnostic is located
+  /// in a header file.
+  std::optional<std::vector<std::string>> HeaderFileExtensions;
+
+  /// File extensions to consider to determine if a given diagnostic is located
+  /// is located in an implementation file.
+  std::optional<std::vector<std::string>> ImplementationFileExtensions;
+
   /// Output warnings from headers matching this filter. Warnings from
   /// main files will always be displayed.
   std::optional<std::string> HeaderFilterRegex;

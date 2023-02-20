@@ -173,7 +173,7 @@ _LIBCPP_NORETURN _LIBCPP_FUNC_VIS void __throw_bad_alloc();  // not in C++ spec
 _LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
 void __throw_bad_array_new_length()
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw bad_array_new_length();
 #else
     _VSTD::abort();

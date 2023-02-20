@@ -38,7 +38,7 @@ What's New in Libc++ 17.0.0?
 Implemented Papers
 ------------------
 
-- P1328R1 - `constexpr type_info::operator==()`
+- P1328R1 - ``constexpr type_info::operator==()``
 
 Improvements and New Features
 -----------------------------
@@ -57,7 +57,7 @@ Deprecations and Removals
   includes are removed based on the language version used. Incidental transitive
   inclusions of the following headers have been removed:
 
-  - C++2b: ``type_traits``
+  - C++2b: ``bit``, ``type_traits``
 
 Upcoming Deprecations and Removals
 ----------------------------------

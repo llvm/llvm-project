@@ -53,6 +53,8 @@ C/C++ Language Potentially Breaking Changes
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
+- Clang won't search for coroutine_traits in std::experimental namespace any more.
+  Clang will only search for std::coroutine_traits for coroutines then.
 
 ABI Changes in This Version
 ---------------------------
@@ -83,7 +85,7 @@ C Language Changes
 ------------------
 - Support for outputs from asm goto statements along indirect edges has been
   added. This fixes
-  `Issue 53562 <https://github.com/llvm/llvm-project/issues/53562`_.
+  `Issue 53562 <https://github.com/llvm/llvm-project/issues/53562>`_.
 
 C2x Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -144,6 +146,9 @@ Bug Fixes in This Version
 - Fix assert that fails when the expression causing the this pointer to be
   captured by a block is part of a constexpr if statement's branch and
   instantiation of the enclosing method causes the branch to be discarded.
+- Fix __VA_OPT__ implementation so that it treats the concatenation of a
+  non-placemaker token and placemaker token as a non-placemaker token.
+  (`#60268 <https://github.com/llvm/llvm-project/issues/60268>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

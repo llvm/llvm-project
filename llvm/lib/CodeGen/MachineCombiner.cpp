@@ -95,7 +95,8 @@ private:
   bool isTransientMI(const MachineInstr *MI);
   unsigned getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
                     DenseMap<unsigned, unsigned> &InstrIdxForVirtReg,
-                    MachineTraceMetrics::Trace BlockTrace);
+                    MachineTraceMetrics::Trace BlockTrace,
+                    const MachineBasicBlock &MBB);
   unsigned getLatency(MachineInstr *Root, MachineInstr *NewRoot,
                       MachineTraceMetrics::Trace BlockTrace);
   bool
@@ -207,7 +208,8 @@ bool MachineCombiner::isTransientMI(const MachineInstr *MI) {
 unsigned
 MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
                           DenseMap<unsigned, unsigned> &InstrIdxForVirtReg,
-                          MachineTraceMetrics::Trace BlockTrace) {
+                          MachineTraceMetrics::Trace BlockTrace,
+                          const MachineBasicBlock &MBB) {
   SmallVector<unsigned, 16> InstrDepth;
   // For each instruction in the new sequence compute the depth based on the
   // operands. Use the trace information when possible. For new operands which
@@ -237,7 +239,9 @@ MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
                                                       InstrPtr, UseIdx);
       } else {
         MachineInstr *DefInstr = getOperandDef(MO);
-        if (DefInstr) {
+        if (DefInstr && (TII->getMachineCombinerTraceStrategy() !=
+                             MachineTraceStrategy::TS_Local ||
+                         DefInstr->getParent() == &MBB)) {
           DepthOp = BlockTrace.getInstrCycles(*DefInstr).Depth;
           if (!isTransientMI(DefInstr))
             LatencyOp = TSchedModel.computeOperandLatency(
@@ -374,7 +378,8 @@ bool MachineCombiner::improvesCriticalPathLen(
     MachineCombinerPattern Pattern,
     bool SlackIsAccurate) {
   // Get depth and latency of NewRoot and Root.
-  unsigned NewRootDepth = getDepth(InsInstrs, InstrIdxForVirtReg, BlockTrace);
+  unsigned NewRootDepth =
+      getDepth(InsInstrs, InstrIdxForVirtReg, BlockTrace, *MBB);
   unsigned RootDepth = BlockTrace.getInstrCycles(*Root).Depth;
 
   LLVM_DEBUG(dbgs() << "  Dependence data for " << *Root << "\tNewRootDepth: "
@@ -574,7 +579,7 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
   // Check if the block is in a loop.
   const MachineLoop *ML = MLI->getLoopFor(MBB);
   if (!TraceEnsemble)
-    TraceEnsemble = Traces->getEnsemble(MachineTraceStrategy::TS_MinInstrCount);
+    TraceEnsemble = Traces->getEnsemble(TII->getMachineCombinerTraceStrategy());
 
   SparseSet<LiveRegUnit> RegUnits;
   RegUnits.setUniverse(TRI->getNumRegUnits());
