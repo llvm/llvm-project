@@ -7338,7 +7338,7 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
   // then add in the carry.
   // TODO: If we can't split it in half, we might be able to split into 3 or
   // more pieces using a smaller bit width.
-  if (HalfMaxPlus1.urem(Divisor).isOneValue()) {
+  if (HalfMaxPlus1.urem(Divisor).isOne()) {
     assert(!LL == !LH && "Expected both input halves or no input halves!");
     if (!LL) {
       LL = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, HiLoVT, N->getOperand(0),
