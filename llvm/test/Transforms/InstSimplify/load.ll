@@ -48,9 +48,7 @@ define <3 x float> @load_vec3() {
 
 define i32 @load_gep_const_zero_array(i64 %idx) {
 ; CHECK-LABEL: @load_gep_const_zero_array(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [4 x i32], ptr @constzeroarray, i64 0, i64 [[IDX:%.*]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    ret i32 [[LOAD]]
+; CHECK-NEXT:    ret i32 0
 ;
   %gep = getelementptr inbounds [4 x i32], ptr @constzeroarray, i64 0, i64 %idx
   %load = load i32, ptr %gep
@@ -59,10 +57,7 @@ define i32 @load_gep_const_zero_array(i64 %idx) {
 
 define i8 @load_i8_multi_gep_const_zero_array(i64 %idx1, i64 %idx2) {
 ; CHECK-LABEL: @load_i8_multi_gep_const_zero_array(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr @constzeroarray, i64 [[IDX1:%.*]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[GEP1]], i64 [[IDX2:%.*]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP]], align 1
-; CHECK-NEXT:    ret i8 [[LOAD]]
+; CHECK-NEXT:    ret i8 0
 ;
   %gep1 = getelementptr inbounds i8, ptr @constzeroarray, i64 %idx1
   %gep = getelementptr inbounds i8, ptr %gep1, i64 %idx2

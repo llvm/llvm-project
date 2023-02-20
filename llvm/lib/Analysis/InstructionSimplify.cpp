@@ -6586,6 +6586,12 @@ static Value *simplifyLoadInst(LoadInst *LI, Value *PtrOp,
   if (!GV || !GV->isConstant() || !GV->hasDefinitiveInitializer())
     return nullptr;
 
+  // If GlobalVariable's initializer is uniform, then return the constant
+  // regardless of its offset.
+  if (Constant *C =
+          ConstantFoldLoadFromUniformValue(GV->getInitializer(), LI->getType()))
+    return C;
+
   // Try to convert operand into a constant by stripping offsets while looking
   // through invariant.group intrinsics.
   APInt Offset(Q.DL.getIndexTypeSizeInBits(PtrOp->getType()), 0);
