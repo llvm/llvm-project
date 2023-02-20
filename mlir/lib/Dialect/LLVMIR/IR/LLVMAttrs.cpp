@@ -42,7 +42,7 @@ void LLVMDialect::registerAttributes() {
 //===----------------------------------------------------------------------===//
 
 bool DINodeAttr::classof(Attribute attr) {
-  return llvm::isa<DIVoidResultTypeAttr, DIBasicTypeAttr, DICompileUnitAttr,
+  return llvm::isa<DINullTypeAttr, DIBasicTypeAttr, DICompileUnitAttr,
                    DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr,
                    DILexicalBlockAttr, DILexicalBlockFileAttr,
                    DILocalVariableAttr, DISubprogramAttr, DISubrangeAttr,
@@ -71,25 +71,8 @@ bool DILocalScopeAttr::classof(Attribute attr) {
 //===----------------------------------------------------------------------===//
 
 bool DITypeAttr::classof(Attribute attr) {
-  return llvm::isa<DIVoidResultTypeAttr, DIBasicTypeAttr, DICompositeTypeAttr,
+  return llvm::isa<DINullTypeAttr, DIBasicTypeAttr, DICompositeTypeAttr,
                    DIDerivedTypeAttr, DISubroutineTypeAttr>(attr);
-}
-
-//===----------------------------------------------------------------------===//
-// DISubroutineTypeAttr
-//===----------------------------------------------------------------------===//
-
-LogicalResult
-DISubroutineTypeAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                             unsigned int callingConventions,
-                             ArrayRef<DITypeAttr> types) {
-  ArrayRef<DITypeAttr> argumentTypes =
-      types.empty() ? types : types.drop_front();
-  if (llvm::any_of(argumentTypes, [](DITypeAttr type) {
-        return type.isa<DIVoidResultTypeAttr>();
-      }))
-    return emitError() << "expected subroutine to have non-void argument types";
-  return success();
 }
 
 //===----------------------------------------------------------------------===//
