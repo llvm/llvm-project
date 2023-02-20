@@ -56,9 +56,8 @@ define void @callbr_without_label_constraint() {
   ret void
 }
 
-;; Ensure you cannot use the return value of a callbr in indirect targets.
-; CHECK: Instruction does not dominate all uses!
-; CHECK-NEXT: #test4
+;; Ensure you can use the return value of a callbr in indirect targets.
+;; No issue!
 define i32 @test4(i1 %var) {
 entry:
   %ret = callbr i32 asm sideeffect "#test4", "=r,!i"() to label %normal [label %abnormal]
