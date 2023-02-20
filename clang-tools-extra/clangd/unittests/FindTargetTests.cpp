@@ -578,14 +578,14 @@ TEST_F(TargetDeclTest, Coroutine) {
   Flags.push_back("-std=c++20");
 
   Code = R"cpp(
-    namespace std::experimental {
+    namespace std {
     template <typename, typename...> struct coroutine_traits;
     template <typename> struct coroutine_handle {
       template <typename U>
       coroutine_handle(coroutine_handle<U>&&) noexcept;
       static coroutine_handle from_address(void* __addr) noexcept;
     };
-    } // namespace std::experimental
+    } // namespace std
 
     struct executor {};
     struct awaitable {};
@@ -596,7 +596,7 @@ TEST_F(TargetDeclTest, Coroutine) {
       struct result_t {
         ~result_t();
         bool await_ready() const noexcept;
-        void await_suspend(std::experimental::coroutine_handle<void>) noexcept;
+        void await_suspend(std::coroutine_handle<void>) noexcept;
         void await_resume() const noexcept;
       };
       result_t initial_suspend() noexcept;
@@ -604,12 +604,12 @@ TEST_F(TargetDeclTest, Coroutine) {
       result_t await_transform(executor) noexcept;
     };
 
-    namespace std::experimental {
+    namespace std {
     template <>
     struct coroutine_traits<awaitable> {
       typedef awaitable_frame promise_type;
     };
-    } // namespace std::experimental
+    } // namespace std
 
     awaitable foo() {
       co_await [[executor]]();
