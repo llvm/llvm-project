@@ -10749,13 +10749,13 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
       // We can materialise `c1 << c2` into an add immediate, so it's "free",
       // and the combine should happen, to potentially allow further combines
       // later.
-      if (ShiftedC1Int.getMinSignedBits() <= 64 &&
+      if (ShiftedC1Int.getSignificantBits() <= 64 &&
           isLegalAddImmediate(ShiftedC1Int.getSExtValue()))
         return true;
 
       // We can materialise `c1` in an add immediate, so it's "free", and the
       // combine should be prevented.
-      if (C1Int.getMinSignedBits() <= 64 &&
+      if (C1Int.getSignificantBits() <= 64 &&
           isLegalAddImmediate(C1Int.getSExtValue()))
         return false;
 
@@ -10845,7 +10845,7 @@ bool RISCVTargetLowering::targetShrinkDemandedConstant(
     return false;
 
   // What is the fewest number of bits we need to represent the negative number.
-  unsigned MinSignedBits = ExpandedMask.getMinSignedBits();
+  unsigned MinSignedBits = ExpandedMask.getSignificantBits();
 
   // Try to make a 12 bit negative immediate. If that fails try to make a 32
   // bit negative immediate unless the shrunk immediate already fits in 32 bits.

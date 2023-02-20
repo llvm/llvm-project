@@ -737,7 +737,7 @@ const Value *Value::stripAndAccumulateConstantOffsets(
       // Stop traversal if the pointer offset wouldn't fit in the bit-width
       // provided by the Offset argument. This can happen due to AddrSpaceCast
       // stripping.
-      if (GEPOffset.getMinSignedBits() > BitWidth)
+      if (GEPOffset.getSignificantBits() > BitWidth)
         return V;
 
       // External Analysis can return a result higher/lower than the value
