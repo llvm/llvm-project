@@ -72,12 +72,17 @@ void GuardedPoolAllocator::unreserveGuardedPool() {
         State.GuardedPagePoolEnd - State.GuardedPagePool);
 }
 
-void GuardedPoolAllocator::allocateInGuardedPool(void *Ptr, size_t Size) const {
+bool GuardedPoolAllocator::allocateInGuardedPool(void *Ptr, size_t Size) const {
   assert((reinterpret_cast<uintptr_t>(Ptr) % State.PageSize) == 0);
   assert((Size % State.PageSize) == 0);
-  Check(mprotect(Ptr, Size, PROT_READ | PROT_WRITE) == 0,
-        "Failed to allocate in guarded pool allocator memory");
-  MaybeSetMappingName(Ptr, Size, kGwpAsanAliveSlotName);
+  // Start Clickhouse-specific code
+  // mprotect might fail because of system limitation. we don't expect to die
+  // in this case.
+  int ret = mprotect(Ptr, Size, PROT_READ | PROT_WRITE);
+  if (ret == 0)
+    MaybeSetMappingName(Ptr, Size, kGwpAsanAliveSlotName);
+  return ret == 0;
+  // End Clickhouse-specific code
 }
 
 void GuardedPoolAllocator::deallocateInGuardedPool(void *Ptr,

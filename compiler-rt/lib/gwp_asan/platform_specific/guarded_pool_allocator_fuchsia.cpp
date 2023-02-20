@@ -64,7 +64,7 @@ void GuardedPoolAllocator::unreserveGuardedPool() {
   GuardedPagePoolPlatformData.Vmar = ZX_HANDLE_INVALID;
 }
 
-void GuardedPoolAllocator::allocateInGuardedPool(void *Ptr, size_t Size) const {
+bool GuardedPoolAllocator::allocateInGuardedPool(void *Ptr, size_t Size) const {
   assert((reinterpret_cast<uintptr_t>(Ptr) % State.PageSize) == 0);
   assert((Size % State.PageSize) == 0);
   zx_handle_t Vmo;
@@ -83,6 +83,7 @@ void GuardedPoolAllocator::allocateInGuardedPool(void *Ptr, size_t Size) const {
                         Offset, Vmo, 0, Size, &P);
   Check(Status == ZX_OK, "Vmo mapping failed");
   _zx_handle_close(Vmo);
+  return true;
 }
 
 void GuardedPoolAllocator::deallocateInGuardedPool(void *Ptr,
