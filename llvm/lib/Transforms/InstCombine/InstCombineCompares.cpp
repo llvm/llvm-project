@@ -14,6 +14,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -915,57 +916,27 @@ Instruction *InstCombinerImpl::foldAllocaCmp(ICmpInst &ICI,
   // comparisons against the alloca consistently, and avoids the risk of
   // erroneously folding a comparison of the pointer with itself.
 
-  unsigned MaxIter = 32; // Break cycles and bound to constant-time.
+  struct CmpCaptureTracker : public CaptureTracker {
+    bool Captured = false;
+    unsigned NumCmps = 0;
 
-  SmallVector<const Use *, 32> Worklist;
-  for (const Use &U : Alloca->uses()) {
-    if (Worklist.size() >= MaxIter)
-      return nullptr;
-    Worklist.push_back(&U);
-  }
+    void tooManyUses() override { Captured = true; }
 
-  unsigned NumCmps = 0;
-  while (!Worklist.empty()) {
-    assert(Worklist.size() <= MaxIter);
-    const Use *U = Worklist.pop_back_val();
-    const Value *V = U->getUser();
-    --MaxIter;
-
-    if (isa<BitCastInst>(V) || isa<GetElementPtrInst>(V) || isa<PHINode>(V) ||
-        isa<SelectInst>(V)) {
-      // Track the uses.
-    } else if (isa<LoadInst>(V)) {
-      // Loading from the pointer doesn't escape it.
-      continue;
-    } else if (const auto *SI = dyn_cast<StoreInst>(V)) {
-      // Storing *to* the pointer is fine, but storing the pointer escapes it.
-      if (SI->getValueOperand() == U->get())
-        return nullptr;
-      continue;
-    } else if (isa<ICmpInst>(V)) {
-      if (NumCmps++)
-        return nullptr; // Found more than one cmp.
-      continue;
-    } else if (const auto *Intrin = dyn_cast<IntrinsicInst>(V)) {
-      switch (Intrin->getIntrinsicID()) {
-        // These intrinsics don't escape or compare the pointer. Memset is safe
-        // because we don't allow ptrtoint. Memcpy and memmove are safe because
-        // we don't allow stores, so src cannot point to V.
-        case Intrinsic::lifetime_start: case Intrinsic::lifetime_end:
-        case Intrinsic::memcpy: case Intrinsic::memmove: case Intrinsic::memset:
-          continue;
-        default:
-          return nullptr;
+    bool captured(const Use *U) override {
+      if (isa<ICmpInst>(U->getUser()) && ++NumCmps == 1) {
+        // Ignore one icmp capture.
+        return false;
       }
-    } else {
-      return nullptr;
+
+      Captured = true;
+      return true;
     }
-    for (const Use &U : V->uses()) {
-      if (Worklist.size() >= MaxIter)
-        return nullptr;
-      Worklist.push_back(&U);
-    }
-  }
+  };
+
+  CmpCaptureTracker Tracker;
+  PointerMayBeCaptured(Alloca, &Tracker);
+  if (Tracker.Captured)
+    return nullptr;
 
   auto *Res = ConstantInt::get(ICI.getType(),
                                !CmpInst::isTrueWhenEqual(ICI.getPredicate()));
