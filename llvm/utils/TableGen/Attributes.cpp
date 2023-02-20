@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TableGenBackends.h"
 #include "llvm/TableGen/Record.h"
 #include <vector>
 using namespace llvm;
@@ -135,4 +136,4 @@ void EmitAttributes(RecordKeeper &RK, raw_ostream &OS) {
   Attributes(RK).emit(OS);
 }
 
-} // End llvm namespace.
+} // namespace llvm

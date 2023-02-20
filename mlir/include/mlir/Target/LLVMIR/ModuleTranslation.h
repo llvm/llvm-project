@@ -121,11 +121,6 @@ public:
   void forgetMapping(Region &region);
 
   /// Returns the LLVM metadata corresponding to a symbol reference to an mlir
-  /// LLVM dialect access group operation.
-  llvm::MDNode *getAccessGroup(Operation *op,
-                               SymbolRefAttr accessGroupRef) const;
-
-  /// Returns the LLVM metadata corresponding to a symbol reference to an mlir
   /// LLVM dialect alias scope operation
   llvm::MDNode *getAliasScope(Operation *op, SymbolRefAttr aliasScopeRef) const;
 
@@ -331,11 +326,6 @@ private:
   /// they are converted to. This allows for connecting PHI nodes to the source
   /// values after all operations are converted.
   DenseMap<Operation *, llvm::Instruction *> branchMapping;
-
-  /// Mapping from an access group metadata operation to its LLVM metadata.
-  /// This map is populated on module entry and is used to annotate loops (as
-  /// identified via their branches) and contained memory accesses.
-  DenseMap<Operation *, llvm::MDNode *> accessGroupMetadataMapping;
 
   /// Mapping from an alias scope metadata operation to its LLVM metadata.
   /// This map is populated on module entry.

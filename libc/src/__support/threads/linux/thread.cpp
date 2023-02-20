@@ -214,7 +214,12 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
 #ifdef LIBC_TARGET_ARCH_IS_AARCH64
     // We set the frame pointer to be the same as the "sp" so that start args
     // can be sniffed out from start_thread.
+#ifdef __clang__
+    // GCC does not currently implement __arm_wsr64/__arm_rsr64.
     __arm_wsr64("x29", __arm_rsr64("sp"));
+#else
+    asm volatile("mov x29, sp");
+#endif
 #endif
     start_thread();
   } else if (clone_result < 0) {

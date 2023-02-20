@@ -3152,7 +3152,7 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
 
       // Check that the mask allows a multiple of 8 bits for a bswap, for an
       // early exit.
-      unsigned NumMaskedBits = AndMask.countPopulation();
+      unsigned NumMaskedBits = AndMask.popcount();
       if (!MatchBitReversals && (NumMaskedBits % 8) != 0)
         return Result;
 

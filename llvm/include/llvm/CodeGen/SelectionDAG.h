@@ -1060,7 +1060,7 @@ public:
 
   /// Return a node that represents the runtime scaling 'MulImm * RuntimeVL'.
   SDValue getVScale(const SDLoc &DL, EVT VT, APInt MulImm) {
-    assert(MulImm.getMinSignedBits() <= VT.getSizeInBits() &&
+    assert(MulImm.getSignificantBits() <= VT.getSizeInBits() &&
            "Immediate does not fit VT");
     return getNode(ISD::VSCALE, DL, VT,
                    getConstant(MulImm.sextOrTrunc(VT.getSizeInBits()), DL, VT));

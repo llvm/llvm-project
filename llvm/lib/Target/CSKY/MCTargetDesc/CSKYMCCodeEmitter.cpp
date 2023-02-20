@@ -82,7 +82,7 @@ void CSKYMCCodeEmitter::expandJBTF(const MCInst &MI, raw_ostream &OS,
   Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
   writeData(Binary, 2, OS);
 
-  if (!STI.getFeatureBits()[CSKY::Has2E3])
+  if (!STI.hasFeature(CSKY::Has2E3))
     TmpInst = MCInstBuilder(CSKY::BR32)
                   .addOperand(MI.getOperand(1))
                   .addOperand(MI.getOperand(2));

@@ -178,12 +178,6 @@ Pass *createLoopRotatePass(int MaxHeaderSize = -1, bool PrepareForLTO = false);
 
 //===----------------------------------------------------------------------===//
 //
-// LoopIdiom - This pass recognizes and replaces idioms in loops.
-//
-Pass *createLoopIdiomPass();
-
-//===----------------------------------------------------------------------===//
-//
 // DemoteRegisterToMemoryPass - This pass is used to demote registers to memory
 // references. In basically undoes the PromoteMemoryToRegister pass to make cfg
 // hacking easier.

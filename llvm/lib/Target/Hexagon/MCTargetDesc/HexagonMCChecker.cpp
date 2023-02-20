@@ -103,7 +103,7 @@ void HexagonMCChecker::init(MCInst const &MCI) {
 
   const bool IgnoreTmpDst = (HexagonMCInstrInfo::hasTmpDst(MCII, MCI) ||
                              HexagonMCInstrInfo::hasHvxTmp(MCII, MCI)) &&
-                            STI.getFeatureBits()[Hexagon::ArchV69];
+                            STI.hasFeature(Hexagon::ArchV69);
 
   // Get implicit register definitions.
   for (MCPhysReg R : MCID.implicit_defs()) {
@@ -709,7 +709,7 @@ bool HexagonMCChecker::checkShuffle() {
 }
 
 bool HexagonMCChecker::checkValidTmpDst() {
-  if (!STI.getFeatureBits()[Hexagon::ArchV69]) {
+  if (!STI.hasFeature(Hexagon::ArchV69)) {
     return true;
   }
   auto HasTmp = [&](MCInst const &I) {
@@ -799,7 +799,7 @@ void HexagonMCChecker::reportWarning(Twine const &Msg) {
 }
 
 bool HexagonMCChecker::checkLegalVecRegPair() {
-  const bool IsPermitted = STI.getFeatureBits()[Hexagon::ArchV67];
+  const bool IsPermitted = STI.hasFeature(Hexagon::ArchV67);
   const bool HasReversePairs = ReversePairs.size() != 0;
 
   if (!IsPermitted && HasReversePairs) {

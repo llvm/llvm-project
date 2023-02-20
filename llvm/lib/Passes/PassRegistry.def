@@ -342,6 +342,7 @@ FUNCTION_PASS("objc-arc-contract", ObjCARCContractPass())
 FUNCTION_PASS("objc-arc-expand", ObjCARCExpandPass())
 FUNCTION_PASS("pa-eval", PAEvalPass())
 FUNCTION_PASS("pgo-memop-opt", PGOMemOPSizeOpt())
+FUNCTION_PASS("place-safepoints", PlaceSafepointsPass())
 FUNCTION_PASS("print", PrintFunctionPass(dbgs()))
 FUNCTION_PASS("print<assumptions>", AssumptionPrinterPass(dbgs()))
 FUNCTION_PASS("print<block-freq>", BlockFrequencyPrinterPass(dbgs()))
@@ -477,6 +478,15 @@ FUNCTION_PASS_WITH_PARAMS("loop-vectorize",
                           parseLoopVectorizeOptions,
                           "no-interleave-forced-only;interleave-forced-only;"
                           "no-vectorize-forced-only;vectorize-forced-only")
+FUNCTION_PASS_WITH_PARAMS("instcombine",
+                          "InstCombinePass",
+                           [](InstCombineOptions Opts) {
+                             return InstCombinePass(Opts);
+                           },
+                          parseInstCombineOptions,
+                          "no-use-loop-info;use-loop-info;"
+                          "max-iterations=N"
+                          )
 FUNCTION_PASS_WITH_PARAMS("mldst-motion",
                           "MergedLoadStoreMotionPass",
                            [](MergedLoadStoreMotionOptions Opts) {

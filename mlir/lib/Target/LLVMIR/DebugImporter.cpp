@@ -113,6 +113,12 @@ DIScopeAttr DebugImporter::translateImpl(llvm::DIScope *node) {
   return cast<DIScopeAttr>(translate(static_cast<llvm::DINode *>(node)));
 }
 
+DINamespaceAttr DebugImporter::translateImpl(llvm::DINamespace *node) {
+  return DINamespaceAttr::get(
+      context, StringAttr::get(context, node->getName()),
+      translate(node->getScope()), node->getExportSymbols());
+}
+
 DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
   std::optional<DISubprogramFlags> subprogramFlags =
       symbolizeDISubprogramFlags(node->getSubprogram()->getSPFlags());
@@ -204,6 +210,8 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
     if (auto *casted = dyn_cast<llvm::DILocalVariable>(node))
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DISubprogram>(node))
+      return translateImpl(casted);
+    if (auto *casted = dyn_cast<llvm::DINamespace>(node))
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DISubrange>(node))
       return translateImpl(casted);

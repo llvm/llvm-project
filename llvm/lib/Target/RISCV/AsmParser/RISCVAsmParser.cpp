@@ -183,19 +183,15 @@ class RISCVAsmParser : public MCTargetAsmParser {
   bool parseDirectiveVariantCC();
 
   void setFeatureBits(uint64_t Feature, StringRef FeatureString) {
-    if (!(getSTI().getFeatureBits()[Feature])) {
+    if (!(getSTI().hasFeature(Feature))) {
       MCSubtargetInfo &STI = copySTI();
       setAvailableFeatures(
           ComputeAvailableFeatures(STI.ToggleFeature(FeatureString)));
     }
   }
 
-  bool getFeatureBits(uint64_t Feature) {
-    return getSTI().getFeatureBits()[Feature];
-  }
-
   void clearFeatureBits(uint64_t Feature, StringRef FeatureString) {
-    if (getSTI().getFeatureBits()[Feature]) {
+    if (getSTI().hasFeature(Feature)) {
       MCSubtargetInfo &STI = copySTI();
       setAvailableFeatures(
           ComputeAvailableFeatures(STI.ToggleFeature(FeatureString)));
@@ -249,13 +245,12 @@ public:
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
 
     auto ABIName = StringRef(Options.ABIName);
-    if (ABIName.endswith("f") &&
-        !getSTI().getFeatureBits()[RISCV::FeatureStdExtF]) {
+    if (ABIName.endswith("f") && !getSTI().hasFeature(RISCV::FeatureStdExtF)) {
       errs() << "Hard-float 'f' ABI can't be used for a target that "
                 "doesn't support the F instruction set extension (ignoring "
                 "target-abi)\n";
     } else if (ABIName.endswith("d") &&
-               !getSTI().getFeatureBits()[RISCV::FeatureStdExtD]) {
+               !getSTI().hasFeature(RISCV::FeatureStdExtD)) {
       errs() << "Hard-float 'd' ABI can't be used for a target that "
                 "doesn't support the D instruction set extension (ignoring "
                 "target-abi)\n";
@@ -483,6 +478,7 @@ public:
 
   /// Return true if the operand is a valid floating point rounding mode.
   bool isFRMArg() const { return Kind == KindTy::FRM; }
+  bool isRTZArg() const { return isFRMArg() && FRM.FRM == RISCVFPRndMode::RTZ; }
 
   bool isImmXLenLI() const {
     int64_t Imm;
@@ -563,7 +559,8 @@ public:
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
     int64_t Imm;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    return IsConstantImm && isInt<5>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
+    return IsConstantImm && isInt<5>(fixImmediateForRV32(Imm, isRV64Imm())) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
   }
 
   bool isSImm6() const {
@@ -572,7 +569,8 @@ public:
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
     int64_t Imm;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    return IsConstantImm && isInt<6>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
+    return IsConstantImm && isInt<6>(fixImmediateForRV32(Imm, isRV64Imm())) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
   }
 
   bool isSImm6NonZero() const {
@@ -581,7 +579,8 @@ public:
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
     int64_t Imm;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    return IsConstantImm && isInt<6>(Imm) && (Imm != 0) &&
+    return IsConstantImm && Imm != 0 &&
+           isInt<6>(fixImmediateForRV32(Imm, isRV64Imm())) &&
            VK == RISCVMCExpr::VK_RISCV_None;
   }
 
@@ -658,6 +657,14 @@ public:
            VK == RISCVMCExpr::VK_RISCV_None;
   }
 
+  // If this a RV32 and the immediate is a uimm32, sign extend it to 32 bits.
+  // This allows writing 'addi a0, a0, 0xffffffff'.
+  static int64_t fixImmediateForRV32(int64_t Imm, bool IsRV64Imm) {
+    if (IsRV64Imm || !isUInt<32>(Imm))
+      return Imm;
+    return SignExtend64<32>(Imm);
+  }
+
   bool isSImm12() const {
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
     int64_t Imm;
@@ -668,7 +675,7 @@ public:
     if (!IsConstantImm)
       IsValid = RISCVAsmParser::classifySymbolRef(getImm(), VK);
     else
-      IsValid = isInt<12>(Imm);
+      IsValid = isInt<12>(fixImmediateForRV32(Imm, isRV64Imm()));
     return IsValid && ((IsConstantImm && VK == RISCVMCExpr::VK_RISCV_None) ||
                        VK == RISCVMCExpr::VK_RISCV_LO ||
                        VK == RISCVMCExpr::VK_RISCV_PCREL_LO ||
@@ -756,7 +763,8 @@ public:
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
     int64_t Imm;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    return IsConstantImm && isInt<5>(Imm - 1) &&
+    return IsConstantImm &&
+           isInt<5>(fixImmediateForRV32(Imm, isRV64Imm()) - 1) &&
            VK == RISCVMCExpr::VK_RISCV_None;
   }
 
@@ -908,14 +916,15 @@ public:
     return Op;
   }
 
-  static void addExpr(MCInst &Inst, const MCExpr *Expr) {
+  static void addExpr(MCInst &Inst, const MCExpr *Expr, bool IsRV64Imm) {
     assert(Expr && "Expr shouldn't be null!");
     int64_t Imm = 0;
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
     bool IsConstant = evaluateConstantImm(Expr, Imm, VK);
 
     if (IsConstant)
-      Inst.addOperand(MCOperand::createImm(Imm));
+      Inst.addOperand(
+          MCOperand::createImm(fixImmediateForRV32(Imm, IsRV64Imm)));
     else
       Inst.addOperand(MCOperand::createExpr(Expr));
   }
@@ -928,7 +937,7 @@ public:
 
   void addImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    addExpr(Inst, getImm());
+    addExpr(Inst, getImm(), isRV64Imm());
   }
 
   void addFenceArgOperands(MCInst &Inst, unsigned N) const {
@@ -1252,6 +1261,10 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidTPRelAddSymbol: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
     return Error(ErrorLoc, "operand must be a symbol with %tprel_add modifier");
+  }
+  case Match_InvalidRTZArg: {
+    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(ErrorLoc, "operand must be 'rtz' floating-point rounding mode");
   }
   case Match_InvalidVTypeI: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
@@ -2027,7 +2040,7 @@ bool RISCVAsmParser::ParseInstruction(ParseInstructionInfo &Info,
   // cause relaxations. Unfortunately instruction processing stage occurs in the
   // same pass as relocation emission, so it's too late to set a 'sticky bit'
   // for the entire file.
-  if (getSTI().getFeatureBits()[RISCV::FeatureRelax]) {
+  if (getSTI().hasFeature(RISCV::FeatureRelax)) {
     auto *Assembler = getTargetStreamer().getStreamer().getAssemblerPtr();
     if (Assembler != nullptr) {
       RISCVAsmBackend &MAB =

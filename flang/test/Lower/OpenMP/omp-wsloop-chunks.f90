@@ -7,7 +7,7 @@ program wsloop
         integer :: i
         integer :: chunk
 
-! CHECK-LABEL: func.func @_QQmain() {
+! CHECK-LABEL: func.func @_QQmain() attributes {fir.bindc_name = "wsloop"} {
 ! CHECK:         %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "chunk", uniq_name = "_QFEchunk"}
 
 !$OMP DO SCHEDULE(static, 4)

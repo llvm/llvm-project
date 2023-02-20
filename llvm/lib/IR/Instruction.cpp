@@ -138,7 +138,7 @@ Instruction *Instruction::getInsertionPointAfterDef() {
   } else if (auto *II = dyn_cast<InvokeInst>(this)) {
     InsertBB = II->getNormalDest();
     InsertPt = InsertBB->getFirstInsertionPt();
-  } else if (auto *CB = dyn_cast<CallBrInst>(this)) {
+  } else if (isa<CallBrInst>(this)) {
     // Def is available in multiple successors, there's no single dominating
     // insertion point.
     return nullptr;

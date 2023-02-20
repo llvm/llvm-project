@@ -77,7 +77,7 @@ static bool isMaxValAllBitSetLiteral(const EnumDecl *EnumDec) {
       });
 
   if (const Expr *InitExpr = EnumConst->getInitExpr()) {
-    return EnumConst->getInitVal().countTrailingOnes() ==
+    return EnumConst->getInitVal().countr_one() ==
                EnumConst->getInitVal().getActiveBits() &&
            isa<IntegerLiteral>(InitExpr->IgnoreImpCasts());
   }

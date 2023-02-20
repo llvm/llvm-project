@@ -28,6 +28,9 @@ def MemRefMultiBufferOp : Op<Transform_Dialect, "memref.multibuffer",
      iterations. This transform expands the size of an allocation by
      a given multiplicative factor and fixes up any users of the
      multibuffered allocation.
+     If skip analysis is not set the transformation will only apply
+     if it can prove that there is no data being carried across loop
+     iterations.
 
      #### Return modes
 
@@ -37,7 +40,8 @@ def MemRefMultiBufferOp : Op<Transform_Dialect, "memref.multibuffer",
 
   let arguments =
       (ins Transform_MemRefAllocOp:$target,
-           ConfinedAttr<I64Attr, [IntPositive]>:$factor);
+           ConfinedAttr<I64Attr, [IntPositive]>:$factor,
+           UnitAttr:$skip_analysis);
 
   let results = (outs PDL_Operation:$transformed);
 

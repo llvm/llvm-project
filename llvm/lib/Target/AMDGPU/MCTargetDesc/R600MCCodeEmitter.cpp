@@ -97,7 +97,7 @@ void R600MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   } else if (IS_VTX(Desc)) {
     uint64_t InstWord01 = getBinaryCodeForInstr(MI, Fixups, STI);
     uint32_t InstWord2 = MI.getOperand(2).getImm(); // Offset
-    if (!(STI.getFeatureBits()[R600::FeatureCaymanISA])) {
+    if (!(STI.hasFeature(R600::FeatureCaymanISA))) {
       InstWord2 |= 1 << 19; // Mega-Fetch bit
     }
 
@@ -130,7 +130,7 @@ void R600MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
       Emit((uint32_t) 0, OS);
   } else {
     uint64_t Inst = getBinaryCodeForInstr(MI, Fixups, STI);
-    if ((STI.getFeatureBits()[R600::FeatureR600ALUInst]) &&
+    if ((STI.hasFeature(R600::FeatureR600ALUInst)) &&
        ((Desc.TSFlags & R600_InstFlag::OP1) ||
          Desc.TSFlags & R600_InstFlag::OP2)) {
       uint64_t ISAOpCode = Inst & (0x3FFULL << 39);

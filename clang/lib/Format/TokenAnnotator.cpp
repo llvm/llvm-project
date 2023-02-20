@@ -2596,8 +2596,21 @@ public:
     FormatToken *Start = Current;
     FormatToken *LatestOperator = nullptr;
     unsigned OperatorIndex = 0;
+    // The first name of the current type in a port list.
+    FormatToken *VerilogFirstOfType = nullptr;
 
     while (Current) {
+      // In Verilog ports in a module header that don't have a type take the
+      // type of the previous one.  For example,
+      //   module a(output b,
+      //                   c,
+      //            output d);
+      // In this case there need to be fake parentheses around b and c.
+      if (Style.isVerilog() && Precedence == prec::Comma) {
+        VerilogFirstOfType =
+            verilogGroupDecl(VerilogFirstOfType, LatestOperator);
+      }
+
       // Consume operators with higher precedence.
       parse(Precedence + 1);
 
@@ -2610,7 +2623,7 @@ public:
         Start = Current;
       }
 
-      // At the end of the line or when an operator with higher precedence is
+      // At the end of the line or when an operator with lower precedence is
       // found, insert fake parenthesis and return.
       if (!Current ||
           (Current->closesScope() &&
@@ -2646,6 +2659,10 @@ public:
         next(/*SkipPastLeadingComments=*/Precedence > 0);
       }
     }
+
+    // Group variables of the same type.
+    if (Style.isVerilog() && Precedence == prec::Comma && VerilogFirstOfType)
+      addFakeParenthesis(VerilogFirstOfType, prec::Comma);
 
     if (LatestOperator && (Current || Precedence > 0)) {
       // The requires clauses do not neccessarily end in a semicolon or a brace,
@@ -2780,6 +2797,140 @@ private:
            Current->isTrailingComment()) {
       Current = Current->Next;
     }
+  }
+
+  // Add fake parenthesis around declarations of the same type for example in a
+  // module prototype. Return the first port / variable of the current type.
+  FormatToken *verilogGroupDecl(FormatToken *FirstOfType,
+                                FormatToken *PreviousComma) {
+    if (!Current)
+      return nullptr;
+
+    FormatToken *Start = Current;
+
+    // Skip attributes.
+    while (Start->startsSequence(tok::l_paren, tok::star)) {
+      if (!(Start = Start->MatchingParen) ||
+          !(Start = Start->getNextNonComment())) {
+        return nullptr;
+      }
+    }
+
+    FormatToken *Tok = Start;
+
+    if (Tok->is(Keywords.kw_assign))
+      Tok = Tok->getNextNonComment();
+
+    // Skip any type qualifiers to find the first identifier. It may be either a
+    // new type name or a variable name. There can be several type qualifiers
+    // preceding a variable name, and we can not tell them apart by looking at
+    // the word alone since a macro can be defined as either a type qualifier or
+    // a variable name. Thus we use the last word before the dimensions instead
+    // of the first word as the candidate for the variable or type name.
+    FormatToken *First = nullptr;
+    while (Tok) {
+      FormatToken *Next = Tok->getNextNonComment();
+
+      if (Tok->is(tok::hash)) {
+        // Start of a macro expansion.
+        First = Tok;
+        Tok = Next;
+        if (Tok)
+          Tok = Tok->getNextNonComment();
+      } else if (Tok->is(tok::hashhash)) {
+        // Concatenation. Skip.
+        Tok = Next;
+        if (Tok)
+          Tok = Tok->getNextNonComment();
+      } else if ((Keywords.isVerilogQualifier(*Tok) ||
+                  Keywords.isVerilogIdentifier(*Tok))) {
+        First = Tok;
+        Tok = Next;
+        // The name may have dots like `interface_foo.modport_foo`.
+        while (Tok && Tok->isOneOf(tok::period, tok::coloncolon) &&
+               (Tok = Tok->getNextNonComment())) {
+          if (Keywords.isVerilogIdentifier(*Tok))
+            Tok = Tok->getNextNonComment();
+        }
+      } else if (!Next) {
+        Tok = nullptr;
+      } else if (Tok->is(tok::l_paren)) {
+        // Make sure the parenthesized list is a drive strength. Otherwise the
+        // statement may be a module instantiation in which case we have already
+        // found the instance name.
+        if (Next->isOneOf(
+                Keywords.kw_highz0, Keywords.kw_highz1, Keywords.kw_large,
+                Keywords.kw_medium, Keywords.kw_pull0, Keywords.kw_pull1,
+                Keywords.kw_small, Keywords.kw_strong0, Keywords.kw_strong1,
+                Keywords.kw_supply0, Keywords.kw_supply1, Keywords.kw_weak0,
+                Keywords.kw_weak1)) {
+          Tok->setType(TT_VerilogStrength);
+          Tok = Tok->MatchingParen;
+          if (Tok) {
+            Tok->setType(TT_VerilogStrength);
+            Tok = Tok->getNextNonComment();
+          }
+        } else {
+          break;
+        }
+      } else if (Tok->is(tok::hash)) {
+        if (Next->is(tok::l_paren))
+          Next = Next->MatchingParen;
+        if (Next)
+          Tok = Next->getNextNonComment();
+      } else {
+        break;
+      }
+    }
+
+    // Find the second identifier. If it exists it will be the name.
+    FormatToken *Second = nullptr;
+    // Dimensions.
+    while (Tok && Tok->is(tok::l_square) && (Tok = Tok->MatchingParen))
+      Tok = Tok->getNextNonComment();
+    if (Tok && (Tok->is(tok::hash) || Keywords.isVerilogIdentifier(*Tok)))
+      Second = Tok;
+
+    // If the second identifier doesn't exist and there are qualifiers, the type
+    // is implied.
+    FormatToken *TypedName = nullptr;
+    if (Second) {
+      TypedName = Second;
+      if (First && First->is(TT_Unknown))
+        First->setType(TT_VerilogDimensionedTypeName);
+    } else if (First != Start) {
+      // If 'First' is null, then this isn't a declaration, 'TypedName' gets set
+      // to null as intended.
+      TypedName = First;
+    }
+
+    if (TypedName) {
+      // This is a declaration with a new type.
+      if (TypedName->is(TT_Unknown))
+        TypedName->setType(TT_StartOfName);
+      // Group variables of the previous type.
+      if (FirstOfType && PreviousComma) {
+        PreviousComma->setType(TT_VerilogTypeComma);
+        addFakeParenthesis(FirstOfType, prec::Comma, PreviousComma->Previous);
+      }
+
+      FirstOfType = TypedName;
+
+      // Don't let higher precedence handle the qualifiers. For example if we
+      // have:
+      //    parameter x = 0
+      // We skip `parameter` here. This way the fake parentheses for the
+      // assignment will be around `x = 0`.
+      while (Current && Current != FirstOfType) {
+        if (Current->opensScope()) {
+          next();
+          parse();
+        }
+        next();
+      }
+    }
+
+    return FirstOfType;
   }
 
   const FormatStyle &Style;
@@ -4213,6 +4364,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     // Add space in attribute like `(* ASYNC_REG = "TRUE" *)`.
     if (Left.endsSequence(tok::star, tok::l_paren) && Right.is(tok::identifier))
       return true;
+    // Add space before drive strength like in `wire (strong1, pull0)`.
+    if (Right.is(tok::l_paren) && Right.is(TT_VerilogStrength))
+      return true;
   }
   if (Left.is(TT_ImplicitStringLiteral))
     return Right.hasWhitespaceBefore();
@@ -4524,6 +4678,9 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       return true;
     }
   } else if (Style.isVerilog()) {
+    // Break between ports of different types.
+    if (Left.is(TT_VerilogTypeComma))
+      return true;
     // Break after labels. In Verilog labels don't have the 'case' keyword, so
     // it is hard to identify them in UnwrappedLineParser.
     if (!Keywords.isVerilogBegin(Right) && Keywords.isVerilogEndOfLabel(Left))

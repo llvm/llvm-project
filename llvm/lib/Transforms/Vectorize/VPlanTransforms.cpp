@@ -551,6 +551,9 @@ static VPRegionBlock *GetReplicateRegion(VPRecipeBase *R) {
 
 static bool properlyDominates(const VPRecipeBase *A, const VPRecipeBase *B,
                               VPDominatorTree &VPDT) {
+  if (A == B)
+    return false;
+
   auto LocalComesBefore = [](const VPRecipeBase *A, const VPRecipeBase *B) {
     for (auto &R : *A->getParent()) {
       if (&R == A)

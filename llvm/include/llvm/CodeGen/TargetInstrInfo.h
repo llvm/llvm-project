@@ -61,6 +61,7 @@ class TargetRegisterInfo;
 class TargetSchedModel;
 class TargetSubtargetInfo;
 enum class MachineCombinerPattern;
+enum class MachineTraceStrategy;
 
 template <class T> class SmallVectorImpl;
 
@@ -1250,6 +1251,9 @@ public:
 
   /// Return true when a target supports MachineCombiner.
   virtual bool useMachineCombiner() const { return false; }
+
+  /// Return a strategy that MachineCombiner must use when creating traces.
+  virtual MachineTraceStrategy getMachineCombinerTraceStrategy() const;
 
   /// Return true if the given SDNode can be copied during scheduling
   /// even if it has glue.

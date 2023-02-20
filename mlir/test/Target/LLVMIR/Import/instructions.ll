@@ -368,13 +368,18 @@ define void @load_store(ptr %ptr) {
 
 ; // -----
 
-; CHECK-LABEL: @atomic_load
+; CHECK-LABEL: @atomic_load_store
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
-define void @atomic_load(ptr %ptr) {
+define void @atomic_load_store(ptr %ptr) {
   ; CHECK:  %[[V1:[0-9]+]] = llvm.load %[[PTR]] atomic acquire {alignment = 8 : i64} : !llvm.ptr -> f64
   ; CHECK:  %[[V2:[0-9]+]] = llvm.load volatile %[[PTR]] atomic syncscope("singlethreaded") acquire {alignment = 16 : i64} : !llvm.ptr -> f64
   %1 = load atomic double, ptr %ptr acquire, align 8
   %2 = load atomic volatile double, ptr %ptr syncscope("singlethreaded") acquire, align 16
+
+  ; CHECK:  llvm.store %[[V1]], %[[PTR]] atomic release {alignment = 8 : i64} : f64, !llvm.ptr
+  ; CHECK:  llvm.store volatile %[[V2]], %[[PTR]] atomic syncscope("singlethreaded") release {alignment = 16 : i64} : f64, !llvm.ptr
+  store atomic double %1, ptr %ptr release, align 8
+  store atomic volatile double %2, ptr %ptr syncscope("singlethreaded") release, align 16
   ret void
 }
 

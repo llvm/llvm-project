@@ -1983,8 +1983,8 @@ TEST_F(AMDGPUGISelMITest, TestKnownBitsAssertAlign) {
   auto CheckBits = [&](unsigned NumBits, unsigned Idx) {
     Res = GetKB(Idx);
     EXPECT_EQ(64u, Res.getBitWidth());
-    EXPECT_EQ(NumBits - 1, Res.Zero.countTrailingOnes());
-    EXPECT_EQ(64u, Res.One.countTrailingZeros());
+    EXPECT_EQ(NumBits - 1, Res.Zero.countr_one());
+    EXPECT_EQ(64u, Res.One.countr_zero());
     EXPECT_EQ(Align(1ull << (NumBits - 1)), Info.computeKnownAlignment(Copies[Idx]));
   };
 
@@ -2014,5 +2014,5 @@ TEST_F(AArch64GISelMITest, TestKnownBitsUADDO) {
   GISelKnownBits Info(*MF);
   KnownBits Res = Info.getKnownBits(CopyOverflow);
   EXPECT_EQ(0u, Res.One.getZExtValue());
-  EXPECT_EQ(31u, Res.Zero.countLeadingOnes());
+  EXPECT_EQ(31u, Res.Zero.countl_one());
 }

@@ -101,7 +101,7 @@ int main() {
   car<1, 2, 3>(); // expected-note {{in instantiation of function template specialization 'car<1, 2, 3>' requested here}}
   HasASTemplateFields<1> HASTF;
   neg<-1>(); // expected-note {{in instantiation of function template specialization 'neg<-1>' requested here}}
-  correct<0x7FFFEB>();
+  correct<0x7FFFEA>();
   tooBig<8388650>(); // expected-note {{in instantiation of function template specialization 'tooBig<8388650L>' requested here}}
 
   __attribute__((address_space(1))) char *x;

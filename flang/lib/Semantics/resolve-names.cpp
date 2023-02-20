@@ -7184,6 +7184,12 @@ void ResolveNamesVisitor::HandleProcedureName(
     if (IsIntrinsic(name.source, flag)) {
       symbol =
           &MakeSymbol(InclusiveScope(), name.source, Attrs{Attr::INTRINSIC});
+    } else if (const auto ppcBuiltinScope =
+                   currScope().context().GetPPCBuiltinsScope()) {
+      // Check if it is a builtin from the predefined module
+      symbol = FindSymbol(*ppcBuiltinScope, name);
+      if (!symbol)
+        symbol = &MakeSymbol(context().globalScope(), name.source, Attrs{});
     } else {
       symbol = &MakeSymbol(context().globalScope(), name.source, Attrs{});
     }

@@ -1736,7 +1736,7 @@ LogicalResult spirv::BranchConditionalOp::verify() {
       return emitOpError("must have exactly two branch weights");
     }
     if (llvm::all_of(*weights, [](Attribute attr) {
-          return attr.cast<IntegerAttr>().getValue().isNullValue();
+          return attr.cast<IntegerAttr>().getValue().isZero();
         }))
       return emitOpError("branch weights cannot both be zero");
   }

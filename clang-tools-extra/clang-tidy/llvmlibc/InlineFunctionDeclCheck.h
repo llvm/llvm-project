@@ -10,7 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVMLIBC_INLINEFUNCTIONDECLCHECK_H
 
 #include "../ClangTidyCheck.h"
-#include "../utils/FileExtensionsUtils.h"
+#include "../FileExtensionsSet.h"
 
 namespace clang::tidy::llvm_libc {
 
@@ -30,13 +30,11 @@ public:
     return LangOpts.CPlusPlus;
   }
 
-  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  const StringRef RawStringHeaderFileExtensions;
-  utils::FileExtensionsSet HeaderFileExtensions;
+  FileExtensionsSet HeaderFileExtensions;
 };
 
 } // namespace clang::tidy::llvm_libc

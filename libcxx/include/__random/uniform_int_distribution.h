@@ -9,12 +9,12 @@
 #ifndef _LIBCPP___RANDOM_UNIFORM_INT_DISTRIBUTION_H
 #define _LIBCPP___RANDOM_UNIFORM_INT_DISTRIBUTION_H
 
+#include <__bit/countl.h>
 #include <__config>
 #include <__random/is_valid.h>
 #include <__random/log2.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/make_unsigned.h>
-#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <iosfwd>

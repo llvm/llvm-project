@@ -391,11 +391,9 @@ transform.sequence failures(propagate) {
 // CHECK-DAG:   #[[MAP0:.+]] = affine_map<(d0) -> (d0 floordiv 32)>
 // CHECK-DAG:   #[[MAP1:.+]] = affine_map<(d0) -> (d0 mod 32)>
 // CHECK-DAG:   #[[MAP2:.+]] = affine_map<(d0) -> ((d0 + 1) floordiv 32 - d0 floordiv 32 + 1)>
-// CHECK-DAG:   #[[MAP3:.+]] = affine_map<(d0) -> (((d0 + 1) floordiv 32) * 32 - (d0 floordiv 32) * 32 + 32)>
 // CHECK-DAG:   #[[MAP4:.+]] = affine_map<(d0) -> (d0 floordiv 16)>
 // CHECK-DAG:   #[[MAP5:.+]] = affine_map<(d0) -> (d0 mod 16)>
 // CHECK-DAG:   #[[MAP6:.+]] = affine_map<(d0) -> ((d0 + 3) floordiv 16 - d0 floordiv 16 + 1)>
-// CHECK-DAG:   #[[MAP7:.+]] = affine_map<(d0) -> (((d0 + 3) floordiv 16) * 16 - (d0 floordiv 16) * 16 + 16)>
 // CHECK:       func.func @NCnc_to_NC
 // CHECK-SAME:    %[[IN:[A-Za-z0-9]+]]:
 // CHECK-SAME:    %[[OUT:[A-Za-z0-9]+]]:
@@ -440,11 +438,9 @@ transform.sequence failures(propagate) {
 // CHECK-DAG:   #[[MAP0:.+]] = affine_map<(d0) -> (d0 floordiv 32)>
 // CHECK-DAG:   #[[MAP1:.+]] = affine_map<(d0) -> (d0 mod 32)>
 // CHECK-DAG:   #[[MAP2:.+]] = affine_map<(d0) -> ((d0 + 1) floordiv 32 - d0 floordiv 32 + 1)>
-// CHECK-DAG:   #[[MAP3:.+]] = affine_map<(d0) -> (((d0 + 1) floordiv 32) * 32 - (d0 floordiv 32) * 32 + 32)>
 // CHECK-DAG:   #[[MAP4:.+]] = affine_map<(d0) -> (d0 floordiv 8)>
 // CHECK-DAG:   #[[MAP5:.+]] = affine_map<(d0) -> (d0 mod 8)>
 // CHECK-DAG:   #[[MAP6:.+]] = affine_map<(d0) -> ((d0 + 3) floordiv 8 - d0 floordiv 8 + 1)>
-// CHECK-DAG:   #[[MAP7:.+]] = affine_map<(d0) -> (((d0 + 3) floordiv 8) * 8 - (d0 floordiv 8) * 8 + 8)>
 // CHECK:       func.func @CKkc_to_KC
 // CHECK-SAME:    %[[IN:[A-Za-z0-9]+]]:
 // CHECK-SAME:    %[[OUT:[A-Za-z0-9]+]]:
