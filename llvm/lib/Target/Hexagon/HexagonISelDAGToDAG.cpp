@@ -1867,7 +1867,7 @@ static unsigned getPowerOf2Factor(SDValue Val) {
         continue;
       const APInt &CInt = C->getAPIntValue();
       if (CInt.getBoolValue())
-        MaxFactor = CInt.countTrailingZeros();
+        MaxFactor = CInt.countr_zero();
     }
     return MaxFactor;
   }

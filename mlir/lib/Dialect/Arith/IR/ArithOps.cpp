@@ -708,7 +708,7 @@ OpFoldResult arith::RemUIOp::fold(FoldAdaptor adaptor) {
   bool div0 = false;
   auto result = constFoldBinaryOp<IntegerAttr>(adaptor.getOperands(),
                                                [&](APInt a, const APInt &b) {
-                                                 if (div0 || b.isNullValue()) {
+                                                 if (div0 || b.isZero()) {
                                                    div0 = true;
                                                    return a;
                                                  }
@@ -731,7 +731,7 @@ OpFoldResult arith::RemSIOp::fold(FoldAdaptor adaptor) {
   bool div0 = false;
   auto result = constFoldBinaryOp<IntegerAttr>(adaptor.getOperands(),
                                                [&](APInt a, const APInt &b) {
-                                                 if (div0 || b.isNullValue()) {
+                                                 if (div0 || b.isZero()) {
                                                    div0 = true;
                                                    return a;
                                                  }

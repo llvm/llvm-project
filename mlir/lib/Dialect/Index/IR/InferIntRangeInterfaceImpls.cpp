@@ -221,7 +221,7 @@ void CmpOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   APInt min = APInt::getZero(1);
-  APInt max = APInt::getAllOnesValue(1);
+  APInt max = APInt::getAllOnes(1);
 
   std::optional<bool> truthValue64 = intrange::evaluatePred(pred, lhs, rhs);
 

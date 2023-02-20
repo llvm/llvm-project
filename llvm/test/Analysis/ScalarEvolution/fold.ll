@@ -67,15 +67,15 @@ define void @test4(i32 %x, i32 %y) {
 ; CHECK-NEXT:    %D = sext i16 %B to i32
 ; CHECK-NEXT:    --> ({0,+,1}<%loop> umax ((zext i2 (trunc i32 %y to i2) to i32) smax {0,+,1}<%loop>)) U: [0,21) S: [0,21) Exits: 20 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %E = sext i16 %B to i34
-; CHECK-NEXT:    --> (zext i32 ({0,+,1}<%loop> umax ((zext i2 (trunc i32 %y to i2) to i32) smax {0,+,1}<%loop>)) to i34) U: [0,21) S: [0,21) Exits: 20 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ((zext i32 ((zext i2 (trunc i32 %y to i2) to i32) smax {0,+,1}<nuw><nsw><%loop>) to i34) umax {0,+,1}<nuw><nsw><%loop>) U: [0,21) S: [0,21) Exits: 20 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %F = zext i16 %B to i30
-; CHECK-NEXT:    --> (trunc i32 ({0,+,1}<%loop> umax ((zext i2 (trunc i32 %y to i2) to i32) smax {0,+,1}<%loop>)) to i30) U: [0,21) S: [0,21) Exits: 20 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> (trunc i32 ({0,+,1}<nuw><nsw><%loop> umax ((zext i2 (trunc i32 %y to i2) to i32) smax {0,+,1}<nuw><nsw><%loop>)) to i30) U: [0,21) S: [0,21) Exits: 20 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %G = zext i16 %B to i32
-; CHECK-NEXT:    --> ({0,+,1}<%loop> umax ((zext i2 (trunc i32 %y to i2) to i32) smax {0,+,1}<%loop>)) U: [0,21) S: [0,21) Exits: 20 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ({0,+,1}<nuw><nsw><%loop> umax ((zext i2 (trunc i32 %y to i2) to i32) smax {0,+,1}<nuw><nsw><%loop>)) U: [0,21) S: [0,21) Exits: 20 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %H = zext i16 %B to i34
-; CHECK-NEXT:    --> (zext i32 ({0,+,1}<%loop> umax ((zext i2 (trunc i32 %y to i2) to i32) smax {0,+,1}<%loop>)) to i34) U: [0,21) S: [0,21) Exits: 20 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ((zext i32 ((zext i2 (trunc i32 %y to i2) to i32) smax {0,+,1}<nuw><nsw><%loop>) to i34) umax {0,+,1}<nuw><nsw><%loop>) U: [0,21) S: [0,21) Exits: 20 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %I = add i32 %A, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,22) S: [1,22) Exits: 21 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,22) S: [1,22) Exits: 21 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test4
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 20
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 20

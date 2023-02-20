@@ -10,6 +10,7 @@ add_startup_object(
     -x cuda # Use the CUDA toolchain to emit the `_start` kernel.
     --offload-device-only
     --offload-arch=${LIBC_GPU_TARGET_ARCHITECTURE}
+  NO_GPU_BUNDLE # Compile this file directly without special GPU handling.
 )
 get_fq_target_name(crt1 fq_name)
 

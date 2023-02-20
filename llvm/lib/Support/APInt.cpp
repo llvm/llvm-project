@@ -767,8 +767,8 @@ APInt llvm::APIntOps::GreatestCommonDivisor(APInt A, APInt B) {
   // Count common powers of 2 and remove all other powers of 2.
   unsigned Pow2;
   {
-    unsigned Pow2_A = A.countTrailingZeros();
-    unsigned Pow2_B = B.countTrailingZeros();
+    unsigned Pow2_A = A.countr_zero();
+    unsigned Pow2_B = B.countr_zero();
     if (Pow2_A > Pow2_B) {
       A.lshrInPlace(Pow2_A - Pow2_B);
       Pow2 = Pow2_B;
@@ -789,10 +789,10 @@ APInt llvm::APIntOps::GreatestCommonDivisor(APInt A, APInt B) {
   while (A != B) {
     if (A.ugt(B)) {
       A -= B;
-      A.lshrInPlace(A.countTrailingZeros() - Pow2);
+      A.lshrInPlace(A.countr_zero() - Pow2);
     } else {
       B -= A;
-      B.lshrInPlace(B.countTrailingZeros() - Pow2);
+      B.lshrInPlace(B.countr_zero() - Pow2);
     }
   }
 
@@ -1967,7 +1967,7 @@ APInt APInt::smul_ov(const APInt &RHS, bool &Overflow) const {
 }
 
 APInt APInt::umul_ov(const APInt &RHS, bool &Overflow) const {
-  if (countLeadingZeros() + RHS.countLeadingZeros() + 2 <= BitWidth) {
+  if (countl_zero() + RHS.countl_zero() + 2 <= BitWidth) {
     Overflow = true;
     return *this * RHS;
   }
@@ -1989,9 +1989,9 @@ APInt APInt::sshl_ov(const APInt &ShAmt, bool &Overflow) const {
     return APInt(BitWidth, 0);
 
   if (isNonNegative()) // Don't allow sign change.
-    Overflow = ShAmt.uge(countLeadingZeros());
+    Overflow = ShAmt.uge(countl_zero());
   else
-    Overflow = ShAmt.uge(countLeadingOnes());
+    Overflow = ShAmt.uge(countl_one());
 
   return *this << ShAmt;
 }
@@ -2001,7 +2001,7 @@ APInt APInt::ushl_ov(const APInt &ShAmt, bool &Overflow) const {
   if (Overflow)
     return APInt(BitWidth, 0);
 
-  Overflow = ShAmt.ugt(countLeadingZeros());
+  Overflow = ShAmt.ugt(countl_zero());
 
   return *this << ShAmt;
 }
@@ -2954,7 +2954,7 @@ llvm::APIntOps::GetMostSignificantDifferentBit(const APInt &A, const APInt &B) {
   assert(A.getBitWidth() == B.getBitWidth() && "Must have the same bitwidth");
   if (A == B)
     return std::nullopt;
-  return A.getBitWidth() - ((A ^ B).countLeadingZeros() + 1);
+  return A.getBitWidth() - ((A ^ B).countl_zero() + 1);
 }
 
 APInt llvm::APIntOps::ScaleBitMask(const APInt &A, unsigned NewBitWidth,

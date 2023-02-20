@@ -9899,7 +9899,7 @@ static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
       return SDValue();
 
     // AddC needs to have at least 32 trailing zeros.
-    if (AddC->getAPIntValue().countTrailingZeros() < 32)
+    if (AddC->getAPIntValue().countr_zero() < 32)
       return SDValue();
 
     // All users should be a shift by constant less than or equal to 32. This
@@ -10749,13 +10749,13 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
       // We can materialise `c1 << c2` into an add immediate, so it's "free",
       // and the combine should happen, to potentially allow further combines
       // later.
-      if (ShiftedC1Int.getMinSignedBits() <= 64 &&
+      if (ShiftedC1Int.getSignificantBits() <= 64 &&
           isLegalAddImmediate(ShiftedC1Int.getSExtValue()))
         return true;
 
       // We can materialise `c1` in an add immediate, so it's "free", and the
       // combine should be prevented.
-      if (C1Int.getMinSignedBits() <= 64 &&
+      if (C1Int.getSignificantBits() <= 64 &&
           isLegalAddImmediate(C1Int.getSExtValue()))
         return false;
 
@@ -10845,7 +10845,7 @@ bool RISCVTargetLowering::targetShrinkDemandedConstant(
     return false;
 
   // What is the fewest number of bits we need to represent the negative number.
-  unsigned MinSignedBits = ExpandedMask.getMinSignedBits();
+  unsigned MinSignedBits = ExpandedMask.getSignificantBits();
 
   // Try to make a 12 bit negative immediate. If that fails try to make a 32
   // bit negative immediate unless the shrunk immediate already fits in 32 bits.
@@ -14138,8 +14138,8 @@ bool RISCVTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
         return false;
       // Break the MUL to two SLLI instructions and an ADD/SUB, if Imm needs
       // a pair of LUI/ADDI.
-      if (!Imm.isSignedIntN(12) && Imm.countTrailingZeros() < 12) {
-        APInt ImmS = Imm.ashr(Imm.countTrailingZeros());
+      if (!Imm.isSignedIntN(12) && Imm.countr_zero() < 12) {
+        APInt ImmS = Imm.ashr(Imm.countr_zero());
         if ((ImmS + 1).isPowerOf2() || (ImmS - 1).isPowerOf2() ||
             (1 - ImmS).isPowerOf2())
           return true;

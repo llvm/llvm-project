@@ -1941,7 +1941,7 @@ static bool isInBoundsIndices(ArrayRef<IndexTy> Idxs) {
 static bool isIndexInRangeOfArrayType(uint64_t NumElements,
                                       const ConstantInt *CI) {
   // We cannot bounds check the index if it doesn't fit in an int64_t.
-  if (CI->getValue().getMinSignedBits() > 64)
+  if (CI->getValue().getSignificantBits() > 64)
     return false;
 
   // A negative index or an index past the end of our sequential type is

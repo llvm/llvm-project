@@ -10,3 +10,9 @@ addi a0, a1, 4294967295 # 0xffffffff
 # CHECK-ASM-AND-OBJ: ori a2, a3, -2048
 # CHECK-ASM: encoding: [0x13,0xe6,0x06,0x80]
 ori a2, a3, 0xfffff800
+# CHECK-ASM-AND-OBJ: lw a1, -1621(a2)
+# CHECK-ASM: encoding: [0x83,0x25,0xb6,0x9a]
+lw a1, 0xfffff9ab(a2)
+# CHECK-ASM-AND-OBJ: sw a1, -8(a2)
+# CHECK-ASM: encoding: [0x23,0x2c,0xb6,0xfe]
+sw a1, 0xfffffff8(a2)
