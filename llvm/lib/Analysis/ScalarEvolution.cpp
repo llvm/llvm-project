@@ -14965,6 +14965,20 @@ public:
           Expr);
     return I->second;
   }
+
+  const SCEV *visitUMinExpr(const SCEVUMinExpr *Expr) {
+    auto I = Map.find(Expr);
+    if (I == Map.end())
+      return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitUMinExpr(Expr);
+    return I->second;
+  }
+
+  const SCEV *visitSMinExpr(const SCEVSMinExpr *Expr) {
+    auto I = Map.find(Expr);
+    if (I == Map.end())
+      return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitSMinExpr(Expr);
+    return I->second;
+  }
 };
 
 const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
