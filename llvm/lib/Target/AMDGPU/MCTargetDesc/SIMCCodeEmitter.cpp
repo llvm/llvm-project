@@ -419,7 +419,7 @@ void SIMCCodeEmitter::getSOPPBrEncoding(const MCInst &MI, unsigned OpNo,
     const MCExpr *Expr = MO.getExpr();
     MCFixupKind Kind = (MCFixupKind)AMDGPU::fixup_si_sopp_br;
     Fixups.push_back(MCFixup::create(0, Expr, Kind, MI.getLoc()));
-    Op = APInt::getNullValue(96);
+    Op = APInt::getZero(96);
   } else {
     getMachineOpValue(MI, MO, Op, Fixups, STI);
   }

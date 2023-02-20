@@ -698,7 +698,7 @@ enum class Domain { NonNegative, NonPositive, Unknown };
 static Domain getDomain(const ConstantRange &CR) {
   if (CR.isAllNonNegative())
     return Domain::NonNegative;
-  if (CR.icmp(ICmpInst::ICMP_SLE, APInt::getNullValue(CR.getBitWidth())))
+  if (CR.icmp(ICmpInst::ICMP_SLE, APInt::getZero(CR.getBitWidth())))
     return Domain::NonPositive;
   return Domain::Unknown;
 }

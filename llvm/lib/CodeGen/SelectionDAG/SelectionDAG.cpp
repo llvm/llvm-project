@@ -2592,7 +2592,7 @@ APInt SelectionDAG::computeVectorKnownZeroElements(SDValue Op,
   unsigned NumElts = VT.getVectorNumElements();
   assert(DemandedElts.getBitWidth() == NumElts && "Unexpected demanded mask.");
 
-  APInt KnownZeroElements = APInt::getNullValue(NumElts);
+  APInt KnownZeroElements = APInt::getZero(NumElts);
   for (unsigned EltIdx = 0; EltIdx != NumElts; ++EltIdx) {
     if (!DemandedElts[EltIdx])
       continue; // Don't query elements that are not demanded.
@@ -2686,8 +2686,8 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
   }
   case ISD::VECTOR_SHUFFLE: {
     // Check if this is a shuffle node doing a splat or a shuffle of a splat.
-    APInt DemandedLHS = APInt::getNullValue(NumElts);
-    APInt DemandedRHS = APInt::getNullValue(NumElts);
+    APInt DemandedLHS = APInt::getZero(NumElts);
+    APInt DemandedRHS = APInt::getZero(NumElts);
     ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(V)->getMask();
     for (int i = 0; i != (int)NumElts; ++i) {
       int M = Mask[i];
@@ -11951,7 +11951,7 @@ bool BuildVectorSDNode::getConstantRawBits(
 
   // Extract raw src bits.
   SmallVector<APInt> SrcBitElements(NumSrcOps,
-                                    APInt::getNullValue(SrcEltSizeInBits));
+                                    APInt::getZero(SrcEltSizeInBits));
   BitVector SrcUndeElements(NumSrcOps, false);
 
   for (unsigned I = 0; I != NumSrcOps; ++I) {
@@ -11989,7 +11989,7 @@ void BuildVectorSDNode::recastRawBits(bool IsLittleEndian,
   unsigned NumDstOps = (NumSrcOps * SrcEltSizeInBits) / DstEltSizeInBits;
   DstUndefElements.clear();
   DstUndefElements.resize(NumDstOps, false);
-  DstBitElements.assign(NumDstOps, APInt::getNullValue(DstEltSizeInBits));
+  DstBitElements.assign(NumDstOps, APInt::getZero(DstEltSizeInBits));
 
   // Concatenate src elements constant bits together into dst element.
   if (SrcEltSizeInBits <= DstEltSizeInBits) {
