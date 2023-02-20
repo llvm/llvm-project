@@ -249,12 +249,14 @@ void *GuardedPoolAllocator::allocate(size_t Size, size_t Alignment) {
       reinterpret_cast<void *>(getPageAddr(UserPtr, PageSize)),
       roundUpTo(Size, PageSize));
 
+  // Start Clickhouse-specific code
   if (!success)
   {
     ScopedLock L(PoolMutex);
     freeSlot(Index);
     return nullptr;
   }
+  // End Clickhouse-specific code
 
   Meta->RecordAllocation(UserPtr, Size);
   {
