@@ -15,17 +15,15 @@
 #endif
 
 // We require std::math functions in the complex builtins below.
-#ifdef __NVPTX__
 #include <cmath>
-#define __CUDA__
+
+#ifdef __NVPTX__
 #define __OPENMP_NVPTX__
 #include <__clang_cuda_complex_builtins.h>
 #undef __OPENMP_NVPTX__
 #endif // __NVPTX__
 
 #ifdef __AMDGCN__
-#include <__clang_hip_libdevice_declares.h>
-#define __ARCHTYPES__ amdgcn
 #define __OPENMP_AMDGCN__
 #include <__clang_cuda_complex_builtins.h>
 #undef __OPENMP_AMDGCN__
@@ -45,7 +43,6 @@
 // arithmetic and calls to non-complex functions, all of which we can then
 // handle.
 #ifndef _LIBCPP_STD_VER
-#ifndef _GLIBCXX_COMPLEX
 
 #pragma omp begin declare variant match(                                       \
     device = {arch(amdgcn, nvptx, nvptx64)},                                   \
@@ -55,5 +52,4 @@
 
 #pragma omp end declare variant
 
-#endif // _GLIBCXX_COMPLEX
 #endif // _LIBCPP_STD_VER
