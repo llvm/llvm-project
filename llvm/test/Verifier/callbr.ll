@@ -68,3 +68,55 @@ normal:
 abnormal:
   ret i32 %ret
 }
+
+;; Tests of the callbr.landingpad intrinsic function.
+declare i32 @llvm.callbr.landingpad.i64(i64)
+define void @callbrpad_bad_type() {
+entry:
+; CHECK: Intrinsic has incorrect argument type!
+; CHECK-NEXT: ptr @llvm.callbr.landingpad.i64
+  %foo = call i32 @llvm.callbr.landingpad.i64(i64 42)
+  ret void
+}
+
+declare i32 @llvm.callbr.landingpad.i32(i32)
+define i32 @callbrpad_multi_preds() {
+entry:
+  %foo = callbr i32 asm "", "=r,!i"() to label %direct [label %indirect]
+direct:
+  br label %indirect
+indirect:
+; CHECK-NEXT: Intrinsic in block must have 1 unique predecessor
+; CHECK-NEXT: %out = call i32 @llvm.callbr.landingpad.i32(i32 %foo)
+  %out = call i32 @llvm.callbr.landingpad.i32(i32 %foo)
+  ret i32 %out
+}
+
+define void @callbrpad_wrong_callbr() {
+entry:
+  %foo = callbr i32 asm "", "=r,!i"() to label %direct [label %indirect]
+direct:
+; CHECK-NEXT: Intrinsic's corresponding callbr must have intrinsic's parent basic block in indirect destination list
+; CHECK-NEXT: %x = call i32 @llvm.callbr.landingpad.i32(i32 %foo)
+  %x = call i32 @llvm.callbr.landingpad.i32(i32 %foo)
+  ret void
+indirect:
+  ret void
+}
+
+declare i32 @foo(i32)
+define i32 @test_callbr_landingpad_not_first_inst() {
+entry:
+  %0 = callbr i32 asm "", "=r,!i"()
+          to label %asm.fallthrough [label %landingpad]
+
+asm.fallthrough:
+  ret i32 42
+
+landingpad:
+  %foo = call i32 @foo(i32 42)
+; CHECK-NEXT: No other instructions may proceed intrinsic
+; CHECK-NEXT: %out = call i32 @llvm.callbr.landingpad.i32(i32 %0)
+  %out = call i32 @llvm.callbr.landingpad.i32(i32 %0)
+  ret i32 %out
+}
