@@ -8,7 +8,7 @@
 //
 /// \file
 /// This tablegen backend emits code for use by the GlobalISel instruction
-/// selector. See include/llvm/CodeGen/TargetGlobalISel.td.
+/// selector. See include/llvm/Target/GlobalISel/Target.td.
 ///
 /// This file analyzes the patterns recognized by the SelectionDAGISel tablegen
 /// backend, filters out the ones that are unsupported, maps
