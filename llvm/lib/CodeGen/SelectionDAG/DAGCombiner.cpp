@@ -24602,12 +24602,9 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
       }
     }
     // TODO: Should we try to mask with N1 as well?
-    if (!IsInLaneMask &&
-        (!DemandedLHS.isNullValue() || !DemandedRHS.isNullValue()) &&
-        (DemandedLHS.isNullValue() ||
-         DAG.MaskedVectorIsZero(N0, DemandedLHS)) &&
-        (DemandedRHS.isNullValue() ||
-         DAG.MaskedVectorIsZero(N1, DemandedRHS))) {
+    if (!IsInLaneMask && (!DemandedLHS.isZero() || !DemandedRHS.isZero()) &&
+        (DemandedLHS.isZero() || DAG.MaskedVectorIsZero(N0, DemandedLHS)) &&
+        (DemandedRHS.isZero() || DAG.MaskedVectorIsZero(N1, DemandedRHS))) {
       SDLoc DL(N);
       EVT IntVT = VT.changeVectorElementTypeToInteger();
       EVT IntSVT = VT.getVectorElementType().changeTypeToInteger();

@@ -12131,8 +12131,8 @@ static bool isTargetShuffleEquivalent(MVT VT, ArrayRef<int> Mask,
     }
     return false;
   }
-  return (ZeroV1.isNullValue() || DAG.MaskedVectorIsZero(V1, ZeroV1)) &&
-         (ZeroV2.isNullValue() || DAG.MaskedVectorIsZero(V2, ZeroV2));
+  return (ZeroV1.isZero() || DAG.MaskedVectorIsZero(V1, ZeroV1)) &&
+         (ZeroV2.isZero() || DAG.MaskedVectorIsZero(V2, ZeroV2));
 }
 
 // Check if the shuffle mask is suitable for the AVX vpunpcklwd or vpunpckhwd
