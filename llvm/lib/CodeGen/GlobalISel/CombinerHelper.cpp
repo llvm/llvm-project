@@ -4968,7 +4968,7 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
     // Magic algorithm doesn't work for division by 1. We need to emit a select
     // at the end.
     // TODO: Use undef values for divisor of 1.
-    if (!Divisor.isOneValue()) {
+    if (!Divisor.isOne()) {
       UnsignedDivisionByConstantInfo magics =
           UnsignedDivisionByConstantInfo::get(Divisor);
 
