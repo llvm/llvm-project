@@ -12440,12 +12440,16 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
   // for each lane.
   if (!PreferDUPAndInsert && NumConstantLanes > 0 && usesOnlyOneConstantValue) {
     // Firstly, try to materialize the splat constant.
-    SDValue Vec = DAG.getSplatBuildVector(VT, dl, ConstantValue),
-            Val = ConstantBuildVector(Vec, DAG);
-    if (!Val) {
-      // Otherwise, materialize the constant and splat it.
-      Val = DAG.getNode(AArch64ISD::DUP, dl, VT, ConstantValue);
-      DAG.ReplaceAllUsesWith(Vec.getNode(), &Val);
+    SDValue Val = DAG.getSplatBuildVector(VT, dl, ConstantValue);
+    unsigned BitSize = VT.getScalarSizeInBits();
+    APInt ConstantValueAPInt(1, 0);
+    if (auto *C = dyn_cast<ConstantSDNode>(ConstantValue))
+      ConstantValueAPInt = C->getAPIntValue().zextOrTrunc(BitSize);
+    if (!isNullConstant(ConstantValue) && !ConstantValueAPInt.isAllOnes()) {
+      Val = ConstantBuildVector(Val, DAG);
+      if (!Val)
+        // Otherwise, materialize the constant and splat it.
+        Val = DAG.getNode(AArch64ISD::DUP, dl, VT, ConstantValue);
     }
 
     // Now insert the non-constant lanes.
