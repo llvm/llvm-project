@@ -280,12 +280,6 @@ def hlfir_SumOp : hlfir_Op<"sum", [AttrSizedOperandSegments,
     $array (`dim` $dim^)? (`mask` $mask^)? attr-dict `:` functional-type(operands, results)
   }];
 
-  // dim and mask can be NULL, array must not be.
-  let builders = [OpBuilder<(ins "mlir::Value":$array,
-                                 "mlir::Value":$dim,
-                                 "mlir::Value":$mask,
-                                 "mlir::Type":$resultType)>];
-
   let hasVerifier = 1;
 }
 
@@ -308,10 +302,6 @@ def hlfir_MatmulOp : hlfir_Op<"matmul",
   let assemblyFormat = [{
     $lhs $rhs attr-dict `:` functional-type(operands, results)
   }];
-
-  let builders = [OpBuilder<(ins "mlir::Value":$lhs,
-                                 "mlir::Value":$rhs,
-                                 "mlir::Type":$resultType)>];
 
   let hasVerifier = 1;
 }
