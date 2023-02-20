@@ -313,15 +313,16 @@ static void Assign(Descriptor &to, const Descriptor &from,
         "Assign: mismatching element sizes (to %zd bytes != from %zd bytes)",
         elementBytes, from.ElementBytes());
   }
-  if (toDerived) {
+  if (const typeInfo::DerivedType *
+      updatedToDerived{toAddendum ? toAddendum->derivedType() : nullptr}) {
     // Derived type intrinsic assignment, which is componentwise and elementwise
     // for all components, including parent components (10.2.1.2-3).
     // The target is first finalized if still necessary (7.5.6.3(1))
     if (needFinalization) {
-      Finalize(to, *toDerived);
+      Finalize(to, *updatedToDerived);
     }
     // Copy the data components (incl. the parent) first.
-    const Descriptor &componentDesc{toDerived->component()};
+    const Descriptor &componentDesc{updatedToDerived->component()};
     std::size_t numComponents{componentDesc.Elements()};
     for (std::size_t k{0}; k < numComponents; ++k) {
       const auto &comp{
@@ -394,7 +395,7 @@ static void Assign(Descriptor &to, const Descriptor &from,
       }
     }
     // Copy procedure pointer components
-    const Descriptor &procPtrDesc{toDerived->procPtr()};
+    const Descriptor &procPtrDesc{updatedToDerived->procPtr()};
     std::size_t numProcPtrs{procPtrDesc.Elements()};
     for (std::size_t k{0}; k < numProcPtrs; ++k) {
       const auto &procPtr{
