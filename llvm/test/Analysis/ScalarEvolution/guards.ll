@@ -86,7 +86,7 @@ entry:
 loop:
 ; CHECK: loop:
 ; CHECK:  call void (i1, ...) @llvm.experimental.guard(i1 true) [ "deopt"() ]
-; CHECK:  %iv.inc.cmp = icmp ult i32 %iv.inc, %len
+; CHECK:  %iv.inc.cmp = icmp slt i32 %iv.inc, %len
 ; CHECK:  call void (i1, ...) @llvm.experimental.guard(i1 %iv.inc.cmp) [ "deopt"() ]
 ; CHECK: leave:
   %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
@@ -129,7 +129,7 @@ left:
 
 be:
 ; CHECK: be:
-; CHECK-NEXT:  %iv.cmp = icmp ult i32 %iv, %len
+; CHECK-NEXT:  %iv.cmp = icmp slt i32 %iv, %len
 ; CHECK-NEXT:  call void (i1, ...) @llvm.experimental.guard(i1 %iv.cmp) [ "deopt"() ]
 ; CHECK: leave:
 
