@@ -22,6 +22,7 @@ set(LLVM_ENABLE_ZLIB ON CACHE BOOL "")
 set(LLVM_INCLUDE_DOCS OFF CACHE BOOL "")
 set(LLVM_INCLUDE_EXAMPLES OFF CACHE BOOL "")
 set(LLVM_STATIC_LINK_CXX_STDLIB ON CACHE BOOL "")
+set(LLVM_TOOL_LLVM_DRIVER_BUILD ON CACHE BOOL "")
 set(LLVM_USE_RELATIVE_PATHS_IN_FILES ON CACHE BOOL "")
 
 if(WIN32)
@@ -292,6 +293,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-cxxfilt
   llvm-debuginfod-find
   llvm-dlltool
+  llvm-driver
   llvm-dwarfdump
   llvm-dwp
   llvm-ifs
