@@ -833,11 +833,6 @@ Concepts Specific Fixes:
 - Fixed an issue with concept requirement evaluation, where we incorrectly allowed implicit
   conversions to bool for a requirement.  (`#54524 <https://github.com/llvm/llvm-project/issues/54524>`_)
 
-- Respect constructor constraints during class template argument deduction (CTAD).
-  This is the suggested resolution to CWG DR2628.
-  (`#57646 <https://github.com/llvm/llvm-project/issues/57646>`_,
-  `#43829 <https://github.com/llvm/llvm-project/issues/43829>`_)
-
 - Fix a crash when emitting a concept-related diagnostic.
   (`#57415 <https://github.com/llvm/llvm-project/issues/57415>`_)
 
