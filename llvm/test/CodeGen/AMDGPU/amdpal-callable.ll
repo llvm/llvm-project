@@ -178,19 +178,19 @@ attributes #0 = { nounwind }
 ; GFX8-NEXT:        .sgpr_count:     0x28{{$}}
 ; GFX9-NEXT:        .sgpr_count:     0x2c{{$}}
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x10{{$}}
-; GCN-NEXT:        .vgpr_count:    0x2b{{$}}
+; GCN-NEXT:        .vgpr_count:    0x2c{{$}}
 ; GCN-NEXT:      no_stack_extern_call_many_args:
 ; GCN-NEXT:        .lds_size:       0{{$}}
 ; GFX8-NEXT:        .sgpr_count:     0x28{{$}}
 ; GFX9-NEXT:        .sgpr_count:     0x2c{{$}}
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x90{{$}}
-; GCN-NEXT:        .vgpr_count:     0x2b{{$}}
+; GCN-NEXT:        .vgpr_count:     0x2c{{$}}
 ; GCN-NEXT:      no_stack_indirect_call:
 ; GCN-NEXT:        .lds_size:       0{{$}}
 ; GFX8-NEXT:        .sgpr_count:     0x28{{$}}
 ; GFX9-NEXT:        .sgpr_count:     0x2c{{$}}
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x10{{$}}
-; GCN-NEXT:        .vgpr_count:     0x2b{{$}}
+; GCN-NEXT:        .vgpr_count:     0x2c{{$}}
 ; GCN-NEXT:      simple_lds:
 ; GCN-NEXT:        .lds_size:       0x100{{$}}
 ; GCN-NEXT:        .sgpr_count:     0x20{{$}}
@@ -200,7 +200,7 @@ attributes #0 = { nounwind }
 ; GCN-NEXT:        .lds_size:       0x100{{$}}
 ; GCN-NEXT:        .sgpr_count:     0x28{{$}}
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x10{{$}}
-; GCN-NEXT:        .vgpr_count:     0x29{{$}}
+; GCN-NEXT:        .vgpr_count:     0x2a{{$}}
 ; GCN-NEXT:      simple_stack:
 ; GCN-NEXT:        .lds_size:       0{{$}}
 ; GCN-NEXT:        .sgpr_count:     0x21{{$}}
@@ -216,16 +216,16 @@ attributes #0 = { nounwind }
 ; GFX8-NEXT:        .sgpr_count:     0x28{{$}}
 ; GFX9-NEXT:        .sgpr_count:     0x2c{{$}}
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x20{{$}}
-; GCN-NEXT:        .vgpr_count:     0x2b{{$}}
+; GCN-NEXT:        .vgpr_count:     0x2c{{$}}
 ; GCN-NEXT:      simple_stack_indirect_call:
 ; GCN-NEXT:        .lds_size:       0{{$}}
 ; GFX8-NEXT:        .sgpr_count:     0x28{{$}}
 ; GFX9-NEXT:        .sgpr_count:     0x2c{{$}}
-; GCN-NEXT:        .stack_frame_size_in_bytes: 0x20{{$}}
-; GCN-NEXT:        .vgpr_count:     0x2b{{$}}
+; GCN-NEXT:        .stack_frame_size_in_bytes: 0x30{{$}}
+; GCN-NEXT:        .vgpr_count:     0x2c{{$}}
 ; GCN-NEXT:      simple_stack_recurse:
 ; GCN-NEXT:        .lds_size:       0{{$}}
 ; GCN-NEXT:        .sgpr_count:     0x28{{$}}
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x20{{$}}
-; GCN-NEXT:        .vgpr_count:     0x2a{{$}}
+; GCN-NEXT:        .vgpr_count:     0x2b{{$}}
 ; GCN-NEXT: ...
