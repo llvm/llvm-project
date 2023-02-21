@@ -117,7 +117,7 @@ _LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST
 void __throw_bad_any_cast()
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw bad_any_cast();
 #else
     _VSTD::abort();

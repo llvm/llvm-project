@@ -448,7 +448,7 @@ public:
 
 _LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
 void __throw_failure(char const* __msg) {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw ios_base::failure(__msg);
 #else
     ((void)__msg);
