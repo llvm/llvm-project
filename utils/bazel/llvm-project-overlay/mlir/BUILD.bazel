@@ -8350,6 +8350,7 @@ cc_library(
         ":AsmParser",
         ":ControlFlowDialect",
         ":DialectUtils",
+        ":FuncDialect",
         ":GPUDialect",
         ":IR",
         ":LinalgDialect",

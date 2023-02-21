@@ -963,7 +963,14 @@ void GenericUniformityAnalysisImpl<ContextT>::taintAndPushPhiNodes(
   LLVM_DEBUG(dbgs() << "taintAndPushPhiNodes in " << Context.print(&JoinBlock)
                     << "\n");
   for (const auto &Phi : JoinBlock.phis()) {
-    if (ContextT::isConstantValuePhi(Phi))
+    // FIXME: The non-undef value is not constant per se; it just happens to be
+    // uniform and may not dominate this PHI. So assuming that the same value
+    // reaches along all incoming edges may itself be undefined behaviour. This
+    // particular interpretation of the undef value was added to
+    // DivergenceAnalysis in the following review:
+    //
+    // https://reviews.llvm.org/D19013
+    if (ContextT::isConstantOrUndefValuePhi(Phi))
       continue;
     if (markDivergent(Phi))
       Worklist.push_back(&Phi);

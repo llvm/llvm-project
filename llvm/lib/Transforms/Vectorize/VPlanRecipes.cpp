@@ -919,7 +919,21 @@ void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
     O << " (with final reduction value stored in invariant address sank "
          "outside of loop)";
 }
+#endif
 
+bool VPReplicateRecipe::shouldPack() const {
+  // Find if the recipe is used by a widened recipe via an intervening
+  // VPPredInstPHIRecipe. In this case, also pack the scalar values in a vector.
+  return any_of(users(), [](const VPUser *U) {
+    if (auto *PredR = dyn_cast<VPPredInstPHIRecipe>(U))
+      return any_of(PredR->users(), [PredR](const VPUser *U) {
+        return !U->usesScalars(PredR);
+      });
+    return false;
+  });
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
   O << Indent << (IsUniform ? "CLONE " : "REPLICATE ");
@@ -940,7 +954,7 @@ void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
     printOperands(O, SlotTracker);
   }
 
-  if (AlsoPack)
+  if (shouldPack())
     O << " (S->V)";
 }
 #endif

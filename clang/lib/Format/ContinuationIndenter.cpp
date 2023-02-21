@@ -614,7 +614,7 @@ unsigned ContinuationIndenter::addTokenToState(LineState &State, bool Newline,
   State.NoContinuation = false;
 
   if ((Current.is(TT_ImplicitStringLiteral) &&
-       (Previous.Tok.getIdentifierInfo() == nullptr ||
+       (!Previous.Tok.getIdentifierInfo() ||
         Previous.Tok.getIdentifierInfo()->getPPKeywordID() ==
             tok::pp_not_keyword))) {
     unsigned EndColumn =
@@ -1750,11 +1750,11 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
   NewState.BreakBeforeParameter = BreakBeforeParameter;
   NewState.HasMultipleNestedBlocks = (Current.BlockParameterCount > 1);
 
-  if (Style.BraceWrapping.BeforeLambdaBody && Current.Next != nullptr &&
+  if (Style.BraceWrapping.BeforeLambdaBody && Current.Next &&
       Current.is(tok::l_paren)) {
     // Search for any parameter that is a lambda.
     FormatToken const *next = Current.Next;
-    while (next != nullptr) {
+    while (next) {
       if (next->is(TT_LambdaLSquare)) {
         NewState.HasMultipleNestedBlocks = true;
         break;
@@ -2169,7 +2169,7 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
         Current, StartColumn, Current.OriginalColumn, !Current.Previous,
         State.Line->InPPDirective, Encoding, Style, Whitespaces.useCRLF());
   } else if (Current.is(TT_LineComment) &&
-             (Current.Previous == nullptr ||
+             (!Current.Previous ||
               Current.Previous->isNot(TT_ImplicitStringLiteral))) {
     bool RegularComments = [&]() {
       for (const FormatToken *T = &Current; T && T->is(TT_LineComment);

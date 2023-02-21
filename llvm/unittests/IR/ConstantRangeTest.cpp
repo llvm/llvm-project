@@ -665,7 +665,7 @@ TEST_F(ConstantRangeTest, getMinSignedBits) {
   EnumerateInterestingConstantRanges([&](const ConstantRange &CR) {
     unsigned Exact = 0;
     ForeachNumInConstantRange(CR, [&](const APInt &N) {
-      Exact = std::max(Exact, N.getMinSignedBits());
+      Exact = std::max(Exact, N.getSignificantBits());
     });
 
     unsigned ResultCR = CR.getMinSignedBits();
