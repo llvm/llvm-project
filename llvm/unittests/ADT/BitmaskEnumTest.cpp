@@ -21,12 +21,30 @@ enum Flags {
   LLVM_MARK_AS_BITMASK_ENUM(F4)
 };
 
+static_assert(is_bitmask_enum<Flags>::value != 0);
+static_assert(largest_bitmask_enum_bit<Flags>::value == Flags::F4);
+
+enum Flags2 { V0 = 0, V1 = 1, V2 = 2, V3 = 4, V4 = 8 };
+} // namespace
+
+LLVM_DECLARE_ENUM_AS_BITMASK(Flags2, V4);
+
+static_assert(is_bitmask_enum<Flags>::value != 0);
+static_assert(largest_bitmask_enum_bit<Flags>::value == Flags::F4);
+
+namespace {
 TEST(BitmaskEnumTest, BitwiseOr) {
   Flags f = F1 | F2;
   EXPECT_EQ(3, f);
 
   f = f | F3;
   EXPECT_EQ(7, f);
+
+  Flags2 f2 = V1 | V2;
+  EXPECT_EQ(3, f2);
+
+  f2 = f2 | V3;
+  EXPECT_EQ(7, f2);
 }
 
 TEST(BitmaskEnumTest, BitwiseOrEquals) {
@@ -38,6 +56,14 @@ TEST(BitmaskEnumTest, BitwiseOrEquals) {
   f = F2;
   (f |= F3) = F1;
   EXPECT_EQ(F1, f);
+
+  Flags2 f2 = V1;
+  f2 |= V3;
+  EXPECT_EQ(5, f2);
+
+  f2 = V2;
+  (f2 |= V3) = V1;
+  EXPECT_EQ(V1, f2);
 }
 
 TEST(BitmaskEnumTest, BitwiseAnd) {
@@ -46,6 +72,12 @@ TEST(BitmaskEnumTest, BitwiseAnd) {
 
   f = (f | F3) & (F1 | F2 | F3);
   EXPECT_EQ(6, f);
+
+  Flags2 f2 = static_cast<Flags2>(3) & V2;
+  EXPECT_EQ(V2, f2);
+
+  f2 = (f2 | V3) & (V1 | V2 | V3);
+  EXPECT_EQ(6, f2);
 }
 
 TEST(BitmaskEnumTest, BitwiseAndEquals) {
@@ -56,6 +88,13 @@ TEST(BitmaskEnumTest, BitwiseAndEquals) {
   // &= should return a reference to the LHS.
   (f &= F1) = F3;
   EXPECT_EQ(F3, f);
+
+  Flags2 f2 = V1 | V2 | V3;
+  f2 &= V1 | V2;
+  EXPECT_EQ(3, f2);
+
+  (f2 &= V1) = V3;
+  EXPECT_EQ(V3, f2);
 }
 
 TEST(BitmaskEnumTest, BitwiseXor) {
@@ -64,6 +103,12 @@ TEST(BitmaskEnumTest, BitwiseXor) {
 
   f = f ^ F1;
   EXPECT_EQ(4, f);
+
+  Flags2 f2 = (V1 | V2) ^ (V2 | V3);
+  EXPECT_EQ(5, f2);
+
+  f2 = f2 ^ V1;
+  EXPECT_EQ(4, f2);
 }
 
 TEST(BitmaskEnumTest, BitwiseXorEquals) {
@@ -74,6 +119,13 @@ TEST(BitmaskEnumTest, BitwiseXorEquals) {
   // ^= should return a reference to the LHS.
   (f ^= F4) = F3;
   EXPECT_EQ(F3, f);
+
+  Flags2 f2 = (V1 | V2);
+  f2 ^= (V2 | V4);
+  EXPECT_EQ(9, f2);
+
+  (f2 ^= V4) = V3;
+  EXPECT_EQ(V3, f2);
 }
 
 TEST(BitmaskEnumTest, ConstantExpression) {
@@ -85,12 +137,25 @@ TEST(BitmaskEnumTest, ConstantExpression) {
   EXPECT_EQ(f2, F1 | F2);
   EXPECT_EQ(f3, F1 & F2);
   EXPECT_EQ(f4, F1 ^ F2);
+
+  constexpr Flags2 f21 = ~V1;
+  constexpr Flags2 f22 = V1 | V2;
+  constexpr Flags2 f23 = V1 & V2;
+  constexpr Flags2 f24 = V1 ^ V2;
+  EXPECT_EQ(f21, ~V1);
+  EXPECT_EQ(f22, V1 | V2);
+  EXPECT_EQ(f23, V1 & V2);
+  EXPECT_EQ(f24, V1 ^ V2);
 }
 
 TEST(BitmaskEnumTest, BitwiseNot) {
   Flags f = ~F1;
   EXPECT_EQ(14, f); // Largest value for f is 15.
   EXPECT_EQ(15, ~F0);
+
+  Flags2 f2 = ~V1;
+  EXPECT_EQ(14, f2);
+  EXPECT_EQ(15, ~V0);
 }
 
 enum class FlagsClass {
