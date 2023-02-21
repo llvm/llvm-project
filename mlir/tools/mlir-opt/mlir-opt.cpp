@@ -107,6 +107,7 @@ void registerTestMathAlgebraicSimplificationPass();
 void registerTestMathPolynomialApproximationPass();
 void registerTestMemRefDependenceCheck();
 void registerTestMemRefStrideCalculation();
+void registerTestOneToNTypeConversionPass();
 void registerTestOpaqueLoc();
 void registerTestPadFusion();
 void registerTestPDLByteCodePass();
@@ -218,6 +219,7 @@ void registerTestPasses() {
   mlir::test::registerTestMathPolynomialApproximationPass();
   mlir::test::registerTestMemRefDependenceCheck();
   mlir::test::registerTestMemRefStrideCalculation();
+  mlir::test::registerTestOneToNTypeConversionPass();
   mlir::test::registerTestOpaqueLoc();
   mlir::test::registerTestPadFusion();
   mlir::test::registerTestPDLByteCodePass();
