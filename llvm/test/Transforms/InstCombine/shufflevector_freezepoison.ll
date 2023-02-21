@@ -4,7 +4,8 @@
 
 define <4 x double> @shuffle_op0_freeze_poison(<2 x double> %a) {
 ; CHECK-LABEL: @shuffle_op0_freeze_poison(
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> zeroinitializer, <2 x double> [[A:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[B:%.*]] = freeze <2 x double> poison
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[B]], <2 x double> [[A:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x double> [[SHUFFLE]]
 ;
   %b = freeze <2 x double> poison
@@ -14,7 +15,8 @@ define <4 x double> @shuffle_op0_freeze_poison(<2 x double> %a) {
 
 define <4 x double> @shuffle_op1_freeze_poison(<2 x double> %a) {
 ; CHECK-LABEL: @shuffle_op1_freeze_poison(
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[A:%.*]], <2 x double> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[B:%.*]] = freeze <2 x double> poison
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[A:%.*]], <2 x double> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x double> [[SHUFFLE]]
 ;
   %b = freeze <2 x double> poison
@@ -24,8 +26,9 @@ define <4 x double> @shuffle_op1_freeze_poison(<2 x double> %a) {
 
 define <4 x double> @shuffle_op0_freeze_poison_use(<2 x double> %a) {
 ; CHECK-LABEL: @shuffle_op0_freeze_poison_use(
-; CHECK-NEXT:    call void @use(<2 x double> zeroinitializer)
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> zeroinitializer, <2 x double> [[A:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[B:%.*]] = freeze <2 x double> poison
+; CHECK-NEXT:    call void @use(<2 x double> [[B]])
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[B]], <2 x double> [[A:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x double> [[SHUFFLE]]
 ;
   %b = freeze <2 x double> poison
@@ -36,8 +39,9 @@ define <4 x double> @shuffle_op0_freeze_poison_use(<2 x double> %a) {
 
 define <4 x double> @shuffle_op1_freeze_poison_use(<2 x double> %a) {
 ; CHECK-LABEL: @shuffle_op1_freeze_poison_use(
-; CHECK-NEXT:    call void @use(<2 x double> zeroinitializer)
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[A:%.*]], <2 x double> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[B:%.*]] = freeze <2 x double> poison
+; CHECK-NEXT:    call void @use(<2 x double> [[B]])
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[A:%.*]], <2 x double> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x double> [[SHUFFLE]]
 ;
   %b = freeze <2 x double> poison
@@ -48,8 +52,9 @@ define <4 x double> @shuffle_op1_freeze_poison_use(<2 x double> %a) {
 
 define <4 x double> @shuffle_op0_freeze_undef(<2 x double> %a) {
 ; CHECK-LABEL: @shuffle_op0_freeze_undef(
-; CHECK-NEXT:    call void @use(<2 x double> zeroinitializer)
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> zeroinitializer, <2 x double> [[A:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[B:%.*]] = freeze <2 x double> undef
+; CHECK-NEXT:    call void @use(<2 x double> [[B]])
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[B]], <2 x double> [[A:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x double> [[SHUFFLE]]
 ;
   %b = freeze <2 x double> undef
@@ -60,14 +65,44 @@ define <4 x double> @shuffle_op0_freeze_undef(<2 x double> %a) {
 
 define <4 x double> @shuffle_op1_freeze_undef(<2 x double> %a) {
 ; CHECK-LABEL: @shuffle_op1_freeze_undef(
-; CHECK-NEXT:    call void @use(<2 x double> zeroinitializer)
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[A:%.*]], <2 x double> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[B:%.*]] = freeze <2 x double> undef
+; CHECK-NEXT:    call void @use(<2 x double> [[B]])
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[A:%.*]], <2 x double> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x double> [[SHUFFLE]]
 ;
   %b = freeze <2 x double> undef
   call void @use(<2 x double> %b)
   %shuffle = shufflevector <2 x double> %a, <2 x double> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x double> %shuffle
+}
+
+define <4 x double> @shuffle_bc1(<2 x double>  %a)  {
+; CHECK-LABEL: @shuffle_bc1(
+; CHECK-NEXT:    [[B:%.*]] = freeze <4 x float> poison
+; CHECK-NEXT:    [[B1:%.*]] = bitcast <4 x float> [[B]] to <2 x double>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[A:%.*]], <2 x double> [[B1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x double> [[SHUFFLE]]
+;
+  %b = freeze <4 x float> poison
+  %b1 = bitcast <4 x float> %b to <2 x double>
+  %shuffle = shufflevector <2 x double> %a, <2 x double> %b1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x double> %shuffle
+}
+
+define <8 x float> @shuffle_bc2(<4 x float>  %a)  {
+; CHECK-LABEL: @shuffle_bc2(
+; CHECK-NEXT:    [[B:%.*]] = freeze <4 x float> poison
+; CHECK-NEXT:    [[B1:%.*]] = bitcast <4 x float> [[B]] to <2 x double>
+; CHECK-NEXT:    call void @use(<2 x double> [[B1]])
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> [[B]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    ret <8 x float> [[SHUFFLE]]
+;
+  %b = freeze <4 x float> poison
+  %b1 = bitcast <4 x float> %b to <2 x double>
+  call void @use(<2 x double> %b1)
+  %b2 = bitcast <2 x double> %b1 to <4 x float>
+  %shuffle = shufflevector <4 x float> %a, <4 x float> %b2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x float> %shuffle
 }
 
 declare void @use(<2 x double>)
