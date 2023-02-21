@@ -58,7 +58,7 @@ public:
   static void appendBlockTerms(SmallVectorImpl<const MachineInstr *> &terms,
                                const MachineBasicBlock &block);
   MachineBasicBlock *getDefBlock(Register) const;
-  static bool isConstantValuePhi(const MachineInstr &Phi);
+  static bool isConstantOrUndefValuePhi(const MachineInstr &Phi);
 
   Printable print(const MachineBasicBlock *Block) const;
   Printable print(const MachineInstr *Inst) const;

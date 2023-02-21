@@ -158,12 +158,12 @@ define <4 x i16> @dont_fold_srem_one(<4 x i16> %x) {
 ; CHECK-NEXT:    mov w11, #25645
 ; CHECK-NEXT:    mov w12, #654
 ; CHECK-NEXT:    movk w11, #2849, lsl #16
-; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    umull x9, w8, w9
 ; CHECK-NEXT:    mov w13, #5560
-; CHECK-NEXT:    umull x11, w10, w11
+; CHECK-NEXT:    umull x9, w8, w9
 ; CHECK-NEXT:    movk w13, #12, lsl #16
+; CHECK-NEXT:    umull x11, w10, w11
 ; CHECK-NEXT:    lsr x9, x9, #32
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    lsr x11, x11, #32
 ; CHECK-NEXT:    msub w8, w9, w12, w8
 ; CHECK-NEXT:    umov w9, v0.h[3]

@@ -257,6 +257,15 @@ public:
     getResults().replaceAllUsesWith(std::forward<ValuesT>(values));
   }
 
+  /// Replace uses of results of this operation with the provided `values` if
+  /// the given callback returns true.
+  template <typename ValuesT>
+  void replaceUsesWithIf(ValuesT &&values,
+                         function_ref<bool(OpOperand &)> shouldReplace) {
+    getResults().replaceUsesWithIf(std::forward<ValuesT>(values),
+                                   shouldReplace);
+  }
+
   /// Destroys this operation and its subclass data.
   void destroy();
 

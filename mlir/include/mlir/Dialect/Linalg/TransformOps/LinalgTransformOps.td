@@ -1706,4 +1706,43 @@ def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// HoistRedundantVectorTransfersOp
+//===----------------------------------------------------------------------===//
+
+def HoistRedundantVectorTransfersOp :
+  Op<Transform_Dialect, "structured.hoist_redundant_vector_transfers",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     TransformEachOpTrait, TransformOpInterface]> {
+  let description = [{
+    Hoist vector.transfer_read / vector.transfer_write pairs out of immediately
+    enclosing scf::ForOp iteratively, if the following conditions are true:
+       1. The 2 ops access the same memref with the same indices.
+       2. All operands are invariant under the enclosing scf::ForOp.
+       3. No uses of the memref either dominate the transfer_read or are
+       dominated by the transfer_write (i.e. no aliasing between the write and
+       the read across the loop)
+
+    #### Return modes:
+
+    The operation always succeeds and returns a handle to the transformed
+    function op.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs TransformHandleTypeInterface:$transformed);
+
+  let assemblyFormat = "$target attr-dict `:` functional-type(operands, results) ";
+
+  let builders = [
+    OpBuilder<(ins "Value":$target)>,
+  ];
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::func::FuncOp target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
 #endif // LINALG_TRANSFORM_OPS

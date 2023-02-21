@@ -11,6 +11,26 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+// T-HEAD specific DAG Nodes.
+//===----------------------------------------------------------------------===//
+
+def SDT_LoadPair : SDTypeProfile<2, 2,
+  [SDTCisSameAs<0, 1>, SDTCisSameAs<1, 3>, SDTCisPtrTy<2>, SDTCisVT<3, XLenVT>]>;
+def SDT_StorePair : SDTypeProfile<0, 4,
+  [SDTCisSameAs<0, 1>, SDTCisSameAs<1, 3>, SDTCisPtrTy<2>, SDTCisVT<3, XLenVT>]>;
+
+def th_lwud : SDNode<"RISCVISD::TH_LWUD", SDT_LoadPair,
+  [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def th_lwd : SDNode<"RISCVISD::TH_LWD", SDT_LoadPair,
+  [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def th_ldd : SDNode<"RISCVISD::TH_LDD", SDT_LoadPair,
+  [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def th_swd : SDNode<"RISCVISD::TH_SWD", SDT_StorePair,
+  [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def th_sdd : SDNode<"RISCVISD::TH_SDD", SDT_StorePair,
+  [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+//===----------------------------------------------------------------------===//
 // Instruction class templates
 //===----------------------------------------------------------------------===//
 class THInstVdotVV<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
@@ -96,6 +116,31 @@ class THMulAccumulate_rr<bits<7> funct7, string opcodestr>
   let Constraints = "$rd_wb = $rd";
 }
 
+let Predicates = [HasVendorXTHeadMemPair], DecoderNamespace = "THeadMemPair",
+  hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+class THLoadPair<bits<5> funct5, string opcodestr>
+  : RVInstR<!shl(funct5, 2), 0b100, OPC_CUSTOM_0,
+            (outs GPR:$rd, GPR:$rs2),
+            (ins GPR:$rs1, uimm2:$uimm2, uimm7:$const3or4),
+             opcodestr, "$rd, $rs2, (${rs1}), $uimm2, $const3or4"> {
+  bits<2> uimm2;
+  let Inst{26-25} = uimm2;
+  let DecoderMethod = "decodeXTHeadMemPair";
+  let Constraints = "@earlyclobber $rd,@earlyclobber $rs2";
+}
+
+let Predicates = [HasVendorXTHeadMemPair], DecoderNamespace = "THeadMemPair",
+  hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
+class THStorePair<bits<5> funct5, string opcodestr>
+  : RVInstR<!shl(funct5, 2), 0b101, OPC_CUSTOM_0,
+            (outs),
+            (ins GPR:$rd, GPR:$rs2, GPR:$rs1, uimm2:$uimm2, uimm7:$const3or4),
+            opcodestr, "$rd, $rs2, (${rs1}), $uimm2, $const3or4"> {
+  bits<2> uimm2;
+  let Inst{26-25} = uimm2;
+  let DecoderMethod = "decodeXTHeadMemPair";
+}
+
 
 //===----------------------------------------------------------------------===//
 // Combination of instruction classes.
@@ -153,6 +198,23 @@ let Predicates = [HasVendorXTHeadMac, IsRV64], IsSignExtendingOpW = 1 in {
 def TH_MULAW : THMulAccumulate_rr<0b0010010, "th.mulaw">;
 def TH_MULSW : THMulAccumulate_rr<0b0010011, "th.mulsw">;
 } // Predicates = [HasVendorXTHeadMac, IsRV64]
+
+let Predicates = [HasVendorXTHeadMemPair] in {
+def TH_LWUD : THLoadPair<0b11110, "th.lwud">,
+              Sched<[WriteLDW, WriteLDW, ReadMemBase]>;
+def TH_SWD  : THStorePair<0b11100, "th.swd">,
+              Sched<[WriteSTW, WriteSTW, ReadStoreData, ReadMemBase]>;
+let IsSignExtendingOpW = 1 in
+def TH_LWD  : THLoadPair<0b11100, "th.lwd">,
+              Sched<[WriteLDW, WriteLDW, ReadMemBase]>;
+}
+
+let Predicates = [HasVendorXTHeadMemPair, IsRV64] in {
+def TH_LDD  : THLoadPair<0b11111, "th.ldd">,
+              Sched<[WriteLDD, WriteLDD, ReadMemBase]>;
+def TH_SDD  : THStorePair<0b11111, "th.sdd">,
+              Sched<[WriteSTD, WriteSTD, ReadStoreData, ReadMemBase]>;
+}
 
 let Predicates = [HasVendorXTHeadVdot],
     Constraints = "@earlyclobber $vd",
@@ -388,4 +450,36 @@ defm : VPatTernaryVMAQA_VV_VX<"int_riscv_th_vmaqa",  "PseudoTHVdotVMAQA",  AllQu
 defm : VPatTernaryVMAQA_VV_VX<"int_riscv_th_vmaqau", "PseudoTHVdotVMAQAU", AllQuadWidenableInt8NoVLMulVectors>;
 defm : VPatTernaryVMAQA_VV_VX<"int_riscv_th_vmaqasu","PseudoTHVdotVMAQASU",AllQuadWidenableInt8NoVLMulVectors>;
 defm : VPatTernaryVMAQA_VX<"int_riscv_th_vmaqaus",   "PseudoTHVdotVMAQAUS",AllQuadWidenableInt8NoVLMulVectors>;
+}
+
+def uimm2_3_XFORM : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant((N->getZExtValue() >> 3) & 0x3,
+                                   SDLoc(N), Subtarget->getXLenVT());
+}]>;
+
+def uimm2_3 : Operand<XLenVT>, ImmLeaf<XLenVT, [{
+  return isShiftedUInt<2, 3>(Imm);
+}], uimm2_3_XFORM>;
+
+def uimm2_4_XFORM : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant((N->getZExtValue() >> 4) & 0x3,
+                                   SDLoc(N), Subtarget->getXLenVT());
+}]>;
+
+def uimm2_4 : Operand<XLenVT>, ImmLeaf<XLenVT, [{
+  return isShiftedUInt<2, 4>(Imm);
+}], uimm2_4_XFORM>;
+
+let Predicates = [HasVendorXTHeadMemPair, IsRV64] in {
+def : Pat<(th_lwud i64:$rs1, uimm2_3:$uimm2_3), (TH_LWUD i64:$rs1, uimm2_3:$uimm2_3, 3)>;
+def : Pat<(th_ldd i64:$rs1, uimm2_4:$uimm2_4), (TH_LDD i64:$rs1, uimm2_4:$uimm2_4, 4)>;
+
+def : Pat<(th_sdd i64:$rd1, i64:$rd2, i64:$rs1, uimm2_4:$uimm2_4),
+          (TH_SDD i64:$rd1, i64:$rd2, i64:$rs1, uimm2_4:$uimm2_4, 4)>;
+}
+
+let Predicates = [HasVendorXTHeadMemPair] in {
+  def : Pat<(th_lwd GPR:$rs1, uimm2_3:$uimm2_3), (TH_LWD GPR:$rs1, uimm2_3:$uimm2_3, 3)>;
+  def : Pat<(th_swd GPR:$rd1, GPR:$rd2, GPR:$rs1, uimm2_3:$uimm2_3),
+            (TH_SWD GPR:$rd1, GPR:$rd2, GPR:$rs1, uimm2_3:$uimm2_3, 3)>;
 }
