@@ -622,6 +622,23 @@ module std [system] {
   module atomic {
     header "atomic"
     export *
+
+    module __atomic {
+      module aliases             { private header "__atomic/aliases.h" }
+      module atomic              { private header "__atomic/atomic.h" }
+      module atomic_base         { private header "__atomic/atomic_base.h" }
+      module atomic_flag         { private header "__atomic/atomic_flag.h" }
+      module atomic_init         { private header "__atomic/atomic_init.h" }
+      module atomic_lock_free    { private header "__atomic/atomic_lock_free.h" }
+      module atomic_sync         { private header "__atomic/atomic_sync.h" }
+      module check_memory_order  { private header "__atomic/check_memory_order.h" }
+      module contention_t        { private header "__atomic/contention_t.h" }
+      module cxx_atomic_impl     { private header "__atomic/cxx_atomic_impl.h" }
+      module fence               { private header "__atomic/fence.h" }
+      module is_always_lock_free { private header "__atomic/is_always_lock_free.h" }
+      module kill_dependency     { private header "__atomic/kill_dependency.h" }
+      module memory_order        { private header "__atomic/memory_order.h" }
+    }
   }
   module barrier {
     @requires_LIBCXX_ENABLE_THREADS@
@@ -1558,7 +1575,11 @@ module std [system] {
     module strip_signature                     { private header "__type_traits/strip_signature.h" }
     module type_identity                       { private header "__type_traits/type_identity.h" }
     module type_list                           { private header "__type_traits/type_list.h" }
-    module underlying_type                     { private header "__type_traits/underlying_type.h" }
+    module underlying_type                     {
+      private header "__type_traits/underlying_type.h"
+
+      export type_traits
+    }
     module void_t                              { private header "__type_traits/void_t.h" }
   }
   module typeindex {
