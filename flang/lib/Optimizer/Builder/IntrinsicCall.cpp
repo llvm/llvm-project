@@ -1702,9 +1702,12 @@ fir::ExtendedValue
 IntrinsicLibrary::genElementalCall<IntrinsicLibrary::ExtendedGenerator>(
     ExtendedGenerator generator, llvm::StringRef name, mlir::Type resultType,
     llvm::ArrayRef<fir::ExtendedValue> args, bool outline) {
-  for (const fir::ExtendedValue &arg : args)
-    if (!arg.getUnboxed() && !arg.getCharBox())
+  for (const fir::ExtendedValue &arg : args) {
+    auto *box = arg.getBoxOf<fir::BoxValue>();
+    if (!arg.getUnboxed() && !arg.getCharBox() &&
+        !(box && fir::isPolymorphicType(fir::getBase(*box).getType())))
       fir::emitFatalError(loc, "nonscalar intrinsic argument");
+  }
   if (outline)
     return outlineInExtendedWrapper(generator, name, resultType, args);
   return std::invoke(generator, *this, resultType, args);
