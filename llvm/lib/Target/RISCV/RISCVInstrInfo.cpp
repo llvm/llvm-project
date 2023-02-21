@@ -2102,6 +2102,14 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
     return false;
 
   switch (MI.getOpcode()) {
+  case RISCV::TH_MULA:
+  case RISCV::TH_MULAW:
+  case RISCV::TH_MULAH:
+  case RISCV::TH_MULS:
+  case RISCV::TH_MULSW:
+  case RISCV::TH_MULSH:
+    // Operands 2 and 3 are commutable.
+    return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 2, 3);
   case RISCV::PseudoCCMOVGPR:
     // Operands 4 and 5 are commutable.
     return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 4, 5);

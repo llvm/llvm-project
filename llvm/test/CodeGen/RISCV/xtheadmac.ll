@@ -40,11 +40,12 @@ define i64 @mula_i64(i64 %a, i64 %b, i64 %c) {
 ; RV32XTHEADMAC-NEXT:    mulhu a6, a2, a4
 ; RV32XTHEADMAC-NEXT:    th.mula a6, a2, a5
 ; RV32XTHEADMAC-NEXT:    th.mula a6, a3, a4
-; RV32XTHEADMAC-NEXT:    th.mula a2, a0, a4
-; RV32XTHEADMAC-NEXT:    sltu a0, a2, a0
+; RV32XTHEADMAC-NEXT:    mv a3, a0
+; RV32XTHEADMAC-NEXT:    th.mula a3, a2, a4
+; RV32XTHEADMAC-NEXT:    sltu a0, a3, a0
 ; RV32XTHEADMAC-NEXT:    add a0, a1, a0
 ; RV32XTHEADMAC-NEXT:    add a1, a0, a6
-; RV32XTHEADMAC-NEXT:    mv a0, a2
+; RV32XTHEADMAC-NEXT:    mv a0, a3
 ; RV32XTHEADMAC-NEXT:    ret
 ;
 ; RV64XTHEADMAC-LABEL: mula_i64:
@@ -99,11 +100,10 @@ define i64 @muls_i64(i64 %a, i64 %b, i64 %c) {
 ; RV32XTHEADMAC-NEXT:    th.mula a6, a2, a5
 ; RV32XTHEADMAC-NEXT:    th.mula a6, a3, a4
 ; RV32XTHEADMAC-NEXT:    mul a3, a2, a4
-; RV32XTHEADMAC-NEXT:    th.muls a2, a0, a4
-; RV32XTHEADMAC-NEXT:    sltu a0, a0, a3
-; RV32XTHEADMAC-NEXT:    sub a1, a1, a0
+; RV32XTHEADMAC-NEXT:    sltu a3, a0, a3
+; RV32XTHEADMAC-NEXT:    th.muls a0, a2, a4
+; RV32XTHEADMAC-NEXT:    sub a1, a1, a3
 ; RV32XTHEADMAC-NEXT:    sub a1, a1, a6
-; RV32XTHEADMAC-NEXT:    mv a0, a2
 ; RV32XTHEADMAC-NEXT:    ret
 ;
 ; RV64XTHEADMAC-LABEL: muls_i64:
@@ -149,4 +149,53 @@ define i64 @mulsh_i64(i32 %a, i16 %b, i16 %c) {
   %g = sub i32 %a, %f
   %h = sext i32 %g to i64
   ret i64 %h
+}
+
+define i32 @commutative1(i32 %A, i32 %B, i32 %C) {
+; RV32XTHEADMAC-LABEL: commutative1:
+; RV32XTHEADMAC:       # %bb.0:
+; RV32XTHEADMAC-NEXT:    th.mula a2, a1, a0
+; RV32XTHEADMAC-NEXT:    mv a0, a2
+; RV32XTHEADMAC-NEXT:    ret
+;
+; RV64XTHEADMAC-LABEL: commutative1:
+; RV64XTHEADMAC:       # %bb.0:
+; RV64XTHEADMAC-NEXT:    th.mulaw a2, a1, a0
+; RV64XTHEADMAC-NEXT:    mv a0, a2
+; RV64XTHEADMAC-NEXT:    ret
+  %mul = mul nsw i32 %B, %A
+  %add = add i32 %mul, %C
+  ret i32 %add
+}
+
+define i32 @commutative2(i32 %A, i32 %B, i32 %C) {
+; RV32XTHEADMAC-LABEL: commutative2:
+; RV32XTHEADMAC:       # %bb.0:
+; RV32XTHEADMAC-NEXT:    th.mula a0, a1, a2
+; RV32XTHEADMAC-NEXT:    ret
+;
+; RV64XTHEADMAC-LABEL: commutative2:
+; RV64XTHEADMAC:       # %bb.0:
+; RV64XTHEADMAC-NEXT:    th.mulaw a0, a1, a2
+; RV64XTHEADMAC-NEXT:    ret
+  %mul = mul nsw i32 %B, %C
+  %add = add i32 %mul, %A
+  ret i32 %add
+}
+
+define i32 @commutative3(i32 %A, i32 %B, i32 %C) {
+; RV32XTHEADMAC-LABEL: commutative3:
+; RV32XTHEADMAC:       # %bb.0:
+; RV32XTHEADMAC-NEXT:    th.mula a1, a2, a0
+; RV32XTHEADMAC-NEXT:    mv a0, a1
+; RV32XTHEADMAC-NEXT:    ret
+;
+; RV64XTHEADMAC-LABEL: commutative3:
+; RV64XTHEADMAC:       # %bb.0:
+; RV64XTHEADMAC-NEXT:    th.mulaw a1, a2, a0
+; RV64XTHEADMAC-NEXT:    mv a0, a1
+; RV64XTHEADMAC-NEXT:    ret
+  %mul = mul nsw i32 %C, %A
+  %add = add i32 %mul, %B
+  ret i32 %add
 }
