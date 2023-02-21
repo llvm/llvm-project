@@ -231,10 +231,18 @@ public:
   /// lookup - Return the entry for the specified key, or a default
   /// constructed value if no such entry exists.
   ValueTy lookup(StringRef Key) const {
-    const_iterator it = find(Key);
-    if (it != end())
-      return it->second;
+    const_iterator Iter = find(Key);
+    if (Iter != end())
+      return Iter->second;
     return ValueTy();
+  }
+
+  /// at - Return the entry for the specified key, or abort if no such
+  /// entry exists.
+  const ValueTy &at(StringRef Val) const {
+    auto Iter = this->find(std::move(Val));
+    assert(Iter != this->end() && "StringMap::at failed due to a missing key");
+    return Iter->second;
   }
 
   /// Lookup the ValueTy for the \p Key, or create a default constructed value
