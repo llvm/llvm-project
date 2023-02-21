@@ -5028,7 +5028,6 @@ defm recursive : BooleanFFlag<"recursive">, Group<gfortran_Group>;
 defm repack_arrays : BooleanFFlag<"repack-arrays">, Group<gfortran_Group>;
 defm second_underscore : BooleanFFlag<"second-underscore">, Group<gfortran_Group>;
 defm sign_zero : BooleanFFlag<"sign-zero">, Group<gfortran_Group>;
-defm underscoring : BooleanFFlag<"underscoring">, Group<gfortran_Group>;
 defm whole_file : BooleanFFlag<"whole-file">, Group<gfortran_Group>;
 
 // C++ SYCL options
@@ -5103,6 +5102,7 @@ defm backslash : OptInFC1FFlag<"backslash", "Specify that backslash in string in
 defm xor_operator : OptInFC1FFlag<"xor-operator", "Enable .XOR. as a synonym of .NEQV.">;
 defm logical_abbreviations : OptInFC1FFlag<"logical-abbreviations", "Enable logical abbreviations">;
 defm implicit_none : OptInFC1FFlag<"implicit-none", "No implicit typing allowed unless overridden by IMPLICIT statements">;
+defm underscoring : OptInFC1FFlag<"underscoring", "Appends one trailing underscore to external names">;
 
 def fno_automatic : Flag<["-"], "fno-automatic">, Group<f_Group>,
   HelpText<"Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE">;

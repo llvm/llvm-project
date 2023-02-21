@@ -171,6 +171,12 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
     if (args.hasArg(clang::driver::options::OPT_pic_is_pie))
       opts.IsPIE = 1;
   }
+
+  // This option is compatible with -f[no-]underscoring in gfortran.
+  if (args.hasFlag(clang::driver::options::OPT_fno_underscoring,
+                   clang::driver::options::OPT_funderscoring, false)) {
+    opts.Underscoring = 0;
+  }
 }
 
 /// Parses all target input arguments and populates the target

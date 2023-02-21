@@ -54,6 +54,7 @@
 ! CHECK-NEXT: -freciprocal-math      Allow division operations to be reassociated
 ! CHECK-NEXT: -fstack-arrays         Attempt to allocate array temporaries on the stack, no matter their size
 ! CHECK-NEXT: -fsyntax-only          Run the preprocessor, parser and semantic analysis stages
+! CHECK-NEXT: -funderscoring         Appends one trailing underscore to external names
 ! CHECK-NEXT: -fxor-operator         Enable .XOR. as a synonym of .NEQV.
 ! CHECK-NEXT: -help     Display available options
 ! CHECK-NEXT: -I <dir>               Add directory to the end of the list of include search paths
