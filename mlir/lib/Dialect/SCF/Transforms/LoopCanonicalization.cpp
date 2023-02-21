@@ -177,13 +177,12 @@ struct AffineOpSCFCanonicalizationPattern : public OpRewritePattern<OpTy> {
         }
         return failure();
       }
-      if (scf::ForeachThreadOp foreachThreadOp =
-              scf::getForeachThreadOpThreadIndexOwner(iv)) {
-        for (int64_t idx = 0; idx < foreachThreadOp.getRank(); ++idx) {
-          if (foreachThreadOp.getInductionVar(idx) == iv) {
-            lb = foreachThreadOp.getMixedLowerBound()[idx];
-            ub = foreachThreadOp.getMixedUpperBound()[idx];
-            step = foreachThreadOp.getMixedStep()[idx];
+      if (scf::ForallOp forallOp = scf::getForallOpThreadIndexOwner(iv)) {
+        for (int64_t idx = 0; idx < forallOp.getRank(); ++idx) {
+          if (forallOp.getInductionVar(idx) == iv) {
+            lb = forallOp.getMixedLowerBound()[idx];
+            ub = forallOp.getMixedUpperBound()[idx];
+            step = forallOp.getMixedStep()[idx];
             return success();
           }
         }
