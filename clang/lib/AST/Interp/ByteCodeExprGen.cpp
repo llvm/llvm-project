@@ -891,19 +891,28 @@ bool ByteCodeExprGen<Emitter>::VisitMaterializeTemporaryExpr(
     return this->discard(SubExpr);
 
   if (E->getStorageDuration() == SD_Static) {
-    if (std::optional<unsigned> GlobalIndex = P.createGlobal(E)) {
-      const LifetimeExtendedTemporaryDecl *TempDecl =
-          E->getLifetimeExtendedTemporaryDecl();
+    std::optional<unsigned> GlobalIndex = P.createGlobal(E);
+    if (!GlobalIndex)
+      return false;
 
+    const LifetimeExtendedTemporaryDecl *TempDecl =
+        E->getLifetimeExtendedTemporaryDecl();
+    assert(TempDecl);
+
+    if (SubExprT) {
       if (!this->visitInitializer(SubExpr))
         return false;
-
       if (!this->emitInitGlobalTemp(*SubExprT, *GlobalIndex, TempDecl, E))
         return false;
       return this->emitGetPtrGlobal(*GlobalIndex, E);
     }
 
-    return false;
+    // Non-primitive values.
+    if (!this->emitGetPtrGlobal(*GlobalIndex, E))
+      return false;
+    if (!this->visitInitializer(SubExpr))
+      return false;
+    return this->emitInitGlobalTempComp(TempDecl, E);
   }
 
   // For everyhing else, use local variables.
