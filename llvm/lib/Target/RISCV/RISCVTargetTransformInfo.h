@@ -271,9 +271,12 @@ public:
   }
 
   unsigned getMaxInterleaveFactor(ElementCount VF) {
+    // Don't interleave if the loop has been vectorized with scalable vectors.
+    if (VF.isScalable())
+      return 1;
     // If the loop will not be vectorized, don't interleave the loop.
     // Let regular unroll to unroll the loop.
-    return VF.getKnownMinValue() == 1 ? 1 : ST->getMaxInterleaveFactor();
+    return VF.isScalar() ? 1 : ST->getMaxInterleaveFactor();
   }
 
   enum RISCVRegisterClass { GPRRC, FPRRC, VRRC };
