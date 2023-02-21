@@ -227,7 +227,8 @@ void Context::open_directory(const char *dirpath) {
   char filepath[TREC_DIR_PATH_LEN];
   if (IS_EXISTS != 0 || !S_ISDIR(_st.st_mode)) {
     if (mkdir(path, ACCESSPERMS) != 0) {
-      Report("Could not create directory at %s, errno=%d", path, errno);
+      Report("Could not create directory at %s, errno=%d, exists=%d, is_dir=%d",
+             path, errno, IS_EXISTS, S_ISDIR(_st.st_mode));
       Die();
     }
   }
