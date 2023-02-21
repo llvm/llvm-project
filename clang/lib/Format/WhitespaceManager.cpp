@@ -1172,7 +1172,7 @@ void WhitespaceManager::alignArrayInitializersRightJustified(
           Changes[CellIter->Index].Spaces = (MaxNetWidth - ThisNetWidth);
         auto RowCount = 1U;
         auto Offset = std::distance(Cells.begin(), CellIter);
-        for (const auto *Next = CellIter->NextColumnElement; Next != nullptr;
+        for (const auto *Next = CellIter->NextColumnElement; Next;
              Next = Next->NextColumnElement) {
           auto *Start = (Cells.begin() + RowCount * CellDescs.CellCounts[0]);
           auto *End = Start + Offset;
@@ -1191,7 +1191,7 @@ void WhitespaceManager::alignArrayInitializersRightJustified(
         Changes[CellIter->Index].Spaces += (i > 0) ? 1 : 0;
       }
       alignToStartOfCell(CellIter->Index, CellIter->EndIndex);
-      for (const auto *Next = CellIter->NextColumnElement; Next != nullptr;
+      for (const auto *Next = CellIter->NextColumnElement; Next;
            Next = Next->NextColumnElement) {
         ThisWidth =
             calculateCellWidth(Next->Index, Next->EndIndex, true) + NetWidth;
@@ -1233,7 +1233,7 @@ void WhitespaceManager::alignArrayInitializersLeftJustified(
     }
     auto RowCount = 1U;
     auto Offset = std::distance(Cells.begin(), CellIter);
-    for (const auto *Next = CellIter->NextColumnElement; Next != nullptr;
+    for (const auto *Next = CellIter->NextColumnElement; Next;
          Next = Next->NextColumnElement) {
       if (RowCount > CellDescs.CellCounts.size())
         break;
@@ -1253,7 +1253,7 @@ void WhitespaceManager::alignArrayInitializersLeftJustified(
 bool WhitespaceManager::isSplitCell(const CellDescription &Cell) {
   if (Cell.HasSplit)
     return true;
-  for (const auto *Next = Cell.NextColumnElement; Next != nullptr;
+  for (const auto *Next = Cell.NextColumnElement; Next;
        Next = Next->NextColumnElement) {
     if (Next->HasSplit)
       return true;
@@ -1406,8 +1406,7 @@ WhitespaceManager::CellDescriptions
 WhitespaceManager::linkCells(CellDescriptions &&CellDesc) {
   auto &Cells = CellDesc.Cells;
   for (auto *CellIter = Cells.begin(); CellIter != Cells.end(); ++CellIter) {
-    if (CellIter->NextColumnElement == nullptr &&
-        ((CellIter + 1) != Cells.end())) {
+    if (!CellIter->NextColumnElement && (CellIter + 1) != Cells.end()) {
       for (auto *NextIter = CellIter + 1; NextIter != Cells.end(); ++NextIter) {
         if (NextIter->Cell == CellIter->Cell) {
           CellIter->NextColumnElement = &(*NextIter);

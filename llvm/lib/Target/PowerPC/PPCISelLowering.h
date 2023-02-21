@@ -1239,17 +1239,25 @@ namespace llvm {
     SDValue getFramePointerFrameIndex(SelectionDAG & DAG) const;
     SDValue getReturnAddrFrameIndex(SelectionDAG & DAG) const;
 
-    bool
-    IsEligibleForTailCallOptimization(SDValue Callee,
-                                      CallingConv::ID CalleeCC,
-                                      bool isVarArg,
-                                      const SmallVectorImpl<ISD::InputArg> &Ins,
-                                      SelectionDAG& DAG) const;
+    bool IsEligibleForTailCallOptimization(
+        const GlobalValue *CalleeGV, CallingConv::ID CalleeCC,
+        CallingConv::ID CallerCC, bool isVarArg,
+        const SmallVectorImpl<ISD::InputArg> &Ins, bool isByValArg) const;
 
     bool IsEligibleForTailCallOptimization_64SVR4(
-        SDValue Callee, CallingConv::ID CalleeCC, const CallBase *CB,
-        bool isVarArg, const SmallVectorImpl<ISD::OutputArg> &Outs,
-        const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG) const;
+        const GlobalValue *CalleeGV, CallingConv::ID CalleeCC,
+        CallingConv::ID CallerCC, const CallBase *CB, bool isVarArg,
+        const SmallVectorImpl<ISD::OutputArg> &Outs,
+        const SmallVectorImpl<ISD::InputArg> &Ins, bool isByValArg,
+        const Function *CallerFunc, bool isCalleeExternalSymbol) const;
+
+    bool isEligibleForTCO(const GlobalValue *CalleeGV, CallingConv::ID CalleeCC,
+                          CallingConv::ID CallerCC, const CallBase *CB,
+                          bool isVarArg,
+                          const SmallVectorImpl<ISD::OutputArg> &Outs,
+                          const SmallVectorImpl<ISD::InputArg> &Ins,
+                          bool isByValArg, const Function *CallerFunc,
+                          bool isCalleeExternalSymbol) const;
 
     SDValue EmitTailCallLoadFPAndRetAddr(SelectionDAG &DAG, int SPDiff,
                                          SDValue Chain, SDValue &LROpOut,
