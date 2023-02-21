@@ -270,10 +270,10 @@ public:
     }
   }
 
-  unsigned getMaxInterleaveFactor(unsigned VF) {
+  unsigned getMaxInterleaveFactor(ElementCount VF) {
     // If the loop will not be vectorized, don't interleave the loop.
     // Let regular unroll to unroll the loop.
-    return VF == 1 ? 1 : ST->getMaxInterleaveFactor();
+    return VF.getKnownMinValue() == 1 ? 1 : ST->getMaxInterleaveFactor();
   }
 
   enum RISCVRegisterClass { GPRRC, FPRRC, VRRC };
