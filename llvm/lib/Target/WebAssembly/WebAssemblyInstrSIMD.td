@@ -1173,19 +1173,19 @@ defm MAX : SIMDBinaryFP<fmaximum, "max", 233>;
 
 // Pseudo-minimum: pmin
 def pmin : PatFrags<(ops node:$lhs, node:$rhs), [
-                    (vselect (setolt $lhs, $rhs), $lhs, $rhs),
-                    (vselect (setole $lhs, $rhs), $lhs, $rhs),
-                    (vselect (setogt $rhs, $lhs), $lhs, $rhs),
-                    (vselect (setoge $rhs, $lhs), $lhs, $rhs)
+                    (vselect (setolt $rhs, $lhs), $rhs, $lhs),
+                    (vselect (setole $rhs, $lhs), $rhs, $lhs),
+                    (vselect (setogt $lhs, $rhs), $rhs, $lhs),
+                    (vselect (setoge $lhs, $rhs), $rhs, $lhs)
 ]>;
 defm PMIN : SIMDBinaryFP<pmin, "pmin", 234>;
 
 // Pseudo-maximum: pmax
 def pmax : PatFrags<(ops node:$lhs, node:$rhs), [
-                    (vselect (setogt $lhs, $rhs), $lhs, $rhs),
-                    (vselect (setoge $lhs, $rhs), $lhs, $rhs),
-                    (vselect (setolt $rhs, $lhs), $lhs, $rhs),
-                    (vselect (setole $rhs, $lhs), $lhs, $rhs)
+                    (vselect (setogt $rhs, $lhs), $rhs, $lhs),
+                    (vselect (setoge $rhs, $lhs), $rhs, $lhs),
+                    (vselect (setolt $lhs, $rhs), $rhs, $lhs),
+                    (vselect (setole $lhs, $rhs), $rhs, $lhs)
 ]>;
 defm PMAX : SIMDBinaryFP<pmax, "pmax", 235>;
 
