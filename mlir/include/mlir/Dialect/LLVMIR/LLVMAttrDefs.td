@@ -470,6 +470,21 @@ def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
 }
 
 //===----------------------------------------------------------------------===//
+// DINamespaceAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DINamespaceAttr : LLVM_Attr<"DINamespace", "di_namespace",
+                                      /*traits=*/[], "DIScopeAttr"> {
+  let parameters = (ins
+    "StringAttr":$name,
+    OptionalParameter<"DIScopeAttr">:$scope,
+    "bool":$exportSymbols
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // DISubrangeAttr
 //===----------------------------------------------------------------------===//
 
