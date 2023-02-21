@@ -780,122 +780,112 @@ END-SCRIPT
 // RUN: bash -c 'echo "TEST_122=\$!"' >> %t.sh
 // RUN: echo "wait $TEST_106" >> %t.sh
 #if defined(TEST_122) && __cplusplus >= 201103L
-#include <experimental/algorithm>
+#include <experimental/deque>
 #endif
 // RUN: bash -c 'echo %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_123 \&' >> %t.sh
 // RUN: bash -c 'echo "TEST_123=\$!"' >> %t.sh
 // RUN: echo "wait $TEST_107" >> %t.sh
 #if defined(TEST_123) && __cplusplus >= 201103L
-#include <experimental/deque>
+#include <experimental/forward_list>
 #endif
 // RUN: bash -c 'echo %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_124 \&' >> %t.sh
 // RUN: bash -c 'echo "TEST_124=\$!"' >> %t.sh
 // RUN: echo "wait $TEST_108" >> %t.sh
 #if defined(TEST_124) && __cplusplus >= 201103L
-#include <experimental/forward_list>
+#include <experimental/iterator>
 #endif
 // RUN: bash -c 'echo %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_125 \&' >> %t.sh
 // RUN: bash -c 'echo "TEST_125=\$!"' >> %t.sh
 // RUN: echo "wait $TEST_109" >> %t.sh
 #if defined(TEST_125) && __cplusplus >= 201103L
-#include <experimental/functional>
+#include <experimental/list>
 #endif
 // RUN: bash -c 'echo %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_126 \&' >> %t.sh
 // RUN: bash -c 'echo "TEST_126=\$!"' >> %t.sh
 // RUN: echo "wait $TEST_110" >> %t.sh
 #if defined(TEST_126) && __cplusplus >= 201103L
-#include <experimental/iterator>
+#include <experimental/map>
 #endif
 // RUN: bash -c 'echo %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_127 \&' >> %t.sh
 // RUN: bash -c 'echo "TEST_127=\$!"' >> %t.sh
 // RUN: echo "wait $TEST_111" >> %t.sh
 #if defined(TEST_127) && __cplusplus >= 201103L
-#include <experimental/list>
+#include <experimental/memory_resource>
 #endif
 // RUN: bash -c 'echo %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_128 \&' >> %t.sh
 // RUN: bash -c 'echo "TEST_128=\$!"' >> %t.sh
 // RUN: echo "wait $TEST_112" >> %t.sh
 #if defined(TEST_128) && __cplusplus >= 201103L
-#include <experimental/map>
+#include <experimental/propagate_const>
 #endif
 // RUN: bash -c 'echo %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_129 \&' >> %t.sh
 // RUN: bash -c 'echo "TEST_129=\$!"' >> %t.sh
 // RUN: echo "wait $TEST_113" >> %t.sh
-#if defined(TEST_129) && __cplusplus >= 201103L
-#include <experimental/memory_resource>
+#if defined(TEST_129) && !defined(_LIBCPP_HAS_NO_LOCALIZATION) && __cplusplus >= 201103L
+#include <experimental/regex>
 #endif
 // RUN: bash -c 'echo %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_130 \&' >> %t.sh
 // RUN: bash -c 'echo "TEST_130=\$!"' >> %t.sh
 // RUN: echo "wait $TEST_114" >> %t.sh
 #if defined(TEST_130) && __cplusplus >= 201103L
-#include <experimental/propagate_const>
+#include <experimental/set>
 #endif
 // RUN: bash -c 'echo %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_131 \&' >> %t.sh
 // RUN: bash -c 'echo "TEST_131=\$!"' >> %t.sh
 // RUN: echo "wait $TEST_115" >> %t.sh
-#if defined(TEST_131) && !defined(_LIBCPP_HAS_NO_LOCALIZATION) && __cplusplus >= 201103L
-#include <experimental/regex>
+#if defined(TEST_131) && __cplusplus >= 201103L
+#include <experimental/simd>
 #endif
 // RUN: bash -c 'echo %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_132 \&' >> %t.sh
 // RUN: bash -c 'echo "TEST_132=\$!"' >> %t.sh
 // RUN: echo "wait $TEST_116" >> %t.sh
 #if defined(TEST_132) && __cplusplus >= 201103L
-#include <experimental/set>
+#include <experimental/string>
 #endif
 // RUN: bash -c 'echo %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_133 \&' >> %t.sh
 // RUN: bash -c 'echo "TEST_133=\$!"' >> %t.sh
 // RUN: echo "wait $TEST_117" >> %t.sh
 #if defined(TEST_133) && __cplusplus >= 201103L
-#include <experimental/simd>
+#include <experimental/type_traits>
 #endif
 // RUN: bash -c 'echo %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_134 \&' >> %t.sh
 // RUN: bash -c 'echo "TEST_134=\$!"' >> %t.sh
 // RUN: echo "wait $TEST_118" >> %t.sh
 #if defined(TEST_134) && __cplusplus >= 201103L
-#include <experimental/string>
+#include <experimental/unordered_map>
 #endif
 // RUN: bash -c 'echo %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_135 \&' >> %t.sh
 // RUN: bash -c 'echo "TEST_135=\$!"' >> %t.sh
 // RUN: echo "wait $TEST_119" >> %t.sh
 #if defined(TEST_135) && __cplusplus >= 201103L
-#include <experimental/type_traits>
+#include <experimental/unordered_set>
 #endif
 // RUN: bash -c 'echo %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_136 \&' >> %t.sh
 // RUN: bash -c 'echo "TEST_136=\$!"' >> %t.sh
 // RUN: echo "wait $TEST_120" >> %t.sh
 #if defined(TEST_136) && __cplusplus >= 201103L
-#include <experimental/unordered_map>
+#include <experimental/utility>
 #endif
 // RUN: bash -c 'echo %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_137 \&' >> %t.sh
 // RUN: bash -c 'echo "TEST_137=\$!"' >> %t.sh
 // RUN: echo "wait $TEST_121" >> %t.sh
 #if defined(TEST_137) && __cplusplus >= 201103L
-#include <experimental/unordered_set>
+#include <experimental/vector>
 #endif
 // RUN: bash -c 'echo %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_138 \&' >> %t.sh
 // RUN: bash -c 'echo "TEST_138=\$!"' >> %t.sh
 // RUN: echo "wait $TEST_122" >> %t.sh
-#if defined(TEST_138) && __cplusplus >= 201103L
-#include <experimental/utility>
+#if defined(TEST_138)
+#include <ext/hash_map>
 #endif
 // RUN: bash -c 'echo %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_139 \&' >> %t.sh
 // RUN: bash -c 'echo "TEST_139=\$!"' >> %t.sh
 // RUN: echo "wait $TEST_123" >> %t.sh
-#if defined(TEST_139) && __cplusplus >= 201103L
-#include <experimental/vector>
-#endif
-// RUN: bash -c 'echo %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_140 \&' >> %t.sh
-// RUN: bash -c 'echo "TEST_140=\$!"' >> %t.sh
-// RUN: echo "wait $TEST_124" >> %t.sh
-#if defined(TEST_140)
-#include <ext/hash_map>
-#endif
-// RUN: bash -c 'echo %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_141 \&' >> %t.sh
-// RUN: bash -c 'echo "TEST_141=\$!"' >> %t.sh
-// RUN: echo "wait $TEST_125" >> %t.sh
-#if defined(TEST_141)
+#if defined(TEST_139)
 #include <ext/hash_set>
 #endif
+// RUN: echo "wait $TEST_124" >> %t.sh
+// RUN: echo "wait $TEST_125" >> %t.sh
 // RUN: echo "wait $TEST_126" >> %t.sh
 // RUN: echo "wait $TEST_127" >> %t.sh
 // RUN: echo "wait $TEST_128" >> %t.sh
@@ -910,7 +900,5 @@ END-SCRIPT
 // RUN: echo "wait $TEST_137" >> %t.sh
 // RUN: echo "wait $TEST_138" >> %t.sh
 // RUN: echo "wait $TEST_139" >> %t.sh
-// RUN: echo "wait $TEST_140" >> %t.sh
-// RUN: echo "wait $TEST_141" >> %t.sh
 // RUN: bash %t.sh
 // GENERATED-MARKER
