@@ -1323,8 +1323,8 @@ DenseSet<int64_t> transform::findPermutationsIndexingOperand(
 }
 
 FailureOr<GemmDimsForPacking> transform::inferGemmDims(LinalgOp linalgOp) {
-  assert(linalgOp.getNumDpsInits() == 1 && "wrong number of dps inits");
-  assert(linalgOp.getNumDpsInputs() == 2 && "wrong number of dps inputs");
+  if (linalgOp.getNumDpsInits() != 1 || linalgOp.getNumDpsInputs() != 2)
+    return failure();
 
   DenseSet<int64_t> a = findPermutationsIndexingOperand(
       linalgOp, linalgOp.getDpsInputOperand(0), par);
