@@ -1509,9 +1509,17 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   searchPaths.emplace_back("");
   for (auto *arg : args.filtered(OPT_libpath))
     searchPaths.push_back(arg->getValue());
-  detectWinSysRoot(args);
-  if (!args.hasArg(OPT_lldignoreenv) && !args.hasArg(OPT_winsysroot))
-    addLibSearchPaths();
+  if (!config->mingw) {
+    // Don't automatically deduce the lib path from the environment or MSVC
+    // installations when operating in mingw mode. (This also makes LLD ignore
+    // winsysroot and vctoolsdir arguments.)
+    detectWinSysRoot(args);
+    if (!args.hasArg(OPT_lldignoreenv) && !args.hasArg(OPT_winsysroot))
+      addLibSearchPaths();
+  } else {
+    if (args.hasArg(OPT_vctoolsdir, OPT_winsysroot))
+      warn("ignoring /vctoolsdir or /winsysroot flags in MinGW mode");
+  }
 
   // Handle /ignore
   for (auto *arg : args.filtered(OPT_ignore)) {
