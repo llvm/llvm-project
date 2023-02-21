@@ -14,11 +14,10 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
-#include <optional>
+#include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTMATHTOLIBM
@@ -52,8 +51,8 @@ struct ScalarOpToLibmCall : public OpRewritePattern<Op> {
 public:
   using OpRewritePattern<Op>::OpRewritePattern;
   ScalarOpToLibmCall<Op>(MLIRContext *context, StringRef floatFunc,
-                         StringRef doubleFunc, PatternBenefit benefit)
-      : OpRewritePattern<Op>(context, benefit), floatFunc(floatFunc),
+                         StringRef doubleFunc)
+      : OpRewritePattern<Op>(context), floatFunc(floatFunc),
         doubleFunc(doubleFunc){};
 
   LogicalResult matchAndRewrite(Op op, PatternRewriter &rewriter) const final;
@@ -152,53 +151,37 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
   return success();
 }
 
-void mlir::populateMathToLibmConversionPatterns(
-    RewritePatternSet &patterns, PatternBenefit benefit,
-    std::optional<PatternBenefit> log1pBenefit) {
+void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns) {
+  MLIRContext *ctx = patterns.getContext();
   patterns.add<VecOpToScalarOp<math::Atan2Op>, VecOpToScalarOp<math::CbrtOp>,
                VecOpToScalarOp<math::ExpM1Op>, VecOpToScalarOp<math::TanhOp>,
                VecOpToScalarOp<math::CosOp>, VecOpToScalarOp<math::SinOp>,
                VecOpToScalarOp<math::ErfOp>, VecOpToScalarOp<math::RoundEvenOp>,
                VecOpToScalarOp<math::RoundOp>, VecOpToScalarOp<math::AtanOp>,
                VecOpToScalarOp<math::TanOp>, VecOpToScalarOp<math::TruncOp>>(
-      patterns.getContext(), benefit);
+      ctx);
   patterns.add<PromoteOpToF32<math::Atan2Op>, PromoteOpToF32<math::CbrtOp>,
                PromoteOpToF32<math::ExpM1Op>, PromoteOpToF32<math::TanhOp>,
                PromoteOpToF32<math::CosOp>, PromoteOpToF32<math::SinOp>,
                PromoteOpToF32<math::ErfOp>, PromoteOpToF32<math::RoundEvenOp>,
                PromoteOpToF32<math::RoundOp>, PromoteOpToF32<math::AtanOp>,
-               PromoteOpToF32<math::TanOp>, PromoteOpToF32<math::TruncOp>>(
-      patterns.getContext(), benefit);
-  patterns.add<ScalarOpToLibmCall<math::AtanOp>>(patterns.getContext(), "atanf",
-                                                 "atan", benefit);
-  patterns.add<ScalarOpToLibmCall<math::Atan2Op>>(patterns.getContext(),
-                                                  "atan2f", "atan2", benefit);
-  patterns.add<ScalarOpToLibmCall<math::CbrtOp>>(patterns.getContext(), "cbrtf",
-                                                 "cbrt", benefit);
-  patterns.add<ScalarOpToLibmCall<math::ErfOp>>(patterns.getContext(), "erff",
-                                                "erf", benefit);
-  patterns.add<ScalarOpToLibmCall<math::ExpM1Op>>(patterns.getContext(),
-                                                  "expm1f", "expm1", benefit);
-  patterns.add<ScalarOpToLibmCall<math::TanOp>>(patterns.getContext(), "tanf",
-                                                "tan", benefit);
-  patterns.add<ScalarOpToLibmCall<math::TanhOp>>(patterns.getContext(), "tanhf",
-                                                 "tanh", benefit);
-  patterns.add<ScalarOpToLibmCall<math::RoundEvenOp>>(
-      patterns.getContext(), "roundevenf", "roundeven", benefit);
-  patterns.add<ScalarOpToLibmCall<math::RoundOp>>(patterns.getContext(),
-                                                  "roundf", "round", benefit);
-  patterns.add<ScalarOpToLibmCall<math::CosOp>>(patterns.getContext(), "cosf",
-                                                "cos", benefit);
-  patterns.add<ScalarOpToLibmCall<math::SinOp>>(patterns.getContext(), "sinf",
-                                                "sin", benefit);
-  patterns.add<ScalarOpToLibmCall<math::Log1pOp>>(
-      patterns.getContext(), "log1pf", "log1p", log1pBenefit.value_or(benefit));
-  patterns.add<ScalarOpToLibmCall<math::FloorOp>>(patterns.getContext(),
-                                                  "floorf", "floor", benefit);
-  patterns.add<ScalarOpToLibmCall<math::CeilOp>>(patterns.getContext(), "ceilf",
-                                                 "ceil", benefit);
-  patterns.add<ScalarOpToLibmCall<math::TruncOp>>(patterns.getContext(),
-                                                  "truncf", "trunc", benefit);
+               PromoteOpToF32<math::TanOp>, PromoteOpToF32<math::TruncOp>>(ctx);
+  patterns.add<ScalarOpToLibmCall<math::AtanOp>>(ctx, "atanf", "atan");
+  patterns.add<ScalarOpToLibmCall<math::Atan2Op>>(ctx, "atan2f", "atan2");
+  patterns.add<ScalarOpToLibmCall<math::CbrtOp>>(ctx, "cbrtf", "cbrt");
+  patterns.add<ScalarOpToLibmCall<math::ErfOp>>(ctx, "erff", "erf");
+  patterns.add<ScalarOpToLibmCall<math::ExpM1Op>>(ctx, "expm1f", "expm1");
+  patterns.add<ScalarOpToLibmCall<math::TanOp>>(ctx, "tanf", "tan");
+  patterns.add<ScalarOpToLibmCall<math::TanhOp>>(ctx, "tanhf", "tanh");
+  patterns.add<ScalarOpToLibmCall<math::RoundEvenOp>>(ctx, "roundevenf",
+                                                      "roundeven");
+  patterns.add<ScalarOpToLibmCall<math::RoundOp>>(ctx, "roundf", "round");
+  patterns.add<ScalarOpToLibmCall<math::CosOp>>(ctx, "cosf", "cos");
+  patterns.add<ScalarOpToLibmCall<math::SinOp>>(ctx, "sinf", "sin");
+  patterns.add<ScalarOpToLibmCall<math::Log1pOp>>(ctx, "log1pf", "log1p");
+  patterns.add<ScalarOpToLibmCall<math::FloorOp>>(ctx, "floorf", "floor");
+  patterns.add<ScalarOpToLibmCall<math::CeilOp>>(ctx, "ceilf", "ceil");
+  patterns.add<ScalarOpToLibmCall<math::TruncOp>>(ctx, "truncf", "trunc");
 }
 
 namespace {
@@ -212,7 +195,7 @@ void ConvertMathToLibmPass::runOnOperation() {
   auto module = getOperation();
 
   RewritePatternSet patterns(&getContext());
-  populateMathToLibmConversionPatterns(patterns, /*benefit=*/1);
+  populateMathToLibmConversionPatterns(patterns);
 
   ConversionTarget target(getContext());
   target.addLegalDialect<arith::ArithDialect, BuiltinDialect, func::FuncDialect,
