@@ -41,7 +41,8 @@ DiagnosedSilenceableFailure transform::MemRefMultiBufferOp::apply(
     if (!canApplyMultiBuffer)
       continue;
 
-    auto newBuffer = memref::multiBuffer(target, getFactor());
+    auto newBuffer =
+        memref::multiBuffer(target, getFactor(), getSkipAnalysis());
     if (failed(newBuffer))
       return emitSilenceableFailure(target->getLoc())
              << "op failed to multibuffer";
