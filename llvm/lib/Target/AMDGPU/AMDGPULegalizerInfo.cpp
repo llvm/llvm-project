@@ -2898,15 +2898,18 @@ bool AMDGPULegalizerInfo::legalizeBuildVector(
 // the outer loop going over parts of the result, the outer loop should go
 // over parts of one of the factors. This should result in instruction
 // selection that makes full use of S_ADDC_U32 instructions.
-void AMDGPULegalizerInfo::buildMultiply(
-    LegalizerHelper &Helper, MutableArrayRef<Register> Accum,
-    ArrayRef<Register> Src0, ArrayRef<Register> Src1,
-    bool UsePartialMad64_32, bool SeparateOddAlignedProducts) const {
+void AMDGPULegalizerInfo::buildMultiply(LegalizerHelper &Helper,
+                                        MutableArrayRef<Register> Accum,
+                                        ArrayRef<Register> Src0,
+                                        ArrayRef<Register> Src1,
+                                        bool UsePartialMad64_32,
+                                        bool SeparateOddAlignedProducts) const {
   // Use (possibly empty) vectors of S1 registers to represent the set of
   // carries from one pair of positions to the next.
   using Carry = SmallVector<Register, 2>;
 
   MachineIRBuilder &B = Helper.MIRBuilder;
+  GISelKnownBits &KB = *Helper.getKnownBits();
 
   const LLT S1 = LLT::scalar(1);
   const LLT S32 = LLT::scalar(32);
@@ -2925,6 +2928,12 @@ void AMDGPULegalizerInfo::buildMultiply(
       Zero64 = B.buildConstant(S64, 0).getReg(0);
     return Zero64;
   };
+
+  SmallVector<bool, 2> Src0KnownZeros, Src1KnownZeros;
+  for (unsigned i = 0; i < Src0.size(); ++i) {
+    Src0KnownZeros.push_back(KB.getKnownBits(Src0[i]).isZero());
+    Src1KnownZeros.push_back(KB.getKnownBits(Src1[i]).isZero());
+  }
 
   // Merge the given carries into the 32-bit LocalAccum, which is modified
   // in-place.
@@ -2988,9 +2997,14 @@ void AMDGPULegalizerInfo::buildMultiply(
         if (LocalAccum.size() == 1 &&
             (!UsePartialMad64_32 || !CarryIn.empty())) {
           do {
+            // Skip multiplication if one of the operands is 0
             unsigned j1 = DstIndex - j0;
+            if (Src0KnownZeros[j0] || Src1KnownZeros[j1]) {
+              ++j0;
+              continue;
+            }
             auto Mul = B.buildMul(S32, Src0[j0], Src1[j1]);
-            if (!LocalAccum[0]) {
+            if (!LocalAccum[0] || KB.getKnownBits(LocalAccum[0]).isZero()) {
               LocalAccum[0] = Mul.getReg(0);
             } else {
               if (CarryIn.empty()) {
@@ -3030,12 +3044,17 @@ void AMDGPULegalizerInfo::buildMultiply(
 
           do {
             unsigned j1 = DstIndex - j0;
+            if (Src0KnownZeros[j0] || Src1KnownZeros[j1]) {
+              ++j0;
+              continue;
+            }
             auto Mad = B.buildInstr(AMDGPU::G_AMDGPU_MAD_U64_U32, {S64, S1},
                                     {Src0[j0], Src1[j1], Tmp});
             Tmp = Mad.getReg(0);
             if (!HaveSmallAccum)
               CarryOut.push_back(Mad.getReg(1));
             HaveSmallAccum = false;
+
             ++j0;
           } while (j0 <= DstIndex);
 
@@ -3178,7 +3197,6 @@ bool AMDGPULegalizerInfo::legalizeMul(LegalizerHelper &Helper,
   B.buildMergeLikeInstr(DstReg, AccumRegs);
   MI.eraseFromParent();
   return true;
-
 }
 
 // Legalize ctlz/cttz to ffbh/ffbl instead of the default legalization to
