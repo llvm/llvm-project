@@ -34,20 +34,20 @@ struct atomic
     typedef value_type difference_type;
 
 #if _LIBCPP_STD_VER >= 20
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     atomic() = default;
 #else
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     atomic() _NOEXCEPT = default;
 #endif
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR atomic(_Tp __d) _NOEXCEPT : __base(__d) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _Tp operator=(_Tp __d) volatile _NOEXCEPT
         {__base::store(__d); return __d;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _Tp operator=(_Tp __d) _NOEXCEPT
         {__base::store(__d); return __d;}
 
@@ -65,70 +65,70 @@ struct atomic<_Tp*>
     typedef _Tp* value_type;
     typedef ptrdiff_t difference_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     atomic() _NOEXCEPT = default;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR atomic(_Tp* __d) _NOEXCEPT : __base(__d) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _Tp* operator=(_Tp* __d) volatile _NOEXCEPT
         {__base::store(__d); return __d;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _Tp* operator=(_Tp* __d) _NOEXCEPT
         {__base::store(__d); return __d;}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _Tp* fetch_add(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
         // __atomic_fetch_add accepts function pointers, guard against them.
         static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
         return std::__cxx_atomic_fetch_add(&this->__a_, __op, __m);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _Tp* fetch_add(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
         // __atomic_fetch_add accepts function pointers, guard against them.
         static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
         return std::__cxx_atomic_fetch_add(&this->__a_, __op, __m);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _Tp* fetch_sub(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
         // __atomic_fetch_add accepts function pointers, guard against them.
         static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
         return std::__cxx_atomic_fetch_sub(&this->__a_, __op, __m);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _Tp* fetch_sub(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
         // __atomic_fetch_add accepts function pointers, guard against them.
         static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
         return std::__cxx_atomic_fetch_sub(&this->__a_, __op, __m);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _Tp* operator++(int) volatile _NOEXCEPT            {return fetch_add(1);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _Tp* operator++(int) _NOEXCEPT                     {return fetch_add(1);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _Tp* operator--(int) volatile _NOEXCEPT            {return fetch_sub(1);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _Tp* operator--(int) _NOEXCEPT                     {return fetch_sub(1);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _Tp* operator++() volatile _NOEXCEPT               {return fetch_add(1) + 1;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _Tp* operator++() _NOEXCEPT                        {return fetch_add(1) + 1;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _Tp* operator--() volatile _NOEXCEPT               {return fetch_sub(1) - 1;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _Tp* operator--() _NOEXCEPT                        {return fetch_sub(1) - 1;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _Tp* operator+=(ptrdiff_t __op) volatile _NOEXCEPT {return fetch_add(__op) + __op;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _Tp* operator+=(ptrdiff_t __op) _NOEXCEPT          {return fetch_add(__op) + __op;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _Tp* operator-=(ptrdiff_t __op) volatile _NOEXCEPT {return fetch_sub(__op) - __op;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _Tp* operator-=(ptrdiff_t __op) _NOEXCEPT          {return fetch_sub(__op) - __op;}
 
     atomic& operator=(const atomic&) = delete;
@@ -138,7 +138,7 @@ struct atomic<_Tp*>
 // atomic_is_lock_free
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 bool
 atomic_is_lock_free(const volatile atomic<_Tp>* __o) _NOEXCEPT
 {
@@ -146,7 +146,7 @@ atomic_is_lock_free(const volatile atomic<_Tp>* __o) _NOEXCEPT
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 bool
 atomic_is_lock_free(const atomic<_Tp>* __o) _NOEXCEPT
 {
@@ -156,7 +156,7 @@ atomic_is_lock_free(const atomic<_Tp>* __o) _NOEXCEPT
 // atomic_init
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI
 void
 atomic_init(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
@@ -164,7 +164,7 @@ atomic_init(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NO
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI
 void
 atomic_init(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
@@ -174,7 +174,7 @@ atomic_init(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 // atomic_store
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 void
 atomic_store(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
@@ -182,7 +182,7 @@ atomic_store(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _N
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 void
 atomic_store(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
@@ -192,7 +192,7 @@ atomic_store(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 // atomic_store_explicit
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 void
 atomic_store_explicit(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d, memory_order __m) _NOEXCEPT
   _LIBCPP_CHECK_STORE_MEMORY_ORDER(__m)
@@ -201,7 +201,7 @@ atomic_store_explicit(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_typ
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 void
 atomic_store_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d, memory_order __m) _NOEXCEPT
   _LIBCPP_CHECK_STORE_MEMORY_ORDER(__m)
@@ -212,7 +212,7 @@ atomic_store_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d, me
 // atomic_load
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 _Tp
 atomic_load(const volatile atomic<_Tp>* __o) _NOEXCEPT
 {
@@ -220,7 +220,7 @@ atomic_load(const volatile atomic<_Tp>* __o) _NOEXCEPT
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 _Tp
 atomic_load(const atomic<_Tp>* __o) _NOEXCEPT
 {
@@ -230,7 +230,7 @@ atomic_load(const atomic<_Tp>* __o) _NOEXCEPT
 // atomic_load_explicit
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 _Tp
 atomic_load_explicit(const volatile atomic<_Tp>* __o, memory_order __m) _NOEXCEPT
   _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__m)
@@ -239,7 +239,7 @@ atomic_load_explicit(const volatile atomic<_Tp>* __o, memory_order __m) _NOEXCEP
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 _Tp
 atomic_load_explicit(const atomic<_Tp>* __o, memory_order __m) _NOEXCEPT
   _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__m)
@@ -250,7 +250,7 @@ atomic_load_explicit(const atomic<_Tp>* __o, memory_order __m) _NOEXCEPT
 // atomic_exchange
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 _Tp
 atomic_exchange(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
@@ -258,7 +258,7 @@ atomic_exchange(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d)
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 _Tp
 atomic_exchange(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
@@ -268,7 +268,7 @@ atomic_exchange(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEP
 // atomic_exchange_explicit
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 _Tp
 atomic_exchange_explicit(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d, memory_order __m) _NOEXCEPT
 {
@@ -276,7 +276,7 @@ atomic_exchange_explicit(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 _Tp
 atomic_exchange_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d, memory_order __m) _NOEXCEPT
 {
@@ -286,7 +286,7 @@ atomic_exchange_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d,
 // atomic_compare_exchange_weak
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 bool
 atomic_compare_exchange_weak(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type* __e, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
@@ -294,7 +294,7 @@ atomic_compare_exchange_weak(volatile atomic<_Tp>* __o, typename atomic<_Tp>::va
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 bool
 atomic_compare_exchange_weak(atomic<_Tp>* __o, typename atomic<_Tp>::value_type* __e, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
@@ -304,7 +304,7 @@ atomic_compare_exchange_weak(atomic<_Tp>* __o, typename atomic<_Tp>::value_type*
 // atomic_compare_exchange_strong
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 bool
 atomic_compare_exchange_strong(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type* __e, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
@@ -312,7 +312,7 @@ atomic_compare_exchange_strong(volatile atomic<_Tp>* __o, typename atomic<_Tp>::
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 bool
 atomic_compare_exchange_strong(atomic<_Tp>* __o, typename atomic<_Tp>::value_type* __e, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
@@ -322,7 +322,7 @@ atomic_compare_exchange_strong(atomic<_Tp>* __o, typename atomic<_Tp>::value_typ
 // atomic_compare_exchange_weak_explicit
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 bool
 atomic_compare_exchange_weak_explicit(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type* __e,
                                       typename atomic<_Tp>::value_type __d,
@@ -333,7 +333,7 @@ atomic_compare_exchange_weak_explicit(volatile atomic<_Tp>* __o, typename atomic
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 bool
 atomic_compare_exchange_weak_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type* __e, typename atomic<_Tp>::value_type __d,
                                       memory_order __s, memory_order __f) _NOEXCEPT
@@ -345,7 +345,7 @@ atomic_compare_exchange_weak_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::va
 // atomic_compare_exchange_strong_explicit
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 bool
 atomic_compare_exchange_strong_explicit(volatile atomic<_Tp>* __o,
                                         typename atomic<_Tp>::value_type* __e, typename atomic<_Tp>::value_type __d,
@@ -356,7 +356,7 @@ atomic_compare_exchange_strong_explicit(volatile atomic<_Tp>* __o,
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 bool
 atomic_compare_exchange_strong_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type* __e,
                                         typename atomic<_Tp>::value_type __d,
@@ -369,7 +369,7 @@ atomic_compare_exchange_strong_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::
 // atomic_wait
 
 template <class _Tp>
-_LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
 void atomic_wait(const volatile atomic<_Tp>* __o,
                  typename atomic<_Tp>::value_type __v) _NOEXCEPT
 {
@@ -377,7 +377,7 @@ void atomic_wait(const volatile atomic<_Tp>* __o,
 }
 
 template <class _Tp>
-_LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
 void atomic_wait(const atomic<_Tp>* __o,
                  typename atomic<_Tp>::value_type __v) _NOEXCEPT
 {
@@ -387,7 +387,7 @@ void atomic_wait(const atomic<_Tp>* __o,
 // atomic_wait_explicit
 
 template <class _Tp>
-_LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
 void atomic_wait_explicit(const volatile atomic<_Tp>* __o,
                           typename atomic<_Tp>::value_type __v,
                           memory_order __m) _NOEXCEPT
@@ -397,7 +397,7 @@ void atomic_wait_explicit(const volatile atomic<_Tp>* __o,
 }
 
 template <class _Tp>
-_LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
 void atomic_wait_explicit(const atomic<_Tp>* __o,
                           typename atomic<_Tp>::value_type __v,
                           memory_order __m) _NOEXCEPT
@@ -409,13 +409,13 @@ void atomic_wait_explicit(const atomic<_Tp>* __o,
 // atomic_notify_one
 
 template <class _Tp>
-_LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
 void atomic_notify_one(volatile atomic<_Tp>* __o) _NOEXCEPT
 {
     __o->notify_one();
 }
 template <class _Tp>
-_LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
 void atomic_notify_one(atomic<_Tp>* __o) _NOEXCEPT
 {
     __o->notify_one();
@@ -424,13 +424,13 @@ void atomic_notify_one(atomic<_Tp>* __o) _NOEXCEPT
 // atomic_notify_all
 
 template <class _Tp>
-_LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
 void atomic_notify_all(volatile atomic<_Tp>* __o) _NOEXCEPT
 {
     __o->notify_all();
 }
 template <class _Tp>
-_LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
 void atomic_notify_all(atomic<_Tp>* __o) _NOEXCEPT
 {
     __o->notify_all();
@@ -439,7 +439,7 @@ void atomic_notify_all(atomic<_Tp>* __o) _NOEXCEPT
 // atomic_fetch_add
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 _Tp
 atomic_fetch_add(volatile atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op) _NOEXCEPT
 {
@@ -447,7 +447,7 @@ atomic_fetch_add(volatile atomic<_Tp>* __o, typename atomic<_Tp>::difference_typ
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 _Tp
 atomic_fetch_add(atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op) _NOEXCEPT
 {
@@ -457,14 +457,14 @@ atomic_fetch_add(atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op) _
 // atomic_fetch_add_explicit
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 _Tp atomic_fetch_add_explicit(volatile atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op, memory_order __m) _NOEXCEPT
 {
     return __o->fetch_add(__op, __m);
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 _Tp atomic_fetch_add_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op, memory_order __m) _NOEXCEPT
 {
     return __o->fetch_add(__op, __m);
@@ -473,14 +473,14 @@ _Tp atomic_fetch_add_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::difference
 // atomic_fetch_sub
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 _Tp atomic_fetch_sub(volatile atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op) _NOEXCEPT
 {
     return __o->fetch_sub(__op);
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 _Tp atomic_fetch_sub(atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op) _NOEXCEPT
 {
     return __o->fetch_sub(__op);
@@ -489,14 +489,14 @@ _Tp atomic_fetch_sub(atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __o
 // atomic_fetch_sub_explicit
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 _Tp atomic_fetch_sub_explicit(volatile atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op, memory_order __m) _NOEXCEPT
 {
     return __o->fetch_sub(__op, __m);
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 _Tp atomic_fetch_sub_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op, memory_order __m) _NOEXCEPT
 {
     return __o->fetch_sub(__op, __m);
@@ -505,7 +505,7 @@ _Tp atomic_fetch_sub_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::difference
 // atomic_fetch_and
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 typename enable_if
 <
     is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
@@ -517,7 +517,7 @@ atomic_fetch_and(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __o
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 typename enable_if
 <
     is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
@@ -531,7 +531,7 @@ atomic_fetch_and(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op) _NOEXC
 // atomic_fetch_and_explicit
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 typename enable_if
 <
     is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
@@ -543,7 +543,7 @@ atomic_fetch_and_explicit(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 typename enable_if
 <
     is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
@@ -557,7 +557,7 @@ atomic_fetch_and_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __o
 // atomic_fetch_or
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 typename enable_if
 <
     is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
@@ -569,7 +569,7 @@ atomic_fetch_or(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 typename enable_if
 <
     is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
@@ -583,7 +583,7 @@ atomic_fetch_or(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op) _NOEXCE
 // atomic_fetch_or_explicit
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 typename enable_if
 <
     is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
@@ -595,7 +595,7 @@ atomic_fetch_or_explicit(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 typename enable_if
 <
     is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
@@ -609,7 +609,7 @@ atomic_fetch_or_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op
 // atomic_fetch_xor
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 typename enable_if
 <
     is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
@@ -621,7 +621,7 @@ atomic_fetch_xor(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __o
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 typename enable_if
 <
     is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
@@ -635,7 +635,7 @@ atomic_fetch_xor(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op) _NOEXC
 // atomic_fetch_xor_explicit
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 typename enable_if
 <
     is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
@@ -647,7 +647,7 @@ atomic_fetch_xor_explicit(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 typename enable_if
 <
     is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
