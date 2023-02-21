@@ -1628,8 +1628,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     Builder.widenScalarIf(
       [=](const LegalityQuery &Query) {
         const LLT Ty = Query.Types[BigTyIdx];
-        return !llvm::has_single_bit<uint32_t>(Ty.getSizeInBits()) &&
-               Ty.getSizeInBits() % 16 != 0;
+        return Ty.getSizeInBits() % 16 != 0;
       },
       [=](const LegalityQuery &Query) {
         // Pick the next power of 2, or a multiple of 64 over 128.
