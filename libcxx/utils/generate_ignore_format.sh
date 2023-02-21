@@ -7,11 +7,22 @@ if [ -z "${CLANG_FORMAT}" ]; then
 fi
 
 rm libcxx/utils/data/ignore_format.txt
-for file in $(find libcxx/{benchmarks,include,src}/ -type f); do
+# This uses the same matches as the check-format CI step.
+#
+# Since it's hard to match empty extensions the following
+# method is used, remove all files with an extension, then
+# add the list of extensions that should be formatted.
+for file in $(find libcxx/{benchmarks,include,src}/ -type f -not -name '*.*' -or \( \
+	 -name "*.h" -or -name "*.hpp" -or \
+	 -name "*.c" -or -name "*.cpp" -or \
+	 -name "*.inc" -or -name "*.ipp" \
+	 \) ); do
+
   ${CLANG_FORMAT} --Werror --dry-run ${file} >& /dev/null
   if [ $? != 0 ]; then
     echo ${file} >> libcxx/utils/data/ignore_format.txt
   fi
 done
 
-sort libcxx/utils/data/ignore_format.txt -d -o libcxx/utils/data/ignore_format.txt
+# Force sorting not to depend on the system's locale.
+LC_ALL=C sort libcxx/utils/data/ignore_format.txt -d -o libcxx/utils/data/ignore_format.txt

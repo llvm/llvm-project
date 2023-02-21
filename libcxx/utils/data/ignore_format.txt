@@ -1,4 +1,3 @@
-libcxx/benchmarks/CMakeLists.txt
 libcxx/benchmarks/CartesianBenchmarks.h
 libcxx/benchmarks/ContainerBenchmarks.h
 libcxx/benchmarks/GenerateInput.h
@@ -29,8 +28,6 @@ libcxx/benchmarks/formatter_int.bench.cpp
 libcxx/benchmarks/format_to.bench.cpp
 libcxx/benchmarks/format_to_n.bench.cpp
 libcxx/benchmarks/function.bench.cpp
-libcxx/benchmarks/lit.cfg.py
-libcxx/benchmarks/lit.site.cfg.py.in
 libcxx/benchmarks/map.bench.cpp
 libcxx/benchmarks/ordered_set.bench.cpp
 libcxx/benchmarks/random.bench.cpp
@@ -38,7 +35,6 @@ libcxx/benchmarks/string.bench.cpp
 libcxx/benchmarks/stringstream.bench.cpp
 libcxx/benchmarks/unordered_set_operations.bench.cpp
 libcxx/benchmarks/vector_operations.bench.cpp
-libcxx/include/CMakeLists.txt
 libcxx/include/__algorithm/binary_search.h
 libcxx/include/__algorithm/clamp.h
 libcxx/include/__algorithm/comp.h
@@ -312,7 +308,6 @@ libcxx/include/__concepts/swappable.h
 libcxx/include/__concepts/totally_ordered.h
 libcxx/include/condition_variable
 libcxx/include/__config
-libcxx/include/__config_site.in
 libcxx/include/__coroutine/coroutine_handle.h
 libcxx/include/__coroutine/coroutine_traits.h
 libcxx/include/__coroutine/noop_coroutine_handle.h
@@ -470,7 +465,6 @@ libcxx/include/__iterator/sortable.h
 libcxx/include/__iterator/unreachable_sentinel.h
 libcxx/include/__iterator/wrap_iter.h
 libcxx/include/latch
-libcxx/include/libcxx.imp
 libcxx/include/limits
 libcxx/include/limits.h
 libcxx/include/list
@@ -506,7 +500,6 @@ libcxx/include/__memory/temp_value.h
 libcxx/include/__memory/uninitialized_algorithms.h
 libcxx/include/__memory/unique_ptr.h
 libcxx/include/__memory/uses_allocator.h
-libcxx/include/module.modulemap.in
 libcxx/include/mutex
 libcxx/include/__mutex_base
 libcxx/include/new
@@ -789,7 +782,6 @@ libcxx/include/vector
 libcxx/include/__verbose_abort
 libcxx/include/wchar.h
 libcxx/include/wctype.h
-libcxx/src/CMakeLists.txt
 libcxx/src/any.cpp
 libcxx/src/atomic.cpp
 libcxx/src/barrier.cpp
