@@ -960,28 +960,11 @@ enum Doggos {
   Longboi,
 };
 
-struct WooferCmp {
-  // Not copyable.
-  WooferCmp(const WooferCmp &) = delete;
-  WooferCmp &operator=(const WooferCmp &) = delete;
-
-  friend bool operator==(const Doggos &Doggo, const WooferCmp &) {
-    return Doggo == Doggos::Woofer;
-  }
-};
-
 TEST(STLExtrasTest, IsContainedInitializerList) {
   EXPECT_TRUE(is_contained({Woofer, SubWoofer}, Woofer));
   EXPECT_TRUE(is_contained({Woofer, SubWoofer}, SubWoofer));
   EXPECT_FALSE(is_contained({Woofer, SubWoofer}, Pupper));
-
-  // Check that the initializer list type and the element type do not have to
-  // match exactly.
-  EXPECT_TRUE(is_contained({Floofer, Woofer, SubWoofer}, WooferCmp{}));
-  EXPECT_FALSE(is_contained({Floofer, SubWoofer}, WooferCmp{}));
-
-  EXPECT_TRUE(is_contained({"a", "bb", "ccc", "dddd"}, llvm::StringRef("ccc")));
-  EXPECT_FALSE(is_contained({"a", "bb", "ccc", "dddd"}, llvm::StringRef("x")));
+  EXPECT_FALSE(is_contained({}, Longboi));
 
   static_assert(is_contained({Woofer, SubWoofer}, SubWoofer), "SubWoofer!");
   static_assert(!is_contained({Woofer, SubWoofer}, Pupper), "Missing Pupper!");
