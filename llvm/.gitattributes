@@ -22,7 +22,9 @@ test/MC/AsmParser/preserve-comments-crlf.s text eol=crlf
 test/tools/llvm-mca/X86/directives-handle-crlf.s text eol=crlf
 
 # These files must have LF line endings because the test requires exact matching
+test/Object/Inputs/*.tbd eol=lf
 test/tools/llvm-strings/radix.test text eol=lf
+test/tools/llvm-tapi-diff/Inputs/*.tbd text eol=lf
 test/tools/split-file/basic.test text eol=lf
 test/tools/split-file/Inputs/basic-*.txt eol=lf
 test/tools/split-file/basic.crlf.test text eol=crlf
