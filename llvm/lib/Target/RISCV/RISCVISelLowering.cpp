@@ -1064,8 +1064,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine({ISD::FCOPYSIGN, ISD::MGATHER, ISD::MSCATTER,
                          ISD::VP_GATHER, ISD::VP_SCATTER, ISD::SRA, ISD::SRL,
                          ISD::SHL, ISD::STORE, ISD::SPLAT_VECTOR});
-  if (Subtarget.hasVendorXTHeadMemPair())
-    setTargetDAGCombine({ISD::LOAD, ISD::STORE});
   if (Subtarget.useRVVForFixedLengthVectors())
     setTargetDAGCombine(ISD::BITCAST);
 
@@ -9766,145 +9764,6 @@ combineBinOp_VLToVWBinOp_VL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   return InputRootReplacement;
 }
 
-// Helper function for performMemPairCombine.
-// Try to combine the memory loads/stores LSNode1 and LSNode2
-// into a single memory pair operation.
-static SDValue tryMemPairCombine(SelectionDAG &DAG, LSBaseSDNode *LSNode1,
-                                 LSBaseSDNode *LSNode2, SDValue BasePtr,
-                                 uint64_t Imm) {
-  SmallPtrSet<const SDNode *, 32> Visited;
-  SmallVector<const SDNode *, 8> Worklist = {LSNode1, LSNode2};
-
-  if (SDNode::hasPredecessorHelper(LSNode1, Visited, Worklist) ||
-      SDNode::hasPredecessorHelper(LSNode2, Visited, Worklist))
-    return SDValue();
-
-  MachineFunction &MF = DAG.getMachineFunction();
-  const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
-
-  // The new operation has twice the width.
-  MVT XLenVT = Subtarget.getXLenVT();
-  EVT MemVT = LSNode1->getMemoryVT();
-  EVT NewMemVT = (MemVT == MVT::i32) ? MVT::i64 : MVT::i128;
-  MachineMemOperand *MMO = LSNode1->getMemOperand();
-  MachineMemOperand *NewMMO = MF.getMachineMemOperand(
-      MMO, MMO->getPointerInfo(), MemVT == MVT::i32 ? 8 : 16);
-
-  if (LSNode1->getOpcode() == ISD::LOAD) {
-    auto Ext = cast<LoadSDNode>(LSNode1)->getExtensionType();
-    unsigned Opcode;
-    if (MemVT == MVT::i32)
-      Opcode = (Ext == ISD::ZEXTLOAD) ? RISCVISD::TH_LWUD : RISCVISD::TH_LWD;
-    else
-      Opcode = RISCVISD::TH_LDD;
-
-    SDValue Res = DAG.getMemIntrinsicNode(
-        Opcode, SDLoc(LSNode1), DAG.getVTList({XLenVT, XLenVT, MVT::Other}),
-        {LSNode1->getChain(), BasePtr,
-         DAG.getConstant(Imm, SDLoc(LSNode1), XLenVT)},
-        NewMemVT, NewMMO);
-
-    SDValue Node1 =
-        DAG.getMergeValues({Res.getValue(0), Res.getValue(2)}, SDLoc(LSNode1));
-    SDValue Node2 =
-        DAG.getMergeValues({Res.getValue(1), Res.getValue(2)}, SDLoc(LSNode2));
-
-    DAG.ReplaceAllUsesWith(LSNode2, Node2.getNode());
-    return Node1;
-  } else {
-    unsigned Opcode = (MemVT == MVT::i32) ? RISCVISD::TH_SWD : RISCVISD::TH_SDD;
-
-    SDValue Res = DAG.getMemIntrinsicNode(
-        Opcode, SDLoc(LSNode1), DAG.getVTList(MVT::Other),
-        {LSNode1->getChain(), LSNode1->getOperand(1), LSNode2->getOperand(1),
-         BasePtr, DAG.getConstant(Imm, SDLoc(LSNode1), XLenVT)},
-        NewMemVT, NewMMO);
-
-    DAG.ReplaceAllUsesWith(LSNode2, Res.getNode());
-    return Res;
-  }
-}
-
-// Try to combine two adjacent loads/stores to a single pair instruction from
-// the XTHeadMemPair vendor extension.
-static SDValue performMemPairCombine(SDNode *N,
-                                     TargetLowering::DAGCombinerInfo &DCI) {
-  SelectionDAG &DAG = DCI.DAG;
-  MachineFunction &MF = DAG.getMachineFunction();
-  const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
-
-  // Target does not support load/store pair.
-  if (!Subtarget.hasVendorXTHeadMemPair())
-    return SDValue();
-
-  LSBaseSDNode *LSNode1 = cast<LSBaseSDNode>(N);
-  EVT MemVT = LSNode1->getMemoryVT();
-  unsigned OpNum = LSNode1->getOpcode() == ISD::LOAD ? 1 : 2;
-
-  // No volatile, indexed or atomic loads/stores.
-  if (!LSNode1->isSimple() || LSNode1->isIndexed())
-    return SDValue();
-
-  // Function to get a base + constant representation from a memory value.
-  auto ExtractBaseAndOffset = [](SDValue Ptr) -> std::pair<SDValue, uint64_t> {
-    if (Ptr->getOpcode() == ISD::ADD) {
-      if (auto *C1 = dyn_cast<ConstantSDNode>(Ptr->getOperand(1))) {
-        return {Ptr->getOperand(0), C1->getZExtValue()};
-      }
-    }
-    return {Ptr, 0};
-  };
-
-  auto [Base1, Offset1] = ExtractBaseAndOffset(LSNode1->getOperand(OpNum));
-
-  SDValue Chain = N->getOperand(0);
-  for (SDNode::use_iterator UI = Chain->use_begin(), UE = Chain->use_end();
-       UI != UE; ++UI) {
-    SDUse &Use = UI.getUse();
-    if (Use.getUser() != N && Use.getResNo() == 0 &&
-        Use.getUser()->getOpcode() == N->getOpcode()) {
-      LSBaseSDNode *LSNode2 = cast<LSBaseSDNode>(Use.getUser());
-
-      // No volatile, indexed or atomic loads/stores.
-      if (!LSNode2->isSimple() || LSNode2->isIndexed())
-        continue;
-
-      // Check if LSNode1 and LSNode2 have the same type and extension.
-      if (LSNode1->getOpcode() == ISD::LOAD)
-        if (cast<LoadSDNode>(LSNode2)->getExtensionType() !=
-            cast<LoadSDNode>(LSNode1)->getExtensionType())
-          continue;
-
-      if (LSNode1->getMemoryVT() != LSNode2->getMemoryVT())
-        continue;
-
-      auto [Base2, Offset2] = ExtractBaseAndOffset(LSNode2->getOperand(OpNum));
-
-      // Check if the base pointer is the same for both instruction.
-      if (Base1 != Base2)
-        continue;
-
-      // Check if the offsets match the XTHeadMemPair encoding contraints.
-      if (MemVT == MVT::i32) {
-        // Check for adjucent i32 values and a 2-bit index.
-        if ((Offset1 + 4 != Offset2) || !isShiftedUInt<2, 3>(Offset1))
-          continue;
-      } else {
-        // Check for adjucent i64 values and a 2-bit index.
-        if ((Offset1 + 8 != Offset2) || !isShiftedUInt<2, 4>(Offset1))
-          continue;
-      }
-
-      // Try to combine.
-      if (SDValue Res =
-              tryMemPairCombine(DAG, LSNode1, LSNode2, Base1, Offset1))
-        return Res;
-    }
-  }
-
-  return SDValue();
-}
-
 // Fold
 //   (fp_to_int (froundeven X)) -> fcvt X, rne
 //   (fp_to_int (ftrunc X))     -> fcvt X, rtz
@@ -10876,15 +10735,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     return DAG.getNode(NewOpcode, SDLoc(N), N->getValueType(0), A, B, C, Mask,
                        VL);
   }
-  case ISD::LOAD:
   case ISD::STORE: {
-    if (DCI.isAfterLegalizeDAG())
-      if (SDValue V = performMemPairCombine(N, DCI))
-        return V;
-
-    if (N->getOpcode() != ISD::STORE)
-      break;
-
     auto *Store = cast<StoreSDNode>(N);
     SDValue Val = Store->getValue();
     // Combine store of vmv.x.s/vfmv.f.s to vse with VL of 1.
@@ -13730,11 +13581,6 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(ORC_B)
   NODE_NAME_CASE(ZIP)
   NODE_NAME_CASE(UNZIP)
-  NODE_NAME_CASE(TH_LWD)
-  NODE_NAME_CASE(TH_LWUD)
-  NODE_NAME_CASE(TH_LDD)
-  NODE_NAME_CASE(TH_SWD)
-  NODE_NAME_CASE(TH_SDD)
   NODE_NAME_CASE(VMV_V_X_VL)
   NODE_NAME_CASE(VFMV_V_F_VL)
   NODE_NAME_CASE(VMV_X_S)
