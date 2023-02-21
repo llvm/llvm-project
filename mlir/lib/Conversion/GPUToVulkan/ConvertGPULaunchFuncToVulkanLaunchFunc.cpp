@@ -35,6 +35,7 @@ using namespace mlir;
 
 static constexpr const char *kSPIRVBlobAttrName = "spirv_blob";
 static constexpr const char *kSPIRVEntryPointAttrName = "spirv_entry_point";
+static constexpr const char *kSPIRVElementTypesAttrName = "spirv_element_types";
 static constexpr const char *kVulkanLaunch = "vulkanLaunch";
 
 namespace {
@@ -188,6 +189,18 @@ void ConvertGpuLaunchFuncToVulkanLaunchFunc::convertGpuLaunchFunc(
   // Set entry point name as an attribute.
   vulkanLaunchCallOp->setAttr(kSPIRVEntryPointAttrName,
                               launchOp.getKernelName());
+
+  // Add MemRef element types before they're lost when lowering to LLVM.
+  SmallVector<Type> elementTypes;
+  for (Type type : llvm::drop_begin(launchOp.getOperandTypes(),
+                                    gpu::LaunchOp::kNumConfigOperands)) {
+    // The below cast always succeeds as it has already been verified in
+    // 'declareVulkanLaunchFunc' that these are MemRefs with compatible element
+    // types.
+    elementTypes.push_back(type.cast<MemRefType>().getElementType());
+  }
+  vulkanLaunchCallOp->setAttr(kSPIRVElementTypesAttrName,
+                              builder.getTypeArrayAttr(elementTypes));
 
   launchOp.erase();
 }
