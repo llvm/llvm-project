@@ -255,5 +255,12 @@ Expected<ObjectProxy> HierarchicalTreeBuilder::create(ObjectStore &CAS) {
     T->Ref = ExpectedTree->getRef();
   }
 
-  return cantFail(CAS.getProxy(*Root.Ref));
+  Expected<ObjectProxy> Obj = cantFail(CAS.getProxy(*Root.Ref));
+#ifndef NDEBUG
+  if (Obj) {
+    if (Error E = CAS.validateTree(Obj->getRef()))
+      return std::move(E);
+  }
+#endif
+  return Obj;
 }

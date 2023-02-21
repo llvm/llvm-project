@@ -172,7 +172,7 @@ protected:
   /// Get ObjectRef from open file.
   virtual Expected<ObjectRef>
   storeFromOpenFileImpl(sys::fs::file_t FD,
-                        Optional<sys::fs::file_status> Status) = 0;
+                        Optional<sys::fs::file_status> Status);
 
   /// Get a lifetime-extended StringRef pointing at \p Data.
   ///
@@ -245,6 +245,9 @@ public:
     OS << toStringRef(Data);
     return Data.size();
   }
+
+  /// Validate the whole node tree.
+  Error validateTree(ObjectRef Ref);
 
   /// Print the ObjectStore internals for debugging purpose.
   virtual void print(raw_ostream &) const {}
