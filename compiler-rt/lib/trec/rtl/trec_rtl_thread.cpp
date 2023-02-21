@@ -89,7 +89,7 @@ bool ThreadContext::state_restore() {
 void ThreadContext::flush_trace() {
   char filepath[TREC_DIR_PATH_LEN];
 
-  open_dir_mutex.Lock();
+  ctx->open_dir_mutex.Lock();
   struct stat _st = {0};
   internal_snprintf(filepath, 2 * TREC_DIR_PATH_LEN - 1, "%s/trec_%llu",
                     ctx->trace_dir, internal_getpid(), tid);
@@ -99,7 +99,7 @@ void ThreadContext::flush_trace() {
     ctx->pid = internal_getpid();
     ctx->open_directory(ctx->trace_dir);
   }
-  open_dir_mutex.Unlock();
+  ctx->open_dir_mutex.Unlock();
 
   internal_snprintf(filepath, TREC_DIR_PATH_LEN - 1, "%s/trec_%d/trace/%d.bin",
                     ctx->trace_dir, internal_getpid(), this->tid);
@@ -129,7 +129,7 @@ void ThreadContext::flush_trace() {
 void ThreadContext::flush_metadata() {
   char filepath[TREC_DIR_PATH_LEN];
 
-  open_dir_mutex.Lock();
+  ctx->open_dir_mutex.Lock();
   struct stat _st = {0};
   internal_snprintf(filepath, 2 * TREC_DIR_PATH_LEN - 1, "%s/trec_%llu",
                     ctx->trace_dir, internal_getpid(), tid);
@@ -139,7 +139,7 @@ void ThreadContext::flush_metadata() {
     ctx->pid = internal_getpid();
     ctx->open_directory(ctx->trace_dir);
   }
-  open_dir_mutex.Unlock();
+  ctx->open_dir_mutex.Unlock();
 
   internal_snprintf(filepath, TREC_DIR_PATH_LEN - 1,
                     "%s/trec_%d/metadata/%d.bin", ctx->trace_dir,
@@ -176,7 +176,7 @@ void ThreadContext::flush_debug_info() {
     return;
   char filepath[TREC_DIR_PATH_LEN];
 
-  open_dir_mutex.Lock();
+  ctx->open_dir_mutex.Lock();
   struct stat _st = {0};
   internal_snprintf(filepath, 2 * TREC_DIR_PATH_LEN - 1, "%s/trec_%llu",
                     ctx->trace_dir, internal_getpid(), tid);
@@ -186,7 +186,7 @@ void ThreadContext::flush_debug_info() {
     ctx->pid = internal_getpid();
     ctx->open_directory(ctx->trace_dir);
   }
-  open_dir_mutex.Unlock();
+  ctx->open_dir_mutex.Unlock();
 
   internal_snprintf(filepath, TREC_DIR_PATH_LEN - 1, "%s/trec_%d/debug/%d.bin",
                     ctx->trace_dir, internal_getpid(), thr->tid);
@@ -276,7 +276,7 @@ void ThreadContext::flush_module() {
 void ThreadContext::flush_header() {
   char filepath[TREC_DIR_PATH_LEN];
 
-  open_dir_mutex.Lock();
+  ctx->open_dir_mutex.Lock();
   struct stat _st = {0};
   internal_snprintf(filepath, 2 * TREC_DIR_PATH_LEN - 1, "%s/trec_%llu",
                     ctx->trace_dir, internal_getpid(), tid);
@@ -286,7 +286,7 @@ void ThreadContext::flush_header() {
     ctx->pid = internal_getpid();
     ctx->open_directory(ctx->trace_dir);
   }
-  open_dir_mutex.Unlock();
+  ctx->open_dir_mutex.Unlock();
 
   internal_snprintf(filepath, TREC_DIR_PATH_LEN - 1, "%s/trec_%d/header/%d.bin",
                     ctx->trace_dir, internal_getpid(), thr->tid);

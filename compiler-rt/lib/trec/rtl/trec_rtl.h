@@ -204,7 +204,7 @@ class ThreadContext final : public ThreadContextBase {
   __trec_metadata::FuncExitMeta exit_meta;
   char dbg_temp_buffer[sizeof(__trec_debug_info::InstDebugInfo) + 512];
   __sanitizer::u64 dbg_temp_buffer_size;
-  Mutex open_dir_mutex;
+
 
   // Override superclass callbacks.
   void OnDead() override;
@@ -235,6 +235,7 @@ struct Context {
   atomic_uint32_t forked_cnt;
   char trace_dir[TREC_DIR_PATH_LEN];
   char *temp_dir_path;
+  Mutex open_dir_mutex;
 #if !SANITIZER_GO
   bool after_multithreaded_fork;
 #endif
