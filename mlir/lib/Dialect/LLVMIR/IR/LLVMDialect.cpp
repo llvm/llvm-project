@@ -2865,15 +2865,37 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     auto funcOp = dyn_cast<LLVM::LLVMFuncOp>(callable);
     if (!callOp || !funcOp)
       return false;
-    return isLegalToInlineCallAttributes(callOp) &&
-           isLegalToInlineFuncAttributes(funcOp);
+    // TODO: Handle argument and result attributes;
+    if (funcOp.getArgAttrs() || funcOp.getResAttrs())
+      return false;
+    // TODO: Handle exceptions.
+    if (funcOp.getPersonality())
+      return false;
+    if (funcOp.getPassthrough()) {
+      // TODO: Used attributes should not be passthrough.
+      DenseSet<StringAttr> disallowed(
+          {StringAttr::get(funcOp->getContext(), "noduplicate"),
+           StringAttr::get(funcOp->getContext(), "noinline"),
+           StringAttr::get(funcOp->getContext(), "optnone"),
+           StringAttr::get(funcOp->getContext(), "presplitcoroutine"),
+           StringAttr::get(funcOp->getContext(), "returns_twice"),
+           StringAttr::get(funcOp->getContext(), "strictfp")});
+      if (llvm::any_of(*funcOp.getPassthrough(), [&](Attribute attr) {
+            auto stringAttr = dyn_cast<StringAttr>(attr);
+            if (!stringAttr)
+              return false;
+            return disallowed.contains(stringAttr);
+          }))
+        return false;
+    }
+    return true;
   }
 
   bool isLegalToInline(Region *, Region *, bool, IRMapping &) const final {
     return true;
   }
 
-  /// Conservative allowlist-based inlining of operations supported so far.
+  /// Conservative allowlist of operations supported so far.
   bool isLegalToInline(Operation *op, Region *, bool, IRMapping &) const final {
     if (isPure(op))
       return true;
@@ -2933,53 +2955,6 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     // This is not implemented as a standalone pattern because we need to know
     // which newly inlined block was previously the entry block of the callee.
     moveConstantAllocasToEntryBlock(inlinedBlocks);
-  }
-
-private:
-  /// Returns true if all attributes of `callOp` are handled during inlining.
-  [[nodiscard]] static bool isLegalToInlineCallAttributes(LLVM::CallOp callOp) {
-    return all_of(callOp.getAttributeNames(), [&](StringRef attrName) {
-      return llvm::StringSwitch<bool>(attrName)
-          // TODO: Propagate and update branch weights.
-          .Case("branch_weights", !callOp.getBranchWeights())
-          .Case("callee", true)
-          .Case("fastmathFlags", true)
-          .Default(false);
-    });
-  }
-
-  /// Returns true if all attributes of `funcOp` are handled during inlining.
-  [[nodiscard]] static bool
-  isLegalToInlineFuncAttributes(LLVM::LLVMFuncOp funcOp) {
-    return all_of(funcOp.getAttributeNames(), [&](StringRef attrName) {
-      return llvm::StringSwitch<bool>(attrName)
-          .Case("CConv", true)
-          .Case("arg_attrs", ([&]() {
-                  if (!funcOp.getArgAttrs())
-                    return true;
-                  return llvm::all_of(funcOp.getArgAttrs().value(),
-                                      [&](Attribute) {
-                                        // TODO: Handle argument attributes.
-                                        return false;
-                                      });
-                })())
-          .Case("dso_local", true)
-          .Case("function_entry_count", true)
-          .Case("function_type", true)
-          // TODO: Once the garbage collector attribute is supported on
-          // LLVM::CallOp, make sure that the garbage collector matches.
-          .Case("garbageCollector", !funcOp.getGarbageCollector())
-          .Case("linkage", true)
-          .Case("memory", true)
-          .Case("passthrough", !funcOp.getPassthrough())
-          // Exception handling is not yet supported, so bail out if the
-          // personality is set.
-          .Case("personality", !funcOp.getPersonality())
-          // TODO: Handle result attributes.
-          .Case("res_attrs", !funcOp.getResAttrs())
-          .Case("sym_name", true)
-          .Default(false);
-    });
   }
 };
 } // end anonymous namespace
