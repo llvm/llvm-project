@@ -14316,6 +14316,12 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
     if (S.SourceMgr.isInSystemMacro(CC))
       return;
 
+    if (SourceBT && SourceBT->isInteger() && TargetBT &&
+        TargetBT->isInteger() &&
+        Source->isSignedIntegerType() == Target->isSignedIntegerType()) {
+      return;
+    }
+
     unsigned DiagID = diag::warn_impcast_integer_sign;
 
     // Traditionally, gcc has warned about this under -Wsign-compare.

@@ -16,6 +16,7 @@ declare i32 @fn3()
 define void @stores_single_use_gep_constexpr() {
 ; CHECK-LABEL: @stores_single_use_gep_constexpr(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store ptr @fn0, ptr @global.20ptr, align 8
 ; CHECK-NEXT:    store ptr @fn1, ptr getelementptr inbounds ([[STRUCT_GLOBAL_20PTR:%.*]], ptr @global.20ptr, i64 0, i32 1), align 8
 ; CHECK-NEXT:    store ptr @fn2, ptr getelementptr inbounds ([[STRUCT_GLOBAL_20PTR]], ptr @global.20ptr, i64 0, i32 2), align 8
 ; CHECK-NEXT:    store ptr @fn3, ptr getelementptr inbounds ([[STRUCT_GLOBAL_20PTR]], ptr @global.20ptr, i64 0, i32 3), align 8
@@ -66,3 +67,25 @@ entry:
   ret void
 }
 
+define void @stores_ptrtoint_constexpr() {
+; CHECK-LABEL: @stores_ptrtoint_constexpr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i32 0, ptr @global.20ptr, align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i32 0, ptr inttoptr (i64 ptrtoint (ptr @global.20ptr to i64) to ptr), align 8
+  ret void
+}
+
+
+@global2.20ptr = internal unnamed_addr global %struct.global.20ptr zeroinitializer
+
+define i1 @icmp_constexpr() {
+; CHECK-LABEL: @icmp_constexpr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i1 icmp eq (ptr @global.20ptr, ptr @global2.20ptr)
+;
+entry:
+  ret i1 icmp eq (ptr @global.20ptr, ptr @global2.20ptr)
+}
