@@ -1064,6 +1064,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine({ISD::FCOPYSIGN, ISD::MGATHER, ISD::MSCATTER,
                          ISD::VP_GATHER, ISD::VP_SCATTER, ISD::SRA, ISD::SRL,
                          ISD::SHL, ISD::STORE, ISD::SPLAT_VECTOR});
+  if (Subtarget.hasVendorXTHeadMemPair())
+    setTargetDAGCombine({ISD::LOAD, ISD::STORE});
   if (Subtarget.useRVVForFixedLengthVectors())
     setTargetDAGCombine(ISD::BITCAST);
 
@@ -3227,6 +3229,78 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlidedown(const SDLoc &DL, MVT VT,
       DAG.getConstant(0, DL, XLenVT));
 }
 
+// Given two input vectors of <[vscale x ]n x ty>, use vwaddu.vv and vwmaccu.vx
+// to create an interleaved vector of <[vscale x] n*2 x ty>.
+// This requires that the size of ty is less than the subtarget's maximum ELEN.
+static SDValue getWideningInterleave(SDValue EvenV, SDValue OddV, SDLoc &DL,
+                                     SelectionDAG &DAG,
+                                     const RISCVSubtarget &Subtarget) {
+  MVT VecVT = EvenV.getSimpleValueType();
+  MVT VecContainerVT = VecVT; // <vscale x n x ty>
+  // Convert fixed vectors to scalable if needed
+  if (VecContainerVT.isFixedLengthVector()) {
+    VecContainerVT = getContainerForFixedLengthVector(DAG, VecVT, Subtarget);
+    EvenV = convertToScalableVector(VecContainerVT, EvenV, DAG, Subtarget);
+    OddV = convertToScalableVector(VecContainerVT, OddV, DAG, Subtarget);
+  }
+
+  assert(VecVT.getScalarSizeInBits() < Subtarget.getELEN());
+
+  // We're working with a vector of the same size as the resulting
+  // interleaved vector, but with half the number of elements and
+  // twice the SEW (Hence the restriction on not using the maximum
+  // ELEN)
+  MVT WideVT =
+      MVT::getVectorVT(MVT::getIntegerVT(VecVT.getScalarSizeInBits() * 2),
+                       VecVT.getVectorElementCount());
+  MVT WideContainerVT = WideVT; // <vscale x n x ty*2>
+  if (WideContainerVT.isFixedLengthVector())
+    WideContainerVT = getContainerForFixedLengthVector(DAG, WideVT, Subtarget);
+
+  // Bitcast the input vectors to integers in case they are FP
+  VecContainerVT = VecContainerVT.changeTypeToInteger();
+  EvenV = DAG.getBitcast(VecContainerVT, EvenV);
+  OddV = DAG.getBitcast(VecContainerVT, OddV);
+
+  auto [Mask, VL] = getDefaultVLOps(VecVT, VecContainerVT, DL, DAG, Subtarget);
+  SDValue Passthru = DAG.getUNDEF(WideContainerVT);
+
+  // Widen EvenV and OddV with 0s and add one copy of OddV to EvenV with
+  // vwaddu.vv
+  SDValue Interleaved = DAG.getNode(RISCVISD::VWADDU_VL, DL, WideContainerVT,
+                                    EvenV, OddV, Passthru, Mask, VL);
+
+  // Then get OddV * by 2^(VecVT.getScalarSizeInBits() - 1)
+  SDValue AllOnesVec = DAG.getSplatVector(
+      VecContainerVT, DL, DAG.getAllOnesConstant(DL, Subtarget.getXLenVT()));
+  SDValue OddsMul = DAG.getNode(RISCVISD::VWMULU_VL, DL, WideContainerVT, OddV,
+                                AllOnesVec, Passthru, Mask, VL);
+
+  // Add the two together so we get
+  //   (OddV * 0xff...ff) + (OddV + EvenV)
+  // = (OddV * 0x100...00) + EvenV
+  // = (OddV << VecVT.getScalarSizeInBits()) + EvenV
+  // Note the ADD_VL and VLMULU_VL should get selected as vwmaccu.vx
+  Interleaved = DAG.getNode(RISCVISD::ADD_VL, DL, WideContainerVT, Interleaved,
+                            OddsMul, Passthru, Mask, VL);
+
+  // Bitcast from <vscale x n * ty*2> to <vscale x 2*n x ty>
+  MVT ResultContainerVT = MVT::getVectorVT(
+      VecVT.getVectorElementType(), // Make sure to use original type
+      VecContainerVT.getVectorElementCount().multiplyCoefficientBy(2));
+  Interleaved = DAG.getBitcast(ResultContainerVT, Interleaved);
+
+  // Convert back to a fixed vector if needed
+  MVT ResultVT =
+      MVT::getVectorVT(VecVT.getVectorElementType(),
+                       VecVT.getVectorElementCount().multiplyCoefficientBy(2));
+  if (ResultVT.isFixedLengthVector())
+    Interleaved =
+        convertFromScalableVector(ResultVT, Interleaved, DAG, Subtarget);
+
+  return Interleaved;
+}
+
 static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
   SDValue V1 = Op.getOperand(0);
@@ -3385,62 +3459,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     OddV = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, OddV,
                        DAG.getConstant(OddSrc % Size, DL, XLenVT));
 
-    // Double the element width and halve the number of elements in an int type.
-    unsigned EltBits = VT.getScalarSizeInBits();
-    MVT WideIntEltVT = MVT::getIntegerVT(EltBits * 2);
-    MVT WideIntVT =
-        MVT::getVectorVT(WideIntEltVT, VT.getVectorNumElements() / 2);
-    // Convert this to a scalable vector. We need to base this on the
-    // destination size to ensure there's always a type with a smaller LMUL.
-    MVT WideIntContainerVT =
-        getContainerForFixedLengthVector(DAG, WideIntVT, Subtarget);
-
-    // Convert sources to scalable vectors with the same element count as the
-    // larger type.
-    MVT HalfContainerVT = MVT::getVectorVT(
-        VT.getVectorElementType(), WideIntContainerVT.getVectorElementCount());
-    EvenV = convertToScalableVector(HalfContainerVT, EvenV, DAG, Subtarget);
-    OddV = convertToScalableVector(HalfContainerVT, OddV, DAG, Subtarget);
-
-    // Cast sources to integer.
-    MVT IntEltVT = MVT::getIntegerVT(EltBits);
-    MVT IntHalfVT =
-        MVT::getVectorVT(IntEltVT, HalfContainerVT.getVectorElementCount());
-    EvenV = DAG.getBitcast(IntHalfVT, EvenV);
-    OddV = DAG.getBitcast(IntHalfVT, OddV);
-
-    // Freeze OddV since we use it twice and we need to be sure that the add and
-    // multiply see the same value.
-    OddV = DAG.getFreeze(OddV);
-
-    // Recreate TrueMask using the widened type's element count.
-    TrueMask = getAllOnesMask(HalfContainerVT, VL, DL, DAG);
-
-    // Widen EvenV and OddV with 0s and add one copy of OddV to EvenV.
-    SDValue Add =
-        DAG.getNode(RISCVISD::VWADDU_VL, DL, WideIntContainerVT, EvenV, OddV,
-                    DAG.getUNDEF(WideIntContainerVT), TrueMask, VL);
-    // Create 2^eltbits - 1 copies of OddV by multiplying by the largest
-    // integer.
-    SDValue Multiplier = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, IntHalfVT,
-                                     DAG.getUNDEF(IntHalfVT),
-                                     DAG.getAllOnesConstant(DL, XLenVT), VL);
-    SDValue WidenMul =
-        DAG.getNode(RISCVISD::VWMULU_VL, DL, WideIntContainerVT, OddV,
-                    Multiplier, DAG.getUNDEF(WideIntContainerVT), TrueMask, VL);
-    // Add the new copies to our previous addition giving us 2^eltbits copies of
-    // OddV. This is equivalent to shifting OddV left by eltbits. This should
-    // combine with the vwmulu.vv above to form vwmaccu.vv.
-    Add = DAG.getNode(RISCVISD::ADD_VL, DL, WideIntContainerVT, Add, WidenMul,
-                      DAG.getUNDEF(WideIntContainerVT), TrueMask, VL);
-    // Cast back to ContainerVT. We need to re-create a new ContainerVT in case
-    // WideIntContainerVT is a larger fractional LMUL than implied by the fixed
-    // vector VT.
-    ContainerVT =
-        MVT::getVectorVT(VT.getVectorElementType(),
-                         WideIntContainerVT.getVectorElementCount() * 2);
-    Add = DAG.getBitcast(ContainerVT, Add);
-    return convertFromScalableVector(VT, Add, DAG, Subtarget);
+    return getWideningInterleave(EvenV, OddV, DL, DAG, Subtarget);
   }
 
   // Detect shuffles which can be re-expressed as vector selects; these are
@@ -9636,6 +9655,143 @@ combineBinOp_VLToVWBinOp_VL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   return InputRootReplacement;
 }
 
+// Helper function for performMemPairCombine.
+// Try to combine the memory loads/stores LSNode1 and LSNode2
+// into a single memory pair operation.
+static SDValue tryMemPairCombine(SelectionDAG &DAG, LSBaseSDNode *LSNode1,
+                                 LSBaseSDNode *LSNode2, SDValue BasePtr,
+                                 uint64_t Imm) {
+  SmallPtrSet<const SDNode *, 32> Visited;
+  SmallVector<const SDNode *, 8> Worklist = {LSNode1, LSNode2};
+
+  if (SDNode::hasPredecessorHelper(LSNode1, Visited, Worklist) ||
+      SDNode::hasPredecessorHelper(LSNode2, Visited, Worklist))
+    return SDValue();
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
+
+  // The new operation has twice the width.
+  MVT XLenVT = Subtarget.getXLenVT();
+  EVT MemVT = LSNode1->getMemoryVT();
+  EVT NewMemVT = (MemVT == MVT::i32) ? MVT::i64 : MVT::i128;
+  MachineMemOperand *MMO = LSNode1->getMemOperand();
+  MachineMemOperand *NewMMO = MF.getMachineMemOperand(
+      MMO, MMO->getPointerInfo(), MemVT == MVT::i32 ? 8 : 16);
+
+  if (LSNode1->getOpcode() == ISD::LOAD) {
+    auto Ext = cast<LoadSDNode>(LSNode1)->getExtensionType();
+    unsigned Opcode;
+    if (MemVT == MVT::i32)
+      Opcode = (Ext == ISD::ZEXTLOAD) ? RISCVISD::TH_LWUD : RISCVISD::TH_LWD;
+    else
+      Opcode = RISCVISD::TH_LDD;
+
+    SDValue Res = DAG.getMemIntrinsicNode(
+        Opcode, SDLoc(LSNode1), DAG.getVTList({XLenVT, XLenVT, MVT::Other}),
+        {LSNode1->getChain(), BasePtr,
+         DAG.getConstant(Imm, SDLoc(LSNode1), XLenVT)},
+        NewMemVT, NewMMO);
+
+    SDValue Node1 =
+        DAG.getMergeValues({Res.getValue(0), Res.getValue(2)}, SDLoc(LSNode1));
+    SDValue Node2 =
+        DAG.getMergeValues({Res.getValue(1), Res.getValue(2)}, SDLoc(LSNode2));
+
+    DAG.ReplaceAllUsesWith(LSNode2, Node2.getNode());
+    return Node1;
+  } else {
+    unsigned Opcode = (MemVT == MVT::i32) ? RISCVISD::TH_SWD : RISCVISD::TH_SDD;
+
+    SDValue Res = DAG.getMemIntrinsicNode(
+        Opcode, SDLoc(LSNode1), DAG.getVTList(MVT::Other),
+        {LSNode1->getChain(), LSNode1->getOperand(1), LSNode2->getOperand(1),
+         BasePtr, DAG.getConstant(Imm, SDLoc(LSNode1), XLenVT)},
+        NewMemVT, NewMMO);
+
+    DAG.ReplaceAllUsesWith(LSNode2, Res.getNode());
+    return Res;
+  }
+}
+
+// Try to combine two adjacent loads/stores to a single pair instruction from
+// the XTHeadMemPair vendor extension.
+static SDValue performMemPairCombine(SDNode *N,
+                                     TargetLowering::DAGCombinerInfo &DCI) {
+  SelectionDAG &DAG = DCI.DAG;
+  MachineFunction &MF = DAG.getMachineFunction();
+  const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
+
+  // Target does not support load/store pair.
+  if (!Subtarget.hasVendorXTHeadMemPair())
+    return SDValue();
+
+  LSBaseSDNode *LSNode1 = cast<LSBaseSDNode>(N);
+  EVT MemVT = LSNode1->getMemoryVT();
+  unsigned OpNum = LSNode1->getOpcode() == ISD::LOAD ? 1 : 2;
+
+  // No volatile, indexed or atomic loads/stores.
+  if (!LSNode1->isSimple() || LSNode1->isIndexed())
+    return SDValue();
+
+  // Function to get a base + constant representation from a memory value.
+  auto ExtractBaseAndOffset = [](SDValue Ptr) -> std::pair<SDValue, uint64_t> {
+    if (Ptr->getOpcode() == ISD::ADD)
+      if (auto *C1 = dyn_cast<ConstantSDNode>(Ptr->getOperand(1)))
+        return {Ptr->getOperand(0), C1->getZExtValue()};
+    return {Ptr, 0};
+  };
+
+  auto [Base1, Offset1] = ExtractBaseAndOffset(LSNode1->getOperand(OpNum));
+
+  SDValue Chain = N->getOperand(0);
+  for (SDNode::use_iterator UI = Chain->use_begin(), UE = Chain->use_end();
+       UI != UE; ++UI) {
+    SDUse &Use = UI.getUse();
+    if (Use.getUser() != N && Use.getResNo() == 0 &&
+        Use.getUser()->getOpcode() == N->getOpcode()) {
+      LSBaseSDNode *LSNode2 = cast<LSBaseSDNode>(Use.getUser());
+
+      // No volatile, indexed or atomic loads/stores.
+      if (!LSNode2->isSimple() || LSNode2->isIndexed())
+        continue;
+
+      // Check if LSNode1 and LSNode2 have the same type and extension.
+      if (LSNode1->getOpcode() == ISD::LOAD)
+        if (cast<LoadSDNode>(LSNode2)->getExtensionType() !=
+            cast<LoadSDNode>(LSNode1)->getExtensionType())
+          continue;
+
+      if (LSNode1->getMemoryVT() != LSNode2->getMemoryVT())
+        continue;
+
+      auto [Base2, Offset2] = ExtractBaseAndOffset(LSNode2->getOperand(OpNum));
+
+      // Check if the base pointer is the same for both instruction.
+      if (Base1 != Base2)
+        continue;
+
+      // Check if the offsets match the XTHeadMemPair encoding contraints.
+      if (MemVT == MVT::i32) {
+        // Check for adjacent i32 values and a 2-bit index.
+        if ((Offset1 + 4 != Offset2) || !isShiftedUInt<2, 3>(Offset1))
+          continue;
+      } else if (MemVT == MVT::i64) {
+        // Check for adjacent i64 values and a 2-bit index.
+        if ((Offset1 + 8 != Offset2) || !isShiftedUInt<2, 4>(Offset1))
+          continue;
+      }
+
+      // Try to combine.
+      if (SDValue Res =
+              tryMemPairCombine(DAG, LSNode1, LSNode2, Base1, Offset1))
+        return Res;
+    }
+  }
+
+  return SDValue();
+}
+
 // Fold
 //   (fp_to_int (froundeven X)) -> fcvt X, rne
 //   (fp_to_int (ftrunc X))     -> fcvt X, rtz
@@ -10605,7 +10761,15 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     return DAG.getNode(NewOpcode, SDLoc(N), N->getValueType(0), A, B, C, Mask,
                        VL);
   }
+  case ISD::LOAD:
   case ISD::STORE: {
+    if (DCI.isAfterLegalizeDAG())
+      if (SDValue V = performMemPairCombine(N, DCI))
+        return V;
+
+    if (N->getOpcode() != ISD::STORE)
+      break;
+
     auto *Store = cast<StoreSDNode>(N);
     SDValue Val = Store->getValue();
     // Combine store of vmv.x.s/vfmv.f.s to vse with VL of 1.
@@ -13435,6 +13599,11 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(ORC_B)
   NODE_NAME_CASE(ZIP)
   NODE_NAME_CASE(UNZIP)
+  NODE_NAME_CASE(TH_LWD)
+  NODE_NAME_CASE(TH_LWUD)
+  NODE_NAME_CASE(TH_LDD)
+  NODE_NAME_CASE(TH_SWD)
+  NODE_NAME_CASE(TH_SDD)
   NODE_NAME_CASE(VMV_V_X_VL)
   NODE_NAME_CASE(VFMV_V_F_VL)
   NODE_NAME_CASE(VMV_X_S)

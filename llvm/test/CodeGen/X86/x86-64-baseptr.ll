@@ -64,6 +64,79 @@ entry:
   ret void
 }
 
+define void @clobber_base() #0 {
+; CHECK-LABEL: clobber_base:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    movq %rsp, %rbp
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    andq $-128, %rsp
+; CHECK-NEXT:    subq $128, %rsp
+; CHECK-NEXT:    movq %rsp, %rbx
+; CHECK-NEXT:    callq helper@PLT
+; CHECK-NEXT:    movq %rsp, %rcx
+; CHECK-NEXT:    movl %eax, %eax
+; CHECK-NEXT:    leaq 31(,%rax,4), %rax
+; CHECK-NEXT:    andq $-32, %rax
+; CHECK-NEXT:    movq %rcx, %rdx
+; CHECK-NEXT:    subq %rax, %rdx
+; CHECK-NEXT:    movq %rdx, %rsp
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    movl $405, %ebx # imm = 0x195
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    movl $8, %edx
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    movl %edx, (%rbx)
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    movl $0, (%rcx,%rax)
+; CHECK-NEXT:    leaq -8(%rbp), %rsp
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    retq
+;
+; X32ABI-LABEL: clobber_base:
+; X32ABI:       # %bb.0: # %entry
+; X32ABI-NEXT:    pushq %rbp
+; X32ABI-NEXT:    movl %esp, %ebp
+; X32ABI-NEXT:    pushq %rbx
+; X32ABI-NEXT:    andl $-128, %esp
+; X32ABI-NEXT:    subl $128, %esp
+; X32ABI-NEXT:    movl %esp, %ebx
+; X32ABI-NEXT:    callq helper@PLT
+; X32ABI-NEXT:    # kill: def $eax killed $eax def $rax
+; X32ABI-NEXT:    leal 31(,%rax,4), %eax
+; X32ABI-NEXT:    andl $-32, %eax
+; X32ABI-NEXT:    movl %esp, %ecx
+; X32ABI-NEXT:    movl %ecx, %edx
+; X32ABI-NEXT:    subl %eax, %edx
+; X32ABI-NEXT:    negl %eax
+; X32ABI-NEXT:    movl %edx, %esp
+; X32ABI-NEXT:    movl $405, %ebx # imm = 0x195
+; X32ABI-NEXT:    #APP
+; X32ABI-NEXT:    nop
+; X32ABI-NEXT:    #NO_APP
+; X32ABI-NEXT:    movl $8, %edx
+; X32ABI-NEXT:    #APP
+; X32ABI-NEXT:    movl %edx, (%ebx)
+; X32ABI-NEXT:    #NO_APP
+; X32ABI-NEXT:    movl $0, (%ecx,%eax)
+; X32ABI-NEXT:    leal -8(%ebp), %esp
+; X32ABI-NEXT:    popq %rbx
+; X32ABI-NEXT:    popq %rbp
+; X32ABI-NEXT:    retq
+entry:
+  %k = call i32 @helper()
+  %a = alloca i32, align 128
+  %b = alloca i32, i32 %k, align 4
+  ; clobber base pointer register
+  tail call void asm sideeffect "nop", "{bx}"(i32 405)
+  call void asm sideeffect "movl $0, $1", "r,*m"(i32 8, ptr elementtype(i32) %a)
+  store i32 0, ptr %b, align 4
+  ret void
+}
+
 attributes #0 = { nounwind "frame-pointer"="all"}
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"override-stack-alignment", i32 32}

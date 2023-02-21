@@ -1400,6 +1400,8 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
   } else {
     // Subprogram declarations (part of the type hierarchy).
     CheckDI(!Unit, "subprogram declarations must not have a compile unit", &N);
+    CheckDI(!N.getRawDeclaration(),
+            "subprogram declaration must not have a declaration field");
   }
 
   if (auto *RawThrownTypes = N.getRawThrownTypes()) {

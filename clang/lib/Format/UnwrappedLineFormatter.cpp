@@ -1435,7 +1435,7 @@ void UnwrappedLineFormatter::formatFirstToken(
     Newlines = std::min(Newlines, 1u);
   }
   // Remove empty lines at the start of nested blocks (lambdas/arrow functions)
-  if (PreviousLine == nullptr && Line.Level > 0)
+  if (!PreviousLine && Line.Level > 0)
     Newlines = std::min(Newlines, 1u);
   if (Newlines == 0 && !RootToken.IsFirst)
     Newlines = 1;

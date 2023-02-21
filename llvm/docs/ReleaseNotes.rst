@@ -112,6 +112,8 @@ Changes to the RISC-V Backend
 * Adds support for the vendor-defined XTHeadBb (basic bit-manipulation) extension.
 * Adds support for the vendor-defined XTHeadBs (single-bit) extension.
 * Adds support for the vendor-defined XTHeadMac (multiply-accumulate instructions) extension.
+* Added support for the vendor-defined XTHeadMemPair (two-GPR memory operations)
+  extension disassembler/assembler.
 * Support for the now-ratified Zawrs extension is no longer experimental.
 
 Changes to the WebAssembly Backend

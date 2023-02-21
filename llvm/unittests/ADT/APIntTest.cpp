@@ -166,7 +166,7 @@ TEST(APIntTest, i128_PositiveCount) {
   EXPECT_EQ(96u, s128.countl_zero());
   EXPECT_EQ(0u, s128.countl_one());
   EXPECT_EQ(32u, s128.getActiveBits());
-  EXPECT_EQ(33u, s128.getMinSignedBits());
+  EXPECT_EQ(33u, s128.getSignificantBits());
   EXPECT_EQ(1u, s128.countr_zero());
   EXPECT_EQ(0u, s128.countr_one());
   EXPECT_EQ(30u, s128.popcount());
@@ -176,7 +176,7 @@ TEST(APIntTest, i128_PositiveCount) {
   EXPECT_EQ(0u, s128.countl_zero());
   EXPECT_EQ(66u, s128.countl_one());
   EXPECT_EQ(128u, s128.getActiveBits());
-  EXPECT_EQ(63u, s128.getMinSignedBits());
+  EXPECT_EQ(63u, s128.getSignificantBits());
   EXPECT_EQ(1u, s128.countr_zero());
   EXPECT_EQ(0u, s128.countr_one());
   EXPECT_EQ(96u, s128.popcount());
@@ -200,7 +200,7 @@ TEST(APIntTest, i256) {
   EXPECT_EQ(190u, s256.countl_zero());
   EXPECT_EQ(0u, s256.countl_one());
   EXPECT_EQ(66u, s256.getActiveBits());
-  EXPECT_EQ(67u, s256.getMinSignedBits());
+  EXPECT_EQ(67u, s256.getSignificantBits());
   EXPECT_EQ(0u, s256.countr_zero());
   EXPECT_EQ(4u, s256.countr_one());
   EXPECT_EQ(8u, s256.popcount());
@@ -209,7 +209,7 @@ TEST(APIntTest, i256) {
   EXPECT_EQ(0u, s256.countl_zero());
   EXPECT_EQ(196u, s256.countl_one());
   EXPECT_EQ(256u, s256.getActiveBits());
-  EXPECT_EQ(61u, s256.getMinSignedBits());
+  EXPECT_EQ(61u, s256.getSignificantBits());
   EXPECT_EQ(0u, s256.countr_zero());
   EXPECT_EQ(4u, s256.countr_one());
   EXPECT_EQ(200u, s256.popcount());
@@ -2759,7 +2759,7 @@ TEST(APIntTest, RoundingSDiv) {
       APInt QuoTowardZero = A.sdiv(B);
       {
         APInt Quo = APIntOps::RoundingSDiv(A, B, APInt::Rounding::UP);
-        if (A.srem(B).isNullValue()) {
+        if (A.srem(B).isZero()) {
           EXPECT_EQ(QuoTowardZero, Quo);
         } else if (A.isNegative() !=
                    B.isNegative()) { // if the math quotient is negative.
@@ -2770,7 +2770,7 @@ TEST(APIntTest, RoundingSDiv) {
       }
       {
         APInt Quo = APIntOps::RoundingSDiv(A, B, APInt::Rounding::DOWN);
-        if (A.srem(B).isNullValue()) {
+        if (A.srem(B).isZero()) {
           EXPECT_EQ(QuoTowardZero, Quo);
         } else if (A.isNegative() !=
                    B.isNegative()) { // if the math quotient is negative.
@@ -2929,12 +2929,12 @@ TEST(APIntTest, MultiplicativeInverseExaustive) {
               .multiplicativeInverse(APInt::getSignedMinValue(BitWidth + 1))
               .trunc(BitWidth);
       APInt One = V * MulInv;
-      if (!V.isNullValue() && V.countr_zero() == 0) {
+      if (!V.isZero() && V.countr_zero() == 0) {
         // Multiplicative inverse exists for all odd numbers.
-        EXPECT_TRUE(One.isOneValue());
+        EXPECT_TRUE(One.isOne());
       } else {
         // Multiplicative inverse does not exist for even numbers (and 0).
-        EXPECT_TRUE(MulInv.isNullValue());
+        EXPECT_TRUE(MulInv.isZero());
       }
     }
   }
@@ -3120,8 +3120,8 @@ TEST(APIntTest, ScaleBitMask) {
 
   EXPECT_EQ(APIntOps::ScaleBitMask(APInt(8, 0x00), 8), APInt(8, 0x00));
 
-  EXPECT_EQ(APIntOps::ScaleBitMask(APInt::getNullValue(1024), 4096),
-            APInt::getNullValue(4096));
+  EXPECT_EQ(APIntOps::ScaleBitMask(APInt::getZero(1024), 4096),
+            APInt::getZero(4096));
   EXPECT_EQ(APIntOps::ScaleBitMask(APInt::getAllOnes(4096), 256),
             APInt::getAllOnes(256));
   EXPECT_EQ(APIntOps::ScaleBitMask(APInt::getOneBitSet(4096, 32), 256),

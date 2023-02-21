@@ -95,7 +95,6 @@ void registerTestLastModifiedPass();
 void registerTestLinalgDecomposeOps();
 void registerTestLinalgElementwiseFusion();
 void registerTestLinalgGreedyFusion();
-void registerTestLinalgHoisting();
 void registerTestLinalgTransforms();
 void registerTestLivenessPass();
 void registerTestLoopFusion();
@@ -205,7 +204,6 @@ void registerTestPasses() {
   mlir::test::registerTestLinalgDecomposeOps();
   mlir::test::registerTestLinalgElementwiseFusion();
   mlir::test::registerTestLinalgGreedyFusion();
-  mlir::test::registerTestLinalgHoisting();
   mlir::test::registerTestLinalgTransforms();
   mlir::test::registerTestLivenessPass();
   mlir::test::registerTestLoopFusion();
