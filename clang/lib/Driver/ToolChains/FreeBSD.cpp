@@ -176,10 +176,8 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("/libexec/ld-elf.so.1");
     }
     const llvm::Triple &T = ToolChain.getTriple();
-    if (T.getOSMajorVersion() >= 9) {
-      if (Arch == llvm::Triple::arm || Arch == llvm::Triple::sparc || T.isX86())
-        CmdArgs.push_back("--hash-style=both");
-    }
+    if (Arch == llvm::Triple::arm || Arch == llvm::Triple::sparc || T.isX86())
+      CmdArgs.push_back("--hash-style=both");
     CmdArgs.push_back("--enable-new-dtags");
   }
 
@@ -396,17 +394,11 @@ FreeBSD::FreeBSD(const Driver &D, const llvm::Triple &Triple,
     getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib"));
 }
 
-ToolChain::CXXStdlibType FreeBSD::GetDefaultCXXStdlibType() const {
-  unsigned Major = getTriple().getOSMajorVersion();
-  if (Major >= 10 || Major == 0)
-    return ToolChain::CST_Libcxx;
-  return ToolChain::CST_Libstdcxx;
-}
-
 unsigned FreeBSD::GetDefaultDwarfVersion() const {
-  if (getTriple().getOSMajorVersion() < 12)
-    return 2;
-  return 4;
+  unsigned Major = getTriple().getOSMajorVersion();
+  if (Major >= 12 || Major == 0)
+    return 4;
+  return 2;
 }
 
 void FreeBSD::AddClangSystemIncludeArgs(
@@ -550,8 +542,9 @@ SanitizerMask FreeBSD::getSupportedSanitizers() const {
 void FreeBSD::addClangTargetOptions(const ArgList &DriverArgs,
                                     ArgStringList &CC1Args,
                                     Action::OffloadKind) const {
+  unsigned Major = getTriple().getOSMajorVersion();
   if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
                           options::OPT_fno_use_init_array,
-                          getTriple().getOSMajorVersion() >= 12))
+                          (Major >= 12 || Major == 0)))
     CC1Args.push_back("-fno-use-init-array");
 }
