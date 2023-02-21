@@ -2014,7 +2014,7 @@ void erase_value(Container &C, ValueType V) {
 /// C.insert(C.end(), R.begin(), R.end());
 template <typename Container, typename Range>
 inline void append_range(Container &C, Range &&R) {
-  C.insert(C.end(), R.begin(), R.end());
+  C.insert(C.end(), adl_begin(R), adl_end(R));
 }
 
 /// Given a sequence container Cont, replace the range [ContIt, ContEnd) with
