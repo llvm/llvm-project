@@ -2541,15 +2541,15 @@ float             f              unsigned long          ul             LONG     
 double            d              unsigned short int     usi            ULONG       ul
 char              c              unsigned short         us             ULONG32     ul32
 bool              b              unsigned int           ui             ULONG64     ul64
-_Bool             b              unsigned               u              ULONGLONG   ull
-int               i              long long int          lli            HANDLE      h
-size_t            n              long double            ld             INT         i
-short             s              long long              ll             INT8        i8
-signed            i              long int               li             INT16       i16
-unsigned          u              long                   l              INT32       i32
-long              l              ptrdiff_t              p              INT64       i64
-long long         ll                                                   UINT        ui
-unsigned long     ul                                                   UINT8       u8
+_Bool             b              unsigned char          uc             ULONGLONG   ull
+int               i              unsigned               u              HANDLE      h
+size_t            n              long long int          lli            INT         i
+short             s              long double            ld             INT8        i8
+signed            i              long long              ll             INT16       i16
+unsigned          u              long int               li             INT32       i32
+long              l              long                   l              INT64       i64
+long long         ll             ptrdiff_t              p              UINT        ui
+unsigned long     ul             void                   *none*         UINT8       u8
 long double       ld                                                   UINT16      u16
 ptrdiff_t         p                                                    UINT32      u32
 wchar_t           wc                                                   UINT64      u64

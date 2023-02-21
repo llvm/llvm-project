@@ -589,6 +589,11 @@ void ResultRange::replaceAllUsesWith(Operation *op) {
   replaceAllUsesWith(op->getResults());
 }
 
+void ResultRange::replaceUsesWithIf(
+    Operation *op, function_ref<bool(OpOperand &)> shouldReplace) {
+  replaceUsesWithIf(op->getResults(), shouldReplace);
+}
+
 //===----------------------------------------------------------------------===//
 // ValueRange
 

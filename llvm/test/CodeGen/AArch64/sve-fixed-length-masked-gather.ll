@@ -572,8 +572,8 @@ define void @masked_gather_v2f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_gather_v2f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr s1, [x0]
-; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    fcmeq v1.4h, v1.4h, #0.0
 ; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
 ; CHECK-NEXT:    fmov w8, s1

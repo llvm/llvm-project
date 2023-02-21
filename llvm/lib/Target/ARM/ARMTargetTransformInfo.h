@@ -325,6 +325,9 @@ public:
 
     return true;
   }
+
+  bool hasArmWideBranch(bool Thumb) const;
+
   /// @}
 };
 

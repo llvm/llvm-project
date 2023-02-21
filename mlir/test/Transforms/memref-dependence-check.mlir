@@ -1102,3 +1102,31 @@ func.func @affine_if_no_dependence() {
   }
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @affine_parallel_dep_check
+func.func @affine_parallel_dep_check() {
+  %memref_23 = memref.alloc() : memref<1x130xf32>
+  %memref_25 = memref.alloc() : memref<1x130x130xf32>
+  %cst = arith.constant 0.0 : f32
+  affine.parallel (%arg4, %arg5) = (0, 0) to (1, 130) {
+    affine.store %cst, %memref_25[%arg4, %arg5, 129] : memref<1x130x130xf32>
+    // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}
+    // expected-remark@above {{dependence from 0 to 0 at depth 2 = false}}
+    // expected-remark@above {{dependence from 0 to 0 at depth 3 = false}}
+    // expected-remark@above {{dependence from 0 to 1 at depth 1 = true}}
+  }
+  %memref_27 = memref.alloc() : memref<1x128x128xf32>
+  affine.parallel (%arg4) = (0) to (130) {
+    affine.parallel (%arg5, %arg6) = (0, 0) to (1, 130) {
+      affine.load %memref_25[0, %arg4 + %arg5, %arg6] : memref<1x130x130xf32>
+      // expected-remark@above {{dependence from 1 to 1 at depth 1 = false}}
+      // expected-remark@above {{dependence from 1 to 1 at depth 2 = false}}
+      // expected-remark@above {{dependence from 1 to 1 at depth 3 = false}}
+      // expected-remark@above {{dependence from 1 to 1 at depth 4 = false}}
+      // expected-remark@above {{dependence from 1 to 0 at depth 1 = false}}
+    }
+  }
+  return
+}

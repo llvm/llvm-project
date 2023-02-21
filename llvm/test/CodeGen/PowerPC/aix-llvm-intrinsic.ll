@@ -1,8 +1,8 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 -mattr=-altivec < %s | \
-; RUN:   FileCheck %s
+; RUN:   FileCheck --check-prefix=CHECK32 %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 -mattr=-altivec < %s | \
-; RUN:   FileCheck %s
+; RUN:   FileCheck --check-prefix=CHECK64 %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 \
 ; RUN:     -mattr=-altivec -filetype=obj -o %t.o < %s
@@ -33,9 +33,10 @@ declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
 ; CHECK-NEXT: # %bb.0:                                # %entry
 ; CHECK-NEXT:         mflr 0
 
-; CHECK:              bl .memset
-
-; CHECK:              .extern .memset
+; CHECK32:              bl .___memset
+; CHECK32:              .extern .___memset
+; CHECK64:              bl .___memset64
+; CHECK64:              .extern .___memset64
 
 ; CHECKSYM:        Symbol {
 ; CHECKSYM-NEXT:     Index: 0
@@ -49,7 +50,8 @@ declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
 ; CHECKSYM-NEXT:     Index: 1
-; CHECKSYM-NEXT:     Name: .memset
+; CHECKSYM32-NEXT:     Name: .___memset
+; CHECKSYM64-NEXT:     Name: .___memset64
 ; CHECKSYM-NEXT:     Value (RelocatableAddress): 0x0
 ; CHECKSYM-NEXT:     Section: N_UNDEF
 ; CHECKSYM-NEXT:     Type: 0x0
@@ -83,5 +85,5 @@ declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
 ; CHECKRELOC-NEXT:       10: 80 83 00 04                        lwz 4, 4(3)
 ; CHECKRELOC-NEXT:       14: 7c 85 23 78                        mr 5, 4
 ; CHECKRELOC-NEXT:       18: 4b ff ff e9                        bl 0x0
-; CHECKRELOC32-NEXT:    00000018:  R_RBR        (idx: 1) .memset[PR]
-; CHECKRELOC64-NEXT:    0000000000000018:  R_RBR	(idx: 1) .memset[PR]
+; CHECKRELOC32-NEXT:    00000018:  R_RBR        (idx: 1) .___memset[PR]
+; CHECKRELOC64-NEXT:    0000000000000018:  R_RBR	(idx: 1) .___memset64[PR]

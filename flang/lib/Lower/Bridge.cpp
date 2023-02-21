@@ -2854,13 +2854,20 @@ private:
               std::optional<Fortran::evaluate::DynamicType> lhsType =
                   assign.lhs.GetType();
               assert(lhsType && "lhs cannot be typeless");
+              std::optional<Fortran::evaluate::DynamicType> rhsType =
+                  assign.rhs.GetType();
 
-              // Assignment to polymorphic allocatables may require changing the
-              // variable dynamic type (See Fortran 2018 10.2.1.3 p3).
-              if ((lhsType->IsPolymorphic() ||
-                   lhsType->IsUnlimitedPolymorphic()) &&
-                  Fortran::lower::isWholeAllocatable(assign.lhs)) {
-                mlir::Value lhs = genExprMutableBox(loc, assign.lhs).getAddr();
+              // Assignment to/from polymorphic entities are done with the
+              // runtime.
+              if (lhsType->IsPolymorphic() ||
+                  lhsType->IsUnlimitedPolymorphic() ||
+                  rhsType->IsPolymorphic() ||
+                  rhsType->IsUnlimitedPolymorphic()) {
+                mlir::Value lhs;
+                if (Fortran::lower::isWholeAllocatable(assign.lhs))
+                  lhs = genExprMutableBox(loc, assign.lhs).getAddr();
+                else
+                  lhs = fir::getBase(genExprBox(loc, assign.lhs, stmtCtx));
                 mlir::Value rhs =
                     fir::getBase(genExprBox(loc, assign.rhs, stmtCtx));
                 fir::runtime::genAssign(*builder, loc, lhs, rhs);

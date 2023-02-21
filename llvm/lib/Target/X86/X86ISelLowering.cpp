@@ -50108,6 +50108,34 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+static SDValue combineOrXorWithSETCC(SDNode *N, SDValue N0, SDValue N1,
+                                     SelectionDAG &DAG) {
+  assert((N->getOpcode() == ISD::XOR || N->getOpcode() == ISD::OR) &&
+         "Unexpected opcode");
+
+  // Delegate to combineAddOrSubToADCOrSBB if we have:
+  //
+  //   (xor/or (zero_extend (setcc)) imm)
+  //
+  // where imm is odd if and only if we have xor, in which case the XOR/OR are
+  // equivalent to a SUB/ADD, respectively.
+  if (N0.getOpcode() == ISD::ZERO_EXTEND &&
+      N0.getOperand(0).getOpcode() == X86ISD::SETCC && N0.hasOneUse()) {
+    if (auto *N1C = dyn_cast<ConstantSDNode>(N1)) {
+      bool IsSub = N->getOpcode() == ISD::XOR;
+      bool N1COdd = N1C->getZExtValue() & 1;
+      if (IsSub ? N1COdd : !N1COdd) {
+        SDLoc DL(N);
+        EVT VT = N->getValueType(0);
+        if (SDValue R = combineAddOrSubToADCOrSBB(IsSub, DL, VT, N1, N0, DAG))
+          return R;
+      }
+    }
+  }
+
+  return SDValue();
+}
+
 static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
                          TargetLowering::DAGCombinerInfo &DCI,
                          const X86Subtarget &Subtarget) {
@@ -50254,6 +50282,9 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
   if (!Subtarget.hasBMI() && VT.isScalarInteger() && VT != MVT::i1)
     if (SDValue R = foldMaskedMerge(N, DAG))
       return R;
+
+  if (SDValue R = combineOrXorWithSETCC(N, N0, N1, DAG))
+    return R;
 
   return SDValue();
 }
@@ -52729,6 +52760,9 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue SetCC = foldXor1SetCC(N, DAG))
     return SetCC;
+
+  if (SDValue R = combineOrXorWithSETCC(N, N0, N1, DAG))
+    return R;
 
   if (SDValue RV = foldXorTruncShiftIntoCmp(N, DAG))
     return RV;

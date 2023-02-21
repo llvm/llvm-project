@@ -318,6 +318,10 @@ Value *simplifyConstrainedFPCall(CallBase *Call, const SimplifyQuery &Q);
 /// If not, this returns null.
 Value *simplifyFreezeInst(Value *Op, const SimplifyQuery &Q);
 
+/// Given a load instruction and its pointer operand, fold the result or return
+/// null.
+Value *simplifyLoadInst(LoadInst *LI, Value *PtrOp, const SimplifyQuery &Q);
+
 /// See if we can compute a simplified version of this instruction. If not,
 /// return null.
 Value *simplifyInstruction(Instruction *I, const SimplifyQuery &Q,

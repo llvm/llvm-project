@@ -50,6 +50,7 @@
 ; GCN-O0-NEXT:      Expand vector predication intrinsics
 ; GCN-O0-NEXT:      Scalarize Masked Memory Intrinsics
 ; GCN-O0-NEXT:      Expand reduction intrinsics
+; GCN-O0-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O0-NEXT:    AMDGPU Attributor
 ; GCN-O0-NEXT:      FunctionPass Manager
 ; GCN-O0-NEXT:        Cycle Info Analysis
@@ -235,6 +236,7 @@
 ; GCN-O1-NEXT:      Expand reduction intrinsics
 ; GCN-O1-NEXT:      Natural Loop Information
 ; GCN-O1-NEXT:      TLS Variable Hoist
+; GCN-O1-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O1-NEXT:    AMDGPU Attributor
 ; GCN-O1-NEXT:      FunctionPass Manager
 ; GCN-O1-NEXT:        Cycle Info Analysis
@@ -535,6 +537,7 @@
 ; GCN-O1-OPTS-NEXT:      Natural Loop Information
 ; GCN-O1-OPTS-NEXT:      TLS Variable Hoist
 ; GCN-O1-OPTS-NEXT:      Early CSE
+; GCN-O1-OPTS-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O1-OPTS-NEXT:    AMDGPU Attributor
 ; GCN-O1-OPTS-NEXT:      FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:        Cycle Info Analysis
@@ -847,6 +850,7 @@
 ; GCN-O2-NEXT:      Natural Loop Information
 ; GCN-O2-NEXT:      TLS Variable Hoist
 ; GCN-O2-NEXT:      Early CSE
+; GCN-O2-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O2-NEXT:    AMDGPU Attributor
 ; GCN-O2-NEXT:      FunctionPass Manager
 ; GCN-O2-NEXT:        Cycle Info Analysis
@@ -1172,6 +1176,7 @@
 ; GCN-O3-NEXT:      Lazy Block Frequency Analysis
 ; GCN-O3-NEXT:      Optimization Remark Emitter
 ; GCN-O3-NEXT:      Global Value Numbering
+; GCN-O3-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O3-NEXT:    AMDGPU Attributor
 ; GCN-O3-NEXT:      FunctionPass Manager
 ; GCN-O3-NEXT:        Cycle Info Analysis

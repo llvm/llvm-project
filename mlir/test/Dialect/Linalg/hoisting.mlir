@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-linalg-hoisting=test-hoist-redundant-transfers -allow-unregistered-dialect -split-input-file | FileCheck %s
+// RUN: mlir-opt  -test-transform-dialect-interpreter --split-input-file --allow-unregistered-dialect %s | FileCheck %s
 
 // CHECK-LABEL: func @hoist_vector_transfer_pairs(
 //  CHECK-SAME:   %[[MEMREF0:[a-zA-Z0-9]*]]: memref<?x?xf32>,
@@ -72,6 +72,14 @@ func.func @hoist_vector_transfer_pairs(
   }
   "unrelated_use"(%memref1) : (memref<?x?xf32>) -> ()
   return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["func.func"]} in %arg1
+    : (!pdl.operation) -> !pdl.operation
+  transform.structured.hoist_redundant_vector_transfers %0
+    : (!pdl.operation) -> !pdl.operation
 }
 
 // -----
@@ -155,6 +163,14 @@ func.func @hoist_vector_transfer_pairs_disjoint(
   return
 }
 
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["func.func"]} in %arg1
+    : (!pdl.operation) -> !pdl.operation
+  transform.structured.hoist_redundant_vector_transfers %0
+    : (!pdl.operation) -> !pdl.operation
+}
+
 // -----
 
 // CHECK-LABEL: func @hoist_vector_transfer_pairs_tensor
@@ -234,6 +250,14 @@ func.func @hoist_vector_transfer_pairs_tensor(
   return %0#0,  %0#1, %0#2, %0#3, %0#4,  %0#5 :
         tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>,
         tensor<?x?xf32>, tensor<?x?xf32>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["func.func"]} in %arg1
+    : (!pdl.operation) -> !pdl.operation
+  transform.structured.hoist_redundant_vector_transfers %0
+    : (!pdl.operation) -> !pdl.operation
 }
 
 // -----
@@ -321,6 +345,14 @@ func.func @hoist_vector_transfer_pairs_disjoint_tensor(
     scf.yield %1#0,  %1#1, %1#2, %1#3 : tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>
   }
   return %0#0,  %0#1, %0#2, %0#3 : tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["func.func"]} in %arg1
+    : (!pdl.operation) -> !pdl.operation
+  transform.structured.hoist_redundant_vector_transfers %0
+    : (!pdl.operation) -> !pdl.operation
 }
 
 // -----
@@ -432,6 +464,14 @@ func.func @hoist_vector_transfer_pairs_tensor_and_slices(
   return %0#0, %0#1, %0#2 : tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>
 }
 
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["func.func"]} in %arg1
+    : (!pdl.operation) -> !pdl.operation
+  transform.structured.hoist_redundant_vector_transfers %0
+    : (!pdl.operation) -> !pdl.operation
+}
+
 // -----
 
 // CHECK-LABEL: func @hoist_vector_transfer_write_pairs_disjoint_tensor(
@@ -469,6 +509,14 @@ func.func @hoist_vector_transfer_write_pairs_disjoint_tensor(
   return %1 : tensor<?x?xf32>
 }
 
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["func.func"]} in %arg1
+    : (!pdl.operation) -> !pdl.operation
+  transform.structured.hoist_redundant_vector_transfers %0
+    : (!pdl.operation) -> !pdl.operation
+}
+
 // -----
 
 // CHECK-LABEL: func @hoist_vector_transfer_pairs_in_affine_loops(
@@ -504,4 +552,12 @@ func.func @hoist_vector_transfer_pairs_in_affine_loops(%memref0: memref<64x64xi3
     }
   }
   return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["func.func"]} in %arg1
+    : (!pdl.operation) -> !pdl.operation
+  transform.structured.hoist_redundant_vector_transfers %0
+    : (!pdl.operation) -> !pdl.operation
 }
