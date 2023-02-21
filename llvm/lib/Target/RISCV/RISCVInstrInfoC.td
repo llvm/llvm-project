@@ -93,6 +93,8 @@ def c_lui_imm : Operand<XLenVT>,
   let ParserMatchClass = CLUIImmAsmOperand;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeCLUIImmOperand";
+  let OperandType = "OPERAND_CLUI_IMM";
+  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -173,6 +175,8 @@ def uimm9_lsb000 : Operand<XLenVT>,
   let ParserMatchClass = UImmAsmOperand<9, "Lsb000">;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeUImmOperand<9>";
+  let OperandType = "OPERAND_UIMM9_LSB000";
+  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
@@ -189,6 +193,8 @@ def uimm10_lsb00nonzero : Operand<XLenVT>,
   let ParserMatchClass = UImmAsmOperand<10, "Lsb00NonZero">;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeUImmNonZeroOperand<10>";
+  let OperandType = "OPERAND_UIMM10_LSB00_NONZERO";
+  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
