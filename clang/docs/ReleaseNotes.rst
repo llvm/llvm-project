@@ -83,7 +83,7 @@ C Language Changes
 ------------------
 - Support for outputs from asm goto statements along indirect edges has been
   added. This fixes
-  `Issue 53562 <https://github.com/llvm/llvm-project/issues/53562`_.
+  `Issue 53562 <https://github.com/llvm/llvm-project/issues/53562>`_.
 
 C2x Feature Support
 ^^^^^^^^^^^^^^^^^^^
