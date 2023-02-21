@@ -975,11 +975,6 @@ set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LLVM_TOOLS_BINARY_DIR} )
 set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LLVM_LIBRARY_DIR} )
 set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LLVM_LIBRARY_DIR} )
 
-if(LLVM_INCLUDE_TESTS)
-  include(GetErrcMessages)
-  get_errc_messages(LLVM_LIT_ERRC_MESSAGES)
-endif()
-
 # For up-to-date instructions for installing the TFLite dependency, refer to
 # the bot setup script: https://github.com/google/ml-compiler-opt/blob/main/buildbot/buildbot_init.sh
 set(LLVM_HAVE_TFLITE "" CACHE BOOL "Use tflite")
