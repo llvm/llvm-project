@@ -368,11 +368,13 @@ public:
   }
 
   static bool isVMEM(const MachineInstr &MI) {
-    return isMUBUF(MI) || isMTBUF(MI) || isMIMG(MI);
+    return isMUBUF(MI) || isMTBUF(MI) || isMIMG(MI) || isVSAMPLE(MI) ||
+           isVIMAGE(MI);
   }
 
   bool isVMEM(uint16_t Opcode) const {
-    return isMUBUF(Opcode) || isMTBUF(Opcode) || isMIMG(Opcode);
+    return isMUBUF(Opcode) || isMTBUF(Opcode) || isMIMG(Opcode) ||
+           isVSAMPLE(Opcode) || isVIMAGE(Opcode);
   }
 
   static bool isSOP1(const MachineInstr &MI) {
