@@ -86,7 +86,7 @@ function(_build_gpu_objects fq_target_name internal_target_name)
 
   # The packaged version will be built for every target GPU architecture. We do
   # this so we can support multiple accelerators on the same machine.
-  foreach(gpu_arch ${all_gpu_architectures})
+  foreach(gpu_arch ${LIBC_GPU_ARCHITECTURES})
     set(gpu_target_name ${fq_target_name}.${gpu_arch})
     set(compile_options ${ADD_GPU_OBJ_COMPILE_OPTIONS})
     # Derive the triple from the specified architecture.
