@@ -18,7 +18,6 @@
 #include <__type_traits/is_specialization.h>
 #include <__utility/pair.h>
 #include <tuple>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
