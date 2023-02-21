@@ -11,4 +11,3 @@ current-version: 1
 exports:
   - targets:              [ armv7k-watchos-simulator, arm64_32-watchos-simulator ]
     symbols:              [ '_sym1' ]
-...

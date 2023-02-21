@@ -47,4 +47,3 @@ undefineds:
     objc-ivars: []
     weak-symbols: []
     thread-local-symbols: []
-...
