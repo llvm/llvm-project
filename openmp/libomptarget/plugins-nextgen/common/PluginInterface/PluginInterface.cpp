@@ -16,6 +16,9 @@
 #include "omptarget.h"
 #include "omptargetplugin.h"
 
+#include "print_tracing.h"
+#include "trace.h"
+
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
@@ -30,6 +33,11 @@ using namespace target;
 using namespace plugin;
 
 GenericPluginTy *Plugin::SpecificPlugin = nullptr;
+
+namespace llvm::omp::target::plugin {
+// Used for kernel tracing implementation
+int PrintKernelTrace = 0;
+} // namespace llvm::omp::target::plugin
 
 // TODO: Fix any thread safety issues for multi-threaded kernel recording.
 struct RecordReplayTy {

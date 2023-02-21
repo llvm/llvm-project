@@ -67,6 +67,18 @@ inline std::atomic<uint32_t> &getInfoLevelInternal() {
       InfoLevel.store(std::stoi(EnvStr));
   });
 
+  static std::once_flag KTFlag{};
+  std::call_once(KTFlag, []() {
+    if (char *EnvStr = getenv("LIBOMPTARGET_KERNEL_TRACE")) {
+      auto V = std::stoi(EnvStr);
+      if (V == 1)
+        InfoLevel.store(OMP_INFOTYPE_PLUGIN_KERNEL);
+      if (V == 2)
+        InfoLevel.store(OMP_INFOTYPE_PLUGIN_KERNEL |
+                        /* OMP_INFOTYPE_API_TRACE */ 0xff000000);
+    }
+  });
+
   return InfoLevel;
 }
 
