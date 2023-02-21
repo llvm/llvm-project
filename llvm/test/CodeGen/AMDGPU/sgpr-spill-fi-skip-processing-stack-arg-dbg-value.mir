@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -amdgpu-spill-sgpr-to-vgpr=true -verify-machineinstrs -run-pass=si-lower-sgpr-spills,prologepilog -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -amdgpu-spill-sgpr-to-vgpr=true -verify-machineinstrs -run-pass=si-lower-sgpr-spills -o - %s | FileCheck %s
 
 # After handling the SGPR spill to VGPR in SILowerSGPRSpills pass, we replace the dead frame index in the DBG_VALUE instruction with reg 0.
 # Skip looking for frame indices in the debug value instruction for incoming arguments passed via stack. The test would crash otherwise.
@@ -45,7 +45,7 @@ machineFunctionInfo:
 body:             |
   ; CHECK-LABEL: name: test
   ; CHECK: bb.0:
-  ; CHECK:   DBG_VALUE $noreg, 0
+  ; CHECK:   DBG_VALUE
   bb.0:
     renamable $sgpr10 = IMPLICIT_DEF
     SI_SPILL_S32_SAVE killed $sgpr10, %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32

@@ -551,29 +551,28 @@ declare hidden void @ex() #0
 ; WAVE64-NEXT: .cfi_offset 2600, 0
 ; VGPR40_wave32 = 1576
 ; WAVE32-NEXT: .cfi_offset 1576, 0
-; CHECK-NEXT: buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; WAVE64: s_mov_b64 exec, [[EXEC_MASK]]
 ; WAVE32: s_mov_b32 exec_lo, [[EXEC_MASK]]
 
 ; CHECK-NOT: .cfi_{{.*}}
 
-; CHECK: v_writelane_b32 v41, [[FP_SCRATCH_COPY]], 0
+; CHECK: v_writelane_b32 v40, [[FP_SCRATCH_COPY]], 2
 
 ; DW_CFA_expression [0x10] SGPR33 ULEB128(65)=[0x41]
 ;   BLOCK_LENGTH ULEB128(5)=[0x05]
 ;     DW_OP_regx [0x90]
-;       VGPR41_wave64 ULEB128(2600)=[0xa9, 0x14]
+;       VGPR40_wave64 ULEB128(2600)=[0xa8, 0x14]
 ;     DW_OP_LLVM_offset_uconst [0xe4]
-;       OFFSET ULEB128(0x00) [0x00]
-; WAVE64-NEXT: .cfi_escape 0x10, 0x41, 0x05, 0x90, 0xa9, 0x14, 0xe4, 0x00
+;       OFFSET ULEB128(0x08) [0x08]
+; WAVE64-NEXT: .cfi_escape 0x10, 0x41, 0x05, 0x90, 0xa8, 0x14, 0xe4, 0x08
 
 ; DW_CFA_expression [0x10] SGPR33 ULEB128(65)=[0x41]
 ;   BLOCK_LENGTH ULEB128(5)=[0x05]
 ;     DW_OP_regx [0x90]
-;       VGPR41_wave32 ULEB128(1576)=[0xa9, 0x0c]
+;       VGPR40_wave32 ULEB128(1576)=[0xa8, 0x0c]
 ;     DW_OP_LLVM_offset_uconst [0xe4]
-;       OFFSET ULEB128(0x00) [0x00]
-; WAVE32-NEXT: .cfi_escape 0x10, 0x41, 0x05, 0x90, 0xa9, 0x0c, 0xe4, 0x00
+;       OFFSET ULEB128(0x08) [0x08]
+; WAVE32-NEXT: .cfi_escape 0x10, 0x41, 0x05, 0x90, 0xa8, 0x0c, 0xe4, 0x08
 
 ; CHECK-NOT: .cfi_{{.*}}
 
@@ -583,7 +582,7 @@ declare hidden void @ex() #0
 ; CHECK-NOT: .cfi_{{.*}}
 
 ; CHECK: s_addk_i32 s32,
-; CHECK: v_readlane_b32 [[FP_SCRATCH_COPY:s[0-9]+]], v41, 0
+; CHECK: v_readlane_b32 [[FP_SCRATCH_COPY:s[0-9]+]], v40, 2
 ; SGPR32 = 64
 ; CHECK: .cfi_def_cfa_register 64
 ; CHECK-NEXT: s_mov_b32 s33, [[FP_SCRATCH_COPY]]

@@ -30,38 +30,35 @@ body: |
   ; EXPANDED-LABEL: name: spill_restore_sgpr288
   ; EXPANDED: bb.0:
   ; EXPANDED-NEXT:   successors: %bb.1(0x80000000)
-  ; EXPANDED-NEXT:   liveins: $vgpr0
   ; EXPANDED-NEXT: {{  $}}
+  ; EXPANDED-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; EXPANDED-NEXT:   S_NOP 0, implicit-def renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12
-  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr4, 0, $vgpr0, implicit-def $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12, implicit $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12
-  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr5, 1, $vgpr0
-  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr6, 2, $vgpr0
-  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr7, 3, $vgpr0
-  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr8, 4, $vgpr0
-  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr9, 5, $vgpr0
-  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr10, 6, $vgpr0
-  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr11, 7, $vgpr0
-  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 killed $sgpr12, 8, $vgpr0, implicit killed $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12
+  ; EXPANDED-NEXT:   [[V_WRITELANE_B32_:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr4, 0, [[V_WRITELANE_B32_]], implicit-def $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12, implicit $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12
+  ; EXPANDED-NEXT:   [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr5, 1, [[V_WRITELANE_B32_1]]
+  ; EXPANDED-NEXT:   [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr6, 2, [[V_WRITELANE_B32_1]]
+  ; EXPANDED-NEXT:   [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr7, 3, [[V_WRITELANE_B32_1]]
+  ; EXPANDED-NEXT:   [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr8, 4, [[V_WRITELANE_B32_1]]
+  ; EXPANDED-NEXT:   [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr9, 5, [[V_WRITELANE_B32_1]]
+  ; EXPANDED-NEXT:   [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr10, 6, [[V_WRITELANE_B32_1]]
+  ; EXPANDED-NEXT:   [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr11, 7, [[V_WRITELANE_B32_1]]
+  ; EXPANDED-NEXT:   [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 killed $sgpr12, 8, [[V_WRITELANE_B32_1]], implicit killed $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12
   ; EXPANDED-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit undef $scc
   ; EXPANDED-NEXT: {{  $}}
   ; EXPANDED-NEXT: bb.1:
   ; EXPANDED-NEXT:   successors: %bb.2(0x80000000)
-  ; EXPANDED-NEXT:   liveins: $vgpr0
   ; EXPANDED-NEXT: {{  $}}
   ; EXPANDED-NEXT:   S_NOP 1
   ; EXPANDED-NEXT: {{  $}}
   ; EXPANDED-NEXT: bb.2:
-  ; EXPANDED-NEXT:   liveins: $vgpr0
-  ; EXPANDED-NEXT: {{  $}}
-  ; EXPANDED-NEXT:   $sgpr4 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12
-  ; EXPANDED-NEXT:   $sgpr5 = V_READLANE_B32 $vgpr0, 1
-  ; EXPANDED-NEXT:   $sgpr6 = V_READLANE_B32 $vgpr0, 2
-  ; EXPANDED-NEXT:   $sgpr7 = V_READLANE_B32 $vgpr0, 3
-  ; EXPANDED-NEXT:   $sgpr8 = V_READLANE_B32 $vgpr0, 4
-  ; EXPANDED-NEXT:   $sgpr9 = V_READLANE_B32 $vgpr0, 5
-  ; EXPANDED-NEXT:   $sgpr10 = V_READLANE_B32 $vgpr0, 6
-  ; EXPANDED-NEXT:   $sgpr11 = V_READLANE_B32 $vgpr0, 7
-  ; EXPANDED-NEXT:   $sgpr12 = V_READLANE_B32 $vgpr0, 8
+  ; EXPANDED-NEXT:   $sgpr4 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 0, implicit-def $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12
+  ; EXPANDED-NEXT:   $sgpr5 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 1
+  ; EXPANDED-NEXT:   $sgpr6 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 2
+  ; EXPANDED-NEXT:   $sgpr7 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 3
+  ; EXPANDED-NEXT:   $sgpr8 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 4
+  ; EXPANDED-NEXT:   $sgpr9 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 5
+  ; EXPANDED-NEXT:   $sgpr10 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 6
+  ; EXPANDED-NEXT:   $sgpr11 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 7
+  ; EXPANDED-NEXT:   $sgpr12 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 8
   ; EXPANDED-NEXT:   S_NOP 0, implicit killed renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12
   bb.0:
     S_NOP 0, implicit-def %0:sgpr_288

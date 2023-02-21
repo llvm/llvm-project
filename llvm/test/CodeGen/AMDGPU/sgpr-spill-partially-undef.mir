@@ -20,10 +20,11 @@ body:             |
     liveins: $sgpr4
 
     ; CHECK-LABEL: name: sgpr_spill_s64_undef_high32
-    ; CHECK: liveins: $sgpr4, $vgpr0
+    ; CHECK: liveins: $sgpr4
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr4, 0, $vgpr0, implicit-def $sgpr4_sgpr5, implicit $sgpr4_sgpr5
-    ; CHECK-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr5, 1, $vgpr0, implicit $sgpr4_sgpr5
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[V_WRITELANE_B32_:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr4, 0, [[V_WRITELANE_B32_]], implicit-def $sgpr4_sgpr5, implicit $sgpr4_sgpr5
+    ; CHECK-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr5, 1, [[V_WRITELANE_B32_1]], implicit $sgpr4_sgpr5
     SI_SPILL_S64_SAVE renamable $sgpr4_sgpr5, %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32 :: (store (s64) into %stack.0, align 4, addrspace 5)
 
 ...
@@ -45,10 +46,11 @@ body:             |
     liveins: $sgpr5
 
     ; CHECK-LABEL: name: sgpr_spill_s64_undef_low32
-    ; CHECK: liveins: $sgpr5, $vgpr0
+    ; CHECK: liveins: $sgpr5
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr4, 0, $vgpr0, implicit-def $sgpr4_sgpr5, implicit $sgpr4_sgpr5
-    ; CHECK-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr5, 1, $vgpr0, implicit $sgpr4_sgpr5
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[V_WRITELANE_B32_:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr4, 0, [[V_WRITELANE_B32_]], implicit-def $sgpr4_sgpr5, implicit $sgpr4_sgpr5
+    ; CHECK-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr5, 1, [[V_WRITELANE_B32_1]], implicit $sgpr4_sgpr5
     SI_SPILL_S64_SAVE renamable $sgpr4_sgpr5, %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32 :: (store (s64) into %stack.0, align 4, addrspace 5)
 
 ...

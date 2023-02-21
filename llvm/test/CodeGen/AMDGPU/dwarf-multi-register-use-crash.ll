@@ -453,11 +453,9 @@ define weak_odr void @test(i32 %0) !dbg !34 {
 ; CHECK-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 2600, 256
-; CHECK-NEXT:    buffer_store_dword v42, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 2602, 512
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
-; CHECK-NEXT:    v_writelane_b32 v42, s16, 0
-; CHECK-NEXT:    .cfi_escape 0x10, 0x41, 0x05, 0x90, 0xaa, 0x14, 0xe4, 0x00 ;
+; CHECK-NEXT:    v_writelane_b32 v40, s16, 16
+; CHECK-NEXT:    .cfi_escape 0x10, 0x41, 0x05, 0x90, 0xa8, 0x14, 0xe4, 0x40 ;
 ; CHECK-NEXT:    .cfi_def_cfa_register 65
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
@@ -544,10 +542,9 @@ define weak_odr void @test(i32 %0) !dbg !34 {
 ; CHECK-NEXT:    v_readlane_b32 s36, v40, 2
 ; CHECK-NEXT:    v_readlane_b32 s35, v40, 1
 ; CHECK-NEXT:    v_readlane_b32 s34, v40, 0
-; CHECK-NEXT:    v_readlane_b32 s4, v42, 0
+; CHECK-NEXT:    v_readlane_b32 s4, v40, 16
 ; CHECK-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[6:7]
 ; CHECK-NEXT:    s_addk_i32 s32, 0xfc00
 ; CHECK-NEXT:    .cfi_def_cfa_register 64
