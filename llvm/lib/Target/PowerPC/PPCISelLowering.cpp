@@ -4679,9 +4679,10 @@ static int CalculateTailCallSPDiff(SelectionDAG& DAG, bool isTailCall,
   return SPDiff;
 }
 
-static bool isFunctionGlobalAddress(SDValue Callee);
+static bool isFunctionGlobalAddress(const GlobalValue *CalleeGV);
 
-static bool callsShareTOCBase(const Function *Caller, SDValue Callee,
+static bool callsShareTOCBase(const Function *Caller,
+                              const GlobalValue *CalleeGV,
                               const TargetMachine &TM) {
   // It does not make sense to call callsShareTOCBase() with a caller that
   // is PC Relative since PC Relative callers do not have a TOC.
@@ -4695,23 +4696,20 @@ static bool callsShareTOCBase(const Function *Caller, SDValue Callee,
   // don't have enough information to determine if the caller and callee share
   // the same  TOC base, so we have to pessimistically assume they don't for
   // correctness.
-  GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee);
-  if (!G)
+  if (!CalleeGV)
     return false;
-
-  const GlobalValue *GV = G->getGlobal();
 
   // If the callee is preemptable, then the static linker will use a plt-stub
   // which saves the toc to the stack, and needs a nop after the call
   // instruction to convert to a toc-restore.
-  if (!TM.shouldAssumeDSOLocal(*Caller->getParent(), GV))
+  if (!TM.shouldAssumeDSOLocal(*Caller->getParent(), CalleeGV))
     return false;
 
   // Functions with PC Relative enabled may clobber the TOC in the same DSO.
   // We may need a TOC restore in the situation where the caller requires a
   // valid TOC but the callee is PC Relative and does not.
-  const Function *F = dyn_cast<Function>(GV);
-  const GlobalAlias *Alias = dyn_cast<GlobalAlias>(GV);
+  const Function *F = dyn_cast<Function>(CalleeGV);
+  const GlobalAlias *Alias = dyn_cast<GlobalAlias>(CalleeGV);
 
   // If we have an Alias we can try to get the function from there.
   if (Alias) {
@@ -4736,7 +4734,7 @@ static bool callsShareTOCBase(const Function *Caller, SDValue Callee,
   // replaced by another function at link time. The function that replaces
   // it may not share the same TOC as the caller since the callee may be
   // replaced by a PC Relative version of the same function.
-  if (!GV->isStrongDefinitionForLinker())
+  if (!CalleeGV->isStrongDefinitionForLinker())
     return false;
 
   // The medium and large code models are expected to provide a sufficiently
@@ -4749,10 +4747,10 @@ static bool callsShareTOCBase(const Function *Caller, SDValue Callee,
   // Any explicitly-specified sections and section prefixes must also match.
   // Also, if we're using -ffunction-sections, then each function is always in
   // a different section (the same is true for COMDAT functions).
-  if (TM.getFunctionSections() || GV->hasComdat() || Caller->hasComdat() ||
-      GV->getSection() != Caller->getSection())
+  if (TM.getFunctionSections() || CalleeGV->hasComdat() ||
+      Caller->hasComdat() || CalleeGV->getSection() != Caller->getSection())
     return false;
-  if (const auto *F = dyn_cast<Function>(GV)) {
+  if (const auto *F = dyn_cast<Function>(CalleeGV)) {
     if (F->getSectionPrefix() != Caller->getSectionPrefix())
       return false;
   }
@@ -4845,9 +4843,11 @@ areCallingConvEligibleForTCO_64SVR4(CallingConv::ID CallerCC,
 }
 
 bool PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
-    SDValue Callee, CallingConv::ID CalleeCC, const CallBase *CB, bool isVarArg,
+    const GlobalValue *CalleeGV, CallingConv::ID CalleeCC,
+    CallingConv::ID CallerCC, const CallBase *CB, bool isVarArg,
     const SmallVectorImpl<ISD::OutputArg> &Outs,
-    const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG) const {
+    const SmallVectorImpl<ISD::InputArg> &Ins, bool isByValArg,
+    const Function *CallerFunc, bool isCalleeExternalSymbol) const {
   bool TailCallOpt = getTargetMachine().Options.GuaranteedTailCallOpt;
 
   if (DisableSCO && !TailCallOpt) return false;
@@ -4855,13 +4855,13 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
   // Variadic argument functions are not supported.
   if (isVarArg) return false;
 
-  auto &Caller = DAG.getMachineFunction().getFunction();
   // Check that the calling conventions are compatible for tco.
-  if (!areCallingConvEligibleForTCO_64SVR4(Caller.getCallingConv(), CalleeCC))
+  if (!areCallingConvEligibleForTCO_64SVR4(CallerCC, CalleeCC))
     return false;
 
   // Caller contains any byval parameter is not supported.
-  if (any_of(Ins, [](const ISD::InputArg &IA) { return IA.Flags.isByVal(); }))
+  if (isByValArg ||
+      any_of(Ins, [](const ISD::InputArg &IA) { return IA.Flags.isByVal(); }))
     return false;
 
   // Callee contains any byval parameter is not supported, too.
@@ -4885,8 +4885,7 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
 
   // If callee and caller use different calling conventions, we cannot pass
   // parameters on stack since offsets for the parameter area may be different.
-  if (Caller.getCallingConv() != CalleeCC &&
-      needStackSlotPassParameters(Subtarget, Outs))
+  if (CallerCC != CalleeCC && needStackSlotPassParameters(Subtarget, Outs))
     return false;
 
   // All variants of 64-bit ELF ABIs without PC-Relative addressing require that
@@ -4899,12 +4898,12 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
   // applicable so this check is not required.
   // Check first for indirect calls.
   if (!Subtarget.isUsingPCRelativeCalls() &&
-      !isFunctionGlobalAddress(Callee) && !isa<ExternalSymbolSDNode>(Callee))
+      !isFunctionGlobalAddress(CalleeGV) && !isCalleeExternalSymbol)
     return false;
 
   // Check if we share the TOC base.
   if (!Subtarget.isUsingPCRelativeCalls() &&
-      !callsShareTOCBase(&Caller, Callee, getTargetMachine()))
+      !callsShareTOCBase(CallerFunc, CalleeGV, getTargetMachine()))
     return false;
 
   // TCO allows altering callee ABI, so we don't have to check further.
@@ -4919,7 +4918,7 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
   // PC Relative tail calls may not have a CallBase.
   // If there is no CallBase we cannot verify if we have the same argument
   // list so assume that we don't have the same argument list.
-  if (CB && !hasSameArgumentList(&Caller, *CB) &&
+  if (CB && !hasSameArgumentList(CallerFunc, *CB) &&
       needStackSlotPassParameters(Subtarget, Outs))
     return false;
   else if (!CB && needStackSlotPassParameters(Subtarget, Outs))
@@ -4931,12 +4930,10 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
 /// IsEligibleForTailCallOptimization - Check whether the call is eligible
 /// for tail call optimization. Targets which want to do tail call
 /// optimization should implement this function.
-bool
-PPCTargetLowering::IsEligibleForTailCallOptimization(SDValue Callee,
-                                                     CallingConv::ID CalleeCC,
-                                                     bool isVarArg,
-                                      const SmallVectorImpl<ISD::InputArg> &Ins,
-                                                     SelectionDAG& DAG) const {
+bool PPCTargetLowering::IsEligibleForTailCallOptimization(
+    const GlobalValue *CalleeGV, CallingConv::ID CalleeCC,
+    CallingConv::ID CallerCC, bool isVarArg,
+    const SmallVectorImpl<ISD::InputArg> &Ins, bool isByValArg) const {
   if (!getTargetMachine().Options.GuaranteedTailCallOpt)
     return false;
 
@@ -4944,14 +4941,11 @@ PPCTargetLowering::IsEligibleForTailCallOptimization(SDValue Callee,
   if (isVarArg)
     return false;
 
-  MachineFunction &MF = DAG.getMachineFunction();
-  CallingConv::ID CallerCC = MF.getFunction().getCallingConv();
   if (CalleeCC == CallingConv::Fast && CallerCC == CalleeCC) {
     // Functions containing by val parameters are not supported.
-    for (unsigned i = 0; i != Ins.size(); i++) {
-       ISD::ArgFlagsTy Flags = Ins[i].Flags;
-       if (Flags.isByVal()) return false;
-    }
+    if (isByValArg ||
+        any_of(Ins, [](const ISD::InputArg &IA) { return IA.Flags.isByVal(); }))
+      return false;
 
     // Non-PIC/GOT tail calls are supported.
     if (getTargetMachine().getRelocationModel() != Reloc::PIC_)
@@ -4959,9 +4953,9 @@ PPCTargetLowering::IsEligibleForTailCallOptimization(SDValue Callee,
 
     // At the moment we can only do local tail calls (in same module, hidden
     // or protected) if we are generating PIC.
-    if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee))
-      return G->getGlobal()->hasHiddenVisibility()
-          || G->getGlobal()->hasProtectedVisibility();
+    if (CalleeGV)
+      return CalleeGV->hasHiddenVisibility() ||
+             CalleeGV->hasProtectedVisibility();
   }
 
   return false;
@@ -5135,13 +5129,12 @@ PrepareTailCall(SelectionDAG &DAG, SDValue &InFlag, SDValue &Chain,
 
 // Is this global address that of a function that can be called by name? (as
 // opposed to something that must hold a descriptor for an indirect call).
-static bool isFunctionGlobalAddress(SDValue Callee) {
-  if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
-    if (Callee.getOpcode() == ISD::GlobalTLSAddress ||
-        Callee.getOpcode() == ISD::TargetGlobalTLSAddress)
+static bool isFunctionGlobalAddress(const GlobalValue *GV) {
+  if (GV) {
+    if (GV->isThreadLocal())
       return false;
 
-    return G->getGlobal()->getValueType()->isFunctionTy();
+    return GV->getValueType()->isFunctionTy();
   }
 
   return false;
@@ -5213,11 +5206,14 @@ SDValue PPCTargetLowering::LowerCallResult(
 
 static bool isIndirectCall(const SDValue &Callee, SelectionDAG &DAG,
                            const PPCSubtarget &Subtarget, bool isPatchPoint) {
+  auto *G = dyn_cast<GlobalAddressSDNode>(Callee);
+  const GlobalValue *GV = G ? G->getGlobal() : nullptr;
+
   // PatchPoint calls are not indirect.
   if (isPatchPoint)
     return false;
 
-  if (isFunctionGlobalAddress(Callee) || isa<ExternalSymbolSDNode>(Callee))
+  if (isFunctionGlobalAddress(GV) || isa<ExternalSymbolSDNode>(Callee))
     return false;
 
   // Darwin, and 32-bit ELF can use a BLA. The descriptor based ABIs can not
@@ -5262,7 +5258,7 @@ static unsigned getCallOpcode(PPCTargetLowering::CallFlags CFlags,
   } else if (Subtarget.isUsingPCRelativeCalls()) {
     assert(Subtarget.is64BitELFABI() && "PC Relative is only on ELF ABI.");
     RetOpc = PPCISD::CALL_NOTOC;
-  } else if (Subtarget.isAIXABI() || Subtarget.is64BitELFABI())
+  } else if (Subtarget.isAIXABI() || Subtarget.is64BitELFABI()) {
     // The ABIs that maintain a TOC pointer accross calls need to have a nop
     // immediately following the call instruction if the caller and callee may
     // have different TOC bases. At link time if the linker determines the calls
@@ -5271,9 +5267,11 @@ static unsigned getCallOpcode(PPCTargetLowering::CallFlags CFlags,
     // TOC pointer at an ABI designated offset in the linkage area and the
     // linker will rewrite the nop to be a load of the TOC pointer from the
     // linkage area into gpr2.
-    RetOpc = callsShareTOCBase(&Caller, Callee, TM) ? PPCISD::CALL
-                                                    : PPCISD::CALL_NOP;
-  else
+    auto *G = dyn_cast<GlobalAddressSDNode>(Callee);
+    const GlobalValue *GV = G ? G->getGlobal() : nullptr;
+    RetOpc =
+        callsShareTOCBase(&Caller, GV, TM) ? PPCISD::CALL : PPCISD::CALL_NOP;
+  } else
     RetOpc = PPCISD::CALL;
   if (IsStrictFPCall) {
     switch (RetOpc) {
@@ -5333,7 +5331,9 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
     return DAG.getMCSymbol(S, PtrVT);
   };
 
-  if (isFunctionGlobalAddress(Callee)) {
+  auto *G = dyn_cast<GlobalAddressSDNode>(Callee);
+  const GlobalValue *GV = G ? G->getGlobal() : nullptr;
+  if (isFunctionGlobalAddress(GV)) {
     const GlobalValue *GV = cast<GlobalAddressSDNode>(Callee)->getGlobal();
 
     if (Subtarget.isAIXABI()) {
@@ -5647,6 +5647,24 @@ SDValue PPCTargetLowering::FinishCall(
                          DAG, InVals);
 }
 
+bool PPCTargetLowering::isEligibleForTCO(
+    const GlobalValue *CalleeGV, CallingConv::ID CalleeCC,
+    CallingConv::ID CallerCC, const CallBase *CB, bool isVarArg,
+    const SmallVectorImpl<ISD::OutputArg> &Outs,
+    const SmallVectorImpl<ISD::InputArg> &Ins, bool isByValArg,
+    const Function *CallerFunc, bool isCalleeExternalSymbol) const {
+  if (Subtarget.useLongCalls() && !(CB && CB->isMustTailCall()))
+    return false;
+
+  if (Subtarget.isSVR4ABI() && Subtarget.isPPC64())
+    return IsEligibleForTailCallOptimization_64SVR4(
+        CalleeGV, CalleeCC, CallerCC, CB, isVarArg, Outs, Ins, isByValArg,
+        CallerFunc, isCalleeExternalSymbol);
+  else
+    return IsEligibleForTailCallOptimization(CalleeGV, CalleeCC, CallerCC,
+                                             isVarArg, Ins, isByValArg);
+}
+
 SDValue
 PPCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                              SmallVectorImpl<SDValue> &InVals) const {
@@ -5664,14 +5682,15 @@ PPCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   const CallBase *CB                    = CLI.CB;
 
   if (isTailCall) {
-    if (Subtarget.useLongCalls() && !(CB && CB->isMustTailCall()))
-      isTailCall = false;
-    else if (Subtarget.isSVR4ABI() && Subtarget.isPPC64())
-      isTailCall = IsEligibleForTailCallOptimization_64SVR4(
-          Callee, CallConv, CB, isVarArg, Outs, Ins, DAG);
-    else
-      isTailCall = IsEligibleForTailCallOptimization(Callee, CallConv, isVarArg,
-                                                     Ins, DAG);
+    MachineFunction &MF = DAG.getMachineFunction();
+    CallingConv::ID CallerCC = MF.getFunction().getCallingConv();
+    auto *G = dyn_cast<GlobalAddressSDNode>(Callee);
+    const GlobalValue *GV = G ? G->getGlobal() : nullptr;
+    bool IsCalleeExternalSymbol = isa<ExternalSymbolSDNode>(Callee);
+
+    isTailCall = isEligibleForTCO(GV, CallConv, CallerCC, CB, isVarArg, Outs,
+                                  Ins, false /*isByValArg*/,
+                                  &(MF.getFunction()), IsCalleeExternalSymbol);
     if (isTailCall) {
       ++NumTailCalls;
       if (!getTargetMachine().Options.GuaranteedTailCallOpt)
