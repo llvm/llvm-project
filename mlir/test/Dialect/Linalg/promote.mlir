@@ -67,9 +67,9 @@ func.func @matmul_f32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 //   CHECK-NOT:         memref.dealloc %[[tmpC]] : memref<24xi8>
 
 transform.sequence failures(propagate) {
-^bb0(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  %1 = transform.structured.promote %0 { use_alloca }
+^bb0(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.structured.promote %0 { use_alloca } : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -137,9 +137,9 @@ func.func @matmul_f64(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 //       CHECK:         memref.dealloc %[[tmpC_f64]] : memref<48xi8>
 
 transform.sequence failures(propagate) {
-^bb0(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  %1 = transform.structured.promote %0
+^bb0(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.structured.promote %0 : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -181,10 +181,10 @@ func.func @gemm_shared(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?
 
 
 transform.sequence failures(propagate) {
-^bb0(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  %1, %loops:3 = transform.structured.tile %0 [16, 16, 16] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation, !pdl.operation)
-  %2 = transform.structured.promote %1 { operands_to_promote = [0, 1], mapping = [#gpu.memory_space<workgroup>] }
+^bb0(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1, %loops:3 = transform.structured.tile %0 [16, 16, 16] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+  %2 = transform.structured.promote %1 { operands_to_promote = [0, 1], mapping = [#gpu.memory_space<workgroup>] } : (!transform.any_op) -> !transform.any_op
 }
 
 
@@ -223,10 +223,10 @@ func.func @gemm_private(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<
 
 
 transform.sequence failures(propagate) {
-^bb0(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  %1, %loops:3 = transform.structured.tile %0 [16, 16, 16] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation, !pdl.operation)
-  %2 = transform.structured.promote %1 { operands_to_promote = [0, 1], mapping = [#gpu.memory_space<private>] }
+^bb0(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1, %loops:3 = transform.structured.tile %0 [16, 16, 16] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+  %2 = transform.structured.promote %1 { operands_to_promote = [0, 1], mapping = [#gpu.memory_space<private>] } : (!transform.any_op) -> !transform.any_op
 }
 
 
@@ -271,7 +271,7 @@ func.func @promote_rank_reducing_subviews(%arg0:  memref<?x?x?x64xf32, strided<[
 }
 
 transform.sequence failures(propagate) {
-^bb0(%arg1: !pdl.operation):
-  %0 = transform.structured.match interface{LinalgOp} in %arg1 : (!pdl.operation) -> !pdl.operation
-  %1 = transform.structured.promote %0
+^bb0(%arg1: !transform.any_op):
+  %0 = transform.structured.match interface{LinalgOp} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.structured.promote %0 : (!transform.any_op) -> !transform.any_op
 }
