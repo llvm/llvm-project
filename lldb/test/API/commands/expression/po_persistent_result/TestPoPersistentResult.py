@@ -4,6 +4,7 @@ Test behavior of `po` and persistent results.
 
 import lldb
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test.decorators import *
 from lldbsuite.test import lldbutil
 
 
