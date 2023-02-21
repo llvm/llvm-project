@@ -231,13 +231,11 @@ define void @neg_consistent_fold4() {
 
 declare void @unknown(ptr)
 
-; TODO: Missing optimization
 define i1 @consistent_nocapture_inttoptr() {
 ; CHECK-LABEL: @consistent_nocapture_inttoptr(
 ; CHECK-NEXT:    [[M1:%.*]] = alloca [4 x i8], align 1
 ; CHECK-NEXT:    call void @unknown(ptr nocapture nonnull [[M1]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[M1]], inttoptr (i64 2048 to ptr)
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %m = alloca i8, i32 4
   call void @unknown(ptr nocapture %m)
@@ -261,14 +259,12 @@ define i1 @consistent_nocapture_offset() {
 }
 
 @gp = global ptr null, align 8
-; TODO: Missing optimization
+
 define i1 @consistent_nocapture_through_global() {
 ; CHECK-LABEL: @consistent_nocapture_through_global(
 ; CHECK-NEXT:    [[M1:%.*]] = alloca [4 x i8], align 1
 ; CHECK-NEXT:    call void @unknown(ptr nocapture nonnull [[M1]])
-; CHECK-NEXT:    [[LGP:%.*]] = load ptr, ptr @gp, align 8, !nonnull !0
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[M1]], [[LGP]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %m = alloca i8, i32 4
   call void @unknown(ptr nocapture %m)

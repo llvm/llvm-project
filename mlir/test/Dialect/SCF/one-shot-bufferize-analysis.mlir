@@ -707,11 +707,11 @@ func.func @read_of_bbarg_in_repetitive_region(
   scf.for %iv = %a to %b step %c {
     // Must bufferize out-of-place because definition of read is in a different
     // repetitive region.
-    // CHECK: tensor.extract_slice {{.*}} {__inplace_operands_attr__ = ["false"]}
+    // CHECK: tensor.extract_slice {{.*}} {__inplace_operands_attr__ = ["true"]}
     %2 = tensor.extract_slice %t[0][4][1] : tensor<10xf32> to tensor<4xf32>
     %3 = tensor.extract %2[%a] : tensor<4xf32>
     vector.print %3 : f32
-    // CHECK: tensor.insert {{.*}} {__inplace_operands_attr__ = ["none", "true", "none"]}
+    // CHECK: tensor.insert {{.*}} {__inplace_operands_attr__ = ["none", "false", "none"]}
     %4 = tensor.insert %cst into %2[%a] : tensor<4xf32>
     %5 = tensor.extract %4[%a] : tensor<4xf32>
     vector.print %5 : f32

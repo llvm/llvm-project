@@ -166,9 +166,8 @@ public:
   /// Build a VPReplicationRecipe for \p I and enclose it within a Region if it
   /// is predicated. \return \p VPBB augmented with this new recipe if \p I is
   /// not predicated, otherwise \return a new VPBasicBlock that succeeds the new
-  /// Region. Update the packing decision of predicated instructions if they
-  /// feed \p I. Range.End may be decreased to ensure same recipe behavior from
-  /// \p Range.Start to \p Range.End.
+  /// Region. Range.End may be decreased to ensure same recipe behavior from \p
+  /// Range.Start to \p Range.End.
   VPBasicBlock *handleReplication(Instruction *I, VFRange &Range,
                                   VPBasicBlock *VPBB, VPlan &Plan);
 
