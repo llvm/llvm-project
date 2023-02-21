@@ -158,11 +158,10 @@ class LLVM_PointerTo<Type pointee> : Type<
 
 // Type constraints accepting LLVM pointer type to integer of a specific width.
 class LLVM_IntPtrBase<int width, int addressSpace = 0> : Type<
-  LLVM_PointerTo<I<width>>.predicate,
-  "LLVM pointer to " # I<width>.summary>,
-  BuildableType<"::mlir::LLVM::LLVMPointerType::get("
-                "::mlir::IntegerType::get($_builder.getContext(), "
-                # width #"), "# addressSpace #")">;
+  And<[LLVM_PointerTo<I<width>>.predicate,
+       CPred<"$_self.cast<::mlir::LLVM::LLVMPointerType>().getAddressSpace()"
+             " == " # addressSpace>]>,
+  "LLVM pointer to " # I<width>.summary>;
 
 def LLVM_i8Ptr : LLVM_IntPtrBase<8>;
 
