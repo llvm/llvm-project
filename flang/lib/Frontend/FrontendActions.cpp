@@ -545,7 +545,8 @@ void CodeGenAction::generateLLVMIR() {
   pm.enableVerifier(/*verifyPasses=*/true);
 
   // Create the pass pipeline
-  fir::createMLIRToLLVMPassPipeline(pm, level, opts.StackArrays);
+  fir::createMLIRToLLVMPassPipeline(pm, level, opts.StackArrays,
+                                    opts.Underscoring);
   mlir::applyPassManagerCLOptions(pm);
 
   // run the pass manager
