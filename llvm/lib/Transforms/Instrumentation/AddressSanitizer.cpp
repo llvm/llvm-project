@@ -774,7 +774,7 @@ class ModuleAddressSanitizer {
 public:
   ModuleAddressSanitizer(Module &M, bool CompileKernel = false,
                          bool Recover = false, bool UseGlobalsGC = true,
-                         bool UseOdrIndicator = true,
+                         bool UseOdrIndicator = false,
                          AsanDtorKind DestructorKind = AsanDtorKind::Global,
                          AsanCtorKind ConstructorKind = AsanCtorKind::Global)
       : CompileKernel(ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan
