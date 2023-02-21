@@ -2656,6 +2656,33 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     }
   }
 
+  unsigned Opcode = Inst.getOpcode();
+
+  if (Opcode == RISCV::TH_LDD || Opcode == RISCV::TH_LWUD ||
+      Opcode == RISCV::TH_LWD || Opcode == RISCV::TH_SDD ||
+      Opcode == RISCV::TH_SWD) {
+    unsigned Rd1 = Inst.getOperand(0).getReg();
+    unsigned Rd2 = Inst.getOperand(1).getReg();
+    unsigned Rs1 = Inst.getOperand(2).getReg();
+    // The encoding with rd1 == rd2 == rs1 is reserved.
+    if (Rs1 == Rd1 && Rs1 == Rd2) {
+      SMLoc Loc = Operands[1]->getStartLoc();
+      return Error(Loc, "The source register and destination registers "
+                        "cannot be equal.");
+    }
+
+    bool IsWordOp = (Opcode == RISCV::TH_LWD || Opcode == RISCV::TH_LWUD ||
+                     Opcode == RISCV::TH_SWD);
+    // The last operand must be constant 3 or 4 depending on the data width.
+    if (IsWordOp && Inst.getOperand(4).getImm() != 3) {
+      SMLoc Loc = Operands.back()->getStartLoc();
+      return Error(Loc, "Operand must be constant 3.");
+    } else if (!IsWordOp && Inst.getOperand(4).getImm() != 4) {
+      SMLoc Loc = Operands.back()->getStartLoc();
+      return Error(Loc, "Operand must be constant 4.");
+    }
+  }
+
   const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
   RISCVII::VConstraintType Constraints = RISCVII::getConstraint(MCID.TSFlags);
   if (Constraints == RISCVII::NoConstraint)
@@ -2679,7 +2706,6 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
   if ((Constraints & RISCVII::VMConstraint) && (DestReg == RISCV::V0)) {
     // vadc, vsbc are special cases. These instructions have no mask register.
     // The destination register could not be V0.
-    unsigned Opcode = Inst.getOpcode();
     if (Opcode == RISCV::VADC_VVM || Opcode == RISCV::VADC_VXM ||
         Opcode == RISCV::VADC_VIM || Opcode == RISCV::VSBC_VVM ||
         Opcode == RISCV::VSBC_VXM || Opcode == RISCV::VFMERGE_VFM ||
