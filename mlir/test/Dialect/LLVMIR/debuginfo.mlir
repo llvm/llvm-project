@@ -30,10 +30,10 @@
   sizeInBits = 64, alignInBits = 32, offsetInBits = 4
 >
 
-// CHECK-DAG: #[[PTR1:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, name = "ptr1", baseType = #[[INT0]]>
+// CHECK-DAG: #[[PTR1:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, name = "ptr1">
 #ptr1 = #llvm.di_derived_type<
   // Specify the name parameter.
-  tag = DW_TAG_pointer_type, name = "ptr1", baseType = #int0
+  tag = DW_TAG_pointer_type, name = "ptr1"
 >
 
 // CHECK-DAG: #[[COMP0:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array0", line = 10, sizeInBits = 128, alignInBits = 32>
