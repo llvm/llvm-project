@@ -46,10 +46,8 @@ define i32 @f(i32 %A, i32 %B, i32 %C) {
 ; RV32XTHEADBB-LABEL: f:
 ; RV32XTHEADBB:       # %bb.0: # %entry
 ; RV32XTHEADBB-NEXT:    mul a0, a1, a0
-; RV32XTHEADBB-NEXT:    slli a1, a0, 26
-; RV32XTHEADBB-NEXT:    srli a1, a1, 28
-; RV32XTHEADBB-NEXT:    slli a0, a0, 20
-; RV32XTHEADBB-NEXT:    srli a0, a0, 25
+; RV32XTHEADBB-NEXT:    th.extu a1, a0, 5, 2
+; RV32XTHEADBB-NEXT:    th.extu a0, a0, 11, 5
 ; RV32XTHEADBB-NEXT:    mul a0, a1, a0
 ; RV32XTHEADBB-NEXT:    add a0, a0, a2
 ; RV32XTHEADBB-NEXT:    ret
@@ -68,10 +66,8 @@ define i32 @f(i32 %A, i32 %B, i32 %C) {
 ; RV32XTHEAD-LABEL: f:
 ; RV32XTHEAD:       # %bb.0: # %entry
 ; RV32XTHEAD-NEXT:    mul a0, a1, a0
-; RV32XTHEAD-NEXT:    slli a1, a0, 26
-; RV32XTHEAD-NEXT:    srli a1, a1, 28
-; RV32XTHEAD-NEXT:    slli a0, a0, 20
-; RV32XTHEAD-NEXT:    srli a0, a0, 25
+; RV32XTHEAD-NEXT:    th.extu a1, a0, 5, 2
+; RV32XTHEAD-NEXT:    th.extu a0, a0, 11, 5
 ; RV32XTHEAD-NEXT:    th.mulah a2, a1, a0
 ; RV32XTHEAD-NEXT:    mv a0, a2
 ; RV32XTHEAD-NEXT:    ret
@@ -111,22 +107,18 @@ define i32 @f(i32 %A, i32 %B, i32 %C) {
 ;
 ; RV64XTHEADBB-LABEL: f:
 ; RV64XTHEADBB:       # %bb.0: # %entry
-; RV64XTHEADBB-NEXT:    mulw a0, a1, a0
-; RV64XTHEADBB-NEXT:    slli a1, a0, 58
-; RV64XTHEADBB-NEXT:    srli a1, a1, 60
-; RV64XTHEADBB-NEXT:    slli a0, a0, 52
-; RV64XTHEADBB-NEXT:    srli a0, a0, 57
+; RV64XTHEADBB-NEXT:    mul a0, a1, a0
+; RV64XTHEADBB-NEXT:    th.extu a1, a0, 5, 2
+; RV64XTHEADBB-NEXT:    th.extu a0, a0, 11, 5
 ; RV64XTHEADBB-NEXT:    mulw a0, a1, a0
 ; RV64XTHEADBB-NEXT:    addw a0, a0, a2
 ; RV64XTHEADBB-NEXT:    ret
 ;
 ; RV64XTHEAD-LABEL: f:
 ; RV64XTHEAD:       # %bb.0: # %entry
-; RV64XTHEAD-NEXT:    mulw a0, a1, a0
-; RV64XTHEAD-NEXT:    slli a1, a0, 58
-; RV64XTHEAD-NEXT:    srli a1, a1, 60
-; RV64XTHEAD-NEXT:    slli a0, a0, 52
-; RV64XTHEAD-NEXT:    srli a0, a0, 57
+; RV64XTHEAD-NEXT:    mul a0, a1, a0
+; RV64XTHEAD-NEXT:    th.extu a1, a0, 5, 2
+; RV64XTHEAD-NEXT:    th.extu a0, a0, 11, 5
 ; RV64XTHEAD-NEXT:    th.mulah a2, a1, a0
 ; RV64XTHEAD-NEXT:    mv a0, a2
 ; RV64XTHEAD-NEXT:    ret
