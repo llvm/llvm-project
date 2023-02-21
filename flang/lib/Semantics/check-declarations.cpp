@@ -1918,7 +1918,7 @@ void CheckHelper::CheckProcBinding(
           if (isNopass) {
             if (!bindingChars->CanOverride(*overriddenChars, std::nullopt)) {
               SayWithDeclaration(*overridden,
-                  "A type-bound procedure and its override must have compatible interfaces"_err_en_US);
+                  "A NOPASS type-bound procedure and its override must have identical interfaces"_err_en_US);
             }
           } else if (!context_.HasError(binding.symbol())) {
             int passIndex{bindingChars->FindPassIndex(binding.passName())};
@@ -1930,7 +1930,7 @@ void CheckHelper::CheckProcBinding(
             } else if (!bindingChars->CanOverride(
                            *overriddenChars, passIndex)) {
               SayWithDeclaration(*overridden,
-                  "A type-bound procedure and its override must have compatible interfaces apart from their passed argument"_err_en_US);
+                  "A type-bound procedure and its override must have compatible interfaces"_err_en_US);
             }
           }
         }
