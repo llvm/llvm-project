@@ -795,10 +795,10 @@ bool SIRegisterInfo::needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
 
   int64_t FullOffset = Offset + getScratchInstrOffset(MI);
 
-  if (SIInstrInfo::isMUBUF(*MI))
-    return !SIInstrInfo::isLegalMUBUFImmOffset(FullOffset);
-
   const SIInstrInfo *TII = ST.getInstrInfo();
+  if (SIInstrInfo::isMUBUF(*MI))
+    return !TII->isLegalMUBUFImmOffset(FullOffset);
+
   return !TII->isLegalFLATOffset(FullOffset, AMDGPUAS::PRIVATE_ADDRESS,
                                  SIInstrFlags::FlatScratch);
 }
@@ -896,8 +896,7 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
   assert(SOffset->isImm() && SOffset->getImm() == 0);
 #endif
 
-  assert(SIInstrInfo::isLegalMUBUFImmOffset(NewOffset) &&
-         "offset should be legal");
+  assert(TII->isLegalMUBUFImmOffset(NewOffset) && "offset should be legal");
 
   FIOp->ChangeToRegister(BaseReg, false);
   OffsetOp->setImm(NewOffset);
@@ -911,10 +910,10 @@ bool SIRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
 
   int64_t NewOffset = Offset + getScratchInstrOffset(MI);
 
-  if (SIInstrInfo::isMUBUF(*MI))
-    return SIInstrInfo::isLegalMUBUFImmOffset(NewOffset);
-
   const SIInstrInfo *TII = ST.getInstrInfo();
+  if (SIInstrInfo::isMUBUF(*MI))
+    return TII->isLegalMUBUFImmOffset(NewOffset);
+
   return TII->isLegalFLATOffset(NewOffset, AMDGPUAS::PRIVATE_ADDRESS,
                                 SIInstrFlags::FlatScratch);
 }
@@ -1391,7 +1390,7 @@ void SIRegisterInfo::buildSpillLoadStore(
   bool IsOffsetLegal =
       IsFlat ? TII->isLegalFLATOffset(MaxOffset, AMDGPUAS::PRIVATE_ADDRESS,
                                       SIInstrFlags::FlatScratch)
-             : SIInstrInfo::isLegalMUBUFImmOffset(MaxOffset);
+             : TII->isLegalMUBUFImmOffset(MaxOffset);
   if (!IsOffsetLegal || (IsFlat && !SOffset && !ST.hasFlatScratchSTMode())) {
     SOffset = MCRegister();
 
@@ -2489,7 +2488,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           = TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm();
         int64_t NewOffset = OldImm + Offset;
 
-        if (SIInstrInfo::isLegalMUBUFImmOffset(NewOffset) &&
+        if (TII->isLegalMUBUFImmOffset(NewOffset) &&
             buildMUBUFOffsetLoadStore(ST, FrameInfo, MI, Index, NewOffset)) {
           MI->eraseFromParent();
           return true;

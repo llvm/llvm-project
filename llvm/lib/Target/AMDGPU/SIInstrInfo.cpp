@@ -8107,7 +8107,16 @@ const MCInstrDesc &SIInstrInfo::getKillTerminatorFromPseudo(unsigned Opcode) con
   }
 }
 
-unsigned SIInstrInfo::getMaxMUBUFImmOffset() { return (1 << 12) - 1; }
+bool SIInstrInfo::isLegalMUBUFImmOffset(unsigned Imm) const {
+  return Imm <= getMaxMUBUFImmOffset(ST);
+}
+
+unsigned SIInstrInfo::getMaxMUBUFImmOffset(const GCNSubtarget &ST) {
+  // GFX12 field is non-negative 24-bit signed byte offset.
+  const unsigned OffsetBits =
+      ST.getGeneration() >= AMDGPUSubtarget::GFX12 ? 23 : 12;
+  return (1 << OffsetBits) - 1;
+}
 
 void SIInstrInfo::fixImplicitOperands(MachineInstr &MI) const {
   if (!ST.isWave32())
@@ -8141,7 +8150,7 @@ bool SIInstrInfo::isBufferSMRD(const MachineInstr &MI) const {
 // offsets within the given alignment can be added to the resulting ImmOffset.
 bool SIInstrInfo::splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset,
                                    uint32_t &ImmOffset, Align Alignment) const {
-  const uint32_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset();
+  const uint32_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset(ST);
   const uint32_t MaxImm = alignDown(MaxOffset, Alignment.value());
   uint32_t Overflow = 0;
 

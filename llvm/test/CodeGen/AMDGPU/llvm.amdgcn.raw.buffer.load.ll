@@ -269,8 +269,7 @@ define amdgpu_ps <4 x float> @buffer_load_voffset_large_13bit(<4 x i32> inreg) {
 ;
 ; GFX12-LABEL: buffer_load_voffset_large_13bit:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_mov_b32_e32 v0, 0x1000
-; GFX12-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen offset:4092
+; GFX12-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], null offset:8188
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
@@ -302,8 +301,7 @@ define amdgpu_ps <4 x float> @buffer_load_voffset_large_16bit(<4 x i32> inreg) {
 ;
 ; GFX12-LABEL: buffer_load_voffset_large_16bit:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_mov_b32_e32 v0, 0xf000
-; GFX12-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen offset:4092
+; GFX12-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], null offset:65532
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
@@ -335,8 +333,7 @@ define amdgpu_ps <4 x float> @buffer_load_voffset_large_23bit(<4 x i32> inreg) {
 ;
 ; GFX12-LABEL: buffer_load_voffset_large_23bit:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_mov_b32_e32 v0, 0x7ff000
-; GFX12-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen offset:4092
+; GFX12-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], null offset:8388604
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
@@ -368,8 +365,8 @@ define amdgpu_ps <4 x float> @buffer_load_voffset_large_24bit(<4 x i32> inreg) {
 ;
 ; GFX12-LABEL: buffer_load_voffset_large_24bit:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_mov_b32_e32 v0, 0xfff000
-; GFX12-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen offset:4092
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0x800000
+; GFX12-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen offset:8388604
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:

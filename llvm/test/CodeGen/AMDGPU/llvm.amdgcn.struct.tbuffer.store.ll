@@ -444,8 +444,8 @@ define amdgpu_ps void @buffer_store_voffset_large_13bit(<4 x i32> inreg %rsrc, <
 ;
 ; GFX12-LABEL: buffer_store_voffset_large_13bit:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_dual_mov_b32 v5, 0x1000 :: v_dual_mov_b32 v4, 0
-; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v[4:5], s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offen offset:4092
+; GFX12-NEXT:    v_mov_b32_e32 v4, 0
+; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offset:8188
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 main_body:
@@ -489,8 +489,8 @@ define amdgpu_ps void @buffer_store_voffset_large_16bit(<4 x i32> inreg %rsrc, <
 ;
 ; GFX12-LABEL: buffer_store_voffset_large_16bit:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_dual_mov_b32 v5, 0xf000 :: v_dual_mov_b32 v4, 0
-; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v[4:5], s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offen offset:4092
+; GFX12-NEXT:    v_mov_b32_e32 v4, 0
+; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offset:65532
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 main_body:
@@ -534,8 +534,8 @@ define amdgpu_ps void @buffer_store_voffset_large_23bit(<4 x i32> inreg %rsrc, <
 ;
 ; GFX12-LABEL: buffer_store_voffset_large_23bit:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_dual_mov_b32 v5, 0x7ff000 :: v_dual_mov_b32 v4, 0
-; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v[4:5], s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offen offset:4092
+; GFX12-NEXT:    v_mov_b32_e32 v4, 0
+; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offset:8388604
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 main_body:
@@ -579,8 +579,8 @@ define amdgpu_ps void @buffer_store_voffset_large_24bit(<4 x i32> inreg %rsrc, <
 ;
 ; GFX12-LABEL: buffer_store_voffset_large_24bit:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_dual_mov_b32 v5, 0xfff000 :: v_dual_mov_b32 v4, 0
-; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v[4:5], s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offen offset:4092
+; GFX12-NEXT:    v_dual_mov_b32 v5, 0x800000 :: v_dual_mov_b32 v4, 0
+; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v[4:5], s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offen offset:8388604
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 main_body:
