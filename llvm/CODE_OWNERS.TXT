@@ -17,7 +17,7 @@ N: Matt Arsenault
 E: Matthew.Arsenault@amd.com
 E: arsenm2@gmail.com
 I: arsenm
-D: InferAddressSpaces
+D: AMDGPU, InferAddressSpaces
 
 N: Justin Bogner
 E: mail@justinbogner.com
@@ -226,7 +226,7 @@ D: BPF backend
 
 N: Tom Stellard
 E: tstellar@redhat.com
-D: Stable release management (x.y.[1-9] releases), AMDGPU Backend, libclc
+D: Stable release management (x.y.[1-9] releases), libclc
 
 N: Evgeniy Stepanov
 E: eugenis@google.com
