@@ -199,6 +199,48 @@ CommandObjectExpression::CommandOptions::GetDefinitions() {
   return llvm::ArrayRef(g_expression_options);
 }
 
+EvaluateExpressionOptions
+CommandObjectExpression::CommandOptions::GetEvaluateExpressionOptions(
+    const Target &target, const OptionGroupValueObjectDisplay &display_opts) {
+  EvaluateExpressionOptions options;
+  options.SetCoerceToId(display_opts.use_objc);
+  if (m_verbosity == eLanguageRuntimeDescriptionDisplayVerbosityCompact)
+    options.SetSuppressPersistentResult(display_opts.use_objc);
+  options.SetUnwindOnError(unwind_on_error);
+  options.SetIgnoreBreakpoints(ignore_breakpoints);
+  options.SetKeepInMemory(true);
+  options.SetUseDynamic(display_opts.use_dynamic);
+  options.SetTryAllThreads(try_all_threads);
+  options.SetDebug(debug);
+  options.SetLanguage(language);
+  options.SetExecutionPolicy(
+      allow_jit ? EvaluateExpressionOptions::default_execution_policy
+                : lldb_private::eExecutionPolicyNever);
+
+  bool auto_apply_fixits;
+  if (this->auto_apply_fixits == eLazyBoolCalculate)
+    auto_apply_fixits = target.GetEnableAutoApplyFixIts();
+  else
+    auto_apply_fixits = this->auto_apply_fixits == eLazyBoolYes;
+
+  options.SetAutoApplyFixIts(auto_apply_fixits);
+  options.SetRetriesWithFixIts(target.GetNumberOfRetriesWithFixits());
+
+  if (top_level)
+    options.SetExecutionPolicy(eExecutionPolicyTopLevel);
+
+  // If there is any chance we are going to stop and want to see what went
+  // wrong with our expression, we should generate debug info
+  if (!ignore_breakpoints || !unwind_on_error)
+    options.SetGenerateDebugInfo(true);
+
+  if (timeout > 0)
+    options.SetTimeout(std::chrono::microseconds(timeout));
+  else
+    options.SetTimeout(std::nullopt);
+  return options;
+}
+
 CommandObjectExpression::CommandObjectExpression(
     CommandInterpreter &interpreter)
     : CommandObjectRaw(interpreter, "expression",
@@ -439,7 +481,8 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
     return false;
   }
 
-  const EvaluateExpressionOptions options = GetEvalOptions(target);
+  const EvaluateExpressionOptions options =
+      m_command_options.GetEvaluateExpressionOptions(target, m_varobj_options);
   ExpressionResults success = target.EvaluateExpression(
       expr, frame, result_valobj_sp, options, &m_fixed_expression);
 

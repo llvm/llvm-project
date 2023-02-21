@@ -36,6 +36,8 @@ CommandObjectDWIMPrint::CommandObjectDWIMPrint(CommandInterpreter &interpreter)
                         OptionGroupFormat::OPTION_GROUP_FORMAT |
                             OptionGroupFormat::OPTION_GROUP_GDB_FMT,
                         LLDB_OPT_SET_1);
+  StringRef exclude_expr_options[] = {"debug", "top-level"};
+  m_option_group.Append(&m_expr_options, exclude_expr_options);
   m_option_group.Append(&m_varobj_options, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
   m_option_group.Finalize();
 }
@@ -57,11 +59,11 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
                                   m_cmd_name);
     return false;
   }
+
   auto verbosity = GetDebugger().GetDWIMPrintVerbosity();
 
   DumpValueObjectOptions dump_options = m_varobj_options.GetAsDumpOptions(
-      eLanguageRuntimeDescriptionDisplayVerbosityFull,
-      m_format_options.GetFormat());
+      m_expr_options.m_verbosity, m_format_options.GetFormat());
 
   // First, try `expr` as the name of a frame variable.
   if (StackFrame *frame = m_exe_ctx.GetFramePtr()) {
@@ -87,9 +89,12 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
     Target &target = target_ptr ? *target_ptr : GetDummyTarget();
 
     auto *exe_scope = m_exe_ctx.GetBestExecutionContextScope();
+    const EvaluateExpressionOptions eval_options =
+        m_expr_options.GetEvaluateExpressionOptions(target, m_varobj_options);
     ValueObjectSP valobj_sp;
-    if (target.EvaluateExpression(expr, exe_scope, valobj_sp) ==
-        eExpressionCompleted) {
+    ExpressionResults expr_result =
+        target.EvaluateExpression(expr, exe_scope, valobj_sp, eval_options);
+    if (expr_result == eExpressionCompleted) {
       if (verbosity != eDWIMPrintVerbosityNone) {
         StringRef flags;
         if (args.HasArgs())
