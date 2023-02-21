@@ -1292,6 +1292,9 @@ def op_sel_hi0 : NamedOperandU32Default0<"OpSelHi", NamedMatchClass<"OpSelHi">>;
 def neg_lo0 : NamedOperandU32Default0<"NegLo", NamedMatchClass<"NegLo">>;
 def neg_hi0 : NamedOperandU32Default0<"NegHi", NamedMatchClass<"NegHi">>;
 
+def IndexKey16bit : NamedOperandU32<"IndexKey16bit", NamedMatchClass<"IndexKey16bit">>;
+def IndexKey8bit : NamedOperandU32<"IndexKey8bit", NamedMatchClass<"IndexKey8bit">>;
+
 def dpp8 : NamedOperandU32<"DPP8", NamedMatchClass<"DPP8", 0>>;
 def dpp_ctrl : NamedOperandU32<"DPPCtrl", NamedMatchClass<"DPPCtrl", 0>>;
 
@@ -1533,6 +1536,10 @@ def VOP3PMods  : ComplexPattern<untyped, 2, "SelectVOP3PMods">;
 def VOP3PModsDOT  : ComplexPattern<untyped, 2, "SelectVOP3PModsDOT">;
 def DotIUVOP3PMods  : ComplexPattern<untyped, 1, "SelectDotIUVOP3PMods">;
 def WMMAOpSelVOP3PMods  : ComplexPattern<untyped, 1, "SelectWMMAOpSelVOP3PMods">;
+
+def WMMAVISrc  : ComplexPattern<untyped, 1, "SelectWMMAVISrc">;
+def SWMMACIndex8  : ComplexPattern<untyped, 2, "SelectSWMMACIndex8">;
+def SWMMACIndex16  : ComplexPattern<untyped, 2, "SelectSWMMACIndex16">;
 
 def VOP3OpSel  : ComplexPattern<untyped, 2, "SelectVOP3OpSel">;
 
@@ -2485,6 +2492,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit IsDOT = 0;
   field bit IsSingle = 0;
   field bit IsWMMA = 0;
+  field bit IsSWMMAC = 0;
 
   field bit HasDst = !ne(DstVT.Value, untyped.Value);
   field bit HasDst32 = HasDst;

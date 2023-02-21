@@ -242,6 +242,11 @@ private:
   bool SelectDotIUVOP3PMods(SDValue In, SDValue &Src) const;
   bool SelectWMMAOpSelVOP3PMods(SDValue In, SDValue &Src) const;
 
+  bool SelectWMMAVISrc(SDValue In, SDValue &Src) const;
+
+  bool SelectSWMMACIndex8(SDValue In, SDValue &Src, SDValue &IndexKey) const;
+  bool SelectSWMMACIndex16(SDValue In, SDValue &Src, SDValue &IndexKey) const;
+
   bool SelectVOP3OpSel(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
   bool SelectVOP3OpSelMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;

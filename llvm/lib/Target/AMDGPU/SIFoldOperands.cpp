@@ -193,6 +193,8 @@ bool SIFoldOperands::updateOperand(FoldCandidate &Fold) const {
   const uint64_t TSFlags = MI->getDesc().TSFlags;
   if (Fold.isImm()) {
     if (TSFlags & SIInstrFlags::IsPacked && !(TSFlags & SIInstrFlags::IsMAI) &&
+        !(TSFlags & SIInstrFlags::IsWMMA) &&
+        !(TSFlags & SIInstrFlags::IsSWMMAC) &&
         (!ST->hasDOTOpSelHazard() || !(TSFlags & SIInstrFlags::IsDOT)) &&
         AMDGPU::isFoldableLiteralV216(Fold.ImmToFold,
                                       ST->hasInv2PiInlineImm())) {
