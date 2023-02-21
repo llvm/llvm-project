@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -353,12 +355,23 @@ TEST(STLExtrasTest, EraseIf) {
 }
 
 TEST(STLExtrasTest, AppendRange) {
-  auto AppendVals = {3};
   std::vector<int> V = {1, 2};
-  append_range(V, AppendVals);
-  EXPECT_EQ(1, V[0]);
-  EXPECT_EQ(2, V[1]);
-  EXPECT_EQ(3, V[2]);
+  auto AppendVals1 = {3};
+  append_range(V, AppendVals1);
+  EXPECT_THAT(V, ElementsAre(1, 2, 3));
+
+  int AppendVals2[] = {4, 5};
+  append_range(V, AppendVals2);
+  EXPECT_THAT(V, ElementsAre(1, 2, 3, 4, 5));
+
+  append_range(V, llvm::seq(6, 8));
+  EXPECT_THAT(V, ElementsAre(1, 2, 3, 4, 5, 6, 7));
+
+  std::string Str;
+  append_range(Str, "abc");
+  EXPECT_THAT(Str, ElementsAre('a', 'b', 'c', '\0'));
+  append_range(Str, "def");
+  EXPECT_THAT(Str, ElementsAre('a', 'b', 'c', '\0', 'd', 'e', 'f', '\0'));
 }
 
 namespace some_namespace {
