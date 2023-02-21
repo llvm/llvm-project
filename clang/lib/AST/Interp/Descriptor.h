@@ -187,6 +187,8 @@ public:
 
   /// Checks if the descriptor is of an array.
   bool isArray() const { return IsArray; }
+  /// Checks if the descriptor is of a record.
+  bool isRecord() const { return !IsArray && ElemRecord; }
 };
 
 /// Bitfield tracking the initialisation status of elements of primitive arrays.
