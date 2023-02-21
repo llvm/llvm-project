@@ -3111,15 +3111,13 @@ static SDValue lowerVECTOR_SHUFFLEAsVNSRL(const SDLoc &DL, MVT VT,
   // Convert the vector to a wider integer type with the original element
   // count. This also converts FP to int.
   unsigned EltBits = ContainerVT.getScalarSizeInBits();
-  MVT WideIntEltVT = MVT::getIntegerVT(EltBits * 2);
   MVT WideIntContainerVT =
-      MVT::getVectorVT(WideIntEltVT, ContainerVT.getVectorElementCount());
+    MVT::getVectorVT(MVT::getIntegerVT(EltBits * 2),
+                     ContainerVT.getVectorElementCount());
   Src = DAG.getBitcast(WideIntContainerVT, Src);
 
-  // Convert to the integer version of the container type.
-  MVT IntEltVT = MVT::getIntegerVT(EltBits);
-  MVT IntContainerVT =
-      MVT::getVectorVT(IntEltVT, ContainerVT.getVectorElementCount());
+  // The integer version of the container type.
+  MVT IntContainerVT = ContainerVT.changeVectorElementTypeToInteger();
 
   // If we want even elements, then the shift amount is 0. Otherwise, shift by
   // the original element size.
