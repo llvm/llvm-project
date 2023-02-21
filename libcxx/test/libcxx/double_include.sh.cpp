@@ -216,16 +216,10 @@ END-SCRIPT
 #   include <wctype.h>
 #endif
 #if __cplusplus >= 201103L
-#   include <experimental/algorithm>
-#endif
-#if __cplusplus >= 201103L
 #   include <experimental/deque>
 #endif
 #if __cplusplus >= 201103L
 #   include <experimental/forward_list>
-#endif
-#if __cplusplus >= 201103L
-#   include <experimental/functional>
 #endif
 #if __cplusplus >= 201103L
 #   include <experimental/iterator>

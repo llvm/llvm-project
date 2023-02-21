@@ -1687,20 +1687,12 @@ module std [system] {
   module experimental {
     requires cplusplus11
 
-    module algorithm {
-      header "experimental/algorithm"
-      export *
-    }
     module deque {
       header "experimental/deque"
       export *
     }
     module forward_list {
       header "experimental/forward_list"
-      export *
-    }
-    module functional {
-      header "experimental/functional"
       export *
     }
     module iterator {
