@@ -933,6 +933,24 @@ module polymorphic_test
     class(*), optional, intent(in) :: up
   end subroutine
 
+  function rhs()
+    class(p1), pointer :: rhs
+  end function
+
+  subroutine test_rhs_assign(a)
+    type(p1) :: a
+    a = rhs()
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPtest_rhs_assign(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "a"}) {
+! CHECK: %[[RES:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>> {bindc_name = ".result"}
+! CHECK: %[[A:.*]] = fir.embox %[[ARG0]] : (!fir.ref<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> !fir.box<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
+! CHECK: %[[LOAD_RES:.*]] = fir.load %[[RES]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>
+! CHECK: %[[A_NONE:.*]] = fir.convert %[[A]] : (!fir.box<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[RES_NONE:.*]] = fir.convert %[[LOAD_RES]] : (!fir.class<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranAAssign(%[[A_NONE]], %[[RES_NONE]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+
 end module
 
 program test
