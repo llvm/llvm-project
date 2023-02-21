@@ -2850,11 +2850,35 @@ static Constant *computePointerICmp(CmpInst::Predicate Pred, Value *LHS,
     else if (isAllocLikeFn(RHS, TLI) &&
              llvm::isKnownNonZero(LHS, DL, 0, nullptr, CxtI, DT))
       MI = RHS;
-    // FIXME: We should also fold the compare when the pointer escapes, but the
-    // compare dominates the pointer escape
-    if (MI && !PointerMayBeCaptured(MI, true, true))
-      return ConstantInt::get(getCompareTy(LHS),
-                              CmpInst::isFalseWhenEqual(Pred));
+    if (MI) {
+      // FIXME: This is incorrect, see PR54002. While we can assume that the
+      // allocation is at an address that makes the comparison false, this
+      // requires that *all* comparisons to that address be false, which
+      // InstSimplify cannot guarantee.
+      struct CustomCaptureTracker : public CaptureTracker {
+        bool Captured = false;
+        void tooManyUses() override { Captured = true; }
+        bool captured(const Use *U) override {
+          if (auto *ICmp = dyn_cast<ICmpInst>(U->getUser())) {
+            // Comparison against value stored in global variable. Given the
+            // pointer does not escape, its value cannot be guessed and stored
+            // separately in a global variable.
+            unsigned OtherIdx = 1 - U->getOperandNo();
+            auto *LI = dyn_cast<LoadInst>(ICmp->getOperand(OtherIdx));
+            if (LI && isa<GlobalVariable>(LI->getPointerOperand()))
+              return false;
+          }
+
+          Captured = true;
+          return true;
+        }
+      };
+      CustomCaptureTracker Tracker;
+      PointerMayBeCaptured(MI, &Tracker);
+      if (!Tracker.Captured)
+        return ConstantInt::get(getCompareTy(LHS),
+                                CmpInst::isFalseWhenEqual(Pred));
+    }
   }
 
   // Otherwise, fail.

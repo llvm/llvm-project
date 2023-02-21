@@ -193,12 +193,14 @@ define void @neg_consistent_fold2() {
   ret void
 }
 
-; FIXME: The end result is correct, but the fold happens for the wrong
-; reason (incorrect icmp GlobalValue special case in CaptureTracking).
-define void @consistent_fold3() {
-; CHECK-LABEL: @consistent_fold3(
+define void @neg_consistent_fold3() {
+; CHECK-LABEL: @neg_consistent_fold3(
+; CHECK-NEXT:    [[M1:%.*]] = alloca [4 x i8], align 1
+; CHECK-NEXT:    [[LGP:%.*]] = load ptr, ptr @gp, align 8
 ; CHECK-NEXT:    [[RHS2:%.*]] = call ptr @hidden_inttoptr()
-; CHECK-NEXT:    call void @witness(i1 false, i1 false)
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[M1]], [[LGP]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq ptr [[M1]], [[RHS2]]
+; CHECK-NEXT:    call void @witness(i1 [[CMP1]], i1 [[CMP2]])
 ; CHECK-NEXT:    ret void
 ;
   %m = alloca i8, i32 4
