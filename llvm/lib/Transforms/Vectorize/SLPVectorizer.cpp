@@ -642,7 +642,7 @@ tryToGatherExtractElements(SmallVectorImpl<Value *> &VL,
         !isa<ConstantInt, UndefValue>(EI->getIndexOperand()) ||
         is_contained(UndefVectorExtracts, I))
       continue;
-    if (Mask[I] == UndefMaskElem)
+    if (Mask[I] == UndefMaskElem && !isa<PoisonValue>(GatheredExtracts[I]))
       std::swap(VL[I], GatheredExtracts[I]);
   }
   return Res;
