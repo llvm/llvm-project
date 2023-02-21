@@ -247,9 +247,10 @@ struct RewriteExtractSliceFromCollapseShapeUsingScfForeach
                                 tensor::ExtractSliceFromCollapseHelper &helper,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    auto foreachOp = rewriter.create<scf::ForeachThreadOp>(
-        loc, /*outputs=*/dest, /*numThreads=*/helper.getIterationSpaceSizes(),
-        /*mapping=*/ArrayRef<Attribute>{},
+    auto foreachThreadOp = rewriter.create<scf::ForeachThreadOp>(
+        loc, /*numThreads=*/getAsOpFoldResult(helper.getIterationSpaceSizes()),
+        /*outputs=*/dest,
+        /*mapping=*/std::nullopt,
         [&](OpBuilder &nestedBuilder, Location loc, ValueRange regionArgs) {
           unsigned numThreadIdRegionArgs =
               helper.getIterationSpaceSizes().size();
@@ -267,7 +268,7 @@ struct RewriteExtractSliceFromCollapseShapeUsingScfForeach
           nestedBuilder.create<tensor::ParallelInsertSliceOp>(
               loc, tile, outputArgs[0], insertParams);
         });
-    rewriter.replaceOp(op, foreachOp->getResult(0));
+    rewriter.replaceOp(op, foreachThreadOp->getResult(0));
     return success();
   }
 };

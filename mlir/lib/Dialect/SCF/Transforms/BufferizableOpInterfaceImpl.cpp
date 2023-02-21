@@ -1004,15 +1004,14 @@ struct YieldOpInterface
 
 /// Return `true` if the given loop may have 0 iterations.
 bool mayHaveZeroIterations(scf::ForeachThreadOp foreachThreadOp) {
-  int64_t p = 1;
-  for (Value v : foreachThreadOp.getNumThreads()) {
-    if (std::optional<int64_t> c = getConstantIntValue(v)) {
-      p *= *c;
-    } else {
+  for (auto [lb, ub] : llvm::zip(foreachThreadOp.getMixedLowerBound(),
+                                 foreachThreadOp.getMixedUpperBound())) {
+    std::optional<int64_t> lbConst = getConstantIntValue(lb);
+    std::optional<int64_t> ubConst = getConstantIntValue(ub);
+    if (!lbConst.has_value() || !ubConst.has_value() || *lbConst >= *ubConst)
       return true;
-    }
   }
-  return p == 0;
+  return false;
 }
 
 /// Bufferization of ForeachThreadOp. This also bufferizes the terminator of the
@@ -1087,8 +1086,9 @@ struct ForeachThreadOpInterface
     rewriter.setInsertionPoint(foreachThreadOp);
     ForeachThreadOp newForeachThreadOp;
     newForeachThreadOp = rewriter.create<ForeachThreadOp>(
-        foreachThreadOp.getLoc(), /*outputs=*/ValueRange(),
-        foreachThreadOp.getNumThreads(), foreachThreadOp.getMapping());
+        foreachThreadOp.getLoc(), foreachThreadOp.getMixedLowerBound(),
+        foreachThreadOp.getMixedUpperBound(), foreachThreadOp.getMixedStep(),
+        /*outputs=*/ValueRange(), foreachThreadOp.getMapping());
 
     newForeachThreadOp.getBody()->getTerminator()->erase();
 
@@ -1127,10 +1127,28 @@ struct ForeachThreadOpInterface
 
   bool isRepetitiveRegion(Operation *op, unsigned index) const {
     auto foreachThreadOp = cast<ForeachThreadOp>(op);
-    // This op is not repetitive if it has just a single thread.
-    return !llvm::all_of(foreachThreadOp.getNumThreads(), [](Value v) {
-      return getConstantIntValue(v) == static_cast<int64_t>(1);
-    });
+
+    // This op is repetitive if it has 1 or more steps.
+    // If the control variables are dynamic, it is also considered so.
+    for (auto [lb, ub, step] : llvm::zip(foreachThreadOp.getMixedLowerBound(),
+                                         foreachThreadOp.getMixedUpperBound(),
+                                         foreachThreadOp.getMixedStep())) {
+      std::optional<int64_t> lbConstant = getConstantIntValue(lb);
+      if (!lbConstant)
+        return true;
+
+      std::optional<int64_t> ubConstant = getConstantIntValue(ub);
+      if (!ubConstant)
+        return true;
+
+      std::optional<int64_t> stepConstant = getConstantIntValue(step);
+      if (!stepConstant)
+        return true;
+
+      if (*lbConstant + *stepConstant < *ubConstant)
+        return true;
+    }
+    return false;
   }
 };
 

@@ -13,9 +13,7 @@ module {
 //  CHECK-SAME:   %[[B:[0-9a-z]+]]: tensor<?x?xf32>
 //  CHECK-SAME:   %[[C:[0-9a-z]+]]: tensor<?x?xf32>
   func.func @matmul(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C: tensor<?x?xf32>) -> tensor<?x?xf32> {
-  //  CHECK-DAG: %[[C10:.*]] = arith.constant 10 : index
-  //  CHECK-DAG: %[[C20:.*]] = arith.constant 20 : index
-  //      CHECK: scf.foreach_thread ({{.*}}) in (%[[C10]], %[[C20]]) shared_outs(%[[C_BLK:.*]] = %[[C]]) -> (tensor<?x?xf32>) {
+  //      CHECK: scf.foreach_thread ({{.*}}) in (10, 20) shared_outs(%[[C_BLK:.*]] = %[[C]]) -> (tensor<?x?xf32>) {
   //      CHECK:   %[[tA:.*]] = tensor.extract_slice %[[A]]{{.*}} : tensor<?x?xf32> to tensor<?x?xf32>
   //      CHECK:   %[[tB:.*]] = tensor.extract_slice %[[B]]{{.*}} : tensor<?x?xf32> to tensor<?x?xf32>
   //      CHECK:   %[[tC:.*]] = tensor.extract_slice %[[C_BLK]]{{.*}} : tensor<?x?xf32> to tensor<?x?xf32>
@@ -95,9 +93,7 @@ transform.sequence failures(propagate) {
 //  CHECK-SAME:   %[[B:[0-9a-z]+]]: tensor
 //  CHECK-SAME:   %[[C:[0-9a-z]+]]: tensor
 func.func @matmul_static(%A: tensor<100x200xf32>, %B: tensor<200x300xf32>, %C: tensor<100x300xf32>) -> tensor<100x300xf32> {
-  //  CHECK-DAG: %[[c10:.+]] = arith.constant 10 : index
-  //  CHECK-DAG: %[[c21:.+]] = arith.constant 21 : index
-  //      CHECK: scf.foreach_thread (%[[IV0:.+]], %[[IV1:.+]]) in (%[[c10]], %[[c21]]) shared_outs(%[[C_BLK:.*]] = %[[C]])
+  //      CHECK: scf.foreach_thread (%[[IV0:.+]], %[[IV1:.+]]) in (10, 21) shared_outs(%[[C_BLK:.*]] = %[[C]])
   //      CHECK:   %[[TSMIN:.+]] = affine.min #[[$map0]](%[[IV1]])
   //      CHECK:   %[[TS:.+]] = affine.max #[[$map1]](%[[TSMIN]])
   //  CHECK-NOT:   affine.min
@@ -175,9 +171,7 @@ transform.sequence failures(propagate) {
 //  CHECK-SAME:   %[[B:[0-9a-z]+]]: tensor
 //  CHECK-SAME:   %[[C:[0-9a-z]+]]: tensor
 func.func @matmul_tile_size_static(%A: tensor<100x200xf32>, %B: tensor<200x300xf32>, %C: tensor<100x300xf32>) -> tensor<100x300xf32> {
-  //  CHECK-DAG: %[[c10:.+]] = arith.constant 10 :
-  //  CHECK-DAG: %[[c15:.+]] = arith.constant 15 :
-  //      CHECK: scf.foreach_thread (%[[IV0:.+]], %[[IV1:.+]]) in (%[[c10]], %[[c15]]) shared_outs(%[[C_BLK:.*]] = %[[C]])
+  //      CHECK: scf.foreach_thread (%[[IV0:.+]], %[[IV1:.+]]) in (10, 15) shared_outs(%[[C_BLK:.*]] = %[[C]])
   //      CHECK:   %[[TS:.+]] = affine.min #[[$map0]](%[[IV1]])
   //  CHECK-NOT:   affine.max
   //  CHECK-NOT:   affine.min
@@ -225,8 +219,7 @@ module {
 // CHECK-DAG: #[[$map0:.+]] = affine_map<(d0) -> (d0 * 2)>
 
 // CHECK-LABEL: extract_source(
-//       CHECK:  %[[C2:.*]] = arith.constant 2 : index
-//       CHECK:  scf.foreach_thread (%[[ARG:.*]]) in (%[[C2]]) shared_outs(%{{.*}} = %{{.*}}) -> (tensor<4xf32>) {
+//       CHECK:  scf.foreach_thread (%[[ARG:.*]]) in (2) shared_outs(%{{.*}} = %{{.*}}) -> (tensor<4xf32>) {
 //       CHECK:    %[[OFF:.*]] = affine.apply #[[$map0]](%[[ARG]])
 //       CHECK:    scf.foreach_thread.perform_concurrently {
 //       CHECK:      tensor.parallel_insert_slice %{{.*}} into %{{.*}}[%[[OFF]]] [2] [1] : tensor<2xf32> into tensor<4xf32>
@@ -289,8 +282,7 @@ transform.sequence failures(propagate) {
   func.func @tile_output_multi_1d_static(%IN1: tensor<100xf32>, %IN2: tensor<100xf32>,
                                          %OUT1: tensor<100xf32>, %OUT2: tensor<100xf32>)
                                          -> (tensor<100xf32>, tensor<100xf32>) {
-//  CHECK-DAG: %[[c0:.+]] = arith.constant 7 :
-//      CHECK: scf.foreach_thread (%[[IV0:.+]]) in (%[[c0]]) shared_outs(%[[OUT1:[0-9a-z]+]] = %[[ORGOUT1]], %[[OUT2:[0-9a-z]+]] = %[[ORGOUT2]])
+//      CHECK: scf.foreach_thread (%[[IV0:.+]]) in (7) shared_outs(%[[OUT1:[0-9a-z]+]] = %[[ORGOUT1]], %[[OUT2:[0-9a-z]+]] = %[[ORGOUT2]])
 //      CHECK:   %[[TSMIN:.+]] = affine.min #[[$map0]](%[[IV0]])
 //      CHECK:   %[[TS:.+]] = affine.max #[[$map1]](%[[TSMIN]])
 //  CHECK-NOT:   affine.min
@@ -345,8 +337,7 @@ transform.sequence failures(propagate) {
   func.func @tile_output_multi_1d2d_static(%IN1: tensor<100xf32>, %IN2: tensor<100x300xf32>, %IN3: tensor<300xf32>,
                      %OUT1: tensor<300x100xf32>, %OUT2: tensor<300xf32>)
                      -> (tensor<300x100xf32>, tensor<300xf32>) {
-//  CHECK-DAG: %[[c0:.+]] = arith.constant 4 :
-//      CHECK: scf.foreach_thread (%[[IV0:.+]]) in (%[[c0]]) shared_outs(%[[OUT1:[0-9a-z]+]] = %[[ORGOUT1]], %[[OUT2:[0-9a-z]+]] = %[[ORGOUT2]])
+//      CHECK: scf.foreach_thread (%[[IV0:.+]]) in (4) shared_outs(%[[OUT1:[0-9a-z]+]] = %[[ORGOUT1]], %[[OUT2:[0-9a-z]+]] = %[[ORGOUT2]])
 //      CHECK:   %[[LB:.+]] = affine.apply #[[$map0]](%[[IV0]])
 //      CHECK:   %[[tIN1:.+]] = tensor.extract_slice %[[IN2]][0, %[[LB]]] [100, 75]
 //      CHECK:   %[[tIN2:.+]] = tensor.extract_slice %[[IN3]][%[[LB]]] [75]
