@@ -333,7 +333,6 @@ filesystem system_error
 filesystem type_traits
 filesystem version
 format array
-format bit
 format charconv
 format cstddef
 format cstdint
