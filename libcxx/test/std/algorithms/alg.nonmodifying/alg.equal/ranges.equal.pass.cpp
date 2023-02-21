@@ -88,6 +88,21 @@ constexpr void test_iterators() {
     }
   }
 
+  { // check that false is returned for non-equal ranges
+    {
+      int a[] = {1, 2, 3, 4};
+      int b[]  = {1, 2, 4, 4};
+      assert(!std::ranges::equal(Iter1(a), Sent1(Iter1(a + 4)), Iter2(b), Sent2(Iter2(b + 4))));
+    }
+    {
+      int a[] = {1, 2, 3, 4};
+      int b[] = {1, 2, 4, 4};
+      auto range1 = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 4)));
+      auto range2 = std::ranges::subrange(Iter2(b), Sent2(Iter2(b + 4)));
+      assert(!std::ranges::equal(range1, range2));
+    }
+  }
+
   { // check that the predicate is used (return true)
     {
       int a[] = {1, 2, 3, 4};
