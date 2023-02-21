@@ -2,7 +2,7 @@
 // RUN: mkdir %t
 // RUN: split-file %s %t
 //
-// RUN: %clang_cc1 -std=c++20 %t/Module.cppm -triple %itanium_abi_triple -emit-llvm -o - | FileCheck %t/Module.cppm --implicit-check-not unused_inline --implicit-check-not unused_stastic_global_module
+// RUN: %clang_cc1 -std=c++20 %t/Module.cppm -triple %itanium_abi_triple -emit-llvm -o - | FileCheck %t/Module.cppm --implicit-check-not unused
 //
 // RUN: %clang_cc1 -std=c++20 %t/Module.cppm -triple %itanium_abi_triple -emit-module-interface -o %t/Module.pcm
 // RUN: %clang_cc1 -std=c++20 %t/module.cpp -triple %itanium_abi_triple -fmodule-file=%t/Module.pcm -emit-llvm -o - | FileCheck %t/module.cpp --implicit-check-not=unused --implicit-check-not=global_module
@@ -33,8 +33,6 @@
 // CHECK-DAG: @_ZL24const_var_module_linkage = internal
 //
 // CHECK-DAG: @_ZW6Module25unused_var_module_linkage = {{(dso_local )?}}global i32 4
-// CHECK-NOT: @_ZW6Module32unused_static_var_module_linkage =
-// CHECK-NOT: @_ZW6Module31unused_const_var_module_linkage =
 
 module;
 
@@ -85,7 +83,6 @@ export {
   }
 }
 
-// CHECK-NOT: define {{(dso_local )?}}void {{.*}}@_ZW6Module28unused_static_module_linkagev
 static void unused_static_module_linkage() {}
 
 static void used_static_module_linkage() {}
