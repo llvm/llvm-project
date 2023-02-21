@@ -13,10 +13,12 @@ class TestCase(TestBase):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.m"))
 
+    @skipUnlessDarwin
     def test_po_does_not_print_persistent_result(self):
         """Test `po` doesn't advertise a persistent result variable."""
         self.expect("po obj", matching=False, substrs=["$0 = "])
 
+    @skipUnlessDarwin
     def test_po_does_not_keep_persistent_result(self):
         """Test `po` doesn't leak a persistent result variable."""
         self.expect("po obj")
@@ -25,6 +27,7 @@ class TestCase(TestBase):
         self.expect("expression $0", error=True)
         self.expect("expression obj", substrs=["$0 = "])
 
+    @skipUnlessDarwin
     def test_expression_description_verbosity(self):
         """Test printing object description _and_ opt-in to persistent results."""
         self.expect("expression -O -vfull -- obj", substrs=["$0 = "])
