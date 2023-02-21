@@ -96,9 +96,6 @@ public:
                                         ArrayRef<ObjectRef> Refs,
                                         ArrayRef<char> Data) = 0;
 
-  Expected<ObjectRef>
-  storeFromOpenFileImpl(sys::fs::file_t FD,
-                        Optional<sys::fs::file_status> Status) override;
   virtual Expected<ObjectRef>
   storeFromNullTerminatedRegion(ArrayRef<uint8_t> ComputedHash,
                                 sys::fs::mapped_file_region Map) {
