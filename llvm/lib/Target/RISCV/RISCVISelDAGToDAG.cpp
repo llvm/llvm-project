@@ -2638,7 +2638,7 @@ bool RISCVDAGToDAGISel::selectVLOp(SDValue N, SDValue &VL) {
   if (C && isUInt<5>(C->getZExtValue())) {
     VL = CurDAG->getTargetConstant(C->getZExtValue(), SDLoc(N),
                                    N->getValueType(0));
-  } else if (C && C->isAllOnesValue()) {
+  } else if (C && C->isAllOnes()) {
     // Treat all ones as VLMax.
     VL = CurDAG->getTargetConstant(RISCV::VLMaxSentinel, SDLoc(N),
                                    N->getValueType(0));

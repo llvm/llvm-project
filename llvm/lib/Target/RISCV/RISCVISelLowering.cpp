@@ -2782,7 +2782,7 @@ static SDValue splatPartsI64WithVL(const SDLoc &DL, MVT VT, SDValue Passthru,
     // If vl is equal to XLEN_MAX and Hi constant is equal to Lo, we could use
     // vmv.v.x whose EEW = 32 to lower it.
     auto *Const = dyn_cast<ConstantSDNode>(VL);
-    if (LoC == HiC && Const && Const->isAllOnesValue()) {
+    if (LoC == HiC && Const && Const->isAllOnes()) {
       MVT InterVT = MVT::getVectorVT(MVT::i32, VT.getVectorElementCount() * 2);
       // TODO: if vl <= min(VLMAX), we can also do this. But we could not
       // access the subtarget here now.
