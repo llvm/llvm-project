@@ -932,6 +932,7 @@ module std [system] {
       module range_default_formatter         { private header "__format/range_default_formatter.h" }
       module range_formatter                 { private header "__format/range_formatter.h" }
       module unicode                         { private header "__format/unicode.h" }
+      module width_estimation_table          { private header "__format/width_estimation_table.h" }
     }
   }
   module forward_list {
