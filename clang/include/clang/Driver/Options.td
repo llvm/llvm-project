@@ -235,6 +235,10 @@ def clang_ignored_f_Group : OptionGroup<"<clang ignored f group>">,
 def clang_ignored_m_Group : OptionGroup<"<clang ignored m group>">,
   Group<m_Group>, Flags<[Ignored]>;
 
+// Unsupported flang groups
+def flang_ignored_w_Group : OptionGroup<"<flang ignored W group>">,
+  Group<W_Group>, Flags<[FlangOnlyOption, Ignored]>;
+
 // Group for clang options in the process of deprecation.
 // Please include the version that deprecated the flag as comment to allow
 // easier garbage collection.
@@ -4871,6 +4875,10 @@ multiclass BooleanFFlag<string name> {
   def fno_#NAME : Flag<["-"], "fno-"#name>;
 }
 
+multiclass FlangIgnoredDiagOpt<string name> {
+  def unsupported_warning_w#NAME : Flag<["-", "--"], "W"#name>, Group<flang_ignored_w_Group>;
+}
+
 defm : BooleanFFlag<"keep-inline-functions">, Group<clang_ignored_gcc_optimization_f_Group>;
 
 def fprofile_dir : Joined<["-"], "fprofile-dir=">, Group<f_Group>;
@@ -5029,6 +5037,36 @@ defm repack_arrays : BooleanFFlag<"repack-arrays">, Group<gfortran_Group>;
 defm second_underscore : BooleanFFlag<"second-underscore">, Group<gfortran_Group>;
 defm sign_zero : BooleanFFlag<"sign-zero">, Group<gfortran_Group>;
 defm whole_file : BooleanFFlag<"whole-file">, Group<gfortran_Group>;
+
+// -W <arg> options unsupported by the flang compiler
+// If any of these options are passed into flang's compiler driver,
+// a warning will be raised and the argument will be claimed
+defm : FlangIgnoredDiagOpt<"extra">;
+defm : FlangIgnoredDiagOpt<"aliasing">;
+defm : FlangIgnoredDiagOpt<"ampersand">;
+defm : FlangIgnoredDiagOpt<"array-bounds">;
+defm : FlangIgnoredDiagOpt<"c-binding-type">;
+defm : FlangIgnoredDiagOpt<"character-truncation">;
+defm : FlangIgnoredDiagOpt<"conversion">;
+defm : FlangIgnoredDiagOpt<"do-subscript">;
+defm : FlangIgnoredDiagOpt<"function-elimination">;
+defm : FlangIgnoredDiagOpt<"implicit-interface">;
+defm : FlangIgnoredDiagOpt<"implicit-procedure">;
+defm : FlangIgnoredDiagOpt<"intrinsic-shadow">;
+defm : FlangIgnoredDiagOpt<"use-without-only">;
+defm : FlangIgnoredDiagOpt<"intrinsics-std">;
+defm : FlangIgnoredDiagOpt<"line-truncation">;
+defm : FlangIgnoredDiagOpt<"no-align-commons">;
+defm : FlangIgnoredDiagOpt<"no-overwrite-recursive">;
+defm : FlangIgnoredDiagOpt<"no-tabs">;
+defm : FlangIgnoredDiagOpt<"real-q-constant">;
+defm : FlangIgnoredDiagOpt<"surprising">;
+defm : FlangIgnoredDiagOpt<"underflow">;
+defm : FlangIgnoredDiagOpt<"unused-parameter">;
+defm : FlangIgnoredDiagOpt<"realloc-lhs">;
+defm : FlangIgnoredDiagOpt<"realloc-lhs-all">;
+defm : FlangIgnoredDiagOpt<"frontend-loop-interchange">;
+defm : FlangIgnoredDiagOpt<"target-lifetime">;
 
 // C++ SYCL options
 def fsycl : Flag<["-"], "fsycl">, Flags<[NoXarchOption, CoreOption]>,
