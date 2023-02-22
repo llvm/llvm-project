@@ -166,7 +166,7 @@ Changes in existing checks
 
 - Deprecated check-local options `HeaderFileExtensions`
   in :doc:`misc-unused-using-decls
-  <clang-tidy/checks/misc/misc-unused-using-decls>` check.
+  <clang-tidy/checks/misc/unused-using-decls>` check.
   Global options of the same name should be used instead.
 
 Removed checks
