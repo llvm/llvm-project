@@ -437,8 +437,7 @@ Error MachOPlatformRuntimeState::initialize() {
 }
 
 Error MachOPlatformRuntimeState::shutdown() {
-  if (__unw_add_find_dynamic_unwind_sections &&
-      __unw_remove_find_dynamic_unwind_sections) {
+  if (UseCallbackStyleUnwindInfo) {
     if (__unw_remove_find_dynamic_unwind_sections(&findDynamicUnwindSections)) {
       ORC_RT_DEBUG(
           { printdbg("__unw_remove_find_dynamic_unwind_sections failed.\n"); });
