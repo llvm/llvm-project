@@ -366,6 +366,13 @@ public:
   BinaryFunction *getBinaryFunctionContainingAddress(uint64_t Address,
                                                      bool CheckPastEnd = false,
                                                      bool UseMaxSize = false);
+  const BinaryFunction *
+  getBinaryFunctionContainingAddress(uint64_t Address,
+                                     bool CheckPastEnd = false,
+                                     bool UseMaxSize = false) const {
+    return const_cast<BinaryContext *>(this)
+        ->getBinaryFunctionContainingAddress(Address, CheckPastEnd, UseMaxSize);
+  }
 
   /// Return a BinaryFunction that starts at a given \p Address.
   BinaryFunction *getBinaryFunctionAtAddress(uint64_t Address);
@@ -504,9 +511,11 @@ public:
   /// Optionally, populate \p Address from jump table entries. The entries
   /// could be partially populated if the jump table detection fails.
   bool analyzeJumpTable(const uint64_t Address,
-                        const JumpTable::JumpTableType Type, BinaryFunction &BF,
+                        const JumpTable::JumpTableType Type,
+                        const BinaryFunction &BF,
                         const uint64_t NextJTAddress = 0,
-                        JumpTable::AddressesType *EntriesAsAddress = nullptr);
+                        JumpTable::AddressesType *EntriesAsAddress = nullptr,
+                        bool *HasEntryInFragment = nullptr) const;
 
   /// After jump table locations are established, this function will populate
   /// their EntriesAsAddress based on memory contents.
@@ -1143,7 +1152,7 @@ public:
 
   /// Return a relocation registered at a given \p Address, or nullptr if there
   /// is no relocation at such address.
-  const Relocation *getRelocationAt(uint64_t Address);
+  const Relocation *getRelocationAt(uint64_t Address) const;
 
   /// Register a presence of PC-relative relocation at the given \p Address.
   void addPCRelativeDataRelocation(uint64_t Address) {
