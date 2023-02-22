@@ -2301,7 +2301,7 @@ private:
   }
 
   /// Enter the scope of the global module.
-  Module *PushGlobalModuleFragment(SourceLocation BeginLoc, bool IsImplicit);
+  Module *PushGlobalModuleFragment(SourceLocation BeginLoc);
   /// Leave the scope of the global module.
   void PopGlobalModuleFragment();
 
