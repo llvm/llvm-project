@@ -22,7 +22,8 @@ class TextAPIWriter {
 public:
   TextAPIWriter() = delete;
 
-  static Error writeToStream(raw_ostream &os, const InterfaceFile &);
+  static Error writeToStream(raw_ostream &OS, const InterfaceFile &File,
+                             bool Compact = false);
 };
 
 } // end namespace MachO.
