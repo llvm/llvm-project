@@ -58,6 +58,8 @@ C++ Specific Potentially Breaking Changes
 
 ABI Changes in This Version
 ---------------------------
+- ``__is_trivial`` has changed for a small category of classes with constrained default constructors (`#60697 <https://github.com/llvm/llvm-project/issues/60697>`_).
+  *FIXME: Remove this note if we've backported this change to the Clang 16 branch.*
 
 What's New in Clang |release|?
 ==============================
