@@ -96,6 +96,7 @@ add_subdirectory(FortranMain)
 add_flang_library(FortranRuntime
   ISO_Fortran_binding.cpp
   allocatable.cpp
+  array-constructor.cpp
   assign.cpp
   buffer.cpp
   command.cpp
