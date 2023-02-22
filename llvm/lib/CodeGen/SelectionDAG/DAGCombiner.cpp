@@ -10815,7 +10815,8 @@ SDValue DAGCombiner::combineMinNumMaxNum(const SDLoc &DL, EVT VT, SDValue LHS,
       if (NegRHS == False) {
         SDValue Combined = combineMinNumMaxNumImpl(DL, VT, LHS, RHS, NegTrue,
                                                    False, CC, TLI, DAG);
-        return DAG.getNode(ISD::FNEG, DL, VT, Combined);
+        if (Combined)
+          return DAG.getNode(ISD::FNEG, DL, VT, Combined);
       }
     }
   }
