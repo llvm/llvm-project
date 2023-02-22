@@ -1559,3 +1559,47 @@ uncond_pred1:
 end:
   ret void
 }
+
+define void @nontemporal(ptr %ptr, i1 %cond) {
+; CHECK-LABEL: @nontemporal(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i64 0, ptr [[PTR:%.*]], align 8, !nontemporal !7
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond, label %if.then, label %if.else
+
+if.then:
+  store i64 0, ptr %ptr, align 8, !nontemporal !12
+  br label %if.end
+
+if.else:
+  store i64 0, ptr %ptr, align 8, !nontemporal !12
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+define void @nontemporal_mismatch(ptr %ptr, i1 %cond) {
+; CHECK-LABEL: @nontemporal_mismatch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i64 0, ptr [[PTR:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond, label %if.then, label %if.else
+
+if.then:
+  store i64 0, ptr %ptr, align 8, !nontemporal !12
+  br label %if.end
+
+if.else:
+  store i64 0, ptr %ptr, align 8
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+!12 = !{i32 1}
