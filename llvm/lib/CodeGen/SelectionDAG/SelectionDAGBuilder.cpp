@@ -9531,6 +9531,11 @@ void SelectionDAGBuilder::populateCallLoweringInfo(
           Call->countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0);
 }
 
+// Is the node `N` a glue or chain node?
+bool isGlueOrChain(const SDValue &N) {
+  return (N.getValueType() == MVT::Other) || (N.getValueType() == MVT::Glue);
+}
+
 /// Given the stackmap live variable `N`, search its sub-DAG and return all of
 /// the constituent values that need to be reported in the stackmap table.
 static std::vector<SDValue> findLiveConstituents(SelectionDAG &DAG,
@@ -9542,8 +9547,11 @@ static std::vector<SDValue> findLiveConstituents(SelectionDAG &DAG,
   case ISD::CONCAT_VECTORS:
   case ISD::MERGE_VALUES:
   case ISD::BUILD_VECTOR:
-    for (SDValue Op : N->op_values())
-      V.push_back(Op);
+    for (SDValue Op : N->op_values()) {
+      if (!isGlueOrChain(Op)) {
+        V.push_back(Op);
+      }
+    }
     break;
   case ISD::INSERT_VECTOR_ELT: {
     V = findLiveConstituents(DAG, N.getOperand(0));
@@ -9554,6 +9562,14 @@ static std::vector<SDValue> findLiveConstituents(SelectionDAG &DAG,
   }
   default:
     V.push_back(N);
+  }
+
+  // We have to be careful not to ask the stackmap to record the locations
+  // of glue or chain operands. That would make no sense, as glue and chain
+  // operands are not real data, rather control dependencies that are an
+  // artefact of using a DAG.
+  for (SDValue &VV: V) {
+    assert(!isGlueOrChain(VV));
   }
 
   return V;
