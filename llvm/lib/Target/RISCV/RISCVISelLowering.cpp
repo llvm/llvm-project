@@ -2927,6 +2927,52 @@ static SDValue lowerScalarInsert(SDValue Scalar, SDValue VL,
 
 }
 
+// Is this a shuffle extracts either the even or odd elements of a vector?
+// That is, specifically, either (a) or (b) below.
+// t34: v8i8 = extract_subvector t11, Constant:i64<0>
+// t33: v8i8 = extract_subvector t11, Constant:i64<8>
+// a) t35: v8i8 = vector_shuffle<0,2,4,6,8,10,12,14> t34, t33
+// b) t35: v8i8 = vector_shuffle<1,3,5,7,9,11,13,15> t34, t33
+// Returns {Src Vector, Even Elements} om success
+static bool isDeinterleaveShuffle(MVT VT, MVT ContainerVT, SDValue V1,
+                                  SDValue V2, ArrayRef<int> Mask,
+                                  const RISCVSubtarget &Subtarget) {
+  // Need to be able to widen the vector.
+  if (VT.getScalarSizeInBits() >= Subtarget.getELEN())
+    return false;
+
+  // Both input must be extracts.
+  if (V1.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
+      V2.getOpcode() != ISD::EXTRACT_SUBVECTOR)
+    return false;
+
+  // Extracting from the same source.
+  SDValue Src = V1.getOperand(0);
+  if (Src != V2.getOperand(0))
+    return false;
+
+  // Src needs to have twice the number of elements.
+  if (Src.getValueType().getVectorNumElements() != (Mask.size() * 2))
+    return false;
+
+  // The extracts must extract the two halves of the source.
+  if (V1.getConstantOperandVal(1) != 0 ||
+      V2.getConstantOperandVal(1) != Mask.size())
+    return false;
+
+  // First index must be the first even or odd element from V1.
+  if (Mask[0] != 0 && Mask[0] != 1)
+    return false;
+
+  // The others must increase by 2 each time.
+  // TODO: Support undef elements?
+  for (unsigned i = 1; i != Mask.size(); ++i)
+    if (Mask[i] != Mask[i - 1] + 2)
+      return false;
+
+  return true;
+}
+
 /// Is this shuffle interleaving contiguous elements from one vector into the
 /// even elements and contiguous elements from another vector into the odd
 /// elements. \p Src1 will contain the element that should be in the first even
@@ -3056,50 +3102,13 @@ static int isElementRotate(int &LoSrc, int &HiSrc, ArrayRef<int> Mask) {
   return Rotation;
 }
 
-// Lower the following shuffles to vnsrl.
-// t34: v8i8 = extract_subvector t11, Constant:i64<0>
-// t33: v8i8 = extract_subvector t11, Constant:i64<8>
-// a) t35: v8i8 = vector_shuffle<0,2,4,6,8,10,12,14> t34, t33
-// b) t35: v8i8 = vector_shuffle<1,3,5,7,9,11,13,15> t34, t33
-static SDValue lowerVECTOR_SHUFFLEAsVNSRL(const SDLoc &DL, MVT VT,
-                                          MVT ContainerVT, SDValue V1,
-                                          SDValue V2, SDValue TrueMask,
-                                          SDValue VL, ArrayRef<int> Mask,
-                                          const RISCVSubtarget &Subtarget,
-                                          SelectionDAG &DAG) {
-  // Need to be able to widen the vector.
-  if (VT.getScalarSizeInBits() >= Subtarget.getELEN())
-    return SDValue();
-
-  // Both input must be extracts.
-  if (V1.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-      V2.getOpcode() != ISD::EXTRACT_SUBVECTOR)
-    return SDValue();
-
-  // Extracting from the same source.
-  SDValue Src = V1.getOperand(0);
-  if (Src != V2.getOperand(0))
-    return SDValue();
-
-  // Src needs to have twice the number of elements.
-  if (Src.getValueType().getVectorNumElements() != (Mask.size() * 2))
-    return SDValue();
-
-  // The extracts must extract the two halves of the source.
-  if (V1.getConstantOperandVal(1) != 0 ||
-      V2.getConstantOperandVal(1) != Mask.size())
-    return SDValue();
-
-  // First index must be the first even or odd element from V1.
-  if (Mask[0] != 0 && Mask[0] != 1)
-    return SDValue();
-
-  // The others must increase by 2 each time.
-  // TODO: Support undef elements?
-  for (unsigned i = 1; i != Mask.size(); ++i)
-    if (Mask[i] != Mask[i - 1] + 2)
-      return SDValue();
-
+// Lower a deinterleave shuffle to vnsrl.
+static SDValue getDeinterleaveViaVNSRL(const SDLoc &DL, MVT VT,
+                                       MVT ContainerVT,
+                                       SDValue Src, bool EvenElts,
+                                       SDValue TrueMask, SDValue VL,
+                                       const RISCVSubtarget &Subtarget,
+                                       SelectionDAG &DAG) {
   // Convert the source using a container type with twice the elements. Since
   // source VT is legal and twice this VT, we know VT isn't LMUL=8 so it is
   // safe to double.
@@ -3121,7 +3130,7 @@ static SDValue lowerVECTOR_SHUFFLEAsVNSRL(const SDLoc &DL, MVT VT,
 
   // If we want even elements, then the shift amount is 0. Otherwise, shift by
   // the original element size.
-  unsigned Shift = Mask[0] == 0 ? 0 : EltBits;
+  unsigned Shift = EvenElts ? 0 : EltBits;
   SDValue SplatShift = DAG.getNode(
       RISCVISD::VMV_V_X_VL, DL, IntContainerVT, DAG.getUNDEF(ContainerVT),
       DAG.getConstant(Shift, DL, Subtarget.getXLenVT()), VL);
@@ -3442,9 +3451,9 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     return convertFromScalableVector(VT, Res, DAG, Subtarget);
   }
 
-  if (SDValue V = lowerVECTOR_SHUFFLEAsVNSRL(
-          DL, VT, ContainerVT, V1, V2, TrueMask, VL, Mask, Subtarget, DAG))
-    return V;
+  if (isDeinterleaveShuffle(VT, ContainerVT, V1, V2, Mask, Subtarget))
+    return getDeinterleaveViaVNSRL(DL, VT, ContainerVT, V1.getOperand(0),
+                                   Mask[0] == 0, TrueMask, VL, Subtarget, DAG);
 
   // Detect an interleave shuffle and lower to
   // (vmaccu.vx (vwaddu.vx lohalf(V1), lohalf(V2)), lohalf(V2), (2^eltbits - 1))
