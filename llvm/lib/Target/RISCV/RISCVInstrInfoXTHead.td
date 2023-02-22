@@ -150,6 +150,13 @@ class THCacheInst_r<bits<5> funct5, string opcodestr>
 }
 
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
+class THCacheInst_rr<bits<7> funct7, string opcodestr>
+    : RVInstR<funct7, 0, OPC_CUSTOM_0, (outs), (ins GPR:$rs1, GPR:$rs2),
+      opcodestr, "$rs1, $rs2"> {
+  let rd = 0;
+}
+
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
 class THCacheInst_void<bits<5> funct5, string opcodestr>
     : RVInstR<0b0000000, 0, OPC_CUSTOM_0, (outs), (ins), opcodestr, ""> {
   let rd = 0;
@@ -522,4 +529,12 @@ def TH_ICACHE_IALLS  : THCacheInst_void<0b10001, "th.icache.ialls">;
 def TH_L2CACHE_CALL  : THCacheInst_void<0b10101, "th.l2cache.call">;
 def TH_L2CACHE_IALL  : THCacheInst_void<0b10110, "th.l2cache.iall">;
 def TH_L2CACHE_CIALL : THCacheInst_void<0b10111, "th.l2cache.ciall">;
+}
+
+let Predicates = [HasVendorXTHeadSync], DecoderNamespace = "THeadSync" in {
+def TH_SFENCE_VMAS : THCacheInst_rr<0b0000010, "th.sfence.vmas">;
+def TH_SYNC        : THCacheInst_void<0b11000, "th.sync">;
+def TH_SYNC_S      : THCacheInst_void<0b11001, "th.sync.s">;
+def TH_SYNC_I      : THCacheInst_void<0b11010, "th.sync.i">;
+def TH_SYNC_IS     : THCacheInst_void<0b11011, "th.sync.is">;
 }

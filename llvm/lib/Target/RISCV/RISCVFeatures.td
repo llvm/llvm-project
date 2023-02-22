@@ -526,6 +526,13 @@ def HasVendorXTHeadMemPair : Predicate<"Subtarget->hasVendorXTHeadMemPair()">,
                                     AssemblerPredicate<(all_of FeatureVendorXTHeadMemPair),
                                     "'xtheadmempair' (T-Head two-GPR Memory Operations)">;
 
+def FeatureVendorXTHeadSync
+    : SubtargetFeature<"xtheadsync", "HasVendorXTHeadSync", "true",
+                       "'xtheadsync' (T-Head multicore synchronization instructions)">;
+def HasVendorXTHeadSync : Predicate<"Subtarget->hasVendorXTHeadSync()">,
+                                    AssemblerPredicate<(all_of FeatureVendorXTHeadSync),
+                                    "'xtheadsync' (T-Head multicore synchronization instructions)">;
+
 def FeatureVendorXTHeadVdot
     : SubtargetFeature<"xtheadvdot", "HasVendorXTHeadVdot", "true",
                        "'xtheadvdot' (T-Head Vector Extensions for Dot)",
