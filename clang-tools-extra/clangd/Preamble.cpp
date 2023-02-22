@@ -9,7 +9,9 @@
 #include "Preamble.h"
 #include "Compiler.h"
 #include "Config.h"
+#include "Diagnostics.h"
 #include "Headers.h"
+#include "Protocol.h"
 #include "SourceCode.h"
 #include "clang-include-cleaner/Record.h"
 #include "support/Logger.h"
@@ -35,6 +37,9 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -43,8 +48,9 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include <iterator>
+#include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -306,6 +312,8 @@ private:
 struct ScannedPreamble {
   std::vector<Inclusion> Includes;
   std::vector<TextualPPDirective> TextualDirectives;
+  // Literal lines of the preamble contents.
+  std::vector<llvm::StringRef> Lines;
   PreambleBounds Bounds = {0, false};
 };
 
@@ -332,7 +340,7 @@ scanPreamble(llvm::StringRef Contents, const tooling::CompileCommand &Cmd) {
   if (!CI)
     return error("failed to create compiler invocation");
   CI->getDiagnosticOpts().IgnoreWarnings = true;
-  auto ContentsBuffer = llvm::MemoryBuffer::getMemBuffer(Contents);
+  auto ContentsBuffer = llvm::MemoryBuffer::getMemBuffer(PI.Contents);
   // This means we're scanning (though not preprocessing) the preamble section
   // twice. However, it's important to precisely follow the preamble bounds used
   // elsewhere.
@@ -363,6 +371,7 @@ scanPreamble(llvm::StringRef Contents, const tooling::CompileCommand &Cmd) {
     return std::move(Err);
   Action.EndSourceFile();
   SP.Includes = std::move(Includes.MainFileIncludes);
+  llvm::append_range(SP.Lines, llvm::split(Contents, "\n"));
   return SP;
 }
 
@@ -465,6 +474,93 @@ private:
   WallTimer Timer;
 };
 
+// Helpers for patching diagnostics between two versions of file contents.
+class DiagPatcher {
+  llvm::ArrayRef<llvm::StringRef> OldLines;
+  llvm::ArrayRef<llvm::StringRef> CurrentLines;
+  llvm::StringMap<llvm::SmallVector<int>> CurrentContentsToLine;
+
+  // Translates a range from old lines to current lines.
+  // Finds the consecutive set of lines that corresponds to the same contents in
+  // old and current, and applies the same translation to the range.
+  // Returns true if translation succeeded.
+  bool translateRange(Range &R) {
+    int OldStart = R.start.line;
+    int OldEnd = R.end.line;
+    assert(OldStart <= OldEnd);
+
+    size_t RangeLen = OldEnd - OldStart + 1;
+    auto RangeContents = OldLines.slice(OldStart).take_front(RangeLen);
+    // Make sure the whole range is covered in old contents.
+    if (RangeContents.size() < RangeLen)
+      return false;
+
+    std::optional<int> Closest;
+    for (int AlternateLine : CurrentContentsToLine.lookup(RangeContents[0])) {
+      // Check if AlternateLine matches all lines in the range.
+      if (RangeContents !=
+          CurrentLines.slice(AlternateLine).take_front(RangeLen))
+        continue;
+      int Delta = AlternateLine - OldStart;
+      if (!Closest.has_value() || abs(Delta) < abs(*Closest))
+        Closest = Delta;
+    }
+    // Couldn't find any viable matches in the current contents.
+    if (!Closest.has_value())
+      return false;
+    R.start.line += *Closest;
+    R.end.line += *Closest;
+    return true;
+  }
+
+  // Translates a Note by patching its range when inside main file. Returns true
+  // on success.
+  bool translateNote(Note &N) {
+    if (!N.InsideMainFile)
+      return true;
+    if (translateRange(N.Range))
+      return true;
+    return false;
+  }
+
+  // Tries to translate all the edit ranges inside the fix. Returns true on
+  // success. On failure fixes might be in an invalid state.
+  bool translateFix(Fix &F) {
+    return llvm::all_of(
+        F.Edits, [this](TextEdit &E) { return translateRange(E.range); });
+  }
+
+public:
+  DiagPatcher(llvm::ArrayRef<llvm::StringRef> OldLines,
+              llvm::ArrayRef<llvm::StringRef> CurrentLines) {
+    this->OldLines = OldLines;
+    this->CurrentLines = CurrentLines;
+    for (int Line = 0, E = CurrentLines.size(); Line != E; ++Line) {
+      llvm::StringRef Contents = CurrentLines[Line];
+      CurrentContentsToLine[Contents].push_back(Line);
+    }
+  }
+  // Translate diagnostic by moving its main range to new location (if inside
+  // the main file). Preserve all the notes and fixes that can be translated to
+  // new contents.
+  // Drops the whole diagnostic if main range can't be patched.
+  std::optional<Diag> translateDiag(const Diag &D) {
+    Range NewRange = D.Range;
+    // Patch range if it's inside main file.
+    if (D.InsideMainFile && !translateRange(NewRange)) {
+      // Drop the diagnostic if we couldn't patch the range.
+      return std::nullopt;
+    }
+
+    Diag NewD = D;
+    NewD.Range = NewRange;
+    // Translate ranges inside notes and fixes too, dropping the ones that are
+    // no longer relevant.
+    llvm::erase_if(NewD.Notes, [this](Note &N) { return !translateNote(N); });
+    llvm::erase_if(NewD.Fixes, [this](Fix &F) { return !translateFix(F); });
+    return NewD;
+  }
+};
 } // namespace
 
 std::shared_ptr<const PreambleData>
@@ -612,6 +708,22 @@ void escapeBackslashAndQuotes(llvm::StringRef Text, llvm::raw_ostream &OS) {
   }
 }
 
+// Translate diagnostics from baseline into modified for the lines that have the
+// same spelling.
+static std::vector<Diag> patchDiags(llvm::ArrayRef<Diag> BaselineDiags,
+                                    const ScannedPreamble &BaselineScan,
+                                    const ScannedPreamble &ModifiedScan) {
+  std::vector<Diag> PatchedDiags;
+  if (BaselineDiags.empty())
+    return PatchedDiags;
+  DiagPatcher Patcher(BaselineScan.Lines, ModifiedScan.Lines);
+  for (auto &D : BaselineDiags) {
+    if (auto NewD = Patcher.translateDiag(D))
+      PatchedDiags.emplace_back(std::move(*NewD));
+  }
+  return PatchedDiags;
+}
+
 PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
                                     const ParseInputs &Modified,
                                     const PreambleData &Baseline,
@@ -629,7 +741,7 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
   //   there's nothing to do but generate an empty patch.
   auto BaselineScan = scanPreamble(
       // Contents needs to be null-terminated.
-      Baseline.Preamble.getContents().str(), Modified.CompileCommand);
+      Baseline.Preamble.getContents(), Modified.CompileCommand);
   if (!BaselineScan) {
     elog("Failed to scan baseline of {0}: {1}", FileName,
          BaselineScan.takeError());
@@ -730,6 +842,8 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
       Patch << TD.Text << '\n';
     }
   }
+
+  PP.PatchedDiags = patchDiags(Baseline.Diags, *BaselineScan, *ModifiedScan);
   dlog("Created preamble patch: {0}", Patch.str());
   Patch.flush();
   return PP;
@@ -771,6 +885,7 @@ PreamblePatch PreamblePatch::unmodified(const PreambleData &Preamble) {
   PreamblePatch PP;
   PP.PreambleIncludes = Preamble.Includes.MainFileIncludes;
   PP.ModifiedBounds = Preamble.Preamble.getBounds();
+  PP.PatchedDiags = Preamble.Diags;
   return PP;
 }
 
