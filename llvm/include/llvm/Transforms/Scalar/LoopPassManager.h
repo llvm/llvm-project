@@ -234,7 +234,7 @@ struct RequireAnalysisPass<AnalysisT, Loop, LoopAnalysisManager,
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
     auto ClassName = AnalysisT::name();
     auto PassName = MapClassName2PassName(ClassName);
-    OS << "require<" << PassName << ">";
+    OS << "require<" << PassName << '>';
   }
 };
 

@@ -10634,8 +10634,8 @@ void LoopVectorizePass::printPipeline(
   static_cast<PassInfoMixin<LoopVectorizePass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
 
-  OS << "<";
+  OS << '<';
   OS << (InterleaveOnlyWhenForced ? "" : "no-") << "interleave-forced-only;";
   OS << (VectorizeOnlyWhenForced ? "" : "no-") << "vectorize-forced-only;";
-  OS << ">";
+  OS << '>';
 }
