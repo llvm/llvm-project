@@ -82,6 +82,8 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     ${ARGN}
   )
 
+  set(include_dirs ${LIBC_BUILD_DIR}/include ${LIBC_SOURCE_DIR} ${LIBC_BUILD_DIR})
+
   # The packaged version will be built for every target GPU architecture. We do
   # this so we can support multiple accelerators on the same machine.
   foreach(gpu_arch ${all_gpu_architectures})
@@ -166,7 +168,6 @@ function(_build_gpu_objects fq_target_name internal_target_name)
                    ${full_deps_list} ${packaged_target_name} ${stub_target_name})
 
   # We only build the internal target for a single supported architecture.
-  set(include_dirs ${LIBC_BUILD_DIR}/include ${LIBC_SOURCE_DIR} ${LIBC_BUILD_DIR})
   if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU OR
      LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
     add_library(
