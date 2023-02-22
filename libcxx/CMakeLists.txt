@@ -465,7 +465,7 @@ include(HandleLibcxxFlags)
 # 'LIBCXX_COMPILE_FLAGS' and 'LIBCXX_LINK_FLAGS'
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
-  add_target_flags_if_supported("-mdefault-visibility-export-mapping=explicit")
+  add_flags_if_supported("-mdefault-visibility-export-mapping=explicit")
   set(CMAKE_AIX_EXPORT_ALL_SYMBOLS OFF)
 endif()
 
