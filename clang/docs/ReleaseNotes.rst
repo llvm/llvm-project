@@ -765,7 +765,7 @@ Bug Fixes to Attribute Support
   a function pointer.
 
 - In C mode, when ``e1`` has ``__attribute__((noreturn))`` but ``e2`` doesn't,
-  ``(c ? e1 : e2)`` is no longer considered noreturn.
+  ``(c ? e1 : e2)`` is no longer considered noreturn, fixing a miscompilation.
   (`#59792 <https://github.com/llvm/llvm-project/issues/59792>`_)
 
 - GNU attributes being applied prior to standard attributes would be handled
