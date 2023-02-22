@@ -1654,6 +1654,7 @@ void ConversionPatternRewriter::startRootUpdate(Operation *op) {
 }
 
 void ConversionPatternRewriter::finalizeRootUpdate(Operation *op) {
+  PatternRewriter::finalizeRootUpdate(op);
   // There is nothing to do here, we only need to track the operation at the
   // start of the update.
 #ifndef NDEBUG
