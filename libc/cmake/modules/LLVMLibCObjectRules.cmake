@@ -132,9 +132,9 @@ function(_build_gpu_objects fq_target_name internal_target_name)
   add_custom_command(OUTPUT ${packaged_output_name}
                      COMMAND ${LIBC_CLANG_OFFLOAD_PACKAGER}
                              ${packager_images} -o ${packaged_output_name}
-                     DEPENDS ${gpu_target_names}
+                     DEPENDS ${gpu_target_names} ${ADD_GPU_OBJ_SRCS} ${ADD_GPU_OBJ_HDRS}
                      COMMENT "Packaging LLVM offloading binary")
-  add_custom_target(${packaged_target_name} DEPENDS ${packaged_output_name})
+  add_custom_target(${packaged_target_name} DEPENDS ${packaged_output_name} ${gpu_target_name})
 
   # We create an empty 'stub' file for the host to contain the embedded device
   # code. This will be packaged into 'libcgpu.a'.
@@ -142,20 +142,28 @@ function(_build_gpu_objects fq_target_name internal_target_name)
   #       into a single bitcode file and use that. For now we simply build for
   #       every single one and let the offloading linker handle it.
   get_filename_component(stub_filename ${ADD_GPU_OBJ_SRCS} NAME)
-  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/stubs)
-  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename} "// Empty file.\n")
+  add_custom_command(
+    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/stubs/
+    COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename}
+    DEPENDS ${gpu_target_names} ${ADD_GPU_OBJ_SRCS} ${ADD_GPU_OBJ_HDRS}
+  )
+  set(stub_target_name ${fq_target_name}.__stub__)
+  add_custom_target(${stub_target_name} DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename})
+
   add_library(
     ${fq_target_name}
     # We want an object library as the objects will eventually get packaged into
     # an archive (like libcgpu.a).
     EXCLUDE_FROM_ALL
     OBJECT
-    "${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename}"
+    ${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename}
   )
   target_compile_options(${fq_target_name} BEFORE PRIVATE ${common_compile_options}
                          -nostdlib -Xclang -fembed-offload-object=${packaged_output_name})
   target_include_directories(${fq_target_name} PRIVATE ${include_dirs})
-  add_dependencies(${fq_target_name} ${full_deps_list} ${packaged_target_name})
+  add_dependencies(${fq_target_name} 
+                   ${full_deps_list} ${packaged_target_name} ${stub_target_name})
 
   # We only build the internal target for a single supported architecture.
   set(include_dirs ${LIBC_BUILD_DIR}/include ${LIBC_SOURCE_DIR} ${LIBC_BUILD_DIR})
@@ -560,7 +568,6 @@ function(create_entrypoint_object fq_target_name)
         OBJECT_FILE_RAW "$<TARGET_OBJECTS:${internal_target_name}>"
     )
   endif()
-
 
   if(LLVM_LIBC_ENABLE_LINTING AND TARGET ${internal_target_name})
     if(NOT LLVM_LIBC_CLANG_TIDY)
