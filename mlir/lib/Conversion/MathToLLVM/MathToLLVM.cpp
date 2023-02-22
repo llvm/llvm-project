@@ -291,7 +291,7 @@ struct ConvertMathToLLVMPass
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     LLVMTypeConverter converter(&getContext());
-    populateMathToLLVMConversionPatterns(converter, patterns);
+    populateMathToLLVMConversionPatterns(converter, patterns, approximateLog1p);
     LLVMConversionTarget target(getContext());
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
@@ -301,7 +301,10 @@ struct ConvertMathToLLVMPass
 } // namespace
 
 void mlir::populateMathToLLVMConversionPatterns(LLVMTypeConverter &converter,
-                                                RewritePatternSet &patterns) {
+                                                RewritePatternSet &patterns,
+                                                bool approximateLog1p) {
+  if (approximateLog1p)
+    patterns.add<Log1pOpLowering>(converter);
   // clang-format off
   patterns.add<
     AbsFOpLowering,
@@ -319,7 +322,6 @@ void mlir::populateMathToLLVMConversionPatterns(LLVMTypeConverter &converter,
     FloorOpLowering,
     FmaOpLowering,
     Log10OpLowering,
-    Log1pOpLowering,
     Log2OpLowering,
     LogOpLowering,
     PowFOpLowering,

@@ -963,20 +963,7 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
         common::visitors{
             [&](const parser::Designator &) {
               if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
-                const auto &useScope{
-                    context_.FindScope(GetContext().directiveSource)};
-                const auto &declScope{
-                    GetProgramUnitContaining(name->symbol->GetUltimate())};
-                const auto *sym =
-                    declScope.parent().FindSymbol(name->symbol->name());
-                if (sym &&
-                    (sym->has<MainProgramDetails>() ||
-                        sym->has<ModuleDetails>())) {
-                  context_.Say(name->source,
-                      "The module name or main program name cannot be in a %s "
-                      "directive"_err_en_US,
-                      ContextDirectiveAsFortran());
-                } else if (name->symbol->GetUltimate().IsSubprogram()) {
+                if (name->symbol->GetUltimate().IsSubprogram()) {
                   if (GetContext().directive ==
                       llvm::omp::Directive::OMPD_threadprivate)
                     context_.Say(name->source,
@@ -1002,20 +989,6 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
                       "A variable in a %s directive cannot be an element of a "
                       "common block"_err_en_US,
                       ContextDirectiveAsFortran());
-                } else if (!IsSave(*name->symbol) &&
-                    declScope.kind() != Scope::Kind::MainProgram &&
-                    declScope.kind() != Scope::Kind::Module) {
-                  context_.Say(name->source,
-                      "A variable that appears in a %s directive must be "
-                      "declared in the scope of a module or have the SAVE "
-                      "attribute, either explicitly or implicitly"_err_en_US,
-                      ContextDirectiveAsFortran());
-                } else if (useScope != declScope) {
-                  context_.Say(name->source,
-                      "The %s directive and the common block or variable in it "
-                      "must appear in the same declaration section of a "
-                      "scoping unit"_err_en_US,
-                      ContextDirectiveAsFortran());
                 } else if (FindEquivalenceSet(*name->symbol)) {
                   context_.Say(name->source,
                       "A variable in a %s directive cannot appear in an "
@@ -1028,6 +1001,40 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
                       "A THREADPRIVATE variable cannot appear in a %s "
                       "directive"_err_en_US,
                       ContextDirectiveAsFortran());
+                } else {
+                  const semantics::Scope &useScope{
+                      context_.FindScope(GetContext().directiveSource)};
+                  const semantics::Scope &curScope =
+                      name->symbol->GetUltimate().owner();
+                  if (!curScope.IsTopLevel()) {
+                    const semantics::Scope &declScope =
+                        GetProgramUnitContaining(curScope);
+                    const semantics::Symbol *sym{
+                        declScope.parent().FindSymbol(name->symbol->name())};
+                    if (sym &&
+                        (sym->has<MainProgramDetails>() ||
+                            sym->has<ModuleDetails>())) {
+                      context_.Say(name->source,
+                          "The module name or main program name cannot be in a "
+                          "%s "
+                          "directive"_err_en_US,
+                          ContextDirectiveAsFortran());
+                    } else if (!IsSave(*name->symbol) &&
+                        declScope.kind() != Scope::Kind::MainProgram &&
+                        declScope.kind() != Scope::Kind::Module) {
+                      context_.Say(name->source,
+                          "A variable that appears in a %s directive must be "
+                          "declared in the scope of a module or have the SAVE "
+                          "attribute, either explicitly or implicitly"_err_en_US,
+                          ContextDirectiveAsFortran());
+                    } else if (useScope != declScope) {
+                      context_.Say(name->source,
+                          "The %s directive and the common block or variable "
+                          "in it must appear in the same declaration section "
+                          "of a scoping unit"_err_en_US,
+                          ContextDirectiveAsFortran());
+                    }
+                  }
                 }
               }
             },

@@ -85,50 +85,41 @@ _LIBCPP_CONSTEXPR_SINCE_CXX14 unsigned __sort3(_ForwardIterator __x, _ForwardIte
 
 template <class _AlgPolicy, class _Compare, class _ForwardIterator>
 _LIBCPP_HIDE_FROM_ABI
-unsigned __sort4(_ForwardIterator __x1, _ForwardIterator __x2, _ForwardIterator __x3, _ForwardIterator __x4,
+void __sort4(_ForwardIterator __x1, _ForwardIterator __x2, _ForwardIterator __x3, _ForwardIterator __x4,
                  _Compare __c) {
   using _Ops   = _IterOps<_AlgPolicy>;
-  unsigned __r = std::__sort3<_AlgPolicy, _Compare>(__x1, __x2, __x3, __c);
+  std::__sort3<_AlgPolicy, _Compare>(__x1, __x2, __x3, __c);
   if (__c(*__x4, *__x3)) {
     _Ops::iter_swap(__x3, __x4);
-    ++__r;
     if (__c(*__x3, *__x2)) {
       _Ops::iter_swap(__x2, __x3);
-      ++__r;
       if (__c(*__x2, *__x1)) {
         _Ops::iter_swap(__x1, __x2);
-        ++__r;
       }
     }
   }
-  return __r;
 }
 
 // stable, 4-10 compares, 0-9 swaps
 
 template <class _AlgPolicy, class _Comp, class _ForwardIterator>
-_LIBCPP_HIDE_FROM_ABI unsigned __sort5(_ForwardIterator __x1, _ForwardIterator __x2, _ForwardIterator __x3,
-                                       _ForwardIterator __x4, _ForwardIterator __x5, _Comp __comp) {
+_LIBCPP_HIDE_FROM_ABI void __sort5(_ForwardIterator __x1, _ForwardIterator __x2, _ForwardIterator __x3,
+                                   _ForwardIterator __x4, _ForwardIterator __x5, _Comp __comp) {
   using _Ops = _IterOps<_AlgPolicy>;
 
-  unsigned __r = std::__sort4<_AlgPolicy, _Comp>(__x1, __x2, __x3, __x4, __comp);
+  std::__sort4<_AlgPolicy, _Comp>(__x1, __x2, __x3, __x4, __comp);
   if (__comp(*__x5, *__x4)) {
     _Ops::iter_swap(__x4, __x5);
-    ++__r;
     if (__comp(*__x4, *__x3)) {
       _Ops::iter_swap(__x3, __x4);
-      ++__r;
       if (__comp(*__x3, *__x2)) {
         _Ops::iter_swap(__x2, __x3);
-        ++__r;
         if (__comp(*__x2, *__x1)) {
           _Ops::iter_swap(__x1, __x2);
-          ++__r;
         }
       }
     }
   }
-  return __r;
 }
 
 // The comparator being simple is a prerequisite for using the branchless optimization.

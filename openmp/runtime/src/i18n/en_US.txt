@@ -492,7 +492,7 @@ SubmitBugReport              "Please submit a bug report with this message, comp
                              "compiler and operating system versions. Faster response will be "
                              "obtained by including all program sources. For information on "
                              "submitting this issue, please see "
-                             "https://bugs.llvm.org/."
+                             "https://github.com/llvm/llvm-project/issues/."
 OBSOLETE                     "Check NLSPATH environment variable, its value is \"%1$s\"."
 ChangeStackLimit             "Please try changing the shell stack limit or adjusting the "
                              "OMP_STACKSIZE environment variable."
