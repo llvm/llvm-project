@@ -76,6 +76,30 @@ func.func @extract_contract2(%arg0: vector<2x3xf32>,
   return %0 : vector<2xf32>
 }
 
+// OUTERPRODUCT-LABEL:   func.func @masked_extract_contract2(
+// OUTERPRODUCT-SAME:                                      %[[VAL_0:.*]]: vector<2x3xf32>,
+// OUTERPRODUCT-SAME:                                      %[[VAL_1:.*]]: vector<3xf32>,
+// OUTERPRODUCT-SAME:                                      %[[VAL_2:.*]]: vector<2xf32>,
+// OUTERPRODUCT-SAME:                                      %[[IN_MASK:.*]]: vector<2x3xi1>) -> vector<2xf32>
+// OUTERPRODUCT:           %[[T_MASK:.*]] = vector.transpose %[[IN_MASK]], [1, 0] : vector<2x3xi1> to vector<3x2xi1>
+// OUTERPRODUCT:           %[[MASK0:.*]] = vector.extract %[[T_MASK]][0] : vector<3x2xi1>
+// OUTERPRODUCT:           vector.mask %[[MASK0]] { vector.outerproduct
+
+// OUTERPRODUCT:           %[[MASK1:.*]] = vector.extract %[[T_MASK]][1] : vector<3x2xi1>
+// OUTERPRODUCT:           vector.mask %[[MASK1]] { vector.outerproduct
+
+// OUTERPRODUCT:           %[[MASK2:.*]] = vector.extract %[[T_MASK]][2] : vector<3x2xi1>
+// OUTERPRODUCT:           vector.mask %[[MASK2]] { vector.outerproduct
+
+func.func @masked_extract_contract2(%arg0: vector<2x3xf32>,
+                                    %arg1: vector<3xf32>,
+                                    %arg2: vector<2xf32>,
+                                    %m: vector<2x3xi1>) -> vector<2xf32> {
+  %0 = vector.mask %m { vector.contract #matvec_trait %arg0, %arg1, %arg2
+          : vector<2x3xf32>, vector<3xf32> into vector<2xf32> } : vector<2x3xi1> -> vector<2xf32>
+  return %0 : vector<2xf32>
+}
+
 // CHECK-LABEL: func @extract_contract2_int
 // CHECK-SAME: %[[A:.*0]]: vector<2x3xi32>,
 // CHECK-SAME: %[[B:.*1]]: vector<3xi32>,
@@ -180,6 +204,32 @@ func.func @extract_contract4(%arg0: vector<2x2xf32>,
   %0 = vector.contract #matmat_trait %arg0, %arg1, %arg2
     : vector<2x2xf32>, vector<2x2xf32> into vector<2x2xf32>
   return %0 : vector<2x2xf32>
+}
+
+// OUTERPRODUCT-LABEL: func.func @masked_extract_contract4(
+// OUTERPRODUCT-SAME:                                      %[[VAL_0:.*]]: vector<3x5xf32>,
+// OUTERPRODUCT-SAME:                                      %[[VAL_1:.*]]: vector<5x7xf32>,
+// OUTERPRODUCT-SAME:                                      %[[VAL_2:.*]]: vector<3x7xf32>,
+// OUTERPRODUCT-SAME:                                      %[[VAL_3:.*]]: vector<3x7x5xi1>) -> vector<3x7xf32> {
+// OUTERPRODUCT:         %[[VAL_5:.*]] = vector.transpose %[[VAL_3]], [2, 0, 1] : vector<3x7x5xi1> to vector<5x3x7xi1>
+// OUTERPRODUCT:         %[[VAL_8:.*]] = vector.extract %[[VAL_5]][0] : vector<5x3x7xi1>
+// OUTERPRODUCT:         %[[VAL_9:.*]] = vector.mask %[[VAL_8]] { vector.outerproduct %{{.*}} {kind = #vector.kind<add>} : vector<3xf32>, vector<7xf32> } : vector<3x7xi1> -> vector<3x7xf32>
+// OUTERPRODUCT:         %[[VAL_12:.*]] = vector.extract %[[VAL_5]][1] : vector<5x3x7xi1>
+// OUTERPRODUCT:         %[[VAL_13:.*]] = vector.mask %[[VAL_12]] { vector.outerproduct %{{.*}} {kind = #vector.kind<add>} : vector<3xf32>, vector<7xf32> } : vector<3x7xi1> -> vector<3x7xf32>
+// OUTERPRODUCT:         %[[VAL_16:.*]] = vector.extract %[[VAL_5]][2] : vector<5x3x7xi1>
+// OUTERPRODUCT:         %[[VAL_17:.*]] = vector.mask %[[VAL_16]] { vector.outerproduct %{{.*}} {kind = #vector.kind<add>} : vector<3xf32>, vector<7xf32> } : vector<3x7xi1> -> vector<3x7xf32>
+// OUTERPRODUCT:         %[[VAL_20:.*]] = vector.extract %[[VAL_5]][3] : vector<5x3x7xi1>
+// OUTERPRODUCT:         %[[VAL_21:.*]] = vector.mask %[[VAL_20]] { vector.outerproduct %{{.*}} {kind = #vector.kind<add>} : vector<3xf32>, vector<7xf32> } : vector<3x7xi1> -> vector<3x7xf32>
+// OUTERPRODUCT:         %[[VAL_24:.*]] = vector.extract %[[VAL_5]][4] : vector<5x3x7xi1>
+// OUTERPRODUCT:         %[[VAL_25:.*]] = vector.mask %[[VAL_24]] { vector.outerproduct %{{.*}} {kind = #vector.kind<add>} : vector<3xf32>, vector<7xf32> } : vector<3x7xi1> -> vector<3x7xf32>
+
+func.func @masked_extract_contract4(%arg0: vector<3x5xf32>,
+                                    %arg1: vector<5x7xf32>,
+                                    %arg2: vector<3x7xf32>,
+                                    %m : vector<3x7x5xi1>) -> vector<3x7xf32> {
+  %0 = vector.mask %m { vector.contract #matmat_trait %arg0, %arg1, %arg2
+  : vector<3x5xf32>, vector<5x7xf32> into vector<3x7xf32> } : vector<3x7x5xi1> -> vector<3x7xf32>
+  return %0 : vector<3x7xf32>
 }
 
 #contraction2d_accesses = [
@@ -1197,26 +1247,4 @@ func.func @parrallel_contract_lowering_scalar(%arg0: vector<1x1xf32>, %arg1: vec
   return %0 : f32
 }
 
-func.func @masked_vector_contract(%arg0: vector<2x3xf32>,
-                                  %arg1: vector<3xf32>,
-                                  %arg2: vector<2xf32>,
-                                  %m: vector<2x3xi1>) -> vector<2xf32> {
-  %0 = vector.mask %m { vector.contract #matvec_trait %arg0, %arg1, %arg2
-          : vector<2x3xf32>, vector<3xf32> into vector<2xf32> } : vector<2x3xi1> -> vector<2xf32>
-  return %0 : vector<2xf32>
-}
 
-// OUTERPRODUCT-LABEL:   func.func @masked_vector_contract(
-// OUTERPRODUCT-SAME:                                      %[[VAL_0:.*]]: vector<2x3xf32>,
-// OUTERPRODUCT-SAME:                                      %[[VAL_1:.*]]: vector<3xf32>,
-// OUTERPRODUCT-SAME:                                      %[[VAL_2:.*]]: vector<2xf32>,
-// OUTERPRODUCT-SAME:                                      %[[IN_MASK:.*]]: vector<2x3xi1>) -> vector<2xf32>
-// OUTERPRODUCT:           %[[T_MASK:.*]] = vector.transpose %[[IN_MASK]], [1, 0] : vector<2x3xi1> to vector<3x2xi1>
-// OUTERPRODUCT:           %[[MASK0:.*]] = vector.extract %[[T_MASK]][0] : vector<3x2xi1>
-// OUTERPRODUCT:           vector.mask %[[MASK0]] { vector.outerproduct
-
-// OUTERPRODUCT:           %[[MASK1:.*]] = vector.extract %[[T_MASK]][1] : vector<3x2xi1>
-// OUTERPRODUCT:           vector.mask %[[MASK1]] { vector.outerproduct
-
-// OUTERPRODUCT:           %[[MASK2:.*]] = vector.extract %[[T_MASK]][2] : vector<3x2xi1>
-// OUTERPRODUCT:           vector.mask %[[MASK2]] { vector.outerproduct

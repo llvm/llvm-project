@@ -1790,16 +1790,6 @@ std::optional<SmallVector<int64_t, 4>> FMAOp::getShapeForUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
 
-// MaskableOpInterface methods.
-
-/// Returns the mask type expected by this operation. Mostly used for
-/// verification purposes. It requires the operation to be vectorized."
-Type FMAOp::getExpectedMaskType() {
-  auto vecType = this->getVectorType();
-  return VectorType::get(vecType.getShape(),
-                         IntegerType::get(vecType.getContext(), /*width=*/1));
-}
-
 //===----------------------------------------------------------------------===//
 // BroadcastOp
 //===----------------------------------------------------------------------===//
@@ -5807,53 +5797,71 @@ bool WarpExecuteOnLane0Op::areTypesCompatible(Type lhs, Type rhs) {
 }
 
 Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,
-                                       CombiningKind kind, Value v1, Value v2) {
+                                       CombiningKind kind, Value v1, Value acc,
+                                       Value mask) {
   Type t1 = getElementTypeOrSelf(v1.getType());
-  Type t2 = getElementTypeOrSelf(v2.getType());
+  Type tAcc = getElementTypeOrSelf(acc.getType());
+  Value result;
+
   switch (kind) {
   case CombiningKind::ADD:
-    if (t1.isIntOrIndex() && t2.isIntOrIndex())
-      return b.createOrFold<arith::AddIOp>(loc, v1, v2);
-    else if (t1.isa<FloatType>() && t2.isa<FloatType>())
-      return b.createOrFold<arith::AddFOp>(loc, v1, v2);
-    llvm_unreachable("invalid value types for ADD reduction");
+    if (t1.isIntOrIndex() && tAcc.isIntOrIndex())
+      result = b.createOrFold<arith::AddIOp>(loc, v1, acc);
+    else if (t1.isa<FloatType>() && tAcc.isa<FloatType>())
+      result = b.createOrFold<arith::AddFOp>(loc, v1, acc);
+    else
+      llvm_unreachable("invalid value types for ADD reduction");
+    break;
   case CombiningKind::AND:
-    assert(t1.isIntOrIndex() && t2.isIntOrIndex() && "expected int values");
-    return b.createOrFold<arith::AndIOp>(loc, v1, v2);
+    assert(t1.isIntOrIndex() && tAcc.isIntOrIndex() && "expected int values");
+    result = b.createOrFold<arith::AndIOp>(loc, v1, acc);
+    break;
   case CombiningKind::MAXF:
-    assert(t1.isa<FloatType>() && t2.isa<FloatType>() &&
+    assert(t1.isa<FloatType>() && tAcc.isa<FloatType>() &&
            "expected float values");
-    return b.createOrFold<arith::MaxFOp>(loc, v1, v2);
+    result = b.createOrFold<arith::MaxFOp>(loc, v1, acc);
+    break;
   case CombiningKind::MINF:
-    assert(t1.isa<FloatType>() && t2.isa<FloatType>() &&
+    assert(t1.isa<FloatType>() && tAcc.isa<FloatType>() &&
            "expected float values");
-    return b.createOrFold<arith::MinFOp>(loc, v1, v2);
+    result = b.createOrFold<arith::MinFOp>(loc, v1, acc);
+    break;
   case CombiningKind::MAXSI:
-    assert(t1.isIntOrIndex() && t2.isIntOrIndex() && "expected int values");
-    return b.createOrFold<arith::MaxSIOp>(loc, v1, v2);
+    assert(t1.isIntOrIndex() && tAcc.isIntOrIndex() && "expected int values");
+    result = b.createOrFold<arith::MaxSIOp>(loc, v1, acc);
+    break;
   case CombiningKind::MINSI:
-    assert(t1.isIntOrIndex() && t2.isIntOrIndex() && "expected int values");
-    return b.createOrFold<arith::MinSIOp>(loc, v1, v2);
+    assert(t1.isIntOrIndex() && tAcc.isIntOrIndex() && "expected int values");
+    result = b.createOrFold<arith::MinSIOp>(loc, v1, acc);
+    break;
   case CombiningKind::MAXUI:
-    assert(t1.isIntOrIndex() && t2.isIntOrIndex() && "expected int values");
-    return b.createOrFold<arith::MaxUIOp>(loc, v1, v2);
+    assert(t1.isIntOrIndex() && tAcc.isIntOrIndex() && "expected int values");
+    result = b.createOrFold<arith::MaxUIOp>(loc, v1, acc);
+    break;
   case CombiningKind::MINUI:
-    assert(t1.isIntOrIndex() && t2.isIntOrIndex() && "expected int values");
-    return b.createOrFold<arith::MinUIOp>(loc, v1, v2);
+    assert(t1.isIntOrIndex() && tAcc.isIntOrIndex() && "expected int values");
+    result = b.createOrFold<arith::MinUIOp>(loc, v1, acc);
+    break;
   case CombiningKind::MUL:
-    if (t1.isIntOrIndex() && t2.isIntOrIndex())
-      return b.createOrFold<arith::MulIOp>(loc, v1, v2);
-    else if (t1.isa<FloatType>() && t2.isa<FloatType>())
-      return b.createOrFold<arith::MulFOp>(loc, v1, v2);
-    llvm_unreachable("invalid value types for MUL reduction");
+    if (t1.isIntOrIndex() && tAcc.isIntOrIndex())
+      result = b.createOrFold<arith::MulIOp>(loc, v1, acc);
+    else if (t1.isa<FloatType>() && tAcc.isa<FloatType>())
+      result = b.createOrFold<arith::MulFOp>(loc, v1, acc);
+    else
+      llvm_unreachable("invalid value types for MUL reduction");
+    break;
   case CombiningKind::OR:
-    assert(t1.isIntOrIndex() && t2.isIntOrIndex() && "expected int values");
-    return b.createOrFold<arith::OrIOp>(loc, v1, v2);
+    assert(t1.isIntOrIndex() && tAcc.isIntOrIndex() && "expected int values");
+    result = b.createOrFold<arith::OrIOp>(loc, v1, acc);
+    break;
   case CombiningKind::XOR:
-    assert(t1.isIntOrIndex() && t2.isIntOrIndex() && "expected int values");
-    return b.createOrFold<arith::XOrIOp>(loc, v1, v2);
+    assert(t1.isIntOrIndex() && tAcc.isIntOrIndex() && "expected int values");
+    result = b.createOrFold<arith::XOrIOp>(loc, v1, acc);
+    break;
   };
-  llvm_unreachable("unknown CombiningKind");
+
+  assert(result && "unknown CombiningKind");
+  return selectPassthru(b, mask, result, acc);
 }
 
 //===----------------------------------------------------------------------===//
@@ -5875,13 +5883,34 @@ void mlir::vector::createMaskOpRegion(OpBuilder &builder,
 /// Creates a vector.mask operation around a maskable operation. Returns the
 /// vector.mask operation if the mask provided is valid. Otherwise, returns
 /// the maskable operation itself.
-Operation *mlir::vector::maskOperation(RewriterBase &rewriter,
-                                       Operation *maskableOp, Value mask) {
+Operation *mlir::vector::maskOperation(OpBuilder &builder,
+                                       Operation *maskableOp, Value mask,
+                                       Value passthru) {
   if (!mask)
     return maskableOp;
-  return rewriter.create<MaskOp>(maskableOp->getLoc(),
-                                 maskableOp->getResultTypes(), mask, maskableOp,
-                                 createMaskOpRegion);
+  if (passthru)
+    return builder.create<MaskOp>(maskableOp->getLoc(),
+                                  maskableOp->getResultTypes(), mask, passthru,
+                                  maskableOp, createMaskOpRegion);
+  return builder.create<MaskOp>(maskableOp->getLoc(),
+                                maskableOp->getResultTypes(), mask, maskableOp,
+                                createMaskOpRegion);
+}
+
+/// Creates a vector select operation that picks values from `newValue` or
+/// `passthru` for each result vector lane based on `mask`. This utility is used
+/// to propagate the pass-thru value of vector.mask or for cases where only the
+/// pass-thru value propagation is needed. VP intrinsics do not support
+/// pass-thru values and every mask-out lane is set to poison. LLVM backends are
+/// usually able to match op + select patterns and fold them into a native
+/// target instructions.
+Value mlir::vector::selectPassthru(OpBuilder &builder, Value mask,
+                                   Value newValue, Value passthru) {
+  if (!mask)
+    return newValue;
+
+  return builder.create<arith::SelectOp>(newValue.getLoc(), newValue.getType(),
+                                         mask, newValue, passthru);
 }
 
 //===----------------------------------------------------------------------===//
