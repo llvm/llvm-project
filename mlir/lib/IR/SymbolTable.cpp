@@ -949,7 +949,7 @@ LogicalResult LockedSymbolTableCollection::lookupSymbolIn(
 }
 
 SymbolTable &
-LockedSymbolTableCollectio::getSymbolTable(Operation *symbolTableOp) {
+LockedSymbolTableCollection::getSymbolTable(Operation *symbolTableOp) {
   assert(symbolTableOp->hasTrait<OpTrait::SymbolTable>());
   // Try to find an existing symbol table.
   {
