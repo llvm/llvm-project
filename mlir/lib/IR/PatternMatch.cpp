@@ -294,6 +294,12 @@ void RewriterBase::eraseBlock(Block *block) {
   block->erase();
 }
 
+void RewriterBase::finalizeRootUpdate(Operation *op) {
+  // Notify the listener that the operation was modified.
+  if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
+    rewriteListener->notifyOperationModified(op);
+}
+
 /// Merge the operations of block 'source' into the end of block 'dest'.
 /// 'source's predecessors must be empty or only contain 'dest`.
 /// 'argValues' is used to replace the block arguments of 'source' after
