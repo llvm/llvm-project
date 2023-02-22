@@ -579,14 +579,8 @@ class SCEVUnknown final : public SCEV, private CallbackVH {
 public:
   Value *getValue() const { return getValPtr(); }
 
-  /// @{
-  /// Test whether this is a special constant representing a type size in a
-  /// target-independent manner, and hasn't happened to have been folded with
-  /// other operations into something unrecognizable. This is mainly only
-  /// useful for pretty-printing and other situations where it isn't
-  /// absolutely required for these to succeed.
-  bool isSizeOf(Type *&AllocTy) const;
-  /// @}
+  /// Check whether this represents vscale.
+  bool isVScale() const;
 
   Type *getType() const { return getValPtr()->getType(); }
 
