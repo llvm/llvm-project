@@ -335,8 +335,12 @@ static bool CleanupConstantGlobalUsers(GlobalVariable *GV,
   return Changed;
 }
 
+/// Part of the global at a specific offset, which is only accessed through
+/// loads and stores with the given type.
 struct GlobalPart {
   Type *Ty;
+  bool IsLoaded = false;
+  bool IsStored = false;
 };
 
 /// Look at all uses of the global and determine which (offset, type) pairs it
@@ -385,6 +389,8 @@ static bool collectSRATypes(DenseMap<uint64_t, GlobalPart> &Parts,
       if (isa<ScalableVectorType>(Ty))
         return false;
 
+      It->second.IsLoaded |= isa<LoadInst>(V);
+      It->second.IsStored |= isa<StoreInst>(V);
       continue;
     }
 
@@ -471,8 +477,13 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
   if (Parts.size() == 1 && Parts.begin()->second.Ty == GV->getValueType())
     return nullptr;
 
-  // Don't perform SRA if we would have to split into many globals.
-  if (Parts.size() > 16)
+  // Don't perform SRA if we would have to split into many globals. Ignore
+  // parts that are either only loaded or only stored, because we expect them
+  // to be optimized away.
+  unsigned NumParts = count_if(Parts, [](const auto &Pair) {
+    return Pair.second.IsLoaded && Pair.second.IsStored;
+  });
+  if (NumParts > 16)
     return nullptr;
 
   // Sort by offset.
