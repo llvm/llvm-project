@@ -723,18 +723,18 @@ static void addArgumentReturnedAttrs(const SCCNodeSet &SCCNodes,
       continue;
 
     // There is nothing to do if an argument is already marked as 'returned'.
-    if (llvm::any_of(F->args(),
-                     [](const Argument &Arg) { return Arg.hasReturnedAttr(); }))
+    if (F->getAttributes().hasAttrSomewhere(Attribute::Returned))
       continue;
 
-    auto FindRetArg = [&]() -> Value * {
-      Value *RetArg = nullptr;
+    auto FindRetArg = [&]() -> Argument * {
+      Argument *RetArg = nullptr;
       for (BasicBlock &BB : *F)
         if (auto *Ret = dyn_cast<ReturnInst>(BB.getTerminator())) {
           // Note that stripPointerCasts should look through functions with
           // returned arguments.
-          Value *RetVal = Ret->getReturnValue()->stripPointerCasts();
-          if (!isa<Argument>(RetVal) || RetVal->getType() != F->getReturnType())
+          auto *RetVal =
+              dyn_cast<Argument>(Ret->getReturnValue()->stripPointerCasts());
+          if (!RetVal || RetVal->getType() != F->getReturnType())
             return nullptr;
 
           if (!RetArg)
@@ -746,9 +746,8 @@ static void addArgumentReturnedAttrs(const SCCNodeSet &SCCNodes,
       return RetArg;
     };
 
-    if (Value *RetArg = FindRetArg()) {
-      auto *A = cast<Argument>(RetArg);
-      A->addAttr(Attribute::Returned);
+    if (Argument *RetArg = FindRetArg()) {
+      RetArg->addAttr(Attribute::Returned);
       ++NumReturned;
       Changed.insert(F);
     }
