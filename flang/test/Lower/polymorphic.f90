@@ -49,6 +49,10 @@ module polymorphic_test
     integer :: d
   end type
 
+  type :: p4
+    class(p1), allocatable :: a(:)
+  end type
+
   contains
 
   elemental subroutine assign_p1_int(lhs, rhs)
@@ -950,6 +954,21 @@ module polymorphic_test
 ! CHECK: %[[A_NONE:.*]] = fir.convert %[[A]] : (!fir.box<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %[[RES_NONE:.*]] = fir.convert %[[LOAD_RES]] : (!fir.class<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>) -> !fir.box<none>
 ! CHECK: %{{.*}} = fir.call @_FortranAAssign(%[[A_NONE]], %[[RES_NONE]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+
+  subroutine type_with_polymorphic_components(a, b)
+    type(p4) :: a, b
+    a = b
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPtype_with_polymorphic_components(
+! CHECK-SAME: %[[A:.*]]: !fir.ref<!fir.type<_QMpolymorphic_testTp4{a:!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>}>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<!fir.type<_QMpolymorphic_testTp4{a:!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>}>> {fir.bindc_name = "b"}) {
+! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.type<_QMpolymorphic_testTp4{a:!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>}>>
+! CHECK: %[[EMBOX_A:.*]] = fir.embox %[[A]] : (!fir.ref<!fir.type<_QMpolymorphic_testTp4{a:!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>}>>) -> !fir.box<!fir.type<_QMpolymorphic_testTp4{a:!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>}>>
+! CHECK: %[[EMBOX_B:.*]] = fir.embox %[[B]] : (!fir.ref<!fir.type<_QMpolymorphic_testTp4{a:!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>}>>) -> !fir.box<!fir.type<_QMpolymorphic_testTp4{a:!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>}>>
+! CHECK: fir.store %[[EMBOX_A]] to %[[ALLOCA]] : !fir.ref<!fir.box<!fir.type<_QMpolymorphic_testTp4{a:!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>}>>>
+! CHECK: %[[BOX_NONE1:.*]] = fir.convert %[[ALLOCA]] : (!fir.ref<!fir.box<!fir.type<_QMpolymorphic_testTp4{a:!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>}>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[BOX_NONE2:.*]] = fir.convert %[[EMBOX_B]] : (!fir.box<!fir.type<_QMpolymorphic_testTp4{a:!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>}>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranAAssign(%[[BOX_NONE1]], %[[BOX_NONE2]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 
 end module
 
