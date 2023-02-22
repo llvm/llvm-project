@@ -54,7 +54,7 @@ protected:
 
   /// Notify the driver that the specified operation may have been modified
   /// in-place. The operation is added to the worklist.
-  void finalizeRootUpdate(Operation *op) override;
+  void notifyOperationModified(Operation *op) override;
 
   /// Notify the driver that the specified operation was inserted. Update the
   /// worklist as needed: The operation is enqueued depending on scope and
@@ -335,7 +335,7 @@ void GreedyPatternRewriteDriver::notifyOperationInserted(Operation *op) {
   addToWorklist(op);
 }
 
-void GreedyPatternRewriteDriver::finalizeRootUpdate(Operation *op) {
+void GreedyPatternRewriteDriver::notifyOperationModified(Operation *op) {
   LLVM_DEBUG({
     logger.startLine() << "** Modified: '" << op->getName() << "'(" << op
                        << ")\n";

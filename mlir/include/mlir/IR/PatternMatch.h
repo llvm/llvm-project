@@ -402,6 +402,9 @@ public:
     Listener()
         : OpBuilder::Listener(ListenerBase::Kind::RewriterBaseListener) {}
 
+    /// Notify the listener that the specified operation was modified in-place.
+    virtual void notifyOperationModified(Operation *op) {}
+
     /// Notify the listener that the specified operation is about to be replaced
     /// with the set of values potentially produced by new operations. This is
     /// called before the uses of the operation have been changed.
@@ -514,7 +517,7 @@ public:
   /// This method is used to signal the end of a root update on the given
   /// operation. This can only be called on operations that were provided to a
   /// call to `startRootUpdate`.
-  virtual void finalizeRootUpdate(Operation *op) {}
+  virtual void finalizeRootUpdate(Operation *op);
 
   /// This method cancels a pending root update. This can only be called on
   /// operations that were provided to a call to `startRootUpdate`.
