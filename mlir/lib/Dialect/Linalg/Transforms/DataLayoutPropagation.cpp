@@ -434,14 +434,30 @@ pushDownUnPackOpThroughElemGenericOp(RewriterBase &rewriter,
   GenericOp newGenericOp = packElementWiseOp(rewriter, genericOp, dest,
                                              packedOutIndexingMap, packInfo);
 
-  auto unPackOp = unPackedOperand->get().getDefiningOp<tensor::UnPackOp>();
+  // If the output element type for the generic differs from the source
+  // unpack op, we need to create a new destination tensor.
+  auto loc = genericOp.getLoc();
+  Value unPackDest = producerUnPackOp.getDest();
+  auto genericOutElementType = getElementTypeOrSelf(genericOp.getResult(0));
+  if (producerUnPackOp.getDestType().getElementType() !=
+      genericOutElementType) {
+    SmallVector<OpFoldResult> unPackMixedSizes;
+    if (auto unPackEmpty = unPackDest.getDefiningOp<tensor::EmptyOp>())
+      unPackMixedSizes = unPackEmpty.getMixedSizes();
+    else
+      unPackMixedSizes = tensor::getMixedSizes(rewriter, loc, unPackDest);
+
+    unPackDest = rewriter.create<tensor::EmptyOp>(loc, unPackMixedSizes,
+                                                  genericOutElementType);
+  }
+
   // Insert an unPackOp right after the packed generic.
   Value unPackOpRes =
       rewriter
           .create<tensor::UnPackOp>(
-              genericOp.getLoc(),
+              loc,
               newGenericOp.getTiedOpResult(newGenericOp.getDpsInitOperand(0)),
-              unPackOp.getDest(), producerUnPackOp.getInnerDimsPos(),
+              unPackDest, producerUnPackOp.getInnerDimsPos(),
               producerUnPackOp.getMixedTiles(),
               producerUnPackOp.getOuterDimsPerm())
           .getResult();

@@ -1669,8 +1669,10 @@ static void genOmpAtomicUpdateStatement(
 
   mlir::Value result = fir::getBase(converter.genExprValue(
       *Fortran::semantics::GetExpr(assignmentStmtExpr), stmtCtx));
+  mlir::Value convertResult =
+      firOpBuilder.createConvert(currentLocation, varType, result);
   // Insert the terminator: YieldOp.
-  firOpBuilder.create<mlir::omp::YieldOp>(currentLocation, result);
+  firOpBuilder.create<mlir::omp::YieldOp>(currentLocation, convertResult);
   // Reset the insert point to before the terminator.
   firOpBuilder.setInsertionPointToStart(&block);
 }

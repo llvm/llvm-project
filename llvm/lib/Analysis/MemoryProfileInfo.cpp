@@ -91,7 +91,7 @@ static void addAllocTypeAttribute(LLVMContext &Ctx, CallBase *CI,
   CI->addFnAttr(A);
 }
 
-static bool hasSingleAllocType(uint8_t AllocTypes) {
+bool llvm::memprof::hasSingleAllocType(uint8_t AllocTypes) {
   const unsigned NumAllocTypes = llvm::popcount(AllocTypes);
   assert(NumAllocTypes != 0);
   return NumAllocTypes == 1;

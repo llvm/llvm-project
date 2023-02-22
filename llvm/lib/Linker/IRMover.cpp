@@ -529,7 +529,7 @@ class IRLinker {
   void linkNamedMDNodes();
 
   ///  Update attributes while linking.
-  void updateAttributes(GlobalValue &GV);
+  void updateAttributes(GlobalValue &DstGV, GlobalValue &SrcGV);
 
 public:
   IRLinker(Module &DstM, MDMapT &SharedMDs,
@@ -641,7 +641,7 @@ Value *IRLinker::materialize(Value *V, bool ForIndirectSymbol) {
   if (ForIndirectSymbol || shouldLink(New, *SGV))
     setError(linkGlobalValueBody(*New, *SGV));
 
-  updateAttributes(*New);
+  updateAttributes(*New, *SGV);
   return New;
 }
 
@@ -1533,7 +1533,10 @@ static std::string adjustInlineAsm(const std::string &InlineAsm,
   return InlineAsm;
 }
 
-void IRLinker::updateAttributes(GlobalValue &GV) {
+void IRLinker::updateAttributes(GlobalValue &DstGV, GlobalValue &SrcGV) {
+  auto *DstF = dyn_cast<Function>(&DstGV);
+  auto *SrcF = dyn_cast<Function>(&SrcGV);
+
   /// Remove nocallback attribute while linking, because nocallback attribute
   /// indicates that the function is only allowed to jump back into caller's
   /// module only by a return or an exception. When modules are linked, this
@@ -1548,15 +1551,52 @@ void IRLinker::updateAttributes(GlobalValue &GV) {
   /// participate in the LTO link, and thus ends up in the merged module
   /// containing its caller and callee, removing the attribute doesn't hurt as
   /// it has no effect on definitions in the same module.
-  if (auto *F = dyn_cast<Function>(&GV)) {
-    if (!F->isIntrinsic())
-      F->removeFnAttr(llvm::Attribute::NoCallback);
+  if (DstF) {
+    if (!DstF->isIntrinsic())
+      DstF->removeFnAttr(llvm::Attribute::NoCallback);
 
     // Remove nocallback attribute when it is on a call-site.
-    for (BasicBlock &BB : *F)
+    for (BasicBlock &BB : *DstF)
       for (Instruction &I : BB)
         if (CallBase *CI = dyn_cast<CallBase>(&I))
           CI->removeFnAttr(Attribute::NoCallback);
+  }
+
+  // Fix compatibility of diverged function signatures.
+  //
+  // If `F` was a definition in its source module but is (already) a
+  // declaration in the destination module, then the signatures of the two
+  // functions may have diverged (even if they were originally idential) due to
+  // optimizations performed on the source module.
+  //
+  // See the test in `FunctionImport/attr_fixup_dae_noundef.ll` for an example
+  // based on how Dead Argument Elimination can remove `noundef` from function
+  // arguments.
+  //
+  // The code below handles _known_ incompatibilities. Others may exist.
+  if (DstF && SrcF && DstF->isDeclaration() && !SrcF->isDeclaration()) {
+    assert(DstF->arg_size() == SrcF->arg_size() &&
+           "Dst and Src should have the same signature.");
+
+    // Remove UB implying attributes present on `Dst`'s arguments but not
+    // `Src`'s.
+    AttributeMask UBImplyingAttributes =
+        AttributeFuncs::getUBImplyingAttributes();
+    for (size_t ArgI = 0; ArgI < DstF->arg_size(); ArgI++) {
+      AttributeSet DstAttrs = DstF->getAttributes().getParamAttrs(ArgI);
+      AttributeSet SrcAttrs = SrcF->getAttributes().getParamAttrs(ArgI);
+      AttributeMask ToRemove;
+
+      for (auto &Attr : DstAttrs) {
+        if (SrcAttrs.hasAttribute(Attr))
+          continue;
+
+        if (UBImplyingAttributes.contains(Attr))
+          ToRemove.addAttribute(Attr);
+      }
+
+      DstF->removeParamAttrs(ArgI, ToRemove);
+    }
   }
 }
 

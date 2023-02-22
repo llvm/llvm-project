@@ -61,7 +61,14 @@ public:
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
-  CXXStdlibType GetDefaultCXXStdlibType() const override;
+
+  RuntimeLibType GetDefaultRuntimeLibType() const override {
+    return ToolChain::RLT_CompilerRT;
+  }
+  CXXStdlibType GetDefaultCXXStdlibType() const override {
+    return ToolChain::CST_Libcxx;
+  }
+
   void addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                              llvm::opt::ArgStringList &CC1Args) const override;
   void

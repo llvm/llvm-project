@@ -1418,23 +1418,33 @@ template <std::ranges::input_range R>
   requires std::ranges::viewable_range<R&&>
 ProxyRange(R&&) -> ProxyRange<std::views::all_t<R&&>>;
 
+#endif // TEST_STD_VER > 17
+
 namespace meta {
 template <class Ptr>
-using random_access_iterator_list = type_list<Ptr, contiguous_iterator<Ptr>, random_access_iterator<Ptr>>;
+using random_access_iterator_list =
+    type_list<Ptr,
+#if TEST_STD_VER >= 20
+              contiguous_iterator<Ptr>,
+#endif
+              random_access_iterator<Ptr> >;
 
 template <class Ptr>
 using bidirectional_iterator_list =
-    concatenate_t<random_access_iterator_list<Ptr>, type_list<bidirectional_iterator<Ptr>>>;
+    concatenate_t<random_access_iterator_list<Ptr>, type_list<bidirectional_iterator<Ptr> > >;
 
 template <class Ptr>
-using forward_iterator_list = concatenate_t<bidirectional_iterator_list<Ptr>, type_list<forward_iterator<Ptr>>>;
+using forward_iterator_list = concatenate_t<bidirectional_iterator_list<Ptr>, type_list<forward_iterator<Ptr> > >;
 
+template <class Ptr>
+using cpp17_input_iterator_list = concatenate_t<forward_iterator_list<Ptr>, type_list<cpp17_input_iterator<Ptr> > >;
+
+#if TEST_STD_VER >= 20
 template <class Ptr>
 using cpp20_input_iterator_list =
     concatenate_t<forward_iterator_list<Ptr>, type_list<cpp20_input_iterator<Ptr>, cpp17_input_iterator<Ptr>>>;
-
+#endif
 } // namespace meta
 
-#endif // TEST_STD_VER > 17
 
 #endif // SUPPORT_TEST_ITERATORS_H
