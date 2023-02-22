@@ -36,6 +36,7 @@
 #include "CodeGenTarget.h"
 #include "InfoByHwMode.h"
 #include "SubtargetFeatureInfo.h"
+#include "TableGenBackends.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CodeGenCoverage.h"
 #include "llvm/Support/CommandLine.h"
