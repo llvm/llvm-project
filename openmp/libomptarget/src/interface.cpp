@@ -412,12 +412,11 @@ EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
   if (QueryCounter.isAboveThreshold())
     AsyncInfo->SyncType = AsyncInfoTy::SyncTy::BLOCKING;
 
-  auto DoneOrErr = AsyncInfo->isDone();
-  if (!DoneOrErr)
+  if (const int Rc = AsyncInfo->synchronize())
     FATAL_MESSAGE0(1, "Error while querying the async queue for completion.\n");
   // If there are device operations still pending, return immediately without
   // deallocating the handle and increase the current thread query count.
-  if (!*DoneOrErr) {
+  if (!AsyncInfo->isDone()) {
     QueryCounter.increment();
     return;
   }
