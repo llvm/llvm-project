@@ -2466,7 +2466,7 @@ struct BubbleDownBitCastForStridedSliceExtract
 
     // Only accept all one strides for now.
     if (llvm::any_of(extractOp.getStrides().getAsValueRange<IntegerAttr>(),
-                     [](const APInt &val) { return !val.isOneValue(); }))
+                     [](const APInt &val) { return !val.isOne(); }))
       return failure();
 
     unsigned rank = extractOp.getSourceVectorType().getRank();
@@ -2553,7 +2553,7 @@ struct BubbleUpBitCastForStridedSliceInsert
 
     // Only accept all one strides for now.
     if (llvm::any_of(insertOp.getStrides().getAsValueRange<IntegerAttr>(),
-                     [](const APInt &val) { return !val.isOneValue(); }))
+                     [](const APInt &val) { return !val.isOne(); }))
       return failure();
 
     unsigned rank = insertOp.getSourceVectorType().getRank();
