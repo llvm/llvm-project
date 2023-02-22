@@ -33,7 +33,9 @@ if(LLVM_BUILD_INSTRUMENTED)
 endif()
 
 find_program(DTRACE dtrace)
-if(APPLE AND DTRACE)
+# TODO: Look into supporting this for the driver build. It will require changing
+# the perf-helper.py file to understand to call `llvm` as `llvm clang`.
+if(APPLE AND DTRACE AND NOT LLVM_TOOL_LLVM_DRIVER_BUILD)
   configure_lit_site_cfg(
     ${CMAKE_CURRENT_SOURCE_DIR}/order-files.lit.site.cfg.in
     ${CMAKE_CURRENT_BINARY_DIR}/order-files/lit.site.cfg
