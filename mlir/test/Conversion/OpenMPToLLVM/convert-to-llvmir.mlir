@@ -202,3 +202,37 @@ llvm.func @_QPomp_target_data(%a : !llvm.ptr<i32>, %b : !llvm.ptr<i32>, %c : !ll
   omp.target_exit_data   map((from -> %a : !llvm.ptr<i32>), (from -> %b : !llvm.ptr<i32>), (release -> %c : !llvm.ptr<i32>), (always, delete -> %d : !llvm.ptr<i32>))
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: @_QPsb
+// CHECK: omp.sections
+// CHECK: omp.section
+// CHECK: llvm.br
+// CHECK: llvm.icmp
+// CHECK: llvm.cond_br
+// CHECK: llvm.br
+// CHECK: omp.terminator
+// CHECK: omp.terminator
+// CHECK: llvm.return
+
+llvm.func @_QPsb() {
+  %0 = llvm.mlir.constant(0 : i64) : i64
+  %1 = llvm.mlir.constant(10 : i64) : i64
+  %2 = llvm.mlir.constant(1 : i64) : i64
+  omp.sections   {
+    omp.section {
+      llvm.br ^bb1(%1 : i64)
+    ^bb1(%3: i64):  // 2 preds: ^bb0, ^bb2
+      %4 = llvm.icmp "sgt" %3, %0 : i64
+      llvm.cond_br %4, ^bb2, ^bb3
+    ^bb2:  // pred: ^bb1
+      %5 = llvm.sub %3, %2  : i64
+      llvm.br ^bb1(%5 : i64)
+    ^bb3:  // pred: ^bb1
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}
