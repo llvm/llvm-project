@@ -53,6 +53,8 @@ public:
 
   uint32_t rawValue() const { return Version; }
 
+  operator std::string() const;
+
   void print(raw_ostream &OS) const;
 };
 

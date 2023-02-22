@@ -161,6 +161,10 @@ static llvm::SmallString<128> getParseErrorMsg(TBDKey Key) {
   return {"invalid ", Keys[Key], " section"};
 }
 
+static llvm::SmallString<128> getSerializeErrorMsg(TBDKey Key) {
+  return {"missing ", Keys[Key], " information"};
+}
+
 class JSONStubError : public llvm::ErrorInfo<llvm::json::ParseError> {
 public:
   JSONStubError(Twine ErrMsg) : Message(ErrMsg.str()) {}
@@ -715,4 +719,295 @@ MachO::getInterfaceFileFromJSON(StringRef JSON) {
     IF->addDocument(std::shared_ptr<InterfaceFile>(std::move(File)));
   }
   return std::move(IF);
+}
+
+namespace {
+
+template <typename ContainerT = Array>
+bool insertNonEmptyValues(Object &Obj, TBDKey Key, ContainerT &&Contents) {
+  if (Contents.empty())
+    return false;
+  Obj[Keys[Key]] = std::move(Contents);
+  return true;
+}
+
+std::string getFormattedStr(const MachO::Target &Targ) {
+  std::string PlatformStr = Targ.Platform == PLATFORM_MACCATALYST
+                                ? "maccatalyst"
+                                : getOSAndEnvironmentName(Targ.Platform);
+  return (getArchitectureName(Targ.Arch) + "-" + PlatformStr).str();
+}
+
+template <typename AggregateT>
+std::vector<std::string> serializeTargets(const AggregateT Targets,
+                                          const TargetList &ActiveTargets) {
+  std::vector<std::string> TargetsStr;
+  if (Targets.size() == ActiveTargets.size())
+    return TargetsStr;
+
+  llvm::for_each(Targets, [&TargetsStr](const MachO::Target &Target) {
+    TargetsStr.emplace_back(getFormattedStr(Target));
+  });
+  return TargetsStr;
+}
+
+Array serializeTargetInfo(const TargetList &ActiveTargets) {
+  Array Targets;
+  for (const auto Targ : ActiveTargets) {
+    Object TargetInfo;
+    TargetInfo[Keys[TBDKey::Deployment]] = Targ.MinDeployment.getAsString();
+    TargetInfo[Keys[TBDKey::Target]] = getFormattedStr(Targ);
+    Targets.emplace_back(std::move(TargetInfo));
+  }
+  return Targets;
+}
+
+template <typename ValueT, typename EntryT = ValueT>
+Array serializeScalar(TBDKey Key, ValueT Value, ValueT Default = ValueT()) {
+  if (Value == Default)
+    return {};
+  Array Container;
+  Object ScalarObj({Object::KV({Keys[Key], EntryT(Value)})});
+
+  Container.emplace_back(std::move(ScalarObj));
+  return Container;
+}
+
+using TargetsToValuesMap =
+    std::map<std::vector<std::string>, std::vector<std::string>>;
+
+template <typename AggregateT = TargetsToValuesMap>
+Array serializeAttrToTargets(AggregateT &Entries, TBDKey Key) {
+  Array Container;
+  for (const auto &[Targets, Values] : Entries) {
+    Object Obj;
+    insertNonEmptyValues(Obj, TBDKey::Targets, std::move(Targets));
+    Obj[Keys[Key]] = Values;
+    Container.emplace_back(std::move(Obj));
+  }
+  return Container;
+}
+
+template <typename ValueT = std::string,
+          typename AggregateT = std::vector<std::pair<MachO::Target, ValueT>>>
+Array serializeField(TBDKey Key, const AggregateT &Values,
+                     const TargetList &ActiveTargets, bool IsArray = true) {
+  std::map<ValueT, std::set<MachO::Target>> Entries;
+  for (const auto &[Target, Val] : Values)
+    Entries[Val].insert(Target);
+
+  if (!IsArray) {
+    std::map<std::vector<std::string>, std::string> FinalEntries;
+    for (const auto &[Val, Targets] : Entries)
+      FinalEntries[serializeTargets(Targets, ActiveTargets)] = Val;
+    return serializeAttrToTargets(FinalEntries, Key);
+  }
+
+  TargetsToValuesMap FinalEntries;
+  for (const auto &[Val, Targets] : Entries)
+    FinalEntries[serializeTargets(Targets, ActiveTargets)].emplace_back(Val);
+  return serializeAttrToTargets(FinalEntries, Key);
+}
+
+Array serializeField(TBDKey Key, const std::vector<InterfaceFileRef> &Values,
+                     const TargetList &ActiveTargets) {
+  TargetsToValuesMap FinalEntries;
+  for (const auto &Ref : Values) {
+    TargetList Targets{Ref.targets().begin(), Ref.targets().end()};
+    FinalEntries[serializeTargets(Targets, ActiveTargets)].emplace_back(
+        Ref.getInstallName());
+  }
+  return serializeAttrToTargets(FinalEntries, Key);
+}
+
+struct SymbolFields {
+  struct SymbolTypes {
+    std::vector<StringRef> Weaks;
+    std::vector<StringRef> Globals;
+    std::vector<StringRef> TLV;
+    std::vector<StringRef> ObjCClasses;
+    std::vector<StringRef> IVars;
+    std::vector<StringRef> EHTypes;
+
+    bool empty() const {
+      return Weaks.empty() && Globals.empty() && TLV.empty() &&
+             ObjCClasses.empty() && IVars.empty() && EHTypes.empty();
+    }
+  };
+  SymbolTypes Data;
+  SymbolTypes Text;
+};
+
+Array serializeSymbols(InterfaceFile::const_filtered_symbol_range Symbols,
+                       const TargetList &ActiveTargets) {
+  auto AssignForSymbolType = [](SymbolFields::SymbolTypes &Assignment,
+                                const Symbol *Sym) {
+    switch (Sym->getKind()) {
+    case SymbolKind::ObjectiveCClass:
+      Assignment.ObjCClasses.emplace_back(Sym->getName());
+      return;
+    case SymbolKind::ObjectiveCClassEHType:
+      Assignment.EHTypes.emplace_back(Sym->getName());
+      return;
+    case SymbolKind::ObjectiveCInstanceVariable:
+      Assignment.IVars.emplace_back(Sym->getName());
+      return;
+    case SymbolKind::GlobalSymbol: {
+      if (Sym->isWeakReferenced() || Sym->isWeakDefined())
+        Assignment.Weaks.emplace_back(Sym->getName());
+      else if (Sym->isThreadLocalValue())
+        Assignment.TLV.emplace_back(Sym->getName());
+      else
+        Assignment.Globals.emplace_back(Sym->getName());
+      return;
+    }
+    }
+  };
+
+  std::map<std::vector<std::string>, SymbolFields> Entries;
+  for (const auto *Sym : Symbols) {
+    std::set<MachO::Target> Targets{Sym->targets().begin(),
+                                    Sym->targets().end()};
+    auto JSONTargets = serializeTargets(Targets, ActiveTargets);
+    if (Sym->isData())
+      AssignForSymbolType(Entries[std::move(JSONTargets)].Data, Sym);
+    else if (Sym->isText())
+      AssignForSymbolType(Entries[std::move(JSONTargets)].Text, Sym);
+    else
+      llvm_unreachable("unexpected symbol type");
+  }
+
+  auto InsertSymbolsToJSON = [](Object &SymSection, TBDKey SegmentKey,
+                                SymbolFields::SymbolTypes &SymField) {
+    if (SymField.empty())
+      return;
+    Object Segment;
+    insertNonEmptyValues(Segment, TBDKey::Globals, std::move(SymField.Globals));
+    insertNonEmptyValues(Segment, TBDKey::ThreadLocal, std::move(SymField.TLV));
+    insertNonEmptyValues(Segment, TBDKey::Weak, std::move(SymField.Weaks));
+    insertNonEmptyValues(Segment, TBDKey::ObjCClass,
+                         std::move(SymField.ObjCClasses));
+    insertNonEmptyValues(Segment, TBDKey::ObjCEHType,
+                         std::move(SymField.EHTypes));
+    insertNonEmptyValues(Segment, TBDKey::ObjCIvar, std::move(SymField.IVars));
+    insertNonEmptyValues(SymSection, SegmentKey, std::move(Segment));
+  };
+
+  Array SymbolSection;
+  for (auto &[Targets, Fields] : Entries) {
+    Object AllSyms;
+    insertNonEmptyValues(AllSyms, TBDKey::Targets, std::move(Targets));
+    InsertSymbolsToJSON(AllSyms, TBDKey::Data, Fields.Data);
+    InsertSymbolsToJSON(AllSyms, TBDKey::Text, Fields.Text);
+    SymbolSection.emplace_back(std::move(AllSyms));
+  }
+
+  return SymbolSection;
+}
+
+Array serializeFlags(const InterfaceFile *File) {
+  // TODO: Give all Targets the same flags for now.
+  Array Flags;
+  if (!File->isTwoLevelNamespace())
+    Flags.emplace_back("flat_namespace");
+  if (!File->isApplicationExtensionSafe())
+    Flags.emplace_back("not_app_extension_safe");
+  return serializeScalar(TBDKey::Attributes, std::move(Flags));
+}
+
+Expected<Object> serializeIF(const InterfaceFile *File) {
+  Object Library;
+
+  // Handle required keys.
+  TargetList ActiveTargets{File->targets().begin(), File->targets().end()};
+  if (!insertNonEmptyValues(Library, TBDKey::TargetInfo,
+                            serializeTargetInfo(ActiveTargets)))
+    return make_error<JSONStubError>(getSerializeErrorMsg(TBDKey::TargetInfo));
+
+  Array Name = serializeScalar<StringRef>(TBDKey::Name, File->getInstallName());
+  if (!insertNonEmptyValues(Library, TBDKey::InstallName, std::move(Name)))
+    return make_error<JSONStubError>(getSerializeErrorMsg(TBDKey::InstallName));
+
+  // Handle optional keys.
+  Array Flags = serializeFlags(File);
+  insertNonEmptyValues(Library, TBDKey::Flags, std::move(Flags));
+
+  Array CurrentV = serializeScalar<PackedVersion, std::string>(
+      TBDKey::Version, File->getCurrentVersion(), PackedVersion(1, 0, 0));
+  insertNonEmptyValues(Library, TBDKey::CurrentVersion, std::move(CurrentV));
+
+  Array CompatV = serializeScalar<PackedVersion, std::string>(
+      TBDKey::Version, File->getCompatibilityVersion(), PackedVersion(1, 0, 0));
+  insertNonEmptyValues(Library, TBDKey::CompatibilityVersion,
+                       std::move(CompatV));
+
+  Array SwiftABI = serializeScalar<uint8_t, int64_t>(
+      TBDKey::ABI, File->getSwiftABIVersion(), 0u);
+  insertNonEmptyValues(Library, TBDKey::SwiftABI, std::move(SwiftABI));
+
+  Array RPaths = serializeField(TBDKey::Paths, File->rpaths(), ActiveTargets);
+  insertNonEmptyValues(Library, TBDKey::RPath, std::move(RPaths));
+
+  Array Umbrellas = serializeField(TBDKey::Umbrella, File->umbrellas(),
+                                   ActiveTargets, /*IsArray=*/false);
+  insertNonEmptyValues(Library, TBDKey::ParentUmbrella, std::move(Umbrellas));
+
+  Array Clients =
+      serializeField(TBDKey::Clients, File->allowableClients(), ActiveTargets);
+  insertNonEmptyValues(Library, TBDKey::AllowableClients, std::move(Clients));
+
+  Array ReexportLibs =
+      serializeField(TBDKey::Names, File->reexportedLibraries(), ActiveTargets);
+  insertNonEmptyValues(Library, TBDKey::ReexportLibs, std::move(ReexportLibs));
+
+  // Handle symbols.
+  Array Exports = serializeSymbols(File->exports(), ActiveTargets);
+  insertNonEmptyValues(Library, TBDKey::Exports, std::move(Exports));
+
+  Array Reexports = serializeSymbols(File->reexports(), ActiveTargets);
+  insertNonEmptyValues(Library, TBDKey::Reexports, std::move(Reexports));
+
+  if (!File->isTwoLevelNamespace()) {
+    Array Undefineds = serializeSymbols(File->undefineds(), ActiveTargets);
+    insertNonEmptyValues(Library, TBDKey::Undefineds, std::move(Undefineds));
+  }
+
+  return std::move(Library);
+}
+
+Expected<Object> getJSON(const InterfaceFile *File) {
+  assert(File->getFileType() == FileType::TBD_V5 &&
+         "unexpected json file format version");
+  Object Root;
+
+  auto MainLibOrErr = serializeIF(File);
+  if (!MainLibOrErr)
+    return MainLibOrErr;
+  Root[Keys[TBDKey::MainLibrary]] = std::move(*MainLibOrErr);
+  Array Documents;
+  for (const auto &Doc : File->documents()) {
+    auto LibOrErr = serializeIF(Doc.get());
+    if (!LibOrErr)
+      return LibOrErr;
+    Documents.emplace_back(std::move(*LibOrErr));
+  }
+
+  Root[Keys[TBDKey::TBDVersion]] = 5;
+  insertNonEmptyValues(Root, TBDKey::Documents, std::move(Documents));
+  return std::move(Root);
+}
+
+} // namespace
+
+Error MachO::serializeInterfaceFileToJSON(raw_ostream &OS,
+                                          const InterfaceFile &File,
+                                          bool Compact) {
+  auto TextFile = getJSON(&File);
+  if (!TextFile)
+    return TextFile.takeError();
+  if (Compact)
+    OS << formatv("{0}", Value(std::move(*TextFile))) << "\n";
+  else
+    OS << formatv("{0:2}", Value(std::move(*TextFile))) << "\n";
+  return Error::success();
 }
