@@ -216,10 +216,10 @@ define amdgpu_ps float @fneg_fadd_0_f32(float inreg %tmp2, float inreg %tmp6, <4
 ; SI-NSZ-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
 ; SI-NSZ-NEXT:    v_div_fmas_f32 v0, v0, v1, v3
 ; SI-NSZ-NEXT:    v_div_fixup_f32 v0, v0, s1, 1.0
-; SI-NSZ-NEXT:    v_mul_f32_e32 v0, 0x80000000, v0
+; SI-NSZ-NEXT:    v_mul_f32_e32 v0, 0, v0
 ; SI-NSZ-NEXT:    v_mov_b32_e32 v1, s0
-; SI-NSZ-NEXT:    v_cmp_nlt_f32_e64 vcc, -v0, s0
-; SI-NSZ-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; SI-NSZ-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
+; SI-NSZ-NEXT:    v_cndmask_b32_e64 v0, -v0, v1, vcc
 ; SI-NSZ-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
 ; SI-NSZ-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
 ; SI-NSZ-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
@@ -266,9 +266,9 @@ define amdgpu_ps float @fneg_fadd_0_f32(float inreg %tmp2, float inreg %tmp6, <4
 ; VI-NSZ-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NSZ-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
 ; VI-NSZ-NEXT:    v_div_fixup_f32 v0, v0, s1, 1.0
-; VI-NSZ-NEXT:    v_mul_f32_e32 v0, 0x80000000, v0
-; VI-NSZ-NEXT:    v_cmp_nlt_f32_e64 vcc, -v0, s0
-; VI-NSZ-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; VI-NSZ-NEXT:    v_mul_f32_e32 v0, 0, v0
+; VI-NSZ-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
+; VI-NSZ-NEXT:    v_cndmask_b32_e64 v0, -v0, v2, vcc
 ; VI-NSZ-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
 ; VI-NSZ-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
 ; VI-NSZ-NEXT:    ; return to shader part epilog
@@ -302,9 +302,9 @@ define amdgpu_ps float @fneg_fadd_0_nsz_f32(float inreg %tmp2, float inreg %tmp6
 ; GCN-NSZ:       ; %bb.0: ; %.entry
 ; GCN-NSZ-NEXT:    v_rcp_f32_e32 v0, s1
 ; GCN-NSZ-NEXT:    v_mov_b32_e32 v1, s0
-; GCN-NSZ-NEXT:    v_mul_f32_e32 v0, 0x80000000, v0
-; GCN-NSZ-NEXT:    v_cmp_nlt_f32_e64 vcc, -v0, s0
-; GCN-NSZ-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-NSZ-NEXT:    v_mul_f32_e32 v0, 0, v0
+; GCN-NSZ-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
+; GCN-NSZ-NEXT:    v_cndmask_b32_e64 v0, -v0, v1, vcc
 ; GCN-NSZ-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
 ; GCN-NSZ-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
 ; GCN-NSZ-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
@@ -2804,14 +2804,12 @@ define amdgpu_kernel void @s_fneg_select_infloop_regression_f32(float %arg, i1 %
 ; SI-LABEL: s_fneg_select_infloop_regression_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
-; SI-NEXT:    v_bfrev_b32_e32 v0, 1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_bitcmp1_b32 s1, 0
-; SI-NEXT:    v_mov_b32_e32 v1, s0
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
-; SI-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
-; SI-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
-; SI-NEXT:    v_xor_b32_e32 v2, 0x80000000, v0
+; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; SI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[0:1]
+; SI-NEXT:    v_cndmask_b32_e64 v2, -v0, 0, s[0:1]
 ; SI-NEXT:    v_mov_b32_e32 v0, s2
 ; SI-NEXT:    v_mov_b32_e32 v1, s3
 ; SI-NEXT:    flat_store_dword v[0:1], v2
@@ -2820,14 +2818,12 @@ define amdgpu_kernel void @s_fneg_select_infloop_regression_f32(float %arg, i1 %
 ; VI-LABEL: s_fneg_select_infloop_regression_f32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
-; VI-NEXT:    v_bfrev_b32_e32 v0, 1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_bitcmp1_b32 s1, 0
-; VI-NEXT:    v_mov_b32_e32 v1, s0
-; VI-NEXT:    s_cselect_b64 vcc, -1, 0
-; VI-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
-; VI-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
-; VI-NEXT:    v_xor_b32_e32 v2, 0x80000000, v0
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; VI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[0:1]
+; VI-NEXT:    v_cndmask_b32_e64 v2, -v0, 0, s[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    flat_store_dword v[0:1], v2
@@ -2846,9 +2842,7 @@ define float @v_fneg_select_infloop_regression_f32(float %arg, i1 %arg1) {
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; GCN-NEXT:    v_bfrev_b32_e32 v1, 1
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -v0, 0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, float 0.0, float %arg
   %i2 = fneg float %i
@@ -2863,9 +2857,7 @@ define float @v_fneg_select_infloop_regression_f32_commute0(float %arg, i1 %arg1
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
-; GCN-NEXT:    v_bfrev_b32_e32 v1, 1
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -v0, 0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, float %arg, float 0.0
   %i2 = fneg float %i
@@ -2880,9 +2872,7 @@ define float @v_fneg_select_infloop_regression_f32_commute1(float %arg, i1 %arg1
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; GCN-NEXT:    v_bfrev_b32_e32 v1, 1
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
-; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, -v0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, float 0.0, float %arg
   %i2 = fneg float %i
@@ -2897,9 +2887,7 @@ define float @v_fneg_select_infloop_regression_f32_commute2(float %arg, i1 %arg1
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
-; GCN-NEXT:    v_bfrev_b32_e32 v1, 1
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
-; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, -v0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, float %arg, float 0.0
   %i2 = fneg float %i
@@ -2915,8 +2903,7 @@ define float @v_fneg_select_infloop_regression_inline_imm_f32(float %arg, i1 %ar
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 2.0, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, -2.0, vcc
-; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -v0, 2.0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, float 2.0, float %arg
   %i2 = fneg float %i
@@ -2931,8 +2918,7 @@ define float @v_fneg_select_infloop_regression_inline_imm_f32_commute0(float %ar
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, -2.0, vcc
-; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -v0, 2.0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, float %arg, float 2.0
   %i2 = fneg float %i
@@ -2947,8 +2933,7 @@ define float @v_fneg_select_infloop_regression_inline_imm_f32_commute1(float %ar
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 2.0, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v0, -2.0, v0, vcc
-; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 2.0, -v0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, float 2.0, float %arg
   %i2 = fneg float %i
@@ -2963,8 +2948,7 @@ define float @v_fneg_select_infloop_regression_inline_imm_f32_commute2(float %ar
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v0, -2.0, v0, vcc
-; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 2.0, -v0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, float %arg, float 2.0
   %i2 = fneg float %i
@@ -2980,8 +2964,7 @@ define float @v_fneg_select_infloop_regression_neg_inline_imm_f32(float %arg, i1
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, -2.0, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 2.0, vcc
-; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -v0, -2.0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, float -2.0, float %arg
   %i2 = fneg float %i
@@ -2996,8 +2979,7 @@ define float @v_fneg_select_infloop_regression_neg_inline_imm_f32_commute0(float
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, -2.0, v0, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 2.0, vcc
-; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -v0, -2.0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, float %arg, float -2.0
   %i2 = fneg float %i
@@ -3012,8 +2994,7 @@ define float @v_fneg_select_infloop_regression_neg_inline_imm_f32_commute1(float
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, -2.0, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc
-; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -2.0, -v0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, float -2.0, float %arg
   %i2 = fneg float %i
@@ -3028,8 +3009,7 @@ define float @v_fneg_select_infloop_regression_neg_inline_imm_f32_commute2(float
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, -2.0, v0, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc
-; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -2.0, -v0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, float %arg, float -2.0
   %i2 = fneg float %i
@@ -3044,14 +3024,16 @@ define amdgpu_kernel void @s_fneg_select_infloop_regression_f64(double %arg, i1 
 ; SI-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xd
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_bitcmp1_b32 s4, 0
+; SI-NEXT:    s_and_b32 s4, 1, s4
 ; SI-NEXT:    s_cselect_b32 s3, 0, s3
 ; SI-NEXT:    s_cselect_b32 s2, 0, s2
-; SI-NEXT:    s_cselect_b32 s3, 0x80000000, s3
-; SI-NEXT:    v_mov_b32_e32 v0, s2
-; SI-NEXT:    s_xor_b32 s2, s3, 0x80000000
+; SI-NEXT:    s_xor_b32 s3, s3, 0x80000000
+; SI-NEXT:    s_cmp_eq_u32 s4, 1
+; SI-NEXT:    s_cselect_b32 s3, 0, s3
+; SI-NEXT:    s_cselect_b32 s2, 0, s2
 ; SI-NEXT:    v_mov_b32_e32 v3, s1
-; SI-NEXT:    v_mov_b32_e32 v1, s2
+; SI-NEXT:    v_mov_b32_e32 v0, s2
+; SI-NEXT:    v_mov_b32_e32 v1, s3
 ; SI-NEXT:    v_mov_b32_e32 v2, s0
 ; SI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; SI-NEXT:    s_endpgm
@@ -3062,14 +3044,16 @@ define amdgpu_kernel void @s_fneg_select_infloop_regression_f64(double %arg, i1 
 ; VI-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_bitcmp1_b32 s4, 0
+; VI-NEXT:    s_and_b32 s4, 1, s4
 ; VI-NEXT:    s_cselect_b32 s3, 0, s3
 ; VI-NEXT:    s_cselect_b32 s2, 0, s2
-; VI-NEXT:    s_cselect_b32 s3, 0x80000000, s3
-; VI-NEXT:    v_mov_b32_e32 v0, s2
-; VI-NEXT:    s_xor_b32 s2, s3, 0x80000000
+; VI-NEXT:    s_xor_b32 s3, s3, 0x80000000
+; VI-NEXT:    s_cmp_eq_u32 s4, 1
+; VI-NEXT:    s_cselect_b32 s3, 0, s3
+; VI-NEXT:    s_cselect_b32 s2, 0, s2
 ; VI-NEXT:    v_mov_b32_e32 v3, s1
-; VI-NEXT:    v_mov_b32_e32 v1, s2
+; VI-NEXT:    v_mov_b32_e32 v0, s2
+; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
@@ -3087,10 +3071,10 @@ define double @v_fneg_select_infloop_regression_f64(double %arg, i1 %arg1) {
 ; GCN-NEXT:    v_and_b32_e32 v2, 1, v2
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
 ; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
-; GCN-NEXT:    v_bfrev_b32_e32 v2, 1
-; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
 ; GCN-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, double 0.0, double %arg
   %i2 = fneg double %i
@@ -3103,14 +3087,13 @@ define amdgpu_kernel void @s_fneg_select_infloop_regression_f16(half %arg, i1 %a
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s2, s[0:1], 0x9
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
-; SI-NEXT:    v_bfrev_b32_e32 v1, 1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, s2
 ; SI-NEXT:    s_bitcmp1_b32 s2, 16
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
-; SI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; SI-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; SI-NEXT:    v_cvt_f16_f32_e64 v2, -v0
+; SI-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; SI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[2:3]
+; SI-NEXT:    v_cndmask_b32_e64 v0, -v0, 0, s[2:3]
+; SI-NEXT:    v_cvt_f16_f32_e32 v2, v0
 ; SI-NEXT:    v_mov_b32_e32 v0, s0
 ; SI-NEXT:    v_mov_b32_e32 v1, s1
 ; SI-NEXT:    flat_store_short v[0:1], v2
@@ -3120,14 +3103,13 @@ define amdgpu_kernel void @s_fneg_select_infloop_regression_f16(half %arg, i1 %a
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s2, s[0:1], 0x24
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2c
-; VI-NEXT:    v_mov_b32_e32 v0, 0x8000
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_bitcmp1_b32 s2, 16
-; VI-NEXT:    v_mov_b32_e32 v1, s2
-; VI-NEXT:    s_cselect_b64 vcc, -1, 0
-; VI-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
-; VI-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
-; VI-NEXT:    v_xor_b32_e32 v2, 0x8000, v0
+; VI-NEXT:    v_mov_b32_e32 v0, s2
+; VI-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; VI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[2:3]
+; VI-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
+; VI-NEXT:    v_cndmask_b32_e64 v2, v0, 0, s[2:3]
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_short v[0:1], v2
@@ -3146,11 +3128,9 @@ define half @v_fneg_select_infloop_regression_f16(half %arg, i1 %arg1) {
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    v_and_b32_e32 v1, 1, v1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; SI-NEXT:    v_bfrev_b32_e32 v1, 1
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; SI-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; SI-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; SI-NEXT:    v_cndmask_b32_e64 v0, -v0, 0, vcc
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_fneg_select_infloop_regression_f16:
@@ -3159,9 +3139,8 @@ define half @v_fneg_select_infloop_regression_f16(half %arg, i1 %arg1) {
 ; VI-NEXT:    v_and_b32_e32 v1, 1, v1
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
 ; VI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; VI-NEXT:    v_mov_b32_e32 v1, 0x8000
-; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; VI-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
+; VI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, half 0.0, half %arg
   %i2 = fneg half %i
@@ -3318,7 +3297,7 @@ define amdgpu_kernel void @s_fabs_select_infloop_regression_f32(float %arg, i1 %
 ; SI-NEXT:    v_mov_b32_e32 v0, s0
 ; SI-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; SI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[0:1]
-; SI-NEXT:    v_and_b32_e32 v2, 0x7fffffff, v0
+; SI-NEXT:    v_cndmask_b32_e64 v2, |v0|, 0, s[0:1]
 ; SI-NEXT:    v_mov_b32_e32 v0, s2
 ; SI-NEXT:    v_mov_b32_e32 v1, s3
 ; SI-NEXT:    flat_store_dword v[0:1], v2
@@ -3332,7 +3311,7 @@ define amdgpu_kernel void @s_fabs_select_infloop_regression_f32(float %arg, i1 %
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; VI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[0:1]
-; VI-NEXT:    v_and_b32_e32 v2, 0x7fffffff, v0
+; VI-NEXT:    v_cndmask_b32_e64 v2, |v0|, 0, s[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    flat_store_dword v[0:1], v2
@@ -3351,7 +3330,7 @@ define float @v_fabs_select_infloop_regression_f32(float %arg, i1 %arg1) {
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; GCN-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, |v0|, 0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, float 0.0, float %arg
   %i2 = call float @llvm.fabs.f32(float %i)
@@ -3363,14 +3342,12 @@ define amdgpu_kernel void @s_fneg_fabs_select_infloop_regression(float %arg, i1 
 ; SI-LABEL: s_fneg_fabs_select_infloop_regression:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
-; SI-NEXT:    v_bfrev_b32_e32 v0, 1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_bitcmp1_b32 s1, 0
-; SI-NEXT:    v_mov_b32_e32 v1, s0
+; SI-NEXT:    v_mov_b32_e32 v0, s0
 ; SI-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; SI-NEXT:    v_cndmask_b32_e64 v1, v1, 0, s[0:1]
-; SI-NEXT:    v_cndmask_b32_e64 v0, |v1|, v0, s[0:1]
-; SI-NEXT:    v_xor_b32_e32 v2, 0x80000000, v0
+; SI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[0:1]
+; SI-NEXT:    v_cndmask_b32_e64 v2, -|v0|, 0, s[0:1]
 ; SI-NEXT:    v_mov_b32_e32 v0, s2
 ; SI-NEXT:    v_mov_b32_e32 v1, s3
 ; SI-NEXT:    flat_store_dword v[0:1], v2
@@ -3379,14 +3356,12 @@ define amdgpu_kernel void @s_fneg_fabs_select_infloop_regression(float %arg, i1 
 ; VI-LABEL: s_fneg_fabs_select_infloop_regression:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
-; VI-NEXT:    v_bfrev_b32_e32 v0, 1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_bitcmp1_b32 s1, 0
-; VI-NEXT:    v_mov_b32_e32 v1, s0
+; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; VI-NEXT:    v_cndmask_b32_e64 v1, v1, 0, s[0:1]
-; VI-NEXT:    v_cndmask_b32_e64 v0, |v1|, v0, s[0:1]
-; VI-NEXT:    v_xor_b32_e32 v2, 0x80000000, v0
+; VI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[0:1]
+; VI-NEXT:    v_cndmask_b32_e64 v2, -|v0|, 0, s[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    flat_store_dword v[0:1], v2
@@ -3406,9 +3381,7 @@ define float @v_fneg_fabs_select_infloop_regression(float %arg, i1 %arg1) {
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; GCN-NEXT:    v_bfrev_b32_e32 v1, 1
-; GCN-NEXT:    v_cndmask_b32_e64 v0, |v0|, v1, vcc
-; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -|v0|, 0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %i = select i1 %arg1, float 0.0, float %arg
   %i2 = call float @llvm.fabs.f32(float %i)
