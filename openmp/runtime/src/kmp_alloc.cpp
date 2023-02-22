@@ -1588,8 +1588,10 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
         ptr = kmp_target_alloc_shared(size, device);
       else // allocator == llvm_omp_target_device_mem_alloc
         ptr = kmp_target_alloc_device(size, device);
+      return ptr;
+    } else {
+      KMP_INFORM(TargetMemNotAvailable);
     }
-    return ptr;
   }
 
   if (allocator >= kmp_max_mem_alloc && KMP_IS_TARGET_MEM_SPACE(al->memspace)) {
@@ -1602,8 +1604,10 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
         ptr = kmp_target_alloc_shared(size, device);
       else // al->memspace == llvm_omp_target_device_mem_space
         ptr = kmp_target_alloc_device(size, device);
+      return ptr;
+    } else {
+      KMP_INFORM(TargetMemNotAvailable);
     }
-    return ptr;
   }
 
   if (__kmp_memkind_available) {
