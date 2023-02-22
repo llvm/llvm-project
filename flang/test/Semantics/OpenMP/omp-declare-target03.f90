@@ -6,6 +6,10 @@
 module mod1
 end
 
+subroutine bar
+  !$omp declare target (bar)
+end subroutine
+
 program main
   use mod1
 
