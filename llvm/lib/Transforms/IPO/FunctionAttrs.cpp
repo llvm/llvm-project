@@ -1409,6 +1409,61 @@ static bool InstrBreaksNoFree(Instruction &I, const SCCNodeSet &SCCNodes) {
   return true;
 }
 
+// Return true if this is an atomic which has an ordering stronger than
+// unordered.  Note that this is different than the predicate we use in
+// Attributor.  Here we chose to be conservative and consider monotonic
+// operations potentially synchronizing.  We generally don't do much with
+// monotonic operations, so this is simply risk reduction.
+static bool isOrderedAtomic(Instruction *I) {
+  if (!I->isAtomic())
+    return false;
+
+  if (auto *FI = dyn_cast<FenceInst>(I))
+    // All legal orderings for fence are stronger than monotonic.
+    return FI->getSyncScopeID() != SyncScope::SingleThread;
+  else if (isa<AtomicCmpXchgInst>(I) || isa<AtomicRMWInst>(I))
+    return true;
+  else if (auto *SI = dyn_cast<StoreInst>(I))
+    return !SI->isUnordered();
+  else if (auto *LI = dyn_cast<LoadInst>(I))
+    return !LI->isUnordered();
+  else {
+    llvm_unreachable("unknown atomic instruction?");
+  }
+}
+
+static bool InstrBreaksNoSync(Instruction &I, const SCCNodeSet &SCCNodes) {
+  // Volatile may synchronize
+  if (I.isVolatile())
+    return true;
+
+  // An ordered atomic may synchronize.  (See comment about on monotonic.)
+  if (isOrderedAtomic(&I))
+    return true;
+
+  auto *CB = dyn_cast<CallBase>(&I);
+  if (!CB)
+    // Non call site cases covered by the two checks above
+    return false;
+
+  if (CB->hasFnAttr(Attribute::NoSync))
+    return false;
+
+  // Non volatile memset/memcpy/memmoves are nosync
+  // NOTE: Only intrinsics with volatile flags should be handled here.  All
+  // others should be marked in Intrinsics.td.
+  if (auto *MI = dyn_cast<MemIntrinsic>(&I))
+    if (!MI->isVolatile())
+      return false;
+
+  // Speculatively assume in SCC.
+  if (Function *Callee = CB->getCalledFunction())
+    if (SCCNodes.contains(Callee))
+      return false;
+
+  return true;
+}
+
 /// Attempt to remove convergent function attribute when possible.
 ///
 /// Returns true if any changes to function attributes were made.
@@ -1440,9 +1495,7 @@ static void inferConvergent(const SCCNodeSet &SCCNodes,
 }
 
 /// Infer attributes from all functions in the SCC by scanning every
-/// instruction for compliance to the attribute assumptions. Currently it
-/// does:
-///   - addition of NoUnwind attribute
+/// instruction for compliance to the attribute assumptions.
 ///
 /// Returns true if any changes to function attributes were made.
 static void inferAttrsFromFunctionBodies(const SCCNodeSet &SCCNodes,
@@ -1493,6 +1546,22 @@ static void inferAttrsFromFunctionBodies(const SCCNodeSet &SCCNodes,
           ++NumNoFree;
         },
         /* RequiresExactDefinition= */ true});
+
+  AI.registerAttrInference(AttributeInferer::InferenceDescriptor{
+      Attribute::NoSync,
+      // Skip already marked functions.
+      [](const Function &F) { return F.hasNoSync(); },
+      // Instructions that break nosync assumption.
+      [&SCCNodes](Instruction &I) {
+        return InstrBreaksNoSync(I, SCCNodes);
+      },
+      [](Function &F) {
+        LLVM_DEBUG(dbgs()
+                   << "Adding nosync attr to fn " << F.getName() << "\n");
+        F.setNoSync();
+        ++NumNoSync;
+      },
+      /* RequiresExactDefinition= */ true});
 
   // Perform all the requested attribute inference actions.
   AI.run(SCCNodes, Changed);
@@ -1621,83 +1690,6 @@ static void addWillReturn(const SCCNodeSet &SCCNodes,
   }
 }
 
-// Return true if this is an atomic which has an ordering stronger than
-// unordered.  Note that this is different than the predicate we use in
-// Attributor.  Here we chose to be conservative and consider monotonic
-// operations potentially synchronizing.  We generally don't do much with
-// monotonic operations, so this is simply risk reduction.
-static bool isOrderedAtomic(Instruction *I) {
-  if (!I->isAtomic())
-    return false;
-
-  if (auto *FI = dyn_cast<FenceInst>(I))
-    // All legal orderings for fence are stronger than monotonic.
-    return FI->getSyncScopeID() != SyncScope::SingleThread;
-  else if (isa<AtomicCmpXchgInst>(I) || isa<AtomicRMWInst>(I))
-    return true;
-  else if (auto *SI = dyn_cast<StoreInst>(I))
-    return !SI->isUnordered();
-  else if (auto *LI = dyn_cast<LoadInst>(I))
-    return !LI->isUnordered();
-  else {
-    llvm_unreachable("unknown atomic instruction?");
-  }
-}
-
-static bool InstrBreaksNoSync(Instruction &I, const SCCNodeSet &SCCNodes) {
-  // Volatile may synchronize
-  if (I.isVolatile())
-    return true;
-
-  // An ordered atomic may synchronize.  (See comment about on monotonic.)
-  if (isOrderedAtomic(&I))
-    return true;
-
-  auto *CB = dyn_cast<CallBase>(&I);
-  if (!CB)
-    // Non call site cases covered by the two checks above
-    return false;
-
-  if (CB->hasFnAttr(Attribute::NoSync))
-    return false;
-
-  // Non volatile memset/memcpy/memmoves are nosync
-  // NOTE: Only intrinsics with volatile flags should be handled here.  All
-  // others should be marked in Intrinsics.td.
-  if (auto *MI = dyn_cast<MemIntrinsic>(&I))
-    if (!MI->isVolatile())
-      return false;
-
-  // Speculatively assume in SCC.
-  if (Function *Callee = CB->getCalledFunction())
-    if (SCCNodes.contains(Callee))
-      return false;
-
-  return true;
-}
-
-// Infer the nosync attribute.
-static void addNoSyncAttr(const SCCNodeSet &SCCNodes,
-                          SmallSet<Function *, 8> &Changed) {
-  AttributeInferer AI;
-  AI.registerAttrInference(AttributeInferer::InferenceDescriptor{
-      Attribute::NoSync,
-      // Skip already marked functions.
-      [](const Function &F) { return F.hasNoSync(); },
-      // Instructions that break nosync assumption.
-      [&SCCNodes](Instruction &I) {
-        return InstrBreaksNoSync(I, SCCNodes);
-      },
-      [](Function &F) {
-        LLVM_DEBUG(dbgs()
-                   << "Adding nosync attr to fn " << F.getName() << "\n");
-        F.setNoSync();
-        ++NumNoSync;
-      },
-      /* RequiresExactDefinition= */ true});
-  AI.run(SCCNodes, Changed);
-}
-
 static SCCNodesResult createSCCNodeSet(ArrayRef<Function *> Functions) {
   SCCNodesResult Res;
   Res.HasUnknownCall = false;
@@ -1754,8 +1746,6 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter) {
     inferAttrsFromFunctionBodies(Nodes.SCCNodes, Changed);
     addNoRecurseAttrs(Nodes.SCCNodes, Changed);
   }
-
-  addNoSyncAttr(Nodes.SCCNodes, Changed);
 
   // Finally, infer the maximal set of attributes from the ones we've inferred
   // above.  This is handling the cases where one attribute on a signature
