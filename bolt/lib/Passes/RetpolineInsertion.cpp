@@ -134,8 +134,8 @@ BinaryFunction *createNewRetpoline(BinaryContext &BC,
 
       MCInst LoadCalleeAddrs;
       const IndirectBranchInfo::MemOpInfo &MemRef = BrInfo.Memory;
-      MIB.createLoad(LoadCalleeAddrs, MemRef.BaseRegNum, MemRef.ScaleValue,
-                     MemRef.IndexRegNum, MemRef.DispValue, MemRef.DispExpr,
+      MIB.createLoad(LoadCalleeAddrs, MemRef.BaseRegNum, MemRef.ScaleImm,
+                     MemRef.IndexRegNum, MemRef.DispImm, MemRef.DispExpr,
                      MemRef.SegRegNum, MIB.getX86R11(), 8);
 
       BB2.addInstruction(LoadCalleeAddrs);
@@ -195,11 +195,10 @@ std::string createRetpolineFunctionTag(BinaryContext &BC,
              ? "r" + to_string(MemRef.BaseRegNum)
              : "";
 
-  Tag +=
-      MemRef.DispExpr ? "+" + DispExprStr : "+" + to_string(MemRef.DispValue);
+  Tag += MemRef.DispExpr ? "+" + DispExprStr : "+" + to_string(MemRef.DispImm);
 
   Tag += MemRef.IndexRegNum != BC.MIB->getNoRegister()
-             ? "+" + to_string(MemRef.ScaleValue) + "*" +
+             ? "+" + to_string(MemRef.ScaleImm) + "*" +
                    to_string(MemRef.IndexRegNum)
              : "";
 
@@ -232,8 +231,8 @@ void createBranchReplacement(BinaryContext &BC,
   if (BrInfo.isMem() && R11Available) {
     const IndirectBranchInfo::MemOpInfo &MemRef = BrInfo.Memory;
     MCInst LoadCalleeAddrs;
-    MIB.createLoad(LoadCalleeAddrs, MemRef.BaseRegNum, MemRef.ScaleValue,
-                   MemRef.IndexRegNum, MemRef.DispValue, MemRef.DispExpr,
+    MIB.createLoad(LoadCalleeAddrs, MemRef.BaseRegNum, MemRef.ScaleImm,
+                   MemRef.IndexRegNum, MemRef.DispImm, MemRef.DispExpr,
                    MemRef.SegRegNum, MIB.getX86R11(), 8);
     Replacement.push_back(LoadCalleeAddrs);
   }
@@ -252,11 +251,11 @@ IndirectBranchInfo::IndirectBranchInfo(MCInst &Inst, MCPlusBuilder &MIB) {
 
   if (MIB.isBranchOnMem(Inst)) {
     IsMem = true;
-    if (!MIB.evaluateX86MemoryOperand(Inst, &Memory.BaseRegNum,
-                                      &Memory.ScaleValue,
-                                      &Memory.IndexRegNum, &Memory.DispValue,
-                                      &Memory.SegRegNum, &Memory.DispExpr))
+    std::optional<MCPlusBuilder::X86MemOperand> MO =
+        MIB.evaluateX86MemoryOperand(Inst);
+    if (!MO)
       llvm_unreachable("not expected");
+    Memory = MO.value();
   } else if (MIB.isBranchOnReg(Inst)) {
     assert(MCPlus::getNumPrimeOperands(Inst) == 1 && "expect 1 operand");
     BranchReg = Inst.getOperand(0).getReg();
@@ -306,9 +305,9 @@ void RetpolineInsertion::runOnFunctions(BinaryContext &BC) {
           IndirectBranchInfo::MemOpInfo &MemRef = BrInfo.Memory;
           int Addend = (BrInfo.isJump() || BrInfo.isTailCall()) ? 8 : 16;
           if (MemRef.BaseRegNum == MIB.getStackPointer())
-            MemRef.DispValue += Addend;
+            MemRef.DispImm += Addend;
           if (MemRef.IndexRegNum == MIB.getStackPointer())
-            MemRef.DispValue += Addend * MemRef.ScaleValue;
+            MemRef.DispImm += Addend * MemRef.ScaleImm;
         }
 
         TargetRetpoline = getOrCreateRetpoline(BC, BrInfo, R11Available);
