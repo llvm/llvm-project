@@ -173,6 +173,7 @@ static StringRef const StyleNames[] = {
      m(unsigned-short-int) \
      m(unsigned-short) \
      m(unsigned-int) \
+     m(unsigned-char) \
      m(unsigned) \
      m(long-long-int) \
      m(long-double) \
@@ -180,6 +181,7 @@ static StringRef const StyleNames[] = {
      m(long-int) \
      m(long) \
      m(ptrdiff_t) \
+     m(void) \
 
 static StringRef const HungarainNotationPrimitiveTypes[] = {
 #define STRINGIZE(v) #v,
@@ -751,13 +753,15 @@ void IdentifierNamingCheck::HungarianNotation::loadDefaultConfig(
         {"unsigned short int",      "usi" },
         {"unsigned short",          "us"  },
         {"unsigned int",            "ui"  },
+        {"unsigned char",           "uc"  },
         {"unsigned",                "u"   },
         {"long long int",           "lli" },
         {"long double",             "ld"  },
         {"long long",               "ll"  },
         {"long int",                "li"  },
         {"long",                    "l"   },
-        {"ptrdiff_t",               "p"   }};
+        {"ptrdiff_t",               "p"   },
+        {"void",                    ""    }};
   // clang-format on
   for (const auto &PT : PrimitiveTypes)
     HNOption.PrimitiveType.try_emplace(PT.first, PT.second);
