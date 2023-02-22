@@ -9783,15 +9783,19 @@ static SDValue performMemPairCombine(SDNode *N,
         continue;
 
       // Check if the offsets match the XTHeadMemPair encoding contraints.
+      bool Valid = false;
       if (MemVT == MVT::i32) {
         // Check for adjacent i32 values and a 2-bit index.
-        if ((Offset1 + 4 != Offset2) || !isShiftedUInt<2, 3>(Offset1))
-          continue;
+        if ((Offset1 + 4 == Offset2) && isShiftedUInt<2, 3>(Offset1))
+          Valid = true;
       } else if (MemVT == MVT::i64) {
         // Check for adjacent i64 values and a 2-bit index.
-        if ((Offset1 + 8 != Offset2) || !isShiftedUInt<2, 4>(Offset1))
-          continue;
+        if ((Offset1 + 8 == Offset2) && isShiftedUInt<2, 4>(Offset1))
+          Valid = true;
       }
+
+      if (!Valid)
+        continue;
 
       // Try to combine.
       if (SDValue Res =
