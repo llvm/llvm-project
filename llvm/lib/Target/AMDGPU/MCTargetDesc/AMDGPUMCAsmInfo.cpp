@@ -58,11 +58,11 @@ unsigned AMDGPUMCAsmInfo::getMaxInstLength(const MCSubtargetInfo *STI) const {
     return MaxInstLength;
 
   // Maximum for NSA encoded images
-  if (STI->getFeatureBits()[AMDGPU::FeatureNSAEncoding])
+  if (STI->hasFeature(AMDGPU::FeatureNSAEncoding))
     return 20;
 
   // 64-bit instruction with 32-bit literal.
-  if (STI->getFeatureBits()[AMDGPU::FeatureVOP3Literal])
+  if (STI->hasFeature(AMDGPU::FeatureVOP3Literal))
     return 12;
 
   return 8;
