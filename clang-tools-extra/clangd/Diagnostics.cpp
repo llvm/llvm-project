@@ -98,17 +98,22 @@ bool locationInRange(SourceLocation L, CharSourceRange R,
 // LSP needs a single range.
 Range diagnosticRange(const clang::Diagnostic &D, const LangOptions &L) {
   auto &M = D.getSourceManager();
+  auto PatchedRange = [&M](CharSourceRange &R) {
+    R.setBegin(translatePreamblePatchLocation(R.getBegin(), M));
+    R.setEnd(translatePreamblePatchLocation(R.getEnd(), M));
+    return R;
+  };
   auto Loc = M.getFileLoc(D.getLocation());
   for (const auto &CR : D.getRanges()) {
     auto R = Lexer::makeFileCharRange(CR, M, L);
     if (locationInRange(Loc, R, M))
-      return halfOpenToRange(M, R);
+      return halfOpenToRange(M, PatchedRange(R));
   }
   // The range may be given as a fixit hint instead.
   for (const auto &F : D.getFixItHints()) {
     auto R = Lexer::makeFileCharRange(F.RemoveRange, M, L);
     if (locationInRange(Loc, R, M))
-      return halfOpenToRange(M, R);
+      return halfOpenToRange(M, PatchedRange(R));
   }
   // If the token at the location is not a comment, we use the token.
   // If we can't get the token at the location, fall back to using the location
@@ -117,7 +122,7 @@ Range diagnosticRange(const clang::Diagnostic &D, const LangOptions &L) {
   if (!Lexer::getRawToken(Loc, Tok, M, L, true) && Tok.isNot(tok::comment)) {
     R = CharSourceRange::getTokenRange(Tok.getLocation(), Tok.getEndLoc());
   }
-  return halfOpenToRange(M, R);
+  return halfOpenToRange(M, PatchedRange(R));
 }
 
 // Try to find a location in the main-file to report the diagnostic D.
@@ -211,13 +216,6 @@ bool tryMoveToMainFile(Diag &D, FullSourceLoc DiagLoc) {
   // Update message to mention original file.
   D.Message = llvm::formatv("{0}: {1}", Prefix, D.Message);
   return true;
-}
-
-bool isInsideMainFile(const clang::Diagnostic &D) {
-  if (!D.hasSourceManager())
-    return false;
-
-  return clangd::isInsideMainFile(D.getLocation(), D.getSourceManager());
 }
 
 bool isNote(DiagnosticsEngine::Level L) {
@@ -713,11 +711,15 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
   auto FillDiagBase = [&](DiagBase &D) {
     fillNonLocationData(DiagLevel, Info, D);
 
-    D.InsideMainFile = isInsideMainFile(Info);
+    SourceLocation PatchLoc =
+        translatePreamblePatchLocation(Info.getLocation(), SM);
+    D.InsideMainFile = isInsideMainFile(PatchLoc, SM);
     D.Range = diagnosticRange(Info, *LangOpts);
-    D.File = std::string(SM.getFilename(Info.getLocation()));
-    D.AbsFile = getCanonicalPath(
-        SM.getFileEntryForID(SM.getFileID(Info.getLocation())), SM);
+    auto FID = SM.getFileID(Info.getLocation());
+    if (auto *FE = SM.getFileEntryForID(FID)) {
+      D.File = FE->getName().str();
+      D.AbsFile = getCanonicalPath(FE, SM);
+    }
     D.ID = Info.getID();
     return D;
   };

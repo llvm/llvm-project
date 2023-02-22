@@ -41,6 +41,7 @@
 using testing::AllOf;
 using testing::Contains;
 using testing::ElementsAre;
+using testing::ElementsAreArray;
 using testing::Eq;
 using testing::Field;
 using testing::HasSubstr;
@@ -705,10 +706,8 @@ void foo();
     auto AST = createPatchedAST(Code.code(), NewCode.code(), AdditionalFiles);
     EXPECT_THAT(
         *AST->getDiagnostics(),
-        ElementsAre(AllOf(
-            Diag(NewCode.range("foo2"), "-Wmacro-redefined"),
-            // FIXME: This should be translated into main file.
-            withNote(Field(&Note::File, HasSubstr("_preamble_patch_"))))));
+        ElementsAre(AllOf(Diag(NewCode.range("foo2"), "-Wmacro-redefined"),
+                          withNote(Diag(NewCode.range("foo1"))))));
   }
 }
 
