@@ -949,7 +949,6 @@ PrefixKind X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand,
   }
   case X86II::MRM_C0:
   case X86II::RawFrm:
-  case X86II::PrefixByte:
     break;
   case X86II::MRMDestMemFSIB:
   case X86II::MRMDestMem: {
@@ -1246,10 +1245,6 @@ PrefixKind X86MCCodeEmitter::emitREXPrefix(int MemOperand, const MCInst &MI,
   case X86II::MRM7r:
     Prefix.setB(MI, CurOp++);
     break;
-  case X86II::MRMr0:
-    llvm_unreachable("MRMr0 format never need REX prefix!");
-  case X86II::MRMDestMemFSIB:
-    llvm_unreachable("FSIB format never need REX prefix!");
   }
   PrefixKind Kind = Prefix.determineOptimalKind();
   if (Kind && UsesHighByteReg)
