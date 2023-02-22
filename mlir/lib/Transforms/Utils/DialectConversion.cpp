@@ -1495,7 +1495,10 @@ LogicalResult ConversionPatternRewriterImpl::notifyMatchFailure(
 
 ConversionPatternRewriter::ConversionPatternRewriter(MLIRContext *ctx)
     : PatternRewriter(ctx),
-      impl(new detail::ConversionPatternRewriterImpl(*this)) {}
+      impl(new detail::ConversionPatternRewriterImpl(*this)) {
+  setListener(this);
+}
+
 ConversionPatternRewriter::~ConversionPatternRewriter() = default;
 
 void ConversionPatternRewriter::replaceOpWithIf(

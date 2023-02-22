@@ -39,7 +39,8 @@ namespace {
 /// This abstract class manages the worklist and contains helper methods for
 /// rewriting ops on the worklist. Derived classes specify how ops are added
 /// to the worklist in the beginning.
-class GreedyPatternRewriteDriver : public PatternRewriter {
+class GreedyPatternRewriteDriver : public PatternRewriter,
+                                   public RewriterBase::Listener {
 protected:
   explicit GreedyPatternRewriteDriver(MLIRContext *ctx,
                                       const FrozenRewritePatternSet &patterns,
@@ -67,7 +68,7 @@ protected:
 
   /// Notify the driver that the specified operation was replaced. Update the
   /// worklist as needed: New users are added enqueued.
-  void notifyRootReplaced(Operation *op, ValueRange replacement) override;
+  void notifyOperationReplaced(Operation *op, ValueRange replacement) override;
 
   /// Process ops until the worklist is empty or `config.maxNumRewrites` is
   /// reached. Return `true` if any IR was changed.
@@ -128,6 +129,9 @@ GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
 
   // Apply a simple cost model based solely on pattern benefit.
   matcher.applyDefaultCostModel();
+
+  // Set up listener.
+  setListener(this);
 }
 
 bool GreedyPatternRewriteDriver::processWorklist() {
@@ -359,8 +363,8 @@ void GreedyPatternRewriteDriver::notifyOperationRemoved(Operation *op) {
     strictModeFilteredOps.erase(op);
 }
 
-void GreedyPatternRewriteDriver::notifyRootReplaced(Operation *op,
-                                                    ValueRange replacement) {
+void GreedyPatternRewriteDriver::notifyOperationReplaced(
+    Operation *op, ValueRange replacement) {
   LLVM_DEBUG({
     logger.startLine() << "** Replace : '" << op->getName() << "'(" << op
                        << ")\n";
