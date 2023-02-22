@@ -4989,7 +4989,10 @@ static bool IsSimplerBaseSCEVForTarget(const TargetTransformInfo &TTI,
                                        ScalarEvolution &SE, const SCEV *Best,
                                        const SCEV *Reg,
                                        MemAccessTy AccessType) {
-  if (Best->getType() != Reg->getType())
+  if (Best->getType() != Reg->getType() ||
+      (false && isa<SCEVAddRecExpr>(Best) && isa<SCEVAddRecExpr>(Reg) &&
+       cast<SCEVAddRecExpr>(Best)->getLoop() !=
+           cast<SCEVAddRecExpr>(Reg)->getLoop()))
     return false;
   const auto *Diff = dyn_cast<SCEVConstant>(SE.getMinusSCEV(Best, Reg));
   if (!Diff)
