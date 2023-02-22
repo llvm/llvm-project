@@ -98,6 +98,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -10605,6 +10606,11 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
     if (!Result.MadeAnyChange)
       return PreservedAnalyses::all();
     PreservedAnalyses PA;
+
+    if (isAssignmentTrackingEnabled(*F.getParent())) {
+      for (auto &BB : F)
+        RemoveRedundantDbgInstrs(&BB);
+    }
 
     // We currently do not preserve loopinfo/dominator analyses with outer loop
     // vectorization. Until this is addressed, mark these analyses as preserved
