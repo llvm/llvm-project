@@ -12230,20 +12230,22 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
   if (Op.getOpcode() != ISD::BUILD_VECTOR)
     return SDValue();
 
-  if (VT.isInteger()) {
-    // Certain vector constants, used to express things like logical NOT and
-    // arithmetic NEG, are passed through unmodified.  This allows special
-    // patterns for these operations to match, which will lower these constants
-    // to whatever is proven necessary.
-    BuildVectorSDNode *BVN = cast<BuildVectorSDNode>(Op.getNode());
-    if (BVN->isConstant())
-      if (ConstantSDNode *Const = BVN->getConstantSplatNode()) {
-        unsigned BitSize = VT.getVectorElementType().getSizeInBits();
-        APInt Val(BitSize,
-                  Const->getAPIntValue().zextOrTrunc(BitSize).getZExtValue());
-        if (Val.isZero() || Val.isAllOnes())
-          return Op;
-      }
+  // Certain vector constants, used to express things like logical NOT and
+  // arithmetic NEG, are passed through unmodified.  This allows special
+  // patterns for these operations to match, which will lower these constants
+  // to whatever is proven necessary.
+  BuildVectorSDNode *BVN = cast<BuildVectorSDNode>(Op.getNode());
+  if (BVN->isConstant()) {
+    if (ConstantSDNode *Const = BVN->getConstantSplatNode()) {
+      unsigned BitSize = VT.getVectorElementType().getSizeInBits();
+      APInt Val(BitSize,
+                Const->getAPIntValue().zextOrTrunc(BitSize).getZExtValue());
+      if (Val.isZero() || (VT.isInteger() && Val.isAllOnes()))
+        return Op;
+    }
+    if (ConstantFPSDNode *Const = BVN->getConstantFPSplatNode())
+      if (Const->isZero() && !Const->isNegative())
+        return Op;
   }
 
   if (SDValue V = ConstantBuildVector(Op, DAG))
@@ -12445,7 +12447,8 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     APInt ConstantValueAPInt(1, 0);
     if (auto *C = dyn_cast<ConstantSDNode>(ConstantValue))
       ConstantValueAPInt = C->getAPIntValue().zextOrTrunc(BitSize);
-    if (!isNullConstant(ConstantValue) && !ConstantValueAPInt.isAllOnes()) {
+    if (!isNullConstant(ConstantValue) && !isNullFPConstant(ConstantValue) &&
+        !ConstantValueAPInt.isAllOnes()) {
       Val = ConstantBuildVector(Val, DAG);
       if (!Val)
         // Otherwise, materialize the constant and splat it.
