@@ -1,4 +1,4 @@
-//===-- Unittests for htons -----------------------------------------------===//
+//===-- Unittests for ntohs -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,18 +11,18 @@
 #include "src/network/ntohs.h"
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcHtons, SmokeTest) {
+TEST(LlvmLibcNtohs, SmokeTest) {
   uint16_t original = 0x2301;
   uint16_t swapped = 0x0123;
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-  EXPECT_EQ(__llvm_libc::htons(original), swapped);
+  EXPECT_EQ(__llvm_libc::ntohs(original), swapped);
 #endif
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-  EXPECT_EQ(__llvm_libc::htons(original), original);
+  EXPECT_EQ(__llvm_libc::ntohs(original), original);
 #endif
 }
 
-TEST(LlvmLibcHtons, CompleteTest) {
+TEST(LlvmLibcNtohs, CompleteTest) {
   uint16_t original = 0x0123;
-  EXPECT_EQ(__llvm_libc::htons(__llvm_libc::ntohs(original)), original);
+  EXPECT_EQ(__llvm_libc::ntohs(__llvm_libc::htons(original)), original);
 }
