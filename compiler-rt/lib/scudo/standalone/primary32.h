@@ -414,6 +414,40 @@ private:
       TransferBatch *TB = nullptr;
       if (ClassId == SizeClassMap::BatchClassId) {
         DCHECK_GE(Size, 2U);
+
+        // Free blocks are recorded by TransferBatch in freelist, blocks of
+        // BatchClassId are included. In order not to use additional memory to
+        // record blocks of BatchClassId, they are self-contained. I.e., A
+        // TransferBatch may record the block address of itself. See the figure
+        // below:
+        //
+        // TransferBatch at 0xABCD
+        // +----------------------------+
+        // | Free blocks' addr          |
+        // | +------+------+------+     |
+        // | |0xABCD|...   |...   |     |
+        // | +------+------+------+     |
+        // +----------------------------+
+        //
+        // The safeness of manipulating TransferBatch is kept by the invariant,
+        //
+        //   The unit of each pop-block request is a TransferBatch. Return
+        //   part of the blocks in a TransferBatch is not allowed.
+        //
+        // This ensures that TransferBatch won't leak the address itself while
+        // it's still holding other valid data.
+        //
+        // Besides, BatchGroup uses the same size-class as TransferBatch does
+        // and its address is recorded in the TransferBatch too. To maintain the
+        // safeness, the invariant to keep is,
+        //
+        //   The address of itself is always recorded in the last TransferBatch
+        //   of the freelist (also imply that the freelist should only be
+        //   updated with push_front). Once the last TransferBatch is popped,
+        //   the BatchGroup becomes invalid.
+        //
+        // As a result, the blocks used by BatchGroup and TransferBatch are
+        // reusable and don't need additional space for them.
         BG = reinterpret_cast<BatchGroup *>(
             decompactPtr(ClassId, Array[Size - 1]));
         BG->Batches.clear();
@@ -421,6 +455,11 @@ private:
         TB = reinterpret_cast<TransferBatch *>(
             decompactPtr(ClassId, Array[Size - 2]));
         TB->clear();
+
+        // Append the blocks used by BatchGroup and TransferBatch immediately so
+        // that we ensure that they are in the last TransBatch.
+        TB->appendFromArray(Array + Size - 2, 2);
+        Size -= 2;
       } else {
         BG = C->createGroup();
         BG->Batches.clear();
@@ -430,6 +469,7 @@ private:
       }
 
       BG->GroupId = GroupId;
+      // TODO(chiahungduan): Avoid the use of push_back() in `Batches`.
       BG->Batches.push_front(TB);
       BG->PushedBlocks = 0;
       BG->PushedBlocksAtLastCheckpoint = 0;
@@ -611,16 +651,8 @@ private:
     // No need to shuffle the batches size class.
     if (ClassId != SizeClassMap::BatchClassId)
       shuffle(ShuffleArray, NumberOfBlocks, &Sci->RandState);
-    for (u32 I = 0; I < NumberOfBlocks;) {
-      // `MaxCount` is u16 so the result will also fit in u16.
-      const u16 N = static_cast<u16>(Min<u32>(MaxCount, NumberOfBlocks - I));
-      // Note that the N blocks here may have different group ids. Given that
-      // it only happens when it crosses the group size boundary. Instead of
-      // sorting them, treat them as same group here to avoid sorting the
-      // almost-sorted blocks.
-      pushBlocksImpl(C, ClassId, Sci, &ShuffleArray[I], N, /*SameGroup=*/true);
-      I += N;
-    }
+    pushBlocksImpl(C, ClassId, Sci, ShuffleArray, NumberOfBlocks,
+                   /*SameGroup=*/true);
 
     const uptr AllocatedUser = Size * NumberOfBlocks;
     C->getStats().add(StatFree, AllocatedUser);
