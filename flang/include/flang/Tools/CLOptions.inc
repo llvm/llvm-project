@@ -157,9 +157,11 @@ inline void addBoxedProcedurePass(mlir::PassManager &pm) {
 }
 #endif
 
-inline void addExternalNameConversionPass(mlir::PassManager &pm) {
-  addPassConditionally(pm, disableExternalNameConversion,
-      [&]() { return fir::createExternalNameConversionPass(); });
+inline void addExternalNameConversionPass(
+    mlir::PassManager &pm, bool appendUnderscore = true) {
+  addPassConditionally(pm, disableExternalNameConversion, [&]() {
+    return fir::createExternalNameConversionPass(appendUnderscore);
+  });
 }
 
 /// Create a pass pipeline for running default optimization passes for
@@ -207,8 +209,9 @@ inline void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 }
 
 #if !defined(FLANG_EXCLUDE_CODEGEN)
-inline void createDefaultFIRCodeGenPassPipeline(
-    mlir::PassManager &pm, llvm::OptimizationLevel optLevel = defaultOptLevel) {
+inline void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
+    llvm::OptimizationLevel optLevel = defaultOptLevel,
+    bool underscoring = true) {
   fir::addBoxedProcedurePass(pm);
   pm.addNestedPass<mlir::func::FuncOp>(
       fir::createAbstractResultOnFuncOptPass());
@@ -216,7 +219,7 @@ inline void createDefaultFIRCodeGenPassPipeline(
       fir::createAbstractResultOnGlobalOptPass());
   fir::addCodeGenRewritePass(pm);
   fir::addTargetRewritePass(pm);
-  fir::addExternalNameConversionPass(pm);
+  fir::addExternalNameConversionPass(pm, underscoring);
   fir::addFIRToLLVMPass(pm, optLevel);
 }
 
@@ -227,12 +230,12 @@ inline void createDefaultFIRCodeGenPassPipeline(
 ///   passes pipeline
 inline void createMLIRToLLVMPassPipeline(mlir::PassManager &pm,
     llvm::OptimizationLevel optLevel = defaultOptLevel,
-    bool stackArrays = false) {
+    bool stackArrays = false, bool underscoring = true) {
   // Add default optimizer pass pipeline.
   fir::createDefaultFIROptimizerPassPipeline(pm, optLevel, stackArrays);
 
   // Add codegen pass pipeline.
-  fir::createDefaultFIRCodeGenPassPipeline(pm, optLevel);
+  fir::createDefaultFIRCodeGenPassPipeline(pm, optLevel, underscoring);
 }
 #undef FLANG_EXCLUDE_CODEGEN
 #endif

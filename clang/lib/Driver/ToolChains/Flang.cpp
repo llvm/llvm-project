@@ -56,7 +56,8 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
                   {options::OPT_module_dir, options::OPT_fdebug_module_writer,
                    options::OPT_fintrinsic_modules_path, options::OPT_pedantic,
                    options::OPT_std_EQ, options::OPT_W_Joined,
-                   options::OPT_fconvert_EQ, options::OPT_fpass_plugin_EQ});
+                   options::OPT_fconvert_EQ, options::OPT_fpass_plugin_EQ,
+                   options::OPT_funderscoring, options::OPT_fno_underscoring});
 
   Arg *stackArrays =
       Args.getLastArg(options::OPT_Ofast, options::OPT_fstack_arrays,
