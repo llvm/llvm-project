@@ -63,8 +63,7 @@ std::unique_ptr<jitlink::LinkGraph> createPlatformGraph(MachOPlatform &MOP,
                                                         std::string Name) {
   unsigned PointerSize;
   support::endianness Endianness;
-  const auto &TT =
-      MOP.getExecutionSession().getExecutorProcessControl().getTargetTriple();
+  const auto &TT = MOP.getExecutionSession().getTargetTriple();
 
   switch (TT.getArch()) {
   case Triple::aarch64:
@@ -258,13 +257,13 @@ MachOPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
                       std::unique_ptr<DefinitionGenerator> OrcRuntime,
                       std::optional<SymbolAliasMap> RuntimeAliases) {
 
-  auto &EPC = ES.getExecutorProcessControl();
-
   // If the target is not supported then bail out immediately.
-  if (!supportedTarget(EPC.getTargetTriple()))
+  if (!supportedTarget(ES.getTargetTriple()))
     return make_error<StringError>("Unsupported MachOPlatform triple: " +
-                                       EPC.getTargetTriple().str(),
+                                       ES.getTargetTriple().str(),
                                    inconvertibleErrorCode());
+
+  auto &EPC = ES.getExecutorProcessControl();
 
   // Create default aliases if the caller didn't supply any.
   if (!RuntimeAliases)
@@ -300,8 +299,7 @@ MachOPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
 
   // Create a generator for the ORC runtime archive.
   auto OrcRuntimeArchiveGenerator = StaticLibraryDefinitionGenerator::Load(
-      ObjLinkingLayer, OrcRuntimePath,
-      ES.getExecutorProcessControl().getTargetTriple());
+      ObjLinkingLayer, OrcRuntimePath, ES.getTargetTriple());
   if (!OrcRuntimeArchiveGenerator)
     return OrcRuntimeArchiveGenerator.takeError();
 
