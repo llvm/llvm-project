@@ -151,8 +151,7 @@ static SmallVector<IntType> extractVector(ArrayAttr arrayAttr) {
 static std::optional<Value>
 createContractArithOp(Location loc, Value x, Value y, Value acc,
                       vector::CombiningKind kind, PatternRewriter &rewriter,
-                      bool isInt,
-                      std::optional<Value> maybeMask = std::nullopt) {
+                      bool isInt, Value mask = Value()) {
   using vector::CombiningKind;
   Value mul;
 
@@ -171,20 +170,20 @@ createContractArithOp(Location loc, Value x, Value y, Value acc,
       return std::nullopt;
     // Special case for fused multiply-add.
     if (acc && acc.getType().isa<VectorType>() && kind == CombiningKind::ADD) {
-      Operation *fmaOp = rewriter.create<vector::FMAOp>(loc, x, y, acc);
-      if (maybeMask.has_value() && maybeMask.value())
-        fmaOp = maskOperation(rewriter, fmaOp, maybeMask.value());
-      return fmaOp->getResult(0);
+      Value fma = rewriter.create<vector::FMAOp>(loc, x, y, acc);
+      if (mask)
+        // The fma op doesn't need explicit masking. However, fma ops used in
+        // reductions must preserve previous 'acc' values for masked-out lanes.
+        fma = selectPassthru(rewriter, mask, fma, acc);
+      return fma;
     }
     mul = rewriter.create<arith::MulFOp>(loc, x, y);
   }
 
-  assert((!maybeMask.has_value() || !maybeMask.value()) &&
-         "Unsupported masked case");
-
   if (!acc)
     return std::optional<Value>(mul);
-  return makeArithReduction(rewriter, loc, kind, mul, acc);
+
+  return makeArithReduction(rewriter, loc, kind, mul, acc, mask);
 }
 
 /// Return the positions of the reductions in the given map.
@@ -587,13 +586,17 @@ public:
     for (int64_t d = 0, e = resType.getDimSize(0); d < e; ++d) {
       auto pos = rewriter.getI64ArrayAttr(d);
       Value x =
-          rewriter.create<vector::ExtractOp>(loc, eltType, op.getLhs(), pos);
+          rewriter.create<vector::ExtractOp>(loc, op.getLhs(), pos);
       Value a = rewriter.create<vector::BroadcastOp>(loc, rhsType, x);
       Value r = nullptr;
       if (acc)
-        r = rewriter.create<vector::ExtractOp>(loc, rhsType, acc, pos);
+        r = rewriter.create<vector::ExtractOp>(loc, acc, pos);
+      Value extrMask;
+      if (mask)
+        extrMask = rewriter.create<vector::ExtractOp>(loc, mask, pos);
+
       std::optional<Value> m = createContractArithOp(
-          loc, a, op.getRhs(), r, kind, rewriter, isInt, mask);
+          loc, a, op.getRhs(), r, kind, rewriter, isInt, extrMask);
       if (!m.has_value())
         return failure();
       result = rewriter.create<vector::InsertOp>(loc, resType, *m, result, pos);
@@ -638,6 +641,7 @@ struct ContractOpToElementwise
     if (vectorTransformOptions.vectorContractLowering !=
         vector::VectorContractLowering::ParallelArith)
       return failure();
+
     ArrayRef<int64_t> lhsShape = contractOp.getLhsType().getShape();
     ArrayRef<int64_t> rhsShape = contractOp.getRhsType().getShape();
     AffineMap lhsMap = contractOp.getIndexingMapsArray()[0];
@@ -1564,8 +1568,7 @@ struct UnrolledOuterProductGenerator
       mask = maskableOp.getMaskingOp().getMask();
   }
 
-  Value t(Value v) {
-    static constexpr std::array<int64_t, 2> perm = {1, 0};
+  Value t(Value v, ArrayRef<int64_t> perm = {1, 0}) {
     if (!v)
       return v;
     return rewriter.create<vector::TransposeOp>(loc, v, perm);
@@ -1620,7 +1623,8 @@ struct UnrolledOuterProductGenerator
     bindDims(rewriter.getContext(), m, n, k);
     // Classical row-major matmul:  Just permute the lhs.
     if (layout({{m, k}, {k, n}, {m, n}}))
-      return outerProd(t(lhs), rhs, res, lhsType.getDimSize(1));
+      return outerProd(t(lhs), rhs, res, lhsType.getDimSize(1),
+                       t(mask, {2, 0, 1}));
     // TODO: may be better to fail and use some vector<k> -> scalar reduction.
     if (layout({{m, k}, {n, k}, {m, n}})) {
       Value tlhs = t(lhs);
