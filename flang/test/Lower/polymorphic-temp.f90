@@ -185,4 +185,26 @@ contains
 ! CHECK: %[[MATRIX_NONE:.*]] = fir.convert %[[MATRIX]] : (!fir.class<!fir.array<?x?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.box<none>
 ! CHECK: %{{.*}} = fir.call @_FortranATranspose(%[[RES_BOX_NONE]], %[[MATRIX_NONE]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 
+  subroutine check_scalar(a)
+    class(p1), intent(in) :: a
+  end subroutine
+
+  subroutine test_merge_intrinsic(a, b)
+    class(p1), intent(in) :: a, b
+
+    call check_scalar(merge(a, b, a%a > b%a))
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpoly_tmpPtest_merge_intrinsic(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.type<_QMpoly_tmpTp1{a:i32}>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.class<!fir.type<_QMpoly_tmpTp1{a:i32}>> {fir.bindc_name = "b"}) {
+! CHECK: %[[FIELD_A:.*]] = fir.field_index a, !fir.type<_QMpoly_tmpTp1{a:i32}>
+! CHECK: %[[COORD_A:.*]] = fir.coordinate_of %[[ARG0]], %[[FIELD_A]] : (!fir.class<!fir.type<_QMpoly_tmpTp1{a:i32}>>, !fir.field) -> !fir.ref<i32>
+! CHECK: %[[LOAD_A1:.*]] = fir.load %[[COORD_A]] : !fir.ref<i32>
+! CHECK: %[[FIELD_A:.*]] = fir.field_index a, !fir.type<_QMpoly_tmpTp1{a:i32}>
+! CHECK: %[[COORD_A:.*]] = fir.coordinate_of %[[ARG1]], %[[FIELD_A]] : (!fir.class<!fir.type<_QMpoly_tmpTp1{a:i32}>>, !fir.field) -> !fir.ref<i32>
+! CHECK: %[[LOAD_A2:.*]] = fir.load %[[COORD_A]] : !fir.ref<i32>
+! CHECK: %[[CMPI:.*]] = arith.cmpi sgt, %[[LOAD_A1]], %[[LOAD_A2]] : i32
+! CHECK: %[[SELECT:.*]] = arith.select %[[CMPI]], %[[ARG0]], %[[ARG1]] : !fir.class<!fir.type<_QMpoly_tmpTp1{a:i32}>>
+! CHECK: fir.call @_QMpoly_tmpPcheck_scalar(%[[SELECT]]) {{.*}} : (!fir.class<!fir.type<_QMpoly_tmpTp1{a:i32}>>) -> ()
+
 end module
