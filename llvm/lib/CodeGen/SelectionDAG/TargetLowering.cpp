@@ -8004,7 +8004,7 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
 }
 
 SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
-                                         FPClassTest Test, SDNodeFlags Flags,
+                                         unsigned Test, SDNodeFlags Flags,
                                          const SDLoc &DL,
                                          SelectionDAG &DAG) const {
   EVT OperandVT = Op.getValueType();
@@ -8027,7 +8027,7 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
   // Some checks may be represented as inversion of simpler check, for example
   // "inf|normal|subnormal|zero" => !"nan".
   bool IsInverted = false;
-  if (FPClassTest InvertedCheck = getInvertedFPClassTest(Test)) {
+  if (unsigned InvertedCheck = getInvertedFPClassTest(Test)) {
     IsInverted = true;
     Test = InvertedCheck;
   }
