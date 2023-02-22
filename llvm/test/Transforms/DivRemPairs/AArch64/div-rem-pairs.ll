@@ -5,7 +5,7 @@ define i8 @f(ptr %p, i8 %x, i8 %y) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:    [[X_FROZEN:%.*]] = freeze i8 [[X:%.*]]
 ; CHECK-NEXT:    [[Y_FROZEN:%.*]] = freeze i8 [[Y:%.*]]
-; CHECK-NEXT:    [[XDIVY:%.*]] = udiv exact i8 [[X_FROZEN]], [[Y_FROZEN]]
+; CHECK-NEXT:    [[XDIVY:%.*]] = udiv i8 [[X_FROZEN]], [[Y_FROZEN]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i8 [[XDIVY]], [[Y_FROZEN]]
 ; CHECK-NEXT:    [[XMODY_DECOMPOSED:%.*]] = sub i8 [[X_FROZEN]], [[TMP1]]
 ; CHECK-NEXT:    store i8 [[XMODY_DECOMPOSED]], ptr [[P:%.*]], align 1
