@@ -326,7 +326,7 @@ void RewriterBase::mergeBlocks(Block *source, Block *dest,
 /// Find uses of `from` and replace them with `to` if the `functor` returns
 /// true. It also marks every modified uses and notifies the rewriter that an
 /// in-place operation modification is about to happen.
-void RewriterBase::replaceUseIf(
+void RewriterBase::replaceUsesWithIf(
     Value from, Value to,
     llvm::unique_function<bool(OpOperand &) const> functor) {
   for (OpOperand &operand : llvm::make_early_inc_range(from.getUses())) {

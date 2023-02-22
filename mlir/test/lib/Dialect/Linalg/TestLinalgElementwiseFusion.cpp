@@ -74,7 +74,7 @@ struct TestMultiUseProducerFusion : public OpRewritePattern<linalg::GenericOp> {
     if (!fusionResult)
       return rewriter.notifyMatchFailure(genericOp, "fusion failed");
     for (auto [origValue, replacement] : fusionResult->replacements) {
-      rewriter.replaceUseIf(origValue, replacement, [&](OpOperand &use) {
+      rewriter.replaceUsesWithIf(origValue, replacement, [&](OpOperand &use) {
         return use.getOwner() != genericOp.getOperation();
       });
     }
