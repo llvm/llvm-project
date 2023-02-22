@@ -1135,6 +1135,9 @@ public:
     return isUInt<12>(Imm);
   }
 
+  bool splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset, uint32_t &ImmOffset,
+                        Align Alignment = Align(4)) const;
+
   /// Returns if \p Offset is legal for the subtarget as the offset to a FLAT
   /// encoded instruction. If \p Signed, this is for an instruction that
   /// interprets the offset as signed.
