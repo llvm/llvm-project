@@ -360,6 +360,13 @@ public:
   /// Return true if the attribute exists in this set.
   bool hasAttribute(StringRef Kind) const;
 
+  /// Return true if the attribute exists in this set.
+  bool hasAttribute(Attribute A) const {
+    if (A.isStringAttribute())
+      return hasAttribute(A.getKindAsString());
+    return hasAttribute(A.getKindAsEnum());
+  }
+
   /// Return the attribute object.
   Attribute getAttribute(Attribute::AttrKind Kind) const;
 

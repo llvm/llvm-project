@@ -112,6 +112,7 @@ chrono concepts
 chrono cstddef
 chrono cstdint
 chrono cstdlib
+chrono cstring
 chrono ctime
 chrono limits
 chrono ratio
@@ -328,7 +329,6 @@ format charconv
 format cstddef
 format cstdint
 format cstdlib
-format cstring
 format initializer_list
 format limits
 format locale

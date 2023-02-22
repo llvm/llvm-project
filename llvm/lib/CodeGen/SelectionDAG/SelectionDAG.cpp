@@ -6721,7 +6721,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::VECTOR_SHUFFLE:
     llvm_unreachable("should use getVectorShuffle constructor!");
   case ISD::VECTOR_SPLICE: {
-    if (cast<ConstantSDNode>(N3)->isNullValue())
+    if (cast<ConstantSDNode>(N3)->isZero())
       return N1;
     break;
   }

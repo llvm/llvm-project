@@ -15,6 +15,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/UInt.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_assert.h"
 #include "src/__support/ryu_constants.h"
 
 // This implementation is based on the Ryu Printf algorithm by Ulf Adams:
@@ -61,7 +62,9 @@ namespace internal {
 // Returns floor(log_10(2^e)); requires 0 <= e <= 1650.
 LIBC_INLINE constexpr uint32_t log10_pow2(const uint32_t e) {
   // The first value this approximation fails for is 2^1651 which is just
-  // greater than 10^297. assert(e >= 0); assert(e <= 1650);
+  // greater than 10^297.
+  LIBC_ASSERT(e >= 0 && e <= 1650 &&
+              "Incorrect exponent to perform log10_pow2 approximation.");
   return (e * 78913) >> 18;
 }
 

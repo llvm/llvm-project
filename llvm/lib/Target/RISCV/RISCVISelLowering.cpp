@@ -1985,6 +1985,14 @@ getDefaultScalableVLOps(MVT VecVT, SDLoc DL, SelectionDAG &DAG,
   return getDefaultVLOps(VecVT, VecVT, DL, DAG, Subtarget);
 }
 
+SDValue RISCVTargetLowering::computeVLMax(MVT VecVT, SDLoc DL,
+                                          SelectionDAG &DAG) const {
+  assert(VecVT.isScalableVector() && "Expected scalable vector");
+  unsigned MinElts = VecVT.getVectorMinNumElements();
+  return DAG.getNode(ISD::VSCALE, DL, Subtarget.getXLenVT(),
+                     getVLOp(MinElts, DL, DAG, Subtarget));
+}
+
 // The state of RVV BUILD_VECTOR and VECTOR_SHUFFLE lowering is that very few
 // of either is (currently) supported. This can get us into an infinite loop
 // where we try to lower a BUILD_VECTOR as a VECTOR_SHUFFLE as a BUILD_VECTOR
@@ -2774,7 +2782,7 @@ static SDValue splatPartsI64WithVL(const SDLoc &DL, MVT VT, SDValue Passthru,
     // If vl is equal to XLEN_MAX and Hi constant is equal to Lo, we could use
     // vmv.v.x whose EEW = 32 to lower it.
     auto *Const = dyn_cast<ConstantSDNode>(VL);
-    if (LoC == HiC && Const && Const->isAllOnesValue()) {
+    if (LoC == HiC && Const && Const->isAllOnes()) {
       MVT InterVT = MVT::getVectorVT(MVT::i32, VT.getVectorElementCount() * 2);
       // TODO: if vl <= min(VLMAX), we can also do this. But we could not
       // access the subtarget here now.
@@ -3103,15 +3111,13 @@ static SDValue lowerVECTOR_SHUFFLEAsVNSRL(const SDLoc &DL, MVT VT,
   // Convert the vector to a wider integer type with the original element
   // count. This also converts FP to int.
   unsigned EltBits = ContainerVT.getScalarSizeInBits();
-  MVT WideIntEltVT = MVT::getIntegerVT(EltBits * 2);
   MVT WideIntContainerVT =
-      MVT::getVectorVT(WideIntEltVT, ContainerVT.getVectorElementCount());
+    MVT::getVectorVT(MVT::getIntegerVT(EltBits * 2),
+                     ContainerVT.getVectorElementCount());
   Src = DAG.getBitcast(WideIntContainerVT, Src);
 
-  // Convert to the integer version of the container type.
-  MVT IntEltVT = MVT::getIntegerVT(EltBits);
-  MVT IntContainerVT =
-      MVT::getVectorVT(IntEltVT, ContainerVT.getVectorElementCount());
+  // The integer version of the container type.
+  MVT IntContainerVT = ContainerVT.changeVectorElementTypeToInteger();
 
   // If we want even elements, then the shift amount is 0. Otherwise, shift by
   // the original element size.
@@ -6621,11 +6627,9 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
   auto [Mask, VL] = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
 
   // Calculate VLMAX-1 for the desired SEW.
-  unsigned MinElts = VecVT.getVectorMinNumElements();
-  SDValue VLMax = DAG.getNode(ISD::VSCALE, DL, XLenVT,
-                              getVLOp(MinElts, DL, DAG, Subtarget));
-  SDValue VLMinus1 =
-      DAG.getNode(ISD::SUB, DL, XLenVT, VLMax, DAG.getConstant(1, DL, XLenVT));
+  SDValue VLMinus1 = DAG.getNode(ISD::SUB, DL, XLenVT,
+                                 computeVLMax(VecVT, DL, DAG),
+                                 DAG.getConstant(1, DL, XLenVT));
 
   // Splat VLMAX-1 taking care to handle SEW==64 on RV32.
   bool IsRV32E64 =
@@ -6653,9 +6657,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_SPLICE(SDValue Op,
   MVT XLenVT = Subtarget.getXLenVT();
   MVT VecVT = Op.getSimpleValueType();
 
-  unsigned MinElts = VecVT.getVectorMinNumElements();
-  SDValue VLMax = DAG.getNode(ISD::VSCALE, DL, XLenVT,
-                              getVLOp(MinElts, DL, DAG, Subtarget));
+  SDValue VLMax = computeVLMax(VecVT, DL, DAG);
 
   int64_t ImmValue = cast<ConstantSDNode>(Op.getOperand(2))->getSExtValue();
   SDValue DownOffset, UpOffset;
