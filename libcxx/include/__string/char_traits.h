@@ -18,11 +18,11 @@
 #include <__config>
 #include <__functional/hash.h>
 #include <__iterator/iterator_traits.h>
+#include <__string/constexpr_c_functions.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
-#include <cstring>
 #include <iosfwd>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS

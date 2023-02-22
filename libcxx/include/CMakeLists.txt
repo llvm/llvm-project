@@ -557,6 +557,7 @@ set(files
   __split_buffer
   __std_stream
   __string/char_traits.h
+  __string/constexpr_c_functions.h
   __string/extern_template_lists.h
   __support/android/locale_bionic.h
   __support/fuchsia/xlocale.h
