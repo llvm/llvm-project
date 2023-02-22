@@ -2476,9 +2476,6 @@ inline InsertValue_match<Ind, Val_t, Elt_t> m_InsertValue(const Val_t &Val,
 ///  `ptrtoint(gep <vscale x 1 x i8>, <vscale x 1 x i8>* null, i32 1>`
 /// under the right conditions determined by DataLayout.
 struct VScaleVal_match {
-  const DataLayout &DL;
-  VScaleVal_match(const DataLayout &DL) : DL(DL) {}
-
   template <typename ITy> bool match(ITy *V) {
     if (m_Intrinsic<Intrinsic::vscale>().match(V))
       return true;
@@ -2486,11 +2483,12 @@ struct VScaleVal_match {
     Value *Ptr;
     if (m_PtrToInt(m_Value(Ptr)).match(V)) {
       if (auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
-        auto *DerefTy = GEP->getSourceElementType();
-        if (GEP->getNumIndices() == 1 && isa<ScalableVectorType>(DerefTy) &&
+        auto *DerefTy =
+            dyn_cast<ScalableVectorType>(GEP->getSourceElementType());
+        if (GEP->getNumIndices() == 1 && DerefTy &&
+            DerefTy->getElementType()->isIntegerTy(8) &&
             m_Zero().match(GEP->getPointerOperand()) &&
-            m_SpecificInt(1).match(GEP->idx_begin()->get()) &&
-            DL.getTypeAllocSizeInBits(DerefTy).getKnownMinValue() == 8)
+            m_SpecificInt(1).match(GEP->idx_begin()->get()))
           return true;
       }
     }
@@ -2499,8 +2497,8 @@ struct VScaleVal_match {
   }
 };
 
-inline VScaleVal_match m_VScale(const DataLayout &DL) {
-  return VScaleVal_match(DL);
+inline VScaleVal_match m_VScale() {
+  return VScaleVal_match();
 }
 
 template <typename LHS, typename RHS, unsigned Opcode, bool Commutable = false>
