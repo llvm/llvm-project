@@ -3227,6 +3227,78 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlidedown(const SDLoc &DL, MVT VT,
       DAG.getConstant(0, DL, XLenVT));
 }
 
+// Given two input vectors of <[vscale x ]n x ty>, use vwaddu.vv and vwmaccu.vx
+// to create an interleaved vector of <[vscale x] n*2 x ty>.
+// This requires that the size of ty is less than the subtarget's maximum ELEN.
+static SDValue getWideningInterleave(SDValue EvenV, SDValue OddV, SDLoc &DL,
+                                     SelectionDAG &DAG,
+                                     const RISCVSubtarget &Subtarget) {
+  MVT VecVT = EvenV.getSimpleValueType();
+  MVT VecContainerVT = VecVT; // <vscale x n x ty>
+  // Convert fixed vectors to scalable if needed
+  if (VecContainerVT.isFixedLengthVector()) {
+    VecContainerVT = getContainerForFixedLengthVector(DAG, VecVT, Subtarget);
+    EvenV = convertToScalableVector(VecContainerVT, EvenV, DAG, Subtarget);
+    OddV = convertToScalableVector(VecContainerVT, OddV, DAG, Subtarget);
+  }
+
+  assert(VecVT.getScalarSizeInBits() < Subtarget.getELEN());
+
+  // We're working with a vector of the same size as the resulting
+  // interleaved vector, but with half the number of elements and
+  // twice the SEW (Hence the restriction on not using the maximum
+  // ELEN)
+  MVT WideVT =
+      MVT::getVectorVT(MVT::getIntegerVT(VecVT.getScalarSizeInBits() * 2),
+                       VecVT.getVectorElementCount());
+  MVT WideContainerVT = WideVT; // <vscale x n x ty*2>
+  if (WideContainerVT.isFixedLengthVector())
+    WideContainerVT = getContainerForFixedLengthVector(DAG, WideVT, Subtarget);
+
+  // Bitcast the input vectors to integers in case they are FP
+  VecContainerVT = VecContainerVT.changeTypeToInteger();
+  EvenV = DAG.getBitcast(VecContainerVT, EvenV);
+  OddV = DAG.getBitcast(VecContainerVT, OddV);
+
+  auto [Mask, VL] = getDefaultVLOps(VecVT, VecContainerVT, DL, DAG, Subtarget);
+  SDValue Passthru = DAG.getUNDEF(WideContainerVT);
+
+  // Widen EvenV and OddV with 0s and add one copy of OddV to EvenV with
+  // vwaddu.vv
+  SDValue Interleaved = DAG.getNode(RISCVISD::VWADDU_VL, DL, WideContainerVT,
+                                    EvenV, OddV, Passthru, Mask, VL);
+
+  // Then get OddV * by 2^(VecVT.getScalarSizeInBits() - 1)
+  SDValue AllOnesVec = DAG.getSplatVector(
+      VecContainerVT, DL, DAG.getAllOnesConstant(DL, Subtarget.getXLenVT()));
+  SDValue OddsMul = DAG.getNode(RISCVISD::VWMULU_VL, DL, WideContainerVT, OddV,
+                                AllOnesVec, Passthru, Mask, VL);
+
+  // Add the two together so we get
+  //   (OddV * 0xff...ff) + (OddV + EvenV)
+  // = (OddV * 0x100...00) + EvenV
+  // = (OddV << VecVT.getScalarSizeInBits()) + EvenV
+  // Note the ADD_VL and VLMULU_VL should get selected as vwmaccu.vx
+  Interleaved = DAG.getNode(RISCVISD::ADD_VL, DL, WideContainerVT, Interleaved,
+                            OddsMul, Passthru, Mask, VL);
+
+  // Bitcast from <vscale x n * ty*2> to <vscale x 2*n x ty>
+  MVT ResultContainerVT = MVT::getVectorVT(
+      VecVT.getVectorElementType(), // Make sure to use original type
+      VecContainerVT.getVectorElementCount().multiplyCoefficientBy(2));
+  Interleaved = DAG.getBitcast(ResultContainerVT, Interleaved);
+
+  // Convert back to a fixed vector if needed
+  MVT ResultVT =
+      MVT::getVectorVT(VecVT.getVectorElementType(),
+                       VecVT.getVectorElementCount().multiplyCoefficientBy(2));
+  if (ResultVT.isFixedLengthVector())
+    Interleaved =
+        convertFromScalableVector(ResultVT, Interleaved, DAG, Subtarget);
+
+  return Interleaved;
+}
+
 static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
   SDValue V1 = Op.getOperand(0);
@@ -3385,62 +3457,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     OddV = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, OddV,
                        DAG.getConstant(OddSrc % Size, DL, XLenVT));
 
-    // Double the element width and halve the number of elements in an int type.
-    unsigned EltBits = VT.getScalarSizeInBits();
-    MVT WideIntEltVT = MVT::getIntegerVT(EltBits * 2);
-    MVT WideIntVT =
-        MVT::getVectorVT(WideIntEltVT, VT.getVectorNumElements() / 2);
-    // Convert this to a scalable vector. We need to base this on the
-    // destination size to ensure there's always a type with a smaller LMUL.
-    MVT WideIntContainerVT =
-        getContainerForFixedLengthVector(DAG, WideIntVT, Subtarget);
-
-    // Convert sources to scalable vectors with the same element count as the
-    // larger type.
-    MVT HalfContainerVT = MVT::getVectorVT(
-        VT.getVectorElementType(), WideIntContainerVT.getVectorElementCount());
-    EvenV = convertToScalableVector(HalfContainerVT, EvenV, DAG, Subtarget);
-    OddV = convertToScalableVector(HalfContainerVT, OddV, DAG, Subtarget);
-
-    // Cast sources to integer.
-    MVT IntEltVT = MVT::getIntegerVT(EltBits);
-    MVT IntHalfVT =
-        MVT::getVectorVT(IntEltVT, HalfContainerVT.getVectorElementCount());
-    EvenV = DAG.getBitcast(IntHalfVT, EvenV);
-    OddV = DAG.getBitcast(IntHalfVT, OddV);
-
-    // Freeze OddV since we use it twice and we need to be sure that the add and
-    // multiply see the same value.
-    OddV = DAG.getFreeze(OddV);
-
-    // Recreate TrueMask using the widened type's element count.
-    TrueMask = getAllOnesMask(HalfContainerVT, VL, DL, DAG);
-
-    // Widen EvenV and OddV with 0s and add one copy of OddV to EvenV.
-    SDValue Add =
-        DAG.getNode(RISCVISD::VWADDU_VL, DL, WideIntContainerVT, EvenV, OddV,
-                    DAG.getUNDEF(WideIntContainerVT), TrueMask, VL);
-    // Create 2^eltbits - 1 copies of OddV by multiplying by the largest
-    // integer.
-    SDValue Multiplier = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, IntHalfVT,
-                                     DAG.getUNDEF(IntHalfVT),
-                                     DAG.getAllOnesConstant(DL, XLenVT), VL);
-    SDValue WidenMul =
-        DAG.getNode(RISCVISD::VWMULU_VL, DL, WideIntContainerVT, OddV,
-                    Multiplier, DAG.getUNDEF(WideIntContainerVT), TrueMask, VL);
-    // Add the new copies to our previous addition giving us 2^eltbits copies of
-    // OddV. This is equivalent to shifting OddV left by eltbits. This should
-    // combine with the vwmulu.vv above to form vwmaccu.vv.
-    Add = DAG.getNode(RISCVISD::ADD_VL, DL, WideIntContainerVT, Add, WidenMul,
-                      DAG.getUNDEF(WideIntContainerVT), TrueMask, VL);
-    // Cast back to ContainerVT. We need to re-create a new ContainerVT in case
-    // WideIntContainerVT is a larger fractional LMUL than implied by the fixed
-    // vector VT.
-    ContainerVT =
-        MVT::getVectorVT(VT.getVectorElementType(),
-                         WideIntContainerVT.getVectorElementCount() * 2);
-    Add = DAG.getBitcast(ContainerVT, Add);
-    return convertFromScalableVector(VT, Add, DAG, Subtarget);
+    return getWideningInterleave(EvenV, OddV, DL, DAG, Subtarget);
   }
 
   // Detect shuffles which can be re-expressed as vector selects; these are
