@@ -48062,8 +48062,8 @@ static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG,
   }
 
   APInt NewMaskVal = MaskVal.lshr(ShiftC->getAPIntValue());
-  unsigned OldMaskSize = MaskVal.getMinSignedBits();
-  unsigned NewMaskSize = NewMaskVal.getMinSignedBits();
+  unsigned OldMaskSize = MaskVal.getSignificantBits();
+  unsigned NewMaskSize = NewMaskVal.getSignificantBits();
   if ((OldMaskSize > 8 && NewMaskSize <= 8) ||
       (OldMaskSize > 32 && NewMaskSize <= 32)) {
     // srl (and X, AndC), ShiftC --> and (srl X, ShiftC), (AndC >> ShiftC)

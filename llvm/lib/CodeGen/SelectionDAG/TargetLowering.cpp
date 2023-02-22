@@ -4333,7 +4333,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
       }
 
       // Figure out how many bits we need to preserve this constant.
-      unsigned ReqdBits = Signed ? C1.getMinSignedBits() : C1.getActiveBits();
+      unsigned ReqdBits = Signed ? C1.getSignificantBits() : C1.getActiveBits();
 
       // Make sure we're not losing bits from the constant.
       if (MinBits > 0 &&
@@ -4507,7 +4507,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
 
       // If the constant doesn't fit into the number of bits for the source of
       // the sign extension, it is impossible for both sides to be equal.
-      if (C1.getMinSignedBits() > ExtSrcTyBits)
+      if (C1.getSignificantBits() > ExtSrcTyBits)
         return DAG.getBoolConstant(Cond == ISD::SETNE, dl, VT, OpVT);
 
       assert(ExtDstTy == N0.getOperand(0).getValueType() &&
@@ -4863,7 +4863,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
       }
     }
 
-    if (C1.getMinSignedBits() <= 64 &&
+    if (C1.getSignificantBits() <= 64 &&
         !isLegalICmpImmediate(C1.getSExtValue())) {
       EVT ShiftTy = getShiftAmountTy(ShValTy, Layout, !DCI.isBeforeLegalize());
       // (X & -256) == 256 -> (X >> 8) == 1
@@ -4900,7 +4900,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
           ShiftBits = C1.countr_zero();
         }
         NewC.lshrInPlace(ShiftBits);
-        if (ShiftBits && NewC.getMinSignedBits() <= 64 &&
+        if (ShiftBits && NewC.getSignificantBits() <= 64 &&
             isLegalICmpImmediate(NewC.getSExtValue()) &&
             !TLI.shouldAvoidTransformToShift(ShValTy, ShiftBits)) {
           SDValue Shift = DAG.getNode(ISD::SRL, dl, ShValTy, N0,

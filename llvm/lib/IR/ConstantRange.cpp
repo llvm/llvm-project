@@ -481,8 +481,8 @@ unsigned ConstantRange::getMinSignedBits() const {
   if (isEmptySet())
     return 0;
 
-  return std::max(getSignedMin().getMinSignedBits(),
-                  getSignedMax().getMinSignedBits());
+  return std::max(getSignedMin().getSignificantBits(),
+                  getSignedMax().getSignificantBits());
 }
 
 ConstantRange ConstantRange::subtract(const APInt &Val) const {

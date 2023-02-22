@@ -5453,7 +5453,7 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
     }
     const APInt &CaseVal = Case.getCaseValue()->getValue();
     if (Known.Zero.intersects(CaseVal) || !Known.One.isSubsetOf(CaseVal) ||
-        (CaseVal.getMinSignedBits() > MaxSignificantBitsInCond)) {
+        (CaseVal.getSignificantBits() > MaxSignificantBitsInCond)) {
       DeadCases.push_back(Case.getCaseValue());
       if (DTU)
         --NumPerSuccessorCases[Successor];
