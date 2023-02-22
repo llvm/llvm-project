@@ -30,11 +30,13 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray(i32 %node_ptr, float %ray_
 ; GFX12-SDAG-LABEL: image_bvh_intersect_ray:
 ; GFX12-SDAG:       ; %bb.0: ; %main_body
 ; GFX12-SDAG-NEXT:    image_bvh_intersect_ray v[0:3], [v0, v1, v[2:4], v[5:7], v[8:10]], s[0:3]
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-LABEL: image_bvh_intersect_ray:
 ; GFX12-GISEL:       ; %bb.0: ; %main_body
 ; GFX12-GISEL-NEXT:    image_bvh_intersect_ray v[0:3], [v0, v1, v[2:4], v[5:7], v[8:10]], s[0:3]
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
 main_body:
   %ray_origin0 = insertelement <3 x float> undef, float %ray_origin_x, i32 0
@@ -110,6 +112,7 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_a16(i32 inreg %node_ptr, f
 ; GFX12-SDAG-NEXT:    s_mov_b32 s13, s10
 ; GFX12-SDAG-NEXT:    s_mov_b32 s12, s9
 ; GFX12-SDAG-NEXT:    image_bvh_intersect_ray v[0:3], [v6, v7, v[0:2], v[3:5]], s[12:15] a16
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-LABEL: image_bvh_intersect_ray_a16:
@@ -129,6 +132,7 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_a16(i32 inreg %node_ptr, f
 ; GFX12-GISEL-NEXT:    s_mov_b32 s18, s11
 ; GFX12-GISEL-NEXT:    s_mov_b32 s19, s12
 ; GFX12-GISEL-NEXT:    image_bvh_intersect_ray v[0:3], [v6, v7, v[0:2], v[3:5]], s[16:19] a16
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(i32 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x half> %ray_dir, <3 x half> %ray_inv_dir, <4 x i32> %tdescr)
@@ -148,11 +152,13 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray(<2 x i32> %node_ptr_vec,
 ; GFX12-SDAG-LABEL: image_bvh64_intersect_ray:
 ; GFX12-SDAG:       ; %bb.0: ; %main_body
 ; GFX12-SDAG-NEXT:    image_bvh64_intersect_ray v[0:3], [v[0:1], v2, v[3:5], v[6:8], v[9:11]], s[0:3]
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-LABEL: image_bvh64_intersect_ray:
 ; GFX12-GISEL:       ; %bb.0: ; %main_body
 ; GFX12-GISEL-NEXT:    image_bvh64_intersect_ray v[0:3], [v[0:1], v2, v[3:5], v[6:8], v[9:11]], s[0:3]
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
 main_body:
   %node_ptr = bitcast <2 x i32> %node_ptr_vec to i64
@@ -232,6 +238,7 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_a16(i64 inreg %node_ptr,
 ; GFX12-SDAG-NEXT:    s_mov_b32 s13, s11
 ; GFX12-SDAG-NEXT:    s_mov_b32 s12, s10
 ; GFX12-SDAG-NEXT:    image_bvh64_intersect_ray v[0:3], [v[6:7], v8, v[0:2], v[3:5]], s[12:15] a16
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-LABEL: image_bvh64_intersect_ray_a16:
@@ -249,6 +256,7 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_a16(i64 inreg %node_ptr,
 ; GFX12-GISEL-NEXT:    s_mov_b32 s16, s10
 ; GFX12-GISEL-NEXT:    s_mov_b32 s17, s11
 ; GFX12-GISEL-NEXT:    image_bvh64_intersect_ray v[0:3], [v[6:7], v8, v[0:2], v[3:5]], s[16:19] a16
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16(i64 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x half> %ray_dir, <3 x half> %ray_inv_dir, <4 x i32> %tdescr)
@@ -358,6 +366,7 @@ define amdgpu_kernel void @image_bvh_intersect_ray_nsa_reassign(ptr %p_node_ptr,
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v3, 0x40400000
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-NEXT:    image_bvh_intersect_ray v[0:3], [v9, v10, v[6:8], v[3:5], v[0:2]], s[4:7]
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    flat_store_b128 v[0:1], v[0:3]
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -393,6 +402,7 @@ define amdgpu_kernel void @image_bvh_intersect_ray_nsa_reassign(ptr %p_node_ptr,
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v5, s11 :: v_dual_mov_b32 v4, s10
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    image_bvh_intersect_ray v[0:3], [v9, v10, v[0:2], v[3:5], v[6:8]], s[4:7]
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    flat_store_b128 v[0:1], v[0:3]
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
@@ -506,6 +516,7 @@ define amdgpu_kernel void @image_bvh_intersect_ray_a16_nsa_reassign(ptr %p_node_
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v2, 0x48004500
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-NEXT:    image_bvh_intersect_ray v[0:3], [v6, v7, v[3:5], v[0:2]], s[4:7] a16
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    flat_store_b128 v[0:1], v[0:3]
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -536,6 +547,7 @@ define amdgpu_kernel void @image_bvh_intersect_ray_a16_nsa_reassign(ptr %p_node_
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v5, s11 :: v_dual_mov_b32 v4, s10
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    image_bvh_intersect_ray v[0:3], [v6, v7, v[0:2], v[3:5]], s[4:7] a16
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    flat_store_b128 v[0:1], v[0:3]
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
@@ -655,6 +667,7 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_nsa_reassign(ptr %p_ray, <4
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, 0x40e00000
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-NEXT:    image_bvh64_intersect_ray v[0:3], [v[9:10], v11, v[6:8], v[3:5], v[0:2]], s[0:3]
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    flat_store_b128 v[0:1], v[0:3]
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -691,6 +704,7 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_nsa_reassign(ptr %p_ray, <4
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s8
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    image_bvh64_intersect_ray v[0:3], [v[9:10], v11, v[0:2], v[3:5], v[6:8]], s[0:3]
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    flat_store_b128 v[0:1], v[0:3]
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
@@ -798,6 +812,7 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_a16_nsa_reassign(ptr %p_ray
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, 0x47004400
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-NEXT:    image_bvh64_intersect_ray v[0:3], [v[6:7], v8, v[3:5], v[0:2]], s[0:3] a16
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    flat_store_b128 v[0:1], v[0:3]
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -830,6 +845,7 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_a16_nsa_reassign(ptr %p_ray
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s8
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    image_bvh64_intersect_ray v[0:3], [v[6:7], v8, v[0:2], v[3:5]], s[0:3] a16
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    flat_store_b128 v[0:1], v[0:3]
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
