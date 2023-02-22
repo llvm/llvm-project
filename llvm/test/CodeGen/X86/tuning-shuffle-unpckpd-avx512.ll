@@ -25,37 +25,117 @@ define <16 x float> @transform_VUNPCKHPDZrr(<16 x float> %a, <16 x float> %b) no
 }
 
 define <8 x float> @transform_VUNPCKLPDYrr(<8 x float> %a, <8 x float> %b) nounwind {
-; CHECK-LABEL: transform_VUNPCKLPDYrr:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; CHECK-NEXT:    retq
+; CHECK-SKX-LABEL: transform_VUNPCKLPDYrr:
+; CHECK-SKX:       # %bb.0:
+; CHECK-SKX-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; CHECK-SKX-NEXT:    retq
+;
+; CHECK-ICX-LABEL: transform_VUNPCKLPDYrr:
+; CHECK-ICX:       # %bb.0:
+; CHECK-ICX-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,1],ymm1[0,1],ymm0[4,5],ymm1[4,5]
+; CHECK-ICX-NEXT:    retq
+;
+; CHECK-V4-LABEL: transform_VUNPCKLPDYrr:
+; CHECK-V4:       # %bb.0:
+; CHECK-V4-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; CHECK-V4-NEXT:    retq
+;
+; CHECK-AVX512-LABEL: transform_VUNPCKLPDYrr:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; CHECK-AVX512-NEXT:    retq
+;
+; CHECK-ZNVER4-LABEL: transform_VUNPCKLPDYrr:
+; CHECK-ZNVER4:       # %bb.0:
+; CHECK-ZNVER4-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; CHECK-ZNVER4-NEXT:    retq
   %shufp = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 4, i32 5, i32 12, i32 13>
   ret <8 x float> %shufp
 }
 
 define <8 x float> @transform_VUNPCKHPDYrr(<8 x float> %a, <8 x float> %b) nounwind {
-; CHECK-LABEL: transform_VUNPCKHPDYrr:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
-; CHECK-NEXT:    retq
+; CHECK-SKX-LABEL: transform_VUNPCKHPDYrr:
+; CHECK-SKX:       # %bb.0:
+; CHECK-SKX-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; CHECK-SKX-NEXT:    retq
+;
+; CHECK-ICX-LABEL: transform_VUNPCKHPDYrr:
+; CHECK-ICX:       # %bb.0:
+; CHECK-ICX-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3],ymm0[6,7],ymm1[6,7]
+; CHECK-ICX-NEXT:    retq
+;
+; CHECK-V4-LABEL: transform_VUNPCKHPDYrr:
+; CHECK-V4:       # %bb.0:
+; CHECK-V4-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; CHECK-V4-NEXT:    retq
+;
+; CHECK-AVX512-LABEL: transform_VUNPCKHPDYrr:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; CHECK-AVX512-NEXT:    retq
+;
+; CHECK-ZNVER4-LABEL: transform_VUNPCKHPDYrr:
+; CHECK-ZNVER4:       # %bb.0:
+; CHECK-ZNVER4-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; CHECK-ZNVER4-NEXT:    retq
   %shufp = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 2, i32 3, i32 10, i32 11, i32 6, i32 7, i32 14, i32 15>
   ret <8 x float> %shufp
 }
 
 define <4 x float> @transform_VUNPCKLPDrr(<4 x float> %a, <4 x float> %b) nounwind {
-; CHECK-LABEL: transform_VUNPCKLPDrr:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; CHECK-NEXT:    retq
+; CHECK-SKX-LABEL: transform_VUNPCKLPDrr:
+; CHECK-SKX:       # %bb.0:
+; CHECK-SKX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-SKX-NEXT:    retq
+;
+; CHECK-ICX-LABEL: transform_VUNPCKLPDrr:
+; CHECK-ICX:       # %bb.0:
+; CHECK-ICX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,1]
+; CHECK-ICX-NEXT:    retq
+;
+; CHECK-V4-LABEL: transform_VUNPCKLPDrr:
+; CHECK-V4:       # %bb.0:
+; CHECK-V4-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-V4-NEXT:    retq
+;
+; CHECK-AVX512-LABEL: transform_VUNPCKLPDrr:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-AVX512-NEXT:    retq
+;
+; CHECK-ZNVER4-LABEL: transform_VUNPCKLPDrr:
+; CHECK-ZNVER4:       # %bb.0:
+; CHECK-ZNVER4-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-ZNVER4-NEXT:    retq
   %shufp = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   ret <4 x float> %shufp
 }
 
 define <4 x float> @transform_VUNPCKHPDrr(<4 x float> %a, <4 x float> %b) nounwind {
-; CHECK-LABEL: transform_VUNPCKHPDrr:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; CHECK-NEXT:    retq
+; CHECK-SKX-LABEL: transform_VUNPCKHPDrr:
+; CHECK-SKX:       # %bb.0:
+; CHECK-SKX-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; CHECK-SKX-NEXT:    retq
+;
+; CHECK-ICX-LABEL: transform_VUNPCKHPDrr:
+; CHECK-ICX:       # %bb.0:
+; CHECK-ICX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3],xmm1[2,3]
+; CHECK-ICX-NEXT:    retq
+;
+; CHECK-V4-LABEL: transform_VUNPCKHPDrr:
+; CHECK-V4:       # %bb.0:
+; CHECK-V4-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; CHECK-V4-NEXT:    retq
+;
+; CHECK-AVX512-LABEL: transform_VUNPCKHPDrr:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; CHECK-AVX512-NEXT:    retq
+;
+; CHECK-ZNVER4-LABEL: transform_VUNPCKHPDrr:
+; CHECK-ZNVER4:       # %bb.0:
+; CHECK-ZNVER4-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; CHECK-ZNVER4-NEXT:    retq
   %shufp = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
   ret <4 x float> %shufp
 }
@@ -431,9 +511,3 @@ define <2 x double> @transform_VUNPCKHPDrmk(<2 x double> %a, ptr %pb, <2 x doubl
   %res = select <2 x i1> %mask, <2 x double> %shufp, <2 x double> %c
   ret <2 x double> %res
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK-AVX512: {{.*}}
-; CHECK-ICX: {{.*}}
-; CHECK-SKX: {{.*}}
-; CHECK-V4: {{.*}}
-; CHECK-ZNVER4: {{.*}}
