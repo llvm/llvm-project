@@ -1,4 +1,4 @@
-//===-- Unittests for htonl -----------------------------------------------===//
+//===-- Unittests for ntohl -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,18 +11,18 @@
 #include "src/network/ntohl.h"
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcHtonl, SmokeTest) {
+TEST(LlvmLibcNtohl, SmokeTest) {
   uint32_t original = 0x67452301;
   uint32_t swapped = 0x01234567;
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-  EXPECT_EQ(__llvm_libc::htonl(original), swapped);
+  EXPECT_EQ(__llvm_libc::ntohl(original), swapped);
 #endif
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-  EXPECT_EQ(__llvm_libc::htonl(original), original);
+  EXPECT_EQ(__llvm_libc::ntohl(original), original);
 #endif
 }
 
-TEST(LlvmLibcHtonl, CompleteTest) {
+TEST(LlvmLibcNtohl, CompleteTest) {
   uint32_t original = 0x01234567;
-  EXPECT_EQ(__llvm_libc::htonl(__llvm_libc::ntohl(original)), original);
+  EXPECT_EQ(__llvm_libc::ntohl(__llvm_libc::htonl(original)), original);
 }
