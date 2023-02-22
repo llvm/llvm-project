@@ -4253,6 +4253,17 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
       if ((Opcode == Instruction::And || Opcode == Instruction::Or) &&
           NewOps[0] == NewOps[1])
         return NewOps[0];
+
+      // If we are substituting an absorber constant into a binop and extra
+      // poison can't leak if we remove the select -- because both operands of
+      // the binop are based on the same value -- then it may be safe to replace
+      // the value with the absorber constant. Examples:
+      // (Op == 0) ? 0 : (Op & -Op)            --> Op & -Op
+      // (Op == 0) ? 0 : (Op * (binop Op, C))  --> Op * (binop Op, C)
+      // (Op == -1) ? -1 : (Op | (binop C, Op) --> Op | (binop C, Op)
+      if (RepOp == ConstantExpr::getBinOpAbsorber(Opcode, I->getType()) &&
+          impliesPoison(BO, Op))
+        return RepOp;
     }
 
     if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
