@@ -294,20 +294,31 @@ struct AssociateOpConversion
   matchAndRewrite(hlfir::AssociateOp associate, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = associate->getLoc();
-    // If this is the last use of the expression value and this is an hlfir.expr
-    // that was bufferized, re-use the storage.
-    // Otherwise, create a temp and assign the storage to it.
+    auto module = associate->getParentOfType<mlir::ModuleOp>();
+    fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
     mlir::Value bufferizedExpr = getBufferizedExprStorage(adaptor.getSource());
     const bool isTrivialValue = fir::isa_trivial(bufferizedExpr.getType());
 
     auto replaceWith = [&](mlir::Value hlfirVar, mlir::Value firVar,
                            mlir::Value flag) {
+      hlfirVar =
+          builder.createConvert(loc, associate.getResultTypes()[0], hlfirVar);
       associate.getResult(0).replaceAllUsesWith(hlfirVar);
+      mlir::Type associateFirVarType = associate.getResultTypes()[1];
+      if (firVar.getType().isa<fir::BaseBoxType>() &&
+          !associateFirVarType.isa<fir::BaseBoxType>())
+        firVar =
+            builder.create<fir::BoxAddrOp>(loc, associateFirVarType, firVar);
+      else
+        firVar = builder.createConvert(loc, associateFirVarType, firVar);
       associate.getResult(1).replaceAllUsesWith(firVar);
       associate.getResult(2).replaceAllUsesWith(flag);
       rewriter.replaceOp(associate, {hlfirVar, firVar, flag});
     };
 
+    // If this is the last use of the expression value and this is an hlfir.expr
+    // that was bufferized, re-use the storage.
+    // Otherwise, create a temp and assign the storage to it.
     if (!isTrivialValue && allOtherUsesAreDestroys(associate.getSource(),
                                                    associate.getOperation())) {
       // Re-use hlfir.expr buffer if this is the only use of the hlfir.expr
@@ -321,8 +332,6 @@ struct AssociateOpConversion
       return mlir::success();
     }
     if (isTrivialValue) {
-      auto module = associate->getParentOfType<mlir::ModuleOp>();
-      fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
       auto temp = builder.createTemporary(loc, bufferizedExpr.getType(),
                                           associate.getUniqName());
       builder.create<fir::StoreOp>(loc, bufferizedExpr, temp);
