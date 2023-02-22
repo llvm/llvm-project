@@ -56,6 +56,7 @@ class SPIRVEmitIntrinsics
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseSet<Instruction *> AggrStores;
   void preprocessCompositeConstants();
+  void preprocessUndefs();
   CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
                             Value *Arg, Value *Arg2) {
     ConstantAsMetadata *CM = ValueAsMetadata::getConstant(Arg);
@@ -149,6 +150,29 @@ void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
     }
   }
   Old->eraseFromParent();
+}
+
+void SPIRVEmitIntrinsics::preprocessUndefs() {
+  std::queue<Instruction *> Worklist;
+  for (auto &I : instructions(F))
+    Worklist.push(&I);
+
+  while (!Worklist.empty()) {
+    Instruction *I = Worklist.front();
+    Worklist.pop();
+
+    for (auto &Op : I->operands()) {
+      auto *AggrUndef = dyn_cast<UndefValue>(Op);
+      if (!AggrUndef || !Op->getType()->isAggregateType())
+        continue;
+
+      IRB->SetInsertPoint(I);
+      auto *IntrUndef = IRB->CreateIntrinsic(Intrinsic::spv_undef, {}, {});
+      Worklist.push(IntrUndef);
+      I->replaceUsesOfWith(Op, IntrUndef);
+      AggrConsts[IntrUndef] = AggrUndef;
+    }
+  }
 }
 
 void SPIRVEmitIntrinsics::preprocessCompositeConstants() {
@@ -369,7 +393,8 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I) {
     setInsertPointSkippingPhis(*IRB, I->getNextNode());
     Type *TypeToAssign = Ty;
     if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-      if (II->getIntrinsicID() == Intrinsic::spv_const_composite) {
+      if (II->getIntrinsicID() == Intrinsic::spv_const_composite ||
+          II->getIntrinsicID() == Intrinsic::spv_undef) {
         auto t = AggrConsts.find(II);
         assert(t != AggrConsts.end());
         TypeToAssign = t->second->getType();
@@ -453,6 +478,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   for (auto &GV : Func.getParent()->globals())
     processGlobalValue(GV);
 
+  preprocessUndefs();
   preprocessCompositeConstants();
   SmallVector<Instruction *> Worklist;
   for (auto &I : instructions(Func))
