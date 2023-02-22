@@ -184,11 +184,11 @@ func.func @sparse_metadata_init() -> !sparse_tensor.storage_specifier<#SparseVec
 // CHECK-LABEL: func @sparse_get_md(
 //  CHECK-SAME: %[[A:.*]]: !sparse_tensor.storage_specifier<#{{.*}}>
 //       CHECK: %[[T:.*]] = sparse_tensor.storage_specifier.get %[[A]] dim_sz at 0
-//       CHECK: return %[[T]] : i64
-func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>) -> i64 {
+//       CHECK: return %[[T]] : index
+func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>) -> index {
   %0 = sparse_tensor.storage_specifier.get %arg0 dim_sz at 0
-       : !sparse_tensor.storage_specifier<#SparseVector> to i64
-  return %0 : i64
+       : !sparse_tensor.storage_specifier<#SparseVector>
+  return %0 : index
 }
 
 // -----
@@ -197,13 +197,13 @@ func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>)
 
 // CHECK-LABEL: func @sparse_set_md(
 //  CHECK-SAME: %[[A:.*]]: !sparse_tensor.storage_specifier<#{{.*}}>,
-//  CHECK-SAME: %[[I:.*]]: i64)
+//  CHECK-SAME: %[[I:.*]]: index)
 //       CHECK: %[[T:.*]] = sparse_tensor.storage_specifier.set %[[A]] dim_sz at 0 with %[[I]]
 //       CHECK: return %[[T]] : !sparse_tensor.storage_specifier<#{{.*}}>
-func.func @sparse_set_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>, %arg1: i64)
+func.func @sparse_set_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>, %arg1: index)
           -> !sparse_tensor.storage_specifier<#SparseVector> {
   %0 = sparse_tensor.storage_specifier.set %arg0 dim_sz at 0 with %arg1
-       : i64, !sparse_tensor.storage_specifier<#SparseVector>
+       : !sparse_tensor.storage_specifier<#SparseVector>
   return %0 : !sparse_tensor.storage_specifier<#SparseVector>
 }
 

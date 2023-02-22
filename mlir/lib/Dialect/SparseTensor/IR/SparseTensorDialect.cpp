@@ -571,7 +571,11 @@ getNormalizedEncodingForSpecifier(SparseTensorEncodingAttr enc) {
       enc.getContext(), dlts,
       AffineMap(), // dimOrdering (irrelavant to storage speicifer)
       AffineMap(), // highLvlOrdering (irrelavant to storage specifer)
-      enc.getPointerBitWidth(), enc.getIndexBitWidth(),
+      // Always use index for memSize, dimSize instead of reusing
+      // getBitwidth from pointers/indices.
+      // It allows us to reuse the same SSA value for different bitwidth,
+      // It also avoids casting between index/integer (returned by DimOp)
+      0, 0,
       // FIXME: we should keep the slice information, for now it is okay as only
       // constant can be used for slice
       ArrayRef<SparseTensorDimSliceAttr>{} /*enc.getDimSlices()*/);
@@ -580,36 +584,6 @@ getNormalizedEncodingForSpecifier(SparseTensorEncodingAttr enc) {
 StorageSpecifierType
 StorageSpecifierType::get(MLIRContext *ctx, SparseTensorEncodingAttr encoding) {
   return Base::get(ctx, getNormalizedEncodingForSpecifier(encoding));
-}
-
-IntegerType StorageSpecifierType::getSizesType() const {
-  unsigned idxBitWidth =
-      getEncoding().getIndexBitWidth() ? getEncoding().getIndexBitWidth() : 64u;
-  unsigned ptrBitWidth =
-      getEncoding().getIndexBitWidth() ? getEncoding().getIndexBitWidth() : 64u;
-
-  return IntegerType::get(getContext(), std::max(idxBitWidth, ptrBitWidth));
-}
-
-// FIXME: see note [CLARIFY_DIM_LVL] in
-// "lib/Dialect/SparseTensor/Transforms/SparseTensorStorageLayout.h"
-Type StorageSpecifierType::getFieldType(StorageSpecifierKind kind,
-                                        std::optional<unsigned> dim) const {
-  if (kind != StorageSpecifierKind::ValMemSize)
-    assert(dim);
-
-  // Right now, we store every sizes metadata using the same size type.
-  // TODO: the field size type can be defined dimensional wise after sparse
-  // tensor encoding supports per dimension index/pointer bitwidth.
-  return getSizesType();
-}
-
-// FIXME: see note [CLARIFY_DIM_LVL] in
-// "lib/Dialect/SparseTensor/Transforms/SparseTensorStorageLayout.h"
-Type StorageSpecifierType::getFieldType(StorageSpecifierKind kind,
-                                        std::optional<APInt> dim) const {
-  return getFieldType(kind, dim ? std::optional(dim.value().getZExtValue())
-                                : std::nullopt);
 }
 
 //===----------------------------------------------------------------------===//
@@ -776,12 +750,6 @@ LogicalResult ToSliceStrideOp::verify() {
 LogicalResult GetStorageSpecifierOp::verify() {
   RETURN_FAILURE_IF_FAILED(verifySparsifierGetterSetter(
       getSpecifierKind(), getDim(), getSpecifier(), getOperation()))
-  // Checks the result type
-  if (getSpecifier().getType().getFieldType(getSpecifierKind(), getDim()) !=
-      getResult().getType()) {
-    return emitError(
-        "type mismatch between requested specifier field and result value");
-  }
   return success();
 }
 
@@ -802,12 +770,6 @@ OpFoldResult GetStorageSpecifierOp::fold(FoldAdaptor adaptor) {
 LogicalResult SetStorageSpecifierOp::verify() {
   RETURN_FAILURE_IF_FAILED(verifySparsifierGetterSetter(
       getSpecifierKind(), getDim(), getSpecifier(), getOperation()))
-  // Checks the input type
-  if (getSpecifier().getType().getFieldType(getSpecifierKind(), getDim()) !=
-      getValue().getType()) {
-    return emitError(
-        "type mismatch between requested specifier field and input value");
-  }
   return success();
 }
 
