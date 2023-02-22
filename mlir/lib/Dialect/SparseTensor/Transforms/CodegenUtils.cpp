@@ -204,6 +204,39 @@ StringRef mlir::sparse_tensor::primaryTypeFunctionSuffix(Type elemTp) {
 // Misc code generators.
 //===----------------------------------------------------------------------===//
 
+Value sparse_tensor::genCast(OpBuilder &builder, Location loc, Value value,
+                             Type dstTy) {
+  Type srcTy = value.getType();
+  if (srcTy != dstTy) {
+    // int <=> index
+    if (dstTy.isa<IndexType>() || srcTy.isa<IndexType>())
+      return builder.create<arith::IndexCastOp>(loc, dstTy, value);
+
+    bool ext = srcTy.getIntOrFloatBitWidth() < dstTy.getIntOrFloatBitWidth();
+
+    // float => float.
+    if (srcTy.isa<FloatType>() && dstTy.isa<FloatType>() && ext)
+      return builder.create<arith::ExtFOp>(loc, dstTy, value);
+
+    if (srcTy.isa<FloatType>() && dstTy.isa<FloatType>() && !ext)
+      return builder.create<arith::TruncFOp>(loc, dstTy, value);
+
+    // int => int
+    if (srcTy.isUnsignedInteger() && dstTy.isa<IntegerType>() && ext)
+      return builder.create<arith::ExtUIOp>(loc, dstTy, value);
+
+    if (srcTy.isSignedInteger() && dstTy.isa<IntegerType>() && ext)
+      return builder.create<arith::ExtSIOp>(loc, dstTy, value);
+
+    if (srcTy.isa<IntegerType>() && dstTy.isa<IntegerType>() && !ext)
+      return builder.create<arith::TruncIOp>(loc, dstTy, value);
+
+    llvm_unreachable("unhandled type casting");
+  }
+
+  return value;
+}
+
 mlir::Attribute mlir::sparse_tensor::getOneAttr(Builder &builder, Type tp) {
   if (tp.isa<FloatType>())
     return builder.getFloatAttr(tp, 1.0);

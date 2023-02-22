@@ -365,7 +365,7 @@ def SparseTensor_GetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.get"
     Arguments<(ins SparseTensorStorageSpecifier:$specifier,
                    SparseTensorStorageSpecifierKindAttr:$specifierKind,
                    OptionalAttr<IndexAttr>:$dim)>,
-    Results<(outs AnyType:$result)> {
+    Results<(outs Index:$result)> {
   let summary = "";
   let description = [{
     Returns the requested field of the given storage_specifier.
@@ -374,12 +374,12 @@ def SparseTensor_GetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.get"
 
     ```mlir
     %0 = sparse_tensor.storage_specifier.get %arg0 idx_mem_sz at 0
-         : !sparse_tensor.storage_specifier<#COO> to i64
+         : !sparse_tensor.storage_specifier<#COO>
     ```
   }];
 
   let assemblyFormat = "$specifier $specifierKind (`at` $dim^)? attr-dict `:` "
-                       "qualified(type($specifier)) `to` type($result)";
+                       "qualified(type($specifier))";
   let hasVerifier = 1;
   let hasFolder = 1;
 }
@@ -389,7 +389,7 @@ def SparseTensor_SetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.set"
     Arguments<(ins SparseTensorStorageSpecifier:$specifier,
                    SparseTensorStorageSpecifierKindAttr:$specifierKind,
                    OptionalAttr<IndexAttr>:$dim,
-                   AnyType:$value)>,
+                   Index:$value)>,
     Results<(outs SparseTensorStorageSpecifier:$result)> {
   let summary = "";
   let description = [{
@@ -400,12 +400,12 @@ def SparseTensor_SetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.set"
 
     ```mlir
     %0 = sparse_tensor.storage_specifier.set %arg0 idx_mem_sz at 0 with %new_sz
-       : i32, !sparse_tensor.storage_specifier<#COO>
+       : !sparse_tensor.storage_specifier<#COO>
 
     ```
   }];
   let assemblyFormat = "$specifier $specifierKind (`at` $dim^)? `with` $value attr-dict `:` "
-                       "type($value) `,` qualified(type($result))";
+                       "qualified(type($result))";
   let hasVerifier = 1;
 }
 
