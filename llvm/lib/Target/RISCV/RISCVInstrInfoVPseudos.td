@@ -48,27 +48,30 @@ defvar TA_MA = 3;
 //===----------------------------------------------------------------------===//
 
 class PseudoToVInst<string PseudoInst> {
-  string VInst = !subst("_M8", "",
-                 !subst("_M4", "",
-                 !subst("_M2", "",
-                 !subst("_M1", "",
-                 !subst("_MF2", "",
-                 !subst("_MF4", "",
-                 !subst("_MF8", "",
-                 !subst("_B1", "",
-                 !subst("_B2", "",
-                 !subst("_B4", "",
-                 !subst("_B8", "",
-                 !subst("_B16", "",
-                 !subst("_B32", "",
-                 !subst("_B64", "",
-                 !subst("_MASK", "",
-                 !subst("_TIED", "",
-                 !subst("_TU", "",
-                 !subst("F16", "F",
-                 !subst("F32", "F",
-                 !subst("F64", "F",
-                 !subst("Pseudo", "", PseudoInst)))))))))))))))))))));
+  defvar AffixSubsts = [["Pseudo", ""],
+                        ["F64", "F"],
+                        ["F32", "F"],
+                        ["F16", "F"],
+                        ["_TU", ""],
+                        ["_TIED", ""],
+                        ["_MASK", ""],
+                        ["_B64", ""],
+                        ["_B32", ""],
+                        ["_B16", ""],
+                        ["_B8", ""],
+                        ["_B4", ""],
+                        ["_B2", ""],
+                        ["_B1", ""],
+                        ["_MF8", ""],
+                        ["_MF4", ""],
+                        ["_MF2", ""],
+                        ["_M1", ""],
+                        ["_M2", ""],
+                        ["_M4", ""],
+                        ["_M8", ""]
+                       ];
+  string VInst = !foldl(PseudoInst, AffixSubsts, Acc, AffixSubst,
+                        !subst(AffixSubst[0], AffixSubst[1], Acc));
 }
 
 // This class describes information associated to the LMUL.
