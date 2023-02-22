@@ -341,14 +341,17 @@ bool SIFoldOperands::tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
       // Check if changing this to a v_mad_{f16, f32} instruction will allow us
       // to fold the operand.
       MI->setDesc(TII->get(NewOpc));
-      if (!AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::op_sel) &&
-          AMDGPU::hasNamedOperand(NewOpc, AMDGPU::OpName::op_sel))
+      bool AddOpSel = !AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::op_sel) &&
+                      AMDGPU::hasNamedOperand(NewOpc, AMDGPU::OpName::op_sel);
+      if (AddOpSel)
         MI->addOperand(MachineOperand::CreateImm(0));
       bool FoldAsMAD = tryAddToFoldList(FoldList, MI, OpNo, OpToFold);
       if (FoldAsMAD) {
         MI->untieRegOperand(OpNo);
         return true;
       }
+      if (AddOpSel)
+        MI->removeOperand(MI->getNumExplicitOperands() - 1);
       MI->setDesc(TII->get(Opc));
     }
 
