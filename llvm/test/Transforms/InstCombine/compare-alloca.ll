@@ -272,3 +272,37 @@ define i1 @consistent_nocapture_through_global() {
   %cmp = icmp eq ptr %m, %lgp
   ret i1 %cmp
 }
+
+define void @select_alloca_unrelated_ptr(i1 %c, ptr %p, ptr %p2) {
+; CHECK-LABEL: @select_alloca_unrelated_ptr(
+; CHECK-NEXT:    [[M:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[M]], [[P:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], ptr [[M]], ptr [[P2:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq ptr [[S]], [[P]]
+; CHECK-NEXT:    call void @witness(i1 [[CMP1]], i1 [[CMP2]])
+; CHECK-NEXT:    ret void
+;
+  %m = alloca i8
+  %cmp1 = icmp eq ptr %m, %p
+  %s = select i1 %c, ptr %m, ptr %p2
+  %cmp2 = icmp eq ptr %s, %p
+  call void @witness(i1 %cmp1, i1 %cmp2)
+  ret void
+}
+
+define void @alloca_offset_icmp(ptr %p, i32 %offset) {
+; CHECK-LABEL: @alloca_offset_icmp(
+; CHECK-NEXT:    [[M:%.*]] = alloca [4 x i8], align 1
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[M]], i32 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[M]], [[P:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq ptr [[M]], [[G]]
+; CHECK-NEXT:    call void @witness(i1 [[CMP1]], i1 [[CMP2]])
+; CHECK-NEXT:    ret void
+;
+  %m = alloca [4 x i8]
+  %g = getelementptr i8, ptr %m, i32 %offset
+  %cmp1 = icmp eq ptr %m, %p
+  %cmp2 = icmp eq ptr %m, %g
+  call void @witness(i1 %cmp1, i1 %cmp2)
+  ret void
+}

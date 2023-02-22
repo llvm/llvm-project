@@ -38,7 +38,7 @@ llvm.func @foo(%arg0: i32, ...) -> i32 {
   %12 = llvm.mlir.constant(1 : i32) : i32
   %13 = llvm.alloca %12 x !llvm.array<1 x struct<"struct.va_list", (i32, i32, ptr<i8>, ptr<i8>)>> {alignment = 8 : i64} : (i32) -> !llvm.ptr<array<1 x struct<"struct.va_list", (i32, i32, ptr<i8>, ptr<i8>)>>>
   %14 = llvm.bitcast %13 : !llvm.ptr<array<1 x struct<"struct.va_list", (i32, i32, ptr<i8>, ptr<i8>)>>> to !llvm.ptr<i8>
-  llvm.intr.vastart %14
+  llvm.intr.vastart %14 : !llvm.ptr<i8>
   %15 = llvm.getelementptr %13[%11, %10, 0] : (!llvm.ptr<array<1 x struct<"struct.va_list", (i32, i32, ptr<i8>, ptr<i8>)>>>, i64, i64) -> !llvm.ptr<i32>
   %16 = llvm.load %15 : !llvm.ptr<i32>
   %17 = llvm.icmp "ult" %16, %8 : i32
@@ -60,7 +60,7 @@ llvm.func @foo(%arg0: i32, ...) -> i32 {
 ^bb3(%26: !llvm.ptr<i8>):  // 2 preds: ^bb1, ^bb2
   %27 = llvm.bitcast %26 : !llvm.ptr<i8> to !llvm.ptr<i32>
   %28 = llvm.load %27 : !llvm.ptr<i32>
-  llvm.intr.vaend %14
+  llvm.intr.vaend %14 : !llvm.ptr<i8>
   llvm.return %28 : i32
 }
 

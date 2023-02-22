@@ -8260,10 +8260,16 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, ArrayRef<Value *> VL,
   // reused elements too for better cost estimation.
   Instruction &UserInst =
       getLastInstructionInBundle(TE->UserTreeIndices.front().UserTE);
-  auto *PHI = dyn_cast<PHINode>(&UserInst);
-  auto *NodeUI = DT->getNode(
-      PHI ? PHI->getIncomingBlock(TE->UserTreeIndices.front().EdgeIdx)
-          : UserInst.getParent());
+  BasicBlock *ParentBB = nullptr;
+  // Main node of PHI entries keeps the correct order of operands/incoming
+  // blocks.
+  if (auto *PHI =
+          dyn_cast<PHINode>(TE->UserTreeIndices.front().UserTE->getMainOp())) {
+    ParentBB = PHI->getIncomingBlock(TE->UserTreeIndices.front().EdgeIdx);
+  } else {
+    ParentBB = UserInst.getParent();
+  }
+  auto *NodeUI = DT->getNode(ParentBB);
   assert(NodeUI && "Should only process reachable instructions");
   SmallPtrSet<Value *, 4> GatheredScalars(VL.begin(), VL.end());
   auto CheckOrdering = [&](Instruction *LastEI) {

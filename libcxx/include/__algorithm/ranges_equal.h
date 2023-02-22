@@ -9,6 +9,8 @@
 #ifndef _LIBCPP___ALGORITHM_RANGES_EQUAL_H
 #define _LIBCPP___ALGORITHM_RANGES_EQUAL_H
 
+#include <__algorithm/equal.h>
+#include <__algorithm/unwrap_range.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__functional/invoke.h>
@@ -31,29 +33,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 namespace __equal {
 struct __fn {
-private:
-  template <class _Iter1, class _Sent1,
-            class _Iter2, class _Sent2,
-            class _Pred,
-            class _Proj1,
-            class _Proj2>
-  _LIBCPP_HIDE_FROM_ABI constexpr static
-  bool __equal_impl(_Iter1 __first1, _Sent1 __last1,
-                    _Iter2 __first2, _Sent2 __last2,
-                    _Pred& __pred,
-                    _Proj1& __proj1,
-                    _Proj2& __proj2) {
-    while (__first1 != __last1 && __first2 != __last2) {
-      if (!std::invoke(__pred, std::invoke(__proj1, *__first1), std::invoke(__proj2, *__first2)))
-        return false;
-      ++__first1;
-      ++__first2;
-    }
-    return __first1 == __last1 && __first2 == __last2;
-  }
-
-public:
-
   template <input_iterator _Iter1, sentinel_for<_Iter1> _Sent1,
             input_iterator _Iter2, sentinel_for<_Iter2> _Sent2,
             class _Pred = ranges::equal_to,
@@ -70,11 +49,13 @@ public:
       if (__last1 - __first1 != __last2 - __first2)
         return false;
     }
-    return __equal_impl(std::move(__first1), std::move(__last1),
-                        std::move(__first2), std::move(__last2),
-                        __pred,
-                        __proj1,
-                        __proj2);
+    auto __unwrapped1 = std::__unwrap_range(std::move(__first1), std::move(__last1));
+    auto __unwrapped2 = std::__unwrap_range(std::move(__first2), std::move(__last2));
+    return std::__equal_impl(std::move(__unwrapped1.first), std::move(__unwrapped1.second),
+                             std::move(__unwrapped2.first), std::move(__unwrapped2.second),
+                             __pred,
+                             __proj1,
+                             __proj2);
   }
 
   template <input_range _Range1,
@@ -93,11 +74,13 @@ public:
       if (ranges::distance(__range1) != ranges::distance(__range2))
         return false;
     }
-    return __equal_impl(ranges::begin(__range1), ranges::end(__range1),
-                        ranges::begin(__range2), ranges::end(__range2),
-                        __pred,
-                        __proj1,
-                        __proj2);
+    auto __unwrapped1 = std::__unwrap_range(ranges::begin(__range1), ranges::end(__range1));
+    auto __unwrapped2 = std::__unwrap_range(ranges::begin(__range2), ranges::end(__range2));
+    return std::__equal_impl(std::move(__unwrapped1.first), std::move(__unwrapped1.second),
+                             std::move(__unwrapped2.first), std::move(__unwrapped2.second),
+                             __pred,
+                             __proj1,
+                             __proj2);
     return false;
   }
 };

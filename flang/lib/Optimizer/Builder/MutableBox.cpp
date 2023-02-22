@@ -64,6 +64,12 @@ createNewFirBox(fir::FirOpBuilder &builder, mlir::Location loc,
     cleanedAddr = builder.createConvert(loc, type, addr);
     if (charTy.getLen() == fir::CharacterType::unknownLen())
       cleanedLengths.append(lengths.begin(), lengths.end());
+  } else if (fir::isUnlimitedPolymorphicType(box.getBoxTy())) {
+    if (auto charTy = fir::dyn_cast_ptrEleTy(addr.getType())
+                          .dyn_cast<fir::CharacterType>()) {
+      if (charTy.getLen() == fir::CharacterType::unknownLen())
+        cleanedLengths.append(lengths.begin(), lengths.end());
+    }
   } else if (box.isDerivedWithLenParameters()) {
     TODO(loc, "updating mutablebox of derived type with length parameters");
     cleanedLengths = lengths;

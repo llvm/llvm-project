@@ -18,7 +18,7 @@ if(LIBC_GPU_ARCHITECTURES STREQUAL "all")
   set(LIBC_GPU_ARCHITECTURES ${all_gpu_architectures} FORCE)
 endif()
 message(STATUS "Building libc for the following GPU architectures: "
-               "${all_gpu_architectures}")
+               "${LIBC_GPU_ARCHITECTURES}")
 
 # Ensure the compiler is a valid clang when building the GPU target.
 set(req_ver "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")

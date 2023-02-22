@@ -13,6 +13,8 @@
 #include <__config>
 #include <__functional/binary_function.h>
 #include <__functional/unary_function.h>
+#include <__type_traits/integral_constant.h>
+#include <__type_traits/predicate_traits.h>
 #include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -339,6 +341,14 @@ struct _LIBCPP_TEMPLATE_VIS equal_to<void>
         { return          _VSTD::forward<_T1>(__t) == _VSTD::forward<_T2>(__u); }
     typedef void is_transparent;
 };
+#endif
+
+template <class _Tp>
+struct __is_trivial_equality_predicate<equal_to<_Tp>, _Tp, _Tp> : true_type {};
+
+#if _LIBCPP_STD_VER >= 14
+template <class _Tp>
+struct __is_trivial_equality_predicate<equal_to<>, _Tp, _Tp> : true_type {};
 #endif
 
 #if _LIBCPP_STD_VER >= 14

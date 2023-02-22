@@ -100,6 +100,20 @@ using integral_types = concatenate_t<character_types, signed_integer_types, unsi
 using floating_point_types = type_list<float, double, long double>;
 
 using arithmetic_types = concatenate_t<integral_types, floating_point_types>;
+
+template <class T>
+using cv_qualified_versions = type_list<T, const T, volatile T, const volatile T>;
+
+template <class T>
+struct type_list_as_pointers;
+
+template <class... Types>
+struct type_list_as_pointers<type_list<Types...> > {
+  using type = type_list<Types*...>;
+};
+
+template <class T>
+using as_pointers = typename type_list_as_pointers<T>::type;
 } // namespace meta
 
 #endif // TEST_SUPPORT_TYPE_ALGORITHMS_H

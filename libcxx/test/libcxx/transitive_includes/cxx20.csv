@@ -338,7 +338,6 @@ format charconv
 format cstddef
 format cstdint
 format cstdlib
-format cstring
 format initializer_list
 format limits
 format locale
