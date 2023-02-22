@@ -191,7 +191,7 @@ bool isDisjointTransferSet(VectorTransferOpInterface transferA,
 /// Return the result value of reducing two scalar/vector values with the
 /// corresponding arith operation.
 Value makeArithReduction(OpBuilder &b, Location loc, CombiningKind kind,
-                         Value v1, Value v2);
+                         Value v1, Value acc, Value mask = Value());
 
 /// Returns true if `attr` has "parallel" iterator type semantics.
 inline bool isParallelIterator(Attribute attr) {
@@ -214,8 +214,17 @@ void createMaskOpRegion(OpBuilder &builder, Operation *maskableOp);
 /// Creates a vector.mask operation around a maskable operation. Returns the
 /// vector.mask operation if the mask provided is valid. Otherwise, returns the
 /// maskable operation itself.
-Operation *maskOperation(RewriterBase &rewriter, Operation *maskableOp,
-                         Value mask);
+Operation *maskOperation(OpBuilder &builder, Operation *maskableOp,
+                         Value mask, Value passthru = Value());
+
+/// Creates a vector select operation that picks values from `newValue` or
+/// `passthru` for each result vector lane based on `mask`. This utility is used
+/// to propagate the pass-thru value for masked-out or expeculatively executed
+/// lanes. VP intrinsics do not support pass-thru values and every mask-out lane
+/// is set to poison. LLVM backends are usually able to match op + select
+/// patterns and fold them into a native target instructions.
+Value selectPassthru(OpBuilder &builder, Value mask, Value newValue,
+                     Value passthru);
 
 } // namespace vector
 } // namespace mlir

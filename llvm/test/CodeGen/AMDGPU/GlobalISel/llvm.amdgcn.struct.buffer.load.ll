@@ -267,9 +267,8 @@ define amdgpu_ps float @struct_buffer_load_i8_sext__sgpr_rsrc__vgpr_vindex__vgpr
   ; CHECK-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
   ; CHECK-NEXT:   [[PRED_COPY6:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr6
   ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY4]], %subreg.sub0, [[PRED_COPY5]], %subreg.sub1
-  ; CHECK-NEXT:   [[BUFFER_LOAD_UBYTE_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_UBYTE_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[PRED_COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (s8), addrspace 7)
-  ; CHECK-NEXT:   [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[BUFFER_LOAD_UBYTE_BOTHEN]], 0, 8, implicit $exec
-  ; CHECK-NEXT:   $vgpr0 = PRED_COPY [[V_BFE_I32_e64_]]
+  ; CHECK-NEXT:   [[BUFFER_LOAD_SBYTE_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_SBYTE_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[PRED_COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (s8), addrspace 7)
+  ; CHECK-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_SBYTE_BOTHEN]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %val = call i8 @llvm.amdgcn.struct.buffer.load.i8(<4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   %ext = sext i8 %val to i32
@@ -314,9 +313,8 @@ define amdgpu_ps float @struct_buffer_load_i16_sext__sgpr_rsrc__vgpr_vindex__vgp
   ; CHECK-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
   ; CHECK-NEXT:   [[PRED_COPY6:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr6
   ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY4]], %subreg.sub0, [[PRED_COPY5]], %subreg.sub1
-  ; CHECK-NEXT:   [[BUFFER_LOAD_USHORT_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[PRED_COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (s16), align 1, addrspace 7)
-  ; CHECK-NEXT:   [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[BUFFER_LOAD_USHORT_BOTHEN]], 0, 16, implicit $exec
-  ; CHECK-NEXT:   $vgpr0 = PRED_COPY [[V_BFE_I32_e64_]]
+  ; CHECK-NEXT:   [[BUFFER_LOAD_SSHORT_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_SSHORT_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[PRED_COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (s16), align 1, addrspace 7)
+  ; CHECK-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_SSHORT_BOTHEN]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %val = call i16 @llvm.amdgcn.struct.buffer.load.i16(<4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   %ext = sext i16 %val to i32

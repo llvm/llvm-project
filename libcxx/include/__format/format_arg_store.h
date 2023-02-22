@@ -22,7 +22,6 @@
 #include <__utility/forward.h>
 #include <string>
 #include <string_view>
-#include <type_traits>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

@@ -13,7 +13,7 @@
 
 namespace __llvm_libc {
 
-uint16_t htons(uint16_t hostlong);
+uint16_t htons(uint16_t hostshort);
 
 } // namespace __llvm_libc
 

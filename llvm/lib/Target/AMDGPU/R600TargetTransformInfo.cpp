@@ -82,10 +82,10 @@ bool R600TTIImpl::isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
   return isLegalToVectorizeMemChain(ChainSizeInBytes, Alignment, AddrSpace);
 }
 
-unsigned R600TTIImpl::getMaxInterleaveFactor(unsigned VF) {
+unsigned R600TTIImpl::getMaxInterleaveFactor(ElementCount VF) {
   // Disable unrolling if the loop is not vectorized.
   // TODO: Enable this again.
-  if (VF == 1)
+  if (VF.isScalar())
     return 1;
 
   return 8;

@@ -8,6 +8,7 @@
 
 #include "src/__support/endian.h"
 #include "src/network/htons.h"
+#include "src/network/ntohs.h"
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcHtons, SmokeTest) {
@@ -19,4 +20,9 @@ TEST(LlvmLibcHtons, SmokeTest) {
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
   EXPECT_EQ(__llvm_libc::htons(original), original);
 #endif
+}
+
+TEST(LlvmLibcHtons, CompleteTest) {
+  uint16_t original = 0x0123;
+  EXPECT_EQ(__llvm_libc::htons(__llvm_libc::ntohs(original)), original);
 }

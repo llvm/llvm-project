@@ -44,14 +44,14 @@ public:
       : OpBuilder{op, /*listener=*/this}, kindMap{kindMap} {}
   explicit FirOpBuilder(mlir::OpBuilder &builder,
                         const fir::KindMapping &kindMap)
-      : OpBuilder{builder}, kindMap{kindMap} {
+      : OpBuilder(builder), OpBuilder::Listener(), kindMap{kindMap} {
     setListener(this);
   }
 
   // The listener self-reference has to be updated in case of copy-construction.
   FirOpBuilder(const FirOpBuilder &other)
-      : OpBuilder{other}, kindMap{other.kindMap}, fastMathFlags{
-                                                      other.fastMathFlags} {
+      : OpBuilder(other), OpBuilder::Listener(), kindMap{other.kindMap},
+        fastMathFlags{other.fastMathFlags} {
     setListener(this);
   }
 

@@ -580,15 +580,12 @@ public:
   Value *getValue() const { return getValPtr(); }
 
   /// @{
-  /// Test whether this is a special constant representing a type
-  /// size, alignment, or field offset in a target-independent
-  /// manner, and hasn't happened to have been folded with other
-  /// operations into something unrecognizable. This is mainly only
+  /// Test whether this is a special constant representing a type size in a
+  /// target-independent manner, and hasn't happened to have been folded with
+  /// other operations into something unrecognizable. This is mainly only
   /// useful for pretty-printing and other situations where it isn't
   /// absolutely required for these to succeed.
   bool isSizeOf(Type *&AllocTy) const;
-  bool isAlignOf(Type *&AllocTy) const;
-  bool isOffsetOf(Type *&STy, Constant *&FieldNo) const;
   /// @}
 
   Type *getType() const { return getValPtr()->getType(); }

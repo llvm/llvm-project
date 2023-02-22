@@ -1233,31 +1233,18 @@ bool AMDGPURegisterBankInfo::applyMappingImage(
   return true;
 }
 
-static Register getSrcRegIgnoringCopies(const MachineRegisterInfo &MRI,
-                                        Register Reg) {
-  MachineInstr *Def = getDefIgnoringCopies(Reg, MRI);
-  if (!Def)
-    return Reg;
-
-  // TODO: Guard against this being an implicit def
-  return Def->getOperand(0).getReg();
-}
-
 // Analyze a combined offset from an llvm.amdgcn.s.buffer intrinsic and store
 // the three offsets (voffset, soffset and instoffset)
-static unsigned setBufferOffsets(MachineIRBuilder &B,
-                                 const AMDGPURegisterBankInfo &RBI,
-                                 Register CombinedOffset, Register &VOffsetReg,
-                                 Register &SOffsetReg, int64_t &InstOffsetVal,
-                                 Align Alignment) {
+unsigned AMDGPURegisterBankInfo::setBufferOffsets(
+    MachineIRBuilder &B, Register CombinedOffset, Register &VOffsetReg,
+    Register &SOffsetReg, int64_t &InstOffsetVal, Align Alignment) const {
   const LLT S32 = LLT::scalar(32);
   MachineRegisterInfo *MRI = B.getMRI();
 
   if (std::optional<int64_t> Imm =
           getIConstantVRegSExtVal(CombinedOffset, *MRI)) {
     uint32_t SOffset, ImmOffset;
-    if (AMDGPU::splitMUBUFOffset(*Imm, SOffset, ImmOffset, &RBI.Subtarget,
-                                 Alignment)) {
+    if (TII->splitMUBUFOffset(*Imm, SOffset, ImmOffset, Alignment)) {
       VOffsetReg = B.buildConstant(S32, 0).getReg(0);
       SOffsetReg = B.buildConstant(S32, SOffset).getReg(0);
       InstOffsetVal = ImmOffset;
@@ -1275,9 +1262,9 @@ static unsigned setBufferOffsets(MachineIRBuilder &B,
       AMDGPU::getBaseWithConstantOffset(*MRI, CombinedOffset);
 
   uint32_t SOffset, ImmOffset;
-  if ((int)Offset > 0 && AMDGPU::splitMUBUFOffset(Offset, SOffset, ImmOffset,
-                                                  &RBI.Subtarget, Alignment)) {
-    if (RBI.getRegBank(Base, *MRI, *RBI.TRI) == &AMDGPU::VGPRRegBank) {
+  if ((int)Offset > 0 &&
+      TII->splitMUBUFOffset(Offset, SOffset, ImmOffset, Alignment)) {
+    if (getRegBank(Base, *MRI, *TRI) == &AMDGPU::VGPRRegBank) {
       VOffsetReg = Base;
       SOffsetReg = B.buildConstant(S32, SOffset).getReg(0);
       B.getMRI()->setRegBank(SOffsetReg, AMDGPU::SGPRRegBank);
@@ -1298,11 +1285,11 @@ static unsigned setBufferOffsets(MachineIRBuilder &B,
   // Handle the variable sgpr + vgpr case.
   MachineInstr *Add = getOpcodeDef(AMDGPU::G_ADD, CombinedOffset, *MRI);
   if (Add && (int)Offset >= 0) {
-    Register Src0 = getSrcRegIgnoringCopies(*MRI, Add->getOperand(1).getReg());
-    Register Src1 = getSrcRegIgnoringCopies(*MRI, Add->getOperand(2).getReg());
+    Register Src0 = getSrcRegIgnoringCopies(Add->getOperand(1).getReg(), *MRI);
+    Register Src1 = getSrcRegIgnoringCopies(Add->getOperand(2).getReg(), *MRI);
 
-    const RegisterBank *Src0Bank = RBI.getRegBank(Src0, *MRI, *RBI.TRI);
-    const RegisterBank *Src1Bank = RBI.getRegBank(Src1, *MRI, *RBI.TRI);
+    const RegisterBank *Src0Bank = getRegBank(Src0, *MRI, *TRI);
+    const RegisterBank *Src1Bank = getRegBank(Src1, *MRI, *TRI);
 
     if (Src0Bank == &AMDGPU::VGPRRegBank && Src1Bank == &AMDGPU::SGPRRegBank) {
       VOffsetReg = Src0;
@@ -1319,7 +1306,7 @@ static unsigned setBufferOffsets(MachineIRBuilder &B,
 
   // Ensure we have a VGPR for the combined offset. This could be an issue if we
   // have an SGPR offset and a VGPR resource.
-  if (RBI.getRegBank(CombinedOffset, *MRI, *RBI.TRI) == &AMDGPU::VGPRRegBank) {
+  if (getRegBank(CombinedOffset, *MRI, *TRI) == &AMDGPU::VGPRRegBank) {
     VOffsetReg = CombinedOffset;
   } else {
     VOffsetReg = B.buildCopy(S32, CombinedOffset).getReg(0);
@@ -1369,8 +1356,8 @@ bool AMDGPURegisterBankInfo::applyMappingSBufferLoad(
   Register VOffset;
   int64_t ImmOffset = 0;
 
-  unsigned MMOOffset = setBufferOffsets(B, *this, MI.getOperand(2).getReg(),
-                                        VOffset, SOffset, ImmOffset, Alignment);
+  unsigned MMOOffset = setBufferOffsets(B, MI.getOperand(2).getReg(), VOffset,
+                                        SOffset, ImmOffset, Alignment);
 
   // TODO: 96-bit loads were widened to 128-bit results. Shrink the result if we
   // can, but we need to track an MMO for that.

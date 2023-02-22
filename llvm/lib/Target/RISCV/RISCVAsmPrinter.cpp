@@ -113,6 +113,11 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case RISCV::HWASAN_CHECK_MEMACCESS_SHORTGRANULES:
     LowerHWASAN_CHECK_MEMACCESS(*MI);
     return;
+  case RISCV::PseudoRVVInitUndefM1:
+  case RISCV::PseudoRVVInitUndefM2:
+  case RISCV::PseudoRVVInitUndefM4:
+  case RISCV::PseudoRVVInitUndefM8:
+    return;
   }
 
   MCInst TmpInst;

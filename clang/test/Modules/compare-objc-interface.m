@@ -444,3 +444,54 @@ CompareLastImplAttribute *compareLastImplAttribute;
 // expected-error@first.h:* {{'CompareLastImplAttribute' has different definitions in different modules; first difference is definition in module 'First.Hidden' found property 'lastImplAttribute' with 'direct' attribute}}
 // expected-note-re@second.h:* {{but in {{'Second'|definition here}} found property 'lastImplAttribute' with different 'direct' attribute}}
 #endif
+
+#if defined(FIRST)
+@interface CompareMatchingCategories: NSObject @end
+@interface CompareMatchingCategories(Matching)
+- (int)testMethod;
+@end
+
+@interface CompareMismatchingCategories1: NSObject @end
+@interface CompareMismatchingCategories1(Category1)
+- (void)presentMethod;
+@end
+@interface CompareMismatchingCategories2: NSObject @end
+@interface CompareMismatchingCategories2(Category2)
+@end
+
+@interface CompareDifferentCategoryNames: NSObject @end
+@interface CompareDifferentCategoryNames(CategoryFirst)
+- (void)firstMethod:(int)x;
+@end
+#elif defined(SECOND)
+@interface CompareMatchingCategories: NSObject @end
+@interface CompareMatchingCategories(Matching)
+- (int)testMethod;
+@end
+
+@interface CompareMismatchingCategories1: NSObject @end
+@interface CompareMismatchingCategories1(Category1)
+@end
+@interface CompareMismatchingCategories2: NSObject @end
+@interface CompareMismatchingCategories2(Category2)
+- (void)presentMethod;
+@end
+
+@interface CompareDifferentCategoryNames: NSObject @end
+@interface CompareDifferentCategoryNames(CategorySecond)
+- (void)secondMethod;
+@end
+#else
+CompareMatchingCategories *compareMatchingCategories; // no diagnostic
+CompareMismatchingCategories1 *compareMismatchingCategories1;
+#ifdef TEST_MODULAR
+// expected-warning@second.h:* {{duplicate definition of category 'Category1' on interface 'CompareMismatchingCategories1'}}
+// expected-note@first.h:* {{previous definition is here}}
+#endif
+CompareMismatchingCategories2 *compareMismatchingCategories2;
+#ifdef TEST_MODULAR
+// expected-warning@second.h:* {{duplicate definition of category 'Category2' on interface 'CompareMismatchingCategories2'}}
+// expected-note@first.h:* {{previous definition is here}}
+#endif
+CompareDifferentCategoryNames *compareDifferentCategoryNames; // no diagnostic
+#endif

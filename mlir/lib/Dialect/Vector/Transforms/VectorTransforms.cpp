@@ -151,8 +151,7 @@ static SmallVector<IntType> extractVector(ArrayAttr arrayAttr) {
 static std::optional<Value>
 createContractArithOp(Location loc, Value x, Value y, Value acc,
                       vector::CombiningKind kind, PatternRewriter &rewriter,
-                      bool isInt,
-                      std::optional<Value> maybeMask = std::nullopt) {
+                      bool isInt, Value mask = Value()) {
   using vector::CombiningKind;
   Value mul;
 
@@ -171,20 +170,20 @@ createContractArithOp(Location loc, Value x, Value y, Value acc,
       return std::nullopt;
     // Special case for fused multiply-add.
     if (acc && acc.getType().isa<VectorType>() && kind == CombiningKind::ADD) {
-      Operation *fmaOp = rewriter.create<vector::FMAOp>(loc, x, y, acc);
-      if (maybeMask.has_value() && maybeMask.value())
-        fmaOp = maskOperation(rewriter, fmaOp, maybeMask.value());
-      return fmaOp->getResult(0);
+      Value fma = rewriter.create<vector::FMAOp>(loc, x, y, acc);
+      if (mask)
+        // The fma op doesn't need explicit masking. However, fma ops used in
+        // reductions must preserve previous 'acc' values for masked-out lanes.
+        fma = selectPassthru(rewriter, mask, fma, acc);
+      return fma;
     }
     mul = rewriter.create<arith::MulFOp>(loc, x, y);
   }
 
-  assert((!maybeMask.has_value() || !maybeMask.value()) &&
-         "Unsupported masked case");
-
   if (!acc)
     return std::optional<Value>(mul);
-  return makeArithReduction(rewriter, loc, kind, mul, acc);
+
+  return makeArithReduction(rewriter, loc, kind, mul, acc, mask);
 }
 
 /// Return the positions of the reductions in the given map.
@@ -587,13 +586,17 @@ public:
     for (int64_t d = 0, e = resType.getDimSize(0); d < e; ++d) {
       auto pos = rewriter.getI64ArrayAttr(d);
       Value x =
-          rewriter.create<vector::ExtractOp>(loc, eltType, op.getLhs(), pos);
+          rewriter.create<vector::ExtractOp>(loc, op.getLhs(), pos);
       Value a = rewriter.create<vector::BroadcastOp>(loc, rhsType, x);
       Value r = nullptr;
       if (acc)
-        r = rewriter.create<vector::ExtractOp>(loc, rhsType, acc, pos);
+        r = rewriter.create<vector::ExtractOp>(loc, acc, pos);
+      Value extrMask;
+      if (mask)
+        extrMask = rewriter.create<vector::ExtractOp>(loc, mask, pos);
+
       std::optional<Value> m = createContractArithOp(
-          loc, a, op.getRhs(), r, kind, rewriter, isInt, mask);
+          loc, a, op.getRhs(), r, kind, rewriter, isInt, extrMask);
       if (!m.has_value())
         return failure();
       result = rewriter.create<vector::InsertOp>(loc, resType, *m, result, pos);
@@ -638,6 +641,7 @@ struct ContractOpToElementwise
     if (vectorTransformOptions.vectorContractLowering !=
         vector::VectorContractLowering::ParallelArith)
       return failure();
+
     ArrayRef<int64_t> lhsShape = contractOp.getLhsType().getShape();
     ArrayRef<int64_t> rhsShape = contractOp.getRhsType().getShape();
     AffineMap lhsMap = contractOp.getIndexingMapsArray()[0];
@@ -1564,8 +1568,7 @@ struct UnrolledOuterProductGenerator
       mask = maskableOp.getMaskingOp().getMask();
   }
 
-  Value t(Value v) {
-    static constexpr std::array<int64_t, 2> perm = {1, 0};
+  Value t(Value v, ArrayRef<int64_t> perm = {1, 0}) {
     if (!v)
       return v;
     return rewriter.create<vector::TransposeOp>(loc, v, perm);
@@ -1620,7 +1623,8 @@ struct UnrolledOuterProductGenerator
     bindDims(rewriter.getContext(), m, n, k);
     // Classical row-major matmul:  Just permute the lhs.
     if (layout({{m, k}, {k, n}, {m, n}}))
-      return outerProd(t(lhs), rhs, res, lhsType.getDimSize(1));
+      return outerProd(t(lhs), rhs, res, lhsType.getDimSize(1),
+                       t(mask, {2, 0, 1}));
     // TODO: may be better to fail and use some vector<k> -> scalar reduction.
     if (layout({{m, k}, {n, k}, {m, n}})) {
       Value tlhs = t(lhs);
@@ -1900,11 +1904,6 @@ ContractionOpToDotLowering::matchAndRewrite(vector::ContractionOp op,
 LogicalResult
 ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
                                        PatternRewriter &rewriter) const {
-  // TODO: Support vector.mask.
-  auto maskableOp = cast<MaskableOpInterface>(op.getOperation());
-  if (maskableOp.isMasked())
-    return failure();
-
   // TODO: Remove native masks from contraction op?
   if (!op.getMasks().empty())
     return failure();
@@ -1940,15 +1939,25 @@ ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
   if (succeeded(pat4.matchAndRewrite(op, rewriter)))
     return success();
 
+  // Vector mask setup.
+  OpBuilder::InsertionGuard guard(rewriter);
+  Operation *rootOp = op;
+  Value mask;
+  if (op.isMasked()) {
+    rewriter.setInsertionPoint(op.getMaskingOp());
+    rootOp = op.getMaskingOp();
+    mask = op.getMaskingOp().getMask();
+  }
+
   // Find first batch dimension in LHS/RHS, and lower when found.
   std::vector<std::pair<int64_t, int64_t>> batchDimMap = op.getBatchDimMap();
   if (!batchDimMap.empty()) {
     int64_t lhsIndex = batchDimMap[0].first;
     int64_t rhsIndex = batchDimMap[0].second;
-    auto newOp = lowerParallel(op, lhsIndex, rhsIndex, rewriter);
+    auto newOp = lowerParallel(rewriter, op, lhsIndex, rhsIndex, mask);
     if (failed(newOp))
       return failure();
-    rewriter.replaceOp(op, *newOp);
+    rewriter.replaceOp(rootOp, *newOp);
     return success();
   }
 
@@ -1966,10 +1975,10 @@ ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
   VectorType lhsType = op.getLhsType();
   for (int64_t lhsIndex = 0, e = lhsType.getRank(); lhsIndex < e; ++lhsIndex) {
     if (lhsContractingDimSet.count(lhsIndex) == 0) {
-      auto newOp = lowerParallel(op, lhsIndex, /*rhsIndex=*/-1, rewriter);
+      auto newOp = lowerParallel(rewriter, op, lhsIndex, /*rhsIndex=*/-1, mask);
       if (failed(newOp))
         return failure();
-      rewriter.replaceOp(op, *newOp);
+      rewriter.replaceOp(rootOp, *newOp);
       return success();
     }
   }
@@ -1978,20 +1987,20 @@ ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
   VectorType rhsType = op.getRhsType();
   for (int64_t rhsIndex = 0, e = rhsType.getRank(); rhsIndex < e; ++rhsIndex) {
     if (rhsContractingDimSet.count(rhsIndex) == 0) {
-      auto newOp = lowerParallel(op, /*lhsIndex=*/-1, rhsIndex, rewriter);
+      auto newOp = lowerParallel(rewriter, op, /*lhsIndex=*/-1, rhsIndex, mask);
       if (failed(newOp))
         return failure();
-      rewriter.replaceOp(op, *newOp);
+      rewriter.replaceOp(rootOp, *newOp);
       return success();
     }
   }
 
   // Lower the first remaining reduction dimension.
   if (!contractingDimMap.empty()) {
-    auto newOp = lowerReduction(op, rewriter);
+    auto newOp = lowerReduction(rewriter, op, mask);
     if (failed(newOp))
       return failure();
-    rewriter.replaceOp(op, *newOp);
+    rewriter.replaceOp(rootOp, *newOp);
     return success();
   }
 
@@ -2001,10 +2010,11 @@ ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
 // Lower one parallel dimension.
 // Incidentally also tolerates unit-size (hence trivial) reduction dimensions.
 // TODO: consider reusing existing contract unrolling
-FailureOr<Value>
-ContractionOpLowering::lowerParallel(vector::ContractionOp op, int64_t lhsIndex,
-                                     int64_t rhsIndex,
-                                     PatternRewriter &rewriter) const {
+FailureOr<Value> ContractionOpLowering::lowerParallel(PatternRewriter &rewriter,
+                                                      vector::ContractionOp op,
+                                                      int64_t lhsIndex,
+                                                      int64_t rhsIndex,
+                                                      Value mask) const {
   VectorType lhsType = op.getLhsType();
   VectorType rhsType = op.getRhsType();
   VectorType resType = op.getResultType().cast<VectorType>();
@@ -2042,6 +2052,7 @@ ContractionOpLowering::lowerParallel(vector::ContractionOp op, int64_t lhsIndex,
       diag << "expected the dimension for iterIndex=" << iterIndex
            << " to either appear in the result map, or to be a unit dimension";
     });
+
   // Construct new iterator types and affine map array attribute.
   std::array<AffineMap, 3> lowIndexingMaps = {
       adjustMap(iMap[0], iterIndex, rewriter),
@@ -2054,22 +2065,29 @@ ContractionOpLowering::lowerParallel(vector::ContractionOp op, int64_t lhsIndex,
   Location loc = op.getLoc();
   Value result = rewriter.create<arith::ConstantOp>(
       loc, resType, rewriter.getZeroAttr(resType));
+
   for (int64_t d = 0; d < dimSize; ++d) {
     auto lhs = reshapeLoad(loc, op.getLhs(), lhsType, lhsIndex, d, rewriter);
     auto rhs = reshapeLoad(loc, op.getRhs(), rhsType, rhsIndex, d, rewriter);
     auto acc = reshapeLoad(loc, op.getAcc(), resType, resIndex, d, rewriter);
-    Value lowContract = rewriter.create<vector::ContractionOp>(
+
+    Value lowMask;
+    if (mask)
+      lowMask = reshapeLoad(loc, mask, cast<VectorType>(mask.getType()),
+                            iterIndex, d, rewriter);
+
+    Operation *lowContract = rewriter.create<vector::ContractionOp>(
         loc, lhs, rhs, acc, lowAffine, lowIter);
-    result =
-        reshapeStore(loc, lowContract, result, resType, resIndex, d, rewriter);
+    lowContract = maskOperation(rewriter, lowContract, lowMask);
+    result = reshapeStore(loc, lowContract->getResult(0), result, resType,
+                          resIndex, d, rewriter);
   }
   return result;
 }
 
 // Lower one reduction dimension.
-FailureOr<Value>
-ContractionOpLowering::lowerReduction(vector::ContractionOp op,
-                                      PatternRewriter &rewriter) const {
+FailureOr<Value> ContractionOpLowering::lowerReduction(
+    PatternRewriter &rewriter, vector::ContractionOp op, Value mask) const {
   auto loc = op.getLoc();
   VectorType lhsType = op.getLhsType();
   VectorType rhsType = op.getRhsType();
@@ -2106,10 +2124,12 @@ ContractionOpLowering::lowerReduction(vector::ContractionOp op,
           op, "When LHS has rank 1, expected also RHS to have rank 1");
     Value m = createMul(loc, op.getLhs(), op.getRhs(), isInt, rewriter);
     auto kind = vector::CombiningKind::ADD;
-    if (auto acc = op.getAcc())
-      return rewriter.create<vector::ReductionOp>(loc, kind, m, acc)
-          .getResult();
-    return rewriter.create<vector::ReductionOp>(loc, kind, m).getResult();
+
+    Value acc = op.getAcc();
+    Operation *reductionOp =
+        acc ? rewriter.create<vector::ReductionOp>(loc, kind, m, acc)
+            : rewriter.create<vector::ReductionOp>(loc, kind, m);
+    return maskOperation(rewriter, reductionOp, mask)->getResult(0);
   }
   // Construct new iterator types and affine map array attribute.
   std::array<AffineMap, 3> lowIndexingMaps = {
@@ -2127,8 +2147,14 @@ ContractionOpLowering::lowerReduction(vector::ContractionOp op,
   for (int64_t d = 0; d < dimSize; ++d) {
     auto lhs = reshapeLoad(loc, op.getLhs(), lhsType, lhsIndex, d, rewriter);
     auto rhs = reshapeLoad(loc, op.getRhs(), rhsType, rhsIndex, d, rewriter);
-    result = rewriter.create<vector::ContractionOp>(loc, lhs, rhs, result,
-                                                    lowAffine, lowIter);
+    Value newMask;
+    if (mask)
+      newMask = reshapeLoad(loc, mask, cast<VectorType>(mask.getType()),
+                            iterIndex, d, rewriter);
+
+    Operation *newContract = rewriter.create<vector::ContractionOp>(
+        loc, lhs, rhs, result, lowAffine, lowIter);
+    result = maskOperation(rewriter, newContract, newMask)->getResult(0);
   }
   return result;
 }
