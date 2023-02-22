@@ -4502,7 +4502,7 @@ X86TTIImpl::getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
       // series of UNPCK followed by CONCAT_VECTORS - all of these can be
       // considered cheap.
       if (Ty->isIntOrIntVectorTy())
-        Cost += DemandedElts.countPopulation();
+        Cost += DemandedElts.popcount();
 
       // Get the smaller of the legalized or original pow2-extended number of
       // vector elements, which represents the number of unpacks we'll end up
@@ -4667,7 +4667,7 @@ X86TTIImpl::getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
   // then we won't need to do that shuffle, so adjust the cost accordingly.
   APInt DemandedDstVectors = APIntOps::ScaleBitMask(
       DemandedDstElts.zext(NumDstVectors * NumEltsPerDstVec), NumDstVectors);
-  unsigned NumDstVectorsDemanded = DemandedDstVectors.countPopulation();
+  unsigned NumDstVectorsDemanded = DemandedDstVectors.popcount();
 
   InstructionCost SingleShuffleCost = getShuffleCost(
       TTI::SK_PermuteSingleSrc, SingleDstVecTy, /*Mask=*/std::nullopt, CostKind,
@@ -4813,7 +4813,7 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
         APInt DemandedElts =
             APInt::getBitsSet(CoalescedVecTy->getNumElements(),
                               CoalescedVecEltIdx, CoalescedVecEltIdx + 1);
-        assert(DemandedElts.countPopulation() == 1 && "Inserting single value");
+        assert(DemandedElts.popcount() == 1 && "Inserting single value");
         Cost += getScalarizationOverhead(CoalescedVecTy, DemandedElts, IsLoad,
                                          !IsLoad, CostKind);
       }

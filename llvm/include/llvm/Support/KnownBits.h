@@ -49,7 +49,7 @@ public:
   /// Returns true if we know the value of all bits.
   bool isConstant() const {
     assert(!hasConflict() && "KnownBits conflict!");
-    return Zero.countPopulation() + One.countPopulation() == getBitWidth();
+    return Zero.popcount() + One.popcount() == getBitWidth();
   }
 
   /// Returns the value when all bits have a known value. This just returns One
@@ -290,13 +290,11 @@ public:
   }
 
   /// Returns the number of bits known to be one.
-  unsigned countMinPopulation() const {
-    return One.countPopulation();
-  }
+  unsigned countMinPopulation() const { return One.popcount(); }
 
   /// Returns the maximum number of bits that could be one.
   unsigned countMaxPopulation() const {
-    return getBitWidth() - Zero.countPopulation();
+    return getBitWidth() - Zero.popcount();
   }
 
   /// Returns the maximum number of bits needed to represent all possible

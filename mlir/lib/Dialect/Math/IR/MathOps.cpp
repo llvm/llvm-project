@@ -171,9 +171,8 @@ OpFoldResult math::CountTrailingZerosOp::fold(FoldAdaptor adaptor) {
 
 OpFoldResult math::CtPopOp::fold(FoldAdaptor adaptor) {
   return constFoldUnaryOp<IntegerAttr>(
-      adaptor.getOperands(), [](const APInt &a) {
-        return APInt(a.getBitWidth(), a.countPopulation());
-      });
+      adaptor.getOperands(),
+      [](const APInt &a) { return APInt(a.getBitWidth(), a.popcount()); });
 }
 
 //===----------------------------------------------------------------------===//

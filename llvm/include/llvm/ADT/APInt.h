@@ -347,7 +347,7 @@ public:
   ///
   /// \returns true if this APInt only has the specified bit set.
   bool isOneBitSet(unsigned BitNo) const {
-    return (*this)[BitNo] && countPopulation() == 1;
+    return (*this)[BitNo] && popcount() == 1;
   }
 
   /// Determine if all bits are set.  This is true for zero-width values.

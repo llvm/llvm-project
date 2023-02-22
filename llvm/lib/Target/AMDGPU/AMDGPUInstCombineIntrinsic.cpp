@@ -1152,7 +1152,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
       Args[DMaskIdx] = ConstantInt::get(DMask->getType(), NewDMaskVal);
   }
 
-  unsigned NewNumElts = DemandedElts.countPopulation();
+  unsigned NewNumElts = DemandedElts.popcount();
   if (!NewNumElts)
     return UndefValue::get(IIVTy);
 

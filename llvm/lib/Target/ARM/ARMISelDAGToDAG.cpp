@@ -3542,7 +3542,7 @@ static std::optional<std::pair<unsigned, unsigned>>
 getContiguousRangeOfSetBits(const APInt &A) {
   unsigned FirstOne = A.getBitWidth() - A.countLeadingZeros() - 1;
   unsigned LastOne = A.countTrailingZeros();
-  if (A.countPopulation() != (FirstOne - LastOne + 1))
+  if (A.popcount() != (FirstOne - LastOne + 1))
     return std::nullopt;
   return std::make_pair(FirstOne, LastOne);
 }

@@ -2395,7 +2395,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case Intrinsic::bswap:
       return ConstantInt::get(Ty->getContext(), Op->getValue().byteSwap());
     case Intrinsic::ctpop:
-      return ConstantInt::get(Ty, Op->getValue().countPopulation());
+      return ConstantInt::get(Ty, Op->getValue().popcount());
     case Intrinsic::bitreverse:
       return ConstantInt::get(Ty->getContext(), Op->getValue().reverseBits());
     case Intrinsic::convert_from_fp16: {
