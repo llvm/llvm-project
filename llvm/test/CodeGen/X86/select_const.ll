@@ -580,3 +580,18 @@ define i32 @select_ugt3_3_2(i32 %X) {
   %cond = select i1 %cmp.inv, i32 3, i32 2
   ret i32 %cond
 }
+
+define i32 @select_eq_1_2(i32 %a, i32 %b) {
+; CHECK-LABEL: select_eq_1_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    sete %cl
+; CHECK-NEXT:    movl $2, %eax
+; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    retq
+
+  %cmp = icmp eq i32 %a, %b
+  %cond = select i1 %cmp, i32 1, i32 2
+  ret i32 %cond
+}
