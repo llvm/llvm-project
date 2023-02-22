@@ -396,7 +396,16 @@ public:
 
   const_filtered_symbol_range exports() const {
     std::function<bool(const Symbol *)> fn = [](const Symbol *Symbol) {
-      return !Symbol->isUndefined();
+      return !Symbol->isUndefined() && !Symbol->isReexported();
+    };
+    return make_filter_range(
+        make_range<const_symbol_iterator>({Symbols.begin()}, {Symbols.end()}),
+        fn);
+  }
+
+  const_filtered_symbol_range reexports() const {
+    std::function<bool(const Symbol *)> fn = [](const Symbol *Symbol) {
+      return Symbol->isReexported();
     };
     return make_filter_range(
         make_range<const_symbol_iterator>({Symbols.begin()}, {Symbols.end()}),
