@@ -155,7 +155,7 @@ public:
   llvm::StringRef text() const { return PatchContents; }
 
   /// Whether diagnostics generated using this patch are trustable.
-  bool preserveDiagnostics() const { return PatchContents.empty(); }
+  bool preserveDiagnostics() const;
 
 private:
   static PreamblePatch create(llvm::StringRef FileName,
