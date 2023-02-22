@@ -141,6 +141,21 @@ class THStorePair<bits<5> funct5, string opcodestr>
   let DecoderMethod = "decodeXTHeadMemPair";
 }
 
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
+class THCacheInst_r<bits<5> funct5, string opcodestr>
+    : RVInstR<0b0000001, 0, OPC_CUSTOM_0, (outs), (ins GPR:$rs1),
+              opcodestr, "$rs1"> {
+  let rd = 0;
+  let rs2 = funct5;
+}
+
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
+class THCacheInst_void<bits<5> funct5, string opcodestr>
+    : RVInstR<0b0000000, 0, OPC_CUSTOM_0, (outs), (ins), opcodestr, ""> {
+  let rd = 0;
+  let rs1 = 0;
+  let rs2 = funct5;
+}
 
 //===----------------------------------------------------------------------===//
 // Combination of instruction classes.
@@ -482,4 +497,29 @@ let Predicates = [HasVendorXTHeadMemPair] in {
   def : Pat<(th_lwd GPR:$rs1, uimm2_3:$uimm2_3), (TH_LWD GPR:$rs1, uimm2_3:$uimm2_3, 3)>;
   def : Pat<(th_swd GPR:$rd1, GPR:$rd2, GPR:$rs1, uimm2_3:$uimm2_3),
             (TH_SWD GPR:$rd1, GPR:$rd2, GPR:$rs1, uimm2_3:$uimm2_3, 3)>;
+}
+
+let Predicates = [HasVendorXTHeadCmo], DecoderNamespace = "THeadCmo" in {
+def TH_DCACHE_CSW    : THCacheInst_r<0b00001, "th.dcache.csw">;
+def TH_DCACHE_ISW    : THCacheInst_r<0b00010, "th.dcache.isw">;
+def TH_DCACHE_CISW   : THCacheInst_r<0b00011, "th.dcache.cisw">;
+def TH_DCACHE_CVAL1  : THCacheInst_r<0b00100, "th.dcache.cval1">;
+def TH_DCACHE_CVA    : THCacheInst_r<0b00101, "th.dcache.cva">;
+def TH_DCACHE_IVA    : THCacheInst_r<0b00110, "th.dcache.iva">;
+def TH_DCACHE_CIVA   : THCacheInst_r<0b00111, "th.dcache.civa">;
+def TH_DCACHE_CPAL1  : THCacheInst_r<0b01000, "th.dcache.cpal1">;
+def TH_DCACHE_CPA    : THCacheInst_r<0b01001, "th.dcache.cpa">;
+def TH_DCACHE_IPA    : THCacheInst_r<0b01010, "th.dcache.ipa">;
+def TH_DCACHE_CIPA   : THCacheInst_r<0b01011, "th.dcache.cipa">;
+def TH_ICACHE_IVA    : THCacheInst_r<0b10000, "th.icache.iva">;
+def TH_ICACHE_IPA    : THCacheInst_r<0b11000, "th.icache.ipa">;
+
+def TH_DCACHE_CALL   : THCacheInst_void<0b00001, "th.dcache.call">;
+def TH_DCACHE_IALL   : THCacheInst_void<0b00010, "th.dcache.iall">;
+def TH_DCACHE_CIALL  : THCacheInst_void<0b00011, "th.dcache.ciall">;
+def TH_ICACHE_IALL   : THCacheInst_void<0b10000, "th.icache.iall">;
+def TH_ICACHE_IALLS  : THCacheInst_void<0b10001, "th.icache.ialls">;
+def TH_L2CACHE_CALL  : THCacheInst_void<0b10101, "th.l2cache.call">;
+def TH_L2CACHE_IALL  : THCacheInst_void<0b10110, "th.l2cache.iall">;
+def TH_L2CACHE_CIALL : THCacheInst_void<0b10111, "th.l2cache.ciall">;
 }
