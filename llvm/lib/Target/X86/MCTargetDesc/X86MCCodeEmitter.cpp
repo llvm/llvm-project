@@ -107,7 +107,7 @@ class X86OpcodePrefixHelper {
 
   // EVEX (4 bytes)
   // +-----+ +--------------+ +-------------------+ +------------------------+
-  // | 62h | | RXBR' | 00mm | | W | vvvv | 1 | pp | | z | L'L | b | v' | aaa |
+  // | 62h | | RXBR' | 0mmm | | W | vvvv | 1 | pp | | z | L'L | b | v' | aaa |
   // +-----+ +--------------+ +-------------------+ +------------------------+
 
   // EVEX_L2/VEX_L (Vector Length):
@@ -228,8 +228,7 @@ public:
       emitByte(W << 7 | LastPayload, OS);
       return;
     case EVEX:
-      assert(VEX_5M & 0x7 &&
-             "More than 3 significant bits in VEX.m-mmmm fields for EVEX!");
+      assert(VEX_5M && !(VEX_5M & 0x8) && "invalid mmm fields for EVEX!");
       emitByte(0x62, OS);
       emitByte(FirstPayload | ((~EVEX_R2) & 0x1) << 4 | VEX_5M, OS);
       emitByte(W << 7 | ((~VEX_4V) & 0xf) << 3 | 1 << 2 | VEX_PP, OS);
