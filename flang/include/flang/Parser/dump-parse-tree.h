@@ -514,6 +514,10 @@ public:
   }
   NODE(parser, OmpObject)
   NODE(parser, OmpObjectList)
+  NODE(parser, OmpOrderClause)
+  NODE_ENUM(OmpOrderClause, Type)
+  NODE(parser, OmpOrderModifier)
+  NODE_ENUM(OmpOrderModifier, Kind)
   NODE(parser, OmpProcBindClause)
   NODE_ENUM(OmpProcBindClause, Type)
   NODE(parser, OmpReductionClause)
