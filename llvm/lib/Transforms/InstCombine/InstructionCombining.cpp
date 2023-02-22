@@ -4594,13 +4594,6 @@ static bool combineInstructionsOverFunction(
   bool MadeIRChange = false;
   if (ShouldLowerDbgDeclare)
     MadeIRChange = LowerDbgDeclare(F);
-  // LowerDbgDeclare calls RemoveRedundantDbgInstrs, but LowerDbgDeclare will
-  // almost never return true when running an assignment tracking build. Take
-  // this opportunity to do some clean up for assignment tracking builds too.
-  if (!MadeIRChange && isAssignmentTrackingEnabled(*F.getParent())) {
-    for (auto &BB : F)
-      RemoveRedundantDbgInstrs(&BB);
-  }
 
   // Iterate while there is work to do.
   unsigned Iteration = 0;
