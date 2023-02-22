@@ -5776,11 +5776,12 @@ retained, even if their IR counterparts are optimized out of the IR. The
 
 .. _DISubprogramDeclaration:
 
-When ``isDefinition: false``, subprograms describe a declaration in the type
-tree as opposed to a definition of a function.  If the scope is a composite
-type with an ODR ``identifier:`` and that does not set ``flags: DIFwdDecl``,
-then the subprogram declaration is uniqued based only on its ``linkageName:``
-and ``scope:``.
+When ``spFlags: DISPFlagDefinition`` is not present, subprograms describe a
+declaration in the type tree as opposed to a definition of a function. In this
+case, the ``declaration`` field must be empty. If the scope is a composite type
+with an ODR ``identifier:`` and that does not set ``flags: DIFwdDecl``, then
+the subprogram declaration is uniqued based only on its ``linkageName:`` and
+``scope:``.
 
 .. code-block:: text
 
@@ -5789,9 +5790,9 @@ and ``scope:``.
     }
 
     !0 = distinct !DISubprogram(name: "foo", linkageName: "_Zfoov", scope: !1,
-                                file: !2, line: 7, type: !3, isLocal: true,
-                                isDefinition: true, scopeLine: 8,
-                                containingType: !4,
+                                file: !2, line: 7, type: !3,
+                                spFlags: DISPFlagDefinition | DISPFlagLocalToUnit,
+                                scopeLine: 8, containingType: !4,
                                 virtuality: DW_VIRTUALITY_pure_virtual,
                                 virtualIndex: 10, flags: DIFlagPrototyped,
                                 isOptimized: true, unit: !5, templateParams: !6,
