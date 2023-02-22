@@ -65,6 +65,12 @@ def CheckFpOrNEON : CheckFunctionPredicateWithTII<
   "AArch64InstrInfo::isFpOrNEON"
 >;
 
+// Identify whether an instruction is the 16-bit NEON form based on its result.
+def CheckHForm : CheckFunctionPredicateWithTII<
+  "AArch64_MC::isHForm",
+  "AArch64InstrInfo::isHForm"
+>;
+
 // Identify whether an instruction is the 128-bit NEON form based on its result.
 def CheckQForm : CheckFunctionPredicateWithTII<
   "AArch64_MC::isQForm",

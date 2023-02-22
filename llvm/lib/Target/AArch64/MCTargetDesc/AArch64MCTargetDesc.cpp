@@ -300,6 +300,13 @@ void AArch64_MC::initLLVMToCVRegMapping(MCRegisterInfo *MRI) {
     MRI->mapLLVMRegToCVReg(I.Reg, static_cast<int>(I.CVReg));
 }
 
+bool AArch64_MC::isHForm(const MCInst &MI, const MCInstrInfo *MCII) {
+  const auto &FPR16 = AArch64MCRegisterClasses[AArch64::FPR16RegClassID];
+  return llvm::any_of(MI, [&](const MCOperand &Op) {
+    return Op.isReg() && FPR16.contains(Op.getReg());
+  });
+}
+
 bool AArch64_MC::isQForm(const MCInst &MI, const MCInstrInfo *MCII) {
   const auto &FPR128 = AArch64MCRegisterClasses[AArch64::FPR128RegClassID];
   return llvm::any_of(MI, [&](const MCOperand &Op) {
