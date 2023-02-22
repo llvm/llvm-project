@@ -3002,8 +3002,8 @@ injectPendingInvariantConditions(NonTrivialUnswitchCandidate Candidate, Loop &L,
   auto *InLoopSucc = Candidate.PendingInjection->InLoopSucc;
   auto *TI = cast<BranchInst>(Candidate.TI);
   auto *BB = Candidate.TI->getParent();
-  assert(InLoopSucc == TI->getSuccessor(0));
-  auto *OutOfLoopSucc = TI->getSuccessor(1);
+  auto *OutOfLoopSucc = InLoopSucc == TI->getSuccessor(0) ? TI->getSuccessor(1)
+                                                          : TI->getSuccessor(0);
   // FIXME: Remove this once limitation on successors is lifted.
   assert(L.contains(InLoopSucc) && "Not supported yet!");
   assert(!L.contains(OutOfLoopSucc) && "Not supported yet!");
