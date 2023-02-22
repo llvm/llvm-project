@@ -1780,13 +1780,20 @@ llvm.func @nontemporal_store_and_load() {
 
 // -----
 
-llvm.func @atomic_load(%ptr : !llvm.ptr) {
+llvm.func @atomic_store_and_load(%ptr : !llvm.ptr) {
   // CHECK: load atomic
-  // CHECK-SAME:  monotonic, align 4
-  %1 = llvm.load %ptr atomic monotonic {alignment = 4 : i64} : !llvm.ptr -> f32
+  // CHECK-SAME:  acquire, align 4
+  %1 = llvm.load %ptr atomic acquire {alignment = 4 : i64} : !llvm.ptr -> f32
   // CHECK: load atomic
-  // CHECK-SAME:  syncscope("singlethread") monotonic, align 4
-  %2 = llvm.load %ptr atomic syncscope("singlethread") monotonic {alignment = 4 : i64} : !llvm.ptr -> f32
+  // CHECK-SAME:  syncscope("singlethread") acquire, align 4
+  %2 = llvm.load %ptr atomic syncscope("singlethread") acquire {alignment = 4 : i64} : !llvm.ptr -> f32
+
+  // CHECK: store atomic
+  // CHECK-SAME:  release, align 4
+  llvm.store %1, %ptr atomic release {alignment = 4 : i64} : f32, !llvm.ptr
+  // CHECK: store atomic
+  // CHECK-SAME:  syncscope("singlethread") release, align 4
+  llvm.store %2, %ptr atomic syncscope("singlethread") release {alignment = 4 : i64} : f32, !llvm.ptr
   llvm.return
 }
 
