@@ -47,8 +47,8 @@ private:
 
   std::vector<UsingDeclContext> Contexts;
 
-  const StringRef RawStringHeaderFileExtensions;
-  utils::FileExtensionsSet HeaderFileExtensions;
+  StringRef RawStringHeaderFileExtensions;
+  FileExtensionsSet HeaderFileExtensions;
 };
 
 } // namespace clang::tidy::misc
