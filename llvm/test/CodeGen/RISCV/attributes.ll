@@ -41,6 +41,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+svnapot %s -o - | FileCheck --check-prefixes=CHECK,RV32SVNAPOT %s
 ; RUN: llc -mtriple=riscv32 -mattr=+svpbmt %s -o - | FileCheck --check-prefixes=CHECK,RV32SVPBMT %s
 ; RUN: llc -mtriple=riscv32 -mattr=+svinval %s -o - | FileCheck --check-prefixes=CHECK,RV32SVINVAL %s
+; RUN: llc -mtriple=riscv32 -mattr=+xtheadcmo %s -o - | FileCheck --check-prefix=RV32XTHEADCMO %s
 ; RUN: llc -mtriple=riscv32 -mattr=+xtheadmac %s -o - | FileCheck --check-prefixes=CHECK,RV32XTHEADMAC %s
 ; RUN: llc -mtriple=riscv32 -mattr=+xtheadmempair %s -o - | FileCheck --check-prefix=RV32XTHEADMEMPAIR %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zca %s -o - | FileCheck --check-prefixes=CHECK,RV32ZCA %s
@@ -96,6 +97,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+xtheadba %s -o - | FileCheck --check-prefixes=CHECK,RV64XTHEADBA %s
 ; RUN: llc -mtriple=riscv64 -mattr=+xtheadbb %s -o - | FileCheck --check-prefixes=CHECK,RV64XTHEADBB %s
 ; RUN: llc -mtriple=riscv64 -mattr=+xtheadbs %s -o - | FileCheck --check-prefixes=CHECK,RV64XTHEADBS %s
+; RUN: llc -mtriple=riscv64 -mattr=+xtheadcmo %s -o - | FileCheck --check-prefix=RV64XTHEADCMO %s
 ; RUN: llc -mtriple=riscv64 -mattr=+xtheadmac %s -o - | FileCheck --check-prefixes=CHECK,RV64XTHEADMAC %s
 ; RUN: llc -mtriple=riscv64 -mattr=+xtheadmempair %s -o - | FileCheck --check-prefix=RV64XTHEADMEMPAIR %s
 ; RUN: llc -mtriple=riscv64 -mattr=+xtheadvdot %s -o - | FileCheck --check-prefixes=CHECK,RV64XTHEADVDOT %s
@@ -150,6 +152,7 @@
 ; RV32SVNAPOT: .attribute 5, "rv32i2p0_svnapot1p0"
 ; RV32SVPBMT: .attribute 5, "rv32i2p0_svpbmt1p0"
 ; RV32SVINVAL: .attribute 5, "rv32i2p0_svinval1p0"
+; RV32XTHEADCMO: .attribute 5, "rv32i2p0_xtheadcmo1p0"
 ; RV32XTHEADMAC: .attribute 5, "rv32i2p0_xtheadmac1p0"
 ; RV32XTHEADMEMPAIR: .attribute 5, "rv32i2p0_xtheadmempair1p0"
 ; RV32ZCA: .attribute 5, "rv32i2p0_zca1p0"
@@ -205,6 +208,7 @@
 ; RV64XTHEADBA: .attribute 5, "rv64i2p0_xtheadba1p0"
 ; RV64XTHEADBB: .attribute 5, "rv64i2p0_xtheadbb1p0"
 ; RV64XTHEADBS: .attribute 5, "rv64i2p0_xtheadbs1p0"
+; RV64XTHEADCMO: .attribute 5, "rv64i2p0_xtheadcmo1p0"
 ; RV64XTHEADMAC: .attribute 5, "rv64i2p0_xtheadmac1p0"
 ; RV64XTHEADMEMPAIR: .attribute 5, "rv64i2p0_xtheadmempair1p0"
 ; RV64XTHEADVDOT: .attribute 5, "rv64i2p0_f2p0_d2p0_v1p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0_xtheadvdot1p0"
