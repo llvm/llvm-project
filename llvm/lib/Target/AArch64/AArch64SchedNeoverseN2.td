@@ -1210,7 +1210,7 @@ def : InstRW<[N2Write_6cyc_4V], (instrs TBXv8i8Three, TBXv16i8Three)>;
 def : InstRW<[N2Write_6cyc_8V], (instrs TBXv8i8Four, TBXv16i8Four)>;
 
 // ASIMD transfer, gen reg to element
-def : InstRW<[N2Write_5cyc_1M0_1V], (instregex "^INSv")>;
+def : InstRW<[N2Write_5cyc_1M0_1V], (instregex "^INSvi(8|16|32|64)gpr$")>;
 
 // ASIMD load instructions
 // -----------------------------------------------------------------------------
