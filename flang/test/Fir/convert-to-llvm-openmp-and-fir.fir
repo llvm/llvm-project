@@ -353,3 +353,56 @@ fir.global internal @_QFsEc : i32 {
 // CHECK:    %[[INIT_10:.*]] = llvm.mlir.constant(10 : i32) : i32
 // CHECK:    llvm.return %[[INIT_10]] : i32
 // CHECK:  }
+
+func.func @_QPsb() {
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %c1_i32 = arith.constant 1 : i32
+  %c0_i32 = arith.constant 0 : i32
+  %0 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsbEi"}
+  %1 = fir.alloca i32 {bindc_name = "li", uniq_name = "_QFsbEli"}
+  fir.store %c0_i32 to %1 : !fir.ref<i32>
+  omp.sections   {
+    omp.section {
+      %2 = fir.convert %c1 : (index) -> i32
+      %3:2 = fir.do_loop %arg0 = %c1 to %c10 step %c1 iter_args(%arg1 = %2) -> (index, i32) {
+        fir.store %arg1 to %0 : !fir.ref<i32>
+        %4 = fir.load %1 : !fir.ref<i32>
+        %5 = arith.addi %4, %c1_i32 : i32
+        fir.store %5 to %1 : !fir.ref<i32>
+        %6 = arith.addi %arg0, %c1 : index
+        %7 = fir.convert %c1 : (index) -> i32
+        %8 = fir.load %0 : !fir.ref<i32>
+        %9 = arith.addi %8, %7 : i32
+        fir.result %6, %9 : index, i32
+      }
+      fir.store %3#1 to %0 : !fir.ref<i32>
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// CHECK:  llvm.func @_QPsb() {
+// CHECK:    %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK:    %[[SIZE:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:    %[[LI_REF:.*]] = llvm.alloca %6 x i32 {bindc_name = "li", in_type = i32, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFsbEli"} : (i64) -> !llvm.ptr<i32>
+// CHECK:    omp.sections   {
+// CHECK:      omp.section {
+// CHECK:        llvm.br ^[[BB_ENTRY:.*]]({{.*}})
+// CHECK:      ^[[BB_ENTRY]]({{.*}}):
+// CHECK:        %[[EXIT_COND:.*]] = llvm.icmp "sgt"
+// CHECK:        llvm.cond_br %[[EXIT_COND]], ^[[BB_LOOP_BODY:.*]], ^[[BB_EXIT:.*]]
+// CHECK:      ^[[BB_LOOP_BODY]]:
+// CHECK:        %[[LI_VAL:.*]] = llvm.load %[[LI_REF]] : !llvm.ptr<i32>
+// CHECK:        %[[LI_INC:.*]] = llvm.add %[[LI_VAL]], %[[ONE]]  : i32
+// CHECK:        llvm.store %[[LI_INC]], %[[LI_REF]] : !llvm.ptr<i32>
+// CHECK:        llvm.br ^[[BB_ENTRY]]({{.*}})
+// CHECK:      ^[[BB_EXIT]]:
+// CHECK:        omp.terminator
+// CHECK:      }
+// CHECK:      omp.terminator
+// CHECK:    }
+// CHECK:    llvm.return
+// CHECK:  }
