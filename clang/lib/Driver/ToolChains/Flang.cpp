@@ -329,6 +329,13 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     A->render(Args, CmdArgs);
   }
 
+  // Remove any unsupported gfortran diagnostic options
+  for (const Arg *A : Args.filtered(options::OPT_flang_ignored_w_Group)) {
+    A->claim();
+    D.Diag(diag::warn_drv_unsupported_diag_option_for_flang)
+        << A->getOption().getName();
+  }
+
   // Optimization level for CodeGen.
   if (const Arg *A = Args.getLastArg(options::OPT_O_Group)) {
     if (A->getOption().matches(options::OPT_O4)) {
