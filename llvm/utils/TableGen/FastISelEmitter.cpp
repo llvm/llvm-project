@@ -875,4 +875,4 @@ void EmitFastISel(RecordKeeper &RK, raw_ostream &OS) {
   F.printFunctionDefinitions(OS);
 }
 
-} // End llvm namespace
+} // namespace llvm

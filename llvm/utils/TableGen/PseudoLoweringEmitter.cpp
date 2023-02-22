@@ -319,4 +319,4 @@ void EmitPseudoLowering(RecordKeeper &RK, raw_ostream &OS) {
   PseudoLoweringEmitter(RK).run(OS);
 }
 
-} // End llvm namespace
+} // namespace llvm
