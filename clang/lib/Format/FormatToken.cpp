@@ -96,7 +96,7 @@ void TokenRole::precomputeFormattingInfos(const FormatToken *Token) {}
 unsigned CommaSeparatedList::formatAfterToken(LineState &State,
                                               ContinuationIndenter *Indenter,
                                               bool DryRun) {
-  if (State.NextToken == nullptr || !State.NextToken->Previous)
+  if (!State.NextToken || !State.NextToken->Previous)
     return 0;
 
   if (Formats.size() == 1)
