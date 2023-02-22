@@ -638,6 +638,7 @@ set(files
   __type_traits/is_destructible.h
   __type_traits/is_empty.h
   __type_traits/is_enum.h
+  __type_traits/is_equality_comparable.h
   __type_traits/is_final.h
   __type_traits/is_floating_point.h
   __type_traits/is_function.h
@@ -702,6 +703,7 @@ set(files
   __type_traits/nat.h
   __type_traits/negation.h
   __type_traits/noexcept_move_assign_container.h
+  __type_traits/predicate_traits.h
   __type_traits/promote.h
   __type_traits/rank.h
   __type_traits/remove_all_extents.h
