@@ -1,5 +1,4 @@
 // RUN: %libomptarget-compile-run-and-check-generic
-// UNSUPPORTED: amdgcn-amd-amdhsa
 
 #include <omp.h>
 #include <stdio.h>
@@ -20,7 +19,7 @@ int main() {
   for (int i = 0; i < N; ++i)
     sum += hst_ptr[i];
 
-  omp_free(hst_ptr, llvm_omp_target_shared_mem_alloc);
+  omp_free(hst_ptr, llvm_omp_target_host_mem_alloc);
   // CHECK: PASS
   if (sum == N)
     printf("PASS\n");
