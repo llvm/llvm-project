@@ -12,6 +12,7 @@
 #include "TextStubCommon.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/JSON.h"
+#include <utility>
 
 // clang-format off
 /*
@@ -334,9 +335,11 @@ Error collectSymbolsFromSegment(const Object *Segment, TargetsToSymbols &Result,
   if (Err)
     return Err;
 
-  SymbolFlags WeakFlag = SectionFlag | (SectionFlag == SymbolFlags::Undefined
-                                            ? SymbolFlags::WeakReferenced
-                                            : SymbolFlags::WeakDefined);
+  SymbolFlags WeakFlag =
+      SectionFlag |
+      (((SectionFlag & SymbolFlags::Undefined) == SymbolFlags::Undefined)
+           ? SymbolFlags::WeakReferenced
+           : SymbolFlags::WeakDefined);
   Err = collectFromArray(
       TBDKey::Weak, Segment, [&Result, WeakFlag](StringRef Name) {
         JSONSymbol Sym = {SymbolKind::GlobalSymbol, Name.str(), WeakFlag};
@@ -405,7 +408,8 @@ Expected<TargetsToSymbols> getSymbolSection(const Object *File, TBDKey Key,
     } else {
       MappedTargets = *TargetsOrErr;
     }
-    Result.emplace_back(std::make_pair(Targets, std::vector<JSONSymbol>()));
+    Result.emplace_back(
+        std::make_pair(std::move(MappedTargets), std::vector<JSONSymbol>()));
 
     auto *DataSection = Obj->getObject(Keys[TBDKey::Data]);
     auto *TextSection = Obj->getObject(Keys[TBDKey::Text]);

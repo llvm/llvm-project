@@ -495,7 +495,7 @@ TEST(TBDv3, Platform_bridgeOS) {
 TEST(TBDv3, Platform_macCatalyst) {
   static const char TBDv3PlatformiOSmac[] = "--- !tapi-tbd-v3\n"
                                             "archs: [ armv7k ]\n"
-                                            "platform: iosmac\n"
+                                            "platform: maccatalyst\n"
                                             "install-name: Test.dylib\n"
                                             "...\n";
 
