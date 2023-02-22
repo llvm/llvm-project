@@ -7440,7 +7440,7 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
     SmallVector<APInt> SrcEltBits;
     unsigned SrcEltSizeInBits = VT.getScalarSizeInBits();
     if (BV->getConstantRawBits(true, SrcEltSizeInBits, SrcEltBits, Undefs)) {
-      APInt UndefSrcElts = APInt::getNullValue(SrcEltBits.size());
+      APInt UndefSrcElts = APInt::getZero(SrcEltBits.size());
       for (unsigned I = 0, E = SrcEltBits.size(); I != E; ++I)
         if (Undefs[I])
           UndefSrcElts.setBit(I);
@@ -12100,8 +12100,8 @@ static bool isTargetShuffleEquivalent(MVT VT, ArrayRef<int> Mask,
   if (V2 && V2.getValueSizeInBits() != VT.getSizeInBits())
     V2 = SDValue();
 
-  APInt ZeroV1 = APInt::getNullValue(Size);
-  APInt ZeroV2 = APInt::getNullValue(Size);
+  APInt ZeroV1 = APInt::getZero(Size);
+  APInt ZeroV2 = APInt::getZero(Size);
 
   for (int i = 0; i < Size; ++i) {
     int MaskIdx = Mask[i];
@@ -40279,7 +40279,7 @@ static SDValue combineX86ShufflesRecursively(
     OpInputs.assign({SrcVec});
     OpMask.assign(NumElts, SM_SentinelUndef);
     std::iota(OpMask.begin(), OpMask.end(), ExtractIdx);
-    OpZero = OpUndef = APInt::getNullValue(NumElts);
+    OpZero = OpUndef = APInt::getZero(NumElts);
   } else {
     return SDValue();
   }
@@ -43471,7 +43471,7 @@ bool X86TargetLowering::isSplatValueForTargetNode(SDValue Op,
   switch (Opc) {
   case X86ISD::VBROADCAST:
   case X86ISD::VBROADCAST_LOAD:
-    UndefElts = APInt::getNullValue(NumElts);
+    UndefElts = APInt::getZero(NumElts);
     return true;
   }
 
@@ -55946,7 +55946,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
   // Attempt to fold target constant loads.
   if (all_of(Ops, [](SDValue Op) { return getTargetConstantFromNode(Op); })) {
     SmallVector<APInt> EltBits;
-    APInt UndefElts = APInt::getNullValue(VT.getVectorNumElements());
+    APInt UndefElts = APInt::getZero(VT.getVectorNumElements());
     for (unsigned I = 0, E = Ops.size(); I != E; ++I) {
       APInt OpUndefElts;
       SmallVector<APInt> OpEltBits;
