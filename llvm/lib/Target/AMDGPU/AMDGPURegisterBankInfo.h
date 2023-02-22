@@ -82,6 +82,9 @@ public:
   applyMappingImage(MachineInstr &MI,
                     const OperandsMapper &OpdMapper,
                     MachineRegisterInfo &MRI, int RSrcIdx) const;
+  unsigned setBufferOffsets(MachineIRBuilder &B, Register CombinedOffset,
+                            Register &VOffsetReg, Register &SOffsetReg,
+                            int64_t &InstOffsetVal, Align Alignment) const;
   bool applyMappingSBufferLoad(const OperandsMapper &OpdMapper) const;
 
   bool applyMappingBFE(const OperandsMapper &OpdMapper, bool Signed) const;

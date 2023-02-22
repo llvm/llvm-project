@@ -7897,6 +7897,51 @@ bool SIInstrInfo::isBufferSMRD(const MachineInstr &MI) const {
   return RI.getRegClass(RCID)->hasSubClassEq(&AMDGPU::SGPR_128RegClass);
 }
 
+// Given Imm, split it into the values to put into the SOffset and ImmOffset
+// fields in an MUBUF instruction. Return false if it is not possible (due to a
+// hardware bug needing a workaround).
+//
+// The required alignment ensures that individual address components remain
+// aligned if they are aligned to begin with. It also ensures that additional
+// offsets within the given alignment can be added to the resulting ImmOffset.
+bool SIInstrInfo::splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset,
+                                   uint32_t &ImmOffset, Align Alignment) const {
+  const uint32_t MaxImm = alignDown(4095, Alignment.value());
+  uint32_t Overflow = 0;
+
+  if (Imm > MaxImm) {
+    if (Imm <= MaxImm + 64) {
+      // Use an SOffset inline constant for 4..64
+      Overflow = Imm - MaxImm;
+      Imm = MaxImm;
+    } else {
+      // Try to keep the same value in SOffset for adjacent loads, so that
+      // the corresponding register contents can be re-used.
+      //
+      // Load values with all low-bits (except for alignment bits) set into
+      // SOffset, so that a larger range of values can be covered using
+      // s_movk_i32.
+      //
+      // Atomic operations fail to work correctly when individual address
+      // components are unaligned, even if their sum is aligned.
+      uint32_t High = (Imm + Alignment.value()) & ~4095;
+      uint32_t Low = (Imm + Alignment.value()) & 4095;
+      Imm = Low;
+      Overflow = High - Alignment.value();
+    }
+  }
+
+  // There is a hardware bug in SI and CI which prevents address clamping in
+  // MUBUF instructions from working correctly with SOffsets. The immediate
+  // offset is unaffected.
+  if (Overflow > 0 && ST.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS)
+    return false;
+
+  ImmOffset = Imm;
+  SOffset = Overflow;
+  return true;
+}
+
 // Depending on the used address space and instructions, some immediate offsets
 // are allowed and some are not.
 // In general, flat instruction offsets can only be non-negative, global and
