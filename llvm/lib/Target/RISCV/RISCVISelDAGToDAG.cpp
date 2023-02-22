@@ -809,6 +809,27 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, Res);
     return;
   }
+  case RISCVISD::SplitF64: {
+    if (!Subtarget->hasStdExtZfa())
+      break;
+    assert(Subtarget->hasStdExtD() && !Subtarget->is64Bit() &&
+           "Unexpected subtarget");
+
+    // With Zfa, lower to fmv.x.w and fmvh.x.d.
+    if (!SDValue(Node, 0).use_empty()) {
+      SDNode *Lo = CurDAG->getMachineNode(RISCV::FMV_X_W_FPR64, DL, VT,
+                                          Node->getOperand(0));
+      ReplaceUses(SDValue(Node, 0), SDValue(Lo, 0));
+    }
+    if (!SDValue(Node, 1).use_empty()) {
+      SDNode *Hi = CurDAG->getMachineNode(RISCV::FMVH_X_D, DL, VT,
+                                          Node->getOperand(0));
+      ReplaceUses(SDValue(Node, 1), SDValue(Hi, 0));
+    }
+
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
   case ISD::SHL: {
     auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
     if (!N1C)
