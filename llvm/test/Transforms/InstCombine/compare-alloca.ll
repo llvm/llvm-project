@@ -193,14 +193,12 @@ define void @neg_consistent_fold2() {
   ret void
 }
 
-define void @neg_consistent_fold3() {
-; CHECK-LABEL: @neg_consistent_fold3(
-; CHECK-NEXT:    [[M1:%.*]] = alloca [4 x i8], align 1
-; CHECK-NEXT:    [[LGP:%.*]] = load ptr, ptr @gp, align 8
+; FIXME: The end result is correct, but the fold happens for the wrong
+; reason (incorrect icmp GlobalValue special case in CaptureTracking).
+define void @consistent_fold3() {
+; CHECK-LABEL: @consistent_fold3(
 ; CHECK-NEXT:    [[RHS2:%.*]] = call ptr @hidden_inttoptr()
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[M1]], [[LGP]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq ptr [[M1]], [[RHS2]]
-; CHECK-NEXT:    call void @witness(i1 [[CMP1]], i1 [[CMP2]])
+; CHECK-NEXT:    call void @witness(i1 false, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %m = alloca i8, i32 4
@@ -231,13 +229,11 @@ define void @neg_consistent_fold4() {
 
 declare void @unknown(ptr)
 
-; TODO: Missing optimization
 define i1 @consistent_nocapture_inttoptr() {
 ; CHECK-LABEL: @consistent_nocapture_inttoptr(
 ; CHECK-NEXT:    [[M1:%.*]] = alloca [4 x i8], align 1
 ; CHECK-NEXT:    call void @unknown(ptr nocapture nonnull [[M1]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[M1]], inttoptr (i64 2048 to ptr)
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %m = alloca i8, i32 4
   call void @unknown(ptr nocapture %m)
@@ -261,14 +257,12 @@ define i1 @consistent_nocapture_offset() {
 }
 
 @gp = global ptr null, align 8
-; TODO: Missing optimization
+
 define i1 @consistent_nocapture_through_global() {
 ; CHECK-LABEL: @consistent_nocapture_through_global(
 ; CHECK-NEXT:    [[M1:%.*]] = alloca [4 x i8], align 1
 ; CHECK-NEXT:    call void @unknown(ptr nocapture nonnull [[M1]])
-; CHECK-NEXT:    [[LGP:%.*]] = load ptr, ptr @gp, align 8, !nonnull !0
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[M1]], [[LGP]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %m = alloca i8, i32 4
   call void @unknown(ptr nocapture %m)
