@@ -597,6 +597,14 @@ static bool opMustUseVOP3Encoding(const SDNode *N, MVT VT) {
          VT == MVT::f64;
 }
 
+/// Return true if v_cndmask_b32 will support fabs/fneg source modifiers for the
+/// type for ISD::SELECT.
+LLVM_READONLY
+static bool selectSupportsSourceMods(const SDNode *N) {
+  // TODO: Only applies if select will be vector
+  return N->getValueType(0) == MVT::f32;
+}
+
 // Most FP instructions support source modifiers, but this could be refined
 // slightly.
 LLVM_READONLY
@@ -631,8 +639,7 @@ static bool hasSourceMods(const SDNode *N) {
     }
   }
   case ISD::SELECT:
-    // TODO: Only applies if select will be vector
-    return N->getValueType(0) == MVT::f32;
+    return selectSupportsSourceMods(N);
   default:
     return true;
   }
@@ -3758,7 +3765,8 @@ AMDGPUTargetLowering::foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
 
   // TODO: Support vector constants.
   ConstantFPSDNode *CRHS = dyn_cast<ConstantFPSDNode>(RHS);
-  if ((LHS.getOpcode() == ISD::FNEG || LHS.getOpcode() == ISD::FABS) && CRHS) {
+  if ((LHS.getOpcode() == ISD::FNEG || LHS.getOpcode() == ISD::FABS) && CRHS &&
+      !selectSupportsSourceMods(N.getNode())) {
     SDLoc SL(N);
     // If one side is an fneg/fabs and the other is a constant, we can push the
     // fneg/fabs down. If it's an fabs, the constant needs to be non-negative.
