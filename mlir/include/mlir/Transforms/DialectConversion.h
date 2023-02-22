@@ -618,7 +618,8 @@ struct ConversionPatternRewriterImpl;
 /// This class implements a pattern rewriter for use with ConversionPatterns. It
 /// extends the base PatternRewriter and provides special conversion specific
 /// hooks.
-class ConversionPatternRewriter final : public PatternRewriter {
+class ConversionPatternRewriter final : public PatternRewriter,
+                                        public RewriterBase::Listener {
 public:
   explicit ConversionPatternRewriter(MLIRContext *ctx);
   ~ConversionPatternRewriter() override;
@@ -742,6 +743,9 @@ public:
   detail::ConversionPatternRewriterImpl &getImpl();
 
 private:
+  using OpBuilder::getListener;
+  using OpBuilder::setListener;
+
   std::unique_ptr<detail::ConversionPatternRewriterImpl> impl;
 };
 

@@ -217,6 +217,10 @@ void PDLPatternModule::registerRewriteFunction(StringRef name,
 // RewriterBase
 //===----------------------------------------------------------------------===//
 
+bool RewriterBase::Listener::classof(const OpBuilder::Listener *base) {
+  return base->getKind() == OpBuilder::ListenerBase::Kind::RewriterBaseListener;
+}
+
 RewriterBase::~RewriterBase() {
   // Out of line to provide a vtable anchor for the class.
 }
@@ -232,7 +236,8 @@ void RewriterBase::replaceOpWithIf(
          "incorrect number of values to replace operation");
 
   // Notify the rewriter subclass that we're about to replace this root.
-  notifyRootReplaced(op, newValues);
+  if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
+    rewriteListener->notifyOperationReplaced(op, newValues);
 
   // Replace each use of the results when the functor is true.
   bool replacedAllUses = true;
@@ -260,13 +265,15 @@ void RewriterBase::replaceOpWithinBlock(Operation *op, ValueRange newValues,
 /// the operation.
 void RewriterBase::replaceOp(Operation *op, ValueRange newValues) {
   // Notify the rewriter subclass that we're about to replace this root.
-  notifyRootReplaced(op, newValues);
+  if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
+    rewriteListener->notifyOperationReplaced(op, newValues);
 
   assert(op->getNumResults() == newValues.size() &&
          "incorrect # of replacement values");
   op->replaceAllUsesWith(newValues);
 
-  notifyOperationRemoved(op);
+  if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
+    rewriteListener->notifyOperationRemoved(op);
   op->erase();
 }
 
@@ -274,7 +281,8 @@ void RewriterBase::replaceOp(Operation *op, ValueRange newValues) {
 /// the given operation *must* be known to be dead.
 void RewriterBase::eraseOp(Operation *op) {
   assert(op->use_empty() && "expected 'op' to have no uses");
-  notifyOperationRemoved(op);
+  if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
+    rewriteListener->notifyOperationRemoved(op);
   op->erase();
 }
 

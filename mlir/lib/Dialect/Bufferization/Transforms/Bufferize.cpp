@@ -342,7 +342,7 @@ static bool hasTensorSemantics(Operation *op) {
 
 namespace {
 /// A rewriter that keeps track of extra information during bufferization.
-class BufferizationRewriter : public IRRewriter {
+class BufferizationRewriter : public IRRewriter, public RewriterBase::Listener {
 public:
   BufferizationRewriter(MLIRContext *ctx, DenseSet<Operation *> &erasedOps,
                         DenseSet<Operation *> &toMemrefOps,
@@ -352,18 +352,18 @@ public:
                         BufferizationStatistics *statistics)
       : IRRewriter(ctx), erasedOps(erasedOps), toMemrefOps(toMemrefOps),
         worklist(worklist), analysisState(options), opFilter(opFilter),
-        statistics(statistics) {}
+        statistics(statistics) {
+    setListener(this);
+  }
 
 protected:
   void notifyOperationRemoved(Operation *op) override {
-    IRRewriter::notifyOperationRemoved(op);
     erasedOps.insert(op);
     // Erase if present.
     toMemrefOps.erase(op);
   }
 
   void notifyOperationInserted(Operation *op) override {
-    IRRewriter::notifyOperationInserted(op);
     erasedOps.erase(op);
 
     // Gather statistics about allocs and deallocs.
