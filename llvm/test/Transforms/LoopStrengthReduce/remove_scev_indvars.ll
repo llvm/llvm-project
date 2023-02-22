@@ -16,7 +16,7 @@ for.body:
 
 ; CHECK: entry:
 ; CHECK: %0 = add i64 %n, %m
-; CHECK-NOT : %indvars.iv.next.prol
+; CHECK-NOT: %indvars.iv.next.prol
 ; CHECK-NOT: %indvars.iv.prol
 ; CHECK: %indvars.iv.unr = phi i64 [ %0, %for.exit ]
 for.exit:
