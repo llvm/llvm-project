@@ -1552,13 +1552,11 @@ define i6 @sdiv_distribute_mul_nsw_add_nsw_not_multiple_offset(i6 %x) {
   ret i6 %div
 }
 
-; negative test - constants must be evenly divisible
+; constants do not have to be evenly divisible with unsigned division
 
 define i6 @udiv_distribute_mul_nuw_add_nuw_not_multiple_offset(i6 %x) {
 ; CHECK-LABEL: @udiv_distribute_mul_nuw_add_nuw_not_multiple_offset(
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i6 [[X:%.*]], 3
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i6 [[MUL]], 7
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i6 [[ADD]], 3
+; CHECK-NEXT:    [[DIV:%.*]] = add nuw i6 [[X:%.*]], 2
 ; CHECK-NEXT:    ret i6 [[DIV]]
 ;
   %mul = mul nuw i6 %x, 3

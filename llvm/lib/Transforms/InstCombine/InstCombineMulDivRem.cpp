@@ -1027,16 +1027,20 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
 
     // Distribute div over add to eliminate a matching div/mul pair:
     // ((X * C2) + C1) / C2 --> X + C1/C2
+    // We need a multiple of the divisor for a signed add constant, but
+    // unsigned is fine with any constant pair.
     if (IsSigned &&
         match(Op0, m_NSWAdd(m_NSWMul(m_Value(X), m_SpecificInt(*C2)),
                             m_APInt(C1))) &&
-        isMultiple(*C1, *C2, Quotient, IsSigned))
+        isMultiple(*C1, *C2, Quotient, IsSigned)) {
       return BinaryOperator::CreateNSWAdd(X, ConstantInt::get(Ty, Quotient));
+    }
     if (!IsSigned &&
         match(Op0, m_NUWAdd(m_NUWMul(m_Value(X), m_SpecificInt(*C2)),
-                            m_APInt(C1))) &&
-        isMultiple(*C1, *C2, Quotient, IsSigned))
-      return BinaryOperator::CreateNUWAdd(X, ConstantInt::get(Ty, Quotient));
+                            m_APInt(C1)))) {
+      return BinaryOperator::CreateNUWAdd(X,
+                                          ConstantInt::get(Ty, C1->udiv(*C2)));
+    }
 
     if (!C2->isZero()) // avoid X udiv 0
       if (Instruction *FoldedDiv = foldBinOpIntoSelectOrPhi(I))
