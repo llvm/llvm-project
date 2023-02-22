@@ -1917,6 +1917,28 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
           }
   }
 
+  // zext(umin(x, y)) -> umin(zext(x), zext(y))
+  // zext(umax(x, y)) -> umax(zext(x), zext(y))
+  if (isa<SCEVUMinExpr>(Op) || isa<SCEVUMaxExpr>(Op)) {
+    auto *MinMax = cast<SCEVMinMaxExpr>(Op);
+    SmallVector<const SCEV *, 4> Operands;
+    for (auto *Operand : MinMax->operands())
+      Operands.push_back(getZeroExtendExpr(Operand, Ty));
+    if (isa<SCEVUMinExpr>(MinMax))
+      return getUMinExpr(Operands);
+    else
+      return getUMaxExpr(Operands);
+  }
+
+  // zext(umin_seq(x, y)) -> umin_seq(zext(x), zext(y))
+  if (auto *MinMax = dyn_cast<SCEVSequentialMinMaxExpr>(Op)) {
+    assert(isa<SCEVSequentialUMinExpr>(MinMax) && "Not supported!");
+    SmallVector<const SCEV *, 4> Operands;
+    for (auto *Operand : MinMax->operands())
+      Operands.push_back(getZeroExtendExpr(Operand, Ty));
+    return getUMinExpr(Operands, /*Sequential*/ true);
+  }
+
   // The cast wasn't folded; create an explicit cast node.
   // Recompute the insert position, as it may have been invalidated.
   if (const SCEV *S = UniqueSCEVs.FindNodeOrInsertPos(ID, IP)) return S;
@@ -2176,6 +2198,19 @@ const SCEV *ScalarEvolution::getSignExtendExprImpl(const SCEV *Op, Type *Ty,
   // away the sext build a zext instead.
   if (isKnownNonNegative(Op))
     return getZeroExtendExpr(Op, Ty, Depth + 1);
+
+  // sext(smin(x, y)) -> smin(sext(x), sext(y))
+  // sext(smax(x, y)) -> smax(sext(x), sext(y))
+  if (isa<SCEVSMinExpr>(Op) || isa<SCEVSMaxExpr>(Op)) {
+    auto *MinMax = cast<SCEVMinMaxExpr>(Op);
+    SmallVector<const SCEV *, 4> Operands;
+    for (auto *Operand : MinMax->operands())
+      Operands.push_back(getSignExtendExpr(Operand, Ty));
+    if (isa<SCEVSMinExpr>(MinMax))
+      return getSMinExpr(Operands);
+    else
+      return getSMaxExpr(Operands);
+  }
 
   // The cast wasn't folded; create an explicit cast node.
   // Recompute the insert position, as it may have been invalidated.

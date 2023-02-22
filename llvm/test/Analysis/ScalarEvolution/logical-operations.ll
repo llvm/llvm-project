@@ -707,9 +707,9 @@ define i32 @umin_seq_x_y_zext_of_umin(i8 %x, i8 %y) {
 ; CHECK-NEXT:    %umin.narrow = call i8 @llvm.umin.i8(i8 %y, i8 %x)
 ; CHECK-NEXT:    --> (%x umin %y) U: full-set S: full-set
 ; CHECK-NEXT:    %umin = zext i8 %umin.narrow to i32
-; CHECK-NEXT:    --> (zext i8 (%x umin %y) to i32) U: [0,256) S: [0,256)
+; CHECK-NEXT:    --> ((zext i8 %x to i32) umin (zext i8 %y to i32)) U: [0,256) S: [0,256)
 ; CHECK-NEXT:    %r = select i1 %x.is.zero, i32 0, i32 %umin
-; CHECK-NEXT:    --> ((zext i8 %x to i32) umin_seq (zext i8 (%x umin %y) to i32)) U: [0,256) S: [0,256)
+; CHECK-NEXT:    --> ((zext i8 %x to i32) umin_seq (zext i8 %y to i32)) U: [0,256) S: [0,256)
 ; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y_zext_of_umin
 ;
   %umin.narrow = call i8 @llvm.umin.i8(i8 %y, i8 %x)
