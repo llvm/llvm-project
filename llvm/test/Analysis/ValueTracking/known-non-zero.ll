@@ -20,9 +20,7 @@ define i1 @check_neg(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NE]])
 ; CHECK-NEXT:    [[Z:%.*]] = sub i8 0, [[X]]
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp ugt i8 [[Z]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[Y]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP0]], [[CMP1]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP0]]
 ;
   %ne = icmp ne i8 %x, 0
   call void @llvm.assume(i1 %ne)
@@ -40,9 +38,7 @@ define i1 @check_abs(i8 %x, i8 %y) {
 ; CHECK:       true:
 ; CHECK-NEXT:    [[Z:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 true)
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp ugt i8 [[Z]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[Y]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP0]], [[CMP1]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP0]]
 ; CHECK:       false:
 ; CHECK-NEXT:    ret i1 [[NE]]
 ;
@@ -89,9 +85,7 @@ define i1 @check_bitreverse(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NE]])
 ; CHECK-NEXT:    [[Z:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[X]])
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp ugt i8 [[Z]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[Y]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP0]], [[CMP1]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP0]]
 ;
   %ne = icmp ne i8 %x, 0
   call void @llvm.assume(i1 %ne)
@@ -108,9 +102,7 @@ define i1 @check_bswap(i16 %x, i16 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NE]])
 ; CHECK-NEXT:    [[Z:%.*]] = call i16 @llvm.bswap.i16(i16 [[X]])
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp ugt i16 [[Z]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i16 [[Y]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP0]], [[CMP1]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP0]]
 ;
   %ne = icmp ne i16 %x, 0
   call void @llvm.assume(i1 %ne)
@@ -130,9 +122,7 @@ define i1 @check_ctpop(i8 %x, i8 %y) {
 ; CHECK:       false:
 ; CHECK-NEXT:    [[Z:%.*]] = call i8 @llvm.ctpop.i8(i8 [[X]])
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp ugt i8 [[Z]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[Y]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP0]], [[CMP1]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP0]]
 ;
   %ne = icmp eq i8 %x, 0
   br i1 %ne, label %true, label %false
@@ -152,9 +142,7 @@ define i1 @check_add_sat(i8 %x, i8 %y, i8 %w) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NE]])
 ; CHECK-NEXT:    [[Z:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[X]], i8 [[Y:%.*]])
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp ugt i8 [[Z]], [[W:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[W]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP0]], [[CMP1]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP0]]
 ;
   %ne = icmp ne i8 %x, 0
   call void @llvm.assume(i1 %ne)
@@ -170,9 +158,7 @@ define <2 x i1> @check_add_sat_vec(<2 x i8> %x, <2 x i8> %y, <2 x i8> %w) {
 ; CHECK-NEXT:    [[YNZ:%.*]] = or <2 x i8> [[Y:%.*]], <i8 2, i8 1>
 ; CHECK-NEXT:    [[Z:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[X:%.*]], <2 x i8> [[YNZ]])
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp ugt <2 x i8> [[Z]], [[W:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq <2 x i8> [[W]], zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[CMP0]], [[CMP1]]
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP0]]
 ;
   %ynz = or <2 x i8> %y, <i8 2, i8 1>
   %z = call <2 x i8> @llvm.uadd.sat.2xi8(<2 x i8> %x, <2 x i8> %ynz)
