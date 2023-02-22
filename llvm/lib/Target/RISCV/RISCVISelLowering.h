@@ -601,6 +601,9 @@ public:
       unsigned NumParts, MVT PartVT, EVT ValueVT,
       std::optional<CallingConv::ID> CC) const override;
 
+  // Return the value of VLMax for the given vector type (i.e. SEW and LMUL)
+  SDValue computeVLMax(MVT VecVT, SDLoc DL, SelectionDAG &DAG) const;
+
   static RISCVII::VLMUL getLMUL(MVT VT);
   inline static unsigned computeVLMAX(unsigned VectorBits, unsigned EltSize,
                                       unsigned MinSize) {

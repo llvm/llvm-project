@@ -1166,7 +1166,7 @@ bool IsAllocatableDesignator(const Expr<SomeType> &expr) {
   // Allocatable sub-objects are not themselves allocatable (9.5.3.1 NOTE 2).
   if (const semantics::Symbol *
       sym{UnwrapWholeSymbolOrComponentOrCoarrayRef(expr)}) {
-    return semantics::IsAllocatable(*sym);
+    return semantics::IsAllocatable(sym->GetUltimate());
   }
   return false;
 }

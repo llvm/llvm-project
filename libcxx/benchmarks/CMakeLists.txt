@@ -107,7 +107,7 @@ endif()
 add_library(           cxx-benchmarks-flags-libcxx INTERFACE)
 target_link_libraries( cxx-benchmarks-flags-libcxx INTERFACE cxx-benchmarks-flags)
 target_compile_options(cxx-benchmarks-flags-libcxx INTERFACE ${SANITIZER_FLAGS} -Wno-user-defined-literals -Wno-suggest-override)
-target_link_options(   cxx-benchmarks-flags-libcxx INTERFACE -nodefaultlibs "-L${BENCHMARK_LIBCXX_INSTALL}/lib" ${SANITIZER_FLAGS})
+target_link_options(   cxx-benchmarks-flags-libcxx INTERFACE -nodefaultlibs "-L${BENCHMARK_LIBCXX_INSTALL}/lib" "-L${BENCHMARK_LIBCXX_INSTALL}/lib64" ${SANITIZER_FLAGS})
 
 set(libcxx_benchmark_targets)
 
@@ -158,6 +158,7 @@ endfunction()
 #==============================================================================
 set(BENCHMARK_TESTS
     algorithms.partition_point.bench.cpp
+    algorithms/equal.bench.cpp
     algorithms/lower_bound.bench.cpp
     algorithms/make_heap.bench.cpp
     algorithms/make_heap_then_sort_heap.bench.cpp

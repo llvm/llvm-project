@@ -1280,7 +1280,7 @@ func.func @bitcast(%arg0: vector<2x3xf32>) {
 
 func.func @cp_async(%arg0: !llvm.ptr<i8, 3>, %arg1: !llvm.ptr<i8, 1>) {
   // expected-error @below {{expected byte size to be either 4, 8 or 16.}}
-  nvvm.cp.async.shared.global %arg0, %arg1, 32
+  nvvm.cp.async.shared.global %arg0, %arg1, 32 : !llvm.ptr<i8, 3>, !llvm.ptr<i8, 1>
   return
 }
 
@@ -1288,7 +1288,7 @@ func.func @cp_async(%arg0: !llvm.ptr<i8, 3>, %arg1: !llvm.ptr<i8, 1>) {
 
 func.func @cp_async(%arg0: !llvm.ptr<i8, 3>, %arg1: !llvm.ptr<i8, 1>) {
   // expected-error @below {{bypass l1 is only support for 16 bytes copy.}}
-  nvvm.cp.async.shared.global %arg0, %arg1, 8 {bypass_l1}
+  nvvm.cp.async.shared.global %arg0, %arg1, 8 {bypass_l1} : !llvm.ptr<i8, 3>, !llvm.ptr<i8, 1>
   return
 }
 

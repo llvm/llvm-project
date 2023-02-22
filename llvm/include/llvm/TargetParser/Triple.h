@@ -886,8 +886,17 @@ public:
   bool isPPC64ELFv2ABI() const {
     return (getArch() == Triple::ppc64 &&
             ((getOS() == Triple::FreeBSD &&
-            (getOSMajorVersion() >= 13 || getOSVersion().empty())) ||
-            getOS() == Triple::OpenBSD || isMusl()));
+              (getOSMajorVersion() >= 13 || getOSVersion().empty())) ||
+             getOS() == Triple::OpenBSD || isMusl()));
+  }
+
+  /// Tests whether the target 32-bit PowerPC uses Secure PLT.
+  bool isPPC32SecurePlt() const {
+    return ((getArch() == Triple::ppc || getArch() == Triple::ppcle) &&
+            ((getOS() == Triple::FreeBSD &&
+              (getOSMajorVersion() >= 13 || getOSVersion().empty())) ||
+             getOS() == Triple::NetBSD || getOS() == Triple::OpenBSD ||
+             isMusl()));
   }
 
   /// Tests whether the target is 32-bit RISC-V.

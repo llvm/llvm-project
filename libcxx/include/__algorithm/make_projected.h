@@ -55,25 +55,12 @@ struct _ProjectedPred {
 
 };
 
-template <class _Pred, class _Proj, class = void>
-struct __can_use_pristine_comp : false_type {};
-
-template <class _Pred, class _Proj>
-struct __can_use_pristine_comp<_Pred, _Proj, __enable_if_t<
-    !is_member_pointer<typename decay<_Pred>::type>::value && (
-#if _LIBCPP_STD_VER >= 20
-      is_same<typename decay<_Proj>::type, identity>::value ||
-#endif
-      is_same<typename decay<_Proj>::type, __identity>::value
-    )
-> > : true_type {};
-
-template <class _Pred, class _Proj>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR static
-__enable_if_t<
-    !__can_use_pristine_comp<_Pred, _Proj>::value,
-    _ProjectedPred<_Pred, _Proj>
->
+template <class _Pred,
+          class _Proj,
+          __enable_if_t<!(!is_member_pointer<typename decay<_Pred>::type>::value &&
+                            __is_identity<typename decay<_Proj>::type>::value),
+                        int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR static _ProjectedPred<_Pred, _Proj>
 __make_projected(_Pred& __pred, _Proj& __proj) {
   return _ProjectedPred<_Pred, _Proj>(__pred, __proj);
 }
@@ -81,13 +68,12 @@ __make_projected(_Pred& __pred, _Proj& __proj) {
 // Avoid creating the functor and just use the pristine comparator -- for certain algorithms, this would enable
 // optimizations that rely on the type of the comparator. Additionally, this results in less layers of indirection in
 // the call stack when the comparator is invoked, even in an unoptimized build.
-template <class _Pred, class _Proj>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR static
-__enable_if_t<
-    __can_use_pristine_comp<_Pred, _Proj>::value,
-    _Pred&
->
-__make_projected(_Pred& __pred, _Proj&) {
+template <class _Pred,
+          class _Proj,
+          __enable_if_t<!is_member_pointer<typename decay<_Pred>::type>::value &&
+                          __is_identity<typename decay<_Proj>::type>::value,
+                        int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR static _Pred& __make_projected(_Pred& __pred, _Proj&) {
   return __pred;
 }
 
@@ -102,7 +88,7 @@ namespace ranges {
 template <class _Comp, class _Proj1, class _Proj2>
 _LIBCPP_HIDE_FROM_ABI constexpr static
 decltype(auto) __make_projected_comp(_Comp& __comp, _Proj1& __proj1, _Proj2& __proj2) {
-  if constexpr (same_as<decay_t<_Proj1>, identity> && same_as<decay_t<_Proj2>, identity> &&
+  if constexpr (__is_identity<decay_t<_Proj1>>::value && __is_identity<decay_t<_Proj2>>::value &&
                 !is_member_pointer_v<decay_t<_Comp>>) {
     // Avoid creating the lambda and just use the pristine comparator -- for certain algorithms, this would enable
     // optimizations that rely on the type of the comparator.

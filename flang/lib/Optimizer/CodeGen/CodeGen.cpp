@@ -3829,7 +3829,7 @@ public:
     // Convert math-like dialect operations, which can be produced
     // when late math lowering mode is used, into llvm dialect.
     mlir::populateMathToLLVMConversionPatterns(typeConverter, pattern);
-    mlir::populateMathToLibmConversionPatterns(pattern, /*benefit=*/0);
+    mlir::populateMathToLibmConversionPatterns(pattern);
     mlir::populateComplexToLLVMConversionPatterns(typeConverter, pattern);
     mlir::ConversionTarget target{*context};
     target.addLegalDialect<mlir::LLVM::LLVMDialect>();
