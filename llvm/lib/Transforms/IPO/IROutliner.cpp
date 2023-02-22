@@ -179,10 +179,8 @@ static void getSortedConstantKeys(std::vector<Value *> &SortedKeys,
 
   stable_sort(SortedKeys, [](const Value *LHS, const Value *RHS) {
     assert(LHS && RHS && "Expected non void values.");
-    const ConstantInt *LHSC = dyn_cast<ConstantInt>(LHS);
-    const ConstantInt *RHSC = dyn_cast<ConstantInt>(RHS);
-    assert(RHSC && "Not a constant integer in return value?");
-    assert(LHSC && "Not a constant integer in return value?");
+    const ConstantInt *LHSC = cast<ConstantInt>(LHS);
+    const ConstantInt *RHSC = cast<ConstantInt>(RHS);
 
     return LHSC->getLimitedValue() < RHSC->getLimitedValue();
   });
