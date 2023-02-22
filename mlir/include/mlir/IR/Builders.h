@@ -253,10 +253,32 @@ public:
   // Listeners
   //===--------------------------------------------------------------------===//
 
+  /// Base class for listeners.
+  struct ListenerBase {
+    /// The kind of listener.
+    enum class Kind {
+      /// OpBuilder::Listener or user-derived class.
+      OpBuilderListener = 0,
+
+      /// RewriterBase::Listener or user-derived class.
+      RewriterBaseListener = 1
+    };
+
+    Kind getKind() const { return kind; }
+
+  protected:
+    ListenerBase(Kind kind) : kind(kind) {}
+
+  private:
+    const Kind kind;
+  };
+
   /// This class represents a listener that may be used to hook into various
   /// actions within an OpBuilder.
-  struct Listener {
-    virtual ~Listener();
+  struct Listener : public ListenerBase {
+    Listener() : ListenerBase(ListenerBase::Kind::OpBuilderListener) {}
+
+    virtual ~Listener() = default;
 
     /// Notification handler for when an operation is inserted into the builder.
     /// `op` is the operation that was inserted.
@@ -265,6 +287,9 @@ public:
     /// Notification handler for when a block is created using the builder.
     /// `block` is the block that was created.
     virtual void notifyBlockCreated(Block *block) {}
+
+  protected:
+    Listener(Kind kind) : ListenerBase(kind) {}
   };
 
   /// Sets the listener of this builder to the one provided.
@@ -537,14 +562,16 @@ public:
     return cast<OpT>(cloneWithoutRegions(*op.getOperation()));
   }
 
+protected:
+  /// The optional listener for events of this builder.
+  Listener *listener;
+
 private:
   /// The current block this builder is inserting into.
   Block *block = nullptr;
   /// The insertion point within the block that this builder is inserting
   /// before.
   Block::iterator insertPoint;
-  /// The optional listener for events of this builder.
-  Listener *listener;
 };
 
 } // namespace mlir
