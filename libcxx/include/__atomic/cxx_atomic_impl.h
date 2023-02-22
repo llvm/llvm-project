@@ -12,10 +12,12 @@
 #include <__atomic/is_always_lock_free.h>
 #include <__atomic/memory_order.h>
 #include <__config>
+#include <__type_traits/conditional.h>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_trivially_copyable.h>
 #include <__type_traits/remove_const.h>
 #include <cstddef>
+#include <cstring>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
