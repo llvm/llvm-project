@@ -1159,17 +1159,10 @@ TextAPIReader::get(MemoryBufferRef InputBuffer) {
   return std::move(File);
 }
 
-Error TextAPIWriter::writeToStream(raw_ostream &OS, const InterfaceFile &File,
-                                   bool Compact) {
+Error TextAPIWriter::writeToStream(raw_ostream &OS, const InterfaceFile &File) {
   TextAPIContext Ctx;
   Ctx.Path = std::string(File.getPath());
   Ctx.FileKind = File.getFileType();
-
-  // Write out in JSON format.
-  if (Ctx.FileKind >= FileType::TBD_V5) {
-    return serializeInterfaceFileToJSON(OS, File, Compact);
-  }
-
   llvm::yaml::Output YAMLOut(OS, &Ctx, /*WrapColumn=*/80);
 
   std::vector<const InterfaceFile *> Files;
