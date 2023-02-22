@@ -4,7 +4,7 @@
 ! RUN:        -Wintrinsics-std -Wline-truncation -Wno-align-commons -Wno-overwrite-recursive \
 ! RUN:        -Wno-tabs -Wreal-q-constant -Wsurprising -Wunderflow -Wunused-parameter \
 ! RUN:        -Wrealloc-lhs -Wrealloc-lhs-all -Wfrontend-loop-interchange -Wtarget-lifetime %s \
-! RUN:        2>&1 | FileCheck %s
+! RUN:        -c 2>&1 | FileCheck %s
 
 ! CHECK: The warning option '-Wextra' is not supported
 ! CHECK-NEXT: The warning option '-Waliasing' is not supported
