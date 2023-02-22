@@ -1083,7 +1083,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
     // Buffer case.
 
     const unsigned ActiveBits = DemandedElts.getActiveBits();
-    const unsigned UnusedComponentsAtFront = DemandedElts.countTrailingZeros();
+    const unsigned UnusedComponentsAtFront = DemandedElts.countr_zero();
 
     // Start assuming the prefix of elements is demanded, but possibly clear
     // some other bits if there are trailing zeros (unused components at front)
@@ -1180,7 +1180,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
 
   if (NewNumElts == 1) {
     return IC.Builder.CreateInsertElement(UndefValue::get(IIVTy), NewCall,
-                                          DemandedElts.countTrailingZeros());
+                                          DemandedElts.countr_zero());
   }
 
   SmallVector<int, 8> EltMask;

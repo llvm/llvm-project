@@ -105,7 +105,7 @@ KnownBits KnownBits::sextInReg(unsigned SrcBitWidth) const {
 KnownBits KnownBits::makeGE(const APInt &Val) const {
   // Count the number of leading bit positions where our underlying value is
   // known to be less than or equal to Val.
-  unsigned N = (Zero | Val).countLeadingOnes();
+  unsigned N = (Zero | Val).countl_one();
 
   // For each of those bit positions, if Val has a 1 in that bit then our
   // underlying value must also have a 1.
@@ -432,7 +432,7 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
   // fit in the bitwidth (it must not overflow).
   bool HasOverflow;
   APInt UMaxResult = UMaxLHS.umul_ov(UMaxRHS, HasOverflow);
-  unsigned LeadZ = HasOverflow ? 0 : UMaxResult.countLeadingZeros();
+  unsigned LeadZ = HasOverflow ? 0 : UMaxResult.countl_zero();
 
   // The result of the bottom bits of an integer multiply can be
   // inferred by looking at the bottom bits of both operands and
@@ -481,8 +481,8 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
 
   // How many times we'd be able to divide each argument by 2 (shr by 1).
   // This gives us the number of trailing zeros on the multiplication result.
-  unsigned TrailBitsKnown0 = (LHS.Zero | LHS.One).countTrailingOnes();
-  unsigned TrailBitsKnown1 = (RHS.Zero | RHS.One).countTrailingOnes();
+  unsigned TrailBitsKnown0 = (LHS.Zero | LHS.One).countr_one();
+  unsigned TrailBitsKnown1 = (RHS.Zero | RHS.One).countr_one();
   unsigned TrailZero0 = LHS.countMinTrailingZeros();
   unsigned TrailZero1 = RHS.countMinTrailingZeros();
   unsigned TrailZ = TrailZero0 + TrailZero1;

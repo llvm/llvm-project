@@ -149,9 +149,8 @@ OpFoldResult math::SinOp::fold(FoldAdaptor adaptor) {
 
 OpFoldResult math::CountLeadingZerosOp::fold(FoldAdaptor adaptor) {
   return constFoldUnaryOp<IntegerAttr>(
-      adaptor.getOperands(), [](const APInt &a) {
-        return APInt(a.getBitWidth(), a.countLeadingZeros());
-      });
+      adaptor.getOperands(),
+      [](const APInt &a) { return APInt(a.getBitWidth(), a.countl_zero()); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -160,9 +159,8 @@ OpFoldResult math::CountLeadingZerosOp::fold(FoldAdaptor adaptor) {
 
 OpFoldResult math::CountTrailingZerosOp::fold(FoldAdaptor adaptor) {
   return constFoldUnaryOp<IntegerAttr>(
-      adaptor.getOperands(), [](const APInt &a) {
-        return APInt(a.getBitWidth(), a.countTrailingZeros());
-      });
+      adaptor.getOperands(),
+      [](const APInt &a) { return APInt(a.getBitWidth(), a.countr_zero()); });
 }
 
 //===----------------------------------------------------------------------===//

@@ -374,7 +374,7 @@ processSTIPredicate(STIPredicateFunction &Fn,
                  unsigned RhsCountPopulation = Rhs.popcount();
                  return ((LhsCountPopulation < RhsCountPopulation) ||
                          ((LhsCountPopulation == RhsCountPopulation) &&
-                          (Lhs.countLeadingZeros() > Rhs.countLeadingZeros())));
+                          (Lhs.countl_zero() > Rhs.countl_zero())));
                };
 
                if (LhsMasks.first != RhsMasks.first)

@@ -230,24 +230,16 @@ public:
   KnownBits makeGE(const APInt &Val) const;
 
   /// Returns the minimum number of trailing zero bits.
-  unsigned countMinTrailingZeros() const {
-    return Zero.countTrailingOnes();
-  }
+  unsigned countMinTrailingZeros() const { return Zero.countr_one(); }
 
   /// Returns the minimum number of trailing one bits.
-  unsigned countMinTrailingOnes() const {
-    return One.countTrailingOnes();
-  }
+  unsigned countMinTrailingOnes() const { return One.countr_one(); }
 
   /// Returns the minimum number of leading zero bits.
-  unsigned countMinLeadingZeros() const {
-    return Zero.countLeadingOnes();
-  }
+  unsigned countMinLeadingZeros() const { return Zero.countl_one(); }
 
   /// Returns the minimum number of leading one bits.
-  unsigned countMinLeadingOnes() const {
-    return One.countLeadingOnes();
-  }
+  unsigned countMinLeadingOnes() const { return One.countl_one(); }
 
   /// Returns the number of times the sign bit is replicated into the other
   /// bits.
@@ -270,24 +262,16 @@ public:
   }
 
   /// Returns the maximum number of trailing zero bits possible.
-  unsigned countMaxTrailingZeros() const {
-    return One.countTrailingZeros();
-  }
+  unsigned countMaxTrailingZeros() const { return One.countr_zero(); }
 
   /// Returns the maximum number of trailing one bits possible.
-  unsigned countMaxTrailingOnes() const {
-    return Zero.countTrailingZeros();
-  }
+  unsigned countMaxTrailingOnes() const { return Zero.countr_zero(); }
 
   /// Returns the maximum number of leading zero bits possible.
-  unsigned countMaxLeadingZeros() const {
-    return One.countLeadingZeros();
-  }
+  unsigned countMaxLeadingZeros() const { return One.countl_zero(); }
 
   /// Returns the maximum number of leading one bits possible.
-  unsigned countMaxLeadingOnes() const {
-    return Zero.countLeadingZeros();
-  }
+  unsigned countMaxLeadingOnes() const { return Zero.countl_zero(); }
 
   /// Returns the number of bits known to be one.
   unsigned countMinPopulation() const { return One.popcount(); }

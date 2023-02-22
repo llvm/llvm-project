@@ -4379,7 +4379,7 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
               if ((C->getAPInt() + NewF.BaseOffset)
                       .abs()
                       .slt(std::abs(NewF.BaseOffset)) &&
-                  (C->getAPInt() + NewF.BaseOffset).countTrailingZeros() >=
+                  (C->getAPInt() + NewF.BaseOffset).countr_zero() >=
                       (unsigned)llvm::countr_zero<uint64_t>(NewF.BaseOffset))
                 goto skip_formula;
 

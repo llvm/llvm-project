@@ -4298,12 +4298,12 @@ bool AMDGPUInstructionSelector::isUnneededShiftMask(const MachineInstr &MI,
   if (!RHS)
     return false;
 
-  if (RHS->countTrailingOnes() >= ShAmtBits)
+  if (RHS->countr_one() >= ShAmtBits)
     return true;
 
   const APInt &LHSKnownZeros =
       KnownBits->getKnownZeroes(MI.getOperand(1).getReg());
-  return (LHSKnownZeros | *RHS).countTrailingOnes() >= ShAmtBits;
+  return (LHSKnownZeros | *RHS).countr_one() >= ShAmtBits;
 }
 
 // Return the wave level SGPR base address if this is a wave address.

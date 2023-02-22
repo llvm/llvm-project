@@ -4312,7 +4312,7 @@ void IEEEFloat::toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
   }
 
   // Ignore trailing binary zeros.
-  int trailingZeros = significand.countTrailingZeros();
+  int trailingZeros = significand.countr_zero();
   exp += trailingZeros;
   significand.lshrInPlace(trailingZeros);
 
