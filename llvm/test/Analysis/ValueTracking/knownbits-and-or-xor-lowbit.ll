@@ -209,10 +209,7 @@ define <2 x i1> @add_XY_or_bit0_is_one_fail(<2 x i8> %x, <2 x i8> %C) nounwind {
 ;; These tests are just to check if it can simplify using demanded bits path.
 define <2 x i32> @add_and_eval_vec(<2 x i32> %x, <2 x i32> %C) {
 ; CHECK-LABEL: @add_and_eval_vec(
-; CHECK-NEXT:    [[Y:%.*]] = add <2 x i32> [[X:%.*]], <i32 1, i32 1>
-; CHECK-NEXT:    [[Z:%.*]] = and <2 x i32> [[Y]], [[X]]
-; CHECK-NEXT:    [[B:%.*]] = shl <2 x i32> [[Z]], <i32 31, i32 31>
-; CHECK-NEXT:    ret <2 x i32> [[B]]
+; CHECK-NEXT:    ret <2 x i32> zeroinitializer
 ;
   %y = add <2 x i32> %x, <i32 1, i32 1>
   %z = and <2 x i32> %x, %y
@@ -224,10 +221,7 @@ define <2 x i32> @add_and_eval_vec(<2 x i32> %x, <2 x i32> %C) {
 
 define <2 x i32> @add_xor_eval_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @add_xor_eval_vec(
-; CHECK-NEXT:    [[Y:%.*]] = add <2 x i32> [[X:%.*]], <i32 1, i32 1>
-; CHECK-NEXT:    [[Z:%.*]] = xor <2 x i32> [[Y]], [[X]]
-; CHECK-NEXT:    [[B:%.*]] = and <2 x i32> [[Z]], <i32 1, i32 1>
-; CHECK-NEXT:    ret <2 x i32> [[B]]
+; CHECK-NEXT:    ret <2 x i32> <i32 1, i32 1>
 ;
   %y = add <2 x i32> %x, <i32 1, i32 1>
   %z = xor <2 x i32> %y, %x
@@ -237,10 +231,7 @@ define <2 x i32> @add_xor_eval_vec(<2 x i32> %x) {
 
 define <2 x i32> @add_or_eval_vec(<2 x i32> %x, <2 x i32> %C) {
 ; CHECK-LABEL: @add_or_eval_vec(
-; CHECK-NEXT:    [[Y:%.*]] = add <2 x i32> [[X:%.*]], <i32 1, i32 1>
-; CHECK-NEXT:    [[Z:%.*]] = or <2 x i32> [[Y]], [[X]]
-; CHECK-NEXT:    [[B:%.*]] = and <2 x i32> [[Z]], <i32 1, i32 1>
-; CHECK-NEXT:    ret <2 x i32> [[B]]
+; CHECK-NEXT:    ret <2 x i32> <i32 1, i32 1>
 ;
   %y = add <2 x i32> %x, <i32 1, i32 1>
   %z = or <2 x i32> %y, %x
