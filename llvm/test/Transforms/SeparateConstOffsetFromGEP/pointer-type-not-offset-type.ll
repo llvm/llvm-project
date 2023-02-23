@@ -4,8 +4,8 @@ target datalayout = "p0:64:64:64-p1:128:128:128:32"
 
 define void @should_be_trunc(ptr addrspace(1) %ptr,  i64 %index, ptr %result) {
 ; CHECK-LABEL: @should_be_trunc(
-; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i64 [[INDEX:%.*]] to i128
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr addrspace(1), ptr addrspace(1) [[PTR:%.*]], i128 [[IDXPROM]]
+; CHECK-NEXT:    [[IDXPROM:%.*]] = trunc i64 [[INDEX:%.*]] to i32
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr addrspace(1), ptr addrspace(1) [[PTR:%.*]], i32 [[IDXPROM]]
 ; CHECK-NEXT:    store ptr addrspace(1) [[GEP]], ptr [[RESULT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
