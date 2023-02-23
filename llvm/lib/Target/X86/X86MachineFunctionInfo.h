@@ -149,6 +149,9 @@ public:
 
   bool getRestoreBasePointer() const { return RestoreBasePointerOffset!=0; }
   void setRestoreBasePointer(const MachineFunction *MF);
+  void setRestoreBasePointer(unsigned CalleeSavedFrameSize) {
+    RestoreBasePointerOffset = -CalleeSavedFrameSize;
+  }
   int getRestoreBasePointerOffset() const {return RestoreBasePointerOffset; }
 
   DenseMap<int, unsigned>& getWinEHXMMSlotInfo() { return WinEHXMMSlotInfo; }
