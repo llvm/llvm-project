@@ -1529,6 +1529,14 @@ public:
     return getFeatureBits()[AMDGPU::FeatureIntClamp];
   }
 
+  bool hasPartialNSAEncoding() const {
+    return getFeatureBits()[AMDGPU::FeaturePartialNSAEncoding];
+  }
+
+  unsigned getNSAMaxSize(bool HasSampler = false) const {
+    return AMDGPU::getNSAMaxSize(getSTI(), HasSampler);
+  }
+
   AMDGPUTargetStreamer &getTargetStreamer() {
     MCTargetStreamer &TS = *getParser().getStreamer().getTargetStreamer();
     return static_cast<AMDGPUTargetStreamer &>(TS);
@@ -3813,7 +3821,17 @@ bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst) {
   unsigned ExpectedAddrSize =
       AMDGPU::getAddrSizeMIMGOp(BaseOpcode, DimInfo, IsA16, hasG16());
 
-  if (!IsNSA) {
+  if (IsNSA) {
+    if (hasPartialNSAEncoding() &&
+        ExpectedAddrSize >
+            getNSAMaxSize(Desc.TSFlags & SIInstrFlags::VSAMPLE)) {
+      int VAddrLastIdx = SrsrcIdx - 1;
+      unsigned VAddrLastSize =
+          AMDGPU::getRegOperandSize(getMRI(), Desc, VAddrLastIdx) / 4;
+
+      return VAddrLastIdx - VAddr0Idx + VAddrLastSize == ExpectedAddrSize;
+    }
+  } else {
     if (ExpectedAddrSize > 12)
       ExpectedAddrSize = 16;
 
@@ -3822,19 +3840,6 @@ bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst) {
     // before 160b/192b/224b types were directly supported.
     if (ActualAddrSize == 8 && (ExpectedAddrSize >= 5 && ExpectedAddrSize <= 7))
       return true;
-  }
-
-  if (Desc.TSFlags & SIInstrFlags::VSAMPLE) {
-    if (ExpectedAddrSize > 3) {
-      int VAddr3Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr3);
-      unsigned Vadd3AddrSize =
-          AMDGPU::getRegOperandSize(getMRI(), Desc, VAddr3Idx) / 4;
-      // Allow oversized 16 VGPR vaddr when only 9 VGPRs for vaddr3 are required
-      if (Vadd3AddrSize == 16 && ExpectedAddrSize == 3 + 9)
-        return true;
-
-      return 3 + Vadd3AddrSize == ExpectedAddrSize;
-    }
   }
 
   return ActualAddrSize == ExpectedAddrSize;

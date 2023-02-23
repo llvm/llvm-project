@@ -218,3 +218,8 @@ SYMBOL(ssize, std::, <string_view>)
 SYMBOL(ssize, std::, <unordered_map>)
 SYMBOL(ssize, std::, <unordered_set>)
 SYMBOL(ssize, std::, <vector>)
+
+// std::get has a few variants for different types (tuple, array, pair etc)
+// which is tricky to disambiguate without type information.
+// Don't set any header for it, as it comes with the type header.
+SYMBOL(get, std::, /*no headers*/)

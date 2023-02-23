@@ -2102,6 +2102,17 @@ bool hasPackedD16(const MCSubtargetInfo &STI) {
          !isSI(STI);
 }
 
+unsigned getNSAMaxSize(const MCSubtargetInfo &STI, bool HasSampler) {
+  auto Version = getIsaVersion(STI.getCPU());
+  if (Version.Major == 10)
+    return Version.Minor >= 3 ? 13 : 5;
+  if (Version.Major == 11)
+    return 5;
+  if (Version.Major >= 12)
+    return HasSampler ? 4 : 5;
+  return 0;
+}
+
 bool isSI(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureSouthernIslands);
 }
