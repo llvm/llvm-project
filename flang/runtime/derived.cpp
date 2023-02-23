@@ -225,14 +225,18 @@ void Destroy(const Descriptor &descriptor, bool finalize,
   std::size_t myComponents{componentDesc.Elements()};
   std::size_t elements{descriptor.Elements()};
   std::size_t byteStride{descriptor.ElementBytes()};
+  SubscriptValue at[maxRank];
+  descriptor.GetLowerBounds(at);
   for (std::size_t k{0}; k < myComponents; ++k) {
     const auto &comp{
         *componentDesc.ZeroBasedIndexedElement<typeInfo::Component>(k)};
     if (comp.genre() == typeInfo::Component::Genre::Allocatable ||
         comp.genre() == typeInfo::Component::Genre::Automatic) {
       for (std::size_t j{0}; j < elements; ++j) {
-        descriptor.OffsetElement<Descriptor>(j * byteStride + comp.offset())
-            ->Deallocate();
+        Descriptor *d{reinterpret_cast<Descriptor *>(
+            descriptor.Element<char>(at) + comp.offset())};
+        d->Deallocate();
+        descriptor.IncrementSubscripts(at);
       }
     }
   }
