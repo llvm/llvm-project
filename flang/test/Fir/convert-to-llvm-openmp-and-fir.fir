@@ -72,7 +72,6 @@ func.func @_QPsb2(%arg0: !fir.ref<i32> {fir.bindc_name = "x"}, %arg1: !fir.ref<i
 // CHECK: llvm.return
 // CHECK: }
 
-
 // -----
 
 func.func @_QPsb(%arr: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "arr"}) {
@@ -218,6 +217,8 @@ func.func @_QPsimd1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref
 // CHECK: llvm.return
 // CHECK: }
 
+// -----
+
 func.func @_QPomp_target_data() {
   %0 = fir.alloca !fir.array<1024xi32> {bindc_name = "a", uniq_name = "_QFomp_target_dataEa"}
   %1 = fir.alloca !fir.array<1024xi32> {bindc_name = "b", uniq_name = "_QFomp_target_dataEb"}
@@ -241,6 +242,84 @@ func.func @_QPomp_target_data() {
 // CHECK:           omp.target_exit_data   map((from -> %[[VAL_1]] : !llvm.ptr<array<1024 x i32>>), (from -> %[[VAL_3]] : !llvm.ptr<array<1024 x i32>>), (release -> %[[VAL_5]] : !llvm.ptr<array<1024 x i32>>), (always, delete -> %[[VAL_7]] : !llvm.ptr<array<1024 x i32>>))
 // CHECK:           llvm.return
 // CHECK:         }
+
+// -----
+
+func.func @_QPopenmp_target_data_region() {
+  %0 = fir.alloca !fir.array<1024xi32> {bindc_name = "a", uniq_name = "_QFopenmp_target_data_regionEa"}
+  %1 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFopenmp_target_data_regionEi"}
+  omp.target_data   map((tofrom -> %0 : !fir.ref<!fir.array<1024xi32>>)) {
+    %c1_i32 = arith.constant 1 : i32
+    %2 = fir.convert %c1_i32 : (i32) -> index
+    %c1024_i32 = arith.constant 1024 : i32
+    %3 = fir.convert %c1024_i32 : (i32) -> index
+    %c1 = arith.constant 1 : index
+    %4 = fir.convert %2 : (index) -> i32
+    %5:2 = fir.do_loop %arg0 = %2 to %3 step %c1 iter_args(%arg1 = %4) -> (index, i32) {
+      fir.store %arg1 to %1 : !fir.ref<i32>
+      %6 = fir.load %1 : !fir.ref<i32>
+      %7 = fir.load %1 : !fir.ref<i32>
+      %8 = fir.convert %7 : (i32) -> i64
+      %c1_i64 = arith.constant 1 : i64
+      %9 = arith.subi %8, %c1_i64 : i64
+      %10 = fir.coordinate_of %0, %9 : (!fir.ref<!fir.array<1024xi32>>, i64) -> !fir.ref<i32>
+      fir.store %6 to %10 : !fir.ref<i32>
+      %11 = arith.addi %arg0, %c1 : index
+      %12 = fir.convert %c1 : (index) -> i32
+      %13 = fir.load %1 : !fir.ref<i32>
+      %14 = arith.addi %13, %12 : i32
+      fir.result %11, %14 : index, i32
+    }
+    fir.store %5#1 to %1 : !fir.ref<i32>
+    omp.terminator
+  }
+  return
+}
+
+// CHECK-LABEL:   llvm.func @_QPopenmp_target_data_region() {
+// CHECK:           %[[VAL_0:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:           %[[VAL_1:.*]] = llvm.alloca %[[VAL_0]] x !llvm.array<1024 x i32> {bindc_name = "a", in_type = !fir.array<1024xi32>, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFopenmp_target_data_regionEa"} : (i64) -> !llvm.ptr<array<1024 x i32>>
+// CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:           %[[VAL_3:.*]] = llvm.alloca %[[VAL_2]] x i32 {bindc_name = "i", in_type = i32, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFopenmp_target_data_regionEi"} : (i64) -> !llvm.ptr<i32>
+// CHECK:           omp.target_data   map((tofrom -> %[[VAL_1]] : !llvm.ptr<array<1024 x i32>>)) {
+// CHECK:             %[[VAL_4:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK:             %[[VAL_5:.*]] = llvm.sext %[[VAL_4]] : i32 to i64
+// CHECK:             %[[VAL_6:.*]] = llvm.mlir.constant(1024 : i32) : i32
+// CHECK:             %[[VAL_7:.*]] = llvm.sext %[[VAL_6]] : i32 to i64
+// CHECK:             %[[VAL_8:.*]] = llvm.mlir.constant(1 : index) : i64
+// CHECK:             %[[VAL_9:.*]] = llvm.trunc %[[VAL_5]] : i64 to i32
+// CHECK:             %[[VAL_10:.*]] = llvm.sub %[[VAL_7]], %[[VAL_5]]  : i64
+// CHECK:             %[[VAL_11:.*]] = llvm.add %[[VAL_10]], %[[VAL_8]]  : i64
+// CHECK:             llvm.br ^bb1(%[[VAL_5]], %[[VAL_9]], %[[VAL_11]] : i64, i32, i64)
+// CHECK:           ^bb1(%[[VAL_12:.*]]: i64, %[[VAL_13:.*]]: i32, %[[VAL_14:.*]]: i64):
+// CHECK:             %[[VAL_15:.*]] = llvm.mlir.constant(0 : index) : i64
+// CHECK:             %[[VAL_16:.*]] = llvm.icmp "sgt" %[[VAL_14]], %[[VAL_15]] : i64
+// CHECK:             llvm.cond_br %[[VAL_16]], ^bb2, ^bb3
+// CHECK:           ^bb2:
+// CHECK:             llvm.store %[[VAL_13]], %[[VAL_3]] : !llvm.ptr<i32>
+// CHECK:             %[[VAL_17:.*]] = llvm.load %[[VAL_3]] : !llvm.ptr<i32>
+// CHECK:             %[[VAL_18:.*]] = llvm.load %[[VAL_3]] : !llvm.ptr<i32>
+// CHECK:             %[[VAL_19:.*]] = llvm.sext %[[VAL_18]] : i32 to i64
+// CHECK:             %[[VAL_20:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:             %[[VAL_21:.*]] = llvm.sub %[[VAL_19]], %[[VAL_20]]  : i64
+// CHECK:             %[[VAL_22:.*]] = llvm.getelementptr %[[VAL_1]][0, %[[VAL_21]]] : (!llvm.ptr<array<1024 x i32>>, i64) -> !llvm.ptr<i32>
+// CHECK:             llvm.store %[[VAL_17]], %[[VAL_22]] : !llvm.ptr<i32>
+// CHECK:             %[[VAL_23:.*]] = llvm.add %[[VAL_12]], %[[VAL_8]]  : i64
+// CHECK:             %[[VAL_24:.*]] = llvm.trunc %[[VAL_8]] : i64 to i32
+// CHECK:             %[[VAL_25:.*]] = llvm.load %[[VAL_3]] : !llvm.ptr<i32>
+// CHECK:             %[[VAL_26:.*]] = llvm.add %[[VAL_25]], %[[VAL_24]]  : i32
+// CHECK:             %[[VAL_27:.*]] = llvm.add %[[VAL_12]], %[[VAL_8]]  : i64
+// CHECK:             %[[VAL_28:.*]] = llvm.mlir.constant(1 : index) : i64
+// CHECK:             %[[VAL_29:.*]] = llvm.sub %[[VAL_14]], %[[VAL_28]]  : i64
+// CHECK:             llvm.br ^bb1(%[[VAL_27]], %[[VAL_26]], %[[VAL_29]] : i64, i32, i64)
+// CHECK:           ^bb3:
+// CHECK:             llvm.store %[[VAL_13]], %[[VAL_3]] : !llvm.ptr<i32>
+// CHECK:             omp.terminator
+// CHECK:           }
+// CHECK:           llvm.return
+// CHECK:         }
+
+// -----
 
 func.func @_QPsimdloop_with_nested_loop() {
   %0 = fir.alloca i32 {adapt.valuebyref}

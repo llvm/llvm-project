@@ -151,24 +151,23 @@ struct LegalizeDataOpForLLVMTranslation : public ConvertOpToLLVMPattern<Op> {
 
 void mlir::configureOpenMPToLLVMConversionLegality(
     ConversionTarget &target, LLVMTypeConverter &typeConverter) {
-  target.addDynamicallyLegalOp<mlir::omp::AtomicUpdateOp, mlir::omp::CriticalOp,
-                               mlir::omp::ParallelOp, mlir::omp::WsLoopOp,
-                               mlir::omp::SimdLoopOp, mlir::omp::MasterOp,
-                               mlir::omp::SectionOp, mlir::omp::SectionsOp,
-                               mlir::omp::SingleOp, mlir::omp::TaskOp>(
-      [&](Operation *op) {
-        return typeConverter.isLegal(&op->getRegion(0)) &&
-               typeConverter.isLegal(op->getOperandTypes()) &&
-               typeConverter.isLegal(op->getResultTypes());
-      });
-  target.addDynamicallyLegalOp<mlir::omp::AtomicReadOp,
-                               mlir::omp::AtomicWriteOp, mlir::omp::FlushOp,
-                               mlir::omp::ThreadprivateOp, mlir::omp::DataOp,
-                               mlir::omp::EnterDataOp, mlir::omp::ExitDataOp>(
-      [&](Operation *op) {
-        return typeConverter.isLegal(op->getOperandTypes()) &&
-               typeConverter.isLegal(op->getResultTypes());
-      });
+  target.addDynamicallyLegalOp<
+      mlir::omp::AtomicUpdateOp, mlir::omp::CriticalOp, mlir::omp::DataOp,
+      mlir::omp::ParallelOp, mlir::omp::WsLoopOp, mlir::omp::SimdLoopOp,
+      mlir::omp::MasterOp, mlir::omp::SectionOp, mlir::omp::SectionsOp,
+      mlir::omp::SingleOp, mlir::omp::TaskOp>([&](Operation *op) {
+    return typeConverter.isLegal(&op->getRegion(0)) &&
+           typeConverter.isLegal(op->getOperandTypes()) &&
+           typeConverter.isLegal(op->getResultTypes());
+  });
+  target
+      .addDynamicallyLegalOp<mlir::omp::AtomicReadOp, mlir::omp::AtomicWriteOp,
+                             mlir::omp::FlushOp, mlir::omp::ThreadprivateOp,
+                             mlir::omp::EnterDataOp, mlir::omp::ExitDataOp>(
+          [&](Operation *op) {
+            return typeConverter.isLegal(op->getOperandTypes()) &&
+                   typeConverter.isLegal(op->getResultTypes());
+          });
   target.addDynamicallyLegalOp<mlir::omp::ReductionOp>([&](Operation *op) {
     return typeConverter.isLegal(op->getOperandTypes());
   });
@@ -177,20 +176,20 @@ void mlir::configureOpenMPToLLVMConversionLegality(
 void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                   RewritePatternSet &patterns) {
   patterns.add<
-      ReductionOpConversion, RegionOpConversion<omp::CriticalOp>,
-      RegionOpConversion<omp::MasterOp>, ReductionOpConversion,
-      RegionOpConversion<omp::MasterOp>, RegionOpConversion<omp::ParallelOp>,
-      RegionOpConversion<omp::WsLoopOp>, RegionOpConversion<omp::SectionsOp>,
-      RegionOpConversion<omp::SectionOp>, RegionOpConversion<omp::SimdLoopOp>,
-      RegionOpConversion<omp::SingleOp>, RegionOpConversion<omp::TaskOp>,
+      LegalizeDataOpForLLVMTranslation<omp::DataOp>,
+      LegalizeDataOpForLLVMTranslation<omp::EnterDataOp>,
+      LegalizeDataOpForLLVMTranslation<omp::ExitDataOp>, ReductionOpConversion,
+      RegionOpConversion<omp::CriticalOp>, RegionOpConversion<omp::MasterOp>,
+      ReductionOpConversion, RegionOpConversion<omp::MasterOp>,
+      RegionOpConversion<omp::ParallelOp>, RegionOpConversion<omp::WsLoopOp>,
+      RegionOpConversion<omp::SectionsOp>, RegionOpConversion<omp::SectionOp>,
+      RegionOpConversion<omp::SimdLoopOp>, RegionOpConversion<omp::SingleOp>,
+      RegionOpConversion<omp::TaskOp>, RegionOpConversion<omp::DataOp>,
       RegionLessOpWithVarOperandsConversion<omp::AtomicReadOp>,
       RegionLessOpWithVarOperandsConversion<omp::AtomicWriteOp>,
       RegionOpWithVarOperandsConversion<omp::AtomicUpdateOp>,
       RegionLessOpWithVarOperandsConversion<omp::FlushOp>,
-      RegionLessOpWithVarOperandsConversion<omp::ThreadprivateOp>,
-      LegalizeDataOpForLLVMTranslation<omp::DataOp>,
-      LegalizeDataOpForLLVMTranslation<omp::EnterDataOp>,
-      LegalizeDataOpForLLVMTranslation<omp::ExitDataOp>>(converter);
+      RegionLessOpWithVarOperandsConversion<omp::ThreadprivateOp>>(converter);
 }
 
 namespace {
