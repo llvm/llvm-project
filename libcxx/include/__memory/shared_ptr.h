@@ -433,10 +433,10 @@ struct __is_array_deletable<_Ptr, decltype(delete[] std::declval<_Ptr>())> : tru
 
 template <class _Dp, class _Pt,
     class = decltype(std::declval<_Dp>()(std::declval<_Pt>()))>
-static true_type __well_formed_deleter_test(int);
+true_type __well_formed_deleter_test(int);
 
 template <class, class>
-static false_type __well_formed_deleter_test(...);
+false_type __well_formed_deleter_test(...);
 
 template <class _Dp, class _Pt>
 struct __well_formed_deleter : decltype(std::__well_formed_deleter_test<_Dp, _Pt>(0)) {};
