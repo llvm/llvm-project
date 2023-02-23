@@ -512,6 +512,14 @@ def HasVendorXTHeadCmo : Predicate<"Subtarget->hasVendorXTHeadCmo()">,
                                    AssemblerPredicate<(all_of FeatureVendorXTHeadCmo),
                                    "'xtheadcmo' (T-Head cache management instructions)">;
 
+def FeatureVendorXTHeadFMemIdx
+    : SubtargetFeature<"xtheadfmemidx", "HasVendorXTHeadFMemIdx", "true",
+                       "'xtheadfmemidx' (T-Head FP Indexed Memory Operations)",
+                       [FeatureStdExtF]>;
+def HasVendorXTHeadFMemIdx : Predicate<"Subtarget->hasVendorXTHeadFMemIdx()">,
+                                       AssemblerPredicate<(all_of FeatureVendorXTHeadFMemIdx),
+                                       "'xtheadfmemidx' (T-Head FP Indexed Memory Operations)">;
+
 def FeatureVendorXTHeadMac
     : SubtargetFeature<"xtheadmac", "HasVendorXTHeadMac", "true",
                        "'xtheadmac' (T-Head Multiply-Accumulate Instructions)">;
