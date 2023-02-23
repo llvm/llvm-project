@@ -4925,8 +4925,11 @@ IntrinsicLibrary::genStorageSize(mlir::Type resultType,
         builder.getKindMap().getIntegerBitsize(fir::toInt(constOp)));
   }
 
-  if (box.getType().isa<fir::ReferenceType>())
+  if (args[0].getBoxOf<fir::PolymorphicValue>()) {
+    box = builder.createBox(loc, args[0], /*isPolymorphic=*/true);
+  } else if (box.getType().isa<fir::ReferenceType>()) {
     box = builder.create<fir::LoadOp>(loc, box);
+  }
   mlir::Value eleSize = builder.create<fir::BoxEleSizeOp>(loc, kindTy, box);
   mlir::Value c8 = builder.createIntegerConstant(loc, kindTy, 8);
   return builder.create<mlir::arith::MulIOp>(loc, eleSize, c8);
