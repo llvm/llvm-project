@@ -519,16 +519,13 @@ define i1 @uaddo6_xor_op_after_XOR(i32 %a, ptr %b.ptr) {
 define i1 @uaddo_i64_increment(i64 %x, ptr %p) {
 ; RV32-LABEL: uaddo_i64_increment:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    mv a3, a0
-; RV32-NEXT:    addi a4, a0, 1
-; RV32-NEXT:    sltu a0, a4, a0
-; RV32-NEXT:    add a5, a1, a0
-; RV32-NEXT:    bgeu a4, a3, .LBB12_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    sltu a0, a5, a1
-; RV32-NEXT:  .LBB12_2:
-; RV32-NEXT:    sw a4, 0(a2)
-; RV32-NEXT:    sw a5, 4(a2)
+; RV32-NEXT:    addi a3, a0, 1
+; RV32-NEXT:    sltu a0, a3, a0
+; RV32-NEXT:    add a1, a1, a0
+; RV32-NEXT:    or a0, a3, a1
+; RV32-NEXT:    seqz a0, a0
+; RV32-NEXT:    sw a3, 0(a2)
+; RV32-NEXT:    sw a1, 4(a2)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: uaddo_i64_increment:
