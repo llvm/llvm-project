@@ -16,133 +16,128 @@
 ; dbg.declare and not stashed into an alloca. They will get lowered to
 ; an entry value in the backend.
 
-; CHECK: define internal swiftcc void @"$s1a1fyS2iYFTY0_"(i8* %0, i8* %1, i8* swiftasync %2)
+; CHECK: define internal swiftcc void @"$s1a1fyS2iYFTY0_"(ptr %0, ptr %1, ptr swiftasync %2)
 ; CHECK: entryresume.0:
-; CHECK-NEXT:   call void @llvm.dbg.declare(metadata i8* %2, metadata ![[X:[0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 64, DW_OP_plus_uconst, 24))
+; CHECK-NEXT:   call void @llvm.dbg.declare(metadata ptr %2, metadata ![[X:[0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 64, DW_OP_plus_uconst, 24))
 ; CHECK: ![[X]] = !DILocalVariable(name: "x",
 source_filename = "/tmp/a.ll"
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "arm64e-apple-macosx11.0.0"
 
 %swift.async_func_pointer = type <{ i32, i32 }>
-%swift.task = type { %swift.refcounted, i8*, i8*, i64, i8*, %swift.context*, i64 }
-%swift.refcounted = type { %swift.type*, i64 }
-%swift.type = type { i64 }
-%swift.executor = type {}
-%swift.context = type {}
-%swift.error = type opaque
 %TSi = type <{ i64 }>
-%swift.metadata_response = type { %swift.type*, i64 }
-%T12_Concurrency9MainActorC5_ImplC = type opaque
+%swift.metadata_response = type { ptr, i64 }
+%swift.task = type { %swift.refcounted, ptr, ptr, i64, ptr, ptr, i64 }
+%swift.refcounted = type { ptr, i64 }
 
-@"$s1a1fyS2iYFTu" = hidden global %swift.async_func_pointer <{ i32 trunc (i64 sub (i64 ptrtoint (void (%swift.task*, %swift.executor*, %swift.context*)* @"$s1a1fyS2iYF" to i64), i64 ptrtoint (%swift.async_func_pointer* @"$s1a1fyS2iYFTu" to i64)) to i32), i32 64 }>, section "__TEXT,__const", align 8
+@"$s1a1fyS2iYFTu" = hidden global %swift.async_func_pointer <{ i32 trunc (i64 sub (i64 ptrtoint (ptr @"$s1a1fyS2iYF" to i64), i64 ptrtoint (ptr @"$s1a1fyS2iYFTu" to i64)) to i32), i32 64 }>, section "__TEXT,__const", align 8
 
-define hidden swiftcc void @"$s1a1fyS2iYF"(%swift.task* %0, %swift.executor* %1, %swift.context* swiftasync %2) #0 !dbg !41 {
+define hidden swiftcc void @"$s1a1fyS2iYF"(ptr %0, ptr %1, ptr swiftasync %2) #0 !dbg !41 {
 entry:
-  %3 = alloca %swift.task*, align 8
-  %4 = alloca %swift.executor*, align 8
-  %5 = alloca %swift.context*, align 8
-  store %swift.task* %0, %swift.task** %3, align 8
-  store %swift.executor* %1, %swift.executor** %4, align 8
-  store %swift.context* %2, %swift.context** %5, align 8
-  %6 = bitcast %swift.context* %2 to <{ %swift.context*, void (%swift.task*, %swift.executor*, %swift.context*)*, %swift.executor*, i32, [4 x i8], %swift.error*, %TSi, %swift.refcounted*, %TSi }>*
-  %7 = call token @llvm.coro.id.async(i32 64, i32 16, i32 2, i8* bitcast (%swift.async_func_pointer* @"$s1a1fyS2iYFTu" to i8*))
-  %8 = call noalias nonnull i8* @llvm.coro.begin(token %7, i8* null)
-  %9 = getelementptr inbounds <{ %swift.context*, void (%swift.task*, %swift.executor*, %swift.context*)*, %swift.executor*, i32, [4 x i8], %swift.error*, %TSi, %swift.refcounted*, %TSi }>, <{ %swift.context*, void (%swift.task*, %swift.executor*, %swift.context*)*, %swift.executor*, i32, [4 x i8], %swift.error*, %TSi, %swift.refcounted*, %TSi }>* %6, i32 0, i32 7
-  %10 = load %swift.refcounted*, %swift.refcounted** %9, align 8
-  %11 = getelementptr inbounds <{ %swift.context*, void (%swift.task*, %swift.executor*, %swift.context*)*, %swift.executor*, i32, [4 x i8], %swift.error*, %TSi, %swift.refcounted*, %TSi }>, <{ %swift.context*, void (%swift.task*, %swift.executor*, %swift.context*)*, %swift.executor*, i32, [4 x i8], %swift.error*, %TSi, %swift.refcounted*, %TSi }>* %6, i32 0, i32 8
-  %._value = getelementptr inbounds %TSi, %TSi* %11, i32 0, i32 0
-  %12 = load i64, i64* %._value, align 8
+  %3 = alloca ptr, align 8
+  %4 = alloca ptr, align 8
+  %5 = alloca ptr, align 8
+  store ptr %0, ptr %3, align 8
+  store ptr %1, ptr %4, align 8
+  store ptr %2, ptr %5, align 8
+  %6 = bitcast ptr %2 to ptr
+  %7 = call token @llvm.coro.id.async(i32 64, i32 16, i32 2, ptr @"$s1a1fyS2iYFTu")
+  %8 = call noalias nonnull ptr @llvm.coro.begin(token %7, ptr null)
+  %9 = getelementptr inbounds <{ ptr, ptr, ptr, i32, [4 x i8], ptr, %TSi, ptr, %TSi }>, ptr %6, i32 0, i32 7
+  %10 = load ptr, ptr %9, align 8
+  %11 = getelementptr inbounds <{ ptr, ptr, ptr, i32, [4 x i8], ptr, %TSi, ptr, %TSi }>, ptr %6, i32 0, i32 8
+  %._value = getelementptr inbounds %TSi, ptr %11, i32 0, i32 0
+  %12 = load i64, ptr %._value, align 8
   call void @llvm.dbg.declare(metadata i64 %12, metadata !46, metadata !DIExpression()), !dbg !48
   %13 = call swiftcc %swift.metadata_response @"$s12_Concurrency9MainActorCMa"(i64 0) #4, !dbg !49
   %14 = extractvalue %swift.metadata_response %13, 0, !dbg !49
-  %15 = call swiftcc %T12_Concurrency9MainActorC5_ImplC* @"$s12_Concurrency9MainActorC6sharedAC5_ImplCvgZ"(%swift.type* swiftself %14), !dbg !49
-  %16 = call i8* @llvm.coro.async.resume(), !dbg !49
-  %17 = load %swift.task*, %swift.task** %3, align 8, !dbg !49
-  %18 = load %swift.executor*, %swift.executor** %4, align 8, !dbg !49
-  %19 = load %swift.task*, %swift.task** %3, align 8, !dbg !49
-  %20 = load %swift.executor*, %swift.executor** %4, align 8, !dbg !49
-  %21 = load %swift.context*, %swift.context** %5, align 8, !dbg !49
-  %22 = load %swift.executor*, %swift.executor** %4, align 8, !dbg !49
-  %23 = bitcast %T12_Concurrency9MainActorC5_ImplC* %15 to %swift.executor*, !dbg !49
-  %24 = load %swift.executor*, %swift.executor** %4, align 8, !dbg !49
-  %25 = load %swift.context*, %swift.context** %5, align 8, !dbg !49
-  %26 = call { i8*, i8*, i8* } (i32, i8*, i8*, ...) @llvm.coro.suspend.async(i32 2, i8* %16, i8* bitcast (i8* (i8*)* @__swift_async_resume_get_context to i8*), i8* bitcast (void (i8*, %swift.executor*, %swift.task*, %swift.executor*, %swift.context*)* @__swift_suspend_point to i8*), i8* %16, %swift.executor* %23, %swift.task* %17, %swift.executor* %24, %swift.context* %25), !dbg !49
-  %27 = extractvalue { i8*, i8*, i8* } %26, 0, !dbg !49
-  %28 = bitcast i8* %27 to %swift.task*, !dbg !49
-  store %swift.task* %28, %swift.task** %3, align 8, !dbg !49
-  %29 = extractvalue { i8*, i8*, i8* } %26, 1, !dbg !49
-  %30 = bitcast i8* %29 to %swift.executor*, !dbg !49
-  store %swift.executor* %30, %swift.executor** %4, align 8, !dbg !49
-  %31 = extractvalue { i8*, i8*, i8* } %26, 2, !dbg !49
-  %32 = call i8* @__swift_async_resume_get_context(i8* %31), !dbg !49
-  %33 = bitcast i8* %32 to %swift.context*, !dbg !49
-  store %swift.context* %33, %swift.context** %5, align 8, !dbg !49
-  call void bitcast (void (%swift.refcounted*)* @swift_release to void (%T12_Concurrency9MainActorC5_ImplC*)*)(%T12_Concurrency9MainActorC5_ImplC* %15) #1, !dbg !50
-  %34 = load %swift.context*, %swift.context** %5, align 8, !dbg !50
-  %35 = bitcast %swift.context* %34 to <{ %swift.context*, void (%swift.task*, %swift.executor*, %swift.context*)*, %swift.executor*, i32, [4 x i8], %swift.error*, %TSi, %swift.refcounted*, %TSi }>*, !dbg !50
-  %36 = getelementptr inbounds <{ %swift.context*, void (%swift.task*, %swift.executor*, %swift.context*)*, %swift.executor*, i32, [4 x i8], %swift.error*, %TSi, %swift.refcounted*, %TSi }>, <{ %swift.context*, void (%swift.task*, %swift.executor*, %swift.context*)*, %swift.executor*, i32, [4 x i8], %swift.error*, %TSi, %swift.refcounted*, %TSi }>* %35, i32 0, i32 6, !dbg !50
-  %._value1 = getelementptr inbounds %TSi, %TSi* %36, i32 0, i32 0, !dbg !50
-  store i64 %12, i64* %._value1, align 8, !dbg !50
-  %37 = load %swift.context*, %swift.context** %5, align 8, !dbg !50
-  %38 = bitcast %swift.context* %37 to <{ %swift.context*, void (%swift.task*, %swift.executor*, %swift.context*)*, %swift.executor*, i32, [4 x i8], %swift.error*, %TSi, %swift.refcounted*, %TSi }>*, !dbg !50
-  %39 = getelementptr inbounds <{ %swift.context*, void (%swift.task*, %swift.executor*, %swift.context*)*, %swift.executor*, i32, [4 x i8], %swift.error*, %TSi, %swift.refcounted*, %TSi }>, <{ %swift.context*, void (%swift.task*, %swift.executor*, %swift.context*)*, %swift.executor*, i32, [4 x i8], %swift.error*, %TSi, %swift.refcounted*, %TSi }>* %38, i32 0, i32 1, !dbg !50
-  %40 = load void (%swift.task*, %swift.executor*, %swift.context*)*, void (%swift.task*, %swift.executor*, %swift.context*)** %39, align 8, !dbg !50
-  %41 = load %swift.task*, %swift.task** %3, align 8, !dbg !50
-  %42 = load %swift.executor*, %swift.executor** %4, align 8, !dbg !50
-  %43 = load %swift.context*, %swift.context** %5, align 8, !dbg !50
-  tail call swiftcc void %40(%swift.task* %41, %swift.executor* %42, %swift.context* swiftasync %43), !dbg !50
+  %15 = call swiftcc ptr @"$s12_Concurrency9MainActorC6sharedAC5_ImplCvgZ"(ptr swiftself %14), !dbg !49
+  %16 = call ptr @llvm.coro.async.resume(), !dbg !49
+  %17 = load ptr, ptr %3, align 8, !dbg !49
+  %18 = load ptr, ptr %4, align 8, !dbg !49
+  %19 = load ptr, ptr %3, align 8, !dbg !49
+  %20 = load ptr, ptr %4, align 8, !dbg !49
+  %21 = load ptr, ptr %5, align 8, !dbg !49
+  %22 = load ptr, ptr %4, align 8, !dbg !49
+  %23 = bitcast ptr %15 to ptr, !dbg !49
+  %24 = load ptr, ptr %4, align 8, !dbg !49
+  %25 = load ptr, ptr %5, align 8, !dbg !49
+  %26 = call { ptr, ptr, ptr } (i32, ptr, ptr, ...) @llvm.coro.suspend.async(i32 2, ptr %16, ptr @__swift_async_resume_get_context, ptr @__swift_suspend_point, ptr %16, ptr %23, ptr %17, ptr %24, ptr %25), !dbg !49
+  %27 = extractvalue { ptr, ptr, ptr } %26, 0, !dbg !49
+  %28 = bitcast ptr %27 to ptr, !dbg !49
+  store ptr %28, ptr %3, align 8, !dbg !49
+  %29 = extractvalue { ptr, ptr, ptr } %26, 1, !dbg !49
+  %30 = bitcast ptr %29 to ptr, !dbg !49
+  store ptr %30, ptr %4, align 8, !dbg !49
+  %31 = extractvalue { ptr, ptr, ptr } %26, 2, !dbg !49
+  %32 = call ptr @__swift_async_resume_get_context(ptr %31), !dbg !49
+  %33 = bitcast ptr %32 to ptr, !dbg !49
+  store ptr %33, ptr %5, align 8, !dbg !49
+  call void @swift_release(ptr %15) #1, !dbg !50
+  %34 = load ptr, ptr %5, align 8, !dbg !50
+  %35 = bitcast ptr %34 to ptr, !dbg !50
+  %36 = getelementptr inbounds <{ ptr, ptr, ptr, i32, [4 x i8], ptr, %TSi, ptr, %TSi }>, ptr %35, i32 0, i32 6, !dbg !50
+  %._value1 = getelementptr inbounds %TSi, ptr %36, i32 0, i32 0, !dbg !50
+  store i64 %12, ptr %._value1, align 8, !dbg !50
+  %37 = load ptr, ptr %5, align 8, !dbg !50
+  %38 = bitcast ptr %37 to ptr, !dbg !50
+  %39 = getelementptr inbounds <{ ptr, ptr, ptr, i32, [4 x i8], ptr, %TSi, ptr, %TSi }>, ptr %38, i32 0, i32 1, !dbg !50
+  %40 = load ptr, ptr %39, align 8, !dbg !50
+  %41 = load ptr, ptr %3, align 8, !dbg !50
+  %42 = load ptr, ptr %4, align 8, !dbg !50
+  %43 = load ptr, ptr %5, align 8, !dbg !50
+  tail call swiftcc void %40(ptr %41, ptr %42, ptr swiftasync %43), !dbg !50
   br label %coro.end, !dbg !50
 
 coro.end:                                         ; preds = %entry
-  %44 = call i1 @llvm.coro.end(i8* %8, i1 false) #5, !dbg !50
+  %44 = call i1 @llvm.coro.end(ptr %8, i1 false) #5, !dbg !50
   unreachable, !dbg !50
 }
 
 ; Function Attrs: nounwind
-declare token @llvm.coro.id.async(i32, i32, i32, i8*) #1
+declare token @llvm.coro.id.async(i32, i32, i32, ptr) #1
 
 ; Function Attrs: nounwind
-declare i8* @llvm.coro.begin(token, i8* writeonly) #1
+declare ptr @llvm.coro.begin(token, ptr writeonly) #1
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
 
 declare swiftcc %swift.metadata_response @"$s12_Concurrency9MainActorCMa"(i64) #0
 
-declare swiftcc %T12_Concurrency9MainActorC5_ImplC* @"$s12_Concurrency9MainActorC6sharedAC5_ImplCvgZ"(%swift.type* swiftself) #0
+declare swiftcc ptr @"$s12_Concurrency9MainActorC6sharedAC5_ImplCvgZ"(ptr swiftself) #0
 
 ; Function Attrs: nounwind
-declare i8* @llvm.coro.async.resume() #1
+declare ptr @llvm.coro.async.resume() #1
 
 ; Function Attrs: nounwind
-define linkonce_odr hidden i8* @__swift_async_resume_get_context(i8* %0) #4 {
+define linkonce_odr hidden ptr @__swift_async_resume_get_context(ptr %0) #4 {
 entry:
-  ret i8* %0
+  ret ptr %0
 }
 
 ; Function Attrs: nounwind
-define internal void @__swift_suspend_point(i8* %0, %swift.executor* %1, %swift.task* %2, %swift.executor* %3, %swift.context* %4) #1 {
+define internal void @__swift_suspend_point(ptr %0, ptr %1, ptr %2, ptr %3, ptr %4) #1 {
 entry:
-  %5 = getelementptr inbounds %swift.task, %swift.task* %2, i32 0, i32 4
-  store i8* %0, i8** %5, align 8
-  %6 = getelementptr inbounds %swift.task, %swift.task* %2, i32 0, i32 5
-  store %swift.context* %4, %swift.context** %6, align 8
-  tail call swiftcc void @swift_task_switch(%swift.task* %2, %swift.executor* %3, %swift.executor* %1) #1
+  %5 = getelementptr inbounds %swift.task, ptr %2, i32 0, i32 4
+  store ptr %0, ptr %5, align 8
+  %6 = getelementptr inbounds %swift.task, ptr %2, i32 0, i32 5
+  store ptr %4, ptr %6, align 8
+  tail call swiftcc void @swift_task_switch(ptr %2, ptr %3, ptr %1) #1
   ret void
 }
 
 ; Function Attrs: nounwind
-declare extern_weak swiftcc void @swift_task_switch(%swift.task* %0, %swift.executor* %1, %swift.executor* %2) #1
+declare extern_weak swiftcc void @swift_task_switch(ptr %0, ptr %1, ptr %2) #1
 
 ; Function Attrs: nounwind
-declare { i8*, i8*, i8* } @llvm.coro.suspend.async(i32, i8*, i8*, ...) #1
+declare { ptr, ptr, ptr } @llvm.coro.suspend.async(i32, ptr, ptr, ...) #1
 
 ; Function Attrs: nounwind
-declare void @swift_release(%swift.refcounted*) #1
+declare void @swift_release(ptr) #1
 
 ; Function Attrs: nounwind
-declare i1 @llvm.coro.end(i8*, i1) #1
+declare i1 @llvm.coro.end(ptr, i1) #1
 
 attributes #0 = { "frame-pointer"="all" }
 attributes #1 = { nounwind }

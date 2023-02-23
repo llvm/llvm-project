@@ -6,6 +6,6 @@ target triple = "x86_64-apple-darwin"
 
 declare void @f()
 
-@f.ptrauth.ia.42 = private constant { i8*, i32, i64, i64 } { i8* bitcast (void ()* @f to i8*), i32 0, i64 0, i64 42 }, section "llvm.ptrauth"
+@f.ptrauth.ia.42 = private constant { ptr, i32, i64, i64 } { ptr @f, i32 0, i64 0, i64 42 }, section "llvm.ptrauth"
 
-; CHECK: @f.ptrauth.ia.42 = private constant { i8*, i32, i64, i64 } { i8* bitcast (void ()* @f to i8*), i32 0, i64 0, i64 42 }, section "llvm.ptrauth"
+; CHECK: @f.ptrauth.ia.42 = private constant { ptr, i32, i64, i64 } { ptr @f, i32 0, i64 0, i64 42 }, section "llvm.ptrauth"
