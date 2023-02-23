@@ -547,7 +547,7 @@ bool AMDGPUInstructionSelector::selectG_FMA_FMAD(MachineInstr &I) const {
 #ifndef NDEBUG
   const SIMachineFunctionInfo *MFI =
       I.getMF()->getInfo<SIMachineFunctionInfo>();
-  AMDGPU::SIModeRegisterDefaults Mode = MFI->getMode();
+  SIModeRegisterDefaults Mode = MFI->getMode();
   assert((IsFMA || !Mode.allFP32Denormals()) &&
          "fmad selected with denormals enabled");
 #endif

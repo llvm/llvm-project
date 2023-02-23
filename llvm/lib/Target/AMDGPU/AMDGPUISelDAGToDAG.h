@@ -16,6 +16,7 @@
 
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
+#include "SIModeRegisterDefaults.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -82,7 +83,7 @@ class AMDGPUDAGToDAGISel : public SelectionDAGISel {
   const GCNSubtarget *Subtarget;
 
   // Default FP mode for the current function.
-  AMDGPU::SIModeRegisterDefaults Mode;
+  SIModeRegisterDefaults Mode;
 
   bool EnableLateStructurizeCFG;
 
