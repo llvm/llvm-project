@@ -1017,8 +1017,6 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   DeclUseTracker Tracker;
 
   {
-    // FIXME: We could skip even matching Fixables' matchers if EmitFixits ==
-    // false.
     auto [FixableGadgets, WarningGadgets, TrackerRes] = findGadgets(D, Handler);
     UnsafeOps = groupWarningGadgetsByVar(std::move(WarningGadgets));
     FixablesForUnsafeVars = groupFixablesByVar(std::move(FixableGadgets));
