@@ -224,7 +224,6 @@ void Destroy(const Descriptor &descriptor, bool finalize,
   const Descriptor &componentDesc{derived.component()};
   std::size_t myComponents{componentDesc.Elements()};
   std::size_t elements{descriptor.Elements()};
-  std::size_t byteStride{descriptor.ElementBytes()};
   SubscriptValue at[maxRank];
   descriptor.GetLowerBounds(at);
   for (std::size_t k{0}; k < myComponents; ++k) {
