@@ -172,6 +172,134 @@ main_body:
   ret <4 x float> %data
 }
 
+define amdgpu_ps <4 x float> @buffer_load_voffset_large_12bit(<4 x i32> inreg) {
+; PREGFX10-LABEL: buffer_load_voffset_large_12bit:
+; PREGFX10:       ; %bb.0: ; %main_body
+; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 offset:4092
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: buffer_load_voffset_large_12bit:
+; GFX10:       ; %bb.0: ; %main_body
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 offset:4092
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: buffer_load_voffset_large_12bit:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0 offset:4092
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    ; return to shader part epilog
+main_body:
+  %data = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %0, i32 4092, i32 0, i32 0)
+  ret <4 x float> %data
+}
+
+define amdgpu_ps <4 x float> @buffer_load_voffset_large_13bit(<4 x i32> inreg) {
+; PREGFX10-LABEL: buffer_load_voffset_large_13bit:
+; PREGFX10:       ; %bb.0: ; %main_body
+; PREGFX10-NEXT:    v_mov_b32_e32 v0, 0x1000
+; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: buffer_load_voffset_large_13bit:
+; GFX10:       ; %bb.0: ; %main_body
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0x1000
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: buffer_load_voffset_large_13bit:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0x1000
+; GFX11-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], 0 offen offset:4092
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    ; return to shader part epilog
+main_body:
+  %data = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %0, i32 8188, i32 0, i32 0)
+  ret <4 x float> %data
+}
+
+define amdgpu_ps <4 x float> @buffer_load_voffset_large_16bit(<4 x i32> inreg) {
+; PREGFX10-LABEL: buffer_load_voffset_large_16bit:
+; PREGFX10:       ; %bb.0: ; %main_body
+; PREGFX10-NEXT:    v_mov_b32_e32 v0, 0xf000
+; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: buffer_load_voffset_large_16bit:
+; GFX10:       ; %bb.0: ; %main_body
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0xf000
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: buffer_load_voffset_large_16bit:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0xf000
+; GFX11-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], 0 offen offset:4092
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    ; return to shader part epilog
+main_body:
+  %data = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %0, i32 65532, i32 0, i32 0)
+  ret <4 x float> %data
+}
+
+define amdgpu_ps <4 x float> @buffer_load_voffset_large_23bit(<4 x i32> inreg) {
+; PREGFX10-LABEL: buffer_load_voffset_large_23bit:
+; PREGFX10:       ; %bb.0: ; %main_body
+; PREGFX10-NEXT:    v_mov_b32_e32 v0, 0x7ff000
+; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: buffer_load_voffset_large_23bit:
+; GFX10:       ; %bb.0: ; %main_body
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0x7ff000
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: buffer_load_voffset_large_23bit:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0x7ff000
+; GFX11-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], 0 offen offset:4092
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    ; return to shader part epilog
+main_body:
+  %data = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %0, i32 8388604, i32 0, i32 0)
+  ret <4 x float> %data
+}
+
+define amdgpu_ps <4 x float> @buffer_load_voffset_large_24bit(<4 x i32> inreg) {
+; PREGFX10-LABEL: buffer_load_voffset_large_24bit:
+; PREGFX10:       ; %bb.0: ; %main_body
+; PREGFX10-NEXT:    v_mov_b32_e32 v0, 0xfff000
+; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: buffer_load_voffset_large_24bit:
+; GFX10:       ; %bb.0: ; %main_body
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0xfff000
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: buffer_load_voffset_large_24bit:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0xfff000
+; GFX11-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], 0 offen offset:4092
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    ; return to shader part epilog
+main_body:
+  %data = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %0, i32 16777212, i32 0, i32 0)
+  ret <4 x float> %data
+}
+
+
 define amdgpu_ps float @buffer_load_x1(<4 x i32> inreg %rsrc, i32 %ofs) {
 ; PREGFX10-LABEL: buffer_load_x1:
 ; PREGFX10:       ; %bb.0: ; %main_body
@@ -237,7 +365,6 @@ main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %0, i32 %ofs.1, i32 0, i32 0)
   ret <4 x float> %data
 }
-
 
 define amdgpu_ps float @buffer_load_mmo(<4 x i32> inreg %rsrc, ptr addrspace(3) %lds) {
 ; GFX10-LABEL: buffer_load_mmo:

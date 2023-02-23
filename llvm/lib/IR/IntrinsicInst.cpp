@@ -554,17 +554,11 @@ bool VPIntrinsic::canIgnoreVectorLengthParam() const {
 
   // Check whether "W == vscale * EC.getKnownMinValue()"
   if (EC.isScalable()) {
-    // Undig the DL
-    const auto *ParMod = this->getModule();
-    if (!ParMod)
-      return false;
-    const auto &DL = ParMod->getDataLayout();
-
     // Compare vscale patterns
     uint64_t VScaleFactor;
-    if (match(VLParam, m_c_Mul(m_ConstantInt(VScaleFactor), m_VScale(DL))))
+    if (match(VLParam, m_c_Mul(m_ConstantInt(VScaleFactor), m_VScale())))
       return VScaleFactor >= EC.getKnownMinValue();
-    return (EC.getKnownMinValue() == 1) && match(VLParam, m_VScale(DL));
+    return (EC.getKnownMinValue() == 1) && match(VLParam, m_VScale());
   }
 
   // standard SIMD operation

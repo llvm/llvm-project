@@ -1529,7 +1529,7 @@ static void addFunctionPointerConversion(Sema &S, SourceRange IntroducerRange,
         S.Context, Class, Loc, DeclarationNameInfo(InvokerName, Loc),
         InvokerFunctionTy, CallOperator->getTypeSourceInfo(), SC_Static,
         S.getCurFPFeatures().isFPConstrained(),
-        /*isInline=*/true, ConstexprSpecKind::Unspecified,
+        /*isInline=*/true, CallOperator->getConstexprKind(),
         CallOperator->getBody()->getEndLoc());
     for (unsigned I = 0, N = CallOperator->getNumParams(); I != N; ++I)
       InvokerParams[I]->setOwningFunction(Invoke);
