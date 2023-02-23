@@ -99,6 +99,23 @@ TEST_CONSTEXPR_CXX20 bool tests() {
         assert(v.capacity() == 150);
         assert(is_contiguous_container_asan_correct(v));
     }
+    {
+      std::vector<int, safe_allocator<int>> v;
+      v.reserve(10);
+      assert(v.capacity() >= 10);
+      assert(is_contiguous_container_asan_correct(v));
+    }
+    {
+      std::vector<int, safe_allocator<int>> v(100);
+      assert(v.capacity() == 100);
+      v.reserve(50);
+      assert(v.size() == 100);
+      assert(v.capacity() == 100);
+      v.reserve(150);
+      assert(v.size() == 100);
+      assert(v.capacity() == 150);
+      assert(is_contiguous_container_asan_correct(v));
+    }
 #endif
 #ifndef TEST_HAS_NO_EXCEPTIONS
     if (!TEST_IS_CONSTANT_EVALUATED) {
