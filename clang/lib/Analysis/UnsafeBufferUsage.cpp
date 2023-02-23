@@ -129,11 +129,19 @@ AST_MATCHER_P(CastExpr, castSubExpr, internal::Matcher<Expr>, innerMatcher) {
 
 // Returns a matcher that matches any expression 'e' such that `innerMatcher`
 // matches 'e' and 'e' is in an Unspecified Lvalue Context.
-static internal::Matcher<Stmt>
-isInUnspecifiedLvalueContext(internal::Matcher<Expr> innerMatcher) {
-  return implicitCastExpr(hasCastKind(CastKind::CK_LValueToRValue),
-                          castSubExpr(innerMatcher));
-  // FIXME: add assignmentTo context...
+static auto isInUnspecifiedLvalueContext(internal::Matcher<Expr> innerMatcher) {
+// clang-format off
+  return
+    expr(anyOf(
+      implicitCastExpr(
+        hasCastKind(CastKind::CK_LValueToRValue),
+        castSubExpr(innerMatcher)),
+      binaryOperator(
+        hasAnyOperatorName("="),
+        hasLHS(innerMatcher)
+      )
+    ));
+// clang-format off
 }
 } // namespace clang::ast_matchers
 
