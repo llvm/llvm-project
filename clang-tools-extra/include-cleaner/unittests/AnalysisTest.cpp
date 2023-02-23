@@ -367,7 +367,7 @@ TEST(WalkUsed, FilterRefsNotSpelledInMainFile) {
     if (RefLoc.isValid()) {
       EXPECT_THAT(RefLoc, AllOf(expandedAt(MainFID, Main.point("expand"), &SM),
                                 spelledAt(MainFID, Main.point("spell"), &SM)))
-          << T.Main;
+          << T.Main.str();
     } else {
       EXPECT_THAT(Main.points(), testing::IsEmpty());
     }
