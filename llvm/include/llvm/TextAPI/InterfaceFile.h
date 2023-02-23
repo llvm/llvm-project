@@ -442,7 +442,7 @@ private:
 
   TargetList Targets;
   std::string Path;
-  FileType FileKind;
+  FileType FileKind{FileType::Invalid};
   std::string InstallName;
   PackedVersion CurrentVersion;
   PackedVersion CompatibilityVersion;
