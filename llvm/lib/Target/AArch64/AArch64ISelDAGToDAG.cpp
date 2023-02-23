@@ -4956,6 +4956,62 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       if (tryMULLV64LaneV128(IntNo, Node))
         return;
       break;
+    case Intrinsic::aarch64_sve_srshl_single_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::SRSHL_VG2_2ZZ_B, AArch64::SRSHL_VG2_2ZZ_H,
+               AArch64::SRSHL_VG2_2ZZ_S, AArch64::SRSHL_VG2_2ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, false, Op);
+      return;
+    case Intrinsic::aarch64_sve_srshl_single_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::SRSHL_VG4_4ZZ_B, AArch64::SRSHL_VG4_4ZZ_H,
+               AArch64::SRSHL_VG4_4ZZ_S, AArch64::SRSHL_VG4_4ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, false, Op);
+      return;
+    case Intrinsic::aarch64_sve_urshl_single_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::URSHL_VG2_2ZZ_B, AArch64::URSHL_VG2_2ZZ_H,
+               AArch64::URSHL_VG2_2ZZ_S, AArch64::URSHL_VG2_2ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, false, Op);
+      return;
+    case Intrinsic::aarch64_sve_urshl_single_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::URSHL_VG4_4ZZ_B, AArch64::URSHL_VG4_4ZZ_H,
+               AArch64::URSHL_VG4_4ZZ_S, AArch64::URSHL_VG4_4ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, false, Op);
+      return;
+    case Intrinsic::aarch64_sve_srshl_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::SRSHL_VG2_2Z2Z_B, AArch64::SRSHL_VG2_2Z2Z_H,
+               AArch64::SRSHL_VG2_2Z2Z_S, AArch64::SRSHL_VG2_2Z2Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, true, Op);
+      return;
+    case Intrinsic::aarch64_sve_srshl_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::SRSHL_VG4_4Z4Z_B, AArch64::SRSHL_VG4_4Z4Z_H,
+               AArch64::SRSHL_VG4_4Z4Z_S, AArch64::SRSHL_VG4_4Z4Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, true, Op);
+      return;
+    case Intrinsic::aarch64_sve_urshl_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::URSHL_VG2_2Z2Z_B, AArch64::URSHL_VG2_2Z2Z_H,
+               AArch64::URSHL_VG2_2Z2Z_S, AArch64::URSHL_VG2_2Z2Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, true, Op);
+      return;
+    case Intrinsic::aarch64_sve_urshl_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::URSHL_VG4_4Z4Z_B, AArch64::URSHL_VG4_4Z4Z_H,
+               AArch64::URSHL_VG4_4Z4Z_S, AArch64::URSHL_VG4_4Z4Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, true, Op);
+      return;
     case Intrinsic::aarch64_sve_sqdmulh_single_vgx2:
       if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
               Node->getValueType(0),
