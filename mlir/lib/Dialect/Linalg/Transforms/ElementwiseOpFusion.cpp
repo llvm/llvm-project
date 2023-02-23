@@ -428,7 +428,7 @@ public:
         return rewriter.notifyMatchFailure(genericOp, "fusion failed");
       Operation *producer = opOperand.get().getDefiningOp();
       for (auto [origVal, replacement] : fusionResult->replacements) {
-        rewriter.replaceUseIf(origVal, replacement, [&](OpOperand &use) {
+        rewriter.replaceUsesWithIf(origVal, replacement, [&](OpOperand &use) {
           // Only replace consumer uses.
           return use.get().getDefiningOp() != producer;
         });

@@ -31,7 +31,7 @@ enum __legacy_memory_order {
     __mo_seq_cst
 };
 
-typedef underlying_type<__legacy_memory_order>::type __memory_order_underlying_t;
+using __memory_order_underlying_t = underlying_type<__legacy_memory_order>::type;
 
 #if _LIBCPP_STD_VER >= 20
 
@@ -56,14 +56,14 @@ inline constexpr auto memory_order_seq_cst = memory_order::seq_cst;
 
 #else
 
-typedef enum memory_order {
+enum memory_order {
   memory_order_relaxed = __mo_relaxed,
   memory_order_consume = __mo_consume,
   memory_order_acquire = __mo_acquire,
   memory_order_release = __mo_release,
   memory_order_acq_rel = __mo_acq_rel,
   memory_order_seq_cst = __mo_seq_cst,
-} memory_order;
+};
 
 #endif // _LIBCPP_STD_VER >= 20
 

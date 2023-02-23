@@ -14,6 +14,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include <optional>
 
 namespace clang {
 namespace tooling {
@@ -120,7 +121,8 @@ static int initialize(Lang Language) {
     }
     Mapping->SymbolNames[SymIndex] = {
         QName.data(), NSLen, static_cast<unsigned int>(QName.size() - NSLen)};
-    Mapping->SymbolHeaderIDs[SymIndex].push_back(AddHeader(HeaderName));
+    if (!HeaderName.empty())
+       Mapping->SymbolHeaderIDs[SymIndex].push_back(AddHeader(HeaderName));
 
     NSSymbolMap &NSSymbols = AddNS(QName.take_front(NSLen));
     NSSymbols.try_emplace(QName.drop_front(NSLen), SymIndex);
@@ -205,8 +207,11 @@ std::optional<Symbol> Symbol::named(llvm::StringRef Scope, llvm::StringRef Name,
   }
   return std::nullopt;
 }
-Header Symbol::header() const {
-  return Header(getMappingPerLang(Language)->SymbolHeaderIDs[ID][0], Language);
+std::optional<Header> Symbol::header() const {
+  const auto& Headers = getMappingPerLang(Language)->SymbolHeaderIDs[ID];
+  if (Headers.empty())
+    return std::nullopt;
+  return Header(Headers.front(), Language);
 }
 llvm::SmallVector<Header> Symbol::headers() const {
   llvm::SmallVector<Header> Results;

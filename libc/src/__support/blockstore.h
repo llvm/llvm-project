@@ -10,14 +10,10 @@
 #define LLVM_LIBC_SUPPORT_BLOCKSTORE_H
 
 #include <src/__support/CPP/new.h>
+#include <src/__support/libc_assert.h>
 
 #include <stddef.h>
 #include <stdint.h>
-
-// TODO: fix our assert.h to make it useable
-#define assert(x)                                                              \
-  if (!(x))                                                                    \
-  __builtin_trap()
 
 namespace __llvm_libc {
 namespace cpp {
@@ -56,7 +52,7 @@ protected:
     Block *curr = &first;
     for (; curr->next; prev = curr, curr = curr->next)
       ;
-    assert(curr == current);
+    LIBC_ASSERT(curr == current);
     return {curr, prev};
   }
 
@@ -152,10 +148,10 @@ public:
       return;
     auto [last, prev] = getLastBlocks();
     if (REVERSE_ORDER) {
-      assert(last == current);
+      LIBC_ASSERT(last == current);
       current = current->next;
     } else {
-      assert(prev->next == last);
+      LIBC_ASSERT(prev->next == last);
       current = prev;
       current->next = nullptr;
     }

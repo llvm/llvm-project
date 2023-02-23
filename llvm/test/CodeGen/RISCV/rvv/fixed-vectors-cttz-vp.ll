@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+experimental-zvfh,+v,+m -target-abi=lp64d -riscv-v-vector-bits-min=128 \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64
 
-declare <2 x i8> @llvm.vp.cttz.v2i8(<2 x i8>, <2 x i1>, i32, i1 immarg)
+declare <2 x i8> @llvm.vp.cttz.v2i8(<2 x i8>, i1 immarg, <2 x i1>, i32)
 
 define <2 x i8> @vp_cttz_v2i8(<2 x i8> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_v2i8:
@@ -27,7 +27,7 @@ define <2 x i8> @vp_cttz_v2i8(<2 x i8> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-NEXT:    vadd.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 15, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <2 x i8> @llvm.vp.cttz.v2i8(<2 x i8> %va, <2 x i1> %m, i32 %evl, i1 false)
+  %v = call <2 x i8> @llvm.vp.cttz.v2i8(<2 x i8> %va, i1 false, <2 x i1> %m, i32 %evl)
   ret <2 x i8> %v
 }
 
@@ -56,11 +56,11 @@ define <2 x i8> @vp_cttz_v2i8_unmasked(<2 x i8> %va, i32 zeroext %evl) {
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x i1> poison, i1 false, i32 0
   %m = shufflevector <2 x i1> %head, <2 x i1> poison, <2 x i32> zeroinitializer
-  %v = call <2 x i8> @llvm.vp.cttz.v2i8(<2 x i8> %va, <2 x i1> %m, i32 %evl, i1 false)
+  %v = call <2 x i8> @llvm.vp.cttz.v2i8(<2 x i8> %va, i1 false, <2 x i1> %m, i32 %evl)
   ret <2 x i8> %v
 }
 
-declare <4 x i8> @llvm.vp.cttz.v4i8(<4 x i8>, <4 x i1>, i32, i1 immarg)
+declare <4 x i8> @llvm.vp.cttz.v4i8(<4 x i8>, i1 immarg, <4 x i1>, i32)
 
 define <4 x i8> @vp_cttz_v4i8(<4 x i8> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_v4i8:
@@ -83,7 +83,7 @@ define <4 x i8> @vp_cttz_v4i8(<4 x i8> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-NEXT:    vadd.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 15, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <4 x i8> @llvm.vp.cttz.v4i8(<4 x i8> %va, <4 x i1> %m, i32 %evl, i1 false)
+  %v = call <4 x i8> @llvm.vp.cttz.v4i8(<4 x i8> %va, i1 false, <4 x i1> %m, i32 %evl)
   ret <4 x i8> %v
 }
 
@@ -112,11 +112,11 @@ define <4 x i8> @vp_cttz_v4i8_unmasked(<4 x i8> %va, i32 zeroext %evl) {
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x i1> poison, i1 false, i32 0
   %m = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
-  %v = call <4 x i8> @llvm.vp.cttz.v4i8(<4 x i8> %va, <4 x i1> %m, i32 %evl, i1 false)
+  %v = call <4 x i8> @llvm.vp.cttz.v4i8(<4 x i8> %va, i1 false, <4 x i1> %m, i32 %evl)
   ret <4 x i8> %v
 }
 
-declare <8 x i8> @llvm.vp.cttz.v8i8(<8 x i8>, <8 x i1>, i32, i1 immarg)
+declare <8 x i8> @llvm.vp.cttz.v8i8(<8 x i8>, i1 immarg, <8 x i1>, i32)
 
 define <8 x i8> @vp_cttz_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_v8i8:
@@ -139,7 +139,7 @@ define <8 x i8> @vp_cttz_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-NEXT:    vadd.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 15, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <8 x i8> @llvm.vp.cttz.v8i8(<8 x i8> %va, <8 x i1> %m, i32 %evl, i1 false)
+  %v = call <8 x i8> @llvm.vp.cttz.v8i8(<8 x i8> %va, i1 false, <8 x i1> %m, i32 %evl)
   ret <8 x i8> %v
 }
 
@@ -168,11 +168,11 @@ define <8 x i8> @vp_cttz_v8i8_unmasked(<8 x i8> %va, i32 zeroext %evl) {
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x i1> poison, i1 false, i32 0
   %m = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i8> @llvm.vp.cttz.v8i8(<8 x i8> %va, <8 x i1> %m, i32 %evl, i1 false)
+  %v = call <8 x i8> @llvm.vp.cttz.v8i8(<8 x i8> %va, i1 false, <8 x i1> %m, i32 %evl)
   ret <8 x i8> %v
 }
 
-declare <16 x i8> @llvm.vp.cttz.v16i8(<16 x i8>, <16 x i1>, i32, i1 immarg)
+declare <16 x i8> @llvm.vp.cttz.v16i8(<16 x i8>, i1 immarg, <16 x i1>, i32)
 
 define <16 x i8> @vp_cttz_v16i8(<16 x i8> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_v16i8:
@@ -195,7 +195,7 @@ define <16 x i8> @vp_cttz_v16i8(<16 x i8> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-NEXT:    vadd.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 15, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <16 x i8> @llvm.vp.cttz.v16i8(<16 x i8> %va, <16 x i1> %m, i32 %evl, i1 false)
+  %v = call <16 x i8> @llvm.vp.cttz.v16i8(<16 x i8> %va, i1 false, <16 x i1> %m, i32 %evl)
   ret <16 x i8> %v
 }
 
@@ -224,11 +224,11 @@ define <16 x i8> @vp_cttz_v16i8_unmasked(<16 x i8> %va, i32 zeroext %evl) {
 ; CHECK-NEXT:    ret
   %head = insertelement <16 x i1> poison, i1 false, i32 0
   %m = shufflevector <16 x i1> %head, <16 x i1> poison, <16 x i32> zeroinitializer
-  %v = call <16 x i8> @llvm.vp.cttz.v16i8(<16 x i8> %va, <16 x i1> %m, i32 %evl, i1 false)
+  %v = call <16 x i8> @llvm.vp.cttz.v16i8(<16 x i8> %va, i1 false, <16 x i1> %m, i32 %evl)
   ret <16 x i8> %v
 }
 
-declare <2 x i16> @llvm.vp.cttz.v2i16(<2 x i16>, <2 x i1>, i32, i1 immarg)
+declare <2 x i16> @llvm.vp.cttz.v2i16(<2 x i16>, i1 immarg, <2 x i1>, i32)
 
 define <2 x i16> @vp_cttz_v2i16(<2 x i16> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_v2i16:
@@ -286,7 +286,7 @@ define <2 x i16> @vp_cttz_v2i16(<2 x i16> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 8, v0.t
 ; RV64-NEXT:    ret
-  %v = call <2 x i16> @llvm.vp.cttz.v2i16(<2 x i16> %va, <2 x i1> %m, i32 %evl, i1 false)
+  %v = call <2 x i16> @llvm.vp.cttz.v2i16(<2 x i16> %va, i1 false, <2 x i1> %m, i32 %evl)
   ret <2 x i16> %v
 }
 
@@ -352,11 +352,11 @@ define <2 x i16> @vp_cttz_v2i16_unmasked(<2 x i16> %va, i32 zeroext %evl) {
 ; RV64-NEXT:    ret
   %head = insertelement <2 x i1> poison, i1 false, i32 0
   %m = shufflevector <2 x i1> %head, <2 x i1> poison, <2 x i32> zeroinitializer
-  %v = call <2 x i16> @llvm.vp.cttz.v2i16(<2 x i16> %va, <2 x i1> %m, i32 %evl, i1 false)
+  %v = call <2 x i16> @llvm.vp.cttz.v2i16(<2 x i16> %va, i1 false, <2 x i1> %m, i32 %evl)
   ret <2 x i16> %v
 }
 
-declare <4 x i16> @llvm.vp.cttz.v4i16(<4 x i16>, <4 x i1>, i32, i1 immarg)
+declare <4 x i16> @llvm.vp.cttz.v4i16(<4 x i16>, i1 immarg, <4 x i1>, i32)
 
 define <4 x i16> @vp_cttz_v4i16(<4 x i16> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_v4i16:
@@ -414,7 +414,7 @@ define <4 x i16> @vp_cttz_v4i16(<4 x i16> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 8, v0.t
 ; RV64-NEXT:    ret
-  %v = call <4 x i16> @llvm.vp.cttz.v4i16(<4 x i16> %va, <4 x i1> %m, i32 %evl, i1 false)
+  %v = call <4 x i16> @llvm.vp.cttz.v4i16(<4 x i16> %va, i1 false, <4 x i1> %m, i32 %evl)
   ret <4 x i16> %v
 }
 
@@ -480,11 +480,11 @@ define <4 x i16> @vp_cttz_v4i16_unmasked(<4 x i16> %va, i32 zeroext %evl) {
 ; RV64-NEXT:    ret
   %head = insertelement <4 x i1> poison, i1 false, i32 0
   %m = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
-  %v = call <4 x i16> @llvm.vp.cttz.v4i16(<4 x i16> %va, <4 x i1> %m, i32 %evl, i1 false)
+  %v = call <4 x i16> @llvm.vp.cttz.v4i16(<4 x i16> %va, i1 false, <4 x i1> %m, i32 %evl)
   ret <4 x i16> %v
 }
 
-declare <8 x i16> @llvm.vp.cttz.v8i16(<8 x i16>, <8 x i1>, i32, i1 immarg)
+declare <8 x i16> @llvm.vp.cttz.v8i16(<8 x i16>, i1 immarg, <8 x i1>, i32)
 
 define <8 x i16> @vp_cttz_v8i16(<8 x i16> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_v8i16:
@@ -542,7 +542,7 @@ define <8 x i16> @vp_cttz_v8i16(<8 x i16> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 8, v0.t
 ; RV64-NEXT:    ret
-  %v = call <8 x i16> @llvm.vp.cttz.v8i16(<8 x i16> %va, <8 x i1> %m, i32 %evl, i1 false)
+  %v = call <8 x i16> @llvm.vp.cttz.v8i16(<8 x i16> %va, i1 false, <8 x i1> %m, i32 %evl)
   ret <8 x i16> %v
 }
 
@@ -608,11 +608,11 @@ define <8 x i16> @vp_cttz_v8i16_unmasked(<8 x i16> %va, i32 zeroext %evl) {
 ; RV64-NEXT:    ret
   %head = insertelement <8 x i1> poison, i1 false, i32 0
   %m = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i16> @llvm.vp.cttz.v8i16(<8 x i16> %va, <8 x i1> %m, i32 %evl, i1 false)
+  %v = call <8 x i16> @llvm.vp.cttz.v8i16(<8 x i16> %va, i1 false, <8 x i1> %m, i32 %evl)
   ret <8 x i16> %v
 }
 
-declare <16 x i16> @llvm.vp.cttz.v16i16(<16 x i16>, <16 x i1>, i32, i1 immarg)
+declare <16 x i16> @llvm.vp.cttz.v16i16(<16 x i16>, i1 immarg, <16 x i1>, i32)
 
 define <16 x i16> @vp_cttz_v16i16(<16 x i16> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_v16i16:
@@ -670,7 +670,7 @@ define <16 x i16> @vp_cttz_v16i16(<16 x i16> %va, <16 x i1> %m, i32 zeroext %evl
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 8, v0.t
 ; RV64-NEXT:    ret
-  %v = call <16 x i16> @llvm.vp.cttz.v16i16(<16 x i16> %va, <16 x i1> %m, i32 %evl, i1 false)
+  %v = call <16 x i16> @llvm.vp.cttz.v16i16(<16 x i16> %va, i1 false, <16 x i1> %m, i32 %evl)
   ret <16 x i16> %v
 }
 
@@ -736,11 +736,11 @@ define <16 x i16> @vp_cttz_v16i16_unmasked(<16 x i16> %va, i32 zeroext %evl) {
 ; RV64-NEXT:    ret
   %head = insertelement <16 x i1> poison, i1 false, i32 0
   %m = shufflevector <16 x i1> %head, <16 x i1> poison, <16 x i32> zeroinitializer
-  %v = call <16 x i16> @llvm.vp.cttz.v16i16(<16 x i16> %va, <16 x i1> %m, i32 %evl, i1 false)
+  %v = call <16 x i16> @llvm.vp.cttz.v16i16(<16 x i16> %va, i1 false, <16 x i1> %m, i32 %evl)
   ret <16 x i16> %v
 }
 
-declare <2 x i32> @llvm.vp.cttz.v2i32(<2 x i32>, <2 x i1>, i32, i1 immarg)
+declare <2 x i32> @llvm.vp.cttz.v2i32(<2 x i32>, i1 immarg, <2 x i1>, i32)
 
 define <2 x i32> @vp_cttz_v2i32(<2 x i32> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_v2i32:
@@ -800,7 +800,7 @@ define <2 x i32> @vp_cttz_v2i32(<2 x i32> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 24, v0.t
 ; RV64-NEXT:    ret
-  %v = call <2 x i32> @llvm.vp.cttz.v2i32(<2 x i32> %va, <2 x i1> %m, i32 %evl, i1 false)
+  %v = call <2 x i32> @llvm.vp.cttz.v2i32(<2 x i32> %va, i1 false, <2 x i1> %m, i32 %evl)
   ret <2 x i32> %v
 }
 
@@ -868,11 +868,11 @@ define <2 x i32> @vp_cttz_v2i32_unmasked(<2 x i32> %va, i32 zeroext %evl) {
 ; RV64-NEXT:    ret
   %head = insertelement <2 x i1> poison, i1 false, i32 0
   %m = shufflevector <2 x i1> %head, <2 x i1> poison, <2 x i32> zeroinitializer
-  %v = call <2 x i32> @llvm.vp.cttz.v2i32(<2 x i32> %va, <2 x i1> %m, i32 %evl, i1 false)
+  %v = call <2 x i32> @llvm.vp.cttz.v2i32(<2 x i32> %va, i1 false, <2 x i1> %m, i32 %evl)
   ret <2 x i32> %v
 }
 
-declare <4 x i32> @llvm.vp.cttz.v4i32(<4 x i32>, <4 x i1>, i32, i1 immarg)
+declare <4 x i32> @llvm.vp.cttz.v4i32(<4 x i32>, i1 immarg, <4 x i1>, i32)
 
 define <4 x i32> @vp_cttz_v4i32(<4 x i32> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_v4i32:
@@ -932,7 +932,7 @@ define <4 x i32> @vp_cttz_v4i32(<4 x i32> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 24, v0.t
 ; RV64-NEXT:    ret
-  %v = call <4 x i32> @llvm.vp.cttz.v4i32(<4 x i32> %va, <4 x i1> %m, i32 %evl, i1 false)
+  %v = call <4 x i32> @llvm.vp.cttz.v4i32(<4 x i32> %va, i1 false, <4 x i1> %m, i32 %evl)
   ret <4 x i32> %v
 }
 
@@ -1000,11 +1000,11 @@ define <4 x i32> @vp_cttz_v4i32_unmasked(<4 x i32> %va, i32 zeroext %evl) {
 ; RV64-NEXT:    ret
   %head = insertelement <4 x i1> poison, i1 false, i32 0
   %m = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
-  %v = call <4 x i32> @llvm.vp.cttz.v4i32(<4 x i32> %va, <4 x i1> %m, i32 %evl, i1 false)
+  %v = call <4 x i32> @llvm.vp.cttz.v4i32(<4 x i32> %va, i1 false, <4 x i1> %m, i32 %evl)
   ret <4 x i32> %v
 }
 
-declare <8 x i32> @llvm.vp.cttz.v8i32(<8 x i32>, <8 x i1>, i32, i1 immarg)
+declare <8 x i32> @llvm.vp.cttz.v8i32(<8 x i32>, i1 immarg, <8 x i1>, i32)
 
 define <8 x i32> @vp_cttz_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_v8i32:
@@ -1064,7 +1064,7 @@ define <8 x i32> @vp_cttz_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 24, v0.t
 ; RV64-NEXT:    ret
-  %v = call <8 x i32> @llvm.vp.cttz.v8i32(<8 x i32> %va, <8 x i1> %m, i32 %evl, i1 false)
+  %v = call <8 x i32> @llvm.vp.cttz.v8i32(<8 x i32> %va, i1 false, <8 x i1> %m, i32 %evl)
   ret <8 x i32> %v
 }
 
@@ -1132,11 +1132,11 @@ define <8 x i32> @vp_cttz_v8i32_unmasked(<8 x i32> %va, i32 zeroext %evl) {
 ; RV64-NEXT:    ret
   %head = insertelement <8 x i1> poison, i1 false, i32 0
   %m = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i32> @llvm.vp.cttz.v8i32(<8 x i32> %va, <8 x i1> %m, i32 %evl, i1 false)
+  %v = call <8 x i32> @llvm.vp.cttz.v8i32(<8 x i32> %va, i1 false, <8 x i1> %m, i32 %evl)
   ret <8 x i32> %v
 }
 
-declare <16 x i32> @llvm.vp.cttz.v16i32(<16 x i32>, <16 x i1>, i32, i1 immarg)
+declare <16 x i32> @llvm.vp.cttz.v16i32(<16 x i32>, i1 immarg, <16 x i1>, i32)
 
 define <16 x i32> @vp_cttz_v16i32(<16 x i32> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_v16i32:
@@ -1196,7 +1196,7 @@ define <16 x i32> @vp_cttz_v16i32(<16 x i32> %va, <16 x i1> %m, i32 zeroext %evl
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 24, v0.t
 ; RV64-NEXT:    ret
-  %v = call <16 x i32> @llvm.vp.cttz.v16i32(<16 x i32> %va, <16 x i1> %m, i32 %evl, i1 false)
+  %v = call <16 x i32> @llvm.vp.cttz.v16i32(<16 x i32> %va, i1 false, <16 x i1> %m, i32 %evl)
   ret <16 x i32> %v
 }
 
@@ -1264,11 +1264,11 @@ define <16 x i32> @vp_cttz_v16i32_unmasked(<16 x i32> %va, i32 zeroext %evl) {
 ; RV64-NEXT:    ret
   %head = insertelement <16 x i1> poison, i1 false, i32 0
   %m = shufflevector <16 x i1> %head, <16 x i1> poison, <16 x i32> zeroinitializer
-  %v = call <16 x i32> @llvm.vp.cttz.v16i32(<16 x i32> %va, <16 x i1> %m, i32 %evl, i1 false)
+  %v = call <16 x i32> @llvm.vp.cttz.v16i32(<16 x i32> %va, i1 false, <16 x i1> %m, i32 %evl)
   ret <16 x i32> %v
 }
 
-declare <2 x i64> @llvm.vp.cttz.v2i64(<2 x i64>, <2 x i1>, i32, i1 immarg)
+declare <2 x i64> @llvm.vp.cttz.v2i64(<2 x i64>, i1 immarg, <2 x i1>, i32)
 
 define <2 x i64> @vp_cttz_v2i64(<2 x i64> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_v2i64:
@@ -1345,7 +1345,7 @@ define <2 x i64> @vp_cttz_v2i64(<2 x i64> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; RV64-NEXT:    li a0, 56
 ; RV64-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    ret
-  %v = call <2 x i64> @llvm.vp.cttz.v2i64(<2 x i64> %va, <2 x i1> %m, i32 %evl, i1 false)
+  %v = call <2 x i64> @llvm.vp.cttz.v2i64(<2 x i64> %va, i1 false, <2 x i1> %m, i32 %evl)
   ret <2 x i64> %v
 }
 
@@ -1430,11 +1430,11 @@ define <2 x i64> @vp_cttz_v2i64_unmasked(<2 x i64> %va, i32 zeroext %evl) {
 ; RV64-NEXT:    ret
   %head = insertelement <2 x i1> poison, i1 false, i32 0
   %m = shufflevector <2 x i1> %head, <2 x i1> poison, <2 x i32> zeroinitializer
-  %v = call <2 x i64> @llvm.vp.cttz.v2i64(<2 x i64> %va, <2 x i1> %m, i32 %evl, i1 false)
+  %v = call <2 x i64> @llvm.vp.cttz.v2i64(<2 x i64> %va, i1 false, <2 x i1> %m, i32 %evl)
   ret <2 x i64> %v
 }
 
-declare <4 x i64> @llvm.vp.cttz.v4i64(<4 x i64>, <4 x i1>, i32, i1 immarg)
+declare <4 x i64> @llvm.vp.cttz.v4i64(<4 x i64>, i1 immarg, <4 x i1>, i32)
 
 define <4 x i64> @vp_cttz_v4i64(<4 x i64> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_v4i64:
@@ -1511,7 +1511,7 @@ define <4 x i64> @vp_cttz_v4i64(<4 x i64> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; RV64-NEXT:    li a0, 56
 ; RV64-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    ret
-  %v = call <4 x i64> @llvm.vp.cttz.v4i64(<4 x i64> %va, <4 x i1> %m, i32 %evl, i1 false)
+  %v = call <4 x i64> @llvm.vp.cttz.v4i64(<4 x i64> %va, i1 false, <4 x i1> %m, i32 %evl)
   ret <4 x i64> %v
 }
 
@@ -1596,11 +1596,11 @@ define <4 x i64> @vp_cttz_v4i64_unmasked(<4 x i64> %va, i32 zeroext %evl) {
 ; RV64-NEXT:    ret
   %head = insertelement <4 x i1> poison, i1 false, i32 0
   %m = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
-  %v = call <4 x i64> @llvm.vp.cttz.v4i64(<4 x i64> %va, <4 x i1> %m, i32 %evl, i1 false)
+  %v = call <4 x i64> @llvm.vp.cttz.v4i64(<4 x i64> %va, i1 false, <4 x i1> %m, i32 %evl)
   ret <4 x i64> %v
 }
 
-declare <8 x i64> @llvm.vp.cttz.v8i64(<8 x i64>, <8 x i1>, i32, i1 immarg)
+declare <8 x i64> @llvm.vp.cttz.v8i64(<8 x i64>, i1 immarg, <8 x i1>, i32)
 
 define <8 x i64> @vp_cttz_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_v8i64:
@@ -1677,7 +1677,7 @@ define <8 x i64> @vp_cttz_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; RV64-NEXT:    li a0, 56
 ; RV64-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    ret
-  %v = call <8 x i64> @llvm.vp.cttz.v8i64(<8 x i64> %va, <8 x i1> %m, i32 %evl, i1 false)
+  %v = call <8 x i64> @llvm.vp.cttz.v8i64(<8 x i64> %va, i1 false, <8 x i1> %m, i32 %evl)
   ret <8 x i64> %v
 }
 
@@ -1762,11 +1762,11 @@ define <8 x i64> @vp_cttz_v8i64_unmasked(<8 x i64> %va, i32 zeroext %evl) {
 ; RV64-NEXT:    ret
   %head = insertelement <8 x i1> poison, i1 false, i32 0
   %m = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i64> @llvm.vp.cttz.v8i64(<8 x i64> %va, <8 x i1> %m, i32 %evl, i1 false)
+  %v = call <8 x i64> @llvm.vp.cttz.v8i64(<8 x i64> %va, i1 false, <8 x i1> %m, i32 %evl)
   ret <8 x i64> %v
 }
 
-declare <15 x i64> @llvm.vp.cttz.v15i64(<15 x i64>, <15 x i1>, i32, i1 immarg)
+declare <15 x i64> @llvm.vp.cttz.v15i64(<15 x i64>, i1 immarg, <15 x i1>, i32)
 
 define <15 x i64> @vp_cttz_v15i64(<15 x i64> %va, <15 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_v15i64:
@@ -1844,7 +1844,7 @@ define <15 x i64> @vp_cttz_v15i64(<15 x i64> %va, <15 x i1> %m, i32 zeroext %evl
 ; RV64-NEXT:    li a0, 56
 ; RV64-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    ret
-  %v = call <15 x i64> @llvm.vp.cttz.v15i64(<15 x i64> %va, <15 x i1> %m, i32 %evl, i1 false)
+  %v = call <15 x i64> @llvm.vp.cttz.v15i64(<15 x i64> %va, i1 false, <15 x i1> %m, i32 %evl)
   ret <15 x i64> %v
 }
 
@@ -1930,11 +1930,11 @@ define <15 x i64> @vp_cttz_v15i64_unmasked(<15 x i64> %va, i32 zeroext %evl) {
 ; RV64-NEXT:    ret
   %head = insertelement <15 x i1> poison, i1 false, i32 0
   %m = shufflevector <15 x i1> %head, <15 x i1> poison, <15 x i32> zeroinitializer
-  %v = call <15 x i64> @llvm.vp.cttz.v15i64(<15 x i64> %va, <15 x i1> %m, i32 %evl, i1 false)
+  %v = call <15 x i64> @llvm.vp.cttz.v15i64(<15 x i64> %va, i1 false, <15 x i1> %m, i32 %evl)
   ret <15 x i64> %v
 }
 
-declare <16 x i64> @llvm.vp.cttz.v16i64(<16 x i64>, <16 x i1>, i32, i1 immarg)
+declare <16 x i64> @llvm.vp.cttz.v16i64(<16 x i64>, i1 immarg, <16 x i1>, i32)
 
 define <16 x i64> @vp_cttz_v16i64(<16 x i64> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_v16i64:
@@ -2012,7 +2012,7 @@ define <16 x i64> @vp_cttz_v16i64(<16 x i64> %va, <16 x i1> %m, i32 zeroext %evl
 ; RV64-NEXT:    li a0, 56
 ; RV64-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    ret
-  %v = call <16 x i64> @llvm.vp.cttz.v16i64(<16 x i64> %va, <16 x i1> %m, i32 %evl, i1 false)
+  %v = call <16 x i64> @llvm.vp.cttz.v16i64(<16 x i64> %va, i1 false, <16 x i1> %m, i32 %evl)
   ret <16 x i64> %v
 }
 
@@ -2098,11 +2098,11 @@ define <16 x i64> @vp_cttz_v16i64_unmasked(<16 x i64> %va, i32 zeroext %evl) {
 ; RV64-NEXT:    ret
   %head = insertelement <16 x i1> poison, i1 false, i32 0
   %m = shufflevector <16 x i1> %head, <16 x i1> poison, <16 x i32> zeroinitializer
-  %v = call <16 x i64> @llvm.vp.cttz.v16i64(<16 x i64> %va, <16 x i1> %m, i32 %evl, i1 false)
+  %v = call <16 x i64> @llvm.vp.cttz.v16i64(<16 x i64> %va, i1 false, <16 x i1> %m, i32 %evl)
   ret <16 x i64> %v
 }
 
-declare <32 x i64> @llvm.vp.cttz.v32i64(<32 x i64>, <32 x i1>, i32, i1 immarg)
+declare <32 x i64> @llvm.vp.cttz.v32i64(<32 x i64>, i1 immarg, <32 x i1>, i32)
 
 define <32 x i64> @vp_cttz_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_v32i64:
@@ -2459,7 +2459,7 @@ define <32 x i64> @vp_cttz_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %evl
 ; RV64-NEXT:    add sp, sp, a0
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
-  %v = call <32 x i64> @llvm.vp.cttz.v32i64(<32 x i64> %va, <32 x i1> %m, i32 %evl, i1 false)
+  %v = call <32 x i64> @llvm.vp.cttz.v32i64(<32 x i64> %va, i1 false, <32 x i1> %m, i32 %evl)
   ret <32 x i64> %v
 }
 
@@ -2679,7 +2679,7 @@ define <32 x i64> @vp_cttz_v32i64_unmasked(<32 x i64> %va, i32 zeroext %evl) {
 ; RV64-NEXT:    ret
   %head = insertelement <32 x i1> poison, i1 false, i32 0
   %m = shufflevector <32 x i1> %head, <32 x i1> poison, <32 x i32> zeroinitializer
-  %v = call <32 x i64> @llvm.vp.cttz.v32i64(<32 x i64> %va, <32 x i1> %m, i32 %evl, i1 false)
+  %v = call <32 x i64> @llvm.vp.cttz.v32i64(<32 x i64> %va, i1 false, <32 x i1> %m, i32 %evl)
   ret <32 x i64> %v
 }
 
@@ -2704,7 +2704,7 @@ define <2 x i8> @vp_cttz_zero_undef_v2i8(<2 x i8> %va, <2 x i1> %m, i32 zeroext 
 ; CHECK-NEXT:    vadd.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 15, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <2 x i8> @llvm.vp.cttz.v2i8(<2 x i8> %va, <2 x i1> %m, i32 %evl, i1 true)
+  %v = call <2 x i8> @llvm.vp.cttz.v2i8(<2 x i8> %va, i1 true, <2 x i1> %m, i32 %evl)
   ret <2 x i8> %v
 }
 
@@ -2731,7 +2731,7 @@ define <2 x i8> @vp_cttz_zero_undef_v2i8_unmasked(<2 x i8> %va, i32 zeroext %evl
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x i1> poison, i1 true, i32 0
   %m = shufflevector <2 x i1> %head, <2 x i1> poison, <2 x i32> zeroinitializer
-  %v = call <2 x i8> @llvm.vp.cttz.v2i8(<2 x i8> %va, <2 x i1> %m, i32 %evl, i1 true)
+  %v = call <2 x i8> @llvm.vp.cttz.v2i8(<2 x i8> %va, i1 true, <2 x i1> %m, i32 %evl)
   ret <2 x i8> %v
 }
 
@@ -2756,7 +2756,7 @@ define <4 x i8> @vp_cttz_zero_undef_v4i8(<4 x i8> %va, <4 x i1> %m, i32 zeroext 
 ; CHECK-NEXT:    vadd.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 15, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <4 x i8> @llvm.vp.cttz.v4i8(<4 x i8> %va, <4 x i1> %m, i32 %evl, i1 true)
+  %v = call <4 x i8> @llvm.vp.cttz.v4i8(<4 x i8> %va, i1 true, <4 x i1> %m, i32 %evl)
   ret <4 x i8> %v
 }
 
@@ -2783,7 +2783,7 @@ define <4 x i8> @vp_cttz_zero_undef_v4i8_unmasked(<4 x i8> %va, i32 zeroext %evl
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x i1> poison, i1 true, i32 0
   %m = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
-  %v = call <4 x i8> @llvm.vp.cttz.v4i8(<4 x i8> %va, <4 x i1> %m, i32 %evl, i1 true)
+  %v = call <4 x i8> @llvm.vp.cttz.v4i8(<4 x i8> %va, i1 true, <4 x i1> %m, i32 %evl)
   ret <4 x i8> %v
 }
 
@@ -2808,7 +2808,7 @@ define <8 x i8> @vp_cttz_zero_undef_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext 
 ; CHECK-NEXT:    vadd.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 15, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <8 x i8> @llvm.vp.cttz.v8i8(<8 x i8> %va, <8 x i1> %m, i32 %evl, i1 true)
+  %v = call <8 x i8> @llvm.vp.cttz.v8i8(<8 x i8> %va, i1 true, <8 x i1> %m, i32 %evl)
   ret <8 x i8> %v
 }
 
@@ -2835,7 +2835,7 @@ define <8 x i8> @vp_cttz_zero_undef_v8i8_unmasked(<8 x i8> %va, i32 zeroext %evl
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x i1> poison, i1 true, i32 0
   %m = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i8> @llvm.vp.cttz.v8i8(<8 x i8> %va, <8 x i1> %m, i32 %evl, i1 true)
+  %v = call <8 x i8> @llvm.vp.cttz.v8i8(<8 x i8> %va, i1 true, <8 x i1> %m, i32 %evl)
   ret <8 x i8> %v
 }
 
@@ -2860,7 +2860,7 @@ define <16 x i8> @vp_cttz_zero_undef_v16i8(<16 x i8> %va, <16 x i1> %m, i32 zero
 ; CHECK-NEXT:    vadd.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 15, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <16 x i8> @llvm.vp.cttz.v16i8(<16 x i8> %va, <16 x i1> %m, i32 %evl, i1 true)
+  %v = call <16 x i8> @llvm.vp.cttz.v16i8(<16 x i8> %va, i1 true, <16 x i1> %m, i32 %evl)
   ret <16 x i8> %v
 }
 
@@ -2887,7 +2887,7 @@ define <16 x i8> @vp_cttz_zero_undef_v16i8_unmasked(<16 x i8> %va, i32 zeroext %
 ; CHECK-NEXT:    ret
   %head = insertelement <16 x i1> poison, i1 true, i32 0
   %m = shufflevector <16 x i1> %head, <16 x i1> poison, <16 x i32> zeroinitializer
-  %v = call <16 x i8> @llvm.vp.cttz.v16i8(<16 x i8> %va, <16 x i1> %m, i32 %evl, i1 true)
+  %v = call <16 x i8> @llvm.vp.cttz.v16i8(<16 x i8> %va, i1 true, <16 x i1> %m, i32 %evl)
   ret <16 x i8> %v
 }
 
@@ -2947,7 +2947,7 @@ define <2 x i16> @vp_cttz_zero_undef_v2i16(<2 x i16> %va, <2 x i1> %m, i32 zeroe
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 8, v0.t
 ; RV64-NEXT:    ret
-  %v = call <2 x i16> @llvm.vp.cttz.v2i16(<2 x i16> %va, <2 x i1> %m, i32 %evl, i1 true)
+  %v = call <2 x i16> @llvm.vp.cttz.v2i16(<2 x i16> %va, i1 true, <2 x i1> %m, i32 %evl)
   ret <2 x i16> %v
 }
 
@@ -3009,7 +3009,7 @@ define <2 x i16> @vp_cttz_zero_undef_v2i16_unmasked(<2 x i16> %va, i32 zeroext %
 ; RV64-NEXT:    ret
   %head = insertelement <2 x i1> poison, i1 true, i32 0
   %m = shufflevector <2 x i1> %head, <2 x i1> poison, <2 x i32> zeroinitializer
-  %v = call <2 x i16> @llvm.vp.cttz.v2i16(<2 x i16> %va, <2 x i1> %m, i32 %evl, i1 true)
+  %v = call <2 x i16> @llvm.vp.cttz.v2i16(<2 x i16> %va, i1 true, <2 x i1> %m, i32 %evl)
   ret <2 x i16> %v
 }
 
@@ -3069,7 +3069,7 @@ define <4 x i16> @vp_cttz_zero_undef_v4i16(<4 x i16> %va, <4 x i1> %m, i32 zeroe
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 8, v0.t
 ; RV64-NEXT:    ret
-  %v = call <4 x i16> @llvm.vp.cttz.v4i16(<4 x i16> %va, <4 x i1> %m, i32 %evl, i1 true)
+  %v = call <4 x i16> @llvm.vp.cttz.v4i16(<4 x i16> %va, i1 true, <4 x i1> %m, i32 %evl)
   ret <4 x i16> %v
 }
 
@@ -3131,7 +3131,7 @@ define <4 x i16> @vp_cttz_zero_undef_v4i16_unmasked(<4 x i16> %va, i32 zeroext %
 ; RV64-NEXT:    ret
   %head = insertelement <4 x i1> poison, i1 true, i32 0
   %m = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
-  %v = call <4 x i16> @llvm.vp.cttz.v4i16(<4 x i16> %va, <4 x i1> %m, i32 %evl, i1 true)
+  %v = call <4 x i16> @llvm.vp.cttz.v4i16(<4 x i16> %va, i1 true, <4 x i1> %m, i32 %evl)
   ret <4 x i16> %v
 }
 
@@ -3191,7 +3191,7 @@ define <8 x i16> @vp_cttz_zero_undef_v8i16(<8 x i16> %va, <8 x i1> %m, i32 zeroe
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 8, v0.t
 ; RV64-NEXT:    ret
-  %v = call <8 x i16> @llvm.vp.cttz.v8i16(<8 x i16> %va, <8 x i1> %m, i32 %evl, i1 true)
+  %v = call <8 x i16> @llvm.vp.cttz.v8i16(<8 x i16> %va, i1 true, <8 x i1> %m, i32 %evl)
   ret <8 x i16> %v
 }
 
@@ -3253,7 +3253,7 @@ define <8 x i16> @vp_cttz_zero_undef_v8i16_unmasked(<8 x i16> %va, i32 zeroext %
 ; RV64-NEXT:    ret
   %head = insertelement <8 x i1> poison, i1 true, i32 0
   %m = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i16> @llvm.vp.cttz.v8i16(<8 x i16> %va, <8 x i1> %m, i32 %evl, i1 true)
+  %v = call <8 x i16> @llvm.vp.cttz.v8i16(<8 x i16> %va, i1 true, <8 x i1> %m, i32 %evl)
   ret <8 x i16> %v
 }
 
@@ -3313,7 +3313,7 @@ define <16 x i16> @vp_cttz_zero_undef_v16i16(<16 x i16> %va, <16 x i1> %m, i32 z
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 8, v0.t
 ; RV64-NEXT:    ret
-  %v = call <16 x i16> @llvm.vp.cttz.v16i16(<16 x i16> %va, <16 x i1> %m, i32 %evl, i1 true)
+  %v = call <16 x i16> @llvm.vp.cttz.v16i16(<16 x i16> %va, i1 true, <16 x i1> %m, i32 %evl)
   ret <16 x i16> %v
 }
 
@@ -3375,7 +3375,7 @@ define <16 x i16> @vp_cttz_zero_undef_v16i16_unmasked(<16 x i16> %va, i32 zeroex
 ; RV64-NEXT:    ret
   %head = insertelement <16 x i1> poison, i1 true, i32 0
   %m = shufflevector <16 x i1> %head, <16 x i1> poison, <16 x i32> zeroinitializer
-  %v = call <16 x i16> @llvm.vp.cttz.v16i16(<16 x i16> %va, <16 x i1> %m, i32 %evl, i1 true)
+  %v = call <16 x i16> @llvm.vp.cttz.v16i16(<16 x i16> %va, i1 true, <16 x i1> %m, i32 %evl)
   ret <16 x i16> %v
 }
 
@@ -3437,7 +3437,7 @@ define <2 x i32> @vp_cttz_zero_undef_v2i32(<2 x i32> %va, <2 x i1> %m, i32 zeroe
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 24, v0.t
 ; RV64-NEXT:    ret
-  %v = call <2 x i32> @llvm.vp.cttz.v2i32(<2 x i32> %va, <2 x i1> %m, i32 %evl, i1 true)
+  %v = call <2 x i32> @llvm.vp.cttz.v2i32(<2 x i32> %va, i1 true, <2 x i1> %m, i32 %evl)
   ret <2 x i32> %v
 }
 
@@ -3501,7 +3501,7 @@ define <2 x i32> @vp_cttz_zero_undef_v2i32_unmasked(<2 x i32> %va, i32 zeroext %
 ; RV64-NEXT:    ret
   %head = insertelement <2 x i1> poison, i1 true, i32 0
   %m = shufflevector <2 x i1> %head, <2 x i1> poison, <2 x i32> zeroinitializer
-  %v = call <2 x i32> @llvm.vp.cttz.v2i32(<2 x i32> %va, <2 x i1> %m, i32 %evl, i1 true)
+  %v = call <2 x i32> @llvm.vp.cttz.v2i32(<2 x i32> %va, i1 true, <2 x i1> %m, i32 %evl)
   ret <2 x i32> %v
 }
 
@@ -3563,7 +3563,7 @@ define <4 x i32> @vp_cttz_zero_undef_v4i32(<4 x i32> %va, <4 x i1> %m, i32 zeroe
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 24, v0.t
 ; RV64-NEXT:    ret
-  %v = call <4 x i32> @llvm.vp.cttz.v4i32(<4 x i32> %va, <4 x i1> %m, i32 %evl, i1 true)
+  %v = call <4 x i32> @llvm.vp.cttz.v4i32(<4 x i32> %va, i1 true, <4 x i1> %m, i32 %evl)
   ret <4 x i32> %v
 }
 
@@ -3627,7 +3627,7 @@ define <4 x i32> @vp_cttz_zero_undef_v4i32_unmasked(<4 x i32> %va, i32 zeroext %
 ; RV64-NEXT:    ret
   %head = insertelement <4 x i1> poison, i1 true, i32 0
   %m = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
-  %v = call <4 x i32> @llvm.vp.cttz.v4i32(<4 x i32> %va, <4 x i1> %m, i32 %evl, i1 true)
+  %v = call <4 x i32> @llvm.vp.cttz.v4i32(<4 x i32> %va, i1 true, <4 x i1> %m, i32 %evl)
   ret <4 x i32> %v
 }
 
@@ -3689,7 +3689,7 @@ define <8 x i32> @vp_cttz_zero_undef_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroe
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 24, v0.t
 ; RV64-NEXT:    ret
-  %v = call <8 x i32> @llvm.vp.cttz.v8i32(<8 x i32> %va, <8 x i1> %m, i32 %evl, i1 true)
+  %v = call <8 x i32> @llvm.vp.cttz.v8i32(<8 x i32> %va, i1 true, <8 x i1> %m, i32 %evl)
   ret <8 x i32> %v
 }
 
@@ -3753,7 +3753,7 @@ define <8 x i32> @vp_cttz_zero_undef_v8i32_unmasked(<8 x i32> %va, i32 zeroext %
 ; RV64-NEXT:    ret
   %head = insertelement <8 x i1> poison, i1 true, i32 0
   %m = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i32> @llvm.vp.cttz.v8i32(<8 x i32> %va, <8 x i1> %m, i32 %evl, i1 true)
+  %v = call <8 x i32> @llvm.vp.cttz.v8i32(<8 x i32> %va, i1 true, <8 x i1> %m, i32 %evl)
   ret <8 x i32> %v
 }
 
@@ -3815,7 +3815,7 @@ define <16 x i32> @vp_cttz_zero_undef_v16i32(<16 x i32> %va, <16 x i1> %m, i32 z
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 24, v0.t
 ; RV64-NEXT:    ret
-  %v = call <16 x i32> @llvm.vp.cttz.v16i32(<16 x i32> %va, <16 x i1> %m, i32 %evl, i1 true)
+  %v = call <16 x i32> @llvm.vp.cttz.v16i32(<16 x i32> %va, i1 true, <16 x i1> %m, i32 %evl)
   ret <16 x i32> %v
 }
 
@@ -3879,7 +3879,7 @@ define <16 x i32> @vp_cttz_zero_undef_v16i32_unmasked(<16 x i32> %va, i32 zeroex
 ; RV64-NEXT:    ret
   %head = insertelement <16 x i1> poison, i1 true, i32 0
   %m = shufflevector <16 x i1> %head, <16 x i1> poison, <16 x i32> zeroinitializer
-  %v = call <16 x i32> @llvm.vp.cttz.v16i32(<16 x i32> %va, <16 x i1> %m, i32 %evl, i1 true)
+  %v = call <16 x i32> @llvm.vp.cttz.v16i32(<16 x i32> %va, i1 true, <16 x i1> %m, i32 %evl)
   ret <16 x i32> %v
 }
 
@@ -3958,7 +3958,7 @@ define <2 x i64> @vp_cttz_zero_undef_v2i64(<2 x i64> %va, <2 x i1> %m, i32 zeroe
 ; RV64-NEXT:    li a0, 56
 ; RV64-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    ret
-  %v = call <2 x i64> @llvm.vp.cttz.v2i64(<2 x i64> %va, <2 x i1> %m, i32 %evl, i1 true)
+  %v = call <2 x i64> @llvm.vp.cttz.v2i64(<2 x i64> %va, i1 true, <2 x i1> %m, i32 %evl)
   ret <2 x i64> %v
 }
 
@@ -4039,7 +4039,7 @@ define <2 x i64> @vp_cttz_zero_undef_v2i64_unmasked(<2 x i64> %va, i32 zeroext %
 ; RV64-NEXT:    ret
   %head = insertelement <2 x i1> poison, i1 true, i32 0
   %m = shufflevector <2 x i1> %head, <2 x i1> poison, <2 x i32> zeroinitializer
-  %v = call <2 x i64> @llvm.vp.cttz.v2i64(<2 x i64> %va, <2 x i1> %m, i32 %evl, i1 true)
+  %v = call <2 x i64> @llvm.vp.cttz.v2i64(<2 x i64> %va, i1 true, <2 x i1> %m, i32 %evl)
   ret <2 x i64> %v
 }
 
@@ -4118,7 +4118,7 @@ define <4 x i64> @vp_cttz_zero_undef_v4i64(<4 x i64> %va, <4 x i1> %m, i32 zeroe
 ; RV64-NEXT:    li a0, 56
 ; RV64-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    ret
-  %v = call <4 x i64> @llvm.vp.cttz.v4i64(<4 x i64> %va, <4 x i1> %m, i32 %evl, i1 true)
+  %v = call <4 x i64> @llvm.vp.cttz.v4i64(<4 x i64> %va, i1 true, <4 x i1> %m, i32 %evl)
   ret <4 x i64> %v
 }
 
@@ -4199,7 +4199,7 @@ define <4 x i64> @vp_cttz_zero_undef_v4i64_unmasked(<4 x i64> %va, i32 zeroext %
 ; RV64-NEXT:    ret
   %head = insertelement <4 x i1> poison, i1 true, i32 0
   %m = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
-  %v = call <4 x i64> @llvm.vp.cttz.v4i64(<4 x i64> %va, <4 x i1> %m, i32 %evl, i1 true)
+  %v = call <4 x i64> @llvm.vp.cttz.v4i64(<4 x i64> %va, i1 true, <4 x i1> %m, i32 %evl)
   ret <4 x i64> %v
 }
 
@@ -4278,7 +4278,7 @@ define <8 x i64> @vp_cttz_zero_undef_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroe
 ; RV64-NEXT:    li a0, 56
 ; RV64-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    ret
-  %v = call <8 x i64> @llvm.vp.cttz.v8i64(<8 x i64> %va, <8 x i1> %m, i32 %evl, i1 true)
+  %v = call <8 x i64> @llvm.vp.cttz.v8i64(<8 x i64> %va, i1 true, <8 x i1> %m, i32 %evl)
   ret <8 x i64> %v
 }
 
@@ -4359,7 +4359,7 @@ define <8 x i64> @vp_cttz_zero_undef_v8i64_unmasked(<8 x i64> %va, i32 zeroext %
 ; RV64-NEXT:    ret
   %head = insertelement <8 x i1> poison, i1 true, i32 0
   %m = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i64> @llvm.vp.cttz.v8i64(<8 x i64> %va, <8 x i1> %m, i32 %evl, i1 true)
+  %v = call <8 x i64> @llvm.vp.cttz.v8i64(<8 x i64> %va, i1 true, <8 x i1> %m, i32 %evl)
   ret <8 x i64> %v
 }
 
@@ -4439,7 +4439,7 @@ define <15 x i64> @vp_cttz_zero_undef_v15i64(<15 x i64> %va, <15 x i1> %m, i32 z
 ; RV64-NEXT:    li a0, 56
 ; RV64-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    ret
-  %v = call <15 x i64> @llvm.vp.cttz.v15i64(<15 x i64> %va, <15 x i1> %m, i32 %evl, i1 true)
+  %v = call <15 x i64> @llvm.vp.cttz.v15i64(<15 x i64> %va, i1 true, <15 x i1> %m, i32 %evl)
   ret <15 x i64> %v
 }
 
@@ -4521,7 +4521,7 @@ define <15 x i64> @vp_cttz_zero_undef_v15i64_unmasked(<15 x i64> %va, i32 zeroex
 ; RV64-NEXT:    ret
   %head = insertelement <15 x i1> poison, i1 true, i32 0
   %m = shufflevector <15 x i1> %head, <15 x i1> poison, <15 x i32> zeroinitializer
-  %v = call <15 x i64> @llvm.vp.cttz.v15i64(<15 x i64> %va, <15 x i1> %m, i32 %evl, i1 true)
+  %v = call <15 x i64> @llvm.vp.cttz.v15i64(<15 x i64> %va, i1 true, <15 x i1> %m, i32 %evl)
   ret <15 x i64> %v
 }
 
@@ -4601,7 +4601,7 @@ define <16 x i64> @vp_cttz_zero_undef_v16i64(<16 x i64> %va, <16 x i1> %m, i32 z
 ; RV64-NEXT:    li a0, 56
 ; RV64-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    ret
-  %v = call <16 x i64> @llvm.vp.cttz.v16i64(<16 x i64> %va, <16 x i1> %m, i32 %evl, i1 true)
+  %v = call <16 x i64> @llvm.vp.cttz.v16i64(<16 x i64> %va, i1 true, <16 x i1> %m, i32 %evl)
   ret <16 x i64> %v
 }
 
@@ -4683,7 +4683,7 @@ define <16 x i64> @vp_cttz_zero_undef_v16i64_unmasked(<16 x i64> %va, i32 zeroex
 ; RV64-NEXT:    ret
   %head = insertelement <16 x i1> poison, i1 true, i32 0
   %m = shufflevector <16 x i1> %head, <16 x i1> poison, <16 x i32> zeroinitializer
-  %v = call <16 x i64> @llvm.vp.cttz.v16i64(<16 x i64> %va, <16 x i1> %m, i32 %evl, i1 true)
+  %v = call <16 x i64> @llvm.vp.cttz.v16i64(<16 x i64> %va, i1 true, <16 x i1> %m, i32 %evl)
   ret <16 x i64> %v
 }
 
@@ -5042,7 +5042,7 @@ define <32 x i64> @vp_cttz_zero_undef_v32i64(<32 x i64> %va, <32 x i1> %m, i32 z
 ; RV64-NEXT:    add sp, sp, a0
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
-  %v = call <32 x i64> @llvm.vp.cttz.v32i64(<32 x i64> %va, <32 x i1> %m, i32 %evl, i1 true)
+  %v = call <32 x i64> @llvm.vp.cttz.v32i64(<32 x i64> %va, i1 true, <32 x i1> %m, i32 %evl)
   ret <32 x i64> %v
 }
 
@@ -5235,6 +5235,6 @@ define <32 x i64> @vp_cttz_zero_undef_v32i64_unmasked(<32 x i64> %va, i32 zeroex
 ; RV64-NEXT:    ret
   %head = insertelement <32 x i1> poison, i1 true, i32 0
   %m = shufflevector <32 x i1> %head, <32 x i1> poison, <32 x i32> zeroinitializer
-  %v = call <32 x i64> @llvm.vp.cttz.v32i64(<32 x i64> %va, <32 x i1> %m, i32 %evl, i1 true)
+  %v = call <32 x i64> @llvm.vp.cttz.v32i64(<32 x i64> %va, i1 true, <32 x i1> %m, i32 %evl)
   ret <32 x i64> %v
 }
