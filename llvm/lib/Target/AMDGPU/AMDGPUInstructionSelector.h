@@ -297,6 +297,7 @@ private:
 
   std::pair<Register, unsigned> selectVOP3PMadMixModsImpl(MachineOperand &Root,
                                                           bool &Matched) const;
+  ComplexRendererFns selectVOP3PMadMixModsExt(MachineOperand &Root) const;
   ComplexRendererFns selectVOP3PMadMixMods(MachineOperand &Root) const;
 
   void renderTruncImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
