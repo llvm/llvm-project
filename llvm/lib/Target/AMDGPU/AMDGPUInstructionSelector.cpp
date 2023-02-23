@@ -1859,7 +1859,10 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   // The legalizer preprocessed the intrinsic arguments. If we aren't using
   // NSA, these should have been packed into a single value in the first
   // address register
-  const bool UseNSA = NumVAddrRegs != 1 && NumVAddrDwords == NumVAddrRegs;
+  const bool UseNSA =
+      NumVAddrRegs != 1 &&
+      (STI.hasPartialNSAEncoding() ? NumVAddrDwords >= NumVAddrRegs
+                                   : NumVAddrDwords == NumVAddrRegs);
   if (UseNSA && !STI.hasFeature(AMDGPU::FeatureNSAEncoding)) {
     LLVM_DEBUG(dbgs() << "Trying to use NSA on non-NSA target\n");
     return false;
