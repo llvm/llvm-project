@@ -19,6 +19,8 @@
 // RUN: %env_hwasan_opts=allocator_may_return_null=1     %run %t new-nothrow max 2>&1
 // RUN:                                                 %run %t usable 2>&1
 
+// REQUIRES: android
+
 // Tests for various edge cases related to sizes, notably the maximum size the
 // allocator can allocate. Tests that an integer overflow in the parameters of
 // calloc is caught.
