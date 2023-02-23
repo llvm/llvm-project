@@ -8,6 +8,8 @@
 
 #include "Annotations.h"
 #include "ClangdServer.h"
+#include "Compiler.h"
+#include "Config.h"
 #include "Diagnostics.h"
 #include "GlobalCompilationDatabase.h"
 #include "Matchers.h"
@@ -21,7 +23,6 @@
 #include "support/Path.h"
 #include "support/TestTracer.h"
 #include "support/Threading.h"
-#include "support/ThreadsafeFS.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FunctionExtras.h"
@@ -31,19 +32,23 @@
 #include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <cstdint>
+#include <functional>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace clang {
 namespace clangd {
 namespace {
 
+using ::testing::_;
 using ::testing::AllOf;
 using ::testing::AnyOf;
 using ::testing::Contains;
@@ -1192,6 +1197,118 @@ TEST_F(TUSchedulerTests, OnlyPublishWhenPreambleIsBuilt) {
   S.update(File, getInputs(File, "#define FOO"), WantDiagnostics::Auto);
   S.blockUntilIdle(timeoutSeconds(10));
   EXPECT_EQ(PreamblePublishCount, 2);
+}
+
+TEST_F(TUSchedulerTests, PublishWithStalePreamble) {
+  // Callbacks that blocks the preamble thread after the first preamble is
+  // built and stores preamble/main-file versions for diagnostics released.
+  class BlockPreambleThread : public ParsingCallbacks {
+  public:
+    using DiagsCB = std::function<void(ParsedAST &)>;
+    BlockPreambleThread(Notification &UnblockPreamble, DiagsCB CB)
+        : UnblockPreamble(UnblockPreamble), CB(std::move(CB)) {}
+
+    void onPreambleAST(PathRef Path, llvm::StringRef Version,
+                       const CompilerInvocation &, ASTContext &Ctx,
+                       Preprocessor &, const CanonicalIncludes &) override {
+      if (BuildBefore)
+        ASSERT_TRUE(UnblockPreamble.wait(timeoutSeconds(5)))
+            << "Expected notification";
+      BuildBefore = true;
+    }
+
+    void onMainAST(PathRef File, ParsedAST &AST, PublishFn Publish) override {
+      CB(AST);
+    }
+
+    void onFailedAST(PathRef File, llvm::StringRef Version,
+                     std::vector<Diag> Diags, PublishFn Publish) override {
+      ADD_FAILURE() << "Received failed ast for: " << File << " with version "
+                    << Version << '\n';
+    }
+
+  private:
+    bool BuildBefore = false;
+    Notification &UnblockPreamble;
+    std::function<void(ParsedAST &)> CB;
+  };
+
+  // Helpers for issuing blocking update requests on a TUScheduler, whose
+  // onMainAST callback would call onDiagnostics.
+  class DiagCollector {
+  public:
+    void onDiagnostics(ParsedAST &AST) {
+      std::scoped_lock<std::mutex> Lock(DiagMu);
+      DiagVersions.emplace_back(
+          std::make_pair(AST.preambleVersion()->str(), AST.version().str()));
+      DiagsReceived.notify_all();
+    }
+
+    std::pair<std::string, std::string>
+    waitForNewDiags(TUScheduler &S, PathRef File, ParseInputs PI) {
+      std::unique_lock<std::mutex> Lock(DiagMu);
+      // Perform the update under the lock to make sure it isn't handled until
+      // we're waiting for it.
+      S.update(File, std::move(PI), WantDiagnostics::Auto);
+      size_t OldSize = DiagVersions.size();
+      bool ReceivedDiags = DiagsReceived.wait_for(
+          Lock, std::chrono::seconds(5),
+          [this, OldSize] { return OldSize + 1 == DiagVersions.size(); });
+      if (!ReceivedDiags) {
+        ADD_FAILURE() << "Timed out waiting for diags";
+        return {"invalid", "version"};
+      }
+      return DiagVersions.back();
+    }
+
+    std::vector<std::pair<std::string, std::string>> diagVersions() {
+      std::scoped_lock<std::mutex> Lock(DiagMu);
+      return DiagVersions;
+    }
+
+  private:
+    std::condition_variable DiagsReceived;
+    std::mutex DiagMu;
+    std::vector<std::pair</*PreambleVersion*/ std::string,
+                          /*MainFileVersion*/ std::string>>
+        DiagVersions;
+  };
+
+  Config Cfg;
+  Cfg.Diagnostics.AllowStalePreamble = true;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+
+  DiagCollector Collector;
+  Notification UnblockPreamble;
+  auto DiagCallbacks = std::make_unique<BlockPreambleThread>(
+      UnblockPreamble,
+      [&Collector](ParsedAST &AST) { Collector.onDiagnostics(AST); });
+  TUScheduler S(CDB, optsForTest(), std::move(DiagCallbacks));
+  Path File = testPath("foo.cpp");
+  auto BlockForDiags = [&](ParseInputs PI) {
+    return Collector.waitForNewDiags(S, File, std::move(PI));
+  };
+
+  // Build first preamble.
+  auto PI = getInputs(File, "");
+  PI.Version = PI.Contents = "1";
+  ASSERT_THAT(BlockForDiags(PI), testing::Pair("1", "1"));
+
+  // Now preamble thread is blocked, so rest of the requests sees only the
+  // stale preamble.
+  PI.Version = "2";
+  PI.Contents = "#define BAR\n" + PI.Version;
+  ASSERT_THAT(BlockForDiags(PI), testing::Pair("1", "2"));
+
+  PI.Version = "3";
+  PI.Contents = "#define FOO\n" + PI.Version;
+  ASSERT_THAT(BlockForDiags(PI), testing::Pair("1", "3"));
+
+  UnblockPreamble.notify();
+  S.blockUntilIdle(timeoutSeconds(5));
+
+  // Make sure that we have eventual consistency.
+  EXPECT_THAT(Collector.diagVersions().back(), Pair(PI.Version, PI.Version));
 }
 
 // If a header file is missing from the CDB (or inferred using heuristics), and

@@ -543,6 +543,21 @@ TEST_F(ConfigCompileTests, Style) {
   EXPECT_TRUE(compileAndApply());
   EXPECT_THAT(Conf.Style.FullyQualifiedNamespaces, ElementsAre("foo", "bar"));
 }
+
+TEST_F(ConfigCompileTests, AllowDiagsFromStalePreamble) {
+  Frag = {};
+  EXPECT_TRUE(compileAndApply());
+  // Off by default.
+  EXPECT_EQ(Conf.Diagnostics.AllowStalePreamble, false);
+
+  Frag.Diagnostics.AllowStalePreamble.emplace(true);
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(Conf.Diagnostics.AllowStalePreamble, true);
+
+  Frag.Diagnostics.AllowStalePreamble.emplace(false);
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(Conf.Diagnostics.AllowStalePreamble, false);
+}
 } // namespace
 } // namespace config
 } // namespace clangd

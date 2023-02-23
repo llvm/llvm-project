@@ -348,7 +348,6 @@ format stdexcept
 format string
 format string_view
 format tuple
-format type_traits
 format vector
 format version
 forward_list algorithm

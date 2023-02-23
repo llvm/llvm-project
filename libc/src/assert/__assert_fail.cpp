@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/OSUtil/io.h"
 #include "src/assert/__assert_fail.h"
+#include "src/__support/OSUtil/io.h"
+#include "src/__support/libc_assert.h"
 #include "src/stdlib/abort.h"
 
 namespace __llvm_libc {
@@ -15,13 +16,7 @@ namespace __llvm_libc {
 LLVM_LIBC_FUNCTION(void, __assert_fail,
                    (const char *assertion, const char *file, unsigned line,
                     const char *function)) {
-  (void)line; // Suppress warning as long as line is unused.
-  write_to_stderr(file);
-  write_to_stderr(": Assertion failed: '");
-  write_to_stderr(assertion);
-  write_to_stderr("' in function: '");
-  write_to_stderr(function);
-  write_to_stderr("'\n");
+  __llvm_libc::report_assertion_failure(assertion, file, line, function);
   __llvm_libc::abort();
 }
 

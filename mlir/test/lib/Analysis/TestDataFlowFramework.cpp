@@ -96,6 +96,9 @@ LogicalResult FooAnalysis::initialize(Operation *top) {
   if (top->getNumRegions() != 1)
     return top->emitError("expected a single region top-level op");
 
+  if (top->getRegion(0).getBlocks().empty())
+    return top->emitError("expected at least one block in the region");
+
   // Initialize the top-level state.
   getOrCreate<FooState>(&top->getRegion(0).front())->join(0);
 

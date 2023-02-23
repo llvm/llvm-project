@@ -68,7 +68,7 @@ let Predicates = [HasVendorXTHeadBa], DecoderNamespace = "THeadBa",
 class THShiftALU_rri<bits<3> funct3, string opcodestr>
     : RVInstR<0, funct3, OPC_CUSTOM_0, (outs GPR:$rd),
               (ins GPR:$rs1, GPR:$rs2, uimm2:$uimm2),
-	      opcodestr, "$rd, $rs1, $rs2, $uimm2"> {
+              opcodestr, "$rd, $rs1, $rs2, $uimm2"> {
   bits<2> uimm2;
   let Inst{31-27} = 0;
   let Inst{26-25} = uimm2;
@@ -79,12 +79,12 @@ let Predicates = [HasVendorXTHeadBb], DecoderNamespace = "THeadBb",
 class THShift_ri<bits<5> funct5, bits<3> funct3, string opcodestr>
     : RVInstIShift<funct5, funct3, OPC_CUSTOM_0, (outs GPR:$rd),
                    (ins GPR:$rs1, uimmlog2xlen:$shamt),
-		   opcodestr, "$rd, $rs1, $shamt">;
+                   opcodestr, "$rd, $rs1, $shamt">;
 
 class THBitfieldExtract_rii<bits<3> funct3, string opcodestr>
     : RVInstI<funct3, OPC_CUSTOM_0, (outs GPR:$rd),
               (ins GPR:$rs1, uimmlog2xlen:$msb, uimmlog2xlen:$lsb),
-	      opcodestr, "$rd, $rs1, $msb, $lsb"> {
+              opcodestr, "$rd, $rs1, $msb, $lsb"> {
   bits<6> msb;
   bits<6> lsb;
   let Inst{31-26} = msb;
@@ -104,7 +104,7 @@ let Predicates = [HasVendorXTHeadBb, IsRV64], DecoderNamespace = "THeadBb",
 class THShiftW_ri<bits<7> funct7, bits<3> funct3, string opcodestr>
     : RVInstIShiftW<funct7, funct3, OPC_CUSTOM_0, (outs GPR:$rd),
                     (ins GPR:$rs1, uimm5:$shamt),
-		    opcodestr, "$rd, $rs1, $shamt">;
+                    opcodestr, "$rd, $rs1, $shamt">;
 
 
 let Predicates = [HasVendorXTHeadMac], DecoderNamespace = "THeadMac",
@@ -141,6 +141,28 @@ class THStorePair<bits<5> funct5, string opcodestr>
   let DecoderMethod = "decodeXTHeadMemPair";
 }
 
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
+class THCacheInst_r<bits<5> funct5, string opcodestr>
+    : RVInstR<0b0000001, 0, OPC_CUSTOM_0, (outs), (ins GPR:$rs1),
+              opcodestr, "$rs1"> {
+  let rd = 0;
+  let rs2 = funct5;
+}
+
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
+class THCacheInst_rr<bits<7> funct7, string opcodestr>
+    : RVInstR<funct7, 0, OPC_CUSTOM_0, (outs), (ins GPR:$rs1, GPR:$rs2),
+      opcodestr, "$rs1, $rs2"> {
+  let rd = 0;
+}
+
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
+class THCacheInst_void<bits<5> funct5, string opcodestr>
+    : RVInstR<0b0000000, 0, OPC_CUSTOM_0, (outs), (ins), opcodestr, ""> {
+  let rd = 0;
+  let rs1 = 0;
+  let rs2 = funct5;
+}
 
 //===----------------------------------------------------------------------===//
 // Combination of instruction classes.
@@ -338,31 +360,31 @@ def : Pat<(mul GPR:$r, C9LeftShift:$i),
                 (TrailingZeros C9LeftShift:$i))>;
 
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 11)),
-	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 2), 1)>;
+          (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 2), 1)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 19)),
-	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 3), 1)>;
+          (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 3), 1)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 13)),
-	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 1), 2)>;
+          (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 1), 2)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 21)),
-	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 2), 2)>;
+          (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 2), 2)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 37)),
-	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 3), 2)>;
+          (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 3), 2)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 25)),
-	  (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 2), (TH_ADDSL GPR:$r, GPR:$r, 2), 2)>;
+          (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 2), (TH_ADDSL GPR:$r, GPR:$r, 2), 2)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 41)),
-	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 2), 3)>;
+          (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 2), 3)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 73)),
-	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 3), 3)>;
+          (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 3), 3)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 27)),
-	  (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 3), (TH_ADDSL GPR:$r, GPR:$r, 3), 1)>;
+          (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 3), (TH_ADDSL GPR:$r, GPR:$r, 3), 1)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 45)),
-	  (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 3), (TH_ADDSL GPR:$r, GPR:$r, 3), 2)>;
+          (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 3), (TH_ADDSL GPR:$r, GPR:$r, 3), 2)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 81)),
-	  (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 3), (TH_ADDSL GPR:$r, GPR:$r, 3), 3)>;
+          (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 3), (TH_ADDSL GPR:$r, GPR:$r, 3), 3)>;
 
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 200)),
-	  (SLLI (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 2),
-		       (TH_ADDSL GPR:$r, GPR:$r, 2), 2), 3)>;
+          (SLLI (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 2),
+                          (TH_ADDSL GPR:$r, GPR:$r, 2), 2), 3)>;
 } // Predicates = [HasVendorXTHeadBa]
 
 let Predicates = [HasVendorXTHeadBb] in {
@@ -435,9 +457,9 @@ def : Pat<(binop_allwusers<sub> GPR:$rd, (mul
 
 let Predicates = [HasVendorXTHeadMac, IsRV32] in {
 def : Pat<(add GPR:$rd, (mul (sexti16 GPR:$rs1), (sexti16 GPR:$rs2))),
-	  (TH_MULAH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+         (TH_MULAH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 def : Pat<(sub GPR:$rd, (mul (sexti16 GPR:$rs1), (sexti16 GPR:$rs2))),
-	  (TH_MULSH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+          (TH_MULSH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasVendorXTHeadMac, IsRV32]
 
 defm PseudoTHVdotVMAQA      : VPseudoVMAQA_VV_VX;
@@ -482,4 +504,37 @@ let Predicates = [HasVendorXTHeadMemPair] in {
   def : Pat<(th_lwd GPR:$rs1, uimm2_3:$uimm2_3), (TH_LWD GPR:$rs1, uimm2_3:$uimm2_3, 3)>;
   def : Pat<(th_swd GPR:$rd1, GPR:$rd2, GPR:$rs1, uimm2_3:$uimm2_3),
             (TH_SWD GPR:$rd1, GPR:$rd2, GPR:$rs1, uimm2_3:$uimm2_3, 3)>;
+}
+
+let Predicates = [HasVendorXTHeadCmo], DecoderNamespace = "THeadCmo" in {
+def TH_DCACHE_CSW    : THCacheInst_r<0b00001, "th.dcache.csw">;
+def TH_DCACHE_ISW    : THCacheInst_r<0b00010, "th.dcache.isw">;
+def TH_DCACHE_CISW   : THCacheInst_r<0b00011, "th.dcache.cisw">;
+def TH_DCACHE_CVAL1  : THCacheInst_r<0b00100, "th.dcache.cval1">;
+def TH_DCACHE_CVA    : THCacheInst_r<0b00101, "th.dcache.cva">;
+def TH_DCACHE_IVA    : THCacheInst_r<0b00110, "th.dcache.iva">;
+def TH_DCACHE_CIVA   : THCacheInst_r<0b00111, "th.dcache.civa">;
+def TH_DCACHE_CPAL1  : THCacheInst_r<0b01000, "th.dcache.cpal1">;
+def TH_DCACHE_CPA    : THCacheInst_r<0b01001, "th.dcache.cpa">;
+def TH_DCACHE_IPA    : THCacheInst_r<0b01010, "th.dcache.ipa">;
+def TH_DCACHE_CIPA   : THCacheInst_r<0b01011, "th.dcache.cipa">;
+def TH_ICACHE_IVA    : THCacheInst_r<0b10000, "th.icache.iva">;
+def TH_ICACHE_IPA    : THCacheInst_r<0b11000, "th.icache.ipa">;
+
+def TH_DCACHE_CALL   : THCacheInst_void<0b00001, "th.dcache.call">;
+def TH_DCACHE_IALL   : THCacheInst_void<0b00010, "th.dcache.iall">;
+def TH_DCACHE_CIALL  : THCacheInst_void<0b00011, "th.dcache.ciall">;
+def TH_ICACHE_IALL   : THCacheInst_void<0b10000, "th.icache.iall">;
+def TH_ICACHE_IALLS  : THCacheInst_void<0b10001, "th.icache.ialls">;
+def TH_L2CACHE_CALL  : THCacheInst_void<0b10101, "th.l2cache.call">;
+def TH_L2CACHE_IALL  : THCacheInst_void<0b10110, "th.l2cache.iall">;
+def TH_L2CACHE_CIALL : THCacheInst_void<0b10111, "th.l2cache.ciall">;
+}
+
+let Predicates = [HasVendorXTHeadSync], DecoderNamespace = "THeadSync" in {
+def TH_SFENCE_VMAS : THCacheInst_rr<0b0000010, "th.sfence.vmas">;
+def TH_SYNC        : THCacheInst_void<0b11000, "th.sync">;
+def TH_SYNC_S      : THCacheInst_void<0b11001, "th.sync.s">;
+def TH_SYNC_I      : THCacheInst_void<0b11010, "th.sync.i">;
+def TH_SYNC_IS     : THCacheInst_void<0b11011, "th.sync.is">;
 }

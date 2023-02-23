@@ -26,7 +26,6 @@ namespace llvm {
 struct Align;
 class Argument;
 class Function;
-class GCNSubtarget;
 class GlobalValue;
 class MCInstrInfo;
 class MCRegisterClass;
@@ -1119,6 +1118,7 @@ bool hasMIMG_R128(const MCSubtargetInfo &STI);
 bool hasA16(const MCSubtargetInfo &STI);
 bool hasG16(const MCSubtargetInfo &STI);
 bool hasPackedD16(const MCSubtargetInfo &STI);
+unsigned getNSAMaxSize(const MCSubtargetInfo &STI);
 
 bool isSI(const MCSubtargetInfo &STI);
 bool isCI(const MCSubtargetInfo &STI);
@@ -1300,10 +1300,6 @@ unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST);
 /// offset field.  \p ByteOffset should be the offset in bytes and
 /// not the encoded offset.
 bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset);
-
-bool splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset, uint32_t &ImmOffset,
-                      const GCNSubtarget *Subtarget,
-                      Align Alignment = Align(4));
 
 LLVM_READNONE
 inline bool isLegal64BitDPPControl(unsigned DC) {

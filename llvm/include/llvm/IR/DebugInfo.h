@@ -296,7 +296,7 @@ std::optional<AssignmentInfo> getAssignmentInfo(const DataLayout &DL,
 class AssignmentTrackingPass : public PassInfoMixin<AssignmentTrackingPass> {
   /// Note: this method does not set the debug-info-assignment-tracking module
   /// flag.
-  void runOnFunction(Function &F);
+  bool runOnFunction(Function &F);
 
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);

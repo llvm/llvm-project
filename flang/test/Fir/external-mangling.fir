@@ -1,6 +1,9 @@
-// RUN: fir-opt --external-name-interop %s | FileCheck %s
-// RUN: tco --external-name-interop %s | FileCheck %s
-// RUN: tco --external-name-interop %s | tco --fir-to-llvm-ir | FileCheck %s --check-prefix=LLVMIR
+// RUN: fir-opt --external-name-interop="append-underscore=true" %s | FileCheck %s --check-prefix=CHECK-UNDER
+// RUN: fir-opt --external-name-interop="append-underscore=false" %s | FileCheck %s --check-prefix=CHECK-NOUNDER
+// RUN: tco --external-name-interop="append-underscore=true" %s | FileCheck %s --check-prefix=CHECK-UNDER
+// RUN: tco --external-name-interop="append-underscore=false" %s | FileCheck %s --check-prefix=CHECK-NOUNDER
+// RUN: tco --external-name-interop="append-underscore=true" %s | tco --fir-to-llvm-ir | FileCheck %s --check-prefix=LLVMIR-UNDER
+// RUN: tco --external-name-interop="append-underscore=false" %s | tco --fir-to-llvm-ir | FileCheck %s --check-prefix=LLVMIR-NOUNDER
 
 func.func @_QPfoo() {
   %c0 = arith.constant 0 : index
@@ -21,24 +24,43 @@ fir.global common @_QB(dense<0> : vector<4xi8>) : !fir.array<4xi8>
 func.func private @_QPbar(!fir.ref<i32>)
 func.func private @_QPbar2(!fir.ref<f32>)
 
-// CHECK: func @foo_
-// CHECK: %{{.*}} = fir.address_of(@a_) : !fir.ref<!fir.array<4xi8>>
-// CHECK: %{{.*}} = fir.address_of(@__BLNK__) : !fir.ref<!fir.array<4xi8>>
-// CHECK: fir.call @bar_
-// CHECK: fir.call @bar2_
-// CHECK: fir.global common @a_(dense<0> : vector<4xi8>) : !fir.array<4xi8>
-// CHECK: fir.global common @__BLNK__(dense<0> : vector<4xi8>) : !fir.array<4xi8>
-// CHECK: func private @bar_(!fir.ref<i32>)
+// CHECK-UNDER: func @foo_
+// CHECK-UNDER: %{{.*}} = fir.address_of(@a_) : !fir.ref<!fir.array<4xi8>>
+// CHECK-UNDER: %{{.*}} = fir.address_of(@__BLNK__) : !fir.ref<!fir.array<4xi8>>
+// CHECK-UNDER: fir.call @bar_
+// CHECK-UNDER: fir.call @bar2_
+// CHECK-UNDER: fir.global common @a_(dense<0> : vector<4xi8>) : !fir.array<4xi8>
+// CHECK-UNDER: fir.global common @__BLNK__(dense<0> : vector<4xi8>) : !fir.array<4xi8>
+// CHECK-UNDER: func private @bar_(!fir.ref<i32>)
 
-// LLVMIR: %{{.*}} = llvm.mlir.addressof @a_ : !llvm.ptr<array<4 x i8>>
-// LLVMIR: %{{.*}} = llvm.mlir.addressof @__BLNK__ : !llvm.ptr<array<4 x i8>>
-// LLVMIR: llvm.call @bar_(%{{.*}}) : (!llvm.ptr<i32>) -> ()
-// LLVMIR: llvm.call @bar2_(%{{.*}}) : (!llvm.ptr<f32>) -> ()
+// CHECK-NOUNDER: func @foo(
+// CHECK-NOUNDER: %{{.*}} = fir.address_of(@a) : !fir.ref<!fir.array<4xi8>>
+// CHECK-NOUNDER: %{{.*}} = fir.address_of(@__BLNK__) : !fir.ref<!fir.array<4xi8>>
+// CHECK-NOUNDER: fir.call @bar(
+// CHECK-NOUNDER: fir.call @bar2(
+// CHECK-NOUNDER: fir.global common @a(dense<0> : vector<4xi8>) : !fir.array<4xi8>
+// CHECK-NOUNDER: fir.global common @__BLNK__(dense<0> : vector<4xi8>) : !fir.array<4xi8>
+// CHECK-NOUNDER: func private @bar(!fir.ref<i32>)
 
-// LLVMIR: llvm.mlir.global common @a_(dense<0> : vector<4xi8>) {{.*}} : !llvm.array<4 x i8>
-// LLVMIR: llvm.mlir.global common @__BLNK__(dense<0> : vector<4xi8>) {{.*}}  : !llvm.array<4 x i8>
-// LLVMIR: llvm.func @bar_(!llvm.ptr<i32>) attributes {sym_visibility = "private"}
-// LLVMIR: llvm.func @bar2_(!llvm.ptr<f32>) attributes {sym_visibility = "private"}
+// LLVMIR-UNDER: %{{.*}} = llvm.mlir.addressof @a_ : !llvm.ptr<array<4 x i8>>
+// LLVMIR-UNDER: %{{.*}} = llvm.mlir.addressof @__BLNK__ : !llvm.ptr<array<4 x i8>>
+// LLVMIR-UNDER: llvm.call @bar_(%{{.*}}) : (!llvm.ptr<i32>) -> ()
+// LLVMIR-UNDER: llvm.call @bar2_(%{{.*}}) : (!llvm.ptr<f32>) -> ()
+
+// LLVMIR-UNDER: llvm.mlir.global common @a_(dense<0> : vector<4xi8>) {{.*}} : !llvm.array<4 x i8>
+// LLVMIR-UNDER: llvm.mlir.global common @__BLNK__(dense<0> : vector<4xi8>) {{.*}}  : !llvm.array<4 x i8>
+// LLVMIR-UNDER: llvm.func @bar_(!llvm.ptr<i32>) attributes {sym_visibility = "private"}
+// LLVMIR-UNDER: llvm.func @bar2_(!llvm.ptr<f32>) attributes {sym_visibility = "private"}
+
+// LLVMIR-NOUNDER: %{{.*}} = llvm.mlir.addressof @a : !llvm.ptr<array<4 x i8>>
+// LLVMIR-NOUNDER: %{{.*}} = llvm.mlir.addressof @__BLNK__ : !llvm.ptr<array<4 x i8>>
+// LLVMIR-NOUNDER: llvm.call @bar(%{{.*}}) : (!llvm.ptr<i32>) -> ()
+// LLVMIR-NOUNDER: llvm.call @bar2(%{{.*}}) : (!llvm.ptr<f32>) -> ()
+
+// LLVMIR-NOUNDER: llvm.mlir.global common @a(dense<0> : vector<4xi8>) {{.*}} : !llvm.array<4 x i8>
+// LLVMIR-NOUNDER: llvm.mlir.global common @__BLNK__(dense<0> : vector<4xi8>) {{.*}}  : !llvm.array<4 x i8>
+// LLVMIR-NOUNDER: llvm.func @bar(!llvm.ptr<i32>) attributes {sym_visibility = "private"}
+// LLVMIR-NOUNDER: llvm.func @bar2(!llvm.ptr<f32>) attributes {sym_visibility = "private"}
 
 // ----- 
 
@@ -52,10 +74,18 @@ func.func @_QPcaller() {
   return 
 }
 
-// CHECK: func @callee_
-// CHECK: fir.call @callee_
-// CHECK: func @caller_
-// CHECK: fir.call @callee_
+// CHECK-UNDER: func @callee_
+// CHECK-UNDER: fir.call @callee_
+// CHECK-UNDER: func @caller_
+// CHECK-UNDER: fir.call @callee_
 
-// LLVMIR: llvm.call @callee_() : () -> ()
-// LLVMIR: llvm.call @callee_() : () -> ()
+// LLVMIR-UNDER: llvm.call @callee_() : () -> ()
+// LLVMIR-UNDER: llvm.call @callee_() : () -> ()
+
+// CHECK-NOUNDER: func @callee(
+// CHECK-NOUNDER: fir.call @callee(
+// CHECK-NOUNDER: func @caller(
+// CHECK-NOUNDER: fir.call @callee(
+
+// LLVMIR-NOUNDER: llvm.call @callee() : () -> ()
+// LLVMIR-NOUNDER: llvm.call @callee() : () -> ()

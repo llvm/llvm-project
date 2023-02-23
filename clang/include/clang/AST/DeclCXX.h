@@ -1546,8 +1546,11 @@ public:
   ///
   /// \param Base the base class we are searching for.
   ///
+  /// \param LookupInDependentTypes whether to look up in dependent types.
+  ///
   /// \returns true if this class is derived from Base, false otherwise.
-  bool isDerivedFrom(const CXXRecordDecl *Base) const;
+  bool isDerivedFrom(const CXXRecordDecl *Base,
+                     bool LookupInDependentTypes = false) const;
 
   /// Determine whether this class is derived from the type \p Base.
   ///
@@ -1561,11 +1564,14 @@ public:
   /// \param Paths will contain the paths taken from the current class to the
   /// given \p Base class.
   ///
+  /// \param LookupInDependentTypes whether to look up independent types.
+  ///
   /// \returns true if this class is derived from \p Base, false otherwise.
   ///
   /// \todo add a separate parameter to configure IsDerivedFrom, rather than
   /// tangling input and output in \p Paths
-  bool isDerivedFrom(const CXXRecordDecl *Base, CXXBasePaths &Paths) const;
+  bool isDerivedFrom(const CXXRecordDecl *Base, CXXBasePaths &Paths,
+                     bool LookupInDependentTypes = false) const;
 
   /// Determine whether this class is virtually derived from
   /// the class \p Base.

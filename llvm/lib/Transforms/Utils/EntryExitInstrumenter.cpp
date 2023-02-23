@@ -145,8 +145,8 @@ void llvm::EntryExitInstrumenterPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   static_cast<PassInfoMixin<llvm::EntryExitInstrumenterPass> *>(this)
       ->printPipeline(OS, MapClassName2PassName);
-  OS << "<";
+  OS << '<';
   if (PostInlining)
     OS << "post-inline";
-  OS << ">";
+  OS << '>';
 }
