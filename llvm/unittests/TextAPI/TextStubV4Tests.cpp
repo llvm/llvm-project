@@ -64,7 +64,7 @@ TEST(TBDv4, ReadFile) {
       "    objc-classes: []\n"
       "    objc-eh-types: []\n"
       "    objc-ivars: []\n"
-      "    weak-symbols: []\n"
+      "    weak-symbols: [weakReexport]\n"
       "    thread-local-symbols: []\n"
       "undefineds:\n"
       "  - targets: [ i386-macos ]\n"
@@ -72,7 +72,7 @@ TEST(TBDv4, ReadFile) {
       "    objc-classes: []\n"
       "    objc-eh-types: []\n"
       "    objc-ivars: []\n"
-      "    weak-symbols: []\n"
+      "    weak-symbols: [weakReference]\n"
       "    thread-local-symbols: []\n"
       "...\n";
 
@@ -114,16 +114,23 @@ TEST(TBDv4, ReadFile) {
   EXPECT_EQ(reexport, File->reexportedLibraries().front());
 
   ExportedSymbolSeq Exports, Reexports, Undefineds;
-  ExportedSymbol temp;
   for (const auto *Sym : File->symbols()) {
-    temp = ExportedSymbol{Sym->getKind(), std::string(Sym->getName()),
-                          Sym->isWeakDefined(), Sym->isThreadLocalValue()};
-    EXPECT_FALSE(Sym->isWeakReferenced());
-    if (Sym->isUndefined())
-      Undefineds.emplace_back(std::move(temp));
-    else
-      Sym->isReexported() ? Reexports.emplace_back(std::move(temp))
-                          : Exports.emplace_back(std::move(temp));
+    ExportedSymbol Temp =
+        ExportedSymbol{Sym->getKind(), std::string(Sym->getName()),
+                       Sym->isWeakDefined() || Sym->isWeakReferenced(),
+                       Sym->isThreadLocalValue()};
+    if (Sym->isUndefined()) {
+      EXPECT_FALSE(Sym->isWeakDefined());
+      Undefineds.emplace_back(std::move(Temp));
+    }
+    // Check that defined symbols cannot be set as weak referenced.
+    else if (Sym->isReexported()) {
+      EXPECT_FALSE(Sym->isWeakReferenced());
+      Reexports.emplace_back(std::move(Temp));
+    } else {
+      EXPECT_FALSE(Sym->isWeakReferenced());
+      Exports.emplace_back(std::move(Temp));
+    }
   }
   llvm::sort(Exports);
   llvm::sort(Reexports);
@@ -137,10 +144,12 @@ TEST(TBDv4, ReadFile) {
 
   static ExportedSymbol ExpectedReexportedSymbols[] = {
       {SymbolKind::GlobalSymbol, "_symC", false, false},
+      {SymbolKind::GlobalSymbol, "weakReexport", true, false},
   };
 
   static ExportedSymbol ExpectedUndefinedSymbols[] = {
       {SymbolKind::GlobalSymbol, "_symD", false, false},
+      {SymbolKind::GlobalSymbol, "weakReference", true, false},
   };
 
   EXPECT_EQ(std::size(ExpectedExportedSymbols), Exports.size());
