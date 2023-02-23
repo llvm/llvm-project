@@ -10750,12 +10750,14 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
     return QualType();
   }
 
-  // Expressions containing GNU and SVE (fixed or sizeless) vectors are invalid
-  // since the ambiguity can affect the ABI.
-  auto IsSveGnuConversion = [](QualType FirstType, QualType SecondType) {
+  // Expressions containing GNU and SVE or RVV (fixed or sizeless) vectors are
+  // invalid since the ambiguity can affect the ABI.
+  auto IsSveRVVGnuConversion = [](QualType FirstType, QualType SecondType,
+                                  unsigned &SVEorRVV) {
     const VectorType *FirstVecType = FirstType->getAs<VectorType>();
     const VectorType *SecondVecType = SecondType->getAs<VectorType>();
 
+    SVEorRVV = 0;
     if (FirstVecType && SecondVecType)
       return FirstVecType->getVectorKind() == VectorType::GenericVector &&
              (SecondVecType->getVectorKind() ==
@@ -10763,13 +10765,24 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
               SecondVecType->getVectorKind() ==
                   VectorType::SveFixedLengthPredicateVector);
 
-    return FirstType->isSizelessBuiltinType() && SecondVecType &&
-           SecondVecType->getVectorKind() == VectorType::GenericVector;
+    if (SecondVecType &&
+        SecondVecType->getVectorKind() == VectorType::GenericVector) {
+      if (FirstType->isSVESizelessBuiltinType())
+        return true;
+      if (FirstType->isRVVSizelessBuiltinType()) {
+        SVEorRVV = 1;
+        return true;
+      }
+    }
+
+    return false;
   };
 
-  if (IsSveGnuConversion(LHSType, RHSType) ||
-      IsSveGnuConversion(RHSType, LHSType)) {
-    Diag(Loc, diag::err_typecheck_sve_gnu_ambiguous) << LHSType << RHSType;
+  unsigned SVEorRVV;
+  if (IsSveRVVGnuConversion(LHSType, RHSType, SVEorRVV) ||
+      IsSveRVVGnuConversion(RHSType, LHSType, SVEorRVV)) {
+    Diag(Loc, diag::err_typecheck_sve_rvv_gnu_ambiguous)
+        << SVEorRVV << LHSType << RHSType;
     return QualType();
   }
 
