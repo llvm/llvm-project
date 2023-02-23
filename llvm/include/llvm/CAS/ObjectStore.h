@@ -334,6 +334,9 @@ private:
 
 std::unique_ptr<ObjectStore> createInMemoryCAS();
 
+/// \returns true if \c LLVM_ENABLE_ONDISK_CAS configuration was enabled.
+bool isOnDiskCASEnabled();
+
 /// Gets or creates a persistent on-disk path at \p Path.
 ///
 /// Deprecated: if \p Path resolves to \a getDefaultOnDiskCASStableID(),

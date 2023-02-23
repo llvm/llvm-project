@@ -224,8 +224,7 @@ llvm::cl::opt<std::string>
                   llvm::cl::cat(DependencyScannerCategory));
 
 llvm::cl::opt<bool> InMemoryCAS(
-    "in-memory-cas",
-    llvm::cl::desc("Use an in-memory CAS instead of on-disk."),
+    "in-memory-cas", llvm::cl::desc("Use an in-memory CAS instead of on-disk."),
     llvm::cl::init(false), llvm::cl::cat(DependencyScannerCategory));
 
 llvm::cl::opt<std::string>
@@ -881,8 +880,7 @@ int main(int argc, const char **argv) {
         CASOpts.ensurePersistentCAS();
     }
 
-    CAS = CASOpts.getOrCreateObjectStore(Diags);
-    Cache = CASOpts.getOrCreateActionCache(Diags);
+    std::tie(CAS, Cache) = CASOpts.getOrCreateDatabases(Diags);
     if (!CAS)
       return 1;
     if (Format != ScanningOutputFormat::IncludeTree)
