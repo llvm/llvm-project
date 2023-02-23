@@ -23,8 +23,8 @@ std::optional<DIERef> DWARFBaseDIE::GetDIERef() const {
   if (!IsValid())
     return std::nullopt;
 
-  return DIERef(m_cu->GetSymbolFileDWARF().GetDwoNum(), m_cu->GetDebugSection(),
-                m_die->GetOffset());
+  return DIERef(m_cu->GetSymbolFileDWARF().GetFileIndex(),
+                m_cu->GetDebugSection(), m_die->GetOffset());
 }
 
 dw_tag_t DWARFBaseDIE::Tag() const {
@@ -70,8 +70,10 @@ uint64_t DWARFBaseDIE::GetAttributeValueAsAddress(const dw_attr_t attr,
 }
 
 lldb::user_id_t DWARFBaseDIE::GetID() const {
-  if (IsValid())
-    return GetDWARF()->GetUID(*this);
+  const std::optional<DIERef> &ref = this->GetDIERef();
+  if (ref)
+    return ref->get_id();
+
   return LLDB_INVALID_UID;
 }
 

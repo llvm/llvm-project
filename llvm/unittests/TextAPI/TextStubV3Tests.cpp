@@ -495,7 +495,7 @@ TEST(TBDv3, Platform_bridgeOS) {
 TEST(TBDv3, Platform_macCatalyst) {
   static const char TBDv3PlatformiOSmac[] = "--- !tapi-tbd-v3\n"
                                             "archs: [ armv7k ]\n"
-                                            "platform: iosmac\n"
+                                            "platform: maccatalyst\n"
                                             "install-name: Test.dylib\n"
                                             "...\n";
 
@@ -940,6 +940,7 @@ TEST(TBDv3, InterfaceInequality) {
   }));
   EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
     InterfaceFile Document;
+    Document.setFileType(FileType::TBD_V3);
     Document.addTargets(TargetList{Target(AK_armv7, PLATFORM_IOS),
                                    Target(AK_arm64, PLATFORM_IOS)});
     Document.setInstallName("/System/Library/Frameworks/A.framework/A");

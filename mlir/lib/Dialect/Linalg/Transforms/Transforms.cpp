@@ -578,6 +578,13 @@ LogicalResult GeneralizeOuterUnitDimsPackOpPattern::matchAndRewrite(
   // 2. Transpose the tile to match the inner tile order.
   SmallVector<int64_t> perm =
       getPackUnpackNormalizedInnerPerm(srcRank, packOp.getInnerDimsPos());
+  // The permutation is inverted when normalizing so invert back to match the
+  // ordering in the pack op.
+  perm = invertPermutationVector(perm);
+
+  LLVM_DEBUG(DBGS() << "Pack permutation: " << packOp << "\n";
+             llvm::interleaveComma(perm, DBGS() << "perm: "); DBGSNL(););
+
   SmallVector<int64_t> transpShape = readShape;
   applyPermutationToVector<int64_t>(transpShape, perm);
 

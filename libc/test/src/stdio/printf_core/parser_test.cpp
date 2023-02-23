@@ -474,4 +474,53 @@ TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
   EXPECT_PFORMAT_EQ(expected9, format_arr[9]);
 }
 
+TEST(LlvmLibcPrintfParserTest, IndexModeGapCheck) {
+  __llvm_libc::printf_core::FormatSection format_arr[10];
+  const char *str = "%1$d%2$d%4$d";
+  int arg1 = 1;
+  int arg2 = 2;
+  int arg3 = 3;
+  int arg4 = 4;
+
+  evaluate(format_arr, str, arg1, arg2, arg3, arg4);
+
+  __llvm_libc::printf_core::FormatSection expected0, expected1, expected2;
+
+  expected0.has_conv = true;
+  expected0.raw_string = {str, 4};
+  expected0.conv_val_raw = arg1;
+  expected0.conv_name = 'd';
+
+  EXPECT_PFORMAT_EQ(expected0, format_arr[0]);
+
+  expected1.has_conv = true;
+  expected1.raw_string = {str + 4, 4};
+  expected1.conv_val_raw = arg2;
+  expected1.conv_name = 'd';
+
+  EXPECT_PFORMAT_EQ(expected1, format_arr[1]);
+
+  expected2.has_conv = false;
+  expected2.raw_string = {str + 8, 4};
+
+  EXPECT_PFORMAT_EQ(expected2, format_arr[2]);
+}
+
+TEST(LlvmLibcPrintfParserTest, IndexModeTrailingPercentCrash) {
+  __llvm_libc::printf_core::FormatSection format_arr[10];
+  const char *str = "%2$d%";
+  evaluate(format_arr, str, 1, 2);
+
+  __llvm_libc::printf_core::FormatSection expected0, expected1;
+  expected0.has_conv = false;
+
+  expected0.raw_string = {str, 4};
+  EXPECT_PFORMAT_EQ(expected0, format_arr[0]);
+
+  expected1.has_conv = false;
+
+  expected1.raw_string = {str + 4, 1};
+  EXPECT_PFORMAT_EQ(expected1, format_arr[1]);
+}
+
 #endif // LIBC_COPT_PRINTF_DISABLE_INDEX_MODE

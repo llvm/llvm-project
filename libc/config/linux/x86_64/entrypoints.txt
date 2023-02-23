@@ -334,6 +334,8 @@ if(LLVM_LIBC_FULL_BUILD)
     # network.h entrypoints
     libc.src.network.htonl
     libc.src.network.htons
+    libc.src.network.ntohl
+    libc.src.network.ntohs
 
     # pthread.h entrypoints
     libc.src.pthread.pthread_atfork

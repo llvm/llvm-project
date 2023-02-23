@@ -12,7 +12,6 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 def Test_Dialect : Dialect {
   let name = "test";
   let cppNamespace = "NS";
-  let useFoldAPI = kEmitRawAttributesFolder;
 }
 class NS_Op<string mnemonic, list<Trait> traits> :
     Op<Test_Dialect, mnemonic, traits>;
@@ -120,7 +119,7 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK:   void print(::mlir::OpAsmPrinter &p);
 // CHECK:   ::mlir::LogicalResult verifyInvariants();
 // CHECK:   static void getCanonicalizationPatterns(::mlir::RewritePatternSet &results, ::mlir::MLIRContext *context);
-// CHECK:   ::mlir::LogicalResult fold(::llvm::ArrayRef<::mlir::Attribute> operands, ::llvm::SmallVectorImpl<::mlir::OpFoldResult> &results);
+// CHECK:   ::mlir::LogicalResult fold(FoldAdaptor adaptor, ::llvm::SmallVectorImpl<::mlir::OpFoldResult> &results);
 // CHECK:   // Display a graph for debugging purposes.
 // CHECK:   void displayGraph();
 // CHECK: };
@@ -322,12 +321,7 @@ def NS_LOp : NS_Op<"op_with_same_operands_and_result_types_unwrapped_attr", [Sam
 // CHECK: static void build(::mlir::OpBuilder &, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
 // CHECK: static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
 
-def TestWithNewFold_Dialect : Dialect {
-  let name = "test";
-  let cppNamespace = "::mlir::testWithFold";
-}
-
-def NS_MOp : Op<TestWithNewFold_Dialect, "op_with_single_result_and_fold_adaptor_fold", []> {
+def NS_MOp : NS_Op<"op_with_single_result_and_fold_adaptor_fold", []> {
   let results = (outs AnyType:$res);
 
   let hasFolder = 1;
@@ -335,15 +329,6 @@ def NS_MOp : Op<TestWithNewFold_Dialect, "op_with_single_result_and_fold_adaptor
 
 // CHECK-LABEL: class MOp :
 // CHECK: ::mlir::OpFoldResult fold(FoldAdaptor adaptor);
-
-def NS_NOp : Op<TestWithNewFold_Dialect, "op_with_multiple_results_and_fold_adaptor_fold", []> {
-  let results = (outs AnyType:$res1, AnyType:$res2);
-
-  let hasFolder = 1;
-}
-
-// CHECK-LABEL: class NOp :
-// CHECK: ::mlir::LogicalResult fold(FoldAdaptor adaptor, ::llvm::SmallVectorImpl<::mlir::OpFoldResult> &results);
 
 // Test that type defs have the proper namespaces when used as a constraint.
 // ---

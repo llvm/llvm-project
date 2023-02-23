@@ -6182,6 +6182,10 @@ bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
   size_t num_loaded_sections = 0;
   const size_t num_sections = section_list->GetSize();
 
+  // Warn if some top-level segments map to the same address. The binary may be
+  // malformed.
+  const bool warn_multiple = true;
+
   if (value_is_offset) {
     // "value" is an offset to apply to each top level segment
     for (size_t sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
@@ -6190,7 +6194,8 @@ bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
       SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
       if (SectionIsLoadable(section_sp.get()))
         if (target.GetSectionLoadList().SetSectionLoadAddress(
-                section_sp, section_sp->GetFileAddress() + value))
+                section_sp, section_sp->GetFileAddress() + value,
+                warn_multiple))
           ++num_loaded_sections;
     }
   } else {
@@ -6207,7 +6212,7 @@ bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
                 value, mach_header_section, section_sp.get());
         if (section_load_addr != LLDB_INVALID_ADDRESS) {
           if (target.GetSectionLoadList().SetSectionLoadAddress(
-                  section_sp, section_load_addr))
+                  section_sp, section_load_addr, warn_multiple))
             ++num_loaded_sections;
         }
       }

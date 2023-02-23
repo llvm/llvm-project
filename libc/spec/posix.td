@@ -814,6 +814,16 @@ def POSIX : StandardSpec<"POSIX"> {
               RetValSpec<UInt16Type>,
               [ArgSpec<UInt16Type>]
           >,
+          FunctionSpec<
+              "ntohl",
+              RetValSpec<UInt32Type>,
+              [ArgSpec<UInt32Type>]
+          >,
+          FunctionSpec<
+              "ntohs",
+              RetValSpec<UInt16Type>,
+              [ArgSpec<UInt16Type>]
+          >,
       ]
   >;
 

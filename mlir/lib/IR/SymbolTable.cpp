@@ -917,6 +917,58 @@ SymbolTable &SymbolTableCollection::getSymbolTable(Operation *op) {
 }
 
 //===----------------------------------------------------------------------===//
+// LockedSymbolTableCollection
+//===----------------------------------------------------------------------===//
+
+Operation *LockedSymbolTableCollection::lookupSymbolIn(Operation *symbolTableOp,
+                                                       StringAttr symbol) {
+  return getSymbolTable(symbolTableOp).lookup(symbol);
+}
+
+Operation *
+LockedSymbolTableCollection::lookupSymbolIn(Operation *symbolTableOp,
+                                            FlatSymbolRefAttr symbol) {
+  return lookupSymbolIn(symbolTableOp, symbol.getAttr());
+}
+
+Operation *LockedSymbolTableCollection::lookupSymbolIn(Operation *symbolTableOp,
+                                                       SymbolRefAttr name) {
+  SmallVector<Operation *> symbols;
+  if (failed(lookupSymbolIn(symbolTableOp, name, symbols)))
+    return nullptr;
+  return symbols.back();
+}
+
+LogicalResult LockedSymbolTableCollection::lookupSymbolIn(
+    Operation *symbolTableOp, SymbolRefAttr name,
+    SmallVectorImpl<Operation *> &symbols) {
+  auto lookupFn = [this](Operation *symbolTableOp, StringAttr symbol) {
+    return lookupSymbolIn(symbolTableOp, symbol);
+  };
+  return lookupSymbolInImpl(symbolTableOp, name, symbols, lookupFn);
+}
+
+SymbolTable &
+LockedSymbolTableCollection::getSymbolTable(Operation *symbolTableOp) {
+  assert(symbolTableOp->hasTrait<OpTrait::SymbolTable>());
+  // Try to find an existing symbol table.
+  {
+    llvm::sys::SmartScopedReader<true> lock(mutex);
+    auto it = collection.symbolTables.find(symbolTableOp);
+    if (it != collection.symbolTables.end())
+      return *it->second;
+  }
+  // Create a symbol table for the operation. Perform construction outside of
+  // the critical section.
+  auto symbolTable = std::make_unique<SymbolTable>(symbolTableOp);
+  // Insert the constructed symbol table.
+  llvm::sys::SmartScopedWriter<true> lock(mutex);
+  return *collection.symbolTables
+              .insert({symbolTableOp, std::move(symbolTable)})
+              .first->second;
+}
+
+//===----------------------------------------------------------------------===//
 // SymbolUserMap
 //===----------------------------------------------------------------------===//
 
