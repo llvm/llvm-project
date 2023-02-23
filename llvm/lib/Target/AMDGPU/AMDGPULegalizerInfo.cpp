@@ -4255,7 +4255,7 @@ bool AMDGPULegalizerInfo::legalizeIsAddrSpace(MachineInstr &MI,
 std::pair<Register, unsigned>
 AMDGPULegalizerInfo::splitBufferOffsets(MachineIRBuilder &B,
                                         Register OrigOffset) const {
-  const unsigned MaxImm = 4095;
+  const unsigned MaxImm = SIInstrInfo::getMaxMUBUFImmOffset();
   Register BaseReg;
   unsigned ImmOffset;
   const LLT S32 = LLT::scalar(32);
@@ -4268,13 +4268,14 @@ AMDGPULegalizerInfo::splitBufferOffsets(MachineIRBuilder &B,
   if (MRI.getType(BaseReg).isPointer())
     BaseReg = B.buildPtrToInt(MRI.getType(OrigOffset), BaseReg).getReg(0);
 
-  // If the immediate value is too big for the immoffset field, put the value
-  // and -4096 into the immoffset field so that the value that is copied/added
-  // for the voffset field is a multiple of 4096, and it stands more chance
-  // of being CSEd with the copy/add for another similar load/store.
-  // However, do not do that rounding down to a multiple of 4096 if that is a
-  // negative number, as it appears to be illegal to have a negative offset
-  // in the vgpr, even if adding the immediate offset makes it positive.
+  // If the immediate value is too big for the immoffset field, put only bits
+  // that would normally fit in the immoffset field. The remaining value that
+  // is copied/added for the voffset field is a large power of 2, and it
+  // stands more chance of being CSEd with the copy/add for another similar
+  // load/store.
+  // However, do not do that rounding down if that is a negative
+  // number, as it appears to be illegal to have a negative offset in the
+  // vgpr, even if adding the immediate offset makes it positive.
   unsigned Overflow = ImmOffset & ~MaxImm;
   ImmOffset -= Overflow;
   if ((int32_t)Overflow < 0) {

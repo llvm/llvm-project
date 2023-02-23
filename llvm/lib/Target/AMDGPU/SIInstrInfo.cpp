@@ -7874,6 +7874,8 @@ const MCInstrDesc &SIInstrInfo::getKillTerminatorFromPseudo(unsigned Opcode) con
   }
 }
 
+unsigned SIInstrInfo::getMaxMUBUFImmOffset() { return (1 << 12) - 1; }
+
 void SIInstrInfo::fixImplicitOperands(MachineInstr &MI) const {
   if (!ST.isWave32())
     return;
@@ -7906,7 +7908,8 @@ bool SIInstrInfo::isBufferSMRD(const MachineInstr &MI) const {
 // offsets within the given alignment can be added to the resulting ImmOffset.
 bool SIInstrInfo::splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset,
                                    uint32_t &ImmOffset, Align Alignment) const {
-  const uint32_t MaxImm = alignDown(4095, Alignment.value());
+  const uint32_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset();
+  const uint32_t MaxImm = alignDown(MaxOffset, Alignment.value());
   uint32_t Overflow = 0;
 
   if (Imm > MaxImm) {
@@ -7924,8 +7927,8 @@ bool SIInstrInfo::splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset,
       //
       // Atomic operations fail to work correctly when individual address
       // components are unaligned, even if their sum is aligned.
-      uint32_t High = (Imm + Alignment.value()) & ~4095;
-      uint32_t Low = (Imm + Alignment.value()) & 4095;
+      uint32_t High = (Imm + Alignment.value()) & ~MaxOffset;
+      uint32_t Low = (Imm + Alignment.value()) & MaxOffset;
       Imm = Low;
       Overflow = High - Alignment.value();
     }
