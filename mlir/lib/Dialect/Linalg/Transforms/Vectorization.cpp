@@ -105,7 +105,7 @@ private:
                            std::optional<AffineMap> maybeMaskingMap);
 
   // Holds the compile-time static sizes of the iteration space to vectorize.
-  // Dynamic dimensions are represented using ShapedType::kDynamicSize.
+  // Dynamic dimensions are represented using ShapedType::kDynamic.
   SmallVector<int64_t> iterSpaceStaticSizes;
 
   /// Holds the runtime sizes of the iteration spaces to vectorize. Static

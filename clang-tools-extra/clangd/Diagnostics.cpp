@@ -526,6 +526,9 @@ void toLSPDiags(
     }
   }
   Main.tags = D.Tags;
+  // FIXME: Get rid of the copies here by taking in a mutable clangd::Diag.
+  for (auto &Entry : D.OpaqueData)
+    Main.data.insert({Entry.first, Entry.second});
   OutFn(std::move(Main), D.Fixes);
 
   // If we didn't emit the notes as relatedLocations, emit separate diagnostics
@@ -540,10 +543,6 @@ void toLSPDiags(
       Res.message = noteMessage(D, Note, Opts);
       OutFn(std::move(Res), llvm::ArrayRef<Fix>());
     }
-
-  // FIXME: Get rid of the copies here by taking in a mutable clangd::Diag.
-  for (auto &Entry : D.OpaqueData)
-    Main.data.insert({Entry.first, Entry.second});
 }
 
 int getSeverity(DiagnosticsEngine::Level L) {

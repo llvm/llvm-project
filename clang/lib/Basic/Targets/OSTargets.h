@@ -535,6 +535,8 @@ protected:
     DefineStd(Builder, "unix", Opts);
     Builder.defineMacro("__ELF__");
     Builder.defineMacro("__SCE__");
+    Builder.defineMacro("__STDC_NO_COMPLEX__");
+    Builder.defineMacro("__STDC_NO_THREADS__");
   }
 
 public:
