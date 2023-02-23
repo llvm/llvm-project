@@ -115,6 +115,8 @@ Removed Compiler Flags
 -------------------------
 - The deprecated flag `-fmodules-ts` is removed. Please use ``-std=c++20``
   or higher to use standard C++ modules instead.
+- The deprecated flag `-fcoroutines-ts` is removed. Please use ``-std=c++20``
+  or higher to use standard C++ coroutines instead.
 
 Attribute Changes in Clang
 --------------------------
