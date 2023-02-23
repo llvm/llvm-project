@@ -4997,6 +4997,9 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     return false;
   }
 
+  const unsigned NSAMaxSize = ST.getNSAMaxSize();
+  const unsigned HasPartialNSA = ST.hasPartialNSAEncoding();
+
   if (IsA16 || IsG16) {
     if (Intr->NumVAddrs > 1) {
       SmallVector<Register, 4> PackedRegs;
@@ -5007,9 +5010,19 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
       // See also below in the non-a16 branch
       const bool UseNSA = ST.hasNSAEncoding() &&
                           PackedRegs.size() >= ST.getNSAThreshold(MF) &&
-                          PackedRegs.size() <= ST.getNSAMaxSize();
+                          (PackedRegs.size() <= NSAMaxSize || HasPartialNSA);
+      const bool UsePartialNSA =
+          UseNSA && HasPartialNSA && PackedRegs.size() > NSAMaxSize;
 
-      if (!UseNSA && PackedRegs.size() > 1) {
+      if (UsePartialNSA) {
+        // Pack registers that would go over NSAMaxSize into last VAddr register
+        LLT PackedAddrTy =
+            LLT::fixed_vector(2 * (PackedRegs.size() - NSAMaxSize + 1), 16);
+        auto Concat = B.buildConcatVectors(
+            PackedAddrTy, ArrayRef(PackedRegs).slice(NSAMaxSize - 1));
+        PackedRegs[NSAMaxSize - 1] = Concat.getReg(0);
+        PackedRegs.resize(NSAMaxSize);
+      } else if (!UseNSA && PackedRegs.size() > 1) {
         LLT PackedAddrTy = LLT::fixed_vector(2 * PackedRegs.size(), 16);
         auto Concat = B.buildConcatVectors(PackedAddrTy, PackedRegs);
         PackedRegs[0] = Concat.getReg(0);
@@ -5045,16 +5058,22 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     // SIShrinkInstructions will convert NSA encodings to non-NSA after register
     // allocation when possible.
     //
-    // TODO: we can actually allow partial NSA where the final register is a
-    // contiguous set of the remaining addresses.
-    // This could help where there are more addresses than supported.
+    // Partial NSA is allowed on GFX11 where the final register is a contiguous
+    // set of the remaining addresses.
     const bool UseNSA = ST.hasNSAEncoding() &&
                         CorrectedNumVAddrs >= ST.getNSAThreshold(MF) &&
-                        CorrectedNumVAddrs <= ST.getNSAMaxSize();
+                        (CorrectedNumVAddrs <= NSAMaxSize || HasPartialNSA);
+    const bool UsePartialNSA =
+        UseNSA && HasPartialNSA && CorrectedNumVAddrs > NSAMaxSize;
 
-    if (!UseNSA && Intr->NumVAddrs > 1)
+    if (UsePartialNSA) {
+      convertImageAddrToPacked(B, MI,
+                               ArgOffset + Intr->VAddrStart + NSAMaxSize - 1,
+                               Intr->NumVAddrs - NSAMaxSize + 1);
+    } else if (!UseNSA && Intr->NumVAddrs > 1) {
       convertImageAddrToPacked(B, MI, ArgOffset + Intr->VAddrStart,
                                Intr->NumVAddrs);
+    }
   }
 
   int Flags = 0;

@@ -308,7 +308,10 @@ void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) const {
   unsigned NextVgpr = 0;
   bool IsUndef = true;
   bool IsKill = NewAddrDwords == Info->VAddrDwords;
-  for (unsigned Idx = 0; Idx < Info->VAddrOperands; ++Idx) {
+  const unsigned NSAMaxSize = ST->getNSAMaxSize();
+  const bool IsPartialNSA = NewAddrDwords > NSAMaxSize;
+  const unsigned EndVAddr = IsPartialNSA ? NSAMaxSize : Info->VAddrOperands;
+  for (unsigned Idx = 0; Idx < EndVAddr; ++Idx) {
     const MachineOperand &Op = MI.getOperand(VAddr0Idx + Idx);
     unsigned Vgpr = TRI->getHWRegIndex(Op.getReg());
     unsigned Dwords = TRI->getRegSizeInBits(Op.getReg(), *MRI) / 32;
@@ -361,13 +364,13 @@ void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) const {
   MI.getOperand(VAddr0Idx).setIsUndef(IsUndef);
   MI.getOperand(VAddr0Idx).setIsKill(IsKill);
 
-  for (int i = 1; i < Info->VAddrOperands; ++i)
+  for (unsigned i = 1; i < EndVAddr; ++i)
     MI.removeOperand(VAddr0Idx + 1);
 
   if (ToUntie >= 0) {
     MI.tieOperands(
         AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vdata),
-        ToUntie - (Info->VAddrOperands - 1));
+        ToUntie - (EndVAddr - 1));
   }
 }
 
