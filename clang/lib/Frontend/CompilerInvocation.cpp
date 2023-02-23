@@ -1352,7 +1352,7 @@ createBaseFS(const FileSystemOptions &FSOpts, const FrontendOptions &FEOpts,
   // If no CAS was provided, create one with CASOptions.
   std::shared_ptr<llvm::cas::ObjectStore> CAS = std::move(OverrideCAS);
   if (!CAS)
-    CAS = CASOpts.getOrCreateObjectStore(Diags);
+    CAS = CASOpts.getOrCreateDatabases(Diags).first;
 
   // Helper for creating a valid (but empty) CASFS if an error is encountered.
   auto makeEmptyCASFS = [&CAS]() {
@@ -2911,7 +2911,7 @@ determineInputFromIncludeTree(StringRef IncludeTreeID, CASOptions &CASOpts,
     Diags.Report(diag::err_fe_unable_to_load_include_tree)
         << IncludeTreeID << llvm::toString(std::move(E));
   };
-  auto CAS = CASOpts.getOrCreateObjectStore(Diags);
+  auto CAS = CASOpts.getOrCreateDatabases(Diags).first;
   if (!CAS)
     return;
   auto ID = CAS->parseID(IncludeTreeID);

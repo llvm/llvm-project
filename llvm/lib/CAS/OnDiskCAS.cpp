@@ -139,6 +139,14 @@ Expected<std::unique_ptr<OnDiskCAS>> OnDiskCAS::open(StringRef AbsPath) {
   return std::unique_ptr<OnDiskCAS>(new OnDiskCAS(std::move(*DB)));
 }
 
+bool cas::isOnDiskCASEnabled() {
+#if LLVM_ENABLE_ONDISK_CAS
+  return true;
+#else
+  return false;
+#endif
+}
+
 #if LLVM_ENABLE_ONDISK_CAS
 
 Expected<std::unique_ptr<ObjectStore>> cas::createOnDiskCAS(const Twine &Path) {

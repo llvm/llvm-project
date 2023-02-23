@@ -28,57 +28,71 @@ TEST(CASOptionsTest, getKind) {
   CASOptions Opts;
   EXPECT_EQ(CASOptions::InMemoryCAS, Opts.getKind());
 
-#if LLVM_ENABLE_ONDISK_CAS
+  if (!llvm::cas::isOnDiskCASEnabled())
+    return;
   Opts.CASPath = "auto";
   unittest::TempDir Dir("cas-options", /*Unique=*/true);
   EXPECT_EQ(CASOptions::OnDiskCAS, Opts.getKind());
 
   Opts.CASPath = Dir.path("cas").str().str();
   EXPECT_EQ(CASOptions::OnDiskCAS, Opts.getKind());
-#endif
 }
 
-TEST(CASOptionsTest, getOrCreateObjectStore) {
+TEST(CASOptionsTest, getOrCreateDatabases) {
   DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
                           new IgnoringDiagConsumer());
 
   // Create an in-memory CAS.
   CASOptions Opts;
-  std::shared_ptr<ObjectStore> InMemory = Opts.getOrCreateObjectStore(Diags);
-  ASSERT_TRUE(InMemory);
-  EXPECT_EQ(InMemory, Opts.getOrCreateObjectStore(Diags));
+  auto [InMemoryCAS, InMemoryAC] = Opts.getOrCreateDatabases(Diags);
+  ASSERT_TRUE(InMemoryCAS);
+  ASSERT_TRUE(InMemoryAC);
+  EXPECT_EQ(InMemoryCAS, Opts.getOrCreateDatabases(Diags).first);
+  EXPECT_EQ(InMemoryAC, Opts.getOrCreateDatabases(Diags).second);
   EXPECT_EQ(CASOptions::InMemoryCAS, Opts.getKind());
 
-#if LLVM_ENABLE_ONDISK_CAS
+  if (!llvm::cas::isOnDiskCASEnabled())
+    return;
+
   // Create an on-disk CAS.
   unittest::TempDir Dir("cas-options", /*Unique=*/true);
   Opts.CASPath = Dir.path("cas").str().str();
-  std::shared_ptr<ObjectStore> OnDisk = Opts.getOrCreateObjectStore(Diags);
-  EXPECT_NE(InMemory, OnDisk);
-  EXPECT_EQ(OnDisk, Opts.getOrCreateObjectStore(Diags));
+  auto [OnDiskCAS, OnDiskAC] = Opts.getOrCreateDatabases(Diags);
+  EXPECT_NE(InMemoryCAS, OnDiskCAS);
+  EXPECT_NE(InMemoryAC, OnDiskAC);
+  EXPECT_EQ(OnDiskCAS, Opts.getOrCreateDatabases(Diags).first);
+  EXPECT_EQ(OnDiskAC, Opts.getOrCreateDatabases(Diags).second);
   EXPECT_EQ(CASOptions::OnDiskCAS, Opts.getKind());
 
   // Create an on-disk CAS at an automatic location.
   Opts.CASPath = "auto";
-  std::shared_ptr<ObjectStore> OnDiskAuto = Opts.getOrCreateObjectStore(Diags);
-  EXPECT_NE(InMemory, OnDiskAuto);
-  EXPECT_NE(OnDisk, OnDiskAuto);
-  EXPECT_EQ(OnDiskAuto, Opts.getOrCreateObjectStore(Diags));
+  auto [AutoCAS, AutoAC] = Opts.getOrCreateDatabases(Diags);
+  EXPECT_NE(InMemoryCAS, AutoCAS);
+  EXPECT_NE(InMemoryAC, AutoAC);
+  EXPECT_NE(OnDiskCAS, AutoCAS);
+  EXPECT_NE(OnDiskAC, AutoAC);
+  EXPECT_EQ(AutoCAS, Opts.getOrCreateDatabases(Diags).first);
+  EXPECT_EQ(AutoAC, Opts.getOrCreateDatabases(Diags).second);
   EXPECT_EQ(CASOptions::OnDiskCAS, Opts.getKind());
 
   // Create another in-memory CAS. It won't be the same one.
   Opts.CASPath = "";
-  std::shared_ptr<ObjectStore> InMemory2 = Opts.getOrCreateObjectStore(Diags);
-  EXPECT_NE(InMemory, InMemory2);
-  EXPECT_NE(OnDisk, InMemory2);
-  EXPECT_NE(OnDiskAuto, InMemory2);
-  EXPECT_EQ(InMemory2, Opts.getOrCreateObjectStore(Diags));
+  auto [InMemoryCAS2, InMemoryAC2] = Opts.getOrCreateDatabases(Diags);
+  EXPECT_NE(InMemoryCAS, InMemoryCAS2);
+  EXPECT_NE(InMemoryAC, InMemoryAC2);
+  EXPECT_NE(OnDiskCAS, InMemoryCAS2);
+  EXPECT_NE(OnDiskAC, InMemoryAC2);
+  EXPECT_NE(AutoCAS, InMemoryCAS2);
+  EXPECT_NE(AutoAC, InMemoryAC2);
+  EXPECT_EQ(InMemoryCAS2, Opts.getOrCreateDatabases(Diags).first);
+  EXPECT_EQ(InMemoryAC2, Opts.getOrCreateDatabases(Diags).second);
   EXPECT_EQ(CASOptions::InMemoryCAS, Opts.getKind());
-#endif
 }
 
-#if LLVM_ENABLE_ONDISK_CAS
 TEST(CASOptionsTest, getOrCreateObjectStoreInvalid) {
+  if (!llvm::cas::isOnDiskCASEnabled())
+    return;
+
   DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
                           new IgnoringDiagConsumer());
 
@@ -90,11 +104,13 @@ TEST(CASOptionsTest, getOrCreateObjectStoreInvalid) {
 
   CASOptions Opts;
   Opts.CASPath = File.path().str();
-  EXPECT_EQ(nullptr, Opts.getOrCreateObjectStore(Diags));
+  EXPECT_EQ(nullptr, Opts.getOrCreateDatabases(Diags).first);
+  EXPECT_EQ(nullptr, Opts.getOrCreateDatabases(Diags).second);
 
-  std::shared_ptr<ObjectStore> Empty =
-      Opts.getOrCreateObjectStore(Diags, /*CreateEmptyCASOnFailure=*/true);
-  EXPECT_EQ(Empty, Opts.getOrCreateObjectStore(Diags));
+  auto [EmptyCAS, EmptyAC] =
+      Opts.getOrCreateDatabases(Diags, /*CreateEmptyCASOnFailure=*/true);
+  EXPECT_EQ(EmptyCAS, Opts.getOrCreateDatabases(Diags).first);
+  EXPECT_EQ(EmptyAC, Opts.getOrCreateDatabases(Diags).second);
 
   // Ensure the file wasn't clobbered.
   std::unique_ptr<MemoryBuffer> MemBuffer;
@@ -105,6 +121,9 @@ TEST(CASOptionsTest, getOrCreateObjectStoreInvalid) {
 }
 
 TEST(CASOptionsTest, freezeConfig) {
+  if (!llvm::cas::isOnDiskCASEnabled())
+    return;
+
   DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
                           new IgnoringDiagConsumer());
 
@@ -113,8 +132,9 @@ TEST(CASOptionsTest, freezeConfig) {
   CASOptions Opts;
   Opts.CASPath = Dir.path("cas").str().str();
   Opts.freezeConfig(Diags);
-  std::shared_ptr<ObjectStore> CAS = Opts.getOrCreateObjectStore(Diags);
+  auto [CAS, AC] = Opts.getOrCreateDatabases(Diags);
   ASSERT_TRUE(CAS);
+  ASSERT_TRUE(AC);
   EXPECT_EQ(CASOptions::UnknownCAS, Opts.getKind());
 
   // Check that the configuration is hidden, but calls to
@@ -123,13 +143,14 @@ TEST(CASOptionsTest, freezeConfig) {
 
   // Check that new paths are ignored.
   Opts.CASPath = "";
-  EXPECT_EQ(CAS, Opts.getOrCreateObjectStore(Diags));
+  EXPECT_EQ(CAS, Opts.getOrCreateDatabases(Diags).first);
+  EXPECT_EQ(AC, Opts.getOrCreateDatabases(Diags).second);
   EXPECT_EQ(CASOptions::UnknownCAS, Opts.getKind());
 
   Opts.CASPath = Dir.path("ignored-cas").str().str();
-  EXPECT_EQ(CAS, Opts.getOrCreateObjectStore(Diags));
+  EXPECT_EQ(CAS, Opts.getOrCreateDatabases(Diags).first);
+  EXPECT_EQ(AC, Opts.getOrCreateDatabases(Diags).second);
   EXPECT_EQ(CASOptions::UnknownCAS, Opts.getKind());
 }
-#endif
 
 } // end namespace

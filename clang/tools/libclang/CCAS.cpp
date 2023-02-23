@@ -47,14 +47,8 @@ CXCASDatabases clang_experimental_cas_Databases_create(CXCASOptions COpts,
       IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), DiagOpts.get(),
       &DiagPrinter, /*ShouldOwnClient=*/false);
 
-  auto CAS = Opts.getOrCreateObjectStore(Diags);
-  if (!CAS) {
-    if (Error)
-      *Error = cxstring::createDup(OS.str());
-    return nullptr;
-  }
-  auto Cache = Opts.getOrCreateActionCache(Diags);
-  if (!Cache) {
+  auto [CAS, Cache] = Opts.getOrCreateDatabases(Diags);
+  if (!CAS || !Cache) {
     if (Error)
       *Error = cxstring::createDup(OS.str());
     return nullptr;
