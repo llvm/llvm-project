@@ -7083,6 +7083,26 @@ def fcompilation_caching_service_path : Separate<["-"], "fcompilation-caching-se
     HelpText<"Specify the socket path for connecting to a remote caching service">,
     MarshallingInfoString<FrontendOpts<"CompilationCachingServicePath">>;
 
+defm casid_output : BoolFOption<"casid-output",
+    FrontendOpts<"WriteOutputAsCASID">, DefaultFalse,
+    PosFlag<SetTrue, [], "When using -fexperimental-cache-compile,"
+                         " write a CASID for the output file.">,
+    NegFlag<SetFalse>>;
+
+/// BEGIN MCCAS
+defm cas_backend : BoolFOption<"cas-backend",
+    CodeGenOpts<"UseCASBackend">, DefaultFalse,
+    PosFlag<SetTrue, [], "Enable using CASBackend for object file output">,
+    NegFlag<SetFalse>>;
+
+def fcas_backend_mode : Joined<["-"], "fcas-backend-mode=">,
+    Group<f_Group>, MetaVarName<"<native|casid|verify>">,
+    HelpText<"CASBackendMode for output kind">,
+    Values<"native,casid,verify">, NormalizedValuesScope<"llvm::CASBackendMode">,
+    NormalizedValues<["Native", "CASID", "Verify"]>,
+    MarshallingInfoEnum<CodeGenOpts<"CASObjMode">, "Native">;
+/// END MCCAS
+
 } // let Flags = [CC1Option, NoDriverOption]
 
 def sycl_std_EQ : Joined<["-"], "sycl-std=">, Group<sycl_Group>,

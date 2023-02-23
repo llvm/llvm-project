@@ -144,21 +144,26 @@ makeStartPlusIntExpr(MCContext &Ctx, const MCSymbol &Start, int IntVal) {
   return Res;
 }
 
-void MCLineSection::addEndEntry(MCSymbol *EndLabel) {
+void MCLineSection::addEndEntry(MCSymbol *EndLabel, bool CasFriendlyDebugInfo) {
   auto *Sec = &EndLabel->getSection();
   // The line table may be empty, which we should skip adding an end entry.
-  // There are two cases:
+  // There are three cases:
   // (1) MCAsmStreamer - emitDwarfLocDirective emits a location directive in
   //     place instead of adding a line entry if the target has
   //     usesDwarfFileAndLocDirectives.
   // (2) MCObjectStreamer - if a function has incomplete debug info where
   //     instructions don't have DILocations, the line entries are missing.
+  // (3) If the debug info is cas friendly, there is an end_sequence after every
+  // function and another one doesn't have to be emitted at the end of the line
+  // table.
   auto I = MCLineDivisions.find(Sec);
   if (I != MCLineDivisions.end()) {
     auto &Entries = I->second;
     auto EndEntry = Entries.back();
-    EndEntry.setEndLabel(EndLabel);
-    Entries.push_back(EndEntry);
+    if (!CasFriendlyDebugInfo) {
+      EndEntry.setEndLabel(EndLabel);
+      Entries.push_back(EndEntry);
+    }
   }
 }
 
@@ -173,7 +178,9 @@ void MCDwarfLineTable::emitOne(
   unsigned FileNum, LastLine, Column, Flags, Isa, Discriminator;
   MCSymbol *LastLabel;
   auto init = [&]() {
-    FileNum = 1;
+    // Force emission of DW_LNS_set_file for every function's contribution to
+    // the line table to maximize deduplication.
+    FileNum = MCOS->getGenerateCasFriendlyDebugInfo() ? 0 : 1;
     LastLine = 1;
     Column = 0;
     Flags = DWARF2_LINE_DEFAULT_IS_STMT ? DWARF2_FLAG_IS_STMT : 0;
@@ -188,14 +195,13 @@ void MCDwarfLineTable::emitOne(
   for (const MCDwarfLineEntry &LineEntry : LineEntries) {
     MCSymbol *Label = LineEntry.getLabel();
     const MCAsmInfo *asmInfo = MCOS->getContext().getAsmInfo();
-    if (LineEntry.IsEndEntry) {
+    if (LineEntry.IsEndEntry || LineEntry.IsEndOfFunction) {
       MCOS->emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, Label,
                                      asmInfo->getCodePointerSize());
       init();
       EndEntryEmitted = true;
       continue;
     }
-
     int64_t LineDelta = static_cast<int64_t>(LineEntry.getLine()) - LastLine;
 
     if (FileNum != LineEntry.getFileNum()) {
@@ -203,6 +209,7 @@ void MCDwarfLineTable::emitOne(
       MCOS->emitInt8(dwarf::DW_LNS_set_file);
       MCOS->emitULEB128IntValue(FileNum);
     }
+
     if (Column != LineEntry.getColumn()) {
       Column = LineEntry.getColumn();
       MCOS->emitInt8(dwarf::DW_LNS_set_column);

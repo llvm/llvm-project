@@ -4,6 +4,8 @@ set(LLVM_LINK_COMPONENTS
   BitReader
   BitstreamReader
   CAS
+  CASUtil
+  MCCAS
   Option
   ProfileData
   RemoteCachingService

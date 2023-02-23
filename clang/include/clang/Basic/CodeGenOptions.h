@@ -170,6 +170,8 @@ public:
     Enabled,
     Forced,
   };
+  /// The callback for mc result.
+  std::optional<llvm::MCTargetOptions::ResultCallBackTy> MCCallBack;
 
   /// The code model to use (-mcmodel).
   std::string CodeModel;

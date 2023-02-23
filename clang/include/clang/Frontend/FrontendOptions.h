@@ -376,6 +376,11 @@ public:
   /// files have been processed.
   unsigned MayEmitDiagnosticsAfterProcessingSourceFiles : 1;
 
+  /// When using CacheCompileJob, write a CASID for the output file.
+  ///
+  /// FIXME: Add clang tests for this functionality.
+  unsigned WriteOutputAsCASID : 1;
+
   /// Output (and read) PCM files regardless of compiler errors.
   unsigned AllowPCMWithCompilerErrors : 1;
 
@@ -579,8 +584,8 @@ public:
         IncludeTimestamps(true), UseTemporary(true), CacheCompileJob(false),
         DisableCachedCompileJobReplay(false),
         MayEmitDiagnosticsAfterProcessingSourceFiles(false),
-        AllowPCMWithCompilerErrors(false), ModulesShareFileManager(true),
-        TimeTraceGranularity(500) {}
+        WriteOutputAsCASID(false), AllowPCMWithCompilerErrors(false),
+        ModulesShareFileManager(true), TimeTraceGranularity(500) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.
