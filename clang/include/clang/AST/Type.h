@@ -2173,6 +2173,9 @@ public:
   /// Returns true for SVE scalable vector types.
   bool isSVESizelessBuiltinType() const;
 
+  /// Returns true for RVV scalable vector types.
+  bool isRVVSizelessBuiltinType() const;
+
   /// Check if this is a WebAssembly Reference Type.
   bool isWebAssemblyReferenceType() const;
   bool isWebAssemblyExternrefType() const;
