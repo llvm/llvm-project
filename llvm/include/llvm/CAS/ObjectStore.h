@@ -381,13 +381,6 @@ using ObjectStoreCreateFuncTy =
     Expected<std::unique_ptr<ObjectStore>>(const Twine &);
 void registerCASURLScheme(StringRef Prefix, ObjectStoreCreateFuncTy *Func);
 
-class ActionCache;
-
-/// Create on-disk \p ObjectStore and \p ActionCache instances based on \p
-/// ondisk::UnifiedOnDiskCache.
-Expected<std::pair<std::unique_ptr<ObjectStore>, std::unique_ptr<ActionCache>>>
-createOnDiskUnifiedCASDatabases(StringRef Path);
-
 } // namespace cas
 } // namespace llvm
 

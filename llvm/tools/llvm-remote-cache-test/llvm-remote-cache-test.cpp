@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/ActionCache.h"
+#include "llvm/CAS/BuiltinUnifiedCASDatabases.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/RemoteCachingService/LLVMCASCacheProvider.h"
 #include "llvm/RemoteCachingService/RemoteCacheProvider.h"
