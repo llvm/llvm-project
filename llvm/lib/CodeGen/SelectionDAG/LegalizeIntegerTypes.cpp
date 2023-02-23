@@ -3014,8 +3014,15 @@ void DAGTypeLegalizer::ExpandIntRes_ADDSUB(SDNode *N,
   if (N->getOpcode() == ISD::ADD) {
     Lo = DAG.getNode(ISD::ADD, dl, NVT, LoOps);
     Hi = DAG.getNode(ISD::ADD, dl, NVT, ArrayRef(HiOps, 2));
-    SDValue Cmp = DAG.getSetCC(dl, getSetCCResultType(NVT), Lo, LoOps[0],
-                               ISD::SETULT);
+    SDValue Cmp;
+    // Special case: X+1 has a carry out if X+1==0. This may reduce the live
+    // range of X. We assume comparing with 0 is cheap.
+    if (isOneConstant(LoOps[1]))
+      Cmp = DAG.getSetCC(dl, getSetCCResultType(NVT), Lo,
+                         DAG.getConstant(0, dl, NVT), ISD::SETEQ);
+    else
+      Cmp = DAG.getSetCC(dl, getSetCCResultType(NVT), Lo, LoOps[0],
+                         ISD::SETULT);
 
     SDValue Carry;
     if (BoolType == TargetLoweringBase::ZeroOrOneBooleanContent)

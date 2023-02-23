@@ -520,7 +520,7 @@ define i1 @uaddo_i64_increment(i64 %x, ptr %p) {
 ; RV32-LABEL: uaddo_i64_increment:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi a3, a0, 1
-; RV32-NEXT:    sltu a0, a3, a0
+; RV32-NEXT:    seqz a0, a3
 ; RV32-NEXT:    add a1, a1, a0
 ; RV32-NEXT:    or a0, a3, a1
 ; RV32-NEXT:    seqz a0, a0
@@ -622,7 +622,7 @@ define i1 @uaddo_i64_increment_alt(i64 %x, ptr %p) {
 ; RV32-LABEL: uaddo_i64_increment_alt:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi a3, a0, 1
-; RV32-NEXT:    sltu a4, a3, a0
+; RV32-NEXT:    seqz a4, a3
 ; RV32-NEXT:    add a4, a1, a4
 ; RV32-NEXT:    sw a3, 0(a2)
 ; RV32-NEXT:    and a0, a0, a1
@@ -651,11 +651,11 @@ define i1 @uaddo_i64_increment_alt_dom(i64 %x, ptr %p) {
 ; RV32-NEXT:    and a3, a0, a1
 ; RV32-NEXT:    addi a3, a3, 1
 ; RV32-NEXT:    seqz a3, a3
-; RV32-NEXT:    addi a4, a0, 1
-; RV32-NEXT:    sltu a0, a4, a0
-; RV32-NEXT:    add a0, a1, a0
-; RV32-NEXT:    sw a4, 0(a2)
-; RV32-NEXT:    sw a0, 4(a2)
+; RV32-NEXT:    addi a0, a0, 1
+; RV32-NEXT:    seqz a4, a0
+; RV32-NEXT:    add a1, a1, a4
+; RV32-NEXT:    sw a0, 0(a2)
+; RV32-NEXT:    sw a1, 4(a2)
 ; RV32-NEXT:    mv a0, a3
 ; RV32-NEXT:    ret
 ;
@@ -733,7 +733,7 @@ define i1 @uaddo_i42_increment_illegal_type(i42 %x, ptr %p) {
 ; RV32-LABEL: uaddo_i42_increment_illegal_type:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi a3, a0, 1
-; RV32-NEXT:    sltu a0, a3, a0
+; RV32-NEXT:    seqz a0, a3
 ; RV32-NEXT:    add a0, a1, a0
 ; RV32-NEXT:    andi a1, a0, 1023
 ; RV32-NEXT:    or a0, a3, a1

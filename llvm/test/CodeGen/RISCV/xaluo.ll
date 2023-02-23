@@ -500,7 +500,7 @@ define zeroext i1 @uaddo.i64.constant_one(i64 %v1, ptr %res) {
 ; RV32-LABEL: uaddo.i64.constant_one:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi a3, a0, 1
-; RV32-NEXT:    sltu a0, a3, a0
+; RV32-NEXT:    seqz a0, a3
 ; RV32-NEXT:    add a1, a1, a0
 ; RV32-NEXT:    or a0, a3, a1
 ; RV32-NEXT:    seqz a0, a0
@@ -518,7 +518,7 @@ define zeroext i1 @uaddo.i64.constant_one(i64 %v1, ptr %res) {
 ; RV32ZBA-LABEL: uaddo.i64.constant_one:
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    addi a3, a0, 1
-; RV32ZBA-NEXT:    sltu a0, a3, a0
+; RV32ZBA-NEXT:    seqz a0, a3
 ; RV32ZBA-NEXT:    add a1, a1, a0
 ; RV32ZBA-NEXT:    or a0, a3, a1
 ; RV32ZBA-NEXT:    seqz a0, a0
