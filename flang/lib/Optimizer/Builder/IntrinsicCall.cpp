@@ -250,6 +250,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genIparity(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genIsContiguous(mlir::Type,
                                      llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genIsNan(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIshft(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIshftc(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -621,6 +622,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"ieee_class_eq", &I::genIeeeTypeCompare<mlir::arith::CmpIPredicate::eq>},
     {"ieee_class_ne", &I::genIeeeTypeCompare<mlir::arith::CmpIPredicate::ne>},
     {"ieee_is_finite", &I::genIeeeIsFinite},
+    {"ieee_is_nan", &I::genIsNan},
     {"ieee_round_eq", &I::genIeeeTypeCompare<mlir::arith::CmpIPredicate::eq>},
     {"ieee_round_ne", &I::genIeeeTypeCompare<mlir::arith::CmpIPredicate::ne>},
     {"ieor", &I::genIeor},
@@ -643,6 +645,7 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"ishft", &I::genIshft},
     {"ishftc", &I::genIshftc},
+    {"isnan", &I::genIsNan},
     {"lbound",
      &I::genLbound,
      {{{"array", asInquired}, {"dim", asValue}, {"kind", asValue}}},
@@ -3688,6 +3691,20 @@ IntrinsicLibrary::genIsContiguous(mlir::Type resultType,
   return builder.createConvert(
       loc, resultType,
       fir::runtime::genIsContiguous(builder, loc, fir::getBase(args[0])));
+}
+
+mlir::Value IntrinsicLibrary::genIsNan(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::IntegerType i1ty = mlir::IntegerType::get(context, 1);
+  mlir::IntegerType i32ty = mlir::IntegerType::get(context, 32);
+  // The last two bits indicate we are checking for signalling or quiet nan.
+  mlir::Value nan = builder.createIntegerConstant(loc, i32ty, 0b11);
+
+  mlir::Value isnan =
+      builder.create<mlir::LLVM::IsFPClass>(loc, i1ty, args[0], nan);
+  return builder.createConvert(loc, resultType, isnan);
 }
 
 // ISHFT
