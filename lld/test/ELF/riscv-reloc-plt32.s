@@ -1,3 +1,5 @@
+# REQUIRES: riscv
+
 # RUN: llvm-mc -filetype=obj -triple=riscv64 %s -o %t.o
 # RUN: llvm-mc -filetype=obj -triple=riscv64 %S/Inputs/abs256.s -o %t256.o
 #
