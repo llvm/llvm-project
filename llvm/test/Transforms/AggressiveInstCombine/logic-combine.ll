@@ -3,7 +3,8 @@
 
 define i8 @leaf1_and_aa(i8 %a)  {
 ; CHECK-LABEL: @leaf1_and_aa(
-; CHECK-NEXT:    ret i8 [[A:%.*]]
+; CHECK-NEXT:    [[AND_AA:%.*]] = and i8 [[A:%.*]], [[A]]
+; CHECK-NEXT:    ret i8 [[AND_AA]]
 ;
   %and.aa = and i8 %a, %a
   ret i8 %and.aa
@@ -11,7 +12,8 @@ define i8 @leaf1_and_aa(i8 %a)  {
 
 define i8 @leaf1_and_a_false(i8 %a)  {
 ; CHECK-LABEL: @leaf1_and_a_false(
-; CHECK-NEXT:    ret i8 0
+; CHECK-NEXT:    [[AND_AA:%.*]] = and i8 [[A:%.*]], 0
+; CHECK-NEXT:    ret i8 [[AND_AA]]
 ;
   %and.aa = and i8 %a, 0
   ret i8 %and.aa
@@ -19,7 +21,8 @@ define i8 @leaf1_and_a_false(i8 %a)  {
 
 define i8 @leaf1_xor_aa(i8 %a)  {
 ; CHECK-LABEL: @leaf1_xor_aa(
-; CHECK-NEXT:    ret i8 0
+; CHECK-NEXT:    [[XOR_AA:%.*]] = xor i8 [[A:%.*]], [[A]]
+; CHECK-NEXT:    ret i8 [[XOR_AA]]
 ;
   %xor.aa = xor i8 %a, %a
   ret i8 %xor.aa
@@ -27,7 +30,9 @@ define i8 @leaf1_xor_aa(i8 %a)  {
 
 define i8 @leaf1_and_not(i8 %a)  {
 ; CHECK-LABEL: @leaf1_and_not(
-; CHECK-NEXT:    ret i8 0
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor i8 [[A:%.*]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[A]], [[NOT_A]]
+; CHECK-NEXT:    ret i8 [[AND]]
 ;
   %not.a = xor i8 %a, -1
   %and = and i8 %a, %not.a
@@ -36,7 +41,9 @@ define i8 @leaf1_and_not(i8 %a)  {
 
 define i8 @leaf1_or_not(i8 %a)  {
 ; CHECK-LABEL: @leaf1_or_not(
-; CHECK-NEXT:    ret i8 -1
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor i8 [[A:%.*]], -1
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[A]], [[NOT_A]]
+; CHECK-NEXT:    ret i8 [[OR]]
 ;
   %not.a = xor i8 %a, -1
   %or = or i8 %a, %not.a
@@ -45,7 +52,9 @@ define i8 @leaf1_or_not(i8 %a)  {
 
 define i8 @leaf2_xor(i8 %a, i8 %b)  {
 ; CHECK-LABEL: @leaf2_xor(
-; CHECK-NEXT:    ret i8 [[B:%.*]]
+; CHECK-NEXT:    [[AB:%.*]] = xor i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[XOR_AB_A:%.*]] = xor i8 [[AB]], [[A]]
+; CHECK-NEXT:    ret i8 [[XOR_AB_A]]
 ;
   %ab = xor i8 %a, %b
   %xor.ab.a = xor i8 %ab, %a
@@ -54,7 +63,10 @@ define i8 @leaf2_xor(i8 %a, i8 %b)  {
 
 define i8 @leaf2_xor_ret_const_false(i8 %a, i8 %b)  {
 ; CHECK-LABEL: @leaf2_xor_ret_const_false(
-; CHECK-NEXT:    ret i8 0
+; CHECK-NEXT:    [[XOR_AB:%.*]] = xor i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[XOR_AB_A:%.*]] = xor i8 [[XOR_AB]], [[A]]
+; CHECK-NEXT:    [[XOR_AB_A_B:%.*]] = xor i8 [[XOR_AB_A]], [[B]]
+; CHECK-NEXT:    ret i8 [[XOR_AB_A_B]]
 ;
   %xor.ab = xor i8 %a, %b
   %xor.ab.a = xor i8 %xor.ab, %a
@@ -64,7 +76,11 @@ define i8 @leaf2_xor_ret_const_false(i8 %a, i8 %b)  {
 
 define i8 @leaf2_or_ret_leaf(i8 %a, i8 %b)  {
 ; CHECK-LABEL: @leaf2_or_ret_leaf(
-; CHECK-NEXT:    ret i8 [[B:%.*]]
+; CHECK-NEXT:    [[OR_AB:%.*]] = or i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[AND_AB:%.*]] = and i8 [[A]], [[B]]
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i8 [[OR_AB]], [[AND_AB]]
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[XOR1]], [[A]]
+; CHECK-NEXT:    ret i8 [[XOR2]]
 ;
   %or.ab = or i8 %a, %b
   %and.ab = and i8 %a, %b
@@ -75,7 +91,12 @@ define i8 @leaf2_or_ret_leaf(i8 %a, i8 %b)  {
 
 define i8 @leaf2_or_ret_const_false(i8 %a, i8 %b)  {
 ; CHECK-LABEL: @leaf2_or_ret_const_false(
-; CHECK-NEXT:    ret i8 [[A:%.*]]
+; CHECK-NEXT:    [[OR_AB:%.*]] = or i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[AND_AB:%.*]] = and i8 [[A]], [[B]]
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i8 [[OR_AB]], [[AND_AB]]
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[XOR1]], [[A]]
+; CHECK-NEXT:    [[XOR3:%.*]] = xor i8 [[XOR1]], [[B]]
+; CHECK-NEXT:    ret i8 [[XOR3]]
 ;
   %or.ab = or i8 %a, %b
   %and.ab = and i8 %a, %b
@@ -87,7 +108,11 @@ define i8 @leaf2_or_ret_const_false(i8 %a, i8 %b)  {
 
 define i1 @leaf2_type_is_i1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @leaf2_type_is_i1(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[XOR_AB:%.*]] = xor i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor i1 [[A]], true
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i1 [[NOT_A]], [[B]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[XOR2]], [[XOR_AB]]
+; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %xor.ab = xor i1 %a, %b
   %not.a = xor i1 %a, true
@@ -98,7 +123,11 @@ define i1 @leaf2_type_is_i1(i1 %a, i1 %b) {
 
 define i8 @leaf3_complex_ret_const_false(i8 %a, i8 %b, i8 %c)  {
 ; CHECK-LABEL: @leaf3_complex_ret_const_false(
-; CHECK-NEXT:    ret i8 0
+; CHECK-NEXT:    [[AB:%.*]] = or i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ABC:%.*]] = or i8 [[AB]], [[C:%.*]]
+; CHECK-NEXT:    [[NOT_ABC:%.*]] = xor i8 [[ABC]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[NOT_ABC]], [[A]]
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %ab = or i8 %a, %b
   %abc = or i8 %ab, %c
@@ -109,7 +138,14 @@ define i8 @leaf3_complex_ret_const_false(i8 %a, i8 %b, i8 %c)  {
 
 define i8 @leaf3_complex_ret_leaf(i8 %a, i8 %b, i8 %c) {
 ; CHECK-LABEL: @leaf3_complex_ret_leaf(
-; CHECK-NEXT:    ret i8 [[C:%.*]]
+; CHECK-NEXT:    [[AB:%.*]] = and i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[BC:%.*]] = and i8 [[B]], [[C:%.*]]
+; CHECK-NEXT:    [[XOR_AC:%.*]] = xor i8 [[A]], [[C]]
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[AB]], [[XOR_AC]]
+; CHECK-NEXT:    [[NOT_BC:%.*]] = xor i8 [[BC]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[NOT_BC]], [[A]]
+; CHECK-NEXT:    [[COND:%.*]] = xor i8 [[AND]], [[OR]]
+; CHECK-NEXT:    ret i8 [[COND]]
 ;
   %ab = and i8 %a, %b
   %bc = and i8 %b, %c
@@ -123,7 +159,13 @@ define i8 @leaf3_complex_ret_leaf(i8 %a, i8 %b, i8 %c) {
 
 define i8 @leaf4_ret_const_true(i8 %a, i8 %b, i8 %c, i8 %d)  {
 ; CHECK-LABEL: @leaf4_ret_const_true(
-; CHECK-NEXT:    ret i8 -1
+; CHECK-NEXT:    [[BD:%.*]] = and i8 [[B:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[NOT_BD:%.*]] = xor i8 [[BD]], -1
+; CHECK-NEXT:    [[XOR_AB:%.*]] = xor i8 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[XOR_AB]], [[C:%.*]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[OR1]], [[NOT_BD]]
+; CHECK-NEXT:    [[OR3:%.*]] = or i8 [[OR2]], [[A]]
+; CHECK-NEXT:    ret i8 [[OR3]]
 ;
   %bd = and i8 %b, %d
   %not.bd = xor i8 %bd, -1
@@ -136,7 +178,15 @@ define i8 @leaf4_ret_const_true(i8 %a, i8 %b, i8 %c, i8 %d)  {
 
 define i8 @leaf4_ret_leaf(i8 %a, i8 %b, i8 %c, i8 %d)  {
 ; CHECK-LABEL: @leaf4_ret_leaf(
-; CHECK-NEXT:    ret i8 [[B:%.*]]
+; CHECK-NEXT:    [[BD:%.*]] = and i8 [[B:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[BD]], [[C:%.*]]
+; CHECK-NEXT:    [[NOT_BD:%.*]] = xor i8 [[XOR]], -1
+; CHECK-NEXT:    [[XOR_AB:%.*]] = xor i8 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[XOR_AB]], [[C]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[OR1]], [[NOT_BD]]
+; CHECK-NEXT:    [[OR3:%.*]] = or i8 [[OR2]], [[A]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[OR3]], [[B]]
+; CHECK-NEXT:    ret i8 [[AND]]
 ;
   %bd = and i8 %b, %d
   %xor = xor i8 %bd, %c
@@ -151,7 +201,15 @@ define i8 @leaf4_ret_leaf(i8 %a, i8 %b, i8 %c, i8 %d)  {
 
 define i8 @leaf4_ret_leaf2(i8 %a, i8 %b, i8 %c, i8 %d)  {
 ; CHECK-LABEL: @leaf4_ret_leaf2(
-; CHECK-NEXT:    ret i8 [[B:%.*]]
+; CHECK-NEXT:    [[BD:%.*]] = and i8 [[B:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[BD]], [[C:%.*]]
+; CHECK-NEXT:    [[NOT_BD:%.*]] = xor i8 [[XOR]], -1
+; CHECK-NEXT:    [[XOR_AB:%.*]] = xor i8 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[XOR_AB]], [[C]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[OR1]], [[NOT_BD]]
+; CHECK-NEXT:    [[OR3:%.*]] = or i8 [[OR2]], [[A]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[OR3]], [[B]]
+; CHECK-NEXT:    ret i8 [[AND]]
 ;
   %bd = and i8 %b, %d
   %xor = xor i8 %bd, %c
