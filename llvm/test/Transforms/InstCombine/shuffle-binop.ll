@@ -201,12 +201,13 @@ define <2 x double> @shuffle_op2_0th_element_mask(ptr %a, ptr %b) {
   ret <2 x double> %shuffle
 }
 
+; This should not create an extra binop.
+
 define <2 x i4> @splat_binop_splat_uses(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @splat_binop_splat_uses(
 ; CHECK-NEXT:    [[XSPLAT:%.*]] = shufflevector <2 x i4> [[X:%.*]], <2 x i4> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[XY:%.*]] = mul <2 x i4> [[XSPLAT]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul <2 x i4> [[X]], [[Y]]
-; CHECK-NEXT:    [[MSPLAT:%.*]] = shufflevector <2 x i4> [[TMP1]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[MSPLAT:%.*]] = shufflevector <2 x i4> [[XY]], <2 x i4> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = add <2 x i4> [[XY]], [[MSPLAT]]
 ; CHECK-NEXT:    ret <2 x i4> [[RES]]
 ;
