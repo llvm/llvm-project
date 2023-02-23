@@ -41,6 +41,49 @@ static Value createMul(Location loc, Value x, Value y, OpBuilder &builder) {
   return builder.create<arith::MulFOp>(loc, x, y);
 }
 
+// Unrolls the given composite `index` into a set of subindices with maximum
+// iteration ranges specified by `factors` according to the following
+// assumptions:
+//   1. The iteration range for `index` is [0, f1 * f2 * ... * fn] i.e. the
+//   product of the given list of factors
+//   2. The iterators corresponding to the entries in `factors` are ordered from
+//   slowest to fastest varying
+// Each subindex is then computed as:
+//    subindex[i] = floor( (index % (fi * ... * fn)) / (fi-1 * ... * fn) )
+static SmallVector<Value, 3> unrollIndex(OpBuilder &b, Location loc,
+                                         Value index,
+                                         ArrayRef<int64_t> factors) {
+  assert(factors.size() >= 1 && "empty factor list");
+  SmallVector<Value, 3> indices(factors.size());
+  int64_t runningProd = 1;
+  for (int i = factors.size() - 1, end = 0; i >= end; i--) {
+    Value unrolledIndex = index;
+    if (i > 0) {
+      Value modBase = b.create<arith::ConstantOp>(
+          loc, b.getIndexAttr(runningProd * factors[i]));
+      unrolledIndex = b.create<arith::RemUIOp>(loc, unrolledIndex, modBase);
+    }
+    if (runningProd > 1) {
+      Value divDenom =
+          b.create<arith::ConstantOp>(loc, b.getIndexAttr(runningProd));
+      unrolledIndex = b.create<arith::DivUIOp>(loc, unrolledIndex, divDenom);
+    }
+    runningProd *= factors[i];
+    indices[i] = unrolledIndex;
+  }
+  return indices;
+}
+
+// Given indices corresponding to iterators in the output (oIndex) and filter
+// (fIndex) for a convolution, compute the convolved index for the
+// input as `oIndex * stride + fIndex`.
+static Value getConvolvedIndex(OpBuilder &b, Location loc, Value oIndex,
+                               Value fIndex, int64_t stride) {
+  Value strideVal = b.create<arith::ConstantOp>(loc, b.getIndexAttr(stride));
+  Value convIndex = b.create<arith::MulIOp>(loc, oIndex, strideVal);
+  return b.create<arith::AddIOp>(loc, convIndex, fIndex);
+}
+
 FailureOr<std::pair<Operation *, Operation *>>
 rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNhwcHwcfOp convOp) {
   auto inputType = convOp.getInputs()[0].getType().cast<ShapedType>();
@@ -68,32 +111,34 @@ rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNhwcHwcfOp convOp) {
   ArrayRef<int64_t> filterShape = filterType.getShape();
   ArrayRef<int64_t> outputShape = outputType.getShape();
 
-  int n = outputShape[0];
-  int oh = outputShape[1];
-  int ow = outputShape[2];
-  int oc = outputShape[3];
-  int fh = filterShape[0];
-  int fw = filterShape[1];
-  int ic = filterShape[2];
+  int64_t n = outputShape[0];
+  int64_t oh = outputShape[1];
+  int64_t ow = outputShape[2];
+  int64_t oc = outputShape[3];
+  int64_t fh = filterShape[0];
+  int64_t fw = filterShape[1];
+  int64_t ic = filterShape[2];
 
   Location loc = convOp.getLoc();
 
-  SmallVector<int64_t> colTensorShape = {n, oh, ow, fh, fw, ic};
+  // Reshape output and filter to the LHS and result of a (B)MNK matmul.
+  SmallVector<ReassociationIndices> filterReassocIndices = {{0, 1, 2}, {3}};
+  auto reshapedFilterType =
+      RankedTensorType::get({fh * fw * ic, oc}, inputType.getElementType());
+  Value reshapedFilter = rewriter.create<tensor::CollapseShapeOp>(
+      loc, reshapedFilterType, filter, filterReassocIndices);
 
+  SmallVector<ReassociationIndices> outputReassocIndices = {{0}, {1, 2}, {3}};
+  RankedTensorType reshapedOutputType =
+      RankedTensorType::get({n, oh * ow, oc}, outputType.getElementType());
+  Value reshapedOutput = rewriter.create<tensor::CollapseShapeOp>(
+      loc, reshapedOutputType, output, outputReassocIndices);
+
+  SmallVector<int64_t> colTensorShape = {n, oh * ow, fh * fw * ic};
   Value colTensor = rewriter.create<tensor::EmptyOp>(
       loc, colTensorShape, inputType.getElementType());
 
-  AffineExpr nDim, ohDim, owDim, khDim, kwDim, icDim;
-  bindDims(context, nDim, ohDim, owDim, khDim, kwDim, icDim);
-
-  AffineExpr shSym = rewriter.getAffineConstantExpr(
-      convOp.getStrides().getValues<int64_t>()[0]);
-  AffineExpr swSym = rewriter.getAffineConstantExpr(
-      convOp.getStrides().getValues<int64_t>()[1]);
-
-  SmallVector<AffineExpr> inputExprs = {nDim, ohDim * shSym + khDim,
-                                        owDim * swSym + kwDim, icDim};
-
+  // Convert the input to a (BMK) column tensor.
   auto nloops = colTensorShape.size();
 
   auto parallel = utils::IteratorType::parallel;
@@ -101,85 +146,68 @@ rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNhwcHwcfOp convOp) {
   SmallVector<utils::IteratorType> img2colIterators(nloops, parallel);
 
   SmallVector<AffineMap> img2colIndexingMaps = {
-      AffineMap::get(nloops, 0, inputExprs, context),
       AffineMap::getMultiDimIdentityMap(nloops, context)};
 
   auto img2ColTensor = rewriter.create<linalg::GenericOp>(
       loc, colTensor.getType(),
-      /*inputs=*/input, /*outputs=*/colTensor, img2colIndexingMaps,
+      /*inputs=*/ValueRange{}, /*outputs=*/colTensor, img2colIndexingMaps,
       img2colIterators,
       [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
-        nestedBuilder.create<linalg::YieldOp>(nestedLoc, args[0]);
+        // Get the iterators named based on the matmul (batch, m, k).
+        Value bIndex = nestedBuilder.create<linalg::IndexOp>(loc, 0);
+        Value mIndex = nestedBuilder.create<linalg::IndexOp>(loc, 1);
+        Value kIndex = nestedBuilder.create<linalg::IndexOp>(loc, 2);
+
+        // Recover the original iteration indices from the problem/input sizes.
+        SmallVector<Value, 3> mIndices = unrollIndex(
+            nestedBuilder, nestedLoc, mIndex, ArrayRef<int64_t>{oh, ow});
+        auto ohIndex = mIndices[0];
+        auto owIndex = mIndices[1];
+
+        SmallVector<Value, 3> kIndices = unrollIndex(
+            nestedBuilder, nestedLoc, kIndex, ArrayRef<int64_t>{fh, fw, ic});
+        auto fhIndex = kIndices[0];
+        auto fwIndex = kIndices[1];
+        auto icIndex = kIndices[2];
+
+        // Extract the input element corresponding to the expanded indices.
+        Value hIndex =
+            getConvolvedIndex(nestedBuilder, nestedLoc, ohIndex, fhIndex,
+                              convOp.getStrides().getValues<int64_t>()[0]);
+        Value wIndex =
+            getConvolvedIndex(nestedBuilder, nestedLoc, owIndex, fwIndex,
+                              convOp.getStrides().getValues<int64_t>()[1]);
+
+        // im2col[n, oh*ow, fh*fw*ic] = input[n, sh*oh + fh, sw*ow + fw, ic]
+        SmallVector<Value> extractionIndices{bIndex, hIndex, wIndex, icIndex};
+        Value inputVal = nestedBuilder.create<tensor::ExtractOp>(
+            loc, input, extractionIndices);
+        nestedBuilder.create<linalg::YieldOp>(nestedLoc, inputVal);
       });
 
-  SmallVector<ReassociationIndices> img2ColTensorReassocIndices;
-  SmallVector<ReassociationIndices> outputReassocIndices;
-  RankedTensorType reshapedImg2ColTensorType, reshapedOutputType;
-  if (n == 1) {
-    img2ColTensorReassocIndices = {{0, 1, 2}, {3, 4, 5}};
-    outputReassocIndices = {{0, 1, 2}, {3}};
+  // Because the filter does not share the same batch dimension,
+  // the batch dimension is only used in indexing the input and output. Thus
+  // we cannot use existing linalg named ops like linalg.batch_matmul.
+  // i.e. (B x) M x K * K x N = (B x) M x N
+  AffineExpr bDim, mDim, nDim, kDim;
+  bindDims(context, bDim, mDim, nDim, kDim);
+  auto lhsMap = AffineMap::get(4, 0, {bDim, mDim, kDim}, context);
+  auto rhsMap = AffineMap::get(4, 0, {kDim, nDim}, context);
+  auto resultMap = AffineMap::get(4, 0, {bDim, mDim, nDim}, context);
+  SmallVector<utils::IteratorType> genericIterators = {parallel, parallel,
+                                                       parallel, reduction};
 
-    reshapedImg2ColTensorType = RankedTensorType::get(
-        {oh * ow, fh * fw * ic}, inputType.getElementType());
-    reshapedOutputType =
-        RankedTensorType::get({oh * ow, oc}, outputType.getElementType());
-  } else {
-    img2ColTensorReassocIndices = {{0}, {1, 2}, {3, 4, 5}};
-    outputReassocIndices = {{0}, {1, 2}, {3}};
-
-    reshapedImg2ColTensorType = RankedTensorType::get(
-        {n, oh * ow, fh * fw * ic}, inputType.getElementType());
-    reshapedOutputType =
-        RankedTensorType::get({n, oh * ow, oc}, outputType.getElementType());
-  }
-
-  SmallVector<ReassociationIndices> filterReassocIndices = {{0, 1, 2}, {3}};
-  auto reshapedFilterType =
-      RankedTensorType::get({fh * fw * ic, oc}, inputType.getElementType());
-
-  Value reshapedImg2ColTensor = rewriter.create<tensor::CollapseShapeOp>(
-      loc, reshapedImg2ColTensorType, img2ColTensor.getResult(0),
-      img2ColTensorReassocIndices);
-
-  Value reshapedFilter = rewriter.create<tensor::CollapseShapeOp>(
-      loc, reshapedFilterType, filter, filterReassocIndices);
-
-  Value reshapedOutput = rewriter.create<tensor::CollapseShapeOp>(
-      loc, reshapedOutputType, output, outputReassocIndices);
-
-  Value result;
-  if (n == 1) {
-    auto matmulOp = rewriter.create<linalg::MatmulOp>(
-        loc, reshapedOutputType,
-        ArrayRef<Value>{reshapedImg2ColTensor, reshapedFilter},
-        ArrayRef<Value>{reshapedOutput});
-    result = matmulOp.getResults().front();
-  } else {
-    // For cases where batch is not 1, we need to keep the batch dimension
-    // separate. Because the filter does not share the same batch dimension,
-    // the batch dimension is only used in indexing the input and output. Thus
-    // we cannot use existing linalg named ops like linalg.batch_matmul.
-    // i.e. (B x) M x K * K x N = (B x) M x N
-    AffineExpr bDim, mDim, nDim, kDim;
-    bindDims(context, bDim, mDim, nDim, kDim);
-    auto lhsMap = AffineMap::get(4, 0, {bDim, mDim, kDim}, context);
-    auto rhsMap = AffineMap::get(4, 0, {kDim, nDim}, context);
-    auto resultMap = AffineMap::get(4, 0, {bDim, mDim, nDim}, context);
-    SmallVector<utils::IteratorType> genericIterators = {parallel, parallel,
-                                                         parallel, reduction};
-
-    auto genericOp = rewriter.create<linalg::GenericOp>(
-        loc, reshapedOutputType,
-        /*inputs=*/ValueRange{reshapedImg2ColTensor, reshapedFilter},
-        /*outputs=*/ValueRange{reshapedOutput},
-        ArrayRef<AffineMap>{lhsMap, rhsMap, resultMap}, genericIterators,
-        [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
-          Value mul = createMul(loc, args[0], args[1], nestedBuilder);
-          Value add = createAdd(loc, mul, args[2], nestedBuilder);
-          nestedBuilder.create<linalg::YieldOp>(nestedLoc, add);
-        });
-    result = genericOp.getResults().front();
-  }
+  auto genericOp = rewriter.create<linalg::GenericOp>(
+      loc, reshapedOutputType,
+      /*inputs=*/ValueRange{img2ColTensor.getResult(0), reshapedFilter},
+      /*outputs=*/ValueRange{reshapedOutput},
+      ArrayRef<AffineMap>{lhsMap, rhsMap, resultMap}, genericIterators,
+      [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
+        Value mul = createMul(loc, args[0], args[1], nestedBuilder);
+        Value add = createAdd(loc, mul, args[2], nestedBuilder);
+        nestedBuilder.create<linalg::YieldOp>(nestedLoc, add);
+      });
+  Value result = genericOp.getResults().front();
 
   auto reshapedResult = rewriter.create<tensor::ExpandShapeOp>(
       loc, outputType, result, outputReassocIndices);
@@ -367,33 +395,33 @@ rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwOp convOp) {
   auto filterShape = filterType.getShape();
   auto outputShape = outputType.getShape();
 
-  int n = outputShape[0];
-  int oc = outputShape[1];
-  int oh = outputShape[2];
-  int ow = outputShape[3];
-  int ic = filterShape[1];
-  int fh = filterShape[2];
-  int fw = filterShape[3];
+  int64_t n = outputShape[0];
+  int64_t oc = outputShape[1];
+  int64_t oh = outputShape[2];
+  int64_t ow = outputShape[3];
+  int64_t ic = filterShape[1];
+  int64_t fh = filterShape[2];
+  int64_t fw = filterShape[3];
 
   auto loc = convOp.getLoc();
-
-  SmallVector<int64_t, 4> colTensorShape = {n, ic, fh, fw, oh, ow};
-
-  Value colTensor = rewriter.create<tensor::EmptyOp>(
-      loc, colTensorShape, inputType.getElementType());
-
   MLIRContext *context = rewriter.getContext();
 
-  AffineExpr nDim, icDim, khDim, kwDim, ohDim, owDim;
-  bindDims(context, nDim, icDim, khDim, kwDim, ohDim, owDim);
+  SmallVector<ReassociationIndices> filterReassocIndices = {{0}, {1, 2, 3}};
+  auto reshapedFilterType =
+      RankedTensorType::get({oc, ic * fh * fw}, inputType.getElementType());
+  Value reshapedFilter = rewriter.create<tensor::CollapseShapeOp>(
+      loc, reshapedFilterType, filter, filterReassocIndices);
 
-  auto shSym = rewriter.getAffineConstantExpr(
-      convOp.getStrides().getValues<int64_t>()[0]);
-  auto swSym = rewriter.getAffineConstantExpr(
-      convOp.getStrides().getValues<int64_t>()[1]);
+  SmallVector<ReassociationIndices> outputReassocIndices = {{0}, {1}, {2, 3}};
+  auto reshapedOutputType =
+      RankedTensorType::get({n, oc, oh * ow}, outputType.getElementType());
+  Value reshapedOutput = rewriter.create<tensor::CollapseShapeOp>(
+      loc, reshapedOutputType, output, outputReassocIndices);
 
-  SmallVector<AffineExpr, 4> inputExprs = {nDim, icDim, ohDim * shSym + khDim,
-                                           owDim * swSym + kwDim};
+  // Convert the input to a (BKN) tensor.
+  SmallVector<int64_t, 4> colTensorShape = {n, ic * fh * fw, oh * ow};
+  Value colTensor = rewriter.create<tensor::EmptyOp>(
+      loc, colTensorShape, inputType.getElementType());
 
   auto nloops = colTensorShape.size();
 
@@ -402,83 +430,67 @@ rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwOp convOp) {
   SmallVector<utils::IteratorType, 3> img2colIterators(nloops, parallel);
 
   SmallVector<AffineMap, 4> img2colIndexingMaps = {
-      AffineMap::get(nloops, 0, inputExprs, context),
       AffineMap::getMultiDimIdentityMap(nloops, context)};
 
   auto img2ColTensor = rewriter.create<linalg::GenericOp>(
       loc, colTensor.getType(),
-      /*inputs=*/input, /*outputs=*/colTensor, img2colIndexingMaps,
+      /*inputs=*/ValueRange{}, /*outputs=*/colTensor, img2colIndexingMaps,
       img2colIterators,
       [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
-        nestedBuilder.create<linalg::YieldOp>(nestedLoc, args[0]);
+        // Get the iterators named based on the matmul (batch, m, k).
+        Value bIndex = nestedBuilder.create<linalg::IndexOp>(loc, 0);
+        Value kIndex = nestedBuilder.create<linalg::IndexOp>(loc, 1);
+        Value nIndex = nestedBuilder.create<linalg::IndexOp>(loc, 2);
+
+        // Recover the original iteration indices from the problem/input sizes.
+        SmallVector<Value, 3> kIndices = unrollIndex(
+            nestedBuilder, nestedLoc, kIndex, ArrayRef<int64_t>{ic, fh, fw});
+        auto icIndex = kIndices[0];
+        auto fhIndex = kIndices[1];
+        auto fwIndex = kIndices[2];
+
+        SmallVector<Value, 3> nIndices = unrollIndex(
+            nestedBuilder, nestedLoc, nIndex, ArrayRef<int64_t>{oh, ow});
+        auto ohIndex = nIndices[0];
+        auto owIndex = nIndices[1];
+
+        // Extract the input element corresponding to the expanded indices.
+        Value hIndex =
+            getConvolvedIndex(nestedBuilder, nestedLoc, ohIndex, fhIndex,
+                              convOp.getStrides().getValues<int64_t>()[0]);
+        Value wIndex =
+            getConvolvedIndex(nestedBuilder, nestedLoc, owIndex, fwIndex,
+                              convOp.getStrides().getValues<int64_t>()[1]);
+
+        // im2col[n, ic*fh*fw, oh*ow] = input[n, ic, sh*oh + fh, sw*ow + fw]
+        SmallVector<Value> extractionIndices{bIndex, icIndex, hIndex, wIndex};
+        Value inputVal = nestedBuilder.create<tensor::ExtractOp>(
+            loc, input, extractionIndices);
+        nestedBuilder.create<linalg::YieldOp>(nestedLoc, inputVal);
       });
 
-  SmallVector<ReassociationIndices> filterReassocIndices = {{0}, {1, 2, 3}};
-  auto reshapedFilterType =
-      RankedTensorType::get({oc, fh * fw * ic}, inputType.getElementType());
-  Value reshapedFilter = rewriter.create<tensor::CollapseShapeOp>(
-      loc, reshapedFilterType, filter, filterReassocIndices);
-
-  SmallVector<ReassociationIndices> img2ColTensorReassocIndices;
-  SmallVector<ReassociationIndices> outputReassocIndices;
-  RankedTensorType reshapedImg2ColTensorType, reshapedOutputType;
-  if (n == 1) {
-    img2ColTensorReassocIndices = {{0, 1, 2, 3}, {4, 5}};
-    outputReassocIndices = {{0, 1}, {2, 3}};
-
-    reshapedImg2ColTensorType = RankedTensorType::get(
-        {fh * fw * ic, oh * ow}, inputType.getElementType());
-    reshapedOutputType =
-        RankedTensorType::get({oc, oh * ow}, outputType.getElementType());
-  } else {
-    img2ColTensorReassocIndices = {{0}, {1, 2, 3}, {4, 5}};
-    outputReassocIndices = {{0}, {1}, {2, 3}};
-
-    reshapedImg2ColTensorType = RankedTensorType::get(
-        {n, fh * fw * ic, oh * ow}, inputType.getElementType());
-    reshapedOutputType =
-        RankedTensorType::get({n, oc, oh * ow}, outputType.getElementType());
-  }
-
-  Value reshapedImg2ColTensor = rewriter.create<tensor::CollapseShapeOp>(
-      loc, reshapedImg2ColTensorType, img2ColTensor.getResult(0),
-      img2ColTensorReassocIndices);
-
-  Value reshapedOutput = rewriter.create<tensor::CollapseShapeOp>(
-      loc, reshapedOutputType, output, outputReassocIndices);
-
-  Value result;
-  if (n == 1) {
-    auto matmulOp = rewriter.create<linalg::MatmulOp>(
-        loc, reshapedOutputType,
-        ArrayRef<Value>{reshapedFilter, reshapedImg2ColTensor},
-        ArrayRef<Value>{reshapedOutput});
-    result = matmulOp.getResults().front();
-  } else {
-    // For cases where batch is not 1, we need to keep the batch dimension
-    // separate. Because the filter does not share the same batch dimension,
-    // the batch dimension is only used in indexing the input and output. Thus
-    // we cannot use existing linalg named ops like linalg.batch_matmul.
-    // i.e. M x K * (B x) K x N = (B x) M x N
-    AffineExpr bDim, mDim, nDim, kDim;
-    bindDims(context, bDim, mDim, nDim, kDim);
-    auto lhsMap = AffineMap::get(4, 0, {mDim, kDim}, context);
-    auto rhsMap = AffineMap::get(4, 0, {bDim, kDim, nDim}, context);
-    auto resultMap = AffineMap::get(4, 0, {bDim, mDim, nDim}, context);
-    SmallVector<utils::IteratorType> genericIterators = {parallel, parallel,
-                                                         parallel, reduction};
-    auto genericOp = rewriter.create<linalg::GenericOp>(
-        loc, reshapedOutputType,
-        /*inputs=*/ValueRange{reshapedFilter, reshapedImg2ColTensor},
-        /*outputs=*/ValueRange{reshapedOutput},
-        ArrayRef<AffineMap>{lhsMap, rhsMap, resultMap}, genericIterators,
-        [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
-          Value mul = createMul(loc, args[0], args[1], nestedBuilder);
-          Value add = createAdd(loc, mul, args[2], nestedBuilder);
-          nestedBuilder.create<linalg::YieldOp>(nestedLoc, add);
-        });
-    result = genericOp.getResults().front();
-  }
+  // Because the filter does not share the same batch dimension,
+  // the batch dimension is only used in indexing the input and output. Thus
+  // we cannot use existing linalg named ops like linalg.batch_matmul.
+  // i.e. M x K * (B x) K x N = (B x) M x N
+  AffineExpr bDim, mDim, nDim, kDim;
+  bindDims(context, bDim, mDim, nDim, kDim);
+  auto lhsMap = AffineMap::get(4, 0, {mDim, kDim}, context);
+  auto rhsMap = AffineMap::get(4, 0, {bDim, kDim, nDim}, context);
+  auto resultMap = AffineMap::get(4, 0, {bDim, mDim, nDim}, context);
+  SmallVector<utils::IteratorType> genericIterators = {parallel, parallel,
+                                                       parallel, reduction};
+  auto genericOp = rewriter.create<linalg::GenericOp>(
+      loc, reshapedOutputType,
+      /*inputs=*/ValueRange{reshapedFilter, img2ColTensor.getResult(0)},
+      /*outputs=*/ValueRange{reshapedOutput},
+      ArrayRef<AffineMap>{lhsMap, rhsMap, resultMap}, genericIterators,
+      [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
+        Value mul = createMul(loc, args[0], args[1], nestedBuilder);
+        Value add = createAdd(loc, mul, args[2], nestedBuilder);
+        nestedBuilder.create<linalg::YieldOp>(nestedLoc, add);
+      });
+  Value result = genericOp.getResults().front();
 
   auto reshapedResult = rewriter.create<tensor::ExpandShapeOp>(
       loc, outputType, result, outputReassocIndices);
