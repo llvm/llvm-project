@@ -76,6 +76,9 @@ public:
   ///   were on the worklist at the very beginning) enqueued. All other ops are
   ///   excluded.
   GreedyRewriteStrictness strictMode = GreedyRewriteStrictness::AnyOp;
+
+  /// An optional listener that should be notified about IR modifications.
+  RewriterBase::Listener *listener = nullptr;
 };
 
 //===----------------------------------------------------------------------===//

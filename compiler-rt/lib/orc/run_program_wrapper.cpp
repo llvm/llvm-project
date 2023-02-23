@@ -22,7 +22,7 @@ extern "C" int64_t __orc_rt_run_program(const char *JITDylibName,
                                         const char *EntrySymbolName, int argc,
                                         char *argv[]);
 
-ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
 __orc_rt_run_program_wrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<int64_t(SPSString, SPSString,
                                  SPSSequence<SPSString>)>::

@@ -1193,13 +1193,13 @@ void ModuleInlinerWrapperPass::printPipeline(
   // on Params and Mode).
   if (!MPM.isEmpty()) {
     MPM.printPipeline(OS, MapClassName2PassName);
-    OS << ",";
+    OS << ',';
   }
   OS << "cgscc(";
   if (MaxDevirtIterations != 0)
     OS << "devirt<" << MaxDevirtIterations << ">(";
   PM.printPipeline(OS, MapClassName2PassName);
   if (MaxDevirtIterations != 0)
-    OS << ")";
-  OS << ")";
+    OS << ')';
+  OS << ')';
 }

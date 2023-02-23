@@ -669,16 +669,19 @@ private:
     }
 
     const auto encDst = dstTp.getEncoding();
-    // We don't need a temporary COO tensor for dense => sparse conversion.
-    const RankedTensorType bufferTp = dstTp.getRankedTensorType();
+    // We don't need a temporary COO tensor if the destination has an identity
+    // ordering. Otherwise, we use the destination ordering for the temporary
+    // COO tensor.
+    // TODO: enhance foreachOp to take ordering to remove the need of a
+    // temporary COO tensor here.
+    const RankedTensorType bufferTp = dstTp.isIdentity()
+                                          ? dstTp.getRankedTensorType()
+                                          : getUnorderedCOOFromTypeWithOrdering(
+                                                dstTp, dstTp.getDimToLvlMap());
     auto buffer =
         rewriter.create<AllocTensorOp>(loc, bufferTp, dynSizes).getResult();
-    AffineMapAttr foreachOrder = nullptr;
-    if (encDst.getDimOrdering())
-      foreachOrder = AffineMapAttr::get(encDst.getDimOrdering());
-
     auto foreachOp = rewriter.create<ForeachOp>(
-        loc, src, buffer, foreachOrder,
+        loc, src, buffer,
         [&](OpBuilder &builder, Location loc, ValueRange indices, Value v,
             ValueRange reduc) {
           Value input = reduc.front();
@@ -706,8 +709,14 @@ private:
         });
     rewriter.setInsertionPointAfter(op);
     src = rewriter.create<LoadOp>(loc, foreachOp.getResult(0), true);
+    if (bufferTp != dstTp) {
+      rewriter.replaceOpWithNewOp<ConvertOp>(op, dstTp.getRankedTensorType(),
+                                             src);
+      rewriter.create<DeallocTensorOp>(loc, src);
+    } else {
+      rewriter.replaceOp(op, src);
+    }
 
-    rewriter.replaceOp(op, src);
     return success();
   }
 

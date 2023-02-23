@@ -603,16 +603,6 @@ and add the label ``clang:modules`` (if you have permissions for that).
 
 For higher level support for proposals, you could visit https://clang.llvm.org/cxx_status.html.
 
-Support for clang-scan-deps
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The support for clang-scan-deps may be the most urgent problem for modules now.
-Without the support for clang-scan-deps, it's hard to involve build systems.
-This means that users could only play with modules through makefiles or by writing a parser by hand.
-It blocks more uses for modules, which will block more defect reports or requirements.
-
-This is tracked in: https://github.com/llvm/llvm-project/issues/51792.
-
 Ambiguous deduction guide
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 

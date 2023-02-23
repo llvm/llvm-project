@@ -115,6 +115,33 @@ func.func @test_end_associate_box_dynamic(%var: !fir.box<!fir.array<?xf64>>, %mu
 // CHECK:    fir.freemem %[[VAL_2]] : !fir.heap<!fir.array<?xf64>>
 // CHECK:  }
 
+func.func private @bar(!fir.ref<!fir.array<?xi32>>) -> ()
+func.func @test_result_box_addr(%x : !fir.box<!fir.array<?xi32>>) {
+  %true = arith.constant 1 : i1
+  %expr = hlfir.as_expr %x move %true : (!fir.box<!fir.array<?xi32>>, i1) -> !hlfir.expr<?xi32>
+  %y:3 = hlfir.associate %expr {uniq_name = "y"}: (!hlfir.expr<?xi32>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
+  fir.call @bar(%y#1) : (!fir.ref<!fir.array<?xi32>>) -> ()
+  return
+}
+// CHECK-LABEL: func.func @test_result_box_addr(
+// CHECK-SAME: %[[X:.*]]: !fir.box<!fir.array<?xi32>>) {
+// CHECK:  %[[ADDR:.*]] = fir.box_addr %[[X]] : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
+// CHECK: fir.call @bar(%[[ADDR]]) : (!fir.ref<!fir.array<?xi32>>) -> ()
+
+func.func private @bar2(!fir.ref<!fir.array<10xi32>>) -> ()
+func.func @test_result_convert(%x : !fir.heap<!fir.array<10xi32>>) {
+  %true = arith.constant 1 : i1
+  %expr = hlfir.as_expr %x move %true : (!fir.heap<!fir.array<10xi32>>, i1) -> !hlfir.expr<10xi32>
+  %y:3 = hlfir.associate %expr {uniq_name = "y"}: (!hlfir.expr<10xi32>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>, i1)
+  fir.call @bar2(%y#1) : (!fir.ref<!fir.array<10xi32>>) -> ()
+  return
+}
+// CHECK-LABEL: func.func @test_result_convert(
+// CHECK-SAME: %[[X:.*]]: !fir.heap<!fir.array<10xi32>>) {
+// CHECK: fir.convert
+// CHECK:  %[[ADDR:.*]] = fir.convert %[[X]] : (!fir.heap<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>>
+// CHECK: fir.call @bar2(%[[ADDR]]) : (!fir.ref<!fir.array<10xi32>>) -> ()
+
 
 func.func private @take_i4(!fir.ref<i32>)
 func.func private @take_r4(!fir.ref<f32>)

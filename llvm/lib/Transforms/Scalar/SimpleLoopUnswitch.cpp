@@ -3583,10 +3583,10 @@ void SimpleLoopUnswitchPass::printPipeline(
   static_cast<PassInfoMixin<SimpleLoopUnswitchPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
 
-  OS << "<";
+  OS << '<';
   OS << (NonTrivial ? "" : "no-") << "nontrivial;";
   OS << (Trivial ? "" : "no-") << "trivial";
-  OS << ">";
+  OS << '>';
 }
 
 namespace {

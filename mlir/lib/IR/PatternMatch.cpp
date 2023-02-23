@@ -217,6 +217,10 @@ void PDLPatternModule::registerRewriteFunction(StringRef name,
 // RewriterBase
 //===----------------------------------------------------------------------===//
 
+bool RewriterBase::Listener::classof(const OpBuilder::Listener *base) {
+  return base->getKind() == OpBuilder::ListenerBase::Kind::RewriterBaseListener;
+}
+
 RewriterBase::~RewriterBase() {
   // Out of line to provide a vtable anchor for the class.
 }
@@ -232,7 +236,8 @@ void RewriterBase::replaceOpWithIf(
          "incorrect number of values to replace operation");
 
   // Notify the rewriter subclass that we're about to replace this root.
-  notifyRootReplaced(op, newValues);
+  if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
+    rewriteListener->notifyOperationReplaced(op, newValues);
 
   // Replace each use of the results when the functor is true.
   bool replacedAllUses = true;
@@ -260,13 +265,15 @@ void RewriterBase::replaceOpWithinBlock(Operation *op, ValueRange newValues,
 /// the operation.
 void RewriterBase::replaceOp(Operation *op, ValueRange newValues) {
   // Notify the rewriter subclass that we're about to replace this root.
-  notifyRootReplaced(op, newValues);
+  if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
+    rewriteListener->notifyOperationReplaced(op, newValues);
 
   assert(op->getNumResults() == newValues.size() &&
          "incorrect # of replacement values");
   op->replaceAllUsesWith(newValues);
 
-  notifyOperationRemoved(op);
+  if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
+    rewriteListener->notifyOperationRemoved(op);
   op->erase();
 }
 
@@ -274,7 +281,8 @@ void RewriterBase::replaceOp(Operation *op, ValueRange newValues) {
 /// the given operation *must* be known to be dead.
 void RewriterBase::eraseOp(Operation *op) {
   assert(op->use_empty() && "expected 'op' to have no uses");
-  notifyOperationRemoved(op);
+  if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
+    rewriteListener->notifyOperationRemoved(op);
   op->erase();
 }
 
@@ -284,6 +292,12 @@ void RewriterBase::eraseBlock(Block *block) {
     eraseOp(&op);
   }
   block->erase();
+}
+
+void RewriterBase::finalizeRootUpdate(Operation *op) {
+  // Notify the listener that the operation was modified.
+  if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
+    rewriteListener->notifyOperationModified(op);
 }
 
 /// Merge the operations of block 'source' into the end of block 'dest'.
@@ -312,7 +326,7 @@ void RewriterBase::mergeBlocks(Block *source, Block *dest,
 /// Find uses of `from` and replace them with `to` if the `functor` returns
 /// true. It also marks every modified uses and notifies the rewriter that an
 /// in-place operation modification is about to happen.
-void RewriterBase::replaceUseIf(
+void RewriterBase::replaceUsesWithIf(
     Value from, Value to,
     llvm::unique_function<bool(OpOperand &) const> functor) {
   for (OpOperand &operand : llvm::make_early_inc_range(from.getUses())) {

@@ -163,8 +163,13 @@ getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
   // Step 1. Construct the information of packing data dimensions; append inner
   // dimensions to the indexing maps for the operand.
   for (auto [index, expr] : llvm::enumerate(exprs)) {
-    int64_t dimPos = expr.cast<AffineDimExpr>().getPosition();
-    domainDimToOperandDim[dimPos] = index;
+    if (auto dimExpr = expr.dyn_cast<AffineDimExpr>()) {
+      int64_t dimPos = dimExpr.getPosition();
+      domainDimToOperandDim[dimPos] = index;
+      continue;
+    }
+    assert(expr.isa<AffineConstantExpr>() &&
+           "Found non-constant and non-affine dim expression");
   }
   SmallVector<int64_t> innerDimsPos;
   SmallVector<OpFoldResult> innerTileSizes;
@@ -186,8 +191,13 @@ getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
     SmallVector<int64_t> inversedOuterPerm =
         invertPermutationVector(packInfo.outerDimsOnDomainPerm);
     for (auto i : llvm::seq<unsigned>(0, origIndexingMap.getNumResults())) {
-      int64_t dimPos = exprs[i].cast<AffineDimExpr>().getPosition();
-      exprs[i] = b.getAffineDimExpr(inversedOuterPerm[dimPos]);
+      if (auto dimExpr = exprs[i].dyn_cast<AffineDimExpr>()) {
+        int64_t dimPos = dimExpr.getPosition();
+        exprs[i] = b.getAffineDimExpr(inversedOuterPerm[dimPos]);
+        continue;
+      }
+      assert(exprs[i].isa<AffineConstantExpr>() &&
+             "Attempted to permute non-constant and non-affine dim expression");
     }
     // Step 2.2: Undo the transposition on `exprs` and propagate the
     // transposition on the pack using outerDimsPerm.

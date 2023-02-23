@@ -6,6 +6,7 @@ add_header_library(
   HDRS
     blockstore.h
   DEPENDS
+    .libc_assert
     libc.src.__support.CPP.new
 )
 
@@ -87,6 +88,7 @@ add_header_library(
     float_to_string.h
     ryu_constants.h
   DEPENDS
+    .libc_assert
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.common
@@ -188,6 +190,15 @@ add_header_library(
     UInt128.h
   DEPENDS
     .uint
+)
+
+add_header_library(
+  libc_assert
+  HDRS
+    libc_assert.h
+  DEPENDS
+    .integer_to_string
+    libc.src.__support.OSUtil.osutil
 )
 
 add_subdirectory(FPUtil)

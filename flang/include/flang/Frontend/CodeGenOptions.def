@@ -28,6 +28,7 @@ CODEGENOPT(PICLevel, 2, 0) ///< PIC level of the LLVM module.
 CODEGENOPT(IsPIE, 1, 0) ///< PIE level is the same as PIC Level.
 CODEGENOPT(StackArrays, 1, 0) ///< -fstack-arrays (enable the stack-arrays pass)
 
+CODEGENOPT(Underscoring, 1, 1)
 ENUM_CODEGENOPT(RelocationModel, llvm::Reloc::Model, 3, llvm::Reloc::PIC_) ///< Name of the relocation model to use.
 
 #undef CODEGENOPT

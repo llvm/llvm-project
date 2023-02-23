@@ -419,8 +419,7 @@ void InstrInfoEmitter::emitOperandTypeMappings(
     // Size the unsigned integer offset to save space.
     assert(OperandRecords.size() <= UINT32_MAX &&
            "Too many operands for offset table");
-    OS << ((OperandRecords.size() <= UINT16_MAX) ? "  const uint16_t"
-                                                 : "  const uint32_t");
+    OS << "  static const " << getMinimalTypeForRange(OperandRecords.size());
     OS << " Offsets[] = {\n";
     for (int I = 0, E = OperandOffsets.size(); I != E; ++I) {
       OS << "    /* " << getInstrName(I) << " */\n";
@@ -436,7 +435,8 @@ void InstrInfoEmitter::emitOperandTypeMappings(
     assert(EnumVal <= INT16_MAX &&
            "Too many operand types for operand types table");
     OS << "\n  using namespace OpTypes;\n";
-    OS << ((EnumVal <= INT8_MAX) ? "  const int8_t" : "  const int16_t");
+    OS << "  static";
+    OS << ((EnumVal <= INT8_MAX) ? " const int8_t" : " const int16_t");
     OS << " OpcodeOperandTypes[] = {\n    ";
     for (int I = 0, E = OperandRecords.size(), CurOffset = 0; I != E; ++I) {
       // We print each Opcode's operands in its own row.

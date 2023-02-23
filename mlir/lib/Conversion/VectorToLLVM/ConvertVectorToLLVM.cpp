@@ -704,11 +704,6 @@ public:
     Value acc = adaptor.getAcc();
     Location loc = reductionOp.getLoc();
 
-    // Masked reductions are lowered separately.
-    auto maskableOp = cast<MaskableOpInterface>(reductionOp.getOperation());
-    if (maskableOp.isMasked())
-      return failure();
-
     if (eltType.isIntOrIndex()) {
       // Integer reductions: add/mul/min/max/and/or/xor.
       Value result;
@@ -1108,43 +1103,8 @@ public:
     if (vType.getRank() > 1)
       return failure();
 
-    // Masked fmas are lowered separately.
-    auto maskableOp = cast<MaskableOpInterface>(fmaOp.getOperation());
-    if (maskableOp.isMasked())
-      return failure();
-
     rewriter.replaceOpWithNewOp<LLVM::FMulAddOp>(
         fmaOp, adaptor.getLhs(), adaptor.getRhs(), adaptor.getAcc());
-    return success();
-  }
-};
-
-/// Conversion pattern that turns a masked vector.fma on a 1-D vector into their
-/// LLVM counterpart representation. Non side effecting VP intrinsics are not
-/// fully supported by some backends, including x86, and they don't support
-/// pass-through values either. For these reasons, we generate an unmasked
-/// fma followed by a select instrution to emulate the masking behavior.
-/// This pattern is peepholed by some backends with support for masked fma
-/// instructions. This pattern does not match vectors of n >= 2 rank.
-class MaskedFMAOp1DConversion
-    : public VectorMaskOpConversionBase<vector::FMAOp> {
-public:
-  using VectorMaskOpConversionBase<vector::FMAOp>::VectorMaskOpConversionBase;
-
-  MaskedFMAOp1DConversion(LLVMTypeConverter &converter, bool fullVPIntr)
-      : VectorMaskOpConversionBase<vector::FMAOp>(converter) {}
-
-  virtual LogicalResult matchAndRewriteMaskableOp(
-      vector::MaskOp maskOp, MaskableOpInterface maskableOp,
-      ConversionPatternRewriter &rewriter) const override {
-    auto fmaOp = cast<FMAOp>(maskableOp.getOperation());
-    Type llvmType = typeConverter->convertType(fmaOp.getVectorType());
-
-    Value fmulAddOp = rewriter.create<LLVM::FMulAddOp>(
-        fmaOp.getLoc(), llvmType, fmaOp.getLhs(), fmaOp.getRhs(),
-        fmaOp.getAcc());
-    rewriter.replaceOpWithNewOp<LLVM::SelectOp>(
-        maskOp, llvmType, maskOp.getMask(), fmulAddOp, fmaOp.getAcc());
     return success();
   }
 };
@@ -1313,11 +1273,6 @@ public:
                                 PatternRewriter &rewriter) const override {
     auto vType = op.getVectorType();
     if (vType.getRank() < 2)
-      return failure();
-
-    // Masked fmas are lowered separately.
-    auto maskableOp = cast<MaskableOpInterface>(op.getOperation());
-    if (maskableOp.isMasked())
       return failure();
 
     auto loc = op.getLoc();
@@ -1748,10 +1703,9 @@ void mlir::populateVectorToLLVMConversionPatterns(
   patterns
       .add<VectorBitCastOpConversion, VectorShuffleOpConversion,
            VectorExtractElementOpConversion, VectorExtractOpConversion,
-           VectorFMAOp1DConversion, MaskedFMAOp1DConversion,
-           VectorInsertElementOpConversion, VectorInsertOpConversion,
-           VectorPrintOpConversion, VectorTypeCastOpConversion,
-           VectorScaleOpConversion,
+           VectorFMAOp1DConversion, VectorInsertElementOpConversion,
+           VectorInsertOpConversion, VectorPrintOpConversion,
+           VectorTypeCastOpConversion, VectorScaleOpConversion,
            VectorLoadStoreConversion<vector::LoadOp, vector::LoadOpAdaptor>,
            VectorLoadStoreConversion<vector::MaskedLoadOp,
                                      vector::MaskedLoadOpAdaptor>,
