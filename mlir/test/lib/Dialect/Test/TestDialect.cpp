@@ -1116,7 +1116,8 @@ LogicalResult TestOpWithVariadicResultsAndFolder::fold(
 }
 
 OpFoldResult TestOpInPlaceFold::fold(FoldAdaptor adaptor) {
-  if (adaptor.getOp()) {
+  if (adaptor.getOp() && !(*this)->hasAttr("attr")) {
+    // The folder adds "attr" if not present.
     (*this)->setAttr("attr", adaptor.getOp());
     return getResult();
   }
