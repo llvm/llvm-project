@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
@@ -34,7 +35,7 @@ namespace object {
 
 class TapiFile : public SymbolicFile {
 public:
-  TapiFile(MemoryBufferRef Source, const MachO::InterfaceFile &interface,
+  TapiFile(MemoryBufferRef Source, const MachO::InterfaceFile &Interface,
            MachO::Architecture Arch);
   ~TapiFile() override;
 
@@ -48,6 +49,8 @@ public:
 
   basic_symbol_iterator symbol_end() const override;
 
+  Expected<SymbolRef::Type> getSymbolType(DataRefImpl DRI) const;
+
   static bool classof(const Binary *v) { return v->isTapiFile(); }
 
   bool is64Bit() const override { return MachO::is64Bit(Arch); }
@@ -57,9 +60,11 @@ private:
     StringRef Prefix;
     StringRef Name;
     uint32_t Flags;
+    SymbolRef::Type Type;
 
-    constexpr Symbol(StringRef Prefix, StringRef Name, uint32_t Flags)
-        : Prefix(Prefix), Name(Name), Flags(Flags) {}
+    constexpr Symbol(StringRef Prefix, StringRef Name, uint32_t Flags,
+                     SymbolRef::Type Type)
+        : Prefix(Prefix), Name(Name), Flags(Flags), Type(Type) {}
   };
 
   std::vector<Symbol> Symbols;
