@@ -51,14 +51,18 @@ namespace {
 class FlattenedSpelling {
   std::string V, N, NS;
   bool K = false;
+  const Record &OriginalSpelling;
 
 public:
   FlattenedSpelling(const std::string &Variety, const std::string &Name,
-                    const std::string &Namespace, bool KnownToGCC) :
-    V(Variety), N(Name), NS(Namespace), K(KnownToGCC) {}
+                    const std::string &Namespace, bool KnownToGCC,
+                    const Record &OriginalSpelling)
+      : V(Variety), N(Name), NS(Namespace), K(KnownToGCC),
+        OriginalSpelling(OriginalSpelling) {}
   explicit FlattenedSpelling(const Record &Spelling)
       : V(std::string(Spelling.getValueAsString("Variety"))),
-        N(std::string(Spelling.getValueAsString("Name"))) {
+        N(std::string(Spelling.getValueAsString("Name"))),
+        OriginalSpelling(Spelling) {
     assert(V != "GCC" && V != "Clang" &&
            "Given a GCC spelling, which means this hasn't been flattened!");
     if (V == "CXX11" || V == "C2x" || V == "Pragma")
@@ -69,6 +73,7 @@ public:
   const std::string &name() const { return N; }
   const std::string &nameSpace() const { return NS; }
   bool knownToGCC() const { return K; }
+  const Record &getSpellingRecord() const { return OriginalSpelling; }
 };
 
 } // end anonymous namespace
@@ -82,15 +87,15 @@ GetFlattenedSpellings(const Record &Attr) {
     StringRef Variety = Spelling->getValueAsString("Variety");
     StringRef Name = Spelling->getValueAsString("Name");
     if (Variety == "GCC") {
-      Ret.emplace_back("GNU", std::string(Name), "", true);
-      Ret.emplace_back("CXX11", std::string(Name), "gnu", true);
+      Ret.emplace_back("GNU", std::string(Name), "", true, *Spelling);
+      Ret.emplace_back("CXX11", std::string(Name), "gnu", true, *Spelling);
       if (Spelling->getValueAsBit("AllowInC"))
-        Ret.emplace_back("C2x", std::string(Name), "gnu", true);
+        Ret.emplace_back("C2x", std::string(Name), "gnu", true, *Spelling);
     } else if (Variety == "Clang") {
-      Ret.emplace_back("GNU", std::string(Name), "", false);
-      Ret.emplace_back("CXX11", std::string(Name), "clang", false);
+      Ret.emplace_back("GNU", std::string(Name), "", false, *Spelling);
+      Ret.emplace_back("CXX11", std::string(Name), "clang", false, *Spelling);
       if (Spelling->getValueAsBit("AllowInC"))
-        Ret.emplace_back("C2x", std::string(Name), "clang", false);
+        Ret.emplace_back("C2x", std::string(Name), "clang", false, *Spelling);
     } else
       Ret.push_back(FlattenedSpelling(*Spelling));
   }
@@ -3309,18 +3314,31 @@ static void GenerateHasAttrSpellingStringSwitch(
     // C2x-style attributes have the same kind of version information
     // associated with them. The unscoped attribute version information should
     // be taken from the specification of the attribute in the C Standard.
+    //
+    // Clang-specific attributes have the same kind of version information
+    // associated with them. This version is typically the default value (1).
+    // These version values are clang-specific and should typically be
+    // incremented once the attribute changes its syntax and/or semantics in a
+    // a way that is impactful to the end user.
     int Version = 1;
 
-    if (Variety == "CXX11" || Variety == "C2x") {
-      std::vector<Record *> Spellings = Attr->getValueAsListOfDefs("Spellings");
-      for (const auto &Spelling : Spellings) {
-        if (Spelling->getValueAsString("Variety") == Variety) {
-          Version = static_cast<int>(Spelling->getValueAsInt("Version"));
-          if (Scope.empty() && Version == 1)
-            PrintError(Spelling->getLoc(), "Standard attributes must have "
-                                           "valid version information.");
-          break;
-        }
+    std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(*Attr);
+    for (const auto &Spelling : Spellings) {
+      if (Spelling.variety() == Variety &&
+          (Spelling.nameSpace().empty() || Scope == Spelling.nameSpace())) {
+        Version = static_cast<int>(
+            Spelling.getSpellingRecord().getValueAsInt("Version"));
+        // Verify that explicitly specified CXX11 and C2x spellings (i.e.
+        // not inferred from Clang/GCC spellings) have a version that's
+        // different than the default (1).
+        bool RequiresValidVersion =
+            (Variety == "CXX11" || Variety == "C2x") &&
+            Spelling.getSpellingRecord().getValueAsString("Variety") == Variety;
+        if (RequiresValidVersion && Scope.empty() && Version == 1)
+          PrintError(Spelling.getSpellingRecord().getLoc(),
+                     "Standard attributes must have "
+                     "valid version information.");
+        break;
       }
     }
 
@@ -3342,9 +3360,9 @@ static void GenerateHasAttrSpellingStringSwitch(
     else if (Variety == "C2x")
       Test = "LangOpts.DoubleSquareBracketAttributes";
 
-    std::string TestStr =
-        !Test.empty() ? Test + " ? " + llvm::itostr(Version) + " : 0" : "1";
-    std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(*Attr);
+    std::string TestStr = !Test.empty()
+                              ? Test + " ? " + llvm::itostr(Version) + " : 0"
+                              : llvm::itostr(Version);
     for (const auto &S : Spellings)
       if (Variety.empty() || (Variety == S.variety() &&
                               (Scope.empty() || Scope == S.nameSpace())))
