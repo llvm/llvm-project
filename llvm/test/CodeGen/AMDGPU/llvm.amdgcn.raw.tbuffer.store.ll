@@ -151,6 +151,123 @@ main_body:
   ret void
 }
 
+define amdgpu_ps void @buffer_store_voffset_large_12bit(<4 x i32> inreg %rsrc, <4 x float> %data) {
+; PREGFX10-LABEL: buffer_store_voffset_large_12bit:
+; PREGFX10:       ; %bb.0: ; %main_body
+; PREGFX10-NEXT:    tbuffer_store_format_xyzw v[0:3], off, s[0:3], 0 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_SSCALED] offset:4092
+; PREGFX10-NEXT:    s_endpgm
+;
+; GFX10-LABEL: buffer_store_voffset_large_12bit:
+; GFX10:       ; %bb.0: ; %main_body
+; GFX10-NEXT:    tbuffer_store_format_xyzw v[0:3], off, s[0:3], 0 format:[BUF_FMT_32_32_SINT] offset:4092
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: buffer_store_voffset_large_12bit:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    tbuffer_store_format_xyzw v[0:3], off, s[0:3], 0 format:[BUF_FMT_32_32_32_32_FLOAT] offset:4092
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+main_body:
+  call void @llvm.amdgcn.raw.tbuffer.store.v4f32(<4 x float> %data, <4 x i32> %rsrc, i32 4092, i32 0, i32 63, i32 0)
+  ret void
+}
+
+define amdgpu_ps void @buffer_store_voffset_large_13bit(<4 x i32> inreg %rsrc, <4 x float> %data) {
+; PREGFX10-LABEL: buffer_store_voffset_large_13bit:
+; PREGFX10:       ; %bb.0: ; %main_body
+; PREGFX10-NEXT:    v_mov_b32_e32 v4, 0x1000
+; PREGFX10-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_SSCALED] offen offset:4092
+; PREGFX10-NEXT:    s_endpgm
+;
+; GFX10-LABEL: buffer_store_voffset_large_13bit:
+; GFX10:       ; %bb.0: ; %main_body
+; GFX10-NEXT:    v_mov_b32_e32 v4, 0x1000
+; GFX10-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_FMT_32_32_SINT] offen offset:4092
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: buffer_store_voffset_large_13bit:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0x1000
+; GFX11-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_FMT_32_32_32_32_FLOAT] offen offset:4092
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+main_body:
+  call void @llvm.amdgcn.raw.tbuffer.store.v4f32(<4 x float> %data, <4 x i32> %rsrc, i32 8188, i32 0, i32 63, i32 0)
+  ret void
+}
+
+define amdgpu_ps void @buffer_store_voffset_large_16bit(<4 x i32> inreg %rsrc, <4 x float> %data) {
+; PREGFX10-LABEL: buffer_store_voffset_large_16bit:
+; PREGFX10:       ; %bb.0: ; %main_body
+; PREGFX10-NEXT:    v_mov_b32_e32 v4, 0xf000
+; PREGFX10-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_SSCALED] offen offset:4092
+; PREGFX10-NEXT:    s_endpgm
+;
+; GFX10-LABEL: buffer_store_voffset_large_16bit:
+; GFX10:       ; %bb.0: ; %main_body
+; GFX10-NEXT:    v_mov_b32_e32 v4, 0xf000
+; GFX10-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_FMT_32_32_SINT] offen offset:4092
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: buffer_store_voffset_large_16bit:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0xf000
+; GFX11-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_FMT_32_32_32_32_FLOAT] offen offset:4092
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+main_body:
+  call void @llvm.amdgcn.raw.tbuffer.store.v4f32(<4 x float> %data, <4 x i32> %rsrc, i32 65532, i32 0, i32 63, i32 0)
+  ret void
+}
+
+define amdgpu_ps void @buffer_store_voffset_large_23bit(<4 x i32> inreg %rsrc, <4 x float> %data) {
+; PREGFX10-LABEL: buffer_store_voffset_large_23bit:
+; PREGFX10:       ; %bb.0: ; %main_body
+; PREGFX10-NEXT:    v_mov_b32_e32 v4, 0x7ff000
+; PREGFX10-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_SSCALED] offen offset:4092
+; PREGFX10-NEXT:    s_endpgm
+;
+; GFX10-LABEL: buffer_store_voffset_large_23bit:
+; GFX10:       ; %bb.0: ; %main_body
+; GFX10-NEXT:    v_mov_b32_e32 v4, 0x7ff000
+; GFX10-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_FMT_32_32_SINT] offen offset:4092
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: buffer_store_voffset_large_23bit:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0x7ff000
+; GFX11-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_FMT_32_32_32_32_FLOAT] offen offset:4092
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+main_body:
+  call void @llvm.amdgcn.raw.tbuffer.store.v4f32(<4 x float> %data, <4 x i32> %rsrc, i32 8388604, i32 0, i32 63, i32 0)
+  ret void
+}
+
+define amdgpu_ps void @buffer_store_voffset_large_24bit(<4 x i32> inreg %rsrc, <4 x float> %data) {
+; PREGFX10-LABEL: buffer_store_voffset_large_24bit:
+; PREGFX10:       ; %bb.0: ; %main_body
+; PREGFX10-NEXT:    v_mov_b32_e32 v4, 0xfff000
+; PREGFX10-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_SSCALED] offen offset:4092
+; PREGFX10-NEXT:    s_endpgm
+;
+; GFX10-LABEL: buffer_store_voffset_large_24bit:
+; GFX10:       ; %bb.0: ; %main_body
+; GFX10-NEXT:    v_mov_b32_e32 v4, 0xfff000
+; GFX10-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_FMT_32_32_SINT] offen offset:4092
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: buffer_store_voffset_large_24bit:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0xfff000
+; GFX11-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_FMT_32_32_32_32_FLOAT] offen offset:4092
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+main_body:
+  call void @llvm.amdgcn.raw.tbuffer.store.v4f32(<4 x float> %data, <4 x i32> %rsrc, i32 16777212, i32 0, i32 63, i32 0)
+  ret void
+}
+
 declare void @llvm.amdgcn.raw.tbuffer.store.i32(i32, <4 x i32>, i32, i32, i32, i32) #0
 declare void @llvm.amdgcn.raw.tbuffer.store.v2i32(<2 x i32>, <4 x i32>, i32, i32, i32, i32) #0
 declare void @llvm.amdgcn.raw.tbuffer.store.v4i32(<4 x i32>, <4 x i32>, i32, i32, i32, i32) #0
