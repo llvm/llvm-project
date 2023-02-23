@@ -67,9 +67,7 @@ static Operation *materializeConstant(Dialect *dialect, OpBuilder &builder,
 // OperationFolder
 //===----------------------------------------------------------------------===//
 
-LogicalResult OperationFolder::tryToFold(
-    Operation *op, function_ref<void(Operation *)> processGeneratedConstants,
-    function_ref<void(Operation *)> preReplaceAction, bool *inPlaceUpdate) {
+LogicalResult OperationFolder::tryToFold(Operation *op, bool *inPlaceUpdate) {
   if (inPlaceUpdate)
     *inPlaceUpdate = false;
 
@@ -86,27 +84,26 @@ LogicalResult OperationFolder::tryToFold(
 
   // Try to fold the operation.
   SmallVector<Value, 8> results;
-  OpBuilder builder(op);
-  if (failed(tryToFold(builder, op, results, processGeneratedConstants)))
+  OpBuilder builder(op, listener);
+  if (failed(tryToFold(builder, op, results)))
     return failure();
 
   // Check to see if the operation was just updated in place.
   if (results.empty()) {
     if (inPlaceUpdate)
       *inPlaceUpdate = true;
+    if (listener)
+      listener->notifyOperationModified(op);
     return success();
   }
 
-  // Constant folding succeeded. We will start replacing this op's uses and
-  // erase this op. Invoke the callback provided by the caller to perform any
-  // pre-replacement action.
-  if (preReplaceAction)
-    preReplaceAction(op);
-
-  // Replace all of the result values and erase the operation.
+  // Constant folding succeeded. Replace all of the result values and erase the
+  // operation.
+  if (listener)
+    listener->notifyOperationReplaced(op, results);
   for (unsigned i = 0, e = results.size(); i != e; ++i)
     op->getResult(i).replaceAllUsesWith(results[i]);
-  op->erase();
+  eraseOp(op);
   return success();
 }
 
@@ -144,8 +141,10 @@ bool OperationFolder::insertKnownConstant(Operation *op, Attribute constValue) {
 
   // If there is an existing constant, replace `op`.
   if (folderConstOp) {
+    if (listener)
+      listener->notifyOperationReplaced(op, folderConstOp->getResults());
     op->replaceAllUsesWith(folderConstOp);
-    op->erase();
+    eraseOp(op);
     return false;
   }
 
@@ -161,6 +160,13 @@ bool OperationFolder::insertKnownConstant(Operation *op, Attribute constValue) {
   folderConstOp = op;
   referencedDialects[op].push_back(op->getDialect());
   return true;
+}
+
+void OperationFolder::eraseOp(Operation *op) {
+  notifyRemoval(op);
+  if (listener)
+    listener->notifyOperationRemoved(op);
+  op->erase();
 }
 
 /// Notifies that the given constant `op` should be remove from this
@@ -221,9 +227,8 @@ bool OperationFolder::isFolderOwnedConstant(Operation *op) const {
 
 /// Tries to perform folding on the given `op`. If successful, populates
 /// `results` with the results of the folding.
-LogicalResult OperationFolder::tryToFold(
-    OpBuilder &builder, Operation *op, SmallVectorImpl<Value> &results,
-    function_ref<void(Operation *)> processGeneratedConstants) {
+LogicalResult OperationFolder::tryToFold(OpBuilder &builder, Operation *op,
+                                         SmallVectorImpl<Value> &results) {
   SmallVector<Attribute, 8> operandConstants;
 
   // If this is a commutative operation, move constants to be trailing operands.
@@ -252,16 +257,15 @@ LogicalResult OperationFolder::tryToFold(
   // fold.
   SmallVector<OpFoldResult, 8> foldResults;
   if (failed(op->fold(operandConstants, foldResults)) ||
-      failed(processFoldResults(builder, op, results, foldResults,
-                                processGeneratedConstants)))
+      failed(processFoldResults(builder, op, results, foldResults)))
     return success(updatedOpOperands);
   return success();
 }
 
-LogicalResult OperationFolder::processFoldResults(
-    OpBuilder &builder, Operation *op, SmallVectorImpl<Value> &results,
-    ArrayRef<OpFoldResult> foldResults,
-    function_ref<void(Operation *)> processGeneratedConstants) {
+LogicalResult
+OperationFolder::processFoldResults(OpBuilder &builder, Operation *op,
+                                    SmallVectorImpl<Value> &results,
+                                    ArrayRef<OpFoldResult> foldResults) {
   // Check to see if the operation was just updated in place.
   if (foldResults.empty())
     return success();
@@ -312,18 +316,11 @@ LogicalResult OperationFolder::processFoldResults(
     // If materialization fails, cleanup any operations generated for the
     // previous results and return failure.
     for (Operation &op : llvm::make_early_inc_range(
-             llvm::make_range(entry.begin(), builder.getInsertionPoint()))) {
-      notifyRemoval(&op);
-      op.erase();
-    }
+             llvm::make_range(entry.begin(), builder.getInsertionPoint())))
+      eraseOp(&op);
+
     results.clear();
     return failure();
-  }
-
-  // Process any newly generated operations.
-  if (processGeneratedConstants) {
-    for (auto i = entry.begin(), e = builder.getInsertionPoint(); i != e; ++i)
-      processGeneratedConstants(&*i);
   }
 
   return success();
@@ -358,7 +355,7 @@ Operation *OperationFolder::tryGetOrCreateConstant(
   // If an existing operation in the new dialect already exists, delete the
   // materialized operation in favor of the existing one.
   if (auto *existingOp = uniquedConstants.lookup(newKey)) {
-    constOp->erase();
+    eraseOp(constOp);
     referencedDialects[existingOp].push_back(dialect);
     return constOp = existingOp;
   }
