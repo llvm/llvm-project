@@ -5048,6 +5048,11 @@ PreservedAnalyses SROAPass::runImpl(Function &F, DomTreeUpdater &RunDTU,
   if (!Changed)
     return PreservedAnalyses::all();
 
+  if (isAssignmentTrackingEnabled(*F.getParent())) {
+    for (auto &BB : F)
+      RemoveRedundantDbgInstrs(&BB);
+  }
+
   PreservedAnalyses PA;
   if (!CFGChanged)
     PA.preserveSet<CFGAnalyses>();

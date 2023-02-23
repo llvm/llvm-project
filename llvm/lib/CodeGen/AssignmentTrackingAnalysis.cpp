@@ -1612,7 +1612,7 @@ AssignmentTrackingLowering::joinLocMap(const LocMap &A, const LocMap &B) {
   // then adding LocKind::None elements for vars in A xor B. The latter part is
   // equivalent to performing join on elements with variables in A xor B with
   // LocKind::None (⊤) since join(x, ⊤) = ⊤.
-  LocMap Join;
+  LocMap Join(std::max(A.size(), B.size()));
   SmallVector<VariableID, 16> SymmetricDifference;
   // Insert the join of the elements with common vars into Join. Add the
   // remaining elements to into SymmetricDifference.
@@ -1703,7 +1703,7 @@ AssignmentTrackingLowering::joinAssignmentMap(const AssignmentMap &A,
   // then adding LocKind::None elements for vars in A xor B. The latter part is
   // equivalent to performing join on elements with variables in A xor B with
   // Status::NoneOrPhi (⊤) since join(x, ⊤) = ⊤.
-  AssignmentMap Join;
+  AssignmentMap Join(std::max(A.size(), B.size()));
   SmallVector<VariableID, 16> SymmetricDifference;
   // Insert the join of the elements with common vars into Join. Add the
   // remaining elements to into SymmetricDifference.

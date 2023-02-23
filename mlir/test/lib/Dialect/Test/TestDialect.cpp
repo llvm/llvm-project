@@ -358,6 +358,7 @@ void TestDialect::initialize() {
 #define GET_OP_LIST
 #include "TestOps.cpp.inc"
       >();
+  addOperations<ManualCppOpWithFold>();
   registerDynamicOp(getDynamicGenericOp(this));
   registerDynamicOp(getDynamicOneOperandTwoResultsOp(this));
   registerDynamicOp(getDynamicCustomParserPrinterOp(this));
@@ -1115,7 +1116,8 @@ LogicalResult TestOpWithVariadicResultsAndFolder::fold(
 }
 
 OpFoldResult TestOpInPlaceFold::fold(FoldAdaptor adaptor) {
-  if (adaptor.getOp()) {
+  if (adaptor.getOp() && !(*this)->hasAttr("attr")) {
+    // The folder adds "attr" if not present.
     (*this)->setAttr("attr", adaptor.getOp());
     return getResult();
   }
@@ -1632,6 +1634,14 @@ void TestReflectBoundsOp::inferResultRanges(
   setSminAttr(b.getIndexAttr(range.smin().getSExtValue()));
   setSmaxAttr(b.getIndexAttr(range.smax().getSExtValue()));
   setResultRanges(getResult(), range);
+}
+
+OpFoldResult ManualCppOpWithFold::fold(ArrayRef<Attribute> attributes) {
+  // Just a simple fold for testing purposes that reads an operands constant
+  // value and returns it.
+  if (!attributes.empty())
+    return attributes.front();
+  return nullptr;
 }
 
 #include "TestOpEnums.cpp.inc"

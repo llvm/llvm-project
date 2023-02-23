@@ -705,6 +705,14 @@ public:
     return isMFMA(MI) || isWMMA(MI);
   }
 
+  static bool isSWMMAC(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::IsSWMMAC;
+  }
+
+  bool isSWMMAC(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::IsSWMMAC;
+  }
+
   bool isDOT(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::IsDOT;
   }
@@ -1152,6 +1160,11 @@ public:
   static bool isLegalMUBUFImmOffset(unsigned Imm) {
     return isUInt<12>(Imm);
   }
+
+  static unsigned getMaxMUBUFImmOffset();
+
+  bool splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset, uint32_t &ImmOffset,
+                        Align Alignment = Align(4)) const;
 
   /// Returns if \p Offset is legal for the subtarget as the offset to a FLAT
   /// encoded instruction. If \p Signed, this is for an instruction that

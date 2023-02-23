@@ -1284,7 +1284,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUF(SDValue Addr, SDValue &Ptr, SDValue &VAddr,
       Ptr = N2;
       VAddr = N3;
     }
-    Offset = CurDAG->getTargetConstant(0, DL, MVT::i16);
+    Offset = CurDAG->getTargetConstant(0, DL, MVT::i32);
   } else if (N0->isDivergent()) {
     // N0 is divergent. Use it as the addr64, and construct the resource from a
     // 0 address.
@@ -1300,18 +1300,18 @@ bool AMDGPUDAGToDAGISel::SelectMUBUF(SDValue Addr, SDValue &Ptr, SDValue &VAddr,
 
   if (!C1) {
     // No offset.
-    Offset = CurDAG->getTargetConstant(0, DL, MVT::i16);
+    Offset = CurDAG->getTargetConstant(0, DL, MVT::i32);
     return true;
   }
 
   if (SIInstrInfo::isLegalMUBUFImmOffset(C1->getZExtValue())) {
     // Legal offset for instruction.
-    Offset = CurDAG->getTargetConstant(C1->getZExtValue(), DL, MVT::i16);
+    Offset = CurDAG->getTargetConstant(C1->getZExtValue(), DL, MVT::i32);
     return true;
   }
 
   // Illegal offset, store it in soffset.
-  Offset = CurDAG->getTargetConstant(0, DL, MVT::i16);
+  Offset = CurDAG->getTargetConstant(0, DL, MVT::i32);
   SOffset =
       SDValue(CurDAG->getMachineNode(
                   AMDGPU::S_MOV_B32, DL, MVT::i32,
@@ -1378,13 +1378,15 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffen(SDNode *Parent,
         AMDGPUTargetMachine::getNullPointerValue(AMDGPUAS::PRIVATE_ADDRESS);
     // Don't fold null pointer.
     if (Imm != NullPtr) {
-      SDValue HighBits = CurDAG->getTargetConstant(Imm & ~4095, DL, MVT::i32);
+      const uint32_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset();
+      SDValue HighBits =
+          CurDAG->getTargetConstant(Imm & ~MaxOffset, DL, MVT::i32);
       MachineSDNode *MovHighBits = CurDAG->getMachineNode(
         AMDGPU::V_MOV_B32_e32, DL, MVT::i32, HighBits);
       VAddr = SDValue(MovHighBits, 0);
 
       SOffset = CurDAG->getTargetConstant(0, DL, MVT::i32);
-      ImmOffset = CurDAG->getTargetConstant(Imm & 4095, DL, MVT::i16);
+      ImmOffset = CurDAG->getTargetConstant(Imm & MaxOffset, DL, MVT::i32);
       return true;
     }
   }
@@ -1415,14 +1417,14 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffen(SDNode *Parent,
         (!Subtarget->privateMemoryResourceIsRangeChecked() ||
          CurDAG->SignBitIsZero(N0))) {
       std::tie(VAddr, SOffset) = foldFrameIndex(N0);
-      ImmOffset = CurDAG->getTargetConstant(C1->getZExtValue(), DL, MVT::i16);
+      ImmOffset = CurDAG->getTargetConstant(C1->getZExtValue(), DL, MVT::i32);
       return true;
     }
   }
 
   // (node)
   std::tie(VAddr, SOffset) = foldFrameIndex(Addr);
-  ImmOffset = CurDAG->getTargetConstant(0, DL, MVT::i16);
+  ImmOffset = CurDAG->getTargetConstant(0, DL, MVT::i32);
   return true;
 }
 
@@ -1451,7 +1453,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffset(SDNode *Parent,
   if (IsCopyFromSGPR(*TRI, Addr)) {
     SRsrc = CurDAG->getRegister(Info->getScratchRSrcReg(), MVT::v4i32);
     SOffset = Addr;
-    Offset = CurDAG->getTargetConstant(0, DL, MVT::i16);
+    Offset = CurDAG->getTargetConstant(0, DL, MVT::i32);
     return true;
   }
 
@@ -1475,7 +1477,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffset(SDNode *Parent,
 
   SRsrc = CurDAG->getRegister(Info->getScratchRSrcReg(), MVT::v4i32);
 
-  Offset = CurDAG->getTargetConstant(CAddr->getZExtValue(), DL, MVT::i16);
+  Offset = CurDAG->getTargetConstant(CAddr->getZExtValue(), DL, MVT::i32);
   return true;
 }
 
@@ -2855,6 +2857,98 @@ bool AMDGPUDAGToDAGISel::SelectWMMAOpSelVOP3PMods(SDValue In,
     Mods |= SISrcMods::OP_SEL_0;
 
   Src = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectWMMAVISrc(SDValue In, SDValue &Src) const {
+  if (auto *BV = dyn_cast<BuildVectorSDNode>(In)) {
+    BitVector UndefElements;
+    if (SDValue Splat = BV->getSplatValue(&UndefElements))
+      if (isInlineImmediate(Splat.getNode())) {
+        if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(Splat)) {
+          unsigned Imm = C->getAPIntValue().getSExtValue();
+          Src = CurDAG->getTargetConstant(Imm, SDLoc(In), MVT::i32);
+          return true;
+        }
+        if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Splat)) {
+          unsigned Imm = C->getValueAPF().bitcastToAPInt().getSExtValue();
+          Src = CurDAG->getTargetConstant(Imm, SDLoc(In), MVT::i32);
+          return true;
+        }
+        llvm_unreachable("unhandled Constant node");
+      }
+  }
+
+  // 16 bit splat
+  SDValue SplatSrc32 = stripBitcast(In);
+  if (auto *SplatSrc32BV = dyn_cast<BuildVectorSDNode>(SplatSrc32)) {
+    if (SDValue Splat32 = SplatSrc32BV->getSplatValue()) {
+      SDValue SplatSrc16 = stripBitcast(Splat32);
+      if (auto *SplatSrc16BV = dyn_cast<BuildVectorSDNode>(SplatSrc16)) {
+        if (SDValue Splat = SplatSrc16BV->getSplatValue()) {
+
+          // f16
+          if (isInlineImmediate(Splat.getNode())) {
+            const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Splat);
+            int64_t Imm = C->getValueAPF().bitcastToAPInt().getSExtValue();
+            Src = CurDAG->getTargetConstant(Imm, SDLoc(In), MVT::i16);
+            return true;
+          }
+
+          // bf16
+          if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(Splat)) {
+            const SIInstrInfo *TII = Subtarget->getInstrInfo();
+            APInt BF16Value = C->getAPIntValue();
+            APInt F32Value = BF16Value.zext(32).shl(16);
+            if (TII->isInlineConstant(F32Value)) {
+              int64_t Imm = F32Value.getSExtValue();
+              Src = CurDAG->getTargetConstant(Imm, SDLoc(In), MVT::i32);
+              return true;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+bool AMDGPUDAGToDAGISel::SelectSWMMACIndex8(SDValue In, SDValue &Src,
+                                            SDValue &IndexKey) const {
+  unsigned Key = 0;
+  Src = In;
+
+  if (In.getOpcode() == ISD::SRL) {
+    const llvm::SDValue &ShiftSrc = In.getOperand(0);
+    ConstantSDNode *ShiftAmt = dyn_cast<ConstantSDNode>(In.getOperand(1));
+    if (ShiftSrc.getValueType().getSizeInBits() == 32 && ShiftAmt &&
+        ShiftAmt->getZExtValue() % 8 == 0) {
+      Key = ShiftAmt->getZExtValue() / 8;
+      Src = ShiftSrc;
+    }
+  }
+
+  IndexKey = CurDAG->getTargetConstant(Key, SDLoc(In), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectSWMMACIndex16(SDValue In, SDValue &Src,
+                                             SDValue &IndexKey) const {
+  unsigned Key = 0;
+  Src = In;
+
+  if (In.getOpcode() == ISD::SRL) {
+    const llvm::SDValue &ShiftSrc = In.getOperand(0);
+    ConstantSDNode *ShiftAmt = dyn_cast<ConstantSDNode>(In.getOperand(1));
+    if (ShiftSrc.getValueType().getSizeInBits() == 32 && ShiftAmt &&
+        ShiftAmt->getZExtValue() == 16) {
+      Key = 1;
+      Src = ShiftSrc;
+    }
+  }
+
+  IndexKey = CurDAG->getTargetConstant(Key, SDLoc(In), MVT::i32);
   return true;
 }
 

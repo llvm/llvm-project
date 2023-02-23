@@ -2724,6 +2724,10 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
         if (DoesKMove)
           K->setMetadata(Kind, JMD);
         break;
+      case LLVMContext::MD_nontemporal:
+        // Preserve !nontemporal if it is present on both instructions.
+        K->setMetadata(Kind, JMD);
+        break;
     }
   }
   // Set !invariant.group from J if J has it. If both instructions have it
@@ -2746,7 +2750,8 @@ void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J,
       LLVMContext::MD_invariant_group, LLVMContext::MD_align,
       LLVMContext::MD_dereferenceable,
       LLVMContext::MD_dereferenceable_or_null,
-      LLVMContext::MD_access_group,    LLVMContext::MD_preserve_access_index};
+      LLVMContext::MD_access_group,    LLVMContext::MD_preserve_access_index,
+      LLVMContext::MD_nontemporal};
   combineMetadata(K, J, KnownIDs, KDominatesJ);
 }
 
@@ -2831,7 +2836,7 @@ void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
       LLVMContext::MD_fpmath,          LLVMContext::MD_invariant_load,
       LLVMContext::MD_invariant_group, LLVMContext::MD_nonnull,
       LLVMContext::MD_access_group,    LLVMContext::MD_preserve_access_index,
-      LLVMContext::MD_noundef};
+      LLVMContext::MD_noundef,         LLVMContext::MD_nontemporal};
   combineMetadata(ReplInst, I, KnownIDs, false);
 }
 

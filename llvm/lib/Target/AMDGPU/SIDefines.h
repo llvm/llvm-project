@@ -138,6 +138,9 @@ enum : uint64_t {
 
   // Is never uniform.
   IsNeverUniform = UINT64_C(1) << 61,
+
+  // Is a SWMMAC instruction.
+  IsSWMMAC = UINT64_C(1) << 62,
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.

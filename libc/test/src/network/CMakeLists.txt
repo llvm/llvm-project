@@ -10,6 +10,7 @@ add_libc_unittest(
     20
   DEPENDS
     libc.src.network.htonl
+    libc.src.network.ntohl
 )
 
 add_libc_unittest(
@@ -22,4 +23,31 @@ add_libc_unittest(
     20
   DEPENDS
     libc.src.network.htons
+    libc.src.network.ntohs
+)
+
+add_libc_unittest(
+  ntohl
+  SUITE
+    libc_network_unittests
+  SRCS
+    ntohl_test.cpp
+  CXX_STANDARD
+    20
+  DEPENDS
+    libc.src.network.htonl
+    libc.src.network.ntohl
+)
+
+add_libc_unittest(
+  ntohs
+  SUITE
+    libc_network_unittests
+  SRCS
+    ntohs_test.cpp
+  CXX_STANDARD
+    20
+  DEPENDS
+    libc.src.network.htons
+    libc.src.network.ntohs
 )

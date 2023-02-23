@@ -158,40 +158,7 @@ struct AffineOpSCFCanonicalizationPattern : public OpRewritePattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
-    auto loopMatcher = [](Value iv, OpFoldResult &lb, OpFoldResult &ub,
-                          OpFoldResult &step) {
-      if (scf::ForOp forOp = scf::getForInductionVarOwner(iv)) {
-        lb = forOp.getLowerBound();
-        ub = forOp.getUpperBound();
-        step = forOp.getStep();
-        return success();
-      }
-      if (scf::ParallelOp parOp = scf::getParallelForInductionVarOwner(iv)) {
-        for (unsigned idx = 0; idx < parOp.getNumLoops(); ++idx) {
-          if (parOp.getInductionVars()[idx] == iv) {
-            lb = parOp.getLowerBound()[idx];
-            ub = parOp.getUpperBound()[idx];
-            step = parOp.getStep()[idx];
-            return success();
-          }
-        }
-        return failure();
-      }
-      if (scf::ForallOp forallOp = scf::getForallOpThreadIndexOwner(iv)) {
-        for (int64_t idx = 0; idx < forallOp.getRank(); ++idx) {
-          if (forallOp.getInductionVar(idx) == iv) {
-            lb = forallOp.getMixedLowerBound()[idx];
-            ub = forallOp.getMixedUpperBound()[idx];
-            step = forallOp.getMixedStep()[idx];
-            return success();
-          }
-        }
-        return failure();
-      }
-      return failure();
-    };
-
-    return scf::canonicalizeMinMaxOpInLoop(rewriter, op, loopMatcher);
+    return scf::canonicalizeMinMaxOpInLoop(rewriter, op, scf::matchForLikeLoop);
   }
 };
 

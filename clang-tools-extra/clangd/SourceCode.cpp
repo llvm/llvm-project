@@ -796,6 +796,12 @@ llvm::SmallVector<llvm::StringRef> ancestorNamespaces(llvm::StringRef NS) {
   return Results;
 }
 
+// Checks whether \p FileName is a valid spelling of main file.
+bool isMainFile(llvm::StringRef FileName, const SourceManager &SM) {
+  auto FE = SM.getFileManager().getFile(FileName);
+  return FE && *FE == SM.getFileEntryForID(SM.getMainFileID());
+}
+
 } // namespace
 
 std::vector<std::string> visibleNamespaces(llvm::StringRef Code,
@@ -1219,5 +1225,24 @@ bool isProtoFile(SourceLocation Loc, const SourceManager &SM) {
   return SM.getBufferData(FID).startswith(ProtoHeaderComment);
 }
 
+SourceLocation translatePreamblePatchLocation(SourceLocation Loc,
+                                              const SourceManager &SM) {
+  auto DefFile = SM.getFileID(Loc);
+  if (auto FE = SM.getFileEntryRefForID(DefFile)) {
+    auto IncludeLoc = SM.getIncludeLoc(DefFile);
+    // Preamble patch is included inside the builtin file.
+    if (IncludeLoc.isValid() && SM.isWrittenInBuiltinFile(IncludeLoc) &&
+        FE->getName().endswith(PreamblePatch::HeaderName)) {
+      auto Presumed = SM.getPresumedLoc(Loc);
+      // Check that line directive is pointing at main file.
+      if (Presumed.isValid() && Presumed.getFileID().isInvalid() &&
+          isMainFile(Presumed.getFilename(), SM)) {
+        Loc = SM.translateLineCol(SM.getMainFileID(), Presumed.getLine(),
+                                  Presumed.getColumn());
+      }
+    }
+  }
+  return Loc;
+}
 } // namespace clangd
 } // namespace clang

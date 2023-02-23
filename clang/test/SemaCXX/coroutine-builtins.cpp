@@ -1,4 +1,3 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -fcoroutines-ts %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -DERRORS %s
 

@@ -338,8 +338,8 @@ void SimplifyCFGPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   static_cast<PassInfoMixin<SimplifyCFGPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
-  OS << "<";
-  OS << "bonus-inst-threshold=" << Options.BonusInstThreshold << ";";
+  OS << '<';
+  OS << "bonus-inst-threshold=" << Options.BonusInstThreshold << ';';
   OS << (Options.ForwardSwitchCondToPhi ? "" : "no-") << "forward-switch-cond;";
   OS << (Options.ConvertSwitchRangeToICmp ? "" : "no-")
      << "switch-range-to-icmp;";
@@ -348,7 +348,7 @@ void SimplifyCFGPass::printPipeline(
   OS << (Options.NeedCanonicalLoop ? "" : "no-") << "keep-loops;";
   OS << (Options.HoistCommonInsts ? "" : "no-") << "hoist-common-insts;";
   OS << (Options.SinkCommonInsts ? "" : "no-") << "sink-common-insts";
-  OS << ">";
+  OS << '>';
 }
 
 PreservedAnalyses SimplifyCFGPass::run(Function &F,

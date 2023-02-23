@@ -55,6 +55,18 @@ def gi_wmmaopselvop3pmods :
     GIComplexOperandMatcher<s32, "selectWMMAOpSelVOP3PMods">,
     GIComplexPatternEquiv<WMMAOpSelVOP3PMods>;
 
+def gi_wmmavisrc :
+    GIComplexOperandMatcher<s32, "selectWMMAVISrc">,
+    GIComplexPatternEquiv<WMMAVISrc>;
+
+def gi_swmmacindex8 :
+    GIComplexOperandMatcher<s32, "selectSWMMACIndex8">,
+    GIComplexPatternEquiv<SWMMACIndex8>;
+
+def gi_swmmacindex16 :
+    GIComplexOperandMatcher<s32, "selectSWMMACIndex16">,
+    GIComplexPatternEquiv<SWMMACIndex16>;
+
 def gi_vop3opselmods :
     GIComplexOperandMatcher<s32, "selectVOP3OpSelMods">,
     GIComplexPatternEquiv<VOP3OpSelMods>;

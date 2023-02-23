@@ -33,6 +33,7 @@ unittest("IRTests") {
     "MDBuilderTest.cpp",
     "ManglerTest.cpp",
     "MetadataTest.cpp",
+    "ModuleSummaryIndexTest.cpp",
     "ModuleTest.cpp",
     "PassBuilderCallbacksTest.cpp",
     "PassManagerTest.cpp",

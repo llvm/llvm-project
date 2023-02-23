@@ -49,6 +49,7 @@
 #include "TUScheduler.h"
 #include "CompileCommands.h"
 #include "Compiler.h"
+#include "Config.h"
 #include "Diagnostics.h"
 #include "GlobalCompilationDatabase.h"
 #include "ParsedAST.h"
@@ -938,8 +939,19 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags,
       return;
     }
 
-    PreamblePeer.update(std::move(Invocation), std::move(Inputs),
-                        std::move(CompilerInvocationDiags), WantDiags);
+    // Inform preamble peer, before attempting to build diagnostics so that they
+    // can be built concurrently.
+    PreamblePeer.update(std::make_unique<CompilerInvocation>(*Invocation),
+                        Inputs, CompilerInvocationDiags, WantDiags);
+
+    // Emit diagnostics from (possibly) stale preamble while waiting for a
+    // rebuild. Newly built preamble cannot emit diagnostics before this call
+    // finishes (ast callbacks are called from astpeer thread), hence we
+    // gurantee eventual consistency.
+    if (LatestPreamble && Config::current().Diagnostics.AllowStalePreamble)
+      generateDiagnostics(std::move(Invocation), std::move(Inputs),
+                          std::move(CompilerInvocationDiags));
+
     std::unique_lock<std::mutex> Lock(Mutex);
     PreambleCV.wait(Lock, [this] {
       // Block until we reiceve a preamble request, unless a preamble already
@@ -1118,6 +1130,18 @@ void ASTWorker::updatePreamble(std::unique_ptr<CompilerInvocation> CI,
     // We only need to build the AST if diagnostics were requested.
     if (WantDiags == WantDiagnostics::No)
       return;
+    // The file may have been edited since we started building this preamble.
+    // If diagnostics need a fresh preamble, we must use the old version that
+    // matches the preamble. We make forward progress as updatePreamble()
+    // receives increasing versions, and this is the only place we emit
+    // diagnostics.
+    // If diagnostics can use a stale preamble, we use the current contents of
+    // the file instead. This provides more up-to-date diagnostics, and avoids
+    // diagnostics going backwards (we may have already emitted staler-preamble
+    // diagnostics for the new version). We still have eventual consistency: at
+    // some point updatePreamble() will catch up to the current file.
+    if (Config::current().Diagnostics.AllowStalePreamble)
+      PI = FileInputs;
     // Report diagnostics with the new preamble to ensure progress. Otherwise
     // diagnostics might get stale indefinitely if user keeps invalidating the
     // preamble.

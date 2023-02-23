@@ -28,7 +28,7 @@
 ;;
 ;; $ clang test.c -Xclang -fexperimental-assignment-tracking  -O2 -g
 
-; CHECK: call void @llvm.dbg.assign(metadata i1 undef, metadata !{{.+}}, metadata !DIExpression(), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg ![[DBG:[0-9]+]]
+; CHECK: call void @llvm.dbg.assign(metadata i1 false, metadata !{{.+}}, metadata !DIExpression(), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg ![[DBG:[0-9]+]]
 
 ; CHECK-DAG: ![[DBG]] = !DILocation(line: 0, scope: ![[INL_SC:[0-9]+]], inlinedAt: ![[IA:[0-9]+]])
 ; CHECK-DAG: ![[IA]] = distinct !DILocation(line: 21, column: 12, scope: ![[SC:[0-9]+]])
@@ -47,7 +47,9 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #2
 define dso_local void @l() local_unnamed_addr #4 !dbg !73 {
 entry:
   %j.i = alloca %struct.c, align 4, !DIAssignID !74
-  call void @llvm.dbg.assign(metadata i1 undef, metadata !64, metadata !DIExpression(), metadata !74, metadata ptr %j.i, metadata !DIExpression()) #5, !dbg !75
+  ; NOTE: this has been changed from undef to false so that the intrinsic isn't
+  ; deleted as redundant.
+  call void @llvm.dbg.assign(metadata i1 false, metadata !64, metadata !DIExpression(), metadata !74, metadata ptr %j.i, metadata !DIExpression()) #5, !dbg !75
   %0 = bitcast ptr %j.i to ptr, !dbg !77
   call void @llvm.lifetime.start.p0i8(i64 4, ptr nonnull %0) #5, !dbg !77
   %arrayidx.i.i = getelementptr inbounds %struct.c, ptr %j.i, i64 0, i32 1, i64 0, !dbg !78

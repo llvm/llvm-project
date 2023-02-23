@@ -2861,8 +2861,8 @@ private:
               // runtime.
               if (lhsType->IsPolymorphic() ||
                   lhsType->IsUnlimitedPolymorphic() ||
-                  rhsType->IsPolymorphic() ||
-                  rhsType->IsUnlimitedPolymorphic()) {
+                  (rhsType && (rhsType->IsPolymorphic() ||
+                               rhsType->IsUnlimitedPolymorphic()))) {
                 mlir::Value lhs;
                 if (Fortran::lower::isWholeAllocatable(assign.lhs))
                   lhs = genExprMutableBox(loc, assign.lhs).getAddr();

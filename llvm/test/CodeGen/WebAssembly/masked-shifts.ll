@@ -502,3 +502,52 @@ define <2 x i64> @lshr_v2i64_late(<2 x i64> %v, i64 %x) {
   %a = lshr <2 x i64> %v, %m
   ret <2 x i64> %a
 }
+
+define <2 x i64> @shl_v2i64_i32(<2 x i64> %v, i32 %x) {
+; CHECK-LABEL: shl_v2i64_i32:
+; CHECK:         .functype shl_v2i64_i32 (v128, i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64x2.shl
+; CHECK-NEXT:    # fallthrough-return
+  %z = and i32 %x, 63
+  %m = zext i32 %z to i64
+  %t = insertelement <2 x i64> undef, i64 %m, i32 0
+  %s = shufflevector <2 x i64> %t, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
+  %a = shl <2 x i64> %v, %s
+  ret <2 x i64> %a
+}
+
+define <2 x i64> @ashr_v2i64_i32(<2 x i64> %v, i32 %x) {
+; CHECK-LABEL: ashr_v2i64_i32:
+; CHECK:         .functype ashr_v2i64_i32 (v128, i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64x2.shr_s
+; CHECK-NEXT:    # fallthrough-return
+  %z = and i32 %x, 63
+  %m = zext i32 %z to i64
+  %t = insertelement <2 x i64> undef, i64 %m, i32 0
+  %s = shufflevector <2 x i64> %t, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
+  %a = ashr <2 x i64> %v, %s
+  ret <2 x i64> %a
+}
+
+define <2 x i64> @lshr_v2i64_i32(<2 x i64> %v, i32 %x) {
+; CHECK-LABEL: lshr_v2i64_i32:
+; CHECK:         .functype lshr_v2i64_i32 (v128, i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64x2.shr_u
+; CHECK-NEXT:    # fallthrough-return
+  %z = and i32 %x, 63
+  %m = zext i32 %z to i64
+  %t = insertelement <2 x i64> undef, i64 %m, i32 0
+  %s = shufflevector <2 x i64> %t, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
+  %a = lshr <2 x i64> %v, %s
+  ret <2 x i64> %a
+}
+

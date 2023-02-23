@@ -505,6 +505,13 @@ def HasVendorXTHeadBs : Predicate<"Subtarget->hasVendorXTHeadBs()">,
                                   AssemblerPredicate<(all_of FeatureVendorXTHeadBs),
                                   "'xtheadbs' (T-Head single-bit instructions)">;
 
+def FeatureVendorXTHeadCmo
+    : SubtargetFeature<"xtheadcmo", "HasVendorXTHeadCmo", "true",
+                       "'xtheadcmo' (T-Head cache management instructions)">;
+def HasVendorXTHeadCmo : Predicate<"Subtarget->hasVendorXTHeadCmo()">,
+                                   AssemblerPredicate<(all_of FeatureVendorXTHeadCmo),
+                                   "'xtheadcmo' (T-Head cache management instructions)">;
+
 def FeatureVendorXTHeadMac
     : SubtargetFeature<"xtheadmac", "HasVendorXTHeadMac", "true",
                        "'xtheadmac' (T-Head Multiply-Accumulate Instructions)">;
@@ -518,6 +525,13 @@ def FeatureVendorXTHeadMemPair
 def HasVendorXTHeadMemPair : Predicate<"Subtarget->hasVendorXTHeadMemPair()">,
                                     AssemblerPredicate<(all_of FeatureVendorXTHeadMemPair),
                                     "'xtheadmempair' (T-Head two-GPR Memory Operations)">;
+
+def FeatureVendorXTHeadSync
+    : SubtargetFeature<"xtheadsync", "HasVendorXTHeadSync", "true",
+                       "'xtheadsync' (T-Head multicore synchronization instructions)">;
+def HasVendorXTHeadSync : Predicate<"Subtarget->hasVendorXTHeadSync()">,
+                                    AssemblerPredicate<(all_of FeatureVendorXTHeadSync),
+                                    "'xtheadsync' (T-Head multicore synchronization instructions)">;
 
 def FeatureVendorXTHeadVdot
     : SubtargetFeature<"xtheadvdot", "HasVendorXTHeadVdot", "true",

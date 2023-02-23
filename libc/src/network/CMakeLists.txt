@@ -19,3 +19,25 @@ add_entrypoint_object(
     libc.include.arpa_inet
     libc.src.__support.common
 )
+
+add_entrypoint_object(
+  ntohl
+  SRCS
+    ntohl.cpp
+  HDRS
+    ntohl.h
+  DEPENDS
+    libc.include.arpa_inet
+    libc.src.__support.common
+)
+
+add_entrypoint_object(
+  ntohs
+  SRCS
+    ntohs.cpp
+  HDRS
+    ntohs.h
+  DEPENDS
+    libc.include.arpa_inet
+    libc.src.__support.common
+)

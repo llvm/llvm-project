@@ -293,3 +293,51 @@ define void @sd128(i128* %a, i128 %b) {
   store i128 %b, i128* %1, align 8
   ret void
 }
+
+define i32 @lh(i16* %a) {
+; RV32XTHEADMEMPAIR-LABEL: lh:
+; RV32XTHEADMEMPAIR:       # %bb.0:
+; RV32XTHEADMEMPAIR-NEXT:    lh a1, 0(a0)
+; RV32XTHEADMEMPAIR-NEXT:    lh a0, 2(a0)
+; RV32XTHEADMEMPAIR-NEXT:    add a0, a1, a0
+; RV32XTHEADMEMPAIR-NEXT:    ret
+;
+; RV64XTHEADMEMPAIR-LABEL: lh:
+; RV64XTHEADMEMPAIR:       # %bb.0:
+; RV64XTHEADMEMPAIR-NEXT:    lh a1, 0(a0)
+; RV64XTHEADMEMPAIR-NEXT:    lh a0, 2(a0)
+; RV64XTHEADMEMPAIR-NEXT:    add a0, a1, a0
+; RV64XTHEADMEMPAIR-NEXT:    ret
+  %1 = getelementptr i16, i16* %a, i64 0
+  %2 = load i16, i16* %1, align 4
+  %3 = getelementptr i16, i16* %a, i64 1
+  %4 = load i16, i16* %3, align 4
+  %5 = sext i16 %2 to i32
+  %6 = sext i16 %4 to i32
+  %7 = add i32 %5, %6
+  ret i32 %7
+}
+
+define i32 @lb(i8* %a) {
+; RV32XTHEADMEMPAIR-LABEL: lb:
+; RV32XTHEADMEMPAIR:       # %bb.0:
+; RV32XTHEADMEMPAIR-NEXT:    lb a1, 0(a0)
+; RV32XTHEADMEMPAIR-NEXT:    lb a0, 1(a0)
+; RV32XTHEADMEMPAIR-NEXT:    add a0, a1, a0
+; RV32XTHEADMEMPAIR-NEXT:    ret
+;
+; RV64XTHEADMEMPAIR-LABEL: lb:
+; RV64XTHEADMEMPAIR:       # %bb.0:
+; RV64XTHEADMEMPAIR-NEXT:    lb a1, 0(a0)
+; RV64XTHEADMEMPAIR-NEXT:    lb a0, 1(a0)
+; RV64XTHEADMEMPAIR-NEXT:    add a0, a1, a0
+; RV64XTHEADMEMPAIR-NEXT:    ret
+  %1 = getelementptr i8, i8* %a, i64 0
+  %2 = load i8, i8* %1, align 4
+  %3 = getelementptr i8, i8* %a, i64 1
+  %4 = load i8, i8* %3, align 4
+  %5 = sext i8 %2 to i32
+  %6 = sext i8 %4 to i32
+  %7 = add i32 %5, %6
+  ret i32 %7
+}

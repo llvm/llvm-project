@@ -150,8 +150,7 @@ void call_dependent_params() {
 }
 
 // Test that, when the promise type has a constructor whose signature matches
-// that of the coroutine function, that constructor is used. This is an
-// experimental feature that will be proposed for the Coroutines TS.
+// that of the coroutine function, that constructor is used.
 
 struct promise_matching_constructor {};
 

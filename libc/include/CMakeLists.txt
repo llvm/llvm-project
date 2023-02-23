@@ -362,6 +362,15 @@ add_gen_header(
 )
 
 add_gen_header(
+  sys_socket
+  DEF_FILE sys/socket.h.def
+  GEN_HDR sys/socket.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_socket_macros
+)
+
+add_gen_header(
   sys_syscall
   DEF_FILE sys/syscall.h.def
   GEN_HDR sys/syscall.h

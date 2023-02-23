@@ -14,6 +14,7 @@
 #include "ASTCommon.h"
 #include "ASTReaderInternals.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/AttrIterator.h"
 #include "clang/AST/Decl.h"
@@ -4181,23 +4182,22 @@ namespace {
       // Check for duplicate categories.
       if (Cat->getDeclName()) {
         ObjCCategoryDecl *&Existing = NameCategoryMap[Cat->getDeclName()];
-        if (Existing &&
-            Reader.getOwningModuleFile(Existing)
-                                          != Reader.getOwningModuleFile(Cat)) {
-          // FIXME: We should not warn for duplicates in diamond:
-          //
-          //   MT     //
-          //  /  \    //
-          // ML  MR   //
-          //  \  /    //
-          //   MB     //
-          //
-          // If there are duplicates in ML/MR, there will be warning when
-          // creating MB *and* when importing MB. We should not warn when
-          // importing.
-          Reader.Diag(Cat->getLocation(), diag::warn_dup_category_def)
-            << Interface->getDeclName() << Cat->getDeclName();
-          Reader.Diag(Existing->getLocation(), diag::note_previous_definition);
+        if (Existing && Reader.getOwningModuleFile(Existing) !=
+                            Reader.getOwningModuleFile(Cat)) {
+          llvm::DenseSet<std::pair<Decl *, Decl *>> NonEquivalentDecls;
+          StructuralEquivalenceContext Ctx(
+              Cat->getASTContext(), Existing->getASTContext(),
+              NonEquivalentDecls, StructuralEquivalenceKind::Default,
+              /*StrictTypeSpelling =*/false,
+              /*Complain =*/false,
+              /*ErrorOnTagTypeMismatch =*/true);
+          if (!Ctx.IsEquivalent(Cat, Existing)) {
+            // Warn only if the categories with the same name are different.
+            Reader.Diag(Cat->getLocation(), diag::warn_dup_category_def)
+                << Interface->getDeclName() << Cat->getDeclName();
+            Reader.Diag(Existing->getLocation(),
+                        diag::note_previous_definition);
+          }
         } else if (!Existing) {
           // Record this category.
           Existing = Cat;

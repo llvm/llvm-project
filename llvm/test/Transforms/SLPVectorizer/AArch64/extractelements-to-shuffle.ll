@@ -4,24 +4,26 @@
 define void @test(<2 x i64> %0, <2 x i64> %1, <2 x i64> %2) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP1:%.*]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP0:%.*]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[TMP2:%.*]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP2]], i64 1
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i64> poison, i64 [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i64> [[TMP8]], i64 [[TMP5]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i64> [[TMP9]], i64 [[TMP6]], i32 2
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i64> [[TMP10]], i64 [[TMP5]], i32 3
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i64> <i64 0, i64 0, i64 poison, i64 0>, i64 [[TMP7]], i32 2
-; CHECK-NEXT:    [[TMP13:%.*]] = or <4 x i64> [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = trunc <4 x i64> [[TMP13]] to <4 x i32>
-; CHECK-NEXT:    br label [[TMP15:%.*]]
-; CHECK:       15:
-; CHECK-NEXT:    [[TMP16:%.*]] = phi <4 x i32> [ [[TMP20:%.*]], [[TMP15]] ], [ [[TMP14]], [[TMP3:%.*]] ]
-; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <4 x i32> <i32 poison, i32 0, i32 0, i32 0>, <4 x i32> [[TMP16]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP18:%.*]] = or <4 x i32> zeroinitializer, [[TMP17]]
-; CHECK-NEXT:    [[TMP19:%.*]] = add <4 x i32> zeroinitializer, [[TMP17]]
-; CHECK-NEXT:    [[TMP20]] = shufflevector <4 x i32> [[TMP18]], <4 x i32> [[TMP19]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    br label [[TMP15]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or i64 [[TMP4]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = or i64 [[TMP7]], 0
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i32
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP2:%.*]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP12:%.*]] = or i64 [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP12]] to i32
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i64> [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP15:%.*]] = or i64 [[TMP14]], 0
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP15]] to i32
+; CHECK-NEXT:    br label [[TMP17:%.*]]
+; CHECK:       17:
+; CHECK-NEXT:    [[TMP18:%.*]] = phi i32 [ [[TMP22:%.*]], [[TMP17]] ], [ [[TMP6]], [[TMP3:%.*]] ]
+; CHECK-NEXT:    [[TMP19:%.*]] = phi i32 [ 0, [[TMP17]] ], [ [[TMP9]], [[TMP3]] ]
+; CHECK-NEXT:    [[TMP20:%.*]] = phi i32 [ 0, [[TMP17]] ], [ [[TMP13]], [[TMP3]] ]
+; CHECK-NEXT:    [[TMP21:%.*]] = phi i32 [ 0, [[TMP17]] ], [ [[TMP16]], [[TMP3]] ]
+; CHECK-NEXT:    [[TMP22]] = or i32 [[TMP18]], 0
+; CHECK-NEXT:    br label [[TMP17]]
 ;
   %4 = extractelement <2 x i64> %1, i64 0
   %5 = or i64 %4, 0

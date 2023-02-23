@@ -27,7 +27,9 @@ static SmallVector<Type, 2> getSpecifierFields(StorageSpecifierType tp) {
   const Level lvlRank = enc.getLvlRank();
 
   SmallVector<Type, 2> result;
-  auto indexType = tp.getSizesType();
+  // TODO: how can we get the lowering type for index type in the later pipeline
+  // to be consistent? LLVM::StructureType does not allow index fields.
+  auto indexType = IntegerType::get(tp.getContext(), 64);
   auto dimSizes = LLVM::LLVMArrayType::get(ctx, indexType, lvlRank);
   auto memSizes = LLVM::LLVMArrayType::get(ctx, indexType,
                                            getNumDataFieldsFromEncoding(enc));
@@ -49,6 +51,21 @@ constexpr uint64_t kDimSizePosInSpecifier = 0;
 constexpr uint64_t kMemSizePosInSpecifier = 1;
 
 class SpecifierStructBuilder : public StructBuilder {
+private:
+  Value extractField(OpBuilder &builder, Location loc,
+                     ArrayRef<int64_t> indices) {
+    return genCast(builder, loc,
+                   builder.create<LLVM::ExtractValueOp>(loc, value, indices),
+                   builder.getIndexType());
+  }
+
+  void insertField(OpBuilder &builder, Location loc, ArrayRef<int64_t> indices,
+                   Value v) {
+    value = builder.create<LLVM::InsertValueOp>(
+        loc, value, genCast(builder, loc, v, builder.getIntegerType(64)),
+        indices);
+  }
+
 public:
   explicit SpecifierStructBuilder(Value specifier) : StructBuilder(specifier) {
     assert(value);
@@ -83,29 +100,30 @@ Value SpecifierStructBuilder::getInitValue(OpBuilder &builder, Location loc,
 /// Builds IR inserting the pos-th size into the descriptor.
 Value SpecifierStructBuilder::dimSize(OpBuilder &builder, Location loc,
                                       unsigned dim) {
-  return builder.create<LLVM::ExtractValueOp>(
-      loc, value, ArrayRef<int64_t>({kDimSizePosInSpecifier, dim}));
+  return extractField(builder, loc,
+                      ArrayRef<int64_t>{kDimSizePosInSpecifier, dim});
 }
 
 /// Builds IR inserting the pos-th size into the descriptor.
 void SpecifierStructBuilder::setDimSize(OpBuilder &builder, Location loc,
                                         unsigned dim, Value size) {
-  value = builder.create<LLVM::InsertValueOp>(
-      loc, value, size, ArrayRef<int64_t>({kDimSizePosInSpecifier, dim}));
+
+  insertField(builder, loc, ArrayRef<int64_t>{kDimSizePosInSpecifier, dim},
+              size);
 }
 
 /// Builds IR extracting the pos-th memory size into the descriptor.
 Value SpecifierStructBuilder::memSize(OpBuilder &builder, Location loc,
                                       unsigned pos) {
-  return builder.create<LLVM::ExtractValueOp>(
-      loc, value, ArrayRef<int64_t>({kMemSizePosInSpecifier, pos}));
+  return extractField(builder, loc,
+                      ArrayRef<int64_t>{kMemSizePosInSpecifier, pos});
 }
 
 /// Builds IR inserting the pos-th memory size into the descriptor.
 void SpecifierStructBuilder::setMemSize(OpBuilder &builder, Location loc,
                                         unsigned pos, Value size) {
-  value = builder.create<LLVM::InsertValueOp>(
-      loc, value, size, ArrayRef<int64_t>({kMemSizePosInSpecifier, pos}));
+  insertField(builder, loc, ArrayRef<int64_t>{kMemSizePosInSpecifier, pos},
+              size);
 }
 
 } // namespace

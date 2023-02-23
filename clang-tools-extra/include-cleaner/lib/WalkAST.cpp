@@ -102,9 +102,12 @@ public:
   }
 
   bool VisitCXXConstructExpr(CXXConstructExpr *E) {
+    // Always treat consturctor calls as implicit. We'll have an explicit
+    // reference for the constructor calls that mention the type-name (through
+    // TypeLocs). This reference only matters for cases where there's no
+    // explicit syntax at all or there're only braces.
     report(E->getLocation(), getMemberProvider(E->getType()),
-           E->getParenOrBraceRange().isValid() ? RefType::Explicit
-                                               : RefType::Implicit);
+           RefType::Implicit);
     return true;
   }
 

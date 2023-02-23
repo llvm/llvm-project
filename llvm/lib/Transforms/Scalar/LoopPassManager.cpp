@@ -59,7 +59,7 @@ void PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
       P->printPipeline(OS, MapClassName2PassName);
     }
     if (Idx + 1 < Size)
-      OS << ",";
+      OS << ',';
   }
 }
 
@@ -193,7 +193,7 @@ void FunctionToLoopPassAdaptor::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   OS << (UseMemorySSA ? "loop-mssa(" : "loop(");
   Pass->printPipeline(OS, MapClassName2PassName);
-  OS << ")";
+  OS << ')';
 }
 PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
