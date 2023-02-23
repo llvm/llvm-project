@@ -4608,12 +4608,14 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
-  if (isMIMG(MI)) {
+  if (isMIMG(MI) || isVSAMPLE(MI) || isVIMAGE(MI)) {
     const MachineOperand *DimOp = getNamedOperand(MI, AMDGPU::OpName::dim);
     if (DimOp) {
       int VAddr0Idx = AMDGPU::getNamedOperandIdx(Opcode,
                                                  AMDGPU::OpName::vaddr0);
-      int SRsrcIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::srsrc);
+      int RSrcOpName =
+          isMIMG(MI) ? AMDGPU::OpName::srsrc : AMDGPU::OpName::rsrc;
+      int RsrcIdx = AMDGPU::getNamedOperandIdx(Opcode, RSrcOpName);
       const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(Opcode);
       const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
           AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
@@ -4634,16 +4636,17 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         IsA16 = A16->getImm() != 0;
       }
 
-      bool IsNSA = SRsrcIdx - VAddr0Idx > 1;
+      bool IsNSA = RsrcIdx - VAddr0Idx > 1;
 
       unsigned AddrWords =
           AMDGPU::getAddrSizeMIMGOp(BaseOpcode, Dim, IsA16, ST.hasG16());
 
       unsigned VAddrWords;
       if (IsNSA) {
-        VAddrWords = SRsrcIdx - VAddr0Idx;
-        if (ST.hasPartialNSAEncoding() && AddrWords > ST.getNSAMaxSize()) {
-          unsigned LastVAddrIdx = SRsrcIdx - 1;
+        VAddrWords = RsrcIdx - VAddr0Idx;
+        if (ST.hasPartialNSAEncoding() &&
+            AddrWords > ST.getNSAMaxSize(isVSAMPLE(MI))) {
+          unsigned LastVAddrIdx = RsrcIdx - 1;
           VAddrWords += getOpSize(MI, LastVAddrIdx) / 4 - 1;
         }
       } else {
