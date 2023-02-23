@@ -119,6 +119,7 @@ Changes to the RISC-V Backend
 * Support for the now-ratified Zawrs extension is no longer experimental.
 * Adds support for the vendor-defined XTHeadCmo (cache management operations) extension.
 * Adds support for the vendor-defined XTHeadSync (multi-core synchronization instructions) extension.
+* Added support for the vendor-defined XTHeadFMemIdx (indexed memory operations for floating point) extension.
 
 Changes to the WebAssembly Backend
 ----------------------------------
