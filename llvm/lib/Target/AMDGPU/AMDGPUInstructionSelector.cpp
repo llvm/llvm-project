@@ -523,60 +523,6 @@ bool AMDGPUInstructionSelector::selectG_EXTRACT(MachineInstr &I) const {
   return true;
 }
 
-bool AMDGPUInstructionSelector::selectG_FMA_FMAD(MachineInstr &I) const {
-  assert(I.getOpcode() == AMDGPU::G_FMA || I.getOpcode() == AMDGPU::G_FMAD);
-
-  // Try to manually select MAD_MIX/FMA_MIX.
-  Register Dst = I.getOperand(0).getReg();
-  LLT ResultTy = MRI->getType(Dst);
-  bool IsFMA = I.getOpcode() == AMDGPU::G_FMA;
-  if (ResultTy != LLT::scalar(32) ||
-      (IsFMA ? !Subtarget->hasFmaMixInsts() : !Subtarget->hasMadMixInsts()))
-    return false;
-
-  // Avoid using v_mad_mix_f32/v_fma_mix_f32 unless there is actually an operand
-  // using the conversion from f16.
-  bool MatchedSrc0, MatchedSrc1, MatchedSrc2;
-  auto [Src0, Src0Mods] =
-      selectVOP3PMadMixModsImpl(I.getOperand(1), MatchedSrc0);
-  auto [Src1, Src1Mods] =
-      selectVOP3PMadMixModsImpl(I.getOperand(2), MatchedSrc1);
-  auto [Src2, Src2Mods] =
-      selectVOP3PMadMixModsImpl(I.getOperand(3), MatchedSrc2);
-
-#ifndef NDEBUG
-  const SIMachineFunctionInfo *MFI =
-      I.getMF()->getInfo<SIMachineFunctionInfo>();
-  SIModeRegisterDefaults Mode = MFI->getMode();
-  assert((IsFMA || !Mode.allFP32Denormals()) &&
-         "fmad selected with denormals enabled");
-#endif
-
-  // TODO: We can select this with f32 denormals enabled if all the sources are
-  // converted from f16 (in which case fmad isn't legal).
-  if (!MatchedSrc0 && !MatchedSrc1 && !MatchedSrc2)
-    return false;
-
-  const unsigned OpC = IsFMA ? AMDGPU::V_FMA_MIX_F32 : AMDGPU::V_MAD_MIX_F32;
-  MachineInstr *MixInst =
-      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(OpC), Dst)
-          .addImm(Src0Mods)
-          .addReg(copyToVGPRIfSrcFolded(Src0, Src0Mods, I.getOperand(1), &I))
-          .addImm(Src1Mods)
-          .addReg(copyToVGPRIfSrcFolded(Src1, Src1Mods, I.getOperand(2), &I))
-          .addImm(Src2Mods)
-          .addReg(copyToVGPRIfSrcFolded(Src2, Src2Mods, I.getOperand(3), &I))
-          .addImm(0)
-          .addImm(0)
-          .addImm(0);
-
-  if (!constrainSelectedInstRegOperands(*MixInst, TII, TRI, RBI))
-    return false;
-
-  I.eraseFromParent();
-  return true;
-}
-
 bool AMDGPUInstructionSelector::selectG_MERGE_VALUES(MachineInstr &MI) const {
   MachineBasicBlock *BB = MI.getParent();
   Register DstReg = MI.getOperand(0).getReg();
@@ -3405,11 +3351,6 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectG_FABS(I);
   case TargetOpcode::G_EXTRACT:
     return selectG_EXTRACT(I);
-  case TargetOpcode::G_FMA:
-  case TargetOpcode::G_FMAD:
-    if (selectG_FMA_FMAD(I))
-      return true;
-    return selectImpl(I, *CoverageInfo);
   case TargetOpcode::G_MERGE_VALUES:
   case TargetOpcode::G_CONCAT_VECTORS:
     return selectG_MERGE_VALUES(I);
@@ -4985,6 +4926,22 @@ AMDGPUInstructionSelector::selectVOP3PMadMixModsImpl(MachineOperand &Root,
   }
 
   return {Src, Mods};
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectVOP3PMadMixModsExt(
+    MachineOperand &Root) const {
+  Register Src;
+  unsigned Mods;
+  bool Matched;
+  std::tie(Src, Mods) = selectVOP3PMadMixModsImpl(Root, Matched);
+  if (!Matched)
+    return {};
+
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
+  }};
 }
 
 InstructionSelector::ComplexRendererFns
