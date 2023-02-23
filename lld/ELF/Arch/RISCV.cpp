@@ -280,6 +280,7 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
     return R_PC;
   case R_RISCV_CALL:
   case R_RISCV_CALL_PLT:
+  case R_RISCV_PLT32:
     return R_PLT_PC;
   case R_RISCV_GOT_HI20:
     return R_GOT_PC;
@@ -473,6 +474,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     return;
   case R_RISCV_SET32:
   case R_RISCV_32_PCREL:
+  case R_RISCV_PLT32:
     write32le(loc, val);
     return;
 
