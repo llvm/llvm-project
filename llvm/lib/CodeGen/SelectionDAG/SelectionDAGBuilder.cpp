@@ -6510,8 +6510,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     const DataLayout DLayout = DAG.getDataLayout();
     EVT DestVT = TLI.getValueType(DLayout, I.getType());
     EVT ArgVT = TLI.getValueType(DLayout, I.getArgOperand(0)->getType());
-    FPClassTest Test = static_cast<FPClassTest>(
-        cast<ConstantInt>(I.getArgOperand(1))->getZExtValue());
+    unsigned Test = cast<ConstantInt>(I.getArgOperand(1))->getZExtValue();
     MachineFunction &MF = DAG.getMachineFunction();
     const Function &F = MF.getFunction();
     SDValue Op = getValue(I.getArgOperand(0));
