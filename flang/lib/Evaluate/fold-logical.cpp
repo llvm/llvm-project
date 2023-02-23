@@ -155,14 +155,15 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
       }
     }
   } else if (name == "isnan" || name == "__builtin_ieee_is_nan") {
-    // A warning about an invalid argument is discarded from converting
-    // the argument of isnan() / IEEE_IS_NAN().
-    auto restorer{context.messages().DiscardMessages()};
     using DefaultReal = Type<TypeCategory::Real, 4>;
-    return FoldElementalIntrinsic<T, DefaultReal>(context, std::move(funcRef),
-        ScalarFunc<T, DefaultReal>([](const Scalar<DefaultReal> &x) {
-          return Scalar<T>{x.IsNotANumber()};
-        }));
+    // Only replace the type of the function if we can do the fold
+    if (args[0] && args[0]->UnwrapExpr() &&
+        IsActuallyConstant(*args[0]->UnwrapExpr())) {
+      return FoldElementalIntrinsic<T, DefaultReal>(context, std::move(funcRef),
+          ScalarFunc<T, DefaultReal>([](const Scalar<DefaultReal> &x) {
+            return Scalar<T>{x.IsNotANumber()};
+          }));
+    }
   } else if (name == "__builtin_ieee_is_negative") {
     auto restorer{context.messages().DiscardMessages()};
     using DefaultReal = Type<TypeCategory::Real, 4>;
