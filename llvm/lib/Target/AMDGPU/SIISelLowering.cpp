@@ -6581,15 +6581,24 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   // SIShrinkInstructions will convert NSA encodings to non-NSA after register
   // allocation when possible.
   //
-  // TODO: we can actually allow partial NSA where the final register is a
-  // contiguous set of the remaining addresses.
-  // This could help where there are more addresses than supported.
-  bool UseNSA = ST->hasFeature(AMDGPU::FeatureNSAEncoding) &&
-                VAddrs.size() >= (unsigned)ST->getNSAThreshold(MF) &&
-                VAddrs.size() <= (unsigned)ST->getNSAMaxSize();
+  // Partial NSA is allowed on GFX11 where the final register is a contiguous
+  // set of the remaining addresses.
+  const unsigned NSAMaxSize = ST->getNSAMaxSize();
+  const bool HasPartialNSAEncoding = ST->hasPartialNSAEncoding();
+  const bool UseNSA = ST->hasNSAEncoding() &&
+                      VAddrs.size() >= ST->getNSAThreshold(MF) &&
+                      (VAddrs.size() <= NSAMaxSize || HasPartialNSAEncoding);
+  const bool UsePartialNSA =
+      UseNSA && HasPartialNSAEncoding && VAddrs.size() > NSAMaxSize;
+
   SDValue VAddr;
-  if (!UseNSA)
+  if (UsePartialNSA) {
+    VAddr = getBuildDwordsVector(DAG, DL,
+                                 ArrayRef(VAddrs).drop_front(NSAMaxSize - 1));
+  }
+  else if (!UseNSA) {
     VAddr = getBuildDwordsVector(DAG, DL, VAddrs);
+  }
 
   SDValue True = DAG.getTargetConstant(1, DL, MVT::i1);
   SDValue False = DAG.getTargetConstant(0, DL, MVT::i1);
@@ -6657,7 +6666,11 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   SmallVector<SDValue, 26> Ops;
   if (BaseOpcode->Store || BaseOpcode->Atomic)
     Ops.push_back(VData); // vdata
-  if (UseNSA)
+  if (UsePartialNSA) {
+    append_range(Ops, ArrayRef(VAddrs).take_front(NSAMaxSize - 1));
+    Ops.push_back(VAddr);
+  }
+  else if (UseNSA)
     append_range(Ops, VAddrs);
   else
     Ops.push_back(VAddr);

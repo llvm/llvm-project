@@ -4636,9 +4636,12 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       unsigned VAddrWords;
       if (IsNSA) {
         VAddrWords = SRsrcIdx - VAddr0Idx;
+        if (ST.hasPartialNSAEncoding() && AddrWords > ST.getNSAMaxSize()) {
+          unsigned LastVAddrIdx = SRsrcIdx - 1;
+          VAddrWords += getOpSize(MI, LastVAddrIdx) / 4 - 1;
+        }
       } else {
-        const TargetRegisterClass *RC = getOpRegClass(MI, VAddr0Idx);
-        VAddrWords = MRI.getTargetRegisterInfo()->getRegSizeInBits(*RC) / 32;
+        VAddrWords = getOpSize(MI, VAddr0Idx) / 4;
         if (AddrWords > 12)
           AddrWords = 16;
       }
