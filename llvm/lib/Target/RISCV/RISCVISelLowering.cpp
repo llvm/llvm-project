@@ -1037,6 +1037,23 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         XLenVT, Expand);
   }
 
+  if (Subtarget.hasVendorXTHeadMemIdx()) {
+    for (unsigned im = (unsigned)ISD::PRE_INC; im != (unsigned)ISD::POST_DEC;
+         ++im) {
+      setIndexedLoadAction(im, MVT::i8, Legal);
+      setIndexedStoreAction(im, MVT::i8, Legal);
+      setIndexedLoadAction(im, MVT::i16, Legal);
+      setIndexedStoreAction(im, MVT::i16, Legal);
+      setIndexedLoadAction(im, MVT::i32, Legal);
+      setIndexedStoreAction(im, MVT::i32, Legal);
+
+      if (Subtarget.is64Bit()) {
+        setIndexedLoadAction(im, MVT::i64, Legal);
+        setIndexedStoreAction(im, MVT::i64, Legal);
+      }
+    }
+  }
+
   // Function alignments.
   const Align FunctionAlignment(Subtarget.hasStdExtCOrZca() ? 2 : 4);
   setMinFunctionAlignment(FunctionAlignment);
@@ -14428,6 +14445,95 @@ bool RISCVTargetLowering::isVScaleKnownToBeAPowerOfTwo() const {
   assert(Subtarget.getRealMinVLen() >= 64 && "zve32* unsupported");
   static_assert(RISCV::RVVBitsPerBlock == 64,
                 "RVVBitsPerBlock changed, audit needed");
+  return true;
+}
+
+bool RISCVTargetLowering::getIndexedAddressParts(SDNode *Op, SDValue &Base,
+                                                 SDValue &Offset,
+                                                 ISD::MemIndexedMode &AM,
+                                                 bool &IsInc,
+                                                 SelectionDAG &DAG) const {
+  // Target does not support indexed loads.
+  if (!Subtarget.hasVendorXTHeadMemIdx())
+    return false;
+
+  if (Op->getOpcode() != ISD::ADD && Op->getOpcode() != ISD::SUB)
+    return false;
+
+  Base = Op->getOperand(0);
+  if (ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(Op->getOperand(1))) {
+    int64_t RHSC = RHS->getSExtValue();
+    if (Op->getOpcode() == ISD::SUB)
+      RHSC = -(uint64_t)RHSC;
+
+    // The constants that can be encoded in the THeadMemIdx instructions
+    // are of the form (sign_extend(imm5) << imm2).
+    bool isLegalIndexedOffset = false;
+    for (unsigned i = 0; i < 4; i++)
+      if (isInt<5>(RHSC >> i) && ((RHSC % (1LL << i)) == 0)) {
+        isLegalIndexedOffset = true;
+        break;
+      }
+
+    if (!isLegalIndexedOffset)
+      return false;
+
+    IsInc = (Op->getOpcode() == ISD::ADD);
+    Offset = Op->getOperand(1);
+    return true;
+  }
+
+  return false;
+}
+
+bool RISCVTargetLowering::getPreIndexedAddressParts(SDNode *N, SDValue &Base,
+                                                    SDValue &Offset,
+                                                    ISD::MemIndexedMode &AM,
+                                                    SelectionDAG &DAG) const {
+  EVT VT;
+  SDValue Ptr;
+  if (LoadSDNode *LD = dyn_cast<LoadSDNode>(N)) {
+    VT = LD->getMemoryVT();
+    Ptr = LD->getBasePtr();
+  } else if (StoreSDNode *ST = dyn_cast<StoreSDNode>(N)) {
+    VT = ST->getMemoryVT();
+    Ptr = ST->getBasePtr();
+  } else
+    return false;
+
+  bool IsInc;
+  if (!getIndexedAddressParts(Ptr.getNode(), Base, Offset, AM, IsInc, DAG))
+    return false;
+
+  AM = IsInc ? ISD::PRE_INC : ISD::PRE_DEC;
+  return true;
+}
+
+bool RISCVTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
+                                                     SDValue &Base,
+                                                     SDValue &Offset,
+                                                     ISD::MemIndexedMode &AM,
+                                                     SelectionDAG &DAG) const {
+  EVT VT;
+  SDValue Ptr;
+  if (LoadSDNode *LD = dyn_cast<LoadSDNode>(N)) {
+    VT = LD->getMemoryVT();
+    Ptr = LD->getBasePtr();
+  } else if (StoreSDNode *ST = dyn_cast<StoreSDNode>(N)) {
+    VT = ST->getMemoryVT();
+    Ptr = ST->getBasePtr();
+  } else
+    return false;
+
+  bool IsInc;
+  if (!getIndexedAddressParts(Op, Base, Offset, AM, IsInc, DAG))
+    return false;
+  // Post-indexing updates the base, so it's not a valid transform
+  // if that's not the same as the load's pointer.
+  if (Ptr != Base)
+    return false;
+
+  AM = IsInc ? ISD::POST_INC : ISD::POST_DEC;
   return true;
 }
 

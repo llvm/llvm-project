@@ -164,6 +164,52 @@ class THCacheInst_void<bits<5> funct5, string opcodestr>
   let rs2 = funct5;
 }
 
+let Predicates = [HasVendorXTHeadMemIdx], DecoderNamespace = "THeadMemIdx",
+  hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
+class THLoadIndexed<RegisterClass Ty, bits<5> funct5, string opcodestr>
+    : RVInstR<!shl(funct5, 2), !if(!eq(Ty, GPR), 0b100, 0b110), OPC_CUSTOM_0,
+              (outs Ty:$rd), (ins GPR:$rs1, GPR:$rs2, uimm2:$uimm2),
+              opcodestr, "$rd, $rs1, $rs2, $uimm2"> {
+  bits<2> uimm2;
+  let Inst{26-25} = uimm2;
+}
+
+class THLoadUpdate<bits<5> funct5, string opcodestr>
+    : RVInstI<0b100, OPC_CUSTOM_0, (outs GPR:$rd, GPR:$rs1_wb),
+              (ins GPR:$rs1, simm5:$simm5, uimm2:$uimm2),
+              opcodestr, "$rd, (${rs1}), $simm5, $uimm2"> {
+  bits<5> simm5;
+  bits<2> uimm2;
+  let imm12{11-7} = funct5;
+  let imm12{6-5} = uimm2;
+  let imm12{4-0} = simm5;
+  let Constraints = "@earlyclobber $rd, $rs1_wb = $rs1";
+}
+}
+
+let Predicates = [HasVendorXTHeadMemIdx], DecoderNamespace = "THeadMemIdx",
+  hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
+class THStoreIndexed<RegisterClass StTy, bits<5> funct5, string opcodestr>
+    : RVInstR<!shl(funct5, 2), !if(!eq(StTy, GPR), 0b101, 0b111), OPC_CUSTOM_0,
+              (outs), (ins StTy:$rd, GPR:$rs1, GPR:$rs2, uimm2:$uimm2),
+              opcodestr, "$rd, $rs1, $rs2, $uimm2"> {
+  bits<2> uimm2;
+  let Inst{26-25} = uimm2;
+}
+
+class THStoreUpdate<bits<5> funct5, string opcodestr>
+    : RVInstI<0b101, OPC_CUSTOM_0, (outs GPR:$rs1_up),
+              (ins GPR:$rd, GPR:$rs1, simm5:$simm5, uimm2:$uimm2),
+              opcodestr, "$rd, (${rs1}), $simm5, $uimm2"> {
+  bits<5> simm5;
+  bits<2> uimm2;
+  let imm12{11-7} = funct5;
+  let imm12{6-5} = uimm2;
+  let imm12{4-0} = simm5;
+  let Constraints = "$rs1_up = $rs1";
+}
+}
+
 //===----------------------------------------------------------------------===//
 // Combination of instruction classes.
 // Use these multiclasses to define instructions more easily.
@@ -236,6 +282,120 @@ def TH_LDD  : THLoadPair<0b11111, "th.ldd">,
               Sched<[WriteLDD, WriteLDD, ReadMemBase]>;
 def TH_SDD  : THStorePair<0b11111, "th.sdd">,
               Sched<[WriteSTD, WriteSTD, ReadStoreData, ReadMemBase]>;
+}
+
+let Predicates = [HasVendorXTHeadMemIdx] in {
+// T-Head Load/Store + Update instructions.
+def TH_LBIA : THLoadUpdate<0b00011, "th.lbia">,
+  Sched<[WriteLDB, ReadMemBase]>;
+def TH_LBIB : THLoadUpdate<0b00001, "th.lbib">,
+  Sched<[WriteLDB, ReadMemBase]>;
+def TH_LBUIA : THLoadUpdate<0b10011, "th.lbuia">,
+   Sched<[WriteLDB, ReadMemBase]>;
+def TH_LBUIB : THLoadUpdate<0b10001, "th.lbuib">,
+   Sched<[WriteLDB, ReadMemBase]>;
+
+def TH_LHIA : THLoadUpdate<0b00111, "th.lhia">,
+  Sched<[WriteLDH, ReadMemBase]>;
+def TH_LHIB : THLoadUpdate<0b00101, "th.lhib">,
+  Sched<[WriteLDH, ReadMemBase]>;
+def TH_LHUIA : THLoadUpdate<0b10111, "th.lhuia">,
+   Sched<[WriteLDH, ReadMemBase]>;
+def TH_LHUIB : THLoadUpdate<0b10101, "th.lhuib">,
+   Sched<[WriteLDH, ReadMemBase]>;
+
+def TH_LWIA : THLoadUpdate<0b01011, "th.lwia">,
+  Sched<[WriteLDW, ReadMemBase]>;
+def TH_LWIB : THLoadUpdate<0b01001, "th.lwib">,
+  Sched<[WriteLDW, ReadMemBase]>;
+
+def TH_SBIA : THStoreUpdate<0b00011, "th.sbia">,
+  Sched<[WriteSTB, ReadStoreData, ReadMemBase]>;
+def TH_SBIB : THStoreUpdate<0b00001, "th.sbib">,
+  Sched<[WriteSTB, ReadStoreData, ReadMemBase]>;
+
+def TH_SHIA : THStoreUpdate<0b00111, "th.shia">,
+  Sched<[WriteSTH, ReadStoreData, ReadMemBase]>;
+def TH_SHIB : THStoreUpdate<0b00101, "th.shib">,
+  Sched<[WriteSTH, ReadStoreData, ReadMemBase]>;
+
+def TH_SWIA : THStoreUpdate<0b01011, "th.swia">,
+  Sched<[WriteSTW, ReadStoreData, ReadMemBase]>;
+def TH_SWIB : THStoreUpdate<0b01001, "th.swib">,
+  Sched<[WriteSTW, ReadStoreData, ReadMemBase]>;
+
+// T-Head Load/Store Indexed instructions.
+def TH_LRB : THLoadIndexed<GPR, 0b00000, "th.lrb">,
+  Sched<[WriteLDB, ReadMemBase]>;
+def TH_LRBU : THLoadIndexed<GPR, 0b10000, "th.lrbu">,
+  Sched<[WriteLDB, ReadMemBase]>;
+def TH_LURB : THLoadIndexed<GPR, 0b00010, "th.lurb">,
+  Sched<[WriteLDB, ReadMemBase]>;
+def TH_LURBU : THLoadIndexed<GPR, 0b10010, "th.lurbu">,
+  Sched<[WriteLDB, ReadMemBase]>;
+
+def TH_LRH : THLoadIndexed<GPR, 0b00100, "th.lrh">,
+  Sched<[WriteLDH, ReadMemBase]>;
+def TH_LRHU : THLoadIndexed<GPR, 0b10100, "th.lrhu">,
+  Sched<[WriteLDH, ReadMemBase]>;
+def TH_LURH : THLoadIndexed<GPR, 0b00110, "th.lurh">,
+  Sched<[WriteLDB, ReadMemBase]>;
+def TH_LURHU : THLoadIndexed<GPR, 0b10110, "th.lurhu">,
+  Sched<[WriteLDB, ReadMemBase]>;
+
+def TH_LRW : THLoadIndexed<GPR, 0b01000, "th.lrw">,
+  Sched<[WriteLDW, ReadMemBase]>;
+def TH_LURW : THLoadIndexed<GPR, 0b01010, "th.lurw">,
+  Sched<[WriteLDB, ReadMemBase]>;
+
+def TH_SRB : THStoreIndexed<GPR, 0b00000, "th.srb">,
+  Sched<[WriteSTB, ReadStoreData, ReadMemBase]>;
+def TH_SURB : THStoreIndexed<GPR, 0b00010, "th.surb">,
+  Sched<[WriteLDB, ReadMemBase]>;
+
+def TH_SRH : THStoreIndexed<GPR, 0b00100, "th.srh">,
+  Sched<[WriteSTH, ReadStoreData, ReadMemBase]>;
+def TH_SURH : THStoreIndexed<GPR, 0b00110, "th.surh">,
+  Sched<[WriteLDB, ReadMemBase]>;
+
+def TH_SRW : THStoreIndexed<GPR, 0b01000, "th.srw">,
+  Sched<[WriteSTW, ReadStoreData, ReadMemBase]>;
+def TH_SURW : THStoreIndexed<GPR, 0b01010, "th.surw">,
+  Sched<[WriteLDB, ReadMemBase]>;
+}
+
+let Predicates = [HasVendorXTHeadMemIdx, IsRV64] in {
+// T-Head Load/Store + Update instructions.
+def TH_LWUIA : THLoadUpdate<0b11011, "th.lwuia">,
+  Sched<[WriteLDH, ReadMemBase]>;
+def TH_LWUIB : THLoadUpdate<0b11001, "th.lwuib">,
+  Sched<[WriteLDH, ReadMemBase]>;
+
+def TH_LDIA : THLoadUpdate<0b01111, "th.ldia">,
+  Sched<[WriteLDW, ReadMemBase]>;
+def TH_LDIB : THLoadUpdate<0b01101, "th.ldib">,
+  Sched<[WriteLDW, ReadMemBase]>;
+
+def TH_SDIA : THStoreUpdate<0b01111, "th.sdia">,
+  Sched<[WriteSTW, ReadStoreData, ReadMemBase]>;
+def TH_SDIB : THStoreUpdate<0b01101, "th.sdib">,
+  Sched<[WriteSTW, ReadStoreData, ReadMemBase]>;
+
+// T-Head Load/Store Indexed instructions.
+def TH_LRWU : THLoadIndexed<GPR, 0b11000, "th.lrwu">,
+  Sched<[WriteLDW, ReadMemBase]>;
+def TH_LURWU : THLoadIndexed<GPR, 0b11010, "th.lurwu">,
+  Sched<[WriteLDB, ReadMemBase]>;
+
+def TH_LRD : THLoadIndexed<GPR, 0b01100, "th.lrd">,
+  Sched<[WriteLDW, ReadMemBase]>;
+def TH_LURD : THLoadIndexed<GPR, 0b01110, "th.lurd">,
+  Sched<[WriteLDB, ReadMemBase]>;
+
+def TH_SRD : THStoreIndexed<GPR, 0b01100, "th.srd">,
+  Sched<[WriteSTW, ReadStoreData, ReadMemBase]>;
+def TH_SURD : THStoreIndexed<GPR, 0b01110, "th.surd">,
+  Sched<[WriteLDB, ReadMemBase]>;
 }
 
 let Predicates = [HasVendorXTHeadVdot],
@@ -537,4 +697,105 @@ def TH_SYNC        : THCacheInst_void<0b11000, "th.sync">;
 def TH_SYNC_S      : THCacheInst_void<0b11001, "th.sync.s">;
 def TH_SYNC_I      : THCacheInst_void<0b11010, "th.sync.i">;
 def TH_SYNC_IS     : THCacheInst_void<0b11011, "th.sync.is">;
+}
+
+def AddrRegRegScale : ComplexPattern<iPTR, 3, "SelectAddrRegRegScale<3>">;
+def AddrRegZextRegScale
+    : ComplexPattern<iPTR, 3, "SelectAddrRegZextRegScale<3, 32>",
+                     [], [], 10>;
+
+multiclass LdIdxPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT> {
+def : Pat<(vt (LoadOp (AddrRegRegScale GPR:$rs1, GPR:$rs2, uimm2:$uimm2))),
+          (Inst GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
+}
+
+multiclass LdZextIdxPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT> {
+def : Pat<(vt (LoadOp (AddrRegZextRegScale GPR:$rs1, GPR:$rs2, uimm2:$uimm2))),
+          (Inst GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
+}
+
+multiclass StIdxPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
+                    ValueType vt = XLenVT> {
+def : Pat<(StoreOp (vt StTy:$rd),
+            (AddrRegRegScale GPR:$rs1, GPR:$rs2, uimm2:$uimm2)),
+          (Inst StTy:$rd, GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
+}
+
+multiclass StZextIdxPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
+                        ValueType vt = XLenVT> {
+def : Pat<(StoreOp (vt StTy:$rd),
+            (AddrRegZextRegScale GPR:$rs1, GPR:$rs2, uimm2:$uimm2)),
+          (Inst StTy:$rd, GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
+}
+
+let Predicates = [HasVendorXTHeadMemIdx] in {
+defm : LdIdxPat<extloadi8, TH_LRB>;
+defm : LdIdxPat<sextloadi8, TH_LRB>;
+defm : LdIdxPat<zextloadi8, TH_LRBU>;
+
+defm : LdIdxPat<extloadi16, TH_LRH>;
+defm : LdIdxPat<sextloadi16, TH_LRH>;
+defm : LdIdxPat<zextloadi16, TH_LRHU>;
+
+defm : StIdxPat<truncstorei8, TH_SRB, GPR>;
+defm : StIdxPat<truncstorei16, TH_SRH, GPR>;
+}
+
+let Predicates = [HasVendorXTHeadMemIdx, IsRV32] in {
+defm : LdIdxPat<load, TH_LRW>;
+defm : StIdxPat<store, TH_SRW, GPR>;
+}
+
+let Predicates = [HasVendorXTHeadMemIdx, IsRV64] in {
+defm : LdZextIdxPat<extloadi8, TH_LURB>;
+defm : LdZextIdxPat<sextloadi8, TH_LURB>;
+defm : LdZextIdxPat<zextloadi8, TH_LURBU>;
+
+defm : LdZextIdxPat<extloadi16, TH_LURH>;
+defm : LdZextIdxPat<sextloadi16, TH_LURH>;
+defm : LdZextIdxPat<zextloadi16, TH_LURHU>;
+
+defm : LdIdxPat<extloadi32, TH_LRW>;
+defm : LdIdxPat<sextloadi32, TH_LRW>;
+defm : LdIdxPat<zextloadi32, TH_LRWU>;
+
+defm : LdZextIdxPat<extloadi32, TH_LURW>;
+defm : LdZextIdxPat<sextloadi32, TH_LURW>;
+defm : LdZextIdxPat<zextloadi32, TH_LURWU>;
+
+defm : LdIdxPat<load, TH_LRD>;
+defm : LdZextIdxPat<load, TH_LURD>;
+
+defm : StZextIdxPat<truncstorei8, TH_SURB, GPR>;
+defm : StZextIdxPat<truncstorei16, TH_SURH, GPR>;
+defm : StIdxPat<truncstorei32, TH_SRW, GPR>;
+defm : StZextIdxPat<truncstorei32, TH_SURW, GPR>;
+defm : StIdxPat<store, TH_SRD, GPR>;
+defm : StZextIdxPat<store, TH_SURD, GPR>;
+}
+
+def simm5shl2 : ComplexPattern<XLenVT, 2, "selectSimm5Shl2">;
+
+multiclass StoreUpdatePat<PatFrag st, Instruction Inst, ValueType vt = XLenVT> {
+def : Pat<(st (vt GPR:$rd), GPR:$rs1, (simm5shl2 simm5:$simm5, uimm2:$uimm2)),
+          (Inst GPR:$rd, GPR:$rs1, simm5:$simm5, uimm2:$uimm2)>;
+}
+
+let Predicates = [HasVendorXTHeadMemIdx] in {
+defm : StoreUpdatePat<post_truncsti8, TH_SBIA>;
+defm : StoreUpdatePat<pre_truncsti8, TH_SBIB>;
+defm : StoreUpdatePat<post_truncsti16, TH_SHIA>;
+defm : StoreUpdatePat<pre_truncsti16, TH_SHIB>;
+}
+
+let Predicates = [HasVendorXTHeadMemIdx, IsRV32] in {
+defm : StoreUpdatePat<post_store, TH_SWIA>;
+defm : StoreUpdatePat<pre_store, TH_SWIB>;
+}
+
+let Predicates = [HasVendorXTHeadMemIdx, IsRV64] in {
+defm : StoreUpdatePat<post_truncsti32, TH_SWIA>;
+defm : StoreUpdatePat<pre_truncsti32, TH_SWIB>;
+defm : StoreUpdatePat<post_store, TH_SDIA>;
+defm : StoreUpdatePat<pre_store, TH_SDIB>;
 }
