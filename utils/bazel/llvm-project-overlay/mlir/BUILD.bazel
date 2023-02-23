@@ -3387,6 +3387,7 @@ cc_library(
         ":ArithDialect",
         ":ArithUtils",
         ":ControlFlowInterfaces",
+        ":DataLayoutInterfaces",
         ":DestinationStyleOpInterface",
         ":DialectUtils",
         ":IR",

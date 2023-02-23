@@ -15034,91 +15034,6 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
     if (MatchRangeCheckIdiom())
       return;
 
-    // Return true if \p Expr is a MinMax SCEV expression with a constant
-    // operand. If so, return in \p SCTy the SCEV type and in \p RHS the
-    // non-constant operand and in \p LHS the constant operand.
-    auto IsMinMaxSCEVWithConstant = [&](const SCEV *Expr, SCEVTypes &SCTy,
-                                        const SCEV *&LHS, const SCEV *&RHS) {
-      if (auto *MinMax = dyn_cast<SCEVMinMaxExpr>(Expr)) {
-        if (MinMax->getNumOperands() != 2)
-          return false;
-        SCTy = MinMax->getSCEVType();
-        if (!isa<SCEVConstant>(MinMax->getOperand(0)))
-          return false;
-        LHS = MinMax->getOperand(0);
-        RHS = MinMax->getOperand(1);
-        return true;
-      }
-      return false;
-    };
-
-    // Checks whether Expr is a non-negative constant, and Divisor is a positive
-    // constant, and returns their APInt in ExprVal and in DivisorVal.
-    auto GetNonNegExprAndPosDivisor = [&](const SCEV *Expr, const SCEV *Divisor,
-                                          APInt &ExprVal, APInt &DivisorVal) {
-      if (!isKnownNonNegative(Expr) || !isKnownPositive(Divisor))
-        return false;
-      auto *ConstExpr = dyn_cast<SCEVConstant>(Expr);
-      auto *ConstDivisor = dyn_cast<SCEVConstant>(Divisor);
-      if (!ConstExpr || !ConstDivisor)
-        return false;
-      ExprVal = ConstExpr->getAPInt();
-      DivisorVal = ConstDivisor->getAPInt();
-      return true;
-    };
-
-    // Return a new SCEV that modifies \p Expr to the closest number divides by
-    // \p Divisor and greater or equal than Expr.
-    // For now, only handle constant Expr and Divisor.
-    auto GetNextSCEVDividesByDivisor = [&](const SCEV *Expr,
-                                           const SCEV *Divisor) {
-      APInt ExprVal;
-      APInt DivisorVal;
-      if (!GetNonNegExprAndPosDivisor(Expr, Divisor, ExprVal, DivisorVal))
-        return Expr;
-      APInt Rem = ExprVal.urem(DivisorVal);
-      if (!Rem.isZero())
-        // return the SCEV: Expr + Divisor - Expr % Divisor
-        return getConstant(ExprVal + DivisorVal - Rem);
-      return Expr;
-    };
-
-    // Return a new SCEV that modifies \p Expr to the closest number divides by
-    // \p Divisor and less or equal than Expr.
-    // For now, only handle constant Expr and Divisor.
-    auto GetPreviousSCEVDividesByDivisor = [&](const SCEV *Expr,
-                                               const SCEV *Divisor) {
-      APInt ExprVal;
-      APInt DivisorVal;
-      if (!GetNonNegExprAndPosDivisor(Expr, Divisor, ExprVal, DivisorVal))
-        return Expr;
-      APInt Rem = ExprVal.urem(DivisorVal);
-      // return the SCEV: Expr - Expr % Divisor
-      return getConstant(ExprVal - Rem);
-    };
-
-    // Apply divisibilty by \p Divisor on MinMaxExpr with constant values,
-    // recursively. This is done by aligning up/down the constant value to the
-    // Divisor.
-    std::function<const SCEV *(const SCEV *, const SCEV *)>
-        ApplyDivisibiltyOnMinMaxExpr = [&](const SCEV *MinMaxExpr,
-                                           const SCEV *Divisor) {
-          const SCEV *MinMaxLHS = nullptr, *MinMaxRHS = nullptr;
-          SCEVTypes SCTy;
-          if (!IsMinMaxSCEVWithConstant(MinMaxExpr, SCTy, MinMaxLHS, MinMaxRHS))
-            return MinMaxExpr;
-          auto IsMin =
-              isa<SCEVSMinExpr>(MinMaxExpr) || isa<SCEVUMinExpr>(MinMaxExpr);
-          assert(isKnownNonNegative(MinMaxLHS) &&
-                 "Expected non-negative operand!");
-          auto *DivisibleExpr =
-              IsMin ? GetPreviousSCEVDividesByDivisor(MinMaxLHS, Divisor)
-                    : GetNextSCEVDividesByDivisor(MinMaxLHS, Divisor);
-          SmallVector<const SCEV *> Ops = {
-              ApplyDivisibiltyOnMinMaxExpr(MinMaxRHS, Divisor), DivisibleExpr};
-          return getMinMaxExpr(SCTy, Ops);
-        };
-
     // If we have LHS == 0, check if LHS is computing a property of some unknown
     // SCEV %v which we can rewrite %v to express explicitly.
     const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(RHS);
@@ -15130,12 +15045,7 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       const SCEV *URemRHS = nullptr;
       if (matchURem(LHS, URemLHS, URemRHS)) {
         if (const SCEVUnknown *LHSUnknown = dyn_cast<SCEVUnknown>(URemLHS)) {
-          auto I = RewriteMap.find(LHSUnknown);
-          const SCEV *RewrittenLHS =
-              I != RewriteMap.end() ? I->second : LHSUnknown;
-          RewrittenLHS = ApplyDivisibiltyOnMinMaxExpr(RewrittenLHS, URemRHS);
-          const auto *Multiple =
-              getMulExpr(getUDivExpr(RewrittenLHS, URemRHS), URemRHS);
+          const auto *Multiple = getMulExpr(getUDivExpr(URemLHS, URemRHS), URemRHS);
           RewriteMap[LHSUnknown] = Multiple;
           ExprsToRewrite.push_back(LHSUnknown);
           return;
@@ -15158,128 +15068,48 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
     auto I = RewriteMap.find(LHS);
     const SCEV *RewrittenLHS = I != RewriteMap.end() ? I->second : LHS;
 
-    // Check for the SCEV expression (A /u B) * B while B is a constant, inside
-    // \p Expr. The check is done recuresively on \p Expr, which is assumed to
-    // be a composition of Min/Max SCEVs. Return whether the SCEV expression (A
-    // /u B) * B was found, and return the divisor B in \p DividesBy. For
-    // example, if Expr = umin (umax ((A /u 8) * 8, 16), 64), return true since
-    // (A /u 8) * 8 matched the pattern, and return the constant SCEV 8 in \p
-    // DividesBy.
-    std::function<bool(const SCEV *, const SCEV *&)> HasDivisibiltyInfo =
-        [&](const SCEV *Expr, const SCEV *&DividesBy) {
-          if (auto *Mul = dyn_cast<SCEVMulExpr>(Expr)) {
-            if (Mul->getNumOperands() != 2)
-              return false;
-            auto *MulLHS = Mul->getOperand(0);
-            auto *MulRHS = Mul->getOperand(1);
-            if (isa<SCEVConstant>(MulLHS))
-              std::swap(MulLHS, MulRHS);
-            if (auto *Div = dyn_cast<SCEVUDivExpr>(MulLHS)) {
-              if (Div->getOperand(1) == MulRHS) {
-                DividesBy = MulRHS;
-                return true;
-              }
-            }
-          }
-          if (auto *MinMax = dyn_cast<SCEVMinMaxExpr>(Expr)) {
-            return HasDivisibiltyInfo(MinMax->getOperand(0), DividesBy) ||
-                   HasDivisibiltyInfo(MinMax->getOperand(1), DividesBy);
-          }
-          return false;
-        };
-
-    // Return true if Expr known to divide by \p DividesBy.
-    std::function<bool(const SCEV *, const SCEV *&)> IsKnownToDivideBy =
-        [&](const SCEV *Expr, const SCEV *DividesBy) {
-          if (getURemExpr(Expr, DividesBy)->isZero())
-            return true;
-          if (auto *MinMax = dyn_cast<SCEVMinMaxExpr>(Expr)) {
-            return IsKnownToDivideBy(MinMax->getOperand(0), DividesBy) &&
-                   IsKnownToDivideBy(MinMax->getOperand(1), DividesBy);
-          }
-          return false;
-        };
-
-    const SCEV *DividesBy = nullptr;
-    if (HasDivisibiltyInfo(RewrittenLHS, DividesBy))
-      // Check that the whole expression is divided by DividesBy
-      DividesBy =
-          IsKnownToDivideBy(RewrittenLHS, DividesBy) ? DividesBy : nullptr;
-
     const SCEV *RewrittenRHS = nullptr;
     switch (Predicate) {
     case CmpInst::ICMP_ULT: {
       if (RHS->getType()->isPointerTy())
         break;
       const SCEV *One = getOne(RHS->getType());
-      auto *ModifiedRHS = getMinusSCEV(getUMaxExpr(RHS, One), One);
-      ModifiedRHS =
-          DividesBy ? GetPreviousSCEVDividesByDivisor(ModifiedRHS, DividesBy)
-                    : ModifiedRHS;
-      RewrittenRHS = getUMinExpr(RewrittenLHS, ModifiedRHS);
+      RewrittenRHS =
+          getUMinExpr(RewrittenLHS, getMinusSCEV(getUMaxExpr(RHS, One), One));
       break;
     }
-    case CmpInst::ICMP_SLT: {
-      auto *ModifiedRHS = getMinusSCEV(RHS, getOne(RHS->getType()));
-      ModifiedRHS =
-          DividesBy ? GetPreviousSCEVDividesByDivisor(ModifiedRHS, DividesBy)
-                    : ModifiedRHS;
-      RewrittenRHS = getSMinExpr(RewrittenLHS, ModifiedRHS);
+    case CmpInst::ICMP_SLT:
+      RewrittenRHS =
+          getSMinExpr(RewrittenLHS, getMinusSCEV(RHS, getOne(RHS->getType())));
       break;
-    }
-    case CmpInst::ICMP_ULE: {
-      auto *ModifiedRHS =
-          DividesBy ? GetPreviousSCEVDividesByDivisor(RHS, DividesBy) : RHS;
-      RewrittenRHS = getUMinExpr(RewrittenLHS, ModifiedRHS);
+    case CmpInst::ICMP_ULE:
+      RewrittenRHS = getUMinExpr(RewrittenLHS, RHS);
       break;
-    }
-    case CmpInst::ICMP_SLE: {
-      auto *ModifiedRHS =
-          DividesBy ? GetPreviousSCEVDividesByDivisor(RHS, DividesBy) : RHS;
-      RewrittenRHS = getSMinExpr(RewrittenLHS, ModifiedRHS);
+    case CmpInst::ICMP_SLE:
+      RewrittenRHS = getSMinExpr(RewrittenLHS, RHS);
       break;
-    }
-    case CmpInst::ICMP_UGT: {
-      auto *ModifiedRHS = getAddExpr(RHS, getOne(RHS->getType()));
-      ModifiedRHS = DividesBy
-                        ? GetNextSCEVDividesByDivisor(ModifiedRHS, DividesBy)
-                        : ModifiedRHS;
-      RewrittenRHS = getUMaxExpr(RewrittenLHS, ModifiedRHS);
+    case CmpInst::ICMP_UGT:
+      RewrittenRHS =
+          getUMaxExpr(RewrittenLHS, getAddExpr(RHS, getOne(RHS->getType())));
       break;
-    }
-    case CmpInst::ICMP_SGT: {
-      auto *ModifiedRHS = getAddExpr(RHS, getOne(RHS->getType()));
-      ModifiedRHS = DividesBy
-                        ? GetNextSCEVDividesByDivisor(ModifiedRHS, DividesBy)
-                        : ModifiedRHS;
-      RewrittenRHS = getSMaxExpr(RewrittenLHS, ModifiedRHS);
+    case CmpInst::ICMP_SGT:
+      RewrittenRHS =
+          getSMaxExpr(RewrittenLHS, getAddExpr(RHS, getOne(RHS->getType())));
       break;
-    }
-    case CmpInst::ICMP_UGE: {
-      auto *ModifiedRHS =
-          DividesBy ? GetNextSCEVDividesByDivisor(RHS, DividesBy) : RHS;
-      RewrittenRHS = getUMaxExpr(RewrittenLHS, ModifiedRHS);
+    case CmpInst::ICMP_UGE:
+      RewrittenRHS = getUMaxExpr(RewrittenLHS, RHS);
       break;
-    }
-    case CmpInst::ICMP_SGE: {
-      auto *ModifiedRHS =
-          DividesBy ? GetNextSCEVDividesByDivisor(RHS, DividesBy) : RHS;
-      RewrittenRHS = getSMaxExpr(RewrittenLHS, ModifiedRHS);
+    case CmpInst::ICMP_SGE:
+      RewrittenRHS = getSMaxExpr(RewrittenLHS, RHS);
       break;
-    }
     case CmpInst::ICMP_EQ:
       if (isa<SCEVConstant>(RHS))
         RewrittenRHS = RHS;
       break;
     case CmpInst::ICMP_NE:
       if (isa<SCEVConstant>(RHS) &&
-          cast<SCEVConstant>(RHS)->getValue()->isNullValue()) {
-        auto *ModifiedRHS = getOne(RHS->getType());
-        ModifiedRHS = DividesBy
-                          ? GetNextSCEVDividesByDivisor(ModifiedRHS, DividesBy)
-                          : ModifiedRHS;
-        RewrittenRHS = getUMaxExpr(RewrittenLHS, ModifiedRHS);
-      }
+          cast<SCEVConstant>(RHS)->getValue()->isNullValue())
+        RewrittenRHS = getUMaxExpr(RewrittenLHS, getOne(RHS->getType()));
       break;
     default:
       break;

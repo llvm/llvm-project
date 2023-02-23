@@ -1047,6 +1047,7 @@ def Arith_ExtFOp : Arith_FToFCastOp<"extf"> {
     When operating on vectors, casts elementwise.
   }];
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
