@@ -4899,9 +4899,6 @@ IntrinsicLibrary::genStorageSize(mlir::Type resultType,
         fir::isPointerType(boxTy)
             ? "unlimited polymorphic disassociated POINTER in STORAGE_SIZE"
             : "unlimited polymorphic unallocated ALLOCATABLE in STORAGE_SIZE";
-  } else if (fir::isPolymorphicType(boxTy) && fir::isPointerType(boxTy)) {
-    needRuntimeCheck = true;
-    errorMsg = "polymorphic disassociated POINTER in STORAGE_SIZE";
   }
   const fir::MutableBoxValue *mutBox = args[0].getBoxOf<fir::MutableBoxValue>();
   if (needRuntimeCheck && mutBox) {
