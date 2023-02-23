@@ -72,14 +72,6 @@ contains
 ! CHECK-SAME: %[[P:.*]]: !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMstorage_size_testTp1{a:i32}>>>> {fir.bindc_name = "p"}) -> i32 {
 ! CHECK: %[[SIZE:.*]] = fir.alloca i32 {bindc_name = "size", uniq_name = "_QMstorage_size_testFpolymorphic_pointerEsize"}
 ! CHECK: %[[LOAD_P:.*]] = fir.load %[[P]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMstorage_size_testTp1{a:i32}>>>>
-! CHECK: %[[P_ADDR:.*]] = fir.box_addr %[[LOAD_P]] : (!fir.class<!fir.ptr<!fir.type<_QMstorage_size_testTp1{a:i32}>>>) -> !fir.ptr<!fir.type<_QMstorage_size_testTp1{a:i32}>>
-! CHECK: %[[P_ADDR_I64:.*]] = fir.convert %[[P_ADDR]] : (!fir.ptr<!fir.type<_QMstorage_size_testTp1{a:i32}>>) -> i64
-! CHECK: %[[C0:.*]] = arith.constant 0 : i64
-! CHECK: %[[IS_NULL_ADDR:.*]] = arith.cmpi eq, %[[P_ADDR_I64]], %[[C0]] : i64
-! CHECK: fir.if %[[IS_NULL_ADDR]] {
-! CHECK:   %{{.*}} = fir.call @_FortranAReportFatalUserError(%{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<i8>, !fir.ref<i8>, i32) -> none
-! CHECK: }
-! CHECK: %[[LOAD_P:.*]] = fir.load %[[P]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMstorage_size_testTp1{a:i32}>>>>
 ! CHECK: %[[ELE_SIZE:.*]] = fir.box_elesize %[[LOAD_P]] : (!fir.class<!fir.ptr<!fir.type<_QMstorage_size_testTp1{a:i32}>>>) -> i32
 ! CHECK: %[[C8:.*]] = arith.constant 8 : i32
 ! CHECK: %[[BITS:.*]] = arith.muli %[[ELE_SIZE]], %[[C8]] : i32
