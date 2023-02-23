@@ -2558,6 +2558,17 @@ static Value *emitTransformedIndex(IRBuilderBase &B, Value *Index,
   llvm_unreachable("invalid enum");
 }
 
+std::optional<unsigned> getMaxVScale(const Function &F,
+                                     const TargetTransformInfo &TTI) {
+  if (std::optional<unsigned> MaxVScale = TTI.getMaxVScale())
+    return MaxVScale;
+
+  if (F.hasFnAttribute(Attribute::VScaleRange))
+    return F.getFnAttribute(Attribute::VScaleRange).getVScaleRangeMax();
+
+  return std::nullopt;
+}
+
 void InnerLoopVectorizer::packScalarIntoVectorValue(VPValue *Def,
                                                     const VPIteration &Instance,
                                                     VPTransformState &State) {
@@ -4942,12 +4953,11 @@ LoopVectorizationCostModel::getMaxLegalScalableVF(unsigned MaxSafeElements) {
     return MaxScalableVF;
 
   // Limit MaxScalableVF by the maximum safe dependence distance.
-  std::optional<unsigned> MaxVScale = TTI.getMaxVScale();
-  if (!MaxVScale && TheFunction->hasFnAttribute(Attribute::VScaleRange))
-    MaxVScale =
-        TheFunction->getFnAttribute(Attribute::VScaleRange).getVScaleRangeMax();
-  MaxScalableVF =
-      ElementCount::getScalable(MaxVScale ? (MaxSafeElements / *MaxVScale) : 0);
+  if (std::optional<unsigned> MaxVScale = getMaxVScale(*TheFunction, TTI))
+    MaxScalableVF = ElementCount::getScalable(MaxSafeElements / *MaxVScale);
+  else
+    MaxScalableVF = ElementCount::getScalable(0);
+
   if (!MaxScalableVF)
     reportVectorizationInfo(
         "Max legal vector width too small, scalable vectorization "
