@@ -3875,10 +3875,9 @@ bool AMDGPULegalizerInfo::legalizeFDIV16(MachineInstr &MI,
 
 // Enable or disable FP32 denorm mode. When 'Enable' is true, emit instructions
 // to enable denorm mode. When 'Enable' is false, disable denorm mode.
-static void toggleSPDenormMode(bool Enable,
-                               MachineIRBuilder &B,
+static void toggleSPDenormMode(bool Enable, MachineIRBuilder &B,
                                const GCNSubtarget &ST,
-                               AMDGPU::SIModeRegisterDefaults Mode) {
+                               SIModeRegisterDefaults Mode) {
   // Set SP denorm mode to this value.
   unsigned SPDenormMode =
     Enable ? FP_DENORM_FLUSH_NONE : Mode.fpDenormModeSPValue();
@@ -3913,7 +3912,7 @@ bool AMDGPULegalizerInfo::legalizeFDIV32(MachineInstr &MI,
   Register LHS = MI.getOperand(1).getReg();
   Register RHS = MI.getOperand(2).getReg();
   const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
-  AMDGPU::SIModeRegisterDefaults Mode = MFI->getMode();
+  SIModeRegisterDefaults Mode = MFI->getMode();
 
   uint16_t Flags = MI.getFlags();
 
