@@ -19,6 +19,7 @@ set(LLVM_LINK_COMPONENTS
   TargetParser
   TransformUtils
   Vectorize
+  CAS
   )
 
 add_llvm_tool(llc

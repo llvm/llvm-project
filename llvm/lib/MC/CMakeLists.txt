@@ -32,6 +32,7 @@ add_llvm_component_library(LLVMMC
   MCLinkerOptimizationHint.cpp
   MCMachOStreamer.cpp
   MCMachObjectTargetWriter.cpp
+  MachOCASWriter.cpp
   MCNullStreamer.cpp
   MCObjectFileInfo.cpp
   MCObjectStreamer.cpp
@@ -77,6 +78,8 @@ add_llvm_component_library(LLVMMC
   Support
   TargetParser
   BinaryFormat
+  CAS
+  CASUtil
   DebugInfoCodeView
 
   DEPENDS

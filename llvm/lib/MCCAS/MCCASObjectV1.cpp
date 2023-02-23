@@ -1808,8 +1808,8 @@ Error InMemoryCASDWARFObject::partitionCUData(ArrayRef<char> DebugInfoData,
                                               MCCASBuilder &Builder) {
   StringRef AbbrevSectionContribution =
       getAbbrevSection().drop_front(AbbrevOffset);
-  DWARFDebugAbbrev Abbrev;
-  Abbrev.extract(DataExtractor(AbbrevSectionContribution, isLittleEndian(), 8));
+  DataExtractor Data(AbbrevSectionContribution, isLittleEndian(), 8);
+  DWARFDebugAbbrev Abbrev(Data);
   uint64_t OffsetPtr = 0;
   DWARFUnitHeader Header;
   DWARFSection Section = {toStringRef(DebugInfoData), 0 /*Address*/};

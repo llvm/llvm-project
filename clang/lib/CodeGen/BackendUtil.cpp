@@ -11,6 +11,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetOptions.h"
+#include "clang/CAS/CASOptions.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearchOptions.h"
@@ -112,6 +113,7 @@ class EmitAssemblyHelper {
   const CodeGenOptions &CodeGenOpts;
   const clang::TargetOptions &TargetOpts;
   const LangOptions &LangOpts;
+  const CASOptions &CASOpts; // MCCAS
   Module *TheModule;
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
 
@@ -178,10 +180,13 @@ public:
                      const HeaderSearchOptions &HeaderSearchOpts,
                      const CodeGenOptions &CGOpts,
                      const clang::TargetOptions &TOpts,
-                     const LangOptions &LOpts, Module *M,
-                     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS)
+                     const LangOptions &LOpts,
+                     const CASOptions &CASOpts, // MCCAS
+                     Module *M, IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS)
       : Diags(_Diags), HSOpts(HeaderSearchOpts), CodeGenOpts(CGOpts),
-        TargetOpts(TOpts), LangOpts(LOpts), TheModule(M), VFS(std::move(VFS)),
+        TargetOpts(TOpts), LangOpts(LOpts),
+        CASOpts(CASOpts), // MCCAS
+        TheModule(M), VFS(std::move(VFS)),
         CodeGenerationTime("codegen", "Code Generation Time"),
         TargetTriple(TheModule->getTargetTriple()) {}
 
@@ -333,6 +338,7 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
                               const CodeGenOptions &CodeGenOpts,
                               const clang::TargetOptions &TargetOpts,
                               const LangOptions &LangOpts,
+                              const CASOptions &CASOpts, // MCCAS
                               const HeaderSearchOptions &HSOpts) {
   switch (LangOpts.getThreadModel()) {
   case LangOptions::ThreadModelKind::POSIX:
@@ -458,6 +464,12 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
     break;
   }
 
+  // BEGIN MCCAS
+  Options.UseCASBackend = CodeGenOpts.UseCASBackend; // MCCAS
+  Options.MCOptions.CAS = CASOpts.getOrCreateDatabases(Diags).first;
+  Options.MCOptions.ResultCallBack = CodeGenOpts.MCCallBack;
+  Options.MCOptions.CASObjMode = CodeGenOpts.getCASObjMode();
+  // END MCCAS
   Options.MCOptions.SplitDwarfFile = CodeGenOpts.SplitDwarfFile;
   Options.MCOptions.EmitDwarfUnwind = CodeGenOpts.getEmitDwarfUnwind();
   Options.MCOptions.EmitCompactUnwindNonCanonical =
@@ -568,6 +580,7 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
 
   llvm::TargetOptions Options;
   if (!initTargetOptions(Diags, Options, CodeGenOpts, TargetOpts, LangOpts,
+                         CASOpts, // MCCAS
                          HSOpts))
     return;
   TM.reset(TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
@@ -1177,6 +1190,7 @@ static void runThinLTOBackend(
     DiagnosticsEngine &Diags, ModuleSummaryIndex *CombinedIndex, Module *M,
     const HeaderSearchOptions &HeaderOpts, const CodeGenOptions &CGOpts,
     const clang::TargetOptions &TOpts, const LangOptions &LOpts,
+    const CASOptions &CASOpts, // MCCAS
     std::unique_ptr<raw_pwrite_stream> OS, std::string SampleProfile,
     std::string ProfileRemapping, BackendAction Action) {
   StringMap<DenseMap<GlobalValue::GUID, GlobalValueSummary *>>
@@ -1215,7 +1229,9 @@ static void runThinLTOBackend(
   assert(OptLevelOrNone && "Invalid optimization level!");
   Conf.CGOptLevel = *OptLevelOrNone;
   Conf.OptLevel = CGOpts.OptimizationLevel;
-  initTargetOptions(Diags, Conf.Options, CGOpts, TOpts, LOpts, HeaderOpts);
+  initTargetOptions(Diags, Conf.Options, CGOpts, TOpts, LOpts,
+                    CASOpts, // MCCAS
+                    HeaderOpts);
   Conf.SampleProfile = std::move(SampleProfile);
   Conf.PTO.LoopUnrolling = CGOpts.UnrollLoops;
   // For historical reasons, loop interleaving is set to mirror setting for loop
@@ -1281,8 +1297,9 @@ void clang::EmitBackendOutput(DiagnosticsEngine &Diags,
                               const HeaderSearchOptions &HeaderOpts,
                               const CodeGenOptions &CGOpts,
                               const clang::TargetOptions &TOpts,
-                              const LangOptions &LOpts, StringRef TDesc,
-                              Module *M, BackendAction Action,
+                              const LangOptions &LOpts,
+                              const CASOptions &CASOpts, // MCCAS
+                              StringRef TDesc, Module *M, BackendAction Action,
                               IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                               std::unique_ptr<raw_pwrite_stream> OS) {
 
@@ -1310,7 +1327,8 @@ void clang::EmitBackendOutput(DiagnosticsEngine &Diags,
     if (CombinedIndex) {
       if (!CombinedIndex->skipModuleByDistributedBackend()) {
         runThinLTOBackend(Diags, CombinedIndex.get(), M, HeaderOpts, CGOpts,
-                          TOpts, LOpts, std::move(OS), CGOpts.SampleProfileFile,
+                          TOpts, LOpts, CASOpts, // MCCAS
+                          std::move(OS), CGOpts.SampleProfileFile,
                           CGOpts.ProfileRemappingFile, Action);
         return;
       }
@@ -1326,7 +1344,9 @@ void clang::EmitBackendOutput(DiagnosticsEngine &Diags,
     }
   }
 
-  EmitAssemblyHelper AsmHelper(Diags, HeaderOpts, CGOpts, TOpts, LOpts, M, VFS);
+  EmitAssemblyHelper AsmHelper(Diags, HeaderOpts, CGOpts, TOpts, LOpts,
+                               CASOpts, // MCCAS
+                               M, VFS);
   AsmHelper.EmitAssembly(Action, std::move(OS));
 
   // Verify clang's TargetInfo DataLayout against the LLVM TargetMachine's

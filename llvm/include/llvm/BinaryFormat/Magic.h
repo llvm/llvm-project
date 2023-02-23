@@ -55,6 +55,7 @@ struct file_magic {
     cuda_fatbinary,      ///< CUDA Fatbinary object file
     offload_binary,      ///< LLVM offload object file
     dxcontainer_object,  ///< DirectX container file
+    cas_id,              ///< Embedded CAS ID // MCCAS
   };
 
   bool is_object() const { return V != unknown; }
@@ -77,6 +78,9 @@ file_magic identify_magic(StringRef magic);
 /// @returns errc::success if result has been successfully set, otherwise a
 ///          platform-specific error_code.
 std::error_code identify_magic(const Twine &path, file_magic &result);
+
+constexpr const char *casidObjectMagicPrefix = "CASID:"; // MCCAS
+
 } // namespace llvm
 
 #endif
