@@ -153,6 +153,8 @@ Bug Fixes in This Version
 - Fix __VA_OPT__ implementation so that it treats the concatenation of a
   non-placemaker token and placemaker token as a non-placemaker token.
   (`#60268 <https://github.com/llvm/llvm-project/issues/60268>`_)
+- Fix crash when taking the address of a consteval lambda call operator.
+  (`#57682 <https://github.com/llvm/llvm-project/issues/57682>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
