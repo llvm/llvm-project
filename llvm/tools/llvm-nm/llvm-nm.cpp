@@ -1029,7 +1029,15 @@ static char getSymbolNMTypeChar(MachOObjectFile &Obj, basic_symbol_iterator I) {
 }
 
 static char getSymbolNMTypeChar(TapiFile &Obj, basic_symbol_iterator I) {
-  return 's';
+  auto Type = cantFail(Obj.getSymbolType(I->getRawDataRefImpl()));
+  switch (Type) {
+  case SymbolRef::ST_Data:
+    return 'd';
+  case SymbolRef::ST_Function:
+    return 't';
+  default:
+    return 's';
+  }
 }
 
 static char getSymbolNMTypeChar(WasmObjectFile &Obj, basic_symbol_iterator I) {
