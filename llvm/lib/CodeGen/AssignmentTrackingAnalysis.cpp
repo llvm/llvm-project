@@ -1630,6 +1630,10 @@ AssignmentTrackingLowering::joinLocMap(const LocMap &A, const LocMap &B) {
   unsigned IntersectSize = Join.size();
   (void)IntersectSize;
 
+  // Check if A and B contain the same variables.
+  if (SymmetricDifference.empty() && A.size() == B.size())
+    return Join;
+
   // Add the elements in B with variables that are not in A into
   // SymmetricDifference.
   for (const auto &Pair : B) {
@@ -1720,6 +1724,10 @@ AssignmentTrackingLowering::joinAssignmentMap(const AssignmentMap &A,
   }
   unsigned IntersectSize = Join.size();
   (void)IntersectSize;
+
+  // Check if A and B contain the same variables.
+  if (SymmetricDifference.empty() && A.size() == B.size())
+    return Join;
 
   // Add the elements in B with variables that are not in A into
   // SymmetricDifference.

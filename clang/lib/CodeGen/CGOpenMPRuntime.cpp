@@ -8455,7 +8455,8 @@ public:
     const CXXMethodDecl *MD =
         CGF.CurFuncDecl ? dyn_cast<CXXMethodDecl>(CGF.CurFuncDecl) : nullptr;
     const CXXRecordDecl *RD = MD ? MD->getParent() : nullptr;
-    bool HasBaseClass = RD ? RD->getNumBases() > 0 : false;
+    // When VD is not null, it is not field of class, skip generating this[:1].
+    bool HasBaseClass = RD && !VD ? RD->getNumBases() > 0 : false;
     // There should not be a mapper for a combined entry.
     if (HasBaseClass) {
       // OpenMP 5.2 148:21:
