@@ -65,13 +65,6 @@ def SparseTensor_StorageSpecifier : SparseTensor_Type<"StorageSpecifier"> {
     }]>
   ];
 
-  let extraClassDeclaration = [{
-    // Get the integer type used to store memory and dimension sizes.
-    IntegerType getSizesType() const;
-    Type getFieldType(StorageSpecifierKind kind, std::optional<unsigned> dim) const;
-    Type getFieldType(StorageSpecifierKind kind, std::optional<APInt> dim) const;
-  }];
-
   // We skipped the default builder that simply takes the input sparse tensor encoding
   // attribute since we need to normalize the dimension level type and remove unrelated
   // fields that are irrelavant to sparse tensor storage scheme.

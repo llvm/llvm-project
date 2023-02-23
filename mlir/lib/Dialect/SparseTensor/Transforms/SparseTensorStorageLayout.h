@@ -241,11 +241,6 @@ public:
                          StorageSpecifierKind kind,
                          std::optional<unsigned> dim);
 
-  // FIXME: see note [CLARIFY_DIM_LVL].
-  Type getFieldType(StorageSpecifierKind kind, std::optional<unsigned> dim) {
-    return specifier.getType().getFieldType(kind, dim);
-  }
-
 private:
   TypedValue<StorageSpecifierType> specifier;
 };
@@ -282,6 +277,8 @@ public:
   ///
   /// Getters: get the value for required field.
   ///
+
+  Value getSpecifier() const { return fields.back(); }
 
   // FIXME: see note [CLARIFY_DIM_LVL].
   Value getSpecifierField(OpBuilder &builder, Location loc,
