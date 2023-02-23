@@ -12,6 +12,7 @@ define amdgpu_ps <10 x float> @image_bvh_dual_intersect_ray(i64 %node_ptr, float
 ; GFX12-SDAG-NEXT:    v_dual_mov_b32 v18, v4 :: v_dual_mov_b32 v17, v3
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX12-SDAG-NEXT:    image_bvh_dual_intersect_ray v[0:9], [v[0:1], v[2:3], v[17:19], v[20:22], v[9:10]], s[0:3]
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    global_store_b96 v[11:12], v[17:19], off
 ; GFX12-SDAG-NEXT:    global_store_b96 v[13:14], v[20:22], off
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
@@ -24,6 +25,7 @@ define amdgpu_ps <10 x float> @image_bvh_dual_intersect_ray(i64 %node_ptr, float
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v19, v7 :: v_dual_mov_b32 v20, v8
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX12-GISEL-NEXT:    image_bvh_dual_intersect_ray v[0:9], [v[0:1], v[2:3], v[15:17], v[18:20], v[9:10]], s[0:3]
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    global_store_b96 v[11:12], v[15:17], off
 ; GFX12-GISEL-NEXT:    global_store_b96 v[13:14], v[18:20], off
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
@@ -53,6 +55,7 @@ define amdgpu_ps <10 x float> @image_bvh_dual_intersect_ray_1(i64 %node_ptr, flo
 ; GFX12-SDAG-NEXT:    v_dual_mov_b32 v18, v4 :: v_dual_mov_b32 v17, v3
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v3, 1
 ; GFX12-SDAG-NEXT:    image_bvh_dual_intersect_ray v[0:9], [v[0:1], v[2:3], v[17:19], v[20:22], v[9:10]], s[0:3]
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    global_store_b96 v[11:12], v[17:19], off
 ; GFX12-SDAG-NEXT:    global_store_b96 v[13:14], v[20:22], off
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
@@ -65,6 +68,7 @@ define amdgpu_ps <10 x float> @image_bvh_dual_intersect_ray_1(i64 %node_ptr, flo
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v19, v7 :: v_dual_mov_b32 v20, v8
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v3, 1
 ; GFX12-GISEL-NEXT:    image_bvh_dual_intersect_ray v[0:9], [v[0:1], v[2:3], v[15:17], v[18:20], v[9:10]], s[0:3]
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    global_store_b96 v[11:12], v[15:17], off
 ; GFX12-GISEL-NEXT:    global_store_b96 v[13:14], v[18:20], off
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
