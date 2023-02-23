@@ -17985,10 +17985,13 @@ HandleImmediateInvocations(Sema &SemaRef,
     if (!CE.getInt())
       EvaluateAndDiagnoseImmediateInvocation(SemaRef, CE);
   for (auto *DR : Rec.ReferenceToConsteval) {
-    auto *FD = cast<FunctionDecl>(DR->getDecl());
+    NamedDecl *ND = cast<FunctionDecl>(DR->getDecl());
+    if (auto *MD = llvm::dyn_cast<CXXMethodDecl>(ND);
+        MD && (MD->isLambdaStaticInvoker() || isLambdaCallOperator(MD)))
+      ND = MD->getParent();
     SemaRef.Diag(DR->getBeginLoc(), diag::err_invalid_consteval_take_address)
-        << FD;
-    SemaRef.Diag(FD->getLocation(), diag::note_declared_at);
+        << ND << isa<CXXRecordDecl>(ND);
+    SemaRef.Diag(ND->getLocation(), diag::note_declared_at);
   }
 }
 

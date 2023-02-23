@@ -14,17 +14,23 @@ using enum E; // expected-error {{unknown type name E}}
 }
 }
 
-namespace dr2628 { // dr2628: yes open
+namespace dr2628 { // dr2628: no, this was reverted for the 16.x release
+                   // due to regressions, see the issue for more details:
+                   // https://github.com/llvm/llvm-project/issues/60777
 
 template <bool A = false, bool B = false>
 struct foo {
-  constexpr foo() requires (!A && !B) = delete; // #DR2628_CTOR
-  constexpr foo() requires (A || B) = delete;
+  // The expected notes below should be removed when dr2628 is fully implemented again
+  constexpr foo() requires (!A && !B) = delete; // expected-note {{candidate function [with A = false, B = false]}} #DR2628_CTOR
+  constexpr foo() requires (A || B) = delete; // expected-note {{candidate function [with A = false, B = false]}}
 };
 
 void f() {
-  foo fooable; // expected-error {{call to deleted}}
-  // expected-note@#DR2628_CTOR {{marked deleted here}}
+  // The FIXME's below should be the expected errors when dr2628 is
+  // fully implemented again.
+  // FIXME-expected-error {{call to deleted}}
+  foo fooable; // expected-error {{ambiguous deduction for template arguments of 'foo'}}
+  // FIXME-expected-note@#DR2628_CTOR {{marked deleted here}}
 }
 
 }
