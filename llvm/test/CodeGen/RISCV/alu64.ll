@@ -19,10 +19,9 @@ define i64 @addi(i64 %a) nounwind {
 ;
 ; RV32I-LABEL: addi:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a2, a0, 1
-; RV32I-NEXT:    sltu a0, a2, a0
-; RV32I-NEXT:    add a1, a1, a0
-; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    addi a0, a0, 1
+; RV32I-NEXT:    seqz a2, a0
+; RV32I-NEXT:    add a1, a1, a2
 ; RV32I-NEXT:    ret
   %1 = add i64 %a, 1
   ret i64 %1
