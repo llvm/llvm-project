@@ -1166,6 +1166,7 @@ TEST(TBDv4, InterfaceInequality) {
   }));
   EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
     InterfaceFile Document;
+    Document.setFileType(FileType::TBD_V4);
     Document.addTargets(TargetList{Target(AK_i386, PLATFORM_MACOS),
                                    Target(AK_x86_64, PLATFORM_MACOS)});
     Document.setInstallName("/System/Library/Frameworks/A.framework/A");
