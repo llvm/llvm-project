@@ -1164,6 +1164,8 @@ public:
     return isUInt<12>(Imm);
   }
 
+  static unsigned getMaxMUBUFImmOffset();
+
   bool splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset, uint32_t &ImmOffset,
                         Align Alignment = Align(4)) const;
 

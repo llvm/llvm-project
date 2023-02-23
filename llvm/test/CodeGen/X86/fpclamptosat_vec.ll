@@ -3038,6 +3038,8 @@ define <2 x i64> @utest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    cmoveq %rcx, %rax
 ; CHECK-NEXT:    testq %r14, %r14
 ; CHECK-NEXT:    cmovneq %rcx, %rbx
+; CHECK-NEXT:    cmpq $1, %r14
+; CHECK-NEXT:    cmoveq %rcx, %rbx
 ; CHECK-NEXT:    movq %rbx, %xmm0
 ; CHECK-NEXT:    movq %rax, %xmm1
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -3200,6 +3202,8 @@ define <2 x i64> @utest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    cmoveq %rcx, %rax
 ; CHECK-NEXT:    testq %r14, %r14
 ; CHECK-NEXT:    cmovneq %rcx, %rbx
+; CHECK-NEXT:    cmpq $1, %r14
+; CHECK-NEXT:    cmoveq %rcx, %rbx
 ; CHECK-NEXT:    movq %rbx, %xmm0
 ; CHECK-NEXT:    movq %rax, %xmm1
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -3352,8 +3356,8 @@ define <2 x i64> @utesth_f16i64_mm(<2 x half> %x) {
 ; CHECK-NEXT:    .cfi_offset %rbx, -32
 ; CHECK-NEXT:    .cfi_offset %r14, -24
 ; CHECK-NEXT:    .cfi_offset %r15, -16
-; CHECK-NEXT:    movl %esi, %ebx
-; CHECK-NEXT:    movzwl %di, %edi
+; CHECK-NEXT:    movl %edi, %ebx
+; CHECK-NEXT:    movzwl %si, %edi
 ; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
 ; CHECK-NEXT:    callq __fixunssfti@PLT
 ; CHECK-NEXT:    movq %rax, %r14
@@ -3368,8 +3372,10 @@ define <2 x i64> @utesth_f16i64_mm(<2 x half> %x) {
 ; CHECK-NEXT:    cmoveq %rcx, %rax
 ; CHECK-NEXT:    testq %r15, %r15
 ; CHECK-NEXT:    cmovneq %rcx, %r14
-; CHECK-NEXT:    movq %r14, %xmm0
-; CHECK-NEXT:    movq %rax, %xmm1
+; CHECK-NEXT:    cmpq $1, %r15
+; CHECK-NEXT:    cmoveq %rcx, %r14
+; CHECK-NEXT:    movq %r14, %xmm1
+; CHECK-NEXT:    movq %rax, %xmm0
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24

@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PARSER_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PARSER_H
 
+#include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/common.h"
@@ -47,7 +48,7 @@ class Parser {
   // TypeDesc objects, which store the size as well as minimal type information.
   // This is necessary because some systems separate the floating point and
   // integer values in va_args.
-  TypeDesc desc_arr[DESC_ARR_LEN] = {{0, Integer}};
+  TypeDesc desc_arr[DESC_ARR_LEN] = {type_desc_from_type<void>()};
 
   // TODO: Look into object stores for optimization.
 
@@ -106,10 +107,18 @@ private:
 
   // get_arg_value gets the value from the arg list at index (starting at 1).
   // This may require parsing the format string. An index of 0 is interpreted as
-  // the next value.
-  template <class T> LIBC_INLINE T get_arg_value(size_t index) {
-    if (!(index == 0 || index == args_index))
-      args_to_index(index);
+  // the next value. If the format string is not valid, it may have gaps in its
+  // indexes. Requesting the value for any index after a gap will fail, since
+  // the arg list must be read in order and with the correct types.
+  template <class T> LIBC_INLINE cpp::optional<T> get_arg_value(size_t index) {
+    if (!(index == 0 || index == args_index)) {
+      bool success = args_to_index(index);
+      if (!success) {
+        // If we can't get to this index, then the value of the arg can't be
+        // found.
+        return cpp::optional<T>();
+      }
+    }
 
     set_type_desc(index, type_desc_from_type<T>());
 
@@ -122,7 +131,7 @@ private:
   // It moves cur_args to the index requested so the the appropriate value may
   // be read. This may involve parsing the format string, and is in the worst
   // case an O(n^2) operation.
-  void args_to_index(size_t index);
+  bool args_to_index(size_t index);
 
   // get_type_desc assumes that this format string uses index mode. It iterates
   // through the format string until it finds a format specifier that defines

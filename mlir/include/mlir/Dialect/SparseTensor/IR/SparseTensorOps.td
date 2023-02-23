@@ -135,7 +135,7 @@ def SparseTensor_UnpackOp : SparseTensor_Op<"unpack", [Pure]>,
 }
 
 def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
-  [Pure, SameOperandsAndResultElementType]>,
+  [Pure]>,
     Arguments<(ins AnyTensor:$source)>,
     Results<(outs AnyTensor:$dest)> {
   string summary = "Converts between different tensor types";

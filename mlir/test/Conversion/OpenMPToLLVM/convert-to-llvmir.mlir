@@ -205,6 +205,26 @@ llvm.func @_QPomp_target_data(%a : !llvm.ptr<i32>, %b : !llvm.ptr<i32>, %c : !ll
 
 // -----
 
+// CHECK-LABEL: @_QPomp_target_data_region
+// CHECK: (%[[ARG0:.*]]: !llvm.ptr<array<1024 x i32>>, %[[ARG1:.*]]: !llvm.ptr<i32>) {
+// CHECK:   omp.target_data   map((tofrom -> %[[ARG0]] : !llvm.ptr<array<1024 x i32>>)) {
+// CHECK:           %[[VAL_1:.*]] = llvm.mlir.constant(10 : i32) : i32
+// CHECK:           llvm.store %[[VAL_1]], %[[ARG1]] : !llvm.ptr<i32>
+// CHECK:           omp.terminator
+// CHECK:         }
+// CHECK:         llvm.return
+
+llvm.func @_QPomp_target_data_region(%a : !llvm.ptr<array<1024 x i32>>, %i : !llvm.ptr<i32>) {
+  omp.target_data   map((tofrom -> %a : !llvm.ptr<array<1024 x i32>>)) {
+    %1 = llvm.mlir.constant(10 : i32) : i32
+    llvm.store %1, %i : !llvm.ptr<i32>
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
 // CHECK-LABEL: @_QPsb
 // CHECK: omp.sections
 // CHECK: omp.section

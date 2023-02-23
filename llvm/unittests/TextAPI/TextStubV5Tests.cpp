@@ -877,7 +877,7 @@ TEST(TBDv5, WriteMultipleDocuments) {
   NestedFileB.setCurrentVersion(PackedVersion(1, 0, 0));
   NestedFileB.setTwoLevelNamespace();
   NestedFileB.setApplicationExtensionSafe(true);
-  NestedFileB.addSymbol(SymbolKind::GlobalSymbol, "_varFooBaz", AllTargets,
+  NestedFileB.addSymbol(SymbolKind::GlobalSymbol, "_varFooBaz", {AllTargets[0]},
                         SymbolFlags::Data);
   File.addDocument(std::make_shared<InterfaceFile>(std::move(NestedFileB)));
 

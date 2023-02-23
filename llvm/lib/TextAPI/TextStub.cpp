@@ -456,7 +456,7 @@ template <> struct MappingTraits<const InterfaceFile *> {
         ArchSet.insert(Library.getArchitectures());
 
       std::map<const Symbol *, ArchitectureSet> SymbolToArchSet;
-      for (const auto *Symbol : File->exports()) {
+      for (const auto *Symbol : File->symbols()) {
         auto Architectures = Symbol->getArchitectures();
         SymbolToArchSet[Symbol] = Architectures;
         ArchSet.insert(Architectures);
@@ -833,13 +833,10 @@ template <> struct MappingTraits<const InterfaceFile *> {
 
       auto handleSymbols =
           [](SectionList &CurrentSections,
-             InterfaceFile::const_filtered_symbol_range Symbols,
-             std::function<bool(const Symbol *)> Pred) {
+             InterfaceFile::const_filtered_symbol_range Symbols) {
             std::set<TargetList> TargetSet;
             std::map<const Symbol *, TargetList> SymbolToTargetList;
             for (const auto *Symbol : Symbols) {
-              if (!Pred(Symbol))
-                continue;
               TargetList Targets(Symbol->targets());
               SymbolToTargetList[Symbol] = Targets;
               TargetSet.emplace(std::move(Targets));
@@ -884,14 +881,9 @@ template <> struct MappingTraits<const InterfaceFile *> {
             }
           };
 
-      handleSymbols(Exports, File->exports(), [](const Symbol *Symbol) {
-        return !Symbol->isReexported();
-      });
-      handleSymbols(Reexports, File->exports(), [](const Symbol *Symbol) {
-        return Symbol->isReexported();
-      });
-      handleSymbols(Undefineds, File->undefineds(),
-                    [](const Symbol *Symbol) { return true; });
+      handleSymbols(Exports, File->exports());
+      handleSymbols(Reexports, File->reexports());
+      handleSymbols(Undefineds, File->undefineds());
     }
 
     const InterfaceFile *denormalize(IO &IO) {
@@ -937,24 +929,28 @@ template <> struct MappingTraits<const InterfaceFile *> {
 
           for (auto &sym : CurrentSection.Classes)
             File->addSymbol(SymbolKind::ObjectiveCClass, sym,
-                            CurrentSection.Targets);
+                            CurrentSection.Targets, Flag);
 
           for (auto &sym : CurrentSection.ClassEHs)
             File->addSymbol(SymbolKind::ObjectiveCClassEHType, sym,
-                            CurrentSection.Targets);
+                            CurrentSection.Targets, Flag);
 
           for (auto &sym : CurrentSection.Ivars)
             File->addSymbol(SymbolKind::ObjectiveCInstanceVariable, sym,
-                            CurrentSection.Targets);
+                            CurrentSection.Targets, Flag);
 
-          for (auto &sym : CurrentSection.WeakSymbols)
+          SymbolFlags SymFlag = (Flag == SymbolFlags::Undefined)
+                                    ? SymbolFlags::WeakReferenced
+                                    : SymbolFlags::WeakDefined;
+          for (auto &sym : CurrentSection.WeakSymbols) {
             File->addSymbol(SymbolKind::GlobalSymbol, sym,
-                            CurrentSection.Targets, SymbolFlags::WeakDefined);
+                            CurrentSection.Targets, Flag | SymFlag);
+          }
 
           for (auto &sym : CurrentSection.TlvSymbols)
             File->addSymbol(SymbolKind::GlobalSymbol, sym,
                             CurrentSection.Targets,
-                            SymbolFlags::ThreadLocalValue);
+                            Flag | SymbolFlags::ThreadLocalValue);
         }
       };
 

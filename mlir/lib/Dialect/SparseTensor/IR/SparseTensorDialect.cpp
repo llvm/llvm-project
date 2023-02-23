@@ -135,6 +135,12 @@ SparseTensorEncodingAttr SparseTensorEncodingAttr::withoutOrdering() const {
       getPointerBitWidth(), getIndexBitWidth());
 }
 
+SparseTensorEncodingAttr SparseTensorEncodingAttr::withoutBitWidths() const {
+  return SparseTensorEncodingAttr::get(getContext(), getDimLevelType(),
+                                       getDimOrdering(), getHigherOrdering(), 0,
+                                       0);
+}
+
 bool SparseTensorEncodingAttr::isAllDense() const {
   return !getImpl() || llvm::all_of(getDimLevelType(), isDenseDLT);
 }

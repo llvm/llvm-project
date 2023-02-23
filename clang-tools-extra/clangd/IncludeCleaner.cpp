@@ -85,7 +85,7 @@ public:
     // Using templateName case is handled by the override TraverseTemplateName.
     if (TST->getTemplateName().getKind() == TemplateName::UsingTemplate)
       return true;
-    add(TST->getAsCXXRecordDecl());                  // Specialization
+    add(TST->getAsCXXRecordDecl()); // Specialization
     return true;
   }
 
@@ -474,22 +474,16 @@ std::vector<const Inclusion *> computeUnusedIncludes(ParsedAST &AST) {
       translateToHeaderIDs(ReferencedFiles, AST.getIncludeStructure(), SM);
   return getUnused(AST, ReferencedHeaders, ReferencedFiles.SpelledUmbrellas);
 }
-std::vector<const Inclusion *> computeUnusedIncludesExperimental(ParsedAST &AST) {
-   const auto &SM = AST.getSourceManager();
-   const auto &Includes = AST.getIncludeStructure();
-   // FIXME: this map should probably be in IncludeStructure.
-   llvm::StringMap<llvm::SmallVector<IncludeStructure::HeaderID>> BySpelling;
-   for (const auto &Inc : Includes.MainFileIncludes) {
-    if (Inc.HeaderID)
-      BySpelling.try_emplace(Inc.Written)
-          .first->second.push_back(
-              static_cast<IncludeStructure::HeaderID>(*Inc.HeaderID));
-   }
-   // FIXME: !!this is a hacky way to collect macro references.
-   std::vector<include_cleaner::SymbolReference> Macros;
-    auto& PP = AST.getPreprocessor();
-   for (const syntax::Token &Tok :
-        AST.getTokens().spelledTokens(SM.getMainFileID())) {
+std::vector<const Inclusion *>
+computeUnusedIncludesExperimental(ParsedAST &AST) {
+  const auto &SM = AST.getSourceManager();
+  const auto &Includes = AST.getIncludeStructure();
+
+  // FIXME: !!this is a hacky way to collect macro references.
+  std::vector<include_cleaner::SymbolReference> Macros;
+  auto &PP = AST.getPreprocessor();
+  for (const syntax::Token &Tok :
+       AST.getTokens().spelledTokens(SM.getMainFileID())) {
     auto Macro = locateMacroAt(Tok, PP);
     if (!Macro)
       continue;
@@ -499,31 +493,37 @@ std::vector<const Inclusion *> computeUnusedIncludesExperimental(ParsedAST &AST)
            include_cleaner::Macro{/*Name=*/PP.getIdentifierInfo(Tok.text(SM)),
                                   DefLoc},
            include_cleaner::RefType::Explicit});
-   }
-   llvm::DenseSet<IncludeStructure::HeaderID> Used;
-   include_cleaner::walkUsed(
-       AST.getLocalTopLevelDecls(), /*MacroRefs=*/Macros,
-       AST.getPragmaIncludes(), SM,
-       [&](const include_cleaner::SymbolReference &Ref,
-           llvm::ArrayRef<include_cleaner::Header> Providers) {
-         for (const auto &H : Providers) {
-           switch (H.kind()) {
-           case include_cleaner::Header::Physical:
-             if (auto HeaderID = Includes.getID(H.physical()))
-               Used.insert(*HeaderID);
-             break;
-           case include_cleaner::Header::Standard:
-             for (auto HeaderID : Includes.StdlibHeaders.lookup(H.standard()))
-               Used.insert(HeaderID);
-             break;
-           case include_cleaner::Header::Verbatim:
-             for (auto HeaderID : BySpelling.lookup(H.verbatim()))
-               Used.insert(HeaderID);
-             break;
-           }
-         }
-       });
-   return getUnused(AST, Used, /*ReferencedPublicHeaders*/{});
+  }
+  llvm::DenseSet<IncludeStructure::HeaderID> Used;
+  include_cleaner::walkUsed(
+      AST.getLocalTopLevelDecls(), /*MacroRefs=*/Macros,
+      AST.getPragmaIncludes(), SM,
+      [&](const include_cleaner::SymbolReference &Ref,
+          llvm::ArrayRef<include_cleaner::Header> Providers) {
+        for (const auto &H : Providers) {
+          switch (H.kind()) {
+          case include_cleaner::Header::Physical:
+            if (auto HeaderID = Includes.getID(H.physical()))
+              Used.insert(*HeaderID);
+            break;
+          case include_cleaner::Header::Standard:
+            for (auto HeaderID : Includes.StdlibHeaders.lookup(H.standard()))
+              Used.insert(HeaderID);
+            break;
+          case include_cleaner::Header::Verbatim:
+            for (auto *Inc :
+                 Includes.mainFileIncludesWithSpelling(H.verbatim())) {
+              if (!Inc->HeaderID.has_value())
+                continue;
+              IncludeStructure::HeaderID ID =
+                  static_cast<IncludeStructure::HeaderID>(*Inc->HeaderID);
+              Used.insert(ID);
+            }
+            break;
+          }
+        }
+      });
+  return getUnused(AST, Used, /*ReferencedPublicHeaders*/ {});
 }
 
 std::vector<Diag> issueUnusedIncludesDiagnostics(ParsedAST &AST,

@@ -1945,6 +1945,15 @@ bool hasPackedD16(const MCSubtargetInfo &STI) {
          !isSI(STI);
 }
 
+unsigned getNSAMaxSize(const MCSubtargetInfo &STI) {
+  auto Version = getIsaVersion(STI.getCPU());
+  if (Version.Major == 10)
+    return Version.Minor >= 3 ? 13 : 5;
+  if (Version.Major == 11)
+    return 5;
+  return 0;
+}
+
 bool isSI(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureSouthernIslands);
 }
@@ -2587,31 +2596,6 @@ unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST) {
     return 12;
 
   return 13;
-}
-
-SIModeRegisterDefaults::SIModeRegisterDefaults(const Function &F) {
-  *this = getDefaultForCallingConv(F.getCallingConv());
-
-  StringRef IEEEAttr = F.getFnAttribute("amdgpu-ieee").getValueAsString();
-  if (!IEEEAttr.empty())
-    IEEE = IEEEAttr == "true";
-
-  StringRef DX10ClampAttr
-    = F.getFnAttribute("amdgpu-dx10-clamp").getValueAsString();
-  if (!DX10ClampAttr.empty())
-    DX10Clamp = DX10ClampAttr == "true";
-
-  StringRef DenormF32Attr = F.getFnAttribute("denormal-fp-math-f32").getValueAsString();
-  if (!DenormF32Attr.empty())
-    FP32Denormals = parseDenormalFPAttribute(DenormF32Attr);
-
-  StringRef DenormAttr = F.getFnAttribute("denormal-fp-math").getValueAsString();
-  if (!DenormAttr.empty()) {
-    DenormalMode DenormMode = parseDenormalFPAttribute(DenormAttr);
-    if (DenormF32Attr.empty())
-      FP32Denormals = DenormMode;
-    FP64FP16Denormals = DenormMode;
-  }
 }
 
 namespace {

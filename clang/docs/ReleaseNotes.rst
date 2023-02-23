@@ -115,6 +115,8 @@ Removed Compiler Flags
 -------------------------
 - The deprecated flag `-fmodules-ts` is removed. Please use ``-std=c++20``
   or higher to use standard C++ modules instead.
+- The deprecated flag `-fcoroutines-ts` is removed. Please use ``-std=c++20``
+  or higher to use standard C++ coroutines instead.
 
 Attribute Changes in Clang
 --------------------------
@@ -151,6 +153,8 @@ Bug Fixes in This Version
 - Fix __VA_OPT__ implementation so that it treats the concatenation of a
   non-placemaker token and placemaker token as a non-placemaker token.
   (`#60268 <https://github.com/llvm/llvm-project/issues/60268>`_)
+- Fix crash when taking the address of a consteval lambda call operator.
+  (`#57682 <https://github.com/llvm/llvm-project/issues/57682>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -167,9 +171,6 @@ Bug Fixes to C++ Support
 - Fix crash when evaluating consteval constructor of derived class whose base
   has more than one field.
   (`#60166 <https://github.com/llvm/llvm-project/issues/60166>`_)
-- Fix an issue about ``decltype`` in the members of class templates derived from
-  templates with related parameters.
-  (`#58674 <https://github.com/llvm/llvm-project/issues/58674>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

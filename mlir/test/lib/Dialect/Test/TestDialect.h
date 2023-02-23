@@ -58,6 +58,23 @@ class RewritePatternSet;
 #include "TestOps.h.inc"
 
 namespace test {
+
+// Op deliberately defined in C++ code rather than ODS to test that C++
+// Ops can still use the old `fold` method.
+class ManualCppOpWithFold
+    : public mlir::Op<ManualCppOpWithFold, mlir::OpTrait::OneResult> {
+public:
+  using Op::Op;
+
+  static llvm::StringRef getOperationName() {
+    return "test.manual_cpp_op_with_fold";
+  }
+
+  static llvm::ArrayRef<llvm::StringRef> getAttributeNames() { return {}; }
+
+  mlir::OpFoldResult fold(llvm::ArrayRef<mlir::Attribute> attributes);
+};
+
 void registerTestDialect(::mlir::DialectRegistry &registry);
 void populateTestReductionPatterns(::mlir::RewritePatternSet &patterns);
 } // namespace test
