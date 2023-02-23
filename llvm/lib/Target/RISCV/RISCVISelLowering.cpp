@@ -616,6 +616,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::VP_FP_TO_SINT, ISD::VP_FP_TO_UINT,
                           ISD::VP_TRUNCATE, ISD::VP_SETCC},
                          VT, Custom);
+
+      setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
+      setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
+
       setOperationAction(ISD::VECTOR_REVERSE, VT, Custom);
 
       setOperationPromotedToType(
@@ -707,6 +711,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          VT, Expand);
       }
 
+      setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
+      setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
+
       // Splice
       setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
 
@@ -787,6 +794,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(
           {ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR},
           VT, Custom);
+
+      setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
+      setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
 
       setOperationAction({ISD::VECTOR_REVERSE, ISD::VECTOR_SPLICE}, VT, Custom);
 
@@ -4166,6 +4176,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerINSERT_SUBVECTOR(Op, DAG);
   case ISD::EXTRACT_SUBVECTOR:
     return lowerEXTRACT_SUBVECTOR(Op, DAG);
+  case ISD::VECTOR_DEINTERLEAVE:
+    return lowerVECTOR_DEINTERLEAVE(Op, DAG);
+  case ISD::VECTOR_INTERLEAVE:
+    return lowerVECTOR_INTERLEAVE(Op, DAG);
   case ISD::STEP_VECTOR:
     return lowerSTEP_VECTOR(Op, DAG);
   case ISD::VECTOR_REVERSE:
@@ -6550,6 +6564,182 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
   // We might have bitcast from a mask type: cast back to the original type if
   // required.
   return DAG.getBitcast(Op.getSimpleValueType(), Slidedown);
+}
+
+// Widen a vector's operands to i8, then truncate its results back to the
+// original type, typically i1.  All operand and result types must be the same.
+static SDValue widenVectorOpsToi8(SDValue N, SDLoc &DL, SelectionDAG &DAG) {
+  MVT VT = N.getSimpleValueType();
+  MVT WideVT = VT.changeVectorElementType(MVT::i8);
+  SmallVector<SDValue, 4> WideOps;
+  for (SDValue Op : N->ops()) {
+    assert(Op.getSimpleValueType() == VT &&
+           "Operands and result must be same type");
+    WideOps.push_back(DAG.getNode(ISD::ZERO_EXTEND, DL, WideVT, Op));
+  }
+
+  unsigned NumVals = N->getNumValues();
+
+  SDVTList VTs = DAG.getVTList(SmallVector<EVT, 4>(
+      NumVals, N.getValueType().changeVectorElementType(MVT::i8)));
+  SDValue WideN = DAG.getNode(N.getOpcode(), DL, VTs, WideOps);
+  SmallVector<SDValue, 4> TruncVals;
+  for (unsigned I = 0; I < NumVals; I++) {
+    TruncVals.push_back(DAG.getNode(ISD::TRUNCATE, DL,
+                                    N->getSimpleValueType(I),
+                                    SDValue(WideN.getNode(), I)));
+  }
+
+  if (TruncVals.size() > 1)
+    return DAG.getMergeValues(TruncVals, DL);
+  return TruncVals.front();
+}
+
+SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
+                                                      SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MVT VecVT = Op.getSimpleValueType();
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  assert(VecVT.isScalableVector() &&
+         "vector_interleave on non-scalable vector!");
+
+  // 1 bit element vectors need to be widened to e8
+  if (VecVT.getVectorElementType() == MVT::i1)
+    return widenVectorOpsToi8(Op, DL, DAG);
+
+  // Concatenate the two vectors as one vector to deinterleave
+  MVT ConcatVT =
+      MVT::getVectorVT(VecVT.getVectorElementType(),
+                       VecVT.getVectorElementCount().multiplyCoefficientBy(2));
+  SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT,
+                               Op.getOperand(0), Op.getOperand(1));
+
+  // We want to operate on all lanes, so get the mask and VL and mask for it
+  auto [Mask, VL] = getDefaultScalableVLOps(ConcatVT, DL, DAG, Subtarget);
+  SDValue Passthru = DAG.getUNDEF(ConcatVT);
+
+  // If the element type is smaller than ELEN, then we can deinterleave
+  // through vnsrl.wi
+  if (VecVT.getScalarSizeInBits() < Subtarget.getELEN()) {
+    // Bitcast the concatenated vector from <n x m x ty> -> <n x m / 2 x ty * 2>
+    // This is also casts FPs to ints
+    MVT WideVT = MVT::getVectorVT(
+        MVT::getIntegerVT(ConcatVT.getScalarSizeInBits() * 2),
+        ConcatVT.getVectorElementCount().divideCoefficientBy(2));
+    SDValue Wide = DAG.getBitcast(WideVT, Concat);
+
+    MVT NarrowVT = VecVT.changeVectorElementTypeToInteger();
+    SDValue Passthru = DAG.getUNDEF(VecVT);
+
+    SDValue Even = DAG.getNode(
+        RISCVISD::VNSRL_VL, DL, NarrowVT, Wide,
+        DAG.getSplatVector(NarrowVT, DL, DAG.getConstant(0, DL, XLenVT)),
+        Passthru, Mask, VL);
+    SDValue Odd = DAG.getNode(
+        RISCVISD::VNSRL_VL, DL, NarrowVT, Wide,
+        DAG.getSplatVector(
+            NarrowVT, DL,
+            DAG.getConstant(VecVT.getScalarSizeInBits(), DL, XLenVT)),
+        Passthru, Mask, VL);
+
+    // Bitcast the results back in case it was casted from an FP vector
+    return DAG.getMergeValues(
+        {DAG.getBitcast(VecVT, Even), DAG.getBitcast(VecVT, Odd)}, DL);
+  }
+
+  // For the indices, use the same SEW to avoid an extra vsetvli
+  MVT IdxVT = ConcatVT.changeVectorElementTypeToInteger();
+  // Create a vector of even indices {0, 2, 4, ...}
+  SDValue EvenIdx =
+      DAG.getStepVector(DL, IdxVT, APInt(IdxVT.getScalarSizeInBits(), 2));
+  // Create a vector of odd indices {1, 3, 5, ... }
+  SDValue OddIdx =
+      DAG.getNode(ISD::ADD, DL, IdxVT, EvenIdx, DAG.getConstant(1, DL, IdxVT));
+
+  // Gather the even and odd elements into two separate vectors
+  SDValue EvenWide = DAG.getNode(RISCVISD::VRGATHER_VV_VL, DL, ConcatVT,
+                                 Concat, EvenIdx, Passthru, Mask, VL);
+  SDValue OddWide = DAG.getNode(RISCVISD::VRGATHER_VV_VL, DL, ConcatVT,
+                                Concat, OddIdx, Passthru, Mask, VL);
+
+  // Extract the result half of the gather for even and odd
+  SDValue Even = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VecVT, EvenWide,
+                             DAG.getConstant(0, DL, XLenVT));
+  SDValue Odd = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VecVT, OddWide,
+                            DAG.getConstant(0, DL, XLenVT));
+
+  return DAG.getMergeValues({Even, Odd}, DL);
+}
+
+SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MVT VecVT = Op.getSimpleValueType();
+
+  assert(VecVT.isScalableVector() &&
+         "vector_interleave on non-scalable vector!");
+
+  // i1 vectors need to be widened to i8
+  if (VecVT.getVectorElementType() == MVT::i1)
+    return widenVectorOpsToi8(Op, DL, DAG);
+
+  MVT XLenVT = Subtarget.getXLenVT();
+  SDValue VL = DAG.getRegister(RISCV::X0, XLenVT);
+
+  SDValue Interleaved;
+
+  // If the element type is smaller than ELEN, then we can interleave with
+  // vwaddu.vv and vwmaccu.vx
+  if (VecVT.getScalarSizeInBits() < Subtarget.getELEN()) {
+    Interleaved = getWideningInterleave(Op.getOperand(0), Op.getOperand(1), DL,
+                                        DAG, Subtarget);
+  } else {
+    // Otherwise, fallback to using vrgathere16.vv
+    MVT ConcatVT =
+      MVT::getVectorVT(VecVT.getVectorElementType(),
+                       VecVT.getVectorElementCount().multiplyCoefficientBy(2));
+    SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT,
+                                 Op.getOperand(0), Op.getOperand(1));
+
+    MVT IdxVT = ConcatVT.changeVectorElementType(MVT::i16);
+
+    // 0 1 2 3 4 5 6 7 ...
+    SDValue StepVec = DAG.getStepVector(DL, IdxVT);
+
+    // 1 1 1 1 1 1 1 1 ...
+    SDValue Ones = DAG.getSplatVector(IdxVT, DL, DAG.getConstant(1, DL, XLenVT));
+
+    // 1 0 1 0 1 0 1 0 ...
+    SDValue OddMask = DAG.getNode(ISD::AND, DL, IdxVT, StepVec, Ones);
+    OddMask = DAG.getSetCC(
+        DL, IdxVT.changeVectorElementType(MVT::i1), OddMask,
+        DAG.getSplatVector(IdxVT, DL, DAG.getConstant(0, DL, XLenVT)),
+        ISD::CondCode::SETNE);
+
+    SDValue VLMax = DAG.getSplatVector(IdxVT, DL, computeVLMax(VecVT, DL, DAG));
+
+    // Build up the index vector for interleaving the concatenated vector
+    //      0      0      1      1      2      2      3      3 ...
+    SDValue Idx = DAG.getNode(ISD::SRL, DL, IdxVT, StepVec, Ones);
+    //      0      n      1    n+1      2    n+2      3    n+3 ...
+    Idx =
+        DAG.getNode(RISCVISD::ADD_VL, DL, IdxVT, Idx, VLMax, Idx, OddMask, VL);
+
+    // Then perform the interleave
+    //   v[0]   v[n]   v[1] v[n+1]   v[2] v[n+2]   v[3] v[n+3] ...
+    Interleaved = DAG.getNode(RISCVISD::VRGATHEREI16_VV_VL, DL, ConcatVT,
+                              Concat, Idx, DAG.getUNDEF(ConcatVT), OddMask, VL);
+  }
+
+  // Extract the two halves from the interleaved result
+  SDValue Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VecVT, Interleaved,
+                           DAG.getVectorIdxConstant(0, DL));
+  SDValue Hi = DAG.getNode(
+      ISD::EXTRACT_SUBVECTOR, DL, VecVT, Interleaved,
+      DAG.getVectorIdxConstant(VecVT.getVectorMinNumElements(), DL));
+
+  return DAG.getMergeValues({Lo, Hi}, DL);
 }
 
 // Lower step_vector to the vid instruction. Any non-identity step value must
