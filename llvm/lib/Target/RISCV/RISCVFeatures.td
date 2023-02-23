@@ -519,6 +519,13 @@ def HasVendorXTHeadMac : Predicate<"Subtarget->hasVendorXTHeadMac()">,
                                    AssemblerPredicate<(all_of FeatureVendorXTHeadMac),
                                    "'xtheadmac' (T-Head Multiply-Accumulate Instructions)">;
 
+def FeatureVendorXTHeadMemIdx
+    : SubtargetFeature<"xtheadmemidx", "HasVendorXTHeadMemIdx", "true",
+                       "'xtheadmemidx' (T-Head Indexed Memory Operations)">;
+def HasVendorXTHeadMemIdx : Predicate<"Subtarget->hasVendorXTHeadMemIdx()">,
+                                      AssemblerPredicate<(all_of FeatureVendorXTHeadMemIdx),
+                                      "'xtheadmemidx' (T-Head Indexed Memory Operations)">;
+
 def FeatureVendorXTHeadMemPair
     : SubtargetFeature<"xtheadmempair", "HasVendorXTHeadMemPair", "true",
                        "'xtheadmempair' (T-Head two-GPR Memory Operations)">;
