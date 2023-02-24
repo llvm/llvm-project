@@ -247,8 +247,8 @@ defm "" : LMULSchedWrites<"WriteVICmpI">;
 defm "" : LMULSchedWrites<"WriteVIMulV">;
 defm "" : LMULSchedWrites<"WriteVIMulX">;
 // 11.11. Vector Integer Divide Instructions
-defm "" : LMULSchedWrites<"WriteVIDivV">;
-defm "" : LMULSchedWrites<"WriteVIDivX">;
+defm "" : LMULSEWSchedWrites<"WriteVIDivV">;
+defm "" : LMULSEWSchedWrites<"WriteVIDivX">;
 // 11.12. Vector Widening Integer Multiply Instructions
 defm "" : LMULSchedWritesW<"WriteVIWMulV">;
 defm "" : LMULSchedWritesW<"WriteVIWMulX">;
@@ -297,8 +297,8 @@ defm "" : LMULSchedWritesFW<"WriteVFWALUF">;
 // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
 defm "" : LMULSchedWrites<"WriteVFMulV">;
 defm "" : LMULSchedWrites<"WriteVFMulF">;
-defm "" : LMULSchedWrites<"WriteVFDivV">;
-defm "" : LMULSchedWrites<"WriteVFDivF">;
+defm "" : LMULSEWSchedWrites<"WriteVFDivV">;
+defm "" : LMULSEWSchedWrites<"WriteVFDivF">;
 // 13.5. Vector Widening Floating-Point Multiply
 defm "" : LMULSchedWritesFW<"WriteVFWMulV">;
 defm "" : LMULSchedWritesFW<"WriteVFWMulF">;
@@ -471,8 +471,8 @@ defm "" : LMULSchedReads<"ReadVICmpX">;
 defm "" : LMULSchedReads<"ReadVIMulV">;
 defm "" : LMULSchedReads<"ReadVIMulX">;
 // 11.11. Vector Integer Divide Instructions
-defm "" : LMULSchedReads<"ReadVIDivV">;
-defm "" : LMULSchedReads<"ReadVIDivX">;
+defm "" : LMULSEWSchedReads<"ReadVIDivV">;
+defm "" : LMULSEWSchedReads<"ReadVIDivX">;
 // 11.12. Vector Widening Integer Multiply Instructions
 defm "" : LMULSchedReadsW<"ReadVIWMulV">;
 defm "" : LMULSchedReadsW<"ReadVIWMulX">;
@@ -516,8 +516,8 @@ defm "" : LMULSchedReadsFW<"ReadVFWALUF">;
 // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
 defm "" : LMULSchedReads<"ReadVFMulV">;
 defm "" : LMULSchedReads<"ReadVFMulF">;
-defm "" : LMULSchedReads<"ReadVFDivV">;
-defm "" : LMULSchedReads<"ReadVFDivF">;
+defm "" : LMULSEWSchedReads<"ReadVFDivV">;
+defm "" : LMULSEWSchedReads<"ReadVFDivF">;
 // 13.5. Vector Widening Floating-Point Multiply
 defm "" : LMULSchedReadsFW<"ReadVFWMulV">;
 defm "" : LMULSchedReadsFW<"ReadVFWMulF">;
@@ -712,8 +712,8 @@ defm "" : LMULWriteRes<"WriteVICmpX", []>;
 defm "" : LMULWriteRes<"WriteVICmpI", []>;
 defm "" : LMULWriteRes<"WriteVIMulV", []>;
 defm "" : LMULWriteRes<"WriteVIMulX", []>;
-defm "" : LMULWriteRes<"WriteVIDivV", []>;
-defm "" : LMULWriteRes<"WriteVIDivX", []>;
+defm "" : LMULSEWWriteRes<"WriteVIDivV", []>;
+defm "" : LMULSEWWriteRes<"WriteVIDivX", []>;
 defm "" : LMULWriteResW<"WriteVIWMulV", []>;
 defm "" : LMULWriteResW<"WriteVIWMulX", []>;
 defm "" : LMULWriteRes<"WriteVIMulAddV", []>;
@@ -749,8 +749,8 @@ defm "" : LMULWriteResFW<"WriteVFWALUV", []>;
 defm "" : LMULWriteResFW<"WriteVFWALUF", []>;
 defm "" : LMULWriteRes<"WriteVFMulV", []>;
 defm "" : LMULWriteRes<"WriteVFMulF", []>;
-defm "" : LMULWriteRes<"WriteVFDivV", []>;
-defm "" : LMULWriteRes<"WriteVFDivF", []>;
+defm "" : LMULSEWWriteRes<"WriteVFDivV", []>;
+defm "" : LMULSEWWriteRes<"WriteVFDivF", []>;
 defm "" : LMULWriteResFW<"WriteVFWMulV", []>;
 defm "" : LMULWriteResFW<"WriteVFWMulF", []>;
 defm "" : LMULWriteRes<"WriteVFMulAddV", []>;
@@ -867,8 +867,8 @@ defm "" : LMULReadAdvance<"ReadVICmpV", 0>;
 defm "" : LMULReadAdvance<"ReadVICmpX", 0>;
 defm "" : LMULReadAdvance<"ReadVIMulV", 0>;
 defm "" : LMULReadAdvance<"ReadVIMulX", 0>;
-defm "" : LMULReadAdvance<"ReadVIDivV", 0>;
-defm "" : LMULReadAdvance<"ReadVIDivX", 0>;
+defm "" : LMULSEWReadAdvance<"ReadVIDivV", 0>;
+defm "" : LMULSEWReadAdvance<"ReadVIDivX", 0>;
 defm "" : LMULReadAdvanceW<"ReadVIWMulV", 0>;
 defm "" : LMULReadAdvanceW<"ReadVIWMulX", 0>;
 defm "" : LMULReadAdvance<"ReadVIMulAddV", 0>;
@@ -899,8 +899,8 @@ defm "" : LMULReadAdvanceFW<"ReadVFWALUV", 0>;
 defm "" : LMULReadAdvanceFW<"ReadVFWALUF", 0>;
 defm "" : LMULReadAdvance<"ReadVFMulV", 0>;
 defm "" : LMULReadAdvance<"ReadVFMulF", 0>;
-defm "" : LMULReadAdvance<"ReadVFDivV", 0>;
-defm "" : LMULReadAdvance<"ReadVFDivF", 0>;
+defm "" : LMULSEWReadAdvance<"ReadVFDivV", 0>;
+defm "" : LMULSEWReadAdvance<"ReadVFDivF", 0>;
 defm "" : LMULReadAdvanceFW<"ReadVFWMulV", 0>;
 defm "" : LMULReadAdvanceFW<"ReadVFWMulF", 0>;
 defm "" : LMULReadAdvance<"ReadVFMulAddV", 0>;

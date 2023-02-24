@@ -2033,6 +2033,10 @@ multiclass VPseudoBinaryFV_VV<LMULInfo m, string Constraint = ""> {
   defm _VV : VPseudoBinary<m.vrclass, m.vrclass, m.vrclass, m, Constraint>;
 }
 
+multiclass VPseudoBinaryFV_VV_E<LMULInfo m, int sew, string Constraint = ""> {
+  defm _VV : VPseudoBinary_E<m.vrclass, m.vrclass, m.vrclass, m, sew, Constraint>;
+}
+
 multiclass VPseudoVGTR_VV_EEW<int eew, string Constraint = ""> {
   foreach m = MxList in {
     defvar mx = m.MX;
@@ -2060,6 +2064,10 @@ multiclass VPseudoBinaryV_VX<LMULInfo m, string Constraint = ""> {
   defm "_VX" : VPseudoBinary<m.vrclass, m.vrclass, GPR, m, Constraint>;
 }
 
+multiclass VPseudoBinaryV_VX_E<LMULInfo m, int sew, string Constraint = ""> {
+  defm "_VX" : VPseudoBinary_E<m.vrclass, m.vrclass, GPR, m, sew, Constraint>;
+}
+
 multiclass VPseudoVSLD1_VX<string Constraint = ""> {
   foreach m = MxList in {
     defvar mx = m.MX;
@@ -2075,6 +2083,12 @@ multiclass VPseudoVSLD1_VX<string Constraint = ""> {
 multiclass VPseudoBinaryV_VF<LMULInfo m, FPR_Info f, string Constraint = ""> {
   defm "_V" # f.FX : VPseudoBinary<m.vrclass, m.vrclass,
                                    f.fprclass, m, Constraint>;
+}
+
+multiclass VPseudoBinaryV_VF_E<LMULInfo m, int sew, FPR_Info f,
+                               string Constraint = ""> {
+  defm "_V" # f.FX : VPseudoBinary_E<m.vrclass, m.vrclass,
+                                     f.fprclass, m, sew, Constraint>;
 }
 
 multiclass VPseudoVSLD1_VF<string Constraint = ""> {
@@ -2621,15 +2635,18 @@ multiclass VPseudoVMUL_VV_VX {
 multiclass VPseudoVDIV_VV_VX {
   foreach m = MxList in {
     defvar mx = m.MX;
-    defvar WriteVIDivV_MX = !cast<SchedWrite>("WriteVIDivV_" # mx);
-    defvar WriteVIDivX_MX = !cast<SchedWrite>("WriteVIDivX_" # mx);
-    defvar ReadVIDivV_MX = !cast<SchedRead>("ReadVIDivV_" # mx);
-    defvar ReadVIDivX_MX = !cast<SchedRead>("ReadVIDivX_" # mx);
+    defvar sews = SchedSEWSet<mx>.val;
+    foreach e = sews in {
+      defvar WriteVIDivV_MX_E = !cast<SchedWrite>("WriteVIDivV_" # mx # "_E" # e);
+      defvar WriteVIDivX_MX_E = !cast<SchedWrite>("WriteVIDivX_" # mx # "_E" # e);
+      defvar ReadVIDivV_MX_E = !cast<SchedRead>("ReadVIDivV_" # mx # "_E" # e);
+      defvar ReadVIDivX_MX_E = !cast<SchedRead>("ReadVIDivX_" # mx # "_E" # e);
 
-    defm "" : VPseudoBinaryV_VV<m>,
-              Sched<[WriteVIDivV_MX, ReadVIDivV_MX, ReadVIDivV_MX, ReadVMask]>;
-    defm "" : VPseudoBinaryV_VX<m>,
-              Sched<[WriteVIDivX_MX, ReadVIDivV_MX, ReadVIDivX_MX, ReadVMask]>;
+      defm "" : VPseudoBinaryV_VV_E<m, e>,
+                Sched<[WriteVIDivV_MX_E, ReadVIDivV_MX_E, ReadVIDivV_MX_E, ReadVMask]>;
+      defm "" : VPseudoBinaryV_VX_E<m, e>,
+                Sched<[WriteVIDivX_MX_E, ReadVIDivV_MX_E, ReadVIDivX_MX_E, ReadVMask]>;
+    }
   }
 }
 
@@ -2659,22 +2676,28 @@ multiclass VPseudoVFMUL_VV_VF {
 multiclass VPseudoVFDIV_VV_VF {
   foreach m = MxListF in {
     defvar mx = m.MX;
-    defvar WriteVFDivV_MX = !cast<SchedWrite>("WriteVFDivV_" # mx);
-    defvar ReadVFDivV_MX = !cast<SchedRead>("ReadVFDivV_" # mx);
+    defvar sews = SchedSEWSet<mx>.val;
+    foreach e = sews in {
+      defvar WriteVFDivV_MX_E = !cast<SchedWrite>("WriteVFDivV_" # mx # "_E" # e);
+      defvar ReadVFDivV_MX_E = !cast<SchedRead>("ReadVFDivV_" # mx # "_E" # e);
 
-    defm "" : VPseudoBinaryFV_VV<m>,
-              Sched<[WriteVFDivV_MX, ReadVFDivV_MX, ReadVFDivV_MX, ReadVMask]>;
+      defm "" : VPseudoBinaryFV_VV_E<m, e>,
+                Sched<[WriteVFDivV_MX_E, ReadVFDivV_MX_E, ReadVFDivV_MX_E, ReadVMask]>;
+    }
   }
 
   foreach f = FPList in {
     foreach m = f.MxList in {
       defvar mx = m.MX;
-      defvar WriteVFDivF_MX = !cast<SchedWrite>("WriteVFDivF_" # mx);
-      defvar ReadVFDivV_MX = !cast<SchedRead>("ReadVFDivV_" # mx);
-      defvar ReadVFDivF_MX = !cast<SchedRead>("ReadVFDivF_" # mx);
+      defvar sews = SchedSEWSet<mx>.val;
+      foreach e = sews in {
+        defvar WriteVFDivF_MX_E = !cast<SchedWrite>("WriteVFDivF_" # mx # "_E" # e);
+        defvar ReadVFDivV_MX_E = !cast<SchedRead>("ReadVFDivV_" # mx # "_E" # e);
+        defvar ReadVFDivF_MX_E = !cast<SchedRead>("ReadVFDivF_" # mx # "_E" # e);
 
-      defm "" : VPseudoBinaryV_VF<m, f>,
-                Sched<[WriteVFDivF_MX, ReadVFDivV_MX, ReadVFDivF_MX, ReadVMask]>;
+        defm "" : VPseudoBinaryV_VF_E<m, e, f>,
+                  Sched<[WriteVFDivF_MX_E, ReadVFDivV_MX_E, ReadVFDivF_MX_E, ReadVMask]>;
+      }
     }
   }
 }
@@ -2683,11 +2706,15 @@ multiclass VPseudoVFRDIV_VF {
   foreach f = FPList in {
     foreach m = f.MxList in {
       defvar mx = m.MX;
-      defvar WriteVFDivF_MX = !cast<SchedWrite>("WriteVFDivF_" # mx);
-      defvar ReadVFDivV_MX = !cast<SchedRead>("ReadVFDivV_" # mx);
-      defvar ReadVFDivF_MX = !cast<SchedRead>("ReadVFDivF_" # mx);
-        defm "" : VPseudoBinaryV_VF<m, f>,
-                  Sched<[WriteVFDivF_MX, ReadVFDivV_MX, ReadVFDivF_MX, ReadVMask]>;
+      defvar sews = SchedSEWSet<mx>.val;
+      foreach e = sews in {
+        defvar WriteVFDivF_MX_E = !cast<SchedWrite>("WriteVFDivF_" # mx # "_E" # e);
+        defvar ReadVFDivV_MX_E = !cast<SchedRead>("ReadVFDivV_" # mx # "_E" # e);
+        defvar ReadVFDivF_MX_E = !cast<SchedRead>("ReadVFDivF_" # mx # "_E" # e);
+
+        defm "" : VPseudoBinaryV_VF_E<m, e, f>,
+                  Sched<[WriteVFDivF_MX_E, ReadVFDivV_MX_E, ReadVFDivF_MX_E, ReadVMask]>;
+      }
     }
   }
 }
@@ -4503,6 +4530,16 @@ multiclass VPatBinaryV_VV<string intrinsic, string instruction,
                         vti.RegClass, vti.RegClass>;
 }
 
+multiclass VPatBinaryV_VV_E<string intrinsic, string instruction,
+                            list<VTypeInfo> vtilist> {
+  foreach vti = vtilist in
+    defm : VPatBinaryTA<intrinsic,
+                        instruction # "_VV_" # vti.LMul.MX # "_E" # vti.SEW,
+                        vti.Vector, vti.Vector, vti.Vector,vti.Mask,
+                        vti.Log2SEW, vti.RegClass,
+                        vti.RegClass, vti.RegClass>;
+}
+
 multiclass VPatBinaryV_VV_INT_E<string intrinsic, string instruction,
                           list<VTypeInfo> vtilist> {
   foreach vti = vtilist in {
@@ -4539,6 +4576,18 @@ multiclass VPatBinaryV_VX<string intrinsic, string instruction,
   foreach vti = vtilist in {
     defvar kind = "V"#vti.ScalarSuffix;
     defm : VPatBinaryTA<intrinsic, instruction#"_"#kind#"_"#vti.LMul.MX,
+                        vti.Vector, vti.Vector, vti.Scalar, vti.Mask,
+                        vti.Log2SEW, vti.RegClass,
+                        vti.RegClass, vti.ScalarRegClass>;
+  }
+}
+
+multiclass VPatBinaryV_VX_E<string intrinsic, string instruction,
+                            list<VTypeInfo> vtilist> {
+  foreach vti = vtilist in {
+    defvar kind = "V"#vti.ScalarSuffix;
+    defm : VPatBinaryTA<intrinsic,
+                        instruction#"_"#kind#"_"#vti.LMul.MX#"_E"#vti.SEW,
                         vti.Vector, vti.Vector, vti.Scalar, vti.Mask,
                         vti.Log2SEW, vti.RegClass,
                         vti.RegClass, vti.ScalarRegClass>;
@@ -4809,6 +4858,11 @@ multiclass VPatBinaryV_VV_VX<string intrinsic, string instruction,
                              list<VTypeInfo> vtilist>
     : VPatBinaryV_VV<intrinsic, instruction, vtilist>,
       VPatBinaryV_VX<intrinsic, instruction, vtilist>;
+
+multiclass VPatBinaryV_VV_VX_E<string intrinsic, string instruction,
+                               list<VTypeInfo> vtilist>
+    : VPatBinaryV_VV_E<intrinsic, instruction, vtilist>,
+      VPatBinaryV_VX_E<intrinsic, instruction, vtilist>;
 
 multiclass VPatBinaryV_VX_VI<string intrinsic, string instruction,
                              list<VTypeInfo> vtilist>
@@ -6091,10 +6145,10 @@ defm : VPatBinaryV_VV_VX<"int_riscv_vmulhsu", "PseudoVMULHSU", AllIntegerVectors
 //===----------------------------------------------------------------------===//
 // 11.11. Vector Integer Divide Instructions
 //===----------------------------------------------------------------------===//
-defm : VPatBinaryV_VV_VX<"int_riscv_vdivu", "PseudoVDIVU", AllIntegerVectors>;
-defm : VPatBinaryV_VV_VX<"int_riscv_vdiv", "PseudoVDIV", AllIntegerVectors>;
-defm : VPatBinaryV_VV_VX<"int_riscv_vremu", "PseudoVREMU", AllIntegerVectors>;
-defm : VPatBinaryV_VV_VX<"int_riscv_vrem", "PseudoVREM", AllIntegerVectors>;
+defm : VPatBinaryV_VV_VX_E<"int_riscv_vdivu", "PseudoVDIVU", AllIntegerVectors>;
+defm : VPatBinaryV_VV_VX_E<"int_riscv_vdiv", "PseudoVDIV", AllIntegerVectors>;
+defm : VPatBinaryV_VV_VX_E<"int_riscv_vremu", "PseudoVREMU", AllIntegerVectors>;
+defm : VPatBinaryV_VV_VX_E<"int_riscv_vrem", "PseudoVREM", AllIntegerVectors>;
 
 //===----------------------------------------------------------------------===//
 // 11.12. Vector Widening Integer Multiply Instructions
@@ -6207,8 +6261,8 @@ defm : VPatBinaryW_WV_WX<"int_riscv_vfwsub_w", "PseudoVFWSUB", AllWidenableFloat
 // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
 //===----------------------------------------------------------------------===//
 defm : VPatBinaryV_VV_VX<"int_riscv_vfmul", "PseudoVFMUL", AllFloatVectors>;
-defm : VPatBinaryV_VV_VX<"int_riscv_vfdiv", "PseudoVFDIV", AllFloatVectors>;
-defm : VPatBinaryV_VX<"int_riscv_vfrdiv", "PseudoVFRDIV", AllFloatVectors>;
+defm : VPatBinaryV_VV_VX_E<"int_riscv_vfdiv", "PseudoVFDIV", AllFloatVectors>;
+defm : VPatBinaryV_VX_E<"int_riscv_vfrdiv", "PseudoVFRDIV", AllFloatVectors>;
 
 //===----------------------------------------------------------------------===//
 // 13.5. Vector Widening Floating-Point Multiply
