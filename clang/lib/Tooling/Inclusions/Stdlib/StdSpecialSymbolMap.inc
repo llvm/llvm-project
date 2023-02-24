@@ -233,6 +233,15 @@ SYMBOL(ssize, std::, <unordered_map>)
 SYMBOL(ssize, std::, <unordered_set>)
 SYMBOL(ssize, std::, <vector>)
 
+// Add headers for generic integer-type abs.
+// Ignore other variants (std::complex, std::valarray, std::intmax_t)
+SYMBOL(abs, std::, <cstdlib>)
+SYMBOL(abs, std::, <cmath>)
+SYMBOL(abs, None, <cstdlib>)
+SYMBOL(abs, None, <stdlib.h>)
+SYMBOL(abs, None, <cmath>)
+SYMBOL(abs, None, <math.h>)
+
 // std::get has a few variants for different types (tuple, array, pair etc)
 // which is tricky to disambiguate without type information.
 // Don't set any header for it, as it comes with the type header.
