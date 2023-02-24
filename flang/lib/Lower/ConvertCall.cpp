@@ -764,7 +764,7 @@ struct ConditionallyPreparedDummy {
       if (type == i1Type)
         elseResultValues.push_back(builder.createBool(loc, false));
       else
-        elseResultValues.push_back(builder.create<fir::AbsentOp>(loc, type));
+        elseResultValues.push_back(builder.genAbsentOp(loc, type));
     }
     builder.create<fir::ResultOp>(loc, elseResultValues);
   }
@@ -1047,7 +1047,7 @@ genUserCall(PreparedActualArguments &loweredActuals,
     mlir::Type argTy = callSiteType.getInput(arg.firArgument);
     if (!preparedActual) {
       // Optional dummy argument for which there is no actual argument.
-      caller.placeInput(arg, builder.create<fir::AbsentOp>(loc, argTy));
+      caller.placeInput(arg, builder.genAbsentOp(loc, argTy));
       continue;
     }
     const auto *expr = arg.entity->UnwrapExpr();
