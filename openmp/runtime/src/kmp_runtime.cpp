@@ -24,7 +24,6 @@
 #include "kmp_wait_release.h"
 #include "kmp_wrapper_getpid.h"
 #include "kmp_dispatch.h"
-#include <cstdio>
 #if KMP_USE_HIER_SCHED
 #include "kmp_dispatch_hier.h"
 #endif
@@ -6917,12 +6916,11 @@ void __kmp_unregister_library(void) {
     // File did not open. Try the temporary file.
     use_shm = false;
     KMP_DEBUG_ASSERT(temp_reg_status_file_name);
-    FILE *tf = fopen(temp_reg_status_file_name, O_RDONLY);
-    if (!tf) {
+    fd1 = open(temp_reg_status_file_name, O_RDONLY);
+    if (fd1 == -1) {
       // give it up now.
       return;
     }
-    fd1 = fileno(tf);
   }
   char *data1 = (char *)mmap(0, SHM_SIZE, PROT_READ, MAP_SHARED, fd1, 0);
   if (data1 != MAP_FAILED) {
