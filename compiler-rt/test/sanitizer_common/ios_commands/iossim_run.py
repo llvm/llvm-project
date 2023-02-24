@@ -22,11 +22,6 @@ for e in [
   if e in os.environ:
     os.environ["SIMCTL_CHILD_" + e] = os.environ[e]
 
-find_atos_cmd = 'xcrun -sdk iphonesimulator -f atos'
-atos_path = subprocess.run(find_atos_cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True).stdout.decode().strip()
-for san in ['ASAN', 'TSAN', 'UBSAN', 'LSAN']:
-  os.environ[f'SIMCTL_CHILD_{san}_SYMBOLIZER_PATH'] = atos_path
-
 prog = sys.argv[1]
 exit_code = None
 if prog == 'rm':
