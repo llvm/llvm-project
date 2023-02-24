@@ -271,11 +271,6 @@ experimental/regex experimental/string
 experimental/regex regex
 experimental/set experimental/memory_resource
 experimental/set set
-experimental/simd algorithm
-experimental/simd array
-experimental/simd cstddef
-experimental/simd functional
-experimental/simd tuple
 experimental/string experimental/memory_resource
 experimental/string string
 experimental/type_traits initializer_list
