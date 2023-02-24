@@ -3,16 +3,16 @@
 
 // REQUIRES: ondisk_cas
 
-// RUN: rm -rf %t
+// RUN: rm -rf %t %t.cas %t.cas_2
 // RUN: split-file %s %t
 
-// RUN: llvm-cas --cas %t/cas --ingest --data %t > %t/casid
+// RUN: llvm-cas --cas %t.cas --ingest --data %t > %t/casid
 
 // RUN: not %clang_cc1 -triple x86_64-apple-macos11 \
 // RUN:   -fmodules -fno-implicit-modules \
 // RUN:   -fmodule-file-cache-key=INVALID \
 // RUN:   -fsyntax-only %t/tu.c \
-// RUN:   -fcas-path %t/cas -fcas-fs @%t/casid \
+// RUN:   -fcas-path %t.cas -fcas-fs @%t/casid \
 // RUN:   -fcache-compile-job -Rcompile-job-cache &> %t/invalid.txt
 // RUN: cat %t/invalid.txt | FileCheck %s -check-prefix=INVALID
 
@@ -22,7 +22,7 @@
 // RUN:   -fmodules -fno-implicit-modules \
 // RUN:   -fmodule-file-cache-key=PATH=KEY \
 // RUN:   -fsyntax-only %t/tu.c \
-// RUN:   -fcas-path %t/cas -fcas-fs @%t/casid \
+// RUN:   -fcas-path %t.cas -fcas-fs @%t/casid \
 // RUN:   -fcache-compile-job -Rcompile-job-cache &> %t/bad_key.txt
 // RUN: cat %t/bad_key.txt | FileCheck %s -check-prefix=BAD_KEY
 
@@ -35,7 +35,7 @@
 // RUN:   -fmodules -fno-implicit-modules \
 // RUN:   @%t/bad_key2.rsp \
 // RUN:   -fsyntax-only %t/tu.c \
-// RUN:   -fcas-path %t/cas -fcas-fs @%t/casid \
+// RUN:   -fcas-path %t.cas -fcas-fs @%t/casid \
 // RUN:   -fcache-compile-job -Rcompile-job-cache &> %t/bad_key2.txt
 // RUN: cat %t/bad_key2.txt | FileCheck %s -check-prefix=BAD_KEY2
 
@@ -46,7 +46,7 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macos11 \
 // RUN:   -fmodules -fmodule-name=A -fno-implicit-modules \
 // RUN:   -emit-module %t/module.modulemap -o %t/A.pcm \
-// RUN:   -fcas-path %t/cas -fcas-fs @%t/casid \
+// RUN:   -fcas-path %t.cas -fcas-fs @%t/casid \
 // RUN:   -fcache-compile-job -Rcompile-job-cache &> %t/A.out.txt
 // RUN: cat %t/A.out.txt | FileCheck %s --check-prefix=CACHE-MISS
 // CACHE-MISS: remark: compile job cache miss
@@ -54,7 +54,7 @@
 
 // == Try to import A with an empty action cache, simulating a missing module
 
-// RUN: llvm-cas --cas %t/cas_2 --import --upstream-cas %t/cas @%t/A.key
+// RUN: llvm-cas --cas %t.cas_2 --import --upstream-cas %t.cas @%t/A.key
 
 // RUN: echo -n '-fmodule-file-cache-key=PATH=' > %t/not_in_cache.rsp
 // RUN: cat %t/A.key >> %t/not_in_cache.rsp
@@ -63,7 +63,7 @@
 // RUN:   -fmodules -fno-implicit-modules \
 // RUN:   @%t/not_in_cache.rsp \
 // RUN:   -fsyntax-only %t/tu.c \
-// RUN:   -fcas-path %t/cas_2 -fcas-fs @%t/casid \
+// RUN:   -fcas-path %t.cas_2 -fcas-fs @%t/casid \
 // RUN:   -fcache-compile-job -Rcompile-job-cache &> %t/not_in_cache.txt
 // RUN: cat %t/not_in_cache.txt | FileCheck %s -check-prefix=NOT_IN_CACHE -DPREFIX=%/t
 
