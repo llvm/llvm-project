@@ -5763,8 +5763,10 @@ INTERCEPTOR(int, capget, void *hdrp, void *datap) {
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
   int res = REAL(capget)(hdrp, datap);
-  if (res == 0 && datap)
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, datap, __user_cap_data_struct_sz);
+  if (res == 0 && datap) {
+    unsigned datasz = __user_cap_data_struct_sz(hdrp);
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, datap, datasz);
+  }
   // We can also return -1 and write to hdrp->version if the version passed in
   // hdrp->version is unsupported. But that's not a trivial condition to check,
   // and anyway COMMON_INTERCEPTOR_READ_RANGE protects us to some extent.
@@ -5775,8 +5777,10 @@ INTERCEPTOR(int, capset, void *hdrp, const void *datap) {
   COMMON_INTERCEPTOR_ENTER(ctx, capset, hdrp, datap);
   if (hdrp)
     COMMON_INTERCEPTOR_READ_RANGE(ctx, hdrp, __user_cap_header_struct_sz);
-  if (datap)
-    COMMON_INTERCEPTOR_READ_RANGE(ctx, datap, __user_cap_data_struct_sz);
+  if (datap) {
+    unsigned datasz = __user_cap_data_struct_sz(hdrp);
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, datap, datasz);
+  }
   return REAL(capset)(hdrp, datap);
 }
 #define INIT_CAPGET                  \
