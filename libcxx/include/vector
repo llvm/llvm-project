@@ -439,11 +439,11 @@ private:
       _LIBCPP_CONSTEXPR __destroy_vector(vector& __vec) : __vec_(__vec) {}
 
       _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void operator()() {
-          __vec_.__annotate_delete();
           std::__debug_db_erase_c(std::addressof(__vec_));
 
           if (__vec_.__begin_ != nullptr) {
             __vec_.__clear();
+            __vec_.__annotate_delete();
             __alloc_traits::deallocate(__vec_.__alloc(), __vec_.__begin_, __vec_.capacity());
           }
       }
@@ -743,8 +743,25 @@ private:
                                          const void *__old_mid,
                                          const void *__new_mid) const
     {
-
+#  if _LIBCPP_CLANG_VER >= 1600
+      if (!__libcpp_is_constant_evaluated() && __beg)
+      // Implementation of __sanitizer_annotate_contiguous_container function changed with commit
+      // rGdd1b7b797a116eed588fd752fbe61d34deeb24e4 and supports:
+      //  - unaligned beginnings of buffers,
+      //  - shared first/last granule (if memory granule is shared with a different object
+      //    just after the end of unaligned end/before the unaligned beginning, memory of that object won't be poisoned).
+      //
+      // Therefore, check for standard allocator is not necessary.
+#  else
+      // TODO LLVM18: Remove the special-casing
+      //
+      // Vectors annotations rely on __sanitizer_annotate_contiguous_container function,
+      // its implementation from LLVM15 (and earlier) requires that
+      // beginning of a containers data buffer is aligned to shadow granularity and
+      // memory just after is not shared with another object.
+      // Default allocator satisfies that.
       if (!__libcpp_is_constant_evaluated() && __beg && is_same<allocator_type, __default_allocator_type>::value)
+#  endif
         __sanitizer_annotate_contiguous_container(__beg, __end, __old_mid, __new_mid);
     }
 #else
@@ -866,6 +883,7 @@ private:
     if (__alloc() != __c.__alloc())
     {
       __clear();
+      __annotate_delete();
       __alloc_traits::deallocate(__alloc(), this->__begin_, capacity());
       this->__begin_ = this->__end_ = __end_cap() = nullptr;
     }
@@ -954,6 +972,7 @@ vector<_Tp, _Allocator>::__vdeallocate() _NOEXCEPT
     if (this->__begin_ != nullptr)
     {
         clear();
+        __annotate_delete();
         __alloc_traits::deallocate(this->__alloc(), this->__begin_, capacity());
         this->__begin_ = this->__end_ = this->__end_cap() = nullptr;
     }

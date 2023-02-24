@@ -616,12 +616,17 @@ struct ConvertRewriter : public OpRewritePattern<ConvertOp> {
                                 PatternRewriter &rewriter) const override {
     auto encDst = getSparseTensorEncoding(op.getType());
     auto encSrc = getSparseTensorEncoding(op.getSource().getType());
-    if (encDst && encSrc) {
-      // Trivial tensor conversion is handled in codegen.
-      if (encSrc == encDst)
-        return failure();
-      return sparse2SparseRewrite(op, rewriter);
+    if (encDst && encSrc &&
+        encSrc.withoutBitWidths() == encDst.withoutBitWidths()) {
+      // Trivial tensor conversion and simple element type conversion is handled
+      // in codegen.
+      return failure();
     }
+    // TODO: Add a cast before generating InsertOp.
+    assert(op.getSource().getType().getElementType() ==
+           op.getDest().getType().getElementType());
+    if (encSrc && encDst)
+      return sparse2SparseRewrite(op, rewriter);
     if (encSrc && !encDst)
       return sparse2DenseRewrite(op, rewriter);
     if (!encSrc && encDst)

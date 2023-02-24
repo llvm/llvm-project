@@ -3014,8 +3014,15 @@ void DAGTypeLegalizer::ExpandIntRes_ADDSUB(SDNode *N,
   if (N->getOpcode() == ISD::ADD) {
     Lo = DAG.getNode(ISD::ADD, dl, NVT, LoOps);
     Hi = DAG.getNode(ISD::ADD, dl, NVT, ArrayRef(HiOps, 2));
-    SDValue Cmp = DAG.getSetCC(dl, getSetCCResultType(NVT), Lo, LoOps[0],
-                               ISD::SETULT);
+    SDValue Cmp;
+    // Special case: X+1 has a carry out if X+1==0. This may reduce the live
+    // range of X. We assume comparing with 0 is cheap.
+    if (isOneConstant(LoOps[1]))
+      Cmp = DAG.getSetCC(dl, getSetCCResultType(NVT), Lo,
+                         DAG.getConstant(0, dl, NVT), ISD::SETEQ);
+    else
+      Cmp = DAG.getSetCC(dl, getSetCCResultType(NVT), Lo, LoOps[0],
+                         ISD::SETULT);
 
     SDValue Carry;
     if (BoolType == TargetLoweringBase::ZeroOrOneBooleanContent)
@@ -3137,9 +3144,17 @@ void DAGTypeLegalizer::ExpandIntRes_UADDSUBO(SDNode *N,
     SDValue Sum = DAG.getNode(NoCarryOp, dl, LHS.getValueType(), LHS, RHS);
     SplitInteger(Sum, Lo, Hi);
 
-    // Calculate the overflow: addition overflows iff a + b < a, and subtraction
-    // overflows iff a - b > a.
-    Ovf = DAG.getSetCC(dl, N->getValueType(1), Sum, LHS, Cond);
+    if (N->getOpcode() == ISD::UADDO && isOneConstant(RHS)) {
+      // Special case: uaddo X, 1 overflowed if X+1 == 0. We can detect this
+      // with (Lo | Hi) == 0.
+      SDValue Or = DAG.getNode(ISD::OR, dl, Lo.getValueType(), Lo, Hi);
+      Ovf = DAG.getSetCC(dl, N->getValueType(1), Or,
+                         DAG.getConstant(0, dl, Lo.getValueType()), ISD::SETEQ);
+    } else {
+      // Calculate the overflow: addition overflows iff a + b < a, and
+      // subtraction overflows iff a - b > a.
+      Ovf = DAG.getSetCC(dl, N->getValueType(1), Sum, LHS, Cond);
+    }
   }
 
   // Legalized the flag result - switch anything that used the old flag to
