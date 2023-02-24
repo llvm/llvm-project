@@ -157,7 +157,7 @@ class Parser : public CodeCompletionHandler {
 
   /// Identifiers used by the 'external_source_symbol' attribute.
   IdentifierInfo *Ident_language, *Ident_defined_in,
-      *Ident_generated_declaration;
+      *Ident_generated_declaration, *Ident_USR;
 
   /// C++11 contextual keywords.
   mutable IdentifierInfo *Ident_final;
