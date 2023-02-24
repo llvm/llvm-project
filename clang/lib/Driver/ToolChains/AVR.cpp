@@ -545,6 +545,9 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // Add user specified linker script.
     Args.AddAllArgs(CmdArgs, options::OPT_T);
 
+    if (Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax, true))
+      CmdArgs.push_back("--relax");
+
     // Specify the family name as the emulation mode to use.
     // This is almost always required because otherwise avr-ld
     // will assume 'avr2' and warn about the program being larger
