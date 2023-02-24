@@ -4,9 +4,9 @@
 
 // RUN: %clang_cc1 -std=c++20 %t/M.cppm -verify
 // RUN: %clang_cc1 -std=c++20 %t/M.cppm -emit-module-interface -o %t/M.pcm
-// RUN: %clang_cc1 -std=c++20 -fmodule-file=%t/M.pcm %t/M.cpp -verify
+// RUN: %clang_cc1 -std=c++20 -fmodule-file=M=%t/M.pcm %t/M.cpp -verify
 //
-// RUN: %clang_cc1 -std=c++20 -fmodule-file=%t/M.pcm %t/user.cpp -verify
+// RUN: %clang_cc1 -std=c++20 -fmodule-file=M=%t/M.pcm %t/user.cpp -verify
 
 //--- M.cppm
 // expected-no-diagnostics
