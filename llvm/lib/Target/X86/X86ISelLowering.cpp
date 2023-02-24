@@ -57260,9 +57260,18 @@ X86TargetLowering::isDesirableToCombineLogicOpOfSETCC(
   EVT OpVT = SETCC0->getOperand(0).getValueType();
   if (!VT.isInteger())
     return AndOrSETCCFoldKind::None;
+
   if (VT.isVector())
-    return isOperationLegal(ISD::ABS, OpVT) ? AndOrSETCCFoldKind::ABS
-                                            : AndOrSETCCFoldKind::None;
+    return AndOrSETCCFoldKind(AndOrSETCCFoldKind::NotAnd |
+                              (isOperationLegal(ISD::ABS, OpVT)
+                                   ? AndOrSETCCFoldKind::ABS
+                                   : AndOrSETCCFoldKind::None));
+
+  // Don't use `NotAnd` as even though `not` is generally shorter code size than
+  // `add`, `add` can lower to LEA which can save moves / spills. Any case where
+  // `NotAnd` applies, `AddAnd` does as well.
+  // TODO: Currently we lower (icmp eq/ne (and ~X, Y), 0) -> `test (not X), Y`,
+  // if we change that to `andn Y, X` it may be worth prefering `NotAnd` here.
   return AndOrSETCCFoldKind::AddAnd;
 }
 
