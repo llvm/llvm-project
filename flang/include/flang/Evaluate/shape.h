@@ -184,8 +184,10 @@ private:
                   !ContainsAnyImpliedDoIndex(ido.upper()) &&
                   !ContainsAnyImpliedDoIndex(ido.stride())) {
                 if (auto nValues{GetArrayConstructorExtent(ido.values())}) {
-                  return std::move(*nValues) *
-                      CountTrips(ido.lower(), ido.upper(), ido.stride());
+                  if (!ContainsAnyImpliedDoIndex(*nValues)) {
+                    return std::move(*nValues) *
+                        CountTrips(ido.lower(), ido.upper(), ido.stride());
+                  }
                 }
               }
               return std::nullopt;

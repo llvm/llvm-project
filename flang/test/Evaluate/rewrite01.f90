@@ -206,4 +206,14 @@ subroutine array_constructor()
   print *, size([return_allocatable(), return_allocatable()])
 end subroutine
 
+!CHECK-LABEL: array_ctor_implied_do_index
+subroutine array_ctor_implied_do_index(x, j)
+  integer :: x(:)
+  integer(8) :: j
+  !CHECK: PRINT *, size([INTEGER(4)::(x(1_8:i:1_8),INTEGER(8)::i=1_8,2_8,1_8)])
+  print *, size([(x(1:i), integer(8)::i=1,2)])
+  !CHECK: PRINT *, int(0_8+2_8*(0_8+max((j-1_8+1_8)/1_8,0_8)),kind=4)
+  print *, size([(x(1:j), integer(8)::i=1,2)])
+end subroutine
+
 end module
