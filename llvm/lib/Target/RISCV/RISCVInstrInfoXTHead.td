@@ -164,8 +164,7 @@ class THCacheInst_void<bits<5> funct5, string opcodestr>
   let rs2 = funct5;
 }
 
-let Predicates = [HasVendorXTHeadMemIdx], DecoderNamespace = "THeadMemIdx",
-  hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 class THLoadIndexed<RegisterClass Ty, bits<5> funct5, string opcodestr>
     : RVInstR<!shl(funct5, 2), !if(!eq(Ty, GPR), 0b100, 0b110), OPC_CUSTOM_0,
               (outs Ty:$rd), (ins GPR:$rs1, GPR:$rs2, uimm2:$uimm2),
@@ -187,8 +186,7 @@ class THLoadUpdate<bits<5> funct5, string opcodestr>
 }
 }
 
-let Predicates = [HasVendorXTHeadMemIdx], DecoderNamespace = "THeadMemIdx",
-  hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
 class THStoreIndexed<RegisterClass StTy, bits<5> funct5, string opcodestr>
     : RVInstR<!shl(funct5, 2), !if(!eq(StTy, GPR), 0b101, 0b111), OPC_CUSTOM_0,
               (outs), (ins StTy:$rd, GPR:$rs1, GPR:$rs2, uimm2:$uimm2),
@@ -284,7 +282,7 @@ def TH_SDD  : THStorePair<0b11111, "th.sdd">,
               Sched<[WriteSTD, WriteSTD, ReadStoreData, ReadMemBase]>;
 }
 
-let Predicates = [HasVendorXTHeadMemIdx] in {
+let Predicates = [HasVendorXTHeadMemIdx], DecoderNamespace = "THeadMemIdx" in {
 // T-Head Load/Store + Update instructions.
 def TH_LBIA : THLoadUpdate<0b00011, "th.lbia">,
   Sched<[WriteLDB, ReadMemBase]>;
@@ -364,7 +362,7 @@ def TH_SURW : THStoreIndexed<GPR, 0b01010, "th.surw">,
   Sched<[WriteLDB, ReadMemBase]>;
 }
 
-let Predicates = [HasVendorXTHeadMemIdx, IsRV64] in {
+let Predicates = [HasVendorXTHeadMemIdx, IsRV64], DecoderNamespace = "THeadMemIdx" in {
 // T-Head Load/Store + Update instructions.
 def TH_LWUIA : THLoadUpdate<0b11011, "th.lwuia">,
   Sched<[WriteLDH, ReadMemBase]>;
@@ -396,6 +394,40 @@ def TH_SRD : THStoreIndexed<GPR, 0b01100, "th.srd">,
   Sched<[WriteSTW, ReadStoreData, ReadMemBase]>;
 def TH_SURD : THStoreIndexed<GPR, 0b01110, "th.surd">,
   Sched<[WriteLDB, ReadMemBase]>;
+}
+
+// T-Head Load/Store Indexed instructions for floating point registers.
+
+let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtF],
+    DecoderNamespace = "THeadFMemIdx" in {
+def TH_FLRW : THLoadIndexed<FPR32, 0b01000, "th.flrw">,
+              Sched<[WriteFLD32, ReadFMemBase]>;
+def TH_FSRW : THStoreIndexed<FPR32, 0b01000, "th.fsrw">,
+              Sched<[WriteFST32, ReadFStoreData, ReadFMemBase]>;
+}
+
+let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtD],
+    DecoderNamespace = "THeadFMemIdx" in {
+def TH_FLRD : THLoadIndexed<FPR64, 0b01100, "th.flrd">,
+              Sched<[WriteFLD64, ReadFMemBase]>;
+def TH_FSRD : THStoreIndexed<FPR64, 0b01100, "th.fsrd">,
+              Sched<[WriteFST64, ReadFStoreData, ReadFMemBase]>;
+}
+
+let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtF, IsRV64],
+    DecoderNamespace = "THeadFMemIdx" in {
+def TH_FLURW : THLoadIndexed<FPR32, 0b01010, "th.flurw">,
+               Sched<[WriteFLD32, ReadFMemBase]>;
+def TH_FSURW : THStoreIndexed<FPR32, 0b01010, "th.fsurw">,
+               Sched<[WriteFST32, ReadFStoreData, ReadFMemBase]>;
+}
+
+let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtD, IsRV64],
+    DecoderNamespace = "THeadFMemIdx" in {
+def TH_FLURD : THLoadIndexed<FPR64, 0b01110, "th.flurd">,
+               Sched<[WriteFLD64, ReadFMemBase]>;
+def TH_FSURD : THStoreIndexed<FPR64, 0b01110, "th.fsurd">,
+               Sched<[WriteFST64, ReadFStoreData, ReadFMemBase]>;
 }
 
 let Predicates = [HasVendorXTHeadVdot],
@@ -772,6 +804,30 @@ defm : StIdxPat<truncstorei32, TH_SRW, GPR>;
 defm : StZextIdxPat<truncstorei32, TH_SURW, GPR>;
 defm : StIdxPat<store, TH_SRD, GPR>;
 defm : StZextIdxPat<store, TH_SURD, GPR>;
+}
+
+let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtF, IsRV32] in {
+defm : LdIdxPat<load, TH_FLRW, f32>;
+defm : StIdxPat<store, TH_FSRW, FPR32, f32>;
+}
+
+let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtD, IsRV32] in {
+defm : LdIdxPat<load, TH_FLRD, f64>;
+defm : StIdxPat<store, TH_FSRD, FPR64, f64>;
+}
+
+let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtF, IsRV64] in {
+defm : LdIdxPat<load, TH_FLRW, f32>;
+defm : LdZextIdxPat<load, TH_FLURW, f32>;
+defm : StIdxPat<store, TH_FSRW, FPR32, f32>;
+defm : StZextIdxPat<store, TH_FSURW, FPR32, f32>;
+}
+
+let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtD, IsRV64] in {
+defm : LdIdxPat<load, TH_FLRD, f64>;
+defm : LdZextIdxPat<load, TH_FLURD, f64>;
+defm : StIdxPat<store, TH_FSRD, FPR64, f64>;
+defm : StZextIdxPat<store, TH_FSURD, FPR64, f64>;
 }
 
 def simm5shl2 : ComplexPattern<XLenVT, 2, "selectSimm5Shl2">;
