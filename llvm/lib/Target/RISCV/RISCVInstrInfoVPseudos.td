@@ -2328,18 +2328,25 @@ multiclass VPseudoVCLS_V {
 multiclass VPseudoVSQR_V {
   foreach m = MxListF in {
     defvar mx = m.MX;
-    defvar WriteVFSqrtV_MX = !cast<SchedWrite>("WriteVFSqrtV_" # mx);
-    defvar ReadVFSqrtV_MX = !cast<SchedRead>("ReadVFSqrtV_" # mx);
+    defvar sews = SchedSEWSet<m.MX>.val;
 
-    let VLMul = m.value in {
-      def "_V_" # mx : VPseudoUnaryNoMask<m.vrclass, m.vrclass>,
-                       Sched<[WriteVFSqrtV_MX, ReadVFSqrtV_MX, ReadVMask]>;
-      def "_V_" # mx # "_TU": VPseudoUnaryNoMaskTU<m.vrclass, m.vrclass>,
-                              Sched<[WriteVFSqrtV_MX, ReadVFSqrtV_MX, ReadVMask]>;
-      def "_V_" # mx # "_MASK" : VPseudoUnaryMaskTA<m.vrclass, m.vrclass>,
-                                 RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
-                                 Sched<[WriteVFSqrtV_MX, ReadVFSqrtV_MX, ReadVMask]>;
-    }
+    let VLMul = m.value in
+      foreach e = sews in {
+        defvar suffix = "_" # mx # "_E" # e;
+        defvar WriteVFSqrtV_MX_E = !cast<SchedWrite>("WriteVFSqrtV" # suffix);
+        defvar ReadVFSqrtV_MX_E = !cast<SchedRead>("ReadVFSqrtV" # suffix);
+
+        def "_V" # suffix : VPseudoUnaryNoMask<m.vrclass, m.vrclass>,
+                            Sched<[WriteVFSqrtV_MX_E, ReadVFSqrtV_MX_E,
+                                   ReadVMask]>;
+        def "_V" # suffix # "_TU": VPseudoUnaryNoMaskTU<m.vrclass, m.vrclass>,
+                                   Sched<[WriteVFSqrtV_MX_E, ReadVFSqrtV_MX_E,
+                                          ReadVMask]>;
+        def "_V" # suffix # "_MASK" : VPseudoUnaryMaskTA<m.vrclass, m.vrclass>,
+                                      RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
+                                      Sched<[WriteVFSqrtV_MX_E, ReadVFSqrtV_MX_E,
+                                             ReadVMask]>;
+      }
   }
 }
 
@@ -3835,6 +3842,23 @@ class VPatUnaryNoMask<string intrinsic_name,
                    (op2_type op2_reg_class:$rs2),
                    GPR:$vl, sew)>;
 
+class VPatUnaryNoMask_E<string intrinsic_name,
+                        string inst,
+                        string kind,
+                        ValueType result_type,
+                        ValueType op2_type,
+                        int log2sew,
+                        LMULInfo vlmul,
+                        int sew,
+                        VReg op2_reg_class> :
+  Pat<(result_type (!cast<Intrinsic>(intrinsic_name)
+                   (result_type undef),
+                   (op2_type op2_reg_class:$rs2),
+                   VLOpFrag)),
+                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX#"_E"#sew)
+                   (op2_type op2_reg_class:$rs2),
+                   GPR:$vl, log2sew)>;
+
 class VPatUnaryNoMaskTU<string intrinsic_name,
                         string inst,
                         string kind,
@@ -3852,6 +3876,25 @@ class VPatUnaryNoMaskTU<string intrinsic_name,
                    (result_type result_reg_class:$merge),
                    (op2_type op2_reg_class:$rs2),
                    GPR:$vl, sew)>;
+
+class VPatUnaryNoMaskTU_E<string intrinsic_name,
+                          string inst,
+                          string kind,
+                          ValueType result_type,
+                          ValueType op2_type,
+                          int log2sew,
+                          LMULInfo vlmul,
+                          int sew,
+                          VReg result_reg_class,
+                          VReg op2_reg_class> :
+  Pat<(result_type (!cast<Intrinsic>(intrinsic_name)
+                   (result_type result_reg_class:$merge),
+                   (op2_type op2_reg_class:$rs2),
+                   VLOpFrag)),
+                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX#"_E"#sew#"_TU")
+                   (result_type result_reg_class:$merge),
+                   (op2_type op2_reg_class:$rs2),
+                   GPR:$vl, log2sew)>;
 
 class VPatUnaryMask<string intrinsic_name,
                     string inst,
@@ -3892,6 +3935,27 @@ class VPatUnaryMaskTA<string intrinsic_name,
                    (result_type result_reg_class:$merge),
                    (op2_type op2_reg_class:$rs2),
                    (mask_type V0), GPR:$vl, sew, (XLenVT timm:$policy))>;
+
+class VPatUnaryMaskTA_E<string intrinsic_name,
+                        string inst,
+                        string kind,
+                        ValueType result_type,
+                        ValueType op2_type,
+                        ValueType mask_type,
+                        int log2sew,
+                        LMULInfo vlmul,
+                        int sew,
+                        VReg result_reg_class,
+                        VReg op2_reg_class> :
+  Pat<(result_type (!cast<Intrinsic>(intrinsic_name#"_mask")
+                   (result_type result_reg_class:$merge),
+                   (op2_type op2_reg_class:$rs2),
+                   (mask_type V0),
+                   VLOpFrag, (XLenVT timm:$policy))),
+                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX#"_E"#sew#"_MASK")
+                   (result_type result_reg_class:$merge),
+                   (op2_type op2_reg_class:$rs2),
+                   (mask_type V0), GPR:$vl, log2sew, (XLenVT timm:$policy))>;
 
 class VPatMaskUnaryNoMask<string intrinsic_name,
                           string inst,
@@ -4333,6 +4397,23 @@ multiclass VPatUnaryV_V<string intrinsic, string instruction,
     def : VPatUnaryMaskTA<intrinsic, instruction, "V",
                           vti.Vector, vti.Vector, vti.Mask,
                           vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass>;
+  }
+}
+
+multiclass VPatUnaryV_V_E<string intrinsic, string instruction,
+                        list<VTypeInfo> vtilist> {
+  foreach vti = vtilist in {
+    def : VPatUnaryNoMask_E<intrinsic, instruction, "V",
+                            vti.Vector, vti.Vector,
+                            vti.Log2SEW, vti.LMul, vti.SEW, vti.RegClass>;
+    def : VPatUnaryNoMaskTU_E<intrinsic, instruction, "V",
+                              vti.Vector, vti.Vector,
+                              vti.Log2SEW, vti.LMul, vti.SEW,
+                              vti.RegClass, vti.RegClass>;
+    def : VPatUnaryMaskTA_E<intrinsic, instruction, "V",
+                            vti.Vector, vti.Vector, vti.Mask,
+                            vti.Log2SEW, vti.LMul, vti.SEW,
+                            vti.RegClass, vti.RegClass>;
   }
 }
 
@@ -6292,7 +6373,7 @@ defm : VPatTernaryW_VV_VX<"int_riscv_vfwnmsac", "PseudoVFWNMSAC", AllWidenableFl
 //===----------------------------------------------------------------------===//
 // 13.8. Vector Floating-Point Square-Root Instruction
 //===----------------------------------------------------------------------===//
-defm : VPatUnaryV_V<"int_riscv_vfsqrt", "PseudoVFSQRT", AllFloatVectors>;
+defm : VPatUnaryV_V_E<"int_riscv_vfsqrt", "PseudoVFSQRT", AllFloatVectors>;
 
 //===----------------------------------------------------------------------===//
 // 13.9. Vector Floating-Point Reciprocal Square-Root Estimate Instruction
