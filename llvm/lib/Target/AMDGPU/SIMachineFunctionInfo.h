@@ -18,6 +18,7 @@
 #include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
+#include "SIModeRegisterDefaults.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
@@ -241,7 +242,7 @@ struct SIMode {
 
   SIMode() = default;
 
-  SIMode(const AMDGPU::SIModeRegisterDefaults &Mode) {
+  SIMode(const SIModeRegisterDefaults &Mode) {
     IEEE = Mode.IEEE;
     DX10Clamp = Mode.DX10Clamp;
     FP32InputDenormals = Mode.FP32Denormals.Input != DenormalMode::PreserveSign;
@@ -385,7 +386,7 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
   friend class GCNTargetMachine;
 
   // State of MODE register, assumed FP mode.
-  AMDGPU::SIModeRegisterDefaults Mode;
+  SIModeRegisterDefaults Mode;
 
   // Registers that may be reserved for spilling purposes. These may be the same
   // as the input registers.
@@ -599,9 +600,7 @@ public:
 
   void reserveWWMRegister(Register Reg) { WWMReservedRegs.insert(Reg); }
 
-  AMDGPU::SIModeRegisterDefaults getMode() const {
-    return Mode;
-  }
+  SIModeRegisterDefaults getMode() const { return Mode; }
 
   ArrayRef<SIRegisterInfo::SpilledReg>
   getSGPRSpillToVGPRLanes(int FrameIndex) const {

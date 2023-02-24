@@ -58,9 +58,6 @@ TEST(StdlibTest, All) {
   EXPECT_EQ(Vector->header(), *VectorH);
   EXPECT_THAT(Vector->headers(), ElementsAre(*VectorH));
 
-  EXPECT_TRUE(stdlib::Symbol::named("std::", "get"));
-  EXPECT_FALSE(stdlib::Symbol::named("std::", "get")->header());
-
   EXPECT_THAT(stdlib::Symbol::named("std::", "basic_iostream")->headers(),
               ElementsAre(stdlib::Header::named("<istream>"),
                           stdlib::Header::named("<iostream>"),

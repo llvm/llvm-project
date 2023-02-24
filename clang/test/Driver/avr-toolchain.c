@@ -67,7 +67,7 @@
 // LLD-NOT: "-mavr5"
 
 // RUN: %clang -### --target=avr --sysroot=%S/Inputs/basic_avr_tree -mmcu=atmega328 %s -T avr.lds 2>&1 | FileCheck --check-prefix=LDS0 %s
-// LDS0: "-T" "avr.lds" "-mavr5"
+// LDS0: "-T" "avr.lds" "--relax" "-mavr5"
 
 // RUN: %clang -### --target=avr --sysroot=%S/Inputs/basic_avr_tree -mmcu=atmega328 %s -fuse-ld=%S/Inputs/basic_avr_tree/usr/bin/ld.lld -T avr.lds 2>&1 | FileCheck --check-prefix=LDS1 %s
 // LDS1: "-T" "avr.lds"

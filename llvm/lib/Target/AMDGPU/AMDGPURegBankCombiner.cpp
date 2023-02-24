@@ -87,7 +87,7 @@ public:
   void applyClamp(MachineInstr &MI, Register &Reg);
 
 private:
-  AMDGPU::SIModeRegisterDefaults getMode();
+  SIModeRegisterDefaults getMode();
   bool getIEEE();
   bool getDX10Clamp();
   bool isFminnumIeee(const MachineInstr &MI);
@@ -378,7 +378,7 @@ void AMDGPURegBankCombinerHelper::applyRmUniformWF(
   Helper.replaceRegWith(MRI, MatchInfo.Dst, MatchInfo.WFReplaceReg);
 }
 
-AMDGPU::SIModeRegisterDefaults AMDGPURegBankCombinerHelper::getMode() {
+SIModeRegisterDefaults AMDGPURegBankCombinerHelper::getMode() {
   return MF.getInfo<SIMachineFunctionInfo>()->getMode();
 }
 

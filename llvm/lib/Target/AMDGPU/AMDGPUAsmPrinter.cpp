@@ -65,7 +65,7 @@ using namespace llvm::AMDGPU;
 // We want to use these instructions, and using fp32 denormals also causes
 // instructions to run at the double precision rate for the device so it's
 // probably best to just report no single precision denormals.
-static uint32_t getFPMode(AMDGPU::SIModeRegisterDefaults Mode) {
+static uint32_t getFPMode(SIModeRegisterDefaults Mode) {
   return FP_ROUND_MODE_SP(FP_ROUND_ROUND_TO_NEAREST) |
          FP_ROUND_MODE_DP(FP_ROUND_ROUND_TO_NEAREST) |
          FP_DENORM_MODE_SP(Mode.fpDenormModeSPValue()) |

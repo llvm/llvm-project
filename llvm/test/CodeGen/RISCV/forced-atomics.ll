@@ -3512,9 +3512,13 @@ define i128 @rmw128(ptr %p) nounwind {
 ; RV32-NEXT:    lw a3, 4(s0)
 ; RV32-NEXT:    lw a4, 0(s0)
 ; RV32-NEXT:    mv s1, a0
-; RV32-NEXT:    j .LBB62_2
 ; RV32-NEXT:  .LBB62_1: # %atomicrmw.start
-; RV32-NEXT:    # in Loop: Header=BB62_2 Depth=1
+; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32-NEXT:    addi a0, a4, 1
+; RV32-NEXT:    seqz a5, a0
+; RV32-NEXT:    add a5, a3, a5
+; RV32-NEXT:    or a6, a0, a5
+; RV32-NEXT:    seqz a6, a6
 ; RV32-NEXT:    add a6, a2, a6
 ; RV32-NEXT:    sltu a7, a6, a2
 ; RV32-NEXT:    add a7, a1, a7
@@ -3537,18 +3541,8 @@ define i128 @rmw128(ptr %p) nounwind {
 ; RV32-NEXT:    lw a2, 24(sp)
 ; RV32-NEXT:    lw a3, 20(sp)
 ; RV32-NEXT:    lw a4, 16(sp)
-; RV32-NEXT:    bnez a0, .LBB62_4
-; RV32-NEXT:  .LBB62_2: # %atomicrmw.start
-; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32-NEXT:    addi a0, a4, 1
-; RV32-NEXT:    sltu a6, a0, a4
-; RV32-NEXT:    add a5, a3, a6
-; RV32-NEXT:    bgeu a0, a4, .LBB62_1
-; RV32-NEXT:  # %bb.3: # %atomicrmw.start
-; RV32-NEXT:    # in Loop: Header=BB62_2 Depth=1
-; RV32-NEXT:    sltu a6, a5, a3
-; RV32-NEXT:    j .LBB62_1
-; RV32-NEXT:  .LBB62_4: # %atomicrmw.end
+; RV32-NEXT:    beqz a0, .LBB62_1
+; RV32-NEXT:  # %bb.2: # %atomicrmw.end
 ; RV32-NEXT:    sw a4, 0(s1)
 ; RV32-NEXT:    sw a3, 4(s1)
 ; RV32-NEXT:    sw a2, 8(s1)
