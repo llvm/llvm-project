@@ -4623,6 +4623,10 @@ The fields used by CP for code objects before V3 also match those specified in
      FLOAT_DENORM_MODE_FLUSH_NONE           3     No Flush
      ====================================== ===== ==============================
 
+     Denormal flushing is sign respecting. i.e. the behavior expected
+     by ``"denormal-fp-math"="preserve-sign"``. The behavior is
+     undefined with ``"denormal-fp-math"="positive-zero"``
+
 ..
 
   .. table:: System VGPR Work-Item ID Enumeration Values
