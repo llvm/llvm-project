@@ -505,6 +505,13 @@ def HasVendorXTHeadBs : Predicate<"Subtarget->hasVendorXTHeadBs()">,
                                   AssemblerPredicate<(all_of FeatureVendorXTHeadBs),
                                   "'xtheadbs' (T-Head single-bit instructions)">;
 
+def FeatureVendorXTHeadCondMov
+    : SubtargetFeature<"xtheadcondmov", "HasVendorXTHeadCondMov", "true",
+                       "'xtheadcondmov' (T-Head conditional move instructions)">;
+def HasVendorXTHeadCondMov : Predicate<"Subtarget->hasVendorXTHeadCondMov()">,
+                                       AssemblerPredicate<(all_of FeatureVendorXTHeadCondMov),
+                                       "'xtheadcondmov' (T-Head conditional move instructions)">;
+
 def FeatureVendorXTHeadCmo
     : SubtargetFeature<"xtheadcmo", "HasVendorXTHeadCmo", "true",
                        "'xtheadcmo' (T-Head cache management instructions)">;

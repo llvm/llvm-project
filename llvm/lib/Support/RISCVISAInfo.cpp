@@ -117,6 +117,7 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"xtheadbb", RISCVExtensionVersion{1, 0}},
     {"xtheadbs", RISCVExtensionVersion{1, 0}},
     {"xtheadcmo", RISCVExtensionVersion{1, 0}},
+    {"xtheadcondmov", RISCVExtensionVersion{1, 0}},
     {"xtheadfmemidx", RISCVExtensionVersion{1, 0}},
     {"xtheadmac", RISCVExtensionVersion{1, 0}},
     {"xtheadmemidx", RISCVExtensionVersion{1, 0}},
