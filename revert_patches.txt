@@ -17,3 +17,7 @@ e327b52766ed [C2x] reject type definitions in offsetof
 
 Workaround failures around new upstream changes in attributor.
 7f12efa88  [X86][FP16] Lower half->i16 into vcvttph2[u]w directly
+
+needs new driver enabled
+revert dbb6344b2 "[Libomptarget] Add the CUDA feature to the packager
+
