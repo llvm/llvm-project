@@ -4,14 +4,14 @@
 
 ;; MOVUPSmr is a merged store from stack objects %ir.arg1, %ir.arg2, %ir.arg3,
 ;; %ir.arg4.
-;; FIXME: the merged store should have dependency with %ir.arg4.
+;; Check that the merged store has dependency with %ir.arg4.
 
 ; CHECK:       ********** MI Scheduling **********
 ; CHECK-LABEL: f:%bb.0 bb
 ; CHECK:       SU([[ARG4:[0-9]+]]):{{.*}}MOV32rm{{.*}}load (s32) from %ir.arg4
 ; CHECK:       SU([[#WIDEN:]]):{{.*}}MOVUPSmr{{.*}}store (s128) into
 ; CHECK:         Predecessors:
-; CHECK-NOT:       SU([[ARG4]]):{{.*}}Memory
+; CHECK:           SU([[ARG4]]):{{.*}}Memory
 ; CHECK:       SU([[#WIDEN+1]])
 ;
 

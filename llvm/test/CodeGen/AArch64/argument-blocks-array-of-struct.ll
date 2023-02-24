@@ -503,8 +503,8 @@ define void @argument_in_memory() {
 ; CHECK-NEXT:    add x8, x8, :lo12:in_memory_store
 ; CHECK-NEXT:    ldp q0, q1, [x8]
 ; CHECK-NEXT:    ldp q2, q3, [x8, #32]
-; CHECK-NEXT:    stp q0, q1, [sp]
 ; CHECK-NEXT:    ldr d4, [x8, #64]
+; CHECK-NEXT:    stp q0, q1, [sp]
 ; CHECK-NEXT:    stp q2, q3, [sp, #32]
 ; CHECK-NEXT:    str d4, [sp, #64]
 ; CHECK-NEXT:    bl callee_in_memory
