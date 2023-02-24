@@ -70,11 +70,11 @@ void naivelyFuseParallelOps(Region &region);
 /// }
 /// ```
 ///
-/// After loop peeling, this function tries to simplify/canonicalize affine.min
-/// and affine.max ops in the body of the peeled loop and in the body of the
-/// partial iteration loop, taking advantage of the fact that the peeled loop
-/// has only "full" iterations. This canonicalization is expected to enable
-/// further canonicalization opportunities through other patterns.
+/// After loop peeling, this function tries to simplify affine.min and
+/// affine.max ops in the body of the peeled loop and in the body of the partial
+/// iteration loop, taking advantage of the fact that the peeled loop has only
+/// "full" iterations. This simplification is expected to enable further
+/// canonicalization opportunities through other patterns.
 ///
 /// The return value indicates whether the loop was rewritten or not. Loops are
 /// not rewritten if:
@@ -85,8 +85,8 @@ void naivelyFuseParallelOps(Region &region);
 /// Note: This function rewrites the given scf.for loop in-place and creates a
 /// new scf.for operation for the last iteration. It replaces all uses of the
 /// unpeeled loop with the results of the newly generated scf.for.
-LogicalResult peelAndCanonicalizeForLoop(RewriterBase &rewriter, ForOp forOp,
-                                         scf::ForOp &partialIteration);
+LogicalResult peelForLoopAndSimplifyBounds(RewriterBase &rewriter, ForOp forOp,
+                                           scf::ForOp &partialIteration);
 
 /// Tile a parallel loop of the form
 ///   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)

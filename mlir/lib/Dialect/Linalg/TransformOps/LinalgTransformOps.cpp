@@ -1726,8 +1726,8 @@ transform::PadOp::applyToOne(LinalgOp target,
   paddingOptions.setHoistPaddings(extractFromI64ArrayAttr(getHoistPaddings()));
   paddingOptions.setTransposePaddings(transposePaddings);
 
-  FailureOr<LinalgOp> result =
-      tryApply<LinalgPaddingPattern>(target, paddingOptions);
+  IRRewriter rewriter(target->getContext());
+  FailureOr<LinalgOp> result = padLinalgOp(rewriter, target, paddingOptions);
   if (succeeded(result)) {
     results.push_back(result->getOperation());
     return DiagnosedSilenceableFailure::success();
