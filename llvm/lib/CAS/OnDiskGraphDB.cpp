@@ -48,6 +48,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/OnDiskGraphDB.h"
+#include "OnDiskCommon.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Errc.h"
@@ -67,7 +68,7 @@ static constexpr StringLiteral DataPoolTableName = "llvm.cas.data";
 static constexpr StringLiteral IndexFile = "index";
 static constexpr StringLiteral DataPoolFile = "data";
 
-static constexpr StringLiteral FilePrefix = "v7.";
+static constexpr StringLiteral FilePrefix = "v8.";
 static constexpr StringLiteral FileSuffixData = ".data";
 static constexpr StringLiteral FileSuffixLeaf = ".leaf";
 static constexpr StringLiteral FileSuffixLeaf0 = ".leaf+0";
@@ -1324,13 +1325,22 @@ Expected<std::unique_ptr<OnDiskGraphDB>> OnDiskGraphDB::open(
   const StringRef Slash = sys::path::get_separator();
   constexpr uint64_t MB = 1024ull * 1024ull;
   constexpr uint64_t GB = 1024ull * 1024ull * 1024ull;
+
+  uint64_t MaxIndexSize = 8 * GB;
+  uint64_t MaxDataPoolSize = 16 * GB;
+
+  auto CustomSize = getOverriddenMaxMappingSize();
+  if (!CustomSize)
+    return CustomSize.takeError();
+  if (*CustomSize)
+    MaxIndexSize = MaxDataPoolSize = **CustomSize;
+
   std::optional<OnDiskHashMappedTrie> Index;
   if (Error E =
           OnDiskHashMappedTrie::create(
               AbsPath + Slash + FilePrefix + IndexFile,
               IndexTableName + "[" + HashName + "]", HashByteSize * CHAR_BIT,
-              /*DataSize=*/sizeof(TrieRecord), /*MaxFileSize=*/8 * GB,
-              /*MinFileSize=*/MB)
+              /*DataSize=*/sizeof(TrieRecord), MaxIndexSize, /*MinFileSize=*/MB)
               .moveInto(Index))
     return std::move(E);
 
@@ -1341,7 +1351,7 @@ Expected<std::unique_ptr<OnDiskGraphDB>> OnDiskGraphDB::open(
   if (Error E = OnDiskDataAllocator::create(
                     AbsPath + Slash + FilePrefix + DataPoolFile,
                     DataPoolTableName + "[" + HashName + "]" + PolicyName,
-                    /*MaxFileSize=*/16 * GB, /*MinFileSize=*/MB, UserHeaderSize,
+                    MaxDataPoolSize, /*MinFileSize=*/MB, UserHeaderSize,
                     [](void *UserHeaderPtr) {
                       new (UserHeaderPtr) std::atomic<uint64_t>(0);
                     })

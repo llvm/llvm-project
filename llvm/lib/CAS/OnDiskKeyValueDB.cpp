@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/OnDiskKeyValueDB.h"
+#include "OnDiskCommon.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Path.h"
@@ -16,7 +17,7 @@ using namespace llvm::cas;
 using namespace llvm::cas::ondisk;
 
 static constexpr StringLiteral ActionCacheFile = "actions";
-static constexpr StringLiteral FilePrefix = "v2.";
+static constexpr StringLiteral FilePrefix = "v3.";
 
 Expected<ArrayRef<char>> OnDiskKeyValueDB::put(ArrayRef<uint8_t> Key,
                                                ArrayRef<char> Value) {
@@ -55,13 +56,19 @@ OnDiskKeyValueDB::open(StringRef Path, StringRef HashName, unsigned KeySize,
   constexpr uint64_t MB = 1024ull * 1024ull;
   constexpr uint64_t GB = 1024ull * 1024ull * 1024ull;
 
+  uint64_t MaxFileSize = GB;
+  auto CustomSize = getOverriddenMaxMappingSize();
+  if (!CustomSize)
+    return CustomSize.takeError();
+  if (*CustomSize)
+    MaxFileSize = **CustomSize;
+
   std::optional<OnDiskHashMappedTrie> ActionCache;
   if (Error E = OnDiskHashMappedTrie::create(
                     CachePath,
                     "llvm.actioncache[" + HashName + "->" + ValueName + "]",
                     KeySize * 8,
-                    /*DataSize=*/ValueSize, /*MaxFileSize=*/GB,
-                    /*MinFileSize=*/MB)
+                    /*DataSize=*/ValueSize, MaxFileSize, /*MinFileSize=*/MB)
                     .moveInto(ActionCache))
     return std::move(E);
 

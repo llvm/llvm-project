@@ -50,8 +50,9 @@ private:
 ///   memory mapping. Atomic access does not work on networked filesystems.
 /// - Filesystem locks are used, but only sparingly:
 ///     - during initialization, for creating / opening an existing store;
-///     - rarely on insertion, to resize the store (see \a
-///       OnDiskHashMappedTrie::MappedFileInfo::requestFileSize()).
+///     - for the lifetime of the instance, a shared/reader lock is held
+///     - during destruction, if there are no concurrent readers, to shrink the
+///       files to their minimum size.
 /// - Path is used as a directory:
 ///     - "index" stores the root trie and subtries.
 ///     - "data" stores (most of) the entries, like a bump-ptr-allocator.

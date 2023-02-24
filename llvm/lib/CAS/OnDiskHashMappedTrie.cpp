@@ -10,8 +10,7 @@
 #include "HashMappedTrieIndexGenerator.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/CAS/LazyMappedFileRegion.h"
-#include "llvm/CAS/LazyMappedFileRegionBumpPtr.h"
+#include "llvm/CAS/MappedFileRegionBumpPtr.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -31,6 +30,8 @@ static_assert(sizeof(std::atomic<int64_t>) == sizeof(uint64_t),
 // Generic database data structures.
 //===----------------------------------------------------------------------===//
 namespace {
+using MappedFileRegion = MappedFileRegionBumpPtr::RegionT;
+
 /// Generic handle for a table.
 ///
 /// Probably we want some table kinds for pointing at multiple tables.
@@ -56,7 +57,7 @@ public:
 
   explicit operator bool() const { return H; }
   const Header &getHeader() const { return *H; }
-  LazyMappedFileRegion &getRegion() const { return *LMFR; }
+  MappedFileRegion &getRegion() const { return *Region; }
 
   template <class T> static void check() {
     static_assert(
@@ -69,7 +70,7 @@ public:
   template <class T> T dyn_cast() const {
     check<T>();
     if (is<T>())
-      return T(*LMFR, *reinterpret_cast<typename T::Header *>(H));
+      return T(*Region, *reinterpret_cast<typename T::Header *>(H));
     return T();
   }
   template <class T> T cast() const {
@@ -83,13 +84,14 @@ public:
   }
 
   TableHandle() = default;
-  TableHandle(LazyMappedFileRegion &LMFR, Header &H) : LMFR(&LMFR), H(&H) {}
-  TableHandle(LazyMappedFileRegion &LMFR, intptr_t HeaderOffset)
-      : TableHandle(LMFR,
-                    *reinterpret_cast<Header *>(LMFR.data() + HeaderOffset)) {}
+  TableHandle(MappedFileRegion &Region, Header &H) : Region(&Region), H(&H) {}
+  TableHandle(MappedFileRegion &Region, intptr_t HeaderOffset)
+      : TableHandle(Region,
+                    *reinterpret_cast<Header *>(Region.data() + HeaderOffset)) {
+  }
 
 private:
-  LazyMappedFileRegion *LMFR = nullptr;
+  MappedFileRegion *Region = nullptr;
   Header *H = nullptr;
 };
 
@@ -117,8 +119,8 @@ public:
   };
 
   const Header &getHeader() { return *H; }
-  LazyMappedFileRegionBumpPtr &getAlloc() { return Alloc; }
-  LazyMappedFileRegion &getRegion() { return Alloc.getRegion(); }
+  MappedFileRegionBumpPtr &getAlloc() { return Alloc; }
+  MappedFileRegion &getRegion() { return Alloc.getRegion(); }
 
   /// Add a table.
   ///
@@ -128,53 +130,57 @@ public:
   /// Find a table. May return null.
   Optional<TableHandle> findTable(StringRef Name);
 
-  static Expected<DatabaseFile> create(LazyMappedFileRegion &LMFR,
-                                       Optional<uint64_t> NewFileInitialSize);
-
-  static Expected<DatabaseFile> get(LazyMappedFileRegion &LMFR) {
-    if (Error E = validate(LMFR))
-      return std::move(E);
-    return DatabaseFile(LMFR);
-  }
   static Expected<DatabaseFile>
-  get(std::shared_ptr<LazyMappedFileRegion> LMFR) {
-    if (Error E = validate(*LMFR))
-      return std::move(E);
-    return DatabaseFile(std::move(LMFR));
-  }
+  create(const Twine &Path, uint64_t Capacity,
+         function_ref<Error(DatabaseFile &)> NewDBConstructor);
 
   size_t size() const { return Alloc.size(); }
 
 private:
-  static Error validate(LazyMappedFileRegion &LMFR);
+  static Expected<DatabaseFile>
+  get(std::shared_ptr<MappedFileRegionBumpPtr> Alloc) {
+    if (Error E = validate(Alloc->getRegion()))
+      return std::move(E);
+    return DatabaseFile(std::move(Alloc));
+  }
 
-  DatabaseFile(LazyMappedFileRegion &LMFR)
-      : H(reinterpret_cast<Header *>(LMFR.data())),
-        Alloc(LMFR, offsetof(Header, BumpPtr)) {}
-  DatabaseFile(std::shared_ptr<LazyMappedFileRegion> LMFR)
-      : H(reinterpret_cast<Header *>(LMFR->data())),
-        Alloc(std::move(LMFR), offsetof(Header, BumpPtr)) {}
+  static Error validate(MappedFileRegion &Region);
+
+  DatabaseFile(MappedFileRegionBumpPtr &Alloc)
+      : H(reinterpret_cast<Header *>(Alloc.data())), Alloc(Alloc) {}
+  DatabaseFile(std::shared_ptr<MappedFileRegionBumpPtr> Alloc)
+      : DatabaseFile(*Alloc) {
+    OwnedAlloc = std::move(Alloc);
+  }
 
   Header *H = nullptr;
-  LazyMappedFileRegionBumpPtr Alloc;
+  MappedFileRegionBumpPtr &Alloc;
+  std::shared_ptr<MappedFileRegionBumpPtr> OwnedAlloc;
 };
 
 } // end anonymous namespace
 
 Expected<DatabaseFile>
-DatabaseFile::create(LazyMappedFileRegion &LMFR,
-                     Optional<uint64_t> NewFileInitialSize) {
-  // Resize the underlying file to the minimum requested. Must be at least big
-  // enough for the header.
-  uint64_t SizeToRequest = sizeof(Header);
-  if (NewFileInitialSize && *NewFileInitialSize > SizeToRequest)
-    SizeToRequest = *NewFileInitialSize;
-  if (Error E = LMFR.extendSize(SizeToRequest))
+DatabaseFile::create(const Twine &Path, uint64_t Capacity,
+                     function_ref<Error(DatabaseFile &)> NewDBConstructor) {
+  // Constructor for if the file doesn't exist.
+  auto NewFileConstructor = [&](MappedFileRegionBumpPtr &Alloc) -> Error {
+    assert(Alloc.capacity() >= sizeof(Header));
+    (void)new (Alloc.data()) Header{getMagic(), getVersion(), {0}, {0}};
+    Alloc.initializeBumpPtr(offsetof(Header, BumpPtr));
+    DatabaseFile DB(Alloc);
+    return NewDBConstructor(DB);
+  };
+
+  // Get or create the file.
+  std::shared_ptr<MappedFileRegionBumpPtr> Alloc;
+  if (Error E = MappedFileRegionBumpPtr::createShared(Path, Capacity,
+                                                      offsetof(Header, BumpPtr),
+                                                      NewFileConstructor)
+                    .moveInto(Alloc))
     return std::move(E);
 
-  // Initialize the header and the allocator.
-  (void)new (LMFR.data()) Header{getMagic(), getVersion(), {0}, {0}};
-  return DatabaseFile(LMFR);
+  return DatabaseFile::get(std::move(Alloc));
 }
 
 void DatabaseFile::addTable(TableHandle Table) {
@@ -223,13 +229,13 @@ Optional<TableHandle> DatabaseFile::findTable(StringRef Name) {
   return std::nullopt;
 }
 
-Error DatabaseFile::validate(LazyMappedFileRegion &LMFR) {
-  if (LMFR.size() < sizeof(Header))
+Error DatabaseFile::validate(MappedFileRegion &Region) {
+  if (Region.size() < sizeof(Header))
     return createStringError(std::errc::invalid_argument,
                              "database: missing header");
 
   // Check the magic and version.
-  auto *H = reinterpret_cast<Header *>(LMFR.data());
+  auto *H = reinterpret_cast<Header *>(Region.data());
   if (H->Magic != getMagic())
     return createStringError(std::errc::invalid_argument,
                              "database: bad magic");
@@ -237,11 +243,10 @@ Error DatabaseFile::validate(LazyMappedFileRegion &LMFR) {
     return createStringError(std::errc::invalid_argument,
                              "database: wrong version");
 
-  // Check the bump-ptr, which should be 0 or point past the header.
-  if (int64_t Bump = H->BumpPtr.load())
-    if (Bump < (int64_t)sizeof(Header))
-      return createStringError(std::errc::invalid_argument,
-                               "database: corrupt bump-ptr");
+  // Check the bump-ptr, which should point past the header.
+  if (H->BumpPtr.load() < (int64_t)sizeof(Header))
+    return createStringError(std::errc::invalid_argument,
+                             "database: corrupt bump-ptr");
 
   return Error::success();
 }
@@ -372,7 +377,7 @@ public:
   ///
   /// Returns the subtrie that now lives at \p I.
   SubtrieHandle sink(size_t I, SubtrieSlotValue V,
-                     LazyMappedFileRegionBumpPtr &Alloc, size_t NumSubtrieBits,
+                     MappedFileRegionBumpPtr &Alloc, size_t NumSubtrieBits,
                      SubtrieHandle &UnusedSubtrie, size_t NewI);
 
   /// Only safe if the subtrie is empty.
@@ -380,7 +385,7 @@ public:
 
   SubtrieSlotValue getOffset() const {
     return SubtrieSlotValue::getSubtrieOffset(
-        reinterpret_cast<const char *>(H) - LMFR->data());
+        reinterpret_cast<const char *>(H) - Region->data());
   }
 
   FileOffset getFileOffset() const { return getOffset().asSubtrieFileOffset(); }
@@ -392,24 +397,23 @@ public:
   uint32_t getNumBits() const { return H->NumBits; }
   uint32_t getNumUnusedBits() const { return H->NumUnusedBits; }
 
-  static SubtrieHandle create(LazyMappedFileRegionBumpPtr &Alloc,
-                              uint32_t StartBit, uint32_t NumBits,
-                              uint32_t NumUnusedBits = 0);
+  static SubtrieHandle create(MappedFileRegionBumpPtr &Alloc, uint32_t StartBit,
+                              uint32_t NumBits, uint32_t NumUnusedBits = 0);
 
-  static SubtrieHandle getFromFileOffset(LazyMappedFileRegion &LMFR,
+  static SubtrieHandle getFromFileOffset(MappedFileRegion &Region,
                                          FileOffset Offset) {
-    return SubtrieHandle(LMFR, SubtrieSlotValue::getSubtrieOffset(Offset));
+    return SubtrieHandle(Region, SubtrieSlotValue::getSubtrieOffset(Offset));
   }
 
   SubtrieHandle() = default;
-  SubtrieHandle(LazyMappedFileRegion &LMFR, Header &H)
-      : LMFR(&LMFR), H(&H), Slots(getSlots(H)) {}
-  SubtrieHandle(LazyMappedFileRegion &LMFR, SubtrieSlotValue Offset)
-      : SubtrieHandle(LMFR, *reinterpret_cast<Header *>(LMFR.data() +
-                                                        Offset.asSubtrie())) {}
+  SubtrieHandle(MappedFileRegion &Region, Header &H)
+      : Region(&Region), H(&H), Slots(getSlots(H)) {}
+  SubtrieHandle(MappedFileRegion &Region, SubtrieSlotValue Offset)
+      : SubtrieHandle(Region, *reinterpret_cast<Header *>(
+                                  Region.data() + Offset.asSubtrie())) {}
 
 private:
-  LazyMappedFileRegion *LMFR = nullptr;
+  MappedFileRegion *Region = nullptr;
   Header *H = nullptr;
   MutableArrayRef<SlotT> Slots;
 
@@ -451,7 +455,7 @@ public:
   operator TableHandle() const {
     if (!H)
       return TableHandle();
-    return TableHandle(*LMFR, H->GenericHeader);
+    return TableHandle(*Region, H->GenericHeader);
   }
 
   struct RecordData {
@@ -484,14 +488,14 @@ public:
   }
 
   RecordData getRecord(SubtrieSlotValue Offset);
-  RecordData createRecord(LazyMappedFileRegionBumpPtr &Alloc,
+  RecordData createRecord(MappedFileRegionBumpPtr &Alloc,
                           ArrayRef<uint8_t> Hash);
 
   explicit operator bool() const { return H; }
   const Header &getHeader() const { return *H; }
   SubtrieHandle getRoot() const;
-  SubtrieHandle getOrCreateRoot(LazyMappedFileRegionBumpPtr &Alloc);
-  LazyMappedFileRegion &getRegion() const { return *LMFR; }
+  SubtrieHandle getOrCreateRoot(MappedFileRegionBumpPtr &Alloc);
+  MappedFileRegion &getRegion() const { return *Region; }
 
   size_t getFlags() const { return H->Flags; }
   uint64_t getNumSubtrieBits() const { return H->NumSubtrieBits; }
@@ -510,7 +514,7 @@ public:
   }
 
   static HashMappedTrieHandle
-  create(LazyMappedFileRegionBumpPtr &Alloc, StringRef Name,
+  create(MappedFileRegionBumpPtr &Alloc, StringRef Name,
          Optional<uint64_t> NumRootBits, uint64_t NumSubtrieBits,
          uint64_t NumHashBits, uint64_t RecordDataSize);
 
@@ -519,14 +523,15 @@ public:
         function_ref<void(ArrayRef<char>)> PrintRecordData = nullptr) const;
 
   HashMappedTrieHandle() = default;
-  HashMappedTrieHandle(LazyMappedFileRegion &LMFR, Header &H)
-      : LMFR(&LMFR), H(&H) {}
-  HashMappedTrieHandle(LazyMappedFileRegion &LMFR, intptr_t HeaderOffset)
+  HashMappedTrieHandle(MappedFileRegion &Region, Header &H)
+      : Region(&Region), H(&H) {}
+  HashMappedTrieHandle(MappedFileRegion &Region, intptr_t HeaderOffset)
       : HashMappedTrieHandle(
-            LMFR, *reinterpret_cast<Header *>(LMFR.data() + HeaderOffset)) {}
+            Region, *reinterpret_cast<Header *>(Region.data() + HeaderOffset)) {
+  }
 
 private:
-  LazyMappedFileRegion *LMFR = nullptr;
+  MappedFileRegion *Region = nullptr;
   Header *H = nullptr;
 };
 
@@ -537,7 +542,7 @@ struct OnDiskHashMappedTrie::ImplType {
   HashMappedTrieHandle Trie;
 };
 
-SubtrieHandle SubtrieHandle::create(LazyMappedFileRegionBumpPtr &Alloc,
+SubtrieHandle SubtrieHandle::create(MappedFileRegionBumpPtr &Alloc,
                                     uint32_t StartBit, uint32_t NumBits,
                                     uint32_t NumUnusedBits) {
   assert(StartBit <= HashMappedTrieHandle::MaxNumHashBits);
@@ -562,7 +567,7 @@ SubtrieHandle HashMappedTrieHandle::getRoot() const {
 }
 
 SubtrieHandle
-HashMappedTrieHandle::getOrCreateRoot(LazyMappedFileRegionBumpPtr &Alloc) {
+HashMappedTrieHandle::getOrCreateRoot(MappedFileRegionBumpPtr &Alloc) {
   assert(&Alloc.getRegion() == &getRegion());
   if (SubtrieHandle Root = getRoot())
     return Root;
@@ -580,7 +585,7 @@ HashMappedTrieHandle::getOrCreateRoot(LazyMappedFileRegionBumpPtr &Alloc) {
 }
 
 HashMappedTrieHandle
-HashMappedTrieHandle::create(LazyMappedFileRegionBumpPtr &Alloc, StringRef Name,
+HashMappedTrieHandle::create(MappedFileRegionBumpPtr &Alloc, StringRef Name,
                              Optional<uint64_t> NumRootBits,
                              uint64_t NumSubtrieBits, uint64_t NumHashBits,
                              uint64_t RecordDataSize) {
@@ -615,7 +620,7 @@ HashMappedTrieHandle::create(LazyMappedFileRegionBumpPtr &Alloc, StringRef Name,
 
 HashMappedTrieHandle::RecordData
 HashMappedTrieHandle::getRecord(SubtrieSlotValue Offset) {
-  char *Begin = LMFR->data() + Offset.asData();
+  char *Begin = Region->data() + Offset.asData();
   OnDiskHashMappedTrie::ValueProxy Proxy;
   Proxy.Data = MutableArrayRef(Begin, getRecordDataSize());
   Proxy.Hash = ArrayRef(reinterpret_cast<const uint8_t *>(Proxy.Data.end()),
@@ -624,9 +629,9 @@ HashMappedTrieHandle::getRecord(SubtrieSlotValue Offset) {
 }
 
 HashMappedTrieHandle::RecordData
-HashMappedTrieHandle::createRecord(LazyMappedFileRegionBumpPtr &Alloc,
+HashMappedTrieHandle::createRecord(MappedFileRegionBumpPtr &Alloc,
                                    ArrayRef<uint8_t> Hash) {
-  assert(&Alloc.getRegion() == LMFR);
+  assert(&Alloc.getRegion() == Region);
   assert(Hash.size() == getNumHashBytes());
   RecordData Record = getRecord(
       SubtrieSlotValue::getDataOffset(Alloc.allocateOffset(getRecordSize())));
@@ -657,7 +662,7 @@ OnDiskHashMappedTrie::recoverFromHashPointer(
 OnDiskHashMappedTrie::const_pointer
 OnDiskHashMappedTrie::recoverFromFileOffset(FileOffset Offset) const {
   // Check alignment.
-  if (!isAligned(LazyMappedFileRegionBumpPtr::getAlign(), Offset.get()))
+  if (!isAligned(MappedFileRegionBumpPtr::getAlign(), Offset.get()))
     return const_pointer();
 
   // Check bounds.
@@ -724,7 +729,7 @@ OnDiskHashMappedTrie::insertLazy(const_pointer Hint, ArrayRef<uint8_t> Hash,
   HashMappedTrieHandle Trie = Impl->Trie;
   assert(Hash.size() == Trie.getNumHashBytes() && "Invalid hash");
 
-  LazyMappedFileRegionBumpPtr &Alloc = Impl->File.getAlloc();
+  MappedFileRegionBumpPtr &Alloc = Impl->File.getAlloc();
   SubtrieHandle S = Trie.getOrCreateRoot(Alloc);
   IndexGenerator IndexGen = Trie.getIndexGen(S, Hash);
 
@@ -801,7 +806,7 @@ OnDiskHashMappedTrie::insertLazy(const_pointer Hint, ArrayRef<uint8_t> Hash,
 }
 
 SubtrieHandle SubtrieHandle::sink(size_t I, SubtrieSlotValue V,
-                                  LazyMappedFileRegionBumpPtr &Alloc,
+                                  MappedFileRegionBumpPtr &Alloc,
                                   size_t NumSubtrieBits,
                                   SubtrieHandle &UnusedSubtrie, size_t NewI) {
   SubtrieHandle NewS;
@@ -949,7 +954,8 @@ void SubtrieHandle::print(raw_ostream &OS, HashMappedTrieHandle Trie,
     printPrefix(OS, *Prefix);
   }
 
-  OS << " addr=" << (void *)(reinterpret_cast<const char *>(H) - LMFR->data());
+  OS << " addr="
+     << (void *)(reinterpret_cast<const char *>(H) - Region->data());
 
   const size_t NumSlots = Slots.size();
   OS << " num-slots=" << NumSlots << "\n";
@@ -965,7 +971,7 @@ void SubtrieHandle::print(raw_ostream &OS, HashMappedTrieHandle Trie,
         OS << "0";
     OS << I << " ";
     if (Slot.isSubtrie()) {
-      SubtrieHandle S(*LMFR, Slot);
+      SubtrieHandle S(*Region, Slot);
       std::string SubtriePrefix = *Prefix;
       appendIndexBits(SubtriePrefix, I, NumSlots);
       OS << "addr=" << (void *)Slot.asSubtrie();
@@ -1065,26 +1071,17 @@ Expected<OnDiskHashMappedTrie> OnDiskHashMappedTrie::create(
         "invalid hash size: " + Twine(NumHashBits) + " (not byte-aligned)");
 
   // Constructor for if the file doesn't exist.
-  auto NewFileConstructor = [&](LazyMappedFileRegion &LMFR) -> Error {
-    Expected<DatabaseFile> DB = DatabaseFile::create(LMFR, NewFileInitialSize);
-    if (!DB)
-      return DB.takeError();
-
+  auto NewDBConstructor = [&](DatabaseFile &DB) -> Error {
     HashMappedTrieHandle Trie =
-        HashMappedTrieHandle::create(DB->getAlloc(), TrieName, NumRootBits,
+        HashMappedTrieHandle::create(DB.getAlloc(), TrieName, NumRootBits,
                                      NumSubtrieBits, NumHashBits, DataSize);
-    DB->addTable(Trie);
+    DB.addTable(Trie);
     return Error::success();
   };
 
   // Get or create the file.
-  std::shared_ptr<LazyMappedFileRegion> LMFR;
-  if (Error E = LazyMappedFileRegion::createShared(Path, MaxFileSize,
-                                                   NewFileConstructor)
-                    .moveInto(LMFR))
-    return std::move(E);
-
-  Expected<DatabaseFile> File = DatabaseFile::get(std::move(LMFR));
+  Expected<DatabaseFile> File =
+      DatabaseFile::create(Path, MaxFileSize, NewDBConstructor);
   if (!File)
     return File.takeError();
 
@@ -1147,36 +1144,37 @@ public:
   operator TableHandle() const {
     if (!H)
       return TableHandle();
-    return TableHandle(*LMFR, H->GenericHeader);
+    return TableHandle(*Region, H->GenericHeader);
   }
 
-  MutableArrayRef<char> allocate(LazyMappedFileRegionBumpPtr &Alloc,
+  MutableArrayRef<char> allocate(MappedFileRegionBumpPtr &Alloc,
                                  size_t DataSize) {
-    assert(&Alloc.getRegion() == LMFR);
+    assert(&Alloc.getRegion() == Region);
     return MutableArrayRef(Alloc.allocate(DataSize), DataSize);
   }
 
   explicit operator bool() const { return H; }
   const Header &getHeader() const { return *H; }
-  LazyMappedFileRegion &getRegion() const { return *LMFR; }
+  MappedFileRegion &getRegion() const { return *Region; }
 
   MutableArrayRef<uint8_t> getUserHeader() {
     return MutableArrayRef(reinterpret_cast<uint8_t *>(H + 1),
                            H->UserHeaderSize);
   }
 
-  static DataAllocatorHandle create(LazyMappedFileRegionBumpPtr &Alloc,
+  static DataAllocatorHandle create(MappedFileRegionBumpPtr &Alloc,
                                     StringRef Name, uint32_t UserHeaderSize);
 
   DataAllocatorHandle() = default;
-  DataAllocatorHandle(LazyMappedFileRegion &LMFR, Header &H)
-      : LMFR(&LMFR), H(&H) {}
-  DataAllocatorHandle(LazyMappedFileRegion &LMFR, intptr_t HeaderOffset)
+  DataAllocatorHandle(MappedFileRegion &Region, Header &H)
+      : Region(&Region), H(&H) {}
+  DataAllocatorHandle(MappedFileRegion &Region, intptr_t HeaderOffset)
       : DataAllocatorHandle(
-            LMFR, *reinterpret_cast<Header *>(LMFR.data() + HeaderOffset)) {}
+            Region, *reinterpret_cast<Header *>(Region.data() + HeaderOffset)) {
+  }
 
 private:
-  LazyMappedFileRegion *LMFR = nullptr;
+  MappedFileRegion *Region = nullptr;
   Header *H = nullptr;
 };
 
@@ -1187,9 +1185,9 @@ struct OnDiskDataAllocator::ImplType {
   DataAllocatorHandle Store;
 };
 
-DataAllocatorHandle
-DataAllocatorHandle::create(LazyMappedFileRegionBumpPtr &Alloc, StringRef Name,
-                            uint32_t UserHeaderSize) {
+DataAllocatorHandle DataAllocatorHandle::create(MappedFileRegionBumpPtr &Alloc,
+                                                StringRef Name,
+                                                uint32_t UserHeaderSize) {
   // Allocate.
   intptr_t Offset =
       Alloc.allocateOffset(sizeof(Header) + UserHeaderSize + Name.size() + 1);
@@ -1219,27 +1217,18 @@ Expected<OnDiskDataAllocator> OnDiskDataAllocator::create(
   StringRef TableName = TableNameTwine.toStringRef(TableNameStorage);
 
   // Constructor for if the file doesn't exist.
-  auto NewFileConstructor = [&](LazyMappedFileRegion &LMFR) -> Error {
-    Expected<DatabaseFile> DB = DatabaseFile::create(LMFR, NewFileInitialSize);
-    if (!DB)
-      return DB.takeError();
-
+  auto NewDBConstructor = [&](DatabaseFile &DB) -> Error {
     DataAllocatorHandle Store =
-        DataAllocatorHandle::create(DB->getAlloc(), TableName, UserHeaderSize);
-    DB->addTable(Store);
+        DataAllocatorHandle::create(DB.getAlloc(), TableName, UserHeaderSize);
+    DB.addTable(Store);
     if (UserHeaderSize)
       UserHeaderInit(Store.getUserHeader().data());
     return Error::success();
   };
 
   // Get or create the file.
-  std::shared_ptr<LazyMappedFileRegion> LMFR;
-  if (Error E = LazyMappedFileRegion::createShared(Path, MaxFileSize,
-                                                   NewFileConstructor)
-                    .moveInto(LMFR))
-    return std::move(E);
-
-  Expected<DatabaseFile> File = DatabaseFile::get(std::move(LMFR));
+  Expected<DatabaseFile> File =
+      DatabaseFile::create(Path, MaxFileSize, NewDBConstructor);
   if (!File)
     return File.takeError();
 
