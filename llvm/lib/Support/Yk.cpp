@@ -25,3 +25,9 @@ static cl::opt<bool, true> YkStackMapOffsetFixParser(
     cl::desc("Apply a fix to stackmaps that corrects the reported instruction "
              "offset in the presence of calls."),
     cl::NotHidden, cl::location(YkStackMapOffsetFix));
+
+bool YkStackMapAdditionalLocs;
+static cl::opt<bool, true> YkStackMapAdditionalLocsParser(
+    "yk-stackmap-add-locs",
+    cl::desc("Encode additional locations for registers into stackmaps."),
+    cl::NotHidden, cl::location(YkStackMapAdditionalLocs));

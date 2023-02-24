@@ -71,6 +71,8 @@ class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
   };
 
   StackMapShadowTracker SMShadowTracker;
+  // Map holding information about register spills.
+  std::map<const MachineInstr *, std::map<Register, int64_t>> StackmapSpillMaps;
 
   // All instructions emitted by the X86AsmPrinter should use this helper
   // method.

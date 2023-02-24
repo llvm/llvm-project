@@ -46,6 +46,7 @@
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
+extern bool YkStackMapAdditionalLocs;
 
 X86AsmPrinter::X86AsmPrinter(TargetMachine &TM,
                              std::unique_ptr<MCStreamer> Streamer)
@@ -54,6 +55,116 @@ X86AsmPrinter::X86AsmPrinter(TargetMachine &TM,
 //===----------------------------------------------------------------------===//
 // Primitive Helper Functions.
 //===----------------------------------------------------------------------===//
+
+const TargetInstrInfo *TII;
+
+/// Clear any mappings that map to the given register.
+void clearRhs(Register Reg, std::map<Register, int64_t> &SpillMap) {
+  auto I = SpillMap.begin();
+  while (I != SpillMap.end()) {
+    if (I->second == Reg) {
+      I = SpillMap.erase(I);
+    } else {
+      ++I;
+    }
+  }
+}
+
+/// Given a MachineBasicBlock, analyse its instructions to build a mapping of
+/// where duplicate values live. This can be either in another register or on
+/// the stack. Since registers are always positive and stack offsets negative,
+/// we can store both in the same map while still being able to distinguish
+/// them. This allows us to keep the changes in Stackmaps.cpp to a minimum and
+/// avoids having to alter the stackmap format.
+void processInstructions(
+    const MachineBasicBlock *MBB,
+    std::map<Register, int64_t> &SpillMap,
+    std::map<const MachineInstr *, std::map<Register, int64_t>> &StackmapSpillMaps
+  ) {
+  for (const MachineInstr &Instr : MBB->instrs()) {
+    // At each stackmap call, save the current mapping so it can later be
+    // encoded in the stackmap when it is lowered.
+    if (Instr.getOpcode() == TargetOpcode::STACKMAP) {
+      StackmapSpillMaps[&Instr] = SpillMap;
+      continue;
+    }
+
+    // Copying a value from one register B to another A, creates a mapping from
+    // A to B. If A is tracked by the stackmap, then B will also be tracked and
+    // assigned the same value during deoptimisation.
+    if (Instr.isMoveReg()) {
+      const MachineOperand Lhs = Instr.getOperand(0);
+      const MachineOperand Rhs = Instr.getOperand(1);
+      assert(Lhs.isReg() && "Is register.");
+      assert(Rhs.isReg() && "Is register.");
+      SpillMap[Lhs.getReg()] = Rhs.getReg();
+      // Reassigning a new value to Lhs means any mappings to Lhs are now void
+      // and need to be removed.
+      clearRhs(Lhs.getReg(), SpillMap);
+      continue;
+    }
+
+    int FI;
+    // A value from a register was spilled to the stack. Create a mapping from
+    // that register to the stack offset.
+    if (TII->isStoreToStackSlotPostFE(Instr, FI)) {
+      const MachineOperand OffsetOp = Instr.getOperand(3);
+      const MachineOperand MO = Instr.getOperand(5);
+      assert(MO.isReg() && "Is register.");
+      const Register Reg = MO.getReg();
+      if (OffsetOp.isImm()) {
+        const int64_t Offset = OffsetOp.getImm();
+        SpillMap[Reg] = Offset;
+        clearRhs(Reg, SpillMap);
+      }
+      continue;
+    }
+
+    // A value from the stack was loaded back into a register. Create a mapping from
+    // that register to the stack offset.
+    if (TII->isLoadFromStackSlotPostFE(Instr, FI)) {
+      const MachineOperand OffsetOp = Instr.getOperand(4);
+      const MachineOperand Lhs = Instr.getOperand(0);
+      assert(Lhs.isReg() && "Is register.");
+      const Register Reg = Lhs.getReg();
+      if (OffsetOp.isImm()) {
+        const int64_t Offset = OffsetOp.getImm();
+        SpillMap[Reg] = Offset;
+        clearRhs(Reg, SpillMap);
+      }
+      continue;
+    }
+
+    // Any other assignments to tracked registers removes their mapping.
+    for (const MachineOperand MO : Instr.defs()) {
+      assert(MO.isReg() && "Is register.");
+      SpillMap.erase(MO.getReg());
+      clearRhs(MO.getReg(), SpillMap);
+    }
+  }
+}
+
+/// Walk through the control flow of a function starting at the entry block
+/// using depth first search. This makes sure the mappings are are generated in
+/// the correct order.
+/// YKFIXME: Can be updated to use an iterative approach.
+void findSpillLocations(
+    const MachineBasicBlock *MBB,
+    std::set<const MachineBasicBlock *> &Seen,
+    std::map<Register, int64_t> SpillMap,
+    std::map<const MachineInstr *, std::map<Register, int64_t>> &StackmapSpillMaps
+    ) {
+
+  // Block has already been processed.
+  if (Seen.count(MBB) > 0) {
+    return;
+  }
+  Seen.insert(MBB);
+  processInstructions(MBB, SpillMap, StackmapSpillMaps);
+  for (MachineBasicBlock *Succ : MBB->successors()) {
+    findSpillLocations(Succ, Seen, SpillMap, StackmapSpillMaps);
+  }
+}
 
 /// runOnMachineFunction - Emit the function body.
 ///
@@ -80,6 +191,15 @@ bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_FUNCTION
                                     << COFF::SCT_COMPLEX_TYPE_SHIFT);
     OutStreamer->endCOFFSymbolDef();
+  }
+
+  // Analyse control flow to find out the location of register spills to the
+  // stack or to other registers, so we can also encode those in stackmaps.
+  TII = MF.getSubtarget().getInstrInfo();
+  std::set<const MachineBasicBlock *> S;
+  std::map<Register, int64_t> SpillMap;
+  if (YkStackMapAdditionalLocs) {
+    findSpillLocations(&*MF.begin(), S, SpillMap, StackmapSpillMaps);
   }
 
   // Emit the rest of the function body.
