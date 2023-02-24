@@ -49,6 +49,10 @@ defvar TA_MA = 3;
 
 class PseudoToVInst<string PseudoInst> {
   defvar AffixSubsts = [["Pseudo", ""],
+                        ["_E64", ""],
+                        ["_E32", ""],
+                        ["_E16", ""],
+                        ["_E8", ""],
                         ["_F64", "_F"],
                         ["_F32", "_F"],
                         ["_F16", "_F"],
