@@ -118,6 +118,8 @@ public:
     return CompactPtr >> GroupSizeLog;
   }
 
+  uptr batchGroupBase(uptr GroupId) { return GroupId << GroupSizeLog; }
+
   TransferBatch *popBatch(CacheT *C, uptr ClassId) {
     DCHECK_LT(ClassId, NumClasses);
     SizeClassInfo *Sci = getSizeClassInfo(ClassId);
@@ -777,9 +779,36 @@ private:
       }
 
       BG.PushedBlocksAtLastCheckpoint = BG.PushedBlocks;
-      // Note that we don't always visit blocks in each BatchGroup so that we
-      // may miss the chance of releasing certain pages that cross BatchGroups.
-      Context.markFreeBlocks(BG.Batches, DecompactPtr, Base);
+
+      const uptr MaxContainedBlocks = AllocatedGroupSize / BlockSize;
+      // The first condition to do range marking is that all the blocks in the
+      // range need to be from the same region. In SizeClassAllocator32, this is
+      // true when GroupSize and RegionSize are the same. Another tricky case,
+      // while range marking, the last block in a region needs the logic to mark
+      // the last page. However, in SizeClassAllocator32, the RegionSize
+      // recorded in PageReleaseContext may be different from
+      // `CurrentRegionAllocated` of the current region. This exception excludes
+      // the chance of doing range marking for the current region.
+      const bool CanDoRangeMark =
+          GroupSize == RegionSize && BG.GroupId != CurRegionGroupId;
+
+      if (CanDoRangeMark && NumBlocks == MaxContainedBlocks) {
+        for (const auto &It : BG.Batches)
+          for (u16 I = 0; I < It.getCount(); ++I)
+            DCHECK_EQ(compactPtrGroup(It.get(I)), BG.GroupId);
+
+        const uptr From = batchGroupBase(BG.GroupId);
+        const uptr To = batchGroupBase(BG.GroupId) + AllocatedGroupSize;
+        Context.markRangeAsAllCounted(From, To, Base);
+      } else {
+        if (CanDoRangeMark)
+          DCHECK_LT(NumBlocks, MaxContainedBlocks);
+
+        // Note that we don't always visit blocks in each BatchGroup so that we
+        // may miss the chance of releasing certain pages that cross
+        // BatchGroups.
+        Context.markFreeBlocks(BG.Batches, DecompactPtr, Base);
+      }
     }
 
     if (!Context.hasBlockMarked())
