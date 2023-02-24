@@ -338,6 +338,10 @@ public:
   mlir::Value createBox(mlir::Location loc, const fir::ExtendedValue &exv,
                         bool isPolymorphic = false);
 
+  mlir::Value createBox(mlir::Location loc, mlir::Type boxType,
+                        mlir::Value addr, mlir::Value shape, mlir::Value slice,
+                        llvm::ArrayRef<mlir::Value> lengths, mlir::Value tdesc);
+
   /// Create constant i1 with value 1. if \p b is true or 0. otherwise
   mlir::Value createBool(mlir::Location loc, bool b) {
     return createIntegerConstant(loc, getIntegerType(1), b ? 1 : 0);
