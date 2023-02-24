@@ -1793,12 +1793,14 @@ TypeIndex CodeViewDebug::lowerTypeBasic(const DIBasicType *Ty) {
     }
     break;
   case dwarf::DW_ATE_complex_float:
+    // The CodeView size for a complex represents the size of
+    // an individual component.
     switch (ByteSize) {
-    case 2:  STK = SimpleTypeKind::Complex16;  break;
-    case 4:  STK = SimpleTypeKind::Complex32;  break;
-    case 8:  STK = SimpleTypeKind::Complex64;  break;
-    case 10: STK = SimpleTypeKind::Complex80;  break;
-    case 16: STK = SimpleTypeKind::Complex128; break;
+    case 4:  STK = SimpleTypeKind::Complex16;  break;
+    case 8:  STK = SimpleTypeKind::Complex32;  break;
+    case 16: STK = SimpleTypeKind::Complex64;  break;
+    case 20: STK = SimpleTypeKind::Complex80;  break;
+    case 32: STK = SimpleTypeKind::Complex128; break;
     }
     break;
   case dwarf::DW_ATE_float:

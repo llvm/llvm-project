@@ -109,8 +109,7 @@ def LLVM_FTruncOp : LLVM_UnaryIntrOpF<"trunc">;
 def LLVM_SqrtOp : LLVM_UnaryIntrOpF<"sqrt">;
 def LLVM_PowOp : LLVM_BinarySameArgsIntrOpF<"pow">;
 def LLVM_PowIOp : LLVM_OneResultIntrOp<"powi", [], [0,1],
-    [DeclareOpInterfaceMethods<FastmathFlagsInterface>, Pure],
-    /*requiresFastmath=*/1> {
+                                       [Pure], /*requiresFastmath=*/1> {
   let arguments =
       (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
            AnySignlessInteger:$power,
