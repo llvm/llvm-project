@@ -97,6 +97,8 @@ add_custom_command(
 )
 
 add_custom_target(libc-api-test)
+add_dependencies(check-libc libc-api-test)
+
 set(
   allocator_entrypoints 
     libc.src.stdlib.malloc
