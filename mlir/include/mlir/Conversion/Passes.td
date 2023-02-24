@@ -683,14 +683,19 @@ def ConvertMemRefToSPIRV : Pass<"convert-memref-to-spirv"> {
 // NVGPUToNVVM
 //===----------------------------------------------------------------------===//
 
-def ConvertNVGPUToNVVM : Pass<"convert-nvgpu-to-nvvm"> {
+def ConvertNVGPUToNVVMPass : Pass<"convert-nvgpu-to-nvvm"> {
   let summary = "Convert NVGPU dialect to NVVM dialect";
   let description = [{
     This pass converts supported NVGPU ops to NVVM dialect intrinsics.
   }];
-  let constructor = "mlir::createConvertNVGPUToNVVMPass()";
+
   let dependentDialects = [
     "NVVM::NVVMDialect",
+  ];
+  let options = [
+    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
+              /*default=*/"false", "Generate LLVM IR using opaque pointers "
+              "instead of typed pointers">
   ];
 }
 
