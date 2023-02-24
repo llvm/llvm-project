@@ -4148,25 +4148,30 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     return;
   }
 
-  const Operator *Op = dyn_cast<Operator>(V);
-  if (!Op)
-    return;
-
   FPClassTest KnownNotFromFlags = fcNone;
-  if (const FPMathOperator *FPOp = dyn_cast<FPMathOperator>(Op)) {
+  if (const auto *CB = dyn_cast<CallBase>(V))
+    KnownNotFromFlags |= CB->getRetNoFPClass();
+  else if (const auto *Arg = dyn_cast<Argument>(V))
+    KnownNotFromFlags |= Arg->getNoFPClass();
+
+  const Operator *Op = dyn_cast<Operator>(V);
+  if (const FPMathOperator *FPOp = dyn_cast_or_null<FPMathOperator>(Op)) {
     if (FPOp->hasNoNaNs())
       KnownNotFromFlags |= fcNan;
     if (FPOp->hasNoInfs())
       KnownNotFromFlags |= fcInf;
-
-    // We no longer need to find out about these bits from inputs if we can
-    // assume this from flags.
-    InterestedClasses &= ~KnownNotFromFlags;
   }
+
+  // We no longer need to find out about these bits from inputs if we can
+  // assume this from flags/attributes.
+  InterestedClasses &= ~KnownNotFromFlags;
 
   auto ClearClassesFromFlags = make_scope_exit([=, &Known] {
     Known.knownNot(KnownNotFromFlags);
   });
+
+  if (!Op)
+    return;
 
   // All recursive calls that increase depth must come after this.
   if (Depth == MaxAnalysisRecursionDepth)
