@@ -237,3 +237,19 @@ SYMBOL(ssize, std::, <vector>)
 // which is tricky to disambiguate without type information.
 // Don't set any header for it, as it comes with the type header.
 SYMBOL(get, std::, /*no headers*/)
+
+// Macros
+SYMBOL(NULL, None, <cstddef>)
+SYMBOL(NULL, None, <stddef.h>)
+SYMBOL(NULL, None, <cstdlib>)
+SYMBOL(NULL, None, <stdlib.h>)
+SYMBOL(NULL, None, <cstring>)
+SYMBOL(NULL, None, <string.h>)
+SYMBOL(NULL, None, <cwchar>)
+SYMBOL(NULL, None, <wchar.h>)
+SYMBOL(NULL, None, <ctime>)
+SYMBOL(NULL, None, <time.h>)
+SYMBOL(NULL, None, <clocale>)
+SYMBOL(NULL, None, <locale.h>)
+SYMBOL(NULL, None, <cstdio>)
+SYMBOL(NULL, None, <stdio.h>)
