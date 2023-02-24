@@ -1910,12 +1910,16 @@ multiclass VPseudoVIOT_M {
 multiclass VPseudoVCPR_V {
   foreach m = MxList in {
     defvar mx = m.MX;
-    defvar WriteVCompressV_MX = !cast<SchedWrite>("WriteVCompressV_" # mx);
-    defvar ReadVCompressV_MX = !cast<SchedRead>("ReadVCompressV_" # mx);
-
+    defvar sews = SchedSEWSet<mx>.val;
     let VLMul = m.value in
-      def _VM # "_" # m.MX : VPseudoUnaryAnyMask<m.vrclass, m.vrclass>,
-                             Sched<[WriteVCompressV_MX, ReadVCompressV_MX, ReadVCompressV_MX]>;
+      foreach e = sews in {
+        defvar suffix = "_" # m.MX # "_E" # e;
+        defvar WriteVCompressV_MX_E = !cast<SchedWrite>("WriteVCompressV" # suffix);
+        defvar ReadVCompressV_MX_E = !cast<SchedRead>("ReadVCompressV" # suffix);
+
+        def _VM # suffix : VPseudoUnaryAnyMask<m.vrclass, m.vrclass>,
+                           Sched<[WriteVCompressV_MX_E, ReadVCompressV_MX_E, ReadVCompressV_MX_E]>;
+      }
   }
 }
 
@@ -3860,6 +3864,28 @@ class VPatUnaryAnyMask<string intrinsic,
                    (mask_type VR:$rs2),
                    GPR:$vl, sew)>;
 
+class VPatUnaryAnyMask_E<string intrinsic,
+                         string inst,
+                         string kind,
+                         ValueType result_type,
+                         ValueType op1_type,
+                         ValueType mask_type,
+                         int log2sew,
+                         LMULInfo vlmul,
+                         int sew,
+                         VReg result_reg_class,
+                         VReg op1_reg_class> :
+  Pat<(result_type (!cast<Intrinsic>(intrinsic)
+                   (result_type result_reg_class:$merge),
+                   (op1_type op1_reg_class:$rs1),
+                   (mask_type VR:$rs2),
+                   VLOpFrag)),
+                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX#"_E"#sew)
+                   (result_type result_reg_class:$merge),
+                   (op1_type op1_reg_class:$rs1),
+                   (mask_type VR:$rs2),
+                   GPR:$vl, log2sew)>;
+
 class VPatBinaryM<string intrinsic_name,
                   string inst,
                   ValueType result_type,
@@ -4168,6 +4194,16 @@ multiclass VPatUnaryV_V_AnyMask<string intrinsic, string instruction,
     def : VPatUnaryAnyMask<intrinsic, instruction, "VM",
                            vti.Vector, vti.Vector, vti.Mask,
                            vti.Log2SEW, vti.LMul, vti.RegClass,
+                           vti.RegClass>;
+  }
+}
+
+multiclass VPatUnaryV_V_AnyMask_E<string intrinsic, string instruction,
+                                  list<VTypeInfo> vtilist> {
+  foreach vti = vtilist in {
+    def : VPatUnaryAnyMask_E<intrinsic, instruction, "VM",
+                           vti.Vector, vti.Vector, vti.Mask,
+                           vti.Log2SEW, vti.LMul, vti.SEW, vti.RegClass,
                            vti.RegClass>;
   }
 }
@@ -6434,11 +6470,11 @@ let Predicates = [HasVInstructionsAnyF] in {
 // 16.5. Vector Compress Instruction
 //===----------------------------------------------------------------------===//
 let Predicates = [HasVInstructions] in {
-  defm : VPatUnaryV_V_AnyMask<"int_riscv_vcompress", "PseudoVCOMPRESS", AllIntegerVectors>;
+  defm : VPatUnaryV_V_AnyMask_E<"int_riscv_vcompress", "PseudoVCOMPRESS", AllIntegerVectors>;
 } // Predicates = [HasVInstructions]
 
 let Predicates = [HasVInstructionsAnyF] in {
-  defm : VPatUnaryV_V_AnyMask<"int_riscv_vcompress", "PseudoVCOMPRESS", AllFloatVectors>;
+  defm : VPatUnaryV_V_AnyMask_E<"int_riscv_vcompress", "PseudoVCOMPRESS", AllFloatVectors>;
 } // Predicates = [HasVInstructionsAnyF]
 
 // Include the non-intrinsic ISel patterns
