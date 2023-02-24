@@ -2423,6 +2423,72 @@ bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
   return true;
 }
 
+/// Some instructions have a condition operand that is compared against zero.
+/// Since RISC-V doesn't have seteq/setne instructions, we can use this
+/// property to avoid a seqz or snez instruction after an xor/addi/xori.
+/// When \p Inverse is false, we match seteq or any unknown operation. When
+/// \p Inverse is true, we only match setne.
+bool RISCVDAGToDAGISel::selectCondOp(SDValue N, bool Inverse, SDValue &Val) {
+  // Start with this node as the output.
+  Val = N;
+
+  // If the node isn't a setcc, there's nothing we can do. Return success
+  // if we aren't looking for an inverse condition.
+  if (N->getOpcode() != ISD::SETCC)
+    return !Inverse;
+
+  // If it isn't an equality comparison, we also can't do anything.
+  ISD::CondCode CCVal = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  if (!isIntEqualitySetCC(CCVal))
+    return !Inverse;
+
+  // This ComplexPattern occurs in pairs with both polarities of Inverse.
+  // If this isn't the one we're looking for, let the other polarity match it.
+  if (isTrueWhenEqual(CCVal) != Inverse)
+    return false;
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  // If the RHS side is 0, we don't need any extra instructions, return the LHS.
+  if (isNullConstant(RHS)) {
+    Val = LHS;
+    return true;
+  }
+
+  SDLoc DL(N);
+
+  if (auto *C = dyn_cast<ConstantSDNode>(RHS)) {
+    int64_t CVal = C->getSExtValue();
+    // If the RHS is -2048, we can use xori to produce 0 if the LHS is -2048 and
+    // non-zero otherwise.
+    if (CVal == -2048) {
+      Val =
+          SDValue(CurDAG->getMachineNode(
+                      RISCV::XORI, DL, N->getValueType(0), LHS,
+                      CurDAG->getTargetConstant(CVal, DL, N->getValueType(0))),
+                  0);
+      return true;
+    }
+    // If the RHS is [-2047,2048], we can use addi with -RHS to produce 0 if the
+    // LHS is equal to the RHS and non-zero otherwise.
+    if (isInt<12>(CVal) || CVal == 2048) {
+      Val =
+          SDValue(CurDAG->getMachineNode(
+                      RISCV::ADDI, DL, N->getValueType(0), LHS,
+                      CurDAG->getTargetConstant(-CVal, DL, N->getValueType(0))),
+                  0);
+      return true;
+    }
+  }
+
+  // If nothing else we can XOR the LHS and RHS to produce zero if they are
+  // equal and a non-zero value if they aren't.
+  Val = SDValue(
+      CurDAG->getMachineNode(RISCV::XOR, DL, N->getValueType(0), LHS, RHS), 0);
+  return true;
+}
+
 bool RISCVDAGToDAGISel::selectSExtBits(SDValue N, unsigned Bits, SDValue &Val) {
   if (N.getOpcode() == ISD::SIGN_EXTEND_INREG &&
       cast<VTSDNode>(N.getOperand(1))->getVT().getSizeInBits() == Bits) {

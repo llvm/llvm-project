@@ -1870,6 +1870,15 @@ def : Pat<(binop_allwusers<add> GPR:$rs1, (AddiPair:$rs2)),
                  (AddiPairImmSmall AddiPair:$rs2))>;
 }
 
+// Some instructions have a condition operand that is compared against zero.
+// Since RISC-V doesn't have seteq/setne instructions, we can use this
+// property to avoid a seqz or snez instruction after an xor/addi/xori.
+// condop matches a setne or any unknown operation.
+// invcondop only matches a seteq.
+// This ComplexPatterns must be used in pairs.
+def condop    : ComplexPattern<XLenVT, 1, "selectCondOp">;
+def invcondop : ComplexPattern<XLenVT, 1, "selectInverseCondOp">;
+
 /// Empty pseudo for RISCVInitUndefPass
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 0, isCodeGenOnly = 1 in {
   def PseudoRVVInitUndefM1     :  Pseudo<(outs VR:$vd), (ins), [], "">;
