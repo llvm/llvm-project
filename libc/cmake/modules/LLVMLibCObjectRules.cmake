@@ -598,9 +598,8 @@ function(create_entrypoint_object fq_target_name)
         COMMAND ${CMAKE_COMMAND} -E echo "Header file check skipped")
     endif()
 
-    set(lint_timestamp "${CMAKE_CURRENT_BINARY_DIR}/.${target_name}.__lint_timestamp__")
-    add_custom_command(
-      OUTPUT ${lint_timestamp}
+    add_custom_target(
+      ${fq_target_name}.__lint__
       # --quiet is used to surpress warning statistics from clang-tidy like:
       #     Suppressed X warnings (X in non-user code).
       # There seems to be a bug in clang-tidy where by even with --quiet some
@@ -622,11 +621,11 @@ function(create_entrypoint_object fq_target_name)
       # use add_custom_command. This function requires an output file and since
       # linting doesn't produce a file, we create a dummy file using a
       # crossplatform touch.
-      COMMAND "${CMAKE_COMMAND}" -E touch ${lint_timestamp}
-      COMMENT "Linting... ${target_name}"
-      DEPENDS clang-tidy ${internal_target_name} ${ADD_ENTRYPOINT_OBJ_SRCS}
+      COMMENT "Linting... ${fq_target_name}"
+      DEPENDS ${internal_target_name} ${ADD_ENTRYPOINT_OBJ_SRCS}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
+    add_dependencies(libc-lint ${fq_target_name}.__lint__)
   endif()
 
 endfunction(create_entrypoint_object)
