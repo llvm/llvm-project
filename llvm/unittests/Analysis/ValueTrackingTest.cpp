@@ -1351,6 +1351,83 @@ TEST_F(ComputeKnownFPClassTest, SelectNNaNNInf) {
   expectKnownFPClass(~(fcNan | fcInf), std::nullopt);
 }
 
+TEST_F(ComputeKnownFPClassTest, SelectNoFPClassArgUnionAll) {
+  parseAssembly(
+      "define float @test(i1 %cond, float nofpclass(snan ninf nsub pzero pnorm) %arg0, float nofpclass(qnan nnorm nzero psub pinf) %arg1) {\n"
+      "  %A = select i1 %cond, float %arg0, float %arg1"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcAllFlags, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNoFPClassArgNoNan) {
+  parseAssembly(
+      "define float @test(i1 %cond, float nofpclass(nan) %arg0, float nofpclass(nan) %arg1) {\n"
+      "  %A = select i1 %cond, float %arg0, float %arg1"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcNan, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNoFPClassArgNoPInf) {
+  parseAssembly(
+      "define float @test(i1 %cond, float nofpclass(inf) %arg0, float nofpclass(pinf) %arg1) {\n"
+      "  %A = select i1 %cond, float %arg0, float %arg1"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcPosInf, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNoFPClassArgNoNInf) {
+  parseAssembly(
+      "define float @test(i1 %cond, float nofpclass(ninf) %arg0, float nofpclass(inf) %arg1) {\n"
+      "  %A = select i1 %cond, float %arg0, float %arg1"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcNegInf, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNoFPClassCallSiteNoNan) {
+  parseAssembly(
+      "declare float @func()\n"
+      "define float @test() {\n"
+      "  %A = call nofpclass(nan) float @func()\n"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcNan, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNoFPClassCallSiteNoZeros) {
+  parseAssembly(
+      "declare float @func()\n"
+      "define float @test() {\n"
+      "  %A = call nofpclass(zero) float @func()\n"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcZero, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNoFPClassDeclarationNoNan) {
+  parseAssembly(
+      "declare nofpclass(nan) float @no_nans()\n"
+      "define float @test() {\n"
+      "  %A = call float @no_nans()\n"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcNan, std::nullopt);
+}
+
+// Check nofpclass + ninf works on a callsite
+TEST_F(ComputeKnownFPClassTest, SelectNoFPClassCallSiteNoZerosNInfFlags) {
+  parseAssembly(
+      "declare float @func()\n"
+      "define float @test() {\n"
+      "  %A = call ninf nofpclass(zero) float @func()\n"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~(fcZero | fcInf), std::nullopt);
+}
+
 TEST_F(ComputeKnownFPClassTest, FNegNInf) {
   parseAssembly(
       "define float @test(float %arg) {\n"
