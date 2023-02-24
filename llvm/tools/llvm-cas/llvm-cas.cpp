@@ -49,7 +49,8 @@ static int makeNode(ObjectStore &CAS, ArrayRef<std::string> References,
                     StringRef DataPath);
 static int diffGraphs(ObjectStore &CAS, const CASID &LHS, const CASID &RHS);
 static int traverseGraph(ObjectStore &CAS, const CASID &ID);
-static int ingestFileSystem(ObjectStore &CAS, StringRef Path);
+static int ingestFileSystem(ObjectStore &CAS, std::optional<StringRef> CASPath,
+                            StringRef Path);
 static int mergeTrees(ObjectStore &CAS, ArrayRef<std::string> Objects);
 static int getCASIDForFile(ObjectStore &CAS, const CASID &ID, StringRef Path);
 static int import(ObjectStore &CAS, ObjectStore &UpstreamCAS,
@@ -129,10 +130,13 @@ int main(int Argc, char **Argv) {
 
   std::unique_ptr<ObjectStore> CAS;
   std::unique_ptr<ActionCache> AC;
-  if (sys::path::is_absolute(CASPath))
+  std::optional<StringRef> CASFilePath;
+  if (sys::path::is_absolute(CASPath)) {
+    CASFilePath = CASPath;
     std::tie(CAS, AC) = ExitOnErr(createOnDiskUnifiedCASDatabases(CASPath));
-  else
+  } else {
     CAS = ExitOnErr(createCASFromIdentifier(CASPath));
+  }
   assert(CAS);
 
   std::unique_ptr<ObjectStore> UpstreamCAS;
@@ -161,7 +165,7 @@ int main(int Argc, char **Argv) {
   }
 
   if (Command == IngestFileSystem)
-    return ingestFileSystem(*CAS, DataPath);
+    return ingestFileSystem(*CAS, CASFilePath, DataPath);
 
   if (Command == MergeTrees)
     return mergeTrees(*CAS, Objects);
@@ -457,11 +461,31 @@ static Expected<ObjectProxy> ingestFileSystemImpl(ObjectStore &CAS,
       });
 }
 
-int ingestFileSystem(ObjectStore &CAS, StringRef Path) {
+/// Check that we are not attempting to ingest the CAS into itself, which can
+/// accidentally create a weird or large cas.
+Error checkCASIngestPath(StringRef CASPath, StringRef DataPath) {
+  SmallString<128> RealCAS, RealData;
+  if (std::error_code EC = sys::fs::real_path(StringRef(CASPath), RealCAS))
+    return createFileError(CASPath, EC);
+  if (std::error_code EC = sys::fs::real_path(StringRef(DataPath), RealData))
+    return createFileError(CASPath, EC);
+  if (RealCAS.startswith(RealData) &&
+      (RealCAS.size() == RealData.size() ||
+       sys::path::is_separator(RealCAS[RealData.size()])))
+    return createStringError(inconvertibleErrorCode(),
+                             "-cas is inside -data directory, which would "
+                             "ingest the cas into itself");
+  return Error::success();
+}
+
+int ingestFileSystem(ObjectStore &CAS, std::optional<StringRef> CASPath,
+                     StringRef Path) {
   ExitOnError ExitOnErr("llvm-cas: ingest: ");
   if (Path.empty())
     ExitOnErr(
         createStringError(inconvertibleErrorCode(), "missing --data=<path>"));
+  if (CASPath)
+    ExitOnErr(checkCASIngestPath(*CASPath, Path));
   auto Ref = ExitOnErr(ingestFileSystemImpl(CAS, Path));
   outs() << Ref.getID() << "\n";
   return 0;
