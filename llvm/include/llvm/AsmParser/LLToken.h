@@ -195,6 +195,24 @@ enum Kind {
   kw_inaccessiblememonly,
   kw_inaccessiblemem_or_argmemonly,
 
+  // nofpclass attribute:
+  kw_all,
+  kw_nan,
+  kw_snan,
+  kw_qnan,
+  kw_inf,
+  // kw_ninf, - already an fmf
+  kw_pinf,
+  kw_norm,
+  kw_nnorm,
+  kw_pnorm,
+  // kw_sub,  - already an instruction
+  kw_nsub,
+  kw_psub,
+  kw_zero,
+  kw_nzero,
+  kw_pzero,
+
   kw_type,
   kw_opaque,
 
