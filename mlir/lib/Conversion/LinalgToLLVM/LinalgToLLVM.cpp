@@ -79,6 +79,9 @@ void mlir::populateLinalgToLLVMConversionPatterns(LLVMTypeConverter &converter,
 namespace {
 struct ConvertLinalgToLLVMPass
     : public impl::ConvertLinalgToLLVMPassBase<ConvertLinalgToLLVMPass> {
+
+  using Base::Base;
+
   void runOnOperation() override;
 };
 } // namespace
@@ -88,7 +91,9 @@ void ConvertLinalgToLLVMPass::runOnOperation() {
 
   // Convert to the LLVM IR dialect using the converter defined above.
   RewritePatternSet patterns(&getContext());
-  LLVMTypeConverter converter(&getContext());
+  LowerToLLVMOptions options(&getContext());
+  options.useOpaquePointers = useOpaquePointers;
+  LLVMTypeConverter converter(&getContext(), options);
   populateLinalgToLLVMConversionPatterns(converter, patterns);
   populateFinalizeMemRefToLLVMConversionPatterns(converter, patterns);
 
