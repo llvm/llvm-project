@@ -300,7 +300,7 @@ endfunction(add_libc_unittest)
 
 function(add_libc_testsuite suite_name)
   add_custom_target(${suite_name})
-  add_dependencies(check-llvmlibc ${suite_name})
+  add_dependencies(libc-unit-tests ${suite_name})
 endfunction(add_libc_testsuite)
 
 function(add_libc_exhaustive_testsuite suite_name)

@@ -118,6 +118,9 @@ def JumpTable : EnumAttr<"jumptable", [FnAttr]>;
 /// Memory effects of the function.
 def Memory : IntAttr<"memory", [FnAttr]>;
 
+/// Forbidden floating-point classes.
+def NoFPClass : IntAttr<"nofpclass", [ParamAttr, RetAttr]>;
+
 /// Function must be optimized for size first.
 def MinSize : EnumAttr<"minsize", [FnAttr]>;
 

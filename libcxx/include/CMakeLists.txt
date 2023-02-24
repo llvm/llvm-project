@@ -792,10 +792,8 @@ set(files
   expected
   experimental/__config
   experimental/__memory
-  experimental/algorithm
   experimental/deque
   experimental/forward_list
-  experimental/functional
   experimental/iterator
   experimental/list
   experimental/map
