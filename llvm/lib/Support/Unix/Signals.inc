@@ -84,13 +84,11 @@ static void InfoSignalHandler(int Sig); // defined below.
 
 using SignalHandlerFunctionType = void (*)();
 /// The function to call if ctrl-c is pressed.
-static std::atomic<SignalHandlerFunctionType> InterruptFunction =
-    ATOMIC_VAR_INIT(nullptr);
-static std::atomic<SignalHandlerFunctionType> InfoSignalFunction =
-    ATOMIC_VAR_INIT(nullptr);
+static std::atomic<SignalHandlerFunctionType> InterruptFunction = nullptr;
+static std::atomic<SignalHandlerFunctionType> InfoSignalFunction = nullptr;
 /// The function to call on SIGPIPE (one-time use only).
 static std::atomic<SignalHandlerFunctionType> OneShotPipeSignalFunction =
-    ATOMIC_VAR_INIT(nullptr);
+    nullptr;
 
 namespace {
 /// Signal-safe removal of files.
@@ -98,8 +96,8 @@ namespace {
 /// themselves is signal-safe. Memory is freed when the head is freed, deletion
 /// is therefore not signal-safe either.
 class FileToRemoveList {
-  std::atomic<char *> Filename = ATOMIC_VAR_INIT(nullptr);
-  std::atomic<FileToRemoveList *> Next = ATOMIC_VAR_INIT(nullptr);
+  std::atomic<char *> Filename = nullptr;
+  std::atomic<FileToRemoveList *> Next = nullptr;
 
   FileToRemoveList() = default;
   // Not signal-safe.
@@ -188,7 +186,7 @@ public:
     Head.exchange(OldHead);
   }
 };
-static std::atomic<FileToRemoveList *> FilesToRemove = ATOMIC_VAR_INIT(nullptr);
+static std::atomic<FileToRemoveList *> FilesToRemove = nullptr;
 
 /// Clean up the list in a signal-friendly manner.
 /// Recall that signals can fire during llvm_shutdown. If this occurs we should
@@ -248,7 +246,7 @@ static const int InfoSigs[] = {SIGUSR1
 static const size_t NumSigs = std::size(IntSigs) + std::size(KillSigs) +
                               std::size(InfoSigs) + 1 /* SIGPIPE */;
 
-static std::atomic<unsigned> NumRegisteredSignals = ATOMIC_VAR_INIT(0);
+static std::atomic<unsigned> NumRegisteredSignals = 0;
 static struct {
   struct sigaction SA;
   int SigNo;
