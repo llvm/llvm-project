@@ -477,6 +477,20 @@ private:
 //   and chooses the lowering strategy.
 //===----------------------------------------------------------------------===//
 
+/// Helper to lower a scalar extent expression (like implied-do bounds).
+static mlir::Value lowerExtentExpr(mlir::Location loc,
+                                   Fortran::lower::AbstractConverter &converter,
+                                   Fortran::lower::SymMap &symMap,
+                                   Fortran::lower::StatementContext &stmtCtx,
+                                   const Fortran::evaluate::ExtentExpr &expr) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::IndexType idxTy = builder.getIndexType();
+  hlfir::Entity value = Fortran::lower::convertExprToHLFIR(
+      loc, converter, toEvExpr(expr), symMap, stmtCtx);
+  value = hlfir::loadTrivialScalar(loc, builder, value);
+  return builder.createConvert(loc, idxTy, value);
+}
+
 namespace {
 /// Helper class to lower the array constructor type and its length parameters.
 /// The length parameters, if any, are only lowered if this does not require
@@ -503,7 +517,10 @@ struct LengthAndTypeCollector<Fortran::evaluate::SomeDerived> {
           &arrayCtorExpr,
       Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
       mlir::SmallVectorImpl<mlir::Value> &lengths) {
-    TODO(loc, "collect derived type and length");
+    // Array constructors cannot be unlimited polymorphic (C7113), so there must
+    // be a derived type spec available.
+    return Fortran::lower::translateDerivedTypeToFIRType(
+        converter, arrayCtorExpr.result().derivedTypeSpec());
   }
 };
 
@@ -517,7 +534,17 @@ struct LengthAndTypeCollector<Character<Kind>> {
       const Fortran::evaluate::ArrayConstructor<Character<Kind>> &arrayCtorExpr,
       Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
       mlir::SmallVectorImpl<mlir::Value> &lengths) {
-    TODO(loc, "collect character type and length");
+    llvm::SmallVector<Fortran::lower::LenParameterTy> typeLengths;
+    if (const Fortran::evaluate::ExtentExpr *lenExpr = arrayCtorExpr.LEN()) {
+      lengths.push_back(
+          lowerExtentExpr(loc, converter, symMap, stmtCtx, *lenExpr));
+      if (std::optional<std::int64_t> cstLen =
+              Fortran::evaluate::ToInt64(*lenExpr))
+        typeLengths.push_back(*cstLen);
+    }
+    return Fortran::lower::getFIRType(&converter.getMLIRContext(),
+                                      Fortran::common::TypeCategory::Character,
+                                      Kind, typeLengths);
   }
 };
 } // namespace
@@ -611,20 +638,6 @@ ArrayCtorAnalysis::ArrayCtorAnalysis(
   }
 }
 
-/// Helper to lower a scalar extent expression (like implied-do bounds).
-static mlir::Value lowerExtentExpr(mlir::Location loc,
-                                   Fortran::lower::AbstractConverter &converter,
-                                   Fortran::lower::SymMap &symMap,
-                                   Fortran::lower::StatementContext &stmtCtx,
-                                   const Fortran::evaluate::ExtentExpr &expr) {
-  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  mlir::IndexType idxTy = builder.getIndexType();
-  hlfir::Entity value = Fortran::lower::convertExprToHLFIR(
-      loc, converter, toEvExpr(expr), symMap, stmtCtx);
-  value = hlfir::loadTrivialScalar(loc, builder, value);
-  return builder.createConvert(loc, idxTy, value);
-}
-
 /// Does \p expr contain no calls to user function?
 static bool isCallFreeExpr(const Fortran::evaluate::ExtentExpr &expr) {
   for (const Fortran::semantics::Symbol &symbol :
@@ -679,7 +692,7 @@ static ArrayCtorLoweringStrategy selectArrayCtorLoweringStrategy(
   // Based on what was gathered and the result of the analysis, select and
   // instantiate the right lowering strategy for the array constructor.
   if (!extent || needToEvaluateOneExprToGetLengthParameters ||
-      analysis.anyArrayExpr)
+      analysis.anyArrayExpr || declaredType.getEleTy().isa<fir::RecordType>())
     return RuntimeTempStrategy(
         loc, builder, declaredType,
         extent ? std::optional<mlir::Value>(extent) : std::nullopt, lengths,
