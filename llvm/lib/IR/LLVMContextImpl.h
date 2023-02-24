@@ -1447,6 +1447,7 @@ public:
   DenseMap<const Value *, ValueName *> ValueNames;
 
   DenseMap<unsigned, std::unique_ptr<ConstantInt>> IntZeroConstants;
+  DenseMap<unsigned, std::unique_ptr<ConstantInt>> IntOneConstants;
   DenseMap<APInt, std::unique_ptr<ConstantInt>, DenseMapAPIntKeyInfo>
       IntConstants;
 
