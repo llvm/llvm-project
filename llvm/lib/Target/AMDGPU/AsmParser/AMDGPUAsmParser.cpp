@@ -893,6 +893,7 @@ public:
   bool isSDelayAlu() const;
   bool isHwreg() const;
   bool isSendMsg() const;
+  bool isSplitBarrierImm() const;
   bool isSwizzle() const;
   bool isSMRDOffset8() const;
   bool isSMEMOffset() const;
@@ -1930,6 +1931,7 @@ static const fltSemantics *getOpFltSemantics(uint8_t OperandType) {
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT32:
   case AMDGPU::OPERAND_REG_IMM_V2INT32:
   case AMDGPU::OPERAND_KIMM32:
+  case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
     return &APFloat::IEEEsingle();
   case AMDGPU::OPERAND_REG_IMM_INT64:
   case AMDGPU::OPERAND_REG_IMM_FP64:
@@ -2253,7 +2255,8 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
     case AMDGPU::OPERAND_REG_INLINE_C_V2INT32:
     case AMDGPU::OPERAND_REG_IMM_V2INT32:
     case AMDGPU::OPERAND_KIMM32:
-    case AMDGPU::OPERAND_KIMM16: {
+    case AMDGPU::OPERAND_KIMM16:
+    case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32: {
       bool lost;
       APFloat FPLiteral(APFloat::IEEEdouble(), Literal);
       // Convert literal to single precision
@@ -2294,6 +2297,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP32:
   case AMDGPU::OPERAND_REG_IMM_V2INT32:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT32:
+  case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
     if (isSafeTruncation(Val, 32) &&
         AMDGPU::isInlinableLiteral32(static_cast<int32_t>(Val),
                                      AsmParser->hasInv2PiInlineImm())) {
@@ -9868,4 +9872,12 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultWaitEXP() const {
 
 bool AMDGPUOperand::isWaitEXP() const {
   return isImmTy(ImmTyWaitEXP) && isUInt<3>(getImm());
+}
+
+//===----------------------------------------------------------------------===//
+// Split Barrier
+//===----------------------------------------------------------------------===//
+
+bool AMDGPUOperand::isSplitBarrierImm() const {
+  return isInlinableImm(MVT::i32);
 }

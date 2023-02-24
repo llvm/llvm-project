@@ -997,6 +997,19 @@ def Attr : Operand<i32> {
 
 def AttrChan : ImmOperand<i32, "AttrChan", 0, "printInterpAttrChan">;
 
+def SplitBarrierImmMatchClass : AsmOperandClass {
+  let Name = "SplitBarrierImm";
+  let PredicateMethod = "isSplitBarrierImm";
+  let RenderMethod = "addImmOperands";
+}
+
+def SplitBarrierImm : Operand<i32> {
+  let OperandNamespace = "AMDGPU";
+  let OperandType = "OPERAND_INLINE_SPLIT_BARRIER_INT32";
+  let ParserMatchClass = SplitBarrierImmMatchClass;
+  let DecoderMethod = "decodeSplitBarrierImm";
+}
+
 def SendMsgMatchClass : AsmOperandClass {
   let Name = "SendMsg";
   let PredicateMethod = "isSendMsg";

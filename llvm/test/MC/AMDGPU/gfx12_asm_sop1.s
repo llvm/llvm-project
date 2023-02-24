@@ -728,3 +728,12 @@ s_rndne_f16 s5, 0x3456
 
 s_sendmsg_rtn_b32 s0, sendmsg(MSG_RTN_GET_SE_AID_ID)
 // GFX12: encoding: [0x86,0x4c,0x80,0xbe]
+
+s_barrier_signal -2
+// GFX12: encoding: [0xc2,0x4e,0x80,0xbe]
+
+s_barrier_signal -1
+// GFX12: encoding: [0xc1,0x4e,0x80,0xbe]
+
+s_barrier_signal m0
+// GFX12: encoding: [0x7d,0x4e,0x80,0xbe]
