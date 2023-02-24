@@ -1146,9 +1146,11 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_global_atomic_fadd:
   case Intrinsic::amdgcn_global_atomic_fmin:
   case Intrinsic::amdgcn_global_atomic_fmax:
+  case Intrinsic::amdgcn_global_atomic_cond_sub_u32:
   case Intrinsic::amdgcn_flat_atomic_fadd:
   case Intrinsic::amdgcn_flat_atomic_fmin:
   case Intrinsic::amdgcn_flat_atomic_fmax:
+  case Intrinsic::amdgcn_flat_atomic_cond_sub_u32:
   case Intrinsic::amdgcn_global_atomic_fadd_v2bf16:
   case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
