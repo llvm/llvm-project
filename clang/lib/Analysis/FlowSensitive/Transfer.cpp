@@ -561,7 +561,9 @@ public:
     assert(ConstructorDecl != nullptr);
 
     if (ConstructorDecl->isCopyOrMoveConstructor()) {
-      assert(S->getNumArgs() == 1);
+      // It is permissible for a copy/move constructor to have additional
+      // parameters as long as they have default arguments defined for them.
+      assert(S->getNumArgs() != 0);
 
       const Expr *Arg = S->getArg(0);
       assert(Arg != nullptr);

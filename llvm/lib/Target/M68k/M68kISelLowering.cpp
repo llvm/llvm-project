@@ -191,6 +191,16 @@ M68kTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
              : TargetLoweringBase::AtomicExpansionKind::None;
 }
 
+Register
+M68kTargetLowering::getExceptionPointerRegister(const Constant *) const {
+  return M68k::D0;
+}
+
+Register
+M68kTargetLowering::getExceptionSelectorRegister(const Constant *) const {
+  return M68k::D1;
+}
+
 EVT M68kTargetLowering::getSetCCResultType(const DataLayout &DL,
                                            LLVMContext &Context, EVT VT) const {
   // M68k SETcc producess either 0x00 or 0xFF

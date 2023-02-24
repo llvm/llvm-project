@@ -7831,6 +7831,107 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     }
     return false;
   }
+
+  case ARM::t2LDRB_OFFSET_imm:
+  case ARM::t2LDRB_PRE_imm:
+  case ARM::t2LDRB_POST_imm:
+  case ARM::t2STRB_OFFSET_imm:
+  case ARM::t2STRB_PRE_imm:
+  case ARM::t2STRB_POST_imm: {
+    if (Inst.getOpcode() == ARM::t2LDRB_POST_imm ||
+        Inst.getOpcode() == ARM::t2STRB_POST_imm ||
+        Inst.getOpcode() == ARM::t2LDRB_PRE_imm ||
+        Inst.getOpcode() == ARM::t2STRB_PRE_imm) {
+      int Imm = Inst.getOperand(2).getImm();
+      if (Imm > 255 || Imm < -255)
+        return Error(Operands[5]->getStartLoc(),
+                     "operand must be in range [-255, 255]");
+    } else if (Inst.getOpcode() == ARM::t2LDRB_OFFSET_imm ||
+               Inst.getOpcode() == ARM::t2STRB_OFFSET_imm) {
+      int Imm = Inst.getOperand(2).getImm();
+      if (Imm > 0 || Imm < -255)
+        return Error(Operands[5]->getStartLoc(),
+                     "operand must be in range [0, 255] with a negative sign");
+    }
+    if (Inst.getOperand(0).getReg() == ARM::PC) {
+      return Error(Operands[3]->getStartLoc(),
+                   "if operand is PC, should call the LDRB (literal)");
+    }
+    return false;
+  }
+
+  case ARM::t2LDRH_OFFSET_imm:
+  case ARM::t2LDRH_PRE_imm:
+  case ARM::t2LDRH_POST_imm:
+  case ARM::t2STRH_OFFSET_imm:
+  case ARM::t2STRH_PRE_imm:
+  case ARM::t2STRH_POST_imm: {
+    if (Inst.getOpcode() == ARM::t2LDRH_POST_imm ||
+        Inst.getOpcode() == ARM::t2STRH_POST_imm ||
+        Inst.getOpcode() == ARM::t2LDRH_PRE_imm ||
+        Inst.getOpcode() == ARM::t2STRH_PRE_imm) {
+      int Imm = Inst.getOperand(2).getImm();
+      if (Imm > 255 || Imm < -255)
+        return Error(Operands[5]->getStartLoc(),
+                     "operand must be in range [-255, 255]");
+    } else if (Inst.getOpcode() == ARM::t2LDRH_OFFSET_imm ||
+               Inst.getOpcode() == ARM::t2STRH_OFFSET_imm) {
+      int Imm = Inst.getOperand(2).getImm();
+      if (Imm > 0 || Imm < -255)
+        return Error(Operands[5]->getStartLoc(),
+                     "operand must be in range [0, 255] with a negative sign");
+    }
+    if (Inst.getOperand(0).getReg() == ARM::PC) {
+      return Error(Operands[3]->getStartLoc(),
+                   "if operand is PC, should call the LDRH (literal)");
+    }
+    return false;
+  }
+
+  case ARM::t2LDRSB_OFFSET_imm:
+  case ARM::t2LDRSB_PRE_imm:
+  case ARM::t2LDRSB_POST_imm: {
+    if (Inst.getOpcode() == ARM::t2LDRSB_POST_imm ||
+        Inst.getOpcode() == ARM::t2LDRSB_PRE_imm) {
+      int Imm = Inst.getOperand(2).getImm();
+      if (Imm > 255 || Imm < -255)
+        return Error(Operands[5]->getStartLoc(),
+                     "operand must be in range [-255, 255]");
+    } else if (Inst.getOpcode() == ARM::t2LDRSB_OFFSET_imm) {
+      int Imm = Inst.getOperand(2).getImm();
+      if (Imm > 0 || Imm < -255)
+        return Error(Operands[5]->getStartLoc(),
+                     "operand must be in range [0, 255] with a negative sign");
+    }
+    if (Inst.getOperand(0).getReg() == ARM::PC) {
+      return Error(Operands[3]->getStartLoc(),
+                   "if operand is PC, should call the LDRH (literal)");
+    }
+    return false;
+  }
+
+  case ARM::t2LDRSH_OFFSET_imm:
+  case ARM::t2LDRSH_PRE_imm:
+  case ARM::t2LDRSH_POST_imm: {
+    if (Inst.getOpcode() == ARM::t2LDRSH_POST_imm ||
+        Inst.getOpcode() == ARM::t2LDRSH_PRE_imm) {
+      int Imm = Inst.getOperand(2).getImm();
+      if (Imm > 255 || Imm < -255)
+        return Error(Operands[5]->getStartLoc(),
+                     "operand must be in range [-255, 255]");
+    } else if (Inst.getOpcode() == ARM::t2LDRSH_OFFSET_imm) {
+      int Imm = Inst.getOperand(2).getImm();
+      if (Imm > 0 || Imm < -255)
+        return Error(Operands[5]->getStartLoc(),
+                     "operand must be in range [0, 255] with a negative sign");
+    }
+    if (Inst.getOperand(0).getReg() == ARM::PC) {
+      return Error(Operands[3]->getStartLoc(),
+                   "if operand is PC, should call the LDRH (literal)");
+    }
+    return false;
+  }
+
   case ARM::LDR_PRE_IMM:
   case ARM::LDR_PRE_REG:
   case ARM::t2LDR_PRE:
@@ -8843,6 +8944,156 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
                                                              : ARM::t2STR_POST);
     TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn
+    TmpInst.addOperand(Inst.getOperand(2)); // imm
+    TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    Inst = TmpInst;
+    return true;
+  }
+  // Aliases for imm syntax of LDRB instructions.
+  case ARM::t2LDRB_OFFSET_imm: {
+    MCInst TmpInst;
+    TmpInst.setOpcode(ARM::t2LDRBi8);
+    TmpInst.addOperand(Inst.getOperand(0)); // Rt
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn
+    TmpInst.addOperand(Inst.getOperand(2)); // imm
+    TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    Inst = TmpInst;
+    return true;
+  }
+  case ARM::t2LDRB_PRE_imm:
+  case ARM::t2LDRB_POST_imm: {
+    MCInst TmpInst;
+    TmpInst.setOpcode(Inst.getOpcode() == ARM::t2LDRB_PRE_imm
+                          ? ARM::t2LDRB_PRE
+                          : ARM::t2LDRB_POST);
+    TmpInst.addOperand(Inst.getOperand(0)); // Rt
+    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn
+    TmpInst.addOperand(Inst.getOperand(2)); // imm
+    TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    Inst = TmpInst;
+    return true;
+  }
+  // Aliases for imm syntax of STRB instructions.
+  case ARM::t2STRB_OFFSET_imm: {
+    MCInst TmpInst;
+    TmpInst.setOpcode(ARM::t2STRBi8);
+    TmpInst.addOperand(Inst.getOperand(0)); // Rt
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn
+    TmpInst.addOperand(Inst.getOperand(2)); // imm
+    TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    Inst = TmpInst;
+    return true;
+  }
+  case ARM::t2STRB_PRE_imm:
+  case ARM::t2STRB_POST_imm: {
+    MCInst TmpInst;
+    TmpInst.setOpcode(Inst.getOpcode() == ARM::t2STRB_PRE_imm
+                          ? ARM::t2STRB_PRE
+                          : ARM::t2STRB_POST);
+    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
+    TmpInst.addOperand(Inst.getOperand(0)); // Rt
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn
+    TmpInst.addOperand(Inst.getOperand(2)); // imm
+    TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    Inst = TmpInst;
+    return true;
+  }
+  // Aliases for imm syntax of LDRH instructions.
+  case ARM::t2LDRH_OFFSET_imm: {
+    MCInst TmpInst;
+    TmpInst.setOpcode(ARM::t2LDRHi8);
+    TmpInst.addOperand(Inst.getOperand(0)); // Rt
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn
+    TmpInst.addOperand(Inst.getOperand(2)); // imm
+    TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    Inst = TmpInst;
+    return true;
+  }
+  case ARM::t2LDRH_PRE_imm:
+  case ARM::t2LDRH_POST_imm: {
+    MCInst TmpInst;
+    TmpInst.setOpcode(Inst.getOpcode() == ARM::t2LDRH_PRE_imm
+                          ? ARM::t2LDRH_PRE
+                          : ARM::t2LDRH_POST);
+    TmpInst.addOperand(Inst.getOperand(0)); // Rt
+    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn
+    TmpInst.addOperand(Inst.getOperand(2)); // imm
+    TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    Inst = TmpInst;
+    return true;
+  }
+  // Aliases for imm syntax of STRH instructions.
+  case ARM::t2STRH_OFFSET_imm: {
+    MCInst TmpInst;
+    TmpInst.setOpcode(ARM::t2STRHi8);
+    TmpInst.addOperand(Inst.getOperand(0)); // Rt
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn
+    TmpInst.addOperand(Inst.getOperand(2)); // imm
+    TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    Inst = TmpInst;
+    return true;
+  }
+  case ARM::t2STRH_PRE_imm:
+  case ARM::t2STRH_POST_imm: {
+    MCInst TmpInst;
+    TmpInst.setOpcode(Inst.getOpcode() == ARM::t2STRH_PRE_imm
+                          ? ARM::t2STRH_PRE
+                          : ARM::t2STRH_POST);
+    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
+    TmpInst.addOperand(Inst.getOperand(0)); // Rt
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn
+    TmpInst.addOperand(Inst.getOperand(2)); // imm
+    TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    Inst = TmpInst;
+    return true;
+  }
+  // Aliases for imm syntax of LDRSB instructions.
+  case ARM::t2LDRSB_OFFSET_imm: {
+    MCInst TmpInst;
+    TmpInst.setOpcode(ARM::t2LDRSBi8);
+    TmpInst.addOperand(Inst.getOperand(0)); // Rt
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn
+    TmpInst.addOperand(Inst.getOperand(2)); // imm
+    TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    Inst = TmpInst;
+    return true;
+  }
+  case ARM::t2LDRSB_PRE_imm:
+  case ARM::t2LDRSB_POST_imm: {
+    MCInst TmpInst;
+    TmpInst.setOpcode(Inst.getOpcode() == ARM::t2LDRSB_PRE_imm
+                          ? ARM::t2LDRSB_PRE
+                          : ARM::t2LDRSB_POST);
+    TmpInst.addOperand(Inst.getOperand(0)); // Rt
+    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn
+    TmpInst.addOperand(Inst.getOperand(2)); // imm
+    TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    Inst = TmpInst;
+    return true;
+  }
+  // Aliases for imm syntax of LDRSH instructions.
+  case ARM::t2LDRSH_OFFSET_imm: {
+    MCInst TmpInst;
+    TmpInst.setOpcode(ARM::t2LDRSHi8);
+    TmpInst.addOperand(Inst.getOperand(0)); // Rt
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn
+    TmpInst.addOperand(Inst.getOperand(2)); // imm
+    TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    Inst = TmpInst;
+    return true;
+  }
+  case ARM::t2LDRSH_PRE_imm:
+  case ARM::t2LDRSH_POST_imm: {
+    MCInst TmpInst;
+    TmpInst.setOpcode(Inst.getOpcode() == ARM::t2LDRSH_PRE_imm
+                          ? ARM::t2LDRSH_PRE
+                          : ARM::t2LDRSH_POST);
+    TmpInst.addOperand(Inst.getOperand(0)); // Rt
+    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode

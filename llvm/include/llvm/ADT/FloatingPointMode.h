@@ -15,6 +15,7 @@
 #ifndef LLVM_ADT_FLOATINGPOINTMODE_H
 #define LLVM_ADT_FLOATINGPOINTMODE_H
 
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -192,11 +193,11 @@ void DenormalMode::print(raw_ostream &OS) const {
   OS << denormalModeKindName(Output) << ',' << denormalModeKindName(Input);
 }
 
-} // namespace llvm
-
 /// Floating-point class tests, supported by 'is_fpclass' intrinsic. Actual
 /// test may be an OR combination of basic tests.
-enum FPClassTest {
+enum FPClassTest : unsigned {
+  fcNone = 0,
+
   fcSNan = 0x0001,
   fcQNan = 0x0002,
   fcNegInf = 0x0004,
@@ -216,7 +217,11 @@ enum FPClassTest {
   fcPosFinite = fcPosNormal | fcPosSubnormal | fcPosZero,
   fcNegFinite = fcNegNormal | fcNegSubnormal | fcNegZero,
   fcFinite = fcPosFinite | fcNegFinite,
-  fcAllFlags = fcNan | fcInf | fcFinite
+  fcAllFlags = fcNan | fcInf | fcFinite,
 };
+
+LLVM_DECLARE_ENUM_AS_BITMASK(FPClassTest, /* LargestValue */ fcPosInf);
+
+} // namespace llvm
 
 #endif // LLVM_ADT_FLOATINGPOINTMODE_H
