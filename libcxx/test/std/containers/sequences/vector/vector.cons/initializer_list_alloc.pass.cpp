@@ -48,6 +48,22 @@ TEST_CONSTEXPR_CXX20 bool tests()
     assert(d.empty());
     assert(is_contiguous_container_asan_correct(d));
     }
+    {
+      std::vector<int, safe_allocator<int>> d({3, 4, 5, 6}, safe_allocator<int>());
+      assert(d.get_allocator() == safe_allocator<int>());
+      assert(d.size() == 4);
+      assert(is_contiguous_container_asan_correct(d));
+      assert(d[0] == 3);
+      assert(d[1] == 4);
+      assert(d[2] == 5);
+      assert(d[3] == 6);
+    }
+    {
+      std::vector<int, safe_allocator<int>> d({}, safe_allocator<int>());
+      assert(d.size() == 0);
+      assert(d.empty());
+      assert(is_contiguous_container_asan_correct(d));
+    }
 
     return true;
 }
