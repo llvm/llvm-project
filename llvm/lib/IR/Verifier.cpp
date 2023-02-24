@@ -1969,8 +1969,8 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
     uint64_t Val = Attrs.getAttribute(Attribute::NoFPClass).getValueAsInt();
     Check(Val != 0, "Attribute 'nofpclass' must have at least one test bit set",
           V);
-    Check((Val & ~fcAllFlags) == 0, "Invalid value for 'nofpclass' test mask",
-          V);
+    Check((Val & ~static_cast<unsigned>(fcAllFlags)) == 0,
+          "Invalid value for 'nofpclass' test mask", V);
   }
 }
 
