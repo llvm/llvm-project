@@ -349,6 +349,9 @@ private:
   /// This attribute is only valid when hasCFG() == true.
   bool HasCanonicalCFG{true};
 
+  /// True if another function body was merged into this one.
+  bool HasFunctionsFoldedInto{false};
+
   /// Name for the section this function code should reside in.
   std::string CodeSectionName;
 
@@ -1407,6 +1410,9 @@ public:
   /// Return true if the body of the function was merged into another function.
   bool isFolded() const { return FoldedIntoFunction != nullptr; }
 
+  /// Return true if other functions were folded into this one.
+  bool hasFunctionsFoldedInto() const { return HasFunctionsFoldedInto; }
+
   /// If this function was folded, return the function it was folded into.
   BinaryFunction *getFoldedIntoFunction() const { return FoldedIntoFunction; }
 
@@ -1769,6 +1775,9 @@ public:
   void setHasCanonicalCFG(bool V) { HasCanonicalCFG = V; }
 
   void setFolded(BinaryFunction *BF) { FoldedIntoFunction = BF; }
+
+  /// Indicate that another function body was merged with this function.
+  void setHasFunctionsFoldedInto() { HasFunctionsFoldedInto = true; }
 
   BinaryFunction &setPersonalityFunction(uint64_t Addr) {
     assert(!PersonalityFunction && "can't set personality function twice");
