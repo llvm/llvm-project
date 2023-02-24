@@ -7,4 +7,4 @@
 // The last parameter controls how many times it will try.
 // To stress-test this extensively change it locally and pass a large number.
 
-// RUN: %S/Inputs/cas-creation-stress-test.sh llvm-cas %t/cas %s 5
+// RUN: %S/Inputs/cas-creation-stress-test.sh llvm-cas %t/cas %s 10

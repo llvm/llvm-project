@@ -9,7 +9,10 @@ NUM_REPEAT=$4
 set -e
 
 for c in $(seq 1 $NUM_REPEAT); do
-  rm -rf $CAS_PATH
+  # Half the time, start from an existing CAS.
+  if [[ $(($c % 2)) -eq 0 ]]; then
+    rm -rf $CAS_PATH
+  fi
 
   pids=""
   for x in $(seq 1 10); do
@@ -20,4 +23,12 @@ for c in $(seq 1 $NUM_REPEAT); do
   for pid in $pids; do
     wait "$pid"
   done
+
+  cas_kb=$(du -ks $CAS_PATH | sed 's|\t.*$||')
+  limit_in_kb=$((100 * 1024))
+  # Check that the CAS is smaller than 100 MB, to ensure it was resized.
+  if [[ $cas_kb -gt $limit_in_kb ]]; then
+    echo "error: on-disk cas size ${cas_kb}kb was larger than ${limit_in_kb}kb" >&2
+    exit 1
+  fi
 done

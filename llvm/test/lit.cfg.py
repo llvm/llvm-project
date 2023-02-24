@@ -496,3 +496,9 @@ if 'aix' in config.target_triple:
 # "OBJECT_MODE" to 'any' by default on AIX OS.
 if 'system-aix' in config.available_features:
     config.environment['OBJECT_MODE'] = 'any'
+
+# Restrict the size of the on-disk CAS for tests. This allows testing in
+# constrained environments (e.g. small TMPDIR). It also prevents leaving
+# behind large files on file systems that do not support sparse files if a test
+# crashes before resizing the file.
+config.environment["LLVM_CAS_MAX_MAPPING_SIZE"] = "%d" % (100 * 1024 * 1024)

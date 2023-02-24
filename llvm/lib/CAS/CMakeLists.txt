@@ -16,10 +16,10 @@ add_llvm_component_library(LLVMCAS
   HashMappedTrie.cpp
   HierarchicalTreeBuilder.cpp
   InMemoryCAS.cpp
-  LazyMappedFileRegion.cpp
-  LazyMappedFileRegionBumpPtr.cpp
+  MappedFileRegionBumpPtr.cpp
   ObjectStore.cpp
   OnDiskCAS.cpp
+  OnDiskCommon.cpp
   OnDiskGraphDB.cpp
   OnDiskHashMappedTrie.cpp
   OnDiskKeyValueDB.cpp
