@@ -32,4 +32,11 @@
 #define _LIBCPP_END_NAMESPACE_LFTS_PMR _LIBCPP_END_NAMESPACE_LFTS }
 #define _VSTD_LFTS_PMR _VSTD_LFTS::pmr
 
+// TODO: support more targets
+#if defined(__AVX__)
+#define _LIBCPP_NATIVE_SIMD_WIDTH_IN_BYTES 32
+#else
+#define _LIBCPP_NATIVE_SIMD_WIDTH_IN_BYTES 16
+#endif
+
 #endif

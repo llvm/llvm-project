@@ -264,6 +264,7 @@ experimental/regex experimental/string
 experimental/regex regex
 experimental/set experimental/memory_resource
 experimental/set set
+experimental/simd cstddef
 experimental/string experimental/memory_resource
 experimental/string string
 experimental/unordered_map algorithm
