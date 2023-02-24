@@ -10,13 +10,13 @@
 // RUN: sed "s|DIR|%/t|g" %t/cdb_timestamp.json.template > %t/cdb_timestamp.json
 
 // RUN: clang-scan-deps -compilation-database %t/cdb.json \
-// RUN:   -cas-path %t/cas -action-cache-path %t/cache -module-files-dir %t/outputs \
+// RUN:   -cas-path %t/cas -module-files-dir %t/outputs \
 // RUN:   -format experimental-full -mode preprocess-dependency-directives \
 // RUN:   > %t/deps.json
 
 // Changing module cache path should not affect results.
 // RUN: clang-scan-deps -compilation-database %t/cdb_cache2.json \
-// RUN:   -cas-path %t/cas -action-cache-path %t/cache -module-files-dir %t/outputs \
+// RUN:   -cas-path %t/cas -module-files-dir %t/outputs \
 // RUN:   -format experimental-full -mode preprocess-dependency-directives \
 // RUN:   > %t/deps_cache2.json
 // RUN: diff -u %t/deps_cache2.json %t/deps.json
@@ -24,12 +24,12 @@
 // .pcm.timestamp files created by -fmodules-validate-once-per-build-session should not affect results
 // RUN: touch %t/session
 // RUN: clang-scan-deps -compilation-database %t/cdb_timestamp.json \
-// RUN:   -cas-path %t/cas -action-cache-path %t/cache -module-files-dir %t/outputs \
+// RUN:   -cas-path %t/cas -module-files-dir %t/outputs \
 // RUN:   -format experimental-full -mode preprocess-dependency-directives \
 // RUN:   > %t/deps_pre_timestamp.json
 // RUN: touch %t/Top.h
 // RUN: clang-scan-deps -compilation-database %t/cdb_timestamp.json \
-// RUN:   -cas-path %t/cas -action-cache-path %t/cache -module-files-dir %t/outputs \
+// RUN:   -cas-path %t/cas -module-files-dir %t/outputs \
 // RUN:   -format experimental-full -mode preprocess-dependency-directives \
 // RUN:   > %t/deps_post_timestamp.json
 // RUN: diff -u %t/deps_pre_timestamp.json %t/deps_post_timestamp.json

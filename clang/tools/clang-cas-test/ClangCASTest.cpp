@@ -71,7 +71,8 @@ int main(int Argc, const char **Argv) {
   Opts.CASPath = CASPath.empty() ? std::string("auto") : CASPath;
 
   auto CAS =
-      Opts.getOrCreateObjectStore(*Diags, /*CreateEmptyCASOnFailure=*/false);
+      Opts.getOrCreateDatabases(*Diags, /*CreateEmptyCASOnFailure=*/false)
+          .first;
   if (!CAS)
     return 1;
 

@@ -143,12 +143,10 @@ public:
                                     ArrayRef<char> Data) = 0;
   /// Get an ID for \p Ref.
   virtual CASID getID(ObjectRef Ref) const = 0;
-  /// Get an ID for \p Handle.
-  virtual CASID getID(ObjectHandle Handle) const = 0;
 
-  /// Get a reference to the object called \p ID.
+  /// Get an existing reference to the object called \p ID.
   ///
-  /// Returns \c None if not stored in this CAS.
+  /// Returns \c None if the object is not stored in this CAS.
   virtual Optional<ObjectRef> getReference(const CASID &ID) const = 0;
 
   /// Validate the underlying object referred by CASID.
@@ -174,7 +172,7 @@ protected:
   /// Get ObjectRef from open file.
   virtual Expected<ObjectRef>
   storeFromOpenFileImpl(sys::fs::file_t FD,
-                        Optional<sys::fs::file_status> Status) = 0;
+                        Optional<sys::fs::file_status> Status);
 
   /// Get a lifetime-extended StringRef pointing at \p Data.
   ///
@@ -248,6 +246,9 @@ public:
     return Data.size();
   }
 
+  /// Validate the whole node tree.
+  Error validateTree(ObjectRef Ref);
+
   /// Print the ObjectStore internals for debugging purpose.
   virtual void print(raw_ostream &) const {}
   void dump() const;
@@ -274,7 +275,7 @@ class ObjectProxy {
 public:
   const ObjectStore &getCAS() const { return *CAS; }
   ObjectStore &getCAS() { return *CAS; }
-  CASID getID() const { return CAS->getID(H); }
+  CASID getID() const { return CAS->getID(Ref); }
   ObjectRef getRef() const { return Ref; }
   size_t getNumReferences() const { return CAS->getNumRefs(H); }
   ObjectRef getReference(size_t I) const { return CAS->readRef(H, I); }
@@ -332,6 +333,9 @@ private:
 
 
 std::unique_ptr<ObjectStore> createInMemoryCAS();
+
+/// \returns true if \c LLVM_ENABLE_ONDISK_CAS configuration was enabled.
+bool isOnDiskCASEnabled();
 
 /// Gets or creates a persistent on-disk path at \p Path.
 ///

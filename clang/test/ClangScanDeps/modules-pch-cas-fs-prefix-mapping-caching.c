@@ -12,12 +12,12 @@
 
 // == Scan PCH
 // RUN: clang-scan-deps -compilation-database %t/dir1/cdb_pch.json -format experimental-full \
-// RUN:    -cas-path %t/cas -action-cache-path %t/cache -module-files-dir %t/dir1/modules \
+// RUN:    -cas-path %t/cas -module-files-dir %t/dir1/modules \
 // RUN:    -prefix-map=%t/dir1/modules=/^modules -prefix-map=%t/dir1=/^src -prefix-map-sdk=/^sdk -prefix-map-toolchain=/^tc \
 // RUN:  > %t/pch_dir1.txt
 
 // RUN: clang-scan-deps -compilation-database %t/dir2/cdb_pch.json -format experimental-full \
-// RUN:    -cas-path %t/cas -action-cache-path %t/cache -module-files-dir %t/dir2/modules \
+// RUN:    -cas-path %t/cas -module-files-dir %t/dir2/modules \
 // RUN:    -prefix-map=%t/dir2/modules=/^modules -prefix-map=%t/dir2=/^src -prefix-map-sdk=/^sdk -prefix-map-toolchain=/^tc \
 // RUN:  > %t/pch_dir2.txt
 
@@ -42,12 +42,12 @@
 
 // == Scan TU, including PCH
 // RUN: clang-scan-deps -compilation-database %t/dir1/cdb.json -format experimental-full \
-// RUN:    -cas-path %t/cas -action-cache-path %t/cache -module-files-dir %t/dir1/modules \
+// RUN:    -cas-path %t/cas -module-files-dir %t/dir1/modules \
 // RUN:    -prefix-map=%t/dir1/modules=/^modules -prefix-map=%t/dir1=/^src -prefix-map-sdk=/^sdk -prefix-map-toolchain=/^tc \
 // RUN:  > %t/dir1.txt
 
 // RUN: clang-scan-deps -compilation-database %t/dir2/cdb.json -format experimental-full \
-// RUN:    -cas-path %t/cas -action-cache-path %t/cache -module-files-dir %t/dir2/modules \
+// RUN:    -cas-path %t/cas -module-files-dir %t/dir2/modules \
 // RUN:    -prefix-map=%t/dir2/modules=/^modules -prefix-map=%t/dir2=/^src -prefix-map-sdk=/^sdk -prefix-map-toolchain=/^tc \
 // RUN:  > %t/dir2.txt
 

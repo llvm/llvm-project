@@ -7,7 +7,7 @@
 // RUN: not %clang_cc1 -triple x86_64-apple-macos11 \
 // RUN:   -fmodules -fmodule-name=A -fno-implicit-modules \
 // RUN:   -emit-module %t/module.modulemap -o %t/A.pcm \
-// RUN:   -fcas-path %t/cas -faction-cache-path %t/cache -fcas-fs @%t/casid \
+// RUN:   -fcas-path %t/cas -fcas-fs @%t/casid \
 // RUN:   -fcache-compile-job -Rcompile-job-cache &> %t/A.out.txt
 // RUN: FileCheck %s --input-file=%t/A.out.txt
 

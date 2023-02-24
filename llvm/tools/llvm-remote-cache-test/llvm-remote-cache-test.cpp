@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/ActionCache.h"
+#include "llvm/CAS/BuiltinUnifiedCASDatabases.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/RemoteCachingService/LLVMCASCacheProvider.h"
 #include "llvm/RemoteCachingService/RemoteCacheProvider.h"
@@ -76,18 +77,14 @@ int main(int Argc, const char **Argv) {
 
   SmallString<256> CASPath(CachePath);
   sys::path::append(CASPath, "cas");
-  auto CAS = createOnDiskCAS(CASPath);
-  if (!CAS)
-    ExitOnErr(CAS.takeError());
-
-  auto Cache = createOnDiskActionCache(CASPath);
-  if (!Cache)
-    ExitOnErr(Cache.takeError());
+  std::unique_ptr<ObjectStore> CAS;
+  std::unique_ptr<ActionCache> AC;
+  std::tie(CAS, AC) = ExitOnErr(createOnDiskUnifiedCASDatabases(CASPath));
 
   auto createServer = [&]() -> remote::RemoteCacheServer {
     return remote::RemoteCacheServer(
-        SocketPath, remote::createLLVMCASCacheProvider(
-                        TempPath, std::move(*CAS), std::move(*Cache)));
+        SocketPath, remote::createLLVMCASCacheProvider(TempPath, std::move(CAS),
+                                                       std::move(AC)));
   };
 
   if (ServerMode) {

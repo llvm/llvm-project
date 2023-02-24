@@ -15,7 +15,7 @@
 // RUN:   -fmodules -fmodule-name=B -fno-implicit-modules \
 // RUN:   -fmodule-related-to-pch \
 // RUN:   -emit-module %t/module.modulemap -o %t/B.pcm \
-// RUN:   -fcas-path %t/cas -faction-cache-path %t/cache -fcas-fs @%t/casid \
+// RUN:   -fcas-path %t/cas -fcas-fs @%t/casid \
 // RUN:   -fcache-compile-job -Rcompile-job-cache &> %t/B.out.txt
 // RUN: cat %t/B.out.txt | FileCheck %s --check-prefix=CACHE-MISS
 // RUN: cat %t/B.out.txt | sed -E "s:^.*cache [a-z]+ for '([^']+)'.*$:\1:" > %t/B.key
@@ -30,7 +30,7 @@
 // RUN:   -fmodule-related-to-pch \
 // RUN:   @%t/B.import.rsp -fmodule-file=%t/B.pcm \
 // RUN:   -emit-module %t/module.modulemap -o %t/A.pcm \
-// RUN:   -fcas-path %t/cas -faction-cache-path %t/cache -fcas-fs @%t/casid \
+// RUN:   -fcas-path %t/cas -fcas-fs @%t/casid \
 // RUN:   -fcache-compile-job -Rcompile-job-cache &> %t/A.out.txt
 // RUN: cat %t/A.out.txt | FileCheck %s --check-prefix=CACHE-MISS
 // RUN: cat %t/A.out.txt | sed -E "s:^.*cache [a-z]+ for '([^']+)'.*$:\1:" > %t/A.key
@@ -42,7 +42,7 @@
 // RUN:   -fmodule-related-to-pch \
 // RUN:   @%t/B.import.rsp -fmodule-file=%t/B.pcm \
 // RUN:   -emit-module %t/module.modulemap -o %t/C.pcm \
-// RUN:   -fcas-path %t/cas -faction-cache-path %t/cache -fcas-fs @%t/casid \
+// RUN:   -fcas-path %t/cas -fcas-fs @%t/casid \
 // RUN:   -fcache-compile-job -Rcompile-job-cache &> %t/C.out.txt
 // RUN: cat %t/C.out.txt | FileCheck %s --check-prefix=CACHE-MISS
 // RUN: cat %t/C.out.txt | sed -E "s:^.*cache [a-z]+ for '([^']+)'.*$:\1:" > %t/C.key
@@ -56,7 +56,7 @@
 // RUN:   -fmodules -fno-implicit-modules \
 // RUN:   @%t/A.import.rsp -fmodule-file=%t/A.pcm \
 // RUN:   -emit-pch -x c-header %t/prefix.h -o %t/prefix.pch \
-// RUN:   -fcas-path %t/cas -faction-cache-path %t/cache -fcas-fs @%t/casid \
+// RUN:   -fcas-path %t/cas -fcas-fs @%t/casid \
 // RUN:   -fcache-compile-job -Rcompile-job-cache &> %t/prefix.out.txt
 // RUN: cat %t/prefix.out.txt | FileCheck %s --check-prefix=CACHE-MISS
 
@@ -75,7 +75,7 @@
 // RUN:   -fmodules -fno-implicit-modules \
 // RUN:   @%t/C.import.rsp -fmodule-file=%t/C.pcm -include-pch %t/prefix.pch \
 // RUN:   -fsyntax-only %t/tu.c \
-// RUN:   -fcas-path %t/cas -faction-cache-path %t/cache -fcas-fs @%t/casid \
+// RUN:   -fcas-path %t/cas -fcas-fs @%t/casid \
 // RUN:   -fcache-compile-job -Rcompile-job-cache &> %t/tu.out.txt
 // RUN: cat %t/tu.out.txt | FileCheck %s --check-prefix=CACHE-MISS
 
@@ -85,7 +85,7 @@
 // RUN:   -fmodules -fno-implicit-modules \
 // RUN:   @%t/C.import.rsp -fmodule-file=%t/C.pcm -include-pch %t/prefix.pch \
 // RUN:   -fsyntax-only %t/tu.c \
-// RUN:   -fcas-path %t/cas -faction-cache-path %t/cache -fcas-fs @%t/casid \
+// RUN:   -fcas-path %t/cas -fcas-fs @%t/casid \
 // RUN:   -fcache-compile-job -Rcompile-job-cache &> %t/tu.out.2.txt
 // RUN: cat %t/tu.out.2.txt | FileCheck %s --check-prefix=CACHE-HIT
 

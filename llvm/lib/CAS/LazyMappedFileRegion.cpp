@@ -20,8 +20,6 @@
 #include "llvm/Support/WindowsError.h"
 #endif
 
-#if LLVM_ENABLE_ONDISK_CAS
-
 using namespace llvm;
 using namespace llvm::cas;
 
@@ -437,5 +435,3 @@ void LazyMappedFileRegion::destroyImpl() {
     CloseHandle(Region);
 #endif
 }
-
-#endif // LLVM_ENABLE_ONDISK_CAS

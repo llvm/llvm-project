@@ -10,7 +10,10 @@
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/HashMappedTrie.h"
 #include "llvm/CAS/ObjectStore.h"
+#include "llvm/CAS/OnDiskGraphDB.h"
 #include "llvm/CAS/OnDiskHashMappedTrie.h"
+#include "llvm/CAS/OnDiskKeyValueDB.h"
+#include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/BLAKE3.h"
@@ -52,7 +55,6 @@ private:
   InMemoryCacheT Cache;
 };
 
-#if LLVM_ENABLE_ONDISK_CAS
 class OnDiskActionCache final : public ActionCache {
 public:
   Error putImpl(ArrayRef<uint8_t> ActionKey, const CASID &Result) final;
@@ -62,22 +64,23 @@ public:
 
 private:
   static StringRef getHashName() { return "BLAKE3"; }
-  static StringRef getActionCacheTableName() {
-    static const std::string Name =
-        ("llvm.actioncache[" + getHashName() + "->" + getHashName() + "]")
-            .str();
-    return Name;
-  }
-  static constexpr StringLiteral ActionCacheFile = "actions";
-  static constexpr StringLiteral FilePrefix = "v1.";
 
-  OnDiskActionCache(StringRef RootPath, OnDiskHashMappedTrie ActionCache);
+  OnDiskActionCache(std::unique_ptr<ondisk::OnDiskKeyValueDB> DB);
 
-  std::string Path;
-  OnDiskHashMappedTrie Cache;
+  std::unique_ptr<ondisk::OnDiskKeyValueDB> DB;
   using DataT = CacheEntry<sizeof(HashType)>;
 };
-#endif /* LLVM_ENABLE_ONDISK_CAS */
+
+class UnifiedOnDiskActionCache final : public ActionCache {
+public:
+  Error putImpl(ArrayRef<uint8_t> ActionKey, const CASID &Result) final;
+  Expected<Optional<CASID>> getImpl(ArrayRef<uint8_t> ActionKey) const final;
+
+  UnifiedOnDiskActionCache(std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB);
+
+private:
+  std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB;
+};
 } // end namespace
 
 static std::string hashToString(ArrayRef<uint8_t> Hash) {
@@ -139,83 +142,104 @@ std::unique_ptr<ActionCache> createInMemoryActionCache() {
 } // namespace cas
 } // namespace llvm
 
-#if LLVM_ENABLE_ONDISK_CAS
-constexpr StringLiteral OnDiskActionCache::ActionCacheFile;
-constexpr StringLiteral OnDiskActionCache::FilePrefix;
-
-OnDiskActionCache::OnDiskActionCache(StringRef Path, OnDiskHashMappedTrie Cache)
+OnDiskActionCache::OnDiskActionCache(
+    std::unique_ptr<ondisk::OnDiskKeyValueDB> DB)
     : ActionCache(builtin::BuiltinCASContext::getDefaultContext()),
-      Path(Path.str()), Cache(std::move(Cache)) {}
+      DB(std::move(DB)) {}
 
 Expected<std::unique_ptr<OnDiskActionCache>>
 OnDiskActionCache::create(StringRef AbsPath) {
-  if (std::error_code EC = sys::fs::create_directories(AbsPath))
-    return createFileError(AbsPath, EC);
-
-  SmallString<256> CachePath(AbsPath);
-  sys::path::append(CachePath, FilePrefix + ActionCacheFile);
-  constexpr uint64_t MB = 1024ull * 1024ull;
-  constexpr uint64_t GB = 1024ull * 1024ull * 1024ull;
-
-  Optional<OnDiskHashMappedTrie> ActionCache;
-  if (Error E = OnDiskHashMappedTrie::create(
-                    CachePath, getActionCacheTableName(), sizeof(HashType) * 8,
-                    /*DataSize=*/sizeof(DataT), /*MaxFileSize=*/GB,
-                    /*MinFileSize=*/MB)
-                    .moveInto(ActionCache))
+  std::unique_ptr<ondisk::OnDiskKeyValueDB> DB;
+  if (Error E = ondisk::OnDiskKeyValueDB::open(AbsPath, getHashName(),
+                                               sizeof(HashType), getHashName(),
+                                               sizeof(DataT))
+                    .moveInto(DB))
     return std::move(E);
-
   return std::unique_ptr<OnDiskActionCache>(
-      new OnDiskActionCache(AbsPath, std::move(*ActionCache)));
+      new OnDiskActionCache(std::move(DB)));
 }
 
 Expected<Optional<CASID>>
 OnDiskActionCache::getImpl(ArrayRef<uint8_t> Key) const {
-  // Check the result cache.
-  OnDiskHashMappedTrie::const_pointer ActionP = Cache.find(Key);
-  if (!ActionP)
+  std::optional<ArrayRef<char>> Val;
+  if (Error E = DB->get(Key).moveInto(Val))
+    return std::move(E);
+  if (!Val)
     return std::nullopt;
-
-  const DataT *Output = reinterpret_cast<const DataT *>(ActionP->Data.data());
-  return CASID::create(&getContext(), toStringRef(Output->getValue()));
+  return CASID::create(&getContext(), toStringRef(*Val));
 }
 
 Error OnDiskActionCache::putImpl(ArrayRef<uint8_t> Key, const CASID &Result) {
-  DataT Expected(Result.getHash());
-  OnDiskHashMappedTrie::pointer ActionP = Cache.insertLazy(
-      Key, [&](FileOffset TentativeOffset,
-               OnDiskHashMappedTrie::ValueProxy TentativeValue) {
-        assert(TentativeValue.Data.size() == sizeof(DataT));
-        assert(isAddrAligned(Align::Of<DataT>(), TentativeValue.Data.data()));
-        new (TentativeValue.Data.data()) DataT{Expected};
-      });
-  const DataT *Observed = reinterpret_cast<const DataT *>(ActionP->Data.data());
+  auto ResultHash = Result.getHash();
+  ArrayRef Expected((const char *)ResultHash.data(), ResultHash.size());
+  ArrayRef<char> Observed;
+  if (Error E = DB->put(Key, Expected).moveInto(Observed))
+    return E;
 
-  if (Expected.getValue() == Observed->getValue())
+  if (Expected == Observed)
     return Error::success();
 
-  return createResultCachePoisonedError(hashToString(Key), getContext(), Result,
-                                        Observed->getValue());
+  return createResultCachePoisonedError(
+      hashToString(Key), getContext(), Result,
+      ArrayRef((const uint8_t *)Observed.data(), Observed.size()));
 }
 
-namespace llvm {
-namespace cas {
+UnifiedOnDiskActionCache::UnifiedOnDiskActionCache(
+    std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB)
+    : ActionCache(builtin::BuiltinCASContext::getDefaultContext()),
+      UniDB(std::move(UniDB)) {}
 
-Expected<std::unique_ptr<ActionCache>> createOnDiskActionCache(StringRef Path) {
+Expected<Optional<CASID>>
+UnifiedOnDiskActionCache::getImpl(ArrayRef<uint8_t> Key) const {
+  std::optional<ondisk::ObjectID> Val;
+  if (Error E = UniDB->KVGet(Key).moveInto(Val))
+    return std::move(E);
+  if (!Val)
+    return std::nullopt;
+  return CASID::create(&getContext(),
+                       toStringRef(UniDB->getGraphDB().getDigest(*Val)));
+}
+
+Error UnifiedOnDiskActionCache::putImpl(ArrayRef<uint8_t> Key,
+                                        const CASID &Result) {
+  ondisk::ObjectID Expected =
+      UniDB->getGraphDB().getReference(Result.getHash());
+  std::optional<ondisk::ObjectID> Observed;
+  if (Error E = UniDB->KVPut(Key, Expected).moveInto(Observed))
+    return E;
+
+  if (Expected == Observed)
+    return Error::success();
+
+  return createResultCachePoisonedError(
+      hashToString(Key), getContext(), Result,
+      UniDB->getGraphDB().getDigest(*Observed));
+}
+
+#if LLVM_ENABLE_ONDISK_CAS
+
+Expected<std::unique_ptr<ActionCache>>
+cas::createOnDiskActionCache(StringRef Path) {
   return OnDiskActionCache::create(Path);
 }
 
-} // namespace cas
-} // namespace llvm
+std::unique_ptr<ActionCache>
+cas::builtin::createActionCacheFromUnifiedOnDiskCache(
+    std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB) {
+  return std::make_unique<UnifiedOnDiskActionCache>(std::move(UniDB));
+}
+
 # else
 
-namespace llvm {
-namespace cas {
-
-Expected<std::unique_ptr<ActionCache>> createOnDiskActionCache(StringRef Path) {
+Expected<std::unique_ptr<ActionCache>>
+cas::createOnDiskActionCache(StringRef Path) {
   return createStringError(inconvertibleErrorCode(), "OnDiskCache is disabled");
 }
 
-} // namespace cas
-} // namespace llvm
+std::unique_ptr<ActionCache>
+cas::builtin::createActionCacheFromUnifiedOnDiskCache(
+    std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB) {
+  return createStringError(inconvertibleErrorCode(), "OnDiskCache is disabled");
+}
+
 #endif /* LLVM_ENABLE_ONDISK_CAS */

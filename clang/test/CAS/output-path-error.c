@@ -6,7 +6,7 @@
 // RUN: llvm-cas --cas %t/cas --ingest --data %s > %t/casid
 
 // RUN: %clang -cc1 -triple x86_64-apple-macos11 \
-// RUN:   -fcas-path %t/cas -faction-cache-path %t/cache -fcas-fs @%t/casid -fcache-compile-job \
+// RUN:   -fcas-path %t/cas -fcas-fs @%t/casid -fcache-compile-job \
 // RUN:   -Rcompile-job-cache -emit-obj %s -o %t/output.o 2>&1 \
 // RUN:   | FileCheck %s --allow-empty --check-prefix=CACHE-MISS
 
@@ -14,7 +14,7 @@
 // RUN: rm -rf %t/cas
 
 // RUN: not %clang -cc1 -triple x86_64-apple-macos11 \
-// RUN:   -fcas-path %t/cas -faction-cache-path %t/cache -fcas-fs @%t/casid -fcache-compile-job \
+// RUN:   -fcas-path %t/cas -fcas-fs @%t/casid -fcache-compile-job \
 // RUN:   -Rcompile-job-cache -emit-obj %s -o %t/output.o &> %t/output.txt
 // RUN: cat %t/output.txt | FileCheck %s --check-prefix=ERROR
 

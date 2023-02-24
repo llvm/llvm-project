@@ -487,11 +487,8 @@ std::optional<int> CompileJobCache::initialize(CompilerInstance &Clang) {
   if (!CacheCompileJob)
     return std::nullopt;
 
-  CAS = Invocation.getCASOpts().getOrCreateObjectStore(Diags);
-  if (!CAS)
-    return 1; // Exit with error!
-  Cache = Invocation.getCASOpts().getOrCreateActionCache(Diags);
-  if (!Cache)
+  std::tie(CAS, Cache) = Invocation.getCASOpts().getOrCreateDatabases(Diags);
+  if (!CAS || !Cache)
     return 1; // Exit with error!
 
   CompileJobCachingOptions CacheOpts;

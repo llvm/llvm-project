@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/ObjectStore.h"
+#include "BuiltinCAS.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -39,13 +42,7 @@ static void printReferenceBase(raw_ostream &OS, StringRef Kind,
 
 void ReferenceBase::print(raw_ostream &OS, const ObjectHandle &This) const {
   assert(this == &This);
-
-  Optional<CASID> ID;
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  if (CAS)
-    ID = CAS->getID(This);
-#endif
-  printReferenceBase(OS, "object-handle", InternalRef, ID);
+  printReferenceBase(OS, "object-handle", InternalRef, std::nullopt);
 }
 
 void ReferenceBase::print(raw_ostream &OS, const ObjectRef &This) const {
@@ -104,6 +101,49 @@ Expected<ObjectProxy> ObjectStore::createProxy(ArrayRef<ObjectRef> Refs,
   return getProxy(*Ref);
 }
 
+Expected<ObjectRef>
+ObjectStore::storeFromOpenFileImpl(sys::fs::file_t FD,
+                                   Optional<sys::fs::file_status> Status) {
+  // Copy the file into an immutable memory buffer and call \c store on that.
+  // Using \c mmap would be unsafe because there's a race window between when we
+  // get the digest hash for the \c mmap contents and when we store the data; if
+  // the file changes in-between we will create an invalid object.
+
+  // FIXME: For the on-disk CAS implementation use cloning to store it as a
+  // standalone file if the file-system supports it and the file is large.
+
+  constexpr size_t ChunkSize = 4 * 4096;
+  SmallString<0> Data;
+  Data.reserve(ChunkSize * 2);
+  if (Error E = sys::fs::readNativeFileToEOF(FD, Data, ChunkSize))
+    return std::move(E);
+  return store(std::nullopt, ArrayRef(Data.data(), Data.size()));
+}
+
+Error ObjectStore::validateTree(ObjectRef Root) {
+  SmallDenseSet<ObjectRef> ValidatedRefs;
+  SmallVector<ObjectRef, 16> RefsToValidate;
+  RefsToValidate.push_back(Root);
+
+  while (!RefsToValidate.empty()) {
+    ObjectRef Ref = RefsToValidate.pop_back_val();
+    auto [I, Inserted] = ValidatedRefs.insert(Ref);
+    if (!Inserted)
+      continue; // already validated.
+    if (Error E = validate(getID(Ref)))
+      return E;
+    Expected<ObjectHandle> Obj = load(Ref);
+    if (!Obj)
+      return Obj.takeError();
+    if (Error E = forEachRef(*Obj, [&RefsToValidate](ObjectRef R) -> Error {
+          RefsToValidate.push_back(R);
+          return Error::success();
+        }))
+      return E;
+  }
+  return Error::success();
+}
+
 std::unique_ptr<MemoryBuffer>
 ObjectProxy::getMemoryBuffer(StringRef Name,
                              bool RequiresNullTerminator) const {
@@ -140,8 +180,11 @@ cas::createCASFromIdentifier(StringRef Path) {
   if (Path == "auto")
     return createOnDiskCAS(getDefaultOnDiskCASPath());
 
-  // Fallback is to create OnDiskCAS.
-  return createOnDiskCAS(Path);
+  // Fallback is to create UnifiedOnDiskCache.
+  auto UniDB = builtin::createBuiltinUnifiedOnDiskCache(Path);
+  if (!UniDB)
+    return UniDB.takeError();
+  return builtin::createObjectStoreFromUnifiedOnDiskCache(std::move(*UniDB));
 }
 
 void cas::registerCASURLScheme(StringRef Prefix,
