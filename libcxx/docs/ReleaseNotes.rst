@@ -61,12 +61,21 @@ Deprecations and Removals
 
   - C++2b: ``bit``, ``cstring``, ``type_traits``
 
+- The headers ``<experimental/algorithm>`` and ``<experimental/functional>`` have been removed, since all the contents
+  have been implemented in namespace ``std`` for at least two releases.
+
 Upcoming Deprecations and Removals
 ----------------------------------
 
 - The ``_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED`` macro will not be honored anymore in LLVM 18.
   Please see the updated documentation about the safe libc++ mode and in particular the ``_LIBCPP_VERBOSE_ABORT``
   macro for details.
+
+- The headers ``<experimental/deque>``, ``<experimental/forward_list>``, ``<experimental/list>``,
+  ``<experimental/map>``, ``<experimental/memory_resource>``, ``<experimental/regex>``, ``<experimental/set>``,
+  ``<experimental/string>``, ``<experimental/unordered_map>``, ``<experimental/unordered_set>``,
+  and ``<experimental/vector>`` will be removed in LLVM 18, as all their contents will have been implemented in
+  namespace ``std`` for at least two releases.
 
 API Changes
 -----------

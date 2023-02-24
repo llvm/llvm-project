@@ -27,7 +27,9 @@ static_assert(largest_bitmask_enum_bit<Flags>::value == Flags::F4);
 enum Flags2 { V0 = 0, V1 = 1, V2 = 2, V3 = 4, V4 = 8 };
 } // namespace
 
+namespace llvm {
 LLVM_DECLARE_ENUM_AS_BITMASK(Flags2, V4);
+}
 
 static_assert(is_bitmask_enum<Flags>::value != 0);
 static_assert(largest_bitmask_enum_bit<Flags>::value == Flags::F4);

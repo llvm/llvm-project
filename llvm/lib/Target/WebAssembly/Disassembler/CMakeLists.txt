@@ -5,7 +5,6 @@ add_llvm_component_library(LLVMWebAssemblyDisassembler
   WebAssemblyDesc
   MCDisassembler
   WebAssemblyInfo
-  WebAssemblyUtils
   Support
   MC
 

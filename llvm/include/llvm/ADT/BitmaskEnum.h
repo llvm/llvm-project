@@ -56,15 +56,15 @@
 /// The second parameter to LLVM_DECLARE_ENUM_AS_BITMASK specifies the largest
 /// bit value of the enum type.
 ///
-/// LLVM_DECLARE_ENUM_AS_BITMASK should be used in global or llvm namespace.
+/// LLVM_DECLARE_ENUM_AS_BITMASK should be used in llvm namespace.
 ///
 /// This a non-intrusive alternative for LLVM_MARK_AS_BITMASK_ENUM. It allows
 /// declaring more than one non-scoped enumerations as bitmask types in the same
 /// scope. Otherwise it provides the same functionality as
 /// LLVM_MARK_AS_BITMASK_ENUM.
 #define LLVM_DECLARE_ENUM_AS_BITMASK(Enum, LargestValue)                       \
-  template <> struct llvm::is_bitmask_enum<Enum> : std::true_type {};          \
-  template <> struct llvm::largest_bitmask_enum_bit<Enum> {                    \
+  template <> struct is_bitmask_enum<Enum> : std::true_type {};                \
+  template <> struct largest_bitmask_enum_bit<Enum> {                          \
     static constexpr std::underlying_type_t<Enum> value = LargestValue;        \
   }
 

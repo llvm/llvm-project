@@ -111,11 +111,6 @@ external add_reassociation
   : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
   = "llvm_add_reassociation"
 
-(** See the [llvm::createSCCPPass] function. *)
-external add_sccp
-  : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
-  = "llvm_add_sccp"
-
 (** See the [llvm::createSROAPass] function. *)
 external add_scalar_repl_aggregation
   : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit

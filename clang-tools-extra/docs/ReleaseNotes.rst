@@ -169,6 +169,10 @@ Changes in existing checks
   <clang-tidy/checks/misc/unused-using-decls>` check.
   Global options of the same name should be used instead.
 
+- Fixed reading `HungarianNotation.CString.*` options in
+  :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>` check.
+
 Removed checks
 ^^^^^^^^^^^^^^
 

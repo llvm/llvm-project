@@ -628,6 +628,11 @@ void ARMConstantIslands::doInitialJumpTablePlacement(
     case ARM::tBR_JTr:
     case ARM::BR_JTm_i12:
     case ARM::BR_JTm_rs:
+      // These instructions are emitted only in ARM or Thumb1 modes which do not
+      // support PACBTI. Hence we don't add BTI instructions in the destination
+      // blocks.
+      assert(!MF->getInfo<ARMFunctionInfo>()->branchTargetEnforcement() &&
+             "Branch protection must not be enabled for Arm or Thumb1 modes");
       JTOpcode = ARM::JUMPTABLE_ADDRS;
       break;
     case ARM::t2BR_JT:

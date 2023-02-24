@@ -1373,8 +1373,9 @@ Expected<bool> FunctionImporter::importFunctions(
     if (Error Err = Mover.move(std::move(SrcModule),
                                GlobalsToImport.getArrayRef(), nullptr,
                                /*IsPerformingImport=*/true))
-      report_fatal_error(Twine("Function Import: link error: ") +
-                         toString(std::move(Err)));
+      return createStringError(errc::invalid_argument,
+                               Twine("Function Import: link error: ") +
+                                   toString(std::move(Err)));
 
     ImportedCount += GlobalsToImport.size();
     NumImportedModules++;
