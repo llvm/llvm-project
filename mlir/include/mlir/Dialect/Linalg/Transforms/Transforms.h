@@ -357,14 +357,70 @@ void peelLoops(RewriterBase &rewriter, ArrayRef<scf::ForOp> loops);
 /// shaped `paddingDimensions` and return the extracted dynamically shaped
 /// results. If padding fails, return failure.
 FailureOr<SmallVector<Value>>
-rewriteAsPaddedOp(OpBuilder &b, LinalgOp opToPad,
+rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
                   ArrayRef<int64_t> paddingDimensions,
                   ArrayRef<Attribute> paddingValues,
                   ArrayRef<bool> packPaddings, LinalgOp &paddedOp);
 
-/// Apply padding to `linalgOp`
-FailureOr<LinalgOp> padLinalgOp(RewriterBase &rewriter, LinalgOp linalgOp,
-                                LinalgPaddingOptions options);
+/// Mechanically hoist padding operations on tensors by `numLoops` into a new,
+/// generally larger tensor. This achieves packing of multiple padding ops into
+/// a larger tensor. On success, `opToHoist` is replaced by the cloned version
+/// in the packing loop so the caller can continue reasoning about the padding
+/// operation. If `transposeVector` is non-empty, hoist padding introduces a
+/// GenericOp to transpose the padded tensor before inserting it into the packed
+/// tensor. A `transposeVector` can change the storage order of the padded
+/// tensor but does not change the order of the pack or compute loops.
+///
+/// TODO: In the future, we should consider rewriting as a tensor.pack after
+/// hoisting since this abstraction is now available.
+///
+/// Example in pseudo-mlir:
+/// =======================
+///
+/// If hoistPaddingOnTensors is called with `nLoops` = 2 on the following IR.
+/// ```
+///    scf.for (%i, %j, %k)
+///      %st0 = tensor.extract_slice f(%i, %k) : ... to tensor<?x?xf32>
+///      %0 = tensor.pad %st0 low[0, 0] high[...] {
+///      ^bb0( ... ):
+///        linalg.yield %pad
+///      } : tensor<?x?xf32> to tensor<4x8xf32>
+///      compute(%0)
+/// ```
+///
+/// IR resembling the following is produced:
+///
+/// ```
+///    scf.for (%i) {
+///      %packed_init = tensor.empty range(%j) : tensor<?x4x8xf32>
+///      %packed = scf.for (%k) iter_args(%p : %packed_init) {
+///        %st0 = tensor.extract_slice f(%i, %k) : ... to tensor<?x?xf32>
+///        %0 = tensor.pad %st0 low[0, 0] high[...] {
+///        ^bb0( ... ):
+///          linalg.yield %pad
+///        } : tensor<?x?xf32> to tensor<4x8xf32>
+///        %1 = tensor.insert_slice %0 ...
+///            : tensor<4x8xf32> to tensor<?x4x8xf32>
+///        scf.yield %1: tensor<?x4x8xf32>
+///      } -> tensor<?x4x8xf32>
+///      scf.for (%j, %k) {
+///        %st0 = tensor.extract_slice %packed [%k, 0, 0][1, 4, 8][1, 1, 1] :
+///                 tensor<?x4x8xf32> to tensor<4x8xf32>
+///        compute(%st0)
+///      }
+///    }
+/// ```
+FailureOr<Value>
+hoistPaddingOnTensors(tensor::PadOp opToHoist, int64_t numLoops,
+                      ArrayRef<int64_t> transposeVector,
+                      tensor::PadOp &hoistedOp,
+                      SmallVectorImpl<GenericOp> &transposeOps);
+
+/// Apply padding and hoisting to `linalgOp` according to the configuration
+/// specified in `options`.
+FailureOr<LinalgOp> padAndHoistLinalgOp(RewriterBase &rewriter,
+                                        LinalgOp linalgOp,
+                                        LinalgPaddingOptions options);
 
 /// Split the given `op` into two parts along the given iteration space
 /// `dimension` at the specified `splitPoint`, and return the two parts.
