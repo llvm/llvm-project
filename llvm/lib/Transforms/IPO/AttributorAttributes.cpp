@@ -177,6 +177,7 @@ PIPE_OPERATOR(AAUndefinedBehavior)
 PIPE_OPERATOR(AAPotentialConstantValues)
 PIPE_OPERATOR(AAPotentialValues)
 PIPE_OPERATOR(AANoUndef)
+PIPE_OPERATOR(AANoFPClass)
 PIPE_OPERATOR(AACallEdges)
 PIPE_OPERATOR(AAInterFnReachability)
 PIPE_OPERATOR(AAPointerInfo)
@@ -10205,6 +10206,103 @@ struct AANoUndefCallSiteReturned final
   void trackStatistics() const override { STATS_DECLTRACK_CSRET_ATTR(noundef) }
 };
 
+/// ------------------------ NoFPClass Attribute -------------------------------
+
+struct AANoFPClassImpl : AANoFPClass {
+  AANoFPClassImpl(const IRPosition &IRP, Attributor &A) : AANoFPClass(IRP, A) {}
+
+  void initialize(Attributor &A) override {
+    const IRPosition &IRP = getIRPosition();
+
+    Value &V = IRP.getAssociatedValue();
+    if (isa<UndefValue>(V)) {
+      indicateOptimisticFixpoint();
+      return;
+    }
+
+    SmallVector<Attribute> Attrs;
+    IRP.getAttrs({Attribute::NoFPClass}, Attrs, false, &A);
+    if (!Attrs.empty()) {
+      addKnownBits(Attrs[0].getNoFPClass());
+      return;
+    }
+
+    const DataLayout &DL = A.getDataLayout();
+    if (getPositionKind() != IRPosition::IRP_RETURNED) {
+      KnownFPClass KnownFPClass = computeKnownFPClass(&V, DL);
+      addKnownBits(~KnownFPClass.KnownFPClasses);
+    }
+  }
+
+  const std::string getAsStr() const override {
+    std::string Result = "nofpclass";
+    raw_string_ostream OS(Result);
+    OS << getAssumedNoFPClass();
+    return Result;
+  }
+
+  void getDeducedAttributes(LLVMContext &Ctx,
+                            SmallVectorImpl<Attribute> &Attrs) const override {
+    Attrs.emplace_back(Attribute::getWithNoFPClass(Ctx, getAssumedNoFPClass()));
+  }
+};
+
+struct AANoFPClassFloating : public AANoFPClassImpl {
+  AANoFPClassFloating(const IRPosition &IRP, Attributor &A)
+      : AANoFPClassImpl(IRP, A) {}
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    return indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    STATS_DECLTRACK_FNRET_ATTR(nofpclass)
+  }
+};
+
+struct AANoFPClassReturned final
+    : AAReturnedFromReturnedValues<AANoFPClass, AANoFPClassImpl> {
+  AANoFPClassReturned(const IRPosition &IRP, Attributor &A)
+      : AAReturnedFromReturnedValues<AANoFPClass, AANoFPClassImpl>(IRP, A) {}
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    STATS_DECLTRACK_FNRET_ATTR(nofpclass)
+  }
+};
+
+struct AANoFPClassArgument final
+    : AAArgumentFromCallSiteArguments<AANoFPClass, AANoFPClassImpl> {
+  AANoFPClassArgument(const IRPosition &IRP, Attributor &A)
+      : AAArgumentFromCallSiteArguments<AANoFPClass, AANoFPClassImpl>(IRP, A) {}
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override { STATS_DECLTRACK_ARG_ATTR(nofpclass) }
+};
+
+struct AANoFPClassCallSiteArgument final : AANoFPClassFloating {
+  AANoFPClassCallSiteArgument(const IRPosition &IRP, Attributor &A)
+      : AANoFPClassFloating(IRP, A) {}
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    STATS_DECLTRACK_CSARG_ATTR(nofpclass)
+  }
+};
+
+struct AANoFPClassCallSiteReturned final
+    : AACallSiteReturnedFromReturned<AANoFPClass, AANoFPClassImpl> {
+  AANoFPClassCallSiteReturned(const IRPosition &IRP, Attributor &A)
+      : AACallSiteReturnedFromReturned<AANoFPClass, AANoFPClassImpl>(IRP, A) {}
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    STATS_DECLTRACK_CSRET_ATTR(nofpclass)
+  }
+};
+
 struct AACallEdgesImpl : public AACallEdges {
   AACallEdgesImpl(const IRPosition &IRP, Attributor &A) : AACallEdges(IRP, A) {}
 
@@ -11629,6 +11727,7 @@ const char AAValueConstantRange::ID = 0;
 const char AAPotentialConstantValues::ID = 0;
 const char AAPotentialValues::ID = 0;
 const char AANoUndef::ID = 0;
+const char AANoFPClass::ID = 0;
 const char AACallEdges::ID = 0;
 const char AAInterFnReachability::ID = 0;
 const char AAPointerInfo::ID = 0;
@@ -11749,6 +11848,7 @@ CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAValueConstantRange)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAPotentialConstantValues)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAPotentialValues)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoUndef)
+CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoFPClass)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAPointerInfo)
 
 CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAValueSimplify)
