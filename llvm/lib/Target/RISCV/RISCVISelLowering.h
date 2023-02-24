@@ -638,6 +638,16 @@ public:
 
   bool isVScaleKnownToBeAPowerOfTwo() const override;
 
+  bool getIndexedAddressParts(SDNode *Op, SDValue &Base, SDValue &Offset,
+                              ISD::MemIndexedMode &AM, bool &IsInc,
+                              SelectionDAG &DAG) const;
+  bool getPreIndexedAddressParts(SDNode *N, SDValue &Base, SDValue &Offset,
+                                 ISD::MemIndexedMode &AM,
+                                 SelectionDAG &DAG) const override;
+  bool getPostIndexedAddressParts(SDNode *N, SDNode *Op, SDValue &Base,
+                                  SDValue &Offset, ISD::MemIndexedMode &AM,
+                                  SelectionDAG &DAG) const override;
+
   bool isLegalScaleForGatherScatter(uint64_t Scale,
                                     uint64_t ElemSize) const override {
     // Scaled addressing not supported on indexed load/stores
@@ -705,6 +715,8 @@ private:
   SDValue lowerFPVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINSERT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVECTOR_DEINTERLEAVE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVECTOR_INTERLEAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSTEP_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECTOR_REVERSE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECTOR_SPLICE(SDValue Op, SelectionDAG &DAG) const;

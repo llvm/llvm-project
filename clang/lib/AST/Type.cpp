@@ -2372,6 +2372,19 @@ bool Type::isSVESizelessBuiltinType() const {
   return false;
 }
 
+bool Type::isRVVSizelessBuiltinType() const {
+  if (const BuiltinType *BT = getAs<BuiltinType>()) {
+    switch (BT->getKind()) {
+#define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/RISCVVTypes.def"
+      return true;
+    default:
+      return false;
+    }
+  }
+  return false;
+}
+
 bool Type::isVLSTBuiltinType() const {
   if (const BuiltinType *BT = getAs<BuiltinType>()) {
     switch (BT->getKind()) {

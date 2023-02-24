@@ -527,9 +527,23 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       if (Result != MCDisassembler::Fail)
         return Result;
     }
+    if (STI.hasFeature(RISCV::FeatureVendorXTHeadFMemIdx)) {
+      LLVM_DEBUG(dbgs() << "Trying XTHeadFMemIdx custom opcode table:\n");
+      Result = decodeInstruction(DecoderTableTHeadFMemIdx32, MI, Insn, Address,
+                                 this, STI);
+      if (Result != MCDisassembler::Fail)
+        return Result;
+    }
     if (STI.hasFeature(RISCV::FeatureVendorXTHeadMac)) {
       LLVM_DEBUG(dbgs() << "Trying XTHeadMac custom opcode table:\n");
       Result = decodeInstruction(DecoderTableTHeadMac32, MI, Insn, Address,
+                                 this, STI);
+      if (Result != MCDisassembler::Fail)
+        return Result;
+    }
+    if (STI.hasFeature(RISCV::FeatureVendorXTHeadMemIdx)) {
+      LLVM_DEBUG(dbgs() << "Trying XTHeadMemIdx custom opcode table:\n");
+      Result = decodeInstruction(DecoderTableTHeadMemIdx32, MI, Insn, Address,
                                  this, STI);
       if (Result != MCDisassembler::Fail)
         return Result;

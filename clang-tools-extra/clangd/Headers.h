@@ -155,12 +155,15 @@ public:
     return !NonSelfContained.contains(ID);
   }
 
-  bool hasIWYUExport(HeaderID ID) const {
-    return HasIWYUExport.contains(ID);
-  }
+  bool hasIWYUExport(HeaderID ID) const { return HasIWYUExport.contains(ID); }
 
   // Return all transitively reachable files.
   llvm::ArrayRef<std::string> allHeaders() const { return RealPathNames; }
+
+  // Returns includes inside the main file with the given spelling.
+  // Spelling should include brackets or quotes, e.g. <foo>.
+  llvm::SmallVector<const Inclusion *>
+  mainFileIncludesWithSpelling(llvm::StringRef Spelling) const;
 
   // Return all transitively reachable files, and their minimum include depth.
   // All transitive includes (absolute paths), with their minimum include depth.
@@ -202,6 +205,10 @@ private:
   // Contains a set of headers that have either "IWYU pragma: export" or "IWYU
   // pragma: begin_exports".
   llvm::DenseSet<HeaderID> HasIWYUExport;
+
+  // Maps written includes to indices in MainFileInclude for easier lookup by
+  // spelling.
+  llvm::StringMap<llvm::SmallVector<unsigned>> MainFileIncludesBySpelling;
 };
 
 // Calculates insertion edit for including a new header in a file.
