@@ -5926,7 +5926,7 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
     // Preference is to use ISD::ABS or we already have an ISD::ABS (in which
     // case this is just a compare).
     if (APLhs == (-APRhs) &&
-        (TargetPreference == AndOrSETCCFoldKind::ABS ||
+        ((TargetPreference & AndOrSETCCFoldKind::ABS) ||
          DAG.doesNodeExist(ISD::ABS, DAG.getVTList(OpVT), {LHS0}))) {
       const APInt &C = APLhs.isNegative() ? APRhs : APLhs;
       // (icmp eq A, C) | (icmp eq A, -C)
@@ -5936,23 +5936,45 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
       SDValue AbsOp = DAG.getNode(ISD::ABS, DL, OpVT, LHS0);
       return DAG.getNode(ISD::SETCC, DL, VT, AbsOp,
                          DAG.getConstant(C, DL, OpVT), LHS.getOperand(2));
-    } else if (TargetPreference == AndOrSETCCFoldKind::AddAnd) {
+    } else if (TargetPreference &
+               (AndOrSETCCFoldKind::AddAnd | AndOrSETCCFoldKind::NotAnd)) {
+
+      // AndOrSETCCFoldKind::AddAnd:
       // A == C0 | A == C1
       //  IF IsPow2(smax(C0, C1)-smin(C0, C1))
       //    -> ((A - smin(C0, C1)) & ~(smax(C0, C1)-smin(C0, C1))) == 0
       // A != C0 & A != C1
       //  IF IsPow2(smax(C0, C1)-smin(C0, C1))
       //    -> ((A - smin(C0, C1)) & ~(smax(C0, C1)-smin(C0, C1))) != 0
+
+      // AndOrSETCCFoldKind::NotAnd:
+      // A == C0 | A == C1
+      //  IF smax(C0, C1) == -1 AND IsPow2(smax(C0, C1) - smin(C0, C1))
+      //    -> ~A & smin(C0, C1) == 0
+      // A != C0 & A != C1
+      //  IF smax(C0, C1) == -1 AND IsPow2(smax(C0, C1) - smin(C0, C1))
+      //    -> ~A & smin(C0, C1) != 0
+
       const APInt &MaxC = APIntOps::smax(APRhs, APLhs);
       const APInt &MinC = APIntOps::smin(APRhs, APLhs);
       APInt Dif = MaxC - MinC;
       if (!Dif.isZero() && Dif.isPowerOf2()) {
-        SDValue AddOp = DAG.getNode(ISD::ADD, DL, OpVT, LHS0,
-                                    DAG.getConstant(-MinC, DL, OpVT));
-        SDValue AndOp = DAG.getNode(ISD::AND, DL, OpVT, AddOp,
-                                    DAG.getConstant(~Dif, DL, OpVT));
-        return DAG.getNode(ISD::SETCC, DL, VT, AndOp,
-                           DAG.getConstant(0, DL, OpVT), LHS.getOperand(2));
+        if (MaxC.isAllOnes() &&
+            (TargetPreference & AndOrSETCCFoldKind::NotAnd)) {
+          SDValue NotOp = DAG.getNOT(DL, LHS0, OpVT);
+          SDValue AndOp = DAG.getNode(ISD::AND, DL, OpVT, NotOp,
+                                      DAG.getConstant(MinC, DL, OpVT));
+          return DAG.getNode(ISD::SETCC, DL, VT, AndOp,
+                             DAG.getConstant(0, DL, OpVT), LHS.getOperand(2));
+        } else if (TargetPreference & AndOrSETCCFoldKind::AddAnd) {
+
+          SDValue AddOp = DAG.getNode(ISD::ADD, DL, OpVT, LHS0,
+                                      DAG.getConstant(-MinC, DL, OpVT));
+          SDValue AndOp = DAG.getNode(ISD::AND, DL, OpVT, AddOp,
+                                      DAG.getConstant(~Dif, DL, OpVT));
+          return DAG.getNode(ISD::SETCC, DL, VT, AndOp,
+                             DAG.getConstant(0, DL, OpVT), LHS.getOperand(2));
+        }
       }
     }
   }
