@@ -135,8 +135,8 @@ LLVM_LIBC_FUNCTION(float, sinf, (float x)) {
 
   if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
     if (x_abs == 0x7f80'0000U) {
-      errno = EDOM;
-      fputil::set_except(FE_INVALID);
+      fputil::set_errno_if_required(EDOM);
+      fputil::raise_except_if_required(FE_INVALID);
     }
     return x +
            FPBits::build_nan(1 << (fputil::MantissaWidth<float>::VALUE - 1));
