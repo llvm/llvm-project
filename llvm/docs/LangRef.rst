@@ -2770,23 +2770,23 @@ as follows:
     specified, the default index size is equal to the pointer size. All sizes
     are in bits. The address space, ``n``, is optional, and if not specified,
     denotes the default address space 0. The value of ``n`` must be
-    in the range [1,2^23).
+    in the range [1,2^24).
 ``i<size>:<abi>[:<pref>]``
     This specifies the alignment for an integer type of a given bit
-    ``<size>``. The value of ``<size>`` must be in the range [1,2^23).
+    ``<size>``. The value of ``<size>`` must be in the range [1,2^24).
     ``<pref>`` is optional and defaults to ``<abi>``.
     For ``i8``, the ``<abi>`` value must equal 8,
     that is, ``i8`` must be naturally aligned.
 ``v<size>:<abi>[:<pref>]``
     This specifies the alignment for a vector type of a given bit
-    ``<size>``. The value of ``<size>`` must be in the range [1,2^23).
+    ``<size>``. The value of ``<size>`` must be in the range [1,2^24).
     ``<pref>`` is optional and defaults to ``<abi>``.
 ``f<size>:<abi>[:<pref>]``
     This specifies the alignment for a floating-point type of a given bit
     ``<size>``. Only values of ``<size>`` that are supported by the target
     will work. 32 (float) and 64 (double) are supported on all targets; 80
     or 128 (different flavors of long double) are also supported on some
-    targets. The value of ``<size>`` must be in the range [1,2^23).
+    targets. The value of ``<size>`` must be in the range [1,2^24).
     ``<pref>`` is optional and defaults to ``<abi>``.
 ``a:<abi>[:<pref>]``
     This specifies the alignment for an object of aggregate type.
