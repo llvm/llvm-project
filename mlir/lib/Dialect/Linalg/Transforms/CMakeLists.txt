@@ -4,6 +4,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   Bufferize.cpp
   ConstantFold.cpp
   ConvertToDestinationStyle.cpp
+  ConvertConv2DToImg2Col.cpp
   DataLayoutPropagation.cpp
   DecomposeLinalgOps.cpp
   Detensorize.cpp
