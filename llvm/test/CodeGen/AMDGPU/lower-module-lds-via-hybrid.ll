@@ -30,13 +30,12 @@ define void @f0() {
 ; GCN-LABEL: f0:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_mov_b64 s[0:1], s[6:7]
-; GCN-NEXT:    s_trap 2
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_mov_b32 m0, -1
-; GCN-NEXT:    ds_read_b32 v0, v0
+; GCN-NEXT:    ds_read_b32 v1, v0 offset:4
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_add_f32_e32 v0, v0, v0
-; GCN-NEXT:    ds_write_b32 v0, v0
+; GCN-NEXT:    v_add_f32_e32 v1, v1, v1
+; GCN-NEXT:    ds_write_b32 v0, v1 offset:4
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %ld = load float, ptr addrspace(3) @v0
@@ -120,13 +119,12 @@ define void @f3() {
 ; GCN-LABEL: f3:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_mov_b64 s[0:1], s[6:7]
-; GCN-NEXT:    s_trap 2
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_mov_b32 m0, -1
-; GCN-NEXT:    ds_read_u8 v0, v0
+; GCN-NEXT:    ds_read_u8 v1, v0 offset:8
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mul_lo_u32 v0, v0, 5
-; GCN-NEXT:    ds_write_b8 v0, v0
+; GCN-NEXT:    v_mul_lo_u32 v1, v1, 5
+; GCN-NEXT:    ds_write_b8 v0, v1 offset:8
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %ld = load i8, ptr addrspace(3) @v3
