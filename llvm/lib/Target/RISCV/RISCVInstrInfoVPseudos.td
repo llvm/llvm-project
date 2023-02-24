@@ -1939,6 +1939,24 @@ multiclass VPseudoBinary<VReg RetClass,
   }
 }
 
+multiclass VPseudoBinary_E<VReg RetClass,
+                           VReg Op1Class,
+                           DAGOperand Op2Class,
+                           LMULInfo MInfo,
+                           int sew,
+                           string Constraint = ""> {
+  let VLMul = MInfo.value in {
+    defvar suffix = "_" # MInfo.MX # "_E" # sew;
+    def suffix : VPseudoBinaryNoMask<RetClass, Op1Class, Op2Class,
+                                     Constraint>;
+    def suffix # "_TU" : VPseudoBinaryNoMaskTU<RetClass, Op1Class, Op2Class,
+                                               Constraint>;
+    def suffix # "_MASK" : VPseudoBinaryMaskPolicy<RetClass, Op1Class, Op2Class,
+                                                   Constraint>,
+                           RISCVMaskedPseudo</*MaskOpIdx*/ 3>;
+  }
+}
+
 multiclass VPseudoBinaryM<VReg RetClass,
                           VReg Op1Class,
                           DAGOperand Op2Class,
@@ -1971,6 +1989,25 @@ multiclass VPseudoBinaryEmul<VReg RetClass,
   }
 }
 
+multiclass VPseudoBinaryEmul_E<VReg RetClass,
+                               VReg Op1Class,
+                               DAGOperand Op2Class,
+                               LMULInfo lmul,
+                               int sew,
+                               LMULInfo emul,
+                               string Constraint = ""> {
+  let VLMul = lmul.value in {
+    defvar suffix = "_" # lmul.MX # "_E" # sew # "_" # emul.MX;
+    def suffix : VPseudoBinaryNoMask<RetClass, Op1Class, Op2Class,
+                                     Constraint>;
+    def suffix # "_TU" : VPseudoBinaryNoMaskTU<RetClass, Op1Class, Op2Class,
+                                               Constraint>;
+    def suffix # "_MASK" : VPseudoBinaryMaskPolicy<RetClass, Op1Class, Op2Class,
+                                                   Constraint>,
+                           RISCVMaskedPseudo</*MaskOpIdx*/ 3>;
+  }
+}
+
 multiclass VPseudoTiedBinary<VReg RetClass,
                              DAGOperand Op2Class,
                              LMULInfo MInfo,
@@ -1987,6 +2024,10 @@ multiclass VPseudoBinaryV_VV<LMULInfo m, string Constraint = ""> {
   defm _VV : VPseudoBinary<m.vrclass, m.vrclass, m.vrclass, m, Constraint>;
 }
 
+multiclass VPseudoBinaryV_VV_E<LMULInfo m, int sew, string Constraint = ""> {
+  defm _VV : VPseudoBinary_E<m.vrclass, m.vrclass, m.vrclass, m, sew, Constraint>;
+}
+
 // Similar to VPseudoBinaryV_VV, but uses MxListF.
 multiclass VPseudoBinaryFV_VV<LMULInfo m, string Constraint = ""> {
   defm _VV : VPseudoBinary<m.vrclass, m.vrclass, m.vrclass, m, Constraint>;
@@ -1995,10 +2036,6 @@ multiclass VPseudoBinaryFV_VV<LMULInfo m, string Constraint = ""> {
 multiclass VPseudoVGTR_VV_EEW<int eew, string Constraint = ""> {
   foreach m = MxList in {
     defvar mx = m.MX;
-    defvar WriteVRGatherVV_MX = !cast<SchedWrite>("WriteVRGatherVV_" # mx);
-    defvar ReadVRGatherVV_data_MX = !cast<SchedRead>("ReadVRGatherVV_data_" # mx);
-    defvar ReadVRGatherVV_index_MX = !cast<SchedRead>("ReadVRGatherVV_index_" # mx);
-
     foreach sew = EEWList in {
       defvar octuple_lmul = m.octuple;
       // emul = lmul * eew / sew
@@ -2006,9 +2043,14 @@ multiclass VPseudoVGTR_VV_EEW<int eew, string Constraint = ""> {
       if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
         defvar emulMX = octuple_to_str<octuple_emul>.ret;
         defvar emul = !cast<LMULInfo>("V_" # emulMX);
-        defm _VV : VPseudoBinaryEmul<m.vrclass, m.vrclass, emul.vrclass, m, emul, Constraint>,
-                   Sched<[WriteVRGatherVV_MX, ReadVRGatherVV_data_MX,
-                          ReadVRGatherVV_index_MX]>;
+        defvar sews = SchedSEWSet<mx>.val;
+        foreach e = sews in {
+          defvar WriteVRGatherVV_MX_E = !cast<SchedWrite>("WriteVRGatherVV_" # mx # "_E" # e);
+          defvar ReadVRGatherVV_data_MX_E = !cast<SchedRead>("ReadVRGatherVV_data_" # mx # "_E" # e);
+          defvar ReadVRGatherVV_index_MX_E = !cast<SchedRead>("ReadVRGatherVV_index_" # mx # "_E" # e);
+          defm _VV : VPseudoBinaryEmul_E<m.vrclass, m.vrclass, emul.vrclass, m, e, emul, Constraint>,
+                     Sched<[WriteVRGatherVV_MX_E, ReadVRGatherVV_data_MX_E, ReadVRGatherVV_index_MX_E]>;
+        }
       }
     }
   }
@@ -2404,23 +2446,27 @@ multiclass VPseudoBinaryM_VI<LMULInfo m> {
 multiclass VPseudoVGTR_VV_VX_VI<Operand ImmType = simm5, string Constraint = ""> {
   foreach m = MxList in {
     defvar mx = m.MX;
-    defvar WriteVRGatherVV_MX = !cast<SchedWrite>("WriteVRGatherVV_" # mx);
     defvar WriteVRGatherVX_MX = !cast<SchedWrite>("WriteVRGatherVX_" # mx);
     defvar WriteVRGatherVI_MX = !cast<SchedWrite>("WriteVRGatherVI_" # mx);
-    defvar ReadVRGatherVV_data_MX = !cast<SchedRead>("ReadVRGatherVV_data_" # mx);
-    defvar ReadVRGatherVV_index_MX = !cast<SchedRead>("ReadVRGatherVV_index_" # mx);
     defvar ReadVRGatherVX_data_MX = !cast<SchedRead>("ReadVRGatherVX_data_" # mx);
     defvar ReadVRGatherVX_index_MX = !cast<SchedRead>("ReadVRGatherVX_index_" # mx);
     defvar ReadVRGatherVI_data_MX = !cast<SchedRead>("ReadVRGatherVI_data_" # mx);
 
-    defm "" : VPseudoBinaryV_VV<m, Constraint>,
-              Sched<[WriteVRGatherVV_MX, ReadVRGatherVV_data_MX,
-                     ReadVRGatherVV_index_MX, ReadVMask]>;
     defm "" : VPseudoBinaryV_VX<m, Constraint>,
               Sched<[WriteVRGatherVX_MX, ReadVRGatherVX_data_MX,
                      ReadVRGatherVX_index_MX, ReadVMask]>;
     defm "" : VPseudoBinaryV_VI<ImmType, m, Constraint>,
               Sched<[WriteVRGatherVI_MX, ReadVRGatherVI_data_MX, ReadVMask]>;
+
+    defvar sews = SchedSEWSet<mx>.val;
+    foreach e = sews in {
+      defvar WriteVRGatherVV_MX_E = !cast<SchedWrite>("WriteVRGatherVV_" # mx # "_E" # e);
+      defvar ReadVRGatherVV_data_MX_E = !cast<SchedRead>("ReadVRGatherVV_data_" # mx # "_E" # e);
+      defvar ReadVRGatherVV_index_MX_E = !cast<SchedRead>("ReadVRGatherVV_index_" # mx # "_E" # e);
+      defm "" : VPseudoBinaryV_VV_E<m, e, Constraint>,
+                Sched<[WriteVRGatherVV_MX_E, ReadVRGatherVV_data_MX_E,
+                       ReadVRGatherVV_index_MX_E, ReadVMask]>;
+    }
   }
 }
 
@@ -4457,18 +4503,19 @@ multiclass VPatBinaryV_VV<string intrinsic, string instruction,
                         vti.RegClass, vti.RegClass>;
 }
 
-multiclass VPatBinaryV_VV_INT<string intrinsic, string instruction,
+multiclass VPatBinaryV_VV_INT_E<string intrinsic, string instruction,
                           list<VTypeInfo> vtilist> {
   foreach vti = vtilist in {
     defvar ivti = GetIntVTypeInfo<vti>.Vti;
-    defm : VPatBinaryTA<intrinsic, instruction # "_VV_" # vti.LMul.MX,
+    defm : VPatBinaryTA<intrinsic,
+                        instruction # "_VV_" # vti.LMul.MX # "_E" # vti.SEW,
                         vti.Vector, vti.Vector, ivti.Vector, vti.Mask,
                         vti.Log2SEW, vti.RegClass,
                         vti.RegClass, vti.RegClass>;
   }
 }
 
-multiclass VPatBinaryV_VV_INT_EEW<string intrinsic, string instruction,
+multiclass VPatBinaryV_VV_INT_E_EEW<string intrinsic, string instruction,
                                   int eew, list<VTypeInfo> vtilist> {
   foreach vti = vtilist in {
     // emul = lmul * eew / sew
@@ -4478,7 +4525,7 @@ multiclass VPatBinaryV_VV_INT_EEW<string intrinsic, string instruction,
     if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
       defvar emul_str = octuple_to_str<octuple_emul>.ret;
       defvar ivti = !cast<VTypeInfo>("VI" # eew # emul_str);
-      defvar inst = instruction # "_VV_" # vti.LMul.MX # "_" # emul_str;
+      defvar inst = instruction # "_VV_" # vti.LMul.MX # "_E" # vti.SEW # "_" # emul_str;
       defm : VPatBinaryTA<intrinsic, inst,
                           vti.Vector, vti.Vector, ivti.Vector, vti.Mask,
                           vti.Log2SEW, vti.RegClass,
@@ -4967,7 +5014,7 @@ multiclass VPatBinaryM_VX_VI<string intrinsic, string instruction,
 
 multiclass VPatBinaryV_VV_VX_VI_INT<string intrinsic, string instruction,
                                     list<VTypeInfo> vtilist, Operand ImmType = simm5>
-    : VPatBinaryV_VV_INT<intrinsic#"_vv", instruction, vtilist>,
+    : VPatBinaryV_VV_INT_E<intrinsic#"_vv", instruction, vtilist>,
       VPatBinaryV_VX_INT<intrinsic#"_vx", instruction, vtilist>,
       VPatBinaryV_VI<intrinsic#"_vx", instruction, vtilist, ImmType>;
 
@@ -6455,14 +6502,14 @@ let Predicates = [HasVInstructionsAnyF] in {
 let Predicates = [HasVInstructions] in {
   defm : VPatBinaryV_VV_VX_VI_INT<"int_riscv_vrgather", "PseudoVRGATHER",
                                   AllIntegerVectors, uimm5>;
-  defm : VPatBinaryV_VV_INT_EEW<"int_riscv_vrgatherei16_vv", "PseudoVRGATHEREI16",
+  defm : VPatBinaryV_VV_INT_E_EEW<"int_riscv_vrgatherei16_vv", "PseudoVRGATHEREI16",
                                 /* eew */ 16, AllIntegerVectors>;
 } // Predicates = [HasVInstructions]
 
 let Predicates = [HasVInstructionsAnyF] in {
   defm : VPatBinaryV_VV_VX_VI_INT<"int_riscv_vrgather", "PseudoVRGATHER",
                                   AllFloatVectors, uimm5>;
-  defm : VPatBinaryV_VV_INT_EEW<"int_riscv_vrgatherei16_vv", "PseudoVRGATHEREI16",
+  defm : VPatBinaryV_VV_INT_E_EEW<"int_riscv_vrgatherei16_vv", "PseudoVRGATHEREI16",
                                 /* eew */ 16, AllFloatVectors>;
 } // Predicates = [HasVInstructionsAnyF]
 
