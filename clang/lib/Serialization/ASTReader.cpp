@@ -5644,6 +5644,12 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       if (DeserializationListener)
         DeserializationListener->ModuleRead(GlobalID, CurrentModule);
 
+      // If we're loading a module before we initialize the sema, it implies
+      // we're performing eagerly loading.
+      if (!getSema() && CurrentModule->isModulePurview() &&
+          !getContext().getLangOpts().isCompilingModule())
+        Diag(clang::diag::warn_eagerly_load_for_standard_cplusplus_modules);
+
       SubmodulesLoaded[GlobalIndex] = CurrentModule;
 
       // Clear out data that will be replaced by what is in the module file.
