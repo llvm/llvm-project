@@ -150,22 +150,24 @@ CompletionItemKind toCompletionItemKind(index::SymbolKind Kind) {
   llvm_unreachable("Unhandled clang::index::SymbolKind.");
 }
 
-CompletionItemKind
-toCompletionItemKind(CodeCompletionResult::ResultKind ResKind,
-                     const NamedDecl *Decl,
-                     CodeCompletionContext::Kind CtxKind) {
-  if (Decl)
-    return toCompletionItemKind(index::getSymbolInfo(Decl).Kind);
+CompletionItemKind toCompletionItemKind(const CodeCompletionResult &Res,
+                                        CodeCompletionContext::Kind CtxKind) {
+  if (Res.Declaration)
+    return toCompletionItemKind(index::getSymbolInfo(Res.Declaration).Kind);
   if (CtxKind == CodeCompletionContext::CCC_IncludedFile)
     return CompletionItemKind::File;
-  switch (ResKind) {
+  switch (Res.Kind) {
   case CodeCompletionResult::RK_Declaration:
     llvm_unreachable("RK_Declaration without Decl");
   case CodeCompletionResult::RK_Keyword:
     return CompletionItemKind::Keyword;
   case CodeCompletionResult::RK_Macro:
-    return CompletionItemKind::Text; // unfortunately, there's no 'Macro'
-                                     // completion items in LSP.
+    // There is no 'Macro' kind in LSP.
+    // Avoid using 'Text' to avoid confusion with client-side word-based
+    // completion proposals.
+    return Res.MacroDefInfo && Res.MacroDefInfo->isFunctionLike()
+               ? CompletionItemKind::Function
+               : CompletionItemKind::Constant;
   case CodeCompletionResult::RK_Pattern:
     return CompletionItemKind::Snippet;
   }
@@ -337,8 +339,7 @@ struct CodeCompletionBuilder {
               Completion.Scope = std::string(
                   splitQualifiedName(printQualifiedName(*ND)).first);
       }
-      Completion.Kind = toCompletionItemKind(
-          C.SemaResult->Kind, C.SemaResult->Declaration, ContextKind);
+      Completion.Kind = toCompletionItemKind(*C.SemaResult, ContextKind);
       // Sema could provide more info on whether the completion was a file or
       // folder.
       if (Completion.Kind == CompletionItemKind::File &&

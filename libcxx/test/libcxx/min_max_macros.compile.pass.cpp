@@ -338,19 +338,11 @@ TEST_MACROS();
 TEST_MACROS();
 #endif
 #if __cplusplus >= 201103L
-#   include <experimental/algorithm>
-TEST_MACROS();
-#endif
-#if __cplusplus >= 201103L
 #   include <experimental/deque>
 TEST_MACROS();
 #endif
 #if __cplusplus >= 201103L
 #   include <experimental/forward_list>
-TEST_MACROS();
-#endif
-#if __cplusplus >= 201103L
-#   include <experimental/functional>
 TEST_MACROS();
 #endif
 #if __cplusplus >= 201103L

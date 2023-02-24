@@ -518,8 +518,8 @@ Error GenericDeviceTy::registerGlobalOffloadEntry(
     // can access host addresses directly. There is no longer a
     // need for device copies.
     GlobalTy HostGlobal(GlobalEntry);
-    if (auto Err = GHandler.writeGlobalToDevice(*this, Image, HostGlobal,
-                                                DeviceGlobal))
+    if (auto Err =
+            GHandler.writeGlobalToDevice(*this, HostGlobal, DeviceGlobal))
       return Err;
   }
 

@@ -31,6 +31,7 @@
 #include "llvm/DebugInfo/CodeView/TypeIndexDiscovery.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
+#include "llvm/DebugInfo/MSF/MSFError.h"
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptorBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
@@ -1687,6 +1688,12 @@ void PDBLinker::commit(codeview::GUID *guid) {
   // the user can see the output of /time and /summary, which is very helpful
   // when trying to figure out why a PDB file is too large.
   if (Error e = builder.commit(ctx.config.pdbPath, guid)) {
+    e = handleErrors(std::move(e),
+        [](const llvm::msf::MSFError &me) {
+          error(me.message());
+          if (me.isPageOverflow())
+            error("try setting a larger /pdbpagesize");
+        });
     checkError(std::move(e));
     error("failed to write PDB file " + Twine(ctx.config.pdbPath));
   }

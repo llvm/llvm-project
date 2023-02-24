@@ -23,13 +23,11 @@ namespace mlir {
 class ModuleOp;
 template <typename T>
 class OperationPass;
+class Pass;
 
-#define GEN_PASS_DECL_CONVERTVULKANLAUNCHFUNCTOVULKANCALLS
+#define GEN_PASS_DECL_CONVERTVULKANLAUNCHFUNCTOVULKANCALLSPASS
 #define GEN_PASS_DECL_CONVERTGPULAUNCHFUNCTOVULKANLAUNCHFUNC
 #include "mlir/Conversion/Passes.h.inc"
-
-std::unique_ptr<OperationPass<ModuleOp>>
-createConvertVulkanLaunchFuncToVulkanCallsPass();
 
 std::unique_ptr<OperationPass<mlir::ModuleOp>>
 createConvertGpuLaunchFuncToVulkanLaunchFuncPass();

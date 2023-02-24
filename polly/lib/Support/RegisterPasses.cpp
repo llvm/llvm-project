@@ -21,7 +21,6 @@
 #include "polly/RegisterPasses.h"
 #include "polly/Canonicalization.h"
 #include "polly/CodeGen/CodeGeneration.h"
-#include "polly/CodeGen/CodegenCleanup.h"
 #include "polly/CodeGen/IslAst.h"
 #include "polly/CodePreparation.h"
 #include "polly/DeLICM.h"
@@ -251,7 +250,6 @@ void initializePollyPasses(llvm::PassRegistry &Registry) {
   initializeScopInfoPrinterLegacyRegionPassPass(Registry);
   initializeScopInfoWrapperPassPass(Registry);
   initializeScopInfoPrinterLegacyFunctionPassPass(Registry);
-  initializeCodegenCleanupPass(Registry);
   initializeFlattenSchedulePass(Registry);
   initializeFlattenSchedulePrinterLegacyPassPass(Registry);
   initializeForwardOpTreeWrapperPassPass(Registry);

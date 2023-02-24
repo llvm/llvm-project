@@ -16,14 +16,11 @@ class LLVMTypeConverter;
 class RewritePatternSet;
 class Pass;
 
-#define GEN_PASS_DECL_CONVERTNVGPUTONVVM
+#define GEN_PASS_DECL_CONVERTNVGPUTONVVMPASS
 #include "mlir/Conversion/Passes.h.inc"
 
 void populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
                                            RewritePatternSet &patterns);
-
-std::unique_ptr<Pass> createConvertNVGPUToNVVMPass();
-
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_NVGPUTONVVM_NVGPUTONVVMPASS_H_

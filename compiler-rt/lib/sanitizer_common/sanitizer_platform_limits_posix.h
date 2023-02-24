@@ -135,7 +135,7 @@ struct __sanitizer_perf_event_attr {
 extern unsigned struct_epoll_event_sz;
 extern unsigned struct_sysinfo_sz;
 extern unsigned __user_cap_header_struct_sz;
-extern unsigned __user_cap_data_struct_sz;
+extern unsigned __user_cap_data_struct_sz(void *hdrp);
 extern unsigned struct_new_utsname_sz;
 extern unsigned struct_old_utsname_sz;
 extern unsigned struct_oldold_utsname_sz;

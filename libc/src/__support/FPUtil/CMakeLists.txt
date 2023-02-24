@@ -3,10 +3,13 @@ add_header_library(
   HDRS
     FEnvImpl.h
   DEPENDS
+    libc.include.errno
     libc.include.fenv
+    libc.include.math
     libc.src.__support.macros.attributes
     libc.src.__support.macros.properties.architectures
     libc.src.__support.macros.sanitizer
+    libc.src.errno.errno
 )
 
 add_header_library(

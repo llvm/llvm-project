@@ -728,6 +728,77 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
   return false;
 }
 
+bool RISCVDAGToDAGISel::tryIndexedLoad(SDNode *Node) {
+  // Target does not support indexed loads.
+  if (!Subtarget->hasVendorXTHeadMemIdx())
+    return false;
+
+  LoadSDNode *Ld = cast<LoadSDNode>(Node);
+  ISD::MemIndexedMode AM = Ld->getAddressingMode();
+  if (AM == ISD::UNINDEXED)
+    return false;
+
+  const ConstantSDNode *C = dyn_cast<ConstantSDNode>(Ld->getOffset());
+  if (!C)
+    return false;
+
+  EVT LoadVT = Ld->getMemoryVT();
+  bool IsPre = (AM == ISD::PRE_INC || AM == ISD::PRE_DEC);
+  bool IsPost = (AM == ISD::POST_INC || AM == ISD::POST_DEC);
+  int64_t Offset = C->getSExtValue();
+
+  // Convert decrements to increments by a negative quantity.
+  if (AM == ISD::PRE_DEC || AM == ISD::POST_DEC)
+    Offset = -Offset;
+
+  // The constants that can be encoded in the THeadMemIdx instructions
+  // are of the form (sign_extend(imm5) << imm2).
+  int64_t Shift;
+  for (Shift = 0; Shift < 4; Shift++)
+    if (isInt<5>(Offset >> Shift) && ((Offset % (1LL << Shift)) == 0))
+      break;
+
+  // Constant cannot be encoded.
+  if (Shift == 4)
+    return false;
+
+  bool IsZExt = (Ld->getExtensionType() == ISD::ZEXTLOAD);
+  unsigned Opcode;
+  if (LoadVT == MVT::i8 && IsPre)
+    Opcode = IsZExt ? RISCV::TH_LBUIB : RISCV::TH_LBIB;
+  else if (LoadVT == MVT::i8 && IsPost)
+    Opcode = IsZExt ? RISCV::TH_LBUIA : RISCV::TH_LBIA;
+  else if (LoadVT == MVT::i16 && IsPre)
+    Opcode = IsZExt ? RISCV::TH_LHUIB : RISCV::TH_LHIB;
+  else if (LoadVT == MVT::i16 && IsPost)
+    Opcode = IsZExt ? RISCV::TH_LHUIA : RISCV::TH_LHIA;
+  else if (LoadVT == MVT::i32 && IsPre)
+    Opcode = IsZExt ? RISCV::TH_LWUIB : RISCV::TH_LWIB;
+  else if (LoadVT == MVT::i32 && IsPost)
+    Opcode = IsZExt ? RISCV::TH_LWUIA : RISCV::TH_LWIA;
+  else if (LoadVT == MVT::i64 && IsPre)
+    Opcode = RISCV::TH_LDIB;
+  else if (LoadVT == MVT::i64 && IsPost)
+    Opcode = RISCV::TH_LDIA;
+  else
+    return false;
+
+  EVT Ty = Ld->getOffset().getValueType();
+  SDValue Ops[] = {Ld->getBasePtr(),
+                   CurDAG->getTargetConstant(Offset >> Shift, SDLoc(Node), Ty),
+                   CurDAG->getTargetConstant(Shift, SDLoc(Node), Ty),
+                   Ld->getChain()};
+  SDNode *New = CurDAG->getMachineNode(Opcode, SDLoc(Node), Ld->getValueType(0),
+                                       Ld->getValueType(1), MVT::Other, Ops);
+
+  MachineMemOperand *MemOp = cast<MemSDNode>(Node)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(New), {MemOp});
+
+  ReplaceNode(Node, New);
+
+  return true;
+}
+
 void RISCVDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we have already selected.
   if (Node->isMachineOpcode()) {
@@ -1271,6 +1342,11 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
                                            SDValue(SLLI, 0), SDValue(Imm, 0));
     ReplaceNode(Node, MULHU);
     return;
+  }
+  case ISD::LOAD: {
+    if (tryIndexedLoad(Node))
+      return;
+    break;
   }
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IntNo = Node->getConstantOperandVal(0);
@@ -2136,6 +2212,60 @@ static bool isWorthFoldingAdd(SDValue Add) {
   return true;
 }
 
+bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
+                                              unsigned MaxShiftAmount,
+                                              SDValue &Base, SDValue &Index,
+                                              SDValue &Scale) {
+  EVT VT = Addr.getSimpleValueType();
+  auto UnwrapShl = [this, VT, MaxShiftAmount](SDValue N, SDValue &Index,
+                                              SDValue &Shift) {
+    uint64_t ShiftAmt = 0;
+    Index = N;
+
+    if (N.getOpcode() == ISD::SHL && isa<ConstantSDNode>(N.getOperand(1))) {
+      // Only match shifts by a value in range [0, MaxShiftAmount].
+      if (N.getConstantOperandVal(1) <= MaxShiftAmount) {
+        Index = N.getOperand(0);
+        ShiftAmt = N.getConstantOperandVal(1);
+      }
+    }
+
+    Shift = CurDAG->getTargetConstant(ShiftAmt, SDLoc(N), VT);
+    return ShiftAmt != 0;
+  };
+
+  if (Addr.getOpcode() == ISD::ADD) {
+    if (auto *C1 = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
+      SDValue AddrB = Addr.getOperand(0);
+      if (AddrB.getOpcode() == ISD::ADD &&
+          UnwrapShl(AddrB.getOperand(0), Index, Scale) &&
+          !isa<ConstantSDNode>(AddrB.getOperand(1)) &&
+          isInt<12>(C1->getSExtValue())) {
+        // (add (add (shl A C2) B) C1) -> (add (add B C1) (shl A C2))
+        SDValue C1Val =
+            CurDAG->getTargetConstant(C1->getZExtValue(), SDLoc(Addr), VT);
+        Base = SDValue(CurDAG->getMachineNode(RISCV::ADDI, SDLoc(Addr), VT,
+                                              AddrB.getOperand(1), C1Val),
+                       0);
+        return true;
+      }
+    } else if (UnwrapShl(Addr.getOperand(0), Index, Scale)) {
+      Base = Addr.getOperand(1);
+      return true;
+    } else {
+      UnwrapShl(Addr.getOperand(1), Index, Scale);
+      Base = Addr.getOperand(0);
+      return true;
+    }
+  } else if (UnwrapShl(Addr, Index, Scale)) {
+    EVT VT = Addr.getValueType();
+    Base = CurDAG->getRegister(RISCV::X0, VT);
+    return true;
+  }
+
+  return false;
+}
+
 bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
                                          SDValue &Offset) {
   if (SelectAddrFrameIndex(Addr, Base, Offset))
@@ -2290,6 +2420,72 @@ bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
     }
   }
 
+  return true;
+}
+
+/// Some instructions have a condition operand that is compared against zero.
+/// Since RISC-V doesn't have seteq/setne instructions, we can use this
+/// property to avoid a seqz or snez instruction after an xor/addi/xori.
+/// When \p Inverse is false, we match seteq or any unknown operation. When
+/// \p Inverse is true, we only match setne.
+bool RISCVDAGToDAGISel::selectCondOp(SDValue N, bool Inverse, SDValue &Val) {
+  // Start with this node as the output.
+  Val = N;
+
+  // If the node isn't a setcc, there's nothing we can do. Return success
+  // if we aren't looking for an inverse condition.
+  if (N->getOpcode() != ISD::SETCC)
+    return !Inverse;
+
+  // If it isn't an equality comparison, we also can't do anything.
+  ISD::CondCode CCVal = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  if (!isIntEqualitySetCC(CCVal))
+    return !Inverse;
+
+  // This ComplexPattern occurs in pairs with both polarities of Inverse.
+  // If this isn't the one we're looking for, let the other polarity match it.
+  if (isTrueWhenEqual(CCVal) != Inverse)
+    return false;
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  // If the RHS side is 0, we don't need any extra instructions, return the LHS.
+  if (isNullConstant(RHS)) {
+    Val = LHS;
+    return true;
+  }
+
+  SDLoc DL(N);
+
+  if (auto *C = dyn_cast<ConstantSDNode>(RHS)) {
+    int64_t CVal = C->getSExtValue();
+    // If the RHS is -2048, we can use xori to produce 0 if the LHS is -2048 and
+    // non-zero otherwise.
+    if (CVal == -2048) {
+      Val =
+          SDValue(CurDAG->getMachineNode(
+                      RISCV::XORI, DL, N->getValueType(0), LHS,
+                      CurDAG->getTargetConstant(CVal, DL, N->getValueType(0))),
+                  0);
+      return true;
+    }
+    // If the RHS is [-2047,2048], we can use addi with -RHS to produce 0 if the
+    // LHS is equal to the RHS and non-zero otherwise.
+    if (isInt<12>(CVal) || CVal == 2048) {
+      Val =
+          SDValue(CurDAG->getMachineNode(
+                      RISCV::ADDI, DL, N->getValueType(0), LHS,
+                      CurDAG->getTargetConstant(-CVal, DL, N->getValueType(0))),
+                  0);
+      return true;
+    }
+  }
+
+  // If nothing else we can XOR the LHS and RHS to produce zero if they are
+  // equal and a non-zero value if they aren't.
+  Val = SDValue(
+      CurDAG->getMachineNode(RISCV::XOR, DL, N->getValueType(0), LHS, RHS), 0);
   return true;
 }
 
@@ -2629,6 +2825,29 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
   }
 
   return true;
+}
+
+// Select a constant that can be represented as (sign_extend(imm5) << imm2).
+bool RISCVDAGToDAGISel::selectSimm5Shl2(SDValue N, SDValue &Simm5,
+                                        SDValue &Shl2) {
+  if (auto *C = dyn_cast<ConstantSDNode>(N)) {
+    int64_t Offset = C->getSExtValue();
+    int64_t Shift;
+    for (Shift = 0; Shift < 4; Shift++)
+      if (isInt<5>(Offset >> Shift) && ((Offset % (1LL << Shift)) == 0))
+        break;
+
+    // Constant cannot be encoded.
+    if (Shift == 4)
+      return false;
+
+    EVT Ty = N->getValueType(0);
+    Simm5 = CurDAG->getTargetConstant(Offset >> Shift, SDLoc(N), Ty);
+    Shl2 = CurDAG->getTargetConstant(Shift, SDLoc(N), Ty);
+    return true;
+  }
+
+  return false;
 }
 
 // Select VL as a 5 bit immediate or a value that will become a register. This
