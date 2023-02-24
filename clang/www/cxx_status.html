@@ -1120,7 +1120,14 @@ code. This issue is expected to be rectified soon.
     <tr>
       <td rowspan=2>Immediate functions (<tt>consteval</tt>)</td>
       <td><a href="https://wg21.link/p1073r3">P1073R3</a></td>
-      <td class="full" align="center">Clang 15</td>
+      <td class="partial" align="center">
+        <details><summary>Clang 15 (Partial)</summary>
+          Clang still incorrectly defers some consteval executions to runtime,
+          resulting in CodeGen crashes. Additionally, Clang does not properly
+          handle default arguments in consteval functions under all
+          circumstances.
+        </details>
+      </td>
     </tr>
       <tr> <!-- from Prague -->
         <td><a href="https://wg21.link/p1937r2">P1937R2</a></td>

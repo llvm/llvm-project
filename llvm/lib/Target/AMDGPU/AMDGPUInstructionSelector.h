@@ -191,6 +191,13 @@ private:
   selectWMMAOpSelVOP3PMods(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
+  selectWMMAVISrc(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectSWMMACIndex8(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectSWMMACIndex16(MachineOperand &Root) const;
+
+  InstructionSelector::ComplexRendererFns
   selectVOP3OpSelMods(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
@@ -304,6 +311,9 @@ private:
                         int OpIdx = -1) const;
 
   void renderTruncTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                       int OpIdx) const;
+
+  void renderOpSelTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
 
   void renderNegateImm(MachineInstrBuilder &MIB, const MachineInstr &MI,

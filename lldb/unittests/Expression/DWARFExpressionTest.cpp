@@ -713,7 +713,7 @@ DWARF:
   //       Entries:
   //         - AbbrCode:        0x1
   //           Values:
-  //             - Value:           0x01020304
+  //             - Value:           0x0120304
   //         - AbbrCode:        0x0
   const char *dwo_yamldata = R"(
 --- !ELF
@@ -750,7 +750,7 @@ Sections:
   auto dwo_module_sp = std::make_shared<Module>(dwo_file->moduleSpec());
   SymbolFileDWARFDwo dwo_symfile(
       skeleton_symfile, dwo_module_sp->GetObjectFile()->shared_from_this(),
-      0x01020304);
+      0x0120304);
   auto *dwo_dwarf_unit = dwo_symfile.DebugInfo().GetUnitAtIndex(0);
 
   testExpressionVendorExtensions(dwo_module_sp, *dwo_dwarf_unit);

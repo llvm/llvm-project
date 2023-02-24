@@ -252,7 +252,7 @@ void BinarySection::reorderContents(const std::vector<BinaryData *> &Order,
     // of the reordered segment to force LLVM to recognize and map this
     // section.
     MCSymbol *ZeroSym = BC.registerNameAtAddress("Zero", 0, 0, 0);
-    addRelocation(OS.tell(), ZeroSym, ELF::R_X86_64_64, 0xdeadbeef);
+    addRelocation(OS.tell(), ZeroSym, Relocation::getAbs64(), 0xdeadbeef);
 
     uint64_t Zero = 0;
     OS.write(reinterpret_cast<const char *>(&Zero), sizeof(Zero));

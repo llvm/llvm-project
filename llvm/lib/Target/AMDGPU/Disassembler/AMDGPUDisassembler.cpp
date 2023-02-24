@@ -252,8 +252,12 @@ DECODE_OPERAND_SRC_REG_OR_IMM_9(VS_32, OPW32, 32)
 DECODE_OPERAND_SRC_REG_OR_IMM_9(VS_64, OPW64, 64)
 DECODE_OPERAND_SRC_REG_OR_IMM_9(VS_64, OPW64, 32)
 DECODE_OPERAND_SRC_REG_OR_IMM_9(VReg_64, OPW64, 64)
+DECODE_OPERAND_SRC_REG_OR_IMM_9(VReg_64, OPW64, 32)
+DECODE_OPERAND_SRC_REG_OR_IMM_9(VReg_64, OPW64, 16)
 DECODE_OPERAND_SRC_REG_OR_IMM_9(VReg_128, OPW128, 32)
+DECODE_OPERAND_SRC_REG_OR_IMM_9(VReg_128, OPW128, 16)
 DECODE_OPERAND_SRC_REG_OR_IMM_9(VReg_256, OPW256, 64)
+DECODE_OPERAND_SRC_REG_OR_IMM_9(VReg_256, OPW256, 32)
 DECODE_OPERAND_SRC_REG_OR_IMM_9(VReg_512, OPW512, 32)
 DECODE_OPERAND_SRC_REG_OR_IMM_9(VReg_1024, OPW1024, 32)
 
@@ -630,6 +634,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       break;
 
     Res = tryDecodeInst(DecoderTableWMMAGFX1164, MI, QW, Address);
+    if (Res)
+      break;
+
+    Res = tryDecodeInst(DecoderTableWMMAGFX1264, MI, QW, Address);
   } while (false);
 
   if (Res && AMDGPU::isMAC(MI.getOpcode())) {
@@ -913,6 +921,7 @@ DecodeStatus AMDGPUDisassembler::convertVOP3DPPInst(MCInst &MI) const {
 // VADDR size. Consequently, decoded instructions always show address as if it
 // has 1 dword, which could be not really so.
 DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
+  auto TSFlags = MCII->get(MI.getOpcode()).TSFlags;
 
   int VDstIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
                                            AMDGPU::OpName::vdst);
@@ -921,6 +930,9 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
                                             AMDGPU::OpName::vdata);
   int VAddr0Idx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vaddr0);
+  int RsrcOpName = TSFlags & SIInstrFlags::MIMG ? AMDGPU::OpName::srsrc
+                                                : AMDGPU::OpName::rsrc;
+  int RsrcIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), RsrcOpName);
   int DMaskIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
                                             AMDGPU::OpName::dmask);
 
@@ -942,10 +954,10 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
   }
 
   bool IsAtomic = (VDstIdx != -1);
-  auto TSFlags = MCII->get(MI.getOpcode()).TSFlags;
   bool IsGather4 = TSFlags & SIInstrFlags::Gather4;
   bool IsVSample = TSFlags & SIInstrFlags::VSAMPLE;
   bool IsNSA = false;
+  bool IsPartialNSA = false;
   unsigned AddrSize = Info->VAddrDwords;
 
   if (isGFX10Plus()) {
@@ -964,16 +976,18 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     // VIMAGE insts other than BVH never use vaddr4.
     IsNSA = Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA ||
             Info->MIMGEncoding == AMDGPU::MIMGEncGfx11NSA ||
-            (Info->MIMGEncoding == AMDGPU::MIMGEncGfx12 &&
-             ((IsVSample && AddrSize < 4) || TSFlags & SIInstrFlags::VIMAGE));
+            Info->MIMGEncoding == AMDGPU::MIMGEncGfx12;
     if (!IsNSA) {
       if (!IsVSample && AddrSize > 12)
         AddrSize = 16;
     } else {
       if (AddrSize > Info->VAddrDwords) {
-        // The NSA encoding does not contain enough operands for the combination
-        // of base opcode / dimension. Should this be an error?
-        return MCDisassembler::Success;
+        if (!STI.hasFeature(AMDGPU::FeaturePartialNSAEncoding)) {
+          // The NSA encoding does not contain enough operands for the
+          // combination of base opcode / dimension. Should this be an error?
+          return MCDisassembler::Success;
+        }
+        IsPartialNSA = true;
       }
     }
   }
@@ -1016,24 +1030,20 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     }
   }
 
-  // For VSAMPLE vaddr3 provides all additional components in sequential VGPRs
-  // if more than 4 vaddrs are needed.
-  int16_t VAddrSAOp =
-      IsVSample ? AMDGPU::OpName::vaddr3 : AMDGPU::OpName::vaddr0;
-  int VAddrSAIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), VAddrSAOp);
-
-  // If not using NSA on GFX10 or GFX11, widen vaddr0 address register to
-  // correct size. On GFX12 widen last address register.
+  // If not using NSA on GFX10+, widen vaddr0 address register to correct size.
+  // If using partial NSA on GFX11+ widen last address register.
+  int VAddrSAIdx = IsPartialNSA ? (RsrcIdx - 1) : VAddr0Idx;
   unsigned NewVAddrSA = AMDGPU::NoRegister;
-  if (isGFX10Plus() && !IsNSA && AddrSize != Info->VAddrDwords) {
+  if (STI.hasFeature(AMDGPU::FeatureNSAEncoding) && (!IsNSA || IsPartialNSA) &&
+      AddrSize != Info->VAddrDwords) {
     unsigned VAddrSA = MI.getOperand(VAddrSAIdx).getReg();
     unsigned VAddrSubSA = MRI.getSubReg(VAddrSA, AMDGPU::sub0);
-    VAddrSA = (VAddrSubSA != 0) ? VAddrSubSA : VAddrSA;
+    VAddrSA = VAddrSubSA ? VAddrSubSA : VAddrSA;
 
     auto AddrRCID = MCII->get(NewOpcode).operands()[VAddrSAIdx].RegClass;
     NewVAddrSA = MRI.getMatchingSuperReg(VAddrSA, AMDGPU::sub0,
-                                         &MRI.getRegClass(AddrRCID));
-    if (NewVAddrSA == AMDGPU::NoRegister)
+                                        &MRI.getRegClass(AddrRCID));
+    if (!NewVAddrSA)
       return MCDisassembler::Success;
   }
 
@@ -1048,7 +1058,7 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     }
   }
 
-  if (NewVAddrSA != AMDGPU::NoRegister) {
+  if (NewVAddrSA) {
     MI.getOperand(VAddrSAIdx) = MCOperand::createReg(NewVAddrSA);
   } else if (IsNSA) {
     assert(AddrSize <= Info->VAddrDwords);

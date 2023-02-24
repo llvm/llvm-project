@@ -1495,6 +1495,25 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
       return Right;
   }
 
+  // Turn at least two fcmps with constants into llvm.is.fpclass.
+  //
+  // If we can represent a combined value test with one class call, we can
+  // potentially eliminate 4-6 instructions. If we can represent a test with a
+  // single fcmp with fneg and fabs, that's likely a better canonical form.
+  if (LHS->hasOneUse() && RHS->hasOneUse()) {
+    auto [ClassValRHS, ClassMaskRHS] = fcmpToClassTest(PredR, RHS0, RHS1);
+    if (ClassValRHS) {
+      auto [ClassValLHS, ClassMaskLHS] = fcmpToClassTest(PredL, LHS0, LHS1);
+      if (ClassValLHS == ClassValRHS) {
+        unsigned CombinedMask = IsAnd ? (ClassMaskLHS & ClassMaskRHS)
+                                      : (ClassMaskLHS | ClassMaskRHS);
+        return Builder.CreateIntrinsic(
+            Intrinsic::is_fpclass, {ClassValLHS->getType()},
+            {ClassValLHS, Builder.getInt32(CombinedMask)});
+      }
+    }
+  }
+
   return nullptr;
 }
 

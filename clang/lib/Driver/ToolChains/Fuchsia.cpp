@@ -12,6 +12,7 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "clang/Driver/MultilibBuilder.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "llvm/Option/ArgList.h"
@@ -262,28 +263,35 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
 
   Multilibs.push_back(Multilib());
   // Use the noexcept variant with -fno-exceptions to avoid the extra overhead.
-  Multilibs.push_back(Multilib("noexcept", {}, {}, 1)
+  Multilibs.push_back(MultilibBuilder("noexcept", {}, {}, 1)
                           .flag("-fexceptions")
-                          .flag("+fno-exceptions"));
+                          .flag("+fno-exceptions")
+                          .makeMultilib());
   // ASan has higher priority because we always want the instrumentated version.
-  Multilibs.push_back(Multilib("asan", {}, {}, 2)
-                          .flag("+fsanitize=address"));
+  Multilibs.push_back(MultilibBuilder("asan", {}, {}, 2)
+                          .flag("+fsanitize=address")
+                          .makeMultilib());
   // Use the asan+noexcept variant with ASan and -fno-exceptions.
-  Multilibs.push_back(Multilib("asan+noexcept", {}, {}, 3)
+  Multilibs.push_back(MultilibBuilder("asan+noexcept", {}, {}, 3)
                           .flag("+fsanitize=address")
                           .flag("-fexceptions")
-                          .flag("+fno-exceptions"));
+                          .flag("+fno-exceptions")
+                          .makeMultilib());
   // HWASan has higher priority because we always want the instrumentated
   // version.
-  Multilibs.push_back(
-      Multilib("hwasan", {}, {}, 4).flag("+fsanitize=hwaddress"));
+  Multilibs.push_back(MultilibBuilder("hwasan", {}, {}, 4)
+                          .flag("+fsanitize=hwaddress")
+                          .makeMultilib());
   // Use the hwasan+noexcept variant with HWASan and -fno-exceptions.
-  Multilibs.push_back(Multilib("hwasan+noexcept", {}, {}, 5)
+  Multilibs.push_back(MultilibBuilder("hwasan+noexcept", {}, {}, 5)
                           .flag("+fsanitize=hwaddress")
                           .flag("-fexceptions")
-                          .flag("+fno-exceptions"));
+                          .flag("+fno-exceptions")
+                          .makeMultilib());
   // Use Itanium C++ ABI for the compat multilib.
-  Multilibs.push_back(Multilib("compat", {}, {}, 6).flag("+fc++-abi=itanium"));
+  Multilibs.push_back(MultilibBuilder("compat", {}, {}, 6)
+                          .flag("+fc++-abi=itanium")
+                          .makeMultilib());
 
   Multilibs.FilterOut([&](const Multilib &M) {
     std::vector<std::string> RD = FilePaths(M);

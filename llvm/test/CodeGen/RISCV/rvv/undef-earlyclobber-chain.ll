@@ -7,9 +7,9 @@ define dso_local signext i32 @undef_early_clobber_chain() {
 ; CHECK-NEXT:    addi sp, sp, -400
 ; CHECK-NEXT:    .cfi_def_cfa_offset 400
 ; CHECK-NEXT:    vsetivli zero, 0, e32, m1, ta, ma
-; CHECK-NEXT:    vrgather.vi v8, v8, 0
+; CHECK-NEXT:    vrgather.vi v9, v8, 0
 ; CHECK-NEXT:    mv a0, sp
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vse32.v v9, (a0)
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    addi sp, sp, 400
 ; CHECK-NEXT:    ret
@@ -51,10 +51,10 @@ define internal void @SubRegLivenessUndefInPhi(i64 %cond) {
 ; CHECK-NEXT:  .LBB1_3: # %UseSR
 ; CHECK-NEXT:    vl1r.v v14, (zero)
 ; CHECK-NEXT:    vsetivli zero, 4, e8, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v15, v14, v8
+; CHECK-NEXT:    vrgatherei16.vv v13, v14, v8
 ; CHECK-NEXT:    vrgatherei16.vv v8, v14, v10
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vand.vv v8, v15, v8
+; CHECK-NEXT:    vand.vv v8, v13, v8
 ; CHECK-NEXT:    vsetivli zero, 4, e8, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v9, v14, v12
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
@@ -106,16 +106,16 @@ define internal void @SubRegLivenessUndef() {
 ; CHECK-NEXT:    vadd.vi v12, v8, 3
 ; CHECK-NEXT:  .LBB2_1: # %loopIR3.i.i
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl1r.v v9, (zero)
+; CHECK-NEXT:    vl1r.v v14, (zero)
 ; CHECK-NEXT:    vsetivli zero, 4, e8, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v11, v9, v8
-; CHECK-NEXT:    vrgatherei16.vv v13, v9, v10
+; CHECK-NEXT:    vrgatherei16.vv v13, v14, v8
+; CHECK-NEXT:    vrgatherei16.vv v9, v14, v10
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vand.vv v11, v11, v13
+; CHECK-NEXT:    vand.vv v9, v13, v9
 ; CHECK-NEXT:    vsetivli zero, 4, e8, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v13, v9, v12
+; CHECK-NEXT:    vrgatherei16.vv v11, v14, v12
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vand.vv v9, v11, v13
+; CHECK-NEXT:    vand.vv v9, v9, v11
 ; CHECK-NEXT:    vs1r.v v9, (zero)
 ; CHECK-NEXT:    j .LBB2_1
 loopIR.preheader.i.i:

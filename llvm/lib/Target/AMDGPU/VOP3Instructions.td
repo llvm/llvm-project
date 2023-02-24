@@ -712,11 +712,17 @@ def VOP3_PERMLANE_VAR_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, untyped
   let HasExtDPP = 0;
 }
 
+def opsel_i1timm : SDNodeXForm<timm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() ? SISrcMods::OP_SEL_0 : 0, SDLoc(N), MVT::i32);
+}]>;
+def gi_opsel_i1timm : GICustomOperandRenderer<"renderOpSelTImm">,
+  GISDNodeXFormEquiv<opsel_i1timm>;
+
 class PermlanePat<SDPatternOperator permlane,
   Instruction inst> : GCNPat<
   (permlane i32:$vdst_in, i32:$src0, i32:$src1, i32:$src2,
             timm:$fi, timm:$bc),
-  (inst (as_i1timm $fi), VGPR_32:$src0, (as_i1timm $bc),
+  (inst (opsel_i1timm $fi), VGPR_32:$src0, (opsel_i1timm $bc),
         SCSrc_b32:$src1, 0, SCSrc_b32:$src2, VGPR_32:$vdst_in)
 >;
 
@@ -724,7 +730,7 @@ class PermlaneVarPat<SDPatternOperator permlane,
   Instruction inst> : GCNPat<
   (permlane i32:$vdst_in, i32:$src0, i32:$src1,
             timm:$fi, timm:$bc),
-  (inst (as_i1timm $fi), VGPR_32:$src0, (as_i1timm $bc),
+  (inst (opsel_i1timm $fi), VGPR_32:$src0, (opsel_i1timm $bc),
         VGPR_32:$src1, VGPR_32:$vdst_in)
 >;
 

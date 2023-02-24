@@ -124,6 +124,7 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
   let IsPacked = P.IsPacked;
   let IsMAI = P.IsMAI;
   let IsWMMA = P.IsWMMA;
+  let IsSWMMAC = P.IsSWMMAC;
 
   let AsmOperands = !if(isVop3OpSel,
                         P.AsmVOP3OpSel,
@@ -376,6 +377,8 @@ class VOP3Pe <bits<7> op, VOPProfile P> : Enc64 {
   bits<4> src2_modifiers;
   bits<9> src2;
   bits<1> clamp;
+  bits<2> index_key_8bit;
+  bits<1> index_key_16bit;
 
   let Inst{7-0} = vdst;
   let Inst{8} = !if(P.HasSrc0Mods, src0_modifiers{1}, 0); // neg_hi src0
