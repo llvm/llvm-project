@@ -322,9 +322,7 @@ libcxx/include/exception
 libcxx/include/execution
 libcxx/include/expected
 libcxx/include/__expected/expected.h
-libcxx/include/experimental/algorithm
 libcxx/include/experimental/__config
-libcxx/include/experimental/functional
 libcxx/include/experimental/iterator
 libcxx/include/experimental/map
 libcxx/include/experimental/__memory
