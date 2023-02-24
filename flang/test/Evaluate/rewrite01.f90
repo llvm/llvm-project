@@ -195,4 +195,15 @@ subroutine associate_tests(p)
   end associate
 end subroutine
 
+!CHECK-LABEL: array_constructor
+subroutine array_constructor()
+  interface
+    function return_allocatable()
+     real, allocatable :: return_allocatable(:)
+    end function
+  end interface
+  !CHECK: PRINT *, size([REAL(4)::return_allocatable(),return_allocatable()])
+  print *, size([return_allocatable(), return_allocatable()])
+end subroutine
+
 end module
