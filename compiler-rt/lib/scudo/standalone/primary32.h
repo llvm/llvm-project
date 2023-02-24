@@ -87,19 +87,27 @@ public:
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
   }
 
-  void unmapTestOnly() NO_THREAD_SAFETY_ANALYSIS {
-    while (NumberOfStashedRegions > 0)
-      unmap(reinterpret_cast<void *>(RegionsStash[--NumberOfStashedRegions]),
-            RegionSize);
+  void unmapTestOnly() {
+    {
+      ScopedLock L(RegionsStashMutex);
+      while (NumberOfStashedRegions > 0) {
+        unmap(reinterpret_cast<void *>(RegionsStash[--NumberOfStashedRegions]),
+              RegionSize);
+      }
+    }
+
     uptr MinRegionIndex = NumRegions, MaxRegionIndex = 0;
     for (uptr I = 0; I < NumClasses; I++) {
       SizeClassInfo *Sci = getSizeClassInfo(I);
+      ScopedLock L(Sci->Mutex);
       if (Sci->MinRegionIndex < MinRegionIndex)
         MinRegionIndex = Sci->MinRegionIndex;
       if (Sci->MaxRegionIndex > MaxRegionIndex)
         MaxRegionIndex = Sci->MaxRegionIndex;
       *Sci = {};
     }
+
+    ScopedLock L(ByteMapMutex);
     for (uptr I = MinRegionIndex; I < MaxRegionIndex; I++)
       if (PossibleRegions[I])
         unmap(reinterpret_cast<void *>(I * RegionSize), RegionSize);
@@ -192,11 +200,11 @@ public:
     }
     getSizeClassInfo(SizeClassMap::BatchClassId)->Mutex.lock();
     RegionsStashMutex.lock();
-    PossibleRegions.disable();
+    ByteMapMutex.lock();
   }
 
   void enable() NO_THREAD_SAFETY_ANALYSIS {
-    PossibleRegions.enable();
+    ByteMapMutex.unlock();
     RegionsStashMutex.unlock();
     getSizeClassInfo(SizeClassMap::BatchClassId)->Mutex.unlock();
     for (uptr I = 0; I < NumClasses; I++) {
@@ -219,7 +227,11 @@ public:
       if (Sci->MaxRegionIndex > MaxRegionIndex)
         MaxRegionIndex = Sci->MaxRegionIndex;
     }
-    for (uptr I = MinRegionIndex; I <= MaxRegionIndex; I++)
+
+    // SizeClassAllocator32 is disabled, i.e., ByteMapMutex is held.
+    ByteMapMutex.assertHeld();
+
+    for (uptr I = MinRegionIndex; I <= MaxRegionIndex; I++) {
       if (PossibleRegions[I] &&
           (PossibleRegions[I] - 1U) != SizeClassMap::BatchClassId) {
         const uptr BlockSize = getSizeByClassId(PossibleRegions[I] - 1U);
@@ -228,6 +240,7 @@ public:
         for (uptr Block = From; Block < To; Block += BlockSize)
           Callback(Block);
       }
+    }
   }
 
   void getStats(ScopedString *Str) {
@@ -370,6 +383,7 @@ private:
         Sci->MinRegionIndex = RegionIndex;
       if (RegionIndex > Sci->MaxRegionIndex)
         Sci->MaxRegionIndex = RegionIndex;
+      ScopedLock L(ByteMapMutex);
       PossibleRegions.set(RegionIndex, static_cast<u8>(ClassId + 1U));
     }
     return Region;
@@ -815,6 +829,7 @@ private:
       return 0;
 
     auto SkipRegion = [this, First, ClassId](uptr RegionIndex) {
+      ScopedLock L(ByteMapMutex);
       return (PossibleRegions[First + RegionIndex] - 1U) != ClassId;
     };
     releaseFreeMemoryToOS(Context, Recorder, SkipRegion);
@@ -832,9 +847,9 @@ private:
 
   SizeClassInfo SizeClassInfoArray[NumClasses] = {};
 
+  HybridMutex ByteMapMutex;
   // Track the regions in use, 0 is unused, otherwise store ClassId + 1.
-  // FIXME: There is no dedicated lock for `PossibleRegions`.
-  ByteMap PossibleRegions = {};
+  ByteMap PossibleRegions GUARDED_BY(ByteMapMutex) = {};
   atomic_s32 ReleaseToOsIntervalMs = {};
   // Unless several threads request regions simultaneously from different size
   // classes, the stash rarely contains more than 1 entry.
