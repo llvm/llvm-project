@@ -2405,7 +2405,7 @@ unsigned LLParser::parseNoFPClassAttr() {
       // TODO: Disallow overlapping masks to avoid copy paste errors
     } else if (Mask == 0 && Lex.getKind() == lltok::APSInt &&
                !parseUInt64(Value)) {
-      if (Value == 0 || (Value & ~fcAllFlags) != 0) {
+      if (Value == 0 || (Value & ~static_cast<unsigned>(fcAllFlags)) != 0) {
         error(Lex.getLoc(), "invalid mask value for 'nofpclass'");
         return 0;
       }
