@@ -54,6 +54,46 @@ multiclass LMULReadAdvanceImpl<string name, int val,
   }
 }
 
+// Define multiclasses to define SchedWrite, SchedRead,  WriteRes, and
+// ReadAdvance for each (name, LMUL, SEW) tuple for each LMUL in each of the
+// SchedMxList variants above.
+multiclass LMULSEWSchedWritesImpl<string name, list<string> MxList> {
+  foreach mx = MxList in {
+    if !eq(mx, "UpperBound") then
+      def name # "_" # mx : SchedWrite;
+    else
+      foreach sew = SchedSEWSet<mx>.val in
+        def name # "_" # mx # "_E" # sew : SchedWrite;
+  }
+}
+multiclass LMULSEWSchedReadsImpl<string name, list<string> MxList> {
+  foreach mx = MxList in {
+    if !eq(mx, "UpperBound") then
+      def name # "_" # mx : SchedRead;
+    else
+      foreach sew = SchedSEWSet<mx>.val in
+        def name # "_" # mx # "_E" # sew : SchedRead;
+  }
+}
+multiclass LMULSEWWriteResImpl<string name, list<ProcResourceKind> resources> {
+  foreach mx = SchedMxList in {
+    if !eq(mx, "UpperBound") then
+      def : WriteRes<!cast<SchedWrite>(name # "_" # mx), resources>;
+    else
+      foreach sew = SchedSEWSet<mx>.val in
+        def : WriteRes<!cast<SchedWrite>(name # "_" # mx # "_E" # sew), resources>;
+  }
+}
+multiclass LMULSEWReadAdvanceImpl<string name, int val,
+                                  list<SchedWrite> writes = []> {
+  foreach mx = SchedMxList in {
+    if !eq(mx, "UpperBound") then
+      def : ReadAdvance<!cast<SchedRead>(name # "_" # mx), val, writes>;
+    else
+      foreach sew = SchedSEWSet<mx>.val in
+        def : ReadAdvance<!cast<SchedRead>(name # "_" # mx # "_E" # sew), val, writes>;
+  }
+}
 // Define classes to define list containing all SchedWrites for each (name, LMUL)
 // pair for each LMUL in each of the SchedMxList variants above and name in
 // argument `names`. These classes can be used to construct a list of existing
@@ -77,6 +117,13 @@ multiclass LMULWriteRes<string name, list<ProcResourceKind> resources>
 multiclass LMULReadAdvance<string name, int val, list<SchedWrite> writes = []>
   : LMULReadAdvanceImpl<name, val, writes>;
 class LMULSchedWriteList<list<string> names> : LMULSchedWriteListImpl<names, SchedMxList>;
+
+multiclass LMULSEWSchedWrites<string name> : LMULSEWSchedWritesImpl<name, SchedMxList>;
+multiclass LMULSEWSchedReads<string name> : LMULSEWSchedReadsImpl<name, SchedMxList>;
+multiclass LMULSEWWriteRes<string name, list<ProcResourceKind> resources>
+  : LMULSEWWriteResImpl<name, resources>;
+multiclass LMULSEWReadAdvance<string name, int val, list<SchedWrite> writes = []>
+  : LMULSEWReadAdvanceImpl<name, val, writes>;
 
 multiclass LMULSchedWritesW<string name> : LMULSchedWritesImpl<name, SchedMxListW>;
 multiclass LMULSchedReadsW<string name> : LMULSchedReadsImpl<name, SchedMxListW>;
@@ -340,7 +387,7 @@ defm "" : LMULSchedWrites<"WriteVRGatherVV">;
 defm "" : LMULSchedWrites<"WriteVRGatherVX">;
 defm "" : LMULSchedWrites<"WriteVRGatherVI">;
 // 16.5. Vector Compress Instruction
-defm "" : LMULSchedWrites<"WriteVCompressV">;
+defm "" : LMULSEWSchedWrites<"WriteVCompressV">;
 // 16.6. Whole Vector Register Move
 // These are already LMUL aware
 def WriteVMov1V       : SchedWrite;
@@ -564,7 +611,7 @@ defm "" : LMULSchedReads<"ReadVRGatherVX_data">;
 defm "" : LMULSchedReads<"ReadVRGatherVX_index">;
 defm "" : LMULSchedReads<"ReadVRGatherVI_data">;
 // 16.5. Vector Compress Instruction
-defm "" : LMULSchedReads<"ReadVCompressV">;
+defm "" : LMULSEWSchedReads<"ReadVCompressV">;
 // 16.6. Whole Vector Register Move
 // These are already LMUL aware
 def ReadVMov1V        : SchedRead;
@@ -756,7 +803,7 @@ defm "" : LMULWriteRes<"WriteVFSlide1F", []>;
 defm "" : LMULWriteRes<"WriteVRGatherVV", []>;
 defm "" : LMULWriteRes<"WriteVRGatherVX", []>;
 defm "" : LMULWriteRes<"WriteVRGatherVI", []>;
-defm "" : LMULWriteRes<"WriteVCompressV", []>;
+defm "" : LMULSEWWriteRes<"WriteVCompressV", []>;
 // These are already LMUL aware
 def : WriteRes<WriteVMov1V, []>;
 def : WriteRes<WriteVMov2V, []>;
@@ -916,7 +963,9 @@ defm "" : LMULReadAdvance<"ReadVRGatherVV_index", 0>;
 defm "" : LMULReadAdvance<"ReadVRGatherVX_data", 0>;
 defm "" : LMULReadAdvance<"ReadVRGatherVX_index", 0>;
 defm "" : LMULReadAdvance<"ReadVRGatherVI_data", 0>;
-defm "" : LMULReadAdvance<"ReadVCompressV", 0>;
+defm "" : LMULReadAdvance<"ReadVGatherV", 0>;
+defm "" : LMULReadAdvance<"ReadVGatherX", 0>;
+defm "" : LMULSEWReadAdvance<"ReadVCompressV", 0>;
 // These are already LMUL aware
 def : ReadAdvance<ReadVMov1V, 0>;
 def : ReadAdvance<ReadVMov2V, 0>;
