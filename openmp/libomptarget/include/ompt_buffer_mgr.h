@@ -332,6 +332,9 @@ private:
     return false;
   }
 
+  // The caller must not hold the flush lock
+  bool areHelperThreadsAvailable();
+
   // The caller must hold the appropriate lock
   void init();
 

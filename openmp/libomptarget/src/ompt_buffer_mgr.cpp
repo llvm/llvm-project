@@ -529,6 +529,9 @@ uint64_t OmptTracingBufferMgr::addNewFlushEntry(BufPtr buf, void *cursor) {
  * existing buffers in creation order and flush all the ready TRs
  */
 int OmptTracingBufferMgr::flushAllBuffers(ompt_device_t *device) {
+  if (!areHelperThreadsAvailable())
+    return 0; // failed to flush
+
   // If flush is called from a helper thread, just bail out
   if (amIHelperThread())
     return 0; // failed to flush
@@ -607,17 +610,23 @@ void OmptTracingBufferMgr::startHelperThreads() {
   createHelperThreads();
 }
 
-void OmptTracingBufferMgr::shutdownHelperThreads() {
+bool OmptTracingBufferMgr::areHelperThreadsAvailable() {
   std::unique_lock<std::mutex> flush_lock(FlushMutex);
-  if (done_tracing // If another thread called stop, there is nothing
-                   // to do for this thread
+  if (done_tracing // If another thread called stop, assume there are no threads
       || HelperThreadIdMap.empty() // Threads were never started
   ) {
     // Don't assert on HelperThreadIdMap since shutdown by another
     // thread may be in progress
-    return;
+    return false;
   }
+  return true;
+}
 
+void OmptTracingBufferMgr::shutdownHelperThreads() {
+  if (!areHelperThreadsAvailable())
+    return;
+
+  std::unique_lock<std::mutex> flush_lock(FlushMutex);
   // If I am destroying the threads, then at least one thread must be present
   assert(!CompletionThreads.empty());
   assert(!HelperThreadIdMap.empty());
