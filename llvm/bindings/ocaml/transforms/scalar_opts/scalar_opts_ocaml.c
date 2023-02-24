@@ -140,12 +140,6 @@ value llvm_add_reassociation(LLVMPassManagerRef PM) {
 }
 
 /* [<Llvm.PassManager.any] Llvm.PassManager.t -> unit */
-value llvm_add_sccp(LLVMPassManagerRef PM) {
-  LLVMAddSCCPPass(PM);
-  return Val_unit;
-}
-
-/* [<Llvm.PassManager.any] Llvm.PassManager.t -> unit */
 value llvm_add_scalar_repl_aggregates(LLVMPassManagerRef PM) {
   LLVMAddScalarReplAggregatesPass(PM);
   return Val_unit;
