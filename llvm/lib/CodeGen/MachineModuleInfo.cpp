@@ -56,11 +56,10 @@ void MachineModuleInfo::finalize() {
 
 MachineModuleInfo::MachineModuleInfo(MachineModuleInfo &&MMI)
     : TM(std::move(MMI.TM)),
-      Context(MMI.TM.getTargetTriple(), MMI.TM.getMCAsmInfo(),
-              MMI.TM.getMCRegisterInfo(), MMI.TM.getMCSubtargetInfo(), nullptr,
-              &MMI.TM.Options.MCOptions, false),
+      Context(TM.getTargetTriple(), TM.getMCAsmInfo(), TM.getMCRegisterInfo(),
+              TM.getMCSubtargetInfo(), nullptr, &TM.Options.MCOptions, false),
       MachineFunctions(std::move(MMI.MachineFunctions)) {
-  Context.setObjectFileInfo(MMI.TM.getObjFileLowering());
+  Context.setObjectFileInfo(TM.getObjFileLowering());
   ObjFileMMI = MMI.ObjFileMMI;
   CurCallSite = MMI.CurCallSite;
   ExternalContext = MMI.ExternalContext;
