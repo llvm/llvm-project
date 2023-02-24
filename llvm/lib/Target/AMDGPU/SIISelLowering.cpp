@@ -13435,3 +13435,25 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   AI->replaceAllUsesWith(Loaded);
   AI->eraseFromParent();
 }
+
+LoadInst *
+SITargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
+  IRBuilder<> Builder(AI);
+  auto Order = AI->getOrdering();
+
+  // The optimization removes store aspect of the atomicrmw. Therefore, cache
+  // must be flushed if the atomic ordering had a release semantics. This is
+  // not necessary a fence, a release fence just coincides to do that flush.
+  // Avoid replacing of an atomicrmw with a release semantics.
+  if (isReleaseOrStronger(Order))
+    return nullptr;
+
+  LoadInst *LI = Builder.CreateAlignedLoad(
+      AI->getType(), AI->getPointerOperand(), AI->getAlign());
+  LI->setAtomic(Order, AI->getSyncScopeID());
+  LI->copyMetadata(*AI);
+  LI->takeName(AI);
+  AI->replaceAllUsesWith(LI);
+  AI->eraseFromParent();
+  return LI;
+}
