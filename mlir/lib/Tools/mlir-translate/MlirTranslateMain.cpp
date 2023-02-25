@@ -39,7 +39,7 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
 
   static llvm::cl::opt<bool> allowUnregisteredDialects(
       "allow-unregistered-dialect",
-      llvm::cl::desc("Allow operation with no registered dialects"),
+      llvm::cl::desc("Allow operation with no registered dialects (discouraged: testing only!)"),
       llvm::cl::init(false));
 
   static llvm::cl::opt<bool> splitInputFile(
