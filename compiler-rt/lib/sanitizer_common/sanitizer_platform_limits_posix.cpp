@@ -248,7 +248,23 @@ namespace __sanitizer {
   unsigned struct_sysinfo_sz = sizeof(struct sysinfo);
   unsigned __user_cap_header_struct_sz =
       sizeof(struct __user_cap_header_struct);
-  unsigned __user_cap_data_struct_sz = sizeof(struct __user_cap_data_struct);
+  unsigned __user_cap_data_struct_sz(void *hdrp) {
+    int u32s = 0;
+    if (hdrp) {
+      switch (((struct __user_cap_header_struct *)hdrp)->version) {
+      case _LINUX_CAPABILITY_VERSION_1:
+        u32s = _LINUX_CAPABILITY_U32S_1;
+        break;
+      case _LINUX_CAPABILITY_VERSION_2:
+        u32s = _LINUX_CAPABILITY_U32S_2;
+        break;
+      case _LINUX_CAPABILITY_VERSION_3:
+        u32s = _LINUX_CAPABILITY_U32S_3;
+        break;
+      }
+    }
+    return sizeof(struct __user_cap_data_struct) * u32s;
+  }
   unsigned struct_new_utsname_sz = sizeof(struct new_utsname);
   unsigned struct_old_utsname_sz = sizeof(struct old_utsname);
   unsigned struct_oldold_utsname_sz = sizeof(struct oldold_utsname);

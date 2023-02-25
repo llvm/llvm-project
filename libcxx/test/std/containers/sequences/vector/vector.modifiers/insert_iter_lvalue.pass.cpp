@@ -114,6 +114,20 @@ TEST_CONSTEXPR_CXX20 bool test() {
         for (++j; j < 101; ++j)
             assert(v[j] == 0);
     }
+    {
+      std::vector<int, safe_allocator<int>> v(100);
+      const int lvalue                                  = 1;
+      std::vector<int, safe_allocator<int>>::iterator i = v.insert(v.cbegin() + 10, lvalue);
+      assert(v.size() == 101);
+      assert(is_contiguous_container_asan_correct(v));
+      assert(i == v.begin() + 10);
+      int j;
+      for (j = 0; j < 10; ++j)
+        assert(v[j] == 0);
+      assert(v[j] == 1);
+      for (++j; j < 101; ++j)
+        assert(v[j] == 0);
+    }
 #endif
 
     return true;

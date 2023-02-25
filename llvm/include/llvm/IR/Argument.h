@@ -63,6 +63,10 @@ public:
   /// number of bytes known to be dereferenceable. Otherwise, zero is returned.
   uint64_t getDereferenceableOrNullBytes() const;
 
+  /// If this argument has nofpclass attribute, return the mask representing
+  /// disallowed floating-point values. Otherwise, fcNone is returned.
+  FPClassTest getNoFPClass() const;
+
   /// Return true if this argument has the byval attribute.
   bool hasByValAttr() const;
 

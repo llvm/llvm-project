@@ -153,6 +153,7 @@ add_llvm_target(AMDGPUCodeGen
   SIMachineScheduler.cpp
   SIMemoryLegalizer.cpp
   SIModeRegister.cpp
+  SIModeRegisterDefaults.cpp
   SIOptimizeExecMasking.cpp
   SIOptimizeExecMaskingPreRA.cpp
   SIOptimizeVGPRLiveRange.cpp

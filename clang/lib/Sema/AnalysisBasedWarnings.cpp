@@ -2518,7 +2518,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     UnsafeBufferUsageReporter R(S);
     checkUnsafeBufferUsage(
         D, R,
-        /*EmitFixits=*/S.getLangOpts().CPlusPlus20);
+        /*EmitFixits=*/S.getDiagnostics().getDiagnosticOptions().ShowFixits &&
+            S.getLangOpts().CPlusPlus20);
   }
 
   // If none of the previous checks caused a CFG build, trigger one here

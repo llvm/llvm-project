@@ -861,9 +861,29 @@ private:
       }
 
       BG.PushedBlocksAtLastCheckpoint = BG.PushedBlocks;
-      // Note that we don't always visit blocks in each BatchGroup so that we
-      // may miss the chance of releasing certain pages that cross BatchGroups.
-      Context.markFreeBlocks(BG.Batches, DecompactPtr, Region->RegionBeg);
+
+      const uptr BatchGroupUsedEnd = BatchGroupBeg + AllocatedGroupSize;
+      const bool BlockAlignedWithUsedEnd =
+          (BatchGroupUsedEnd - Region->RegionBeg) % BlockSize == 0;
+
+      uptr MaxContainedBlocks = AllocatedGroupSize / BlockSize;
+      if (!BlockAlignedWithUsedEnd)
+        ++MaxContainedBlocks;
+
+      if (NumBlocks == MaxContainedBlocks) {
+        for (const auto &It : BG.Batches)
+          for (u16 I = 0; I < It.getCount(); ++I)
+            DCHECK_EQ(compactPtrGroup(It.get(I)), BG.GroupId);
+
+        Context.markRangeAsAllCounted(BatchGroupBeg, BatchGroupUsedEnd,
+                                      Region->RegionBeg);
+      } else {
+        DCHECK_LT(NumBlocks, MaxContainedBlocks);
+        // Note that we don't always visit blocks in each BatchGroup so that we
+        // may miss the chance of releasing certain pages that cross
+        // BatchGroups.
+        Context.markFreeBlocks(BG.Batches, DecompactPtr, Region->RegionBeg);
+      }
     }
 
     if (!Context.hasBlockMarked())

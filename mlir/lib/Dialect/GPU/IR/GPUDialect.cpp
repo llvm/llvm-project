@@ -1333,7 +1333,7 @@ public:
         continue;
       validOperands.push_back(operand);
     }
-    op->setOperands(validOperands);
+    rewriter.updateRootInPlace(op, [&]() { op->setOperands(validOperands); });
     return success();
   }
 };

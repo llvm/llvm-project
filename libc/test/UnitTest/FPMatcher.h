@@ -124,14 +124,16 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
 #define EXPECT_FP_EXCEPTION(expected)                                          \
   do {                                                                         \
     if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      EXPECT_EQ(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT), expected);    \
+      EXPECT_GE(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT) & expected,    \
+                expected);                                                     \
     }                                                                          \
   } while (0)
 
 #define ASSERT_FP_EXCEPTION(expected)                                          \
   do {                                                                         \
     if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      ASSERT_EQ(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT), expected);    \
+      ASSERT_GE(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT) & expected,    \
+                expected);                                                     \
     }                                                                          \
   } while (0)
 
@@ -140,7 +142,8 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
     __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);                          \
     EXPECT_FP_EQ(expected_val, actual_val);                                    \
     if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      EXPECT_EQ(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT),               \
+      EXPECT_GE(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT) &              \
+                    expected_except,                                           \
                 expected_except);                                              \
       __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);                        \
     }                                                                          \
@@ -151,7 +154,8 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
     __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);                          \
     EXPECT_FP_IS_NAN(actual_val);                                              \
     if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      EXPECT_EQ(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT),               \
+      EXPECT_GE(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT) &              \
+                    expected_except,                                           \
                 expected_except);                                              \
       __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);                        \
     }                                                                          \

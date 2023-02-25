@@ -305,7 +305,7 @@ Error DataLayout::parseSpecifier(StringRef Desc) {
         if (Error Err = getInt(Tok, AddrSpace))
           return Err;
       if (!isUInt<24>(AddrSpace))
-        return reportError("Invalid address space, must be a 24bit integer");
+        return reportError("Invalid address space, must be a 24-bit integer");
 
       // Size.
       if (Rest.empty())
@@ -571,7 +571,7 @@ Error DataLayout::setAlignment(AlignTypeEnum AlignType, Align ABIAlign,
   // an assert. See D67400 for context.
   assert(Log2(ABIAlign) < 16 && Log2(PrefAlign) < 16 && "Alignment too big");
   if (!isUInt<24>(BitWidth))
-    return reportError("Invalid bit width, must be a 24bit integer");
+    return reportError("Invalid bit width, must be a 24-bit integer");
   if (PrefAlign < ABIAlign)
     return reportError(
         "Preferred alignment cannot be less than the ABI alignment");

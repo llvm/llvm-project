@@ -417,14 +417,14 @@ PRE_SYSCALL(capget)(void *header, void *dataptr) {
 POST_SYSCALL(capget)(long res, void *header, void *dataptr) {
   if (res >= 0)
     if (dataptr)
-      POST_WRITE(dataptr, __user_cap_data_struct_sz);
+      POST_WRITE(dataptr, __user_cap_data_struct_sz(header));
 }
 
 PRE_SYSCALL(capset)(void *header, const void *data) {
   if (header)
     PRE_READ(header, __user_cap_header_struct_sz);
   if (data)
-    PRE_READ(data, __user_cap_data_struct_sz);
+    PRE_READ(data, __user_cap_data_struct_sz(header));
 }
 
 POST_SYSCALL(capset)(long res, void *header, const void *data) {}

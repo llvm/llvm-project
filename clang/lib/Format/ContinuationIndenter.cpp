@@ -18,6 +18,7 @@
 #include "WhitespaceManager.h"
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Format/Format.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Debug.h"
@@ -739,9 +740,14 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   if (Previous.is(TT_TemplateString) && Previous.opensScope())
     CurrentState.NoLineBreak = true;
 
+  // Align following lines within parentheses / brackets if configured.
+  // Note: This doesn't apply to macro expansion lines, which are MACRO( , , )
+  // with args as children of the '(' and ',' tokens. It does not make sense to
+  // align the commas with the opening paren.
   if (Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign &&
       !CurrentState.IsCSharpGenericTypeConstraint && Previous.opensScope() &&
       Previous.isNot(TT_ObjCMethodExpr) && Previous.isNot(TT_RequiresClause) &&
+      !(Current.MacroParent && Previous.MacroParent) &&
       (Current.isNot(TT_LineComment) || Previous.is(BK_BracedInit))) {
     CurrentState.Indent = State.Column + Spaces;
     CurrentState.IsAligned = true;

@@ -10,7 +10,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUAsmUtils.h"
 #include "AMDKernelCodeT.h"
-#include "GCNSubtarget.h" // TODO-GFX12: Remove this.
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Attributes.h"
@@ -2790,36 +2789,6 @@ unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST) {
   if (AMDGPU::isGFX12(ST))
     return 24;
   return 13;
-}
-
-SIModeRegisterDefaults::SIModeRegisterDefaults(const Function &F,
-                                               const GCNSubtarget &ST) {
-  *this = getDefaultForCallingConv(F.getCallingConv());
-
-  if (ST.hasIEEEMode()) {
-    StringRef IEEEAttr = F.getFnAttribute("amdgpu-ieee").getValueAsString();
-    if (!IEEEAttr.empty())
-      IEEE = IEEEAttr == "true";
-  }
-
-  if (ST.hasDX10ClampMode()) {
-    StringRef DX10ClampAttr
-      = F.getFnAttribute("amdgpu-dx10-clamp").getValueAsString();
-    if (!DX10ClampAttr.empty())
-      DX10Clamp = DX10ClampAttr == "true";
-  }
-
-  StringRef DenormF32Attr = F.getFnAttribute("denormal-fp-math-f32").getValueAsString();
-  if (!DenormF32Attr.empty())
-    FP32Denormals = parseDenormalFPAttribute(DenormF32Attr);
-
-  StringRef DenormAttr = F.getFnAttribute("denormal-fp-math").getValueAsString();
-  if (!DenormAttr.empty()) {
-    DenormalMode DenormMode = parseDenormalFPAttribute(DenormAttr);
-    if (DenormF32Attr.empty())
-      FP32Denormals = DenormMode;
-    FP64FP16Denormals = DenormMode;
-  }
 }
 
 namespace {

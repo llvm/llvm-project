@@ -3,9 +3,6 @@ cmake_minimum_required(VERSION 3.13.4)
 # Default to C++17
 set(CMAKE_CXX_STANDARD 17)
 
-# Use old version of target_sources command which converts the source
-# file paths to full paths.
-cmake_policy(SET CMP0076 OLD)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
 # The top-level sourse and binary directories.
@@ -110,6 +107,7 @@ if(LLVM_LIBC_ENABLE_LINTING)
           The path to the clang-tidy binary can be set manually by passing
           -DLLVM_LIBC_CLANG_TIDY=<path/to/clang-tidy> to CMake.")
       endif()
+      add_custom_target(libc-lint)
     else()
       message(FATAL_ERROR "
         Linting is enabled but 'clang-tidy' is not found!

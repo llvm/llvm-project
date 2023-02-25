@@ -710,7 +710,7 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", [
 
     The runtime representation of the MLIR tensor type is intentionally
     abstracted - you cannot control layout or get a pointer to the data. For
-    low level buffer access, MLIR has a [`memref` type](#memref-type). This
+    low level buffer access, MLIR has a [`memref` type](#memreftype). This
     abstracted runtime representation holds both the tensor data values as well
     as information about the (potentially dynamic) shape of the tensor. The
     [`dim` operation](MemRef.md/#memrefdim-mlirmemrefdimop) returns the size of a

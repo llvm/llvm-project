@@ -41,13 +41,33 @@ TEST(LlvmLibcExp10fTest, SpecialNumbers) {
 
 TEST(LlvmLibcExp10fTest, Overflow) {
   errno = 0;
-  EXPECT_FP_EQ(inf, __llvm_libc::exp10f(float(FPBits(0x7f7fffffU))));
+  EXPECT_FP_EQ_WITH_EXCEPTION(
+      inf, __llvm_libc::exp10f(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
-  EXPECT_FP_EQ(inf, __llvm_libc::exp10f(float(FPBits(0x43000000U))));
+  EXPECT_FP_EQ_WITH_EXCEPTION(
+      inf, __llvm_libc::exp10f(float(FPBits(0x43000000U))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
-  EXPECT_FP_EQ(inf, __llvm_libc::exp10f(float(FPBits(0x43000001U))));
+  EXPECT_FP_EQ_WITH_EXCEPTION(
+      inf, __llvm_libc::exp10f(float(FPBits(0x43000001U))), FE_OVERFLOW);
+  EXPECT_MATH_ERRNO(ERANGE);
+}
+
+TEST(LlvmLibcExp10fTest, Underflow) {
+  errno = 0;
+  EXPECT_FP_EQ_WITH_EXCEPTION(
+      0.0f, __llvm_libc::exp10f(float(FPBits(0xff7fffffU))), FE_UNDERFLOW);
+  EXPECT_MATH_ERRNO(ERANGE);
+
+  float x = float(FPBits(0xc2cffff8U));
+  EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, x,
+                                 __llvm_libc::exp10f(x), 0.5);
+  EXPECT_MATH_ERRNO(ERANGE);
+
+  x = float(FPBits(0xc2d00008U));
+  EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, x,
+                                 __llvm_libc::exp10f(x), 0.5);
   EXPECT_MATH_ERRNO(ERANGE);
 }
 

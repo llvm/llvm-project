@@ -82,7 +82,6 @@ void llvm::initializeScalarOpts(PassRegistry &Registry) {
   initializeRegToMemLegacyPass(Registry);
   initializeRewriteStatepointsForGCLegacyPassPass(Registry);
   initializeScalarizeMaskedMemIntrinLegacyPassPass(Registry);
-  initializeSCCPLegacyPassPass(Registry);
   initializeSROALegacyPassPass(Registry);
   initializeCFGSimplifyPassPass(Registry);
   initializeStructurizeCFGLegacyPassPass(Registry);
@@ -189,10 +188,6 @@ void LLVMAddPartiallyInlineLibCallsPass(LLVMPassManagerRef PM) {
 
 void LLVMAddReassociatePass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createReassociatePass());
-}
-
-void LLVMAddSCCPPass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createSCCPPass());
 }
 
 void LLVMAddScalarReplAggregatesPass(LLVMPassManagerRef PM) {
