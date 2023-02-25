@@ -240,7 +240,7 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
 
   static cl::opt<bool> allowUnregisteredDialects(
       "allow-unregistered-dialect",
-      cl::desc("Allow operation with no registered dialects"), cl::init(false));
+      cl::desc("Allow operation with no registered dialects (discouraged: testing only!)"), cl::init(false));
 
   static cl::opt<bool> showDialects(
       "show-dialects", cl::desc("Print the list of registered dialects"),

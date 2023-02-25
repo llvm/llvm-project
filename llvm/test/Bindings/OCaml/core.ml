@@ -1458,29 +1458,6 @@ let test_builder () =
  * CHECK: !1 = !{i32 1, !"metadata test"}
  *)
 
-(*===-- Pass Managers -----------------------------------------------------===*)
-
-let test_pass_manager () =
-  let (++) x f = ignore (f x); x in
-
-  begin group "module pass manager";
-    ignore (PassManager.create ()
-             ++ PassManager.run_module m
-             ++ PassManager.dispose)
-  end;
-
-  begin group "function pass manager";
-    let fty = function_type void_type [| |] in
-    let fn = define_function "FunctionPassManager" fty m in
-    ignore (build_ret_void (builder_at_end context (entry_block fn)));
-
-    ignore (PassManager.create_function m
-             ++ PassManager.initialize
-             ++ PassManager.run_function fn
-             ++ PassManager.finalize
-             ++ PassManager.dispose)
-  end
-
 
 (*===-- Memory Buffer -----------------------------------------------------===*)
 
@@ -1523,7 +1500,6 @@ let _ =
   suite "basic blocks"     test_basic_blocks;
   suite "instructions"     test_instructions;
   suite "builder"          test_builder;
-  suite "pass manager"     test_pass_manager;
   suite "memory buffer"    test_memory_buffer;
   suite "writer"           test_writer; (* Keep this last; it disposes m. *)
   exit !exit_status

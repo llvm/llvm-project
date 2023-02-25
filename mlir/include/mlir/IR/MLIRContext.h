@@ -132,6 +132,10 @@ public:
   bool allowsUnregisteredDialects();
 
   /// Enables creating operations in unregistered dialects.
+  /// This option is **heavily discouraged**: it is convenient during testing
+  /// but it is not a good practice to use it in production code. Some system
+  /// invariants can be broken (like loading a dialect after creating
+  ///  operations) without being caught by assertions or other means.
   void allowUnregisteredDialects(bool allow = true);
 
   /// Return true if multi-threading is enabled by the context.
