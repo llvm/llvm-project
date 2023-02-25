@@ -1,5 +1,5 @@
 # REQUIRES: system-linux
-# RUN: llvm-bolt  %S/../../llvm/test/tools/llvm-profgen/Inputs/noinline-cs-pseudoprobe.perfbin --print-pseudo-probes=all -o %t.bolt 2>&1 | FileCheck %s
+# RUN: llvm-bolt  %S/../../../llvm/test/tools/llvm-profgen/Inputs/noinline-cs-pseudoprobe.perfbin --print-pseudo-probes=all -o %t.bolt 2>&1 | FileCheck %s
 
 ;; Report of decoding input pseudo probe binaries
 
