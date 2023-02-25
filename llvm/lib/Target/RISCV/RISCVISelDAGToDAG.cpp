@@ -2423,28 +2423,23 @@ bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
   return true;
 }
 
-/// Some instructions have a condition operand that is compared against zero.
-/// Since RISC-V doesn't have seteq/setne instructions, we can use this
-/// property to avoid a seqz or snez instruction after an xor/addi/xori.
-/// When \p Inverse is false, we match seteq or any unknown operation. When
-/// \p Inverse is true, we only match setne.
-bool RISCVDAGToDAGISel::selectCondOp(SDValue N, bool Inverse, SDValue &Val) {
-  // Start with this node as the output.
-  Val = N;
+/// RISC-V doesn't have general instructions for integer setne/seteq, but we can
+/// check for equality with 0. This function emits instructions that convert the
+/// seteq/setne into something that can be compared with 0.
+/// When \p Equal is false, we match setne. When \p Equal is true, we match
+/// seteq.
+bool RISCVDAGToDAGISel::selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
+                                    SDValue &Val) {
+  assert(ISD::isIntEqualitySetCC(ExpectedCCVal) &&
+         "Unexpected condition code!");
 
-  // If the node isn't a setcc, there's nothing we can do. Return success
-  // if we aren't looking for an inverse condition.
+  // We're looking for a setcc.
   if (N->getOpcode() != ISD::SETCC)
-    return !Inverse;
+    return false;
 
-  // If it isn't an equality comparison, we also can't do anything.
+  // Must be an equality comparison.
   ISD::CondCode CCVal = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  if (!isIntEqualitySetCC(CCVal))
-    return !Inverse;
-
-  // This ComplexPattern occurs in pairs with both polarities of Inverse.
-  // If this isn't the one we're looking for, let the other polarity match it.
-  if (isTrueWhenEqual(CCVal) != Inverse)
+  if (CCVal != ExpectedCCVal)
     return false;
 
   SDValue LHS = N->getOperand(0);
