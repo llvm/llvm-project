@@ -1246,7 +1246,7 @@ define <4 x i32> @sub_absv_vec_32(<4 x i32> %a, <4 x i32> %b) local_unnamed_addr
 ; CHECK-PWR78-NEXT:    vmaxsw v2, v2, v3
 ; CHECK-PWR78-NEXT:    blr
 entry:
-  %sub = sub <4 x i32> %a, %b
+  %sub = sub nsw <4 x i32> %a, %b
   %sub.i = sub <4 x i32> zeroinitializer, %sub
   %0 = tail call <4 x i32> @llvm.ppc.altivec.vmaxsw(<4 x i32> %sub, <4 x i32> %sub.i)
   ret <4 x i32> %0
@@ -1269,7 +1269,7 @@ define <8 x i16> @sub_absv_vec_16(<8 x i16> %a, <8 x i16> %b) local_unnamed_addr
 ; CHECK-PWR78-NEXT:    vmaxsh v2, v2, v3
 ; CHECK-PWR78-NEXT:    blr
 entry:
-  %sub = sub <8 x i16> %a, %b
+  %sub = sub nsw <8 x i16> %a, %b
   %sub.i = sub <8 x i16> zeroinitializer, %sub
   %0 = tail call <8 x i16> @llvm.ppc.altivec.vmaxsh(<8 x i16> %sub, <8 x i16> %sub.i)
   ret <8 x i16> %0
@@ -1292,7 +1292,7 @@ define <16 x i8> @sub_absv_vec_8(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-PWR78-NEXT:    vmaxsb v2, v2, v3
 ; CHECK-PWR78-NEXT:    blr
 entry:
-  %sub = sub <16 x i8> %a, %b
+  %sub = sub nsw <16 x i8> %a, %b
   %sub.i = sub <16 x i8> zeroinitializer, %sub
   %0 = tail call <16 x i8> @llvm.ppc.altivec.vmaxsb(<16 x i8> %sub, <16 x i8> %sub.i)
   ret <16 x i8> %0
