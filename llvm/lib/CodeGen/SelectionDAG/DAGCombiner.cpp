@@ -5907,8 +5907,8 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
   SDValue LHS1 = LHS->getOperand(1);
   SDValue RHS1 = RHS->getOperand(1);
 
-  // TODO: We don't actually need a splat here, for vectors we just need
-  // LaneLHS[N] == -LaneRHS[N];
+  // TODO: We don't actually need a splat here, for vectors we just need the
+  // invariants to hold for each element.
   auto *LHS1C = isConstOrConstSplat(LHS1);
   auto *RHS1C = isConstOrConstSplat(RHS1);
 
@@ -5919,15 +5919,16 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
   if (CCL == CCR &&
       CCL == (LogicOp->getOpcode() == ISD::AND ? ISD::SETNE : ISD::SETEQ) &&
       LHS0 == RHS0 && LHS1C && RHS1C && OpVT.isInteger() && LHS.hasOneUse() &&
-      RHS.hasOneUse() && LHS1C->getAPIntValue() == (-RHS1C->getAPIntValue())) {
+      RHS.hasOneUse()) {
+    const APInt &APLhs = LHS1C->getAPIntValue();
+    const APInt &APRhs = RHS1C->getAPIntValue();
 
     // Preference is to use ISD::ABS or we already have an ISD::ABS (in which
     // case this is just a compare).
-    if (TargetPreference == AndOrSETCCFoldKind::ABS ||
-        DAG.doesNodeExist(ISD::ABS, DAG.getVTList(OpVT), {LHS0})) {
-      APInt C = LHS1C->getAPIntValue();
-      if (C.isNegative())
-        C = RHS1C->getAPIntValue();
+    if (APLhs == (-APRhs) &&
+        (TargetPreference == AndOrSETCCFoldKind::ABS ||
+         DAG.doesNodeExist(ISD::ABS, DAG.getVTList(OpVT), {LHS0}))) {
+      const APInt &C = APLhs.isNegative() ? APRhs : APLhs;
       // (icmp eq A, C) | (icmp eq A, -C)
       //    -> (icmp eq Abs(A), C)
       // (icmp ne A, C) & (icmp ne A, -C)
@@ -5936,23 +5937,20 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
       return DAG.getNode(ISD::SETCC, DL, VT, AbsOp,
                          DAG.getConstant(C, DL, OpVT), LHS.getOperand(2));
     } else if (TargetPreference == AndOrSETCCFoldKind::AddAnd) {
-      // With C as a power of 2 and C != 0 and C != INT_MIN:
-      //   (icmp eq A, C) | (icmp eq A, -C)
-      //        -> (icmp eq and(add(A, C), ~(C + C)), 0)
-      //   (icmp ne A, C) & (icmp ne A, -C)w
-      //        -> (icmp ne and(add(A, C), ~(C + C)), 0)
-      const ConstantSDNode *Pow2 = nullptr;
-      if (LHS1C->getAPIntValue().isPowerOf2())
-        Pow2 = LHS1C;
-      else if (RHS1C->getAPIntValue().isPowerOf2())
-        Pow2 = RHS1C;
-      // isPowerOf2 is only for non-zero powers of 2.
-      if (Pow2 != nullptr && !Pow2->getAPIntValue().isMinSignedValue()) {
-        const APInt &C = Pow2->getAPIntValue();
-        SDValue AddOp =
-            DAG.getNode(ISD::ADD, DL, OpVT, LHS0, DAG.getConstant(C, DL, OpVT));
+      // A == C0 | A == C1
+      //  IF IsPow2(smax(C0, C1)-smin(C0, C1))
+      //    -> ((A - smin(C0, C1)) & ~(smax(C0, C1)-smin(C0, C1))) == 0
+      // A != C0 & A != C1
+      //  IF IsPow2(smax(C0, C1)-smin(C0, C1))
+      //    -> ((A - smin(C0, C1)) & ~(smax(C0, C1)-smin(C0, C1))) != 0
+      const APInt &MaxC = APIntOps::smax(APRhs, APLhs);
+      const APInt &MinC = APIntOps::smin(APRhs, APLhs);
+      APInt Dif = MaxC - MinC;
+      if (!Dif.isZero() && Dif.isPowerOf2()) {
+        SDValue AddOp = DAG.getNode(ISD::ADD, DL, OpVT, LHS0,
+                                    DAG.getConstant(-MinC, DL, OpVT));
         SDValue AndOp = DAG.getNode(ISD::AND, DL, OpVT, AddOp,
-                                    DAG.getConstant(~(C + C), DL, OpVT));
+                                    DAG.getConstant(~Dif, DL, OpVT));
         return DAG.getNode(ISD::SETCC, DL, VT, AndOp,
                            DAG.getConstant(0, DL, OpVT), LHS.getOperand(2));
       }
