@@ -65,3 +65,11 @@
 
 // RUN: %clang_cl /Tc%s -fuse-ld=lld -### 2>&1 | FileCheck --check-prefix=USE_LLD %s
 // USE_LLD: lld-link
+
+// RUN: %clang_cl -m32 -arch:IA32 --target=i386-pc-win32 /Tc%s -fuse-ld=link -### -fsanitize=address 2>&1 | FileCheck --check-prefix=INFER-LINK %s
+// INFER-LINK: link.exe
+// INFER-LINK: /INFERASANLIBS:NO
+
+// RUN: %clang_cl -m32 -arch:IA32 --target=i386-pc-win32 /Tc%s -fuse-ld=lld -### -fsanitize=address 2>&1 | FileCheck --check-prefix=INFER-LLD %s
+// INFER-LLD: lld-link
+// INFER-LLD-NOT: INFERASANLIBS

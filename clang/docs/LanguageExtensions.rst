@@ -4665,7 +4665,7 @@ provide deprecation warnings for macro uses. For example:
    #define MIN(x, y) x < y ? x : y
    #pragma clang deprecated(MIN, "use std::min instead")
 
-   void min(int a, int b) {
+   int min(int a, int b) {
      return MIN(a, b); // warning: MIN is deprecated: use std::min instead
    }
 
