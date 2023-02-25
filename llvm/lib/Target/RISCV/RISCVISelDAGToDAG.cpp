@@ -2450,6 +2450,9 @@ bool RISCVDAGToDAGISel::selectCondOp(SDValue N, bool Inverse, SDValue &Val) {
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
+  if (!LHS.getValueType().isInteger())
+    return false;
+
   // If the RHS side is 0, we don't need any extra instructions, return the LHS.
   if (isNullConstant(RHS)) {
     Val = LHS;
