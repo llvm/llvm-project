@@ -83,7 +83,11 @@ Error BuiltinCAS::validate(const CASID &ID) {
 
 Expected<std::unique_ptr<ondisk::UnifiedOnDiskCache>>
 cas::builtin::createBuiltinUnifiedOnDiskCache(StringRef Path) {
+#if LLVM_ENABLE_ONDISK_CAS
   return ondisk::UnifiedOnDiskCache::open(Path, /*SizeLimit=*/std::nullopt,
                                           BuiltinCASContext::getHashName(),
                                           sizeof(HashType));
+#else
+  return createStringError(inconvertibleErrorCode(), "OnDiskCache is disabled");
+#endif
 }
