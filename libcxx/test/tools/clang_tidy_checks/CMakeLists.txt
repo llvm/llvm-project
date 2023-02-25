@@ -3,7 +3,16 @@
 set(CMAKE_FIND_PACKAGE_SORT_ORDER NATURAL)
 set(CMAKE_FIND_PACKAGE_SORT_DIRECTION DEC)
 
-find_package(Clang 16...17)
+# The find_package changes these variables. This leaves the build in an odd
+# state. Calling cmake a second time tries to write site config information in
+# the system's libc++. Restoring these setting after testing fixes this issue.
+set(LLVM_DIR_SAVE ${LLVM_DIR})
+set(Clang_DIR_SAVE ${Clang_DIR})
+
+find_package(Clang 16)
+if (NOT Clang_FOUND)
+  find_package(Clang 17)
+endif()
 
 set(SOURCES
     abi_tag_on_virtual.cpp
@@ -20,6 +29,9 @@ if(NOT Clang_FOUND)
                   custom libc++ clang-tidy checks will not be available.")
   return()
 endif()
+
+set(LLVM_DIR "${LLVM_DIR_SAVE}" CACHE PATH "The directory containing a CMake configuration file for LLVM." FORCE)
+set(Clang_DIR "${Clang_DIR_SAVE}" CACHE PATH "The directory containing a CMake configuration file for Clang." FORCE)
 
 message(STATUS "Found system-installed LLVM ${LLVM_PACKAGE_VERSION} with headers in ${LLVM_INCLUDE_DIRS}")
 
