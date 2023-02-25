@@ -1318,6 +1318,10 @@ void OnDiskHashMappedTrie::print(
   report_fatal_error("not supported");
 }
 
+size_t OnDiskHashMappedTrie::size() const {
+  report_fatal_error("not supported");
+}
+
 struct OnDiskDataAllocator::ImplType {};
 
 Expected<OnDiskDataAllocator> OnDiskDataAllocator::create(
@@ -1332,6 +1336,14 @@ OnDiskDataAllocator::pointer OnDiskDataAllocator::allocate(size_t Size) {
 }
 
 const char *OnDiskDataAllocator::beginData(FileOffset Offset) const {
+  report_fatal_error("not supported");
+}
+
+MutableArrayRef<uint8_t> OnDiskDataAllocator::getUserHeader() {
+  report_fatal_error("not supported");
+}
+
+size_t OnDiskDataAllocator::size() const {
   report_fatal_error("not supported");
 }
 
