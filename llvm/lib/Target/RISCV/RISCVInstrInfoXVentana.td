@@ -30,14 +30,19 @@ def VT_MASKCN : VTMaskedMove<0b111, "vt.maskcn">,
 
 let Predicates = [IsRV64, HasVendorXVentanaCondOps] in {
 // Directly use MASKC/MASKCN in case of any of the operands being 0.
-def : Pat<(select condop:$rc, GPR:$rs1, (i64 0)),
-          (VT_MASKC GPR:$rs1, condop:$rc)>;
-def : Pat<(select invcondop:$rc, GPR:$rs1, (i64 0)),
-          (VT_MASKCN GPR:$rs1, invcondop:$rc)>;
-def : Pat<(select condop:$rc, (i64 0), GPR:$rs1),
-          (VT_MASKCN GPR:$rs1, condop:$rc)>;
-def : Pat<(select invcondop:$rc, (i64 0), GPR:$rs1),
-          (VT_MASKC GPR:$rs1, invcondop:$rc)>;
+def : Pat<(select GPR:$rc, GPR:$rs1, (i64 0)),
+          (VT_MASKC GPR:$rs1, GPR:$rc)>;
+def : Pat<(select GPR:$rc, (i64 0), GPR:$rs1),
+          (VT_MASKCN GPR:$rs1, GPR:$rc)>;
+
+def : Pat<(select (riscv_setne GPR:$rc), GPR:$rs1, (i64 0)),
+          (VT_MASKC GPR:$rs1, GPR:$rc)>;
+def : Pat<(select (riscv_seteq GPR:$rc), GPR:$rs1, (i64 0)),
+          (VT_MASKCN GPR:$rs1, GPR:$rc)>;
+def : Pat<(select (riscv_setne GPR:$rc), (i64 0), GPR:$rs1),
+          (VT_MASKCN GPR:$rs1, GPR:$rc)>;
+def : Pat<(select (riscv_seteq GPR:$rc), (i64 0), GPR:$rs1),
+          (VT_MASKC GPR:$rs1, GPR:$rc)>;
 
 // Conditional AND operation patterns.
 def : Pat<(i64 (select GPR:$rc, (and GPR:$rs1, GPR:$rs2), GPR:$rs1)),
@@ -49,30 +54,9 @@ def : Pat<(i64 (select GPR:$rc, GPR:$rs1, (and GPR:$rs1, GPR:$rs2))),
 def : Pat<(i64 (select GPR:$rc, GPR:$rs1, GPR:$rs2)),
           (OR (VT_MASKC $rs1, $rc), (VT_MASKCN $rs2, $rc))>;
 
-def : Pat<(i64 (select (i64 (setne GPR:$rc, (i64 0))), GPR:$rs1, GPR:$rs2)),
+def : Pat<(i64 (select (riscv_setne GPR:$rc), GPR:$rs1, GPR:$rs2)),
           (OR (VT_MASKC GPR:$rs1, GPR:$rc), (VT_MASKCN GPR:$rs2, GPR:$rc))>;
-def : Pat<(i64 (select (i64 (seteq GPR:$rc, (i64 0))), GPR:$rs2, GPR:$rs1)),
+def : Pat<(i64 (select (riscv_seteq GPR:$rc), GPR:$rs2, GPR:$rs1)),
           (OR (VT_MASKC GPR:$rs1, GPR:$rc), (VT_MASKCN GPR:$rs2, GPR:$rc))>;
-
-def : Pat<(i64 (select (i64 (setne GPR:$x, simm12_plus1:$y)), GPR:$rs1, GPR:$rs2)),
-          (OR (VT_MASKC GPR:$rs1, (ADDI GPR:$x, (NegImm simm12_plus1:$y))),
-              (VT_MASKCN GPR:$rs2, (ADDI GPR:$x, (NegImm simm12_plus1:$y))))>;
-def : Pat<(i64 (select (i64 (seteq GPR:$x, simm12_plus1:$y)), GPR:$rs2, GPR:$rs1)),
-          (OR (VT_MASKC GPR:$rs1, (ADDI GPR:$x, (NegImm simm12_plus1:$y))),
-              (VT_MASKCN GPR:$rs2, (ADDI GPR:$x, (NegImm simm12_plus1:$y))))>;
-
-def : Pat<(i64 (select (i64 (setne GPR:$x, (i64 -2048))), GPR:$rs1, GPR:$rs2)),
-          (OR (VT_MASKC GPR:$rs1, (XORI GPR:$x, -2048)),
-              (VT_MASKCN GPR:$rs2, (XORI GPR:$x, -2048)))>;
-def : Pat<(i64 (select (i64 (seteq GPR:$x, (i64 -2048))), GPR:$rs2, GPR:$rs1)),
-          (OR (VT_MASKC GPR:$rs1, (XORI GPR:$x, -2048)),
-              (VT_MASKCN GPR:$rs2, (XORI GPR:$x, -2048)))>;
-
-def : Pat<(i64 (select (i64 (setne GPR:$x, GPR:$y)), GPR:$rs1, GPR:$rs2)),
-          (OR (VT_MASKC GPR:$rs1, (XOR GPR:$x, GPR:$y)),
-              (VT_MASKCN GPR:$rs2, (XOR GPR:$x, GPR:$y)))>;
-def : Pat<(i64 (select (i64 (seteq GPR:$x, GPR:$y)), GPR:$rs2, GPR:$rs1)),
-          (OR (VT_MASKC GPR:$rs1, (XOR GPR:$x, GPR:$y)),
-              (VT_MASKCN GPR:$rs2, (XOR GPR:$x, GPR:$y)))>;
 
 } // Predicates = [IsRV64, HasVendorXVentanaCondOps]

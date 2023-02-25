@@ -639,18 +639,25 @@ def : Pat<(seteq (and GPR:$rs1, SingleBitSetMask:$mask), 0),
 } // Predicates = [HasVendorXTHeadBs]
 
 let Predicates = [HasVendorXTHeadCondMov] in {
-def : Pat<(select invcondop:$cond, GPR:$a, GPR:$b),
-          (TH_MVNEZ $a, $b, $cond)>;
-def : Pat<(select condop:$cond, GPR:$a, GPR:$b),
-          (TH_MVEQZ $a, $b, $cond)>;
-def : Pat<(select invcondop:$cond, GPR:$a, (XLenVT 0)),
-          (TH_MVNEZ $a, X0, $cond)>;
-def : Pat<(select condop:$cond, GPR:$a, (XLenVT 0)),
-          (TH_MVEQZ $a, X0, $cond)>;
-def : Pat<(select invcondop:$cond, (XLenVT 0), GPR:$b),
-          (TH_MVEQZ $b, X0, $cond)>;
-def : Pat<(select condop:$cond,  (XLenVT 0), GPR:$b),
-          (TH_MVNEZ $b, X0, $cond)>;
+def : Pat<(select GPR:$cond, GPR:$a, GPR:$b),
+          (TH_MVEQZ GPR:$a, GPR:$b, GPR:$cond)>;
+def : Pat<(select GPR:$cond, GPR:$a, (XLenVT 0)),
+          (TH_MVEQZ GPR:$a, X0, GPR:$cond)>;
+def : Pat<(select GPR:$cond, (XLenVT 0), GPR:$b),
+          (TH_MVNEZ GPR:$b, X0, GPR:$cond)>;
+
+def : Pat<(select (riscv_seteq GPR:$cond), GPR:$a, GPR:$b),
+          (TH_MVNEZ GPR:$a, GPR:$b, GPR:$cond)>;
+def : Pat<(select (riscv_setne GPR:$cond), GPR:$a, GPR:$b),
+          (TH_MVEQZ GPR:$a, GPR:$b, GPR:$cond)>;
+def : Pat<(select (riscv_seteq GPR:$cond), GPR:$a, (XLenVT 0)),
+          (TH_MVNEZ GPR:$a, X0, GPR:$cond)>;
+def : Pat<(select (riscv_setne GPR:$cond), GPR:$a, (XLenVT 0)),
+          (TH_MVEQZ GPR:$a, X0, GPR:$cond)>;
+def : Pat<(select (riscv_seteq GPR:$cond), (XLenVT 0), GPR:$b),
+          (TH_MVEQZ GPR:$b, X0, GPR:$cond)>;
+def : Pat<(select (riscv_setne GPR:$cond),  (XLenVT 0), GPR:$b),
+          (TH_MVNEZ GPR:$b, X0, GPR:$cond)>;
 } // Predicates = [HasVendorXTHeadCondMov]
 
 let Predicates = [HasVendorXTHeadMac] in {
