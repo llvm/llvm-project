@@ -834,27 +834,23 @@ defm : StIdxPat<store, TH_SRD, GPR>;
 defm : StZextIdxPat<store, TH_SURD, GPR>;
 }
 
-let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtF, IsRV32] in {
+let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtF] in {
 defm : LdIdxPat<load, TH_FLRW, f32>;
 defm : StIdxPat<store, TH_FSRW, FPR32, f32>;
 }
 
-let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtD, IsRV32] in {
+let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtD] in {
 defm : LdIdxPat<load, TH_FLRD, f64>;
 defm : StIdxPat<store, TH_FSRD, FPR64, f64>;
 }
 
 let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtF, IsRV64] in {
-defm : LdIdxPat<load, TH_FLRW, f32>;
 defm : LdZextIdxPat<load, TH_FLURW, f32>;
-defm : StIdxPat<store, TH_FSRW, FPR32, f32>;
 defm : StZextIdxPat<store, TH_FSURW, FPR32, f32>;
 }
 
 let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtD, IsRV64] in {
-defm : LdIdxPat<load, TH_FLRD, f64>;
 defm : LdZextIdxPat<load, TH_FLURD, f64>;
-defm : StIdxPat<store, TH_FSRD, FPR64, f64>;
 defm : StZextIdxPat<store, TH_FSURD, FPR64, f64>;
 }
 
