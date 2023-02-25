@@ -1321,10 +1321,10 @@ void OnDiskHashMappedTrie::print(
 
 struct OnDiskDataAllocator::ImplType {};
 
-Expected<OnDiskDataAllocator>
-OnDiskDataAllocator::create(const Twine &PathTwine, const Twine &TableNameTwine,
-                            uint64_t MaxFileSize,
-                            Optional<uint64_t> NewFileInitialSize) {
+Expected<OnDiskDataAllocator> OnDiskDataAllocator::create(
+    const Twine &Path, const Twine &TableName, uint64_t MaxFileSize,
+    Optional<uint64_t> NewFileInitialSize, uint32_t UserHeaderSize,
+    function_ref<void(void *)> UserHeaderInit) {
   report_fatal_error("not supported");
 }
 
