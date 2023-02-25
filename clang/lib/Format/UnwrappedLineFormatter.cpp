@@ -60,7 +60,8 @@ public:
     Offset = getIndentOffset(*Line.First);
     // Update the indent level cache size so that we can rely on it
     // having the right size in adjustToUnmodifiedline.
-    skipLine(Line, /*UnknownIndent=*/true);
+    if (Line.Level >= IndentForLevel.size())
+      IndentForLevel.resize(Line.Level + 1, -1);
     if (Style.IndentPPDirectives != FormatStyle::PPDIS_None &&
         (Line.InPPDirective ||
          (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHash &&
@@ -79,13 +80,6 @@ public:
       Indent += Offset;
     if (Line.IsContinuation)
       Indent = Line.Level * Style.IndentWidth + Style.ContinuationIndentWidth;
-  }
-
-  /// Update the indent state given that \p Line indent should be
-  /// skipped.
-  void skipLine(const AnnotatedLine &Line, bool UnknownIndent = false) {
-    if (Line.Level >= IndentForLevel.size())
-      IndentForLevel.resize(Line.Level + 1, UnknownIndent ? -1 : Indent);
   }
 
   /// Update the level indent to adapt to the given \p Line.
@@ -367,20 +361,27 @@ private:
     // instead of TheLine->First.
 
     if (Style.CompactNamespaces) {
-      if (auto nsToken = TheLine->First->getNamespaceToken()) {
-        int i = 0;
-        unsigned closingLine = TheLine->MatchingClosingBlockLineIndex - 1;
-        for (; I + 1 + i != E &&
-               nsToken->TokenText == getNamespaceTokenText(I[i + 1]) &&
-               closingLine == I[i + 1]->MatchingClosingBlockLineIndex &&
-               I[i + 1]->Last->TotalLength < Limit;
-             i++, --closingLine) {
-          // No extra indent for compacted namespaces.
-          IndentTracker.skipLine(*I[i + 1]);
+      if (const auto *NSToken = TheLine->First->getNamespaceToken()) {
+        int J = 1;
+        assert(TheLine->MatchingClosingBlockLineIndex > 0);
+        for (auto ClosingLineIndex = TheLine->MatchingClosingBlockLineIndex - 1;
+             I + J != E && NSToken->TokenText == getNamespaceTokenText(I[J]) &&
+             ClosingLineIndex == I[J]->MatchingClosingBlockLineIndex &&
+             I[J]->Last->TotalLength < Limit;
+             ++J, --ClosingLineIndex) {
+          Limit -= I[J]->Last->TotalLength;
 
-          Limit -= I[i + 1]->Last->TotalLength;
+          // Reduce indent level for bodies of namespaces which were compacted,
+          // but only if their content was indented in the first place.
+          auto *ClosingLine = AnnotatedLines.begin() + ClosingLineIndex + 1;
+          auto OutdentBy = I[J]->Level - TheLine->Level;
+          for (auto *CompactedLine = I + J; CompactedLine <= ClosingLine;
+               ++CompactedLine) {
+            if (!(*CompactedLine)->InPPDirective)
+              (*CompactedLine)->Level -= OutdentBy;
+          }
         }
-        return i;
+        return J - 1;
       }
 
       if (auto nsToken = getMatchingNamespaceToken(TheLine, AnnotatedLines)) {
