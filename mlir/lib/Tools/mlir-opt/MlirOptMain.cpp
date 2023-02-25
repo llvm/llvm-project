@@ -40,6 +40,25 @@
 using namespace mlir;
 using namespace llvm;
 
+MlirOptMainConfig &MlirOptMainConfig::setPassPipelineParser(
+    const PassPipelineCLParser &passPipeline) {
+  passPipelineCallback = [&](PassManager &pm) {
+    auto errorHandler = [&](const Twine &msg) {
+      emitError(UnknownLoc::get(pm.getContext())) << msg;
+      return failure();
+    };
+    if (failed(passPipeline.addToPipeline(pm, errorHandler)))
+      return failure();
+    if (this->shouldDumpPassPipeline()) {
+
+      pm.dump();
+      llvm::errs() << "\n";
+    }
+    return success();
+  };
+  return *this;
+}
+
 /// Perform the actions on the input file indicated by the command line flags
 /// within the specified context.
 ///
@@ -47,10 +66,9 @@ using namespace llvm;
 /// passes, then prints the output.
 ///
 static LogicalResult
-performActions(raw_ostream &os, bool verifyDiagnostics, bool verifyPasses,
+performActions(raw_ostream &os,
                const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
-               MLIRContext *context, PassPipelineFn passManagerSetupFn,
-               bool emitBytecode, bool implicitModule) {
+               MLIRContext *context, const MlirOptMainConfig &config) {
   DefaultTimingManager tm;
   applyDefaultTimingManagerCLOptions(tm);
   TimingScope timing = tm.getRootScope();
@@ -66,13 +84,14 @@ performActions(raw_ostream &os, bool verifyDiagnostics, bool verifyPasses,
   // untouched.
   PassReproducerOptions reproOptions;
   FallbackAsmResourceMap fallbackResourceMap;
-  ParserConfig config(context, /*verifyAfterParse=*/true, &fallbackResourceMap);
-  reproOptions.attachResourceParser(config);
+  ParserConfig parseConfig(context, /*verifyAfterParse=*/true,
+                           &fallbackResourceMap);
+  reproOptions.attachResourceParser(parseConfig);
 
   // Parse the input file and reset the context threading state.
   TimingScope parserTiming = timing.nest("Parser");
-  OwningOpRef<Operation *> op =
-      parseSourceFileForTool(sourceMgr, config, implicitModule);
+  OwningOpRef<Operation *> op = parseSourceFileForTool(
+      sourceMgr, parseConfig, config.shouldUseImplicitModule());
   context->enableMultithreading(wasThreadingEnabled);
   if (!op)
     return failure();
@@ -80,10 +99,10 @@ performActions(raw_ostream &os, bool verifyDiagnostics, bool verifyPasses,
 
   // Prepare the pass manager, applying command-line and reproducer options.
   PassManager pm(op.get()->getName(), PassManager::Nesting::Implicit);
-  pm.enableVerifier(verifyPasses);
+  pm.enableVerifier(config.shouldVerifyPasses());
   applyPassManagerCLOptions(pm);
   pm.enableTiming(timing);
-  if (failed(reproOptions.apply(pm)) || failed(passManagerSetupFn(pm)))
+  if (failed(reproOptions.apply(pm)) || failed(config.setupPassPipeline(pm)))
     return failure();
 
   // Run the pipeline.
@@ -92,7 +111,7 @@ performActions(raw_ostream &os, bool verifyDiagnostics, bool verifyPasses,
 
   // Print the output.
   TimingScope outputTiming = timing.nest("Output");
-  if (emitBytecode) {
+  if (config.shouldEmitBytecode()) {
     BytecodeWriterConfig writerConfig(fallbackResourceMap);
     writeBytecodeToFile(op.get(), os, writerConfig);
   } else {
@@ -106,13 +125,11 @@ performActions(raw_ostream &os, bool verifyDiagnostics, bool verifyPasses,
 
 /// Parses the memory buffer.  If successfully, run a series of passes against
 /// it and print the result.
-static LogicalResult
-processBuffer(raw_ostream &os, std::unique_ptr<MemoryBuffer> ownedBuffer,
-              bool verifyDiagnostics, bool verifyPasses,
-              bool allowUnregisteredDialects, bool preloadDialectsInContext,
-              bool emitBytecode, bool implicitModule,
-              PassPipelineFn passManagerSetupFn, DialectRegistry &registry,
-              llvm::ThreadPool *threadPool) {
+static LogicalResult processBuffer(raw_ostream &os,
+                                   std::unique_ptr<MemoryBuffer> ownedBuffer,
+                                   const MlirOptMainConfig &config,
+                                   DialectRegistry &registry,
+                                   llvm::ThreadPool *threadPool) {
   // Tell sourceMgr about this buffer, which is what the parser will pick up.
   auto sourceMgr = std::make_shared<SourceMgr>();
   sourceMgr->AddNewSourceBuffer(std::move(ownedBuffer), SMLoc());
@@ -124,20 +141,18 @@ processBuffer(raw_ostream &os, std::unique_ptr<MemoryBuffer> ownedBuffer,
     context.setThreadPool(*threadPool);
 
   // Parse the input file.
-  if (preloadDialectsInContext)
+  if (config.shouldPreloadDialectsInContext())
     context.loadAllAvailableDialects();
-  context.allowUnregisteredDialects(allowUnregisteredDialects);
-  if (verifyDiagnostics)
+  context.allowUnregisteredDialects(config.shouldAllowUnregisteredDialects());
+  if (config.shouldVerifyDiagnostics())
     context.printOpOnDiagnostic(false);
   context.getDebugActionManager().registerActionHandler<DebugCounter>();
 
   // If we are in verify diagnostics mode then we have a lot of work to do,
   // otherwise just perform the actions without worrying about it.
-  if (!verifyDiagnostics) {
+  if (!config.shouldVerifyDiagnostics()) {
     SourceMgrDiagnosticHandler sourceMgrHandler(*sourceMgr, &context);
-    return performActions(os, verifyDiagnostics, verifyPasses, sourceMgr,
-                          &context, passManagerSetupFn, emitBytecode,
-                          implicitModule);
+    return performActions(os, sourceMgr, &context, config);
   }
 
   SourceMgrDiagnosticVerifierHandler sourceMgrHandler(*sourceMgr, &context);
@@ -145,22 +160,17 @@ processBuffer(raw_ostream &os, std::unique_ptr<MemoryBuffer> ownedBuffer,
   // Do any processing requested by command line flags.  We don't care whether
   // these actions succeed or fail, we only care what diagnostics they produce
   // and whether they match our expectations.
-  (void)performActions(os, verifyDiagnostics, verifyPasses, sourceMgr, &context,
-                       passManagerSetupFn, emitBytecode, implicitModule);
+  (void)performActions(os, sourceMgr, &context, config);
 
   // Verify the diagnostic handler to make sure that each of the diagnostics
   // matched.
   return sourceMgrHandler.verify();
 }
 
-LogicalResult mlir::MlirOptMain(raw_ostream &outputStream,
-                                std::unique_ptr<MemoryBuffer> buffer,
-                                PassPipelineFn passManagerSetupFn,
-                                DialectRegistry &registry, bool splitInputFile,
-                                bool verifyDiagnostics, bool verifyPasses,
-                                bool allowUnregisteredDialects,
-                                bool preloadDialectsInContext,
-                                bool emitBytecode, bool implicitModule) {
+LogicalResult mlir::MlirOptMain(llvm::raw_ostream &outputStream,
+                                std::unique_ptr<llvm::MemoryBuffer> buffer,
+                                DialectRegistry &registry,
+                                const MlirOptMainConfig &config) {
   // The split-input-file mode is a very specific mode that slices the file
   // up into small pieces and checks each independently.
   // We use an explicit threadpool to avoid creating and joining/destroying
@@ -177,13 +187,32 @@ LogicalResult mlir::MlirOptMain(raw_ostream &outputStream,
 
   auto chunkFn = [&](std::unique_ptr<MemoryBuffer> chunkBuffer,
                      raw_ostream &os) {
-    return processBuffer(os, std::move(chunkBuffer), verifyDiagnostics,
-                         verifyPasses, allowUnregisteredDialects,
-                         preloadDialectsInContext, emitBytecode, implicitModule,
-                         passManagerSetupFn, registry, threadPool);
+    return processBuffer(os, std::move(chunkBuffer), config, registry,
+                         threadPool);
   };
   return splitAndProcessBuffer(std::move(buffer), chunkFn, outputStream,
-                               splitInputFile, /*insertMarkerInOutput=*/true);
+                               config.shouldSplitInputFile(),
+                               /*insertMarkerInOutput=*/true);
+}
+
+LogicalResult mlir::MlirOptMain(raw_ostream &outputStream,
+                                std::unique_ptr<MemoryBuffer> buffer,
+                                PassPipelineFn passManagerSetupFn,
+                                DialectRegistry &registry, bool splitInputFile,
+                                bool verifyDiagnostics, bool verifyPasses,
+                                bool allowUnregisteredDialects,
+                                bool preloadDialectsInContext,
+                                bool emitBytecode, bool implicitModule) {
+  return MlirOptMain(outputStream, std::move(buffer), registry,
+                     MlirOptMainConfig{}
+                         .splitInputFile(splitInputFile)
+                         .verifyDiagnostics(verifyDiagnostics)
+                         .verifyPasses(verifyPasses)
+                         .allowUnregisteredDialects(allowUnregisteredDialects)
+                         .preloadDialectsInContext(preloadDialectsInContext)
+                         .emitBytecode(emitBytecode)
+                         .useImplicitModule(implicitModule)
+                         .setPassPipelineSetupFn(passManagerSetupFn));
 }
 
 LogicalResult mlir::MlirOptMain(
@@ -192,23 +221,17 @@ LogicalResult mlir::MlirOptMain(
     bool splitInputFile, bool verifyDiagnostics, bool verifyPasses,
     bool allowUnregisteredDialects, bool preloadDialectsInContext,
     bool emitBytecode, bool implicitModule, bool dumpPassPipeline) {
-  auto passManagerSetupFn = [&](PassManager &pm) {
-    auto errorHandler = [&](const Twine &msg) {
-      emitError(UnknownLoc::get(pm.getContext())) << msg;
-      return failure();
-    };
-    if (failed(passPipeline.addToPipeline(pm, errorHandler)))
-      return failure();
-    if (dumpPassPipeline) {
-      pm.dump();
-      llvm::errs() << "\n";
-    }
-    return success();
-  };
-  return MlirOptMain(outputStream, std::move(buffer), passManagerSetupFn,
-                     registry, splitInputFile, verifyDiagnostics, verifyPasses,
-                     allowUnregisteredDialects, preloadDialectsInContext,
-                     emitBytecode, implicitModule);
+  return MlirOptMain(outputStream, std::move(buffer), registry,
+                     MlirOptMainConfig{}
+                         .splitInputFile(splitInputFile)
+                         .verifyDiagnostics(verifyDiagnostics)
+                         .verifyPasses(verifyPasses)
+                         .allowUnregisteredDialects(allowUnregisteredDialects)
+                         .preloadDialectsInContext(preloadDialectsInContext)
+                         .emitBytecode(emitBytecode)
+                         .useImplicitModule(implicitModule)
+                         .dumpPassPipeline(dumpPassPipeline)
+                         .setPassPipelineParser(passPipeline));
 }
 
 LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
@@ -301,12 +324,19 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
     llvm::errs() << errorMessage << "\n";
     return failure();
   }
+  // Setup the configuration for the main function.
+  MlirOptMainConfig config;
+  config.setPassPipelineParser(passPipeline)
+      .splitInputFile(splitInputFile)
+      .verifyDiagnostics(verifyDiagnostics)
+      .verifyPasses(verifyPasses)
+      .allowUnregisteredDialects(allowUnregisteredDialects)
+      .preloadDialectsInContext(preloadDialectsInContext)
+      .emitBytecode(emitBytecode)
+      .useImplicitModule(!noImplicitModule)
+      .dumpPassPipeline(dumpPassPipeline);
 
-  if (failed(MlirOptMain(output->os(), std::move(file), passPipeline, registry,
-                         splitInputFile, verifyDiagnostics, verifyPasses,
-                         allowUnregisteredDialects, preloadDialectsInContext,
-                         emitBytecode, /*implicitModule=*/!noImplicitModule,
-                         dumpPassPipeline)))
+  if (failed(MlirOptMain(output->os(), std::move(file), registry, config)))
     return failure();
 
   // Keep the output file if the invocation of MlirOptMain was successful.
