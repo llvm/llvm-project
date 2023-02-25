@@ -4739,11 +4739,13 @@ bool SROAPass::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
 
   // Migrate debug information from the old alloca to the new alloca(s)
   // and the individual partitions.
-  TinyPtrVector<DbgVariableIntrinsic *> DbgDeclares = FindDbgAddrUses(&AI);
+  TinyPtrVector<DbgVariableIntrinsic *> DbgVariables;
+  for (auto *DbgDeclare : FindDbgDeclareUses(&AI))
+    DbgVariables.push_back(DbgDeclare);
   for (auto *DbgAssign : at::getAssignmentMarkers(&AI))
-    DbgDeclares.push_back(DbgAssign);
-  for (DbgVariableIntrinsic *DbgDeclare : DbgDeclares) {
-    auto *Expr = DbgDeclare->getExpression();
+    DbgVariables.push_back(DbgAssign);
+  for (DbgVariableIntrinsic *DbgVariable : DbgVariables) {
+    auto *Expr = DbgVariable->getExpression();
     DIBuilder DIB(*AI.getModule(), /*AllowUnresolved*/ false);
     uint64_t AllocaSize =
         DL.getTypeSizeInBits(AI.getAllocatedType()).getFixedValue();
@@ -4775,7 +4777,7 @@ bool SROAPass::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
         }
 
         // The alloca may be larger than the variable.
-        auto VarSize = DbgDeclare->getVariable()->getSizeInBits();
+        auto VarSize = DbgVariable->getVariable()->getSizeInBits();
         if (VarSize) {
           if (Size > *VarSize)
             Size = *VarSize;
@@ -4795,18 +4797,18 @@ bool SROAPass::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
 
       // Remove any existing intrinsics on the new alloca describing
       // the variable fragment.
-      for (DbgVariableIntrinsic *OldDII : FindDbgAddrUses(Fragment.Alloca)) {
+      for (DbgDeclareInst *OldDII : FindDbgDeclareUses(Fragment.Alloca)) {
         auto SameVariableFragment = [](const DbgVariableIntrinsic *LHS,
                                        const DbgVariableIntrinsic *RHS) {
           return LHS->getVariable() == RHS->getVariable() &&
                  LHS->getDebugLoc()->getInlinedAt() ==
                      RHS->getDebugLoc()->getInlinedAt();
         };
-        if (SameVariableFragment(OldDII, DbgDeclare))
+        if (SameVariableFragment(OldDII, DbgVariable))
           OldDII->eraseFromParent();
       }
 
-      if (auto *DbgAssign = dyn_cast<DbgAssignIntrinsic>(DbgDeclare)) {
+      if (auto *DbgAssign = dyn_cast<DbgAssignIntrinsic>(DbgVariable)) {
         if (!Fragment.Alloca->hasMetadata(LLVMContext::MD_DIAssignID)) {
           Fragment.Alloca->setMetadata(
               LLVMContext::MD_DIAssignID,
@@ -4820,8 +4822,8 @@ bool SROAPass::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
         LLVM_DEBUG(dbgs() << "Created new assign intrinsic: " << *NewAssign
                           << "\n");
       } else {
-        DIB.insertDeclare(Fragment.Alloca, DbgDeclare->getVariable(),
-                          FragmentExpr, DbgDeclare->getDebugLoc(), &AI);
+        DIB.insertDeclare(Fragment.Alloca, DbgVariable->getVariable(),
+                          FragmentExpr, DbgVariable->getDebugLoc(), &AI);
       }
     }
   }
@@ -4945,7 +4947,7 @@ bool SROAPass::deleteDeadInstructions(
     // not be able to find it.
     if (AllocaInst *AI = dyn_cast<AllocaInst>(I)) {
       DeletedAllocas.insert(AI);
-      for (DbgVariableIntrinsic *OldDII : FindDbgAddrUses(AI))
+      for (DbgDeclareInst *OldDII : FindDbgDeclareUses(AI))
         OldDII->eraseFromParent();
     }
 
