@@ -770,7 +770,7 @@ def : Pat<(vt (LoadOp (AddrRegRegScale GPR:$rs1, GPR:$rs2, uimm2:$uimm2))),
 }
 
 multiclass LdZextIdxPat<PatFrag LoadOp, RVInst Inst, ValueType vt = i64> {
-def : Pat<(vt (LoadOp (AddrRegZextRegScale GPR:$rs1, GPR:$rs2, uimm2:$uimm2))),
+def : Pat<(vt (LoadOp (AddrRegZextRegScale (i64 GPR:$rs1), GPR:$rs2, uimm2:$uimm2))),
           (Inst GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 }
 
@@ -784,7 +784,7 @@ def : Pat<(StoreOp (vt StTy:$rd),
 multiclass StZextIdxPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
                         ValueType vt = i64> {
 def : Pat<(StoreOp (vt StTy:$rd),
-            (AddrRegZextRegScale GPR:$rs1, GPR:$rs2, uimm2:$uimm2)),
+            (AddrRegZextRegScale (i64 GPR:$rs1), GPR:$rs2, uimm2:$uimm2)),
           (Inst StTy:$rd, GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 }
 
@@ -869,13 +869,13 @@ defm : StoreUpdatePat<pre_truncsti16, TH_SHIB>;
 }
 
 let Predicates = [HasVendorXTHeadMemIdx, IsRV32] in {
-defm : StoreUpdatePat<post_store, TH_SWIA>;
-defm : StoreUpdatePat<pre_store, TH_SWIB>;
+defm : StoreUpdatePat<post_store, TH_SWIA, i32>;
+defm : StoreUpdatePat<pre_store, TH_SWIB, i32>;
 }
 
 let Predicates = [HasVendorXTHeadMemIdx, IsRV64] in {
-defm : StoreUpdatePat<post_truncsti32, TH_SWIA>;
-defm : StoreUpdatePat<pre_truncsti32, TH_SWIB>;
-defm : StoreUpdatePat<post_store, TH_SDIA>;
-defm : StoreUpdatePat<pre_store, TH_SDIB>;
+defm : StoreUpdatePat<post_truncsti32, TH_SWIA, i64>;
+defm : StoreUpdatePat<pre_truncsti32, TH_SWIB, i64>;
+defm : StoreUpdatePat<post_store, TH_SDIA, i64>;
+defm : StoreUpdatePat<pre_store, TH_SDIB, i64>;
 }
