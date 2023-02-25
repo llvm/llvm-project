@@ -523,4 +523,29 @@ TEST(LlvmLibcPrintfParserTest, IndexModeTrailingPercentCrash) {
   EXPECT_PFORMAT_EQ(expected1, format_arr[1]);
 }
 
+TEST(LlvmLibcPrintfParserTest, DoublePercentIsAllowedInvalidIndex) {
+  __llvm_libc::printf_core::FormatSection format_arr[10];
+
+  // Normally this conversion specifier would be raw (due to having a width
+  // defined as an invalid argument) but since it's a % conversion it's allowed
+  // by this specific parser. Any % conversion that is not just "%%" is
+  // undefined, so this is implementation-specific behavior.
+  // The goal is to be consistent. A conversion specifier of "%L%" is also
+  // undefined, but is traditionally displayed as just "%". "%2%" is also
+  // displayed as "%", even though if the width was respected it should be " %".
+  // Finally, "%*%" traditionally is displayed as "%" but also traditionally
+  // consumes an argument, since the * consumes an integer. Therefore, having
+  // "%*2$%" display as "%" is consistent with other printf behavior.
+  const char *str = "%*2$%";
+
+  evaluate(format_arr, str, 1, 2);
+
+  __llvm_libc::printf_core::FormatSection expected0;
+  expected0.has_conv = true;
+
+  expected0.raw_string = str;
+  expected0.conv_name = '%';
+  EXPECT_PFORMAT_EQ(expected0, format_arr[0]);
+}
+
 #endif // LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
