@@ -216,11 +216,13 @@ Error UnifiedOnDiskActionCache::putImpl(ArrayRef<uint8_t> Key,
       UniDB->getGraphDB().getDigest(*Observed));
 }
 
-#if LLVM_ENABLE_ONDISK_CAS
-
 Expected<std::unique_ptr<ActionCache>>
 cas::createOnDiskActionCache(StringRef Path) {
+#if LLVM_ENABLE_ONDISK_CAS
   return OnDiskActionCache::create(Path);
+#else
+  return createStringError(inconvertibleErrorCode(), "OnDiskCache is disabled");
+#endif
 }
 
 std::unique_ptr<ActionCache>
@@ -228,18 +230,3 @@ cas::builtin::createActionCacheFromUnifiedOnDiskCache(
     std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB) {
   return std::make_unique<UnifiedOnDiskActionCache>(std::move(UniDB));
 }
-
-# else
-
-Expected<std::unique_ptr<ActionCache>>
-cas::createOnDiskActionCache(StringRef Path) {
-  return createStringError(inconvertibleErrorCode(), "OnDiskCache is disabled");
-}
-
-std::unique_ptr<ActionCache>
-cas::builtin::createActionCacheFromUnifiedOnDiskCache(
-    std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB) {
-  return createStringError(inconvertibleErrorCode(), "OnDiskCache is disabled");
-}
-
-#endif /* LLVM_ENABLE_ONDISK_CAS */
