@@ -117,6 +117,7 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"xtheadbb", RISCVExtensionVersion{1, 0}},
     {"xtheadbs", RISCVExtensionVersion{1, 0}},
     {"xtheadcmo", RISCVExtensionVersion{1, 0}},
+    {"xtheadcondmov", RISCVExtensionVersion{1, 0}},
     {"xtheadfmemidx", RISCVExtensionVersion{1, 0}},
     {"xtheadmac", RISCVExtensionVersion{1, 0}},
     {"xtheadmemidx", RISCVExtensionVersion{1, 0}},
@@ -516,6 +517,67 @@ RISCVISAInfo::parseFeatures(unsigned XLen,
   }
 
   return RISCVISAInfo::postProcessAndChecking(std::move(ISAInfo));
+}
+
+llvm::Expected<std::unique_ptr<RISCVISAInfo>>
+RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
+  if (llvm::any_of(Arch, isupper)) {
+    return createStringError(errc::invalid_argument,
+                             "string must be lowercase");
+  }
+  // Must start with a valid base ISA name.
+  unsigned XLen;
+  if (Arch.startswith("rv32i") || Arch.startswith("rv32e"))
+    XLen = 32;
+  else if (Arch.startswith("rv64i") || Arch.startswith("rv64e"))
+    XLen = 64;
+  else
+    return createStringError(errc::invalid_argument,
+                             "arch string must begin with valid base ISA");
+  std::unique_ptr<RISCVISAInfo> ISAInfo(new RISCVISAInfo(XLen));
+  // Discard rv32/rv64 prefix.
+  Arch = Arch.substr(4);
+
+  // Each extension is of the form ${name}${major_version}p${minor_version}
+  // and separated by _. Split by _ and then extract the name and version
+  // information for each extension.
+  SmallVector<StringRef, 8> Split;
+  Arch.split(Split, '_');
+  for (StringRef Ext : Split) {
+    StringRef Prefix, MinorVersionStr;
+    std::tie(Prefix, MinorVersionStr) = Ext.rsplit('p');
+    if (MinorVersionStr.empty())
+      return createStringError(errc::invalid_argument,
+                               "extension lacks version in expected format");
+    unsigned MajorVersion, MinorVersion;
+    if (MinorVersionStr.getAsInteger(10, MinorVersion))
+      return createStringError(errc::invalid_argument,
+                               "failed to parse minor version number");
+
+    // Split Prefix into the extension name and the major version number
+    // (the trailing digits of Prefix).
+    int TrailingDigits = 0;
+    StringRef ExtName = Prefix;
+    while (!ExtName.empty()) {
+      if (!isDigit(ExtName.back()))
+        break;
+      ExtName = ExtName.drop_back(1);
+      TrailingDigits++;
+    }
+    if (!TrailingDigits)
+      return createStringError(errc::invalid_argument,
+                               "extension lacks version in expected format");
+
+    StringRef MajorVersionStr = Prefix.take_back(TrailingDigits);
+    if (MajorVersionStr.getAsInteger(10, MajorVersion))
+      return createStringError(errc::invalid_argument,
+                               "failed to parse major version number");
+    ISAInfo->addExtension(ExtName, MajorVersion, MinorVersion);
+  }
+  ISAInfo->updateFLen();
+  ISAInfo->updateMinVLen();
+  ISAInfo->updateMaxELen();
+  return std::move(ISAInfo);
 }
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>

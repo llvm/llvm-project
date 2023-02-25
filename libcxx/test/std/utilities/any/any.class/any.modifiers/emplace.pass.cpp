@@ -25,9 +25,11 @@
 #include "test_macros.h"
 
 struct Tracked {
-  static int count;
-  Tracked()  {++count;}
-  ~Tracked() { --count; }
+    static int count;
+    Tracked() { ++count; }
+    Tracked(Tracked const&) noexcept { ++count; }
+    Tracked& operator=(Tracked const&) = default;
+    ~Tracked() { --count; }
 };
 int Tracked::count = 0;
 

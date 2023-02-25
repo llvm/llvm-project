@@ -15,20 +15,24 @@
 # RUN: llvm-readobj --arch-specific out2 | FileCheck %s --check-prefix=CHECK2
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64 unrecognized_ext1.s -o unrecognized_ext1.o
-# RUN: not ld.lld unrecognized_ext1.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=UNRECOGNIZED_EXT1 --implicit-check-not=error:
-# UNRECOGNIZED_EXT1: error: unrecognized_ext1.o:(.riscv.attributes): rv64i2p0_y2p0: invalid standard user-level extension 'y'
+# RUN: ld.lld -e 0 unrecognized_ext1.o -o unrecognized_ext1 2>&1 | count 0
+# RUN: llvm-readobj --arch-specific unrecognized_ext1 | FileCheck %s --check-prefix=UNRECOGNIZED_EXT1
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64 unrecognized_ext2.s -o unrecognized_ext2.o
-# RUN: not ld.lld unrecognized_ext2.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=UNRECOGNIZED_EXT2 --implicit-check-not=error:
-# UNRECOGNIZED_EXT2: error: unrecognized_ext2.o:(.riscv.attributes): rv64i2p0_zmadeup1p0: unsupported version number 1.0 for extension 'zmadeup'
+# RUN: ld.lld -e 0 unrecognized_ext2.o -o unrecognized_ext2 2>&1 | count 0
+# RUN: llvm-readobj --arch-specific unrecognized_ext2 | FileCheck %s --check-prefix=UNRECOGNIZED_EXT2
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64 unrecognized_version.s -o unrecognized_version.o
-# RUN: not ld.lld unrecognized_version.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=UNRECOGNIZED_VERSION --implicit-check-not=error:
-# UNRECOGNIZED_VERSION: error: unrecognized_version.o:(.riscv.attributes): rv64i99p0: unsupported version number 99.0 for extension 'i'
+# RUN: ld.lld -e 0 unrecognized_version.o -o unrecognized_version 2>&1 | count 0
+# RUN: llvm-readobj --arch-specific unrecognized_version | FileCheck %s --check-prefix=UNRECOGNIZED_VERSION
+
+# RUN: llvm-mc -filetype=obj -triple=riscv64 merge_version_test_input.s -o merge_version_test_input.o
+# RUN: ld.lld -e 0 unrecognized_version.o merge_version_test_input.o -o out3 2>&1 | count 0
+# RUN: llvm-readobj --arch-specific out3 | FileCheck %s --check-prefix=CHECK3
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64 invalid_arch1.s -o invalid_arch1.o
-# RUN: ld.lld -e 0 invalid_arch1.o -o invalid_arch1
-# RUN: llvm-readobj --arch-specific invalid_arch1 | FileCheck %s --check-prefix=INVALID_ARCH1
+# RUN: not ld.lld invalid_arch1.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=INVALID_ARCH1 --implicit-check-not=error:
+# INVALID_ARCH1: error: invalid_arch1.o:(.riscv.attributes): rv64i2: extension lacks version in expected format
 
 ## A zero value attribute is not printed.
 # RUN: llvm-mc -filetype=obj -triple=riscv64 unaligned_access_0.s -o unaligned_access_0.o
@@ -121,6 +125,23 @@
 # CHECK2-NEXT:   }
 # CHECK2-NEXT: }
 
+# CHECK3:      BuildAttributes {
+# CHECK3-NEXT:   FormatVersion: 0x41
+# CHECK3-NEXT:   Section 1 {
+# CHECK3-NEXT:     SectionLength: 26
+# CHECK3-NEXT:     Vendor: riscv
+# CHECK3-NEXT:     Tag: Tag_File (0x1)
+# CHECK3-NEXT:     Size: 16
+# CHECK3-NEXT:     FileAttributes {
+# CHECK3-NEXT:       Attribute {
+# CHECK3-NEXT:         Tag: 5
+# CHECK3-NEXT:         TagName: arch
+# CHECK3-NEXT:         Value: rv64i99p0
+# CHECK3-NEXT:       }
+# CHECK3-NEXT:     }
+# CHECK3-NEXT:   }
+# CHECK3-NEXT: }
+
 #--- a.s
 .attribute stack_align, 16
 .attribute arch, "rv64i2p0_m2p0_a2p0_f2p0_d2p0_c2p0"
@@ -140,6 +161,22 @@
 .attribute priv_spec_minor, 2
 
 #--- unrecognized_ext1.s
+# UNRECOGNIZED_EXT1:      BuildAttributes {
+# UNRECOGNIZED_EXT1-NEXT:   FormatVersion: 0x41
+# UNRECOGNIZED_EXT1-NEXT:   Section 1 {
+# UNRECOGNIZED_EXT1-NEXT:     SectionLength: 30
+# UNRECOGNIZED_EXT1-NEXT:     Vendor: riscv
+# UNRECOGNIZED_EXT1-NEXT:     Tag: Tag_File (0x1)
+# UNRECOGNIZED_EXT1-NEXT:     Size: 20
+# UNRECOGNIZED_EXT1-NEXT:     FileAttributes {
+# UNRECOGNIZED_EXT1-NEXT:       Attribute {
+# UNRECOGNIZED_EXT1-NEXT:         Tag: 5
+# UNRECOGNIZED_EXT1-NEXT:         TagName: arch
+# UNRECOGNIZED_EXT1-NEXT:         Value: rv64i2p0_y2p0
+# UNRECOGNIZED_EXT1-NEXT:       }
+# UNRECOGNIZED_EXT1-NEXT:     }
+# UNRECOGNIZED_EXT1-NEXT:   }
+# UNRECOGNIZED_EXT1-NEXT: }
 .section .riscv.attributes,"",@0x70000003
 .byte 0x41
 .long .Lend-.riscv.attributes-1
@@ -152,6 +189,22 @@
 .Lend:
 
 #--- unrecognized_ext2.s
+# UNRECOGNIZED_EXT2:      BuildAttributes {
+# UNRECOGNIZED_EXT2-NEXT:   FormatVersion: 0x41
+# UNRECOGNIZED_EXT2-NEXT:   Section 1 {
+# UNRECOGNIZED_EXT2-NEXT:     SectionLength: 36
+# UNRECOGNIZED_EXT2-NEXT:     Vendor: riscv
+# UNRECOGNIZED_EXT2-NEXT:     Tag: Tag_File (0x1)
+# UNRECOGNIZED_EXT2-NEXT:     Size: 26
+# UNRECOGNIZED_EXT2-NEXT:     FileAttributes {
+# UNRECOGNIZED_EXT2-NEXT:       Attribute {
+# UNRECOGNIZED_EXT2-NEXT:         Tag: 5
+# UNRECOGNIZED_EXT2-NEXT:         TagName: arch
+# UNRECOGNIZED_EXT2-NEXT:         Value: rv64i2p0_zmadeup1p0
+# UNRECOGNIZED_EXT2-NEXT:       }
+# UNRECOGNIZED_EXT2-NEXT:     }
+# UNRECOGNIZED_EXT2-NEXT:   }
+# UNRECOGNIZED_EXT2-NEXT: }
 .section .riscv.attributes,"",@0x70000003
 .byte 0x41
 .long .Lend-.riscv.attributes-1
@@ -164,6 +217,22 @@
 .Lend:
 
 #--- unrecognized_version.s
+# UNRECOGNIZED_VERSION:      BuildAttributes {
+# UNRECOGNIZED_VERSION-NEXT:   FormatVersion: 0x41
+# UNRECOGNIZED_VERSION-NEXT:   Section 1 {
+# UNRECOGNIZED_VERSION-NEXT:     SectionLength: 26
+# UNRECOGNIZED_VERSION-NEXT:     Vendor: riscv
+# UNRECOGNIZED_VERSION-NEXT:     Tag: Tag_File (0x1)
+# UNRECOGNIZED_VERSION-NEXT:     Size: 16
+# UNRECOGNIZED_VERSION-NEXT:     FileAttributes {
+# UNRECOGNIZED_VERSION-NEXT:       Attribute {
+# UNRECOGNIZED_VERSION-NEXT:         Tag: 5
+# UNRECOGNIZED_VERSION-NEXT:         TagName: arch
+# UNRECOGNIZED_VERSION-NEXT:         Value: rv64i99p0
+# UNRECOGNIZED_VERSION-NEXT:       }
+# UNRECOGNIZED_VERSION-NEXT:     }
+# UNRECOGNIZED_VERSION-NEXT:   }
+# UNRECOGNIZED_VERSION-NEXT: }
 .section .riscv.attributes,"",@0x70000003
 .byte 0x41
 .long .Lend-.riscv.attributes-1
@@ -175,23 +244,19 @@
 .asciz "rv64i99p0"
 .Lend:
 
+#--- merge_version_test_input.s
+.section .riscv.attributes,"",@0x70000003
+.byte 0x41
+.long .Lend-.riscv.attributes-1
+.asciz "riscv"  # vendor
+.Lbegin:
+.byte 1  # Tag_File
+.long .Lend-.Lbegin
+.byte 5  # Tag_RISCV_arch
+.asciz "rv64i2p1"
+.Lend:
+
 #--- invalid_arch1.s
-# INVALID_ARCH1:      BuildAttributes {
-# INVALID_ARCH1-NEXT:   FormatVersion: 0x41
-# INVALID_ARCH1-NEXT:   Section 1 {
-# INVALID_ARCH1-NEXT:     SectionLength: 25
-# INVALID_ARCH1-NEXT:     Vendor: riscv
-# INVALID_ARCH1-NEXT:     Tag: Tag_File (0x1)
-# INVALID_ARCH1-NEXT:     Size: 15
-# INVALID_ARCH1-NEXT:     FileAttributes {
-# INVALID_ARCH1-NEXT:       Attribute {
-# INVALID_ARCH1-NEXT:         Tag: 5
-# INVALID_ARCH1-NEXT:         TagName: arch
-# INVALID_ARCH1-NEXT:         Value: rv64i2p0
-# INVALID_ARCH1-NEXT:       }
-# INVALID_ARCH1-NEXT:     }
-# INVALID_ARCH1-NEXT:   }
-# INVALID_ARCH1-NEXT: }
 .section .riscv.attributes,"",@0x70000003
 .byte 0x41
 .long .Lend-.riscv.attributes-1
