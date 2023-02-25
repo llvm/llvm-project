@@ -3934,6 +3934,8 @@ void Parser::ParseDeclarationSpecifiers(
       isStorageClass = true;
       break;
     case tok::kw_thread_local:
+      if (getLangOpts().C2x)
+        Diag(Tok, diag::warn_c2x_compat_keyword) << Tok.getName();
       isInvalid = DS.SetStorageClassSpecThread(DeclSpec::TSCS_thread_local, Loc,
                                                PrevSpec, DiagID);
       isStorageClass = true;
@@ -4169,6 +4171,9 @@ void Parser::ParseDeclarationSpecifiers(
                                      DiagID, Policy);
       break;
     case tok::kw_bool:
+      if (getLangOpts().C2x)
+        Diag(Tok, diag::warn_c2x_compat_keyword) << Tok.getName();
+      [[fallthrough]];
     case tok::kw__Bool:
       if (Tok.is(tok::kw__Bool) && !getLangOpts().C99)
         Diag(Tok, diag::ext_c99_feature) << Tok.getName();
@@ -7657,8 +7662,7 @@ void Parser::ParseTypeofSpecifier(DeclSpec &DS) {
   bool IsUnqual = Tok.is(tok::kw_typeof_unqual);
   const IdentifierInfo *II = Tok.getIdentifierInfo();
   if (getLangOpts().C2x && !II->getName().startswith("__"))
-    Diag(Tok.getLocation(), diag::warn_c2x_compat_typeof_type_specifier)
-        << IsUnqual;
+    Diag(Tok.getLocation(), diag::warn_c2x_compat_keyword) << Tok.getName();
 
   Token OpTok = Tok;
   SourceLocation StartLoc = ConsumeToken();
@@ -7858,7 +7862,7 @@ void Parser::DiagnoseBitIntUse(const Token &Tok) {
     // In C2x mode, diagnose that the use is not compatible with pre-C2x modes.
     // Otherwise, diagnose that the use is a Clang extension.
     if (getLangOpts().C2x)
-      Diag(Loc, diag::warn_c17_compat_bit_int);
+      Diag(Loc, diag::warn_c2x_compat_keyword) << Tok.getName();
     else
       Diag(Loc, diag::ext_bit_int) << getLangOpts().CPlusPlus;
   }
