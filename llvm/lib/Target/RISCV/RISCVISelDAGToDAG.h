@@ -86,6 +86,14 @@ public:
     return selectShiftMask(N, 32, ShAmt);
   }
 
+  bool selectCondOp(SDValue N, bool Inverse, SDValue &Val);
+  bool selectCondOp(SDValue N, SDValue &Val) {
+    return selectCondOp(N, /*Inverse*/ false, Val);
+  }
+  bool selectInverseCondOp(SDValue N, SDValue &Val) {
+    return selectCondOp(N, /*Inverse*/ true, Val);
+  }
+
   bool selectSExtBits(SDValue N, unsigned Bits, SDValue &Val);
   template <unsigned Bits> bool selectSExtBits(SDValue N, SDValue &Val) {
     return selectSExtBits(N, Bits, Val);

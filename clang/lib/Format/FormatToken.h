@@ -377,6 +377,11 @@ public:
   /// binary operator.
   TokenType getType() const { return Type; }
   void setType(TokenType T) {
+    // If this token is a macro argument while formatting an unexpanded macro
+    // call, we do not change its type any more - the type was deduced from
+    // formatting the expanded macro stream already.
+    if (MacroCtx && MacroCtx->Role == MR_UnexpandedArg)
+      return;
     assert((!TypeIsFinalized || T == Type) &&
            "Please use overwriteFixedType to change a fixed type.");
     Type = T;

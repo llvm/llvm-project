@@ -69,7 +69,8 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
           if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
             return static_cast<float>(FPBits(FPBits::MAX_NORMAL));
 
-          errno = ERANGE;
+          fputil::set_errno_if_required(ERANGE);
+          fputil::raise_except_if_required(FE_OVERFLOW);
         }
         return x + static_cast<float>(FPBits::inf());
       }

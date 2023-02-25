@@ -107,6 +107,7 @@ if(LLVM_LIBC_ENABLE_LINTING)
           The path to the clang-tidy binary can be set manually by passing
           -DLLVM_LIBC_CLANG_TIDY=<path/to/clang-tidy> to CMake.")
       endif()
+      add_custom_target(libc-lint)
     else()
       message(FATAL_ERROR "
         Linting is enabled but 'clang-tidy' is not found!

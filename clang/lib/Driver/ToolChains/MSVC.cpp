@@ -336,6 +336,11 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       }
     }
 
+    // Clang handles passing the proper asan libs to the linker, which goes
+    // against link.exe's /INFERASANLIBS which automatically finds asan libs.
+    if (TC.getSanitizerArgs(Args).needsAsanRt())
+      CmdArgs.push_back("/INFERASANLIBS:NO");
+
 #ifdef _WIN32
     // When cross-compiling with VS2017 or newer, link.exe expects to have
     // its containing bin directory at the top of PATH, followed by the

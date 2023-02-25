@@ -42,13 +42,16 @@ TEST(LlvmLibcExp2fTest, SpecialNumbers) {
 
 TEST(LlvmLibcExp2fTest, Overflow) {
   errno = 0;
-  EXPECT_FP_EQ(inf, __llvm_libc::exp2f(float(FPBits(0x7f7fffffU))));
+  EXPECT_FP_EQ_WITH_EXCEPTION(
+      inf, __llvm_libc::exp2f(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
-  EXPECT_FP_EQ(inf, __llvm_libc::exp2f(float(FPBits(0x43000000U))));
+  EXPECT_FP_EQ_WITH_EXCEPTION(
+      inf, __llvm_libc::exp2f(float(FPBits(0x43000000U))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
-  EXPECT_FP_EQ(inf, __llvm_libc::exp2f(float(FPBits(0x43000001U))));
+  EXPECT_FP_EQ_WITH_EXCEPTION(
+      inf, __llvm_libc::exp2f(float(FPBits(0x43000001U))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 }
 
@@ -79,7 +82,8 @@ TEST(LlvmLibcExp2fTest, TrickyInputs) {
 
 TEST(LlvmLibcExp2fTest, Underflow) {
   errno = 0;
-  EXPECT_FP_EQ(0.0f, __llvm_libc::exp2f(float(FPBits(0xff7fffffU))));
+  EXPECT_FP_EQ_WITH_EXCEPTION(
+      0.0f, __llvm_libc::exp2f(float(FPBits(0xff7fffffU))), FE_UNDERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   float x = float(FPBits(0xc3158000U));
