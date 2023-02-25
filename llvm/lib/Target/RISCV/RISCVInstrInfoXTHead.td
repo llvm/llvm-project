@@ -106,6 +106,14 @@ class THShiftW_ri<bits<7> funct7, bits<3> funct3, string opcodestr>
                     (ins GPR:$rs1, uimm5:$shamt),
                     opcodestr, "$rd, $rs1, $shamt">;
 
+let Predicates = [HasVendorXTHeadCondMov], DecoderNamespace = "THeadCondMov",
+    hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCommutable = 1 in
+class THCondMov_rr<bits<7> funct7, string opcodestr>
+    : RVInstR<funct7, 0b001, OPC_CUSTOM_0, (outs GPR:$rd_wb),
+              (ins GPR:$rd, GPR:$rs1, GPR:$rs2),
+              opcodestr, "$rd, $rs1, $rs2"> {
+  let Constraints = "$rd_wb = $rd";
+}
 
 let Predicates = [HasVendorXTHeadMac], DecoderNamespace = "THeadMac",
     hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCommutable = 1 in
@@ -249,6 +257,11 @@ let IsSignExtendingOpW = 1 in
 def TH_TST : RVBShift_ri<0b10001, 0b001, OPC_CUSTOM_0, "th.tst">,
              Sched<[WriteSingleBitImm, ReadSingleBitImm]>;
 } // Predicates = [HasVendorXTHeadBs]
+
+let Predicates = [HasVendorXTHeadCondMov] in {
+def TH_MVEQZ  : THCondMov_rr<0b0100000, "th.mveqz">;
+def TH_MVNEZ  : THCondMov_rr<0b0100001, "th.mvnez">;
+} // Predicates = [HasVendorXTHeadCondMov]
 
 let Predicates = [HasVendorXTHeadMac] in {
 def TH_MULA  : THMulAccumulate_rr<0b0010000, "th.mula">;
@@ -624,6 +637,21 @@ def : Pat<(and (srl GPR:$rs1, uimmlog2xlen:$shamt), 1),
 def : Pat<(seteq (and GPR:$rs1, SingleBitSetMask:$mask), 0),
           (TH_TST (XORI GPR:$rs1, -1), SingleBitSetMask:$mask)>;
 } // Predicates = [HasVendorXTHeadBs]
+
+let Predicates = [HasVendorXTHeadCondMov] in {
+def : Pat<(select invcondop:$cond, GPR:$a, GPR:$b),
+          (TH_MVNEZ $a, $b, $cond)>;
+def : Pat<(select condop:$cond, GPR:$a, GPR:$b),
+          (TH_MVEQZ $a, $b, $cond)>;
+def : Pat<(select invcondop:$cond, GPR:$a, (XLenVT 0)),
+          (TH_MVNEZ $a, X0, $cond)>;
+def : Pat<(select condop:$cond, GPR:$a, (XLenVT 0)),
+          (TH_MVEQZ $a, X0, $cond)>;
+def : Pat<(select invcondop:$cond, (XLenVT 0), GPR:$b),
+          (TH_MVEQZ $b, X0, $cond)>;
+def : Pat<(select condop:$cond,  (XLenVT 0), GPR:$b),
+          (TH_MVNEZ $b, X0, $cond)>;
+} // Predicates = [HasVendorXTHeadCondMov]
 
 let Predicates = [HasVendorXTHeadMac] in {
 def : Pat<(add GPR:$rd, (mul GPR:$rs1, GPR:$rs2)), (TH_MULA GPR:$rd, GPR:$rs1, GPR:$rs2)>;
