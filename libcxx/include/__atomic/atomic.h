@@ -14,6 +14,7 @@
 #include <__atomic/cxx_atomic_impl.h>
 #include <__atomic/memory_order.h>
 #include <__config>
+#include <__memory/addressof.h>
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/remove_pointer.h>
@@ -82,28 +83,28 @@ struct atomic<_Tp*>
     _Tp* fetch_add(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
         // __atomic_fetch_add accepts function pointers, guard against them.
         static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
-        return std::__cxx_atomic_fetch_add(&this->__a_, __op, __m);
+        return std::__cxx_atomic_fetch_add(std::addressof(this->__a_), __op, __m);
     }
 
     _LIBCPP_HIDE_FROM_ABI
     _Tp* fetch_add(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
         // __atomic_fetch_add accepts function pointers, guard against them.
         static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
-        return std::__cxx_atomic_fetch_add(&this->__a_, __op, __m);
+        return std::__cxx_atomic_fetch_add(std::addressof(this->__a_), __op, __m);
     }
 
     _LIBCPP_HIDE_FROM_ABI
     _Tp* fetch_sub(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
         // __atomic_fetch_add accepts function pointers, guard against them.
         static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
-        return std::__cxx_atomic_fetch_sub(&this->__a_, __op, __m);
+        return std::__cxx_atomic_fetch_sub(std::addressof(this->__a_), __op, __m);
     }
 
     _LIBCPP_HIDE_FROM_ABI
     _Tp* fetch_sub(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
         // __atomic_fetch_add accepts function pointers, guard against them.
         static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
-        return std::__cxx_atomic_fetch_sub(&this->__a_, __op, __m);
+        return std::__cxx_atomic_fetch_sub(std::addressof(this->__a_), __op, __m);
     }
 
     _LIBCPP_HIDE_FROM_ABI
@@ -160,7 +161,7 @@ _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI
 void
 atomic_init(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
-    std::__cxx_atomic_init(&__o->__a_, __d);
+    std::__cxx_atomic_init(std::addressof(__o->__a_), __d);
 }
 
 template <class _Tp>
@@ -168,7 +169,7 @@ _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI
 void
 atomic_init(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
-    std::__cxx_atomic_init(&__o->__a_, __d);
+    std::__cxx_atomic_init(std::addressof(__o->__a_), __d);
 }
 
 // atomic_store
