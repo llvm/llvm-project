@@ -173,6 +173,11 @@ Changes in existing checks
   :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check.
 
+- Fixed a false positive in :doc:`readability-container-size-empty
+  <clang-tidy/checks/readability/container-size-empty>` check when comparing
+  ``std::array`` objects to default constructed ones. The behavior for this and
+  other relevant classes can now be configured with a new option.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
