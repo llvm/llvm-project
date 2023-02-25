@@ -4,14 +4,23 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+avx512f,+avx512bw,+avx512vl,+avx512dq,+avx512vbmi | FileCheck --check-prefixes=CHECK,SKX %s
 
 define <16 x float> @test1(<16 x float> %x, ptr %br, float %y) nounwind {
-; CHECK-LABEL: test1:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm0[0],mem[0],xmm0[2,3]
-; CHECK-NEXT:    vinsertf32x4 $0, %xmm2, %zmm0, %zmm2
-; CHECK-NEXT:    vbroadcastss %xmm1, %zmm1
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm0 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,30,15]
-; CHECK-NEXT:    vpermi2ps %zmm1, %zmm2, %zmm0
-; CHECK-NEXT:    retq
+; KNL-LABEL: test1:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm0[0],mem[0],xmm0[2,3]
+; KNL-NEXT:    vinsertf32x4 $0, %xmm2, %zmm0, %zmm0
+; KNL-NEXT:    movw $16384, %ax ## imm = 0x4000
+; KNL-NEXT:    kmovw %eax, %k1
+; KNL-NEXT:    vbroadcastss %xmm1, %zmm0 {%k1}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test1:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vinsertps {{.*#+}} xmm2 = xmm0[0],mem[0],xmm0[2,3]
+; SKX-NEXT:    vinsertf32x4 $0, %xmm2, %zmm0, %zmm0
+; SKX-NEXT:    movw $16384, %ax ## imm = 0x4000
+; SKX-NEXT:    kmovd %eax, %k1
+; SKX-NEXT:    vbroadcastss %xmm1, %zmm0 {%k1}
+; SKX-NEXT:    retq
   %rrr = load float, ptr %br
   %rrr2 = insertelement <16 x float> %x, float %rrr, i32 1
   %rrr3 = insertelement <16 x float> %rrr2, float %y, i32 14
