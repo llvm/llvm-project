@@ -676,9 +676,9 @@ def : Pat<(binop_allwusers<sub> GPR:$rd, (mul
 } // Predicates = [HasVendorXTHeadMac, IsRV64]
 
 let Predicates = [HasVendorXTHeadMac, IsRV32] in {
-def : Pat<(i32 (add GPR:$rd, (mul (sexti16 GPR:$rs1), (sexti16 GPR:$rs2)))),
-          (TH_MULAH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (sub GPR:$rd, (mul (sexti16 GPR:$rs1), (sexti16 GPR:$rs2)))),
+def : Pat<(add GPR:$rd, (mul (sexti16 GPR:$rs1), (sexti16 GPR:$rs2))),
+         (TH_MULAH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+def : Pat<(sub GPR:$rd, (mul (sexti16 GPR:$rs1), (sexti16 GPR:$rs2))),
           (TH_MULSH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasVendorXTHeadMac, IsRV32]
 
@@ -761,7 +761,7 @@ def TH_SYNC_IS     : THCacheInst_void<0b11011, "th.sync.is">;
 
 def AddrRegRegScale : ComplexPattern<iPTR, 3, "SelectAddrRegRegScale<3>">;
 def AddrRegZextRegScale
-    : ComplexPattern<i64, 3, "SelectAddrRegZextRegScale<3, 32>",
+    : ComplexPattern<iPTR, 3, "SelectAddrRegZextRegScale<3, 32>",
                      [], [], 10>;
 
 multiclass LdIdxPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT> {
@@ -769,7 +769,7 @@ def : Pat<(vt (LoadOp (AddrRegRegScale GPR:$rs1, GPR:$rs2, uimm2:$uimm2))),
           (Inst GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 }
 
-multiclass LdZextIdxPat<PatFrag LoadOp, RVInst Inst, ValueType vt = i64> {
+multiclass LdZextIdxPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT> {
 def : Pat<(vt (LoadOp (AddrRegZextRegScale GPR:$rs1, GPR:$rs2, uimm2:$uimm2))),
           (Inst GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 }
@@ -782,7 +782,7 @@ def : Pat<(StoreOp (vt StTy:$rd),
 }
 
 multiclass StZextIdxPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
-                        ValueType vt = i64> {
+                        ValueType vt = XLenVT> {
 def : Pat<(StoreOp (vt StTy:$rd),
             (AddrRegZextRegScale GPR:$rs1, GPR:$rs2, uimm2:$uimm2)),
           (Inst StTy:$rd, GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
@@ -802,8 +802,8 @@ defm : StIdxPat<truncstorei16, TH_SRH, GPR>;
 }
 
 let Predicates = [HasVendorXTHeadMemIdx, IsRV32] in {
-defm : LdIdxPat<load, TH_LRW, i32>;
-defm : StIdxPat<store, TH_SRW, GPR, i32>;
+defm : LdIdxPat<load, TH_LRW>;
+defm : StIdxPat<store, TH_SRW, GPR>;
 }
 
 let Predicates = [HasVendorXTHeadMemIdx, IsRV64] in {
@@ -815,22 +815,22 @@ defm : LdZextIdxPat<extloadi16, TH_LURH>;
 defm : LdZextIdxPat<sextloadi16, TH_LURH>;
 defm : LdZextIdxPat<zextloadi16, TH_LURHU>;
 
-defm : LdIdxPat<extloadi32, TH_LRW, i64>;
-defm : LdIdxPat<sextloadi32, TH_LRW, i64>;
-defm : LdIdxPat<zextloadi32, TH_LRWU, i64>;
+defm : LdIdxPat<extloadi32, TH_LRW>;
+defm : LdIdxPat<sextloadi32, TH_LRW>;
+defm : LdIdxPat<zextloadi32, TH_LRWU>;
 
 defm : LdZextIdxPat<extloadi32, TH_LURW>;
 defm : LdZextIdxPat<sextloadi32, TH_LURW>;
 defm : LdZextIdxPat<zextloadi32, TH_LURWU>;
 
-defm : LdIdxPat<load, TH_LRD, i64>;
+defm : LdIdxPat<load, TH_LRD>;
 defm : LdZextIdxPat<load, TH_LURD>;
 
 defm : StZextIdxPat<truncstorei8, TH_SURB, GPR>;
 defm : StZextIdxPat<truncstorei16, TH_SURH, GPR>;
-defm : StIdxPat<truncstorei32, TH_SRW, GPR, i64>;
-defm : StZextIdxPat<truncstorei32, TH_SURW, GPR, i64>;
-defm : StIdxPat<store, TH_SRD, GPR, i64>;
+defm : StIdxPat<truncstorei32, TH_SRW, GPR>;
+defm : StZextIdxPat<truncstorei32, TH_SURW, GPR>;
+defm : StIdxPat<store, TH_SRD, GPR>;
 defm : StZextIdxPat<store, TH_SURD, GPR>;
 }
 
