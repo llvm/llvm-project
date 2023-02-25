@@ -63,8 +63,8 @@ int __kmp_init_counter = 0;
 int __kmp_root_counter = 0;
 int __kmp_version = 0;
 
-std::atomic<kmp_int32> __kmp_team_counter = ATOMIC_VAR_INIT(0);
-std::atomic<kmp_int32> __kmp_task_counter = ATOMIC_VAR_INIT(0);
+std::atomic<kmp_int32> __kmp_team_counter = 0;
+std::atomic<kmp_int32> __kmp_task_counter = 0;
 
 size_t __kmp_stksize = KMP_DEFAULT_STKSIZE;
 #if KMP_USE_MONITOR
@@ -386,7 +386,7 @@ int __kmp_debug_buf_atomic =
 
 char *__kmp_debug_buffer = NULL; /* Debug buffer itself */
 std::atomic<int> __kmp_debug_count =
-    ATOMIC_VAR_INIT(0); /* number of lines printed in buffer so far */
+    0; /* number of lines printed in buffer so far */
 int __kmp_debug_buf_warn_chars =
     0; /* Keep track of char increase recommended in warnings */
 /* end rotating debug buffer */
@@ -454,7 +454,7 @@ volatile kmp_info_t *__kmp_thread_pool = NULL;
 volatile kmp_team_t *__kmp_team_pool = NULL;
 
 KMP_ALIGN_CACHE
-std::atomic<int> __kmp_thread_pool_active_nth = ATOMIC_VAR_INIT(0);
+std::atomic<int> __kmp_thread_pool_active_nth = 0;
 
 /* -------------------------------------------------
  * GLOBAL/ROOT STATE */
