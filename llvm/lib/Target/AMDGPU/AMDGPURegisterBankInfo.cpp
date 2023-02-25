@@ -2948,7 +2948,11 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     executeInWaterfallLoop(MI, MRI, {3, 6});
     return;
   }
-  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD: {
+  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD:
+  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_UBYTE:
+  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SBYTE:
+  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_USHORT:
+  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SSHORT: {
     applyMappingSBufferLoad(OpdMapper);
     return;
   }
@@ -4251,7 +4255,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // initialized.
     break;
   }
-  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD: {
+  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD:
+  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_UBYTE:
+  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SBYTE:
+  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_USHORT:
+  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SSHORT: {
     // Lie and claim everything is legal, even though some need to be
     // SGPRs. applyMapping will have to deal with it as a waterfall loop.
     OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
