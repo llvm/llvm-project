@@ -1054,6 +1054,11 @@ void CheckHelper::CheckSubprogram(
             *host);
       }
     }
+    if (GetProgramUnitOrBlockConstructContaining(symbol).kind() ==
+        Scope::Kind::BlockConstruct) { // C1107
+      messages_.Say(symbol.name(),
+          "A statement function definition may not appear in a BLOCK construct"_err_en_US);
+    }
   }
   if (IsElementalProcedure(symbol)) {
     // See comment on the similar check in CheckProcEntity()

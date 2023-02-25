@@ -7692,7 +7692,6 @@ void ResolveNamesVisitor::Post(const parser::TypeGuardStmt &x) {
   ConstructVisitor::Post(x);
 }
 bool ResolveNamesVisitor::Pre(const parser::StmtFunctionStmt &x) {
-  CheckNotInBlock("STATEMENT FUNCTION"); // C1107
   if (HandleStmtFunction(x)) {
     return false;
   } else {
