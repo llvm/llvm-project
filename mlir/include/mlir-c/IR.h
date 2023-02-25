@@ -404,6 +404,10 @@ mlirOpPrintingFlagsPrintGenericOpForm(MlirOpPrintingFlags flags);
 MLIR_CAPI_EXPORTED void
 mlirOpPrintingFlagsUseLocalScope(MlirOpPrintingFlags flags);
 
+/// Do not verify the operation when using custom operation printers.
+MLIR_CAPI_EXPORTED void
+mlirOpPrintingFlagsAssumeVerified(MlirOpPrintingFlags flags);
+
 //===----------------------------------------------------------------------===//
 // Operation API.
 //===----------------------------------------------------------------------===//
