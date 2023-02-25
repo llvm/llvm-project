@@ -1329,6 +1329,18 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
   GlobalAddressSDNode *G = cast<GlobalAddressSDNode>(Op);
   const GlobalValue *GV = G->getGlobal();
 
+  if (G->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+    if (!MFI->isModuleEntryFunction()) {
+      if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV)) {
+        if (AMDGPUMachineFunction::isKnownAddressLDSGlobal(*GVar)) {
+          unsigned Offset =
+              AMDGPUMachineFunction::calculateKnownAddressOfLDSGlobal(*GVar);
+          return DAG.getConstant(Offset, SDLoc(Op), Op.getValueType());
+        }
+      }
+    }
+  }
+
   if (G->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
       G->getAddressSpace() == AMDGPUAS::REGION_ADDRESS) {
     if (!MFI->isModuleEntryFunction() &&

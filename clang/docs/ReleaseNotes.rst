@@ -94,6 +94,9 @@ C2x Feature Support
 - Implemented the ``unreachable`` macro in freestanding ``<stddef.h>`` for
   `WG14 N2826 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2826.pdf>`_
 
+- Removed the ``ATOMIC_VAR_INIT`` macro in C2x and later standards modes, which
+  implements `WG14 N2886 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2886.htm>`_
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 - Clang now saves the address of ABI-indirect function parameters on the stack,

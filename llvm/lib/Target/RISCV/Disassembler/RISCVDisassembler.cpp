@@ -520,6 +520,13 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       if (Result != MCDisassembler::Fail)
         return Result;
     }
+    if (STI.hasFeature(RISCV::FeatureVendorXTHeadCondMov)) {
+      LLVM_DEBUG(dbgs() << "Trying XTHeadCondMov custom opcode table:\n");
+      Result = decodeInstruction(DecoderTableTHeadCondMov32, MI, Insn, Address,
+                                 this, STI);
+      if (Result != MCDisassembler::Fail)
+        return Result;
+    }
     if (STI.hasFeature(RISCV::FeatureVendorXTHeadCmo)) {
       LLVM_DEBUG(dbgs() << "Trying XTHeadCmo custom opcode table:\n");
       Result = decodeInstruction(DecoderTableTHeadCmo32, MI, Insn, Address,

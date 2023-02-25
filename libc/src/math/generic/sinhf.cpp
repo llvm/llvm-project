@@ -42,7 +42,8 @@ LLVM_LIBC_FUNCTION(float, sinhf, (float x)) {
         return FPBits(FPBits::MAX_NORMAL).get_val();
     }
 
-    errno = ERANGE;
+    fputil::set_errno_if_required(ERANGE);
+    fputil::raise_except_if_required(FE_OVERFLOW);
 
     return x + FPBits::inf(sign).get_val();
   }
