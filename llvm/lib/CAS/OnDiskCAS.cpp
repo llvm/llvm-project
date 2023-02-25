@@ -147,9 +147,8 @@ bool cas::isOnDiskCASEnabled() {
 #endif
 }
 
-#if LLVM_ENABLE_ONDISK_CAS
-
 Expected<std::unique_ptr<ObjectStore>> cas::createOnDiskCAS(const Twine &Path) {
+#if LLVM_ENABLE_ONDISK_CAS
   // FIXME: An absolute path isn't really good enough. Should open a directory
   // and use openat() for files underneath.
   SmallString<256> AbsPath;
@@ -161,6 +160,9 @@ Expected<std::unique_ptr<ObjectStore>> cas::createOnDiskCAS(const Twine &Path) {
     AbsPath = StringRef(getDefaultOnDiskCASPath());
 
   return OnDiskCAS::open(AbsPath);
+#else
+  return createStringError(inconvertibleErrorCode(), "OnDiskCAS is disabled");
+#endif /* LLVM_ENABLE_ONDISK_CAS */
 }
 
 std::unique_ptr<ObjectStore>
@@ -168,20 +170,6 @@ cas::builtin::createObjectStoreFromUnifiedOnDiskCache(
     std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB) {
   return std::make_unique<OnDiskCAS>(std::move(UniDB));
 }
-
-#else /* LLVM_ENABLE_ONDISK_CAS */
-
-Expected<std::unique_ptr<ObjectStore>> cas::createOnDiskCAS(const Twine &Path) {
-  return createStringError(inconvertibleErrorCode(), "OnDiskCAS is disabled");
-}
-
-std::unique_ptr<ObjectStore>
-cas::builtin::createObjectStoreFromUnifiedOnDiskCache(
-    std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB) {
-  return createStringError(inconvertibleErrorCode(), "OnDiskCAS is disabled");
-}
-
-#endif /* LLVM_ENABLE_ONDISK_CAS */
 
 static constexpr StringLiteral DefaultName = "cas";
 
