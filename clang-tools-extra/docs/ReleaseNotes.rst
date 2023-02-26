@@ -173,6 +173,11 @@ Changes in existing checks
   :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check.
 
+- Renamed `HungarianNotation.CString` options `CharPrinter` and
+  `WideCharPrinter` to `CharPointer` and `WideCharPointer` respectively in
+  :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>` check.
+
 - Fixed a false positive in :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check when comparing
   ``std::array`` objects to default constructed ones. The behavior for this and
