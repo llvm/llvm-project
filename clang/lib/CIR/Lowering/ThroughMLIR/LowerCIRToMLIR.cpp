@@ -302,7 +302,7 @@ public:
     case mlir::cir::BinOpKind::Div:
       if (type.isa<mlir::IntegerType>()) {
         if (type.isSignlessInteger())
-          rewriter.replaceOpWithNewOp<mlir::arith::DivSIOp>(
+          rewriter.replaceOpWithNewOp<mlir::arith::DivUIOp>(
               op, op.getType(), op.getLhs(), op.getRhs());
         else
           llvm_unreachable("integer type not supported in CIR yet");
@@ -313,7 +313,7 @@ public:
     case mlir::cir::BinOpKind::Rem:
       if (type.isa<mlir::IntegerType>()) {
         if (type.isSignlessInteger())
-          rewriter.replaceOpWithNewOp<mlir::arith::RemSIOp>(
+          rewriter.replaceOpWithNewOp<mlir::arith::RemUIOp>(
               op, op.getType(), op.getLhs(), op.getRhs());
         else
           llvm_unreachable("integer type not supported in CIR yet");
@@ -339,7 +339,7 @@ public:
       break;
     case mlir::cir::BinOpKind::Shr:
       if (type.isSignlessInteger())
-        rewriter.replaceOpWithNewOp<mlir::arith::ShRSIOp>(
+        rewriter.replaceOpWithNewOp<mlir::arith::ShRUIOp>(
             op, op.getType(), op.getLhs(), op.getRhs());
       else
         llvm_unreachable("integer type not supported in CIR yet");
