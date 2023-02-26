@@ -441,30 +441,14 @@ void FreeBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                    concat(getDriver().SysRoot, "/usr/include/c++/v1"));
 }
 
-void FreeBSD::addLibStdCxxIncludePaths(
-    const llvm::opt::ArgList &DriverArgs,
-    llvm::opt::ArgStringList &CC1Args) const {
-  addLibStdCXXIncludePaths(concat(getDriver().SysRoot, "/usr/include/c++/4.2"),
-                           "", "", DriverArgs, CC1Args);
-}
-
 void FreeBSD::AddCXXStdlibLibArgs(const ArgList &Args,
                                   ArgStringList &CmdArgs) const {
-  CXXStdlibType Type = GetCXXStdlibType(Args);
   unsigned Major = getTriple().getOSMajorVersion();
   bool Profiling = Args.hasArg(options::OPT_pg) && Major != 0 && Major < 14;
 
-  switch (Type) {
-  case ToolChain::CST_Libcxx:
-    CmdArgs.push_back(Profiling ? "-lc++_p" : "-lc++");
-    if (Args.hasArg(options::OPT_fexperimental_library))
-      CmdArgs.push_back("-lc++experimental");
-    break;
-
-  case ToolChain::CST_Libstdcxx:
-    CmdArgs.push_back(Profiling ? "-lstdc++_p" : "-lstdc++");
-    break;
-  }
+  CmdArgs.push_back(Profiling ? "-lc++_p" : "-lc++");
+  if (Args.hasArg(options::OPT_fexperimental_library))
+    CmdArgs.push_back("-lc++experimental");
 }
 
 void FreeBSD::AddCudaIncludeArgs(const ArgList &DriverArgs,
