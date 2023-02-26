@@ -526,9 +526,14 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    return matchAndRewrite(cast<SourceOp>(op),
-                           OpAdaptor(operands, op->getAttrDictionary()),
-                           rewriter);
+    auto sourceOp = cast<SourceOp>(op);
+    if constexpr (SourceOp::hasProperties())
+      return matchAndRewrite(sourceOp,
+                             OpAdaptor(operands, op->getAttrDictionary(),
+                                       sourceOp.getProperties()),
+                             rewriter);
+    return matchAndRewrite(
+        sourceOp, OpAdaptor(operands, op->getAttrDictionary()), rewriter);
   }
 
   /// Rewrite and Match methods that operate on the SourceOp type. These must be

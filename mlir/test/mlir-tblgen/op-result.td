@@ -152,7 +152,7 @@ def OpL3 : NS_Op<"op_with_all_types_constraint",
 
 // CHECK-LABEL: LogicalResult OpL3::inferReturnTypes
 // CHECK-NOT: }
-// CHECK: ::mlir::Type odsInferredType0 = attributes.get("a").cast<::mlir::TypedAttr>().getType();
+// CHECK: ::mlir::Type odsInferredType0 = odsInferredTypeAttr0.getType();
 // CHECK: inferredReturnTypes[0] = odsInferredType0;
 
 def OpL4 : NS_Op<"two_inference_edges", [
