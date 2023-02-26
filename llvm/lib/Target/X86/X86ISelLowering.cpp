@@ -16960,8 +16960,7 @@ static SDValue splitAndLowerShuffle(const SDLoc &DL, MVT VT, SDValue V1,
     // Because the lowering happens after all combining takes place, we need to
     // manually combine these blend masks as much as possible so that we create
     // a minimal number of high-level vector shuffle nodes.
-
-    assert(!SimpleOnly || (!UseHiV1 && !UseHiV2) && "Shuffle won't be simple");
+    assert((!SimpleOnly || (!UseHiV1 && !UseHiV2)) && "Shuffle isn't simple");
 
     // First try just blending the halves of V1 or V2.
     if (!UseLoV1 && !UseHiV1 && !UseLoV2 && !UseHiV2)
