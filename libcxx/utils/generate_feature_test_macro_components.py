@@ -535,6 +535,10 @@ feature_test_macros = [ add_version_header(x) for x in [
     "values": { "c++20": 202106 },
     "headers": ["algorithm", "functional", "iterator", "memory", "ranges"],
   }, {
+    "name": "__cpp_lib_ranges_as_rvalue",
+    "values": { "c++2b": 202207 },
+    "headers": ["ranges"],
+  }, {
     "name": "__cpp_lib_ranges_chunk",
     "values": { "c++2b": 202202 },
     "headers": ["ranges"],
