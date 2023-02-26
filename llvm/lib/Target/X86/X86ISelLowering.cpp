@@ -19855,6 +19855,16 @@ static bool canCombineAsMaskOperation(SDValue V1, SDValue V2,
     case ISD::SUB:
     case ISD::AND:
     case ISD::XOR:
+    case ISD::OR:
+    case ISD::SMAX:
+    case ISD::SMIN:
+    case ISD::UMAX:
+    case ISD::UMIN:
+    case ISD::ABS:
+    case ISD::SHL:
+    case ISD::SRL:
+    case ISD::SRA:
+    case ISD::MUL:
       break;
     }
     if (!V->hasOneUse())
