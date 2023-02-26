@@ -13,7 +13,7 @@
 #ifndef MLIR_TOOLS_MLIROPT_MLIROPTMAIN_H
 #define MLIR_TOOLS_MLIROPT_MLIROPTMAIN_H
 
-#include "mlir/Debug/BreakpointManagers/FileLineColLocBreakpointManager.h"
+#include "mlir/Debug/CLOptionsSetup.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -30,9 +30,6 @@ namespace mlir {
 class DialectRegistry;
 class PassPipelineCLParser;
 class PassManager;
-namespace tracing {
-class FileLineColLocBreakpointManager;
-}
 
 /// Configuration options for the mlir-opt tool.
 /// This is intended to help building tools like mlir-opt by collecting the
@@ -64,6 +61,14 @@ public:
     return allowUnregisteredDialectsFlag;
   }
 
+  /// Set the debug configuration to use.
+  MlirOptMainConfig &setDebugConfig(tracing::DebugConfig config) {
+    debugConfig = std::move(config);
+    return *this;
+  }
+  tracing::DebugConfig &getDebugConfig() { return debugConfig; }
+  const tracing::DebugConfig &getDebugConfig() const { return debugConfig; }
+
   /// Print the pass-pipeline as text before executing.
   MlirOptMainConfig &dumpPassPipeline(bool dump) {
     dumpPassPipelineFlag = dump;
@@ -78,43 +83,12 @@ public:
   }
   bool shouldEmitBytecode() const { return emitBytecodeFlag; }
 
-  /// Enable the debugger action hook: it makes the debugger able to intercept
-  /// MLIR Actions.
-  void enableDebuggerActionHook(bool enabled = true) {
-    enableDebuggerActionHookFlag = enabled;
-  }
-
-  /// Return true if the Debugger action hook is enabled.
-  bool isDebuggerActionHookEnabled() const {
-    return enableDebuggerActionHookFlag;
-  }
-
   /// Set the IRDL file to load before processing the input.
   MlirOptMainConfig &setIrdlFile(StringRef file) {
     irdlFileFlag = file;
     return *this;
   }
   StringRef getIrdlFile() const { return irdlFileFlag; }
-
-  /// Set the filename to use for logging actions, use "-" for stdout.
-  MlirOptMainConfig &logActionsTo(StringRef filename) {
-    logActionsToFlag = filename;
-    return *this;
-  }
-  /// Get the filename to use for logging actions.
-  StringRef getLogActionsTo() const { return logActionsToFlag; }
-
-  /// Set a location breakpoint manager to filter out action logging based on
-  /// the attached IR location in the Action context. Ownership stays with the
-  /// caller.
-  void addLogActionLocFilter(tracing::BreakpointManager *breakpointManager) {
-    logActionLocationFilter.push_back(breakpointManager);
-  }
-
-  /// Get the location breakpoint managers to use to filter out action logging.
-  ArrayRef<tracing::BreakpointManager *> getLogActionsLocFilters() const {
-    return logActionLocationFilter;
-  }
 
   /// Set the callback to populate the pass manager.
   MlirOptMainConfig &
@@ -185,6 +159,9 @@ protected:
   /// general.
   bool allowUnregisteredDialectsFlag = false;
 
+  /// Configuration for the debugging hooks.
+  tracing::DebugConfig debugConfig;
+
   /// Print the pipeline that will be run.
   bool dumpPassPipelineFlag = false;
 
@@ -196,9 +173,6 @@ protected:
 
   /// IRDL file to register before processing the input.
   std::string irdlFileFlag = "";
-
-  /// Log action execution to the given file (or "-" for stdout)
-  std::string logActionsToFlag;
 
   /// Location Breakpoints to filter the action logging.
   std::vector<tracing::BreakpointManager *> logActionLocationFilter;
