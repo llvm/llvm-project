@@ -2,6 +2,9 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
+declare void @use(<2 x i4>)
+declare void @use_fp(<2 x float>)
+
 define i32 @test2(float %f) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[T5:%.*]] = fmul float [[F:%.*]], [[F]]
@@ -76,8 +79,8 @@ define <4 x float> @dead_shuffle_elt(<4 x float> %x, <2 x float> %y) nounwind {
 define <2 x float> @test_fptrunc(double %f) {
 ; CHECK-LABEL: @test_fptrunc(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[F:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = fptrunc <2 x double> [[TMP1]] to <2 x float>
-; CHECK-NEXT:    ret <2 x float> [[TMP2]]
+; CHECK-NEXT:    [[RET:%.*]] = fptrunc <2 x double> [[TMP1]] to <2 x float>
+; CHECK-NEXT:    ret <2 x float> [[RET]]
 ;
   %t9 = insertelement <4 x double> undef, double %f, i32 0
   %t10 = insertelement <4 x double> %t9, double 0.000000e+00, i32 1
@@ -91,8 +94,8 @@ define <2 x float> @test_fptrunc(double %f) {
 define <2 x double> @test_fpext(float %f) {
 ; CHECK-LABEL: @test_fpext(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float poison, float 0.000000e+00>, float [[F:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = fpext <2 x float> [[TMP1]] to <2 x double>
-; CHECK-NEXT:    ret <2 x double> [[TMP2]]
+; CHECK-NEXT:    [[RET:%.*]] = fpext <2 x float> [[TMP1]] to <2 x double>
+; CHECK-NEXT:    ret <2 x double> [[RET]]
 ;
   %t9 = insertelement <4 x float> undef, float %f, i32 0
   %t10 = insertelement <4 x float> %t9, float 0.000000e+00, i32 1
@@ -841,4 +844,310 @@ define <8 x i4> @ins_of_ext_undef_elts_propagation2(<8 x i4> %v, <8 x i4> %v2, i
   %i20 = shufflevector <8 x i4> %i19, <8 x i4> %v2, <8 x i32> <i32 0, i32 1, i32 2, i32 11, i32 10, i32 9, i32 8, i32 undef>
   %i21 = shufflevector <8 x i4> %i20, <8 x i4> %v, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 15>
   ret <8 x i4> %i21
+}
+
+define void @common_binop_demand_via_splat_op0(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @common_binop_demand_via_splat_op0(
+; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x i4> [[X:%.*]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B_XSHUF_Y:%.*]] = mul <2 x i4> [[XSHUF]], [[Y:%.*]]
+; CHECK-NEXT:    [[B_XY:%.*]] = mul <2 x i4> [[X]], [[Y]]
+; CHECK-NEXT:    [[B_XY_SPLAT:%.*]] = shufflevector <2 x i4> [[B_XY]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    call void @use(<2 x i4> [[B_XSHUF_Y]])
+; CHECK-NEXT:    call void @use(<2 x i4> [[B_XY_SPLAT]])
+; CHECK-NEXT:    ret void
+;
+  %xshuf = shufflevector <2 x i4> %x, <2 x i4> poison, <2 x i32> zeroinitializer
+  %b_xshuf_y = mul <2 x i4> %xshuf, %y
+  %b_xy = mul <2 x i4> %x, %y
+  %b_xy_splat = shufflevector <2 x i4> %b_xy, <2 x i4> poison, <2 x i32> zeroinitializer
+  call void @use(<2 x i4> %b_xshuf_y)
+  call void @use(<2 x i4> %b_xy_splat)
+  ret void
+}
+
+define void @common_binop_demand_via_splat_op1(<2 x i4> %p, <2 x i4> %y) {
+; CHECK-LABEL: @common_binop_demand_via_splat_op1(
+; CHECK-NEXT:    [[X:%.*]] = sub <2 x i4> <i4 0, i4 1>, [[P:%.*]]
+; CHECK-NEXT:    [[YSHUF:%.*]] = shufflevector <2 x i4> [[Y:%.*]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B_X_YSHUF:%.*]] = mul <2 x i4> [[X]], [[YSHUF]]
+; CHECK-NEXT:    [[B_XY:%.*]] = mul <2 x i4> [[X]], [[Y]]
+; CHECK-NEXT:    [[B_XY_SPLAT:%.*]] = shufflevector <2 x i4> [[B_XY]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    call void @use(<2 x i4> [[B_XY_SPLAT]])
+; CHECK-NEXT:    call void @use(<2 x i4> [[B_X_YSHUF]])
+; CHECK-NEXT:    ret void
+;
+  %x = sub <2 x i4> <i4 0, i4 1>, %p ; thwart complexity-based canonicalization
+  %yshuf = shufflevector <2 x i4> %y, <2 x i4> poison, <2 x i32> zeroinitializer
+  %b_x_yshuf = mul <2 x i4> %x, %yshuf
+  %b_xy = mul <2 x i4> %x, %y
+  %b_xy_splat = shufflevector <2 x i4> %b_xy, <2 x i4> poison, <2 x i32> zeroinitializer
+  call void @use(<2 x i4> %b_xy_splat)
+  call void @use(<2 x i4> %b_x_yshuf)
+  ret void
+}
+
+define void @common_binop_demand_via_splat_op0_commute(<2 x i4> %p, <2 x i4> %q) {
+; CHECK-LABEL: @common_binop_demand_via_splat_op0_commute(
+; CHECK-NEXT:    [[X:%.*]] = sub <2 x i4> <i4 0, i4 1>, [[P:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = sub <2 x i4> <i4 1, i4 2>, [[Q:%.*]]
+; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x i4> [[X]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B_Y_XSHUF:%.*]] = mul <2 x i4> [[Y]], [[XSHUF]]
+; CHECK-NEXT:    [[B_XY:%.*]] = mul <2 x i4> [[X]], [[Y]]
+; CHECK-NEXT:    [[B_XY_SPLAT:%.*]] = shufflevector <2 x i4> [[B_XY]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    call void @use(<2 x i4> [[B_XY_SPLAT]])
+; CHECK-NEXT:    call void @use(<2 x i4> [[B_Y_XSHUF]])
+; CHECK-NEXT:    ret void
+;
+  %x = sub <2 x i4> <i4 0, i4 1>, %p ; thwart complexity-based canonicalization
+  %y = sub <2 x i4> <i4 1, i4 2>, %q ; thwart complexity-based canonicalization
+  %xshuf = shufflevector <2 x i4> %x, <2 x i4> poison, <2 x i32> zeroinitializer
+  %b_y_xshuf = mul <2 x i4> %y, %xshuf
+  %b_xy = mul <2 x i4> %x, %y
+  %b_xy_splat = shufflevector <2 x i4> %b_xy, <2 x i4> poison, <2 x i32> zeroinitializer
+  call void @use(<2 x i4> %b_xy_splat)
+  call void @use(<2 x i4> %b_y_xshuf)
+  ret void
+}
+
+define void @common_binop_demand_via_splat_op1_commute(<2 x i4> %p, <2 x i4> %q) {
+; CHECK-LABEL: @common_binop_demand_via_splat_op1_commute(
+; CHECK-NEXT:    [[X:%.*]] = sub <2 x i4> <i4 0, i4 1>, [[P:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = sub <2 x i4> <i4 2, i4 3>, [[Q:%.*]]
+; CHECK-NEXT:    [[YSHUF:%.*]] = shufflevector <2 x i4> [[Y]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B_Y_XSHUF:%.*]] = mul <2 x i4> [[YSHUF]], [[X]]
+; CHECK-NEXT:    [[B_XY:%.*]] = mul <2 x i4> [[X]], [[Y]]
+; CHECK-NEXT:    [[B_XY_SPLAT:%.*]] = shufflevector <2 x i4> [[B_XY]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    call void @use(<2 x i4> [[B_XY_SPLAT]])
+; CHECK-NEXT:    call void @use(<2 x i4> [[B_Y_XSHUF]])
+; CHECK-NEXT:    ret void
+;
+  %x = sub <2 x i4> <i4 0, i4 1>, %p ; thwart complexity-based canonicalization
+  %y = sub <2 x i4> <i4 2, i4 3>, %q ; thwart complexity-based canonicalization
+  %yshuf = shufflevector <2 x i4> %y, <2 x i4> poison, <2 x i32> zeroinitializer
+  %b_y_xshuf = mul <2 x i4> %yshuf, %x
+  %b_xy = mul <2 x i4> %x, %y
+  %b_xy_splat = shufflevector <2 x i4> %b_xy, <2 x i4> poison, <2 x i32> zeroinitializer
+  call void @use(<2 x i4> %b_xy_splat)
+  call void @use(<2 x i4> %b_y_xshuf)
+  ret void
+}
+
+define void @common_binop_demand_via_splat_op0_wrong_commute(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @common_binop_demand_via_splat_op0_wrong_commute(
+; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x i4> [[X:%.*]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B_Y_XSHUF:%.*]] = sub <2 x i4> [[Y:%.*]], [[XSHUF]]
+; CHECK-NEXT:    [[B_XY:%.*]] = sub <2 x i4> [[X]], [[Y]]
+; CHECK-NEXT:    [[B_XY_SPLAT:%.*]] = shufflevector <2 x i4> [[B_XY]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    call void @use(<2 x i4> [[B_XY_SPLAT]])
+; CHECK-NEXT:    call void @use(<2 x i4> [[B_Y_XSHUF]])
+; CHECK-NEXT:    ret void
+;
+  %xshuf = shufflevector <2 x i4> %x, <2 x i4> poison, <2 x i32> zeroinitializer
+  %b_y_xshuf = sub <2 x i4> %y, %xshuf
+  %b_xy = sub <2 x i4> %x, %y
+  %b_xy_splat = shufflevector <2 x i4> %b_xy, <2 x i4> poison, <2 x i32> zeroinitializer
+  call void @use(<2 x i4> %b_xy_splat)
+  call void @use(<2 x i4> %b_y_xshuf)
+  ret void
+}
+
+define void @common_binop_demand_via_splat_op0_not_dominated1(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @common_binop_demand_via_splat_op0_not_dominated1(
+; CHECK-NEXT:    [[B_XY:%.*]] = mul <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x i4> [[X]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B_XSHUF_Y:%.*]] = mul <2 x i4> [[XSHUF]], [[Y]]
+; CHECK-NEXT:    [[B_XY_SPLAT:%.*]] = shufflevector <2 x i4> [[B_XY]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    call void @use(<2 x i4> [[B_XSHUF_Y]])
+; CHECK-NEXT:    call void @use(<2 x i4> [[B_XY_SPLAT]])
+; CHECK-NEXT:    ret void
+;
+  %b_xy = mul <2 x i4> %x, %y
+  %xshuf = shufflevector <2 x i4> %x, <2 x i4> poison, <2 x i32> zeroinitializer
+  %b_xshuf_y = mul <2 x i4> %xshuf, %y
+  %b_xy_splat = shufflevector <2 x i4> %b_xy, <2 x i4> poison, <2 x i32> zeroinitializer
+  call void @use(<2 x i4> %b_xshuf_y)
+  call void @use(<2 x i4> %b_xy_splat)
+  ret void
+}
+
+define void @common_binop_demand_via_splat_op0_not_dominated2(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @common_binop_demand_via_splat_op0_not_dominated2(
+; CHECK-NEXT:    [[B_XY:%.*]] = mul <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B_XY_SPLAT:%.*]] = shufflevector <2 x i4> [[B_XY]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x i4> [[X]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B_XSHUF_Y:%.*]] = mul <2 x i4> [[XSHUF]], [[Y]]
+; CHECK-NEXT:    call void @use(<2 x i4> [[B_XSHUF_Y]])
+; CHECK-NEXT:    call void @use(<2 x i4> [[B_XY_SPLAT]])
+; CHECK-NEXT:    ret void
+;
+  %b_xy = mul <2 x i4> %x, %y
+  %b_xy_splat = shufflevector <2 x i4> %b_xy, <2 x i4> poison, <2 x i32> zeroinitializer
+  %xshuf = shufflevector <2 x i4> %x, <2 x i4> poison, <2 x i32> zeroinitializer
+  %b_xshuf_y = mul <2 x i4> %xshuf, %y
+  call void @use(<2 x i4> %b_xshuf_y)
+  call void @use(<2 x i4> %b_xy_splat)
+  ret void
+}
+
+define i4 @common_binop_demand_via_extelt_op0(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @common_binop_demand_via_extelt_op0(
+; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x i4> [[X:%.*]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B_XSHUF_Y:%.*]] = sub <2 x i4> [[XSHUF]], [[Y:%.*]]
+; CHECK-NEXT:    [[B_XY:%.*]] = sub nsw <2 x i4> [[X]], [[Y]]
+; CHECK-NEXT:    [[B_XY0:%.*]] = extractelement <2 x i4> [[B_XY]], i64 0
+; CHECK-NEXT:    call void @use(<2 x i4> [[B_XSHUF_Y]])
+; CHECK-NEXT:    ret i4 [[B_XY0]]
+;
+  %xshuf = shufflevector <2 x i4> %x, <2 x i4> poison, <2 x i32> zeroinitializer
+  %b_xshuf_y = sub <2 x i4> %xshuf, %y
+  %b_xy = sub nsw <2 x i4> %x, %y
+  %b_xy0 = extractelement <2 x i4> %b_xy, i32 0
+  call void @use(<2 x i4> %b_xshuf_y)
+  ret i4 %b_xy0
+}
+
+define float @common_binop_demand_via_extelt_op1(<2 x float> %p, <2 x float> %y) {
+; CHECK-LABEL: @common_binop_demand_via_extelt_op1(
+; CHECK-NEXT:    [[X:%.*]] = fsub <2 x float> <float 0.000000e+00, float 1.000000e+00>, [[P:%.*]]
+; CHECK-NEXT:    [[YSHUF:%.*]] = shufflevector <2 x float> [[Y:%.*]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B_X_YSHUF:%.*]] = fdiv <2 x float> [[X]], [[YSHUF]]
+; CHECK-NEXT:    [[B_XY:%.*]] = fdiv <2 x float> [[X]], [[Y]]
+; CHECK-NEXT:    [[B_XY0:%.*]] = extractelement <2 x float> [[B_XY]], i64 0
+; CHECK-NEXT:    call void @use_fp(<2 x float> [[B_X_YSHUF]])
+; CHECK-NEXT:    ret float [[B_XY0]]
+;
+  %x = fsub <2 x float> <float 0.0, float 1.0>, %p ; thwart complexity-based canonicalization
+  %yshuf = shufflevector <2 x float> %y, <2 x float> poison, <2 x i32> zeroinitializer
+  %b_x_yshuf = fdiv <2 x float> %x, %yshuf
+  %b_xy = fdiv <2 x float> %x, %y
+  %b_xy0 = extractelement <2 x float> %b_xy, i32 0
+  call void @use_fp(<2 x float> %b_x_yshuf)
+  ret float %b_xy0
+}
+
+define float @common_binop_demand_via_extelt_op0_commute(<2 x float> %p, <2 x float> %q) {
+; CHECK-LABEL: @common_binop_demand_via_extelt_op0_commute(
+; CHECK-NEXT:    [[X:%.*]] = fsub <2 x float> <float 0.000000e+00, float 1.000000e+00>, [[P:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = fsub <2 x float> <float 3.000000e+00, float 2.000000e+00>, [[Q:%.*]]
+; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x float> [[X]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B_Y_XSHUF:%.*]] = fmul nnan <2 x float> [[Y]], [[XSHUF]]
+; CHECK-NEXT:    [[B_XY:%.*]] = fmul ninf <2 x float> [[X]], [[Y]]
+; CHECK-NEXT:    [[B_XY0:%.*]] = extractelement <2 x float> [[B_XY]], i64 0
+; CHECK-NEXT:    call void @use_fp(<2 x float> [[B_Y_XSHUF]])
+; CHECK-NEXT:    ret float [[B_XY0]]
+;
+  %x = fsub <2 x float> <float 0.0, float 1.0>, %p ; thwart complexity-based canonicalization
+  %y = fsub <2 x float> <float 3.0, float 2.0>, %q ; thwart complexity-based canonicalization
+  %xshuf = shufflevector <2 x float> %x, <2 x float> poison, <2 x i32> zeroinitializer
+  %b_y_xshuf = fmul nnan <2 x float> %y, %xshuf
+  %b_xy = fmul ninf <2 x float> %x, %y
+  %b_xy0 = extractelement <2 x float> %b_xy, i32 0
+  call void @use_fp(<2 x float> %b_y_xshuf)
+  ret float %b_xy0
+}
+
+define i4 @common_binop_demand_via_extelt_op1_commute(<2 x i4> %p, <2 x i4> %q) {
+; CHECK-LABEL: @common_binop_demand_via_extelt_op1_commute(
+; CHECK-NEXT:    [[X:%.*]] = sub <2 x i4> <i4 0, i4 1>, [[P:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = sub <2 x i4> <i4 2, i4 3>, [[Q:%.*]]
+; CHECK-NEXT:    [[YSHUF:%.*]] = shufflevector <2 x i4> [[Y]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B_Y_XSHUF:%.*]] = or <2 x i4> [[YSHUF]], [[X]]
+; CHECK-NEXT:    [[B_XY:%.*]] = or <2 x i4> [[X]], [[Y]]
+; CHECK-NEXT:    [[B_XY0:%.*]] = extractelement <2 x i4> [[B_XY]], i64 0
+; CHECK-NEXT:    call void @use(<2 x i4> [[B_Y_XSHUF]])
+; CHECK-NEXT:    ret i4 [[B_XY0]]
+;
+  %x = sub <2 x i4> <i4 0, i4 1>, %p ; thwart complexity-based canonicalization
+  %y = sub <2 x i4> <i4 2, i4 3>, %q ; thwart complexity-based canonicalization
+  %yshuf = shufflevector <2 x i4> %y, <2 x i4> poison, <2 x i32> zeroinitializer
+  %b_y_xshuf = or <2 x i4> %yshuf, %x
+  %b_xy = or <2 x i4> %x, %y
+  %b_xy0 = extractelement <2 x i4> %b_xy, i32 0
+  call void @use(<2 x i4> %b_y_xshuf)
+  ret i4 %b_xy0
+}
+
+define i4 @common_binop_demand_via_extelt_op0_wrong_commute(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @common_binop_demand_via_extelt_op0_wrong_commute(
+; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x i4> [[X:%.*]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B_Y_XSHUF:%.*]] = sub <2 x i4> [[Y:%.*]], [[XSHUF]]
+; CHECK-NEXT:    [[B_XY:%.*]] = sub <2 x i4> [[X]], [[Y]]
+; CHECK-NEXT:    [[B_XY0:%.*]] = extractelement <2 x i4> [[B_XY]], i64 0
+; CHECK-NEXT:    call void @use(<2 x i4> [[B_Y_XSHUF]])
+; CHECK-NEXT:    ret i4 [[B_XY0]]
+;
+  %xshuf = shufflevector <2 x i4> %x, <2 x i4> poison, <2 x i32> zeroinitializer
+  %b_y_xshuf = sub <2 x i4> %y, %xshuf
+  %b_xy = sub <2 x i4> %x, %y
+  %b_xy0 = extractelement <2 x i4> %b_xy, i32 0
+  call void @use(<2 x i4> %b_y_xshuf)
+  ret i4 %b_xy0
+}
+
+define i4 @common_binop_demand_via_extelt_op0_not_dominated1(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @common_binop_demand_via_extelt_op0_not_dominated1(
+; CHECK-NEXT:    [[B_XY:%.*]] = xor <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x i4> [[X]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B_XSHUF_Y:%.*]] = xor <2 x i4> [[XSHUF]], [[Y]]
+; CHECK-NEXT:    [[B_XY0:%.*]] = extractelement <2 x i4> [[B_XY]], i64 0
+; CHECK-NEXT:    call void @use(<2 x i4> [[B_XSHUF_Y]])
+; CHECK-NEXT:    ret i4 [[B_XY0]]
+;
+  %b_xy = xor <2 x i4> %x, %y
+  %xshuf = shufflevector <2 x i4> %x, <2 x i4> poison, <2 x i32> zeroinitializer
+  %b_xshuf_y = xor <2 x i4> %xshuf, %y
+  %b_xy0 = extractelement <2 x i4> %b_xy, i32 0
+  call void @use(<2 x i4> %b_xshuf_y)
+  ret i4 %b_xy0
+}
+
+define i4 @common_binop_demand_via_extelt_op0_not_dominated2(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @common_binop_demand_via_extelt_op0_not_dominated2(
+; CHECK-NEXT:    [[B_XY:%.*]] = mul <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B_XY0:%.*]] = extractelement <2 x i4> [[B_XY]], i64 0
+; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x i4> [[X]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B_XSHUF_Y:%.*]] = mul <2 x i4> [[XSHUF]], [[Y]]
+; CHECK-NEXT:    call void @use(<2 x i4> [[B_XSHUF_Y]])
+; CHECK-NEXT:    ret i4 [[B_XY0]]
+;
+  %b_xy = mul <2 x i4> %x, %y
+  %b_xy0 = extractelement <2 x i4> %b_xy, i32 0
+  %xshuf = shufflevector <2 x i4> %x, <2 x i4> poison, <2 x i32> zeroinitializer
+  %b_xshuf_y = mul <2 x i4> %xshuf, %y
+  call void @use(<2 x i4> %b_xshuf_y)
+  ret i4 %b_xy0
+}
+
+define i4 @common_binop_demand_via_extelt_op0_mismatch_elt0(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @common_binop_demand_via_extelt_op0_mismatch_elt0(
+; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x i4> [[X:%.*]], <2 x i4> poison, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[B_XSHUF_Y:%.*]] = sub <2 x i4> [[XSHUF]], [[Y:%.*]]
+; CHECK-NEXT:    [[B_XY:%.*]] = sub nsw <2 x i4> [[X]], [[Y]]
+; CHECK-NEXT:    [[B_XY0:%.*]] = extractelement <2 x i4> [[B_XY]], i64 0
+; CHECK-NEXT:    call void @use(<2 x i4> [[B_XSHUF_Y]])
+; CHECK-NEXT:    ret i4 [[B_XY0]]
+;
+  %xshuf = shufflevector <2 x i4> %x, <2 x i4> poison, <2 x i32> <i32 1, i32 1>
+  %b_xshuf_y = sub <2 x i4> %xshuf, %y
+  %b_xy = sub nsw <2 x i4> %x, %y
+  %b_xy0 = extractelement <2 x i4> %b_xy, i32 0
+  call void @use(<2 x i4> %b_xshuf_y)
+  ret i4 %b_xy0
+}
+
+define i4 @common_binop_demand_via_extelt_op0_mismatch_elt1(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @common_binop_demand_via_extelt_op0_mismatch_elt1(
+; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x i4> [[X:%.*]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B_XSHUF_Y:%.*]] = sub <2 x i4> [[XSHUF]], [[Y:%.*]]
+; CHECK-NEXT:    [[B_XY:%.*]] = sub nsw <2 x i4> [[X]], [[Y]]
+; CHECK-NEXT:    [[B_XY0:%.*]] = extractelement <2 x i4> [[B_XY]], i64 1
+; CHECK-NEXT:    call void @use(<2 x i4> [[B_XSHUF_Y]])
+; CHECK-NEXT:    ret i4 [[B_XY0]]
+;
+  %xshuf = shufflevector <2 x i4> %x, <2 x i4> poison, <2 x i32> zeroinitializer
+  %b_xshuf_y = sub <2 x i4> %xshuf, %y
+  %b_xy = sub nsw <2 x i4> %x, %y
+  %b_xy0 = extractelement <2 x i4> %b_xy, i32 1
+  call void @use(<2 x i4> %b_xshuf_y)
+  ret i4 %b_xy0
 }

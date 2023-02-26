@@ -91,7 +91,7 @@ performActions(raw_ostream &os,
   // Parse the input file and reset the context threading state.
   TimingScope parserTiming = timing.nest("Parser");
   OwningOpRef<Operation *> op = parseSourceFileForTool(
-      sourceMgr, parseConfig, config.shouldUseImplicitModule());
+      sourceMgr, parseConfig, !config.shouldUseExplicitModule());
   context->enableMultithreading(wasThreadingEnabled);
   if (!op)
     return failure();
@@ -202,7 +202,7 @@ LogicalResult mlir::MlirOptMain(raw_ostream &outputStream,
                                 bool verifyDiagnostics, bool verifyPasses,
                                 bool allowUnregisteredDialects,
                                 bool preloadDialectsInContext,
-                                bool emitBytecode, bool implicitModule) {
+                                bool emitBytecode, bool explicitModule) {
   return MlirOptMain(outputStream, std::move(buffer), registry,
                      MlirOptMainConfig{}
                          .splitInputFile(splitInputFile)
@@ -211,7 +211,7 @@ LogicalResult mlir::MlirOptMain(raw_ostream &outputStream,
                          .allowUnregisteredDialects(allowUnregisteredDialects)
                          .preloadDialectsInContext(preloadDialectsInContext)
                          .emitBytecode(emitBytecode)
-                         .useImplicitModule(implicitModule)
+                         .useExplicitModule(explicitModule)
                          .setPassPipelineSetupFn(passManagerSetupFn));
 }
 
@@ -220,7 +220,7 @@ LogicalResult mlir::MlirOptMain(
     const PassPipelineCLParser &passPipeline, DialectRegistry &registry,
     bool splitInputFile, bool verifyDiagnostics, bool verifyPasses,
     bool allowUnregisteredDialects, bool preloadDialectsInContext,
-    bool emitBytecode, bool implicitModule, bool dumpPassPipeline) {
+    bool emitBytecode, bool explicitModule, bool dumpPassPipeline) {
   return MlirOptMain(outputStream, std::move(buffer), registry,
                      MlirOptMainConfig{}
                          .splitInputFile(splitInputFile)
@@ -229,7 +229,7 @@ LogicalResult mlir::MlirOptMain(
                          .allowUnregisteredDialects(allowUnregisteredDialects)
                          .preloadDialectsInContext(preloadDialectsInContext)
                          .emitBytecode(emitBytecode)
-                         .useImplicitModule(implicitModule)
+                         .useExplicitModule(explicitModule)
                          .dumpPassPipeline(dumpPassPipeline)
                          .setPassPipelineParser(passPipeline));
 }
@@ -273,7 +273,7 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
       "emit-bytecode", cl::desc("Emit bytecode when generating output"),
       cl::init(false));
 
-  static cl::opt<bool> noImplicitModule{
+  static cl::opt<bool> explicitModule{
       "no-implicit-module",
       cl::desc(
           "Disable implicit addition of a top-level module op during parsing"),
@@ -333,7 +333,7 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
       .allowUnregisteredDialects(allowUnregisteredDialects)
       .preloadDialectsInContext(preloadDialectsInContext)
       .emitBytecode(emitBytecode)
-      .useImplicitModule(!noImplicitModule)
+      .useExplicitModule(explicitModule)
       .dumpPassPipeline(dumpPassPipeline);
 
   if (failed(MlirOptMain(output->os(), std::move(file), registry, config)))
