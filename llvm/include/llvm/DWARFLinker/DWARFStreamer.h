@@ -93,17 +93,27 @@ public:
       llvm::binaryformat::Swift5ReflectionSectionKind ReflSectionKind,
       StringRef Buffer, uint32_t Alignment, uint32_t Size);
 
-  /// Emit piece of .debug_ranges for \p Ranges.
-  virtual void
-  emitDwarfDebugRangesTableFragment(const CompileUnit &Unit,
-                                    const AddressRanges &LinkedRanges) override;
+  /// Emit debug ranges(.debug_ranges, .debug_rnglists) header.
+  MCSymbol *emitDwarfDebugRangeListHeader(const CompileUnit &Unit) override;
 
-  /// Emit debug_aranges entries for \p Unit and if \p DoRangesSection is true,
-  /// also emit the debug_ranges entries for the DW_TAG_compile_unit's
-  /// DW_AT_ranges attribute.
-  void emitUnitRangesEntries(CompileUnit &Unit, bool DoRangesSection) override;
+  /// Emit debug ranges(.debug_ranges, .debug_rnglists) fragment.
+  void emitDwarfDebugRangeListFragment(const CompileUnit &Unit,
+                                       const AddressRanges &LinkedRanges,
+                                       PatchLocation Patch) override;
+
+  /// Emit debug ranges(.debug_ranges, .debug_rnglists) footer.
+  void emitDwarfDebugRangeListFooter(const CompileUnit &Unit,
+                                     MCSymbol *EndLabel) override;
+
+  /// Emit .debug_aranges entries for \p Unit
+  void emitDwarfDebugArangesTable(const CompileUnit &Unit,
+                                  const AddressRanges &LinkedRanges) override;
 
   uint64_t getRangesSectionSize() const override { return RangesSectionSize; }
+
+  uint64_t getRngListsSectionSize() const override {
+    return RngListsSectionSize;
+  }
 
   /// Emit the debug_loc contribution for \p Unit by copying the entries from
   /// \p Dwarf and offsetting them. Update the location attributes to point to
@@ -189,8 +199,16 @@ private:
   void emitMacroTableImpl(const DWARFDebugMacro *MacroTable,
                           const Offset2UnitMap &UnitMacroMap,
                           OffsetsStringPool &StringPool, uint64_t &OutOffset);
-  void emitDwarfDebugArangesTable(const CompileUnit &Unit,
-                                  const AddressRanges &LinkedRanges);
+
+  /// Emit piece of .debug_ranges for \p LinkedRanges.
+  void emitDwarfDebugRangesTableFragment(const CompileUnit &Unit,
+                                         const AddressRanges &LinkedRanges,
+                                         PatchLocation Patch);
+
+  /// Emit piece of .debug_rnglists for \p LinkedRanges.
+  void emitDwarfDebugRngListsTableFragment(const CompileUnit &Unit,
+                                           const AddressRanges &LinkedRanges,
+                                           PatchLocation Patch);
 
   /// \defgroup MCObjects MC layer objects constructed by the streamer
   /// @{
@@ -214,6 +232,7 @@ private:
   std::function<StringRef(StringRef Input)> Translator;
 
   uint64_t RangesSectionSize = 0;
+  uint64_t RngListsSectionSize = 0;
   uint64_t LocSectionSize = 0;
   uint64_t LineSectionSize = 0;
   uint64_t FrameSectionSize = 0;
