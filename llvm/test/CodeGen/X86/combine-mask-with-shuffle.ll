@@ -10,10 +10,9 @@ define <16 x i32> @combine_mask_with_or(<16 x i32> %v0) {
 ; CHECK-NEXT:    kmovw %eax, %k1
 ; CHECK-NEXT:    vpblendmd %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vpord %zmm2, %zmm1, %zmm1
-; CHECK-NEXT:    vpopcntd %zmm0, %zmm0
-; CHECK-NEXT:    movb $-52, %al
+; CHECK-NEXT:    movw $-3856, %ax # imm = 0xF0F0
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpopcntd %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %shuf0_0 = shufflevector <16 x i32> %v0, <16 x i32> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
@@ -32,10 +31,9 @@ define <16 x i32> @combine_mask_with_mul(<16 x i32> %v0) {
 ; CHECK-NEXT:    kmovw %eax, %k1
 ; CHECK-NEXT:    vpblendmd %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vpmulld %zmm2, %zmm1, %zmm1
-; CHECK-NEXT:    vpopcntd %zmm0, %zmm0
-; CHECK-NEXT:    movb $-52, %al
+; CHECK-NEXT:    movw $-3856, %ax # imm = 0xF0F0
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpopcntd %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %shuf0_0 = shufflevector <16 x i32> %v0, <16 x i32> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
@@ -51,10 +49,9 @@ define <16 x i32> @combine_mask_with_abs(<16 x i32> %v0) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpshufd {{.*#+}} zmm1 = zmm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
 ; CHECK-NEXT:    vpabsd %zmm1, %zmm1
-; CHECK-NEXT:    vpopcntd %zmm0, %zmm0
-; CHECK-NEXT:    movb $-52, %al
+; CHECK-NEXT:    movw $-3856, %ax # imm = 0xF0F0
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpopcntd %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %shuf0_0 = shufflevector <16 x i32> %v0, <16 x i32> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
@@ -75,10 +72,9 @@ define <16 x i32> @combine_mask_with_umin(<16 x i32> %v0) {
 ; CHECK-NEXT:    kmovw %eax, %k1
 ; CHECK-NEXT:    vpblendmd %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vpminud %zmm2, %zmm1, %zmm1
-; CHECK-NEXT:    vpopcntd %zmm0, %zmm0
-; CHECK-NEXT:    movb $-52, %al
+; CHECK-NEXT:    movw $-3856, %ax # imm = 0xF0F0
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpopcntd %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %shuf0_0 = shufflevector <16 x i32> %v0, <16 x i32> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
@@ -97,10 +93,9 @@ define <16 x i32> @combine_mask_with_umax(<16 x i32> %v0) {
 ; CHECK-NEXT:    kmovw %eax, %k1
 ; CHECK-NEXT:    vpblendmd %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vpmaxud %zmm2, %zmm1, %zmm1
-; CHECK-NEXT:    vpopcntd %zmm0, %zmm0
-; CHECK-NEXT:    movb $-52, %al
+; CHECK-NEXT:    movw $-3856, %ax # imm = 0xF0F0
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpopcntd %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %shuf0_0 = shufflevector <16 x i32> %v0, <16 x i32> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
@@ -119,10 +114,9 @@ define <16 x i32> @combine_mask_with_smin(<16 x i32> %v0) {
 ; CHECK-NEXT:    kmovw %eax, %k1
 ; CHECK-NEXT:    vpblendmd %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vpminsd %zmm2, %zmm1, %zmm1
-; CHECK-NEXT:    vpopcntd %zmm0, %zmm0
-; CHECK-NEXT:    movb $-52, %al
+; CHECK-NEXT:    movw $-3856, %ax # imm = 0xF0F0
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpopcntd %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %shuf0_0 = shufflevector <16 x i32> %v0, <16 x i32> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
@@ -141,10 +135,9 @@ define <16 x i32> @combine_mask_with_smax(<16 x i32> %v0) {
 ; CHECK-NEXT:    kmovw %eax, %k1
 ; CHECK-NEXT:    vpblendmd %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vpmaxsd %zmm2, %zmm1, %zmm1
-; CHECK-NEXT:    vpopcntd %zmm0, %zmm0
-; CHECK-NEXT:    movb $-52, %al
+; CHECK-NEXT:    movw $-3856, %ax # imm = 0xF0F0
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpopcntd %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %shuf0_0 = shufflevector <16 x i32> %v0, <16 x i32> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
@@ -163,10 +156,9 @@ define <16 x i32> @combine_mask_with_shl(<16 x i32> %v0) {
 ; CHECK-NEXT:    kmovw %eax, %k1
 ; CHECK-NEXT:    vpblendmd %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vpsllvd %zmm2, %zmm1, %zmm1
-; CHECK-NEXT:    vpopcntd %zmm0, %zmm0
-; CHECK-NEXT:    movb $-52, %al
+; CHECK-NEXT:    movw $-3856, %ax # imm = 0xF0F0
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpopcntd %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %shuf0_0 = shufflevector <16 x i32> %v0, <16 x i32> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
@@ -185,10 +177,9 @@ define <16 x i32> @combine_mask_with_ashr(<16 x i32> %v0) {
 ; CHECK-NEXT:    kmovw %eax, %k1
 ; CHECK-NEXT:    vpblendmd %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vpsravd %zmm2, %zmm1, %zmm1
-; CHECK-NEXT:    vpopcntd %zmm0, %zmm0
-; CHECK-NEXT:    movb $-52, %al
+; CHECK-NEXT:    movw $-3856, %ax # imm = 0xF0F0
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpopcntd %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %shuf0_0 = shufflevector <16 x i32> %v0, <16 x i32> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
@@ -207,10 +198,9 @@ define <16 x i32> @combine_mask_with_lshr(<16 x i32> %v0) {
 ; CHECK-NEXT:    kmovw %eax, %k1
 ; CHECK-NEXT:    vpblendmd %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vpsrlvd %zmm2, %zmm1, %zmm1
-; CHECK-NEXT:    vpopcntd %zmm0, %zmm0
-; CHECK-NEXT:    movb $-52, %al
+; CHECK-NEXT:    movw $-3856, %ax # imm = 0xF0F0
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpopcntd %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %shuf0_0 = shufflevector <16 x i32> %v0, <16 x i32> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
