@@ -103,11 +103,11 @@ public:
   bool shouldSplitInputFile() const { return splitInputFileFlag; }
 
   /// Disable implicit addition of a top-level module op during parsing.
-  MlirOptMainConfig &useImplicitModule(bool useImplicitModule) {
-    useImplicitModuleFlag = useImplicitModule;
+  MlirOptMainConfig &useExplicitModule(bool useExplicitModule) {
+    useExplicitModuleFlag = useExplicitModule;
     return *this;
   }
-  bool shouldUseImplicitModule() const { return useImplicitModuleFlag; }
+  bool shouldUseExplicitModule() const { return useExplicitModuleFlag; }
 
   /// Set whether to check that emitted diagnostics match `expected-*` lines on
   /// the corresponding line. This is meant for implementing diagnostic tests.
@@ -149,8 +149,8 @@ private:
   /// process each chunk independently.
   bool splitInputFileFlag = false;
 
-  /// Use an implicit top-level module op during parsing.
-  bool useImplicitModuleFlag = true;
+  /// Use an explicit top-level module op during parsing.
+  bool useExplicitModuleFlag = false;
 
   /// Set whether to check that emitted diagnostics match `expected-*` lines on
   /// the corresponding line. This is meant for implementing diagnostic tests.
@@ -177,14 +177,15 @@ LogicalResult MlirOptMain(llvm::raw_ostream &outputStream,
 
 /// Perform the core processing behind `mlir-opt`.
 /// This API is deprecated, use the MlirOptMainConfig version above instead.
-LogicalResult
-MlirOptMain(llvm::raw_ostream &outputStream,
-            std::unique_ptr<llvm::MemoryBuffer> buffer,
-            const PassPipelineCLParser &passPipeline, DialectRegistry &registry,
-            bool splitInputFile, bool verifyDiagnostics, bool verifyPasses,
-            bool allowUnregisteredDialects,
-            bool preloadDialectsInContext = false, bool emitBytecode = false,
-            bool implicitModule = false, bool dumpPassPipeline = false);
+LogicalResult MlirOptMain(llvm::raw_ostream &outputStream,
+                          std::unique_ptr<llvm::MemoryBuffer> buffer,
+                          const PassPipelineCLParser &passPipeline,
+                          DialectRegistry &registry, bool splitInputFile,
+                          bool verifyDiagnostics, bool verifyPasses,
+                          bool allowUnregisteredDialects,
+                          bool preloadDialectsInContext = false,
+                          bool emitBytecode = false, bool explicitModule = true,
+                          bool dumpPassPipeline = false);
 
 /// Perform the core processing behind `mlir-opt`.
 /// This API is deprecated, use the MlirOptMainConfig version above instead.
@@ -193,7 +194,7 @@ LogicalResult MlirOptMain(
     PassPipelineFn passManagerSetupFn, DialectRegistry &registry,
     bool splitInputFile, bool verifyDiagnostics, bool verifyPasses,
     bool allowUnregisteredDialects, bool preloadDialectsInContext = false,
-    bool emitBytecode = false, bool implicitModule = false);
+    bool emitBytecode = false, bool explicitModule = true);
 
 /// Implementation for tools like `mlir-opt`.
 /// - toolName is used for the header displayed by `--help`.
