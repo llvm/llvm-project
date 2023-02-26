@@ -183,6 +183,10 @@ Changes in existing checks
   ``std::array`` objects to default constructed ones. The behavior for this and
   other relevant classes can now be configured with a new option.
 
+- Improved :doc:`bugprone-too-small-loop-variable
+  <clang-tidy/checks/bugprone/too-small-loop-variable>` check. Basic support
+  for bit-field and integer members as a loop variable or upper limit were added.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
