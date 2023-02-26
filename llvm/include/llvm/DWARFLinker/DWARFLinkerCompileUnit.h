@@ -43,6 +43,8 @@ struct PatchLocation {
   }
 };
 
+using RngListAttributesTy = SmallVector<PatchLocation>;
+
 /// Stores all information relating to a compile unit, be it in its original
 /// instance in the object file to its brand new cloned and generated DIE tree.
 class CompileUnit {
@@ -143,14 +145,12 @@ public:
   uint64_t getHighPc() const { return HighPc; }
   bool hasLabelAt(uint64_t Addr) const { return Labels.count(Addr); }
 
-  std::optional<PatchLocation> getUnitRangesAttribute() const {
-    return UnitRangeAttribute;
-  }
-
   const RangesTy &getFunctionRanges() const { return Ranges; }
 
-  const std::vector<PatchLocation> &getRangesAttributes() const {
-    return RangeAttributes;
+  const RngListAttributesTy &getRangesAttributes() { return RangeAttributes; }
+
+  std::optional<PatchLocation> getUnitRangesAttribute() const {
+    return UnitRangeAttribute;
   }
 
   const std::vector<std::pair<PatchLocation, int64_t>> &
@@ -278,10 +278,10 @@ private:
   /// The DW_AT_low_pc of each DW_TAG_label.
   SmallDenseMap<uint64_t, uint64_t, 1> Labels;
 
-  /// DW_AT_ranges attributes to patch after we have gathered
-  /// all the unit's function addresses.
+  /// 'rnglist'(DW_AT_ranges, DW_AT_start_scope) attributes to patch after
+  /// we have gathered all the unit's function addresses.
   /// @{
-  std::vector<PatchLocation> RangeAttributes;
+  RngListAttributesTy RangeAttributes;
   std::optional<PatchLocation> UnitRangeAttribute;
   /// @}
 
