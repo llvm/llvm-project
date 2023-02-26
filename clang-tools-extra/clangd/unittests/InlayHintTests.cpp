@@ -1050,9 +1050,15 @@ TEST(ParameterHints, ParamNameComment) {
     void bar() {
       foo(/*param*/42);
       foo( /* param = */ 42);
+#define X 42
+#define Y X
+#define Z(...) Y
+      foo(/*param=*/Z(a));
+      foo($macro[[Z(a)]]);
       foo(/* the answer */$param[[42]]);
     }
   )cpp",
+                       ExpectedHint{"param: ", "macro"},
                        ExpectedHint{"param: ", "param"});
 }
 
