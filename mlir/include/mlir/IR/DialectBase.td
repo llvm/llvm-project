@@ -103,6 +103,9 @@ class Dialect {
 
   // If this dialect can be extended at runtime with new operations or types.
   bit isExtensible = 0;
+
+  // Whether inherent Attributes defined in ODS will be stored as Properties.
+  bit usePropertiesForAttributes = 0;
 }
 
 #endif // DIALECTBASE_TD
