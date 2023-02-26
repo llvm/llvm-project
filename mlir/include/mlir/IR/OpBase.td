@@ -179,6 +179,69 @@ class TypeConstraint<Pred predicate, string summary = "",
   string cppClassName = cppClassNameParam;
 }
 
+// Base class for defining properties.
+class Property<string storageTypeParam = "", string desc = ""> {
+  // User-readable one line summary used in error reporting messages. If empty,
+  // a generic message will be used.
+  string summary = desc;
+  // The full description of this property.
+  string description = "";
+  code storageType = storageTypeParam;
+  code interfaceType = storageTypeParam;
+
+  // The expression to convert from the storage type to the Interface
+  // type. For example, an enum can be stored as an int but returned as an
+  // enum class.
+  //
+  // Format:
+  // - `$_storage` will contain the property in the storage type.
+  // - `$_ctxt` will contain an `MLIRContext *`.
+  code convertFromStorage = "$_storage";
+
+  // The call expression to build a property storage from the interface type.
+  //
+  // Format:
+  // - `$_storage` will contain the property in the storage type.
+  // - `$_value` will contain the property in the user interface type.
+  code assignToStorage = "$_storage = $_value";
+
+  // The call expression to convert from the storage type to an attribute.
+  //
+  // Format:
+  // - `$_storage` is the storage type value.
+  // - `$_ctxt` is a `MLIRContext *`.
+  //
+  // The expression must result in an Attribute.
+  code convertToAttribute = [{
+    convertToAttribute($_ctxt, $_storage)
+  }];
+
+  // The call expression to convert from an Attribute to the storage type.
+  //
+  // Format:
+  // - `$_storage` is the storage type value.
+  // - `$_attr` is the attribute.
+  // - `$_diag` is an optional Diagnostic pointer to emit error.
+  //
+  // The expression must return a LogicalResult
+  code convertFromAttribute = [{
+    return convertFromAttribute($_storage, $_attr, $_diag);
+  }];
+
+  // The call expression to hash the property.
+  //
+  // Format:
+  // - `$_storage` is the variable to hash.
+  //
+  // The expression should define a llvm::hash_code.
+  code hashProperty = [{
+    llvm::hash_value($_storage);
+  }];
+
+  // Default value for the property.
+  string defaultValue = ?;
+}
+
 // Subclass for constraints on an attribute.
 class AttrConstraint<Pred predicate, string summary = ""> :
     Constraint<predicate, summary>;
@@ -1089,6 +1152,16 @@ class DefaultValuedStrAttr<Attr attr, string val>
     : DefaultValuedAttr<attr, "\"" # val # "\"">;
 class DefaultValuedOptionalStrAttr<Attr attr, string val>
     : DefaultValuedOptionalAttr<attr, "\"" # val # "\"">;
+
+//===----------------------------------------------------------------------===//
+// Primitive property kinds
+
+class ArrayProperty<string storageTypeParam = "", int n, string desc = ""> :
+  Property<storageTypeParam # "[" # n # "]", desc> {
+  let interfaceType = "::llvm::ArrayRef<" # storageTypeParam # ">";
+  let convertFromStorage = "$_storage";
+  let assignToStorage = "::llvm::copy($_value, $_storage)";
+}
 
 //===----------------------------------------------------------------------===//
 // Primitive attribute kinds

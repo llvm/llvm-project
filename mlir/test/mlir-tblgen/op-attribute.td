@@ -68,7 +68,7 @@ def AOp : NS_Op<"a_op", []> {
 
 // DEF:      ::mlir::LogicalResult AOpAdaptor::verify
 // DEF:      ::mlir::Attribute tblgen_aAttr;
-// DEF-NEXT: while (true) {
+// DEF: while (true) {
 // DEF-NEXT:   if (namedAttrIt == namedAttrRange.end())
 // DEF-NEXT:     return emitError(loc, "'test.a_op' op ""requires attribute 'aAttr'");
 // DEF-NEXT:   if (namedAttrIt->getName() == AOp::getAAttrAttrName(*odsOpName)) {
@@ -217,10 +217,10 @@ def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
 
 // DEF:      ::mlir::LogicalResult AgetOpAdaptor::verify
 // DEF:      ::mlir::Attribute tblgen_aAttr;
-// DEF-NEXT: while (true)
+// DEF: while (true)
 // DEF:      ::mlir::Attribute tblgen_bAttr;
 // DEF-NEXT: ::mlir::Attribute tblgen_cAttr;
-// DEF-NEXT: while (true)
+// DEF: while (true)
 // DEF:      if (tblgen_aAttr && !((some-condition)))
 // DEF-NEXT:   return emitError(loc, "'test2.a_get_op' op ""attribute 'aAttr' failed to satisfy constraint: some attribute kind");
 // DEF:      if (tblgen_bAttr && !((some-condition)))
