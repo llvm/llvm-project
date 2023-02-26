@@ -1332,20 +1332,17 @@ def : PatGprSimm12<setlt, SLTI>;
 def : PatGprGpr<setult, SLTU>;
 def : PatGprSimm12<setult, SLTIU>;
 
+// RISC-V doesn't have general instructions for integer setne/seteq, but we can
+// check for equality with 0. These ComplexPatterns rewrite the setne/seteq into
+// something that can be compared with 0.
+// These ComplexPatterns must be used in pairs.
+def riscv_setne : ComplexPattern<XLenVT, 1, "selectSETNE", [setcc]>;
+def riscv_seteq : ComplexPattern<XLenVT, 1, "selectSETEQ", [setcc]>;
+
 // Define pattern expansions for setcc operations that aren't directly
 // handled by a RISC-V instruction.
-def : Pat<(seteq GPR:$rs1, 0), (SLTIU GPR:$rs1, 1)>;
-def : Pat<(seteq GPR:$rs1, GPR:$rs2), (SLTIU (XOR GPR:$rs1, GPR:$rs2), 1)>;
-def : Pat<(seteq GPR:$rs1, simm12_plus1:$imm12),
-          (SLTIU (ADDI GPR:$rs1, (NegImm simm12_plus1:$imm12)), 1)>;
-def : Pat<(seteq GPR:$rs1, -2048),
-          (SLTIU (XORI GPR:$rs1, -2048), 1)>;
-def : Pat<(setne GPR:$rs1, 0), (SLTU X0, GPR:$rs1)>;
-def : Pat<(setne GPR:$rs1, GPR:$rs2), (SLTU X0, (XOR GPR:$rs1, GPR:$rs2))>;
-def : Pat<(setne GPR:$rs1, simm12_plus1:$imm12),
-          (SLTU X0, (ADDI GPR:$rs1, (NegImm simm12_plus1:$imm12)))>;
-def : Pat<(setne GPR:$rs1, -2048),
-          (SLTU X0, (XORI GPR:$rs1, -2048))>;
+def : Pat<(riscv_seteq GPR:$rs1), (SLTIU GPR:$rs1, 1)>;
+def : Pat<(riscv_setne GPR:$rs1), (SLTU X0, GPR:$rs1)>;
 def : Pat<(setne GPR:$rs1, -1), (SLTIU GPR:$rs1, -1)>;
 
 def IntCCtoRISCVCC : SDNodeXForm<riscv_selectcc, [{
@@ -1869,15 +1866,6 @@ def : Pat<(binop_allwusers<add> GPR:$rs1, (AddiPair:$rs2)),
           (ADDIW (ADDIW GPR:$rs1, (AddiPairImmLarge AddiPair:$rs2)),
                  (AddiPairImmSmall AddiPair:$rs2))>;
 }
-
-// Some instructions have a condition operand that is compared against zero.
-// Since RISC-V doesn't have seteq/setne instructions, we can use this
-// property to avoid a seqz or snez instruction after an xor/addi/xori.
-// condop matches a setne or any unknown operation.
-// invcondop only matches a seteq.
-// This ComplexPatterns must be used in pairs.
-def condop    : ComplexPattern<XLenVT, 1, "selectCondOp">;
-def invcondop : ComplexPattern<XLenVT, 1, "selectInverseCondOp">;
 
 /// Empty pseudo for RISCVInitUndefPass
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 0, isCodeGenOnly = 1 in {

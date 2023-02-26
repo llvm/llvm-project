@@ -1299,6 +1299,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i16, Legal);
       setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i32, Legal);
       setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i64, Legal);
+
+      setOperationAction(ISD::ABDU, MVT::v16i8, Legal);
+      setOperationAction(ISD::ABDU, MVT::v8i16, Legal);
+      setOperationAction(ISD::ABDU, MVT::v4i32, Legal);
+      setOperationAction(ISD::ABDS, MVT::v4i32, Legal);
     }
 
     if (Subtarget.hasP10Vector()) {
@@ -1386,7 +1391,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   }
 
   if (Subtarget.hasP9Altivec()) {
-    setTargetDAGCombine({ISD::ABS, ISD::VSELECT});
+    setTargetDAGCombine({ISD::VSELECT});
   }
 
   setLibcallName(RTLIB::LOG_F128, "logf128");
@@ -1750,7 +1755,6 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::RFEBB:           return "PPCISD::RFEBB";
   case PPCISD::XXSWAPD:         return "PPCISD::XXSWAPD";
   case PPCISD::SWAP_NO_CHAIN:   return "PPCISD::SWAP_NO_CHAIN";
-  case PPCISD::VABSD:           return "PPCISD::VABSD";
   case PPCISD::BUILD_FP128:     return "PPCISD::BUILD_FP128";
   case PPCISD::BUILD_SPE64:     return "PPCISD::BUILD_SPE64";
   case PPCISD::EXTRACT_SPE:     return "PPCISD::EXTRACT_SPE";
@@ -16034,8 +16038,6 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
   }
   case ISD::BUILD_VECTOR:
     return DAGCombineBuildVector(N, DCI);
-  case ISD::ABS:
-    return combineABS(N, DCI);
   case ISD::VSELECT:
     return combineVSelect(N, DCI);
   }
@@ -17463,24 +17465,6 @@ SDValue PPCTargetLowering::combineTRUNCATE(SDNode *N,
   SDLoc dl(N);
   SDValue Op0 = N->getOperand(0);
 
-  // fold (truncate (abs (sub (zext a), (zext b)))) -> (vabsd a, b)
-  if (Subtarget.hasP9Altivec() && Op0.getOpcode() == ISD::ABS) {
-    EVT VT = N->getValueType(0);
-    if (VT != MVT::v4i32 && VT != MVT::v8i16 && VT != MVT::v16i8)
-      return SDValue();
-    SDValue Sub = Op0.getOperand(0);
-    if (Sub.getOpcode() == ISD::SUB) {
-      SDValue SubOp0 = Sub.getOperand(0);
-      SDValue SubOp1 = Sub.getOperand(1);
-      if ((SubOp0.getOpcode() == ISD::ZERO_EXTEND) &&
-          (SubOp1.getOpcode() == ISD::ZERO_EXTEND)) {
-        return DCI.DAG.getNode(PPCISD::VABSD, dl, VT, SubOp0.getOperand(0),
-                               SubOp1.getOperand(0),
-                               DCI.DAG.getTargetConstant(0, dl, MVT::i32));
-      }
-    }
-  }
-
   // Looking for a truncate of i128 to i64.
   if (Op0.getValueType() != MVT::i128 || N->getValueType(0) != MVT::i64)
     return SDValue();
@@ -17681,54 +17665,12 @@ isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const {
   return true;
 }
 
-// Transform (abs (sub (zext a), (zext b))) to (vabsd a b 0)
-// Transform (abs (sub (zext a), (zext_invec b))) to (vabsd a b 0)
-// Transform (abs (sub (zext_invec a), (zext_invec b))) to (vabsd a b 0)
-// Transform (abs (sub (zext_invec a), (zext b))) to (vabsd a b 0)
-// Transform (abs (sub a, b) to (vabsd a b 1)) if a & b of type v4i32
-SDValue PPCTargetLowering::combineABS(SDNode *N, DAGCombinerInfo &DCI) const {
-  assert((N->getOpcode() == ISD::ABS) && "Need ABS node here");
-  assert(Subtarget.hasP9Altivec() &&
-         "Only combine this when P9 altivec supported!");
-  EVT VT = N->getValueType(0);
-  if (VT != MVT::v4i32 && VT != MVT::v8i16 && VT != MVT::v16i8)
-    return SDValue();
-
-  SelectionDAG &DAG = DCI.DAG;
-  SDLoc dl(N);
-  if (N->getOperand(0).getOpcode() == ISD::SUB) {
-    // Even for signed integers, if it's known to be positive (as signed
-    // integer) due to zero-extended inputs.
-    unsigned SubOpcd0 = N->getOperand(0)->getOperand(0).getOpcode();
-    unsigned SubOpcd1 = N->getOperand(0)->getOperand(1).getOpcode();
-    if ((SubOpcd0 == ISD::ZERO_EXTEND ||
-         SubOpcd0 == ISD::ZERO_EXTEND_VECTOR_INREG) &&
-        (SubOpcd1 == ISD::ZERO_EXTEND ||
-         SubOpcd1 == ISD::ZERO_EXTEND_VECTOR_INREG)) {
-      return DAG.getNode(PPCISD::VABSD, dl, N->getOperand(0).getValueType(),
-                         N->getOperand(0)->getOperand(0),
-                         N->getOperand(0)->getOperand(1),
-                         DAG.getTargetConstant(0, dl, MVT::i32));
-    }
-
-    // For type v4i32, it can be optimized with xvnegsp + vabsduw
-    if (N->getOperand(0).getValueType() == MVT::v4i32 &&
-        N->getOperand(0).hasOneUse()) {
-      return DAG.getNode(PPCISD::VABSD, dl, N->getOperand(0).getValueType(),
-                         N->getOperand(0)->getOperand(0),
-                         N->getOperand(0)->getOperand(1),
-                         DAG.getTargetConstant(1, dl, MVT::i32));
-    }
-  }
-
-  return SDValue();
-}
-
 // For type v4i32/v8ii16/v16i8, transform
-// from (vselect (setcc a, b, setugt), (sub a, b), (sub b, a)) to (vabsd a, b)
-// from (vselect (setcc a, b, setuge), (sub a, b), (sub b, a)) to (vabsd a, b)
-// from (vselect (setcc a, b, setult), (sub b, a), (sub a, b)) to (vabsd a, b)
-// from (vselect (setcc a, b, setule), (sub b, a), (sub a, b)) to (vabsd a, b)
+// from (vselect (setcc a, b, setugt), (sub a, b), (sub b, a)) to (abdu a, b)
+// from (vselect (setcc a, b, setuge), (sub a, b), (sub b, a)) to (abdu a, b)
+// from (vselect (setcc a, b, setult), (sub b, a), (sub a, b)) to (abdu a, b)
+// from (vselect (setcc a, b, setule), (sub b, a), (sub a, b)) to (abdu a, b)
+// TODO: Move this to DAGCombiner?
 SDValue PPCTargetLowering::combineVSelect(SDNode *N,
                                           DAGCombinerInfo &DCI) const {
   assert((N->getOpcode() == ISD::VSELECT) && "Need VSELECT node here");
@@ -17779,9 +17721,8 @@ SDValue PPCTargetLowering::combineVSelect(SDNode *N,
       TrueOpnd.getOperand(1) == CmpOpnd2 &&
       FalseOpnd.getOperand(0) == CmpOpnd2 &&
       FalseOpnd.getOperand(1) == CmpOpnd1) {
-    return DAG.getNode(PPCISD::VABSD, dl, N->getOperand(1).getValueType(),
-                       CmpOpnd1, CmpOpnd2,
-                       DAG.getTargetConstant(0, dl, MVT::i32));
+    return DAG.getNode(ISD::ABDU, dl, N->getOperand(1).getValueType(), CmpOpnd1,
+                       CmpOpnd2, DAG.getTargetConstant(0, dl, MVT::i32));
   }
 
   return SDValue();

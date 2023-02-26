@@ -76,9 +76,6 @@ def SDT_PPCxxswapd : SDTypeProfile<1, 1, [
 def SDTVecConv : SDTypeProfile<1, 2, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisPtrTy<2>
 ]>;
-def SDTVabsd : SDTypeProfile<1, 3, [
-  SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<3, i32>
-]>;
 def SDT_PPCld_vec_be : SDTypeProfile<1, 1, [
   SDTCisVec<0>, SDTCisPtrTy<1>
 ]>;
@@ -105,7 +102,6 @@ def PPCmtvsrz : SDNode<"PPCISD::MTVSRZ", SDTUnaryOp, []>;
 def PPCsvec2fp : SDNode<"PPCISD::SINT_VEC_TO_FP", SDTVecConv, []>;
 def PPCuvec2fp: SDNode<"PPCISD::UINT_VEC_TO_FP", SDTVecConv, []>;
 def PPCswapNoChain : SDNode<"PPCISD::SWAP_NO_CHAIN", SDT_PPCxxswapd>;
-def PPCvabsd : SDNode<"PPCISD::VABSD", SDTVabsd, []>;
 
 def PPCfpexth : SDNode<"PPCISD::FP_EXTEND_HALF", SDT_PPCfpexth, []>;
 def PPCldvsxlh : SDNode<"PPCISD::LD_VSX_LH", SDT_PPCldvsxlh,
@@ -4821,20 +4817,23 @@ def : Pat<(f128 (uint_to_fp (i32 (PPCmfvsr f64:$src)))),
 
 // Any Power9 VSX subtarget that supports Power9 Altivec.
 let Predicates = [HasVSX, HasP9Altivec] in {
-// Put this P9Altivec related definition here since it's possible to be
-// selected to VSX instruction xvnegsp, avoid possible undef.
-def : Pat<(v4i32 (PPCvabsd v4i32:$A, v4i32:$B, (i32 0))),
+// Unsigned absolute-difference.
+def : Pat<(v4i32 (abdu v4i32:$A, v4i32:$B)),
           (v4i32 (VABSDUW $A, $B))>;
 
-def : Pat<(v8i16 (PPCvabsd v8i16:$A, v8i16:$B, (i32 0))),
+def : Pat<(v8i16 (abdu v8i16:$A, v8i16:$B)),
           (v8i16 (VABSDUH $A, $B))>;
 
-def : Pat<(v16i8 (PPCvabsd v16i8:$A, v16i8:$B, (i32 0))),
+def : Pat<(v16i8 (abdu v16i8:$A, v16i8:$B)),
           (v16i8 (VABSDUB $A, $B))>;
 
-// As PPCVABSD description, the last operand indicates whether do the
-// sign bit flip.
-def : Pat<(v4i32 (PPCvabsd v4i32:$A, v4i32:$B, (i32 1))),
+// Signed absolute-difference.
+// Power9 VABSD* instructions are designed to support unsigned integer
+// vectors (byte/halfword/word), if we want to make use of them for signed
+// integer vectors, we have to flip their sign bits first. To flip sign bit
+// for byte/halfword integer vector would become inefficient, but for word
+// integer vector, we can leverage XVNEGSP to make it efficiently.
+def : Pat<(v4i32 (abds v4i32:$A, v4i32:$B)),
           (v4i32 (VABSDUW (XVNEGSP $A), (XVNEGSP $B)))>;
 } // HasVSX, HasP9Altivec
 
