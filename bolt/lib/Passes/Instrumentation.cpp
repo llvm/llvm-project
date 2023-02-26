@@ -215,7 +215,7 @@ void Instrumentation::instrumentIndirectTarget(BinaryBasicBlock &BB,
   BinaryContext &BC = FromFunction.getBinaryContext();
   bool IsTailCall = BC.MIB->isTailCall(*Iter);
   InstructionListType CounterInstrs = BC.MIB->createInstrumentedIndirectCall(
-      *Iter, IsTailCall,
+      std::move(*Iter),
       IsTailCall ? IndTailCallHandlerExitBBFunction->getSymbol()
                  : IndCallHandlerExitBBFunction->getSymbol(),
       IndCallSiteID, &*BC.Ctx);
