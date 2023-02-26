@@ -200,3 +200,39 @@ define i128 @bitselect_i128(i128 %a, i128 %b, i128 %m) nounwind {
   %or = or i128 %ma, %mb
   ret i128 %or
 }
+
+;
+; Bitselect between constants
+;
+
+; bitselect(52, -6553, m)
+; TODO: Non-BMI canonicalization is actually better.
+define i32 @bitselect_constants_i32(i32 %m) nounwind {
+; X86-LABEL: bitselect_constants_i32:
+; X86:       # %bb.0:
+; X86-NEXT:    movl $-6573, %eax # imm = 0xE653
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    xorl $52, %eax
+; X86-NEXT:    retl
+;
+; X64-NOBMI-LABEL: bitselect_constants_i32:
+; X64-NOBMI:       # %bb.0:
+; X64-NOBMI-NEXT:    movl %edi, %eax
+; X64-NOBMI-NEXT:    andl $-6573, %eax # imm = 0xE653
+; X64-NOBMI-NEXT:    xorl $52, %eax
+; X64-NOBMI-NEXT:    retq
+;
+; X64-BMI-LABEL: bitselect_constants_i32:
+; X64-BMI:       # %bb.0:
+; X64-BMI-NEXT:    movl %edi, %eax
+; X64-BMI-NEXT:    notl %eax
+; X64-BMI-NEXT:    andl $52, %eax
+; X64-BMI-NEXT:    andl $-6553, %edi # imm = 0xE667
+; X64-BMI-NEXT:    orl %edi, %eax
+; X64-BMI-NEXT:    retq
+  %not = xor i32 %m, -1
+  %ma = and i32 52, %not
+  %mb = and i32 -6553, %m
+  %or = or i32 %ma, %mb
+  ret i32 %or
+}
