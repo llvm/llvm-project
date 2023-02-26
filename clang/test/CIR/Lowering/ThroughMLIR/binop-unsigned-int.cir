@@ -53,22 +53,22 @@ module {
 }
 
 // MLIR: = arith.muli
-// MLIR: = arith.divsi
-// MLIR: = arith.remsi
+// MLIR: = arith.divui
+// MLIR: = arith.remui
 // MLIR: = arith.addi
 // MLIR: = arith.subi
-// MLIR: = arith.shrsi
+// MLIR: = arith.shrui
 // MLIR: = arith.shli
 // MLIR: = arith.andi
 // MLIR: = arith.xori
 // MLIR: = arith.ori
 
 // LLVM: = mul i32
-// LLVM: = sdiv i32
-// LLVM: = srem i32
+// LLVM: = udiv i32
+// LLVM: = urem i32
 // LLVM: = add i32
 // LLVM: = sub i32
-// LLVM: = ashr i32
+// LLVM: = lshr i32
 // LLVM: = shl i32
 // LLVM: = and i32
 // LLVM: = xor i32
