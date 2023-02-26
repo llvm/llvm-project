@@ -223,7 +223,7 @@ Error collectFromArray(TBDKey Key, const Object *Obj,
     return Error::success();
   }
 
-  for (Value Val : *Values) {
+  for (const Value &Val : *Values) {
     auto ValStr = Val.getAsString();
     if (!ValStr.has_value())
       return make_error<JSONStubError>(getParseErrorMsg(Key));
@@ -256,7 +256,7 @@ Expected<TargetList> getTargets(const Object *Section) {
     return make_error<JSONStubError>(getParseErrorMsg(TBDKey::Targets));
 
   TargetList IFTargets;
-  for (Value JSONTarget : *Targets) {
+  for (const Value &JSONTarget : *Targets) {
     auto TargetStr = JSONTarget.getAsString();
     if (!TargetStr.has_value())
       return make_error<JSONStubError>(getParseErrorMsg(TBDKey::Target));
