@@ -8,14 +8,14 @@
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 
 // RUN: clang-scan-deps -compilation-database %t/cdb.json \
-// RUN:   -cas-path %t/cas -action-cache-path %t/cache -module-files-dir %t/outputs \
+// RUN:   -cas-path %t/cas -module-files-dir %t/outputs \
 // RUN:   -format experimental-full -mode preprocess-dependency-directives \
 // RUN:   > %t/deps_no_fw.json
 
 // RUN: echo 'build 1' > %t/Foo.framework/Foo
 
 // RUN: clang-scan-deps -compilation-database %t/cdb.json \
-// RUN:   -cas-path %t/cas -action-cache-path %t/cache -module-files-dir %t/outputs \
+// RUN:   -cas-path %t/cas -module-files-dir %t/outputs \
 // RUN:   -format experimental-full -mode preprocess-dependency-directives \
 // RUN:   > %t/deps_fw1.json
 
@@ -25,7 +25,7 @@
 // RUN: echo 'build 2' > %t/Foo.framework/Foo
 
 // RUN: clang-scan-deps -compilation-database %t/cdb.json \
-// RUN:   -cas-path %t/cas -action-cache-path %t/cache -module-files-dir %t/outputs \
+// RUN:   -cas-path %t/cas -module-files-dir %t/outputs \
 // RUN:   -format experimental-full -mode preprocess-dependency-directives \
 // RUN:   > %t/deps_fw2.json
 

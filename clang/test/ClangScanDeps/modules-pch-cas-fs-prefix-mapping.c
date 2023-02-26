@@ -10,7 +10,7 @@
 
 // == Scan PCH
 // RUN: clang-scan-deps -compilation-database %t/cdb_pch.json -format experimental-full \
-// RUN:    -cas-path %t/cas -action-cache-path %t/cache -module-files-dir %t/modules \
+// RUN:    -cas-path %t/cas -module-files-dir %t/modules \
 // RUN:    -prefix-map=%t/modules=/^modules -prefix-map=%t=/^src -prefix-map-sdk=/^sdk -prefix-map-toolchain=/^tc \
 // RUN:  > %t/pch_result.txt
 
@@ -29,7 +29,7 @@
 
 // == Scan TU, including PCH
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full \
-// RUN:    -cas-path %t/cas -action-cache-path %t/cache -module-files-dir %t/modules \
+// RUN:    -cas-path %t/cas -module-files-dir %t/modules \
 // RUN:    -prefix-map=%t/modules=/^modules -prefix-map=%t=/^src -prefix-map-sdk=/^sdk -prefix-map-toolchain=/^tc \
 // RUN:  > %t/result.txt
 
@@ -88,8 +88,6 @@
 // PCH:            "command-line": [
 // PCH:              "-fcas-path"
 // PCH:              "[[PREFIX]]/cas"
-// PCH:              "-faction-cache-path"
-// PCH:              "[[PREFIX]]/cache"
 // PCH:              "-fcas-fs"
 // PCH:              "[[A_ROOT_ID]]"
 // PCH:              "-fcas-fs-working-directory"
@@ -124,8 +122,6 @@
 // PCH:            "command-line": [
 // PCH:              "-fcas-path"
 // PCH:              "[[PREFIX]]/cas"
-// PCH:              "-faction-cache-path"
-// PCH:              "[[PREFIX]]/cache"
 // PCH:              "-fcas-fs"
 // PCH:              "[[B_ROOT_ID]]"
 // PCH:              "-fcas-fs-working-directory"
@@ -168,8 +164,6 @@
 // PCH:                "command-line": [
 // PCH:                  "-fcas-path"
 // PCH:                  "[[PREFIX]]/cas"
-// PCH:                  "-faction-cache-path"
-// PCH:                  "[[PREFIX]]/cache"
 // PCH:                  "-fcas-fs"
 // PCH:                  "[[TU_ROOT_ID]]"
 // PCH:                  "-fcas-fs-working-directory"
@@ -204,8 +198,6 @@
 // CHECK-NEXT:         "-cc1"
 // CHECK:              "-fcas-path"
 // CHECK-NEXT:         "[[PREFIX]]{{.}}cas"
-// CHECK:              "-faction-cache-path"
-// CHECK-NEXT:         "[[PREFIX]]{{.}}cache"
 // CHECK:              "-fcas-fs"
 // CHECK-NEXT:         "[[C_ROOT_ID]]"
 // CHECK:              "-fcas-fs-working-directory"
@@ -240,8 +232,6 @@
 // CHECK:                "command-line": [
 // CHECK:                  "-fcas-path"
 // CHECK-NEXT:             "[[PREFIX]]/cas"
-// CHECK:                  "-faction-cache-path"
-// CHECK-NEXT:             "[[PREFIX]]/cache"
 // CHECK:                  "-fcas-fs"
 // CHECK-NEXT:             "[[TU_ROOT_ID]]"
 // CHECK:                  "-fcas-fs-working-directory"

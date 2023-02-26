@@ -186,6 +186,8 @@ class CompilerInstance : public ModuleLoader {
   /// Force an output buffer.
   std::unique_ptr<llvm::raw_pwrite_stream> OutputStream;
 
+  void createCASDatabases();
+
   CompilerInstance(const CompilerInstance &) = delete;
   void operator=(const CompilerInstance &) = delete;
 public:

@@ -9,7 +9,6 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/CAS/LazyMappedFileRegionBumpPtr.h"
 
-#if LLVM_ENABLE_ONDISK_CAS
 using namespace llvm;
 using namespace llvm::cas;
 
@@ -38,4 +37,3 @@ int64_t LazyMappedFileRegionBumpPtr::allocateOffset(uint64_t AllocSize) {
   }
   return OldEnd;
 }
-#endif // LLVM_ENABLE_ONDISK_CAS

@@ -1,4 +1,4 @@
-RUN: rm -rf %t
+RUN: rm -rf %t %t.cas
 RUN: mkdir %t
 
 RUN: llvm-cas --cas %t.cas --make-blob \

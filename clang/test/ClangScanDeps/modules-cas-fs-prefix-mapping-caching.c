@@ -9,13 +9,13 @@
 // RUN: sed -e "s|DIR|%t/dir2|g" -e "s|CLANG|%clang|g" -e "s|SDK|%S/Inputs/SDK|g" %t/cdb.json.template > %t/dir2/cdb.json
 
 // RUN: clang-scan-deps -compilation-database %t/dir1/cdb.json -format experimental-full \
-// RUN:    -cas-path %t/cas -action-cache-path %t/cache -module-files-dir %t/dir1/modules \
+// RUN:    -cas-path %t/cas -module-files-dir %t/dir1/modules \
 // RUN:    -prefix-map-sdk=/^sdk -prefix-map-toolchain=/^tc \
 // RUN:    -prefix-map=%t/dir1/modules=/^modules -prefix-map=%t/dir1=/^src \
 // RUN:  > %t/dir1.txt
 
 // RUN: clang-scan-deps -compilation-database %t/dir2/cdb.json -format experimental-full \
-// RUN:    -cas-path %t/cas -action-cache-path %t/cache -module-files-dir %t/dir2/modules \
+// RUN:    -cas-path %t/cas -module-files-dir %t/dir2/modules \
 // RUN:    -prefix-map-sdk=/^sdk -prefix-map-toolchain=/^tc \
 // RUN:    -prefix-map=%t/dir2/modules=/^modules -prefix-map=%t/dir2=/^src \
 // RUN:  > %t/dir2.txt

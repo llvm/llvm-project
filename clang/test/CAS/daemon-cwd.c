@@ -11,13 +11,13 @@
 // RUN:    -fdepscan-prefix-map=%t=/^build                                \
 // RUN:    -fdepscan-prefix-map-toolchain=/^toolchain                     \
 // RUN:    -fdepscan-daemon=%{clang-daemon-dir}/%basename_t               \
-// RUN:    -Xclang -fcas-path -Xclang %t/cas -Xclang -faction-cache-path -Xclang %t/cache \
+// RUN:    -Xclang -fcas-path -Xclang %t/cas                              \
 // RUN:    -MD -MF %t/test.d -Iinclude                                    \
 // RUN:    -fsyntax-only -x c %s >> %t/cmd.sh
 // RUN: chmod +x %t/cmd.sh
 
 // RUN: %clang -cc1depscand -execute %{clang-daemon-dir}/%basename_t      \
-// RUN:   -cas-args -fcas-path %t/cas -faction-cache-path %t/cache -- %t/cmd.sh
+// RUN:   -cas-args -fcas-path %t/cas -- %t/cmd.sh
 // RUN: (cd %t && %clang -target x86_64-apple-macos11 -MD -MF %t/test2.d  \
 // RUN:    -Iinclude -fsyntax-only -x c %s)
 // RUN: diff %t/test.d %t/test2.d

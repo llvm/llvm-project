@@ -467,9 +467,44 @@ namespace llvm {
     ~OwningArrayRef() { delete[] this->data(); }
   };
 
+  /// @name ArrayRef Deduction guides
+  /// @{
+  /// Deduction guide to construct an ArrayRef from a single element.
+  template <typename T> ArrayRef(const T &OneElt) -> ArrayRef<T>;
+
+  /// Deduction guide to construct an ArrayRef from a pointer and length
+  template <typename T> ArrayRef(const T *data, size_t length) -> ArrayRef<T>;
+
+  /// Deduction guide to construct an ArrayRef from a range
+  template <typename T> ArrayRef(const T *data, const T *end) -> ArrayRef<T>;
+
+  /// Deduction guide to construct an ArrayRef from a SmallVector
+  template <typename T> ArrayRef(const SmallVectorImpl<T> &Vec) -> ArrayRef<T>;
+
+  /// Deduction guide to construct an ArrayRef from a SmallVector
+  template <typename T, unsigned N>
+  ArrayRef(const SmallVector<T, N> &Vec) -> ArrayRef<T>;
+
+  /// Deduction guide to construct an ArrayRef from a std::vector
+  template <typename T> ArrayRef(const std::vector<T> &Vec) -> ArrayRef<T>;
+
+  /// Deduction guide to construct an ArrayRef from a std::array
+  template <typename T, std::size_t N>
+  ArrayRef(const std::array<T, N> &Vec) -> ArrayRef<T>;
+
+  /// Deduction guide to construct an ArrayRef from an ArrayRef (no-op) (const)
+  template <typename T> ArrayRef(const ArrayRef<T> &Vec) -> ArrayRef<T>;
+
+  /// Deduction guide to construct an ArrayRef from an ArrayRef (no-op)
+  template <typename T> ArrayRef(ArrayRef<T> &Vec) -> ArrayRef<T>;
+
+  /// Deduction guide to construct an ArrayRef from a C array.
+  template <typename T, size_t N> ArrayRef(const T (&Arr)[N]) -> ArrayRef<T>;
+
+  /// @}
+
   /// @name ArrayRef Convenience constructors
   /// @{
-
   /// Construct an ArrayRef from a single element.
   template<typename T>
   ArrayRef<T> makeArrayRef(const T &OneElt) {
@@ -527,6 +562,36 @@ namespace llvm {
   ArrayRef<T> makeArrayRef(const T (&Arr)[N]) {
     return ArrayRef<T>(Arr);
   }
+
+  /// @name MutableArrayRef Deduction guides
+  /// @{
+  /// Deduction guide to construct a `MutableArrayRef` from a single element
+  template <class T> MutableArrayRef(T &OneElt) -> MutableArrayRef<T>;
+
+  /// Deduction guide to construct a `MutableArrayRef` from a pointer and
+  /// length.
+  template <class T>
+  MutableArrayRef(T *data, size_t length) -> MutableArrayRef<T>;
+
+  /// Deduction guide to construct a `MutableArrayRef` from a `SmallVector`.
+  template <class T>
+  MutableArrayRef(SmallVectorImpl<T> &Vec) -> MutableArrayRef<T>;
+
+  template <class T, unsigned N>
+  MutableArrayRef(SmallVector<T, N> &Vec) -> MutableArrayRef<T>;
+
+  /// Deduction guide to construct a `MutableArrayRef` from a `std::vector`.
+  template <class T> MutableArrayRef(std::vector<T> &Vec) -> MutableArrayRef<T>;
+
+  /// Deduction guide to construct a `MutableArrayRef` from a `std::array`.
+  template <class T, std::size_t N>
+  MutableArrayRef(std::array<T, N> &Vec) -> MutableArrayRef<T>;
+
+  /// Deduction guide to construct a `MutableArrayRef` from a C array.
+  template <typename T, size_t N>
+  MutableArrayRef(T (&Arr)[N]) -> MutableArrayRef<T>;
+
+  /// @}
 
   /// Construct a MutableArrayRef from a single element.
   template<typename T>

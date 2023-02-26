@@ -9,6 +9,7 @@
 #include "BuiltinCAS.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CAS/BuiltinObjectHasher.h"
+#include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
@@ -35,7 +36,7 @@ Expected<CASID> BuiltinCAS::parseID(StringRef Reference) {
     return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "invalid hash in cas-id '" + Reference + "'");
 
-  return parseIDImpl(arrayRefFromStringRef(Binary));
+  return CASID::create(&getContext(), Binary);
 }
 
 void BuiltinCASContext::printIDImpl(raw_ostream &OS, const CASID &ID) const {
@@ -47,57 +48,6 @@ void BuiltinCASContext::printIDImpl(raw_ostream &OS, const CASID &ID) const {
 const BuiltinCASContext &BuiltinCASContext::getDefaultContext() {
   static BuiltinCASContext DefaultContext;
   return DefaultContext;
-}
-
-static size_t getPageSize() {
-  static int PageSize = sys::Process::getPageSizeEstimate();
-  return PageSize;
-}
-
-Expected<ObjectRef>
-BuiltinCAS::storeFromOpenFileImpl(sys::fs::file_t FD,
-                                  Optional<sys::fs::file_status> Status) {
-  int PageSize = getPageSize();
-
-  if (!Status) {
-    Status.emplace();
-    if (std::error_code EC = sys::fs::status(FD, *Status))
-      return errorCodeToError(EC);
-  }
-
-  constexpr size_t MinMappedSize = 4 * 4096;
-  auto readWithStream = [&]() -> Expected<ObjectRef> {
-    // FIXME: MSVC: SmallString<MinMappedSize * 2>
-    SmallString<4 * 4096 * 2> Data;
-    if (Error E = sys::fs::readNativeFileToEOF(FD, Data, MinMappedSize))
-      return std::move(E);
-    return store(None, makeArrayRef(Data.data(), Data.size()));
-  };
-
-  // Check whether we can trust the size from stat.
-  if (Status->type() != sys::fs::file_type::regular_file &&
-      Status->type() != sys::fs::file_type::block_file)
-    return readWithStream();
-
-  if (Status->getSize() < MinMappedSize)
-    return readWithStream();
-
-  std::error_code EC;
-  sys::fs::mapped_file_region Map(FD, sys::fs::mapped_file_region::readonly,
-                                  Status->getSize(),
-                                  /*offset=*/0, EC);
-  if (EC)
-    return errorCodeToError(EC);
-
-  // If the file is guaranteed to be null-terminated, use it directly. Note
-  // that the file size may have changed from ::stat if this file is volatile,
-  // so we need to check for an actual null character at the end.
-  ArrayRef<char> Data(Map.data(), Map.size());
-  HashType ComputedHash =
-      BuiltinObjectHasher<HasherT>::hashObject(*this, None, Data);
-  if (!isAligned(Align(PageSize), Data.size()) && Data.end()[0] == 0)
-    return storeFromNullTerminatedRegion(ComputedHash, std::move(Map));
-  return storeImpl(ComputedHash, None, Data);
 }
 
 Expected<ObjectRef> BuiltinCAS::store(ArrayRef<ObjectRef> Refs,
@@ -129,4 +79,15 @@ Error BuiltinCAS::validate(const CASID &ID) {
     return createCorruptObjectError(ID);
 
   return Error::success();
+}
+
+Expected<std::unique_ptr<ondisk::UnifiedOnDiskCache>>
+cas::builtin::createBuiltinUnifiedOnDiskCache(StringRef Path) {
+#if LLVM_ENABLE_ONDISK_CAS
+  return ondisk::UnifiedOnDiskCache::open(Path, /*SizeLimit=*/std::nullopt,
+                                          BuiltinCASContext::getHashName(),
+                                          sizeof(HashType));
+#else
+  return createStringError(inconvertibleErrorCode(), "OnDiskCache is disabled");
+#endif
 }

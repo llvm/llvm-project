@@ -18,10 +18,10 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
-#if LLVM_ENABLE_ONDISK_CAS
-
 using namespace llvm;
 using namespace llvm::cas;
+
+#if LLVM_ENABLE_ONDISK_CAS
 
 static_assert(sizeof(size_t) == sizeof(uint64_t), "64-bit only");
 static_assert(sizeof(std::atomic<int64_t>) == sizeof(uint64_t),
@@ -142,6 +142,8 @@ public:
       return std::move(E);
     return DatabaseFile(std::move(LMFR));
   }
+
+  size_t size() const { return Alloc.size(); }
 
 private:
   static Error validate(LazyMappedFileRegion &LMFR);
@@ -1020,6 +1022,8 @@ static Error checkTable(StringRef Label, size_t Expected, size_t Observed,
                                     ", observed: " + Twine(Observed) + ")");
 }
 
+size_t OnDiskHashMappedTrie::size() const { return Impl->File.size(); }
+
 Expected<OnDiskHashMappedTrie> OnDiskHashMappedTrie::create(
     const Twine &PathTwine, const Twine &TrieNameTwine, size_t NumHashBits,
     uint64_t DataSize, uint64_t MaxFileSize,
@@ -1117,14 +1121,6 @@ Expected<OnDiskHashMappedTrie> OnDiskHashMappedTrie::create(
   return OnDiskHashMappedTrie(std::make_unique<ImplType>(std::move(Impl)));
 }
 
-OnDiskHashMappedTrie::OnDiskHashMappedTrie(std::unique_ptr<ImplType> Impl)
-    : Impl(std::move(Impl)) {}
-OnDiskHashMappedTrie::OnDiskHashMappedTrie(OnDiskHashMappedTrie &&RHS) =
-    default;
-OnDiskHashMappedTrie &
-OnDiskHashMappedTrie::operator=(OnDiskHashMappedTrie &&RHS) = default;
-OnDiskHashMappedTrie::~OnDiskHashMappedTrie() = default;
-
 //===----------------------------------------------------------------------===//
 // DataAllocator data structures.
 //===----------------------------------------------------------------------===//
@@ -1133,6 +1129,8 @@ namespace {
 /// DataAllocator table layout:
 /// - [8-bytes: Generic table header]
 /// - 8-bytes: AllocatorOffset (reserved for implementing free lists)
+/// - 8-bytes: Size for user data header
+/// - <user data buffer>
 ///
 /// Record layout:
 /// - <data>
@@ -1144,6 +1142,7 @@ public:
   struct Header {
     TableHandle::Header GenericHeader;
     std::atomic<int64_t> AllocatorOffset;
+    const uint64_t UserHeaderSize;
   };
 
   operator TableHandle() const {
@@ -1162,8 +1161,13 @@ public:
   const Header &getHeader() const { return *H; }
   LazyMappedFileRegion &getRegion() const { return *LMFR; }
 
+  MutableArrayRef<uint8_t> getUserHeader() {
+    return MutableArrayRef(reinterpret_cast<uint8_t *>(H + 1),
+                           H->UserHeaderSize);
+  }
+
   static DataAllocatorHandle create(LazyMappedFileRegionBumpPtr &Alloc,
-                                    StringRef Name);
+                                    StringRef Name, uint32_t UserHeaderSize);
 
   DataAllocatorHandle() = default;
   DataAllocatorHandle(LazyMappedFileRegion &LMFR, Header &H)
@@ -1185,27 +1189,31 @@ struct OnDiskDataAllocator::ImplType {
 };
 
 DataAllocatorHandle
-DataAllocatorHandle::create(LazyMappedFileRegionBumpPtr &Alloc,
-                            StringRef Name) {
+DataAllocatorHandle::create(LazyMappedFileRegionBumpPtr &Alloc, StringRef Name,
+                            uint32_t UserHeaderSize) {
   // Allocate.
-  intptr_t Offset = Alloc.allocateOffset(sizeof(Header) + Name.size() + 1);
+  intptr_t Offset =
+      Alloc.allocateOffset(sizeof(Header) + UserHeaderSize + Name.size() + 1);
 
   // Construct the header and the name.
   assert(Name.size() <= UINT16_MAX && "Expected smaller table name");
   auto *H = new (Alloc.getRegion().data() + Offset)
       Header{{TableHandle::TableKind::DataAllocator, (uint16_t)Name.size(),
-              (uint32_t)sizeof(Header)},
-             /*AllocatorOffset=*/{0}};
-  char *NameStorage = reinterpret_cast<char *>(H + 1);
+              (int32_t)(sizeof(Header) + UserHeaderSize)},
+             /*AllocatorOffset=*/{0},
+             /*UserHeaderSize=*/UserHeaderSize};
+  memset(H + 1, 0, UserHeaderSize);
+  char *NameStorage = reinterpret_cast<char *>(H + 1) + UserHeaderSize;
   llvm::copy(Name, NameStorage);
   NameStorage[Name.size()] = 0;
   return DataAllocatorHandle(Alloc.getRegion(), *H);
 }
 
-Expected<OnDiskDataAllocator>
-OnDiskDataAllocator::create(const Twine &PathTwine, const Twine &TableNameTwine,
-                            uint64_t MaxFileSize,
-                            Optional<uint64_t> NewFileInitialSize) {
+Expected<OnDiskDataAllocator> OnDiskDataAllocator::create(
+    const Twine &PathTwine, const Twine &TableNameTwine, uint64_t MaxFileSize,
+    Optional<uint64_t> NewFileInitialSize, uint32_t UserHeaderSize,
+    function_ref<void(void *)> UserHeaderInit) {
+  assert(!UserHeaderSize || UserHeaderInit);
   SmallString<128> PathStorage;
   StringRef Path = PathTwine.toStringRef(PathStorage);
   SmallString<128> TableNameStorage;
@@ -1218,8 +1226,10 @@ OnDiskDataAllocator::create(const Twine &PathTwine, const Twine &TableNameTwine,
       return DB.takeError();
 
     DataAllocatorHandle Store =
-        DataAllocatorHandle::create(DB->getAlloc(), TableName);
+        DataAllocatorHandle::create(DB->getAlloc(), TableName, UserHeaderSize);
     DB->addTable(Store);
+    if (UserHeaderSize)
+      UserHeaderInit(Store.getUserHeader().data());
     return Error::success();
   };
 
@@ -1266,11 +1276,89 @@ const char *OnDiskDataAllocator::beginData(FileOffset Offset) const {
   return Impl->File.getRegion().data() + Offset.get();
 }
 
+MutableArrayRef<uint8_t> OnDiskDataAllocator::getUserHeader() {
+  return Impl->Store.getUserHeader();
+}
+
+size_t OnDiskDataAllocator::size() const { return Impl->File.size(); }
+
 OnDiskDataAllocator::OnDiskDataAllocator(std::unique_ptr<ImplType> Impl)
     : Impl(std::move(Impl)) {}
+
+#else // !LLVM_ENABLE_ONDISK_CAS
+
+struct OnDiskHashMappedTrie::ImplType {};
+
+Expected<OnDiskHashMappedTrie> OnDiskHashMappedTrie::create(
+    const Twine &PathTwine, const Twine &TrieNameTwine, size_t NumHashBits,
+    uint64_t DataSize, uint64_t MaxFileSize,
+    Optional<uint64_t> NewFileInitialSize, Optional<size_t> NewTableNumRootBits,
+    Optional<size_t> NewTableNumSubtrieBits) {
+  report_fatal_error("not supported");
+}
+
+OnDiskHashMappedTrie::pointer
+OnDiskHashMappedTrie::insertLazy(const_pointer Hint, ArrayRef<uint8_t> Hash,
+                                 LazyInsertOnConstructCB OnConstruct,
+                                 LazyInsertOnLeakCB OnLeak) {
+  report_fatal_error("not supported");
+}
+
+OnDiskHashMappedTrie::const_pointer
+OnDiskHashMappedTrie::recoverFromFileOffset(FileOffset Offset) const {
+  report_fatal_error("not supported");
+}
+
+OnDiskHashMappedTrie::const_pointer
+OnDiskHashMappedTrie::find(ArrayRef<uint8_t> Hash) const {
+  report_fatal_error("not supported");
+}
+
+void OnDiskHashMappedTrie::print(
+    raw_ostream &OS, function_ref<void(ArrayRef<char>)> PrintRecordData) const {
+  report_fatal_error("not supported");
+}
+
+size_t OnDiskHashMappedTrie::size() const {
+  report_fatal_error("not supported");
+}
+
+struct OnDiskDataAllocator::ImplType {};
+
+Expected<OnDiskDataAllocator> OnDiskDataAllocator::create(
+    const Twine &Path, const Twine &TableName, uint64_t MaxFileSize,
+    Optional<uint64_t> NewFileInitialSize, uint32_t UserHeaderSize,
+    function_ref<void(void *)> UserHeaderInit) {
+  report_fatal_error("not supported");
+}
+
+OnDiskDataAllocator::pointer OnDiskDataAllocator::allocate(size_t Size) {
+  report_fatal_error("not supported");
+}
+
+const char *OnDiskDataAllocator::beginData(FileOffset Offset) const {
+  report_fatal_error("not supported");
+}
+
+MutableArrayRef<uint8_t> OnDiskDataAllocator::getUserHeader() {
+  report_fatal_error("not supported");
+}
+
+size_t OnDiskDataAllocator::size() const {
+  report_fatal_error("not supported");
+}
+
+#endif // LLVM_ENABLE_ONDISK_CAS
+
+OnDiskHashMappedTrie::OnDiskHashMappedTrie(std::unique_ptr<ImplType> Impl)
+    : Impl(std::move(Impl)) {}
+OnDiskHashMappedTrie::OnDiskHashMappedTrie(OnDiskHashMappedTrie &&RHS) =
+    default;
+OnDiskHashMappedTrie &
+OnDiskHashMappedTrie::operator=(OnDiskHashMappedTrie &&RHS) = default;
+OnDiskHashMappedTrie::~OnDiskHashMappedTrie() = default;
+
 OnDiskDataAllocator::OnDiskDataAllocator(OnDiskDataAllocator &&RHS) = default;
 OnDiskDataAllocator &
 OnDiskDataAllocator::operator=(OnDiskDataAllocator &&RHS) = default;
 OnDiskDataAllocator::~OnDiskDataAllocator() = default;
-
-#endif // LLVM_ENABLE_ONDISK_CAS

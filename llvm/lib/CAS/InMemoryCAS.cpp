@@ -22,7 +22,6 @@ using namespace llvm::cas::builtin;
 namespace {
 
 class InMemoryObject;
-class InMemoryString;
 
 /// Index of referenced IDs (map: Hash -> InMemoryObject*). Uses
 /// LazyAtomicPointer to coordinate creation of objects.
@@ -34,10 +33,6 @@ using InMemoryIndexT =
 /// their hash.
 using InMemoryIndexValueT = InMemoryIndexT::value_type;
 
-/// String pool.
-using InMemoryStringPoolT =
-    ThreadSafeHashMappedTrie<LazyAtomicPointer<const InMemoryString>,
-                             sizeof(HashType)>;
 
 class InMemoryObject {
 public:
@@ -159,36 +154,9 @@ private:
   uint32_t DataSize;
 };
 
-/// Internal string type.
-class InMemoryString {
-public:
-  StringRef get() const {
-    return StringRef(reinterpret_cast<const char *>(this + 1), Size);
-  }
-
-  static InMemoryString &create(function_ref<void *(size_t Size)> Allocate,
-                                StringRef String) {
-    assert(String.size() <= UINT32_MAX && "Expected strings smaller than 4GB");
-    void *Mem = Allocate(sizeof(InMemoryString) + String.size() + 1);
-    return *new (Mem) InMemoryString(String);
-  }
-
-private:
-  InMemoryString(StringRef String) : Size(String.size()) {
-    auto *Begin = reinterpret_cast<char *>(this + 1);
-    llvm::copy(String, Begin);
-    Begin[String.size()] = 0;
-  }
-  size_t Size;
-};
-
 /// In-memory CAS database and action cache (the latter should be separated).
 class InMemoryCAS : public BuiltinCAS {
 public:
-  Expected<CASID> parseIDImpl(ArrayRef<uint8_t> Hash) final {
-    return getID(indexHash(Hash));
-  }
-
   Expected<ObjectRef> storeImpl(ArrayRef<uint8_t> ComputedHash,
                                 ArrayRef<ObjectRef> Refs,
                                 ArrayRef<char> Data) final;
@@ -242,7 +210,6 @@ public:
   }
 
   CASID getID(ObjectRef Ref) const final { return getIDImpl(Ref); }
-  CASID getID(ObjectHandle Ref) const final { return getIDImpl(Ref); }
   CASID getIDImpl(ReferenceBase Ref) const {
     return getID(asInMemoryObject(Ref));
   }
@@ -278,11 +245,7 @@ private:
   /// - InMemoryObject points back to here.
   InMemoryIndexT Index;
 
-  /// String pool for trees.
-  InMemoryStringPoolT StringPool;
-
   ThreadSafeAllocator<BumpPtrAllocator> Objects;
-  ThreadSafeAllocator<BumpPtrAllocator> Strings;
   ThreadSafeAllocator<SpecificBumpPtrAllocator<sys::fs::mapped_file_region>>
       MemoryMaps;
 };
@@ -304,8 +267,6 @@ ArrayRef<const InMemoryObject *> InMemoryObject::getRefs() const {
 void InMemoryCAS::print(raw_ostream &OS) const {
   OS << "index: ";
   Index.print(OS);
-  OS << "strings: ";
-  StringPool.print(OS);
 }
 
 Expected<ObjectRef>

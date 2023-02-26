@@ -31,6 +31,16 @@ public:
     return H.finish();
   }
 
+  static HashT hashObject(ArrayRef<ArrayRef<uint8_t>> Refs,
+                          ArrayRef<char> Data) {
+    BuiltinObjectHasher H;
+    H.updateSize(Refs.size());
+    for (const ArrayRef<uint8_t> &Ref : Refs)
+      H.updateID(Ref);
+    H.updateArray(Data);
+    return H.finish();
+  }
+
 private:
   HashT finish() { return Hasher.final(); }
 
@@ -38,10 +48,11 @@ private:
     updateID(CAS.getID(Ref));
   }
 
-  void updateID(const CASID &ID) {
+  void updateID(const CASID &ID) { updateID(ID.getHash()); }
+
+  void updateID(ArrayRef<uint8_t> Hash) {
     // NOTE: Does not hash the size of the hash. That's a CAS implementation
     // detail that shouldn't leak into the UUID for an object.
-    ArrayRef<uint8_t> Hash = ID.getHash();
     assert(Hash.size() == sizeof(HashT) &&
            "Expected object ref to match the hash size");
     Hasher.update(Hash);

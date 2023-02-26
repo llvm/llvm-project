@@ -11,7 +11,7 @@
 // CHECK:      tree {{.*}} for '[[PREFIX]]/t1.c'
 // CHECK-NEXT: tree {{.*}} for '[[PREFIX]]/t2.c'
 
-// RUN: clang-scan-deps -compilation-database %t/cdb.json -cas-path %t/cas -action-cache-path %t/cache -format experimental-tree-full -mode preprocess > %t/full_result.json
+// RUN: clang-scan-deps -compilation-database %t/cdb.json -cas-path %t/cas -format experimental-tree-full -mode preprocess > %t/full_result.json
 // RUN: cat %t/full_result.json | FileCheck %s -DPREFIX=%/t --check-prefix=FULL-TREE
 
 // FULL-TREE:      {
@@ -24,8 +24,6 @@
 // FULL-TREE-NEXT:       "command-line": [
 // FULL-TREE:              "-fcas-path"
 // FULL-TREE-NEXT:         "[[PREFIX]]{{.}}cas"
-// FULL-TREE:              "-faction-cache-path"
-// FULL-TREE-NEXT:         "[[PREFIX]]{{.}}cache"
 // FULL-TREE:              "-fcas-fs"
 // FULL-TREE-NEXT:         "[[T1_ROOT_ID]]"
 // FULL-TREE:              "-fcache-compile-job"
@@ -44,8 +42,6 @@
 // FULL-TREE-NEXT:       "command-line": [
 // FULL-TREE:              "-fcas-path"
 // FULL-TREE-NEXT:         "[[PREFIX]]{{.}}cas"
-// FULL-TREE:              "-faction-cache-path"
-// FULL-TREE-NEXT:         "[[PREFIX]]{{.}}cache"
 // FULL-TREE:              "-fcas-fs"
 // FULL-TREE-NEXT:         "[[T2_ROOT_ID]]"
 // FULL-TREE:              "-fcache-compile-job"

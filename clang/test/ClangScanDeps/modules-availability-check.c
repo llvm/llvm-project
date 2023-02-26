@@ -7,7 +7,7 @@
 
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -j 1 \
 // RUN:   -format experimental-full -mode preprocess-dependency-directives \
-// RUN:   -cas-path %t/cas -action-cache-path %t/cache > %t/deps.json
+// RUN:   -cas-path %t/cas > %t/deps.json
 
 // RUN: %deps-to-rsp %t/deps.json --module-name=mod > %t/mod.rsp
 // RUN: %deps-to-rsp %t/deps.json --tu-index 0 > %t/tu.rsp

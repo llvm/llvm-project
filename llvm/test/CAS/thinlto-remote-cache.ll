@@ -15,10 +15,10 @@
 ; CHECK: index:
 ; CHECK: root
 ; CHECK: records
-; CHECK-NEXT: OK=object  SK=datapool
-; CHECK-NEXT: OK=object  SK=datapool
-; CHECK-NEXT: OK=object  SK=datapool
-; CHECK-NEXT: OK=object  SK=datapool
+; CHECK-NEXT: SK=datapool
+; CHECK-NEXT: SK=datapool
+; CHECK-NEXT: SK=datapool
+; CHECK-NEXT: SK=datapool
 ; CHECK-EMPTY:
 ; CHECK-NEXT: pool:
 

@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/CAS/ActionCache.h"
+#include "llvm/CAS/BuiltinUnifiedCASDatabases.h"
 #include "llvm/CAS/CASFileSystem.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/CAS/HierarchicalTreeBuilder.h"
@@ -51,6 +52,10 @@ static int traverseGraph(ObjectStore &CAS, const CASID &ID);
 static int ingestFileSystem(ObjectStore &CAS, StringRef Path);
 static int mergeTrees(ObjectStore &CAS, ArrayRef<std::string> Objects);
 static int getCASIDForFile(ObjectStore &CAS, const CASID &ID, StringRef Path);
+static int import(ObjectStore &CAS, ObjectStore &UpstreamCAS,
+                  ArrayRef<std::string> Objects);
+static int putCacheKey(ObjectStore &CAS, ActionCache &AC,
+                       ArrayRef<std::string> Objects);
 static int validateObject(ObjectStore &CAS, const CASID &ID);
 
 int main(int Argc, char **Argv) {
@@ -60,6 +65,8 @@ int main(int Argc, char **Argv) {
   cl::list<std::string> Objects(cl::Positional, cl::desc("<object>..."));
   cl::opt<std::string> CASPath("cas", cl::desc("Path to CAS on disk."),
                                cl::value_desc("path"));
+  cl::opt<std::string> UpstreamCASPath(
+      "upstream-cas", cl::desc("Path to another CAS."), cl::value_desc("path"));
   cl::opt<std::string> DataPath("data",
                                 cl::desc("Path to data or '-' for stdin."),
                                 cl::value_desc("path"));
@@ -80,6 +87,8 @@ int main(int Argc, char **Argv) {
     IngestFileSystem,
     MergeTrees,
     GetCASIDForFile,
+    Import,
+    PutCacheKey,
     Validate,
   };
   cl::opt<CommandKind> Command(
@@ -100,6 +109,9 @@ int main(int Argc, char **Argv) {
           clEnumValN(IngestFileSystem, "ingest", "ingest file system"),
           clEnumValN(MergeTrees, "merge", "merge paths/cas-ids"),
           clEnumValN(GetCASIDForFile, "get-cas-id", "get cas id for file"),
+          clEnumValN(Import, "import", "import objects from another CAS"),
+          clEnumValN(PutCacheKey, "put-cache-key",
+                     "set a value for a cache key"),
           clEnumValN(Validate, "validate", "validate the object for CASID")),
       cl::init(CommandKind::Invalid));
 
@@ -115,9 +127,17 @@ int main(int Argc, char **Argv) {
     ExitOnErr(
         createStringError(inconvertibleErrorCode(), "missing --cas=<path>"));
 
-  std::unique_ptr<ObjectStore> CAS =
-      ExitOnErr(createCASFromIdentifier(CASPath));
+  std::unique_ptr<ObjectStore> CAS;
+  std::unique_ptr<ActionCache> AC;
+  if (sys::path::is_absolute(CASPath))
+    std::tie(CAS, AC) = ExitOnErr(createOnDiskUnifiedCASDatabases(CASPath));
+  else
+    CAS = ExitOnErr(createCASFromIdentifier(CASPath));
   assert(CAS);
+
+  std::unique_ptr<ObjectStore> UpstreamCAS;
+  if (!UpstreamCASPath.empty())
+    UpstreamCAS = ExitOnErr(createCASFromIdentifier(UpstreamCASPath));
 
   if (Command == Dump)
     return dump(*CAS);
@@ -146,10 +166,25 @@ int main(int Argc, char **Argv) {
   if (Command == MergeTrees)
     return mergeTrees(*CAS, Objects);
 
-  // Remaining commands need exactly one CAS object.
   if (Objects.empty())
     ExitOnErr(createStringError(inconvertibleErrorCode(),
                                 "missing <object> to operate on"));
+
+  if (Command == Import) {
+    if (!UpstreamCAS)
+      ExitOnErr(createStringError(inconvertibleErrorCode(),
+                                  "missing '-upstream-cas'"));
+    return import(*CAS, *UpstreamCAS, Objects);
+  }
+
+  if (Command == PutCacheKey) {
+    if (!AC)
+      ExitOnErr(createStringError(inconvertibleErrorCode(),
+                                  "no action-cache available"));
+    return putCacheKey(*CAS, *AC, Objects);
+  }
+
+  // Remaining commands need exactly one CAS object.
   if (Objects.size() > 1)
     ExitOnErr(createStringError(inconvertibleErrorCode(),
                                 "too many <object>s, expected 1"));
@@ -469,6 +504,52 @@ int getCASIDForFile(ObjectStore &CAS, const CASID &ID, StringRef Path) {
 
   CASID FileID = CAS.getID(**FileRef);
   outs() << FileID << "\n";
+  return 0;
+}
+
+static ObjectRef importNode(ObjectStore &CAS, ObjectStore &UpstreamCAS,
+                            const CASID &ID) {
+  ExitOnError ExitOnErr("llvm-cas: import: ");
+
+  Optional<ObjectRef> PrimaryRef = CAS.getReference(ID);
+  if (PrimaryRef)
+    return *PrimaryRef; // object is present.
+
+  ObjectProxy UpstreamObj = ExitOnErr(UpstreamCAS.getProxy(ID));
+  SmallVector<ObjectRef> Refs;
+  ExitOnErr(UpstreamObj.forEachReference([&](ObjectRef UpstreamRef) -> Error {
+    ObjectRef Ref =
+        importNode(CAS, UpstreamCAS, UpstreamCAS.getID(UpstreamRef));
+    Refs.push_back(Ref);
+    return Error::success();
+  }));
+  return ExitOnErr(CAS.storeFromString(Refs, UpstreamObj.getData()));
+}
+
+static int import(ObjectStore &CAS, ObjectStore &UpstreamCAS,
+                  ArrayRef<std::string> Objects) {
+  ExitOnError ExitOnErr("llvm-cas: import: ");
+
+  for (StringRef Object : Objects) {
+    CASID ID = ExitOnErr(CAS.parseID(Object));
+    importNode(CAS, UpstreamCAS, ID);
+  }
+  return 0;
+}
+
+static int putCacheKey(ObjectStore &CAS, ActionCache &AC,
+                       ArrayRef<std::string> Objects) {
+  ExitOnError ExitOnErr("llvm-cas: put-cache-key: ");
+
+  if (Objects.size() % 2 != 0)
+    ExitOnErr(createStringError(inconvertibleErrorCode(),
+                                "expected pairs of inputs"));
+  while (!Objects.empty()) {
+    CASID Key = ExitOnErr(CAS.parseID(Objects[0]));
+    CASID Result = ExitOnErr(CAS.parseID(Objects[1]));
+    Objects = Objects.drop_front(2);
+    ExitOnErr(AC.put(Key, Result));
+  }
   return 0;
 }
 

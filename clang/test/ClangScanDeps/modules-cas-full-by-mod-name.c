@@ -29,8 +29,7 @@ module transitive { header "transitive.h" }
 
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json \
-// RUN:   -cas-path %t/cas -action-cache-path %t/cache \
-// RUN:   -format experimental-full -module-name=root > %t/result.json
+// RUN:   -cas-path %t/cas -format experimental-full -module-name=root > %t/result.json
 // RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
 
 // CHECK:      {

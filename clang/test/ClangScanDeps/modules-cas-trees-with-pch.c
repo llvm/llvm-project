@@ -10,7 +10,7 @@
 
 // == Scan PCH
 // RUN: clang-scan-deps -compilation-database %t/cdb_pch.json \
-// RUN:   -cas-path %t/cas -action-cache-path %t/cache -module-files-dir %t/outputs \
+// RUN:   -cas-path %t/cas -module-files-dir %t/outputs \
 // RUN:   -format experimental-full -mode preprocess-dependency-directives \
 // RUN:   > %t/deps_pch.json
 
@@ -31,7 +31,7 @@
 
 // == Scan TU, including PCH
 // RUN: clang-scan-deps -compilation-database %t/cdb.json \
-// RUN:   -cas-path %t/cas -action-cache-path %t/cache -module-files-dir %t/outputs \
+// RUN:   -cas-path %t/cas -module-files-dir %t/outputs \
 // RUN:   -format experimental-full -mode preprocess-dependency-directives \
 // RUN:   > %t/deps.json
 
@@ -61,8 +61,6 @@
 // PCH-NEXT:         "-cc1"
 // PCH:              "-fcas-path"
 // PCH-NEXT:         "[[PREFIX]]{{.}}cas"
-// PCH:              "-faction-cache-path"
-// PCH-NEXT:         "[[PREFIX]]{{.}}cache"
 // PCH:              "-fcas-fs"
 // PCH-NEXT:         "[[A_ROOT_ID]]"
 // PCH:              "-o"
@@ -85,8 +83,6 @@
 // PCH-NEXT:         "-cc1"
 // PCH:              "-fcas-path"
 // PCH-NEXT:         "[[PREFIX]]{{.}}cas"
-// PCH:              "-faction-cache-path"
-// PCH-NEXT:         "[[PREFIX]]{{.}}cache"
 // PCH:              "-fcas-fs"
 // PCH-NEXT:         "[[B_ROOT_ID]]"
 // PCH:              "-o"
@@ -115,8 +111,6 @@
 // PCH-NEXT:             "-cc1"
 // PCH:                  "-fcas-path"
 // PCH-NEXT:             "[[PREFIX]]{{.}}cas"
-// PCH:                  "-faction-cache-path"
-// PCH-NEXT:             "[[PREFIX]]{{.}}cache"
 // PCH:                  "-fcas-fs"
 // PCH-NEXT:             "[[PCH_ROOT_ID]]"
 // PCH:                  "-fno-pch-timestamp"
@@ -139,8 +133,6 @@
 // CHECK-NEXT:         "-cc1"
 // CHECK:              "-fcas-path"
 // CHECK-NEXT:         "[[PREFIX]]{{.}}cas"
-// CHECK:              "-faction-cache-path"
-// CHECK-NEXT:         "[[PREFIX]]{{.}}cache"
 // CHECK:              "-fcas-fs"
 // CHECK-NEXT:         "[[C_ROOT_ID]]"
 // CHECK:              "-o"
@@ -171,8 +163,6 @@
 // CHECK-NEXT:             "-cc1"
 // CHECK:                  "-fcas-path"
 // CHECK-NEXT:             "[[PREFIX]]{{.}}cas"
-// CHECK:                  "-faction-cache-path"
-// CHECK-NEXT:             "[[PREFIX]]{{.}}cache"
 // CHECK:                  "-fcas-fs"
 // CHECK-NEXT:             "[[TU_ROOT_ID]]"
 // CHECK:                  "-fno-pch-timestamp"

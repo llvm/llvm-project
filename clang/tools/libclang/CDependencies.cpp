@@ -112,7 +112,7 @@ void clang_experimental_DependencyScannerServiceOptions_setObjectStore(
 void clang_experimental_DependencyScannerServiceOptions_setActionCache(
     CXDependencyScannerServiceOptions Opts, CXCASActionCache Cache) {
   unwrap(Opts)->Cache = cas::unwrap(Cache)->Cache;
-  unwrap(Opts)->CASOpts.CachePath = cas::unwrap(Cache)->CachePath;
+  unwrap(Opts)->CASOpts.CASPath = cas::unwrap(Cache)->CachePath;
 }
 
 CXDependencyScannerService

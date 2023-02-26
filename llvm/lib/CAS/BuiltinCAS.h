@@ -18,6 +18,10 @@
 
 namespace llvm {
 namespace cas {
+class ActionCache;
+namespace ondisk {
+class UnifiedOnDiskCache;
+}
 namespace builtin {
 
 /// Current hash type for the internal CAS.
@@ -90,17 +94,12 @@ public:
 
   Expected<CASID> parseID(StringRef Reference) final;
 
-  virtual Expected<CASID> parseIDImpl(ArrayRef<uint8_t> Hash) = 0;
-
   Expected<ObjectRef> store(ArrayRef<ObjectRef> Refs,
                             ArrayRef<char> Data) final;
   virtual Expected<ObjectRef> storeImpl(ArrayRef<uint8_t> ComputedHash,
                                         ArrayRef<ObjectRef> Refs,
                                         ArrayRef<char> Data) = 0;
 
-  Expected<ObjectRef>
-  storeFromOpenFileImpl(sys::fs::file_t FD,
-                        Optional<sys::fs::file_status> Status) override;
   virtual Expected<ObjectRef>
   storeFromNullTerminatedRegion(ArrayRef<uint8_t> ComputedHash,
                                 sys::fs::mapped_file_region Map) {
@@ -138,6 +137,20 @@ public:
 
   Error validate(const CASID &ID) final;
 };
+
+/// Create a \p UnifiedOnDiskCache instance that uses \p BLAKE3 hashing.
+Expected<std::unique_ptr<ondisk::UnifiedOnDiskCache>>
+createBuiltinUnifiedOnDiskCache(StringRef Path);
+
+/// \param UniDB A \p UnifiedOnDiskCache instance from \p
+/// createBuiltinUnifiedOnDiskCache.
+std::unique_ptr<ObjectStore> createObjectStoreFromUnifiedOnDiskCache(
+    std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB);
+
+/// \param UniDB A \p UnifiedOnDiskCache instance from \p
+/// createBuiltinUnifiedOnDiskCache.
+std::unique_ptr<ActionCache> createActionCacheFromUnifiedOnDiskCache(
+    std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB);
 
 // FIXME: Proxy not portable. Maybe also error-prone?
 constexpr StringLiteral DefaultDirProxy = "/^llvm::cas::builtin::default";

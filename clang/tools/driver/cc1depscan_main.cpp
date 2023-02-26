@@ -612,14 +612,8 @@ int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
   CompilerInvocation::ParseCASArgs(CASOpts, ParsedCC1Args, Diags);
   CASOpts.ensurePersistentCAS();
 
-  std::shared_ptr<llvm::cas::ObjectStore> CAS =
-      CASOpts.getOrCreateObjectStore(Diags);
-  if (!CAS)
-    return 1;
-
-  std::shared_ptr<llvm::cas::ActionCache> Cache =
-      CASOpts.getOrCreateActionCache(Diags);
-  if (!Cache)
+  auto [CAS, Cache] = CASOpts.getOrCreateDatabases(Diags);
+  if (!CAS || !Cache)
     return 1;
 
   if (int Ret = scanAndUpdateCC1(Argv0, CC1Args->getValues(), NewArgs, Diags,
@@ -869,13 +863,11 @@ int ScanServer::listen() {
   bool ProduceIncludeTree =
       ParsedCASArgs.hasArg(driver::options::OPT_fdepscan_include_tree);
 
-  std::shared_ptr<llvm::cas::ObjectStore> CAS =
-      CASOpts.getOrCreateObjectStore(Diags);
+  std::shared_ptr<llvm::cas::ObjectStore> CAS;
+  std::shared_ptr<llvm::cas::ActionCache> Cache;
+  std::tie(CAS, Cache) = CASOpts.getOrCreateDatabases(Diags);
   if (!CAS)
     reportError("cannot create CAS");
-
-  std::shared_ptr<llvm::cas::ActionCache> Cache =
-      CASOpts.getOrCreateActionCache(Diags);
   if (!Cache)
     reportError("cannot create ActionCache");
 

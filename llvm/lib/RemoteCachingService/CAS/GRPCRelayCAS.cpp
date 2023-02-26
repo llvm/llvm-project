@@ -115,7 +115,6 @@ public:
   Expected<ObjectRef> store(ArrayRef<ObjectRef> Refs,
                                ArrayRef<char> Data) final;
   CASID getID(ObjectRef Ref) const final;
-  CASID getID(ObjectHandle Handle) const final;
   Optional<ObjectRef> getReference(const CASID &ID) const final;
   Expected<ObjectHandle> load(ObjectRef Ref) final;
   Error validate(const CASID &ID) final {
@@ -268,7 +267,7 @@ Expected<CASID> GRPCRelayCAS::parseID(StringRef Reference) {
   std::vector<char> Binary;
   if (Error Err = decodeBase64(Reference, Binary))
     return std::move(Err);
-  return getID(indexHash(arrayRefFromStringRef(toStringRef(Binary))));
+  return CASID::create(&getContext(), toStringRef(Binary));
 }
 
 Expected<ObjectRef> GRPCRelayCAS::store(ArrayRef<ObjectRef> Refs,
@@ -292,10 +291,6 @@ Expected<ObjectRef> GRPCRelayCAS::store(ArrayRef<ObjectRef> Refs,
 
 CASID GRPCRelayCAS::getID(ObjectRef Ref) const {
   return getID(asInMemoryIndexValue(Ref));
-}
-
-CASID GRPCRelayCAS::getID(ObjectHandle Handle) const {
-  return getID(asInMemoryCASData(Handle).getIndex());
 }
 
 Optional<ObjectRef> GRPCRelayCAS::getReference(const CASID &ID) const {

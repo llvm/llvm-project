@@ -902,25 +902,24 @@ llvm::vfs::OutputBackend &CompilerInstance::getOrCreateOutputBackend() {
   return getOutputBackend();
 }
 
-llvm::cas::ObjectStore &CompilerInstance::getOrCreateObjectStore() {
-  if (CAS)
-    return *CAS;
-
-  // Create a new CAS instance from the CompilerInvocation. Future calls to
+void CompilerInstance::createCASDatabases() {
+  // Create a new CAS databases from the CompilerInvocation. Future calls to
   // createFileManager() will use the same CAS.
-  CAS = getInvocation().getCASOpts().getOrCreateObjectStore(
-      getDiagnostics(),
-      /*CreateEmptyCASOnFailure=*/true);
+  std::tie(CAS, ActionCache) =
+      getInvocation().getCASOpts().getOrCreateDatabases(
+          getDiagnostics(),
+          /*CreateEmptyCASOnFailure=*/true);
+}
+
+llvm::cas::ObjectStore &CompilerInstance::getOrCreateObjectStore() {
+  if (!CAS)
+    createCASDatabases();
   return *CAS;
 }
 
 llvm::cas::ActionCache &CompilerInstance::getOrCreateActionCache() {
-  if (ActionCache)
-    return *ActionCache;
-
-  ActionCache = getInvocation().getCASOpts().getOrCreateActionCache(
-      getDiagnostics(),
-      /*CreateEmptyActionCacheOnFailure=*/true);
+  if (!ActionCache)
+    createCASDatabases();
   return *ActionCache;
 }
 
