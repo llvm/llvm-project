@@ -1101,141 +1101,105 @@ foreach i = ["", "2", "3", "4", "8", "16"] in {
 }
 
 //===----------------------------------------------------------------------===//
-// Class defining implementation details of demangled builtin types. The info
+// Class defining implementation details of SPIR-V builtin types. The info
 // in the record is used for lowering into OpType.
 //
-// name is the demangled name of the given builtin.
+// name is the name of the given SPIR-V builtin type.
 // operation specifies the SPIR-V opcode the StructType should be lowered to.
 //===----------------------------------------------------------------------===//
-class DemangledType<string name, Op operation> {
+class BuiltinType<string name, Op operation> {
   string Name = name;
   Op Opcode = operation;
 }
 
-// Table gathering all the demangled type records.
-def DemangledTypes : GenericTable {
-  let FilterClass = "DemangledType";
+// Table gathering all the builtin type records.
+def BuiltinTypes : GenericTable {
+  let FilterClass = "BuiltinType";
   let Fields = ["Name", "Opcode"];
 }
 
 // Function to lookup builtin types by their demangled name.
 def lookupBuiltinType : SearchIndex {
-  let Table = DemangledTypes;
+  let Table = BuiltinTypes;
   let Key = ["Name"];
 }
 
-def : DemangledType<"opencl.reserve_id_t", OpTypeReserveId>;
-def : DemangledType<"opencl.event_t", OpTypeEvent>;
-def : DemangledType<"opencl.queue_t", OpTypeQueue>;
-def : DemangledType<"opencl.sampler_t", OpTypeSampler>;
-def : DemangledType<"opencl.clk_event_t", OpTypeDeviceEvent>;
+def : BuiltinType<"spirv.ReserveId", OpTypeReserveId>;
+def : BuiltinType<"spirv.PipeStorage", OpTypePipeStorage>;
+def : BuiltinType<"spirv.Queue", OpTypeQueue>;
+def : BuiltinType<"spirv.Event", OpTypeEvent>;
+def : BuiltinType<"spirv.Sampler", OpTypeSampler>;
+def : BuiltinType<"spirv.DeviceEvent", OpTypeDeviceEvent>;
+def : BuiltinType<"spirv.Image", OpTypeImage>;
+def : BuiltinType<"spirv.SampledImage", OpTypeSampledImage>;
+def : BuiltinType<"spirv.Pipe", OpTypePipe>;
 
-def : DemangledType<"spirv.ReserveId", OpTypeReserveId>;
-def : DemangledType<"spirv.PipeStorage", OpTypePipeStorage>;
-def : DemangledType<"spirv.Queue", OpTypeQueue>;
-def : DemangledType<"spirv.Event", OpTypeEvent>;
-def : DemangledType<"spirv.Sampler", OpTypeSampler>;
-def : DemangledType<"spirv.DeviceEvent", OpTypeDeviceEvent>;
 
-// Some SPIR-V builtin types (e.g. spirv.Image) have a complex list of
-// parameters as part of their name. Some of those parameters should be treated
-// as numeric literals and therefore they cannot be represented in TableGen and
-// should be parsed instead.
-def : DemangledType<"spirv.Image", OpTypeImage>;
-def : DemangledType<"spirv.SampledImage", OpTypeSampledImage>;
-def : DemangledType<"spirv.Pipe", OpTypePipe>;
-
-// Class definining lowering details for various variants of image type indentifiers.
-class ImageType<string name> {
+//===----------------------------------------------------------------------===//
+// Class matching an OpenCL builtin type name to an equivalent SPIR-V
+// builtin type literal.
+//
+// name is the name of the given OpenCL builtin type.
+// spirvTypeLiteral is the literal of an equivalent SPIR-V builtin type.
+//===----------------------------------------------------------------------===//
+class OpenCLType<string name, string spirvTypeLiteral> {
   string Name = name;
-  string Type = "void";
-  AccessQualifier Qualifier = !cond(!not(!eq(!find(name, "_ro_t"), -1)) : ReadOnly,
-                                  !not(!eq(!find(name, "_wo_t"), -1)) : WriteOnly,
-                                  !not(!eq(!find(name, "_rw_t"), -1)) : ReadWrite,
-                                  true : ReadOnly);
-  Dim Dimensionality = !cond(!not(!eq(!find(name, "buffer"), -1)) : DIM_Buffer,
-                                  !not(!eq(!find(name, "image1"), -1)) : DIM_1D,
-                                  !not(!eq(!find(name, "image2"), -1)) : DIM_2D,
-                                  !not(!eq(!find(name, "image3"), -1)) : DIM_3D);
-  bit Arrayed = !not(!eq(!find(name, "array"), -1));
-  bit Depth = !not(!eq(!find(name, "depth"), -1));
-  bit Multisampled = false;
-  bit Sampled = false;
-  ImageFormat Format = Unknown;
+  string SpirvTypeLiteral = spirvTypeLiteral;
 }
 
-// Table gathering all the image type records.
-def ImageTypes : GenericTable {
-  let FilterClass = "ImageType";
-  let Fields = ["Name", "Type", "Qualifier", "Dimensionality", "Arrayed",
-                "Depth", "Multisampled", "Sampled", "Format"];
-  string TypeOf_Qualifier = "AccessQualifier";
-  string TypeOf_Dimensionality = "Dim";
-  string TypeOf_Format = "ImageFormat";
+// Table gathering all the OpenCL type records.
+def OpenCLTypes : GenericTable {
+  let FilterClass = "OpenCLType";
+  let Fields = ["Name", "SpirvTypeLiteral"];
 }
 
-// Function to lookup builtin image types by their demangled name.
-def lookupImageType : SearchIndex {
-  let Table = ImageTypes;
+// Function to lookup OpenCL types by their name.
+def lookupOpenCLType : SearchIndex {
+  let Table = OpenCLTypes;
   let Key = ["Name"];
 }
 
-// Multiclass used to define at the same time a DemangledType record used
-// for matching an incoming demangled string to the OpTypeImage opcode and
-// ImageType conatining the lowering details.
-multiclass DemangledImageType<string name> {
-  def : DemangledType<name, OpTypeImage>;
-  def : ImageType<name>;
+def : OpenCLType<"opencl.reserve_id_t", "spirv.ReserveId">;
+def : OpenCLType<"opencl.event_t", "spirv.Event">;
+def : OpenCLType<"opencl.queue_t", "spirv.Queue">;
+def : OpenCLType<"opencl.sampler_t", "spirv.Sampler">;
+def : OpenCLType<"opencl.clk_event_t", "spirv.DeviceEvent">;
+
+foreach aq = ["_t", "_ro_t", "_wo_t", "_rw_t"] in {
+  defvar p = !cond(!not(!eq(!find(aq, "_rw_t"), -1)) : "2",
+                   !not(!eq(!find(aq, "_wo_t"), -1)) : "1",
+                                                true : "0");
+  def : OpenCLType<!strconcat("opencl.pipe", aq), 
+                   !strconcat("spirv.Pipe._", p)>;
 }
 
 foreach aq = ["_t", "_ro_t", "_wo_t", "_rw_t"] in {
-  defm : DemangledImageType<!strconcat("opencl.image1d", aq)>;
-  defm : DemangledImageType<!strconcat("opencl.image1d_array", aq)>;
-  defm : DemangledImageType<!strconcat("opencl.image1d_buffer", aq)>;
+  defvar p7 = !cond(!not(!eq(!find(aq, "_rw_t"), -1)) : "2",
+                    !not(!eq(!find(aq, "_wo_t"), -1)) : "1",
+                                                 true : "0");
+
+  def : OpenCLType<!strconcat("opencl.image1d", aq), 
+                   !strconcat("spirv.Image._void_0_0_0_0_0_0_", p7)>;
+  def : OpenCLType<!strconcat("opencl.image1d_array", aq), 
+                   !strconcat("spirv.Image._void_0_0_1_0_0_0_", p7)>;
+  def : OpenCLType<!strconcat("opencl.image1d_buffer", aq), 
+                   !strconcat("spirv.Image._void_5_0_0_0_0_0_", p7)>;
 
   foreach a1 = ["", "_array"] in {
     foreach a2 = ["", "_msaa"] in {
       foreach a3 = ["", "_depth"] in {
-        defm : DemangledImageType<!strconcat("opencl.image2d", a1, a2, a3, aq)>;
+        defvar p2 = !cond(!not(!eq(!find(a3, "_depth"), -1)) : "1", true : "0");
+        defvar p3 = !cond(!not(!eq(!find(a1, "_array"), -1))  : "1", true : "0");
+        defvar p4 = !cond(!not(!eq(!find(a2, "msaa"), -1))  : "1", true : "0");
+
+        def : OpenCLType<!strconcat("opencl.image2d", a1, a2, a3, aq), 
+                         !strconcat("spirv.Image._void_1_", p2 , "_", p3, "_", p4, "_0_0_", p7)>;
       }
     }
   }
-
-  defm : DemangledImageType<!strconcat("opencl.image3d", aq)>;
-}
-
-// Class definining lowering details for various variants of pipe type indentifiers.
-class PipeType<string name> {
-  string Name = name;
-  AccessQualifier Qualifier = !cond(!not(!eq(!find(name, "_ro_t"), -1)) : ReadOnly,
-                                  !not(!eq(!find(name, "_wo_t"), -1)) : WriteOnly,
-                                  !not(!eq(!find(name, "_rw_t"), -1)) : ReadWrite,
-                                  true : ReadOnly);
-}
-
-// Table gathering all the pipe type records.
-def PipeTypes : GenericTable {
-  let FilterClass = "PipeType";
-  let Fields = ["Name", "Qualifier"];
-  string TypeOf_Qualifier = "AccessQualifier";
-}
-
-// Function to lookup builtin pipe types by their demangled name.
-def lookupPipeType : SearchIndex {
-  let Table = PipeTypes;
-  let Key = ["Name"];
-}
-
-// Multiclass used to define at the same time a DemangledType record used
-// for matching an incoming demangled string to the OpTypePipe opcode and
-// PipeType conatining the lowering details.
-multiclass DemangledPipeType<string name> {
-  def : DemangledType<name, OpTypePipe>;
-  def : PipeType<name>;
-}
-
-foreach aq = ["_t", "_ro_t", "_wo_t", "_rw_t"] in {
-  defm : DemangledPipeType<!strconcat("opencl.pipe", aq)>;
+  
+  def : OpenCLType<!strconcat("opencl.image3d", aq), 
+                   !strconcat("spirv.Image._void_2_0_0_0_0_0_", p7)>;
 }
 
 //===----------------------------------------------------------------------===//
