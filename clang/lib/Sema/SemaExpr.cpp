@@ -9871,8 +9871,8 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
     }
 
     // Allow assignments between fixed-length and sizeless SVE vectors.
-    if ((LHSType->isSizelessBuiltinType() && RHSType->isVectorType()) ||
-        (LHSType->isVectorType() && RHSType->isSizelessBuiltinType()))
+    if ((LHSType->isSVESizelessBuiltinType() && RHSType->isVectorType()) ||
+        (LHSType->isVectorType() && RHSType->isSVESizelessBuiltinType()))
       if (Context.areCompatibleSveTypes(LHSType, RHSType) ||
           Context.areLaxCompatibleSveTypes(LHSType, RHSType)) {
         Kind = CK_BitCast;
