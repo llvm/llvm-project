@@ -97,17 +97,26 @@ llvm::DIType *DebugTranslation::translateImpl(DINullTypeAttr attr) {
   return nullptr;
 }
 
+llvm::MDString *DebugTranslation::getMDStringOrNull(StringAttr stringAttr) {
+  if (!stringAttr || stringAttr.getValue().empty())
+    return nullptr;
+  return llvm::MDString::get(llvmCtx, stringAttr);
+}
+
 llvm::DIBasicType *DebugTranslation::translateImpl(DIBasicTypeAttr attr) {
   return llvm::DIBasicType::get(
-      llvmCtx, attr.getTag(), attr.getName(), attr.getSizeInBits(),
+      llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()),
+      attr.getSizeInBits(),
       /*AlignInBits=*/0, attr.getEncoding(), llvm::DINode::FlagZero);
 }
 
 llvm::DICompileUnit *DebugTranslation::translateImpl(DICompileUnitAttr attr) {
   llvm::DIBuilder builder(llvmModule);
   return builder.createCompileUnit(
-      attr.getSourceLanguage(), translate(attr.getFile()), attr.getProducer(),
-      attr.getIsOptimized(), /*Flags=*/"", /*RV=*/0);
+      attr.getSourceLanguage(), translate(attr.getFile()),
+      attr.getProducer() ? attr.getProducer().getValue() : "",
+      attr.getIsOptimized(),
+      /*Flags=*/"", /*RV=*/0);
 }
 
 llvm::DICompositeType *
@@ -116,9 +125,10 @@ DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
   for (auto member : attr.getElements())
     elements.push_back(translate(member));
   return llvm::DICompositeType::get(
-      llvmCtx, attr.getTag(), attr.getName(), translate(attr.getFile()),
-      attr.getLine(), translate(attr.getScope()), translate(attr.getBaseType()),
-      attr.getSizeInBits(), attr.getAlignInBits(),
+      llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()),
+      translate(attr.getFile()), attr.getLine(), translate(attr.getScope()),
+      translate(attr.getBaseType()), attr.getSizeInBits(),
+      attr.getAlignInBits(),
       /*OffsetInBits=*/0,
       /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
       llvm::MDNode::get(llvmCtx, elements),
@@ -126,9 +136,6 @@ DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
 }
 
 llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
-  auto getMDStringOrNull = [&](StringAttr attr) -> llvm::MDString * {
-    return attr ? llvm::MDString::get(llvmCtx, attr) : nullptr;
-  };
   return llvm::DIDerivedType::get(
       llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()),
       /*File=*/nullptr, /*Line=*/0,
@@ -138,7 +145,8 @@ llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
 }
 
 llvm::DIFile *DebugTranslation::translateImpl(DIFileAttr attr) {
-  return llvm::DIFile::get(llvmCtx, attr.getName(), attr.getDirectory());
+  return llvm::DIFile::get(llvmCtx, getMDStringOrNull(attr.getName()),
+                           getMDStringOrNull(attr.getDirectory()));
 }
 
 llvm::DILexicalBlock *DebugTranslation::translateImpl(DILexicalBlockAttr attr) {
@@ -161,9 +169,9 @@ llvm::DILocalScope *DebugTranslation::translateImpl(DILocalScopeAttr attr) {
 llvm::DILocalVariable *
 DebugTranslation::translateImpl(DILocalVariableAttr attr) {
   return llvm::DILocalVariable::get(
-      llvmCtx, translate(attr.getScope()),
-      llvm::MDString::get(llvmCtx, attr.getName()), translate(attr.getFile()),
-      attr.getLine(), translate(attr.getType()), attr.getArg(),
+      llvmCtx, translate(attr.getScope()), getMDStringOrNull(attr.getName()),
+      translate(attr.getFile()), attr.getLine(), translate(attr.getType()),
+      attr.getArg(),
       /*Flags=*/llvm::DINode::FlagZero, attr.getAlignInBits(),
       /*Annotations=*/nullptr);
 }
@@ -184,12 +192,9 @@ static llvm::DISubprogram *getSubprogram(bool isDistinct, Ts &&...args) {
 llvm::DISubprogram *DebugTranslation::translateImpl(DISubprogramAttr attr) {
   bool isDefinition = static_cast<bool>(attr.getSubprogramFlags() &
                                         LLVM::DISubprogramFlags::Definition);
-  auto getMDStringOrNull = [&](StringAttr attr) -> llvm::MDString * {
-    return attr ? llvm::MDString::get(llvmCtx, attr) : nullptr;
-  };
   return getSubprogram(
       isDefinition, llvmCtx, translate(attr.getScope()),
-      llvm::MDString::get(llvmCtx, attr.getName()),
+      getMDStringOrNull(attr.getName()),
       getMDStringOrNull(attr.getLinkageName()), translate(attr.getFile()),
       attr.getLine(), translate(attr.getType()), attr.getScopeLine(),
       /*ContainingType=*/nullptr, /*VirtualIndex=*/0,
@@ -200,7 +205,8 @@ llvm::DISubprogram *DebugTranslation::translateImpl(DISubprogramAttr attr) {
 
 llvm::DINamespace *DebugTranslation::translateImpl(DINamespaceAttr attr) {
   return llvm::DINamespace::get(llvmCtx, translate(attr.getScope()),
-                                attr.getName(), attr.getExportSymbols());
+                                getMDStringOrNull(attr.getName()),
+                                attr.getExportSymbols());
 }
 
 llvm::DISubrange *DebugTranslation::translateImpl(DISubrangeAttr attr) {
