@@ -637,6 +637,36 @@ mlir::LogicalResult hlfir::MatmulOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// TransposeOp
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult hlfir::TransposeOp::verify() {
+  mlir::Value array = getArray();
+  fir::SequenceType arrayTy =
+      hlfir::getFortranElementOrSequenceType(array.getType())
+          .cast<fir::SequenceType>();
+  llvm::ArrayRef<int64_t> inShape = arrayTy.getShape();
+  std::size_t rank = inShape.size();
+  mlir::Type eleTy = arrayTy.getEleTy();
+  hlfir::ExprType resultTy = getResult().getType().cast<hlfir::ExprType>();
+  llvm::ArrayRef<int64_t> resultShape = resultTy.getShape();
+  std::size_t resultRank = resultShape.size();
+  mlir::Type resultEleTy = resultTy.getEleTy();
+
+  if (rank != 2 || resultRank != 2)
+    return emitOpError("input and output arrays should have rank 2");
+
+  if (inShape[0] != resultShape[1] || inShape[1] != resultShape[0])
+    return emitOpError("output shape does not match input array");
+
+  if (eleTy != resultEleTy)
+    return emitOpError(
+        "input and output arrays should have the same element type");
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // AssociateOp
 //===----------------------------------------------------------------------===//
 

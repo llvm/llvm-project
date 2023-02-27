@@ -127,6 +127,12 @@ bool hlfir::isFortranNumericalOrLogicalArrayObject(mlir::Type type) {
   return false;
 }
 
+bool hlfir::isFortranArrayObject(mlir::Type type) {
+  if (isBoxAddressType(type))
+    return false;
+  return !!getFortranElementOrSequenceType(type).dyn_cast<fir::SequenceType>();
+}
+
 bool hlfir::isPassByRefOrIntegerType(mlir::Type type) {
   mlir::Type unwrappedType = fir::unwrapPassByRefType(type);
   return fir::isa_integer(unwrappedType);

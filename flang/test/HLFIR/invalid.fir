@@ -377,6 +377,27 @@ func.func @bad_matmul8(%arg0: !hlfir.expr<2xi32>, %arg1: !hlfir.expr<2x3xi32>) {
 }
 
 // -----
+func.func @bad_transpose1(%arg0: !hlfir.expr<2xi32>) {
+  // expected-error@+1 {{'hlfir.transpose' op input and output arrays should have rank 2}}
+  %0 = hlfir.transpose %arg0 : (!hlfir.expr<2xi32>) -> !hlfir.expr<2xi32>
+  return
+}
+
+// -----
+func.func @bad_transpose2(%arg0: !hlfir.expr<2x3xi32>) {
+  // expected-error@+1 {{'hlfir.transpose' op output shape does not match input array}}
+  %0 = hlfir.transpose %arg0 : (!hlfir.expr<2x3xi32>) -> !hlfir.expr<2x2xi32>
+  return
+}
+
+// -----
+func.func @bad_transpose3(%arg0: !hlfir.expr<2x3xi32>) {
+  // expected-error@+1 {{'hlfir.transpose' op input and output arrays should have the same element type}}
+  %0 = hlfir.transpose %arg0 : (!hlfir.expr<2x3xi32>) -> !hlfir.expr<3x2xf64>
+  return
+}
+
+// -----
 func.func @bad_assign_1(%arg0: !fir.box<!fir.array<?xi32>>, %arg1: !fir.box<!fir.array<?xi32>>) {
   // expected-error@+1 {{'hlfir.assign' op lhs must be an allocatable when `realloc` is set}}
   hlfir.assign %arg1 to %arg0 realloc : !fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>

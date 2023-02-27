@@ -385,6 +385,23 @@ def hlfir_MatmulOp : hlfir_Op<"matmul",
   let hasVerifier = 1;
 }
 
+def hlfir_TransposeOp : hlfir_Op<"transpose", []> {
+  let summary = "TRANSPOSE transformational intrinsic";
+  let description = [{
+    Transpose a rank 2 array
+  }];
+
+  let arguments = (ins AnyFortranArrayObject:$array);
+
+  let results = (outs hlfir_ExprType);
+
+  let assemblyFormat = [{
+    $array attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
 def hlfir_AssociateOp : hlfir_Op<"associate", [AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
   let summary = "Create a variable from an expression value";
