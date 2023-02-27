@@ -1593,13 +1593,26 @@ IfOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
 
 void IfOp::build(OpBuilder &builder, OperationState &result,
                  TypeRange resultTypes, Value cond) {
+  return build(builder, result, resultTypes, cond, /*addThenBlock=*/false,
+               /*addElseBlock=*/false);
+}
+
+void IfOp::build(OpBuilder &builder, OperationState &result,
+                 TypeRange resultTypes, Value cond, bool addThenBlock,
+                 bool addElseBlock) {
+  assert((!addElseBlock || addThenBlock) &&
+         "must not create else block w/o then block");
   result.addTypes(resultTypes);
   result.addOperands(cond);
 
-  // Build regions.
+  // Add regions and blocks.
   OpBuilder::InsertionGuard guard(builder);
-  result.addRegion();
-  result.addRegion();
+  Region *thenRegion = result.addRegion();
+  if (addThenBlock)
+    builder.createBlock(thenRegion);
+  Region *elseRegion = result.addRegion();
+  if (addElseBlock)
+    builder.createBlock(elseRegion);
 }
 
 void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
