@@ -16,6 +16,8 @@
 #include "private.h"
 #include "rtl.h"
 
+#include "llvm/ADT/bit.h"
+
 #include <cassert>
 #include <cstdint>
 #include <vector>
@@ -105,7 +107,7 @@ static const int64_t MaxAlignment = 16;
 
 /// Return the alignment requirement of partially mapped structs, see
 /// MaxAlignment above.
-static int64_t getPartialStructRequiredAlignment(void *HstPtrBase) {
+static uint64_t getPartialStructRequiredAlignment(void *HstPtrBase) {
   auto BaseAlignment = reinterpret_cast<uintptr_t>(HstPtrBase) % MaxAlignment;
   return BaseAlignment == 0 ? MaxAlignment : BaseAlignment;
 }
@@ -1289,22 +1291,27 @@ class PrivateArgumentManagerTy {
   /// use this information to optimize data transfer by packing all
   /// first-private arguments and transfer them all at once.
   struct FirstPrivateArgInfoTy {
-    /// The index of the element in \p TgtArgs corresponding to the argument
-    int Index;
     /// Host pointer begin
     char *HstPtrBegin;
     /// Host pointer end
     char *HstPtrEnd;
-    /// Aligned size
-    int64_t AlignedSize;
+    /// The index of the element in \p TgtArgs corresponding to the argument
+    int Index;
+    /// Alignment of the entry (base of the entry, not after the entry).
+    uint32_t Alignment;
+    /// Size (without alignment, see padding)
+    uint32_t Size;
+    /// Padding used to align this argument entry, if necessary.
+    uint32_t Padding;
     /// Host pointer name
     map_var_info_t HstPtrName = nullptr;
 
-    FirstPrivateArgInfoTy(int Index, void *HstPtr, int64_t Size,
+    FirstPrivateArgInfoTy(int Index, void *HstPtr, uint32_t Size,
+                          uint32_t Alignment, uint32_t Padding,
                           const map_var_info_t HstPtrName = nullptr)
-        : Index(Index), HstPtrBegin(reinterpret_cast<char *>(HstPtr)),
-          HstPtrEnd(HstPtrBegin + Size),
-          AlignedSize(Size + Size % MaxAlignment), HstPtrName(HstPtrName) {}
+        : HstPtrBegin(reinterpret_cast<char *>(HstPtr)),
+          HstPtrEnd(HstPtrBegin + Size), Index(Index), Alignment(Alignment),
+          Size(Size), Padding(Padding), HstPtrName(HstPtrName) {}
   };
 
   /// A vector of target pointers for all private arguments
@@ -1382,9 +1389,34 @@ public:
 
       // Placeholder value
       TgtPtr = nullptr;
+      auto *LastFPArgInfo =
+          FirstPrivateArgInfo.empty() ? nullptr : &FirstPrivateArgInfo.back();
+
+      // Compute the start alignment of this entry, add padding if necessary.
+      // TODO: Consider sorting instead.
+      uint32_t Padding = 0;
+      uint32_t StartAlignment =
+          LastFPArgInfo ? LastFPArgInfo->Alignment : MaxAlignment;
+      if (LastFPArgInfo) {
+        // Check if we keep the start alignment or if it is shrunk due to the
+        // size of the last element.
+        uint32_t Offset = LastFPArgInfo->Size % StartAlignment;
+        if (Offset)
+          StartAlignment = Offset;
+        // We only need as much alignment as the host pointer had (since we
+        // don't know the alignment information from the source we might end up
+        // overaligning accesses but not too much).
+        uint32_t RequiredAlignment =
+            llvm::bit_floor(getPartialStructRequiredAlignment(HstPtr));
+        if (RequiredAlignment > StartAlignment) {
+          Padding = RequiredAlignment - StartAlignment;
+          StartAlignment = RequiredAlignment;
+        }
+      }
+
       FirstPrivateArgInfo.emplace_back(TgtArgsIndex, HstPtr, ArgSize,
-                                       HstPtrName);
-      FirstPrivateArgSize += FirstPrivateArgInfo.back().AlignedSize;
+                                       StartAlignment, Padding, HstPtrName);
+      FirstPrivateArgSize += Padding + ArgSize;
     }
 
     return OFFLOAD_SUCCESS;
@@ -1400,8 +1432,10 @@ public:
       auto Itr = FirstPrivateArgBuffer.begin();
       // Copy all host data to this buffer
       for (FirstPrivateArgInfoTy &Info : FirstPrivateArgInfo) {
+        // First pad the pointer as we (have to) pad it on the device too.
+        Itr = std::next(Itr, Info.Padding);
         std::copy(Info.HstPtrBegin, Info.HstPtrEnd, Itr);
-        Itr = std::next(Itr, Info.AlignedSize);
+        Itr = std::next(Itr, Info.Size);
       }
       // Allocate target memory
       void *TgtPtr =
@@ -1425,8 +1459,10 @@ public:
       for (FirstPrivateArgInfoTy &Info : FirstPrivateArgInfo) {
         void *&Ptr = TgtArgs[Info.Index];
         assert(Ptr == nullptr && "Target pointer is already set by mistaken");
+        // Pad the device pointer to get the right alignment.
+        TP += Info.Padding;
         Ptr = reinterpret_cast<void *>(TP);
-        TP += Info.AlignedSize;
+        TP += Info.Size;
         DP("Firstprivate array " DPxMOD " of size %" PRId64 " mapped to " DPxMOD
            "\n",
            DPxPTR(Info.HstPtrBegin), Info.HstPtrEnd - Info.HstPtrBegin,
