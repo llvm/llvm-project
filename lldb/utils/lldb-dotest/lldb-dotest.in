@@ -14,7 +14,6 @@ lldb_build_intel_pt = "@LLDB_BUILD_INTEL_PT@"
 lldb_framework_dir = "@LLDB_FRAMEWORK_DIR_CONFIGURED@"
 lldb_libs_dir = "@LLDB_LIBS_DIR_CONFIGURED@"
 llvm_tools_dir = "@LLVM_TOOLS_DIR_CONFIGURED@"
-swift_libs_dir = '@LLDB_SWIFT_LIBS@' 
 
 if __name__ == '__main__':
     wrapper_args = sys.argv[1:]

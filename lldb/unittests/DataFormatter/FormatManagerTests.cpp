@@ -21,9 +21,6 @@ TEST(FormatManagerTests, CompatibleLangs) {
   EXPECT_EQ(FormatManager::GetCandidateLanguages(eLanguageTypeC99), candidates);
   EXPECT_EQ(FormatManager::GetCandidateLanguages(eLanguageTypeC11), candidates);
 
-  // BEGIN SWIFT
-  candidates = {eLanguageTypeC_plus_plus, eLanguageTypeObjC,
-                eLanguageTypeSwift};
   EXPECT_EQ(FormatManager::GetCandidateLanguages(eLanguageTypeC_plus_plus),
             candidates);
   EXPECT_EQ(FormatManager::GetCandidateLanguages(eLanguageTypeC_plus_plus_03),
@@ -36,5 +33,4 @@ TEST(FormatManagerTests, CompatibleLangs) {
   candidates = {eLanguageTypeObjC, eLanguageTypeSwift};
   EXPECT_EQ(FormatManager::GetCandidateLanguages(eLanguageTypeObjC),
             candidates);
-  // END SWIFT
 }

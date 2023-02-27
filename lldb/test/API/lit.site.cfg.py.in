@@ -36,7 +36,6 @@ config.has_libcxx = @LLDB_HAS_LIBCXX@
 # The API tests use their own module caches.
 config.lldb_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_LLDB@", "lldb-api")
 config.clang_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_CLANG@", "lldb-api")
-config.swift_libs_dir = '@LLDB_SWIFT_LIBS@' 
 
 # Plugins
 lldb_build_intel_pt = '@LLDB_BUILD_INTEL_PT@'

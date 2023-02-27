@@ -205,9 +205,6 @@ if is_configured('clang_module_cache'):
   delete_module_cache(config.clang_module_cache)
   dotest_cmd += ['--clang-module-cache-dir', config.clang_module_cache]
 
-if is_configured('swift_libs_dir'):
-  dotest_cmd += ['--swift-libs-dir', config.swift_libs_dir]
-
 if is_configured('lldb_executable'):
   dotest_cmd += ['--executable', config.lldb_executable]
 
