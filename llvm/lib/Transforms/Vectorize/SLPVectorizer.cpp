@@ -13043,7 +13043,7 @@ public:
           Value *OrigV = TrackedToOrig.find(RdxVal)->second;
           unsigned NumOps =
               VectorizedVals.lookup(RdxVal) + SameValuesCounter[OrigV];
-          if (NumOps != ReducedValsToOps.find(RdxVal)->second.size())
+          if (NumOps != ReducedValsToOps.find(OrigV)->second.size())
             LocalExternallyUsedValues[RdxVal];
         }
         // Do not need the list of reused scalars in regular mode anymore.
