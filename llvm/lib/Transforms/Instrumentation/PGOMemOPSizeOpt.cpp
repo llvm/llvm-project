@@ -317,7 +317,7 @@ bool MemOPSizeOpt::perform(MemOp MO) {
     }
 
     if (!SeenSizeId.insert(V).second) {
-      errs() << "Invalid Profile Data in Function " << Func.getName()
+      errs() << "warning: Invalid Profile Data in Function " << Func.getName()
              << ": Two identical values in MemOp value counts.\n";
       return false;
     }
