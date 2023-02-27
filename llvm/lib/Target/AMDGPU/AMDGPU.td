@@ -779,6 +779,12 @@ def FeaturePseudoScalarTrans : SubtargetFeature<"pseudo-scalar-trans",
   "Has Pseudo Scalar Transcendental instructions"
 >;
 
+def FeatureHasRestrictedSOffset : SubtargetFeature<"restricted-soffset",
+  "HasRestrictedSOffset",
+  "true",
+  "Has restricted SOffset (immediate not supported)."
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1442,6 +1448,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureVcmpxPermlaneHazard,
    FeatureSALUFloatInsts,
    FeaturePseudoScalarTrans,
+   FeatureHasRestrictedSOffset,
    FeatureVGPRSingleUseHintInsts]>;
 
 //===----------------------------------------------------------------------===//
@@ -1749,6 +1756,11 @@ def HasUnpackedD16VMem : Predicate<"Subtarget->hasUnpackedD16VMem()">,
   AssemblerPredicate<(all_of FeatureUnpackedD16VMem)>;
 def HasPackedD16VMem : Predicate<"!Subtarget->hasUnpackedD16VMem()">,
   AssemblerPredicate<(all_of (not FeatureUnpackedD16VMem))>;
+
+def HasRestrictedSOffset : Predicate<"Subtarget->hasRestrictedSOffset()">,
+  AssemblerPredicate<(all_of FeatureHasRestrictedSOffset)>;
+def HasUnrestrictedSOffset : Predicate<"!Subtarget->hasRestrictedSOffset()">,
+  AssemblerPredicate<(all_of (not FeatureHasRestrictedSOffset))>;
 
 def D16PreservesUnusedBits :
   Predicate<"Subtarget->d16PreservesUnusedBits()">,

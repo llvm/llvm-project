@@ -516,8 +516,8 @@ private:
   // at the end.
   bool isPrecededByParamNameComment(const Expr *E, StringRef ParamName) {
     auto &SM = AST.getSourceManager();
-    auto ExprStartLoc = SM.getTopMacroCallerLoc(E->getBeginLoc());
-    auto Decomposed = SM.getDecomposedLoc(ExprStartLoc);
+    auto FileLoc = SM.getFileLoc(E->getBeginLoc());
+    auto Decomposed = SM.getDecomposedLoc(FileLoc);
     if (Decomposed.first != MainFileID)
       return false;
 

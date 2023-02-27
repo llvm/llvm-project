@@ -257,7 +257,7 @@
 "`3811 <https://wg21.link/LWG3811>`__","``views::as_const`` on ``ref_view<T>`` should return ``ref_view<const T>``","February 2023","","","|ranges|"
 "`3820 <https://wg21.link/LWG3820>`__","``cartesian_product_view::iterator::prev`` is not quite right","February 2023","","","|ranges|"
 "`3825 <https://wg21.link/LWG3825>`__","Missing compile-time argument ``id`` check in ``basic_format_parse_context::next_arg_id``","February 2023","","","|format|"
-"`3204 <https://wg21.link/LWG3204>`__","``sub_match::swap`` only swaps the base class","February 2023","","",""
+"`3204 <https://wg21.link/LWG3204>`__","``sub_match::swap`` only swaps the base class","February 2023","|Complete|","17.0",""
 "`3733 <https://wg21.link/LWG3733>`__","``ranges::to`` misuses ``cpp17-input-iterator``","February 2023","","","|ranges|"
 "`3742 <https://wg21.link/LWG3742>`__","``deque::prepend_range`` needs to permute","February 2023","","","|ranges|"
 "`3790 <https://wg21.link/LWG3790>`__","`P1467 <https://wg21.link/P1467>`__ accidentally changed ``nexttoward``'s signature","February 2023","","",""

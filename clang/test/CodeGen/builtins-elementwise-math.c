@@ -1,5 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
+typedef _Float16 half;
+
+typedef half half2 __attribute__((ext_vector_type(2)));
+typedef float float2 __attribute__((ext_vector_type(2)));
 typedef float float4 __attribute__((ext_vector_type(4)));
 typedef short int si8 __attribute__((ext_vector_type(8)));
 typedef unsigned int u4 __attribute__((ext_vector_type(4)));
@@ -524,4 +528,78 @@ void test_builtin_elementwise_copysign(float f1, float f2, double d1, double d2,
   // CHECK:      [[V2F64:%.+]] = load <2 x double>, ptr %v2f64.addr, align 16
   // CHECK-NEXT: call <2 x double> @llvm.copysign.v2f64(<2 x double> <double 1.000000e+00, double 1.000000e+00>, <2 x double> [[V2F64]])
   v2f64 = __builtin_elementwise_copysign((double2)1.0, v2f64);
+}
+
+void test_builtin_elementwise_fma(float f32, double f64,
+                                  float2 v2f32, float4 v4f32,
+                                  double2 v2f64, double3 v3f64,
+                                  const float4 c_v4f32,
+                                  half f16, half2 v2f16) {
+  // CHECK-LABEL: define void @test_builtin_elementwise_fma(
+  // CHECK:      [[F32_0:%.+]] = load float, ptr %f32.addr
+  // CHECK-NEXT: [[F32_1:%.+]] = load float, ptr %f32.addr
+  // CHECK-NEXT: [[F32_2:%.+]] = load float, ptr %f32.addr
+  // CHECK-NEXT: call float @llvm.fma.f32(float [[F32_0]], float [[F32_1]], float [[F32_2]])
+  float f2 = __builtin_elementwise_fma(f32, f32, f32);
+
+  // CHECK:      [[F64_0:%.+]] = load double, ptr %f64.addr
+  // CHECK-NEXT: [[F64_1:%.+]] = load double, ptr %f64.addr
+  // CHECK-NEXT: [[F64_2:%.+]] = load double, ptr %f64.addr
+  // CHECK-NEXT: call double @llvm.fma.f64(double [[F64_0]], double [[F64_1]], double [[F64_2]])
+  double d2 = __builtin_elementwise_fma(f64, f64, f64);
+
+  // CHECK:      [[V4F32_0:%.+]] = load <4 x float>, ptr %v4f32.addr
+  // CHECK-NEXT: [[V4F32_1:%.+]] = load <4 x float>, ptr %v4f32.addr
+  // CHECK-NEXT: [[V4F32_2:%.+]] = load <4 x float>, ptr %v4f32.addr
+  // CHECK-NEXT: call <4 x float> @llvm.fma.v4f32(<4 x float> [[V4F32_0]], <4 x float> [[V4F32_1]], <4 x float> [[V4F32_2]])
+  float4 tmp_v4f32 = __builtin_elementwise_fma(v4f32, v4f32, v4f32);
+
+
+  // FIXME: Are we really still doing the 3 vector load workaround
+  // CHECK:      [[V3F64_LOAD_0:%.+]] = load <4 x double>, ptr %v3f64.addr
+  // CHECK-NEXT: [[V3F64_0:%.+]] = shufflevector
+  // CHECK-NEXT: [[V3F64_LOAD_1:%.+]] = load <4 x double>, ptr %v3f64.addr
+  // CHECK-NEXT: [[V3F64_1:%.+]] = shufflevector
+  // CHECK-NEXT: [[V3F64_LOAD_2:%.+]] = load <4 x double>, ptr %v3f64.addr
+  // CHECK-NEXT: [[V3F64_2:%.+]] = shufflevector
+    // CHECK-NEXT: call <3 x double> @llvm.fma.v3f64(<3 x double> [[V3F64_0]], <3 x double> [[V3F64_1]], <3 x double> [[V3F64_2]])
+  v3f64 = __builtin_elementwise_fma(v3f64, v3f64, v3f64);
+
+  // CHECK:      [[F64_0:%.+]] = load double, ptr %f64.addr
+  // CHECK-NEXT: [[F64_1:%.+]] = load double, ptr %f64.addr
+  // CHECK-NEXT: [[F64_2:%.+]] = load double, ptr %f64.addr
+  // CHECK-NEXT: call double @llvm.fma.f64(double [[F64_0]], double [[F64_1]], double [[F64_2]])
+  v2f64 = __builtin_elementwise_fma(f64, f64, f64);
+
+  // CHECK:      [[V4F32_0:%.+]] = load <4 x float>, ptr %c_v4f32.addr
+  // CHECK-NEXT: [[V4F32_1:%.+]] = load <4 x float>, ptr %c_v4f32.addr
+  // CHECK-NEXT: [[V4F32_2:%.+]] = load <4 x float>, ptr %c_v4f32.addr
+  // CHECK-NEXT: call <4 x float> @llvm.fma.v4f32(<4 x float> [[V4F32_0]], <4 x float> [[V4F32_1]], <4 x float> [[V4F32_2]])
+  v4f32 = __builtin_elementwise_fma(c_v4f32, c_v4f32, c_v4f32);
+
+  // CHECK:      [[F16_0:%.+]] = load half, ptr %f16.addr
+  // CHECK-NEXT: [[F16_1:%.+]] = load half, ptr %f16.addr
+  // CHECK-NEXT: [[F16_2:%.+]] = load half, ptr %f16.addr
+  // CHECK-NEXT: call half @llvm.fma.f16(half [[F16_0]], half [[F16_1]], half [[F16_2]])
+  half tmp_f16 = __builtin_elementwise_fma(f16, f16, f16);
+
+  // CHECK:      [[V2F16_0:%.+]] = load <2 x half>, ptr %v2f16.addr
+  // CHECK-NEXT: [[V2F16_1:%.+]] = load <2 x half>, ptr %v2f16.addr
+  // CHECK-NEXT: [[V2F16_2:%.+]] = load <2 x half>, ptr %v2f16.addr
+  // CHECK-NEXT: call <2 x half> @llvm.fma.v2f16(<2 x half> [[V2F16_0]], <2 x half> [[V2F16_1]], <2 x half> [[V2F16_2]])
+  half2 tmp0_v2f16 = __builtin_elementwise_fma(v2f16, v2f16, v2f16);
+
+  // CHECK:      [[V2F16_0:%.+]] = load <2 x half>, ptr %v2f16.addr
+  // CHECK-NEXT: [[V2F16_1:%.+]] = load <2 x half>, ptr %v2f16.addr
+  // CHECK-NEXT: [[F16_2:%.+]] = load half, ptr %f16.addr
+  // CHECK-NEXT: [[V2F16_2_INSERT:%.+]] = insertelement
+  // CHECK-NEXT: [[V2F16_2:%.+]] = shufflevector <2 x half> [[V2F16_2_INSERT]], <2 x half> poison, <2 x i32> zeroinitializer
+  // CHECK-NEXT: call <2 x half> @llvm.fma.v2f16(<2 x half> [[V2F16_0]], <2 x half> [[V2F16_1]], <2 x half> [[V2F16_2]])
+  half2 tmp1_v2f16 = __builtin_elementwise_fma(v2f16, v2f16, (half2)f16);
+
+  // CHECK:      [[V2F16_0:%.+]] = load <2 x half>, ptr %v2f16.addr
+  // CHECK-NEXT: [[V2F16_1:%.+]] = load <2 x half>, ptr %v2f16.addr
+  // CHECK-NEXT: call <2 x half> @llvm.fma.v2f16(<2 x half> [[V2F16_0]], <2 x half> [[V2F16_1]], <2 x half> <half 0xH4400, half 0xH4400>)
+  half2 tmp2_v2f16 = __builtin_elementwise_fma(v2f16, v2f16, (half2)4.0);
+
 }

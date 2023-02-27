@@ -681,7 +681,6 @@ def testInvalidOperationStrSoftFails():
   with Location.unknown(ctx):
     invalid_op = create_invalid_operation()
     # Verify that we fallback to the generic printer for safety.
-    # CHECK: // Verification failed, printing generic form
     # CHECK: "builtin.module"() ({
     # CHECK: }) : () -> ()
     print(invalid_op)
@@ -698,7 +697,8 @@ def testInvalidModuleStrSoftFails():
     with InsertionPoint(module.body):
       invalid_op = create_invalid_operation()
     # Verify that we fallback to the generic printer for safety.
-    # CHECK: // Verification failed, printing generic form
+    # CHECK: "builtin.module"() ({
+    # CHECK: }) : () -> ()
     print(module)
 
 
@@ -709,7 +709,7 @@ def testInvalidOperationGetAsmBinarySoftFails():
   with Location.unknown(ctx):
     invalid_op = create_invalid_operation()
     # Verify that we fallback to the generic printer for safety.
-    # CHECK: b'// Verification failed, printing generic form\n
+    # CHECK: b'"builtin.module"() ({\n^bb0:\n}, {\n}) : () -> ()\n'
     print(invalid_op.get_asm(binary=True))
 
 

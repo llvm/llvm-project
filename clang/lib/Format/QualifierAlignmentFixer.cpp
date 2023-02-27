@@ -280,8 +280,11 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
     // The case  `const Foo &&` -> `Foo const &&`
     // The case  `const std::Foo &&` -> `std::Foo const &&`
     // The case  `const std::Foo<T> &&` -> `std::Foo<T> const &&`
-    while (Next && Next->isOneOf(tok::identifier, tok::coloncolon))
+    // However,  `const Bar::*` remains the same.
+    while (Next && Next->isOneOf(tok::identifier, tok::coloncolon) &&
+           !Next->startsSequence(tok::coloncolon, tok::star)) {
       Next = Next->Next;
+    }
     if (Next && Next->is(TT_TemplateOpener)) {
       Next = Next->MatchingParen;
       // Move to the end of any template class members e.g.

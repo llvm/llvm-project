@@ -7428,9 +7428,9 @@ ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
       return getUnknown(PoisonValue::get(V->getType()));
   } else if (ConstantInt *CI = dyn_cast<ConstantInt>(V))
     return getConstant(CI);
-  else if (GlobalAlias *GA = dyn_cast<GlobalAlias>(V)) {
+  else if (isa<GlobalAlias>(V))
     return getUnknown(V);
-  } else if (!isa<ConstantExpr>(V))
+  else if (!isa<ConstantExpr>(V))
     return getUnknown(V);
 
   Operator *U = cast<Operator>(V);
@@ -7614,7 +7614,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
       return getUnknown(PoisonValue::get(V->getType()));
   } else if (ConstantInt *CI = dyn_cast<ConstantInt>(V))
     return getConstant(CI);
-  else if (GlobalAlias *GA = dyn_cast<GlobalAlias>(V))
+  else if (isa<GlobalAlias>(V))
     return getUnknown(V);
   else if (!isa<ConstantExpr>(V))
     return getUnknown(V);

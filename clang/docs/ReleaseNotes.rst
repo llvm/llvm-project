@@ -97,6 +97,10 @@ C2x Feature Support
 - Removed the ``ATOMIC_VAR_INIT`` macro in C2x and later standards modes, which
   implements `WG14 N2886 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2886.htm>`_
 
+- Implemented `WG14 N2934 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2934.pdf>`_
+  which introduces the ``bool``, ``static_assert``, ``alignas``, ``alignof``,
+  and ``thread_local`` keywords in C2x.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 - Clang now saves the address of ABI-indirect function parameters on the stack,

@@ -631,6 +631,7 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
 =========================================== ================================================================ =========================================
  T __builtin_elementwise_abs(T x)            return the absolute value of a number x; the absolute value of   signed integer and floating point types
                                              the most negative integer remains the most negative integer
+ T __builtin_elementwise_fma(T x, T y, T z)  fused multiply add, (x * y) +  z.                                              floating point types
  T __builtin_elementwise_ceil(T x)           return the smallest integral value greater than or equal to x    floating point types
  T __builtin_elementwise_sin(T x)            return the sine of x interpreted as an angle in radians          floating point types
  T __builtin_elementwise_cos(T x)            return the cosine of x interpreted as an angle in radians        floating point types

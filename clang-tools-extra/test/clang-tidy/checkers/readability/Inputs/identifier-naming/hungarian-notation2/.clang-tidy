@@ -120,11 +120,11 @@ CheckOptions:
     value:  custp
   - key:    readability-identifier-naming.HungarianNotation.DerivedType.FunctionPointer
     value:  custfn
-  - key:    readability-identifier-naming.HungarianNotation.CString.CharPrinter
+  - key:    readability-identifier-naming.HungarianNotation.CString.CharPointer
     value:  custsz
   - key:    readability-identifier-naming.HungarianNotation.CString.CharArray
     value:  custsz
-  - key:    readability-identifier-naming.HungarianNotation.CString.WideCharPrinter
+  - key:    readability-identifier-naming.HungarianNotation.CString.WideCharPointer
     value:  custwsz
   - key:    readability-identifier-naming.HungarianNotation.CString.WideCharArray
     value:  custwsz

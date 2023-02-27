@@ -10052,6 +10052,7 @@ public:
                         const Decl *Pattern, Decl *Inst,
                         LateInstantiatedAttrVec *LateAttrs = nullptr,
                         LocalInstantiationScope *OuterMostScope = nullptr);
+  void updateAttrsForLateParsedTemplate(const Decl *Pattern, Decl *Inst);
 
   void
   InstantiateAttrsForDecl(const MultiLevelTemplateArgumentList &TemplateArgs,
@@ -13531,6 +13532,7 @@ private:
   bool CheckPPCMMAType(QualType Type, SourceLocation TypeLoc);
 
   bool SemaBuiltinElementwiseMath(CallExpr *TheCall);
+  bool SemaBuiltinElementwiseTernaryMath(CallExpr *TheCall);
   bool PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall);
   bool PrepareBuiltinReduceMathOneArgCall(CallExpr *TheCall);
 
