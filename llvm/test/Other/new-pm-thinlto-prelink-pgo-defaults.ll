@@ -184,9 +184,6 @@
 ; CHECK-O23SZ-NEXT: Running pass: CoroElidePass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
-; CHECK-O3-NEXT: Running pass: ControlHeightReductionPass on foo
-; CHECK-O3-NEXT: Running analysis: RegionInfoAnalysis on foo
-; CHECK-O3-NEXT: Running analysis: DominanceFrontierAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: ShouldNotRunFunctionPassesAnalysis
 ; CHECK-O-NEXT: Running pass: CoroSplitPass
 ; CHECK-O-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}ShouldNotRunFunctionPassesAnalysis
