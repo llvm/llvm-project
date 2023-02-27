@@ -283,9 +283,8 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, TypeConverter &typeConverter,
 /// gpu.func to spirv.func if no arguments have the attributes set
 /// already. Returns failure if any argument has the ABI attribute set already.
 static LogicalResult
-getDefaultABIAttrs(MLIRContext *context, gpu::GPUFuncOp funcOp,
+getDefaultABIAttrs(const spirv::TargetEnv &targetEnv, gpu::GPUFuncOp funcOp,
                    SmallVectorImpl<spirv::InterfaceVarABIAttr> &argABI) {
-  spirv::TargetEnvAttr targetEnv = spirv::lookupTargetEnvOrDefault(funcOp);
   if (!spirv::needsInterfaceVarABIAttrs(targetEnv))
     return success();
 
@@ -298,7 +297,8 @@ getDefaultABIAttrs(MLIRContext *context, gpu::GPUFuncOp funcOp,
     std::optional<spirv::StorageClass> sc;
     if (funcOp.getArgument(argIndex).getType().isIntOrIndexOrFloat())
       sc = spirv::StorageClass::StorageBuffer;
-    argABI.push_back(spirv::getInterfaceVarABIAttr(0, argIndex, sc, context));
+    argABI.push_back(
+        spirv::getInterfaceVarABIAttr(0, argIndex, sc, funcOp.getContext()));
   }
   return success();
 }
@@ -309,8 +309,10 @@ LogicalResult GPUFuncOpConversion::matchAndRewrite(
   if (!gpu::GPUDialect::isKernel(funcOp))
     return failure();
 
+  auto *typeConverter = getTypeConverter<SPIRVTypeConverter>();
   SmallVector<spirv::InterfaceVarABIAttr, 4> argABI;
-  if (failed(getDefaultABIAttrs(rewriter.getContext(), funcOp, argABI))) {
+  if (failed(
+          getDefaultABIAttrs(typeConverter->getTargetEnv(), funcOp, argABI))) {
     argABI.clear();
     for (auto argIndex : llvm::seq<unsigned>(0, funcOp.getNumArguments())) {
       // If the ABI is already specified, use it.
@@ -349,12 +351,14 @@ LogicalResult GPUFuncOpConversion::matchAndRewrite(
 LogicalResult GPUModuleConversion::matchAndRewrite(
     gpu::GPUModuleOp moduleOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-  spirv::TargetEnvAttr targetEnv = spirv::lookupTargetEnvOrDefault(moduleOp);
-  spirv::AddressingModel addressingModel = spirv::getAddressingModel(targetEnv);
+  auto *typeConverter = getTypeConverter<SPIRVTypeConverter>();
+  const spirv::TargetEnv &targetEnv = typeConverter->getTargetEnv();
+  spirv::AddressingModel addressingModel = spirv::getAddressingModel(
+      targetEnv, typeConverter->getOptions().use64bitIndex);
   FailureOr<spirv::MemoryModel> memoryModel = spirv::getMemoryModel(targetEnv);
   if (failed(memoryModel))
-    return moduleOp.emitRemark("match failure: could not selected memory model "
-                               "based on 'spirv.target_env'");
+    return moduleOp.emitRemark(
+        "cannot deduce memory model from 'spirv.target_env'");
 
   // Add a keyword to the module name to avoid symbolic conflict.
   std::string spvModuleName = (kSPIRVModule + moduleOp.getName()).str();
