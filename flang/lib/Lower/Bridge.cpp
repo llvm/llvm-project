@@ -2093,6 +2093,8 @@ private:
   fir::ExtendedValue
   genAssociateSelector(const Fortran::lower::SomeExpr &selector,
                        Fortran::lower::StatementContext &stmtCtx) {
+    if (lowerToHighLevelFIR())
+      return genExprAddr(selector, stmtCtx);
     return Fortran::lower::isArraySectionWithoutVectorSubscript(selector)
                ? Fortran::lower::createSomeArrayBox(*this, selector,
                                                     localSymbols, stmtCtx)
