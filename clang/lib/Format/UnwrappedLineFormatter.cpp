@@ -511,12 +511,11 @@ private:
         ShouldMerge = !Style.BraceWrapping.AfterClass ||
                       (NextLine.First->is(tok::r_brace) &&
                        !Style.BraceWrapping.SplitEmptyRecord);
-      } else {
+      } if(TheLine->InPPDirective ||
+               !TheLine->First->isOneOf(tok::kw_class, tok::kw_enum,
+                                        tok::kw_struct)) {
         // Try to merge a block with left brace unwrapped that wasn't yet
         // covered.
-        assert(TheLine->InPPDirective ||
-               !TheLine->First->isOneOf(tok::kw_class, tok::kw_enum,
-                                        tok::kw_struct));
         ShouldMerge = !Style.BraceWrapping.AfterFunction ||
                       (NextLine.First->is(tok::r_brace) &&
                        !Style.BraceWrapping.SplitEmptyFunction);
