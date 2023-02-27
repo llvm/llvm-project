@@ -72,6 +72,7 @@ llvm.func @func_no_debug() {
 #blockScope = #llvm.di_lexical_block<scope = #sp0>
 #variable = #llvm.di_local_variable<scope = #fileScope, name = "arg", file = #file, line = 6, arg = 1, alignInBits = 32, type = #si64>
 #variableAddr = #llvm.di_local_variable<scope = #blockScope, name = "alloc">
+#noNameVariable = #llvm.di_local_variable<scope = #blockScope>
 
 #spType1 = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
 #sp1 = #llvm.di_subprogram<
@@ -89,9 +90,11 @@ llvm.func @func_with_debug(%arg: i64) {
   // CHECK: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[VAR_LOC:[0-9]+]], metadata !DIExpression())
   // CHECK: call void @llvm.dbg.addr(metadata ptr %[[ALLOC]], metadata ![[ADDR_LOC:[0-9]+]], metadata !DIExpression())
   // CHECK: call void @llvm.dbg.declare(metadata ptr %[[ALLOC]], metadata ![[ADDR_LOC]], metadata !DIExpression())
+  // CHECK: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[NO_NAME_VAR:[0-9]+]], metadata !DIExpression())
   llvm.intr.dbg.value #variable = %arg : i64
   llvm.intr.dbg.addr #variableAddr = %alloc : !llvm.ptr<i64>
   llvm.intr.dbg.declare #variableAddr = %alloc : !llvm.ptr<i64>
+  llvm.intr.dbg.value #noNameVariable= %arg : i64
 
   // CHECK: call void @func_no_debug(), !dbg ![[CALLSITE_LOC:[0-9]+]]
   llvm.call @func_no_debug() : () -> () loc(callsite("mysource.cc":3:4 at "mysource.cc":5:6))
@@ -139,6 +142,7 @@ llvm.func @empty_types() {
 // CHECK: ![[VAR_SCOPE]] = distinct !DILexicalBlockFile(scope: ![[FUNC_LOC]], file: ![[CU_FILE_LOC]], discriminator: 0)
 // CHECK: ![[ADDR_LOC]] = !DILocalVariable(name: "alloc", scope: ![[BLOCK_LOC:.*]])
 // CHECK: ![[BLOCK_LOC]] = distinct !DILexicalBlock(scope: ![[FUNC_LOC]])
+// CHECK: ![[NO_NAME_VAR]] = !DILocalVariable(scope: ![[BLOCK_LOC]])
 
 // CHECK-DAG: ![[CALLSITE_LOC]] = !DILocation(line: 3, column: 4,
 // CHECK-DAG: ![[FILE_LOC]] = !DILocation(line: 1, column: 2,
