@@ -473,7 +473,7 @@ Optional<Value> mlir::linalg::allocateGPUPrivateMemory(
 /// Normal copy to between src and dst.
 LogicalResult mlir::linalg::copyToGPUPrivateMemory(OpBuilder &b, Value src,
                                                    Value dst) {
-  Operation *copyOp = b.create<memref::CopyOp>(src.getLoc(), src, dst);
+  b.create<memref::CopyOp>(src.getLoc(), src, dst);
   return success();
 }
 
