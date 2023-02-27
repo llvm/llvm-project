@@ -173,6 +173,7 @@ void ThreadContext::flush_debug_info() {
 
   internal_snprintf(filepath, 2 * TREC_DIR_PATH_LEN - 1, "%s/trec_%llu",
                     ctx->trace_dir, internal_getpid(), tid);
+  struct stat _st = {0};
   uptr IS_EXIST = __sanitizer::internal_stat(filepath, &_st);
   if (IS_EXIST != 0) {
     ctx->ppid = ctx->pid;
