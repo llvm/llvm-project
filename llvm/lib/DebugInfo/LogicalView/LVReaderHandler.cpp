@@ -11,8 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/LogicalView/LVReaderHandler.h"
+#include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVCompare.h"
+#include "llvm/DebugInfo/LogicalView/Readers/LVCodeViewReader.h"
 #include "llvm/DebugInfo/LogicalView/Readers/LVELFReader.h"
+#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
+#include "llvm/DebugInfo/PDB/PDB.h"
+#include "llvm/Object/COFF.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -38,8 +43,18 @@ Error LVReaderHandler::createReader(StringRef Filename, LVReaders &Readers,
   auto CreateOneReader = [&]() -> std::unique_ptr<LVReader> {
     if (Input.is<ObjectFile *>()) {
       ObjectFile &Obj = *Input.get<ObjectFile *>();
+      if (Obj.isCOFF()) {
+        COFFObjectFile *COFF = cast<COFFObjectFile>(&Obj);
+        return std::make_unique<LVCodeViewReader>(Filename, FileFormatName,
+                                                  *COFF, W, ExePath);
+      }
       if (Obj.isELF() || Obj.isMachO())
         return std::make_unique<LVELFReader>(Filename, FileFormatName, Obj, W);
+    }
+    if (Input.is<PDBFile *>()) {
+      PDBFile &Pdb = *Input.get<PDBFile *>();
+      return std::make_unique<LVCodeViewReader>(Filename, FileFormatName, Pdb,
+                                                W, ExePath);
     }
     return nullptr;
   };
@@ -76,8 +91,102 @@ Error LVReaderHandler::handleArchive(LVReaders &Readers, StringRef Filename,
   return Error::success();
 }
 
+// Search for a matching executable image for the given PDB path.
+static std::string searchForExe(const StringRef Path,
+                                const StringRef Extension) {
+  SmallString<128> ExePath(Path);
+  llvm::sys::path::replace_extension(ExePath, Extension);
+
+  std::unique_ptr<IPDBSession> Session;
+  if (Error Err = loadDataForEXE(PDB_ReaderType::Native, ExePath, Session)) {
+    consumeError(std::move(Err));
+    return {};
+  }
+  // We have a candidate for the executable image.
+  Expected<std::string> PdbPathOrErr = NativeSession::searchForPdb({ExePath});
+  if (!PdbPathOrErr) {
+    consumeError(PdbPathOrErr.takeError());
+    return {};
+  }
+  // Convert any Windows backslashes into forward slashes to get the path.
+  std::string ConvertedPath = sys::path::convert_to_slash(
+      PdbPathOrErr.get(), sys::path::Style::windows);
+  if (ConvertedPath == Path)
+    return std::string(ExePath);
+
+  return {};
+}
+
+// Search for a matching object image for the given PDB path.
+static std::string searchForObj(const StringRef Path,
+                                const StringRef Extension) {
+  SmallString<128> ObjPath(Path);
+  llvm::sys::path::replace_extension(ObjPath, Extension);
+  if (llvm::sys::fs::exists(ObjPath)) {
+    ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
+        MemoryBuffer::getFileOrSTDIN(ObjPath);
+    if (!BuffOrErr)
+      return {};
+    return std::string(ObjPath);
+  }
+
+  return {};
+}
+
 Error LVReaderHandler::handleBuffer(LVReaders &Readers, StringRef Filename,
                                     MemoryBufferRef Buffer, StringRef ExePath) {
+  // As PDB does not support the Binary interface, at this point we can check
+  // if the buffer corresponds to a PDB or PE file.
+  file_magic FileMagic = identify_magic(Buffer.getBuffer());
+  if (FileMagic == file_magic::pdb) {
+    if (!ExePath.empty())
+      return handleObject(Readers, Filename, Buffer.getBuffer(), ExePath);
+
+    // Search in the directory derived from the given 'Filename' for a
+    // matching object file (.o, .obj, .lib) or a matching executable file
+    // (.exe/.dll) and try to create the reader based on the matched file.
+    // If no matching file is found then we load the original PDB file.
+    std::vector<StringRef> ExecutableExtensions = {"exe", "dll"};
+    for (StringRef Extension : ExecutableExtensions) {
+      std::string ExecutableImage = searchForExe(Filename, Extension);
+      if (ExecutableImage.empty())
+        continue;
+      if (Error Err = handleObject(Readers, Filename, Buffer.getBuffer(),
+                                   ExecutableImage)) {
+        consumeError(std::move(Err));
+        continue;
+      }
+      return Error::success();
+    }
+
+    std::vector<StringRef> ObjectExtensions = {"o", "obj", "lib"};
+    for (StringRef Extension : ObjectExtensions) {
+      std::string ObjectImage = searchForObj(Filename, Extension);
+      if (ObjectImage.empty())
+        continue;
+      if (Error Err = handleFile(Readers, ObjectImage)) {
+        consumeError(std::move(Err));
+        continue;
+      }
+      return Error::success();
+    }
+
+    // No matching executable/object image was found. Load the given PDB.
+    return handleObject(Readers, Filename, Buffer.getBuffer(), ExePath);
+  }
+  if (FileMagic == file_magic::pecoff_executable) {
+    // If we have a valid executable, try to find a matching PDB file.
+    Expected<std::string> PdbPath = NativeSession::searchForPdb({Filename});
+    if (errorToErrorCode(PdbPath.takeError())) {
+      return createStringError(
+          errc::not_supported,
+          "Binary object format in '%s' does not have debug info.",
+          Filename.str().c_str());
+    }
+    // Process the matching PDB file and pass the executable filename.
+    return handleFile(Readers, PdbPath.get(), Filename);
+  }
+
   Expected<std::unique_ptr<Binary>> BinOrErr = createBinary(Buffer);
   if (errorToErrorCode(BinOrErr.takeError())) {
     return createStringError(errc::not_supported,
@@ -145,6 +254,23 @@ Error LVReaderHandler::handleObject(LVReaders &Readers, StringRef Filename,
   return createStringError(errc::not_supported,
                            "Binary object format in '%s' is not supported.",
                            Filename.str().c_str());
+}
+
+Error LVReaderHandler::handleObject(LVReaders &Readers, StringRef Filename,
+                                    StringRef Buffer, StringRef ExePath) {
+  std::unique_ptr<IPDBSession> Session;
+  if (Error Err = loadDataForPDB(PDB_ReaderType::Native, Filename, Session))
+    return createStringError(errorToErrorCode(std::move(Err)), "%s",
+                             Filename.str().c_str());
+
+  std::unique_ptr<NativeSession> PdbSession;
+  PdbSession.reset(static_cast<NativeSession *>(Session.release()));
+  PdbOrObj Input = &PdbSession->getPDBFile();
+  StringRef FileFormatName;
+  size_t Pos = Buffer.find_first_of("\r\n");
+  if (Pos)
+    FileFormatName = Buffer.substr(0, Pos - 1);
+  return createReader(Filename, Readers, Input, FileFormatName, ExePath);
 }
 
 Error LVReaderHandler::createReaders() {
