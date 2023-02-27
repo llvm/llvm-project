@@ -1450,13 +1450,12 @@ public:
 
   DenseMap<const Value *, ValueName *> ValueNames;
 
-  using IntMapTy =
-      DenseMap<APInt, std::unique_ptr<ConstantInt>, DenseMapAPIntKeyInfo>;
-  IntMapTy IntConstants;
+  DenseMap<unsigned, std::unique_ptr<ConstantInt>> IntZeroConstants;
+  DenseMap<APInt, std::unique_ptr<ConstantInt>, DenseMapAPIntKeyInfo>
+      IntConstants;
 
-  using FPMapTy =
-      DenseMap<APFloat, std::unique_ptr<ConstantFP>, DenseMapAPFloatKeyInfo>;
-  FPMapTy FPConstants;
+  DenseMap<APFloat, std::unique_ptr<ConstantFP>, DenseMapAPFloatKeyInfo>
+      FPConstants;
 
   FoldingSet<AttributeImpl> AttrsSet;
   FoldingSet<AttributeListImpl> AttrsLists;
