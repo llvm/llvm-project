@@ -1,4 +1,5 @@
 // RUN: mlir-opt -split-input-file -convert-gpu-to-spirv="use-64bit-index=false" %s -o - | FileCheck %s --check-prefix=INDEX32
+// RUN: mlir-opt -split-input-file -convert-gpu-to-spirv="use-64bit-index=true" %s -o - | FileCheck %s --check-prefix=INDEX64
 
 module attributes {
   gpu.container_module,
@@ -13,12 +14,15 @@ module attributes {
 
   // INDEX32-LABEL:  spirv.module @{{.*}} Logical GLSL450
   // INDEX32: spirv.GlobalVariable [[WORKGROUPID:@.*]] built_in("WorkgroupId") : !spirv.ptr<vector<3xi32>, Input>
+  // INDEX64-LABEL:  spirv.module @{{.*}} Logical GLSL450
+  // INDEX64: spirv.GlobalVariable [[WORKGROUPID:@.*]] built_in("WorkgroupId") : !spirv.ptr<vector<3xi32>, Input>
   gpu.module @kernels {
     gpu.func @builtin_workgroup_id_x() kernel
       attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
       // INDEX32: [[ADDRESS:%.*]] = spirv.mlir.addressof [[WORKGROUPID]]
       // INDEX32-NEXT: [[VEC:%.*]] = spirv.Load "Input" [[ADDRESS]]
       // INDEX32-NEXT: {{%.*}} = spirv.CompositeExtract [[VEC]]{{\[}}0 : i32{{\]}}
+      // INDEX64: spirv.UConvert %{{.+}} : i32 to i64
       %0 = gpu.block_id x
       gpu.return
     }
@@ -422,11 +426,14 @@ module attributes {
 } {
   // INDEX32-LABEL:  spirv.module @{{.*}} Logical GLSL450
   // INDEX32: spirv.GlobalVariable [[SUBGROUPSIZE:@.*]] built_in("SubgroupSize") : !spirv.ptr<i32, Input>
+  // INDEX64-LABEL:  spirv.module @{{.*}} Logical GLSL450
+  // INDEX64: spirv.GlobalVariable [[SUBGROUPSIZE:@.*]] built_in("SubgroupSize") : !spirv.ptr<i32, Input>
   gpu.module @kernels {
     gpu.func @builtin_subgroup_size() kernel
       attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
       // INDEX32: [[ADDRESS:%.*]] = spirv.mlir.addressof [[SUBGROUPSIZE]]
       // INDEX32-NEXT: {{%.*}} = spirv.Load "Input" [[ADDRESS]]
+      // INDEX64: spirv.UConvert %{{.+}} : i32 to i64
       %0 = gpu.subgroup_size : index
       gpu.return
     }

@@ -144,14 +144,31 @@ LogicalResult LaunchConfigConversion<SourceOp, builtin>::matchAndRewrite(
     SourceOp op, typename SourceOp::Adaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   auto *typeConverter = this->template getTypeConverter<SPIRVTypeConverter>();
-  auto indexType = typeConverter->getIndexType();
+  Type indexType = typeConverter->getIndexType();
 
-  // SPIR-V invocation builtin variables are a vector of type <3xi32>
-  auto spirvBuiltin =
-      spirv::getBuiltinVariableValue(op, builtin, indexType, rewriter);
-  rewriter.replaceOpWithNewOp<spirv::CompositeExtractOp>(
-      op, indexType, spirvBuiltin,
+  // For Vulkan, these SPIR-V builtin variables are required to be a vector of
+  // type <3xi32> by the spec:
+  // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/NumWorkgroups.html
+  // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/WorkgroupId.html
+  // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/WorkgroupSize.html
+  // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/LocalInvocationId.html
+  // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/LocalInvocationId.html
+  // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/GlobalInvocationId.html
+  //
+  // For OpenCL, it depends on the Physical32/Physical64 addressing model:
+  // https://registry.khronos.org/OpenCL/specs/3.0-unified/html/OpenCL_Env.html#_built_in_variables
+  bool forShader =
+      typeConverter->getTargetEnv().allows(spirv::Capability::Shader);
+  Type builtinType = forShader ? rewriter.getIntegerType(32) : indexType;
+
+  Value vector =
+      spirv::getBuiltinVariableValue(op, builtin, builtinType, rewriter);
+  Value dim = rewriter.create<spirv::CompositeExtractOp>(
+      op.getLoc(), builtinType, vector,
       rewriter.getI32ArrayAttr({static_cast<int32_t>(op.getDimension())}));
+  if (forShader && builtinType != indexType)
+    dim = rewriter.create<spirv::UConvertOp>(op.getLoc(), indexType, dim);
+  rewriter.replaceOp(op, dim);
   return success();
 }
 
@@ -161,11 +178,23 @@ SingleDimLaunchConfigConversion<SourceOp, builtin>::matchAndRewrite(
     SourceOp op, typename SourceOp::Adaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   auto *typeConverter = this->template getTypeConverter<SPIRVTypeConverter>();
-  auto indexType = typeConverter->getIndexType();
+  Type indexType = typeConverter->getIndexType();
+  Type i32Type = rewriter.getIntegerType(32);
 
-  auto spirvBuiltin =
-      spirv::getBuiltinVariableValue(op, builtin, indexType, rewriter);
-  rewriter.replaceOp(op, spirvBuiltin);
+  // For Vulkan, these SPIR-V builtin variables are required to be a vector of
+  // type i32 by the spec:
+  // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/NumSubgroups.html
+  // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/SubgroupId.html
+  // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/SubgroupSize.html
+  //
+  // For OpenCL, they are also required to be i32:
+  // https://registry.khronos.org/OpenCL/specs/3.0-unified/html/OpenCL_Env.html#_built_in_variables
+  Value builtinValue =
+      spirv::getBuiltinVariableValue(op, builtin, i32Type, rewriter);
+  if (i32Type != indexType)
+    builtinValue = rewriter.create<spirv::UConvertOp>(op.getLoc(), indexType,
+                                                      builtinValue);
+  rewriter.replaceOp(op, builtinValue);
   return success();
 }
 
