@@ -200,8 +200,6 @@ struct llvm::gvn::AvailableValue {
   unsigned Offset = 0;
   /// V1, V2 - The dominating non-clobbered values of SelectVal.
   Value *V1 = nullptr, *V2 = nullptr;
-  /// InsertPt - The position for select materialization.
-  Instruction *InsertPt = nullptr;
 
   static AvailableValue get(Value *V, unsigned Offset = 0) {
     AvailableValue Res;
@@ -235,15 +233,13 @@ struct llvm::gvn::AvailableValue {
     return Res;
   }
 
-  static AvailableValue getSelect(Value *Cond, Value *V1, Value *V2,
-                                  Instruction *InsertPt) {
+  static AvailableValue getSelect(SelectInst *Sel, Value *V1, Value *V2) {
     AvailableValue Res;
-    Res.Val = Cond;
+    Res.Val = Sel;
     Res.Kind = ValType::SelectVal;
     Res.Offset = 0;
     Res.V1 = V1;
     Res.V2 = V2;
-    Res.InsertPt = InsertPt;
     return Res;
   }
 
@@ -266,6 +262,11 @@ struct llvm::gvn::AvailableValue {
   MemIntrinsic *getMemIntrinValue() const {
     assert(isMemIntrinValue() && "Wrong accessor");
     return cast<MemIntrinsic>(Val);
+  }
+
+  SelectInst *getSelectValue() const {
+    assert(isSelectValue() && "Wrong accessor");
+    return cast<SelectInst>(Val);
   }
 
   /// Emit code at the specified insertion point to adjust the value defined
@@ -297,6 +298,11 @@ struct llvm::gvn::AvailableValueInBlock {
 
   static AvailableValueInBlock getUndef(BasicBlock *BB) {
     return get(BB, AvailableValue::getUndef());
+  }
+
+  static AvailableValueInBlock getSelect(BasicBlock *BB, SelectInst *Sel,
+                                         Value *V1, Value *V2) {
+    return get(BB, AvailableValue::getSelect(Sel, V1, V2));
   }
 
   /// Emit code at the end of this block to adjust the value defined here to
@@ -1013,8 +1019,9 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
                       << "\n\n\n");
   } else if (isSelectValue()) {
     // Introduce a new value select for a load from an eligible pointer select.
+    SelectInst *Sel = getSelectValue();
     assert(V1 && V2 && "both value operands of the select must be present");
-    Res = SelectInst::Create(Val, V1, V2, "", InsertPt);
+    Res = SelectInst::Create(Sel->getCondition(), V1, V2, "", Sel);
   } else {
     llvm_unreachable("Should not materialize value from dead block");
   }
@@ -1123,32 +1130,6 @@ static Value *findDominatingValue(const MemoryLocation &Loc, Type *LoadTy,
           return LI;
     }
   return nullptr;
-}
-
-// Check if load with Addr dependent from select can be converted to select
-// between load values. There must be no clobbers between the found loads and
-// From instruction.
-std::optional<AvailableValue>
-GVNPass::AnalyzeSelectAvailability(LoadInst *Load, const SelectAddr &Addr,
-                                   Instruction *From) {
-  auto [Cond, SelectAddrs] = Addr.getSelectCondAndAddrs();
-  auto [TrueAddr, FalseAddr] = SelectAddrs;
-  assert(TrueAddr && "Missing address of true side of select dependency");
-  assert(TrueAddr->getType() == Load->getPointerOperandType() &&
-         "Invalid address type of true side of select dependency");
-  assert(FalseAddr && "Missing address of false side of select dependency");
-  assert(FalseAddr->getType() == Load->getPointerOperandType() &&
-         "Invalid address type of false side of select dependency");
-  auto Loc = MemoryLocation::get(Load);
-  Value *V1 = findDominatingValue(Loc.getWithNewPtr(TrueAddr), Load->getType(),
-                                  From, getAliasAnalysis());
-  if (!V1)
-    return std::nullopt;
-  Value *V2 = findDominatingValue(Loc.getWithNewPtr(FalseAddr), Load->getType(),
-                                  From, getAliasAnalysis());
-  if (!V2)
-    return std::nullopt;
-  return AvailableValue::getSelect(Cond, V1, V2, From);
 }
 
 std::optional<AvailableValue>
@@ -1265,6 +1246,25 @@ GVNPass::AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
     return AvailableValue::getLoad(LD);
   }
 
+  // Check if load with Addr dependent from select can be converted to select
+  // between load values. There must be no instructions between the found
+  // loads and DepInst that may clobber the loads.
+  if (auto *Sel = dyn_cast<SelectInst>(DepInst)) {
+    assert(Sel->getType() == Load->getPointerOperandType());
+    auto Loc = MemoryLocation::get(Load);
+    Value *V1 =
+        findDominatingValue(Loc.getWithNewPtr(Sel->getTrueValue()),
+                            Load->getType(), DepInst, getAliasAnalysis());
+    if (!V1)
+      return std::nullopt;
+    Value *V2 =
+        findDominatingValue(Loc.getWithNewPtr(Sel->getFalseValue()),
+                            Load->getType(), DepInst, getAliasAnalysis());
+    if (!V2)
+      return std::nullopt;
+    return AvailableValue::getSelect(Sel, V1, V2);
+  }
+
   // Unknown def - must be conservative
   LLVM_DEBUG(
       // fast print dep, using operator<< on instruction is too slow.
@@ -1283,7 +1283,6 @@ void GVNPass::AnalyzeLoadAvailability(LoadInst *Load, LoadDepVect &Deps,
   for (const auto &Dep : Deps) {
     BasicBlock *DepBB = Dep.getBB();
     MemDepResult DepInfo = Dep.getResult();
-    SelectAddr Addr = Dep.getAddress();
 
     if (DeadBlocks.count(DepBB)) {
       // Dead dependent mem-op disguise as a load evaluating the same value
@@ -1293,13 +1292,6 @@ void GVNPass::AnalyzeLoadAvailability(LoadInst *Load, LoadDepVect &Deps,
     }
 
     if (!DepInfo.isLocal()) {
-      if (DepInfo.isSelect())
-        if (auto AV =
-                AnalyzeSelectAvailability(Load, Addr, DepBB->getTerminator())) {
-          ValuesPerBlock.push_back(
-              AvailableValueInBlock::get(DepBB, std::move(*AV)));
-          continue;
-        }
       UnavailableBlocks.push_back(DepBB);
       continue;
     }
@@ -1307,7 +1299,7 @@ void GVNPass::AnalyzeLoadAvailability(LoadInst *Load, LoadDepVect &Deps,
     // The address being loaded in this non-local block may not be the same as
     // the pointer operand of the load if PHI translation occurs.  Make sure
     // to consider the right address.
-    if (auto AV = AnalyzeLoadAvailability(Load, DepInfo, Addr.getAddr())) {
+    if (auto AV = AnalyzeLoadAvailability(Load, DepInfo, Dep.getAddress())) {
       // subtlety: because we know this was a non-local dependency, we know
       // it's safe to materialize anywhere between the instruction within
       // DepInfo and the end of it's block.
@@ -1746,7 +1738,7 @@ bool GVNPass::processNonLocalLoad(LoadInst *Load) {
   // If we had a phi translation failure, we'll have a single entry which is a
   // clobber in the current block.  Reject this early.
   if (NumDeps == 1 &&
-      !Deps[0].getResult().isLocal() && !Deps[0].getResult().isSelect()) {
+      !Deps[0].getResult().isDef() && !Deps[0].getResult().isClobber()) {
     LLVM_DEBUG(dbgs() << "GVN: non-local load "; Load->printAsOperand(dbgs());
                dbgs() << " has unknown dependencies\n";);
     return false;
@@ -2036,12 +2028,8 @@ bool GVNPass::processLoad(LoadInst *L) {
   if (Dep.isNonLocal())
     return processNonLocalLoad(L);
 
-  std::optional<AvailableValue> AV;
-  if (Dep.isLocal())
-    AV = AnalyzeLoadAvailability(L, Dep, L->getPointerOperand());
-  else if (Dep.isSelect())
-    AV = AnalyzeSelectAvailability(L, L->getPointerOperand(), L);
-  else {
+  // Only handle the local case below
+  if (!Dep.isLocal()) {
     // This might be a NonFuncLocal or an Unknown
     LLVM_DEBUG(
         // fast print dep, using operator<< on instruction is too slow.
@@ -2050,6 +2038,7 @@ bool GVNPass::processLoad(LoadInst *L) {
     return false;
   }
 
+  auto AV = AnalyzeLoadAvailability(L, Dep, L->getPointerOperand());
   if (!AV)
     return false;
 

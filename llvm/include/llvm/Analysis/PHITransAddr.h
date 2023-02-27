@@ -15,47 +15,12 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/IR/Instructions.h"
 
 namespace llvm {
 class AssumptionCache;
 class DominatorTree;
 class DataLayout;
 class TargetLibraryInfo;
-
-// SelectAddr - storage of normal Value address or Condition value and pair of
-// addresses for true and false variant of select dependency. If Addrs are not
-// present (both values are nullptr), V is a normal address; otherwise, V is a
-// select condition and SelectAddrs are "true" and "false" addresses.
-class SelectAddr {
-public:
-  using SelectAddrs = std::pair<Value *, Value *>;
-
-  SelectAddr(Value *Addr) : V(Addr), Addrs(nullptr, nullptr) {}
-  SelectAddr(Value *Cond, SelectAddrs Addrs) : V(Cond), Addrs(Addrs) {
-    assert(Cond && "Condition must be present");
-    assert(hasSelectAddrs() && "Addrs must be present");
-  };
-  Value *getAddr() const {
-    assert(!hasSelectAddrs());
-    return V;
-  }
-  std::pair<Value *, SelectAddrs> getSelectCondAndAddrs() const {
-    // If Addrs is present, return it.
-    if (hasSelectAddrs())
-      return {V, Addrs};
-    // Otherwise V must be SelectInst; return condition and both addresses from
-    // its operands.
-    auto *SI = cast<SelectInst>(V);
-    return {SI->getCondition(), {SI->getTrueValue(), SI->getFalseValue()}};
-  }
-
-private:
-  Value *V;
-  SelectAddrs Addrs;
-
-  bool hasSelectAddrs() const { return Addrs.first && Addrs.second; }
-};
 
 /// PHITransAddr - An address value which tracks and handles phi translation.
 /// As we walk "up" the CFG through predecessors, we need to ensure that the
@@ -92,15 +57,6 @@ public:
 
   Value *getAddr() const { return Addr; }
 
-  /// getSelectCondition - if address has select input, return its condition
-  /// (otherwise nullptr).
-  Value *getSelectCondition() const {
-    for (auto *I : InstInputs)
-      if (auto *SI = dyn_cast<SelectInst>(I))
-        return SI->getCondition();
-    return nullptr;
-  }
-
   /// needsPHITranslationFromBlock - Return true if moving from the specified
   /// BasicBlock to its predecessors requires PHI translation.
   bool needsPHITranslationFromBlock(BasicBlock *BB) const {
@@ -122,12 +78,6 @@ public:
   Value *translateValue(BasicBlock *CurBB, BasicBlock *PredBB,
                         const DominatorTree *DT, bool MustDominate);
 
-  /// translateValue - PHI translate the current address from \p CurBB to \p
-  /// PredBB, and if the resulted address depends on select instructions with \p
-  /// Cond predicate, translate both cases of this selects.
-  SelectAddr::SelectAddrs translateValue(BasicBlock *CurBB, BasicBlock *PredBB,
-                                         const DominatorTree *DT, Value *Cond);
-
   /// translateWithInsertion - PHI translate this value into the specified
   /// predecessor block, inserting a computation of the value if it is
   /// unavailable.
@@ -147,13 +97,8 @@ public:
   bool verify() const;
 
 private:
-  /// translateSubExpr - recursively translate value \p V from \p CurBB to \p
-  /// PredBB, and if value depends from selects with \p Cond condition, also
-  /// translate it through these selects with \p CondVal predicate. Return
-  /// nullptr on failure.
   Value *translateSubExpr(Value *V, BasicBlock *CurBB, BasicBlock *PredBB,
-                          const DominatorTree *DT, Value *Cond = nullptr,
-                          bool CondVal = false);
+                          const DominatorTree *DT);
 
   /// insertTranslatedSubExpr - Insert a computation of the PHI translated
   /// version of 'V' for the edge PredBB->CurBB into the end of the PredBB
