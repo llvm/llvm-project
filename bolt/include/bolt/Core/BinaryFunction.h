@@ -1466,8 +1466,6 @@ public:
 
   ArrayRef<uint8_t> getLSDATypeIndexTable() const { return LSDATypeIndexTable; }
 
-  const LabelsMapType &getLabels() const { return Labels; }
-
   IslandInfo &getIslandInfo() {
     assert(Islands && "function expected to have constant islands");
     return *Islands;
