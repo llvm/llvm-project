@@ -152,10 +152,15 @@ struct ReadMeta {
   __sanitizer::u64 none2 : 16;
   __sanitizer::u64 debug_offset : 48;
   ReadMeta(__sanitizer::u64 v, __sanitizer::u64 si, __sanitizer::u64 sa,
-           __sanitizer::u64 debug = 0)
-      : val(v), src_idx(si), src_addr(sa), debug_offset(debug) {}
+           __sanitizer::u16 isMemCpyFlag, __sanitizer::u64 debug = 0)
+      : val(v),
+        src_idx(si),
+        src_addr(sa),
+        none2(isMemCpyFlag),
+        debug_offset(debug) {}
 };
 static_assert(sizeof(ReadMeta) == 24, "ERROR: sizeof(ReadMeta)!=24");
+
 struct WriteMeta {
   __sanitizer::u64 val;
   __sanitizer::u64 addr_src_idx : 16;
@@ -166,15 +171,23 @@ struct WriteMeta {
   __sanitizer::u64 debug_offset : 48;
   WriteMeta(__sanitizer::u64 v, __sanitizer::u64 asi, __sanitizer::u64 asa,
             __sanitizer::u64 vsi, __sanitizer::u64 vsa,
-            __sanitizer::u64 debug = 0)
+             __sanitizer::u16 isMemCpyFlag, __sanitizer::u64 debug = 0)
       : val(v),
         addr_src_idx(asi),
         addr_src_addr(asa),
         val_src_idx(vsi),
         val_src_addr(vsa),
+        none2(isMemCpyFlag),
         debug_offset(debug) {}
 };
 static_assert(sizeof(WriteMeta) == 32, "ERROR: sizeof(WriteMeta)!=32");
+
+struct BranchMeta {
+  __sanitizer::u64 none : 16;
+  __sanitizer::u64 debug_offset : 48;
+  BranchMeta(__sanitizer::u64 debug) : debug_offset(debug) {}
+};
+static_assert(sizeof(BranchMeta) == 8, "ERROR: sizeof(BranchMeta) != 8");
 
 struct FuncEnterMeta {
   __sanitizer::u64 order;

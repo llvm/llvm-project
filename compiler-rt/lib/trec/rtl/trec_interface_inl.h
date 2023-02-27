@@ -21,9 +21,7 @@
 
 using namespace __trec;
 using namespace __trec_metadata;
-void __trec_branch(u64 cond) {
-  CondBranch(cur_thread(), CALLERPC, cond);
-}
+void __trec_branch(u64 cond) { CondBranch(cur_thread(), CALLERPC, cond); }
 
 void __trec_func_param(u16 param_idx, void *src_addr, u16 src_idx, void *val) {
   FuncParam(cur_thread(), param_idx, (uptr)src_addr, src_idx, (uptr)val);
@@ -117,9 +115,9 @@ void __trec_write8(void *addr, bool isPtr, void *val, void *addr_src_addr,
               SAI_addr, SAI_val);
 }
 
-void __trec_func_entry() {
+void __trec_func_entry(void *name) {
   bool should_record = true;
-  RecordFuncEntry(cur_thread(), should_record, __func__,
+  RecordFuncEntry(cur_thread(), should_record, (char *)name,
                   StackTrace::GetPreviousInstructionPc(GET_CALLER_PC()));
 }
 

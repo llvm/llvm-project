@@ -129,7 +129,7 @@ SANITIZER_INTERFACE_ATTRIBUTE void __trec_unaligned_write16(
     __sanitizer::u16 addr_src_idx, void *val_src_addr,
     __sanitizer::u16 val_src_idx);
 #endif
-SANITIZER_INTERFACE_ATTRIBUTE void __trec_func_entry();
+SANITIZER_INTERFACE_ATTRIBUTE void __trec_func_entry(void *);
 SANITIZER_INTERFACE_ATTRIBUTE void __trec_func_exit();
 
 #endif  // SANITIZER_GO

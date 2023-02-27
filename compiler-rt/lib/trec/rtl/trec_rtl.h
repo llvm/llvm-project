@@ -205,7 +205,6 @@ class ThreadContext final : public ThreadContextBase {
   char dbg_temp_buffer[sizeof(__trec_debug_info::InstDebugInfo) + 512];
   __sanitizer::u64 dbg_temp_buffer_size;
 
-
   // Override superclass callbacks.
   void OnDead() override;
   void OnJoined(void *arg) override;
@@ -315,7 +314,8 @@ void MemoryAccess(ThreadState *thr, uptr pc, uptr addr, int kAccessSizeLog,
                   bool kAccessIsWrite, bool kIsAtomic, bool isPtr = false,
                   uptr val = 0,
                   __trec_metadata::SourceAddressInfo SAI_addr = {0, 0},
-                  __trec_metadata::SourceAddressInfo SAI_val = {0, 0});
+                  __trec_metadata::SourceAddressInfo SAI_val = {0, 0},
+                  bool isMemCpyFlag = false);
 void MemoryAccessRange(ThreadState *thr, uptr pc, uptr addr, uptr size,
                        bool is_write,
                        __trec_metadata::SourceAddressInfo SAI = {0, 0});

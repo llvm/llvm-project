@@ -88,8 +88,6 @@ bool ThreadContext::state_restore() {
 
 void ThreadContext::flush_trace() {
   char filepath[TREC_DIR_PATH_LEN];
-
-  ctx->open_dir_mutex.Lock();
   struct stat _st = {0};
   internal_snprintf(filepath, 2 * TREC_DIR_PATH_LEN - 1, "%s/trec_%llu",
                     ctx->trace_dir, internal_getpid(), tid);
@@ -99,7 +97,6 @@ void ThreadContext::flush_trace() {
     ctx->pid = internal_getpid();
     ctx->open_directory(ctx->trace_dir);
   }
-  ctx->open_dir_mutex.Unlock();
 
   internal_snprintf(filepath, TREC_DIR_PATH_LEN - 1, "%s/trec_%d/trace/%d.bin",
                     ctx->trace_dir, internal_getpid(), this->tid);
@@ -129,7 +126,6 @@ void ThreadContext::flush_trace() {
 void ThreadContext::flush_metadata() {
   char filepath[TREC_DIR_PATH_LEN];
 
-  ctx->open_dir_mutex.Lock();
   struct stat _st = {0};
   internal_snprintf(filepath, 2 * TREC_DIR_PATH_LEN - 1, "%s/trec_%llu",
                     ctx->trace_dir, internal_getpid(), tid);
@@ -139,7 +135,6 @@ void ThreadContext::flush_metadata() {
     ctx->pid = internal_getpid();
     ctx->open_directory(ctx->trace_dir);
   }
-  ctx->open_dir_mutex.Unlock();
 
   internal_snprintf(filepath, TREC_DIR_PATH_LEN - 1,
                     "%s/trec_%d/metadata/%d.bin", ctx->trace_dir,
@@ -176,8 +171,6 @@ void ThreadContext::flush_debug_info() {
     return;
   char filepath[TREC_DIR_PATH_LEN];
 
-  ctx->open_dir_mutex.Lock();
-  struct stat _st = {0};
   internal_snprintf(filepath, 2 * TREC_DIR_PATH_LEN - 1, "%s/trec_%llu",
                     ctx->trace_dir, internal_getpid(), tid);
   uptr IS_EXIST = __sanitizer::internal_stat(filepath, &_st);
@@ -186,7 +179,6 @@ void ThreadContext::flush_debug_info() {
     ctx->pid = internal_getpid();
     ctx->open_directory(ctx->trace_dir);
   }
-  ctx->open_dir_mutex.Unlock();
 
   internal_snprintf(filepath, TREC_DIR_PATH_LEN - 1, "%s/trec_%d/debug/%d.bin",
                     ctx->trace_dir, internal_getpid(), thr->tid);
@@ -228,12 +220,14 @@ void ThreadContext::flush_module() {
                        sizeof(thr->tctx->header.cmd) - 1) == 0) {
     char **cmds = GetArgv();
     int cmd_len = 0;
+    internal_strlcpy(thr->tctx->header.binary_path, cmds[0],
+                     2 * TREC_DIR_PATH_LEN - 1);
     for (int i = 0; cmds[i]; i++) {
-      cmd_len += internal_strlcpy(thr->tctx->header.cmd + cmd_len, cmds[i],
-                                  sizeof(thr->tctx->header.cmd) - 1 - cmd_len);
       if (i != 0) {
         thr->tctx->header.cmd[cmd_len++] = ' ';
       }
+      cmd_len += internal_strlcpy(thr->tctx->header.cmd + cmd_len, cmds[i],
+                                  sizeof(thr->tctx->header.cmd) - 1 - cmd_len);
     }
   }
   MemoryMappingLayout memory_mapping(false);
@@ -241,15 +235,9 @@ void ThreadContext::flush_module() {
   memory_mapping.DumpListOfModules(&modules);
   Sort(modules.begin(), modules.size(), CompareBaseAddress);
   uptr idx = 0;
-  bool found = false;
   for (auto &item : modules) {
     if (item.full_name() && item.base_address() && item.max_address() &&
         internal_strstr(item.full_name(), "(deleted)") == nullptr) {
-      if (!found) {
-        internal_strlcpy(thr->tctx->header.binary_path, item.full_name(),
-                         2 * TREC_DIR_PATH_LEN - 1);
-        found = true;
-      }
       internal_memset(write_buff, 0, sizeof(write_buff));
       int bufflen = internal_snprintf(write_buff, 2 * TREC_DIR_PATH_LEN - 1,
                                       "%s %p-%p\n", item.full_name(),
@@ -276,7 +264,6 @@ void ThreadContext::flush_module() {
 void ThreadContext::flush_header() {
   char filepath[TREC_DIR_PATH_LEN];
 
-  ctx->open_dir_mutex.Lock();
   struct stat _st = {0};
   internal_snprintf(filepath, 2 * TREC_DIR_PATH_LEN - 1, "%s/trec_%llu",
                     ctx->trace_dir, internal_getpid(), tid);
@@ -286,7 +273,6 @@ void ThreadContext::flush_header() {
     ctx->pid = internal_getpid();
     ctx->open_directory(ctx->trace_dir);
   }
-  ctx->open_dir_mutex.Unlock();
 
   internal_snprintf(filepath, TREC_DIR_PATH_LEN - 1, "%s/trec_%d/header/%d.bin",
                     ctx->trace_dir, internal_getpid(), thr->tid);
@@ -475,7 +461,7 @@ int ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached) {
         ctx->flags.trace_mode = 2;
       } else if (internal_strcmp(ctx->record_mode, "verification") == 0) {
         // Report("Trace mode: Program Verification\n");
-        ctx->flags.record_alloc_free = false;
+        // ctx->flags.record_alloc_free = false;
         // ctx->flags.record_mutex = false;
         // ctx->flags.record_read = false;
         ctx->flags.trace_mode = 3;

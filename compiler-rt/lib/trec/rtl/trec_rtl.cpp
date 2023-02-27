@@ -223,9 +223,13 @@ void Context::open_directory(const char *dirpath) {
                     internal_getpid());
 
   struct stat _st = {0};
+  open_dir_mutex.Lock();
   uptr IS_EXISTS = __sanitizer::internal_stat(path, &_st);
   char filepath[TREC_DIR_PATH_LEN];
-  if (IS_EXISTS != 0 || !S_ISDIR(_st.st_mode)) {
+  if (IS_EXISTS == 0) {
+    open_dir_mutex.Unlock();
+    return;
+  } else {
     if (mkdir(path, ACCESSPERMS) != 0) {
       Report("Could not create directory at %s, errno=%d, exists=%d, is_dir=%d",
              path, errno, IS_EXISTS, S_ISDIR(_st.st_mode));
@@ -235,7 +239,7 @@ void Context::open_directory(const char *dirpath) {
   if (flags.trace_mode == 2 || flags.trace_mode == 3) {
     internal_snprintf(filepath, TREC_DIR_PATH_LEN - 1, "%s/%s", path, "trace");
     IS_EXISTS = __sanitizer::internal_stat(filepath, &_st);
-    if (IS_EXISTS != 0 || !S_ISDIR(_st.st_mode)) {
+    if (IS_EXISTS != 0) {
       if (mkdir(filepath, ACCESSPERMS) != 0) {
         Report("Could not create trace directory at %s, errno=%d\n", filepath,
                errno);
@@ -245,7 +249,7 @@ void Context::open_directory(const char *dirpath) {
     internal_snprintf(filepath, TREC_DIR_PATH_LEN - 1, "%s/%s", path,
                       "metadata");
     IS_EXISTS = __sanitizer::internal_stat(filepath, &_st);
-    if (IS_EXISTS != 0 || !S_ISDIR(_st.st_mode)) {
+    if (IS_EXISTS != 0) {
       if (mkdir(filepath, ACCESSPERMS) != 0) {
         Report("Could not create metadata directory at %s, errno=%d\n",
                filepath, errno);
@@ -254,7 +258,7 @@ void Context::open_directory(const char *dirpath) {
     }
     internal_snprintf(filepath, TREC_DIR_PATH_LEN - 1, "%s/%s", path, "header");
     IS_EXISTS = __sanitizer::internal_stat(filepath, &_st);
-    if (IS_EXISTS != 0 || !S_ISDIR(_st.st_mode)) {
+    if (IS_EXISTS != 0) {
       if (mkdir(filepath, ACCESSPERMS) != 0) {
         Report("Could not create header directory at %s, errno=%d\n", filepath,
                errno);
@@ -265,7 +269,7 @@ void Context::open_directory(const char *dirpath) {
       internal_snprintf(filepath, TREC_DIR_PATH_LEN - 1, "%s/%s", path,
                         "debug");
       IS_EXISTS = __sanitizer::internal_stat(filepath, &_st);
-      if (IS_EXISTS != 0 || !S_ISDIR(_st.st_mode)) {
+      if (IS_EXISTS != 0) {
         if (mkdir(filepath, ACCESSPERMS) != 0) {
           Report("Could not create debug directory at %s, errno=%d\n", filepath,
                  errno);
@@ -275,6 +279,7 @@ void Context::open_directory(const char *dirpath) {
     }
     cur_thread()->tctx->flush_module();
   }
+  open_dir_mutex.Unlock();
 }
 void Context::flush_seqc_summary() {
   char filepath[TREC_DIR_PATH_LEN];
@@ -619,8 +624,14 @@ ALWAYS_INLINE USED void CondBranch(ThreadState *thr, uptr pc,
     } else if (ctx->flags.trace_mode == 2 || ctx->flags.trace_mode == 3) {
       __trec_trace::Event e(
           __trec_trace::EventType::Branch, thr->tid,
-          atomic_fetch_add(&ctx->global_id, 1, memory_order_relaxed), cond, 0,
-          pc);
+          atomic_fetch_add(&ctx->global_id, 1, memory_order_relaxed), cond,
+          thr->tctx->dbg_temp_buffer_size ? thr->tctx->metadata_offset : 0, pc);
+      if (thr->tctx->dbg_temp_buffer_size) {
+        __trec_metadata::BranchMeta meta(thr->tctx->debug_offset);
+        thr->tctx->put_debug_info(thr->tctx->dbg_temp_buffer,
+                                  thr->tctx->dbg_temp_buffer_size);
+        thr->tctx->put_metadata(&meta, sizeof(meta));
+      }
       thr->tctx->put_trace(&e, sizeof(__trec_trace::Event));
       thr->tctx->header.StateInc(__trec_header::RecordType::Branch);
     }
@@ -667,7 +678,7 @@ ALWAYS_INLINE USED void MemoryAccess(
     ThreadState *thr, uptr pc, uptr addr, int kAccessSizeLog,
     bool kAccessIsWrite, bool kIsAtomic, bool isPtr, uptr val,
     __trec_metadata::SourceAddressInfo SAI_addr,
-    __trec_metadata::SourceAddressInfo SAI_val) {
+    __trec_metadata::SourceAddressInfo SAI_val, bool isMemCpyFlag) {
   if (LIKELY(ctx->flags.output_trace) &&
       LIKELY(thr->ignore_interceptors == 0) && LIKELY(thr->should_record)) {
     if (kAccessIsWrite && LIKELY(ctx->flags.record_write)) {
@@ -697,6 +708,7 @@ ALWAYS_INLINE USED void MemoryAccess(
 
         __trec_metadata::WriteMeta meta(
             val, SAI_addr.idx, SAI_addr.addr, SAI_val.idx, SAI_val.addr,
+            isMemCpyFlag,
             thr->tctx->dbg_temp_buffer_size ? thr->tctx->debug_offset : 0);
         thr->tctx->put_metadata(&meta, sizeof(meta));
         if (thr->tctx->dbg_temp_buffer_size)
@@ -733,7 +745,7 @@ ALWAYS_INLINE USED void MemoryAccess(
             thr->tctx->metadata_offset, pc);
 
         __trec_metadata::ReadMeta meta(
-            val, SAI_addr.idx, SAI_addr.addr,
+            val, SAI_addr.idx, SAI_addr.addr, isMemCpyFlag,
             thr->tctx->dbg_temp_buffer_size ? thr->tctx->debug_offset : 0);
         thr->tctx->put_metadata(&meta, sizeof(meta));
         if (thr->tctx->dbg_temp_buffer_size) {
@@ -778,6 +790,23 @@ ALWAYS_INLINE USED void RecordFuncEntry(ThreadState *thr, bool &should_record,
           thr->tctx->put_metadata(&thr->tctx->parammetas[i],
                                   sizeof(__trec_metadata::FuncParamMeta));
         if (ctx->flags.output_debug && thr->tctx->dbg_temp_buffer_size) {
+          __trec_debug_info::InstDebugInfo &debug_info =
+              (*(__trec_debug_info::InstDebugInfo *)thr->tctx->dbg_temp_buffer);
+          if (debug_info.name_len[0] == 0 && internal_strlen(name) != 0) {
+            internal_memmove(thr->tctx->dbg_temp_buffer +
+                                 sizeof(__trec_debug_info::InstDebugInfo) +
+                                 internal_strlen(name),
+                             thr->tctx->dbg_temp_buffer +
+                                 sizeof(__trec_debug_info::InstDebugInfo),
+                             debug_info.name_len[1]);
+            internal_memcpy(thr->tctx->dbg_temp_buffer +
+                                sizeof(__trec_debug_info::InstDebugInfo),
+                            name, internal_strlen(name));
+            debug_info.name_len[0] = internal_strlen(name);
+            thr->tctx->dbg_temp_buffer_size =
+                sizeof(__trec_debug_info::InstDebugInfo) +
+                internal_strlen(name) + debug_info.name_len[1];
+          }
           thr->tctx->put_debug_info(thr->tctx->dbg_temp_buffer,
                                     thr->tctx->dbg_temp_buffer_size);
         }

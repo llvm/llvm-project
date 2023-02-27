@@ -200,7 +200,7 @@ T func_cas(volatile T *v, T cmp, T xch, uptr pc) {
                    {0x8000, 1});
   MemoryAccess(cur_thread(), pc, -1, SizeLog<T>(), true, false, false, res,
                {0, 0}, {0, (uptr)v});
-  CondBranch(cur_thread(), pc, res == cmp);
+  CondBranch(cur_thread(), pc, (u64)res == cmp);
   if (res == cmp) {
     MemoryWriteAtomic(cur_thread(), pc, (uptr)v, SizeLog<T>(), false,
                       (uptr)(xch), {0x8000, 1}, {0x8000, 3});

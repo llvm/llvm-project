@@ -511,10 +511,11 @@ TREC_INTERCEPTOR(char *, strcpy, char *dst, const char *src) {
       val = *(u8 *)((char *)dst + n - rest_cnt);
     }
     MemoryAccess(cur_thread(), caller_pc, (uptr)src, szLog, false, false, false,
-                 val, {(u16)(0x8000 | ((n - rest_cnt) & 0x7fff)), 2});
+                 val, {(u16)(0x8000 | ((n - rest_cnt) & 0x7fff)), 2}, {0, 0},
+                 true);
     MemoryAccess(cur_thread(), caller_pc, (uptr)dst, szLog, true, false, false,
                  val, {(u16)(0x8000 | ((n - rest_cnt) & 0x7fff)), 1},
-                 {0, (uptr)src + n - rest_cnt});
+                 {0, (uptr)src + n - rest_cnt}, true);
     rest_cnt -= (1 << szLog);
   }
   return ret;
@@ -541,10 +542,11 @@ TREC_INTERCEPTOR(char *, strncpy, char *dst, char *src, uptr n) {
       val = *(u8 *)((char *)dst + srclen - rest_cnt);
     }
     MemoryAccess(cur_thread(), caller_pc, (uptr)src, szLog, false, false, false,
-                 val, {(u16)(0x8000 | ((srclen - rest_cnt) & 0x7fff)), 2});
+                 val, {(u16)(0x8000 | ((srclen - rest_cnt) & 0x7fff)), 2},
+                 {0, 0}, true);
     MemoryAccess(cur_thread(), caller_pc, (uptr)dst, szLog, true, false, false,
                  val, {(u16)(0x8000 | ((srclen - rest_cnt) & 0x7fff)), 1},
-                 {0, (uptr)src + srclen - rest_cnt});
+                 {0, (uptr)src + srclen - rest_cnt}, true);
     rest_cnt -= (1 << szLog);
   }
   return ret;
@@ -572,10 +574,11 @@ TREC_INTERCEPTOR(char *, strdup, const char *str) {
       val = *(u8 *)((char *)dst + srclen - rest_cnt);
     }
     MemoryAccess(cur_thread(), caller_pc, (uptr)str, szLog, false, false, false,
-                 val, {(u16)(0x8000 | ((srclen - rest_cnt) & 0x7fff)), 2});
+                 val, {(u16)(0x8000 | ((srclen - rest_cnt) & 0x7fff)), 2},
+                 {0, 0}, true);
     MemoryAccess(cur_thread(), caller_pc, (uptr)dst, szLog, true, false, false,
                  val, {(u16)(0x8000 | ((srclen - rest_cnt) & 0x7fff)), 1},
-                 {0, (uptr)str + srclen - rest_cnt});
+                 {0, (uptr)str + srclen - rest_cnt}, true);
     rest_cnt -= (1 << szLog);
   }
   return dst;
@@ -1659,122 +1662,123 @@ uptr Dir2addr(const char *path) {
       MemoryAccess(                                                            \
           cur_thread(), StackTrace::GetPreviousInstructionPc(GET_CALLER_PC()), \
           (uptr)dst + size - rest_cnt, szLog, true, false, false, val,         \
-          {(u16)(0x8000 | ((size - rest_cnt) & 0x7fff)), 1}, {0, 0});          \
+          {(u16)(0x8000 | ((size - rest_cnt) & 0x7fff)), 1}, {0, 0}, true);    \
       rest_cnt -= (1 << szLog);                                                \
     }                                                                          \
     FuncExitParam(cur_thread(), 1, 0x8000, (uptr)ret);                         \
     return ret;                                                                \
   }
 
-#define COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, dst, src, size)                \
-  {                                                                         \
-    if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)                          \
-      return internal_memmove(dst, src, size);                              \
-    COMMON_INTERCEPTOR_ENTER(ctx, memmove, dst, src, size);                 \
-    uptr rest_cnt = size, val;                                              \
-    int szLog;                                                              \
-    void *ret = REAL(memmove)(dst, src, size);                              \
-    while (rest_cnt) {                                                      \
-      if (rest_cnt >= 8) {                                                  \
-        szLog = kSizeLog8;                                                  \
-        val = *(u64 *)((char *)dst + size - rest_cnt);                      \
-      } else if (rest_cnt >= 4 && rest_cnt < 8) {                           \
-        szLog = kSizeLog4;                                                  \
-        val = *(u32 *)((char *)dst + size - rest_cnt);                      \
-      } else if (rest_cnt >= 2 && rest_cnt < 4) {                           \
-        szLog = kSizeLog2;                                                  \
-        val = *(u16 *)((char *)dst + size - rest_cnt);                      \
-      } else {                                                              \
-        szLog = kSizeLog1;                                                  \
-        val = *(u8 *)((char *)dst + size - rest_cnt);                       \
-      }                                                                     \
-      MemoryAccess(cur_thread(),                                            \
-                   StackTrace::GetPreviousInstructionPc(GET_CALLER_PC()),   \
-                   (uptr)src + size - rest_cnt, szLog, false, false, false, \
-                   val, {(u16)(0x8000 | ((size - rest_cnt) & 0x7fff)), 2}); \
-      MemoryAccess(cur_thread(),                                            \
-                   StackTrace::GetPreviousInstructionPc(GET_CALLER_PC()),   \
-                   (uptr)dst + size - rest_cnt, szLog, true, false, false,  \
-                   val, {(u16)(0x8000 | ((size - rest_cnt) & 0x7fff)), 1},  \
-                   {0, (uptr)src + size - rest_cnt});                       \
-      rest_cnt -= (1 << szLog);                                             \
-    }                                                                       \
-    FuncExitParam(cur_thread(), 1, 0x8000, (uptr)ret);                      \
-    return ret;                                                             \
+#define COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, dst, src, size)                   \
+  {                                                                            \
+    if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)                             \
+      return internal_memmove(dst, src, size);                                 \
+    COMMON_INTERCEPTOR_ENTER(ctx, memmove, dst, src, size);                    \
+    uptr rest_cnt = size, val;                                                 \
+    int szLog;                                                                 \
+    void *ret = REAL(memmove)(dst, src, size);                                 \
+    while (rest_cnt) {                                                         \
+      if (rest_cnt >= 8) {                                                     \
+        szLog = kSizeLog8;                                                     \
+        val = *(u64 *)((char *)dst + size - rest_cnt);                         \
+      } else if (rest_cnt >= 4 && rest_cnt < 8) {                              \
+        szLog = kSizeLog4;                                                     \
+        val = *(u32 *)((char *)dst + size - rest_cnt);                         \
+      } else if (rest_cnt >= 2 && rest_cnt < 4) {                              \
+        szLog = kSizeLog2;                                                     \
+        val = *(u16 *)((char *)dst + size - rest_cnt);                         \
+      } else {                                                                 \
+        szLog = kSizeLog1;                                                     \
+        val = *(u8 *)((char *)dst + size - rest_cnt);                          \
+      }                                                                        \
+      MemoryAccess(                                                            \
+          cur_thread(), StackTrace::GetPreviousInstructionPc(GET_CALLER_PC()), \
+          (uptr)src + size - rest_cnt, szLog, false, false, false, val,        \
+          {(u16)(0x8000 | ((size - rest_cnt) & 0x7fff)), 2}, {0, 0}, true);    \
+      MemoryAccess(cur_thread(),                                               \
+                   StackTrace::GetPreviousInstructionPc(GET_CALLER_PC()),      \
+                   (uptr)dst + size - rest_cnt, szLog, true, false, false,     \
+                   val, {(u16)(0x8000 | ((size - rest_cnt) & 0x7fff)), 1},     \
+                   {0, (uptr)src + size - rest_cnt}, true);                    \
+      rest_cnt -= (1 << szLog);                                                \
+    }                                                                          \
+    FuncExitParam(cur_thread(), 1, 0x8000, (uptr)ret);                         \
+    return ret;                                                                \
   }
 
-#define COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, dst, src, size)                 \
-  {                                                                         \
-    if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED) {                        \
-      return internal_memmove(dst, src, size);                              \
-    }                                                                       \
-    COMMON_INTERCEPTOR_ENTER(ctx, memcpy, dst, src, size);                  \
-                                                                            \
-    uptr rest_cnt = size, val;                                              \
-    int szLog;                                                              \
-    void *ret = REAL(memcpy)(dst, src, size);                               \
-    while (rest_cnt) {                                                      \
-      if (rest_cnt >= 8) {                                                  \
-        szLog = kSizeLog8;                                                  \
-        val = *(u64 *)((char *)dst + size - rest_cnt);                      \
-      } else if (rest_cnt >= 4 && rest_cnt < 8) {                           \
-        szLog = kSizeLog4;                                                  \
-        val = *(u32 *)((char *)dst + size - rest_cnt);                      \
-      } else if (rest_cnt >= 2 && rest_cnt < 4) {                           \
-        szLog = kSizeLog2;                                                  \
-        val = *(u16 *)((char *)dst + size - rest_cnt);                      \
-      } else {                                                              \
-        szLog = kSizeLog1;                                                  \
-        val = *(u8 *)((char *)dst + size - rest_cnt);                       \
-      }                                                                     \
-      MemoryAccess(cur_thread(),                                            \
-                   StackTrace::GetPreviousInstructionPc(GET_CALLER_PC()),   \
-                   (uptr)src + size - rest_cnt, szLog, false, false, false, \
-                   val, {(u16)(0x8000 | ((size - rest_cnt) & 0x7fff)), 2}); \
-      MemoryAccess(cur_thread(),                                            \
-                   StackTrace::GetPreviousInstructionPc(GET_CALLER_PC()),   \
-                   (uptr)dst + size - rest_cnt, szLog, true, false, false,  \
-                   val, {(u16)(0x8000 | ((size - rest_cnt) & 0x7fff)), 1},  \
-                   {0, (uptr)src + size - rest_cnt});                       \
-      rest_cnt -= (1 << szLog);                                             \
-    }                                                                       \
-    FuncExitParam(cur_thread(), 1, 0x8000, (uptr)ret);                      \
-    return ret;                                                             \
+#define COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, dst, src, size)                    \
+  {                                                                            \
+    if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED) {                           \
+      return internal_memmove(dst, src, size);                                 \
+    }                                                                          \
+    COMMON_INTERCEPTOR_ENTER(ctx, memcpy, dst, src, size);                     \
+                                                                               \
+    uptr rest_cnt = size, val;                                                 \
+    int szLog;                                                                 \
+    void *ret = REAL(memcpy)(dst, src, size);                                  \
+    while (rest_cnt) {                                                         \
+      if (rest_cnt >= 8) {                                                     \
+        szLog = kSizeLog8;                                                     \
+        val = *(u64 *)((char *)dst + size - rest_cnt);                         \
+      } else if (rest_cnt >= 4 && rest_cnt < 8) {                              \
+        szLog = kSizeLog4;                                                     \
+        val = *(u32 *)((char *)dst + size - rest_cnt);                         \
+      } else if (rest_cnt >= 2 && rest_cnt < 4) {                              \
+        szLog = kSizeLog2;                                                     \
+        val = *(u16 *)((char *)dst + size - rest_cnt);                         \
+      } else {                                                                 \
+        szLog = kSizeLog1;                                                     \
+        val = *(u8 *)((char *)dst + size - rest_cnt);                          \
+      }                                                                        \
+      MemoryAccess(                                                            \
+          cur_thread(), StackTrace::GetPreviousInstructionPc(GET_CALLER_PC()), \
+          (uptr)src + size - rest_cnt, szLog, false, false, false, val,        \
+          {(u16)(0x8000 | ((size - rest_cnt) & 0x7fff)), 2}, {0, 0}, true);    \
+      MemoryAccess(cur_thread(),                                               \
+                   StackTrace::GetPreviousInstructionPc(GET_CALLER_PC()),      \
+                   (uptr)dst + size - rest_cnt, szLog, true, false, false,     \
+                   val, {(u16)(0x8000 | ((size - rest_cnt) & 0x7fff)), 1},     \
+                   {0, (uptr)src + size - rest_cnt}, true);                    \
+      rest_cnt -= (1 << szLog);                                                \
+    }                                                                          \
+    FuncExitParam(cur_thread(), 1, 0x8000, (uptr)ret);                         \
+    return ret;                                                                \
   }
 
-#define COMMON_INTERCEPTOR_STRNDUP_IMPL(ctx, s, size)                       \
-  COMMON_INTERCEPTOR_ENTER(ctx, strndup, s, size);                          \
-  uptr copy_length = internal_strnlen(s, size);                             \
-  char *new_mem = (char *)WRAP(malloc)(copy_length + 1);                    \
-  uptr rest_cnt = copy_length, val;                                         \
-  int szLog;                                                                \
-  void *ret = internal_memcpy(new_mem, s, copy_length);                     \
-  while (rest_cnt) {                                                        \
-    if (rest_cnt >= 8) {                                                    \
-      szLog = kSizeLog8;                                                    \
-      val = *(u64 *)((char *)new_mem + copy_length - rest_cnt);             \
-    } else if (rest_cnt >= 4 && rest_cnt < 8) {                             \
-      szLog = kSizeLog4;                                                    \
-      val = *(u32 *)((char *)new_mem + copy_length - rest_cnt);             \
-    } else if (rest_cnt >= 2 && rest_cnt < 4) {                             \
-      szLog = kSizeLog2;                                                    \
-      val = *(u16 *)((char *)new_mem + copy_length - rest_cnt);             \
-    } else {                                                                \
-      szLog = kSizeLog1;                                                    \
-      val = *(u8 *)((char *)new_mem + copy_length - rest_cnt);              \
-    }                                                                       \
-    MemoryAccess(cur_thread(),                                              \
-                 StackTrace::GetPreviousInstructionPc(GET_CALLER_PC()),     \
-                 (uptr)s, szLog, false, false, false, val,                  \
-                 {(u16)(0x8000 | ((copy_length - rest_cnt) & 0x7fff)), 2}); \
-    MemoryAccess(cur_thread(),                                              \
-                 StackTrace::GetPreviousInstructionPc(GET_CALLER_PC()),     \
-                 (uptr)new_mem, szLog, true, false, false, val,             \
-                 {(u16)(0x8000 | ((copy_length - rest_cnt) & 0x7fff)), 1},  \
-                 {0, (uptr)s + copy_length - rest_cnt});                    \
-    rest_cnt -= (1 << szLog);                                               \
-  }                                                                         \
-  new_mem[copy_length] = '\0';                                              \
+#define COMMON_INTERCEPTOR_STRNDUP_IMPL(ctx, s, size)                      \
+  COMMON_INTERCEPTOR_ENTER(ctx, strndup, s, size);                         \
+  uptr copy_length = internal_strnlen(s, size);                            \
+  char *new_mem = (char *)WRAP(malloc)(copy_length + 1);                   \
+  uptr rest_cnt = copy_length, val;                                        \
+  int szLog;                                                               \
+  void *ret = internal_memcpy(new_mem, s, copy_length);                    \
+  while (rest_cnt) {                                                       \
+    if (rest_cnt >= 8) {                                                   \
+      szLog = kSizeLog8;                                                   \
+      val = *(u64 *)((char *)new_mem + copy_length - rest_cnt);            \
+    } else if (rest_cnt >= 4 && rest_cnt < 8) {                            \
+      szLog = kSizeLog4;                                                   \
+      val = *(u32 *)((char *)new_mem + copy_length - rest_cnt);            \
+    } else if (rest_cnt >= 2 && rest_cnt < 4) {                            \
+      szLog = kSizeLog2;                                                   \
+      val = *(u16 *)((char *)new_mem + copy_length - rest_cnt);            \
+    } else {                                                               \
+      szLog = kSizeLog1;                                                   \
+      val = *(u8 *)((char *)new_mem + copy_length - rest_cnt);             \
+    }                                                                      \
+    MemoryAccess(cur_thread(),                                             \
+                 StackTrace::GetPreviousInstructionPc(GET_CALLER_PC()),    \
+                 (uptr)s, szLog, false, false, false, val,                 \
+                 {(u16)(0x8000 | ((copy_length - rest_cnt) & 0x7fff)), 2}, \
+                 {0, 0}, true);                                            \
+    MemoryAccess(cur_thread(),                                             \
+                 StackTrace::GetPreviousInstructionPc(GET_CALLER_PC()),    \
+                 (uptr)new_mem, szLog, true, false, false, val,            \
+                 {(u16)(0x8000 | ((copy_length - rest_cnt) & 0x7fff)), 1}, \
+                 {0, (uptr)s + copy_length - rest_cnt}, true);            \
+    rest_cnt -= (1 << szLog);                                              \
+  }                                                                        \
+  new_mem[copy_length] = '\0';                                             \
   return new_mem;
 
 #include "sanitizer_common/sanitizer_common_interceptors.inc"
