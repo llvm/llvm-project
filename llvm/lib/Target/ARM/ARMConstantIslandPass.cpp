@@ -277,8 +277,6 @@ namespace {
                               unsigned &DeadSize, bool &CanDeleteLEA,
                               bool &BaseRegKill);
     bool optimizeThumb2JumpTables();
-    void fixupBTI(unsigned JTI, MachineBasicBlock &OldBB,
-                  MachineBasicBlock &NewBB);
     MachineBasicBlock *adjustJTTargetBlockForward(unsigned JTI,
                                                   MachineBasicBlock *BB,
                                                   MachineBasicBlock *JTBB);
@@ -2455,38 +2453,6 @@ bool ARMConstantIslands::reorderThumb2JumpTables() {
   return MadeChange;
 }
 
-void ARMConstantIslands::fixupBTI(unsigned JTI, MachineBasicBlock &OldBB,
-                                  MachineBasicBlock &NewBB) {
-  assert(isThumb2 && "BTI in Thumb1?");
-
-  // Insert a BTI instruction into NewBB
-  BuildMI(NewBB, NewBB.begin(), DebugLoc(), TII->get(ARM::t2BTI));
-
-  // Update jump table reference counts.
-  const MachineJumpTableInfo &MJTI = *MF->getJumpTableInfo();
-  const MachineJumpTableEntry &JTE = MJTI.getJumpTables()[JTI];
-  for (const MachineBasicBlock *MBB : JTE.MBBs) {
-    if (MBB != &OldBB)
-      continue;
-    --BlockJumpTableRefCount[MBB];
-    ++BlockJumpTableRefCount[&NewBB];
-  }
-
-  // If the old basic block reference count dropped to zero, remove
-  // the BTI instruction at its beginning.
-  if (BlockJumpTableRefCount[&OldBB] > 0)
-    return;
-
-  // Skip meta instructions
-  auto BTIPos = llvm::find_if_not(OldBB.instrs(), [](const MachineInstr &MI) {
-    return MI.isMetaInstruction();
-  });
-  assert(BTIPos->getOpcode() == ARM::t2BTI &&
-         "BasicBlock is mentioned in a jump table but does start with BTI");
-  if (BTIPos->getOpcode() == ARM::t2BTI)
-    BTIPos->eraseFromParent();
-}
-
 MachineBasicBlock *ARMConstantIslands::adjustJTTargetBlockForward(
     unsigned JTI, MachineBasicBlock *BB, MachineBasicBlock *JTBB) {
   // If the destination block is terminated by an unconditional branch,
@@ -2545,9 +2511,6 @@ MachineBasicBlock *ARMConstantIslands::adjustJTTargetBlockForward(
   // Update the CFG.
   NewBB->addSuccessor(BB);
   JTBB->replaceSuccessor(BB, NewBB);
-
-  if (MF->getInfo<ARMFunctionInfo>()->branchTargetEnforcement())
-    fixupBTI(JTI, *BB, *NewBB);
 
   ++NumJTInserted;
   return NewBB;
