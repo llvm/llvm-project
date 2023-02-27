@@ -85,4 +85,23 @@ def GPUBlockMappingAttr : GPU_Attr<"GPUBlockMapping", "block", [
   }];
 }
 
+
+def GPUMemorySpaceMappingAttr : GPU_Attr<"GPUMemorySpaceMapping", "memory_space", [
+  DeclareAttrInterfaceMethods<DeviceMappingAttrInterface> ] >  {
+  let parameters = (ins
+    EnumParameter<GPU_AddressSpaceEnum>:$address_space
+  );
+  let assemblyFormat = "`<` params `>`";
+  let description = [{
+    An attribute that allows defining memory hierarchy for GPU devices.
+
+    GPU Memory has three memory space, global, workgroup, and private. The global memory
+    is visible to all workitems and workgroups, the workgroup memory is only available for workitems
+    within a workgroup, and private memory is only visible to a single workitem. This attribute indicates
+    that using memory hiearchy is desired. It can be consumed by lowering to
+    move data to a specific address space in GPU code.
+  }];
+}
+
+
 #endif // GPU_DEVICE_MAPPING_ATTR
