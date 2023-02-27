@@ -2093,6 +2093,8 @@ private:
   fir::ExtendedValue
   genAssociateSelector(const Fortran::lower::SomeExpr &selector,
                        Fortran::lower::StatementContext &stmtCtx) {
+    if (lowerToHighLevelFIR())
+      return genExprAddr(selector, stmtCtx);
     return Fortran::lower::isArraySectionWithoutVectorSubscript(selector)
                ? Fortran::lower::createSomeArrayBox(*this, selector,
                                                     localSymbols, stmtCtx)
@@ -2807,18 +2809,32 @@ private:
               // [1] Plain old assignment.
               [&](const Fortran::evaluate::Assignment::Intrinsic &) {
                 Fortran::lower::StatementContext stmtCtx;
-                if (Fortran::lower::isWholeAllocatable(assign.lhs))
-                  TODO(loc, "HLFIR assignment to whole allocatable");
                 hlfir::Entity rhs = Fortran::lower::convertExprToHLFIR(
                     loc, *this, assign.rhs, localSymbols, stmtCtx);
-                // Dereference pointers and allocatables RHS: the target is
-                // being assigned from.
-                rhs = hlfir::derefPointersAndAllocatables(loc, builder, rhs);
+                // Load trivial scalar LHS to allow the loads to be hoisted
+                // outside of loops early if possible. This also dereferences
+                // pointer and allocatable RHS: the target is being assigned
+                // from.
+                rhs = hlfir::loadTrivialScalar(loc, builder, rhs);
                 hlfir::Entity lhs = Fortran::lower::convertExprToHLFIR(
                     loc, *this, assign.lhs, localSymbols, stmtCtx);
-                // Dereference pointers LHS: the target is being assigned to.
-                lhs = hlfir::derefPointersAndAllocatables(loc, builder, lhs);
-                builder.create<hlfir::AssignOp>(loc, rhs, lhs);
+                bool isWholeAllocatableAssignment = false;
+                bool keepLhsLengthInAllocatableAssignment = false;
+                if (Fortran::lower::isWholeAllocatable(assign.lhs)) {
+                  isWholeAllocatableAssignment = true;
+                  if (std::optional<Fortran::evaluate::DynamicType> lhsType =
+                          assign.lhs.GetType())
+                    keepLhsLengthInAllocatableAssignment =
+                        lhsType->category() ==
+                            Fortran::common::TypeCategory::Character &&
+                        !lhsType->HasDeferredTypeParameter();
+                } else {
+                  // Dereference pointer LHS: the target is being assigned to.
+                  lhs = hlfir::derefPointersAndAllocatables(loc, builder, lhs);
+                }
+                builder.create<hlfir::AssignOp>(
+                    loc, rhs, lhs, isWholeAllocatableAssignment,
+                    keepLhsLengthInAllocatableAssignment);
               },
               // [2] User defined assignment. If the context is a scalar
               // expression then call the procedure.

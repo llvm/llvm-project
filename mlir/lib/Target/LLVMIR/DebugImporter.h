@@ -67,6 +67,10 @@ private:
   DISubroutineTypeAttr translateImpl(llvm::DISubroutineType *node);
   DITypeAttr translateImpl(llvm::DIType *node);
 
+  /// Constructs a StringAttr from the MDString if it is non-null. Returns a
+  /// null attribute otherwise.
+  StringAttr getStringAttrOrNull(llvm::MDString *stringNode);
+
   /// A mapping between LLVM debug metadata and the corresponding attribute.
   DenseMap<llvm::DINode *, DINodeAttr> nodeToAttr;
 
