@@ -2764,8 +2764,6 @@ bool CombinerHelper::matchHoistLogicOpWithSameOpcodeHands(
   LLT YTy = MRI.getType(Y);
   if (!XTy.isValid() || XTy != YTy)
     return false;
-  if (!isLegalOrBeforeLegalizer({LogicOpcode, {XTy, YTy}}))
-    return false;
 
   // Optional extra source register.
   Register ExtraHandOpSrcReg;
@@ -2790,6 +2788,9 @@ bool CombinerHelper::matchHoistLogicOpWithSameOpcodeHands(
     break;
   }
   }
+
+  if (!isLegalOrBeforeLegalizer({LogicOpcode, {XTy, YTy}}))
+    return false;
 
   // Record the steps to build the new instructions.
   //

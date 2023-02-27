@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_CONTAINERSIZEEMPTYCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include <vector>
 
 namespace clang::tidy::readability {
 
@@ -31,9 +32,13 @@ public:
   }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
+
+private:
+  std::vector<llvm::StringRef> ExcludedComparisonTypes;
 };
 
 } // namespace clang::tidy::readability

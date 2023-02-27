@@ -116,6 +116,11 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const Driver &D = ToolChain.getDriver();
   const llvm::Triple::ArchType Arch = ToolChain.getArch();
   ArgStringList CmdArgs;
+  bool Static = Args.hasArg(options::OPT_static);
+  bool Shared = Args.hasArg(options::OPT_shared);
+  bool Profiling = Args.hasArg(options::OPT_pg);
+  bool Pie = Args.hasArg(options::OPT_pie);
+  bool Nopie = Args.hasArg(options::OPT_nopie);
 
   // Silence warning for "clang -g foo.o -o foo"
   Args.ClaimAllArgs(options::OPT_g_Group);
@@ -133,19 +138,19 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   else if (Arch == llvm::Triple::mips64el)
     CmdArgs.push_back("-EL");
 
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_shared)) {
+  if (!Args.hasArg(options::OPT_nostdlib) && !Shared) {
     CmdArgs.push_back("-e");
     CmdArgs.push_back("__start");
   }
 
   CmdArgs.push_back("--eh-frame-hdr");
-  if (Args.hasArg(options::OPT_static)) {
+  if (Static) {
     CmdArgs.push_back("-Bstatic");
   } else {
     if (Args.hasArg(options::OPT_rdynamic))
       CmdArgs.push_back("-export-dynamic");
     CmdArgs.push_back("-Bdynamic");
-    if (Args.hasArg(options::OPT_shared)) {
+    if (Shared) {
       CmdArgs.push_back("-shared");
     } else if (!Args.hasArg(options::OPT_r)) {
       CmdArgs.push_back("-dynamic-linker");
@@ -153,9 +158,9 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (Args.hasArg(options::OPT_pie))
+  if (Pie)
     CmdArgs.push_back("-pie");
-  if (Args.hasArg(options::OPT_nopie) || Args.hasArg(options::OPT_pg))
+  if (Nopie || Profiling)
     CmdArgs.push_back("-nopie");
 
   if (Arch == llvm::Triple::riscv64)
@@ -172,11 +177,10 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_r)) {
     const char *crt0 = nullptr;
     const char *crtbegin = nullptr;
-    if (!Args.hasArg(options::OPT_shared)) {
-      if (Args.hasArg(options::OPT_pg))
+    if (!Shared) {
+      if (Profiling)
         crt0 = "gcrt0.o";
-      else if (Args.hasArg(options::OPT_static) &&
-               !Args.hasArg(options::OPT_nopie))
+      else if (Static && !Nopie)
         crt0 = "rcrt0.o";
       else
         crt0 = "crt0.o";
@@ -203,14 +207,13 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
                    options::OPT_r)) {
     // Use the static OpenMP runtime with -static-openmp
-    bool StaticOpenMP = Args.hasArg(options::OPT_static_openmp) &&
-                        !Args.hasArg(options::OPT_static);
+    bool StaticOpenMP = Args.hasArg(options::OPT_static_openmp) && !Static;
     addOpenMPRuntime(CmdArgs, ToolChain, Args, StaticOpenMP);
 
     if (D.CCCIsCXX()) {
       if (ToolChain.ShouldLinkCXXStdlib(Args))
         ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
-      if (Args.hasArg(options::OPT_pg))
+      if (Profiling)
         CmdArgs.push_back("-lm_p");
       else
         CmdArgs.push_back("-lm");
@@ -228,14 +231,14 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-lcompiler_rt");
 
     if (Args.hasArg(options::OPT_pthread)) {
-      if (!Args.hasArg(options::OPT_shared) && Args.hasArg(options::OPT_pg))
+      if (!Shared && Profiling)
         CmdArgs.push_back("-lpthread_p");
       else
         CmdArgs.push_back("-lpthread");
     }
 
-    if (!Args.hasArg(options::OPT_shared)) {
-      if (Args.hasArg(options::OPT_pg))
+    if (!Shared) {
+      if (Profiling)
         CmdArgs.push_back("-lc_p");
       else
         CmdArgs.push_back("-lc");
@@ -247,7 +250,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
                    options::OPT_r)) {
     const char *crtend = nullptr;
-    if (!Args.hasArg(options::OPT_shared))
+    if (!Shared)
       crtend = "crtend.o";
     else
       crtend = "crtendS.o";

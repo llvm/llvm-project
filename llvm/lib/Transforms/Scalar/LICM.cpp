@@ -163,7 +163,8 @@ static bool isSafeToExecuteUnconditionally(
     AssumptionCache *AC, bool AllowSpeculation);
 static bool pointerInvalidatedByLoop(MemorySSA *MSSA, MemoryUse *MU,
                                      Loop *CurLoop, Instruction &I,
-                                     SinkAndHoistLICMFlags &Flags);
+                                     SinkAndHoistLICMFlags &Flags,
+                                     bool InvariantGroup);
 static bool pointerInvalidatedByBlock(BasicBlock &BB, MemorySSA &MSSA,
                                       MemoryUse &MU);
 static Instruction *cloneInstructionInExitBlock(
@@ -1176,8 +1177,12 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
     if (isLoadInvariantInLoop(LI, DT, CurLoop))
       return true;
 
+    auto MU = cast<MemoryUse>(MSSA->getMemoryAccess(LI));
+
+    bool InvariantGroup = LI->hasMetadata(LLVMContext::MD_invariant_group);
+
     bool Invalidated = pointerInvalidatedByLoop(
-        MSSA, cast<MemoryUse>(MSSA->getMemoryAccess(LI)), CurLoop, I, Flags);
+        MSSA, MU, CurLoop, I, Flags, InvariantGroup);
     // Check loop-invariant address because this may also be a sinkable load
     // whose address is not necessarily loop-invariant.
     if (ORE && Invalidated && CurLoop->isLoopInvariant(LI->getPointerOperand()))
@@ -1228,7 +1233,7 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
           if (Op->getType()->isPointerTy() &&
               pointerInvalidatedByLoop(
                   MSSA, cast<MemoryUse>(MSSA->getMemoryAccess(CI)), CurLoop, I,
-                  Flags))
+                  Flags, /*InvariantGroup=*/false))
             return false;
         return true;
       }
@@ -2330,7 +2335,8 @@ collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L) {
 
 static bool pointerInvalidatedByLoop(MemorySSA *MSSA, MemoryUse *MU,
                                      Loop *CurLoop, Instruction &I,
-                                     SinkAndHoistLICMFlags &Flags) {
+                                     SinkAndHoistLICMFlags &Flags,
+                                     bool InvariantGroup) {
   // For hoisting, use the walker to determine safety
   if (!Flags.getIsSink()) {
     MemoryAccess *Source;
@@ -2341,8 +2347,18 @@ static bool pointerInvalidatedByLoop(MemorySSA *MSSA, MemoryUse *MU,
       Source = MSSA->getSkipSelfWalker()->getClobberingMemoryAccess(MU);
       Flags.incrementClobberingCalls();
     }
+    // If hoisting an invariant group, we only need to check that there
+    // is no store to the loaded pointer between the start of the loop,
+    // and the load (since all values must be the same).
+
+    // This can be checked in two conditions:
+    // 1) if the memoryaccess is outside the loop
+    // 2) the earliest access is at the loop header,
+    // if the memory loaded is the phi node
+
     return !MSSA->isLiveOnEntryDef(Source) &&
-           CurLoop->contains(Source->getBlock());
+           CurLoop->contains(Source->getBlock()) &&
+           !(InvariantGroup && Source->getBlock() == CurLoop->getHeader() && isa<MemoryPhi>(Source));
   }
 
   // For sinking, we'd need to check all Defs below this use. The getClobbering

@@ -554,8 +554,11 @@ tryToGatherExtractElements(SmallVectorImpl<Value *> &VL,
   SmallVector<int> UndefVectorExtracts;
   for (int I = 0, E = VL.size(); I < E; ++I) {
     auto *EI = dyn_cast<ExtractElementInst>(VL[I]);
-    if (!EI)
+    if (!EI) {
+      if (isa<UndefValue>(VL[I]))
+        UndefVectorExtracts.push_back(I);
       continue;
+    }
     auto *VecTy = dyn_cast<FixedVectorType>(EI->getVectorOperandType());
     if (!VecTy || !isa<ConstantInt, UndefValue>(EI->getIndexOperand()))
       continue;
@@ -1198,6 +1201,8 @@ public:
   /// Gets reordering data for the given tree entry. If the entry is vectorized
   /// - just return ReorderIndices, otherwise check if the scalars can be
   /// reordered and return the most optimal order.
+  /// \return std::nullopt if ordering is not important, empty order, if
+  /// identity order is important, or the actual order.
   /// \param TopToBottom If true, include the order of vectorized stores and
   /// insertelement nodes, otherwise skip them.
   std::optional<OrdersType> getReorderingData(const TreeEntry &TE,
@@ -1444,8 +1449,14 @@ public:
       ConstantInt *Ex1Idx;
       if (match(V1, m_ExtractElt(m_Value(EV1), m_ConstantInt(Ex1Idx)))) {
         // Undefs are always profitable for extractelements.
+        // Compiler can easily combine poison and extractelement <non-poison> or
+        // undef and extractelement <poison>. But combining undef +
+        // extractelement <non-poison-but-may-produce-poison> requires some
+        // extra operations.
         if (isa<UndefValue>(V2))
-          return LookAheadHeuristics::ScoreConsecutiveExtracts;
+          return (isa<PoisonValue>(V2) || isUndefVector(EV1).all())
+                     ? LookAheadHeuristics::ScoreConsecutiveExtracts
+                     : LookAheadHeuristics::ScoreSameOpcode;
         Value *EV2 = nullptr;
         ConstantInt *Ex2Idx = nullptr;
         if (match(V2,
@@ -4167,6 +4178,41 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
         if (!CurrentOrder.empty())
           fixupOrderingIndices(CurrentOrder);
         return std::move(CurrentOrder);
+      }
+    }
+    // If the gather node is <undef, v, .., poison> and
+    // insertelement poison, v, 0 [+ permute]
+    // is cheaper than
+    // insertelement poison, v, n - try to reorder.
+    // If rotating the whole graph, exclude the permute cost, the whole graph
+    // might be transformed.
+    int Sz = TE.Scalars.size();
+    if (isSplat(TE.Scalars) && !allConstant(TE.Scalars) &&
+        count_if(TE.Scalars, UndefValue::classof) == Sz - 1) {
+      const auto *It =
+          find_if(TE.Scalars, [](Value *V) { return !isConstant(V); });
+      if (It == TE.Scalars.begin())
+        return OrdersType();
+      auto *Ty = FixedVectorType::get(TE.Scalars.front()->getType(), Sz);
+      if (It != TE.Scalars.end()) {
+        OrdersType Order(Sz, Sz);
+        unsigned Idx = std::distance(TE.Scalars.begin(), It);
+        Order[Idx] = 0;
+        fixupOrderingIndices(Order);
+        SmallVector<int> Mask;
+        inversePermutation(Order, Mask);
+        InstructionCost PermuteCost =
+            TopToBottom
+                ? 0
+                : TTI->getShuffleCost(TTI::SK_PermuteSingleSrc, Ty, Mask);
+        InstructionCost InsertFirstCost = TTI->getVectorInstrCost(
+            Instruction::InsertElement, Ty, TTI::TCK_RecipThroughput, 0,
+            PoisonValue::get(Ty), *It);
+        InstructionCost InsertIdxCost = TTI->getVectorInstrCost(
+            Instruction::InsertElement, Ty, TTI::TCK_RecipThroughput, Idx,
+            PoisonValue::get(Ty), *It);
+        if (InsertFirstCost + PermuteCost < InsertIdxCost)
+          return std::move(Order);
       }
     }
     if (std::optional<OrdersType> CurrentOrder = findReusedOrderedScalars(TE))
@@ -6939,9 +6985,10 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       // Add broadcast for non-identity shuffle only.
       bool NeedShuffle =
           VL.front() != *It || !all_of(VL.drop_front(), UndefValue::classof);
-      InstructionCost InsertCost =
-          TTI->getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind,
-                                  /*Index=*/0, PoisonValue::get(VecTy), *It);
+      InstructionCost InsertCost = TTI->getVectorInstrCost(
+          Instruction::InsertElement, VecTy, CostKind,
+          NeedShuffle ? 0 : std::distance(VL.begin(), It),
+          PoisonValue::get(VecTy), *It);
       return InsertCost + (NeedShuffle
                                ? TTI->getShuffleCost(
                                      TargetTransformInfo::SK_Broadcast, VecTy,

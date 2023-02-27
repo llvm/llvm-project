@@ -117,16 +117,23 @@ public:
   virtual void
   emitAppleTypes(AccelTable<AppleAccelTableStaticTypeData> &Table) = 0;
 
-  /// Emit piece of .debug_ranges for \p Ranges.
-  virtual void
-  emitDwarfDebugRangesTableFragment(const CompileUnit &Unit,
-                                    const AddressRanges &LinkedRanges) = 0;
+  /// Emit debug ranges(.debug_ranges, .debug_rnglists) header.
+  virtual MCSymbol *emitDwarfDebugRangeListHeader(const CompileUnit &Unit) = 0;
 
-  /// Emit .debug_aranges entries for \p Unit and if \p DoRangesSection is true,
-  /// also emit the .debug_ranges entries for the DW_TAG_compile_unit's
-  /// DW_AT_ranges attribute.
-  virtual void emitUnitRangesEntries(CompileUnit &Unit,
-                                     bool DoRangesSection) = 0;
+  /// Emit debug ranges(.debug_ranges, .debug_rnglists) fragment.
+  virtual void
+  emitDwarfDebugRangeListFragment(const CompileUnit &Unit,
+                                  const AddressRanges &LinkedRanges,
+                                  PatchLocation Patch) = 0;
+
+  /// Emit debug ranges(.debug_ranges, .debug_rnglists) footer.
+  virtual void emitDwarfDebugRangeListFooter(const CompileUnit &Unit,
+                                             MCSymbol *EndLabel) = 0;
+
+  /// Emit .debug_aranges entries for \p Unit
+  virtual void
+  emitDwarfDebugArangesTable(const CompileUnit &Unit,
+                             const AddressRanges &LinkedRanges) = 0;
 
   /// Copy the .debug_line over to the updated binary while unobfuscating the
   /// file names and directories.
@@ -188,6 +195,9 @@ public:
 
   /// Returns size of generated .debug_ranges section.
   virtual uint64_t getRangesSectionSize() const = 0;
+
+  /// Returns size of generated .debug_rnglists section.
+  virtual uint64_t getRngListsSectionSize() const = 0;
 
   /// Returns size of generated .debug_info section.
   virtual uint64_t getDebugInfoSectionSize() const = 0;
@@ -724,14 +734,9 @@ private:
   /// Assign an abbreviation number to \p Abbrev
   void assignAbbrev(DIEAbbrev &Abbrev);
 
-  /// Compute and emit .debug_ranges section for \p Unit, and
-  /// patch the attributes referencing it.
-  void patchRangesForUnit(const CompileUnit &Unit, DWARFContext &Dwarf,
-                          const DWARFFile &File) const;
-
-  /// Generate and emit the DW_AT_ranges attribute for a compile_unit if it had
-  /// one.
-  void generateUnitRanges(CompileUnit &Unit) const;
+  /// Compute and emit debug ranges(.debug_aranges, .debug_ranges,
+  /// .debug_rnglists) for \p Unit, patch the attributes referencing it.
+  void generateUnitRanges(CompileUnit &Unit, const DWARFFile &File) const;
 
   /// Extract the line tables from the original dwarf, extract the relevant
   /// parts according to the linked function ranges and emit the result in the

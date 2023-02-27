@@ -848,9 +848,7 @@ public:
 static void mergeArch(RISCVISAInfo::OrderedExtensionMap &mergedExts,
                       unsigned &mergedXlen, const InputSectionBase *sec,
                       StringRef s) {
-  auto maybeInfo =
-      RISCVISAInfo::parseArchString(s, /*EnableExperimentalExtension=*/true,
-                                    /*ExperimentalExtensionVersionCheck=*/true);
+  auto maybeInfo = RISCVISAInfo::parseNormalizedArchString(s);
   if (!maybeInfo) {
     errorOrWarn(toString(sec) + ": " + s + ": " +
                 llvm::toString(maybeInfo.takeError()));
@@ -865,8 +863,6 @@ static void mergeArch(RISCVISAInfo::OrderedExtensionMap &mergedExts,
   } else {
     for (const auto &ext : info.getExtensions()) {
       if (auto it = mergedExts.find(ext.first); it != mergedExts.end()) {
-        // TODO This is untested because RISCVISAInfo::parseArchString does not
-        // accept unsupported versions yet.
         if (std::tie(it->second.MajorVersion, it->second.MinorVersion) >=
             std::tie(ext.second.MajorVersion, ext.second.MinorVersion))
           continue;
