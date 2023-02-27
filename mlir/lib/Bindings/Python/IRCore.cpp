@@ -1075,17 +1075,6 @@ void PyOperationBase::print(py::object fileObject, bool binary,
   if (fileObject.is_none())
     fileObject = py::module::import("sys").attr("stdout");
 
-  if (!assumeVerified && !printGenericOpForm &&
-      !mlirOperationVerify(operation)) {
-    std::string message("// Verification failed, printing generic form\n");
-    if (binary) {
-      fileObject.attr("write")(py::bytes(message));
-    } else {
-      fileObject.attr("write")(py::str(message));
-    }
-    printGenericOpForm = true;
-  }
-
   MlirOpPrintingFlags flags = mlirOpPrintingFlagsCreate();
   if (largeElementsLimit)
     mlirOpPrintingFlagsElideLargeElementsAttrs(flags, *largeElementsLimit);
@@ -1096,6 +1085,8 @@ void PyOperationBase::print(py::object fileObject, bool binary,
     mlirOpPrintingFlagsPrintGenericOpForm(flags);
   if (useLocalScope)
     mlirOpPrintingFlagsUseLocalScope(flags);
+  if (assumeVerified)
+    mlirOpPrintingFlagsAssumeVerified(flags);
 
   PyFileAccumulator accum(fileObject, binary);
   mlirOperationPrintWithFlags(operation, flags, accum.getCallback(),
