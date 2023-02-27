@@ -1160,20 +1160,21 @@ PrefixKind X86MCCodeEmitter::emitREXPrefix(int MemOperand, const MCInst &MI,
   if (!STI.hasFeature(X86::Is64Bit))
     return None;
   X86OpcodePrefixHelper Prefix(*Ctx.getRegisterInfo());
-  bool UsesHighByteReg = false;
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   uint64_t TSFlags = Desc.TSFlags;
   Prefix.setW(TSFlags & X86II::REX_W);
   unsigned NumOps = MI.getNumOperands();
-  if (!NumOps) {
-    PrefixKind Kind = Prefix.determineOptimalKind();
-    Prefix.emit(OS);
-    return Kind;
-  }
-  unsigned CurOp = X86II::getOperandBias(Desc);
+  bool UsesHighByteReg = false;
+#ifndef NDEBUG
+  bool HasRegOp = false;
+#endif
+  unsigned CurOp = NumOps ? X86II::getOperandBias(Desc) : 0;
   for (unsigned i = CurOp; i != NumOps; ++i) {
     const MCOperand &MO = MI.getOperand(i);
     if (MO.isReg()) {
+#ifndef NDEBUG
+      HasRegOp = true;
+#endif
       unsigned Reg = MO.getReg();
       if (Reg == X86::AH || Reg == X86::BH || Reg == X86::CH || Reg == X86::DH)
         UsesHighByteReg = true;
@@ -1194,6 +1195,15 @@ PrefixKind X86MCCodeEmitter::emitREXPrefix(int MemOperand, const MCInst &MI,
     }
   }
   switch (TSFlags & X86II::FormMask) {
+  default:
+    assert(!HasRegOp && "Unexpected form in emitREXPrefix!");
+    break;
+  case X86II::RawFrm:
+  case X86II::RawFrmMemOffs:
+  case X86II::RawFrmSrc:
+  case X86II::RawFrmDst:
+  case X86II::RawFrmDstSrc:
+    break;
   case X86II::AddRegFrm:
     Prefix.setB(MI, CurOp++);
     break;
