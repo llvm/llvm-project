@@ -379,7 +379,7 @@ def LLVM_DILexicalBlockAttr : LLVM_Attr<"DILexicalBlock", "di_lexical_block",
       "DIScopeAttr":$scope, "DIFileAttr":$file, "unsigned":$line,
       "unsigned":$column
     ), [{
-      return $_get(file.getContext(), scope, file, line, column);
+      return $_get(scope.getContext(), scope, file, line, column);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
@@ -400,7 +400,7 @@ def LLVM_DILexicalBlockFile : LLVM_Attr<"DILexicalBlockFile", "di_lexical_block_
     AttrBuilderWithInferredContext<(ins
       "DIScopeAttr":$scope, "DIFileAttr":$file, "unsigned":$discriminator
     ), [{
-      return $_get(file.getContext(), scope, file, discriminator);
+      return $_get(scope.getContext(), scope, file, discriminator);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
@@ -427,7 +427,7 @@ def LLVM_DILocalVariableAttr : LLVM_Attr<"DILocalVariable", "di_local_variable",
       "unsigned":$line, "unsigned":$arg, "unsigned":$alignInBits,
       "DITypeAttr":$type
     ), [{
-      MLIRContext *ctx = file.getContext();
+      MLIRContext *ctx = scope.getContext();
       return $_get(ctx, scope, StringAttr::get(ctx, name), file, line,
                    arg, alignInBits, type);
     }]>
