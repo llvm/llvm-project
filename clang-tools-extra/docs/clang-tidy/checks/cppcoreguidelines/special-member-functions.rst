@@ -25,13 +25,23 @@ Options
 
 .. option:: AllowSoleDefaultDtor
 
-   When set to `true` (default is `false`), this check doesn't flag classes with a sole, explicitly
-   defaulted destructor. An example for such a class is:
+   When set to `true` (default is `false`), this check will only trigger on
+   destructors if they are defined and not defaulted.
 
    .. code-block:: c++
 
-     struct A {
+     struct A { // This is fine.
        virtual ~A() = default;
+     };
+
+     struct B { // This is not fine.
+       ~B() {}
+     };
+
+     struct C {
+       // This is not checked, because the destructor might be defaulted in
+       // another translation unit.
+       ~C();
      };
 
 .. option:: AllowMissingMoveFunctions

@@ -21,16 +21,24 @@ entry:
   %t = call i32 @llvm.eh.sjlj.setjmp(ptr %s)
   call void @whatever(i64 %n, ptr %f, ptr %p, ptr %q, ptr %s, i32 %t) #1
   ret i32 0
+; X86: pushl   %esi
+; X86-NEXT: pushl   %esi
 ; X86: movl    %esp, %esi
 ; X86: movl    %esp, -16(%ebp)
 ; X86: {{.LBB.*:}}
 ; X86: movl    -16(%ebp), %esi
 ; X86: {{.LBB.*:}}
+; X86: popl    %esi
+; X86-NEXT: popl    %esi
+; X64: pushq   %rbx
+; X64-NEXT: pushq   %rbx
 ; X64: movq    %rsp, %rbx
 ; X64: movq    %rsp, -48(%rbp)
 ; X64: {{.LBB.*:}}
 ; X64: movq    -48(%rbp), %rbx
 ; X64: {{.LBB.*:}}
+; X64: popq    %rbx
+; X64-NEXT: popq    %rbx
 }
 
 

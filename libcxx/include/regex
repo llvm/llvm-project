@@ -225,6 +225,8 @@ public:
     int compare(const sub_match& s) const;
     int compare(const string_type& s) const;
     int compare(const value_type* s) const;
+
+    void swap(sub_match& s) noexcept(see below);
 };
 
 typedef sub_match<const char*>             csub_match;
@@ -770,6 +772,7 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <__iterator/wrap_iter.h>
 #include <__locale>
 #include <__memory_resource/polymorphic_allocator.h>
+#include <__type_traits/is_swappable.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/swap.h>
@@ -5008,6 +5011,16 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     int compare(const value_type* __s) const
         {return str().compare(__s);}
+
+    _LIBCPP_HIDE_FROM_ABI
+    void swap(sub_match& __s)
+#ifndef _LIBCPP_CXX03_LANG
+    _NOEXCEPT(__is_nothrow_swappable<_BidirectionalIterator>::value)
+#endif // _LIBCPP_CXX03_LANG
+    {
+        this->pair<_BidirectionalIterator, _BidirectionalIterator>::swap(__s);
+        std::swap(matched, __s.matched);
+    }
 };
 
 template <class _BiIter>

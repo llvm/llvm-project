@@ -1007,8 +1007,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     if (getLangOpts().CPlusPlus)
       Diag(Tok, diag::warn_cxx98_compat_nullptr);
     else
-      Diag(Tok, getLangOpts().C2x ? diag::warn_c17_compat_nullptr
-                                  : diag::ext_c_nullptr);
+      Diag(Tok, getLangOpts().C2x ? diag::warn_c2x_compat_keyword
+                                  : diag::ext_c_nullptr) << Tok.getName();
 
     Res = Actions.ActOnCXXNullPtrLiteral(ConsumeToken());
     break;
@@ -2484,8 +2484,11 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
                                                 RParenLoc);
   }
 
-  if (OpTok.isOneOf(tok::kw_alignof, tok::kw__Alignof))
+  if (getLangOpts().CPlusPlus &&
+      OpTok.isOneOf(tok::kw_alignof, tok::kw__Alignof))
     Diag(OpTok, diag::warn_cxx98_compat_alignof);
+  else if (getLangOpts().C2x && OpTok.is(tok::kw_alignof))
+    Diag(OpTok, diag::warn_c2x_compat_keyword) << OpTok.getName();
 
   EnterExpressionEvaluationContext Unevaluated(
       Actions, Sema::ExpressionEvaluationContext::Unevaluated,

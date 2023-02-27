@@ -2584,9 +2584,9 @@ Options for Hungarian Notation
 - :option:`HungarianNotation.DerivedType.Pointer`
 - :option:`HungarianNotation.DerivedType.FunctionPointer`
 
-- :option:`HungarianNotation.CString.CharPrinter`
+- :option:`HungarianNotation.CString.CharPointer`
 - :option:`HungarianNotation.CString.CharArray`
-- :option:`HungarianNotation.CString.WideCharPrinter`
+- :option:`HungarianNotation.CString.WideCharPointer`
 - :option:`HungarianNotation.CString.WideCharArray`
 
 - :option:`HungarianNotation.PrimitiveType.*`
@@ -2642,7 +2642,7 @@ After:
     FUNC_PTR fnFuncPtr = NULL;
 
 
-.. option:: HungarianNotation.CString.CharPrinter
+.. option:: HungarianNotation.CString.CharPointer
 
     When defined, the check will ensure variable name will add the prefix with
     the given string. The default prefix is `sz`.
@@ -2652,7 +2652,7 @@ After:
     When defined, the check will ensure variable name will add the prefix with
     the given string. The default prefix is `sz`.
 
-.. option:: HungarianNotation.CString.WideCharPrinter
+.. option:: HungarianNotation.CString.WideCharPointer
 
     When defined, the check will ensure variable name will add the prefix with
     the given string. The default prefix is `wsz`.
@@ -2667,13 +2667,13 @@ Before:
 
 .. code-block:: c++
 
-    // CharPrinter
+    // CharPointer
     const char *NamePtr = "Name";
 
     // CharArray
     const char NameArray[] = "Name";
 
-    // WideCharPrinter
+    // WideCharPointer
     const wchar_t *WideNamePtr = L"Name";
 
     // WideCharArray
@@ -2683,13 +2683,13 @@ After:
 
 .. code-block:: c++
 
-    // CharPrinter
+    // CharPointer
     const char *szNamePtr = "Name";
 
     // CharArray
     const char szNameArray[] = "Name";
 
-    // WideCharPrinter
+    // WideCharPointer
     const wchar_t *wszWideNamePtr = L"Name";
 
     // WideCharArray

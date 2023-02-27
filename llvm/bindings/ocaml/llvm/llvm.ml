@@ -1392,21 +1392,3 @@ module MemoryBuffer = struct
   external as_string : llmemorybuffer -> string = "llvm_memorybuffer_as_string"
   external dispose : llmemorybuffer -> unit = "llvm_memorybuffer_dispose"
 end
-
-
-(*===-- Pass Manager ------------------------------------------------------===*)
-
-module PassManager = struct
-  type 'a t
-  type any = [ `Module | `Function ]
-  external create : unit -> [ `Module ] t = "llvm_passmanager_create"
-  external create_function : llmodule -> [ `Function ] t
-                           = "LLVMCreateFunctionPassManager"
-  external run_module : llmodule -> [ `Module ] t -> bool
-                      = "llvm_passmanager_run_module"
-  external initialize : [ `Function ] t -> bool = "llvm_passmanager_initialize"
-  external run_function : llvalue -> [ `Function ] t -> bool
-                        = "llvm_passmanager_run_function"
-  external finalize : [ `Function ] t -> bool = "llvm_passmanager_finalize"
-  external dispose : [< any ] t -> unit = "llvm_passmanager_dispose"
-end

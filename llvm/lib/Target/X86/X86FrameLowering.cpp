@@ -1628,10 +1628,6 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
 
     // Calculate required stack adjustment.
     uint64_t FrameSize = StackSize - SlotSize;
-    // If required, include space for extra hidden slot for stashing base pointer.
-    if (X86FI->getRestoreBasePointer())
-      FrameSize += SlotSize;
-
     NumBytes = FrameSize -
                (X86FI->getCalleeSavedFrameSize() + TailCallArgReserveSize);
 
@@ -2646,6 +2642,16 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
     I.setFrameIdx(SlotIndex);
   }
 
+  // Adjust the offset of spill slot as we know the accurate callee saved frame
+  // size.
+  if (X86FI->getRestoreBasePointer()) {
+    SpillSlotOffset -= SlotSize;
+    CalleeSavedFrameSize += SlotSize;
+
+    MFI.CreateFixedSpillStackObject(SlotSize, SpillSlotOffset);
+    // TODO: saving the slot index is better?
+    X86FI->setRestoreBasePointer(CalleeSavedFrameSize);
+  }
   X86FI->setCalleeSavedFrameSize(CalleeSavedFrameSize);
   MFI.setCVBytesOfCalleeSavedRegisters(CalleeSavedFrameSize);
 
@@ -2726,6 +2732,15 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
     // is not used after all.
     BuildMI(MBB, MI, DL, TII.get(Opc)).addReg(Reg, getKillRegState(CanKill))
       .setMIFlag(MachineInstr::FrameSetup);
+  }
+
+  const X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
+  if (X86FI->getRestoreBasePointer()) {
+    unsigned Opc = STI.is64Bit() ? X86::PUSH64r : X86::PUSH32r;
+    Register BaseReg = this->TRI->getBaseRegister();
+    BuildMI(MBB, MI, DL, TII.get(Opc))
+        .addReg(BaseReg, getKillRegState(true))
+        .setMIFlag(MachineInstr::FrameSetup);
   }
 
   // Make XMM regs spilled. X86 does not have ability of push/pop XMM.
@@ -2823,6 +2838,16 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, VT);
     TII.loadRegFromStackSlot(MBB, MI, Reg, I.getFrameIdx(), RC, TRI,
                              Register());
+  }
+
+  // Clear the stack slot for spill base pointer register.
+  MachineFunction &MF = *MBB.getParent();
+  const X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
+  if (X86FI->getRestoreBasePointer()) {
+    unsigned Opc = STI.is64Bit() ? X86::POP64r : X86::POP32r;
+    Register BaseReg = this->TRI->getBaseRegister();
+    BuildMI(MBB, MI, DL, TII.get(Opc), BaseReg)
+        .setMIFlag(MachineInstr::FrameDestroy);
   }
 
   // POP GPRs.
