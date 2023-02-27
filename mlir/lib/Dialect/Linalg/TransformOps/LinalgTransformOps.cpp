@@ -1779,12 +1779,12 @@ DiagnosedSilenceableFailure
 transform::HoistPadOp::applyToOne(tensor::PadOp target,
                                   transform::ApplyToEachResultList &results,
                                   transform::TransformState &state) {
-  IRRewriter rewriter(target->getContext());
   tensor::PadOp hoistedPadOp;
   SmallVector<GenericOp> transposeOps;
-  // TODO: Pass rewriter down to hoistPaddingOnTensors, in a followup commit.
-  FailureOr<Value> result = hoistPaddingOnTensors(
-      target, getNumLoops(), getTranspose(), hoistedPadOp, transposeOps);
+  IRRewriter rewriter(target->getContext());
+  FailureOr<Value> result =
+      hoistPaddingOnTensors(rewriter, target, getNumLoops(), getTranspose(),
+                            hoistedPadOp, transposeOps);
   if (succeeded(result)) {
     // We need to perform our own replacement here because this API is still
     // used in patterns that "pad and hoist", for which the replacement values

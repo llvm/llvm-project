@@ -5491,6 +5491,7 @@ cc_library(
     deps = [
         ":AffineDialect",
         ":ArithDialect",
+        ":DialectUtils",
         ":TensorDialect",
         "//llvm:Support",
     ],
@@ -8467,6 +8468,7 @@ cc_library(
         ":LinalgPassIncGen",
         ":LinalgStructuredOpsIncGen",
         ":LinalgUtils",
+        ":LoopLikeInterface",
         ":MaskableOpInterface",
         ":MathDialect",
         ":MemRefDialect",
