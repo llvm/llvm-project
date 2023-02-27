@@ -165,50 +165,50 @@ pxor        (%rax), %mm2
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  10     10    4.50    *      *      U     emms
-# CHECK-NEXT:  1      3     1.00                        movd	%eax, %mm2
-# CHECK-NEXT:  1      8     0.33    *                   movd	(%rax), %mm2
+# CHECK-NEXT:  1      1     1.00                        movd	%eax, %mm2
+# CHECK-NEXT:  1      6     0.33    *                   movd	(%rax), %mm2
 # CHECK-NEXT:  1      3     1.00                        movd	%mm0, %ecx
-# CHECK-NEXT:  2      18    0.50           *      U     movd	%mm0, (%rax)
-# CHECK-NEXT:  1      3     1.00                        movq	%rax, %mm2
-# CHECK-NEXT:  1      8     0.33    *                   movq	(%rax), %mm2
+# CHECK-NEXT:  2      1     0.50           *      U     movd	%mm0, (%rax)
+# CHECK-NEXT:  1      1     1.00                        movq	%rax, %mm2
+# CHECK-NEXT:  1      6     0.33    *                   movq	(%rax), %mm2
 # CHECK-NEXT:  1      3     1.00                        movq	%mm0, %rcx
-# CHECK-NEXT:  2      12    0.50           *            movq	%mm0, (%rax)
-# CHECK-NEXT:  2      4     2.00                        packsswb	%mm0, %mm2
-# CHECK-NEXT:  3      12    2.00    *                   packsswb	(%rax), %mm2
-# CHECK-NEXT:  2      4     2.00                        packssdw	%mm0, %mm2
-# CHECK-NEXT:  3      12    2.00    *                   packssdw	(%rax), %mm2
-# CHECK-NEXT:  2      4     2.00                        packuswb	%mm0, %mm2
-# CHECK-NEXT:  3      12    2.00    *                   packuswb	(%rax), %mm2
+# CHECK-NEXT:  2      1     0.50           *            movq	%mm0, (%rax)
+# CHECK-NEXT:  3      4     2.00                        packsswb	%mm0, %mm2
+# CHECK-NEXT:  3      10    2.00    *                   packsswb	(%rax), %mm2
+# CHECK-NEXT:  3      4     2.00                        packssdw	%mm0, %mm2
+# CHECK-NEXT:  3      10    2.00    *                   packssdw	(%rax), %mm2
+# CHECK-NEXT:  3      4     2.00                        packuswb	%mm0, %mm2
+# CHECK-NEXT:  3      10    2.00    *                   packuswb	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        paddb	%mm0, %mm2
-# CHECK-NEXT:  2      9     0.50    *                   paddb	(%rax), %mm2
+# CHECK-NEXT:  2      7     0.50    *                   paddb	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        paddd	%mm0, %mm2
-# CHECK-NEXT:  2      9     0.50    *                   paddd	(%rax), %mm2
+# CHECK-NEXT:  2      7     0.50    *                   paddd	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        paddsb	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   paddsb	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   paddsb	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        paddsw	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   paddsw	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   paddsw	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        paddusb	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   paddusb	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   paddusb	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        paddusw	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   paddusw	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   paddusw	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        paddw	%mm0, %mm2
-# CHECK-NEXT:  2      9     0.50    *                   paddw	(%rax), %mm2
+# CHECK-NEXT:  2      7     0.50    *                   paddw	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        pand	%mm0, %mm2
-# CHECK-NEXT:  2      9     0.50    *                   pand	(%rax), %mm2
+# CHECK-NEXT:  2      7     0.50    *                   pand	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        pandn	%mm0, %mm2
-# CHECK-NEXT:  2      9     0.50    *                   pandn	(%rax), %mm2
+# CHECK-NEXT:  2      7     0.50    *                   pandn	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        pcmpeqb	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   pcmpeqb	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   pcmpeqb	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        pcmpeqd	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   pcmpeqd	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   pcmpeqd	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        pcmpeqw	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   pcmpeqw	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   pcmpeqw	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        pcmpgtb	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   pcmpgtb	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   pcmpgtb	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        pcmpgtd	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   pcmpgtd	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   pcmpgtd	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        pcmpgtw	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   pcmpgtw	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   pcmpgtw	(%rax), %mm2
 # CHECK-NEXT:  1      5     1.00                        pmaddwd	%mm0, %mm2
 # CHECK-NEXT:  2      13    1.00    *                   pmaddwd	(%rax), %mm2
 # CHECK-NEXT:  1      5     1.00                        pmulhw	%mm0, %mm2
@@ -216,59 +216,59 @@ pxor        (%rax), %mm2
 # CHECK-NEXT:  1      5     1.00                        pmullw	%mm0, %mm2
 # CHECK-NEXT:  2      13    1.00    *                   pmullw	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        por	%mm0, %mm2
-# CHECK-NEXT:  2      9     0.50    *                   por	(%rax), %mm2
+# CHECK-NEXT:  2      7     0.50    *                   por	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        pslld	$1, %mm2
 # CHECK-NEXT:  1      1     1.00                        pslld	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   pslld	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   pslld	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        psllq	$1, %mm2
 # CHECK-NEXT:  1      1     1.00                        psllq	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   psllq	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   psllq	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        psllw	$1, %mm2
 # CHECK-NEXT:  1      1     1.00                        psllw	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   psllw	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   psllw	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        psrad	$1, %mm2
 # CHECK-NEXT:  1      1     1.00                        psrad	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   psrad	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   psrad	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        psraw	$1, %mm2
 # CHECK-NEXT:  1      1     1.00                        psraw	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   psraw	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   psraw	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        psrld	$1, %mm2
 # CHECK-NEXT:  1      1     1.00                        psrld	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   psrld	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   psrld	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        psrlq	$1, %mm2
 # CHECK-NEXT:  1      1     1.00                        psrlq	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   psrlq	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   psrlq	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        psrlw	$1, %mm2
 # CHECK-NEXT:  1      1     1.00                        psrlw	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   psrlw	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   psrlw	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        psubb	%mm0, %mm2
-# CHECK-NEXT:  2      9     0.50    *                   psubb	(%rax), %mm2
+# CHECK-NEXT:  2      7     0.50    *                   psubb	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        psubd	%mm0, %mm2
-# CHECK-NEXT:  2      9     0.50    *                   psubd	(%rax), %mm2
+# CHECK-NEXT:  2      7     0.50    *                   psubd	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        psubsb	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   psubsb	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   psubsb	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        psubsw	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   psubsw	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   psubsw	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        psubusb	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   psubusb	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   psubusb	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        psubusw	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   psubusw	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   psubusw	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        psubw	%mm0, %mm2
-# CHECK-NEXT:  2      9     0.50    *                   psubw	(%rax), %mm2
+# CHECK-NEXT:  2      7     0.50    *                   psubw	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        punpckhbw	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   punpckhbw	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   punpckhbw	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        punpckhdq	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   punpckhdq	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   punpckhdq	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        punpckhwd	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   punpckhwd	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   punpckhwd	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        punpcklbw	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   punpcklbw	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   punpcklbw	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        punpckldq	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   punpckldq	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   punpckldq	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        punpcklwd	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   punpcklwd	(%rax), %mm2
+# CHECK-NEXT:  2      7     1.00    *                   punpcklwd	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        pxor	%mm0, %mm2
-# CHECK-NEXT:  2      9     0.50    *                   pxor	(%rax), %mm2
+# CHECK-NEXT:  2      7     0.50    *                   pxor	(%rax), %mm2
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - ADLPPort00
