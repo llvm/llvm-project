@@ -47,7 +47,7 @@ DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
       symbolizeDIEmissionKind(node->getEmissionKind());
   return DICompileUnitAttr::get(context, node->getSourceLanguage(),
                                 translate(node->getFile()),
-                                StringAttr::get(context, node->getProducer()),
+                                getStringAttrOrNull(node->getRawProducer()),
                                 node->isOptimized(), emissionKind.value());
 }
 
@@ -66,7 +66,7 @@ DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
   if (llvm::is_contained(elements, nullptr))
     elements.clear();
   return DICompositeTypeAttr::get(
-      context, node->getTag(), StringAttr::get(context, node->getName()),
+      context, node->getTag(), getStringAttrOrNull(node->getRawName()),
       translate(node->getFile()), node->getLine(), translate(node->getScope()),
       translate(node->getBaseType()), flags.value_or(DIFlags::Zero),
       node->getSizeInBits(), node->getAlignInBits(), elements);
@@ -78,8 +78,7 @@ DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
   if (node->getBaseType() && !baseType)
     return nullptr;
   return DIDerivedTypeAttr::get(
-      context, node->getTag(),
-      node->getRawName() ? StringAttr::get(context, node->getName()) : nullptr,
+      context, node->getTag(), getStringAttrOrNull(node->getRawName()),
       baseType, node->getSizeInBits(), node->getAlignInBits(),
       node->getOffsetInBits());
 }
@@ -103,7 +102,7 @@ DebugImporter::translateImpl(llvm::DILexicalBlockFile *node) {
 
 DILocalVariableAttr DebugImporter::translateImpl(llvm::DILocalVariable *node) {
   return DILocalVariableAttr::get(context, translate(node->getScope()),
-                                  StringAttr::get(context, node->getName()),
+                                  getStringAttrOrNull(node->getRawName()),
                                   translate(node->getFile()), node->getLine(),
                                   node->getArg(), node->getAlignInBits(),
                                   translate(node->getType()));
@@ -114,9 +113,9 @@ DIScopeAttr DebugImporter::translateImpl(llvm::DIScope *node) {
 }
 
 DINamespaceAttr DebugImporter::translateImpl(llvm::DINamespace *node) {
-  return DINamespaceAttr::get(
-      context, StringAttr::get(context, node->getName()),
-      translate(node->getScope()), node->getExportSymbols());
+  return DINamespaceAttr::get(context, getStringAttrOrNull(node->getRawName()),
+                              translate(node->getScope()),
+                              node->getExportSymbols());
 }
 
 DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
@@ -129,14 +128,12 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
   DISubroutineTypeAttr type = translate(node->getType());
   if (node->getType() && !type)
     return nullptr;
-  return DISubprogramAttr::get(
-      context, translate(node->getUnit()), scope,
-      StringAttr::get(context, node->getName()),
-      node->getRawLinkageName()
-          ? StringAttr::get(context, node->getLinkageName())
-          : nullptr,
-      translate(node->getFile()), node->getLine(), node->getScopeLine(),
-      subprogramFlags.value(), type);
+  return DISubprogramAttr::get(context, translate(node->getUnit()), scope,
+                               getStringAttrOrNull(node->getRawName()),
+                               getStringAttrOrNull(node->getRawLinkageName()),
+                               translate(node->getFile()), node->getLine(),
+                               node->getScopeLine(), subprogramFlags.value(),
+                               type);
 }
 
 DISubrangeAttr DebugImporter::translateImpl(llvm::DISubrange *node) {
@@ -247,4 +244,10 @@ Location DebugImporter::translateLoc(llvm::DILocation *loc) {
   result = FusedLocWith<DIScopeAttr>::get({result}, translate(loc->getScope()),
                                           context);
   return result;
+}
+
+StringAttr DebugImporter::getStringAttrOrNull(llvm::MDString *stringNode) {
+  if (!stringNode)
+    return StringAttr();
+  return StringAttr::get(context, stringNode->getString());
 }
