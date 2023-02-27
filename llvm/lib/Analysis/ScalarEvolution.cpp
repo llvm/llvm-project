@@ -368,9 +368,8 @@ void SCEV::print(raw_ostream &OS) const {
   }
   case scUnknown: {
     const SCEVUnknown *U = cast<SCEVUnknown>(this);
-    Type *AllocTy;
-    if (U->isSizeOf(AllocTy)) {
-      OS << "sizeof(" << *AllocTy << ")";
+    if (U->isVScale()) {
+      OS << "vscale";
       return;
     }
 
@@ -561,20 +560,8 @@ void SCEVUnknown::allUsesReplacedWith(Value *New) {
   setValPtr(New);
 }
 
-bool SCEVUnknown::isSizeOf(Type *&AllocTy) const {
-  if (ConstantExpr *VCE = dyn_cast<ConstantExpr>(getValue()))
-    if (VCE->getOpcode() == Instruction::PtrToInt)
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(VCE->getOperand(0)))
-        if (CE->getOpcode() == Instruction::GetElementPtr &&
-            CE->getOperand(0)->isNullValue() &&
-            CE->getNumOperands() == 2)
-          if (ConstantInt *CI = dyn_cast<ConstantInt>(CE->getOperand(1)))
-            if (CI->isOne()) {
-              AllocTy = cast<GEPOperator>(CE)->getSourceElementType();
-              return true;
-            }
-
-  return false;
+bool SCEVUnknown::isVScale() const {
+  return match(getValue(), m_VScale());
 }
 
 //===----------------------------------------------------------------------===//
@@ -4326,33 +4313,26 @@ const SCEV *ScalarEvolution::getUMinExpr(SmallVectorImpl<const SCEV *> &Ops,
 }
 
 const SCEV *
-ScalarEvolution::getSizeOfScalableVectorExpr(Type *IntTy,
-                                             ScalableVectorType *ScalableTy) {
-  Constant *NullPtr = Constant::getNullValue(ScalableTy->getPointerTo());
-  Constant *One = ConstantInt::get(IntTy, 1);
-  Constant *GEP = ConstantExpr::getGetElementPtr(ScalableTy, NullPtr, One);
-  // Note that the expression we created is the final expression, we don't
-  // want to simplify it any further Also, if we call a normal getSCEV(),
-  // we'll end up in an endless recursion. So just create an SCEVUnknown.
-  return getUnknown(ConstantExpr::getPtrToInt(GEP, IntTy));
+ScalarEvolution::getSizeOfExpr(Type *IntTy, TypeSize Size) {
+  const SCEV *Res = getConstant(IntTy, Size.getKnownMinValue());
+  if (Size.isScalable()) {
+    // TODO: Why is there no ConstantExpr::getVScale()?
+    Type *SrcElemTy = ScalableVectorType::get(Type::getInt8Ty(getContext()), 1);
+    Constant *NullPtr = Constant::getNullValue(SrcElemTy->getPointerTo());
+    Constant *One = ConstantInt::get(IntTy, 1);
+    Constant *GEP = ConstantExpr::getGetElementPtr(SrcElemTy, NullPtr, One);
+    Constant *VScale = ConstantExpr::getPtrToInt(GEP, IntTy);
+    Res = getMulExpr(Res, getUnknown(VScale));
+  }
+  return Res;
 }
 
 const SCEV *ScalarEvolution::getSizeOfExpr(Type *IntTy, Type *AllocTy) {
-  if (auto *ScalableAllocTy = dyn_cast<ScalableVectorType>(AllocTy))
-    return getSizeOfScalableVectorExpr(IntTy, ScalableAllocTy);
-  // We can bypass creating a target-independent constant expression and then
-  // folding it back into a ConstantInt. This is just a compile-time
-  // optimization.
-  return getConstant(IntTy, getDataLayout().getTypeAllocSize(AllocTy));
+  return getSizeOfExpr(IntTy, getDataLayout().getTypeAllocSize(AllocTy));
 }
 
 const SCEV *ScalarEvolution::getStoreSizeOfExpr(Type *IntTy, Type *StoreTy) {
-  if (auto *ScalableStoreTy = dyn_cast<ScalableVectorType>(StoreTy))
-    return getSizeOfScalableVectorExpr(IntTy, ScalableStoreTy);
-  // We can bypass creating a target-independent constant expression and then
-  // folding it back into a ConstantInt. This is just a compile-time
-  // optimization.
-  return getConstant(IntTy, getDataLayout().getTypeStoreSize(StoreTy));
+  return getSizeOfExpr(IntTy, getDataLayout().getTypeStoreSize(StoreTy));
 }
 
 const SCEV *ScalarEvolution::getOffsetOfExpr(Type *IntTy,

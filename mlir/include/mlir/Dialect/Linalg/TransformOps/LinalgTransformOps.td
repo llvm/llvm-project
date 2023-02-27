@@ -765,6 +765,7 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
 // PromoteOp
 //===----------------------------------------------------------------------===//
 
+
 def PromoteOp : Op<Transform_Dialect, "structured.promote",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
     TransformOpInterface, TransformEachOpTrait]> {
@@ -791,6 +792,7 @@ def PromoteOp : Op<Transform_Dialect, "structured.promote",
                        DefaultValuedAttr<BoolArrayAttr, "{}">:$use_full_tile_buffers,
                        UnitAttr:$use_full_tiles_by_default,
                        UnitAttr:$use_alloca,
+                       OptionalAttr<DeviceMappingArrayAttr>:$mapping,
                        OptionalAttr<I64Attr>:$alignment);
   let results = (outs PDL_Operation:$transformed);
 

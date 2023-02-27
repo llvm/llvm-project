@@ -41,12 +41,20 @@ moduleNames(const Fortran::semantics::Symbol &symbol) {
 
 static std::optional<llvm::StringRef>
 hostName(const Fortran::semantics::Symbol &symbol) {
-  const Fortran::semantics::Scope &scope = symbol.owner();
-  if (scope.kind() == Fortran::semantics::Scope::Kind::Subprogram) {
-    assert(scope.symbol() && "subprogram scope must have a symbol");
-    return toStringRef(scope.symbol()->name());
+  const Fortran::semantics::Scope *scope = &symbol.owner();
+  if (symbol.has<Fortran::semantics::AssocEntityDetails>())
+    // Associate/Select construct scopes are not part of the mangling. This can
+    // result in different construct selector being mangled with the same name.
+    // This is not an issue since these are not global symbols.
+    while (!scope->IsTopLevel() &&
+           (scope->kind() != Fortran::semantics::Scope::Kind::Subprogram &&
+            scope->kind() != Fortran::semantics::Scope::Kind::MainProgram))
+      scope = &scope->parent();
+  if (scope->kind() == Fortran::semantics::Scope::Kind::Subprogram) {
+    assert(scope->symbol() && "subprogram scope must have a symbol");
+    return toStringRef(scope->symbol()->name());
   }
-  if (scope.kind() == Fortran::semantics::Scope::Kind::MainProgram)
+  if (scope->kind() == Fortran::semantics::Scope::Kind::MainProgram)
     // Do not use the main program name, if any, because it may lead to name
     // collision with procedures with the same name in other compilation units
     // (technically illegal, but all compilers are able to compile and link
@@ -79,6 +87,15 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
       Fortran::semantics::ClassifyProcedure(symbol) !=
           Fortran::semantics::ProcedureDefinitionClass::Internal)
     return ultimateSymbol.name().ToString();
+
+  // mangle ObjectEntityDetails or AssocEntityDetails symbols.
+  auto mangleObject = [&]() -> std::string {
+    llvm::SmallVector<llvm::StringRef> modNames = moduleNames(ultimateSymbol);
+    std::optional<llvm::StringRef> optHost = hostName(ultimateSymbol);
+    if (Fortran::semantics::IsNamedConstant(ultimateSymbol))
+      return fir::NameUniquer::doConstant(modNames, optHost, symbolName);
+    return fir::NameUniquer::doVariable(modNames, optHost, symbolName);
+  };
 
   return std::visit(
       Fortran::common::visitors{
@@ -117,13 +134,10 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
                                                  symbolName);
           },
           [&](const Fortran::semantics::ObjectEntityDetails &) {
-            llvm::SmallVector<llvm::StringRef> modNames =
-                moduleNames(ultimateSymbol);
-            std::optional<llvm::StringRef> optHost = hostName(ultimateSymbol);
-            if (Fortran::semantics::IsNamedConstant(ultimateSymbol))
-              return fir::NameUniquer::doConstant(modNames, optHost,
-                                                  symbolName);
-            return fir::NameUniquer::doVariable(modNames, optHost, symbolName);
+            return mangleObject();
+          },
+          [&](const Fortran::semantics::AssocEntityDetails &) {
+            return mangleObject();
           },
           [&](const Fortran::semantics::NamelistDetails &) {
             llvm::SmallVector<llvm::StringRef> modNames =

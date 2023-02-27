@@ -27,6 +27,29 @@
 // DeclareOp
 //===----------------------------------------------------------------------===//
 
+/// Is this a fir.[ref/ptr/heap]<fir.[box/class]<fir.heap<T>>> type?
+static bool isAllocatableBoxRef(mlir::Type type) {
+  fir::BaseBoxType boxType =
+      fir::dyn_cast_ptrEleTy(type).dyn_cast_or_null<fir::BaseBoxType>();
+  return boxType && boxType.getEleTy().isa<fir::HeapType>();
+}
+
+mlir::LogicalResult hlfir::AssignOp::verify() {
+  mlir::Type lhsType = getLhs().getType();
+  if (isAllocatableAssignment() && !isAllocatableBoxRef(lhsType))
+    return emitOpError("lhs must be an allocatable when `realloc` is set");
+  if (mustKeepLhsLengthInAllocatableAssignment() &&
+      !(isAllocatableAssignment() &&
+        hlfir::getFortranElementType(lhsType).isa<fir::CharacterType>()))
+    return emitOpError("`realloc` must be set and lhs must be a character "
+                       "allocatable when `keep_lhs_length_if_realloc` is set");
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// DeclareOp
+//===----------------------------------------------------------------------===//
+
 /// Given a FIR memory type, and information about non default lower bounds, get
 /// the related HLFIR variable type.
 mlir::Type hlfir::DeclareOp::getHLFIRVariableType(mlir::Type inputType,

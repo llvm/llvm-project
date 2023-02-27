@@ -187,9 +187,10 @@ int main(int argc, const char **argv) {
   if (OptionsParser->getSourcePathList().size() != 1) {
     std::vector<cl::Option *> IncompatibleFlags = {&HTMLReportPath, &Print};
     for (const auto *Flag : IncompatibleFlags) {
-      if (Flag->getNumOccurrences())
+      if (Flag->getNumOccurrences()) {
         llvm::errs() << "-" << Flag->ArgStr << " requires a single input file";
-      return 1;
+        return 1;
+      }
     }
   }
   auto Factory = clang::tooling::newFrontendActionFactory<Action>();

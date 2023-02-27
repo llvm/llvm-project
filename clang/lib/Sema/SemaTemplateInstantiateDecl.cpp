@@ -834,6 +834,22 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
   }
 }
 
+/// Update instantiation attributes after template was late parsed.
+///
+/// Some attributes are evaluated based on the body of template. If it is
+/// late parsed, such attributes cannot be evaluated when declaration is
+/// instantiated. This function is used to update instantiation attributes when
+/// template definition is ready.
+void Sema::updateAttrsForLateParsedTemplate(const Decl *Pattern, Decl *Inst) {
+  for (const auto *Attr : Pattern->attrs()) {
+    if (auto *A = dyn_cast<StrictFPAttr>(Attr)) {
+      if (!Inst->hasAttr<StrictFPAttr>())
+        Inst->addAttr(A->clone(getASTContext()));
+      continue;
+    }
+  }
+}
+
 /// In the MS ABI, we need to instantiate default arguments of dllexported
 /// default constructors along with the constructor definition. This allows IR
 /// gen to emit a constructor closure which calls the default constructor with
@@ -4916,6 +4932,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
            "missing LateParsedTemplate");
     LateTemplateParser(OpaqueParser, *LPTIter->second);
     Pattern = PatternDecl->getBody(PatternDecl);
+    updateAttrsForLateParsedTemplate(PatternDecl, Function);
   }
 
   // Note, we should never try to instantiate a deleted function template.

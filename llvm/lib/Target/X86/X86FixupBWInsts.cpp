@@ -299,7 +299,7 @@ MachineInstr *FixupBWInstPass::tryReplaceLoad(unsigned New32BitOpcode,
 
   // Safe to change the instruction.
   MachineInstrBuilder MIB =
-      BuildMI(*MF, MI->getDebugLoc(), TII->get(New32BitOpcode), NewDestReg);
+      BuildMI(*MF, MIMetadata(*MI), TII->get(New32BitOpcode), NewDestReg);
 
   unsigned NumArgs = MI->getNumOperands();
   for (unsigned i = 1; i < NumArgs; ++i)
@@ -343,7 +343,7 @@ MachineInstr *FixupBWInstPass::tryReplaceCopy(MachineInstr *MI) const {
   // we don't care about the higher bits by reading it as Undef, and adding
   // an imp-use on the original subregister.
   MachineInstrBuilder MIB =
-      BuildMI(*MF, MI->getDebugLoc(), TII->get(X86::MOV32rr), NewDestReg)
+      BuildMI(*MF, MIMetadata(*MI), TII->get(X86::MOV32rr), NewDestReg)
           .addReg(NewSrcReg, RegState::Undef)
           .addReg(OldSrc.getReg(), RegState::Implicit);
 
@@ -371,7 +371,7 @@ MachineInstr *FixupBWInstPass::tryReplaceExtend(unsigned New32BitOpcode,
 
   // Safe to change the instruction.
   MachineInstrBuilder MIB =
-      BuildMI(*MF, MI->getDebugLoc(), TII->get(New32BitOpcode), NewDestReg);
+      BuildMI(*MF, MIMetadata(*MI), TII->get(New32BitOpcode), NewDestReg);
 
   unsigned NumArgs = MI->getNumOperands();
   for (unsigned i = 1; i < NumArgs; ++i)
