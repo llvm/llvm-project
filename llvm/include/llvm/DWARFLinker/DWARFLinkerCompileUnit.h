@@ -44,6 +44,7 @@ struct PatchLocation {
 };
 
 using RngListAttributesTy = SmallVector<PatchLocation>;
+using LocListAttributesTy = SmallVector<std::pair<PatchLocation, int64_t>>;
 
 /// Stores all information relating to a compile unit, be it in its original
 /// instance in the object file to its brand new cloned and generated DIE tree.
@@ -153,8 +154,7 @@ public:
     return UnitRangeAttribute;
   }
 
-  const std::vector<std::pair<PatchLocation, int64_t>> &
-  getLocationAttributes() const {
+  const LocListAttributesTy &getLocationAttributes() const {
     return LocationAttributes;
   }
 
@@ -289,7 +289,7 @@ private:
   /// original debug_loc section to the liked one. They are stored
   /// along with the PC offset that is to be applied to their
   /// function's address.
-  std::vector<std::pair<PatchLocation, int64_t>> LocationAttributes;
+  LocListAttributesTy LocationAttributes;
 
   /// Accelerator entries for the unit, both for the pub*
   /// sections and the apple* ones.
