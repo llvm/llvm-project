@@ -598,7 +598,7 @@ define amdgpu_kernel void @flat_volatile_workgroup_acquire_load(
 ; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-WGP-NEXT:    flat_load_b32 v2, v[0:1] th:TH_LOAD_NT
 ; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    global_inv scope:SCOPE_SE
 ; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX12-WGP-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
