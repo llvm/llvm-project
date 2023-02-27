@@ -128,3 +128,21 @@ func.func @array_4(%arg0: !fir.box<!fir.array<?xi32>>, %arg1: !fir.box<!fir.arra
 // CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>>,
 // CHECK-SAME:    %[[VAL_1:.*]]: !fir.box<!fir.array<?xi32>>) {
 // CHECK:  hlfir.assign %[[VAL_1]] to %[[VAL_0]] : !fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>
+
+func.func @alloc_assign(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, %arg1: !fir.box<!fir.array<?xi32>>) {
+  hlfir.assign %arg1 to %arg0 realloc : !fir.box<!fir.array<?xi32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+  return
+}
+// CHECK-LABEL:   func.func @alloc_assign(
+// CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>,
+// CHECK-SAME:    %[[VAL_1:.*]]: !fir.box<!fir.array<?xi32>>) {
+// CHECK:  hlfir.assign %[[VAL_1]] to %[[VAL_0]] realloc : !fir.box<!fir.array<?xi32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+
+func.func @alloc_assign_keep_lhs_len(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>, %arg1: !fir.box<!fir.array<?x!fir.char<1,?>>>) {
+  hlfir.assign %arg1 to %arg0 realloc keep_lhs_len : !fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
+  return
+}
+// CHECK-LABEL:   func.func @alloc_assign_keep_lhs_len(
+// CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>,
+// CHECK-SAME:    %[[VAL_1:.*]]: !fir.box<!fir.array<?x!fir.char<1,?>>>) {
+// CHECK:  hlfir.assign %[[VAL_1]] to %[[VAL_0]] realloc keep_lhs_len : !fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
