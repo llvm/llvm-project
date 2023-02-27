@@ -2539,7 +2539,7 @@ multiclass sme2_multi_vec_array_vg4_index_64b<string mnemonic, bits<3> op,
 // SME2 multi-vec indexed long long MLA one source 32-bit
 class sme2_mla_ll_array_index_32b<string mnemonic, bits<3> op>
     : I<(outs MatrixOp32:$ZAda),
-        (ins MatrixOp32:$_ZAda, MatrixIndexGPR32Op8_11:$Rv, uimm2s4range:$imm2, ZPR8:$Zn, ZPR4b8:$Zm, VectorIndexB:$i),
+        (ins MatrixOp32:$_ZAda, MatrixIndexGPR32Op8_11:$Rv, uimm2s4range:$imm2, ZPR8:$Zn, ZPR4b8:$Zm, VectorIndexB32b_timm:$i),
         mnemonic, "\t$ZAda[$Rv, $imm2], $Zn, $Zm$i",
         "", []>, Sched<[]> {
   bits<4> Zm;
@@ -2559,11 +2559,19 @@ class sme2_mla_ll_array_index_32b<string mnemonic, bits<3> op>
   let Constraints = "$ZAda = $_ZAda";
 }
 
+multiclass sme2_mla_ll_array_index_32b<string mnemonic, bits<3> op, SDPatternOperator intrinsic> {
+  def NAME : sme2_mla_ll_array_index_32b<mnemonic, op>, SMEPseudo2Instr<NAME, 1>;
+
+  def _PSEUDO : sme2_za_array_2op_multi_index_pseudo<NAME, uimm2s4range, ZPR8, ZPR4b8, VectorIndexB32b_timm, SMEMatrixArray>;
+
+  def : SME2_ZA_TwoOp_Multi_Index_Pat<NAME, intrinsic, uimm2s4range, ZPR4b8, nxv16i8, VectorIndexB32b_timm, tileslicerange2s4>;
+}
+
 // SME2 multi-vec indexed long long MLA one source 64-bit
 
 class sme2_mla_ll_array_index_64b<string mnemonic, bits<2> op>
     : I<(outs MatrixOp64:$ZAda),
-        (ins MatrixOp64:$_ZAda, MatrixIndexGPR32Op8_11:$Rv, uimm2s4range:$imm2, ZPR16:$Zn, ZPR4b16:$Zm, VectorIndexH:$i),
+        (ins MatrixOp64:$_ZAda, MatrixIndexGPR32Op8_11:$Rv, uimm2s4range:$imm2, ZPR16:$Zn, ZPR4b16:$Zm, VectorIndexH32b_timm:$i),
         mnemonic, "\t$ZAda[$Rv, $imm2], $Zn, $Zm$i",
         "", []>, Sched<[]> {
   bits<4> Zm;
@@ -2585,12 +2593,20 @@ class sme2_mla_ll_array_index_64b<string mnemonic, bits<2> op>
   let Constraints = "$ZAda = $_ZAda";
 }
 
+multiclass sme2_mla_ll_array_index_64b<string mnemonic, bits<2> op, SDPatternOperator intrinsic> {
+  def NAME : sme2_mla_ll_array_index_64b<mnemonic, op>, SMEPseudo2Instr<NAME, 1>;
+
+  def _PSEUDO : sme2_za_array_2op_multi_index_pseudo<NAME, uimm2s4range, ZPR16, ZPR4b16, VectorIndexH32b_timm, SMEMatrixArray>;
+
+  def : SME2_ZA_TwoOp_Multi_Index_Pat<NAME, intrinsic, uimm2s4range, ZPR4b16, nxv8i16, VectorIndexH32b_timm, tileslicerange2s4>;
+}
+
 class sme2_mla_ll_array_vg24_index_32b<bit vg4, bits<3> op,
                                        RegisterOperand vector_ty,
                                        string mnemonic>
     : I<(outs MatrixOp32:$ZAda),
         (ins MatrixOp32:$_ZAda, MatrixIndexGPR32Op8_11:$Rv, uimm1s4range:$imm,
-             vector_ty:$Zn, ZPR4b8:$Zm, VectorIndexB:$i),
+             vector_ty:$Zn, ZPR4b8:$Zm, VectorIndexB32b_timm:$i),
         mnemonic, "\t$ZAda[$Rv, $imm, " # !if(vg4, "vgx4", "vgx2") # "], $Zn, $Zm$i",
         "", []>, Sched<[]> {
   bits<4> Zm;
@@ -2612,34 +2628,42 @@ class sme2_mla_ll_array_vg24_index_32b<bit vg4, bits<3> op,
 
 //SME2 multi-vec indexed long long MLA two sources 32-bit
 
-multiclass sme2_mla_ll_array_vg2_index_32b<string mnemonic, bits<3> op> {
-  def NAME: sme2_mla_ll_array_vg24_index_32b<0b0, op, ZZ_b_mul_r, mnemonic> {
+multiclass sme2_mla_ll_array_vg2_index_32b<string mnemonic, bits<3> op, SDPatternOperator intrinsic> {
+  def NAME: sme2_mla_ll_array_vg24_index_32b<0b0, op, ZZ_b_mul_r, mnemonic>, SMEPseudo2Instr<NAME, 1> {
    bits<4> Zn;
    let Inst{9-6} = Zn;
   }
 
+  def _PSEUDO : sme2_za_array_2op_multi_index_pseudo<NAME, uimm1s4range, ZZ_b_mul_r, ZPR4b8, VectorIndexB32b_timm, SMEMatrixArray>;
+
+  def : SME2_ZA_TwoOp_VG2_Multi_Index_Pat<NAME, intrinsic, uimm1s4range, ZPR4b8, nxv16i8, VectorIndexB32b_timm, tileslicerange1s4>;
+
   def : InstAlias<mnemonic # "\t$ZAda[$Rv, $imm], $Zn, $Zm$i",
-                 (!cast<Instruction>(NAME) MatrixOp32:$ZAda,  MatrixIndexGPR32Op8_11:$Rv, uimm1s4range:$imm, ZZ_b_mul_r:$Zn, ZPR4b8:$Zm, VectorIndexB:$i), 0>;
+                 (!cast<Instruction>(NAME) MatrixOp32:$ZAda,  MatrixIndexGPR32Op8_11:$Rv, uimm1s4range:$imm, ZZ_b_mul_r:$Zn, ZPR4b8:$Zm, VectorIndexB32b_timm:$i), 0>;
 }
 
 // SME2 multi-vec indexed long long MLA four sources 32-bit
 
-multiclass sme2_mla_ll_array_vg4_index_32b<string mnemonic, bits<3> op> {
-  def NAME: sme2_mla_ll_array_vg24_index_32b<0b1, op, ZZZZ_b_mul_r, mnemonic> {
+multiclass sme2_mla_ll_array_vg4_index_32b<string mnemonic, bits<3> op, SDPatternOperator intrinsic> {
+  def NAME: sme2_mla_ll_array_vg24_index_32b<0b1, op, ZZZZ_b_mul_r, mnemonic>, SMEPseudo2Instr<NAME, 1> {
    bits<3> Zn;
    let Inst{9-7} = Zn;
    let Inst{6}   = 0b0;
   }
 
+  def _PSEUDO : sme2_za_array_2op_multi_index_pseudo<NAME, uimm1s4range, ZZZZ_b_mul_r, ZPR4b8, VectorIndexB32b_timm, SMEMatrixArray>;
+
+  def : SME2_ZA_TwoOp_VG4_Multi_Index_Pat<NAME, intrinsic, uimm1s4range, ZPR4b8, nxv16i8, VectorIndexB32b_timm, tileslicerange1s4>;
+
   def : InstAlias<mnemonic # "\t$ZAda[$Rv, $imm], $Zn, $Zm$i",
-                 (!cast<Instruction>(NAME) MatrixOp32:$ZAda,  MatrixIndexGPR32Op8_11:$Rv, uimm1s4range:$imm, ZZZZ_b_mul_r:$Zn, ZPR4b8:$Zm, VectorIndexB:$i), 0>;
+                 (!cast<Instruction>(NAME) MatrixOp32:$ZAda,  MatrixIndexGPR32Op8_11:$Rv, uimm1s4range:$imm, ZZZZ_b_mul_r:$Zn, ZPR4b8:$Zm, VectorIndexB32b_timm:$i), 0>;
 }
 class sme2_mla_ll_array_vg24_index_64b<bit vg4,  bits<2> op,
                                        RegisterOperand vector_ty,
                                        string mnemonic>
     : I<(outs MatrixOp64:$ZAda),
         (ins MatrixOp64:$_ZAda, MatrixIndexGPR32Op8_11:$Rv, uimm1s4range:$imm,
-             vector_ty:$Zn, ZPR4b16:$Zm, VectorIndexH:$i),
+             vector_ty:$Zn, ZPR4b16:$Zm, VectorIndexH32b_timm:$i),
         mnemonic, "\t$ZAda[$Rv, $imm, " # !if(vg4, "vgx4", "vgx2") # "], $Zn, $Zm$i",
         "", []>, Sched<[]> {
   bits<4> Zm;
@@ -2662,27 +2686,35 @@ class sme2_mla_ll_array_vg24_index_64b<bit vg4,  bits<2> op,
 
 // SME2 multi-vec indexed long long MLA two sources 64-bit
 
-multiclass sme2_mla_ll_array_vg2_index_64b<string mnemonic, bits<2> op> {
-  def NAME: sme2_mla_ll_array_vg24_index_64b<0b0, op, ZZ_h_mul_r, mnemonic>{
+multiclass sme2_mla_ll_array_vg2_index_64b<string mnemonic, bits<2> op, SDPatternOperator intrinsic> {
+  def NAME: sme2_mla_ll_array_vg24_index_64b<0b0, op, ZZ_h_mul_r, mnemonic>, SMEPseudo2Instr<NAME, 1> {
     bits<4> Zn;
     let Inst{9-6} = Zn;
   }
 
+  def _PSEUDO : sme2_za_array_2op_multi_index_pseudo<NAME, uimm1s4range, ZZ_h_mul_r, ZPR4b16, VectorIndexH32b_timm, SMEMatrixArray>;
+
+  def : SME2_ZA_TwoOp_VG2_Multi_Index_Pat<NAME, intrinsic, uimm1s4range, ZPR4b16, nxv8i16, VectorIndexH32b_timm, tileslicerange1s4>;
+
   def : InstAlias<mnemonic # "\t$ZAda[$Rv, $imm], $Zn, $Zm$i",
-                 (!cast<Instruction>(NAME) MatrixOp64:$ZAda,  MatrixIndexGPR32Op8_11:$Rv, uimm1s4range:$imm, ZZ_h_mul_r:$Zn, ZPR4b16:$Zm, VectorIndexH:$i), 0>;
+                 (!cast<Instruction>(NAME) MatrixOp64:$ZAda,  MatrixIndexGPR32Op8_11:$Rv, uimm1s4range:$imm, ZZ_h_mul_r:$Zn, ZPR4b16:$Zm, VectorIndexH32b_timm:$i), 0>;
 }
 
 // SME2 multi-vec indexed long long MLA four sources 64-bit
 
-multiclass sme2_mla_ll_array_vg4_index_64b<string mnemonic, bits<2> op> {
-  def NAME: sme2_mla_ll_array_vg24_index_64b<0b1, op, ZZZZ_h_mul_r,  mnemonic>{
+multiclass sme2_mla_ll_array_vg4_index_64b<string mnemonic, bits<2> op, SDPatternOperator intrinsic> {
+  def NAME: sme2_mla_ll_array_vg24_index_64b<0b1, op, ZZZZ_h_mul_r,  mnemonic>, SMEPseudo2Instr<NAME, 1> {
     bits<3> Zn;
     let Inst{9-7} = Zn;
     let Inst{6}   = 0b0;
   }
 
+  def _PSEUDO : sme2_za_array_2op_multi_index_pseudo<NAME, uimm1s4range, ZZZZ_h_mul_r, ZPR4b16, VectorIndexH32b_timm, SMEMatrixArray>;
+
+  def : SME2_ZA_TwoOp_VG4_Multi_Index_Pat<NAME, intrinsic, uimm1s4range, ZPR4b16, nxv8i16, VectorIndexH32b_timm, tileslicerange1s4>;
+
   def : InstAlias<mnemonic # "\t$ZAda[$Rv, $imm], $Zn, $Zm$i",
-                 (!cast<Instruction>(NAME) MatrixOp64:$ZAda,  MatrixIndexGPR32Op8_11:$Rv, uimm1s4range:$imm, ZZZZ_h_mul_r:$Zn, ZPR4b16:$Zm, VectorIndexH:$i), 0>;
+                 (!cast<Instruction>(NAME) MatrixOp64:$ZAda,  MatrixIndexGPR32Op8_11:$Rv, uimm1s4range:$imm, ZZZZ_h_mul_r:$Zn, ZPR4b16:$Zm, VectorIndexH32b_timm:$i), 0>;
 }
 
 
