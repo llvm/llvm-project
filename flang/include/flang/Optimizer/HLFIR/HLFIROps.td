@@ -125,14 +125,48 @@ def fir_AssignOp : hlfir_Op<"assign", [MemoryEffects<[MemWrite]>]> {
     Assign rhs to lhs following Fortran intrinsic assignments rules.
     The operation deals with inserting a temporary if the lhs and rhs
     may overlap.
+    The optional "realloc" flag allows indicating that this assignment
+    has the Fortran 95 semantics for assignments to a whole allocatable.
+    In such case, the left hand side must be an allocatable that may be
+    unallocated or allocated with a different type and shape than the right
+    hand side. It will be allocated or re-allocated as needed during the
+    assignment.
+    When "realloc" is set and this is a character assignment, the optional
+    flag "keep_lhs_length_if_realloc" indicates that the character
+    left hand side should retain its length after the assignment. If the
+    right hand side has a different length, truncation and padding will
+    occur. This covers the case of explicit and assumed length character
+    allocatables.
+    Otherwise, the left hand side will be allocated or reallocated to match the
+    right hand side length if they differ. This covers the case of deferred
+    length character allocatables.
   }];
 
   let arguments = (ins AnyFortranEntity:$rhs,
-                   Arg<AnyFortranVariable, "", [MemWrite]>:$lhs);
+                   Arg<AnyFortranVariable, "", [MemWrite]>:$lhs,
+                   UnitAttr:$realloc,
+                   UnitAttr:$keep_lhs_length_if_realloc);
 
   let assemblyFormat = [{
-    $rhs `to` $lhs attr-dict `:` type(operands)
+    $rhs `to` $lhs (`realloc` $realloc^)?
+    (`keep_lhs_len` $keep_lhs_length_if_realloc^)?
+    attr-dict `:` type(operands)
   }];
+
+  let extraClassDeclaration = [{
+    /// Does this assignment have the Fortran 95 semantics of assignments
+    /// to a whole allocatable?
+    bool isAllocatableAssignment() {
+      return getRealloc();
+    }
+    /// Is the assignment left hand side a whole allocatable character
+    /// that should retain its length after the assignment?
+    bool mustKeepLhsLengthInAllocatableAssignment() {
+      return getKeepLhsLengthIfRealloc();
+    }
+  }];
+
+  let hasVerifier = 1;
 }
 
 def hlfir_DesignateOp : hlfir_Op<"designate", [AttrSizedOperandSegments,

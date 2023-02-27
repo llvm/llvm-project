@@ -1441,21 +1441,23 @@ public:
         failed(foldDynamicIndexList(rewriter, mixedStep)))
       return failure();
 
-    SmallVector<Value> dynamicLowerBound, dynamicUpperBound, dynamicStep;
-    SmallVector<int64_t> staticLowerBound, staticUpperBound, staticStep;
-    dispatchIndexOpFoldResults(mixedLowerBound, dynamicLowerBound,
-                               staticLowerBound);
-    op.getDynamicLowerBoundMutable().assign(dynamicLowerBound);
-    op.setStaticLowerBound(staticLowerBound);
+    rewriter.updateRootInPlace(op, [&]() {
+      SmallVector<Value> dynamicLowerBound, dynamicUpperBound, dynamicStep;
+      SmallVector<int64_t> staticLowerBound, staticUpperBound, staticStep;
+      dispatchIndexOpFoldResults(mixedLowerBound, dynamicLowerBound,
+                                 staticLowerBound);
+      op.getDynamicLowerBoundMutable().assign(dynamicLowerBound);
+      op.setStaticLowerBound(staticLowerBound);
 
-    dispatchIndexOpFoldResults(mixedUpperBound, dynamicUpperBound,
-                               staticUpperBound);
-    op.getDynamicUpperBoundMutable().assign(dynamicUpperBound);
-    op.setStaticUpperBound(staticUpperBound);
+      dispatchIndexOpFoldResults(mixedUpperBound, dynamicUpperBound,
+                                 staticUpperBound);
+      op.getDynamicUpperBoundMutable().assign(dynamicUpperBound);
+      op.setStaticUpperBound(staticUpperBound);
 
-    dispatchIndexOpFoldResults(mixedStep, dynamicStep, staticStep);
-    op.getDynamicStepMutable().assign(dynamicStep);
-    op.setStaticStep(staticStep);
+      dispatchIndexOpFoldResults(mixedStep, dynamicStep, staticStep);
+      op.getDynamicStepMutable().assign(dynamicStep);
+      op.setStaticStep(staticStep);
+    });
     return success();
   }
 };
@@ -3073,7 +3075,8 @@ struct WhileConditionTruth : public OpRewritePattern<WhileOp> {
                 op.getLoc(), term.getCondition().getType(),
                 rewriter.getBoolAttr(true));
 
-          std::get<1>(yieldedAndBlockArgs).replaceAllUsesWith(constantTrue);
+          rewriter.replaceAllUsesWith(std::get<1>(yieldedAndBlockArgs),
+                                      constantTrue);
           replaced = true;
         }
       }

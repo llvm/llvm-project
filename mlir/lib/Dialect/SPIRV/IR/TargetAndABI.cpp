@@ -205,12 +205,12 @@ spirv::TargetEnvAttr spirv::lookupTargetEnvOrDefault(Operation *op) {
 }
 
 spirv::AddressingModel
-spirv::getAddressingModel(spirv::TargetEnvAttr targetAttr) {
+spirv::getAddressingModel(spirv::TargetEnvAttr targetAttr,
+                          bool use64bitAddress) {
   for (spirv::Capability cap : targetAttr.getCapabilities()) {
-    // TODO: Physical64 is hard-coded here, but some information should come
-    // from TargetEnvAttr to selected between Physical32 and Physical64.
     if (cap == Capability::Kernel)
-      return spirv::AddressingModel::Physical64;
+      return use64bitAddress ? spirv::AddressingModel::Physical64
+                             : spirv::AddressingModel::Physical32;
     // TODO PhysicalStorageBuffer64 is hard-coded here, but some information
     // should come from TargetEnvAttr to select between PhysicalStorageBuffer64
     // and PhysicalStorageBuffer64EXT
@@ -235,7 +235,7 @@ spirv::getExecutionModel(spirv::TargetEnvAttr targetAttr) {
 FailureOr<spirv::MemoryModel>
 spirv::getMemoryModel(spirv::TargetEnvAttr targetAttr) {
   for (spirv::Capability cap : targetAttr.getCapabilities()) {
-    if (cap == spirv::Capability::Addresses)
+    if (cap == spirv::Capability::Kernel)
       return spirv::MemoryModel::OpenCL;
     if (cap == spirv::Capability::Shader)
       return spirv::MemoryModel::GLSL450;
