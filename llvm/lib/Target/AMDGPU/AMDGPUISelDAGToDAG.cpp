@@ -3065,20 +3065,26 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
   return !AllUsesAcceptSReg && (Limit < 10);
 }
 
-bool AMDGPUDAGToDAGISel::isUniformLoad(const SDNode * N) const {
+bool AMDGPUDAGToDAGISel::isUniformLoad(const SDNode *N) const {
   auto Ld = cast<LoadSDNode>(N);
+  const MachineMemOperand *MMO = Ld->getMemOperand();
+  const unsigned AS = MMO->getAddrSpace();
+  const bool IsConst = AS == AMDGPUAS::CONSTANT_ADDRESS ||
+                       AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT;
+  const unsigned MemSize = 8 * MMO->getSize();
 
-  if (N->isDivergent() && !AMDGPUInstrInfo::isUniformMMO(Ld->getMemOperand()))
+  if (N->isDivergent() && !AMDGPUInstrInfo::isUniformMMO(MMO))
     return false;
 
-  return Ld->getAlign() >= Align(4) &&
-         ((Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
-           Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) ||
-          (Subtarget->getScalarizeGlobalBehavior() &&
-           Ld->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS &&
-           Ld->isSimple() &&
-           static_cast<const SITargetLowering *>(getTargetLowering())
-               ->isMemOpHasNoClobberedMemOperand(N)));
+  return (Ld->getAlign() >= Align(4) ||
+          (Subtarget->hasScalarSubwordLoads() &&
+           ((MemSize == 16 && MMO->getAlign() >= Align(2)) ||
+            (MemSize == 8 && MMO->getAlign() >= Align(1))))) &&
+         (IsConst || (Subtarget->getScalarizeGlobalBehavior() &&
+                      Ld->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS &&
+                      Ld->isSimple() &&
+                      static_cast<const SITargetLowering *>(getTargetLowering())
+                          ->isMemOpHasNoClobberedMemOperand(N)));
 }
 
 void AMDGPUDAGToDAGISel::PostprocessISelDAG() {

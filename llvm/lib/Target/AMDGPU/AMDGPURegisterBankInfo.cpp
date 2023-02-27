@@ -437,8 +437,15 @@ static bool isScalarLoadLegal(const MachineInstr &MI) {
   const unsigned AS = MMO->getAddrSpace();
   const bool IsConst = AS == AMDGPUAS::CONSTANT_ADDRESS ||
                        AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT;
+  const unsigned MemSize = 8 * MMO->getSize();
+  const MachineFunction *MF = MI.getParent()->getParent();
+  const GCNSubtarget &Subtarget = MF->getSubtarget<GCNSubtarget>();
+
   // Require 4-byte alignment.
-  return MMO->getAlign() >= Align(4) &&
+  return (MMO->getAlign() >= Align(4) ||
+          (Subtarget.hasScalarSubwordLoads() &&
+           ((MemSize == 16 && MMO->getAlign() >= Align(2)) ||
+            (MemSize == 8 && MMO->getAlign() >= Align(1))))) &&
          // Can't do a scalar atomic load.
          !MMO->isAtomic() &&
          // Don't use scalar loads for volatile accesses to non-constant address
@@ -1071,6 +1078,13 @@ bool AMDGPURegisterBankInfo::applyMappingLoad(MachineInstr &MI,
     // than 32.
     if (LoadSize == 32 &&
         (MemSize == 32 || LoadTy.isVector() || !isScalarLoadLegal(MI)))
+      return false;
+
+    if (LoadSize == 32 &&
+        ((MemSize == 8 && MMO->getAlign() == Align(1)) ||
+         (MemSize == 16 && MMO->getAlign() == Align(2))) &&
+        isScalarLoadLegal(MI) &&
+        Subtarget.getGeneration() >= AMDGPUSubtarget::GFX12)
       return false;
 
     Register PtrReg = MI.getOperand(1).getReg();
