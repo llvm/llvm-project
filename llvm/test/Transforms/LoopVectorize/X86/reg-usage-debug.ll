@@ -26,7 +26,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 2 registers
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 2 registers
 ; CHECK-NEXT: LV(REG): Found invariant usage: 1 item
-; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 2 registers
+; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 1 registers
 
 define i32 @test_g(ptr nocapture readonly %a, i32 %n) local_unnamed_addr !dbg !6 {
 entry:
@@ -68,7 +68,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 2 registers
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 2 registers
 ; CHECK-NEXT: LV(REG): Found invariant usage: 1 item
-; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 2 registers
+; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 1 registers
 
 define i32 @test(ptr nocapture readonly %a, i32 %n) local_unnamed_addr {
 entry:
