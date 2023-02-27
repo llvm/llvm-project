@@ -191,7 +191,7 @@ protected:
     assert(!empty());
     stack.pop_back();
     if (empty()) {
-      stmtCtx.finalize();
+      stmtCtx.finalizeAndReset();
       vmap.clear();
     }
   }
@@ -522,7 +522,7 @@ public:
                                        const ExplicitIterSpace &);
 
   /// Finalize the current body statement context.
-  void finalizeContext() { stmtCtx.finalize(); }
+  void finalizeContext() { stmtCtx.finalizeAndReset(); }
 
   void appendLoops(const llvm::SmallVector<fir::DoLoopOp> &loops) {
     loopStack.push_back(loops);
