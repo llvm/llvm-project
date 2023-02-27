@@ -1312,6 +1312,17 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // Now we can add the actual call instruction to the correct basic block.
   MIRBuilder.insertInstr(MIB);
 
+  uint64_t CalleePopBytes =
+      doesCalleeRestoreStack(Info.CallConv,
+                             MF.getTarget().Options.GuaranteedTailCallOpt)
+          ? alignTo(Assigner.StackOffset, 16)
+          : 0;
+
+  CallSeqStart.addImm(Assigner.StackOffset).addImm(0);
+  MIRBuilder.buildInstr(AArch64::ADJCALLSTACKUP)
+      .addImm(Assigner.StackOffset)
+      .addImm(CalleePopBytes);
+
   // If Callee is a reg, since it is used by a target specific
   // instruction, it must have a register class matching the
   // constraint of that instruction.
@@ -1343,17 +1354,6 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     MIB.addDef(AArch64::X21, RegState::Implicit);
     MIRBuilder.buildCopy(Info.SwiftErrorVReg, Register(AArch64::X21));
   }
-
-  uint64_t CalleePopBytes =
-      doesCalleeRestoreStack(Info.CallConv,
-                             MF.getTarget().Options.GuaranteedTailCallOpt)
-          ? alignTo(Assigner.StackOffset, 16)
-          : 0;
-
-  CallSeqStart.addImm(Assigner.StackOffset).addImm(0);
-  MIRBuilder.buildInstr(AArch64::ADJCALLSTACKUP)
-      .addImm(Assigner.StackOffset)
-      .addImm(CalleePopBytes);
 
   if (!Info.CanLowerReturn) {
     insertSRetLoads(MIRBuilder, Info.OrigRet.Ty, Info.OrigRet.Regs,
