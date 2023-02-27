@@ -1770,6 +1770,8 @@ bool BinaryFunction::validateExternallyReferencedOffsets() {
 bool BinaryFunction::postProcessIndirectBranches(
     MCPlusBuilder::AllocatorIdTy AllocId) {
   auto addUnknownControlFlow = [&](BinaryBasicBlock &BB) {
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: adding unknown control flow in " << *this
+                      << " for " << BB.getName() << "\n");
     HasUnknownControlFlow = true;
     BB.removeAllSuccessors();
     for (uint64_t PossibleDestination : ExternallyReferencedOffsets)
@@ -1877,7 +1879,10 @@ bool BinaryFunction::postProcessIndirectBranches(
   // references, then we should be able to derive the jump table even if we
   // fail to match the pattern.
   if (HasUnknownControlFlow && NumIndirectJumps == 1 &&
-      JumpTables.size() == 1 && LastIndirectJump) {
+      JumpTables.size() == 1 && LastIndirectJump &&
+      !BC.getJumpTableContainingAddress(LastJT)->IsSplit) {
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: unsetting unknown control flow in "
+                      << *this << '\n');
     BC.MIB->setJumpTable(*LastIndirectJump, LastJT, LastJTIndexReg, AllocId);
     HasUnknownControlFlow = false;
 
