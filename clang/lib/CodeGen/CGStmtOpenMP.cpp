@@ -7146,7 +7146,7 @@ void CodeGenFunction::EmitOMPUseDevicePtrClause(
       // OMPCapturedExprDecl are used to privative fields of the current
       // structure.
       const auto *ME = cast<MemberExpr>(OED->getInit());
-      assert(isa<CXXThisExpr>(ME->getBase()) &&
+      assert(isa<CXXThisExpr>(ME->getBase()->IgnoreImpCasts()) &&
              "Base should be the current struct!");
       MatchingVD = ME->getMemberDecl();
     }
