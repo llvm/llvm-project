@@ -78,6 +78,10 @@ private:
   llvm::DISubroutineType *translateImpl(DISubroutineTypeAttr attr);
   llvm::DIType *translateImpl(DITypeAttr attr);
 
+  /// Constructs a string metadata node from the string attribute. Returns
+  /// nullptr if `stringAttr` is null or contains and empty string.
+  llvm::MDString *getMDStringOrNull(StringAttr stringAttr);
+
   /// A mapping between mlir location+scope and the corresponding llvm debug
   /// metadata.
   DenseMap<std::tuple<Location, llvm::DILocalScope *, const llvm::DILocation *>,
