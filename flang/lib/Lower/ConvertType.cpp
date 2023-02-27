@@ -315,8 +315,7 @@ struct TypeBuilderImpl {
     if (mlir::Type ty = getTypeIfDerivedAlreadyInConstruction(typeSymbol))
       return ty;
 
-    auto rec = fir::RecordType::get(context,
-                                    Fortran::lower::mangle::mangleName(tySpec));
+    auto rec = fir::RecordType::get(context, converter.mangleName(tySpec));
     // Maintain the stack of types for recursive references.
     derivedTypeInConstruction.emplace_back(typeSymbol, rec);
 

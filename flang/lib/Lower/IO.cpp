@@ -108,9 +108,9 @@ static constexpr std::tuple<
 } // namespace Fortran::lower
 
 namespace {
-/// IO statements may require exceptional condition handling.  A statement that
+/// IO statements may require exceptional condition handling. A statement that
 /// encounters an exceptional condition may branch to a label given on an ERR
-/// (error), END (end-of-file), or EOR (end-of-record) specifier.  An IOSTAT
+/// (error), END (end-of-file), or EOR (end-of-record) specifier. An IOSTAT
 /// specifier variable may be set to a value that indicates some condition,
 /// and an IOMSG specifier variable may be set to a description of a condition.
 struct ConditionSpecInfo {
@@ -125,7 +125,7 @@ struct ConditionSpecInfo {
   bool hasErrorConditionSpec() const { return ioStatExpr != nullptr || hasErr; }
 
   /// Check for any condition specifier that applies to data transfer items
-  /// in a PRINT, READ, WRITE, or WAIT statement.  (WAIT may be irrelevant.)
+  /// in a PRINT, READ, WRITE, or WAIT statement. (WAIT may be irrelevant.)
   bool hasTransferConditionSpec() const {
     return hasErrorConditionSpec() || hasEnd || hasEor;
   }
@@ -176,7 +176,7 @@ static mlir::func::FuncOp getIORuntimeFunc(mlir::Location loc,
   return func;
 }
 
-/// Generate calls to end an IO statement.  Return the IOSTAT value, if any.
+/// Generate calls to end an IO statement. Return the IOSTAT value, if any.
 /// It is the caller's responsibility to generate branches on that value.
 static mlir::Value genEndIO(Fortran::lower::AbstractConverter &converter,
                             mlir::Location loc, mlir::Value cookie,
@@ -218,7 +218,7 @@ static mlir::Value genEndIO(Fortran::lower::AbstractConverter &converter,
 
 /// Make the next call in the IO statement conditional on runtime result `ok`.
 /// If a call returns `ok==false`, further suboperation calls for an IO
-/// statement will be skipped.  This may generate branch heavy, deeply nested
+/// statement will be skipped. This may generate branch heavy, deeply nested
 /// conditionals for IO statements with a large number of suboperations.
 static void makeNextConditionalOn(fir::FirOpBuilder &builder,
                                   mlir::Location loc, bool checkResult,
@@ -227,7 +227,7 @@ static void makeNextConditionalOn(fir::FirOpBuilder &builder,
     // Either no IO calls need to be checked, or this will be the first call.
     return;
 
-  // A previous IO call for a statement returned the bool `ok`.  If this call
+  // A previous IO call for a statement returned the bool `ok`. If this call
   // is in a fir.iterate_while loop, the result must be propagated up to the
   // loop scope as an extra ifOp result. (The propagation is done in genIoLoop.)
   mlir::TypeRange resTy;
@@ -241,7 +241,7 @@ static void makeNextConditionalOn(fir::FirOpBuilder &builder,
 /// Retrieve or generate a runtime description of NAMELIST group `symbol`.
 /// The form of the description is defined in runtime header file namelist.h.
 /// Static descriptors are generated for global objects; local descriptors for
-/// local objects.  If all descriptors are static, the NamelistGroup is static.
+/// local objects. If all descriptors are static, the NamelistGroup is static.
 static mlir::Value
 getNamelistGroup(Fortran::lower::AbstractConverter &converter,
                  const Fortran::semantics::Symbol &symbol,
@@ -605,7 +605,8 @@ static mlir::Value createIoRuntimeCallForItem(mlir::Location loc,
   llvm::SmallVector<mlir::Value> inputFuncArgs = {cookie};
   if (argType.isa<fir::BaseBoxType>()) {
     mlir::Value box = fir::getBase(item);
-    assert(box.getType().isa<fir::BaseBoxType>() && "must be previously emboxed");
+    assert(box.getType().isa<fir::BaseBoxType>() &&
+           "must be previously emboxed");
     inputFuncArgs.push_back(builder.createConvert(loc, argType, box));
   } else {
     mlir::Value itemAddr = fir::getBase(item);
@@ -1493,9 +1494,9 @@ lowerReferenceAsStringSelect(Fortran::lower::AbstractConverter &converter,
   return {buff, len, mlir::Value{}};
 }
 
-/// Generate a reference to a format string.  There are four cases - a format
+/// Generate a reference to a format string. There are four cases - a format
 /// statement label, a character format expression, an integer that holds the
-/// label of a format statement, and the * case.  The first three are done here.
+/// label of a format statement, and the * case. The first three are done here.
 /// The * case is done elsewhere.
 static std::tuple<mlir::Value, mlir::Value, mlir::Value>
 genFormat(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
@@ -2022,7 +2023,7 @@ genDataTransferStmt(Fortran::lower::AbstractConverter &converter,
   }
   // Generate end statement call/s.
   mlir::Value result = genEndIO(converter, loc, cookie, csi, stmtCtx);
-  stmtCtx.finalize();
+  stmtCtx.finalizeAndReset();
   return result;
 }
 
