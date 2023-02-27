@@ -393,6 +393,32 @@ promoteSubviewAsNewBuffer(OpBuilder &b, Location loc, memref::SubViewOp subView,
 FailureOr<LinalgOp> promoteSubViews(OpBuilder &b, LinalgOp op,
                                     const LinalgPromotionOptions &options);
 
+/// Allocate the subview in the GPU workgroup memory.
+Optional<Value> allocateWorkgroupMemory(OpBuilder &builder,
+                                        memref::SubViewOp subview,
+                                        ArrayRef<Value> sizeBounds,
+                                        DataLayout &);
+
+/// In case of GPU group memory there is no need to deallocate.
+LogicalResult deallocateWorkgroupMemory(OpBuilder &, Value /*buffer*/);
+
+/// Create Memref copy operations and add gpu barrier guards before and after
+/// the copy operation to ensure data integrity.
+LogicalResult copyToWorkgroupMemory(OpBuilder &b, Value src, Value dst);
+
+/// Allocate the subview in the GPU private memory.
+Optional<Value> allocateGPUPrivateMemory(OpBuilder &builder,
+                                         memref::SubViewOp subview,
+                                         ArrayRef<Value> sizeBounds,
+                                         DataLayout &);
+
+/// Normal copy to between src and dst.
+LogicalResult copyToGPUPrivateMemory(OpBuilder &b, Value src, Value dst);
+
+/// In case of GPU private memory there is no need to deallocate since the
+/// memory is freed when going outside of the scope.
+LogicalResult deallocateGPUPrivateMemory(OpBuilder &, Value /*buffer*/);
+
 /// Emit a suitable vector form for a Linalg op. If provided, `inputVectorSizes`
 /// are used to vectorize this operation. `inputVectorSizes` must match the rank
 /// of the iteration space of the operation and the sizes must be smaller or
