@@ -1285,14 +1285,7 @@ static llvm::Function *emitParallelOrTeamsOutlinedFunction(
 llvm::Function *CGOpenMPRuntime::emitParallelOutlinedFunction(
     const OMPExecutableDirective &D, const VarDecl *ThreadIDVar,
     OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen) {
-  // Captured statement is in teams region for target_teams_loop
-  // and teams_loop because for now we are only pretending to be like a
-  // target_teams_distribute_parallel_for/teams_distribute_parallel_for
-  const CapturedStmt *CS =
-      D.getDirectiveKind() == OMPD_target_teams_loop ||
-      D.getDirectiveKind() == OMPD_teams_loop
-          ? D.getCapturedStmt(OMPD_teams)
-          : D.getCapturedStmt(OMPD_parallel);
+  const CapturedStmt *CS = D.getCapturedStmt(OMPD_parallel);
   return emitParallelOrTeamsOutlinedFunction(
       CGM, D, CS, ThreadIDVar, InnermostKind, getOutlinedHelperName(), CodeGen);
 }
