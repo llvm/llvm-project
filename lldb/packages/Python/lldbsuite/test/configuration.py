@@ -118,8 +118,6 @@ lldb_module_cache_dir = None
 # The clang module cache directory used by clang.
 clang_module_cache_dir = None
 
-swift_libs_dir = None
-
 # Test results handling globals
 test_result = None
 

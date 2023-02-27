@@ -280,12 +280,6 @@ ifndef NO_TEST_COMMON_H
   CFLAGS += -include $(THIS_FILE_DIR)/test_common.h
 endif
 
-# If C++ interop is enabled, the generated header file will try to include 
-# SWIFT_LIBS_DIR/swiftToCxx/_SwiftCxxInteroperability.h
-ifneq "$(SWIFT_CXX_INTEROP)" ""
-  CFLAGS += -I$(SWIFT_LIBS_DIR)
-endif
-
 CFLAGS += $(NO_LIMIT_DEBUG_INFO_FLAGS) $(ARCH_CFLAGS)
 SWIFTFLAGS += $(SWIFTFLAGS_EXTRAS)
 SWIFTFLAGS += $(FRAMEWORK_INCLUDES)
@@ -569,11 +563,6 @@ ifneq "$(strip $(DYLIB_SWIFT_SOURCES))" ""
 	USESWIFTDRIVER = 1
 endif
 
-ifneq "$(strip $(SWIFT_SOURCES_FOR_CXX_HEADER))" ""
-	SWIFT_CXX_HEADER =$(strip $(SWIFT_SOURCES:.swift=.o))
-	USESWIFTDRIVER = 1
-endif
-
 ifeq "$(USESWIFTDRIVER)" "1"
 	LDFLAGS +=-L"$(SWIFTLIBS)"
 	ifeq "$(OS)" "Darwin"
@@ -715,14 +704,6 @@ $(SWIFT_OBJC_HEADER): $(SWIFT_SOURCES) $(DYLIB_SWIFT_SOURCES)
 	$(SWIFT_FE) -typecheck $(VPATHSOURCES) \
 	  $(SWIFT_FEFLAGS) $(SWIFT_HFLAGS) -module-name $(MODULENAME) \
 	  -emit-objc-header-path $(SWIFT_OBJC_HEADER)
-endif
-
-ifneq "$(SWIFT_CXX_HEADER)" ""
-$(SWIFT_CXX_HEADER): $(SWIFT_SOURCES) $(SWIFT_BRIDGING_PCH) 
-	@echo "### Building C++ header from Swift" $<
-	$(SWIFT_FE) -typecheck $(VPATHSOURCES) \
-	  $(SWIFT_FEFLAGS) $(SWIFT_HFLAGS) -module-name $(MODULENAME) \
-	  -clang-header-expose-decls=all-public -emit-clang-header-path  $(SWIFT_CXX_HEADER)
 endif
 
 else # USESWIFTDRIVER = 0
@@ -869,7 +850,7 @@ endif
 %.o: %.c %.d
 	$(CC) $(CFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
 
-%.o: %.cpp %.d $(PCH_OUTPUT) $(SWIFT_CXX_HEADER)
+%.o: %.cpp %.d $(PCH_OUTPUT)
 	$(CXX) $(PCHFLAGS) $(CXXFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
 
 %.o: %.m %.d

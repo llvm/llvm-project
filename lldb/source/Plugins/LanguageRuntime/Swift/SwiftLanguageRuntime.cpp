@@ -24,7 +24,6 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/ValueObjectCast.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/Host/OptionParser.h"
@@ -376,12 +375,6 @@ public:
 
   lldb::SyntheticChildrenSP
   GetBridgedSyntheticChildProvider(ValueObject &valobj) {
-    STUB_LOG();
-    return {};
-  }
-
-  lldb::SyntheticChildrenSP
-  GetCxxBridgedSyntheticChildProvider(ValueObjectSP valobj) {
     STUB_LOG();
     return {};
   }
@@ -1623,7 +1616,7 @@ public:
     int32_t byte_offset;
 
     FieldProjection(CompilerType parent_type, ExecutionContext *exe_ctx,
-                    size_t idx, ValueObject *valobj) {
+                    size_t idx) {
       const bool transparent_pointers = false;
       const bool omit_empty_base_classes = true;
       const bool ignore_array_bounds = false;
@@ -1640,7 +1633,7 @@ public:
           exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
           ignore_array_bounds, child_name, child_byte_size, byte_offset,
           child_bitfield_bit_size, child_bitfield_bit_offset,
-          child_is_base_class, child_is_deref_of_parent, valobj,
+          child_is_base_class, child_is_deref_of_parent, nullptr,
           language_flags);
 
       if (child_is_base_class)
@@ -1773,7 +1766,7 @@ SwiftLanguageRuntimeImpl::GetBridgedSyntheticChildProvider(
         // if a projection fails, keep going - we have offsets here, so it
         // should be OK to skip some members
         if (auto projection = ProjectionSyntheticChildren::FieldProjection(
-                swift_type, &exe_ctx, idx, &valobj)) {
+                swift_type, &exe_ctx, idx)) {
           any_projected = true;
           type_projection->field_projections.push_back(projection);
         }
@@ -1791,113 +1784,6 @@ SwiftLanguageRuntimeImpl::GetBridgedSyntheticChildProvider(
   }
 
   return nullptr;
-}
-
-lldb::ValueObjectSP SwiftLanguageRuntime::ExtractSwiftValueObjectFromCxxWrapper(
-    ValueObject &valobj) {
-  ValueObjectSP swift_valobj;
-
-  // There are two flavors of c++ wrapper classes:
-  // - Reference types wrappers, which have no ivars, and have one super class
-  // which contains an opaque pointer to the swift instance.
-  // - Value type wrappers, which has one ivar, a single char array with the
-  // swift value embedded directly in it.
-  // In both cases the valobj should have exactly one child.
-  if (valobj.GetNumChildren() != 1)
-    return swift_valobj;
-
-  auto child_valobj = valobj.GetChildAtIndex(0, true);
-  auto child_type = child_valobj->GetCompilerType();
-  // If this is a reference wrapper, the first child is actually the super
-  // class.
-  if (child_type.GetMangledTypeName() == "swift::_impl::RefCountedClass") {
-    // The super class should have exactly one ivar, the opaque pointer that
-    // points to the Swift instance.
-    if (child_valobj->GetNumChildren() != 1)
-      return swift_valobj;
-
-    auto opaque_ptr_valobj = child_valobj->GetChildAtIndex(0, true);
-    swift_valobj = opaque_ptr_valobj;
-  } else {
-    CompilerType element_type;
-    if (child_type.IsArrayType(&element_type)) {
-      if (element_type.IsCharType()) {
-        swift_valobj = valobj.GetSP();
-      }
-    }
-  }
-  return swift_valobj;
-}
-/// Synthetic child for Swift types wrapped in C++ interop wrapper classes.
-class CxxBridgedSyntheticChildren : public SyntheticChildren {
-  class CxxBridgedFrontEndProvider : public SyntheticChildrenFrontEnd {
-  public:
-    CxxBridgedFrontEndProvider(ValueObject &backend)
-        : SyntheticChildrenFrontEnd(backend) {}
-
-    size_t CalculateNumChildren() override {
-      return 1;
-    }
-
-    lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
-      return idx == 0 ? m_backend.GetSP() : nullptr;
-    }
-
-    size_t GetIndexOfChildWithName(ConstString name) override {
-      return m_backend.GetName() == name ? 0 : UINT32_MAX;
-    }
-
-    bool Update() override { return false; }
-
-    bool MightHaveChildren() override { return true; }
-
-    ConstString GetSyntheticTypeName() override {
-      return m_backend.GetCompilerType().GetTypeName();
-    }
-  };
-
-public:
-  CxxBridgedSyntheticChildren(ValueObjectSP valobj, const Flags &flags) 
-      : SyntheticChildren(flags), m_valobj(valobj) {}
-
-  SyntheticChildrenFrontEnd::AutoPointer
-  GetFrontEnd(ValueObject &backend) override {
-    if (!m_valobj)
-      return nullptr;
-    // We ignore the backend parameter here, as we have a more specific one
-    // available.
-    return std::make_unique<CxxBridgedFrontEndProvider>(*m_valobj); 
-  }
-
-  bool IsScripted() override { return false; }
-
-  std::string GetDescription() override {
-    return "C++ bridged synthetic children";
-  }
-
-private:
-  ValueObjectSP m_valobj;
-};
-
-lldb::SyntheticChildrenSP
-SwiftLanguageRuntimeImpl::GetCxxBridgedSyntheticChildProvider(
-    ValueObjectSP valobj) {
-  auto swift_type = valobj->GetCompilerType();
-  if (!swift_type)
-    return nullptr;
-  ConstString type_name = swift_type.GetDisplayTypeName();
-
-  if (!type_name.IsEmpty()) {
-    auto iter = m_bridged_synthetics_map.find(type_name.AsCString()),
-         end = m_bridged_synthetics_map.end();
-    if (iter != end)
-      return iter->second;
-  }
-
-  SyntheticChildrenSP synth_sp = SyntheticChildrenSP(
-      new CxxBridgedSyntheticChildren(valobj, SyntheticChildren::Flags()));
-  m_bridged_synthetics_map.insert({type_name.AsCString(), synth_sp});
-  return synth_sp;
 }
 
 void SwiftLanguageRuntimeImpl::WillStartExecutingUserExpression(
@@ -2519,12 +2405,6 @@ bool SwiftLanguageRuntime::IsValidErrorValue(ValueObject &in_value) {
 lldb::SyntheticChildrenSP
 SwiftLanguageRuntime::GetBridgedSyntheticChildProvider(ValueObject &valobj) {
   FORWARD(GetBridgedSyntheticChildProvider, valobj);
-}
-
-lldb::SyntheticChildrenSP
-SwiftLanguageRuntime::GetCxxBridgedSyntheticChildProvider(
-    ValueObjectSP valobj) {
-  FORWARD(GetCxxBridgedSyntheticChildProvider, valobj);
 }
 
 void SwiftLanguageRuntime::WillStartExecutingUserExpression(

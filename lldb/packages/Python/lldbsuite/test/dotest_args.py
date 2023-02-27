@@ -165,11 +165,6 @@ def create_parser():
         metavar='The clang module cache directory used by Clang',
         help='The clang module cache directory used in the Make files by Clang while building tests. Defaults to <test build directory>/module-cache-clang.')
     group.add_argument(
-        '--swift-libs-dir',
-        dest='swift_libs_dir',
-        metavar='The lib directory inside the Swift build directory',
-        help='The lib directory inside the Swift build directory.')
-    group.add_argument(
         '--lldb-libs-dir',
         dest='lldb_libs_dir',
         metavar='path',
