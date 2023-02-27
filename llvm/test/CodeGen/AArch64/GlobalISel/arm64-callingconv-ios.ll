@@ -90,8 +90,8 @@ define i32 @i8i16caller() nounwind readnone {
   ; CHECK-NEXT:   $x6 = COPY [[C6]](s64)
   ; CHECK-NEXT:   $x7 = COPY [[C7]](s64)
   ; CHECK-NEXT:   BL @i8i16callee, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $w3, implicit $w4, implicit $x5, implicit $x6, implicit $x7, implicit-def $x0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 6, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x0
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
   ; CHECK-NEXT:   $w0 = COPY [[TRUNC]](s32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
