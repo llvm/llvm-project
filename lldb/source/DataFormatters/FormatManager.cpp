@@ -579,11 +579,15 @@ FormatManager::GetCandidateLanguages(lldb::LanguageType lang_type) {
   case lldb::eLanguageTypeC89:
   case lldb::eLanguageTypeC99:
   case lldb::eLanguageTypeC11:
+  // BEGIN SWIFT
+    return {lldb::eLanguageTypeC_plus_plus, lldb::eLanguageTypeObjC};
   case lldb::eLanguageTypeC_plus_plus:
   case lldb::eLanguageTypeC_plus_plus_03:
   case lldb::eLanguageTypeC_plus_plus_11:
   case lldb::eLanguageTypeC_plus_plus_14:
-    return {lldb::eLanguageTypeC_plus_plus, lldb::eLanguageTypeObjC};
+    // Swift can format C++ types due to Swift/C++ iterop.
+    return {lldb::eLanguageTypeC_plus_plus, lldb::eLanguageTypeObjC, lldb::eLanguageTypeSwift};
+  // END SWIFT
   default:
     return {lang_type};
   }
