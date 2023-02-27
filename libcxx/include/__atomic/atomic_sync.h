@@ -15,6 +15,7 @@
 #include <__availability>
 #include <__chrono/duration.h>
 #include <__config>
+#include <__memory/addressof.h>
 #include <__thread/poll_with_backoff.h>
 #include <__threading_support>
 #include <__type_traits/decay.h>
@@ -84,7 +85,7 @@ _LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_wait(_Atp*, _Fn && __test_fn)
 
 template <typename _Tp> _LIBCPP_HIDE_FROM_ABI
 bool __cxx_nonatomic_compare_equal(_Tp const& __lhs, _Tp const& __rhs) {
-    return std::memcmp(&__lhs, &__rhs, sizeof(_Tp)) == 0;
+    return std::memcmp(std::addressof(__lhs), std::addressof(__rhs), sizeof(_Tp)) == 0;
 }
 
 template <class _Atp, class _Tp>
