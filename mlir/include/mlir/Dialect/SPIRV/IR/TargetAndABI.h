@@ -121,7 +121,8 @@ TargetEnvAttr lookupTargetEnv(Operation *op);
 TargetEnvAttr lookupTargetEnvOrDefault(Operation *op);
 
 /// Returns addressing model selected based on target environment.
-AddressingModel getAddressingModel(TargetEnvAttr targetAttr);
+AddressingModel getAddressingModel(TargetEnvAttr targetAttr,
+                                   bool use64bitAddress);
 
 /// Returns execution model selected based on target environment.
 /// Returns failure if it cannot be selected.
