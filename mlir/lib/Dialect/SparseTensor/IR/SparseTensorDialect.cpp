@@ -453,7 +453,7 @@ static bool isCOOType(SparseTensorEncodingAttr enc, Level startLvl,
   return !isUnique || enc.isUniqueLvl(lvlRank - 1);
 }
 
-bool mlir::sparse_tensor::isUniqueCOOType(TensorType tp) {
+bool mlir::sparse_tensor::isUniqueCOOType(Type tp) {
   return isCOOType(getSparseTensorEncoding(tp), 0, /*isUnique=*/true);
 }
 

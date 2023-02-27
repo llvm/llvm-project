@@ -132,31 +132,43 @@ LoopEmitter::LoopEmitter(ValueRange tensors, StringAttr loopTag, bool hasOutput,
   initialize(tensors, loopTag, hasOutput, isSparseOut, topSort);
 }
 
-void LoopEmitter::initialize(ValueRange tensors, StringAttr loopTag,
-                             bool hasOutput, bool isSparseOut,
-                             ArrayRef<unsigned> topSort) {
+void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
+                             bool isSparseOut, ArrayRef<unsigned> topSort) {
   // First initializes fields.
   this->loopTag = loopTag;
   this->hasOutput = hasOutput;
   this->isSparseOut = isSparseOut;
-  this->tensors.assign(tensors.begin(), tensors.end());
+  this->tensors.assign(ts.begin(), ts.end());
   this->isSparseSlices.assign(tensors.size(), false);
   this->dimTypes.assign(tensors.size(), std::vector<DimLevelType>());
   this->pidxs.assign(tensors.size(), std::vector<Value>());
   this->coord.assign(tensors.size(), std::vector<Value>());
   this->highs.assign(tensors.size(), std::vector<Value>());
+  this->lvlSizes.assign(tensors.size(), std::vector<Value>());
   this->ptrBuffer.assign(tensors.size(), std::vector<Value>());
   this->idxBuffer.assign(tensors.size(), std::vector<Value>());
   this->valBuffer.assign(tensors.size(), nullptr);
   this->loopStack.reserve(topSort.size());
   this->sparsiferLoopLvlMap.assign(topSort.size(), 0);
+  this->collapseReassoc.assign(tensors.size(), nullptr);
 
   for (size_t tid = 0, e = tensors.size(); tid < e; tid++) {
     auto t = tensors[tid];
     // a scalar or 0-dimension tensors
     if (isZeroRankedTensorOrScalar(t.getType()))
       continue;
+
     auto rtp = getRankedTensorType(t);
+    if (auto reshape = t.getDefiningOp<tensor::CollapseShapeOp>();
+        isUniqueCOOType(rtp) && reshape) {
+      // TODO: Supports more kinds of sparse tensors.
+      // FIXME: We should instead lower reshape operations on sparse tensors to
+      // view change.
+      collapseReassoc[tid] = reshape.getReassociation();
+      rtp = reshape.getSrcType();
+      // Overwrites the tensor to the source tensor of reshape operations.
+      tensors[tid] = t = reshape.getSrc();
+    }
     auto rank = static_cast<size_t>(rtp.getRank());
     auto enc = getSparseTensorEncoding(rtp);
     // We always treat sparse output tensor as dense so that we always iterate
@@ -172,6 +184,7 @@ void LoopEmitter::initialize(ValueRange tensors, StringAttr loopTag,
     pidxs[tid].assign(rank, Value());
     coord[tid].assign(rank, Value());
     highs[tid].assign(rank, Value());
+    lvlSizes[tid].assign(rank, Value());
     ptrBuffer[tid].assign(rank, Value());
     idxBuffer[tid].assign(rank, Value());
   }
@@ -224,7 +237,8 @@ void LoopEmitter::initializeLoopEmit(OpBuilder &builder, Location loc,
       // Find upper bound in current dimension.
       // FIXME: `toOrigDim` is deprecated
       const Dimension d = toOrigDim(enc, l);
-      highs[t][l] = mlir::linalg::createOrFoldDimOp(builder, loc, tensor, d);
+      lvlSizes[t][l] = highs[t][l] =
+          mlir::linalg::createOrFoldDimOp(builder, loc, tensor, d);
     }
 
     // Perform the required bufferization. Dense inputs materialize
@@ -325,6 +339,8 @@ Operation *LoopEmitter::enterLoopOverTensorAtDim(
   }
 
   auto enc = getSparseTensorEncoding(tensors[tid].getType());
+  auto reass = getCollapseReassociation(tid, dim);
+  dim = reass.front();
   // TODO: support dynamic slices.
   Value step = constantIndex(builder, loc, 1);
   Value lo = isSparseInput ? pidxs[tid][dim]      // current offset
@@ -334,6 +350,7 @@ Operation *LoopEmitter::enterLoopOverTensorAtDim(
   Operation *loop = nullptr;
   Value iv;
   if (isParallel) {
+    assert(collapseReassoc[tid] == nullptr);
     scf::ParallelOp parOp =
         builder.create<scf::ParallelOp>(loc, lo, hi, step, reduc);
     builder.setInsertionPointToStart(parOp.getBody());
@@ -365,10 +382,21 @@ Operation *LoopEmitter::enterLoopOverTensorAtDim(
 
   Value c;
   if (isSparseInput) {
-    pidxs[tid][dim] = iv;
-    // Generating a load on the indices array yields the coordinate.
-    Value ptr = idxBuffer[tid][dim];
-    c = genIndexLoad(builder, loc, ptr, iv);
+    assert(reass.size() == 1 || isUniqueCOOType(tensors[tid].getType()));
+    c = constantIndex(builder, loc, 0);
+    for (unsigned i = 0; i < reass.size(); i++) {
+      auto lvl = reass[i];
+      // For COO, the pidxs are always the same across consecutive levels.
+      pidxs[tid][lvl] = iv;
+      // Generating a load on the indices array yields the coordinate.
+      Value ptr = idxBuffer[tid][lvl];
+      Value off = genIndexLoad(builder, loc, ptr, iv);
+      c = builder.create<arith::AddIOp>(loc, c, off);
+      if (i != reass.size() - 1) {
+        c = builder.create<arith::MulIOp>(loc, c,
+                                          this->lvlSizes[tid][reass[i + 1]]);
+      }
+    }
   } else {
     // Dense tensor, the coordinates is the inducation variable.
     c = iv;
@@ -643,27 +671,30 @@ void LoopEmitter::prepareLoopOverTensorAtDim(OpBuilder &builder, Location loc,
   if (isDenseDLT(dimType))
     return;
 
-  // Either the first dimension, or the previous dimension has been set.
-  assert(dim == 0 || pidxs[tid][dim - 1]);
-  Value c0 = constantIndex(builder, loc, 0);
-  Value c1 = constantIndex(builder, loc, 1);
-  if (isCompressedDLT(dimType)) {
-    Value ptr = ptrBuffer[tid][dim];
+  auto reassoc = getCollapseReassociation(tid, dim);
+  for (auto lvl : reassoc) {
+    // Either the first dimension, or the previous dimension has been set.
+    assert(lvl == 0 || pidxs[tid][lvl - 1]);
+    Value c0 = constantIndex(builder, loc, 0);
+    Value c1 = constantIndex(builder, loc, 1);
+    if (isCompressedDLT(dimType)) {
+      Value ptr = ptrBuffer[tid][lvl];
 
-    Value pLo = dim == 0 ? c0 : pidxs[tid][dim - 1];
-    pidxs[tid][dim] = genIndexLoad(builder, loc, ptr, pLo);
+      Value pLo = lvl == 0 ? c0 : pidxs[tid][lvl - 1];
+      pidxs[tid][lvl] = genIndexLoad(builder, loc, ptr, pLo);
 
-    Value pHi = builder.create<arith::AddIOp>(loc, pLo, c1);
-    highs[tid][dim] = genIndexLoad(builder, loc, ptr, pHi);
-    return;
-  }
-  if (isSingletonDLT(dimType)) {
-    Value pLo = dim == 0 ? c0 : pidxs[tid][dim - 1];
-    Value pHi = builder.create<arith::AddIOp>(loc, pLo, c1);
+      Value pHi = builder.create<arith::AddIOp>(loc, pLo, c1);
+      highs[tid][lvl] = genIndexLoad(builder, loc, ptr, pHi);
+      return;
+    }
+    if (isSingletonDLT(dimType)) {
+      Value pLo = lvl == 0 ? c0 : pidxs[tid][lvl - 1];
+      Value pHi = builder.create<arith::AddIOp>(loc, pLo, c1);
 
-    pidxs[tid][dim] = pLo;
-    highs[tid][dim] = pHi;
-    return;
+      pidxs[tid][lvl] = pLo;
+      highs[tid][lvl] = pHi;
+      return;
+    }
   }
 
   llvm_unreachable("Unrecognizable dimesion type!");
