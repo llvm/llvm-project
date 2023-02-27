@@ -308,6 +308,10 @@ Instruction *InstCombinerImpl::commonCastTransforms(CastInst &CI) {
   Value *Src = CI.getOperand(0);
   Type *Ty = CI.getType();
 
+  if (auto *SrcC = dyn_cast<Constant>(Src))
+    if (Constant *Res = ConstantFoldCastOperand(CI.getOpcode(), SrcC, Ty, DL))
+      return replaceInstUsesWith(CI, Res);
+
   // Try to eliminate a cast of a cast.
   if (auto *CSrc = dyn_cast<CastInst>(Src)) {   // A->B->C cast
     if (Instruction::CastOps NewOpc = isEliminableCastPair(CSrc, &CI)) {
@@ -1243,7 +1247,8 @@ static bool canEvaluateZExtd(Value *V, Type *Ty, unsigned &BitsToClear,
 Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
   // If this zero extend is only used by a truncate, let the truncate be
   // eliminated before we try to optimize this zext.
-  if (Zext.hasOneUse() && isa<TruncInst>(Zext.user_back()))
+  if (Zext.hasOneUse() && isa<TruncInst>(Zext.user_back()) &&
+      !isa<Constant>(Zext.getOperand(0)))
     return nullptr;
 
   // If one of the common conversion will work, do it.
