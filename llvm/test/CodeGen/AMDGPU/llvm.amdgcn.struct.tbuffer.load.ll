@@ -419,8 +419,8 @@ define amdgpu_ps <4 x float> @tbuffer_load_voffset_large_13bit(<4 x i32> inreg) 
 ;
 ; GFX12-LABEL: tbuffer_load_voffset_large_13bit:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_dual_mov_b32 v1, 0x1000 :: v_dual_mov_b32 v0, 0
-; GFX12-NEXT:    tbuffer_load_format_xyzw v[0:3], v[0:1], s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offen offset:4092
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-NEXT:    tbuffer_load_format_xyzw v[0:3], v0, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offset:8188
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
@@ -458,8 +458,8 @@ define amdgpu_ps <4 x float> @tbuffer_load_voffset_large_16bit(<4 x i32> inreg) 
 ;
 ; GFX12-LABEL: tbuffer_load_voffset_large_16bit:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_dual_mov_b32 v1, 0xf000 :: v_dual_mov_b32 v0, 0
-; GFX12-NEXT:    tbuffer_load_format_xyzw v[0:3], v[0:1], s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offen offset:4092
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-NEXT:    tbuffer_load_format_xyzw v[0:3], v0, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offset:65532
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
@@ -497,8 +497,8 @@ define amdgpu_ps <4 x float> @tbuffer_load_voffset_large_23bit(<4 x i32> inreg) 
 ;
 ; GFX12-LABEL: tbuffer_load_voffset_large_23bit:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_dual_mov_b32 v1, 0x7ff000 :: v_dual_mov_b32 v0, 0
-; GFX12-NEXT:    tbuffer_load_format_xyzw v[0:3], v[0:1], s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offen offset:4092
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-NEXT:    tbuffer_load_format_xyzw v[0:3], v0, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offset:8388604
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
@@ -536,8 +536,8 @@ define amdgpu_ps <4 x float> @tbuffer_load_voffset_large_24bit(<4 x i32> inreg) 
 ;
 ; GFX12-LABEL: tbuffer_load_voffset_large_24bit:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_dual_mov_b32 v1, 0xfff000 :: v_dual_mov_b32 v0, 0
-; GFX12-NEXT:    tbuffer_load_format_xyzw v[0:3], v[0:1], s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offen offset:4092
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0x800000 :: v_dual_mov_b32 v0, 0
+; GFX12-NEXT:    tbuffer_load_format_xyzw v[0:3], v[0:1], s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offen offset:8388604
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:

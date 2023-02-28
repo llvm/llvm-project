@@ -4344,7 +4344,7 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
 
     // TODO: Should this be inside the render function? The iterator seems to
     // move.
-    const uint32_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset();
+    const uint32_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset(*Subtarget);
     BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::V_MOV_B32_e32),
             HighBits)
         .addImm(Offset & ~MaxOffset);
@@ -4376,7 +4376,7 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
     int64_t ConstOffset;
     std::tie(PtrBase, ConstOffset) = getPtrBaseWithConstantOffset(VAddr, *MRI);
     if (ConstOffset != 0) {
-      if (SIInstrInfo::isLegalMUBUFImmOffset(ConstOffset) &&
+      if (TII.isLegalMUBUFImmOffset(ConstOffset) &&
           (!STI.privateMemoryResourceIsRangeChecked() ||
            KnownBits->signBitIsZero(PtrBase))) {
         const MachineInstr *PtrBaseDef = MRI->getVRegDef(PtrBase);
@@ -4487,7 +4487,7 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffset(
   // FIXME: Copy check is a hack
   Register BasePtr;
   if (mi_match(Reg, *MRI, m_GPtrAdd(m_Reg(BasePtr), m_Copy(m_ICst(Offset))))) {
-    if (!SIInstrInfo::isLegalMUBUFImmOffset(Offset))
+    if (!TII.isLegalMUBUFImmOffset(Offset))
       return {};
     const MachineInstr *BasePtrDef = MRI->getVRegDef(BasePtr);
     Register WaveBase = getWaveAddress(BasePtrDef);
@@ -4506,7 +4506,7 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffset(
   }
 
   if (!mi_match(Root.getReg(), *MRI, m_ICst(Offset)) ||
-      !SIInstrInfo::isLegalMUBUFImmOffset(Offset))
+      !TII.isLegalMUBUFImmOffset(Offset))
     return {};
 
   return {{
@@ -4749,7 +4749,7 @@ bool AMDGPUInstructionSelector::shouldUseAddr64(MUBUFAddressData Addr) const {
 /// component.
 void AMDGPUInstructionSelector::splitIllegalMUBUFOffset(
   MachineIRBuilder &B, Register &SOffset, int64_t &ImmOffset) const {
-  if (SIInstrInfo::isLegalMUBUFImmOffset(ImmOffset))
+  if (TII.isLegalMUBUFImmOffset(ImmOffset))
     return;
 
   // Illegal offset, store it in soffset.
