@@ -6707,6 +6707,10 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
                               PrimaryY->getTrailingRequiresClause()))
       return false;
 
+    // Constrained friends are different in certain cases, see: [temp.friend]p9.
+    if (FriendsDifferByConstraints(FuncX, FuncY))
+      return false;
+
     auto GetTypeAsWritten = [](const FunctionDecl *FD) {
       // Map to the first declaration that we've already merged into this one.
       // The TSI of redeclarations might not match (due to calling conventions
