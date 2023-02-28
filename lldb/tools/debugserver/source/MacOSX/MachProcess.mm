@@ -3266,7 +3266,7 @@ pid_t MachProcess::LaunchForDebug(
         return m_pid; // A successful SBLaunchForDebug() returns and assigns a
                       // non-zero m_pid.
     }
-    DNBLog("Failed to launch '%s' with FBS", app_bundle_path);
+    DNBLog("Failed to launch '%s' with FBS", app_bundle_path.c_str());
   } break;
 #endif
 #ifdef WITH_BKS
@@ -3280,7 +3280,7 @@ pid_t MachProcess::LaunchForDebug(
         return m_pid; // A successful SBLaunchForDebug() returns and assigns a
                       // non-zero m_pid.
     }
-    DNBLog("Failed to launch '%s' with BKS", app_bundle_path);
+    DNBLog("Failed to launch '%s' with BKS", app_bundle_path.c_str());
   } break;
 #endif
 #ifdef WITH_SPRINGBOARD
@@ -3292,7 +3292,7 @@ pid_t MachProcess::LaunchForDebug(
         return m_pid; // A successful SBLaunchForDebug() returns and assigns a
                       // non-zero m_pid.
     }
-    DNBLog("Failed to launch '%s' with SpringBoard", app_bundle_path);
+    DNBLog("Failed to launch '%s' with SpringBoard", app_bundle_path.c_str());
   } break;
 
 #endif
