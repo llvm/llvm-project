@@ -9,9 +9,13 @@
 #ifndef LLVM_LIBC_SRC_ERRNO_LLVMLIBC_ERRNO_H
 #define LLVM_LIBC_SRC_ERRNO_LLVMLIBC_ERRNO_H
 
-// Internal code should use this and not use the errno macro from the
-// public header.
-extern thread_local int __llvmlibc_errno;
-#define llvmlibc_errno __llvmlibc_errno
+#include <errno.h>
+
+// DEPRECATED: Use libc_errno from libc_errno.h instead. This macro is only
+// present to facilitate gradual transition (as in, in multiple simple patches)
+// to libc_errno.
+// TODO: After all of libc/src and libc/test is switched over to use libc_errno,
+// remove this macro and header file.
+#define llvmlibc_errno errno
 
 #endif // LLVM_LIBC_SRC_ERRNO_LLVMLIBC_ERRNO_H
