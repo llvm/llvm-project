@@ -9,7 +9,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 
-#include "TestPlugin.h"
+#include "../TestPlugin.h"
 
 using namespace llvm;
 
