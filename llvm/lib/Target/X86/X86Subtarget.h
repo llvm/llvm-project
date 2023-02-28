@@ -249,6 +249,17 @@ public:
     return hasBWI() && canExtendTo512DQ();
   }
 
+  bool hasNoDomainDelay() const { return NoDomainDelay; }
+  bool hasNoDomainDelayMov() const {
+      return hasNoDomainDelay() || NoDomainDelayMov;
+  }
+  bool hasNoDomainDelayBlend() const {
+      return hasNoDomainDelay() || NoDomainDelayBlend;
+  }
+  bool hasNoDomainDelayShuffle() const {
+      return hasNoDomainDelay() || NoDomainDelayShuffle;
+  }
+
   // If there are no 512-bit vectors and we prefer not to use 512-bit registers,
   // disable them in the legalizer.
   bool useAVX512Regs() const {
