@@ -527,6 +527,9 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
       RawBufferOpLowering<RawBufferLoadOp, ROCDL::RawBufferLoadOp>,
       RawBufferOpLowering<RawBufferStoreOp, ROCDL::RawBufferStoreOp>,
       RawBufferOpLowering<RawBufferAtomicFaddOp, ROCDL::RawBufferAtomicFAddOp>,
+      RawBufferOpLowering<RawBufferAtomicFmaxOp, ROCDL::RawBufferAtomicFMaxOp>,
+      RawBufferOpLowering<RawBufferAtomicSmaxOp, ROCDL::RawBufferAtomicSMaxOp>,
+      RawBufferOpLowering<RawBufferAtomicUminOp, ROCDL::RawBufferAtomicUMinOp>,
       MFMAOpLowering>(converter, chipset);
 }
 
