@@ -55560,6 +55560,33 @@ static SDValue combineSubABS(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::ADD, DL, VT, N0, Cmov);
 }
 
+static SDValue combineSubSetcc(SDNode *N, SelectionDAG &DAG) {
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+
+  // (sub C (zero_extend (setcc)))
+  // =>
+  // (add (zero_extend (setcc inverted) C-1))   if C is a nonzero immediate
+  // Don't disturb (sub 0 setcc), which is easily done with neg.
+  EVT VT = N->getValueType(0);
+  auto *Op0C = dyn_cast<ConstantSDNode>(Op0);
+  if (Op1.getOpcode() == ISD::ZERO_EXTEND && Op1.hasOneUse() && Op0C &&
+      !Op0C->isZero() && Op1.getOperand(0).getOpcode() == X86ISD::SETCC &&
+      Op1.getOperand(0).hasOneUse()) {
+    SDValue SetCC = Op1.getOperand(0);
+    X86::CondCode CC = (X86::CondCode)SetCC.getConstantOperandVal(0);
+    X86::CondCode NewCC = X86::GetOppositeBranchCondition(CC);
+    uint64_t NewImm = Op0C->getZExtValue() - 1;
+    SDLoc DL(Op1);
+    SDValue NewSetCC = getSETCC(NewCC, SetCC.getOperand(1), DL, DAG);
+    NewSetCC = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, NewSetCC);
+    return DAG.getNode(X86ISD::ADD, DL, DAG.getVTList(VT, VT), NewSetCC,
+                       DAG.getConstant(NewImm, DL, VT));
+  }
+
+  return SDValue();
+}
+
 static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
@@ -55620,7 +55647,10 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineXorSubCTLZ(N, DAG, Subtarget))
     return V;
 
-  return combineAddOrSubToADCOrSBB(N, DAG);
+  if (SDValue V = combineAddOrSubToADCOrSBB(N, DAG))
+    return V;
+
+  return combineSubSetcc(N, DAG);
 }
 
 static SDValue combineVectorCompare(SDNode *N, SelectionDAG &DAG,

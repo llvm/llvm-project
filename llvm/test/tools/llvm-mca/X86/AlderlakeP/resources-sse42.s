@@ -59,7 +59,7 @@ pcmpgtq     (%rax), %xmm2
 # CHECK-NEXT:  3      11    3.00                        pcmpistrm	$1, %xmm0, %xmm2
 # CHECK-NEXT:  4      16    3.00    *                   pcmpistrm	$1, (%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                        pcmpgtq	%xmm0, %xmm2
-# CHECK-NEXT:  2      10    1.00    *                   pcmpgtq	(%rax), %xmm2
+# CHECK-NEXT:  2      9     1.00    *                   pcmpgtq	(%rax), %xmm2
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - ADLPPort00
