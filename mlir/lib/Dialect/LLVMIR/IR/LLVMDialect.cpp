@@ -46,7 +46,7 @@ using mlir::LLVM::linkage::getMaxEnumValForLinkage;
 
 static constexpr const char kElemTypeAttrName[] = "elem_type";
 
-#include "mlir/Dialect/LLVMIR/LLVMOpsInterfaces.cpp.inc"
+#include "mlir/Dialect/LLVMIR/LLVMInterfaces.cpp.inc"
 
 static auto processFMFAttr(ArrayRef<NamedAttribute> attrs) {
   SmallVector<NamedAttribute, 8> filteredAttrs(
