@@ -13,6 +13,7 @@
 #include "src/stdlib/strtod.h"
 #include "src/stdlib/strtof.h"
 #include "src/stdlib/strtold.h"
+#include <math.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -30,10 +31,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 
   char *out_ptr = nullptr;
 
-  // This fuzzer only checks that the alrogithms didn't read beyond the end of
+  // This fuzzer only checks that the algorithms didn't read beyond the end of
   // the string in container. Combined with sanitizers, this will check that the
-  // code is not reading memory beyond what's expected. This test does not make
-  // any attempt to check correctness of the result.
+  // code is not reading memory beyond what's expected. This test does not
+  // effectively check the correctness of the result.
   auto volatile atof_output = __llvm_libc::atof(str_ptr);
   auto volatile strtof_output = __llvm_libc::strtof(str_ptr, &out_ptr);
   if (str_ptr + size < out_ptr)
@@ -44,6 +45,17 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   auto volatile strtold_output = __llvm_libc::strtold(str_ptr, &out_ptr);
   if (str_ptr + size < out_ptr)
     __builtin_trap();
+
+  // If any of the outputs are NaN
+  if (isnan(atof_output) || isnan(strtof_output) || isnan(strtod_output) ||
+      isnan(strtold_output)) {
+    // Then all the outputs should be NaN.
+    // This is a trivial check meant to silence the "unused variable" warnings.
+    if (!isnan(atof_output) || !isnan(strtof_output) || !isnan(strtod_output) ||
+        !isnan(strtold_output)) {
+      __builtin_trap();
+    }
+  }
 
   delete[] container;
   return 0;
