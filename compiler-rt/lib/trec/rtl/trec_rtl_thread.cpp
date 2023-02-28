@@ -89,7 +89,7 @@ bool ThreadContext::state_restore() {
 void ThreadContext::flush_trace() {
   char filepath[TREC_DIR_PATH_LEN];
   struct stat _st = {0};
-  internal_snprintf(filepath, 2 * TREC_DIR_PATH_LEN - 1, "%s/trec_%llu",
+  internal_snprintf(filepath, 2 * TREC_DIR_PATH_LEN - 1, "%s/trec_%llu/trace",
                     ctx->trace_dir, internal_getpid(), tid);
   uptr IS_EXIST = __sanitizer::internal_stat(filepath, &_st);
   if (IS_EXIST != 0) {
@@ -127,7 +127,7 @@ void ThreadContext::flush_metadata() {
   char filepath[TREC_DIR_PATH_LEN];
 
   struct stat _st = {0};
-  internal_snprintf(filepath, 2 * TREC_DIR_PATH_LEN - 1, "%s/trec_%llu",
+  internal_snprintf(filepath, 2 * TREC_DIR_PATH_LEN - 1, "%s/trec_%llu/metadata",
                     ctx->trace_dir, internal_getpid(), tid);
   uptr IS_EXIST = __sanitizer::internal_stat(filepath, &_st);
   if (IS_EXIST != 0) {
@@ -171,7 +171,7 @@ void ThreadContext::flush_debug_info() {
     return;
   char filepath[TREC_DIR_PATH_LEN];
 
-  internal_snprintf(filepath, 2 * TREC_DIR_PATH_LEN - 1, "%s/trec_%llu",
+  internal_snprintf(filepath, 2 * TREC_DIR_PATH_LEN - 1, "%s/trec_%llu/debug",
                     ctx->trace_dir, internal_getpid(), tid);
   struct stat _st = {0};
   uptr IS_EXIST = __sanitizer::internal_stat(filepath, &_st);
@@ -266,7 +266,7 @@ void ThreadContext::flush_header() {
   char filepath[TREC_DIR_PATH_LEN];
 
   struct stat _st = {0};
-  internal_snprintf(filepath, 2 * TREC_DIR_PATH_LEN - 1, "%s/trec_%llu",
+  internal_snprintf(filepath, 2 * TREC_DIR_PATH_LEN - 1, "%s/trec_%llu/header",
                     ctx->trace_dir, internal_getpid(), tid);
   uptr IS_EXIST = __sanitizer::internal_stat(filepath, &_st);
   if (IS_EXIST != 0) {
