@@ -374,6 +374,8 @@ static mlir::Value genInlinedStructureCtorLitImpl(
         // The Ev::Expr returned is an initializer that is a pointer (e.g.,
         // null) that must be inserted into an intermediate cptr record
         // value's address field, which ought to be an intptr_t on the target.
+        if (addr.getType().isa<fir::BoxProcType>())
+          addr = builder.create<fir::BoxAddrOp>(loc, addr);
         assert((fir::isa_ref_type(addr.getType()) ||
                 addr.getType().isa<mlir::FunctionType>()) &&
                "expect reference type for address field");
