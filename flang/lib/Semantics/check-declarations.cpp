@@ -2219,14 +2219,35 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
   CheckConflicting(symbol, Attr::BIND_C, Attr::PARAMETER);
   CheckConflicting(symbol, Attr::BIND_C, Attr::ELEMENTAL);
   if (const std::string * bindName{symbol.GetBindName()};
-      bindName && !bindName->empty()) {
-    bool ok{bindName->front() == '_' || parser::IsLetter(bindName->front())};
-    for (char ch : *bindName) {
-      ok &= ch == '_' || parser::IsLetter(ch) || parser::IsDecimalDigit(ch);
+      bindName) { // BIND(C,NAME=...)
+    if (!bindName->empty()) {
+      bool ok{bindName->front() == '_' || parser::IsLetter(bindName->front())};
+      for (char ch : *bindName) {
+        ok &= ch == '_' || parser::IsLetter(ch) || parser::IsDecimalDigit(ch);
+      }
+      if (!ok) {
+        messages_.Say(symbol.name(),
+            "Symbol has a BIND(C) name that is not a valid C language identifier"_err_en_US);
+        context_.SetError(symbol);
+      }
     }
-    if (!ok) {
+  }
+  if (symbol.GetIsExplicitBindName()) { // C1552, C1529
+    auto defClass{ClassifyProcedure(symbol)};
+    if (IsProcedurePointer(symbol)) {
       messages_.Say(symbol.name(),
-          "Symbol has a BIND(C) name that is not a valid C language identifier"_err_en_US);
+          "A procedure pointer may not have a BIND attribute with a name"_err_en_US);
+      context_.SetError(symbol);
+    } else if (defClass == ProcedureDefinitionClass::None ||
+        IsExternal(symbol)) {
+    } else if (symbol.attrs().test(Attr::ABSTRACT)) {
+      messages_.Say(symbol.name(),
+          "An ABSTRACT interface may not have a BIND attribute with a name"_err_en_US);
+      context_.SetError(symbol);
+    } else if (defClass == ProcedureDefinitionClass::Internal ||
+        defClass == ProcedureDefinitionClass::Dummy) {
+      messages_.Say(symbol.name(),
+          "An internal or dummy procedure may not have a BIND(C,NAME=) binding label"_err_en_US);
       context_.SetError(symbol);
     }
   }
@@ -2240,6 +2261,22 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
         extents && evaluate::GetSize(*extents) == 0) {
       SayWithDeclaration(symbol, symbol.name(),
           "Interoperable array must have at least one element"_err_en_US);
+    }
+    if (const auto *type{symbol.GetType()}) {
+      if (const auto *derived{type->AsDerived()}) {
+        if (!derived->typeSymbol().attrs().test(Attr::BIND_C)) {
+          if (auto *msg{messages_.Say(symbol.name(),
+                  "The derived type of a BIND(C) object must also be BIND(C)"_err_en_US)}) {
+            msg->Attach(
+                derived->typeSymbol().name(), "Non-interoperable type"_en_US);
+          }
+          context_.SetError(symbol);
+        }
+      } else if (!IsInteroperableIntrinsicType(*type)) {
+        messages_.Say(symbol.name(),
+            "A BIND(C) object must have an interoperable type"_err_en_US);
+        context_.SetError(symbol);
+      }
     }
   } else if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
     if (!proc->procInterface() ||
