@@ -7260,16 +7260,13 @@ void CodeGenFunction::EmitOMPTargetDataDirective(
   };
   DevicePointerPrivActionTy PrivAction(PrivatizeDevicePointers);
 
-  auto &&CodeGen = [&S, &Info, &PrivatizeDevicePointers](
-                       CodeGenFunction &CGF, PrePostActionTy &Action) {
+  auto &&CodeGen = [&](CodeGenFunction &CGF, PrePostActionTy &Action) {
     auto &&InnermostCodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &) {
       CGF.EmitStmt(S.getInnermostCapturedStmt()->getCapturedStmt());
     };
 
     // Codegen that selects whether to generate the privatization code or not.
-    auto &&PrivCodeGen = [&S, &Info, &PrivatizeDevicePointers,
-                          &InnermostCodeGen](CodeGenFunction &CGF,
-                                             PrePostActionTy &Action) {
+    auto &&PrivCodeGen = [&](CodeGenFunction &CGF, PrePostActionTy &Action) {
       RegionCodeGenTy RCG(InnermostCodeGen);
       PrivatizeDevicePointers = false;
 
@@ -7289,7 +7286,28 @@ void CodeGenFunction::EmitOMPTargetDataDirective(
         (void)PrivateScope.Privatize();
         RCG(CGF);
       } else {
-        OMPLexicalScope Scope(CGF, S, OMPD_unknown);
+        // If we don't have target devices, don't bother emitting the data
+        // mapping code.
+        std::optional<OpenMPDirectiveKind> CaptureRegion;
+        if (CGM.getLangOpts().OMPTargetTriples.empty()) {
+          // Emit helper decls of the use_device_ptr/use_device_addr clauses.
+          for (const auto *C : S.getClausesOfKind<OMPUseDevicePtrClause>())
+            for (const Expr *E : C->varlists()) {
+              const Decl *D = cast<DeclRefExpr>(E)->getDecl();
+              if (const auto *OED = dyn_cast<OMPCapturedExprDecl>(D))
+                CGF.EmitVarDecl(*OED);
+            }
+          for (const auto *C : S.getClausesOfKind<OMPUseDeviceAddrClause>())
+            for (const Expr *E : C->varlists()) {
+              const Decl *D = getBaseDecl(E);
+              if (const auto *OED = dyn_cast<OMPCapturedExprDecl>(D))
+                CGF.EmitVarDecl(*OED);
+            }
+        } else {
+          CaptureRegion = OMPD_unknown;
+        }
+
+        OMPLexicalScope Scope(CGF, S, CaptureRegion);
         RCG(CGF);
       }
     };
