@@ -189,7 +189,7 @@ public:
   // Shim for old PM.
   LoopVectorizeResult runImpl(Function &F, ScalarEvolution &SE_, LoopInfo &LI_,
                               TargetTransformInfo &TTI_, DominatorTree &DT_,
-                              BlockFrequencyInfo &BFI_, TargetLibraryInfo *TLI_,
+                              BlockFrequencyInfo *BFI_, TargetLibraryInfo *TLI_,
                               DemandedBits &DB_, AssumptionCache &AC_,
                               LoopAccessInfoManager &LAIs_,
                               OptimizationRemarkEmitter &ORE_,

@@ -13157,7 +13157,7 @@ public:
         for (Value *RdxVal : VL) {
           Value *OrigV = TrackedToOrig.find(RdxVal)->second;
           if (IsSupportedHorRdxIdentityOp) {
-            VectorizedVals.try_emplace(OrigV, SameValuesCounter[OrigV]);
+            VectorizedVals.try_emplace(OrigV, SameValuesCounter[RdxVal]);
             continue;
           }
           ++VectorizedVals.try_emplace(OrigV, 0).first->getSecond();

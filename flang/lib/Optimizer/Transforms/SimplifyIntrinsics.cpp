@@ -662,7 +662,7 @@ static void genRuntimeCountBody(fir::FirOpBuilder &builder,
   auto genBodyOp = [](fir::FirOpBuilder builder, mlir::Location loc,
                       mlir::Type elementType, mlir::Value elem1,
                       mlir::Value elem2) -> mlir::Value {
-    auto zero32 = builder.createIntegerConstant(loc, builder.getI32Type(), 0);
+    auto zero32 = builder.createIntegerConstant(loc, elementType, 0);
     auto zero64 = builder.createIntegerConstant(loc, builder.getI64Type(), 0);
     auto one64 = builder.createIntegerConstant(loc, builder.getI64Type(), 1);
 

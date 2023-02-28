@@ -1309,7 +1309,7 @@ struct DepTestType {
   }
 };
 
-template struct DepTestType<int>; // expected-note {{requested here}}
+template struct DepTestType<int>; // expected-note 2{{requested here}}
 template CoroMemberTag DepTestType<int>::test_member_template(long, const char *) const &&;
 
 template CoroMemberTag DepTestType<int>::test_static_template<void>(const char *volatile &, unsigned);

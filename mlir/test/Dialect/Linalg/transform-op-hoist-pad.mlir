@@ -149,3 +149,46 @@ transform.sequence failures(propagate) {
   transform.structured.hoist_pad %pad by 1 loops, transpose by [1, 0]
      : (!pdl.operation) -> !pdl.operation
 }
+
+// -----
+
+//     CHECK-LABEL: pad_and_hoist_init
+func.func @pad_and_hoist_init(
+  %arg0: tensor<24x12xf32>, %arg1: tensor<12x25xf32>, %arg2: tensor<24x25xf32>)
+     -> tensor<24x25xf32> 
+{
+
+  //      CHECK: scf.for %{{.*}} -> (tensor<24x25xf32>) {
+  //      CHECK:   %[[PADDED:.*]] = tensor.pad %{{.*}} 
+  //      CHECK:     : tensor<?x25xf32> to tensor<5x25xf32>
+  //      CHECK:   scf.for %{{.*}} -> (tensor<?x25xf32>) {
+  //      CHECK:     %[[RES:.*]] = linalg.matmul {{.*}} outs(%[[PADDED]] : tensor<5x25xf32>
+  //
+  // TODO: atm we are missing the plumbing of packedTensor through the loop bbarg
+  // when required (i.e. when hoisting init tensors).
+  //      CHECK:     %[[RES_EXTRACTED:.*]] = tensor.extract_slice %[[RES]][0, 0] [%{{.*}}, 25] [1, 1] 
+  // CHECK-SAME:       : tensor<5x25xf32> to tensor<?x25xf32>
+  //      CHECK:     scf.yield %[[RES_EXTRACTED]] : tensor<?x25xf32>
+  %0 = linalg.matmul ins(%arg0, %arg1 : tensor<24x12xf32>, tensor<12x25xf32>) outs(%arg2 : tensor<24x25xf32>) -> tensor<24x25xf32>
+  func.return %0 : tensor<24x25xf32>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1 
+    : (!pdl.operation) -> !pdl.operation
+
+  
+  %matmul_l1, %loops_l1:2 = transform.structured.tile_to_scf_for %matmul [5, 0, 7]
+
+  %matmul_padded = transform.structured.pad %matmul_l1 {
+    padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
+    padding_dimensions=[0, 1, 2]
+  }
+
+  %pad = transform.get_producer_of_operand %matmul_padded[2]
+    : (!pdl.operation) -> !transform.op<"tensor.pad">
+
+  transform.structured.hoist_pad %pad by 1 loops
+     : (!transform.op<"tensor.pad">) -> !pdl.operation
+}

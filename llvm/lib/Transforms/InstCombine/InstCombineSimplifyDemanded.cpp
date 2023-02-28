@@ -1713,6 +1713,54 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
   // UB/poison potential, but that should be refined.
   BinaryOperator *BO;
   if (match(I, m_BinOp(BO)) && !BO->isIntDivRem() && !BO->isShift()) {
+    Value *X = BO->getOperand(0);
+    Value *Y = BO->getOperand(1);
+
+    // Look for an equivalent binop except that one operand has been shuffled.
+    // If the demand for this binop only includes elements that are the same as
+    // the other binop, then we may be able to replace this binop with a use of
+    // the earlier one.
+    //
+    // Example:
+    // %other_bo = bo (shuf X, {0}), Y
+    // %this_extracted_bo = extelt (bo X, Y), 0
+    // -->
+    // %other_bo = bo (shuf X, {0}), Y
+    // %this_extracted_bo = extelt %other_bo, 0
+    //
+    // TODO: Handle demand of an arbitrary single element or more than one
+    //       element instead of just element 0.
+    // TODO: Unlike general demanded elements transforms, this should be safe
+    //       for any (div/rem/shift) opcode too.
+    if (DemandedElts == 1 && !X->hasOneUse() && !Y->hasOneUse() &&
+        BO->hasOneUse() ) {
+
+      auto findShufBO = [&](bool MatchShufAsOp0) -> User * {
+        // Try to use shuffle-of-operand in place of an operand:
+        // bo X, Y --> bo (shuf X), Y
+        // bo X, Y --> bo X, (shuf Y)
+        BinaryOperator::BinaryOps Opcode = BO->getOpcode();
+        Value *ShufOp = MatchShufAsOp0 ? X : Y;
+        Value *OtherOp = MatchShufAsOp0 ? Y : X;
+        for (User *U : OtherOp->users()) {
+          auto Shuf = m_Shuffle(m_Specific(ShufOp), m_Value(), m_ZeroMask());
+          if (BO->isCommutative()
+                  ? match(U, m_c_BinOp(Opcode, Shuf, m_Specific(OtherOp)))
+                  : MatchShufAsOp0
+                        ? match(U, m_BinOp(Opcode, Shuf, m_Specific(OtherOp)))
+                        : match(U, m_BinOp(Opcode, m_Specific(OtherOp), Shuf)))
+            if (DT.dominates(U, I))
+              return U;
+        }
+        return nullptr;
+      };
+
+      if (User *ShufBO = findShufBO(/* MatchShufAsOp0 */ true))
+        return ShufBO;
+      if (User *ShufBO = findShufBO(/* MatchShufAsOp0 */ false))
+        return ShufBO;
+    }
+
     simplifyAndSetOp(I, 0, DemandedElts, UndefElts);
     simplifyAndSetOp(I, 1, DemandedElts, UndefElts2);
 

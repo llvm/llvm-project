@@ -5080,4 +5080,28 @@ TEST(TransferTest, ContextSensitiveConstructorDefault) {
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
+TEST(TransferTest, UnnamedBitfieldInitializer) {
+  std::string Code = R"(
+    struct B {};
+    struct A {
+      unsigned a;
+      unsigned : 4;
+      unsigned c;
+      B b;
+    };
+    void target() {
+      A a = {};
+      A test = a;
+      (void)test.c;
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        // This doesn't need a body because this test was crashing the framework
+        // before handling correctly Unnamed bitfields in `InitListExpr`.
+      });
+}
+
 } // namespace

@@ -411,6 +411,12 @@ rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
 ///    }
 /// ```
 FailureOr<Value>
+hoistPaddingOnTensors(RewriterBase &rewriter, tensor::PadOp opToHoist,
+                      int64_t numLoops, ArrayRef<int64_t> transposeVector,
+                      tensor::PadOp &hoistedOp,
+                      SmallVectorImpl<GenericOp> &transposeOps);
+/// Calls into `hoistPaddingOnTensors` with a local IRRewriter.
+FailureOr<Value>
 hoistPaddingOnTensors(tensor::PadOp opToHoist, int64_t numLoops,
                       ArrayRef<int64_t> transposeVector,
                       tensor::PadOp &hoistedOp,
