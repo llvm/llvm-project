@@ -44,9 +44,6 @@ void RTNAME(AllocatableInitDerived)(Descriptor &descriptor,
 std::int32_t RTNAME(MoveAlloc)(Descriptor &to, Descriptor &from, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
-  // Should be handled by semantic analysis
-  RUNTIME_CHECK(terminator, to.type() == from.type());
-  RUNTIME_CHECK(terminator, to.IsAllocatable() && from.IsAllocatable());
 
   // If to and from are the same allocatable they must not be allocated
   // and nothing should be done.
