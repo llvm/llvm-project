@@ -52,38 +52,3 @@ PreservedAnalyses InferFunctionAttrsPass::run(Module &M,
   // out all the passes.
   return PreservedAnalyses::none();
 }
-
-namespace {
-struct InferFunctionAttrsLegacyPass : public ModulePass {
-  static char ID; // Pass identification, replacement for typeid
-  InferFunctionAttrsLegacyPass() : ModulePass(ID) {
-    initializeInferFunctionAttrsLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-  }
-
-  bool runOnModule(Module &M) override {
-    if (skipModule(M))
-      return false;
-
-    auto GetTLI = [this](Function &F) -> TargetLibraryInfo & {
-      return this->getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-    };
-    return inferAllPrototypeAttributes(M, GetTLI);
-  }
-};
-}
-
-char InferFunctionAttrsLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(InferFunctionAttrsLegacyPass, "inferattrs",
-                      "Infer set function attributes", false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(InferFunctionAttrsLegacyPass, "inferattrs",
-                    "Infer set function attributes", false, false)
-
-Pass *llvm::createInferFunctionAttrsLegacyPass() {
-  return new InferFunctionAttrsLegacyPass();
-}
