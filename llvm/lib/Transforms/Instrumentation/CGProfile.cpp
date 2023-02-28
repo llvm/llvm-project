@@ -46,8 +46,7 @@ addModuleFlags(Module &M,
 }
 
 static bool runCGProfilePass(
-    Module &M, function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
-    function_ref<TargetTransformInfo &(Function &)> GetTTI, bool LazyBFI) {
+    Module &M, FunctionAnalysisManager &FAM, bool LazyBFI) {
   MapVector<std::pair<Function *, Function *>, uint64_t> Counts;
   InstrProfSymtab Symtab;
   auto UpdateCounts = [&](TargetTransformInfo &TTI, Function *F,
@@ -69,10 +68,10 @@ static bool runCGProfilePass(
     // TODO: Remove LazyBFI when LazyBlockFrequencyInfoPass is available in NPM.
     if (F.isDeclaration() || (LazyBFI && !F.getEntryCount()))
       continue;
-    auto &BFI = GetBFI(F);
+    auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
     if (BFI.getEntryFreq() == 0)
       continue;
-    TargetTransformInfo &TTI = GetTTI(F);
+    TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
     for (auto &BB : F) {
       std::optional<uint64_t> BBCount = BFI.getBlockProfileCount(&BB);
       if (!BBCount)
@@ -105,14 +104,7 @@ static bool runCGProfilePass(
 PreservedAnalyses CGProfilePass::run(Module &M, ModuleAnalysisManager &MAM) {
   FunctionAnalysisManager &FAM =
       MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  auto GetBFI = [&FAM](Function &F) -> BlockFrequencyInfo & {
-    return FAM.getResult<BlockFrequencyAnalysis>(F);
-  };
-  auto GetTTI = [&FAM](Function &F) -> TargetTransformInfo & {
-    return FAM.getResult<TargetIRAnalysis>(F);
-  };
-
-  runCGProfilePass(M, GetBFI, GetTTI, false);
+  runCGProfilePass(M, FAM, false);
 
   return PreservedAnalyses::all();
 }
