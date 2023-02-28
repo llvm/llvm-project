@@ -54,7 +54,7 @@ std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
     if (recordDecl->getDeclContext())
       recordDecl->printQualifiedName(outStream, policy);
     else
-      recordDecl->DeclaratorDecl::printName(outStream);
+      recordDecl->printName(outStream, policy);
   } else if (auto *typedefNameDecl = recordDecl->getTypedefNameForAnonDecl()) {
     if (typedefNameDecl->getDeclContext())
       typedefNameDecl->printQualifiedName(outStream, policy);
