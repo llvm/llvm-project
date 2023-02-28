@@ -52,10 +52,6 @@ struct PostOrderFunctionAttrsPass : PassInfoMixin<PostOrderFunctionAttrsPass> {
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);
 };
 
-/// Create a legacy pass manager instance of a pass to compute function attrs
-/// in post-order.
-Pass *createPostOrderFunctionAttrsLegacyPass();
-
 /// A pass to do RPO deduction and propagation of function attributes.
 ///
 /// This pass provides a general RPO or "top down" propagation of
