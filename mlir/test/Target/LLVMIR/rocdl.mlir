@@ -266,14 +266,30 @@ llvm.func @rocdl.raw.buffer(%rsrc : vector<4xi32>,
   llvm.return
 }
 
-llvm.func @rocdl.raw.buffer.atomic(%rsrc : vector<4xi32>,
+llvm.func @rocdl.raw.buffer.atomic.f32(%rsrc : vector<4xi32>,
                         %offset : i32, %soffset : i32,
                         %vdata1 : f32) {
   %aux = llvm.mlir.constant(0 : i32) : i32
-  // CHECK-LABEL: rocdl.raw.buffer.atomic
+  // CHECK-LABEL: rocdl.raw.buffer.atomic.f32
   // CHECK: call float @llvm.amdgcn.raw.buffer.atomic.fadd.f32(float %{{.*}}, <4 x i32> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+  // CHECK: call float @llvm.amdgcn.raw.buffer.atomic.fmax.f32(float %{{.*}}, <4 x i32> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
 
   rocdl.raw.buffer.atomic.fadd %vdata1, %rsrc, %offset, %soffset, %aux : f32
+  rocdl.raw.buffer.atomic.fmax %vdata1, %rsrc, %offset, %soffset, %aux : f32
+
+  llvm.return
+}
+
+llvm.func @rocdl.raw.buffer.atomic.i32(%rsrc : vector<4xi32>,
+                        %offset : i32, %soffset : i32,
+                        %vdata1 : i32) {
+  %aux = llvm.mlir.constant(0 : i32) : i32
+  // CHECK-LABEL: rocdl.raw.buffer.atomic.i32
+  // CHECK: call i32 @llvm.amdgcn.raw.buffer.atomic.smax.i32(i32 %{{.*}}, <4 x i32> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+  // CHECK: call i32 @llvm.amdgcn.raw.buffer.atomic.umin.i32(i32 %{{.*}}, <4 x i32> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+
+  rocdl.raw.buffer.atomic.smax %vdata1, %rsrc, %offset, %soffset, %aux : i32
+  rocdl.raw.buffer.atomic.umin %vdata1, %rsrc, %offset, %soffset, %aux : i32
 
   llvm.return
 }
