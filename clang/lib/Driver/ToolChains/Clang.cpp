@@ -8420,84 +8420,6 @@ static bool isArchiveOfBundlesFileName(StringRef FilePath) {
   return true;
 }
 
-static void createUnbundleArchiveCommand(Compilation &C,
-                                         const OffloadUnbundlingJobAction &UA,
-                                         const Tool &T,
-                                         const InputInfoList &Outputs,
-                                         const InputInfoList &Inputs) {
-  auto DepInfo = UA.getDependentActionsInfo();
-  InputInfo Input = Inputs.front();
-  StringRef ArchiveOfBundles = Input.getFilename();
-
-  std::string OutputLib;
-
-  // Skip host-only archive libraries. This is a crude method
-  // method that should be replaced with a user defined method.
-  // The unbundle action creates two outputs for the unbundle when it sees
-  // an archive (.a) input on command line. But if that is a host-only static
-  // library, we don't want unbundle to touch it. So we simply touch the
-  // output file (usually a temp) so the linker wont see a nonexistant file.
-  if (ArchiveOfBundles.endswith(".a") && ArchiveOfBundles.startswith("/usr/")) {
-    OutputLib = DepInfo[1].DependentToolChain->getInputFilename(Outputs[1]);
-    ArgStringList CmdArgs;
-    const char *TouchProgram = C.getArgs().MakeArgString("/usr/bin/touch");
-    CmdArgs.push_back(C.getArgs().MakeArgString(OutputLib));
-    C.addCommand(std::make_unique<Command>(
-        UA, T, ResponseFileSupport::AtFileCurCP(), TouchProgram, CmdArgs,
-        Inputs, InputInfo(&UA, C.getArgs().MakeArgString(OutputLib))));
-    return;
-  }
-
-  for (unsigned I = 0; I < DepInfo.size(); ++I) {
-    auto &Dep = DepInfo[I];
-    auto &Triple = Dep.DependentToolChain->getTriple();
-    if (Triple.isNVPTX() || Triple.isAMDGCN()) {
-      OutputLib = DepInfo[I].DependentToolChain->getInputFilename(Outputs[I]);
-
-      const char *UBProgram = C.getArgs().MakeArgString(
-          T.getToolChain().GetProgramPath("clang-offload-bundler"));
-
-      llvm::SmallString<128> TmpDirString;
-      llvm::sys::path::system_temp_directory(true, TmpDirString);
-      std::string TmpDir(TmpDirString.str());
-
-      SmallString<128> DeviceTriple;
-      auto OffloadKind = Dep.DependentOffloadKind;
-      DeviceTriple += Action::GetOffloadKindName(OffloadKind);
-      DeviceTriple += '-';
-      DeviceTriple += Triple.normalize();
-      DeviceTriple += '-';
-      if (OffloadKind == Action::OFK_OpenMP &&
-          !Dep.DependentToolChain->getTargetID().empty())
-        DeviceTriple += Dep.DependentToolChain->getTargetID();
-      else
-        DeviceTriple += Dep.DependentBoundArch;
-
-      std::string UnbundleArg("-unbundle");
-      std::string TypeArg("-type=a");
-      std::string InputArg("-input=");
-      InputArg += ArchiveOfBundles;
-      std::string OffloadArg("-targets=" + std::string(DeviceTriple));
-      std::string OutputArg("-output=" + OutputLib);
-
-      ArgStringList UBArgs;
-      UBArgs.push_back(C.getArgs().MakeArgString(UnbundleArg.c_str()));
-      UBArgs.push_back(C.getArgs().MakeArgString(TypeArg.c_str()));
-      UBArgs.push_back(C.getArgs().MakeArgString(InputArg.c_str()));
-      UBArgs.push_back(C.getArgs().MakeArgString(OffloadArg.c_str()));
-      UBArgs.push_back(C.getArgs().MakeArgString(OutputArg.c_str()));
-
-      // Add this flag to not exit from clang-offload-bundler if no compatible
-      // code object is found in heterogenous archive library.
-      std::string AdditionalArgs("-allow-missing-bundles");
-      UBArgs.push_back(C.getArgs().MakeArgString(AdditionalArgs.c_str()));
-      C.addCommand(std::make_unique<Command>(
-          UA, T, ResponseFileSupport::AtFileCurCP(), UBProgram, UBArgs, Inputs,
-          InputInfo(&UA, C.getArgs().MakeArgString(OutputLib))));
-    }
-  }
-}
-
 void OffloadBundler::ConstructJobMultipleOutputs(
     Compilation &C, const JobAction &JA, const InputInfoList &Outputs,
     const InputInfoList &Inputs, const llvm::opt::ArgList &TCArgs,
@@ -8521,7 +8443,6 @@ void OffloadBundler::ConstructJobMultipleOutputs(
   StringRef FileName = Input.getFilename();
 
   if (isArchiveOfBundlesFileName(FileName)) {
-    createUnbundleArchiveCommand(C, UA, *this, Outputs, Inputs);
     return;
   }
 
