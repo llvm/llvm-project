@@ -12,10 +12,10 @@
 defvar UpperBoundLMUL = "UpperBound";
 defvar SchedMxList = ["UpperBound", "M1", "M2", "M4", "M8", "MF2", "MF4", "MF8"];
 // Used for widening and narrowing instructions as it doesn't contain M8.
-defvar SchedMxListW = ["UpperBound", "MF8", "MF4", "MF2", "M1", "M2", "M4"];
-defvar SchedMxListFW = ["UpperBound", "MF4", "MF2", "M1", "M2", "M4"];
+defvar SchedMxListW = !listremove(SchedMxList, ["M8"]);
+defvar SchedMxListFW = !listremove(SchedMxList, ["M8", "MF8"]);
 // Used for widening floating-point Reduction as it doesn't contain MF8.
-defvar SchedMxListFWRed = ["UpperBound", "MF4", "MF2", "M1", "M2", "M4", "M8"];
+defvar SchedMxListFWRed = !listremove(SchedMxList, ["MF8"]);
 
 // Define multiclasses to define SchedWrite, SchedRead,  WriteRes, and
 // ReadAdvance for each (name, LMUL) pair for each LMUL in each of the
