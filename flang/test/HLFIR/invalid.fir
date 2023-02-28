@@ -389,3 +389,51 @@ func.func @bad_assign_2(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>,
   hlfir.assign %arg1 to %arg0 realloc keep_lhs_len : !fir.box<!fir.array<?xi32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   return
 }
+
+// -----
+func.func @bad_parent_comp1(%arg0: !fir.box<!fir.array<10x!fir.type<t2{i:i32,j:i32}>>>) {
+  // expected-error@+1 {{'hlfir.parent_comp' op must be provided a shape if and only if the base is an array}}
+  %2 = hlfir.parent_comp %arg0 : (!fir.box<!fir.array<10x!fir.type<t2{i:i32,j:i32}>>>) -> !fir.box<!fir.array<10x!fir.type<t1{i:i32}>>>
+  return
+}
+
+// -----
+func.func @bad_parent_comp2(%arg0: !fir.box<!fir.array<10x!fir.type<t2{i:i32,j:i32}>>>) {
+  %c10 = arith.constant 10 : index
+  %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+  // expected-error@+1 {{'hlfir.parent_comp' op result type rank must match input type rank}}
+  %2 = hlfir.parent_comp %arg0 shape %1 : (!fir.box<!fir.array<10x!fir.type<t2{i:i32,j:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x5x!fir.type<t1{i:i32}>>>
+  return
+}
+
+// -----
+func.func @bad_parent_comp3(%arg0: !fir.box<!fir.array<10x!fir.type<t2{i:i32,j:i32}>>>) {
+  %c10 = arith.constant 10 : index
+  %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+  // expected-error@+1 {{'hlfir.parent_comp' op result type extents are inconsistent with memref type}}
+  %2 = hlfir.parent_comp %arg0 shape %1 : (!fir.box<!fir.array<10x!fir.type<t2{i:i32,j:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<20x!fir.type<t1{i:i32}>>>
+  return
+}
+
+// -----
+func.func @bad_parent_comp4(%arg0: !fir.ref<!fir.type<t2{i:i32,j:i32}>>) {
+  // expected-error@+1 {{'hlfir.parent_comp' op result type and input type must be derived types}}
+  %1 = hlfir.parent_comp %arg0 : (!fir.ref<!fir.type<t2{i:i32,j:i32}>>) -> !fir.ref<i32>
+  return
+}
+
+// -----
+func.func @bad_parent_comp5(%arg0: !fir.class<!fir.type<t2{i:i32,j:i32}>>) {
+  // expected-error@+1 {{'hlfir.parent_comp' op result type must not be polymorphic}}
+  %2 = hlfir.parent_comp %arg0 : (!fir.class<!fir.type<t2{i:i32,j:i32}>>) -> !fir.class<!fir.type<t1{i:i32}>>
+  return
+}
+
+// -----
+func.func @bad_parent_comp6(%arg0: !fir.box<!fir.array<10x!fir.type<t2{i:i32,j:i32}>>>) {
+  %c10 = arith.constant 10 : index
+  %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+  // expected-error@+1 {{'hlfir.parent_comp' op result type must be a fir.box if the result is an array or has length parameters}}
+  %2 = hlfir.parent_comp %arg0 shape %1 : (!fir.box<!fir.array<10x!fir.type<t2{i:i32,j:i32}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<10x!fir.type<t1{i:i32}>>>
+  return
+}
