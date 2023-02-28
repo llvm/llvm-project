@@ -143,6 +143,22 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
        Args.hasArg(options::OPT_coverage))
     CmdArgs.push_back("-bdbg:namedsects:ss");
 
+  if (Arg *A =
+          Args.getLastArg(clang::driver::options::OPT_mxcoff_build_id_EQ)) {
+    StringRef BuildId = A->getValue();
+    if (BuildId[0] != '0' || BuildId[1] != 'x' ||
+        BuildId.find_if_not(llvm::isHexDigit, 2) != StringRef::npos)
+      ToolChain.getDriver().Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << BuildId;
+    else {
+      std::string LinkerFlag = "-bdbg:ldrinfo:xcoff_binary_id:0x";
+      if (BuildId.size() % 2) // Prepend a 0 if odd number of digits.
+        LinkerFlag += "0";
+      LinkerFlag += BuildId.drop_front(2).lower();
+      CmdArgs.push_back(Args.MakeArgString(LinkerFlag));
+    }
+  }
+
   // Specify linker output file.
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
