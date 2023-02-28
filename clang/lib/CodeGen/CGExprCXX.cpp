@@ -443,9 +443,9 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
   // Emit the 'this' pointer.
   Address This = Address::invalid();
   if (BO->getOpcode() == BO_PtrMemI)
-    This = EmitPointerWithAlignment(BaseExpr);
+    This = EmitPointerWithAlignment(BaseExpr, nullptr, nullptr, KnownNonNull);
   else
-    This = EmitLValue(BaseExpr).getAddress(*this);
+    This = EmitLValue(BaseExpr, KnownNonNull).getAddress(*this);
 
   EmitTypeCheck(TCK_MemberCall, E->getExprLoc(), This.getPointer(),
                 QualType(MPT->getClass(), 0));
@@ -2071,6 +2071,7 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
 
   Builder.CreateCondBr(IsNull, DeleteEnd, DeleteNotNull);
   EmitBlock(DeleteNotNull);
+  Ptr.setKnownNonNull();
 
   QualType DeleteTy = E->getDestroyedType();
 
@@ -2103,7 +2104,8 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
 
     Ptr = Address(Builder.CreateInBoundsGEP(Ptr.getElementType(),
                                             Ptr.getPointer(), GEP, "del.first"),
-                  ConvertTypeForMem(DeleteTy), Ptr.getAlignment());
+                  ConvertTypeForMem(DeleteTy), Ptr.getAlignment(),
+                  Ptr.isKnownNonNull());
   }
 
   assert(ConvertTypeForMem(DeleteTy) == Ptr.getElementType());
