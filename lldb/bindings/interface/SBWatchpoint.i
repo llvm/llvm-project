@@ -91,6 +91,21 @@ public:
     GetWatchpointFromEvent (const lldb::SBEvent& event);
 
     STRING_EXTENSION_LEVEL(SBWatchpoint, lldb::eDescriptionLevelVerbose)
+
+    lldb::SBType
+    GetType();
+
+    WatchpointValueKind
+    GetWatchValueKind();
+
+    const char *
+    GetWatchSpec();
+
+    bool
+    IsWatchingReads();
+
+    bool
+    IsWatchingWrites();
 };
 
 } // namespace lldb
