@@ -48,7 +48,7 @@
 # CHECK-NEXT:  bctr
 
 # CHECK-NOP10-LABEL: <__gep_setup_callee>:
-# CHECK-NOP10-NEXT:  mflr 0
+# CHECK-NOP10-NEXT:  mflr 12
 # CHECK-NOP10-NEXT:  bcl 20, 31, 0x10030018
 # CHECK-NOP10-NEXT:  mflr 11
 # CHECK-NOP10-NEXT:  mtlr 12

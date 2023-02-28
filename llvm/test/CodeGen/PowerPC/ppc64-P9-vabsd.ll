@@ -1246,7 +1246,7 @@ define <4 x i32> @sub_absv_vec_32(<4 x i32> %a, <4 x i32> %b) local_unnamed_addr
 ; CHECK-PWR78-NEXT:    vmaxsw v2, v2, v3
 ; CHECK-PWR78-NEXT:    blr
 entry:
-  %sub = sub <4 x i32> %a, %b
+  %sub = sub nsw <4 x i32> %a, %b
   %sub.i = sub <4 x i32> zeroinitializer, %sub
   %0 = tail call <4 x i32> @llvm.ppc.altivec.vmaxsw(<4 x i32> %sub, <4 x i32> %sub.i)
   ret <4 x i32> %0
@@ -1269,7 +1269,7 @@ define <8 x i16> @sub_absv_vec_16(<8 x i16> %a, <8 x i16> %b) local_unnamed_addr
 ; CHECK-PWR78-NEXT:    vmaxsh v2, v2, v3
 ; CHECK-PWR78-NEXT:    blr
 entry:
-  %sub = sub <8 x i16> %a, %b
+  %sub = sub nsw <8 x i16> %a, %b
   %sub.i = sub <8 x i16> zeroinitializer, %sub
   %0 = tail call <8 x i16> @llvm.ppc.altivec.vmaxsh(<8 x i16> %sub, <8 x i16> %sub.i)
   ret <8 x i16> %0
@@ -1292,7 +1292,7 @@ define <16 x i8> @sub_absv_vec_8(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-PWR78-NEXT:    vmaxsb v2, v2, v3
 ; CHECK-PWR78-NEXT:    blr
 entry:
-  %sub = sub <16 x i8> %a, %b
+  %sub = sub nsw <16 x i8> %a, %b
   %sub.i = sub <16 x i8> zeroinitializer, %sub
   %0 = tail call <16 x i8> @llvm.ppc.altivec.vmaxsb(<16 x i8> %sub, <16 x i8> %sub.i)
   ret <16 x i8> %0
@@ -1825,6 +1825,194 @@ define <16 x i8> @absd_int8_ule(<16 x i8>, <16 x i8>) {
 ; CHECK-PWR78-NEXT:    xxsel v2, v5, v2, v4
 ; CHECK-PWR78-NEXT:    blr
   %3 = icmp ule <16 x i8> %0, %1
+  %4 = sub <16 x i8> %0, %1
+  %5 = sub <16 x i8> %1, %0
+  %6 = select <16 x i1> %3, <16 x i8> %5, <16 x i8> %4
+  ret <16 x i8> %6
+}
+
+; Tests for ABDS icmp + sub + select sequence
+
+define <4 x i32> @absd_int32_sgt(<4 x i32>, <4 x i32>) {
+; CHECK-LABEL: absd_int32_sgt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpgtsw v4, v2, v3
+; CHECK-NEXT:    vsubuwm v5, v2, v3
+; CHECK-NEXT:    vsubuwm v2, v3, v2
+; CHECK-NEXT:    xxsel v2, v2, v5, v4
+; CHECK-NEXT:    blr
+  %3 = icmp sgt <4 x i32> %0, %1
+  %4 = sub <4 x i32> %0, %1
+  %5 = sub <4 x i32> %1, %0
+  %6 = select <4 x i1> %3, <4 x i32> %4, <4 x i32> %5
+  ret <4 x i32> %6
+}
+
+define <4 x i32> @absd_int32_sge(<4 x i32>, <4 x i32>) {
+; CHECK-LABEL: absd_int32_sge:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpgtsw v4, v3, v2
+; CHECK-NEXT:    xxlnor vs0, v4, v4
+; CHECK-NEXT:    vsubuwm v4, v2, v3
+; CHECK-NEXT:    vsubuwm v2, v3, v2
+; CHECK-NEXT:    xxsel v2, v2, v4, vs0
+; CHECK-NEXT:    blr
+  %3 = icmp sge <4 x i32> %0, %1
+  %4 = sub <4 x i32> %0, %1
+  %5 = sub <4 x i32> %1, %0
+  %6 = select <4 x i1> %3, <4 x i32> %4, <4 x i32> %5
+  ret <4 x i32> %6
+}
+
+define <4 x i32> @absd_int32_slt(<4 x i32>, <4 x i32>) {
+; CHECK-LABEL: absd_int32_slt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpgtsw v4, v3, v2
+; CHECK-NEXT:    vsubuwm v5, v2, v3
+; CHECK-NEXT:    vsubuwm v2, v3, v2
+; CHECK-NEXT:    xxsel v2, v5, v2, v4
+; CHECK-NEXT:    blr
+  %3 = icmp slt <4 x i32> %0, %1
+  %4 = sub <4 x i32> %0, %1
+  %5 = sub <4 x i32> %1, %0
+  %6 = select <4 x i1> %3, <4 x i32> %5, <4 x i32> %4
+  ret <4 x i32> %6
+}
+
+define <4 x i32> @absd_int32_sle(<4 x i32>, <4 x i32>) {
+; CHECK-LABEL: absd_int32_sle:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpgtsw v4, v2, v3
+; CHECK-NEXT:    xxlnor vs0, v4, v4
+; CHECK-NEXT:    vsubuwm v4, v2, v3
+; CHECK-NEXT:    vsubuwm v2, v3, v2
+; CHECK-NEXT:    xxsel v2, v4, v2, vs0
+; CHECK-NEXT:    blr
+  %3 = icmp sle <4 x i32> %0, %1
+  %4 = sub <4 x i32> %0, %1
+  %5 = sub <4 x i32> %1, %0
+  %6 = select <4 x i1> %3, <4 x i32> %5, <4 x i32> %4
+  ret <4 x i32> %6
+}
+
+define <8 x i16> @absd_int16_sgt(<8 x i16>, <8 x i16>) {
+; CHECK-LABEL: absd_int16_sgt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpgtsh v4, v2, v3
+; CHECK-NEXT:    vsubuhm v5, v2, v3
+; CHECK-NEXT:    vsubuhm v2, v3, v2
+; CHECK-NEXT:    xxsel v2, v2, v5, v4
+; CHECK-NEXT:    blr
+  %3 = icmp sgt <8 x i16> %0, %1
+  %4 = sub <8 x i16> %0, %1
+  %5 = sub <8 x i16> %1, %0
+  %6 = select <8 x i1> %3, <8 x i16> %4, <8 x i16> %5
+  ret <8 x i16> %6
+}
+
+define <8 x i16> @absd_int16_sge(<8 x i16>, <8 x i16>) {
+; CHECK-LABEL: absd_int16_sge:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpgtsh v4, v3, v2
+; CHECK-NEXT:    vsubuhm v5, v2, v3
+; CHECK-NEXT:    vsubuhm v2, v3, v2
+; CHECK-NEXT:    xxlnor v4, v4, v4
+; CHECK-NEXT:    xxsel v2, v2, v5, v4
+; CHECK-NEXT:    blr
+  %3 = icmp sge <8 x i16> %0, %1
+  %4 = sub <8 x i16> %0, %1
+  %5 = sub <8 x i16> %1, %0
+  %6 = select <8 x i1> %3, <8 x i16> %4, <8 x i16> %5
+  ret <8 x i16> %6
+}
+
+define <8 x i16> @absd_int16_slt(<8 x i16>, <8 x i16>) {
+; CHECK-LABEL: absd_int16_slt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpgtsh v4, v3, v2
+; CHECK-NEXT:    vsubuhm v5, v2, v3
+; CHECK-NEXT:    vsubuhm v2, v3, v2
+; CHECK-NEXT:    xxsel v2, v5, v2, v4
+; CHECK-NEXT:    blr
+  %3 = icmp slt <8 x i16> %0, %1
+  %4 = sub <8 x i16> %0, %1
+  %5 = sub <8 x i16> %1, %0
+  %6 = select <8 x i1> %3, <8 x i16> %5, <8 x i16> %4
+  ret <8 x i16> %6
+}
+
+define <8 x i16> @absd_int16_sle(<8 x i16>, <8 x i16>) {
+; CHECK-LABEL: absd_int16_sle:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpgtsh v4, v2, v3
+; CHECK-NEXT:    vsubuhm v5, v2, v3
+; CHECK-NEXT:    vsubuhm v2, v3, v2
+; CHECK-NEXT:    xxlnor v4, v4, v4
+; CHECK-NEXT:    xxsel v2, v5, v2, v4
+; CHECK-NEXT:    blr
+  %3 = icmp sle <8 x i16> %0, %1
+  %4 = sub <8 x i16> %0, %1
+  %5 = sub <8 x i16> %1, %0
+  %6 = select <8 x i1> %3, <8 x i16> %5, <8 x i16> %4
+  ret <8 x i16> %6
+}
+
+define <16 x i8> @absd_int8_sgt(<16 x i8>, <16 x i8>) {
+; CHECK-LABEL: absd_int8_sgt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpgtsb v4, v2, v3
+; CHECK-NEXT:    vsububm v5, v2, v3
+; CHECK-NEXT:    vsububm v2, v3, v2
+; CHECK-NEXT:    xxsel v2, v2, v5, v4
+; CHECK-NEXT:    blr
+  %3 = icmp sgt <16 x i8> %0, %1
+  %4 = sub <16 x i8> %0, %1
+  %5 = sub <16 x i8> %1, %0
+  %6 = select <16 x i1> %3, <16 x i8> %4, <16 x i8> %5
+  ret <16 x i8> %6
+}
+
+define <16 x i8> @absd_int8_sge(<16 x i8>, <16 x i8>) {
+; CHECK-LABEL: absd_int8_sge:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpgtsb v4, v3, v2
+; CHECK-NEXT:    vsububm v5, v2, v3
+; CHECK-NEXT:    vsububm v2, v3, v2
+; CHECK-NEXT:    xxlnor v4, v4, v4
+; CHECK-NEXT:    xxsel v2, v2, v5, v4
+; CHECK-NEXT:    blr
+  %3 = icmp sge <16 x i8> %0, %1
+  %4 = sub <16 x i8> %0, %1
+  %5 = sub <16 x i8> %1, %0
+  %6 = select <16 x i1> %3, <16 x i8> %4, <16 x i8> %5
+  ret <16 x i8> %6
+}
+
+define <16 x i8> @absd_int8_slt(<16 x i8>, <16 x i8>) {
+; CHECK-LABEL: absd_int8_slt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpgtsb v4, v3, v2
+; CHECK-NEXT:    vsububm v5, v2, v3
+; CHECK-NEXT:    vsububm v2, v3, v2
+; CHECK-NEXT:    xxsel v2, v5, v2, v4
+; CHECK-NEXT:    blr
+  %3 = icmp slt <16 x i8> %0, %1
+  %4 = sub <16 x i8> %0, %1
+  %5 = sub <16 x i8> %1, %0
+  %6 = select <16 x i1> %3, <16 x i8> %5, <16 x i8> %4
+  ret <16 x i8> %6
+}
+
+define <16 x i8> @absd_int8_sle(<16 x i8>, <16 x i8>) {
+; CHECK-LABEL: absd_int8_sle:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpgtsb v4, v2, v3
+; CHECK-NEXT:    vsububm v5, v2, v3
+; CHECK-NEXT:    vsububm v2, v3, v2
+; CHECK-NEXT:    xxlnor v4, v4, v4
+; CHECK-NEXT:    xxsel v2, v5, v2, v4
+; CHECK-NEXT:    blr
+  %3 = icmp sle <16 x i8> %0, %1
   %4 = sub <16 x i8> %0, %1
   %5 = sub <16 x i8> %1, %0
   %6 = select <16 x i1> %3, <16 x i8> %5, <16 x i8> %4

@@ -4080,7 +4080,7 @@ define void @load_i16_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX1-ONLY-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm11 # 16-byte Reload
 ; AVX1-ONLY-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm1[0],xmm11[0],xmm1[1],xmm11[1],xmm1[2],xmm11[2],xmm1[3],xmm11[3]
 ; AVX1-ONLY-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5],xmm1[6,7]
-; AVX1-ONLY-NEXT:    vpermilps {{.*#+}} xmm1 = xmm12[0,1,0,3]
+; AVX1-ONLY-NEXT:    vshufps {{.*#+}} xmm1 = xmm12[0,1,0,3]
 ; AVX1-ONLY-NEXT:    vpshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,4,7]
 ; AVX1-ONLY-NEXT:    vpshufd {{.*#+}} xmm4 = xmm13[2,2,3,3]
 ; AVX1-ONLY-NEXT:    vpunpckhqdq {{.*#+}} xmm4 = xmm1[1],xmm4[1]

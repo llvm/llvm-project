@@ -270,7 +270,7 @@ define void @trunc_qd_256_mem(<4 x i64> %i, ptr %res) #0 {
 define <2 x i32> @trunc_qd_128(<2 x i64> %i) #0 {
 ; ALL-LABEL: trunc_qd_128:
 ; ALL:       ## %bb.0:
-; ALL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; ALL-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; ALL-NEXT:    retq
   %x = trunc <2 x i64> %i to <2 x i32>
   ret <2 x i32> %x
@@ -279,7 +279,7 @@ define <2 x i32> @trunc_qd_128(<2 x i64> %i) #0 {
 define void @trunc_qd_128_mem(<2 x i64> %i, ptr %res) #0 {
 ; KNL-LABEL: trunc_qd_128_mem:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; KNL-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; KNL-NEXT:    vmovlps %xmm0, (%rdi)
 ; KNL-NEXT:    retq
 ;

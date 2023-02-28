@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +zve64x -ffreestanding -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -ffreestanding -fsyntax-only -verify %s
 
 // TODO: Support for a arm_sve_vector_bits like attribute will come in the future.
 
@@ -59,4 +59,22 @@ void f(int c) {
   ss8 = ss8 & gs8; // expected-error {{invalid operands to binary expression ('vint8m1_t' (aka '__rvv_int8m1_t') and 'gnu_int8_t' (vector of 8 'int8_t' values))}}
 
   gs8 = gs8 & ss8; // expected-error {{invalid operands to binary expression ('gnu_int8_t' (vector of 8 'int8_t' values) and 'vint8m1_t' (aka '__rvv_int8m1_t'))}}
+}
+
+// --------------------------------------------------------------------------//
+// Implicit casts
+
+gnu_int8_t to_gnu_int8_t_from_vint8m1_t_(vint8m1_t x) { return x; } // expected-error {{returning 'vint8m1_t' (aka '__rvv_int8m1_t') from a function with incompatible result type 'gnu_int8_t' (vector of 8 'int8_t' values)}}
+vint8m1_t from_gnu_int8_t_to_vint8m1_t(gnu_int8_t x) { return x; } // expected-error {{returning 'gnu_int8_t' (vector of 8 'int8_t' values) from a function with incompatible result type 'vint8m1_t' (aka '__rvv_int8m1_t')}}
+
+// --------------------------------------------------------------------------//
+// Test passing GNU vector scalable function
+
+vint32m1_t __attribute__((overloadable)) vfunc(vint32m1_t op1, vint32m1_t op2);
+vfloat64m1_t __attribute__((overloadable)) vfunc(vfloat64m1_t op1, vfloat64m1_t op2);
+
+gnu_int32_t call_int32_ff(gnu_int32_t op1, gnu_int32_t op2) {
+  return vfunc(op1, op2); // expected-error {{no matching function for call to 'vfunc'}}
+                          // expected-note@-5 {{candidate function not viable: no known conversion from 'gnu_int32_t' (vector of 2 'int32_t' values) to 'vint32m1_t' (aka '__rvv_int32m1_t') for 1st argument}}
+                          // expected-note@-5 {{candidate function not viable: no known conversion from 'gnu_int32_t' (vector of 2 'int32_t' values) to 'vfloat64m1_t' (aka '__rvv_float64m1_t') for 1st argument}}
 }

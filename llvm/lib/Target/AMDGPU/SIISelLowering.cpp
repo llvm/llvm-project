@@ -735,7 +735,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
                      {MVT::Other, MVT::f32, MVT::v4f32, MVT::i16, MVT::f16,
-                      MVT::v2i16, MVT::v2f16, MVT::i8},
+                      MVT::v2i16, MVT::v2f16, MVT::i16, MVT::i8},
                      Custom);
 
   setOperationAction(ISD::INTRINSIC_W_CHAIN,
@@ -1323,7 +1323,8 @@ bool SITargetLowering::isLegalMUBUFAddressingMode(const AddrMode &AM) const {
   // assume those use MUBUF instructions. Scratch loads / stores are currently
   // implemented as mubuf instructions with offen bit set, so slightly
   // different than the normal addr64.
-  if (!SIInstrInfo::isLegalMUBUFImmOffset(AM.BaseOffs))
+  const SIInstrInfo *TII = Subtarget->getInstrInfo();
+  if (!TII->isLegalMUBUFImmOffset(AM.BaseOffs))
     return false;
 
   // FIXME: Since we can split immediate into soffset and immediate offset,
@@ -5033,7 +5034,7 @@ SDValue SITargetLowering::lowerIntrinsicLoad(MemSDNode *M, bool IsFormat,
 
   // Handle BUFFER_LOAD_BYTE/UBYTE/SHORT/USHORT overloaded intrinsics
   if (!IsD16 && !LoadVT.isVector() && EltType.getSizeInBits() < 32)
-    return handleByteShortBufferLoads(DAG, LoadVT, DL, Ops, M);
+    return handleByteShortBufferLoads(DAG, LoadVT, DL, Ops, M->getMemOperand());
 
   if (isTypeLegal(LoadVT)) {
     return getMemIntrinsicNode(Opc, DL, M->getVTList(), Ops, IntVT,
@@ -5202,6 +5203,56 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
         SDValue Cvt = DAG.getNode(Opcode, SL, MVT::i32, Src0, Src1);
         Results.push_back(DAG.getNode(ISD::BITCAST, SL, MVT::v2i16, Cvt));
       }
+      return;
+    }
+    case Intrinsic::amdgcn_s_buffer_load: {
+      // Lower llvm.amdgcn.s.buffer.load.(i8, u8) intrinsics. First, we generate
+      // s_buffer_load_u8 for signed and unsigned load instructions. Next, DAG
+      // combiner tries to merge the s_buffer_load_u8 with a sext instruction
+      // (performSignExtendInRegCombine()) and it replaces s_buffer_load_u8 with
+      // s_buffer_load_i8.
+      assert(Subtarget->hasScalarSubwordLoads() &&
+             "s_buffer_load_{u8, i8} are supported "
+             "in GFX12 (or newer) architectures.");
+      SDValue Op = SDValue(N, 0);
+      SDValue Rsrc = Op.getOperand(1);
+      SDValue Offset = Op.getOperand(2);
+      SDValue CachePolicy = Op.getOperand(3);
+      EVT VT = Op.getValueType();
+      assert(VT == MVT::i8 && "Expected 8-bit s_buffer_load intrinsics.\n");
+      SDLoc DL(Op);
+      MachineFunction &MF = DAG.getMachineFunction();
+      const DataLayout &DataLayout = DAG.getDataLayout();
+      Align Alignment =
+          DataLayout.getABITypeAlign(VT.getTypeForEVT(*DAG.getContext()));
+      MachineMemOperand *MMO = MF.getMachineMemOperand(
+          MachinePointerInfo(),
+          MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+              MachineMemOperand::MOInvariant,
+          VT.getStoreSize(), Alignment);
+      SDValue LoadVal;
+      if (!Offset->isDivergent()) {
+        SDValue Ops[] = {Rsrc, // source register
+                         Offset, CachePolicy};
+        SDValue BufferLoad =
+            DAG.getMemIntrinsicNode(AMDGPUISD::SBUFFER_LOAD_UBYTE, DL,
+                                    DAG.getVTList(MVT::i32), Ops, VT, MMO);
+        LoadVal = DAG.getNode(ISD::TRUNCATE, DL, VT, BufferLoad);
+      } else {
+        SDValue Ops[] = {
+            DAG.getEntryNode(),                    // Chain
+            Rsrc,                                  // rsrc
+            DAG.getConstant(0, DL, MVT::i32),      // vindex
+            {},                                    // voffset
+            {},                                    // soffset
+            {},                                    // offset
+            CachePolicy,                           // cachepolicy
+            DAG.getTargetConstant(0, DL, MVT::i1), // idxen
+        };
+        setBufferOffsets(Offset, DAG, &Ops[3], Align(4));
+        LoadVal = handleByteShortBufferLoads(DAG, VT, DL, Ops, MMO);
+      }
+      Results.push_back(LoadVal);
       return;
     }
     }
@@ -6519,6 +6570,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   unsigned IntrOpcode = Intr->BaseOpcode;
   bool IsGFX10Plus = AMDGPU::isGFX10Plus(*Subtarget);
   bool IsGFX11Plus = AMDGPU::isGFX11Plus(*Subtarget);
+  bool IsGFX12Plus = AMDGPU::isGFX12Plus(*Subtarget);
 
   SmallVector<EVT, 3> ResultTypes(Op->values());
   SmallVector<EVT, 3> OrigResultTypes(Op->values());
@@ -6698,9 +6750,9 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   // SIShrinkInstructions will convert NSA encodings to non-NSA after register
   // allocation when possible.
   //
-  // Partial NSA is allowed on GFX11 where the final register is a contiguous
+  // Partial NSA is allowed on GFX11+ where the final register is a contiguous
   // set of the remaining addresses.
-  const unsigned NSAMaxSize = ST->getNSAMaxSize();
+  const unsigned NSAMaxSize = ST->getNSAMaxSize(BaseOpcode->Sampler);
   const bool HasPartialNSAEncoding = ST->hasPartialNSAEncoding();
   const bool UseNSA = ST->hasNSAEncoding() &&
                       VAddrs.size() >= ST->getNSAThreshold(MF) &&
@@ -6797,7 +6849,8 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   Ops.push_back(DAG.getTargetConstant(DMask, DL, MVT::i32));
   if (IsGFX10Plus)
     Ops.push_back(DAG.getTargetConstant(DimInfo->Encoding, DL, MVT::i32));
-  Ops.push_back(Unorm);
+  if (!IsGFX12Plus || BaseOpcode->Sampler)
+    Ops.push_back(Unorm);
   Ops.push_back(DAG.getTargetConstant(CPol, DL, MVT::i32));
   Ops.push_back(IsA16 &&  // r128, a16 for gfx9
                 ST->hasFeature(AMDGPU::FeatureR128A16) ? True : False);
@@ -6808,7 +6861,8 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   } else if (cast<ConstantSDNode>(TFE)->getZExtValue()) {
     report_fatal_error("TFE is not supported on this GPU");
   }
-  Ops.push_back(LWE); // lwe
+  if (!IsGFX12Plus || BaseOpcode->Sampler)
+    Ops.push_back(LWE); // lwe
   if (!IsGFX10Plus)
     Ops.push_back(DimInfo->DA ? True : False);
   if (BaseOpcode->HasD16)
@@ -6820,7 +6874,10 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
       UseNSA ? VAddrs.size() : VAddr.getValueType().getSizeInBits() / 32;
   int Opcode = -1;
 
-  if (IsGFX11Plus) {
+  if (IsGFX12Plus) {
+    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx12,
+                                   NumVDataDwords, NumVAddrDwords);
+  } else if (IsGFX11Plus) {
     Opcode = AMDGPU::getMIMGOpcode(IntrOpcode,
                                    UseNSA ? AMDGPU::MIMGEncGfx11NSA
                                           : AMDGPU::MIMGEncGfx11Default,
@@ -6882,11 +6939,18 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
       VT.getStoreSize(), Alignment);
 
   if (!Offset->isDivergent()) {
-    SDValue Ops[] = {
-        Rsrc,
-        Offset, // Offset
-        CachePolicy
-    };
+    SDValue Ops[] = {Rsrc, Offset, CachePolicy};
+
+    // Lower llvm.amdgcn.s.buffer.load.{i16, u16} intrinsics. Initially, the
+    // s_buffer_load_u16 instruction is emitted for both signed and unsigned
+    // loads. Later, DAG combiner tries to combine s_buffer_load_u16 with sext
+    // and generates s_buffer_load_i16 (performSignExtendInRegCombine).
+    if (VT == MVT::i16 && Subtarget->hasScalarSubwordLoads()) {
+      SDValue BufferLoad =
+          DAG.getMemIntrinsicNode(AMDGPUISD::SBUFFER_LOAD_USHORT, DL,
+                                  DAG.getVTList(MVT::i32), Ops, VT, MMO);
+      return DAG.getNode(ISD::TRUNCATE, DL, VT, BufferLoad);
+    }
 
     // Widen vec3 load to vec4.
     if (VT.isVector() && VT.getVectorNumElements() == 3) {
@@ -6906,6 +6970,21 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
 
   // We have a divergent offset. Emit a MUBUF buffer load instead. We can
   // assume that the buffer is unswizzled.
+  SDValue Ops[] = {
+      DAG.getEntryNode(),                    // Chain
+      Rsrc,                                  // rsrc
+      DAG.getConstant(0, DL, MVT::i32),      // vindex
+      {},                                    // voffset
+      {},                                    // soffset
+      {},                                    // offset
+      CachePolicy,                           // cachepolicy
+      DAG.getTargetConstant(0, DL, MVT::i1), // idxen
+  };
+  if (VT == MVT::i16 && Subtarget->hasScalarSubwordLoads()) {
+    setBufferOffsets(Offset, DAG, &Ops[3], Align(4));
+    return handleByteShortBufferLoads(DAG, VT, DL, Ops, MMO);
+  }
+
   SmallVector<SDValue, 4> Loads;
   unsigned NumLoads = 1;
   MVT LoadVT = VT.getSimpleVT();
@@ -6919,16 +6998,6 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
   }
 
   SDVTList VTList = DAG.getVTList({LoadVT, MVT::Glue});
-  SDValue Ops[] = {
-      DAG.getEntryNode(),                               // Chain
-      Rsrc,                                             // rsrc
-      DAG.getConstant(0, DL, MVT::i32),                 // vindex
-      {},                                               // voffset
-      {},                                               // soffset
-      {},                                               // offset
-      CachePolicy,                                      // cachepolicy
-      DAG.getTargetConstant(0, DL, MVT::i1),            // idxen
-  };
 
   // Use the alignment to ensure that the required offsets will fit into the
   // immediate offsets.
@@ -7364,6 +7433,19 @@ static void updateBufferMMO(MachineMemOperand *MMO, SDValue VOffset,
                  cast<ConstantSDNode>(Offset)->getSExtValue());
 }
 
+// On targets not supporting constant in soffset field, turn zero to
+// SGPR_NULL to avoid generating an extra s_mov with zero.
+static SDValue selectSOffset(SDValue SOffset, SelectionDAG &DAG,
+                             const GCNSubtarget *Subtarget) {
+  if (Subtarget->hasRestrictedSOffset())
+    if (auto SOffsetConst = dyn_cast<ConstantSDNode>(SOffset)) {
+      if (SOffsetConst->isZero()) {
+        return DAG.getRegister(AMDGPU::SGPR_NULL, MVT::i32);
+      }
+    }
+  return SOffset;
+}
+
 SDValue SITargetLowering::lowerRawBufferAtomicIntrin(SDValue Op,
                                                      SelectionDAG &DAG,
                                                      unsigned NewOpcode) const {
@@ -7371,16 +7453,17 @@ SDValue SITargetLowering::lowerRawBufferAtomicIntrin(SDValue Op,
 
   SDValue VData = Op.getOperand(2);
   auto Offsets = splitBufferOffsets(Op.getOperand(4), DAG);
+  auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
   SDValue Ops[] = {
-    Op.getOperand(0), // Chain
-    VData,            // vdata
-    Op.getOperand(3), // rsrc
-    DAG.getConstant(0, DL, MVT::i32), // vindex
-    Offsets.first,    // voffset
-    Op.getOperand(5), // soffset
-    Offsets.second,   // offset
-    Op.getOperand(6), // cachepolicy
-    DAG.getTargetConstant(0, DL, MVT::i1), // idxen
+      Op.getOperand(0),                      // Chain
+      VData,                                 // vdata
+      Op.getOperand(3),                      // rsrc
+      DAG.getConstant(0, DL, MVT::i32),      // vindex
+      Offsets.first,                         // voffset
+      SOffset,                               // soffset
+      Offsets.second,                        // offset
+      Op.getOperand(6),                      // cachepolicy
+      DAG.getTargetConstant(0, DL, MVT::i1), // idxen
   };
 
   auto *M = cast<MemSDNode>(Op);
@@ -7406,16 +7489,17 @@ SITargetLowering::lowerStructBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
 
   SDValue VData = Op.getOperand(2);
   auto Offsets = splitBufferOffsets(Op.getOperand(5), DAG);
+  auto SOffset = selectSOffset(Op.getOperand(6), DAG, Subtarget);
   SDValue Ops[] = {
-    Op.getOperand(0), // Chain
-    VData,            // vdata
-    Op.getOperand(3), // rsrc
-    Op.getOperand(4), // vindex
-    Offsets.first,    // voffset
-    Op.getOperand(6), // soffset
-    Offsets.second,   // offset
-    Op.getOperand(7), // cachepolicy
-    DAG.getTargetConstant(1, DL, MVT::i1), // idxen
+      Op.getOperand(0),                      // Chain
+      VData,                                 // vdata
+      Op.getOperand(3),                      // rsrc
+      Op.getOperand(4),                      // vindex
+      Offsets.first,                         // voffset
+      SOffset,                               // soffset
+      Offsets.second,                        // offset
+      Op.getOperand(7),                      // cachepolicy
+      DAG.getTargetConstant(1, DL, MVT::i1), // idxen
   };
 
   auto *M = cast<MemSDNode>(Op);
@@ -7567,9 +7651,9 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                  M, DAG, Ops);
 
     // Handle BUFFER_LOAD_BYTE/UBYTE/SHORT/USHORT overloaded intrinsics
-    if (LoadVT.getScalarType() == MVT::i8 ||
-        LoadVT.getScalarType() == MVT::i16)
-      return handleByteShortBufferLoads(DAG, LoadVT, DL, Ops, M);
+    if (LoadVT.getScalarType() == MVT::i8 || LoadVT.getScalarType() == MVT::i16)
+      return handleByteShortBufferLoads(DAG, LoadVT, DL, Ops,
+                                        M->getMemOperand());
 
     return getMemIntrinsicNode(Opc, DL, Op->getVTList(), Ops, IntVT,
                                M->getMemOperand(), DAG);
@@ -7579,15 +7663,16 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     const bool IsFormat = IntrID == Intrinsic::amdgcn_raw_buffer_load_format;
 
     auto Offsets = splitBufferOffsets(Op.getOperand(3), DAG);
+    auto SOffset = selectSOffset(Op.getOperand(4), DAG, Subtarget);
     SDValue Ops[] = {
-      Op.getOperand(0), // Chain
-      Op.getOperand(2), // rsrc
-      DAG.getConstant(0, DL, MVT::i32), // vindex
-      Offsets.first,    // voffset
-      Op.getOperand(4), // soffset
-      Offsets.second,   // offset
-      Op.getOperand(5), // cachepolicy, swizzled buffer
-      DAG.getTargetConstant(0, DL, MVT::i1), // idxen
+        Op.getOperand(0),                      // Chain
+        Op.getOperand(2),                      // rsrc
+        DAG.getConstant(0, DL, MVT::i32),      // vindex
+        Offsets.first,                         // voffset
+        SOffset,                               // soffset
+        Offsets.second,                        // offset
+        Op.getOperand(5),                      // cachepolicy, swizzled buffer
+        DAG.getTargetConstant(0, DL, MVT::i1), // idxen
     };
 
     auto *M = cast<MemSDNode>(Op);
@@ -7599,15 +7684,16 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     const bool IsFormat = IntrID == Intrinsic::amdgcn_struct_buffer_load_format;
 
     auto Offsets = splitBufferOffsets(Op.getOperand(4), DAG);
+    auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
     SDValue Ops[] = {
-      Op.getOperand(0), // Chain
-      Op.getOperand(2), // rsrc
-      Op.getOperand(3), // vindex
-      Offsets.first,    // voffset
-      Op.getOperand(5), // soffset
-      Offsets.second,   // offset
-      Op.getOperand(6), // cachepolicy, swizzled buffer
-      DAG.getTargetConstant(1, DL, MVT::i1), // idxen
+        Op.getOperand(0),                      // Chain
+        Op.getOperand(2),                      // rsrc
+        Op.getOperand(3),                      // vindex
+        Offsets.first,                         // voffset
+        SOffset,                               // soffset
+        Offsets.second,                        // offset
+        Op.getOperand(6),                      // cachepolicy, swizzled buffer
+        DAG.getTargetConstant(1, DL, MVT::i1), // idxen
     };
 
     auto *M = cast<MemSDNode>(Op);
@@ -7618,21 +7704,22 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     MemSDNode *M = cast<MemSDNode>(Op);
     EVT LoadVT = Op.getValueType();
 
+    auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
     unsigned Dfmt = cast<ConstantSDNode>(Op.getOperand(7))->getZExtValue();
     unsigned Nfmt = cast<ConstantSDNode>(Op.getOperand(8))->getZExtValue();
     unsigned Glc = cast<ConstantSDNode>(Op.getOperand(9))->getZExtValue();
     unsigned Slc = cast<ConstantSDNode>(Op.getOperand(10))->getZExtValue();
     unsigned IdxEn = getIdxEn(Op.getOperand(3));
     SDValue Ops[] = {
-      Op.getOperand(0),  // Chain
-      Op.getOperand(2),  // rsrc
-      Op.getOperand(3),  // vindex
-      Op.getOperand(4),  // voffset
-      Op.getOperand(5),  // soffset
-      Op.getOperand(6),  // offset
-      DAG.getTargetConstant(Dfmt | (Nfmt << 4), DL, MVT::i32), // format
-      DAG.getTargetConstant(Glc | (Slc << 1), DL, MVT::i32), // cachepolicy
-      DAG.getTargetConstant(IdxEn, DL, MVT::i1) // idxen
+        Op.getOperand(0),                                        // Chain
+        Op.getOperand(2),                                        // rsrc
+        Op.getOperand(3),                                        // vindex
+        Op.getOperand(4),                                        // voffset
+        SOffset,                                                 // soffset
+        Op.getOperand(6),                                        // offset
+        DAG.getTargetConstant(Dfmt | (Nfmt << 4), DL, MVT::i32), // format
+        DAG.getTargetConstant(Glc | (Slc << 1), DL, MVT::i32),   // cachepolicy
+        DAG.getTargetConstant(IdxEn, DL, MVT::i1)                // idxen
     };
 
     if (LoadVT.getScalarType() == MVT::f16)
@@ -7646,17 +7733,18 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     MemSDNode *M = cast<MemSDNode>(Op);
     EVT LoadVT = Op.getValueType();
     auto Offsets = splitBufferOffsets(Op.getOperand(3), DAG);
+    auto SOffset = selectSOffset(Op.getOperand(4), DAG, Subtarget);
 
     SDValue Ops[] = {
-      Op.getOperand(0),  // Chain
-      Op.getOperand(2),  // rsrc
-      DAG.getConstant(0, DL, MVT::i32), // vindex
-      Offsets.first,     // voffset
-      Op.getOperand(4),  // soffset
-      Offsets.second,    // offset
-      Op.getOperand(5),  // format
-      Op.getOperand(6),  // cachepolicy, swizzled buffer
-      DAG.getTargetConstant(0, DL, MVT::i1), // idxen
+        Op.getOperand(0),                      // Chain
+        Op.getOperand(2),                      // rsrc
+        DAG.getConstant(0, DL, MVT::i32),      // vindex
+        Offsets.first,                         // voffset
+        SOffset,                               // soffset
+        Offsets.second,                        // offset
+        Op.getOperand(5),                      // format
+        Op.getOperand(6),                      // cachepolicy, swizzled buffer
+        DAG.getTargetConstant(0, DL, MVT::i1), // idxen
     };
 
     if (LoadVT.getScalarType() == MVT::f16)
@@ -7670,17 +7758,18 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     MemSDNode *M = cast<MemSDNode>(Op);
     EVT LoadVT = Op.getValueType();
     auto Offsets = splitBufferOffsets(Op.getOperand(4), DAG);
+    auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
 
     SDValue Ops[] = {
-      Op.getOperand(0),  // Chain
-      Op.getOperand(2),  // rsrc
-      Op.getOperand(3),  // vindex
-      Offsets.first,     // voffset
-      Op.getOperand(5),  // soffset
-      Offsets.second,    // offset
-      Op.getOperand(6),  // format
-      Op.getOperand(7),  // cachepolicy, swizzled buffer
-      DAG.getTargetConstant(1, DL, MVT::i1), // idxen
+        Op.getOperand(0),                      // Chain
+        Op.getOperand(2),                      // rsrc
+        Op.getOperand(3),                      // vindex
+        Offsets.first,                         // voffset
+        SOffset,                               // soffset
+        Offsets.second,                        // offset
+        Op.getOperand(6),                      // format
+        Op.getOperand(7),                      // cachepolicy, swizzled buffer
+        DAG.getTargetConstant(1, DL, MVT::i1), // idxen
     };
 
     if (LoadVT.getScalarType() == MVT::f16)
@@ -7859,17 +7948,18 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   }
   case Intrinsic::amdgcn_raw_buffer_atomic_cmpswap: {
     auto Offsets = splitBufferOffsets(Op.getOperand(5), DAG);
+    auto SOffset = selectSOffset(Op.getOperand(6), DAG, Subtarget);
     SDValue Ops[] = {
-      Op.getOperand(0), // Chain
-      Op.getOperand(2), // src
-      Op.getOperand(3), // cmp
-      Op.getOperand(4), // rsrc
-      DAG.getConstant(0, DL, MVT::i32), // vindex
-      Offsets.first,    // voffset
-      Op.getOperand(6), // soffset
-      Offsets.second,   // offset
-      Op.getOperand(7), // cachepolicy
-      DAG.getTargetConstant(0, DL, MVT::i1), // idxen
+        Op.getOperand(0),                      // Chain
+        Op.getOperand(2),                      // src
+        Op.getOperand(3),                      // cmp
+        Op.getOperand(4),                      // rsrc
+        DAG.getConstant(0, DL, MVT::i32),      // vindex
+        Offsets.first,                         // voffset
+        SOffset,                               // soffset
+        Offsets.second,                        // offset
+        Op.getOperand(7),                      // cachepolicy
+        DAG.getTargetConstant(0, DL, MVT::i1), // idxen
     };
     EVT VT = Op.getValueType();
     auto *M = cast<MemSDNode>(Op);
@@ -7880,17 +7970,18 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   }
   case Intrinsic::amdgcn_struct_buffer_atomic_cmpswap: {
     auto Offsets = splitBufferOffsets(Op.getOperand(6), DAG);
+    auto SOffset = selectSOffset(Op.getOperand(7), DAG, Subtarget);
     SDValue Ops[] = {
-      Op.getOperand(0), // Chain
-      Op.getOperand(2), // src
-      Op.getOperand(3), // cmp
-      Op.getOperand(4), // rsrc
-      Op.getOperand(5), // vindex
-      Offsets.first,    // voffset
-      Op.getOperand(7), // soffset
-      Offsets.second,   // offset
-      Op.getOperand(8), // cachepolicy
-      DAG.getTargetConstant(1, DL, MVT::i1), // idxen
+        Op.getOperand(0),                      // Chain
+        Op.getOperand(2),                      // src
+        Op.getOperand(3),                      // cmp
+        Op.getOperand(4),                      // rsrc
+        Op.getOperand(5),                      // vindex
+        Offsets.first,                         // voffset
+        SOffset,                               // soffset
+        Offsets.second,                        // offset
+        Op.getOperand(8),                      // cachepolicy
+        DAG.getTargetConstant(1, DL, MVT::i1), // idxen
     };
     EVT VT = Op.getValueType();
     auto *M = cast<MemSDNode>(Op);
@@ -7970,8 +8061,9 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     const unsigned NumVDataDwords = 4;
     const unsigned NumVAddrDwords = IsA16 ? (Is64 ? 9 : 8) : (Is64 ? 12 : 11);
     const unsigned NumVAddrs = IsGFX11Plus ? (IsA16 ? 4 : 5) : NumVAddrDwords;
-    const bool UseNSA =
-        Subtarget->hasNSAEncoding() && NumVAddrs <= Subtarget->getNSAMaxSize();
+    const bool UseNSA = (Subtarget->hasNSAEncoding() &&
+                         NumVAddrs <= Subtarget->getNSAMaxSize()) ||
+                        IsGFX12Plus;
     const unsigned BaseOpcodes[2][2] = {
         {AMDGPU::IMAGE_BVH_INTERSECT_RAY, AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16},
         {AMDGPU::IMAGE_BVH64_INTERSECT_RAY,
@@ -8331,17 +8423,18 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     if (IsD16)
       VData = handleD16VData(VData, DAG);
     auto Offsets = splitBufferOffsets(Op.getOperand(5), DAG);
+    auto SOffset = selectSOffset(Op.getOperand(6), DAG, Subtarget);
     SDValue Ops[] = {
-      Chain,
-      VData,             // vdata
-      Op.getOperand(3),  // rsrc
-      Op.getOperand(4),  // vindex
-      Offsets.first,     // voffset
-      Op.getOperand(6),  // soffset
-      Offsets.second,    // offset
-      Op.getOperand(7),  // format
-      Op.getOperand(8),  // cachepolicy, swizzled buffer
-      DAG.getTargetConstant(1, DL, MVT::i1), // idxen
+        Chain,
+        VData,                                 // vdata
+        Op.getOperand(3),                      // rsrc
+        Op.getOperand(4),                      // vindex
+        Offsets.first,                         // voffset
+        SOffset,                               // soffset
+        Offsets.second,                        // offset
+        Op.getOperand(7),                      // format
+        Op.getOperand(8),                      // cachepolicy, swizzled buffer
+        DAG.getTargetConstant(1, DL, MVT::i1), // idxen
     };
     unsigned Opc = IsD16 ? AMDGPUISD::TBUFFER_STORE_FORMAT_D16 :
                            AMDGPUISD::TBUFFER_STORE_FORMAT;
@@ -8356,17 +8449,18 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     if (IsD16)
       VData = handleD16VData(VData, DAG);
     auto Offsets = splitBufferOffsets(Op.getOperand(4), DAG);
+    auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
     SDValue Ops[] = {
-      Chain,
-      VData,             // vdata
-      Op.getOperand(3),  // rsrc
-      DAG.getConstant(0, DL, MVT::i32), // vindex
-      Offsets.first,     // voffset
-      Op.getOperand(5),  // soffset
-      Offsets.second,    // offset
-      Op.getOperand(6),  // format
-      Op.getOperand(7),  // cachepolicy, swizzled buffer
-      DAG.getTargetConstant(0, DL, MVT::i1), // idxen
+        Chain,
+        VData,                                 // vdata
+        Op.getOperand(3),                      // rsrc
+        DAG.getConstant(0, DL, MVT::i32),      // vindex
+        Offsets.first,                         // voffset
+        SOffset,                               // soffset
+        Offsets.second,                        // offset
+        Op.getOperand(6),                      // format
+        Op.getOperand(7),                      // cachepolicy, swizzled buffer
+        DAG.getTargetConstant(0, DL, MVT::i1), // idxen
     };
     unsigned Opc = IsD16 ? AMDGPUISD::TBUFFER_STORE_FORMAT_D16 :
                            AMDGPUISD::TBUFFER_STORE_FORMAT;
@@ -8433,16 +8527,17 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     }
 
     auto Offsets = splitBufferOffsets(Op.getOperand(4), DAG);
+    auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
     SDValue Ops[] = {
-      Chain,
-      VData,
-      Op.getOperand(3), // rsrc
-      DAG.getConstant(0, DL, MVT::i32), // vindex
-      Offsets.first,    // voffset
-      Op.getOperand(5), // soffset
-      Offsets.second,   // offset
-      Op.getOperand(6), // cachepolicy, swizzled buffer
-      DAG.getTargetConstant(0, DL, MVT::i1), // idxen
+        Chain,
+        VData,
+        Op.getOperand(3),                      // rsrc
+        DAG.getConstant(0, DL, MVT::i32),      // vindex
+        Offsets.first,                         // voffset
+        SOffset,                               // soffset
+        Offsets.second,                        // offset
+        Op.getOperand(6),                      // cachepolicy, swizzled buffer
+        DAG.getTargetConstant(0, DL, MVT::i1), // idxen
     };
     unsigned Opc =
         IsFormat ? AMDGPUISD::BUFFER_STORE_FORMAT : AMDGPUISD::BUFFER_STORE;
@@ -8480,16 +8575,17 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     }
 
     auto Offsets = splitBufferOffsets(Op.getOperand(5), DAG);
+    auto SOffset = selectSOffset(Op.getOperand(6), DAG, Subtarget);
     SDValue Ops[] = {
-      Chain,
-      VData,
-      Op.getOperand(3), // rsrc
-      Op.getOperand(4), // vindex
-      Offsets.first,    // voffset
-      Op.getOperand(6), // soffset
-      Offsets.second,   // offset
-      Op.getOperand(7), // cachepolicy, swizzled buffer
-      DAG.getTargetConstant(1, DL, MVT::i1), // idxen
+        Chain,
+        VData,
+        Op.getOperand(3),                      // rsrc
+        Op.getOperand(4),                      // vindex
+        Offsets.first,                         // voffset
+        SOffset,                               // soffset
+        Offsets.second,                        // offset
+        Op.getOperand(7),                      // cachepolicy, swizzled buffer
+        DAG.getTargetConstant(1, DL, MVT::i1), // idxen
     };
     unsigned Opc = IntrinsicID == Intrinsic::amdgcn_struct_buffer_store ?
                    AMDGPUISD::BUFFER_STORE : AMDGPUISD::BUFFER_STORE_FORMAT;
@@ -8703,7 +8799,7 @@ SDValue SITargetLowering::makeV_ILLEGAL(SDValue Op, SelectionDAG & DAG) const {
 std::pair<SDValue, SDValue> SITargetLowering::splitBufferOffsets(
     SDValue Offset, SelectionDAG &DAG) const {
   SDLoc DL(Offset);
-  const unsigned MaxImm = SIInstrInfo::getMaxMUBUFImmOffset();
+  const unsigned MaxImm = SIInstrInfo::getMaxMUBUFImmOffset(*Subtarget);
   SDValue N0 = Offset;
   ConstantSDNode *C1 = nullptr;
 
@@ -8779,24 +8875,28 @@ void SITargetLowering::setBufferOffsets(SDValue CombinedOffset,
       return;
     }
   }
+
+  SDValue SOffsetZero = Subtarget->hasRestrictedSOffset()
+                            ? DAG.getRegister(AMDGPU::SGPR_NULL, MVT::i32)
+                            : DAG.getConstant(0, DL, MVT::i32);
+
   Offsets[0] = CombinedOffset;
-  Offsets[1] = DAG.getConstant(0, DL, MVT::i32);
+  Offsets[1] = SOffsetZero;
   Offsets[2] = DAG.getTargetConstant(0, DL, MVT::i32);
 }
 
 // Handle 8 bit and 16 bit buffer loads
-SDValue SITargetLowering::handleByteShortBufferLoads(SelectionDAG &DAG,
-                                                     EVT LoadVT, SDLoc DL,
-                                                     ArrayRef<SDValue> Ops,
-                                                     MemSDNode *M) const {
+SDValue
+SITargetLowering::handleByteShortBufferLoads(SelectionDAG &DAG, EVT LoadVT,
+                                             SDLoc DL, ArrayRef<SDValue> Ops,
+                                             MachineMemOperand *MMO) const {
   EVT IntVT = LoadVT.changeTypeToInteger();
   unsigned Opc = (LoadVT.getScalarType() == MVT::i8) ?
          AMDGPUISD::BUFFER_LOAD_UBYTE : AMDGPUISD::BUFFER_LOAD_USHORT;
 
   SDVTList ResList = DAG.getVTList(MVT::i32, MVT::Other);
-  SDValue BufferLoad = DAG.getMemIntrinsicNode(Opc, DL, ResList,
-                                               Ops, IntVT,
-                                               M->getMemOperand());
+  SDValue BufferLoad =
+      DAG.getMemIntrinsicNode(Opc, DL, ResList, Ops, IntVT, MMO);
   SDValue LoadVal = DAG.getNode(ISD::TRUNCATE, DL, IntVT, BufferLoad);
   LoadVal = DAG.getNode(ISD::BITCAST, DL, LoadVT, LoadVal);
 
@@ -10232,17 +10332,42 @@ SDValue SITargetLowering::performZeroExtendCombine(SDNode *N,
   return SDValue();
 }
 
-SDValue SITargetLowering::performSignExtendInRegCombine(SDNode *N,
-                                                        DAGCombinerInfo &DCI)
-                                                        const {
+SDValue
+SITargetLowering::performSignExtendInRegCombine(SDNode *N,
+                                                DAGCombinerInfo &DCI) const {
   SDValue Src = N->getOperand(0);
   auto *VTSign = cast<VTSDNode>(N->getOperand(1));
 
-  if (((Src.getOpcode() == AMDGPUISD::BUFFER_LOAD_UBYTE &&
-      VTSign->getVT() == MVT::i8) ||
-      (Src.getOpcode() == AMDGPUISD::BUFFER_LOAD_USHORT &&
-      VTSign->getVT() == MVT::i16)) &&
-      Src.hasOneUse()) {
+  // Combine s_buffer_load_u8 or s_buffer_load_u16 with sext and replace them
+  // with s_buffer_load_i8 and s_buffer_load_i16 respectively.
+  if (((Src.getOpcode() == AMDGPUISD::SBUFFER_LOAD_UBYTE &&
+        VTSign->getVT() == MVT::i8) ||
+       (Src.getOpcode() == AMDGPUISD::SBUFFER_LOAD_USHORT &&
+        VTSign->getVT() == MVT::i16))) {
+    assert(Subtarget->hasScalarSubwordLoads() &&
+           "s_buffer_load_{u8, i8} are supported "
+           "in GFX12 (or newer) architectures.");
+    EVT VT = Src.getValueType();
+    unsigned Opc = (Src.getOpcode() == AMDGPUISD::SBUFFER_LOAD_UBYTE)
+                       ? AMDGPUISD::SBUFFER_LOAD_BYTE
+                       : AMDGPUISD::SBUFFER_LOAD_SHORT;
+    SDLoc DL(N);
+    SDVTList ResList = DCI.DAG.getVTList(MVT::i32);
+    SDValue Ops[] = {
+        Src.getOperand(0), // source register
+        Src.getOperand(1), // offset
+        Src.getOperand(2)  // cachePolicy
+    };
+    auto *M = cast<MemSDNode>(Src);
+    SDValue BufferLoad = DCI.DAG.getMemIntrinsicNode(
+        Opc, DL, ResList, Ops, M->getMemoryVT(), M->getMemOperand());
+    SDValue LoadVal = DCI.DAG.getNode(ISD::TRUNCATE, DL, VT, BufferLoad);
+    return LoadVal;
+  } else if (((Src.getOpcode() == AMDGPUISD::BUFFER_LOAD_UBYTE &&
+               VTSign->getVT() == MVT::i8) ||
+              (Src.getOpcode() == AMDGPUISD::BUFFER_LOAD_USHORT &&
+               VTSign->getVT() == MVT::i16)) &&
+             Src.hasOneUse()) {
     auto *M = cast<MemSDNode>(Src);
     SDValue Ops[] = {
       Src.getOperand(0), // Chain

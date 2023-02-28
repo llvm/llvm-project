@@ -438,6 +438,141 @@ define i64 @abd_minmax_i64(i64 %a, i64 %b) nounwind {
 }
 
 ;
+; select(icmp(a,b),sub(a,b),sub(b,a)) -> abds(a,b)
+;
+
+define i8 @abd_cmp_i8(i8 %a, i8 %b) nounwind {
+; X86-LABEL: abd_cmp_i8:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    subb %cl, %dl
+; X86-NEXT:    negb %dl
+; X86-NEXT:    subb %cl, %al
+; X86-NEXT:    movzbl %al, %ecx
+; X86-NEXT:    movzbl %dl, %eax
+; X86-NEXT:    cmovgl %ecx, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: abd_cmp_i8:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    subb %sil, %al
+; X64-NEXT:    negb %al
+; X64-NEXT:    subb %sil, %dil
+; X64-NEXT:    movzbl %dil, %ecx
+; X64-NEXT:    movzbl %al, %eax
+; X64-NEXT:    cmovgl %ecx, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+  %cmp = icmp sgt i8 %a, %b
+  %ab = sub i8 %a, %b
+  %ba = sub i8 %b, %a
+  %sel = select i1 %cmp, i8 %ab, i8 %ba
+  ret i8 %sel
+}
+
+define i16 @abd_cmp_i16(i16 %a, i16 %b) nounwind {
+; X86-LABEL: abd_cmp_i16:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %ecx, %esi
+; X86-NEXT:    subw %dx, %si
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    cmpw %dx, %cx
+; X86-NEXT:    cmovgel %esi, %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: abd_cmp_i16:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %ecx
+; X64-NEXT:    subw %si, %cx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    cmpw %si, %di
+; X64-NEXT:    cmovgel %ecx, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    retq
+  %cmp = icmp sge i16 %a, %b
+  %ab = sub i16 %a, %b
+  %ba = sub i16 %b, %a
+  %sel = select i1 %cmp, i16 %ab, i16 %ba
+  ret i16 %sel
+}
+
+define i32 @abd_cmp_i32(i32 %a, i32 %b) nounwind {
+; X86-LABEL: abd_cmp_i32:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    subl %ecx, %edx
+; X86-NEXT:    negl %edx
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    cmovll %edx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: abd_cmp_i32:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    subl %esi, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    subl %esi, %edi
+; X64-NEXT:    cmovgel %edi, %eax
+; X64-NEXT:    retq
+  %cmp = icmp slt i32 %a, %b
+  %ab = sub i32 %a, %b
+  %ba = sub i32 %b, %a
+  %sel = select i1 %cmp, i32 %ba, i32 %ab
+  ret i32 %sel
+}
+
+define i64 @abd_cmp_i64(i64 %a, i64 %b) nounwind {
+; X86-LABEL: abd_cmp_i64:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl %ecx, %edi
+; X86-NEXT:    subl %eax, %edi
+; X86-NEXT:    movl %esi, %ebx
+; X86-NEXT:    sbbl %edx, %ebx
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    sbbl %esi, %edx
+; X86-NEXT:    cmovgel %edi, %eax
+; X86-NEXT:    cmovgel %ebx, %edx
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    retl
+;
+; X64-LABEL: abd_cmp_i64:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    subq %rsi, %rax
+; X64-NEXT:    negq %rax
+; X64-NEXT:    subq %rsi, %rdi
+; X64-NEXT:    cmovlq %rdi, %rax
+; X64-NEXT:    retq
+  %cmp = icmp sge i64 %a, %b
+  %ab = sub i64 %a, %b
+  %ba = sub i64 %b, %a
+  %sel = select i1 %cmp, i64 %ba, i64 %ab
+  ret i64 %sel
+}
+
+;
 ; abs(sub_nsw(x, y)) -> abds(a,b)
 ;
 

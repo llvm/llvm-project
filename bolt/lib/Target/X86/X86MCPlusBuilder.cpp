@@ -3085,8 +3085,7 @@ public:
     Inst.addOperand(MCOperand::createReg(X86::NoRegister)); // AddrSegmentReg
   }
 
-  InstructionListType createInstrumentedIndirectCall(const MCInst &CallInst,
-                                                     bool TailCall,
+  InstructionListType createInstrumentedIndirectCall(MCInst &&CallInst,
                                                      MCSymbol *HandlerFuncAddr,
                                                      int CallSiteID,
                                                      MCContext *Ctx) override {
@@ -3137,14 +3136,13 @@ public:
     createLoadImmediate(Insts.back(), TempReg, CallSiteID);
     Insts.emplace_back();
     createPushRegister(Insts.back(), TempReg, 8);
-    Insts.emplace_back();
-    createDirectCall(Insts.back(), HandlerFuncAddr, Ctx,
-                     /*TailCall=*/TailCall);
-    // Carry over metadata
-    for (int I = MCPlus::getNumPrimeOperands(CallInst),
-             E = CallInst.getNumOperands();
-         I != E; ++I)
-      Insts.back().addOperand(CallInst.getOperand(I));
+
+    MCInst &NewCallInst = Insts.emplace_back();
+    createDirectCall(NewCallInst, HandlerFuncAddr, Ctx, isTailCall(CallInst));
+
+    // Carry over metadata including tail call marker if present.
+    stripAnnotations(NewCallInst);
+    moveAnnotations(std::move(CallInst), NewCallInst);
 
     return Insts;
   }

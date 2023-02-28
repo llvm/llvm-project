@@ -1203,8 +1203,8 @@ unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
 
   dwarf::Form Form = AttrSpec.Form;
 
-  // FIXME: Generation of DWARFv5 .debug_addr table is not supported yet.
-  // Convert attribute into the dwarf::DW_FORM_addr.
+  // DWARFLinker does not use addrx forms since it generates relocated
+  // addresses. Replace DW_FORM_addrx with DW_FORM_addr here.
   if (Form == dwarf::DW_FORM_addrx)
     Form = dwarf::DW_FORM_addr;
 
@@ -1257,8 +1257,30 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
     return AttrSize;
   }
 
-  if (AttrSpec.Attr == dwarf::DW_AT_high_pc &&
-      Die.getTag() == dwarf::DW_TAG_compile_unit) {
+  [[maybe_unused]] dwarf::Form OriginalForm = AttrSpec.Form;
+  if (AttrSpec.Form == dwarf::DW_FORM_rnglistx) {
+    // DWARFLinker does not generate .debug_addr table. Thus we need to change
+    // all "addrx" related forms to "addr" version. Change DW_FORM_rnglistx
+    // to DW_FORM_sec_offset here.
+    std::optional<uint64_t> Index = Val.getAsSectionOffset();
+    if (!Index) {
+      Linker.reportWarning("Cannot read the attribute. Dropping.", File,
+                           &InputDIE);
+      return 0;
+    }
+    std::optional<uint64_t> Offset =
+        Unit.getOrigUnit().getRnglistOffset(*Index);
+    if (!Offset) {
+      Linker.reportWarning("Cannot read the attribute. Dropping.", File,
+                           &InputDIE);
+      return 0;
+    }
+
+    Value = *Offset;
+    AttrSpec.Form = dwarf::DW_FORM_sec_offset;
+    AttrSize = Unit.getOrigUnit().getFormParams().getDwarfOffsetByteSize();
+  } else if (AttrSpec.Attr == dwarf::DW_AT_high_pc &&
+             Die.getTag() == dwarf::DW_TAG_compile_unit) {
     std::optional<uint64_t> LowPC = Unit.getLowPc();
     if (!LowPC)
       return 0;
@@ -1279,11 +1301,11 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
   PatchLocation Patch =
       Die.addValue(DIEAlloc, dwarf::Attribute(AttrSpec.Attr),
                    dwarf::Form(AttrSpec.Form), DIEInteger(Value));
-  if (AttrSpec.Attr == dwarf::DW_AT_ranges) {
+  if (AttrSpec.Attr == dwarf::DW_AT_ranges ||
+      AttrSpec.Attr == dwarf::DW_AT_start_scope) {
     Unit.noteRangeAttribute(Die, Patch);
     Info.HasRanges = true;
   }
-
   // A more generic way to check for location attributes would be
   // nice, but it's very unlikely that any other attribute needs a
   // location list.
@@ -1293,6 +1315,10 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
     Unit.noteLocationAttribute(Patch, Info.PCOffset);
   } else if (AttrSpec.Attr == dwarf::DW_AT_declaration && Value)
     Info.IsDeclaration = true;
+
+  // check that all dwarf::DW_FORM_rnglistx are handled previously.
+  assert((Info.HasRanges || (OriginalForm != dwarf::DW_FORM_rnglistx)) &&
+         "Unhandled DW_FORM_rnglistx attribute");
 
   return AttrSize;
 }
@@ -1343,6 +1369,7 @@ unsigned DWARFLinker::DIECloner::cloneAttribute(
   case dwarf::DW_FORM_sec_offset:
   case dwarf::DW_FORM_flag:
   case dwarf::DW_FORM_flag_present:
+  case dwarf::DW_FORM_rnglistx:
     return cloneScalarAttribute(Die, InputDIE, File, Unit, AttrSpec, Val,
                                 AttrSize, Info);
   default:
@@ -1412,6 +1439,15 @@ static bool shouldSkipAttribute(
   case dwarf::DW_AT_high_pc:
   case dwarf::DW_AT_ranges:
     return !Update && SkipPC;
+  case dwarf::DW_AT_addr_base:
+    // In case !Update the .debug_addr table is not generated/preserved.
+    return !Update;
+  case dwarf::DW_AT_rnglists_base:
+    // In case !Update the .debug_addr table is not generated/preserved.
+    // Thus instead of DW_FORM_rnglistx the DW_FORM_sec_offset is used.
+    // Since DW_AT_rnglists_base is used for only DW_FORM_rnglistx the
+    // DW_AT_rnglists_base is removed.
+    return !Update;
   case dwarf::DW_AT_str_offsets_base:
     // FIXME: Use the string offset table with Dwarf 5.
     return true;
@@ -1612,77 +1648,75 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
   return Die;
 }
 
-/// Patch the input object file relevant debug_ranges entries
-/// and emit them in the output file. Update the relevant attributes
+/// Patch the input object file relevant debug_ranges or debug_rnglists
+/// entries and emit them in the output file. Update the relevant attributes
 /// to point at the new entries.
-void DWARFLinker::patchRangesForUnit(const CompileUnit &Unit,
-                                     DWARFContext &OrigDwarf,
+void DWARFLinker::generateUnitRanges(CompileUnit &Unit,
                                      const DWARFFile &File) const {
-  DWARFDebugRangeList RangeList;
+  if (LLVM_UNLIKELY(Options.Update))
+    return;
+
   const auto &FunctionRanges = Unit.getFunctionRanges();
-  unsigned AddressSize = Unit.getOrigUnit().getAddressByteSize();
-  DWARFDataExtractor RangeExtractor(OrigDwarf.getDWARFObj(),
-                                    OrigDwarf.getDWARFObj().getRangesSection(),
-                                    OrigDwarf.isLittleEndian(), AddressSize);
-  std::optional<AddressRangeValuePair> CachedRange;
-  DWARFUnit &OrigUnit = Unit.getOrigUnit();
-  auto OrigUnitDie = OrigUnit.getUnitDIE(false);
-  uint64_t UnitBaseAddress =
-      dwarf::toAddress(OrigUnitDie.find(dwarf::DW_AT_low_pc), 0);
 
-  for (const auto &RangeAttribute : Unit.getRangesAttributes()) {
-    uint64_t Offset = RangeAttribute.get();
-    RangeAttribute.set(TheDwarfEmitter->getRangesSectionSize());
-    if (Error E = RangeList.extract(RangeExtractor, &Offset)) {
-      llvm::consumeError(std::move(E));
-      reportWarning("invalid range list ignored.", File);
-      RangeList.clear();
-    }
-    const auto &Entries = RangeList.getEntries();
+  // Build set of linked address ranges for unit function ranges.
+  AddressRanges LinkedFunctionRanges;
+  for (const AddressRangeValuePair &Range : FunctionRanges)
+    LinkedFunctionRanges.insert(
+        {Range.Range.start() + Range.Value, Range.Range.end() + Range.Value});
 
-    uint64_t BaseAddress = UnitBaseAddress;
-    AddressRanges LinkedRanges;
+  // Emit LinkedFunctionRanges into .debug_aranges
+  if (!LinkedFunctionRanges.empty())
+    TheDwarfEmitter->emitDwarfDebugArangesTable(Unit, LinkedFunctionRanges);
 
-    if (!Entries.empty()) {
-      for (const auto &Range : Entries) {
-        if (Range.isBaseAddressSelectionEntry(
-                Unit.getOrigUnit().getAddressByteSize())) {
-          BaseAddress = Range.EndAddress;
-          continue;
+  RngListAttributesTy AllRngListAttributes = Unit.getRangesAttributes();
+  std::optional<PatchLocation> UnitRngListAttribute =
+      Unit.getUnitRangesAttribute();
+
+  if (!AllRngListAttributes.empty() || UnitRngListAttribute) {
+    std::optional<AddressRangeValuePair> CachedRange;
+    MCSymbol *EndLabel = TheDwarfEmitter->emitDwarfDebugRangeListHeader(Unit);
+
+    // Read original address ranges, apply relocation value, emit linked address
+    // ranges.
+    for (PatchLocation &AttributePatch : AllRngListAttributes) {
+      // Get ranges from the source DWARF corresponding to the current
+      // attribute.
+      AddressRanges LinkedRanges;
+      if (Expected<DWARFAddressRangesVector> OriginalRanges =
+              Unit.getOrigUnit().findRnglistFromOffset(AttributePatch.get())) {
+        // Apply relocation adjustment.
+        for (const auto &Range : *OriginalRanges) {
+          if (!CachedRange || !CachedRange->Range.contains(Range.LowPC))
+            CachedRange = FunctionRanges.getRangeThatContains(Range.LowPC);
+
+          // All range entries should lie in the function range.
+          if (!CachedRange) {
+            reportWarning("inconsistent range data.", File);
+            continue;
+          }
+
+          // Store range for emiting.
+          LinkedRanges.insert({Range.LowPC + CachedRange->Value,
+                               Range.HighPC + CachedRange->Value});
         }
-
-        if (!CachedRange ||
-            !CachedRange->Range.contains(Range.StartAddress + BaseAddress))
-          CachedRange = FunctionRanges.getRangeThatContains(Range.StartAddress +
-                                                            BaseAddress);
-
-        // All range entries should lie in the function range.
-        if (!CachedRange) {
-          reportWarning("inconsistent range data.", File);
-          continue;
-        }
-
-        LinkedRanges.insert(
-            {Range.StartAddress + BaseAddress + CachedRange->Value,
-             Range.EndAddress + BaseAddress + CachedRange->Value});
+      } else {
+        llvm::consumeError(OriginalRanges.takeError());
+        reportWarning("invalid range list ignored.", File);
       }
+
+      // Emit linked ranges.
+      TheDwarfEmitter->emitDwarfDebugRangeListFragment(Unit, LinkedRanges,
+                                                       AttributePatch);
     }
 
-    TheDwarfEmitter->emitDwarfDebugRangesTableFragment(Unit, LinkedRanges);
-  }
-}
+    // Emit ranges for Unit AT_ranges attribute.
+    if (UnitRngListAttribute.has_value())
+      TheDwarfEmitter->emitDwarfDebugRangeListFragment(
+          Unit, LinkedFunctionRanges, *UnitRngListAttribute);
 
-/// Generate the debug_aranges entries for \p Unit and if the
-/// unit has a DW_AT_ranges attribute, also emit the debug_ranges
-/// contribution for this attribute.
-/// FIXME: this could actually be done right in patchRangesForUnit,
-/// but for the sake of initial bit-for-bit compatibility with legacy
-/// dsymutil, we have to do it in a delayed pass.
-void DWARFLinker::generateUnitRanges(CompileUnit &Unit) const {
-  auto Attr = Unit.getUnitRangesAttribute();
-  if (Attr)
-    Attr->set(TheDwarfEmitter->getRangesSectionSize());
-  TheDwarfEmitter->emitUnitRangesEntries(Unit, static_cast<bool>(Attr));
+    // Emit ranges footer.
+    TheDwarfEmitter->emitDwarfDebugRangeListFooter(Unit, EndLabel);
+  }
 }
 
 /// Insert the new line info sequence \p Seq into the current
@@ -2265,7 +2299,8 @@ uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
       if (LLVM_UNLIKELY(Linker.Options.Update))
         continue;
 
-      Linker.patchRangesForUnit(*CurrentUnit, DwarfContext, File);
+      Linker.generateUnitRanges(*CurrentUnit, File);
+
       auto ProcessExpr = [&](StringRef Bytes,
                              SmallVectorImpl<uint8_t> &Buffer) {
         DWARFUnit &OrigUnit = CurrentUnit->getOrigUnit();
@@ -2287,9 +2322,6 @@ uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
 
     // Emit all the compile unit's debug information.
     for (auto &CurrentUnit : CompileUnits) {
-      if (LLVM_LIKELY(!Linker.Options.Update))
-        Linker.generateUnitRanges(*CurrentUnit);
-
       CurrentUnit->fixupForwardReferences();
 
       if (!CurrentUnit->getOutputUnitDIE())
@@ -2384,6 +2416,10 @@ void DWARFLinker::copyInvariantDebugSection(DWARFContext &Dwarf) {
       Dwarf.getDWARFObj().getFrameSection().Data, "debug_frame");
   TheDwarfEmitter->emitSectionContents(Dwarf.getDWARFObj().getArangesSection(),
                                        "debug_aranges");
+  TheDwarfEmitter->emitSectionContents(
+      Dwarf.getDWARFObj().getAddrSection().Data, "debug_addr");
+  TheDwarfEmitter->emitSectionContents(
+      Dwarf.getDWARFObj().getRnglistsSection().Data, "debug_rnglists");
 }
 
 void DWARFLinker::addObjectFile(DWARFFile &File, objFileLoader Loader,
@@ -2473,16 +2509,6 @@ Error DWARFLinker::link() {
     // from .debug_info section. Current DWARFLinker implementation does not
     // support or update references to these tables. Thus we report warning
     // and skip corresponding object file.
-    if (!OptContext.File.Dwarf->getDWARFObj()
-             .getRnglistsSection()
-             .Data.empty()) {
-      reportWarning("'.debug_rnglists' is not currently supported: file "
-                    "will be skipped",
-                    OptContext.File);
-      OptContext.Skip = true;
-      continue;
-    }
-
     if (!OptContext.File.Dwarf->getDWARFObj()
              .getLoclistsSection()
              .Data.empty()) {

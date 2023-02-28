@@ -135,10 +135,12 @@ void CompileUnit::addFunctionRange(uint64_t FuncLowPc, uint64_t FuncHighPc,
 }
 
 void CompileUnit::noteRangeAttribute(const DIE &Die, PatchLocation Attr) {
-  if (Die.getTag() != dwarf::DW_TAG_compile_unit)
-    RangeAttributes.push_back(Attr);
-  else
+  if (Die.getTag() == dwarf::DW_TAG_compile_unit) {
     UnitRangeAttribute = Attr;
+    return;
+  }
+
+  RangeAttributes.emplace_back(Attr);
 }
 
 void CompileUnit::noteLocationAttribute(PatchLocation Attr, int64_t PcOffset) {

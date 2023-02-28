@@ -31,6 +31,11 @@ namespace logicalview {
 // Returns the unique string pool instance.
 LVStringPool &getStringPool();
 
+using LVStringRefs = std::vector<StringRef>;
+using LVLexicalComponent = std::tuple<StringRef, StringRef>;
+using LVLexicalIndex =
+    std::tuple<LVStringRefs::size_type, LVStringRefs::size_type>;
+
 // Used to record specific characteristics about the objects.
 template <typename T> class LVProperties {
   SmallBitVector Bits = SmallBitVector(static_cast<unsigned>(T::LastEntry) + 1);
@@ -220,6 +225,15 @@ inline std::string formattedName(StringRef Name) {
 inline std::string formattedNames(StringRef Name1, StringRef Name2) {
   return (Twine("'") + Twine(Name1) + Twine(Name2) + Twine("'")).str();
 }
+
+// The given string represents a symbol or type name with optional enclosing
+// scopes, such as: name, name<..>, scope::name, scope::..::name, etc.
+// The string can have multiple references to template instantiations.
+// It returns the inner most component.
+LVLexicalComponent getInnerComponent(StringRef Name);
+LVStringRefs getAllLexicalComponents(StringRef Name);
+std::string getScopedName(const LVStringRefs &Components,
+                          StringRef BaseName = {});
 
 // These are the values assigned to the debug location record IDs.
 // See DebugInfo/CodeView/CodeViewSymbols.def.

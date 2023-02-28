@@ -80,32 +80,3 @@ PreservedAnalyses ForceFunctionAttrsPass::run(Module &M,
   // Just conservatively invalidate analyses, this isn't likely to be important.
   return PreservedAnalyses::none();
 }
-
-namespace {
-struct ForceFunctionAttrsLegacyPass : public ModulePass {
-  static char ID; // Pass identification, replacement for typeid
-  ForceFunctionAttrsLegacyPass() : ModulePass(ID) {
-    initializeForceFunctionAttrsLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  bool runOnModule(Module &M) override {
-    if (!hasForceAttributes())
-      return false;
-
-    for (Function &F : M.functions())
-      forceAttributes(F);
-
-    // Conservatively assume we changed something.
-    return true;
-  }
-};
-}
-
-char ForceFunctionAttrsLegacyPass::ID = 0;
-INITIALIZE_PASS(ForceFunctionAttrsLegacyPass, "forceattrs",
-                "Force set function attributes", false, false)
-
-Pass *llvm::createForceFunctionAttrsLegacyPass() {
-  return new ForceFunctionAttrsLegacyPass();
-}

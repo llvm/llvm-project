@@ -324,6 +324,13 @@ LVElement *LVTypeDefinition::getUnderlyingType() {
 }
 
 void LVTypeDefinition::resolveExtra() {
+  // In the case of CodeView, the MSVC toolset generates a series of typedefs
+  // that refer to internal runtime structures, that we do not process. Those
+  // typedefs are marked as 'system'. They have an associated logical type,
+  // but the underlying type always is null.
+  if (getIsSystem())
+    return;
+
   // Set the reference to the typedef type.
   if (options().getAttributeUnderlying()) {
     setUnderlyingType(getUnderlyingType());

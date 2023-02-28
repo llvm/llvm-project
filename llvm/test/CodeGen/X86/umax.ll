@@ -41,6 +41,27 @@ define i8 @test_i8(i8 %a, i8 %b) nounwind {
   ret i8 %r
 }
 
+define i8 @test_i8_1(i8 %a) nounwind {
+; X64-LABEL: test_i8_1:
+; X64:       # %bb.0:
+; X64-NEXT:    cmpb $2, %dil
+; X64-NEXT:    movl $1, %eax
+; X64-NEXT:    cmovael %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; X86-LABEL: test_i8_1:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    cmpb $2, %cl
+; X86-NEXT:    movl $1, %eax
+; X86-NEXT:    cmovael %ecx, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+  %r = call i8 @llvm.umax.i8(i8 %a, i8 1)
+  ret i8 %r
+}
+
 define i16 @test_i16(i16 %a, i16 %b) nounwind {
 ; X64-LABEL: test_i16:
 ; X64:       # %bb.0:
@@ -59,6 +80,27 @@ define i16 @test_i16(i16 %a, i16 %b) nounwind {
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
   %r = call i16 @llvm.umax.i16(i16 %a, i16 %b)
+  ret i16 %r
+}
+
+define i16 @test_i16_1(i16 %a) nounwind {
+; X64-LABEL: test_i16_1:
+; X64:       # %bb.0:
+; X64-NEXT:    cmpw $2, %di
+; X64-NEXT:    movl $1, %eax
+; X64-NEXT:    cmovael %edi, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    retq
+;
+; X86-LABEL: test_i16_1:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    cmpw $2, %cx
+; X86-NEXT:    movl $1, %eax
+; X86-NEXT:    cmovael %ecx, %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    retl
+  %r = call i16 @llvm.umax.i16(i16 %a, i16 1)
   ret i16 %r
 }
 

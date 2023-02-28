@@ -585,8 +585,9 @@ bool MatcherGen::EmitMatcherCode(unsigned Variant) {
 
   // If the pattern has a predicate on it (e.g. only enabled when a subtarget
   // feature is around, do the check).
-  if (!Pattern.getPredicateCheck().empty())
-    AddMatcher(new CheckPatternPredicateMatcher(Pattern.getPredicateCheck()));
+  std::string PredicateCheck = Pattern.getPredicateCheck();
+  if (!PredicateCheck.empty())
+    AddMatcher(new CheckPatternPredicateMatcher(PredicateCheck));
 
   // Now that we've completed the structural type match, emit any ComplexPattern
   // checks (e.g. addrmode matches).  We emit this after the structural match

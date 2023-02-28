@@ -238,3 +238,276 @@ define amdgpu_ps void @test_s_load_u16_sgpr_imm(ptr addrspace(4) %in, i32 inreg 
   store i32 %zext2, ptr addrspace(1) %out, align 4
   ret void
 }
+
+define amdgpu_ps void @s_buffer_load_byte_imm_offset(<4 x i32> inreg %src, ptr addrspace(1) nocapture %out) {
+; GCN-LABEL: s_buffer_load_byte_imm_offset:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    s_buffer_load_i8 s0, s[0:3], 0x4
+; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
+; GCN-NEXT:    global_store_b32 v[0:1], v2, off
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GCN-NEXT:    s_endpgm
+main_body:
+  %ld = call i8 @llvm.amdgcn.s.buffer.load.i8(<4 x i32> %src, i32 4, i32 0)
+  %sext = sext i8 %ld to i32
+  store i32 %sext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @s_buffer_load_byte_sgpr(<4 x i32> inreg %src, ptr addrspace(1) nocapture %out, i32 inreg %offset) {
+; GCN-LABEL: s_buffer_load_byte_sgpr:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    s_buffer_load_i8 s0, s[0:3], s4 offset:0x0
+; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
+; GCN-NEXT:    global_store_b32 v[0:1], v2, off
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GCN-NEXT:    s_endpgm
+main_body:
+  %ld = call i8 @llvm.amdgcn.s.buffer.load.i8(<4 x i32> %src, i32 %offset, i32 0)
+  %sext = sext i8 %ld to i32
+  store i32 %sext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @s_buffer_load_byte_sgpr_or_imm_offset(<4 x i32> inreg %src, ptr addrspace(1) nocapture %out, i32 inreg %in) {
+; GCN-LABEL: s_buffer_load_byte_sgpr_or_imm_offset:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    s_buffer_load_i8 s0, s[0:3], s4 offset:0x64
+; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
+; GCN-NEXT:    global_store_b32 v[0:1], v2, off
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GCN-NEXT:    s_endpgm
+main_body:
+  %off = add nuw nsw i32 %in, 100
+  %ld = call i8 @llvm.amdgcn.s.buffer.load.i8(<4 x i32> %src, i32 %off, i32 0)
+  %sext = sext i8 %ld to i32
+  store i32 %sext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @s_buffer_load_byte_sgpr_or_imm_offset_divergent(<4 x i32> inreg %src, ptr addrspace(1) nocapture %out, i32 %offset) {
+; GCN-LABEL: s_buffer_load_byte_sgpr_or_imm_offset_divergent:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    buffer_load_i8 v2, v2, s[0:3], null offen
+; GCN-NEXT:    s_wait_loadcnt 0x0
+; GCN-NEXT:    global_store_b32 v[0:1], v2, off
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GCN-NEXT:    s_endpgm
+main_body:
+  %ld = call i8 @llvm.amdgcn.s.buffer.load.i8(<4 x i32> %src, i32 %offset, i32 0)
+  %sext = sext i8 %ld to i32
+  store i32 %sext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @s_buffer_load_ubyte_imm_offset(<4 x i32> inreg %src, ptr addrspace(1) nocapture %out) {
+; GCN-LABEL: s_buffer_load_ubyte_imm_offset:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    s_buffer_load_u8 s0, s[0:3], 0x4
+; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    s_and_b32 s0, s0, 0xff
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
+; GCN-NEXT:    global_store_b32 v[0:1], v2, off
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GCN-NEXT:    s_endpgm
+main_body:
+  %ld = call i8 @llvm.amdgcn.s.buffer.load.u8(<4 x i32> %src, i32 4, i32 0)
+  %zext = zext i8 %ld to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @s_buffer_load_ubyte_sgpr(<4 x i32> inreg %src, ptr addrspace(1) nocapture %out, i32 inreg %offset) {
+; GCN-LABEL: s_buffer_load_ubyte_sgpr:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    s_buffer_load_u8 s0, s[0:3], s4 offset:0x0
+; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    s_and_b32 s0, s0, 0xff
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
+; GCN-NEXT:    global_store_b32 v[0:1], v2, off
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GCN-NEXT:    s_endpgm
+main_body:
+  %ld = call i8 @llvm.amdgcn.s.buffer.load.u8(<4 x i32> %src, i32 %offset, i32 0)
+  %zext = zext i8 %ld to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @s_buffer_load_ubyte_sgpr_or_imm_offset(<4 x i32> inreg %src, ptr addrspace(1) nocapture %out, i32 inreg %in) {
+; GCN-LABEL: s_buffer_load_ubyte_sgpr_or_imm_offset:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    s_buffer_load_u8 s0, s[0:3], s4 offset:0x64
+; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    s_and_b32 s0, s0, 0xff
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
+; GCN-NEXT:    global_store_b32 v[0:1], v2, off
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GCN-NEXT:    s_endpgm
+main_body:
+  %off = add nuw nsw i32 %in, 100
+  %ld = call i8 @llvm.amdgcn.s.buffer.load.u8(<4 x i32> %src, i32 %off, i32 0)
+  %zext = zext i8 %ld to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @s_buffer_load_ubyte_sgpr_or_imm_offset_divergent(<4 x i32> inreg %src, ptr addrspace(1) nocapture %out, i32 %offset) {
+; GCN-LABEL: s_buffer_load_ubyte_sgpr_or_imm_offset_divergent:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    buffer_load_u8 v2, v2, s[0:3], null offen
+; GCN-NEXT:    s_wait_loadcnt 0x0
+; GCN-NEXT:    global_store_b32 v[0:1], v2, off
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GCN-NEXT:    s_endpgm
+main_body:
+  %ld = call i8 @llvm.amdgcn.s.buffer.load.u8(<4 x i32> %src, i32 %offset, i32 0)
+  %zext = zext i8 %ld to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @s_buffer_load_short_imm_offset(<4 x i32> inreg %src, ptr addrspace(1) nocapture %out) {
+; GCN-LABEL: s_buffer_load_short_imm_offset:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    s_buffer_load_i16 s0, s[0:3], 0x4
+; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
+; GCN-NEXT:    global_store_b32 v[0:1], v2, off
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GCN-NEXT:    s_endpgm
+main_body:
+  %ld = call i16 @llvm.amdgcn.s.buffer.load.i16(<4 x i32> %src, i32 4, i32 0)
+  %sext = sext i16 %ld to i32
+  store i32 %sext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @s_buffer_load_short_sgpr(<4 x i32> inreg %src, ptr addrspace(1) nocapture %out, i32 inreg %offset) {
+; GCN-LABEL: s_buffer_load_short_sgpr:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    s_buffer_load_i16 s0, s[0:3], s4 offset:0x0
+; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
+; GCN-NEXT:    global_store_b32 v[0:1], v2, off
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GCN-NEXT:    s_endpgm
+main_body:
+  %ld = call i16 @llvm.amdgcn.s.buffer.load.i16(<4 x i32> %src, i32 %offset, i32 0)
+  %sext = sext i16 %ld to i32
+  store i32 %sext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @s_buffer_load_short_sgpr_or_imm_offset(<4 x i32> inreg %src, ptr addrspace(1) nocapture %out, i32 inreg %in) {
+; GCN-LABEL: s_buffer_load_short_sgpr_or_imm_offset:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    s_buffer_load_i16 s0, s[0:3], s4 offset:0x64
+; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
+; GCN-NEXT:    global_store_b32 v[0:1], v2, off
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GCN-NEXT:    s_endpgm
+main_body:
+  %off = add nuw nsw i32 %in, 100
+  %ld = call i16 @llvm.amdgcn.s.buffer.load.i16(<4 x i32> %src, i32 %off, i32 0)
+  %sext = sext i16 %ld to i32
+  store i32 %sext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @s_buffer_load_short_sgpr_or_imm_offset_divergent(<4 x i32> inreg %src, ptr addrspace(1) nocapture %out, i32 %offset) {
+; GCN-LABEL: s_buffer_load_short_sgpr_or_imm_offset_divergent:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    buffer_load_i16 v2, v2, s[0:3], null offen
+; GCN-NEXT:    s_wait_loadcnt 0x0
+; GCN-NEXT:    global_store_b32 v[0:1], v2, off
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GCN-NEXT:    s_endpgm
+main_body:
+  %ld = call i16 @llvm.amdgcn.s.buffer.load.i16(<4 x i32> %src, i32 %offset, i32 0)
+  %sext = sext i16 %ld to i32
+  store i32 %sext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @s_buffer_load_ushort_imm_offset(<4 x i32> inreg %src, ptr addrspace(1) nocapture %out) {
+; GCN-LABEL: s_buffer_load_ushort_imm_offset:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    s_buffer_load_u16 s0, s[0:3], 0x4
+; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    s_and_b32 s0, s0, 0xffff
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
+; GCN-NEXT:    global_store_b32 v[0:1], v2, off
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GCN-NEXT:    s_endpgm
+main_body:
+  %ld = call i16 @llvm.amdgcn.s.buffer.load.u16(<4 x i32> %src, i32 4, i32 0)
+  %zext = zext i16 %ld to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @s_buffer_load_ushort_sgpr(<4 x i32> inreg %src, ptr addrspace(1) nocapture %out, i32 inreg %offset) {
+; GCN-LABEL: s_buffer_load_ushort_sgpr:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    s_buffer_load_u16 s0, s[0:3], s4 offset:0x0
+; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    s_and_b32 s0, s0, 0xffff
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
+; GCN-NEXT:    global_store_b32 v[0:1], v2, off
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GCN-NEXT:    s_endpgm
+main_body:
+  %ld = call i16 @llvm.amdgcn.s.buffer.load.u16(<4 x i32> %src, i32 %offset, i32 0)
+  %zext = zext i16 %ld to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @s_buffer_load_ushort_sgpr_or_imm_offset(<4 x i32> inreg %src, ptr addrspace(1) nocapture %out, i32 inreg %in) {
+; GCN-LABEL: s_buffer_load_ushort_sgpr_or_imm_offset:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    s_buffer_load_u16 s0, s[0:3], s4 offset:0x64
+; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    s_and_b32 s0, s0, 0xffff
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
+; GCN-NEXT:    global_store_b32 v[0:1], v2, off
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GCN-NEXT:    s_endpgm
+main_body:
+  %off = add nuw nsw i32 %in, 100
+  %ld = call i16 @llvm.amdgcn.s.buffer.load.u16(<4 x i32> %src, i32 %off, i32 0)
+  %zext = zext i16 %ld to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @s_buffer_load_ushort_sgpr_or_imm_offset_divergent(<4 x i32> inreg %src, ptr addrspace(1) nocapture %out, i32 %offset) {
+; GCN-LABEL: s_buffer_load_ushort_sgpr_or_imm_offset_divergent:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    buffer_load_u16 v2, v2, s[0:3], null offen
+; GCN-NEXT:    s_wait_loadcnt 0x0
+; GCN-NEXT:    global_store_b32 v[0:1], v2, off
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GCN-NEXT:    s_endpgm
+main_body:
+  %ld = call i16 @llvm.amdgcn.s.buffer.load.u16(<4 x i32> %src, i32 %offset, i32 0)
+  %zext = zext i16 %ld to i32
+  store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+declare i8 @llvm.amdgcn.s.buffer.load.i8(<4 x i32>, i32, i32)
+declare i8 @llvm.amdgcn.s.buffer.load.u8(<4 x i32>, i32, i32)
+declare i16 @llvm.amdgcn.s.buffer.load.i16(<4 x i32>, i32, i32)
+declare i16 @llvm.amdgcn.s.buffer.load.u16(<4 x i32>, i32, i32)

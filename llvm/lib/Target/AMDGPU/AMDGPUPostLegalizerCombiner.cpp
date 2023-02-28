@@ -328,7 +328,12 @@ bool AMDGPUPostLegalizerCombinerHelper::matchCombineSignExtendInReg(
   // Check if the first operand of the sign extension is a subword buffer load
   // instruction.
   return SubwordBufferLoad->getOpcode() == AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE ||
-         SubwordBufferLoad->getOpcode() == AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT;
+         SubwordBufferLoad->getOpcode() ==
+             AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT ||
+         SubwordBufferLoad->getOpcode() ==
+             AMDGPU::G_AMDGPU_S_BUFFER_LOAD_UBYTE ||
+         SubwordBufferLoad->getOpcode() ==
+             AMDGPU::G_AMDGPU_S_BUFFER_LOAD_USHORT;
 }
 
 // Combine buffer_load_{u8, u16} and the sign extension instruction to generate
@@ -337,10 +342,23 @@ void AMDGPUPostLegalizerCombinerHelper::applyCombineSignExtendInReg(
     MachineInstr &MI, MachineInstr *&SubwordBufferLoad) {
   // Modify the opcode and the destination of buffer_load_{u8, u16}:
   // Replace the opcode.
-  unsigned Opc =
-      SubwordBufferLoad->getOpcode() == AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE
-          ? AMDGPU::G_AMDGPU_BUFFER_LOAD_SBYTE
-          : AMDGPU::G_AMDGPU_BUFFER_LOAD_SSHORT;
+  unsigned Opc = 0;
+  switch (SubwordBufferLoad->getOpcode()) {
+  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_UBYTE:
+    Opc = AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SBYTE;
+    break;
+  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_USHORT:
+    Opc = AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SSHORT;
+    break;
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE:
+    Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD_SBYTE;
+    break;
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT:
+    Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD_SSHORT;
+    break;
+  default:
+    llvm_unreachable("Instruction should not have been matched.");
+  }
   SubwordBufferLoad->setDesc(TII.get(Opc));
   // Update the destination register of SubwordBufferLoad with the destination
   // register of the sign extension.

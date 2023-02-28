@@ -1430,5 +1430,8 @@ def : InstRW<[],
   DCCCI,
   ICCCI,
   ADDEX,
-  ADDEX8
+  ADDEX8,
+  CDTBCD, CDTBCD8,
+  CBCDTD, CBCDTD8,
+  ADDG6S, ADDG6S8
 )> { let Unsupported = 1; }

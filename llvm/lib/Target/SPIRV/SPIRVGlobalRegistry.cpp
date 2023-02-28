@@ -573,9 +573,8 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSpecialType(
     assert(!PType->isOpaque());
     Ty = PType->getNonOpaquePointerElementType();
   }
-  auto SType = cast<StructType>(Ty);
-  assert(isSpecialOpaqueType(SType) && "Not a special opaque builtin type");
-  return SPIRV::lowerBuiltinType(SType, AccQual, MIRBuilder, this);
+  assert(isSpecialOpaqueType(Ty) && "Not a special opaque builtin type");
+  return SPIRV::lowerBuiltinType(Ty, AccQual, MIRBuilder, this);
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOpTypePointer(

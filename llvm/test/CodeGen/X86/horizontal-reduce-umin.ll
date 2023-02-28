@@ -53,7 +53,7 @@ define i64 @test_reduce_v2i64(<2 x i64> %a0) {
 ;
 ; X86-AVX1-LABEL: test_reduce_v2i64:
 ; X86-AVX1:       ## %bb.0:
-; X86-AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X86-AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; X86-AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
 ; X86-AVX1-NEXT:    ## xmm2 = mem[0,0]
 ; X86-AVX1-NEXT:    vxorps %xmm2, %xmm0, %xmm3
@@ -475,7 +475,7 @@ define i64 @test_reduce_v4i64(<4 x i64> %a0) {
 ; X86-AVX1-NEXT:    vxorps %xmm1, %xmm3, %xmm4
 ; X86-AVX1-NEXT:    vpcmpgtq %xmm2, %xmm4, %xmm2
 ; X86-AVX1-NEXT:    vblendvpd %xmm2, %xmm0, %xmm3, %xmm0
-; X86-AVX1-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[2,3,2,3]
+; X86-AVX1-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[2,3,2,3]
 ; X86-AVX1-NEXT:    vxorpd %xmm1, %xmm0, %xmm3
 ; X86-AVX1-NEXT:    vxorpd %xmm1, %xmm2, %xmm1
 ; X86-AVX1-NEXT:    vpcmpgtq %xmm3, %xmm1, %xmm1
@@ -493,7 +493,7 @@ define i64 @test_reduce_v4i64(<4 x i64> %a0) {
 ; X86-AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm4
 ; X86-AVX2-NEXT:    vpcmpgtq %xmm3, %xmm4, %xmm3
 ; X86-AVX2-NEXT:    vblendvpd %xmm3, %xmm0, %xmm1, %xmm0
-; X86-AVX2-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X86-AVX2-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; X86-AVX2-NEXT:    vxorpd %xmm2, %xmm0, %xmm3
 ; X86-AVX2-NEXT:    vxorpd %xmm2, %xmm1, %xmm2
 ; X86-AVX2-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
@@ -567,7 +567,7 @@ define i64 @test_reduce_v4i64(<4 x i64> %a0) {
 ; X64-AVX1-NEXT:    vpxor %xmm1, %xmm3, %xmm4
 ; X64-AVX1-NEXT:    vpcmpgtq %xmm2, %xmm4, %xmm2
 ; X64-AVX1-NEXT:    vblendvpd %xmm2, %xmm0, %xmm3, %xmm0
-; X64-AVX1-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[2,3,2,3]
+; X64-AVX1-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[2,3,2,3]
 ; X64-AVX1-NEXT:    vxorpd %xmm1, %xmm0, %xmm3
 ; X64-AVX1-NEXT:    vxorpd %xmm1, %xmm2, %xmm1
 ; X64-AVX1-NEXT:    vpcmpgtq %xmm3, %xmm1, %xmm1
@@ -584,7 +584,7 @@ define i64 @test_reduce_v4i64(<4 x i64> %a0) {
 ; X64-AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm4
 ; X64-AVX2-NEXT:    vpcmpgtq %xmm3, %xmm4, %xmm3
 ; X64-AVX2-NEXT:    vblendvpd %xmm3, %xmm0, %xmm1, %xmm0
-; X64-AVX2-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X64-AVX2-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; X64-AVX2-NEXT:    vxorpd %xmm2, %xmm0, %xmm3
 ; X64-AVX2-NEXT:    vxorpd %xmm2, %xmm1, %xmm2
 ; X64-AVX2-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
@@ -1152,7 +1152,7 @@ define i64 @test_reduce_v8i64(<8 x i64> %a0) {
 ; X86-AVX1-NEXT:    vxorpd %xmm2, %xmm3, %xmm4
 ; X86-AVX1-NEXT:    vpcmpgtq %xmm1, %xmm4, %xmm1
 ; X86-AVX1-NEXT:    vblendvpd %xmm1, %xmm0, %xmm3, %xmm0
-; X86-AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X86-AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; X86-AVX1-NEXT:    vxorpd %xmm2, %xmm0, %xmm3
 ; X86-AVX1-NEXT:    vxorpd %xmm2, %xmm1, %xmm2
 ; X86-AVX1-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
@@ -1174,7 +1174,7 @@ define i64 @test_reduce_v8i64(<8 x i64> %a0) {
 ; X86-AVX2-NEXT:    vxorpd %xmm2, %xmm1, %xmm4
 ; X86-AVX2-NEXT:    vpcmpgtq %xmm3, %xmm4, %xmm3
 ; X86-AVX2-NEXT:    vblendvpd %xmm3, %xmm0, %xmm1, %xmm0
-; X86-AVX2-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X86-AVX2-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; X86-AVX2-NEXT:    vxorpd %xmm2, %xmm0, %xmm3
 ; X86-AVX2-NEXT:    vxorpd %xmm2, %xmm1, %xmm2
 ; X86-AVX2-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
@@ -1299,7 +1299,7 @@ define i64 @test_reduce_v8i64(<8 x i64> %a0) {
 ; X64-AVX1-NEXT:    vxorpd %xmm3, %xmm2, %xmm4
 ; X64-AVX1-NEXT:    vpcmpgtq %xmm1, %xmm4, %xmm1
 ; X64-AVX1-NEXT:    vblendvpd %xmm1, %xmm0, %xmm2, %xmm0
-; X64-AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X64-AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; X64-AVX1-NEXT:    vxorpd %xmm3, %xmm0, %xmm2
 ; X64-AVX1-NEXT:    vxorpd %xmm3, %xmm1, %xmm3
 ; X64-AVX1-NEXT:    vpcmpgtq %xmm2, %xmm3, %xmm2
@@ -1320,7 +1320,7 @@ define i64 @test_reduce_v8i64(<8 x i64> %a0) {
 ; X64-AVX2-NEXT:    vxorpd %xmm2, %xmm1, %xmm4
 ; X64-AVX2-NEXT:    vpcmpgtq %xmm3, %xmm4, %xmm3
 ; X64-AVX2-NEXT:    vblendvpd %xmm3, %xmm0, %xmm1, %xmm0
-; X64-AVX2-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X64-AVX2-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; X64-AVX2-NEXT:    vxorpd %xmm2, %xmm0, %xmm3
 ; X64-AVX2-NEXT:    vxorpd %xmm2, %xmm1, %xmm2
 ; X64-AVX2-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2

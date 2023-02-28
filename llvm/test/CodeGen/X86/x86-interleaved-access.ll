@@ -1720,13 +1720,13 @@ define void @splat4_v8f32_load_store(ptr %s, ptr %d) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovups (%rdi), %ymm0
 ; AVX2-NEXT:    vmovups (%rdi), %xmm1
-; AVX2-NEXT:    vpermilps {{.*#+}} xmm2 = xmm1[0,0,1,1]
+; AVX2-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[0,0,1,1]
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm2 = ymm2[0,0,1,1]
-; AVX2-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[2,2,3,3]
+; AVX2-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[2,2,3,3]
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[0,0,1,1]
-; AVX2-NEXT:    vpermilps {{.*#+}} ymm3 = ymm0[0,0,1,1,4,4,5,5]
+; AVX2-NEXT:    vshufps {{.*#+}} ymm3 = ymm0[0,0,1,1,4,4,5,5]
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm3 = ymm3[2,2,3,3]
-; AVX2-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[2,2,3,3,6,6,7,7]
+; AVX2-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[2,2,3,3,6,6,7,7]
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,2,3,3]
 ; AVX2-NEXT:    vmovups %ymm0, 96(%rsi)
 ; AVX2-NEXT:    vmovups %ymm3, 64(%rsi)
@@ -1780,13 +1780,13 @@ define void @splat4_v8i32_load_store(ptr %s, ptr %d) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovups (%rdi), %ymm0
 ; AVX2-NEXT:    vmovups (%rdi), %xmm1
-; AVX2-NEXT:    vpermilps {{.*#+}} xmm2 = xmm1[0,0,1,1]
+; AVX2-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[0,0,1,1]
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm2 = ymm2[0,0,1,1]
-; AVX2-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[2,2,3,3]
+; AVX2-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[2,2,3,3]
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[0,0,1,1]
-; AVX2-NEXT:    vpermilps {{.*#+}} ymm3 = ymm0[0,0,1,1,4,4,5,5]
+; AVX2-NEXT:    vshufps {{.*#+}} ymm3 = ymm0[0,0,1,1,4,4,5,5]
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm3 = ymm3[2,2,3,3]
-; AVX2-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[2,2,3,3,6,6,7,7]
+; AVX2-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[2,2,3,3,6,6,7,7]
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,2,3,3]
 ; AVX2-NEXT:    vmovups %ymm0, 96(%rsi)
 ; AVX2-NEXT:    vmovups %ymm3, 64(%rsi)

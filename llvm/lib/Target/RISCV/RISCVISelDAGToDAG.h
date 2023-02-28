@@ -86,12 +86,12 @@ public:
     return selectShiftMask(N, 32, ShAmt);
   }
 
-  bool selectCondOp(SDValue N, bool Inverse, SDValue &Val);
-  bool selectCondOp(SDValue N, SDValue &Val) {
-    return selectCondOp(N, /*Inverse*/ false, Val);
+  bool selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal, SDValue &Val);
+  bool selectSETNE(SDValue N, SDValue &Val) {
+    return selectSETCC(N, ISD::SETNE, Val);
   }
-  bool selectInverseCondOp(SDValue N, SDValue &Val) {
-    return selectCondOp(N, /*Inverse*/ true, Val);
+  bool selectSETEQ(SDValue N, SDValue &Val) {
+    return selectSETCC(N, ISD::SETEQ, Val);
   }
 
   bool selectSExtBits(SDValue N, unsigned Bits, SDValue &Val);
