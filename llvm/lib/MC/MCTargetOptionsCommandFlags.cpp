@@ -39,6 +39,7 @@ MCOPT(bool, IncrementalLinkerCompatible)
 MCOPT(int, DwarfVersion)
 MCOPT(bool, Dwarf64)
 MCOPT(EmitDwarfUnwindType, EmitDwarfUnwind)
+MCOPT(bool, EmitCompactUnwindNonCanonical)
 MCOPT(bool, ShowMCInst)
 MCOPT(bool, FatalWarnings)
 MCOPT(bool, NoWarn)
@@ -86,6 +87,14 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
                  clEnumValN(EmitDwarfUnwindType::Default, "default",
                             "Use target platform default")));
   MCBINDOPT(EmitDwarfUnwind);
+
+  static cl::opt<bool> EmitCompactUnwindNonCanonical(
+      "emit-compact-unwind-non-canonical",
+      cl::desc(
+          "Whether to try to emit Compact Unwind for non canonical entries."),
+      cl::init(
+          false)); // By default, use DWARF for non-canonical personalities.
+  MCBINDOPT(EmitCompactUnwindNonCanonical);
 
   static cl::opt<bool> ShowMCInst(
       "asm-show-inst",
@@ -135,6 +144,7 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.MCNoDeprecatedWarn = getNoDeprecatedWarn();
   Options.MCNoTypeCheck = getNoTypeCheck();
   Options.EmitDwarfUnwind = getEmitDwarfUnwind();
+  Options.EmitCompactUnwindNonCanonical = getEmitCompactUnwindNonCanonical();
   Options.AsSecureLogFile = getAsSecureLogFile();
 
   return Options;
