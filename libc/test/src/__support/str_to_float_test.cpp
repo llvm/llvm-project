@@ -349,7 +349,7 @@ TEST_F(LlvmLibcStrToFloatTest, EiselLemireFloat128Fallback) {
   ASSERT_FALSE(
       __llvm_libc::internal::eisel_lemire<long double>(
           {(UInt128(0x5ce0e9a56015fec5) << 64) + UInt128(0xaadfa328ae39b333),
-           1}, )
+           1})
           .has_value());
 }
 #endif
