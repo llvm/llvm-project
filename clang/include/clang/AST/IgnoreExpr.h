@@ -23,7 +23,8 @@ namespace detail {
 inline Expr *IgnoreExprNodesImpl(Expr *E) { return E; }
 template <typename FnTy, typename... FnTys>
 Expr *IgnoreExprNodesImpl(Expr *E, FnTy &&Fn, FnTys &&... Fns) {
-  return IgnoreExprNodesImpl(Fn(E), std::forward<FnTys>(Fns)...);
+  return IgnoreExprNodesImpl(std::forward<FnTy>(Fn)(E),
+                             std::forward<FnTys>(Fns)...);
 }
 } // namespace detail
 
