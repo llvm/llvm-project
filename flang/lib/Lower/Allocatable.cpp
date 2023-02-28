@@ -220,7 +220,7 @@ static void genRuntimeAllocateApplyMold(fir::FirOpBuilder &builder,
           : fir::runtime::getRuntimeFunc<mkRTKey(AllocatableApplyMold)>(
                 loc, builder);
   llvm::SmallVector<mlir::Value> args{
-      box.getAddr(), fir::getBase(mold),
+      fir::factory::getMutableIRBox(builder, loc, box), fir::getBase(mold),
       builder.createIntegerConstant(
           loc, callee.getFunctionType().getInputs()[2], rank)};
   llvm::SmallVector<mlir::Value> operands;
