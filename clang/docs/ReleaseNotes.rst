@@ -237,6 +237,13 @@ AIX Support
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
 
+AVR Support
+^^^^^^^^^^^
+- The definition of ``USHRT_MAX`` in the freestanding ``<limits.h>`` no longer
+  overflows on AVR (where ``sizeof(int) == sizeof(unsigned short)``).  The type
+  of ``USHRT_MAX`` is now ``unsigned int`` instead of ``int``, as required by
+  the C standard.
+
 DWARF Support in Clang
 ----------------------
 
