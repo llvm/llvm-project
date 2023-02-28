@@ -18,7 +18,6 @@ from dex.dextIR import DextIR
 from dex.utils import get_root_directory, Timer
 from dex.utils.Environment import is_native_windows
 from dex.utils.Exceptions import ToolArgumentError
-from dex.utils.Warning import warn
 from dex.utils.Exceptions import DebuggerException
 
 from dex.debugger.DebuggerControllers.DefaultController import DefaultController
@@ -48,9 +47,10 @@ def _warn_meaningless_option(context, option):
     if hasattr(context.options, 'list_debuggers'):
         return
 
-    warn(context,
-         'option <y>"{}"</> is meaningless with this debugger'.format(option),
-         '--debugger={}'.format(context.options.debugger))
+    context.logger.warning(
+         f'option "{option}" is meaningless with this debugger',
+         enable_prefix=True,
+         flag=f'--debugger={context.options.debugger}')
 
 
 def add_debugger_tool_base_arguments(parser, defaults):
