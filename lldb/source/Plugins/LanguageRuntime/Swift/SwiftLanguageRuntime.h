@@ -413,7 +413,6 @@ public:
   lldb::SyntheticChildrenSP
   GetBridgedSyntheticChildProvider(ValueObject &valobj);
 
-
   /// Expression Callbacks.
   /// \{
   void WillStartExecutingUserExpression(bool);
