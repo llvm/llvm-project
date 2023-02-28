@@ -39,7 +39,7 @@ foreach(arch ${BUILTIN_TEST_ARCH})
     string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
   endif()
 
-  if (${arch} STREQUAL "riscv32")
+  if (COMPILER_RT_ENABLE_SOFTWARE_INT128 OR ${arch} STREQUAL "riscv32")
     list(APPEND BUILTINS_TEST_TARGET_CFLAGS -fforce-enable-int128)
     string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
   endif()
