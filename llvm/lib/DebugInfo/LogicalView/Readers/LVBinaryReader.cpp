@@ -190,6 +190,61 @@ void LVBinaryReader::mapVirtualAddress(const object::ObjectFile &Obj) {
   });
 }
 
+void LVBinaryReader::mapVirtualAddress(const object::COFFObjectFile &COFFObj) {
+  ErrorOr<uint64_t> ImageBase = COFFObj.getImageBase();
+  if (ImageBase)
+    ImageBaseAddress = ImageBase.get();
+
+  LLVM_DEBUG({
+    dbgs() << "ImageBaseAddress: " << hexValue(ImageBaseAddress) << "\n";
+  });
+
+  uint32_t Flags = COFF::IMAGE_SCN_CNT_CODE | COFF::IMAGE_SCN_LNK_COMDAT;
+
+  for (const object::SectionRef &Section : COFFObj.sections()) {
+    if (!Section.isText() || Section.isVirtual() || !Section.getSize())
+      continue;
+
+    const object::coff_section *COFFSection = COFFObj.getCOFFSection(Section);
+    VirtualAddress = COFFSection->VirtualAddress;
+    bool IsComdat = (COFFSection->Characteristics & Flags) == Flags;
+
+    // Record section information required for symbol resolution.
+    // Note: The section index returned by 'getIndex()' is zero based.
+    Sections.emplace(Section.getIndex() + 1, Section);
+    addSectionAddress(Section);
+
+    // Additional initialization on the specific object format.
+    mapRangeAddress(COFFObj, Section, IsComdat);
+  }
+
+  LLVM_DEBUG({
+    dbgs() << "\nSections Information:\n";
+    for (LVSections::reference Entry : Sections) {
+      LVSectionIndex SectionIndex = Entry.first;
+      const object::SectionRef Section = Entry.second;
+      const object::coff_section *COFFSection = COFFObj.getCOFFSection(Section);
+      Expected<StringRef> SectionNameOrErr = Section.getName();
+      if (!SectionNameOrErr)
+        consumeError(SectionNameOrErr.takeError());
+      dbgs() << "\nIndex: " << format_decimal(SectionIndex, 3)
+             << " Name: " << *SectionNameOrErr << "\n"
+             << "Size: " << hexValue(Section.getSize()) << "\n"
+             << "VirtualAddress: " << hexValue(VirtualAddress) << "\n"
+             << "SectionAddress: " << hexValue(Section.getAddress()) << "\n"
+             << "PointerToRawData: " << hexValue(COFFSection->PointerToRawData)
+             << "\n"
+             << "SizeOfRawData: " << hexValue(COFFSection->SizeOfRawData)
+             << "\n";
+    }
+    dbgs() << "\nObject Section Information:\n";
+    for (LVSectionAddresses::const_reference Entry : SectionAddresses)
+      dbgs() << "[" << hexValue(Entry.first) << ":"
+             << hexValue(Entry.first + Entry.second.getSize())
+             << "] Size: " << hexValue(Entry.second.getSize()) << "\n";
+  });
+}
+
 Error LVBinaryReader::loadGenericTargetInfo(StringRef TheTriple,
                                             StringRef TheFeatures) {
   std::string TargetLookupError;
@@ -802,6 +857,80 @@ void LVBinaryReader::processLines(LVLines *DebugLines,
       }
     }
   }
+}
+
+// Traverse the scopes for the given 'Function' looking for any inlined
+// scopes with inlined lines, which are found in 'CUInlineeLines'.
+void LVBinaryReader::includeInlineeLines(LVSectionIndex SectionIndex,
+                                         LVScope *Function) {
+  SmallVector<LVInlineeLine::iterator> InlineeIters;
+  std::function<void(LVScope * Parent)> FindInlinedScopes =
+      [&](LVScope *Parent) {
+        if (const LVScopes *Scopes = Parent->getScopes())
+          for (LVScope *Scope : *Scopes) {
+            LVInlineeLine::iterator Iter = CUInlineeLines.find(Scope);
+            if (Iter != CUInlineeLines.end())
+              InlineeIters.push_back(Iter);
+            FindInlinedScopes(Scope);
+          }
+      };
+
+  // Find all inlined scopes for the given 'Function'.
+  FindInlinedScopes(Function);
+  for (LVInlineeLine::iterator InlineeIter : InlineeIters) {
+    LVScope *Scope = InlineeIter->first;
+    addToSymbolTable(Scope->getLinkageName(), Scope, SectionIndex);
+
+    // TODO: Convert this into a reference.
+    LVLines *InlineeLines = InlineeIter->second.get();
+    LLVM_DEBUG({
+      dbgs() << "Inlined lines for: " << Scope->getName() << "\n";
+      for (const LVLine *Line : *InlineeLines)
+        dbgs() << "[" << hexValue(Line->getAddress()) << "] "
+               << Line->getLineNumber() << "\n";
+      dbgs() << format("Debug lines: %d\n", CULines.size());
+      for (const LVLine *Line : CULines)
+        dbgs() << "Line address: " << hexValue(Line->getOffset()) << ", ("
+               << Line->getLineNumber() << ")\n";
+      ;
+    });
+
+    // The inlined lines must be merged using its address, in order to keep
+    // the real order of the instructions. The inlined lines are mixed with
+    // the other non-inlined lines.
+    if (InlineeLines->size()) {
+      // First address of inlinee code.
+      uint64_t InlineeStart = (InlineeLines->front())->getAddress();
+      LVLines::iterator Iter = std::find_if(
+          CULines.begin(), CULines.end(), [&](LVLine *Item) -> bool {
+            return Item->getAddress() == InlineeStart;
+          });
+      if (Iter != CULines.end()) {
+        // 'Iter' points to the line where the inlined function is called.
+        // Emulate the DW_AT_call_line attribute.
+        Scope->setCallLineNumber((*Iter)->getLineNumber());
+        // Mark the referenced line as the start of the inlined function.
+        // Skip the first line during the insertion, as the address and
+        // line number as the same. Otherwise we have to erase and insert.
+        (*Iter)->setLineNumber((*InlineeLines->begin())->getLineNumber());
+        ++Iter;
+        CULines.insert(Iter, InlineeLines->begin() + 1, InlineeLines->end());
+      }
+    }
+
+    // Remove this set of lines from the container; each inlined function
+    // creates an unique set of lines. Remove only the created container.
+    CUInlineeLines.erase(InlineeIter);
+    InlineeLines->clear();
+  }
+  LLVM_DEBUG({
+    dbgs() << "Merged Inlined lines for: " << Function->getName() << "\n";
+    dbgs() << format("Debug lines: %d\n", CULines.size());
+    for (const LVLine *Line : CULines)
+      dbgs() << "Line address: " << hexValue(Line->getOffset()) << ", ("
+             << Line->getLineNumber() << ")\n";
+    ;
+  });
 }
 
 void LVBinaryReader::print(raw_ostream &OS) const {

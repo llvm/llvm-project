@@ -391,7 +391,8 @@ public:
   }
   bool isTargetMuslAEABI() const {
     return (TargetTriple.getEnvironment() == Triple::MuslEABI ||
-            TargetTriple.getEnvironment() == Triple::MuslEABIHF) &&
+            TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
+            TargetTriple.getEnvironment() == Triple::OpenHOS) &&
            !isTargetDarwin() && !isTargetWindows();
   }
 
