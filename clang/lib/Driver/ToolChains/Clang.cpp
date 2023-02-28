@@ -7039,8 +7039,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Setup statistics file output.
   SmallString<128> StatsFile = getStatsFileName(Args, Output, Input, D);
-  if (!StatsFile.empty())
+  if (!StatsFile.empty()) {
     CmdArgs.push_back(Args.MakeArgString(Twine("-stats-file=") + StatsFile));
+    if (D.CCPrintInternalStats)
+      CmdArgs.push_back("-stats-file-append");
+  }
 
   // Forward -Xclang arguments to -cc1, and -mllvm arguments to the LLVM option
   // parser.
