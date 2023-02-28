@@ -135,11 +135,7 @@ public:
     SourceMgr = &CI.getSourceManager();
     PP = &CI.getPreprocessor();
     Includes.collect(CI);
-    if (Config::current().Diagnostics.UnusedIncludes ==
-                Config::IncludesPolicy::Strict ||
-            Config::current().Diagnostics.MissingIncludes ==
-            Config::IncludesPolicy::Strict)
-      Pragmas.record(CI);
+    Pragmas.record(CI);
     if (BeforeExecuteCallback)
       BeforeExecuteCallback(CI);
   }
