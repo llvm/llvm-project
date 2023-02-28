@@ -1,4 +1,4 @@
-//===-- LLVMOpsInterfaces.td - LLVM op interfaces ----------*- tablegen -*-===//
+//===-- LLVMInterfaces.td - LLVM Interfaces ----------------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This is the LLVM IR interfaces definition file.
+// This file defines op and type interfaces for the LLVM dialect in MLIR.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_OPS_INTERFACES
-#define LLVM_OPS_INTERFACES
+#ifndef LLVMIR_INTERFACES
+#define LLVMIR_INTERFACES
 
 include "mlir/IR/OpBase.td"
 
@@ -77,4 +77,4 @@ def LLVM_PointerElementTypeInterface
 }
 
 
-#endif // LLVM_OPS_INTERFACES
+#endif // LLVMIR_INTERFACES
