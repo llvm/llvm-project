@@ -110,6 +110,13 @@ private:
     return AnnotationInst;
   }
 
+  void removeAnnotationInst(MCInst &Inst) const {
+    assert(getAnnotationInst(Inst) && "Expected annotation instruction.");
+    Inst.erase(std::prev(Inst.end()));
+    assert(!getAnnotationInst(Inst) &&
+           "More than one annotation instruction detected.");
+  }
+
   void setAnnotationOpValue(MCInst &Inst, unsigned Index, int64_t Value,
                             AllocatorIdTy AllocatorId = 0) {
     MCInst *AnnotationInst = getAnnotationInst(Inst);
@@ -162,6 +169,18 @@ protected:
   /// Allocate the TailCall annotation value. Clients of the target-specific
   /// MCPlusBuilder classes must use convert/lower/create* interfaces instead.
   void setTailCall(MCInst &Inst);
+
+  /// Transfer annotations from \p SrcInst to \p DstInst.
+  void moveAnnotations(MCInst &&SrcInst, MCInst &DstInst) const {
+    assert(!getAnnotationInst(DstInst) &&
+           "Destination instruction should not have annotations.");
+    const MCInst *AnnotationInst = getAnnotationInst(SrcInst);
+    if (!AnnotationInst)
+      return;
+
+    DstInst.addOperand(MCOperand::createInst(AnnotationInst));
+    removeAnnotationInst(SrcInst);
+  }
 
 public:
   class InstructionIterator {
@@ -1864,9 +1883,8 @@ public:
   void stripAnnotations(MCInst &Inst, bool KeepTC = false);
 
   virtual InstructionListType
-  createInstrumentedIndirectCall(const MCInst &CallInst, bool TailCall,
-                                 MCSymbol *HandlerFuncAddr, int CallSiteID,
-                                 MCContext *Ctx) {
+  createInstrumentedIndirectCall(MCInst &&CallInst, MCSymbol *HandlerFuncAddr,
+                                 int CallSiteID, MCContext *Ctx) {
     llvm_unreachable("not implemented");
     return InstructionListType();
   }
