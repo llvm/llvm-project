@@ -34,18 +34,24 @@ let fp128_type = Llvm.fp128_type context
 let filename = Sys.argv.(1)
 let m = create_module context filename
 
+(*===-- Modules  ----------------------------------------------------------===*)
+
+let test_modules () =
+  insist (module_context m = context)
+
 (*===-- Contained types  --------------------------------------------------===*)
 
 let test_contained_types () =
   let ar = struct_type context [| i32_type; i8_type |] in
   insist (i32_type = (Array.get (subtypes ar)) 0);
-  insist (i8_type = (Array.get (subtypes ar)) 1)
+  insist (i8_type = (Array.get (subtypes ar)) 1);
+  insist ([| i32_type; i8_type |] = struct_element_types ar)
 
 (*===-- Pointer types  ----------------------------------------------------===*)
 let test_pointer_types () =
-  insist (address_space (pointer_type context) = 0);
-  insist (address_space (qualified_pointer_type context 0) = 0);
-  insist (address_space (qualified_pointer_type context 1) = 1)
+  insist (0 = address_space (pointer_type context));
+  insist (0 = address_space (qualified_pointer_type context 0));
+  insist (1 = address_space (qualified_pointer_type context 1))
 
 (*===-- Conversion --------------------------------------------------------===*)
 
@@ -185,6 +191,7 @@ let test_constants () =
   let c = const_array i32_type [| three; four |] in
   ignore (define_global "const_array" c m);
   insist ((array_type i32_type 2) = (type_of c));
+  insist (element_type (type_of c) = i32_type);
   insist (Some three = (aggregate_element c 0));
   insist (Some four = (aggregate_element c 1));
   insist (None = (aggregate_element c 2));
@@ -196,6 +203,7 @@ let test_constants () =
                           one; two; one; two |] in
   ignore (define_global "const_vector" c m);
   insist ((vector_type i16_type 8) = (type_of c));
+  insist (element_type (type_of c) = i16_type);
 
   (* CHECK: const_structure{{.*.}}i16 1, i16 2, i32 3, i32 4
    *)
@@ -1484,6 +1492,7 @@ let test_writer () =
 (*===-- Driver ------------------------------------------------------------===*)
 
 let _ =
+  suite "modules"          test_modules;
   suite "contained types"  test_contained_types;
   suite "pointer types"    test_pointer_types;
   suite "conversion"       test_conversion;
