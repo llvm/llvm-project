@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/Transforms/HoistPadding.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -25,7 +24,9 @@
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dominance.h"
+
 #include "mlir/IR/Matchers.h"
+#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 
@@ -165,6 +166,30 @@ computeTransposedType(RankedTensorType rankedTensorType,
   return transposedTensorType;
 }
 
+// Get all the ops in the backwards slice starting from `padOp` and that
+// are dominated by the outermost enclosing loop.
+// This also requires tracking ops defining values used in the region but
+// defined above.
+static void computeBackwardSlice(tensor::PadOp padOp,
+                                 scf::ForOp outermostEnclosingForOp,
+                                 SetVector<Operation *> &backwardSlice) {
+  DominanceInfo domInfo(outermostEnclosingForOp);
+  auto filter = [&](Operation *op) {
+    return domInfo.dominates(outermostEnclosingForOp, op) &&
+           !padOp->isProperAncestor(op);
+  };
+  // First, add the ops required to compute the region to the backwardSlice.
+  SetVector<Value> valuesDefinedAbove;
+  getUsedValuesDefinedAbove(padOp.getRegion(), padOp.getRegion(),
+                            valuesDefinedAbove);
+  for (Value v : valuesDefinedAbove) {
+    getBackwardSlice(v, &backwardSlice, filter, /*inclusive=*/true);
+  }
+  // Then, add the backward slice from padOp itself.
+  getBackwardSlice(padOp.getOperation(), &backwardSlice, filter,
+                   /*inclusive=*/true);
+}
+
 HoistingAnalysis::HoistingAnalysis(tensor::PadOp padOp, int numLoops) {
   valid = false;
 
@@ -218,16 +243,9 @@ HoistingAnalysis::HoistingAnalysis(tensor::PadOp padOp, int numLoops) {
     return;
   }
 
-  // Get all the ops in the backwards slice starting from `padOp` and that
-  // are dominated by the outermost enclosing loop.
-  DominanceInfo domInfo(outermostEnclosingForOp);
-  getBackwardSlice(padOp.getOperation(), &backwardSlice, [&](Operation *op) {
-    return domInfo.dominates(outermostEnclosingForOp, op);
-  });
-  if (backwardSlice.empty())
+  computeBackwardSlice(padOp, outermostEnclosingForOp, backwardSlice);
+  if (backwardSlice.size() <= 1)
     return;
-  // Add `padOp` itself to the backward slice.
-  backwardSlice.insert(padOp.getOperation());
 
   // Remove all ops in the backward slice that are not used to index the padded
   // tensor. In particular, keep `padOp`, `sliceOp`, and the loop and
@@ -394,9 +412,11 @@ static Value buildLoopIterationCount(OpBuilder &b, scf::ForOp outer,
                                        ValueRange{ivVal, lbVal, stepVal});
 }
 
-FailureOr<Value> mlir::linalg::hoistPaddingOnTensors(
-    tensor::PadOp opToHoist, int numLoops, ArrayRef<int64_t> transposeVector,
-    tensor::PadOp &hoistedOp, SmallVectorImpl<GenericOp> &transposeOps) {
+FailureOr<Value>
+mlir::linalg::hoistPaddingOnTensors(tensor::PadOp opToHoist, int64_t numLoops,
+                                    ArrayRef<int64_t> transposeVector,
+                                    tensor::PadOp &hoistedOp,
+                                    SmallVectorImpl<GenericOp> &transposeOps) {
   LLVM_DEBUG(DBGS() << "Try to hoist " << *(opToHoist) << " by " << numLoops
                     << " loops\n");
   HoistingAnalysis analysis(opToHoist, numLoops);
