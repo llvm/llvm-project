@@ -2489,9 +2489,18 @@ static bool canUseCtorHoming(const CXXRecordDecl *RD) {
   if (isClassOrMethodDLLImport(RD))
     return false;
 
-  return !RD->isLambda() && !RD->isAggregate() &&
-         !RD->hasTrivialDefaultConstructor() &&
-         !RD->hasConstexprNonCopyMoveConstructor();
+  if (RD->isLambda() || RD->isAggregate() ||
+      RD->hasTrivialDefaultConstructor() ||
+      RD->hasConstexprNonCopyMoveConstructor())
+    return false;
+
+  for (const CXXConstructorDecl *Ctor : RD->ctors()) {
+    if (Ctor->isCopyOrMoveConstructor())
+      continue;
+    if (!Ctor->isDeleted())
+      return true;
+  }
+  return false;
 }
 
 static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,
