@@ -333,3 +333,13 @@ folly::coro::Task<int> go1() {
 // CHECK: },)
 // CHECK: %[[#V:]] = cir.load %[[#CoReturnValAddr]] : cir.ptr <i32>, i32
 // CHECK: cir.call @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi({{.*}}, %[[#V]])
+
+folly::coro::Task<int> go1_lambda() {
+  auto task = []() -> folly::coro::Task<int> {
+    co_return 1;
+  }();
+  co_return co_await task;
+}
+
+// CHECK: cir.func coroutine internal @_ZZ10go1_lambdavENK3$_0clEv
+// CHECK: cir.func coroutine @_Z10go1_lambdav()
