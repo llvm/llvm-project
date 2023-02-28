@@ -1522,7 +1522,7 @@ LLVM_DUMP_METHOD void ILPValue::dump() const {
 
 namespace llvm {
 
-LLVM_DUMP_METHOD
+LLVM_ATTRIBUTE_UNUSED
 raw_ostream &operator<<(raw_ostream &OS, const ILPValue &Val) {
   Val.print(OS);
   return OS;
