@@ -1156,6 +1156,12 @@ mlir::Attribute ConstantEmitter::tryEmitAbstractForMemory(const APValue &value,
   return (C ? emitForMemory(C, destType) : nullptr);
 }
 
+mlir::TypedAttr ConstantEmitter::tryEmitPrivateForMemory(const Expr *E,
+                                                         QualType destType) {
+  assert(0 && "not implemented");
+  return nullptr;
+}
+
 mlir::Attribute ConstantEmitter::tryEmitPrivateForMemory(const APValue &value,
                                                          QualType destType) {
   auto nonMemoryDestType = getNonMemoryType(CGM, destType);
@@ -1247,6 +1253,11 @@ buildArrayConstant(CIRGenModule &CGM, mlir::Type DesiredType,
   // We have mixed types. Use a packed struct.
   assert(0 && "NYE");
   return {};
+}
+
+mlir::TypedAttr ConstantEmitter::tryEmitPrivate(const Expr *E, QualType T) {
+  assert(0 && "not implemented");
+  return nullptr;
 }
 
 mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
