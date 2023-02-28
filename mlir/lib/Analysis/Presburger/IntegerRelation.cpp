@@ -2246,14 +2246,16 @@ void IntegerRelation::print(raw_ostream &os) const {
   assert(hasConsistentState());
   printSpace(os);
   for (unsigned i = 0, e = getNumEqualities(); i < e; ++i) {
+    os << " ";
     for (unsigned j = 0, f = getNumCols(); j < f; ++j) {
-      os << atEq(i, j) << " ";
+      os << atEq(i, j) << "\t";
     }
     os << "= 0\n";
   }
   for (unsigned i = 0, e = getNumInequalities(); i < e; ++i) {
+    os << " ";
     for (unsigned j = 0, f = getNumCols(); j < f; ++j) {
-      os << atIneq(i, j) << " ";
+      os << atIneq(i, j) << "\t";
     }
     os << ">= 0\n";
   }

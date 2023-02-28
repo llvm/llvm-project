@@ -1406,15 +1406,15 @@ void FlatAffineValueConstraints::printSpace(raw_ostream &os) const {
   os << "(";
   for (unsigned i = 0, e = getNumDimAndSymbolVars(); i < e; i++) {
     if (hasValue(i))
-      os << "Value ";
+      os << "Value\t";
     else
-      os << "None ";
+      os << "None\t";
   }
   for (unsigned i = getVarKindOffset(VarKind::Local),
                 e = getVarKindEnd(VarKind::Local);
        i < e; ++i)
-    os << "Local ";
-  os << " const)\n";
+    os << "Local\t";
+  os << "const)\n";
 }
 
 void FlatAffineValueConstraints::clearAndCopyFrom(
