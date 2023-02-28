@@ -183,17 +183,18 @@ public:
     return error;
   }
 
-  virtual Status GenerateBreakpointCommandCallbackData(
-      StringList &input,
-      std::string &output,
-      bool has_extra_args) {
+  virtual Status GenerateBreakpointCommandCallbackData(StringList &input,
+                                                       std::string &output,
+                                                       bool has_extra_args,
+                                                       const bool is_callback) {
     Status error;
     error.SetErrorString("not implemented");
     return error;
   }
 
   virtual bool GenerateWatchpointCommandCallbackData(StringList &input,
-                                                     std::string &output) {
+                                                     std::string &output,
+                                                     const bool is_callback) {
     return false;
   }
 
@@ -359,7 +360,8 @@ public:
   }
 
   virtual Status GenerateFunction(const char *signature,
-                                  const StringList &input) {
+                                  const StringList &input,
+                                  const bool is_callback) {
     Status error;
     error.SetErrorString("unimplemented");
     return error;
@@ -379,7 +381,8 @@ public:
       const char *callback_text);
 
   virtual Status SetBreakpointCommandCallback(BreakpointOptions &bp_options,
-                                              const char *callback_text) {
+                                              const char *callback_text,
+                                              const bool is_callback) {
     Status error;
     error.SetErrorString("unimplemented");
     return error;
@@ -410,7 +413,8 @@ public:
 
   /// Set a one-liner as the callback for the watchpoint.
   virtual void SetWatchpointCommandCallback(WatchpointOptions *wp_options,
-                                            const char *oneliner) {}
+                                            const char *user_input,
+                                            const bool is_callback) {}
 
   virtual bool GetScriptedSummary(const char *function_name,
                                   lldb::ValueObjectSP valobj,

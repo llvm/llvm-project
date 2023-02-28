@@ -112,7 +112,8 @@ Status ScriptInterpreter::SetBreakpointCommandCallback(
     const char *callback_text) {
   Status error;
   for (BreakpointOptions &bp_options : bp_options_vec) {
-    error = SetBreakpointCommandCallback(bp_options, callback_text);
+    error = SetBreakpointCommandCallback(bp_options, callback_text,
+                                         /*is_callback=*/false);
     if (!error.Success())
       break;
   }
