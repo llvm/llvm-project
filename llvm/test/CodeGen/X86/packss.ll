@@ -185,7 +185,7 @@ define <8 x i16> @trunc_ashr_v4i64_demandedelts(<4 x i64> %a0) {
 ; X86-AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; X86-AVX1-NEXT:    vpaddq %xmm3, %xmm1, %xmm1
 ; X86-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; X86-AVX1-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
+; X86-AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X86-AVX1-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vzeroupper
@@ -236,7 +236,7 @@ define <8 x i16> @trunc_ashr_v4i64_demandedelts(<4 x i64> %a0) {
 ; X64-AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; X64-AVX1-NEXT:    vpsubq %xmm2, %xmm1, %xmm1
 ; X64-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; X64-AVX1-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
+; X64-AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
 ; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X64-AVX1-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vzeroupper

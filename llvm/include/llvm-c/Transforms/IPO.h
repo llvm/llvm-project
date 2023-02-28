@@ -27,9 +27,6 @@ LLVM_C_EXTERN_C_BEGIN
  * @{
  */
 
-/** See llvm::createConstantMergePass function. */
-void LLVMAddConstantMergePass(LLVMPassManagerRef PM);
-
 /** See llvm::createDeadArgEliminationPass function. */
 void LLVMAddDeadArgEliminationPass(LLVMPassManagerRef PM);
 
@@ -38,9 +35,6 @@ void LLVMAddFunctionAttrsPass(LLVMPassManagerRef PM);
 
 /** See llvm::createAlwaysInlinerPass function. */
 void LLVMAddAlwaysInlinerPass(LLVMPassManagerRef PM);
-
-/** See llvm::createGlobalDCEPass function. */
-void LLVMAddGlobalDCEPass(LLVMPassManagerRef PM);
 
 /**
  * @}

@@ -80,7 +80,7 @@ define <4 x i32> @rot_v4i32_non_splat_2masks(<4 x i32> %x) {
 define <4 x i32> @rot_v4i32_zero_non_splat(<4 x i32> %x) {
 ; XOPAVX1-LABEL: rot_v4i32_zero_non_splat:
 ; XOPAVX1:       # %bb.0:
-; XOPAVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; XOPAVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: rot_v4i32_zero_non_splat:

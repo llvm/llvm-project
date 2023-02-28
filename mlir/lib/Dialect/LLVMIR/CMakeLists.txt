@@ -14,7 +14,7 @@ add_mlir_dialect_library(MLIRLLVMDialect
   MLIRLLVMOpsIncGen
   MLIRLLVMTypesIncGen
   MLIRLLVMIntrinsicOpsIncGen
-  MLIRLLVMOpsInterfacesIncGen
+  MLIRLLVMInterfacesIncGen
   MLIROpenMPOpsIncGen
   intrinsics_gen
 

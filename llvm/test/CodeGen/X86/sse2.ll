@@ -144,7 +144,7 @@ define void @test4(<4 x float> %X, ptr %res) nounwind {
 ; X86-AVX-LABEL: test4:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,1,3,3]
+; X86-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,1,3,3]
 ; X86-AVX-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-AVX-NEXT:    retl
 ;
@@ -156,7 +156,7 @@ define void @test4(<4 x float> %X, ptr %res) nounwind {
 ;
 ; X64-AVX-LABEL: test4:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,1,3,3]
+; X64-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,1,3,3]
 ; X64-AVX-NEXT:    vmovaps %xmm0, (%rdi)
 ; X64-AVX-NEXT:    retq
 	%tmp5 = shufflevector <4 x float> %X, <4 x float> undef, <4 x i32> < i32 2, i32 6, i32 3, i32 7 >		; <<4 x float>> [#uses=1]
@@ -448,7 +448,7 @@ define void @test13(ptr %res, ptr %A, ptr %B, ptr %C) nounwind {
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-AVX-NEXT:    vmovaps (%edx), %xmm0
 ; X86-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1],mem[0,1]
-; X86-AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; X86-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; X86-AVX-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-AVX-NEXT:    retl
 ;
@@ -464,7 +464,7 @@ define void @test13(ptr %res, ptr %A, ptr %B, ptr %C) nounwind {
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vmovaps (%rdx), %xmm0
 ; X64-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1],mem[0,1]
-; X64-AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; X64-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; X64-AVX-NEXT:    vmovaps %xmm0, (%rdi)
 ; X64-AVX-NEXT:    retq
   %tmp3 = load <4 x float>, ptr %B            ; <<4 x float>> [#uses=1]

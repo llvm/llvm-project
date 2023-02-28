@@ -133,7 +133,7 @@ public:
     auto *TC = dyn_cast<Constant>(True);
     auto *FC = dyn_cast<Constant>(False);
     if (CC && TC && FC)
-      return Fold(ConstantExpr::getSelect(CC, TC, FC));
+      return ConstantFoldSelectInstruction(CC, TC, FC);
 
     return nullptr;
   }

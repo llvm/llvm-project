@@ -64,34 +64,6 @@ static bool convertAnnotation2Metadata(Module &M) {
   return true;
 }
 
-namespace {
-struct Annotation2MetadataLegacy : public ModulePass {
-  static char ID;
-
-  Annotation2MetadataLegacy() : ModulePass(ID) {
-    initializeAnnotation2MetadataLegacyPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnModule(Module &M) override { return convertAnnotation2Metadata(M); }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-  }
-};
-
-} // end anonymous namespace
-
-char Annotation2MetadataLegacy::ID = 0;
-
-INITIALIZE_PASS_BEGIN(Annotation2MetadataLegacy, DEBUG_TYPE,
-                      "Annotation2Metadata", false, false)
-INITIALIZE_PASS_END(Annotation2MetadataLegacy, DEBUG_TYPE,
-                    "Annotation2Metadata", false, false)
-
-ModulePass *llvm::createAnnotation2MetadataLegacyPass() {
-  return new Annotation2MetadataLegacy();
-}
-
 PreservedAnalyses Annotation2MetadataPass::run(Module &M,
                                                ModuleAnalysisManager &AM) {
   convertAnnotation2Metadata(M);

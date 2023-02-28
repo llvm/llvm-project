@@ -23,43 +23,22 @@
 using namespace llvm;
 
 void llvm::initializeIPO(PassRegistry &Registry) {
-  initializeAnnotation2MetadataLegacyPass(Registry);
-  initializeConstantMergeLegacyPassPass(Registry);
   initializeDAEPass(Registry);
   initializeDAHPass(Registry);
-  initializeForceFunctionAttrsLegacyPassPass(Registry);
-  initializeGlobalDCELegacyPassPass(Registry);
   initializeAlwaysInlinerLegacyPassPass(Registry);
-  initializeInferFunctionAttrsLegacyPassPass(Registry);
   initializeLoopExtractorLegacyPassPass(Registry);
   initializeSingleLoopExtractorPass(Registry);
-  initializeAttributorLegacyPassPass(Registry);
-  initializeAttributorCGSCCLegacyPassPass(Registry);
-  initializePostOrderFunctionAttrsLegacyPassPass(Registry);
   initializeBarrierNoopPass(Registry);
-  initializeEliminateAvailableExternallyLegacyPassPass(Registry);
 }
 
 void LLVMInitializeIPO(LLVMPassRegistryRef R) {
   initializeIPO(*unwrap(R));
 }
 
-void LLVMAddConstantMergePass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createConstantMergePass());
-}
-
 void LLVMAddDeadArgEliminationPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createDeadArgEliminationPass());
 }
 
-void LLVMAddFunctionAttrsPass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createPostOrderFunctionAttrsLegacyPass());
-}
-
 void LLVMAddAlwaysInlinerPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(llvm::createAlwaysInlinerLegacyPass());
-}
-
-void LLVMAddGlobalDCEPass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createGlobalDCEPass());
 }

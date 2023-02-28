@@ -4958,7 +4958,7 @@ define void @one_mask_bit_set6(ptr %addr, <16 x i64> %val) {
 ; X86-AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
 ; X86-AVX512-NEXT:    vmovlps %xmm0, 48(%eax)
 ; X86-AVX512-NEXT:    vextractf128 $1, %ymm1, %xmm0
-; X86-AVX512-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; X86-AVX512-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; X86-AVX512-NEXT:    vmovlps %xmm0, 88(%eax)
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl

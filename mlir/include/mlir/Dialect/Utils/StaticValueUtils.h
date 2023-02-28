@@ -82,6 +82,8 @@ bool isConstantIntValue(OpFoldResult ofr, int64_t value);
 /// that come from the fact there is no IndexAttr and that IndexType have no
 /// bitwidth.
 bool isEqualConstantIntOrValue(OpFoldResult ofr1, OpFoldResult ofr2);
+bool isEqualConstantIntOrValueArray(ArrayRef<OpFoldResult> ofrs1,
+                                    ArrayRef<OpFoldResult> ofrs2);
 
 /// Helper function to convert a vector of `OpFoldResult`s into a vector of
 /// `Value`s. For each `OpFoldResult` in `valueOrAttrVec` return the fold

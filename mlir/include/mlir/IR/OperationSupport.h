@@ -949,6 +949,18 @@ struct OperationEquivalence {
   /// Compare two operations and return if they are equivalent.
   static bool isEquivalentTo(Operation *lhs, Operation *rhs, Flags flags);
 
+  /// Compare two regions (including their subregions) and return if they are
+  /// equivalent. See also `isEquivalentTo` for details.
+  static bool isRegionEquivalentTo(
+      Region *lhs, Region *rhs,
+      function_ref<LogicalResult(Value, Value)> checkEquivalent,
+      function_ref<void(Value, Value)> markEquivalent,
+      OperationEquivalence::Flags flags);
+
+  /// Compare two regions and return if they are equivalent.
+  static bool isRegionEquivalentTo(Region *lhs, Region *rhs,
+                                   OperationEquivalence::Flags flags);
+
   /// Helper that can be used with `isEquivalentTo` above to consider ops
   /// equivalent even if their operands are not equivalent.
   static LogicalResult ignoreValueEquivalence(Value lhs, Value rhs) {

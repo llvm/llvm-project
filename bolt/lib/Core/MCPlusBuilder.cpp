@@ -298,7 +298,8 @@ void MCPlusBuilder::stripAnnotations(MCInst &Inst, bool KeepTC) {
   // Preserve TailCall annotation.
   auto IsTC = hasAnnotation(Inst, MCAnnotation::kTailCall);
 
-  Inst.erase(std::prev(Inst.end()));
+  removeAnnotationInst(Inst);
+
   if (KeepTC && IsTC)
     setTailCall(Inst);
 }

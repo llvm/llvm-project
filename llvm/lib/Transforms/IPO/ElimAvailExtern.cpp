@@ -70,33 +70,3 @@ EliminateAvailableExternallyPass::run(Module &M, ModuleAnalysisManager &) {
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }
-
-namespace {
-
-struct EliminateAvailableExternallyLegacyPass : public ModulePass {
-  static char ID; // Pass identification, replacement for typeid
-
-  EliminateAvailableExternallyLegacyPass() : ModulePass(ID) {
-    initializeEliminateAvailableExternallyLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  // run - Do the EliminateAvailableExternally pass on the specified module,
-  // optionally updating the specified callgraph to reflect the changes.
-  bool runOnModule(Module &M) override {
-    if (skipModule(M))
-      return false;
-    return eliminateAvailableExternally(M);
-  }
-};
-
-} // end anonymous namespace
-
-char EliminateAvailableExternallyLegacyPass::ID = 0;
-
-INITIALIZE_PASS(EliminateAvailableExternallyLegacyPass, "elim-avail-extern",
-                "Eliminate Available Externally Globals", false, false)
-
-ModulePass *llvm::createEliminateAvailableExternallyPass() {
-  return new EliminateAvailableExternallyLegacyPass();
-}
