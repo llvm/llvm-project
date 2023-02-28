@@ -34,14 +34,9 @@
 # include <unistd.h>
 #endif // defined(_LIBCPP_WIN32API)
 
-#include "../include/apple_availability.h"
-
-#if !defined(__APPLE__)
-// We can use the presence of UTIME_OMIT to detect platforms that provide
-// utimensat.
+// We can use the presence of UTIME_OMIT to detect platforms that provide utimensat.
 #if defined(UTIME_OMIT)
-#define _LIBCPP_USE_UTIMENSAT
-#endif
+# define _LIBCPP_USE_UTIMENSAT
 #endif
 
 // TODO: Check whether these functions actually need internal linkage, or if they can be made normal header functions
