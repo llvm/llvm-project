@@ -6,14 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <map>
+// <deque>
 //   The container's value type must be the same as the allocator's value type
 
-#include <map>
+#include <deque>
 
-int main(int, char**)
-{
-    std::multimap<int, int, std::less<int>, std::allocator<long> > m;
-
-  return 0;
-}
+std::deque<int, std::allocator<long> > d;
+  // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed{{.*}}Allocator::value_type must be same type as value_type}}
