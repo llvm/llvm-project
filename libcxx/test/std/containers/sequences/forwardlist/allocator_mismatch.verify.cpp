@@ -11,9 +11,5 @@
 
 #include <forward_list>
 
-int main(int, char**)
-{
-    std::forward_list<int, std::allocator<long> > fl;
-
-  return 0;
-}
+std::forward_list<int, std::allocator<long> > fl;
+  // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed{{.*}}Allocator::value_type must be same type as value_type}}

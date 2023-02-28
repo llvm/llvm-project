@@ -133,6 +133,39 @@ func.func @gpu_gcn_raw_buffer_atomic_fadd_f32(%value: f32, %buf: memref<64xf32>,
   func.return
 }
 
+// CHECK-LABEL: func @gpu_gcn_raw_buffer_atomic_fmax_f32
+func.func @gpu_gcn_raw_buffer_atomic_fmax_f32(%value: f32, %buf: memref<64xf32>, %idx: i32) {
+  // CHECK: %[[numRecords:.*]] = llvm.mlir.constant(256 : i32)
+  // CHECK: llvm.insertelement{{.*}}%[[numRecords]]
+  // CHECK: %[[word3:.*]] = llvm.mlir.constant(159744 : i32)
+  // CHECK: %[[resource:.*]] = llvm.insertelement{{.*}}%[[word3]]
+  // CHECK: rocdl.raw.buffer.atomic.fmax %{{.*}} %[[resource]], %{{.*}}, %{{.*}}, %{{.*}} : f32
+  amdgpu.raw_buffer_atomic_fmax {boundsCheck = true} %value -> %buf[%idx] : f32 -> memref<64xf32>, i32
+  func.return
+}
+
+// CHECK-LABEL: func @gpu_gcn_raw_buffer_atomic_smax_i32
+func.func @gpu_gcn_raw_buffer_atomic_smax_i32(%value: i32, %buf: memref<64xi32>, %idx: i32) {
+  // CHECK: %[[numRecords:.*]] = llvm.mlir.constant(256 : i32)
+  // CHECK: llvm.insertelement{{.*}}%[[numRecords]]
+  // CHECK: %[[word3:.*]] = llvm.mlir.constant(159744 : i32)
+  // CHECK: %[[resource:.*]] = llvm.insertelement{{.*}}%[[word3]]
+  // CHECK: rocdl.raw.buffer.atomic.smax %{{.*}} %[[resource]], %{{.*}}, %{{.*}}, %{{.*}} : i32
+  amdgpu.raw_buffer_atomic_smax {boundsCheck = true} %value -> %buf[%idx] : i32 -> memref<64xi32>, i32
+  func.return
+}
+
+// CHECK-LABEL: func @gpu_gcn_raw_buffer_atomic_umin_i32
+func.func @gpu_gcn_raw_buffer_atomic_umin_i32(%value: i32, %buf: memref<64xi32>, %idx: i32) {
+  // CHECK: %[[numRecords:.*]] = llvm.mlir.constant(256 : i32)
+  // CHECK: llvm.insertelement{{.*}}%[[numRecords]]
+  // CHECK: %[[word3:.*]] = llvm.mlir.constant(159744 : i32)
+  // CHECK: %[[resource:.*]] = llvm.insertelement{{.*}}%[[word3]]
+  // CHECK: rocdl.raw.buffer.atomic.umin %{{.*}} %[[resource]], %{{.*}}, %{{.*}}, %{{.*}} : i32
+  amdgpu.raw_buffer_atomic_umin {boundsCheck = true} %value -> %buf[%idx] : i32 -> memref<64xi32>, i32
+  func.return
+}
+
 // CHECK-LABEL: func @lds_barrier
 func.func @lds_barrier() {
   // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "s_waitcnt lgkmcnt(0)\0As_barrier"

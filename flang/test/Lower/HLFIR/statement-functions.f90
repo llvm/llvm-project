@@ -30,6 +30,6 @@ end subroutine
 ! CHECK:  %[[VAL_15:.*]] = arith.constant 0 : i32
 ! CHECK:  %[[VAL_16:.*]] = arith.cmpi sgt, %[[VAL_14]], %[[VAL_15]] : i32
 ! CHECK:  %[[VAL_17:.*]] = arith.select %[[VAL_16]], %[[VAL_14]], %[[VAL_15]] : i32
-! CHECK:  %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_13]]#0 typeparams %[[VAL_17]] {uniq_name = "_QFstmt_funcEchar_stmt_func_dummy_arg"} : (!fir.ref<!fir.char<1,?>>, i32) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:  %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_13]]#0 typeparams %[[VAL_17]] {uniq_name = "_QFchar_testFstmt_funcEchar_stmt_func_dummy_arg"} : (!fir.ref<!fir.char<1,?>>, i32) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 ! CHECK:  %[[VAL_19:.*]] = arith.constant 10 : i64
 ! CHECK:  %[[VAL_20:.*]] = hlfir.set_length %[[VAL_18]]#0 len %[[VAL_19]] : (!fir.boxchar<1>, i64) -> !hlfir.expr<!fir.char<1,10>>

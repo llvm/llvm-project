@@ -1189,15 +1189,16 @@ void SimplifyIntrinsicsPass::simplifyMinlocReduction(
 
   int maskRank;
   fir::KindTy kind = 0;
-  mlir::Type logicalConvertType = builder.getI1Type();
+  mlir::Type logicalElemType = builder.getI1Type();
   if (isOperandAbsent(mask)) {
     maskRank = -1;
   } else {
     maskRank = getDimCount(mask);
     mlir::Type maskElemTy = hlfir::getFortranElementType(maskDef.getType());
-    fir::LogicalType maskLogiTy = {maskElemTy.dyn_cast<fir::LogicalType>()};
-    kind = maskLogiTy.getFKind();
-    logicalConvertType = builder.getIntegerType(kind * 8);
+    fir::LogicalType logicalFirType = {maskElemTy.dyn_cast<fir::LogicalType>()};
+    kind = logicalFirType.getFKind();
+    // Convert fir::LogicalType to mlir::Type
+    logicalElemType = logicalFirType;
   }
 
   mlir::Operation *outputDef = args[0].getDefiningOp();
@@ -1221,11 +1222,11 @@ void SimplifyIntrinsicsPass::simplifyMinlocReduction(
   auto typeGenerator = [rank](fir::FirOpBuilder &builder) {
     return genRuntimeMinlocType(builder, rank);
   };
-  auto bodyGenerator = [rank, maskRank, inputType, logicalConvertType,
+  auto bodyGenerator = [rank, maskRank, inputType, logicalElemType,
                         outType](fir::FirOpBuilder &builder,
                                  mlir::func::FuncOp &funcOp) {
     genRuntimeMinlocBody(builder, funcOp, rank, maskRank, inputType,
-                         logicalConvertType, outType);
+                         logicalElemType, outType);
   };
 
   mlir::func::FuncOp newFunc =

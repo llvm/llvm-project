@@ -21,6 +21,10 @@ struct LShiftTableEntry {
   char const *power_of_five;
 };
 
+// This is used in both this file and in the main str_to_float.h.
+// TODO: Figure out where to put this.
+enum class RoundDirection { Up, Down, Nearest };
+
 // This is based on the HPD data structure described as part of the Simple
 // Decimal Conversion algorithm by Nigel Tao, described at this link:
 // https://nigeltao.github.io/blog/2020/parse-number-f64-simple.html
@@ -111,11 +115,22 @@ class HighPrecisionDecimal {
   uint8_t digits[MAX_NUM_DIGITS];
 
 private:
-  bool should_round_up(int32_t roundToDigit) {
+  bool should_round_up(int32_t roundToDigit, RoundDirection round) {
     if (roundToDigit < 0 ||
         static_cast<uint32_t>(roundToDigit) >= this->num_digits) {
       return false;
     }
+
+    // The above condition handles all cases where all of the trailing digits
+    // are zero. In that case, if the rounding mode is up, then this number
+    // should be rounded up. Similarly, if the rounding mode is down, then it
+    // should always round down.
+    if (round == RoundDirection::Up) {
+      return true;
+    } else if (round == RoundDirection::Down) {
+      return false;
+    }
+    // Else round to nearest.
 
     // If we're right in the middle and there are no extra digits
     if (this->digits[roundToDigit] == 5 &&
@@ -357,7 +372,8 @@ public:
 
   // Round the number represented to the closest value of unsigned int type T.
   // This is done ignoring overflow.
-  template <class T> T round_to_integer_type() {
+  template <class T>
+  T round_to_integer_type(RoundDirection round = RoundDirection::Nearest) {
     T result = 0;
     uint32_t cur_digit = 0;
 
@@ -372,10 +388,7 @@ public:
       result *= 10;
       ++cur_digit;
     }
-    if (this->should_round_up(this->decimal_point)) {
-      ++result;
-    }
-    return result;
+    return result + this->should_round_up(this->decimal_point, round);
   }
 
   // Extra functions for testing.

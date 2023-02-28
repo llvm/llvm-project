@@ -16,85 +16,85 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/Support/MD5.h"
-#include <optional>
 
-// recursively build the vector of module scopes
-static void moduleNames(const Fortran::semantics::Scope &scope,
-                        llvm::SmallVector<llvm::StringRef> &result) {
-  if (scope.IsTopLevel())
-    return;
-  moduleNames(scope.parent(), result);
-  if (scope.kind() == Fortran::semantics::Scope::Kind::Module)
-    if (const Fortran::semantics::Symbol *symbol = scope.symbol())
-      result.emplace_back(toStringRef(symbol->name()));
-}
-
-static llvm::SmallVector<llvm::StringRef>
-moduleNames(const Fortran::semantics::Symbol &symbol) {
-  const Fortran::semantics::Scope &scope = symbol.owner();
-  llvm::SmallVector<llvm::StringRef> result;
-  moduleNames(scope, result);
-  return result;
-}
-
-static std::optional<llvm::StringRef>
-hostName(const Fortran::semantics::Symbol &symbol) {
-  const Fortran::semantics::Scope *scope = &symbol.owner();
-  if (symbol.has<Fortran::semantics::AssocEntityDetails>())
-    // Associate/Select construct scopes are not part of the mangling. This can
-    // result in different construct selector being mangled with the same name.
-    // This is not an issue since these are not global symbols.
-    while (!scope->IsTopLevel() &&
-           (scope->kind() != Fortran::semantics::Scope::Kind::Subprogram &&
-            scope->kind() != Fortran::semantics::Scope::Kind::MainProgram))
-      scope = &scope->parent();
-  if (scope->kind() == Fortran::semantics::Scope::Kind::Subprogram) {
-    assert(scope->symbol() && "subprogram scope must have a symbol");
-    return toStringRef(scope->symbol()->name());
+/// Return all ancestor module and submodule scope names; all host procedure
+/// and statement function scope names; and the innermost blockId containing
+/// \p symbol.
+static std::tuple<llvm::SmallVector<llvm::StringRef>,
+                  llvm::SmallVector<llvm::StringRef>, std::int64_t>
+ancestors(const Fortran::semantics::Symbol &symbol,
+          Fortran::lower::mangle::ScopeBlockIdMap &scopeBlockIdMap) {
+  llvm::SmallVector<const Fortran::semantics::Scope *> scopes;
+  for (auto *scp = &symbol.owner(); !scp->IsGlobal(); scp = &scp->parent())
+    scopes.push_back(scp);
+  llvm::SmallVector<llvm::StringRef> modules;
+  llvm::SmallVector<llvm::StringRef> procs;
+  std::int64_t blockId = 0;
+  for (auto iter = scopes.rbegin(), rend = scopes.rend(); iter != rend;
+       ++iter) {
+    auto *scp = *iter;
+    switch (scp->kind()) {
+    case Fortran::semantics::Scope::Kind::Module:
+      modules.emplace_back(toStringRef(scp->symbol()->name()));
+      break;
+    case Fortran::semantics::Scope::Kind::Subprogram:
+      procs.emplace_back(toStringRef(scp->symbol()->name()));
+      break;
+    case Fortran::semantics::Scope::Kind::MainProgram:
+      // Do not use the main program name, if any, because it may collide
+      // with a procedure of the same name in another compilation unit.
+      // This is nonconformant, but universally allowed.
+      procs.emplace_back(llvm::StringRef(""));
+      break;
+    case Fortran::semantics::Scope::Kind::BlockConstruct: {
+      auto it = scopeBlockIdMap.find(scp);
+      assert(it != scopeBlockIdMap.end() && it->second &&
+             "invalid block identifier");
+      blockId = it->second;
+    } break;
+    default:
+      break;
+    }
   }
-  if (scope->kind() == Fortran::semantics::Scope::Kind::MainProgram)
-    // Do not use the main program name, if any, because it may lead to name
-    // collision with procedures with the same name in other compilation units
-    // (technically illegal, but all compilers are able to compile and link
-    // properly these programs).
-    return llvm::StringRef("");
-  return {};
+  return {modules, procs, blockId};
 }
 
-// Mangle the name of `symbol` to make it unique within FIR's symbol table using
-// the FIR name mangler, `mangler`
+// Mangle the name of \p symbol to make it globally unique.
 std::string
 Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
+                                   ScopeBlockIdMap &scopeBlockIdMap,
                                    bool keepExternalInScope) {
-  // Resolve host and module association before mangling
+  // Resolve module and host associations before mangling.
   const auto &ultimateSymbol = symbol.GetUltimate();
-  auto symbolName = toStringRef(ultimateSymbol.name());
 
-  // The Fortran and BIND(C) namespaces are counterintuitive. A
-  // BIND(C) name is substituted early having precedence over the
-  // Fortran name of the subprogram. By side-effect, this allows
-  // multiple subprocedures with identical Fortran names to be legally
-  // present in the program. Assume the BIND(C) name is unique.
+  // The Fortran and BIND(C) namespaces are counterintuitive. A BIND(C) name is
+  // substituted early, and has precedence over the Fortran name. This allows
+  // multiple procedures or objects with identical Fortran names to legally
+  // coexist. The BIND(C) name is unique.
   if (auto *overrideName = ultimateSymbol.GetBindName())
     return *overrideName;
-  // TODO: the case of procedure that inherits the BIND(C) through another
-  // interface (procedure(iface)), should be dealt within GetBindName()
-  // directly, or some semantics wrapper.
+
+  // TODO: A procedure that inherits BIND(C) through another interface
+  // (procedure(iface)) should be dealt with in GetBindName() or some wrapper.
   if (!Fortran::semantics::IsPointer(ultimateSymbol) &&
       Fortran::semantics::IsBindCProcedure(ultimateSymbol) &&
       Fortran::semantics::ClassifyProcedure(symbol) !=
           Fortran::semantics::ProcedureDefinitionClass::Internal)
     return ultimateSymbol.name().ToString();
 
+  llvm::StringRef symbolName = toStringRef(ultimateSymbol.name());
+  llvm::SmallVector<llvm::StringRef> modules;
+  llvm::SmallVector<llvm::StringRef> procs;
+  std::int64_t blockId;
+
   // mangle ObjectEntityDetails or AssocEntityDetails symbols.
   auto mangleObject = [&]() -> std::string {
-    llvm::SmallVector<llvm::StringRef> modNames = moduleNames(ultimateSymbol);
-    std::optional<llvm::StringRef> optHost = hostName(ultimateSymbol);
+    std::tie(modules, procs, blockId) =
+        ancestors(ultimateSymbol, scopeBlockIdMap);
     if (Fortran::semantics::IsNamedConstant(ultimateSymbol))
-      return fir::NameUniquer::doConstant(modNames, optHost, symbolName);
-    return fir::NameUniquer::doVariable(modNames, optHost, symbolName);
+      return fir::NameUniquer::doConstant(modules, procs, blockId, symbolName);
+    return fir::NameUniquer::doVariable(modules, procs, blockId, symbolName);
   };
 
   return std::visit(
@@ -115,21 +115,21 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
                 interface->owner().IsSubmodule() && !subpDetails.isInterface())
               interface = subpDetails.moduleInterface();
             assert(interface && "Separate module procedure must be declared");
-            llvm::SmallVector<llvm::StringRef> modNames =
-                moduleNames(*interface);
-            return fir::NameUniquer::doProcedure(modNames, hostName(*interface),
-                                                 symbolName);
+            std::tie(modules, procs, blockId) =
+                ancestors(*interface, scopeBlockIdMap);
+            return fir::NameUniquer::doProcedure(modules, procs, symbolName);
           },
           [&](const Fortran::semantics::ProcEntityDetails &) {
-            // Mangle procedure pointers and dummy procedures as variables
+            // Mangle procedure pointers and dummy procedures as variables.
             if (Fortran::semantics::IsPointer(ultimateSymbol) ||
-                Fortran::semantics::IsDummy(ultimateSymbol))
-              return fir::NameUniquer::doVariable(moduleNames(ultimateSymbol),
-                                                  hostName(ultimateSymbol),
+                Fortran::semantics::IsDummy(ultimateSymbol)) {
+              std::tie(modules, procs, blockId) =
+                  ancestors(ultimateSymbol, scopeBlockIdMap);
+              return fir::NameUniquer::doVariable(modules, procs, blockId,
                                                   symbolName);
-            // Otherwise, this is an external procedure, even if it does not
-            // have an explicit EXTERNAL attribute. Mangle it without any
-            // prefix.
+            }
+            // Otherwise, this is an external procedure, with or without an
+            // explicit EXTERNAL attribute. Mangle it without any prefix.
             return fir::NameUniquer::doProcedure(std::nullopt, std::nullopt,
                                                  symbolName);
           },
@@ -140,38 +140,52 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
             return mangleObject();
           },
           [&](const Fortran::semantics::NamelistDetails &) {
-            llvm::SmallVector<llvm::StringRef> modNames =
-                moduleNames(ultimateSymbol);
-            std::optional<llvm::StringRef> optHost = hostName(ultimateSymbol);
-            return fir::NameUniquer::doNamelistGroup(modNames, optHost,
+            std::tie(modules, procs, blockId) =
+                ancestors(ultimateSymbol, scopeBlockIdMap);
+            return fir::NameUniquer::doNamelistGroup(modules, procs,
                                                      symbolName);
           },
           [&](const Fortran::semantics::CommonBlockDetails &) {
             return fir::NameUniquer::doCommonBlock(symbolName);
           },
+          [&](const Fortran::semantics::ProcBindingDetails &procBinding) {
+            return mangleName(procBinding.symbol(), scopeBlockIdMap,
+                              keepExternalInScope);
+          },
           [&](const Fortran::semantics::DerivedTypeDetails &) -> std::string {
-            // Derived type mangling must used mangleName(DerivedTypeSpec&) so
+            // Derived type mangling must use mangleName(DerivedTypeSpec) so
             // that kind type parameter values can be mangled.
             llvm::report_fatal_error(
                 "only derived type instances can be mangled");
-          },
-          [&](const Fortran::semantics::ProcBindingDetails &procBinding)
-              -> std::string {
-            return mangleName(procBinding.symbol(), keepExternalInScope);
           },
           [](const auto &) -> std::string { TODO_NOLOC("symbol mangling"); },
       },
       ultimateSymbol.details());
 }
 
+std::string
+Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
+                                   bool keepExternalInScope) {
+  assert(symbol.owner().kind() !=
+             Fortran::semantics::Scope::Kind::BlockConstruct &&
+         "block object mangling must specify a scopeBlockIdMap");
+  ScopeBlockIdMap scopeBlockIdMap;
+  return mangleName(symbol, scopeBlockIdMap, keepExternalInScope);
+}
+
 std::string Fortran::lower::mangle::mangleName(
-    const Fortran::semantics::DerivedTypeSpec &derivedType) {
-  // Resolve host and module association before mangling
+    const Fortran::semantics::DerivedTypeSpec &derivedType,
+    ScopeBlockIdMap &scopeBlockIdMap) {
+  // Resolve module and host associations before mangling.
   const Fortran::semantics::Symbol &ultimateSymbol =
       derivedType.typeSymbol().GetUltimate();
+
   llvm::StringRef symbolName = toStringRef(ultimateSymbol.name());
-  llvm::SmallVector<llvm::StringRef> modNames = moduleNames(ultimateSymbol);
-  std::optional<llvm::StringRef> optHost = hostName(ultimateSymbol);
+  llvm::SmallVector<llvm::StringRef> modules;
+  llvm::SmallVector<llvm::StringRef> procs;
+  std::int64_t blockId;
+  std::tie(modules, procs, blockId) =
+      ancestors(ultimateSymbol, scopeBlockIdMap);
   llvm::SmallVector<std::int64_t> kinds;
   for (const auto &param :
        Fortran::semantics::OrderParameterDeclarations(ultimateSymbol)) {
@@ -190,7 +204,7 @@ std::string Fortran::lower::mangle::mangleName(
       kinds.emplace_back(*init);
     }
   }
-  return fir::NameUniquer::doType(modNames, optHost, symbolName, kinds);
+  return fir::NameUniquer::doType(modules, procs, blockId, symbolName, kinds);
 }
 
 std::string Fortran::lower::mangle::demangleName(llvm::StringRef name) {
