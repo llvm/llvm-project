@@ -196,6 +196,32 @@ struct GenericKernelTy {
     return false;
   }
 
+protected:
+  /// Get the execution mode name of the kernel.
+  const char *getExecutionModeName() const {
+    switch (ExecutionMode) {
+    case OMP_TGT_EXEC_MODE_SPMD:
+      return "SPMD";
+    case OMP_TGT_EXEC_MODE_GENERIC:
+      return "Generic";
+    case OMP_TGT_EXEC_MODE_GENERIC_SPMD:
+      return "Generic-SPMD";
+    }
+    llvm_unreachable("Unknown execution mode!");
+  }
+
+  /// Prints generic kernel launch information.
+  Error printLaunchInfo(GenericDeviceTy &GenericDevice,
+                        KernelArgsTy &KernelArgs, uint32_t NumThreads,
+                        uint64_t NumBlocks) const;
+
+  /// Prints plugin-specific kernel launch information after generic kernel
+  /// launch information
+  virtual Error printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
+                                       KernelArgsTy &KernelArgs,
+                                       uint32_t NumThreads,
+                                       uint64_t NumBlocks) const;
+
 private:
   /// Prepare the arguments before launching the kernel.
   void *prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
@@ -224,19 +250,6 @@ private:
     return ExecutionMode == OMP_TGT_EXEC_MODE_GENERIC;
   }
   bool isSPMDMode() const { return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD; }
-
-  /// Get the execution mode name of the kernel.
-  const char *getExecutionModeName() const {
-    switch (ExecutionMode) {
-    case OMP_TGT_EXEC_MODE_SPMD:
-      return "SPMD";
-    case OMP_TGT_EXEC_MODE_GENERIC:
-      return "Generic";
-    case OMP_TGT_EXEC_MODE_GENERIC_SPMD:
-      return "Generic-SPMD";
-    }
-    llvm_unreachable("Unknown execution mode!");
-  }
 
   /// The kernel name.
   const char *Name;
