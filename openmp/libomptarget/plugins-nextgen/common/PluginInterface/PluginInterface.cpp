@@ -218,6 +218,25 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
   return initImpl(GenericDevice, Image);
 }
 
+Error GenericKernelTy::printLaunchInfo(GenericDeviceTy &GenericDevice,
+                                       KernelArgsTy &KernelArgs,
+                                       uint32_t NumThreads,
+                                       uint64_t NumBlocks) const {
+  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, GenericDevice.getDeviceId(),
+       "Launching kernel %s with %" PRIu64
+       " blocks and %d threads in %s mode\n",
+       getName(), NumBlocks, NumThreads, getExecutionModeName());
+  return printLaunchInfoDetails(GenericDevice, KernelArgs, NumThreads,
+                                NumBlocks);
+}
+
+Error GenericKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
+                                              KernelArgsTy &KernelArgs,
+                                              uint32_t NumThreads,
+                                              uint64_t NumBlocks) const {
+  return Plugin::success();
+}
+
 Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                               ptrdiff_t *ArgOffsets, KernelArgsTy &KernelArgs,
                               AsyncInfoWrapperTy &AsyncInfoWrapper) const {
@@ -232,10 +251,9 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   uint64_t NumBlocks = getNumBlocks(GenericDevice, KernelArgs.NumTeams,
                                     KernelArgs.Tripcount, NumThreads);
 
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, GenericDevice.getDeviceId(),
-       "Launching kernel %s with %" PRIu64
-       " blocks and %d threads in %s mode\n",
-       getName(), NumBlocks, NumThreads, getExecutionModeName());
+  if (auto Err =
+          printLaunchInfo(GenericDevice, KernelArgs, NumThreads, NumBlocks))
+    return Err;
 
   return launchImpl(GenericDevice, NumThreads, NumBlocks, KernelArgs,
                     KernelArgsPtr, AsyncInfoWrapper);

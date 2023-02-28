@@ -163,12 +163,63 @@ private:
   }
 
   fir::FortranVariableOpInterface
-  gen(const Fortran::evaluate::Component &component) {
+  gen(const Fortran::evaluate::Component &component,
+      bool skipParentComponent = false) {
     if (Fortran::semantics::IsAllocatableOrPointer(component.GetLastSymbol()))
       return genWholeAllocatableOrPointerComponent(component);
+    if (component.GetLastSymbol().test(
+            Fortran::semantics::Symbol::Flag::ParentComp)) {
+      if (skipParentComponent)
+        // Inner parent components can be skipped: x%parent_comp%i is equivalent
+        // to "x%i" in FIR (all the parent components are part of the FIR type
+        // of "x").
+        return genDataRefAndSkipParentComponents(component.base());
+      // This is a leaf "x%parent_comp" or "x(subscripts)%parent_comp" and
+      // cannot be skipped: the designator must be lowered to the parent type.
+      // This cannot be represented with an hlfir.designate since "parent_comp"
+      // name is meaningless in the fir.record type of "x". Instead, an
+      // hlfir.parent_comp is generated.
+      fir::FirOpBuilder &builder = getBuilder();
+      hlfir::Entity base = genDataRefAndSkipParentComponents(component.base());
+      base = derefPointersAndAllocatables(loc, builder, base);
+      mlir::Value shape;
+      if (base.isArray())
+        shape = hlfir::genShape(loc, builder, base);
+      const Fortran::semantics::DeclTypeSpec *declTypeSpec =
+          component.GetLastSymbol().GetType();
+      assert(declTypeSpec && declTypeSpec->AsDerived() &&
+             "parent component symbols must have a derived type");
+      mlir::Type componentType = Fortran::lower::translateDerivedTypeToFIRType(
+          getConverter(), *declTypeSpec->AsDerived());
+      mlir::Type resultType =
+          changeElementType(base.getElementOrSequenceType(), componentType);
+      // Note that the result is monomorphic even if the base is polymorphic:
+      // the dynamic type of the parent component reference is the parent type.
+      // If the base is an array, it is however most likely not contiguous.
+      if (base.isArray() || fir::isRecordWithTypeParameters(componentType))
+        resultType = fir::BoxType::get(resultType);
+      else
+        resultType = fir::ReferenceType::get(resultType);
+      if (fir::isRecordWithTypeParameters(componentType))
+        TODO(loc, "parent component reference with a parametrized parent type");
+      auto parentComp = builder.create<hlfir::ParentComponentOp>(
+          loc, resultType, base, shape, /*typeParams=*/mlir::ValueRange{});
+      return mlir::cast<fir::FortranVariableOpInterface>(
+          parentComp.getOperation());
+    }
     PartInfo partInfo;
     mlir::Type resultType = visit(component, partInfo);
     return genDesignate(resultType, partInfo, component);
+  }
+
+  fir::FortranVariableOpInterface
+  genDataRefAndSkipParentComponents(const Fortran::evaluate::DataRef &dataRef) {
+    return std::visit(Fortran::common::visitors{
+                          [&](const Fortran::evaluate::Component &component) {
+                            return gen(component, /*skipParentComponent=*/true);
+                          },
+                          [&](const auto &x) { return gen(x); }},
+                      dataRef.u);
   }
 
   fir::FortranVariableOpInterface
@@ -508,8 +559,7 @@ private:
     // coarray-ref, or another component, this creates another hlfir.designate
     // for it.  hlfir.designate is not meant to represent more than one
     // part-ref.
-    partInfo.base =
-        std::visit([&](const auto &x) { return gen(x); }, component.base().u);
+    partInfo.base = genDataRefAndSkipParentComponents(component.base());
     // If the base is an allocatable/pointer, dereference it here since the
     // component ref designates its target.
     partInfo.base =
@@ -523,8 +573,9 @@ private:
     // Lower the information about the component (type, length parameters and
     // shape).
     const Fortran::semantics::Symbol &componentSym = component.GetLastSymbol();
-    if (componentSym.test(Fortran::semantics::Symbol::Flag::ParentComp))
-      TODO(getLoc(), "Parent component reference in HLFIR");
+    assert(
+        !componentSym.test(Fortran::semantics::Symbol::Flag::ParentComp) &&
+        "parent components are skipped and must not reach visitComponentImpl");
     partInfo.componentName = componentSym.name().ToString();
     auto recordType =
         hlfir::getFortranElementType(baseType).cast<fir::RecordType>();

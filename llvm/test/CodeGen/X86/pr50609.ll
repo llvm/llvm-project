@@ -13,7 +13,7 @@ define void @PR50609(float* noalias nocapture %RET, float* noalias %aFOO, <16 x 
 ; CHECK-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
 ; CHECK-NEXT:    vpsrad $2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcvtdq2ps %ymm2, %ymm2
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[0,0,0,0]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm2, %ymm2
 ; CHECK-NEXT:    vmaskmovps %ymm2, %ymm0, (%rdi)
 ; CHECK-NEXT:    vmaskmovps %ymm2, %ymm1, 32(%rdi)

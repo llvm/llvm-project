@@ -1089,13 +1089,17 @@ void PPC64R12SetupStub::writeTo(uint8_t *buf) {
         buf, (gotPlt ? PLD_R12_NO_DISP : PADDI_R12_NO_DISP) | imm);
     nextInstOffset = 8;
   } else {
-    uint32_t off = destination.getVA(addend) - getThunkTargetSym()->getVA() - 8;
-    write32(buf + 0, 0x7c0802a6);                      // mflr r12
-    write32(buf + 4, 0x429f0005);                      // bcl 20,31,.+4
-    write32(buf + 8, 0x7d6802a6);                      // mflr r11
-    write32(buf + 12, 0x7d8803a6);                     // mtlr r12
-    write32(buf + 16, 0x3d8b0000 | computeHiBits(off));// addis r12,r11,off@ha
-    write32(buf + 20, 0x398c0000 | (off & 0xffff));    // addi r12,r12,off@l
+    uint32_t off = offset - 8;
+    write32(buf + 0, 0x7d8802a6);                     // mflr 12
+    write32(buf + 4, 0x429f0005);                     // bcl 20,31,.+4
+    write32(buf + 8, 0x7d6802a6);                     // mflr 11
+    write32(buf + 12, 0x7d8803a6);                    // mtlr 12
+    write32(buf + 16,
+            0x3d8b0000 | ((off + 0x8000) >> 16));     // addis 12,11,off@ha
+    if (gotPlt)
+      write32(buf + 20, 0xe98c0000 | (off & 0xffff)); // ld 12, off@l(12)
+    else
+      write32(buf + 20, 0x398c0000 | (off & 0xffff)); // addi 12,12,off@l
     nextInstOffset = 24;
   }
   write32(buf + nextInstOffset, MTCTR_R12); // mtctr r12

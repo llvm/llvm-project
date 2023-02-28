@@ -15,7 +15,7 @@ define <2 x i64> @shuffle_v2i64_00(<2 x i64> %a, <2 x i64> %b) {
 ;
 ; AVX1-LABEL: shuffle_v2i64_00:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: shuffle_v2i64_00:
@@ -38,7 +38,7 @@ define <2 x i64> @shuffle_v2i64_10(<2 x i64> %a, <2 x i64> %b) {
 ;
 ; AVX-LABEL: shuffle_v2i64_10:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; AVX-NEXT:    retq
   %shuffle = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 1, i32 0>
   ret <2 x i64> %shuffle
@@ -51,7 +51,7 @@ define <2 x i64> @shuffle_v2i64_11(<2 x i64> %a, <2 x i64> %b) {
 ;
 ; AVX-LABEL: shuffle_v2i64_11:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; AVX-NEXT:    retq
   %shuffle = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 1, i32 1>
   ret <2 x i64> %shuffle
@@ -64,7 +64,7 @@ define <2 x i64> @shuffle_v2i64_22(<2 x i64> %a, <2 x i64> %b) {
 ;
 ; AVX1-LABEL: shuffle_v2i64_22:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm1[0,1,0,1]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,1,0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: shuffle_v2i64_22:
@@ -87,7 +87,7 @@ define <2 x i64> @shuffle_v2i64_32(<2 x i64> %a, <2 x i64> %b) {
 ;
 ; AVX-LABEL: shuffle_v2i64_32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm1[2,3,0,1]
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[2,3,0,1]
 ; AVX-NEXT:    retq
   %shuffle = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 3, i32 2>
   ret <2 x i64> %shuffle
@@ -100,7 +100,7 @@ define <2 x i64> @shuffle_v2i64_33(<2 x i64> %a, <2 x i64> %b) {
 ;
 ; AVX-LABEL: shuffle_v2i64_33:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; AVX-NEXT:    retq
   %shuffle = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 3, i32 3>
   ret <2 x i64> %shuffle

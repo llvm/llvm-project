@@ -6,7 +6,7 @@
 define <4 x float> @test_4xfloat_perm_mask0(<4 x float> %vec) {
 ; CHECK-LABEL: test_4xfloat_perm_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,1,3,1]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,1,3,1]
 ; CHECK-NEXT:    retq
   %res = shufflevector <4 x float> %vec, <4 x float> undef, <4 x i32> <i32 2, i32 1, i32 3, i32 1>
   ret <4 x float> %res
@@ -92,7 +92,7 @@ define <4 x float> @test_masked_z_4xfloat_perm_mask2(<4 x float> %vec, <4 x floa
 define <4 x float> @test_4xfloat_perm_mask3(<4 x float> %vec) {
 ; CHECK-LABEL: test_4xfloat_perm_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,2,3,2]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,2,3,2]
 ; CHECK-NEXT:    retq
   %res = shufflevector <4 x float> %vec, <4 x float> undef, <4 x i32> <i32 1, i32 2, i32 3, i32 2>
   ret <4 x float> %res
@@ -342,7 +342,7 @@ define <8 x float> @test_masked_z_8xfloat_perm_mask2(<8 x float> %vec, <8 x floa
 define <8 x float> @test_8xfloat_perm_imm_mask3(<8 x float> %vec) {
 ; CHECK-LABEL: test_8xfloat_perm_imm_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[2,2,1,0,6,6,5,4]
+; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[2,2,1,0,6,6,5,4]
 ; CHECK-NEXT:    retq
   %res = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 2, i32 2, i32 1, i32 0, i32 6, i32 6, i32 5, i32 4>
   ret <8 x float> %res
@@ -835,7 +835,7 @@ define <16 x float> @test_masked_z_16xfloat_perm_mask2(<16 x float> %vec, <16 x 
 define <16 x float> @test_16xfloat_perm_imm_mask3(<16 x float> %vec) {
 ; CHECK-LABEL: test_16xfloat_perm_imm_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[1,1,0,2,5,5,4,6,9,9,8,10,13,13,12,14]
+; CHECK-NEXT:    vshufps {{.*#+}} zmm0 = zmm0[1,1,0,2,5,5,4,6,9,9,8,10,13,13,12,14]
 ; CHECK-NEXT:    retq
   %res = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 1, i32 1, i32 0, i32 2, i32 5, i32 5, i32 4, i32 6, i32 9, i32 9, i32 8, i32 10, i32 13, i32 13, i32 12, i32 14>
   ret <16 x float> %res

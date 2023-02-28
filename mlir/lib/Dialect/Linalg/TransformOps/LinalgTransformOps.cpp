@@ -1718,18 +1718,19 @@ transform::PadOp::applyToOne(LinalgOp target,
     transposePaddings.push_back(
         extractFromI64ArrayAttr(transposeVector.cast<ArrayAttr>()));
 
-  LinalgPaddingOptions paddingOptions;
-  paddingOptions.setPaddingValues(paddingValues);
-  paddingOptions.setPaddingDimensions(
-      extractFromI64ArrayAttr(getPaddingDimensions()));
-  paddingOptions.setPackPaddings(packPaddings);
-  paddingOptions.setHoistPaddings(extractFromI64ArrayAttr(getHoistPaddings()));
-  paddingOptions.setTransposePaddings(transposePaddings);
-
-  FailureOr<LinalgOp> result =
-      tryApply<LinalgPaddingPattern>(target, paddingOptions);
+  IRRewriter rewriter(target->getContext());
+  LinalgOp paddedOp;
+  FailureOr<SmallVector<Value>> result = rewriteAsPaddedOp(
+      rewriter, target, extractFromI64ArrayAttr(getPaddingDimensions()),
+      paddingValues, packPaddings, paddedOp);
   if (succeeded(result)) {
-    results.push_back(result->getOperation());
+    // We need to perform our own replacement here because this API is still
+    // used in patterns that "pad and hoist", for which the replacement values
+    // need to be different.
+    // TODO: clean this up and stop "pad and hoist" behavior more globally now
+    // that we have more composable abstractions.
+    rewriter.replaceOp(target, *result);
+    results.push_back(paddedOp);
     return DiagnosedSilenceableFailure::success();
   }
 
@@ -1756,15 +1757,6 @@ LogicalResult transform::PadOp::verify() {
                          << getPaddingDimensions();
   }
 
-  SmallVector<int64_t> hoistPaddings =
-      extractFromI64ArrayAttr(getHoistPaddings());
-  if (any_of(hoistPaddings,
-             [](int64_t hoistPadding) { return hoistPadding < 0; })) {
-    return emitOpError()
-           << "expects hoist_paddings to contain positive integers, found "
-           << getHoistPaddings();
-  }
-
   ArrayAttr transposes = getTransposePaddings();
   for (Attribute attr : transposes) {
     SmallVector<int64_t> transpose = extractFromI64ArrayAttr(attr);
@@ -1775,6 +1767,44 @@ LogicalResult transform::PadOp::verify() {
              << "expects transpose_paddings to be a permutation, found "
              << attr;
     }
+  }
+  return success();
+}
+
+//===---------------------------------------------------------------------===//
+// HoistPadOp
+//===---------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::HoistPadOp::applyToOne(tensor::PadOp target,
+                                  transform::ApplyToEachResultList &results,
+                                  transform::TransformState &state) {
+  tensor::PadOp hoistedPadOp;
+  SmallVector<GenericOp> transposeOps;
+  IRRewriter rewriter(target->getContext());
+  FailureOr<Value> result =
+      hoistPaddingOnTensors(rewriter, target, getNumLoops(), getTranspose(),
+                            hoistedPadOp, transposeOps);
+  if (succeeded(result)) {
+    // We need to perform our own replacement here because this API is still
+    // used in patterns that "pad and hoist", for which the replacement values
+    // need to be different.
+    // TODO: clean this up and stop "pad and hoist" behavior more globally now
+    // that we have more composable abstractions.
+    rewriter.replaceOp(target, *result);
+    results.push_back(hoistedPadOp);
+    return DiagnosedSilenceableFailure::success();
+  }
+  return emitDefaultSilenceableFailure(target);
+}
+
+LogicalResult transform::HoistPadOp::verify() {
+  ArrayRef<int64_t> transpose = getTranspose();
+  auto sequence = llvm::to_vector(llvm::seq<int64_t>(0, transpose.size()));
+  if (!std::is_permutation(sequence.begin(), sequence.end(), transpose.begin(),
+                           transpose.end())) {
+    return emitOpError() << "expects transpose to be a permutation, found "
+                         << getTranspose();
   }
   return success();
 }

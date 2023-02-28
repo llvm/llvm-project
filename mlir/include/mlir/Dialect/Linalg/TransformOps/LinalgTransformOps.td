@@ -744,7 +744,6 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
          DefaultValuedAttr<ArrayAttr, "{}">:$padding_values,
          DefaultValuedAttr<I64ArrayAttr, "{}">:$padding_dimensions,
          DefaultValuedAttr<I64ArrayAttr, "{}">:$pack_paddings,
-         DefaultValuedAttr<I64ArrayAttr, "{}">:$hoist_paddings,
          DefaultValuedAttr<
           TypedArrayAttrBase<I64ArrayAttr, "array of arrays of i64">,
           "{}">:$transpose_paddings);
@@ -756,6 +755,58 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::linalg::LinalgOp target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// HoistPadOp
+//===----------------------------------------------------------------------===//
+
+def HoistPadOp : Op<Transform_Dialect, "structured.hoist_pad",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     TransformOpInterface, TransformEachOpTrait]> {
+  let description = [{
+    Hoist the tensor.pad target operation by at most the given number of loops.
+    Optionally apply the transpose attribute to the inner dimensions.
+
+    TODO: In the future, we should consider rewriting as a tensor.pack after 
+    hoisting since this abstraction is now available.
+    TODO: Maybe also return the linalg.generic transpose created at some point.
+
+    #### Return modes
+
+    This operation ignores non-tensor.pad ops and drops them in the result.
+    If any non-tensor.pad is passed, the transform emits a silenceable failure.
+
+    If all the operations referred to by the `target` handle padproperly, the
+    transform succeeds. Otherwise the transform silently fails.
+
+    The return handle points to only the subset of successfully hoisted 
+    tensor.pad operations, which can be empty.
+  }];
+
+  // Also allow any !pdl.operation for simpler composition. Non-tensor.pad ops
+  // will be dropped from the results.
+  let arguments =
+    (ins TransformHandleTypeInterface:$target,
+         I64Attr:$num_loops,
+         DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$transpose);
+  let results = (outs TransformHandleTypeInterface:$transformed);
+
+  let assemblyFormat = [{
+    $target 
+    `by` $num_loops `loops` 
+    (`,` `transpose` `by` $transpose^)? 
+    attr-dict
+    `:` functional-type(operands, results)
+  }];
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::tensor::PadOp,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];

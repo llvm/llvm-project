@@ -2987,6 +2987,15 @@ let TargetPrefix = "aarch64" in {
                 [LLVMMatchType<0>, LLVMMatchType<0>,
                  LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem]>;
 
+  class SME2_VG2_Unpk_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
+                [LLVMSubdivide2VectorType<0>], [IntrNoMem]>;
+
+  class SME2_VG4_Unpk_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>,
+                             LLVMMatchType<0>, LLVMMatchType<0>],
+                [LLVMSubdivide2VectorType<0>, LLVMSubdivide2VectorType<0>],
+                [IntrNoMem]>;
 
   //
   // Multi-vector fused multiply-add/subtract
@@ -3320,4 +3329,12 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_sdot_lane_x2 : SVE2_3VectorArgIndexed_Long_Intrinsic;
   def int_aarch64_sve_udot_lane_x2 : SVE2_3VectorArgIndexed_Long_Intrinsic;
   def int_aarch64_sve_fdot_lane_x2 : SVE2_3VectorArgIndexed_Long_Intrinsic;
+
+  //
+  // Signed/unsigned multi-vector unpacks
+  //
+  def int_aarch64_sve_sunpk_x2 : SME2_VG2_Unpk_Intrinsic;
+  def int_aarch64_sve_uunpk_x2 : SME2_VG2_Unpk_Intrinsic;
+  def int_aarch64_sve_sunpk_x4 : SME2_VG4_Unpk_Intrinsic;
+  def int_aarch64_sve_uunpk_x4 : SME2_VG4_Unpk_Intrinsic;
 }

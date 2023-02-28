@@ -1,7 +1,9 @@
 // RUN: %libomptarget-compile-generic \
 // RUN:     -gline-tables-only -fopenmp-extensions
 // RUN: env LIBOMPTARGET_INFO=63 %libomptarget-run-generic 2>&1 | \
-// RUN:   %fcheck-generic -allow-empty -check-prefix=INFO
+// RUN:   %fcheck-generic -allow-empty -check-prefixes=INFO
+// RUN: env LIBOMPTARGET_INFO=63 %libomptarget-run-amdgcn-amd-amdhsa 2>&1 | \
+// RUN:   %fcheck-amdgcn-amd-amdhsa -allow-empty -check-prefixes=INFO,AMDGPU
 
 #include <omp.h>
 #include <stdio.h>
@@ -37,6 +39,7 @@ int main() {
 // INFO: info: Entering OpenMP kernel at info.c:{{[0-9]+}}:{{[0-9]+}} with 1 arguments:
 // INFO: info: firstprivate(val)[4]
 // INFO: info: Launching kernel __omp_offloading_{{.*}}main{{.*}} with {{[0-9]+}} blocks and {{[0-9]+}} threads in Generic mode
+// AMDGPU: AMDGPU device {{[0-9]}} info: SGN:Generic ConstWGSize:{{[0-9]+}} args:{{[0-9]}} teamsXthrds:({{   [0-9]+}}X {{[0-9]+}}) reqd:(   {{[0-9]+}}X   {{[0-9]+}}) lds_usage:{{[0-9]+}}B sgpr_count:{{[0-9]+}} vgpr_count:{{[0-9]+}} sgpr_spill_count:{{[0-9]+}} vgpr_spill_count:{{[0-9]+}} tripcount:{{[0-9]+}} rpc:0 n:__omp_offloading_{{.*}}main{{.*}}
 // INFO: info: OpenMP Host-Device pointer mappings after block at info.c:{{[0-9]+}}:{{[0-9]+}}:
 // INFO: info: Host Ptr           Target Ptr         Size (B) DynRefCount HoldRefCount Declaration
 // INFO: info: {{.*}}             {{.*}}             256      1           0            C[0:64] at info.c:{{[0-9]+}}:{{[0-9]+}}

@@ -94,6 +94,7 @@ static_library("LLVMX86CodeGen") {
     "X86FastTileConfig.cpp",
     "X86FixupBWInsts.cpp",
     "X86FixupLEAs.cpp",
+    "X86FixupInstTuning.cpp",
     "X86FixupSetCC.cpp",
     "X86FlagsCopyLowering.cpp",
     "X86FloatingPoint.cpp",

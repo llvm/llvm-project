@@ -73,7 +73,7 @@ define <4 x float> @prefer_f16_v4f32(ptr %p) nounwind {
 ; AVX1-NEXT:    pushq %rax
 ; AVX1-NEXT:    movzwl (%rdi), %edi
 ; AVX1-NEXT:    callq __gnu_h2f_ieee@PLT
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    popq %rax
 ; AVX1-NEXT:    retq
 ;
@@ -124,7 +124,7 @@ define <8 x float> @prefer_f16_v8f32(ptr %p) nounwind {
 ; AVX1-NEXT:    pushq %rax
 ; AVX1-NEXT:    movzwl (%rdi), %edi
 ; AVX1-NEXT:    callq __gnu_h2f_ieee@PLT
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    popq %rax
 ; AVX1-NEXT:    retq

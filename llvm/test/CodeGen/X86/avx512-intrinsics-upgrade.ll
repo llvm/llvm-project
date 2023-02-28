@@ -1022,7 +1022,7 @@ declare <16 x float> @llvm.x86.avx512.mask.vpermil.ps.512(<16 x float>, i32, <16
 define <16 x float>@test_int_x86_avx512_vpermil_ps_512(<16 x float> %x0, <16 x float> %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_vpermil_ps_512:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpermilps $22, %zmm0, %zmm0 ## encoding: [0x62,0xf3,0x7d,0x48,0x04,0xc0,0x16]
+; CHECK-NEXT:    vshufps $22, %zmm0, %zmm0, %zmm0 ## encoding: [0x62,0xf1,0x7c,0x48,0xc6,0xc0,0x16]
 ; CHECK-NEXT:    ## zmm0 = zmm0[2,1,1,0,6,5,5,4,10,9,9,8,14,13,13,12]
 ; CHECK-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
   %res = call <16 x float> @llvm.x86.avx512.mask.vpermil.ps.512(<16 x float> %x0, i32 22, <16 x float> %x2, i16 -1)
@@ -1072,7 +1072,7 @@ declare <16 x i32> @llvm.x86.avx512.mask.pshuf.d.512(<16 x i32>, i32, <16 x i32>
 define <16 x i32>@test_int_x86_avx512_pshuf_d_512(<16 x i32> %x0, i32 %x1, <16 x i32> %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_pshuf_d_512:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpermilps $3, %zmm0, %zmm0 ## encoding: [0x62,0xf3,0x7d,0x48,0x04,0xc0,0x03]
+; CHECK-NEXT:    vshufps $3, %zmm0, %zmm0, %zmm0 ## encoding: [0x62,0xf1,0x7c,0x48,0xc6,0xc0,0x03]
 ; CHECK-NEXT:    ## zmm0 = zmm0[3,0,0,0,7,4,4,4,11,8,8,8,15,12,12,12]
 ; CHECK-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
   %res = call <16 x i32> @llvm.x86.avx512.mask.pshuf.d.512(<16 x i32> %x0, i32 3, <16 x i32> %x2, i16 -1)

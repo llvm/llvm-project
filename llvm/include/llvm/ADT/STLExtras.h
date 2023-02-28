@@ -50,14 +50,67 @@ namespace llvm {
 // using SFINAE to test for the existence of member functions.
 template <typename T, T> struct SameType;
 
+namespace adl_detail {
+
+using std::begin;
+
+template <typename RangeT>
+constexpr auto begin_impl(RangeT &&range)
+    -> decltype(begin(std::forward<RangeT>(range))) {
+  return begin(std::forward<RangeT>(range));
+}
+
+using std::end;
+
+template <typename RangeT>
+constexpr auto end_impl(RangeT &&range)
+    -> decltype(end(std::forward<RangeT>(range))) {
+  return end(std::forward<RangeT>(range));
+}
+
+using std::swap;
+
+template <typename T>
+constexpr void swap_impl(T &&lhs,
+                         T &&rhs) noexcept(noexcept(swap(std::declval<T>(),
+                                                         std::declval<T>()))) {
+  swap(std::forward<T>(lhs), std::forward<T>(rhs));
+}
+
+} // end namespace adl_detail
+
+/// Returns the begin iterator to \p range using `std::begin` and
+/// function found through Argument-Dependent Lookup (ADL).
+template <typename RangeT>
+constexpr auto adl_begin(RangeT &&range)
+    -> decltype(adl_detail::begin_impl(std::forward<RangeT>(range))) {
+  return adl_detail::begin_impl(std::forward<RangeT>(range));
+}
+
+/// Returns the end iterator to \p range using `std::end` and
+/// functions found through Argument-Dependent Lookup (ADL).
+template <typename RangeT>
+constexpr auto adl_end(RangeT &&range)
+    -> decltype(adl_detail::end_impl(std::forward<RangeT>(range))) {
+  return adl_detail::end_impl(std::forward<RangeT>(range));
+}
+
+/// Swaps \p lhs with \p rhs using `std::swap` and functions found through
+/// Argument-Dependent Lookup (ADL).
+template <typename T>
+constexpr void adl_swap(T &&lhs, T &&rhs) noexcept(
+    noexcept(adl_detail::swap_impl(std::declval<T>(), std::declval<T>()))) {
+  adl_detail::swap_impl(std::forward<T>(lhs), std::forward<T>(rhs));
+}
+
 namespace detail {
 
 template <typename RangeT>
-using IterOfRange = decltype(std::begin(std::declval<RangeT &>()));
+using IterOfRange = decltype(adl_begin(std::declval<RangeT &>()));
 
 template <typename RangeT>
 using ValueOfRange =
-    std::remove_reference_t<decltype(*std::begin(std::declval<RangeT &>()))>;
+    std::remove_reference_t<decltype(*adl_begin(std::declval<RangeT &>()))>;
 
 } // end namespace detail
 
@@ -332,48 +385,6 @@ public:
 };
 
 } // namespace callable_detail
-
-namespace adl_detail {
-
-using std::begin;
-
-template <typename ContainerTy>
-decltype(auto) adl_begin(ContainerTy &&container) {
-  return begin(std::forward<ContainerTy>(container));
-}
-
-using std::end;
-
-template <typename ContainerTy>
-decltype(auto) adl_end(ContainerTy &&container) {
-  return end(std::forward<ContainerTy>(container));
-}
-
-using std::swap;
-
-template <typename T>
-void adl_swap(T &&lhs, T &&rhs) noexcept(noexcept(swap(std::declval<T>(),
-                                                       std::declval<T>()))) {
-  swap(std::forward<T>(lhs), std::forward<T>(rhs));
-}
-
-} // end namespace adl_detail
-
-template <typename ContainerTy>
-decltype(auto) adl_begin(ContainerTy &&container) {
-  return adl_detail::adl_begin(std::forward<ContainerTy>(container));
-}
-
-template <typename ContainerTy>
-decltype(auto) adl_end(ContainerTy &&container) {
-  return adl_detail::adl_end(std::forward<ContainerTy>(container));
-}
-
-template <typename T>
-void adl_swap(T &&lhs, T &&rhs) noexcept(
-    noexcept(adl_detail::adl_swap(std::declval<T>(), std::declval<T>()))) {
-  adl_detail::adl_swap(std::forward<T>(lhs), std::forward<T>(rhs));
-}
 
 /// Returns true if the given container only contains a single element.
 template <typename ContainerTy> bool hasSingleElement(ContainerTy &&C) {

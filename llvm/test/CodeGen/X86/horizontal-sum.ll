@@ -218,8 +218,8 @@ define <8 x float> @pair_sum_v8f32_v4f32(<4 x float> %0, <4 x float> %1, <4 x fl
 ; AVX1-SLOW-LABEL: pair_sum_v8f32_v4f32:
 ; AVX1-SLOW:       # %bb.0:
 ; AVX1-SLOW-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
-; AVX1-SLOW-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[1,3,1,3]
-; AVX1-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; AVX1-SLOW-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[1,3,1,3]
+; AVX1-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX1-SLOW-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX1-SLOW-NEXT:    vhaddps %xmm4, %xmm4, %xmm1
 ; AVX1-SLOW-NEXT:    vhaddps %xmm5, %xmm5, %xmm4
@@ -262,8 +262,8 @@ define <8 x float> @pair_sum_v8f32_v4f32(<4 x float> %0, <4 x float> %1, <4 x fl
 ; AVX2-SLOW-LABEL: pair_sum_v8f32_v4f32:
 ; AVX2-SLOW:       # %bb.0:
 ; AVX2-SLOW-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[1,3,1,3]
-; AVX2-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[1,3,1,3]
+; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX2-SLOW-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX2-SLOW-NEXT:    vhaddps %xmm4, %xmm4, %xmm1
 ; AVX2-SLOW-NEXT:    vhaddps %xmm5, %xmm5, %xmm4
@@ -893,27 +893,27 @@ define <4 x float> @reduction_sum_v4f32_v4f32(<4 x float> %0, <4 x float> %1, <4
 ; AVX-SLOW-NEXT:    vaddss %xmm4, %xmm0, %xmm4
 ; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm5 = xmm0[1,0]
 ; AVX-SLOW-NEXT:    vaddss %xmm5, %xmm4, %xmm4
-; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; AVX-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX-SLOW-NEXT:    vaddss %xmm0, %xmm4, %xmm0
 ; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm1[1,1,3,3]
 ; AVX-SLOW-NEXT:    vaddss %xmm4, %xmm1, %xmm4
 ; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm5 = xmm1[1,0]
 ; AVX-SLOW-NEXT:    vaddss %xmm5, %xmm4, %xmm4
-; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,3,3,3]
+; AVX-SLOW-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; AVX-SLOW-NEXT:    vaddss %xmm1, %xmm4, %xmm1
 ; AVX-SLOW-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
 ; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm2[1,1,3,3]
 ; AVX-SLOW-NEXT:    vaddss %xmm1, %xmm2, %xmm1
 ; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm4 = xmm2[1,0]
 ; AVX-SLOW-NEXT:    vaddss %xmm4, %xmm1, %xmm1
-; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,3,3,3]
+; AVX-SLOW-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[3,3,3,3]
 ; AVX-SLOW-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX-SLOW-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
 ; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm3[1,1,3,3]
 ; AVX-SLOW-NEXT:    vaddss %xmm1, %xmm3, %xmm1
 ; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm3[1,0]
 ; AVX-SLOW-NEXT:    vaddss %xmm2, %xmm1, %xmm1
-; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm2 = xmm3[3,3,3,3]
+; AVX-SLOW-NEXT:    vshufps {{.*#+}} xmm2 = xmm3[3,3,3,3]
 ; AVX-SLOW-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX-SLOW-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
 ; AVX-SLOW-NEXT:    retq
@@ -923,24 +923,24 @@ define <4 x float> @reduction_sum_v4f32_v4f32(<4 x float> %0, <4 x float> %1, <4
 ; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm4
 ; AVX-FAST-NEXT:    vpermilpd {{.*#+}} xmm5 = xmm0[1,0]
 ; AVX-FAST-NEXT:    vaddss %xmm5, %xmm4, %xmm4
-; AVX-FAST-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; AVX-FAST-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX-FAST-NEXT:    vaddss %xmm0, %xmm4, %xmm0
 ; AVX-FAST-NEXT:    vhaddps %xmm1, %xmm1, %xmm4
 ; AVX-FAST-NEXT:    vpermilpd {{.*#+}} xmm5 = xmm1[1,0]
 ; AVX-FAST-NEXT:    vaddss %xmm5, %xmm4, %xmm4
-; AVX-FAST-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,3,3,3]
+; AVX-FAST-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; AVX-FAST-NEXT:    vaddss %xmm1, %xmm4, %xmm1
 ; AVX-FAST-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
 ; AVX-FAST-NEXT:    vhaddps %xmm2, %xmm2, %xmm1
 ; AVX-FAST-NEXT:    vpermilpd {{.*#+}} xmm4 = xmm2[1,0]
 ; AVX-FAST-NEXT:    vaddss %xmm4, %xmm1, %xmm1
-; AVX-FAST-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,3,3,3]
+; AVX-FAST-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[3,3,3,3]
 ; AVX-FAST-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX-FAST-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
 ; AVX-FAST-NEXT:    vhaddps %xmm3, %xmm3, %xmm1
 ; AVX-FAST-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm3[1,0]
 ; AVX-FAST-NEXT:    vaddss %xmm2, %xmm1, %xmm1
-; AVX-FAST-NEXT:    vpermilps {{.*#+}} xmm2 = xmm3[3,3,3,3]
+; AVX-FAST-NEXT:    vshufps {{.*#+}} xmm2 = xmm3[3,3,3,3]
 ; AVX-FAST-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX-FAST-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
 ; AVX-FAST-NEXT:    retq

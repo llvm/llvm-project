@@ -34,7 +34,11 @@ func.func @static_sizes_output_divisible(%arg0: tensor<24x12xf32>,
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  %1 = transform.structured.pad %0 {padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32], padding_dimensions=[0, 1, 2], pack_paddings=[1, 1, 0]}
+  %1 = transform.structured.pad %0 {
+    padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32], 
+    padding_dimensions=[0, 1, 2], 
+    pack_paddings=[1, 1, 0]
+  }
 }
 
 // -----
@@ -72,7 +76,11 @@ func.func @static_sizes_output_divisible_on_empty_op(%arg0: tensor<24x12xf32>,
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  %1 = transform.structured.pad %0 {padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32], padding_dimensions=[0, 1, 2], pack_paddings=[1, 1, 0]}
+  %1 = transform.structured.pad %0 {
+    padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
+    padding_dimensions=[0, 1, 2],
+    pack_paddings=[1, 1, 0]
+  }
 }
 
 // -----
@@ -89,7 +97,11 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   // expected-error @below {{op expects a padding value of type 'f32', got 0 : i32}}
-  %1 = transform.structured.pad %0 {padding_values=[0: i32, 0.0 : f32, 0.0 : f32], padding_dimensions=[0, 1, 2], pack_paddings=[1, 1, 0]}
+  %1 = transform.structured.pad %0 {
+    padding_values=[0: i32, 0.0 : f32, 0.0 : f32],
+    padding_dimensions=[0, 1, 2],
+    pack_paddings=[1, 1, 0]
+  }
 }
 
 // -----
@@ -106,7 +118,11 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   // expected-error @below {{expects a padding that parses to 'f32', got "foo"}}
-  %1 = transform.structured.pad %0 {padding_values=["foo", 0.0 : f32, 0.0 : f32], padding_dimensions=[0, 1, 2], pack_paddings=[1, 1, 0]}
+  %1 = transform.structured.pad %0 {
+    padding_values=["foo", 0.0 : f32, 0.0 : f32],
+    padding_dimensions=[0, 1, 2],
+    pack_paddings=[1, 1, 0]
+  }
 }
 
 // -----
@@ -125,5 +141,9 @@ transform.sequence failures(suppress) {
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   // This error is silenceable and is not reported by this transform
   //   {{transform.structured.pad failed to apply}}
-  %1 = transform.structured.pad %0 {padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32], padding_dimensions=[0, 1, 2], pack_paddings=[1, 1, 0]}
+  %1 = transform.structured.pad %0 {
+    padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
+    padding_dimensions=[0, 1, 2],
+    pack_paddings=[1, 1, 0]
+  }
 }

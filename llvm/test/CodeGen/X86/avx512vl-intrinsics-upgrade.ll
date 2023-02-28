@@ -891,7 +891,7 @@ declare <8 x float> @llvm.x86.avx512.mask.vpermil.ps.256(<8 x float>, i32, <8 x 
 define <8 x float>@test_int_x86_avx512_vpermil_ps_256(<8 x float> %x0, <8 x float> %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_vpermil_ps_256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps $22, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x7d,0x04,0xc0,0x16]
+; CHECK-NEXT:    vshufps $22, %ymm0, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfc,0xc6,0xc0,0x16]
 ; CHECK-NEXT:    # ymm0 = ymm0[2,1,1,0,6,5,5,4]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = call <8 x float> @llvm.x86.avx512.mask.vpermil.ps.256(<8 x float> %x0, i32 22, <8 x float> %x2, i8 -1)
@@ -943,7 +943,7 @@ declare <4 x float> @llvm.x86.avx512.mask.vpermil.ps.128(<4 x float>, i32, <4 x 
 define <4 x float>@test_int_x86_avx512_vpermil_ps_128(<4 x float> %x0, <4 x float> %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_vpermil_ps_128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps $22, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x04,0xc0,0x16]
+; CHECK-NEXT:    vshufps $22, %xmm0, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0xc6,0xc0,0x16]
 ; CHECK-NEXT:    # xmm0 = xmm0[2,1,1,0]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.avx512.mask.vpermil.ps.128(<4 x float> %x0, i32 22, <4 x float> %x2, i8 -1)
@@ -1967,7 +1967,7 @@ declare <4 x i32> @llvm.x86.avx512.mask.pshuf.d.128(<4 x i32>, i32, <4 x i32>, i
 define <4 x i32>@test_int_x86_avx512_pshuf_d_128(<4 x i32> %x0, i32 %x1, <4 x i32> %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_pshuf_d_128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps $3, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x04,0xc0,0x03]
+; CHECK-NEXT:    vshufps $3, %xmm0, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0xc6,0xc0,0x03]
 ; CHECK-NEXT:    # xmm0 = xmm0[3,0,0,0]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = call <4 x i32> @llvm.x86.avx512.mask.pshuf.d.128(<4 x i32> %x0, i32 3, <4 x i32> %x2, i8 -1)
@@ -2019,7 +2019,7 @@ declare <8 x i32> @llvm.x86.avx512.mask.pshuf.d.256(<8 x i32>, i32, <8 x i32>, i
 define <8 x i32>@test_int_x86_avx512_pshuf_d_256(<8 x i32> %x0, i32 %x1, <8 x i32> %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_pshuf_d_256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps $3, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x7d,0x04,0xc0,0x03]
+; CHECK-NEXT:    vshufps $3, %ymm0, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfc,0xc6,0xc0,0x03]
 ; CHECK-NEXT:    # ymm0 = ymm0[3,0,0,0,7,4,4,4]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx512.mask.pshuf.d.256(<8 x i32> %x0, i32 3, <8 x i32> %x2, i8 -1)

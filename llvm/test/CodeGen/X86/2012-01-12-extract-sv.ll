@@ -6,7 +6,7 @@ define void @endless_loop() {
 ; AVX1-LABEL: endless_loop:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovaps (%eax), %xmm0
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
 ; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1,2,3,4,5,6],ymm1[7]

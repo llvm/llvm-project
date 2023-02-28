@@ -34,7 +34,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 
-#include "mlir/Dialect/LLVMIR/LLVMOpsInterfaces.h.inc"
+#include "mlir/Dialect/LLVMIR/LLVMInterfaces.h.inc"
 
 namespace llvm {
 class Type;

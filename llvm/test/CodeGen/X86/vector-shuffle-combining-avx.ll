@@ -76,7 +76,7 @@ define <4 x float> @combine_vpermilvar_4f32_movsldup(<4 x float> %a0) {
 define <4 x float> @combine_vpermilvar_4f32_unpckh(<4 x float> %a0) {
 ; CHECK-LABEL: combine_vpermilvar_4f32_unpckh:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 2, i32 2, i32 3, i32 3>)
   ret <4 x float> %1
@@ -85,7 +85,7 @@ define <4 x float> @combine_vpermilvar_4f32_unpckh(<4 x float> %a0) {
 define <4 x float> @combine_vpermilvar_4f32_unpckl(<4 x float> %a0) {
 ; CHECK-LABEL: combine_vpermilvar_4f32_unpckl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,0,1,1]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 0, i32 0, i32 1, i32 1>)
   ret <4 x float> %1
@@ -143,7 +143,7 @@ define <8 x float> @combine_vpermilvar_vperm2f128_zero_8f32(<8 x float> %a0) {
 ; AVX512-NEXT:    vmovaps {{.*#+}} ymm1 = [16,17,18,19,3,2,1,0]
 ; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vpermt2ps %zmm2, %zmm1, %zmm0
-; AVX512-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
+; AVX512-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
 ; AVX512-NEXT:    ret{{[l|q]}}
   %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0>)
   %2 = shufflevector <8 x float> %1, <8 x float> zeroinitializer, <8 x i32> <i32 8, i32 8, i32 8, i32 8, i32 0, i32 1, i32 2, i32 3>
@@ -274,7 +274,7 @@ define <4 x double> @combine_vpermilvar_4f64_movddup(<4 x double> %a0) {
 define <4 x float> @combine_vpermilvar_4f32_4stage(<4 x float> %a0) {
 ; CHECK-LABEL: combine_vpermilvar_4f32_4stage:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,0,3,1]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,0,3,1]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 3, i32 2, i32 1, i32 0>)
   %2 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float>  %1, <4 x i32> <i32 2, i32 3, i32 0, i32 1>)
@@ -286,7 +286,7 @@ define <4 x float> @combine_vpermilvar_4f32_4stage(<4 x float> %a0) {
 define <8 x float> @combine_vpermilvar_8f32_4stage(<8 x float> %a0) {
 ; CHECK-LABEL: combine_vpermilvar_8f32_4stage:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[2,0,3,1,6,4,7,5]
+; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[2,0,3,1,6,4,7,5]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0>)
   %2 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float>  %1, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1>)

@@ -16,7 +16,6 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/Dialect/Linalg/Transforms/HoistPadding.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -46,26 +45,6 @@ using namespace mlir::linalg;
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE << "]: ")
 #define DBGSNL() (llvm::dbgs() << "\n")
 
-//===----------------------------------------------------------------------===//
-// Transformations exposed as rewrite patterns.
-//===----------------------------------------------------------------------===//
-
-LinalgTilingOptions &
-mlir::linalg::LinalgTilingOptions::setTileSizes(ArrayRef<int64_t> ts) {
-  assert(!tileSizeComputationFunction && "tile sizes already set");
-  SmallVector<int64_t, 4> tileSizes(ts.begin(), ts.end());
-  tileSizeComputationFunction = [tileSizes](OpBuilder &b, Operation *op) {
-    OpBuilder::InsertionGuard guard(b);
-    b.setInsertionPointToStart(
-        &op->getParentOfType<func::FuncOp>().getBody().front());
-    return llvm::to_vector<4>(map_range(tileSizes, [&](int64_t s) {
-      Value v = b.create<arith::ConstantIndexOp>(op->getLoc(), s);
-      return v;
-    }));
-  };
-  return *this;
-}
-
 /// Pad the `opOperand` in the `paddingDimensions` using the padding value and
 /// the nofold flag found in `paddingValues` and `packPaddings`, respectively.
 /// Exit early and return the `opOperand` value if the shape dimensions that
@@ -74,7 +53,7 @@ mlir::linalg::LinalgTilingOptions::setTileSizes(ArrayRef<int64_t> ts) {
 /// dimensions `paddingDimensions` and return the tensor::PadOp result if
 /// padding succeeds or failure otherwise.
 static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
-    OpBuilder &b, linalg::LinalgOp opToPad, OpOperand *opOperand,
+    RewriterBase &rewriter, linalg::LinalgOp opToPad, OpOperand *opOperand,
     ArrayRef<int64_t> paddingDimensions, ArrayRef<Attribute> paddingValues,
     ArrayRef<bool> packPaddings) {
   AffineMap indexingMap = opToPad.getMatchingIndexingMap(opOperand);
@@ -99,14 +78,15 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
     return opOperand->get();
 
   // Fail if `paddingValues` specifies no padding value.
-  if (opOperand->getOperandNumber() >= paddingValues.size())
-    return failure();
+  if (opOperand->getOperandNumber() >= paddingValues.size()) {
+    return rewriter.notifyMatchFailure(opToPad, "no padding value specified");
+  }
   Attribute paddingAttr = paddingValues[opOperand->getOperandNumber()];
-  Type paddingType = b.getType<NoneType>();
+  Type paddingType = rewriter.getType<NoneType>();
   if (auto typedAttr = paddingAttr.dyn_cast<TypedAttr>())
     paddingType = typedAttr.getType();
-  Value paddingValue =
-      b.create<arith::ConstantOp>(opToPad.getLoc(), paddingType, paddingAttr);
+  Value paddingValue = rewriter.create<arith::ConstantOp>(
+      opToPad.getLoc(), paddingType, paddingAttr);
 
   // Follow the use-def chain if `currOpOperand` is defined by a LinalgOp.
   OpOperand *currOpOperand = opOperand;
@@ -118,8 +98,14 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
   // Fail if `currOpOperand` is not defined by an ExtractSliceOp or EmptyOp.
   auto sliceOp = currOpOperand->get().getDefiningOp<tensor::ExtractSliceOp>();
   auto emptyOp = currOpOperand->get().getDefiningOp<tensor::EmptyOp>();
-  if (!sliceOp && !emptyOp)
-    return failure();
+  if (!sliceOp && !emptyOp) {
+    // TODO: may want to add support for going through loop iter args.
+    // This is not strictly necessary as we can pad before hoisting but it would
+    // make the system overall more resilient to minor transformation
+    // reorderings.
+    return rewriter.notifyMatchFailure(
+        opToPad, "not defined by an extractSlice or emptyOp");
+  }
 
   llvm::SmallBitVector droppedDims;
   SmallVector<OpFoldResult> mixedSizes;
@@ -155,8 +141,9 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
     FailureOr<int64_t> upperBound =
         getConstantUpperBoundForIndex(en.value().get<Value>());
     if (failed(upperBound)) {
-      LLVM_DEBUG(DBGS() << "No constant bounding box can be found for padding");
-      return failure();
+      LLVM_DEBUG(DBGS() << "count not compute a bonding box for padding");
+      return rewriter.notifyMatchFailure(
+          opToPad, "count not compute a bonding box for padding");
     }
     paddedShape[shapeIdx++] = *upperBound;
   }
@@ -166,12 +153,25 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
   // Pad the operand to the bounding box defined by `paddedShape`.
   auto paddedTensorType = RankedTensorType::get(
       paddedShape, getElementTypeOrSelf(opOperand->get()));
-  return makeComposedPadHighOp(b, opToPad->getLoc(), paddedTensorType,
+  return makeComposedPadHighOp(rewriter, opToPad->getLoc(), paddedTensorType,
                                opOperand->get(), paddingValue, nofold);
 }
 
+static SmallVector<utils::IteratorType>
+getNParallelLoopsAttrs(unsigned nParallelLoops) {
+  return SmallVector<utils::IteratorType>(nParallelLoops,
+                                          utils::IteratorType::parallel);
+}
+
+//===----------------------------------------------------------------------===//
+// Transformations exposed as functional-style API calls.
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+// rewriteAsPaddedOp transformation.
+//===----------------------------------------------------------------------===//
 FailureOr<SmallVector<Value>>
-linalg::rewriteAsPaddedOp(OpBuilder &b, LinalgOp opToPad,
+linalg::rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
                           ArrayRef<int64_t> paddingDimensions,
                           ArrayRef<Attribute> paddingValues,
                           ArrayRef<bool> packPaddings, LinalgOp &paddedOp) {
@@ -181,15 +181,17 @@ linalg::rewriteAsPaddedOp(OpBuilder &b, LinalgOp opToPad,
   assert(opToPad.hasTensorSemantics() &&
          "expected operation to have tensor semantics");
 
-  OpBuilder::InsertionGuard g(b);
+  OpBuilder::InsertionGuard g(rewriter);
   // Set IP after op because we also take the dims of the original output.
-  b.setInsertionPointAfter(opToPad);
+  rewriter.setInsertionPointAfter(opToPad);
+
   // Make a copy of the shaped operands and update it.
   SmallVector<Value> newOperands;
   newOperands.reserve(opToPad->getNumOperands());
   for (OpOperand &opOperand : opToPad->getOpOperands()) {
     FailureOr<Value> paddedOperand = padOperandToSmallestStaticBoundingBox(
-        b, opToPad, &opOperand, paddingDimensions, paddingValues, packPaddings);
+        rewriter, opToPad, &opOperand, paddingDimensions, paddingValues,
+        packPaddings);
     // Exit if `paddingDimensions` cannot be bounded statically.
     if (failed(paddedOperand))
       return failure();
@@ -198,7 +200,7 @@ linalg::rewriteAsPaddedOp(OpBuilder &b, LinalgOp opToPad,
 
   SmallVector<SmallVector<Value>> reifiedResultShapes;
   if (failed(cast<ReifyRankedShapedTypeOpInterface>(opToPad.getOperation())
-                 .reifyResultShapes(b, reifiedResultShapes)))
+                 .reifyResultShapes(rewriter, reifiedResultShapes)))
     return failure();
   assert(reifiedResultShapes.size() == opToPad->getNumResults() &&
          "expected same number of results");
@@ -206,36 +208,42 @@ linalg::rewriteAsPaddedOp(OpBuilder &b, LinalgOp opToPad,
   // Clone `opToPad` to operate on the statically padded shapes.
   auto resultTensorTypes =
       ValueRange(newOperands).take_back(opToPad.getNumDpsInits()).getTypes();
-  paddedOp = clone(b, opToPad, resultTensorTypes, newOperands);
+  // clone **should** properly notify the rewriter.
+  paddedOp = clone(rewriter, opToPad, resultTensorTypes, newOperands);
 
   // Recover the slice out of the new static results. This keeps the original
   // linalg op around because it uses the dims of the original results.
-  SmallVector<Value> paddedSubviewResults;
-  paddedSubviewResults.reserve(opToPad->getNumResults());
+  SmallVector<Value> paddedSubtensorResults;
+  paddedSubtensorResults.reserve(opToPad->getNumResults());
   for (const auto &en : llvm::enumerate(paddedOp->getResults())) {
     Value paddedResult = en.value();
     int64_t resultNumber = en.index();
     int64_t rank = paddedResult.getType().cast<RankedTensorType>().getRank();
-    SmallVector<OpFoldResult> offsets(rank, b.getIndexAttr(0));
+    SmallVector<OpFoldResult> offsets(rank, rewriter.getIndexAttr(0));
     SmallVector<OpFoldResult> sizes;
     for (Value v : reifiedResultShapes[resultNumber])
       sizes.push_back(getAsOpFoldResult(v));
-    SmallVector<OpFoldResult> strides(rank, b.getIndexAttr(1));
-    paddedSubviewResults.push_back(b.create<tensor::ExtractSliceOp>(
+    SmallVector<OpFoldResult> strides(rank, rewriter.getIndexAttr(1));
+    paddedSubtensorResults.push_back(rewriter.create<tensor::ExtractSliceOp>(
         loc, paddedResult, offsets, sizes, strides));
   }
-  return paddedSubviewResults;
+  return paddedSubtensorResults;
 }
 
-/// Try to peel a loop `op` and return the new result.
+//===----------------------------------------------------------------------===//
+// peelLoop transformation.
+//===----------------------------------------------------------------------===//
+
+/// Try to peel and canonicalize loop `op` and return the new result.
+/// Also applies affine_min/max bounds simplification on the fly where relevant.
 // TODO: Add support for scf.parallel and affine.for loops.
 SmallVector<Value> mlir::linalg::peelLoop(RewriterBase &rewriter,
                                           Operation *op) {
   return llvm::TypeSwitch<Operation *, SmallVector<Value, 4>>(op)
       .Case<scf::ForOp>([&](scf::ForOp forOp) {
         scf::ForOp partialIteration;
-        if (succeeded(scf::peelAndCanonicalizeForLoop(rewriter, forOp,
-                                                      partialIteration)))
+        if (succeeded(scf::peelForLoopAndSimplifyBounds(rewriter, forOp,
+                                                        partialIteration)))
           return partialIteration->getResults();
         assert(!partialIteration && "expected that loop was not peeled");
         return forOp->getResults();
@@ -243,24 +251,24 @@ SmallVector<Value> mlir::linalg::peelLoop(RewriterBase &rewriter,
       .Default([&](Operation *op) { return op->getResults(); });
 }
 
-/// Peel and canonicalize 'loops'.
+/// Peel 'loops' and applies affine_min/max bounds simplification on the fly
+/// where relevant.
 void mlir::linalg::peelLoops(RewriterBase &rewriter,
                              ArrayRef<scf::ForOp> loops) {
   for (auto loopOp : loops)
     peelLoop(rewriter, loopOp);
 }
 
-/// Linalg padding pattern.
-mlir::linalg::LinalgPaddingPattern::LinalgPaddingPattern(
-    MLIRContext *context, LinalgPaddingOptions options, PatternBenefit benefit)
-    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
-      options(std::move(options)) {}
+//===----------------------------------------------------------------------===//
+// pad transformation.
+//===----------------------------------------------------------------------===//
 
 FailureOr<LinalgOp>
-mlir::linalg::LinalgPaddingPattern::returningMatchAndRewrite(
-    LinalgOp linalgOp, PatternRewriter &rewriter) const {
+mlir::linalg::padAndHoistLinalgOp(RewriterBase &rewriter, LinalgOp linalgOp,
+                                  LinalgPaddingOptions options) {
   if (!linalgOp.hasTensorSemantics())
-    return failure();
+    return rewriter.notifyMatchFailure(
+        linalgOp, "only applies to Linalg ops with tensor semantics");
 
   // Pad the operation.
   LinalgOp paddedOp;
@@ -268,7 +276,8 @@ mlir::linalg::LinalgPaddingPattern::returningMatchAndRewrite(
       rewriteAsPaddedOp(rewriter, linalgOp, options.paddingDimensions,
                         options.paddingValues, options.packPaddings, paddedOp);
   if (failed(newResults))
-    return failure();
+    return rewriter.notifyMatchFailure(linalgOp,
+                                       "failed to rewrite as a padded op");
 
   // Hoist the padding.
   for (const auto &en : enumerate(options.hoistPaddings)) {
@@ -276,12 +285,17 @@ mlir::linalg::LinalgPaddingPattern::returningMatchAndRewrite(
       break;
     OpOperand &opOperand = paddedOp->getOpOperand(en.index());
     auto padOp = opOperand.get().getDefiningOp<tensor::PadOp>();
-    if (!padOp || en.value() == 0)
+    if (!padOp || en.value() == 0) {
+      (void)rewriter.notifyMatchFailure(linalgOp, "not a tensor.pad -- skip");
       continue;
+    }
 
     // Fail hoisting if the operand shape is not fully static.
-    if (llvm::any_of(paddedOp.getShape(&opOperand), ShapedType::isDynamic))
-      return failure();
+    if (llvm::any_of(paddedOp.getShape(&opOperand), ShapedType::isDynamic)) {
+      (void)rewriter.notifyMatchFailure(linalgOp,
+                                        "non static padding shape -- skip");
+      continue;
+    }
 
     tensor::PadOp hoistedOp;
     SmallVector<GenericOp> transposeOps;
@@ -292,8 +306,11 @@ mlir::linalg::LinalgPaddingPattern::returningMatchAndRewrite(
 
     FailureOr<Value> newResult = hoistPaddingOnTensors(
         padOp, en.value(), transposeVector, hoistedOp, transposeOps);
-    if (failed(newResult))
+    if (failed(newResult)) {
+      (void)rewriter.notifyMatchFailure(linalgOp,
+                                        "failed to apply hoistPadding");
       continue;
+    }
     rewriter.replaceOp(padOp, *newResult);
   }
 
@@ -303,19 +320,471 @@ mlir::linalg::LinalgPaddingPattern::returningMatchAndRewrite(
   return paddedOp;
 }
 
+//===----------------------------------------------------------------------===//
+// pack transformation.
+//===----------------------------------------------------------------------===//
+
+#ifndef NDEBUG
+/// Return true if `map` has 0 or 1 result function of AffineDimExpr(dim).
+static bool hasAtMostOneResultFunctionOfDim(AffineMap map, int64_t dim) {
+  bool found = false;
+  for (AffineExpr e : map.getResults()) {
+    if (!e.isFunctionOfDim(dim))
+      continue;
+    if (found)
+      return false;
+    found = true;
+  }
+  return true;
+}
+#endif // NDEBUG
+
+/// Return the index of the first result of `map` that is a function of
+/// AffineDimExpr(dim), std::nullopt otherwise.
+static std::optional<int64_t> getFirstResultIndexFunctionOf(AffineMap map,
+                                                            int64_t dim) {
+  for (int64_t i = 0, e = map.getNumResults(); i < e; ++i) {
+    AffineExpr expr = map.getResult(i);
+    if (!expr.isFunctionOfDim(dim))
+      continue;
+    return i;
+  }
+  return std::nullopt;
+}
+
+/// Perform one step of packing of a LinalgOp's metadata along `dim` into the
+/// `newDim` at `iteratorTypes.size()` by:
+///   1. Appending `iteratorTypes[newDim]`, equal to `iteratorTypes[dim]`.
+///   2. Appending a `newDim` to the domain of every indexing map.
+///   3. For each operand (i.e. for each map in `indexingMaps`), perform packing
+///      by potentially adding a `newDim` result to `map`.
+/// The preserved invariant is that `iteratorTypes.size()` is always equal to
+/// `map.getNumDims()` for every map in `indexingMaps`.
+///
+/// Update `indexingMaps` and `iteratorTypes` inplace as one step of the update.
+/// Return a vector that records the optional packing for each operand.
+/// Return failure if the packed indexing cannot be represented with a LinalgOp.
+///
+/// Further details:
+/// ================
+/// The current implementation of packing (i.e. data tiling) consists of
+/// rewriting a linearized strip-mined form into a higher-dimensional access.
+/// e.g. consider an access `A[I][f(j, k, l)]` and packing by 4; we rewrite
+/// `I` into `4 * i + ii`, where `0 <= ii < 4`.
+/// The access is further rewritten as `A[i][f(j, k, l)][ii]`.
+///
+/// This rewrite into higher dimensional access is not possible for general
+/// AffineExpr in Linalg atm, it is restricted to an AffineDimExpr:
+/// e.g. consider an access `A[I + J][f(j, k, l)]` and packing by 4; we
+/// rewrite `I + J` into `4 * i + ii + J`, where `0 <= ii < 4`.
+/// The rewrite of the access would be a form not representable in Linalg:
+///   `A[i + (ii + J) / 4][f(j, k, l)][(ii + J) % 4]`.
+/// Note however that as `J` and `ii` iterate, the accesses do not have a
+/// particular alignment, so packing does not achieve alignment in this case
+///
+/// In the future, we may want to consider a mixed-form that allows some
+/// alignment in the presence of multiple accesses:
+///   `A[I][f(j, k, l)]` and `B[I + J][f(j, k, l)]`
+/// And would rewrite accesses as:
+///   `A[i][f(j, k, l)][ii]` and `B[4 * i + ii + J][f(j, k, l)]`
+static FailureOr<SmallVector<std::optional<int64_t>>>
+packLinalgMetadataOnce(SmallVectorImpl<AffineMap> &indexingMaps,
+                       SmallVectorImpl<utils::IteratorType> &iteratorTypes,
+                       int64_t dim) {
+  int64_t newDim = iteratorTypes.size();
+  iteratorTypes.push_back(iteratorTypes[dim]);
+
+  SmallVector<std::optional<int64_t>> packedDimPerIndexingMap(
+      indexingMaps.size(), std::nullopt);
+  SmallVector<AffineMap> newMaps;
+  for (int64_t operandIdx = 0, e = indexingMaps.size(); operandIdx < e;
+       ++operandIdx) {
+    AffineMap map = indexingMaps[operandIdx];
+
+    // Add the `newDim` to map whatever the case.
+    assert(map.getNumDims() == newDim && "num dims invariant violation");
+    map = map.shiftDims(1, newDim);
+
+    // Get the at-most-1 index of the result that is a function of `dim`.
+    // If we can find one, we insert `AffineDimExpr(newDim)` to the map, which
+    // logically chunks dimension `dim` into `K * dim + newDim`, where the
+    // packing factor `K` is specified separately.
+    assert(hasAtMostOneResultFunctionOfDim(map, dim) &&
+           "num results invariant violation");
+    auto maybeOperandDimensionToPack = getFirstResultIndexFunctionOf(map, dim);
+    if (!maybeOperandDimensionToPack.has_value()) {
+      newMaps.push_back(map);
+      continue;
+    }
+
+    // We can only pack AffineDimExpr atm.
+    if (!map.getResult(maybeOperandDimensionToPack.value())
+             .isa<AffineDimExpr>())
+      return failure();
+
+    // Add `newDim` to the results of the map.
+    map = map.insertResult(Builder(map.getContext()).getAffineDimExpr(newDim),
+                           map.getNumResults());
+    newMaps.push_back(map);
+
+    // Record the that `operandIdx` is packed.
+    packedDimPerIndexingMap[operandIdx] = maybeOperandDimensionToPack;
+  }
+  indexingMaps = newMaps;
+
+  return packedDimPerIndexingMap;
+}
+
+namespace {
+
+/// Helper struct to encode packing along one dimension of a LinalgOp.
+struct PackedOperandsDim {
+  OpFoldResult packedSize;
+  SmallVector<std::optional<int64_t>> packedDimForEachOperand;
+};
+
+/// Helper struct to encode packing along all dimensions of a LinalgOp.
+struct PackedOperandsDimList {
+  void push_back(PackedOperandsDim &&packedOperandsDims) {
+    spec.emplace_back(packedOperandsDims);
+  }
+  /// Return all the dims that have been packed for operand @ `operandPos`.
+  SmallVector<int64_t> extractPackedDimsForOperand(int64_t operandPos);
+  /// Return all the pack sizes by which an operand @ `operandPos` is packed.
+  SmallVector<OpFoldResult> extractPackSizesForOperand(int64_t operandPos);
+
+private:
+  SmallVector<PackedOperandsDim> spec;
+};
+
+} // namespace
+
+SmallVector<int64_t>
+PackedOperandsDimList::extractPackedDimsForOperand(int64_t operandPos) {
+  SmallVector<int64_t> res;
+  for (int64_t i = 0, e = spec.size(); i < e; ++i) {
+    if (!spec[i].packedDimForEachOperand[operandPos].has_value())
+      continue;
+    res.push_back(spec[i].packedDimForEachOperand[operandPos].value());
+  }
+  return res;
+}
+
+SmallVector<OpFoldResult>
+PackedOperandsDimList::extractPackSizesForOperand(int64_t operandPos) {
+  SmallVector<OpFoldResult> res;
+  for (int64_t i = 0, e = spec.size(); i < e; ++i) {
+    if (!spec[i].packedDimForEachOperand[operandPos].has_value())
+      continue;
+    res.push_back(spec[i].packedSize);
+  }
+  return res;
+}
+
+/// Implement packing of a single LinalgOp by performing packing by
+/// `packedSizes`. There must be one packedSizes entry per `linalgOp` iterator.
+/// Return the packed Linalg op on success, failure otherwise.
+FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
+                                   linalg::LinalgOp linalgOp,
+                                   ArrayRef<OpFoldResult> packedSizes) {
+  if (packedSizes.size() != linalgOp.getNumLoops()) {
+    return rewriter.notifyMatchFailure(linalgOp,
+                                       "incorrect number of pack sizes");
+  }
+
+  Location loc = linalgOp->getLoc();
+  SmallVector<AffineMap> indexingMaps = linalgOp.getIndexingMapsArray();
+  SmallVector<utils::IteratorType> iteratorTypes =
+      linalgOp.getIteratorTypesArray();
+  LLVM_DEBUG(DBGS() << "Start packing: " << linalgOp << "\n";
+             llvm::interleaveComma(indexingMaps, DBGS() << "maps: "); DBGSNL();
+             llvm::interleaveComma(iteratorTypes, DBGS() << "iterators: ");
+             DBGSNL(););
+
+  SmallVector<tensor::PackOp> packOps;
+  SmallVector<tensor::UnPackOp> unPackOps;
+  // Step 1. Pack each dim of the LinalgOp metadata by packedSizes[i].
+  PackedOperandsDimList listOfPackedOperandsDim;
+  for (int64_t i = 0, e = packedSizes.size(); i < e; ++i) {
+    std::optional<int64_t> maybeConstant = getConstantIntValue(packedSizes[i]);
+    // Skip tile sizes explicitly set to 0.
+    if (maybeConstant.has_value() && maybeConstant.value() == 0)
+      continue;
+
+    PackedOperandsDim packedOperandsDims;
+    packedOperandsDims.packedSize = packedSizes[i];
+    FailureOr<SmallVector<std::optional<int64_t>>>
+        maybePackedDimForEachOperand =
+            packLinalgMetadataOnce(indexingMaps, iteratorTypes, i);
+    if (failed(maybePackedDimForEachOperand))
+      return failure();
+    packedOperandsDims.packedDimForEachOperand = *maybePackedDimForEachOperand;
+    listOfPackedOperandsDim.push_back(std::move(packedOperandsDims));
+
+    LLVM_DEBUG(
+        DBGS() << "++++ After pack size #" << i << ": " << packedSizes[i]
+               << "\n";
+        llvm::interleaveComma(indexingMaps, DBGS() << "maps: "); DBGSNL();
+        llvm::interleaveComma(iteratorTypes, DBGS() << "iterators: "); DBGSNL();
+        llvm::interleaveComma(packedOperandsDims.packedDimForEachOperand,
+                              DBGS() << "packedDimForEachOperand: ");
+        DBGSNL(););
+  }
+
+  // Step 2. Propagate packing to all LinalgOp operands.
+  SmallVector<Value> inputsAndInits, results;
+  for (auto operandsList :
+       {linalgOp.getDpsInputOperands(), linalgOp.getDpsInitOperands()}) {
+    for (OpOperand *opOperandPtr : operandsList) {
+      int64_t pos = opOperandPtr->getOperandNumber();
+      Value operand = opOperandPtr->get();
+      SmallVector<int64_t> innerPos =
+          listOfPackedOperandsDim.extractPackedDimsForOperand(pos);
+      SmallVector<OpFoldResult> innerPackSizes =
+          listOfPackedOperandsDim.extractPackSizesForOperand(pos);
+      LLVM_DEBUG(
+          DBGS() << "operand: " << operand << "\n";
+          llvm::interleaveComma(innerPos, DBGS() << "innerPos: "); DBGSNL();
+          llvm::interleaveComma(innerPackSizes, DBGS() << "innerPackSizes: ");
+          DBGSNL(););
+      if (innerPackSizes.empty()) {
+        inputsAndInits.push_back(operand);
+        continue;
+      }
+      Value dest = tensor::PackOp::createDestinationTensor(
+          rewriter, loc, operand, innerPackSizes, innerPos,
+          /*outerDimsPerm=*/{});
+      // TODO: value of the padding attribute should be determined by consumers.
+      Attribute zeroAttr =
+          rewriter.getZeroAttr(getElementTypeOrSelf(dest.getType()));
+      Value zero = rewriter.create<arith::ConstantOp>(loc, zeroAttr);
+      packOps.push_back(rewriter.create<tensor::PackOp>(
+          loc, operand, dest, innerPos, innerPackSizes, zero));
+      inputsAndInits.push_back(packOps.back());
+    }
+  }
+
+  // Step 3. Build the packed op, use the type of `inits` as result types.
+  ValueRange inputs =
+      ValueRange{inputsAndInits}.take_front(linalgOp.getNumDpsInputs());
+  ValueRange inits =
+      ValueRange{inputsAndInits}.take_back(linalgOp.getNumDpsInits());
+  auto packedLinalgOp = rewriter.create<linalg::GenericOp>(
+      linalgOp.getLoc(), inits.getTypes(), inputs, inits, indexingMaps,
+      iteratorTypes);
+  packedLinalgOp.getRegion().takeBody(linalgOp->getRegion(0));
+
+  // Step 4. Propagate packing to all the op results.
+  for (OpResult result : packedLinalgOp->getResults()) {
+    int64_t resultNum = result.getResultNumber();
+    tensor::PackOp maybePackedInit =
+        inits[resultNum].getDefiningOp<tensor::PackOp>();
+    if (!maybePackedInit) {
+      results.push_back(result);
+      continue;
+    }
+    // Build the symmetrical UnPackOp to the existing PackOp.
+    unPackOps.push_back(rewriter.create<tensor::UnPackOp>(
+        packedLinalgOp->getLoc(), result, maybePackedInit.getSource(),
+        maybePackedInit.getInnerDimsPos(), maybePackedInit.getMixedTiles()));
+    results.push_back(unPackOps.back());
+  }
+
+  // Step 5. Replace `linalgOp`.
+  rewriter.replaceOp(linalgOp, results);
+
+  // Return packedLinalgOp.
+  return PackResult{packOps,
+                    cast<linalg::LinalgOp>(packedLinalgOp.getOperation()),
+                    unPackOps};
+}
+
+//===----------------------------------------------------------------------===//
+// packTranspose transformation.
+//===----------------------------------------------------------------------===//
+
+/// Return a copy of `tensorType` after permutation by `permutationVector`.
+// Note: Should be a new method in of MemRef/RankedTensor/VectorType::Builder
+// but this would introduce a dependence on Dialect in IR.
+// TODO: Restructure.
+static RankedTensorType permuteShape(RankedTensorType tensorType,
+                                     ArrayRef<int64_t> permutationVector) {
+  SmallVector<int64_t> shape(tensorType.getShape());
+  applyPermutationToVector(shape, permutationVector);
+  return RankedTensorType::Builder(tensorType).setShape(shape);
+}
+
+/// Return a new GenericOp obtained by transposing opOperand by the permutation
+/// vector:
+///   - the corresponding indexing map is transposed by `permutation`
+///   - the corresponding operand value is replaced by `transposedValue`
+/// `linalgOp` is replaced by the return op in the process.
+/// Asserts that `transposedValue` is of the proper transposed ShapedType.
+static LinalgOp transposeOneLinalgOperandAndReplace(
+    RewriterBase &rewriter, LinalgOp linalgOp, OpOperand &opOperand,
+    ArrayRef<int64_t> permutation, Value transposedValue) {
+  // Sanity check the operand.
+  assert(linalgOp == opOperand.getOwner() && "linalg op must own the operand");
+
+  // Sanity check of the expected transposed tensor type.
+  auto tensorType = permuteShape(
+      opOperand.get().getType().cast<RankedTensorType>(), permutation);
+  (void)tensorType;
+  assert(tensorType == transposedValue.getType() &&
+         "expected tensor type mismatch");
+
+  // Compute the transposed indexing map.
+  // Sigh unsigned pollution.
+  SmallVector<unsigned> tmpTransposition = llvm::to_vector(
+      llvm::map_range(permutation, [](int64_t i) -> unsigned { return i; }));
+  AffineMap permutationMap =
+      AffineMap::getPermutationMap(tmpTransposition, rewriter.getContext());
+  AffineMap transposedMap =
+      permutationMap.compose(linalgOp.getMatchingIndexingMap(&opOperand));
+
+  // Set the transposed indexing map in the proper position.
+  SmallVector<AffineMap> indexingMaps = linalgOp.getIndexingMapsArray();
+  indexingMaps[linalgOp.getIndexingMapIndex(&opOperand)] = transposedMap;
+  // Set the transposedValue in the proper operand position.
+  SmallVector<Value> operands = linalgOp->getOperands();
+  operands[opOperand.getOperandNumber()] = transposedValue;
+
+  ValueRange operandsRef(operands);
+  auto transposedGenericOp = rewriter.create<linalg::GenericOp>(
+      /*location=*/linalgOp->getLoc(),
+      /*resultTensorTypes=*/
+      operandsRef.drop_front(linalgOp.getNumDpsInputs()).getTypes(),
+      /*inputs=*/operandsRef.take_front(linalgOp.getNumDpsInputs()),
+      /*outputs=*/operandsRef.drop_front(linalgOp.getNumDpsInputs()),
+      /*indexingMaps=*/indexingMaps,
+      /*iteratorTypes=*/linalgOp.getIteratorTypesArray());
+  transposedGenericOp.getRegion().takeBody(linalgOp->getRegion(0));
+  rewriter.replaceOp(linalgOp, transposedGenericOp->getResults());
+
+  return cast<linalg::LinalgOp>(transposedGenericOp.getOperation());
+}
+
+FailureOr<PackTransposeResult>
+linalg::packTranspose(RewriterBase &rewriter, tensor::PackOp packOp,
+                      linalg::LinalgOp linalgOp, tensor::UnPackOp maybeUnPackOp,
+                      ArrayRef<int64_t> outerPerm,
+                      ArrayRef<int64_t> innerPerm) {
+  Location loc = linalgOp.getLoc();
+
+  // Step 1. Transpose packOp.
+  rewriter.setInsertionPoint(packOp);
+  tensor::PackOp transposedPackOp =
+      packOp.createTransposedClone(rewriter, loc, innerPerm, outerPerm);
+
+  if (!packOp.getResult().hasOneUse())
+    return rewriter.notifyMatchFailure(linalgOp, "expect single pack use");
+
+  OpOperand &packUse = *packOp->getUses().begin();
+  if (packUse.getOwner() != linalgOp) {
+    return rewriter.notifyMatchFailure(
+        linalgOp, "not a single use by the LinalgOp target");
+  }
+  if (maybeUnPackOp &&
+      (!linalgOp.isDpsInit(&packUse) ||
+       maybeUnPackOp.getSource() != linalgOp.getTiedOpResult(&packUse))) {
+    return rewriter.notifyMatchFailure(linalgOp,
+                                       "not produced by the LinalgOp target");
+  }
+
+  // Step 2. Transpose linalgOp.
+  // transposedPackOp.getOuterDimsPerm() may be empty, in which case it is the
+  // identity. Don't rely on it.
+  int64_t numLeadingDims = packOp.getSourceRank();
+  int64_t numTrailingDims = packOp.getInnerDimsPos().size();
+  // Step 2.a. Compute the permutation on the whole operand.
+  // Leading part just reuse the outerPerm.
+  SmallVector<int64_t> permutation(outerPerm);
+  if (permutation.empty())
+    llvm::append_range(permutation, llvm::seq<int64_t>(0, numLeadingDims));
+  // Trailing part needs to reindex positions by `numLeadingDims`.
+  if (innerPerm.empty()) {
+    llvm::append_range(
+        permutation,
+        llvm::seq<int64_t>(numLeadingDims, numLeadingDims + numTrailingDims));
+  } else {
+    llvm::append_range(permutation,
+                       llvm::map_range(innerPerm, [&](int64_t pos) {
+                         return numLeadingDims + pos;
+                       }));
+  }
+  if (!isPermutationVector(permutation))
+    return rewriter.notifyMatchFailure(linalgOp, "invalid permutation");
+
+  // Step 2.b. Save the transposedPackUse operand number in case we need to
+  // get the tied OpResult after `linalgOp` has been replaced.
+  int64_t packUseOperandNumber = packUse.getOperandNumber();
+  // Step 2.c. Actually perform the transposition.
+  rewriter.setInsertionPoint(linalgOp);
+  linalg::LinalgOp transposedLinalgOp = transposeOneLinalgOperandAndReplace(
+      rewriter, linalgOp, packUse, permutation, transposedPackOp.getResult());
+
+  // Step 3. Maybe transpose unPackOp.
+  tensor::UnPackOp transposedUnPackOp;
+  if (maybeUnPackOp) {
+    OpOperand &opOperand =
+        transposedLinalgOp->getOpOperand(packUseOperandNumber);
+    OpResult transposedResult = transposedLinalgOp.getTiedOpResult(&opOperand);
+    rewriter.setInsertionPoint(maybeUnPackOp);
+    transposedUnPackOp = maybeUnPackOp.createTransposedClone(
+        rewriter, loc, transposedResult, innerPerm, outerPerm);
+
+    rewriter.replaceOp(maybeUnPackOp, transposedUnPackOp->getResults());
+  }
+
+  // Step 4. Finally, replace packOp now that we don't need it anymore.
+  rewriter.replaceOp(packOp, transposedPackOp->getResults());
+
+  return PackTransposeResult{transposedPackOp, transposedLinalgOp,
+                             transposedUnPackOp};
+}
+
+//===----------------------------------------------------------------------===//
+// Transformations exposed as rewrite patterns.
+//===----------------------------------------------------------------------===//
+
+LinalgTilingOptions &
+mlir::linalg::LinalgTilingOptions::setTileSizes(ArrayRef<int64_t> ts) {
+  assert(!tileSizeComputationFunction && "tile sizes already set");
+  SmallVector<int64_t, 4> tileSizes(ts.begin(), ts.end());
+  tileSizeComputationFunction = [tileSizes](OpBuilder &b, Operation *op) {
+    OpBuilder::InsertionGuard guard(b);
+    b.setInsertionPointToStart(
+        &op->getParentOfType<func::FuncOp>().getBody().front());
+    return llvm::to_vector<4>(map_range(tileSizes, [&](int64_t s) {
+      Value v = b.create<arith::ConstantIndexOp>(op->getLoc(), s);
+      return v;
+    }));
+  };
+  return *this;
+}
+
+///
+/// Padding pattern.
+///
+mlir::linalg::LinalgPaddingPattern::LinalgPaddingPattern(
+    MLIRContext *context, LinalgPaddingOptions options, PatternBenefit benefit)
+    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
+      options(std::move(options)) {}
+
+LogicalResult mlir::linalg::LinalgPaddingPattern::matchAndRewrite(
+    LinalgOp op, PatternRewriter &rewriter) const {
+  return padAndHoistLinalgOp(rewriter, op, options);
+}
+
 LogicalResult mlir::linalg::CopyVectorizationPattern::matchAndRewrite(
     memref::CopyOp copyOp, PatternRewriter &rewriter) const {
   return vectorizeCopy(rewriter, copyOp);
 }
 
-static SmallVector<utils::IteratorType>
-getNParallelLoopsAttrs(unsigned nParallelLoops) {
-  return SmallVector<utils::IteratorType>(nParallelLoops,
-                                          utils::IteratorType::parallel);
-}
-
-/// Rewrite a tensor::PadOp into a sequence of EmptyOp, FillOp (to
+///
+/// Pattern to rewrite a tensor::PadOp into a sequence of EmptyOp, FillOp (to
 /// initialize with pad_val) and GenericOp (to copy contents).
+///
 LogicalResult
 PadOpTransformationPattern::matchAndRewrite(tensor::PadOp padOp,
                                             PatternRewriter &rewriter) const {
@@ -902,427 +1371,4 @@ void linalg::populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
                                             PoolingNwcMinUnsignedOp>,
       DownscaleSizeOneWindowed2DConvolution<PoolingNchwMaxOp, PoolingNcwMaxOp>>(
       patterns.getContext(), benefit);
-}
-
-//===----------------------------------------------------------------------===//
-// pack transformation.
-//===----------------------------------------------------------------------===//
-
-#ifndef NDEBUG
-/// Return true if `map` has 0 or 1 result function of AffineDimExpr(dim).
-static bool hasAtMostOneResultFunctionOfDim(AffineMap map, int64_t dim) {
-  bool found = false;
-  for (AffineExpr e : map.getResults()) {
-    if (!e.isFunctionOfDim(dim))
-      continue;
-    if (found)
-      return false;
-    found = true;
-  }
-  return true;
-}
-#endif // NDEBUG
-
-/// Return the index of the first result of `map` that is a function of
-/// AffineDimExpr(dim), std::nullopt otherwise.
-static std::optional<int64_t> getFirstResultIndexFunctionOf(AffineMap map,
-                                                            int64_t dim) {
-  for (int64_t i = 0, e = map.getNumResults(); i < e; ++i) {
-    AffineExpr expr = map.getResult(i);
-    if (!expr.isFunctionOfDim(dim))
-      continue;
-    return i;
-  }
-  return std::nullopt;
-}
-
-/// Perform one step of packing of a LinalgOp's metadata along `dim` into the
-/// `newDim` at `iteratorTypes.size()` by:
-///   1. Appending `iteratorTypes[newDim]`, equal to `iteratorTypes[dim]`.
-///   2. Appending a `newDim` to the domain of every indexing map.
-///   3. For each operand (i.e. for each map in `indexingMaps`), perform packing
-///      by potentially adding a `newDim` result to `map`.
-/// The preserved invariant is that `iteratorTypes.size()` is always equal to
-/// `map.getNumDims()` for every map in `indexingMaps`.
-///
-/// Update `indexingMaps` and `iteratorTypes` inplace as one step of the update.
-/// Return a vector that records the optional packing for each operand.
-/// Return failure if the packed indexing cannot be represented with a LinalgOp.
-///
-/// Further details:
-/// ================
-/// The current implementation of packing (i.e. data tiling) consists of
-/// rewriting a linearized strip-mined form into a higher-dimensional access.
-/// e.g. consider an access `A[I][f(j, k, l)]` and packing by 4; we rewrite
-/// `I` into `4 * i + ii`, where `0 <= ii < 4`.
-/// The access is further rewritten as `A[i][f(j, k, l)][ii]`.
-///
-/// This rewrite into higher dimensional access is not possible for general
-/// AffineExpr in Linalg atm, it is restricted to an AffineDimExpr:
-/// e.g. consider an access `A[I + J][f(j, k, l)]` and packing by 4; we
-/// rewrite `I + J` into `4 * i + ii + J`, where `0 <= ii < 4`.
-/// The rewrite of the access would be a form not representable in Linalg:
-///   `A[i + (ii + J) / 4][f(j, k, l)][(ii + J) % 4]`.
-/// Note however that as `J` and `ii` iterate, the accesses do not have a
-/// particular alignment, so packing does not achieve alignment in this case
-///
-/// In the future, we may want to consider a mixed-form that allows some
-/// alignment in the presence of multiple accesses:
-///   `A[I][f(j, k, l)]` and `B[I + J][f(j, k, l)]`
-/// And would rewrite accesses as:
-///   `A[i][f(j, k, l)][ii]` and `B[4 * i + ii + J][f(j, k, l)]`
-static FailureOr<SmallVector<std::optional<int64_t>>>
-packLinalgMetadataOnce(SmallVectorImpl<AffineMap> &indexingMaps,
-                       SmallVectorImpl<utils::IteratorType> &iteratorTypes,
-                       int64_t dim) {
-  int64_t newDim = iteratorTypes.size();
-  iteratorTypes.push_back(iteratorTypes[dim]);
-
-  SmallVector<std::optional<int64_t>> packedDimPerIndexingMap(
-      indexingMaps.size(), std::nullopt);
-  SmallVector<AffineMap> newMaps;
-  for (int64_t operandIdx = 0, e = indexingMaps.size(); operandIdx < e;
-       ++operandIdx) {
-    AffineMap map = indexingMaps[operandIdx];
-
-    // Add the `newDim` to map whatever the case.
-    assert(map.getNumDims() == newDim && "num dims invariant violation");
-    map = map.shiftDims(1, newDim);
-
-    // Get the at-most-1 index of the result that is a function of `dim`.
-    // If we can find one, we insert `AffineDimExpr(newDim)` to the map, which
-    // logically chunks dimension `dim` into `K * dim + newDim`, where the
-    // packing factor `K` is specified separately.
-    assert(hasAtMostOneResultFunctionOfDim(map, dim) &&
-           "num results invariant violation");
-    auto maybeOperandDimensionToPack = getFirstResultIndexFunctionOf(map, dim);
-    if (!maybeOperandDimensionToPack.has_value()) {
-      newMaps.push_back(map);
-      continue;
-    }
-
-    // We can only pack AffineDimExpr atm.
-    if (!map.getResult(maybeOperandDimensionToPack.value())
-             .isa<AffineDimExpr>())
-      return failure();
-
-    // Add `newDim` to the results of the map.
-    map = map.insertResult(Builder(map.getContext()).getAffineDimExpr(newDim),
-                           map.getNumResults());
-    newMaps.push_back(map);
-
-    // Record the that `operandIdx` is packed.
-    packedDimPerIndexingMap[operandIdx] = maybeOperandDimensionToPack;
-  }
-  indexingMaps = newMaps;
-
-  return packedDimPerIndexingMap;
-}
-
-namespace {
-
-/// Helper struct to encode packing along one dimension of a LinalgOp.
-struct PackedOperandsDim {
-  OpFoldResult packedSize;
-  SmallVector<std::optional<int64_t>> packedDimForEachOperand;
-};
-
-/// Helper struct to encode packing along all dimensions of a LinalgOp.
-struct PackedOperandsDimList {
-  void push_back(PackedOperandsDim &&packedOperandsDims) {
-    spec.emplace_back(packedOperandsDims);
-  }
-  /// Return all the dims that have been packed for operand @ `operandPos`.
-  SmallVector<int64_t> extractPackedDimsForOperand(int64_t operandPos);
-  /// Return all the pack sizes by which an operand @ `operandPos` is packed.
-  SmallVector<OpFoldResult> extractPackSizesForOperand(int64_t operandPos);
-
-private:
-  SmallVector<PackedOperandsDim> spec;
-};
-
-} // namespace
-
-SmallVector<int64_t>
-PackedOperandsDimList::extractPackedDimsForOperand(int64_t operandPos) {
-  SmallVector<int64_t> res;
-  for (int64_t i = 0, e = spec.size(); i < e; ++i) {
-    if (!spec[i].packedDimForEachOperand[operandPos].has_value())
-      continue;
-    res.push_back(spec[i].packedDimForEachOperand[operandPos].value());
-  }
-  return res;
-}
-
-SmallVector<OpFoldResult>
-PackedOperandsDimList::extractPackSizesForOperand(int64_t operandPos) {
-  SmallVector<OpFoldResult> res;
-  for (int64_t i = 0, e = spec.size(); i < e; ++i) {
-    if (!spec[i].packedDimForEachOperand[operandPos].has_value())
-      continue;
-    res.push_back(spec[i].packedSize);
-  }
-  return res;
-}
-
-/// Implement packing of a single LinalgOp by performing packing by
-/// `packedSizes`. There must be one packedSizes entry per `linalgOp` iterator.
-/// Return the packed Linalg op on success, failure otherwise.
-FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
-                                   linalg::LinalgOp linalgOp,
-                                   ArrayRef<OpFoldResult> packedSizes) {
-  if (packedSizes.size() != linalgOp.getNumLoops()) {
-    return rewriter.notifyMatchFailure(linalgOp,
-                                       "incorrect number of pack sizes");
-  }
-
-  Location loc = linalgOp->getLoc();
-  SmallVector<AffineMap> indexingMaps = linalgOp.getIndexingMapsArray();
-  SmallVector<utils::IteratorType> iteratorTypes =
-      linalgOp.getIteratorTypesArray();
-  LLVM_DEBUG(DBGS() << "Start packing: " << linalgOp << "\n";
-             llvm::interleaveComma(indexingMaps, DBGS() << "maps: "); DBGSNL();
-             llvm::interleaveComma(iteratorTypes, DBGS() << "iterators: ");
-             DBGSNL(););
-
-  SmallVector<tensor::PackOp> packOps;
-  SmallVector<tensor::UnPackOp> unPackOps;
-  // Step 1. Pack each dim of the LinalgOp metadata by packedSizes[i].
-  PackedOperandsDimList listOfPackedOperandsDim;
-  for (int64_t i = 0, e = packedSizes.size(); i < e; ++i) {
-    std::optional<int64_t> maybeConstant = getConstantIntValue(packedSizes[i]);
-    // Skip tile sizes explicitly set to 0.
-    if (maybeConstant.has_value() && maybeConstant.value() == 0)
-      continue;
-
-    PackedOperandsDim packedOperandsDims;
-    packedOperandsDims.packedSize = packedSizes[i];
-    FailureOr<SmallVector<std::optional<int64_t>>>
-        maybePackedDimForEachOperand =
-            packLinalgMetadataOnce(indexingMaps, iteratorTypes, i);
-    if (failed(maybePackedDimForEachOperand))
-      return failure();
-    packedOperandsDims.packedDimForEachOperand = *maybePackedDimForEachOperand;
-    listOfPackedOperandsDim.push_back(std::move(packedOperandsDims));
-
-    LLVM_DEBUG(
-        DBGS() << "++++ After pack size #" << i << ": " << packedSizes[i]
-               << "\n";
-        llvm::interleaveComma(indexingMaps, DBGS() << "maps: "); DBGSNL();
-        llvm::interleaveComma(iteratorTypes, DBGS() << "iterators: "); DBGSNL();
-        llvm::interleaveComma(packedOperandsDims.packedDimForEachOperand,
-                              DBGS() << "packedDimForEachOperand: ");
-        DBGSNL(););
-  }
-
-  // Step 2. Propagate packing to all LinalgOp operands.
-  SmallVector<Value> inputsAndInits, results;
-  for (auto operandsList :
-       {linalgOp.getDpsInputOperands(), linalgOp.getDpsInitOperands()}) {
-    for (OpOperand *opOperandPtr : operandsList) {
-      int64_t pos = opOperandPtr->getOperandNumber();
-      Value operand = opOperandPtr->get();
-      SmallVector<int64_t> innerPos =
-          listOfPackedOperandsDim.extractPackedDimsForOperand(pos);
-      SmallVector<OpFoldResult> innerPackSizes =
-          listOfPackedOperandsDim.extractPackSizesForOperand(pos);
-      LLVM_DEBUG(
-          DBGS() << "operand: " << operand << "\n";
-          llvm::interleaveComma(innerPos, DBGS() << "innerPos: "); DBGSNL();
-          llvm::interleaveComma(innerPackSizes, DBGS() << "innerPackSizes: ");
-          DBGSNL(););
-      if (innerPackSizes.empty()) {
-        inputsAndInits.push_back(operand);
-        continue;
-      }
-      Value dest = tensor::PackOp::createDestinationTensor(
-          rewriter, loc, operand, innerPackSizes, innerPos,
-          /*outerDimsPerm=*/{});
-      // TODO: value of the padding attribute should be determined by consumers.
-      Attribute zeroAttr =
-          rewriter.getZeroAttr(getElementTypeOrSelf(dest.getType()));
-      Value zero = rewriter.create<arith::ConstantOp>(loc, zeroAttr);
-      packOps.push_back(rewriter.create<tensor::PackOp>(
-          loc, operand, dest, innerPos, innerPackSizes, zero));
-      inputsAndInits.push_back(packOps.back());
-    }
-  }
-
-  // Step 3. Build the packed op, use the type of `inits` as result types.
-  ValueRange inputs =
-      ValueRange{inputsAndInits}.take_front(linalgOp.getNumDpsInputs());
-  ValueRange inits =
-      ValueRange{inputsAndInits}.take_back(linalgOp.getNumDpsInits());
-  auto packedLinalgOp = rewriter.create<linalg::GenericOp>(
-      linalgOp.getLoc(), inits.getTypes(), inputs, inits, indexingMaps,
-      iteratorTypes);
-  packedLinalgOp.getRegion().takeBody(linalgOp->getRegion(0));
-
-  // Step 4. Propagate packing to all the op results.
-  for (OpResult result : packedLinalgOp->getResults()) {
-    int64_t resultNum = result.getResultNumber();
-    tensor::PackOp maybePackedInit =
-        inits[resultNum].getDefiningOp<tensor::PackOp>();
-    if (!maybePackedInit) {
-      results.push_back(result);
-      continue;
-    }
-    // Build the symmetrical UnPackOp to the existing PackOp.
-    unPackOps.push_back(rewriter.create<tensor::UnPackOp>(
-        packedLinalgOp->getLoc(), result, maybePackedInit.getSource(),
-        maybePackedInit.getInnerDimsPos(), maybePackedInit.getMixedTiles()));
-    results.push_back(unPackOps.back());
-  }
-
-  // Step 5. Replace `linalgOp`.
-  rewriter.replaceOp(linalgOp, results);
-
-  // Return packedLinalgOp.
-  return PackResult{packOps,
-                    cast<linalg::LinalgOp>(packedLinalgOp.getOperation()),
-                    unPackOps};
-}
-
-//===----------------------------------------------------------------------===//
-// packTranspose transformation.
-//===----------------------------------------------------------------------===//
-
-/// Return a copy of `tensorType` after permutation by `permutationVector`.
-// Note: Should be a new method in of MemRef/RankedTensor/VectorType::Builder
-// but this would introduce a dependence on Dialect in IR.
-// TODO: Restructure.
-static RankedTensorType permuteShape(RankedTensorType tensorType,
-                                     ArrayRef<int64_t> permutationVector) {
-  SmallVector<int64_t> shape(tensorType.getShape());
-  applyPermutationToVector(shape, permutationVector);
-  return RankedTensorType::Builder(tensorType).setShape(shape);
-}
-
-/// Return a new GenericOp obtained by transposing opOperand by the permutation
-/// vector:
-///   - the corresponding indexing map is transposed by `permutation`
-///   - the corresponding operand value is replaced by `transposedValue`
-/// `linalgOp` is replaced by the return op in the process.
-/// Asserts that `transposedValue` is of the proper transposed ShapedType.
-static LinalgOp transposeOneLinalgOperandAndReplace(
-    RewriterBase &rewriter, LinalgOp linalgOp, OpOperand &opOperand,
-    ArrayRef<int64_t> permutation, Value transposedValue) {
-  // Sanity check the operand.
-  assert(linalgOp == opOperand.getOwner() && "linalg op must own the operand");
-
-  // Sanity check of the expected transposed tensor type.
-  auto tensorType = permuteShape(
-      opOperand.get().getType().cast<RankedTensorType>(), permutation);
-  (void)tensorType;
-  assert(tensorType == transposedValue.getType() &&
-         "expected tensor type mismatch");
-
-  // Compute the transposed indexing map.
-  // Sigh unsigned pollution.
-  SmallVector<unsigned> tmpTransposition = llvm::to_vector(
-      llvm::map_range(permutation, [](int64_t i) -> unsigned { return i; }));
-  AffineMap permutationMap =
-      AffineMap::getPermutationMap(tmpTransposition, rewriter.getContext());
-  AffineMap transposedMap =
-      permutationMap.compose(linalgOp.getMatchingIndexingMap(&opOperand));
-
-  // Set the transposed indexing map in the proper position.
-  SmallVector<AffineMap> indexingMaps = linalgOp.getIndexingMapsArray();
-  indexingMaps[linalgOp.getIndexingMapIndex(&opOperand)] = transposedMap;
-  // Set the transposedValue in the proper operand position.
-  SmallVector<Value> operands = linalgOp->getOperands();
-  operands[opOperand.getOperandNumber()] = transposedValue;
-
-  ValueRange operandsRef(operands);
-  auto transposedGenericOp = rewriter.create<linalg::GenericOp>(
-      /*location=*/linalgOp->getLoc(),
-      /*resultTensorTypes=*/
-      operandsRef.drop_front(linalgOp.getNumDpsInputs()).getTypes(),
-      /*inputs=*/operandsRef.take_front(linalgOp.getNumDpsInputs()),
-      /*outputs=*/operandsRef.drop_front(linalgOp.getNumDpsInputs()),
-      /*indexingMaps=*/indexingMaps,
-      /*iteratorTypes=*/linalgOp.getIteratorTypesArray());
-  transposedGenericOp.getRegion().takeBody(linalgOp->getRegion(0));
-  rewriter.replaceOp(linalgOp, transposedGenericOp->getResults());
-
-  return cast<linalg::LinalgOp>(transposedGenericOp.getOperation());
-}
-
-FailureOr<PackTransposeResult>
-linalg::packTranspose(RewriterBase &rewriter, tensor::PackOp packOp,
-                      linalg::LinalgOp linalgOp, tensor::UnPackOp maybeUnPackOp,
-                      ArrayRef<int64_t> outerPerm,
-                      ArrayRef<int64_t> innerPerm) {
-  Location loc = linalgOp.getLoc();
-
-  // Step 1. Transpose packOp.
-  rewriter.setInsertionPoint(packOp);
-  tensor::PackOp transposedPackOp =
-      packOp.createTransposedClone(rewriter, loc, innerPerm, outerPerm);
-
-  if (!packOp.getResult().hasOneUse())
-    return rewriter.notifyMatchFailure(linalgOp, "expect single pack use");
-
-  OpOperand &packUse = *packOp->getUses().begin();
-  if (packUse.getOwner() != linalgOp) {
-    return rewriter.notifyMatchFailure(
-        linalgOp, "not a single use by the LinalgOp target");
-  }
-  if (maybeUnPackOp &&
-      (!linalgOp.isDpsInit(&packUse) ||
-       maybeUnPackOp.getSource() != linalgOp.getTiedOpResult(&packUse))) {
-    return rewriter.notifyMatchFailure(linalgOp,
-                                       "not produced by the LinalgOp target");
-  }
-
-  // Step 2. Transpose linalgOp.
-  // transposedPackOp.getOuterDimsPerm() may be empty, in which case it is the
-  // identity. Don't rely on it.
-  int64_t numLeadingDims = packOp.getSourceRank();
-  int64_t numTrailingDims = packOp.getInnerDimsPos().size();
-  // Step 2.a. Compute the permutation on the whole operand.
-  // Leading part just reuse the outerPerm.
-  SmallVector<int64_t> permutation(outerPerm);
-  if (permutation.empty())
-    llvm::append_range(permutation, llvm::seq<int64_t>(0, numLeadingDims));
-  // Trailing part needs to reindex positions by `numLeadingDims`.
-  if (innerPerm.empty()) {
-    llvm::append_range(
-        permutation,
-        llvm::seq<int64_t>(numLeadingDims, numLeadingDims + numTrailingDims));
-  } else {
-    llvm::append_range(permutation,
-                       llvm::map_range(innerPerm, [&](int64_t pos) {
-                         return numLeadingDims + pos;
-                       }));
-  }
-  if (!isPermutationVector(permutation))
-    return rewriter.notifyMatchFailure(linalgOp, "invalid permutation");
-
-  // Step 2.b. Save the transposedPackUse operand number in case we need to
-  // get the tied OpResult after `linalgOp` has been replaced.
-  int64_t packUseOperandNumber = packUse.getOperandNumber();
-  // Step 2.c. Actually perform the transposition.
-  rewriter.setInsertionPoint(linalgOp);
-  linalg::LinalgOp transposedLinalgOp = transposeOneLinalgOperandAndReplace(
-      rewriter, linalgOp, packUse, permutation, transposedPackOp.getResult());
-
-  // Step 3. Maybe transpose unPackOp.
-  tensor::UnPackOp transposedUnPackOp;
-  if (maybeUnPackOp) {
-    OpOperand &opOperand =
-        transposedLinalgOp->getOpOperand(packUseOperandNumber);
-    OpResult transposedResult = transposedLinalgOp.getTiedOpResult(&opOperand);
-    rewriter.setInsertionPoint(maybeUnPackOp);
-    transposedUnPackOp = maybeUnPackOp.createTransposedClone(
-        rewriter, loc, transposedResult, innerPerm, outerPerm);
-
-    rewriter.replaceOp(maybeUnPackOp, transposedUnPackOp->getResults());
-  }
-
-  // Step 4. Finally, replace packOp now that we don't need it anymore.
-  rewriter.replaceOp(packOp, transposedPackOp->getResults());
-
-  return PackTransposeResult{transposedPackOp, transposedLinalgOp,
-                             transposedUnPackOp};
 }
