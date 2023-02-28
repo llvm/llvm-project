@@ -328,6 +328,9 @@ public:
                                                            unsigned TypeIdx,
                                                            LLT NarrowTy);
 
+  /// Equalize source and destination vector sizes of G_SHUFFLE_VECTOR.
+  LegalizeResult equalizeVectorShuffleLengths(MachineInstr &MI);
+
   LegalizeResult reduceLoadStoreWidth(GLoadStore &MI, unsigned TypeIdx,
                                       LLT NarrowTy);
 

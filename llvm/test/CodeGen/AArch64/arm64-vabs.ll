@@ -47,13 +47,23 @@ define <2 x i64> @sabdl2d(ptr %A, ptr %B) nounwind {
   ret <2 x i64> %tmp4
 }
 
+; FALLBACK-NOT: remark:{{.*}} sabdl2_8h
 define <8 x i16> @sabdl2_8h(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: sabdl2_8h:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0, #8]
-; CHECK-NEXT:    ldr d1, [x1, #8]
-; CHECK-NEXT:    sabdl.8h v0, v0, v1
-; CHECK-NEXT:    ret
+; DAG-LABEL:   sabdl2_8h:
+; DAG:         // %bb.0:
+; DAG-NEXT:      ldr d0, [x0, #8]
+; DAG-NEXT:      ldr d1, [x1, #8]
+; DAG-NEXT:      sabdl.8h v0, v0, v1
+; DAG-NEXT:      ret
+;
+; GISEL-LABEL: sabdl2_8h:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr q0, [x0]
+; GISEL-NEXT:    ldr q1, [x1]
+; GISEL-NEXT:    ext.16b v0, v0, v0, #8
+; GISEL-NEXT:    ext.16b v1, v1, v0, #8
+; GISEL-NEXT:    sabdl.8h  v0, v0, v1
+; GISEL-NEXT:    ret
   %load1 = load <16 x i8>, ptr %A
   %load2 = load <16 x i8>, ptr %B
   %tmp1 = shufflevector <16 x i8> %load1, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -63,13 +73,23 @@ define <8 x i16> @sabdl2_8h(ptr %A, ptr %B) nounwind {
   ret <8 x i16> %tmp4
 }
 
+; FALLBACK-NOT: remark:{{.*}} sabdl2_4s
 define <4 x i32> @sabdl2_4s(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: sabdl2_4s:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0, #8]
-; CHECK-NEXT:    ldr d1, [x1, #8]
-; CHECK-NEXT:    sabdl.4s v0, v0, v1
-; CHECK-NEXT:    ret
+; DAG-LABEL:   sabdl2_4s:
+; DAG:         // %bb.0:
+; DAG-NEXT:      ldr d0, [x0, #8]
+; DAG-NEXT:      ldr d1, [x1, #8]
+; DAG-NEXT:      sabdl.4s v0, v0, v1
+; DAG-NEXT:      ret
+;
+; GISEL-LABEL: sabdl2_4s:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr q0, [x0]
+; GISEL-NEXT:    ldr q1, [x1]
+; GISEL-NEXT:    ext.16b v0, v0, v0, #8
+; GISEL-NEXT:    ext.16b v1, v1, v0, #8
+; GISEL-NEXT:    sabdl.4s v0, v0, v1
+; GISEL-NEXT:    ret
   %load1 = load <8 x i16>, ptr %A
   %load2 = load <8 x i16>, ptr %B
   %tmp1 = shufflevector <8 x i16> %load1, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -79,13 +99,23 @@ define <4 x i32> @sabdl2_4s(ptr %A, ptr %B) nounwind {
   ret <4 x i32> %tmp4
 }
 
+; FALLBACK-NOT: remark:{{.*}} sabdl2_2d
 define <2 x i64> @sabdl2_2d(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: sabdl2_2d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0, #8]
-; CHECK-NEXT:    ldr d1, [x1, #8]
-; CHECK-NEXT:    sabdl.2d v0, v0, v1
-; CHECK-NEXT:    ret
+; DAG-LABEL:   sabdl2_2d:
+; DAG:         // %bb.0:
+; DAG-NEXT:      ldr d0, [x0, #8]
+; DAG-NEXT:      ldr d1, [x1, #8]
+; DAG-NEXT:      sabdl.2d v0, v0, v1
+; DAG-NEXT:      ret
+;
+; GISEL-LABEL: sabdl2_2d:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr q0, [x0]
+; GISEL-NEXT:    ldr q1, [x1]
+; GISEL-NEXT:    ext.16b v0, v0, v0, #8
+; GISEL-NEXT:    ext.16b v1, v1, v0, #8
+; GISEL-NEXT:    sabdl.2d v0, v0, v1
+; GISEL-NEXT:    ret
   %load1 = load <4 x i32>, ptr %A
   %load2 = load <4 x i32>, ptr %B
   %tmp1 = shufflevector <4 x i32> %load1, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -140,13 +170,23 @@ define <2 x i64> @uabdl2d(ptr %A, ptr %B) nounwind {
   ret <2 x i64> %tmp4
 }
 
+; FALLBACK-NOT: remark:{{.*}} uabdl2_8h
 define <8 x i16> @uabdl2_8h(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: uabdl2_8h:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0, #8]
-; CHECK-NEXT:    ldr d1, [x1, #8]
-; CHECK-NEXT:    uabdl.8h v0, v0, v1
-; CHECK-NEXT:    ret
+; DAG-LABEL:   uabdl2_8h:
+; DAG:         // %bb.0:
+; DAG-NEXT:      ldr d0, [x0, #8]
+; DAG-NEXT:      ldr d1, [x1, #8]
+; DAG-NEXT:      uabdl.8h v0, v0, v1
+; DAG-NEXT:      ret
+;
+; GISEL-LABEL: uabdl2_8h:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr q0, [x0]
+; GISEL-NEXT:    ldr q1, [x1]
+; GISEL-NEXT:    ext.16b v0, v0, v0, #8
+; GISEL-NEXT:    ext.16b v1, v1, v0, #8
+; GISEL-NEXT:    uabdl.8h  v0, v0, v1
+; GISEL-NEXT:    ret
   %load1 = load <16 x i8>, ptr %A
   %load2 = load <16 x i8>, ptr %B
   %tmp1 = shufflevector <16 x i8> %load1, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -157,13 +197,23 @@ define <8 x i16> @uabdl2_8h(ptr %A, ptr %B) nounwind {
   ret <8 x i16> %tmp4
 }
 
+; FALLBACK-NOT: remark:{{.*}} uabdl2_4s
 define <4 x i32> @uabdl2_4s(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: uabdl2_4s:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0, #8]
-; CHECK-NEXT:    ldr d1, [x1, #8]
-; CHECK-NEXT:    uabdl.4s v0, v0, v1
-; CHECK-NEXT:    ret
+; DAG-LABEL:   uabdl2_4s:
+; DAG:         // %bb.0:
+; DAG-NEXT:      ldr d0, [x0, #8]
+; DAG-NEXT:      ldr d1, [x1, #8]
+; DAG-NEXT:      uabdl.4s v0, v0, v1
+; DAG-NEXT:      ret
+;
+; GISEL-LABEL: uabdl2_4s:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr q0, [x0]
+; GISEL-NEXT:    ldr q1, [x1]
+; GISEL-NEXT:    ext.16b v0, v0, v0, #8
+; GISEL-NEXT:    ext.16b v1, v1, v0, #8
+; GISEL-NEXT:    uabdl.4s  v0, v0, v1
+; GISEL-NEXT:    ret
   %load1 = load <8 x i16>, ptr %A
   %load2 = load <8 x i16>, ptr %B
   %tmp1 = shufflevector <8 x i16> %load1, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -173,13 +223,23 @@ define <4 x i32> @uabdl2_4s(ptr %A, ptr %B) nounwind {
   ret <4 x i32> %tmp4
 }
 
+; FALLBACK-NOT: remark:{{.*}} uabdl2_2d
 define <2 x i64> @uabdl2_2d(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: uabdl2_2d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0, #8]
-; CHECK-NEXT:    ldr d1, [x1, #8]
-; CHECK-NEXT:    uabdl.2d v0, v0, v1
-; CHECK-NEXT:    ret
+; DAG-LABEL:   uabdl2_2d:
+; DAG:         // %bb.0:
+; DAG-NEXT:      ldr d0, [x0, #8]
+; DAG-NEXT:      ldr d1, [x1, #8]
+; DAG-NEXT:      uabdl.2d v0, v0, v1
+; DAG-NEXT:      ret
+;
+; GISEL-LABEL: uabdl2_2d:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr q0, [x0]
+; GISEL-NEXT:    ldr q1, [x1]
+; GISEL-NEXT:    ext.16b v0, v0, v0, #8
+; GISEL-NEXT:    ext.16b v1, v1, v0, #8
+; GISEL-NEXT:    uabdl.2d  v0, v0, v1
+; GISEL-NEXT:    ret
   %load1 = load <4 x i32>, ptr %A
   %load2 = load <4 x i32>, ptr %B
   %tmp1 = shufflevector <4 x i32> %load1, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -971,14 +1031,25 @@ define <2 x i64> @sabal2d(ptr %A, ptr %B, ptr %C) nounwind {
   ret <2 x i64> %tmp5
 }
 
+; FALLBACK-NOT: remark:{{.*}} sabal2_8h
 define <8 x i16> @sabal2_8h(ptr %A, ptr %B, ptr %C) nounwind {
-; CHECK-LABEL: sabal2_8h:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    ldr d1, [x0, #8]
-; CHECK-NEXT:    ldr d2, [x1, #8]
-; CHECK-NEXT:    sabal.8h v0, v1, v2
-; CHECK-NEXT:    ret
+; DAG-LABEL:   sabal2_8h:
+; DAG:         // %bb.0:
+; DAG-NEXT:      ldr q0, [x2]
+; DAG-NEXT:      ldr d1, [x0, #8]
+; DAG-NEXT:      ldr d2, [x1, #8]
+; DAG-NEXT:      sabal.8h v0, v1, v2
+; DAG-NEXT:      ret
+;
+; GISEL-LABEL: sabal2_8h:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr q0, [x0]
+; GISEL-NEXT:    ldr q1, [x1]
+; GISEL-NEXT:    ext.16b v2, v0, v0, #8
+; GISEL-NEXT:    ext.16b v1, v1, v0, #8
+; GISEL-NEXT:    ldr q0, [x2]
+; GISEL-NEXT:    sabal.8h v0, v2, v1
+; GISEL-NEXT:    ret
   %load1 = load <16 x i8>, ptr %A
   %load2 = load <16 x i8>, ptr %B
   %tmp3 = load <8 x i16>, ptr %C
@@ -990,14 +1061,25 @@ define <8 x i16> @sabal2_8h(ptr %A, ptr %B, ptr %C) nounwind {
   ret <8 x i16> %tmp5
 }
 
+; FALLBACK-NOT: remark:{{.*}} sabal2_4s
 define <4 x i32> @sabal2_4s(ptr %A, ptr %B, ptr %C) nounwind {
-; CHECK-LABEL: sabal2_4s:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    ldr d1, [x0, #8]
-; CHECK-NEXT:    ldr d2, [x1, #8]
-; CHECK-NEXT:    sabal.4s v0, v1, v2
-; CHECK-NEXT:    ret
+; DAG-LABEL:   sabal2_4s:
+; DAG:         // %bb.0:
+; DAG-NEXT:      ldr q0, [x2]
+; DAG-NEXT:      ldr d1, [x0, #8]
+; DAG-NEXT:      ldr d2, [x1, #8]
+; DAG-NEXT:      sabal.4s v0, v1, v2
+; DAG-NEXT:      ret
+;
+; GISEL-LABEL: sabal2_4s:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr q0, [x0]
+; GISEL-NEXT:    ldr q1, [x1]
+; GISEL-NEXT:    ext.16b v2, v0, v0, #8
+; GISEL-NEXT:    ext.16b v1, v1, v0, #8
+; GISEL-NEXT:    ldr q0, [x2]
+; GISEL-NEXT:    sabal.4s v0, v2, v1
+; GISEL-NEXT:    ret
   %load1 = load <8 x i16>, ptr %A
   %load2 = load <8 x i16>, ptr %B
   %tmp3 = load <4 x i32>, ptr %C
@@ -1009,14 +1091,25 @@ define <4 x i32> @sabal2_4s(ptr %A, ptr %B, ptr %C) nounwind {
   ret <4 x i32> %tmp5
 }
 
+; FALLBACK-NOT: remark:{{.*}} sabal2_2d
 define <2 x i64> @sabal2_2d(ptr %A, ptr %B, ptr %C) nounwind {
-; CHECK-LABEL: sabal2_2d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    ldr d1, [x0, #8]
-; CHECK-NEXT:    ldr d2, [x1, #8]
-; CHECK-NEXT:    sabal.2d v0, v1, v2
-; CHECK-NEXT:    ret
+; DAG-LABEL:   sabal2_2d:
+; DAG:         // %bb.0:
+; DAG-NEXT:      ldr q0, [x2]
+; DAG-NEXT:      ldr d1, [x0, #8]
+; DAG-NEXT:      ldr d2, [x1, #8]
+; DAG-NEXT:      sabal.2d v0, v1, v2
+; DAG-NEXT:      ret
+;
+; GISEL-LABEL: sabal2_2d:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr q0, [x0]
+; GISEL-NEXT:    ldr q1, [x1]
+; GISEL-NEXT:    ext.16b v2, v0, v0, #8
+; GISEL-NEXT:    ext.16b v1, v1, v0, #8
+; GISEL-NEXT:    ldr q0, [x2]
+; GISEL-NEXT:    sabal.2d v0, v2, v1
+; GISEL-NEXT:    ret
   %load1 = load <4 x i32>, ptr %A
   %load2 = load <4 x i32>, ptr %B
   %tmp3 = load <2 x i64>, ptr %C
@@ -1106,14 +1199,25 @@ define <2 x i64> @uabal2d(ptr %A, ptr %B, ptr %C) nounwind {
   ret <2 x i64> %tmp5
 }
 
+; FALLBACK-NOT: remark:{{.*}} uabal2_8h
 define <8 x i16> @uabal2_8h(ptr %A, ptr %B, ptr %C) nounwind {
-; CHECK-LABEL: uabal2_8h:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    ldr d1, [x0, #8]
-; CHECK-NEXT:    ldr d2, [x1, #8]
-; CHECK-NEXT:    uabal.8h v0, v1, v2
-; CHECK-NEXT:    ret
+; DAG-LABEL:   uabal2_8h:
+; DAG:         // %bb.0:
+; DAG-NEXT:      ldr q0, [x2]
+; DAG-NEXT:      ldr d1, [x0, #8]
+; DAG-NEXT:      ldr d2, [x1, #8]
+; DAG-NEXT:      uabal.8h v0, v1, v2
+; DAG-NEXT:      ret
+;
+; GISEL-LABEL: uabal2_8h:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr q0, [x0]
+; GISEL-NEXT:    ldr q1, [x1]
+; GISEL-NEXT:    ext.16b v2, v0, v0, #8
+; GISEL-NEXT:    ext.16b v1, v1, v0, #8
+; GISEL-NEXT:    ldr q0, [x2]
+; GISEL-NEXT:    uabal.8h v0, v2, v1
+; GISEL-NEXT:    ret
   %load1 = load <16 x i8>, ptr %A
   %load2 = load <16 x i8>, ptr %B
   %tmp3 = load <8 x i16>, ptr %C
@@ -1125,14 +1229,25 @@ define <8 x i16> @uabal2_8h(ptr %A, ptr %B, ptr %C) nounwind {
   ret <8 x i16> %tmp5
 }
 
+; FALLBACK-NOT: remark:{{.*}} uabal2_4s
 define <4 x i32> @uabal2_4s(ptr %A, ptr %B, ptr %C) nounwind {
-; CHECK-LABEL: uabal2_4s:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    ldr d1, [x0, #8]
-; CHECK-NEXT:    ldr d2, [x1, #8]
-; CHECK-NEXT:    uabal.4s v0, v1, v2
-; CHECK-NEXT:    ret
+; DAG-LABEL:   uabal2_4s:
+; DAG:         // %bb.0:
+; DAG-NEXT:      ldr q0, [x2]
+; DAG-NEXT:      ldr d1, [x0, #8]
+; DAG-NEXT:      ldr d2, [x1, #8]
+; DAG-NEXT:      uabal.4s v0, v1, v2
+; DAG-NEXT:      ret
+;
+; GISEL-LABEL: uabal2_4s:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr q0, [x0]
+; GISEL-NEXT:    ldr q1, [x1]
+; GISEL-NEXT:    ext.16b v2, v0, v0, #8
+; GISEL-NEXT:    ext.16b v1, v1, v0, #8
+; GISEL-NEXT:    ldr q0, [x2]
+; GISEL-NEXT:    uabal.4s v0, v2, v1
+; GISEL-NEXT:    ret
   %load1 = load <8 x i16>, ptr %A
   %load2 = load <8 x i16>, ptr %B
   %tmp3 = load <4 x i32>, ptr %C
@@ -1144,14 +1259,25 @@ define <4 x i32> @uabal2_4s(ptr %A, ptr %B, ptr %C) nounwind {
   ret <4 x i32> %tmp5
 }
 
+; FALLBACK-NOT: remark:{{.*}} uabal2_2d
 define <2 x i64> @uabal2_2d(ptr %A, ptr %B, ptr %C) nounwind {
-; CHECK-LABEL: uabal2_2d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    ldr d1, [x0, #8]
-; CHECK-NEXT:    ldr d2, [x1, #8]
-; CHECK-NEXT:    uabal.2d v0, v1, v2
-; CHECK-NEXT:    ret
+; DAG-LABEL:   uabal2_2d:
+; DAG:         // %bb.0:
+; DAG-NEXT:      ldr q0, [x2]
+; DAG-NEXT:      ldr d1, [x0, #8]
+; DAG-NEXT:      ldr d2, [x1, #8]
+; DAG-NEXT:      uabal.2d v0, v1, v2
+; DAG-NEXT:      ret
+;
+; GISEL-LABEL: uabal2_2d:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr q0, [x0]
+; GISEL-NEXT:    ldr q1, [x1]
+; GISEL-NEXT:    ext.16b v2, v0, v0, #8
+; GISEL-NEXT:    ext.16b v1, v1, v0, #8
+; GISEL-NEXT:    ldr q0, [x2]
+; GISEL-NEXT:    uabal.2d v0, v2, v1
+; GISEL-NEXT:    ret
   %load1 = load <4 x i32>, ptr %A
   %load2 = load <4 x i32>, ptr %B
   %tmp3 = load <2 x i64>, ptr %C
@@ -1496,10 +1622,12 @@ define double @fabdd_from_fsub_fabs(double %a, double %b) nounwind {
 declare float @llvm.fabs.f32(float) nounwind readnone
 declare double @llvm.fabs.f64(double) nounwind readnone
 
+; FALLBACK-NOT: remark:{{.*}} uabdl_from_extract_dup
 define <2 x i64> @uabdl_from_extract_dup(<4 x i32> %lhs, i32 %rhs) {
 ; CHECK-LABEL: uabdl_from_extract_dup:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    dup.2s v1, w0
+; GISEL-NEXT:    ext.16b v0, v0, v0, #0
 ; CHECK-NEXT:    uabdl.2d v0, v0, v1
 ; CHECK-NEXT:    ret
   %rhsvec.tmp = insertelement <2 x i32> undef, i32 %rhs, i32 0
@@ -1512,12 +1640,20 @@ define <2 x i64> @uabdl_from_extract_dup(<4 x i32> %lhs, i32 %rhs) {
   ret <2 x i64> %res1
 }
 
+; FALLBACK-NOT: remark:{{.*}} uabdl2_from_extract_dup
 define <2 x i64> @uabdl2_from_extract_dup(<4 x i32> %lhs, i32 %rhs) {
-; CHECK-LABEL: uabdl2_from_extract_dup:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup.4s v1, w0
-; CHECK-NEXT:    uabdl2.2d v0, v0, v1
-; CHECK-NEXT:    ret
+; DAG-LABEL:   uabdl2_from_extract_dup:
+; DAG:         // %bb.0:
+; DAG-NEXT:      dup.4s v1, w0
+; DAG-NEXT:      uabdl2.2d v0, v0, v1
+; DAG-NEXT:      ret
+;
+; GISEL-LABEL: uabdl2_from_extract_dup:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    dup.2s v1, w0
+; GISEL-NEXT:    ext.16b v0, v0, v0, #8
+; GISEL-NEXT:    uabdl.2d v0, v0, v1
+; GISEL-NEXT:    ret
   %rhsvec.tmp = insertelement <2 x i32> undef, i32 %rhs, i32 0
   %rhsvec = insertelement <2 x i32> %rhsvec.tmp, i32 %rhs, i32 1
 
@@ -1528,10 +1664,12 @@ define <2 x i64> @uabdl2_from_extract_dup(<4 x i32> %lhs, i32 %rhs) {
   ret <2 x i64> %res1
 }
 
+; FALLBACK-NOT: remark:{{.*}} sabdl_from_extract_dup
 define <2 x i64> @sabdl_from_extract_dup(<4 x i32> %lhs, i32 %rhs) {
 ; CHECK-LABEL: sabdl_from_extract_dup:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    dup.2s v1, w0
+; GISEL-NEXT:    ext.16b v0, v0, v0, #0
 ; CHECK-NEXT:    sabdl.2d v0, v0, v1
 ; CHECK-NEXT:    ret
   %rhsvec.tmp = insertelement <2 x i32> undef, i32 %rhs, i32 0
@@ -1544,12 +1682,20 @@ define <2 x i64> @sabdl_from_extract_dup(<4 x i32> %lhs, i32 %rhs) {
   ret <2 x i64> %res1
 }
 
+; FALLBACK-NOT: remark:{{.*}} sabdl2_from_extract_dup
 define <2 x i64> @sabdl2_from_extract_dup(<4 x i32> %lhs, i32 %rhs) {
-; CHECK-LABEL: sabdl2_from_extract_dup:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup.4s v1, w0
-; CHECK-NEXT:    sabdl2.2d v0, v0, v1
-; CHECK-NEXT:    ret
+; DAG-LABEL:   sabdl2_from_extract_dup:
+; DAG:         // %bb.0:
+; DAG-NEXT:      dup.4s v1, w0
+; DAG-NEXT:      sabdl2.2d v0, v0, v1
+; DAG-NEXT:      ret
+;
+; GISEL-LABEL: sabdl2_from_extract_dup:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    dup.2s v1, w0
+; GISEL-NEXT:    ext.16b v0, v0, v0, #8
+; GISEL-NEXT:    sabdl.2d v0, v0, v1
+; GISEL-NEXT:    ret
   %rhsvec.tmp = insertelement <2 x i32> undef, i32 %rhs, i32 0
   %rhsvec = insertelement <2 x i32> %rhsvec.tmp, i32 %rhs, i32 1
 
