@@ -250,6 +250,12 @@ public:
     assert(Scope && Scope->isCompileUnit() && "Scope is not a compile unit");
     CompileUnit = static_cast<LVScopeCompileUnit *>(Scope);
   }
+  void setCompileUnitCPUType(codeview::CPUType Type) {
+    CompileUnit->setCPUType(Type);
+  }
+  codeview::CPUType getCompileUnitCPUType() {
+    return CompileUnit->getCPUType();
+  }
 
   // Access to the scopes root.
   LVScopeRoot *getScopesRoot() const { return Root; }

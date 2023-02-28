@@ -438,6 +438,7 @@ cc_library(
         ":DebugInfoCodeView",
         ":DebugInfoDWARF",
         ":DebugInfoPDB",
+        ":Demangle",
         ":MC",
         ":MCDisassembler",
         ":Object",

@@ -58,6 +58,8 @@ class LVReaderHandler {
                    object::MachOUniversalBinary &Mach);
   Error handleObject(LVReaders &Readers, StringRef Filename,
                      object::Binary &Binary);
+  Error handleObject(LVReaders &Readers, StringRef Filename, StringRef Buffer,
+                     StringRef ExePath);
 
   Error createReader(StringRef Filename, LVReaders &Readers, PdbOrObj &Input,
                      StringRef FileFormatName, StringRef ExePath = {});

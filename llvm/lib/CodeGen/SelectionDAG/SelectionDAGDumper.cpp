@@ -851,6 +851,12 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
           Dbg->print(OS);
     } else if (getHasDebugValue())
       OS << " [NoOfDbgValues>0]";
+
+    if (const auto *MD = G ? G->getPCSections(this) : nullptr) {
+      OS << " [pcsections ";
+      MD->printAsOperand(OS, G->getMachineFunction().getFunction().getParent());
+      OS << ']';
+    }
   }
 }
 
