@@ -16,7 +16,7 @@ package(default_visibility = ["//visibility:public"])
             "//mlir:SideEffectInterfacesTdFiles",
             "//mlir:include/mlir/Bindings/Python/Attributes.td",
             "//mlir:include/mlir/Dialect/LLVMIR/LLVMOpBase.td",
-            "//mlir:include/mlir/Dialect/LLVMIR/LLVMOpsInterfaces.td",
+            "//mlir:include/mlir/Dialect/LLVMIR/LLVMInterfaces.td",
             "//mlir:include/mlir/IR/OpBase.td",
             "//mlir:include/mlir/Interfaces/InferTypeOpInterface.td",
             "//mlir:include/mlir/Interfaces/SideEffectInterfaces.td",
