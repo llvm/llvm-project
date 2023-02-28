@@ -1345,6 +1345,8 @@ void BinaryContext::foldFunction(BinaryFunction &ChildBF,
 
     ChildBF.setFolded(&ParentBF);
   }
+
+  ParentBF.setHasFunctionsFoldedInto();
 }
 
 void BinaryContext::fixBinaryDataHoles() {
