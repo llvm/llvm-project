@@ -228,8 +228,6 @@
 ; CHECK-POSTLINK-O-NEXT: Running pass: LICMPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: AlignmentFromAssumptionsPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopSinkPass
-; CHECK-POSTLINK-O-NEXT: Running analysis: BlockFrequencyAnalysis
-; CHECK-POSTLINK-O-NEXT: Running analysis: BranchProbabilityAnalysis
 ; CHECK-POSTLINK-O-NEXT: Running pass: InstSimplifyPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: DivRemPairsPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: TailCallElimPass
@@ -238,6 +236,8 @@
 ; CHECK-POSTLINK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: ConstantMergePass
 ; CHECK-POSTLINK-O-NEXT: Running pass: CGProfilePass
+; CHECK-POSTLINK-O-NEXT: Running analysis: BlockFrequencyAnalysis
+; CHECK-POSTLINK-O-NEXT: Running analysis: BranchProbabilityAnalysis
 ; CHECK-POSTLINK-O-NEXT: Running pass: RelLookupTableConverterPass
 ; CHECK-EP-OPT-EARLY-NEXT: Running pass: NoOpModulePass
 ; CHECK-EP-OPT-LAST-NEXT: Running pass: NoOpModulePass
