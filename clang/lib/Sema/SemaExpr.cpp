@@ -7937,7 +7937,7 @@ bool Sema::isValidSveBitcast(QualType srcTy, QualType destTy) {
   assert(srcTy->isVectorType() || destTy->isVectorType());
 
   auto ValidScalableConversion = [](QualType FirstType, QualType SecondType) {
-    if (!FirstType->isSizelessBuiltinType())
+    if (!FirstType->isSVESizelessBuiltinType())
       return false;
 
     const auto *VecTy = SecondType->getAs<VectorType>();
