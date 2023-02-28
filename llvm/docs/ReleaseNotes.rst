@@ -145,6 +145,8 @@ Changes to the C API
 
 * ``LLVMContextSetOpaquePointers``, a temporary API to pin to legacy typed
   pointer, has been removed.
+* Functions for adding legacy passes like ``LLVMAddInstructionCombiningPass``
+  have been removed.
 
 Changes to the FastISel infrastructure
 --------------------------------------
