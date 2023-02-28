@@ -490,7 +490,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = "/bin/sh -x";
-			shellScript = "if [ \"${CONFIGURATION}\" != BuildAndIntegration ]\nthen\n    if [ -n \"${DEBUGSERVER_USE_FROM_SYSTEM}\" ]\n    then\n\t\tditto \"${DEVELOPER_DIR}/../SharedFrameworks/LLDB.framework/Resources/debugserver\" \"${TARGET_BUILD_DIR}/${TARGET_NAME}\"\n    elif [ \"${DEBUGSERVER_DISABLE_CODESIGN}\" == \"\" ]\n    then\n        codesign -f -s lldb_codesign --entitlements ${SRCROOT}/../../resources/debugserver-macosx-entitlements.plist \"${TARGET_BUILD_DIR}/${TARGET_NAME}\"\n    fi\nfi\n";
+			shellScript = "if [ \"${CONFIGURATION}\" != BuildAndIntegration ]\nthen\n    if [ -n \"${DEBUGSERVER_USE_FROM_SYSTEM}\" ]\n    then\n\t\tditto \"${DEVELOPER_DIR}/../SharedFrameworks/LLDB.framework/Resources/debugserver\" \"${TARGET_BUILD_DIR}/${TARGET_NAME}\"\n    elif [ \"${DEBUGSERVER_DISABLE_CODESIGN}\" == \"\" ]\n    then\n        codesign -f -s lldb_codesign --entitlements ${SRCROOT}/resources/debugserver-macosx-entitlements.plist \"${TARGET_BUILD_DIR}/${TARGET_NAME}\"\n    fi\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -664,7 +664,7 @@
 		26CE0596115C31C30022F371 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CLANG_CXX_LIBRARY = "libc++";
 				"CODE_SIGN_ENTITLEMENTS[sdk=*]" = "source/debugserver-entitlements.plist";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "source/debugserver-macosx-entitlements.plist";
@@ -764,7 +764,7 @@
 		26CE0597115C31C30022F371 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CLANG_CXX_LIBRARY = "libc++";
 				"CODE_SIGN_ENTITLEMENTS[sdk=*]" = "source/debugserver-entitlements.plist";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "source/debugserver-macosx-entitlements.plist";
