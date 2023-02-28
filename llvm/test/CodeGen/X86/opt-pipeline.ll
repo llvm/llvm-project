@@ -202,6 +202,7 @@
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       X86 Atom pad short functions
 ; CHECK-NEXT:       X86 LEA Fixup
+; CHECK-NEXT:       X86 Fixup Inst Tuning
 ; CHECK-NEXT:       Compressing EVEX instrs to VEX encoding when possible
 ; CHECK-NEXT:       X86 Discriminate Memory Operands
 ; CHECK-NEXT:       X86 Insert Cache Prefetches

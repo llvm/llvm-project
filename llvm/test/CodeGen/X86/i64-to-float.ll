@@ -299,7 +299,7 @@ define <2 x double> @clamp_sitofp_2i64_2f64(<2 x i64> %a) nounwind {
 ; X86-AVX-NEXT:    # xmm1 = mem[0,0]
 ; X86-AVX-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm2
 ; X86-AVX-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; X86-AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; X86-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X86-AVX-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
@@ -359,7 +359,7 @@ define <2 x double> @clamp_sitofp_2i64_2f64(<2 x i64> %a) nounwind {
 ; X64-AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [255,255]
 ; X64-AVX-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm2
 ; X64-AVX-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; X64-AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; X64-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X64-AVX-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
 ;

@@ -490,8 +490,8 @@ define <4 x float> @buildvector_mul_subadd_ps128(<4 x float> %C, <4 x float> %D,
 ; NOFMA-NEXT:    vsubss %xmm5, %xmm4, %xmm4
 ; NOFMA-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[2,3]
 ; NOFMA-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm3[0],xmm1[3]
-; NOFMA-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; NOFMA-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,3,3,3]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[3,3,3,3]
 ; NOFMA-NEXT:    vsubss %xmm2, %xmm0, %xmm0
 ; NOFMA-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; NOFMA-NEXT:    retq
@@ -578,8 +578,8 @@ define <8 x float> @buildvector_mul_subadd_ps256(<8 x float> %C, <8 x float> %D,
 ; NOFMA-NEXT:    vsubss %xmm9, %xmm8, %xmm8
 ; NOFMA-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm8[0],xmm1[2,3]
 ; NOFMA-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm3[0],xmm1[3]
-; NOFMA-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; NOFMA-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,3,3,3]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[3,3,3,3]
 ; NOFMA-NEXT:    vsubss %xmm2, %xmm0, %xmm0
 ; NOFMA-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; NOFMA-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm4[1,1,3,3]
@@ -587,8 +587,8 @@ define <8 x float> @buildvector_mul_subadd_ps256(<8 x float> %C, <8 x float> %D,
 ; NOFMA-NEXT:    vsubss %xmm2, %xmm1, %xmm1
 ; NOFMA-NEXT:    vinsertps {{.*#+}} xmm1 = xmm6[0],xmm1[0],xmm6[2,3]
 ; NOFMA-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm7[0],xmm1[3]
-; NOFMA-NEXT:    vpermilps {{.*#+}} xmm2 = xmm4[3,3,3,3]
-; NOFMA-NEXT:    vpermilps {{.*#+}} xmm3 = xmm5[3,3,3,3]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm2 = xmm4[3,3,3,3]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm3 = xmm5[3,3,3,3]
 ; NOFMA-NEXT:    vsubss %xmm3, %xmm2, %xmm2
 ; NOFMA-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[0]
 ; NOFMA-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -719,12 +719,12 @@ define <16 x float> @buildvector_mul_subadd_ps512(<16 x float> %C, <16 x float> 
 ; NOFMA-NEXT:    vsubss %xmm15, %xmm14, %xmm14
 ; NOFMA-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm14[0],xmm2[2,3]
 ; NOFMA-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm3[0],xmm2[3]
-; NOFMA-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; NOFMA-NEXT:    vpermilps {{.*#+}} xmm3 = xmm4[3,3,3,3]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm3 = xmm4[3,3,3,3]
 ; NOFMA-NEXT:    vsubss %xmm3, %xmm0, %xmm0
 ; NOFMA-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[0]
-; NOFMA-NEXT:    vpermilps {{.*#+}} xmm2 = xmm6[3,3,3,3]
-; NOFMA-NEXT:    vpermilps {{.*#+}} xmm3 = xmm7[3,3,3,3]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm2 = xmm6[3,3,3,3]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm3 = xmm7[3,3,3,3]
 ; NOFMA-NEXT:    vsubss %xmm3, %xmm2, %xmm2
 ; NOFMA-NEXT:    vinsertps {{.*#+}} xmm2 = xmm8[0,1,2],xmm2[0]
 ; NOFMA-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm1[1,1,3,3]
@@ -732,16 +732,16 @@ define <16 x float> @buildvector_mul_subadd_ps512(<16 x float> %C, <16 x float> 
 ; NOFMA-NEXT:    vsubss %xmm4, %xmm3, %xmm3
 ; NOFMA-NEXT:    vinsertps {{.*#+}} xmm3 = xmm9[0],xmm3[0],xmm9[2,3]
 ; NOFMA-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0,1],xmm10[0],xmm3[3]
-; NOFMA-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,3,3,3]
-; NOFMA-NEXT:    vpermilps {{.*#+}} xmm4 = xmm5[3,3,3,3]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm4 = xmm5[3,3,3,3]
 ; NOFMA-NEXT:    vsubss %xmm4, %xmm1, %xmm1
 ; NOFMA-NEXT:    vinsertps {{.*#+}} xmm1 = xmm3[0,1,2],xmm1[0]
 ; NOFMA-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm11[1,1,3,3]
 ; NOFMA-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm13[1,1,3,3]
 ; NOFMA-NEXT:    vsubss %xmm4, %xmm3, %xmm3
 ; NOFMA-NEXT:    vshufps {{.*#+}} xmm3 = xmm3[0,0],xmm12[0,0]
-; NOFMA-NEXT:    vpermilps {{.*#+}} xmm4 = xmm11[3,3,3,3]
-; NOFMA-NEXT:    vpermilps {{.*#+}} xmm5 = xmm13[3,3,3,3]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm4 = xmm11[3,3,3,3]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm5 = xmm13[3,3,3,3]
 ; NOFMA-NEXT:    vsubss %xmm5, %xmm4, %xmm4
 ; NOFMA-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0,1,2],xmm4[0]
 ; NOFMA-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0

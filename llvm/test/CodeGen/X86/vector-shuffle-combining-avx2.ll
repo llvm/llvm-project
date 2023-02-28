@@ -755,7 +755,7 @@ define <32 x i8> @combine_pshufb_pshufb_or_as_unpcklbw(<32 x i8> %a0, <32 x i8> 
 define <32 x i8> @combine_pshufb_pshufb_or_pshufb(<32 x i8> %a0) {
 ; CHECK-LABEL: combine_pshufb_pshufb_or_pshufb:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
+; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a0, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1>)
   %2 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a0, <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3>)
