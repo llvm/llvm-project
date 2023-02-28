@@ -821,6 +821,17 @@ let SubtargetPredicate = HasBitOp3Insts in {
     defm V_BITOP3_B32 : VOP3Inst <"v_bitop3_b32",
                                   VOP3_BITOP3_Profile<VOPProfile <[i32, i32, i32, i32, i8]>, VOP3_REGULAR>>;
   }
+
+  def : GCNPat<
+    (i32 (int_amdgcn_bitop3 i32:$src0, i32:$src1, i32:$src2, i8:$bitop3)),
+    (i32 (V_BITOP3_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1, VSrc_b32:$src2, timm:$bitop3))
+  >;
+
+  // TODO-GFX1210: This can be an opsel patern, but I expect to use 16-bit registers in true16 instead.
+  def : GCNPat<
+    (i16 (int_amdgcn_bitop3 i16:$src0, i16:$src1, i16:$src2, i8:$bitop3)),
+    (i16 (V_BITOP3_B16_e64 0, VSrc_b16:$src0, 0, VSrc_b16:$src1, 0, VSrc_b16:$src2, timm:$bitop3, 0))
+  >;
 } // End SubtargetPredicate = HasBitOp3Insts
 
 class DivFmasPat<ValueType vt, Instruction inst, Register CondReg> : GCNPat<

@@ -202,6 +202,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
       Features["gfx11-insts"] = true;
       Features["gfx12-insts"] = true;
       Features["gfx12-10-insts"] = true;
+      Features["bitop3-insts"] = true;
       break;
     case GK_GFX1200:
       IsWave32Capable = true;

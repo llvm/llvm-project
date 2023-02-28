@@ -2640,6 +2640,15 @@ def int_amdgcn_reloc_constant : DefaultAttrsIntrinsic<
 >;
 
 //===----------------------------------------------------------------------===//
+// gfx1210 intrinsics
+// ===----------------------------------------------------------------------===//
+
+def int_amdgcn_bitop3 :
+  DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                        [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, llvm_i8_ty],
+                        [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>>]>;
+
+//===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend
 // should emit calls to these.
 // ===----------------------------------------------------------------------===//

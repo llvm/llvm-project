@@ -580,6 +580,19 @@ static Value *emitTernaryBuiltin(CodeGenFunction &CGF,
   return CGF.Builder.CreateCall(F, { Src0, Src1, Src2 });
 }
 
+// Emit an intrinsic that has 4 operands of the same type as its result.
+static Value *emitQuaternaryBuiltin(CodeGenFunction &CGF,
+                                    const CallExpr *E,
+                                    unsigned IntrinsicID) {
+  llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
+  llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
+  llvm::Value *Src2 = CGF.EmitScalarExpr(E->getArg(2));
+  llvm::Value *Src3 = CGF.EmitScalarExpr(E->getArg(3));
+
+  Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
+  return CGF.Builder.CreateCall(F, { Src0, Src1, Src2, Src3 });
+}
+
 // Emit an intrinsic that has 1 float or double operand, and 1 integer.
 static Value *emitFPIntBuiltin(CodeGenFunction &CGF,
                                const CallExpr *E,
@@ -17527,6 +17540,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(Intrinsic::amdgcn_s_sendmsg_rtn, {ResultType});
     return Builder.CreateCall(F, {Arg});
   }
+  case AMDGPU::BI__builtin_amdgcn_bitop3_b32:
+  case AMDGPU::BI__builtin_amdgcn_bitop3_b16:
+    return emitQuaternaryBuiltin(*this, E, Intrinsic::amdgcn_bitop3);
   default:
     return nullptr;
   }
