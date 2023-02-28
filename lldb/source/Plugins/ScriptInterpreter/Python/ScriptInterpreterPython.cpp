@@ -1217,7 +1217,7 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
 
 Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
     BreakpointOptions &bp_options, const char *command_body_text,
-    const bool is_callback) {
+    bool is_callback) {
   return SetBreakpointCommandCallback(bp_options, command_body_text, {},
                                       /*uses_extra_args=*/false, is_callback);
 }
@@ -1226,7 +1226,7 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
 Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
     BreakpointOptions &bp_options, const char *command_body_text,
     StructuredData::ObjectSP extra_args_sp, bool uses_extra_args,
-    const bool is_callback) {
+    bool is_callback) {
   auto data_up = std::make_unique<CommandDataPython>(extra_args_sp);
   // Split the command_body_text into lines, and pass that to
   // GenerateBreakpointCommandCallbackData.  That will wrap the body in an
@@ -1250,7 +1250,7 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
 // Set a Python one-liner as the callback for the watchpoint.
 void ScriptInterpreterPythonImpl::SetWatchpointCommandCallback(
     WatchpointOptions *wp_options, const char *user_input,
-    const bool is_callback) {
+    bool is_callback) {
   auto data_up = std::make_unique<WatchpointOptions::CommandData>();
 
   // It's necessary to set both user_source and script_source to the oneliner.
@@ -1283,7 +1283,7 @@ Status ScriptInterpreterPythonImpl::ExportFunctionDefinitionToInterpreter(
 
 Status ScriptInterpreterPythonImpl::GenerateFunction(const char *signature,
                                                      const StringList &input,
-                                                     const bool is_callback) {
+                                                     bool is_callback) {
   Status error;
   int num_lines = input.GetSize();
   if (num_lines == 0) {
@@ -2003,7 +2003,7 @@ bool ScriptInterpreterPythonImpl::GenerateTypeSynthClass(
 
 Status ScriptInterpreterPythonImpl::GenerateBreakpointCommandCallbackData(
     StringList &user_input, std::string &output, bool has_extra_args,
-    const bool is_callback) {
+    bool is_callback) {
   static uint32_t num_created_functions = 0;
   user_input.RemoveBlankLines();
   StreamString sstr;
@@ -2032,7 +2032,7 @@ Status ScriptInterpreterPythonImpl::GenerateBreakpointCommandCallbackData(
 }
 
 bool ScriptInterpreterPythonImpl::GenerateWatchpointCommandCallbackData(
-    StringList &user_input, std::string &output, const bool is_callback) {
+    StringList &user_input, std::string &output, bool is_callback) {
   static uint32_t num_created_functions = 0;
   user_input.RemoveBlankLines();
   StreamString sstr;

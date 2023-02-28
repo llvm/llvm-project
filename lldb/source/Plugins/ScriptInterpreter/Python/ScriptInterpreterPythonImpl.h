@@ -189,16 +189,16 @@ public:
       const lldb_private::ExecutionContext &exe_ctx) override;
 
   Status GenerateFunction(const char *signature, const StringList &input,
-                          const bool is_callback) override;
+                          bool is_callback) override;
 
   Status GenerateBreakpointCommandCallbackData(StringList &input,
                                                std::string &output,
                                                bool has_extra_args,
-                                               const bool is_callback) override;
+                                               bool is_callback) override;
 
   bool GenerateWatchpointCommandCallbackData(StringList &input,
                                              std::string &output,
-                                             const bool is_callback) override;
+                                             bool is_callback) override;
 
   bool GetScriptedSummary(const char *function_name, lldb::ValueObjectSP valobj,
                           StructuredData::ObjectSP &callee_wrapper_sp,
@@ -262,7 +262,7 @@ public:
   /// Set the callback body text into the callback for the breakpoint.
   Status SetBreakpointCommandCallback(BreakpointOptions &bp_options,
                                       const char *callback_body,
-                                      const bool is_callback) override;
+                                      bool is_callback) override;
 
   Status SetBreakpointCommandCallbackFunction(
       BreakpointOptions &bp_options, const char *function_name,
@@ -277,12 +277,12 @@ public:
                                       const char *command_body_text,
                                       StructuredData::ObjectSP extra_args_sp,
                                       bool uses_extra_args,
-                                      const bool is_callback);
+                                      bool is_callback);
 
   /// Set a one-liner as the callback for the watchpoint.
   void SetWatchpointCommandCallback(WatchpointOptions *wp_options,
                                     const char *user_input,
-                                    const bool is_callback) override;
+                                    bool is_callback) override;
 
   const char *GetDictionaryName() { return m_dictionary_name.c_str(); }
 
