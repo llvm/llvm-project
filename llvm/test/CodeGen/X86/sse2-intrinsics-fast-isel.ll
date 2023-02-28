@@ -4523,7 +4523,7 @@ define <2 x i64> @test_mm_set1_epi32(i32 %a0) nounwind {
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    vmovss {{[0-9]+}}(%esp), %xmm0 # encoding: [0xc5,0xfa,0x10,0x44,0x24,0x04]
 ; X86-AVX1-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; X86-AVX1-NEXT:    vpermilps $0, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x04,0xc0,0x00]
+; X86-AVX1-NEXT:    vshufps $0, %xmm0, %xmm0, %xmm0 # encoding: [0xc5,0xf8,0xc6,0xc0,0x00]
 ; X86-AVX1-NEXT:    # xmm0 = xmm0[0,0,0,0]
 ; X86-AVX1-NEXT:    retl # encoding: [0xc3]
 ;
@@ -5636,7 +5636,7 @@ define <2 x i64> @test_mm_shuffle_epi32(<2 x i64> %a0) {
 ;
 ; AVX1-LABEL: test_mm_shuffle_epi32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpermilps $0, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x04,0xc0,0x00]
+; AVX1-NEXT:    vshufps $0, %xmm0, %xmm0, %xmm0 # encoding: [0xc5,0xf8,0xc6,0xc0,0x00]
 ; AVX1-NEXT:    # xmm0 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 ;

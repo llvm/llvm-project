@@ -38,7 +38,18 @@ using namespace object;
 void WasmSymbol::print(raw_ostream &Out) const {
   Out << "Name=" << Info.Name
       << ", Kind=" << toString(wasm::WasmSymbolType(Info.Kind)) << ", Flags=0x"
-      << Twine::utohexstr(Info.Flags);
+      << Twine::utohexstr(Info.Flags) << " [";
+  switch (getBinding()) {
+    case wasm::WASM_SYMBOL_BINDING_GLOBAL: Out << "global"; break;
+    case wasm::WASM_SYMBOL_BINDING_LOCAL: Out << "local"; break;
+    case wasm::WASM_SYMBOL_BINDING_WEAK: Out << "weak"; break;
+  }
+  if (isHidden()) {
+    Out << ", hidden";
+  } else {
+    Out << ", default";
+  }
+  Out << "]";
   if (!isTypeData()) {
     Out << ", ElemIndex=" << Info.ElementIndex;
   } else if (isDefined()) {

@@ -1645,14 +1645,16 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       // Define the current CFA rule to use the provided offset.
       assert(StackSize);
       BuildCFI(MBB, MBBI, DL,
-               MCCFIInstruction::cfiDefCfaOffset(nullptr, -2 * stackGrowth),
+               MCCFIInstruction::cfiDefCfaOffset(
+                   nullptr, -2 * stackGrowth + (int)TailCallArgReserveSize),
                MachineInstr::FrameSetup);
 
       // Change the rule for the FramePtr to be an "offset" rule.
       unsigned DwarfFramePtr = TRI->getDwarfRegNum(MachineFramePtr, true);
       BuildCFI(MBB, MBBI, DL,
                MCCFIInstruction::createOffset(nullptr, DwarfFramePtr,
-                                              2 * stackGrowth),
+                                              2 * stackGrowth -
+                                                  (int)TailCallArgReserveSize),
                MachineInstr::FrameSetup);
     }
 
