@@ -2015,7 +2015,7 @@ declare <4 x i64> @llvm.x86.avx2.psad.bw(<32 x i8>, <32 x i8>) nounwind readnone
 define <4 x i64> @test_mm256_shuffle_epi32(<4 x i64> %a0) {
 ; CHECK-LABEL: test_mm256_shuffle_epi32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[3,3,0,0,7,7,4,4]
+; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[3,3,0,0,7,7,4,4]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <4 x i64> %a0 to <8 x i32>
   %shuf = shufflevector <8 x i32> %arg0, <8 x i32> undef, <8 x i32> <i32 3, i32 3, i32 0, i32 0, i32 7, i32 7, i32 4, i32 4>

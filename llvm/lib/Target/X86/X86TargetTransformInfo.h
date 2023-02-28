@@ -88,6 +88,10 @@ class X86TTIImpl : public BasicTTIImplBase<X86TTIImpl> {
       X86::TuningInsertVZEROUPPER,
       X86::TuningUseSLMArithCosts,
       X86::TuningUseGLMDivSqrtCosts,
+      X86::TuningNoDomainDelay,
+      X86::TuningNoDomainDelayMov,
+      X86::TuningNoDomainDelayShuffle,
+      X86::TuningNoDomainDelayBlend,
 
       // Perf-tuning flags.
       X86::TuningFastGather,

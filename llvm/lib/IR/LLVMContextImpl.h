@@ -1446,13 +1446,13 @@ public:
 
   DenseMap<const Value *, ValueName *> ValueNames;
 
-  using IntMapTy =
-      DenseMap<APInt, std::unique_ptr<ConstantInt>, DenseMapAPIntKeyInfo>;
-  IntMapTy IntConstants;
+  DenseMap<unsigned, std::unique_ptr<ConstantInt>> IntZeroConstants;
+  DenseMap<unsigned, std::unique_ptr<ConstantInt>> IntOneConstants;
+  DenseMap<APInt, std::unique_ptr<ConstantInt>, DenseMapAPIntKeyInfo>
+      IntConstants;
 
-  using FPMapTy =
-      DenseMap<APFloat, std::unique_ptr<ConstantFP>, DenseMapAPFloatKeyInfo>;
-  FPMapTy FPConstants;
+  DenseMap<APFloat, std::unique_ptr<ConstantFP>, DenseMapAPFloatKeyInfo>
+      FPConstants;
 
   FoldingSet<AttributeImpl> AttrsSet;
   FoldingSet<AttributeListImpl> AttrsLists;
@@ -1535,8 +1535,9 @@ public:
 
   DenseMap<std::pair<Type *, uint64_t>, ArrayType *> ArrayTypes;
   DenseMap<std::pair<Type *, ElementCount>, VectorType *> VectorTypes;
-  DenseMap<Type *, PointerType *> PointerTypes; // Pointers in AddrSpace = 0
-  DenseMap<std::pair<Type *, unsigned>, PointerType *> ASPointerTypes;
+  PointerType *AS0PointerType = nullptr; // AddrSpace = 0
+  DenseMap<unsigned, PointerType *> PointerTypes;
+  DenseMap<std::pair<Type *, unsigned>, PointerType *> LegacyPointerTypes;
   DenseMap<std::pair<Type *, unsigned>, TypedPointerType *> ASTypedPointerTypes;
 
   /// ValueHandles - This map keeps track of all of the value handles that are

@@ -574,19 +574,18 @@ define void @masked_gather_v2f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ldr s1, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    ldr q2, [x1]
 ; CHECK-NEXT:    fcmeq v1.4h, v1.4h, #0.0
 ; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov w9, v1.s[1]
-; CHECK-NEXT:    ldr q1, [x1]
-; CHECK-NEXT:    mov v0.h[0], w8
-; CHECK-NEXT:    mov v0.h[1], w9
+; CHECK-NEXT:    mov v0.h[0], v1.h[0]
+; CHECK-NEXT:    mov w8, v1.s[1]
+; CHECK-NEXT:    mov v0.h[1], w8
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #15
 ; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
-; CHECK-NEXT:    ld1h { z0.d }, p0/z, [z1.d]
+; CHECK-NEXT:    ld1h { z0.d }, p0/z, [z2.d]
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    str s0, [x0]

@@ -765,6 +765,7 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
 // PromoteOp
 //===----------------------------------------------------------------------===//
 
+
 def PromoteOp : Op<Transform_Dialect, "structured.promote",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
     TransformOpInterface, TransformEachOpTrait]> {
@@ -791,6 +792,7 @@ def PromoteOp : Op<Transform_Dialect, "structured.promote",
                        DefaultValuedAttr<BoolArrayAttr, "{}">:$use_full_tile_buffers,
                        UnitAttr:$use_full_tiles_by_default,
                        UnitAttr:$use_alloca,
+                       OptionalAttr<DeviceMappingArrayAttr>:$mapping,
                        OptionalAttr<I64Attr>:$alignment);
   let results = (outs PDL_Operation:$transformed);
 
@@ -1723,6 +1725,10 @@ def HoistRedundantVectorTransfersOp :
        dominated by the transfer_write (i.e. no aliasing between the write and
        the read across the loop)
 
+    WARNING: This hoisting does not model parallelism and is generally incorrect
+    when used on distributed loops with memref semantics!
+    TODO: obsolete and should be retired.
+
     #### Return modes:
 
     The operation always succeeds and returns a handle to the transformed
@@ -1816,6 +1822,53 @@ def ConvertConv2DToImg2ColOp : Op<Transform_Dialect,
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::linalg::LinalgOp target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// HoistRedundantTensorSubsetsOp
+//===----------------------------------------------------------------------===//
+
+def HoistRedundantTensorSubsetsOp :
+  Op<Transform_Dialect, "structured.hoist_redundant_tensor_subsets",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     TransformEachOpTrait, TransformOpInterface]> {
+  let description = [{
+    Hoists supported tensor subset extract/insert operation pairs out of 
+    immediately enclosing loop iteratively, if the following conditions
+    are true:
+       1. The 2 ops access the same tensor subset.
+       2. All operands are invariant under the enclosing loop.
+    
+    The supported subset extract/insert operation pairs currently comprise:
+       - tensor.extract_slice / tensor.insert_slice
+       - vector.transfer_read / vector.transfer_write on tensors
+    
+    Only scf.for loops are currently supported.
+
+    When applied to:
+       1. an scf.for loop, hoist out of this loop only.
+       2. a non-loop op, apply hoisting to all the contained loop ops.
+
+    #### Return modes:
+
+    The operation always succeeds and returns a handle to the transformed
+    function op.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs TransformHandleTypeInterface:$transformed);
+
+  let assemblyFormat = "$target attr-dict `:` functional-type(operands, results) ";
+
+  let builders = [
+    OpBuilder<(ins "Value":$target)>,
+  ];
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::Operation *target,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];

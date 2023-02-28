@@ -384,34 +384,23 @@ private:
 };
 
 // PPC64 R12 Setup Stub
-// When a caller that does not maintain a toc-pointer performs a local call to
-// a callee which requires a toc-pointer then we need this stub to place the
-// callee's global entry point into r12 without a save of R2.
+// When a caller that does not maintain TOC calls a target which may possibly
+// use TOC (either non-preemptible with localentry>1 or preemptible), we need to
+// set r12 to satisfy the requirement of the global entry point.
 class PPC64R12SetupStub final : public Thunk {
 public:
-  PPC64R12SetupStub(Symbol &dest) : Thunk(dest, 0) { alignment = 16; }
+  PPC64R12SetupStub(Symbol &dest, bool gotPlt)
+      : Thunk(dest, 0), gotPlt(gotPlt) {
+    alignment = 16;
+  }
   uint32_t size() override { return 32; }
   void writeTo(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
   bool isCompatibleWith(const InputSection &isec,
                         const Relocation &rel) const override;
-};
 
-// PPC64 PC-relative PLT Stub
-// When a caller that does not maintain a toc-pointer performs an extern call
-// then this stub is needed for:
-// 1) Loading the target functions address from the procedure linkage table into
-//    r12 for use by the target functions global entry point, and into the count
-//    register with pc-relative instructions.
-// 2) Transferring control to the target function through an indirect branch.
-class PPC64PCRelPLTStub final : public Thunk {
-public:
-  PPC64PCRelPLTStub(Symbol &dest) : Thunk(dest, 0) { alignment = 16; }
-  uint32_t size() override { return 32; }
-  void writeTo(uint8_t *buf) override;
-  void addSymbols(ThunkSection &isec) override;
-  bool isCompatibleWith(const InputSection &isec,
-                        const Relocation &rel) const override;
+private:
+  bool gotPlt;
 };
 
 // A bl instruction uses a signed 24 bit offset, with an implicit 4 byte
@@ -1087,72 +1076,43 @@ bool PPC64R2SaveStub::isCompatibleWith(const InputSection &isec,
 }
 
 void PPC64R12SetupStub::writeTo(uint8_t *buf) {
-  int64_t offset = destination.getVA() - getThunkTargetSym()->getVA();
+  int64_t offset = (gotPlt ? destination.getGotPltVA() : destination.getVA()) -
+                   getThunkTargetSym()->getVA();
   if (!isInt<34>(offset))
     reportRangeError(buf, offset, 34, destination, "R12 setup stub offset");
 
   int nextInstOffset;
-  if (!config->power10Stubs) {
-    uint32_t off = destination.getVA(addend) - getThunkTargetSym()->getVA() - 8;
-    write32(buf + 0, 0x7c0802a6);                      // mflr r12
-    write32(buf + 4, 0x429f0005);                      // bcl 20,31,.+4
-    write32(buf + 8, 0x7d6802a6);                      // mflr r11
-    write32(buf + 12, 0x7d8803a6);                     // mtlr r12
-    write32(buf + 16, 0x3d8b0000 | computeHiBits(off));// addis r12,r11,off@ha
-    write32(buf + 20, 0x398c0000 | (off & 0xffff));    // addi r12,r12,off@l
-    nextInstOffset = 24;
-  } else {
-    uint64_t paddi = PADDI_R12_NO_DISP | (((offset >> 16) & 0x3ffff) << 32) |
-                     (offset & 0xffff);
-    writePrefixedInstruction(buf + 0, paddi); // paddi r12, 0, func@pcrel, 1
+  if (config->power10Stubs) {
+    const uint64_t imm = (((offset >> 16) & 0x3ffff) << 32) | (offset & 0xffff);
+    // pld 12, func@plt@pcrel or  paddi r12, 0, func@pcrel
+    writePrefixedInstruction(
+        buf, (gotPlt ? PLD_R12_NO_DISP : PADDI_R12_NO_DISP) | imm);
     nextInstOffset = 8;
+  } else {
+    uint32_t off = offset - 8;
+    write32(buf + 0, 0x7d8802a6);                     // mflr 12
+    write32(buf + 4, 0x429f0005);                     // bcl 20,31,.+4
+    write32(buf + 8, 0x7d6802a6);                     // mflr 11
+    write32(buf + 12, 0x7d8803a6);                    // mtlr 12
+    write32(buf + 16,
+            0x3d8b0000 | ((off + 0x8000) >> 16));     // addis 12,11,off@ha
+    if (gotPlt)
+      write32(buf + 20, 0xe98c0000 | (off & 0xffff)); // ld 12, off@l(12)
+    else
+      write32(buf + 20, 0x398c0000 | (off & 0xffff)); // addi 12,12,off@l
+    nextInstOffset = 24;
   }
   write32(buf + nextInstOffset, MTCTR_R12); // mtctr r12
   write32(buf + nextInstOffset + 4, BCTR);  // bctr
 }
 
 void PPC64R12SetupStub::addSymbols(ThunkSection &isec) {
-  addSymbol(saver().save("__gep_setup_" + destination.getName()), STT_FUNC, 0,
-            isec);
+  addSymbol(saver().save((gotPlt ? "__plt_pcrel_" : "__gep_setup_") +
+                         destination.getName()),
+            STT_FUNC, 0, isec);
 }
 
 bool PPC64R12SetupStub::isCompatibleWith(const InputSection &isec,
-                                         const Relocation &rel) const {
-  return rel.type == R_PPC64_REL24_NOTOC;
-}
-
-void PPC64PCRelPLTStub::writeTo(uint8_t *buf) {
-  int nextInstOffset = 0;
-  int64_t offset = destination.getGotPltVA() - getThunkTargetSym()->getVA();
-
-  if (config->power10Stubs) {
-    if (!isInt<34>(offset))
-      reportRangeError(buf, offset, 34, destination,
-                       "PC-relative PLT stub offset");
-    const uint64_t pld = PLD_R12_NO_DISP | (((offset >> 16) & 0x3ffff) << 32) |
-                   (offset & 0xffff);
-    writePrefixedInstruction(buf + 0, pld); // pld r12, func@plt@pcrel
-    nextInstOffset = 8;
-  } else {
-    uint32_t off = destination.getVA(addend) - getThunkTargetSym()->getVA() - 8;
-    write32(buf + 0, 0x7c0802a6);            // mflr r12
-    write32(buf + 4, 0x429f0005);            // bcl 20,31,.+4
-    write32(buf + 8, 0x7d6802a6);            // mflr r11
-    write32(buf + 12, 0x7d8803a6);           // mtlr r12
-    write32(buf + 16, 0x3d8b0000 | computeHiBits(off)); // addis r12,r11,off@ha
-    write32(buf + 20, 0x398c0000 | (off & 0xffff)); // addi r12,r12,off@l
-    nextInstOffset = 24;
-  }
-  write32(buf + nextInstOffset, MTCTR_R12); // mtctr r12
-  write32(buf + nextInstOffset + 4, BCTR);  // bctr
-}
-
-void PPC64PCRelPLTStub::addSymbols(ThunkSection &isec) {
-  addSymbol(saver().save("__plt_pcrel_" + destination.getName()), STT_FUNC, 0,
-            isec);
-}
-
-bool PPC64PCRelPLTStub::isCompatibleWith(const InputSection &isec,
                                          const Relocation &rel) const {
   return rel.type == R_PPC64_REL24_NOTOC;
 }
@@ -1329,8 +1289,9 @@ static Thunk *addThunkPPC64(RelType type, Symbol &s, int64_t a) {
           type == R_PPC64_REL24_NOTOC) &&
          "unexpected relocation type for thunk");
   if (s.isInPlt())
-    return type == R_PPC64_REL24_NOTOC ? (Thunk *)make<PPC64PCRelPLTStub>(s)
-                                       : (Thunk *)make<PPC64PltCallStub>(s);
+    return type == R_PPC64_REL24_NOTOC
+               ? (Thunk *)make<PPC64R12SetupStub>(s, /*gotPlt=*/true)
+               : (Thunk *)make<PPC64PltCallStub>(s);
 
   // This check looks at the st_other bits of the callee. If the value is 1
   // then the callee clobbers the TOC and we need an R2 save stub when RelType
@@ -1339,7 +1300,7 @@ static Thunk *addThunkPPC64(RelType type, Symbol &s, int64_t a) {
     return make<PPC64R2SaveStub>(s, a);
 
   if (type == R_PPC64_REL24_NOTOC)
-    return make<PPC64R12SetupStub>(s);
+    return make<PPC64R12SetupStub>(s, /*gotPlt=*/false);
 
   if (config->picThunk)
     return make<PPC64PILongBranchThunk>(s, a);

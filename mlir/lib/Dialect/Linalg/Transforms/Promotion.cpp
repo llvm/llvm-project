@@ -13,6 +13,8 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
@@ -396,4 +398,88 @@ mlir::linalg::promoteSubViews(OpBuilder &builder, LinalgOp linalgOp,
   if (failed(res))
     return failure();
   return res;
+}
+
+/// Allocate the given subview to a memory address space in GPU by creating a
+/// allocation operation and setting the memref type address space to desired
+/// address space.
+static Optional<Value> allocateSubviewGPUMemoryInAddressSpace(
+    OpBuilder &builder, memref::SubViewOp subview, ArrayRef<Value> sizeBounds,
+    gpu::AddressSpace addressSpace) {
+  OpBuilder::InsertionGuard guard(builder);
+
+  func::FuncOp funcOp = subview->getParentOfType<func::FuncOp>();
+  if (!funcOp)
+    return std::nullopt;
+
+  // The subview size bounds are expected to be constant; they specify the shape
+  // of the allocation.
+  SmallVector<int64_t> shape;
+  for (Value bound : sizeBounds) {
+    APInt value;
+    if (!matchPattern(bound, m_ConstantInt(&value)))
+      return std::nullopt;
+    shape.push_back(value.getSExtValue());
+  }
+
+  builder.setInsertionPoint(&funcOp.front(), funcOp.front().begin());
+  auto type = MemRefType::get(
+      shape, subview.getType().getElementType(), MemRefLayoutAttrInterface{},
+      gpu::AddressSpaceAttr::get(builder.getContext(), addressSpace));
+  Value buffer;
+  if (addressSpace == gpu::GPUDialect::getWorkgroupAddressSpace()) {
+    buffer = builder.create<memref::AllocOp>(funcOp.getLoc(), type);
+  } else if (addressSpace == gpu::GPUDialect::getPrivateAddressSpace()) {
+    buffer = builder.create<memref::AllocaOp>(funcOp.getLoc(), type);
+  } else {
+    return std::nullopt;
+  }
+  return buffer;
+}
+
+/// Allocate the subview in the GPU workgroup memory.
+Optional<Value> mlir::linalg::allocateWorkgroupMemory(
+    OpBuilder &builder, memref::SubViewOp subview, ArrayRef<Value> sizeBounds,
+    DataLayout &) {
+  return allocateSubviewGPUMemoryInAddressSpace(
+      builder, subview, sizeBounds,
+      gpu::GPUDialect::getWorkgroupAddressSpace());
+}
+
+/// In case of GPU group memory there is no need to deallocate.
+LogicalResult mlir::linalg::deallocateWorkgroupMemory(OpBuilder &,
+                                                      Value /*buffer*/) {
+  return success();
+}
+
+/// Create Memref copy operations and add gpu barrier guards before and after
+/// the copy operation to ensure data integrity.
+LogicalResult mlir::linalg::copyToWorkgroupMemory(OpBuilder &b, Value src,
+                                                  Value dst) {
+  b.create<gpu::BarrierOp>(src.getLoc());
+  Operation *copyOp = b.create<memref::CopyOp>(src.getLoc(), src, dst);
+  b.create<gpu::BarrierOp>(copyOp->getLoc());
+  return success();
+}
+
+/// Allocate the subview in the GPU private memory.
+Optional<Value> mlir::linalg::allocateGPUPrivateMemory(
+    OpBuilder &builder, memref::SubViewOp subview, ArrayRef<Value> sizeBounds,
+    DataLayout &) {
+  return allocateSubviewGPUMemoryInAddressSpace(
+      builder, subview, sizeBounds, gpu::GPUDialect::getPrivateAddressSpace());
+}
+
+/// Normal copy to between src and dst.
+LogicalResult mlir::linalg::copyToGPUPrivateMemory(OpBuilder &b, Value src,
+                                                   Value dst) {
+  b.create<memref::CopyOp>(src.getLoc(), src, dst);
+  return success();
+}
+
+/// In case of GPU private memory there is no need to deallocate since the
+/// memory is freed when going outside of the scope.
+LogicalResult mlir::linalg::deallocateGPUPrivateMemory(OpBuilder &,
+                                                       Value /*buffer*/) {
+  return success();
 }

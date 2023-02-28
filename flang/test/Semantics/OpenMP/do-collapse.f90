@@ -22,5 +22,12 @@ program omp_doCollapse
       !$omp end do
     end do
   end do
+
+  !$omp parallel do collapse(2)
+    do i = 1, 3
+      !ERROR: Loop control is not present in the DO LOOP
+      do
+      end do
+    end do
 end program omp_doCollapse
 

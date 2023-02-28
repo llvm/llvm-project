@@ -65,8 +65,8 @@ public:
     DCHECK(isAligned(reinterpret_cast<uptr>(this), alignof(ThisT)));
     DCHECK_EQ(PrimaryBase, 0U);
     // Reserve the space required for the Primary.
-    PrimaryBase = reinterpret_cast<uptr>(
-        map(nullptr, PrimarySize, nullptr, MAP_NOACCESS, &Data));
+    PrimaryBase = reinterpret_cast<uptr>(map(
+        nullptr, PrimarySize, "scudo:primary_reserve", MAP_NOACCESS, &Data));
 
     u32 Seed;
     const u64 Time = getMonotonicTime();

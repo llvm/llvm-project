@@ -446,7 +446,7 @@ define i32 @test_v8i32_v8i8(<8 x i32> %a0) {
 ; AVX1-SLOW-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-SLOW-NEXT:    vorps %xmm1, %xmm0, %xmm0
-; AVX1-SLOW-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX1-SLOW-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX1-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX1-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0

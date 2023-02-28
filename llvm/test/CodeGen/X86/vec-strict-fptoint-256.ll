@@ -607,7 +607,7 @@ define <4 x i64> @strict_vector_fptosi_v4f32_to_v4i64(<4 x float> %a) #0 {
 ;
 ; AVX-64-LABEL: strict_vector_fptosi_v4f32_to_v4i64:
 ; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; AVX-64-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[3,3,3,3]
 ; AVX-64-NEXT:    vcvttss2si %xmm1, %rax
 ; AVX-64-NEXT:    vmovq %rax, %xmm1
 ; AVX-64-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
@@ -661,7 +661,7 @@ define <4 x i64> @strict_vector_fptosi_v4f32_to_v4i64(<4 x float> %a) #0 {
 ;
 ; AVX512F-64-LABEL: strict_vector_fptosi_v4f32_to_v4i64:
 ; AVX512F-64:       # %bb.0:
-; AVX512F-64-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; AVX512F-64-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[3,3,3,3]
 ; AVX512F-64-NEXT:    vcvttss2si %xmm1, %rax
 ; AVX512F-64-NEXT:    vmovq %rax, %xmm1
 ; AVX512F-64-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
@@ -715,7 +715,7 @@ define <4 x i64> @strict_vector_fptosi_v4f32_to_v4i64(<4 x float> %a) #0 {
 ;
 ; AVX512VL-64-LABEL: strict_vector_fptosi_v4f32_to_v4i64:
 ; AVX512VL-64:       # %bb.0:
-; AVX512VL-64-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; AVX512VL-64-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[3,3,3,3]
 ; AVX512VL-64-NEXT:    vcvttss2si %xmm1, %rax
 ; AVX512VL-64-NEXT:    vmovq %rax, %xmm1
 ; AVX512VL-64-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
@@ -774,7 +774,7 @@ define <4 x i64> @strict_vector_fptoui_v4f32_to_v4i64(<4 x float> %a) #0 {
 ; AVX-32-NEXT:    movzbl %al, %eax
 ; AVX-32-NEXT:    shll $31, %eax
 ; AVX-32-NEXT:    xorl {{[0-9]+}}(%esp), %eax
-; AVX-32-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[3,3,3,3]
+; AVX-32-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[3,3,3,3]
 ; AVX-32-NEXT:    vcomiss %xmm1, %xmm2
 ; AVX-32-NEXT:    vmovaps %xmm1, %xmm3
 ; AVX-32-NEXT:    jae .LBB3_4
@@ -836,7 +836,7 @@ define <4 x i64> @strict_vector_fptoui_v4f32_to_v4i64(<4 x float> %a) #0 {
 ;
 ; AVX-64-LABEL: strict_vector_fptoui_v4f32_to_v4i64:
 ; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    vpermilps {{.*#+}} xmm3 = xmm0[3,3,3,3]
+; AVX-64-NEXT:    vshufps {{.*#+}} xmm3 = xmm0[3,3,3,3]
 ; AVX-64-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; AVX-64-NEXT:    vcomiss %xmm1, %xmm3
 ; AVX-64-NEXT:    vxorps %xmm2, %xmm2, %xmm2
@@ -908,7 +908,7 @@ define <4 x i64> @strict_vector_fptoui_v4f32_to_v4i64(<4 x float> %a) #0 {
 ; AVX512F-32-NEXT:    andl $-8, %esp
 ; AVX512F-32-NEXT:    subl $40, %esp
 ; AVX512F-32-NEXT:    .cfi_offset %ebx, -12
-; AVX512F-32-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[3,3,3,3]
+; AVX512F-32-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[3,3,3,3]
 ; AVX512F-32-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; AVX512F-32-NEXT:    xorl %eax, %eax
 ; AVX512F-32-NEXT:    vcomiss %xmm1, %xmm2
@@ -974,7 +974,7 @@ define <4 x i64> @strict_vector_fptoui_v4f32_to_v4i64(<4 x float> %a) #0 {
 ;
 ; AVX512F-64-LABEL: strict_vector_fptoui_v4f32_to_v4i64:
 ; AVX512F-64:       # %bb.0:
-; AVX512F-64-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; AVX512F-64-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[3,3,3,3]
 ; AVX512F-64-NEXT:    vcvttss2usi %xmm1, %rax
 ; AVX512F-64-NEXT:    vmovq %rax, %xmm1
 ; AVX512F-64-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
@@ -1001,7 +1001,7 @@ define <4 x i64> @strict_vector_fptoui_v4f32_to_v4i64(<4 x float> %a) #0 {
 ; AVX512VL-32-NEXT:    andl $-8, %esp
 ; AVX512VL-32-NEXT:    subl $40, %esp
 ; AVX512VL-32-NEXT:    .cfi_offset %ebx, -12
-; AVX512VL-32-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[3,3,3,3]
+; AVX512VL-32-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[3,3,3,3]
 ; AVX512VL-32-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; AVX512VL-32-NEXT:    xorl %eax, %eax
 ; AVX512VL-32-NEXT:    vcomiss %xmm1, %xmm2
@@ -1067,7 +1067,7 @@ define <4 x i64> @strict_vector_fptoui_v4f32_to_v4i64(<4 x float> %a) #0 {
 ;
 ; AVX512VL-64-LABEL: strict_vector_fptoui_v4f32_to_v4i64:
 ; AVX512VL-64:       # %bb.0:
-; AVX512VL-64-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; AVX512VL-64-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[3,3,3,3]
 ; AVX512VL-64-NEXT:    vcvttss2usi %xmm1, %rax
 ; AVX512VL-64-NEXT:    vmovq %rax, %xmm1
 ; AVX512VL-64-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
