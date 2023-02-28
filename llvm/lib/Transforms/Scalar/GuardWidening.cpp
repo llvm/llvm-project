@@ -552,6 +552,8 @@ bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
           if (InsertPt) {
             ConstantInt *NewRHS =
                 ConstantInt::get(Cond0->getContext(), NewRHSAP);
+            assert(isAvailableAt(LHS, InsertPt) && "must be");
+            makeAvailableAt(LHS, InsertPt);
             Result = new ICmpInst(InsertPt, Pred, LHS, NewRHS, "wide.chk");
           }
           return true;
