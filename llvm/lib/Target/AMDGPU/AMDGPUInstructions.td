@@ -135,10 +135,6 @@ def s16ImmTarget : AsmOperandClass {
 
 let OperandType = "OPERAND_IMMEDIATE" in {
 
-def u32imm : Operand<i32> {
-  let PrintMethod = "printU32ImmOperand";
-}
-
 def u16imm : Operand<i16> {
   let PrintMethod = "printU16ImmOperand";
   let ParserMatchClass = u16ImmTarget;
