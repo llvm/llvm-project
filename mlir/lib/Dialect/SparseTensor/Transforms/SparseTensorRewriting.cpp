@@ -1013,92 +1013,21 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
     Location loc = op.getLoc();
     const auto dstTp = getSparseTensorType(op.getResult());
     const auto encDst = dstTp.getEncoding();
-    if (!dstTp.hasEncoding())
+    if (!dstTp.hasEncoding() || getCOOStart(encDst) == 0)
       return failure();
 
-    // Create a sparse tensor reader.
-    Value fileName = op.getSource();
-    Type opaqueTp = getOpaquePointerType(rewriter);
-    Value reader = createFuncCall(rewriter, loc, "createSparseTensorReader",
-                                  {opaqueTp}, {fileName}, EmitCInterface::Off)
-                       .getResult(0);
-
-    // Allocate a temporary buffer for storing dimension sizes and indices.
-    Type indexTp = rewriter.getIndexType();
-    const Dimension dimRank = dstTp.getDimRank();
-    Value dimSizes = genAlloca(rewriter, loc, dimRank, indexTp);
-
-    // If the result tensor has dynamic dimensions, get the dynamic sizes from
-    // the sparse tensor reader.
-    SmallVector<Value> dynSizesArray;
-    if (dstTp.hasDynamicDimShape()) {
-      createFuncCall(rewriter, loc, "copySparseTensorReaderDimSizes", {},
-                     {reader, dimSizes}, EmitCInterface::On)
-          .getResult(0);
-      ArrayRef<int64_t> dstShape = dstTp.getRankedTensorType().getShape();
-      for (auto &d : llvm::enumerate(dstShape)) {
-        if (d.value() == ShapedType::kDynamic) {
-          dynSizesArray.push_back(rewriter.create<memref::LoadOp>(
-              loc, dimSizes, constantIndex(rewriter, loc, d.index())));
-        }
-      }
-    }
-
     // Implement the NewOp as follows:
-    //   %tmp = bufferization.alloc_tensor : an unordered COO with identity
-    //                                       storage ordering
-    //   for i = 0 to nnz
-    //     get the next element from the input file
-    //     insert the element to %tmp
-    //   %t = sparse_tensor.ConvertOp %tmp
-    Value c0 = constantIndex(rewriter, loc, 0);
-    Value c1 = constantIndex(rewriter, loc, 1);
-    Value nnz = createFuncCall(rewriter, loc, "getSparseTensorReaderNNZ",
-                               {indexTp}, {reader}, EmitCInterface::Off)
-                    .getResult(0);
+    //   %orderedCoo = sparse_tensor.new %filename
+    //   %t = sparse_tensor.ConvertOp %orderedCoo
     RankedTensorType cooTp =
-        getUnorderedCOOFromTypeWithOrdering(dstTp, dstTp.getDimToLvlMap());
-    Value cooBuffer =
-        rewriter
-            .create<AllocTensorOp>(loc, cooTp, dynSizesArray, Value(),
-                                   /*sizeHint=*/nnz, Attribute())
-            .getResult();
+        getCOOFromTypeWithOrdering(dstTp, encDst.getDimOrdering(), true);
+    Value cooTensor = rewriter.create<NewOp>(loc, cooTp, op.getSource());
+    Value convert = rewriter.replaceOpWithNewOp<ConvertOp>(
+        op, dstTp.getRankedTensorType(), cooTensor);
 
-    Type eltTp = dstTp.getElementType();
-    Value value = genAllocaScalar(rewriter, loc, eltTp);
-    scf::ForOp forOp = rewriter.create<scf::ForOp>(loc, c0, nnz, c1,
-                                                   ArrayRef<Value>(cooBuffer));
-    rewriter.setInsertionPointToStart(forOp.getBody());
-
-    SmallString<29> getNextFuncName{"getSparseTensorReaderNext",
-                                    primaryTypeFunctionSuffix(eltTp)};
-    Value indices = dimSizes; // Reuse the indices memref to store indices.
-    createFuncCall(rewriter, loc, getNextFuncName, {}, {reader, indices, value},
-                   EmitCInterface::On);
-    SmallVector<Value> indicesArray(dimRank);
-    for (Dimension d = 0; d < dimRank; d++) {
-      // FIXME: `toStoredDim` is deprecated
-      indicesArray[toStoredDim(encDst, d)] = rewriter.create<memref::LoadOp>(
-          loc, indices, constantIndex(rewriter, loc, d));
-    }
-    Value v = rewriter.create<memref::LoadOp>(loc, value);
-    Value t = rewriter.create<InsertOp>(loc, v, forOp.getRegionIterArg(0),
-                                        indicesArray);
-    rewriter.create<scf::YieldOp>(loc, ArrayRef<Value>(t));
-    rewriter.setInsertionPointAfter(forOp);
-    // Link SSA chain.
-    cooBuffer = forOp.getResult(0);
-
-    // Release the sparse tensor reader.
-    createFuncCall(rewriter, loc, "delSparseTensorReader", {}, {reader},
-                   EmitCInterface::Off);
-    cooBuffer = rewriter.create<LoadOp>(loc, cooBuffer, true);
-    Value newOp = rewriter.replaceOpWithNewOp<ConvertOp>(
-        op, dstTp.getRankedTensorType(), cooBuffer);
-
-    // Release the unordered COO tensor buffer.
-    rewriter.setInsertionPointAfterValue(newOp);
-    rewriter.create<DeallocTensorOp>(loc, cooBuffer);
+    // Release the ordered COO tensor.
+    rewriter.setInsertionPointAfterValue(convert);
+    rewriter.create<DeallocTensorOp>(loc, cooTensor);
 
     return success();
   }
