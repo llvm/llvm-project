@@ -371,18 +371,11 @@ define i32 @both_i16i32(<8 x i16> %x) {
 }
 
 define i32 @redundant_i16i32(<8 x i16> %x) {
-; CHECK-ISEL-LABEL: redundant_i16i32:
-; CHECK-ISEL:       // %bb.0:
-; CHECK-ISEL-NEXT:    umov w8, v0.h[2]
-; CHECK-ISEL-NEXT:    smov w9, v0.h[2]
-; CHECK-ISEL-NEXT:    eor w0, w9, w8, lsl #16
-; CHECK-ISEL-NEXT:    ret
-;
-; CHECK-GLOBAL-LABEL: redundant_i16i32:
-; CHECK-GLOBAL:       // %bb.0:
-; CHECK-GLOBAL-NEXT:    smov w8, v0.h[2]
-; CHECK-GLOBAL-NEXT:    eor w0, w8, w8, lsl #16
-; CHECK-GLOBAL-NEXT:    ret
+; CHECK-LABEL: redundant_i16i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smov w8, v0.h[2]
+; CHECK-NEXT:    eor w0, w8, w8, lsl #16
+; CHECK-NEXT:    ret
   %e = extractelement <8 x i16> %x, i64 2
   %s = sext i16 %e to i32
   %t = shl i32 %s, 16
@@ -406,20 +399,12 @@ define i32 @both_i8i32(<8 x i8> %x) {
 }
 
 define i32 @redundant_i8i32(<8 x i8> %x) {
-; CHECK-ISEL-LABEL: redundant_i8i32:
-; CHECK-ISEL:       // %bb.0:
-; CHECK-ISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-ISEL-NEXT:    umov w8, v0.b[2]
-; CHECK-ISEL-NEXT:    smov w9, v0.b[2]
-; CHECK-ISEL-NEXT:    eor w0, w9, w8, lsl #24
-; CHECK-ISEL-NEXT:    ret
-;
-; CHECK-GLOBAL-LABEL: redundant_i8i32:
-; CHECK-GLOBAL:       // %bb.0:
-; CHECK-GLOBAL-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GLOBAL-NEXT:    smov w8, v0.b[2]
-; CHECK-GLOBAL-NEXT:    eor w0, w8, w8, lsl #24
-; CHECK-GLOBAL-NEXT:    ret
+; CHECK-LABEL: redundant_i8i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    smov w8, v0.b[2]
+; CHECK-NEXT:    eor w0, w8, w8, lsl #24
+; CHECK-NEXT:    ret
   %e = extractelement <8 x i8> %x, i64 2
   %s = sext i8 %e to i32
   %t = shl i32 %s, 24
@@ -469,18 +454,11 @@ define i64 @both_i16i64(<8 x i16> %x) {
 }
 
 define i64 @redundant_i16i64(<8 x i16> %x) {
-; CHECK-ISEL-LABEL: redundant_i16i64:
-; CHECK-ISEL:       // %bb.0:
-; CHECK-ISEL-NEXT:    umov w8, v0.h[2]
-; CHECK-ISEL-NEXT:    smov x9, v0.h[2]
-; CHECK-ISEL-NEXT:    eor x0, x9, x8, lsl #48
-; CHECK-ISEL-NEXT:    ret
-;
-; CHECK-GLOBAL-LABEL: redundant_i16i64:
-; CHECK-GLOBAL:       // %bb.0:
-; CHECK-GLOBAL-NEXT:    smov x8, v0.h[2]
-; CHECK-GLOBAL-NEXT:    eor x0, x8, x8, lsl #48
-; CHECK-GLOBAL-NEXT:    ret
+; CHECK-LABEL: redundant_i16i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smov x8, v0.h[2]
+; CHECK-NEXT:    eor x0, x8, x8, lsl #48
+; CHECK-NEXT:    ret
   %e = extractelement <8 x i16> %x, i64 2
   %s = sext i16 %e to i64
   %t = shl i64 %s, 48
@@ -504,20 +482,12 @@ define i64 @both_i8i64(<8 x i8> %x) {
 }
 
 define i64 @redundant_i8i64(<8 x i8> %x) {
-; CHECK-ISEL-LABEL: redundant_i8i64:
-; CHECK-ISEL:       // %bb.0:
-; CHECK-ISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-ISEL-NEXT:    umov w8, v0.b[2]
-; CHECK-ISEL-NEXT:    smov x9, v0.b[2]
-; CHECK-ISEL-NEXT:    eor x0, x9, x8, lsl #56
-; CHECK-ISEL-NEXT:    ret
-;
-; CHECK-GLOBAL-LABEL: redundant_i8i64:
-; CHECK-GLOBAL:       // %bb.0:
-; CHECK-GLOBAL-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GLOBAL-NEXT:    smov x8, v0.b[2]
-; CHECK-GLOBAL-NEXT:    eor x0, x8, x8, lsl #56
-; CHECK-GLOBAL-NEXT:    ret
+; CHECK-LABEL: redundant_i8i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    smov x8, v0.b[2]
+; CHECK-NEXT:    eor x0, x8, x8, lsl #56
+; CHECK-NEXT:    ret
   %e = extractelement <8 x i8> %x, i64 2
   %s = sext i8 %e to i64
   %t = shl i64 %s, 56
