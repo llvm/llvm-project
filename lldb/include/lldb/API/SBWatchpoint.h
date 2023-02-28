@@ -10,6 +10,7 @@
 #define LLDB_API_SBWATCHPOINT_H
 
 #include "lldb/API/SBDefines.h"
+#include "lldb/API/SBType.h"
 
 namespace lldb {
 
@@ -76,6 +77,16 @@ public:
   GetWatchpointEventTypeFromEvent(const lldb::SBEvent &event);
 
   static lldb::SBWatchpoint GetWatchpointFromEvent(const lldb::SBEvent &event);
+
+  lldb::SBType GetType();
+
+  WatchpointValueKind GetWatchValueKind();
+
+  const char *GetWatchSpec();
+
+  bool IsWatchingReads();
+
+  bool IsWatchingWrites();
 
 private:
   friend class SBTarget;
