@@ -46,6 +46,8 @@ void DeallocateMemory(gwp_asan::GuardedPoolAllocator &GPA, void *Ptr);
 void DeallocateMemory2(gwp_asan::GuardedPoolAllocator &GPA, void *Ptr);
 void TouchMemory(void *Ptr);
 
+void CheckOnlyOneGwpAsanCrash(const std::string &OutputBuffer);
+
 class DefaultGuardedPoolAllocator : public Test {
 public:
   void SetUp() override {
