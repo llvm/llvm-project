@@ -587,6 +587,7 @@ bool AArch64MIPeepholeOpt::visitINSviGPR(MachineInstr &MI, unsigned Opc) {
           .addImm(0);
 
   LLVM_DEBUG(dbgs() << MI << "  replace by:\n: " << *INSvilaneMI << "\n");
+  (void)INSvilaneMI;
   MI.eraseFromParent();
   return true;
 }
