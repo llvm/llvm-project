@@ -862,7 +862,7 @@ struct TargetTypeInfo {
 static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   LLVMContext &C = Ty->getContext();
   StringRef Name = Ty->getName();
-  if (Name.startswith("spirv.")) {
+  if (Name.startswith("spirv.") || Name.startswith("opencl.")) {
     return TargetTypeInfo(Type::getInt8PtrTy(C, 0), TargetExtType::HasZeroInit,
                           TargetExtType::CanBeGlobal);
   }
