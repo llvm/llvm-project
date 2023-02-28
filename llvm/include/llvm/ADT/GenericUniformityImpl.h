@@ -1265,6 +1265,11 @@ bool GenericUniformityInfo<ContextT>::isDivergent(ConstValueRefT V) const {
 }
 
 template <typename ContextT>
+bool GenericUniformityInfo<ContextT>::isDivergent(const InstructionT *I) const {
+  return DA->isDivergent(*I);
+}
+
+template <typename ContextT>
 bool GenericUniformityInfo<ContextT>::hasDivergentTerminator(const BlockT &B) {
   return DA->hasDivergentTerminator(B);
 }
