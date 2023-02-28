@@ -1140,6 +1140,13 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
   written = __llvm_libc::sprintf(buff, "%.5f", 1.008e3);
   ASSERT_STREQ_LEN(written, buff, "1008.00000");
 
+  // Found with the help of Fred Tydeman's tbin2dec test.
+  written = __llvm_libc::sprintf(buff, "%.1f", 0x1.1000000000006p+3);
+  ASSERT_STREQ_LEN(written, buff, "8.5");
+
+  written = __llvm_libc::sprintf(buff, "%.0f", 0x1.1000000000006p+3);
+  ASSERT_STREQ_LEN(written, buff, "9");
+
   // Subnormal Precision Tests
 
   written = __llvm_libc::sprintf(buff, "%.310f", 0x1.0p-1022);
