@@ -39,6 +39,7 @@ Getting Started with libc++
    BuildingLibcxx
    TestingLibcxx
    Contributing
+   Modules
    ReleaseProcedure
    Status/Cxx14
    Status/Cxx17

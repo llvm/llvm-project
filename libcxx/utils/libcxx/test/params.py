@@ -24,6 +24,7 @@ _warningFlags = [
     "-Wno-noexcept-type",
     "-Wno-aligned-allocation-unavailable",
     "-Wno-atomic-alignment",
+    "-Wno-reserved-module-identifier",
     # GCC warns about places where we might want to add sized allocation/deallocation
     # functions, but we know better what we're doing/testing in the test suite.
     "-Wno-sized-deallocation",
@@ -73,6 +74,15 @@ def getStdFlag(cfg, std):
     return None
 
 
+_allModules = ["none", "clang", "std"]
+
+
+def getModuleFlag(cfg, enable_modules):
+    if enable_modules in _allModules:
+        return enable_modules
+    return None
+
+
 DEFAULT_PARAMETERS = [
     Parameter(
         name="target_triple",
@@ -104,18 +114,32 @@ DEFAULT_PARAMETERS = [
     ),
     Parameter(
         name="enable_modules",
-        choices=[True, False],
-        type=bool,
-        default=False,
-        help="Whether to build the test suite with Clang modules enabled.",
-        actions=lambda modules: [
+        choices=_allModules,
+        type=str,
+        help="Whether to build the test suite with modules enabled. Select "
+        "`clang` for Clang modules and `std` for C++23 std module",
+        default=lambda cfg: next(s for s in _allModules if getModuleFlag(cfg, s)),
+        actions=lambda enable_modules: [
             AddFeature("modules-build"),
             AddCompileFlag("-fmodules"),
             AddCompileFlag(
                 "-fcxx-modules"
             ),  # AppleClang disregards -fmodules entirely when compiling C++. This enables modules for C++.
         ]
-        if modules
+        if enable_modules == "clang"
+        else [
+            AddFeature("use_module_std"),
+            AddCompileFlag("-DTEST_USE_MODULE"),
+            AddCompileFlag("-DTEST_USE_MODULE_STD"),
+            AddCompileFlag(
+                lambda cfg: "-fprebuilt-module-path="
+                + os.path.join(
+                    cfg.test_exec_root, "__config_module__/CMakeFiles/std.dir"
+                )
+            ),
+            BuildStdModule(),
+        ]
+        if enable_modules == "std"
         else [],
     ),
     Parameter(
