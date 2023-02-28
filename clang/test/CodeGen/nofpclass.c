@@ -1396,40 +1396,40 @@ __m256d call_m256d(__m256d x) {
 }
 
 // CFINITEONLY: Function Attrs: noinline nounwind optnone
-// CFINITEONLY-LABEL: define dso_local <25 x double> @call_matrix
-// CFINITEONLY-SAME: (<25 x double> noundef [[X:%.*]]) #[[ATTR6:[0-9]+]] {
+// CFINITEONLY-LABEL: define dso_local nofpclass(nan inf) <25 x double> @call_matrix
+// CFINITEONLY-SAME: (<25 x double> noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR6:[0-9]+]] {
 // CFINITEONLY-NEXT:  entry:
 // CFINITEONLY-NEXT:    [[X_ADDR:%.*]] = alloca [25 x double], align 8
 // CFINITEONLY-NEXT:    store <25 x double> [[X]], ptr [[X_ADDR]], align 8
 // CFINITEONLY-NEXT:    [[TMP0:%.*]] = load <25 x double>, ptr [[X_ADDR]], align 8
-// CFINITEONLY-NEXT:    [[CALL:%.*]] = call nnan ninf <25 x double> @extern_matrix(<25 x double> noundef [[TMP0]])
+// CFINITEONLY-NEXT:    [[CALL:%.*]] = call nnan ninf nofpclass(nan inf) <25 x double> @extern_matrix(<25 x double> noundef nofpclass(nan inf) [[TMP0]])
 // CFINITEONLY-NEXT:    ret <25 x double> [[CALL]]
 //
 // CLFINITEONLY: Function Attrs: convergent norecurse nounwind
-// CLFINITEONLY-LABEL: define dso_local <25 x double> @call_matrix
-// CLFINITEONLY-SAME: (<25 x double> noundef [[X:%.*]]) local_unnamed_addr #[[ATTR9:[0-9]+]] {
+// CLFINITEONLY-LABEL: define dso_local nofpclass(nan inf) <25 x double> @call_matrix
+// CLFINITEONLY-SAME: (<25 x double> noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR9:[0-9]+]] {
 // CLFINITEONLY-NEXT:  entry:
-// CLFINITEONLY-NEXT:    [[CALL:%.*]] = tail call nnan ninf <25 x double> @extern_matrix(<25 x double> noundef [[X]]) #[[ATTR10]]
+// CLFINITEONLY-NEXT:    [[CALL:%.*]] = tail call nnan ninf nofpclass(nan inf) <25 x double> @extern_matrix(<25 x double> noundef nofpclass(nan inf) [[X]]) #[[ATTR10]]
 // CLFINITEONLY-NEXT:    ret <25 x double> [[CALL]]
 //
 // NONANS: Function Attrs: noinline nounwind optnone
-// NONANS-LABEL: define dso_local <25 x double> @call_matrix
-// NONANS-SAME: (<25 x double> noundef [[X:%.*]]) #[[ATTR6:[0-9]+]] {
+// NONANS-LABEL: define dso_local nofpclass(nan) <25 x double> @call_matrix
+// NONANS-SAME: (<25 x double> noundef nofpclass(nan) [[X:%.*]]) #[[ATTR6:[0-9]+]] {
 // NONANS-NEXT:  entry:
 // NONANS-NEXT:    [[X_ADDR:%.*]] = alloca [25 x double], align 8
 // NONANS-NEXT:    store <25 x double> [[X]], ptr [[X_ADDR]], align 8
 // NONANS-NEXT:    [[TMP0:%.*]] = load <25 x double>, ptr [[X_ADDR]], align 8
-// NONANS-NEXT:    [[CALL:%.*]] = call nnan <25 x double> @extern_matrix(<25 x double> noundef [[TMP0]])
+// NONANS-NEXT:    [[CALL:%.*]] = call nnan nofpclass(nan) <25 x double> @extern_matrix(<25 x double> noundef nofpclass(nan) [[TMP0]])
 // NONANS-NEXT:    ret <25 x double> [[CALL]]
 //
 // NOINFS: Function Attrs: noinline nounwind optnone
-// NOINFS-LABEL: define dso_local <25 x double> @call_matrix
-// NOINFS-SAME: (<25 x double> noundef [[X:%.*]]) #[[ATTR6:[0-9]+]] {
+// NOINFS-LABEL: define dso_local nofpclass(inf) <25 x double> @call_matrix
+// NOINFS-SAME: (<25 x double> noundef nofpclass(inf) [[X:%.*]]) #[[ATTR6:[0-9]+]] {
 // NOINFS-NEXT:  entry:
 // NOINFS-NEXT:    [[X_ADDR:%.*]] = alloca [25 x double], align 8
 // NOINFS-NEXT:    store <25 x double> [[X]], ptr [[X_ADDR]], align 8
 // NOINFS-NEXT:    [[TMP0:%.*]] = load <25 x double>, ptr [[X_ADDR]], align 8
-// NOINFS-NEXT:    [[CALL:%.*]] = call ninf <25 x double> @extern_matrix(<25 x double> noundef [[TMP0]])
+// NOINFS-NEXT:    [[CALL:%.*]] = call ninf nofpclass(inf) <25 x double> @extern_matrix(<25 x double> noundef nofpclass(inf) [[TMP0]])
 // NOINFS-NEXT:    ret <25 x double> [[CALL]]
 //
 dx5x5_t call_matrix(dx5x5_t x) {
