@@ -12,6 +12,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include <array>
 #include <climits>
 #include <list>
 #include <vector>
@@ -394,6 +395,10 @@ void swap(some_struct &lhs, some_struct &rhs) {
   lhs.swap_val = "lhs";
   rhs.swap_val = "rhs";
 }
+
+struct requires_move {};
+int *begin(requires_move &&) { return nullptr; }
+int *end(requires_move &&) { return nullptr; }
 } // namespace some_namespace
 
 TEST(STLExtrasTest, ADLTest) {
@@ -409,7 +414,25 @@ TEST(STLExtrasTest, ADLTest) {
 
   int count = 0;
   llvm::for_each(s, [&count](int) { ++count; });
-  EXPECT_EQ(5, count);
+  EXPECT_EQ(count, 5);
+}
+
+TEST(STLExtrasTest, ADLTestTemporaryRange) {
+  EXPECT_EQ(adl_begin(some_namespace::requires_move{}), nullptr);
+  EXPECT_EQ(adl_end(some_namespace::requires_move{}), nullptr);
+}
+
+TEST(STLExtrasTest, ADLTestConstexpr) {
+  // `std::begin`/`std::end` are marked as `constexpr`; check that
+  // `adl_begin`/`adl_end` also work in constant-evaluated contexts.
+  static constexpr int c_arr[] = {7, 8, 9};
+  static_assert(adl_begin(c_arr) == c_arr);
+  static_assert(adl_end(c_arr) == c_arr + 3);
+
+  static constexpr std::array<int, 2> std_arr = {1, 2};
+  static_assert(adl_begin(std_arr) == std_arr.begin());
+  static_assert(adl_end(std_arr) == std_arr.end());
+  SUCCEED();
 }
 
 TEST(STLExtrasTest, DropBeginTest) {
