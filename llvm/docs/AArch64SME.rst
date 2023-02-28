@@ -440,7 +440,38 @@ Committing a lazy-save
 Exception handling and ZA
 -------------------------
 
-4. References
+4. Types
+========
+
+AArch64 Predicate-as-Counter Type
+---------------------------------
+
+:Overview:
+
+The predicate-as-counter type represents the type of a predicate-as-counter
+value held in a AArch64 SVE predicate register. Such a value contains
+information about the number of active lanes, the element width and a bit that
+tells whether the generated mask should be inverted. ACLE intrinsics should be
+used to move the predicate-as-counter value to/from a predicate vector.
+
+There are certain limitations on the type:
+
+* The type can be used for function parameters and return values.
+
+* The supported LLVM operations on this type are limited to ``load``, ``store``,
+  ``phi``, ``select`` and ``alloca`` instructions.
+
+The predicate-as-counter type is a scalable type.
+
+:Syntax:
+
+::
+
+      target("aarch64.svcount")
+
+
+
+5. References
 =============
 
     .. _aarch64_sme_acle:
