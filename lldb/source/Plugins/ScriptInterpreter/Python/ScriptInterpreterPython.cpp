@@ -521,7 +521,8 @@ void ScriptInterpreterPythonImpl::IOHandlerInputComplete(IOHandler &io_handler,
       StructuredData::ObjectSP empty_args_sp;
       if (GenerateBreakpointCommandCallbackData(data_up->user_source,
                                                 data_up->script_source,
-                                                false)
+                                                /*has_extra_args=*/false,
+                                                /*is_callback=*/false)
               .Success()) {
         auto baton_sp = std::make_shared<BreakpointOptions::CommandBaton>(
             std::move(data_up));
@@ -544,7 +545,8 @@ void ScriptInterpreterPythonImpl::IOHandlerInputComplete(IOHandler &io_handler,
     data_up->user_source.SplitIntoLines(data);
 
     if (GenerateWatchpointCommandCallbackData(data_up->user_source,
-                                              data_up->script_source)) {
+                                              data_up->script_source,
+                                              /*is_callback=*/false)) {
       auto baton_sp =
           std::make_shared<WatchpointOptions::CommandBaton>(std::move(data_up));
       wp_options->SetCallback(
@@ -1158,8 +1160,7 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallbackFunction(
     StructuredData::ObjectSP extra_args_sp) {
   Status error;
   // For now just cons up a oneliner that calls the provided function.
-  std::string oneliner("return ");
-  oneliner += function_name;
+  std::string function_signature = function_name;
 
   llvm::Expected<unsigned> maybe_args =
       GetMaxPositionalArgumentsForCallable(function_name);
@@ -1174,7 +1175,7 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallbackFunction(
   bool uses_extra_args = false;
   if (max_args >= 4) {
     uses_extra_args = true;
-    oneliner += "(frame, bp_loc, extra_args, internal_dict)";
+    function_signature += "(frame, bp_loc, extra_args, internal_dict)";
   } else if (max_args >= 3) {
     if (extra_args_sp) {
       error.SetErrorString("cannot pass extra_args to a three argument callback"
@@ -1182,7 +1183,7 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallbackFunction(
       return error;
     }
     uses_extra_args = false;
-    oneliner += "(frame, bp_loc, internal_dict)";
+    function_signature += "(frame, bp_loc, internal_dict)";
   } else {
     error.SetErrorStringWithFormat("expected 3 or 4 argument "
                                    "function, %s can only take %zu",
@@ -1190,8 +1191,9 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallbackFunction(
     return error;
   }
 
-  SetBreakpointCommandCallback(bp_options, oneliner.c_str(), extra_args_sp,
-                               uses_extra_args);
+  SetBreakpointCommandCallback(bp_options, function_signature.c_str(),
+                               extra_args_sp, uses_extra_args,
+                               /*is_callback=*/true);
   return error;
 }
 
@@ -1201,7 +1203,8 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
   Status error;
   error = GenerateBreakpointCommandCallbackData(cmd_data_up->user_source,
                                                 cmd_data_up->script_source,
-                                                false);
+                                                /*has_extra_args=*/false,
+                                                /*is_callback=*/false);
   if (error.Fail()) {
     return error;
   }
@@ -1213,14 +1216,17 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
 }
 
 Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
-    BreakpointOptions &bp_options, const char *command_body_text) {
-  return SetBreakpointCommandCallback(bp_options, command_body_text, {},false);
+    BreakpointOptions &bp_options, const char *command_body_text,
+    const bool is_callback) {
+  return SetBreakpointCommandCallback(bp_options, command_body_text, {},
+                                      /*uses_extra_args=*/false, is_callback);
 }
 
 // Set a Python one-liner as the callback for the breakpoint.
 Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
     BreakpointOptions &bp_options, const char *command_body_text,
-    StructuredData::ObjectSP extra_args_sp, bool uses_extra_args) {
+    StructuredData::ObjectSP extra_args_sp, bool uses_extra_args,
+    const bool is_callback) {
   auto data_up = std::make_unique<CommandDataPython>(extra_args_sp);
   // Split the command_body_text into lines, and pass that to
   // GenerateBreakpointCommandCallbackData.  That will wrap the body in an
@@ -1228,9 +1234,9 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
   // That is what the callback will actually invoke.
 
   data_up->user_source.SplitIntoLines(command_body_text);
-  Status error = GenerateBreakpointCommandCallbackData(data_up->user_source,
-                                                       data_up->script_source,
-                                                       uses_extra_args);
+  Status error = GenerateBreakpointCommandCallbackData(
+      data_up->user_source, data_up->script_source, uses_extra_args,
+      is_callback);
   if (error.Success()) {
     auto baton_sp =
         std::make_shared<BreakpointOptions::CommandBaton>(std::move(data_up));
@@ -1243,7 +1249,8 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
 
 // Set a Python one-liner as the callback for the watchpoint.
 void ScriptInterpreterPythonImpl::SetWatchpointCommandCallback(
-    WatchpointOptions *wp_options, const char *oneliner) {
+    WatchpointOptions *wp_options, const char *user_input,
+    const bool is_callback) {
   auto data_up = std::make_unique<WatchpointOptions::CommandData>();
 
   // It's necessary to set both user_source and script_source to the oneliner.
@@ -1251,11 +1258,11 @@ void ScriptInterpreterPythonImpl::SetWatchpointCommandCallback(
   // command list) while the latter is used for Python to interpret during the
   // actual callback.
 
-  data_up->user_source.AppendString(oneliner);
-  data_up->script_source.assign(oneliner);
+  data_up->user_source.AppendString(user_input);
+  data_up->script_source.assign(user_input);
 
-  if (GenerateWatchpointCommandCallbackData(data_up->user_source,
-                                            data_up->script_source)) {
+  if (GenerateWatchpointCommandCallbackData(
+          data_up->user_source, data_up->script_source, is_callback)) {
     auto baton_sp =
         std::make_shared<WatchpointOptions::CommandBaton>(std::move(data_up));
     wp_options->SetCallback(
@@ -1275,7 +1282,8 @@ Status ScriptInterpreterPythonImpl::ExportFunctionDefinitionToInterpreter(
 }
 
 Status ScriptInterpreterPythonImpl::GenerateFunction(const char *signature,
-                                                     const StringList &input) {
+                                                     const StringList &input,
+                                                     const bool is_callback) {
   Status error;
   int num_lines = input.GetSize();
   if (num_lines == 0) {
@@ -1292,40 +1300,61 @@ Status ScriptInterpreterPythonImpl::GenerateFunction(const char *signature,
   StringList auto_generated_function;
   auto_generated_function.AppendString(signature);
   auto_generated_function.AppendString(
-      "     global_dict = globals()"); // Grab the global dictionary
+      "    global_dict = globals()"); // Grab the global dictionary
   auto_generated_function.AppendString(
-      "     new_keys = internal_dict.keys()"); // Make a list of keys in the
-                                               // session dict
+      "    new_keys = internal_dict.keys()"); // Make a list of keys in the
+                                              // session dict
   auto_generated_function.AppendString(
-      "     old_keys = global_dict.keys()"); // Save list of keys in global dict
+      "    old_keys = global_dict.keys()"); // Save list of keys in global dict
   auto_generated_function.AppendString(
-      "     global_dict.update (internal_dict)"); // Add the session dictionary
-                                                  // to the
-  // global dictionary.
+      "    global_dict.update(internal_dict)"); // Add the session dictionary
+                                                // to the global dictionary.
 
-  // Wrap everything up inside the function, increasing the indentation.
-
-  auto_generated_function.AppendString("     if True:");
-  for (int i = 0; i < num_lines; ++i) {
-    sstr.Clear();
-    sstr.Printf("       %s", input.GetStringAtIndex(i));
-    auto_generated_function.AppendString(sstr.GetData());
+  if (is_callback) {
+    // If the user input is a callback to a python function, make sure the input
+    // is only 1 line, otherwise appending the user input would break the
+    // generated wrapped function
+    if (num_lines == 1) {
+      sstr.Clear();
+      sstr.Printf("    __return_val = %s", input.GetStringAtIndex(0));
+      auto_generated_function.AppendString(sstr.GetData());
+    } else {
+      return Status("ScriptInterpreterPythonImpl::GenerateFunction(is_callback="
+                    "true) = ERROR: python function is multiline.");
+    }
+  } else {
+    auto_generated_function.AppendString(
+        "    __return_val = None"); // Initialize user callback return value.
+    auto_generated_function.AppendString(
+        "    def __user_code():"); // Create a nested function that will wrap
+                                   // the user input. This is necessary to
+                                   // capture the return value of the user input
+                                   // and prevent early returns.
+    for (int i = 0; i < num_lines; ++i) {
+      sstr.Clear();
+      sstr.Printf("      %s", input.GetStringAtIndex(i));
+      auto_generated_function.AppendString(sstr.GetData());
+    }
+    auto_generated_function.AppendString(
+        "    __return_val = __user_code()"); //  Call user code and capture
+                                             //  return value
   }
   auto_generated_function.AppendString(
-      "     for key in new_keys:"); // Iterate over all the keys from session
-                                    // dict
+      "    for key in new_keys:"); // Iterate over all the keys from session
+                                   // dict
   auto_generated_function.AppendString(
-      "         internal_dict[key] = global_dict[key]"); // Update session dict
-                                                         // values
+      "        internal_dict[key] = global_dict[key]"); // Update session dict
+                                                        // values
   auto_generated_function.AppendString(
-      "         if key not in old_keys:"); // If key was not originally in
-                                           // global dict
+      "        if key not in old_keys:"); // If key was not originally in
+                                          // global dict
   auto_generated_function.AppendString(
-      "             del global_dict[key]"); //  ...then remove key/value from
-                                            //  global dict
+      "            del global_dict[key]"); //  ...then remove key/value from
+                                           //  global dict
+  auto_generated_function.AppendString(
+      "    return __return_val"); //  Return the user callback return value.
 
   // Verify that the results are valid Python.
-
   error = ExportFunctionDefinitionToInterpreter(auto_generated_function);
 
   return error;
@@ -1350,7 +1379,8 @@ bool ScriptInterpreterPythonImpl::GenerateTypeScriptFunction(
   sstr.Printf("def %s (valobj, internal_dict):",
               auto_generated_function_name.c_str());
 
-  if (!GenerateFunction(sstr.GetData(), user_input).Success())
+  if (!GenerateFunction(sstr.GetData(), user_input, /*is_callback=*/false)
+           .Success())
     return false;
 
   // Store the name of the auto-generated function to be called.
@@ -1374,7 +1404,8 @@ bool ScriptInterpreterPythonImpl::GenerateScriptAliasFunction(
   sstr.Printf("def %s (debugger, args, exe_ctx, result, internal_dict):",
               auto_generated_function_name.c_str());
 
-  if (!GenerateFunction(sstr.GetData(), user_input).Success())
+  if (!GenerateFunction(sstr.GetData(), user_input, /*is_callback=*/true)
+           .Success())
     return false;
 
   // Store the name of the auto-generated function to be called.
@@ -1971,8 +2002,8 @@ bool ScriptInterpreterPythonImpl::GenerateTypeSynthClass(
 }
 
 Status ScriptInterpreterPythonImpl::GenerateBreakpointCommandCallbackData(
-    StringList &user_input, std::string &output,
-    bool has_extra_args) {
+    StringList &user_input, std::string &output, bool has_extra_args,
+    const bool is_callback) {
   static uint32_t num_created_functions = 0;
   user_input.RemoveBlankLines();
   StreamString sstr;
@@ -1991,7 +2022,7 @@ Status ScriptInterpreterPythonImpl::GenerateBreakpointCommandCallbackData(
     sstr.Printf("def %s (frame, bp_loc, internal_dict):",
                 auto_generated_function_name.c_str());
 
-  error = GenerateFunction(sstr.GetData(), user_input);
+  error = GenerateFunction(sstr.GetData(), user_input, is_callback);
   if (!error.Success())
     return error;
 
@@ -2001,7 +2032,7 @@ Status ScriptInterpreterPythonImpl::GenerateBreakpointCommandCallbackData(
 }
 
 bool ScriptInterpreterPythonImpl::GenerateWatchpointCommandCallbackData(
-    StringList &user_input, std::string &output) {
+    StringList &user_input, std::string &output, const bool is_callback) {
   static uint32_t num_created_functions = 0;
   user_input.RemoveBlankLines();
   StreamString sstr;
@@ -2014,7 +2045,7 @@ bool ScriptInterpreterPythonImpl::GenerateWatchpointCommandCallbackData(
   sstr.Printf("def %s (frame, wp, internal_dict):",
               auto_generated_function_name.c_str());
 
-  if (!GenerateFunction(sstr.GetData(), user_input).Success())
+  if (!GenerateFunction(sstr.GetData(), user_input, is_callback).Success())
     return false;
 
   // Store the name of the auto-generated function to be called.
