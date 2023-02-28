@@ -943,7 +943,18 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 
     const auto *MD = cast<CXXMethodDecl>(D);
     if (MD->getParent()->isLambda() && MD->getOverloadedOperator() == OO_Call) {
-      llvm_unreachable("NYI");
+      // We're in a lambda; figure out the captures.
+      MD->getParent()->getCaptureFields(LambdaCaptureFields,
+                                        LambdaThisCaptureField);
+      if (LambdaThisCaptureField) {
+        llvm_unreachable("NYI");
+      }
+      for (auto *FD : MD->getParent()->fields()) {
+        if (FD->hasCapturedVLAType()) {
+          llvm_unreachable("NYI");
+        }
+      }
+
     } else {
       // Not in a lambda; just use 'this' from the method.
       // FIXME: Should we generate a new load for each use of 'this'? The fast
@@ -963,10 +974,9 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       // a null 'this' pointer.
       if (isLambdaCallOperator(MD) &&
           MD->getParent()->getLambdaCaptureDefault() == LCD_None)
-        llvm_unreachable("NYI");
-      ;
+        SkippedChecks.set(SanitizerKind::Null, true);
 
-      // TODO(CIR): buildTypeCheck
+      assert(!UnimplementedFeature::buildTypeCheck() && "NYI");
     }
   }
 

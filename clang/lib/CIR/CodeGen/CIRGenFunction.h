@@ -503,6 +503,10 @@ public:
   std::optional<mlir::Type> FnRetCIRTy;
   std::optional<mlir::Value> FnRetAlloca;
 
+  llvm::DenseMap<const clang::ValueDecl *, clang::FieldDecl *>
+      LambdaCaptureFields;
+  clang::FieldDecl *LambdaThisCaptureField = nullptr;
+
   /// When generating code for a C++ member function, this will
   /// hold the implicit 'this' declaration.
   clang::ImplicitParamDecl *CXXABIThisDecl = nullptr;
