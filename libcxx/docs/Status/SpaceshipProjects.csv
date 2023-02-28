@@ -38,7 +38,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `[array.syn] <https://wg21.link/array.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| `array <https://reviews.llvm.org/D132265>`_,[expos.only.func],Adrian Vogelsgesang,|In Progress|
 | `[deque.syn] <https://wg21.link/deque.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| deque,[expos.only.func],Unassigned,|Not Started|
 | `[forward.list.syn] <https://wg21.link/forward.list.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| forward_list,[expos.only.func],Unassigned,|Not Started|
-| `[list.syn] <https://wg21.link/list.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| list,[expos.only.func],Unassigned,|Not Started|
+| `[list.syn] <https://wg21.link/list.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| `list <https://reviews.llvm.org/D132312>`_,[expos.only.func],Adrian Vogelsgesang,|Complete|
 | `[vector.syn] <https://wg21.link/vector.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| `vector <https://reviews.llvm.org/D132268>`_,[expos.only.func],Adrian Vogelsgesang,|In Progress|
 | `[associative.map.syn] <https://wg21.link/associative.map.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),"| map
 | multimap",[expos.only.func],Unassigned,|Not Started|
