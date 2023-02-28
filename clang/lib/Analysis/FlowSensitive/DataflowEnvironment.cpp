@@ -242,7 +242,8 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
     llvm::DenseSet<const FieldDecl *> Fields;
     llvm::DenseSet<const VarDecl *> Vars;
 
-    // Look for global variable references in the constructor-initializers.
+    // Look for global variable and field references in the
+    // constructor-initializers.
     if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(&DeclCtx)) {
       for (const auto *Init : CtorDecl->inits()) {
         if (const auto *M = Init->getAnyMember())
@@ -251,6 +252,10 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
         assert(E != nullptr);
         getFieldsAndGlobalVars(*E, Fields, Vars);
       }
+      // Add all fields mentioned in default member initializers.
+      for (const FieldDecl *F  : CtorDecl->getParent()->fields())
+        if (const auto *I = F->getInClassInitializer())
+          getFieldsAndGlobalVars(*I, Fields, Vars);
     }
     getFieldsAndGlobalVars(*FuncDecl->getBody(), Fields, Vars);
 
