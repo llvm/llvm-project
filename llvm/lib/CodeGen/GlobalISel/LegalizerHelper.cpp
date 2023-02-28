@@ -4978,9 +4978,8 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   }
 }
 
-/// Expand source vectors to the size of destination vector.
-static LegalizerHelper::LegalizeResult
-equalizeVectorShuffleLengths(MachineInstr &MI, MachineIRBuilder &MIRBuilder) {
+LegalizerHelper::LegalizeResult
+LegalizerHelper::equalizeVectorShuffleLengths(MachineInstr &MI) {
   MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
 
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
@@ -4991,10 +4990,24 @@ equalizeVectorShuffleLengths(MachineInstr &MI, MachineIRBuilder &MIRBuilder) {
   Register DstReg = MI.getOperand(0).getReg();
   LLT DestEltTy = DstTy.getElementType();
 
-  // TODO: Normalize the shuffle vector since mask and vector length don't
-  // match.
-  if (MaskNumElts <= SrcNumElts) {
-    return LegalizerHelper::LegalizeResult::UnableToLegalize;
+  if (MaskNumElts == SrcNumElts)
+    return Legalized;
+
+  if (MaskNumElts < SrcNumElts) {
+    // Extend mask to match new destination vector size with
+    // undef values.
+    SmallVector<int, 16> NewMask(Mask);
+    for (unsigned I = MaskNumElts; I < SrcNumElts; ++I)
+      NewMask.push_back(-1);
+
+    moreElementsVectorDst(MI, SrcTy, 0);
+    MIRBuilder.setInstrAndDebugLoc(MI);
+    MIRBuilder.buildShuffleVector(MI.getOperand(0).getReg(),
+                                  MI.getOperand(1).getReg(),
+                                  MI.getOperand(2).getReg(), NewMask);
+    MI.eraseFromParent();
+
+    return Legalized;
   }
 
   unsigned PaddedMaskNumElts = alignTo(MaskNumElts, SrcNumElts);
@@ -5055,8 +5068,8 @@ LegalizerHelper::moreElementsVectorShuffle(MachineInstr &MI,
   unsigned WidenNumElts = MoreTy.getNumElements();
 
   if (DstTy.isVector() && Src1Ty.isVector() &&
-      DstTy.getNumElements() > Src1Ty.getNumElements()) {
-    return equalizeVectorShuffleLengths(MI, MIRBuilder);
+      DstTy.getNumElements() != Src1Ty.getNumElements()) {
+    return equalizeVectorShuffleLengths(MI);
   }
 
   if (TypeIdx != 0)

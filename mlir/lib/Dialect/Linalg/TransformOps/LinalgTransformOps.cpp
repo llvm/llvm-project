@@ -1802,6 +1802,35 @@ transform::PromoteOp::applyToOne(LinalgOp target,
   if (getAlignment().has_value())
     promotionOptions = promotionOptions.setAlignment(*getAlignment());
 
+  if (getMapping().has_value()) {
+    // The mapping should only contain an element
+    auto mapping = *getMapping();
+    if (mapping.size() > 1)
+      return emitDefaultDefiniteFailure(target);
+
+    auto addressSpace = mapping[0].cast<gpu::GPUMemorySpaceMappingAttr>();
+
+    if (addressSpace.getAddressSpace() ==
+        gpu::GPUDialect::getWorkgroupAddressSpace()) {
+      promotionOptions =
+          promotionOptions
+              .setAllocationDeallocationFns(allocateWorkgroupMemory,
+                                            deallocateWorkgroupMemory)
+              .setCopyInOutFns(copyToWorkgroupMemory, copyToWorkgroupMemory)
+              .setUseFullTileBuffers({false, false});
+    } else if (addressSpace.getAddressSpace() ==
+               gpu::GPUDialect::getPrivateAddressSpace()) {
+      promotionOptions =
+          promotionOptions
+              .setAllocationDeallocationFns(allocateGPUPrivateMemory,
+                                            deallocateGPUPrivateMemory)
+              .setCopyInOutFns(copyToGPUPrivateMemory, copyToGPUPrivateMemory)
+              .setUseFullTileBuffers({false, false});
+    } else {
+      return emitDefaultDefiniteFailure(target);
+    }
+  }
+
   if (failed(promoteSubviewsPrecondition(target, promotionOptions)))
     return emitDefaultDefiniteFailure(target);
 
@@ -3068,8 +3097,10 @@ DiagnosedSilenceableFailure
 transform::HoistRedundantVectorTransfersOp::applyToOne(
     func::FuncOp target, transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
+  // WARNING: This hoisting does not model parallelism and is generally
+  // incorrect when used on distributed loops with memref semantics!
+  // TODO: obsolete and should be retired.
   linalg::hoistRedundantVectorTransfers(target);
-  linalg::hoistRedundantVectorTransfersOnTensor(target);
   results.push_back(target);
   return DiagnosedSilenceableFailure::success();
 }
@@ -3104,6 +3135,32 @@ DiagnosedSilenceableFailure transform::ConvertConv2DToImg2ColOp::applyToOne(
   results.push_back(maybeTransformed->first);
   // Handle to the operation that replaces the original convolution.
   results.push_back(maybeTransformed->second);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// HoistRedundantTensorSubsetsOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::HoistRedundantTensorSubsetsOp::applyToOne(
+    Operation *target, transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  IRRewriter rewriter(target->getContext());
+  auto forOp = dyn_cast<scf::ForOp>(target);
+  if (forOp) {
+    scf::ForOp newForOp =
+        linalg::hoistRedundantSubsetExtractInsert(rewriter, forOp);
+    results.push_back(newForOp);
+    return DiagnosedSilenceableFailure::success();
+  }
+
+  // TODO: walking in some reverse / inside-out order would be more efficient
+  // and would capture more cases.
+  target->walk([&](scf::ForOp forOp) {
+    hoistRedundantSubsetExtractInsert(rewriter, forOp);
+  });
+  results.push_back(target);
   return DiagnosedSilenceableFailure::success();
 }
 

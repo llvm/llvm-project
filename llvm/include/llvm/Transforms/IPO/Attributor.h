@@ -3223,9 +3223,6 @@ struct AttributorCGSCCPass : public PassInfoMixin<AttributorCGSCCPass> {
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);
 };
 
-Pass *createAttributorLegacyPass();
-Pass *createAttributorCGSCCLegacyPass();
-
 /// Helper function to clamp a state \p S of type \p StateType with the
 /// information in \p R and indicate/return if \p S did change (as-in update is
 /// required to be run again).

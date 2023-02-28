@@ -8415,6 +8415,25 @@ void ScalarEvolution::forgetAllLoops() {
   FoldCache.clear();
   FoldCacheUser.clear();
 }
+void ScalarEvolution::visitAndClearUsers(
+    SmallVectorImpl<Instruction *> &Worklist,
+    SmallPtrSetImpl<Instruction *> &Visited,
+    SmallVectorImpl<const SCEV *> &ToForget) {
+  while (!Worklist.empty()) {
+    Instruction *I = Worklist.pop_back_val();
+
+    ValueExprMapType::iterator It =
+        ValueExprMap.find_as(static_cast<Value *>(I));
+    if (It != ValueExprMap.end()) {
+      eraseValueFromMap(It->first);
+      ToForget.push_back(It->second);
+      if (PHINode *PN = dyn_cast<PHINode>(I))
+        ConstantEvolutionLoopExitValue.erase(PN);
+    }
+
+    PushDefUseChildren(I, Worklist, Visited);
+  }
+}
 
 void ScalarEvolution::forgetLoop(const Loop *L) {
   SmallVector<const Loop *, 16> LoopWorklist(1, L);
@@ -8448,21 +8467,7 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
 
     // Drop information about expressions based on loop-header PHIs.
     PushLoopPHIs(CurrL, Worklist, Visited);
-
-    while (!Worklist.empty()) {
-      Instruction *I = Worklist.pop_back_val();
-
-      ValueExprMapType::iterator It =
-          ValueExprMap.find_as(static_cast<Value *>(I));
-      if (It != ValueExprMap.end()) {
-        eraseValueFromMap(It->first);
-        ToForget.push_back(It->second);
-        if (PHINode *PN = dyn_cast<PHINode>(I))
-          ConstantEvolutionLoopExitValue.erase(PN);
-      }
-
-      PushDefUseChildren(I, Worklist, Visited);
-    }
+    visitAndClearUsers(Worklist, Visited, ToForget);
 
     LoopPropertiesCache.erase(CurrL);
     // Forget all contained loops too, to avoid dangling entries in the
@@ -8486,20 +8491,8 @@ void ScalarEvolution::forgetValue(Value *V) {
   SmallVector<const SCEV *, 8> ToForget;
   Worklist.push_back(I);
   Visited.insert(I);
+  visitAndClearUsers(Worklist, Visited, ToForget);
 
-  while (!Worklist.empty()) {
-    I = Worklist.pop_back_val();
-    ValueExprMapType::iterator It =
-      ValueExprMap.find_as(static_cast<Value *>(I));
-    if (It != ValueExprMap.end()) {
-      eraseValueFromMap(It->first);
-      ToForget.push_back(It->second);
-      if (PHINode *PN = dyn_cast<PHINode>(I))
-        ConstantEvolutionLoopExitValue.erase(PN);
-    }
-
-    PushDefUseChildren(I, Worklist, Visited);
-  }
   forgetMemoizedResults(ToForget);
 }
 

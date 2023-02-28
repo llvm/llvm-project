@@ -804,7 +804,8 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     SDValue Op0 = Op.getOperand(0);
     EVT ExVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
     unsigned ExBits = ExVT.getScalarSizeInBits();
-    if (DemandedBits.getActiveBits() <= ExBits)
+    if (DemandedBits.getActiveBits() <= ExBits &&
+        shouldRemoveRedundantExtend(Op))
       return Op0;
     // If the input is already sign extended, just drop the extension.
     unsigned NumSignBits = DAG.ComputeNumSignBits(Op0, DemandedElts, Depth + 1);

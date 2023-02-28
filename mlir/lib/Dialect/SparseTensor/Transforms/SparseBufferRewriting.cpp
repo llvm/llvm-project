@@ -1160,6 +1160,9 @@ LogicalResult matchAndRewriteSortOp(OpTy op, ValueRange xys, uint64_t nx,
   }
 
   auto insertPoint = op->template getParentOfType<func::FuncOp>();
+  if (!insertPoint)
+    return failure();
+
   SmallString<32> funcName;
   FuncGeneratorType funcGenerator;
   uint32_t nTrailingP = 0;

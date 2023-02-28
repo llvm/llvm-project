@@ -35,6 +35,17 @@
 // 5. %reg = INSERT_SUBREG %reg(tied-def 0), %subreg, subidx
 //     ==> %reg:subidx =  SUBREG_TO_REG 0, %subreg, subidx
 //
+// 6. %intermediate:gpr32 = COPY %src:fpr128
+//    %dst:fpr128 = INSvi32gpr %dst_vec:fpr128, dst_index, %intermediate:gpr32
+//     ==> %dst:fpr128 = INSvi32lane %dst_vec:fpr128, dst_index, %src:fpr128, 0
+//
+//    In cases where a source FPR is copied to a GPR in order to be copied
+//    to a destination FPR, we can directly copy the values between the FPRs,
+//    eliminating the use of the Integer unit. When we match a pattern of
+//    INSvi[X]gpr that is preceded by a chain of COPY instructions from a FPR
+//    source, we use the INSvi[X]lane to replace the COPY & INSvi[X]gpr
+//    instructions.
+//
 //===----------------------------------------------------------------------===//
 
 #include "AArch64ExpandImm.h"
@@ -99,6 +110,7 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   bool visitAND(unsigned Opc, MachineInstr &MI);
   bool visitORR(MachineInstr &MI);
   bool visitINSERT(MachineInstr &MI);
+  bool visitINSviGPR(MachineInstr &MI, unsigned Opc);
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
@@ -535,6 +547,51 @@ bool AArch64MIPeepholeOpt::splitTwoPartImm(
   return true;
 }
 
+bool AArch64MIPeepholeOpt::visitINSviGPR(MachineInstr &MI, unsigned Opc) {
+  // Check if this INSvi[X]gpr comes from COPY of a source FPR128
+  //
+  // From
+  //  %intermediate1:gpr64 = COPY %src:fpr128
+  //  %intermediate2:gpr32 = COPY %intermediate1:gpr64
+  //  %dst:fpr128 = INSvi[X]gpr %dst_vec:fpr128, dst_index, %intermediate2:gpr32
+  // To
+  //  %dst:fpr128 = INSvi[X]lane %dst_vec:fpr128, dst_index, %src:fpr128,
+  //  src_index
+  // where src_index = 0, X = [8|16|32|64]
+
+  MachineInstr *SrcMI = MRI->getUniqueVRegDef(MI.getOperand(3).getReg());
+
+  // For a chain of COPY instructions, find the initial source register
+  // and check if it's an FPR128
+  while (true) {
+    if (!SrcMI || SrcMI->getOpcode() != TargetOpcode::COPY)
+      return false;
+
+    if (!SrcMI->getOperand(1).getReg().isVirtual())
+      return false;
+
+    if (MRI->getRegClass(SrcMI->getOperand(1).getReg()) ==
+        &AArch64::FPR128RegClass) {
+      break;
+    }
+    SrcMI = MRI->getUniqueVRegDef(SrcMI->getOperand(1).getReg());
+  }
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = SrcMI->getOperand(1).getReg();
+  MachineInstr *INSvilaneMI =
+      BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(Opc), DstReg)
+          .add(MI.getOperand(1))
+          .add(MI.getOperand(2))
+          .addUse(SrcReg, getRegState(SrcMI->getOperand(1)))
+          .addImm(0);
+
+  LLVM_DEBUG(dbgs() << MI << "  replace by:\n: " << *INSvilaneMI << "\n");
+  (void)INSvilaneMI;
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -597,6 +654,18 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
         Changed = visitADDSSUBS<uint64_t>({AArch64::SUBXri, AArch64::SUBSXri},
                                           {AArch64::ADDXri, AArch64::ADDSXri},
                                           MI);
+        break;
+      case AArch64::INSvi64gpr:
+        Changed = visitINSviGPR(MI, AArch64::INSvi64lane);
+        break;
+      case AArch64::INSvi32gpr:
+        Changed = visitINSviGPR(MI, AArch64::INSvi32lane);
+        break;
+      case AArch64::INSvi16gpr:
+        Changed = visitINSviGPR(MI, AArch64::INSvi16lane);
+        break;
+      case AArch64::INSvi8gpr:
+        Changed = visitINSviGPR(MI, AArch64::INSvi8lane);
         break;
       }
     }

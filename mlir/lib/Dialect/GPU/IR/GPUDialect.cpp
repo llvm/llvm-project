@@ -50,6 +50,10 @@ int64_t GPUThreadMappingAttr::getMappingId() const {
   return static_cast<int64_t>(getThread());
 }
 
+int64_t GPUMemorySpaceMappingAttr::getMappingId() const {
+  return static_cast<int64_t>(getAddressSpace());
+}
+
 //===----------------------------------------------------------------------===//
 // MMAMatrixType
 //===----------------------------------------------------------------------===//

@@ -624,12 +624,12 @@ entry:
 define <4 x i32> @H(<4 x i32> %a) {
 ; X86-LABEL: H:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: H:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X64-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X64-NEXT:    retq
 entry:
   %x = shufflevector <4 x i32> %a, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
@@ -982,7 +982,7 @@ define <8 x i16> @broadcast_x86_mmx(x86_mmx %tmp) nounwind {
 ; X64:       ## %bb.0: ## %bb
 ; X64-NEXT:    movdq2q %xmm0, %mm0
 ; X64-NEXT:    movq2dq %mm0, %xmm0
-; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; X64-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; X64-NEXT:    retq
 bb:
   %tmp1 = bitcast x86_mmx %tmp to i64

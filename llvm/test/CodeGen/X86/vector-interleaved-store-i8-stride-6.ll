@@ -1181,8 +1181,8 @@ define void @store_i8_stride6_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX1-ONLY-NEXT:    vpor %xmm9, %xmm8, %xmm8
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-ONLY-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Reload
-; AVX1-ONLY-NEXT:    vpermilps {{.*#+}} xmm8 = xmm9[0,0,1,1]
-; AVX1-ONLY-NEXT:    vpermilps {{.*#+}} xmm10 = xmm9[1,1,2,2]
+; AVX1-ONLY-NEXT:    vshufps {{.*#+}} xmm8 = xmm9[0,0,1,1]
+; AVX1-ONLY-NEXT:    vshufps {{.*#+}} xmm10 = xmm9[1,1,2,2]
 ; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm10, %ymm8, %ymm8
 ; AVX1-ONLY-NEXT:    vpshuflw {{.*#+}} xmm10 = xmm13[1,0,2,2,4,5,6,7]
 ; AVX1-ONLY-NEXT:    vpshufd {{.*#+}} xmm10 = xmm10[0,1,0,1]

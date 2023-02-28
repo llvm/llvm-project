@@ -490,6 +490,8 @@ public:
   }
   bool convertSelectOfConstantsToMath(EVT VT) const override { return true; }
 
+  bool preferZeroCompareBranch() const override { return true; }
+
   bool shouldInsertFencesForAtomic(const Instruction *I) const override {
     return isa<LoadInst>(I) || isa<StoreInst>(I);
   }

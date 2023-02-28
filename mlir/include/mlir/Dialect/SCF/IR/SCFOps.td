@@ -773,6 +773,8 @@ def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<(ins "TypeRange":$resultTypes, "Value":$cond)>,
+    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$cond,
+      "bool":$addThenBlock, "bool":$addElseBlock)>,
     OpBuilder<(ins "Value":$cond, "bool":$withElseRegion)>,
     OpBuilder<(ins "TypeRange":$resultTypes, "Value":$cond,
       "bool":$withElseRegion)>,

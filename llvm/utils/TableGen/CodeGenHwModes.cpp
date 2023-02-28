@@ -38,7 +38,7 @@ HwModeSelect::HwModeSelect(Record *R, CodeGenHwModes &CGH) {
     report_fatal_error("error in target description.");
   }
   for (unsigned i = 0, e = Modes.size(); i != e; ++i) {
-    unsigned ModeId = CGH.getHwModeId(Modes[i]->getName());
+    unsigned ModeId = CGH.getHwModeId(Modes[i]);
     Items.push_back(std::make_pair(ModeId, Objects[i]));
   }
 }
@@ -64,8 +64,7 @@ CodeGenHwModes::CodeGenHwModes(RecordKeeper &RK) : Records(RK) {
 
   for (Record *R : MRs) {
     Modes.emplace_back(R);
-    unsigned NewId = Modes.size();
-    ModeIds.insert(std::make_pair(Modes[NewId-1].Name, NewId));
+    ModeIds.insert(std::make_pair(R, Modes.size()));
   }
 
   std::vector<Record*> MSs = Records.getAllDerivedDefinitions("HwModeSelect");
@@ -76,10 +75,10 @@ CodeGenHwModes::CodeGenHwModes(RecordKeeper &RK) : Records(RK) {
   }
 }
 
-unsigned CodeGenHwModes::getHwModeId(StringRef Name) const {
-  if (Name == DefaultModeName)
+unsigned CodeGenHwModes::getHwModeId(Record *R) const {
+  if (R->getName() == DefaultModeName)
     return DefaultMode;
-  auto F = ModeIds.find(Name);
+  auto F = ModeIds.find(R);
   assert(F != ModeIds.end() && "Unknown mode name");
   return F->second;
 }
@@ -101,7 +100,7 @@ void CodeGenHwModes::dump() const {
 
   dbgs() << "ModeIds: {\n";
   for (const auto &P : ModeIds)
-    dbgs() << "  " << P.first() << " -> " << P.second << '\n';
+    dbgs() << "  " << P.first->getName() << " -> " << P.second << '\n';
   dbgs() << "}\n";
 
   dbgs() << "ModeSelects: {\n";

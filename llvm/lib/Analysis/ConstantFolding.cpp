@@ -1083,7 +1083,7 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
     }
     return nullptr;
   case Instruction::Select:
-    return ConstantExpr::getSelect(Ops[0], Ops[1], Ops[2]);
+    return ConstantFoldSelectInstruction(Ops[0], Ops[1], Ops[2]);
   case Instruction::ExtractElement:
     return ConstantExpr::getExtractElement(Ops[0], Ops[1]);
   case Instruction::ExtractValue:

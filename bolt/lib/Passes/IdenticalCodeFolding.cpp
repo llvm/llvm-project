@@ -413,7 +413,7 @@ void IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
   uint64_t NumFunctionsFolded = 0;
   std::atomic<uint64_t> NumJTFunctionsFolded{0};
   std::atomic<uint64_t> BytesSavedEstimate{0};
-  std::atomic<uint64_t> CallsSavedEstimate{0};
+  std::atomic<uint64_t> NumCalled{0};
   std::atomic<uint64_t> NumFoldedLastIteration{0};
   CongruentBucketsMap CongruentBuckets;
 
@@ -493,6 +493,8 @@ void IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
             });
 
         BinaryFunction *ParentBF = Twins[0];
+        if (!ParentBF->hasFunctionsFoldedInto())
+          NumCalled += ParentBF->getKnownExecutionCount();
         for (unsigned I = 1; I < Twins.size(); ++I) {
           BinaryFunction *ChildBF = Twins[I];
           LLVM_DEBUG(dbgs() << "BOLT-DEBUG: folding " << *ChildBF << " into "
@@ -506,8 +508,8 @@ void IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
 
           // Fold the function and remove from the list of processed functions.
           BytesSavedEstimate += ChildBF->getSize();
-          CallsSavedEstimate += std::min(ChildBF->getKnownExecutionCount(),
-                                         ParentBF->getKnownExecutionCount());
+          if (!ChildBF->hasFunctionsFoldedInto())
+            NumCalled += ChildBF->getKnownExecutionCount();
           BC.foldFunction(*ChildBF, *ParentBF);
 
           ++NumFoldedLastIteration;
@@ -579,8 +581,8 @@ void IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
            << " functions had jump tables.\n"
            << "BOLT-INFO: Removing all identical functions will save "
            << format("%.2lf", (double)BytesSavedEstimate / 1024)
-           << " KB of code space. Folded functions were called "
-           << CallsSavedEstimate << " times based on profile.\n";
+           << " KB of code space. Folded functions were called " << NumCalled
+           << " times based on profile.\n";
 }
 
 } // namespace bolt
