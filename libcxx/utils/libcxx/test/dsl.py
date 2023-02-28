@@ -12,6 +12,7 @@ import pipes
 import platform
 import re
 import shutil
+import subprocess
 import tempfile
 
 import libcxx.test.format
@@ -338,6 +339,12 @@ def featureTestMacros(config, flags=""):
     }
 
 
+def _getSubstitution(substitution, config):
+  for (orig, replacement) in config.substitutions:
+    if orig == substitution:
+      return replacement
+  raise ValueError('Substitution {} is not in the config.'.format(substitution))
+
 def _appendToSubstitution(substitutions, key, value):
     return [(k, v + " " + value) if k == key else (k, v) for (k, v) in substitutions]
 
@@ -430,6 +437,30 @@ class AddFlag(ConfigAction):
     def pretty(self, config, litParams):
         return "add {} to %{{flags}}".format(self._getFlag(config))
 
+class BuildStdModule(ConfigAction):
+  def applyTo(self, config):
+    build = os.path.join(config.test_exec_root, '__config_module__')
+
+    std = _getSubstitution('%{cxx_std}', config)
+    if std == 'cxx26':
+        # This fails to work properly. It might be due to
+        #   CMAKE_CXX_STANDARD 26
+        # does not work in CMake 3.26, it requires the upcomming CMake 3.27.
+        # TODO MODULES test whether this is fixed with CMake 3.27.
+        std = '17'
+    elif std == 'cxx23':
+        std = '23'
+    else:
+        std = '17' # Not allowed for modules
+
+    flags = _getSubstitution('%{flags}', config)
+    cmake = _getSubstitution('%{cmake}', config)
+
+    subprocess.check_call([cmake, "-DCMAKE_CXX_STANDARD=" + std, f"-DCMAKE_CXX_FLAGS={flags}", build], env={})
+    subprocess.check_call([cmake, "--build", build], env={})
+
+  def pretty(self, config, litParams):
+    return "building std module with flags {}".format(_getSubstitution('%{flags}', config))
 
 class AddFlagIfSupported(ConfigAction):
     """
