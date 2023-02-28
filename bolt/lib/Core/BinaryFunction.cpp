@@ -2902,16 +2902,12 @@ void BinaryFunction::clearDisasmState() {
 void BinaryFunction::setTrapOnEntry() {
   clearDisasmState();
 
-  auto addTrapAtOffset = [&](uint64_t Offset) {
+  forEachEntryPoint([&](uint64_t Offset, const MCSymbol *Label) -> bool {
     MCInst TrapInstr;
     BC.MIB->createTrap(TrapInstr);
     addInstruction(Offset, std::move(TrapInstr));
-  };
-
-  addTrapAtOffset(0);
-  for (const std::pair<const uint32_t, MCSymbol *> &KV : getLabels())
-    if (getSecondaryEntryPointSymbol(KV.second))
-      addTrapAtOffset(KV.first);
+    return true;
+  });
 
   TrapsOnEntry = true;
 }
