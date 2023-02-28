@@ -210,8 +210,6 @@
 ; CHECK-POSTLINK-O-NEXT: Running analysis: LoopAccessAnalysis on foo
 ; CHECK-POSTLINK-O-NEXT: Running pass: InjectTLIMappings
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopVectorizePass
-; CHECK-POSTLINK-O-NEXT: Running analysis: BlockFrequencyAnalysis
-; CHECK-POSTLINK-O-NEXT: Running analysis: BranchProbabilityAnalysis
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopLoadEliminationPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-POSTLINK-O-NEXT: Running pass: SimplifyCFGPass
@@ -230,6 +228,8 @@
 ; CHECK-POSTLINK-O-NEXT: Running pass: LICMPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: AlignmentFromAssumptionsPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopSinkPass
+; CHECK-POSTLINK-O-NEXT: Running analysis: BlockFrequencyAnalysis
+; CHECK-POSTLINK-O-NEXT: Running analysis: BranchProbabilityAnalysis
 ; CHECK-POSTLINK-O-NEXT: Running pass: InstSimplifyPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: DivRemPairsPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: TailCallElimPass
