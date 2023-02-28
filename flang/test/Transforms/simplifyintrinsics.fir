@@ -1767,16 +1767,16 @@ func.func @_QPtestminloc_works1d(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_
 // CHECK:           %[[FLAG_SET:.*]] = arith.constant 1 : i32
 // CHECK:           %[[FLAG_EMPTY:.*]] = arith.constant 0 : i32
 // CHECK:           fir.store %[[FLAG_EMPTY]] to %[[FLAG_ALLOC]] : !fir.ref<i32>
-// CHECK:           %[[BOX_MASK:.*]] = fir.convert %[[BOX_MASK_NONE]] : (!fir.box<none>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:           %[[BOX_MASK:.*]] = fir.convert %[[BOX_MASK_NONE]] : (!fir.box<none>) -> !fir.box<!fir.array<?x!fir.logical<4>>>
 // CHECK:           %[[MAX:.*]] = arith.constant 2147483647 : i32
 // CHECK:           %[[CINDEX_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[DIM_INDEX0:.*]] = arith.constant 0 : index
 // CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[BOX_INARR]], %[[DIM_INDEX0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
 // CHECK:           %[[DOLOOP:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[MIN:.*]] = %[[MAX]]) -> (i32) {
-// CHECK:             %[[MASK_ITEM:.*]] = fir.coordinate_of %[[BOX_MASK]], %[[ITER]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
-// CHECK:             %[[MASK_ITEMVAL:.*]] = fir.load %[[MASK_ITEM]] : !fir.ref<i32>
-// CHECK:             %[[MASK_IF_ITEM:.*]] = fir.convert %[[MASK_ITEMVAL]] : (i32) -> i1
+// CHECK:             %[[MASK_ITEM:.*]] = fir.coordinate_of %[[BOX_MASK]], %[[ITER]] : (!fir.box<!fir.array<?x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
+// CHECK:             %[[MASK_ITEMVAL:.*]] = fir.load %[[MASK_ITEM]] : !fir.ref<!fir.logical<4>>
+// CHECK:             %[[MASK_IF_ITEM:.*]] = fir.convert %[[MASK_ITEMVAL]] : (!fir.logical<4>) -> i1
 // CHECK:             %[[IF_MASK:.*]] = fir.if %[[MASK_IF_ITEM]] -> (i32) {
 // CHECK:               fir.store %[[FLAG_SET]] to %[[FLAG_ALLOC]] : !fir.ref<i32>
 // CHECK:               %[[INARR_ITEM:.*]] = fir.coordinate_of %[[BOX_INARR]], %[[ITER]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
