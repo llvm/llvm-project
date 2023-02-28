@@ -82,7 +82,7 @@ int Context::CopyFile(const char *src_path, const char *dest_path) {
   if (src_fd < 0 || dest_fd < 0)
     return 1;
   uptr read_bytes = 0;
-  while ((read_bytes = internal_read(src_fd, read_buff, (1 << 28))) > 0) {
+  while ((read_bytes = internal_read(src_fd, read_buff, TREC_BUFFER_SIZE)) > 0) {
     while (read_bytes > 0) {
       char *buff_pos = read_buff;
       uptr write_bytes = internal_write(dest_fd, buff_pos, read_bytes);

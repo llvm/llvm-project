@@ -127,8 +127,9 @@ void ThreadContext::flush_metadata() {
   char filepath[TREC_DIR_PATH_LEN];
 
   struct stat _st = {0};
-  internal_snprintf(filepath, 2 * TREC_DIR_PATH_LEN - 1, "%s/trec_%llu/metadata",
-                    ctx->trace_dir, internal_getpid(), tid);
+  internal_snprintf(filepath, 2 * TREC_DIR_PATH_LEN - 1,
+                    "%s/trec_%llu/metadata", ctx->trace_dir, internal_getpid(),
+                    tid);
   uptr IS_EXIST = __sanitizer::internal_stat(filepath, &_st);
   if (IS_EXIST != 0) {
     ctx->ppid = ctx->pid;
@@ -501,6 +502,7 @@ int ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached) {
       }
     }
   }
+  Report("tid=%d create: alloc=%d\n", tid, ctx->flags.record_alloc_free);
   return tid;
 }
 

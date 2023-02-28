@@ -775,7 +775,6 @@ bool TraceRecorder::instrumentLoadStore(const InstructionInfo &II,
   int Idx = getMemoryAccessFuncIndex(OrigTy, Addr, DL);
   if (Idx < 0 || Idx >= 4)
     return false;
-  return false;
   // never instrument vtable update/read operations
   if (isVtableAccess(II.Inst)) {
     return false;

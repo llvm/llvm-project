@@ -20,7 +20,7 @@ endif()
 
 set(TREC_RTL_CFLAGS ${TREC_CFLAGS})
 append_list_if(COMPILER_RT_HAS_MSSE3_FLAG -msse3 TREC_RTL_CFLAGS)
-append_list_if(SANITIZER_LIMIT_FRAME_SIZE -Wframe-larger-than=530
+append_list_if(SANITIZER_LIMIT_FRAME_SIZE -Wframe-larger-than=1200
                TREC_RTL_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WGLOBAL_CONSTRUCTORS_FLAG -Wglobal-constructors
                TREC_RTL_CFLAGS)

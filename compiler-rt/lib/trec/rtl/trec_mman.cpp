@@ -196,21 +196,18 @@ void OnUserFree(ThreadState *thr, uptr pc, uptr p, bool write,
   CHECK_NE(p, (void *)0);
   uptr sz = user_alloc_usable_size((void *)p);
   DPrintf("#%d: free(%p, %zu)\n", thr->tid, p, sz);
-  if (record_trace &&
-      LIKELY(ctx->flags.output_trace && LIKELY(ctx->flags.record_alloc_free)) &&
-      LIKELY(thr->ignore_interceptors == 0)&& LIKELY(thr->should_record)) {
-    if (ctx->flags.trace_mode == 2 || ctx->flags.trace_mode == 3) {
-      __trec_trace::Event e(
-          __trec_trace::EventType::MemFree, thr->tid,
-          atomic_fetch_add(&ctx->global_id, 1, memory_order_relaxed),
-          ((sz & 0xffff) << 48) | (p & ((((u64)1) << 48) - 1)),
-          thr->tctx->metadata_offset, pc);
+  if (record_trace && LIKELY(thr->ignore_interceptors == 0) &&
+      LIKELY(thr->should_record)) {
+    __trec_trace::Event e(
+        __trec_trace::EventType::MemFree, thr->tid,
+        atomic_fetch_add(&ctx->global_id, 1, memory_order_relaxed),
+        ((sz & 0xffff) << 48) | (p & ((((u64)1) << 48) - 1)),
+        thr->tctx->metadata_offset, pc);
 
-      __trec_metadata::MemFreeMeta meta(0x8000, 1);
-      thr->tctx->put_metadata(&meta, sizeof(meta));
-      thr->tctx->put_trace(&e, sizeof(__trec_trace::Event));
-      thr->tctx->header.StateInc(__trec_header::RecordType::MemFree);
-    }
+    __trec_metadata::MemFreeMeta meta(0x8000, 1);
+    thr->tctx->put_metadata(&meta, sizeof(meta));
+    thr->tctx->put_trace(&e, sizeof(__trec_trace::Event));
+    thr->tctx->header.StateInc(__trec_header::RecordType::MemFree);
   }
 }
 

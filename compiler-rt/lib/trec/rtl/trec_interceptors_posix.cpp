@@ -472,7 +472,8 @@ TREC_INTERCEPTOR(void, free, void *p) {
     return;
   invoke_free_hook(p);
   SCOPED_INTERCEPTOR_RAW(free, p);
-  user_free(thr, caller_pc, p, true, true);
+
+  user_free(thr, caller_pc, p, true, ctx->flags.output_trace && LIKELY(ctx->flags.record_alloc_free));
 }
 
 TREC_INTERCEPTOR(void, cfree, void *p) {
@@ -1775,7 +1776,7 @@ uptr Dir2addr(const char *path) {
                  StackTrace::GetPreviousInstructionPc(GET_CALLER_PC()),    \
                  (uptr)new_mem, szLog, true, false, false, val,            \
                  {(u16)(0x8000 | ((copy_length - rest_cnt) & 0x7fff)), 1}, \
-                 {0, (uptr)s + copy_length - rest_cnt}, true);            \
+                 {0, (uptr)s + copy_length - rest_cnt}, true);             \
     rest_cnt -= (1 << szLog);                                              \
   }                                                                        \
   new_mem[copy_length] = '\0';                                             \
