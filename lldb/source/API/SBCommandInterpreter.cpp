@@ -118,6 +118,13 @@ bool SBCommandInterpreter::CommandExists(const char *cmd) {
                                           : false);
 }
 
+bool SBCommandInterpreter::UserCommandExists(const char *cmd) {
+  LLDB_INSTRUMENT_VA(this, cmd);
+
+  return (((cmd != nullptr) && IsValid()) ? m_opaque_ptr->UserCommandExists(cmd)
+                                          : false);
+}
+
 bool SBCommandInterpreter::AliasExists(const char *cmd) {
   LLDB_INSTRUMENT_VA(this, cmd);
 
