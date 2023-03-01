@@ -2385,20 +2385,33 @@ class MUBUF_Real_gfx11_impl<bits<8> op, string ps_name, string real_name> :
 class VBUFFER_MUBUF_Real_gfx12_impl<bits<8> op, string ps_name, string real_name> :
   VBUFFER_MUBUF_Real_gfx12<op, !cast<MUBUF_Pseudo>(ps_name), real_name>;
 
-multiclass MUBUF_Real_AllAddr_gfx11_gfx12_Renamed_Impl2<bits<8> op, string real_name> {
-  let  AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
+multiclass MUBUF_Real_AllAddr_gfx11_Renamed_Impl2<bits<8> op, string real_name> {
+  let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
     def _BOTHEN_gfx11 : MUBUF_Real_gfx11_impl<op, NAME # "_BOTHEN", real_name>;
     def _IDXEN_gfx11 : MUBUF_Real_gfx11_impl<op, NAME # "_IDXEN", real_name>;
     def _OFFEN_gfx11 : MUBUF_Real_gfx11_impl<op, NAME # "_OFFEN", real_name>;
     def _OFFSET_gfx11 : MUBUF_Real_gfx11_impl<op, NAME # "_OFFSET", real_name>;
   }
+}
 
+multiclass MUBUF_Real_AllAddr_gfx12_Renamed_Impl2<bits<8> op, string real_name> {
   let AssemblerPredicate = isGFX12Plus, DecoderNamespace = "GFX12" in {
     def _BOTHEN_gfx12 : VBUFFER_MUBUF_Real_gfx12_impl<op, NAME # "_VBUFFER_BOTHEN", real_name>;
     def _IDXEN_gfx12 : VBUFFER_MUBUF_Real_gfx12_impl<op, NAME # "_VBUFFER_IDXEN", real_name>;
     def _OFFEN_gfx12 : VBUFFER_MUBUF_Real_gfx12_impl<op, NAME # "_VBUFFER_OFFEN", real_name>;
     def _OFFSET_gfx12 : VBUFFER_MUBUF_Real_gfx12_impl<op, NAME # "_VBUFFER_OFFSET", real_name>;
   }
+}
+
+multiclass MUBUF_Real_AllAddr_gfx11_gfx12_Renamed_Impl2<bits<8> op, string real_name> :
+  MUBUF_Real_AllAddr_gfx11_Renamed_Impl2<op, real_name>,
+  MUBUF_Real_AllAddr_gfx12_Renamed_Impl2<op, real_name>;
+
+multiclass MUBUF_Real_AllAddr_gfx11_Renamed_Impl<bits<8> op, string real_name,
+                                                 bit hasTFE = 1> {
+  defm NAME : MUBUF_Real_AllAddr_gfx11_Renamed_Impl2<op, real_name>;
+  if hasTFE then
+    defm _TFE : MUBUF_Real_AllAddr_gfx11_Renamed_Impl2<op, real_name>;
 }
 
 multiclass MUBUF_Real_AllAddr_gfx11_gfx12_Renamed_Impl<bits<8> op, string real_name,
@@ -2409,6 +2422,9 @@ multiclass MUBUF_Real_AllAddr_gfx11_gfx12_Renamed_Impl<bits<8> op, string real_n
 }
 
 // Non-renamed, non-atomic gfx11/gfx12 mubuf instructions.
+multiclass MUBUF_Real_AllAddr_gfx11<bits<8> op, bit hasTFE = 1> :
+  MUBUF_Real_AllAddr_gfx11_Renamed_Impl<op, get_MUBUF_ps<NAME>.Mnemonic, hasTFE>;
+
 multiclass MUBUF_Real_AllAddr_gfx11_gfx12<bits<8> op, bit hasTFE = 1> :
   MUBUF_Real_AllAddr_gfx11_gfx12_Renamed_Impl<op, get_MUBUF_ps<NAME>.Mnemonic, hasTFE>;
 
@@ -2536,12 +2552,12 @@ defm BUFFER_LOAD_SBYTE            : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x011
 defm BUFFER_LOAD_SSHORT           : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x013, "buffer_load_i16">;
 defm BUFFER_LOAD_UBYTE            : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x010, "buffer_load_u8">;
 defm BUFFER_LOAD_USHORT           : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x012, "buffer_load_u16">;
-defm BUFFER_LOAD_LDS_B32          : MUBUF_Real_AllAddr_gfx11_gfx12<0x031, 0>;
-defm BUFFER_LOAD_LDS_FORMAT_X     : MUBUF_Real_AllAddr_gfx11_gfx12<0x032, 0>;
-defm BUFFER_LOAD_LDS_I8           : MUBUF_Real_AllAddr_gfx11_gfx12<0x02e, 0>;
-defm BUFFER_LOAD_LDS_I16          : MUBUF_Real_AllAddr_gfx11_gfx12<0x030, 0>;
-defm BUFFER_LOAD_LDS_U8           : MUBUF_Real_AllAddr_gfx11_gfx12<0x02d, 0>;
-defm BUFFER_LOAD_LDS_U16          : MUBUF_Real_AllAddr_gfx11_gfx12<0x02f, 0>;
+defm BUFFER_LOAD_LDS_B32          : MUBUF_Real_AllAddr_gfx11<0x031, 0>;
+defm BUFFER_LOAD_LDS_FORMAT_X     : MUBUF_Real_AllAddr_gfx11<0x032, 0>;
+defm BUFFER_LOAD_LDS_I8           : MUBUF_Real_AllAddr_gfx11<0x02e, 0>;
+defm BUFFER_LOAD_LDS_I16          : MUBUF_Real_AllAddr_gfx11<0x030, 0>;
+defm BUFFER_LOAD_LDS_U8           : MUBUF_Real_AllAddr_gfx11<0x02d, 0>;
+defm BUFFER_LOAD_LDS_U16          : MUBUF_Real_AllAddr_gfx11<0x02f, 0>;
 defm BUFFER_STORE_BYTE            : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x018, "buffer_store_b8">;
 defm BUFFER_STORE_SHORT           : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x019, "buffer_store_b16">;
 defm BUFFER_STORE_DWORD           : MUBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x01A, "buffer_store_b32">;
