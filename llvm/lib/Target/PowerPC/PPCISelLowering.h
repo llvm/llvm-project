@@ -1172,6 +1172,7 @@ namespace llvm {
 
     CCAssignFn *ccAssignFnForCall(CallingConv::ID CC, bool Return,
                                   bool IsVarArg) const;
+    bool supportsTailCallFor(const CallBase *CB) const;
 
   private:
     struct ReuseLoadInfo {
