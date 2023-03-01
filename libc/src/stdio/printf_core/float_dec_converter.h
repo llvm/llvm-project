@@ -493,6 +493,10 @@ public:
   }
 };
 
+// This implementation is based on the Ryu Printf algorithm by Ulf Adams:
+// Ulf Adams. 2019. Ryū revisited: printf floating point conversion.
+// Proc. ACM Program. Lang. 3, OOPSLA, Article 169 (October 2019), 23 pages.
+// https://doi.org/10.1145/3360595
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
                                             const FormatSection &to_conv,
@@ -590,7 +594,7 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
         RoundDirection round;
         // Is m * 10^(additionalDigits + 1) / 2^(-exponent) integer?
         const int32_t requiredTwos =
-            -exponent - MANT_WIDTH - static_cast<int32_t>(precision) - 1;
+            -(exponent - MANT_WIDTH) - static_cast<int32_t>(precision) - 1;
         const bool trailingZeros =
             requiredTwos <= 0 ||
             (requiredTwos < 60 &&
@@ -764,7 +768,7 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
   RoundDirection round;
   // Is m * 10^(additionalDigits + 1) / 2^(-exponent) integer?
   const int32_t requiredTwos =
-      -exponent - MANT_WIDTH - static_cast<int32_t>(precision) - 1;
+      -(exponent - MANT_WIDTH) - static_cast<int32_t>(precision) - 1;
   const bool trailingZeros =
       requiredTwos <= 0 ||
       (requiredTwos < 60 &&
@@ -1011,7 +1015,7 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
   RoundDirection round;
   // Is m * 10^(additionalDigits + 1) / 2^(-exponent) integer?
   const int32_t requiredTwos =
-      -exponent - MANT_WIDTH - static_cast<int32_t>(exp_precision) - 1;
+      -(exponent - MANT_WIDTH) - static_cast<int32_t>(exp_precision) - 1;
   // TODO: rename this variable to remove confusion with trailing_zeroes
   const bool trailingZeros =
       requiredTwos <= 0 ||
