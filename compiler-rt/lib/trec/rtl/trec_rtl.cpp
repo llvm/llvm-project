@@ -768,8 +768,6 @@ ALWAYS_INLINE USED void RecordFuncEntry(ThreadState *thr, bool &should_record,
   if (LIKELY(ctx->flags.output_trace) &&
       LIKELY(ctx->flags.record_func_enter_exit) &&
       LIKELY(thr->ignore_interceptors == 0)) {
-    Report("tid=%d name=%s ctx->flags.addr=%p\n", thr->tid, name,
-           &(ctx->flags));
            
     if (ctx->flags.trace_mode == 2 || ctx->flags.trace_mode == 3) {
       should_record = should_record || thr->tctx->isFuncEnterMetaVaild ||

@@ -733,28 +733,6 @@ TREC_INTERCEPTOR(int, pthread_create, void *th, void *attr,
                  void *(*callback)(void *), void *param) {
   ScopedIgnoreInterceptors ignore;
   SCOPED_INTERCEPTOR_RAW(pthread_create, th, attr, callback, param);
-  if (ctx->after_multithreaded_fork) {
-    if (flags()->die_after_fork) {
-      Report(
-          "TraceRecorder: starting new threads after multi-threaded "
-          "fork is not supported. Dying (set die_after_fork=0 to override)\n");
-      Die();
-    } else {
-      VPrintf(1,
-              "TraceRecorder: starting new threads after multi-threaded "
-              "fork is not supported (pid %d). Continuing because of "
-              "die_after_fork=0, but you are on your own\n",
-              internal_getpid());
-    }
-  }
-  __sanitizer_pthread_attr_t myattr;
-  if (attr == 0) {
-    pthread_attr_init(&myattr);
-    attr = &myattr;
-  }
-  int detached = 0;
-  REAL(pthread_attr_getdetachstate)(attr, &detached);
-  AdjustStackSize(attr);
 
   ThreadParam p;
   p.callback = callback;
@@ -782,17 +760,37 @@ TREC_INTERCEPTOR(int, pthread_create, void *th, void *attr,
     internal_memcpy(p.debug_info, thr->tctx->dbg_temp_buffer,
                     p.debug_info_size);
     thr->tctx->dbg_temp_buffer_size = 0;
-    Report(
-        "tid=%d,debuginfo=%s\n", thr->tid,
-        thr->tctx->dbg_temp_buffer + sizeof(__trec_debug_info::InstDebugInfo));
   }
   atomic_store(&p.tid, 0, memory_order_relaxed);
+
+  if (ctx->after_multithreaded_fork) {
+    if (flags()->die_after_fork) {
+      Report(
+          "TraceRecorder: starting new threads after multi-threaded "
+          "fork is not supported. Dying (set die_after_fork=0 to override)\n");
+      Die();
+    } else {
+      VPrintf(1,
+              "TraceRecorder: starting new threads after multi-threaded "
+              "fork is not supported (pid %d). Continuing because of "
+              "die_after_fork=0, but you are on your own\n",
+              internal_getpid());
+    }
+  }
+  __sanitizer_pthread_attr_t myattr;
+  if (attr == 0) {
+    pthread_attr_init(&myattr);
+    attr = &myattr;
+  }
+  int detached = 0;
+  REAL(pthread_attr_getdetachstate)(attr, &detached);
+  AdjustStackSize(attr);
+
   int res = -1;
   {
     // Otherwise we see false positives in pthread stack manipulation.
     res = REAL(pthread_create)(th, attr, __trec_thread_start_func, &p);
   }
-  Report("create pthread tid=%d\n", res);
   if (res == 0) {
     int backup = thr->ignore_interceptors;
     thr->ignore_interceptors = 0;
