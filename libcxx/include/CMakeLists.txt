@@ -297,6 +297,11 @@ set(files
   __debug
   __debug_utils/randomize_range.h
   __errc
+  __exception/exception.h
+  __exception/exception_ptr.h
+  __exception/nested_exception.h
+  __exception/operations.h
+  __exception/terminate.h
   __expected/bad_expected_access.h
   __expected/expected.h
   __expected/unexpect.h

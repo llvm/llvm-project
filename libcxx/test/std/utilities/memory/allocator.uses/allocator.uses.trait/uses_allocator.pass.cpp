@@ -12,6 +12,7 @@
 
 #include <memory>
 #include <vector>
+#include <type_traits>
 
 #include "test_macros.h"
 
