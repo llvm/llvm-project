@@ -155,8 +155,7 @@ struct C : A, B {
 };
 
 C::~C() {
-// CHECK-LABEL: define dso_local x86_thiscallcc void @"??1C@dtor_in_second_nvbase@@UAE@XZ"
-// CHECK:       (%"struct.dtor_in_second_nvbase::C"* {{[^,]*}} %this)
+// CHECK-LABEL: define dso_local x86_thiscallcc void @"??1C@dtor_in_second_nvbase@@UAE@XZ"(i8*{{[^,]*}} %this.coerce)
 //      No this adjustment!
 // CHECK-NOT: getelementptr
 // CHECK:   load %"struct.dtor_in_second_nvbase::C"*, %"struct.dtor_in_second_nvbase::C"** %{{.*}}
@@ -164,19 +163,16 @@ C::~C() {
 // CHECK:   bitcast %"struct.dtor_in_second_nvbase::C"* %{{.*}} to i8*
 // CHECK:   getelementptr inbounds i8, i8* %{{.*}}, i32 4
 // CHECK:   bitcast i8* %{{.*}} to %"struct.dtor_in_second_nvbase::B"*
-// CHECK:   call x86_thiscallcc void @"??1B@dtor_in_second_nvbase@@UAE@XZ"
-// CHECK:       (%"struct.dtor_in_second_nvbase::B"* {{[^,]*}} %{{.*}})
+// CHECK:   call x86_thiscallcc void @"??1B@dtor_in_second_nvbase@@UAE@XZ"(%"struct.dtor_in_second_nvbase::B"*{{[^,]*}} %{{.*}})
 // CHECK:   ret void
 }
 
 void foo() {
   C c;
 }
-// DTORS2-LABEL: define linkonce_odr dso_local x86_thiscallcc i8* @"??_EC@dtor_in_second_nvbase@@W3AEPAXI@Z"
-// DTORS2:       (%"struct.dtor_in_second_nvbase::C"* %this, i32 %should_call_delete)
+// DTORS2-LABEL: define linkonce_odr dso_local x86_thiscallcc i8* @"??_EC@dtor_in_second_nvbase@@W3AEPAXI@Z"(i8* %this.coerce, i32 %should_call_delete)
 //      Do an adjustment from B* to C*.
 // DTORS2:   getelementptr i8, i8* %{{.*}}, i32 -4
-// DTORS2:   bitcast i8* %{{.*}} to %"struct.dtor_in_second_nvbase::C"*
 // DTORS2:   %[[CALL:.*]] = tail call x86_thiscallcc i8* @"??_GC@dtor_in_second_nvbase@@UAEPAXI@Z"
 // DTORS2:   ret i8* %[[CALL]]
 }
@@ -195,7 +191,7 @@ struct E : virtual C { int e; };
 struct F : D, E { ~F(); int f; };
 
 F::~F() {
-// CHECK-LABEL: define dso_local x86_thiscallcc void @"??1F@test2@@UAE@XZ"(%"struct.test2::F"*{{[^,]*}})
+// CHECK-LABEL: define dso_local x86_thiscallcc void @"??1F@test2@@UAE@XZ"(i8*{{[^,]*}})
 //      Do an adjustment from C vbase subobject to F as though F was the
 //      complete type.
 // CHECK:   getelementptr inbounds i8, i8* %{{.*}}, i32 -20
@@ -209,7 +205,6 @@ void foo() {
 // DTORS3-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"??_DF@test2@@QAEXXZ"({{.*}} {{.*}} comdat
 //      Do an adjustment from C* to F*.
 // DTORS3:   getelementptr i8, i8* %{{.*}}, i32 20
-// DTORS3:   bitcast i8* %{{.*}} to %"struct.test2::F"*
 // DTORS3:   call x86_thiscallcc void @"??1F@test2@@UAE@XZ"
 // DTORS3:   ret void
 
