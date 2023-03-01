@@ -9,28 +9,24 @@ define void @test_61038(ptr %tmp_buffer) {
 ; CHECK-BMI2:       # %bb.0: # %entry
 ; CHECK-BMI2-NEXT:    tzcntl %eax, %eax
 ; CHECK-BMI2-NEXT:    movabsq $8589934591, %rcx # imm = 0x1FFFFFFFF
-; CHECK-BMI2-NEXT:    movq $-1, %rdx
+; CHECK-BMI2-NEXT:    movq %rcx, %rdx
 ; CHECK-BMI2-NEXT:    btcq %rax, %rdx
-; CHECK-BMI2-NEXT:    shrxq %rdx, %rcx, %rdx
-; CHECK-BMI2-NEXT:    btcq %rax, %rcx
 ; CHECK-BMI2-NEXT:    xorl %eax, %eax
-; CHECK-BMI2-NEXT:    cmpq $64, %rcx
-; CHECK-BMI2-NEXT:    cmovael %eax, %edx
-; CHECK-BMI2-NEXT:    movl %edx, (%rdi)
+; CHECK-BMI2-NEXT:    cmpq $64, %rdx
+; CHECK-BMI2-NEXT:    shrxq %rdx, %rcx, %rcx
+; CHECK-BMI2-NEXT:    cmovael %eax, %ecx
+; CHECK-BMI2-NEXT:    movl %ecx, (%rdi)
 ; CHECK-BMI2-NEXT:    retq
 ;
 ; CHECK-BMI-LABEL: test_61038:
 ; CHECK-BMI:       # %bb.0: # %entry
 ; CHECK-BMI-NEXT:    tzcntl %eax, %eax
 ; CHECK-BMI-NEXT:    movabsq $8589934591, %rdx # imm = 0x1FFFFFFFF
-; CHECK-BMI-NEXT:    movq %rdx, %rsi
-; CHECK-BMI-NEXT:    btcq %rax, %rsi
-; CHECK-BMI-NEXT:    movq $-1, %rcx
+; CHECK-BMI-NEXT:    movq %rdx, %rcx
 ; CHECK-BMI-NEXT:    btcq %rax, %rcx
-; CHECK-BMI-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; CHECK-BMI-NEXT:    shrq %cl, %rdx
 ; CHECK-BMI-NEXT:    xorl %eax, %eax
-; CHECK-BMI-NEXT:    cmpq $64, %rsi
+; CHECK-BMI-NEXT:    cmpq $64, %rcx
 ; CHECK-BMI-NEXT:    cmovael %eax, %edx
 ; CHECK-BMI-NEXT:    movl %edx, (%rdi)
 ; CHECK-BMI-NEXT:    retq
