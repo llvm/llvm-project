@@ -11,7 +11,7 @@ define i32 @a(i8 zeroext %b, ptr nocapture readonly %c, ptr nocapture readonly %
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    cmp r0, #1
+; CHECK-NEXT:    cmp r0, #2
 ; CHECK-NEXT:    bls.w .LBB0_12
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.us.preheader
 ; CHECK-NEXT:    movw r5, :lower16:arr_183
@@ -189,7 +189,7 @@ define i32 @a(i8 zeroext %b, ptr nocapture readonly %c, ptr nocapture readonly %
 ; CHECK-NEXT:    letp lr, .LBB0_24
 ; CHECK-NEXT:    b .LBB0_14
 entry:
-  %cmp = icmp ugt i8 %b, 1
+  %cmp = icmp ugt i8 %b, 2  ; avoid following BB optimizing away through the domination
   br i1 %cmp, label %for.body.us.preheader, label %for.cond.preheader
 
 for.cond.preheader:                               ; preds = %entry
