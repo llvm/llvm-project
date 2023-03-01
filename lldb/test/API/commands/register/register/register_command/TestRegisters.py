@@ -567,3 +567,41 @@ class RegisterCommandsTestCase(TestBase):
             error=True,
             substrs=["error: Register not found for 'blub'."],
         )
+
+    def test_info_unknown_register(self):
+        self.build()
+        self.common_setup()
+
+        self.expect("register info blub", error=True,
+                    substrs=["error: No register found with name 'blub'."])
+
+    def test_info_many_registers(self):
+        self.build()
+        self.common_setup()
+
+        # Only 1 register allowed at this time.
+        self.expect("register info abc def", error=True,
+                    substrs=["error: register info takes exactly 1 argument"])
+
+    @skipIf(archs=no_match(["aarch64"]))
+    def test_info_register(self):
+        # The behaviour of this command is generic but the specific registers
+        # are not, so this is written for AArch64 only.
+        # Text alignment and ordering are checked in the DumpRegisterInfo unit tests.
+        self.build()
+        self.common_setup()
+
+        # Standard register. Doesn't invalidate anything, doesn't have an alias.
+        self.expect("register info x1", substrs=[
+                   "Name: x1",
+                   "Size: 8 bytes (64 bits)",
+                   "In sets: General Purpose Registers"])
+        self.expect("register info x1", substrs=["Invalidates:", "Name: x1 ("],
+                    matching=False)
+
+        # These registers invalidate others as they are subsets of those registers.
+        self.expect("register info w1", substrs=["Invalidates: x1"])
+        self.expect("register info s0", substrs=["Invalidates: v0, d0"])
+
+        # This has an alternative name according to the ABI.
+        self.expect("register info x30", substrs=["Name: lr (x30)"])
