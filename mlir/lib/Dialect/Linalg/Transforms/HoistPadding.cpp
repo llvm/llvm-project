@@ -100,6 +100,9 @@ struct HoistingAnalysis {
   /// The ExtractSliceOp that feeds the PadOp we want to hoist.
   tensor::ExtractSliceOp sliceOp;
 
+  /// If non-empty, this is the unique scf::ForOp that consumes the `sliceOp`.
+  scf::ForOp padConsumingForOp;
+
 private:
   /// Drop any non-index dependencies of `padOp` and `sliceOp` from
   /// `backwardSlice`. The method follows the use-def chains of the index
@@ -224,9 +227,12 @@ HoistingAnalysis::HoistingAnalysis(tensor::PadOp padOp, int numLoops) {
     LLVM_DEBUG(DBGS() << "----Source not defined outside of loops -> Skip\n");
     return;
   }
+  if (sliceOp->hasOneUse()) {
+    padConsumingForOp = dyn_cast<scf::ForOp>(*(sliceOp->getUsers().begin()));
+  }
 
-  // Check the region of `padOp` depends on a constant only. Adding
-  // hoisting support for arbitrary padding regions would require cloning all
+  // Check the region of `padOp` depends on a constant only. Adding hoisting
+  // support for arbitrary padding regions would require cloning all
   // dependencies captured by the padding region.
   Value paddingValue = padOp.getConstantPaddingValue();
   if (!paddingValue ||
@@ -258,6 +264,13 @@ HoistingAnalysis::HoistingAnalysis(tensor::PadOp padOp, int numLoops) {
   for (scf::ForOp forOp : llvm::reverse(reverseEnclosingLoops))
     if (backwardSlice.contains(forOp))
       packingLoops.push_back(forOp);
+
+  // TODO: for multiple loops we need to track the use to the innermost loop.
+  if (packingLoops.size() > 1 && padConsumingForOp) {
+    LLVM_DEBUG(DBGS() << "--Cannot hoist multiple loops through iter_args -> "
+                         "Downgrade to 1 loop\n");
+    packingLoops.resize(1);
+  }
 
   // Note: at this point, packing loops may be empty but we would still like
   // to hoist the padding if so specified.
@@ -512,18 +525,21 @@ static PackingLoopNestResult buildPackingLoopNest(
     paddedTensor = maybeTransposeOp.getResult(0);
   }
 
-  // Step 4. Create InsertSliceOp at the innermost loop level, inserting an
-  // optionally transposed padded slice into the packed tensor.
-  Value inserted = rewriter.create<tensor::InsertSliceOp>(
-      loc, paddedTensor, packedTensor, offsets, sizes, strides);
+  // Innermost tensor.insert_slice and yields are optional / need loops.
+  if (nPackedLoops > 0) {
+    // Step 4. Create InsertSliceOp at the innermost loop level, inserting an
+    // optionally transposed padded slice into the packed tensor.
+    Value inserted = rewriter.create<tensor::InsertSliceOp>(
+        loc, paddedTensor, packedTensor, offsets, sizes, strides);
 
-  // Step 5. Iteratively pop the stack and propagate the yield.
-  Value valueToYield = inserted;
-  for (Value iv : llvm::reverse(clonedLoopIvs)) {
-    auto forOp = scf::getForInductionVarOwner(iv);
-    rewriter.setInsertionPointToEnd(&forOp.getRegion().front());
-    rewriter.create<scf::YieldOp>(loc, valueToYield);
-    valueToYield = forOp.getResult(0);
+    // Step 5. Iteratively pop the stack and propagate the yield.
+    Value valueToYield = inserted;
+    for (Value iv : llvm::reverse(clonedLoopIvs)) {
+      auto forOp = scf::getForInductionVarOwner(iv);
+      rewriter.setInsertionPointToEnd(&forOp.getRegion().front());
+      rewriter.create<scf::YieldOp>(loc, valueToYield);
+      valueToYield = forOp.getResult(0);
+    }
   }
 
   return PackingLoopNestResult{offsets,
@@ -532,6 +548,36 @@ static PackingLoopNestResult buildPackingLoopNest(
                                clonedLoopIvs,
                                leadingPackedTensorIndexings,
                                maybeTransposeOp};
+}
+
+// If the original consumer of `sliceOp` was a `forOp` (i.e. through an iter
+// arg), propagate the `packedTensor` value through the same iter arg.
+// TODO: for multiple loops we need to track the use to the innermost loop.
+static Value padThroughLoopIterArg(RewriterBase &rewriter, Value packedTensor,
+                                   tensor::ExtractSliceOp sliceOp,
+                                   scf::ForOp forOp) {
+  OpOperand *pUse = nullptr;
+  for (OpOperand &use : sliceOp->getUses()) {
+    if (use.getOwner() == forOp) {
+      assert(!pUse && "Multiple slice uses in the for loop");
+      pUse = &use;
+    }
+  }
+  assert(pUse && "No slice use in the for loop");
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPointAfter(packedTensor.getDefiningOp());
+  Value casted = rewriter.create<tensor::CastOp>(
+      packedTensor.getLoc(), pUse->get().getType(), packedTensor);
+
+  std::optional<unsigned> operandNumber =
+      forOp.getIterArgNumberForOpOperand(*pUse);
+  assert(operandNumber.has_value() && "expected a proper iter arg number");
+  SmallVector<Value> initArgs = forOp.getInitArgs();
+  initArgs[operandNumber.value()] = casted;
+  rewriter.startRootUpdate(forOp);
+  forOp.getInitArgsMutable().assign(initArgs);
+  rewriter.finalizeRootUpdate(forOp);
+  return forOp.getRegionIterArgForOpOperand(*pUse);
 }
 
 /// Produce a tensor extracted from the packingResult. This can be used as a
@@ -588,8 +634,12 @@ static Value replaceByPackingLoopNestResult(
 
   LLVM_DEBUG(DBGS() << "packedTensor: " << packedTensor << "\n");
 
-  // TODO: atm we are missing the plumbing of packedTensor through the loop
-  // bbarg when required (i.e. when hoisting init tensors).
+  // If the consumer of `padOp` was a `forOp`, propagate through iter args.
+  scf::ForOp forOp = analysis.padConsumingForOp;
+  if (forOp) {
+    packedTensor =
+        padThroughLoopIterArg(rewriter, packedTensor, analysis.sliceOp, forOp);
+  }
 
   // offsets = [maybe_leading_ivs, 0 .. 0].
   // sizes = [1 .. 1, transposedShape] (defined above).
