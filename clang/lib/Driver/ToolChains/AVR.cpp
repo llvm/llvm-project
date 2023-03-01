@@ -498,8 +498,9 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (SectionAddressData) {
-    CmdArgs.push_back(Args.MakeArgString(
-        "-Tdata=0x" + Twine::utohexstr(*SectionAddressData)));
+    CmdArgs.push_back(
+        Args.MakeArgString("--defsym=__DATA_REGION_ORIGIN__=0x" +
+                           Twine::utohexstr(*SectionAddressData)));
   } else {
     // We do not have an entry for this CPU in the address mapping table yet.
     D.Diag(diag::warn_drv_avr_linker_section_addresses_not_implemented) << CPU;

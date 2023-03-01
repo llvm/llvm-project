@@ -59,3 +59,23 @@ define void @two_domains(ptr %arg1) {
 !3 = !{!3, !1}
 !4 = !{!2}
 !5 = !{!3}
+
+; // -----
+
+; CHECK-LABEL: llvm.func @supported_ops
+define void @supported_ops(ptr %arg1, float %arg2, i32 %arg3, i32 %arg4) {
+  ; CHECK: llvm.load {{.*}}alias_scopes =
+  %1 = load i32, ptr %arg1, !alias.scope !3
+  ; CHECK: llvm.store {{.*}}alias_scopes =
+  store i32 %1, ptr %arg1, !alias.scope !3
+  ; CHECK: llvm.atomicrmw {{.*}}alias_scopes =
+  %2 = atomicrmw fmax ptr %arg1, float %arg2 acquire, !alias.scope !3
+  ; CHECK: llvm.cmpxchg {{.*}}alias_scopes =
+  %3 = cmpxchg ptr %arg1, i32 %arg3, i32 %arg4 monotonic seq_cst, !alias.scope !3
+  ret void
+}
+
+!0 = distinct !{!0, !"The domain"}
+!1 = distinct !{!1}
+!2 = !{!2, !0}
+!3 = !{!2}

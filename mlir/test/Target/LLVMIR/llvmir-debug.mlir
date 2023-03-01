@@ -1,4 +1,4 @@
-// RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
+// RUN: mlir-translate -mlir-to-llvmir --split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: define void @func_with_empty_named_info()
 // Check that translation doens't crash in the presence of an inlineble call
@@ -149,8 +149,7 @@ llvm.func @empty_types() {
 // CHECK-DAG: ![[NAMED_LOC]] = !DILocation(line: 10, column: 10
 // CHECK-DAG: ![[FUSED_LOC]] = !DILocation(line: 1, column: 1
 
-// CHECK: ![[FUSEDWITH_LOC]] = !DILocation(line: 2, column: 4, scope: ![[FUSEDWITH_SCOPE:.*]], inlinedAt: ![[INLINE_LOC:.*]])
-// CHECK: ![[FUSEDWITH_SCOPE]] = !DILexicalBlockFile(scope: ![[CALLEE_LOC:.*]], file:
+// CHECK: ![[FUSEDWITH_LOC]] = !DILocation(line: 2, column: 4, scope: ![[CALLEE_LOC:.*]], inlinedAt: ![[INLINE_LOC:.*]])
 // CHECK: ![[CALLEE_LOC]] = distinct !DISubprogram(name: "callee", scope: ![[COMPOSITE_TYPE]], file: ![[CU_FILE_LOC]], type: ![[CALLEE_TYPE:.*]], spFlags: DISPFlagDefinition, unit: ![[CU_LOC]])
 // CHECK: ![[CALLEE_TYPE]] = !DISubroutineType(types: ![[CALLEE_ARGS:.*]])
 // CHECK: ![[CALLEE_ARGS]] = !{![[ARG_TYPE:.*]], ![[ARG_TYPE:.*]]}
@@ -159,3 +158,43 @@ llvm.func @empty_types() {
 // CHECK: ![[EMPTY_TYPES_LOC]] = distinct !DISubprogram(name: "empty_types", scope: ![[CU_FILE_LOC]], file: ![[CU_FILE_LOC]], type: ![[EMPTY_TYPES_TYPE:.*]], spFlags: DISPFlagDefinition
 // CHECK: ![[EMPTY_TYPES_TYPE]] = !DISubroutineType(cc: DW_CC_normal, types: ![[EMPTY_TYPES_ARGS:.*]])
 // CHECK: ![[EMPTY_TYPES_ARGS]] = !{}
+
+// -----
+
+#di_basic_type = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int", sizeInBits = 32, encoding = DW_ATE_signed>
+#di_file = #llvm.di_file<"foo.mlir" in "/test/">
+#di_compile_unit = #llvm.di_compile_unit<
+  sourceLanguage = DW_LANG_C, file = #di_file, producer = "MLIR",
+  isOptimized = true, emissionKind = Full
+>
+#di_subprogram = #llvm.di_subprogram<
+  compileUnit = #di_compile_unit, scope = #di_file, name = "outer_func",
+  file = #di_file, subprogramFlags = "Definition|Optimized"
+>
+#di_subprogram1 = #llvm.di_subprogram<
+  compileUnit = #di_compile_unit, scope = #di_file, name = "inner_func",
+  file = #di_file, subprogramFlags = "LocalToUnit|Definition|Optimized"
+>
+#di_local_variable0 = #llvm.di_local_variable<scope = #di_subprogram, name = "a", file = #di_file, type = #di_basic_type>
+#di_lexical_block_file = #llvm.di_lexical_block_file<scope = #di_subprogram1, file = #di_file, discriminator = 0>
+#di_local_variable1 = #llvm.di_local_variable<scope = #di_lexical_block_file, name = "b", file = #di_file, type = #di_basic_type>
+
+#loc0 = loc("foo.mlir":0:0)
+#loc1 = loc(callsite(#loc0 at fused<#di_subprogram>["foo.mlir":4:2]))
+
+// CHECK-LABEL: define i32 @func_with_inlined_dbg_value(
+// CHECK-SAME: i32 %[[ARG:.*]]) !dbg ![[OUTER_FUNC:[0-9]+]]
+llvm.func @func_with_inlined_dbg_value(%arg0: i32) -> (i32) {
+  // CHECK: call void @llvm.dbg.value(metadata i32 %[[ARG]], metadata ![[VAR_LOC0:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG_LOC0:.*]]
+  llvm.intr.dbg.value #di_local_variable0 = %arg0 : i32 loc(fused<#di_subprogram>[#loc0])
+  // CHECK: call void @llvm.dbg.value(metadata i32 %[[ARG]], metadata ![[VAR_LOC1:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG_LOC1:.*]]
+  llvm.intr.dbg.value #di_local_variable1 = %arg0 : i32 loc(fused<#di_lexical_block_file>[#loc1])
+  llvm.return %arg0 : i32
+} loc(fused<#di_subprogram>["caller"])
+
+// CHECK: ![[FILE:.*]] = !DIFile(filename: "foo.mlir", directory: "/test/")
+// CHECK-DAG: ![[OUTER_FUNC]] = distinct !DISubprogram(name: "outer_func", scope: ![[FILE]]
+// CHECK-DAG: ![[INNER_FUNC:.*]] = distinct !DISubprogram(name: "inner_func", scope: ![[FILE]]
+// CHECK-DAG: ![[LEXICAL_BLOCK_FILE:.*]] = distinct !DILexicalBlockFile(scope: ![[INNER_FUNC]], file: ![[FILE]], discriminator: 0)
+// CHECK-DAG: ![[VAR_LOC0]] = !DILocalVariable(name: "a", scope: ![[OUTER_FUNC]], file: ![[FILE]]
+// CHECK-DAG: ![[VAR_LOC1]] = !DILocalVariable(name: "b", scope: ![[LEXICAL_BLOCK_FILE]], file: ![[FILE]]

@@ -10327,18 +10327,6 @@ static unsigned getExtFactor(SDValue &V) {
   return EltType.getSizeInBits() / 8;
 }
 
-/// NarrowVector - Given a value in the V128 register class, produce the
-/// equivalent value in the V64 register class.
-static SDValue NarrowVector(SDValue V128Reg, SelectionDAG &DAG) {
-  EVT VT = V128Reg.getValueType();
-  unsigned WideSize = VT.getVectorNumElements();
-  MVT EltTy = VT.getVectorElementType().getSimpleVT();
-  MVT NarrowTy = MVT::getVectorVT(EltTy, WideSize / 2);
-  SDLoc DL(V128Reg);
-
-  return DAG.getTargetExtractSubreg(AArch64::dsub, DL, NarrowTy, V128Reg);
-}
-
 // Gather data to see if the operation can be modelled as a
 // shuffle in combination with VEXTs.
 SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
@@ -12594,7 +12582,6 @@ SDValue AArch64TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
                                    Subtarget->forceStreamingCompatibleSVE()))
     return LowerFixedLengthInsertVectorElt(Op, DAG);
 
-  // Check for non-constant or out of range lane.
   EVT VT = Op.getOperand(0).getValueType();
 
   if (VT.getScalarType() == MVT::i1) {
@@ -12613,31 +12600,12 @@ SDValue AArch64TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
     return DAG.getAnyExtOrTrunc(ExtendedVector, DL, VT);
   }
 
+  // Check for non-constant or out of range lane.
   ConstantSDNode *CI = dyn_cast<ConstantSDNode>(Op.getOperand(2));
   if (!CI || CI->getZExtValue() >= VT.getVectorNumElements())
     return SDValue();
 
-  // Insertion/extraction are legal for V128 types.
-  if (VT == MVT::v16i8 || VT == MVT::v8i16 || VT == MVT::v4i32 ||
-      VT == MVT::v2i64 || VT == MVT::v4f32 || VT == MVT::v2f64 ||
-      VT == MVT::v8f16 || VT == MVT::v8bf16)
-    return Op;
-
-  if (VT != MVT::v8i8 && VT != MVT::v4i16 && VT != MVT::v2i32 &&
-      VT != MVT::v1i64 && VT != MVT::v2f32 && VT != MVT::v4f16 &&
-      VT != MVT::v4bf16)
-    return SDValue();
-
-  // For V64 types, we perform insertion by expanding the value
-  // to a V128 type and perform the insertion on that.
-  SDLoc DL(Op);
-  SDValue WideVec = WidenVector(Op.getOperand(0), DAG);
-  EVT WideTy = WideVec.getValueType();
-
-  SDValue Node = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, WideTy, WideVec,
-                             Op.getOperand(1), Op.getOperand(2));
-  // Re-narrow the resultant vector.
-  return NarrowVector(Node, DAG);
+  return Op;
 }
 
 SDValue
