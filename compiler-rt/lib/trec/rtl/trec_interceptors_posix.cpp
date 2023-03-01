@@ -782,7 +782,9 @@ TREC_INTERCEPTOR(int, pthread_create, void *th, void *attr,
     internal_memcpy(p.debug_info, thr->tctx->dbg_temp_buffer,
                     p.debug_info_size);
     thr->tctx->dbg_temp_buffer_size = 0;
-    Report("tid=%d,debuginfo=%s\n", thr->tid, thr->tctx->dbg_temp_buffer);
+    Report(
+        "tid=%d,debuginfo=%s\n", thr->tid,
+        thr->tctx->dbg_temp_buffer + sizeof(__trec_debug_info::InstDebugInfo));
   }
   atomic_store(&p.tid, 0, memory_order_relaxed);
   int res = -1;
