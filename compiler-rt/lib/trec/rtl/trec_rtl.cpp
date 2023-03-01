@@ -82,7 +82,8 @@ int Context::CopyFile(const char *src_path, const char *dest_path) {
   if (src_fd < 0 || dest_fd < 0)
     return 1;
   uptr read_bytes = 0;
-  while ((read_bytes = internal_read(src_fd, read_buff, TREC_BUFFER_SIZE)) > 0) {
+  while ((read_bytes = internal_read(src_fd, read_buff, TREC_BUFFER_SIZE)) >
+         0) {
     while (read_bytes > 0) {
       char *buff_pos = read_buff;
       uptr write_bytes = internal_write(dest_fd, buff_pos, read_bytes);
@@ -767,6 +768,9 @@ ALWAYS_INLINE USED void RecordFuncEntry(ThreadState *thr, bool &should_record,
   if (LIKELY(ctx->flags.output_trace) &&
       LIKELY(ctx->flags.record_func_enter_exit) &&
       LIKELY(thr->ignore_interceptors == 0)) {
+    Report("tid=%d name=%s ctx->flags.addr=%p\n", thr->tid, name,
+           &(ctx->flags));
+           
     if (ctx->flags.trace_mode == 2 || ctx->flags.trace_mode == 3) {
       should_record = should_record || thr->tctx->isFuncEnterMetaVaild ||
                       thr->tctx->dbg_temp_buffer_size != 0;
