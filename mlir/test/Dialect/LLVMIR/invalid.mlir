@@ -938,9 +938,9 @@ module {
 // -----
 
 module {
-  llvm.func @accessGroups(%arg0 : !llvm.ptr<i32>) {
+  llvm.func @accessGroups(%arg0 : !llvm.ptr) {
       // expected-error@below {{expected '@func1' to specify a fully qualified reference}}
-      %0 = llvm.load %arg0 { "access_groups" = [@func1] } : !llvm.ptr<i32>
+      %0 = llvm.load %arg0 { "access_groups" = [@func1] } : !llvm.ptr -> i32
       llvm.return
   }
   llvm.func @func1() {
@@ -951,9 +951,9 @@ module {
 // -----
 
 module {
-  llvm.func @accessGroups(%arg0 : !llvm.ptr<i32>) {
+  llvm.func @accessGroups(%arg0 : i32, %arg1 : !llvm.ptr) {
       // expected-error@below {{expected '@accessGroups::@group1' to reference a metadata op}}
-      %0 = llvm.load %arg0 { "access_groups" = [@accessGroups::@group1] } : !llvm.ptr<i32>
+      llvm.store %arg0, %arg1 { "access_groups" = [@accessGroups::@group1] } : i32, !llvm.ptr
       llvm.return
   }
   llvm.metadata @metadata {
@@ -963,9 +963,9 @@ module {
 // -----
 
 module {
-  llvm.func @accessGroups(%arg0 : !llvm.ptr<i32>) {
+  llvm.func @accessGroups(%arg0 : !llvm.ptr, %arg1 : f32) {
       // expected-error@below {{expected '@metadata::@group1' to be a valid reference}}
-      %0 = llvm.load %arg0 { "access_groups" = [@metadata::@group1] } : !llvm.ptr<i32>
+      %0 = llvm.atomicrmw fadd %arg0, %arg1 monotonic { "access_groups" = [@metadata::@group1] } : !llvm.ptr, f32
       llvm.return
   }
   llvm.metadata @metadata {
@@ -975,9 +975,9 @@ module {
 // -----
 
 module {
-  llvm.func @accessGroups(%arg0 : !llvm.ptr<i32>) {
+  llvm.func @accessGroups(%arg0 : !llvm.ptr, %arg1 : i32, %arg2 : i32) {
       // expected-error@below {{expected '@metadata::@scope' to resolve to a llvm.access_group}}
-      %0 = llvm.load %arg0 { "access_groups" = [@metadata::@scope] } : !llvm.ptr<i32>
+      %0 = llvm.cmpxchg %arg0, %arg1, %arg2 acq_rel monotonic { "access_groups" = [@metadata::@scope] } : !llvm.ptr, i32
       llvm.return
   }
   llvm.metadata @metadata {
@@ -989,9 +989,9 @@ module {
 // -----
 
 module {
-  llvm.func @accessGroups(%arg0 : !llvm.ptr<i32>) {
+  llvm.func @aliasScope(%arg0 : !llvm.ptr, %arg1 : i32, %arg2 : i32) {
       // expected-error@below {{attribute 'alias_scopes' failed to satisfy constraint: symbol ref array attribute}}
-      %0 = llvm.load %arg0 { "alias_scopes" = "test" } : !llvm.ptr<i32>
+      %0 = llvm.cmpxchg %arg0, %arg1, %arg2 acq_rel monotonic { "alias_scopes" = "test" } : !llvm.ptr, i32
       llvm.return
   }
 }
@@ -999,9 +999,9 @@ module {
 // -----
 
 module {
-  llvm.func @accessGroups(%arg0 : !llvm.ptr<i32>) {
+  llvm.func @noAliasScopes(%arg0 : !llvm.ptr) {
       // expected-error@below {{attribute 'noalias_scopes' failed to satisfy constraint: symbol ref array attribute}}
-      %0 = llvm.load %arg0 { "noalias_scopes" = "test" } : !llvm.ptr<i32>
+      %0 = llvm.load %arg0 { "noalias_scopes" = "test" } : !llvm.ptr -> i32
       llvm.return
   }
 }
@@ -1009,9 +1009,9 @@ module {
 // -----
 
 module {
-  llvm.func @aliasScope(%arg0 : !llvm.ptr<i32>) {
+  llvm.func @aliasScope(%arg0 : i32, %arg1 : !llvm.ptr) {
       // expected-error@below {{expected '@metadata::@group' to resolve to a llvm.alias_scope}}
-      %0 = llvm.load %arg0 { "alias_scopes" = [@metadata::@group] } : !llvm.ptr<i32>
+      llvm.store %arg0, %arg1 { "alias_scopes" = [@metadata::@group] } : i32, !llvm.ptr
       llvm.return
   }
   llvm.metadata @metadata {
@@ -1022,9 +1022,9 @@ module {
 // -----
 
 module {
-  llvm.func @aliasScope(%arg0 : !llvm.ptr<i32>) {
+  llvm.func @aliasScope(%arg0 : !llvm.ptr, %arg1 : f32) {
       // expected-error@below {{expected '@metadata::@group' to resolve to a llvm.alias_scope}}
-      %0 = llvm.load %arg0 { "noalias_scopes" = [@metadata::@group] } : !llvm.ptr<i32>
+      %0 = llvm.atomicrmw fadd %arg0, %arg1 monotonic { "noalias_scopes" = [@metadata::@group] } : !llvm.ptr, f32
       llvm.return
   }
   llvm.metadata @metadata {

@@ -15,6 +15,7 @@
 #define MLIR_DIALECT_LLVMIR_LLVMDIALECT_H_
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
@@ -33,8 +34,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-
-#include "mlir/Dialect/LLVMIR/LLVMInterfaces.h.inc"
 
 namespace llvm {
 class Type;
