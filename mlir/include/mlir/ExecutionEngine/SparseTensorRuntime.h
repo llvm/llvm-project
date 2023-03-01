@@ -283,6 +283,17 @@ MLIR_CRUNNERUTILS_EXPORT void delSparseTensorReader(void *p);
 MLIR_SPARSETENSOR_FOREVERY_V(DECL_GETNEXT)
 #undef DECL_GETNEXT
 
+/// Reads the sparse tensor, stores the coordinates and values to the given
+/// memrefs. Returns a boolean value to indicate whether the COO elements are
+/// sorted.
+#define DECL_GETNEXT(VNAME, V, CNAME, C)                                       \
+  MLIR_CRUNNERUTILS_EXPORT bool                                                \
+      _mlir_ciface_getSparseTensorReaderRead##CNAME##VNAME(                    \
+          void *p, StridedMemRefType<index_type, 1> *dim2lvlRef,               \
+          StridedMemRefType<C, 1> *iref, StridedMemRefType<V, 1> *vref)        \
+          MLIR_SPARSETENSOR_FOREVERY_V_O(DECL_GETNEXT)
+#undef DECL_GETNEXT
+
 using SparseTensorWriter = std::ostream;
 
 /// Creates a SparseTensorWriter for outputing a sparse tensor to a file with

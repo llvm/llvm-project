@@ -1033,6 +1033,12 @@ the user can choose to get the dependency information per file. For example:
 
   $ clang-scan-deps -format=p1689 -- <path-to-compiler-executable>/clang++ -std=c++20 impl_part.cppm -c -o impl_part.o
 
+.. warning::
+
+   The ``<path-to-compiler-executable>/clang++`` should point to the real
+   binary and not to a symlink. If it points to a symlink the include paths
+   will not be correctly resolved.
+
 And we'll get:
 
 .. code-block:: text

@@ -92,6 +92,11 @@ enum class PrimaryType : uint32_t {
 };
 
 // This x-macro includes all `V` types.
+// TODO: We currently split out the non-variadic version from the variadic
+// version. Using ##__VA_ARGS__ to avoid the split gives
+//   warning: token pasting of ',' and __VA_ARGS__ is a GNU extension
+//   [-Wgnu-zero-variadic-macro-arguments]
+// and __VA_OPT__(, ) __VA_ARGS__ requires c++20.
 #define MLIR_SPARSETENSOR_FOREVERY_V(DO)                                       \
   DO(F64, double)                                                              \
   DO(F32, float)                                                               \
@@ -103,6 +108,27 @@ enum class PrimaryType : uint32_t {
   DO(I8, int8_t)                                                               \
   DO(C64, complex64)                                                           \
   DO(C32, complex32)
+
+// This x-macro includes all `V` types and supports variadic arguments.
+#define MLIR_SPARSETENSOR_FOREVERY_V_VAR(DO, ...)                              \
+  DO(F64, double, __VA_ARGS__)                                                 \
+  DO(F32, float, __VA_ARGS__)                                                  \
+  DO(F16, f16, __VA_ARGS__)                                                    \
+  DO(BF16, bf16, __VA_ARGS__)                                                  \
+  DO(I64, int64_t, __VA_ARGS__)                                                \
+  DO(I32, int32_t, __VA_ARGS__)                                                \
+  DO(I16, int16_t, __VA_ARGS__)                                                \
+  DO(I8, int8_t, __VA_ARGS__)                                                  \
+  DO(C64, complex64, __VA_ARGS__)                                              \
+  DO(C32, complex32, __VA_ARGS__)
+
+// This x-macro calls its argument on every pair of overhead and `V` types.
+#define MLIR_SPARSETENSOR_FOREVERY_V_O(DO)                                     \
+  MLIR_SPARSETENSOR_FOREVERY_V_VAR(DO, 64, uint64_t)                           \
+  MLIR_SPARSETENSOR_FOREVERY_V_VAR(DO, 32, uint32_t)                           \
+  MLIR_SPARSETENSOR_FOREVERY_V_VAR(DO, 16, uint16_t)                           \
+  MLIR_SPARSETENSOR_FOREVERY_V_VAR(DO, 8, uint8_t)                             \
+  MLIR_SPARSETENSOR_FOREVERY_V_VAR(DO, 0, index_type)
 
 constexpr bool isFloatingPrimaryType(PrimaryType valTy) {
   return PrimaryType::kF64 <= valTy && valTy <= PrimaryType::kBF16;

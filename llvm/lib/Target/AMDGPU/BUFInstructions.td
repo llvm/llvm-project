@@ -1741,12 +1741,12 @@ multiclass MUBUFScratchLoadPat <MUBUF_Pseudo InstrOffen,
                                 ValueType vt, PatFrag ld> {
   def : GCNPat <
     (vt (ld (MUBUFScratchOffen v4i32:$srsrc, i32:$vaddr,
-                               i32:$soffset, u32imm:$offset))),
+                               i32:$soffset, i32:$offset))),
     (InstrOffen $vaddr, $srsrc, $soffset, $offset, 0, 0)
   >;
 
   def : GCNPat <
-    (vt (ld (MUBUFScratchOffset v4i32:$srsrc, i32:$soffset, u32imm:$offset))),
+    (vt (ld (MUBUFScratchOffset v4i32:$srsrc, i32:$soffset, i32:$offset))),
     (InstrOffset $srsrc, $soffset, $offset, 0, 0)
   >;
 }
@@ -1756,12 +1756,12 @@ multiclass MUBUFScratchLoadPat_D16 <MUBUF_Pseudo InstrOffen,
                                 MUBUF_Pseudo InstrOffset,
                                 ValueType vt, PatFrag ld_frag> {
   def : GCNPat <
-    (ld_frag (MUBUFScratchOffen v4i32:$srsrc, i32:$vaddr, i32:$soffset, u32imm:$offset), vt:$in),
+    (ld_frag (MUBUFScratchOffen v4i32:$srsrc, i32:$vaddr, i32:$soffset, i32:$offset), vt:$in),
     (InstrOffen $vaddr, $srsrc, $soffset, $offset, $in)
   >;
 
   def : GCNPat <
-    (ld_frag (MUBUFScratchOffset v4i32:$srsrc, i32:$soffset, u32imm:$offset), vt:$in),
+    (ld_frag (MUBUFScratchOffset v4i32:$srsrc, i32:$soffset, i32:$offset), vt:$in),
     (InstrOffset $srsrc, $soffset, $offset, $in)
   >;
 }
@@ -1844,13 +1844,13 @@ multiclass MUBUFScratchStorePat <MUBUF_Pseudo InstrOffen,
                                  RegisterClass rc = VGPR_32> {
   def : GCNPat <
     (st vt:$value, (MUBUFScratchOffen v4i32:$srsrc, i32:$vaddr,
-                                      i32:$soffset, u32imm:$offset)),
+                                      i32:$soffset, i32:$offset)),
     (InstrOffen rc:$value, $vaddr, $srsrc, $soffset, $offset, 0, 0)
   >;
 
   def : GCNPat <
     (st vt:$value, (MUBUFScratchOffset v4i32:$srsrc, i32:$soffset,
-                                       u32imm:$offset)),
+                                       i32:$offset)),
     (InstrOffset rc:$value, $srsrc, $soffset, $offset, 0, 0)
   >;
 }

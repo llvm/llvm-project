@@ -176,7 +176,6 @@ add_entrypoint_object(
   DEPENDS
     .memory_utils.memcpy_implementation
     .string_utils
-    libc.include.errno
     libc.include.stdlib
     libc.src.errno.errno
 )

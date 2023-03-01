@@ -1035,7 +1035,7 @@ public:
     typedef value_type&                                    reference;
     typedef const value_type&                              const_reference;
     static_assert((is_same<value_type, typename allocator_type::value_type>::value),
-                  "Invalid allocator::value_type");
+                  "Allocator::value_type must be same type as value_type");
 
 private:
     typedef __hash_value_type<key_type, mapped_type>                          __value_type;
@@ -1928,7 +1928,7 @@ public:
     typedef value_type&                                    reference;
     typedef const value_type&                              const_reference;
     static_assert((is_same<value_type, typename allocator_type::value_type>::value),
-                  "Invalid allocator::value_type");
+                  "Allocator::value_type must be same type as value_type");
 
 private:
     typedef __hash_value_type<key_type, mapped_type>                          __value_type;

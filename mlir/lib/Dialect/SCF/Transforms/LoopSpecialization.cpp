@@ -180,9 +180,9 @@ static void rewriteAffineOpAfterPeeling(RewriterBase &rewriter, ForOp forOp,
   });
 }
 
-LogicalResult mlir::scf::peelAndCanonicalizeForLoop(RewriterBase &rewriter,
-                                                    ForOp forOp,
-                                                    ForOp &partialIteration) {
+LogicalResult mlir::scf::peelForLoopAndSimplifyBounds(RewriterBase &rewriter,
+                                                      ForOp forOp,
+                                                      ForOp &partialIteration) {
   Value previousUb = forOp.getUpperBound();
   Value splitBound;
   if (failed(peelForLoop(rewriter, forOp, partialIteration, splitBound)))
@@ -218,7 +218,7 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
     }
     // Apply loop peeling.
     scf::ForOp partialIteration;
-    if (failed(peelAndCanonicalizeForLoop(rewriter, forOp, partialIteration)))
+    if (failed(peelForLoopAndSimplifyBounds(rewriter, forOp, partialIteration)))
       return failure();
     // Apply label, so that the same loop is not rewritten a second time.
     rewriter.updateRootInPlace(partialIteration, [&]() {

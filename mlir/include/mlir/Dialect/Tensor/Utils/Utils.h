@@ -31,6 +31,12 @@ SmallVector<Value> createDynamicDimValues(OpBuilder &b, Location loc,
 SmallVector<OpFoldResult> createDimValues(OpBuilder &b, Location loc,
                                           Value rankedTensor);
 
+/// Returns the transposed `rankedTensorType` if `transposeVector` is non-empty.
+/// Fail if `transposeVector` is not a permutation matching the tensor rank.
+FailureOr<RankedTensorType>
+computeTransposedType(RankedTensorType rankedTensorType,
+                      ArrayRef<int64_t> transposeVector);
+
 } // namespace tensor
 } // namespace mlir
 

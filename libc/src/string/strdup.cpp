@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strdup.h"
+#include "src/errno/libc_errno.h"
 #include "src/string/allocating_string_utils.h"
 #include "src/string/memory_utils/memcpy_implementations.h"
 
 #include "src/__support/common.h"
 
-#include <errno.h>
 #include <stdlib.h>
 
 namespace __llvm_libc {
@@ -22,7 +22,7 @@ LLVM_LIBC_FUNCTION(char *, strdup, (const char *src)) {
   if (dup)
     return *dup;
   if (src != nullptr)
-    errno = ENOMEM;
+    libc_errno = ENOMEM;
   return nullptr;
 }
 

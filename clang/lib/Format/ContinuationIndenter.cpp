@@ -1273,8 +1273,13 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     return ContinuationIndent;
   }
 
-  if (State.Line->InPragmaDirective)
-    return CurrentState.Indent + Style.ContinuationIndentWidth;
+  // OpenMP clauses want to get additional indentation when they are pushed onto
+  // the next line.
+  if (State.Line->InPragmaDirective) {
+    FormatToken *PragmaType = State.Line->First->Next->Next;
+    if (PragmaType && PragmaType->TokenText.equals("omp"))
+      return CurrentState.Indent + Style.ContinuationIndentWidth;
+  }
 
   // This ensure that we correctly format ObjC methods calls without inputs,
   // i.e. where the last element isn't selector like: [callee method];

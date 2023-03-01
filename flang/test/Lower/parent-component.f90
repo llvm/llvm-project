@@ -43,7 +43,7 @@ contains
     print*,y(:)%p
   end subroutine
   ! CHECK-LABEL: func.func @_QFPinit_with_slice()
-  ! CHECK: %[[Y:.*]] = fir.address_of(@_QFinit_with_sliceEy) : !fir.ref<!fir.array<2x!fir.type<_QFTc{a:i32,b:i32}>>>
+  ! CHECK: %[[Y:.*]] = fir.address_of(@_QFFinit_with_sliceEy) : !fir.ref<!fir.array<2x!fir.type<_QFTc{a:i32,b:i32}>>>
   ! CHECK: %[[C2:.*]] = arith.constant 2 : index
   ! CHECK: %[[C1:.*]] = arith.constant 1 : index
   ! CHECK: %[[C1_I64:.*]] = arith.constant 1 : i64
@@ -81,7 +81,7 @@ contains
     print*,y%p
   end subroutine
   ! CHECK-LABEL: func.func @_QFPinit_no_slice()
-  ! CHECK: %[[Y:.*]] = fir.address_of(@_QFinit_no_sliceEy) : !fir.ref<!fir.array<2x!fir.type<_QFTc{a:i32,b:i32}>>>
+  ! CHECK: %[[Y:.*]] = fir.address_of(@_QFFinit_no_sliceEy) : !fir.ref<!fir.array<2x!fir.type<_QFTc{a:i32,b:i32}>>>
   ! CHECK: %[[C2:.*]] = arith.constant 2 : index
   ! CHECK: %[[SHAPE:.*]] = fir.shape %[[C2]] : (index) -> !fir.shape<1>
   ! CHECK: %[[FIELD:.*]] = fir.field_index a, !fir.type<_QFTc{a:i32,b:i32}>
@@ -119,9 +119,9 @@ contains
   end subroutine
 
   ! CHECK-LABEL: func.func @_QFPinit_allocatable()
-  ! CHECK: %[[ALLOC:.*]] = fir.alloca !fir.heap<!fir.array<?x!fir.type<_QFTc{a:i32,b:i32}>>> {uniq_name = "_QFinit_allocatableEy.addr"}
-  ! CHECK: %[[LB0:.*]] = fir.alloca index {uniq_name = "_QFinit_allocatableEy.lb0"}
-  ! CHECK: %[[EXT0:.*]] = fir.alloca index {uniq_name = "_QFinit_allocatableEy.ext0"}
+  ! CHECK: %[[ALLOC:.*]] = fir.alloca !fir.heap<!fir.array<?x!fir.type<_QFTc{a:i32,b:i32}>>> {uniq_name = "_QFFinit_allocatableEy.addr"}
+  ! CHECK: %[[LB0:.*]] = fir.alloca index {uniq_name = "_QFFinit_allocatableEy.lb0"}
+  ! CHECK: %[[EXT0:.*]] = fir.alloca index {uniq_name = "_QFFinit_allocatableEy.ext0"}
   ! CHECK-COUNT-6: %{{.*}} = fir.field_index a, !fir.type<_QFTc{a:i32,b:i32}>
   ! CHECK: %[[LOAD_LB0:.*]] = fir.load %[[LB0]] : !fir.ref<index>
   ! CHECK: %[[LOAD_EXT0:.*]] = fir.load %[[EXT0]] : !fir.ref<index>
@@ -166,7 +166,7 @@ contains
   end subroutine
 
   ! CHECK-LABEL: func.func @_QFPinit_scalar()
-  ! CHECK: %[[S:.*]] = fir.address_of(@_QFinit_scalarEs) : !fir.ref<!fir.type<_QFTc{a:i32,b:i32}>>
+  ! CHECK: %[[S:.*]] = fir.address_of(@_QFFinit_scalarEs) : !fir.ref<!fir.type<_QFTc{a:i32,b:i32}>>
   ! CHECK: %[[CAST:.*]] = fir.convert %[[S]] : (!fir.ref<!fir.type<_QFTc{a:i32,b:i32}>>) -> !fir.ref<!fir.type<_QFTp{a:i32}>>
   ! CHECK: fir.call @_QFPprint_scalar(%[[CAST]]) {{.*}}: (!fir.ref<!fir.type<_QFTp{a:i32}>>) -> ()
 
@@ -207,7 +207,7 @@ contains
 
   ! CHECK-LABEL: func.func @_QFPinit_existing_field
   ! CHECK: %[[C2:.*]] = arith.constant 2 : index
-  ! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.array<2x!fir.type<_QFTz{k:i32,c:!fir.type<_QFTc{a:i32,b:i32}>}>> {bindc_name = "y", uniq_name = "_QFinit_existing_fieldEy"}
+  ! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.array<2x!fir.type<_QFTz{k:i32,c:!fir.type<_QFTc{a:i32,b:i32}>}>> {bindc_name = "y", uniq_name = "_QFFinit_existing_fieldEy"}
   ! CHECK: %[[FIELD_C:.*]] = fir.field_index c, !fir.type<_QFTz{k:i32,c:!fir.type<_QFTc{a:i32,b:i32}>}>
   ! CHECK: %[[SHAPE:.*]] = fir.shape %[[C2]] : (index) -> !fir.shape<1>
   ! CHECK: %[[C1:.*]] = arith.constant 1 : index

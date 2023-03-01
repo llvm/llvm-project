@@ -90,17 +90,17 @@ LIBC_INLINE void write_float_with_length(char *str,
   LengthModifier lm = to_conv.length_modifier;
   switch (lm) {
   case (LengthModifier::l): {
-    auto value = internal::strtofloatingpoint<double>(str, nullptr);
+    auto value = internal::strtofloatingpoint<double>(str);
     *reinterpret_cast<double *>(output_ptr) = value;
     break;
   }
   case (LengthModifier::L): {
-    auto value = internal::strtofloatingpoint<long double>(str, nullptr);
+    auto value = internal::strtofloatingpoint<long double>(str);
     *reinterpret_cast<long double *>(output_ptr) = value;
     break;
   }
   default: {
-    auto value = internal::strtofloatingpoint<float>(str, nullptr);
+    auto value = internal::strtofloatingpoint<float>(str);
     *reinterpret_cast<float *>(output_ptr) = value;
     break;
   }
