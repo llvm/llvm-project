@@ -18,6 +18,7 @@
 #include "LoopAnnotationTranslation.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Attributes.h"
@@ -1091,31 +1092,25 @@ llvm::MDNode *ModuleTranslation::getTBAANode(Operation *op,
   return tbaaMetadataMapping.lookup(tagOp);
 }
 
-void ModuleTranslation::setTBAAMetadata(Operation *op,
+void ModuleTranslation::setTBAAMetadata(AliasAnalysisOpInterface op,
                                         llvm::Instruction *inst) {
-  auto populateTBAAMetadata = [&](std::optional<ArrayAttr> tagRefs) {
-    if (!tagRefs || tagRefs->empty())
-      return;
+  ArrayAttr tagRefs = op.getTBAATagsOrNull();
+  if (!tagRefs || tagRefs.empty())
+    return;
 
-    // LLVM IR currently does not support attaching more than one
-    // TBAA access tag to a memory accessing instruction.
-    // It may be useful to support this in future, but for the time being
-    // just ignore the metadata if MLIR operation has multiple access tags.
-    if (tagRefs->size() > 1) {
-      op->emitWarning() << "TBAA access tags were not translated, because LLVM "
-                           "IR only supports a single tag per instruction";
-      return;
-    }
+  // LLVM IR currently does not support attaching more than one TBAA access tag
+  // to a memory accessing instruction. It may be useful to support this in
+  // future, but for the time being just ignore the metadata if MLIR operation
+  // has multiple access tags.
+  if (tagRefs.size() > 1) {
+    op.emitWarning() << "TBAA access tags were not translated, because LLVM "
+                        "IR only supports a single tag per instruction";
+    return;
+  }
 
-    SymbolRefAttr tagRef = (*tagRefs)[0].cast<SymbolRefAttr>();
-    llvm::MDNode *node = getTBAANode(op, tagRef);
-    inst->setMetadata(llvm::LLVMContext::MD_tbaa, node);
-  };
-
-  llvm::TypeSwitch<Operation *>(op)
-      .Case<LoadOp, StoreOp>(
-          [&](auto memOp) { populateTBAAMetadata(memOp.getTbaa()); })
-      .Default([](auto) { llvm_unreachable("expected LoadOp or StoreOp"); });
+  SymbolRefAttr tagRef = tagRefs[0].cast<SymbolRefAttr>();
+  llvm::MDNode *node = getTBAANode(op, tagRef);
+  inst->setMetadata(llvm::LLVMContext::MD_tbaa, node);
 }
 
 LogicalResult ModuleTranslation::createTBAAMetadata() {
