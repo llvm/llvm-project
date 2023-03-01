@@ -47,11 +47,28 @@ namespace {
 
 /// Iteration graph sorting.
 enum SortMask {
-  kSparseOnly = 0x0,
-  kIncludeDense = 0x1,
-  kIncludeUndef = 0x2,
-  kIncludeAll = 0x3
+  // The individual mask bits.
+  kIncludeDenseOutput = 0x1, // b001
+  kIncludeDenseInput = 0x2,  // b010
+  kIncludeUndef = 0x4,       // b100
+  // The subsets of mask bits.
+  kIncludeAll = 0x7,   // b111
+  kIncludeDense = 0x3, // b011
+  kSparseOnly = 0x0,   // b000
 };
+
+/// SortMask tests on individual bits.
+inline static bool includeDenseInput(unsigned mask) {
+  return mask & SortMask::kIncludeDenseInput;
+}
+
+inline static bool includeDenseOutput(unsigned mask) {
+  return mask & SortMask::kIncludeDenseOutput;
+}
+
+inline static bool includeUndef(unsigned mask) {
+  return mask & SortMask::kIncludeUndef;
+}
 
 /// A helper class that visits an affine expression and tries to find an
 /// AffineDimExpr to which the corresponding iterator from a GenericOp matches
@@ -453,9 +470,35 @@ static bool computeIterationGraph(CodegenEnv &env, unsigned mask,
     const auto map = env.op().getMatchingIndexingMap(&t);
     const auto enc = getSparseTensorEncoding(t.get().getType());
     assert(map.getNumDims() + getNumCompoundAffineOnSparseDims(env.op()) == n);
-    // Skip dense tensor constraints when not requested.
-    if (!(mask & SortMask::kIncludeDense) && !enc)
+
+    bool isDenseInput = !enc && env.op().isDpsInput(&t);
+    bool isDenseOutput = !enc && !isDenseInput;
+
+    // Skips dense inputs/outputs when not requested.
+    if ((isDenseInput && !includeDenseInput(mask)) ||
+        (isDenseOutput && !includeDenseOutput(mask)))
       continue;
+
+    // Push unrelated loops into sparse iteration space, so these
+    // will be skipped more often.
+    // TODO: Do we really need this?
+    if (includeUndef(mask)) {
+      unsigned tensor = t.getOperandNumber();
+      for (unsigned i = 0; i < n; i++) {
+        if (isCompressedDLT(env.dlt(tensor, i)) ||
+            isSingletonDLT(env.dlt(tensor, i))) {
+          for (unsigned j = 0; j < n; j++)
+            if (isUndefDLT(env.dlt(tensor, j))) {
+              adjM[i][j] = true;
+              inDegree[j]++;
+            }
+        } else {
+          assert(isDenseDLT(env.dlt(tensor, i)) ||
+                 isUndefDLT(env.dlt(tensor, i)));
+        }
+      }
+    }
+
     // Each tensor expression and optional dimension ordering (row-major
     // by default) puts an ordering constraint on the loop indices. For
     // example, the tensor expresion A_ijk forces the ordering i < j < k
@@ -506,24 +549,6 @@ static bool computeIterationGraph(CodegenEnv &env, unsigned mask,
         // filter_loop_d-1 < filter_loop_d depending on whether fa/ta is reset
         // above.
         addAffineOrderings(adjM, inDegree, fa, ta, fldx, tldx);
-      }
-    }
-    // Push unrelated loops into sparse iteration space, so these
-    // will be skipped more often.
-    if (mask & SortMask::kIncludeUndef) {
-      unsigned tensor = t.getOperandNumber();
-      for (unsigned i = 0; i < n; i++) {
-        if (isCompressedDLT(env.dlt(tensor, i)) ||
-            isSingletonDLT(env.dlt(tensor, i))) {
-          for (unsigned j = 0; j < n; j++)
-            if (isUndefDLT(env.dlt(tensor, j))) {
-              adjM[i][j] = true;
-              inDegree[j]++;
-            }
-        } else {
-          assert(isDenseDLT(env.dlt(tensor, i)) ||
-                 isUndefDLT(env.dlt(tensor, i)));
-        }
       }
     }
   }
@@ -1532,8 +1557,12 @@ public:
 
     // An const list of all masks that we used for interation graph
     // computation. Must be ordered from more strict to less strict.
-    const auto allMask = {SortMask::kIncludeAll, SortMask::kIncludeUndef,
-                          SortMask::kIncludeDense, SortMask::kSparseOnly};
+    // Ideally (though might not be guaranteed), the eariler a constraint mask
+    // can be satisfied, the faster the generated kernel will be.
+    const auto allMask = {
+        SortMask::kIncludeAll,        SortMask::kIncludeDense,
+        SortMask::kIncludeDenseInput, SortMask::kIncludeDenseOutput,
+        SortMask::kIncludeUndef,      SortMask::kSparseOnly};
     for (auto mask : allMask) {
       if (computeIterationGraph(env, mask)) {
         hasCycle = false;

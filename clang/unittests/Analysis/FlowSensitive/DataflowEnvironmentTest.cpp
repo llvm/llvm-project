@@ -7,13 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
-#include "TestingSupport.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
-#include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
+#include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
+#include "clang/Tooling/Tooling.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -124,6 +125,58 @@ TEST_F(EnvironmentTest, InitGlobalVarsFun) {
   // Verify the global variable is populated when we analyze `Target`.
   Environment Env(DAContext, *Fun);
   EXPECT_THAT(Env.getValue(*Var, SkipPast::None), NotNull());
+}
+
+// Tests that fields mentioned only in default member initializers are included
+// in the set of tracked fields.
+TEST_F(EnvironmentTest, IncludeFieldsFromDefaultInitializers) {
+  using namespace ast_matchers;
+
+  std::string Code = R"cc(
+     struct S {
+     S() {}
+     int X = 3;
+     int Y = X;
+     };
+     S foo();
+  )cc";
+
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++11"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto Results = match(
+      qualType(hasDeclaration(
+                   cxxRecordDecl(hasName("S"),
+                                 hasMethod(cxxConstructorDecl().bind("target")))
+                       .bind("struct")))
+          .bind("ty"),
+      Context);
+  const auto *Constructor = selectFirst<FunctionDecl>("target", Results);
+  const auto *Rec = selectFirst<RecordDecl>("struct", Results);
+  const auto QTy = *selectFirst<QualType>("ty", Results);
+  ASSERT_THAT(Constructor, NotNull());
+  ASSERT_THAT(Rec, NotNull());
+  ASSERT_FALSE(QTy.isNull());
+
+  auto Fields = Rec->fields();
+  FieldDecl *XDecl = nullptr;
+  for (FieldDecl *Field : Fields) {
+    if (Field->getNameAsString() == "X") {
+      XDecl = Field;
+      break;
+    }
+  }
+  ASSERT_THAT(XDecl, NotNull());
+
+  // Verify that the `X` field of `S` is populated when analyzing the
+  // constructor, even though it is not referenced directly in the constructor.
+  Environment Env(DAContext, *Constructor);
+  auto *Val = cast<StructValue>(Env.createValue(QTy));
+  ASSERT_THAT(Val, NotNull());
+  EXPECT_THAT(Val->getChild(*XDecl), NotNull());
 }
 
 TEST_F(EnvironmentTest, InitGlobalVarsFieldFun) {

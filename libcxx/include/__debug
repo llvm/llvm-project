@@ -98,8 +98,8 @@ _C_node<_Cont>::__dereferenceable(const void* __i) const
 {
     typedef typename _Cont::const_iterator iterator;
     const iterator* __j = static_cast<const iterator*>(__i);
-    _Cont* _Cp = static_cast<_Cont*>(__c_);
-    return _Cp->__dereferenceable(__j);
+    _Cont* __cp = static_cast<_Cont*>(__c_);
+    return __cp->__dereferenceable(__j);
 }
 
 template <class _Cont>
@@ -108,8 +108,8 @@ _C_node<_Cont>::__decrementable(const void* __i) const
 {
     typedef typename _Cont::const_iterator iterator;
     const iterator* __j = static_cast<const iterator*>(__i);
-    _Cont* _Cp = static_cast<_Cont*>(__c_);
-    return _Cp->__decrementable(__j);
+    _Cont* __cp = static_cast<_Cont*>(__c_);
+    return __cp->__decrementable(__j);
 }
 
 template <class _Cont>
@@ -118,8 +118,8 @@ _C_node<_Cont>::__addable(const void* __i, ptrdiff_t __n) const
 {
     typedef typename _Cont::const_iterator iterator;
     const iterator* __j = static_cast<const iterator*>(__i);
-    _Cont* _Cp = static_cast<_Cont*>(__c_);
-    return _Cp->__addable(__j, __n);
+    _Cont* __cp = static_cast<_Cont*>(__c_);
+    return __cp->__addable(__j, __n);
 }
 
 template <class _Cont>
@@ -128,8 +128,8 @@ _C_node<_Cont>::__subscriptable(const void* __i, ptrdiff_t __n) const
 {
     typedef typename _Cont::const_iterator iterator;
     const iterator* __j = static_cast<const iterator*>(__i);
-    _Cont* _Cp = static_cast<_Cont*>(__c_);
-    return _Cp->__subscriptable(__j, __n);
+    _Cont* __cp = static_cast<_Cont*>(__c_);
+    return __cp->__subscriptable(__j, __n);
 }
 
 class _LIBCPP_TYPE_VIS __libcpp_db

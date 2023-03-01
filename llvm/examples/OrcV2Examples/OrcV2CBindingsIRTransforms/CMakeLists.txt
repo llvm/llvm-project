@@ -1,11 +1,11 @@
 set(LLVM_LINK_COMPONENTS
   Core
   ExecutionEngine
-  InstCombine
   IRReader
   JITLink
   MC
   OrcJIT
+  Passes
   Support
   Target
   nativecodegen

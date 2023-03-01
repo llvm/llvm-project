@@ -645,7 +645,8 @@ SBError SBBreakpoint::SetScriptCallbackBody(const char *callback_body_text) {
         bkpt_sp->GetTarget()
             .GetDebugger()
             .GetScriptInterpreter()
-            ->SetBreakpointCommandCallback(bp_options, callback_body_text);
+            ->SetBreakpointCommandCallback(bp_options, callback_body_text,
+                                           /*is_callback=*/false);
     sb_error.SetError(error);
   } else
     sb_error.SetErrorString("invalid breakpoint");
