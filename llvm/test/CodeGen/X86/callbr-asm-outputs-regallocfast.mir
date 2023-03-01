@@ -135,8 +135,9 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.label.split (machine-block-address-taken, inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT:   liveins: $eax
   ; CHECK-NEXT: {{  $}}
-  ; FIXME: this is a load from a stack slot that hasn't been stored to yet!
+  ; CHECK-NEXT:   MOV32mr %stack.3, 1, $noreg, 0, $noreg, $eax :: (store (s32) into %stack.3)
   ; CHECK-NEXT:   $eax = MOV32rm %stack.3, 1, $noreg, 0, $noreg :: (load (s32) from %stack.3)
   ; CHECK-NEXT:   MOV32mr %stack.1.x, 1, $noreg, 0, $noreg, killed renamable $eax :: (store (s32) into %ir.x)
   ; CHECK-NEXT:   JMP_1 %bb.2
