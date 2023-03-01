@@ -987,6 +987,20 @@ module polymorphic_test
 ! CHECK: fir.store %[[EMBOX]] to %[[NEW_BOX]] : !fir.ref<!fir.class<!fir.ptr<none>>>
 ! CHECK: fir.call @_QMpolymorphic_testPup_pointer(%[[NEW_BOX]]) {{.*}} : (!fir.ref<!fir.class<!fir.ptr<none>>>) -> ()
 
+  subroutine move_alloc_poly(a, b)
+    class(p1), allocatable :: a, b
+
+    call move_alloc(a, b)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPmove_alloc_poly(
+! CHECK-SAME: %[[A:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>> {fir.bindc_name = "b"}) {
+! CHECK: %[[TYPE_DESC:.*]] = fir.type_desc !fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>
+! CHECK: %[[B_CONV:.*]] = fir.convert %[[B]] : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[A_CONV:.*]] = fir.convert %[[A]] : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[TYPE_DESC_CONV:.*]] = fir.convert %[[TYPE_DESC]] : (!fir.tdesc<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> !fir.ref<none>
+! CHECK: %{{.*}} = fir.call @_FortranAMoveAlloc(%[[B_CONV]], %[[A_CONV]], %[[TYPE_DESC_CONV]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+
 end module
 
 program test
