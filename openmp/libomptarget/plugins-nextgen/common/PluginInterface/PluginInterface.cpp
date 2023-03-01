@@ -117,12 +117,12 @@ public:
                               /* Default in GB */ 64) {}
 
   void saveImage(const char *Name, DeviceImageTy &Image) {
-    Twine ImageName = Twine(Name) + Twine(".image");
+    SmallString<128> ImageName = {Name, ".image"};
     std::error_code EC;
-    raw_fd_ostream OS(ImageName.str(), EC);
+    raw_fd_ostream OS(ImageName, EC);
     if (EC)
       report_fatal_error("Error saving image : " + StringRef(EC.message()));
-    if (auto TgtImageBitcode = Image.getTgtImageBitcode()) {
+    if (const auto *TgtImageBitcode = Image.getTgtImageBitcode()) {
       size_t Size =
           getPtrDiff(TgtImageBitcode->ImageEnd, TgtImageBitcode->ImageStart);
       MemoryBufferRef MBR = MemoryBufferRef(
@@ -158,11 +158,10 @@ public:
       JsonArgOffsets.push_back(ArgOffsets[I]);
     JsonKernelInfo["ArgOffsets"] = json::Value(std::move(JsonArgOffsets));
 
-    Twine KernelName(Name);
-    Twine MemoryFilename = KernelName + ".memory";
-    dumpDeviceMemory(MemoryFilename.str(), AsyncInfoWrapper);
+    SmallString<128> MemoryFilename = {Name, ".memory"};
+    dumpDeviceMemory(MemoryFilename, AsyncInfoWrapper);
 
-    Twine JsonFilename = KernelName + ".json";
+    SmallString<128> JsonFilename = {Name, ".json"};
     std::error_code EC;
     raw_fd_ostream JsonOS(JsonFilename.str(), EC);
     if (EC)
@@ -174,9 +173,9 @@ public:
 
   void saveKernelOutputInfo(const char *Name,
                             AsyncInfoWrapperTy &AsyncInfoWrapper) {
-    Twine OutputFilename =
-        Twine(Name) + (isRecording() ? ".original.output" : ".replay.output");
-    dumpDeviceMemory(OutputFilename.str(), AsyncInfoWrapper);
+    SmallString<128> OutputFilename = {
+        Name, (isRecording() ? ".original.output" : ".replay.output")};
+    dumpDeviceMemory(OutputFilename, AsyncInfoWrapper);
   }
 
   void *alloc(uint64_t Size) {
