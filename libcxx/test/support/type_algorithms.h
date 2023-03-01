@@ -13,7 +13,7 @@
 
 #include "test_macros.h"
 
-namespace meta {
+namespace types {
 template <class... Types>
 struct type_list {};
 
@@ -114,6 +114,6 @@ struct type_list_as_pointers<type_list<Types...> > {
 
 template <class T>
 using as_pointers = typename type_list_as_pointers<T>::type;
-} // namespace meta
+} // namespace types
 
 #endif // TEST_SUPPORT_TYPE_ALGORITHMS_H
