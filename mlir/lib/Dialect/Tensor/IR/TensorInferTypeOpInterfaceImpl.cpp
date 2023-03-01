@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Tensor/IR/TensorInferTypeOpInterfaceImpl.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
@@ -146,7 +147,8 @@ struct ReifyExpandOrCollapseShapeOp
     auto resultShape = getReshapeOutputShapeFromInputShape(
         b, loc, reshapeOp.getSrc(), reshapeOp.getResultType().getShape(),
         reshapeOp.getReassociationMaps());
-    reifiedReturnShapes.push_back(getAsValues(b, loc, resultShape));
+    reifiedReturnShapes.push_back(
+        getValueOrCreateConstantIndexOp(b, loc, resultShape));
     return success();
   }
 };

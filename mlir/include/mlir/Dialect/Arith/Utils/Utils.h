@@ -76,17 +76,17 @@ public:
 Value getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
                                       OpFoldResult ofr);
 
-/// Create a cast from an index-like value (index or integer) to another
-/// index-like value. If the value type and the target type are the same, it
-/// returns the original value.
-Value getValueOrCreateCastToIndexLike(OpBuilder &b, Location loc,
-                                      Type targetType, Value value);
-
 /// Similar to the other overload, but converts multiple OpFoldResults into
 /// Values.
 SmallVector<Value>
 getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
                                 ArrayRef<OpFoldResult> valueOrAttrVec);
+
+/// Create a cast from an index-like value (index or integer) to another
+/// index-like value. If the value type and the target type are the same, it
+/// returns the original value.
+Value getValueOrCreateCastToIndexLike(OpBuilder &b, Location loc,
+                                      Type targetType, Value value);
 
 /// Converts a scalar value `operand` to type `toType`. If the value doesn't
 /// convert, a warning will be issued and the operand is returned as is (which
