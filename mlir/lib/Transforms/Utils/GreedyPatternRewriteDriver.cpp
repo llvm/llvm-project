@@ -315,6 +315,8 @@ void GreedyPatternRewriteDriver::notifyOperationModified(Operation *op) {
     logger.startLine() << "** Modified: '" << op->getName() << "'(" << op
                        << ")\n";
   });
+  if (config.listener)
+    config.listener->notifyOperationModified(op);
   addToWorklist(op);
 }
 
