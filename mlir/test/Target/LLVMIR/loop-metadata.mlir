@@ -45,7 +45,7 @@ llvm.func @isvectorized() {
 llvm.func @vectorizeOptions() {
   // CHECK: br {{.*}} !llvm.loop ![[LOOP_NODE:[0-9]+]]
   llvm.br ^bb1 {loop_annotation = #llvm.loop_annotation<vectorize = <
-    disable = false, predicateEnable = true, scalableEnable = false, width = 16 : i32, 
+    disable = false, predicateEnable = true, scalableEnable = false, width = 16 : i32,
     followupVectorized = #followup, followupEpilogue = #followup, followupAll = #followup>
   >}
 ^bb1:
@@ -111,7 +111,7 @@ llvm.func @unrollOptions2() {
   llvm.return
 }
 
-// CHECK: ![[LOOP_NODE]] = distinct !{![[LOOP_NODE]], !{{[0-9]+}}, !{{[0-9]+}}} 
+// CHECK: ![[LOOP_NODE]] = distinct !{![[LOOP_NODE]], !{{[0-9]+}}, !{{[0-9]+}}}
 // CHECK-DAG: ![[VEC_NODE0:[0-9]+]] = !{!"llvm.loop.unroll.enable"}
 // CHECK-DAG: ![[VEC_NODE2:[0-9]+]] = !{!"llvm.loop.unroll.full"}
 
@@ -236,7 +236,7 @@ llvm.func @unswitchOptions() {
 // CHECK-LABEL: @loopOptions
 llvm.func @loopOptions(%arg1 : i32, %arg2 : i32) {
     %0 = llvm.mlir.constant(0 : i32) : i32
-    %4 = llvm.alloca %arg1 x i32 : (i32) -> (!llvm.ptr<i32>)
+    %4 = llvm.alloca %arg1 x i32 : (i32) -> (!llvm.ptr)
     llvm.br ^bb3(%0 : i32)
   ^bb3(%1: i32):
     %2 = llvm.icmp "slt" %1, %arg1 : i32
@@ -249,7 +249,13 @@ llvm.func @loopOptions(%arg1 : i32, %arg2 : i32) {
   ^bb4:
     %3 = llvm.add %1, %arg2  : i32
     // CHECK: = load i32, ptr %{{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE:[0-9]+]]
-    %5 = llvm.load %4 { access_groups = [@metadata::@group1, @metadata::@group2] } : !llvm.ptr<i32>
+    %5 = llvm.load %4 {access_groups = [@metadata::@group1, @metadata::@group2]} : !llvm.ptr -> i32
+    // CHECK: store i32 %{{.*}}, ptr %{{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE]]
+    llvm.store %5, %4 {access_groups = [@metadata::@group1, @metadata::@group2]} : i32, !llvm.ptr
+    // CHECK: = atomicrmw add ptr %{{.*}}, i32 %{{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE]]
+    %6 = llvm.atomicrmw add %4, %5 monotonic {access_groups = [@metadata::@group1, @metadata::@group2]} : !llvm.ptr, i32
+    // CHECK: = cmpxchg ptr %{{.*}}, i32 %{{.*}}, i32 %{{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE]]
+    %7 = llvm.cmpxchg %4, %5, %6 acq_rel monotonic {access_groups = [@metadata::@group1, @metadata::@group2]} : !llvm.ptr, i32
     // CHECK: br label {{.*}} !llvm.loop ![[LOOP_NODE]]
     llvm.br ^bb3(%3 : i32) {loop_annotation = #llvm.loop_annotation<
           licm = <disable = true>,
@@ -266,7 +272,7 @@ llvm.metadata @metadata {
   llvm.access_group @group2
 }
 
-// CHECK: ![[LOOP_NODE]] = distinct !{![[LOOP_NODE]], !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}}       
+// CHECK: ![[LOOP_NODE]] = distinct !{![[LOOP_NODE]], !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}}
 // CHECK-DAG: ![[PA_NODE:[0-9]+]] = !{!"llvm.loop.parallel_accesses", ![[GROUP_NODE1:[0-9]+]], ![[GROUP_NODE2:[0-9]+]]}
 // CHECK-DAG: ![[GROUP_NODE1:[0-9]+]] = distinct !{}
 // CHECK-DAG: ![[GROUP_NODE2:[0-9]+]] = distinct !{}

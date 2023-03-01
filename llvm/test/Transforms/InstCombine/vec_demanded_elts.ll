@@ -850,8 +850,7 @@ define void @common_binop_demand_via_splat_op0(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @common_binop_demand_via_splat_op0(
 ; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x i4> [[X:%.*]], <2 x i4> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[B_XSHUF_Y:%.*]] = mul <2 x i4> [[XSHUF]], [[Y:%.*]]
-; CHECK-NEXT:    [[B_XY:%.*]] = mul <2 x i4> [[X]], [[Y]]
-; CHECK-NEXT:    [[B_XY_SPLAT:%.*]] = shufflevector <2 x i4> [[B_XY]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B_XY_SPLAT:%.*]] = shufflevector <2 x i4> [[B_XSHUF_Y]], <2 x i4> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    call void @use(<2 x i4> [[B_XSHUF_Y]])
 ; CHECK-NEXT:    call void @use(<2 x i4> [[B_XY_SPLAT]])
 ; CHECK-NEXT:    ret void
@@ -870,8 +869,7 @@ define void @common_binop_demand_via_splat_op1(<2 x i4> %p, <2 x i4> %y) {
 ; CHECK-NEXT:    [[X:%.*]] = sub <2 x i4> <i4 0, i4 1>, [[P:%.*]]
 ; CHECK-NEXT:    [[YSHUF:%.*]] = shufflevector <2 x i4> [[Y:%.*]], <2 x i4> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[B_X_YSHUF:%.*]] = mul <2 x i4> [[X]], [[YSHUF]]
-; CHECK-NEXT:    [[B_XY:%.*]] = mul <2 x i4> [[X]], [[Y]]
-; CHECK-NEXT:    [[B_XY_SPLAT:%.*]] = shufflevector <2 x i4> [[B_XY]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B_XY_SPLAT:%.*]] = shufflevector <2 x i4> [[B_X_YSHUF]], <2 x i4> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    call void @use(<2 x i4> [[B_XY_SPLAT]])
 ; CHECK-NEXT:    call void @use(<2 x i4> [[B_X_YSHUF]])
 ; CHECK-NEXT:    ret void
@@ -888,12 +886,11 @@ define void @common_binop_demand_via_splat_op1(<2 x i4> %p, <2 x i4> %y) {
 
 define void @common_binop_demand_via_splat_op0_commute(<2 x i4> %p, <2 x i4> %q) {
 ; CHECK-LABEL: @common_binop_demand_via_splat_op0_commute(
-; CHECK-NEXT:    [[X:%.*]] = sub <2 x i4> <i4 0, i4 1>, [[P:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = sub <2 x i4> <i4 0, i4 poison>, [[P:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = sub <2 x i4> <i4 1, i4 2>, [[Q:%.*]]
 ; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x i4> [[X]], <2 x i4> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[B_Y_XSHUF:%.*]] = mul <2 x i4> [[Y]], [[XSHUF]]
-; CHECK-NEXT:    [[B_XY:%.*]] = mul <2 x i4> [[X]], [[Y]]
-; CHECK-NEXT:    [[B_XY_SPLAT:%.*]] = shufflevector <2 x i4> [[B_XY]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B_XY_SPLAT:%.*]] = shufflevector <2 x i4> [[B_Y_XSHUF]], <2 x i4> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    call void @use(<2 x i4> [[B_XY_SPLAT]])
 ; CHECK-NEXT:    call void @use(<2 x i4> [[B_Y_XSHUF]])
 ; CHECK-NEXT:    ret void
@@ -912,11 +909,10 @@ define void @common_binop_demand_via_splat_op0_commute(<2 x i4> %p, <2 x i4> %q)
 define void @common_binop_demand_via_splat_op1_commute(<2 x i4> %p, <2 x i4> %q) {
 ; CHECK-LABEL: @common_binop_demand_via_splat_op1_commute(
 ; CHECK-NEXT:    [[X:%.*]] = sub <2 x i4> <i4 0, i4 1>, [[P:%.*]]
-; CHECK-NEXT:    [[Y:%.*]] = sub <2 x i4> <i4 2, i4 3>, [[Q:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = sub <2 x i4> <i4 2, i4 poison>, [[Q:%.*]]
 ; CHECK-NEXT:    [[YSHUF:%.*]] = shufflevector <2 x i4> [[Y]], <2 x i4> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[B_Y_XSHUF:%.*]] = mul <2 x i4> [[YSHUF]], [[X]]
-; CHECK-NEXT:    [[B_XY:%.*]] = mul <2 x i4> [[X]], [[Y]]
-; CHECK-NEXT:    [[B_XY_SPLAT:%.*]] = shufflevector <2 x i4> [[B_XY]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B_XY_SPLAT:%.*]] = shufflevector <2 x i4> [[B_Y_XSHUF]], <2 x i4> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    call void @use(<2 x i4> [[B_XY_SPLAT]])
 ; CHECK-NEXT:    call void @use(<2 x i4> [[B_Y_XSHUF]])
 ; CHECK-NEXT:    ret void
@@ -931,6 +927,8 @@ define void @common_binop_demand_via_splat_op1_commute(<2 x i4> %p, <2 x i4> %q)
   call void @use(<2 x i4> %b_y_xshuf)
   ret void
 }
+
+; negative test - wrong operands for sub
 
 define void @common_binop_demand_via_splat_op0_wrong_commute(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @common_binop_demand_via_splat_op0_wrong_commute(
@@ -951,6 +949,8 @@ define void @common_binop_demand_via_splat_op0_wrong_commute(<2 x i4> %x, <2 x i
   ret void
 }
 
+; negative test - need to reorder insts?
+
 define void @common_binop_demand_via_splat_op0_not_dominated1(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @common_binop_demand_via_splat_op0_not_dominated1(
 ; CHECK-NEXT:    [[B_XY:%.*]] = mul <2 x i4> [[X:%.*]], [[Y:%.*]]
@@ -969,6 +969,8 @@ define void @common_binop_demand_via_splat_op0_not_dominated1(<2 x i4> %x, <2 x 
   call void @use(<2 x i4> %b_xy_splat)
   ret void
 }
+
+; negative test - need to reorder insts?
 
 define void @common_binop_demand_via_splat_op0_not_dominated2(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @common_binop_demand_via_splat_op0_not_dominated2(
@@ -993,8 +995,7 @@ define i4 @common_binop_demand_via_extelt_op0(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @common_binop_demand_via_extelt_op0(
 ; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x i4> [[X:%.*]], <2 x i4> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[B_XSHUF_Y:%.*]] = sub <2 x i4> [[XSHUF]], [[Y:%.*]]
-; CHECK-NEXT:    [[B_XY:%.*]] = sub nsw <2 x i4> [[X]], [[Y]]
-; CHECK-NEXT:    [[B_XY0:%.*]] = extractelement <2 x i4> [[B_XY]], i64 0
+; CHECK-NEXT:    [[B_XY0:%.*]] = extractelement <2 x i4> [[B_XSHUF_Y]], i64 0
 ; CHECK-NEXT:    call void @use(<2 x i4> [[B_XSHUF_Y]])
 ; CHECK-NEXT:    ret i4 [[B_XY0]]
 ;
@@ -1011,8 +1012,7 @@ define float @common_binop_demand_via_extelt_op1(<2 x float> %p, <2 x float> %y)
 ; CHECK-NEXT:    [[X:%.*]] = fsub <2 x float> <float 0.000000e+00, float 1.000000e+00>, [[P:%.*]]
 ; CHECK-NEXT:    [[YSHUF:%.*]] = shufflevector <2 x float> [[Y:%.*]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[B_X_YSHUF:%.*]] = fdiv <2 x float> [[X]], [[YSHUF]]
-; CHECK-NEXT:    [[B_XY:%.*]] = fdiv <2 x float> [[X]], [[Y]]
-; CHECK-NEXT:    [[B_XY0:%.*]] = extractelement <2 x float> [[B_XY]], i64 0
+; CHECK-NEXT:    [[B_XY0:%.*]] = extractelement <2 x float> [[B_X_YSHUF]], i64 0
 ; CHECK-NEXT:    call void @use_fp(<2 x float> [[B_X_YSHUF]])
 ; CHECK-NEXT:    ret float [[B_XY0]]
 ;
@@ -1027,12 +1027,11 @@ define float @common_binop_demand_via_extelt_op1(<2 x float> %p, <2 x float> %y)
 
 define float @common_binop_demand_via_extelt_op0_commute(<2 x float> %p, <2 x float> %q) {
 ; CHECK-LABEL: @common_binop_demand_via_extelt_op0_commute(
-; CHECK-NEXT:    [[X:%.*]] = fsub <2 x float> <float 0.000000e+00, float 1.000000e+00>, [[P:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = fsub <2 x float> <float 0.000000e+00, float poison>, [[P:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = fsub <2 x float> <float 3.000000e+00, float 2.000000e+00>, [[Q:%.*]]
 ; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x float> [[X]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[B_Y_XSHUF:%.*]] = fmul nnan <2 x float> [[Y]], [[XSHUF]]
-; CHECK-NEXT:    [[B_XY:%.*]] = fmul ninf <2 x float> [[X]], [[Y]]
-; CHECK-NEXT:    [[B_XY0:%.*]] = extractelement <2 x float> [[B_XY]], i64 0
+; CHECK-NEXT:    [[B_XY0:%.*]] = extractelement <2 x float> [[B_Y_XSHUF]], i64 0
 ; CHECK-NEXT:    call void @use_fp(<2 x float> [[B_Y_XSHUF]])
 ; CHECK-NEXT:    ret float [[B_XY0]]
 ;
@@ -1049,11 +1048,10 @@ define float @common_binop_demand_via_extelt_op0_commute(<2 x float> %p, <2 x fl
 define i4 @common_binop_demand_via_extelt_op1_commute(<2 x i4> %p, <2 x i4> %q) {
 ; CHECK-LABEL: @common_binop_demand_via_extelt_op1_commute(
 ; CHECK-NEXT:    [[X:%.*]] = sub <2 x i4> <i4 0, i4 1>, [[P:%.*]]
-; CHECK-NEXT:    [[Y:%.*]] = sub <2 x i4> <i4 2, i4 3>, [[Q:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = sub <2 x i4> <i4 2, i4 poison>, [[Q:%.*]]
 ; CHECK-NEXT:    [[YSHUF:%.*]] = shufflevector <2 x i4> [[Y]], <2 x i4> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[B_Y_XSHUF:%.*]] = or <2 x i4> [[YSHUF]], [[X]]
-; CHECK-NEXT:    [[B_XY:%.*]] = or <2 x i4> [[X]], [[Y]]
-; CHECK-NEXT:    [[B_XY0:%.*]] = extractelement <2 x i4> [[B_XY]], i64 0
+; CHECK-NEXT:    [[B_XY0:%.*]] = extractelement <2 x i4> [[B_Y_XSHUF]], i64 0
 ; CHECK-NEXT:    call void @use(<2 x i4> [[B_Y_XSHUF]])
 ; CHECK-NEXT:    ret i4 [[B_XY0]]
 ;
@@ -1066,6 +1064,8 @@ define i4 @common_binop_demand_via_extelt_op1_commute(<2 x i4> %p, <2 x i4> %q) 
   call void @use(<2 x i4> %b_y_xshuf)
   ret i4 %b_xy0
 }
+
+; negative test - wrong operands for sub
 
 define i4 @common_binop_demand_via_extelt_op0_wrong_commute(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @common_binop_demand_via_extelt_op0_wrong_commute(
@@ -1084,6 +1084,8 @@ define i4 @common_binop_demand_via_extelt_op0_wrong_commute(<2 x i4> %x, <2 x i4
   ret i4 %b_xy0
 }
 
+; negative test - need to reorder insts?
+
 define i4 @common_binop_demand_via_extelt_op0_not_dominated1(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @common_binop_demand_via_extelt_op0_not_dominated1(
 ; CHECK-NEXT:    [[B_XY:%.*]] = xor <2 x i4> [[X:%.*]], [[Y:%.*]]
@@ -1100,6 +1102,8 @@ define i4 @common_binop_demand_via_extelt_op0_not_dominated1(<2 x i4> %x, <2 x i
   call void @use(<2 x i4> %b_xshuf_y)
   ret i4 %b_xy0
 }
+
+; negative test - need to reorder insts?
 
 define i4 @common_binop_demand_via_extelt_op0_not_dominated2(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @common_binop_demand_via_extelt_op0_not_dominated2(
@@ -1118,6 +1122,8 @@ define i4 @common_binop_demand_via_extelt_op0_not_dominated2(<2 x i4> %x, <2 x i
   ret i4 %b_xy0
 }
 
+; negative test - splat doesn't match demanded element
+
 define i4 @common_binop_demand_via_extelt_op0_mismatch_elt0(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @common_binop_demand_via_extelt_op0_mismatch_elt0(
 ; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x i4> [[X:%.*]], <2 x i4> poison, <2 x i32> <i32 1, i32 1>
@@ -1134,6 +1140,8 @@ define i4 @common_binop_demand_via_extelt_op0_mismatch_elt0(<2 x i4> %x, <2 x i4
   call void @use(<2 x i4> %b_xshuf_y)
   ret i4 %b_xy0
 }
+
+; negative test - splat doesn't match demanded element
 
 define i4 @common_binop_demand_via_extelt_op0_mismatch_elt1(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @common_binop_demand_via_extelt_op0_mismatch_elt1(

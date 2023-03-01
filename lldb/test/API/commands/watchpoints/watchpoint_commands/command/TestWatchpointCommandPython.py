@@ -1,4 +1,4 @@
-﻿"""
+"""
 Test 'watchpoint command'.
 """
 
@@ -22,6 +22,8 @@ class WatchpointPythonCommandTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number(
             self.source, '// Set break point at this line.')
+        self.second_line = line_number(
+            self.source, '// Set another breakpoint here.')
         # And the watchpoint variable declaration line number.
         self.decl = line_number(self.source,
                                 '// Watchpoint variable declaration.')
@@ -142,6 +144,32 @@ class WatchpointPythonCommandTestCase(TestBase):
         # The stop reason of the thread should be watchpoint.
         self.expect("thread backtrace", STOPPED_DUE_TO_WATCHPOINT,
                     substrs=['stop reason = watchpoint'])
+
+        # We should have hit the watchpoint once, set cookie to 888, since the
+        # user callback returned True.
+        self.expect("frame variable --show-globals cookie",
+                    substrs=['(int32_t)', 'cookie = 888'])
+
+        self.runCmd("process continue")
+
+        # We should be stopped again due to the watchpoint (write type).
+        # The stop reason of the thread should be watchpoint.
+        self.expect("thread backtrace", STOPPED_DUE_TO_WATCHPOINT,
+                    substrs=['stop reason = watchpoint'])
+
+        # We should have hit the watchpoint a second time, set cookie to 666,
+        # even if the user callback didn't return anything and then continue.
+        self.expect("frame variable --show-globals cookie",
+                    substrs=['(int32_t)', 'cookie = 666'])
+
+        # Add a breakpoint to set a watchpoint when stopped on the breakpoint.
+        lldbutil.run_break_set_by_file_and_line(
+            self, None, self.second_line, num_expected_locations=1)
+
+        self.runCmd("process continue")
+
+        self.expect("thread backtrace", STOPPED_DUE_TO_BREAKPOINT,
+                    substrs=['stop reason = breakpoint'])
 
         # We should have hit the watchpoint once, set cookie to 888, then continued to the
         # second hit and set it to 999

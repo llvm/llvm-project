@@ -52,9 +52,11 @@ static_assert(false, "🏳️‍🌈 🏴󠁧󠁢󠁥󠁮󠁧󠁿 🇪🇺"); //
 
 template<typename T> struct AlwaysFails {
   // Only give one error here.
-  static_assert(false, ""); // expected-error {{static assertion failed}}
+  static_assert(false, ""); // expected-error 2{{static assertion failed}}
 };
-AlwaysFails<int> alwaysFails;
+AlwaysFails<int> alwaysFails; // expected-note {{instantiation}}
+AlwaysFails<double> alwaysFails2; // expected-note {{instantiation}}
+
 
 template<typename T> struct StaticAssertProtected {
   static_assert(__is_literal(T), ""); // expected-error {{static assertion failed}}
@@ -217,6 +219,23 @@ static_assert(constexprNotBool, "message"); // expected-error {{value of type 'c
 
 static_assert(1 , "") // expected-error {{expected ';' after 'static_assert'}}
 
+namespace DependentAlwaysFalse {
+template <typename Ty>
+struct S {
+  static_assert(false); // expected-error{{static assertion failed}} \
+                        // expected-warning {{C++17 extension}}
+};
+
+template <typename Ty>
+struct T {
+  static_assert(false, "test"); // expected-error{{static assertion failed: test}}
+};
+
+int f() {
+  S<double> s; //expected-note {{in instantiation of template class 'DependentAlwaysFalse::S<double>' requested here}}
+  T<double> t; //expected-note {{in instantiation of template class 'DependentAlwaysFalse::T<double>' requested here}}
+}
+}
 
 namespace Diagnostics {
   /// No notes for literals.

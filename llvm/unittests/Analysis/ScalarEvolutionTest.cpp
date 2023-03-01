@@ -1744,4 +1744,20 @@ TEST_F(ScalarEvolutionsTest, ComputeMaxTripCountFromMultiDemArray) {
   });
 }
 
+TEST_F(ScalarEvolutionsTest, CheckGetPowerOfTwo) {
+  Module M("CheckGetPowerOfTwo", Context);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context), {}, false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(Context, "entry", F);
+  IRBuilder<> Builder(Entry);
+  Builder.CreateRetVoid();
+  ScalarEvolution SE = buildSE(*F);
+
+  for (unsigned short i = 0; i < 64; ++i)
+    EXPECT_TRUE(
+        dyn_cast<SCEVConstant>(SE.getPowerOfTwo(Type::getInt64Ty(Context), i))
+            ->getValue()
+            ->equalsInt(1ULL << i));
+}
+
 }  // end namespace llvm

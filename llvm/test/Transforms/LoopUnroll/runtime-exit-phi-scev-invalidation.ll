@@ -214,8 +214,7 @@ define void @pr56286(i64 %x, ptr %src, ptr %dst, ptr %ptr.src) !prof !0 {
 ; CHECK-NEXT:    [[L_1:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    store i32 [[L_1]], ptr [[DST]], align 8
 ; CHECK-NEXT:    [[INNER_1_IV_NEXT:%.*]] = add i64 [[INNER_1_IV]], 1
-; CHECK-NEXT:    [[CMP_1_1:%.*]] = icmp sgt i32 [[OUTER_P]], 0
-; CHECK-NEXT:    br i1 [[CMP_1_1]], label [[EXIT_DEOPT_LOOPEXIT]], label [[INNER_1_LATCH_1:%.*]]
+; CHECK-NEXT:    br i1 false, label [[EXIT_DEOPT_LOOPEXIT]], label [[INNER_1_LATCH_1:%.*]]
 ; CHECK:       inner.1.latch.1:
 ; CHECK-NEXT:    [[L_1_1:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    store i32 [[L_1_1]], ptr [[DST]], align 8
@@ -226,8 +225,7 @@ define void @pr56286(i64 %x, ptr %src, ptr %dst, ptr %ptr.src) !prof !0 {
 ; CHECK-NEXT:    [[L_1_2:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    store i32 [[L_1_2]], ptr [[DST]], align 8
 ; CHECK-NEXT:    [[INNER_1_IV_NEXT_2:%.*]] = add i64 [[INNER_1_IV_NEXT_1]], 1
-; CHECK-NEXT:    [[CMP_1_3:%.*]] = icmp sgt i32 [[OUTER_P]], 0
-; CHECK-NEXT:    br i1 [[CMP_1_3]], label [[EXIT_DEOPT_LOOPEXIT]], label [[INNER_1_LATCH_3:%.*]]
+; CHECK-NEXT:    br i1 false, label [[EXIT_DEOPT_LOOPEXIT]], label [[INNER_1_LATCH_3:%.*]]
 ; CHECK:       inner.1.latch.3:
 ; CHECK-NEXT:    [[L_1_3:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    store i32 [[L_1_3]], ptr [[DST]], align 8
@@ -238,8 +236,7 @@ define void @pr56286(i64 %x, ptr %src, ptr %dst, ptr %ptr.src) !prof !0 {
 ; CHECK-NEXT:    [[L_1_4:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    store i32 [[L_1_4]], ptr [[DST]], align 8
 ; CHECK-NEXT:    [[INNER_1_IV_NEXT_4:%.*]] = add i64 [[INNER_1_IV_NEXT_3]], 1
-; CHECK-NEXT:    [[CMP_1_5:%.*]] = icmp sgt i32 [[OUTER_P]], 0
-; CHECK-NEXT:    br i1 [[CMP_1_5]], label [[EXIT_DEOPT_LOOPEXIT]], label [[INNER_1_LATCH_5:%.*]]
+; CHECK-NEXT:    br i1 false, label [[EXIT_DEOPT_LOOPEXIT]], label [[INNER_1_LATCH_5:%.*]]
 ; CHECK:       inner.1.latch.5:
 ; CHECK-NEXT:    [[L_1_5:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    store i32 [[L_1_5]], ptr [[DST]], align 8
@@ -250,8 +247,7 @@ define void @pr56286(i64 %x, ptr %src, ptr %dst, ptr %ptr.src) !prof !0 {
 ; CHECK-NEXT:    [[L_1_6:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    store i32 [[L_1_6]], ptr [[DST]], align 8
 ; CHECK-NEXT:    [[INNER_1_IV_NEXT_6:%.*]] = add i64 [[INNER_1_IV_NEXT_5]], 1
-; CHECK-NEXT:    [[CMP_1_7:%.*]] = icmp sgt i32 [[OUTER_P]], 0
-; CHECK-NEXT:    br i1 [[CMP_1_7]], label [[EXIT_DEOPT_LOOPEXIT]], label [[INNER_1_LATCH_7]]
+; CHECK-NEXT:    br i1 false, label [[EXIT_DEOPT_LOOPEXIT]], label [[INNER_1_LATCH_7]]
 ; CHECK:       inner.1.latch.7:
 ; CHECK-NEXT:    [[L_1_7:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    store i32 [[L_1_7]], ptr [[DST]], align 8

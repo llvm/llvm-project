@@ -691,6 +691,38 @@ struct MatmulOpConversion : public HlfirIntrinsicConversion<hlfir::MatmulOp> {
   }
 };
 
+class TransposeOpConversion
+    : public HlfirIntrinsicConversion<hlfir::TransposeOp> {
+  using HlfirIntrinsicConversion<hlfir::TransposeOp>::HlfirIntrinsicConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(hlfir::TransposeOp transpose, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    fir::KindMapping kindMapping{rewriter.getContext()};
+    fir::FirOpBuilder builder{rewriter, kindMapping};
+    const mlir::Location &loc = transpose->getLoc();
+    HLFIRListener listener{builder, rewriter};
+    builder.setListener(&listener);
+
+    mlir::Value arg = transpose.getArray();
+    llvm::SmallVector<IntrinsicArgument, 1> inArgs;
+    inArgs.push_back({arg, arg.getType()});
+
+    auto *argLowering = fir::getIntrinsicArgumentLowering("transpose");
+    llvm::SmallVector<fir::ExtendedValue, 1> args =
+        lowerArguments(transpose, inArgs, rewriter, argLowering);
+
+    mlir::Type scalarResultType =
+        hlfir::getFortranElementType(transpose.getType());
+
+    auto [resultExv, mustBeFreed] = fir::genIntrinsicCall(
+        builder, loc, "transpose", scalarResultType, args);
+
+    processReturnValue(transpose, resultExv, mustBeFreed, builder, rewriter);
+    return mlir::success();
+  }
+};
+
 class BufferizeHLFIR : public hlfir::impl::BufferizeHLFIRBase<BufferizeHLFIR> {
 public:
   void runOnOperation() override {
@@ -704,11 +736,13 @@ public:
     auto module = this->getOperation();
     auto *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<
-        ApplyOpConversion, AsExprOpConversion, AssignOpConversion,
-        AssociateOpConversion, ConcatOpConversion, DestroyOpConversion,
-        ElementalOpConversion, EndAssociateOpConversion, MatmulOpConversion,
-        NoReassocOpConversion, SetLengthOpConversion, SumOpConversion>(context);
+    patterns
+        .insert<ApplyOpConversion, AsExprOpConversion, AssignOpConversion,
+                AssociateOpConversion, ConcatOpConversion, DestroyOpConversion,
+                ElementalOpConversion, EndAssociateOpConversion,
+                MatmulOpConversion, NoReassocOpConversion,
+                SetLengthOpConversion, SumOpConversion, TransposeOpConversion>(
+            context);
     mlir::ConversionTarget target(*context);
     target.addIllegalOp<hlfir::ApplyOp, hlfir::AssociateOp, hlfir::ElementalOp,
                         hlfir::EndAssociateOp, hlfir::SetLengthOp,

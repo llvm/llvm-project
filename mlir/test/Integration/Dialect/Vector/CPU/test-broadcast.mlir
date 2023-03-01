@@ -43,7 +43,7 @@ func.func @entry() {
   %x = vector.broadcast %f5 : f32 to vector<1xf32>
   %y = vector.broadcast %x  : vector<1xf32> to vector<8xf32>
   vector.print %y : vector<8xf32>
-  // CHECK : ( 5, 5, 5, 5, 5, 5, 5, 5 )
+  // CHECK: ( 5, 5, 5, 5, 5, 5, 5, 5 )
 
   // Test "stretch" in leading dimension.
   %s = vector.broadcast %v3 : vector<4xf32> to vector<1x4xf32>

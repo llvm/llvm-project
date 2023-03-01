@@ -43,6 +43,9 @@ module {
   func.func private @getSparseTensorReaderIsSymmetric(!TensorReader) -> (i1)
   func.func private @copySparseTensorReaderDimSizes(!TensorReader,
     memref<?xindex>) -> () attributes { llvm.emit_c_interface }
+  func.func private @getSparseTensorReaderRead0F32(!TensorReader,
+    memref<?xindex>, memref<?xindex>, memref<?xf32>)
+    -> (i1) attributes { llvm.emit_c_interface }
   func.func private @getSparseTensorReaderNextF32(!TensorReader,
     memref<?xindex>, memref<f32>) -> () attributes { llvm.emit_c_interface }
 
@@ -60,6 +63,14 @@ module {
     return
   }
 
+  func.func @dumpi2(%arg0: memref<?xindex, strided<[2], offset: ?>>) {
+    %c0 = arith.constant 0 : index
+    %v = vector.transfer_read %arg0[%c0], %c0 :
+      memref<?xindex, strided<[2], offset: ?>>, vector<17xindex>
+    vector.print %v : vector<17xindex>
+    return
+  }
+
   func.func @dumpf(%arg0: memref<?xf32>) {
     %c0 = arith.constant 0 : index
     %d0 = arith.constant 0.0 : f32
@@ -70,39 +81,31 @@ module {
 
   // Returns the indices and values of the tensor.
   func.func @readTensorFile(%tensor: !TensorReader)
-    -> (memref<?xindex>, memref<?xindex>, memref<?xf32>) {
+    -> (memref<?xindex>, memref<?xf32>, i1) {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
+    %c2 = arith.constant 2 : index
 
     %rank = call @getSparseTensorReaderRank(%tensor) : (!TensorReader) -> index
     %nnz = call @getSparseTensorReaderNNZ(%tensor) : (!TensorReader) -> index
 
     // Assume rank == 2.
-    %x0s = memref.alloc(%nnz) : memref<?xindex>
-    %x1s = memref.alloc(%nnz) : memref<?xindex>
+    %isize = arith.muli %c2, %nnz : index
+    %xs = memref.alloc(%isize) : memref<?xindex>
     %vs = memref.alloc(%nnz) : memref<?xf32>
-    %indices = memref.alloc(%rank) : memref<?xindex>
-    %value = memref.alloca() : memref<f32>
-    scf.for %i = %c0 to %nnz step %c1 {
-      func.call @getSparseTensorReaderNextF32(%tensor, %indices, %value)
-        : (!TensorReader, memref<?xindex>, memref<f32>) -> ()
-      // TODO: can we use memref.subview to avoid the need for the %value
-      //       buffer?
-      %v = memref.load %value[] : memref<f32>
-      memref.store %v, %vs[%i] : memref<?xf32>
-      %i0 = memref.load %indices[%c0] : memref<?xindex>
-      memref.store %i0, %x0s[%i] : memref<?xindex>
-      %i1 = memref.load %indices[%c1] : memref<?xindex>
-      memref.store %i1, %x1s[%i] : memref<?xindex>
-    }
-
-    // Release the resource for the indices.
-    memref.dealloc %indices : memref<?xindex>
-    return %x0s, %x1s, %vs : memref<?xindex>, memref<?xindex>, memref<?xf32>
+    %dim2lvl = memref.alloca(%c2) : memref<?xindex>
+    memref.store %c0, %dim2lvl[%c0] : memref<?xindex>
+    memref.store %c1, %dim2lvl[%c1] : memref<?xindex>
+    %isSorted =func.call @getSparseTensorReaderRead0F32(%tensor, %dim2lvl, %xs, %vs)
+        : (!TensorReader, memref<?xindex>, memref<?xindex>, memref<?xf32>) -> (i1)
+    return %xs, %vs, %isSorted : memref<?xindex>, memref<?xf32>, i1
   }
 
   // Reads a COO tensor from the given file name and prints its content.
   func.func @readTensorFileAndDump(%fileName: !Filename) {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c2 = arith.constant 2 : index
     %tensor = call @createSparseTensorReader(%fileName)
       : (!Filename) -> (!TensorReader)
     %rank = call @getSparseTensorReaderRank(%tensor) : (!TensorReader) -> index
@@ -116,18 +119,22 @@ module {
     func.call @copySparseTensorReaderDimSizes(%tensor, %dimSizes)
       : (!TensorReader, memref<?xindex>) -> ()
     call @dumpi(%dimSizes) : (memref<?xindex>) -> ()
-    %x0s, %x1s, %vs = call @readTensorFile(%tensor)
-      : (!TensorReader) -> (memref<?xindex>, memref<?xindex>, memref<?xf32>)
 
-    call @dumpi(%x0s) : (memref<?xindex>) -> ()
-    call @dumpi(%x1s) : (memref<?xindex>) -> ()
+    %xs, %vs, %isSorted = call @readTensorFile(%tensor)
+      : (!TensorReader) -> (memref<?xindex>, memref<?xf32>, i1)
+    %x0s = memref.subview %xs[%c0][%nnz][%c2]
+      : memref<?xindex> to memref<?xindex, strided<[2], offset: ?>>
+    %x1s = memref.subview %xs[%c1][%nnz][%c2]
+      : memref<?xindex> to memref<?xindex, strided<[2], offset: ?>>
+    vector.print %isSorted : i1
+    call @dumpi2(%x0s) : (memref<?xindex, strided<[2], offset: ?>>) -> ()
+    call @dumpi2(%x1s) : (memref<?xindex, strided<[2], offset: ?>>) -> ()
     call @dumpf(%vs) : (memref<?xf32>) -> ()
 
     // Release the resources.
     call @delSparseTensorReader(%tensor) : (!TensorReader) -> ()
     memref.dealloc %dimSizes : memref<?xindex>
-    memref.dealloc %x0s : memref<?xindex>
-    memref.dealloc %x1s : memref<?xindex>
+    memref.dealloc %xs : memref<?xindex>
     memref.dealloc %vs : memref<?xf32>
 
     return
@@ -184,6 +191,7 @@ module {
     // CHECK: 17
     // CHECK: 0
     // CHECK: ( 4, 256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
+    // CHECK: 1
     // CHECK: ( 0, 0, 0, 0, 1, 1, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 )
     // CHECK: ( 0, 126, 127, 254, 1, 253, 2, 0, 1, 3, 98, 126, 127, 128, 249, 253, 255 )
     // CHECK: ( -1, 2, -3, 4, -5, 6, -7, 8, -9, 10, -11, 12, -13, 14, -15, 16, -17 )

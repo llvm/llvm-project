@@ -12,6 +12,7 @@
 
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMIRToLLVMTranslation.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/ModuleImport.h"
 
@@ -77,30 +78,6 @@ static ArrayRef<unsigned> getSupportedMetadataImpl() {
   return convertibleMetadata;
 }
 
-namespace {
-/// Helper class to attach metadata attributes to specific operation types. It
-/// specializes TypeSwitch to take an Operation and return a LogicalResult.
-template <typename... OpTys>
-struct AttributeSetter {
-  AttributeSetter(Operation *op) : op(op) {}
-
-  /// Calls `attachFn` on the provided Operation if it has one of
-  /// the given operation types. Returns failure otherwise.
-  template <typename CallableT>
-  LogicalResult apply(CallableT &&attachFn) {
-    return llvm::TypeSwitch<Operation *, LogicalResult>(op)
-        .Case<OpTys...>([&attachFn](auto concreteOp) {
-          attachFn(concreteOp);
-          return success();
-        })
-        .Default([&](auto) { return failure(); });
-  }
-
-private:
-  Operation *op;
-};
-} // namespace
-
 /// Converts the given profiling metadata `node` to an MLIR profiling attribute
 /// and attaches it to the imported operation if the translation succeeds.
 /// Returns failure otherwise.
@@ -148,11 +125,13 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
     branchWeights.push_back(branchWeight->getZExtValue());
   }
 
-  return AttributeSetter<CondBrOp, SwitchOp, CallOp, InvokeOp>(op).apply(
-      [&](auto branchWeightOp) {
+  return TypeSwitch<Operation *, LogicalResult>(op)
+      .Case<CondBrOp, SwitchOp, CallOp, InvokeOp>([&](auto branchWeightOp) {
         branchWeightOp.setBranchWeightsAttr(
             builder.getI32VectorAttr(branchWeights));
-      });
+        return success();
+      })
+      .Default([](auto) { return failure(); });
 }
 
 /// Searches the symbol reference pointing to the metadata operation that
@@ -164,9 +143,12 @@ static LogicalResult setTBAAAttr(const llvm::MDNode *node, Operation *op,
   if (!tbaaTagSym)
     return failure();
 
-  return AttributeSetter<LoadOp, StoreOp>(op).apply([&](auto memOp) {
-    memOp.setTbaaAttr(ArrayAttr::get(memOp.getContext(), tbaaTagSym));
-  });
+  auto iface = dyn_cast<AliasAnalysisOpInterface>(op);
+  if (!iface)
+    return failure();
+
+  iface.setTBAATags(ArrayAttr::get(iface.getContext(), tbaaTagSym));
+  return success();
 }
 
 /// Looks up all the symbol references pointing to the access group operations
@@ -181,12 +163,14 @@ static LogicalResult setAccessGroupsAttr(const llvm::MDNode *node,
   if (failed(accessGroups))
     return failure();
 
-  SmallVector<Attribute> accessGroupAttrs(accessGroups->begin(),
-                                          accessGroups->end());
-  return AttributeSetter<LoadOp, StoreOp>(op).apply([&](auto memOp) {
-    memOp.setAccessGroupsAttr(
-        ArrayAttr::get(memOp.getContext(), accessGroupAttrs));
-  });
+  auto iface = dyn_cast<AccessGroupOpInterface>(op);
+  if (!iface)
+    return failure();
+
+  iface.setAccessGroups(ArrayAttr::get(
+      iface.getContext(),
+      SmallVector<Attribute>{accessGroups->begin(), accessGroups->end()}));
+  return success();
 }
 
 /// Converts the given loop metadata node to an MLIR loop annotation attribute
@@ -218,12 +202,14 @@ static LogicalResult setAliasScopesAttr(const llvm::MDNode *node, Operation *op,
   if (failed(aliasScopes))
     return failure();
 
-  SmallVector<Attribute> aliasScopeAttrs(aliasScopes->begin(),
-                                         aliasScopes->end());
-  return AttributeSetter<LoadOp, StoreOp>(op).apply([&](auto memOp) {
-    memOp.setAliasScopesAttr(
-        ArrayAttr::get(memOp.getContext(), aliasScopeAttrs));
-  });
+  auto iface = dyn_cast<AliasAnalysisOpInterface>(op);
+  if (!iface)
+    return failure();
+
+  iface.setAliasScopes(ArrayAttr::get(
+      iface.getContext(),
+      SmallVector<Attribute>{aliasScopes->begin(), aliasScopes->end()}));
+  return success();
 }
 
 /// Looks up all the symbol references pointing to the alias scope operations
@@ -233,17 +219,19 @@ static LogicalResult setAliasScopesAttr(const llvm::MDNode *node, Operation *op,
 static LogicalResult setNoaliasScopesAttr(const llvm::MDNode *node,
                                           Operation *op,
                                           LLVM::ModuleImport &moduleImport) {
-  FailureOr<SmallVector<SymbolRefAttr>> noaliasScopes =
+  FailureOr<SmallVector<SymbolRefAttr>> noAliasScopes =
       moduleImport.lookupAliasScopeAttrs(node);
-  if (failed(noaliasScopes))
+  if (failed(noAliasScopes))
     return failure();
 
-  SmallVector<Attribute> noaliasScopeAttrs(noaliasScopes->begin(),
-                                           noaliasScopes->end());
-  return AttributeSetter<LoadOp, StoreOp>(op).apply([&](auto memOp) {
-    memOp.setNoaliasScopesAttr(
-        ArrayAttr::get(memOp.getContext(), noaliasScopeAttrs));
-  });
+  auto iface = dyn_cast<AliasAnalysisOpInterface>(op);
+  if (!iface)
+    return failure();
+
+  iface.setNoAliasScopes(ArrayAttr::get(
+      iface.getContext(),
+      SmallVector<Attribute>{noAliasScopes->begin(), noAliasScopes->end()}));
+  return success();
 }
 
 namespace {

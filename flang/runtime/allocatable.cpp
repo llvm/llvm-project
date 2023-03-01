@@ -41,12 +41,10 @@ void RTNAME(AllocatableInitDerived)(Descriptor &descriptor,
       derivedType, nullptr, rank, nullptr, CFI_attribute_allocatable);
 }
 
-std::int32_t RTNAME(MoveAlloc)(Descriptor &to, Descriptor &from, bool hasStat,
+std::int32_t RTNAME(MoveAlloc)(Descriptor &to, Descriptor &from,
+    const typeInfo::DerivedType *derivedType, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
-  // Should be handled by semantic analysis
-  RUNTIME_CHECK(terminator, to.type() == from.type());
-  RUNTIME_CHECK(terminator, to.IsAllocatable() && from.IsAllocatable());
 
   // If to and from are the same allocatable they must not be allocated
   // and nothing should be done.
@@ -66,7 +64,24 @@ std::int32_t RTNAME(MoveAlloc)(Descriptor &to, Descriptor &from, bool hasStat,
   if (from.IsAllocated()) {
     to = from;
     from.raw().base_addr = nullptr;
+
+    // Carry over the dynamic type.
+    if (auto *toAddendum{to.Addendum()}) {
+      if (const auto *fromAddendum{from.Addendum()}) {
+        if (const auto *derived{fromAddendum->derivedType()}) {
+          toAddendum->set_derivedType(derived);
+        }
+      }
+    }
+
+    // Reset from dynamic type if needed.
+    if (auto *fromAddendum{from.Addendum()}) {
+      if (derivedType) {
+        fromAddendum->set_derivedType(derivedType);
+      }
+    }
   }
+
   return StatOk;
 }
 
@@ -159,8 +174,7 @@ int RTNAME(AllocatableDeallocatePolymorphic)(Descriptor &descriptor,
       descriptor, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
     DescriptorAddendum *addendum{descriptor.Addendum()};
-    if (addendum) { // Unlimited polymorphic allocated from intrinsic type spec
-                    // does not have
+    if (addendum) {
       addendum->set_derivedType(derivedType);
     } else {
       // Unlimited polymorphic descriptors initialized with

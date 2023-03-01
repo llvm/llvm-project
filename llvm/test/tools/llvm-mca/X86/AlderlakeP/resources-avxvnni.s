@@ -35,21 +35,21 @@ vpdpwssds   (%rax), %ymm1, %ymm2
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      5     0.50                        vpdpbusd	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  2      13    0.50    *                   vpdpbusd	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  2      11    0.50    *                   vpdpbusd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      5     0.50                        vpdpbusd	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  2      13    0.50    *                   vpdpbusd	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  2      12    0.50    *                   vpdpbusd	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      5     0.50                        vpdpbusds	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  2      13    0.50    *                   vpdpbusds	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  2      11    0.50    *                   vpdpbusds	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      5     0.50                        vpdpbusds	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  2      13    0.50    *                   vpdpbusds	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  2      12    0.50    *                   vpdpbusds	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      5     0.50                        vpdpwssd	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  2      13    0.50    *                   vpdpwssd	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  2      11    0.50    *                   vpdpwssd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      5     0.50                        vpdpwssd	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  2      13    0.50    *                   vpdpwssd	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  2      12    0.50    *                   vpdpwssd	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      5     0.50                        vpdpwssds	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  2      13    0.50    *                   vpdpwssds	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  2      11    0.50    *                   vpdpwssds	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      5     0.50                        vpdpwssds	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  2      13    0.50    *                   vpdpwssds	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  2      12    0.50    *                   vpdpwssds	(%rax), %ymm1, %ymm2
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - ADLPPort00

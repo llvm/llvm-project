@@ -28,16 +28,16 @@ aeskeygenassist $22, (%rax), %xmm2
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      5     0.50                        aesdec	%xmm0, %xmm2
-# CHECK-NEXT:  2      12    0.50    *                   aesdec	(%rax), %xmm2
-# CHECK-NEXT:  1      5     0.50                        aesdeclast	%xmm0, %xmm2
-# CHECK-NEXT:  2      12    0.50    *                   aesdeclast	(%rax), %xmm2
-# CHECK-NEXT:  1      5     0.50                        aesenc	%xmm0, %xmm2
-# CHECK-NEXT:  2      12    0.50    *                   aesenc	(%rax), %xmm2
-# CHECK-NEXT:  1      5     0.50                        aesenclast	%xmm0, %xmm2
-# CHECK-NEXT:  2      12    0.50    *                   aesenclast	(%rax), %xmm2
-# CHECK-NEXT:  2      8     1.00                        aesimc	%xmm0, %xmm2
-# CHECK-NEXT:  3      15    1.00    *                   aesimc	(%rax), %xmm2
+# CHECK-NEXT:  1      3     0.50                        aesdec	%xmm0, %xmm2
+# CHECK-NEXT:  2      11    0.50    *                   aesdec	(%rax), %xmm2
+# CHECK-NEXT:  1      3     0.50                        aesdeclast	%xmm0, %xmm2
+# CHECK-NEXT:  2      11    0.50    *                   aesdeclast	(%rax), %xmm2
+# CHECK-NEXT:  1      3     0.50                        aesenc	%xmm0, %xmm2
+# CHECK-NEXT:  2      11    0.50    *                   aesenc	(%rax), %xmm2
+# CHECK-NEXT:  1      3     0.50                        aesenclast	%xmm0, %xmm2
+# CHECK-NEXT:  2      11    0.50    *                   aesenclast	(%rax), %xmm2
+# CHECK-NEXT:  2      6     1.00                        aesimc	%xmm0, %xmm2
+# CHECK-NEXT:  3      14    1.00    *                   aesimc	(%rax), %xmm2
 # CHECK-NEXT:  14     7     4.00                        aeskeygenassist	$22, %xmm0, %xmm2
 # CHECK-NEXT:  14     12    4.00    *                   aeskeygenassist	$22, (%rax), %xmm2
 

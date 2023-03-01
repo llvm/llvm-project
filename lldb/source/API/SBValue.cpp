@@ -114,6 +114,10 @@ public:
     lldb::ValueObjectSP value_sp = m_valobj_sp;
 
     Target *target = value_sp->GetTargetSP().get();
+    // If this ValueObject holds an error, then it is valuable for that.
+    if (value_sp->GetError().Fail()) 
+      return value_sp;
+
     if (!target)
       return ValueObjectSP();
 
@@ -1047,7 +1051,12 @@ lldb::SBFrame SBValue::GetFrame() {
 }
 
 lldb::ValueObjectSP SBValue::GetSP(ValueLocker &locker) const {
-  if (!m_opaque_sp || !m_opaque_sp->IsValid()) {
+  // IsValid means that the SBValue has a value in it.  But that's not the
+  // only time that ValueObjects are useful.  We also want to return the value
+  // if there's an error state in it.
+  if (!m_opaque_sp || (!m_opaque_sp->IsValid() 
+      && (m_opaque_sp->GetRootSP() 
+          && !m_opaque_sp->GetRootSP()->GetError().Fail()))) {
     locker.GetError().SetErrorString("No value");
     return ValueObjectSP();
   }

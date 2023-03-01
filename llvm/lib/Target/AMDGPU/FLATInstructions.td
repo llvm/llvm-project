@@ -955,7 +955,8 @@ defm GLOBAL_LOAD_LDS_SSHORT : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_ssho
 defm GLOBAL_LOAD_LDS_DWORD  : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_dword">;
 
 let SubtargetPredicate = isGFX12Plus in {
-  defm GLOBAL_ATOMIC_COND_SUB_U32 : FLAT_Global_Atomic_Pseudo <"global_atomic_cond_sub_u32", VGPR_32, i32>;
+  defm GLOBAL_ATOMIC_COND_SUB_U32    : FLAT_Global_Atomic_Pseudo <"global_atomic_cond_sub_u32", VGPR_32, i32>;
+  defm GLOBAL_ATOMIC_ORDERED_ADD_B64 : FLAT_Global_Atomic_Pseudo <"global_atomic_ordered_add_b64", VReg_64, i64>;
 
   def GLOBAL_INV    : FLAT_Global_Invalidate_Writeback<"global_inv">;
   def GLOBAL_WB     : FLAT_Global_Invalidate_Writeback<"global_wb">;
@@ -1133,9 +1134,9 @@ class FlatStoreSignedAtomicPat <FLAT_Pseudo inst, SDPatternOperator node,
 >;
 
 multiclass FlatAtomicPat <string inst, string node, ValueType vt,
-                          ValueType data_vt = vt> {
-  defvar rtnNode = !cast<PatFrags>(node#"_"#vt.Size);
-  defvar noRtnNode = !cast<PatFrags>(node#"_noret_"#vt.Size);
+                          ValueType data_vt = vt, bit isIntr = 0> {
+  defvar rtnNode = !cast<SDPatternOperator>(node # !if(isIntr, "", "_"#vt.Size));
+  defvar noRtnNode = !cast<PatFrags>(node # "_noret" # !if(isIntr, "", "_"#vt.Size));
 
   def : GCNPat <(vt (rtnNode (FlatOffset i64:$vaddr, i32:$offset), data_vt:$data)),
     (!cast<FLAT_Pseudo>(inst#"_RTN") VReg_64:$vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)>;
@@ -1143,6 +1144,11 @@ multiclass FlatAtomicPat <string inst, string node, ValueType vt,
   let AddedComplexity = 1 in
   def : GCNPat <(vt (noRtnNode (FlatOffset i64:$vaddr, i32:$offset), data_vt:$data)),
     (!cast<FLAT_Pseudo>(inst) VReg_64:$vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)>;
+}
+
+multiclass FlatAtomicIntrPat <string inst, string node, ValueType vt,
+                                    ValueType data_vt = vt> {
+  defm : FlatAtomicPat<inst, node, vt, data_vt, /* isIntr */ 1>;
 }
 
 class FlatSignedAtomicPatBase <FLAT_Pseudo inst, SDPatternOperator node,
@@ -1304,6 +1310,10 @@ defm : FlatAtomicPat <"FLAT_ATOMIC_CMPSWAP_X2", "AMDGPUatomic_cmp_swap_"#as, i64
 defm : FlatAtomicPat <"FLAT_ATOMIC_XOR_X2", "atomic_load_xor_"#as, i64>;
 } // end foreach as
 
+let OtherPredicates = [isGFX12Plus] in {
+defm : FlatAtomicIntrPat<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_flat_atomic_cond_sub_u32", i32>;
+}
+
 def : FlatStorePat <FLAT_STORE_BYTE, truncstorei8_flat, i16>;
 def : FlatStorePat <FLAT_STORE_SHORT, store_flat, i16>;
 
@@ -1376,10 +1386,10 @@ multiclass GlobalFLATAtomicStorePats<FLAT_Pseudo inst, SDPatternOperator node, V
 multiclass GlobalFLATAtomicPatsNoRtnBase<string inst, string node, ValueType vt,
                                          ValueType data_vt = vt> {
   let AddedComplexity = 11 in
-  def : FlatSignedAtomicPatBase<!cast<FLAT_Pseudo>(inst), !cast<PatFrags>(node), vt, data_vt>;
+  def : FlatSignedAtomicPatBase<!cast<FLAT_Pseudo>(inst), !cast<SDPatternOperator>(node), vt, data_vt>;
 
   let AddedComplexity = 13 in
-  def : GlobalAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR"), !cast<PatFrags>(node), vt, data_vt>;
+  def : GlobalAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR"), !cast<SDPatternOperator>(node), vt, data_vt>;
 }
 
 multiclass GlobalFLATAtomicPatsRtnBase<string inst, string node, ValueType vt,
@@ -1572,6 +1582,11 @@ defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_OR_X2", "atomic_load_or_global", i64
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_SWAP_X2", "atomic_swap_global", i64>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_CMPSWAP_X2", "AMDGPUatomic_cmp_swap_global", i64, v2i64>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_XOR_X2", "atomic_load_xor_global", i64>;
+
+let OtherPredicates = [isGFX12Plus] in {
+defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_COND_SUB_U32", "int_amdgcn_global_atomic_cond_sub_u32", i32>;
+defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_ORDERED_ADD_B64", "int_amdgcn_global_atomic_ordered_add_b64", i64>;
+}
 
 let OtherPredicates = [isGFX10Plus] in {
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_FMIN", "atomic_load_fmin_global", f32>;
@@ -2571,150 +2586,151 @@ multiclass VSCRATCH_Real_AllAddr_gfx12<bits<8> op, string ps, string opName, int
   VFLAT_Real_SVS_gfx12<op, ps, opName>;
 
 // ENC_VFLAT.
-defm FLAT_LOAD_U8                : VFLAT_Real_Base_gfx12<0x010, "FLAT_LOAD_UBYTE", "flat_load_u8", true>;
-defm FLAT_LOAD_I8                : VFLAT_Real_Base_gfx12<0x011, "FLAT_LOAD_SBYTE", "flat_load_i8", true>;
-defm FLAT_LOAD_U16               : VFLAT_Real_Base_gfx12<0x012, "FLAT_LOAD_USHORT", "flat_load_u16", true>;
-defm FLAT_LOAD_I16               : VFLAT_Real_Base_gfx12<0x013, "FLAT_LOAD_SSHORT", "flat_load_i16", true>;
-defm FLAT_LOAD_B32               : VFLAT_Real_Base_gfx12<0x014, "FLAT_LOAD_DWORD", "flat_load_b32", true>;
-defm FLAT_LOAD_B64               : VFLAT_Real_Base_gfx12<0x015, "FLAT_LOAD_DWORDX2", "flat_load_b64", true>;
-defm FLAT_LOAD_B96               : VFLAT_Real_Base_gfx12<0x016, "FLAT_LOAD_DWORDX3", "flat_load_b96", true>;
-defm FLAT_LOAD_B128              : VFLAT_Real_Base_gfx12<0x017, "FLAT_LOAD_DWORDX4", "flat_load_b128", true>;
-defm FLAT_STORE_B8               : VFLAT_Real_Base_gfx12<0x018, "FLAT_STORE_BYTE", "flat_store_b8", true>;
-defm FLAT_STORE_B16              : VFLAT_Real_Base_gfx12<0x019, "FLAT_STORE_SHORT", "flat_store_b16", true>;
-defm FLAT_STORE_B32              : VFLAT_Real_Base_gfx12<0x01a, "FLAT_STORE_DWORD", "flat_store_b32", true>;
-defm FLAT_STORE_B64              : VFLAT_Real_Base_gfx12<0x01b, "FLAT_STORE_DWORDX2", "flat_store_b64", true>;
-defm FLAT_STORE_B96              : VFLAT_Real_Base_gfx12<0x01c, "FLAT_STORE_DWORDX3", "flat_store_b96", true>;
-defm FLAT_STORE_B128             : VFLAT_Real_Base_gfx12<0x01d, "FLAT_STORE_DWORDX4", "flat_store_b128", true>;
-defm FLAT_LOAD_D16_U8            : VFLAT_Real_Base_gfx12<0x01e, "FLAT_LOAD_UBYTE_D16", "flat_load_d16_u8">;
-defm FLAT_LOAD_D16_I8            : VFLAT_Real_Base_gfx12<0x01f, "FLAT_LOAD_SBYTE_D16", "flat_load_d16_i8">;
-defm FLAT_LOAD_D16_B16           : VFLAT_Real_Base_gfx12<0x020, "FLAT_LOAD_SHORT_D16", "flat_load_d16_b16">;
-defm FLAT_LOAD_D16_HI_U8         : VFLAT_Real_Base_gfx12<0x021, "FLAT_LOAD_UBYTE_D16_HI", "flat_load_d16_hi_u8">;
-defm FLAT_LOAD_D16_HI_I8         : VFLAT_Real_Base_gfx12<0x022, "FLAT_LOAD_SBYTE_D16_HI", "flat_load_d16_hi_i8">;
-defm FLAT_LOAD_D16_HI_B16        : VFLAT_Real_Base_gfx12<0x023, "FLAT_LOAD_SHORT_D16_HI", "flat_load_d16_hi_b16">;
-defm FLAT_STORE_D16_HI_B8        : VFLAT_Real_Base_gfx12<0x024, "FLAT_STORE_BYTE_D16_HI", "flat_store_d16_hi_b8">;
-defm FLAT_STORE_D16_HI_B16       : VFLAT_Real_Base_gfx12<0x025, "FLAT_STORE_SHORT_D16_HI", "flat_store_d16_hi_b16">;
-defm FLAT_ATOMIC_SWAP_B32        : VFLAT_Real_Atomics_gfx12<0x033, "FLAT_ATOMIC_SWAP", "flat_atomic_swap_b32", true>;
-defm FLAT_ATOMIC_CMPSWAP_B32     : VFLAT_Real_Atomics_gfx12<0x034, "FLAT_ATOMIC_CMPSWAP", "flat_atomic_cmpswap_b32", true>;
-defm FLAT_ATOMIC_ADD_U32         : VFLAT_Real_Atomics_gfx12<0x035, "FLAT_ATOMIC_ADD", "flat_atomic_add_u32", true>;
-defm FLAT_ATOMIC_SUB_U32         : VFLAT_Real_Atomics_gfx12<0x036, "FLAT_ATOMIC_SUB", "flat_atomic_sub_u32", true>;
-defm FLAT_ATOMIC_SUB_CLAMP_U32   : VFLAT_Real_Atomics_RTN_gfx12<0x037, "FLAT_ATOMIC_CSUB_U32", "flat_atomic_sub_clamp_u32", true>;
-defm FLAT_ATOMIC_MIN_I32         : VFLAT_Real_Atomics_gfx12<0x038, "FLAT_ATOMIC_SMIN", "flat_atomic_min_i32", true>;
-defm FLAT_ATOMIC_MIN_U32         : VFLAT_Real_Atomics_gfx12<0x039, "FLAT_ATOMIC_UMIN", "flat_atomic_min_u32", true>;
-defm FLAT_ATOMIC_MAX_I32         : VFLAT_Real_Atomics_gfx12<0x03a, "FLAT_ATOMIC_SMAX", "flat_atomic_max_i32", true>;
-defm FLAT_ATOMIC_MAX_U32         : VFLAT_Real_Atomics_gfx12<0x03b, "FLAT_ATOMIC_UMAX", "flat_atomic_max_u32", true>;
-defm FLAT_ATOMIC_AND_B32         : VFLAT_Real_Atomics_gfx12<0x03c, "FLAT_ATOMIC_AND", "flat_atomic_and_b32", true>;
-defm FLAT_ATOMIC_OR_B32          : VFLAT_Real_Atomics_gfx12<0x03d, "FLAT_ATOMIC_OR", "flat_atomic_or_b32", true>;
-defm FLAT_ATOMIC_XOR_B32         : VFLAT_Real_Atomics_gfx12<0x03e, "FLAT_ATOMIC_XOR", "flat_atomic_xor_b32", true>;
-defm FLAT_ATOMIC_INC_U32         : VFLAT_Real_Atomics_gfx12<0x03f, "FLAT_ATOMIC_INC", "flat_atomic_inc_u32", true>;
-defm FLAT_ATOMIC_DEC_U32         : VFLAT_Real_Atomics_gfx12<0x040, "FLAT_ATOMIC_DEC", "flat_atomic_dec_u32", true>;
-defm FLAT_ATOMIC_SWAP_B64        : VFLAT_Real_Atomics_gfx12<0x041, "FLAT_ATOMIC_SWAP_X2", "flat_atomic_swap_b64", true>;
-defm FLAT_ATOMIC_CMPSWAP_B64     : VFLAT_Real_Atomics_gfx12<0x042, "FLAT_ATOMIC_CMPSWAP_X2", "flat_atomic_cmpswap_b64", true>;
-defm FLAT_ATOMIC_ADD_U64         : VFLAT_Real_Atomics_gfx12<0x043, "FLAT_ATOMIC_ADD_X2", "flat_atomic_add_u64", true>;
-defm FLAT_ATOMIC_SUB_U64         : VFLAT_Real_Atomics_gfx12<0x044, "FLAT_ATOMIC_SUB_X2", "flat_atomic_sub_u64", true>;
-defm FLAT_ATOMIC_MIN_I64         : VFLAT_Real_Atomics_gfx12<0x045, "FLAT_ATOMIC_SMIN_X2", "flat_atomic_min_i64", true>;
-defm FLAT_ATOMIC_MIN_U64         : VFLAT_Real_Atomics_gfx12<0x046, "FLAT_ATOMIC_UMIN_X2", "flat_atomic_min_u64", true>;
-defm FLAT_ATOMIC_MAX_I64         : VFLAT_Real_Atomics_gfx12<0x047, "FLAT_ATOMIC_SMAX_X2", "flat_atomic_max_i64", true>;
-defm FLAT_ATOMIC_MAX_U64         : VFLAT_Real_Atomics_gfx12<0x048, "FLAT_ATOMIC_UMAX_X2", "flat_atomic_max_u64", true>;
-defm FLAT_ATOMIC_AND_B64         : VFLAT_Real_Atomics_gfx12<0x049, "FLAT_ATOMIC_AND_X2", "flat_atomic_and_b64", true>;
-defm FLAT_ATOMIC_OR_B64          : VFLAT_Real_Atomics_gfx12<0x04a, "FLAT_ATOMIC_OR_X2", "flat_atomic_or_b64", true>;
-defm FLAT_ATOMIC_XOR_B64         : VFLAT_Real_Atomics_gfx12<0x04b, "FLAT_ATOMIC_XOR_X2", "flat_atomic_xor_b64", true>;
-defm FLAT_ATOMIC_INC_U64         : VFLAT_Real_Atomics_gfx12<0x04c, "FLAT_ATOMIC_INC_X2", "flat_atomic_inc_u64", true>;
-defm FLAT_ATOMIC_DEC_U64         : VFLAT_Real_Atomics_gfx12<0x04d, "FLAT_ATOMIC_DEC_X2", "flat_atomic_dec_u64", true>;
-defm FLAT_ATOMIC_COND_SUB_U32    : VFLAT_Real_Atomics_gfx12<0x050, "FLAT_ATOMIC_COND_SUB_U32", "flat_atomic_cond_sub_u32">;
-defm FLAT_ATOMIC_MIN_NUM_F32     : VFLAT_Real_Atomics_gfx12<0x051, "FLAT_ATOMIC_FMIN", "flat_atomic_min_num_f32", true, "flat_atomic_min_f32">;
-defm FLAT_ATOMIC_MAX_NUM_F32     : VFLAT_Real_Atomics_gfx12<0x052, "FLAT_ATOMIC_FMAX", "flat_atomic_max_num_f32", true, "flat_atomic_max_f32">;
-defm FLAT_ATOMIC_ADD_F32         : VFLAT_Real_Atomics_gfx12<0x056, "FLAT_ATOMIC_ADD_F32", "flat_atomic_add_f32">;
+defm FLAT_LOAD_U8                  : VFLAT_Real_Base_gfx12<0x010, "FLAT_LOAD_UBYTE", "flat_load_u8", true>;
+defm FLAT_LOAD_I8                  : VFLAT_Real_Base_gfx12<0x011, "FLAT_LOAD_SBYTE", "flat_load_i8", true>;
+defm FLAT_LOAD_U16                 : VFLAT_Real_Base_gfx12<0x012, "FLAT_LOAD_USHORT", "flat_load_u16", true>;
+defm FLAT_LOAD_I16                 : VFLAT_Real_Base_gfx12<0x013, "FLAT_LOAD_SSHORT", "flat_load_i16", true>;
+defm FLAT_LOAD_B32                 : VFLAT_Real_Base_gfx12<0x014, "FLAT_LOAD_DWORD", "flat_load_b32", true>;
+defm FLAT_LOAD_B64                 : VFLAT_Real_Base_gfx12<0x015, "FLAT_LOAD_DWORDX2", "flat_load_b64", true>;
+defm FLAT_LOAD_B96                 : VFLAT_Real_Base_gfx12<0x016, "FLAT_LOAD_DWORDX3", "flat_load_b96", true>;
+defm FLAT_LOAD_B128                : VFLAT_Real_Base_gfx12<0x017, "FLAT_LOAD_DWORDX4", "flat_load_b128", true>;
+defm FLAT_STORE_B8                 : VFLAT_Real_Base_gfx12<0x018, "FLAT_STORE_BYTE", "flat_store_b8", true>;
+defm FLAT_STORE_B16                : VFLAT_Real_Base_gfx12<0x019, "FLAT_STORE_SHORT", "flat_store_b16", true>;
+defm FLAT_STORE_B32                : VFLAT_Real_Base_gfx12<0x01a, "FLAT_STORE_DWORD", "flat_store_b32", true>;
+defm FLAT_STORE_B64                : VFLAT_Real_Base_gfx12<0x01b, "FLAT_STORE_DWORDX2", "flat_store_b64", true>;
+defm FLAT_STORE_B96                : VFLAT_Real_Base_gfx12<0x01c, "FLAT_STORE_DWORDX3", "flat_store_b96", true>;
+defm FLAT_STORE_B128               : VFLAT_Real_Base_gfx12<0x01d, "FLAT_STORE_DWORDX4", "flat_store_b128", true>;
+defm FLAT_LOAD_D16_U8              : VFLAT_Real_Base_gfx12<0x01e, "FLAT_LOAD_UBYTE_D16", "flat_load_d16_u8">;
+defm FLAT_LOAD_D16_I8              : VFLAT_Real_Base_gfx12<0x01f, "FLAT_LOAD_SBYTE_D16", "flat_load_d16_i8">;
+defm FLAT_LOAD_D16_B16             : VFLAT_Real_Base_gfx12<0x020, "FLAT_LOAD_SHORT_D16", "flat_load_d16_b16">;
+defm FLAT_LOAD_D16_HI_U8           : VFLAT_Real_Base_gfx12<0x021, "FLAT_LOAD_UBYTE_D16_HI", "flat_load_d16_hi_u8">;
+defm FLAT_LOAD_D16_HI_I8           : VFLAT_Real_Base_gfx12<0x022, "FLAT_LOAD_SBYTE_D16_HI", "flat_load_d16_hi_i8">;
+defm FLAT_LOAD_D16_HI_B16          : VFLAT_Real_Base_gfx12<0x023, "FLAT_LOAD_SHORT_D16_HI", "flat_load_d16_hi_b16">;
+defm FLAT_STORE_D16_HI_B8          : VFLAT_Real_Base_gfx12<0x024, "FLAT_STORE_BYTE_D16_HI", "flat_store_d16_hi_b8">;
+defm FLAT_STORE_D16_HI_B16         : VFLAT_Real_Base_gfx12<0x025, "FLAT_STORE_SHORT_D16_HI", "flat_store_d16_hi_b16">;
+defm FLAT_ATOMIC_SWAP_B32          : VFLAT_Real_Atomics_gfx12<0x033, "FLAT_ATOMIC_SWAP", "flat_atomic_swap_b32", true>;
+defm FLAT_ATOMIC_CMPSWAP_B32       : VFLAT_Real_Atomics_gfx12<0x034, "FLAT_ATOMIC_CMPSWAP", "flat_atomic_cmpswap_b32", true>;
+defm FLAT_ATOMIC_ADD_U32           : VFLAT_Real_Atomics_gfx12<0x035, "FLAT_ATOMIC_ADD", "flat_atomic_add_u32", true>;
+defm FLAT_ATOMIC_SUB_U32           : VFLAT_Real_Atomics_gfx12<0x036, "FLAT_ATOMIC_SUB", "flat_atomic_sub_u32", true>;
+defm FLAT_ATOMIC_SUB_CLAMP_U32     : VFLAT_Real_Atomics_RTN_gfx12<0x037, "FLAT_ATOMIC_CSUB_U32", "flat_atomic_sub_clamp_u32", true>;
+defm FLAT_ATOMIC_MIN_I32           : VFLAT_Real_Atomics_gfx12<0x038, "FLAT_ATOMIC_SMIN", "flat_atomic_min_i32", true>;
+defm FLAT_ATOMIC_MIN_U32           : VFLAT_Real_Atomics_gfx12<0x039, "FLAT_ATOMIC_UMIN", "flat_atomic_min_u32", true>;
+defm FLAT_ATOMIC_MAX_I32           : VFLAT_Real_Atomics_gfx12<0x03a, "FLAT_ATOMIC_SMAX", "flat_atomic_max_i32", true>;
+defm FLAT_ATOMIC_MAX_U32           : VFLAT_Real_Atomics_gfx12<0x03b, "FLAT_ATOMIC_UMAX", "flat_atomic_max_u32", true>;
+defm FLAT_ATOMIC_AND_B32           : VFLAT_Real_Atomics_gfx12<0x03c, "FLAT_ATOMIC_AND", "flat_atomic_and_b32", true>;
+defm FLAT_ATOMIC_OR_B32            : VFLAT_Real_Atomics_gfx12<0x03d, "FLAT_ATOMIC_OR", "flat_atomic_or_b32", true>;
+defm FLAT_ATOMIC_XOR_B32           : VFLAT_Real_Atomics_gfx12<0x03e, "FLAT_ATOMIC_XOR", "flat_atomic_xor_b32", true>;
+defm FLAT_ATOMIC_INC_U32           : VFLAT_Real_Atomics_gfx12<0x03f, "FLAT_ATOMIC_INC", "flat_atomic_inc_u32", true>;
+defm FLAT_ATOMIC_DEC_U32           : VFLAT_Real_Atomics_gfx12<0x040, "FLAT_ATOMIC_DEC", "flat_atomic_dec_u32", true>;
+defm FLAT_ATOMIC_SWAP_B64          : VFLAT_Real_Atomics_gfx12<0x041, "FLAT_ATOMIC_SWAP_X2", "flat_atomic_swap_b64", true>;
+defm FLAT_ATOMIC_CMPSWAP_B64       : VFLAT_Real_Atomics_gfx12<0x042, "FLAT_ATOMIC_CMPSWAP_X2", "flat_atomic_cmpswap_b64", true>;
+defm FLAT_ATOMIC_ADD_U64           : VFLAT_Real_Atomics_gfx12<0x043, "FLAT_ATOMIC_ADD_X2", "flat_atomic_add_u64", true>;
+defm FLAT_ATOMIC_SUB_U64           : VFLAT_Real_Atomics_gfx12<0x044, "FLAT_ATOMIC_SUB_X2", "flat_atomic_sub_u64", true>;
+defm FLAT_ATOMIC_MIN_I64           : VFLAT_Real_Atomics_gfx12<0x045, "FLAT_ATOMIC_SMIN_X2", "flat_atomic_min_i64", true>;
+defm FLAT_ATOMIC_MIN_U64           : VFLAT_Real_Atomics_gfx12<0x046, "FLAT_ATOMIC_UMIN_X2", "flat_atomic_min_u64", true>;
+defm FLAT_ATOMIC_MAX_I64           : VFLAT_Real_Atomics_gfx12<0x047, "FLAT_ATOMIC_SMAX_X2", "flat_atomic_max_i64", true>;
+defm FLAT_ATOMIC_MAX_U64           : VFLAT_Real_Atomics_gfx12<0x048, "FLAT_ATOMIC_UMAX_X2", "flat_atomic_max_u64", true>;
+defm FLAT_ATOMIC_AND_B64           : VFLAT_Real_Atomics_gfx12<0x049, "FLAT_ATOMIC_AND_X2", "flat_atomic_and_b64", true>;
+defm FLAT_ATOMIC_OR_B64            : VFLAT_Real_Atomics_gfx12<0x04a, "FLAT_ATOMIC_OR_X2", "flat_atomic_or_b64", true>;
+defm FLAT_ATOMIC_XOR_B64           : VFLAT_Real_Atomics_gfx12<0x04b, "FLAT_ATOMIC_XOR_X2", "flat_atomic_xor_b64", true>;
+defm FLAT_ATOMIC_INC_U64           : VFLAT_Real_Atomics_gfx12<0x04c, "FLAT_ATOMIC_INC_X2", "flat_atomic_inc_u64", true>;
+defm FLAT_ATOMIC_DEC_U64           : VFLAT_Real_Atomics_gfx12<0x04d, "FLAT_ATOMIC_DEC_X2", "flat_atomic_dec_u64", true>;
+defm FLAT_ATOMIC_COND_SUB_U32      : VFLAT_Real_Atomics_gfx12<0x050, "FLAT_ATOMIC_COND_SUB_U32", "flat_atomic_cond_sub_u32">;
+defm FLAT_ATOMIC_MIN_NUM_F32       : VFLAT_Real_Atomics_gfx12<0x051, "FLAT_ATOMIC_FMIN", "flat_atomic_min_num_f32", true, "flat_atomic_min_f32">;
+defm FLAT_ATOMIC_MAX_NUM_F32       : VFLAT_Real_Atomics_gfx12<0x052, "FLAT_ATOMIC_FMAX", "flat_atomic_max_num_f32", true, "flat_atomic_max_f32">;
+defm FLAT_ATOMIC_ADD_F32           : VFLAT_Real_Atomics_gfx12<0x056, "FLAT_ATOMIC_ADD_F32", "flat_atomic_add_f32">;
 
 // ENC_VGLOBAL.
-defm GLOBAL_LOAD_U8              : VGLOBAL_Real_AllAddr_gfx12<0x010, "GLOBAL_LOAD_UBYTE", "global_load_u8", true>;
-defm GLOBAL_LOAD_I8              : VGLOBAL_Real_AllAddr_gfx12<0x011, "GLOBAL_LOAD_SBYTE", "global_load_i8", true>;
-defm GLOBAL_LOAD_U16             : VGLOBAL_Real_AllAddr_gfx12<0x012, "GLOBAL_LOAD_USHORT", "global_load_u16", true>;
-defm GLOBAL_LOAD_I16             : VGLOBAL_Real_AllAddr_gfx12<0x013, "GLOBAL_LOAD_SSHORT", "global_load_i16", true>;
-defm GLOBAL_LOAD_B32             : VGLOBAL_Real_AllAddr_gfx12<0x014, "GLOBAL_LOAD_DWORD", "global_load_b32", true>;
-defm GLOBAL_LOAD_B64             : VGLOBAL_Real_AllAddr_gfx12<0x015, "GLOBAL_LOAD_DWORDX2", "global_load_b64", true>;
-defm GLOBAL_LOAD_B96             : VGLOBAL_Real_AllAddr_gfx12<0x016, "GLOBAL_LOAD_DWORDX3", "global_load_b96", true>;
-defm GLOBAL_LOAD_B128            : VGLOBAL_Real_AllAddr_gfx12<0x017, "GLOBAL_LOAD_DWORDX4", "global_load_b128", true>;
-defm GLOBAL_STORE_B8             : VGLOBAL_Real_AllAddr_gfx12<0x018, "GLOBAL_STORE_BYTE", "global_store_b8", true>;
-defm GLOBAL_STORE_B16            : VGLOBAL_Real_AllAddr_gfx12<0x019, "GLOBAL_STORE_SHORT", "global_store_b16", true>;
-defm GLOBAL_STORE_B32            : VGLOBAL_Real_AllAddr_gfx12<0x01a, "GLOBAL_STORE_DWORD", "global_store_b32", true>;
-defm GLOBAL_STORE_B64            : VGLOBAL_Real_AllAddr_gfx12<0x01b, "GLOBAL_STORE_DWORDX2", "global_store_b64", true>;
-defm GLOBAL_STORE_B96            : VGLOBAL_Real_AllAddr_gfx12<0x01c, "GLOBAL_STORE_DWORDX3", "global_store_b96", true>;
-defm GLOBAL_STORE_B128           : VGLOBAL_Real_AllAddr_gfx12<0x01d, "GLOBAL_STORE_DWORDX4", "global_store_b128", true>;
-defm GLOBAL_LOAD_D16_U8          : VGLOBAL_Real_AllAddr_gfx12<0x01e, "GLOBAL_LOAD_UBYTE_D16", "global_load_d16_u8">;
-defm GLOBAL_LOAD_D16_I8          : VGLOBAL_Real_AllAddr_gfx12<0x01f, "GLOBAL_LOAD_SBYTE_D16", "global_load_d16_i8">;
-defm GLOBAL_LOAD_D16_B16         : VGLOBAL_Real_AllAddr_gfx12<0x020, "GLOBAL_LOAD_SHORT_D16", "global_load_d16_b16">;
-defm GLOBAL_LOAD_D16_HI_U8       : VGLOBAL_Real_AllAddr_gfx12<0x021, "GLOBAL_LOAD_UBYTE_D16_HI", "global_load_d16_hi_u8">;
-defm GLOBAL_LOAD_D16_HI_I8       : VGLOBAL_Real_AllAddr_gfx12<0x022, "GLOBAL_LOAD_SBYTE_D16_HI", "global_load_d16_hi_i8">;
-defm GLOBAL_LOAD_D16_HI_B16      : VGLOBAL_Real_AllAddr_gfx12<0x023, "GLOBAL_LOAD_SHORT_D16_HI", "global_load_d16_hi_b16">;
-defm GLOBAL_STORE_D16_HI_B8      : VGLOBAL_Real_AllAddr_gfx12<0x024, "GLOBAL_STORE_BYTE_D16_HI", "global_store_d16_hi_b8">;
-defm GLOBAL_STORE_D16_HI_B16     : VGLOBAL_Real_AllAddr_gfx12<0x025, "GLOBAL_STORE_SHORT_D16_HI", "global_store_d16_hi_b16">;
-defm GLOBAL_LOAD_ADDTID_B32      : VGLOBAL_Real_AllAddr_gfx12<0x028, "GLOBAL_LOAD_DWORD_ADDTID", "global_load_addtid_b32">;
-defm GLOBAL_STORE_ADDTID_B32     : VGLOBAL_Real_AllAddr_gfx12<0x029, "GLOBAL_STORE_DWORD_ADDTID", "global_store_addtid_b32">;
-defm GLOBAL_LOAD_BLOCK           : VGLOBAL_Real_AllAddr_gfx12<0x053, "GLOBAL_LOAD_BLOCK", "global_load_block">;
-defm GLOBAL_STORE_BLOCK          : VGLOBAL_Real_AllAddr_gfx12<0x054, "GLOBAL_STORE_BLOCK", "global_store_block">;
+defm GLOBAL_LOAD_U8                : VGLOBAL_Real_AllAddr_gfx12<0x010, "GLOBAL_LOAD_UBYTE", "global_load_u8", true>;
+defm GLOBAL_LOAD_I8                : VGLOBAL_Real_AllAddr_gfx12<0x011, "GLOBAL_LOAD_SBYTE", "global_load_i8", true>;
+defm GLOBAL_LOAD_U16               : VGLOBAL_Real_AllAddr_gfx12<0x012, "GLOBAL_LOAD_USHORT", "global_load_u16", true>;
+defm GLOBAL_LOAD_I16               : VGLOBAL_Real_AllAddr_gfx12<0x013, "GLOBAL_LOAD_SSHORT", "global_load_i16", true>;
+defm GLOBAL_LOAD_B32               : VGLOBAL_Real_AllAddr_gfx12<0x014, "GLOBAL_LOAD_DWORD", "global_load_b32", true>;
+defm GLOBAL_LOAD_B64               : VGLOBAL_Real_AllAddr_gfx12<0x015, "GLOBAL_LOAD_DWORDX2", "global_load_b64", true>;
+defm GLOBAL_LOAD_B96               : VGLOBAL_Real_AllAddr_gfx12<0x016, "GLOBAL_LOAD_DWORDX3", "global_load_b96", true>;
+defm GLOBAL_LOAD_B128              : VGLOBAL_Real_AllAddr_gfx12<0x017, "GLOBAL_LOAD_DWORDX4", "global_load_b128", true>;
+defm GLOBAL_STORE_B8               : VGLOBAL_Real_AllAddr_gfx12<0x018, "GLOBAL_STORE_BYTE", "global_store_b8", true>;
+defm GLOBAL_STORE_B16              : VGLOBAL_Real_AllAddr_gfx12<0x019, "GLOBAL_STORE_SHORT", "global_store_b16", true>;
+defm GLOBAL_STORE_B32              : VGLOBAL_Real_AllAddr_gfx12<0x01a, "GLOBAL_STORE_DWORD", "global_store_b32", true>;
+defm GLOBAL_STORE_B64              : VGLOBAL_Real_AllAddr_gfx12<0x01b, "GLOBAL_STORE_DWORDX2", "global_store_b64", true>;
+defm GLOBAL_STORE_B96              : VGLOBAL_Real_AllAddr_gfx12<0x01c, "GLOBAL_STORE_DWORDX3", "global_store_b96", true>;
+defm GLOBAL_STORE_B128             : VGLOBAL_Real_AllAddr_gfx12<0x01d, "GLOBAL_STORE_DWORDX4", "global_store_b128", true>;
+defm GLOBAL_LOAD_D16_U8            : VGLOBAL_Real_AllAddr_gfx12<0x01e, "GLOBAL_LOAD_UBYTE_D16", "global_load_d16_u8">;
+defm GLOBAL_LOAD_D16_I8            : VGLOBAL_Real_AllAddr_gfx12<0x01f, "GLOBAL_LOAD_SBYTE_D16", "global_load_d16_i8">;
+defm GLOBAL_LOAD_D16_B16           : VGLOBAL_Real_AllAddr_gfx12<0x020, "GLOBAL_LOAD_SHORT_D16", "global_load_d16_b16">;
+defm GLOBAL_LOAD_D16_HI_U8         : VGLOBAL_Real_AllAddr_gfx12<0x021, "GLOBAL_LOAD_UBYTE_D16_HI", "global_load_d16_hi_u8">;
+defm GLOBAL_LOAD_D16_HI_I8         : VGLOBAL_Real_AllAddr_gfx12<0x022, "GLOBAL_LOAD_SBYTE_D16_HI", "global_load_d16_hi_i8">;
+defm GLOBAL_LOAD_D16_HI_B16        : VGLOBAL_Real_AllAddr_gfx12<0x023, "GLOBAL_LOAD_SHORT_D16_HI", "global_load_d16_hi_b16">;
+defm GLOBAL_STORE_D16_HI_B8        : VGLOBAL_Real_AllAddr_gfx12<0x024, "GLOBAL_STORE_BYTE_D16_HI", "global_store_d16_hi_b8">;
+defm GLOBAL_STORE_D16_HI_B16       : VGLOBAL_Real_AllAddr_gfx12<0x025, "GLOBAL_STORE_SHORT_D16_HI", "global_store_d16_hi_b16">;
+defm GLOBAL_LOAD_ADDTID_B32        : VGLOBAL_Real_AllAddr_gfx12<0x028, "GLOBAL_LOAD_DWORD_ADDTID", "global_load_addtid_b32">;
+defm GLOBAL_STORE_ADDTID_B32       : VGLOBAL_Real_AllAddr_gfx12<0x029, "GLOBAL_STORE_DWORD_ADDTID", "global_store_addtid_b32">;
+defm GLOBAL_LOAD_BLOCK             : VGLOBAL_Real_AllAddr_gfx12<0x053, "GLOBAL_LOAD_BLOCK", "global_load_block">;
+defm GLOBAL_STORE_BLOCK            : VGLOBAL_Real_AllAddr_gfx12<0x054, "GLOBAL_STORE_BLOCK", "global_store_block">;
 
-defm GLOBAL_ATOMIC_SWAP_B32      : VGLOBAL_Real_Atomics_gfx12<0x033, "GLOBAL_ATOMIC_SWAP", "global_atomic_swap_b32", true>;
-defm GLOBAL_ATOMIC_CMPSWAP_B32   : VGLOBAL_Real_Atomics_gfx12<0x034, "GLOBAL_ATOMIC_CMPSWAP", "global_atomic_cmpswap_b32", true>;
-defm GLOBAL_ATOMIC_ADD_U32       : VGLOBAL_Real_Atomics_gfx12<0x035, "GLOBAL_ATOMIC_ADD", "global_atomic_add_u32", true>;
-defm GLOBAL_ATOMIC_SUB_U32       : VGLOBAL_Real_Atomics_gfx12<0x036, "GLOBAL_ATOMIC_SUB", "global_atomic_sub_u32", true>;
-defm GLOBAL_ATOMIC_SUB_CLAMP_U32 : VGLOBAL_Real_Atomics_RTN_gfx12<0x037, "GLOBAL_ATOMIC_CSUB", "global_atomic_sub_clamp_u32", true, "global_atomic_csub_u32">;
-defm GLOBAL_ATOMIC_MIN_I32       : VGLOBAL_Real_Atomics_gfx12<0x038, "GLOBAL_ATOMIC_SMIN", "global_atomic_min_i32", true>;
-defm GLOBAL_ATOMIC_MIN_U32       : VGLOBAL_Real_Atomics_gfx12<0x039, "GLOBAL_ATOMIC_UMIN", "global_atomic_min_u32", true>;
-defm GLOBAL_ATOMIC_MAX_I32       : VGLOBAL_Real_Atomics_gfx12<0x03a, "GLOBAL_ATOMIC_SMAX", "global_atomic_max_i32", true>;
-defm GLOBAL_ATOMIC_MAX_U32       : VGLOBAL_Real_Atomics_gfx12<0x03b, "GLOBAL_ATOMIC_UMAX", "global_atomic_max_u32", true>;
-defm GLOBAL_ATOMIC_AND_B32       : VGLOBAL_Real_Atomics_gfx12<0x03c, "GLOBAL_ATOMIC_AND", "global_atomic_and_b32", true>;
-defm GLOBAL_ATOMIC_OR_B32        : VGLOBAL_Real_Atomics_gfx12<0x03d, "GLOBAL_ATOMIC_OR", "global_atomic_or_b32", true>;
-defm GLOBAL_ATOMIC_XOR_B32       : VGLOBAL_Real_Atomics_gfx12<0x03e, "GLOBAL_ATOMIC_XOR", "global_atomic_xor_b32", true>;
-defm GLOBAL_ATOMIC_INC_U32       : VGLOBAL_Real_Atomics_gfx12<0x03f, "GLOBAL_ATOMIC_INC", "global_atomic_inc_u32", true>;
-defm GLOBAL_ATOMIC_DEC_U32       : VGLOBAL_Real_Atomics_gfx12<0x040, "GLOBAL_ATOMIC_DEC", "global_atomic_dec_u32", true>;
-defm GLOBAL_ATOMIC_SWAP_B64      : VGLOBAL_Real_Atomics_gfx12<0x041, "GLOBAL_ATOMIC_SWAP_X2", "global_atomic_swap_b64", true>;
-defm GLOBAL_ATOMIC_CMPSWAP_B64   : VGLOBAL_Real_Atomics_gfx12<0x042, "GLOBAL_ATOMIC_CMPSWAP_X2", "global_atomic_cmpswap_b64", true>;
-defm GLOBAL_ATOMIC_ADD_U64       : VGLOBAL_Real_Atomics_gfx12<0x043, "GLOBAL_ATOMIC_ADD_X2", "global_atomic_add_u64", true>;
-defm GLOBAL_ATOMIC_SUB_U64       : VGLOBAL_Real_Atomics_gfx12<0x044, "GLOBAL_ATOMIC_SUB_X2", "global_atomic_sub_u64", true>;
-defm GLOBAL_ATOMIC_MIN_I64       : VGLOBAL_Real_Atomics_gfx12<0x045, "GLOBAL_ATOMIC_SMIN_X2", "global_atomic_min_i64", true>;
-defm GLOBAL_ATOMIC_MIN_U64       : VGLOBAL_Real_Atomics_gfx12<0x046, "GLOBAL_ATOMIC_UMIN_X2", "global_atomic_min_u64", true>;
-defm GLOBAL_ATOMIC_MAX_I64       : VGLOBAL_Real_Atomics_gfx12<0x047, "GLOBAL_ATOMIC_SMAX_X2", "global_atomic_max_i64", true>;
-defm GLOBAL_ATOMIC_MAX_U64       : VGLOBAL_Real_Atomics_gfx12<0x048, "GLOBAL_ATOMIC_UMAX_X2", "global_atomic_max_u64", true>;
-defm GLOBAL_ATOMIC_AND_B64       : VGLOBAL_Real_Atomics_gfx12<0x049, "GLOBAL_ATOMIC_AND_X2", "global_atomic_and_b64", true>;
-defm GLOBAL_ATOMIC_OR_B64        : VGLOBAL_Real_Atomics_gfx12<0x04a, "GLOBAL_ATOMIC_OR_X2", "global_atomic_or_b64", true>;
-defm GLOBAL_ATOMIC_XOR_B64       : VGLOBAL_Real_Atomics_gfx12<0x04b, "GLOBAL_ATOMIC_XOR_X2", "global_atomic_xor_b64", true>;
-defm GLOBAL_ATOMIC_INC_U64       : VGLOBAL_Real_Atomics_gfx12<0x04c, "GLOBAL_ATOMIC_INC_X2", "global_atomic_inc_u64", true>;
-defm GLOBAL_ATOMIC_DEC_U64       : VGLOBAL_Real_Atomics_gfx12<0x04d, "GLOBAL_ATOMIC_DEC_X2", "global_atomic_dec_u64", true>;
-defm GLOBAL_ATOMIC_COND_SUB_U32  : VGLOBAL_Real_Atomics_gfx12<0x050, "GLOBAL_ATOMIC_COND_SUB_U32", "global_atomic_cond_sub_u32">;
-defm GLOBAL_ATOMIC_MIN_NUM_F32   : VGLOBAL_Real_Atomics_gfx12<0x051, "GLOBAL_ATOMIC_FMIN", "global_atomic_min_num_f32", true, "global_atomic_min_f32">;
-defm GLOBAL_ATOMIC_MAX_NUM_F32   : VGLOBAL_Real_Atomics_gfx12<0x052, "GLOBAL_ATOMIC_FMAX", "global_atomic_max_num_f32", true, "global_atomic_max_f32">;
-defm GLOBAL_ATOMIC_ADD_F32       : VGLOBAL_Real_Atomics_gfx12<0x056, "GLOBAL_ATOMIC_ADD_F32", "global_atomic_add_f32">;
-defm GLOBAL_LOAD_TR_B128         : VGLOBAL_Real_AllAddr_gfx12<0x057, "GLOBAL_LOAD_TR_B128", "global_load_tr_b128">;
-defm GLOBAL_LOAD_TR_B64          : VGLOBAL_Real_AllAddr_gfx12<0x058, "GLOBAL_LOAD_TR_B64", "global_load_tr_b64">;
+defm GLOBAL_ATOMIC_SWAP_B32        : VGLOBAL_Real_Atomics_gfx12<0x033, "GLOBAL_ATOMIC_SWAP", "global_atomic_swap_b32", true>;
+defm GLOBAL_ATOMIC_CMPSWAP_B32     : VGLOBAL_Real_Atomics_gfx12<0x034, "GLOBAL_ATOMIC_CMPSWAP", "global_atomic_cmpswap_b32", true>;
+defm GLOBAL_ATOMIC_ADD_U32         : VGLOBAL_Real_Atomics_gfx12<0x035, "GLOBAL_ATOMIC_ADD", "global_atomic_add_u32", true>;
+defm GLOBAL_ATOMIC_SUB_U32         : VGLOBAL_Real_Atomics_gfx12<0x036, "GLOBAL_ATOMIC_SUB", "global_atomic_sub_u32", true>;
+defm GLOBAL_ATOMIC_SUB_CLAMP_U32   : VGLOBAL_Real_Atomics_RTN_gfx12<0x037, "GLOBAL_ATOMIC_CSUB", "global_atomic_sub_clamp_u32", true, "global_atomic_csub_u32">;
+defm GLOBAL_ATOMIC_MIN_I32         : VGLOBAL_Real_Atomics_gfx12<0x038, "GLOBAL_ATOMIC_SMIN", "global_atomic_min_i32", true>;
+defm GLOBAL_ATOMIC_MIN_U32         : VGLOBAL_Real_Atomics_gfx12<0x039, "GLOBAL_ATOMIC_UMIN", "global_atomic_min_u32", true>;
+defm GLOBAL_ATOMIC_MAX_I32         : VGLOBAL_Real_Atomics_gfx12<0x03a, "GLOBAL_ATOMIC_SMAX", "global_atomic_max_i32", true>;
+defm GLOBAL_ATOMIC_MAX_U32         : VGLOBAL_Real_Atomics_gfx12<0x03b, "GLOBAL_ATOMIC_UMAX", "global_atomic_max_u32", true>;
+defm GLOBAL_ATOMIC_AND_B32         : VGLOBAL_Real_Atomics_gfx12<0x03c, "GLOBAL_ATOMIC_AND", "global_atomic_and_b32", true>;
+defm GLOBAL_ATOMIC_OR_B32          : VGLOBAL_Real_Atomics_gfx12<0x03d, "GLOBAL_ATOMIC_OR", "global_atomic_or_b32", true>;
+defm GLOBAL_ATOMIC_XOR_B32         : VGLOBAL_Real_Atomics_gfx12<0x03e, "GLOBAL_ATOMIC_XOR", "global_atomic_xor_b32", true>;
+defm GLOBAL_ATOMIC_INC_U32         : VGLOBAL_Real_Atomics_gfx12<0x03f, "GLOBAL_ATOMIC_INC", "global_atomic_inc_u32", true>;
+defm GLOBAL_ATOMIC_DEC_U32         : VGLOBAL_Real_Atomics_gfx12<0x040, "GLOBAL_ATOMIC_DEC", "global_atomic_dec_u32", true>;
+defm GLOBAL_ATOMIC_SWAP_B64        : VGLOBAL_Real_Atomics_gfx12<0x041, "GLOBAL_ATOMIC_SWAP_X2", "global_atomic_swap_b64", true>;
+defm GLOBAL_ATOMIC_CMPSWAP_B64     : VGLOBAL_Real_Atomics_gfx12<0x042, "GLOBAL_ATOMIC_CMPSWAP_X2", "global_atomic_cmpswap_b64", true>;
+defm GLOBAL_ATOMIC_ADD_U64         : VGLOBAL_Real_Atomics_gfx12<0x043, "GLOBAL_ATOMIC_ADD_X2", "global_atomic_add_u64", true>;
+defm GLOBAL_ATOMIC_SUB_U64         : VGLOBAL_Real_Atomics_gfx12<0x044, "GLOBAL_ATOMIC_SUB_X2", "global_atomic_sub_u64", true>;
+defm GLOBAL_ATOMIC_MIN_I64         : VGLOBAL_Real_Atomics_gfx12<0x045, "GLOBAL_ATOMIC_SMIN_X2", "global_atomic_min_i64", true>;
+defm GLOBAL_ATOMIC_MIN_U64         : VGLOBAL_Real_Atomics_gfx12<0x046, "GLOBAL_ATOMIC_UMIN_X2", "global_atomic_min_u64", true>;
+defm GLOBAL_ATOMIC_MAX_I64         : VGLOBAL_Real_Atomics_gfx12<0x047, "GLOBAL_ATOMIC_SMAX_X2", "global_atomic_max_i64", true>;
+defm GLOBAL_ATOMIC_MAX_U64         : VGLOBAL_Real_Atomics_gfx12<0x048, "GLOBAL_ATOMIC_UMAX_X2", "global_atomic_max_u64", true>;
+defm GLOBAL_ATOMIC_AND_B64         : VGLOBAL_Real_Atomics_gfx12<0x049, "GLOBAL_ATOMIC_AND_X2", "global_atomic_and_b64", true>;
+defm GLOBAL_ATOMIC_OR_B64          : VGLOBAL_Real_Atomics_gfx12<0x04a, "GLOBAL_ATOMIC_OR_X2", "global_atomic_or_b64", true>;
+defm GLOBAL_ATOMIC_XOR_B64         : VGLOBAL_Real_Atomics_gfx12<0x04b, "GLOBAL_ATOMIC_XOR_X2", "global_atomic_xor_b64", true>;
+defm GLOBAL_ATOMIC_INC_U64         : VGLOBAL_Real_Atomics_gfx12<0x04c, "GLOBAL_ATOMIC_INC_X2", "global_atomic_inc_u64", true>;
+defm GLOBAL_ATOMIC_DEC_U64         : VGLOBAL_Real_Atomics_gfx12<0x04d, "GLOBAL_ATOMIC_DEC_X2", "global_atomic_dec_u64", true>;
+defm GLOBAL_ATOMIC_COND_SUB_U32    : VGLOBAL_Real_Atomics_gfx12<0x050, "GLOBAL_ATOMIC_COND_SUB_U32", "global_atomic_cond_sub_u32">;
+defm GLOBAL_ATOMIC_MIN_NUM_F32     : VGLOBAL_Real_Atomics_gfx12<0x051, "GLOBAL_ATOMIC_FMIN", "global_atomic_min_num_f32", true, "global_atomic_min_f32">;
+defm GLOBAL_ATOMIC_MAX_NUM_F32     : VGLOBAL_Real_Atomics_gfx12<0x052, "GLOBAL_ATOMIC_FMAX", "global_atomic_max_num_f32", true, "global_atomic_max_f32">;
+defm GLOBAL_ATOMIC_ADD_F32         : VGLOBAL_Real_Atomics_gfx12<0x056, "GLOBAL_ATOMIC_ADD_F32", "global_atomic_add_f32">;
+defm GLOBAL_LOAD_TR_B128           : VGLOBAL_Real_AllAddr_gfx12<0x057, "GLOBAL_LOAD_TR_B128", "global_load_tr_b128">;
+defm GLOBAL_LOAD_TR_B64            : VGLOBAL_Real_AllAddr_gfx12<0x058, "GLOBAL_LOAD_TR_B64", "global_load_tr_b64">;
+defm GLOBAL_ATOMIC_ORDERED_ADD_B64 : VGLOBAL_Real_Atomics_gfx12<0x073, "GLOBAL_ATOMIC_ORDERED_ADD_B64", "global_atomic_ordered_add_b64">;
 
 
-defm GLOBAL_INV                  : VFLAT_Real_Base_gfx12<0x02b, "GLOBAL_INV", "global_inv">;
-defm GLOBAL_WB                   : VFLAT_Real_Base_gfx12<0x02c, "GLOBAL_WB", "global_wb">;
-defm GLOBAL_WBINV                : VFLAT_Real_Base_gfx12<0x04f, "GLOBAL_WBINV", "global_wbinv">;
+defm GLOBAL_INV                    : VFLAT_Real_Base_gfx12<0x02b, "GLOBAL_INV", "global_inv">;
+defm GLOBAL_WB                     : VFLAT_Real_Base_gfx12<0x02c, "GLOBAL_WB", "global_wb">;
+defm GLOBAL_WBINV                  : VFLAT_Real_Base_gfx12<0x04f, "GLOBAL_WBINV", "global_wbinv">;
 
 // ENC_VSCRATCH.
-defm SCRATCH_LOAD_U8             : VSCRATCH_Real_AllAddr_gfx12<0x10, "SCRATCH_LOAD_UBYTE", "scratch_load_u8", true>;
-defm SCRATCH_LOAD_I8             : VSCRATCH_Real_AllAddr_gfx12<0x11, "SCRATCH_LOAD_SBYTE", "scratch_load_i8", true>;
-defm SCRATCH_LOAD_U16            : VSCRATCH_Real_AllAddr_gfx12<0x12, "SCRATCH_LOAD_USHORT", "scratch_load_u16", true>;
-defm SCRATCH_LOAD_I16            : VSCRATCH_Real_AllAddr_gfx12<0x13, "SCRATCH_LOAD_SSHORT", "scratch_load_i16", true>;
-defm SCRATCH_LOAD_B32            : VSCRATCH_Real_AllAddr_gfx12<0x14, "SCRATCH_LOAD_DWORD", "scratch_load_b32", true>;
-defm SCRATCH_LOAD_B64            : VSCRATCH_Real_AllAddr_gfx12<0x15, "SCRATCH_LOAD_DWORDX2", "scratch_load_b64", true>;
-defm SCRATCH_LOAD_B96            : VSCRATCH_Real_AllAddr_gfx12<0x16, "SCRATCH_LOAD_DWORDX3", "scratch_load_b96", true>;
-defm SCRATCH_LOAD_B128           : VSCRATCH_Real_AllAddr_gfx12<0x17, "SCRATCH_LOAD_DWORDX4", "scratch_load_b128", true>;
-defm SCRATCH_STORE_B8            : VSCRATCH_Real_AllAddr_gfx12<0x18, "SCRATCH_STORE_BYTE", "scratch_store_b8", true>;
-defm SCRATCH_STORE_B16           : VSCRATCH_Real_AllAddr_gfx12<0x19, "SCRATCH_STORE_SHORT", "scratch_store_b16", true>;
-defm SCRATCH_STORE_B32           : VSCRATCH_Real_AllAddr_gfx12<0x1a, "SCRATCH_STORE_DWORD", "scratch_store_b32", true>;
-defm SCRATCH_STORE_B64           : VSCRATCH_Real_AllAddr_gfx12<0x1b, "SCRATCH_STORE_DWORDX2", "scratch_store_b64", true>;
-defm SCRATCH_STORE_B96           : VSCRATCH_Real_AllAddr_gfx12<0x1c, "SCRATCH_STORE_DWORDX3", "scratch_store_b96", true>;
-defm SCRATCH_STORE_B128          : VSCRATCH_Real_AllAddr_gfx12<0x1d, "SCRATCH_STORE_DWORDX4", "scratch_store_b128", true>;
-defm SCRATCH_LOAD_D16_U8         : VSCRATCH_Real_AllAddr_gfx12<0x1e, "SCRATCH_LOAD_UBYTE_D16", "scratch_load_d16_u8">;
-defm SCRATCH_LOAD_D16_I8         : VSCRATCH_Real_AllAddr_gfx12<0x1f, "SCRATCH_LOAD_SBYTE_D16", "scratch_load_d16_i8">;
-defm SCRATCH_LOAD_D16_B16        : VSCRATCH_Real_AllAddr_gfx12<0x20, "SCRATCH_LOAD_SHORT_D16", "scratch_load_d16_b16">;
-defm SCRATCH_LOAD_D16_HI_U8      : VSCRATCH_Real_AllAddr_gfx12<0x21, "SCRATCH_LOAD_UBYTE_D16_HI", "scratch_load_d16_hi_u8">;
-defm SCRATCH_LOAD_D16_HI_I8      : VSCRATCH_Real_AllAddr_gfx12<0x22, "SCRATCH_LOAD_SBYTE_D16_HI", "scratch_load_d16_hi_i8">;
-defm SCRATCH_LOAD_D16_HI_B16     : VSCRATCH_Real_AllAddr_gfx12<0x23, "SCRATCH_LOAD_SHORT_D16_HI", "scratch_load_d16_hi_b16">;
-defm SCRATCH_STORE_D16_HI_B8     : VSCRATCH_Real_AllAddr_gfx12<0x24, "SCRATCH_STORE_BYTE_D16_HI", "scratch_store_d16_hi_b8">;
-defm SCRATCH_STORE_D16_HI_B16    : VSCRATCH_Real_AllAddr_gfx12<0x25, "SCRATCH_STORE_SHORT_D16_HI", "scratch_store_d16_hi_b16">;
+defm SCRATCH_LOAD_U8               : VSCRATCH_Real_AllAddr_gfx12<0x10, "SCRATCH_LOAD_UBYTE", "scratch_load_u8", true>;
+defm SCRATCH_LOAD_I8               : VSCRATCH_Real_AllAddr_gfx12<0x11, "SCRATCH_LOAD_SBYTE", "scratch_load_i8", true>;
+defm SCRATCH_LOAD_U16              : VSCRATCH_Real_AllAddr_gfx12<0x12, "SCRATCH_LOAD_USHORT", "scratch_load_u16", true>;
+defm SCRATCH_LOAD_I16              : VSCRATCH_Real_AllAddr_gfx12<0x13, "SCRATCH_LOAD_SSHORT", "scratch_load_i16", true>;
+defm SCRATCH_LOAD_B32              : VSCRATCH_Real_AllAddr_gfx12<0x14, "SCRATCH_LOAD_DWORD", "scratch_load_b32", true>;
+defm SCRATCH_LOAD_B64              : VSCRATCH_Real_AllAddr_gfx12<0x15, "SCRATCH_LOAD_DWORDX2", "scratch_load_b64", true>;
+defm SCRATCH_LOAD_B96              : VSCRATCH_Real_AllAddr_gfx12<0x16, "SCRATCH_LOAD_DWORDX3", "scratch_load_b96", true>;
+defm SCRATCH_LOAD_B128             : VSCRATCH_Real_AllAddr_gfx12<0x17, "SCRATCH_LOAD_DWORDX4", "scratch_load_b128", true>;
+defm SCRATCH_STORE_B8              : VSCRATCH_Real_AllAddr_gfx12<0x18, "SCRATCH_STORE_BYTE", "scratch_store_b8", true>;
+defm SCRATCH_STORE_B16             : VSCRATCH_Real_AllAddr_gfx12<0x19, "SCRATCH_STORE_SHORT", "scratch_store_b16", true>;
+defm SCRATCH_STORE_B32             : VSCRATCH_Real_AllAddr_gfx12<0x1a, "SCRATCH_STORE_DWORD", "scratch_store_b32", true>;
+defm SCRATCH_STORE_B64             : VSCRATCH_Real_AllAddr_gfx12<0x1b, "SCRATCH_STORE_DWORDX2", "scratch_store_b64", true>;
+defm SCRATCH_STORE_B96             : VSCRATCH_Real_AllAddr_gfx12<0x1c, "SCRATCH_STORE_DWORDX3", "scratch_store_b96", true>;
+defm SCRATCH_STORE_B128            : VSCRATCH_Real_AllAddr_gfx12<0x1d, "SCRATCH_STORE_DWORDX4", "scratch_store_b128", true>;
+defm SCRATCH_LOAD_D16_U8           : VSCRATCH_Real_AllAddr_gfx12<0x1e, "SCRATCH_LOAD_UBYTE_D16", "scratch_load_d16_u8">;
+defm SCRATCH_LOAD_D16_I8           : VSCRATCH_Real_AllAddr_gfx12<0x1f, "SCRATCH_LOAD_SBYTE_D16", "scratch_load_d16_i8">;
+defm SCRATCH_LOAD_D16_B16          : VSCRATCH_Real_AllAddr_gfx12<0x20, "SCRATCH_LOAD_SHORT_D16", "scratch_load_d16_b16">;
+defm SCRATCH_LOAD_D16_HI_U8        : VSCRATCH_Real_AllAddr_gfx12<0x21, "SCRATCH_LOAD_UBYTE_D16_HI", "scratch_load_d16_hi_u8">;
+defm SCRATCH_LOAD_D16_HI_I8        : VSCRATCH_Real_AllAddr_gfx12<0x22, "SCRATCH_LOAD_SBYTE_D16_HI", "scratch_load_d16_hi_i8">;
+defm SCRATCH_LOAD_D16_HI_B16       : VSCRATCH_Real_AllAddr_gfx12<0x23, "SCRATCH_LOAD_SHORT_D16_HI", "scratch_load_d16_hi_b16">;
+defm SCRATCH_STORE_D16_HI_B8       : VSCRATCH_Real_AllAddr_gfx12<0x24, "SCRATCH_STORE_BYTE_D16_HI", "scratch_store_d16_hi_b8">;
+defm SCRATCH_STORE_D16_HI_B16      : VSCRATCH_Real_AllAddr_gfx12<0x25, "SCRATCH_STORE_SHORT_D16_HI", "scratch_store_d16_hi_b16">;
 
-defm SCRATCH_LOAD_BLOCK          : VSCRATCH_Real_AllAddr_gfx12<0x53, "SCRATCH_LOAD_BLOCK", "scratch_load_block">;
-defm SCRATCH_STORE_BLOCK         : VSCRATCH_Real_AllAddr_gfx12<0x54, "SCRATCH_STORE_BLOCK", "scratch_store_block">;
+defm SCRATCH_LOAD_BLOCK            : VSCRATCH_Real_AllAddr_gfx12<0x53, "SCRATCH_LOAD_BLOCK", "scratch_load_block">;
+defm SCRATCH_STORE_BLOCK           : VSCRATCH_Real_AllAddr_gfx12<0x54, "SCRATCH_STORE_BLOCK", "scratch_store_block">;

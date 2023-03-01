@@ -528,7 +528,7 @@ define amdgpu_kernel void @nested_if_else_if(ptr addrspace(1) nocapture %arg) {
 ; GCN-NEXT:    s_mov_b32 s0, s2
 ; GCN-NEXT:    s_mov_b32 s1, s2
 ; GCN-NEXT:    v_mov_b32_e32 v3, 3
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v0
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    buffer_store_dword v3, v[1:2], s[0:3], 0 addr64 offset:12
 ; GCN-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB3_3
@@ -672,19 +672,18 @@ define amdgpu_kernel void @nested_if_else_if(ptr addrspace(1) nocapture %arg) {
 ; GCN-O0-NEXT:    buffer_load_dword v0, off, s[8:11], 0 offset:12 ; 4-byte Folded Reload
 ; GCN-O0-NEXT:    buffer_load_dword v3, off, s[8:11], 0 offset:4 ; 4-byte Folded Reload
 ; GCN-O0-NEXT:    buffer_load_dword v4, off, s[8:11], 0 offset:8 ; 4-byte Folded Reload
-; GCN-O0-NEXT:    s_mov_b32 s0, 0xf000
-; GCN-O0-NEXT:    s_mov_b32 s2, 0
-; GCN-O0-NEXT:    s_mov_b32 s4, s2
+; GCN-O0-NEXT:    s_mov_b32 s1, 0xf000
+; GCN-O0-NEXT:    s_mov_b32 s0, 0
+; GCN-O0-NEXT:    s_mov_b32 s2, s0
+; GCN-O0-NEXT:    s_mov_b32 s3, s1
+; GCN-O0-NEXT:    s_mov_b32 s4, s0
 ; GCN-O0-NEXT:    s_mov_b32 s5, s0
-; GCN-O0-NEXT:    s_mov_b32 s0, s2
-; GCN-O0-NEXT:    s_mov_b32 s1, s2
-; GCN-O0-NEXT:    ; kill: def $sgpr0_sgpr1 killed $sgpr0_sgpr1 def $sgpr0_sgpr1_sgpr2_sgpr3
-; GCN-O0-NEXT:    s_mov_b64 s[2:3], s[4:5]
+; GCN-O0-NEXT:    ; kill: def $sgpr4_sgpr5 killed $sgpr4_sgpr5 def $sgpr4_sgpr5_sgpr6_sgpr7
+; GCN-O0-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GCN-O0-NEXT:    s_waitcnt expcnt(0)
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, 3
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(0)
-; GCN-O0-NEXT:    buffer_store_dword v2, v[3:4], s[0:3], 0 addr64 offset:12
-; GCN-O0-NEXT:    s_mov_b32 s0, 2
+; GCN-O0-NEXT:    buffer_store_dword v2, v[3:4], s[4:7], 0 addr64 offset:12
 ; GCN-O0-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s0
 ; GCN-O0-NEXT:    s_mov_b64 s[0:1], exec
 ; GCN-O0-NEXT:    v_writelane_b32 v1, s0, 6
@@ -747,7 +746,7 @@ bb.inner.then:
 bb.outer.else:
   %tmp4 = getelementptr inbounds i32, ptr addrspace(1) %tmp1, i32 3
   store i32 3, ptr addrspace(1) %tmp4, align 4
-  %cc3 = icmp eq i32 %tmp, 2
+  %cc3 = icmp eq i32 %tmp, 0   ; avoid being optimized away through the domination
   br i1 %cc3, label %bb.inner.then2, label %bb.outer.end
 
 bb.inner.then2:

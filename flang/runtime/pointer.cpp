@@ -102,8 +102,10 @@ void RTNAME(PointerAssociateRemapping)(Descriptor &pointer,
   Terminator terminator{sourceFile, sourceLine};
   SubscriptValue byteStride{/*captured from first dimension*/};
   std::size_t boundElementBytes{bounds.ElementBytes()};
-  pointer.raw().rank = bounds.rank();
-  for (int j{0}; j < bounds.rank(); ++j) {
+  std::size_t boundsRank{
+      static_cast<std::size_t>(bounds.GetDimension(1).Extent())};
+  pointer.raw().rank = boundsRank;
+  for (unsigned j{0}; j < boundsRank; ++j) {
     auto &dim{pointer.GetDimension(j)};
     dim.SetBounds(GetInt64(bounds.ZeroBasedIndexedElement<const char>(2 * j),
                       boundElementBytes, terminator),

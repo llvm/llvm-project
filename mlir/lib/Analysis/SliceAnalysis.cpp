@@ -51,11 +51,13 @@ static void getForwardSliceImpl(Operation *op,
 }
 
 void mlir::getForwardSlice(Operation *op, SetVector<Operation *> *forwardSlice,
-                           TransitiveFilter filter) {
+                           TransitiveFilter filter, bool inclusive) {
   getForwardSliceImpl(op, forwardSlice, filter);
-  // Don't insert the top level operation, we just queried on it and don't
-  // want it in the results.
-  forwardSlice->remove(op);
+  if (!inclusive) {
+    // Don't insert the top level operation, we just queried on it and don't
+    // want it in the results.
+    forwardSlice->remove(op);
+  }
 
   // Reverse to get back the actual topological order.
   // std::reverse does not work out of the box on SetVector and I want an
@@ -65,7 +67,7 @@ void mlir::getForwardSlice(Operation *op, SetVector<Operation *> *forwardSlice,
 }
 
 void mlir::getForwardSlice(Value root, SetVector<Operation *> *forwardSlice,
-                           TransitiveFilter filter) {
+                           TransitiveFilter filter, bool inclusive) {
   for (Operation *user : root.getUsers())
     getForwardSliceImpl(user, forwardSlice, filter);
 
@@ -114,27 +116,30 @@ static void getBackwardSliceImpl(Operation *op,
 
 void mlir::getBackwardSlice(Operation *op,
                             SetVector<Operation *> *backwardSlice,
-                            TransitiveFilter filter) {
+                            TransitiveFilter filter, bool inclusive) {
   getBackwardSliceImpl(op, backwardSlice, filter);
 
-  // Don't insert the top level operation, we just queried on it and don't
-  // want it in the results.
-  backwardSlice->remove(op);
+  if (!inclusive) {
+    // Don't insert the top level operation, we just queried on it and don't
+    // want it in the results.
+    backwardSlice->remove(op);
+  }
 }
 
 void mlir::getBackwardSlice(Value root, SetVector<Operation *> *backwardSlice,
-                            TransitiveFilter filter) {
+                            TransitiveFilter filter, bool inclusive) {
   if (Operation *definingOp = root.getDefiningOp()) {
-    getBackwardSlice(definingOp, backwardSlice, filter);
+    getBackwardSlice(definingOp, backwardSlice, filter, inclusive);
     return;
   }
   Operation *bbAargOwner = root.cast<BlockArgument>().getOwner()->getParentOp();
-  getBackwardSlice(bbAargOwner, backwardSlice, filter);
+  getBackwardSlice(bbAargOwner, backwardSlice, filter, inclusive);
 }
 
 SetVector<Operation *> mlir::getSlice(Operation *op,
                                       TransitiveFilter backwardFilter,
-                                      TransitiveFilter forwardFilter) {
+                                      TransitiveFilter forwardFilter,
+                                      bool inclusive) {
   SetVector<Operation *> slice;
   slice.insert(op);
 
@@ -145,12 +150,12 @@ SetVector<Operation *> mlir::getSlice(Operation *op,
     auto *currentOp = (slice)[currentIndex];
     // Compute and insert the backwardSlice starting from currentOp.
     backwardSlice.clear();
-    getBackwardSlice(currentOp, &backwardSlice, backwardFilter);
+    getBackwardSlice(currentOp, &backwardSlice, backwardFilter, inclusive);
     slice.insert(backwardSlice.begin(), backwardSlice.end());
 
     // Compute and insert the forwardSlice starting from currentOp.
     forwardSlice.clear();
-    getForwardSlice(currentOp, &forwardSlice, forwardFilter);
+    getForwardSlice(currentOp, &forwardSlice, forwardFilter, inclusive);
     slice.insert(forwardSlice.begin(), forwardSlice.end());
     ++currentIndex;
   }

@@ -444,7 +444,7 @@ def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
   let parameters = (ins
     OptionalParameter<"DICompileUnitAttr">:$compileUnit,
     "DIScopeAttr":$scope,
-    "StringAttr":$name,
+    OptionalParameter<"StringAttr">:$name,
     OptionalParameter<"StringAttr">:$linkageName,
     "DIFileAttr":$file,
     OptionalParameter<"unsigned">:$line,

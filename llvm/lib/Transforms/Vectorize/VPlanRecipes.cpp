@@ -275,6 +275,17 @@ void VPInstruction::generateInstruction(VPTransformState &State,
     }
     break;
   }
+  case VPInstruction::CalculateTripCountMinusVF: {
+    Value *ScalarTC = State.get(getOperand(0), Part);
+    Value *Step =
+        createStepForVF(Builder, ScalarTC->getType(), State.VF, State.UF);
+    Value *Sub = Builder.CreateSub(ScalarTC, Step);
+    Value *Cmp = Builder.CreateICmp(CmpInst::Predicate::ICMP_UGT, ScalarTC, Step);
+    Value *Zero = ConstantInt::get(ScalarTC->getType(), 0);
+    Value *Sel = Builder.CreateSelect(Cmp, Sub, Zero);
+    State.set(this, Sel, Part);
+    break;
+  }
   case VPInstruction::CanonicalIVIncrement:
   case VPInstruction::CanonicalIVIncrementNUW: {
     Value *Next = nullptr;
@@ -410,6 +421,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::BranchOnCond:
     O << "branch-on-cond";
+    break;
+  case VPInstruction::CalculateTripCountMinusVF:
+    O << "TC > VF ? TC - VF : 0";
     break;
   case VPInstruction::CanonicalIVIncrementForPart:
     O << "VF * Part + ";

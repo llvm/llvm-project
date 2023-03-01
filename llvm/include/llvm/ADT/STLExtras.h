@@ -856,33 +856,70 @@ public:
   }
 };
 
+/// Helper to obtain the iterator types for the tuple storage within `zippy`.
+template <template <typename...> class ItType, typename TupleStorageType,
+          typename IndexSequence>
+struct ZippyIteratorTuple;
+
+/// Partial specialization for non-const tuple storage.
+template <template <typename...> class ItType, typename... Args,
+          std::size_t... Ns>
+struct ZippyIteratorTuple<ItType, std::tuple<Args...>,
+                          std::index_sequence<Ns...>> {
+  using type = ItType<decltype(adl_begin(
+      std::get<Ns>(declval<std::tuple<Args...> &>())))...>;
+};
+
+/// Partial specialization for const tuple storage.
+template <template <typename...> class ItType, typename... Args,
+          std::size_t... Ns>
+struct ZippyIteratorTuple<ItType, const std::tuple<Args...>,
+                          std::index_sequence<Ns...>> {
+  using type = ItType<decltype(adl_begin(
+      std::get<Ns>(declval<const std::tuple<Args...> &>())))...>;
+};
+
 template <template <typename...> class ItType, typename... Args> class zippy {
+private:
+  std::tuple<Args...> storage;
+  using IndexSequence = std::index_sequence_for<Args...>;
+
 public:
-  using iterator = ItType<decltype(std::begin(std::declval<Args>()))...>;
+  using iterator = typename ZippyIteratorTuple<ItType, decltype(storage),
+                                               IndexSequence>::type;
+  using const_iterator =
+      typename ZippyIteratorTuple<ItType, const decltype(storage),
+                                  IndexSequence>::type;
   using iterator_category = typename iterator::iterator_category;
   using value_type = typename iterator::value_type;
   using difference_type = typename iterator::difference_type;
   using pointer = typename iterator::pointer;
   using reference = typename iterator::reference;
+  using const_reference = typename const_iterator::reference;
+
+  zippy(Args &&...args) : storage(std::forward<Args>(args)...) {}
+
+  const_iterator begin() const { return begin_impl(IndexSequence{}); }
+  iterator begin() { return begin_impl(IndexSequence{}); }
+  const_iterator end() const { return end_impl(IndexSequence{}); }
+  iterator end() { return end_impl(IndexSequence{}); }
 
 private:
-  std::tuple<Args...> ts;
+  template <size_t... Ns>
+  const_iterator begin_impl(std::index_sequence<Ns...>) const {
+    return const_iterator(adl_begin(std::get<Ns>(storage))...);
+  }
+  template <size_t... Ns> iterator begin_impl(std::index_sequence<Ns...>) {
+    return iterator(adl_begin(std::get<Ns>(storage))...);
+  }
 
   template <size_t... Ns>
-  iterator begin_impl(std::index_sequence<Ns...>) const {
-    return iterator(std::begin(std::get<Ns>(ts))...);
+  const_iterator end_impl(std::index_sequence<Ns...>) const {
+    return const_iterator(adl_end(std::get<Ns>(storage))...);
   }
-  template <size_t... Ns> iterator end_impl(std::index_sequence<Ns...>) const {
-    return iterator(std::end(std::get<Ns>(ts))...);
+  template <size_t... Ns> iterator end_impl(std::index_sequence<Ns...>) {
+    return iterator(adl_end(std::get<Ns>(storage))...);
   }
-
-public:
-  zippy(Args &&... ts_) : ts(std::forward<Args>(ts_)...) {}
-
-  iterator begin() const {
-    return begin_impl(std::index_sequence_for<Args...>{});
-  }
-  iterator end() const { return end_impl(std::index_sequence_for<Args...>{}); }
 };
 
 } // end namespace detail

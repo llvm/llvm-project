@@ -11,17 +11,11 @@ def smrd_offset_8 : NamedOperandU32<"SMRDOffset8",
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
-class SMEMOffset : NamedOperandU32<"SMEMOffset",
-                                   NamedMatchClass<"SMEMOffset">> {
-  let OperandType = "OPERAND_IMMEDIATE";
-  let EncoderMethod = "getSMEMOffsetEncoding";
-  let DecoderMethod = "decodeSMEMOffset";
-}
-
-def smem_offset : SMEMOffset;
-
-def smem_offset_mod : SMEMOffset {
-  let PrintMethod = "printSMEMOffsetMod";
+let OperandType = "OPERAND_IMMEDIATE",
+    EncoderMethod = "getSMEMOffsetEncoding",
+    DecoderMethod = "decodeSMEMOffset" in {
+def smem_offset : NamedOperandU32<"SMEMOffset", NamedMatchClass<"SMEMOffset">>;
+def smem_offset_mod : NamedIntOperand<i32, "offset", "SMEMOffsetMod">;
 }
 
 //===----------------------------------------------------------------------===//

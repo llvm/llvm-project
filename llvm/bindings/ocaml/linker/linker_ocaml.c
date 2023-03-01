@@ -15,18 +15,19 @@
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
+#include "caml/alloc.h"
+#include "caml/callback.h"
+#include "caml/fail.h"
+#include "caml/memory.h"
+#include "llvm_ocaml.h"
 #include "llvm-c/Core.h"
 #include "llvm-c/Linker.h"
-#include "caml/alloc.h"
-#include "caml/memory.h"
-#include "caml/fail.h"
-#include "caml/callback.h"
 
 void llvm_raise(value Prototype, char *Message);
 
 /* llmodule -> llmodule -> unit */
-value llvm_link_modules(LLVMModuleRef Dst, LLVMModuleRef Src) {
-  if (LLVMLinkModules2(Dst, Src))
+value llvm_link_modules(value Dst, value Src) {
+  if (LLVMLinkModules2(Module_val(Dst), Module_val(Src)))
     llvm_raise(*caml_named_value("Llvm_linker.Error"),
                LLVMCreateMessage("Linking failed"));
 

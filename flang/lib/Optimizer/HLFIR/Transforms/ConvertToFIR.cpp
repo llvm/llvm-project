@@ -286,26 +286,52 @@ public:
     mlir::Value hlfirBase;
     mlir::Type hlfirBaseType = declareOp.getBase().getType();
     if (hlfirBaseType.isa<fir::BaseBoxType>()) {
-      // Need to conditionally rebox/embox for optional.
-      if (mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation())
-              .isOptional())
-        TODO(loc, "converting hlfir declare of optional box to fir");
-      if (!firBase.getType().isa<fir::BaseBoxType>()) {
-        llvm::SmallVector<mlir::Value> typeParams;
-        auto maybeCharType =
-            fir::unwrapSequenceType(fir::unwrapPassByRefType(hlfirBaseType))
-                .dyn_cast<fir::CharacterType>();
-        if (!maybeCharType || maybeCharType.hasDynamicLen())
-          typeParams.append(declareOp.getTypeparams().begin(),
-                            declareOp.getTypeparams().end());
-        hlfirBase = rewriter.create<fir::EmboxOp>(
-            loc, hlfirBaseType, firBase, declareOp.getShape(),
-            /*slice=*/mlir::Value{}, typeParams);
+      auto module = declareOp->getParentOfType<mlir::ModuleOp>();
+      fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
+      // Helper to generate the hlfir fir.box with the local lower bounds and
+      // type parameters.
+      auto genHlfirBox = [&]() -> mlir::Value {
+        if (!firBase.getType().isa<fir::BaseBoxType>()) {
+          llvm::SmallVector<mlir::Value> typeParams;
+          auto maybeCharType =
+              fir::unwrapSequenceType(fir::unwrapPassByRefType(hlfirBaseType))
+                  .dyn_cast<fir::CharacterType>();
+          if (!maybeCharType || maybeCharType.hasDynamicLen())
+            typeParams.append(declareOp.getTypeparams().begin(),
+                              declareOp.getTypeparams().end());
+          return builder.create<fir::EmboxOp>(
+              loc, hlfirBaseType, firBase, declareOp.getShape(),
+              /*slice=*/mlir::Value{}, typeParams);
+        } else {
+          // Rebox so that lower bounds are correct.
+          return builder.create<fir::ReboxOp>(loc, hlfirBaseType, firBase,
+                                              declareOp.getShape(),
+                                              /*slice=*/mlir::Value{});
+        }
+      };
+      if (!mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation())
+               .isOptional()) {
+        hlfirBase = genHlfirBox();
       } else {
-        // Rebox so that lower bounds are correct.
-        hlfirBase = rewriter.create<fir::ReboxOp>(loc, hlfirBaseType, firBase,
-                                                  declareOp.getShape(),
-                                                  /*slice=*/mlir::Value{});
+        // Need to conditionally rebox/embox the optional: the input fir.box
+        // may be null and the rebox would be illegal. It is also important to
+        // preserve the optional aspect: the hlfir fir.box should be null if
+        // the entity is absent so that later fir.is_present on the hlfir base
+        // are valid.
+        mlir::Value isPresent =
+            builder.create<fir::IsPresentOp>(loc, builder.getI1Type(), firBase);
+        hlfirBase = builder
+                        .genIfOp(loc, {hlfirBaseType}, isPresent,
+                                 /*withElseRegion=*/true)
+                        .genThen([&] {
+                          builder.create<fir::ResultOp>(loc, genHlfirBox());
+                        })
+                        .genElse([&]() {
+                          mlir::Value absent =
+                              builder.create<fir::AbsentOp>(loc, hlfirBaseType);
+                          builder.create<fir::ResultOp>(loc, absent);
+                        })
+                        .getResults()[0];
       }
     } else if (hlfirBaseType.isa<fir::BoxCharType>()) {
       assert(declareOp.getTypeparams().size() == 1 &&
@@ -506,6 +532,54 @@ public:
   }
 };
 
+class ParentComponentOpConversion
+    : public mlir::OpRewritePattern<hlfir::ParentComponentOp> {
+public:
+  explicit ParentComponentOpConversion(mlir::MLIRContext *ctx)
+      : OpRewritePattern{ctx} {}
+
+  mlir::LogicalResult
+  matchAndRewrite(hlfir::ParentComponentOp parentComponent,
+                  mlir::PatternRewriter &rewriter) const override {
+    mlir::Location loc = parentComponent.getLoc();
+    mlir::Type resultType = parentComponent.getType();
+    if (!parentComponent.getType().isa<fir::BoxType>()) {
+      mlir::Value baseAddr = parentComponent.getMemref();
+      // Scalar parent component ref without any length type parameters. The
+      // input may be a fir.class if it is polymorphic, since this is a scalar
+      // and the output will be monomorphic, the base address can be extracted
+      // from the fir.class.
+      if (baseAddr.getType().isa<fir::BaseBoxType>())
+        baseAddr = rewriter.create<fir::BoxAddrOp>(loc, baseAddr);
+      rewriter.replaceOpWithNewOp<fir::ConvertOp>(parentComponent, resultType,
+                                                  baseAddr);
+      return mlir::success();
+    }
+    // Array parent component ref or PDTs.
+    hlfir::Entity base{parentComponent.getMemref()};
+    mlir::Value baseAddr = base.getBase();
+    if (!baseAddr.getType().isa<fir::BaseBoxType>()) {
+      // Embox cannot directly be used to address parent components: it expects
+      // the output type to match the input type when there are no slices. When
+      // the types have at least one component, a slice to the first element can
+      // be built, and the result set to the parent component type. Just create
+      // a fir.box with the base for now since this covers all cases.
+      mlir::Type baseBoxType =
+          fir::BoxType::get(base.getElementOrSequenceType());
+      assert(!base.hasLengthParameters() &&
+             "base must be a box if it has any type parameters");
+      baseAddr = rewriter.create<fir::EmboxOp>(
+          loc, baseBoxType, baseAddr, parentComponent.getShape(),
+          /*slice=*/mlir::Value{}, /*typeParams=*/mlir::ValueRange{});
+    }
+    rewriter.replaceOpWithNewOp<fir::ReboxOp>(parentComponent, resultType,
+                                              baseAddr,
+                                              /*shape=*/mlir::Value{},
+                                              /*slice=*/mlir::Value{});
+    return mlir::success();
+  }
+};
+
 class NoReassocOpConversion
     : public mlir::OpRewritePattern<hlfir::NoReassocOp> {
 public:
@@ -546,7 +620,8 @@ public:
     mlir::RewritePatternSet patterns(context);
     patterns.insert<AssignOpConversion, CopyInOpConversion, CopyOutOpConversion,
                     DeclareOpConversion, DesignateOpConversion,
-                    NoReassocOpConversion, NullOpConversion>(context);
+                    NoReassocOpConversion, NullOpConversion,
+                    ParentComponentOpConversion>(context);
     mlir::ConversionTarget target(*context);
     target.addIllegalDialect<hlfir::hlfirDialect>();
     target.markUnknownOpDynamicallyLegal(

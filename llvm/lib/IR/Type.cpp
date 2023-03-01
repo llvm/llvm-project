@@ -863,6 +863,11 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
     return TargetTypeInfo(Type::getInt8PtrTy(C, 0), TargetExtType::HasZeroInit,
                           TargetExtType::CanBeGlobal);
   }
+
+  // Opaque types in the AArch64 name space.
+  if (Name == "aarch64.svcount")
+    return TargetTypeInfo(ScalableVectorType::get(Type::getInt1Ty(C), 16));
+
   return TargetTypeInfo(Type::getVoidTy(C));
 }
 
