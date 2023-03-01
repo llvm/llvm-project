@@ -1729,6 +1729,7 @@ void DataAggregator::processMemEvents() {
     const Location AddrLoc(!MemName.empty(), MemName, Addr);
 
     FuncMemData *MemData = &NamesToMemEvents[FuncName];
+    MemData->Name = FuncName;
     setMemData(*Func, MemData);
     MemData->update(FuncLoc, AddrLoc);
     LLVM_DEBUG(dbgs() << "Mem event: " << FuncLoc << " = " << AddrLoc << "\n");
@@ -2241,22 +2242,24 @@ DataAggregator::writeAggregatedFile(StringRef OutputFilename) const {
       OutFile << " " << Entry.getKey();
     OutFile << "\n";
 
-    for (const StringMapEntry<FuncSampleData> &Func : NamesToSamples) {
-      for (const SampleInfo &SI : Func.getValue().Data) {
+    for (const auto &KV : NamesToSamples) {
+      const FuncSampleData &FSD = KV.second;
+      for (const SampleInfo &SI : FSD.Data) {
         writeLocation(SI.Loc);
         OutFile << SI.Hits << "\n";
         ++BranchValues;
       }
     }
   } else {
-    for (const StringMapEntry<FuncBranchData> &Func : NamesToBranches) {
-      for (const llvm::bolt::BranchInfo &BI : Func.getValue().Data) {
+    for (const auto &KV : NamesToBranches) {
+      const FuncBranchData &FBD = KV.second;
+      for (const llvm::bolt::BranchInfo &BI : FBD.Data) {
         writeLocation(BI.From);
         writeLocation(BI.To);
         OutFile << BI.Mispreds << " " << BI.Branches << "\n";
         ++BranchValues;
       }
-      for (const llvm::bolt::BranchInfo &BI : Func.getValue().EntryData) {
+      for (const llvm::bolt::BranchInfo &BI : FBD.EntryData) {
         // Do not output if source is a known symbol, since this was already
         // accounted for in the source function
         if (BI.From.IsSymbol)
@@ -2269,8 +2272,9 @@ DataAggregator::writeAggregatedFile(StringRef OutputFilename) const {
     }
 
     WriteMemLocs = true;
-    for (const StringMapEntry<FuncMemData> &Func : NamesToMemEvents) {
-      for (const MemInfo &MemEvent : Func.getValue().Data) {
+    for (const auto &KV : NamesToMemEvents) {
+      const FuncMemData &FMD = KV.second;
+      for (const MemInfo &MemEvent : FMD.Data) {
         writeLocation(MemEvent.Offset);
         writeLocation(MemEvent.Addr);
         OutFile << MemEvent.Count << "\n";
