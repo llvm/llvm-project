@@ -112,6 +112,8 @@ Changes to the LLVM IR
 
 * Added ``uinc_wrap`` and ``udec_wrap`` operations to ``atomicrmw``.
 
+* Renamed ``llvm.flt.rounds`` intrinsic to ``llvm.get.rounding``.
+
 Changes to building LLVM
 ------------------------
 
@@ -192,7 +194,43 @@ Changes to the MIPS Backend
 Changes to the PowerPC Backend
 ------------------------------
 
-* ...
+Common PowerPC improvements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* Supported selecting floating point and 'sync' family of instructions in
+  GlobalISel PowerPC.
+* Comparison operations are now optimized by record form instructions.
+* ``__test_data_class`` built-in now accepts ``__float128`` arguments for
+  Power9 and newer.
+* Fixed incorrect fence insertion in atomic FP operations on PowerPC.
+* Fixed alignment of aggregate with smaller size than register in variadic
+  function on PowerPC 64-bit.
+* CTR loops on PowerPC are now generated after instruction selection.
+* Enabled track-subreg-liveness option by default.
+* Store of link register in function prologue are now generated in location
+  after stack pointer update instructions.
+* Code generation improvements for atomic operations, vector permutes, and
+  constant materialization for some floating point constants.
+* Implement new register classes and a number of new instructions for ``mcpu=future``.
+* Implement byte reverse instructions, and VSX Scalar Quad Precision compares
+  for ``mcpu=pwr10``.
+* Improved load-store forwarding for big-endian mode.
+* Bug fixes.
+
+AIX improvements
+^^^^^^^^^^^^^^^^
+
+* Supported TOC-data, overflow section, R_RBR relocation in XCOFF.
+* Fixed behavior of function sections, cold attribute, and handling of TLS symbols' name prefixes in XCOFF.
+* Fixed redundant spill and reload on AIX 64-bit when paired vector are enabled.
+* Disabled location attribution generation of TLS variables.
+* Fixed the mapping of built-in functions ``__builtin_frexpl``,
+  ``__builtin_ldexpl``, and ``__builtin_modfl`` to ``libm`` routines in 64-bit
+  ``long double`` mode.
+* Implemented ``libunwind`` function ``_Unwind_FindEnclosingFunction`` using
+  traceback table on AIX.
+* Changed to use non-unique implementation for ``typeinfo`` comparison.
+* Codegen work done for ``-pg`` to generate correct calls to ``__mcount``.
 
 Changes to the RISC-V Backend
 -----------------------------
@@ -322,6 +360,8 @@ When emitting CodeView debug information, LLVM will now emit S_CONSTANT records
 for variables optimized into a constant via the SROA and SCCP passes.
 (`D138995 <https://reviews.llvm.org/D138995>`_)
 
+``DW_LANG_C11`` now respects ``-gstrict-dwarf`` option.
+
 Changes to the LLVM tools
 ---------------------------------
 
@@ -333,11 +373,26 @@ Changes to the LLVM tools
   that consume ``llvm-readobj``'s JSON output should update their parsers
   accordingly.
 
+* ``llvm-readobj`` now supports a new option ``--loader-section-header`` to
+  display the loader section header of XCOFF object tiles
+
+* ``llvm-readobj`` now supports a new option ``--loader-section-header`` to
+  display the symbol table of the loader section of XCOFF object files
+
+* ``llvm-readobj`` now supports a new option ``--loader-section-header`` to
+  display relocation entries in the loader section of XCOFF object files
+
+* ``llvm-readobj`` now supports a new option ``--exception-section`` to
+  display exception section entries from XCOFF object files
+
 * ``llvm-objdump`` now uses ``--print-imm-hex`` by default, which brings its
   default behavior closer in line with ``objdump``.
 
 * ``llvm-objcopy`` no longer writes corrupt addresses to empty sections if
   the input file had a nonzero address to an empty section.
+
+* ``llvm-nm`` now supports the environment variable ``OBJECT_MODE`` for the ``-X``
+  option on AIX OS
 
 Changes to LLDB
 ---------------------------------

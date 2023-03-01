@@ -893,6 +893,8 @@ Miscellaneous Bug Fixes
 
 - Fix the bug of inserting the ``ZeroInitializationFixit`` before the template
   argument list of ``VarTemplateSpecializationDecl``.
+- Fix the bug where Clang emits constrained float intrinsics when specifying
+  ``-ffp-model=strict -ffp-model=fast``.
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1065,6 +1067,18 @@ AIX Support
 * When using ``-shared``, the clang driver now invokes llvm-nm to create an
   export list if the user doesn't specify one via linker flag or pass an
   alternative export control option.
+* Driver work done for ``-pg`` to link with the right paths and files.
+
+- Improved support for `-bcdtors:mbr` and `-bcdtors:csect` linker flags
+  when linking with -fprofile-generate.
+
+- Enabled LTO support. Requires AIX 7.2 TL5 SP3 or newer, or AIX 7.3. LTO
+  support is implemented with the `libLTO.so` plugin. To specify a
+  different plugin, use the linker option `-bplugin:<path to plugin>`.
+  To pass options to the plugin, use the linker option `-bplugin_opt:<option>`.
+
+- ``-mcpu`` option's values are checked against a list of known CPUs. An error
+  is reported if the specified CPU model is not found.
 
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
