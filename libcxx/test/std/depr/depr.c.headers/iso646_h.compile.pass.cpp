@@ -6,16 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <complex.h>
+// <iso646.h>
 
-#include <complex.h>
-
-#include "test_macros.h"
-
-int main(int, char**)
-{
-    std::complex<double> d;
-    (void)d;
-
-  return 0;
-}
+#include <iso646.h>

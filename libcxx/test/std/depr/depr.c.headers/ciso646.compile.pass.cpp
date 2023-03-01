@@ -9,11 +9,3 @@
 // <ciso646>
 
 #include <ciso646>
-
-#include "test_macros.h"
-
-int main(int, char**)
-{
-
-  return 0;
-}

@@ -177,9 +177,3 @@
 #error LDBL_TRUE_MIN not defined
 #endif
 #endif
-
-int main(int, char**)
-{
-
-  return 0;
-}

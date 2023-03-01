@@ -10,8 +10,6 @@
 
 #include <errno.h>
 
-#include "test_macros.h"
-
 #ifndef EDOM
 #error EDOM not defined
 #endif
@@ -27,9 +25,3 @@
 #ifndef errno
 #error errno not defined
 #endif
-
-int main(int, char**)
-{
-
-  return 0;
-}
