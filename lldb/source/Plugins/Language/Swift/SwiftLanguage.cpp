@@ -27,6 +27,8 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Utility/Log.h"
+#include "lldb/Utility/LLDBLog.h"
 
 #include "LogChannelSwift.h"
 #include "ObjCRuntimeSyntheticProvider.h"
@@ -856,6 +858,134 @@ SwiftLanguage::GetHardcodedSynthetics() {
           }
           return nullptr;
         });
+    g_formatters.push_back([](lldb_private::ValueObject &valobj,
+                              lldb::DynamicValueType dyn_type,
+                              FormatManager &format_manager)
+                               -> lldb::SyntheticChildrenSP {
+      // Try to recognize a Swift type wrapped in a C++ interop wrapper class.
+      // These types have a typedef from a char to the swift mangled name, and a
+      // static constexpr char field whose type is the typedef, and whose name
+      // is $__swift_mangled_name.
+
+      Log *log(GetLog(LLDBLog::DataFormatters));
+
+      ProcessSP process_sp(valobj.GetProcessSP());
+      auto *swift_runtime = SwiftLanguageRuntime::Get(process_sp);
+      if (!swift_runtime) {
+        LLDB_LOGV(log, "[Matching CxxBridgedSyntheticChildProvider] - "
+                       "Could not get the swift runtime.");
+        return nullptr;
+      }
+
+      auto scratch_ctx = valobj.GetSwiftScratchContext();
+      if (!scratch_ctx) {
+        LLDB_LOGV(log, "[Matching CxxBridgedSyntheticChildProvider] - "
+                       "Could not get the swift scratch context.");
+        return nullptr;
+      }
+      auto &type_system_swift = **scratch_ctx;
+
+      // This only makes sense for Clang types.
+      auto type = valobj.GetCompilerType();
+      auto tsc = type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+      if (!tsc) {
+        LLDB_LOGV(log, "[Matching CxxBridgedSyntheticChildProvider] - "
+                       "Type is not a clang type.");
+        return nullptr;
+      }
+
+      // We operate directly on the qualified type because the TypeSystem
+      // interface doesn't allow us to check for static constexpr members.
+      auto qual_type = TypeSystemClang::GetQualType(type.GetOpaqueQualType());
+      auto *record_type = llvm::dyn_cast_or_null<clang::RecordType>(
+          qual_type.getTypePtrOrNull());
+      if (!record_type) {
+        LLDB_LOGV(log, "[Matching CxxBridgedSyntheticChildProvider] - "
+                       "Type is not a record type.");
+        return nullptr;
+      }
+
+      const clang::RecordDecl *record_decl = record_type->getDecl();
+      CompilerType swift_type;
+
+      for (auto *child_decl : record_decl->decls()) {
+        auto *var_decl = llvm::dyn_cast<clang::VarDecl>(child_decl);
+        if (!var_decl)
+          continue;
+
+        auto name = var_decl->getName();
+        if (name != "__swift_mangled_name")
+          continue;
+
+        const auto *typedef_type =
+            llvm::dyn_cast<clang::TypedefType>(var_decl->getType());
+        if (!typedef_type)
+          break;
+
+        auto *decl = typedef_type->getDecl();
+        if (!decl)
+          break;
+
+        auto swift_name = decl->getName();
+        if (!swift::Demangle::isMangledName(swift_name))
+          break;
+
+        swift_type = type_system_swift.GetTypeFromMangledTypename(
+            ConstString(swift_name));
+        break;
+      }
+
+      if (!swift_type) {
+        LLDB_LOGV(log, "[Matching CxxBridgedSyntheticChildProvider] - "
+                       "Did not find Swift type.");
+        return nullptr;
+      }
+
+      auto swift_valobj =
+          SwiftLanguageRuntime::ExtractSwiftValueObjectFromCxxWrapper(valobj);
+      if (!swift_valobj) {
+        StreamString clang_desc;
+        type.DumpTypeDescription(&clang_desc);
+
+        StreamString swift_desc;
+        type.DumpTypeDescription(&swift_desc);
+
+        LLDB_LOGF(log,
+                  "[Matching CxxBridgedSyntheticChildProvider] - "
+                  "Was not able to extract Swift value object. Clang type: %s. "
+                  "Swift type: %s",
+                  clang_desc.GetData(), swift_desc.GetData());
+        return nullptr;
+      }
+      // Cast it to a Swift type since thhe swift runtime expects a Swift value
+      // object.
+      auto casted_to_swift = swift_valobj->Cast(swift_type);
+      if (!casted_to_swift) {
+        LLDB_LOGF(log, "[Matching CxxBridgedSyntheticChildProvider] - "
+                       "Could not cast value object to swift type.");
+        return nullptr;
+      }
+
+      TypeAndOrName type_or_name;
+      Address address;
+      Value::ValueType value_type;
+      // Try to find the dynamic type of the Swift type.
+      // TODO: find a way to get the dyamic value type from the
+      // command.
+      if (swift_runtime->GetDynamicTypeAndAddress(
+              *casted_to_swift.get(),
+              lldb::DynamicValueType::eDynamicCanRunTarget, type_or_name,
+              address, value_type)) {
+        if (type_or_name.HasCompilerType()) {
+          swift_type = type_or_name.GetCompilerType();
+          // Cast it to the more specific type.
+          casted_to_swift = casted_to_swift->Cast(swift_type);
+        }
+      }
+
+      return swift_runtime->GetCxxBridgedSyntheticChildProvider(
+          casted_to_swift);
+    });
   });
 
   return g_formatters;
