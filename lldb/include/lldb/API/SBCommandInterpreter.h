@@ -45,8 +45,34 @@ public:
 
   bool IsValid() const;
 
+  /// Return whether a built-in command with the passed in
+  /// name or command path exists.
+  ///
+  /// \param[in] cmd
+  ///   The command or command path to search for.
+  ///
+  /// \return
+  ///   \b true if the command exists, \b false otherwise.
   bool CommandExists(const char *cmd);
 
+  /// Return whether a user defined command with the passed in
+  /// name or command path exists.
+  ///
+  /// \param[in] cmd
+  ///   The command or command path to search for.
+  ///
+  /// \return
+  ///   \b true if the command exists, \b false otherwise.
+  bool UserCommandExists(const char *cmd);
+
+  /// Return whether the passed in name or command path
+  /// exists and is an alias to some other command.
+  ///
+  /// \param[in] cmd
+  ///   The command or command path to search for.
+  ///
+  /// \return
+  ///   \b true if the command exists, \b false otherwise.
   bool AliasExists(const char *cmd);
 
   lldb::SBBroadcaster GetBroadcaster();

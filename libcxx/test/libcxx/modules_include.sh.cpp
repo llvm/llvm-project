@@ -20,6 +20,7 @@
 
 // The Windows headers don't appear to be compatible with modules
 // UNSUPPORTED: windows
+// UNSUPPORTED: buildhost=windows
 
 // The Android headers don't appear to be compatible with modules yet
 // XFAIL: LIBCXX-ANDROID-FIXME

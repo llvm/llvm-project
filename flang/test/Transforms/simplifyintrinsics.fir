@@ -1162,6 +1162,54 @@ fir.global linkonce @_QQcl.2E2F746573746661696C2E66393000 constant : !fir.char<1
 // CHECK:         }
 
 // -----
+// Ensure count is properly simplified for different mask kind
+
+func.func @_QPdiffkind(%arg0: !fir.ref<!fir.array<10x!fir.logical<2>>> {fir.bindc_name = "mask"}) -> i32 {
+  %0 = fir.alloca i32 {bindc_name = "diffkind", uniq_name = "_QFdiffkindEdiffkind"}
+  %c10 = arith.constant 10 : index
+  %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10x!fir.logical<2>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.logical<2>>>
+  %c0 = arith.constant 0 : index
+  %3 = fir.address_of(@_QQcl.916d74b25894ddf7881ff7f913a677f5) : !fir.ref<!fir.char<1,52>>
+  %c5_i32 = arith.constant 5 : i32
+  %4 = fir.convert %2 : (!fir.box<!fir.array<10x!fir.logical<2>>>) -> !fir.box<none>
+  %5 = fir.convert %3 : (!fir.ref<!fir.char<1,52>>) -> !fir.ref<i8>
+  %6 = fir.convert %c0 : (index) -> i32
+  %7 = fir.call @_FortranACount(%4, %5, %c5_i32, %6) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32, i32) -> i64
+  %8 = fir.convert %7 : (i64) -> i32
+  fir.store %8 to %0 : !fir.ref<i32>
+  %9 = fir.load %0 : !fir.ref<i32>
+  return %9 : i32
+}
+
+// CHECK-LABEL:   func.func @_QPdiffkind(
+// CHECK-SAME:                           %[[A:.*]]: !fir.ref<!fir.array<10x!fir.logical<2>>> {fir.bindc_name = "mask"}) -> i32 {
+// CHECK:           %[[res:.*]] = fir.call @_FortranACountLogical2x1_simplified({{.*}}) fastmath<contract> : (!fir.box<none>) -> i64
+
+// CHECK-LABEL:   func.func private @_FortranACountLogical2x1_simplified(
+// CHECK-SAME:                                                           %[[ARR:.*]]: !fir.box<none>) -> i64 attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
+// CHECK:           %[[C_INDEX0:.*]] = arith.constant 0 : index
+// CHECK:           %[[ARR_BOX_I16:.*]] = fir.convert %[[ARR]] : (!fir.box<none>) -> !fir.box<!fir.array<?xi16>>
+// CHECK:           %[[IZERO:.*]] = arith.constant 0 : i64
+// CHECK:           %[[C_INDEX1:.*]] = arith.constant 1 : index
+// CHECK:           %[[DIMIDX_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_I16]], %[[DIMIDX_0]] : (!fir.box<!fir.array<?xi16>>, index) -> (index, index, index)
+// CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[C_INDEX1]] : index
+// CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[C_INDEX0]] to %[[EXTENT]] step %[[C_INDEX1]] iter_args(%[[COUNT:.*]] = %[[IZERO]]) -> (i64) {
+// CHECK:             %[[ITEM:.*]] = fir.coordinate_of %[[ARR_BOX_I16]], %[[ITER]] : (!fir.box<!fir.array<?xi16>>, index) -> !fir.ref<i16>
+// CHECK:             %[[ITEM_VAL:.*]] = fir.load %[[ITEM]] : !fir.ref<i16>
+// CHECK:             %[[I16_0:.*]] = arith.constant 0 : i16
+// CHECK:             %[[I64_0:.*]] = arith.constant 0 : i64
+// CHECK:             %[[I64_1:.*]] = arith.constant 1 : i64
+// CHECK:             %[[CMP:.*]] = arith.cmpi eq, %[[ITEM_VAL]], %[[I16_0]] : i16
+// CHECK:             %[[SELECT:.*]] = arith.select %[[CMP]], %[[I64_0]], %[[I64_1]] : i64
+// CHECK:             %[[NEW_COUNT:.*]] = arith.addi %[[SELECT]], %[[COUNT]] : i64
+// CHECK:             fir.result %[[NEW_COUNT]] : i64
+// CHECK:           }
+// CHECK:           return %[[RES:.*]] : i64
+// CHECK:         }
+
+// -----
 // Ensure count isn't simplified when given dim argument
 
 func.func @_QMtestPcount_generate_mask(%arg0: !fir.ref<!fir.array<10x10x!fir.logical<4>>> {fir.bindc_name = "mask"}) -> !fir.array<10xi32> {
@@ -1719,16 +1767,16 @@ func.func @_QPtestminloc_works1d(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_
 // CHECK:           %[[FLAG_SET:.*]] = arith.constant 1 : i32
 // CHECK:           %[[FLAG_EMPTY:.*]] = arith.constant 0 : i32
 // CHECK:           fir.store %[[FLAG_EMPTY]] to %[[FLAG_ALLOC]] : !fir.ref<i32>
-// CHECK:           %[[BOX_MASK:.*]] = fir.convert %[[BOX_MASK_NONE]] : (!fir.box<none>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:           %[[BOX_MASK:.*]] = fir.convert %[[BOX_MASK_NONE]] : (!fir.box<none>) -> !fir.box<!fir.array<?x!fir.logical<4>>>
 // CHECK:           %[[MAX:.*]] = arith.constant 2147483647 : i32
 // CHECK:           %[[CINDEX_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[DIM_INDEX0:.*]] = arith.constant 0 : index
 // CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[BOX_INARR]], %[[DIM_INDEX0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
 // CHECK:           %[[DOLOOP:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[MIN:.*]] = %[[MAX]]) -> (i32) {
-// CHECK:             %[[MASK_ITEM:.*]] = fir.coordinate_of %[[BOX_MASK]], %[[ITER]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
-// CHECK:             %[[MASK_ITEMVAL:.*]] = fir.load %[[MASK_ITEM]] : !fir.ref<i32>
-// CHECK:             %[[MASK_IF_ITEM:.*]] = fir.convert %[[MASK_ITEMVAL]] : (i32) -> i1
+// CHECK:             %[[MASK_ITEM:.*]] = fir.coordinate_of %[[BOX_MASK]], %[[ITER]] : (!fir.box<!fir.array<?x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
+// CHECK:             %[[MASK_ITEMVAL:.*]] = fir.load %[[MASK_ITEM]] : !fir.ref<!fir.logical<4>>
+// CHECK:             %[[MASK_IF_ITEM:.*]] = fir.convert %[[MASK_ITEMVAL]] : (!fir.logical<4>) -> i1
 // CHECK:             %[[IF_MASK:.*]] = fir.if %[[MASK_IF_ITEM]] -> (i32) {
 // CHECK:               fir.store %[[FLAG_SET]] to %[[FLAG_ALLOC]] : !fir.ref<i32>
 // CHECK:               %[[INARR_ITEM:.*]] = fir.coordinate_of %[[BOX_INARR]], %[[ITER]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>

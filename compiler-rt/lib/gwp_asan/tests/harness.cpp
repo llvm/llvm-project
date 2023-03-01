@@ -8,6 +8,8 @@
 
 #include "gwp_asan/tests/harness.h"
 
+#include <string>
+
 namespace gwp_asan {
 namespace test {
 bool OnlyOnce() {
@@ -34,3 +36,19 @@ DeallocateMemory2(gwp_asan::GuardedPoolAllocator &GPA, void *Ptr) {
 __attribute__((optnone)) void TouchMemory(void *Ptr) {
   *(reinterpret_cast<volatile char *>(Ptr)) = 7;
 }
+
+void CheckOnlyOneGwpAsanCrash(const std::string &OutputBuffer) {
+  const char *kGwpAsanErrorString = "GWP-ASan detected a memory error";
+  size_t FirstIndex = OutputBuffer.find(kGwpAsanErrorString);
+  ASSERT_NE(FirstIndex, std::string::npos) << "Didn't detect a GWP-ASan crash";
+  ASSERT_EQ(OutputBuffer.find(kGwpAsanErrorString, FirstIndex + 1),
+            std::string::npos)
+      << "Detected more than one GWP-ASan crash:\n"
+      << OutputBuffer;
+}
+
+INSTANTIATE_TEST_SUITE_P(RecoverableTests, BacktraceGuardedPoolAllocator,
+                         /* Recoverable */ testing::Values(true));
+INSTANTIATE_TEST_SUITE_P(RecoverableAndNonRecoverableTests,
+                         BacktraceGuardedPoolAllocatorDeathTest,
+                         /* Recoverable */ testing::Bool());

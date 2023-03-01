@@ -1,5 +1,39 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify
 
+namespace dr2518 { // dr2518: 17 review
+
+template <class T>
+void f(T t) {
+  if constexpr (sizeof(T) != sizeof(int)) {
+    static_assert(false, "must be int-sized"); // expected-error {{must be int-size}}
+  }
+}
+
+void g(char c) {
+  f(0);
+  f(c); // expected-note {{requested here}}
+}
+
+template <typename Ty>
+struct S {
+  static_assert(false); // expected-error {{static assertion failed}}
+};
+
+template <>
+struct S<int> {};
+
+template <>
+struct S<float> {};
+
+int test_specialization() {
+  S<int> s1;
+  S<float> s2;
+  S<double> s3; // expected-note {{in instantiation of template class 'dr2518::S<double>' requested here}}
+}
+
+}
+
+
 namespace dr2565 { // dr2565: 16 open
   template<typename T>
     concept C = requires (typename T::type x) {

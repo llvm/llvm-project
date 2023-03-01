@@ -590,8 +590,8 @@ define i32 @addsub_combine_constants_use3(i32 %x, i32 %y) {
 
 define i5 @sub_from_constant(i5 %x, i5 %y) {
 ; CHECK-LABEL: @sub_from_constant(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i5 10, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = add i5 [[SUB]], [[Y:%.*]]
+; CHECK-NEXT:    [[REASS_SUB:%.*]] = sub i5 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i5 [[REASS_SUB]], 10
 ; CHECK-NEXT:    ret i5 [[R]]
 ;
   %sub = sub i5 10, %x
@@ -602,8 +602,8 @@ define i5 @sub_from_constant(i5 %x, i5 %y) {
 define i5 @sub_from_constant_commute(i5 %x, i5 %p) {
 ; CHECK-LABEL: @sub_from_constant_commute(
 ; CHECK-NEXT:    [[Y:%.*]] = mul i5 [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i5 10, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = add nsw i5 [[Y]], [[SUB]]
+; CHECK-NEXT:    [[REASS_SUB:%.*]] = sub i5 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i5 [[REASS_SUB]], 10
 ; CHECK-NEXT:    ret i5 [[R]]
 ;
   %y = mul i5 %p, %p  ; thwart complexity-based canonicalization
@@ -614,14 +614,16 @@ define i5 @sub_from_constant_commute(i5 %x, i5 %p) {
 
 define <2 x i8> @sub_from_constant_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @sub_from_constant_vec(
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw <2 x i8> <i8 2, i8 -42>, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = add nuw <2 x i8> [[SUB]], [[Y:%.*]]
+; CHECK-NEXT:    [[REASS_SUB:%.*]] = sub <2 x i8> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[REASS_SUB]], <i8 2, i8 -42>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %sub = sub nuw <2 x i8> <i8 2, i8 -42>, %x
   %r = add nuw <2 x i8> %sub, %y
   ret <2 x i8> %r
 }
+
+; negative test - don't create extra instructions
 
 define i8 @sub_from_constant_extra_use(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sub_from_constant_extra_use(

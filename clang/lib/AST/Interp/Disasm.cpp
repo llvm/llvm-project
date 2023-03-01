@@ -34,14 +34,7 @@ template <typename T> inline T ReadArg(Program &P, CodePtr &OpPC) {
 LLVM_DUMP_METHOD void Function::dump() const { dump(llvm::errs()); }
 
 LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS) const {
-  if (F) {
-    if (const auto *MD = dyn_cast<CXXMethodDecl>(F))
-      OS << MD->getParent()->getDeclName() << "::";
-    OS << F->getDeclName() << " " << (const void *)this << ":\n";
-  } else {
-    OS << "<<expr>>\n";
-  }
-
+  OS << getName() << " " << (const void *)this << "\n";
   OS << "frame size: " << getFrameSize() << "\n";
   OS << "arg size:   " << getArgSize() << "\n";
   OS << "rvo:        " << hasRVO() << "\n";

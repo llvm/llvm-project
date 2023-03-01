@@ -155,15 +155,18 @@ template <class InputIterator, class Allocator = allocator<typename iterator_tra
 template <class T, class Alloc>
     bool operator==(const list<T,Alloc>& x, const list<T,Alloc>& y);
 template <class T, class Alloc>
-    bool operator< (const list<T,Alloc>& x, const list<T,Alloc>& y);
+    bool operator< (const list<T,Alloc>& x, const list<T,Alloc>& y);     // removed in C++20
 template <class T, class Alloc>
-    bool operator!=(const list<T,Alloc>& x, const list<T,Alloc>& y);
+    bool operator!=(const list<T,Alloc>& x, const list<T,Alloc>& y);     // removed in C++20
 template <class T, class Alloc>
-    bool operator> (const list<T,Alloc>& x, const list<T,Alloc>& y);
+    bool operator> (const list<T,Alloc>& x, const list<T,Alloc>& y);     // removed in C++20
 template <class T, class Alloc>
-    bool operator>=(const list<T,Alloc>& x, const list<T,Alloc>& y);
+    bool operator>=(const list<T,Alloc>& x, const list<T,Alloc>& y);     // removed in C++20
 template <class T, class Alloc>
-    bool operator<=(const list<T,Alloc>& x, const list<T,Alloc>& y);
+    bool operator<=(const list<T,Alloc>& x, const list<T,Alloc>& y);     // removed in C++20
+template<class T, class Allocator>
+  synth-three-way-result<T> operator<=>(const list<T, Allocator>& x,
+                                        const list<T, Allocator>& y);    // since C++20
 
 template <class T, class Alloc>
     void swap(list<T,Alloc>& x, list<T,Alloc>& y)
@@ -171,10 +174,10 @@ template <class T, class Alloc>
 
 template <class T, class Allocator, class U>
     typename list<T, Allocator>::size_type
-    erase(list<T, Allocator>& c, const U& value);       // C++20
+    erase(list<T, Allocator>& c, const U& value);       // since C++20
 template <class T, class Allocator, class Predicate>
     typename list<T, Allocator>::size_type
-    erase_if(list<T, Allocator>& c, Predicate pred);    // C++20
+    erase_if(list<T, Allocator>& c, Predicate pred);    // since C++20
 
 }  // std
 
@@ -183,6 +186,7 @@ template <class T, class Allocator, class Predicate>
 #include <__algorithm/comp.h>
 #include <__algorithm/equal.h>
 #include <__algorithm/lexicographical_compare.h>
+#include <__algorithm/lexicographical_compare_three_way.h>
 #include <__algorithm/min.h>
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
@@ -824,7 +828,7 @@ public:
     typedef _Tp                                            value_type;
     typedef _Alloc                                         allocator_type;
     static_assert((is_same<value_type, typename allocator_type::value_type>::value),
-                  "Invalid allocator::value_type");
+                  "Allocator::value_type must be same type as value_type");
     typedef value_type&                                    reference;
     typedef const value_type&                              const_reference;
     typedef typename base::pointer                         pointer;
@@ -2289,6 +2293,8 @@ operator==(const list<_Tp, _Alloc>& __x, const list<_Tp, _Alloc>& __y)
     return __x.size() == __y.size() && _VSTD::equal(__x.begin(), __x.end(), __y.begin());
 }
 
+#if _LIBCPP_STD_VER <= 17
+
 template <class _Tp, class _Alloc>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -2328,6 +2334,19 @@ operator<=(const list<_Tp, _Alloc>& __x, const list<_Tp, _Alloc>& __y)
 {
     return !(__y < __x);
 }
+
+#else // _LIBCPP_STD_VER <= 17
+
+template<class _Tp, class _Allocator>
+inline _LIBCPP_HIDE_FROM_ABI
+__synth_three_way_result<_Tp>
+operator<=>(const list<_Tp, _Allocator>& __x, const list<_Tp, _Allocator>& __y)
+{
+    return std::lexicographical_compare_three_way(
+        __x.begin(), __x.end(), __y.begin(), __y.end(), __synth_three_way);
+}
+
+#endif // _LIBCPP_STD_VER <= 17
 
 template <class _Tp, class _Alloc>
 inline _LIBCPP_INLINE_VISIBILITY

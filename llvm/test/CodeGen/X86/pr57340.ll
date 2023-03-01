@@ -47,7 +47,7 @@ define void @main.41() local_unnamed_addr #1 {
 ; CHECK-NEXT:    movw $-5, %ax
 ; CHECK-NEXT:    kmovd %eax, %k1
 ; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[1,1,3,3]
+; CHECK-NEXT:    vprolq $32, %xmm1, %xmm0
 ; CHECK-NEXT:    vpextrw $0, %xmm0, %eax
 ; CHECK-NEXT:    movzwl %ax, %eax
 ; CHECK-NEXT:    vmovd %eax, %xmm0
@@ -200,7 +200,7 @@ define void @main.41() local_unnamed_addr #1 {
 ; CHECK-NEXT:    korw %k1, %k0, %k0
 ; CHECK-NEXT:    movw $-1025, %ax # imm = 0xFBFF
 ; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; CHECK-NEXT:    vprolq $32, %xmm1, %xmm2
 ; CHECK-NEXT:    vpextrw $0, %xmm2, %eax
 ; CHECK-NEXT:    movzwl %ax, %eax
 ; CHECK-NEXT:    vmovd %eax, %xmm2

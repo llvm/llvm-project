@@ -68,10 +68,6 @@ TEST_P(BacktraceGuardedPoolAllocatorDeathTest, UseAfterFree) {
   ;
 }
 
-INSTANTIATE_TEST_SUITE_P(RecoverableSignalDeathTest,
-                         BacktraceGuardedPoolAllocatorDeathTest,
-                         /* Recoverable */ testing::Bool());
-
 TEST(Backtrace, Short) {
   gwp_asan::AllocationMetadata Meta;
   Meta.AllocationTrace.RecordBacktrace(

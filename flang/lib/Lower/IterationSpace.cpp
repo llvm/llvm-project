@@ -847,7 +847,7 @@ void Fortran::lower::ExplicitIterSpace::conditionalCleanup() {
   if (forallContextOpen == 0) {
     // Exiting the outermost FORALL context.
     // Cleanup any residual mask buffers.
-    outermostContext().finalize();
+    outermostContext().finalizeAndReset();
     // Clear and reset all the cached information.
     symbolStack.clear();
     lhsBases.clear();

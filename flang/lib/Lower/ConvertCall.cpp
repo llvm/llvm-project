@@ -1317,6 +1317,24 @@ genHLFIRIntrinsicRefCore(PreparedActualArguments &loweredActuals,
 
     return {hlfir::EntityWithAttributes{matmulOp.getResult()}};
   }
+  if (intrinsic.name == "transpose") {
+    llvm::SmallVector<mlir::Value> operands = getOperandVector(loweredActuals);
+    hlfir::ExprType::Shape resultShape;
+    mlir::Type normalisedResult =
+        hlfir::getFortranElementOrSequenceType(*callContext.resultType);
+    auto array = normalisedResult.cast<fir::SequenceType>();
+    llvm::ArrayRef<int64_t> arrayShape = array.getShape();
+    assert(arrayShape.size() == 2 && "arguments to transpose have a rank of 2");
+    mlir::Type elementType = array.getEleTy();
+    resultShape.push_back(arrayShape[0]);
+    resultShape.push_back(arrayShape[1]);
+    mlir::Type resultTy = hlfir::ExprType::get(
+        builder.getContext(), resultShape, elementType, /*polymorphic=*/false);
+    hlfir::TransposeOp transposeOp =
+        builder.create<hlfir::TransposeOp>(loc, resultTy, operands[0]);
+
+    return {hlfir::EntityWithAttributes{transposeOp.getResult()}};
+  }
 
   // TODO add hlfir operations for other transformational intrinsics here
 

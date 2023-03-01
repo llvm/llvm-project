@@ -251,6 +251,51 @@ def hlfir_DesignateOp : hlfir_Op<"designate", [AttrSizedOperandSegments,
   let hasVerifier = 1;
 }
 
+def hlfir_ParentComponentOp : hlfir_Op<"parent_comp", [AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
+  let summary = "Designate the parent component of a variable";
+
+  let description = [{
+    This operation represents a Fortran component reference where the
+    component name is a parent type of the variable's derived type.
+    These component references cannot be represented with an hlfir.designate
+    because the parent type names are not embedded in fir.type<> types
+    as opposed to the actual component names.
+
+    The operands are as follow:
+      - memref is a derived type variable whose parent component is being
+        designated.
+      - shape is the shape of memref and the result and must be provided if
+        memref is an array. Parent component reference lower bounds are ones,
+        so the provided shape must be a fir.shape.
+      - typeparams are the type parameters of the parent component type if any.
+        It is a subset of memref type parameters.
+    The parent component type and name is reflected in the result type.
+  }];
+
+  let arguments = (ins AnyFortranVariable:$memref,
+                   Optional<AnyShapeType>:$shape,
+                   Variadic<AnyIntegerType>:$typeparams);
+
+  let extraClassDeclaration = [{
+    // Implement FortranVariableInterface interface. Parent components have
+    // no attributes (pointer, allocatable or contiguous can only be added
+    // to regular components).
+    std::optional<fir::FortranVariableFlagsEnum> getFortranAttrs() const {
+      return std::nullopt;
+    }
+  }];
+
+  let results = (outs AnyFortranVariable);
+
+  let assemblyFormat = [{
+    $memref (`shape` $shape^)? (`typeparams` $typeparams^)?
+    attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
 def hlfir_ConcatOp : hlfir_Op<"concat", []> {
   let summary = "concatenate characters";
   let description = [{
@@ -335,6 +380,23 @@ def hlfir_MatmulOp : hlfir_Op<"matmul",
 
   let assemblyFormat = [{
     $lhs $rhs attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def hlfir_TransposeOp : hlfir_Op<"transpose", []> {
+  let summary = "TRANSPOSE transformational intrinsic";
+  let description = [{
+    Transpose a rank 2 array
+  }];
+
+  let arguments = (ins AnyFortranArrayObject:$array);
+
+  let results = (outs hlfir_ExprType);
+
+  let assemblyFormat = [{
+    $array attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
