@@ -42,3 +42,25 @@ TEST(DependencyScanningCASFilesystem, FilenameSpelling) {
   ASSERT_TRUE(DirectivesSymlink);
   EXPECT_EQ(DirectivesSymlink->size(), 2u);
 }
+
+TEST(DependencyScanningCASFilesystem, DirectiveScanFailure) {
+  TempDir TestDir("DependencyScanningCASFilesystemTest", /*Unique=*/true);
+  TempFile TestFile(TestDir.path("python"), "", "import sys\n");
+
+  std::unique_ptr<ObjectStore> CAS = llvm::cas::createInMemoryCAS();
+  std::unique_ptr<ActionCache> Cache = llvm::cas::createInMemoryActionCache();
+  auto CacheFS = llvm::cantFail(llvm::cas::createCachingOnDiskFileSystem(*CAS));
+  DependencyScanningCASFilesystem FS(CacheFS, *Cache);
+
+  EXPECT_EQ(FS.status(TestFile.path()).getError(), std::error_code());
+  auto Directives = FS.getDirectiveTokens(TestFile.path());
+  ASSERT_FALSE(Directives);
+
+  // Check the cached failure in the action cache.
+  {
+    DependencyScanningCASFilesystem NewFS(CacheFS, *Cache);
+    EXPECT_EQ(NewFS.status(TestFile.path()).getError(), std::error_code());
+    auto Directives = NewFS.getDirectiveTokens(TestFile.path());
+    ASSERT_FALSE(Directives);
+  }
+}
