@@ -6,30 +6,28 @@
 //
 //===----------------------------------------------------------------------===//
 
-// test <stdbool.h>
+// test <stdarg.h>
 
-#include <stdbool.h>
+#include <stdarg.h>
 
 #include "test_macros.h"
 
-#ifndef __bool_true_false_are_defined
-#error __bool_true_false_are_defined not defined
+#ifndef va_arg
+#error va_arg not defined
 #endif
 
-#ifdef bool
-#error bool should not be defined
+#if TEST_STD_VER >= 11
+#  ifndef va_copy
+#    error va_copy is not defined when c++ >= 11
+#  endif
 #endif
 
-#ifdef true
-#error true should not be defined
+#ifndef va_end
+#error va_end not defined
 #endif
 
-#ifdef false
-#error false should not be defined
+#ifndef va_start
+#error va_start not defined
 #endif
 
-int main(int, char**)
-{
-
-  return 0;
-}
+va_list va;

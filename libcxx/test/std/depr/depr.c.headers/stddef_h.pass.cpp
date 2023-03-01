@@ -22,8 +22,7 @@
 #error offsetof not defined
 #endif
 
-int main(int, char**)
-{
+int main(int, char**) {
     void *p = NULL;
     assert(!p);
 
@@ -68,5 +67,5 @@ int main(int, char**)
                   "std::alignment_of<void*>::value");
 #endif
 
-  return 0;
+    return 0;
 }

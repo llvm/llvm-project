@@ -101,8 +101,7 @@
 TEST_CLANG_DIAGNOSTIC_IGNORED("-Wformat-zero-length")
 TEST_GCC_DIAGNOSTIC_IGNORED("-Wformat-zero-length")
 
-int main(int, char**)
-{
+int main(int, char**) {
     FILE* fp = 0;
     fpos_t fpos = fpos_t();
     size_t s = 0;
@@ -184,5 +183,5 @@ int main(int, char**)
     static_assert((std::is_same<decltype(ferror(fp)), int>::value), "");
     static_assert((std::is_same<decltype(perror("")), void>::value), "");
 
-  return 0;
+    return 0;
 }

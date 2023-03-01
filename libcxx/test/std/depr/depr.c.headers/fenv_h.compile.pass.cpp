@@ -11,8 +11,6 @@
 #include <fenv.h>
 #include <type_traits>
 
-#include "test_macros.h"
-
 #ifndef FE_DIVBYZERO
 #error FE_DIVBYZERO not defined
 #endif
@@ -57,21 +55,16 @@
 #error FE_DFL_ENV not defined
 #endif
 
-int main(int, char**)
-{
-    fenv_t fenv = {};
-    fexcept_t fex = 0;
-    static_assert((std::is_same<decltype(::feclearexcept(0)), int>::value), "");
-    static_assert((std::is_same<decltype(::fegetexceptflag(&fex, 0)), int>::value), "");
-    static_assert((std::is_same<decltype(::feraiseexcept(0)), int>::value), "");
-    static_assert((std::is_same<decltype(::fesetexceptflag(&fex, 0)), int>::value), "");
-    static_assert((std::is_same<decltype(::fetestexcept(0)), int>::value), "");
-    static_assert((std::is_same<decltype(::fegetround()), int>::value), "");
-    static_assert((std::is_same<decltype(::fesetround(0)), int>::value), "");
-    static_assert((std::is_same<decltype(::fegetenv(&fenv)), int>::value), "");
-    static_assert((std::is_same<decltype(::feholdexcept(&fenv)), int>::value), "");
-    static_assert((std::is_same<decltype(::fesetenv(&fenv)), int>::value), "");
-    static_assert((std::is_same<decltype(::feupdateenv(&fenv)), int>::value), "");
-
-  return 0;
-}
+fenv_t fenv = {};
+fexcept_t fex = 0;
+static_assert(std::is_same<decltype(::feclearexcept(0)), int>::value, "");
+static_assert(std::is_same<decltype(::fegetexceptflag(&fex, 0)), int>::value, "");
+static_assert(std::is_same<decltype(::feraiseexcept(0)), int>::value, "");
+static_assert(std::is_same<decltype(::fesetexceptflag(&fex, 0)), int>::value, "");
+static_assert(std::is_same<decltype(::fetestexcept(0)), int>::value, "");
+static_assert(std::is_same<decltype(::fegetround()), int>::value, "");
+static_assert(std::is_same<decltype(::fesetround(0)), int>::value, "");
+static_assert(std::is_same<decltype(::fegetenv(&fenv)), int>::value, "");
+static_assert(std::is_same<decltype(::feholdexcept(&fenv)), int>::value, "");
+static_assert(std::is_same<decltype(::fesetenv(&fenv)), int>::value, "");
+static_assert(std::is_same<decltype(::feupdateenv(&fenv)), int>::value, "");

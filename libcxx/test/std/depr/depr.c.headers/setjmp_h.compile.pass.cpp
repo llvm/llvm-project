@@ -6,16 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// test <assert.h>
+// test <setjmp.h>
 
-#include <assert.h>
+#include <setjmp.h>
+#include <type_traits>
 
-#ifndef assert
-#error assert not defined
+#ifndef setjmp
+#error setjmp not defined
 #endif
 
-int main(int, char**) {
-  assert(true);
-
-  return 0;
-}
+jmp_buf jb;
+static_assert(std::is_same<decltype(longjmp(jb, 0)), void>::value, "");
