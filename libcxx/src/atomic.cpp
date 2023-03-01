@@ -77,7 +77,7 @@ static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const vo
                  const_cast<__cxx_atomic_contention_t*>(__ptr), 0);
 }
 
-#elif defined(__FreeBSD__) && defined(__LP64__)
+#elif defined(__FreeBSD__) && __SIZEOF_LONG__ == 8
 /*
  * Since __cxx_contention_t is int64_t even on 32bit FreeBSD
  * platforms, we have to use umtx ops that work on the long type, and
