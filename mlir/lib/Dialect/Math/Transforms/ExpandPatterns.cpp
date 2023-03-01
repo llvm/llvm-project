@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
@@ -51,6 +52,17 @@ static LogicalResult convertTanhOp(math::TanhOp op, PatternRewriter &rewriter) {
                                                 op.getOperand(), zero);
   rewriter.replaceOpWithNewOp<arith::SelectOp>(op, cmpRes, positiveRes,
                                                negativeRes);
+  return success();
+}
+
+static LogicalResult convertTanOp(math::TanOp op, PatternRewriter &rewriter) {
+  ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+  Value operand = op.getOperand();
+  Type type = operand.getType();
+  Value sin = b.create<math::SinOp>(type, operand);
+  Value cos = b.create<math::CosOp>(type, operand);
+  Value div = b.create<arith::DivFOp>(type, sin, cos);
+  rewriter.replaceOp(op, div);
   return success();
 }
 
@@ -105,6 +117,10 @@ static LogicalResult convertCtlzOp(math::CountLeadingZerosOp op,
 
 void mlir::populateExpandCtlzPattern(RewritePatternSet &patterns) {
   patterns.add(convertCtlzOp);
+}
+
+void mlir::populateExpandTanPattern(RewritePatternSet &patterns) {
+  patterns.add(convertTanOp);
 }
 
 void mlir::populateExpandTanhPattern(RewritePatternSet &patterns) {

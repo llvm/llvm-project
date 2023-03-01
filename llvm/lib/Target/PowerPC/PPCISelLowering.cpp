@@ -5651,6 +5651,27 @@ SDValue PPCTargetLowering::FinishCall(
                          DAG, InVals);
 }
 
+bool PPCTargetLowering::supportsTailCallFor(const CallBase *CB) const {
+  CallingConv::ID CalleeCC = CB->getCallingConv();
+  const Function *CallerFunc = CB->getCaller();
+  CallingConv::ID CallerCC = CallerFunc->getCallingConv();
+  const Function *CalleeFunc = CB->getCalledFunction();
+  if (!CalleeFunc)
+    return false;
+  const GlobalValue *CalleeGV = dyn_cast<GlobalValue>(CalleeFunc);
+
+  SmallVector<ISD::OutputArg, 2> Outs;
+  SmallVector<ISD::InputArg, 2> Ins;
+
+  GetReturnInfo(CalleeCC, CalleeFunc->getReturnType(),
+                CalleeFunc->getAttributes(), Outs, *this,
+                CalleeFunc->getParent()->getDataLayout());
+
+  return isEligibleForTCO(
+      CalleeGV, CalleeCC, CallerCC, CB, CalleeFunc->isVarArg(), Outs, Ins,
+      false /*IsByValArg*/, CallerFunc, false /*isCalleeExternalSymbol*/);
+}
+
 bool PPCTargetLowering::isEligibleForTCO(
     const GlobalValue *CalleeGV, CallingConv::ID CalleeCC,
     CallingConv::ID CallerCC, const CallBase *CB, bool isVarArg,

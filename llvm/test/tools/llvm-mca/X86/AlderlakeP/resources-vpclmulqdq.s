@@ -14,7 +14,7 @@ vpclmulqdq    $11, (%rax), %ymm1, %ymm3
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      3     1.00                        vpclmulqdq	$11, %ymm0, %ymm1, %ymm3
-# CHECK-NEXT:  2      11    1.00    *                   vpclmulqdq	$11, (%rax), %ymm1, %ymm3
+# CHECK-NEXT:  2      10    1.00    *                   vpclmulqdq	$11, (%rax), %ymm1, %ymm3
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - ADLPPort00

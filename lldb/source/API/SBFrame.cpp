@@ -19,6 +19,7 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Core/ValueObjectVariable.h"
+#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Host/Host.h"
@@ -988,6 +989,12 @@ SBValue SBFrame::EvaluateExpression(const char *expr) {
     else
       options.SetLanguage(frame->GetLanguage());
     return EvaluateExpression(expr, options);
+  } else {
+    Status error;
+    error.SetErrorString("can't evaluate expressions when the "
+                           "process is running.");
+    ValueObjectSP error_val_sp = ValueObjectConstResult::Create(nullptr, error);
+    result.SetSP(error_val_sp, false);
   }
   return result;
 }
@@ -1051,7 +1058,6 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
-
   StackFrame *frame = nullptr;
   Target *target = exe_ctx.GetTargetPtr();
   Process *process = exe_ctx.GetProcessPtr();
@@ -1075,13 +1081,30 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
         target->EvaluateExpression(expr, frame, expr_value_sp, options.ref());
         expr_result.SetSP(expr_value_sp, options.GetFetchDynamicValue());
       }
+    } else {
+      Status error;
+      error.SetErrorString("can't evaluate expressions when the "
+                           "process is running.");
+      expr_value_sp = ValueObjectConstResult::Create(nullptr, error);
+      expr_result.SetSP(expr_value_sp, false);
     }
+  } else {
+      Status error;
+      error.SetErrorString("sbframe object is not valid.");
+      expr_value_sp = ValueObjectConstResult::Create(nullptr, error);
+      expr_result.SetSP(expr_value_sp, false);
   }
 
-  LLDB_LOGF(expr_log,
-            "** [SBFrame::EvaluateExpression] Expression result is "
-            "%s, summary %s **",
-            expr_result.GetValue(), expr_result.GetSummary());
+  if (expr_result.GetError().Success())
+    LLDB_LOGF(expr_log,
+              "** [SBFrame::EvaluateExpression] Expression result is "
+              "%s, summary %s **",
+              expr_result.GetValue(), expr_result.GetSummary());
+  else
+    LLDB_LOGF(expr_log,
+              "** [SBFrame::EvaluateExpression] Expression evaluation failed: "
+              "%s **",
+              expr_result.GetError().GetCString());
 
   return expr_result;
 }

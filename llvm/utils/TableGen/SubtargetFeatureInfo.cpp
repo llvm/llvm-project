@@ -117,16 +117,19 @@ static bool emitFeaturesAux(StringRef TargetName, const Init &Val,
     return false;
   }
   if (auto *D = dyn_cast<DagInit>(&Val)) {
-    std::string Op = D->getOperator()->getAsString();
-    if (Op == "not" && D->getNumArgs() == 1) {
+    auto *Op = dyn_cast<DefInit>(D->getOperator());
+    if (!Op)
+      return true;
+    StringRef OpName = Op->getDef()->getName();
+    if (OpName == "not" && D->getNumArgs() == 1) {
       OS << '!';
       return emitFeaturesAux(TargetName, *D->getArg(0), true, OS);
     }
-    if ((Op == "any_of" || Op == "all_of") && D->getNumArgs() > 0) {
+    if ((OpName == "any_of" || OpName == "all_of") && D->getNumArgs() > 0) {
       bool Paren = D->getNumArgs() > 1 && std::exchange(ParenIfBinOp, true);
       if (Paren)
         OS << '(';
-      ListSeparator LS(Op == "any_of" ? " || " : " && ");
+      ListSeparator LS(OpName == "any_of" ? " || " : " && ");
       for (auto *Arg : D->getArgs()) {
         OS << LS;
         if (emitFeaturesAux(TargetName, *Arg, ParenIfBinOp, OS))
