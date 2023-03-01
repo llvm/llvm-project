@@ -2271,17 +2271,15 @@ public:
   explicit enumerator(R &&Range) : TheRange(std::forward<R>(Range)) {}
 
   enumerator_iter<R> begin() {
-    return enumerator_iter<R>(0, std::begin(TheRange));
+    return enumerator_iter<R>(0, adl_begin(TheRange));
   }
   enumerator_iter<R> begin() const {
-    return enumerator_iter<R>(0, std::begin(TheRange));
+    return enumerator_iter<R>(0, adl_begin(TheRange));
   }
 
-  enumerator_iter<R> end() {
-    return enumerator_iter<R>(std::end(TheRange));
-  }
+  enumerator_iter<R> end() { return enumerator_iter<R>(adl_end(TheRange)); }
   enumerator_iter<R> end() const {
-    return enumerator_iter<R>(std::end(TheRange));
+    return enumerator_iter<R>(adl_end(TheRange));
   }
 
 private:

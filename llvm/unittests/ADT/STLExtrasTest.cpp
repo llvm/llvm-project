@@ -260,6 +260,46 @@ TEST(STLExtrasTest, EnumerateLifetimeSemanticsLValue) {
   EXPECT_EQ(1, Destructors);
 }
 
+namespace some_namespace {
+struct some_struct {
+  std::vector<int> data;
+  std::string swap_val;
+};
+
+std::vector<int>::const_iterator begin(const some_struct &s) {
+  return s.data.begin();
+}
+
+std::vector<int>::const_iterator end(const some_struct &s) {
+  return s.data.end();
+}
+
+void swap(some_struct &lhs, some_struct &rhs) {
+  // make swap visible as non-adl swap would even seem to
+  // work with std::swap which defaults to moving
+  lhs.swap_val = "lhs";
+  rhs.swap_val = "rhs";
+}
+
+struct requires_move {};
+int *begin(requires_move &&) { return nullptr; }
+int *end(requires_move &&) { return nullptr; }
+} // namespace some_namespace
+
+TEST(STLExtrasTest, EnumerateCustomBeginEnd) {
+  // Check that `enumerate` uses ADL to find `begin`/`end` iterators
+  // of the enumerated type.
+  some_namespace::some_struct X{};
+  X.data = {1, 2, 3};
+
+  unsigned Iters = 0;
+  for (auto [Idx, Val] : enumerate(X)) {
+    EXPECT_EQ(Val, X.data[Idx]);
+    ++Iters;
+  }
+  EXPECT_EQ(Iters, 3u);
+}
+
 TEST(STLExtrasTest, CountAdaptor) {
   std::vector<int> v;
 
@@ -374,32 +414,6 @@ TEST(STLExtrasTest, AppendRange) {
   append_range(Str, "def");
   EXPECT_THAT(Str, ElementsAre('a', 'b', 'c', '\0', 'd', 'e', 'f', '\0'));
 }
-
-namespace some_namespace {
-struct some_struct {
-  std::vector<int> data;
-  std::string swap_val;
-};
-
-std::vector<int>::const_iterator begin(const some_struct &s) {
-  return s.data.begin();
-}
-
-std::vector<int>::const_iterator end(const some_struct &s) {
-  return s.data.end();
-}
-
-void swap(some_struct &lhs, some_struct &rhs) {
-  // make swap visible as non-adl swap would even seem to
-  // work with std::swap which defaults to moving
-  lhs.swap_val = "lhs";
-  rhs.swap_val = "rhs";
-}
-
-struct requires_move {};
-int *begin(requires_move &&) { return nullptr; }
-int *end(requires_move &&) { return nullptr; }
-} // namespace some_namespace
 
 TEST(STLExtrasTest, ADLTest) {
   some_namespace::some_struct s{{1, 2, 3, 4, 5}, ""};
