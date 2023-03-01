@@ -4,9 +4,7 @@
 define <8 x i8> @loadv8i8(ptr %p) {
 ; CHECK-LABEL: loadv8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    ld1 { v0.b }[0], [x0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ldr b0, [x0]
 ; CHECK-NEXT:    ret
   %l = load i8, ptr %p
   %v = insertelement <8 x i8> zeroinitializer, i8 %l, i32 0
@@ -16,8 +14,7 @@ define <8 x i8> @loadv8i8(ptr %p) {
 define <16 x i8> @loadv16i8(ptr %p) {
 ; CHECK-LABEL: loadv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    ld1 { v0.b }[0], [x0]
+; CHECK-NEXT:    ldr b0, [x0]
 ; CHECK-NEXT:    ret
   %l = load i8, ptr %p
   %v = insertelement <16 x i8> zeroinitializer, i8 %l, i32 0
@@ -27,9 +24,7 @@ define <16 x i8> @loadv16i8(ptr %p) {
 define <4 x i16> @loadv4i16(ptr %p) {
 ; CHECK-LABEL: loadv4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    ld1 { v0.h }[0], [x0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ldr h0, [x0]
 ; CHECK-NEXT:    ret
   %l = load i16, ptr %p
   %v = insertelement <4 x i16> zeroinitializer, i16 %l, i32 0
@@ -39,8 +34,7 @@ define <4 x i16> @loadv4i16(ptr %p) {
 define <8 x i16> @loadv8i16(ptr %p) {
 ; CHECK-LABEL: loadv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    ld1 { v0.h }[0], [x0]
+; CHECK-NEXT:    ldr h0, [x0]
 ; CHECK-NEXT:    ret
   %l = load i16, ptr %p
   %v = insertelement <8 x i16> zeroinitializer, i16 %l, i32 0
@@ -50,9 +44,7 @@ define <8 x i16> @loadv8i16(ptr %p) {
 define <2 x i32> @loadv2i32(ptr %p) {
 ; CHECK-LABEL: loadv2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    ld1 { v0.s }[0], [x0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ldr s0, [x0]
 ; CHECK-NEXT:    ret
   %l = load i32, ptr %p
   %v = insertelement <2 x i32> zeroinitializer, i32 %l, i32 0
@@ -62,8 +54,7 @@ define <2 x i32> @loadv2i32(ptr %p) {
 define <4 x i32> @loadv4i32(ptr %p) {
 ; CHECK-LABEL: loadv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    ld1 { v0.s }[0], [x0]
+; CHECK-NEXT:    ldr s0, [x0]
 ; CHECK-NEXT:    ret
   %l = load i32, ptr %p
   %v = insertelement <4 x i32> zeroinitializer, i32 %l, i32 0
@@ -73,8 +64,7 @@ define <4 x i32> @loadv4i32(ptr %p) {
 define <2 x i64> @loadv2i64(ptr %p) {
 ; CHECK-LABEL: loadv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    ld1 { v0.d }[0], [x0]
+; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ret
   %l = load i64, ptr %p
   %v = insertelement <2 x i64> zeroinitializer, i64 %l, i32 0
@@ -85,9 +75,7 @@ define <2 x i64> @loadv2i64(ptr %p) {
 define <4 x half> @loadv4f16(ptr %p) {
 ; CHECK-LABEL: loadv4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi d0, #0000000000000000
-; CHECK-NEXT:    ld1 { v0.h }[0], [x0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ldr h0, [x0]
 ; CHECK-NEXT:    ret
   %l = load half, ptr %p
   %v = insertelement <4 x half> zeroinitializer, half %l, i32 0
@@ -97,8 +85,7 @@ define <4 x half> @loadv4f16(ptr %p) {
 define <8 x half> @loadv8f16(ptr %p) {
 ; CHECK-LABEL: loadv8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    ld1 { v0.h }[0], [x0]
+; CHECK-NEXT:    ldr h0, [x0]
 ; CHECK-NEXT:    ret
   %l = load half, ptr %p
   %v = insertelement <8 x half> zeroinitializer, half %l, i32 0
@@ -108,9 +95,7 @@ define <8 x half> @loadv8f16(ptr %p) {
 define <4 x bfloat> @loadv4bf16(ptr %p) {
 ; CHECK-LABEL: loadv4bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi d0, #0000000000000000
-; CHECK-NEXT:    ld1 { v0.h }[0], [x0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ldr h0, [x0]
 ; CHECK-NEXT:    ret
   %l = load bfloat, ptr %p
   %v = insertelement <4 x bfloat> zeroinitializer, bfloat %l, i32 0
@@ -120,8 +105,7 @@ define <4 x bfloat> @loadv4bf16(ptr %p) {
 define <8 x bfloat> @loadv8bf16(ptr %p) {
 ; CHECK-LABEL: loadv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    ld1 { v0.h }[0], [x0]
+; CHECK-NEXT:    ldr h0, [x0]
 ; CHECK-NEXT:    ret
   %l = load bfloat, ptr %p
   %v = insertelement <8 x bfloat> zeroinitializer, bfloat %l, i32 0
@@ -131,9 +115,7 @@ define <8 x bfloat> @loadv8bf16(ptr %p) {
 define <2 x float> @loadv2f32(ptr %p) {
 ; CHECK-LABEL: loadv2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi d0, #0000000000000000
-; CHECK-NEXT:    ld1 { v0.s }[0], [x0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ldr s0, [x0]
 ; CHECK-NEXT:    ret
   %l = load float, ptr %p
   %v = insertelement <2 x float> zeroinitializer, float %l, i32 0
@@ -143,8 +125,7 @@ define <2 x float> @loadv2f32(ptr %p) {
 define <4 x float> @loadv4f32(ptr %p) {
 ; CHECK-LABEL: loadv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    ld1 { v0.s }[0], [x0]
+; CHECK-NEXT:    ldr s0, [x0]
 ; CHECK-NEXT:    ret
   %l = load float, ptr %p
   %v = insertelement <4 x float> zeroinitializer, float %l, i32 0
@@ -154,8 +135,7 @@ define <4 x float> @loadv4f32(ptr %p) {
 define <2 x double> @loadv2f64(ptr %p) {
 ; CHECK-LABEL: loadv2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    ld1 { v0.d }[0], [x0]
+; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ret
   %l = load double, ptr %p
   %v = insertelement <2 x double> zeroinitializer, double %l, i32 0
@@ -168,10 +148,7 @@ define <2 x double> @loadv2f64(ptr %p) {
 define <8 x i8> @loadv8i8_offset(ptr %p) {
 ; CHECK-LABEL: loadv8i8_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    add x8, x0, #1
-; CHECK-NEXT:    ld1 { v0.b }[0], [x8]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ldr b0, [x0, #1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load i8, ptr %g
@@ -182,9 +159,7 @@ define <8 x i8> @loadv8i8_offset(ptr %p) {
 define <16 x i8> @loadv16i8_offset(ptr %p) {
 ; CHECK-LABEL: loadv16i8_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    add x8, x0, #1
-; CHECK-NEXT:    ld1 { v0.b }[0], [x8]
+; CHECK-NEXT:    ldr b0, [x0, #1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load i8, ptr %g
@@ -195,10 +170,7 @@ define <16 x i8> @loadv16i8_offset(ptr %p) {
 define <4 x i16> @loadv4i16_offset(ptr %p) {
 ; CHECK-LABEL: loadv4i16_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    add x8, x0, #1
-; CHECK-NEXT:    ld1 { v0.h }[0], [x8]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ldur h0, [x0, #1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load i16, ptr %g
@@ -209,9 +181,7 @@ define <4 x i16> @loadv4i16_offset(ptr %p) {
 define <8 x i16> @loadv8i16_offset(ptr %p) {
 ; CHECK-LABEL: loadv8i16_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    add x8, x0, #1
-; CHECK-NEXT:    ld1 { v0.h }[0], [x8]
+; CHECK-NEXT:    ldur h0, [x0, #1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load i16, ptr %g
@@ -222,10 +192,7 @@ define <8 x i16> @loadv8i16_offset(ptr %p) {
 define <2 x i32> @loadv2i32_offset(ptr %p) {
 ; CHECK-LABEL: loadv2i32_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    add x8, x0, #1
-; CHECK-NEXT:    ld1 { v0.s }[0], [x8]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ldur s0, [x0, #1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load i32, ptr %g
@@ -236,9 +203,7 @@ define <2 x i32> @loadv2i32_offset(ptr %p) {
 define <4 x i32> @loadv4i32_offset(ptr %p) {
 ; CHECK-LABEL: loadv4i32_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    add x8, x0, #1
-; CHECK-NEXT:    ld1 { v0.s }[0], [x8]
+; CHECK-NEXT:    ldur s0, [x0, #1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load i32, ptr %g
@@ -249,9 +214,7 @@ define <4 x i32> @loadv4i32_offset(ptr %p) {
 define <2 x i64> @loadv2i64_offset(ptr %p) {
 ; CHECK-LABEL: loadv2i64_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    add x8, x0, #1
-; CHECK-NEXT:    ld1 { v0.d }[0], [x8]
+; CHECK-NEXT:    ldur d0, [x0, #1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load i64, ptr %g
@@ -263,10 +226,7 @@ define <2 x i64> @loadv2i64_offset(ptr %p) {
 define <4 x half> @loadv4f16_offset(ptr %p) {
 ; CHECK-LABEL: loadv4f16_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi d0, #0000000000000000
-; CHECK-NEXT:    add x8, x0, #1
-; CHECK-NEXT:    ld1 { v0.h }[0], [x8]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ldur h0, [x0, #1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load half, ptr %g
@@ -277,9 +237,7 @@ define <4 x half> @loadv4f16_offset(ptr %p) {
 define <8 x half> @loadv8f16_offset(ptr %p) {
 ; CHECK-LABEL: loadv8f16_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    add x8, x0, #1
-; CHECK-NEXT:    ld1 { v0.h }[0], [x8]
+; CHECK-NEXT:    ldur h0, [x0, #1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load half, ptr %g
@@ -290,10 +248,7 @@ define <8 x half> @loadv8f16_offset(ptr %p) {
 define <4 x bfloat> @loadv4bf16_offset(ptr %p) {
 ; CHECK-LABEL: loadv4bf16_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi d0, #0000000000000000
-; CHECK-NEXT:    add x8, x0, #1
-; CHECK-NEXT:    ld1 { v0.h }[0], [x8]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ldur h0, [x0, #1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load bfloat, ptr %g
@@ -304,9 +259,7 @@ define <4 x bfloat> @loadv4bf16_offset(ptr %p) {
 define <8 x bfloat> @loadv8bf16_offset(ptr %p) {
 ; CHECK-LABEL: loadv8bf16_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    add x8, x0, #1
-; CHECK-NEXT:    ld1 { v0.h }[0], [x8]
+; CHECK-NEXT:    ldur h0, [x0, #1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load bfloat, ptr %g
@@ -317,10 +270,7 @@ define <8 x bfloat> @loadv8bf16_offset(ptr %p) {
 define <2 x float> @loadv2f32_offset(ptr %p) {
 ; CHECK-LABEL: loadv2f32_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi d0, #0000000000000000
-; CHECK-NEXT:    add x8, x0, #1
-; CHECK-NEXT:    ld1 { v0.s }[0], [x8]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ldur s0, [x0, #1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load float, ptr %g
@@ -331,9 +281,7 @@ define <2 x float> @loadv2f32_offset(ptr %p) {
 define <4 x float> @loadv4f32_offset(ptr %p) {
 ; CHECK-LABEL: loadv4f32_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    add x8, x0, #1
-; CHECK-NEXT:    ld1 { v0.s }[0], [x8]
+; CHECK-NEXT:    ldur s0, [x0, #1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load float, ptr %g
@@ -344,9 +292,7 @@ define <4 x float> @loadv4f32_offset(ptr %p) {
 define <2 x double> @loadv2f64_offset(ptr %p) {
 ; CHECK-LABEL: loadv2f64_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    add x8, x0, #1
-; CHECK-NEXT:    ld1 { v0.d }[0], [x8]
+; CHECK-NEXT:    ldur d0, [x0, #1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load double, ptr %g
@@ -360,27 +306,24 @@ define void @predictor_4x4_neon(ptr nocapture noundef writeonly %0, i64 noundef 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldur w9, [x2, #2]
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    add x8, x2, #1
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    ld1 { v0.s }[0], [x2]
-; CHECK-NEXT:    mov v1.s[0], w9
-; CHECK-NEXT:    ld1 { v2.s }[0], [x8]
-; CHECK-NEXT:    lsr w8, w9, #24
-; CHECK-NEXT:    uaddl v1.8h, v1.8b, v0.8b
-; CHECK-NEXT:    dup v4.8b, w8
-; CHECK-NEXT:    ushll v3.8h, v2.8b, #1
+; CHECK-NEXT:    ldr s1, [x2]
 ; CHECK-NEXT:    lsl x8, x1, #1
-; CHECK-NEXT:    urhadd v0.8b, v0.8b, v2.8b
+; CHECK-NEXT:    ldur s2, [x2, #1]
+; CHECK-NEXT:    mov v0.s[0], w9
+; CHECK-NEXT:    lsr w9, w9, #24
+; CHECK-NEXT:    ushll v3.8h, v2.8b, #1
+; CHECK-NEXT:    dup v4.8b, w9
 ; CHECK-NEXT:    add x9, x8, x1
-; CHECK-NEXT:    add v1.8h, v1.8h, v3.8h
-; CHECK-NEXT:    zip1 v2.2s, v0.2s, v4.2s
-; CHECK-NEXT:    str s0, [x0]
-; CHECK-NEXT:    rshrn v1.8b, v1.8h, #2
-; CHECK-NEXT:    str s1, [x0, x1]
-; CHECK-NEXT:    zip1 v3.2s, v1.2s, v4.2s
-; CHECK-NEXT:    ext v0.8b, v2.8b, v0.8b, #1
-; CHECK-NEXT:    str s0, [x0, x8]
+; CHECK-NEXT:    uaddl v0.8h, v0.8b, v1.8b
+; CHECK-NEXT:    urhadd v1.8b, v1.8b, v2.8b
+; CHECK-NEXT:    str s1, [x0]
+; CHECK-NEXT:    add v0.8h, v0.8h, v3.8h
+; CHECK-NEXT:    zip1 v2.2s, v1.2s, v4.2s
+; CHECK-NEXT:    rshrn v0.8b, v0.8h, #2
+; CHECK-NEXT:    str s0, [x0, x1]
+; CHECK-NEXT:    zip1 v3.2s, v0.2s, v4.2s
+; CHECK-NEXT:    ext v1.8b, v2.8b, v0.8b, #1
+; CHECK-NEXT:    str s1, [x0, x8]
 ; CHECK-NEXT:    ext v2.8b, v3.8b, v0.8b, #1
 ; CHECK-NEXT:    str s2, [x0, x9]
 ; CHECK-NEXT:    ret
@@ -437,32 +380,25 @@ define void @predictor_4x4_neon(ptr nocapture noundef writeonly %0, i64 noundef 
 define void @predictor_4x4_neon_new(ptr nocapture noundef writeonly %0, i64 noundef %1, ptr nocapture noundef readonly %2, ptr nocapture noundef readnone %3) {
 ; CHECK-LABEL: predictor_4x4_neon_new:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    add x8, x2, #1
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    add x9, x2, #2
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    add x10, x2, #3
-; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    ld1 { v0.s }[0], [x2]
-; CHECK-NEXT:    ld1 { v1.s }[0], [x8]
+; CHECK-NEXT:    ldr s0, [x2]
 ; CHECK-NEXT:    lsl x8, x1, #1
-; CHECK-NEXT:    ld1 { v2.s }[0], [x9]
+; CHECK-NEXT:    ldur s1, [x2, #1]
 ; CHECK-NEXT:    add x9, x8, x1
-; CHECK-NEXT:    ld1 { v3.s }[0], [x10]
+; CHECK-NEXT:    ldur s2, [x2, #2]
+; CHECK-NEXT:    ldur s3, [x2, #3]
 ; CHECK-NEXT:    uaddl v4.8h, v1.8b, v0.8b
 ; CHECK-NEXT:    urhadd v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    uaddl v5.8h, v2.8b, v1.8b
 ; CHECK-NEXT:    uaddl v3.8h, v3.8b, v2.8b
 ; CHECK-NEXT:    str s0, [x0]
-; CHECK-NEXT:    urhadd v1.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    add v4.8h, v4.8h, v5.8h
 ; CHECK-NEXT:    add v3.8h, v3.8h, v5.8h
-; CHECK-NEXT:    rshrn v4.8b, v4.8h, #2
-; CHECK-NEXT:    rshrn v0.8b, v3.8h, #2
-; CHECK-NEXT:    str s4, [x0, x1]
-; CHECK-NEXT:    str s1, [x0, x8]
-; CHECK-NEXT:    str s0, [x0, x9]
+; CHECK-NEXT:    rshrn v0.8b, v4.8h, #2
+; CHECK-NEXT:    str s0, [x0, x1]
+; CHECK-NEXT:    urhadd v0.8b, v1.8b, v2.8b
+; CHECK-NEXT:    rshrn v1.8b, v3.8h, #2
+; CHECK-NEXT:    str s0, [x0, x8]
+; CHECK-NEXT:    str s1, [x0, x9]
 ; CHECK-NEXT:    ret
   %5 = load i32, ptr %2, align 4
   %6 = insertelement <2 x i32> <i32 poison, i32 0>, i32 %5, i64 0

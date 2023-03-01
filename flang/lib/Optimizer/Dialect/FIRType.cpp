@@ -290,6 +290,20 @@ bool isBoxedRecordType(mlir::Type ty) {
   return false;
 }
 
+bool isScalarBoxedRecordType(mlir::Type ty) {
+  if (auto refTy = fir::dyn_cast_ptrEleTy(ty))
+    ty = refTy;
+  if (auto boxTy = ty.dyn_cast<fir::BaseBoxType>()) {
+    if (boxTy.getEleTy().isa<fir::RecordType>())
+      return true;
+    if (auto heapTy = boxTy.getEleTy().dyn_cast<fir::HeapType>())
+      return heapTy.getEleTy().isa<fir::RecordType>();
+    if (auto ptrTy = boxTy.getEleTy().dyn_cast<fir::PointerType>())
+      return ptrTy.getEleTy().isa<fir::RecordType>();
+  }
+  return false;
+}
+
 static bool isAssumedType(mlir::Type ty) {
   if (auto boxTy = ty.dyn_cast<fir::BoxType>()) {
     if (boxTy.getEleTy().isa<mlir::NoneType>())

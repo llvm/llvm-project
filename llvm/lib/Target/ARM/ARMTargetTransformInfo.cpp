@@ -2286,7 +2286,8 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(
   return canTailPredicateLoop(L, LI, SE, DL, LVL->getLAI());
 }
 
-TailFoldingStyle ARMTTIImpl::getPreferredTailFoldingStyle() const {
+TailFoldingStyle
+ARMTTIImpl::getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const {
   if (!ST->hasMVEIntegerOps() || !EnableTailPredication)
     return TailFoldingStyle::DataWithoutLaneMask;
 
