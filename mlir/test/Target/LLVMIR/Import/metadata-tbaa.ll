@@ -29,7 +29,7 @@ define dso_local void @tbaa1(ptr %0, ptr %1) {
 !4 = !{!"other scalar type", !5, i64 0}
 !5 = !{!"Other language TBAA"}
 
-// -----
+; // -----
 
 ; CHECK-LABEL: llvm.metadata @__llvm_global_metadata {
 ; CHECK-NEXT:    llvm.tbaa_root @[[R0:tbaa_root_[0-9]+]] {id = "Simple C/C++ TBAA"}
@@ -68,3 +68,22 @@ define dso_local void @tbaa2(ptr %0, ptr %1) {
 !11 = !{!12, !13, i64 0}
 !12 = !{!"agg1_t", !13, i64 0, !13, i64 4}
 !13 = !{!"int", !9, i64 0}
+
+; // -----
+
+; CHECK-LABEL: llvm.func @supported_ops
+define void @supported_ops(ptr %arg1, float %arg2, i32 %arg3, i32 %arg4) {
+  ; CHECK: llvm.load {{.*}}tbaa =
+  %1 = load i32, ptr %arg1, !tbaa !0
+  ; CHECK: llvm.store {{.*}}tbaa =
+  store i32 %1, ptr %arg1, !tbaa !0
+  ; CHECK: llvm.atomicrmw {{.*}}tbaa =
+  %2 = atomicrmw fmax ptr %arg1, float %arg2 acquire, !tbaa !0
+  ; CHECK: llvm.cmpxchg {{.*}}tbaa =
+  %3 = cmpxchg ptr %arg1, i32 %arg3, i32 %arg4 monotonic seq_cst, !tbaa !0
+  ret void
+}
+
+!0 = !{!1, !1, i64 0}
+!1 = !{!"scalar type", !2, i64 0}
+!2 = !{!"Simple C/C++ TBAA"}

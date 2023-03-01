@@ -24,6 +24,19 @@ func.func @tanh(%arg: f32) -> f32 {
 
 // -----
 
+// CHECK-LABEL: func @tan
+func.func @tan(%arg: f32) -> f32 {
+  %res = math.tan %arg : f32
+  return %res : f32
+}
+
+// CHECK-SAME: %[[ARG0:.+]]: f32
+// CHECK: %[[SIN:.+]] = math.sin %[[ARG0]]
+// CHECK: %[[COS:.+]] = math.cos %[[ARG0]]
+// CEHCK: %[[DIV:.+]] = arith.div %[[SIN]] %[[COS]]
+
+// -----
+
 // CHECK-LABEL: func @ctlz
 func.func @ctlz(%arg: i32) -> i32 {
   // CHECK-DAG: %[[C0:.+]] = arith.constant 0 : i32

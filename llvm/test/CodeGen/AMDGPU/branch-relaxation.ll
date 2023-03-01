@@ -598,7 +598,7 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:  .LBB10_2:
 ; GCN-NEXT:    s_mov_b64 s[8:9], 0
 ; GCN-NEXT:  .LBB10_3: ; %bb9
-; GCN-NEXT:    s_cmp_lt_i32 s7, 1
+; GCN-NEXT:    s_cmp_lt_i32 s7, 11
 ; GCN-NEXT:    s_cselect_b64 s[8:9], -1, 0
 ; GCN-NEXT:    s_cmp_ge_i32 s6, s7
 ; GCN-NEXT:    s_cselect_b64 s[10:11], -1, 0
@@ -641,8 +641,7 @@ bb:
   br i1 %tmp8, label %bb9, label %bb13
 
 bb9:                                              ; preds = %bb
-  %tmp7 = icmp sgt i32 %arg4, 0
-  %tmp10 = and i1 %tmp7, %tmp
+  %tmp7 = icmp sgt i32 %arg4, 10                  ; avoid being optimized away through the domination
   %tmp11 = icmp slt i32 %arg3, %arg4
   %tmp12 = or i1 %tmp11, %tmp7
   br i1 %tmp12, label %bb19, label %bb14

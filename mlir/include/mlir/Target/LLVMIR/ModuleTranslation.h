@@ -14,6 +14,7 @@
 #ifndef MLIR_TARGET_LLVMIR_MODULETRANSLATION_H
 #define MLIR_TARGET_LLVMIR_MODULETRANSLATION_H
 
+#include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
@@ -130,9 +131,8 @@ public:
   // Sets LLVM metadata for memory operations that have alias scope information.
   void setAliasScopeMetadata(Operation *op, llvm::Instruction *inst);
 
-  /// Sets LLVM TBAA metadata for memory operations that have
-  /// TBAA attributes.
-  void setTBAAMetadata(Operation *op, llvm::Instruction *inst);
+  /// Sets LLVM TBAA metadata for memory operations that have TBAA attributes.
+  void setTBAAMetadata(AliasAnalysisOpInterface op, llvm::Instruction *inst);
 
   /// Sets LLVM loop metadata for branch operations that have a loop annotation
   /// attribute.
