@@ -85,6 +85,15 @@ def CSE : Pass<"cse"> {
   ];
 }
 
+def PrintIRPass : Pass<"print-ir"> {
+  let summary = "Print IR on the debug stream";
+  let description = [{
+    Print the entire IR on the debug stream. This is meant for debugging
+    purposes to inspect the IR at a specific point in the pipeline.
+  }];
+  let constructor = "mlir::createPrintIRPass()";
+}
+
 def GenerateRuntimeVerification : Pass<"generate-runtime-verification"> {
   let summary = "Generate additional runtime op verification checks";
   let description = [{
