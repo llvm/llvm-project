@@ -1133,9 +1133,9 @@ class FlatStoreSignedAtomicPat <FLAT_Pseudo inst, SDPatternOperator node,
 >;
 
 multiclass FlatAtomicPat <string inst, string node, ValueType vt,
-                          ValueType data_vt = vt> {
-  defvar rtnNode = !cast<PatFrags>(node#"_"#vt.Size);
-  defvar noRtnNode = !cast<PatFrags>(node#"_noret_"#vt.Size);
+                          ValueType data_vt = vt, bit isIntr = 0> {
+  defvar rtnNode = !cast<SDPatternOperator>(node # !if(isIntr, "", "_"#vt.Size));
+  defvar noRtnNode = !cast<PatFrags>(node # "_noret" # !if(isIntr, "", "_"#vt.Size));
 
   def : GCNPat <(vt (rtnNode (FlatOffset i64:$vaddr, i32:$offset), data_vt:$data)),
     (!cast<FLAT_Pseudo>(inst#"_RTN") VReg_64:$vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)>;
@@ -1143,6 +1143,11 @@ multiclass FlatAtomicPat <string inst, string node, ValueType vt,
   let AddedComplexity = 1 in
   def : GCNPat <(vt (noRtnNode (FlatOffset i64:$vaddr, i32:$offset), data_vt:$data)),
     (!cast<FLAT_Pseudo>(inst) VReg_64:$vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)>;
+}
+
+multiclass FlatAtomicIntrPat <string inst, string node, ValueType vt,
+                                    ValueType data_vt = vt> {
+  defm : FlatAtomicPat<inst, node, vt, data_vt, /* isIntr */ 1>;
 }
 
 class FlatSignedAtomicPatBase <FLAT_Pseudo inst, SDPatternOperator node,
@@ -1305,7 +1310,7 @@ defm : FlatAtomicPat <"FLAT_ATOMIC_XOR_X2", "atomic_load_xor_"#as, i64>;
 } // end foreach as
 
 let OtherPredicates = [isGFX12Plus] in {
-defm : FlatSignedAtomicIntrPat<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_flat_atomic_cond_sub_u32", i32>;
+defm : FlatAtomicIntrPat<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_flat_atomic_cond_sub_u32", i32>;
 }
 
 def : FlatStorePat <FLAT_STORE_BYTE, truncstorei8_flat, i16>;
