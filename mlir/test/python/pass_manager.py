@@ -3,6 +3,7 @@
 import gc, sys
 from mlir.ir import *
 from mlir.passmanager import *
+from mlir.dialects.func import FuncOp
 
 # Log everything to stderr and flush so that we have a unified stream to match
 # errors/info emitted by MLIR to stderr.
@@ -120,11 +121,10 @@ run(testInvalidNesting)
 # CHECK-LABEL: TEST: testRun
 def testRunPipeline():
   with Context():
-    pm = PassManager.parse("builtin.module(print-op-stats{json=false})")
-    module = Module.parse(r"""func.func @successfulParse() { return }""")
-    pm.run(module)
+    pm = PassManager.parse("any(print-op-stats{json=false})")
+    func = FuncOp.parse(r"""func.func @successfulParse() { return }""")
+    pm.run(func)
 # CHECK: Operations encountered:
-# CHECK: builtin.module    , 1
 # CHECK: func.func      , 1
 # CHECK: func.return        , 1
 run(testRunPipeline)
