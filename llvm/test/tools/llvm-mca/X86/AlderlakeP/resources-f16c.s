@@ -23,7 +23,7 @@ vcvtps2ph   $0, %ymm0, (%rax)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  2      6     1.00                        vcvtph2ps	%xmm0, %xmm2
-# CHECK-NEXT:  2      12    0.50    *                   vcvtph2ps	(%rax), %xmm2
+# CHECK-NEXT:  2      11    0.50    *                   vcvtph2ps	(%rax), %xmm2
 # CHECK-NEXT:  2      8     1.00                        vcvtph2ps	%xmm0, %ymm2
 # CHECK-NEXT:  2      12    0.50    *                   vcvtph2ps	(%rax), %ymm2
 # CHECK-NEXT:  2      6     1.00                        vcvtps2ph	$0, %xmm0, %xmm2

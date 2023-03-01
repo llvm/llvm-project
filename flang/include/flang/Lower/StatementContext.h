@@ -21,11 +21,19 @@
 namespace Fortran::lower {
 
 /// When lowering a statement, temporaries for intermediate results may be
-/// allocated on the heap.  A StatementContext enables their deallocation
-/// either explicitly with finalize() calls, or implicitly at the end of
-/// the context.  A context may prohibit temporary allocation.  Otherwise,
-/// an initial "outer" context scope may have nested context scopes, which
-/// must make explicit subscope finalize() calls.
+/// allocated on the heap. A StatementContext enables their deallocation
+/// with one of several explicit finalize calls, or with an implicit
+/// call to finalizeAndPop() at the end of the context. A context may prohibit
+/// temporary allocation. Otherwise, an initial "outer" context scope may have
+/// nested context scopes, which must make explicit subscope finalize calls.
+///
+/// In addition to being useful for individual action statement contexts, a
+/// StatementContext is also useful for construct blocks delimited by a pair
+/// of statements such as (block-stmt, end-block-stmt), or a program unit
+/// delimited by a pair of statements such as (subroutine-stmt, end-subroutine-
+/// stmt). Attached cleanup code for these contexts may include stack
+/// management code, deallocation code, and finalization of derived type
+/// entities in the context.
 class StatementContext {
 public:
   explicit StatementContext(bool cleanupProhibited = false) {
@@ -62,29 +70,29 @@ public:
     }
   }
 
-  /// Make cleanup calls.  Retain the stack top list for a repeat call.
+  /// Make cleanup calls. Retain the stack top list for a repeat call.
   void finalizeAndKeep() {
     assert(!cufs.empty() && "invalid finalize statement context");
     if (cufs.back())
       (*cufs.back())();
   }
 
-  /// Make cleanup calls.  Pop the stack top list.
+  /// Make cleanup calls. Clear the stack top list.
+  void finalizeAndReset() {
+    finalizeAndKeep();
+    cufs.back().reset();
+  }
+
+  /// Make cleanup calls. Pop the stack top list.
   void finalizeAndPop() {
     finalizeAndKeep();
     cufs.pop_back();
   }
 
-  /// Make cleanup calls.  Clear the stack top list.
-  void finalize() {
-    finalizeAndKeep();
-    cufs.back().reset();
-  }
-
-  bool workListIsEmpty() const {
-    return cufs.empty() || llvm::all_of(cufs, [](auto &opt) -> bool {
-             return !opt.has_value();
-           });
+  bool hasCode() const {
+    return !cufs.empty() && llvm::any_of(cufs, [](auto &opt) -> bool {
+      return opt.has_value();
+    });
   }
 
 private:

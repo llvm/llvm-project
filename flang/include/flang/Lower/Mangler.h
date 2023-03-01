@@ -26,22 +26,29 @@ class Reference;
 }
 
 namespace semantics {
+class Scope;
 class Symbol;
 class DerivedTypeSpec;
 } // namespace semantics
 
 namespace lower::mangle {
 
-/// Convert a front-end Symbol to an internal name.
-/// If \p keepExternalInScope is true, the mangling of external symbols
-/// retains the scope of the symbol declaring externals. Otherwise,
-/// external symbols are mangled outside of any scope. Keeping the scope is
-/// useful in attributes where all the Fortran context is to be maintained.
+using ScopeBlockIdMap =
+    llvm::DenseMap<Fortran::semantics::Scope *, std::int64_t>;
+
+/// Convert a front-end symbol to a unique internal name.
+/// A symbol that could be in a block scope must provide a ScopeBlockIdMap.
+/// If \p keepExternalInScope is true, mangling an external symbol retains
+/// the scope of the symbol. This is useful when setting the attributes of
+/// a symbol where all the Fortran context is needed. Otherwise, external
+/// symbols are mangled outside of any scope.
+std::string mangleName(const semantics::Symbol &, ScopeBlockIdMap &,
+                       bool keepExternalInScope = false);
 std::string mangleName(const semantics::Symbol &,
                        bool keepExternalInScope = false);
 
 /// Convert a derived type instance to an internal name.
-std::string mangleName(const semantics::DerivedTypeSpec &);
+std::string mangleName(const semantics::DerivedTypeSpec &, ScopeBlockIdMap &);
 
 /// Recover the bare name of the original symbol from an internal name.
 std::string demangleName(llvm::StringRef name);

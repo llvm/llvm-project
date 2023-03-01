@@ -28,11 +28,6 @@ class KindMapping;
 class FirOpBuilder;
 } // namespace fir
 
-namespace fir {
-class KindMapping;
-class FirOpBuilder;
-} // namespace fir
-
 namespace Fortran {
 namespace common {
 template <typename>
@@ -233,6 +228,9 @@ public:
   virtual mlir::MLIRContext &getMLIRContext() = 0;
   /// Unique a symbol
   virtual std::string mangleName(const Fortran::semantics::Symbol &) = 0;
+  /// Unique a derived type
+  virtual std::string
+  mangleName(const Fortran::semantics::DerivedTypeSpec &) = 0;
   /// Get the KindMap.
   virtual const fir::KindMapping &getKindMap() = 0;
 

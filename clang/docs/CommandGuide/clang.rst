@@ -373,6 +373,10 @@ number of cross compilers, or may only support a native target.
 
   Acts as an alias for :option:`--print-supported-cpus`.
 
+.. option:: -mcpu=help, -mtune=help
+
+  Acts as an alias for :option:`--print-supported-cpus`.
+
 .. option:: -march=<cpu>
 
   Specify that Clang should generate code for a specific processor family

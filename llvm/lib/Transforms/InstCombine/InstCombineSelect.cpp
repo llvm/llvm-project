@@ -3383,25 +3383,14 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     }
   }
 
-  auto canMergeSelectThroughBinop = [](BinaryOperator *BO) {
-    // The select might be preventing a division by 0.
-    switch (BO->getOpcode()) {
-    default:
-      return true;
-    case Instruction::SRem:
-    case Instruction::URem:
-    case Instruction::SDiv:
-    case Instruction::UDiv:
-      return false;
-    }
-  };
-
   // Try to simplify a binop sandwiched between 2 selects with the same
-  // condition.
+  // condition. This is not valid for div/rem because the select might be
+  // preventing a division-by-zero.
+  // TODO: A div/rem restriction is conservative; use something like
+  //       isSafeToSpeculativelyExecute().
   // select(C, binop(select(C, X, Y), W), Z) -> select(C, binop(X, W), Z)
   BinaryOperator *TrueBO;
-  if (match(TrueVal, m_OneUse(m_BinOp(TrueBO))) &&
-      canMergeSelectThroughBinop(TrueBO)) {
+  if (match(TrueVal, m_OneUse(m_BinOp(TrueBO))) && !TrueBO->isIntDivRem()) {
     if (auto *TrueBOSI = dyn_cast<SelectInst>(TrueBO->getOperand(0))) {
       if (TrueBOSI->getCondition() == CondVal) {
         replaceOperand(*TrueBO, 0, TrueBOSI->getTrueValue());
@@ -3420,8 +3409,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   // select(C, Z, binop(select(C, X, Y), W)) -> select(C, Z, binop(Y, W))
   BinaryOperator *FalseBO;
-  if (match(FalseVal, m_OneUse(m_BinOp(FalseBO))) &&
-      canMergeSelectThroughBinop(FalseBO)) {
+  if (match(FalseVal, m_OneUse(m_BinOp(FalseBO))) && !FalseBO->isIntDivRem()) {
     if (auto *FalseBOSI = dyn_cast<SelectInst>(FalseBO->getOperand(0))) {
       if (FalseBOSI->getCondition() == CondVal) {
         replaceOperand(*FalseBO, 0, FalseBOSI->getFalseValue());

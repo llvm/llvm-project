@@ -96,14 +96,14 @@ struct flag {
 };
 
 template <class T>
-struct trait : flag<sizeof(T)> {};
+struct trait : flag<sizeof(T)> {}; // expected-note 2{{here}}
 
-template <class T, bool Inferred = trait<T>::value>
+template <class T, bool Inferred = trait<T>::value> // expected-note {{here}}
 struct a {};
 
 template <class T>
 class b {
-  a<T> x;
+  a<T> x; // expected-note {{here}}
   using U = a<T>;
 };
 
@@ -113,5 +113,5 @@ struct Impossible {
 };
 
 // verify "no member named 'value'" bogus diagnostic is not emitted.
-trait<b<Impossible<0>>>::value;
+trait<b<Impossible<0>>>::value; // expected-note {{here}}
 } // namespace T8

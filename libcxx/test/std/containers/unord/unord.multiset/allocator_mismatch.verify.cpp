@@ -6,14 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <deque>
+// <unordered_set>
 //   The container's value type must be the same as the allocator's value type
 
-#include <deque>
+#include <unordered_set>
 
-int main(int, char**)
-{
-    std::deque<int, std::allocator<long> > d;
-
-  return 0;
-}
+std::unordered_multiset<int, std::hash<int>, std::less<int>, std::allocator<long> > v;
+  // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed{{.*}}Allocator::value_type must be same type as value_type}}

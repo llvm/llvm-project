@@ -225,11 +225,11 @@ llvm.func @rocdl.mubuf(%rsrc : vector<4xi32>, %vindex : i32,
   llvm.return
 }
 
-llvm.func @rocdl.raw.buffer(%rsrc : vector<4xi32>,
+llvm.func @rocdl.raw.buffer.f32(%rsrc : vector<4xi32>,
                        %offset : i32, %soffset : i32,
                        %aux : i32, %vdata1 : f32,
                        %vdata2 : vector<2xf32>, %vdata4 : vector<4xf32>) {
-  // CHECK-LABEL: rocdl.raw.buffer
+  // CHECK-LABEL: rocdl.raw.buffer.f32
   // CHECK: %{{.*}} = rocdl.raw.buffer.load %{{.*}} %{{.*}} %{{.*}} %{{.*}} : f32
   // CHECK: %{{.*}} = rocdl.raw.buffer.load %{{.*}} %{{.*}} %{{.*}} %{{.*}} : vector<2xf32>
   // CHECK: %{{.*}} = rocdl.raw.buffer.load %{{.*}} %{{.*}} %{{.*}} %{{.*}} : vector<4xf32>
@@ -249,7 +249,22 @@ llvm.func @rocdl.raw.buffer(%rsrc : vector<4xi32>,
   rocdl.raw.buffer.store %vdata4, %rsrc, %offset, %offset, %aux : vector<4xf32>
 
   rocdl.raw.buffer.atomic.fadd %vdata1, %rsrc, %offset, %soffset, %aux : f32
+  rocdl.raw.buffer.atomic.fmax %vdata1, %rsrc, %offset, %soffset, %aux : f32
 
+  llvm.return
+}
+
+
+llvm.func @rocdl.raw.buffer.i32(%rsrc : vector<4xi32>,
+                       %offset : i32, %soffset : i32,
+                       %aux : i32, %vdata1 : i32,
+                       %vdata2 : vector<2xi32>, %vdata4 : vector<4xi32>) {
+  // CHECK-LABEL: rocdl.raw.buffer.i32
+  // CHECK: rocdl.raw.buffer.atomic.smax %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : i32
+  // CHECK: rocdl.raw.buffer.atomic.umin %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : i32
+
+  rocdl.raw.buffer.atomic.smax %vdata1, %rsrc, %offset, %soffset, %aux : i32
+  rocdl.raw.buffer.atomic.umin %vdata1, %rsrc, %offset, %soffset, %aux : i32
   llvm.return
 }
 
