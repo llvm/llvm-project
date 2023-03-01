@@ -12,13 +12,12 @@
 #include "test/UnitTest/Test.h"
 
 #include <errno.h>
+#include <string.h>
 
 namespace __llvm_libc {
 namespace testing {
 
 namespace internal {
-
-extern "C" char *strerror(int);
 
 template <typename T> class ErrnoSetterMatcher : public Matcher<T> {
   T ExpectedReturn;
