@@ -9,6 +9,7 @@ add_mlir_library(MLIRTransforms
   LocationSnapshot.cpp
   LoopInvariantCodeMotion.cpp
   OpStats.cpp
+  PrintIR.cpp
   SCCP.cpp
   StripDebugInfo.cpp
   SymbolDCE.cpp
