@@ -1081,8 +1081,8 @@ bool AMDGPURegisterBankInfo::applyMappingLoad(MachineInstr &MI,
       return false;
 
     if (LoadSize == 32 &&
-        ((MemSize == 8 && MMO->getAlign() == Align(1)) ||
-         (MemSize == 16 && MMO->getAlign() == Align(2))) &&
+        ((MemSize == 8 && MMO->getAlign() >= Align(1)) ||
+         (MemSize == 16 && MMO->getAlign() >= Align(2))) &&
         isScalarLoadLegal(MI) &&
         Subtarget.getGeneration() >= AMDGPUSubtarget::GFX12)
       return false;
