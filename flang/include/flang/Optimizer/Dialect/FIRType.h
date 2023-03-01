@@ -283,6 +283,12 @@ bool isBoxNone(mlir::Type ty);
 /// e.g. !fir.box<!fir.type<derived>>
 bool isBoxedRecordType(mlir::Type ty);
 
+/// Return true iff `ty` is a scalar boxed record type.
+/// e.g. !fir.box<!fir.type<derived>>
+///      !fir.box<!fir.heap<!fir.type<derived>>>
+///      !fir.class<!fir.type<derived>>
+bool isScalarBoxedRecordType(mlir::Type ty);
+
 /// Return the nested RecordType if one if found. Return ty otherwise.
 mlir::Type getDerivedType(mlir::Type ty);
 
