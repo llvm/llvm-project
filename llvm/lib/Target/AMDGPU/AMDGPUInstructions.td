@@ -135,10 +135,6 @@ def s16ImmTarget : AsmOperandClass {
 
 let OperandType = "OPERAND_IMMEDIATE" in {
 
-def u32imm : Operand<i32> {
-  let PrintMethod = "printU32ImmOperand";
-}
-
 def u16imm : Operand<i16> {
   let PrintMethod = "printU16ImmOperand";
   let ParserMatchClass = u16ImmTarget;
@@ -608,6 +604,8 @@ defm int_amdgcn_global_atomic_fmin : noret_op;
 defm int_amdgcn_global_atomic_fmax : noret_op;
 defm int_amdgcn_flat_atomic_fadd : local_addr_space_atomic_op;
 defm int_amdgcn_ds_fadd_v2bf16 : noret_op;
+defm int_amdgcn_flat_atomic_cond_sub_u32 : noret_op;
+defm int_amdgcn_global_atomic_cond_sub_u32 : noret_op;
 
 multiclass noret_binary_atomic_op<SDNode atomic_op, bit IsInt = 1> {
   let HasNoUse = true in

@@ -17,6 +17,14 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
+
+#include "llvm/BinaryFormat/AMDGPUMetadataVerifier.h"
+#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/MsgPackDocument.h"
+#include "llvm/Support/MemoryBufferRef.h"
+
+#include "llvm/Support/YAMLTraits.h"
 
 namespace llvm {
 namespace omp {
@@ -127,6 +135,166 @@ bool isImageCompatibleWithEnv(const __tgt_image_info *Info,
   return true;
 }
 
+struct KernelMetaDataTy {
+  uint64_t KernelObject;
+  uint32_t GroupSegmentList;
+  uint32_t PrivateSegmentSize;
+  uint32_t SGPRCount;
+  uint32_t VGPRCount;
+  uint32_t SGPRSpillCount;
+  uint32_t VGPRSpillCount;
+  uint32_t KernelSegmentSize;
+  uint32_t ExplicitArgumentCount;
+  uint32_t ImplicitArgumentCount;
+};
+namespace {
+
+/// Reads the AMDGPU specific per-kernel-metadata from an image.
+class KernelInfoReader {
+public:
+  KernelInfoReader(StringMap<KernelMetaDataTy> &KIM) : KernelInfoMap(KIM) {}
+
+  /// Process ELF note to read AMDGPU metadata from respective information
+  /// fields.
+  Error processNote(const object::ELF64LE::Note &Note) {
+    if (Note.getName() != "AMDGPU")
+      return Error::success(); // We are not interested in other things
+
+    assert(Note.getType() == ELF::NT_AMDGPU_METADATA &&
+           "Parse AMDGPU MetaData");
+    auto Desc = Note.getDesc();
+    StringRef MsgPackString =
+        StringRef(reinterpret_cast<const char *>(Desc.data()), Desc.size());
+    msgpack::Document MsgPackDoc;
+    if (!MsgPackDoc.readFromBlob(MsgPackString, /*Multi=*/false))
+      return Error::success();
+
+    AMDGPU::HSAMD::V3::MetadataVerifier Verifier(true);
+    if (!Verifier.verify(MsgPackDoc.getRoot()))
+      return Error::success();
+
+    auto RootMap = MsgPackDoc.getRoot().getMap(true);
+
+    if (auto Err = iterateAMDKernels(RootMap))
+      return Err;
+
+    return Error::success();
+  }
+
+private:
+  /// Extracts the relevant information via simple string look-up in the msgpack
+  /// document elements.
+  Error extractKernelData(msgpack::MapDocNode::MapTy::value_type V,
+                          std::string &KernelName,
+                          KernelMetaDataTy &KernelData) {
+    if (!V.first.isString())
+      return Error::success();
+
+    const auto isKey = [](const msgpack::DocNode &DK, StringRef SK) {
+      return DK.getString() == SK;
+    };
+
+    if (isKey(V.first, ".name")) {
+      KernelName = V.second.toString();
+    } else if (isKey(V.first, ".sgpr_count")) {
+      KernelData.SGPRCount = V.second.getUInt();
+    } else if (isKey(V.first, ".sgpr_spill_count")) {
+      KernelData.SGPRSpillCount = V.second.getUInt();
+    } else if (isKey(V.first, ".vgpr_count")) {
+      KernelData.VGPRCount = V.second.getUInt();
+    } else if (isKey(V.first, ".vgpr_spill_count")) {
+      KernelData.VGPRSpillCount = V.second.getUInt();
+    } else if (isKey(V.first, ".private_segment_fixed_size")) {
+      KernelData.PrivateSegmentSize = V.second.getUInt();
+    } else if (isKey(V.first, ".group_segement_fixed_size")) {
+      KernelData.GroupSegmentList = V.second.getUInt();
+    }
+
+    return Error::success();
+  }
+
+  /// Get the "amdhsa.kernels" element from the msgpack Document
+  Expected<msgpack::ArrayDocNode> getAMDKernelsArray(msgpack::MapDocNode &MDN) {
+    auto Res = MDN.find("amdhsa.kernels");
+    if (Res == MDN.end())
+      return createStringError(inconvertibleErrorCode(),
+                               "Could not find amdhsa.kernels key");
+
+    auto Pair = *Res;
+    assert(Pair.second.isArray() &&
+           "AMDGPU kernel entries are arrays of entries");
+
+    return Pair.second.getArray();
+  }
+
+  /// Iterate all entries for one "amdhsa.kernels" entry. Each entry is a
+  /// MapDocNode that either maps a string to a single value (most of them) or
+  /// to another array of things. Currently, we only handle the case that maps
+  /// to scalar value.
+  Error generateKernelInfo(msgpack::ArrayDocNode::ArrayTy::iterator It) {
+    KernelMetaDataTy KernelData;
+    std::string KernelName;
+    auto Entry = (*It).getMap();
+    for (auto MI = Entry.begin(), E = Entry.end(); MI != E; ++MI)
+      if (auto Err = extractKernelData(*MI, KernelName, KernelData))
+        return Err;
+
+    KernelInfoMap.insert({KernelName, KernelData});
+    return Error::success();
+  }
+
+  /// Go over the list of AMD kernels in the "amdhsa.kernels" entry
+  Error iterateAMDKernels(msgpack::MapDocNode &MDN) {
+    auto KernelsOrErr = getAMDKernelsArray(MDN);
+    if (auto Err = KernelsOrErr.takeError())
+      return Err;
+
+    auto KernelsArr = *KernelsOrErr;
+    for (auto It = KernelsArr.begin(), E = KernelsArr.end(); It != E; ++It) {
+      if (!It->isMap())
+        continue; // we expect <key,value> pairs
+
+      // Obtain the value for the different entries. Each array entry is a
+      // MapDocNode
+      if (auto Err = generateKernelInfo(It))
+        return Err;
+    }
+    return Error::success();
+  }
+
+  // Kernel names are the keys
+  StringMap<KernelMetaDataTy> &KernelInfoMap;
+};
+} // namespace
+
+/// Reads the AMDGPU specific metadata from the ELF file and propagates the
+/// KernelInfoMap
+Error readAMDGPUMetaDataFromImage(MemoryBufferRef MemBuffer,
+                                  StringMap<KernelMetaDataTy> &KernelInfoMap) {
+  Error Err = Error::success(); // Used later as out-parameter
+
+  auto ELFOrError = object::ELF64LEFile::create(MemBuffer.getBuffer());
+  if (auto Err = ELFOrError.takeError())
+    return Err;
+
+  const object::ELF64LEFile ELFObj = ELFOrError.get();
+  ArrayRef<object::ELF64LE::Shdr> Sections = cantFail(ELFObj.sections());
+  KernelInfoReader Reader(KernelInfoMap);
+  for (const auto &S : Sections) {
+    if (S.sh_type != ELF::SHT_NOTE)
+      continue;
+
+    for (const auto N : ELFObj.notes(S, Err)) {
+      if (Err)
+        return Err;
+      // Fills the KernelInfoTabel entries in the reader
+      if ((Err = Reader.processNote(N)))
+        return Err;
+    }
+  }
+
+  return Error::success();
+}
 } // namespace utils
 } // namespace plugin
 } // namespace target

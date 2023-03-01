@@ -132,7 +132,7 @@ transform::LoopPeelOp::applyToOne(scf::ForOp target,
   //    "the loop trip count is divisible by the step"
   // is valid.
   LogicalResult status =
-      scf::peelAndCanonicalizeForLoop(rewriter, target, result);
+      scf::peelForLoopAndSimplifyBounds(rewriter, target, result);
   // TODO: Return both the peeled loop and the remainder loop.
   results.push_back(failed(status) ? target : result);
   return DiagnosedSilenceableFailure::success();

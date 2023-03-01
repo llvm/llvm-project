@@ -124,8 +124,8 @@ vpxor  %ymm3, %ymm3, %ymm5
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      1     0.20                        subl	%eax, %eax
 # CHECK-NEXT:  1      1     0.20                        subq	%rax, %rax
-# CHECK-NEXT:  1      2     0.20                        xorl	%eax, %eax
-# CHECK-NEXT:  1      2     0.20                        xorq	%rax, %rax
+# CHECK-NEXT:  1      1     0.20                        xorl	%eax, %eax
+# CHECK-NEXT:  1      1     0.20                        xorq	%rax, %rax
 # CHECK-NEXT:  1      1     1.00                        pcmpgtb	%mm2, %mm2
 # CHECK-NEXT:  1      1     1.00                        pcmpgtd	%mm2, %mm2
 # CHECK-NEXT:  1      1     1.00                        pcmpgtw	%mm2, %mm2
@@ -321,13 +321,13 @@ vpxor  %ymm3, %ymm3, %ymm5
 
 # CHECK:      [0,0]     DeER .    .    .    .    .    .  .   subl	%eax, %eax
 # CHECK-NEXT: [0,1]     D=eER.    .    .    .    .    .  .   subq	%rax, %rax
-# CHECK-NEXT: [0,2]     D==eeER   .    .    .    .    .  .   xorl	%eax, %eax
-# CHECK-NEXT: [0,3]     D====eeER .    .    .    .    .  .   xorq	%rax, %rax
-# CHECK-NEXT: [0,4]     DeE-----R .    .    .    .    .  .   pcmpgtb	%mm2, %mm2
-# CHECK-NEXT: [0,5]     D=eE----R .    .    .    .    .  .   pcmpgtd	%mm2, %mm2
-# CHECK-NEXT: [0,6]     .D=eE---R .    .    .    .    .  .   pcmpgtw	%mm2, %mm2
-# CHECK-NEXT: [0,7]     .DeE----R .    .    .    .    .  .   pcmpgtb	%xmm2, %xmm2
-# CHECK-NEXT: [0,8]     .D=eE---R .    .    .    .    .  .   pcmpgtd	%xmm2, %xmm2
+# CHECK-NEXT: [0,2]     D==eER    .    .    .    .    .  .   xorl	%eax, %eax
+# CHECK-NEXT: [0,3]     D===eER   .    .    .    .    .  .   xorq	%rax, %rax
+# CHECK-NEXT: [0,4]     DeE---R   .    .    .    .    .  .   pcmpgtb	%mm2, %mm2
+# CHECK-NEXT: [0,5]     D=eE--R   .    .    .    .    .  .   pcmpgtd	%mm2, %mm2
+# CHECK-NEXT: [0,6]     .D=eE-R   .    .    .    .    .  .   pcmpgtw	%mm2, %mm2
+# CHECK-NEXT: [0,7]     .DeE--R   .    .    .    .    .  .   pcmpgtb	%xmm2, %xmm2
+# CHECK-NEXT: [0,8]     .D=eE-R   .    .    .    .    .  .   pcmpgtd	%xmm2, %xmm2
 # CHECK-NEXT: [0,9]     .D==eeeER .    .    .    .    .  .   pcmpgtq	%xmm2, %xmm2
 # CHECK-NEXT: [0,10]    .D=====eER.    .    .    .    .  .   pcmpgtw	%xmm2, %xmm2
 # CHECK-NEXT: [0,11]    .D==eE---R.    .    .    .    .  .   vpcmpgtb	%xmm3, %xmm3, %xmm3
@@ -413,12 +413,12 @@ vpxor  %ymm3, %ymm3, %ymm5
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       subl	%eax, %eax
 # CHECK-NEXT: 1.     1     2.0    0.0    0.0       subq	%rax, %rax
 # CHECK-NEXT: 2.     1     3.0    0.0    0.0       xorl	%eax, %eax
-# CHECK-NEXT: 3.     1     5.0    0.0    0.0       xorq	%rax, %rax
-# CHECK-NEXT: 4.     1     1.0    1.0    5.0       pcmpgtb	%mm2, %mm2
-# CHECK-NEXT: 5.     1     2.0    0.0    4.0       pcmpgtd	%mm2, %mm2
-# CHECK-NEXT: 6.     1     2.0    0.0    3.0       pcmpgtw	%mm2, %mm2
-# CHECK-NEXT: 7.     1     1.0    1.0    4.0       pcmpgtb	%xmm2, %xmm2
-# CHECK-NEXT: 8.     1     2.0    0.0    3.0       pcmpgtd	%xmm2, %xmm2
+# CHECK-NEXT: 3.     1     4.0    0.0    0.0       xorq	%rax, %rax
+# CHECK-NEXT: 4.     1     1.0    1.0    3.0       pcmpgtb	%mm2, %mm2
+# CHECK-NEXT: 5.     1     2.0    0.0    2.0       pcmpgtd	%mm2, %mm2
+# CHECK-NEXT: 6.     1     2.0    0.0    1.0       pcmpgtw	%mm2, %mm2
+# CHECK-NEXT: 7.     1     1.0    1.0    2.0       pcmpgtb	%xmm2, %xmm2
+# CHECK-NEXT: 8.     1     2.0    0.0    1.0       pcmpgtd	%xmm2, %xmm2
 # CHECK-NEXT: 9.     1     3.0    0.0    0.0       pcmpgtq	%xmm2, %xmm2
 # CHECK-NEXT: 10.    1     6.0    0.0    0.0       pcmpgtw	%xmm2, %xmm2
 # CHECK-NEXT: 11.    1     3.0    3.0    3.0       vpcmpgtb	%xmm3, %xmm3, %xmm3
@@ -493,4 +493,4 @@ vpxor  %ymm3, %ymm3, %ymm5
 # CHECK-NEXT: 80.    1     9.0    0.0    9.0       vxorpd	%ymm1, %ymm1, %ymm3
 # CHECK-NEXT: 81.    1     11.0   1.0    7.0       vpxor	%xmm3, %xmm3, %xmm5
 # CHECK-NEXT: 82.    1     12.0   2.0    6.0       vpxor	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT:        1     9.4    1.0    5.0       <total>
+# CHECK-NEXT:        1     9.4    1.0    4.9       <total>

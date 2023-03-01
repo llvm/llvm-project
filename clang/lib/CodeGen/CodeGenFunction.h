@@ -333,6 +333,7 @@ public:
   // in this header.
   struct CGCoroInfo {
     std::unique_ptr<CGCoroData> Data;
+    bool InSuspendBlock = false;
     CGCoroInfo();
     ~CGCoroInfo();
   };
@@ -340,6 +341,10 @@ public:
 
   bool isCoroutine() const {
     return CurCoro.Data != nullptr;
+  }
+
+  bool inSuspendBlock() const {
+    return isCoroutine() && CurCoro.InSuspendBlock;
   }
 
   /// CurGD - The GlobalDecl for the current function being compiled.

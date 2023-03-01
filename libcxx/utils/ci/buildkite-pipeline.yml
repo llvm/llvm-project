@@ -97,6 +97,7 @@ steps:
     env:
         CC: "gcc-${GCC_STABLE_VERSION}"
         CXX: "g++-${GCC_STABLE_VERSION}"
+        ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -132,6 +133,7 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
+        ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -245,6 +247,7 @@ steps:
     env:
         CC: "gcc-${GCC_STABLE_VERSION}"
         CXX: "g++-${GCC_STABLE_VERSION}"
+        ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -262,6 +265,8 @@ steps:
     env:
         CC: "clang-15"
         CXX: "clang++-15"
+        # TODO LLVM18: Enable clang-tidy
+        # ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -279,6 +284,7 @@ steps:
     env:
         CC: "clang-16"
         CXX: "clang++-16"
+        ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -299,6 +305,7 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -316,6 +323,7 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -333,6 +341,7 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -350,6 +359,7 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -389,6 +399,7 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
+        ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -406,6 +417,7 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
+        ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -423,6 +435,7 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
+        ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -440,6 +453,7 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
+        ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -457,6 +471,7 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
+        ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -474,6 +489,7 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
+        ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -493,6 +509,7 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -510,6 +527,7 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -527,6 +545,7 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -544,6 +563,7 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -561,6 +581,7 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -578,6 +599,7 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -595,6 +617,7 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -612,6 +635,7 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -629,6 +653,7 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -646,6 +671,7 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
+        ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -664,6 +690,7 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
+        ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"

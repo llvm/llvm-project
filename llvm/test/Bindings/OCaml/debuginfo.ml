@@ -290,7 +290,7 @@ let test_variables f dibuilder file_di fun_di =
   *)
   let arg0 = (Llvm.params f).(0) in
   let arg_var = Llvm_debuginfo.dibuild_create_parameter_variable dibuilder ~scope:fun_di
-    ~name:"my_arg" ~argno:0 ~file:file_di ~line:10 ~ty
+    ~name:"my_arg" ~argno:1 ~file:file_di ~line:10 ~ty
     ~always_preserve:false flags_zero
   in
   let argdi = Llvm_debuginfo.dibuild_insert_declare_before dibuilder ~storage:arg0

@@ -45,7 +45,16 @@ target_include_directories(clangTidy INTERFACE
                            ${CLANG_INCLUDE_DIRS}
                            ${LLVM_INCLUDE_DIRS}
                           )
-target_compile_options(clangTidy INTERFACE -fno-rtti)
+target_compile_options(clangTidy INTERFACE
+                       -fno-rtti
+                       -fno-sanitize=address,hwaddress,undefined,thread,leak # ignore any sanitizers
+                      )
+
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  target_compile_options(clangTidy INTERFACE
+                         -fno-sanitize=memory,dataflow
+                        )
+endif()
 
 add_library(cxx-tidy MODULE ${SOURCES})
 target_link_libraries(cxx-tidy clangTidy)

@@ -1897,12 +1897,12 @@ multiclass MUBUFScratchLoadPat_Common <string Instr,
                                 ValueType vt, PatFrag ld> {
   def : GCNPat <
     (vt (ld (MUBUFScratchOffen v4i32:$srsrc, i32:$vaddr,
-                               i32:$soffset, u32imm:$offset))),
+                               i32:$soffset, i32:$offset))),
     (!cast<MUBUF_Pseudo>(Instr # _OFFEN) $vaddr, $srsrc, $soffset, $offset, 0, 0)
   >;
 
   def : GCNPat <
-    (vt (ld (MUBUFScratchOffset v4i32:$srsrc, i32:$soffset, u32imm:$offset))),
+    (vt (ld (MUBUFScratchOffset v4i32:$srsrc, i32:$soffset, i32:$offset))),
     (!cast<MUBUF_Pseudo>(Instr # _OFFSET) $srsrc, $soffset, $offset, 0, 0)
   >;
 }
@@ -1919,12 +1919,12 @@ multiclass MUBUFScratchLoadPat <string Instr,
 multiclass MUBUFScratchLoadPat_D16_Common <string Instr,
                                 ValueType vt, PatFrag ld_frag> {
   def : GCNPat <
-    (ld_frag (MUBUFScratchOffen v4i32:$srsrc, i32:$vaddr, i32:$soffset, u32imm:$offset), vt:$in),
+    (ld_frag (MUBUFScratchOffen v4i32:$srsrc, i32:$vaddr, i32:$soffset, i32:$offset), vt:$in),
     (!cast<MUBUF_Pseudo>(Instr # _OFFEN) $vaddr, $srsrc, $soffset, $offset, $in)
   >;
 
   def : GCNPat <
-    (ld_frag (MUBUFScratchOffset v4i32:$srsrc, i32:$soffset, u32imm:$offset), vt:$in),
+    (ld_frag (MUBUFScratchOffset v4i32:$srsrc, i32:$soffset, i32:$offset), vt:$in),
     (!cast<MUBUF_Pseudo>(Instr # _OFFSET) $srsrc, $soffset, $offset, $in)
   >;
 }
@@ -2022,13 +2022,13 @@ multiclass MUBUFScratchStorePat_Common <string Instr,
                                  RegisterClass rc = VGPR_32> {
   def : GCNPat <
     (st vt:$value, (MUBUFScratchOffen v4i32:$srsrc, i32:$vaddr,
-                                      i32:$soffset, u32imm:$offset)),
+                                      i32:$soffset, i32:$offset)),
     (!cast<MUBUF_Pseudo>(Instr # _OFFEN) rc:$value, $vaddr, $srsrc, $soffset, $offset, 0, 0)
   >;
 
   def : GCNPat <
     (st vt:$value, (MUBUFScratchOffset v4i32:$srsrc, i32:$soffset,
-                                       u32imm:$offset)),
+                                       i32:$offset)),
     (!cast<MUBUF_Pseudo>(Instr # _OFFSET) rc:$value, $srsrc, $soffset, $offset, 0, 0)
   >;
 }

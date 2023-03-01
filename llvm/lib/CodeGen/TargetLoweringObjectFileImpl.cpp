@@ -71,6 +71,10 @@
 using namespace llvm;
 using namespace dwarf;
 
+static cl::opt<bool> JumpTableInFunctionSection(
+    "jumptable-in-function-section", cl::Hidden, cl::init(false),
+    cl::desc("Putting Jump Table in function section"));
+
 static void GetObjCImageInfo(Module &M, unsigned &Version, unsigned &Flags,
                              StringRef &Section) {
   SmallVector<Module::ModuleFlagEntry, 8> ModuleFlags;
@@ -1775,6 +1779,19 @@ MCSection *TargetLoweringObjectFileCOFF::getSectionForJumpTable(
   return getContext().getCOFFSection(
       SecName, Characteristics, Kind, COMDATSymName,
       COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE, UniqueID);
+}
+
+bool TargetLoweringObjectFileCOFF::shouldPutJumpTableInFunctionSection(
+    bool UsesLabelDifference, const Function &F) const {
+  if (TM->getTargetTriple().getArch() == Triple::x86_64) {
+    if (!JumpTableInFunctionSection) {
+      // We can always create relative relocations, so use another section
+      // that can be marked non-executable.
+      return false;
+    }
+  }
+  return TargetLoweringObjectFile::shouldPutJumpTableInFunctionSection(
+    UsesLabelDifference, F);
 }
 
 void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,

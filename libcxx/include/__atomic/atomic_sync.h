@@ -78,7 +78,7 @@ _LIBCPP_HIDE_FROM_ABI void __cxx_atomic_notify_one(__cxx_atomic_impl<_Tp> const 
 template <class _Atp, class _Fn>
 _LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_wait(_Atp*, _Fn && __test_fn)
 {
-    return __libcpp_thread_poll_with_backoff(__test_fn, __spinning_backoff_policy());
+    return std::__libcpp_thread_poll_with_backoff(__test_fn, __spinning_backoff_policy());
 }
 
 #endif // _LIBCPP_HAS_NO_THREADS

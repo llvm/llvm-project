@@ -171,7 +171,6 @@ class PadOp:
                                               Sequence[Attribute]]] = None,
                padding_dimensions: OptionalIntList = None,
                pack_paddings: OptionalIntList = None,
-               hoist_paddings: OptionalIntList = None,
                transpose_paddings: Optional[Union[ArrayAttr, Sequence[Union[
                    ArrayAttr, IntOrAttrList]]]] = None,
                loc=None,
@@ -180,7 +179,6 @@ class PadOp:
     padding_values_attr = _get_array_attr(padding_values)
     padding_dimensions_attr = _get_int_array_attr(padding_dimensions)
     pack_paddings_attr = _get_int_array_attr(pack_paddings)
-    hoist_paddings_attr = _get_int_array_attr(hoist_paddings)
     transpose_paddings_attr = _get_int_int_array_attr(transpose_paddings)
     super().__init__(
         pdl_operation_type,
@@ -188,7 +186,6 @@ class PadOp:
         padding_values=padding_values_attr,
         padding_dimensions=padding_dimensions_attr,
         pack_paddings=pack_paddings_attr,
-        hoist_paddings=hoist_paddings_attr,
         transpose_paddings=transpose_paddings_attr,
         loc=loc,
         ip=ip)

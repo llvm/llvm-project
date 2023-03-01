@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+def flat_ptr_i32_ty : LLVMQualPointerType<llvm_i32_ty, 0>;
+def global_ptr_i32_ty : LLVMQualPointerType<llvm_i32_ty, 1>;
+
 class AMDGPUReadPreloadRegisterIntrinsic
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
 
@@ -2299,6 +2302,16 @@ def int_amdgcn_swmmac_f32_16x16x32_fp8_fp8 : AMDGPUSWmmacIntrinsicIdx<llvm_anyin
 def int_amdgcn_swmmac_f32_16x16x32_fp8_bf8 : AMDGPUSWmmacIntrinsicIdx<llvm_anyint_ty, llvm_anyint_ty, llvm_anyfloat_ty, llvm_anyint_ty>;
 def int_amdgcn_swmmac_f32_16x16x32_bf8_fp8 : AMDGPUSWmmacIntrinsicIdx<llvm_anyint_ty, llvm_anyint_ty, llvm_anyfloat_ty, llvm_anyint_ty>;
 def int_amdgcn_swmmac_f32_16x16x32_bf8_bf8 : AMDGPUSWmmacIntrinsicIdx<llvm_anyint_ty, llvm_anyint_ty, llvm_anyfloat_ty, llvm_anyint_ty>;
+
+class AMDGPUAtomicCondSub<LLVMType vt, LLVMType pt> : Intrinsic <
+    [vt],
+    [pt,    // vaddr
+     vt],   // vsrc(VGPR)
+    [IntrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>, IntrNoCallback, IntrNoFree], "",
+    [SDNPMemOperand]>;
+
+def int_amdgcn_flat_atomic_cond_sub_u32 : AMDGPUAtomicCondSub<llvm_i32_ty, flat_ptr_i32_ty>;
+def int_amdgcn_global_atomic_cond_sub_u32 : AMDGPUAtomicCondSub<llvm_i32_ty, global_ptr_i32_ty>;
 
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.

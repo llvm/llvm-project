@@ -7,19 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "InterpState.h"
-#include <limits>
-#include "Function.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
-#include "Opcode.h"
-#include "PrimType.h"
 #include "Program.h"
 #include "State.h"
 
 using namespace clang;
 using namespace clang::interp;
-
-using APSInt = llvm::APSInt;
 
 InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
                          Context &Ctx, SourceMapper *M)
@@ -41,11 +35,9 @@ InterpState::~InterpState() {
 }
 
 Frame *InterpState::getCurrentFrame() {
-  if (Current && Current->Caller) {
+  if (Current && Current->Caller)
     return Current;
-  } else {
-    return Parent.getCurrentFrame();
-  }
+  return Parent.getCurrentFrame();
 }
 
 bool InterpState::reportOverflow(const Expr *E, const llvm::APSInt &Value) {

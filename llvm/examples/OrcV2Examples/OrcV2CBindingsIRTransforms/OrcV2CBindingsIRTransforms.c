@@ -21,7 +21,7 @@
 #include "llvm-c/LLJIT.h"
 #include "llvm-c/Support.h"
 #include "llvm-c/Target.h"
-#include "llvm-c/Transforms/Scalar.h"
+#include "llvm-c/Transforms/PassBuilder.h"
 
 #include <stdio.h>
 
@@ -54,11 +54,10 @@ LLVMOrcThreadSafeModuleRef createDemoModule(void) {
 }
 
 LLVMErrorRef myModuleTransform(void *Ctx, LLVMModuleRef Mod) {
-  LLVMPassManagerRef PM = LLVMCreatePassManager();
-  LLVMAddInstructionCombiningPass(PM);
-  LLVMRunPassManager(PM, Mod);
-  LLVMDisposePassManager(PM);
-  return LLVMErrorSuccess;
+  LLVMPassBuilderOptionsRef Options = LLVMCreatePassBuilderOptions();
+  LLVMErrorRef E = LLVMRunPasses(Mod, "instcombine", NULL, Options);
+  LLVMDisposePassBuilderOptions(Options);
+  return E;
 }
 
 LLVMErrorRef transform(void *Ctx, LLVMOrcThreadSafeModuleRef *ModInOut,

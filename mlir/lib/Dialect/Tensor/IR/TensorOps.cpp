@@ -2449,6 +2449,15 @@ LogicalResult PadOp::verify() {
   auto resultType = getResult().getType().cast<RankedTensorType>();
   auto expectedType =
       PadOp::inferResultType(sourceType, getStaticLow(), getStaticHigh());
+  if (!expectedType) {
+    return emitError("failed to infer expectedType from sourceType ")
+           << sourceType << ", specified resultType is " << resultType;
+  }
+  if (resultType.getRank() != expectedType.getRank()) {
+    return emitError("specified type ")
+           << resultType << " does not match the inferred type "
+           << expectedType;
+  }
   for (int i = 0, e = sourceType.getRank(); i < e; ++i) {
     if (resultType.getDimSize(i) == expectedType.getDimSize(i))
       continue;
@@ -2490,10 +2499,12 @@ RankedTensorType PadOp::inferResultType(RankedTensorType sourceType,
                                         ArrayRef<int64_t> staticHigh,
                                         ArrayRef<int64_t> resultShape) {
   unsigned rank = sourceType.getRank();
-  assert(staticLow.size() == rank && "unexpected staticLow size mismatch");
-  assert(staticHigh.size() == rank && "unexpected staticHigh size mismatch");
-  assert((resultShape.empty() || resultShape.size() == rank) &&
-         "unexpected resultShape size mismatch");
+  if (staticLow.size() != rank)
+    return RankedTensorType();
+  if (staticHigh.size() != rank)
+    return RankedTensorType();
+  if (!(resultShape.empty() || resultShape.size() == rank))
+    return RankedTensorType();
 
   SmallVector<int64_t, 4> inferredShape;
   for (auto i : llvm::seq<unsigned>(0, rank)) {

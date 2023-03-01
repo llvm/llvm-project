@@ -1304,6 +1304,10 @@ defm : FlatAtomicPat <"FLAT_ATOMIC_CMPSWAP_X2", "AMDGPUatomic_cmp_swap_"#as, i64
 defm : FlatAtomicPat <"FLAT_ATOMIC_XOR_X2", "atomic_load_xor_"#as, i64>;
 } // end foreach as
 
+let OtherPredicates = [isGFX12Plus] in {
+defm : FlatSignedAtomicIntrPat<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_flat_atomic_cond_sub_u32", i32>;
+}
+
 def : FlatStorePat <FLAT_STORE_BYTE, truncstorei8_flat, i16>;
 def : FlatStorePat <FLAT_STORE_SHORT, store_flat, i16>;
 
@@ -1376,10 +1380,10 @@ multiclass GlobalFLATAtomicStorePats<FLAT_Pseudo inst, SDPatternOperator node, V
 multiclass GlobalFLATAtomicPatsNoRtnBase<string inst, string node, ValueType vt,
                                          ValueType data_vt = vt> {
   let AddedComplexity = 11 in
-  def : FlatSignedAtomicPatBase<!cast<FLAT_Pseudo>(inst), !cast<PatFrags>(node), vt, data_vt>;
+  def : FlatSignedAtomicPatBase<!cast<FLAT_Pseudo>(inst), !cast<SDPatternOperator>(node), vt, data_vt>;
 
   let AddedComplexity = 13 in
-  def : GlobalAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR"), !cast<PatFrags>(node), vt, data_vt>;
+  def : GlobalAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR"), !cast<SDPatternOperator>(node), vt, data_vt>;
 }
 
 multiclass GlobalFLATAtomicPatsRtnBase<string inst, string node, ValueType vt,
@@ -1572,6 +1576,10 @@ defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_OR_X2", "atomic_load_or_global", i64
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_SWAP_X2", "atomic_swap_global", i64>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_CMPSWAP_X2", "AMDGPUatomic_cmp_swap_global", i64, v2i64>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_XOR_X2", "atomic_load_xor_global", i64>;
+
+let OtherPredicates = [isGFX12Plus] in {
+defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_COND_SUB_U32", "int_amdgcn_global_atomic_cond_sub_u32", i32>;
+}
 
 let OtherPredicates = [isGFX10Plus] in {
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_FMIN", "atomic_load_fmin_global", f32>;
