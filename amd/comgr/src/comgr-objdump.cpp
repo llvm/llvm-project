@@ -671,7 +671,7 @@ public:
     OS << left_justify(IS.str(), 60)
        << format("// %012" PRIX64 ": ", Address.Address);
     typedef support::ulittle32_t U32;
-    for (auto D : makeArrayRef(reinterpret_cast<const U32 *>(Bytes.data()),
+    for (auto D : ArrayRef(reinterpret_cast<const U32 *>(Bytes.data()),
                                Bytes.size() / sizeof(U32))) {
       // D should be explicitly casted to uint32_t here as it is passed
       // by format to snprintf as vararg.

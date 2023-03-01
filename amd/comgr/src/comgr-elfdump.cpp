@@ -102,7 +102,7 @@ void printProgramHeaders(const ELFFile<ELFT> &ELF, raw_ostream &OS) {
     OS << "off    " << format(Fmt, (uint64_t)Phdr.p_offset) << "vaddr "
        << format(Fmt, (uint64_t)Phdr.p_vaddr) << "paddr "
        << format(Fmt, (uint64_t)Phdr.p_paddr)
-       << format("align 2**%u\n", countTrailingZeros<uint64_t>(Phdr.p_align))
+       << format("align 2**%u\n", countr_zero<uint64_t>(Phdr.p_align))
        << "         filesz " << format(Fmt, (uint64_t)Phdr.p_filesz) << "memsz "
        << format(Fmt, (uint64_t)Phdr.p_memsz) << "flags "
        << ((Phdr.p_flags & ELF::PF_R) ? "r" : "-")

@@ -615,7 +615,7 @@ static amd_comgr_status_t linkWithLLD(llvm::ArrayRef<const char *> Args,
   LLDArgs.insert(LLDArgs.begin(), "lld");
   LLDArgs.push_back("--threads=1");
 
-  ArrayRef<const char *> ArgRefs = llvm::makeArrayRef(LLDArgs);
+  ArrayRef<const char *> ArgRefs = llvm::ArrayRef(LLDArgs);
   bool LLDRet = lld::elf::link(ArgRefs, LogS, LogE, false, false);
   lld::CommonLinkerContext::destroy();
   if (!LLDRet) {
