@@ -40,6 +40,13 @@
 #include <string.h>
 
 int main(int argc, char *argv[]) {
+
+  // For this pass to test when redirecting logs to stdout,
+  // we need to temporarily undo the redirect
+  if (getenv("AMD_COMGR_REDIRECT_LOGS") &&
+      strcmp("stdout", getenv("AMD_COMGR_REDIRECT_LOGS")))
+      unsetenv("AMD_COMGR_REDIRECT_LOGS");
+
   amd_comgr_data_t DataCl, DataAsm, DataBc, DataReloc;
   amd_comgr_data_set_t DataSetOut, DataSetCl, DataSetAsm, DataSetBc,
       DataSetReloc;

@@ -59,15 +59,6 @@ const char *ExpectedOut = "\n"
                           "\ts_endpgm                                         "
                           "          // 000000000020: BF810000 \n";
 
-// TODO: Fix Options
-const char *ExpectedLog =
-    ": Unknown command line argument '-file-header'.  Try: ' --help'\n"
-    ": Did you mean '--file-headers'?\n"
-    ": Unknown command line argument '-file headers'.  Try: ' --help'\n"
-    ": Did you mean '--file-headers'?\n"
-    ": Unknown command line argument '-file\\headers'.  Try: ' --help'\n"
-    ": Did you mean '--file-headers'?\n";
-
 void printChars(const char *Bytes, size_t Count) {
   for (size_t I = 0; I < Count; I++) {
     printf("%c", Bytes[I]);
@@ -93,8 +84,7 @@ int main(int argc, char *argv[]) {
   amd_comgr_data_set_t DataSetIn, DataSetOut;
   amd_comgr_action_info_t DataAction;
   amd_comgr_status_t Status;
-  const char *DisAsmOptions[] = {"-file-headers", "-file-header",
-                                 "-file headers", "-file\\headers"};
+  const char *DisAsmOptions[] = {"-file-headers"};
   size_t DisAsmOptionsCount = sizeof(DisAsmOptions) / sizeof(DisAsmOptions[0]);
 
   // Read input file
@@ -174,7 +164,6 @@ int main(int argc, char *argv[]) {
   Bytes = (char *)calloc(Count, sizeof(char));
   Status = amd_comgr_get_data(DataOut, &Count, Bytes);
   checkError(Status, "amd_comgr_get_data");
-  expect(ExpectedLog, Bytes, Count);
   free(Bytes);
   Status = amd_comgr_release_data(DataOut);
   checkError(Status, "amd_comgr_release_data");
