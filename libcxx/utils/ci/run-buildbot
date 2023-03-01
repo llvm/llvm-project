@@ -448,12 +448,6 @@ generic-abi-unstable)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-abi-unstable.cmake"
     check-runtimes
 ;;
-apple-cxx20)
-    clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx20.cmake"
-    check-runtimes
-    check-abi-list
-;;
 apple-system)
     clean
 
