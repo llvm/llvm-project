@@ -1085,7 +1085,7 @@ bool TraceRecorder::instrumentAtomic(Instruction *I, const DataLayout &DL) {
     const unsigned BitSize = ByteSize * 8;
     Type *Ty = Type::getIntNTy(IRB.getContext(), BitSize);
     Type *PtrTy = Ty->getPointerTo();
-    Type *OrigTy = cast<PointerType>(Addr->getType())->getPointerElementType();
+    Type *OrigTy = SI->getValueOperand()->getType();
     Value *Args[] = {IRB.CreatePointerCast(Addr, PtrTy),
                      IRB.CreateBitOrPointerCast(SI->getValueOperand(), Ty),
                      createOrdering(&IRB, SI->getOrdering()),
@@ -1106,7 +1106,7 @@ bool TraceRecorder::instrumentAtomic(Instruction *I, const DataLayout &DL) {
     const unsigned BitSize = ByteSize * 8;
     Type *Ty = Type::getIntNTy(IRB.getContext(), BitSize);
     Type *PtrTy = Ty->getPointerTo();
-    Type *OrigTy = cast<PointerType>(Addr->getType())->getPointerElementType();
+    Type *OrigTy = RMWI->getValOperand()->getType();
     Value *Args[] = {IRB.CreatePointerCast(Addr, PtrTy),
                      IRB.CreateIntCast(RMWI->getValOperand(), Ty, false),
                      createOrdering(&IRB, RMWI->getOrdering()),
@@ -1124,7 +1124,7 @@ bool TraceRecorder::instrumentAtomic(Instruction *I, const DataLayout &DL) {
     const unsigned BitSize = ByteSize * 8;
     Type *Ty = Type::getIntNTy(IRB.getContext(), BitSize);
     Type *PtrTy = Ty->getPointerTo();
-    Type *OrigTy = cast<PointerType>(Addr->getType())->getPointerElementType();
+    Type *OrigTy = CASI->getNewValOperand()->getType();
     Value *CmpOperand =
         IRB.CreateBitOrPointerCast(CASI->getCompareOperand(), Ty);
     Value *NewOperand =
