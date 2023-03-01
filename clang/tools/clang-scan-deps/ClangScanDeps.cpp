@@ -493,13 +493,12 @@ handleIncludeTreeToolResult(llvm::cas::ObjectStore &CAS,
 
 static bool outputFormatRequiresCAS() {
   switch (Format) {
-    case ScanningOutputFormat::Make:
-    case ScanningOutputFormat::Full:
-      return false;
     case ScanningOutputFormat::Tree:
     case ScanningOutputFormat::FullTree:
     case ScanningOutputFormat::IncludeTree:
       return true;
+    default:
+      return false;
   }
 }
 
