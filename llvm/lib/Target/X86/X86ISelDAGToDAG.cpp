@@ -4007,7 +4007,7 @@ bool X86DAGToDAGISel::tryShiftAmountMod(SDNode *N) {
     if (Add1C && Add1C->getAPIntValue().urem(Size) == 0) {
       NewShiftAmt = Add0;
 
-    } else if (ShiftAmt->getOpcode() != ISD::ADD &&
+    } else if (ShiftAmt->getOpcode() != ISD::ADD && ShiftAmt.hasOneUse() &&
                ((Add0C && Add0C->getAPIntValue().urem(Size) == Size - 1) ||
                 (Add1C && Add1C->getAPIntValue().urem(Size) == Size - 1))) {
       // If we are doing a NOT on just the lower bits with (Size*N-1) -/^ X
