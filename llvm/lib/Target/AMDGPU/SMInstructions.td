@@ -858,7 +858,7 @@ def S_DCACHE_INV_VOL_ci : SMRD_Real_ci <0x1d, S_DCACHE_INV_VOL>;
 // Scalar Memory Patterns
 //===----------------------------------------------------------------------===//
 
-def smrd_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{ return isUniformLoad(N);}]> {
+class SMRDLoadPat<PatFrag Op> : PatFrag <(ops node:$ptr), (Op node:$ptr), [{ return isUniformLoad(N);}]> {
   let GISelPredicateCode = [{
     if (!MI.hasOneMemOperand())
       return false;
@@ -874,6 +874,12 @@ def smrd_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{ return isUniformL
     return true;
   }];
 }
+
+def smrd_load : SMRDLoadPat<load>;
+def smrd_zextloadi8 : SMRDLoadPat<zextloadi8_constant>;
+def smrd_sextloadi8 : SMRDLoadPat<sextloadi8_constant>;
+def smrd_zextloadi16 : SMRDLoadPat<zextloadi16_constant>;
+def smrd_sextloadi16 : SMRDLoadPat<sextloadi16_constant>;
 
 def smrd_prefetch : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
                              (prefetch node:$ptr, node:$rw, node:$loc, node:$type),
@@ -959,7 +965,7 @@ multiclass SMLoad_Pattern <string Instr, ValueType vt> {
   }
 }
 
-multiclass SLoadPatternWithExtension <string Instr, SDPatternOperator node, ValueType vt> {
+multiclass ScalarLoadWithExtensionPat <string Instr, SDPatternOperator node, ValueType vt> {
    // 1. IMM offset
    def : GCNPat <
      (node (SMRDImm i64:$sbase, i32:$offset)),
@@ -1013,10 +1019,10 @@ multiclass ScalarBufferLoadIntrinsicPat <SDPatternOperator name, string Instr> {
 // selector to prefer those.
 let AddedComplexity = 100 in {
 
-defm : SLoadPatternWithExtension <"S_LOAD_U8", zextloadi8_constant, i32>;
-defm : SLoadPatternWithExtension <"S_LOAD_I8", sextloadi8_constant, i32>;
-defm : SLoadPatternWithExtension <"S_LOAD_U16", zextloadi16_constant, i32>;
-defm : SLoadPatternWithExtension <"S_LOAD_I16", sextloadi16_constant, i32>;
+defm : ScalarLoadWithExtensionPat <"S_LOAD_U8", smrd_zextloadi8, i32>;
+defm : ScalarLoadWithExtensionPat <"S_LOAD_I8", smrd_sextloadi8, i32>;
+defm : ScalarLoadWithExtensionPat <"S_LOAD_U16", smrd_zextloadi16, i32>;
+defm : ScalarLoadWithExtensionPat <"S_LOAD_I16", smrd_sextloadi16, i32>;
 defm : ScalarBufferLoadIntrinsicPat <SIsbuffer_load_byte, "S_BUFFER_LOAD_I8">;
 defm : ScalarBufferLoadIntrinsicPat <SIsbuffer_load_ubyte, "S_BUFFER_LOAD_U8">;
 defm : ScalarBufferLoadIntrinsicPat <SIsbuffer_load_short, "S_BUFFER_LOAD_I16">;
