@@ -859,10 +859,9 @@ struct TargetTypeInfo {
 static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   LLVMContext &C = Ty->getContext();
   StringRef Name = Ty->getName();
-  if (Name.startswith("spirv.") || Name.startswith("opencl.")) {
+  if (Name.startswith("spirv."))
     return TargetTypeInfo(Type::getInt8PtrTy(C, 0), TargetExtType::HasZeroInit,
                           TargetExtType::CanBeGlobal);
-  }
 
   // Opaque types in the AArch64 name space.
   if (Name == "aarch64.svcount")
