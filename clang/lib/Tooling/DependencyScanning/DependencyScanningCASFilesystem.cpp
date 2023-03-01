@@ -165,6 +165,8 @@ void DependencyScanningCASFilesystem::scanForDirectives(
   if (std::optional<CASID> OutputID =
           reportAsFatalIfError(Cache.get(*InputID))) {
     if (std::optional<ObjectRef> OutputRef = CAS.getReference(*OutputID)) {
+      if (OutputRef == EmptyBlobID)
+        return; // Cached directive scanning failure.
       reportAsFatalIfError(
           loadDepDirectives(CAS, *OutputRef, Tokens, Directives));
       return;
