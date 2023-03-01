@@ -206,6 +206,7 @@ def SIbuffer_atomic_csub : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_CSUB">;
 def SIbuffer_atomic_fadd : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FADD">;
 def SIbuffer_atomic_fmin : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FMIN">;
 def SIbuffer_atomic_fmax : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FMAX">;
+def SIbuffer_atomic_cond_sub_u32 : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_COND_SUB_U32">;
 
 multiclass SDBufferAtomicNoRet {
   def "_noret" : PatFrag<
@@ -233,6 +234,7 @@ defm SIbuffer_atomic_dec : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_fadd : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_fmin : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_fmax : SDBufferAtomicNoRet;
+defm SIbuffer_atomic_cond_sub_u32 : SDBufferAtomicNoRet;
 
 def SIbuffer_atomic_cmpswap : SDNode <"AMDGPUISD::BUFFER_ATOMIC_CMPSWAP",
   SDTypeProfile<1, 9,

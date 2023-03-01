@@ -259,13 +259,13 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
         ActiveConfiguration = self._fetch_property(project.Properties, 'ActiveConfiguration').Object
         ActiveConfiguration.DebugSettings.CommandArguments = cmdline_str
 
-        self._fn_go()
+        self._fn_go(False)
 
     def step(self):
-        self._fn_step()
+        self._fn_step(False)
 
     def go(self) -> ReturnCode:
-        self._fn_go()
+        self._fn_go(False)
         return ReturnCode.OK
 
     def set_current_stack_frame(self, idx: int = 0):

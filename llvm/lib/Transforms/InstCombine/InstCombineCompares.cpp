@@ -1382,11 +1382,8 @@ Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
   if (TrueBB == FalseBB)
     return nullptr;
 
-  // Try to simplify this compare to T/F based on the dominating condition.
-  std::optional<bool> Imp =
-      isImpliedCondition(DomCond, &Cmp, DL, TrueBB == CmpBB);
-  if (Imp)
-    return replaceInstUsesWith(Cmp, ConstantInt::get(Cmp.getType(), *Imp));
+  // We already checked simple implication in InstSimplify, only handle complex
+  // cases here.
 
   CmpInst::Predicate Pred = Cmp.getPredicate();
   Value *X = Cmp.getOperand(0), *Y = Cmp.getOperand(1);

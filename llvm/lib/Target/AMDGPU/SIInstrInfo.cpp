@@ -8208,17 +8208,13 @@ bool SIInstrInfo::isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,
        AddrSpace == AMDGPUAS::GLOBAL_ADDRESS))
     return false;
 
-  bool AllowNegative =
-      FlatVariant != SIInstrFlags::FLAT || AMDGPU::isGFX12Plus(ST);
-  if (ST.hasNegativeScratchOffsetBug() &&
-      FlatVariant == SIInstrFlags::FlatScratch)
-    AllowNegative = false;
   if (ST.hasNegativeUnalignedScratchOffsetBug() &&
       FlatVariant == SIInstrFlags::FlatScratch && Offset < 0 &&
       (Offset % 4) != 0) {
     return false;
   }
 
+  bool AllowNegative = allowNegativeFlatOffset(FlatVariant);
   unsigned N = AMDGPU::getNumFlatOffsetBits(ST);
   return isIntN(N, Offset) && (AllowNegative || Offset >= 0);
 }
@@ -8229,12 +8225,10 @@ SIInstrInfo::splitFlatOffset(int64_t COffsetVal, unsigned AddrSpace,
                              uint64_t FlatVariant) const {
   int64_t RemainderOffset = COffsetVal;
   int64_t ImmField = 0;
-  bool AllowNegative = FlatVariant != SIInstrFlags::FLAT;
-  if (ST.hasNegativeScratchOffsetBug() &&
-      FlatVariant == SIInstrFlags::FlatScratch)
-    AllowNegative = false;
 
+  bool AllowNegative = allowNegativeFlatOffset(FlatVariant);
   const unsigned NumBits = AMDGPU::getNumFlatOffsetBits(ST) - 1;
+
   if (AllowNegative) {
     // Use signed division by a power of two to truncate towards 0.
     int64_t D = 1LL << NumBits;
@@ -8256,6 +8250,14 @@ SIInstrInfo::splitFlatOffset(int64_t COffsetVal, unsigned AddrSpace,
   assert(isLegalFLATOffset(ImmField, AddrSpace, FlatVariant));
   assert(RemainderOffset + ImmField == COffsetVal);
   return {ImmField, RemainderOffset};
+}
+
+bool SIInstrInfo::allowNegativeFlatOffset(uint64_t FlatVariant) const {
+  if (ST.hasNegativeScratchOffsetBug() &&
+      FlatVariant == SIInstrFlags::FlatScratch)
+    return false;
+
+  return FlatVariant != SIInstrFlags::FLAT || AMDGPU::isGFX12Plus(ST);
 }
 
 // This must be kept in sync with the SIEncodingFamily class in SIInstrInfo.td

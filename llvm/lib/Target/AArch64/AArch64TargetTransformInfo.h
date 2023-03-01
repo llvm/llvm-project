@@ -349,7 +349,7 @@ public:
 
   TailFoldingStyle getPreferredTailFoldingStyle() const {
     if (ST->hasSVE())
-      return TailFoldingStyle::DataAndControlFlow;
+      return TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
     return TailFoldingStyle::DataWithoutLaneMask;
   }
 

@@ -1138,6 +1138,7 @@ def int_amdgcn_raw_buffer_atomic_or : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_xor : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_inc : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_dec : AMDGPURawBufferAtomic;
+def int_amdgcn_raw_buffer_atomic_cond_sub_u32 : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_cmpswap : Intrinsic<
   [llvm_anyint_ty],
   [LLVMMatchType<0>,  // src(VGPR)
@@ -1174,6 +1175,7 @@ def int_amdgcn_struct_buffer_atomic_or : AMDGPUStructBufferAtomic;
 def int_amdgcn_struct_buffer_atomic_xor : AMDGPUStructBufferAtomic;
 def int_amdgcn_struct_buffer_atomic_inc : AMDGPUStructBufferAtomic;
 def int_amdgcn_struct_buffer_atomic_dec : AMDGPUStructBufferAtomic;
+def int_amdgcn_struct_buffer_atomic_cond_sub_u32 : AMDGPUStructBufferAtomic;
 def int_amdgcn_struct_buffer_atomic_cmpswap : Intrinsic<
   [llvm_anyint_ty],
   [LLVMMatchType<0>,  // src(VGPR)
@@ -1311,6 +1313,7 @@ def int_amdgcn_buffer_atomic_umax : AMDGPUBufferAtomic;
 def int_amdgcn_buffer_atomic_and : AMDGPUBufferAtomic;
 def int_amdgcn_buffer_atomic_or : AMDGPUBufferAtomic;
 def int_amdgcn_buffer_atomic_xor : AMDGPUBufferAtomic;
+def int_amdgcn_buffer_atomic_cond_sub_u32 : AMDGPUBufferAtomic;
 def int_amdgcn_buffer_atomic_cmpswap : Intrinsic<
   [llvm_i32_ty],
   [llvm_i32_ty,       // src(VGPR)

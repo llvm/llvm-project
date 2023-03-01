@@ -288,11 +288,16 @@ DebugTranslation::translateLoc(Location loc, llvm::DILocalScope *scope,
     llvmLoc = translateLoc(callLoc.getCallee(), scope, callerLoc);
 
   } else if (auto fileLoc = loc.dyn_cast<FileLineColLoc>()) {
-    auto *file = translateFile(fileLoc.getFilename());
-    auto *fileScope = llvm::DILexicalBlockFile::get(llvmCtx, scope, file,
+    llvm::DILocalScope *locationScope = scope;
+    // Only construct a new DIFile when no local scope is present. This
+    // prioritizes existing DI information when it's present.
+    if (!locationScope) {
+      auto *file = translateFile(fileLoc.getFilename());
+      locationScope = llvm::DILexicalBlockFile::get(llvmCtx, scope, file,
                                                     /*Discriminator=*/0);
+    }
     llvmLoc = llvm::DILocation::get(llvmCtx, fileLoc.getLine(),
-                                    fileLoc.getColumn(), fileScope,
+                                    fileLoc.getColumn(), locationScope,
                                     const_cast<llvm::DILocation *>(inlinedAt));
 
   } else if (auto fusedLoc = loc.dyn_cast<FusedLoc>()) {
