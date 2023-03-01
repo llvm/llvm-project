@@ -4007,7 +4007,7 @@ bool X86DAGToDAGISel::tryShiftAmountMod(SDNode *N) {
     if (Add1C && Add1C->getAPIntValue().urem(Size) == 0) {
       NewShiftAmt = Add0;
 
-    } else if (ShiftAmt->getOpcode() != ISD::ADD &&
+    } else if (ShiftAmt->getOpcode() != ISD::ADD && ShiftAmt.hasOneUse() &&
                ((Add0C && Add0C->getAPIntValue().urem(Size) == Size - 1) ||
                 (Add1C && Add1C->getAPIntValue().urem(Size) == Size - 1))) {
       // If we are doing a NOT on just the lower bits with (Size*N-1) -/^ X
@@ -4021,7 +4021,10 @@ bool X86DAGToDAGISel::tryShiftAmountMod(SDNode *N) {
 
       EVT OpVT = ShiftAmt.getValueType();
 
-      NewShiftAmt = CurDAG->getNOT(DL, Add0C == nullptr ? Add0 : Add1, OpVT);
+      SDValue AllOnes = CurDAG->getAllOnesConstant(DL, OpVT);
+      NewShiftAmt = CurDAG->getNode(ISD::XOR, DL, OpVT,
+                                    Add0C == nullptr ? Add0 : Add1, AllOnes);
+      insertDAGNode(*CurDAG, OrigShiftAmt, AllOnes);
       insertDAGNode(*CurDAG, OrigShiftAmt, NewShiftAmt);
       // If we are shifting by N-X where N == 0 mod Size, then just shift by
       // -X to generate a NEG instead of a SUB of a constant.

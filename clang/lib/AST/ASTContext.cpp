@@ -6683,28 +6683,12 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
         return false;
     }
 
-    // The trailing require clause of instantiated function may change during
-    // the semantic analysis. Trying to get the primary template function (if
-    // exists) to compare the primary trailing require clause.
-    auto TryToGetPrimaryTemplatedFunction =
-        [](const FunctionDecl *FD) -> const FunctionDecl * {
-      switch (FD->getTemplatedKind()) {
-      case FunctionDecl::TK_DependentNonTemplate:
-        return FD->getInstantiatedFromDecl();
-      case FunctionDecl::TK_FunctionTemplate:
-        return FD->getDescribedFunctionTemplate()->getTemplatedDecl();
-      case FunctionDecl::TK_MemberSpecialization:
-        return FD->getInstantiatedFromMemberFunction();
-      case FunctionDecl::TK_FunctionTemplateSpecialization:
-        return FD->getPrimaryTemplate()->getTemplatedDecl();
-      default:
-        return FD;
-      }
-    };
-    const FunctionDecl *PrimaryX = TryToGetPrimaryTemplatedFunction(FuncX);
-    const FunctionDecl *PrimaryY = TryToGetPrimaryTemplatedFunction(FuncY);
-    if (!isSameConstraintExpr(PrimaryX->getTrailingRequiresClause(),
-                              PrimaryY->getTrailingRequiresClause()))
+    if (!isSameConstraintExpr(FuncX->getTrailingRequiresClause(),
+                              FuncY->getTrailingRequiresClause()))
+      return false;
+
+    // Constrained friends are different in certain cases, see: [temp.friend]p9.
+    if (FriendsDifferByConstraints(FuncX, FuncY))
       return false;
 
     auto GetTypeAsWritten = [](const FunctionDecl *FD) {

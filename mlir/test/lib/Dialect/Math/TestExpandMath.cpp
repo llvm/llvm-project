@@ -35,6 +35,7 @@ struct TestExpandMathPass
 void TestExpandMathPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   populateExpandCtlzPattern(patterns);
+  populateExpandTanPattern(patterns);
   populateExpandTanhPattern(patterns);
   (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 }

@@ -996,7 +996,10 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
 
       for (Record *const R : ReqFeatures) {
         const DagInit *D = R->getValueAsDag("AssemblerCondDag");
-        std::string CombineType = D->getOperator()->getAsString();
+        auto *Op = dyn_cast<DefInit>(D->getOperator());
+        if (!Op)
+          PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
+        StringRef CombineType = Op->getDef()->getName();
         if (CombineType != "any_of" && CombineType != "all_of")
           PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
         if (D->getNumArgs() == 0)

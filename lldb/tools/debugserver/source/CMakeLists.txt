@@ -2,8 +2,11 @@ include(CheckCXXCompilerFlag)
 include(CheckLibraryExists)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/..)
 include_directories(${LLDB_SOURCE_DIR}/source)
-
 include_directories(MacOSX)
+include_directories(MacOSX/i386)
+include_directories(MacOSX/x86_64)
+include_directories(MacOSX/arm)
+include_directories(MacOSX/arm64)
 
 function(check_certificate identity result_valid)
   execute_process(
@@ -107,8 +110,6 @@ if (BUILDING_FOR_ARM64_OSX AND LLDB_ENABLE_ARM64E_DEBUGSERVER)
 endif ()
 
 find_library(SECURITY_LIBRARY Security)
-
-add_subdirectory(MacOSX)
 
 set(LLDB_CODESIGN_IDENTITY "" CACHE STRING
     "Identity override for debugserver; see 'Code Signing on macOS' in the documentation (Darwin only)")
@@ -227,6 +228,10 @@ set(lldbDebugserverCommonSources
   MacOSX/MachVMMemory.cpp
   MacOSX/MachVMRegion.cpp
   MacOSX/OsLogger.cpp
+  MacOSX/arm/DNBArchImpl.cpp
+  MacOSX/arm64/DNBArchImplARM64.cpp
+  MacOSX/i386/DNBArchImplI386.cpp
+  MacOSX/x86_64/DNBArchImplX86_64.cpp
   ${generated_mach_interfaces}
   ${DEBUGSERVER_VERS_GENERATED_FILE})
 
@@ -248,7 +253,6 @@ target_link_libraries(lldbDebugserverCommon
                       ${MOBILESERVICES_LIBRARY}
                       ${LOCKDOWN_LIBRARY}
                       ${CAROUSELSERVICES_LIBRARY}
-                      lldbDebugserverArchSupport
                       ${FOUNDATION_LIBRARY}
                       ${SECURITY_LIBRARY}
                       ${LIBCOMPRESSION}
@@ -313,7 +317,6 @@ if(APPLE_EMBEDDED)
                       INTERFACE ${COCOA_LIBRARY}
                       ${CORE_FOUNDATION_LIBRARY}
                       ${FOUNDATION_LIBRARY}
-                      lldbDebugserverArchSupport
                       ${SECURITY_LIBRARY}
                       ${LIBCOMPRESSION})
 

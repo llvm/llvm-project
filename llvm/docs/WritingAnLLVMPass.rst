@@ -1263,7 +1263,7 @@ Then you need to declare the registry.  Example: if your pass registry is
 
 .. code-block:: c++
 
-  MachinePassRegistry RegisterMyPasses::Registry;
+  MachinePassRegistry<RegisterMyPasses::FunctionPassCtor> RegisterMyPasses::Registry;
 
 And finally, declare the command line option for your passes.  Example:
 
