@@ -790,6 +790,7 @@ public:
     SLPLoad,
     SLPStore,
     ActiveLaneMask,
+    CalculateTripCountMinusVF,
     CanonicalIVIncrement,
     CanonicalIVIncrementNUW,
     // The next two are similar to the above, but instead increment the
@@ -892,6 +893,7 @@ public:
     default:
       return false;
     case VPInstruction::ActiveLaneMask:
+    case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrement:
     case VPInstruction::CanonicalIVIncrementNUW:
     case VPInstruction::CanonicalIVIncrementForPart:
