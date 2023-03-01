@@ -12,33 +12,35 @@
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
-#include "llvm-c/BitReader.h"
-#include "llvm-c/Core.h"
 #include "caml/alloc.h"
+#include "caml/callback.h"
 #include "caml/fail.h"
 #include "caml/memory.h"
-#include "caml/callback.h"
+#include "llvm_ocaml.h"
+#include "llvm-c/BitReader.h"
+#include "llvm-c/Core.h"
 
 void llvm_raise(value Prototype, char *Message);
 
 /* Llvm.llcontext -> Llvm.llmemorybuffer -> Llvm.llmodule */
-LLVMModuleRef llvm_get_module(LLVMContextRef C, LLVMMemoryBufferRef MemBuf) {
+value llvm_get_module(value C, value MemBuf) {
   LLVMModuleRef M;
 
-  if (LLVMGetBitcodeModuleInContext2(C, MemBuf, &M))
+  if (LLVMGetBitcodeModuleInContext2(Context_val(C), MemoryBuffer_val(MemBuf),
+                                     &M))
     llvm_raise(*caml_named_value("Llvm_bitreader.Error"),
                LLVMCreateMessage(""));
 
-  return M;
+  return to_val(M);
 }
 
 /* Llvm.llcontext -> Llvm.llmemorybuffer -> Llvm.llmodule */
-LLVMModuleRef llvm_parse_bitcode(LLVMContextRef C, LLVMMemoryBufferRef MemBuf) {
+value llvm_parse_bitcode(value C, value MemBuf) {
   LLVMModuleRef M;
 
-  if (LLVMParseBitcodeInContext2(C, MemBuf, &M))
+  if (LLVMParseBitcodeInContext2(Context_val(C), MemoryBuffer_val(MemBuf), &M))
     llvm_raise(*caml_named_value("Llvm_bitreader.Error"),
                LLVMCreateMessage(""));
 
-  return M;
+  return to_val(M);
 }
