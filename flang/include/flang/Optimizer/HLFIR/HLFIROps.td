@@ -763,4 +763,34 @@ def hlfir_CopyOutOp : hlfir_Op<"copy_out", []> {
   }];
 }
 
+def hlfir_ShapeOfOp : hlfir_Op<"shape_of", [Pure]> {
+  let summary = "Get the shape of a hlfir.expr";
+  let description = [{
+    Gets the runtime shape of a hlfir.expr. In lowering to FIR, the
+    hlfir.shape_of operation will be replaced by an fir.shape.
+    It is not valid to request the shape of a hlfir.expr which has no shape.
+  }];
+
+  let arguments = (ins hlfir_ExprType:$expr);
+
+  let results = (outs fir_ShapeType);
+
+  let hasVerifier = 1;
+
+  // If all extents are known at compile time, the hlfir.shape_of can be
+  // immediately folded into a fir.shape operation. This makes information
+  // available sooner to inform bufferization decisions
+  let hasCanonicalizeMethod = 1;
+
+  let extraClassDeclaration = [{
+    std::size_t getRank();
+  }];
+
+  let assemblyFormat = [{
+    $expr attr-dict `:` functional-type(operands, results)
+  }];
+
+  let builders = [OpBuilder<(ins "mlir::Value":$expr)>];
+}
+
 #endif // FORTRAN_DIALECT_HLFIR_OPS
