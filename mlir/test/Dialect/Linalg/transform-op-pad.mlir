@@ -117,9 +117,9 @@ func.func @pad(%arg0: tensor<24x12xf32>,
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  // expected-error @below {{expects a padding that parses to 'f32', got "foo"}}
+  // expected-error @below {{expects a padding that parses to 'f32', got "{foo}"}}
   %1 = transform.structured.pad %0 {
-    padding_values=["foo", 0.0 : f32, 0.0 : f32],
+    padding_values=["{foo}", 0.0 : f32, 0.0 : f32],
     padding_dimensions=[0, 1, 2],
     pack_paddings=[1, 1, 0]
   }
