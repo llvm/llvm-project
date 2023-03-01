@@ -783,8 +783,15 @@ int main(int argc, const char **argv) {
   std::atomic<bool> HadErrors(false);
   std::optional<FullDeps> FD;
   P1689Deps PD;
+
   std::mutex Lock;
   size_t Index = 0;
+  auto GetNextInputIndex = [&]() -> std::optional<size_t> {
+    std::unique_lock<std::mutex> LockGuard(Lock);
+    if (Index < Inputs.size())
+      return Index++;
+    return {};
+  };
 
   if (Format == ScanningOutputFormat::Full)
     FD.emplace(ModuleName.empty() ? Inputs.size() : 0);
@@ -794,24 +801,14 @@ int main(int argc, const char **argv) {
                  << " files using " << Pool.getThreadCount() << " workers\n";
   }
   for (unsigned I = 0; I < Pool.getThreadCount(); ++I) {
-    Pool.async([I, &Lock, &Index, &Inputs, &HadErrors, &FD, &PD, &WorkerTools,
-                &DependencyOS, &Errs]() {
+    Pool.async([&, I]() {
       llvm::StringSet<> AlreadySeenModules;
-      while (true) {
-        const tooling::CompileCommand *Input;
-        std::string Filename;
-        std::string CWD;
-        size_t LocalIndex;
-        // Take the next input.
-        {
-          std::unique_lock<std::mutex> LockGuard(Lock);
-          if (Index >= Inputs.size())
-            return;
-          LocalIndex = Index;
-          Input = &Inputs[Index++];
-          Filename = std::move(Input->Filename);
-          CWD = std::move(Input->Directory);
-        }
+      while (auto MaybeInputIndex = GetNextInputIndex()) {
+        size_t LocalIndex = *MaybeInputIndex;
+        const tooling::CompileCommand *Input = &Inputs[LocalIndex];
+        std::string Filename = std::move(Input->Filename);
+        std::string CWD = std::move(Input->Directory);
+
         std::optional<StringRef> MaybeModuleName;
         if (!ModuleName.empty())
           MaybeModuleName = ModuleName;
