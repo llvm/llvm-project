@@ -127,6 +127,25 @@ Value LoopEmitter::genAddress(OpBuilder &builder, Location loc, size_t tid,
   return add;
 }
 
+Value LoopEmitter::genSparseCoord(OpBuilder &builder, Location loc, size_t tid,
+                                  size_t l) {
+  Value c = constantIndex(builder, loc, 0);
+  auto reass = getCollapseReassociation(tid, l);
+  for (unsigned i = 0; i < reass.size(); i++) {
+    auto lvl = reass[i];
+    // A load on the indices array yields the coordinate.
+    Value ptr = idxBuffer[tid][lvl];
+    Value off = genIndexLoad(builder, loc, ptr, pidxs[tid][l]);
+    // Linearized the coordinates within the same collapse reassociation.
+    c = builder.create<arith::AddIOp>(loc, c, off);
+    if (i != reass.size() - 1) {
+      c = builder.create<arith::MulIOp>(loc, c,
+                                        this->lvlSizes[tid][reass[i + 1]]);
+    }
+  }
+  return c;
+}
+
 LoopEmitter::LoopEmitter(ValueRange tensors, StringAttr loopTag, bool hasOutput,
                          bool isSparseOut, ArrayRef<unsigned> topSort) {
   initialize(tensors, loopTag, hasOutput, isSparseOut, topSort);
@@ -383,20 +402,9 @@ Operation *LoopEmitter::enterLoopOverTensorAtDim(
   Value c;
   if (isSparseInput) {
     assert(reass.size() == 1 || isUniqueCOOType(tensors[tid].getType()));
-    c = constantIndex(builder, loc, 0);
-    for (unsigned i = 0; i < reass.size(); i++) {
-      auto lvl = reass[i];
-      // For COO, the pidxs are always the same across consecutive levels.
-      pidxs[tid][lvl] = iv;
-      // Generating a load on the indices array yields the coordinate.
-      Value ptr = idxBuffer[tid][lvl];
-      Value off = genIndexLoad(builder, loc, ptr, iv);
-      c = builder.create<arith::AddIOp>(loc, c, off);
-      if (i != reass.size() - 1) {
-        c = builder.create<arith::MulIOp>(loc, c,
-                                          this->lvlSizes[tid][reass[i + 1]]);
-      }
-    }
+    // For COO, the position is the same across consecutive levels.
+    llvm::for_each(reass, [this, tid, iv](int lvl) { pidxs[tid][lvl] = iv; });
+    c = genSparseCoord(builder, loc, tid, dim);
   } else {
     // Dense tensor, the coordinates is the inducation variable.
     c = iv;
@@ -555,16 +563,22 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtDims(
   builder.setInsertionPointToStart(&whileOp.getBefore().front());
   Value cond;
   unsigned o = 0;
-  for (auto [tid, dim] : llvm::zip(tids, dims)) {
-    if (isCompressedDLT(dimTypes[tid][dim]) ||
-        isSingletonDLT(dimTypes[tid][dim])) {
+  for (auto [t, lvl] : llvm::zip(tids, dims)) {
+    unsigned tid = t; // Why `t` can not be captured by lambda?
+    if (isCompressedDLT(dimTypes[tid][lvl]) ||
+        isSingletonDLT(dimTypes[tid][lvl])) {
       Value op1 = before->getArgument(o);
-      Value op2 = highs[tid][dim];
+      Value op2 = highs[tid][lvl];
       Value opc = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
                                                 op1, op2);
       cond = cond ? builder.create<arith::AndIOp>(loc, cond, opc) : opc;
-      // Update
-      pidxs[tid][dim] = after->getArgument(o++);
+      // Update positions
+      Value pos = after->getArgument(o++);
+      auto reass = getCollapseReassociation(tid, lvl);
+      assert(reass.size() == 1 || isUniqueCOOType(tensors[tid].getType()));
+      // For COO, the position is the same across consecutive levels.
+      llvm::for_each(reass,
+                     [this, tid, pos](int lvl) { pidxs[tid][lvl] = pos; });
     }
   }
   builder.create<scf::ConditionOp>(loc, cond, before->getArguments());
@@ -578,11 +592,10 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtDims(
     // Prepares for next level.
     if (isCompressedDLT(dimTypes[tid][dim]) ||
         isSingletonDLT(dimTypes[tid][dim])) {
-      Value ptr = idxBuffer[tid][dim];
-      Value s = pidxs[tid][dim];
-      Value load = genIndexLoad(builder, loc, ptr, s);
-      coord[tid][dim] = load;
+      coord[tid][dim] = genSparseCoord(builder, loc, tid, dim);
       if (isSparseSlices[tid]) {
+        Value load =
+            genIndexLoad(builder, loc, idxBuffer[tid][dim], pidxs[tid][dim]);
         auto enc = getSparseTensorEncoding(tensors[tid].getType());
         auto [trans, pred] =
             genSliceLegitPredicate(builder, loc, load, enc, dim);

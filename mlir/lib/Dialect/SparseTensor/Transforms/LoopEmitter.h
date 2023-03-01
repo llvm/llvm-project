@@ -190,6 +190,10 @@ private:
   Value genAddress(OpBuilder &builder, Location loc, size_t tid, size_t dim,
                    Value iv);
 
+  /// Generates instructions to compute the coordinate of tesnors[tid] on `l`
+  /// under the current loop context.
+  Value genSparseCoord(OpBuilder &builder, Location loc, size_t tid, size_t l);
+
   bool isOutputTensor(size_t tid) {
     return hasOutput && tid == tensors.size() - 1;
   }
