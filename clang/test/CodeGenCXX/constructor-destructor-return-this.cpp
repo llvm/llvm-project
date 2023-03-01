@@ -153,7 +153,7 @@ D::~D() { }
 // CHECKFUCHSIA-LABEL: define{{.*}} %class.D* @_ZN1DD1Ev(%class.D* {{[^,]*}} returned{{[^,]*}} %this)
 
 // CHECKMS-LABEL: define dso_local x86_thiscallcc noundef %class.D* @"??0D@@QAE@XZ"(%class.D* {{[^,]*}} returned{{[^,]*}} %this, i32 noundef %is_most_derived)
-// CHECKMS-LABEL: define dso_local x86_thiscallcc void @"??1D@@UAE@XZ"(%class.D* {{[^,]*}} %this)
+// CHECKMS-LABEL: define dso_local x86_thiscallcc void @"??1D@@UAE@XZ"(i8*{{[^,]*}} %this.coerce)
 
 class E {
 public:
