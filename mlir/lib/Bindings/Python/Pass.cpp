@@ -117,8 +117,8 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
       .def(
           "run",
           [](PyPassManager &passManager, PyModule &module) {
-            MlirLogicalResult status =
-                mlirPassManagerRun(passManager.get(), module.get());
+            MlirLogicalResult status = mlirPassManagerRunOnOp(
+                passManager.get(), mlirModuleGetOperation(module.get()));
             if (mlirLogicalResultIsFailure(status))
               throw SetPyError(PyExc_RuntimeError,
                                "Failure while executing pass pipeline.");
