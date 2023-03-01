@@ -78,6 +78,11 @@ bool isI1Type(mlir::Type);
 // scalar i1 or logical, or sequence of logical (via (boxed?) array or expr)
 bool isMaskArgument(mlir::Type);
 
+/// If an expression's extents are known at compile time, generate a fir.shape
+/// for this expression. Otherwise return {}
+mlir::Value genExprShape(mlir::OpBuilder &builder, const mlir::Location &loc,
+                         const hlfir::ExprType &expr);
+
 } // namespace hlfir
 
 #endif // FORTRAN_OPTIMIZER_HLFIR_HLFIRDIALECT_H
