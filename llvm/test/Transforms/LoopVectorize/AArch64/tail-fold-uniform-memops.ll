@@ -10,6 +10,9 @@ target triple = "aarch64-linux-gnu"
 define void @uniform_load(i32* noalias %dst, i32* noalias readonly %src, i64 %n) #0 {
 ; CHECK-LABEL: @uniform_load(
 ; CHECK:       vector.ph:
+; CHECK:         [[N_MINUS_VF:%.*]] = sub i64 %n, [[VSCALE_X_VF:.*]]
+; CHECK:         [[CMP:%.*]] = icmp ugt i64 %n, [[VSCALE_X_VF]]
+; CHECK:         [[N2:%.*]] = select i1 [[CMP]], i64 [[N_MINUS_VF]], i64 0
 ; CHECK:         [[INIT_ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 0, i64 %n)
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[IDX_NEXT:%.*]], %vector.body ]
@@ -23,8 +26,8 @@ define void @uniform_load(i32* noalias %dst, i32* noalias readonly %src, i64 %n)
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[TMP6]], i32 0
 ; CHECK-NEXT:    [[STORE_PTR:%.*]] = bitcast i32* [[TMP7]] to <4 x i32>*
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> [[TMP5]], <4 x i32>* [[STORE_PTR]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-NEXT:    [[NEXT_ACTIVE_LANE_MASK]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[IDX]], i64 [[N2]])
 ; CHECK-NEXT:    [[IDX_NEXT]] = add i64 [[IDX]], 4
-; CHECK-NEXT:    [[NEXT_ACTIVE_LANE_MASK]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[IDX_NEXT]], i64 %n)
 ; CHECK-NEXT:    [[NOT_ACTIVE_LANE_MASK:%.*]] = xor <4 x i1> [[NEXT_ACTIVE_LANE_MASK]], <i1 true, i1 true, i1 true, i1 true>
 ; CHECK-NEXT:    [[FIRST_LANE_SET:%.*]] = extractelement <4 x i1> [[NOT_ACTIVE_LANE_MASK]], i32 0
 ; CHECK-NEXT:    br i1 [[FIRST_LANE_SET]], label %middle.block, label %vector.body

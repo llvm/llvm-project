@@ -232,6 +232,25 @@ static cl::opt<PreferPredicateTy::Option> PreferPredicateOverEpilogue(
                          "prefers tail-folding, don't attempt vectorization if "
                          "tail-folding fails.")));
 
+static cl::opt<TailFoldingStyle> ForceTailFoldingStyle(
+    "force-tail-folding-style", cl::desc("Force the tail folding style"),
+    cl::init(TailFoldingStyle::None),
+    cl::values(
+        clEnumValN(TailFoldingStyle::None, "none", "Disable tail folding"),
+        clEnumValN(
+            TailFoldingStyle::Data, "data",
+            "Create lane mask for data only, using active.lane.mask intrinsic"),
+        clEnumValN(TailFoldingStyle::DataWithoutLaneMask,
+                   "data-without-lane-mask",
+                   "Create lane mask with compare/stepvector"),
+        clEnumValN(TailFoldingStyle::DataAndControlFlow, "data-and-control",
+                   "Create lane mask using active.lane.mask intrinsic, and use "
+                   "it for both data and control flow"),
+        clEnumValN(
+            TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck,
+            "data-and-control-without-rt-check",
+            "Similar to data-and-control, but remove the runtime check")));
+
 static cl::opt<bool> MaximizeBandwidth(
     "vectorizer-maximize-bandwidth", cl::init(false), cl::Hidden,
     cl::desc("Maximize bandwidth when selecting vectorization factor which "
@@ -1554,18 +1573,15 @@ public:
     if (!CanFoldTailByMasking)
       return TailFoldingStyle::None;
 
+    if (ForceTailFoldingStyle.getNumOccurrences())
+      return ForceTailFoldingStyle;
+
     return TTI.getPreferredTailFoldingStyle();
   }
 
   /// Returns true if all loop blocks should be masked to fold tail loop.
   bool foldTailByMasking() const {
     return getTailFoldingStyle() != TailFoldingStyle::None;
-  }
-
-  /// Returns true if were tail-folding and want to use the active lane mask
-  /// for vector loop control flow.
-  bool useActiveLaneMaskForControlFlow() const {
-    return getTailFoldingStyle() == TailFoldingStyle::DataAndControlFlow;
   }
 
   /// Returns true if the instructions in this block requires predication
@@ -2154,6 +2170,17 @@ public:
   }
 };
 } // namespace
+
+static bool useActiveLaneMask(TailFoldingStyle Style) {
+  return Style == TailFoldingStyle::Data ||
+         Style == TailFoldingStyle::DataAndControlFlow ||
+         Style == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
+}
+
+static bool useActiveLaneMaskForControlFlow(TailFoldingStyle Style) {
+  return Style == TailFoldingStyle::DataAndControlFlow ||
+         Style == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
+}
 
 // Return true if \p OuterLp is an outer loop annotated with hints for explicit
 // vectorization. The loop needs to be annotated with #pragma omp simd
@@ -3020,10 +3047,12 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
         Intrinsic::umax, MinProfTC, createStepForVF(Builder, CountTy, VF, UF));
   };
 
-  if (!Cost->foldTailByMasking())
+  TailFoldingStyle Style = Cost->getTailFoldingStyle();
+  if (Style == TailFoldingStyle::None)
     CheckMinIters =
         Builder.CreateICmp(P, Count, CreateStep(), "min.iters.check");
-  else if (VF.isScalable()) {
+  else if (VF.isScalable() &&
+           Style != TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck) {
     // vscale is not necessarily a power-of-2, which means we cannot guarantee
     // an overflow to zero when updating induction variables and so an
     // additional overflow check is required before entering the vector loop.
@@ -8154,8 +8183,8 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlan &Plan) {
 
     // If we're using the active lane mask for control flow, then we get the
     // mask from the active lane mask PHI that is cached in the VPlan.
-    TailFoldingStyle Style = CM.getTailFoldingStyle();
-    if (Style == TailFoldingStyle::DataAndControlFlow)
+    TailFoldingStyle TFStyle = CM.getTailFoldingStyle();
+    if (useActiveLaneMaskForControlFlow(TFStyle))
       return BlockMaskCache[BB] = Plan.getActiveLaneMaskPhi();
 
     // Introduce the early-exit compare IV <= BTC to form header block mask.
@@ -8170,8 +8199,7 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlan &Plan) {
 
     VPBuilder::InsertPointGuard Guard(Builder);
     Builder.setInsertPoint(HeaderVPBB, NewInsertionPoint);
-    if (Style != TailFoldingStyle::None &&
-        Style != TailFoldingStyle::DataWithoutLaneMask) {
+    if (useActiveLaneMask(TFStyle)) {
       VPValue *TC = Plan.getOrCreateTripCount();
       BlockMask = Builder.createNaryOp(VPInstruction::ActiveLaneMask, {IV, TC},
                                        nullptr, "active.lane.mask");
@@ -8786,9 +8814,7 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, DebugLoc DL,
   CanonicalIVPHI->addOperand(CanonicalIVIncrement);
 
   VPBasicBlock *EB = TopRegion->getExitingBasicBlock();
-  EB->appendRecipe(CanonicalIVIncrement);
-
-  if (Style == TailFoldingStyle::DataAndControlFlow) {
+  if (useActiveLaneMaskForControlFlow(Style)) {
     // Create the active lane mask instruction in the vplan preheader.
     VPBasicBlock *Preheader = Plan.getEntry()->getEntryBasicBlock();
 
@@ -8803,6 +8829,26 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, DebugLoc DL,
 
     // Create the ActiveLaneMask instruction using the correct start values.
     VPValue *TC = Plan.getOrCreateTripCount();
+
+    VPValue *TripCount, *IncrementValue;
+    if (Style == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck) {
+      // When avoiding a runtime check, the active.lane.mask inside the loop
+      // uses a modified trip count and the induction variable increment is
+      // done after the active.lane.mask intrinsic is called.
+      auto *TCMinusVF =
+          new VPInstruction(VPInstruction::CalculateTripCountMinusVF, {TC}, DL);
+      Preheader->appendRecipe(TCMinusVF);
+      IncrementValue = CanonicalIVPHI;
+      TripCount = TCMinusVF;
+    } else {
+      // When the loop is guarded by a runtime overflow check for the loop
+      // induction variable increment by VF, we can increment the value before
+      // the get.active.lane mask and use the unmodified tripcount.
+      EB->appendRecipe(CanonicalIVIncrement);
+      IncrementValue = CanonicalIVIncrement;
+      TripCount = TC;
+    }
+
     auto *EntryALM = new VPInstruction(VPInstruction::ActiveLaneMask,
                                        {CanonicalIVIncrementParts, TC}, DL,
                                        "active.lane.mask.entry");
@@ -8817,14 +8863,20 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, DebugLoc DL,
     CanonicalIVIncrementParts =
         new VPInstruction(HasNUW ? VPInstruction::CanonicalIVIncrementForPartNUW
                                  : VPInstruction::CanonicalIVIncrementForPart,
-                          {CanonicalIVIncrement}, DL);
+                          {IncrementValue}, DL);
     EB->appendRecipe(CanonicalIVIncrementParts);
 
     auto *ALM = new VPInstruction(VPInstruction::ActiveLaneMask,
-                                  {CanonicalIVIncrementParts, TC}, DL,
+                                  {CanonicalIVIncrementParts, TripCount}, DL,
                                   "active.lane.mask.next");
     EB->appendRecipe(ALM);
     LaneMaskPhi->addOperand(ALM);
+
+    if (Style == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck) {
+      // Do the increment of the canonical IV after the active.lane.mask, because
+      // that value is still based off %CanonicalIVPHI
+      EB->appendRecipe(CanonicalIVIncrement);
+    }
 
     // We have to invert the mask here because a true condition means jumping
     // to the exit block.
@@ -8835,6 +8887,8 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, DebugLoc DL,
         new VPInstruction(VPInstruction::BranchOnCond, {NotMask}, DL);
     EB->appendRecipe(BranchBack);
   } else {
+    EB->appendRecipe(CanonicalIVIncrement);
+
     // Add the BranchOnCount VPInstruction to the latch.
     VPInstruction *BranchBack = new VPInstruction(
         VPInstruction::BranchOnCount,
