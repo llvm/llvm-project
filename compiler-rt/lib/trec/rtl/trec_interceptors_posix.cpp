@@ -792,6 +792,7 @@ TREC_INTERCEPTOR(int, pthread_create, void *th, void *attr,
     // Otherwise we see false positives in pthread stack manipulation.
     res = REAL(pthread_create)(th, attr, __trec_thread_start_func, &p);
   }
+  Report("create pthread tid=%d\n", res);
   if (res == 0) {
     int backup = thr->ignore_interceptors;
     thr->ignore_interceptors = 0;
