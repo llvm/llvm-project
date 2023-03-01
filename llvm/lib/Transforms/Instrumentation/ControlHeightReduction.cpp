@@ -631,7 +631,7 @@ static bool checkBiasedBranch(BranchInst *BI, Region *R,
                               DenseSet<Region *> &TrueBiasedRegionsGlobal,
                               DenseSet<Region *> &FalseBiasedRegionsGlobal,
                               DenseMap<Region *, BranchProbability> &BranchBiasMap) {
-  if (!BI->isConditional() || isa<PoisonValue>(BI->getCondition()))
+  if (!BI->isConditional())
     return false;
   BranchProbability ThenProb, ElseProb;
   if (!extractBranchProbabilities(BI, ThenProb, ElseProb))
