@@ -1178,6 +1178,24 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.size = MemoryLocation::UnknownSize;
     Info.flags |= MachineMemOperand::MOLoad;
     return true;
+  case Intrinsic::riscv_seg2_store:
+  case Intrinsic::riscv_seg3_store:
+  case Intrinsic::riscv_seg4_store:
+  case Intrinsic::riscv_seg5_store:
+  case Intrinsic::riscv_seg6_store:
+  case Intrinsic::riscv_seg7_store:
+  case Intrinsic::riscv_seg8_store:
+    Info.opc = ISD::INTRINSIC_VOID;
+    // Operands are (vec, ..., vec, ptr, vl, int_id)
+    Info.ptrVal = I.getArgOperand(I.getNumOperands() - 3);
+    Info.memVT =
+        getValueType(DL, I.getArgOperand(0)->getType()->getScalarType());
+    Info.align = Align(
+        DL.getTypeSizeInBits(I.getArgOperand(0)->getType()->getScalarType()) /
+        8);
+    Info.size = MemoryLocation::UnknownSize;
+    Info.flags |= MachineMemOperand::MOStore;
+    return true;
   }
 }
 
@@ -6026,6 +6044,41 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, DL, Store->getVTList(),
                                    Ops, Store->getMemoryVT(),
                                    Store->getMemOperand());
+  }
+  case Intrinsic::riscv_seg2_store:
+  case Intrinsic::riscv_seg3_store:
+  case Intrinsic::riscv_seg4_store:
+  case Intrinsic::riscv_seg5_store:
+  case Intrinsic::riscv_seg6_store:
+  case Intrinsic::riscv_seg7_store:
+  case Intrinsic::riscv_seg8_store: {
+    SDLoc DL(Op);
+    static const Intrinsic::ID VssegInts[] = {
+        Intrinsic::riscv_vsseg2, Intrinsic::riscv_vsseg3,
+        Intrinsic::riscv_vsseg4, Intrinsic::riscv_vsseg5,
+        Intrinsic::riscv_vsseg6, Intrinsic::riscv_vsseg7,
+        Intrinsic::riscv_vsseg8};
+    // Operands are (chain, int_id, vec*, ptr, vl)
+    unsigned NF = Op->getNumOperands() - 4;
+    assert(NF >= 2 && NF <= 8 && "Unexpected seg number");
+    MVT XLenVT = Subtarget.getXLenVT();
+    MVT VT = Op->getOperand(2).getSimpleValueType();
+    MVT ContainerVT = getContainerForFixedLengthVector(VT);
+
+    SDValue VL = getVLOp(VT.getVectorNumElements(), DL, DAG, Subtarget);
+    SDValue IntID = DAG.getTargetConstant(VssegInts[NF - 2], DL, XLenVT);
+    SDValue Ptr = Op->getOperand(NF + 2);
+
+    auto *FixedIntrinsic = cast<MemIntrinsicSDNode>(Op);
+    SmallVector<SDValue, 12> Ops = {FixedIntrinsic->getChain(), IntID};
+    for (unsigned i = 0; i < NF; i++)
+      Ops.push_back(convertToScalableVector(
+          ContainerVT, FixedIntrinsic->getOperand(2 + i), DAG, Subtarget));
+    Ops.append({Ptr, VL});
+
+    return DAG.getMemIntrinsicNode(
+        ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops,
+        FixedIntrinsic->getMemoryVT(), FixedIntrinsic->getMemOperand());
   }
   }
 
