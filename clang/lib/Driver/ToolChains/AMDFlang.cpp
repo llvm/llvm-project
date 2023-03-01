@@ -627,6 +627,12 @@ void AMDFlang::ConstructJob(Compilation &C, const JobAction &JA,
   // TODO do we need to invoke this under GDB sometimes?
   const char *UpperExec = Args.MakeArgString(getToolChain().GetProgramPath("flang1"));
 
+  // GetProgramPath will just return the string passed in if the program name is not found
+  // in one of the search paths. If a user installs rocm-llvm and uses amdflang without
+  // installing openmp-extras, which has flang support, warn them that a package may be missing.
+  if (strcmp(UpperExec, "flang1") == 0)
+     getToolChain().getDriver().Diag(diag::warn_drv_missing_flang_exec) << "flang1";
+
   UpperCmdArgs.push_back("-opt"); UpperCmdArgs.push_back(Args.MakeArgString(OptOStr));
   UpperCmdArgs.push_back("-terse"); UpperCmdArgs.push_back("1");
   UpperCmdArgs.push_back("-inform"); UpperCmdArgs.push_back("warn");
@@ -955,6 +961,9 @@ void AMDFlang::ConstructJob(Compilation &C, const JobAction &JA,
   /***** Lower part of Fortran frontend *****/
 
   const char *LowerExec = Args.MakeArgString(getToolChain().GetProgramPath("flang2"));
+
+  if (strcmp(LowerExec, "flang2") == 0)
+     getToolChain().getDriver().Diag(diag::warn_drv_missing_flang_exec) << "flang2";
 
   // TODO FLANG arg handling
   LowerCmdArgs.push_back("-fn"); LowerCmdArgs.push_back(Input.getBaseInput());
