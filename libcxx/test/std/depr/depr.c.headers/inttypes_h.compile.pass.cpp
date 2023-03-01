@@ -9,7 +9,6 @@
 // test <inttypes.h>
 
 #include <inttypes.h>
-#include <type_traits>
 
 #include "test_macros.h"
 
@@ -873,63 +872,51 @@
 #error SCNxPTR not defined
 #endif
 
-template <class T>
-void test() {
-    T t = 0;
-    ((void)t); // Prevent unused warning
-}
+void f() {
+    { int8_t x = 0; (void)x; }
+    { int16_t x = 0; (void)x; }
+    { int32_t x = 0; (void)x; }
+    { int64_t x = 0; (void)x; }
 
-int main(int, char**) {
-    test<int8_t >();
-    test<int16_t>();
-    test<int32_t>();
-    test<int64_t>();
+    { uint8_t x = 0; (void)x; }
+    { uint16_t x = 0; (void)x; }
+    { uint32_t x = 0; (void)x; }
+    { uint64_t x = 0; (void)x; }
 
-    test<uint8_t >();
-    test<uint16_t>();
-    test<uint32_t>();
-    test<uint64_t>();
+    { int_least8_t x = 0; (void)x; }
+    { int_least16_t x = 0; (void)x; }
+    { int_least32_t x = 0; (void)x; }
+    { int_least64_t x = 0; (void)x; }
 
-    test<int_least8_t >();
-    test<int_least16_t>();
-    test<int_least32_t>();
-    test<int_least64_t>();
+    { uint_least8_t x = 0; (void)x; }
+    { uint_least16_t x = 0; (void)x; }
+    { uint_least32_t x = 0; (void)x; }
+    { uint_least64_t x = 0; (void)x; }
 
-    test<uint_least8_t >();
-    test<uint_least16_t>();
-    test<uint_least32_t>();
-    test<uint_least64_t>();
+    { int_fast8_t x = 0; (void)x; }
+    { int_fast16_t x = 0; (void)x; }
+    { int_fast32_t x = 0; (void)x; }
+    { int_fast64_t x = 0; (void)x; }
 
-    test<int_fast8_t >();
-    test<int_fast16_t>();
-    test<int_fast32_t>();
-    test<int_fast64_t>();
+    { uint_fast8_t x = 0; (void)x; }
+    { uint_fast16_t x = 0; (void)x; }
+    { uint_fast32_t x = 0; (void)x; }
+    { uint_fast64_t x = 0; (void)x; }
 
-    test<uint_fast8_t >();
-    test<uint_fast16_t>();
-    test<uint_fast32_t>();
-    test<uint_fast64_t>();
+    { intptr_t x = 0; (void)x; }
+    { uintptr_t x = 0; (void)x; }
+    { intmax_t x = 0; (void)x; }
+    { uintmax_t x = 0; (void)x; }
 
-    test<intptr_t >();
-    test<uintptr_t>();
-    test<intmax_t >();
-    test<uintmax_t>();
+    { imaxdiv_t x = {}; (void)x; }
 
-    {
-        imaxdiv_t  i1 = {};
-        ((void)i1); // Prevent unused warning
-    }
-
-    intmax_t i = 0;
-    ((void)i); // Prevent unused warning
-    static_assert((std::is_same<decltype(imaxabs(i)), intmax_t>::value), "");
-    static_assert((std::is_same<decltype(imaxdiv(i, i)), imaxdiv_t>::value), "");
-    static_assert((std::is_same<decltype(strtoimax("", (char**)0, 0)), intmax_t>::value), "");
-    static_assert((std::is_same<decltype(strtoumax("", (char**)0, 0)), uintmax_t>::value), "");
+    intmax_t i = 0; (void)i;
+    ASSERT_SAME_TYPE(intmax_t,  decltype(imaxabs(i)));
+    ASSERT_SAME_TYPE(imaxdiv_t, decltype(imaxdiv(i, i)));
+    ASSERT_SAME_TYPE(intmax_t,  decltype(strtoimax("", (char**)0, 0)));
+    ASSERT_SAME_TYPE(uintmax_t, decltype(strtoumax("", (char**)0, 0)));
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-    static_assert((std::is_same<decltype(wcstoimax(L"", (wchar_t**)0, 0)), intmax_t>::value), "");
-    static_assert((std::is_same<decltype(wcstoumax(L"", (wchar_t**)0, 0)), uintmax_t>::value), "");
+    ASSERT_SAME_TYPE(intmax_t,  decltype(wcstoimax(L"", (wchar_t**)0, 0)));
+    ASSERT_SAME_TYPE(uintmax_t, decltype(wcstoumax(L"", (wchar_t**)0, 0)));
 #endif
-
-    return 0;
 }
