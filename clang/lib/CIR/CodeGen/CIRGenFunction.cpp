@@ -943,7 +943,10 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 
     const auto *MD = cast<CXXMethodDecl>(D);
     if (MD->getParent()->isLambda() && MD->getOverloadedOperator() == OO_Call) {
-      // We're in a lambda; figure out the captures.
+      // We're in a lambda.
+      CurFn.setLambdaAttr(mlir::UnitAttr::get(builder.getContext()));
+
+      // Figure out the captures.
       MD->getParent()->getCaptureFields(LambdaCaptureFields,
                                         LambdaThisCaptureField);
       if (LambdaThisCaptureField) {

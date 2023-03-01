@@ -1185,11 +1185,14 @@ void cir::FuncOp::build(OpBuilder &builder, OperationState &result,
 ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   auto builtinNameAttr = getBuiltinAttrName(state.name);
   auto coroutineNameAttr = getCoroutineAttrName(state.name);
+  auto lambdaNameAttr = getLambdaAttrName(state.name);
   if (::mlir::succeeded(parser.parseOptionalKeyword(builtinNameAttr.strref())))
     state.addAttribute(builtinNameAttr, parser.getBuilder().getUnitAttr());
   if (::mlir::succeeded(
           parser.parseOptionalKeyword(coroutineNameAttr.strref())))
     state.addAttribute(coroutineNameAttr, parser.getBuilder().getUnitAttr());
+  if (::mlir::succeeded(parser.parseOptionalKeyword(lambdaNameAttr.strref())))
+    state.addAttribute(lambdaNameAttr, parser.getBuilder().getUnitAttr());
 
   // Default to external linkage if no keyword is provided.
   state.addAttribute(getLinkageAttrNameString(),
@@ -1257,6 +1260,9 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 
   if (getCoroutine())
     p << "coroutine ";
+
+  if (getLambda())
+    p << "lambda ";
 
   if (getLinkage() != GlobalLinkageKind::ExternalLinkage)
     p << stringifyGlobalLinkageKind(getLinkage()) << ' ';

@@ -1234,6 +1234,10 @@ def FuncOp : CIR_Op<"func", [
     The `coroutine` keyword is used to mark coroutine function, which requires
     at least one `cir.await` instruction to be used in its body.
 
+    The `lambda` translates to a C++ `operator()` that implements a lambda, this
+    allow callsites to make certain assumptions about the real function nature
+    when writing analysis. The verifier should, but do act on this keyword yet.
+
     Example:
 
     ```mlir
@@ -1264,6 +1268,7 @@ def FuncOp : CIR_Op<"func", [
                        TypeAttrOf<FunctionType>:$function_type,
                        UnitAttr:$builtin,
                        UnitAttr:$coroutine,
+                       UnitAttr:$lambda,
                        DefaultValuedAttr<GlobalLinkageKind,
                                          "GlobalLinkageKind::ExternalLinkage">:$linkage,
                        OptionalAttr<StrAttr>:$sym_visibility,
