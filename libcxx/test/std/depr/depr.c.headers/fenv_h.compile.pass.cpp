@@ -9,7 +9,8 @@
 // <fenv.h>
 
 #include <fenv.h>
-#include <type_traits>
+
+#include "test_macros.h"
 
 #ifndef FE_DIVBYZERO
 #error FE_DIVBYZERO not defined
@@ -57,14 +58,14 @@
 
 fenv_t fenv = {};
 fexcept_t fex = 0;
-static_assert(std::is_same<decltype(::feclearexcept(0)), int>::value, "");
-static_assert(std::is_same<decltype(::fegetexceptflag(&fex, 0)), int>::value, "");
-static_assert(std::is_same<decltype(::feraiseexcept(0)), int>::value, "");
-static_assert(std::is_same<decltype(::fesetexceptflag(&fex, 0)), int>::value, "");
-static_assert(std::is_same<decltype(::fetestexcept(0)), int>::value, "");
-static_assert(std::is_same<decltype(::fegetround()), int>::value, "");
-static_assert(std::is_same<decltype(::fesetround(0)), int>::value, "");
-static_assert(std::is_same<decltype(::fegetenv(&fenv)), int>::value, "");
-static_assert(std::is_same<decltype(::feholdexcept(&fenv)), int>::value, "");
-static_assert(std::is_same<decltype(::fesetenv(&fenv)), int>::value, "");
-static_assert(std::is_same<decltype(::feupdateenv(&fenv)), int>::value, "");
+ASSERT_SAME_TYPE(int, decltype(::feclearexcept(0)));
+ASSERT_SAME_TYPE(int, decltype(::fegetexceptflag(&fex, 0)));
+ASSERT_SAME_TYPE(int, decltype(::feraiseexcept(0)));
+ASSERT_SAME_TYPE(int, decltype(::fesetexceptflag(&fex, 0)));
+ASSERT_SAME_TYPE(int, decltype(::fetestexcept(0)));
+ASSERT_SAME_TYPE(int, decltype(::fegetround()));
+ASSERT_SAME_TYPE(int, decltype(::fesetround(0)));
+ASSERT_SAME_TYPE(int, decltype(::fegetenv(&fenv)));
+ASSERT_SAME_TYPE(int, decltype(::feholdexcept(&fenv)));
+ASSERT_SAME_TYPE(int, decltype(::fesetenv(&fenv)));
+ASSERT_SAME_TYPE(int, decltype(::feupdateenv(&fenv)));
