@@ -1708,7 +1708,7 @@ IntrinsicLibrary::genElementalCall<IntrinsicLibrary::ExtendedGenerator>(
   for (const fir::ExtendedValue &arg : args) {
     auto *box = arg.getBoxOf<fir::BoxValue>();
     if (!arg.getUnboxed() && !arg.getCharBox() &&
-        !(box && fir::isPolymorphicType(fir::getBase(*box).getType())))
+        !(box && fir::isScalarBoxedRecordType(fir::getBase(*box).getType())))
       fir::emitFatalError(loc, "nonscalar intrinsic argument");
   }
   if (outline)
