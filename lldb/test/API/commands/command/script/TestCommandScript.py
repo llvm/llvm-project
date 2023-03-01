@@ -21,8 +21,8 @@ class CmdPythonTestCase(TestBase):
 
         # Test that we did indeed add these commands as user commands:
         interp = self.dbg.GetCommandInterpreter()
-        self.expectTrue(interp.UserCommandExists("foobar"), "foobar exists")
-        self.expectFalse(interp.CommandExists("foobar"), "It is not a builtin.")
+        self.assertTrue(interp.UserCommandExists("foobar"), "foobar exists")
+        self.assertFalse(interp.CommandExists("foobar"), "It is not a builtin.")
 
         # Test a bunch of different kinds of python callables with
         # both 4 and 5 positional arguments.
