@@ -1420,7 +1420,7 @@ ProxyRange(R&&) -> ProxyRange<std::views::all_t<R&&>>;
 
 #endif // TEST_STD_VER > 17
 
-namespace meta {
+namespace types {
 template <class Ptr>
 using random_access_iterator_list =
     type_list<Ptr,
@@ -1444,7 +1444,7 @@ template <class Ptr>
 using cpp20_input_iterator_list =
     concatenate_t<forward_iterator_list<Ptr>, type_list<cpp20_input_iterator<Ptr>, cpp17_input_iterator<Ptr>>>;
 #endif
-} // namespace meta
+} // namespace types
 
 
 #endif // SUPPORT_TEST_ITERATORS_H

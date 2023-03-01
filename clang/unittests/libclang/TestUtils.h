@@ -14,18 +14,21 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
+#include "gtest/gtest.h"
 #include <fstream>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
-#include "gtest/gtest.h"
 
 class LibclangParseTest : public ::testing::Test {
-  std::set<std::string> Files;
+  // std::greater<> to remove files before their parent dirs in TearDown().
+  std::set<std::string, std::greater<>> Files;
   typedef std::unique_ptr<std::string> fixed_addr_string;
   std::map<fixed_addr_string, fixed_addr_string> UnsavedFileContents;
 public:
   std::string TestDir;
+  bool RemoveTestDirRecursivelyDuringTeardown = false;
   CXIndex Index;
   CXTranslationUnit ClangTU;
   unsigned TUFlags;
@@ -43,16 +46,26 @@ public:
   void TearDown() override {
     clang_disposeTranslationUnit(ClangTU);
     clang_disposeIndex(Index);
+
+    namespace fs = llvm::sys::fs;
     for (const std::string &Path : Files)
-      llvm::sys::fs::remove(Path);
-    llvm::sys::fs::remove(TestDir);
+      EXPECT_FALSE(fs::remove(Path, /*IgnoreNonExisting=*/false));
+    if (RemoveTestDirRecursivelyDuringTeardown)
+      EXPECT_FALSE(fs::remove_directories(TestDir, /*IgnoreErrors=*/false));
+    else
+      EXPECT_FALSE(fs::remove(TestDir, /*IgnoreNonExisting=*/false));
   }
   void WriteFile(std::string &Filename, const std::string &Contents) {
     if (!llvm::sys::path::is_absolute(Filename)) {
       llvm::SmallString<256> Path(TestDir);
-      llvm::sys::path::append(Path, Filename);
+      namespace path = llvm::sys::path;
+      for (auto FileI = path::begin(Filename), FileEnd = path::end(Filename);
+           FileI != FileEnd; ++FileI) {
+        ASSERT_NE(*FileI, ".");
+        path::append(Path, *FileI);
+        Files.emplace(Path.str());
+      }
       Filename = std::string(Path.str());
-      Files.insert(Filename);
     }
     llvm::sys::fs::create_directories(llvm::sys::path::parent_path(Filename));
     std::ofstream OS(Filename);
