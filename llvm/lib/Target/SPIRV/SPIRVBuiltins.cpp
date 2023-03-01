@@ -1975,7 +1975,7 @@ static const TargetExtType *parseToTargetExtType(const Type *OpaqueType,
   assert(NameWithParameters.startswith("spirv.") &&
          "Unknown builtin opaque type!");
 
-  // Parametrized SPIR-V builtins names follow this format:
+  // Parameterized SPIR-V builtins names follow this format:
   // e.g. %spirv.Image._void_1_0_0_0_0_0_0, %spirv.Pipe._0
   if (NameWithParameters.find('_') == std::string::npos)
     return TargetExtType::get(OpaqueType->getContext(), NameWithParameters);
@@ -1985,12 +1985,12 @@ static const TargetExtType *parseToTargetExtType(const Type *OpaqueType,
   SplitString(NameWithParameters.substr(BaseNameLength + 1), Parameters, "_");
 
   SmallVector<Type *, 1> TypeParameters;
-  bool HasTypeParamter = !isDigit(Parameters[0][0]);
-  if (HasTypeParamter)
+  bool HasTypeParameter = !isDigit(Parameters[0][0]);
+  if (HasTypeParameter)
     TypeParameters.push_back(parseTypeString(
         Parameters[0], MIRBuilder.getMF().getFunction().getContext()));
   SmallVector<unsigned> IntParameters;
-  for (unsigned i = HasTypeParamter ? 1 : 0; i < Parameters.size(); i++) {
+  for (unsigned i = HasTypeParameter ? 1 : 0; i < Parameters.size(); i++) {
     unsigned IntParameter = 0;
     bool ValidLiteral = !Parameters[i].getAsInteger(10, IntParameter);
     assert(ValidLiteral &&
@@ -2006,10 +2006,10 @@ static const TargetExtType *parseToTargetExtType(const Type *OpaqueType,
 // Implementation functions for builtin types.
 //===----------------------------------------------------------------------===//
 
-static SPIRVType *getNonParametrizedType(const TargetExtType *ExtensionType,
-                                         const SPIRV::BuiltinType *TypeRecord,
-                                         MachineIRBuilder &MIRBuilder,
-                                         SPIRVGlobalRegistry *GR) {
+static SPIRVType *getNonParameterizedType(const TargetExtType *ExtensionType,
+                                          const SPIRV::BuiltinType *TypeRecord,
+                                          MachineIRBuilder &MIRBuilder,
+                                          SPIRVGlobalRegistry *GR) {
   unsigned Opcode = TypeRecord->Opcode;
   // Create or get an existing type from GlobalRegistry.
   return GR->getOrCreateOpTypeByOpcode(ExtensionType, MIRBuilder, Opcode);
@@ -2114,7 +2114,7 @@ SPIRVType *lowerBuiltinType(const Type *OpaqueType,
     break;
   default:
     TargetType =
-        getNonParametrizedType(BuiltinType, TypeRecord, MIRBuilder, GR);
+        getNonParameterizedType(BuiltinType, TypeRecord, MIRBuilder, GR);
     break;
   }
 
