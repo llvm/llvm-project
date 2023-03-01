@@ -22,8 +22,3 @@
 #ifndef _LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR
 #error _LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR must be defined
 #endif
-
-int main(int, char**) {
-
-  return 0;
-}
