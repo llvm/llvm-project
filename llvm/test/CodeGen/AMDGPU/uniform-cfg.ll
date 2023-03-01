@@ -810,21 +810,19 @@ define amdgpu_kernel void @cse_uniform_condition_different_blocks(i32 %cond, ptr
 ; SI-NEXT:    s_load_dword s2, s[0:1], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_cmp_lt_i32 s2, 1
-; SI-NEXT:    s_cbranch_scc1 .LBB14_3
+; SI-NEXT:    s_cbranch_scc1 .LBB14_2
 ; SI-NEXT:  ; %bb.1: ; %bb2
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-NEXT:    buffer_store_dword v1, off, s[0:3], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    s_cbranch_scc1 .LBB14_3
-; SI-NEXT:  ; %bb.2: ; %bb7
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
-; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; SI-NEXT:  .LBB14_3: ; %bb9
+; SI-NEXT:  .LBB14_2: ; %bb9
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: cse_uniform_condition_different_blocks:
@@ -832,21 +830,19 @@ define amdgpu_kernel void @cse_uniform_condition_different_blocks(i32 %cond, ptr
 ; VI-NEXT:    s_load_dword s2, s[0:1], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_cmp_lt_i32 s2, 1
-; VI-NEXT:    s_cbranch_scc1 .LBB14_3
+; VI-NEXT:    s_cbranch_scc1 .LBB14_2
 ; VI-NEXT:  ; %bb.1: ; %bb2
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2c
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
+; VI-NEXT:    v_mov_b32_e32 v1, 0
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    buffer_store_dword v1, off, s[0:3], 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    s_cbranch_scc1 .LBB14_3
-; VI-NEXT:  ; %bb.2: ; %bb7
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2c
-; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; VI-NEXT:  .LBB14_3: ; %bb9
+; VI-NEXT:  .LBB14_2: ; %bb9
 ; VI-NEXT:    s_endpgm
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #0
