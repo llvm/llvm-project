@@ -473,7 +473,8 @@ TREC_INTERCEPTOR(void, free, void *p) {
   invoke_free_hook(p);
   SCOPED_INTERCEPTOR_RAW(free, p);
 
-  user_free(thr, caller_pc, p, true, ctx->flags.output_trace && LIKELY(ctx->flags.record_alloc_free));
+  user_free(thr, caller_pc, p, true,
+            ctx->flags.output_trace && LIKELY(ctx->flags.record_alloc_free));
 }
 
 TREC_INTERCEPTOR(void, cfree, void *p) {
@@ -781,6 +782,7 @@ TREC_INTERCEPTOR(int, pthread_create, void *th, void *attr,
     internal_memcpy(p.debug_info, thr->tctx->dbg_temp_buffer,
                     p.debug_info_size);
     thr->tctx->dbg_temp_buffer_size = 0;
+    Report("tid=%d,debuginfo=%s\n", thr->tid, thr->tctx->dbg_temp_buffer);
   }
   atomic_store(&p.tid, 0, memory_order_relaxed);
   int res = -1;

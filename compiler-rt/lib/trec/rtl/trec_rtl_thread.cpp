@@ -218,20 +218,6 @@ void ThreadContext::flush_module() {
                     internal_getpid(), thr->tid);
   int fd_module_file =
       internal_open(modulepath, O_CREAT | O_WRONLY | O_TRUNC, 0700);
-  if (internal_strnlen(thr->tctx->header.cmd,
-                       sizeof(thr->tctx->header.cmd) - 1) == 0) {
-    char **cmds = GetArgv();
-    int cmd_len = 0;
-    internal_strlcpy(thr->tctx->header.binary_path, cmds[0],
-                     2 * TREC_DIR_PATH_LEN - 1);
-    for (int i = 0; cmds[i]; i++) {
-      if (i != 0) {
-        thr->tctx->header.cmd[cmd_len++] = ' ';
-      }
-      cmd_len += internal_strlcpy(thr->tctx->header.cmd + cmd_len, cmds[i],
-                                  sizeof(thr->tctx->header.cmd) - 1 - cmd_len);
-    }
-  }
   MemoryMappingLayout memory_mapping(false);
   InternalMmapVector<LoadedModule> modules(/*initial_capacity*/ 64);
   memory_mapping.DumpListOfModules(&modules);
@@ -502,7 +488,6 @@ int ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached) {
       }
     }
   }
-  Report("tid=%d create: alloc=%d\n", tid, ctx->flags.record_alloc_free);
   return tid;
 }
 
@@ -579,6 +564,21 @@ void ThreadStart(ThreadState *thr, int tid, tid_t os_id,
             atomic_fetch_add(&ctx->global_id, 1, memory_order_relaxed), 0, 0,
             0);
         thr->tctx->put_trace(&e, sizeof(__trec_trace::Event));
+      }
+      if (internal_strnlen(thr->tctx->header.cmd,
+                           sizeof(thr->tctx->header.cmd) - 1) == 0) {
+        char **cmds = GetArgv();
+        int cmd_len = 0;
+        internal_strlcpy(thr->tctx->header.binary_path, cmds[0],
+                         2 * TREC_DIR_PATH_LEN - 1);
+        for (int i = 0; cmds[i]; i++) {
+          if (i != 0) {
+            thr->tctx->header.cmd[cmd_len++] = ' ';
+          }
+          cmd_len +=
+              internal_strlcpy(thr->tctx->header.cmd + cmd_len, cmds[i],
+                               sizeof(thr->tctx->header.cmd) - 1 - cmd_len);
+        }
       }
     }
   }
