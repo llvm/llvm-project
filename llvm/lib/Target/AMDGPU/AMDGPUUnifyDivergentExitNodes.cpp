@@ -26,9 +26,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
-#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -82,7 +82,7 @@ INITIALIZE_PASS_BEGIN(AMDGPUUnifyDivergentExitNodes, DEBUG_TYPE,
                      "Unify divergent function exit nodes", false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LegacyDivergenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_END(AMDGPUUnifyDivergentExitNodes, DEBUG_TYPE,
                     "Unify divergent function exit nodes", false, false)
 
@@ -92,7 +92,7 @@ void AMDGPUUnifyDivergentExitNodes::getAnalysisUsage(AnalysisUsage &AU) const{
 
   AU.addRequired<PostDominatorTreeWrapperPass>();
 
-  AU.addRequired<LegacyDivergenceAnalysis>();
+  AU.addRequired<UniformityInfoWrapperPass>();
 
   if (RequireAndPreserveDomTree) {
     AU.addPreserved<DominatorTreeWrapperPass>();
@@ -100,7 +100,7 @@ void AMDGPUUnifyDivergentExitNodes::getAnalysisUsage(AnalysisUsage &AU) const{
   }
 
   // No divergent values are changed, only blocks and branch edges.
-  AU.addPreserved<LegacyDivergenceAnalysis>();
+  AU.addPreserved<UniformityInfoWrapperPass>();
 
   // We preserve the non-critical-edgeness property
   AU.addPreservedID(BreakCriticalEdgesID);
@@ -114,14 +114,13 @@ void AMDGPUUnifyDivergentExitNodes::getAnalysisUsage(AnalysisUsage &AU) const{
 
 /// \returns true if \p BB is reachable through only uniform branches.
 /// XXX - Is there a more efficient way to find this?
-static bool isUniformlyReached(const LegacyDivergenceAnalysis &DA,
-                               BasicBlock &BB) {
+static bool isUniformlyReached(const UniformityInfo &UA, BasicBlock &BB) {
   SmallVector<BasicBlock *, 8> Stack(predecessors(&BB));
   SmallPtrSet<BasicBlock *, 8> Visited;
 
   while (!Stack.empty()) {
     BasicBlock *Top = Stack.pop_back_val();
-    if (!DA.isUniform(Top->getTerminator()))
+    if (!UA.isUniform(Top->getTerminator()))
       return false;
 
     for (BasicBlock *Pred : predecessors(Top)) {
@@ -192,7 +191,8 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
        !isa<BranchInst>(PDT.getRoot()->getTerminator())))
     return false;
 
-  LegacyDivergenceAnalysis &DA = getAnalysis<LegacyDivergenceAnalysis>();
+  UniformityInfo &UA =
+      getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
   TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
   // Loop over all of the blocks in a function, tracking all of the blocks that
@@ -213,7 +213,7 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
   // exits, we should only unify UnreachableBlocks that are not uniformly
   // reachable.
   bool HasDivergentExitBlock = llvm::any_of(
-      PDT.roots(), [&](auto BB) { return !isUniformlyReached(DA, *BB); });
+      PDT.roots(), [&](auto BB) { return !isUniformlyReached(UA, *BB); });
 
   for (BasicBlock *BB : PDT.roots()) {
     if (isa<ReturnInst>(BB->getTerminator())) {
