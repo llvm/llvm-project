@@ -71,6 +71,18 @@ void ValueObjectPrinter::Init(
 }
 
 bool ValueObjectPrinter::PrintValueObject() {
+  if (!m_orig_valobj)
+    return false;
+
+  // If the incoming ValueObject is in an error state, the best we're going to 
+  // get out of it is its type.  But if we don't even have that, just print
+  // the error and exit early.
+  if (m_orig_valobj->GetError().Fail() 
+      && !m_orig_valobj->GetCompilerType().IsValid()) {
+    m_stream->Printf("Error: '%s'", m_orig_valobj->GetError().AsCString());
+    return true;
+  }
+   
   if (!GetMostSpecializedValue() || m_valobj == nullptr)
     return false;
 
