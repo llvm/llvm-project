@@ -199,6 +199,9 @@ inline void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   pm.addPass(fir::createSimplifyRegionLitePass());
   pm.addPass(mlir::createCSEPass());
 
+  // Polymorphic types
+  pm.addPass(fir::createPolymorphicOpConversionPass());
+
   // convert control flow to CFG form
   fir::addCfgConversionPass(pm);
   pm.addPass(mlir::createConvertSCFToCFPass());

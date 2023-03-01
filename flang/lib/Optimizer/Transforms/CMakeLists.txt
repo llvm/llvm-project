@@ -14,6 +14,7 @@ add_flang_library(FIRTransforms
   AlgebraicSimplification.cpp
   SimplifyIntrinsics.cpp
   AddDebugFoundation.cpp
+  PolymorphicOpConversion.cpp
 
   DEPENDS
   FIRBuilder
