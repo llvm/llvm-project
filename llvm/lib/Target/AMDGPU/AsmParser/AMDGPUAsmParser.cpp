@@ -1453,6 +1453,8 @@ public:
 
   bool hasG16() const { return AMDGPU::hasG16(getSTI()); }
 
+  bool hasGDS() const { return AMDGPU::hasGDS(getSTI()); }
+
   bool isSI() const {
     return AMDGPU::isSI(getSTI());
   }
@@ -6318,6 +6320,10 @@ AMDGPUAsmParser::parseNamedBit(StringRef Name, OperandVector &Operands,
   }
   if (Name == "a16" && !hasA16()) {
     Error(S, "a16 modifier is not supported on this GPU");
+    return MatchOperand_ParseFail;
+  }
+  if (Name == "gds" && !hasGDS()) {
+    Error(S, "gds modifier is not supported on this GPU");
     return MatchOperand_ParseFail;
   }
 

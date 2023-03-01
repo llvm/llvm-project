@@ -2101,6 +2101,10 @@ bool hasPackedD16(const MCSubtargetInfo &STI) {
          !isSI(STI);
 }
 
+bool hasGDS(const MCSubtargetInfo &STI) {
+  return isNotGFX12Plus(STI);
+}
+
 unsigned getNSAMaxSize(const MCSubtargetInfo &STI, bool HasSampler) {
   auto Version = getIsaVersion(STI.getCPU());
   if (Version.Major == 10)
