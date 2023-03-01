@@ -20,7 +20,7 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 
 using namespace clang;
 
