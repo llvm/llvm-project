@@ -55,7 +55,7 @@ bool DINodeAttr::classof(Attribute attr) {
 
 bool DIScopeAttr::classof(Attribute attr) {
   return llvm::isa<DICompileUnitAttr, DICompositeTypeAttr, DIFileAttr,
-                   DILexicalBlockFileAttr, DILocalScopeAttr>(attr);
+                   DILocalScopeAttr, DINamespaceAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -63,7 +63,8 @@ bool DIScopeAttr::classof(Attribute attr) {
 //===----------------------------------------------------------------------===//
 
 bool DILocalScopeAttr::classof(Attribute attr) {
-  return llvm::isa<DILexicalBlockAttr, DINamespaceAttr, DISubprogramAttr>(attr);
+  return llvm::isa<DILexicalBlockAttr, DILexicalBlockFileAttr,
+                   DISubprogramAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//
