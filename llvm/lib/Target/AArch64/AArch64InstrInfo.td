@@ -3419,6 +3419,48 @@ def : InstAlias<"ldrsh $Rt, [$Rn, $offset]",
 def : InstAlias<"ldrsw $Rt, [$Rn, $offset]",
                 (LDURSWi GPR64:$Rt, GPR64sp:$Rn, simm9_offset_fb32:$offset), 0>;
 
+// A LDR will implicitly zero the rest of the vector, so vector_insert(zeros,
+// load, 0) can use a single load.
+multiclass LoadInsertZeroPatterns<SDPatternOperator LoadOp, ValueType VT, ValueType HVT, ValueType ScalarVT,
+                                  Instruction LoadInst, Instruction UnscaledLoadInst,
+                                  ComplexPattern Addr, ComplexPattern UnscaledAddr, Operand AddrImm,
+                                  SubRegIndex SubReg> {
+  // Scaled
+  def : Pat <(vector_insert (VT immAllZerosV),
+                (ScalarVT (LoadOp (Addr GPR64sp:$Rn, AddrImm:$offset))), (i64 0)),
+            (SUBREG_TO_REG (i64 0), (LoadInst GPR64sp:$Rn, AddrImm:$offset), SubReg)>;
+  // Unscaled
+  def : Pat <(vector_insert (VT immAllZerosV),
+                 (ScalarVT (LoadOp (UnscaledAddr GPR64sp:$Rn, simm9:$offset))), (i64 0)),
+             (SUBREG_TO_REG (i64 0), (UnscaledLoadInst GPR64sp:$Rn, simm9:$offset), SubReg)>;
+
+  // Half-vector patterns
+  def : Pat <(vector_insert (HVT immAllZerosV),
+                 (ScalarVT (LoadOp (Addr GPR64sp:$Rn, AddrImm:$offset))), (i64 0)),
+             (SUBREG_TO_REG (i64 0), (LoadInst GPR64sp:$Rn, AddrImm:$offset), SubReg)>;
+  // Unscaled
+  def : Pat <(vector_insert (HVT immAllZerosV),
+                 (ScalarVT (LoadOp (UnscaledAddr GPR64sp:$Rn, simm9:$offset))), (i64 0)),
+             (SUBREG_TO_REG (i64 0), (UnscaledLoadInst GPR64sp:$Rn, simm9:$offset), SubReg)>;
+}
+
+defm : LoadInsertZeroPatterns<extloadi8,  v16i8,  v8i8,   i32,  LDRBui, LDRBui,
+                              am_indexed8,  am_unscaled8,  uimm12s1, bsub>;
+defm : LoadInsertZeroPatterns<extloadi16, v8i16,  v4i16,  i32,  LDRHui, LDURHi,
+                              am_indexed16, am_unscaled16, uimm12s2, hsub>;
+defm : LoadInsertZeroPatterns<load,       v4i32,  v2i32,  i32,  LDRSui, LDURSi,
+                              am_indexed32, am_unscaled32, uimm12s4, ssub>;
+defm : LoadInsertZeroPatterns<load,       v2i64,  v1i64,  i64,  LDRDui, LDURDi,
+                              am_indexed64, am_unscaled64, uimm12s8, dsub>;
+defm : LoadInsertZeroPatterns<load,       v8f16,  v4f16,  f16,  LDRHui, LDURHi,
+                              am_indexed16, am_unscaled16, uimm12s2, hsub>;
+defm : LoadInsertZeroPatterns<load,       v8bf16, v4bf16, bf16, LDRHui, LDURHi,
+                              am_indexed16, am_unscaled16, uimm12s2, hsub>;
+defm : LoadInsertZeroPatterns<load,       v4f32,  v2f32,  f32,  LDRSui, LDURSi,
+                              am_indexed32, am_unscaled32, uimm12s4, ssub>;
+defm : LoadInsertZeroPatterns<load,       v2f64,  v1f64,  f64,  LDRDui, LDURDi,
+                              am_indexed64, am_unscaled64, uimm12s8, dsub>;
+
 // Pre-fetch.
 defm PRFUM : PrefetchUnscaled<0b11, 0, 0b10, "prfum",
                   [(AArch64Prefetch timm:$Rt,
