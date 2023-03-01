@@ -34,6 +34,7 @@ using llvm::dbgs;
 using namespace mlir;
 using namespace mlir::linalg;
 
+#ifndef NDEBUG
 static bool debugPrintLoopInShortForm(Operation *op) {
   AsmState state(op->getParentOfType<func::FuncOp>());
   (void)state;
@@ -44,6 +45,7 @@ static bool debugPrintLoopInShortForm(Operation *op) {
   }
   return false;
 }
+#endif
 
 static void debugPrintBackwardSlice(SetVector<Operation *> &backwardSlice) {
   LLVM_DEBUG(llvm::interleaveComma(backwardSlice, DBGS() << "--backwardSlice:",
