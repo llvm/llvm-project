@@ -65,6 +65,10 @@ module {
     %5 = llvm.getelementptr inbounds %arg0[%0, 0] : (!llvm.ptr, i32) -> !llvm.ptr, !llvm.struct<"struct.agg1_t", (i32, i32)>
     // CHECK: store i32 %{{.*}}, ptr %{{.*}},{{.*}}!tbaa ![[STAG:[0-9]*]]
     llvm.store %4, %5 {tbaa = [@__tbaa::@tbaa_tag_7]} : i32, !llvm.ptr
+    // CHECK: atomicrmw add ptr %{{.*}}, i32 %{{.*}} !tbaa ![[STAG]]
+    %6 = llvm.atomicrmw add %5, %4 monotonic {tbaa = [@__tbaa::@tbaa_tag_7]} : !llvm.ptr, i32
+    // CHECK: cmpxchg ptr %{{.*}}, i32 %{{.*}}, i32 %{{.*}} !tbaa ![[STAG]]
+    %7 = llvm.cmpxchg %5, %6, %4 acq_rel monotonic {tbaa = [@__tbaa::@tbaa_tag_7]} : !llvm.ptr, i32
     llvm.return
   }
 }

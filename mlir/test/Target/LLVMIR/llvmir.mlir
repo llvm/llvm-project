@@ -1975,27 +1975,29 @@ llvm.func @switch_weights(%arg0: i32) -> i32 {
 // -----
 
 module {
-  llvm.func @aliasScope(%arg1 : !llvm.ptr<i32>, %arg2 : !llvm.ptr<i32>, %arg3 : !llvm.ptr<i32>) {
+  llvm.func @aliasScope(%arg1 : !llvm.ptr) {
       %0 = llvm.mlir.constant(0 : i32) : i32
-      llvm.store %0, %arg1 { alias_scopes = [@metadata::@scope1], noalias_scopes = [@metadata::@scope2, @metadata::@scope3] } : !llvm.ptr<i32>
-      llvm.store %0, %arg2 { alias_scopes = [@metadata::@scope2], noalias_scopes = [@metadata::@scope1, @metadata::@scope3] } : !llvm.ptr<i32>
-      %1 = llvm.load %arg3 { alias_scopes = [@metadata::@scope3], noalias_scopes = [@metadata::@scope1, @metadata::@scope2] } : !llvm.ptr<i32>
+      llvm.store %0, %arg1 {alias_scopes = [@metadata::@scope1], noalias_scopes = [@metadata::@scope2, @metadata::@scope3]} : i32, !llvm.ptr
+      %1 = llvm.load %arg1 {alias_scopes = [@metadata::@scope2], noalias_scopes = [@metadata::@scope1, @metadata::@scope3]} : !llvm.ptr -> i32
+      %2 = llvm.atomicrmw add %arg1, %0 monotonic {alias_scopes = [@metadata::@scope3], noalias_scopes = [@metadata::@scope1, @metadata::@scope2]} : !llvm.ptr, i32
+      %3 = llvm.cmpxchg %arg1, %1, %2 acq_rel monotonic {alias_scopes = [@metadata::@scope3]} : !llvm.ptr, i32
       llvm.return
   }
 
   llvm.metadata @metadata {
-    llvm.alias_scope_domain @domain { description = "The domain"}
-    llvm.alias_scope @scope1 { domain = @domain, description = "The first scope" }
-    llvm.alias_scope @scope2 { domain = @domain }
-    llvm.alias_scope @scope3 { domain = @domain }
+    llvm.alias_scope_domain @domain {description = "The domain"}
+    llvm.alias_scope @scope1 {domain = @domain, description = "The first scope"}
+    llvm.alias_scope @scope2 {domain = @domain}
+    llvm.alias_scope @scope3 {domain = @domain}
   }
 }
 
 // Function
 // CHECK-LABEL: aliasScope
 // CHECK:  store {{.*}}, !alias.scope ![[SCOPES1:[0-9]+]], !noalias ![[SCOPES23:[0-9]+]]
-// CHECK:  store {{.*}}, !alias.scope ![[SCOPES2:[0-9]+]], !noalias ![[SCOPES13:[0-9]+]]
-// CHECK:  load {{.*}},  !alias.scope ![[SCOPES3:[0-9]+]], !noalias ![[SCOPES12:[0-9]+]]
+// CHECK:  load {{.*}}, !alias.scope ![[SCOPES2:[0-9]+]], !noalias ![[SCOPES13:[0-9]+]]
+// CHECK:  atomicrmw {{.*}}, !alias.scope ![[SCOPES3:[0-9]+]], !noalias ![[SCOPES12:[0-9]+]]
+// CHECK:  cmpxchg {{.*}}, !alias.scope ![[SCOPES3]]
 
 // Metadata
 // CHECK-DAG: ![[DOMAIN:[0-9]+]] = distinct !{![[DOMAIN]], !"The domain"}
