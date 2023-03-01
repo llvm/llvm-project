@@ -1000,6 +1000,12 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VECTOR_SPLICE:
     SplitVecRes_VECTOR_SPLICE(N, Lo, Hi);
     break;
+  case ISD::VECTOR_DEINTERLEAVE:
+    SplitVecRes_VECTOR_DEINTERLEAVE(N);
+    return;
+  case ISD::VECTOR_INTERLEAVE:
+    SplitVecRes_VECTOR_INTERLEAVE(N);
+    return;
   case ISD::VAARG:
     SplitVecRes_VAARG(N, Lo, Hi);
     break;
@@ -2766,6 +2772,37 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SPLICE(SDNode *N, SDValue &Lo,
   Hi =
       DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HiVT, Expanded,
                   DAG.getVectorIdxConstant(LoVT.getVectorMinNumElements(), DL));
+}
+
+void DAGTypeLegalizer::SplitVecRes_VECTOR_DEINTERLEAVE(SDNode *N) {
+
+  SDValue Op0Lo, Op0Hi, Op1Lo, Op1Hi;
+  GetSplitVector(N->getOperand(0), Op0Lo, Op0Hi);
+  GetSplitVector(N->getOperand(1), Op1Lo, Op1Hi);
+  EVT VT = Op0Lo.getValueType();
+  SDLoc DL(N);
+  SDValue ResLo = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
+                              DAG.getVTList(VT, VT), Op0Lo, Op0Hi);
+  SDValue ResHi = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
+                              DAG.getVTList(VT, VT), Op1Lo, Op1Hi);
+
+  SetSplitVector(SDValue(N, 0), ResLo.getValue(0), ResHi.getValue(0));
+  SetSplitVector(SDValue(N, 1), ResLo.getValue(1), ResHi.getValue(1));
+}
+
+void DAGTypeLegalizer::SplitVecRes_VECTOR_INTERLEAVE(SDNode *N) {
+  SDValue Op0Lo, Op0Hi, Op1Lo, Op1Hi;
+  GetSplitVector(N->getOperand(0), Op0Lo, Op0Hi);
+  GetSplitVector(N->getOperand(1), Op1Lo, Op1Hi);
+  EVT VT = Op0Lo.getValueType();
+  SDLoc DL(N);
+  SDValue Res[] = {DAG.getNode(ISD::VECTOR_INTERLEAVE, DL,
+                               DAG.getVTList(VT, VT), Op0Lo, Op1Lo),
+                   DAG.getNode(ISD::VECTOR_INTERLEAVE, DL,
+                               DAG.getVTList(VT, VT), Op0Hi, Op1Hi)};
+
+  SetSplitVector(SDValue(N, 0), Res[0].getValue(0), Res[0].getValue(1));
+  SetSplitVector(SDValue(N, 1), Res[1].getValue(0), Res[1].getValue(1));
 }
 
 //===----------------------------------------------------------------------===//

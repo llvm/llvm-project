@@ -269,15 +269,8 @@ class LLVM_OpBase<Dialect dialect, string mnemonic, list<Trait> traits = []> :
 }
 
 //===----------------------------------------------------------------------===//
-// Base classes for LLVM dialect operations.
+// Base classes for LLVM enum attributes.
 //===----------------------------------------------------------------------===//
-
-// Base class for LLVM operations. All operations get an "llvm." prefix in
-// their name automatically. LLVM operations have either zero or one result,
-// this class is specialized below for both cases and should not be used
-// directly.
-class LLVM_Op<string mnemonic, list<Trait> traits = []> :
-    LLVM_OpBase<LLVM_Dialect, mnemonic, traits>;
 
 // Case of the LLVM enum attribute backed by I64Attr with customized string
 // representation that corresponds to what is visible in the textual IR form.
@@ -290,7 +283,6 @@ class LLVM_Op<string mnemonic, list<Trait> traits = []> :
 // is printed/parsed as `weak` in MLIR custom textual format.
 class LLVM_EnumAttrCase<string cppSym, string irSym, string llvmSym, int val> :
     I64EnumAttrCase<cppSym, val, irSym> {
-
   // The name of the equivalent enumerant in LLVM.
   string llvmEnumerant = llvmSym;
 }
@@ -314,8 +306,6 @@ class LLVM_EnumAttr<string name, string llvmName, string description,
                     list<LLVM_EnumAttrCase> cases,
                     list<LLVM_EnumAttrCase> unsupportedCases = []> :
     I64EnumAttr<name, description, cases> {
-
-
   // List of unsupported cases that have no conversion to an MLIR value.
   list<LLVM_EnumAttrCase> unsupported = unsupportedCases;
 
@@ -331,11 +321,50 @@ class LLVM_CEnumAttr<string name, string llvmNS, string description,
   string llvmClassName = llvmNS;
 }
 
-// For every value in the list, substitutes the value in the place of "$0" in
-// "pattern" and stores the list of strings as "lst".
-class ListIntSubst<string pattern, list<int> values> {
-  list<string> lst = !foreach(x, values,
-                              !subst("$0", !cast<string>(x), pattern));
+//===----------------------------------------------------------------------===//
+// Patterns for LLVM dialect operations.
+//===----------------------------------------------------------------------===//
+
+// Patterns with code to set flags and metadata of memory operations after their
+// translation to LLVM IR instructions. Operations may use the patterns to
+// implement their "llvmBuilder". The patterns assume the `op` and `inst`
+// variables exist and refer to the original MLIR operation and the translated
+// LLVM IR instruction, respectively.
+class LLVM_MemOpPatterns {
+  code setAlignmentCode = [{
+    if ($alignment.has_value()) {
+      auto align = *$alignment;
+      if (align != 0)
+        inst->setAlignment(llvm::Align(align));
+    }
+  }];
+  code setVolatileCode = [{
+    inst->setVolatile($volatile_);
+  }];
+  code setSyncScopeCode = [{
+    if ($syncscope.has_value()) {
+      llvm::LLVMContext &llvmContext = builder.getContext();
+      inst->setSyncScopeID(llvmContext.getOrInsertSyncScopeID(*$syncscope));
+    }
+  }];
+  code setOrderingCode = [{
+    inst->setAtomic(convertAtomicOrderingToLLVM($ordering));
+  }];
+  code setNonTemporalMetadataCode = [{
+    if ($nontemporal) {
+      llvm::MDNode *metadata = llvm::MDNode::get(
+          inst->getContext(), llvm::ConstantAsMetadata::get(
+              builder.getInt32(1)));
+      inst->setMetadata(llvm::LLVMContext::MD_nontemporal, metadata);
+    }
+  }];
+  code setAccessGroupsMetadataCode = [{
+    moduleTranslation.setAccessGroupsMetadata(op, inst);
+  }];
+  code setAliasAnalysisMetadataCode = [{
+    moduleTranslation.setAliasScopeMetadata(op, inst);
+    moduleTranslation.setTBAAMetadata(op, inst);
+  }];
 }
 
 // Patterns with code obtaining the LLVM IR type of the given operand or result
@@ -352,6 +381,36 @@ def LLVM_IntrPatterns {
               .getBody()[$0])}];
 }
 
+// For every value in the list, substitutes the value in the place of "$0" in
+// "pattern" and stores the list of strings as "lst".
+class ListIntSubst<string pattern, list<int> values> {
+  list<string> lst = !foreach(x, values,
+                              !subst("$0", !cast<string>(x), pattern));
+}
+
+//===----------------------------------------------------------------------===//
+// Base classes for LLVM dialect operations.
+//===----------------------------------------------------------------------===//
+
+// Base class for LLVM operations. All operations get an "llvm." prefix in
+// their name automatically and should either have zero or one result.
+class LLVM_Op<string mnemonic, list<Trait> traits = []> :
+    LLVM_OpBase<LLVM_Dialect, mnemonic, traits>;
+
+// Base class for LLVM memory access operations that implement the access group
+// and alias analysis interfaces. The "aliasAttrs" list contains the arguments
+// required by the access group and alias analysis interfaces. Derived
+// operations should append the "aliasAttrs" to their argument list.
+class LLVM_MemAccessOpBase<string mnemonic, list<Trait> traits = []> :
+    LLVM_Op<mnemonic, !listconcat([
+      DeclareOpInterfaceMethods<AccessGroupOpInterface>,
+      DeclareOpInterfaceMethods<AliasAnalysisOpInterface>], traits)>,
+    LLVM_MemOpPatterns {
+  dag aliasAttrs = (ins OptionalAttr<SymbolRefArrayAttr>:$access_groups,
+                    OptionalAttr<SymbolRefArrayAttr>:$alias_scopes,
+                    OptionalAttr<SymbolRefArrayAttr>:$noalias_scopes,
+                    OptionalAttr<SymbolRefArrayAttr>:$tbaa);
+}
 
 // Base class for LLVM intrinsics operation. It is similar to LLVM_Op, but
 // provides the "llvmBuilder" field for constructing the intrinsic.

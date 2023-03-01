@@ -22391,7 +22391,7 @@ static SDValue combineConcatVectorOfScalars(SDNode *N, SelectionDAG &DAG) {
   EVT OpVT = N->getOperand(0).getValueType();
 
   // If the operands are legal vectors, leave them alone.
-  if (TLI.isTypeLegal(OpVT))
+  if (TLI.isTypeLegal(OpVT) || OpVT.isScalableVector())
     return SDValue();
 
   SDLoc DL(N);

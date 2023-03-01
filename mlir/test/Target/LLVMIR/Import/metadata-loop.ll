@@ -27,6 +27,25 @@ define void @access_group(ptr %arg1) {
 
 ; // -----
 
+; CHECK-LABEL: llvm.func @supported_ops
+define void @supported_ops(ptr %arg1, float %arg2, i32 %arg3, i32 %arg4) {
+  ; CHECK: llvm.load {{.*}}access_groups =
+  %1 = load i32, ptr %arg1, !llvm.access.group !0
+  ; CHECK: llvm.store {{.*}}access_groups =
+  store i32 %1, ptr %arg1, !llvm.access.group !0
+  ; CHECK: llvm.atomicrmw {{.*}}access_groups =
+  %2 = atomicrmw fmax ptr %arg1, float %arg2 acquire, !llvm.access.group !0
+  ; CHECK: llvm.cmpxchg {{.*}}access_groups =
+  %3 = cmpxchg ptr %arg1, i32 %arg3, i32 %arg4 monotonic seq_cst, !llvm.access.group !0
+  ret void
+}
+
+!0 = !{!1, !2}
+!1 = distinct !{}
+!2 = distinct !{}
+
+; // -----
+
 ; CHECK: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<disableNonforced = true, mustProgress = true, isVectorized = true>
 
 ; CHECK-LABEL: @simple

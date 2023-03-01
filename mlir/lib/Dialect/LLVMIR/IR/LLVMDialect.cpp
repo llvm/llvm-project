@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "TypeDetail.h"
+#include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -45,8 +46,6 @@ using mlir::LLVM::linkage::getMaxEnumValForLinkage;
 #include "mlir/Dialect/LLVMIR/LLVMOpsDialect.cpp.inc"
 
 static constexpr const char kElemTypeAttrName[] = "elem_type";
-
-#include "mlir/Dialect/LLVMIR/LLVMInterfaces.cpp.inc"
 
 static auto processFMFAttr(ArrayRef<NamedAttribute> attrs) {
   SmallVector<NamedAttribute, 8> filteredAttrs(
@@ -715,95 +714,6 @@ Type LLVM::GEPOp::getSourceElementType() {
 // LoadOp
 //===----------------------------------------------------------------------===//
 
-/// Verifies the given array attribute contains symbol references and checks the
-/// referenced symbol types using the provided verification function.
-LogicalResult verifyMemOpSymbolRefs(
-    Operation *op, StringRef name, ArrayAttr symbolRefs,
-    llvm::function_ref<LogicalResult(Operation *, SymbolRefAttr)>
-        verifySymbolType) {
-  assert(symbolRefs && "expected a non-null attribute");
-
-  // Verify that the attribute is a symbol ref array attribute,
-  // because this constraint is not verified for all attribute
-  // names processed here (e.g. 'tbaa'). This verification
-  // is redundant in some cases.
-  if (!llvm::all_of(symbolRefs, [](Attribute attr) {
-        return attr && attr.isa<SymbolRefAttr>();
-      }))
-    return op->emitOpError("attribute '")
-           << name
-           << "' failed to satisfy constraint: symbol ref array attribute";
-
-  for (SymbolRefAttr symbolRef : symbolRefs.getAsRange<SymbolRefAttr>()) {
-    StringAttr metadataName = symbolRef.getRootReference();
-    StringAttr symbolName = symbolRef.getLeafReference();
-    // We want @metadata::@symbol, not just @symbol
-    if (metadataName == symbolName) {
-      return op->emitOpError() << "expected '" << symbolRef
-                               << "' to specify a fully qualified reference";
-    }
-    auto metadataOp = SymbolTable::lookupNearestSymbolFrom<LLVM::MetadataOp>(
-        op->getParentOp(), metadataName);
-    if (!metadataOp)
-      return op->emitOpError()
-             << "expected '" << symbolRef << "' to reference a metadata op";
-    Operation *symbolOp =
-        SymbolTable::lookupNearestSymbolFrom(metadataOp, symbolName);
-    if (!symbolOp)
-      return op->emitOpError()
-             << "expected '" << symbolRef << "' to be a valid reference";
-    if (failed(verifySymbolType(symbolOp, symbolRef))) {
-      return failure();
-    }
-  }
-
-  return success();
-}
-
-/// Verifies the given array attribute contains symbol references that point to
-/// metadata operations of the given type.
-template <typename OpTy>
-static LogicalResult
-verifyMemOpSymbolRefsPointTo(Operation *op, StringRef name,
-                             std::optional<ArrayAttr> symbolRefs) {
-  if (!symbolRefs)
-    return success();
-
-  auto verifySymbolType = [op](Operation *symbolOp,
-                               SymbolRefAttr symbolRef) -> LogicalResult {
-    if (!isa<OpTy>(symbolOp)) {
-      return op->emitOpError()
-             << "expected '" << symbolRef << "' to resolve to a "
-             << OpTy::getOperationName();
-    }
-    return success();
-  };
-  return verifyMemOpSymbolRefs(op, name, *symbolRefs, verifySymbolType);
-}
-
-/// Verifies the types of the metadata operations referenced by aliasing and
-/// access group metadata.
-template <typename OpTy>
-LogicalResult verifyMemOpMetadata(OpTy memOp) {
-  if (failed(verifyMemOpSymbolRefsPointTo<LLVM::AccessGroupMetadataOp>(
-          memOp, memOp.getAccessGroupsAttrName(), memOp.getAccessGroups())))
-    return failure();
-
-  if (failed(verifyMemOpSymbolRefsPointTo<LLVM::AliasScopeMetadataOp>(
-          memOp, memOp.getAliasScopesAttrName(), memOp.getAliasScopes())))
-    return failure();
-
-  if (failed(verifyMemOpSymbolRefsPointTo<LLVM::AliasScopeMetadataOp>(
-          memOp, memOp.getNoaliasScopesAttrName(), memOp.getNoaliasScopes())))
-    return failure();
-
-  if (failed(verifyMemOpSymbolRefsPointTo<LLVM::TBAATagOp>(
-          memOp, memOp.getTbaaAttrName(), memOp.getTbaa())))
-    return failure();
-
-  return success();
-}
-
 /// Returns true if the given type is supported by atomic operations. All
 /// integer and float types with limited bit width are supported. Additionally,
 /// depending on the operation pointers may be supported as well.
@@ -850,12 +760,8 @@ LogicalResult verifyAtomicMemOp(OpTy memOp, Type valueType,
 
 LogicalResult LoadOp::verify() {
   Type valueType = getResult().getType();
-  if (failed(verifyAtomicMemOp(
-          *this, valueType,
-          {AtomicOrdering::release, AtomicOrdering::acq_rel})))
-    return failure();
-
-  return verifyMemOpMetadata(*this);
+  return verifyAtomicMemOp(*this, valueType,
+                           {AtomicOrdering::release, AtomicOrdering::acq_rel});
 }
 
 void LoadOp::build(OpBuilder &builder, OperationState &state, Value addr,
@@ -871,12 +777,12 @@ void LoadOp::build(OpBuilder &builder, OperationState &state, Type type,
                    bool isNonTemporal, AtomicOrdering ordering,
                    StringRef syncscope) {
   build(builder, state, type, addr,
-        /*access_groups=*/nullptr,
-        /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr,
-        /*tbaa=*/nullptr,
         alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isVolatile,
         isNonTemporal, ordering,
-        syncscope.empty() ? nullptr : builder.getStringAttr(syncscope));
+        syncscope.empty() ? nullptr : builder.getStringAttr(syncscope),
+        /*access_groups=*/nullptr,
+        /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr,
+        /*tbaa=*/nullptr);
 }
 
 // Extract the pointee type from the LLVM pointer type wrapped in MLIR. Return
@@ -930,23 +836,20 @@ static void printLoadType(OpAsmPrinter &printer, Operation *op, Type type,
 
 LogicalResult StoreOp::verify() {
   Type valueType = getValue().getType();
-  if (failed(verifyAtomicMemOp(
-          *this, valueType,
-          {AtomicOrdering::acquire, AtomicOrdering::acq_rel})))
-    return failure();
-
-  return verifyMemOpMetadata(*this);
+  return verifyAtomicMemOp(*this, valueType,
+                           {AtomicOrdering::acquire, AtomicOrdering::acq_rel});
 }
 
 void StoreOp::build(OpBuilder &builder, OperationState &state, Value value,
                     Value addr, unsigned alignment, bool isVolatile,
                     bool isNonTemporal, AtomicOrdering ordering,
                     StringRef syncscope) {
-  build(builder, state, value, addr, /*access_groups=*/nullptr,
-        /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
+  build(builder, state, value, addr,
         alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isVolatile,
         isNonTemporal, ordering,
-        syncscope.empty() ? nullptr : builder.getStringAttr(syncscope));
+        syncscope.empty() ? nullptr : builder.getStringAttr(syncscope),
+        /*access_groups=*/nullptr,
+        /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
 
 /// Parses the StoreOp type either using the typed or opaque pointer format.
@@ -2326,7 +2229,9 @@ void AtomicRMWOp::build(OpBuilder &builder, OperationState &state,
                         unsigned alignment, bool isVolatile) {
   build(builder, state, val.getType(), binOp, ptr, val, ordering,
         !syncscope.empty() ? builder.getStringAttr(syncscope) : nullptr,
-        alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isVolatile);
+        alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isVolatile,
+        /*access_groups=*/nullptr,
+        /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
 
 LogicalResult AtomicRMWOp::verify() {
@@ -2378,7 +2283,8 @@ void AtomicCmpXchgOp::build(OpBuilder &builder, OperationState &state,
         successOrdering, failureOrdering,
         !syncscope.empty() ? builder.getStringAttr(syncscope) : nullptr,
         alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isWeak,
-        isVolatile);
+        isVolatile, /*access_groups=*/nullptr,
+        /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
 
 LogicalResult AtomicCmpXchgOp::verify() {
@@ -2964,22 +2870,17 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
   bool isLegalToInline(Operation *op, Region *, bool, IRMapping &) const final {
     if (isPure(op))
       return true;
-    return llvm::TypeSwitch<Operation *, bool>(op)
-        .Case<LLVM::LoadOp, LLVM::StoreOp>([&](auto memOp) {
-          // Some attributes on load and store operations require handling
-          // during inlining. Since this is not yet implemented, refuse to
-          // inline memory operations that have any of these attributes.
-          if (memOp.getAccessGroups())
-            return false;
-          if (memOp.getAliasScopes())
-            return false;
-          if (memOp.getNoaliasScopes())
-            return false;
-          return true;
-        })
-        .Case<LLVM::CallOp, LLVM::AllocaOp, LLVM::LifetimeStartOp,
-              LLVM::LifetimeEndOp>([](auto) { return true; })
-        .Default([](auto) { return false; });
+    // Some attributes on memory operations require handling during
+    // inlining. Since this is not yet implemented, refuse to inline memory
+    // operations that have any of these attributes.
+    if (auto iface = dyn_cast<AliasAnalysisOpInterface>(op))
+      if (iface.getAliasScopesOrNull() || iface.getNoAliasScopesOrNull())
+        return false;
+    if (auto iface = dyn_cast<AccessGroupOpInterface>(op))
+      if (iface.getAccessGroupsOrNull())
+        return false;
+    return isa<LLVM::CallOp, LLVM::AllocaOp, LLVM::LifetimeStartOp,
+               LLVM::LifetimeEndOp, LLVM::LoadOp, LLVM::StoreOp>(op);
   }
 
   /// Handle the given inlined return by replacing it with a branch. This

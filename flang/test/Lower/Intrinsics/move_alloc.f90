@@ -12,7 +12,7 @@ subroutine to_from_only
   ! CHECK-DAG: %[[a2:.*]] = fir.convert %[[a1]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK-DAG: %[[b2:.*]] = fir.convert %[[b1]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
   call move_alloc(from, to)
-  ! CHECK: fir.call @_FortranAMoveAlloc(%[[b2]], %[[a2]], %[[false]], %[[errMsg]], %{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+  ! CHECK: fir.call @_FortranAMoveAlloc(%[[b2]], %[[a2]], %{{.*}}, %[[false]], %[[errMsg]], %{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
   ! CHECK-DAG:  %[[a3:.*]] = fir.load %[[a1:.*]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   ! CHECK-DAG:  %[[a4:.*]] = fir.box_addr %[[a3]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   ! CHECK-DAG:  %[[b3:.*]] = fir.load %[[b1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
@@ -32,7 +32,7 @@ subroutine to_from_stat
   ! CHECK-DAG: %[[a2:.*]] = fir.convert %[[a1]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK-DAG: %[[b2:.*]] = fir.convert %[[b1]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
   call move_alloc(from, to, stat)
-  ! CHECK: %[[stat:.*]] = fir.call @_FortranAMoveAlloc(%[[b2]], %[[a2]], %[[true]], %[[errMsg]], %{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+  ! CHECK: %[[stat:.*]] = fir.call @_FortranAMoveAlloc(%[[b2]], %[[a2]], %{{.*}}, %[[true]], %[[errMsg]], %{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
   ! CHECK-DAG:  %[[a3:.*]] = fir.load %[[a1:.*]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   ! CHECK-DAG:  %[[a4:.*]] = fir.box_addr %[[a3]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   ! CHECK-DAG:  %[[b3:.*]] = fir.load %[[b1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
@@ -55,7 +55,7 @@ subroutine to_from_stat_errmsg
   ! CHECK-DAG: %[[a2:.*]] = fir.convert %[[a1]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK-DAG: %[[b2:.*]] = fir.convert %[[b1]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
   call move_alloc(from, to, stat, errMsg)
-  ! CHECK: %[[stat:.*]] = fir.call @_FortranAMoveAlloc(%[[b2]], %[[a2]], %[[true]], %[[errMsg3]], %{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+  ! CHECK: %[[stat:.*]] = fir.call @_FortranAMoveAlloc(%[[b2]], %[[a2]], %{{.*}}, %[[true]], %[[errMsg3]], %{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
   ! CHECK-DAG:  %[[a3:.*]] = fir.load %[[a1:.*]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   ! CHECK-DAG:  %[[a4:.*]] = fir.box_addr %[[a3]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   ! CHECK-DAG:  %[[b3:.*]] = fir.load %[[b1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>

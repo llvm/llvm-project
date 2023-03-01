@@ -6027,28 +6027,21 @@ AMDGPUAsmParser::parseNamedBit(StringRef Name, OperandVector &Operands,
 
 unsigned AMDGPUAsmParser::getCPolKind(StringRef Id, StringRef Mnemo,
                                       bool &Disabling) const {
-  Disabling = Id.startswith("no");
+  Disabling = Id.consume_front("no");
 
   if (isGFX940() && !Mnemo.startswith("s_")) {
     return StringSwitch<unsigned>(Id)
         .Case("nt", AMDGPU::CPol::NT)
-        .Case("nont", AMDGPU::CPol::NT)
         .Case("sc0", AMDGPU::CPol::SC0)
-        .Case("nosc0", AMDGPU::CPol::SC0)
         .Case("sc1", AMDGPU::CPol::SC1)
-        .Case("nosc1", AMDGPU::CPol::SC1)
         .Default(0);
   }
 
   return StringSwitch<unsigned>(Id)
       .Case("dlc", AMDGPU::CPol::DLC)
-      .Case("nodlc", AMDGPU::CPol::DLC)
       .Case("glc", AMDGPU::CPol::GLC)
-      .Case("noglc", AMDGPU::CPol::GLC)
       .Case("scc", AMDGPU::CPol::SCC)
-      .Case("noscc", AMDGPU::CPol::SCC)
       .Case("slc", AMDGPU::CPol::SLC)
-      .Case("noslc", AMDGPU::CPol::SLC)
       .Default(0);
 }
 

@@ -410,3 +410,18 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !7 = !DILocalVariable(scope: !8)
 !8 = distinct !DISubprogram(name: "noname_variable", scope: !2, file: !2, unit: !1);
 !9 = !DILocation(line: 1, column: 2, scope: !8)
+
+; // -----
+
+; CHECK: #[[SUBPROGRAM:.*]] = #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #{{.*}}, file = #{{.*}}, subprogramFlags = Definition>
+; CHECK: #[[FUNC_LOC:.*]] = loc(fused<#[[SUBPROGRAM]]>[{{.*}}])
+define void @noname_subprogram(ptr %arg) !dbg !8 {
+  ret void
+}
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "debug-info.ll", directory: "/")
+!8 = distinct !DISubprogram(scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1);
