@@ -7368,6 +7368,22 @@ def : Pat<(v2i64 (AArch64dup (i64 (load GPR64sp:$Rn)))),
           (LD1Rv2d GPR64sp:$Rn)>;
 def : Pat<(v1i64 (AArch64dup (i64 (load GPR64sp:$Rn)))),
           (LD1Rv1d GPR64sp:$Rn)>;
+
+def : Pat<(v8i8 (AArch64duplane8 (v16i8 (insert_subvector undef, (v8i8 (load GPR64sp:$Rn)), (i64 0))), (i64 0))),
+          (LD1Rv8b GPR64sp:$Rn)>;
+def : Pat<(v16i8 (AArch64duplane8 (v16i8 (load GPR64sp:$Rn)), (i64 0))),
+          (LD1Rv16b GPR64sp:$Rn)>;
+def : Pat<(v4i16 (AArch64duplane16 (v8i16 (insert_subvector undef, (v4i16 (load GPR64sp:$Rn)), (i64 0))), (i64 0))),
+          (LD1Rv4h GPR64sp:$Rn)>;
+def : Pat<(v8i16 (AArch64duplane16 (v8i16 (load GPR64sp:$Rn)), (i64 0))),
+          (LD1Rv8h GPR64sp:$Rn)>;
+def : Pat<(v2i32 (AArch64duplane32 (v4i32 (insert_subvector undef, (v2i32 (load GPR64sp:$Rn)), (i64 0))), (i64 0))),
+          (LD1Rv2s GPR64sp:$Rn)>;
+def : Pat<(v4i32 (AArch64duplane32 (v4i32 (load GPR64sp:$Rn)), (i64 0))),
+          (LD1Rv4s GPR64sp:$Rn)>;
+def : Pat<(v2i64 (AArch64duplane64 (v2i64 (load GPR64sp:$Rn)), (i64 0))),
+          (LD1Rv2d GPR64sp:$Rn)>;
+
 // Grab the floating point version too
 def : Pat<(v2f32 (AArch64dup (f32 (load GPR64sp:$Rn)))),
           (LD1Rv2s GPR64sp:$Rn)>;
