@@ -219,8 +219,12 @@ public:
                                 Address &address,
                                 Value::ValueType &value_type) override;
 
+  CompilerType BindGenericTypeParameters(
+      CompilerType unbound_type,
+      std::function<CompilerType(unsigned, unsigned)> finder);
+
   /// Extract the value object which contains the Swift type's "contents".
-  /// Returns null if this is not a C++ wrapping a Swift type. 
+  /// Returns null if this is not a C++ wrapping a Swift type.
   static lldb::ValueObjectSP
   ExtractSwiftValueObjectFromCxxWrapper(ValueObject &valobj);
 

@@ -346,6 +346,13 @@ public:
     return {};
   }
 
+  CompilerType BindGenericTypeParameters(
+      CompilerType unbound_type,
+      std::function<CompilerType(unsigned, unsigned)> type_finder) {
+    STUB_LOG();
+    return {};
+  }
+
   CompilerType GetConcreteType(ExecutionContextScope *exe_scope,
                                ConstString abstract_type_name) {
     STUB_LOG();
@@ -1818,6 +1825,20 @@ lldb::ValueObjectSP SwiftLanguageRuntime::ExtractSwiftValueObjectFromCxxWrapper(
 
     auto opaque_ptr_valobj = child_valobj->GetChildAtIndex(0, true);
     swift_valobj = opaque_ptr_valobj;
+  } else if (child_type.GetMangledTypeName() == "swift::_impl::OpaqueStorage") {
+    if (child_valobj->GetNumChildren() != 1)
+      return swift_valobj;
+
+    auto opaque_ptr_valobj = child_valobj->GetChildAtIndex(0, true);
+
+    Status error;
+    opaque_ptr_valobj = opaque_ptr_valobj->Dereference(error);
+    if (error.Success())
+      swift_valobj = opaque_ptr_valobj;
+    else
+      LLDB_LOGF(GetLog(LLDBLog::Types),
+                "Could not dereference opaque storage value object, error: %s",
+                error.AsCString());
   } else {
     CompilerType element_type;
     if (child_type.IsArrayType(&element_type)) {
@@ -2376,6 +2397,12 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
     Value::ValueType &value_type) {
   FORWARD(GetDynamicTypeAndAddress, in_value, use_dynamic, class_type_or_name,
           address, value_type);
+}
+
+CompilerType SwiftLanguageRuntime::BindGenericTypeParameters(
+    CompilerType unbound_type,
+    std::function<CompilerType(unsigned, unsigned)> type_resolver) {
+  FORWARD(BindGenericTypeParameters, unbound_type, type_resolver);
 }
 
 void SwiftLanguageRuntime::DumpTyperef(CompilerType type,
