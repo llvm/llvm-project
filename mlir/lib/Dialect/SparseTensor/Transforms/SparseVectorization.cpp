@@ -546,7 +546,7 @@ static bool vectorizeStmt(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
           forOp->getAttr(LoopEmitter::getLoopEmitterLoopAttrName()));
       rewriter.setInsertionPointToStart(forOpNew.getBody());
     } else {
-      forOp.setStep(step);
+      rewriter.updateRootInPlace(forOp, [&]() { forOp.setStep(step); });
       rewriter.setInsertionPoint(yield);
     }
     vmask = genVectorMask(rewriter, loc, vl, forOp.getInductionVar(),
@@ -575,10 +575,11 @@ static bool vectorizeStmt(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
         // Now do some relinking (last one is not completely type safe
         // but all bad ones are removed right away). This also folds away
         // nop broadcast operations.
-        forOp.getResult(0).replaceAllUsesWith(vres);
-        forOp.getInductionVar().replaceAllUsesWith(forOpNew.getInductionVar());
-        forOp.getRegionIterArg(0).replaceAllUsesWith(
-            forOpNew.getRegionIterArg(0));
+        rewriter.replaceAllUsesWith(forOp.getResult(0), vres);
+        rewriter.replaceAllUsesWith(forOp.getInductionVar(),
+                                    forOpNew.getInductionVar());
+        rewriter.replaceAllUsesWith(forOp.getRegionIterArg(0),
+                                    forOpNew.getRegionIterArg(0));
         rewriter.eraseOp(forOp);
       }
       return true;
