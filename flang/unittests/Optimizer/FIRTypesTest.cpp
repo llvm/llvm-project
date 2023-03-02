@@ -147,6 +147,43 @@ TEST_F(FIRTypesTest, isBoxedRecordType) {
       fir::ReferenceType::get(mlir::IntegerType::get(&context, 32)))));
 }
 
+// Test fir::isScalarBoxedRecordType from flang/Optimizer/Dialect/FIRType.h.
+TEST_F(FIRTypesTest, isScalarBoxedRecordType) {
+  mlir::Type recTy = fir::RecordType::get(&context, "dt");
+  mlir::Type seqRecTy =
+      fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, recTy);
+  mlir::Type ty = fir::BoxType::get(recTy);
+  EXPECT_TRUE(fir::isScalarBoxedRecordType(ty));
+  EXPECT_TRUE(fir::isScalarBoxedRecordType(fir::ReferenceType::get(ty)));
+
+  // CLASS(T), ALLOCATABLE
+  ty = fir::ClassType::get(fir::HeapType::get(recTy));
+  EXPECT_TRUE(fir::isScalarBoxedRecordType(ty));
+
+  // TYPE(T), ALLOCATABLE
+  ty = fir::BoxType::get(fir::HeapType::get(recTy));
+  EXPECT_TRUE(fir::isScalarBoxedRecordType(ty));
+
+  // TYPE(T), POINTER
+  ty = fir::BoxType::get(fir::PointerType::get(recTy));
+  EXPECT_TRUE(fir::isScalarBoxedRecordType(ty));
+
+  // CLASS(T), POINTER
+  ty = fir::ClassType::get(fir::PointerType::get(recTy));
+  EXPECT_TRUE(fir::isScalarBoxedRecordType(ty));
+
+  // TYPE(T), DIMENSION(10)
+  ty = fir::BoxType::get(fir::SequenceType::get({10}, recTy));
+  EXPECT_FALSE(fir::isScalarBoxedRecordType(ty));
+
+  // TYPE(T), DIMENSION(:)
+  ty = fir::BoxType::get(seqRecTy);
+  EXPECT_FALSE(fir::isScalarBoxedRecordType(ty));
+
+  EXPECT_FALSE(fir::isScalarBoxedRecordType(fir::BoxType::get(
+      fir::ReferenceType::get(mlir::IntegerType::get(&context, 32)))));
+}
+
 TEST_F(FIRTypesTest, updateTypeForUnlimitedPolymorphic) {
   // RecordType are not changed.
 
