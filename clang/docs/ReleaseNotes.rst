@@ -1015,6 +1015,9 @@ Windows Support
   by Linux distributions such as Fedora. Also improved such setups by
   avoiding to include ``/usr/include`` among the include paths when cross
   compiling with a cross sysroot based in ``/usr``.
+- Fix incorrect alignment attribute on the this parameter of certain
+  non-complete destructors when using the Microsoft ABI.
+  `Issue 60465 <https://github.com/llvm/llvm-project/issues/60465>`_.
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
