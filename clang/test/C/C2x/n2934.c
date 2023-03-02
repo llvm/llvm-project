@@ -7,6 +7,7 @@
 
 thread_local struct alignas(int) S { // c2x-warning {{'alignas' is incompatible with C standards before C2x}} \
                                         c2x-warning {{'thread_local' is incompatible with C standards before C2x}} \
+                                        c2x-error 0+ {{thread-local storage is not supported for the current target}} \
                                         c17-error {{unknown type name 'thread_local'}} \
                                         c17-error {{expected identifier or '('}} \
                                         c17-error {{expected ')'}} \
