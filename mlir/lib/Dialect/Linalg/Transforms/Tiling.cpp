@@ -674,7 +674,7 @@ FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
         return !isConstantIntValue(ofr, 0);
       }));
   SmallVector<Value> materializedNonZeroNumThreads =
-      getAsValues(b, loc, nonZeroNumThreads);
+      getValueOrCreateConstantIndexOp(b, loc, nonZeroNumThreads);
 
   // 2. Create the ForallOp with an empty region.
   scf::ForallOp forallOp = b.create<scf::ForallOp>(

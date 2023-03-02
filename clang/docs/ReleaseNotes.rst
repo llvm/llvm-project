@@ -258,6 +258,11 @@ Floating Point Support in Clang
 AST Matchers
 ------------
 
+- Add ``coroutineBodyStmt`` matcher.
+
+- The ``hasBody`` matcher now matches coroutine body nodes in
+  ``CoroutineBodyStmts``.
+
 clang-format
 ------------
 

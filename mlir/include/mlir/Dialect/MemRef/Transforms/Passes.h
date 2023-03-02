@@ -19,6 +19,7 @@ namespace mlir {
 
 class AffineDialect;
 class ModuleOp;
+class RewriterBase;
 
 namespace arith {
 class WideIntEmulationConverter;
@@ -102,6 +103,11 @@ void populateMemRefWideIntEmulationConversions(
 ///   "some_use"(%sv) : (memref<4x128xf32, strided<...>) -> ()
 /// }
 /// ```
+FailureOr<memref::AllocOp> multiBuffer(RewriterBase &rewriter,
+                                       memref::AllocOp allocOp,
+                                       unsigned multiplier,
+                                       bool skipOverrideAnalysis = false);
+/// Call into `multiBuffer` with  locally constructed IRRewriter.
 FailureOr<memref::AllocOp> multiBuffer(memref::AllocOp allocOp,
                                        unsigned multiplier,
                                        bool skipOverrideAnalysis = false);
