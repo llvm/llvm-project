@@ -74,8 +74,7 @@ public:
   /// Raises an exception if the mapping already exists.
   /// This is intended to be called by implementation code.
   void registerOperationImpl(const std::string &operationName,
-                             pybind11::object pyClass,
-                             pybind11::object rawOpViewClass);
+                             pybind11::object pyClass);
 
   /// Returns the custom Attribute builder for Attribute kind.
   std::optional<pybind11::function>
@@ -86,10 +85,11 @@ public:
   std::optional<pybind11::object>
   lookupDialectClass(const std::string &dialectNamespace);
 
-  /// Looks up a registered raw OpView class by operation name. Note that this
-  /// may trigger a load of the dialect, which can arbitrarily re-enter.
+  /// Looks up a registered operation class (deriving from OpView) by operation
+  /// name. Note that this may trigger a load of the dialect, which can
+  /// arbitrarily re-enter.
   std::optional<pybind11::object>
-  lookupRawOpViewClass(llvm::StringRef operationName);
+  lookupOperationClass(llvm::StringRef operationName);
 
 private:
   static PyGlobals *instance;
@@ -99,21 +99,16 @@ private:
   llvm::StringMap<pybind11::object> dialectClassMap;
   /// Map of full operation name to external operation class object.
   llvm::StringMap<pybind11::object> operationClassMap;
-  /// Map of operation name to custom subclass that directly initializes
-  /// the OpView base class (bypassing the user class constructor).
-  llvm::StringMap<pybind11::object> rawOpViewClassMap;
   /// Map of attribute ODS name to custom builder.
   llvm::StringMap<pybind11::object> attributeBuilderMap;
 
   /// Set of dialect namespaces that we have attempted to import implementation
   /// modules for.
   llvm::StringSet<> loadedDialectModulesCache;
-  /// Cache of operation name to custom OpView subclass that directly
-  /// initializes the OpView base class (or an undefined object for negative
-  /// lookup). This is maintained on loopup as a shadow of rawOpViewClassMap
-  /// in order for repeat lookups of the OpView classes to only incur the cost
-  /// of one hashtable lookup.
-  llvm::StringMap<pybind11::object> rawOpViewClassMapCache;
+  /// Cache of operation name to external operation class object. This is
+  /// maintained on lookup as a shadow of operationClassMap in order for repeat
+  /// lookups of the classes to only incur the cost of one hashtable lookup.
+  llvm::StringMap<pybind11::object> operationClassMapCache;
 };
 
 } // namespace python

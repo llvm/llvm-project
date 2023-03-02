@@ -273,12 +273,6 @@ FunctionPass *createNewGVNPass();
 
 //===----------------------------------------------------------------------===//
 //
-// DivRemPairs - Hoist/decompose integer division and remainder instructions.
-//
-FunctionPass *createDivRemPairsPass();
-
-//===----------------------------------------------------------------------===//
-//
 // MemCpyOpt - This pass performs optimizations related to eliminating memcpy
 // calls and/or combining multiple stores into memset's.
 //

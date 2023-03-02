@@ -22,7 +22,11 @@
 #else
 #include "aarch64/FEnvImpl.h"
 #endif
-#elif defined(LIBC_TARGET_ARCH_IS_X86)
+
+// The extra !defined(APPLE) condition is to cause x86_64 MacOS builds to use
+// the dummy implementations below. Once a proper x86_64 darwin fenv is set up,
+// the apple condition here should be removed.
+#elif defined(LIBC_TARGET_ARCH_IS_X86) && !defined(__APPLE__)
 #include "x86_64/FEnvImpl.h"
 #else
 

@@ -42,6 +42,7 @@ Paper Status
    .. [#note-P0533R9] P0533R9: ``isfinite``, ``isinf``, ``isnan`` and ``isnormal`` are implemented.
    .. [#note-P1413R3] P1413R3: ``std::aligned_storage_t`` and ``std::aligned_union_t`` are marked deprecated, but
       clang doesn't issue a diagnostic for deprecated using template declarations.
+   .. [#note-P2520R0] P2520R0: Libc++ implemented this paper as a DR in C++20 as well.
 
 .. _issues-status-cxx2b:
 

@@ -243,19 +243,15 @@ source_filename = "debug-info.ll"
 define void @intrinsic(i64 %0, ptr %1) {
   ; CHECK: llvm.intr.dbg.value #[[$VAR0]] = %[[ARG0]] : i64 loc(#[[LOC0:.+]])
   call void @llvm.dbg.value(metadata i64 %0, metadata !5, metadata !DIExpression()), !dbg !7
-  ; CHECK: llvm.intr.dbg.addr #[[$VAR1]] = %[[ARG1]] : !llvm.ptr loc(#[[LOC1:.+]])
-  call void @llvm.dbg.addr(metadata ptr %1, metadata !6, metadata !DIExpression()), !dbg !8
-  ; CHECK: llvm.intr.dbg.declare #[[$VAR1]] = %[[ARG1]] : !llvm.ptr loc(#[[LOC2:.+]])
+  ; CHECK: llvm.intr.dbg.declare #[[$VAR1]] = %[[ARG1]] : !llvm.ptr loc(#[[LOC1:.+]])
   call void @llvm.dbg.declare(metadata ptr %1, metadata !6, metadata !DIExpression()), !dbg !9
   ret void
 }
 
 ; CHECK: #[[LOC0]] = loc(fused<#[[$SP]]>[{{.*}}])
 ; CHECK: #[[LOC1]] = loc(fused<#[[$SP]]>[{{.*}}])
-; CHECK: #[[LOC2]] = loc(fused<#[[$SP]]>[{{.*}}])
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
-declare void @llvm.dbg.addr(metadata, metadata, metadata)
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!1}

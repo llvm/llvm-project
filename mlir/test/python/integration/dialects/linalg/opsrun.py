@@ -202,7 +202,7 @@ def transform(module, boilerplate):
   pm.add("finalize-memref-to-llvm")
   pm.add("convert-func-to-llvm")
   pm.add("reconcile-unrealized-casts")
-  pm.run(mod)
+  pm.run(mod.operation)
   return mod
 
 

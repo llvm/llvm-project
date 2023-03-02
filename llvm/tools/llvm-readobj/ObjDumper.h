@@ -136,6 +136,7 @@ public:
   virtual void printStackSizes() {}
   virtual void printSectionDetails() {}
   virtual void printArchSpecificInfo() {}
+  virtual void printMemtag() {}
 
   // Only implemented for PE/COFF.
   virtual void printCOFFImports() { }

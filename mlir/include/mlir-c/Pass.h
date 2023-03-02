@@ -70,9 +70,9 @@ static inline bool mlirPassManagerIsNull(MlirPassManager passManager) {
 MLIR_CAPI_EXPORTED MlirOpPassManager
 mlirPassManagerGetAsOpPassManager(MlirPassManager passManager);
 
-/// Run the provided `passManager` on the given `module`.
+/// Run the provided `passManager` on the given `op`.
 MLIR_CAPI_EXPORTED MlirLogicalResult
-mlirPassManagerRun(MlirPassManager passManager, MlirModule module);
+mlirPassManagerRunOnOp(MlirPassManager passManager, MlirOperation op);
 
 /// Enable mlir-print-ir-after-all.
 MLIR_CAPI_EXPORTED void

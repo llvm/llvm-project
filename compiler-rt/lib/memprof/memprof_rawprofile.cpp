@@ -20,7 +20,7 @@ using SegmentEntry = ::llvm::memprof::SegmentEntry;
 using Header = ::llvm::memprof::Header;
 
 namespace {
-template <class T> char *WriteBytes(T Pod, char *&Buffer) {
+template <class T> char *WriteBytes(const T &Pod, char *Buffer) {
   *(T *)Buffer = Pod;
   return Buffer + sizeof(T);
 }

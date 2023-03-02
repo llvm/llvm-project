@@ -84,8 +84,7 @@ void PyGlobals::registerDialectImpl(const std::string &dialectNamespace,
 }
 
 void PyGlobals::registerOperationImpl(const std::string &operationName,
-                                      py::object pyClass,
-                                      py::object rawOpViewClass) {
+                                      py::object pyClass) {
   py::object &found = operationClassMap[operationName];
   if (found) {
     throw SetPyError(PyExc_RuntimeError, llvm::Twine("Operation '") +
@@ -93,7 +92,6 @@ void PyGlobals::registerOperationImpl(const std::string &operationName,
                                              "' is already registered.");
   }
   found = std::move(pyClass);
-  rawOpViewClassMap[operationName] = std::move(rawOpViewClass);
 }
 
 std::optional<py::function>
@@ -130,10 +128,10 @@ PyGlobals::lookupDialectClass(const std::string &dialectNamespace) {
 }
 
 std::optional<pybind11::object>
-PyGlobals::lookupRawOpViewClass(llvm::StringRef operationName) {
+PyGlobals::lookupOperationClass(llvm::StringRef operationName) {
   {
-    auto foundIt = rawOpViewClassMapCache.find(operationName);
-    if (foundIt != rawOpViewClassMapCache.end()) {
+    auto foundIt = operationClassMapCache.find(operationName);
+    if (foundIt != operationClassMapCache.end()) {
       if (foundIt->second.is_none())
         return std::nullopt;
       assert(foundIt->second && "py::object is defined");
@@ -148,22 +146,22 @@ PyGlobals::lookupRawOpViewClass(llvm::StringRef operationName) {
 
   // Attempt to find from the canonical map and cache.
   {
-    auto foundIt = rawOpViewClassMap.find(operationName);
-    if (foundIt != rawOpViewClassMap.end()) {
+    auto foundIt = operationClassMap.find(operationName);
+    if (foundIt != operationClassMap.end()) {
       if (foundIt->second.is_none())
         return std::nullopt;
       assert(foundIt->second && "py::object is defined");
       // Positive cache.
-      rawOpViewClassMapCache[operationName] = foundIt->second;
+      operationClassMapCache[operationName] = foundIt->second;
       return foundIt->second;
     }
     // Negative cache.
-    rawOpViewClassMap[operationName] = py::none();
+    operationClassMap[operationName] = py::none();
     return std::nullopt;
   }
 }
 
 void PyGlobals::clearImportCache() {
   loadedDialectModulesCache.clear();
-  rawOpViewClassMapCache.clear();
+  operationClassMapCache.clear();
 }

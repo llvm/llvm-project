@@ -117,12 +117,12 @@ public:
                               /* Default in GB */ 64) {}
 
   void saveImage(const char *Name, DeviceImageTy &Image) {
-    Twine ImageName = Twine(Name) + Twine(".image");
+    SmallString<128> ImageName = {Name, ".image"};
     std::error_code EC;
-    raw_fd_ostream OS(ImageName.str(), EC);
+    raw_fd_ostream OS(ImageName, EC);
     if (EC)
       report_fatal_error("Error saving image : " + StringRef(EC.message()));
-    if (auto TgtImageBitcode = Image.getTgtImageBitcode()) {
+    if (const auto *TgtImageBitcode = Image.getTgtImageBitcode()) {
       size_t Size =
           getPtrDiff(TgtImageBitcode->ImageEnd, TgtImageBitcode->ImageStart);
       MemoryBufferRef MBR = MemoryBufferRef(
@@ -158,11 +158,10 @@ public:
       JsonArgOffsets.push_back(ArgOffsets[I]);
     JsonKernelInfo["ArgOffsets"] = json::Value(std::move(JsonArgOffsets));
 
-    Twine KernelName(Name);
-    Twine MemoryFilename = KernelName + ".memory";
-    dumpDeviceMemory(MemoryFilename.str(), AsyncInfoWrapper);
+    SmallString<128> MemoryFilename = {Name, ".memory"};
+    dumpDeviceMemory(MemoryFilename, AsyncInfoWrapper);
 
-    Twine JsonFilename = KernelName + ".json";
+    SmallString<128> JsonFilename = {Name, ".json"};
     std::error_code EC;
     raw_fd_ostream JsonOS(JsonFilename.str(), EC);
     if (EC)
@@ -174,9 +173,9 @@ public:
 
   void saveKernelOutputInfo(const char *Name,
                             AsyncInfoWrapperTy &AsyncInfoWrapper) {
-    Twine OutputFilename =
-        Twine(Name) + (isRecording() ? ".original.output" : ".replay.output");
-    dumpDeviceMemory(OutputFilename.str(), AsyncInfoWrapper);
+    SmallString<128> OutputFilename = {
+        Name, (isRecording() ? ".original.output" : ".replay.output")};
+    dumpDeviceMemory(OutputFilename, AsyncInfoWrapper);
   }
 
   void *alloc(uint64_t Size) {
@@ -352,15 +351,7 @@ GenericDeviceTy::GenericDeviceTy(int32_t DeviceId, int32_t NumDevices,
       OMPX_InitialNumEvents("LIBOMPTARGET_NUM_INITIAL_EVENTS", 32),
       DeviceId(DeviceId), GridValues(OMPGridValues),
       PeerAccesses(NumDevices, PeerAccessState::PENDING), PeerAccessesLock(),
-      PinnedAllocs(*this) {
-  if (OMP_NumTeams > 0)
-    GridValues.GV_Max_Teams =
-        std::min(GridValues.GV_Max_Teams, uint32_t(OMP_NumTeams));
-
-  if (OMP_TeamsThreadLimit > 0)
-    GridValues.GV_Max_WG_Size =
-        std::min(GridValues.GV_Max_WG_Size, uint32_t(OMP_TeamsThreadLimit));
-}
+      PinnedAllocs(*this) {}
 
 Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
   if (auto Err = initImpl(Plugin))
@@ -384,6 +375,16 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
   if (!HeapSizeEnvarOrErr)
     return HeapSizeEnvarOrErr.takeError();
   OMPX_TargetHeapSize = std::move(*HeapSizeEnvarOrErr);
+
+  // Update the maximum number of teams and threads after the device
+  // initialization sets the corresponding hardware limit.
+  if (OMP_NumTeams > 0)
+    GridValues.GV_Max_Teams =
+        std::min(GridValues.GV_Max_Teams, uint32_t(OMP_NumTeams));
+
+  if (OMP_TeamsThreadLimit > 0)
+    GridValues.GV_Max_WG_Size =
+        std::min(GridValues.GV_Max_WG_Size, uint32_t(OMP_TeamsThreadLimit));
 
   // Enable the memory manager if required.
   auto [ThresholdMM, EnableMM] = MemoryManagerTy::getSizeThresholdFromEnv();
@@ -1190,7 +1191,6 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t DeviceId,
                                           __tgt_device_image *TgtImage) {
   GenericPluginTy &Plugin = Plugin::get();
   GenericDeviceTy &Device = Plugin.getDevice(DeviceId);
-
 
   auto TableOrErr = Device.loadBinary(Plugin, TgtImage);
   if (!TableOrErr) {

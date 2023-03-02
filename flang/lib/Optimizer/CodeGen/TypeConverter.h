@@ -390,8 +390,9 @@ public:
   KindMapping &getKindMap() { return kindMapping; }
 
   // Relay TBAA tag attachment to TBAABuilder.
-  void attachTBAATag(mlir::Operation *op, mlir::Type baseFIRType,
-                     mlir::Type accessFIRType, mlir::LLVM::GEPOp gep) {
+  void attachTBAATag(mlir::LLVM::AliasAnalysisOpInterface op,
+                     mlir::Type baseFIRType, mlir::Type accessFIRType,
+                     mlir::LLVM::GEPOp gep) {
     tbaaBuilder.attachTBAATag(op, baseFIRType, accessFIRType, gep);
   }
 

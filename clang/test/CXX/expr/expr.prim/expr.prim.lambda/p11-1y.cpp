@@ -12,16 +12,16 @@ auto with_float_2 = [&f(f)] { // ok, refers to outer f
   using T = double&;
 };
 
-// Within the lambda-expression's compound-statement,
-// the identifier in the init-capture hides any declaration
-// of the same name in scopes enclosing the lambda-expression.
+// Within the lambda-expression the identifier in the init-capture
+// hides any declaration of the same name in scopes enclosing
+// the lambda-expression.
 void hiding() {
   char c;
   (void) [c("foo")] {
     static_assert(sizeof(c) == sizeof(const char*), "");
   };
-  (void) [c("bar")] () -> decltype(c) { // outer c, not init-capture
-    return "baz"; // expected-error {{cannot initialize}}
+  (void)[c("bar")]()->decltype(c) { // inner c
+    return "baz";
   };
 }
 
