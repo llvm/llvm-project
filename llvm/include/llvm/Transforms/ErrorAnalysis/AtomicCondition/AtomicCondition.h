@@ -11,10 +11,10 @@
 #include <regex.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <string.h>
 #include <stdint.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 /*----------------------------------------------------------------------------*/
 /* Constants                                                                  */
@@ -63,6 +63,7 @@ struct ACItem {
   enum Func F;
   int NumOperands;
   const char *ResultVar;
+  double HPResult;
   char **OperandNames;
   double *OperandValues;
   double *ACWRTOperands;
@@ -96,10 +97,12 @@ void fACStoreACItems(FILE *FP, ACItem **ObjectPointerList, uint64_t NumObjects) 
               "\t\t{\n"
               "\t\t\t\"ItemId\": %d,\n"
               "\t\t\t\"Function\": %d,\n"
-              "\t\t\t\"ResultVar\": \"%s\",\n",
+              "\t\t\t\"ResultVar\": \"%s\",\n"
+              "\t\t\t\"HPResult\": %0.15lf,\n",
               ObjectPointerList[I]->ItemId,
               ObjectPointerList[I]->F,
-              ObjectPointerList[I]->ResultVar);
+              ObjectPointerList[I]->ResultVar,
+              ObjectPointerList[I]->HPResult);
       for (int J = 0; J < ObjectPointerList[I]->NumOperands; ++J) {
         fprintf(FP,
                 "\t\t\t\"Operand %d Name\": \"%s\",\n"
@@ -731,6 +734,7 @@ void fACSetACItem(ACTable *AtomicConditionsTable, ACItem *NewValue)
     FoundItem->F = NewValue->F;
     FoundItem->NumOperands = fACFuncHasXNumOperands(FoundItem->F);
     FoundItem->ResultVar = NewValue->ResultVar;
+    FoundItem->HPResult = NewValue->HPResult;
     for (int I = 0; I < FoundItem->NumOperands; ++I) {
       FoundItem->OperandNames[I] = NewValue->OperandNames[I];
       FoundItem->OperandValues[I] = NewValue->OperandValues[I];
@@ -750,6 +754,7 @@ void fACSetACItem(ACTable *AtomicConditionsTable, ACItem *NewValue)
     AtomicConditionsTable->ACItems[NewValue->ItemId]->NumOperands =
         fACFuncHasXNumOperands(NewValue->F);
     AtomicConditionsTable->ACItems[NewValue->ItemId]->ResultVar = NewValue->ResultVar;
+    AtomicConditionsTable->ACItems[NewValue->ItemId]->HPResult = NewValue->HPResult;
 
     if((AtomicConditionsTable->ACItems[NewValue->ItemId]->OperandNames =
              (char **)malloc(sizeof(char *) * AtomicConditionsTable->ACItems[NewValue->ItemId]->NumOperands)) == NULL) {
@@ -797,7 +802,7 @@ ACItem **fACComputeAC(const char *ResultVar,
   printf("\tResultVar      : %s\n", ResultVar);
   for (int I = 0; I < NumOperands; ++I) {
     printf("\tOperand %d Name : %s\n"
-           "\tOperand %d Value: %lf\n",
+           "\tOperand %d Value: %0.15lf\n",
            I, OperandNames[I], I, OperandValues[I]);
   }
   printf("\tFileName       : %s\n", FileName);
@@ -824,6 +829,8 @@ ACItem **fACComputeAC(const char *ResultVar,
 
   switch (F) {
   case 0:
+    Item.HPResult = OperandValues[0] + OperandValues[1];
+
     Item.ACWRTOperands[0] = fabs(OperandValues[0] / (OperandValues[0]+OperandValues[1]));
     Item.ACWRTOperands[1] = fabs(OperandValues[1] / (OperandValues[0]+OperandValues[1]));
     //    printf("AC of x+y | x=%lf, y=%lf WRT x is %lf.\n", OperandValues[0], OperandValues[1], Item.ACWRTOperands[0]);
@@ -833,6 +840,8 @@ ACItem **fACComputeAC(const char *ResultVar,
     Item.ACStrings[1] = fACDumpAtomicConditionString(OperandNames, OperandValues, F, 1);
     break;
   case 1:
+    Item.HPResult = OperandValues[0] - OperandValues[1];
+
     Item.ACWRTOperands[0] = fabs(OperandValues[0] / (OperandValues[0]-OperandValues[1]));
     Item.ACWRTOperands[1] = fabs(OperandValues[1] / (OperandValues[1]-OperandValues[0]));
     //    printf("AC of x-y | x=%lf, y=%lf WRT x is %lf.\n", OperandValues[0], OperandValues[1], Item.ACWRTOperands[0]);
@@ -842,6 +851,8 @@ ACItem **fACComputeAC(const char *ResultVar,
     Item.ACStrings[1] = fACDumpAtomicConditionString(OperandNames, OperandValues, F, 1);
     break;
   case 2:
+    Item.HPResult = OperandValues[0] * OperandValues[1];
+
     Item.ACWRTOperands[0]=Item.ACWRTOperands[1]=1.0;
     //    printf("AC of x*y | x=%lf, y=%lf WRT x is %lf.\n", OperandValues[0], OperandValues[1], Item.ACWRTOperands[0]);
     //    printf("AC of x*y | x=%lf, y=%lf WRT y is %lf.\n", OperandValues[0], OperandValues[1], Item.ACWRTOperands[1]);
@@ -850,6 +861,8 @@ ACItem **fACComputeAC(const char *ResultVar,
     Item.ACStrings[1] = fACDumpAtomicConditionString(OperandNames, OperandValues, F, 1);
     break;
   case 3:
+    Item.HPResult = OperandValues[0] / OperandValues[1];
+
     Item.ACWRTOperands[0]=Item.ACWRTOperands[1]=1.0;
     //    printf("AC of x/y | x=%lf, y=%lf WRT x is %lf.\n", OperandValues[0], OperandValues[1], Item.ACWRTOperands[0]);
     //    printf("AC of x/y | x=%lf, y=%lf WRT y is %lf.\n", OperandValues[0], OperandValues[1], Item.ACWRTOperands[1]);
@@ -858,81 +871,109 @@ ACItem **fACComputeAC(const char *ResultVar,
     Item.ACStrings[1] = fACDumpAtomicConditionString(OperandNames, OperandValues, F, 1);
     break;
   case 4:
+    Item.HPResult = sin(OperandValues[0]);
+
     Item.ACWRTOperands[0] = fabs(OperandValues[0] * (cos(OperandValues[0])/sin(OperandValues[0])));
     //    printf("AC of sin(x) | x=%lf is %lf.\n", OperandValues[0], Item.ACWRTOperands[0]);
 
     Item.ACStrings[0] = fACDumpAtomicConditionString(OperandNames, OperandValues, F, 0);
     break;
   case 5:
+    Item.HPResult = cos(OperandValues[0]);
+
     Item.ACWRTOperands[0] = fabs(OperandValues[0] * tan(OperandValues[0]));
     //    printf("AC of cos(x) | x=%lf is %lf.\n", OperandValues[0], Item.ACWRTOperands[0]);
 
     Item.ACStrings[0] = fACDumpAtomicConditionString(OperandNames, OperandValues, F, 0);
     break;
   case 6:
+    Item.HPResult = tan(OperandValues[0]);
+
     Item.ACWRTOperands[0] = fabs(OperandValues[0] / (sin(OperandValues[0])*cos(OperandValues[0])));
     //    printf("AC of tan(x) | x=%lf is %lf.\n", OperandValues[0], Item.ACWRTOperands[0]);
     break;
   case 7:
+    Item.HPResult = asin(OperandValues[0]);
+
     Item.ACWRTOperands[0] = fabs(OperandValues[0] / (sqrt(1-pow(OperandValues[0],2)) * asin(OperandValues[0])));
     //    printf("AC of asin(x) | x=%lf is %lf.\n", OperandValues[0], Item.ACWRTOperands[0]);
 
     Item.ACStrings[0] = fACDumpAtomicConditionString(OperandNames, OperandValues, F, 0);
     break;
   case 8:
+    Item.HPResult = acos(OperandValues[0]);
+
     Item.ACWRTOperands[0] = fabs(-OperandValues[0] / (sqrt(1-pow(OperandValues[0],2)) * acos(OperandValues[0])));
     //    printf("AC of acos(x) | x=%lf is %lf.\n", OperandValues[0], Item.ACWRTOperands[0]);
 
     Item.ACStrings[0] = fACDumpAtomicConditionString(OperandNames, OperandValues, F, 0);
     break;
   case 9:
+    Item.HPResult = atan(OperandValues[0]);
+
     Item.ACWRTOperands[0] = fabs(OperandValues[0] / (pow(OperandValues[0],2)+1 * atan(OperandValues[0])));
     //    printf("AC of atan(x) | x=%lf is %lf.\n", OperandValues[0], Item.ACWRTOperands[0]);
 
     Item.ACStrings[0] = fACDumpAtomicConditionString(OperandNames, OperandValues, F, 0);
     break;
   case 10:
+    Item.HPResult = sinh(OperandValues[0]);
+
     Item.ACWRTOperands[0] = fabs(OperandValues[0] * (cosh(OperandValues[0])/sinh(OperandValues[0])));
     //    printf("AC of sinh(x) | x=%lf is %lf.\n", OperandValues[0], Item.ACWRTOperands[0]);
 
     Item.ACStrings[0] = fACDumpAtomicConditionString(OperandNames, OperandValues, F, 0);
     break;
   case 11:
+    Item.HPResult = cosh(OperandValues[0]);
+
     Item.ACWRTOperands[0] = fabs(OperandValues[0] * tanh(OperandValues[0]));
     //    printf("AC of cosh(x) | x=%lf is %lf.\n", OperandValues[0], Item.ACWRTOperands[0]);
 
     Item.ACStrings[0] = fACDumpAtomicConditionString(OperandNames, OperandValues, F, 0);
     break;
   case 12:
+    Item.HPResult = tanh(OperandValues[0]);
+
     Item.ACWRTOperands[0] = fabs(OperandValues[0] / (sinh(OperandValues[0])*cosh(OperandValues[0])));
     //    printf("AC of tanh(x) | x=%lf is %lf.\n", OperandValues[0], Item.ACWRTOperands[0]);
 
     Item.ACStrings[0] = fACDumpAtomicConditionString(OperandNames, OperandValues, F, 0);
     break;
   case 13:
+    Item.HPResult = exp(OperandValues[0]);
+
     Item.ACWRTOperands[0] = fabs(OperandValues[0]);
     //    printf("AC of exp(x) | x=%lf is %lf.\n", OperandValues[0], Item.ACWRTOperands[0]);
 
     Item.ACStrings[0] = fACDumpAtomicConditionString(OperandNames, OperandValues, F, 0);
     break;
   case 14:
+    Item.HPResult = log(OperandValues[0]);
+
     Item.ACWRTOperands[0] = fabs(1/log(OperandValues[0]));
     //    printf("AC of log(x) | x=%lf is %lf.\n", OperandValues[0], Item.ACWRTOperands[0]);
 
     Item.ACStrings[0] = fACDumpAtomicConditionString(OperandNames, OperandValues, F, 0);break;
   case 15:
+    Item.HPResult = sqrt(OperandValues[0]);
+
     Item.ACWRTOperands[0] = 0.5;
     //    printf("AC of sqrt(x) | x=%lf is %lf.\n", OperandValues[0], Item.ACWRTOperands[0]);
 
     Item.ACStrings[0] = fACDumpAtomicConditionString(OperandNames, OperandValues, F, 0);
     break;
   case 16:
+    Item.HPResult = -OperandValues[0];
+
     Item.ACWRTOperands[0] = 1.0;
     //    printf("AC of -x | x=%lf is %lf.\n", OperandValues[0], Item.ACWRTOperands[0]);
 
     Item.ACStrings[0] = fACDumpAtomicConditionString(OperandNames, OperandValues, F, 0);
     break;
   case 17:
+    Item.HPResult = OperandValues[0] * OperandValues[1] + OperandValues[2];
+
     Item.ACWRTOperands[0] = fabs(OperandValues[0]*OperandValues[1] / ((OperandValues[0]*OperandValues[1])+OperandValues[2]));
     Item.ACWRTOperands[1] = fabs(OperandValues[0]*OperandValues[1] / ((OperandValues[0]*OperandValues[1])+OperandValues[2]));
     Item.ACWRTOperands[2] = fabs(OperandValues[2] / ((OperandValues[0]*OperandValues[1])+OperandValues[2]));
@@ -961,6 +1002,7 @@ ACItem **fACComputeAC(const char *ResultVar,
   printf("\tItem Id        : %d\n", ACs->ACItems[Item.ItemId]->ItemId);
   printf("\tFunction       : %d\n", ACs->ACItems[Item.ItemId]->F);
   printf("\tResultVar      : %s\n", ACs->ACItems[Item.ItemId]->ResultVar);
+  printf("\tHP Result      : %0.15lf\n", ACs->ACItems[Item.ItemId]->HPResult);
   for (int I = 0; I < NumOperands; ++I) {
     printf("\tOperand %d Name : %s\n"
            "\tOperand %d Value: %lf\n",
@@ -968,7 +1010,7 @@ ACItem **fACComputeAC(const char *ResultVar,
            ACs->ACItems[Item.ItemId]->OperandValues[I]);
   }
   for (int I = 0; I < NumOperands; ++I) {
-    printf("\tACWRTOperand %d : %lf\n", I,
+    printf("\tACWRTOperand %d : %0.15lf\n", I,
            ACs->ACItems[Item.ItemId]->ACWRTOperands[I]);
   }
   for (int I = 0; I < NumOperands; ++I) {

@@ -67,22 +67,106 @@ double fp64OpError[] = {
 
 struct AFProduct {
   int ItemId;
-  ACItem *Factor;
-  struct AFProduct *ProductTail;
-  char *Input;
+
+  ACItem **Factors;
+  struct AFProduct **ProductTails;
+  char **Inputs;
+  double *AFs;
+
+  // Metadata
   int Height;
-  double AF;
+  int NumberOfInputs;
 };
 
 typedef struct AFProduct AFProduct;
 
-void fAFCreateAFComponent(AFProduct **AddressToAllocateAt) {
+void fAFCreateAFComponent(AFProduct **AddressToAllocateAt,
+                          int ItemId,
+                          int LengthOfLists) {
   if((*AddressToAllocateAt = (AFProduct *)malloc(sizeof(AFProduct))) == NULL) {
     printf("#fAF: Not enough memory for AFProduct!");
     exit(EXIT_FAILURE);
   }
 
+  (*AddressToAllocateAt)->ItemId = ItemId;
+
+  if(((*AddressToAllocateAt)->Factors = (ACItem **)malloc(sizeof(ACItem *) *
+                                                           LengthOfLists)) == NULL) {
+    printf("#fAF: Not enough memory for Factors!");
+    exit(EXIT_FAILURE);
+  }
+  (*AddressToAllocateAt)->Factors[0] = NULL;
+
+  if(((*AddressToAllocateAt)->ProductTails = (AFProduct **)malloc(sizeof(AFProduct *) *
+                                                           LengthOfLists)) == NULL) {
+    printf("#fAF: Not enough memory for ProductTails!");
+    exit(EXIT_FAILURE);
+  }
+  (*AddressToAllocateAt)->ProductTails[0] = NULL;
+
+  if(((*AddressToAllocateAt)->Inputs = (char **)malloc(sizeof(char *) *
+                                                                   LengthOfLists)) == NULL) {
+    printf("#fAF: Not enough memory for Inputs!");
+    exit(EXIT_FAILURE);
+  }
+  (*AddressToAllocateAt)->Inputs[0] = NULL;
+
+  if(((*AddressToAllocateAt)->AFs = (double *)malloc(sizeof(double *) *
+                                                        LengthOfLists)) == NULL) {
+    printf("#fAF: Not enough memory for AFs!");
+    exit(EXIT_FAILURE);
+  }
+  (*AddressToAllocateAt)->AFs[0] = 0.0;
+
+  (*AddressToAllocateAt)->Height = 1;
+  (*AddressToAllocateAt)->NumberOfInputs = 0;
+
   return ;
+}
+
+void fAFPrintAFProduct(AFProduct *ProductObject) {
+  printf("\t\t\t\"ProductItemId\": %d,\n", ProductObject->ItemId);
+
+  printf("\t\t\t\"Height\": %d,\n",
+         ProductObject->Height);
+
+  printf("\t\t\t\"Number of Inputs\": %d,\n",
+         ProductObject->NumberOfInputs);
+  printf("\t\t\t\"ACItemIds\": [%d", ProductObject->Factors[0]->ItemId);
+  for (int I = 1; I < ProductObject->NumberOfInputs; ++I) {
+    printf(",%d", ProductObject->Factors[I]->ItemId);
+  }
+  printf("],\n");
+
+  printf("\t\t\t\"ACItemStrings\": [\"%s\"",
+         ProductObject->Factors[0]->ResultVar);
+  for (int I = 1; I < ProductObject->NumberOfInputs; ++I) {
+    printf(",\"%s\"", ProductObject->Factors[I]->ResultVar);
+  }
+  printf("],\n");
+
+  printf("\t\t\t\"ProductTailItemIds\": [%d",
+         ProductObject->ProductTails[0] != NULL
+             ? ProductObject->ProductTails[0]->ItemId
+             : -1);
+  for (int I = 1; I < ProductObject->NumberOfInputs; ++I) {
+    printf(",%d", ProductObject->ProductTails[I] != NULL
+                      ? ProductObject->ProductTails[I]->ItemId
+                      : -1);
+  }
+  printf("],\n");
+
+  printf("\t\t\t\"Inputs\": [\"%s\"", ProductObject->Inputs[0]);
+  for (int I = 1; I < ProductObject->NumberOfInputs; ++I) {
+    printf(",\"%s\"", ProductObject->Inputs[I]);
+  }
+  printf("],\n");
+
+  printf("\t\t\t\"AFs\": [%0.15lf", ProductObject->AFs[0]);
+  for (int I = 1; I < ProductObject->NumberOfInputs; ++I) {
+    printf(",%0.15lf", ProductObject->AFs[I]);
+  }
+  printf("],\n");
 }
 
 AFProduct **fAFFlattenAFComponentsPath(AFProduct *ProductObject) {
@@ -94,11 +178,15 @@ AFProduct **fAFFlattenAFComponentsPath(AFProduct *ProductObject) {
     printf("#fAF: Not enough memory for AFProduct pointers!");
     exit(EXIT_FAILURE);
   }
-  ProductPath[0] = &*ProductObject;
+  ProductPath[0] = &*ProductObjectWalker;
+//  fAFPrintAFProduct(ProductObjectWalker);
+//  printf("\n");
 
   for (int I = 1; I < ProductObject->Height; ++I) {
-    ProductPath[I] = &*(ProductObjectWalker->ProductTail);
-    ProductObjectWalker = ProductObjectWalker->ProductTail;
+    ProductPath[I] = &*(ProductObjectWalker->ProductTails[0]);
+    ProductObjectWalker = ProductObjectWalker->ProductTails[0];
+//    fAFPrintAFProduct(ProductObjectWalker);
+//    printf("\n");
   }
 
   return ProductPath;
@@ -115,32 +203,53 @@ void fAFStoreAFProducts(FILE *FP, AFProduct **ObjectPointerList, uint64_t NumObj
   fprintf(FP, "\t\"AFs\": [\n");
   for (uint64_t J = 0; J < NumObjects; ++J) {
     AFProduct **ProductPath= fAFFlattenAFComponentsPath(ObjectPointerList[J]);
-    if (fprintf(FP,
-                "\t\t{\n"
-                "\t\t\t\"ProductItemId\": %d,\n"
-                "\t\t\t\"ACItemId\":%d,\n"
-                "\t\t\t\"ACItemString\": \"%s\",\n"
-                "\t\t\t\"ProductTailItemId\": %d,\n"
-                "\t\t\t\"Input\": \"%s\",\n"
-                "\t\t\t\"AF\": %lf,\n",
-                ObjectPointerList[J]->ItemId,
-                ObjectPointerList[J]->Factor->ItemId,
-                ObjectPointerList[J]->Factor->ResultVar,
-                ObjectPointerList[J]->
-                        ProductTail!=NULL?ObjectPointerList[J]->ProductTail->ItemId:
-                    -1,
-                ObjectPointerList[J]->Input,
-                ObjectPointerList[J]->AF) > 0) {
+    fprintf(FP,
+            "\t\t{\n"
+            "\t\t\t\"ProductItemId\": %d,\n",
+            ObjectPointerList[J]->ItemId);
 
-      fprintf(FP, "\t\t\t\"Path(AFProductIds)\": [%d", ProductPath[0]->ItemId);
-      for (int K = 1; K < ObjectPointerList[J]->Height; ++K)
-        fprintf(FP, ", %d", ProductPath[K]->ItemId);
-
-      if ((uint64_t)J == NumObjects-1)
-        fprintf(FP, "]\n\t\t}\n");
-      else
-        fprintf(FP, "]\n\t\t},\n");
+    fprintf(FP, "\t\t\t\"ACItemIds\": [%d", ObjectPointerList[J]->Factors[0]->ItemId);
+    for (int I = 1; I < ObjectPointerList[J]->NumberOfInputs; ++I) {
+      fprintf(FP, ",%d", ObjectPointerList[J]->Factors[I]->ItemId);
     }
+    fprintf(FP, "],\n");
+
+    fprintf(FP, "\t\t\t\"ACItemStrings\": [\"%s\"", ObjectPointerList[J]->Factors[0]->ResultVar);
+    for (int I = 1; I < ObjectPointerList[J]->NumberOfInputs; ++I) {
+      fprintf(FP, ",\"%s\"", ObjectPointerList[J]->Factors[I]->ResultVar);
+    }
+    fprintf(FP, "],\n");
+
+    fprintf(FP, "\t\t\t\"ProductTailItemIds\": [%d", ObjectPointerList[J]->
+                                                             ProductTails[0]!=NULL?ObjectPointerList[J]->ProductTails[0]->ItemId:
+                                                         -1);
+    for (int I = 1; I < ObjectPointerList[J]->NumberOfInputs; ++I) {
+      fprintf(FP, ",%d", ObjectPointerList[J]->
+                                 ProductTails[I]!=NULL?ObjectPointerList[J]->ProductTails[I]->ItemId:
+                             -1);
+    }
+    fprintf(FP, "],\n");
+
+    fprintf(FP, "\t\t\t\"Inputs\": [\"%s\"", ObjectPointerList[J]->Inputs[0]);
+    for (int I = 1; I < ObjectPointerList[J]->NumberOfInputs; ++I) {
+      fprintf(FP, ",\"%s\"", ObjectPointerList[J]->Inputs[I]);
+    }
+    fprintf(FP, "],\n");
+
+    fprintf(FP, "\t\t\t\"ACItemIds\": [%lf", ObjectPointerList[J]->AFs[0]);
+    for (int I = 1; I < ObjectPointerList[J]->NumberOfInputs; ++I) {
+      fprintf(FP, ",%0.15lf", ObjectPointerList[J]->AFs[I]);
+    }
+    fprintf(FP, "],\n");
+
+    fprintf(FP, "\t\t\t\"Path(AFProductIds)\": [%d", ProductPath[0]->ItemId);
+    for (int K = 1; K < ObjectPointerList[J]->Height; ++K)
+      fprintf(FP, ", %d", ProductPath[K]->ItemId);
+
+    if ((uint64_t)J == NumObjects-1)
+      fprintf(FP, "]\n\t\t}\n");
+    else
+      fprintf(FP, "]\n\t\t},\n");
   }
   fprintf(FP, "\t]\n");
 
@@ -151,19 +260,45 @@ void fAFStoreAFProducts(FILE *FP, AFProduct **ObjectPointerList, uint64_t NumObj
 
 struct AFItem {
   int ItemId;
+  int InstructionId;
+  int ExecutionId;
+
   AFProduct** Components;
   int NumAFComponents;
 };
 
 typedef struct AFItem AFItem;
 
-void fAFCreateAFItem(AFItem **AddressToAllocateAt) {
+void fAFCreateAFItem(AFItem **AddressToAllocateAt,
+                     int ItemId,
+                     int InstructionId,
+                     int ExecutionId,
+                     int NumAFComponents) {
   if((*AddressToAllocateAt = (AFItem *)malloc(sizeof(AFItem))) == NULL) {
     printf("#fAF: Not enough memory for AFItem!");
     exit(EXIT_FAILURE);
   }
 
+  (*AddressToAllocateAt)->ItemId = ItemId;
+  (*AddressToAllocateAt)->InstructionId = InstructionId;
+  (*AddressToAllocateAt)->ExecutionId = ExecutionId;
+  (*AddressToAllocateAt)->Components = NULL;
+  (*AddressToAllocateAt)->NumAFComponents = NumAFComponents;
+
   return ;
+}
+
+// Gets the AFItem with InstructionId and ExecutionId from List of AFItems.
+AFItem *fAFGetAFItemFromList(AFItem **AFItemList,
+                             int NumAFItems,
+                             int InstructionId,
+                             int ExecutionId) {
+  for (int I = 0; I < NumAFItems; ++I)
+    if (AFItemList[I]->InstructionId == InstructionId &&
+        AFItemList[I]->ExecutionId == ExecutionId)
+      return AFItemList[I];
+
+  return NULL;
 }
 
 // Function to write NumObjects number of AFItems from ObjectPointerList into
@@ -175,40 +310,68 @@ void fAFStoreAFItems(FILE *FP, AFItem **ObjectPointerList, uint64_t NumObjects) 
   fprintf(FP, "{\n");
 
   fprintf(FP, "\t\"AFs\": [\n");
-  int I = 0;
-  while ((uint64_t)I < NumObjects) {
-    for (int J = 0; J < ObjectPointerList[I]->NumAFComponents; ++J) {
-      AFProduct **ProductPath= fAFFlattenAFComponentsPath(ObjectPointerList[I]->Components[J]);
-      if (fprintf(FP,
-                  "\t\t{\n"
-                  "\t\t\t\"ProductItemId\": %d,\n"
-                  "\t\t\t\"ACItemId\":%d,\n"
-                  "\t\t\t\"ACItemString\": \"%s\",\n"
-                  "\t\t\t\"ProductTailItemId\": %d,\n"
-                  "\t\t\t\"Input\": \"%s\",\n"
-                  "\t\t\t\"AF\": %0.15lf,\n",
-                  ObjectPointerList[I]->Components[J]->ItemId,
-                  ObjectPointerList[I]->Components[J]->Factor->ItemId,
-                  ObjectPointerList[I]->Components[J]->Factor->ResultVar,
-                  ObjectPointerList[I]->Components[J]->
-                          ProductTail!=NULL?ObjectPointerList[I]->Components[J]->ProductTail->ItemId:
-                      -1,
-                  ObjectPointerList[I]->Components[J]->Input,
-                  ObjectPointerList[I]->Components[J]->AF) > 0) {
+  int K = 0;
+  while ((uint64_t)K < NumObjects) {
+    printf("K: %d\n", K);
+    for (int J = 0; J < ObjectPointerList[K]->NumAFComponents; ++J) {
+      AFProduct **ProductPath= fAFFlattenAFComponentsPath(ObjectPointerList[K]->Components[J]);
+      printf("\t ProductItemId: %d,\n",
+              ObjectPointerList[K]->Components[J]->ItemId);
+      fprintf(FP,
+              "\t\t{\n"
+              "\t\t\t\"ProductItemId\": %d,\n",
+              ObjectPointerList[K]->Components[J]->ItemId);
 
-        fprintf(FP, "\t\t\t\"Path(AFProductIds)\": [%d", ProductPath[0]->ItemId);
-        for (int K = 1; K < ObjectPointerList[I]->Components[J]->Height; ++K)
-          fprintf(FP, ", %d", ProductPath[K]->ItemId);
+      fprintf(FP,
+              "\t\t\t\"Height\": %d,\n",
+              ObjectPointerList[K]->Components[J]->Height);
 
-        if ((uint64_t)I == NumObjects-1 && J == ObjectPointerList[I]->NumAFComponents-1)
-          fprintf(FP, "]\n\t\t}\n");
-        else
-          fprintf(FP, "]\n\t\t},\n");
+      fprintf(FP, "\t\t\t\"ACItemIds\": [%d", ObjectPointerList[K]->Components[J]->Factors[0]->ItemId);
+      for (int I = 1; I < ObjectPointerList[K]->Components[J]->NumberOfInputs; ++I) {
+        fprintf(FP, ",%d", ObjectPointerList[K]->Components[J]->Factors[I]->ItemId);
       }
+      fprintf(FP, "],\n");
+
+      fprintf(FP, "\t\t\t\"ACItemStrings\": [\"%s\"", ObjectPointerList[K]->Components[J]->Factors[0]->ResultVar);
+      for (int I = 1; I < ObjectPointerList[K]->Components[J]->NumberOfInputs; ++I) {
+        fprintf(FP, ",\"%s\"", ObjectPointerList[K]->Components[J]->Factors[I]->ResultVar);
+      }
+      fprintf(FP, "],\n");
+
+      fprintf(FP, "\t\t\t\"ProductTailItemIds\": [%d", ObjectPointerList[K]->Components[J]->
+                                                               ProductTails[0]!=NULL?ObjectPointerList[K]->Components[J]->ProductTails[0]->ItemId:
+                                                           -1);
+      for (int I = 1; I < ObjectPointerList[K]->Components[J]->NumberOfInputs; ++I) {
+        fprintf(FP, ",%d", ObjectPointerList[K]->Components[J]->
+                                   ProductTails[I]!=NULL?ObjectPointerList[K]->Components[J]->ProductTails[I]->ItemId:
+                               -1);
+      }
+      fprintf(FP, "],\n");
+
+      fprintf(FP, "\t\t\t\"Inputs\": [\"%s\"", ObjectPointerList[K]->Components[J]->Inputs[0]);
+      for (int I = 1; I < ObjectPointerList[K]->Components[J]->NumberOfInputs; ++I) {
+        fprintf(FP, ",\"%s\"", ObjectPointerList[K]->Components[J]->Inputs[I]);
+      }
+      fprintf(FP, "],\n");
+
+      fprintf(FP, "\t\t\t\"AFs\": [%0.15lf", ObjectPointerList[K]->Components[J]->AFs[0]);
+      for (int I = 1; I < ObjectPointerList[K]->Components[J]->NumberOfInputs; ++I) {
+        fprintf(FP, ",%0.15lf", ObjectPointerList[K]->Components[J]->AFs[I]);
+      }
+      fprintf(FP, "],\n");
+
+      fprintf(FP, "\t\t\t\"Path(AFProductIds)\": [%d", ProductPath[0]->ItemId);
+
+      for(int I = 1; I < ObjectPointerList[K]->Components[J]->Height; ++I)
+        fprintf(FP, ", %d", ProductPath[I]->ItemId);
+
+      if ((uint64_t)K == NumObjects-1 && J == ObjectPointerList[K]->NumAFComponents-1)
+        fprintf(FP, "]\n\t\t}\n");
+      else
+        fprintf(FP, "]\n\t\t},\n");
     }
 
-    I++;
-
+    K++;
   }
   fprintf(FP, "\t]\n");
 
@@ -239,6 +402,7 @@ void fAFCreateAFTable(AFTable **AddressToAllocateAt) {
 int AFItemCounter;
 int AFComponentCounter;
 int PlotDataCounter;
+int ExecutionCounter;
 AFTable *AFs;
 AFProduct **Paths;
 
@@ -247,18 +411,18 @@ AFProduct **Paths;
 /*----------------------------------------------------------------------------*/
 
 #pragma clang optimize off
-void fAFfp32markForResult(float res) {
+void fAFfp32markForResult(float Res) {
   return ;
 }
 
-void fAFfp64markForResult(double res) {
+void fAFfp64markForResult(double Res) {
   return ;
 }
 
 #pragma clang optimize on
 
-int min(int a, int b) {
-  return (a > b)? b : a;
+int min(int A, int B) {
+  return (A > B)? B : A;
 }
 
 AFProduct **fAFFlattenAllComponentPaths() {
@@ -268,16 +432,10 @@ AFProduct **fAFFlattenAllComponentPaths() {
     exit(EXIT_FAILURE);
   }
 
-  for (uint64_t I = 0; I < AFs->ListLength; ++I) {
-    for (int J = 0; J < AFs->AFItems[I]->NumAFComponents; ++J) {
-      AFProduct *ProductObjectWalker = &*(AFs->AFItems[I]->Components[J]);
-      Paths[ProductObjectWalker->ItemId] = &*ProductObjectWalker;
-      for (int K = 1; K < AFs->AFItems[I]->Components[J]->Height; ++K) {
-        Paths[ProductObjectWalker->ProductTail->ItemId] = &*(ProductObjectWalker->ProductTail);
-        ProductObjectWalker = ProductObjectWalker->ProductTail;
-      }
-    }
-  }
+  for (uint64_t I = 0; I < AFs->ListLength; ++I)
+    for (int J = 0; J < AFs->AFItems[I]->NumAFComponents; ++J)
+      Paths[AFs->AFItems[I]->Components[J]->ItemId] = &*(AFs->AFItems[I]->Components[J]);
+
   return Paths;
 }
 
@@ -307,32 +465,53 @@ void fAFStoreInFile(AFItem **ObjectToStore) {
 
   for (int J = 0; J < (*ObjectToStore)->NumAFComponents; ++J) {
     AFProduct **ProductPath= fAFFlattenAFComponentsPath((*ObjectToStore)->Components[J]);
-    if (fprintf(FP,
-                "\t\t{\n"
-                "\t\t\t\"ProductItemId\": %d,\n"
-                "\t\t\t\"ACItemId\":%d,\n"
-                "\t\t\t\"ACItemString\": \"%s\",\n"
-                "\t\t\t\"ProductTailItemId\": %d,\n"
-                "\t\t\t\"Input\": \"%s\",\n"
-                "\t\t\t\"AF\": %lf,\n",
-                (*ObjectToStore)->Components[J]->ItemId,
-                (*ObjectToStore)->Components[J]->Factor->ItemId,
-                (*ObjectToStore)->Components[J]->Factor->ResultVar,
-                (*ObjectToStore)->Components[J]->
-                        ProductTail!=NULL?(*ObjectToStore)->Components[J]->ProductTail->ItemId:
-                    -1,
-                (*ObjectToStore)->Components[J]->Input,
-                isnan((*ObjectToStore)->Components[J]->AF)?-1.0:
-                                                           (*ObjectToStore)->Components[J]->AF) > 0) {
-      fprintf(FP, "\t\t\t\"Path(AFProductIds)\": [%d", ProductPath[0]->ItemId);
-      for (int K = 1; K < (*ObjectToStore)->Components[J]->Height; ++K)
-        fprintf(FP, ", %d", ProductPath[K]->ItemId);
+    fprintf(FP,
+            "\t\t{\n"
+            "\t\t\t\"ProductItemId\": %d,\n",
+            (*ObjectToStore)->Components[J]->ItemId);
 
-      if (J == (*ObjectToStore)->NumAFComponents-1)
-        fprintf(FP, "]\n\t\t}\n");
-      else
-        fprintf(FP, "]\n\t\t},\n");
+    fprintf(FP, "\t\t\t\"ACItemIds\": [%d", (*ObjectToStore)->Components[J]->Factors[0]->ItemId);
+    for (int I = 1; I < (*ObjectToStore)->Components[J]->NumberOfInputs; ++I) {
+      fprintf(FP, ",%d", (*ObjectToStore)->Components[J]->Factors[I]->ItemId);
     }
+    fprintf(FP, "],\n");
+
+    fprintf(FP, "\t\t\t\"ACItemStrings\": [\"%s\"", (*ObjectToStore)->Components[J]->Factors[0]->ResultVar);
+    for (int I = 1; I < (*ObjectToStore)->Components[J]->NumberOfInputs; ++I) {
+      fprintf(FP, ",\"%s\"", (*ObjectToStore)->Components[J]->Factors[I]->ResultVar);
+    }
+    fprintf(FP, "],\n");
+
+    fprintf(FP, "\t\t\t\"ProductTailItemIds\": [%d", (*ObjectToStore)->Components[J]->
+                                                             ProductTails[0]!=NULL?(*ObjectToStore)->Components[J]->ProductTails[0]->ItemId:
+                                                         -1);
+    for (int I = 1; I < (*ObjectToStore)->Components[J]->NumberOfInputs; ++I) {
+      fprintf(FP, ",%d", (*ObjectToStore)->Components[J]->
+                                 ProductTails[I]!=NULL?(*ObjectToStore)->Components[J]->ProductTails[I]->ItemId:
+                             -1);
+    }
+    fprintf(FP, "],\n");
+
+    fprintf(FP, "\t\t\t\"Inputs\": [\"%s\"", (*ObjectToStore)->Components[J]->Inputs[0]);
+    for (int I = 1; I < (*ObjectToStore)->Components[J]->NumberOfInputs; ++I) {
+      fprintf(FP, ",\"%s\"", (*ObjectToStore)->Components[J]->Inputs[I]);
+    }
+    fprintf(FP, "],\n");
+
+    fprintf(FP, "\t\t\t\"AFs\": [%0.15lf", (*ObjectToStore)->Components[J]->AFs[0]);
+    for (int I = 1; I < (*ObjectToStore)->Components[J]->NumberOfInputs; ++I) {
+      fprintf(FP, ",%0.15lf", (*ObjectToStore)->Components[J]->AFs[I]);
+    }
+    fprintf(FP, "],\n");
+
+    fprintf(FP, "\t\t\t\"Path(AFProductIds)\": [%d", ProductPath[0]->ItemId);
+    for (int K = 1; K < (*ObjectToStore)->Components[J]->Height; ++K)
+      fprintf(FP, ", %d", ProductPath[K]->ItemId);
+
+    if (J == (*ObjectToStore)->NumAFComponents-1)
+      fprintf(FP, "]\n\t\t}\n");
+    else
+      fprintf(FP, "]\n\t\t},\n");
   }
 
   fprintf(FP, "\t],\n");
@@ -350,16 +529,15 @@ int fAFisMemoryOpInstruction(char *InstructionString) {
   return 0;
 }
 
-int fAFComparator(const void *a, const void *b) {
-  double AF1 = (*(AFProduct **)a)->AF;
-  double AF2 = (*(AFProduct **)b)->AF;
+int fAFComparator(const void *A, const void *B) {
+  double AF1 = fabs((*(AFProduct **)A)->AFs[0]);
+  double AF2 = fabs((*(AFProduct **)B)->AFs[0]);
 
   if(AF2 > AF1)
     return 1;
-  else if(AF2 == AF1)
+  if(AF2 == AF1)
     return 0;
-  else
-    return -1;
+  return -1;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -390,7 +568,7 @@ void fAFInitialize() {
 /* Analysis Functions                                                         */
 /*----------------------------------------------------------------------------*/
 
-// Input: AC Record corresponding to the current instruction and the AF Records
+// Inputs: AC Record corresponding to the current instruction and the AF Records
 //  corresponding the operands.
 // Note: The current instruction information can be found in the AC record.
 // Steps:
@@ -407,10 +585,16 @@ void fAFInitialize() {
 //      Add this new AFProduct to the new AFItem
 //  Add AFItem to the AFTable
 //  Return the AFItem
-AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands, int NumOperands) {
+#if MEMORY_OPT
+AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
+                      int NumOperands,
+                      int InstructionId,
+                      int NumFunctionEvaluations) {
 #if FAF_DEBUG>=2
   printf("\nCreating AFItem\n");
   printf("\tACId: %d\n", (*AC)->ItemId);
+  printf("\tInstructionId: %d\n", InstructionId);
+  printf("\tExecutionId: %d\n", ExecutionCounter);
   printf("\tNumber of Operands: %d\n", NumOperands);
   printf("\tRootNode: %s\n", (*AC)->ResultVar);
   printf("\tComponents:\n");
@@ -427,125 +611,86 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands, int NumOperands)
 #endif
 
   //  Create a new AF record and initialize data members and allocate memory for
-  //    AFComponents array.
-  AFItem *NewAFItem = NULL;
-  fAFCreateAFItem(&NewAFItem);
-  NewAFItem->ItemId = AFItemCounter;
-  NewAFItem->NumAFComponents=0;
+  //  AFComponents array.
+  AFItem *UpdatingAFItem = NULL;
+
+  fAFCreateAFItem(&UpdatingAFItem,
+                  AFItemCounter,
+                  InstructionId,
+                  ExecutionCounter,
+                  0);
+  AFItemCounter++;
 
   int TotalAFComponents = 0;
-
-#if MEMORY_OPT
   TotalAFComponents+=NumOperands;
-#else
-  // Computing the number of Components/AFPaths that contribute to the Relative
-  // Error of this instruction.
-  for (int I = 0; I < NumOperands; ++I) {
-    if (AFItemWRTOperands[I] != NULL)
-      TotalAFComponents+=(*AFItemWRTOperands[I])->NumAFComponents;
-    else
-      TotalAFComponents++;
-  }
-#endif
+
 #if FAF_DEBUG>=2
   printf("\tTotalAFComponents: %d\n\n", TotalAFComponents);
 #endif
 
-  if((NewAFItem->Components =
-           (AFProduct **)malloc(sizeof(AFProduct*)*TotalAFComponents)) == NULL) {
+  if ((UpdatingAFItem->Components = (AFProduct **)malloc(
+           sizeof(AFProduct *) * TotalAFComponents)) == NULL) {
     printf("#fAF: Not enough memory for AFProduct Array!");
     exit(EXIT_FAILURE);
   }
 
-  AFItemCounter++;
-
-
   // Generating AFProduct Data
   // Loop over the AF Records corresponding to each operand and for each operand:
   for (int I = 0; I < NumOperands; ++I) {
+    // Create a new AFProduct and copy the ACItem and set the AF.
+    AFProduct *NewAFComponent = NULL;
+
     if(AFItemWRTOperands[I] != NULL) {
-#if MEMORY_OPT
       assert((*AFItemWRTOperands[I])->Components[0] != NULL);
-      double GreatestAF = (*AFItemWRTOperands[I])->Components[0]->AF *
+      double GreatestAF = (*AFItemWRTOperands[I])->Components[0]->AFs[0] *
                           (*AC)->ACWRTOperands[I];
       int CandidateIndex = 0;
-#endif
 
-      // Loop through all Components of this child. Do not skip 0 to optimize
-      //  getting the greatest AF or you will miss some components.
+      // Loop through all Components of this child. Do not skip 0th component to
+      //  optimize getting the greatest AF or you will miss some components.
       for (int J = 0; J < (*AFItemWRTOperands[I])->NumAFComponents; ++J) {
-#if MEMORY_OPT
         // Get the greatest AF and index of the corresponding component.
-        if(GreatestAF < (*AFItemWRTOperands[I])->Components[J]->AF *
+        if (GreatestAF < (*AFItemWRTOperands[I])->Components[J]->AFs[0] *
                              (*AC)->ACWRTOperands[I]) {
-          GreatestAF = (*AFItemWRTOperands[I])->Components[J]->AF *
+          GreatestAF = (*AFItemWRTOperands[I])->Components[J]->AFs[0] *
                        (*AC)->ACWRTOperands[I];
           CandidateIndex = J;
         }
-#else
-        // Create a new AFProduct and copy the corresponding AFProduct from
-        // the AFItem for that operand and also the ACItem and set the AF.
-        AFProduct *NewAFComponent = NULL;
-        fAFCreateAFComponent(&NewAFComponent);
-        NewAFComponent->Input = (*AFItemWRTOperands[I])->Components[J]->Input;
-        NewAFComponent->ItemId = AFComponentCounter;
-        NewAFComponent->Factor = *AC;
-        NewAFComponent->ProductTail = (*AFItemWRTOperands[I])->Components[J];
-        NewAFComponent->Height = (*AFItemWRTOperands[I])->Components[J]->Height+1;
-        NewAFComponent->AF = (*AFItemWRTOperands[I])->Components[J]->AF *
-                             (*AC)->ACWRTOperands[I];
-
-        AFComponentCounter++;
-
-        // Add this new AFProduct to the new AFItem
-        NewAFItem->Components[NewAFItem->NumAFComponents] = NewAFComponent;
-        NewAFItem->NumAFComponents++;
-#endif
       }
 
-#if MEMORY_OPT
       // Create a new AFProduct and copy the corresponding AFProduct from
       // the AFItem for that operand and also the ACItem and set the AF.
-      AFProduct *NewAFComponent = NULL;
-      fAFCreateAFComponent(&NewAFComponent);
-      NewAFComponent->Input = (*AFItemWRTOperands[I])->Components[CandidateIndex]->Input;
-      NewAFComponent->ItemId = AFComponentCounter;
-      NewAFComponent->Factor = *AC;
-      NewAFComponent->ProductTail = (*AFItemWRTOperands[I])->Components[CandidateIndex];
+      fAFCreateAFComponent(&NewAFComponent,
+                           AFComponentCounter,
+                           1);
+      NewAFComponent->Inputs[0] = (*AFItemWRTOperands[I])->Components[CandidateIndex]->Inputs[0];
+      NewAFComponent->Factors[0] = *AC;
+      NewAFComponent->ProductTails[0] = (*AFItemWRTOperands[I])->Components[CandidateIndex];
+      NewAFComponent->AFs[0] = (*AFItemWRTOperands[I])->Components[CandidateIndex]->AFs[0] *
+                               (*AC)->ACWRTOperands[I];
       NewAFComponent->Height = (*AFItemWRTOperands[I])->Components[CandidateIndex]->Height+1;
-      NewAFComponent->AF = (*AFItemWRTOperands[I])->Components[CandidateIndex]->AF *
-                           (*AC)->ACWRTOperands[I];
-
+      NewAFComponent->NumberOfInputs++;
       AFComponentCounter++;
-
-      // Add this new AFProduct to the new AFItem
-      NewAFItem->Components[NewAFItem->NumAFComponents] = NewAFComponent;
-      NewAFItem->NumAFComponents++;
-#endif
-    } else
-//        if(strlen((*AC)->OperandNames[I]) != 0)
-    {
-      // Create a new AFProduct and copy the ACItem and set the AF.
-      AFProduct *NewAFComponent = NULL;
-      fAFCreateAFComponent(&NewAFComponent);
-      NewAFComponent->Input = (*AC)->OperandNames[I];
-      NewAFComponent->ItemId = AFComponentCounter;
-      NewAFComponent->Factor = *AC;
-      NewAFComponent->ProductTail = NULL;
-      NewAFComponent->Height = 1;
-      NewAFComponent->AF = (*AC)->ACWRTOperands[I];
-
+    } else {
+      fAFCreateAFComponent(&NewAFComponent,
+                           AFComponentCounter,
+                           NumFunctionEvaluations);
+      NewAFComponent->Inputs[NewAFComponent->NumberOfInputs] = (*AC)->OperandNames[I];
+      NewAFComponent->Factors[NewAFComponent->NumberOfInputs] = *AC;
+      NewAFComponent->AFs[NewAFComponent->NumberOfInputs] = (*AC)->ACWRTOperands[I];
+      NewAFComponent->NumberOfInputs++;
       AFComponentCounter++;
-
-      // Add this new AFProduct to the new AFItem
-      NewAFItem->Components[NewAFItem->NumAFComponents] = NewAFComponent;
-      NewAFItem->NumAFComponents++;
     }
+
+    // Add this new AFProduct to the new AFItem
+    UpdatingAFItem->Components[UpdatingAFItem->NumAFComponents] = NewAFComponent;
+    UpdatingAFItem->NumAFComponents++;
   }
 
   //  Add AFItem to the AFTable
-  AFs->AFItems[AFs->ListLength] = NewAFItem;
+  AFs->AFItems[AFs->ListLength] = UpdatingAFItem;
   AFs->ListLength++;
+  ExecutionCounter++;
 
 #if FAF_DEBUG>=2
   printf("\nAFItem Created\n");
@@ -557,14 +702,170 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands, int NumOperands)
   //  Return the AFItem
   return &AFs->AFItems[AFs->ListLength-1];
 }
+#else
+AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
+                      int NumOperands,
+                      int InstructionId,
+                      int NumFunctionEvaluations) {
+#if FAF_DEBUG>=2
+  printf("\nCreating AFItem\n");
+  printf("\tACId: %d\n", (*AC)->ItemId);
+  printf("\tInstructionId: %d\n", InstructionId);
+  printf("\tExecutionId: %d\n", ExecutionCounter);
+  printf("\tNumber of Operands: %d\n", NumOperands);
+  printf("\tRootNode: %s\n", (*AC)->ResultVar);
+  printf("\tComponents:\n");
+  for (int I = 0; I < NumOperands; ++I) {
+    if(AFItemWRTOperands[I] != NULL)
+      printf("\t\tAFId %d #Components: %d\n",
+             (*AFItemWRTOperands[I])->ItemId,
+             (*AFItemWRTOperands[I])->NumAFComponents);
+    else
+      printf("\t\tAFId %d #Components: 0\n", -1);
+  }
+
+  printf("\n");
+#endif
+
+  // This determines whether we create a new AFItem or update an existing one.
+  int NewAFItem = 0;
+
+  // Find an existing AFItem with the same InstructionId and ExecutionId or create
+  // a new one.
+  AFItem *UpdatingAFItem = NULL;
+  UpdatingAFItem = fAFGetAFItemFromList(AFs->AFItems,
+                                        AFs->ListLength,
+                                        InstructionId,
+                                        ExecutionCounter);
+  if(UpdatingAFItem == NULL) {
+    printf("Creating a new AFItem\n");
+    NewAFItem = 1;
+
+    fAFCreateAFItem(&UpdatingAFItem, AFItemCounter, InstructionId, ExecutionCounter, 0);
+    AFItemCounter++;
+  }
+
+  int TotalAFComponents = 0;
+
+  // Computing the number of Components/AFPaths that contribute to the Relative
+  // Error of this instruction.
+  for (int I = 0; I < NumOperands; ++I) {
+    if (AFItemWRTOperands[I] != NULL)
+      TotalAFComponents+=(*AFItemWRTOperands[I])->NumAFComponents;
+    else
+      TotalAFComponents++;
+  }
+
+#if FAF_DEBUG>=2
+  printf("\tTotalAFComponents: %d\n\n", TotalAFComponents);
+  printf("\tNewAFItem: %d\n", NewAFItem);
+#endif
+
+  if (NewAFItem) {
+    if ((UpdatingAFItem->Components = (AFProduct **)malloc(
+             sizeof(AFProduct *) * TotalAFComponents)) == NULL) {
+      printf("#fAF: Not enough memory for AFProduct Array!");
+      exit(EXIT_FAILURE);
+    }
+  }
+
+  int K = 0;
+
+  // Generating AFProduct Data
+  // Loop over the AF Records corresponding to each operand and for each operand:
+  for (int I = 0; I < NumOperands; ++I) {
+    if(AFItemWRTOperands[I] != NULL) {
+
+      // Loop through all Components of this child.
+      for (int J = 0; J < (*AFItemWRTOperands[I])->NumAFComponents; ++J) {
+        // Create a new AFProduct and copy the corresponding AFProduct from
+        // the AFItem for that operand and also the ACItem and set the AF.
+        AFProduct *UpdatingAFComponent = NULL;
+
+        if (NewAFItem) {
+          fAFCreateAFComponent(&UpdatingAFComponent, AFComponentCounter,
+                               NumFunctionEvaluations);
+          AFComponentCounter++;
+        }
+        else
+          UpdatingAFComponent = UpdatingAFItem->Components[K];
+
+        UpdatingAFComponent->Inputs = (*AFItemWRTOperands[I])->Components[J]->Inputs;
+        UpdatingAFComponent->Factors[UpdatingAFComponent->NumberOfInputs] = *AC;
+        UpdatingAFComponent->ProductTails[UpdatingAFComponent->NumberOfInputs] = (*AFItemWRTOperands[I])->Components[J];
+        UpdatingAFComponent->AFs[UpdatingAFComponent->NumberOfInputs] =
+            (*AFItemWRTOperands[I])->Components[J]->AFs[(*AFItemWRTOperands[I])->Components[J]->NumberOfInputs] *
+            (*AC)->ACWRTOperands[I];
+        UpdatingAFComponent->Height = (*AFItemWRTOperands[I])->Components[J]->Height+1;
+        UpdatingAFComponent->NumberOfInputs++;
+
+        if(NewAFItem) {
+          // Add this new AFProduct to the new AFItem
+          UpdatingAFItem->Components[UpdatingAFItem->NumAFComponents] =
+              UpdatingAFComponent;
+          UpdatingAFItem->NumAFComponents++;
+        }
+
+//        printf("J: %d\n", J);
+//        fAFPrintAFProduct(UpdatingAFComponent);
+//        printf("\n");
+
+        K++;
+      }
+    } else {
+      // Create a new AFProduct and copy the ACItem and set the AF.
+      AFProduct *UpdatingAFComponent = NULL;
+
+      if (NewAFItem) {
+        fAFCreateAFComponent(&UpdatingAFComponent, AFComponentCounter,
+                             NumFunctionEvaluations);
+        AFComponentCounter++;
+      }
+      else
+        UpdatingAFComponent = UpdatingAFItem->Components[K];
+      UpdatingAFComponent->Inputs[UpdatingAFComponent->NumberOfInputs] = (*AC)->OperandNames[I];
+      UpdatingAFComponent->Factors[UpdatingAFComponent->NumberOfInputs] = *AC;
+      UpdatingAFComponent->ProductTails[UpdatingAFComponent->NumberOfInputs] = NULL;
+      UpdatingAFComponent->AFs[UpdatingAFComponent->NumberOfInputs] = (*AC)->ACWRTOperands[I];
+      UpdatingAFComponent->NumberOfInputs++;
+
+      if(NewAFItem) {
+        // Add this new AFProduct to the new AFItem
+        UpdatingAFItem->Components[UpdatingAFItem->NumAFComponents] =
+            UpdatingAFComponent;
+        UpdatingAFItem->NumAFComponents++;
+      }
+//      fAFPrintAFProduct(UpdatingAFComponent);
+//      printf("\n");
+
+      K++;
+    }
+  }
+
+  //  Add AFItem to the AFTable
+  AFs->AFItems[AFs->ListLength] = UpdatingAFItem;
+  AFs->ListLength++;
+  ExecutionCounter++;
+
+#if FAF_DEBUG>=2
+  printf("\nAFItem Created\n");
+  printf("\tAFId: %d\n", AFs->AFItems[AFs->ListLength-1]->ItemId);
+  printf("\tNumComponents: %d\n", AFs->AFItems[AFs->ListLength-1]->NumAFComponents);
+  printf("\n");
+#endif
+
+  //  Return the AFItem
+  return &AFs->AFItems[AFs->ListLength-1];
+}
+#endif
 
 // This function prints the ItemId and LineNumber corresponding to the ACItems
 // in the flattenedProductTail of an AFProduct
 void fAFPrintAFProductSources(AFProduct *AFProduct) {
-  printf("(%d, %d)", AFProduct->Factor->ItemId, AFProduct->Factor->LineNumber);
-  if(AFProduct->ProductTail != NULL) {
+  printf("(%d, %d)", AFProduct->Factors[0]->ItemId, AFProduct->Factors[0]->LineNumber);
+  if(AFProduct->ProductTails[0] != NULL) {
     printf(", ");
-    fAFPrintAFProductSources(AFProduct->ProductTail);
+    fAFPrintAFProductSources(AFProduct->ProductTails[0]);
   }
 }
 
@@ -579,10 +880,12 @@ void fAFPrintTopAmplificationPaths() {
   printf("\n");
   printf("The top Amplification Paths are:\n");
   for (int I = 0; I < min(5, AFs->AFItems[AFs->ListLength-1]->NumAFComponents); ++I) {
-    printf("AF: %0.15lf of Node:%d WRT Input:%s through path: [",
-           AFs->AFItems[AFs->ListLength-1]->Components[I]->AF,
+    printf("AF: %0.15lf (ULPErr: %lf; %lf digits) of Node with AFId:%d WRT Input:%s through path: [",
+           AFs->AFItems[AFs->ListLength-1]->Components[I]->AFs[0],
+           ceil(log2(AFs->AFItems[AFs->ListLength-1]->Components[I]->AFs[0])),
+           ceil(log10(log2(AFs->AFItems[AFs->ListLength-1]->Components[I]->AFs[0]))),
            AFs->AFItems[AFs->ListLength-1]->Components[I]->ItemId,
-           AFs->AFItems[AFs->ListLength-1]->Components[I]->Input);
+           AFs->AFItems[AFs->ListLength-1]->Components[I]->Inputs[0]);
 
     fAFPrintAFProductSources(AFs->AFItems[AFs->ListLength-1]->Components[I]);
     printf("]\n");
@@ -597,14 +900,21 @@ void fAFPrintTopFromAllAmplificationPaths() {
   // Sorting the list according to Amplification Factors
   qsort(Paths, AFComponentCounter,sizeof(AFProduct *), fAFComparator);
 
+//  for (uint64_t I = 0; I < AFComponentCounter; ++I) {
+//    fAFPrintAFProduct(Paths[I]);
+//    printf("\n");
+//  }
+
   // Printing Results
   printf("\n");
   printf("The top Amplification Paths are:\n");
   for (int I = 0; I < min(10, AFComponentCounter); ++I) {
-    printf("AF: %0.15lf of Node:%d WRT Input:%s through path: [",
-           Paths[I]->AF,
+    printf("AF: %0.15lf (ULPErr: %lf; %lf digits) of Node with AFId:%d WRT Input:%s through path: [",
+           Paths[I]->AFs[0],
+           ceil(log2(Paths[I]->AFs[0])),
+           ceil(log10(log2(Paths[I]->AFs[0]))),
            Paths[I]->ItemId,
-           Paths[I]->Input);
+           Paths[I]->Inputs[0]);
 
     fAFPrintAFProductSources(Paths[I]);
     printf("]\n");

@@ -5,6 +5,7 @@
 #ifndef LLVM_ACINSTRUMENTATION_H
 #define LLVM_ACINSTRUMENTATION_H
 
+#include <string>
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/ValueMap.h"
 
@@ -14,6 +15,9 @@ namespace atomiccondition {
 
 class ACInstrumentation {
 private:
+  // Function to Instrument
+  int Evaluations;
+  GlobalVariable *ExecutionCounter;
   Function *FunctionToInstrument;
 
   Function *AFInitFunction;
@@ -36,7 +40,7 @@ private:
 public:
   Value *EmptyValuePointer;
 
-  ACInstrumentation(Function *F);
+  ACInstrumentation(Function *F, std::string FunctionToAnalyze, int Evaluations);
 
   void instrumentCallsToAnalyzeInstruction(Instruction *BaseInstruction,
                                            BasicBlock::iterator *InstructionIterator,
@@ -58,10 +62,13 @@ public:
   void instrumentForMarkedVariable(Value *BaseInstruction,
                                    BasicBlock::iterator *InstructionIterator,
                                    long int *NumInstrumentedInstructions);
+  void instrumentMarkedFunction(BasicBlock::iterator *InstructionIterator,
+                                long int *NumInstrumentedInstructions);
 
   void instrumentBasicBlock(BasicBlock *BB,
                             long int *NumInstrumentedInstructions);
   void instrumentMainFunction(Function *F);
+  void instrumentFunctionInitializationInsts(Function *F);
 
   //// Helper Functions
   Value *createArrayInIR(std::vector<Value*> ArrayOfValues,

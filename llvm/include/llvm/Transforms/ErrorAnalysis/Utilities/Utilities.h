@@ -15,7 +15,7 @@ namespace atomiccondition {
 Instruction *getInstructionAfterInitializationCalls(BasicBlock *BB);
 
 Value *createBBNameGlobalString(BasicBlock *BB);
-Value *createRegisterNameGlobalString(Instruction *Inst);
+Value *createRegisterNameGlobalString(Instruction *Inst, Module *M);
 Value *createInstructionGlobalString(Instruction *Inst);
 Value *createStringRefGlobalString(StringRef StringObj, Instruction *Inst);
 std::string getInstructionAsString(Instruction *Inst);

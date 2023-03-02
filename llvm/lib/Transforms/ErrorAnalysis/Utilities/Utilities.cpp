@@ -44,16 +44,16 @@ Value *createBBNameGlobalString(BasicBlock *BB) {
   return BBValuePointer;
 }
 
-Value *createRegisterNameGlobalString(Instruction *Inst) {
+Value *createRegisterNameGlobalString(Instruction *Inst, Module *M) {
   string RegisterString;
   raw_string_ostream RawRegisterString(RegisterString);
   Inst->printAsOperand(RawRegisterString, false);
 
-  Constant *RegisterValue = ConstantDataArray::getString(Inst->getModule()->getContext(),
+  Constant *RegisterValue = ConstantDataArray::getString(Inst->getContext(),
                                                          RawRegisterString.str().c_str(),
                                                          true);
 
-  Value *RegisterValuePointer = new GlobalVariable(*Inst->getModule(),
+  Value *RegisterValuePointer = new GlobalVariable(*M,
                                                    RegisterValue->getType(),
                                                    true,
                                                    GlobalValue::InternalLinkage,
@@ -70,7 +70,7 @@ Value *createInstructionGlobalString(Instruction *Inst) {
   string Initializer = (NonEmptyPosition == std::string::npos) ? "" :
                                                                RawInstructionString.str().substr(NonEmptyPosition);
 
-  Constant *InstructionValue = ConstantDataArray::getString(Inst->getModule()->getContext(),
+  Constant *InstructionValue = ConstantDataArray::getString(Inst->getContext(),
                                                             Initializer.c_str(),
                                                             true);
 
