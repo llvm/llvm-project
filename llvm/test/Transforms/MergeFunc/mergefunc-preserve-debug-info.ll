@@ -147,6 +147,16 @@ entry:
 
 ; OPTIMIZATION_LEVEL_2: define void @f()
 ; OPTIMIZATION_LEVEL_2-NEXT: entry:
+; OPTIMIZATION_LEVEL_2-NEXT:  call void @llvm.dbg.value(metadata i32 3, metadata !{{[0-9]+}}, metadata !DIExpression()), !dbg !{{[0-9]+}}
+; OPTIMIZATION_LEVEL_2-NEXT:  call void @llvm.dbg.value(metadata i32 4, metadata !{{[0-9]+}}, metadata !DIExpression()), !dbg !{{[0-9]+}}
+; OPTIMIZATION_LEVEL_2-NEXT:  call void @llvm.dbg.declare(metadata ptr undef, metadata !{{[0-9]+}}, metadata !DIExpression()), !dbg !{{[0-9]+}}
+; OPTIMIZATION_LEVEL_2-NEXT:  call void @llvm.dbg.declare(metadata ptr undef, metadata !{{[0-9]+}}, metadata !DIExpression()), !dbg !{{[0-9]+}}
+; OPTIMIZATION_LEVEL_2-NEXT:  call void @llvm.dbg.value(metadata i32 4, metadata !{{[0-9]+}}, metadata !DIExpression()), !dbg !{{[0-9]+}}
+; OPTIMIZATION_LEVEL_2-NEXT:  call void @llvm.dbg.value(metadata i32 1, metadata !{{[0-9]+}}, metadata !DIExpression()), !dbg !{{[0-9]+}}
+; OPTIMIZATION_LEVEL_2-NEXT:  call void @llvm.dbg.value(metadata i32 9, metadata !{{[0-9]+}}, metadata !DIExpression()), !dbg !{{[0-9]+}}
+; OPTIMIZATION_LEVEL_2-NEXT:  call void @llvm.dbg.declare(metadata ptr undef, metadata !{{[0-9]+}}, metadata !DIExpression()), !dbg !{{[0-9]+}}
+; OPTIMIZATION_LEVEL_2-NEXT:  call void @llvm.dbg.declare(metadata ptr undef, metadata !{{[0-9]+}}, metadata !DIExpression()), !dbg !{{[0-9]+}}
+; OPTIMIZATION_LEVEL_2-NEXT:  call void @llvm.dbg.value(metadata i32 9, metadata !{{[0-9]+}}, metadata !DIExpression()), !dbg !{{[0-9]+}}
 ; OPTIMIZATION_LEVEL_2-NEXT: ret void, !dbg !{{[0-9]+}}
 
   %call = call i32 @maxA(i32 3, i32 4), !dbg !60
