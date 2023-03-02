@@ -687,10 +687,6 @@ def no_warn_inits : Flag<["-"], "no_warn_inits">,
     HelpText<"Suppress warnings for static initializers in the output">,
     Flags<[HelpHidden]>,
     Group<grp_rare>;
-def debug_variant : Flag<["-"], "debug_variant">,
-    HelpText<"Suppress warnings germane to binaries shipping to customers">,
-    Flags<[HelpHidden]>,
-    Group<grp_rare>;
 def unaligned_pointers : Separate<["-"], "unaligned_pointers">,
     MetaVarName<"<treatment>">,
     HelpText<"Handle unaligned pointers in __DATA segments according to <treatment>: warning, error, or suppress (default for arm64e is error, otherwise suppress)">,
@@ -1385,5 +1381,9 @@ def grp_ignored_silently : OptionGroup<"ignored_silently">, HelpText<"IGNORED SI
 
 def objc_abi_version : Separate<["-"], "objc_abi_version">,
     HelpText<"This option only applies to i386 in ld64">,
+    Flags<[HelpHidden]>,
+    Group<grp_ignored_silently>;
+def debug_variant : Flag<["-"], "debug_variant">,
+    HelpText<"Do not warn about issues that are only problems for binaries shipping to customers.">,
     Flags<[HelpHidden]>,
     Group<grp_ignored_silently>;
