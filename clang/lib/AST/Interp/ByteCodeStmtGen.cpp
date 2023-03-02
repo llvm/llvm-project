@@ -205,17 +205,11 @@ bool ByteCodeStmtGen<Emitter>::visitCompoundStmt(
 template <class Emitter>
 bool ByteCodeStmtGen<Emitter>::visitDeclStmt(const DeclStmt *DS) {
   for (auto *D : DS->decls()) {
-    // Variable declarator.
-    if (auto *VD = dyn_cast<VarDecl>(D)) {
-      if (!this->visitVarDecl(VD))
-        return false;
-      continue;
-    }
-
-    // Decomposition declarator.
-    if (auto *DD = dyn_cast<DecompositionDecl>(D)) {
-      return this->bail(DD);
-    }
+    const auto *VD = dyn_cast<VarDecl>(D);
+    if (!VD)
+      return false;
+    if (!this->visitVarDecl(VD))
+      return false;
   }
 
   return true;

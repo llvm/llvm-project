@@ -1466,6 +1466,7 @@ struct CounterCoverageMappingBuilder
     Counter TrueCount = getRegionCounter(E);
 
     propagateCounts(ParentCount, E->getCond());
+    Counter OutCount;
 
     if (!isa<BinaryConditionalOperator>(E)) {
       // The 'then' count applies to the area immediately after the condition.
@@ -1475,12 +1476,18 @@ struct CounterCoverageMappingBuilder
         fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), TrueCount);
 
       extendRegion(E->getTrueExpr());
-      propagateCounts(TrueCount, E->getTrueExpr());
+      OutCount = propagateCounts(TrueCount, E->getTrueExpr());
     }
 
     extendRegion(E->getFalseExpr());
-    propagateCounts(subtractCounters(ParentCount, TrueCount),
-                    E->getFalseExpr());
+    OutCount = addCounters(
+        OutCount, propagateCounts(subtractCounters(ParentCount, TrueCount),
+                                  E->getFalseExpr()));
+
+    if (OutCount != ParentCount) {
+      pushRegion(OutCount);
+      GapRegionCounter = OutCount;
+    }
 
     // Create Branch Region around condition.
     createBranchRegion(E->getCond(), TrueCount,
@@ -1514,9 +1521,19 @@ struct CounterCoverageMappingBuilder
                        subtractCounters(RHSExecCnt, RHSTrueCnt));
   }
 
+  // Determine whether the right side of OR operation need to be visited.
+  bool shouldVisitRHS(const Expr *LHS) {
+    bool LHSIsTrue = false;
+    bool LHSIsConst = false;
+    if (!LHS->isValueDependent())
+      LHSIsConst = LHS->EvaluateAsBooleanCondition(
+          LHSIsTrue, CVM.getCodeGenModule().getContext());
+    return !LHSIsConst || (LHSIsConst && !LHSIsTrue);
+  }
+
   void VisitBinLOr(const BinaryOperator *E) {
     extendRegion(E->getLHS());
-    propagateCounts(getRegion().getCounter(), E->getLHS());
+    Counter OutCount = propagateCounts(getRegion().getCounter(), E->getLHS());
     handleFileExit(getEnd(E->getLHS()));
 
     // Counter tracks the right hand side of a logical or operator.
@@ -1528,6 +1545,10 @@ struct CounterCoverageMappingBuilder
 
     // Extract the RHS's "False" Instance Counter.
     Counter RHSFalseCnt = getRegionCounter(E->getRHS());
+
+    if (!shouldVisitRHS(E->getLHS())) {
+      GapRegionCounter = OutCount;
+    }
 
     // Extract the Parent Region Counter.
     Counter ParentCnt = getRegion().getCounter();

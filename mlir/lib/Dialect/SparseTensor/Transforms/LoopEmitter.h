@@ -190,6 +190,10 @@ private:
   Value genAddress(OpBuilder &builder, Location loc, size_t tid, size_t dim,
                    Value iv);
 
+  /// Generates instructions to compute the coordinate of tesnors[tid] on `l`
+  /// under the current loop context.
+  Value genSparseCoord(OpBuilder &builder, Location loc, size_t tid, size_t l);
+
   bool isOutputTensor(size_t tid) {
     return hasOutput && tid == tensors.size() - 1;
   }
@@ -256,6 +260,7 @@ private:
   std::vector<std::vector<Value>> pidxs;
   std::vector<std::vector<Value>> coord;
   std::vector<std::vector<Value>> highs;
+  std::vector<std::vector<Value>> lvlSizes;
   std::vector<std::vector<Value>> ptrBuffer; // to_pointers
   std::vector<std::vector<Value>> idxBuffer; // to_indices
   std::vector<Value> valBuffer;              // to_value
@@ -275,6 +280,28 @@ private:
   /// TODO: We should probably use a callback function here to make it more
   /// general.
   std::vector<unsigned> sparsiferLoopLvlMap;
+
+  //
+  // View based reshape related-fields and methods
+  //
+
+  /// Collapse Reassociations related to a specific tensor
+  // TODO: support expand.
+  std::vector<ArrayAttr> collapseReassoc;
+
+  /// Get the collapse reassociation for tensors[tid] on l. For unreshaped
+  /// operands, the reassociation is simply an identity transformation.
+  SmallVector<int64_t, 2> getCollapseReassociation(unsigned tid, unsigned l) {
+    // Returns for SmallVector<int64_t, 2> just like `ReassociaionIndices`
+    if (auto reass = collapseReassoc[tid]) {
+      auto attr = reass[l];
+      return llvm::to_vector<2>(
+          llvm::map_range(attr.cast<ArrayAttr>(), [&](Attribute indexAttr) {
+            return indexAttr.cast<IntegerAttr>().getInt();
+          }));
+    }
+    return {l};
+  }
 
   /// TODO: not yet used, it should track the current level for each tensor
   /// to help eliminate `dim` paramters from above APIs.

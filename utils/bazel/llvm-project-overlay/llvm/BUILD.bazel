@@ -1159,7 +1159,6 @@ cc_library(
     ]),
     hdrs = glob(["include/llvm/Transforms/Utils/*.h"]) + [
         "include/llvm/Transforms/Utils.h",
-        "include/llvm-c/Transforms/Utils.h",
     ],
     copts = llvm_copts,
     deps = [
@@ -1199,9 +1198,7 @@ cc_library(
         "lib/Transforms/InstCombine/*.cpp",
         "lib/Transforms/InstCombine/*.h",
     ]),
-    hdrs = glob(["include/llvm/Transforms/InstCombine/*.h"]) + [
-        "include/llvm-c/Transforms/InstCombine.h",
-    ],
+    hdrs = glob(["include/llvm/Transforms/InstCombine/*.h"]),
     copts = llvm_copts,
     deps = [
         ":Analysis",
@@ -1283,7 +1280,6 @@ cc_library(
         "lib/Transforms/Scalar/*.h",
     ]),
     hdrs = glob(["include/llvm/Transforms/Scalar/*.h"]) + [
-        "include/llvm-c/Transforms/Scalar.h",
         "include/llvm/Transforms/Scalar.h",
     ],
     copts = llvm_copts,
@@ -1310,7 +1306,6 @@ cc_library(
     hdrs = glob([
         "include/llvm/Transforms/Vectorize/*.h",
     ]) + [
-        "include/llvm-c/Transforms/Vectorize.h",
         "include/llvm/Transforms/Vectorize.h",
     ],
     copts = llvm_copts,
@@ -1532,7 +1527,6 @@ cc_library(
     hdrs = glob([
         "include/llvm/Transforms/IPO/*.h",
     ]) + [
-        "include/llvm-c/Transforms/IPO.h",
         "include/llvm-c/Transforms/PassManagerBuilder.h",
         "include/llvm/Transforms/IPO.h",
     ],
@@ -4719,6 +4713,7 @@ cc_binary(
         ":MCDisassembler",
         ":Object",
         ":OrcJIT",
+        ":Passes",
         ":Remarks",
         ":Scalar",
         ":Support",

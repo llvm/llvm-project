@@ -19,12 +19,24 @@ class SetWatchpointAPITestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number(
             self.source, '// Set break point at this line.')
+        self.build()
 
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=['s390x'])
     def test_watch_val(self):
         """Exercise SBValue.Watch() API to set a watchpoint."""
-        self.build()
+        self._test_watch_val(variable_watchpoint=False)
+        pass
+
+    @expectedFailureAll(archs=['s390x'])
+    def test_watch_variable(self):
+        """
+           Exercise some watchpoint APIs when the watchpoint
+           is created as a variable watchpoint.
+        """
+        self._test_watch_val(variable_watchpoint=True)
+
+    def _test_watch_val(self, variable_watchpoint):
         exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
@@ -50,12 +62,40 @@ class SetWatchpointAPITestCase(TestBase):
         frame0 = thread.GetFrameAtIndex(0)
 
         # Watch 'global' for read and write.
-        value = frame0.FindValue('global', lldb.eValueTypeVariableGlobal)
-        error = lldb.SBError()
-        watchpoint = value.Watch(True, True, True, error)
-        self.assertTrue(value and watchpoint,
+        if variable_watchpoint:
+            # FIXME: There should probably be an API to create a
+            # variable watchpoint.
+            self.runCmd('watchpoint set variable -w read_write -- global')
+            watchpoint = target.GetWatchpointAtIndex(0)
+            self.assertEqual(watchpoint.GetWatchValueKind(),
+                             lldb.eWatchPointValueKindVariable)
+            self.assertEqual(watchpoint.GetWatchSpec(), 'global')
+            # Synthesize an SBValue from the watchpoint
+            watchpoint_addr = lldb.SBAddress(watchpoint.GetWatchAddress(),
+                                             target)
+            value = target.CreateValueFromAddress(
+                watchpoint.GetWatchSpec(),
+                watchpoint_addr, watchpoint.GetType())
+        else:
+            value = frame0.FindValue('global', lldb.eValueTypeVariableGlobal)
+            error = lldb.SBError()
+            watchpoint = value.Watch(True, True, True, error)
+            self.assertTrue(value and watchpoint,
                         "Successfully found the variable and set a watchpoint")
-        self.DebugSBValue(value)
+            self.DebugSBValue(value)
+            self.assertEqual(watchpoint.GetWatchValueKind(),
+                             lldb.eWatchPointValueKindExpression)
+            # FIXME: The spec should probably be '&global' given that the kind
+            # is reported as eWatchPointValueKindExpression. If the kind is
+            # actually supposed to be eWatchPointValueKindVariable then the spec
+            # should probably be 'global'.
+            self.assertEqual(watchpoint.GetWatchSpec(), None)
+
+        self.assertEqual(watchpoint.GetType().GetDisplayTypeName(), 'int32_t')
+        self.assertEqual(value.GetName(), 'global')
+        self.assertEqual(value.GetType(), watchpoint.GetType())
+        self.assertTrue(watchpoint.IsWatchingReads())
+        self.assertTrue(watchpoint.IsWatchingWrites())
 
         # Hide stdout if not running with '-t' option.
         if not self.TraceOn():

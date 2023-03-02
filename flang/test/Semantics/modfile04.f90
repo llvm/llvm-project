@@ -53,7 +53,7 @@ end module m3
 !type::t
 !end type
 !contains
-!pure subroutine ss(x,y) bind(c, name="ss")
+!pure subroutine ss(x,y) bind(c)
 !logical(4),intent(in)::x
 !real(4),intent(inout)::y
 !end

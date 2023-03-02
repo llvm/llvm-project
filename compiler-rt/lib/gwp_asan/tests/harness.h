@@ -12,13 +12,11 @@
 #include <stdarg.h>
 
 #if defined(__Fuchsia__)
+#define ZXTEST_USE_STREAMABLE_MACROS
 #include <zxtest/zxtest.h>
-using Test = ::zxtest::Test;
-template <typename T> using TestWithParam = ::zxtest::TestWithParam<T>;
+namespace testing = zxtest;
 #else
 #include "gtest/gtest.h"
-using Test = ::testing::Test;
-template <typename T> using TestWithParam = ::testing::TestWithParam<T>;
 #endif
 
 #include "gwp_asan/guarded_pool_allocator.h"
@@ -48,7 +46,7 @@ void TouchMemory(void *Ptr);
 
 void CheckOnlyOneGwpAsanCrash(const std::string &OutputBuffer);
 
-class DefaultGuardedPoolAllocator : public Test {
+class DefaultGuardedPoolAllocator : public ::testing::Test {
 public:
   void SetUp() override {
     gwp_asan::options::Options Opts;
@@ -67,7 +65,7 @@ protected:
       MaxSimultaneousAllocations;
 };
 
-class CustomGuardedPoolAllocator : public Test {
+class CustomGuardedPoolAllocator : public ::testing::Test {
 public:
   void
   InitNumSlots(decltype(gwp_asan::options::Options::MaxSimultaneousAllocations)
@@ -91,7 +89,7 @@ protected:
 };
 
 class BacktraceGuardedPoolAllocator
-    : public TestWithParam</* Recoverable */ bool> {
+    : public ::testing::TestWithParam</* Recoverable */ bool> {
 public:
   void SetUp() override {
     gwp_asan::options::Options Opts;

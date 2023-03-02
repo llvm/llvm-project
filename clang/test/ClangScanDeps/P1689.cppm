@@ -40,7 +40,7 @@
 //
 // Check that we can mix the use of -format=p1689 and -fmodules.
 // RUN: clang-scan-deps -format=p1689 \
-// RUN:   -- %clang++ -std=c++20 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache -serialize-diagnostics -c %t/impl_part.cppm -o %t/impl_part.o \
+// RUN:   -- %clang++ -std=c++20 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache -c %t/impl_part.cppm -o %t/impl_part.o \
 // RUN:   | FileCheck %t/impl_part.cppm -DPREFIX=%/t
 
 //--- P1689.json.in

@@ -156,17 +156,17 @@ subroutine assoc()
     intProcPointer1 => targetIntVar1
     !ERROR: POINTER= argument 'intprocpointer1' is a procedure pointer but the TARGET= argument 'targetintvar1' is not a procedure or procedure pointer
     lvar = associated (intProcPointer1, targetIntVar1)
-    !ERROR: Procedure pointer 'intprocpointer1' associated with result of reference to function 'null' that is an incompatible procedure pointer: function results have incompatible types: INTEGER(4) vs REAL(4)
+    !ERROR: Procedure pointer 'intprocpointer1' associated with result of reference to function 'null' that is an incompatible procedure pointer: function results have distinct types: INTEGER(4) vs REAL(4)
     intProcPointer1 => null(mold=realProcPointer1)
-    !WARNING: Procedure pointer 'intprocpointer1' associated with result of reference to function 'null()' that is an incompatible procedure pointer: function results have incompatible types: INTEGER(4) vs REAL(4)
+    !WARNING: Procedure pointer 'intprocpointer1' associated with result of reference to function 'null()' that is an incompatible procedure pointer: function results have distinct types: INTEGER(4) vs REAL(4)
     lvar = associated(intProcPointer1, null(mold=realProcPointer1))
     !ERROR: PURE procedure pointer 'purefuncpointer' may not be associated with non-PURE procedure designator 'intproc'
     pureFuncPointer => intProc
     !WARNING: PURE procedure pointer 'purefuncpointer' may not be associated with non-PURE procedure designator 'intproc'
     lvar = associated(pureFuncPointer, intProc)
-    !ERROR: Function pointer 'realprocpointer1' associated with incompatible function designator 'intproc': function results have incompatible types: REAL(4) vs INTEGER(4)
+    !ERROR: Function pointer 'realprocpointer1' associated with incompatible function designator 'intproc': function results have distinct types: REAL(4) vs INTEGER(4)
     realProcPointer1 => intProc
-    !WARNING: Function pointer 'realprocpointer1' associated with incompatible function designator 'intproc': function results have incompatible types: REAL(4) vs INTEGER(4)
+    !WARNING: Function pointer 'realprocpointer1' associated with incompatible function designator 'intproc': function results have distinct types: REAL(4) vs INTEGER(4)
     lvar = associated(realProcPointer1, intProc)
     subProcPointer => externalProc ! OK to associate a procedure pointer  with an explicit interface to a procedure with an implicit interface
     lvar = associated(subProcPointer, externalProc) ! OK to associate a procedure pointer with an explicit interface to a procedure with an implicit interface

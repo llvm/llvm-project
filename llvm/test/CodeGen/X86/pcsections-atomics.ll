@@ -683,18 +683,16 @@ define void @atomic8_nand_monotonic(ptr %a) {
 ; O0-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %al # 1-byte Reload
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; O0-NEXT:    movb %al, %dl
-; O0-NEXT:  .Lpcsection17:
 ; O0-NEXT:    notb %dl
-; O0-NEXT:  .Lpcsection18:
+; O0-NEXT:  .Lpcsection17:
 ; O0-NEXT:    orb $-43, %dl
-; O0-NEXT:  .Lpcsection19:
 ; O0-NEXT:    lock cmpxchgb %dl, (%rcx)
-; O0-NEXT:  .Lpcsection20:
+; O0-NEXT:  .Lpcsection18:
 ; O0-NEXT:    sete %cl
-; O0-NEXT:  .Lpcsection21:
+; O0-NEXT:  .Lpcsection19:
 ; O0-NEXT:    testb $1, %cl
 ; O0-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
-; O0-NEXT:  .Lpcsection22:
+; O0-NEXT:  .Lpcsection20:
 ; O0-NEXT:    jne .LBB16_2
 ; O0-NEXT:    jmp .LBB16_1
 ; O0-NEXT:  .LBB16_2: # %atomicrmw.end
@@ -710,13 +708,11 @@ define void @atomic8_nand_monotonic(ptr %a) {
 ; O1-NEXT:  .LBB16_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
-; O1-NEXT:  .Lpcsection17:
 ; O1-NEXT:    notb %cl
-; O1-NEXT:  .Lpcsection18:
+; O1-NEXT:  .Lpcsection17:
 ; O1-NEXT:    orb $-43, %cl
-; O1-NEXT:  .Lpcsection19:
 ; O1-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O1-NEXT:  .Lpcsection20:
+; O1-NEXT:  .Lpcsection18:
 ; O1-NEXT:    jne .LBB16_1
 ; O1-NEXT:  # %bb.2: # %atomicrmw.end
 ; O1-NEXT:    movq $1, foo(%rip)
@@ -731,13 +727,11 @@ define void @atomic8_nand_monotonic(ptr %a) {
 ; O2-NEXT:  .LBB16_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
-; O2-NEXT:  .Lpcsection17:
 ; O2-NEXT:    notb %cl
-; O2-NEXT:  .Lpcsection18:
+; O2-NEXT:  .Lpcsection17:
 ; O2-NEXT:    orb $-43, %cl
-; O2-NEXT:  .Lpcsection19:
 ; O2-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O2-NEXT:  .Lpcsection20:
+; O2-NEXT:  .Lpcsection18:
 ; O2-NEXT:    jne .LBB16_1
 ; O2-NEXT:  # %bb.2: # %atomicrmw.end
 ; O2-NEXT:    movq $1, foo(%rip)
@@ -752,13 +746,11 @@ define void @atomic8_nand_monotonic(ptr %a) {
 ; O3-NEXT:  .LBB16_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
-; O3-NEXT:  .Lpcsection17:
 ; O3-NEXT:    notb %cl
-; O3-NEXT:  .Lpcsection18:
+; O3-NEXT:  .Lpcsection17:
 ; O3-NEXT:    orb $-43, %cl
-; O3-NEXT:  .Lpcsection19:
 ; O3-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O3-NEXT:  .Lpcsection20:
+; O3-NEXT:  .Lpcsection18:
 ; O3-NEXT:    jne .LBB16_1
 ; O3-NEXT:  # %bb.2: # %atomicrmw.end
 ; O3-NEXT:    movq $1, foo(%rip)
@@ -775,7 +767,7 @@ define void @atomic8_xchg_acquire(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:    movb $42, %al
-; O0-NEXT:  .Lpcsection23:
+; O0-NEXT:  .Lpcsection21:
 ; O0-NEXT:    xchgb %al, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -784,7 +776,7 @@ define void @atomic8_xchg_acquire(ptr %a) {
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movb $42, %al
-; O1-NEXT:  .Lpcsection21:
+; O1-NEXT:  .Lpcsection19:
 ; O1-NEXT:    xchgb %al, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -793,7 +785,7 @@ define void @atomic8_xchg_acquire(ptr %a) {
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movb $42, %al
-; O2-NEXT:  .Lpcsection21:
+; O2-NEXT:  .Lpcsection19:
 ; O2-NEXT:    xchgb %al, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -802,7 +794,7 @@ define void @atomic8_xchg_acquire(ptr %a) {
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movb $42, %al
-; O3-NEXT:  .Lpcsection21:
+; O3-NEXT:  .Lpcsection19:
 ; O3-NEXT:    xchgb %al, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -817,7 +809,7 @@ define void @atomic8_add_acquire(ptr %a) {
 ; O0-LABEL: atomic8_add_acquire:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection24:
+; O0-NEXT:  .Lpcsection22:
 ; O0-NEXT:    lock addb $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -825,7 +817,7 @@ define void @atomic8_add_acquire(ptr %a) {
 ; O1-LABEL: atomic8_add_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection22:
+; O1-NEXT:  .Lpcsection20:
 ; O1-NEXT:    lock addb $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -833,7 +825,7 @@ define void @atomic8_add_acquire(ptr %a) {
 ; O2-LABEL: atomic8_add_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection22:
+; O2-NEXT:  .Lpcsection20:
 ; O2-NEXT:    lock addb $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -841,7 +833,7 @@ define void @atomic8_add_acquire(ptr %a) {
 ; O3-LABEL: atomic8_add_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection22:
+; O3-NEXT:  .Lpcsection20:
 ; O3-NEXT:    lock addb $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -856,7 +848,7 @@ define void @atomic8_sub_acquire(ptr %a) {
 ; O0-LABEL: atomic8_sub_acquire:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection25:
+; O0-NEXT:  .Lpcsection23:
 ; O0-NEXT:    lock subb $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -864,7 +856,7 @@ define void @atomic8_sub_acquire(ptr %a) {
 ; O1-LABEL: atomic8_sub_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection23:
+; O1-NEXT:  .Lpcsection21:
 ; O1-NEXT:    lock subb $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -872,7 +864,7 @@ define void @atomic8_sub_acquire(ptr %a) {
 ; O2-LABEL: atomic8_sub_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection23:
+; O2-NEXT:  .Lpcsection21:
 ; O2-NEXT:    lock subb $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -880,7 +872,7 @@ define void @atomic8_sub_acquire(ptr %a) {
 ; O3-LABEL: atomic8_sub_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection23:
+; O3-NEXT:  .Lpcsection21:
 ; O3-NEXT:    lock subb $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -895,7 +887,7 @@ define void @atomic8_and_acquire(ptr %a) {
 ; O0-LABEL: atomic8_and_acquire:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection26:
+; O0-NEXT:  .Lpcsection24:
 ; O0-NEXT:    lock andb $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -903,7 +895,7 @@ define void @atomic8_and_acquire(ptr %a) {
 ; O1-LABEL: atomic8_and_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection24:
+; O1-NEXT:  .Lpcsection22:
 ; O1-NEXT:    lock andb $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -911,7 +903,7 @@ define void @atomic8_and_acquire(ptr %a) {
 ; O2-LABEL: atomic8_and_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection24:
+; O2-NEXT:  .Lpcsection22:
 ; O2-NEXT:    lock andb $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -919,7 +911,7 @@ define void @atomic8_and_acquire(ptr %a) {
 ; O3-LABEL: atomic8_and_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection24:
+; O3-NEXT:  .Lpcsection22:
 ; O3-NEXT:    lock andb $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -934,7 +926,7 @@ define void @atomic8_or_acquire(ptr %a) {
 ; O0-LABEL: atomic8_or_acquire:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection27:
+; O0-NEXT:  .Lpcsection25:
 ; O0-NEXT:    lock orb $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -942,7 +934,7 @@ define void @atomic8_or_acquire(ptr %a) {
 ; O1-LABEL: atomic8_or_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection25:
+; O1-NEXT:  .Lpcsection23:
 ; O1-NEXT:    lock orb $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -950,7 +942,7 @@ define void @atomic8_or_acquire(ptr %a) {
 ; O2-LABEL: atomic8_or_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection25:
+; O2-NEXT:  .Lpcsection23:
 ; O2-NEXT:    lock orb $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -958,7 +950,7 @@ define void @atomic8_or_acquire(ptr %a) {
 ; O3-LABEL: atomic8_or_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection25:
+; O3-NEXT:  .Lpcsection23:
 ; O3-NEXT:    lock orb $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -973,7 +965,7 @@ define void @atomic8_xor_acquire(ptr %a) {
 ; O0-LABEL: atomic8_xor_acquire:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection28:
+; O0-NEXT:  .Lpcsection26:
 ; O0-NEXT:    lock xorb $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -981,7 +973,7 @@ define void @atomic8_xor_acquire(ptr %a) {
 ; O1-LABEL: atomic8_xor_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection26:
+; O1-NEXT:  .Lpcsection24:
 ; O1-NEXT:    lock xorb $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -989,7 +981,7 @@ define void @atomic8_xor_acquire(ptr %a) {
 ; O2-LABEL: atomic8_xor_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection26:
+; O2-NEXT:  .Lpcsection24:
 ; O2-NEXT:    lock xorb $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -997,7 +989,7 @@ define void @atomic8_xor_acquire(ptr %a) {
 ; O3-LABEL: atomic8_xor_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection26:
+; O3-NEXT:  .Lpcsection24:
 ; O3-NEXT:    lock xorb $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -1013,7 +1005,7 @@ define void @atomic8_nand_acquire(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq foo, %rax
-; O0-NEXT:  .Lpcsection29:
+; O0-NEXT:  .Lpcsection27:
 ; O0-NEXT:    movb (%rdi), %al
 ; O0-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; O0-NEXT:  .LBB23_1: # %atomicrmw.start
@@ -1021,18 +1013,16 @@ define void @atomic8_nand_acquire(ptr %a) {
 ; O0-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %al # 1-byte Reload
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; O0-NEXT:    movb %al, %dl
-; O0-NEXT:  .Lpcsection30:
 ; O0-NEXT:    notb %dl
-; O0-NEXT:  .Lpcsection31:
+; O0-NEXT:  .Lpcsection28:
 ; O0-NEXT:    orb $-43, %dl
-; O0-NEXT:  .Lpcsection32:
 ; O0-NEXT:    lock cmpxchgb %dl, (%rcx)
-; O0-NEXT:  .Lpcsection33:
+; O0-NEXT:  .Lpcsection29:
 ; O0-NEXT:    sete %cl
-; O0-NEXT:  .Lpcsection34:
+; O0-NEXT:  .Lpcsection30:
 ; O0-NEXT:    testb $1, %cl
 ; O0-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
-; O0-NEXT:  .Lpcsection35:
+; O0-NEXT:  .Lpcsection31:
 ; O0-NEXT:    jne .LBB23_2
 ; O0-NEXT:    jmp .LBB23_1
 ; O0-NEXT:  .LBB23_2: # %atomicrmw.end
@@ -1042,19 +1032,17 @@ define void @atomic8_nand_acquire(ptr %a) {
 ; O1-LABEL: atomic8_nand_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection27:
+; O1-NEXT:  .Lpcsection25:
 ; O1-NEXT:    movzbl (%rdi), %eax
 ; O1-NEXT:    .p2align 4, 0x90
 ; O1-NEXT:  .LBB23_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
-; O1-NEXT:  .Lpcsection28:
 ; O1-NEXT:    notb %cl
-; O1-NEXT:  .Lpcsection29:
+; O1-NEXT:  .Lpcsection26:
 ; O1-NEXT:    orb $-43, %cl
-; O1-NEXT:  .Lpcsection30:
 ; O1-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O1-NEXT:  .Lpcsection31:
+; O1-NEXT:  .Lpcsection27:
 ; O1-NEXT:    jne .LBB23_1
 ; O1-NEXT:  # %bb.2: # %atomicrmw.end
 ; O1-NEXT:    movq $1, foo(%rip)
@@ -1063,19 +1051,17 @@ define void @atomic8_nand_acquire(ptr %a) {
 ; O2-LABEL: atomic8_nand_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection27:
+; O2-NEXT:  .Lpcsection25:
 ; O2-NEXT:    movzbl (%rdi), %eax
 ; O2-NEXT:    .p2align 4, 0x90
 ; O2-NEXT:  .LBB23_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
-; O2-NEXT:  .Lpcsection28:
 ; O2-NEXT:    notb %cl
-; O2-NEXT:  .Lpcsection29:
+; O2-NEXT:  .Lpcsection26:
 ; O2-NEXT:    orb $-43, %cl
-; O2-NEXT:  .Lpcsection30:
 ; O2-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O2-NEXT:  .Lpcsection31:
+; O2-NEXT:  .Lpcsection27:
 ; O2-NEXT:    jne .LBB23_1
 ; O2-NEXT:  # %bb.2: # %atomicrmw.end
 ; O2-NEXT:    movq $1, foo(%rip)
@@ -1084,19 +1070,17 @@ define void @atomic8_nand_acquire(ptr %a) {
 ; O3-LABEL: atomic8_nand_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection27:
+; O3-NEXT:  .Lpcsection25:
 ; O3-NEXT:    movzbl (%rdi), %eax
 ; O3-NEXT:    .p2align 4, 0x90
 ; O3-NEXT:  .LBB23_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
-; O3-NEXT:  .Lpcsection28:
 ; O3-NEXT:    notb %cl
-; O3-NEXT:  .Lpcsection29:
+; O3-NEXT:  .Lpcsection26:
 ; O3-NEXT:    orb $-43, %cl
-; O3-NEXT:  .Lpcsection30:
 ; O3-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O3-NEXT:  .Lpcsection31:
+; O3-NEXT:  .Lpcsection27:
 ; O3-NEXT:    jne .LBB23_1
 ; O3-NEXT:  # %bb.2: # %atomicrmw.end
 ; O3-NEXT:    movq $1, foo(%rip)
@@ -1113,7 +1097,7 @@ define void @atomic8_xchg_release(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:    movb $42, %al
-; O0-NEXT:  .Lpcsection36:
+; O0-NEXT:  .Lpcsection32:
 ; O0-NEXT:    xchgb %al, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -1122,7 +1106,7 @@ define void @atomic8_xchg_release(ptr %a) {
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movb $42, %al
-; O1-NEXT:  .Lpcsection32:
+; O1-NEXT:  .Lpcsection28:
 ; O1-NEXT:    xchgb %al, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -1131,7 +1115,7 @@ define void @atomic8_xchg_release(ptr %a) {
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movb $42, %al
-; O2-NEXT:  .Lpcsection32:
+; O2-NEXT:  .Lpcsection28:
 ; O2-NEXT:    xchgb %al, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -1140,7 +1124,7 @@ define void @atomic8_xchg_release(ptr %a) {
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movb $42, %al
-; O3-NEXT:  .Lpcsection32:
+; O3-NEXT:  .Lpcsection28:
 ; O3-NEXT:    xchgb %al, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -1155,7 +1139,7 @@ define void @atomic8_add_release(ptr %a) {
 ; O0-LABEL: atomic8_add_release:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection37:
+; O0-NEXT:  .Lpcsection33:
 ; O0-NEXT:    lock addb $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -1163,7 +1147,7 @@ define void @atomic8_add_release(ptr %a) {
 ; O1-LABEL: atomic8_add_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection33:
+; O1-NEXT:  .Lpcsection29:
 ; O1-NEXT:    lock addb $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -1171,7 +1155,7 @@ define void @atomic8_add_release(ptr %a) {
 ; O2-LABEL: atomic8_add_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection33:
+; O2-NEXT:  .Lpcsection29:
 ; O2-NEXT:    lock addb $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -1179,7 +1163,7 @@ define void @atomic8_add_release(ptr %a) {
 ; O3-LABEL: atomic8_add_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection33:
+; O3-NEXT:  .Lpcsection29:
 ; O3-NEXT:    lock addb $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -1194,7 +1178,7 @@ define void @atomic8_sub_release(ptr %a) {
 ; O0-LABEL: atomic8_sub_release:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection38:
+; O0-NEXT:  .Lpcsection34:
 ; O0-NEXT:    lock subb $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -1202,7 +1186,7 @@ define void @atomic8_sub_release(ptr %a) {
 ; O1-LABEL: atomic8_sub_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection34:
+; O1-NEXT:  .Lpcsection30:
 ; O1-NEXT:    lock subb $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -1210,7 +1194,7 @@ define void @atomic8_sub_release(ptr %a) {
 ; O2-LABEL: atomic8_sub_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection34:
+; O2-NEXT:  .Lpcsection30:
 ; O2-NEXT:    lock subb $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -1218,7 +1202,7 @@ define void @atomic8_sub_release(ptr %a) {
 ; O3-LABEL: atomic8_sub_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection34:
+; O3-NEXT:  .Lpcsection30:
 ; O3-NEXT:    lock subb $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -1233,7 +1217,7 @@ define void @atomic8_and_release(ptr %a) {
 ; O0-LABEL: atomic8_and_release:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection39:
+; O0-NEXT:  .Lpcsection35:
 ; O0-NEXT:    lock andb $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -1241,7 +1225,7 @@ define void @atomic8_and_release(ptr %a) {
 ; O1-LABEL: atomic8_and_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection35:
+; O1-NEXT:  .Lpcsection31:
 ; O1-NEXT:    lock andb $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -1249,7 +1233,7 @@ define void @atomic8_and_release(ptr %a) {
 ; O2-LABEL: atomic8_and_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection35:
+; O2-NEXT:  .Lpcsection31:
 ; O2-NEXT:    lock andb $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -1257,7 +1241,7 @@ define void @atomic8_and_release(ptr %a) {
 ; O3-LABEL: atomic8_and_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection35:
+; O3-NEXT:  .Lpcsection31:
 ; O3-NEXT:    lock andb $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -1272,7 +1256,7 @@ define void @atomic8_or_release(ptr %a) {
 ; O0-LABEL: atomic8_or_release:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection40:
+; O0-NEXT:  .Lpcsection36:
 ; O0-NEXT:    lock orb $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -1280,7 +1264,7 @@ define void @atomic8_or_release(ptr %a) {
 ; O1-LABEL: atomic8_or_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection36:
+; O1-NEXT:  .Lpcsection32:
 ; O1-NEXT:    lock orb $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -1288,7 +1272,7 @@ define void @atomic8_or_release(ptr %a) {
 ; O2-LABEL: atomic8_or_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection36:
+; O2-NEXT:  .Lpcsection32:
 ; O2-NEXT:    lock orb $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -1296,7 +1280,7 @@ define void @atomic8_or_release(ptr %a) {
 ; O3-LABEL: atomic8_or_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection36:
+; O3-NEXT:  .Lpcsection32:
 ; O3-NEXT:    lock orb $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -1311,7 +1295,7 @@ define void @atomic8_xor_release(ptr %a) {
 ; O0-LABEL: atomic8_xor_release:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection41:
+; O0-NEXT:  .Lpcsection37:
 ; O0-NEXT:    lock xorb $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -1319,7 +1303,7 @@ define void @atomic8_xor_release(ptr %a) {
 ; O1-LABEL: atomic8_xor_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection37:
+; O1-NEXT:  .Lpcsection33:
 ; O1-NEXT:    lock xorb $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -1327,7 +1311,7 @@ define void @atomic8_xor_release(ptr %a) {
 ; O2-LABEL: atomic8_xor_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection37:
+; O2-NEXT:  .Lpcsection33:
 ; O2-NEXT:    lock xorb $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -1335,7 +1319,7 @@ define void @atomic8_xor_release(ptr %a) {
 ; O3-LABEL: atomic8_xor_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection37:
+; O3-NEXT:  .Lpcsection33:
 ; O3-NEXT:    lock xorb $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -1351,7 +1335,7 @@ define void @atomic8_nand_release(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq foo, %rax
-; O0-NEXT:  .Lpcsection42:
+; O0-NEXT:  .Lpcsection38:
 ; O0-NEXT:    movb (%rdi), %al
 ; O0-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; O0-NEXT:  .LBB30_1: # %atomicrmw.start
@@ -1359,18 +1343,16 @@ define void @atomic8_nand_release(ptr %a) {
 ; O0-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %al # 1-byte Reload
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; O0-NEXT:    movb %al, %dl
-; O0-NEXT:  .Lpcsection43:
 ; O0-NEXT:    notb %dl
-; O0-NEXT:  .Lpcsection44:
+; O0-NEXT:  .Lpcsection39:
 ; O0-NEXT:    orb $-43, %dl
-; O0-NEXT:  .Lpcsection45:
 ; O0-NEXT:    lock cmpxchgb %dl, (%rcx)
-; O0-NEXT:  .Lpcsection46:
+; O0-NEXT:  .Lpcsection40:
 ; O0-NEXT:    sete %cl
-; O0-NEXT:  .Lpcsection47:
+; O0-NEXT:  .Lpcsection41:
 ; O0-NEXT:    testb $1, %cl
 ; O0-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
-; O0-NEXT:  .Lpcsection48:
+; O0-NEXT:  .Lpcsection42:
 ; O0-NEXT:    jne .LBB30_2
 ; O0-NEXT:    jmp .LBB30_1
 ; O0-NEXT:  .LBB30_2: # %atomicrmw.end
@@ -1380,19 +1362,17 @@ define void @atomic8_nand_release(ptr %a) {
 ; O1-LABEL: atomic8_nand_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection38:
+; O1-NEXT:  .Lpcsection34:
 ; O1-NEXT:    movzbl (%rdi), %eax
 ; O1-NEXT:    .p2align 4, 0x90
 ; O1-NEXT:  .LBB30_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
-; O1-NEXT:  .Lpcsection39:
 ; O1-NEXT:    notb %cl
-; O1-NEXT:  .Lpcsection40:
+; O1-NEXT:  .Lpcsection35:
 ; O1-NEXT:    orb $-43, %cl
-; O1-NEXT:  .Lpcsection41:
 ; O1-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O1-NEXT:  .Lpcsection42:
+; O1-NEXT:  .Lpcsection36:
 ; O1-NEXT:    jne .LBB30_1
 ; O1-NEXT:  # %bb.2: # %atomicrmw.end
 ; O1-NEXT:    movq $1, foo(%rip)
@@ -1401,19 +1381,17 @@ define void @atomic8_nand_release(ptr %a) {
 ; O2-LABEL: atomic8_nand_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection38:
+; O2-NEXT:  .Lpcsection34:
 ; O2-NEXT:    movzbl (%rdi), %eax
 ; O2-NEXT:    .p2align 4, 0x90
 ; O2-NEXT:  .LBB30_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
-; O2-NEXT:  .Lpcsection39:
 ; O2-NEXT:    notb %cl
-; O2-NEXT:  .Lpcsection40:
+; O2-NEXT:  .Lpcsection35:
 ; O2-NEXT:    orb $-43, %cl
-; O2-NEXT:  .Lpcsection41:
 ; O2-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O2-NEXT:  .Lpcsection42:
+; O2-NEXT:  .Lpcsection36:
 ; O2-NEXT:    jne .LBB30_1
 ; O2-NEXT:  # %bb.2: # %atomicrmw.end
 ; O2-NEXT:    movq $1, foo(%rip)
@@ -1422,19 +1400,17 @@ define void @atomic8_nand_release(ptr %a) {
 ; O3-LABEL: atomic8_nand_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection38:
+; O3-NEXT:  .Lpcsection34:
 ; O3-NEXT:    movzbl (%rdi), %eax
 ; O3-NEXT:    .p2align 4, 0x90
 ; O3-NEXT:  .LBB30_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
-; O3-NEXT:  .Lpcsection39:
 ; O3-NEXT:    notb %cl
-; O3-NEXT:  .Lpcsection40:
+; O3-NEXT:  .Lpcsection35:
 ; O3-NEXT:    orb $-43, %cl
-; O3-NEXT:  .Lpcsection41:
 ; O3-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O3-NEXT:  .Lpcsection42:
+; O3-NEXT:  .Lpcsection36:
 ; O3-NEXT:    jne .LBB30_1
 ; O3-NEXT:  # %bb.2: # %atomicrmw.end
 ; O3-NEXT:    movq $1, foo(%rip)
@@ -1451,7 +1427,7 @@ define void @atomic8_xchg_acq_rel(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:    movb $42, %al
-; O0-NEXT:  .Lpcsection49:
+; O0-NEXT:  .Lpcsection43:
 ; O0-NEXT:    xchgb %al, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -1460,7 +1436,7 @@ define void @atomic8_xchg_acq_rel(ptr %a) {
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movb $42, %al
-; O1-NEXT:  .Lpcsection43:
+; O1-NEXT:  .Lpcsection37:
 ; O1-NEXT:    xchgb %al, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -1469,7 +1445,7 @@ define void @atomic8_xchg_acq_rel(ptr %a) {
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movb $42, %al
-; O2-NEXT:  .Lpcsection43:
+; O2-NEXT:  .Lpcsection37:
 ; O2-NEXT:    xchgb %al, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -1478,7 +1454,7 @@ define void @atomic8_xchg_acq_rel(ptr %a) {
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movb $42, %al
-; O3-NEXT:  .Lpcsection43:
+; O3-NEXT:  .Lpcsection37:
 ; O3-NEXT:    xchgb %al, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -1493,7 +1469,7 @@ define void @atomic8_add_acq_rel(ptr %a) {
 ; O0-LABEL: atomic8_add_acq_rel:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection50:
+; O0-NEXT:  .Lpcsection44:
 ; O0-NEXT:    lock addb $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -1501,7 +1477,7 @@ define void @atomic8_add_acq_rel(ptr %a) {
 ; O1-LABEL: atomic8_add_acq_rel:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection44:
+; O1-NEXT:  .Lpcsection38:
 ; O1-NEXT:    lock addb $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -1509,7 +1485,7 @@ define void @atomic8_add_acq_rel(ptr %a) {
 ; O2-LABEL: atomic8_add_acq_rel:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection44:
+; O2-NEXT:  .Lpcsection38:
 ; O2-NEXT:    lock addb $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -1517,7 +1493,7 @@ define void @atomic8_add_acq_rel(ptr %a) {
 ; O3-LABEL: atomic8_add_acq_rel:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection44:
+; O3-NEXT:  .Lpcsection38:
 ; O3-NEXT:    lock addb $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -1532,7 +1508,7 @@ define void @atomic8_sub_acq_rel(ptr %a) {
 ; O0-LABEL: atomic8_sub_acq_rel:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection51:
+; O0-NEXT:  .Lpcsection45:
 ; O0-NEXT:    lock subb $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -1540,7 +1516,7 @@ define void @atomic8_sub_acq_rel(ptr %a) {
 ; O1-LABEL: atomic8_sub_acq_rel:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection45:
+; O1-NEXT:  .Lpcsection39:
 ; O1-NEXT:    lock subb $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -1548,7 +1524,7 @@ define void @atomic8_sub_acq_rel(ptr %a) {
 ; O2-LABEL: atomic8_sub_acq_rel:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection45:
+; O2-NEXT:  .Lpcsection39:
 ; O2-NEXT:    lock subb $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -1556,7 +1532,7 @@ define void @atomic8_sub_acq_rel(ptr %a) {
 ; O3-LABEL: atomic8_sub_acq_rel:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection45:
+; O3-NEXT:  .Lpcsection39:
 ; O3-NEXT:    lock subb $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -1571,7 +1547,7 @@ define void @atomic8_and_acq_rel(ptr %a) {
 ; O0-LABEL: atomic8_and_acq_rel:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection52:
+; O0-NEXT:  .Lpcsection46:
 ; O0-NEXT:    lock andb $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -1579,7 +1555,7 @@ define void @atomic8_and_acq_rel(ptr %a) {
 ; O1-LABEL: atomic8_and_acq_rel:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection46:
+; O1-NEXT:  .Lpcsection40:
 ; O1-NEXT:    lock andb $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -1587,7 +1563,7 @@ define void @atomic8_and_acq_rel(ptr %a) {
 ; O2-LABEL: atomic8_and_acq_rel:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection46:
+; O2-NEXT:  .Lpcsection40:
 ; O2-NEXT:    lock andb $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -1595,7 +1571,7 @@ define void @atomic8_and_acq_rel(ptr %a) {
 ; O3-LABEL: atomic8_and_acq_rel:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection46:
+; O3-NEXT:  .Lpcsection40:
 ; O3-NEXT:    lock andb $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -1610,7 +1586,7 @@ define void @atomic8_or_acq_rel(ptr %a) {
 ; O0-LABEL: atomic8_or_acq_rel:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection53:
+; O0-NEXT:  .Lpcsection47:
 ; O0-NEXT:    lock orb $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -1618,7 +1594,7 @@ define void @atomic8_or_acq_rel(ptr %a) {
 ; O1-LABEL: atomic8_or_acq_rel:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection47:
+; O1-NEXT:  .Lpcsection41:
 ; O1-NEXT:    lock orb $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -1626,7 +1602,7 @@ define void @atomic8_or_acq_rel(ptr %a) {
 ; O2-LABEL: atomic8_or_acq_rel:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection47:
+; O2-NEXT:  .Lpcsection41:
 ; O2-NEXT:    lock orb $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -1634,7 +1610,7 @@ define void @atomic8_or_acq_rel(ptr %a) {
 ; O3-LABEL: atomic8_or_acq_rel:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection47:
+; O3-NEXT:  .Lpcsection41:
 ; O3-NEXT:    lock orb $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -1649,7 +1625,7 @@ define void @atomic8_xor_acq_rel(ptr %a) {
 ; O0-LABEL: atomic8_xor_acq_rel:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection54:
+; O0-NEXT:  .Lpcsection48:
 ; O0-NEXT:    lock xorb $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -1657,7 +1633,7 @@ define void @atomic8_xor_acq_rel(ptr %a) {
 ; O1-LABEL: atomic8_xor_acq_rel:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection48:
+; O1-NEXT:  .Lpcsection42:
 ; O1-NEXT:    lock xorb $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -1665,7 +1641,7 @@ define void @atomic8_xor_acq_rel(ptr %a) {
 ; O2-LABEL: atomic8_xor_acq_rel:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection48:
+; O2-NEXT:  .Lpcsection42:
 ; O2-NEXT:    lock xorb $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -1673,7 +1649,7 @@ define void @atomic8_xor_acq_rel(ptr %a) {
 ; O3-LABEL: atomic8_xor_acq_rel:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection48:
+; O3-NEXT:  .Lpcsection42:
 ; O3-NEXT:    lock xorb $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -1689,7 +1665,7 @@ define void @atomic8_nand_acq_rel(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq foo, %rax
-; O0-NEXT:  .Lpcsection55:
+; O0-NEXT:  .Lpcsection49:
 ; O0-NEXT:    movb (%rdi), %al
 ; O0-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; O0-NEXT:  .LBB37_1: # %atomicrmw.start
@@ -1697,18 +1673,16 @@ define void @atomic8_nand_acq_rel(ptr %a) {
 ; O0-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %al # 1-byte Reload
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; O0-NEXT:    movb %al, %dl
-; O0-NEXT:  .Lpcsection56:
 ; O0-NEXT:    notb %dl
-; O0-NEXT:  .Lpcsection57:
+; O0-NEXT:  .Lpcsection50:
 ; O0-NEXT:    orb $-43, %dl
-; O0-NEXT:  .Lpcsection58:
 ; O0-NEXT:    lock cmpxchgb %dl, (%rcx)
-; O0-NEXT:  .Lpcsection59:
+; O0-NEXT:  .Lpcsection51:
 ; O0-NEXT:    sete %cl
-; O0-NEXT:  .Lpcsection60:
+; O0-NEXT:  .Lpcsection52:
 ; O0-NEXT:    testb $1, %cl
 ; O0-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
-; O0-NEXT:  .Lpcsection61:
+; O0-NEXT:  .Lpcsection53:
 ; O0-NEXT:    jne .LBB37_2
 ; O0-NEXT:    jmp .LBB37_1
 ; O0-NEXT:  .LBB37_2: # %atomicrmw.end
@@ -1718,19 +1692,17 @@ define void @atomic8_nand_acq_rel(ptr %a) {
 ; O1-LABEL: atomic8_nand_acq_rel:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection49:
+; O1-NEXT:  .Lpcsection43:
 ; O1-NEXT:    movzbl (%rdi), %eax
 ; O1-NEXT:    .p2align 4, 0x90
 ; O1-NEXT:  .LBB37_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
-; O1-NEXT:  .Lpcsection50:
 ; O1-NEXT:    notb %cl
-; O1-NEXT:  .Lpcsection51:
+; O1-NEXT:  .Lpcsection44:
 ; O1-NEXT:    orb $-43, %cl
-; O1-NEXT:  .Lpcsection52:
 ; O1-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O1-NEXT:  .Lpcsection53:
+; O1-NEXT:  .Lpcsection45:
 ; O1-NEXT:    jne .LBB37_1
 ; O1-NEXT:  # %bb.2: # %atomicrmw.end
 ; O1-NEXT:    movq $1, foo(%rip)
@@ -1739,19 +1711,17 @@ define void @atomic8_nand_acq_rel(ptr %a) {
 ; O2-LABEL: atomic8_nand_acq_rel:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection49:
+; O2-NEXT:  .Lpcsection43:
 ; O2-NEXT:    movzbl (%rdi), %eax
 ; O2-NEXT:    .p2align 4, 0x90
 ; O2-NEXT:  .LBB37_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
-; O2-NEXT:  .Lpcsection50:
 ; O2-NEXT:    notb %cl
-; O2-NEXT:  .Lpcsection51:
+; O2-NEXT:  .Lpcsection44:
 ; O2-NEXT:    orb $-43, %cl
-; O2-NEXT:  .Lpcsection52:
 ; O2-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O2-NEXT:  .Lpcsection53:
+; O2-NEXT:  .Lpcsection45:
 ; O2-NEXT:    jne .LBB37_1
 ; O2-NEXT:  # %bb.2: # %atomicrmw.end
 ; O2-NEXT:    movq $1, foo(%rip)
@@ -1760,19 +1730,17 @@ define void @atomic8_nand_acq_rel(ptr %a) {
 ; O3-LABEL: atomic8_nand_acq_rel:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection49:
+; O3-NEXT:  .Lpcsection43:
 ; O3-NEXT:    movzbl (%rdi), %eax
 ; O3-NEXT:    .p2align 4, 0x90
 ; O3-NEXT:  .LBB37_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
-; O3-NEXT:  .Lpcsection50:
 ; O3-NEXT:    notb %cl
-; O3-NEXT:  .Lpcsection51:
+; O3-NEXT:  .Lpcsection44:
 ; O3-NEXT:    orb $-43, %cl
-; O3-NEXT:  .Lpcsection52:
 ; O3-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O3-NEXT:  .Lpcsection53:
+; O3-NEXT:  .Lpcsection45:
 ; O3-NEXT:    jne .LBB37_1
 ; O3-NEXT:  # %bb.2: # %atomicrmw.end
 ; O3-NEXT:    movq $1, foo(%rip)
@@ -1789,7 +1757,7 @@ define void @atomic8_xchg_seq_cst(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:    movb $42, %al
-; O0-NEXT:  .Lpcsection62:
+; O0-NEXT:  .Lpcsection54:
 ; O0-NEXT:    xchgb %al, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -1798,7 +1766,7 @@ define void @atomic8_xchg_seq_cst(ptr %a) {
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movb $42, %al
-; O1-NEXT:  .Lpcsection54:
+; O1-NEXT:  .Lpcsection46:
 ; O1-NEXT:    xchgb %al, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -1807,7 +1775,7 @@ define void @atomic8_xchg_seq_cst(ptr %a) {
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movb $42, %al
-; O2-NEXT:  .Lpcsection54:
+; O2-NEXT:  .Lpcsection46:
 ; O2-NEXT:    xchgb %al, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -1816,7 +1784,7 @@ define void @atomic8_xchg_seq_cst(ptr %a) {
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movb $42, %al
-; O3-NEXT:  .Lpcsection54:
+; O3-NEXT:  .Lpcsection46:
 ; O3-NEXT:    xchgb %al, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -1831,7 +1799,7 @@ define void @atomic8_add_seq_cst(ptr %a) {
 ; O0-LABEL: atomic8_add_seq_cst:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection63:
+; O0-NEXT:  .Lpcsection55:
 ; O0-NEXT:    lock addb $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -1839,7 +1807,7 @@ define void @atomic8_add_seq_cst(ptr %a) {
 ; O1-LABEL: atomic8_add_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection55:
+; O1-NEXT:  .Lpcsection47:
 ; O1-NEXT:    lock addb $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -1847,7 +1815,7 @@ define void @atomic8_add_seq_cst(ptr %a) {
 ; O2-LABEL: atomic8_add_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection55:
+; O2-NEXT:  .Lpcsection47:
 ; O2-NEXT:    lock addb $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -1855,7 +1823,7 @@ define void @atomic8_add_seq_cst(ptr %a) {
 ; O3-LABEL: atomic8_add_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection55:
+; O3-NEXT:  .Lpcsection47:
 ; O3-NEXT:    lock addb $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -1870,7 +1838,7 @@ define void @atomic8_sub_seq_cst(ptr %a) {
 ; O0-LABEL: atomic8_sub_seq_cst:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection64:
+; O0-NEXT:  .Lpcsection56:
 ; O0-NEXT:    lock subb $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -1878,7 +1846,7 @@ define void @atomic8_sub_seq_cst(ptr %a) {
 ; O1-LABEL: atomic8_sub_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection56:
+; O1-NEXT:  .Lpcsection48:
 ; O1-NEXT:    lock subb $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -1886,7 +1854,7 @@ define void @atomic8_sub_seq_cst(ptr %a) {
 ; O2-LABEL: atomic8_sub_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection56:
+; O2-NEXT:  .Lpcsection48:
 ; O2-NEXT:    lock subb $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -1894,7 +1862,7 @@ define void @atomic8_sub_seq_cst(ptr %a) {
 ; O3-LABEL: atomic8_sub_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection56:
+; O3-NEXT:  .Lpcsection48:
 ; O3-NEXT:    lock subb $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -1909,7 +1877,7 @@ define void @atomic8_and_seq_cst(ptr %a) {
 ; O0-LABEL: atomic8_and_seq_cst:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection65:
+; O0-NEXT:  .Lpcsection57:
 ; O0-NEXT:    lock andb $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -1917,7 +1885,7 @@ define void @atomic8_and_seq_cst(ptr %a) {
 ; O1-LABEL: atomic8_and_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection57:
+; O1-NEXT:  .Lpcsection49:
 ; O1-NEXT:    lock andb $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -1925,7 +1893,7 @@ define void @atomic8_and_seq_cst(ptr %a) {
 ; O2-LABEL: atomic8_and_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection57:
+; O2-NEXT:  .Lpcsection49:
 ; O2-NEXT:    lock andb $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -1933,7 +1901,7 @@ define void @atomic8_and_seq_cst(ptr %a) {
 ; O3-LABEL: atomic8_and_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection57:
+; O3-NEXT:  .Lpcsection49:
 ; O3-NEXT:    lock andb $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -1948,7 +1916,7 @@ define void @atomic8_or_seq_cst(ptr %a) {
 ; O0-LABEL: atomic8_or_seq_cst:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection66:
+; O0-NEXT:  .Lpcsection58:
 ; O0-NEXT:    lock orb $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -1956,7 +1924,7 @@ define void @atomic8_or_seq_cst(ptr %a) {
 ; O1-LABEL: atomic8_or_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection58:
+; O1-NEXT:  .Lpcsection50:
 ; O1-NEXT:    lock orb $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -1964,7 +1932,7 @@ define void @atomic8_or_seq_cst(ptr %a) {
 ; O2-LABEL: atomic8_or_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection58:
+; O2-NEXT:  .Lpcsection50:
 ; O2-NEXT:    lock orb $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -1972,7 +1940,7 @@ define void @atomic8_or_seq_cst(ptr %a) {
 ; O3-LABEL: atomic8_or_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection58:
+; O3-NEXT:  .Lpcsection50:
 ; O3-NEXT:    lock orb $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -1987,7 +1955,7 @@ define void @atomic8_xor_seq_cst(ptr %a) {
 ; O0-LABEL: atomic8_xor_seq_cst:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection67:
+; O0-NEXT:  .Lpcsection59:
 ; O0-NEXT:    lock xorb $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -1995,7 +1963,7 @@ define void @atomic8_xor_seq_cst(ptr %a) {
 ; O1-LABEL: atomic8_xor_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection59:
+; O1-NEXT:  .Lpcsection51:
 ; O1-NEXT:    lock xorb $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -2003,7 +1971,7 @@ define void @atomic8_xor_seq_cst(ptr %a) {
 ; O2-LABEL: atomic8_xor_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection59:
+; O2-NEXT:  .Lpcsection51:
 ; O2-NEXT:    lock xorb $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -2011,7 +1979,7 @@ define void @atomic8_xor_seq_cst(ptr %a) {
 ; O3-LABEL: atomic8_xor_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection59:
+; O3-NEXT:  .Lpcsection51:
 ; O3-NEXT:    lock xorb $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -2027,7 +1995,7 @@ define void @atomic8_nand_seq_cst(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq foo, %rax
-; O0-NEXT:  .Lpcsection68:
+; O0-NEXT:  .Lpcsection60:
 ; O0-NEXT:    movb (%rdi), %al
 ; O0-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; O0-NEXT:  .LBB44_1: # %atomicrmw.start
@@ -2035,18 +2003,16 @@ define void @atomic8_nand_seq_cst(ptr %a) {
 ; O0-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %al # 1-byte Reload
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; O0-NEXT:    movb %al, %dl
-; O0-NEXT:  .Lpcsection69:
 ; O0-NEXT:    notb %dl
-; O0-NEXT:  .Lpcsection70:
+; O0-NEXT:  .Lpcsection61:
 ; O0-NEXT:    orb $-43, %dl
-; O0-NEXT:  .Lpcsection71:
 ; O0-NEXT:    lock cmpxchgb %dl, (%rcx)
-; O0-NEXT:  .Lpcsection72:
+; O0-NEXT:  .Lpcsection62:
 ; O0-NEXT:    sete %cl
-; O0-NEXT:  .Lpcsection73:
+; O0-NEXT:  .Lpcsection63:
 ; O0-NEXT:    testb $1, %cl
 ; O0-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
-; O0-NEXT:  .Lpcsection74:
+; O0-NEXT:  .Lpcsection64:
 ; O0-NEXT:    jne .LBB44_2
 ; O0-NEXT:    jmp .LBB44_1
 ; O0-NEXT:  .LBB44_2: # %atomicrmw.end
@@ -2056,19 +2022,17 @@ define void @atomic8_nand_seq_cst(ptr %a) {
 ; O1-LABEL: atomic8_nand_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection60:
+; O1-NEXT:  .Lpcsection52:
 ; O1-NEXT:    movzbl (%rdi), %eax
 ; O1-NEXT:    .p2align 4, 0x90
 ; O1-NEXT:  .LBB44_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
-; O1-NEXT:  .Lpcsection61:
 ; O1-NEXT:    notb %cl
-; O1-NEXT:  .Lpcsection62:
+; O1-NEXT:  .Lpcsection53:
 ; O1-NEXT:    orb $-43, %cl
-; O1-NEXT:  .Lpcsection63:
 ; O1-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O1-NEXT:  .Lpcsection64:
+; O1-NEXT:  .Lpcsection54:
 ; O1-NEXT:    jne .LBB44_1
 ; O1-NEXT:  # %bb.2: # %atomicrmw.end
 ; O1-NEXT:    movq $1, foo(%rip)
@@ -2077,19 +2041,17 @@ define void @atomic8_nand_seq_cst(ptr %a) {
 ; O2-LABEL: atomic8_nand_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection60:
+; O2-NEXT:  .Lpcsection52:
 ; O2-NEXT:    movzbl (%rdi), %eax
 ; O2-NEXT:    .p2align 4, 0x90
 ; O2-NEXT:  .LBB44_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
-; O2-NEXT:  .Lpcsection61:
 ; O2-NEXT:    notb %cl
-; O2-NEXT:  .Lpcsection62:
+; O2-NEXT:  .Lpcsection53:
 ; O2-NEXT:    orb $-43, %cl
-; O2-NEXT:  .Lpcsection63:
 ; O2-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O2-NEXT:  .Lpcsection64:
+; O2-NEXT:  .Lpcsection54:
 ; O2-NEXT:    jne .LBB44_1
 ; O2-NEXT:  # %bb.2: # %atomicrmw.end
 ; O2-NEXT:    movq $1, foo(%rip)
@@ -2098,19 +2060,17 @@ define void @atomic8_nand_seq_cst(ptr %a) {
 ; O3-LABEL: atomic8_nand_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection60:
+; O3-NEXT:  .Lpcsection52:
 ; O3-NEXT:    movzbl (%rdi), %eax
 ; O3-NEXT:    .p2align 4, 0x90
 ; O3-NEXT:  .LBB44_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
-; O3-NEXT:  .Lpcsection61:
 ; O3-NEXT:    notb %cl
-; O3-NEXT:  .Lpcsection62:
+; O3-NEXT:  .Lpcsection53:
 ; O3-NEXT:    orb $-43, %cl
-; O3-NEXT:  .Lpcsection63:
 ; O3-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O3-NEXT:  .Lpcsection64:
+; O3-NEXT:  .Lpcsection54:
 ; O3-NEXT:    jne .LBB44_1
 ; O3-NEXT:  # %bb.2: # %atomicrmw.end
 ; O3-NEXT:    movq $1, foo(%rip)
@@ -2129,17 +2089,14 @@ define void @atomic8_cas_monotonic(ptr %a) {
 ; O0-NEXT:    movb $42, %al
 ; O0-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; O0-NEXT:    movb $1, %cl
-; O0-NEXT:  .Lpcsection75:
 ; O0-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O0-NEXT:  .Lpcsection76:
+; O0-NEXT:  .Lpcsection65:
 ; O0-NEXT:    # kill: def $dl killed $al
 ; O0-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %al # 1-byte Reload
-; O0-NEXT:  .Lpcsection77:
 ; O0-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O0-NEXT:  .Lpcsection78:
+; O0-NEXT:  .Lpcsection66:
 ; O0-NEXT:    # kill: def $dl killed $al
 ; O0-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %al # 1-byte Reload
-; O0-NEXT:  .Lpcsection79:
 ; O0-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -2149,13 +2106,10 @@ define void @atomic8_cas_monotonic(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movb $1, %cl
 ; O1-NEXT:    movb $42, %al
-; O1-NEXT:  .Lpcsection65:
 ; O1-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O1-NEXT:    movb $42, %al
-; O1-NEXT:  .Lpcsection66:
 ; O1-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O1-NEXT:    movb $42, %al
-; O1-NEXT:  .Lpcsection67:
 ; O1-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -2165,13 +2119,10 @@ define void @atomic8_cas_monotonic(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movb $1, %cl
 ; O2-NEXT:    movb $42, %al
-; O2-NEXT:  .Lpcsection65:
 ; O2-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O2-NEXT:    movb $42, %al
-; O2-NEXT:  .Lpcsection66:
 ; O2-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O2-NEXT:    movb $42, %al
-; O2-NEXT:  .Lpcsection67:
 ; O2-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -2181,13 +2132,10 @@ define void @atomic8_cas_monotonic(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movb $1, %cl
 ; O3-NEXT:    movb $42, %al
-; O3-NEXT:  .Lpcsection65:
 ; O3-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O3-NEXT:    movb $42, %al
-; O3-NEXT:  .Lpcsection66:
 ; O3-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O3-NEXT:    movb $42, %al
-; O3-NEXT:  .Lpcsection67:
 ; O3-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -2207,17 +2155,14 @@ define void @atomic8_cas_acquire(ptr %a) {
 ; O0-NEXT:    movb $42, %al
 ; O0-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; O0-NEXT:    movb $1, %cl
-; O0-NEXT:  .Lpcsection80:
 ; O0-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O0-NEXT:  .Lpcsection81:
+; O0-NEXT:  .Lpcsection67:
 ; O0-NEXT:    # kill: def $dl killed $al
 ; O0-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %al # 1-byte Reload
-; O0-NEXT:  .Lpcsection82:
 ; O0-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O0-NEXT:  .Lpcsection83:
+; O0-NEXT:  .Lpcsection68:
 ; O0-NEXT:    # kill: def $dl killed $al
 ; O0-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %al # 1-byte Reload
-; O0-NEXT:  .Lpcsection84:
 ; O0-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -2227,13 +2172,10 @@ define void @atomic8_cas_acquire(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movb $1, %cl
 ; O1-NEXT:    movb $42, %al
-; O1-NEXT:  .Lpcsection68:
 ; O1-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O1-NEXT:    movb $42, %al
-; O1-NEXT:  .Lpcsection69:
 ; O1-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O1-NEXT:    movb $42, %al
-; O1-NEXT:  .Lpcsection70:
 ; O1-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -2243,13 +2185,10 @@ define void @atomic8_cas_acquire(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movb $1, %cl
 ; O2-NEXT:    movb $42, %al
-; O2-NEXT:  .Lpcsection68:
 ; O2-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O2-NEXT:    movb $42, %al
-; O2-NEXT:  .Lpcsection69:
 ; O2-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O2-NEXT:    movb $42, %al
-; O2-NEXT:  .Lpcsection70:
 ; O2-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -2259,13 +2198,10 @@ define void @atomic8_cas_acquire(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movb $1, %cl
 ; O3-NEXT:    movb $42, %al
-; O3-NEXT:  .Lpcsection68:
 ; O3-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O3-NEXT:    movb $42, %al
-; O3-NEXT:  .Lpcsection69:
 ; O3-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O3-NEXT:    movb $42, %al
-; O3-NEXT:  .Lpcsection70:
 ; O3-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -2285,17 +2221,14 @@ define void @atomic8_cas_release(ptr %a) {
 ; O0-NEXT:    movb $42, %al
 ; O0-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; O0-NEXT:    movb $1, %cl
-; O0-NEXT:  .Lpcsection85:
 ; O0-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O0-NEXT:  .Lpcsection86:
+; O0-NEXT:  .Lpcsection69:
 ; O0-NEXT:    # kill: def $dl killed $al
 ; O0-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %al # 1-byte Reload
-; O0-NEXT:  .Lpcsection87:
 ; O0-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O0-NEXT:  .Lpcsection88:
+; O0-NEXT:  .Lpcsection70:
 ; O0-NEXT:    # kill: def $dl killed $al
 ; O0-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %al # 1-byte Reload
-; O0-NEXT:  .Lpcsection89:
 ; O0-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -2305,13 +2238,10 @@ define void @atomic8_cas_release(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movb $1, %cl
 ; O1-NEXT:    movb $42, %al
-; O1-NEXT:  .Lpcsection71:
 ; O1-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O1-NEXT:    movb $42, %al
-; O1-NEXT:  .Lpcsection72:
 ; O1-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O1-NEXT:    movb $42, %al
-; O1-NEXT:  .Lpcsection73:
 ; O1-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -2321,13 +2251,10 @@ define void @atomic8_cas_release(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movb $1, %cl
 ; O2-NEXT:    movb $42, %al
-; O2-NEXT:  .Lpcsection71:
 ; O2-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O2-NEXT:    movb $42, %al
-; O2-NEXT:  .Lpcsection72:
 ; O2-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O2-NEXT:    movb $42, %al
-; O2-NEXT:  .Lpcsection73:
 ; O2-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -2337,13 +2264,10 @@ define void @atomic8_cas_release(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movb $1, %cl
 ; O3-NEXT:    movb $42, %al
-; O3-NEXT:  .Lpcsection71:
 ; O3-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O3-NEXT:    movb $42, %al
-; O3-NEXT:  .Lpcsection72:
 ; O3-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O3-NEXT:    movb $42, %al
-; O3-NEXT:  .Lpcsection73:
 ; O3-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -2363,17 +2287,14 @@ define void @atomic8_cas_acq_rel(ptr %a) {
 ; O0-NEXT:    movb $42, %al
 ; O0-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; O0-NEXT:    movb $1, %cl
-; O0-NEXT:  .Lpcsection90:
 ; O0-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O0-NEXT:  .Lpcsection91:
+; O0-NEXT:  .Lpcsection71:
 ; O0-NEXT:    # kill: def $dl killed $al
 ; O0-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %al # 1-byte Reload
-; O0-NEXT:  .Lpcsection92:
 ; O0-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O0-NEXT:  .Lpcsection93:
+; O0-NEXT:  .Lpcsection72:
 ; O0-NEXT:    # kill: def $dl killed $al
 ; O0-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %al # 1-byte Reload
-; O0-NEXT:  .Lpcsection94:
 ; O0-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -2383,13 +2304,10 @@ define void @atomic8_cas_acq_rel(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movb $1, %cl
 ; O1-NEXT:    movb $42, %al
-; O1-NEXT:  .Lpcsection74:
 ; O1-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O1-NEXT:    movb $42, %al
-; O1-NEXT:  .Lpcsection75:
 ; O1-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O1-NEXT:    movb $42, %al
-; O1-NEXT:  .Lpcsection76:
 ; O1-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -2399,13 +2317,10 @@ define void @atomic8_cas_acq_rel(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movb $1, %cl
 ; O2-NEXT:    movb $42, %al
-; O2-NEXT:  .Lpcsection74:
 ; O2-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O2-NEXT:    movb $42, %al
-; O2-NEXT:  .Lpcsection75:
 ; O2-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O2-NEXT:    movb $42, %al
-; O2-NEXT:  .Lpcsection76:
 ; O2-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -2415,13 +2330,10 @@ define void @atomic8_cas_acq_rel(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movb $1, %cl
 ; O3-NEXT:    movb $42, %al
-; O3-NEXT:  .Lpcsection74:
 ; O3-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O3-NEXT:    movb $42, %al
-; O3-NEXT:  .Lpcsection75:
 ; O3-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O3-NEXT:    movb $42, %al
-; O3-NEXT:  .Lpcsection76:
 ; O3-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -2441,17 +2353,14 @@ define void @atomic8_cas_seq_cst(ptr %a) {
 ; O0-NEXT:    movb $42, %al
 ; O0-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; O0-NEXT:    movb $1, %cl
-; O0-NEXT:  .Lpcsection95:
 ; O0-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O0-NEXT:  .Lpcsection96:
+; O0-NEXT:  .Lpcsection73:
 ; O0-NEXT:    # kill: def $dl killed $al
 ; O0-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %al # 1-byte Reload
-; O0-NEXT:  .Lpcsection97:
 ; O0-NEXT:    lock cmpxchgb %cl, (%rdi)
-; O0-NEXT:  .Lpcsection98:
+; O0-NEXT:  .Lpcsection74:
 ; O0-NEXT:    # kill: def $dl killed $al
 ; O0-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %al # 1-byte Reload
-; O0-NEXT:  .Lpcsection99:
 ; O0-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -2461,13 +2370,10 @@ define void @atomic8_cas_seq_cst(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movb $1, %cl
 ; O1-NEXT:    movb $42, %al
-; O1-NEXT:  .Lpcsection77:
 ; O1-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O1-NEXT:    movb $42, %al
-; O1-NEXT:  .Lpcsection78:
 ; O1-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O1-NEXT:    movb $42, %al
-; O1-NEXT:  .Lpcsection79:
 ; O1-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -2477,13 +2383,10 @@ define void @atomic8_cas_seq_cst(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movb $1, %cl
 ; O2-NEXT:    movb $42, %al
-; O2-NEXT:  .Lpcsection77:
 ; O2-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O2-NEXT:    movb $42, %al
-; O2-NEXT:  .Lpcsection78:
 ; O2-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O2-NEXT:    movb $42, %al
-; O2-NEXT:  .Lpcsection79:
 ; O2-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -2493,13 +2396,10 @@ define void @atomic8_cas_seq_cst(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movb $1, %cl
 ; O3-NEXT:    movb $42, %al
-; O3-NEXT:  .Lpcsection77:
 ; O3-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O3-NEXT:    movb $42, %al
-; O3-NEXT:  .Lpcsection78:
 ; O3-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O3-NEXT:    movb $42, %al
-; O3-NEXT:  .Lpcsection79:
 ; O3-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -2516,7 +2416,7 @@ define i16 @atomic16_load_unordered(ptr %a) {
 ; O0-LABEL: atomic16_load_unordered:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection100:
+; O0-NEXT:  .Lpcsection75:
 ; O0-NEXT:    movw (%rdi), %ax
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -2524,7 +2424,7 @@ define i16 @atomic16_load_unordered(ptr %a) {
 ; O1-LABEL: atomic16_load_unordered:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection80:
+; O1-NEXT:  .Lpcsection55:
 ; O1-NEXT:    movzwl (%rdi), %eax
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -2532,7 +2432,7 @@ define i16 @atomic16_load_unordered(ptr %a) {
 ; O2-LABEL: atomic16_load_unordered:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection80:
+; O2-NEXT:  .Lpcsection55:
 ; O2-NEXT:    movzwl (%rdi), %eax
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -2540,7 +2440,7 @@ define i16 @atomic16_load_unordered(ptr %a) {
 ; O3-LABEL: atomic16_load_unordered:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection80:
+; O3-NEXT:  .Lpcsection55:
 ; O3-NEXT:    movzwl (%rdi), %eax
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -2555,7 +2455,7 @@ define i16 @atomic16_load_monotonic(ptr %a) {
 ; O0-LABEL: atomic16_load_monotonic:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection101:
+; O0-NEXT:  .Lpcsection76:
 ; O0-NEXT:    movw (%rdi), %ax
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -2563,7 +2463,7 @@ define i16 @atomic16_load_monotonic(ptr %a) {
 ; O1-LABEL: atomic16_load_monotonic:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection81:
+; O1-NEXT:  .Lpcsection56:
 ; O1-NEXT:    movzwl (%rdi), %eax
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -2571,7 +2471,7 @@ define i16 @atomic16_load_monotonic(ptr %a) {
 ; O2-LABEL: atomic16_load_monotonic:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection81:
+; O2-NEXT:  .Lpcsection56:
 ; O2-NEXT:    movzwl (%rdi), %eax
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -2579,7 +2479,7 @@ define i16 @atomic16_load_monotonic(ptr %a) {
 ; O3-LABEL: atomic16_load_monotonic:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection81:
+; O3-NEXT:  .Lpcsection56:
 ; O3-NEXT:    movzwl (%rdi), %eax
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -2594,7 +2494,7 @@ define i16 @atomic16_load_acquire(ptr %a) {
 ; O0-LABEL: atomic16_load_acquire:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection102:
+; O0-NEXT:  .Lpcsection77:
 ; O0-NEXT:    movw (%rdi), %ax
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -2602,7 +2502,7 @@ define i16 @atomic16_load_acquire(ptr %a) {
 ; O1-LABEL: atomic16_load_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection82:
+; O1-NEXT:  .Lpcsection57:
 ; O1-NEXT:    movzwl (%rdi), %eax
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -2610,7 +2510,7 @@ define i16 @atomic16_load_acquire(ptr %a) {
 ; O2-LABEL: atomic16_load_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection82:
+; O2-NEXT:  .Lpcsection57:
 ; O2-NEXT:    movzwl (%rdi), %eax
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -2618,7 +2518,7 @@ define i16 @atomic16_load_acquire(ptr %a) {
 ; O3-LABEL: atomic16_load_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection82:
+; O3-NEXT:  .Lpcsection57:
 ; O3-NEXT:    movzwl (%rdi), %eax
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -2633,7 +2533,7 @@ define i16 @atomic16_load_seq_cst(ptr %a) {
 ; O0-LABEL: atomic16_load_seq_cst:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection103:
+; O0-NEXT:  .Lpcsection78:
 ; O0-NEXT:    movw (%rdi), %ax
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -2641,7 +2541,7 @@ define i16 @atomic16_load_seq_cst(ptr %a) {
 ; O1-LABEL: atomic16_load_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection83:
+; O1-NEXT:  .Lpcsection58:
 ; O1-NEXT:    movzwl (%rdi), %eax
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -2649,7 +2549,7 @@ define i16 @atomic16_load_seq_cst(ptr %a) {
 ; O2-LABEL: atomic16_load_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection83:
+; O2-NEXT:  .Lpcsection58:
 ; O2-NEXT:    movzwl (%rdi), %eax
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -2657,7 +2557,7 @@ define i16 @atomic16_load_seq_cst(ptr %a) {
 ; O3-LABEL: atomic16_load_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection83:
+; O3-NEXT:  .Lpcsection58:
 ; O3-NEXT:    movzwl (%rdi), %eax
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -2672,7 +2572,7 @@ define void @atomic16_store_unordered(ptr %a) {
 ; O0-LABEL: atomic16_store_unordered:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection104:
+; O0-NEXT:  .Lpcsection79:
 ; O0-NEXT:    movw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -2680,7 +2580,7 @@ define void @atomic16_store_unordered(ptr %a) {
 ; O1-LABEL: atomic16_store_unordered:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection84:
+; O1-NEXT:  .Lpcsection59:
 ; O1-NEXT:    movw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -2688,7 +2588,7 @@ define void @atomic16_store_unordered(ptr %a) {
 ; O2-LABEL: atomic16_store_unordered:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection84:
+; O2-NEXT:  .Lpcsection59:
 ; O2-NEXT:    movw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -2696,7 +2596,7 @@ define void @atomic16_store_unordered(ptr %a) {
 ; O3-LABEL: atomic16_store_unordered:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection84:
+; O3-NEXT:  .Lpcsection59:
 ; O3-NEXT:    movw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -2711,7 +2611,7 @@ define void @atomic16_store_monotonic(ptr %a) {
 ; O0-LABEL: atomic16_store_monotonic:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection105:
+; O0-NEXT:  .Lpcsection80:
 ; O0-NEXT:    movw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -2719,7 +2619,7 @@ define void @atomic16_store_monotonic(ptr %a) {
 ; O1-LABEL: atomic16_store_monotonic:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection85:
+; O1-NEXT:  .Lpcsection60:
 ; O1-NEXT:    movw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -2727,7 +2627,7 @@ define void @atomic16_store_monotonic(ptr %a) {
 ; O2-LABEL: atomic16_store_monotonic:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection85:
+; O2-NEXT:  .Lpcsection60:
 ; O2-NEXT:    movw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -2735,7 +2635,7 @@ define void @atomic16_store_monotonic(ptr %a) {
 ; O3-LABEL: atomic16_store_monotonic:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection85:
+; O3-NEXT:  .Lpcsection60:
 ; O3-NEXT:    movw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -2750,7 +2650,7 @@ define void @atomic16_store_release(ptr %a) {
 ; O0-LABEL: atomic16_store_release:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection106:
+; O0-NEXT:  .Lpcsection81:
 ; O0-NEXT:    movw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -2758,7 +2658,7 @@ define void @atomic16_store_release(ptr %a) {
 ; O1-LABEL: atomic16_store_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection86:
+; O1-NEXT:  .Lpcsection61:
 ; O1-NEXT:    movw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -2766,7 +2666,7 @@ define void @atomic16_store_release(ptr %a) {
 ; O2-LABEL: atomic16_store_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection86:
+; O2-NEXT:  .Lpcsection61:
 ; O2-NEXT:    movw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -2774,7 +2674,7 @@ define void @atomic16_store_release(ptr %a) {
 ; O3-LABEL: atomic16_store_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection86:
+; O3-NEXT:  .Lpcsection61:
 ; O3-NEXT:    movw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -2790,7 +2690,7 @@ define void @atomic16_store_seq_cst(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:    movw $42, %ax
-; O0-NEXT:  .Lpcsection107:
+; O0-NEXT:  .Lpcsection82:
 ; O0-NEXT:    xchgw %ax, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -2799,7 +2699,7 @@ define void @atomic16_store_seq_cst(ptr %a) {
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movw $42, %ax
-; O1-NEXT:  .Lpcsection87:
+; O1-NEXT:  .Lpcsection62:
 ; O1-NEXT:    xchgw %ax, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -2808,7 +2708,7 @@ define void @atomic16_store_seq_cst(ptr %a) {
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movw $42, %ax
-; O2-NEXT:  .Lpcsection87:
+; O2-NEXT:  .Lpcsection62:
 ; O2-NEXT:    xchgw %ax, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -2817,7 +2717,7 @@ define void @atomic16_store_seq_cst(ptr %a) {
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movw $42, %ax
-; O3-NEXT:  .Lpcsection87:
+; O3-NEXT:  .Lpcsection62:
 ; O3-NEXT:    xchgw %ax, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -2833,7 +2733,7 @@ define void @atomic16_xchg_monotonic(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:    movw $42, %ax
-; O0-NEXT:  .Lpcsection108:
+; O0-NEXT:  .Lpcsection83:
 ; O0-NEXT:    xchgw %ax, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -2842,7 +2742,7 @@ define void @atomic16_xchg_monotonic(ptr %a) {
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movw $42, %ax
-; O1-NEXT:  .Lpcsection88:
+; O1-NEXT:  .Lpcsection63:
 ; O1-NEXT:    xchgw %ax, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -2851,7 +2751,7 @@ define void @atomic16_xchg_monotonic(ptr %a) {
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movw $42, %ax
-; O2-NEXT:  .Lpcsection88:
+; O2-NEXT:  .Lpcsection63:
 ; O2-NEXT:    xchgw %ax, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -2860,7 +2760,7 @@ define void @atomic16_xchg_monotonic(ptr %a) {
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movw $42, %ax
-; O3-NEXT:  .Lpcsection88:
+; O3-NEXT:  .Lpcsection63:
 ; O3-NEXT:    xchgw %ax, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -2875,7 +2775,7 @@ define void @atomic16_add_monotonic(ptr %a) {
 ; O0-LABEL: atomic16_add_monotonic:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection109:
+; O0-NEXT:  .Lpcsection84:
 ; O0-NEXT:    lock addw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -2883,7 +2783,7 @@ define void @atomic16_add_monotonic(ptr %a) {
 ; O1-LABEL: atomic16_add_monotonic:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection89:
+; O1-NEXT:  .Lpcsection64:
 ; O1-NEXT:    lock addw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -2891,7 +2791,7 @@ define void @atomic16_add_monotonic(ptr %a) {
 ; O2-LABEL: atomic16_add_monotonic:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection89:
+; O2-NEXT:  .Lpcsection64:
 ; O2-NEXT:    lock addw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -2899,7 +2799,7 @@ define void @atomic16_add_monotonic(ptr %a) {
 ; O3-LABEL: atomic16_add_monotonic:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection89:
+; O3-NEXT:  .Lpcsection64:
 ; O3-NEXT:    lock addw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -2914,7 +2814,7 @@ define void @atomic16_sub_monotonic(ptr %a) {
 ; O0-LABEL: atomic16_sub_monotonic:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection110:
+; O0-NEXT:  .Lpcsection85:
 ; O0-NEXT:    lock subw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -2922,7 +2822,7 @@ define void @atomic16_sub_monotonic(ptr %a) {
 ; O1-LABEL: atomic16_sub_monotonic:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection90:
+; O1-NEXT:  .Lpcsection65:
 ; O1-NEXT:    lock subw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -2930,7 +2830,7 @@ define void @atomic16_sub_monotonic(ptr %a) {
 ; O2-LABEL: atomic16_sub_monotonic:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection90:
+; O2-NEXT:  .Lpcsection65:
 ; O2-NEXT:    lock subw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -2938,7 +2838,7 @@ define void @atomic16_sub_monotonic(ptr %a) {
 ; O3-LABEL: atomic16_sub_monotonic:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection90:
+; O3-NEXT:  .Lpcsection65:
 ; O3-NEXT:    lock subw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -2953,7 +2853,7 @@ define void @atomic16_and_monotonic(ptr %a) {
 ; O0-LABEL: atomic16_and_monotonic:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection111:
+; O0-NEXT:  .Lpcsection86:
 ; O0-NEXT:    lock andw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -2961,7 +2861,7 @@ define void @atomic16_and_monotonic(ptr %a) {
 ; O1-LABEL: atomic16_and_monotonic:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection91:
+; O1-NEXT:  .Lpcsection66:
 ; O1-NEXT:    lock andw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -2969,7 +2869,7 @@ define void @atomic16_and_monotonic(ptr %a) {
 ; O2-LABEL: atomic16_and_monotonic:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection91:
+; O2-NEXT:  .Lpcsection66:
 ; O2-NEXT:    lock andw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -2977,7 +2877,7 @@ define void @atomic16_and_monotonic(ptr %a) {
 ; O3-LABEL: atomic16_and_monotonic:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection91:
+; O3-NEXT:  .Lpcsection66:
 ; O3-NEXT:    lock andw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -2992,7 +2892,7 @@ define void @atomic16_or_monotonic(ptr %a) {
 ; O0-LABEL: atomic16_or_monotonic:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection112:
+; O0-NEXT:  .Lpcsection87:
 ; O0-NEXT:    lock orw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -3000,7 +2900,7 @@ define void @atomic16_or_monotonic(ptr %a) {
 ; O1-LABEL: atomic16_or_monotonic:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection92:
+; O1-NEXT:  .Lpcsection67:
 ; O1-NEXT:    lock orw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -3008,7 +2908,7 @@ define void @atomic16_or_monotonic(ptr %a) {
 ; O2-LABEL: atomic16_or_monotonic:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection92:
+; O2-NEXT:  .Lpcsection67:
 ; O2-NEXT:    lock orw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -3016,7 +2916,7 @@ define void @atomic16_or_monotonic(ptr %a) {
 ; O3-LABEL: atomic16_or_monotonic:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection92:
+; O3-NEXT:  .Lpcsection67:
 ; O3-NEXT:    lock orw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -3031,7 +2931,7 @@ define void @atomic16_xor_monotonic(ptr %a) {
 ; O0-LABEL: atomic16_xor_monotonic:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection113:
+; O0-NEXT:  .Lpcsection88:
 ; O0-NEXT:    lock xorw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -3039,7 +2939,7 @@ define void @atomic16_xor_monotonic(ptr %a) {
 ; O1-LABEL: atomic16_xor_monotonic:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection93:
+; O1-NEXT:  .Lpcsection68:
 ; O1-NEXT:    lock xorw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -3047,7 +2947,7 @@ define void @atomic16_xor_monotonic(ptr %a) {
 ; O2-LABEL: atomic16_xor_monotonic:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection93:
+; O2-NEXT:  .Lpcsection68:
 ; O2-NEXT:    lock xorw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -3055,7 +2955,7 @@ define void @atomic16_xor_monotonic(ptr %a) {
 ; O3-LABEL: atomic16_xor_monotonic:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection93:
+; O3-NEXT:  .Lpcsection68:
 ; O3-NEXT:    lock xorw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -3071,30 +2971,26 @@ define void @atomic16_nand_monotonic(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq foo, %rax
-; O0-NEXT:  .Lpcsection114:
+; O0-NEXT:  .Lpcsection89:
 ; O0-NEXT:    movw (%rdi), %ax
 ; O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; O0-NEXT:  .LBB64_1: # %atomicrmw.start
 ; O0-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; O0-NEXT:  .Lpcsection115:
 ; O0-NEXT:    # implicit-def: $edx
 ; O0-NEXT:    movw %ax, %dx
-; O0-NEXT:  .Lpcsection116:
 ; O0-NEXT:    notl %edx
-; O0-NEXT:  .Lpcsection117:
 ; O0-NEXT:    orl $65493, %edx # imm = 0xFFD5
-; O0-NEXT:  .Lpcsection118:
+; O0-NEXT:  .Lpcsection90:
 ; O0-NEXT:    # kill: def $dx killed $dx killed $edx
-; O0-NEXT:  .Lpcsection119:
 ; O0-NEXT:    lock cmpxchgw %dx, (%rcx)
-; O0-NEXT:  .Lpcsection120:
+; O0-NEXT:  .Lpcsection91:
 ; O0-NEXT:    sete %cl
-; O0-NEXT:  .Lpcsection121:
+; O0-NEXT:  .Lpcsection92:
 ; O0-NEXT:    testb $1, %cl
 ; O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; O0-NEXT:  .Lpcsection122:
+; O0-NEXT:  .Lpcsection93:
 ; O0-NEXT:    jne .LBB64_2
 ; O0-NEXT:    jmp .LBB64_1
 ; O0-NEXT:  .LBB64_2: # %atomicrmw.end
@@ -3104,23 +3000,19 @@ define void @atomic16_nand_monotonic(ptr %a) {
 ; O1-LABEL: atomic16_nand_monotonic:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection94:
+; O1-NEXT:  .Lpcsection69:
 ; O1-NEXT:    movzwl (%rdi), %eax
 ; O1-NEXT:    .p2align 4, 0x90
 ; O1-NEXT:  .LBB64_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
-; O1-NEXT:  .Lpcsection95:
 ; O1-NEXT:    notl %ecx
-; O1-NEXT:  .Lpcsection96:
 ; O1-NEXT:    orl $65493, %ecx # imm = 0xFFD5
-; O1-NEXT:  .Lpcsection97:
 ; O1-NEXT:    # kill: def $ax killed $ax killed $eax
-; O1-NEXT:  .Lpcsection98:
 ; O1-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O1-NEXT:  .Lpcsection99:
+; O1-NEXT:  .Lpcsection70:
 ; O1-NEXT:    # kill: def $ax killed $ax def $eax
-; O1-NEXT:  .Lpcsection100:
+; O1-NEXT:  .Lpcsection71:
 ; O1-NEXT:    jne .LBB64_1
 ; O1-NEXT:  # %bb.2: # %atomicrmw.end
 ; O1-NEXT:    movq $1, foo(%rip)
@@ -3129,23 +3021,19 @@ define void @atomic16_nand_monotonic(ptr %a) {
 ; O2-LABEL: atomic16_nand_monotonic:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection94:
+; O2-NEXT:  .Lpcsection69:
 ; O2-NEXT:    movzwl (%rdi), %eax
 ; O2-NEXT:    .p2align 4, 0x90
 ; O2-NEXT:  .LBB64_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
-; O2-NEXT:  .Lpcsection95:
 ; O2-NEXT:    notl %ecx
-; O2-NEXT:  .Lpcsection96:
 ; O2-NEXT:    orl $65493, %ecx # imm = 0xFFD5
-; O2-NEXT:  .Lpcsection97:
 ; O2-NEXT:    # kill: def $ax killed $ax killed $eax
-; O2-NEXT:  .Lpcsection98:
 ; O2-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O2-NEXT:  .Lpcsection99:
+; O2-NEXT:  .Lpcsection70:
 ; O2-NEXT:    # kill: def $ax killed $ax def $eax
-; O2-NEXT:  .Lpcsection100:
+; O2-NEXT:  .Lpcsection71:
 ; O2-NEXT:    jne .LBB64_1
 ; O2-NEXT:  # %bb.2: # %atomicrmw.end
 ; O2-NEXT:    movq $1, foo(%rip)
@@ -3154,23 +3042,19 @@ define void @atomic16_nand_monotonic(ptr %a) {
 ; O3-LABEL: atomic16_nand_monotonic:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection94:
+; O3-NEXT:  .Lpcsection69:
 ; O3-NEXT:    movzwl (%rdi), %eax
 ; O3-NEXT:    .p2align 4, 0x90
 ; O3-NEXT:  .LBB64_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
-; O3-NEXT:  .Lpcsection95:
 ; O3-NEXT:    notl %ecx
-; O3-NEXT:  .Lpcsection96:
 ; O3-NEXT:    orl $65493, %ecx # imm = 0xFFD5
-; O3-NEXT:  .Lpcsection97:
 ; O3-NEXT:    # kill: def $ax killed $ax killed $eax
-; O3-NEXT:  .Lpcsection98:
 ; O3-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O3-NEXT:  .Lpcsection99:
+; O3-NEXT:  .Lpcsection70:
 ; O3-NEXT:    # kill: def $ax killed $ax def $eax
-; O3-NEXT:  .Lpcsection100:
+; O3-NEXT:  .Lpcsection71:
 ; O3-NEXT:    jne .LBB64_1
 ; O3-NEXT:  # %bb.2: # %atomicrmw.end
 ; O3-NEXT:    movq $1, foo(%rip)
@@ -3187,7 +3071,7 @@ define void @atomic16_xchg_acquire(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:    movw $42, %ax
-; O0-NEXT:  .Lpcsection123:
+; O0-NEXT:  .Lpcsection94:
 ; O0-NEXT:    xchgw %ax, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -3196,7 +3080,7 @@ define void @atomic16_xchg_acquire(ptr %a) {
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movw $42, %ax
-; O1-NEXT:  .Lpcsection101:
+; O1-NEXT:  .Lpcsection72:
 ; O1-NEXT:    xchgw %ax, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -3205,7 +3089,7 @@ define void @atomic16_xchg_acquire(ptr %a) {
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movw $42, %ax
-; O2-NEXT:  .Lpcsection101:
+; O2-NEXT:  .Lpcsection72:
 ; O2-NEXT:    xchgw %ax, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -3214,7 +3098,7 @@ define void @atomic16_xchg_acquire(ptr %a) {
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movw $42, %ax
-; O3-NEXT:  .Lpcsection101:
+; O3-NEXT:  .Lpcsection72:
 ; O3-NEXT:    xchgw %ax, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -3229,7 +3113,7 @@ define void @atomic16_add_acquire(ptr %a) {
 ; O0-LABEL: atomic16_add_acquire:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection124:
+; O0-NEXT:  .Lpcsection95:
 ; O0-NEXT:    lock addw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -3237,7 +3121,7 @@ define void @atomic16_add_acquire(ptr %a) {
 ; O1-LABEL: atomic16_add_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection102:
+; O1-NEXT:  .Lpcsection73:
 ; O1-NEXT:    lock addw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -3245,7 +3129,7 @@ define void @atomic16_add_acquire(ptr %a) {
 ; O2-LABEL: atomic16_add_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection102:
+; O2-NEXT:  .Lpcsection73:
 ; O2-NEXT:    lock addw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -3253,7 +3137,7 @@ define void @atomic16_add_acquire(ptr %a) {
 ; O3-LABEL: atomic16_add_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection102:
+; O3-NEXT:  .Lpcsection73:
 ; O3-NEXT:    lock addw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -3268,7 +3152,7 @@ define void @atomic16_sub_acquire(ptr %a) {
 ; O0-LABEL: atomic16_sub_acquire:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection125:
+; O0-NEXT:  .Lpcsection96:
 ; O0-NEXT:    lock subw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -3276,7 +3160,7 @@ define void @atomic16_sub_acquire(ptr %a) {
 ; O1-LABEL: atomic16_sub_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection103:
+; O1-NEXT:  .Lpcsection74:
 ; O1-NEXT:    lock subw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -3284,7 +3168,7 @@ define void @atomic16_sub_acquire(ptr %a) {
 ; O2-LABEL: atomic16_sub_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection103:
+; O2-NEXT:  .Lpcsection74:
 ; O2-NEXT:    lock subw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -3292,7 +3176,7 @@ define void @atomic16_sub_acquire(ptr %a) {
 ; O3-LABEL: atomic16_sub_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection103:
+; O3-NEXT:  .Lpcsection74:
 ; O3-NEXT:    lock subw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -3307,7 +3191,7 @@ define void @atomic16_and_acquire(ptr %a) {
 ; O0-LABEL: atomic16_and_acquire:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection126:
+; O0-NEXT:  .Lpcsection97:
 ; O0-NEXT:    lock andw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -3315,7 +3199,7 @@ define void @atomic16_and_acquire(ptr %a) {
 ; O1-LABEL: atomic16_and_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection104:
+; O1-NEXT:  .Lpcsection75:
 ; O1-NEXT:    lock andw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -3323,7 +3207,7 @@ define void @atomic16_and_acquire(ptr %a) {
 ; O2-LABEL: atomic16_and_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection104:
+; O2-NEXT:  .Lpcsection75:
 ; O2-NEXT:    lock andw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -3331,7 +3215,7 @@ define void @atomic16_and_acquire(ptr %a) {
 ; O3-LABEL: atomic16_and_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection104:
+; O3-NEXT:  .Lpcsection75:
 ; O3-NEXT:    lock andw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -3346,7 +3230,7 @@ define void @atomic16_or_acquire(ptr %a) {
 ; O0-LABEL: atomic16_or_acquire:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection127:
+; O0-NEXT:  .Lpcsection98:
 ; O0-NEXT:    lock orw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -3354,7 +3238,7 @@ define void @atomic16_or_acquire(ptr %a) {
 ; O1-LABEL: atomic16_or_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection105:
+; O1-NEXT:  .Lpcsection76:
 ; O1-NEXT:    lock orw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -3362,7 +3246,7 @@ define void @atomic16_or_acquire(ptr %a) {
 ; O2-LABEL: atomic16_or_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection105:
+; O2-NEXT:  .Lpcsection76:
 ; O2-NEXT:    lock orw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -3370,7 +3254,7 @@ define void @atomic16_or_acquire(ptr %a) {
 ; O3-LABEL: atomic16_or_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection105:
+; O3-NEXT:  .Lpcsection76:
 ; O3-NEXT:    lock orw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -3385,7 +3269,7 @@ define void @atomic16_xor_acquire(ptr %a) {
 ; O0-LABEL: atomic16_xor_acquire:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection128:
+; O0-NEXT:  .Lpcsection99:
 ; O0-NEXT:    lock xorw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -3393,7 +3277,7 @@ define void @atomic16_xor_acquire(ptr %a) {
 ; O1-LABEL: atomic16_xor_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection106:
+; O1-NEXT:  .Lpcsection77:
 ; O1-NEXT:    lock xorw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -3401,7 +3285,7 @@ define void @atomic16_xor_acquire(ptr %a) {
 ; O2-LABEL: atomic16_xor_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection106:
+; O2-NEXT:  .Lpcsection77:
 ; O2-NEXT:    lock xorw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -3409,7 +3293,7 @@ define void @atomic16_xor_acquire(ptr %a) {
 ; O3-LABEL: atomic16_xor_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection106:
+; O3-NEXT:  .Lpcsection77:
 ; O3-NEXT:    lock xorw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -3425,30 +3309,26 @@ define void @atomic16_nand_acquire(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq foo, %rax
-; O0-NEXT:  .Lpcsection129:
+; O0-NEXT:  .Lpcsection100:
 ; O0-NEXT:    movw (%rdi), %ax
 ; O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; O0-NEXT:  .LBB71_1: # %atomicrmw.start
 ; O0-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; O0-NEXT:  .Lpcsection130:
 ; O0-NEXT:    # implicit-def: $edx
 ; O0-NEXT:    movw %ax, %dx
-; O0-NEXT:  .Lpcsection131:
 ; O0-NEXT:    notl %edx
-; O0-NEXT:  .Lpcsection132:
 ; O0-NEXT:    orl $65493, %edx # imm = 0xFFD5
-; O0-NEXT:  .Lpcsection133:
+; O0-NEXT:  .Lpcsection101:
 ; O0-NEXT:    # kill: def $dx killed $dx killed $edx
-; O0-NEXT:  .Lpcsection134:
 ; O0-NEXT:    lock cmpxchgw %dx, (%rcx)
-; O0-NEXT:  .Lpcsection135:
+; O0-NEXT:  .Lpcsection102:
 ; O0-NEXT:    sete %cl
-; O0-NEXT:  .Lpcsection136:
+; O0-NEXT:  .Lpcsection103:
 ; O0-NEXT:    testb $1, %cl
 ; O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; O0-NEXT:  .Lpcsection137:
+; O0-NEXT:  .Lpcsection104:
 ; O0-NEXT:    jne .LBB71_2
 ; O0-NEXT:    jmp .LBB71_1
 ; O0-NEXT:  .LBB71_2: # %atomicrmw.end
@@ -3458,23 +3338,19 @@ define void @atomic16_nand_acquire(ptr %a) {
 ; O1-LABEL: atomic16_nand_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection107:
+; O1-NEXT:  .Lpcsection78:
 ; O1-NEXT:    movzwl (%rdi), %eax
 ; O1-NEXT:    .p2align 4, 0x90
 ; O1-NEXT:  .LBB71_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
-; O1-NEXT:  .Lpcsection108:
 ; O1-NEXT:    notl %ecx
-; O1-NEXT:  .Lpcsection109:
 ; O1-NEXT:    orl $65493, %ecx # imm = 0xFFD5
-; O1-NEXT:  .Lpcsection110:
 ; O1-NEXT:    # kill: def $ax killed $ax killed $eax
-; O1-NEXT:  .Lpcsection111:
 ; O1-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O1-NEXT:  .Lpcsection112:
+; O1-NEXT:  .Lpcsection79:
 ; O1-NEXT:    # kill: def $ax killed $ax def $eax
-; O1-NEXT:  .Lpcsection113:
+; O1-NEXT:  .Lpcsection80:
 ; O1-NEXT:    jne .LBB71_1
 ; O1-NEXT:  # %bb.2: # %atomicrmw.end
 ; O1-NEXT:    movq $1, foo(%rip)
@@ -3483,23 +3359,19 @@ define void @atomic16_nand_acquire(ptr %a) {
 ; O2-LABEL: atomic16_nand_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection107:
+; O2-NEXT:  .Lpcsection78:
 ; O2-NEXT:    movzwl (%rdi), %eax
 ; O2-NEXT:    .p2align 4, 0x90
 ; O2-NEXT:  .LBB71_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
-; O2-NEXT:  .Lpcsection108:
 ; O2-NEXT:    notl %ecx
-; O2-NEXT:  .Lpcsection109:
 ; O2-NEXT:    orl $65493, %ecx # imm = 0xFFD5
-; O2-NEXT:  .Lpcsection110:
 ; O2-NEXT:    # kill: def $ax killed $ax killed $eax
-; O2-NEXT:  .Lpcsection111:
 ; O2-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O2-NEXT:  .Lpcsection112:
+; O2-NEXT:  .Lpcsection79:
 ; O2-NEXT:    # kill: def $ax killed $ax def $eax
-; O2-NEXT:  .Lpcsection113:
+; O2-NEXT:  .Lpcsection80:
 ; O2-NEXT:    jne .LBB71_1
 ; O2-NEXT:  # %bb.2: # %atomicrmw.end
 ; O2-NEXT:    movq $1, foo(%rip)
@@ -3508,23 +3380,19 @@ define void @atomic16_nand_acquire(ptr %a) {
 ; O3-LABEL: atomic16_nand_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection107:
+; O3-NEXT:  .Lpcsection78:
 ; O3-NEXT:    movzwl (%rdi), %eax
 ; O3-NEXT:    .p2align 4, 0x90
 ; O3-NEXT:  .LBB71_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
-; O3-NEXT:  .Lpcsection108:
 ; O3-NEXT:    notl %ecx
-; O3-NEXT:  .Lpcsection109:
 ; O3-NEXT:    orl $65493, %ecx # imm = 0xFFD5
-; O3-NEXT:  .Lpcsection110:
 ; O3-NEXT:    # kill: def $ax killed $ax killed $eax
-; O3-NEXT:  .Lpcsection111:
 ; O3-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O3-NEXT:  .Lpcsection112:
+; O3-NEXT:  .Lpcsection79:
 ; O3-NEXT:    # kill: def $ax killed $ax def $eax
-; O3-NEXT:  .Lpcsection113:
+; O3-NEXT:  .Lpcsection80:
 ; O3-NEXT:    jne .LBB71_1
 ; O3-NEXT:  # %bb.2: # %atomicrmw.end
 ; O3-NEXT:    movq $1, foo(%rip)
@@ -3541,7 +3409,7 @@ define void @atomic16_xchg_release(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:    movw $42, %ax
-; O0-NEXT:  .Lpcsection138:
+; O0-NEXT:  .Lpcsection105:
 ; O0-NEXT:    xchgw %ax, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -3550,7 +3418,7 @@ define void @atomic16_xchg_release(ptr %a) {
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movw $42, %ax
-; O1-NEXT:  .Lpcsection114:
+; O1-NEXT:  .Lpcsection81:
 ; O1-NEXT:    xchgw %ax, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -3559,7 +3427,7 @@ define void @atomic16_xchg_release(ptr %a) {
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movw $42, %ax
-; O2-NEXT:  .Lpcsection114:
+; O2-NEXT:  .Lpcsection81:
 ; O2-NEXT:    xchgw %ax, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -3568,7 +3436,7 @@ define void @atomic16_xchg_release(ptr %a) {
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movw $42, %ax
-; O3-NEXT:  .Lpcsection114:
+; O3-NEXT:  .Lpcsection81:
 ; O3-NEXT:    xchgw %ax, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -3583,7 +3451,7 @@ define void @atomic16_add_release(ptr %a) {
 ; O0-LABEL: atomic16_add_release:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection139:
+; O0-NEXT:  .Lpcsection106:
 ; O0-NEXT:    lock addw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -3591,7 +3459,7 @@ define void @atomic16_add_release(ptr %a) {
 ; O1-LABEL: atomic16_add_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection115:
+; O1-NEXT:  .Lpcsection82:
 ; O1-NEXT:    lock addw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -3599,7 +3467,7 @@ define void @atomic16_add_release(ptr %a) {
 ; O2-LABEL: atomic16_add_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection115:
+; O2-NEXT:  .Lpcsection82:
 ; O2-NEXT:    lock addw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -3607,7 +3475,7 @@ define void @atomic16_add_release(ptr %a) {
 ; O3-LABEL: atomic16_add_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection115:
+; O3-NEXT:  .Lpcsection82:
 ; O3-NEXT:    lock addw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -3622,7 +3490,7 @@ define void @atomic16_sub_release(ptr %a) {
 ; O0-LABEL: atomic16_sub_release:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection140:
+; O0-NEXT:  .Lpcsection107:
 ; O0-NEXT:    lock subw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -3630,7 +3498,7 @@ define void @atomic16_sub_release(ptr %a) {
 ; O1-LABEL: atomic16_sub_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection116:
+; O1-NEXT:  .Lpcsection83:
 ; O1-NEXT:    lock subw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -3638,7 +3506,7 @@ define void @atomic16_sub_release(ptr %a) {
 ; O2-LABEL: atomic16_sub_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection116:
+; O2-NEXT:  .Lpcsection83:
 ; O2-NEXT:    lock subw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -3646,7 +3514,7 @@ define void @atomic16_sub_release(ptr %a) {
 ; O3-LABEL: atomic16_sub_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection116:
+; O3-NEXT:  .Lpcsection83:
 ; O3-NEXT:    lock subw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -3661,7 +3529,7 @@ define void @atomic16_and_release(ptr %a) {
 ; O0-LABEL: atomic16_and_release:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection141:
+; O0-NEXT:  .Lpcsection108:
 ; O0-NEXT:    lock andw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -3669,7 +3537,7 @@ define void @atomic16_and_release(ptr %a) {
 ; O1-LABEL: atomic16_and_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection117:
+; O1-NEXT:  .Lpcsection84:
 ; O1-NEXT:    lock andw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -3677,7 +3545,7 @@ define void @atomic16_and_release(ptr %a) {
 ; O2-LABEL: atomic16_and_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection117:
+; O2-NEXT:  .Lpcsection84:
 ; O2-NEXT:    lock andw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -3685,7 +3553,7 @@ define void @atomic16_and_release(ptr %a) {
 ; O3-LABEL: atomic16_and_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection117:
+; O3-NEXT:  .Lpcsection84:
 ; O3-NEXT:    lock andw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -3700,7 +3568,7 @@ define void @atomic16_or_release(ptr %a) {
 ; O0-LABEL: atomic16_or_release:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection142:
+; O0-NEXT:  .Lpcsection109:
 ; O0-NEXT:    lock orw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -3708,7 +3576,7 @@ define void @atomic16_or_release(ptr %a) {
 ; O1-LABEL: atomic16_or_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection118:
+; O1-NEXT:  .Lpcsection85:
 ; O1-NEXT:    lock orw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -3716,7 +3584,7 @@ define void @atomic16_or_release(ptr %a) {
 ; O2-LABEL: atomic16_or_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection118:
+; O2-NEXT:  .Lpcsection85:
 ; O2-NEXT:    lock orw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -3724,7 +3592,7 @@ define void @atomic16_or_release(ptr %a) {
 ; O3-LABEL: atomic16_or_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection118:
+; O3-NEXT:  .Lpcsection85:
 ; O3-NEXT:    lock orw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -3739,7 +3607,7 @@ define void @atomic16_xor_release(ptr %a) {
 ; O0-LABEL: atomic16_xor_release:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection143:
+; O0-NEXT:  .Lpcsection110:
 ; O0-NEXT:    lock xorw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -3747,7 +3615,7 @@ define void @atomic16_xor_release(ptr %a) {
 ; O1-LABEL: atomic16_xor_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection119:
+; O1-NEXT:  .Lpcsection86:
 ; O1-NEXT:    lock xorw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -3755,7 +3623,7 @@ define void @atomic16_xor_release(ptr %a) {
 ; O2-LABEL: atomic16_xor_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection119:
+; O2-NEXT:  .Lpcsection86:
 ; O2-NEXT:    lock xorw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -3763,7 +3631,7 @@ define void @atomic16_xor_release(ptr %a) {
 ; O3-LABEL: atomic16_xor_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection119:
+; O3-NEXT:  .Lpcsection86:
 ; O3-NEXT:    lock xorw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -3779,30 +3647,26 @@ define void @atomic16_nand_release(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq foo, %rax
-; O0-NEXT:  .Lpcsection144:
+; O0-NEXT:  .Lpcsection111:
 ; O0-NEXT:    movw (%rdi), %ax
 ; O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; O0-NEXT:  .LBB78_1: # %atomicrmw.start
 ; O0-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; O0-NEXT:  .Lpcsection145:
 ; O0-NEXT:    # implicit-def: $edx
 ; O0-NEXT:    movw %ax, %dx
-; O0-NEXT:  .Lpcsection146:
 ; O0-NEXT:    notl %edx
-; O0-NEXT:  .Lpcsection147:
 ; O0-NEXT:    orl $65493, %edx # imm = 0xFFD5
-; O0-NEXT:  .Lpcsection148:
+; O0-NEXT:  .Lpcsection112:
 ; O0-NEXT:    # kill: def $dx killed $dx killed $edx
-; O0-NEXT:  .Lpcsection149:
 ; O0-NEXT:    lock cmpxchgw %dx, (%rcx)
-; O0-NEXT:  .Lpcsection150:
+; O0-NEXT:  .Lpcsection113:
 ; O0-NEXT:    sete %cl
-; O0-NEXT:  .Lpcsection151:
+; O0-NEXT:  .Lpcsection114:
 ; O0-NEXT:    testb $1, %cl
 ; O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; O0-NEXT:  .Lpcsection152:
+; O0-NEXT:  .Lpcsection115:
 ; O0-NEXT:    jne .LBB78_2
 ; O0-NEXT:    jmp .LBB78_1
 ; O0-NEXT:  .LBB78_2: # %atomicrmw.end
@@ -3812,23 +3676,19 @@ define void @atomic16_nand_release(ptr %a) {
 ; O1-LABEL: atomic16_nand_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection120:
+; O1-NEXT:  .Lpcsection87:
 ; O1-NEXT:    movzwl (%rdi), %eax
 ; O1-NEXT:    .p2align 4, 0x90
 ; O1-NEXT:  .LBB78_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
-; O1-NEXT:  .Lpcsection121:
 ; O1-NEXT:    notl %ecx
-; O1-NEXT:  .Lpcsection122:
 ; O1-NEXT:    orl $65493, %ecx # imm = 0xFFD5
-; O1-NEXT:  .Lpcsection123:
 ; O1-NEXT:    # kill: def $ax killed $ax killed $eax
-; O1-NEXT:  .Lpcsection124:
 ; O1-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O1-NEXT:  .Lpcsection125:
+; O1-NEXT:  .Lpcsection88:
 ; O1-NEXT:    # kill: def $ax killed $ax def $eax
-; O1-NEXT:  .Lpcsection126:
+; O1-NEXT:  .Lpcsection89:
 ; O1-NEXT:    jne .LBB78_1
 ; O1-NEXT:  # %bb.2: # %atomicrmw.end
 ; O1-NEXT:    movq $1, foo(%rip)
@@ -3837,23 +3697,19 @@ define void @atomic16_nand_release(ptr %a) {
 ; O2-LABEL: atomic16_nand_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection120:
+; O2-NEXT:  .Lpcsection87:
 ; O2-NEXT:    movzwl (%rdi), %eax
 ; O2-NEXT:    .p2align 4, 0x90
 ; O2-NEXT:  .LBB78_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
-; O2-NEXT:  .Lpcsection121:
 ; O2-NEXT:    notl %ecx
-; O2-NEXT:  .Lpcsection122:
 ; O2-NEXT:    orl $65493, %ecx # imm = 0xFFD5
-; O2-NEXT:  .Lpcsection123:
 ; O2-NEXT:    # kill: def $ax killed $ax killed $eax
-; O2-NEXT:  .Lpcsection124:
 ; O2-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O2-NEXT:  .Lpcsection125:
+; O2-NEXT:  .Lpcsection88:
 ; O2-NEXT:    # kill: def $ax killed $ax def $eax
-; O2-NEXT:  .Lpcsection126:
+; O2-NEXT:  .Lpcsection89:
 ; O2-NEXT:    jne .LBB78_1
 ; O2-NEXT:  # %bb.2: # %atomicrmw.end
 ; O2-NEXT:    movq $1, foo(%rip)
@@ -3862,23 +3718,19 @@ define void @atomic16_nand_release(ptr %a) {
 ; O3-LABEL: atomic16_nand_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection120:
+; O3-NEXT:  .Lpcsection87:
 ; O3-NEXT:    movzwl (%rdi), %eax
 ; O3-NEXT:    .p2align 4, 0x90
 ; O3-NEXT:  .LBB78_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
-; O3-NEXT:  .Lpcsection121:
 ; O3-NEXT:    notl %ecx
-; O3-NEXT:  .Lpcsection122:
 ; O3-NEXT:    orl $65493, %ecx # imm = 0xFFD5
-; O3-NEXT:  .Lpcsection123:
 ; O3-NEXT:    # kill: def $ax killed $ax killed $eax
-; O3-NEXT:  .Lpcsection124:
 ; O3-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O3-NEXT:  .Lpcsection125:
+; O3-NEXT:  .Lpcsection88:
 ; O3-NEXT:    # kill: def $ax killed $ax def $eax
-; O3-NEXT:  .Lpcsection126:
+; O3-NEXT:  .Lpcsection89:
 ; O3-NEXT:    jne .LBB78_1
 ; O3-NEXT:  # %bb.2: # %atomicrmw.end
 ; O3-NEXT:    movq $1, foo(%rip)
@@ -3895,7 +3747,7 @@ define void @atomic16_xchg_acq_rel(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:    movw $42, %ax
-; O0-NEXT:  .Lpcsection153:
+; O0-NEXT:  .Lpcsection116:
 ; O0-NEXT:    xchgw %ax, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -3904,7 +3756,7 @@ define void @atomic16_xchg_acq_rel(ptr %a) {
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movw $42, %ax
-; O1-NEXT:  .Lpcsection127:
+; O1-NEXT:  .Lpcsection90:
 ; O1-NEXT:    xchgw %ax, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -3913,7 +3765,7 @@ define void @atomic16_xchg_acq_rel(ptr %a) {
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movw $42, %ax
-; O2-NEXT:  .Lpcsection127:
+; O2-NEXT:  .Lpcsection90:
 ; O2-NEXT:    xchgw %ax, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -3922,7 +3774,7 @@ define void @atomic16_xchg_acq_rel(ptr %a) {
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movw $42, %ax
-; O3-NEXT:  .Lpcsection127:
+; O3-NEXT:  .Lpcsection90:
 ; O3-NEXT:    xchgw %ax, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -3937,7 +3789,7 @@ define void @atomic16_add_acq_rel(ptr %a) {
 ; O0-LABEL: atomic16_add_acq_rel:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection154:
+; O0-NEXT:  .Lpcsection117:
 ; O0-NEXT:    lock addw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -3945,7 +3797,7 @@ define void @atomic16_add_acq_rel(ptr %a) {
 ; O1-LABEL: atomic16_add_acq_rel:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection128:
+; O1-NEXT:  .Lpcsection91:
 ; O1-NEXT:    lock addw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -3953,7 +3805,7 @@ define void @atomic16_add_acq_rel(ptr %a) {
 ; O2-LABEL: atomic16_add_acq_rel:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection128:
+; O2-NEXT:  .Lpcsection91:
 ; O2-NEXT:    lock addw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -3961,7 +3813,7 @@ define void @atomic16_add_acq_rel(ptr %a) {
 ; O3-LABEL: atomic16_add_acq_rel:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection128:
+; O3-NEXT:  .Lpcsection91:
 ; O3-NEXT:    lock addw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -3976,7 +3828,7 @@ define void @atomic16_sub_acq_rel(ptr %a) {
 ; O0-LABEL: atomic16_sub_acq_rel:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection155:
+; O0-NEXT:  .Lpcsection118:
 ; O0-NEXT:    lock subw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -3984,7 +3836,7 @@ define void @atomic16_sub_acq_rel(ptr %a) {
 ; O1-LABEL: atomic16_sub_acq_rel:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection129:
+; O1-NEXT:  .Lpcsection92:
 ; O1-NEXT:    lock subw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -3992,7 +3844,7 @@ define void @atomic16_sub_acq_rel(ptr %a) {
 ; O2-LABEL: atomic16_sub_acq_rel:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection129:
+; O2-NEXT:  .Lpcsection92:
 ; O2-NEXT:    lock subw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -4000,7 +3852,7 @@ define void @atomic16_sub_acq_rel(ptr %a) {
 ; O3-LABEL: atomic16_sub_acq_rel:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection129:
+; O3-NEXT:  .Lpcsection92:
 ; O3-NEXT:    lock subw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -4015,7 +3867,7 @@ define void @atomic16_and_acq_rel(ptr %a) {
 ; O0-LABEL: atomic16_and_acq_rel:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection156:
+; O0-NEXT:  .Lpcsection119:
 ; O0-NEXT:    lock andw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -4023,7 +3875,7 @@ define void @atomic16_and_acq_rel(ptr %a) {
 ; O1-LABEL: atomic16_and_acq_rel:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection130:
+; O1-NEXT:  .Lpcsection93:
 ; O1-NEXT:    lock andw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -4031,7 +3883,7 @@ define void @atomic16_and_acq_rel(ptr %a) {
 ; O2-LABEL: atomic16_and_acq_rel:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection130:
+; O2-NEXT:  .Lpcsection93:
 ; O2-NEXT:    lock andw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -4039,7 +3891,7 @@ define void @atomic16_and_acq_rel(ptr %a) {
 ; O3-LABEL: atomic16_and_acq_rel:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection130:
+; O3-NEXT:  .Lpcsection93:
 ; O3-NEXT:    lock andw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -4054,7 +3906,7 @@ define void @atomic16_or_acq_rel(ptr %a) {
 ; O0-LABEL: atomic16_or_acq_rel:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection157:
+; O0-NEXT:  .Lpcsection120:
 ; O0-NEXT:    lock orw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -4062,7 +3914,7 @@ define void @atomic16_or_acq_rel(ptr %a) {
 ; O1-LABEL: atomic16_or_acq_rel:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection131:
+; O1-NEXT:  .Lpcsection94:
 ; O1-NEXT:    lock orw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -4070,7 +3922,7 @@ define void @atomic16_or_acq_rel(ptr %a) {
 ; O2-LABEL: atomic16_or_acq_rel:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection131:
+; O2-NEXT:  .Lpcsection94:
 ; O2-NEXT:    lock orw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -4078,7 +3930,7 @@ define void @atomic16_or_acq_rel(ptr %a) {
 ; O3-LABEL: atomic16_or_acq_rel:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection131:
+; O3-NEXT:  .Lpcsection94:
 ; O3-NEXT:    lock orw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -4093,7 +3945,7 @@ define void @atomic16_xor_acq_rel(ptr %a) {
 ; O0-LABEL: atomic16_xor_acq_rel:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection158:
+; O0-NEXT:  .Lpcsection121:
 ; O0-NEXT:    lock xorw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -4101,7 +3953,7 @@ define void @atomic16_xor_acq_rel(ptr %a) {
 ; O1-LABEL: atomic16_xor_acq_rel:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection132:
+; O1-NEXT:  .Lpcsection95:
 ; O1-NEXT:    lock xorw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -4109,7 +3961,7 @@ define void @atomic16_xor_acq_rel(ptr %a) {
 ; O2-LABEL: atomic16_xor_acq_rel:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection132:
+; O2-NEXT:  .Lpcsection95:
 ; O2-NEXT:    lock xorw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -4117,7 +3969,7 @@ define void @atomic16_xor_acq_rel(ptr %a) {
 ; O3-LABEL: atomic16_xor_acq_rel:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection132:
+; O3-NEXT:  .Lpcsection95:
 ; O3-NEXT:    lock xorw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -4133,30 +3985,26 @@ define void @atomic16_nand_acq_rel(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq foo, %rax
-; O0-NEXT:  .Lpcsection159:
+; O0-NEXT:  .Lpcsection122:
 ; O0-NEXT:    movw (%rdi), %ax
 ; O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; O0-NEXT:  .LBB85_1: # %atomicrmw.start
 ; O0-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; O0-NEXT:  .Lpcsection160:
 ; O0-NEXT:    # implicit-def: $edx
 ; O0-NEXT:    movw %ax, %dx
-; O0-NEXT:  .Lpcsection161:
 ; O0-NEXT:    notl %edx
-; O0-NEXT:  .Lpcsection162:
 ; O0-NEXT:    orl $65493, %edx # imm = 0xFFD5
-; O0-NEXT:  .Lpcsection163:
+; O0-NEXT:  .Lpcsection123:
 ; O0-NEXT:    # kill: def $dx killed $dx killed $edx
-; O0-NEXT:  .Lpcsection164:
 ; O0-NEXT:    lock cmpxchgw %dx, (%rcx)
-; O0-NEXT:  .Lpcsection165:
+; O0-NEXT:  .Lpcsection124:
 ; O0-NEXT:    sete %cl
-; O0-NEXT:  .Lpcsection166:
+; O0-NEXT:  .Lpcsection125:
 ; O0-NEXT:    testb $1, %cl
 ; O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; O0-NEXT:  .Lpcsection167:
+; O0-NEXT:  .Lpcsection126:
 ; O0-NEXT:    jne .LBB85_2
 ; O0-NEXT:    jmp .LBB85_1
 ; O0-NEXT:  .LBB85_2: # %atomicrmw.end
@@ -4166,23 +4014,19 @@ define void @atomic16_nand_acq_rel(ptr %a) {
 ; O1-LABEL: atomic16_nand_acq_rel:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection133:
+; O1-NEXT:  .Lpcsection96:
 ; O1-NEXT:    movzwl (%rdi), %eax
 ; O1-NEXT:    .p2align 4, 0x90
 ; O1-NEXT:  .LBB85_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
-; O1-NEXT:  .Lpcsection134:
 ; O1-NEXT:    notl %ecx
-; O1-NEXT:  .Lpcsection135:
 ; O1-NEXT:    orl $65493, %ecx # imm = 0xFFD5
-; O1-NEXT:  .Lpcsection136:
 ; O1-NEXT:    # kill: def $ax killed $ax killed $eax
-; O1-NEXT:  .Lpcsection137:
 ; O1-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O1-NEXT:  .Lpcsection138:
+; O1-NEXT:  .Lpcsection97:
 ; O1-NEXT:    # kill: def $ax killed $ax def $eax
-; O1-NEXT:  .Lpcsection139:
+; O1-NEXT:  .Lpcsection98:
 ; O1-NEXT:    jne .LBB85_1
 ; O1-NEXT:  # %bb.2: # %atomicrmw.end
 ; O1-NEXT:    movq $1, foo(%rip)
@@ -4191,23 +4035,19 @@ define void @atomic16_nand_acq_rel(ptr %a) {
 ; O2-LABEL: atomic16_nand_acq_rel:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection133:
+; O2-NEXT:  .Lpcsection96:
 ; O2-NEXT:    movzwl (%rdi), %eax
 ; O2-NEXT:    .p2align 4, 0x90
 ; O2-NEXT:  .LBB85_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
-; O2-NEXT:  .Lpcsection134:
 ; O2-NEXT:    notl %ecx
-; O2-NEXT:  .Lpcsection135:
 ; O2-NEXT:    orl $65493, %ecx # imm = 0xFFD5
-; O2-NEXT:  .Lpcsection136:
 ; O2-NEXT:    # kill: def $ax killed $ax killed $eax
-; O2-NEXT:  .Lpcsection137:
 ; O2-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O2-NEXT:  .Lpcsection138:
+; O2-NEXT:  .Lpcsection97:
 ; O2-NEXT:    # kill: def $ax killed $ax def $eax
-; O2-NEXT:  .Lpcsection139:
+; O2-NEXT:  .Lpcsection98:
 ; O2-NEXT:    jne .LBB85_1
 ; O2-NEXT:  # %bb.2: # %atomicrmw.end
 ; O2-NEXT:    movq $1, foo(%rip)
@@ -4216,23 +4056,19 @@ define void @atomic16_nand_acq_rel(ptr %a) {
 ; O3-LABEL: atomic16_nand_acq_rel:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection133:
+; O3-NEXT:  .Lpcsection96:
 ; O3-NEXT:    movzwl (%rdi), %eax
 ; O3-NEXT:    .p2align 4, 0x90
 ; O3-NEXT:  .LBB85_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
-; O3-NEXT:  .Lpcsection134:
 ; O3-NEXT:    notl %ecx
-; O3-NEXT:  .Lpcsection135:
 ; O3-NEXT:    orl $65493, %ecx # imm = 0xFFD5
-; O3-NEXT:  .Lpcsection136:
 ; O3-NEXT:    # kill: def $ax killed $ax killed $eax
-; O3-NEXT:  .Lpcsection137:
 ; O3-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O3-NEXT:  .Lpcsection138:
+; O3-NEXT:  .Lpcsection97:
 ; O3-NEXT:    # kill: def $ax killed $ax def $eax
-; O3-NEXT:  .Lpcsection139:
+; O3-NEXT:  .Lpcsection98:
 ; O3-NEXT:    jne .LBB85_1
 ; O3-NEXT:  # %bb.2: # %atomicrmw.end
 ; O3-NEXT:    movq $1, foo(%rip)
@@ -4249,7 +4085,7 @@ define void @atomic16_xchg_seq_cst(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:    movw $42, %ax
-; O0-NEXT:  .Lpcsection168:
+; O0-NEXT:  .Lpcsection127:
 ; O0-NEXT:    xchgw %ax, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -4258,7 +4094,7 @@ define void @atomic16_xchg_seq_cst(ptr %a) {
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movw $42, %ax
-; O1-NEXT:  .Lpcsection140:
+; O1-NEXT:  .Lpcsection99:
 ; O1-NEXT:    xchgw %ax, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -4267,7 +4103,7 @@ define void @atomic16_xchg_seq_cst(ptr %a) {
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movw $42, %ax
-; O2-NEXT:  .Lpcsection140:
+; O2-NEXT:  .Lpcsection99:
 ; O2-NEXT:    xchgw %ax, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -4276,7 +4112,7 @@ define void @atomic16_xchg_seq_cst(ptr %a) {
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movw $42, %ax
-; O3-NEXT:  .Lpcsection140:
+; O3-NEXT:  .Lpcsection99:
 ; O3-NEXT:    xchgw %ax, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -4291,7 +4127,7 @@ define void @atomic16_add_seq_cst(ptr %a) {
 ; O0-LABEL: atomic16_add_seq_cst:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection169:
+; O0-NEXT:  .Lpcsection128:
 ; O0-NEXT:    lock addw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -4299,7 +4135,7 @@ define void @atomic16_add_seq_cst(ptr %a) {
 ; O1-LABEL: atomic16_add_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection141:
+; O1-NEXT:  .Lpcsection100:
 ; O1-NEXT:    lock addw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -4307,7 +4143,7 @@ define void @atomic16_add_seq_cst(ptr %a) {
 ; O2-LABEL: atomic16_add_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection141:
+; O2-NEXT:  .Lpcsection100:
 ; O2-NEXT:    lock addw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -4315,7 +4151,7 @@ define void @atomic16_add_seq_cst(ptr %a) {
 ; O3-LABEL: atomic16_add_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection141:
+; O3-NEXT:  .Lpcsection100:
 ; O3-NEXT:    lock addw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -4330,7 +4166,7 @@ define void @atomic16_sub_seq_cst(ptr %a) {
 ; O0-LABEL: atomic16_sub_seq_cst:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection170:
+; O0-NEXT:  .Lpcsection129:
 ; O0-NEXT:    lock subw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -4338,7 +4174,7 @@ define void @atomic16_sub_seq_cst(ptr %a) {
 ; O1-LABEL: atomic16_sub_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection142:
+; O1-NEXT:  .Lpcsection101:
 ; O1-NEXT:    lock subw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -4346,7 +4182,7 @@ define void @atomic16_sub_seq_cst(ptr %a) {
 ; O2-LABEL: atomic16_sub_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection142:
+; O2-NEXT:  .Lpcsection101:
 ; O2-NEXT:    lock subw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -4354,7 +4190,7 @@ define void @atomic16_sub_seq_cst(ptr %a) {
 ; O3-LABEL: atomic16_sub_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection142:
+; O3-NEXT:  .Lpcsection101:
 ; O3-NEXT:    lock subw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -4369,7 +4205,7 @@ define void @atomic16_and_seq_cst(ptr %a) {
 ; O0-LABEL: atomic16_and_seq_cst:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection171:
+; O0-NEXT:  .Lpcsection130:
 ; O0-NEXT:    lock andw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -4377,7 +4213,7 @@ define void @atomic16_and_seq_cst(ptr %a) {
 ; O1-LABEL: atomic16_and_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection143:
+; O1-NEXT:  .Lpcsection102:
 ; O1-NEXT:    lock andw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -4385,7 +4221,7 @@ define void @atomic16_and_seq_cst(ptr %a) {
 ; O2-LABEL: atomic16_and_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection143:
+; O2-NEXT:  .Lpcsection102:
 ; O2-NEXT:    lock andw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -4393,7 +4229,7 @@ define void @atomic16_and_seq_cst(ptr %a) {
 ; O3-LABEL: atomic16_and_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection143:
+; O3-NEXT:  .Lpcsection102:
 ; O3-NEXT:    lock andw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -4408,7 +4244,7 @@ define void @atomic16_or_seq_cst(ptr %a) {
 ; O0-LABEL: atomic16_or_seq_cst:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection172:
+; O0-NEXT:  .Lpcsection131:
 ; O0-NEXT:    lock orw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -4416,7 +4252,7 @@ define void @atomic16_or_seq_cst(ptr %a) {
 ; O1-LABEL: atomic16_or_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection144:
+; O1-NEXT:  .Lpcsection103:
 ; O1-NEXT:    lock orw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -4424,7 +4260,7 @@ define void @atomic16_or_seq_cst(ptr %a) {
 ; O2-LABEL: atomic16_or_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection144:
+; O2-NEXT:  .Lpcsection103:
 ; O2-NEXT:    lock orw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -4432,7 +4268,7 @@ define void @atomic16_or_seq_cst(ptr %a) {
 ; O3-LABEL: atomic16_or_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection144:
+; O3-NEXT:  .Lpcsection103:
 ; O3-NEXT:    lock orw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -4447,7 +4283,7 @@ define void @atomic16_xor_seq_cst(ptr %a) {
 ; O0-LABEL: atomic16_xor_seq_cst:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection173:
+; O0-NEXT:  .Lpcsection132:
 ; O0-NEXT:    lock xorw $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -4455,7 +4291,7 @@ define void @atomic16_xor_seq_cst(ptr %a) {
 ; O1-LABEL: atomic16_xor_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection145:
+; O1-NEXT:  .Lpcsection104:
 ; O1-NEXT:    lock xorw $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -4463,7 +4299,7 @@ define void @atomic16_xor_seq_cst(ptr %a) {
 ; O2-LABEL: atomic16_xor_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection145:
+; O2-NEXT:  .Lpcsection104:
 ; O2-NEXT:    lock xorw $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -4471,7 +4307,7 @@ define void @atomic16_xor_seq_cst(ptr %a) {
 ; O3-LABEL: atomic16_xor_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection145:
+; O3-NEXT:  .Lpcsection104:
 ; O3-NEXT:    lock xorw $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -4487,30 +4323,26 @@ define void @atomic16_nand_seq_cst(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq foo, %rax
-; O0-NEXT:  .Lpcsection174:
+; O0-NEXT:  .Lpcsection133:
 ; O0-NEXT:    movw (%rdi), %ax
 ; O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; O0-NEXT:  .LBB92_1: # %atomicrmw.start
 ; O0-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; O0-NEXT:  .Lpcsection175:
 ; O0-NEXT:    # implicit-def: $edx
 ; O0-NEXT:    movw %ax, %dx
-; O0-NEXT:  .Lpcsection176:
 ; O0-NEXT:    notl %edx
-; O0-NEXT:  .Lpcsection177:
 ; O0-NEXT:    orl $65493, %edx # imm = 0xFFD5
-; O0-NEXT:  .Lpcsection178:
+; O0-NEXT:  .Lpcsection134:
 ; O0-NEXT:    # kill: def $dx killed $dx killed $edx
-; O0-NEXT:  .Lpcsection179:
 ; O0-NEXT:    lock cmpxchgw %dx, (%rcx)
-; O0-NEXT:  .Lpcsection180:
+; O0-NEXT:  .Lpcsection135:
 ; O0-NEXT:    sete %cl
-; O0-NEXT:  .Lpcsection181:
+; O0-NEXT:  .Lpcsection136:
 ; O0-NEXT:    testb $1, %cl
 ; O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; O0-NEXT:  .Lpcsection182:
+; O0-NEXT:  .Lpcsection137:
 ; O0-NEXT:    jne .LBB92_2
 ; O0-NEXT:    jmp .LBB92_1
 ; O0-NEXT:  .LBB92_2: # %atomicrmw.end
@@ -4520,23 +4352,19 @@ define void @atomic16_nand_seq_cst(ptr %a) {
 ; O1-LABEL: atomic16_nand_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection146:
+; O1-NEXT:  .Lpcsection105:
 ; O1-NEXT:    movzwl (%rdi), %eax
 ; O1-NEXT:    .p2align 4, 0x90
 ; O1-NEXT:  .LBB92_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
-; O1-NEXT:  .Lpcsection147:
 ; O1-NEXT:    notl %ecx
-; O1-NEXT:  .Lpcsection148:
 ; O1-NEXT:    orl $65493, %ecx # imm = 0xFFD5
-; O1-NEXT:  .Lpcsection149:
 ; O1-NEXT:    # kill: def $ax killed $ax killed $eax
-; O1-NEXT:  .Lpcsection150:
 ; O1-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O1-NEXT:  .Lpcsection151:
+; O1-NEXT:  .Lpcsection106:
 ; O1-NEXT:    # kill: def $ax killed $ax def $eax
-; O1-NEXT:  .Lpcsection152:
+; O1-NEXT:  .Lpcsection107:
 ; O1-NEXT:    jne .LBB92_1
 ; O1-NEXT:  # %bb.2: # %atomicrmw.end
 ; O1-NEXT:    movq $1, foo(%rip)
@@ -4545,23 +4373,19 @@ define void @atomic16_nand_seq_cst(ptr %a) {
 ; O2-LABEL: atomic16_nand_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection146:
+; O2-NEXT:  .Lpcsection105:
 ; O2-NEXT:    movzwl (%rdi), %eax
 ; O2-NEXT:    .p2align 4, 0x90
 ; O2-NEXT:  .LBB92_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
-; O2-NEXT:  .Lpcsection147:
 ; O2-NEXT:    notl %ecx
-; O2-NEXT:  .Lpcsection148:
 ; O2-NEXT:    orl $65493, %ecx # imm = 0xFFD5
-; O2-NEXT:  .Lpcsection149:
 ; O2-NEXT:    # kill: def $ax killed $ax killed $eax
-; O2-NEXT:  .Lpcsection150:
 ; O2-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O2-NEXT:  .Lpcsection151:
+; O2-NEXT:  .Lpcsection106:
 ; O2-NEXT:    # kill: def $ax killed $ax def $eax
-; O2-NEXT:  .Lpcsection152:
+; O2-NEXT:  .Lpcsection107:
 ; O2-NEXT:    jne .LBB92_1
 ; O2-NEXT:  # %bb.2: # %atomicrmw.end
 ; O2-NEXT:    movq $1, foo(%rip)
@@ -4570,23 +4394,19 @@ define void @atomic16_nand_seq_cst(ptr %a) {
 ; O3-LABEL: atomic16_nand_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection146:
+; O3-NEXT:  .Lpcsection105:
 ; O3-NEXT:    movzwl (%rdi), %eax
 ; O3-NEXT:    .p2align 4, 0x90
 ; O3-NEXT:  .LBB92_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
-; O3-NEXT:  .Lpcsection147:
 ; O3-NEXT:    notl %ecx
-; O3-NEXT:  .Lpcsection148:
 ; O3-NEXT:    orl $65493, %ecx # imm = 0xFFD5
-; O3-NEXT:  .Lpcsection149:
 ; O3-NEXT:    # kill: def $ax killed $ax killed $eax
-; O3-NEXT:  .Lpcsection150:
 ; O3-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O3-NEXT:  .Lpcsection151:
+; O3-NEXT:  .Lpcsection106:
 ; O3-NEXT:    # kill: def $ax killed $ax def $eax
-; O3-NEXT:  .Lpcsection152:
+; O3-NEXT:  .Lpcsection107:
 ; O3-NEXT:    jne .LBB92_1
 ; O3-NEXT:  # %bb.2: # %atomicrmw.end
 ; O3-NEXT:    movq $1, foo(%rip)
@@ -4605,17 +4425,14 @@ define void @atomic16_cas_monotonic(ptr %a) {
 ; O0-NEXT:    movw $42, %ax
 ; O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; O0-NEXT:    movw $1, %cx
-; O0-NEXT:  .Lpcsection183:
 ; O0-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O0-NEXT:  .Lpcsection184:
+; O0-NEXT:  .Lpcsection138:
 ; O0-NEXT:    # kill: def $dx killed $ax
 ; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
-; O0-NEXT:  .Lpcsection185:
 ; O0-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O0-NEXT:  .Lpcsection186:
+; O0-NEXT:  .Lpcsection139:
 ; O0-NEXT:    # kill: def $dx killed $ax
 ; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
-; O0-NEXT:  .Lpcsection187:
 ; O0-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -4625,13 +4442,10 @@ define void @atomic16_cas_monotonic(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movw $1, %cx
 ; O1-NEXT:    movw $42, %ax
-; O1-NEXT:  .Lpcsection153:
 ; O1-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O1-NEXT:    movw $42, %ax
-; O1-NEXT:  .Lpcsection154:
 ; O1-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O1-NEXT:    movw $42, %ax
-; O1-NEXT:  .Lpcsection155:
 ; O1-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -4641,13 +4455,10 @@ define void @atomic16_cas_monotonic(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movw $1, %cx
 ; O2-NEXT:    movw $42, %ax
-; O2-NEXT:  .Lpcsection153:
 ; O2-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O2-NEXT:    movw $42, %ax
-; O2-NEXT:  .Lpcsection154:
 ; O2-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O2-NEXT:    movw $42, %ax
-; O2-NEXT:  .Lpcsection155:
 ; O2-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -4657,13 +4468,10 @@ define void @atomic16_cas_monotonic(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movw $1, %cx
 ; O3-NEXT:    movw $42, %ax
-; O3-NEXT:  .Lpcsection153:
 ; O3-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O3-NEXT:    movw $42, %ax
-; O3-NEXT:  .Lpcsection154:
 ; O3-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O3-NEXT:    movw $42, %ax
-; O3-NEXT:  .Lpcsection155:
 ; O3-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -4683,17 +4491,14 @@ define void @atomic16_cas_acquire(ptr %a) {
 ; O0-NEXT:    movw $42, %ax
 ; O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; O0-NEXT:    movw $1, %cx
-; O0-NEXT:  .Lpcsection188:
 ; O0-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O0-NEXT:  .Lpcsection189:
+; O0-NEXT:  .Lpcsection140:
 ; O0-NEXT:    # kill: def $dx killed $ax
 ; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
-; O0-NEXT:  .Lpcsection190:
 ; O0-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O0-NEXT:  .Lpcsection191:
+; O0-NEXT:  .Lpcsection141:
 ; O0-NEXT:    # kill: def $dx killed $ax
 ; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
-; O0-NEXT:  .Lpcsection192:
 ; O0-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -4703,13 +4508,10 @@ define void @atomic16_cas_acquire(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movw $1, %cx
 ; O1-NEXT:    movw $42, %ax
-; O1-NEXT:  .Lpcsection156:
 ; O1-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O1-NEXT:    movw $42, %ax
-; O1-NEXT:  .Lpcsection157:
 ; O1-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O1-NEXT:    movw $42, %ax
-; O1-NEXT:  .Lpcsection158:
 ; O1-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -4719,13 +4521,10 @@ define void @atomic16_cas_acquire(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movw $1, %cx
 ; O2-NEXT:    movw $42, %ax
-; O2-NEXT:  .Lpcsection156:
 ; O2-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O2-NEXT:    movw $42, %ax
-; O2-NEXT:  .Lpcsection157:
 ; O2-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O2-NEXT:    movw $42, %ax
-; O2-NEXT:  .Lpcsection158:
 ; O2-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -4735,13 +4534,10 @@ define void @atomic16_cas_acquire(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movw $1, %cx
 ; O3-NEXT:    movw $42, %ax
-; O3-NEXT:  .Lpcsection156:
 ; O3-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O3-NEXT:    movw $42, %ax
-; O3-NEXT:  .Lpcsection157:
 ; O3-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O3-NEXT:    movw $42, %ax
-; O3-NEXT:  .Lpcsection158:
 ; O3-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -4761,17 +4557,14 @@ define void @atomic16_cas_release(ptr %a) {
 ; O0-NEXT:    movw $42, %ax
 ; O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; O0-NEXT:    movw $1, %cx
-; O0-NEXT:  .Lpcsection193:
 ; O0-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O0-NEXT:  .Lpcsection194:
+; O0-NEXT:  .Lpcsection142:
 ; O0-NEXT:    # kill: def $dx killed $ax
 ; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
-; O0-NEXT:  .Lpcsection195:
 ; O0-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O0-NEXT:  .Lpcsection196:
+; O0-NEXT:  .Lpcsection143:
 ; O0-NEXT:    # kill: def $dx killed $ax
 ; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
-; O0-NEXT:  .Lpcsection197:
 ; O0-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -4781,13 +4574,10 @@ define void @atomic16_cas_release(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movw $1, %cx
 ; O1-NEXT:    movw $42, %ax
-; O1-NEXT:  .Lpcsection159:
 ; O1-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O1-NEXT:    movw $42, %ax
-; O1-NEXT:  .Lpcsection160:
 ; O1-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O1-NEXT:    movw $42, %ax
-; O1-NEXT:  .Lpcsection161:
 ; O1-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -4797,13 +4587,10 @@ define void @atomic16_cas_release(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movw $1, %cx
 ; O2-NEXT:    movw $42, %ax
-; O2-NEXT:  .Lpcsection159:
 ; O2-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O2-NEXT:    movw $42, %ax
-; O2-NEXT:  .Lpcsection160:
 ; O2-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O2-NEXT:    movw $42, %ax
-; O2-NEXT:  .Lpcsection161:
 ; O2-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -4813,13 +4600,10 @@ define void @atomic16_cas_release(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movw $1, %cx
 ; O3-NEXT:    movw $42, %ax
-; O3-NEXT:  .Lpcsection159:
 ; O3-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O3-NEXT:    movw $42, %ax
-; O3-NEXT:  .Lpcsection160:
 ; O3-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O3-NEXT:    movw $42, %ax
-; O3-NEXT:  .Lpcsection161:
 ; O3-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -4839,17 +4623,14 @@ define void @atomic16_cas_acq_rel(ptr %a) {
 ; O0-NEXT:    movw $42, %ax
 ; O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; O0-NEXT:    movw $1, %cx
-; O0-NEXT:  .Lpcsection198:
 ; O0-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O0-NEXT:  .Lpcsection199:
+; O0-NEXT:  .Lpcsection144:
 ; O0-NEXT:    # kill: def $dx killed $ax
 ; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
-; O0-NEXT:  .Lpcsection200:
 ; O0-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O0-NEXT:  .Lpcsection201:
+; O0-NEXT:  .Lpcsection145:
 ; O0-NEXT:    # kill: def $dx killed $ax
 ; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
-; O0-NEXT:  .Lpcsection202:
 ; O0-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -4859,13 +4640,10 @@ define void @atomic16_cas_acq_rel(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movw $1, %cx
 ; O1-NEXT:    movw $42, %ax
-; O1-NEXT:  .Lpcsection162:
 ; O1-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O1-NEXT:    movw $42, %ax
-; O1-NEXT:  .Lpcsection163:
 ; O1-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O1-NEXT:    movw $42, %ax
-; O1-NEXT:  .Lpcsection164:
 ; O1-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -4875,13 +4653,10 @@ define void @atomic16_cas_acq_rel(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movw $1, %cx
 ; O2-NEXT:    movw $42, %ax
-; O2-NEXT:  .Lpcsection162:
 ; O2-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O2-NEXT:    movw $42, %ax
-; O2-NEXT:  .Lpcsection163:
 ; O2-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O2-NEXT:    movw $42, %ax
-; O2-NEXT:  .Lpcsection164:
 ; O2-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -4891,13 +4666,10 @@ define void @atomic16_cas_acq_rel(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movw $1, %cx
 ; O3-NEXT:    movw $42, %ax
-; O3-NEXT:  .Lpcsection162:
 ; O3-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O3-NEXT:    movw $42, %ax
-; O3-NEXT:  .Lpcsection163:
 ; O3-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O3-NEXT:    movw $42, %ax
-; O3-NEXT:  .Lpcsection164:
 ; O3-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -4917,17 +4689,14 @@ define void @atomic16_cas_seq_cst(ptr %a) {
 ; O0-NEXT:    movw $42, %ax
 ; O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; O0-NEXT:    movw $1, %cx
-; O0-NEXT:  .Lpcsection203:
 ; O0-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O0-NEXT:  .Lpcsection204:
+; O0-NEXT:  .Lpcsection146:
 ; O0-NEXT:    # kill: def $dx killed $ax
 ; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
-; O0-NEXT:  .Lpcsection205:
 ; O0-NEXT:    lock cmpxchgw %cx, (%rdi)
-; O0-NEXT:  .Lpcsection206:
+; O0-NEXT:  .Lpcsection147:
 ; O0-NEXT:    # kill: def $dx killed $ax
 ; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
-; O0-NEXT:  .Lpcsection207:
 ; O0-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -4937,13 +4706,10 @@ define void @atomic16_cas_seq_cst(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movw $1, %cx
 ; O1-NEXT:    movw $42, %ax
-; O1-NEXT:  .Lpcsection165:
 ; O1-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O1-NEXT:    movw $42, %ax
-; O1-NEXT:  .Lpcsection166:
 ; O1-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O1-NEXT:    movw $42, %ax
-; O1-NEXT:  .Lpcsection167:
 ; O1-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -4953,13 +4719,10 @@ define void @atomic16_cas_seq_cst(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movw $1, %cx
 ; O2-NEXT:    movw $42, %ax
-; O2-NEXT:  .Lpcsection165:
 ; O2-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O2-NEXT:    movw $42, %ax
-; O2-NEXT:  .Lpcsection166:
 ; O2-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O2-NEXT:    movw $42, %ax
-; O2-NEXT:  .Lpcsection167:
 ; O2-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -4969,13 +4732,10 @@ define void @atomic16_cas_seq_cst(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movw $1, %cx
 ; O3-NEXT:    movw $42, %ax
-; O3-NEXT:  .Lpcsection165:
 ; O3-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O3-NEXT:    movw $42, %ax
-; O3-NEXT:  .Lpcsection166:
 ; O3-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O3-NEXT:    movw $42, %ax
-; O3-NEXT:  .Lpcsection167:
 ; O3-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -4992,7 +4752,7 @@ define i32 @atomic32_load_unordered(ptr %a) {
 ; O0-LABEL: atomic32_load_unordered:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection208:
+; O0-NEXT:  .Lpcsection148:
 ; O0-NEXT:    movl (%rdi), %eax
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -5000,7 +4760,7 @@ define i32 @atomic32_load_unordered(ptr %a) {
 ; O1-LABEL: atomic32_load_unordered:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection168:
+; O1-NEXT:  .Lpcsection108:
 ; O1-NEXT:    movl (%rdi), %eax
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -5008,7 +4768,7 @@ define i32 @atomic32_load_unordered(ptr %a) {
 ; O2-LABEL: atomic32_load_unordered:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection168:
+; O2-NEXT:  .Lpcsection108:
 ; O2-NEXT:    movl (%rdi), %eax
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -5016,7 +4776,7 @@ define i32 @atomic32_load_unordered(ptr %a) {
 ; O3-LABEL: atomic32_load_unordered:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection168:
+; O3-NEXT:  .Lpcsection108:
 ; O3-NEXT:    movl (%rdi), %eax
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -5031,7 +4791,7 @@ define i32 @atomic32_load_monotonic(ptr %a) {
 ; O0-LABEL: atomic32_load_monotonic:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection209:
+; O0-NEXT:  .Lpcsection149:
 ; O0-NEXT:    movl (%rdi), %eax
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -5039,7 +4799,7 @@ define i32 @atomic32_load_monotonic(ptr %a) {
 ; O1-LABEL: atomic32_load_monotonic:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection169:
+; O1-NEXT:  .Lpcsection109:
 ; O1-NEXT:    movl (%rdi), %eax
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -5047,7 +4807,7 @@ define i32 @atomic32_load_monotonic(ptr %a) {
 ; O2-LABEL: atomic32_load_monotonic:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection169:
+; O2-NEXT:  .Lpcsection109:
 ; O2-NEXT:    movl (%rdi), %eax
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -5055,7 +4815,7 @@ define i32 @atomic32_load_monotonic(ptr %a) {
 ; O3-LABEL: atomic32_load_monotonic:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection169:
+; O3-NEXT:  .Lpcsection109:
 ; O3-NEXT:    movl (%rdi), %eax
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -5070,7 +4830,7 @@ define i32 @atomic32_load_acquire(ptr %a) {
 ; O0-LABEL: atomic32_load_acquire:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection210:
+; O0-NEXT:  .Lpcsection150:
 ; O0-NEXT:    movl (%rdi), %eax
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -5078,7 +4838,7 @@ define i32 @atomic32_load_acquire(ptr %a) {
 ; O1-LABEL: atomic32_load_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection170:
+; O1-NEXT:  .Lpcsection110:
 ; O1-NEXT:    movl (%rdi), %eax
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -5086,7 +4846,7 @@ define i32 @atomic32_load_acquire(ptr %a) {
 ; O2-LABEL: atomic32_load_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection170:
+; O2-NEXT:  .Lpcsection110:
 ; O2-NEXT:    movl (%rdi), %eax
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -5094,7 +4854,7 @@ define i32 @atomic32_load_acquire(ptr %a) {
 ; O3-LABEL: atomic32_load_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection170:
+; O3-NEXT:  .Lpcsection110:
 ; O3-NEXT:    movl (%rdi), %eax
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -5109,7 +4869,7 @@ define i32 @atomic32_load_seq_cst(ptr %a) {
 ; O0-LABEL: atomic32_load_seq_cst:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection211:
+; O0-NEXT:  .Lpcsection151:
 ; O0-NEXT:    movl (%rdi), %eax
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -5117,7 +4877,7 @@ define i32 @atomic32_load_seq_cst(ptr %a) {
 ; O1-LABEL: atomic32_load_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection171:
+; O1-NEXT:  .Lpcsection111:
 ; O1-NEXT:    movl (%rdi), %eax
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -5125,7 +4885,7 @@ define i32 @atomic32_load_seq_cst(ptr %a) {
 ; O2-LABEL: atomic32_load_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection171:
+; O2-NEXT:  .Lpcsection111:
 ; O2-NEXT:    movl (%rdi), %eax
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -5133,7 +4893,7 @@ define i32 @atomic32_load_seq_cst(ptr %a) {
 ; O3-LABEL: atomic32_load_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection171:
+; O3-NEXT:  .Lpcsection111:
 ; O3-NEXT:    movl (%rdi), %eax
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -5148,7 +4908,7 @@ define void @atomic32_store_unordered(ptr %a) {
 ; O0-LABEL: atomic32_store_unordered:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection212:
+; O0-NEXT:  .Lpcsection152:
 ; O0-NEXT:    movl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -5156,7 +4916,7 @@ define void @atomic32_store_unordered(ptr %a) {
 ; O1-LABEL: atomic32_store_unordered:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection172:
+; O1-NEXT:  .Lpcsection112:
 ; O1-NEXT:    movl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -5164,7 +4924,7 @@ define void @atomic32_store_unordered(ptr %a) {
 ; O2-LABEL: atomic32_store_unordered:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection172:
+; O2-NEXT:  .Lpcsection112:
 ; O2-NEXT:    movl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -5172,7 +4932,7 @@ define void @atomic32_store_unordered(ptr %a) {
 ; O3-LABEL: atomic32_store_unordered:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection172:
+; O3-NEXT:  .Lpcsection112:
 ; O3-NEXT:    movl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -5187,7 +4947,7 @@ define void @atomic32_store_monotonic(ptr %a) {
 ; O0-LABEL: atomic32_store_monotonic:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection213:
+; O0-NEXT:  .Lpcsection153:
 ; O0-NEXT:    movl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -5195,7 +4955,7 @@ define void @atomic32_store_monotonic(ptr %a) {
 ; O1-LABEL: atomic32_store_monotonic:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection173:
+; O1-NEXT:  .Lpcsection113:
 ; O1-NEXT:    movl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -5203,7 +4963,7 @@ define void @atomic32_store_monotonic(ptr %a) {
 ; O2-LABEL: atomic32_store_monotonic:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection173:
+; O2-NEXT:  .Lpcsection113:
 ; O2-NEXT:    movl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -5211,7 +4971,7 @@ define void @atomic32_store_monotonic(ptr %a) {
 ; O3-LABEL: atomic32_store_monotonic:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection173:
+; O3-NEXT:  .Lpcsection113:
 ; O3-NEXT:    movl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -5226,7 +4986,7 @@ define void @atomic32_store_release(ptr %a) {
 ; O0-LABEL: atomic32_store_release:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection214:
+; O0-NEXT:  .Lpcsection154:
 ; O0-NEXT:    movl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -5234,7 +4994,7 @@ define void @atomic32_store_release(ptr %a) {
 ; O1-LABEL: atomic32_store_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection174:
+; O1-NEXT:  .Lpcsection114:
 ; O1-NEXT:    movl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -5242,7 +5002,7 @@ define void @atomic32_store_release(ptr %a) {
 ; O2-LABEL: atomic32_store_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection174:
+; O2-NEXT:  .Lpcsection114:
 ; O2-NEXT:    movl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -5250,7 +5010,7 @@ define void @atomic32_store_release(ptr %a) {
 ; O3-LABEL: atomic32_store_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection174:
+; O3-NEXT:  .Lpcsection114:
 ; O3-NEXT:    movl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -5266,7 +5026,7 @@ define void @atomic32_store_seq_cst(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:    movl $42, %eax
-; O0-NEXT:  .Lpcsection215:
+; O0-NEXT:  .Lpcsection155:
 ; O0-NEXT:    xchgl %eax, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -5275,7 +5035,7 @@ define void @atomic32_store_seq_cst(ptr %a) {
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection175:
+; O1-NEXT:  .Lpcsection115:
 ; O1-NEXT:    xchgl %eax, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -5284,7 +5044,7 @@ define void @atomic32_store_seq_cst(ptr %a) {
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection175:
+; O2-NEXT:  .Lpcsection115:
 ; O2-NEXT:    xchgl %eax, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -5293,7 +5053,7 @@ define void @atomic32_store_seq_cst(ptr %a) {
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection175:
+; O3-NEXT:  .Lpcsection115:
 ; O3-NEXT:    xchgl %eax, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -5309,7 +5069,7 @@ define void @atomic32_xchg_monotonic(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:    movl $42, %eax
-; O0-NEXT:  .Lpcsection216:
+; O0-NEXT:  .Lpcsection156:
 ; O0-NEXT:    xchgl %eax, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -5318,7 +5078,7 @@ define void @atomic32_xchg_monotonic(ptr %a) {
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection176:
+; O1-NEXT:  .Lpcsection116:
 ; O1-NEXT:    xchgl %eax, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -5327,7 +5087,7 @@ define void @atomic32_xchg_monotonic(ptr %a) {
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection176:
+; O2-NEXT:  .Lpcsection116:
 ; O2-NEXT:    xchgl %eax, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -5336,7 +5096,7 @@ define void @atomic32_xchg_monotonic(ptr %a) {
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection176:
+; O3-NEXT:  .Lpcsection116:
 ; O3-NEXT:    xchgl %eax, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -5351,7 +5111,7 @@ define void @atomic32_add_monotonic(ptr %a) {
 ; O0-LABEL: atomic32_add_monotonic:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection217:
+; O0-NEXT:  .Lpcsection157:
 ; O0-NEXT:    lock addl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -5359,7 +5119,7 @@ define void @atomic32_add_monotonic(ptr %a) {
 ; O1-LABEL: atomic32_add_monotonic:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection177:
+; O1-NEXT:  .Lpcsection117:
 ; O1-NEXT:    lock addl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -5367,7 +5127,7 @@ define void @atomic32_add_monotonic(ptr %a) {
 ; O2-LABEL: atomic32_add_monotonic:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection177:
+; O2-NEXT:  .Lpcsection117:
 ; O2-NEXT:    lock addl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -5375,7 +5135,7 @@ define void @atomic32_add_monotonic(ptr %a) {
 ; O3-LABEL: atomic32_add_monotonic:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection177:
+; O3-NEXT:  .Lpcsection117:
 ; O3-NEXT:    lock addl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -5390,7 +5150,7 @@ define void @atomic32_sub_monotonic(ptr %a) {
 ; O0-LABEL: atomic32_sub_monotonic:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection218:
+; O0-NEXT:  .Lpcsection158:
 ; O0-NEXT:    lock subl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -5398,7 +5158,7 @@ define void @atomic32_sub_monotonic(ptr %a) {
 ; O1-LABEL: atomic32_sub_monotonic:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection178:
+; O1-NEXT:  .Lpcsection118:
 ; O1-NEXT:    lock subl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -5406,7 +5166,7 @@ define void @atomic32_sub_monotonic(ptr %a) {
 ; O2-LABEL: atomic32_sub_monotonic:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection178:
+; O2-NEXT:  .Lpcsection118:
 ; O2-NEXT:    lock subl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -5414,7 +5174,7 @@ define void @atomic32_sub_monotonic(ptr %a) {
 ; O3-LABEL: atomic32_sub_monotonic:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection178:
+; O3-NEXT:  .Lpcsection118:
 ; O3-NEXT:    lock subl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -5429,7 +5189,7 @@ define void @atomic32_and_monotonic(ptr %a) {
 ; O0-LABEL: atomic32_and_monotonic:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection219:
+; O0-NEXT:  .Lpcsection159:
 ; O0-NEXT:    lock andl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -5437,7 +5197,7 @@ define void @atomic32_and_monotonic(ptr %a) {
 ; O1-LABEL: atomic32_and_monotonic:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection179:
+; O1-NEXT:  .Lpcsection119:
 ; O1-NEXT:    lock andl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -5445,7 +5205,7 @@ define void @atomic32_and_monotonic(ptr %a) {
 ; O2-LABEL: atomic32_and_monotonic:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection179:
+; O2-NEXT:  .Lpcsection119:
 ; O2-NEXT:    lock andl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -5453,7 +5213,7 @@ define void @atomic32_and_monotonic(ptr %a) {
 ; O3-LABEL: atomic32_and_monotonic:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection179:
+; O3-NEXT:  .Lpcsection119:
 ; O3-NEXT:    lock andl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -5468,7 +5228,7 @@ define void @atomic32_or_monotonic(ptr %a) {
 ; O0-LABEL: atomic32_or_monotonic:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection220:
+; O0-NEXT:  .Lpcsection160:
 ; O0-NEXT:    lock orl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -5476,7 +5236,7 @@ define void @atomic32_or_monotonic(ptr %a) {
 ; O1-LABEL: atomic32_or_monotonic:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection180:
+; O1-NEXT:  .Lpcsection120:
 ; O1-NEXT:    lock orl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -5484,7 +5244,7 @@ define void @atomic32_or_monotonic(ptr %a) {
 ; O2-LABEL: atomic32_or_monotonic:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection180:
+; O2-NEXT:  .Lpcsection120:
 ; O2-NEXT:    lock orl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -5492,7 +5252,7 @@ define void @atomic32_or_monotonic(ptr %a) {
 ; O3-LABEL: atomic32_or_monotonic:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection180:
+; O3-NEXT:  .Lpcsection120:
 ; O3-NEXT:    lock orl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -5507,7 +5267,7 @@ define void @atomic32_xor_monotonic(ptr %a) {
 ; O0-LABEL: atomic32_xor_monotonic:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection221:
+; O0-NEXT:  .Lpcsection161:
 ; O0-NEXT:    lock xorl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -5515,7 +5275,7 @@ define void @atomic32_xor_monotonic(ptr %a) {
 ; O1-LABEL: atomic32_xor_monotonic:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection181:
+; O1-NEXT:  .Lpcsection121:
 ; O1-NEXT:    lock xorl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -5523,7 +5283,7 @@ define void @atomic32_xor_monotonic(ptr %a) {
 ; O2-LABEL: atomic32_xor_monotonic:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection181:
+; O2-NEXT:  .Lpcsection121:
 ; O2-NEXT:    lock xorl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -5531,7 +5291,7 @@ define void @atomic32_xor_monotonic(ptr %a) {
 ; O3-LABEL: atomic32_xor_monotonic:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection181:
+; O3-NEXT:  .Lpcsection121:
 ; O3-NEXT:    lock xorl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -5547,7 +5307,7 @@ define void @atomic32_nand_monotonic(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq foo, %rax
-; O0-NEXT:  .Lpcsection222:
+; O0-NEXT:  .Lpcsection162:
 ; O0-NEXT:    movl (%rdi), %eax
 ; O0-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; O0-NEXT:  .LBB112_1: # %atomicrmw.start
@@ -5555,18 +5315,16 @@ define void @atomic32_nand_monotonic(ptr %a) {
 ; O0-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; O0-NEXT:    movl %eax, %edx
-; O0-NEXT:  .Lpcsection223:
 ; O0-NEXT:    notl %edx
-; O0-NEXT:  .Lpcsection224:
+; O0-NEXT:  .Lpcsection163:
 ; O0-NEXT:    orl $-43, %edx
-; O0-NEXT:  .Lpcsection225:
 ; O0-NEXT:    lock cmpxchgl %edx, (%rcx)
-; O0-NEXT:  .Lpcsection226:
+; O0-NEXT:  .Lpcsection164:
 ; O0-NEXT:    sete %cl
-; O0-NEXT:  .Lpcsection227:
+; O0-NEXT:  .Lpcsection165:
 ; O0-NEXT:    testb $1, %cl
 ; O0-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; O0-NEXT:  .Lpcsection228:
+; O0-NEXT:  .Lpcsection166:
 ; O0-NEXT:    jne .LBB112_2
 ; O0-NEXT:    jmp .LBB112_1
 ; O0-NEXT:  .LBB112_2: # %atomicrmw.end
@@ -5576,19 +5334,17 @@ define void @atomic32_nand_monotonic(ptr %a) {
 ; O1-LABEL: atomic32_nand_monotonic:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection182:
+; O1-NEXT:  .Lpcsection122:
 ; O1-NEXT:    movl (%rdi), %eax
 ; O1-NEXT:    .p2align 4, 0x90
 ; O1-NEXT:  .LBB112_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
-; O1-NEXT:  .Lpcsection183:
 ; O1-NEXT:    notl %ecx
-; O1-NEXT:  .Lpcsection184:
+; O1-NEXT:  .Lpcsection123:
 ; O1-NEXT:    orl $-43, %ecx
-; O1-NEXT:  .Lpcsection185:
 ; O1-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O1-NEXT:  .Lpcsection186:
+; O1-NEXT:  .Lpcsection124:
 ; O1-NEXT:    jne .LBB112_1
 ; O1-NEXT:  # %bb.2: # %atomicrmw.end
 ; O1-NEXT:    movq $1, foo(%rip)
@@ -5597,19 +5353,17 @@ define void @atomic32_nand_monotonic(ptr %a) {
 ; O2-LABEL: atomic32_nand_monotonic:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection182:
+; O2-NEXT:  .Lpcsection122:
 ; O2-NEXT:    movl (%rdi), %eax
 ; O2-NEXT:    .p2align 4, 0x90
 ; O2-NEXT:  .LBB112_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
-; O2-NEXT:  .Lpcsection183:
 ; O2-NEXT:    notl %ecx
-; O2-NEXT:  .Lpcsection184:
+; O2-NEXT:  .Lpcsection123:
 ; O2-NEXT:    orl $-43, %ecx
-; O2-NEXT:  .Lpcsection185:
 ; O2-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O2-NEXT:  .Lpcsection186:
+; O2-NEXT:  .Lpcsection124:
 ; O2-NEXT:    jne .LBB112_1
 ; O2-NEXT:  # %bb.2: # %atomicrmw.end
 ; O2-NEXT:    movq $1, foo(%rip)
@@ -5618,19 +5372,17 @@ define void @atomic32_nand_monotonic(ptr %a) {
 ; O3-LABEL: atomic32_nand_monotonic:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection182:
+; O3-NEXT:  .Lpcsection122:
 ; O3-NEXT:    movl (%rdi), %eax
 ; O3-NEXT:    .p2align 4, 0x90
 ; O3-NEXT:  .LBB112_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
-; O3-NEXT:  .Lpcsection183:
 ; O3-NEXT:    notl %ecx
-; O3-NEXT:  .Lpcsection184:
+; O3-NEXT:  .Lpcsection123:
 ; O3-NEXT:    orl $-43, %ecx
-; O3-NEXT:  .Lpcsection185:
 ; O3-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O3-NEXT:  .Lpcsection186:
+; O3-NEXT:  .Lpcsection124:
 ; O3-NEXT:    jne .LBB112_1
 ; O3-NEXT:  # %bb.2: # %atomicrmw.end
 ; O3-NEXT:    movq $1, foo(%rip)
@@ -5647,7 +5399,7 @@ define void @atomic32_xchg_acquire(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:    movl $42, %eax
-; O0-NEXT:  .Lpcsection229:
+; O0-NEXT:  .Lpcsection167:
 ; O0-NEXT:    xchgl %eax, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -5656,7 +5408,7 @@ define void @atomic32_xchg_acquire(ptr %a) {
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection187:
+; O1-NEXT:  .Lpcsection125:
 ; O1-NEXT:    xchgl %eax, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -5665,7 +5417,7 @@ define void @atomic32_xchg_acquire(ptr %a) {
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection187:
+; O2-NEXT:  .Lpcsection125:
 ; O2-NEXT:    xchgl %eax, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -5674,7 +5426,7 @@ define void @atomic32_xchg_acquire(ptr %a) {
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection187:
+; O3-NEXT:  .Lpcsection125:
 ; O3-NEXT:    xchgl %eax, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -5689,7 +5441,7 @@ define void @atomic32_add_acquire(ptr %a) {
 ; O0-LABEL: atomic32_add_acquire:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection230:
+; O0-NEXT:  .Lpcsection168:
 ; O0-NEXT:    lock addl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -5697,7 +5449,7 @@ define void @atomic32_add_acquire(ptr %a) {
 ; O1-LABEL: atomic32_add_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection188:
+; O1-NEXT:  .Lpcsection126:
 ; O1-NEXT:    lock addl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -5705,7 +5457,7 @@ define void @atomic32_add_acquire(ptr %a) {
 ; O2-LABEL: atomic32_add_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection188:
+; O2-NEXT:  .Lpcsection126:
 ; O2-NEXT:    lock addl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -5713,7 +5465,7 @@ define void @atomic32_add_acquire(ptr %a) {
 ; O3-LABEL: atomic32_add_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection188:
+; O3-NEXT:  .Lpcsection126:
 ; O3-NEXT:    lock addl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -5728,7 +5480,7 @@ define void @atomic32_sub_acquire(ptr %a) {
 ; O0-LABEL: atomic32_sub_acquire:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection231:
+; O0-NEXT:  .Lpcsection169:
 ; O0-NEXT:    lock subl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -5736,7 +5488,7 @@ define void @atomic32_sub_acquire(ptr %a) {
 ; O1-LABEL: atomic32_sub_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection189:
+; O1-NEXT:  .Lpcsection127:
 ; O1-NEXT:    lock subl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -5744,7 +5496,7 @@ define void @atomic32_sub_acquire(ptr %a) {
 ; O2-LABEL: atomic32_sub_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection189:
+; O2-NEXT:  .Lpcsection127:
 ; O2-NEXT:    lock subl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -5752,7 +5504,7 @@ define void @atomic32_sub_acquire(ptr %a) {
 ; O3-LABEL: atomic32_sub_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection189:
+; O3-NEXT:  .Lpcsection127:
 ; O3-NEXT:    lock subl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -5767,7 +5519,7 @@ define void @atomic32_and_acquire(ptr %a) {
 ; O0-LABEL: atomic32_and_acquire:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection232:
+; O0-NEXT:  .Lpcsection170:
 ; O0-NEXT:    lock andl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -5775,7 +5527,7 @@ define void @atomic32_and_acquire(ptr %a) {
 ; O1-LABEL: atomic32_and_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection190:
+; O1-NEXT:  .Lpcsection128:
 ; O1-NEXT:    lock andl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -5783,7 +5535,7 @@ define void @atomic32_and_acquire(ptr %a) {
 ; O2-LABEL: atomic32_and_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection190:
+; O2-NEXT:  .Lpcsection128:
 ; O2-NEXT:    lock andl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -5791,7 +5543,7 @@ define void @atomic32_and_acquire(ptr %a) {
 ; O3-LABEL: atomic32_and_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection190:
+; O3-NEXT:  .Lpcsection128:
 ; O3-NEXT:    lock andl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -5806,7 +5558,7 @@ define void @atomic32_or_acquire(ptr %a) {
 ; O0-LABEL: atomic32_or_acquire:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection233:
+; O0-NEXT:  .Lpcsection171:
 ; O0-NEXT:    lock orl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -5814,7 +5566,7 @@ define void @atomic32_or_acquire(ptr %a) {
 ; O1-LABEL: atomic32_or_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection191:
+; O1-NEXT:  .Lpcsection129:
 ; O1-NEXT:    lock orl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -5822,7 +5574,7 @@ define void @atomic32_or_acquire(ptr %a) {
 ; O2-LABEL: atomic32_or_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection191:
+; O2-NEXT:  .Lpcsection129:
 ; O2-NEXT:    lock orl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -5830,7 +5582,7 @@ define void @atomic32_or_acquire(ptr %a) {
 ; O3-LABEL: atomic32_or_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection191:
+; O3-NEXT:  .Lpcsection129:
 ; O3-NEXT:    lock orl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -5845,7 +5597,7 @@ define void @atomic32_xor_acquire(ptr %a) {
 ; O0-LABEL: atomic32_xor_acquire:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection234:
+; O0-NEXT:  .Lpcsection172:
 ; O0-NEXT:    lock xorl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -5853,7 +5605,7 @@ define void @atomic32_xor_acquire(ptr %a) {
 ; O1-LABEL: atomic32_xor_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection192:
+; O1-NEXT:  .Lpcsection130:
 ; O1-NEXT:    lock xorl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -5861,7 +5613,7 @@ define void @atomic32_xor_acquire(ptr %a) {
 ; O2-LABEL: atomic32_xor_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection192:
+; O2-NEXT:  .Lpcsection130:
 ; O2-NEXT:    lock xorl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -5869,7 +5621,7 @@ define void @atomic32_xor_acquire(ptr %a) {
 ; O3-LABEL: atomic32_xor_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection192:
+; O3-NEXT:  .Lpcsection130:
 ; O3-NEXT:    lock xorl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -5885,7 +5637,7 @@ define void @atomic32_nand_acquire(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq foo, %rax
-; O0-NEXT:  .Lpcsection235:
+; O0-NEXT:  .Lpcsection173:
 ; O0-NEXT:    movl (%rdi), %eax
 ; O0-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; O0-NEXT:  .LBB119_1: # %atomicrmw.start
@@ -5893,18 +5645,16 @@ define void @atomic32_nand_acquire(ptr %a) {
 ; O0-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; O0-NEXT:    movl %eax, %edx
-; O0-NEXT:  .Lpcsection236:
 ; O0-NEXT:    notl %edx
-; O0-NEXT:  .Lpcsection237:
+; O0-NEXT:  .Lpcsection174:
 ; O0-NEXT:    orl $-43, %edx
-; O0-NEXT:  .Lpcsection238:
 ; O0-NEXT:    lock cmpxchgl %edx, (%rcx)
-; O0-NEXT:  .Lpcsection239:
+; O0-NEXT:  .Lpcsection175:
 ; O0-NEXT:    sete %cl
-; O0-NEXT:  .Lpcsection240:
+; O0-NEXT:  .Lpcsection176:
 ; O0-NEXT:    testb $1, %cl
 ; O0-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; O0-NEXT:  .Lpcsection241:
+; O0-NEXT:  .Lpcsection177:
 ; O0-NEXT:    jne .LBB119_2
 ; O0-NEXT:    jmp .LBB119_1
 ; O0-NEXT:  .LBB119_2: # %atomicrmw.end
@@ -5914,19 +5664,17 @@ define void @atomic32_nand_acquire(ptr %a) {
 ; O1-LABEL: atomic32_nand_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection193:
+; O1-NEXT:  .Lpcsection131:
 ; O1-NEXT:    movl (%rdi), %eax
 ; O1-NEXT:    .p2align 4, 0x90
 ; O1-NEXT:  .LBB119_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
-; O1-NEXT:  .Lpcsection194:
 ; O1-NEXT:    notl %ecx
-; O1-NEXT:  .Lpcsection195:
+; O1-NEXT:  .Lpcsection132:
 ; O1-NEXT:    orl $-43, %ecx
-; O1-NEXT:  .Lpcsection196:
 ; O1-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O1-NEXT:  .Lpcsection197:
+; O1-NEXT:  .Lpcsection133:
 ; O1-NEXT:    jne .LBB119_1
 ; O1-NEXT:  # %bb.2: # %atomicrmw.end
 ; O1-NEXT:    movq $1, foo(%rip)
@@ -5935,19 +5683,17 @@ define void @atomic32_nand_acquire(ptr %a) {
 ; O2-LABEL: atomic32_nand_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection193:
+; O2-NEXT:  .Lpcsection131:
 ; O2-NEXT:    movl (%rdi), %eax
 ; O2-NEXT:    .p2align 4, 0x90
 ; O2-NEXT:  .LBB119_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
-; O2-NEXT:  .Lpcsection194:
 ; O2-NEXT:    notl %ecx
-; O2-NEXT:  .Lpcsection195:
+; O2-NEXT:  .Lpcsection132:
 ; O2-NEXT:    orl $-43, %ecx
-; O2-NEXT:  .Lpcsection196:
 ; O2-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O2-NEXT:  .Lpcsection197:
+; O2-NEXT:  .Lpcsection133:
 ; O2-NEXT:    jne .LBB119_1
 ; O2-NEXT:  # %bb.2: # %atomicrmw.end
 ; O2-NEXT:    movq $1, foo(%rip)
@@ -5956,19 +5702,17 @@ define void @atomic32_nand_acquire(ptr %a) {
 ; O3-LABEL: atomic32_nand_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection193:
+; O3-NEXT:  .Lpcsection131:
 ; O3-NEXT:    movl (%rdi), %eax
 ; O3-NEXT:    .p2align 4, 0x90
 ; O3-NEXT:  .LBB119_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
-; O3-NEXT:  .Lpcsection194:
 ; O3-NEXT:    notl %ecx
-; O3-NEXT:  .Lpcsection195:
+; O3-NEXT:  .Lpcsection132:
 ; O3-NEXT:    orl $-43, %ecx
-; O3-NEXT:  .Lpcsection196:
 ; O3-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O3-NEXT:  .Lpcsection197:
+; O3-NEXT:  .Lpcsection133:
 ; O3-NEXT:    jne .LBB119_1
 ; O3-NEXT:  # %bb.2: # %atomicrmw.end
 ; O3-NEXT:    movq $1, foo(%rip)
@@ -5985,7 +5729,7 @@ define void @atomic32_xchg_release(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:    movl $42, %eax
-; O0-NEXT:  .Lpcsection242:
+; O0-NEXT:  .Lpcsection178:
 ; O0-NEXT:    xchgl %eax, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -5994,7 +5738,7 @@ define void @atomic32_xchg_release(ptr %a) {
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection198:
+; O1-NEXT:  .Lpcsection134:
 ; O1-NEXT:    xchgl %eax, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -6003,7 +5747,7 @@ define void @atomic32_xchg_release(ptr %a) {
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection198:
+; O2-NEXT:  .Lpcsection134:
 ; O2-NEXT:    xchgl %eax, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -6012,7 +5756,7 @@ define void @atomic32_xchg_release(ptr %a) {
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection198:
+; O3-NEXT:  .Lpcsection134:
 ; O3-NEXT:    xchgl %eax, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -6027,7 +5771,7 @@ define void @atomic32_add_release(ptr %a) {
 ; O0-LABEL: atomic32_add_release:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection243:
+; O0-NEXT:  .Lpcsection179:
 ; O0-NEXT:    lock addl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -6035,7 +5779,7 @@ define void @atomic32_add_release(ptr %a) {
 ; O1-LABEL: atomic32_add_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection199:
+; O1-NEXT:  .Lpcsection135:
 ; O1-NEXT:    lock addl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -6043,7 +5787,7 @@ define void @atomic32_add_release(ptr %a) {
 ; O2-LABEL: atomic32_add_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection199:
+; O2-NEXT:  .Lpcsection135:
 ; O2-NEXT:    lock addl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -6051,7 +5795,7 @@ define void @atomic32_add_release(ptr %a) {
 ; O3-LABEL: atomic32_add_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection199:
+; O3-NEXT:  .Lpcsection135:
 ; O3-NEXT:    lock addl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -6066,7 +5810,7 @@ define void @atomic32_sub_release(ptr %a) {
 ; O0-LABEL: atomic32_sub_release:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection244:
+; O0-NEXT:  .Lpcsection180:
 ; O0-NEXT:    lock subl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -6074,7 +5818,7 @@ define void @atomic32_sub_release(ptr %a) {
 ; O1-LABEL: atomic32_sub_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection200:
+; O1-NEXT:  .Lpcsection136:
 ; O1-NEXT:    lock subl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -6082,7 +5826,7 @@ define void @atomic32_sub_release(ptr %a) {
 ; O2-LABEL: atomic32_sub_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection200:
+; O2-NEXT:  .Lpcsection136:
 ; O2-NEXT:    lock subl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -6090,7 +5834,7 @@ define void @atomic32_sub_release(ptr %a) {
 ; O3-LABEL: atomic32_sub_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection200:
+; O3-NEXT:  .Lpcsection136:
 ; O3-NEXT:    lock subl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -6105,7 +5849,7 @@ define void @atomic32_and_release(ptr %a) {
 ; O0-LABEL: atomic32_and_release:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection245:
+; O0-NEXT:  .Lpcsection181:
 ; O0-NEXT:    lock andl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -6113,7 +5857,7 @@ define void @atomic32_and_release(ptr %a) {
 ; O1-LABEL: atomic32_and_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection201:
+; O1-NEXT:  .Lpcsection137:
 ; O1-NEXT:    lock andl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -6121,7 +5865,7 @@ define void @atomic32_and_release(ptr %a) {
 ; O2-LABEL: atomic32_and_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection201:
+; O2-NEXT:  .Lpcsection137:
 ; O2-NEXT:    lock andl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -6129,7 +5873,7 @@ define void @atomic32_and_release(ptr %a) {
 ; O3-LABEL: atomic32_and_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection201:
+; O3-NEXT:  .Lpcsection137:
 ; O3-NEXT:    lock andl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -6144,7 +5888,7 @@ define void @atomic32_or_release(ptr %a) {
 ; O0-LABEL: atomic32_or_release:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection246:
+; O0-NEXT:  .Lpcsection182:
 ; O0-NEXT:    lock orl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -6152,7 +5896,7 @@ define void @atomic32_or_release(ptr %a) {
 ; O1-LABEL: atomic32_or_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection202:
+; O1-NEXT:  .Lpcsection138:
 ; O1-NEXT:    lock orl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -6160,7 +5904,7 @@ define void @atomic32_or_release(ptr %a) {
 ; O2-LABEL: atomic32_or_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection202:
+; O2-NEXT:  .Lpcsection138:
 ; O2-NEXT:    lock orl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -6168,7 +5912,7 @@ define void @atomic32_or_release(ptr %a) {
 ; O3-LABEL: atomic32_or_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection202:
+; O3-NEXT:  .Lpcsection138:
 ; O3-NEXT:    lock orl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -6183,7 +5927,7 @@ define void @atomic32_xor_release(ptr %a) {
 ; O0-LABEL: atomic32_xor_release:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection247:
+; O0-NEXT:  .Lpcsection183:
 ; O0-NEXT:    lock xorl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -6191,7 +5935,7 @@ define void @atomic32_xor_release(ptr %a) {
 ; O1-LABEL: atomic32_xor_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection203:
+; O1-NEXT:  .Lpcsection139:
 ; O1-NEXT:    lock xorl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -6199,7 +5943,7 @@ define void @atomic32_xor_release(ptr %a) {
 ; O2-LABEL: atomic32_xor_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection203:
+; O2-NEXT:  .Lpcsection139:
 ; O2-NEXT:    lock xorl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -6207,7 +5951,7 @@ define void @atomic32_xor_release(ptr %a) {
 ; O3-LABEL: atomic32_xor_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection203:
+; O3-NEXT:  .Lpcsection139:
 ; O3-NEXT:    lock xorl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -6223,7 +5967,7 @@ define void @atomic32_nand_release(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq foo, %rax
-; O0-NEXT:  .Lpcsection248:
+; O0-NEXT:  .Lpcsection184:
 ; O0-NEXT:    movl (%rdi), %eax
 ; O0-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; O0-NEXT:  .LBB126_1: # %atomicrmw.start
@@ -6231,18 +5975,16 @@ define void @atomic32_nand_release(ptr %a) {
 ; O0-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; O0-NEXT:    movl %eax, %edx
-; O0-NEXT:  .Lpcsection249:
 ; O0-NEXT:    notl %edx
-; O0-NEXT:  .Lpcsection250:
+; O0-NEXT:  .Lpcsection185:
 ; O0-NEXT:    orl $-43, %edx
-; O0-NEXT:  .Lpcsection251:
 ; O0-NEXT:    lock cmpxchgl %edx, (%rcx)
-; O0-NEXT:  .Lpcsection252:
+; O0-NEXT:  .Lpcsection186:
 ; O0-NEXT:    sete %cl
-; O0-NEXT:  .Lpcsection253:
+; O0-NEXT:  .Lpcsection187:
 ; O0-NEXT:    testb $1, %cl
 ; O0-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; O0-NEXT:  .Lpcsection254:
+; O0-NEXT:  .Lpcsection188:
 ; O0-NEXT:    jne .LBB126_2
 ; O0-NEXT:    jmp .LBB126_1
 ; O0-NEXT:  .LBB126_2: # %atomicrmw.end
@@ -6252,19 +5994,17 @@ define void @atomic32_nand_release(ptr %a) {
 ; O1-LABEL: atomic32_nand_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection204:
+; O1-NEXT:  .Lpcsection140:
 ; O1-NEXT:    movl (%rdi), %eax
 ; O1-NEXT:    .p2align 4, 0x90
 ; O1-NEXT:  .LBB126_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
-; O1-NEXT:  .Lpcsection205:
 ; O1-NEXT:    notl %ecx
-; O1-NEXT:  .Lpcsection206:
+; O1-NEXT:  .Lpcsection141:
 ; O1-NEXT:    orl $-43, %ecx
-; O1-NEXT:  .Lpcsection207:
 ; O1-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O1-NEXT:  .Lpcsection208:
+; O1-NEXT:  .Lpcsection142:
 ; O1-NEXT:    jne .LBB126_1
 ; O1-NEXT:  # %bb.2: # %atomicrmw.end
 ; O1-NEXT:    movq $1, foo(%rip)
@@ -6273,19 +6013,17 @@ define void @atomic32_nand_release(ptr %a) {
 ; O2-LABEL: atomic32_nand_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection204:
+; O2-NEXT:  .Lpcsection140:
 ; O2-NEXT:    movl (%rdi), %eax
 ; O2-NEXT:    .p2align 4, 0x90
 ; O2-NEXT:  .LBB126_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
-; O2-NEXT:  .Lpcsection205:
 ; O2-NEXT:    notl %ecx
-; O2-NEXT:  .Lpcsection206:
+; O2-NEXT:  .Lpcsection141:
 ; O2-NEXT:    orl $-43, %ecx
-; O2-NEXT:  .Lpcsection207:
 ; O2-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O2-NEXT:  .Lpcsection208:
+; O2-NEXT:  .Lpcsection142:
 ; O2-NEXT:    jne .LBB126_1
 ; O2-NEXT:  # %bb.2: # %atomicrmw.end
 ; O2-NEXT:    movq $1, foo(%rip)
@@ -6294,19 +6032,17 @@ define void @atomic32_nand_release(ptr %a) {
 ; O3-LABEL: atomic32_nand_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection204:
+; O3-NEXT:  .Lpcsection140:
 ; O3-NEXT:    movl (%rdi), %eax
 ; O3-NEXT:    .p2align 4, 0x90
 ; O3-NEXT:  .LBB126_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
-; O3-NEXT:  .Lpcsection205:
 ; O3-NEXT:    notl %ecx
-; O3-NEXT:  .Lpcsection206:
+; O3-NEXT:  .Lpcsection141:
 ; O3-NEXT:    orl $-43, %ecx
-; O3-NEXT:  .Lpcsection207:
 ; O3-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O3-NEXT:  .Lpcsection208:
+; O3-NEXT:  .Lpcsection142:
 ; O3-NEXT:    jne .LBB126_1
 ; O3-NEXT:  # %bb.2: # %atomicrmw.end
 ; O3-NEXT:    movq $1, foo(%rip)
@@ -6323,7 +6059,7 @@ define void @atomic32_xchg_acq_rel(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:    movl $42, %eax
-; O0-NEXT:  .Lpcsection255:
+; O0-NEXT:  .Lpcsection189:
 ; O0-NEXT:    xchgl %eax, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -6332,7 +6068,7 @@ define void @atomic32_xchg_acq_rel(ptr %a) {
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection209:
+; O1-NEXT:  .Lpcsection143:
 ; O1-NEXT:    xchgl %eax, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -6341,7 +6077,7 @@ define void @atomic32_xchg_acq_rel(ptr %a) {
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection209:
+; O2-NEXT:  .Lpcsection143:
 ; O2-NEXT:    xchgl %eax, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -6350,7 +6086,7 @@ define void @atomic32_xchg_acq_rel(ptr %a) {
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection209:
+; O3-NEXT:  .Lpcsection143:
 ; O3-NEXT:    xchgl %eax, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -6365,7 +6101,7 @@ define void @atomic32_add_acq_rel(ptr %a) {
 ; O0-LABEL: atomic32_add_acq_rel:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection256:
+; O0-NEXT:  .Lpcsection190:
 ; O0-NEXT:    lock addl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -6373,7 +6109,7 @@ define void @atomic32_add_acq_rel(ptr %a) {
 ; O1-LABEL: atomic32_add_acq_rel:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection210:
+; O1-NEXT:  .Lpcsection144:
 ; O1-NEXT:    lock addl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -6381,7 +6117,7 @@ define void @atomic32_add_acq_rel(ptr %a) {
 ; O2-LABEL: atomic32_add_acq_rel:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection210:
+; O2-NEXT:  .Lpcsection144:
 ; O2-NEXT:    lock addl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -6389,7 +6125,7 @@ define void @atomic32_add_acq_rel(ptr %a) {
 ; O3-LABEL: atomic32_add_acq_rel:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection210:
+; O3-NEXT:  .Lpcsection144:
 ; O3-NEXT:    lock addl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -6404,7 +6140,7 @@ define void @atomic32_sub_acq_rel(ptr %a) {
 ; O0-LABEL: atomic32_sub_acq_rel:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection257:
+; O0-NEXT:  .Lpcsection191:
 ; O0-NEXT:    lock subl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -6412,7 +6148,7 @@ define void @atomic32_sub_acq_rel(ptr %a) {
 ; O1-LABEL: atomic32_sub_acq_rel:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection211:
+; O1-NEXT:  .Lpcsection145:
 ; O1-NEXT:    lock subl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -6420,7 +6156,7 @@ define void @atomic32_sub_acq_rel(ptr %a) {
 ; O2-LABEL: atomic32_sub_acq_rel:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection211:
+; O2-NEXT:  .Lpcsection145:
 ; O2-NEXT:    lock subl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -6428,7 +6164,7 @@ define void @atomic32_sub_acq_rel(ptr %a) {
 ; O3-LABEL: atomic32_sub_acq_rel:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection211:
+; O3-NEXT:  .Lpcsection145:
 ; O3-NEXT:    lock subl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -6443,7 +6179,7 @@ define void @atomic32_and_acq_rel(ptr %a) {
 ; O0-LABEL: atomic32_and_acq_rel:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection258:
+; O0-NEXT:  .Lpcsection192:
 ; O0-NEXT:    lock andl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -6451,7 +6187,7 @@ define void @atomic32_and_acq_rel(ptr %a) {
 ; O1-LABEL: atomic32_and_acq_rel:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection212:
+; O1-NEXT:  .Lpcsection146:
 ; O1-NEXT:    lock andl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -6459,7 +6195,7 @@ define void @atomic32_and_acq_rel(ptr %a) {
 ; O2-LABEL: atomic32_and_acq_rel:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection212:
+; O2-NEXT:  .Lpcsection146:
 ; O2-NEXT:    lock andl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -6467,7 +6203,7 @@ define void @atomic32_and_acq_rel(ptr %a) {
 ; O3-LABEL: atomic32_and_acq_rel:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection212:
+; O3-NEXT:  .Lpcsection146:
 ; O3-NEXT:    lock andl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -6482,7 +6218,7 @@ define void @atomic32_or_acq_rel(ptr %a) {
 ; O0-LABEL: atomic32_or_acq_rel:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection259:
+; O0-NEXT:  .Lpcsection193:
 ; O0-NEXT:    lock orl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -6490,7 +6226,7 @@ define void @atomic32_or_acq_rel(ptr %a) {
 ; O1-LABEL: atomic32_or_acq_rel:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection213:
+; O1-NEXT:  .Lpcsection147:
 ; O1-NEXT:    lock orl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -6498,7 +6234,7 @@ define void @atomic32_or_acq_rel(ptr %a) {
 ; O2-LABEL: atomic32_or_acq_rel:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection213:
+; O2-NEXT:  .Lpcsection147:
 ; O2-NEXT:    lock orl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -6506,7 +6242,7 @@ define void @atomic32_or_acq_rel(ptr %a) {
 ; O3-LABEL: atomic32_or_acq_rel:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection213:
+; O3-NEXT:  .Lpcsection147:
 ; O3-NEXT:    lock orl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -6521,7 +6257,7 @@ define void @atomic32_xor_acq_rel(ptr %a) {
 ; O0-LABEL: atomic32_xor_acq_rel:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection260:
+; O0-NEXT:  .Lpcsection194:
 ; O0-NEXT:    lock xorl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -6529,7 +6265,7 @@ define void @atomic32_xor_acq_rel(ptr %a) {
 ; O1-LABEL: atomic32_xor_acq_rel:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection214:
+; O1-NEXT:  .Lpcsection148:
 ; O1-NEXT:    lock xorl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -6537,7 +6273,7 @@ define void @atomic32_xor_acq_rel(ptr %a) {
 ; O2-LABEL: atomic32_xor_acq_rel:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection214:
+; O2-NEXT:  .Lpcsection148:
 ; O2-NEXT:    lock xorl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -6545,7 +6281,7 @@ define void @atomic32_xor_acq_rel(ptr %a) {
 ; O3-LABEL: atomic32_xor_acq_rel:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection214:
+; O3-NEXT:  .Lpcsection148:
 ; O3-NEXT:    lock xorl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -6561,7 +6297,7 @@ define void @atomic32_nand_acq_rel(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq foo, %rax
-; O0-NEXT:  .Lpcsection261:
+; O0-NEXT:  .Lpcsection195:
 ; O0-NEXT:    movl (%rdi), %eax
 ; O0-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; O0-NEXT:  .LBB133_1: # %atomicrmw.start
@@ -6569,18 +6305,16 @@ define void @atomic32_nand_acq_rel(ptr %a) {
 ; O0-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; O0-NEXT:    movl %eax, %edx
-; O0-NEXT:  .Lpcsection262:
 ; O0-NEXT:    notl %edx
-; O0-NEXT:  .Lpcsection263:
+; O0-NEXT:  .Lpcsection196:
 ; O0-NEXT:    orl $-43, %edx
-; O0-NEXT:  .Lpcsection264:
 ; O0-NEXT:    lock cmpxchgl %edx, (%rcx)
-; O0-NEXT:  .Lpcsection265:
+; O0-NEXT:  .Lpcsection197:
 ; O0-NEXT:    sete %cl
-; O0-NEXT:  .Lpcsection266:
+; O0-NEXT:  .Lpcsection198:
 ; O0-NEXT:    testb $1, %cl
 ; O0-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; O0-NEXT:  .Lpcsection267:
+; O0-NEXT:  .Lpcsection199:
 ; O0-NEXT:    jne .LBB133_2
 ; O0-NEXT:    jmp .LBB133_1
 ; O0-NEXT:  .LBB133_2: # %atomicrmw.end
@@ -6590,19 +6324,17 @@ define void @atomic32_nand_acq_rel(ptr %a) {
 ; O1-LABEL: atomic32_nand_acq_rel:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection215:
+; O1-NEXT:  .Lpcsection149:
 ; O1-NEXT:    movl (%rdi), %eax
 ; O1-NEXT:    .p2align 4, 0x90
 ; O1-NEXT:  .LBB133_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
-; O1-NEXT:  .Lpcsection216:
 ; O1-NEXT:    notl %ecx
-; O1-NEXT:  .Lpcsection217:
+; O1-NEXT:  .Lpcsection150:
 ; O1-NEXT:    orl $-43, %ecx
-; O1-NEXT:  .Lpcsection218:
 ; O1-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O1-NEXT:  .Lpcsection219:
+; O1-NEXT:  .Lpcsection151:
 ; O1-NEXT:    jne .LBB133_1
 ; O1-NEXT:  # %bb.2: # %atomicrmw.end
 ; O1-NEXT:    movq $1, foo(%rip)
@@ -6611,19 +6343,17 @@ define void @atomic32_nand_acq_rel(ptr %a) {
 ; O2-LABEL: atomic32_nand_acq_rel:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection215:
+; O2-NEXT:  .Lpcsection149:
 ; O2-NEXT:    movl (%rdi), %eax
 ; O2-NEXT:    .p2align 4, 0x90
 ; O2-NEXT:  .LBB133_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
-; O2-NEXT:  .Lpcsection216:
 ; O2-NEXT:    notl %ecx
-; O2-NEXT:  .Lpcsection217:
+; O2-NEXT:  .Lpcsection150:
 ; O2-NEXT:    orl $-43, %ecx
-; O2-NEXT:  .Lpcsection218:
 ; O2-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O2-NEXT:  .Lpcsection219:
+; O2-NEXT:  .Lpcsection151:
 ; O2-NEXT:    jne .LBB133_1
 ; O2-NEXT:  # %bb.2: # %atomicrmw.end
 ; O2-NEXT:    movq $1, foo(%rip)
@@ -6632,19 +6362,17 @@ define void @atomic32_nand_acq_rel(ptr %a) {
 ; O3-LABEL: atomic32_nand_acq_rel:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection215:
+; O3-NEXT:  .Lpcsection149:
 ; O3-NEXT:    movl (%rdi), %eax
 ; O3-NEXT:    .p2align 4, 0x90
 ; O3-NEXT:  .LBB133_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
-; O3-NEXT:  .Lpcsection216:
 ; O3-NEXT:    notl %ecx
-; O3-NEXT:  .Lpcsection217:
+; O3-NEXT:  .Lpcsection150:
 ; O3-NEXT:    orl $-43, %ecx
-; O3-NEXT:  .Lpcsection218:
 ; O3-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O3-NEXT:  .Lpcsection219:
+; O3-NEXT:  .Lpcsection151:
 ; O3-NEXT:    jne .LBB133_1
 ; O3-NEXT:  # %bb.2: # %atomicrmw.end
 ; O3-NEXT:    movq $1, foo(%rip)
@@ -6661,7 +6389,7 @@ define void @atomic32_xchg_seq_cst(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:    movl $42, %eax
-; O0-NEXT:  .Lpcsection268:
+; O0-NEXT:  .Lpcsection200:
 ; O0-NEXT:    xchgl %eax, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -6670,7 +6398,7 @@ define void @atomic32_xchg_seq_cst(ptr %a) {
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection220:
+; O1-NEXT:  .Lpcsection152:
 ; O1-NEXT:    xchgl %eax, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -6679,7 +6407,7 @@ define void @atomic32_xchg_seq_cst(ptr %a) {
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection220:
+; O2-NEXT:  .Lpcsection152:
 ; O2-NEXT:    xchgl %eax, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -6688,7 +6416,7 @@ define void @atomic32_xchg_seq_cst(ptr %a) {
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection220:
+; O3-NEXT:  .Lpcsection152:
 ; O3-NEXT:    xchgl %eax, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -6703,7 +6431,7 @@ define void @atomic32_add_seq_cst(ptr %a) {
 ; O0-LABEL: atomic32_add_seq_cst:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection269:
+; O0-NEXT:  .Lpcsection201:
 ; O0-NEXT:    lock addl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -6711,7 +6439,7 @@ define void @atomic32_add_seq_cst(ptr %a) {
 ; O1-LABEL: atomic32_add_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection221:
+; O1-NEXT:  .Lpcsection153:
 ; O1-NEXT:    lock addl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -6719,7 +6447,7 @@ define void @atomic32_add_seq_cst(ptr %a) {
 ; O2-LABEL: atomic32_add_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection221:
+; O2-NEXT:  .Lpcsection153:
 ; O2-NEXT:    lock addl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -6727,7 +6455,7 @@ define void @atomic32_add_seq_cst(ptr %a) {
 ; O3-LABEL: atomic32_add_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection221:
+; O3-NEXT:  .Lpcsection153:
 ; O3-NEXT:    lock addl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -6742,7 +6470,7 @@ define void @atomic32_sub_seq_cst(ptr %a) {
 ; O0-LABEL: atomic32_sub_seq_cst:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection270:
+; O0-NEXT:  .Lpcsection202:
 ; O0-NEXT:    lock subl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -6750,7 +6478,7 @@ define void @atomic32_sub_seq_cst(ptr %a) {
 ; O1-LABEL: atomic32_sub_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection222:
+; O1-NEXT:  .Lpcsection154:
 ; O1-NEXT:    lock subl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -6758,7 +6486,7 @@ define void @atomic32_sub_seq_cst(ptr %a) {
 ; O2-LABEL: atomic32_sub_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection222:
+; O2-NEXT:  .Lpcsection154:
 ; O2-NEXT:    lock subl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -6766,7 +6494,7 @@ define void @atomic32_sub_seq_cst(ptr %a) {
 ; O3-LABEL: atomic32_sub_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection222:
+; O3-NEXT:  .Lpcsection154:
 ; O3-NEXT:    lock subl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -6781,7 +6509,7 @@ define void @atomic32_and_seq_cst(ptr %a) {
 ; O0-LABEL: atomic32_and_seq_cst:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection271:
+; O0-NEXT:  .Lpcsection203:
 ; O0-NEXT:    lock andl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -6789,7 +6517,7 @@ define void @atomic32_and_seq_cst(ptr %a) {
 ; O1-LABEL: atomic32_and_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection223:
+; O1-NEXT:  .Lpcsection155:
 ; O1-NEXT:    lock andl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -6797,7 +6525,7 @@ define void @atomic32_and_seq_cst(ptr %a) {
 ; O2-LABEL: atomic32_and_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection223:
+; O2-NEXT:  .Lpcsection155:
 ; O2-NEXT:    lock andl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -6805,7 +6533,7 @@ define void @atomic32_and_seq_cst(ptr %a) {
 ; O3-LABEL: atomic32_and_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection223:
+; O3-NEXT:  .Lpcsection155:
 ; O3-NEXT:    lock andl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -6820,7 +6548,7 @@ define void @atomic32_or_seq_cst(ptr %a) {
 ; O0-LABEL: atomic32_or_seq_cst:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection272:
+; O0-NEXT:  .Lpcsection204:
 ; O0-NEXT:    lock orl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -6828,7 +6556,7 @@ define void @atomic32_or_seq_cst(ptr %a) {
 ; O1-LABEL: atomic32_or_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection224:
+; O1-NEXT:  .Lpcsection156:
 ; O1-NEXT:    lock orl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -6836,7 +6564,7 @@ define void @atomic32_or_seq_cst(ptr %a) {
 ; O2-LABEL: atomic32_or_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection224:
+; O2-NEXT:  .Lpcsection156:
 ; O2-NEXT:    lock orl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -6844,7 +6572,7 @@ define void @atomic32_or_seq_cst(ptr %a) {
 ; O3-LABEL: atomic32_or_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection224:
+; O3-NEXT:  .Lpcsection156:
 ; O3-NEXT:    lock orl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -6859,7 +6587,7 @@ define void @atomic32_xor_seq_cst(ptr %a) {
 ; O0-LABEL: atomic32_xor_seq_cst:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection273:
+; O0-NEXT:  .Lpcsection205:
 ; O0-NEXT:    lock xorl $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -6867,7 +6595,7 @@ define void @atomic32_xor_seq_cst(ptr %a) {
 ; O1-LABEL: atomic32_xor_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection225:
+; O1-NEXT:  .Lpcsection157:
 ; O1-NEXT:    lock xorl $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -6875,7 +6603,7 @@ define void @atomic32_xor_seq_cst(ptr %a) {
 ; O2-LABEL: atomic32_xor_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection225:
+; O2-NEXT:  .Lpcsection157:
 ; O2-NEXT:    lock xorl $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -6883,7 +6611,7 @@ define void @atomic32_xor_seq_cst(ptr %a) {
 ; O3-LABEL: atomic32_xor_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection225:
+; O3-NEXT:  .Lpcsection157:
 ; O3-NEXT:    lock xorl $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -6899,7 +6627,7 @@ define void @atomic32_nand_seq_cst(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq foo, %rax
-; O0-NEXT:  .Lpcsection274:
+; O0-NEXT:  .Lpcsection206:
 ; O0-NEXT:    movl (%rdi), %eax
 ; O0-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; O0-NEXT:  .LBB140_1: # %atomicrmw.start
@@ -6907,18 +6635,16 @@ define void @atomic32_nand_seq_cst(ptr %a) {
 ; O0-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; O0-NEXT:    movl %eax, %edx
-; O0-NEXT:  .Lpcsection275:
 ; O0-NEXT:    notl %edx
-; O0-NEXT:  .Lpcsection276:
+; O0-NEXT:  .Lpcsection207:
 ; O0-NEXT:    orl $-43, %edx
-; O0-NEXT:  .Lpcsection277:
 ; O0-NEXT:    lock cmpxchgl %edx, (%rcx)
-; O0-NEXT:  .Lpcsection278:
+; O0-NEXT:  .Lpcsection208:
 ; O0-NEXT:    sete %cl
-; O0-NEXT:  .Lpcsection279:
+; O0-NEXT:  .Lpcsection209:
 ; O0-NEXT:    testb $1, %cl
 ; O0-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; O0-NEXT:  .Lpcsection280:
+; O0-NEXT:  .Lpcsection210:
 ; O0-NEXT:    jne .LBB140_2
 ; O0-NEXT:    jmp .LBB140_1
 ; O0-NEXT:  .LBB140_2: # %atomicrmw.end
@@ -6928,19 +6654,17 @@ define void @atomic32_nand_seq_cst(ptr %a) {
 ; O1-LABEL: atomic32_nand_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection226:
+; O1-NEXT:  .Lpcsection158:
 ; O1-NEXT:    movl (%rdi), %eax
 ; O1-NEXT:    .p2align 4, 0x90
 ; O1-NEXT:  .LBB140_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
-; O1-NEXT:  .Lpcsection227:
 ; O1-NEXT:    notl %ecx
-; O1-NEXT:  .Lpcsection228:
+; O1-NEXT:  .Lpcsection159:
 ; O1-NEXT:    orl $-43, %ecx
-; O1-NEXT:  .Lpcsection229:
 ; O1-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O1-NEXT:  .Lpcsection230:
+; O1-NEXT:  .Lpcsection160:
 ; O1-NEXT:    jne .LBB140_1
 ; O1-NEXT:  # %bb.2: # %atomicrmw.end
 ; O1-NEXT:    movq $1, foo(%rip)
@@ -6949,19 +6673,17 @@ define void @atomic32_nand_seq_cst(ptr %a) {
 ; O2-LABEL: atomic32_nand_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection226:
+; O2-NEXT:  .Lpcsection158:
 ; O2-NEXT:    movl (%rdi), %eax
 ; O2-NEXT:    .p2align 4, 0x90
 ; O2-NEXT:  .LBB140_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
-; O2-NEXT:  .Lpcsection227:
 ; O2-NEXT:    notl %ecx
-; O2-NEXT:  .Lpcsection228:
+; O2-NEXT:  .Lpcsection159:
 ; O2-NEXT:    orl $-43, %ecx
-; O2-NEXT:  .Lpcsection229:
 ; O2-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O2-NEXT:  .Lpcsection230:
+; O2-NEXT:  .Lpcsection160:
 ; O2-NEXT:    jne .LBB140_1
 ; O2-NEXT:  # %bb.2: # %atomicrmw.end
 ; O2-NEXT:    movq $1, foo(%rip)
@@ -6970,19 +6692,17 @@ define void @atomic32_nand_seq_cst(ptr %a) {
 ; O3-LABEL: atomic32_nand_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection226:
+; O3-NEXT:  .Lpcsection158:
 ; O3-NEXT:    movl (%rdi), %eax
 ; O3-NEXT:    .p2align 4, 0x90
 ; O3-NEXT:  .LBB140_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
-; O3-NEXT:  .Lpcsection227:
 ; O3-NEXT:    notl %ecx
-; O3-NEXT:  .Lpcsection228:
+; O3-NEXT:  .Lpcsection159:
 ; O3-NEXT:    orl $-43, %ecx
-; O3-NEXT:  .Lpcsection229:
 ; O3-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O3-NEXT:  .Lpcsection230:
+; O3-NEXT:  .Lpcsection160:
 ; O3-NEXT:    jne .LBB140_1
 ; O3-NEXT:  # %bb.2: # %atomicrmw.end
 ; O3-NEXT:    movq $1, foo(%rip)
@@ -7001,17 +6721,14 @@ define void @atomic32_cas_monotonic(ptr %a) {
 ; O0-NEXT:    movl $42, %eax
 ; O0-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; O0-NEXT:    movl $1, %ecx
-; O0-NEXT:  .Lpcsection281:
 ; O0-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O0-NEXT:  .Lpcsection282:
+; O0-NEXT:  .Lpcsection211:
 ; O0-NEXT:    # kill: def $edx killed $eax
 ; O0-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; O0-NEXT:  .Lpcsection283:
 ; O0-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O0-NEXT:  .Lpcsection284:
+; O0-NEXT:  .Lpcsection212:
 ; O0-NEXT:    # kill: def $edx killed $eax
 ; O0-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; O0-NEXT:  .Lpcsection285:
 ; O0-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -7021,13 +6738,10 @@ define void @atomic32_cas_monotonic(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movl $1, %ecx
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection231:
 ; O1-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection232:
 ; O1-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection233:
 ; O1-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -7037,13 +6751,10 @@ define void @atomic32_cas_monotonic(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movl $1, %ecx
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection231:
 ; O2-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection232:
 ; O2-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection233:
 ; O2-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -7053,13 +6764,10 @@ define void @atomic32_cas_monotonic(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movl $1, %ecx
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection231:
 ; O3-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection232:
 ; O3-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection233:
 ; O3-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -7079,17 +6787,14 @@ define void @atomic32_cas_acquire(ptr %a) {
 ; O0-NEXT:    movl $42, %eax
 ; O0-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; O0-NEXT:    movl $1, %ecx
-; O0-NEXT:  .Lpcsection286:
 ; O0-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O0-NEXT:  .Lpcsection287:
+; O0-NEXT:  .Lpcsection213:
 ; O0-NEXT:    # kill: def $edx killed $eax
 ; O0-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; O0-NEXT:  .Lpcsection288:
 ; O0-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O0-NEXT:  .Lpcsection289:
+; O0-NEXT:  .Lpcsection214:
 ; O0-NEXT:    # kill: def $edx killed $eax
 ; O0-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; O0-NEXT:  .Lpcsection290:
 ; O0-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -7099,13 +6804,10 @@ define void @atomic32_cas_acquire(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movl $1, %ecx
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection234:
 ; O1-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection235:
 ; O1-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection236:
 ; O1-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -7115,13 +6817,10 @@ define void @atomic32_cas_acquire(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movl $1, %ecx
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection234:
 ; O2-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection235:
 ; O2-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection236:
 ; O2-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -7131,13 +6830,10 @@ define void @atomic32_cas_acquire(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movl $1, %ecx
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection234:
 ; O3-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection235:
 ; O3-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection236:
 ; O3-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -7157,17 +6853,14 @@ define void @atomic32_cas_release(ptr %a) {
 ; O0-NEXT:    movl $42, %eax
 ; O0-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; O0-NEXT:    movl $1, %ecx
-; O0-NEXT:  .Lpcsection291:
 ; O0-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O0-NEXT:  .Lpcsection292:
+; O0-NEXT:  .Lpcsection215:
 ; O0-NEXT:    # kill: def $edx killed $eax
 ; O0-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; O0-NEXT:  .Lpcsection293:
 ; O0-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O0-NEXT:  .Lpcsection294:
+; O0-NEXT:  .Lpcsection216:
 ; O0-NEXT:    # kill: def $edx killed $eax
 ; O0-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; O0-NEXT:  .Lpcsection295:
 ; O0-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -7177,13 +6870,10 @@ define void @atomic32_cas_release(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movl $1, %ecx
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection237:
 ; O1-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection238:
 ; O1-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection239:
 ; O1-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -7193,13 +6883,10 @@ define void @atomic32_cas_release(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movl $1, %ecx
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection237:
 ; O2-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection238:
 ; O2-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection239:
 ; O2-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -7209,13 +6896,10 @@ define void @atomic32_cas_release(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movl $1, %ecx
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection237:
 ; O3-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection238:
 ; O3-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection239:
 ; O3-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -7235,17 +6919,14 @@ define void @atomic32_cas_acq_rel(ptr %a) {
 ; O0-NEXT:    movl $42, %eax
 ; O0-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; O0-NEXT:    movl $1, %ecx
-; O0-NEXT:  .Lpcsection296:
 ; O0-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O0-NEXT:  .Lpcsection297:
+; O0-NEXT:  .Lpcsection217:
 ; O0-NEXT:    # kill: def $edx killed $eax
 ; O0-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; O0-NEXT:  .Lpcsection298:
 ; O0-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O0-NEXT:  .Lpcsection299:
+; O0-NEXT:  .Lpcsection218:
 ; O0-NEXT:    # kill: def $edx killed $eax
 ; O0-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; O0-NEXT:  .Lpcsection300:
 ; O0-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -7255,13 +6936,10 @@ define void @atomic32_cas_acq_rel(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movl $1, %ecx
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection240:
 ; O1-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection241:
 ; O1-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection242:
 ; O1-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -7271,13 +6949,10 @@ define void @atomic32_cas_acq_rel(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movl $1, %ecx
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection240:
 ; O2-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection241:
 ; O2-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection242:
 ; O2-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -7287,13 +6962,10 @@ define void @atomic32_cas_acq_rel(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movl $1, %ecx
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection240:
 ; O3-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection241:
 ; O3-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection242:
 ; O3-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -7313,17 +6985,14 @@ define void @atomic32_cas_seq_cst(ptr %a) {
 ; O0-NEXT:    movl $42, %eax
 ; O0-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; O0-NEXT:    movl $1, %ecx
-; O0-NEXT:  .Lpcsection301:
 ; O0-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O0-NEXT:  .Lpcsection302:
+; O0-NEXT:  .Lpcsection219:
 ; O0-NEXT:    # kill: def $edx killed $eax
 ; O0-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; O0-NEXT:  .Lpcsection303:
 ; O0-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; O0-NEXT:  .Lpcsection304:
+; O0-NEXT:  .Lpcsection220:
 ; O0-NEXT:    # kill: def $edx killed $eax
 ; O0-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; O0-NEXT:  .Lpcsection305:
 ; O0-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -7333,13 +7002,10 @@ define void @atomic32_cas_seq_cst(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movl $1, %ecx
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection243:
 ; O1-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection244:
 ; O1-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection245:
 ; O1-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -7349,13 +7015,10 @@ define void @atomic32_cas_seq_cst(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movl $1, %ecx
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection243:
 ; O2-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection244:
 ; O2-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection245:
 ; O2-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -7365,13 +7028,10 @@ define void @atomic32_cas_seq_cst(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movl $1, %ecx
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection243:
 ; O3-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection244:
 ; O3-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection245:
 ; O3-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -7388,7 +7048,7 @@ define i64 @atomic64_load_unordered(ptr %a) {
 ; O0-LABEL: atomic64_load_unordered:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection306:
+; O0-NEXT:  .Lpcsection221:
 ; O0-NEXT:    movq (%rdi), %rax
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -7396,7 +7056,7 @@ define i64 @atomic64_load_unordered(ptr %a) {
 ; O1-LABEL: atomic64_load_unordered:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection246:
+; O1-NEXT:  .Lpcsection161:
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -7404,7 +7064,7 @@ define i64 @atomic64_load_unordered(ptr %a) {
 ; O2-LABEL: atomic64_load_unordered:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection246:
+; O2-NEXT:  .Lpcsection161:
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -7412,7 +7072,7 @@ define i64 @atomic64_load_unordered(ptr %a) {
 ; O3-LABEL: atomic64_load_unordered:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection246:
+; O3-NEXT:  .Lpcsection161:
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -7427,7 +7087,7 @@ define i64 @atomic64_load_monotonic(ptr %a) {
 ; O0-LABEL: atomic64_load_monotonic:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection307:
+; O0-NEXT:  .Lpcsection222:
 ; O0-NEXT:    movq (%rdi), %rax
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -7435,7 +7095,7 @@ define i64 @atomic64_load_monotonic(ptr %a) {
 ; O1-LABEL: atomic64_load_monotonic:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection247:
+; O1-NEXT:  .Lpcsection162:
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -7443,7 +7103,7 @@ define i64 @atomic64_load_monotonic(ptr %a) {
 ; O2-LABEL: atomic64_load_monotonic:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection247:
+; O2-NEXT:  .Lpcsection162:
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -7451,7 +7111,7 @@ define i64 @atomic64_load_monotonic(ptr %a) {
 ; O3-LABEL: atomic64_load_monotonic:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection247:
+; O3-NEXT:  .Lpcsection162:
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -7466,7 +7126,7 @@ define i64 @atomic64_load_acquire(ptr %a) {
 ; O0-LABEL: atomic64_load_acquire:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection308:
+; O0-NEXT:  .Lpcsection223:
 ; O0-NEXT:    movq (%rdi), %rax
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -7474,7 +7134,7 @@ define i64 @atomic64_load_acquire(ptr %a) {
 ; O1-LABEL: atomic64_load_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection248:
+; O1-NEXT:  .Lpcsection163:
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -7482,7 +7142,7 @@ define i64 @atomic64_load_acquire(ptr %a) {
 ; O2-LABEL: atomic64_load_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection248:
+; O2-NEXT:  .Lpcsection163:
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -7490,7 +7150,7 @@ define i64 @atomic64_load_acquire(ptr %a) {
 ; O3-LABEL: atomic64_load_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection248:
+; O3-NEXT:  .Lpcsection163:
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -7505,7 +7165,7 @@ define i64 @atomic64_load_seq_cst(ptr %a) {
 ; O0-LABEL: atomic64_load_seq_cst:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection309:
+; O0-NEXT:  .Lpcsection224:
 ; O0-NEXT:    movq (%rdi), %rax
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -7513,7 +7173,7 @@ define i64 @atomic64_load_seq_cst(ptr %a) {
 ; O1-LABEL: atomic64_load_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection249:
+; O1-NEXT:  .Lpcsection164:
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -7521,7 +7181,7 @@ define i64 @atomic64_load_seq_cst(ptr %a) {
 ; O2-LABEL: atomic64_load_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection249:
+; O2-NEXT:  .Lpcsection164:
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -7529,7 +7189,7 @@ define i64 @atomic64_load_seq_cst(ptr %a) {
 ; O3-LABEL: atomic64_load_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection249:
+; O3-NEXT:  .Lpcsection164:
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -7544,7 +7204,7 @@ define ptr @atomic64_load_seq_cst_ptr_ty(ptr %a) {
 ; O0-LABEL: atomic64_load_seq_cst_ptr_ty:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection310:
+; O0-NEXT:  .Lpcsection225:
 ; O0-NEXT:    movq (%rdi), %rax
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -7552,7 +7212,7 @@ define ptr @atomic64_load_seq_cst_ptr_ty(ptr %a) {
 ; O1-LABEL: atomic64_load_seq_cst_ptr_ty:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection250:
+; O1-NEXT:  .Lpcsection165:
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -7560,7 +7220,7 @@ define ptr @atomic64_load_seq_cst_ptr_ty(ptr %a) {
 ; O2-LABEL: atomic64_load_seq_cst_ptr_ty:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection250:
+; O2-NEXT:  .Lpcsection165:
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -7568,7 +7228,7 @@ define ptr @atomic64_load_seq_cst_ptr_ty(ptr %a) {
 ; O3-LABEL: atomic64_load_seq_cst_ptr_ty:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection250:
+; O3-NEXT:  .Lpcsection165:
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -7583,7 +7243,7 @@ define void @atomic64_store_unordered(ptr %a) {
 ; O0-LABEL: atomic64_store_unordered:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection311:
+; O0-NEXT:  .Lpcsection226:
 ; O0-NEXT:    movq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -7591,7 +7251,7 @@ define void @atomic64_store_unordered(ptr %a) {
 ; O1-LABEL: atomic64_store_unordered:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection251:
+; O1-NEXT:  .Lpcsection166:
 ; O1-NEXT:    movq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -7599,7 +7259,7 @@ define void @atomic64_store_unordered(ptr %a) {
 ; O2-LABEL: atomic64_store_unordered:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection251:
+; O2-NEXT:  .Lpcsection166:
 ; O2-NEXT:    movq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -7607,7 +7267,7 @@ define void @atomic64_store_unordered(ptr %a) {
 ; O3-LABEL: atomic64_store_unordered:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection251:
+; O3-NEXT:  .Lpcsection166:
 ; O3-NEXT:    movq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -7622,7 +7282,7 @@ define void @atomic64_store_monotonic(ptr %a) {
 ; O0-LABEL: atomic64_store_monotonic:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection312:
+; O0-NEXT:  .Lpcsection227:
 ; O0-NEXT:    movq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -7630,7 +7290,7 @@ define void @atomic64_store_monotonic(ptr %a) {
 ; O1-LABEL: atomic64_store_monotonic:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection252:
+; O1-NEXT:  .Lpcsection167:
 ; O1-NEXT:    movq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -7638,7 +7298,7 @@ define void @atomic64_store_monotonic(ptr %a) {
 ; O2-LABEL: atomic64_store_monotonic:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection252:
+; O2-NEXT:  .Lpcsection167:
 ; O2-NEXT:    movq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -7646,7 +7306,7 @@ define void @atomic64_store_monotonic(ptr %a) {
 ; O3-LABEL: atomic64_store_monotonic:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection252:
+; O3-NEXT:  .Lpcsection167:
 ; O3-NEXT:    movq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -7661,7 +7321,7 @@ define void @atomic64_store_release(ptr %a) {
 ; O0-LABEL: atomic64_store_release:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection313:
+; O0-NEXT:  .Lpcsection228:
 ; O0-NEXT:    movq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -7669,7 +7329,7 @@ define void @atomic64_store_release(ptr %a) {
 ; O1-LABEL: atomic64_store_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection253:
+; O1-NEXT:  .Lpcsection168:
 ; O1-NEXT:    movq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -7677,7 +7337,7 @@ define void @atomic64_store_release(ptr %a) {
 ; O2-LABEL: atomic64_store_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection253:
+; O2-NEXT:  .Lpcsection168:
 ; O2-NEXT:    movq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -7685,7 +7345,7 @@ define void @atomic64_store_release(ptr %a) {
 ; O3-LABEL: atomic64_store_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection253:
+; O3-NEXT:  .Lpcsection168:
 ; O3-NEXT:    movq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -7701,7 +7361,7 @@ define void @atomic64_store_seq_cst(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:    movl $42, %eax
-; O0-NEXT:  .Lpcsection314:
+; O0-NEXT:  .Lpcsection229:
 ; O0-NEXT:    xchgq %rax, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -7710,7 +7370,7 @@ define void @atomic64_store_seq_cst(ptr %a) {
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection254:
+; O1-NEXT:  .Lpcsection169:
 ; O1-NEXT:    xchgq %rax, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -7719,7 +7379,7 @@ define void @atomic64_store_seq_cst(ptr %a) {
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection254:
+; O2-NEXT:  .Lpcsection169:
 ; O2-NEXT:    xchgq %rax, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -7728,7 +7388,7 @@ define void @atomic64_store_seq_cst(ptr %a) {
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection254:
+; O3-NEXT:  .Lpcsection169:
 ; O3-NEXT:    xchgq %rax, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -7743,7 +7403,7 @@ define void @atomic64_store_seq_cst_ptr_ty(ptr %a, ptr %v) {
 ; O0-LABEL: atomic64_store_seq_cst_ptr_ty:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection315:
+; O0-NEXT:  .Lpcsection230:
 ; O0-NEXT:    xchgq %rsi, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -7751,7 +7411,7 @@ define void @atomic64_store_seq_cst_ptr_ty(ptr %a, ptr %v) {
 ; O1-LABEL: atomic64_store_seq_cst_ptr_ty:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection255:
+; O1-NEXT:  .Lpcsection170:
 ; O1-NEXT:    xchgq %rsi, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -7759,7 +7419,7 @@ define void @atomic64_store_seq_cst_ptr_ty(ptr %a, ptr %v) {
 ; O2-LABEL: atomic64_store_seq_cst_ptr_ty:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection255:
+; O2-NEXT:  .Lpcsection170:
 ; O2-NEXT:    xchgq %rsi, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -7767,7 +7427,7 @@ define void @atomic64_store_seq_cst_ptr_ty(ptr %a, ptr %v) {
 ; O3-LABEL: atomic64_store_seq_cst_ptr_ty:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection255:
+; O3-NEXT:  .Lpcsection170:
 ; O3-NEXT:    xchgq %rsi, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -7783,7 +7443,7 @@ define void @atomic64_xchg_monotonic(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:    movl $42, %eax
-; O0-NEXT:  .Lpcsection316:
+; O0-NEXT:  .Lpcsection231:
 ; O0-NEXT:    xchgq %rax, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -7792,7 +7452,7 @@ define void @atomic64_xchg_monotonic(ptr %a) {
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection256:
+; O1-NEXT:  .Lpcsection171:
 ; O1-NEXT:    xchgq %rax, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -7801,7 +7461,7 @@ define void @atomic64_xchg_monotonic(ptr %a) {
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection256:
+; O2-NEXT:  .Lpcsection171:
 ; O2-NEXT:    xchgq %rax, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -7810,7 +7470,7 @@ define void @atomic64_xchg_monotonic(ptr %a) {
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection256:
+; O3-NEXT:  .Lpcsection171:
 ; O3-NEXT:    xchgq %rax, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -7825,7 +7485,7 @@ define void @atomic64_add_monotonic(ptr %a) {
 ; O0-LABEL: atomic64_add_monotonic:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection317:
+; O0-NEXT:  .Lpcsection232:
 ; O0-NEXT:    lock addq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -7833,7 +7493,7 @@ define void @atomic64_add_monotonic(ptr %a) {
 ; O1-LABEL: atomic64_add_monotonic:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection257:
+; O1-NEXT:  .Lpcsection172:
 ; O1-NEXT:    lock addq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -7841,7 +7501,7 @@ define void @atomic64_add_monotonic(ptr %a) {
 ; O2-LABEL: atomic64_add_monotonic:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection257:
+; O2-NEXT:  .Lpcsection172:
 ; O2-NEXT:    lock addq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -7849,7 +7509,7 @@ define void @atomic64_add_monotonic(ptr %a) {
 ; O3-LABEL: atomic64_add_monotonic:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection257:
+; O3-NEXT:  .Lpcsection172:
 ; O3-NEXT:    lock addq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -7864,7 +7524,7 @@ define void @atomic64_sub_monotonic(ptr %a) {
 ; O0-LABEL: atomic64_sub_monotonic:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection318:
+; O0-NEXT:  .Lpcsection233:
 ; O0-NEXT:    lock subq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -7872,7 +7532,7 @@ define void @atomic64_sub_monotonic(ptr %a) {
 ; O1-LABEL: atomic64_sub_monotonic:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection258:
+; O1-NEXT:  .Lpcsection173:
 ; O1-NEXT:    lock subq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -7880,7 +7540,7 @@ define void @atomic64_sub_monotonic(ptr %a) {
 ; O2-LABEL: atomic64_sub_monotonic:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection258:
+; O2-NEXT:  .Lpcsection173:
 ; O2-NEXT:    lock subq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -7888,7 +7548,7 @@ define void @atomic64_sub_monotonic(ptr %a) {
 ; O3-LABEL: atomic64_sub_monotonic:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection258:
+; O3-NEXT:  .Lpcsection173:
 ; O3-NEXT:    lock subq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -7903,7 +7563,7 @@ define void @atomic64_and_monotonic(ptr %a) {
 ; O0-LABEL: atomic64_and_monotonic:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection319:
+; O0-NEXT:  .Lpcsection234:
 ; O0-NEXT:    lock andq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -7911,7 +7571,7 @@ define void @atomic64_and_monotonic(ptr %a) {
 ; O1-LABEL: atomic64_and_monotonic:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection259:
+; O1-NEXT:  .Lpcsection174:
 ; O1-NEXT:    lock andq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -7919,7 +7579,7 @@ define void @atomic64_and_monotonic(ptr %a) {
 ; O2-LABEL: atomic64_and_monotonic:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection259:
+; O2-NEXT:  .Lpcsection174:
 ; O2-NEXT:    lock andq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -7927,7 +7587,7 @@ define void @atomic64_and_monotonic(ptr %a) {
 ; O3-LABEL: atomic64_and_monotonic:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection259:
+; O3-NEXT:  .Lpcsection174:
 ; O3-NEXT:    lock andq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -7942,7 +7602,7 @@ define void @atomic64_or_monotonic(ptr %a) {
 ; O0-LABEL: atomic64_or_monotonic:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection320:
+; O0-NEXT:  .Lpcsection235:
 ; O0-NEXT:    lock orq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -7950,7 +7610,7 @@ define void @atomic64_or_monotonic(ptr %a) {
 ; O1-LABEL: atomic64_or_monotonic:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection260:
+; O1-NEXT:  .Lpcsection175:
 ; O1-NEXT:    lock orq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -7958,7 +7618,7 @@ define void @atomic64_or_monotonic(ptr %a) {
 ; O2-LABEL: atomic64_or_monotonic:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection260:
+; O2-NEXT:  .Lpcsection175:
 ; O2-NEXT:    lock orq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -7966,7 +7626,7 @@ define void @atomic64_or_monotonic(ptr %a) {
 ; O3-LABEL: atomic64_or_monotonic:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection260:
+; O3-NEXT:  .Lpcsection175:
 ; O3-NEXT:    lock orq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -7981,7 +7641,7 @@ define void @atomic64_xor_monotonic(ptr %a) {
 ; O0-LABEL: atomic64_xor_monotonic:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection321:
+; O0-NEXT:  .Lpcsection236:
 ; O0-NEXT:    lock xorq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -7989,7 +7649,7 @@ define void @atomic64_xor_monotonic(ptr %a) {
 ; O1-LABEL: atomic64_xor_monotonic:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection261:
+; O1-NEXT:  .Lpcsection176:
 ; O1-NEXT:    lock xorq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -7997,7 +7657,7 @@ define void @atomic64_xor_monotonic(ptr %a) {
 ; O2-LABEL: atomic64_xor_monotonic:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection261:
+; O2-NEXT:  .Lpcsection176:
 ; O2-NEXT:    lock xorq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -8005,7 +7665,7 @@ define void @atomic64_xor_monotonic(ptr %a) {
 ; O3-LABEL: atomic64_xor_monotonic:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection261:
+; O3-NEXT:  .Lpcsection176:
 ; O3-NEXT:    lock xorq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -8021,7 +7681,7 @@ define void @atomic64_nand_monotonic(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq foo, %rax
-; O0-NEXT:  .Lpcsection322:
+; O0-NEXT:  .Lpcsection237:
 ; O0-NEXT:    movq (%rdi), %rax
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .LBB162_1: # %atomicrmw.start
@@ -8029,21 +7689,18 @@ define void @atomic64_nand_monotonic(ptr %a) {
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; O0-NEXT:    movl %eax, %esi
-; O0-NEXT:  .Lpcsection323:
 ; O0-NEXT:    notl %esi
-; O0-NEXT:  .Lpcsection324:
 ; O0-NEXT:    # implicit-def: $rdx
 ; O0-NEXT:    movl %esi, %edx
-; O0-NEXT:  .Lpcsection325:
+; O0-NEXT:  .Lpcsection238:
 ; O0-NEXT:    orq $-43, %rdx
-; O0-NEXT:  .Lpcsection326:
 ; O0-NEXT:    lock cmpxchgq %rdx, (%rcx)
-; O0-NEXT:  .Lpcsection327:
+; O0-NEXT:  .Lpcsection239:
 ; O0-NEXT:    sete %cl
-; O0-NEXT:  .Lpcsection328:
+; O0-NEXT:  .Lpcsection240:
 ; O0-NEXT:    testb $1, %cl
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:  .Lpcsection329:
+; O0-NEXT:  .Lpcsection241:
 ; O0-NEXT:    jne .LBB162_2
 ; O0-NEXT:    jmp .LBB162_1
 ; O0-NEXT:  .LBB162_2: # %atomicrmw.end
@@ -8053,19 +7710,17 @@ define void @atomic64_nand_monotonic(ptr %a) {
 ; O1-LABEL: atomic64_nand_monotonic:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection262:
+; O1-NEXT:  .Lpcsection177:
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:    .p2align 4, 0x90
 ; O1-NEXT:  .LBB162_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
-; O1-NEXT:  .Lpcsection263:
 ; O1-NEXT:    notl %ecx
-; O1-NEXT:  .Lpcsection264:
+; O1-NEXT:  .Lpcsection178:
 ; O1-NEXT:    orq $-43, %rcx
-; O1-NEXT:  .Lpcsection265:
 ; O1-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O1-NEXT:  .Lpcsection266:
+; O1-NEXT:  .Lpcsection179:
 ; O1-NEXT:    jne .LBB162_1
 ; O1-NEXT:  # %bb.2: # %atomicrmw.end
 ; O1-NEXT:    movq $1, foo(%rip)
@@ -8074,19 +7729,17 @@ define void @atomic64_nand_monotonic(ptr %a) {
 ; O2-LABEL: atomic64_nand_monotonic:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection262:
+; O2-NEXT:  .Lpcsection177:
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:    .p2align 4, 0x90
 ; O2-NEXT:  .LBB162_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
-; O2-NEXT:  .Lpcsection263:
 ; O2-NEXT:    notl %ecx
-; O2-NEXT:  .Lpcsection264:
+; O2-NEXT:  .Lpcsection178:
 ; O2-NEXT:    orq $-43, %rcx
-; O2-NEXT:  .Lpcsection265:
 ; O2-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O2-NEXT:  .Lpcsection266:
+; O2-NEXT:  .Lpcsection179:
 ; O2-NEXT:    jne .LBB162_1
 ; O2-NEXT:  # %bb.2: # %atomicrmw.end
 ; O2-NEXT:    movq $1, foo(%rip)
@@ -8095,19 +7748,17 @@ define void @atomic64_nand_monotonic(ptr %a) {
 ; O3-LABEL: atomic64_nand_monotonic:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection262:
+; O3-NEXT:  .Lpcsection177:
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:    .p2align 4, 0x90
 ; O3-NEXT:  .LBB162_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
-; O3-NEXT:  .Lpcsection263:
 ; O3-NEXT:    notl %ecx
-; O3-NEXT:  .Lpcsection264:
+; O3-NEXT:  .Lpcsection178:
 ; O3-NEXT:    orq $-43, %rcx
-; O3-NEXT:  .Lpcsection265:
 ; O3-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O3-NEXT:  .Lpcsection266:
+; O3-NEXT:  .Lpcsection179:
 ; O3-NEXT:    jne .LBB162_1
 ; O3-NEXT:  # %bb.2: # %atomicrmw.end
 ; O3-NEXT:    movq $1, foo(%rip)
@@ -8124,7 +7775,7 @@ define void @atomic64_xchg_acquire(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:    movl $42, %eax
-; O0-NEXT:  .Lpcsection330:
+; O0-NEXT:  .Lpcsection242:
 ; O0-NEXT:    xchgq %rax, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -8133,7 +7784,7 @@ define void @atomic64_xchg_acquire(ptr %a) {
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection267:
+; O1-NEXT:  .Lpcsection180:
 ; O1-NEXT:    xchgq %rax, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -8142,7 +7793,7 @@ define void @atomic64_xchg_acquire(ptr %a) {
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection267:
+; O2-NEXT:  .Lpcsection180:
 ; O2-NEXT:    xchgq %rax, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -8151,7 +7802,7 @@ define void @atomic64_xchg_acquire(ptr %a) {
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection267:
+; O3-NEXT:  .Lpcsection180:
 ; O3-NEXT:    xchgq %rax, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -8166,7 +7817,7 @@ define void @atomic64_add_acquire(ptr %a) {
 ; O0-LABEL: atomic64_add_acquire:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection331:
+; O0-NEXT:  .Lpcsection243:
 ; O0-NEXT:    lock addq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -8174,7 +7825,7 @@ define void @atomic64_add_acquire(ptr %a) {
 ; O1-LABEL: atomic64_add_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection268:
+; O1-NEXT:  .Lpcsection181:
 ; O1-NEXT:    lock addq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -8182,7 +7833,7 @@ define void @atomic64_add_acquire(ptr %a) {
 ; O2-LABEL: atomic64_add_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection268:
+; O2-NEXT:  .Lpcsection181:
 ; O2-NEXT:    lock addq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -8190,7 +7841,7 @@ define void @atomic64_add_acquire(ptr %a) {
 ; O3-LABEL: atomic64_add_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection268:
+; O3-NEXT:  .Lpcsection181:
 ; O3-NEXT:    lock addq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -8205,7 +7856,7 @@ define void @atomic64_sub_acquire(ptr %a) {
 ; O0-LABEL: atomic64_sub_acquire:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection332:
+; O0-NEXT:  .Lpcsection244:
 ; O0-NEXT:    lock subq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -8213,7 +7864,7 @@ define void @atomic64_sub_acquire(ptr %a) {
 ; O1-LABEL: atomic64_sub_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection269:
+; O1-NEXT:  .Lpcsection182:
 ; O1-NEXT:    lock subq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -8221,7 +7872,7 @@ define void @atomic64_sub_acquire(ptr %a) {
 ; O2-LABEL: atomic64_sub_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection269:
+; O2-NEXT:  .Lpcsection182:
 ; O2-NEXT:    lock subq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -8229,7 +7880,7 @@ define void @atomic64_sub_acquire(ptr %a) {
 ; O3-LABEL: atomic64_sub_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection269:
+; O3-NEXT:  .Lpcsection182:
 ; O3-NEXT:    lock subq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -8244,7 +7895,7 @@ define void @atomic64_and_acquire(ptr %a) {
 ; O0-LABEL: atomic64_and_acquire:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection333:
+; O0-NEXT:  .Lpcsection245:
 ; O0-NEXT:    lock andq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -8252,7 +7903,7 @@ define void @atomic64_and_acquire(ptr %a) {
 ; O1-LABEL: atomic64_and_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection270:
+; O1-NEXT:  .Lpcsection183:
 ; O1-NEXT:    lock andq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -8260,7 +7911,7 @@ define void @atomic64_and_acquire(ptr %a) {
 ; O2-LABEL: atomic64_and_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection270:
+; O2-NEXT:  .Lpcsection183:
 ; O2-NEXT:    lock andq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -8268,7 +7919,7 @@ define void @atomic64_and_acquire(ptr %a) {
 ; O3-LABEL: atomic64_and_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection270:
+; O3-NEXT:  .Lpcsection183:
 ; O3-NEXT:    lock andq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -8283,7 +7934,7 @@ define void @atomic64_or_acquire(ptr %a) {
 ; O0-LABEL: atomic64_or_acquire:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection334:
+; O0-NEXT:  .Lpcsection246:
 ; O0-NEXT:    lock orq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -8291,7 +7942,7 @@ define void @atomic64_or_acquire(ptr %a) {
 ; O1-LABEL: atomic64_or_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection271:
+; O1-NEXT:  .Lpcsection184:
 ; O1-NEXT:    lock orq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -8299,7 +7950,7 @@ define void @atomic64_or_acquire(ptr %a) {
 ; O2-LABEL: atomic64_or_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection271:
+; O2-NEXT:  .Lpcsection184:
 ; O2-NEXT:    lock orq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -8307,7 +7958,7 @@ define void @atomic64_or_acquire(ptr %a) {
 ; O3-LABEL: atomic64_or_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection271:
+; O3-NEXT:  .Lpcsection184:
 ; O3-NEXT:    lock orq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -8322,7 +7973,7 @@ define void @atomic64_xor_acquire(ptr %a) {
 ; O0-LABEL: atomic64_xor_acquire:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection335:
+; O0-NEXT:  .Lpcsection247:
 ; O0-NEXT:    lock xorq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -8330,7 +7981,7 @@ define void @atomic64_xor_acquire(ptr %a) {
 ; O1-LABEL: atomic64_xor_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection272:
+; O1-NEXT:  .Lpcsection185:
 ; O1-NEXT:    lock xorq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -8338,7 +7989,7 @@ define void @atomic64_xor_acquire(ptr %a) {
 ; O2-LABEL: atomic64_xor_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection272:
+; O2-NEXT:  .Lpcsection185:
 ; O2-NEXT:    lock xorq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -8346,7 +7997,7 @@ define void @atomic64_xor_acquire(ptr %a) {
 ; O3-LABEL: atomic64_xor_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection272:
+; O3-NEXT:  .Lpcsection185:
 ; O3-NEXT:    lock xorq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -8362,7 +8013,7 @@ define void @atomic64_nand_acquire(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq foo, %rax
-; O0-NEXT:  .Lpcsection336:
+; O0-NEXT:  .Lpcsection248:
 ; O0-NEXT:    movq (%rdi), %rax
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .LBB169_1: # %atomicrmw.start
@@ -8370,21 +8021,18 @@ define void @atomic64_nand_acquire(ptr %a) {
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; O0-NEXT:    movl %eax, %esi
-; O0-NEXT:  .Lpcsection337:
 ; O0-NEXT:    notl %esi
-; O0-NEXT:  .Lpcsection338:
 ; O0-NEXT:    # implicit-def: $rdx
 ; O0-NEXT:    movl %esi, %edx
-; O0-NEXT:  .Lpcsection339:
+; O0-NEXT:  .Lpcsection249:
 ; O0-NEXT:    orq $-43, %rdx
-; O0-NEXT:  .Lpcsection340:
 ; O0-NEXT:    lock cmpxchgq %rdx, (%rcx)
-; O0-NEXT:  .Lpcsection341:
+; O0-NEXT:  .Lpcsection250:
 ; O0-NEXT:    sete %cl
-; O0-NEXT:  .Lpcsection342:
+; O0-NEXT:  .Lpcsection251:
 ; O0-NEXT:    testb $1, %cl
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:  .Lpcsection343:
+; O0-NEXT:  .Lpcsection252:
 ; O0-NEXT:    jne .LBB169_2
 ; O0-NEXT:    jmp .LBB169_1
 ; O0-NEXT:  .LBB169_2: # %atomicrmw.end
@@ -8394,19 +8042,17 @@ define void @atomic64_nand_acquire(ptr %a) {
 ; O1-LABEL: atomic64_nand_acquire:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection273:
+; O1-NEXT:  .Lpcsection186:
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:    .p2align 4, 0x90
 ; O1-NEXT:  .LBB169_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
-; O1-NEXT:  .Lpcsection274:
 ; O1-NEXT:    notl %ecx
-; O1-NEXT:  .Lpcsection275:
+; O1-NEXT:  .Lpcsection187:
 ; O1-NEXT:    orq $-43, %rcx
-; O1-NEXT:  .Lpcsection276:
 ; O1-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O1-NEXT:  .Lpcsection277:
+; O1-NEXT:  .Lpcsection188:
 ; O1-NEXT:    jne .LBB169_1
 ; O1-NEXT:  # %bb.2: # %atomicrmw.end
 ; O1-NEXT:    movq $1, foo(%rip)
@@ -8415,19 +8061,17 @@ define void @atomic64_nand_acquire(ptr %a) {
 ; O2-LABEL: atomic64_nand_acquire:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection273:
+; O2-NEXT:  .Lpcsection186:
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:    .p2align 4, 0x90
 ; O2-NEXT:  .LBB169_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
-; O2-NEXT:  .Lpcsection274:
 ; O2-NEXT:    notl %ecx
-; O2-NEXT:  .Lpcsection275:
+; O2-NEXT:  .Lpcsection187:
 ; O2-NEXT:    orq $-43, %rcx
-; O2-NEXT:  .Lpcsection276:
 ; O2-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O2-NEXT:  .Lpcsection277:
+; O2-NEXT:  .Lpcsection188:
 ; O2-NEXT:    jne .LBB169_1
 ; O2-NEXT:  # %bb.2: # %atomicrmw.end
 ; O2-NEXT:    movq $1, foo(%rip)
@@ -8436,19 +8080,17 @@ define void @atomic64_nand_acquire(ptr %a) {
 ; O3-LABEL: atomic64_nand_acquire:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection273:
+; O3-NEXT:  .Lpcsection186:
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:    .p2align 4, 0x90
 ; O3-NEXT:  .LBB169_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
-; O3-NEXT:  .Lpcsection274:
 ; O3-NEXT:    notl %ecx
-; O3-NEXT:  .Lpcsection275:
+; O3-NEXT:  .Lpcsection187:
 ; O3-NEXT:    orq $-43, %rcx
-; O3-NEXT:  .Lpcsection276:
 ; O3-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O3-NEXT:  .Lpcsection277:
+; O3-NEXT:  .Lpcsection188:
 ; O3-NEXT:    jne .LBB169_1
 ; O3-NEXT:  # %bb.2: # %atomicrmw.end
 ; O3-NEXT:    movq $1, foo(%rip)
@@ -8465,7 +8107,7 @@ define void @atomic64_xchg_release(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:    movl $42, %eax
-; O0-NEXT:  .Lpcsection344:
+; O0-NEXT:  .Lpcsection253:
 ; O0-NEXT:    xchgq %rax, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -8474,7 +8116,7 @@ define void @atomic64_xchg_release(ptr %a) {
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection278:
+; O1-NEXT:  .Lpcsection189:
 ; O1-NEXT:    xchgq %rax, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -8483,7 +8125,7 @@ define void @atomic64_xchg_release(ptr %a) {
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection278:
+; O2-NEXT:  .Lpcsection189:
 ; O2-NEXT:    xchgq %rax, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -8492,7 +8134,7 @@ define void @atomic64_xchg_release(ptr %a) {
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection278:
+; O3-NEXT:  .Lpcsection189:
 ; O3-NEXT:    xchgq %rax, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -8507,7 +8149,7 @@ define void @atomic64_add_release(ptr %a) {
 ; O0-LABEL: atomic64_add_release:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection345:
+; O0-NEXT:  .Lpcsection254:
 ; O0-NEXT:    lock addq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -8515,7 +8157,7 @@ define void @atomic64_add_release(ptr %a) {
 ; O1-LABEL: atomic64_add_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection279:
+; O1-NEXT:  .Lpcsection190:
 ; O1-NEXT:    lock addq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -8523,7 +8165,7 @@ define void @atomic64_add_release(ptr %a) {
 ; O2-LABEL: atomic64_add_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection279:
+; O2-NEXT:  .Lpcsection190:
 ; O2-NEXT:    lock addq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -8531,7 +8173,7 @@ define void @atomic64_add_release(ptr %a) {
 ; O3-LABEL: atomic64_add_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection279:
+; O3-NEXT:  .Lpcsection190:
 ; O3-NEXT:    lock addq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -8546,7 +8188,7 @@ define void @atomic64_sub_release(ptr %a) {
 ; O0-LABEL: atomic64_sub_release:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection346:
+; O0-NEXT:  .Lpcsection255:
 ; O0-NEXT:    lock subq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -8554,7 +8196,7 @@ define void @atomic64_sub_release(ptr %a) {
 ; O1-LABEL: atomic64_sub_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection280:
+; O1-NEXT:  .Lpcsection191:
 ; O1-NEXT:    lock subq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -8562,7 +8204,7 @@ define void @atomic64_sub_release(ptr %a) {
 ; O2-LABEL: atomic64_sub_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection280:
+; O2-NEXT:  .Lpcsection191:
 ; O2-NEXT:    lock subq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -8570,7 +8212,7 @@ define void @atomic64_sub_release(ptr %a) {
 ; O3-LABEL: atomic64_sub_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection280:
+; O3-NEXT:  .Lpcsection191:
 ; O3-NEXT:    lock subq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -8585,7 +8227,7 @@ define void @atomic64_and_release(ptr %a) {
 ; O0-LABEL: atomic64_and_release:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection347:
+; O0-NEXT:  .Lpcsection256:
 ; O0-NEXT:    lock andq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -8593,7 +8235,7 @@ define void @atomic64_and_release(ptr %a) {
 ; O1-LABEL: atomic64_and_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection281:
+; O1-NEXT:  .Lpcsection192:
 ; O1-NEXT:    lock andq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -8601,7 +8243,7 @@ define void @atomic64_and_release(ptr %a) {
 ; O2-LABEL: atomic64_and_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection281:
+; O2-NEXT:  .Lpcsection192:
 ; O2-NEXT:    lock andq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -8609,7 +8251,7 @@ define void @atomic64_and_release(ptr %a) {
 ; O3-LABEL: atomic64_and_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection281:
+; O3-NEXT:  .Lpcsection192:
 ; O3-NEXT:    lock andq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -8624,7 +8266,7 @@ define void @atomic64_or_release(ptr %a) {
 ; O0-LABEL: atomic64_or_release:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection348:
+; O0-NEXT:  .Lpcsection257:
 ; O0-NEXT:    lock orq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -8632,7 +8274,7 @@ define void @atomic64_or_release(ptr %a) {
 ; O1-LABEL: atomic64_or_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection282:
+; O1-NEXT:  .Lpcsection193:
 ; O1-NEXT:    lock orq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -8640,7 +8282,7 @@ define void @atomic64_or_release(ptr %a) {
 ; O2-LABEL: atomic64_or_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection282:
+; O2-NEXT:  .Lpcsection193:
 ; O2-NEXT:    lock orq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -8648,7 +8290,7 @@ define void @atomic64_or_release(ptr %a) {
 ; O3-LABEL: atomic64_or_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection282:
+; O3-NEXT:  .Lpcsection193:
 ; O3-NEXT:    lock orq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -8663,7 +8305,7 @@ define void @atomic64_xor_release(ptr %a) {
 ; O0-LABEL: atomic64_xor_release:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection349:
+; O0-NEXT:  .Lpcsection258:
 ; O0-NEXT:    lock xorq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -8671,7 +8313,7 @@ define void @atomic64_xor_release(ptr %a) {
 ; O1-LABEL: atomic64_xor_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection283:
+; O1-NEXT:  .Lpcsection194:
 ; O1-NEXT:    lock xorq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -8679,7 +8321,7 @@ define void @atomic64_xor_release(ptr %a) {
 ; O2-LABEL: atomic64_xor_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection283:
+; O2-NEXT:  .Lpcsection194:
 ; O2-NEXT:    lock xorq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -8687,7 +8329,7 @@ define void @atomic64_xor_release(ptr %a) {
 ; O3-LABEL: atomic64_xor_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection283:
+; O3-NEXT:  .Lpcsection194:
 ; O3-NEXT:    lock xorq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -8703,7 +8345,7 @@ define void @atomic64_nand_release(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq foo, %rax
-; O0-NEXT:  .Lpcsection350:
+; O0-NEXT:  .Lpcsection259:
 ; O0-NEXT:    movq (%rdi), %rax
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .LBB176_1: # %atomicrmw.start
@@ -8711,21 +8353,18 @@ define void @atomic64_nand_release(ptr %a) {
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; O0-NEXT:    movl %eax, %esi
-; O0-NEXT:  .Lpcsection351:
 ; O0-NEXT:    notl %esi
-; O0-NEXT:  .Lpcsection352:
 ; O0-NEXT:    # implicit-def: $rdx
 ; O0-NEXT:    movl %esi, %edx
-; O0-NEXT:  .Lpcsection353:
+; O0-NEXT:  .Lpcsection260:
 ; O0-NEXT:    orq $-43, %rdx
-; O0-NEXT:  .Lpcsection354:
 ; O0-NEXT:    lock cmpxchgq %rdx, (%rcx)
-; O0-NEXT:  .Lpcsection355:
+; O0-NEXT:  .Lpcsection261:
 ; O0-NEXT:    sete %cl
-; O0-NEXT:  .Lpcsection356:
+; O0-NEXT:  .Lpcsection262:
 ; O0-NEXT:    testb $1, %cl
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:  .Lpcsection357:
+; O0-NEXT:  .Lpcsection263:
 ; O0-NEXT:    jne .LBB176_2
 ; O0-NEXT:    jmp .LBB176_1
 ; O0-NEXT:  .LBB176_2: # %atomicrmw.end
@@ -8735,19 +8374,17 @@ define void @atomic64_nand_release(ptr %a) {
 ; O1-LABEL: atomic64_nand_release:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection284:
+; O1-NEXT:  .Lpcsection195:
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:    .p2align 4, 0x90
 ; O1-NEXT:  .LBB176_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
-; O1-NEXT:  .Lpcsection285:
 ; O1-NEXT:    notl %ecx
-; O1-NEXT:  .Lpcsection286:
+; O1-NEXT:  .Lpcsection196:
 ; O1-NEXT:    orq $-43, %rcx
-; O1-NEXT:  .Lpcsection287:
 ; O1-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O1-NEXT:  .Lpcsection288:
+; O1-NEXT:  .Lpcsection197:
 ; O1-NEXT:    jne .LBB176_1
 ; O1-NEXT:  # %bb.2: # %atomicrmw.end
 ; O1-NEXT:    movq $1, foo(%rip)
@@ -8756,19 +8393,17 @@ define void @atomic64_nand_release(ptr %a) {
 ; O2-LABEL: atomic64_nand_release:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection284:
+; O2-NEXT:  .Lpcsection195:
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:    .p2align 4, 0x90
 ; O2-NEXT:  .LBB176_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
-; O2-NEXT:  .Lpcsection285:
 ; O2-NEXT:    notl %ecx
-; O2-NEXT:  .Lpcsection286:
+; O2-NEXT:  .Lpcsection196:
 ; O2-NEXT:    orq $-43, %rcx
-; O2-NEXT:  .Lpcsection287:
 ; O2-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O2-NEXT:  .Lpcsection288:
+; O2-NEXT:  .Lpcsection197:
 ; O2-NEXT:    jne .LBB176_1
 ; O2-NEXT:  # %bb.2: # %atomicrmw.end
 ; O2-NEXT:    movq $1, foo(%rip)
@@ -8777,19 +8412,17 @@ define void @atomic64_nand_release(ptr %a) {
 ; O3-LABEL: atomic64_nand_release:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection284:
+; O3-NEXT:  .Lpcsection195:
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:    .p2align 4, 0x90
 ; O3-NEXT:  .LBB176_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
-; O3-NEXT:  .Lpcsection285:
 ; O3-NEXT:    notl %ecx
-; O3-NEXT:  .Lpcsection286:
+; O3-NEXT:  .Lpcsection196:
 ; O3-NEXT:    orq $-43, %rcx
-; O3-NEXT:  .Lpcsection287:
 ; O3-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O3-NEXT:  .Lpcsection288:
+; O3-NEXT:  .Lpcsection197:
 ; O3-NEXT:    jne .LBB176_1
 ; O3-NEXT:  # %bb.2: # %atomicrmw.end
 ; O3-NEXT:    movq $1, foo(%rip)
@@ -8806,7 +8439,7 @@ define void @atomic64_xchg_acq_rel(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:    movl $42, %eax
-; O0-NEXT:  .Lpcsection358:
+; O0-NEXT:  .Lpcsection264:
 ; O0-NEXT:    xchgq %rax, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -8815,7 +8448,7 @@ define void @atomic64_xchg_acq_rel(ptr %a) {
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection289:
+; O1-NEXT:  .Lpcsection198:
 ; O1-NEXT:    xchgq %rax, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -8824,7 +8457,7 @@ define void @atomic64_xchg_acq_rel(ptr %a) {
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection289:
+; O2-NEXT:  .Lpcsection198:
 ; O2-NEXT:    xchgq %rax, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -8833,7 +8466,7 @@ define void @atomic64_xchg_acq_rel(ptr %a) {
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection289:
+; O3-NEXT:  .Lpcsection198:
 ; O3-NEXT:    xchgq %rax, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -8848,7 +8481,7 @@ define void @atomic64_add_acq_rel(ptr %a) {
 ; O0-LABEL: atomic64_add_acq_rel:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection359:
+; O0-NEXT:  .Lpcsection265:
 ; O0-NEXT:    lock addq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -8856,7 +8489,7 @@ define void @atomic64_add_acq_rel(ptr %a) {
 ; O1-LABEL: atomic64_add_acq_rel:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection290:
+; O1-NEXT:  .Lpcsection199:
 ; O1-NEXT:    lock addq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -8864,7 +8497,7 @@ define void @atomic64_add_acq_rel(ptr %a) {
 ; O2-LABEL: atomic64_add_acq_rel:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection290:
+; O2-NEXT:  .Lpcsection199:
 ; O2-NEXT:    lock addq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -8872,7 +8505,7 @@ define void @atomic64_add_acq_rel(ptr %a) {
 ; O3-LABEL: atomic64_add_acq_rel:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection290:
+; O3-NEXT:  .Lpcsection199:
 ; O3-NEXT:    lock addq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -8887,7 +8520,7 @@ define void @atomic64_sub_acq_rel(ptr %a) {
 ; O0-LABEL: atomic64_sub_acq_rel:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection360:
+; O0-NEXT:  .Lpcsection266:
 ; O0-NEXT:    lock subq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -8895,7 +8528,7 @@ define void @atomic64_sub_acq_rel(ptr %a) {
 ; O1-LABEL: atomic64_sub_acq_rel:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection291:
+; O1-NEXT:  .Lpcsection200:
 ; O1-NEXT:    lock subq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -8903,7 +8536,7 @@ define void @atomic64_sub_acq_rel(ptr %a) {
 ; O2-LABEL: atomic64_sub_acq_rel:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection291:
+; O2-NEXT:  .Lpcsection200:
 ; O2-NEXT:    lock subq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -8911,7 +8544,7 @@ define void @atomic64_sub_acq_rel(ptr %a) {
 ; O3-LABEL: atomic64_sub_acq_rel:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection291:
+; O3-NEXT:  .Lpcsection200:
 ; O3-NEXT:    lock subq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -8926,7 +8559,7 @@ define void @atomic64_and_acq_rel(ptr %a) {
 ; O0-LABEL: atomic64_and_acq_rel:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection361:
+; O0-NEXT:  .Lpcsection267:
 ; O0-NEXT:    lock andq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -8934,7 +8567,7 @@ define void @atomic64_and_acq_rel(ptr %a) {
 ; O1-LABEL: atomic64_and_acq_rel:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection292:
+; O1-NEXT:  .Lpcsection201:
 ; O1-NEXT:    lock andq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -8942,7 +8575,7 @@ define void @atomic64_and_acq_rel(ptr %a) {
 ; O2-LABEL: atomic64_and_acq_rel:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection292:
+; O2-NEXT:  .Lpcsection201:
 ; O2-NEXT:    lock andq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -8950,7 +8583,7 @@ define void @atomic64_and_acq_rel(ptr %a) {
 ; O3-LABEL: atomic64_and_acq_rel:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection292:
+; O3-NEXT:  .Lpcsection201:
 ; O3-NEXT:    lock andq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -8965,7 +8598,7 @@ define void @atomic64_or_acq_rel(ptr %a) {
 ; O0-LABEL: atomic64_or_acq_rel:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection362:
+; O0-NEXT:  .Lpcsection268:
 ; O0-NEXT:    lock orq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -8973,7 +8606,7 @@ define void @atomic64_or_acq_rel(ptr %a) {
 ; O1-LABEL: atomic64_or_acq_rel:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection293:
+; O1-NEXT:  .Lpcsection202:
 ; O1-NEXT:    lock orq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -8981,7 +8614,7 @@ define void @atomic64_or_acq_rel(ptr %a) {
 ; O2-LABEL: atomic64_or_acq_rel:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection293:
+; O2-NEXT:  .Lpcsection202:
 ; O2-NEXT:    lock orq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -8989,7 +8622,7 @@ define void @atomic64_or_acq_rel(ptr %a) {
 ; O3-LABEL: atomic64_or_acq_rel:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection293:
+; O3-NEXT:  .Lpcsection202:
 ; O3-NEXT:    lock orq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -9004,7 +8637,7 @@ define void @atomic64_xor_acq_rel(ptr %a) {
 ; O0-LABEL: atomic64_xor_acq_rel:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection363:
+; O0-NEXT:  .Lpcsection269:
 ; O0-NEXT:    lock xorq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -9012,7 +8645,7 @@ define void @atomic64_xor_acq_rel(ptr %a) {
 ; O1-LABEL: atomic64_xor_acq_rel:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection294:
+; O1-NEXT:  .Lpcsection203:
 ; O1-NEXT:    lock xorq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -9020,7 +8653,7 @@ define void @atomic64_xor_acq_rel(ptr %a) {
 ; O2-LABEL: atomic64_xor_acq_rel:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection294:
+; O2-NEXT:  .Lpcsection203:
 ; O2-NEXT:    lock xorq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -9028,7 +8661,7 @@ define void @atomic64_xor_acq_rel(ptr %a) {
 ; O3-LABEL: atomic64_xor_acq_rel:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection294:
+; O3-NEXT:  .Lpcsection203:
 ; O3-NEXT:    lock xorq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -9044,7 +8677,7 @@ define void @atomic64_nand_acq_rel(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq foo, %rax
-; O0-NEXT:  .Lpcsection364:
+; O0-NEXT:  .Lpcsection270:
 ; O0-NEXT:    movq (%rdi), %rax
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .LBB183_1: # %atomicrmw.start
@@ -9052,21 +8685,18 @@ define void @atomic64_nand_acq_rel(ptr %a) {
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; O0-NEXT:    movl %eax, %esi
-; O0-NEXT:  .Lpcsection365:
 ; O0-NEXT:    notl %esi
-; O0-NEXT:  .Lpcsection366:
 ; O0-NEXT:    # implicit-def: $rdx
 ; O0-NEXT:    movl %esi, %edx
-; O0-NEXT:  .Lpcsection367:
+; O0-NEXT:  .Lpcsection271:
 ; O0-NEXT:    orq $-43, %rdx
-; O0-NEXT:  .Lpcsection368:
 ; O0-NEXT:    lock cmpxchgq %rdx, (%rcx)
-; O0-NEXT:  .Lpcsection369:
+; O0-NEXT:  .Lpcsection272:
 ; O0-NEXT:    sete %cl
-; O0-NEXT:  .Lpcsection370:
+; O0-NEXT:  .Lpcsection273:
 ; O0-NEXT:    testb $1, %cl
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:  .Lpcsection371:
+; O0-NEXT:  .Lpcsection274:
 ; O0-NEXT:    jne .LBB183_2
 ; O0-NEXT:    jmp .LBB183_1
 ; O0-NEXT:  .LBB183_2: # %atomicrmw.end
@@ -9076,19 +8706,17 @@ define void @atomic64_nand_acq_rel(ptr %a) {
 ; O1-LABEL: atomic64_nand_acq_rel:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection295:
+; O1-NEXT:  .Lpcsection204:
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:    .p2align 4, 0x90
 ; O1-NEXT:  .LBB183_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
-; O1-NEXT:  .Lpcsection296:
 ; O1-NEXT:    notl %ecx
-; O1-NEXT:  .Lpcsection297:
+; O1-NEXT:  .Lpcsection205:
 ; O1-NEXT:    orq $-43, %rcx
-; O1-NEXT:  .Lpcsection298:
 ; O1-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O1-NEXT:  .Lpcsection299:
+; O1-NEXT:  .Lpcsection206:
 ; O1-NEXT:    jne .LBB183_1
 ; O1-NEXT:  # %bb.2: # %atomicrmw.end
 ; O1-NEXT:    movq $1, foo(%rip)
@@ -9097,19 +8725,17 @@ define void @atomic64_nand_acq_rel(ptr %a) {
 ; O2-LABEL: atomic64_nand_acq_rel:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection295:
+; O2-NEXT:  .Lpcsection204:
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:    .p2align 4, 0x90
 ; O2-NEXT:  .LBB183_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
-; O2-NEXT:  .Lpcsection296:
 ; O2-NEXT:    notl %ecx
-; O2-NEXT:  .Lpcsection297:
+; O2-NEXT:  .Lpcsection205:
 ; O2-NEXT:    orq $-43, %rcx
-; O2-NEXT:  .Lpcsection298:
 ; O2-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O2-NEXT:  .Lpcsection299:
+; O2-NEXT:  .Lpcsection206:
 ; O2-NEXT:    jne .LBB183_1
 ; O2-NEXT:  # %bb.2: # %atomicrmw.end
 ; O2-NEXT:    movq $1, foo(%rip)
@@ -9118,19 +8744,17 @@ define void @atomic64_nand_acq_rel(ptr %a) {
 ; O3-LABEL: atomic64_nand_acq_rel:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection295:
+; O3-NEXT:  .Lpcsection204:
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:    .p2align 4, 0x90
 ; O3-NEXT:  .LBB183_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
-; O3-NEXT:  .Lpcsection296:
 ; O3-NEXT:    notl %ecx
-; O3-NEXT:  .Lpcsection297:
+; O3-NEXT:  .Lpcsection205:
 ; O3-NEXT:    orq $-43, %rcx
-; O3-NEXT:  .Lpcsection298:
 ; O3-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O3-NEXT:  .Lpcsection299:
+; O3-NEXT:  .Lpcsection206:
 ; O3-NEXT:    jne .LBB183_1
 ; O3-NEXT:  # %bb.2: # %atomicrmw.end
 ; O3-NEXT:    movq $1, foo(%rip)
@@ -9147,7 +8771,7 @@ define void @atomic64_xchg_seq_cst(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:    movl $42, %eax
-; O0-NEXT:  .Lpcsection372:
+; O0-NEXT:  .Lpcsection275:
 ; O0-NEXT:    xchgq %rax, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -9156,7 +8780,7 @@ define void @atomic64_xchg_seq_cst(ptr %a) {
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection300:
+; O1-NEXT:  .Lpcsection207:
 ; O1-NEXT:    xchgq %rax, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -9165,7 +8789,7 @@ define void @atomic64_xchg_seq_cst(ptr %a) {
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection300:
+; O2-NEXT:  .Lpcsection207:
 ; O2-NEXT:    xchgq %rax, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -9174,7 +8798,7 @@ define void @atomic64_xchg_seq_cst(ptr %a) {
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection300:
+; O3-NEXT:  .Lpcsection207:
 ; O3-NEXT:    xchgq %rax, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -9189,7 +8813,7 @@ define void @atomic64_add_seq_cst(ptr %a) {
 ; O0-LABEL: atomic64_add_seq_cst:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection373:
+; O0-NEXT:  .Lpcsection276:
 ; O0-NEXT:    lock addq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -9197,7 +8821,7 @@ define void @atomic64_add_seq_cst(ptr %a) {
 ; O1-LABEL: atomic64_add_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection301:
+; O1-NEXT:  .Lpcsection208:
 ; O1-NEXT:    lock addq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -9205,7 +8829,7 @@ define void @atomic64_add_seq_cst(ptr %a) {
 ; O2-LABEL: atomic64_add_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection301:
+; O2-NEXT:  .Lpcsection208:
 ; O2-NEXT:    lock addq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -9213,7 +8837,7 @@ define void @atomic64_add_seq_cst(ptr %a) {
 ; O3-LABEL: atomic64_add_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection301:
+; O3-NEXT:  .Lpcsection208:
 ; O3-NEXT:    lock addq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -9228,7 +8852,7 @@ define void @atomic64_sub_seq_cst(ptr %a) {
 ; O0-LABEL: atomic64_sub_seq_cst:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection374:
+; O0-NEXT:  .Lpcsection277:
 ; O0-NEXT:    lock subq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -9236,7 +8860,7 @@ define void @atomic64_sub_seq_cst(ptr %a) {
 ; O1-LABEL: atomic64_sub_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection302:
+; O1-NEXT:  .Lpcsection209:
 ; O1-NEXT:    lock subq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -9244,7 +8868,7 @@ define void @atomic64_sub_seq_cst(ptr %a) {
 ; O2-LABEL: atomic64_sub_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection302:
+; O2-NEXT:  .Lpcsection209:
 ; O2-NEXT:    lock subq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -9252,7 +8876,7 @@ define void @atomic64_sub_seq_cst(ptr %a) {
 ; O3-LABEL: atomic64_sub_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection302:
+; O3-NEXT:  .Lpcsection209:
 ; O3-NEXT:    lock subq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -9267,7 +8891,7 @@ define void @atomic64_and_seq_cst(ptr %a) {
 ; O0-LABEL: atomic64_and_seq_cst:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection375:
+; O0-NEXT:  .Lpcsection278:
 ; O0-NEXT:    lock andq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -9275,7 +8899,7 @@ define void @atomic64_and_seq_cst(ptr %a) {
 ; O1-LABEL: atomic64_and_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection303:
+; O1-NEXT:  .Lpcsection210:
 ; O1-NEXT:    lock andq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -9283,7 +8907,7 @@ define void @atomic64_and_seq_cst(ptr %a) {
 ; O2-LABEL: atomic64_and_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection303:
+; O2-NEXT:  .Lpcsection210:
 ; O2-NEXT:    lock andq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -9291,7 +8915,7 @@ define void @atomic64_and_seq_cst(ptr %a) {
 ; O3-LABEL: atomic64_and_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection303:
+; O3-NEXT:  .Lpcsection210:
 ; O3-NEXT:    lock andq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -9306,7 +8930,7 @@ define void @atomic64_or_seq_cst(ptr %a) {
 ; O0-LABEL: atomic64_or_seq_cst:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection376:
+; O0-NEXT:  .Lpcsection279:
 ; O0-NEXT:    lock orq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -9314,7 +8938,7 @@ define void @atomic64_or_seq_cst(ptr %a) {
 ; O1-LABEL: atomic64_or_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection304:
+; O1-NEXT:  .Lpcsection211:
 ; O1-NEXT:    lock orq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -9322,7 +8946,7 @@ define void @atomic64_or_seq_cst(ptr %a) {
 ; O2-LABEL: atomic64_or_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection304:
+; O2-NEXT:  .Lpcsection211:
 ; O2-NEXT:    lock orq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -9330,7 +8954,7 @@ define void @atomic64_or_seq_cst(ptr %a) {
 ; O3-LABEL: atomic64_or_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection304:
+; O3-NEXT:  .Lpcsection211:
 ; O3-NEXT:    lock orq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -9345,7 +8969,7 @@ define void @atomic64_xor_seq_cst(ptr %a) {
 ; O0-LABEL: atomic64_xor_seq_cst:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq foo(%rip), %rax
-; O0-NEXT:  .Lpcsection377:
+; O0-NEXT:  .Lpcsection280:
 ; O0-NEXT:    lock xorq $42, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -9353,7 +8977,7 @@ define void @atomic64_xor_seq_cst(ptr %a) {
 ; O1-LABEL: atomic64_xor_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection305:
+; O1-NEXT:  .Lpcsection212:
 ; O1-NEXT:    lock xorq $42, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -9361,7 +8985,7 @@ define void @atomic64_xor_seq_cst(ptr %a) {
 ; O2-LABEL: atomic64_xor_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection305:
+; O2-NEXT:  .Lpcsection212:
 ; O2-NEXT:    lock xorq $42, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -9369,7 +8993,7 @@ define void @atomic64_xor_seq_cst(ptr %a) {
 ; O3-LABEL: atomic64_xor_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection305:
+; O3-NEXT:  .Lpcsection212:
 ; O3-NEXT:    lock xorq $42, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -9385,7 +9009,7 @@ define void @atomic64_nand_seq_cst(ptr %a) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq foo, %rax
-; O0-NEXT:  .Lpcsection378:
+; O0-NEXT:  .Lpcsection281:
 ; O0-NEXT:    movq (%rdi), %rax
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .LBB190_1: # %atomicrmw.start
@@ -9393,21 +9017,18 @@ define void @atomic64_nand_seq_cst(ptr %a) {
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; O0-NEXT:    movl %eax, %esi
-; O0-NEXT:  .Lpcsection379:
 ; O0-NEXT:    notl %esi
-; O0-NEXT:  .Lpcsection380:
 ; O0-NEXT:    # implicit-def: $rdx
 ; O0-NEXT:    movl %esi, %edx
-; O0-NEXT:  .Lpcsection381:
+; O0-NEXT:  .Lpcsection282:
 ; O0-NEXT:    orq $-43, %rdx
-; O0-NEXT:  .Lpcsection382:
 ; O0-NEXT:    lock cmpxchgq %rdx, (%rcx)
-; O0-NEXT:  .Lpcsection383:
+; O0-NEXT:  .Lpcsection283:
 ; O0-NEXT:    sete %cl
-; O0-NEXT:  .Lpcsection384:
+; O0-NEXT:  .Lpcsection284:
 ; O0-NEXT:    testb $1, %cl
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:  .Lpcsection385:
+; O0-NEXT:  .Lpcsection285:
 ; O0-NEXT:    jne .LBB190_2
 ; O0-NEXT:    jmp .LBB190_1
 ; O0-NEXT:  .LBB190_2: # %atomicrmw.end
@@ -9417,19 +9038,17 @@ define void @atomic64_nand_seq_cst(ptr %a) {
 ; O1-LABEL: atomic64_nand_seq_cst:
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq foo(%rip), %rax
-; O1-NEXT:  .Lpcsection306:
+; O1-NEXT:  .Lpcsection213:
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:    .p2align 4, 0x90
 ; O1-NEXT:  .LBB190_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
-; O1-NEXT:  .Lpcsection307:
 ; O1-NEXT:    notl %ecx
-; O1-NEXT:  .Lpcsection308:
+; O1-NEXT:  .Lpcsection214:
 ; O1-NEXT:    orq $-43, %rcx
-; O1-NEXT:  .Lpcsection309:
 ; O1-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O1-NEXT:  .Lpcsection310:
+; O1-NEXT:  .Lpcsection215:
 ; O1-NEXT:    jne .LBB190_1
 ; O1-NEXT:  # %bb.2: # %atomicrmw.end
 ; O1-NEXT:    movq $1, foo(%rip)
@@ -9438,19 +9057,17 @@ define void @atomic64_nand_seq_cst(ptr %a) {
 ; O2-LABEL: atomic64_nand_seq_cst:
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq foo(%rip), %rax
-; O2-NEXT:  .Lpcsection306:
+; O2-NEXT:  .Lpcsection213:
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:    .p2align 4, 0x90
 ; O2-NEXT:  .LBB190_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
-; O2-NEXT:  .Lpcsection307:
 ; O2-NEXT:    notl %ecx
-; O2-NEXT:  .Lpcsection308:
+; O2-NEXT:  .Lpcsection214:
 ; O2-NEXT:    orq $-43, %rcx
-; O2-NEXT:  .Lpcsection309:
 ; O2-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O2-NEXT:  .Lpcsection310:
+; O2-NEXT:  .Lpcsection215:
 ; O2-NEXT:    jne .LBB190_1
 ; O2-NEXT:  # %bb.2: # %atomicrmw.end
 ; O2-NEXT:    movq $1, foo(%rip)
@@ -9459,19 +9076,17 @@ define void @atomic64_nand_seq_cst(ptr %a) {
 ; O3-LABEL: atomic64_nand_seq_cst:
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq foo(%rip), %rax
-; O3-NEXT:  .Lpcsection306:
+; O3-NEXT:  .Lpcsection213:
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:    .p2align 4, 0x90
 ; O3-NEXT:  .LBB190_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
-; O3-NEXT:  .Lpcsection307:
 ; O3-NEXT:    notl %ecx
-; O3-NEXT:  .Lpcsection308:
+; O3-NEXT:  .Lpcsection214:
 ; O3-NEXT:    orq $-43, %rcx
-; O3-NEXT:  .Lpcsection309:
 ; O3-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O3-NEXT:  .Lpcsection310:
+; O3-NEXT:  .Lpcsection215:
 ; O3-NEXT:    jne .LBB190_1
 ; O3-NEXT:  # %bb.2: # %atomicrmw.end
 ; O3-NEXT:    movq $1, foo(%rip)
@@ -9490,17 +9105,14 @@ define void @atomic64_cas_monotonic(ptr %a) {
 ; O0-NEXT:    movl $42, %eax
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movl $1, %ecx
-; O0-NEXT:  .Lpcsection386:
 ; O0-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O0-NEXT:  .Lpcsection387:
+; O0-NEXT:  .Lpcsection286:
 ; O0-NEXT:    # kill: def $rdx killed $rax
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; O0-NEXT:  .Lpcsection388:
 ; O0-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O0-NEXT:  .Lpcsection389:
+; O0-NEXT:  .Lpcsection287:
 ; O0-NEXT:    # kill: def $rdx killed $rax
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; O0-NEXT:  .Lpcsection390:
 ; O0-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -9510,13 +9122,10 @@ define void @atomic64_cas_monotonic(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movl $1, %ecx
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection311:
 ; O1-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection312:
 ; O1-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection313:
 ; O1-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -9526,13 +9135,10 @@ define void @atomic64_cas_monotonic(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movl $1, %ecx
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection311:
 ; O2-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection312:
 ; O2-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection313:
 ; O2-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -9542,13 +9148,10 @@ define void @atomic64_cas_monotonic(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movl $1, %ecx
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection311:
 ; O3-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection312:
 ; O3-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection313:
 ; O3-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -9568,17 +9171,14 @@ define void @atomic64_cas_acquire(ptr %a) {
 ; O0-NEXT:    movl $42, %eax
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movl $1, %ecx
-; O0-NEXT:  .Lpcsection391:
 ; O0-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O0-NEXT:  .Lpcsection392:
+; O0-NEXT:  .Lpcsection288:
 ; O0-NEXT:    # kill: def $rdx killed $rax
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; O0-NEXT:  .Lpcsection393:
 ; O0-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O0-NEXT:  .Lpcsection394:
+; O0-NEXT:  .Lpcsection289:
 ; O0-NEXT:    # kill: def $rdx killed $rax
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; O0-NEXT:  .Lpcsection395:
 ; O0-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -9588,13 +9188,10 @@ define void @atomic64_cas_acquire(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movl $1, %ecx
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection314:
 ; O1-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection315:
 ; O1-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection316:
 ; O1-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -9604,13 +9201,10 @@ define void @atomic64_cas_acquire(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movl $1, %ecx
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection314:
 ; O2-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection315:
 ; O2-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection316:
 ; O2-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -9620,13 +9214,10 @@ define void @atomic64_cas_acquire(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movl $1, %ecx
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection314:
 ; O3-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection315:
 ; O3-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection316:
 ; O3-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -9646,17 +9237,14 @@ define void @atomic64_cas_release(ptr %a) {
 ; O0-NEXT:    movl $42, %eax
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movl $1, %ecx
-; O0-NEXT:  .Lpcsection396:
 ; O0-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O0-NEXT:  .Lpcsection397:
+; O0-NEXT:  .Lpcsection290:
 ; O0-NEXT:    # kill: def $rdx killed $rax
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; O0-NEXT:  .Lpcsection398:
 ; O0-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O0-NEXT:  .Lpcsection399:
+; O0-NEXT:  .Lpcsection291:
 ; O0-NEXT:    # kill: def $rdx killed $rax
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; O0-NEXT:  .Lpcsection400:
 ; O0-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -9666,13 +9254,10 @@ define void @atomic64_cas_release(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movl $1, %ecx
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection317:
 ; O1-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection318:
 ; O1-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection319:
 ; O1-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -9682,13 +9267,10 @@ define void @atomic64_cas_release(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movl $1, %ecx
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection317:
 ; O2-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection318:
 ; O2-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection319:
 ; O2-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -9698,13 +9280,10 @@ define void @atomic64_cas_release(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movl $1, %ecx
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection317:
 ; O3-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection318:
 ; O3-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection319:
 ; O3-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -9724,17 +9303,14 @@ define void @atomic64_cas_acq_rel(ptr %a) {
 ; O0-NEXT:    movl $42, %eax
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movl $1, %ecx
-; O0-NEXT:  .Lpcsection401:
 ; O0-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O0-NEXT:  .Lpcsection402:
+; O0-NEXT:  .Lpcsection292:
 ; O0-NEXT:    # kill: def $rdx killed $rax
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; O0-NEXT:  .Lpcsection403:
 ; O0-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O0-NEXT:  .Lpcsection404:
+; O0-NEXT:  .Lpcsection293:
 ; O0-NEXT:    # kill: def $rdx killed $rax
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; O0-NEXT:  .Lpcsection405:
 ; O0-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -9744,13 +9320,10 @@ define void @atomic64_cas_acq_rel(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movl $1, %ecx
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection320:
 ; O1-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection321:
 ; O1-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection322:
 ; O1-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -9760,13 +9333,10 @@ define void @atomic64_cas_acq_rel(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movl $1, %ecx
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection320:
 ; O2-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection321:
 ; O2-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection322:
 ; O2-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -9776,13 +9346,10 @@ define void @atomic64_cas_acq_rel(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movl $1, %ecx
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection320:
 ; O3-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection321:
 ; O3-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection322:
 ; O3-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq
@@ -9802,17 +9369,14 @@ define void @atomic64_cas_seq_cst(ptr %a) {
 ; O0-NEXT:    movl $42, %eax
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movl $1, %ecx
-; O0-NEXT:  .Lpcsection406:
 ; O0-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O0-NEXT:  .Lpcsection407:
+; O0-NEXT:  .Lpcsection294:
 ; O0-NEXT:    # kill: def $rdx killed $rax
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; O0-NEXT:  .Lpcsection408:
 ; O0-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; O0-NEXT:  .Lpcsection409:
+; O0-NEXT:  .Lpcsection295:
 ; O0-NEXT:    # kill: def $rdx killed $rax
 ; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; O0-NEXT:  .Lpcsection410:
 ; O0-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O0-NEXT:    movq $3, foo
 ; O0-NEXT:    retq
@@ -9822,13 +9386,10 @@ define void @atomic64_cas_seq_cst(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:    movl $1, %ecx
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection323:
 ; O1-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection324:
 ; O1-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O1-NEXT:    movl $42, %eax
-; O1-NEXT:  .Lpcsection325:
 ; O1-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O1-NEXT:    movq $3, foo(%rip)
 ; O1-NEXT:    retq
@@ -9838,13 +9399,10 @@ define void @atomic64_cas_seq_cst(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:    movl $1, %ecx
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection323:
 ; O2-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection324:
 ; O2-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O2-NEXT:    movl $42, %eax
-; O2-NEXT:  .Lpcsection325:
 ; O2-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O2-NEXT:    movq $3, foo(%rip)
 ; O2-NEXT:    retq
@@ -9854,13 +9412,10 @@ define void @atomic64_cas_seq_cst(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:    movl $1, %ecx
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection323:
 ; O3-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection324:
 ; O3-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O3-NEXT:    movl $42, %eax
-; O3-NEXT:  .Lpcsection325:
 ; O3-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; O3-NEXT:    movq $3, foo(%rip)
 ; O3-NEXT:    retq
@@ -9878,7 +9433,6 @@ define void @atomic64_cas_seq_cst_ptr_ty(ptr %a, ptr %v1, ptr %v2) {
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq %rsi, %rax
 ; O0-NEXT:    movq foo(%rip), %rcx
-; O0-NEXT:  .Lpcsection411:
 ; O0-NEXT:    lock cmpxchgq %rdx, (%rdi)
 ; O0-NEXT:    movq $1, foo
 ; O0-NEXT:    retq
@@ -9887,7 +9441,6 @@ define void @atomic64_cas_seq_cst_ptr_ty(ptr %a, ptr %v1, ptr %v2) {
 ; O1:       # %bb.0: # %entry
 ; O1-NEXT:    movq %rsi, %rax
 ; O1-NEXT:    movq foo(%rip), %rcx
-; O1-NEXT:  .Lpcsection326:
 ; O1-NEXT:    lock cmpxchgq %rdx, (%rdi)
 ; O1-NEXT:    movq $1, foo(%rip)
 ; O1-NEXT:    retq
@@ -9896,7 +9449,6 @@ define void @atomic64_cas_seq_cst_ptr_ty(ptr %a, ptr %v1, ptr %v2) {
 ; O2:       # %bb.0: # %entry
 ; O2-NEXT:    movq %rsi, %rax
 ; O2-NEXT:    movq foo(%rip), %rcx
-; O2-NEXT:  .Lpcsection326:
 ; O2-NEXT:    lock cmpxchgq %rdx, (%rdi)
 ; O2-NEXT:    movq $1, foo(%rip)
 ; O2-NEXT:    retq
@@ -9905,7 +9457,6 @@ define void @atomic64_cas_seq_cst_ptr_ty(ptr %a, ptr %v1, ptr %v2) {
 ; O3:       # %bb.0: # %entry
 ; O3-NEXT:    movq %rsi, %rax
 ; O3-NEXT:    movq foo(%rip), %rcx
-; O3-NEXT:  .Lpcsection326:
 ; O3-NEXT:    lock cmpxchgq %rdx, (%rdi)
 ; O3-NEXT:    movq $1, foo(%rip)
 ; O3-NEXT:    retq

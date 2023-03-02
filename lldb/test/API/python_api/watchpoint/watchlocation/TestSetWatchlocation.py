@@ -64,6 +64,15 @@ class SetWatchlocationAPITestCase(TestBase):
         self.DebugSBValue(value)
         self.DebugSBValue(pointee)
 
+        # Check some API calls return expected values
+        self.assertEqual(watchpoint.GetWatchValueKind(),
+                         lldb.eWatchPointValueKindExpression)
+        # FIXME: The spec should probably be 'g_char_ptr'
+        self.assertEqual(watchpoint.GetWatchSpec(), None)
+        self.assertEqual(watchpoint.GetType().GetDisplayTypeName(), 'char')
+        self.assertFalse(watchpoint.IsWatchingReads())
+        self.assertTrue(watchpoint.IsWatchingWrites())
+
         # Hide stdout if not running with '-t' option.
         if not self.TraceOn():
             self.HideStdout()

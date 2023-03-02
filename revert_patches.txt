@@ -21,3 +21,7 @@ Workaround failures around new upstream changes in attributor.
 needs new driver enabled
 revert dbb6344b2 "[Libomptarget] Add the CUDA feature to the packager
 
+rocThrust asserst in build
+Revert "[AMDGPUUnifyDivergentExitNodes] Use Uniformity Analysis"
+commit 1b52c7be91131886e01a96144d37e3a4a9ca3954.
+

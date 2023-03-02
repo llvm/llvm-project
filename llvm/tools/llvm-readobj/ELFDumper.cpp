@@ -220,6 +220,7 @@ public:
   void printVersionInfo() override;
   void printArchSpecificInfo() override;
   void printStackMap() const override;
+  void printMemtag() override;
 
   const object::ELFObjectFile<ELFT> &getElfObject() const { return ObjF; };
 
@@ -295,6 +296,10 @@ protected:
   virtual void printMipsABIFlags() = 0;
   virtual void printMipsGOT(const MipsGOTParser<ELFT> &Parser) = 0;
   virtual void printMipsPLT(const MipsGOTParser<ELFT> &Parser) = 0;
+
+  virtual void printMemtag(
+      const ArrayRef<std::pair<std::string, std::string>> DynamicEntries,
+      const ArrayRef<uint8_t> AndroidNoteDesc) = 0;
 
   Expected<ArrayRef<Elf_Versym>>
   getVersionTable(const Elf_Shdr &Sec, ArrayRef<Elf_Sym> *SymTab,
@@ -577,6 +582,9 @@ public:
   void printNotes() override;
   void printELFLinkerOptions() override;
   void printStackSizes() override;
+  void printMemtag(
+      const ArrayRef<std::pair<std::string, std::string>> DynamicEntries,
+      const ArrayRef<uint8_t> AndroidNoteDesc) override;
 
 private:
   void printHashHistogram(const Elf_Hash &HashTable);
@@ -681,6 +689,9 @@ public:
   void printNotes() override;
   void printELFLinkerOptions() override;
   void printStackSizes() override;
+  void printMemtag(
+      const ArrayRef<std::pair<std::string, std::string>> DynamicEntries,
+      const ArrayRef<uint8_t> AndroidNoteDesc) override;
 
 private:
   void printRelrReloc(const Elf_Relr &R) override;
@@ -2251,7 +2262,29 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
     case DT_AARCH64_BTI_PLT:
     case DT_AARCH64_PAC_PLT:
     case DT_AARCH64_VARIANT_PCS:
+    case DT_AARCH64_MEMTAG_GLOBALSSZ:
       return std::to_string(Value);
+    case DT_AARCH64_MEMTAG_MODE:
+      switch (Value) {
+        case 0:
+          return "Synchronous (0)";
+        case 1:
+          return "Asynchronous (1)";
+        default:
+          return (Twine("Unknown (") + Twine(Value) + ")").str();
+      }
+    case DT_AARCH64_MEMTAG_HEAP:
+    case DT_AARCH64_MEMTAG_STACK:
+      switch (Value) {
+        case 0:
+          return "Disabled (0)";
+        case 1:
+          return "Enabled (1)";
+        default:
+          return (Twine("Unknown (") + Twine(Value) + ")").str();
+      }
+    case DT_AARCH64_MEMTAG_GLOBALS:
+      return (Twine("0x") + utohexstr(Value, /*LowerCase=*/true)).str();
     default:
       break;
     }
@@ -5198,6 +5231,23 @@ static bool printAndroidNote(raw_ostream &OS, uint32_t NoteType,
   return true;
 }
 
+template <class ELFT>
+void GNUELFDumper<ELFT>::printMemtag(
+    const ArrayRef<std::pair<std::string, std::string>> DynamicEntries,
+    const ArrayRef<uint8_t> AndroidNoteDesc) {
+  OS << "Memtag Dynamic Entries:\n";
+  if (DynamicEntries.empty())
+    OS << "    < none found >\n";
+  for (const auto &DynamicEntryKV : DynamicEntries)
+    OS << "    " << DynamicEntryKV.first << ": " << DynamicEntryKV.second
+       << "\n";
+
+  if (!AndroidNoteDesc.empty()) {
+    OS << "Memtag Android Note:\n";
+    printAndroidNote(OS, ELF::NT_ANDROID_TYPE_MEMTAG, AndroidNoteDesc);
+  }
+}
+
 template <typename ELFT>
 static bool printLLVMOMPOFFLOADNote(raw_ostream &OS, uint32_t NoteType,
                                     ArrayRef<uint8_t> Desc) {
@@ -5681,7 +5731,7 @@ StringRef getNoteTypeName(const typename ELFT::Note &Note, unsigned ELFType) {
 }
 
 template <class ELFT>
-static void printNotesHelper(
+static void processNotesHelper(
     const ELFDumper<ELFT> &Dumper,
     llvm::function_ref<void(std::optional<StringRef>, typename ELFT::Off,
                             typename ELFT::Addr)>
@@ -5837,7 +5887,42 @@ template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
     return Error::success();
   };
 
-  printNotesHelper(*this, PrintHeader, ProcessNote, []() {});
+  processNotesHelper(*this, /*StartNotesFn=*/PrintHeader,
+                     /*ProcessNoteFn=*/ProcessNote, /*FinishNotesFn=*/[]() {});
+}
+
+template <typename ELFT> void ELFDumper<ELFT>::printMemtag() {
+  if (Obj.getHeader().e_machine != EM_AARCH64) return;
+  std::vector<std::pair<std::string, std::string>> DynamicEntries;
+  for (const typename ELFT::Dyn &Entry : dynamic_table()) {
+    uintX_t Tag = Entry.getTag();
+    switch (Tag) {
+    case DT_AARCH64_MEMTAG_MODE:
+    case DT_AARCH64_MEMTAG_HEAP:
+    case DT_AARCH64_MEMTAG_STACK:
+    case DT_AARCH64_MEMTAG_GLOBALSSZ:
+    case DT_AARCH64_MEMTAG_GLOBALS:
+      DynamicEntries.emplace_back(Obj.getDynamicTagAsString(Tag),
+                                  getDynamicEntry(Tag, Entry.getVal()));
+    }
+  }
+
+  ArrayRef<uint8_t> AndroidNoteDesc;
+  auto FindAndroidNote = [&](const Elf_Note &Note, bool IsCore) -> Error {
+    if (Note.getName() == "Android" &&
+        Note.getType() == ELF::NT_ANDROID_TYPE_MEMTAG)
+      AndroidNoteDesc = Note.getDesc();
+    return Error::success();
+  };
+
+  processNotesHelper(
+      *this,
+      /*StartNotesFn=*/
+      [](std::optional<StringRef>, const typename ELFT::Off,
+         const typename ELFT::Addr) {},
+      /*ProcessNoteFn=*/FindAndroidNote, /*FinishNotesFn=*/[]() {});
+
+  printMemtag(DynamicEntries, AndroidNoteDesc);
 }
 
 template <class ELFT> void GNUELFDumper<ELFT>::printELFLinkerOptions() {
@@ -7216,6 +7301,22 @@ static bool printAndroidNoteLLVMStyle(uint32_t NoteType, ArrayRef<uint8_t> Desc,
   return true;
 }
 
+template <class ELFT>
+void LLVMELFDumper<ELFT>::printMemtag(
+    const ArrayRef<std::pair<std::string, std::string>> DynamicEntries,
+    const ArrayRef<uint8_t> AndroidNoteDesc) {
+  ListScope L(W, "Memtag Dynamic Entries:");
+  if (DynamicEntries.empty())
+    W.printString("< none found >");
+  for (const auto &DynamicEntryKV : DynamicEntries)
+    W.printString(DynamicEntryKV.first, DynamicEntryKV.second);
+
+  if (!AndroidNoteDesc.empty()) {
+    ListScope L(W, "Memtag Android Note:");
+    printAndroidNoteLLVMStyle(ELF::NT_ANDROID_TYPE_MEMTAG, AndroidNoteDesc, W);
+  }
+}
+
 template <typename ELFT>
 static bool printLLVMOMPOFFLOADNoteLLVMStyle(uint32_t NoteType,
                                              ArrayRef<uint8_t> Desc,
@@ -7328,7 +7429,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
     return Error::success();
   };
 
-  printNotesHelper(*this, StartNotes, ProcessNote, EndNotes);
+  processNotesHelper(*this, /*StartNotesFn=*/StartNotes,
+                     /*ProcessNoteFn=*/ProcessNote, /*FinishNotesFn=*/EndNotes);
 }
 
 template <class ELFT> void LLVMELFDumper<ELFT>::printELFLinkerOptions() {

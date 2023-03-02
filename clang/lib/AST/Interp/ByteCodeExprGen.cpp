@@ -28,7 +28,7 @@ namespace interp {
 /// Scope used to handle temporaries in toplevel variable declarations.
 template <class Emitter> class DeclScope final : public LocalScope<Emitter> {
 public:
-  DeclScope(ByteCodeExprGen<Emitter> *Ctx, const VarDecl *VD)
+  DeclScope(ByteCodeExprGen<Emitter> *Ctx, const ValueDecl *VD)
       : LocalScope<Emitter>(Ctx), Scope(Ctx->P, VD) {}
 
   void addExtended(const Scope::Local &Local) override {
@@ -413,7 +413,7 @@ bool ByteCodeExprGen<Emitter>::VisitArraySubscriptExpr(
   const Expr *Index = E->getIdx();
   PrimType IndexT = classifyPrim(Index->getType());
 
-  // Take pointer of LHS, add offset from RHS, narrow result.
+  // Take pointer of LHS, add offset from RHS.
   // What's left on the stack after this is a pointer.
   if (!this->visit(Base))
     return false;
@@ -421,10 +421,7 @@ bool ByteCodeExprGen<Emitter>::VisitArraySubscriptExpr(
   if (!this->visit(Index))
     return false;
 
-  if (!this->emitAddOffset(IndexT, E))
-    return false;
-
-  if (!this->emitNarrowPtr(E))
+  if (!this->emitArrayElemPtrPop(IndexT, E))
     return false;
 
   if (DiscardResult)
@@ -835,19 +832,10 @@ bool ByteCodeExprGen<Emitter>::VisitExprWithCleanups(
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitMaterializeTemporaryExpr(
     const MaterializeTemporaryExpr *E) {
-  StorageDuration SD = E->getStorageDuration();
-
-  // We conservatively only support these for now.
-  if (SD != SD_Static && SD != SD_Automatic)
-    return false;
-
   const Expr *SubExpr = E->getSubExpr();
   std::optional<PrimType> SubExprT = classify(SubExpr);
-  // FIXME: Implement this for records and arrays as well.
-  if (!SubExprT)
-    return false;
 
-  if (SD == SD_Static) {
+  if (E->getStorageDuration() == SD_Static) {
     if (std::optional<unsigned> GlobalIndex = P.createGlobal(E)) {
       const LifetimeExtendedTemporaryDecl *TempDecl =
           E->getLifetimeExtendedTemporaryDecl();
@@ -859,15 +847,54 @@ bool ByteCodeExprGen<Emitter>::VisitMaterializeTemporaryExpr(
         return false;
       return this->emitGetPtrGlobal(*GlobalIndex, E);
     }
-  } else if (SD == SD_Automatic) {
-    if (std::optional<unsigned> LocalIndex =
-            allocateLocalPrimitive(SubExpr, *SubExprT, true, true)) {
+
+    return false;
+  }
+
+  // For everyhing else, use local variables.
+  if (SubExprT) {
+    if (std::optional<unsigned> LocalIndex = allocateLocalPrimitive(
+            SubExpr, *SubExprT, /*IsMutable=*/true, /*IsExtended=*/true)) {
       if (!this->visitInitializer(SubExpr))
         return false;
-
-      if (!this->emitSetLocal(*SubExprT, *LocalIndex, E))
-        return false;
+      this->emitSetLocal(*SubExprT, *LocalIndex, E);
       return this->emitGetPtrLocal(*LocalIndex, E);
+    }
+  } else {
+    if (std::optional<unsigned> LocalIndex =
+            allocateLocal(SubExpr, /*IsExtended=*/true)) {
+      if (!this->emitGetPtrLocal(*LocalIndex, E))
+        return false;
+      return this->visitInitializer(SubExpr);
+    }
+  }
+  return false;
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCompoundLiteralExpr(
+    const CompoundLiteralExpr *E) {
+  std::optional<PrimType> T = classify(E->getType());
+  const Expr *Init = E->getInitializer();
+  if (E->isFileScope()) {
+    if (std::optional<unsigned> GlobalIndex = P.createGlobal(E)) {
+      if (classify(E->getType()))
+        return this->visit(Init);
+      if (!this->emitGetPtrGlobal(*GlobalIndex, E))
+        return false;
+      return this->visitInitializer(Init);
+    }
+  }
+
+  // Otherwise, use a local variable.
+  if (T) {
+    // For primitive types, we just visit the initializer.
+    return this->visit(Init);
+  } else {
+    if (std::optional<unsigned> LocalIndex = allocateLocal(Init)) {
+      if (!this->emitGetPtrLocal(*LocalIndex, E))
+        return false;
+      return this->visitInitializer(Init);
     }
   }
 
@@ -936,11 +963,11 @@ bool ByteCodeExprGen<Emitter>::dereference(
   if (std::optional<PrimType> T = classify(LV->getType())) {
     if (!LV->refersToBitField()) {
       // Only primitive, non bit-field types can be dereferenced directly.
-      if (auto *DE = dyn_cast<DeclRefExpr>(LV)) {
+      if (const auto *DE = dyn_cast<DeclRefExpr>(LV)) {
         if (!DE->getDecl()->getType()->isReferenceType()) {
-          if (auto *PD = dyn_cast<ParmVarDecl>(DE->getDecl()))
+          if (const auto *PD = dyn_cast<ParmVarDecl>(DE->getDecl()))
             return dereferenceParam(LV, *T, PD, AK, Direct, Indirect);
-          if (auto *VD = dyn_cast<VarDecl>(DE->getDecl()))
+          if (const auto *VD = dyn_cast<VarDecl>(DE->getDecl()))
             return dereferenceVar(LV, *T, VD, AK, Direct, Indirect);
         }
       }
@@ -1184,16 +1211,11 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
           return false;
       } else {
         // Advance the pointer currently on the stack to the given
-        // dimension and narrow().
-        if (!this->emitDupPtr(Init))
-          return false;
+        // dimension.
         if (!this->emitConstUint32(ElementIndex, Init))
           return false;
-        if (!this->emitAddOffsetUint32(Init))
+        if (!this->emitArrayElemPtrUint32(Init))
           return false;
-        if (!this->emitNarrowPtr(Init))
-          return false;
-
         if (!visitInitializer(Init))
           return false;
         if (!this->emitPopPtr(Init))
@@ -1219,31 +1241,22 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
     for (size_t I = 0; I != Size; ++I) {
       ArrayIndexScope<Emitter> IndexScope(this, I);
 
-      if (!this->emitDupPtr(SubExpr)) // LHS
-        return false;
-
       if (ElemT) {
         if (!this->visit(SubExpr))
           return false;
         if (!this->emitInitElem(*ElemT, I, Initializer))
           return false;
       } else {
-        // Narrow to our array element and recurse into visitInitializer()
+        // Get to our array element and recurse into visitInitializer()
         if (!this->emitConstUint64(I, SubExpr))
           return false;
-
-        if (!this->emitAddOffsetUint64(SubExpr))
+        if (!this->emitArrayElemPtrUint64(SubExpr))
           return false;
-
-        if (!this->emitNarrowPtr(SubExpr))
-          return false;
-
         if (!visitInitializer(SubExpr))
           return false;
+        if (!this->emitPopPtr(Initializer))
+          return false;
       }
-
-      if (!this->emitPopPtr(Initializer))
-        return false;
     }
     return true;
   } else if (const auto *IVIE = dyn_cast<ImplicitValueInitExpr>(Initializer)) {
@@ -1279,13 +1292,9 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
     // FIXME(perf): We're calling the constructor once per array element here,
     //   in the old intepreter we had a special-case for trivial constructors.
     for (size_t I = 0; I != NumElems; ++I) {
-      if (!this->emitDupPtr(Initializer))
-        return false;
       if (!this->emitConstUint64(I, Initializer))
         return false;
-      if (!this->emitAddOffsetUint64(Initializer))
-        return false;
-      if (!this->emitNarrowPtr(Initializer))
+      if (!this->emitArrayElemPtrUint64(Initializer))
         return false;
 
       // Constructor arguments.
@@ -1326,6 +1335,8 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
       }
     }
     return true;
+  } else if (const auto *CLE = dyn_cast<CompoundLiteralExpr>(Initializer)) {
+    return visitInitializer(CLE->getInitializer());
   }
 
   assert(false && "Unknown expression for array initialization");
@@ -1399,6 +1410,8 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
     return this->VisitCallExpr(CE);
   } else if (const auto *DIE = dyn_cast<CXXDefaultInitExpr>(Initializer)) {
     return this->visitInitializer(DIE->getExpr());
+  } else if (const auto *CE = dyn_cast<CastExpr>(Initializer)) {
+    return this->visitInitializer(CE->getSubExpr());
   }
 
   return false;
@@ -1511,6 +1524,10 @@ bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::visitVarDecl(const VarDecl *VD) {
+  // We don't know what to do with these, so just return false.
+  if (VD->getType().isNull())
+    return false;
+
   const Expr *Init = VD->getInit();
   std::optional<PrimType> VarT = classify(VD->getType());
 
@@ -1823,6 +1840,8 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
     }
   } else if (const auto *ECD = dyn_cast<EnumConstantDecl>(Decl)) {
     return this->emitConst(ECD->getInitVal(), E);
+  } else if (const auto *BD = dyn_cast<BindingDecl>(Decl)) {
+    return this->visit(BD->getBinding());
   }
 
   return false;

@@ -103,7 +103,7 @@ SparseTensorEncodingAttr getSparseTensorEncoding(Type type);
 
 /// Returns true iff the given type is a COO type where the last level
 /// is unique.
-bool isUniqueCOOType(TensorType tp);
+bool isUniqueCOOType(Type tp);
 
 /// Returns the starting level for a trailing COO region that spans
 /// at least two levels.  If no such COO region is found, then returns

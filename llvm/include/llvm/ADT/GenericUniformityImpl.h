@@ -811,10 +811,10 @@ void GenericUniformityAnalysisImpl<ContextT>::analyzeTemporalDivergence(
 
   LLVM_DEBUG(dbgs() << "Analyze temporal divergence: " << Context.print(&I)
                     << "\n");
-  if (!usesValueFromCycle(I, OuterDivCycle))
+  if (isAlwaysUniform(I))
     return;
 
-  if (isAlwaysUniform(I))
+  if (!usesValueFromCycle(I, OuterDivCycle))
     return;
 
   if (markDivergent(I))
