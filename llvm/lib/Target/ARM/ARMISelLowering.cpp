@@ -15000,16 +15000,31 @@ static SDValue PerformVMOVhrCombine(SDNode *N,
   // FullFP16: half values are passed in S-registers, and we don't
   // need any of the bitcast and moves:
   //
-  //     t2: f32,ch = CopyFromReg t0, Register:f32 %0
+  //     t2: f32,ch1,gl1? = CopyFromReg ch, Register:f32 %0, gl?
   //   t5: i32 = bitcast t2
   // t18: f16 = ARMISD::VMOVhr t5
+  // =>
+  // tN: f16,ch2,gl2? = CopyFromReg ch, Register::f32 %0, gl?
   if (Op0->getOpcode() == ISD::BITCAST) {
     SDValue Copy = Op0->getOperand(0);
     if (Copy.getValueType() == MVT::f32 &&
         Copy->getOpcode() == ISD::CopyFromReg) {
-      SDValue Ops[] = {Copy->getOperand(0), Copy->getOperand(1)};
+      bool HasGlue = Copy->getNumOperands() == 3;
+      SDValue Ops[] = {Copy->getOperand(0), Copy->getOperand(1),
+                       HasGlue ? Copy->getOperand(2) : SDValue()};
+      EVT OutTys[] = {N->getValueType(0), MVT::Other, MVT::Glue};
       SDValue NewCopy =
-          DCI.DAG.getNode(ISD::CopyFromReg, SDLoc(N), N->getValueType(0), Ops);
+          DCI.DAG.getNode(ISD::CopyFromReg, SDLoc(N),
+                          DCI.DAG.getVTList(ArrayRef(OutTys, HasGlue ? 3 : 2)),
+                          ArrayRef(Ops, HasGlue ? 3 : 2));
+
+      // Update Users, Chains, and Potential Glue.
+      DCI.DAG.ReplaceAllUsesOfValueWith(SDValue(N, 0), NewCopy.getValue(0));
+      DCI.DAG.ReplaceAllUsesOfValueWith(Copy.getValue(1), NewCopy.getValue(1));
+      if (HasGlue)
+        DCI.DAG.ReplaceAllUsesOfValueWith(Copy.getValue(2),
+                                          NewCopy.getValue(2));
+
       return NewCopy;
     }
   }

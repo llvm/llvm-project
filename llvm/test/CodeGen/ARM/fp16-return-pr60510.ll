@@ -59,8 +59,10 @@ define half @fp16_out_call_oneuse(float %arg) nounwind {
 ; FP16-HARD:  @ %bb.0:
 ; FP16-HARD:    vmov.f32 s16, s0
 ; FP16-HARD:    bl fp16_inner
+; FP16-HARD:    vmov.f32 s18, s0
 ; FP16-HARD:    vmov.f32 s0, s16
 ; FP16-HARD:    bl other
+; FP16-HARD:    vmov.f32 s0, s18
   %call = call half @fp16_inner()
   %call1 = call float @other(float %arg)
   ret half %call
@@ -105,13 +107,13 @@ define half @fp16_out_call_multiuse(float %arg) nounwind {
 ; FP16-HARD:  @ %bb.0:
 ; FP16-HARD:    vmov.f32 s16, s0
 ; FP16-HARD:    bl fp16_inner
+; FP16-HARD:    vmov.f32 s18, s0
 ; FP16-HARD:    vmov.f32 s0, s16
 ; FP16-HARD:    bl other
-; FP16-HARD:    vmov.f16 r0, s0
-; FP16-HARD:    vmov.f32 s16, s0
+; FP16-HARD:    vmov.f16 r0, s18
 ; FP16-HARD:    vmov s0, r0
 ; FP16-HARD:    bl fp16_sink
-; FP16-HARD:    vmov.f32 s0, s16
+; FP16-HARD:    vmov.f32 s0, s18
   %call = call half @fp16_inner()
   %call1 = call float @other(float %arg)
   call void @fp16_sink(half %call)
