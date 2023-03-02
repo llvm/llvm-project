@@ -617,7 +617,14 @@ class LLDBTypeInfoProvider : public swift::remote::TypeInfoProvider {
 public:
   LLDBTypeInfoProvider(SwiftLanguageRuntimeImpl &runtime,
                        TypeSystemSwift &typesystem)
-      : m_runtime(runtime), m_typesystem(typesystem) {}
+      : m_runtime(runtime),
+        // Always use the typeref type system so we have fewer cache
+        // invalidations.
+        m_typesystem(typesystem.GetTypeSystemSwiftTypeRef()) {}
+
+  swift::remote::TypeInfoProvider::IdType getId() override {
+    return (void *)&m_typesystem;
+  }
 
   const swift::reflection::TypeInfo *
   getTypeInfo(llvm::StringRef mangledName) override {
