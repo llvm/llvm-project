@@ -545,7 +545,13 @@ public:
                                    InterleavedAccessInfo *IAI) const;
 
   /// Query the target what the preferred style of tail folding is.
-  TailFoldingStyle getPreferredTailFoldingStyle() const;
+  /// \param IVUpdateMayOverflow Tells whether it is known if the IV update
+  /// may (or will never) overflow for the suggested VF/UF in the given loop.
+  /// Targets can use this information to select a more optimal tail folding
+  /// style. The value conservatively defaults to true, such that no assumptions
+  /// are made on overflow.
+  TailFoldingStyle
+  getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) const;
 
   // Parameters that control the loop peeling transformation
   struct PeelingPreferences {
@@ -1650,7 +1656,8 @@ public:
                               AssumptionCache &AC, TargetLibraryInfo *TLI,
                               DominatorTree *DT, LoopVectorizationLegality *LVL,
                               InterleavedAccessInfo *IAI) = 0;
-  virtual TailFoldingStyle getPreferredTailFoldingStyle() = 0;
+  virtual TailFoldingStyle
+  getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) = 0;
   virtual std::optional<Instruction *> instCombineIntrinsic(
       InstCombiner &IC, IntrinsicInst &II) = 0;
   virtual std::optional<Value *> simplifyDemandedUseBitsIntrinsic(
@@ -2051,8 +2058,9 @@ public:
                                    InterleavedAccessInfo *IAI) override {
     return Impl.preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LVL, IAI);
   }
-  TailFoldingStyle getPreferredTailFoldingStyle() override {
-    return Impl.getPreferredTailFoldingStyle();
+  TailFoldingStyle
+  getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) override {
+    return Impl.getPreferredTailFoldingStyle(IVUpdateMayOverflow);
   }
   std::optional<Instruction *>
   instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) override {

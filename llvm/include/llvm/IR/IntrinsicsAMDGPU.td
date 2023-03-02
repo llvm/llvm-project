@@ -2315,6 +2315,7 @@ class AMDGPUAtomicCondSub<LLVMType vt, LLVMType pt> : Intrinsic <
 
 def int_amdgcn_flat_atomic_cond_sub_u32 : AMDGPUAtomicCondSub<llvm_i32_ty, flat_ptr_i32_ty>;
 def int_amdgcn_global_atomic_cond_sub_u32 : AMDGPUAtomicCondSub<llvm_i32_ty, global_ptr_i32_ty>;
+def int_amdgcn_global_atomic_ordered_add_b64 : AMDGPUAtomicCondSub<llvm_i64_ty, global_ptr_i32_ty>;
 
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.

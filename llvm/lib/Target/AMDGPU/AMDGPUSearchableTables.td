@@ -244,6 +244,7 @@ def : SourceOfDivergence<int_amdgcn_global_atomic_fadd>;
 def : SourceOfDivergence<int_amdgcn_global_atomic_fmin>;
 def : SourceOfDivergence<int_amdgcn_global_atomic_fmax>;
 def : SourceOfDivergence<int_amdgcn_global_atomic_cond_sub_u32>;
+def : SourceOfDivergence<int_amdgcn_global_atomic_ordered_add_b64>;
 def : SourceOfDivergence<int_amdgcn_flat_atomic_fadd>;
 def : SourceOfDivergence<int_amdgcn_flat_atomic_fmin>;
 def : SourceOfDivergence<int_amdgcn_flat_atomic_fmax>;

@@ -213,7 +213,14 @@ bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   assert(Ptr.isLive() && "Pointer is not live");
-  if (!Ptr.isConst()) {
+  if (!Ptr.isConst())
+    return true;
+
+  // The This pointer is writable in constructors and destructors,
+  // even if isConst() returns true.
+  if (const Function *Func = S.Current->getFunction();
+      Func && (Func->isConstructor() || Func->isDestructor()) &&
+      Ptr.block() == S.Current->getThis().block()) {
     return true;
   }
 

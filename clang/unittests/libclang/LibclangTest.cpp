@@ -515,6 +515,8 @@ TEST_F(LibclangReparseTest, ReparseWithModule) {
   WriteFile(HeaderName, std::string(HeaderTop) + HeaderBottom);
   WriteFile(ModName, ModFile);
 
+  // Removing recursively is necessary to delete the module cache.
+  RemoveTestDirRecursivelyDuringTeardown = true;
   std::string ModulesCache = std::string("-fmodules-cache-path=") + TestDir;
   const char *Args[] = { "-fmodules", ModulesCache.c_str(),
                          "-I", TestDir.c_str() };
