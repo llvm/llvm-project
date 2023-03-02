@@ -922,9 +922,10 @@ struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
         continue;
       // If the dest type of the cast does not preserve static information in
       // the source type.
-      if (!tensor::preservesStaticInformation(incomingCast.getDest().getType(),
-                                         incomingCast.getSource().getType()))
-          continue;
+      if (!tensor::preservesStaticInformation(
+              incomingCast.getDest().getType(),
+              incomingCast.getSource().getType()))
+        continue;
       if (!std::get<1>(it).hasOneUse())
         continue;
 

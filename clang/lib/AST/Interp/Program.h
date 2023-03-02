@@ -131,7 +131,9 @@ public:
   /// Context to manage declaration lifetimes.
   class DeclScope {
   public:
-    DeclScope(Program &P, const VarDecl *VD) : P(P) { P.startDeclaration(VD); }
+    DeclScope(Program &P, const ValueDecl *VD) : P(P) {
+      P.startDeclaration(VD);
+    }
     ~DeclScope() { P.endDeclaration(); }
 
   private:
@@ -222,7 +224,7 @@ private:
   unsigned CurrentDeclaration = NoDeclaration;
 
   /// Starts evaluating a declaration.
-  void startDeclaration(const VarDecl *Decl) {
+  void startDeclaration(const ValueDecl *Decl) {
     LastDeclaration += 1;
     CurrentDeclaration = LastDeclaration;
   }

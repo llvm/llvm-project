@@ -37,7 +37,7 @@ What's New in Libc++ 17.0.0?
 
 Implemented Papers
 ------------------
-
+- P2520R0 - ``move_iterator<T*>`` should be a random access iterator
 - P1328R1 - ``constexpr type_info::operator==()``
 
 Improvements and New Features
