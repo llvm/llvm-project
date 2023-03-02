@@ -10,8 +10,8 @@
 
 #include "src/__support/common.h"
 
+#include "src/errno/libc_errno.h"
 #include <linux/param.h> // For EXEC_PAGESIZE.
-#include <src/errno/libc_errno.h>
 #include <unistd.h>
 
 namespace __llvm_libc {
