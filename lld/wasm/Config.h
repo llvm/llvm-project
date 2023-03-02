@@ -26,9 +26,6 @@ namespace wasm {
 // For --unresolved-symbols.
 enum class UnresolvedPolicy { ReportError, Warn, Ignore, ImportDynamic };
 
-// For --build-id.
-enum class BuildIdKind { None, Fast, Sha1, Hexstring, Uuid };
-
 // This struct contains the global configuration for the linker.
 // Most fields are direct mapping from the command line options
 // and such fields have the same name as the corresponding options.
@@ -75,7 +72,6 @@ struct Configuration {
   llvm::StringRef thinLTOJobs;
   bool ltoDebugPassManager;
   UnresolvedPolicy unresolvedSymbols;
-  BuildIdKind buildId = BuildIdKind::None;
 
   llvm::StringRef entry;
   llvm::StringRef mapFile;
@@ -89,7 +85,6 @@ struct Configuration {
   llvm::CachePruningPolicy thinLTOCachePolicy;
   std::optional<std::vector<std::string>> features;
   std::optional<std::vector<std::string>> extraFeatures;
-  llvm::SmallVector<uint8_t, 0> buildIdVector;
 
   // The following config options do not directly correspond to any
   // particular command line options.
