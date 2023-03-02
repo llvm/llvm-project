@@ -64,7 +64,6 @@ add_header_library(
   DEPENDS
     .ctype_utils
     .str_to_num_result
-    libc.include.errno
     libc.src.errno.errno
     libc.src.__support.CPP.limits
     libc.src.__support.common

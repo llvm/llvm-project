@@ -288,6 +288,7 @@ libc_support_library(
         ":__support_cpp_limits",
         ":__support_ctype_utils",
         ":__support_str_to_num_result",
+        ":errno",
     ],
 )
 
@@ -309,6 +310,7 @@ libc_support_library(
         ":__support_str_to_integer",
         ":__support_str_to_num_result",
         ":__support_uint128",
+        ":errno",
     ],
 )
 
@@ -1331,6 +1333,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_str_to_integer",
+        ":errno",
     ],
 )
 
@@ -1341,6 +1344,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_str_to_integer",
+        ":errno",
     ],
 )
 
@@ -1351,6 +1355,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_str_to_integer",
+        ":errno",
     ],
 )
 
@@ -1361,6 +1366,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_str_to_float",
+        ":errno",
     ],
 )
 
@@ -1389,6 +1395,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_str_to_integer",
+        ":errno",
     ],
 )
 
@@ -1399,6 +1406,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_str_to_integer",
+        ":errno",
     ],
 )
 
@@ -1409,6 +1417,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_str_to_integer",
+        ":errno",
     ],
 )
 
@@ -1419,6 +1428,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_str_to_integer",
+        ":errno",
     ],
 )
 
@@ -1429,6 +1439,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_str_to_float",
+        ":errno",
     ],
 )
 
@@ -1439,6 +1450,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_str_to_float",
+        ":errno",
     ],
 )
 
@@ -1449,6 +1461,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_str_to_float",
+        ":errno",
     ],
 )
 
