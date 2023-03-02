@@ -14118,10 +14118,10 @@ static SDValue lowerShuffleAsShift(const SDLoc &DL, MVT VT, SDValue V1,
     V = V2;
   }
 
-  if (BitwiseOnly && (Opcode == X86ISD::VSHLDQ || Opcode == X86ISD::VSRLDQ))
+  if (ShiftAmt < 0)
     return SDValue();
 
-  if (ShiftAmt < 0)
+  if (BitwiseOnly && (Opcode == X86ISD::VSHLDQ || Opcode == X86ISD::VSRLDQ))
     return SDValue();
 
   assert(DAG.getTargetLoweringInfo().isTypeLegal(ShiftVT) &&
@@ -38829,12 +38829,13 @@ static bool matchUnaryPermuteShuffle(MVT MaskVT, ArrayRef<int> Mask,
       int ShiftAmt =
           matchShuffleAsShift(ShuffleVT, Shuffle, MaskScalarSizeInBits, Mask, 0,
                               Zeroable, Subtarget);
-      // Byte shifts can be slower so only match them on second attempt.
-      if (Order == 0 &&
-          (Shuffle == X86ISD::VSHLDQ || Shuffle == X86ISD::VSRLDQ))
-        continue;
       if (0 < ShiftAmt && (!ShuffleVT.is512BitVector() || Subtarget.hasBWI() ||
                            32 <= ShuffleVT.getScalarSizeInBits())) {
+        // Byte shifts can be slower so only match them on second attempt.
+        if (Order == 0 &&
+            (Shuffle == X86ISD::VSHLDQ || Shuffle == X86ISD::VSRLDQ))
+          continue;
+
         PermuteImm = (unsigned)ShiftAmt;
         return true;
       }
@@ -46461,20 +46462,6 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         Cond = DAG.getNode(X86ISD::PCMPGT, DL, CondVT,
                            DAG.getConstant(0, DL, CondVT), Cond.getOperand(0));
         return DAG.getNode(N->getOpcode(), DL, VT, Cond, RHS, LHS);
-      }
-
-      // smin(LHS, RHS) : select(pcmpgt(RHS, LHS), LHS, RHS)
-      //               -> select(pcmpgt(LHS, RHS), RHS, LHS)
-      // iff the commuted pcmpgt() already exists.
-      // TODO: Could DAGCombiner::combine cse search for SETCC nodes, like it
-      // does for commutative binops?
-      if (Cond.getOperand(0) == RHS && Cond.getOperand(1) == LHS) {
-        if (SDNode *FlipCond =
-                DAG.getNodeIfExists(X86ISD::PCMPGT, DAG.getVTList(CondVT),
-                                    {Cond.getOperand(1), Cond.getOperand(0)})) {
-          return DAG.getNode(N->getOpcode(), DL, VT, SDValue(FlipCond, 0), RHS,
-                             LHS);
-        }
       }
     }
   }

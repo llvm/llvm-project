@@ -24,7 +24,7 @@ class SparseCompiler:
 
   def compile(self, module: ir.Module):
     """Compiles the module by invoking the sparse copmiler pipeline."""
-    passmanager.PassManager.parse(self.pipeline).run(module)
+    passmanager.PassManager.parse(self.pipeline).run(module.operation)
 
   def jit(self, module: ir.Module) -> execution_engine.ExecutionEngine:
     """Wraps the module in a JIT execution engine."""

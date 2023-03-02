@@ -99,8 +99,11 @@ void test() {
 #endif
 
 #if TEST_STD_VER > 17
- static_assert(std::is_same_v<typename R::iterator_concept, std::conditional_t<std::is_same_v<typename R::iterator_concept, 
-std::contiguous_iterator_tag>, std::random_access_iterator_tag, typename R::iterator_concept>>);
+  static_assert(
+      std::is_same_v<typename R::iterator_concept,
+                     std::conditional_t<std::is_same_v<typename R::iterator_concept, std::contiguous_iterator_tag>,
+                                        std::random_access_iterator_tag,
+                                        typename R::iterator_concept>>);
 #endif
 }
 

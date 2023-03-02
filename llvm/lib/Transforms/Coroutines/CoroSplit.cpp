@@ -1970,18 +1970,14 @@ splitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
   // This invalidates SwiftErrorOps in the Shape.
   replaceSwiftErrorOps(F, Shape, nullptr);
 
-  // Finally, salvage the llvm.dbg.{declare,addr} in our original function that
-  // point into the coroutine frame. We only do this for the current function
-  // since the Cloner salvaged debug info for us in the new coroutine funclets.
+  // Finally, salvage the llvm.dbg.declare in our original function that point
+  // into the coroutine frame. We only do this for the current function since
+  // the Cloner salvaged debug info for us in the new coroutine funclets.
   SmallVector<DbgVariableIntrinsic *, 8> Worklist;
   SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> DbgPtrAllocaCache;
   for (auto &BB : F) {
     for (auto &I : BB) {
       if (auto *DDI = dyn_cast<DbgDeclareInst>(&I)) {
-        Worklist.push_back(DDI);
-        continue;
-      }
-      if (auto *DDI = dyn_cast<DbgAddrIntrinsic>(&I)) {
         Worklist.push_back(DDI);
         continue;
       }

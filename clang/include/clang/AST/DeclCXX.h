@@ -1092,6 +1092,11 @@ public:
 
   unsigned capture_size() const { return getLambdaData().NumCaptures; }
 
+  const LambdaCapture *getCapture(unsigned I) const {
+    assert(isLambda() && I < capture_size() && "invalid index for capture");
+    return captures_begin() + I;
+  }
+
   using conversion_iterator = UnresolvedSetIterator;
 
   conversion_iterator conversion_begin() const {
@@ -1824,6 +1829,20 @@ public:
 
   TypeSourceInfo *getLambdaTypeInfo() const {
     return getLambdaData().MethodTyInfo;
+  }
+
+  void setLambdaTypeInfo(TypeSourceInfo *TS) {
+    assert(DefinitionData && DefinitionData->IsLambda &&
+           "setting lambda property of non-lambda class");
+    auto &DL = static_cast<LambdaDefinitionData &>(*DefinitionData);
+    DL.MethodTyInfo = TS;
+  }
+
+  void setLambdaIsGeneric(bool IsGeneric) {
+    assert(DefinitionData && DefinitionData->IsLambda &&
+           "setting lambda property of non-lambda class");
+    auto &DL = static_cast<LambdaDefinitionData &>(*DefinitionData);
+    DL.IsGenericLambda = IsGeneric;
   }
 
   // Determine whether this type is an Interface Like type for

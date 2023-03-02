@@ -306,6 +306,9 @@ def RVOPtr : Opcode;
 def NarrowPtr : Opcode;
 // [Pointer] -> [Pointer]
 def ExpandPtr : Opcode;
+// [Pointer, Offset] -> [Pointer]
+def ArrayElemPtr : AluOpcode;
+def ArrayElemPtrPop : AluOpcode;
 
 //===----------------------------------------------------------------------===//
 // Direct field accessors
@@ -327,6 +330,8 @@ class BitFieldOpcode : Opcode {
 def GetLocal : AccessOpcode { let HasCustomEval = 1; }
 // [] -> [Pointer]
 def SetLocal : AccessOpcode { let HasCustomEval = 1; }
+
+def CheckGlobalCtor : Opcode {}
 
 // [] -> [Value]
 def GetGlobal : AccessOpcode;

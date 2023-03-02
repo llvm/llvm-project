@@ -141,7 +141,7 @@ SymbolRefAttr TBAABuilder::getDataAccessTag(Type baseFIRType,
   return getAnyDataAccessTag();
 }
 
-void TBAABuilder::attachTBAATag(Operation *op, Type baseFIRType,
+void TBAABuilder::attachTBAATag(AliasAnalysisOpInterface op, Type baseFIRType,
                                 Type accessFIRType, GEPOp gep) {
   if (!enableTBAA)
     return;
@@ -163,10 +163,7 @@ void TBAABuilder::attachTBAATag(Operation *op, Type baseFIRType,
   if (!tbaaTagSym)
     return;
 
-  auto tbaaAttr = ArrayAttr::get(op->getContext(), tbaaTagSym);
-  llvm::TypeSwitch<Operation *>(op)
-      .Case<LoadOp, StoreOp>([&](auto memOp) { memOp.setTbaaAttr(tbaaAttr); })
-      .Default([](auto) { llvm_unreachable("expected LoadOp or StoreOp"); });
+  op.setTBAATags(ArrayAttr::get(op->getContext(), tbaaTagSym));
 }
 
 } // namespace fir

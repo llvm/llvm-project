@@ -1981,6 +1981,10 @@ module {
       %1 = llvm.load %arg1 {alias_scopes = [@metadata::@scope2], noalias_scopes = [@metadata::@scope1, @metadata::@scope3]} : !llvm.ptr -> i32
       %2 = llvm.atomicrmw add %arg1, %0 monotonic {alias_scopes = [@metadata::@scope3], noalias_scopes = [@metadata::@scope1, @metadata::@scope2]} : !llvm.ptr, i32
       %3 = llvm.cmpxchg %arg1, %1, %2 acq_rel monotonic {alias_scopes = [@metadata::@scope3]} : !llvm.ptr, i32
+      %4 = llvm.mlir.constant(0 : i1) : i1
+      %5 = llvm.mlir.constant(42 : i8) : i8
+      "llvm.intr.memcpy"(%arg1, %arg1, %0, %4) {alias_scopes = [@metadata::@scope3]} : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
+      "llvm.intr.memset"(%arg1, %5, %0, %4) {noalias_scopes = [@metadata::@scope3]} : (!llvm.ptr, i8, i32, i1) -> ()
       llvm.return
   }
 
@@ -1998,6 +2002,8 @@ module {
 // CHECK:  load {{.*}}, !alias.scope ![[SCOPES2:[0-9]+]], !noalias ![[SCOPES13:[0-9]+]]
 // CHECK:  atomicrmw {{.*}}, !alias.scope ![[SCOPES3:[0-9]+]], !noalias ![[SCOPES12:[0-9]+]]
 // CHECK:  cmpxchg {{.*}}, !alias.scope ![[SCOPES3]]
+// CHECK:  llvm.memcpy{{.*}}, !alias.scope ![[SCOPES3]]
+// CHECK:  llvm.memset{{.*}}, !noalias ![[SCOPES3]]
 
 // Metadata
 // CHECK-DAG: ![[DOMAIN:[0-9]+]] = distinct !{![[DOMAIN]], !"The domain"}

@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -std=c++17 -verify=ref %s
 
 // ref-no-diagnostics
+// expected-no-diagnostics
 
 struct F { int a; int b;};
 constexpr F getF() {
@@ -21,8 +22,7 @@ constexpr int structRefs() {
 
   return a + b;
 }
-// FIXME: This should work, but the MaterializeTemporaryExpr handling is not ready for it.
-static_assert(structRefs() == 15); // expected-error {{not an integral constant expression}}
+static_assert(structRefs() == 15);
 
 constexpr int structRefs2() {
   F f = getF();

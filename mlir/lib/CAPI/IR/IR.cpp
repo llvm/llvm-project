@@ -368,6 +368,15 @@ MlirOperation mlirOperationCreate(MlirOperationState *state) {
   return result;
 }
 
+MlirOperation mlirOperationCreateParse(MlirContext context,
+                                       MlirStringRef sourceStr,
+                                       MlirStringRef sourceName) {
+
+  return wrap(
+      parseSourceString(unwrap(sourceStr), unwrap(context), unwrap(sourceName))
+          .release());
+}
+
 MlirOperation mlirOperationClone(MlirOperation op) {
   return wrap(unwrap(op)->clone());
 }
