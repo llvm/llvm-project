@@ -30,6 +30,7 @@
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
@@ -921,6 +922,25 @@ uint64_t SBValue::GetValueAsUnsigned(uint64_t fail_value) {
   if (value_sp) {
     return value_sp->GetValueAsUnsigned(fail_value);
   }
+  return fail_value;
+}
+
+lldb::addr_t SBValue::GetValueAsAddress() {
+  addr_t fail_value = LLDB_INVALID_ADDRESS;
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  if (value_sp) {
+    bool success = true;
+    uint64_t ret_val = fail_value;
+    ret_val = value_sp->GetValueAsUnsigned(fail_value, &success);
+    if (!success)
+      return fail_value;
+    if (ProcessSP process_sp = m_opaque_sp->GetProcessSP())
+      if (ABISP abi_sp = process_sp->GetABI())
+        return abi_sp->FixCodeAddress(ret_val);
+    return ret_val;
+  }
+
   return fail_value;
 }
 
