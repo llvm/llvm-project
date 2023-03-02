@@ -6054,10 +6054,10 @@ sense that a debugger might modify its value), whereas *implicit locations*
 describe merely the actual *value* of a source variable which might not exist
 in registers or in memory (see ``DW_OP_stack_value``).
 
-A ``llvm.dbg.addr`` or ``llvm.dbg.declare`` intrinsic describes an indirect
-value (the address) of a source variable. The first operand of the intrinsic
-must be an address of some kind. A DIExpression attached to the intrinsic
-refines this address to produce a concrete location for the source variable.
+A ``llvm.dbg.declare`` intrinsic describes an indirect value (the address) of a
+source variable. The first operand of the intrinsic must be an address of some
+kind. A DIExpression attached to the intrinsic refines this address to produce a
+concrete location for the source variable.
 
 A ``llvm.dbg.value`` intrinsic describes the direct value of a source variable.
 The first operand of the intrinsic may be a direct or indirect value. A
