@@ -44,6 +44,9 @@
 ///      c
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_ANALYSIS_LOGICALEXPR_H
+#define LLVM_ANALYSIS_LOGICALEXPR_H
+
 #include "llvm/ADT/DenseSet.h"
 
 namespace llvm {
@@ -138,3 +141,5 @@ inline LogicalExpr operator~(const LogicalExpr &a) {
 }
 
 } // namespace llvm
+
+#endif // LLVM_ANALYSIS_LOGICALEXPR_H
