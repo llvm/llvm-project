@@ -457,8 +457,6 @@ private:
 
   Value *visitConstant(const SCEVConstant *S) { return S->getValue(); }
 
-  Value *visitVScale(const SCEVVScale *S);
-
   Value *visitPtrToIntExpr(const SCEVPtrToIntExpr *S);
 
   Value *visitTruncateExpr(const SCEVTruncateExpr *S);
