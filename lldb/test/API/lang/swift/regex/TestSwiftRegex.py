@@ -26,6 +26,7 @@ class TestSwiftRegex(TestBase):
         self.main_source = "main.swift"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
+    @skipIf(bugnumber="rdar://106107613")
     @swiftTest
     def test_swift_regex(self):
         """Test Swift's regex support"""

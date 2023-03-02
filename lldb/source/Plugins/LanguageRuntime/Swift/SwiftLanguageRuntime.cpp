@@ -1031,7 +1031,7 @@ SwiftLanguageRuntimeImpl::RunObjectDescriptionExpr(ValueObject &object,
   ValueObjectSP result_sp;
   EvaluateExpressionOptions eval_options;
   eval_options.SetLanguage(lldb::eLanguageTypeSwift);
-  eval_options.SetResultIsInternal(true);
+  eval_options.SetSuppressPersistentResult(true);
   eval_options.SetGenerateDebugInfo(true);
   eval_options.SetTimeout(m_process.GetUtilityExpressionTimeout());
   
@@ -2260,7 +2260,7 @@ private:
 
     EvaluateExpressionOptions eval_options;
     eval_options.SetLanguage(lldb::eLanguageTypeSwift);
-    eval_options.SetResultIsInternal(true);
+    eval_options.SetSuppressPersistentResult(true);
     ValueObjectSP result_valobj_sp;
     std::string Expr =
         (llvm::Twine("Swift._get") + Kind + llvm::Twine("RetainCount(") +
@@ -2285,7 +2285,7 @@ protected:
     StackFrameSP frame_sp(m_exe_ctx.GetFrameSP());
     EvaluateExpressionOptions options;
     options.SetLanguage(lldb::eLanguageTypeSwift);
-    options.SetResultIsInternal(true);
+    options.SetSuppressPersistentResult(true);
     ValueObjectSP result_valobj_sp;
 
     // We want to evaluate first the object we're trying to get the

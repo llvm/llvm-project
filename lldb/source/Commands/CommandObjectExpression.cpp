@@ -21,6 +21,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
+#include "lldb/lldb-private-enumerations.h"
 
 // BEGIN SWIFT
 #include "lldb/Symbol/CompileUnit.h"
@@ -144,8 +145,21 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
     break;
   }
 
-  // BEGIN SWIFT
   case '\x01': {
+    bool success;
+    bool persist_result =
+        OptionArgParser::ToBoolean(option_arg, true, &success);
+    if (success)
+      suppress_persistent_result = !persist_result;
+    else
+      error.SetErrorStringWithFormat(
+          "could not convert \"%s\" to a boolean value.",
+          option_arg.str().c_str());
+    break;
+  }
+
+  // BEGIN SWIFT
+  case '\x31': {
     int32_t result;
     result = OptionArgParser::ToOptionEnum(option_arg, BindGenTypeParamValue(),
                                            0, error);
@@ -183,6 +197,7 @@ void CommandObjectExpression::CommandOptions::OptionParsingStarting(
   auto_apply_fixits = eLazyBoolCalculate;
   top_level = false;
   allow_jit = true;
+  suppress_persistent_result = false;
   // BEGIN SWIFT
   bind_generic_types = eBindAuto;
   // END SWIFT
@@ -191,6 +206,64 @@ void CommandObjectExpression::CommandOptions::OptionParsingStarting(
 llvm::ArrayRef<OptionDefinition>
 CommandObjectExpression::CommandOptions::GetDefinitions() {
   return llvm::makeArrayRef(g_expression_options);
+}
+
+EvaluateExpressionOptions
+CommandObjectExpression::CommandOptions::GetEvaluateExpressionOptions(
+    const Target &target, const OptionGroupValueObjectDisplay &display_opts) {
+  EvaluateExpressionOptions options;
+  options.SetCoerceToId(display_opts.use_objc);
+  // Explicitly disabling persistent results takes precedence over the
+  // m_verbosity/use_objc logic.
+  if (suppress_persistent_result)
+    options.SetSuppressPersistentResult(true);
+  else if (m_verbosity == eLanguageRuntimeDescriptionDisplayVerbosityCompact)
+    options.SetSuppressPersistentResult(display_opts.use_objc);
+  options.SetUnwindOnError(unwind_on_error);
+  options.SetIgnoreBreakpoints(ignore_breakpoints);
+  options.SetKeepInMemory(true);
+  options.SetUseDynamic(display_opts.use_dynamic);
+  options.SetTryAllThreads(try_all_threads);
+  options.SetDebug(debug);
+
+  // BEGIN SWIFT
+  options.SetBindGenericTypes(bind_generic_types);
+  // If the language was not specified in the expression command,
+  // set it to the language in the target's properties if
+  // specified, else default to the language for the frame.
+  if (language != eLanguageTypeUnknown) {
+  // END SWIFT
+  options.SetLanguage(language);
+  // BEGIN SWIFT
+  }
+  // END SWIFT
+
+  options.SetExecutionPolicy(
+      allow_jit ? EvaluateExpressionOptions::default_execution_policy
+                : lldb_private::eExecutionPolicyNever);
+
+  bool auto_apply_fixits;
+  if (this->auto_apply_fixits == eLazyBoolCalculate)
+    auto_apply_fixits = target.GetEnableAutoApplyFixIts();
+  else
+    auto_apply_fixits = this->auto_apply_fixits == eLazyBoolYes;
+
+  options.SetAutoApplyFixIts(auto_apply_fixits);
+  options.SetRetriesWithFixIts(target.GetNumberOfRetriesWithFixits());
+
+  if (top_level)
+    options.SetExecutionPolicy(eExecutionPolicyTopLevel);
+
+  // If there is any chance we are going to stop and want to see what went
+  // wrong with our expression, we should generate debug info
+  if (!ignore_breakpoints || !unwind_on_error)
+    options.SetGenerateDebugInfo(true);
+
+  if (timeout > 0)
+    options.SetTimeout(std::chrono::microseconds(timeout));
+  else
+    options.SetTimeout(std::nullopt);
+  return options;
 }
 
 CommandObjectExpression::CommandObjectExpression(
@@ -357,59 +430,6 @@ CanBeUsedForElementCountPrinting(ValueObject &valobj) {
   return Status();
 }
 
-EvaluateExpressionOptions
-CommandObjectExpression::GetEvalOptions(const Target &target) {
-  EvaluateExpressionOptions options;
-  options.SetCoerceToId(m_varobj_options.use_objc);
-  options.SetUnwindOnError(m_command_options.unwind_on_error);
-  options.SetIgnoreBreakpoints(m_command_options.ignore_breakpoints);
-  options.SetKeepInMemory(true);
-  options.SetUseDynamic(m_varobj_options.use_dynamic);
-  options.SetTryAllThreads(m_command_options.try_all_threads);
-  options.SetDebug(m_command_options.debug);
-
-  // BEGIN SWIFT
-  options.SetBindGenericTypes(m_command_options.bind_generic_types);
-  // If the language was not specified in the expression command,
-  // set it to the language in the target's properties if
-  // specified, else default to the language for the frame.
-  if (m_command_options.language != eLanguageTypeUnknown) {
-  // END SWIFT   
-  options.SetLanguage(m_command_options.language);
-  // BEGIN SWIFT
-  }
-  // END SWIFT
-
-  options.SetExecutionPolicy(
-      m_command_options.allow_jit
-          ? EvaluateExpressionOptions::default_execution_policy
-          : lldb_private::eExecutionPolicyNever);
-
-  bool auto_apply_fixits;
-  if (m_command_options.auto_apply_fixits == eLazyBoolCalculate)
-    auto_apply_fixits = target.GetEnableAutoApplyFixIts();
-  else
-    auto_apply_fixits = m_command_options.auto_apply_fixits == eLazyBoolYes;
-
-  options.SetAutoApplyFixIts(auto_apply_fixits);
-  options.SetRetriesWithFixIts(target.GetNumberOfRetriesWithFixits());
-
-  if (m_command_options.top_level)
-    options.SetExecutionPolicy(eExecutionPolicyTopLevel);
-
-  // If there is any chance we are going to stop and want to see what went
-  // wrong with our expression, we should generate debug info
-  if (!m_command_options.ignore_breakpoints ||
-      !m_command_options.unwind_on_error)
-    options.SetGenerateDebugInfo(true);
-
-  if (m_command_options.timeout > 0)
-    options.SetTimeout(std::chrono::microseconds(m_command_options.timeout));
-  else
-    options.SetTimeout(llvm::None);
-  return options;
-}
-
 bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
                                                  Stream &output_stream,
                                                  Stream &error_stream,
@@ -430,9 +450,10 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
     return false;
   }
 
-  const EvaluateExpressionOptions options = GetEvalOptions(target);
+  const EvaluateExpressionOptions eval_options =
+      m_command_options.GetEvaluateExpressionOptions(target, m_varobj_options);
   ExpressionResults success = target.EvaluateExpression(
-      expr, frame, result_valobj_sp, options, &m_fixed_expression);
+      expr, frame, result_valobj_sp, eval_options, &m_fixed_expression);
 
   // We only tell you about the FixIt if we applied it.  The compiler errors
   // will suggest the FixIt if it parsed.
@@ -461,6 +482,7 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
 
         DumpValueObjectOptions options(m_varobj_options.GetAsDumpOptions(
             m_command_options.m_verbosity, format));
+        options.SetHideName(eval_options.GetSuppressPersistentResult());
         options.SetVariableFormatDisplayLanguage(
             result_valobj_sp->GetPreferredDisplayLanguage());
 
