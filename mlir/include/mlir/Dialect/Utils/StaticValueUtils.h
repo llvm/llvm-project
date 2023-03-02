@@ -85,12 +85,20 @@ bool isEqualConstantIntOrValue(OpFoldResult ofr1, OpFoldResult ofr2);
 bool isEqualConstantIntOrValueArray(ArrayRef<OpFoldResult> ofrs1,
                                     ArrayRef<OpFoldResult> ofrs2);
 
-/// Helper function to convert a vector of `OpFoldResult`s into a vector of
-/// `Value`s. For each `OpFoldResult` in `valueOrAttrVec` return the fold
-/// result if it casts to  a `Value` or create an index-type constant if it
-/// casts to `IntegerAttr`. No other attribute types are supported.
-SmallVector<Value> getAsValues(OpBuilder &b, Location loc,
-                               ArrayRef<OpFoldResult> valueOrAttrVec);
+// To convert an OpFoldResult to a Value of index type, see:
+//   mlir/include/mlir/Dialect/Arith/Utils/Utils.h
+// TODO: find a better common landing place.
+//
+// Value getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
+//                                       OpFoldResult ofr);
+
+// To convert an OpFoldResult to a Value of index type, see:
+//   mlir/include/mlir/Dialect/Arith/Utils/Utils.h
+// TODO: find a better common landing place.
+//
+// SmallVector<Value>
+// getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
+//                                 ArrayRef<OpFoldResult> valueOrAttrVec);
 
 /// Return a vector of OpFoldResults with the same size a staticValues, but
 /// all elements for which ShapedType::isDynamic is true, will be replaced by
