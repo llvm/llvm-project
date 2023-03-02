@@ -27,7 +27,6 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/AST/DeclarationName.h"
-#include "clang/AST/Designator.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
@@ -436,6 +435,8 @@ namespace clang {
 
     Expected<CXXCastPath> ImportCastPath(CastExpr *E);
     Expected<APValue> ImportAPValue(const APValue &FromValue);
+
+    using Designator = DesignatedInitExpr::Designator;
 
     /// What we should import from the definition.
     enum ImportDefinitionKind {
@@ -961,7 +962,9 @@ Expected<DeclGroupRef> ASTNodeImporter::import(const DeclGroupRef &DG) {
                               NumDecls);
 }
 
-template <> Expected<Designator> ASTNodeImporter::import(const Designator &D) {
+template <>
+Expected<ASTNodeImporter::Designator>
+ASTNodeImporter::import(const Designator &D) {
   if (D.isFieldDesignator()) {
     IdentifierInfo *ToFieldName = Importer.Import(D.getFieldName());
 
@@ -973,8 +976,7 @@ template <> Expected<Designator> ASTNodeImporter::import(const Designator &D) {
     if (!ToFieldLocOrErr)
       return ToFieldLocOrErr.takeError();
 
-    return Designator::CreateFieldDesignator(ToFieldName, *ToDotLocOrErr,
-                                             *ToFieldLocOrErr);
+    return Designator(ToFieldName, *ToDotLocOrErr, *ToFieldLocOrErr);
   }
 
   ExpectedSLoc ToLBracketLocOrErr = import(D.getLBracketLoc());
@@ -986,15 +988,15 @@ template <> Expected<Designator> ASTNodeImporter::import(const Designator &D) {
     return ToRBracketLocOrErr.takeError();
 
   if (D.isArrayDesignator())
-    return Designator::CreateArrayDesignator(
-        D.getFirstExprIndex(), *ToLBracketLocOrErr, *ToRBracketLocOrErr);
+    return Designator(D.getFirstExprIndex(),
+                      *ToLBracketLocOrErr, *ToRBracketLocOrErr);
 
   ExpectedSLoc ToEllipsisLocOrErr = import(D.getEllipsisLoc());
   if (!ToEllipsisLocOrErr)
     return ToEllipsisLocOrErr.takeError();
 
   assert(D.isArrayRangeDesignator());
-  return Designator::CreateArrayRangeDesignator(
+  return Designator(
       D.getFirstExprIndex(), *ToLBracketLocOrErr, *ToEllipsisLocOrErr,
       *ToRBracketLocOrErr);
 }
