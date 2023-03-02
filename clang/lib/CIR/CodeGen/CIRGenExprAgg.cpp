@@ -147,9 +147,8 @@ public:
 
   void VisitVAArgExpr(VAArgExpr *E) { llvm_unreachable("NYI"); }
 
-  void EmitInitializationToLValue(Expr *E, LValue Address) {
-    llvm_unreachable("NYI");
-  }
+  void EmitInitializationToLValue(Expr *E, LValue LV);
+
   void EmitNullInitializationToLValue(LValue Address) {
     llvm_unreachable("NYI");
   }
@@ -162,6 +161,89 @@ public:
 //===----------------------------------------------------------------------===//
 //                             Visitor Methods
 //===----------------------------------------------------------------------===//
+
+/// If emitting this value will obviously just cause a store of
+/// zero to memory, return true.  This can return false if uncertain, so it just
+/// handles simple cases.
+static bool isSimpleZero(const Expr *E, CIRGenFunction &CGF) {
+  E = E->IgnoreParens();
+  while (auto *CE = dyn_cast<CastExpr>(E)) {
+    llvm_unreachable("NYI");
+    // if (!castPreservesZero(CE))
+    //   break;
+    // E = CE->getSubExpr()->IgnoreParens();
+  }
+
+  // 0
+  if (const IntegerLiteral *IL = dyn_cast<IntegerLiteral>(E))
+    return IL->getValue() == 0;
+  // +0.0
+  if (const FloatingLiteral *FL = dyn_cast<FloatingLiteral>(E))
+    return FL->getValue().isPosZero();
+  // int()
+  if ((isa<ImplicitValueInitExpr>(E) || isa<CXXScalarValueInitExpr>(E)) &&
+      CGF.getTypes().isZeroInitializable(E->getType()))
+    return true;
+  // (int*)0 - Null pointer expressions.
+  if (const CastExpr *ICE = dyn_cast<CastExpr>(E)) {
+    llvm_unreachable("NYI");
+    // return ICE->getCastKind() == CK_NullToPointer &&
+    //        CGF.getTypes().isPointerZeroInitializable(E->getType()) &&
+    //        !E->HasSideEffects(CGF.getContext());
+  }
+  // '\0'
+  if (const CharacterLiteral *CL = dyn_cast<CharacterLiteral>(E))
+    return CL->getValue() == 0;
+
+  // Otherwise, hard case: conservatively return false.
+  return false;
+}
+
+void AggExprEmitter::EmitInitializationToLValue(Expr *E, LValue LV) {
+  QualType type = LV.getType();
+  // FIXME: Ignore result?
+  // FIXME: Are initializers affected by volatile?
+  if (Dest.isZeroed() && isSimpleZero(E, CGF)) {
+    // TODO(cir): LLVM codegen just returns here, do we want to
+    // do anything different when we hit this code path?
+    llvm_unreachable("NYI");
+    // Storing "i32 0" to a zero'd memory location is a noop.
+    return;
+  } else if (isa<ImplicitValueInitExpr>(E) || isa<CXXScalarValueInitExpr>(E)) {
+    return EmitNullInitializationToLValue(LV);
+  } else if (isa<NoInitExpr>(E)) {
+    // Do nothing.
+    return;
+  } else if (type->isReferenceType()) {
+    llvm_unreachable("NYI");
+    // RValue RV = CGF.EmitReferenceBindingToExpr(E);
+    // return CGF.EmitStoreThroughLValue(RV, LV);
+  }
+
+  switch (CGF.getEvaluationKind(type)) {
+  case TEK_Complex:
+    llvm_unreachable("NYI");
+    return;
+  case TEK_Aggregate:
+    llvm_unreachable("NYI");
+    // CGF.EmitAggExpr(E, AggValueSlot::forLValue(
+    //                        LV, CGF, AggValueSlot::IsDestructed,
+    //                        AggValueSlot::DoesNotNeedGCBarriers,
+    //                        AggValueSlot::IsNotAliased,
+    //                        AggValueSlot::MayOverlap, Dest.isZeroed()));
+    return;
+  case TEK_Scalar:
+    if (LV.isSimple()) {
+      llvm_unreachable("NYI");
+      // CGF.EmitScalarInit(E, /*D=*/nullptr, LV, /*Captured=*/false);
+    } else {
+      llvm_unreachable("NYI");
+      // CGF.EmitStoreThroughLValue(RValue::get(CGF.EmitScalarExpr(E)), LV);
+    }
+    return;
+  }
+  llvm_unreachable("bad evaluation kind");
+}
 
 void AggExprEmitter::VisitMaterializeTemporaryExpr(
     MaterializeTemporaryExpr *E) {
@@ -213,7 +295,19 @@ void AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
   for (LambdaExpr::const_capture_init_iterator i = E->capture_init_begin(),
                                                e = E->capture_init_end();
        i != e; ++i, ++CurField) {
-    llvm_unreachable("NYI");
+    // Emit initialization
+    LValue LV = CGF.buildLValueForFieldInitialization(SlotLV, *CurField);
+    if (CurField->hasCapturedVLAType()) {
+      llvm_unreachable("NYI");
+    }
+
+    EmitInitializationToLValue(*i, LV);
+
+    // Push a destructor if necessary.
+    if (QualType::DestructionKind DtorKind =
+            CurField->getType().isDestructedType()) {
+      llvm_unreachable("NYI");
+    }
   }
 
   // Deactivate all the partial cleanups in reverse order, which generally means
