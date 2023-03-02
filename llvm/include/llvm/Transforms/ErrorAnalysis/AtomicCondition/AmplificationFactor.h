@@ -236,7 +236,7 @@ void fAFStoreAFProducts(FILE *FP, AFProduct **ObjectPointerList, uint64_t NumObj
     }
     fprintf(FP, "],\n");
 
-    fprintf(FP, "\t\t\t\"ACItemIds\": [%lf", ObjectPointerList[J]->AFs[0]);
+    fprintf(FP, "\t\t\t\"AFs\": [%0.15lf", ObjectPointerList[J]->AFs[0]);
     for (int I = 1; I < ObjectPointerList[J]->NumberOfInputs; ++I) {
       fprintf(FP, ",%0.15lf", ObjectPointerList[J]->AFs[I]);
     }
@@ -312,11 +312,11 @@ void fAFStoreAFItems(FILE *FP, AFItem **ObjectPointerList, uint64_t NumObjects) 
   fprintf(FP, "\t\"AFs\": [\n");
   int K = 0;
   while ((uint64_t)K < NumObjects) {
-    printf("K: %d\n", K);
+//    printf("K: %d\n", K);
     for (int J = 0; J < ObjectPointerList[K]->NumAFComponents; ++J) {
       AFProduct **ProductPath= fAFFlattenAFComponentsPath(ObjectPointerList[K]->Components[J]);
-      printf("\t ProductItemId: %d,\n",
-              ObjectPointerList[K]->Components[J]->ItemId);
+//      printf("\t ProductItemId: %d,\n",
+//              ObjectPointerList[K]->Components[J]->ItemId);
       fprintf(FP,
               "\t\t{\n"
               "\t\t\t\"ProductItemId\": %d,\n",
@@ -529,9 +529,30 @@ int fAFisMemoryOpInstruction(char *InstructionString) {
   return 0;
 }
 
+//int fAFComparator(const void *A, const void *B) {
+//  double AF1 = fabs((*(AFProduct **)A)->AFs[0]);
+//  double AF2 = fabs((*(AFProduct **)B)->AFs[0]);
+//
+//  if(AF2 > AF1)
+//    return 1;
+//  if(AF2 == AF1)
+//    return 0;
+//  return -1;
+//}
+
 int fAFComparator(const void *A, const void *B) {
   double AF1 = fabs((*(AFProduct **)A)->AFs[0]);
+  for (int I = 0; I < (*(AFProduct **)A)->NumberOfInputs; ++I) {
+    if((*(AFProduct **)A)->ProductTails[I]!=NULL &&
+        fabs((*(AFProduct **)A)->AFs[I]) > AF1)
+      AF1 = fabs((*(AFProduct **)A)->AFs[I]);
+  }
   double AF2 = fabs((*(AFProduct **)B)->AFs[0]);
+  for (int I = 0; I < (*(AFProduct **)B)->NumberOfInputs; ++I) {
+    if((*(AFProduct **)B)->ProductTails[I]!=NULL &&
+            fabs((*(AFProduct **)B)->AFs[I]) > AF2)
+      AF2 = fabs((*(AFProduct **)B)->AFs[I]);
+  }
 
   if(AF2 > AF1)
     return 1;
