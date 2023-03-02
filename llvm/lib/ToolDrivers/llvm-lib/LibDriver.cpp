@@ -19,6 +19,7 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Object/COFFModuleDefinition.h"
 #include "llvm/Object/WindowsMachineFlag.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -31,6 +32,7 @@
 #include <optional>
 
 using namespace llvm;
+using namespace llvm::object;
 
 namespace {
 
@@ -60,7 +62,7 @@ class LibOptTable : public opt::GenericOptTable {
 public:
   LibOptTable() : opt::GenericOptTable(InfoTable, true) {}
 };
-}
+} // namespace
 
 static std::string getDefaultOutputPath(const NewArchiveMember &FirstMember) {
   SmallString<128> Val = StringRef(FirstMember.Buf->getBufferIdentifier());
@@ -91,6 +93,18 @@ static std::vector<StringRef> getSearchPaths(opt::InputArgList *Args,
   return Ret;
 }
 
+// Opens a file. Path has to be resolved already. (used for def file)
+std::unique_ptr<MemoryBuffer> openFile(const Twine &Path) {
+  ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MB = MemoryBuffer::getFile(Path);
+
+  if (std::error_code EC = MB.getError()) {
+    llvm::errs() << "cannot open file " << Path << ": " << EC.message() << "\n";
+    return nullptr;
+  }
+
+  return std::move(*MB);
+}
+
 static std::string findInputFile(StringRef File, ArrayRef<StringRef> Paths) {
   for (StringRef Dir : Paths) {
     SmallString<128> Path = Dir;
@@ -110,7 +124,7 @@ static void fatalOpenError(llvm::Error E, Twine File) {
   });
 }
 
-static void doList(opt::InputArgList& Args) {
+static void doList(opt::InputArgList &Args) {
   // lib.exe prints the contents of the first archive file.
   std::unique_ptr<MemoryBuffer> B;
   for (auto *Arg : Args.filtered(OPT_INPUT)) {
@@ -302,6 +316,63 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
   for (auto *Arg : Args.filtered(OPT_ignore))
     IgnoredWarnings.insert(Arg->getValue());
 
+  // get output library path, if any
+  std::string OutputPath;
+  if (auto *Arg = Args.getLastArg(OPT_out)) {
+    OutputPath = Arg->getValue();
+  }
+
+  COFF::MachineTypes LibMachine = COFF::IMAGE_FILE_MACHINE_UNKNOWN;
+  std::string LibMachineSource;
+  if (auto *Arg = Args.getLastArg(OPT_machine)) {
+    LibMachine = getMachineType(Arg->getValue());
+    if (LibMachine == COFF::IMAGE_FILE_MACHINE_UNKNOWN) {
+      llvm::errs() << "unknown /machine: arg " << Arg->getValue() << '\n';
+      return 1;
+    }
+    LibMachineSource =
+        std::string(" (from '/machine:") + Arg->getValue() + "' flag)";
+  }
+
+  // create an import library
+  if (Args.hasArg(OPT_deffile)) {
+
+    if (OutputPath.empty()) {
+      llvm::errs() << "no output path given\n";
+      return 1;
+    }
+
+    if (LibMachine == COFF::IMAGE_FILE_MACHINE_UNKNOWN) {
+      llvm::errs() << "/def option requires /machine to be specified" << '\n';
+      return 1;
+    }
+
+    std::unique_ptr<MemoryBuffer> MB =
+        openFile(Args.getLastArg(OPT_deffile)->getValue());
+    if (!MB)
+      return 1;
+
+    if (!MB->getBufferSize()) {
+      llvm::errs() << "definition file empty\n";
+      return 1;
+    }
+
+    Expected<COFFModuleDefinition> Def =
+        parseCOFFModuleDefinition(*MB, LibMachine, true);
+
+    if (!Def) {
+      llvm::errs() << "error parsing definition\n"
+                   << errorToErrorCode(Def.takeError()).message();
+      return 1;
+    }
+
+    return writeImportLibrary(Def->OutputFile, OutputPath, Def->Exports,
+                              LibMachine,
+                              /*MinGW=*/false)
+               ? 1
+               : 0;
+  }
+
   // If no input files and not told otherwise, silently do nothing to match
   // lib.exe
   if (!Args.hasArgNoClaim(OPT_INPUT) && !Args.hasArg(OPT_llvmlibempty)) {
@@ -323,18 +394,6 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
   }
 
   std::vector<StringRef> SearchPaths = getSearchPaths(&Args, Saver);
-
-  COFF::MachineTypes LibMachine = COFF::IMAGE_FILE_MACHINE_UNKNOWN;
-  std::string LibMachineSource;
-  if (auto *Arg = Args.getLastArg(OPT_machine)) {
-    LibMachine = getMachineType(Arg->getValue());
-    if (LibMachine == COFF::IMAGE_FILE_MACHINE_UNKNOWN) {
-      llvm::errs() << "unknown /machine: arg " << Arg->getValue() << '\n';
-      return 1;
-    }
-    LibMachineSource =
-        std::string(" (from '/machine:") + Arg->getValue() + "' flag)";
-  }
 
   std::vector<std::unique_ptr<MemoryBuffer>> MBs;
   StringSet<> Seen;
@@ -373,14 +432,13 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
   }
 
   // Create an archive file.
-  std::string OutputPath;
-  if (auto *Arg = Args.getLastArg(OPT_out)) {
-    OutputPath = Arg->getValue();
-  } else if (!Members.empty()) {
-    OutputPath = getDefaultOutputPath(Members[0]);
-  } else {
-    llvm::errs() << "no output path given, and cannot infer with no inputs\n";
-    return 1;
+  if (OutputPath.empty()) {
+    if (!Members.empty()) {
+      OutputPath = getDefaultOutputPath(Members[0]);
+    } else {
+      llvm::errs() << "no output path given, and cannot infer with no inputs\n";
+      return 1;
+    }
   }
   // llvm-lib uses relative paths for both regular and thin archives, unlike
   // standard GNU ar, which only uses relative paths for thin archives and
