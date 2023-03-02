@@ -253,8 +253,8 @@ XRayLogFlushStatus profilingFlush() XRAY_NEVER_INSTRUMENT {
                        reinterpret_cast<const char *>(B.Data) + B.Size);
           B = profileCollectorService::nextBuffer(B);
         }
+        LogWriter::Close(LW);
       }
-      LogWriter::Close(LW);
     }
   }
 

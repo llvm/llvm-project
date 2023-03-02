@@ -234,7 +234,7 @@ void VLIWPacketizerList::PacketizeMIs(MachineBasicBlock *MBB,
                     "added to packet\n  "
                  << MI);
       // End the packet if resource is not available, or if the instruction
-      // shoud not be added to the current packet.
+      // should not be added to the current packet.
       endPacket(MBB, MI);
     }
 

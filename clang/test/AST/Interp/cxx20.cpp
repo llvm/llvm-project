@@ -201,3 +201,74 @@ constexpr Derived D; // expected-error {{must be initialized by a constant expre
                    // ref-note {{subobject of type 'bool' is not initialized}}
 #endif
 };
+
+namespace ConstThis {
+  class Foo {
+    const int T = 12; // expected-note {{declared const here}} \
+                      // ref-note {{declared const here}}
+    int a;
+  public:
+    constexpr Foo() {
+      this->a = 10;
+      T = 13; // expected-error {{cannot assign to non-static data member 'T' with const-qualified type}} \
+              // ref-error {{cannot assign to non-static data member 'T' with const-qualified type}}
+    }
+  };
+  constexpr Foo F; // expected-error {{must be initialized by a constant expression}} \
+                   // ref-error {{must be initialized by a constant expression}}
+
+
+  class FooDtor {
+    int a;
+  public:
+    constexpr FooDtor() {
+      this->a = 10;
+    }
+    constexpr ~FooDtor() {
+      this->a = 12;
+    }
+  };
+
+  constexpr int foo() {
+    const FooDtor f;
+    return 0;
+  }
+  static_assert(foo() == 0);
+
+  template <bool Good>
+  struct ctor_test {
+    int a = 0;
+
+    constexpr ctor_test() {
+      if (Good)
+        a = 10;
+      int local = 100 / a; // expected-note {{division by zero}} \
+                           // ref-note {{division by zero}}
+    }
+  };
+
+  template <bool Good>
+  struct dtor_test {
+    int a = 0;
+
+    constexpr dtor_test() = default;
+    constexpr ~dtor_test() {
+      if (Good)
+        a = 10;
+      int local = 100 / a; // expected-note {{division by zero}} \
+                           // ref-note {{division by zero}}
+    }
+  };
+
+  constexpr ctor_test<true> good_ctor;
+  constexpr dtor_test<true> good_dtor;
+
+  constexpr ctor_test<false> bad_ctor; // expected-error {{must be initialized by a constant expression}} \
+                                       // expected-note {{in call to}} \
+                                       // ref-error {{must be initialized by a constant expression}} \
+                                       // ref-note {{in call to}}
+  constexpr dtor_test<false> bad_dtor; // expected-error {{must have constant destruction}} \
+                                       // expected-note {{in call to}} \
+                                       // ref-error {{must have constant destruction}} \
+                                       // ref-note {{in call to}}
+};

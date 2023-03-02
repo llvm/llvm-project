@@ -312,8 +312,9 @@ bool TargetTransformInfo::preferPredicateOverEpilogue(
   return TTIImpl->preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LVL, IAI);
 }
 
-TailFoldingStyle TargetTransformInfo::getPreferredTailFoldingStyle() const {
-  return TTIImpl->getPreferredTailFoldingStyle();
+TailFoldingStyle TargetTransformInfo::getPreferredTailFoldingStyle(
+    bool IVUpdateMayOverflow) const {
+  return TTIImpl->getPreferredTailFoldingStyle(IVUpdateMayOverflow);
 }
 
 std::optional<Instruction *>
