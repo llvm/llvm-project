@@ -429,6 +429,21 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
                                !OtherOpF->getType()->isVectorTy()))
     return nullptr;
 
+  // If we are sinking div/rem after a select, we may need to freeze the
+  // condition because div/rem may induce immediate UB with a poison operand.
+  // For example, the following transform is not safe if Cond can ever be poison
+  // because we can replace poison with zero and then we have div-by-zero that
+  // didn't exist in the original code:
+  // Cond ? x/y : x/z --> x / (Cond ? y : z)
+  auto *BO = dyn_cast<BinaryOperator>(TI);
+  if (BO && BO->isIntDivRem() && !isGuaranteedNotToBePoison(Cond)) {
+    // A udiv/urem with a common divisor is safe because UB can only occur with
+    // div-by-zero, and that would be present in the original code.
+    if (BO->getOpcode() == Instruction::SDiv ||
+        BO->getOpcode() == Instruction::SRem || MatchIsOpZero)
+      Cond = Builder.CreateFreeze(Cond);
+  }
+
   // If we reach here, they do have operations in common.
   Value *NewSI = Builder.CreateSelect(Cond, OtherOpT, OtherOpF,
                                       SI.getName() + ".v", &SI);

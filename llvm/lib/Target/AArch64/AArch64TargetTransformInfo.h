@@ -347,9 +347,12 @@ public:
     return ST->hasSVE() ? 5 : 0;
   }
 
-  TailFoldingStyle getPreferredTailFoldingStyle() const {
+  TailFoldingStyle getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const {
     if (ST->hasSVE())
-      return TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
+      return IVUpdateMayOverflow
+                 ? TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck
+                 : TailFoldingStyle::DataAndControlFlow;
+
     return TailFoldingStyle::DataWithoutLaneMask;
   }
 

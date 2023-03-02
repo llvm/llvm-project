@@ -171,7 +171,8 @@ public:
     return false;
   }
 
-  TailFoldingStyle getPreferredTailFoldingStyle() const {
+  TailFoldingStyle
+  getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) const {
     return TailFoldingStyle::DataWithoutLaneMask;
   }
 

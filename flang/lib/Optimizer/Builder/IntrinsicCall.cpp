@@ -250,6 +250,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genIparity(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genIsContiguous(mlir::Type,
                                      llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genIsNan(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIshft(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIshftc(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -621,6 +622,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"ieee_class_eq", &I::genIeeeTypeCompare<mlir::arith::CmpIPredicate::eq>},
     {"ieee_class_ne", &I::genIeeeTypeCompare<mlir::arith::CmpIPredicate::ne>},
     {"ieee_is_finite", &I::genIeeeIsFinite},
+    {"ieee_is_nan", &I::genIsNan},
     {"ieee_round_eq", &I::genIeeeTypeCompare<mlir::arith::CmpIPredicate::eq>},
     {"ieee_round_ne", &I::genIeeeTypeCompare<mlir::arith::CmpIPredicate::ne>},
     {"ieor", &I::genIeor},
@@ -643,6 +645,7 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"ishft", &I::genIshft},
     {"ishftc", &I::genIshftc},
+    {"isnan", &I::genIsNan},
     {"lbound",
      &I::genLbound,
      {{{"array", asInquired}, {"dim", asValue}, {"kind", asValue}}},
@@ -1705,7 +1708,7 @@ IntrinsicLibrary::genElementalCall<IntrinsicLibrary::ExtendedGenerator>(
   for (const fir::ExtendedValue &arg : args) {
     auto *box = arg.getBoxOf<fir::BoxValue>();
     if (!arg.getUnboxed() && !arg.getCharBox() &&
-        !(box && fir::isPolymorphicType(fir::getBase(*box).getType())))
+        !(box && fir::isScalarBoxedRecordType(fir::getBase(*box).getType())))
       fir::emitFatalError(loc, "nonscalar intrinsic argument");
   }
   if (outline)
@@ -3690,6 +3693,20 @@ IntrinsicLibrary::genIsContiguous(mlir::Type resultType,
       fir::runtime::genIsContiguous(builder, loc, fir::getBase(args[0])));
 }
 
+mlir::Value IntrinsicLibrary::genIsNan(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::IntegerType i1ty = mlir::IntegerType::get(context, 1);
+  mlir::IntegerType i32ty = mlir::IntegerType::get(context, 32);
+  // The last two bits indicate we are checking for signalling or quiet nan.
+  mlir::Value nan = builder.createIntegerConstant(loc, i32ty, 0b11);
+
+  mlir::Value isnan =
+      builder.create<mlir::LLVM::IsFPClass>(loc, i1ty, args[0], nan);
+  return builder.createConvert(loc, resultType, isnan);
+}
+
 // ISHFT
 mlir::Value IntrinsicLibrary::genIshft(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
@@ -3908,14 +3925,29 @@ IntrinsicLibrary::genMerge(mlir::Type,
   mlir::Type type0 = fir::unwrapRefType(tsource.getType());
   bool isCharRslt = fir::isa_char(type0); // result is same as first argument
   mlir::Value mask = builder.createConvert(loc, builder.getI1Type(), rawMask);
-  // FSOURCE has the same type as TSOURCE, but they may not have the same MLIR
-  // types (one can have dynamic length while the other has constant lengths,
-  // or one may be a fir.logical<> while the other is an i1). Insert a cast to
-  // fulfill mlir::SelectOp constraint that the MLIR types must be the same.
-  mlir::Value fsourceCast =
-      builder.createConvert(loc, tsource.getType(), fsource);
-  auto rslt =
-      builder.create<mlir::arith::SelectOp>(loc, mask, tsource, fsourceCast);
+
+  // The result is polymorphic if and only if both TSOURCE and FSOURCE are
+  // polymorphic. TSOURCE and FSOURCE are required to have the same type
+  // (for both declared and dynamic types) so a simple convert op can be
+  // used.
+  mlir::Value tsourceCast = tsource;
+  mlir::Value fsourceCast = fsource;
+  if (fir::isPolymorphicType(tsource.getType()) &&
+      !fir::isPolymorphicType(fsource.getType())) {
+    tsourceCast = builder.createConvert(loc, fsource.getType(), tsource);
+  } else if (!fir::isPolymorphicType(tsource.getType()) &&
+             fir::isPolymorphicType(fsource.getType())) {
+    fsourceCast = builder.createConvert(loc, tsource.getType(), fsource);
+  } else {
+    // FSOURCE and TSOURCE are not polymorphic.
+    // FSOURCE has the same type as TSOURCE, but they may not have the same MLIR
+    // types (one can have dynamic length while the other has constant lengths,
+    // or one may be a fir.logical<> while the other is an i1). Insert a cast to
+    // fulfill mlir::SelectOp constraint that the MLIR types must be the same.
+    fsourceCast = builder.createConvert(loc, tsource.getType(), fsource);
+  }
+  auto rslt = builder.create<mlir::arith::SelectOp>(loc, mask, tsourceCast,
+                                                    fsourceCast);
   if (isCharRslt) {
     // Need a CharBoxValue for character results
     const fir::CharBoxValue *charBox = args[0].getCharBox();
