@@ -72,8 +72,15 @@ define void @supported_ops(ptr %arg1, float %arg2, i32 %arg3, i32 %arg4) {
   %2 = atomicrmw fmax ptr %arg1, float %arg2 acquire, !alias.scope !3
   ; CHECK: llvm.cmpxchg {{.*}}alias_scopes =
   %3 = cmpxchg ptr %arg1, i32 %arg3, i32 %arg4 monotonic seq_cst, !alias.scope !3
+  ; CHECK: "llvm.intr.memcpy"{{.*}}alias_scopes =
+  call void @llvm.memcpy.p0.p0.i32(ptr %arg1, ptr %arg1, i32 4, i1 false), !alias.scope !3
+  ; CHECK: "llvm.intr.memset"{{.*}}alias_scopes =
+  call void @llvm.memset.p0.i32(ptr %arg1, i8 42, i32 4, i1 false), !alias.scope !3
   ret void
 }
+
+declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg)
+declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
 
 !0 = distinct !{!0, !"The domain"}
 !1 = distinct !{!1}
