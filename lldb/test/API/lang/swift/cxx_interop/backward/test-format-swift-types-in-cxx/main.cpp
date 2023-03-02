@@ -5,5 +5,6 @@ int main() {
   auto swiftClass = returnSwiftClass();
   auto swiftSublass = returnSwiftSubclassAsClass();
   auto swiftStruct = returnSwiftStruct();
+  auto wrapper = returnPair(swiftClass, swiftStruct);
   return 0; // Set breakpoint here.
 }

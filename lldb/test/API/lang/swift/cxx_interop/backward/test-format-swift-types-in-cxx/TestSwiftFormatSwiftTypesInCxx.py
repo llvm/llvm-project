@@ -34,3 +34,9 @@ class TestSwiftFormatSwiftTypesInCxx(TestBase):
         self.expect('p swiftStruct', substrs=['SwiftStruct', 'str = "Hello this is a big string"', 
             'boolean = true'])
 
+        self.expect('v wrapper', substrs=['a.GenericPair<a.SwiftClass, a.SwiftStruct>', 
+                'field = 42', 'arr = 4 values', '[0] = "An"', '[1] = "array"', '[2] = "of"', 
+                '[3] = "strings"', 'str = "Hello this is a big string"', 'boolean = true'])
+        self.expect('p wrapper', substrs=['a.GenericPair<a.SwiftClass, a.SwiftStruct>', 
+                'field = 42', 'arr = 4 values', '[0] = "An"', '[1] = "array"', '[2] = "of"', 
+                '[3] = "strings"', 'str = "Hello this is a big string"', 'boolean = true'])

@@ -2005,6 +2005,75 @@ ForEachGenericParameter(swift::Demangle::NodePointer node,
   }
 }
 
+CompilerType SwiftLanguageRuntimeImpl::BindGenericTypeParameters(
+    CompilerType unbound_type,
+    std::function<CompilerType(unsigned, unsigned)> type_resolver) {
+  LLDB_SCOPED_TIMER();
+  using namespace swift::Demangle;
+
+  auto ts =
+      unbound_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+  Status error;
+  auto *reflection_ctx = GetReflectionContext();
+  if (!reflection_ctx) {
+    LLDB_LOG(GetLog(LLDBLog::Types),
+             "No reflection context available.");
+    return unbound_type;
+  }
+
+  Demangler dem;
+  NodePointer unbound_node =
+      dem.demangleSymbol(unbound_type.GetMangledTypeName().GetStringRef());
+  auto type_ref_or_err =
+      decodeMangledType(reflection_ctx->getBuilder(), unbound_node);
+  if (type_ref_or_err.isError()) {
+    LLDB_LOG(GetLog(LLDBLog::Expressions | LLDBLog::Types),
+             "Couldn't get TypeRef of unbound type.");
+    return {};
+  }
+
+  swift::reflection::GenericArgumentMap substitutions;
+  bool failure = false;
+  ForEachGenericParameter(unbound_node, [&](unsigned depth, unsigned index) {
+    if (failure)
+      return;
+    if (substitutions.count({depth, index}))
+      return;
+
+    auto type = type_resolver(depth, index);
+    if (!type) {
+      LLDB_LOG(GetLog(LLDBLog::Expressions | LLDBLog::Types),
+               "type_finder function failed to find type.");
+      failure = true;
+      return;
+    }
+
+    NodePointer child_node =
+        dem.demangleSymbol(type.GetMangledTypeName().GetStringRef());
+    auto type_ref_or_err =
+        decodeMangledType(reflection_ctx->getBuilder(), child_node);
+    if (type_ref_or_err.isError()) {
+      LLDB_LOG(GetLog(LLDBLog::Expressions | LLDBLog::Types),
+               "Couldn't get TypeRef when binding generic type parameters.");
+      failure = true;
+      return;
+    }
+
+    substitutions.insert({{depth, index}, type_ref_or_err.getType()});
+  });
+
+  if (failure)
+    return {};
+
+  const swift::reflection::TypeRef *type_ref = type_ref_or_err.getType();
+
+  // Apply the substitutions.
+  const swift::reflection::TypeRef *bound_type_ref =
+      type_ref->subst(reflection_ctx->getBuilder(), substitutions);
+  NodePointer node = bound_type_ref->getDemangling(dem);
+  return ts->GetTypeSystemSwiftTypeRef().RemangleAsType(dem, node);
+}
+
 CompilerType
 SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
                                                     TypeSystemSwiftTypeRef &ts,
