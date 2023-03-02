@@ -429,6 +429,35 @@ protected:
   OutputSection *sec;
 };
 
+class BuildIdSection : public SyntheticSection {
+public:
+  BuildIdSection();
+  void writeBody() override;
+  bool isNeeded() const override {
+    return config->buildId != BuildIdKind::None;
+  }
+  void writeBuildId(llvm::ArrayRef<uint8_t> buf);
+  void writeTo(uint8_t *buf) override {
+    LLVM_DEBUG(llvm::dbgs()
+               << "BuildId writeto buf " << buf << " offset " << offset
+               << " headersize " << header.size() << '\n');
+    // The actual build ID is derived from a hash of all of the output
+    // sections, so it can't be calculated until they are written. Here
+    // we write the section leaving zeros in place of the hash.
+    SyntheticSection::writeTo(buf);
+    // Calculate and store the location where the hash will be written.
+    hashPlaceholderPtr = buf + offset + header.size() +
+                         +sizeof(buildIdSectionName) /*name string*/ +
+                         1 /* hash size */;
+  }
+
+  const uint32_t hashSize;
+
+private:
+  static constexpr char buildIdSectionName[] = "build_id";
+  uint8_t *hashPlaceholderPtr = nullptr;
+};
+
 // Linker generated output sections
 struct OutStruct {
   DylinkSection *dylinkSec;
@@ -447,6 +476,7 @@ struct OutStruct {
   NameSection *nameSec;
   ProducersSection *producersSec;
   TargetFeaturesSection *targetFeaturesSec;
+  BuildIdSection *buildIdSec;
 };
 
 extern OutStruct out;

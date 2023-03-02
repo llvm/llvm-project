@@ -17,8 +17,10 @@
 #include "SymbolTable.h"
 #include "SyntheticSections.h"
 #include "WriterUtils.h"
+#include "lld/Common/Arrays.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Strings.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -30,6 +32,9 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
+#include "llvm/Support/RandomNumberGenerator.h"
+#include "llvm/Support/SHA1.h"
+#include "llvm/Support/xxhash.h"
 
 #include <cstdarg>
 #include <map>
@@ -103,6 +108,7 @@ private:
 
   void writeHeader();
   void writeSections();
+  void writeBuildId();
 
   uint64_t fileSize = 0;
 
@@ -217,6 +223,91 @@ void Writer::writeSections() {
     assert(s->isNeeded());
     s->writeTo(buf);
   });
+}
+
+// Computes a hash value of Data using a given hash function.
+// In order to utilize multiple cores, we first split data into 1MB
+// chunks, compute a hash for each chunk, and then compute a hash value
+// of the hash values.
+
+static void
+computeHash(llvm::MutableArrayRef<uint8_t> hashBuf,
+            llvm::ArrayRef<uint8_t> data,
+            std::function<void(uint8_t *dest, ArrayRef<uint8_t> arr)> hashFn) {
+  std::vector<ArrayRef<uint8_t>> chunks = split(data, 1024 * 1024);
+  std::vector<uint8_t> hashes(chunks.size() * hashBuf.size());
+
+  // Compute hash values.
+  parallelFor(0, chunks.size(), [&](size_t i) {
+    hashFn(hashes.data() + i * hashBuf.size(), chunks[i]);
+  });
+
+  // Write to the final output buffer.
+  hashFn(hashBuf.data(), hashes);
+}
+
+static void makeUUID(unsigned version, llvm::ArrayRef<uint8_t> fileHash,
+                     llvm::MutableArrayRef<uint8_t> output) {
+  assert(version == 4 || version == 5 && "Unknown UUID version");
+  assert(output.size() == 16 && "Wrong size for UUID output");
+  if (version == 5) {
+    // Build a valid v5 UUID from a hardcoded (randomly-generated) namespace
+    // UUID, and the computed hash of the output.
+    std::array<uint8_t, 16> namespaceUUID{0xA1, 0xFA, 0x48, 0x2D, 0x0E, 0x22,
+                                          0x03, 0x8D, 0x33, 0x8B, 0x52, 0x1C,
+                                          0xD6, 0xD2, 0x12, 0xB2};
+    SHA1 sha;
+    sha.update(namespaceUUID);
+    sha.update(fileHash);
+    auto s = sha.final();
+    std::copy(s.data(), &s.data()[output.size()], output.data());
+  } else if (version == 4) {
+    if (auto ec = llvm::getRandomBytes(output.data(), output.size()))
+      error("entropy source failure: " + ec.message());
+  }
+  // Set the UUID version and variant fields.
+  // The version is the upper nibble of byte 6 (0b0101xxxx or 0b0100xxxx)
+  output[6] = (static_cast<uint8_t>(version) << 4) | (output[6] & 0xF);
+
+  // The variant is DCE 1.1/ISO 11578 (0b10xxxxxx)
+  output[8] &= 0xBF;
+  output[8] |= 0x80;
+}
+
+void Writer::writeBuildId() {
+  if (!out.buildIdSec->isNeeded())
+    return;
+  if (config->buildId == BuildIdKind::Hexstring) {
+    out.buildIdSec->writeBuildId(config->buildIdVector);
+    return;
+  }
+
+  // Compute a hash of all sections of the output file.
+  size_t hashSize = out.buildIdSec->hashSize;
+  std::vector<uint8_t> buildId(hashSize);
+  llvm::ArrayRef<uint8_t> buf{buffer->getBufferStart(), size_t(fileSize)};
+
+  switch (config->buildId) {
+  case BuildIdKind::Fast: {
+    std::vector<uint8_t> fileHash(8);
+    computeHash(fileHash, buf, [](uint8_t *dest, ArrayRef<uint8_t> arr) {
+      support::endian::write64le(dest, xxHash64(arr));
+    });
+    makeUUID(5, fileHash, buildId);
+    break;
+  }
+  case BuildIdKind::Sha1:
+    computeHash(buildId, buf, [&](uint8_t *dest, ArrayRef<uint8_t> arr) {
+      memcpy(dest, SHA1::hash(arr).data(), hashSize);
+    });
+    break;
+  case BuildIdKind::Uuid:
+    makeUUID(4, {}, buildId);
+    break;
+  default:
+    llvm_unreachable("unknown BuildIdKind");
+  }
+  out.buildIdSec->writeBuildId(buildId);
 }
 
 static void setGlobalPtr(DefinedGlobal *g, uint64_t memoryPtr) {
@@ -456,6 +547,7 @@ void Writer::addSections() {
   addSection(out.nameSec);
   addSection(out.producersSec);
   addSection(out.targetFeaturesSec);
+  addSection(out.buildIdSec);
 }
 
 void Writer::finalizeSections() {
@@ -1577,6 +1669,7 @@ void Writer::createSyntheticSections() {
   out.elemSec = make<ElemSection>();
   out.producersSec = make<ProducersSection>();
   out.targetFeaturesSec = make<TargetFeaturesSection>();
+  out.buildIdSec = make<BuildIdSection>();
 }
 
 void Writer::createSyntheticSectionsPostLayout() {
@@ -1738,6 +1831,7 @@ void Writer::run() {
 
   log("-- writeSections");
   writeSections();
+  writeBuildId();
   if (errorCount())
     return;
 

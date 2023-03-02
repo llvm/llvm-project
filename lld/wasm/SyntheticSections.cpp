@@ -888,5 +888,39 @@ void RelocSection::writeBody() {
   sec->writeRelocations(bodyOutputStream);
 }
 
+static size_t getHashSize() {
+  switch (config->buildId) {
+  case BuildIdKind::Fast:
+  case BuildIdKind::Uuid:
+    return 16;
+  case BuildIdKind::Sha1:
+    return 20;
+  case BuildIdKind::Hexstring:
+    return config->buildIdVector.size();
+  case BuildIdKind::None:
+    return 0;
+  }
+}
+
+BuildIdSection::BuildIdSection()
+    : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, buildIdSectionName),
+      hashSize(getHashSize()) {}
+
+void BuildIdSection::writeBody() {
+  LLVM_DEBUG(llvm::dbgs() << "BuildId writebody\n");
+  // Write hash size
+  auto &os = bodyOutputStream;
+  writeUleb128(os, hashSize, "build id size");
+  writeBytes(os, std::vector<char>(hashSize, ' ').data(), hashSize,
+             "placeholder");
+}
+
+void BuildIdSection::writeBuildId(llvm::ArrayRef<uint8_t> buf) {
+  assert(buf.size() == hashSize);
+  LLVM_DEBUG(dbgs() << "buildid write " << buf.size() << " "
+                    << hashPlaceholderPtr << '\n');
+  memcpy(hashPlaceholderPtr, buf.data(), hashSize);
+}
+
 } // namespace wasm
 } // namespace lld
