@@ -13,7 +13,6 @@
 #include "test/src/time/TmHelper.h"
 #include "test/src/time/TmMatcher.h"
 
-#include <errno.h>
 #include <limits.h>
 
 using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
