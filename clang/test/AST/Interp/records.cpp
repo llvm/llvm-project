@@ -325,3 +325,9 @@ namespace DeriveFailures {
                                        // expected-error {{must be initialized by a constant expression}}
                                        // FIXME: Missing reason for rejection.
 };
+
+namespace EmptyCtor {
+  struct piecewise_construct_t { explicit piecewise_construct_t() = default; };
+  constexpr piecewise_construct_t piecewise_construct =
+    piecewise_construct_t();
+};
