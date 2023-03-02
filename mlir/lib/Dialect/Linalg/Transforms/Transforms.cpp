@@ -175,11 +175,13 @@ linalg::rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
                           ArrayRef<int64_t> paddingDimensions,
                           ArrayRef<Attribute> paddingValues,
                           ArrayRef<bool> packPaddings, LinalgOp &paddedOp) {
+  LLVM_DEBUG(DBGS() << "Start rewriteAsPaddedOp : " << opToPad << "\n");
   Location loc = opToPad->getLoc();
 
   // TODO: there are cases where we may still want to pad to larger sizes.
-  assert(opToPad.hasTensorSemantics() &&
-         "expected operation to have tensor semantics");
+  if (!opToPad.hasTensorSemantics())
+    return rewriter.notifyMatchFailure(opToPad,
+                                       "expected operation on tensors");
 
   OpBuilder::InsertionGuard g(rewriter);
   // Set IP after op because we also take the dims of the original output.
@@ -193,15 +195,22 @@ linalg::rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
         rewriter, opToPad, &opOperand, paddingDimensions, paddingValues,
         packPaddings);
     // Exit if `paddingDimensions` cannot be bounded statically.
-    if (failed(paddedOperand))
-      return failure();
+    if (failed(paddedOperand)) {
+      LLVM_DEBUG(DBGS() << "--operand cannot be bound statically : "
+                        << opOperand.get() << " -> FAIL\n");
+      return rewriter.notifyMatchFailure(opToPad,
+                                         "operand cannot be bound statically");
+    }
     newOperands.push_back(*paddedOperand);
   }
 
   SmallVector<SmallVector<Value>> reifiedResultShapes;
   if (failed(cast<ReifyRankedShapedTypeOpInterface>(opToPad.getOperation())
-                 .reifyResultShapes(rewriter, reifiedResultShapes)))
-    return failure();
+                 .reifyResultShapes(rewriter, reifiedResultShapes))) {
+    LLVM_DEBUG(DBGS() << "--failed to reify result shapes -> FAIL\n");
+    return rewriter.notifyMatchFailure(opToPad,
+                                       "failed to reify result shapes");
+  }
   assert(reifiedResultShapes.size() == opToPad->getNumResults() &&
          "expected same number of results");
 
@@ -210,6 +219,7 @@ linalg::rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
       ValueRange(newOperands).take_back(opToPad.getNumDpsInits()).getTypes();
   // clone **should** properly notify the rewriter.
   paddedOp = clone(rewriter, opToPad, resultTensorTypes, newOperands);
+  LLVM_DEBUG(DBGS() << "--cloned padded op: " << paddedOp << "\n");
 
   // Recover the slice out of the new static results. This keeps the original
   // linalg op around because it uses the dims of the original results.
