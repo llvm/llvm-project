@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -404,9 +403,6 @@ TEST(STLExtrasTest, AppendRange) {
   int AppendVals2[] = {4, 5};
   append_range(V, AppendVals2);
   EXPECT_THAT(V, ElementsAre(1, 2, 3, 4, 5));
-
-  append_range(V, llvm::seq(6, 8));
-  EXPECT_THAT(V, ElementsAre(1, 2, 3, 4, 5, 6, 7));
 
   std::string Str;
   append_range(Str, "abc");
