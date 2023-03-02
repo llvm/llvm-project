@@ -22,9 +22,10 @@ _prefix_filecheck_ir_name = ''
 Version changelog:
 
 1: Initial version, used by tests that don't specify --version explicitly.
-2: --function-signature now also checks return type/attributes.
+2: --function-signature is now enabled by default and also checks return
+   type/attributes.
 """
-DEFAULT_VERSION = 1
+DEFAULT_VERSION = 2
 
 class Regex(object):
   """Wrap a compiled regular expression object to allow deep copy of a regexp.
@@ -157,6 +158,11 @@ def parse_commandline_args(parser):
   _global_hex_value_regex = args.global_hex_value_regex
   return args
 
+def parse_args(parser, argv):
+  args = parser.parse_args(argv)
+  if args.version >= 2:
+    args.function_signature = True
+  return args
 
 class InputLineInfo(object):
   def __init__(self, line, line_number, args, argv):
@@ -246,7 +252,7 @@ def itertests(test_patterns, parser, script_name, comment_prefix=None, argparse_
       if not is_regenerate:
         argv.insert(1, '--version=' + str(DEFAULT_VERSION))
 
-      args = parser.parse_args(argv[1:])
+      args = parse_args(parser, argv[1:])
       if argparse_callback is not None:
         argparse_callback(args)
       if is_regenerate:
@@ -1199,6 +1205,8 @@ def get_autogennote_suffix(parser, args):
         continue
     if parser.get_default(action.dest) == value:
       continue  # Don't add default values
+    if action.dest == 'function_signature' and args.version >= 2:
+      continue # Enabled by default in version 2
     if action.dest == 'filters':
       # Create a separate option for each filter element.  The value is a list
       # of Filter objects.
@@ -1225,7 +1233,7 @@ def check_for_command(line, parser, args, argv, argparse_callback):
     for option in shlex.split(cmd_m.group('cmd').strip()):
       if option:
         argv.append(option)
-    args = parser.parse_args(filter(lambda arg: arg not in args.tests, argv))
+    args = parse_args(parser, filter(lambda arg: arg not in args.tests, argv))
     if argparse_callback is not None:
       argparse_callback(args)
   return args, argv
