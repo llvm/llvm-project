@@ -111,7 +111,7 @@ public:
               io_handler.GetUserData());
       for (BreakpointOptions &bp_options : *bp_options_vec) {
         Status error = m_script_interpreter.SetBreakpointCommandCallback(
-            bp_options, data.c_str());
+            bp_options, data.c_str(), /*is_callback=*/false);
         if (error.Fail())
           *io_handler.GetErrorStreamFileSP() << error.AsCString() << '\n';
       }
@@ -121,7 +121,8 @@ public:
       auto *wp_options =
           static_cast<WatchpointOptions *>(io_handler.GetUserData());
       m_script_interpreter.SetWatchpointCommandCallback(wp_options,
-                                                        data.c_str());
+                                                        data.c_str(),
+                                                        /*is_callback=*/false);
       io_handler.SetIsDone(true);
     } break;
     case eIOHandlerNone:
@@ -348,7 +349,8 @@ Status ScriptInterpreterLua::SetBreakpointCommandCallbackFunction(
 }
 
 Status ScriptInterpreterLua::SetBreakpointCommandCallback(
-    BreakpointOptions &bp_options, const char *command_body_text) {
+    BreakpointOptions &bp_options, const char *command_body_text,
+    bool is_callback) {
   return RegisterBreakpointCallback(bp_options, command_body_text, {});
 }
 
@@ -368,7 +370,8 @@ Status ScriptInterpreterLua::RegisterBreakpointCallback(
 }
 
 void ScriptInterpreterLua::SetWatchpointCommandCallback(
-    WatchpointOptions *wp_options, const char *command_body_text) {
+    WatchpointOptions *wp_options, const char *command_body_text,
+    bool is_callback) {
   RegisterWatchpointCallback(wp_options, command_body_text, {});
 }
 
