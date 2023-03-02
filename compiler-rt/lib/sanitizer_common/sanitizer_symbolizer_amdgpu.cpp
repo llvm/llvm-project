@@ -36,10 +36,8 @@ void AMDGPUCodeObjectSymbolizer::InitCOMgr() {
     comgr.release_data = (decltype(comgr.release_data))dlsym(
         RTLD_NEXT, "amd_comgr_release_data");
 
-    if (!comgr.create_data || !comgr.set_data || !comgr.create_symbolizer ||
-        !comgr.symbolize || !comgr.destroy_symbolizer || !comgr.release_data)
-      comgr.inited_ = false;
-    comgr.inited_ = true;
+    comgr.inited_ = comgr.create_data && comgr.set_data && comgr.create_symbolizer &&
+        comgr.symbolize && comgr.destroy_symbolizer && comgr.release_data;
   }
 }
 
