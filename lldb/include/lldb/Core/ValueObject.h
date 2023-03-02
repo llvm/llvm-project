@@ -564,10 +564,6 @@ public:
 
   lldb::addr_t GetPointerValue(AddressType *address_type = nullptr);
 
-  /// Remove TBI/MTE/ptrauth bits from address, if those are defined on this
-  /// target/ABI.
-  lldb::addr_t GetStrippedPointerValue(lldb::addr_t address);
-
   lldb::ValueObjectSP GetSyntheticChild(ConstString key) const;
 
   lldb::ValueObjectSP GetSyntheticArrayMember(size_t index, bool can_create);
