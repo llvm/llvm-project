@@ -1223,8 +1223,8 @@ define %svboolx2 @and_of_multiuse_icmp_sle(<vscale x 4 x i1> %a, <vscale x 4 x i
 ; CHECK-LABEL: and_of_multiuse_icmp_sle:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    cmpge p0.s, p0/z, z1.s, z0.s
 ; CHECK-NEXT:    cmpge p1.s, p1/z, z1.s, z0.s
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %cmp = icmp sle <vscale x 4 x i32> %b, %c
   %and = and <vscale x 4 x i1> %a, %cmp
@@ -1237,8 +1237,8 @@ define %svboolx2 @and_of_multiuse_icmp_sle_imm(<vscale x 4 x i1> %a, <vscale x 4
 ; CHECK-LABEL: and_of_multiuse_icmp_sle_imm:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    cmple p0.s, p0/z, z0.s, #1
 ; CHECK-NEXT:    cmple p1.s, p1/z, z0.s, #1
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %imm = shufflevector <vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 1, i64 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
   %cmp = icmp sle <vscale x 4 x i32> %b, %imm
@@ -1252,8 +1252,8 @@ define %svboolx2 @and_of_multiuse_icmp_ugt(<vscale x 4 x i1> %a, <vscale x 4 x i
 ; CHECK-LABEL: and_of_multiuse_icmp_ugt:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    cmphi p0.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    cmphi p1.s, p1/z, z0.s, z1.s
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %cmp = icmp ugt <vscale x 4 x i32> %b, %c
   %and = and <vscale x 4 x i1> %a, %cmp
@@ -1266,8 +1266,8 @@ define %svboolx2 @and_of_multiuse_icmp_ugt_imm(<vscale x 4 x i1> %a, <vscale x 4
 ; CHECK-LABEL: and_of_multiuse_icmp_ugt_imm:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    cmphi p0.s, p0/z, z0.s, #1
 ; CHECK-NEXT:    cmphi p1.s, p1/z, z0.s, #1
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %imm = shufflevector <vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 1, i64 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
   %cmp = icmp ugt <vscale x 4 x i32> %b, %imm
