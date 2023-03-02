@@ -620,7 +620,7 @@ def testKnownOpView():
     # addf should map to a known OpView class in the arithmetic dialect.
     # We know the OpView for it defines an 'lhs' attribute.
     addf = module.body.operations[2]
-    # CHECK: <mlir.dialects._arith_ops_gen._AddFOp object
+    # CHECK: <mlir.dialects._arith_ops_gen.AddFOp object
     print(repr(addf))
     # CHECK: "custom.f32"()
     print(addf.lhs)

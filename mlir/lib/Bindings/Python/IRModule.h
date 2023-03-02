@@ -654,8 +654,6 @@ public:
   PyOpView(const pybind11::object &operationObject);
   PyOperation &getOperation() override { return operation; }
 
-  static pybind11::object createRawSubclass(const pybind11::object &userClass);
-
   pybind11::object getOperationObject() { return operationObject; }
 
   static pybind11::object
@@ -665,6 +663,16 @@ public:
                std::optional<std::vector<PyBlock *>> successors,
                std::optional<int> regions, DefaultingPyLocation location,
                const pybind11::object &maybeIp);
+
+  /// Construct an instance of a class deriving from OpView, bypassing its
+  /// `__init__` method. The derived class will typically define a constructor
+  /// that provides a convenient builder, but we need to side-step this when
+  /// constructing an `OpView` for an already-built operation.
+  ///
+  /// The caller is responsible for verifying that `operation` is a valid
+  /// operation to construct `cls` with.
+  static pybind11::object constructDerived(const pybind11::object &cls,
+                                           const PyOperation &operation);
 
 private:
   PyOperation &operation;           // For efficient, cast-free access from C++
