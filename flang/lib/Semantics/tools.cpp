@@ -278,7 +278,8 @@ bool IsPointerDummy(const Symbol &symbol) {
   return IsPointer(symbol) && IsDummy(symbol);
 }
 
-bool IsBindCProcedure(const Symbol &symbol) {
+bool IsBindCProcedure(const Symbol &original) {
+  const Symbol &symbol{original.GetUltimate()};
   if (const auto *procDetails{symbol.detailsIf<ProcEntityDetails>()}) {
     if (procDetails->procInterface()) {
       // procedure component with a BIND(C) interface

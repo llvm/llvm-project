@@ -256,6 +256,12 @@ llvm.func @loopOptions(%arg1 : i32, %arg2 : i32) {
     %6 = llvm.atomicrmw add %4, %5 monotonic {access_groups = [@metadata::@group1, @metadata::@group2]} : !llvm.ptr, i32
     // CHECK: = cmpxchg ptr %{{.*}}, i32 %{{.*}}, i32 %{{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE]]
     %7 = llvm.cmpxchg %4, %5, %6 acq_rel monotonic {access_groups = [@metadata::@group1, @metadata::@group2]} : !llvm.ptr, i32
+    %8 = llvm.mlir.constant(0 : i1) : i1
+    %9 = llvm.mlir.constant(42 : i8) : i8
+    // CHECK: llvm.memcpy{{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE]]
+    "llvm.intr.memcpy"(%4, %4, %0, %8) {access_groups = [@metadata::@group1, @metadata::@group2]} : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
+    // CHECK: llvm.memset{{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE]]
+    "llvm.intr.memset"(%4, %9, %0, %8) {access_groups = [@metadata::@group1, @metadata::@group2]} : (!llvm.ptr, i8, i32, i1) -> ()
     // CHECK: br label {{.*}} !llvm.loop ![[LOOP_NODE]]
     llvm.br ^bb3(%3 : i32) {loop_annotation = #llvm.loop_annotation<
           licm = <disable = true>,

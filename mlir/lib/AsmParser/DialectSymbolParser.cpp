@@ -309,12 +309,13 @@ Type Parser::parseExtendedType() {
 /// parsing failed, nullptr is returned. The number of bytes read from the input
 /// string is returned in 'numRead'.
 template <typename T, typename ParserFn>
-static T parseSymbol(StringRef inputStr, MLIRContext *context, size_t &numRead,
-                     ParserFn &&parserFn) {
+static T parseSymbol(StringRef inputStr, MLIRContext *context,
+                     size_t *numReadOut, ParserFn &&parserFn) {
+  // Set the buffer name to the string being parsed, so that it appears in error
+  // diagnostics.
+  auto memBuffer = MemoryBuffer::getMemBuffer(inputStr, /*BufferName=*/inputStr,
+                                              /*RequiresNullTerminator=*/true);
   SourceMgr sourceMgr;
-  auto memBuffer = MemoryBuffer::getMemBuffer(
-      inputStr, /*BufferName=*/"<mlir_parser_buffer>",
-      /*RequiresNullTerminator=*/false);
   sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
   SymbolState aliasState;
   ParserConfig config(context);
@@ -322,9 +323,6 @@ static T parseSymbol(StringRef inputStr, MLIRContext *context, size_t &numRead,
                     /*codeCompleteContext=*/nullptr);
   Parser parser(state);
 
-  SourceMgrDiagnosticHandler handler(
-      const_cast<llvm::SourceMgr &>(parser.getSourceMgr()),
-      parser.getContext());
   Token startTok = parser.getToken();
   T symbol = parserFn(parser);
   if (!symbol)
@@ -332,38 +330,25 @@ static T parseSymbol(StringRef inputStr, MLIRContext *context, size_t &numRead,
 
   // Provide the number of bytes that were read.
   Token endTok = parser.getToken();
-  numRead = static_cast<size_t>(endTok.getLoc().getPointer() -
-                                startTok.getLoc().getPointer());
+  size_t numRead =
+      endTok.getLoc().getPointer() - startTok.getLoc().getPointer();
+  if (numReadOut) {
+    *numReadOut = numRead;
+  } else if (numRead != inputStr.size()) {
+    parser.emitError(endTok.getLoc()) << "found trailing characters: '"
+                                      << inputStr.drop_front(numRead) << "'";
+    return T();
+  }
   return symbol;
 }
 
-Attribute mlir::parseAttribute(StringRef attrStr, MLIRContext *context) {
-  size_t numRead = 0;
-  return parseAttribute(attrStr, context, numRead);
-}
-Attribute mlir::parseAttribute(StringRef attrStr, Type type) {
-  size_t numRead = 0;
-  return parseAttribute(attrStr, type, numRead);
-}
-
 Attribute mlir::parseAttribute(StringRef attrStr, MLIRContext *context,
-                               size_t &numRead) {
-  return parseSymbol<Attribute>(attrStr, context, numRead, [](Parser &parser) {
-    return parser.parseAttribute();
-  });
-}
-Attribute mlir::parseAttribute(StringRef attrStr, Type type, size_t &numRead) {
+                               Type type, size_t *numRead) {
   return parseSymbol<Attribute>(
-      attrStr, type.getContext(), numRead,
+      attrStr, context, numRead,
       [type](Parser &parser) { return parser.parseAttribute(type); });
 }
-
-Type mlir::parseType(StringRef typeStr, MLIRContext *context) {
-  size_t numRead = 0;
-  return parseType(typeStr, context, numRead);
-}
-
-Type mlir::parseType(StringRef typeStr, MLIRContext *context, size_t &numRead) {
+Type mlir::parseType(StringRef typeStr, MLIRContext *context, size_t *numRead) {
   return parseSymbol<Type>(typeStr, context, numRead,
                            [](Parser &parser) { return parser.parseType(); });
 }

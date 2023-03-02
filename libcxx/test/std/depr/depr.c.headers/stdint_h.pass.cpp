@@ -22,8 +22,7 @@
 #   include <cwctype>
 #endif
 
-int main(int, char**)
-{
+int main(int, char**) {
     // typedef int8_t
     static_assert(sizeof(int8_t)*CHAR_BIT == 8,
                  "sizeof(int8_t)*CHAR_BIT == 8");
@@ -295,5 +294,5 @@ int main(int, char**)
 #error UINTMAX_C not defined
 #endif
 
-  return 0;
+    return 0;
 }

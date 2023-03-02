@@ -170,8 +170,9 @@ public:
 
   // Attach the llvm.tbaa attribute to the given memory accessing operation
   // based on the provided base/access FIR types and the GEPOp.
-  void attachTBAATag(mlir::Operation *op, mlir::Type baseFIRType,
-                     mlir::Type accessFIRType, mlir::LLVM::GEPOp gep);
+  void attachTBAATag(mlir::LLVM::AliasAnalysisOpInterface op,
+                     mlir::Type baseFIRType, mlir::Type accessFIRType,
+                     mlir::LLVM::GEPOp gep);
 
 private:
   // Return unique string name based on `basename`.

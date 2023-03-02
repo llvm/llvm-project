@@ -873,14 +873,13 @@
 #error SCNxPTR not defined
 #endif
 
-template <class T> void test()
-{
+template <class T>
+void test() {
     T t = 0;
     ((void)t); // Prevent unused warning
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
     test<int8_t >();
     test<int16_t>();
     test<int32_t>();
@@ -917,8 +916,8 @@ int main(int, char**)
     test<uintmax_t>();
 
     {
-    imaxdiv_t  i1 = {};
-    ((void)i1); // Prevent unused warning
+        imaxdiv_t  i1 = {};
+        ((void)i1); // Prevent unused warning
     }
 
     intmax_t i = 0;
@@ -932,5 +931,5 @@ int main(int, char**)
     static_assert((std::is_same<decltype(wcstoumax(L"", (wchar_t**)0, 0)), uintmax_t>::value), "");
 #endif
 
-  return 0;
+    return 0;
 }

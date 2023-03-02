@@ -1631,8 +1631,7 @@ static Error addLibraries(Session &S,
       break;
     }
     auto G = StaticLibraryDefinitionGenerator::Load(
-        S.ObjLayer, Path, S.ES.getTargetTriple(),
-        std::move(GetObjFileInterface));
+        S.ObjLayer, Path, std::move(GetObjFileInterface));
     if (!G)
       return G.takeError();
 

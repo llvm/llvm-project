@@ -741,31 +741,19 @@ LLVMErrorRef LLVMOrcCreateDynamicLibrarySearchGeneratorForPath(
 
 LLVMErrorRef LLVMOrcCreateStaticLibrarySearchGeneratorForPath(
     LLVMOrcDefinitionGeneratorRef *Result, LLVMOrcObjectLayerRef ObjLayer,
-    const char *FileName, const char *TargetTriple) {
+    const char *FileName) {
   assert(Result && "Result can not be null");
   assert(FileName && "Filename can not be null");
   assert(ObjLayer && "ObjectLayer can not be null");
 
-  if (TargetTriple) {
-    auto TT = Triple(TargetTriple);
-    auto LibrarySymsGenerator =
-        StaticLibraryDefinitionGenerator::Load(*unwrap(ObjLayer), FileName, TT);
-    if (!LibrarySymsGenerator) {
-      *Result = nullptr;
-      return wrap(LibrarySymsGenerator.takeError());
-    }
-    *Result = wrap(LibrarySymsGenerator->release());
-    return LLVMErrorSuccess;
-  } else {
-    auto LibrarySymsGenerator =
-        StaticLibraryDefinitionGenerator::Load(*unwrap(ObjLayer), FileName);
-    if (!LibrarySymsGenerator) {
-      *Result = nullptr;
-      return wrap(LibrarySymsGenerator.takeError());
-    }
-    *Result = wrap(LibrarySymsGenerator->release());
-    return LLVMErrorSuccess;
+  auto LibrarySymsGenerator =
+      StaticLibraryDefinitionGenerator::Load(*unwrap(ObjLayer), FileName);
+  if (!LibrarySymsGenerator) {
+    *Result = nullptr;
+    return wrap(LibrarySymsGenerator.takeError());
   }
+  *Result = wrap(LibrarySymsGenerator->release());
+  return LLVMErrorSuccess;
 }
 
 LLVMOrcThreadSafeContextRef LLVMOrcCreateNewThreadSafeContext(void) {

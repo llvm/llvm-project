@@ -18,8 +18,7 @@
 #error NULL not defined
 #endif
 
-int main(int, char**)
-{
+int main(int, char**) {
     // Functions we get directly from the C library (just check the signature)
     {
         size_t s = 0;

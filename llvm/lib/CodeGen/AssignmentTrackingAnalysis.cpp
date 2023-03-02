@@ -1533,7 +1533,6 @@ void AssignmentTrackingLowering::processDbgValue(DbgValueInst &DVI,
 
 void AssignmentTrackingLowering::processDbgInstruction(
     Instruction &I, AssignmentTrackingLowering::BlockInfo *LiveSet) {
-  assert(!isa<DbgAddrIntrinsic>(&I) && "unexpected dbg.addr");
   if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(&I))
     processDbgAssign(*DAI, LiveSet);
   else if (auto *DVI = dyn_cast<DbgValueInst>(&I))
