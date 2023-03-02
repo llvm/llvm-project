@@ -22,7 +22,6 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "clang/Frontend/CASDependencyCollector.h"
-#include "clang/Frontend/ChainedDiagnosticConsumer.h"
 #include "clang/Frontend/CompileJobCacheKey.h"
 #include "clang/Frontend/CompileJobCacheResult.h"
 #include "clang/Frontend/CompilerInstance.h"

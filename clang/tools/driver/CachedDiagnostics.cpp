@@ -307,7 +307,7 @@ unsigned CachedDiagnosticSerializer::convertFileID(FileID FID,
     CachedEI.ExpansionStartLoc =
         convertLoc(FullSourceLoc(EI.getExpansionLocStart(), SM));
     CachedEI.ExpansionEndLoc =
-        convertLoc(FullSourceLoc(EI.getExpansionLocEnd(), SM));
+        convertLoc(FullSourceLoc(EI.getUnderlyingExpansionLocEnd(), SM));
     CachedEI.IsTokenRange = EI.isExpansionTokenRange();
     CachedEntry.Data = std::move(CachedEI);
   }
