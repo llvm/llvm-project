@@ -702,6 +702,30 @@ bool IsSeparateModuleProcedureInterface(const Symbol *symbol) {
   return false;
 }
 
+SymbolVector FinalsForDerivedTypeInstantiation(const DerivedTypeSpec &spec) {
+  SymbolVector result;
+  const Symbol &typeSymbol{spec.typeSymbol()};
+  if (const auto *derived{typeSymbol.detailsIf<DerivedTypeDetails>()}) {
+    for (const auto &pair : derived->finals()) {
+      const Symbol &subr{*pair.second};
+      // Errors in FINAL subroutines are caught in CheckFinal
+      // in check-declarations.cpp.
+      if (const auto *subprog{subr.detailsIf<SubprogramDetails>()};
+          subprog && subprog->dummyArgs().size() == 1) {
+        if (const Symbol * arg{subprog->dummyArgs()[0]}) {
+          if (const DeclTypeSpec * type{arg->GetType()}) {
+            if (type->category() == DeclTypeSpec::TypeDerived &&
+                evaluate::AreSameDerivedType(spec, type->derivedTypeSpec())) {
+              result.emplace_back(subr);
+            }
+          }
+        }
+      }
+    }
+  }
+  return result;
+}
+
 bool IsFinalizable(
     const Symbol &symbol, std::set<const DerivedTypeSpec *> *inProgress) {
   if (IsPointer(symbol)) {
@@ -720,7 +744,7 @@ bool IsFinalizable(
 
 bool IsFinalizable(const DerivedTypeSpec &derived,
     std::set<const DerivedTypeSpec *> *inProgress) {
-  if (!derived.typeSymbol().get<DerivedTypeDetails>().finals().empty()) {
+  if (!FinalsForDerivedTypeInstantiation(derived).empty()) {
     return true;
   }
   std::set<const DerivedTypeSpec *> basis;
@@ -742,14 +766,12 @@ bool IsFinalizable(const DerivedTypeSpec &derived,
 }
 
 bool HasImpureFinal(const DerivedTypeSpec &derived) {
-  if (const auto *details{
-          derived.typeSymbol().detailsIf<DerivedTypeDetails>()}) {
-    const auto &finals{details->finals()};
-    return std::any_of(finals.begin(), finals.end(),
-        [](const auto &x) { return !IsPureProcedure(*x.second); });
-  } else {
-    return false;
+  for (auto ref : FinalsForDerivedTypeInstantiation(derived)) {
+    if (!IsPureProcedure(*ref)) {
+      return true;
+    }
   }
+  return false;
 }
 
 bool IsAssumedLengthCharacter(const Symbol &symbol) {

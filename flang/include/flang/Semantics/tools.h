@@ -169,6 +169,7 @@ inline bool IsProtected(const Symbol &symbol) {
 inline bool IsImpliedDoIndex(const Symbol &symbol) {
   return symbol.owner().kind() == Scope::Kind::ImpliedDos;
 }
+SymbolVector FinalsForDerivedTypeInstantiation(const DerivedTypeSpec &);
 bool IsFinalizable(
     const Symbol &, std::set<const DerivedTypeSpec *> * = nullptr);
 bool IsFinalizable(

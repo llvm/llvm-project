@@ -573,12 +573,11 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
       // do not (the runtime will call all of them).
       std::map<int, evaluate::StructureConstructor> specials{
           DescribeSpecialGenerics(dtScope, dtScope, derivedTypeSpec)};
-      const DerivedTypeDetails &dtDetails{dtSymbol->get<DerivedTypeDetails>()};
-      for (const auto &pair : dtDetails.finals()) {
-        DescribeSpecialProc(specials, *pair.second, false /*!isAssignment*/,
-            true, std::nullopt, nullptr, derivedTypeSpec);
-      }
       if (derivedTypeSpec) {
+        for (auto &ref : FinalsForDerivedTypeInstantiation(*derivedTypeSpec)) {
+          DescribeSpecialProc(specials, *ref, false /*!isAssignment*/, true,
+              std::nullopt, nullptr, derivedTypeSpec);
+        }
         IncorporateDefinedIoGenericInterfaces(specials,
             GenericKind::DefinedIo::ReadFormatted, &scope, derivedTypeSpec);
         IncorporateDefinedIoGenericInterfaces(specials,
