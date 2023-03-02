@@ -427,6 +427,12 @@ inline bool isFlatGlobalAddrSpace(unsigned AS) {
          AS == AMDGPUAS::CONSTANT_ADDRESS ||
          AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;
 }
+
+inline bool isExtendedGlobalAddrSpace(unsigned AS) {
+  return AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::CONSTANT_ADDRESS ||
+         AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
+         AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;
+}
 }
 
 } // End namespace llvm
