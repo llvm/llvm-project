@@ -440,13 +440,6 @@ bool ValueObjectPrinter::PrintValueAndSummaryIfNeeded(bool &value_printed,
           if (!m_options.m_hide_name)
             m_stream->PutChar(' ');
           m_stream->PutCString(m_value);
-          if (IsPointerValue(m_valobj->GetCompilerType())) {
-            uint64_t orig_value = m_valobj->GetValueAsUnsigned(0);
-            addr_t stripped = m_valobj->GetPointerValue();
-            if (stripped != orig_value) {
-              m_stream->Printf(" (actual=0x%" PRIx64 ")", stripped);
-            }
-          }
           value_printed = true;
         }
       }
