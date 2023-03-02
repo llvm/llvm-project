@@ -16,6 +16,9 @@
 #include "mlir/IR/Dialect.h"
 
 namespace mlir {
+
+struct TilingResult;
+
 namespace tensor {
 
 class PadOp;
@@ -39,10 +42,10 @@ class PadOp;
 /// to guard against the case that we might take a zero-sized slice from the
 /// original source. For such cases, we `tensor.generate` to generate the
 /// full tensor.
-Operation *bubbleUpPadSlice(OpBuilder &b, tensor::PadOp padOp,
-                            ArrayRef<OpFoldResult> offsets,
-                            ArrayRef<OpFoldResult> sizes,
-                            bool generateZeroSliceGuard = true);
+FailureOr<TilingResult> bubbleUpPadSlice(OpBuilder &b, tensor::PadOp padOp,
+                                         ArrayRef<OpFoldResult> offsets,
+                                         ArrayRef<OpFoldResult> sizes,
+                                         bool generateZeroSliceGuard = true);
 
 /// Registers external models for Tiling interface for tensor ops.
 /// Currently, it registers:

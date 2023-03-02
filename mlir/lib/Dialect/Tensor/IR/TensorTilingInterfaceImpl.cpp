@@ -46,15 +46,15 @@ struct PadOpTiling : public TilingInterface::ExternalModel<PadOpTiling, PadOp> {
     return loopRanges;
   }
 
-  SmallVector<Operation *>
+  FailureOr<TilingResult>
   getTiledImplementation(Operation *op, OpBuilder &b,
                          ArrayRef<OpFoldResult> offsets,
                          ArrayRef<OpFoldResult> sizes) const {
-    Operation *result =
+    FailureOr<TilingResult> result =
         tensor::bubbleUpPadSlice(b, cast<PadOp>(op), offsets, sizes);
-    if (!result)
-      return {};
-    return {result};
+    if (failed(result))
+      return failure();
+    return result.value();
   }
 
   LogicalResult
@@ -117,7 +117,7 @@ struct PackOpTiling
     return getPackUnPackIterationDomain<PackOp>(cast<PackOp>(op), b);
   }
 
-  SmallVector<Operation *>
+  FailureOr<TilingResult>
   getTiledImplementation(Operation *op, OpBuilder &b,
                          ArrayRef<OpFoldResult> offsets,
                          ArrayRef<OpFoldResult> sizes) const {
@@ -192,7 +192,8 @@ struct PackOpTiling
     Operation *tiledPackOp = b.create<PackOp>(
         loc, TypeRange{extractSlice.getType()}, tiledOperands, op->getAttrs());
 
-    return {tiledPackOp};
+    return TilingResult{{tiledPackOp},
+                        SmallVector<Value>(tiledPackOp->getResults())};
   }
 
   LogicalResult
@@ -353,7 +354,7 @@ struct UnPackOpTiling
   /// (3, 7). In this context, the tiled unpack produces a (3 * n) elements
   /// because there are 3 rows in total. Follow by a tensor.extract_slice op, we
   /// can get the actual result.
-  SmallVector<Operation *>
+  FailureOr<TilingResult>
   getTiledImplementation(Operation *op, OpBuilder &b,
                          ArrayRef<OpFoldResult> offsets,
                          ArrayRef<OpFoldResult> sizes) const {
@@ -412,12 +413,13 @@ struct UnPackOpTiling
         loc, TypeRange{sliceDest.getType()}, tiledOperands, op->getAttrs());
 
     if (isPerfectTilingCase)
-      return {tiledUnpackOp};
+      return TilingResult{{tiledUnpackOp},
+                          SmallVector<Value>(tiledUnpackOp->getResults())};
 
-    Operation *extractSlice =
+    auto extractSlice =
         b.create<ExtractSliceOp>(loc, tiledUnpackOp->getResult(0),
                                  resultOffsetsFromDest, sizes, destStrides);
-    return {tiledUnpackOp, extractSlice};
+    return TilingResult{{tiledUnpackOp}, {extractSlice.getResult()}};
   }
 
   LogicalResult
@@ -431,26 +433,29 @@ struct UnPackOpTiling
     return success();
   }
 
-  FailureOr<Value> generateResultTileValue(Operation *op, OpBuilder &b,
-                                           unsigned resultNumber,
-                                           ArrayRef<OpFoldResult> offsets,
-                                           ArrayRef<OpFoldResult> sizes) const {
-    return getTiledImplementation(op, b, offsets, sizes)
-        .back()
-        ->getResult(resultNumber);
+  FailureOr<TilingResult>
+  generateResultTileValue(Operation *op, OpBuilder &b, unsigned resultNumber,
+                          ArrayRef<OpFoldResult> offsets,
+                          ArrayRef<OpFoldResult> sizes) const {
+    FailureOr<TilingResult> tilingResult =
+        getTiledImplementation(op, b, offsets, sizes);
+    if (failed(tilingResult))
+      return failure();
+    return tilingResult.value();
   }
 };
 
 } // namespace
 
-Operation *tensor::bubbleUpPadSlice(OpBuilder &b, tensor::PadOp padOp,
-                                    ArrayRef<OpFoldResult> offsets,
-                                    ArrayRef<OpFoldResult> sizes,
-                                    bool generateZeroSliceGuard) {
+FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
+                                                 tensor::PadOp padOp,
+                                                 ArrayRef<OpFoldResult> offsets,
+                                                 ArrayRef<OpFoldResult> sizes,
+                                                 bool generateZeroSliceGuard) {
   // Only constant padding value supported.
   Value padValue = padOp.getConstantPaddingValue();
   if (!padValue)
-    return nullptr;
+    return failure();
 
   // Helper variables and functions for various arithmetic operations. These
   // are used extensively for computing new offset/length and padding values.
@@ -584,10 +589,9 @@ Operation *tensor::bubbleUpPadSlice(OpBuilder &b, tensor::PadOp padOp,
       RankedTensorType::get(shape, padOp.getResultType().getElementType());
 
   // Insert cast to ensure that types match. (May be folded away.)
-  auto castResult = [&](Operation *op) -> Operation * {
-    Value val = op->getResult(0);
+  auto castResult = [&](Value val) -> Value {
     if (resultType == val.getType())
-      return op;
+      return val;
     return b.create<tensor::CastOp>(loc, resultType, val);
   };
 
@@ -601,7 +605,7 @@ Operation *tensor::bubbleUpPadSlice(OpBuilder &b, tensor::PadOp padOp,
         [&](OpBuilder &builder, Location gLoc, ValueRange indices) {
           builder.create<tensor::YieldOp>(gLoc, padValue);
         });
-    return castResult(generateOp);
+    return generateOp;
   };
 
   // Emit a SliceOp and a PadOp. Should not be used in cases where
@@ -617,30 +621,38 @@ Operation *tensor::bubbleUpPadSlice(OpBuilder &b, tensor::PadOp padOp,
     padOp.getRegion().cloneInto(&newPadOp.getRegion(), bvm);
 
     // Cast result and return.
-    return castResult(newPadOp);
+    return newPadOp;
   };
 
   // Rewrite extract_slice(pad(x)) into a GenerateOp it is statically known that
   // the original data source x is not used.
-  if (hasZeroLen)
-    return createGenerateOp();
+  if (hasZeroLen) {
+    Operation *generateOp = createGenerateOp();
+    return TilingResult{{generateOp}, {castResult(generateOp->getResult(0))}};
+  }
 
   // If there are dynamic dimensions: Generate an scf.if check to avoid
   // creating SliceOps with result dimensions of size 0 at runtime.
   if (generateZeroSliceGuard && dynHasZeroLenCond) {
+    Operation *thenOp;
+    Operation *elseOp;
     auto result = b.create<scf::IfOp>(
         loc, dynHasZeroLenCond,
         /*thenBuilder=*/
         [&](OpBuilder &b, Location loc) {
-          b.create<scf::YieldOp>(loc, createGenerateOp()->getResult(0));
+          thenOp = createGenerateOp();
+          b.create<scf::YieldOp>(loc, castResult(thenOp->getResult(0)));
         },
         /*elseBuilder=*/
         [&](OpBuilder &b, Location loc) {
-          b.create<scf::YieldOp>(loc, createPadOfExtractSlice()->getResult(0));
+          elseOp = createPadOfExtractSlice();
+          b.create<scf::YieldOp>(loc, castResult(elseOp->getResult(0)));
         });
-    return result;
+    return TilingResult{{result}, SmallVector<Value>(result->getResults())};
   }
-  return createPadOfExtractSlice();
+
+  Operation *newPadOp = createPadOfExtractSlice();
+  return TilingResult{{newPadOp}, {castResult(newPadOp->getResult(0))}};
 }
 
 void mlir::tensor::registerTilingInterfaceExternalModels(
