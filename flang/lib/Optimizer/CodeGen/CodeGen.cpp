@@ -352,8 +352,9 @@ protected:
     return *static_cast<fir::LLVMTypeConverter *>(this->getTypeConverter());
   }
 
-  void attachTBAATag(mlir::Operation *op, mlir::Type baseFIRType,
-                     mlir::Type accessFIRType, mlir::LLVM::GEPOp gep) const {
+  void attachTBAATag(mlir::LLVM::AliasAnalysisOpInterface op,
+                     mlir::Type baseFIRType, mlir::Type accessFIRType,
+                     mlir::LLVM::GEPOp gep) const {
     lowerTy().attachTBAATag(op, baseFIRType, accessFIRType, gep);
   }
 
