@@ -274,31 +274,25 @@ Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
 StaticLibraryDefinitionGenerator::Load(
     ObjectLayer &L, const char *FileName,
     GetObjectFileInterface GetObjFileInterface) {
-  auto ArchiveBuffer = MemoryBuffer::getFile(FileName);
-
-  if (!ArchiveBuffer)
-    return createFileError(FileName, ArchiveBuffer.getError());
-
-  return Create(L, std::move(*ArchiveBuffer), std::move(GetObjFileInterface));
-}
-
-Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
-StaticLibraryDefinitionGenerator::Load(
-    ObjectLayer &L, const char *FileName, const Triple &TT,
-    GetObjectFileInterface GetObjFileInterface) {
 
   auto B = object::createBinary(FileName);
   if (!B)
     return createFileError(FileName, B.takeError());
 
   // If this is a regular archive then create an instance from it.
-  if (isa<object::Archive>(B->getBinary()))
-    return Create(L, std::move(B->takeBinary().second),
+  if (isa<object::Archive>(B->getBinary())) {
+    auto [Archive, ArchiveBuffer] = B->takeBinary();
+    return Create(L, std::move(ArchiveBuffer),
+                  std::unique_ptr<object::Archive>(
+                      static_cast<object::Archive *>(Archive.release())),
                   std::move(GetObjFileInterface));
+  }
 
   // If this is a universal binary then search for a slice matching the given
   // Triple.
   if (auto *UB = cast<object::MachOUniversalBinary>(B->getBinary())) {
+
+    const auto &TT = L.getExecutionSession().getTargetTriple();
 
     auto SliceRange = getSliceRangeForArch(*UB, TT);
     if (!SliceRange)
@@ -346,30 +340,23 @@ StaticLibraryDefinitionGenerator::Create(
     ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
     GetObjectFileInterface GetObjFileInterface) {
 
-  auto Archive = object::Archive::create(ArchiveBuffer->getMemBufferRef());
-  if (!Archive)
-    return Archive.takeError();
-
-  return Create(L, std::move(ArchiveBuffer), std::move(*Archive),
-                std::move(GetObjFileInterface));
-}
-
-Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
-StaticLibraryDefinitionGenerator::Create(
-    ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
-    const Triple &TT, GetObjectFileInterface GetObjFileInterface) {
-
   auto B = object::createBinary(ArchiveBuffer->getMemBufferRef());
   if (!B)
     return B.takeError();
 
   // If this is a regular archive then create an instance from it.
   if (isa<object::Archive>(*B))
-    return Create(L, std::move(ArchiveBuffer), std::move(GetObjFileInterface));
+    return Create(L, std::move(ArchiveBuffer),
+                  std::unique_ptr<object::Archive>(
+                      static_cast<object::Archive *>(B->release())),
+                  std::move(GetObjFileInterface));
 
   // If this is a universal binary then search for a slice matching the given
   // Triple.
   if (auto *UB = cast<object::MachOUniversalBinary>(B->get())) {
+
+    const auto &TT = L.getExecutionSession().getTargetTriple();
+
     auto SliceRange = getSliceRangeForArch(*UB, TT);
     if (!SliceRange)
       return SliceRange.takeError();
