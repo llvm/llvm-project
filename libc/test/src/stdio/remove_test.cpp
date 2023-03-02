@@ -15,18 +15,18 @@
 #include "test/UnitTest/Test.h"
 #include "utils/testutils/FDReader.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <unistd.h>
 
 TEST(LlvmLibcRemoveTest, CreateAndRemoveFile) {
   // The test strategy is to create a file and remove it, and also verify that
   // it was removed.
-  errno = 0;
+  libc_errno = 0;
   using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
   using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *TEST_FILE = "testdata/remove.test.file";
   int fd = __llvm_libc::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   ASSERT_GT(fd, 0);
   ASSERT_THAT(__llvm_libc::close(fd), Succeeds(0));
 
@@ -38,7 +38,7 @@ TEST(LlvmLibcRemoveTest, CreateAndRemoveFile) {
 TEST(LlvmLibcRemoveTest, CreateAndRemoveDir) {
   // The test strategy is to create a dir and remove it, and also verify that
   // it was removed.
-  errno = 0;
+  libc_errno = 0;
   using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
   using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *TEST_DIR = "testdata/remove.test.dir";
