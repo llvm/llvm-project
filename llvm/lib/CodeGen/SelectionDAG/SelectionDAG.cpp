@@ -1935,6 +1935,27 @@ SDValue SelectionDAG::getCondCode(ISD::CondCode Cond) {
   return SDValue(CondCodeNodes[Cond], 0);
 }
 
+SDValue SelectionDAG::getVScale(const SDLoc &DL, EVT VT, APInt MulImm,
+                                bool ConstantFold) {
+  assert(MulImm.getSignificantBits() <= VT.getSizeInBits() &&
+         "Immediate does not fit VT");
+
+  MulImm = MulImm.sextOrTrunc(VT.getSizeInBits());
+
+  if (ConstantFold) {
+    const MachineFunction &MF = getMachineFunction();
+    auto Attr = MF.getFunction().getFnAttribute(Attribute::VScaleRange);
+    if (Attr.isValid()) {
+      unsigned VScaleMin = Attr.getVScaleRangeMin();
+      if (std::optional<unsigned> VScaleMax = Attr.getVScaleRangeMax())
+        if (*VScaleMax == VScaleMin)
+          return getConstant(MulImm * VScaleMin, DL, VT);
+    }
+  }
+
+  return getNode(ISD::VSCALE, DL, VT, getConstant(MulImm, DL, VT));
+}
+
 SDValue SelectionDAG::getStepVector(const SDLoc &DL, EVT ResVT) {
   APInt One(ResVT.getScalarSizeInBits(), 1);
   return getStepVector(DL, ResVT, One);
