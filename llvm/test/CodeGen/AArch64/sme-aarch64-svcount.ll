@@ -161,11 +161,52 @@ define void @test_pass_5args(target("aarch64.svcount") %arg) nounwind {
 }
 
 define target("aarch64.svcount") @test_sel(target("aarch64.svcount") %x, target("aarch64.svcount") %y, i1 %cmp) {
+; CHECK-O0-LABEL: test_sel:
+; CHECK-O0:       // %bb.0:
+; CHECK-O0-NEXT:    mov p2.b, p1.b
+; CHECK-O0-NEXT:    mov p1.b, p0.b
+; CHECK-O0-NEXT:    // implicit-def: $x8
+; CHECK-O0-NEXT:    mov w8, w0
+; CHECK-O0-NEXT:    sbfx x9, x8, #0, #1
+; CHECK-O0-NEXT:    mov x8, xzr
+; CHECK-O0-NEXT:    whilelo p0.b, x8, x9
+; CHECK-O0-NEXT:    sel p0.b, p0, p1.b, p2.b
+; CHECK-O0-NEXT:    ret
+;
+; CHECK-O3-LABEL: test_sel:
+; CHECK-O3:       // %bb.0:
+; CHECK-O3-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-O3-NEXT:    sbfx x8, x0, #0, #1
+; CHECK-O3-NEXT:    whilelo p2.b, xzr, x8
+; CHECK-O3-NEXT:    sel p0.b, p2, p0.b, p1.b
+; CHECK-O3-NEXT:    ret
   %x.y = select i1 %cmp, target("aarch64.svcount") %x, target("aarch64.svcount") %y
   ret target("aarch64.svcount") %x.y
 }
 
 define target("aarch64.svcount") @test_sel_cc(target("aarch64.svcount") %x, target("aarch64.svcount") %y, i32 %k) {
+; CHECK-O0-LABEL: test_sel_cc:
+; CHECK-O0:       // %bb.0:
+; CHECK-O0-NEXT:    mov p2.b, p1.b
+; CHECK-O0-NEXT:    mov p1.b, p0.b
+; CHECK-O0-NEXT:    subs w8, w0, #42
+; CHECK-O0-NEXT:    cset w9, gt
+; CHECK-O0-NEXT:    // implicit-def: $x8
+; CHECK-O0-NEXT:    mov w8, w9
+; CHECK-O0-NEXT:    sbfx x9, x8, #0, #1
+; CHECK-O0-NEXT:    mov x8, xzr
+; CHECK-O0-NEXT:    whilelo p0.b, x8, x9
+; CHECK-O0-NEXT:    sel p0.b, p0, p1.b, p2.b
+; CHECK-O0-NEXT:    ret
+;
+; CHECK-O3-LABEL: test_sel_cc:
+; CHECK-O3:       // %bb.0:
+; CHECK-O3-NEXT:    cmp w0, #42
+; CHECK-O3-NEXT:    cset w8, gt
+; CHECK-O3-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-O3-NEXT:    whilelo p2.b, xzr, x8
+; CHECK-O3-NEXT:    sel p0.b, p2, p0.b, p1.b
+; CHECK-O3-NEXT:    ret
   %cmp = icmp sgt i32 %k, 42
   %x.y = select i1 %cmp, target("aarch64.svcount") %x, target("aarch64.svcount") %y
   ret target("aarch64.svcount") %x.y
