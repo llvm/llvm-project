@@ -146,6 +146,7 @@ private:
   bool selectBVHIntersectRayIntrinsic(MachineInstr &I) const;
   bool selectSMFMACIntrin(MachineInstr &I) const;
   bool selectWaveAddress(MachineInstr &I) const;
+  bool selectBITOP3(MachineInstr &I) const;
 
   std::pair<Register, unsigned>
   selectVOP3ModsImpl(MachineOperand &Root, bool AllowAbs = true,
