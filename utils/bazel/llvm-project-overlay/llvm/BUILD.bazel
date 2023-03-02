@@ -4713,6 +4713,7 @@ cc_binary(
         ":MCDisassembler",
         ":Object",
         ":OrcJIT",
+        ":Passes",
         ":Remarks",
         ":Scalar",
         ":Support",
