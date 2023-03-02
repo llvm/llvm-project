@@ -244,14 +244,9 @@ define void @test_i1_uge(ptr%A2) {
 ; CHECK-LABEL: test_i1_uge:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl (%rdi), %eax
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    xorb $1, %cl
-; CHECK-NEXT:    andb %cl, %al
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    negq %rax
-; CHECK-NEXT:    andb $1, %cl
-; CHECK-NEXT:    movb %cl, (%rdi,%rax)
+; CHECK-NEXT:    notb %al
+; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    movb %al, (%rdi)
 ; CHECK-NEXT:    retq
   %L5 = load i1, ptr %A2
   %C3 = icmp ne i1 %L5, true

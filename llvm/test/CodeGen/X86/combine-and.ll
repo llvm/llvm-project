@@ -1180,12 +1180,12 @@ define <4 x i32> @neg_scalar_broadcast_two_uses(i32 %a0, <4 x i32> %a1, ptr %a2)
 define <2 x i64> @andnp_xx(<2 x i64> %v0) nounwind {
 ; SSE-LABEL: andnp_xx:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    andnps %xmm0, %xmm0
+; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: andnp_xx:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vandnps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %x = xor <2 x i64> %v0, <i64 -1, i64 -1>
   %y = and <2 x i64> %v0, %x
@@ -1195,12 +1195,12 @@ define <2 x i64> @andnp_xx(<2 x i64> %v0) nounwind {
 define <2 x i64> @andnp_xx_2(<2 x i64> %v0) nounwind {
 ; SSE-LABEL: andnp_xx_2:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    andnps %xmm0, %xmm0
+; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: andnp_xx_2:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vandnps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %x = xor <2 x i64> %v0, <i64 -1, i64 -1>
   %y = and <2 x i64> %x, %v0
@@ -1210,9 +1210,7 @@ define <2 x i64> @andnp_xx_2(<2 x i64> %v0) nounwind {
 define i64 @andn_xx(i64 %v0) nounwind {
 ; CHECK-LABEL: andn_xx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    notq %rax
-; CHECK-NEXT:    andq %rdi, %rax
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
   %x = xor i64 %v0, -1
   %y = and i64 %v0, %x
@@ -1222,9 +1220,7 @@ define i64 @andn_xx(i64 %v0) nounwind {
 define i64 @andn_xx_2(i64 %v0) nounwind {
 ; CHECK-LABEL: andn_xx_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    notq %rax
-; CHECK-NEXT:    andq %rdi, %rax
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
   %x = xor i64 %v0, -1
   %y = and i64 %x, %v0
