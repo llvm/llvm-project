@@ -172,6 +172,8 @@ bool ByteCodeStmtGen<Emitter>::visitStmt(const Stmt *S) {
     return visitDoStmt(cast<DoStmt>(S));
   case Stmt::ForStmtClass:
     return visitForStmt(cast<ForStmt>(S));
+  case Stmt::CXXForRangeStmtClass:
+    return visitCXXForRangeStmt(cast<CXXForRangeStmt>(S));
   case Stmt::BreakStmtClass:
     return visitBreakStmt(cast<BreakStmt>(S));
   case Stmt::ContinueStmtClass:
@@ -365,6 +367,58 @@ bool ByteCodeStmtGen<Emitter>::visitForStmt(const ForStmt *S) {
     return false;
   if (!this->jump(CondLabel))
     return false;
+  this->emitLabel(EndLabel);
+  return true;
+}
+
+template <class Emitter>
+bool ByteCodeStmtGen<Emitter>::visitCXXForRangeStmt(const CXXForRangeStmt *S) {
+  const Stmt *Init = S->getInit();
+  const Expr *Cond = S->getCond();
+  const Expr *Inc = S->getInc();
+  const Stmt *Body = S->getBody();
+  const Stmt *BeginStmt = S->getBeginStmt();
+  const Stmt *RangeStmt = S->getRangeStmt();
+  const Stmt *EndStmt = S->getEndStmt();
+  const VarDecl *LoopVar = S->getLoopVariable();
+
+  LabelTy EndLabel = this->getLabel();
+  LabelTy CondLabel = this->getLabel();
+  LabelTy IncLabel = this->getLabel();
+  LoopScope<Emitter> LS(this, EndLabel, IncLabel);
+  {
+    ExprScope<Emitter> ES(this);
+
+    // Emit declarations needed in the loop.
+    if (Init && !this->visitStmt(Init))
+      return false;
+    if (!this->visitStmt(RangeStmt))
+      return false;
+    if (!this->visitStmt(BeginStmt))
+      return false;
+    if (!this->visitStmt(EndStmt))
+      return false;
+
+    // Now the condition as well as the loop variable assignment.
+    this->emitLabel(CondLabel);
+    if (!this->visitBool(Cond))
+      return false;
+    if (!this->jumpFalse(EndLabel))
+      return false;
+
+    if (!this->visitVarDecl(LoopVar))
+      return false;
+
+    // Body.
+    if (!this->visitStmt(Body))
+      return false;
+    this->emitLabel(IncLabel);
+    if (!this->discard(Inc))
+      return false;
+    if (!this->jump(CondLabel))
+      return false;
+  }
+
   this->emitLabel(EndLabel);
   return true;
 }
