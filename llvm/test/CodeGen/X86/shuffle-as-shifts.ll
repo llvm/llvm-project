@@ -6,87 +6,33 @@
 
 
 define <4 x i32> @shuf_rot_v4i32_1032(<4 x i32> %x) {
-; CHECK-SKX-LABEL: shuf_rot_v4i32_1032:
-; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; CHECK-SKX-NEXT:    vprolq $32, %xmm0, %xmm0
-; CHECK-SKX-NEXT:    retq
-;
-; CHECK-ICX-LABEL: shuf_rot_v4i32_1032:
-; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; CHECK-ICX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,0,3,2]
-; CHECK-ICX-NEXT:    retq
-;
-; CHECK-V4-LABEL: shuf_rot_v4i32_1032:
-; CHECK-V4:       # %bb.0:
-; CHECK-V4-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; CHECK-V4-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,0,3,2]
-; CHECK-V4-NEXT:    retq
-;
-; CHECK-ZNVER4-LABEL: shuf_rot_v4i32_1032:
-; CHECK-ZNVER4:       # %bb.0:
-; CHECK-ZNVER4-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; CHECK-ZNVER4-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,0,3,2]
-; CHECK-ZNVER4-NEXT:    retq
+; CHECK-LABEL: shuf_rot_v4i32_1032:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,0,3,2]
+; CHECK-NEXT:    retq
   %x1 = add <4 x i32> %x, %x
   %r = shufflevector <4 x i32> %x1, <4 x i32> zeroinitializer, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
   ret <4 x i32> %r
 }
 
 define <8 x i32> @shuf_rot_v8i32_10325476(<8 x i32> %x) {
-; CHECK-SKX-LABEL: shuf_rot_v8i32_10325476:
-; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
-; CHECK-SKX-NEXT:    vprolq $32, %ymm0, %ymm0
-; CHECK-SKX-NEXT:    retq
-;
-; CHECK-ICX-LABEL: shuf_rot_v8i32_10325476:
-; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
-; CHECK-ICX-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[1,0,3,2,5,4,7,6]
-; CHECK-ICX-NEXT:    retq
-;
-; CHECK-V4-LABEL: shuf_rot_v8i32_10325476:
-; CHECK-V4:       # %bb.0:
-; CHECK-V4-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
-; CHECK-V4-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[1,0,3,2,5,4,7,6]
-; CHECK-V4-NEXT:    retq
-;
-; CHECK-ZNVER4-LABEL: shuf_rot_v8i32_10325476:
-; CHECK-ZNVER4:       # %bb.0:
-; CHECK-ZNVER4-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
-; CHECK-ZNVER4-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[1,0,3,2,5,4,7,6]
-; CHECK-ZNVER4-NEXT:    retq
+; CHECK-LABEL: shuf_rot_v8i32_10325476:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
+; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[1,0,3,2,5,4,7,6]
+; CHECK-NEXT:    retq
   %x1 = add <8 x i32> %x, %x
   %r = shufflevector <8 x i32> %x1, <8 x i32> zeroinitializer, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
   ret <8 x i32> %r
 }
 
 define <16 x i32> @shuf_rot_v16i32_1032547698111013121514(<16 x i32> %x) {
-; CHECK-SKX-LABEL: shuf_rot_v16i32_1032547698111013121514:
-; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    vpaddd %zmm0, %zmm0, %zmm0
-; CHECK-SKX-NEXT:    vprolq $32, %zmm0, %zmm0
-; CHECK-SKX-NEXT:    retq
-;
-; CHECK-ICX-LABEL: shuf_rot_v16i32_1032547698111013121514:
-; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    vpaddd %zmm0, %zmm0, %zmm0
-; CHECK-ICX-NEXT:    vpshufd {{.*#+}} zmm0 = zmm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
-; CHECK-ICX-NEXT:    retq
-;
-; CHECK-V4-LABEL: shuf_rot_v16i32_1032547698111013121514:
-; CHECK-V4:       # %bb.0:
-; CHECK-V4-NEXT:    vpaddd %zmm0, %zmm0, %zmm0
-; CHECK-V4-NEXT:    vpshufd {{.*#+}} zmm0 = zmm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
-; CHECK-V4-NEXT:    retq
-;
-; CHECK-ZNVER4-LABEL: shuf_rot_v16i32_1032547698111013121514:
-; CHECK-ZNVER4:       # %bb.0:
-; CHECK-ZNVER4-NEXT:    vpaddd %zmm0, %zmm0, %zmm0
-; CHECK-ZNVER4-NEXT:    vpshufd {{.*#+}} zmm0 = zmm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
-; CHECK-ZNVER4-NEXT:    retq
+; CHECK-LABEL: shuf_rot_v16i32_1032547698111013121514:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddd %zmm0, %zmm0, %zmm0
+; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 = zmm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
+; CHECK-NEXT:    retq
   %x1 = add <16 x i32> %x, %x
   %r = shufflevector <16 x i32> %x1, <16 x i32> zeroinitializer, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
   ret <16 x i32> %r
@@ -159,87 +105,33 @@ define <64 x i8> @shuf_rot_v64i8_30127456118910151213141916171823202122272425263
 }
 
 define <4 x i32> @shuf_shr_v4i32_1U3U(<4 x i32> %x) {
-; CHECK-SKX-LABEL: shuf_shr_v4i32_1U3U:
-; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; CHECK-SKX-NEXT:    vpsrlq $32, %xmm0, %xmm0
-; CHECK-SKX-NEXT:    retq
-;
-; CHECK-ICX-LABEL: shuf_shr_v4i32_1U3U:
-; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; CHECK-ICX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; CHECK-ICX-NEXT:    retq
-;
-; CHECK-V4-LABEL: shuf_shr_v4i32_1U3U:
-; CHECK-V4:       # %bb.0:
-; CHECK-V4-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; CHECK-V4-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; CHECK-V4-NEXT:    retq
-;
-; CHECK-ZNVER4-LABEL: shuf_shr_v4i32_1U3U:
-; CHECK-ZNVER4:       # %bb.0:
-; CHECK-ZNVER4-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; CHECK-ZNVER4-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; CHECK-ZNVER4-NEXT:    retq
+; CHECK-LABEL: shuf_shr_v4i32_1U3U:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; CHECK-NEXT:    retq
   %x1 = add <4 x i32> %x, %x
   %r = shufflevector <4 x i32> %x1, <4 x i32> zeroinitializer, <4 x i32> <i32 1, i32 undef, i32 3, i32 undef>
   ret <4 x i32> %r
 }
 
 define <8 x i32> @shuf_shr_v8i32_1U3U5U7U(<8 x i32> %x) {
-; CHECK-SKX-LABEL: shuf_shr_v8i32_1U3U5U7U:
-; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
-; CHECK-SKX-NEXT:    vpsrlq $32, %ymm0, %ymm0
-; CHECK-SKX-NEXT:    retq
-;
-; CHECK-ICX-LABEL: shuf_shr_v8i32_1U3U5U7U:
-; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
-; CHECK-ICX-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7]
-; CHECK-ICX-NEXT:    retq
-;
-; CHECK-V4-LABEL: shuf_shr_v8i32_1U3U5U7U:
-; CHECK-V4:       # %bb.0:
-; CHECK-V4-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
-; CHECK-V4-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7]
-; CHECK-V4-NEXT:    retq
-;
-; CHECK-ZNVER4-LABEL: shuf_shr_v8i32_1U3U5U7U:
-; CHECK-ZNVER4:       # %bb.0:
-; CHECK-ZNVER4-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
-; CHECK-ZNVER4-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7]
-; CHECK-ZNVER4-NEXT:    retq
+; CHECK-LABEL: shuf_shr_v8i32_1U3U5U7U:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
+; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7]
+; CHECK-NEXT:    retq
   %x1 = add <8 x i32> %x, %x
   %r = shufflevector <8 x i32> %x1, <8 x i32> zeroinitializer, <8 x i32> <i32 1, i32 undef, i32 3, i32 undef, i32 5, i32 undef, i32 7, i32 undef>
   ret <8 x i32> %r
 }
 
 define <16 x i32> @shuf_shr_v16i32_U3U5U7U9U11U13U15(<16 x i32> %x) {
-; CHECK-SKX-LABEL: shuf_shr_v16i32_U3U5U7U9U11U13U15:
-; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    vpaddd %zmm0, %zmm0, %zmm0
-; CHECK-SKX-NEXT:    vpsrlq $32, %zmm0, %zmm0
-; CHECK-SKX-NEXT:    retq
-;
-; CHECK-ICX-LABEL: shuf_shr_v16i32_U3U5U7U9U11U13U15:
-; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    vpaddd %zmm0, %zmm0, %zmm0
-; CHECK-ICX-NEXT:    vpshufd {{.*#+}} zmm0 = zmm0[1,1,3,3,5,5,7,7,9,9,11,11,13,13,15,15]
-; CHECK-ICX-NEXT:    retq
-;
-; CHECK-V4-LABEL: shuf_shr_v16i32_U3U5U7U9U11U13U15:
-; CHECK-V4:       # %bb.0:
-; CHECK-V4-NEXT:    vpaddd %zmm0, %zmm0, %zmm0
-; CHECK-V4-NEXT:    vpshufd {{.*#+}} zmm0 = zmm0[1,1,3,3,5,5,7,7,9,9,11,11,13,13,15,15]
-; CHECK-V4-NEXT:    retq
-;
-; CHECK-ZNVER4-LABEL: shuf_shr_v16i32_U3U5U7U9U11U13U15:
-; CHECK-ZNVER4:       # %bb.0:
-; CHECK-ZNVER4-NEXT:    vpaddd %zmm0, %zmm0, %zmm0
-; CHECK-ZNVER4-NEXT:    vpshufd {{.*#+}} zmm0 = zmm0[1,1,3,3,5,5,7,7,9,9,11,11,13,13,15,15]
-; CHECK-ZNVER4-NEXT:    retq
+; CHECK-LABEL: shuf_shr_v16i32_U3U5U7U9U11U13U15:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddd %zmm0, %zmm0, %zmm0
+; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 = zmm0[1,1,3,3,5,5,7,7,9,9,11,11,13,13,15,15]
+; CHECK-NEXT:    retq
   %x1 = add <16 x i32> %x, %x
   %r = shufflevector <16 x i32> %x1, <16 x i32> zeroinitializer, <16 x i32> <i32 1, i32 undef, i32 3, i32 undef, i32 5, i32 undef, i32 7, i32 undef, i32 9, i32 undef, i32 11, i32 undef, i32 13, i32 undef, i32 15, i32 undef>
   ret <16 x i32> %r
@@ -279,87 +171,33 @@ define <32 x i8> @shuf_shr_v32i8_1U3U5U7U9U11U13U15U17U19U21U23U25U27U29U31U(<32
 }
 
 define <4 x i32> @shuf_shl_v4i32_U0U2(<4 x i32> %x) {
-; CHECK-SKX-LABEL: shuf_shl_v4i32_U0U2:
-; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; CHECK-SKX-NEXT:    vpsllq $32, %xmm0, %xmm0
-; CHECK-SKX-NEXT:    retq
-;
-; CHECK-ICX-LABEL: shuf_shl_v4i32_U0U2:
-; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; CHECK-ICX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,2,2]
-; CHECK-ICX-NEXT:    retq
-;
-; CHECK-V4-LABEL: shuf_shl_v4i32_U0U2:
-; CHECK-V4:       # %bb.0:
-; CHECK-V4-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; CHECK-V4-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,2,2]
-; CHECK-V4-NEXT:    retq
-;
-; CHECK-ZNVER4-LABEL: shuf_shl_v4i32_U0U2:
-; CHECK-ZNVER4:       # %bb.0:
-; CHECK-ZNVER4-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; CHECK-ZNVER4-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,2,2]
-; CHECK-ZNVER4-NEXT:    retq
+; CHECK-LABEL: shuf_shl_v4i32_U0U2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,2,2]
+; CHECK-NEXT:    retq
   %x1 = add <4 x i32> %x, %x
   %r = shufflevector <4 x i32> %x1, <4 x i32> zeroinitializer, <4 x i32> <i32 undef, i32 0, i32 undef, i32 2>
   ret <4 x i32> %r
 }
 
 define <8 x i32> @shuf_shl_v8i32_U0U2U4U6(<8 x i32> %x) {
-; CHECK-SKX-LABEL: shuf_shl_v8i32_U0U2U4U6:
-; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
-; CHECK-SKX-NEXT:    vpsllq $32, %ymm0, %ymm0
-; CHECK-SKX-NEXT:    retq
-;
-; CHECK-ICX-LABEL: shuf_shl_v8i32_U0U2U4U6:
-; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
-; CHECK-ICX-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6]
-; CHECK-ICX-NEXT:    retq
-;
-; CHECK-V4-LABEL: shuf_shl_v8i32_U0U2U4U6:
-; CHECK-V4:       # %bb.0:
-; CHECK-V4-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
-; CHECK-V4-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6]
-; CHECK-V4-NEXT:    retq
-;
-; CHECK-ZNVER4-LABEL: shuf_shl_v8i32_U0U2U4U6:
-; CHECK-ZNVER4:       # %bb.0:
-; CHECK-ZNVER4-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
-; CHECK-ZNVER4-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6]
-; CHECK-ZNVER4-NEXT:    retq
+; CHECK-LABEL: shuf_shl_v8i32_U0U2U4U6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
+; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6]
+; CHECK-NEXT:    retq
   %x1 = add <8 x i32> %x, %x
   %r = shufflevector <8 x i32> %x1, <8 x i32> zeroinitializer, <8 x i32> <i32 undef, i32 0, i32 undef, i32 2, i32 undef, i32 4, i32 undef, i32 6>
   ret <8 x i32> %r
 }
 
 define <16 x i32> @shuf_shl_v16i32_U0U2U4U6U8U10U12U14(<16 x i32> %x) {
-; CHECK-SKX-LABEL: shuf_shl_v16i32_U0U2U4U6U8U10U12U14:
-; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    vpaddd %zmm0, %zmm0, %zmm0
-; CHECK-SKX-NEXT:    vpsllq $32, %zmm0, %zmm0
-; CHECK-SKX-NEXT:    retq
-;
-; CHECK-ICX-LABEL: shuf_shl_v16i32_U0U2U4U6U8U10U12U14:
-; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    vpaddd %zmm0, %zmm0, %zmm0
-; CHECK-ICX-NEXT:    vpshufd {{.*#+}} zmm0 = zmm0[0,0,2,2,4,4,6,6,8,8,10,10,12,12,14,14]
-; CHECK-ICX-NEXT:    retq
-;
-; CHECK-V4-LABEL: shuf_shl_v16i32_U0U2U4U6U8U10U12U14:
-; CHECK-V4:       # %bb.0:
-; CHECK-V4-NEXT:    vpaddd %zmm0, %zmm0, %zmm0
-; CHECK-V4-NEXT:    vpshufd {{.*#+}} zmm0 = zmm0[0,0,2,2,4,4,6,6,8,8,10,10,12,12,14,14]
-; CHECK-V4-NEXT:    retq
-;
-; CHECK-ZNVER4-LABEL: shuf_shl_v16i32_U0U2U4U6U8U10U12U14:
-; CHECK-ZNVER4:       # %bb.0:
-; CHECK-ZNVER4-NEXT:    vpaddd %zmm0, %zmm0, %zmm0
-; CHECK-ZNVER4-NEXT:    vpshufd {{.*#+}} zmm0 = zmm0[0,0,2,2,4,4,6,6,8,8,10,10,12,12,14,14]
-; CHECK-ZNVER4-NEXT:    retq
+; CHECK-LABEL: shuf_shl_v16i32_U0U2U4U6U8U10U12U14:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddd %zmm0, %zmm0, %zmm0
+; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 = zmm0[0,0,2,2,4,4,6,6,8,8,10,10,12,12,14,14]
+; CHECK-NEXT:    retq
   %x1 = add <16 x i32> %x, %x
   %r = shufflevector <16 x i32> %x1, <16 x i32> zeroinitializer, <16 x i32> <i32 undef, i32 0, i32 undef, i32 2, i32 undef, i32 4, i32 undef, i32 6, i32 undef, i32 8, i32 undef, i32 10, i32 undef, i32 12, i32 undef, i32 14>
   ret <16 x i32> %r
@@ -397,3 +235,8 @@ define <64 x i8> @shuf_shl_v64i8_U0U2U4U6U8U10U12U14U16U18U20U22U24U26U28U30U32U
   %r = shufflevector <64 x i8> %x1, <64 x i8> zeroinitializer, <64 x i32> <i32 undef, i32 0, i32 undef, i32 2, i32 undef, i32 4, i32 undef, i32 6, i32 undef, i32 8, i32 undef, i32 10, i32 undef, i32 12, i32 undef, i32 14, i32 undef, i32 16, i32 undef, i32 18, i32 undef, i32 20, i32 undef, i32 22, i32 undef, i32 24, i32 undef, i32 26, i32 undef, i32 28, i32 undef, i32 30, i32 undef, i32 32, i32 undef, i32 34, i32 undef, i32 36, i32 undef, i32 38, i32 undef, i32 40, i32 undef, i32 42, i32 undef, i32 44, i32 undef, i32 46, i32 undef, i32 48, i32 undef, i32 50, i32 undef, i32 52, i32 undef, i32 54, i32 undef, i32 56, i32 undef, i32 58, i32 undef, i32 60, i32 undef, i32 62>
   ret <64 x i8> %r
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK-ICX: {{.*}}
+; CHECK-SKX: {{.*}}
+; CHECK-V4: {{.*}}
+; CHECK-ZNVER4: {{.*}}

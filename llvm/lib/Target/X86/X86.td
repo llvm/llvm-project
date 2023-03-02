@@ -550,12 +550,6 @@ def TuningNoDomainDelayShuffle : SubtargetFeature<"no-bypass-delay-shuffle",
                                    "NoDomainDelayShuffle","true",
                                    "Has no bypass delay when using the 'wrong' shuffle type">;
 
-// Prefer lowering shuffles on AVX512 targets (e.g. Skylake Server) to
-// imm shifts/rotate if they can use more ports than regular shuffles.
-def TuningPreferShiftShuffle : SubtargetFeature<"faster-shift-than-shuffle",
-                                   "PreferLowerShuffleAsShift", "true",
-                                   "Shifts are faster (or as fast) as shuffle">;
-
 // On some X86 processors, a vzeroupper instruction should be inserted after
 // using ymm/zmm registers before executing code that may use SSE instructions.
 def TuningInsertVZEROUPPER
@@ -928,7 +922,6 @@ def ProcessorFeatures {
                                       TuningPOPCNTFalseDeps,
                                       TuningInsertVZEROUPPER,
                                       TuningAllowLight256Bit,
-                                      TuningPreferShiftShuffle,
                                       TuningNoDomainDelayMov,
                                       TuningNoDomainDelayShuffle,
                                       TuningNoDomainDelayBlend];
