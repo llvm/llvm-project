@@ -85,10 +85,11 @@ static_assert(initializedLocal2() == 20); // expected-error {{not an integral co
                                           // ref-note {{in call to}}
 
 
-struct Int { int a; }; // expected-note {{subobject declared here}}
+struct Int { int a; };
 constexpr int initializedLocal3() {
-  Int i; // expected-note {{subobject of type 'int' is not initialized}}
-  return i.a; // ref-note {{read of uninitialized object is not allowed in a constant expression}}
+  Int i;
+  return i.a; // ref-note {{read of uninitialized object is not allowed in a constant expression}} \
+              // expected-note {{read of object outside its lifetime}}
 }
 static_assert(initializedLocal3() == 20); // expected-error {{not an integral constant expression}} \
                                           // expected-note {{in call to}} \
@@ -157,21 +158,19 @@ namespace UninitializedFields {
 
   class Derived : public Base {
   public:
-    constexpr Derived() : Base() {} // expected-note {{subobject of type 'int' is not initialized}}
-  };
+    constexpr Derived() : Base() {}   };
 
-constexpr Derived D; // expected-error {{must be initialized by a constant expression}} \\
-                     // expected-note {{in call to 'Derived()'}} \
-                     // ref-error {{must be initialized by a constant expression}} \
-                     // ref-note {{subobject of type 'int' is not initialized}}
+  constexpr Derived D; // expected-error {{must be initialized by a constant expression}} \
+                       // expected-note {{subobject of type 'int' is not initialized}} \
+                       // ref-error {{must be initialized by a constant expression}} \
+                       // ref-note {{subobject of type 'int' is not initialized}}
 
   class C2 {
   public:
     A a;
-    constexpr C2() {} // expected-note {{subobject of type 'int' is not initialized}}
-  };
+    constexpr C2() {}   };
   constexpr C2 c2; // expected-error {{must be initialized by a constant expression}} \
-                   // expected-note {{in call to 'C2()'}} \
+                   // expected-note {{subobject of type 'int' is not initialized}} \
                    // ref-error {{must be initialized by a constant expression}} \
                    // ref-note {{subobject of type 'int' is not initialized}}
 

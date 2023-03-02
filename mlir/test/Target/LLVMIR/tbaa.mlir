@@ -69,6 +69,12 @@ module {
     %6 = llvm.atomicrmw add %5, %4 monotonic {tbaa = [@__tbaa::@tbaa_tag_7]} : !llvm.ptr, i32
     // CHECK: cmpxchg ptr %{{.*}}, i32 %{{.*}}, i32 %{{.*}} !tbaa ![[STAG]]
     %7 = llvm.cmpxchg %5, %6, %4 acq_rel monotonic {tbaa = [@__tbaa::@tbaa_tag_7]} : !llvm.ptr, i32
+    %8 = llvm.mlir.constant(0 : i1) : i1
+    %9 = llvm.mlir.constant(42 : i8) : i8
+    // CHECK: llvm.memcpy{{.*}} !tbaa ![[STAG]]
+    "llvm.intr.memcpy"(%arg1, %arg1, %0, %8) {tbaa = [@__tbaa::@tbaa_tag_7]} : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
+    // CHECK: llvm.memset{{.*}} !tbaa ![[STAG]]
+    "llvm.intr.memset"(%arg1, %9, %0, %8) {tbaa = [@__tbaa::@tbaa_tag_7]} : (!llvm.ptr, i8, i32, i1) -> ()
     llvm.return
   }
 }

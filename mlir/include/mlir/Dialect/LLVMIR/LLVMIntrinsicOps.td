@@ -4,7 +4,6 @@
 include "mlir/IR/OpBase.td"
 include "mlir/Dialect/LLVMIR/LLVMAttrDefs.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
-include "mlir/Dialect/LLVMIR/LLVMAttrDefs.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 
 // Operations that correspond to LLVM intrinsics. With MLIR operation set being
@@ -130,25 +129,42 @@ def LLVM_SMinOp : LLVM_BinarySameArgsIntrOpI<"smin">;
 def LLVM_UMaxOp : LLVM_BinarySameArgsIntrOpI<"umax">;
 def LLVM_UMinOp : LLVM_BinarySameArgsIntrOpI<"umin">;
 
-def LLVM_MemcpyOp : LLVM_ZeroResultIntrOp<"memcpy", [0, 1, 2]> {
-  let arguments = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
-                       Arg<LLVM_AnyPointer,"",[MemRead]>:$src,
-                       AnySignlessInteger:$len, I1:$isVolatile);
-}
-def LLVM_MemcpyInlineOp : LLVM_ZeroResultIntrOp<"memcpy.inline", [0, 1, 2]> {
-  let arguments = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
-                       Arg<LLVM_AnyPointer,"",[MemRead]>:$src,
-                       AnySignlessInteger:$len, I1:$isVolatile);
-}
-def LLVM_MemmoveOp : LLVM_ZeroResultIntrOp<"memmove", [0, 1, 2]> {
-  let arguments = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
-                       Arg<LLVM_AnyPointer,"",[MemRead]>:$src,
-                       AnySignlessInteger:$len, I1:$isVolatile);
+class LLVM_MemcpyIntrOpBase<string name> :
+    LLVM_ZeroResultIntrOp<name, [0, 1, 2], [], /*requiresAccessGroup=*/1,
+                                               /*requiresAliasAnalysis=*/1> {
+  dag args = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
+                  Arg<LLVM_AnyPointer,"",[MemRead]>:$src,
+                  AnySignlessInteger:$len, I1:$isVolatile);
+  // Append the alias attributes defined by LLVM_IntrOpBase.
+  let arguments = !con(args, aliasAttrs);
+  let builders = [
+    OpBuilder<(ins "Value":$dst, "Value":$src, "Value":$len,
+                   "Value":$isVolatile), [{
+      build($_builder, $_state, dst, src, len, isVolatile,
+            /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
+            /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
+    }]
+  >];
 }
 
-def LLVM_MemsetOp : LLVM_ZeroResultIntrOp<"memset", [0, 2]> {
-  let arguments = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
-                       I8:$val, AnySignlessInteger:$len, I1:$isVolatile);
+def LLVM_MemcpyOp : LLVM_MemcpyIntrOpBase<"memcpy">;
+def LLVM_MemcpyInlineOp : LLVM_MemcpyIntrOpBase<"memcpy.inline">;
+def LLVM_MemmoveOp : LLVM_MemcpyIntrOpBase<"memmove">;
+
+def LLVM_MemsetOp : LLVM_ZeroResultIntrOp<"memset", [0, 2], [],
+                      /*requiresAccessGroup=*/1, /*requiresAliasAnalysis=*/1> {
+  dag args = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
+                  I8:$val, AnySignlessInteger:$len, I1:$isVolatile);
+  // Append the alias attributes defined by LLVM_IntrOpBase.
+  let arguments = !con(args, aliasAttrs);
+  let builders = [
+    OpBuilder<(ins "Value":$dst, "Value":$val, "Value":$len,
+                    "Value":$isVolatile), [{
+      build($_builder, $_state, dst, val, len, isVolatile,
+            /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
+            /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
+    }]
+  >];
 }
 
 //===----------------------------------------------------------------------===//
@@ -304,11 +320,6 @@ class LLVM_DbgIntrOp<string name, string argName> : LLVM_IntrOp<name, [], [], []
     qualified($varInfo) `=` $}] # argName #
       [{ `:` qualified(type($}] # argName # [{)) attr-dict
   }];
-}
-
-def LLVM_DbgAddrOp : LLVM_DbgIntrOp<"dbg.addr", "addr"> {
-  let summary = "Describe the current address of a local debug info variable.";
-  let arguments = (ins LLVM_AnyPointer:$addr, LLVM_DILocalVariableAttr:$varInfo);
 }
 
 def LLVM_DbgDeclareOp : LLVM_DbgIntrOp<"dbg.declare", "addr"> {

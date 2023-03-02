@@ -426,18 +426,36 @@ class LLVM_MemAccessOpBase<string mnemonic, list<Trait> traits = []> :
 // intrinsic and "enumName" contains the name of the intrinsic as appears in
 // `llvm::Intrinsic` enum; one usually wants these to be related. Additionally,
 // the base class also defines the "mlirBuilder" field to support the inverse
-// translation starting from an LLVM IR intrinsic.
+// translation starting from an LLVM IR intrinsic. The "requiresAccessGroup",
+// "requiresAliasAnalysis", and "requiresFastmath" flags specify which
+// interfaces the intrinsic implements. If the corresponding flags are set, the
+// "aliasAttrs" list contains the arguments required by the access group and
+// alias analysis interfaces. Derived intrinsics should append the "aliasAttrs"
+// to their argument list if they set one of the flags.
 class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
                       list<int> overloadedResults, list<int> overloadedOperands,
                       list<Trait> traits, int numResults,
-                      bit requiresAccessGroup = 0, bit requiresAliasScope = 0,
+                      bit requiresAccessGroup = 0, bit requiresAliasAnalysis = 0,
                       bit requiresFastmath = 0>
     : LLVM_OpBase<dialect, opName, !listconcat(
+        !if(!gt(requiresAccessGroup, 0),
+            [DeclareOpInterfaceMethods<AccessGroupOpInterface>], []),
+        !if(!gt(requiresAliasAnalysis, 0),
+            [DeclareOpInterfaceMethods<AliasAnalysisOpInterface>], []),
         !if(!gt(requiresFastmath, 0),
-            [DeclareOpInterfaceMethods<FastmathFlagsInterface>],
-            []),
+            [DeclareOpInterfaceMethods<FastmathFlagsInterface>], []),
         traits)>,
+      LLVM_MemOpPatterns,
       Results<!if(!gt(numResults, 0), (outs LLVM_Type:$res), (outs))> {
+  dag aliasAttrs = !con(
+        !if(!gt(requiresAccessGroup, 0),
+            (ins OptionalAttr<SymbolRefArrayAttr>:$access_groups),
+            (ins )),
+        !if(!gt(requiresAccessGroup, 0),
+            (ins OptionalAttr<SymbolRefArrayAttr>:$alias_scopes,
+                 OptionalAttr<SymbolRefArrayAttr>:$noalias_scopes,
+                 OptionalAttr<SymbolRefArrayAttr>:$tbaa),
+            (ins )));
   string resultPattern = !if(!gt(numResults, 1),
                              LLVM_IntrPatterns.structResult,
                              LLVM_IntrPatterns.result);
@@ -453,14 +471,12 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
                          overloadedOperands>.lst), ", ") # [{
         });
     auto operands = moduleTranslation.lookupValues(opInst.getOperands());
-    }] # [{auto *inst = builder.CreateCall(fn, operands);
-    }] # !if(!gt(requiresAccessGroup, 0),
-      "moduleTranslation.setAccessGroupsMetadata(op, inst);",
-      "(void) inst;")
-    # !if(!gt(requiresAliasScope, 0),
-      "moduleTranslation.setAliasScopeMetadata(op, inst);",
-      "(void) inst;")
-    # !if(!gt(numResults, 0), "$res = inst;", "");
+    }] # [{
+    auto *inst = builder.CreateCall(fn, operands);
+    (void) inst;
+    }] # !if(!gt(requiresAccessGroup, 0), setAccessGroupsMetadataCode, "")
+       # !if(!gt(requiresAliasAnalysis, 0), setAliasAnalysisMetadataCode, "")
+       # !if(!gt(numResults, 0), "$res = inst;", "");
 
   string mlirBuilder = [{
     FailureOr<SmallVector<Value>> mlirOperands =
@@ -481,10 +497,10 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
 class LLVM_IntrOp<string mnem, list<int> overloadedResults,
                   list<int> overloadedOperands, list<Trait> traits,
                   int numResults, bit requiresAccessGroup = 0,
-                  bit requiresAliasScope = 0, bit requiresFastmath = 0>
+                  bit requiresAliasAnalysis = 0, bit requiresFastmath = 0>
     : LLVM_IntrOpBase<LLVM_Dialect, "intr." # mnem, !subst(".", "_", mnem),
                       overloadedResults, overloadedOperands, traits,
-                      numResults, requiresAccessGroup, requiresAliasScope,
+                      numResults, requiresAccessGroup, requiresAliasAnalysis,
                       requiresFastmath>;
 
 // Base class for LLVM intrinsic operations returning no results. Places the
@@ -502,8 +518,11 @@ class LLVM_IntrOp<string mnem, list<int> overloadedResults,
 // one (as indicated by `[0]`) is necessary to resolve the overloaded intrinsic.
 // The Op has no results.
 class LLVM_ZeroResultIntrOp<string mnem, list<int> overloadedOperands = [],
-                            list<Trait> traits = []>
-    : LLVM_IntrOp<mnem, [], overloadedOperands, traits, 0>;
+                            list<Trait> traits = [],
+                            bit requiresAccessGroup = 0,
+                            bit requiresAliasAnalysis = 0>
+    : LLVM_IntrOp<mnem, [], overloadedOperands, traits, /*numResults=*/0,
+                  requiresAccessGroup, requiresAliasAnalysis>;
 
 // Base class for LLVM intrinsic operations returning one result. Places the
 // intrinsic into the LLVM dialect and prefixes its name with "intr.". This is
@@ -516,7 +535,7 @@ class LLVM_OneResultIntrOp<string mnem, list<int> overloadedResults = [],
                            list<Trait> traits = [],
                            bit requiresFastmath = 0>
     : LLVM_IntrOp<mnem, overloadedResults, overloadedOperands, traits, 1,
-                  /*requiresAccessGroup=*/0, /*requiresAliasScope=*/0,
+                  /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
                   requiresFastmath>;
 
 def LLVM_OneResultOpBuilder :

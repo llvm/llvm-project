@@ -1407,3 +1407,24 @@ The result from a command interpreter run.
 .. py:data:: eCommandInterpreterResultQuitRequested
 
    Stopped because quit was requested.
+
+
+.. _WatchPointValueKind:
+
+WatchPointValueKind
+-------------------
+
+The type of value that the watchpoint was created to monitor.
+
+.. py:data:: eWatchPointValueKindInvalid
+
+   Invalid kind.
+
+.. py:data:: eWatchPointValueKindVariable
+
+   Watchpoint was created watching a variable
+
+.. py:data:: eWatchPointValueKindExpression
+
+   Watchpoint was created watching the result of an expression that was
+   evaluated at creation time.

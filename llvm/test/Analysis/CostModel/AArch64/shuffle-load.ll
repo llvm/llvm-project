@@ -2,12 +2,12 @@
 ; RUN: opt < %s -mtriple=aarch64--linux-gnu -passes="print<cost-model>" 2>&1 -disable-output | FileCheck %s
 
 ; These tests check the costs of ld1r instructions, through the
-; isLegalBroadcastLoad method. The tests use vector loads and splats,
-; as opposed to scalar loads, inserts and splats as that is how
-; getShuffleCost currently recognizes them.
+; isLegalBroadcastLoad method.
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
+; The tests use vector loads and splats, as opposed to scalar loads, inserts
+; and splats as that is how getShuffleCost currently recognizes them.
 define void @shuffle() {
 ; CHECK-LABEL: 'shuffle'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %lv2i8 = load <2 x i8>, ptr undef, align 2
@@ -108,4 +108,176 @@ define void @shuffle() {
   %sv4f64 = shufflevector <4 x double> %lv4f64, <4 x double> undef, <4 x i32> zeroinitializer
 
   ret void
+}
+
+; Check ld1r generated from scalar FP loads
+
+define <4 x half> @ld1r_4h_float_shuff(ptr nocapture %x) {
+; CHECK-LABEL: 'ld1r_4h_float_shuff'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp = load half, ptr %x, align 2
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %tmp1 = insertelement <4 x half> undef, half %tmp, i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %lane = shufflevector <4 x half> %tmp1, <4 x half> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x half> %lane
+;
+entry:
+  %tmp = load half, ptr %x, align 2
+  %tmp1 = insertelement <4 x half> undef, half %tmp, i32 0
+  %lane = shufflevector <4 x half> %tmp1, <4 x half> undef, <4 x i32> zeroinitializer
+  ret <4 x half> %lane
+}
+
+define <8 x half> @ld1r_8h_float_shuff(ptr nocapture %x) {
+; CHECK-LABEL: 'ld1r_8h_float_shuff'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp = load half, ptr %x, align 2
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %tmp1 = insertelement <8 x half> undef, half %tmp, i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %lane = shufflevector <8 x half> %tmp1, <8 x half> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x half> %lane
+;
+entry:
+  %tmp = load half, ptr %x, align 2
+  %tmp1 = insertelement <8 x half> undef, half %tmp, i32 0
+  %lane = shufflevector <8 x half> %tmp1, <8 x half> undef, <8 x i32> zeroinitializer
+  ret <8 x half> %lane
+}
+
+define <2 x float> @ld1r_2s_float_shuff(ptr nocapture %x) {
+; CHECK-LABEL: 'ld1r_2s_float_shuff'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp = load float, ptr %x, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %tmp1 = insertelement <2 x float> undef, float %tmp, i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %lane = shufflevector <2 x float> %tmp1, <2 x float> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x float> %lane
+;
+entry:
+  %tmp = load float, ptr %x, align 4
+  %tmp1 = insertelement <2 x float> undef, float %tmp, i32 0
+  %lane = shufflevector <2 x float> %tmp1, <2 x float> undef, <2 x i32> zeroinitializer
+  ret <2 x float> %lane
+}
+
+define <4 x float> @ld1r_4s_float_shuff(ptr nocapture %x) {
+; CHECK-LABEL: 'ld1r_4s_float_shuff'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp = load float, ptr %x, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %tmp1 = insertelement <4 x float> undef, float %tmp, i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %lane = shufflevector <4 x float> %tmp1, <4 x float> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x float> %lane
+;
+entry:
+  %tmp = load float, ptr %x, align 4
+  %tmp1 = insertelement <4 x float> undef, float %tmp, i32 0
+  %lane = shufflevector <4 x float> %tmp1, <4 x float> undef, <4 x i32> zeroinitializer
+  ret <4 x float> %lane
+}
+
+define <2 x double> @ld1r_2d_double_shuff(ptr nocapture %x) {
+; CHECK-LABEL: 'ld1r_2d_double_shuff'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp = load double, ptr %x, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %tmp1 = insertelement <2 x double> undef, double %tmp, i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %lane = shufflevector <2 x double> %tmp1, <2 x double> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x double> %lane
+;
+entry:
+  %tmp = load double, ptr %x, align 4
+  %tmp1 = insertelement <2 x double> undef, double %tmp, i32 0
+  %lane = shufflevector <2 x double> %tmp1, <2 x double> undef, <2 x i32> zeroinitializer
+  ret <2 x double> %lane
+}
+
+; Check ld1r generated from scalar integer loads
+
+define <8 x i8> @ld1r_8b_int_shuff(ptr nocapture %x) {
+; CHECK-LABEL: 'ld1r_8b_int_shuff'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp = load i8, ptr %x, align 2
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %tmp1 = insertelement <8 x i8> undef, i8 %tmp, i8 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %lane = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i8> %lane
+;
+entry:
+  %tmp = load i8, ptr %x, align 2
+  %tmp1 = insertelement <8 x i8> undef, i8 %tmp, i8 0
+  %lane = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <8 x i32> zeroinitializer
+  ret <8 x i8> %lane
+}
+
+define <16 x i8> @ld1r_16b_int_shuff(ptr nocapture %x) {
+; CHECK-LABEL: 'ld1r_16b_int_shuff'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp = load i8, ptr %x, align 2
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %tmp1 = insertelement <16 x i8> undef, i8 %tmp, i8 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %lane = shufflevector <16 x i8> %tmp1, <16 x i8> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i8> %lane
+;
+entry:
+  %tmp = load i8, ptr %x, align 2
+  %tmp1 = insertelement <16 x i8> undef, i8 %tmp, i8 0
+  %lane = shufflevector <16 x i8> %tmp1, <16 x i8> undef, <16 x i32> zeroinitializer
+  ret <16 x i8> %lane
+}
+
+define <4 x i16> @ld1r_4h_int_shuff(ptr nocapture %x) {
+; CHECK-LABEL: 'ld1r_4h_int_shuff'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp = load i16, ptr %x, align 2
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %tmp1 = insertelement <4 x i16> undef, i16 %tmp, i16 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %lane = shufflevector <4 x i16> %tmp1, <4 x i16> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i16> %lane
+;
+entry:
+  %tmp = load i16, ptr %x, align 2
+  %tmp1 = insertelement <4 x i16> undef, i16 %tmp, i16 0
+  %lane = shufflevector <4 x i16> %tmp1, <4 x i16> undef, <4 x i32> zeroinitializer
+  ret <4 x i16> %lane
+}
+
+define <8 x i16> @ld1r_8h_int_shuff(ptr nocapture %x) {
+; CHECK-LABEL: 'ld1r_8h_int_shuff'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp = load i16, ptr %x, align 2
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %tmp1 = insertelement <8 x i16> undef, i16 %tmp, i16 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %lane = shufflevector <8 x i16> %tmp1, <8 x i16> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %lane
+;
+entry:
+  %tmp = load i16, ptr %x, align 2
+  %tmp1 = insertelement <8 x i16> undef, i16 %tmp, i16 0
+  %lane = shufflevector <8 x i16> %tmp1, <8 x i16> undef, <8 x i32> zeroinitializer
+  ret <8 x i16> %lane
+}
+
+define <2 x i32> @ld1r_2s_int_shuff(ptr nocapture %x) {
+; CHECK-LABEL: 'ld1r_2s_int_shuff'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp = load i32, ptr %x, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %tmp1 = insertelement <2 x i32> undef, i32 %tmp, i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %lane = shufflevector <2 x i32> %tmp1, <2 x i32> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %lane
+;
+entry:
+  %tmp = load i32, ptr %x, align 4
+  %tmp1 = insertelement <2 x i32> undef, i32 %tmp, i32 0
+  %lane = shufflevector <2 x i32> %tmp1, <2 x i32> undef, <2 x i32> zeroinitializer
+  ret <2 x i32> %lane
+}
+
+define <4 x i32> @ld1r_4s_int_shuff(ptr nocapture %x) {
+; CHECK-LABEL: 'ld1r_4s_int_shuff'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp = load i32, ptr %x, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %tmp1 = insertelement <4 x i32> undef, i32 %tmp, i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %lane = shufflevector <4 x i32> %tmp1, <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %lane
+;
+entry:
+  %tmp = load i32, ptr %x, align 4
+  %tmp1 = insertelement <4 x i32> undef, i32 %tmp, i32 0
+  %lane = shufflevector <4 x i32> %tmp1, <4 x i32> undef, <4 x i32> zeroinitializer
+  ret <4 x i32> %lane
+}
+
+define <2 x i64> @ld1r_2d_int_shuff(ptr nocapture %x) {
+; CHECK-LABEL: 'ld1r_2d_int_shuff'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp = load i64, ptr %x, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %tmp1 = insertelement <2 x i64> undef, i64 %tmp, i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %lane = shufflevector <2 x i64> %tmp1, <2 x i64> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %lane
+;
+entry:
+  %tmp = load i64, ptr %x, align 8
+  %tmp1 = insertelement <2 x i64> undef, i64 %tmp, i32 0
+  %lane = shufflevector <2 x i64> %tmp1, <2 x i64> undef, <2 x i32> zeroinitializer
+  ret <2 x i64> %lane
 }

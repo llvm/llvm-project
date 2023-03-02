@@ -1219,6 +1219,15 @@ enum DWIMPrintVerbosity {
   eDWIMPrintVerbosityFull,
 };
 
+enum WatchpointValueKind {
+  eWatchPointValueKindInvalid = 0,
+  ///< Watchpoint was created watching a variable
+  eWatchPointValueKindVariable = 1,
+  ///< Watchpoint was created watching the result of an expression that was
+  ///< evaluated at creation time.
+  eWatchPointValueKindExpression = 2,
+};
+
 } // namespace lldb
 
 #endif // LLDB_LLDB_ENUMERATIONS_H

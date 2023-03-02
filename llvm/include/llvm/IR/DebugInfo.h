@@ -35,13 +35,8 @@ class DbgVariableIntrinsic;
 class Instruction;
 class Module;
 
-/// Finds all intrinsics declaring local variables as living in the memory that
-/// 'V' points to. This may include a mix of dbg.declare and
-/// dbg.addr intrinsics.
-TinyPtrVector<DbgVariableIntrinsic *> FindDbgAddrUses(Value *V);
-
-/// Like \c FindDbgAddrUses, but only returns dbg.declare intrinsics, not
-/// dbg.addr.
+/// Finds dbg.declare intrinsics declaring local variables as living in the
+/// memory that 'V' points to.
 TinyPtrVector<DbgDeclareInst *> FindDbgDeclareUses(Value *V);
 
 /// Finds the llvm.dbg.value intrinsics describing a value.

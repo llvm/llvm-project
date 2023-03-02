@@ -4,6 +4,7 @@ import gc
 import io
 import itertools
 from mlir.ir import *
+from mlir.dialects.builtin import ModuleOp
 
 
 def run(f):
@@ -619,7 +620,7 @@ def testKnownOpView():
     # addf should map to a known OpView class in the arithmetic dialect.
     # We know the OpView for it defines an 'lhs' attribute.
     addf = module.body.operations[2]
-    # CHECK: <mlir.dialects._arith_ops_gen._AddFOp object
+    # CHECK: <mlir.dialects._arith_ops_gen.AddFOp object
     print(repr(addf))
     # CHECK: "custom.f32"()
     print(addf.lhs)
@@ -900,3 +901,31 @@ def testOperationHash():
   with ctx, Location.unknown():
     op = Operation.create("custom.op1")
     assert hash(op) == hash(op.operation)
+
+
+# CHECK-LABEL: TEST: testOperationParse
+@run
+def testOperationParse():
+  with Context() as ctx:
+    ctx.allow_unregistered_dialects = True
+
+    # Generic operation parsing.
+    m = Operation.parse('module {}')
+    o = Operation.parse('"test.foo"() : () -> ()')
+    assert isinstance(m, ModuleOp)
+    assert type(o) is OpView
+
+    # Parsing specific operation.
+    m = ModuleOp.parse('module {}')
+    assert isinstance(m, ModuleOp)
+    try:
+      ModuleOp.parse('"test.foo"() : () -> ()')
+    except ValueError as e:
+      # CHECK: error: Expected a 'builtin.module' op, got: 'test.foo'
+      print(f"error: {e}")
+    else:
+      assert False, "expected error"
+
+    o = Operation.parse('"test.foo"() : () -> ()', source_name="my-source-string")
+    # CHECK: op_with_source_name: "test.foo"() : () -> () loc("my-source-string":1:1)
+    print(f"op_with_source_name: {o.get_asm(enable_debug_info=True, use_local_scope=True)}")

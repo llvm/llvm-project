@@ -206,8 +206,10 @@ CleanupPointerRootUsers(GlobalVariable *GV,
   // chain of computation and the store to the global in Dead[n].second.
   SmallVector<std::pair<Instruction *, Instruction *>, 32> Dead;
 
+  SmallVector<User *> Worklist(GV->users());
   // Constants can't be pointers to dynamically allocated memory.
-  for (User *U : llvm::make_early_inc_range(GV->users())) {
+  while (!Worklist.empty()) {
+    User *U = Worklist.pop_back_val();
     if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
       Value *V = SI->getValueOperand();
       if (isa<Constant>(V)) {
@@ -238,7 +240,8 @@ CleanupPointerRootUsers(GlobalVariable *GV,
       if (CE->use_empty()) {
         CE->destroyConstant();
         Changed = true;
-      }
+      } else if (isa<GEPOperator>(CE))
+        append_range(Worklist, CE->users());
     } else if (Constant *C = dyn_cast<Constant>(U)) {
       if (isSafeToDestroyConstant(C)) {
         C->destroyConstant();
@@ -346,7 +349,7 @@ struct GlobalPart {
 /// Look at all uses of the global and determine which (offset, type) pairs it
 /// can be split into.
 static bool collectSRATypes(DenseMap<uint64_t, GlobalPart> &Parts,
-                            GlobalValue *GV, const DataLayout &DL) {
+                            GlobalVariable *GV, const DataLayout &DL) {
   SmallVector<Use *, 16> Worklist;
   SmallPtrSet<Use *, 16> Visited;
   auto AppendUses = [&](Value *V) {

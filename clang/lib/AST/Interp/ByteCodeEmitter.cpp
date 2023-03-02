@@ -22,11 +22,6 @@ using Error = llvm::Error;
 
 Expected<Function *>
 ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
-  // Function is not defined at all or not yet. We will
-  // create a Function instance but not compile the body. That
-  // will (maybe) happen later.
-  bool HasBody = FuncDecl->hasBody(FuncDecl);
-
   // Create a handle over the emitted code.
   Function *Func = P.getFunction(FuncDecl);
   if (!Func) {
@@ -74,7 +69,9 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   }
 
   assert(Func);
-  if (!HasBody)
+  // For not-yet-defined functions, we only create a Function instance and
+  // compile their body later.
+  if (!FuncDecl->isDefined())
     return Func;
 
   // Compile the function body.
