@@ -349,7 +349,7 @@ struct GlobalPart {
 /// Look at all uses of the global and determine which (offset, type) pairs it
 /// can be split into.
 static bool collectSRATypes(DenseMap<uint64_t, GlobalPart> &Parts,
-                            GlobalValue *GV, const DataLayout &DL) {
+                            GlobalVariable *GV, const DataLayout &DL) {
   SmallVector<Use *, 16> Worklist;
   SmallPtrSet<Use *, 16> Visited;
   auto AppendUses = [&](Value *V) {
