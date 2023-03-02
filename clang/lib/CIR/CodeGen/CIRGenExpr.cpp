@@ -147,7 +147,20 @@ LValue CIRGenFunction::buildLValueForFieldInitialization(
   if (!FieldType->isReferenceType())
     return buildLValueForField(Base, Field);
 
-  llvm_unreachable("NYI");
+  Address V = buildAddrOfFieldStorage(*this, Base.getAddress(), Field);
+
+  // Make sure that the address is pointing to the right type.
+  auto memTy = getTypes().convertTypeForMem(FieldType);
+  V = builder.getElementBitCast(getLoc(Field->getSourceRange()), V, memTy);
+
+  // TODO: Generate TBAA information that describes this access as a structure
+  // member access and not just an access to an object of the field's type. This
+  // should be similar to what we do in EmitLValueForField().
+  LValueBaseInfo BaseInfo = Base.getBaseInfo();
+  AlignmentSource FieldAlignSource = BaseInfo.getAlignmentSource();
+  LValueBaseInfo FieldBaseInfo(getFieldAlignmentSource(FieldAlignSource));
+  assert(!UnimplementedFeature::tbaa() && "NYI");
+  return makeAddrLValue(V, FieldType, FieldBaseInfo);
 }
 
 // Detect the unusual situation where an inline version is shadowed by a

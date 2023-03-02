@@ -10,6 +10,7 @@
 #define LLVM_CLANG_LIB_CIR_CIRGENBUILDER_H
 
 #include "Address.h"
+#include "UnimplementedFeatureGuarding.h"
 
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/FPEnv.h"
@@ -127,6 +128,21 @@ public:
                          mlir::Type newTy) {
     return create<mlir::cir::CastOp>(loc, newTy, mlir::cir::CastKind::bitcast,
                                      src);
+  }
+
+  mlir::cir::PointerType getPointerTo(mlir::Type ty,
+                                      unsigned addressSpace = 0) {
+    assert(!UnimplementedFeature::addressSpace() && "NYI");
+    return mlir::cir::PointerType::get(getContext(), ty);
+  }
+
+  /// Cast the element type of the given address to a different type,
+  /// preserving information like the alignment.
+  Address getElementBitCast(mlir::Location loc, Address Addr, mlir::Type Ty) {
+    assert(!UnimplementedFeature::addressSpace() && "NYI");
+    auto ptrTy = getPointerTo(Ty);
+    return Address(getBitcast(loc, Addr.getPointer(), ptrTy), Ty,
+                   Addr.getAlignment());
   }
 
   OpBuilder::InsertPoint getBestAllocaInsertPoint(mlir::Block *block) {

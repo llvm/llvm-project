@@ -26,8 +26,10 @@ struct UnimplementedFeature {
   // corresponding to `llvm::VectorType`
   static bool cirVectorType() { return false; }
 
-  // CIR still unware of address space
+  // Address space related
+  static bool addressSpace() { return false; }
   static bool addressSpaceInGlobalVar() { return false; }
+  static bool getASTAllocaAddressSpace() { return false; }
 
   // Unhandled global/linkage information.
   static bool unnamedAddr() { return false; }
@@ -50,7 +52,6 @@ struct UnimplementedFeature {
   static bool unhandledException() { return false; }
 
   static bool capturedByInit() { return false; }
-  static bool getASTAllocaAddressSpace() { return false; }
   static bool tryEmitAsConstant() { return false; }
   static bool incrementProfileCounter() { return false; }
   static bool requiresReturnValueCheck() { return false; }
