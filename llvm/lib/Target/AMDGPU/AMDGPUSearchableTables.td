@@ -266,7 +266,6 @@ def : SourceOfDivergence<int_amdgcn_buffer_atomic_and>;
 def : SourceOfDivergence<int_amdgcn_buffer_atomic_or>;
 def : SourceOfDivergence<int_amdgcn_buffer_atomic_xor>;
 def : SourceOfDivergence<int_amdgcn_buffer_atomic_cmpswap>;
-def : SourceOfDivergence<int_amdgcn_buffer_atomic_cond_sub_u32>;
 def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_swap>;
 def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_add>;
 def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_sub>;

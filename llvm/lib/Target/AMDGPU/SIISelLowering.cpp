@@ -7815,7 +7815,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_buffer_atomic_swap:
   case Intrinsic::amdgcn_buffer_atomic_add:
   case Intrinsic::amdgcn_buffer_atomic_sub:
-  case Intrinsic::amdgcn_buffer_atomic_cond_sub_u32:
   case Intrinsic::amdgcn_buffer_atomic_csub:
   case Intrinsic::amdgcn_buffer_atomic_smin:
   case Intrinsic::amdgcn_buffer_atomic_umin:
@@ -7882,9 +7881,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       break;
     case Intrinsic::amdgcn_buffer_atomic_fadd:
       Opcode = AMDGPUISD::BUFFER_ATOMIC_FADD;
-      break;
-    case Intrinsic::amdgcn_buffer_atomic_cond_sub_u32:
-      Opcode = AMDGPUISD::BUFFER_ATOMIC_COND_SUB_U32;
       break;
     default:
       llvm_unreachable("unhandled atomic opcode");
@@ -12149,7 +12145,7 @@ static unsigned SubIdx2Lane(unsigned Idx) {
   }
 }
 
-/// Adjust the writemask of MIMG instructions
+/// Adjust the writemask of MIMG, VIMAGE or VSAMPLE instructions
 SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
                                           SelectionDAG &DAG) const {
   unsigned Opcode = Node->getMachineOpcode();
@@ -12167,7 +12163,7 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
   unsigned TFEIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::tfe) - 1;
   unsigned LWEIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::lwe) - 1;
   bool UsesTFC = ((int(TFEIdx) >= 0 && Node->getConstantOperandVal(TFEIdx)) ||
-                  Node->getConstantOperandVal(LWEIdx))
+                  (int(LWEIdx) >= 0 && Node->getConstantOperandVal(LWEIdx)))
                      ? true
                      : false;
   unsigned TFCLane = 0;
@@ -12375,7 +12371,7 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
   unsigned Opcode = Node->getMachineOpcode();
 
-  if (TII->isMIMG(Opcode) && !TII->get(Opcode).mayStore() &&
+  if (TII->isImage(Opcode) && !TII->get(Opcode).mayStore() &&
       !TII->isGather4(Opcode) &&
       AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::dmask)) {
     return adjustWritemask(Node, DAG);

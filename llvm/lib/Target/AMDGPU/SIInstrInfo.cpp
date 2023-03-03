@@ -6047,18 +6047,21 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return CreatedBB;
   }
 
-  // Legalize MIMG and MUBUF/MTBUF for shaders.
+  // Legalize MIMG/VIMAGE/VSAMPLE and MUBUF/MTBUF for shaders.
   //
   // Shaders only generate MUBUF/MTBUF instructions via intrinsics or via
   // scratch memory access. In both cases, the legalization never involves
   // conversion to the addr64 form.
-  if (isMIMG(MI) || (AMDGPU::isGraphics(MF.getFunction().getCallingConv()) &&
+  if (isImage(MI) || (AMDGPU::isGraphics(MF.getFunction().getCallingConv()) &&
                      (isMUBUF(MI) || isMTBUF(MI)))) {
-    MachineOperand *SRsrc = getNamedOperand(MI, AMDGPU::OpName::srsrc);
+    int RSrcOpName = (isVIMAGE(MI) || isVSAMPLE(MI)) ? AMDGPU::OpName::rsrc
+                                                     : AMDGPU::OpName::srsrc;
+    MachineOperand *SRsrc = getNamedOperand(MI, RSrcOpName);
     if (SRsrc && !RI.isSGPRClass(MRI.getRegClass(SRsrc->getReg())))
       CreatedBB = loadSRsrcFromVGPR(*this, MI, *SRsrc, MDT);
 
-    MachineOperand *SSamp = getNamedOperand(MI, AMDGPU::OpName::ssamp);
+    int SampOpName = isMIMG(MI) ? AMDGPU::OpName::ssamp : AMDGPU::OpName::samp;
+    MachineOperand *SSamp = getNamedOperand(MI, SampOpName);
     if (SSamp && !RI.isSGPRClass(MRI.getRegClass(SSamp->getReg())))
       CreatedBB = loadSRsrcFromVGPR(*this, MI, *SSamp, MDT);
 
