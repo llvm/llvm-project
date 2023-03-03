@@ -18130,7 +18130,12 @@ static NVPTXMmaInfo getNVPTXMmaInfo(unsigned BuiltinID) {
 
 Value *
 CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID, const CallExpr *E) {
-  auto MakeLdg = [&](unsigned IntrinsicID) {
+  auto HasHalfSupport = [&](unsigned BuiltinID) {
+    auto &Context = getContext();
+    return Context.getLangOpts().NativeHalfType ||
+           !Context.getTargetInfo().useFP16ConversionIntrinsics();
+  };
+  auto MakeLdgLdu = [&](unsigned IntrinsicID) {
     Value *Ptr = EmitScalarExpr(E->getArg(0));
     QualType ArgType = E->getArg(0)->getType();
     clang::CharUnits Align = CGM.getNaturalPointeeTypeAlignment(ArgType);
@@ -18256,15 +18261,63 @@ CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID, const CallExpr *E) {
     // PTX Interoperability section 2.2: "For a vector with an even number of
     // elements, its alignment is set to number of elements times the alignment
     // of its member: n*alignof(t)."
-    return MakeLdg(Intrinsic::nvvm_ldg_global_i);
+    return MakeLdgLdu(Intrinsic::nvvm_ldg_global_i);
   case NVPTX::BI__nvvm_ldg_h:
-  case NVPTX::BI__nvvm_ldg_f:
   case NVPTX::BI__nvvm_ldg_h2:
+    if (!HasHalfSupport(BuiltinID)) {
+      CGM.Error(E->getExprLoc(),
+                getContext().BuiltinInfo.getName(BuiltinID).str() +
+                    " requires native half type support.");
+      return nullptr;
+    }
+    [[fallthrough]];
+  case NVPTX::BI__nvvm_ldg_f:
   case NVPTX::BI__nvvm_ldg_f2:
   case NVPTX::BI__nvvm_ldg_f4:
   case NVPTX::BI__nvvm_ldg_d:
   case NVPTX::BI__nvvm_ldg_d2:
-    return MakeLdg(Intrinsic::nvvm_ldg_global_f);
+    return MakeLdgLdu(Intrinsic::nvvm_ldg_global_f);
+
+  case NVPTX::BI__nvvm_ldu_c:
+  case NVPTX::BI__nvvm_ldu_c2:
+  case NVPTX::BI__nvvm_ldu_c4:
+  case NVPTX::BI__nvvm_ldu_s:
+  case NVPTX::BI__nvvm_ldu_s2:
+  case NVPTX::BI__nvvm_ldu_s4:
+  case NVPTX::BI__nvvm_ldu_i:
+  case NVPTX::BI__nvvm_ldu_i2:
+  case NVPTX::BI__nvvm_ldu_i4:
+  case NVPTX::BI__nvvm_ldu_l:
+  case NVPTX::BI__nvvm_ldu_ll:
+  case NVPTX::BI__nvvm_ldu_ll2:
+  case NVPTX::BI__nvvm_ldu_uc:
+  case NVPTX::BI__nvvm_ldu_uc2:
+  case NVPTX::BI__nvvm_ldu_uc4:
+  case NVPTX::BI__nvvm_ldu_us:
+  case NVPTX::BI__nvvm_ldu_us2:
+  case NVPTX::BI__nvvm_ldu_us4:
+  case NVPTX::BI__nvvm_ldu_ui:
+  case NVPTX::BI__nvvm_ldu_ui2:
+  case NVPTX::BI__nvvm_ldu_ui4:
+  case NVPTX::BI__nvvm_ldu_ul:
+  case NVPTX::BI__nvvm_ldu_ull:
+  case NVPTX::BI__nvvm_ldu_ull2:
+    return MakeLdgLdu(Intrinsic::nvvm_ldu_global_i);
+  case NVPTX::BI__nvvm_ldu_h:
+  case NVPTX::BI__nvvm_ldu_h2:
+    if (!HasHalfSupport(BuiltinID)) {
+      CGM.Error(E->getExprLoc(),
+                getContext().BuiltinInfo.getName(BuiltinID).str() +
+                    " requires native half type support.");
+      return nullptr;
+    }
+    [[fallthrough]];
+  case NVPTX::BI__nvvm_ldu_f:
+  case NVPTX::BI__nvvm_ldu_f2:
+  case NVPTX::BI__nvvm_ldu_f4:
+  case NVPTX::BI__nvvm_ldu_d:
+  case NVPTX::BI__nvvm_ldu_d2:
+    return MakeLdgLdu(Intrinsic::nvvm_ldu_global_f);
 
   case NVPTX::BI__nvvm_atom_cta_add_gen_i:
   case NVPTX::BI__nvvm_atom_cta_add_gen_l:
