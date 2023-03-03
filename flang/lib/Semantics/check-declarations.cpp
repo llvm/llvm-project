@@ -83,7 +83,7 @@ private:
       const SourceName &, const Symbol &, const Procedure &, std::size_t);
   bool CheckDefinedAssignment(const Symbol &, const Procedure &);
   bool CheckDefinedAssignmentArg(const Symbol &, const DummyArgument &, int);
-  void CheckSpecificsAreDistinguishable(const Symbol &, const GenericDetails &);
+  void CheckSpecifics(const Symbol &, const GenericDetails &);
   void CheckEquivalenceSet(const EquivalenceSet &);
   void CheckBlockData(const Scope &);
   void CheckGenericOps(const Scope &);
@@ -1346,7 +1346,7 @@ void CheckHelper::CheckHostAssoc(
 
 void CheckHelper::CheckGeneric(
     const Symbol &symbol, const GenericDetails &details) {
-  CheckSpecificsAreDistinguishable(symbol, details);
+  CheckSpecifics(symbol, details);
   common::visit(common::visitors{
                     [&](const GenericKind::DefinedIo &io) {
                       CheckDefinedIoProc(symbol, details, io);
@@ -1369,7 +1369,7 @@ void CheckHelper::CheckGeneric(
 }
 
 // Check that the specifics of this generic are distinguishable from each other
-void CheckHelper::CheckSpecificsAreDistinguishable(
+void CheckHelper::CheckSpecifics(
     const Symbol &generic, const GenericDetails &details) {
   GenericKind kind{details.kind()};
   DistinguishabilityHelper helper{context_};
@@ -1381,6 +1381,23 @@ void CheckHelper::CheckSpecificsAreDistinguishable(
         msg->Attach(
             specific.name(), "Definition of '%s'"_en_US, specific.name());
       }
+      continue;
+    }
+    if (specific.attrs().test(Attr::INTRINSIC)) {
+      if (auto *msg{messages_.Say(specific.name(),
+              "Specific procedure '%s' of generic interface '%s' may not be INTRINSIC"_err_en_US,
+              specific.name(), generic.name())}) {
+        msg->Attach(generic.name(), "Definition of '%s'"_en_US, generic.name());
+      }
+      continue;
+    }
+    if (IsStmtFunction(specific)) {
+      if (auto *msg{messages_.Say(specific.name(),
+              "Specific procedure '%s' of generic interface '%s' may not be a statement function"_err_en_US,
+              specific.name(), generic.name())}) {
+        msg->Attach(generic.name(), "Definition of '%s'"_en_US, generic.name());
+      }
+      continue;
     }
     if (const Procedure *procedure{Characterize(specific)}) {
       if (procedure->HasExplicitInterface()) {
