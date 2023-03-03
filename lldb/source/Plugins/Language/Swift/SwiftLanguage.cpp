@@ -733,6 +733,84 @@ SwiftLanguage::GetHardcodedSummaries() {
   return g_formatters;
 }
 
+static CompilerType
+ExtractSwiftTypeFromCxxInteropType(CompilerType type, TypeSystemSwift &ts,
+                                   SwiftLanguageRuntime &runtime) {
+  // Try to recognize a Swift type wrapped in a C++ interop wrapper class.
+  // These types have a typedef from a char to the swift mangled name, and a
+  // static constexpr char field whose type is the typedef, and whose name
+  // is __swift_mangled_name.
+  // These classes will look something like:
+  // class CxxBridgedClass {
+  //   [Layout specific variables]
+  //   typedef char $sClassMangledNameHere;
+  //   static inline constexpr $sClassMangledNameHere __swift_mangled_name = 0;
+  // }
+
+
+  Log *log(GetLog(LLDBLog::DataFormatters));
+  // This only makes sense for Clang types.
+  auto tsc = type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  if (!tsc)
+    return {};
+
+  // We operate directly on the qualified type because the TypeSystem
+  // interface doesn't allow us to check for static constexpr members.
+  auto qual_type = TypeSystemClang::GetQualType(type.GetOpaqueQualType());
+  auto *record_type =
+      llvm::dyn_cast_or_null<clang::RecordType>(qual_type.getTypePtrOrNull());
+  if (!record_type) {
+    LLDB_LOGV(log, "[ExtractSwiftTypeFromCxxInteropType] "
+                   "Type is not a record type.");
+    return {};
+  }
+
+  const clang::RecordDecl *record_decl = record_type->getDecl();
+  CompilerType swift_type;
+
+  for (auto *child_decl : record_decl->decls()) {
+    auto *var_decl = llvm::dyn_cast<clang::VarDecl>(child_decl);
+    if (!var_decl)
+      continue;
+
+    auto name = var_decl->getName();
+    if (name != "__swift_mangled_name")
+      continue;
+
+    const auto *typedef_type =
+        llvm::dyn_cast<clang::TypedefType>(var_decl->getType());
+    if (!typedef_type)
+      break;
+
+    auto *decl = typedef_type->getDecl();
+    if (!decl)
+      break;
+
+    auto swift_name = decl->getName();
+    if (!swift::Demangle::isMangledName(swift_name))
+      break;
+
+    swift_type = ts.GetTypeFromMangledTypename(ConstString(swift_name));
+    break;
+  }
+
+  if (swift_type) {
+    auto bound_type = runtime.BindGenericTypeParameters(
+        swift_type, [&](unsigned depth, unsigned index) -> CompilerType {
+          assert(depth == 0 && "Unexpected depth! C++ interop does not support "
+                               "nested generic parameters");
+          if (depth > 0)
+            return {};
+
+          auto templated_type = type.GetTypeTemplateArgument(index);
+          return ExtractSwiftTypeFromCxxInteropType(templated_type, ts,
+                                                    runtime);
+        });
+    return bound_type;
+  }
+  return {};
+}
+
 HardcodedFormatters::HardcodedSyntheticFinder
 SwiftLanguage::GetHardcodedSynthetics() {
   static std::once_flag g_initialize;
@@ -862,11 +940,6 @@ SwiftLanguage::GetHardcodedSynthetics() {
                               lldb::DynamicValueType dyn_type,
                               FormatManager &format_manager)
                                -> lldb::SyntheticChildrenSP {
-      // Try to recognize a Swift type wrapped in a C++ interop wrapper class.
-      // These types have a typedef from a char to the swift mangled name, and a
-      // static constexpr char field whose type is the typedef, and whose name
-      // is $__swift_mangled_name.
-
       Log *log(GetLog(LLDBLog::DataFormatters));
 
       ProcessSP process_sp(valobj.GetProcessSP());
@@ -885,56 +958,10 @@ SwiftLanguage::GetHardcodedSynthetics() {
       }
       auto &type_system_swift = **scratch_ctx;
 
-      // This only makes sense for Clang types.
       auto type = valobj.GetCompilerType();
-      auto tsc = type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
-      if (!tsc) {
-        LLDB_LOGV(log, "[Matching CxxBridgedSyntheticChildProvider] - "
-                       "Type is not a clang type.");
-        return nullptr;
-      }
 
-      // We operate directly on the qualified type because the TypeSystem
-      // interface doesn't allow us to check for static constexpr members.
-      auto qual_type = TypeSystemClang::GetQualType(type.GetOpaqueQualType());
-      auto *record_type = llvm::dyn_cast_or_null<clang::RecordType>(
-          qual_type.getTypePtrOrNull());
-      if (!record_type) {
-        LLDB_LOGV(log, "[Matching CxxBridgedSyntheticChildProvider] - "
-                       "Type is not a record type.");
-        return nullptr;
-      }
-
-      const clang::RecordDecl *record_decl = record_type->getDecl();
-      CompilerType swift_type;
-
-      for (auto *child_decl : record_decl->decls()) {
-        auto *var_decl = llvm::dyn_cast<clang::VarDecl>(child_decl);
-        if (!var_decl)
-          continue;
-
-        auto name = var_decl->getName();
-        if (name != "__swift_mangled_name")
-          continue;
-
-        const auto *typedef_type =
-            llvm::dyn_cast<clang::TypedefType>(var_decl->getType());
-        if (!typedef_type)
-          break;
-
-        auto *decl = typedef_type->getDecl();
-        if (!decl)
-          break;
-
-        auto swift_name = decl->getName();
-        if (!swift::Demangle::isMangledName(swift_name))
-          break;
-
-        swift_type = type_system_swift.GetTypeFromMangledTypename(
-            ConstString(swift_name));
-        break;
-      }
-
+      auto swift_type = ExtractSwiftTypeFromCxxInteropType(
+          type, type_system_swift, *swift_runtime);
       if (!swift_type) {
         LLDB_LOGV(log, "[Matching CxxBridgedSyntheticChildProvider] - "
                        "Did not find Swift type.");
