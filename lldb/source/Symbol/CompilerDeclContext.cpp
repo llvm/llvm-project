@@ -34,11 +34,23 @@ ConstString CompilerDeclContext::GetScopeQualifiedName() const {
   return ConstString();
 }
 
-bool CompilerDeclContext::IsClassMethod(ConstString *language_object_name_ptr) {
+bool CompilerDeclContext::IsClassMethod() {
   if (IsValid())
-    return m_type_system->DeclContextIsClassMethod(m_opaque_decl_ctx,
-                                                   language_object_name_ptr);
+    return m_type_system->DeclContextIsClassMethod(m_opaque_decl_ctx);
   return false;
+}
+
+lldb::LanguageType CompilerDeclContext::GetLanguage() {
+  if (IsValid())
+    return m_type_system->DeclContextGetLanguage(m_opaque_decl_ctx);
+  return {};
+}
+
+ConstString
+CompilerDeclContext::GetInstanceVariableName(lldb::LanguageType language) {
+  if (IsValid())
+    return m_type_system->GetInstanceVariableName(language);
+  return {};
 }
 
 bool CompilerDeclContext::IsContainedInLookup(CompilerDeclContext other) const {

@@ -61,15 +61,21 @@ public:
 
   /// Checks if this decl context represents a method of a class.
   ///
-  /// \param[out] language_object_name_ptr
-  ///     If non NULL and \b true is returned from this function,
-  ///     this will indicate if implicit object name for the language
-  ///     like "this" for C++, and "self" for Objective C.
-  ///
   /// \return
   ///     Returns true if this is a decl context that represents a method
   ///     in a struct, union or class.
-  bool IsClassMethod(ConstString *language_object_name_ptr = nullptr);
+  bool IsClassMethod();
+
+  /// Determines the original language of the decl context.
+  lldb::LanguageType GetLanguage();
+
+  /// Determines the name of the instance variable for the this decl context.
+  ///
+  /// For C++ the name is "this", for Objective-C the name is "self".
+  ///
+  /// \return
+  ///     Returns a string for the name of the instance variable.
+  ConstString GetInstanceVariableName(lldb::LanguageType language);
 
   /// Check if the given other decl context is contained in the lookup
   /// of this decl context (for example because the other context is a nested
