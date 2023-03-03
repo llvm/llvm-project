@@ -3411,6 +3411,9 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
           << getOpenMPClauseName(CKind) << getOpenMPDirectiveName(DKind);
     SkipUntil(tok::comma, tok::annot_pragma_openmp_end, StopBeforeMatch);
     break;
+  case OMPC_ompx_attribute:
+    Clause = ParseOpenMPOMPXAttributesClause(WrongDirective);
+    break;
   default:
     break;
   }
@@ -3689,6 +3692,62 @@ OMPClause *Parser::ParseOpenMPInteropClause(OpenMPClauseKind Kind,
                                             T.getOpenLocation(), VarLoc, RLoc);
 
   llvm_unreachable("Unexpected interop variable clause.");
+}
+
+OMPClause *Parser::ParseOpenMPOMPXAttributesClause(bool ParseOnly) {
+  SourceLocation Loc = ConsumeToken();
+  // Parse '('.
+  BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
+  if (T.expectAndConsume(diag::err_expected_lparen_after,
+                         getOpenMPClauseName(OMPC_ompx_attribute).data()))
+    return nullptr;
+
+  ParsedAttributes ParsedAttrs(AttrFactory);
+  ParseAttributes(PAKM_GNU | PAKM_CXX11, ParsedAttrs);
+
+  // Parse ')'.
+  if (T.consumeClose())
+    return nullptr;
+
+  if (ParseOnly)
+    return nullptr;
+
+  SmallVector<Attr *> Attrs;
+  for (const ParsedAttr &PA : ParsedAttrs) {
+    switch (PA.getKind()) {
+    case ParsedAttr::AT_AMDGPUFlatWorkGroupSize:
+      if (!PA.checkExactlyNumArgs(Actions, 2))
+        continue;
+      if (auto *A = Actions.CreateAMDGPUFlatWorkGroupSizeAttr(
+              PA, PA.getArgAsExpr(0), PA.getArgAsExpr(1)))
+        Attrs.push_back(A);
+      continue;
+    case ParsedAttr::AT_AMDGPUWavesPerEU:
+      if (!PA.checkAtLeastNumArgs(Actions, 1) ||
+          !PA.checkAtMostNumArgs(Actions, 2))
+        continue;
+      if (auto *A = Actions.CreateAMDGPUWavesPerEUAttr(
+              PA, PA.getArgAsExpr(0),
+              PA.getNumArgs() > 1 ? PA.getArgAsExpr(1) : nullptr))
+        Attrs.push_back(A);
+      continue;
+    case ParsedAttr::AT_CUDALaunchBounds:
+      if (!PA.checkAtLeastNumArgs(Actions, 1) ||
+          !PA.checkAtMostNumArgs(Actions, 2))
+        continue;
+      if (auto *A = Actions.CreateLaunchBoundsAttr(
+              PA, PA.getArgAsExpr(0),
+              PA.getNumArgs() > 1 ? PA.getArgAsExpr(1) : nullptr))
+        Attrs.push_back(A);
+      continue;
+    default:
+      Diag(Loc, diag::warn_omp_invalid_attribute_for_ompx_attributes) << PA;
+      continue;
+    };
+  }
+
+  return Actions.ActOnOpenMPXAttributeClause(Attrs, Loc, T.getOpenLocation(),
+                                             T.getCloseLocation());
 }
 
 /// Parsing of simple OpenMP clauses like 'default' or 'proc_bind'.
