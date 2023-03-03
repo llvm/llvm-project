@@ -10,9 +10,9 @@
 
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
+#include "src/errno/libc_errno.h"
 
 #include <asm/ioctls.h> // Safe to include without the risk of name pollution.
-#include <errno.h>
 #include <sys/syscall.h> // For syscall numbers
 #include <termios.h>
 
@@ -24,7 +24,7 @@ LLVM_LIBC_FUNCTION(pid_t, tcsendbreak, (int fd, int /* unused duration */)) {
   // zero. So, we just pass zero to the syscall.
   long ret = __llvm_libc::syscall_impl(SYS_ioctl, fd, TCSBRK, 0);
   if (ret < 0) {
-    errno = -ret;
+    libc_errno = -ret;
     return -1;
   }
   return 0;
