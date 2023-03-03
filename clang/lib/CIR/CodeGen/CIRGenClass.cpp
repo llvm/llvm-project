@@ -224,7 +224,7 @@ static void buildMemberInitializer(CIRGenFunction &CGF,
   FieldDecl *Field = MemberInit->getAnyMember();
   QualType FieldType = Field->getType();
 
-  mlir::Operation *ThisPtr = CGF.LoadCXXThis();
+  auto ThisPtr = CGF.LoadCXXThis();
   QualType RecordTy = CGF.getContext().getTypeDeclType(ClassDecl);
   LValue LHS;
 
@@ -477,7 +477,7 @@ void CIRGenFunction::buildCtorPrologue(const CXXConstructorDecl *CD,
     llvm_unreachable("NYI");
   }
 
-  mlir::Operation *const OldThis = CXXThisValue;
+  auto const OldThis = CXXThisValue;
   for (; B != E && (*B)->isBaseInitializer() && (*B)->isBaseVirtual(); B++) {
     if (!ConstructVBases)
       continue;
@@ -580,11 +580,7 @@ Address CIRGenFunction::LoadCXXThisAddress() {
     CXXThisAlignment = CGM.getClassPointerAlignment(RD);
   }
 
-  // TODO(cir): consider how to do this if we ever have multiple returns
-  auto *t = LoadCXXThis();
-  assert(t->getNumResults() == 1);
-  auto Result = t->getOpResult(0);
-  return Address(Result, CXXThisAlignment);
+  return Address(LoadCXXThis(), CXXThisAlignment);
 }
 
 void CIRGenFunction::buildInitializerForField(FieldDecl *Field, LValue LHS,

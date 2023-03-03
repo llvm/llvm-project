@@ -122,7 +122,7 @@ public:
   void buildThisParam(CIRGenFunction &CGF, FunctionArgList &Params);
 
   /// Loads the incoming C++ this pointer as it was passed by the caller.
-  mlir::Operation *loadIncomingCXXThis(CIRGenFunction &CGF);
+  mlir::Value loadIncomingCXXThis(CIRGenFunction &CGF);
 
   /// Determine whether there's something special about the rules of the ABI
   /// tell us that 'this' is a complete object within the given function.
@@ -181,7 +181,7 @@ public:
 
   virtual ~CIRGenCXXABI();
 
-  void setCXXABIThisValue(CIRGenFunction &CGF, mlir::Operation *ThisPtr);
+  void setCXXABIThisValue(CIRGenFunction &CGF, mlir::Value ThisPtr);
 
   // Determine if references to thread_local global variables can be made
   // directly or require access through a thread wrapper function.

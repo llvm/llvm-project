@@ -532,13 +532,10 @@ CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
   return Fn;
 }
 
-mlir::Operation *CIRGenFunction::createLoad(const VarDecl *VD,
-                                            const char *Name) {
+mlir::Value CIRGenFunction::createLoad(const VarDecl *VD, const char *Name) {
   auto addr = GetAddrOfLocalVar(VD);
-  auto ret = builder.create<LoadOp>(getLoc(VD->getLocation()),
-                                    addr.getElementType(), addr.getPointer());
-
-  return ret;
+  return builder.create<LoadOp>(getLoc(VD->getLocation()),
+                                addr.getElementType(), addr.getPointer());
 }
 
 static bool isMemcpyEquivalentSpecialMember(const CXXMethodDecl *D) {
@@ -691,14 +688,14 @@ void CIRGenFunction::buildConstructorBody(FunctionArgList &Args) {
 
 /// Given a value of type T* that may not be to a complete object, construct
 /// an l-vlaue withi the natural pointee alignment of T.
-LValue CIRGenFunction::MakeNaturalAlignPointeeAddrLValue(mlir::Operation *Op,
+LValue CIRGenFunction::MakeNaturalAlignPointeeAddrLValue(mlir::Value V,
                                                          QualType T) {
   // FIXME(cir): is it safe to assume Op->getResult(0) is valid? Perhaps
   // assert on the result type first.
   LValueBaseInfo BaseInfo;
   CharUnits Align = CGM.getNaturalTypeAlignment(T, &BaseInfo,
                                                 /* for PointeeType= */ true);
-  return makeAddrLValue(Address(Op->getResult(0), Align), T, BaseInfo);
+  return makeAddrLValue(Address(V, Align), T, BaseInfo);
 }
 
 // Map the LangOption for exception behavior into the corresponding enum in

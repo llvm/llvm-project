@@ -57,7 +57,7 @@ static Address buildAddrOfFieldStorage(CIRGenFunction &CGF, Address Base,
   auto fieldPtr =
       mlir::cir::PointerType::get(CGF.getBuilder().getContext(), fieldType);
   auto sea = CGF.getBuilder().create<mlir::cir::StructElementAddr>(
-      loc, fieldPtr, CGF.CXXThisValue->getOperand(0), field->getName());
+      loc, fieldPtr, Base.getPointer(), field->getName());
 
   // TODO: We could get the alignment from the CIRGenRecordLayout, but given the
   // member name based lookup of the member here we probably shouldn't be. We'll
@@ -1291,8 +1291,7 @@ LValue CIRGenFunction::buildCallExprLValue(const CallExpr *E) {
          "Can't have a scalar return unless the return type is a "
          "reference type!");
 
-  return MakeNaturalAlignPointeeAddrLValue(RV.getScalarVal().getDefiningOp(),
-                                           E->getType());
+  return MakeNaturalAlignPointeeAddrLValue(RV.getScalarVal(), E->getType());
 }
 
 /// Evaluate an expression into a given memory location.

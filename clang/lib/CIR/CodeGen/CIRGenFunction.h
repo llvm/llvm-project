@@ -510,8 +510,8 @@ public:
   /// When generating code for a C++ member function, this will
   /// hold the implicit 'this' declaration.
   clang::ImplicitParamDecl *CXXABIThisDecl = nullptr;
-  mlir::Operation *CXXABIThisValue = nullptr;
-  mlir::Operation *CXXThisValue = nullptr;
+  mlir::Value CXXABIThisValue = nullptr;
+  mlir::Value CXXThisValue = nullptr;
   clang::CharUnits CXXABIThisAlignment;
   clang::CharUnits CXXThisAlignment;
 
@@ -692,7 +692,7 @@ public:
 
   mlir::Value buildCXXNewExpr(const CXXNewExpr *E);
 
-  mlir::Operation *createLoad(const clang::VarDecl *VD, const char *Name);
+  mlir::Value createLoad(const clang::VarDecl *VD, const char *Name);
 
   // Wrapper for function prototype sources. Wraps either a FunctionProtoType or
   // an ObjCMethodDecl.
@@ -1089,8 +1089,7 @@ public:
         : CGF{CGF}, OldCXXThisValue(CGF.CXXThisValue),
           OldCXXThisAlignment(CGF.CXXThisAlignment),
           SourceLocScope(E, CGF.CurSourceLocExprScope) {
-      CGF.CXXThisValue =
-          CGF.CXXDefaultInitExprThis.getPointer().getDefiningOp();
+      CGF.CXXThisValue = CGF.CXXDefaultInitExprThis.getPointer();
       CGF.CXXThisAlignment = CGF.CXXDefaultInitExprThis.getAlignment();
     }
     ~CXXDefaultInitExprScope() {
@@ -1100,7 +1099,7 @@ public:
 
   public:
     CIRGenFunction &CGF;
-    mlir::Operation *OldCXXThisValue;
+    mlir::Value OldCXXThisValue;
     clang::CharUnits OldCXXThisAlignment;
     SourceLocExprScopeGuard SourceLocScope;
   };
@@ -1110,13 +1109,12 @@ public:
         : SourceLocExprScopeGuard(E, CGF.CurSourceLocExprScope) {}
   };
 
-  LValue MakeNaturalAlignPointeeAddrLValue(mlir::Operation *Op,
-                                           clang::QualType T);
+  LValue MakeNaturalAlignPointeeAddrLValue(mlir::Value V, clang::QualType T);
 
   /// Load the value for 'this'. This function is only valid while generating
   /// code for an C++ member function.
   /// FIXME(cir): this should return a mlir::Value!
-  mlir::Operation *LoadCXXThis() {
+  mlir::Value LoadCXXThis() {
     assert(CXXThisValue && "no 'this' value for this function");
     return CXXThisValue;
   }

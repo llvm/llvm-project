@@ -450,11 +450,7 @@ public:
     return Visit(DIE->getExpr());
   }
 
-  mlir::Value VisitCXXThisExpr(CXXThisExpr *TE) {
-    auto *t = CGF.LoadCXXThis();
-    assert(t->getNumResults() == 1);
-    return t->getOpResult(0);
-  }
+  mlir::Value VisitCXXThisExpr(CXXThisExpr *TE) { return CGF.LoadCXXThis(); }
 
   mlir::Value VisitExprWithCleanups(ExprWithCleanups *E);
   mlir::Value VisitCXXNewExpr(const CXXNewExpr *E) {
