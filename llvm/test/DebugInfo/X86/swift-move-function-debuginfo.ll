@@ -36,8 +36,7 @@ declare hidden swiftcc %T4main5KlassC* @"$s4main5KlassCACycfC"(%swift.type* swif
 ;; DWARF-NEXT: DW_AT_type	(
 ;;
 ;; DWARF: DW_TAG_variable
-;; DWARF-NEXT: DW_AT_location	(0x{{[a-z0-9]+}}:
-;; DWARF-NEXT:    [0x{{[a-z0-9]+}}, 0x{{[a-z0-9]+}}):
+;; DWARF-NEXT: DW_AT_location	(DW_OP_fbreg
 ;; DWARF-NEXT: DW_AT_name	("k")
 ;; DWARF-NEXT: DW_AT_decl_file	(
 ;; DWARF-NEXT: DW_AT_decl_line	(
@@ -55,7 +54,7 @@ entry:
   %3 = extractvalue %swift.metadata_response %2, 0, !dbg !54
   %4 = call swiftcc %T4main5KlassC* @"$s4main5KlassCACycfC"(%swift.type* swiftself %3), !dbg !54
   store %T4main5KlassC* %4, %T4main5KlassC** %k.debug, align 8, !dbg !55
-  call void @llvm.dbg.addr(metadata %T4main5KlassC** %k.debug, metadata !48, metadata !DIExpression()), !dbg !56
+  call void @llvm.dbg.declare(metadata %T4main5KlassC** %k.debug, metadata !48, metadata !DIExpression()), !dbg !56
   br label %entry.split, !dbg !57
 
 entry.split:                                      ; preds = %entry
@@ -83,9 +82,6 @@ entry.split:                                      ; preds = %entry
 ; Function Attrs: noinline nounwind readnone
 declare swiftcc %swift.metadata_response @"$s4main5KlassCMa"(i64) #3
 
-; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
-declare void @llvm.dbg.addr(metadata, metadata, metadata) #1
-
 ; Function Attrs: nounwind willreturn
 declare %swift.refcounted* @swift_retain(%swift.refcounted* returned) #4
 
@@ -103,8 +99,7 @@ declare void @swift_release(%swift.refcounted*) #5
 ;; DWARF-NEXT: DW_AT_external	(true)
 ;;
 ;; DWARF: DW_TAG_formal_parameter
-;; DWARF-NEXT: DW_AT_location	(0x{{[a-z0-9]+}}:
-;; DWARF-NEXT:    [0x{{[a-z0-9]+}}, 0x{{[a-z0-9]+}}):
+;; DWARF-NEXT: DW_AT_location	(DW_OP_fbreg
 ;; DWARF-NEXT: DW_AT_name	("k")
 ;; DWARF-NEXT: DW_AT_decl_file	(
 ;; DWARF-NEXT: DW_AT_decl_line	(
@@ -126,7 +121,7 @@ entry:
   %2 = bitcast %T4main5KlassC** %m.debug to i8*
   call void @llvm.memset.p0i8.i64(i8* align 8 %2, i8 0, i64 8, i1 false)
   store %T4main5KlassC* %0, %T4main5KlassC** %k.debug, align 8, !dbg !69
-  call void @llvm.dbg.addr(metadata %T4main5KlassC** %k.debug, metadata !65, metadata !DIExpression()), !dbg !70
+  call void @llvm.dbg.declare(metadata %T4main5KlassC** %k.debug, metadata !65, metadata !DIExpression()), !dbg !70
   br label %entry.split, !dbg !71
 
 entry.split:                                      ; preds = %entry
@@ -166,11 +161,7 @@ entry.split:                                      ; preds = %entry
 ;; DWARF-NEXT: DW_AT_type	(
 ;;
 ;; DWARF: DW_TAG_variable
-;; DWARF-NEXT: DW_AT_location	(0x{{[a-z0-9]+}}:
-;; We check that we get two separate locations for the different lifetimes of
-;; the values.
-;; DWARF-NEXT:    [0x{{[a-z0-9]+}}, 0x{{[a-z0-9]+}}):
-;; DWARF-NEXT:    [0x{{[a-z0-9]+}}, 0x{{[a-z0-9]+}}):
+;; DWARF-NEXT: DW_AT_location	(DW_OP_fbreg
 ;; DWARF-NEXT: DW_AT_name	("k")
 ;; DWARF-NEXT: DW_AT_decl_file	(
 ;; DWARF-NEXT: DW_AT_decl_line	(
@@ -186,7 +177,7 @@ entry:
   call void @llvm.memset.p0i8.i64(i8* align 8 %1, i8 0, i64 8, i1 false)
   %2 = bitcast %T4main5KlassC** %k to i8*, !dbg !82
   call void @llvm.lifetime.start.p0i8(i64 8, i8* %2), !dbg !82
-  call void @llvm.dbg.addr(metadata %T4main5KlassC** %k, metadata !78, metadata !DIExpression()), !dbg !85
+  call void @llvm.dbg.declare(metadata %T4main5KlassC** %k, metadata !78, metadata !DIExpression()), !dbg !85
   br label %entry.split1, !dbg !86
 
 entry.split1:                                     ; preds = %entry
@@ -216,7 +207,7 @@ entry.split1:                                     ; preds = %entry
   %20 = bitcast %T4main5KlassC* %19 to %swift.refcounted*, !dbg !92
   %21 = call %swift.refcounted* @swift_retain(%swift.refcounted* returned %20) #5, !dbg !92
   store %T4main5KlassC* %19, %T4main5KlassC** %k, align 8, !dbg !92
-  call void @llvm.dbg.addr(metadata %T4main5KlassC** %k, metadata !78, metadata !DIExpression()), !dbg !85
+  call void @llvm.dbg.declare(metadata %T4main5KlassC** %k, metadata !78, metadata !DIExpression()), !dbg !85
   br label %entry.split, !dbg !93
 
 entry.split:                                      ; preds = %entry.split1
@@ -249,11 +240,7 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #6
 ;; DWARF-NEXT: DW_AT_external	(
 ;;
 ;; DWARF: DW_TAG_formal_parameter
-;; DWARF-NEXT: DW_AT_location	(0x{{[a-z0-9]+}}:
-;; We check that we get two separate locations for the different lifetimes of
-;; the values.
-;; DWARF-NEXT:    [0x{{[a-z0-9]+}}, 0x{{[a-z0-9]+}}):
-;; DWARF-NEXT:    [0x{{[a-z0-9]+}}, 0x{{[a-z0-9]+}}):
+;; DWARF-NEXT: DW_AT_location	(DW_OP_fbreg
 ;; DWARF-NEXT: DW_AT_name	("k")
 ;; DWARF-NEXT: DW_AT_decl_file	(
 ;; DWARF-NEXT: DW_AT_decl_line	(
@@ -277,7 +264,7 @@ entry:
   %3 = bitcast %T4main5KlassC*** %k.debug to i8*
   call void @llvm.memset.p0i8.i64(i8* align 8 %3, i8 0, i64 8, i1 false)
   store %T4main5KlassC** %0, %T4main5KlassC*** %k.debug, align 8, !dbg !101
-  call void @llvm.dbg.addr(metadata %T4main5KlassC*** %k.debug, metadata !97, metadata !DIExpression(DW_OP_deref)), !dbg !102
+  call void @llvm.dbg.declare(metadata %T4main5KlassC*** %k.debug, metadata !97, metadata !DIExpression(DW_OP_deref)), !dbg !102
   br label %entry.split1, !dbg !103
 
 entry.split1:                                     ; preds = %entry
@@ -305,7 +292,7 @@ entry.split1:                                     ; preds = %entry
   %20 = call swiftcc %T4main5KlassC* @"$s4main5KlassCACycfC"(%swift.type* swiftself %19), !dbg !108
   store %T4main5KlassC* %20, %T4main5KlassC** %0, align 8, !dbg !109
   store %T4main5KlassC** %0, %T4main5KlassC*** %k.debug, align 8, !dbg !101
-  call void @llvm.dbg.addr(metadata %T4main5KlassC*** %k.debug, metadata !97, metadata !DIExpression(DW_OP_deref)), !dbg !102
+  call void @llvm.dbg.declare(metadata %T4main5KlassC*** %k.debug, metadata !97, metadata !DIExpression(DW_OP_deref)), !dbg !102
   br label %entry.split, !dbg !110
 
 entry.split:                                      ; preds = %entry.split1
@@ -351,8 +338,7 @@ entry.split:                                      ; preds = %entry.split1
 ;; DWARF-NEXT: DW_AT_type      (
 ;;
 ;; DWARF: DW_TAG_variable
-;; DWARF-NEXT: DW_AT_location  (0x{{[a-z0-9]+}}:
-;; DWARF-NEXT:    [0x{{[a-z0-9]+}}, 0x{{[a-z0-9]+}}):
+;; DWARF-NEXT: DW_AT_location	(DW_OP_fbreg
 ;; DWARF-NEXT: DW_AT_name      ("k")
 ;; DWARF-NEXT: DW_AT_decl_file (
 ;; DWARF-NEXT: DW_AT_decl_line (
@@ -391,7 +377,7 @@ entry:
   %12 = bitcast i8* %11 to %swift.opaque*, !dbg !130
   store %swift.opaque* %0, %swift.opaque** %x.debug, align 8, !dbg !127
   store %swift.opaque* %12, %swift.opaque** %k.debug, align 8, !dbg !133
-  call void @llvm.dbg.addr(metadata %swift.opaque** %k.debug, metadata !126, metadata !DIExpression()), !dbg !134
+  call void @llvm.dbg.declare(metadata %swift.opaque** %k.debug, metadata !126, metadata !DIExpression()), !dbg !134
   br label %13, !dbg !135
 
 13:                                               ; preds = %entry
@@ -435,8 +421,7 @@ entry:
 ;; DWARF-NEXT: DW_AT_external  (
 ;;
 ;; DWARF: DW_TAG_formal_parameter
-;; DWARF-NEXT: DW_AT_location  (0x{{[a-z0-9]+}}:
-;; DWARF-NEXT:    [0x{{[a-z0-9]+}}, 0x{{[a-z0-9]+}}):
+;; DWARF-NEXT: DW_AT_location	(DW_OP_fbreg
 ;; DWARF-NEXT: DW_AT_name      ("k")
 ;; DWARF-NEXT: DW_AT_decl_file (
 ;; DWARF-NEXT: DW_AT_decl_line (
@@ -480,7 +465,7 @@ entry:
   %9 = bitcast i8* %m to %swift.opaque*, !dbg !149
   store i8* %m, i8** %m.debug, align 8, !dbg !151
   store %swift.opaque* %0, %swift.opaque** %k.debug, align 8, !dbg !147
-  call void @llvm.dbg.addr(metadata %swift.opaque** %k.debug, metadata !146, metadata !DIExpression(DW_OP_deref)), !dbg !152
+  call void @llvm.dbg.declare(metadata %swift.opaque** %k.debug, metadata !146, metadata !DIExpression(DW_OP_deref)), !dbg !152
   br label %entry.split, !dbg !153
 
 entry.split:                                      ; preds = %entry
@@ -534,9 +519,7 @@ entry.split:                                      ; preds = %entry
 ;; DWARF-NEXT: DW_AT_artificial        (true)
 ;;
 ;; DWARF: DW_TAG_variable
-;; DWARF-NEXT: DW_AT_location  (0x{{[a-z0-9]+}}:
-;; DWARF-NEXT:    [0x{{[a-z0-9]+}}, 0x{{[a-z0-9]+}}):
-;; DWARF-NEXT:    [0x{{[a-z0-9]+}}, 0x{{[a-z0-9]+}}):
+;; DWARF-NEXT: DW_AT_location	(DW_OP_fbreg
 ;; DWARF-NEXT: DW_AT_name      ("k")
 ;; DWARF-NEXT: DW_AT_decl_file (
 ;; DWARF-NEXT: DW_AT_decl_line (
@@ -572,7 +555,7 @@ entry:
   %13 = bitcast i8* %12 to %swift.opaque*, !dbg !166
   store %swift.opaque* %0, %swift.opaque** %x.debug, align 8, !dbg !164
   store %swift.opaque* %13, %swift.opaque** %k.debug, align 8, !dbg !168
-  call void @llvm.dbg.addr(metadata %swift.opaque** %k.debug, metadata !162, metadata !DIExpression()), !dbg !169
+  call void @llvm.dbg.declare(metadata %swift.opaque** %k.debug, metadata !162, metadata !DIExpression()), !dbg !169
   br label %14, !dbg !170
 
 14:                                               ; preds = %entry
@@ -603,7 +586,7 @@ entry:
   %31 = call %swift.opaque* %initializeWithCopy(%swift.opaque* noalias %9, %swift.opaque* noalias %0, %swift.type* %T) #5, !dbg !176
   %32 = call %swift.opaque* %initializeWithTake(%swift.opaque* noalias %13, %swift.opaque* noalias %9, %swift.type* %T) #5, !dbg !177
   store %swift.opaque* %13, %swift.opaque** %k.debug, align 8, !dbg !168
-  call void @llvm.dbg.addr(metadata %swift.opaque** %k.debug, metadata !162, metadata !DIExpression()), !dbg !169
+  call void @llvm.dbg.declare(metadata %swift.opaque** %k.debug, metadata !162, metadata !DIExpression()), !dbg !169
   br label %.split, !dbg !178
 
 .split:                                           ; preds = %14
@@ -632,9 +615,7 @@ entry:
 ;; DWARF-NEXT: DW_AT_external  (
 ;;
 ;; DWARF: DW_TAG_formal_parameter
-;; DWARF-NEXT: DW_AT_location  (0x{{[a-z0-9]+}}:
-;; DWARF-NEXT:    [0x{{[a-z0-9]+}}, 0x{{[a-z0-9]+}}):
-;; DWARF-NEXT:    [0x{{[a-z0-9]+}}, 0x{{[a-z0-9]+}}):
+;; DWARF-NEXT: DW_AT_location	(DW_OP_fbreg
 ;; DWARF-NEXT: DW_AT_name      ("k")
 ;; DWARF-NEXT: DW_AT_decl_file (
 ;; DWARF-NEXT: DW_AT_decl_line (
@@ -666,7 +647,7 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %11), !dbg !190
   %12 = bitcast i8* %11 to %swift.opaque*, !dbg !190
   store %swift.opaque* %0, %swift.opaque** %k.debug, align 8, !dbg !188
-  call void @llvm.dbg.addr(metadata %swift.opaque** %k.debug, metadata !186, metadata !DIExpression(DW_OP_deref)), !dbg !193
+  call void @llvm.dbg.declare(metadata %swift.opaque** %k.debug, metadata !186, metadata !DIExpression(DW_OP_deref)), !dbg !193
   br label %entry.split2, !dbg !188
 
 entry.split2:                                     ; preds = %entry
@@ -697,7 +678,7 @@ entry.split2:                                     ; preds = %entry
   %28 = call %swift.opaque* %initializeWithCopy(%swift.opaque* noalias %10, %swift.opaque* noalias %1, %swift.type* %T) #5, !dbg !199
   %29 = call %swift.opaque* %initializeWithTake(%swift.opaque* noalias %0, %swift.opaque* noalias %10, %swift.type* %T) #5, !dbg !200
   store %swift.opaque* %0, %swift.opaque** %k.debug, align 8, !dbg !188
-  call void @llvm.dbg.addr(metadata %swift.opaque** %k.debug, metadata !186, metadata !DIExpression(DW_OP_deref)), !dbg !193
+  call void @llvm.dbg.declare(metadata %swift.opaque** %k.debug, metadata !186, metadata !DIExpression(DW_OP_deref)), !dbg !193
   br label %entry.split, !dbg !201
 
 entry.split:                                      ; preds = %entry.split2

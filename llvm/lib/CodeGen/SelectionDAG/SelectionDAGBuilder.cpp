@@ -5778,8 +5778,8 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
   if (!Op)
     return false;
 
-  // If we had a dbg addr, just emit it here.
-  if (Kind == FuncArgumentDbgValueKind::Addr) {
+  // If we had a dbg declare, just emit it here.
+  if (Kind == FuncArgumentDbgValueKind::Declare) {
     if (!Op->isReg()) {
       LLVM_DEBUG(
           llvm::dbgs()
@@ -6224,11 +6224,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       } else if (isa<Argument>(Address)) {
         // Address is an argument, so try to emit its dbg value using
         // virtual register info from the FuncInfo.ValueMap.
+        assert(Intrinsic == Intrinsic::dbg_declare);
         EmitFuncArgumentDbgValue(Address, Variable, Expression, dl,
-                                 Intrinsic == Intrinsic::dbg_addr
-                                     ? FuncArgumentDbgValueKind::Addr
-                                     : FuncArgumentDbgValueKind::Declare,
-                                 N);
+                                 FuncArgumentDbgValueKind::Declare, N);
         return;
       } else {
         SDV = DAG.getDbgValue(Variable, Expression, N.getNode(), N.getResNo(),
@@ -6238,11 +6236,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     } else {
       // If Address is an argument then try to emit its dbg value using
       // virtual register info from the FuncInfo.ValueMap.
+      assert(Intrinsic == Intrinsic::dbg_declare);
       if (!EmitFuncArgumentDbgValue(Address, Variable, Expression, dl,
-                                    Intrinsic == Intrinsic::dbg_addr
-                                        ? FuncArgumentDbgValueKind::Addr
-                                        : FuncArgumentDbgValueKind::Declare,
-                                    N)) {
+                                    FuncArgumentDbgValueKind::Declare, N)) {
         LLVM_DEBUG(dbgs() << "Dropping debug info for " << DI
                           << " (could not emit func-arg dbg_value)\n");
       }
