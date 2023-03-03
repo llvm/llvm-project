@@ -1,4 +1,4 @@
-; RUN: opt -S --passes="ipsccp<func-spec>" -force-function-specialization < %s | FileCheck %s
+; RUN: opt -S --passes="ipsccp<func-spec>" -force-specialization < %s | FileCheck %s
 
 ; Tests that `bar` has been specialized and that the compiler did not crash
 ; while attempting to promote the alloca in `entry`.
