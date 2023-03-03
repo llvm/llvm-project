@@ -435,7 +435,7 @@ UserExpression::Execute(DiagnosticManager &diagnostic_manager,
   lldb::ExpressionResults expr_result = DoExecute(
       diagnostic_manager, exe_ctx, options, shared_ptr_to_me, result_var);
   Target *target = exe_ctx.GetTargetPtr();
-  if (options.SetSuppressPersistentResult() && result_var && target) {
+  if (options.GetSuppressPersistentResult() && result_var && target) {
 #ifdef LLDB_ENABLE_SWIFT
     if (m_language == lldb::eLanguageTypeSwift) {
       if (auto *exe_scope = exe_ctx.GetBestExecutionContextScope())
