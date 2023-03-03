@@ -1699,15 +1699,9 @@ void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
   }
   std::optional<std::string> label{
       evaluate::GetScalarConstantValue<evaluate::Ascii>(bindName_)};
-  if (ClassifyProcedure(symbol) == ProcedureDefinitionClass::Internal) {
-    if (label) { // C1552: no NAME= allowed even if null
-      Say(symbol.name(),
-          "An internal procedure may not have a BIND(C,NAME=) binding label"_err_en_US);
-    }
-    return;
-  }
   // 18.9.2(2): discard leading and trailing blanks
   if (label) {
+    symbol.SetIsExplicitBindName(true);
     auto first{label->find_first_not_of(" ")};
     if (first == std::string::npos) {
       // Empty NAME= means no binding at all (18.10.2p2)
@@ -1716,7 +1710,7 @@ void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
     auto last{label->find_last_not_of(" ")};
     label = label->substr(first, last - first + 1);
   } else {
-    label = parser::ToLowerCaseLetters(symbol.name().ToString());
+    label = symbol.name().ToString();
   }
   // Check if a symbol has two Bind names.
   std::string oldBindName;
@@ -5090,10 +5084,6 @@ void DeclarationVisitor::Post(const parser::ProcDecl &x) {
   symbol.ReplaceName(name.source);
   if (dtDetails) {
     dtDetails->add_component(symbol);
-  }
-  if (hasBindCName_ && (IsPointer(symbol) || IsDummy(symbol))) {
-    Say(symbol.name(),
-        "BIND(C) procedure with NAME= specified can neither have POINTER attribute nor be a dummy procedure"_err_en_US);
   }
 }
 
