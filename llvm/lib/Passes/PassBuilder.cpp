@@ -657,6 +657,11 @@ Expected<bool> parseCoroSplitPassOptions(StringRef Params) {
   return parseSinglePassOption(Params, "reuse-storage", "CoroSplitPass");
 }
 
+Expected<bool> parsePostOrderFunctionAttrsPassOptions(StringRef Params) {
+  return parseSinglePassOption(Params, "skip-non-recursive",
+                               "PostOrderFunctionAttrs");
+}
+
 Expected<bool> parseEarlyCSEPassOptions(StringRef Params) {
   return parseSinglePassOption(Params, "memssa", "EarlyCSE");
 }
