@@ -677,7 +677,6 @@ private:
   /// EmitFuncArgumentDbgValue.
   enum class FuncArgumentDbgValueKind {
     Value,   // This was originally a llvm.dbg.value.
-    Addr,    // This was originally a llvm.dbg.addr.
     Declare, // This was originally a llvm.dbg.declare.
   };
 
