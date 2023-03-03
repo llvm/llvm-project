@@ -92,6 +92,7 @@ public:
   size_t GetStringValue(char *dst, size_t dst_len) const;
 
 protected:
+  friend class SBAttachInfo;
   friend class SBLaunchInfo;
   friend class SBDebugger;
   friend class SBTarget;
