@@ -101,7 +101,7 @@ void elf::reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
   std::string hint;
   if (rel.sym) {
     if (!rel.sym->isSection())
-      hint = "; references " + lld::toString(*rel.sym);
+      hint = "; references '" + lld::toString(*rel.sym) + '\'';
     else if (auto *d = dyn_cast<Defined>(rel.sym))
       hint = ("; references section '" + d->section->name + "'").str();
   }
@@ -124,7 +124,8 @@ void elf::reportRangeError(uint8_t *loc, int64_t v, int n, const Symbol &sym,
   ErrorPlace errPlace = getErrorPlace(loc);
   std::string hint;
   if (!sym.getName().empty())
-    hint = "; references " + lld::toString(sym) + getDefinedLocation(sym);
+    hint =
+        "; references '" + lld::toString(sym) + '\'' + getDefinedLocation(sym);
   errorOrWarn(errPlace.loc + msg + " is out of range: " + Twine(v) +
               " is not in [" + Twine(llvm::minIntN(n)) + ", " +
               Twine(llvm::maxIntN(n)) + "]" + hint);
