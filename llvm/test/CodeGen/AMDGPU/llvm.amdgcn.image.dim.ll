@@ -1955,9 +1955,9 @@ define amdgpu_ps float @load_mip_2d_tfe_nouse(<8 x i32> inreg %rsrc, i32 %s, i32
 ;
 ; GFX12-LABEL: load_mip_2d_tfe_nouse:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    image_load_mip v[0:4], [v0, v1, v2], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D tfe
+; GFX12-NEXT:    image_load_mip v[0:1], [v0, v1, v2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D tfe
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v0, v4
+; GFX12-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.mip.2d.v4f32i32.i32(i32 15, i32 %s, i32 %t, i32 %mip, <8 x i32> %rsrc, i32 1, i32 0)
@@ -2013,9 +2013,9 @@ define amdgpu_ps float @load_mip_2d_tfe_nouse_V2(<8 x i32> inreg %rsrc, i32 %s, 
 ;
 ; GFX12-LABEL: load_mip_2d_tfe_nouse_V2:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    image_load_mip v[0:2], [v0, v1, v2], s[0:7] dmask:0x6 dim:SQ_RSRC_IMG_2D tfe
+; GFX12-NEXT:    image_load_mip v[0:1], [v0, v1, v2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D tfe
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v0, v2
+; GFX12-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<2 x float>,i32} @llvm.amdgcn.image.load.mip.2d.v2f32i32.i32(i32 6, i32 %s, i32 %t, i32 %mip, <8 x i32> %rsrc, i32 1, i32 0)
