@@ -1,6 +1,6 @@
-; RUN: opt -passes="ipsccp<func-spec>,inline,instcombine" -force-function-specialization -func-specialization-max-iters=2 -S < %s | FileCheck %s --check-prefix=ITERS2
-; RUN: opt -passes="ipsccp<func-spec>,inline,instcombine" -force-function-specialization -func-specialization-max-iters=3 -S < %s | FileCheck %s --check-prefix=ITERS3
-; RUN: opt -passes="ipsccp<func-spec>,inline,instcombine" -force-function-specialization -func-specialization-max-iters=4 -S < %s | FileCheck %s --check-prefix=ITERS4
+; RUN: opt -passes="ipsccp<func-spec>,inline,instcombine" -force-specialization -funcspec-max-iters=2 -S < %s | FileCheck %s --check-prefix=ITERS2
+; RUN: opt -passes="ipsccp<func-spec>,inline,instcombine" -force-specialization -funcspec-max-iters=3 -S < %s | FileCheck %s --check-prefix=ITERS3
+; RUN: opt -passes="ipsccp<func-spec>,inline,instcombine" -force-specialization -funcspec-max-iters=4 -S < %s | FileCheck %s --check-prefix=ITERS4
 
 @low = internal constant i32 0, align 4
 @high = internal constant i32 6, align 4
