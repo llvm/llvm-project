@@ -467,6 +467,11 @@ std::optional<DynamicType> ComparisonType(
 
 bool IsInteroperableIntrinsicType(const DynamicType &);
 
+// Determine whether two derived type specs are sufficiently identical
+// to be considered the "same" type even if declared separately.
+bool AreSameDerivedType(
+    const semantics::DerivedTypeSpec &x, const semantics::DerivedTypeSpec &y);
+
 // For generating "[extern] template class", &c. boilerplate
 #define EXPAND_FOR_EACH_INTEGER_KIND(M, P, S) \
   M(P, S, 1) M(P, S, 2) M(P, S, 4) M(P, S, 8) M(P, S, 16)

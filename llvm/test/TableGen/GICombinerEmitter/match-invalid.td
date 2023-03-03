@@ -1,6 +1,6 @@
 // RUN: not llvm-tblgen -I %p/../../../include -gen-global-isel-combiner \
 // RUN:     -combiners=MyCombiner %s 2>&1 | \
-// RUN:     FileCheck -implicit-check-not=error %s
+// RUN:     FileCheck -implicit-check-not=error: %s
 
 include "llvm/Target/Target.td"
 include "llvm/Target/GlobalISel/Combine.td"

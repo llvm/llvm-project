@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/unistd/lseek.h"
+#include "src/errno/libc_errno.h"
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
-#include <errno.h>
 #include <sys/syscall.h> // For syscall numbers.
 #include <unistd.h>
 
@@ -30,7 +30,7 @@ LLVM_LIBC_FUNCTION(off_t, lseek, (int fd, off_t offset, int whence)) {
 #endif
 
   if (ret < 0) {
-    errno = -ret;
+    libc_errno = -ret;
     return -1;
   }
   return result;

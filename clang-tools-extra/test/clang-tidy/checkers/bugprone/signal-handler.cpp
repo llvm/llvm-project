@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy -std=c++14 %s bugprone-signal-handler %t -- -- -isystem %clang_tidy_headers -isystem %S/Inputs/signal-handler -target x86_64-unknown-unknown
-
+// FIXME: Fix the checker to work in C++17 or later mode.
 #include "stdcpp.h"
 #include "stdio.h"
 

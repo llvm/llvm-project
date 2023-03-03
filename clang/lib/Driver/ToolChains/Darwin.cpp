@@ -1426,42 +1426,24 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
 
   const SanitizerArgs &Sanitize = getSanitizerArgs(Args);
 
-  if (!Sanitize.needsSharedRt()) {
-    const char *sanitizer = nullptr;
-    if (Sanitize.needsUbsanRt()) {
-      sanitizer = "UndefinedBehaviorSanitizer";
-    } else if (Sanitize.needsAsanRt()) {
-      sanitizer = "AddressSanitizer";
-    } else if (Sanitize.needsTsanRt()) {
-      sanitizer = "ThreadSanitizer";
-    }
-    if (sanitizer) {
-      getDriver().Diag(diag::err_drv_unsupported_static_sanitizer_darwin)
-          << sanitizer;
-      return;
-    }
+  if (!Sanitize.needsSharedRt() && Sanitize.needsUbsanRt()) {
+    getDriver().Diag(diag::err_drv_unsupported_static_ubsan_darwin);
+    return;
   }
 
   if (Sanitize.linkRuntimes()) {
-    if (Sanitize.needsAsanRt()) {
-      assert(Sanitize.needsSharedRt() &&
-             "Static sanitizer runtimes not supported");
+    if (Sanitize.needsAsanRt())
       AddLinkSanitizerLibArgs(Args, CmdArgs, "asan");
-    }
     if (Sanitize.needsLsanRt())
       AddLinkSanitizerLibArgs(Args, CmdArgs, "lsan");
     if (Sanitize.needsUbsanRt()) {
-      assert(Sanitize.needsSharedRt() &&
-             "Static sanitizer runtimes not supported");
-      AddLinkSanitizerLibArgs(
-          Args, CmdArgs,
-          Sanitize.requiresMinimalRuntime() ? "ubsan_minimal" : "ubsan");
+      assert(Sanitize.needsSharedRt() && "Static sanitizer runtimes not supported");
+      AddLinkSanitizerLibArgs(Args, CmdArgs,
+                              Sanitize.requiresMinimalRuntime() ? "ubsan_minimal"
+                                                                : "ubsan");
     }
-    if (Sanitize.needsTsanRt()) {
-      assert(Sanitize.needsSharedRt() &&
-             "Static sanitizer runtimes not supported");
+    if (Sanitize.needsTsanRt())
       AddLinkSanitizerLibArgs(Args, CmdArgs, "tsan");
-    }
     if (Sanitize.needsFuzzer() && !Args.hasArg(options::OPT_dynamiclib)) {
       AddLinkSanitizerLibArgs(Args, CmdArgs, "fuzzer", /*shared=*/false);
 

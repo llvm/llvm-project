@@ -403,7 +403,7 @@ mlir::linalg::promoteSubViews(OpBuilder &builder, LinalgOp linalgOp,
 /// Allocate the given subview to a memory address space in GPU by creating a
 /// allocation operation and setting the memref type address space to desired
 /// address space.
-static Optional<Value> allocateSubviewGPUMemoryInAddressSpace(
+static std::optional<Value> allocateSubviewGPUMemoryInAddressSpace(
     OpBuilder &builder, memref::SubViewOp subview, ArrayRef<Value> sizeBounds,
     gpu::AddressSpace addressSpace) {
   OpBuilder::InsertionGuard guard(builder);
@@ -438,7 +438,7 @@ static Optional<Value> allocateSubviewGPUMemoryInAddressSpace(
 }
 
 /// Allocate the subview in the GPU workgroup memory.
-Optional<Value> mlir::linalg::allocateWorkgroupMemory(
+std::optional<Value> mlir::linalg::allocateWorkgroupMemory(
     OpBuilder &builder, memref::SubViewOp subview, ArrayRef<Value> sizeBounds,
     DataLayout &) {
   return allocateSubviewGPUMemoryInAddressSpace(
@@ -463,7 +463,7 @@ LogicalResult mlir::linalg::copyToWorkgroupMemory(OpBuilder &b, Value src,
 }
 
 /// Allocate the subview in the GPU private memory.
-Optional<Value> mlir::linalg::allocateGPUPrivateMemory(
+std::optional<Value> mlir::linalg::allocateGPUPrivateMemory(
     OpBuilder &builder, memref::SubViewOp subview, ArrayRef<Value> sizeBounds,
     DataLayout &) {
   return allocateSubviewGPUMemoryInAddressSpace(

@@ -134,15 +134,18 @@ template <class InputIterator, class Allocator = allocator<typename iterator_tra
 template <class T, class Allocator>
     bool operator==(const deque<T,Allocator>& x, const deque<T,Allocator>& y);
 template <class T, class Allocator>
-    bool operator< (const deque<T,Allocator>& x, const deque<T,Allocator>& y);
+    bool operator< (const deque<T,Allocator>& x, const deque<T,Allocator>& y); // removed in C++20
 template <class T, class Allocator>
-    bool operator!=(const deque<T,Allocator>& x, const deque<T,Allocator>& y);
+    bool operator!=(const deque<T,Allocator>& x, const deque<T,Allocator>& y); // removed in C++20
 template <class T, class Allocator>
-    bool operator> (const deque<T,Allocator>& x, const deque<T,Allocator>& y);
+    bool operator> (const deque<T,Allocator>& x, const deque<T,Allocator>& y); // removed in C++20
 template <class T, class Allocator>
-    bool operator>=(const deque<T,Allocator>& x, const deque<T,Allocator>& y);
+    bool operator>=(const deque<T,Allocator>& x, const deque<T,Allocator>& y); // removed in C++20
 template <class T, class Allocator>
-    bool operator<=(const deque<T,Allocator>& x, const deque<T,Allocator>& y);
+    bool operator<=(const deque<T,Allocator>& x, const deque<T,Allocator>& y); // removed in C++20
+template<class T, class Allocator>
+    synth-three-way-result<T> operator<=>(const deque<T, Allocator>& x,
+                                          const deque<T, Allocator>& y);       // since C++20
 
 // specialized algorithms:
 template <class T, class Allocator>
@@ -165,6 +168,7 @@ template <class T, class Allocator, class Predicate>
 #include <__algorithm/equal.h>
 #include <__algorithm/fill_n.h>
 #include <__algorithm/lexicographical_compare.h>
+#include <__algorithm/lexicographical_compare_three_way.h>
 #include <__algorithm/min.h>
 #include <__algorithm/remove.h>
 #include <__algorithm/remove_if.h>
@@ -2342,6 +2346,8 @@ operator==(const deque<_Tp, _Allocator>& __x, const deque<_Tp, _Allocator>& __y)
     return __sz == __y.size() && _VSTD::equal(__x.begin(), __x.end(), __y.begin());
 }
 
+#if _LIBCPP_STD_VER <= 17
+
 template <class _Tp, class _Allocator>
 inline _LIBCPP_HIDE_FROM_ABI
 bool
@@ -2381,6 +2387,19 @@ operator<=(const deque<_Tp, _Allocator>& __x, const deque<_Tp, _Allocator>& __y)
 {
     return !(__y < __x);
 }
+
+#else // _LIBCPP_STD_VER <= 17
+
+template<class _Tp, class _Allocator>
+inline _LIBCPP_HIDE_FROM_ABI
+__synth_three_way_result<_Tp>
+operator<=>(const deque<_Tp, _Allocator>& __x, const deque<_Tp, _Allocator>& __y)
+{
+    return std::lexicographical_compare_three_way(
+        __x.begin(), __x.end(), __y.begin(), __y.end(), __synth_three_way);
+}
+
+#endif // _LIBCPP_STD_VER <= 17
 
 template <class _Tp, class _Allocator>
 inline _LIBCPP_HIDE_FROM_ABI

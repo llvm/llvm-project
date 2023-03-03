@@ -321,7 +321,8 @@ void ModFileWriter::PutSymbol(
             }
             decls_ << '\n';
             if (symbol.attrs().test(Attr::BIND_C)) {
-              PutAttrs(decls_, symbol.attrs(), x.bindName(), ""s);
+              PutAttrs(decls_, symbol.attrs(), x.bindName(),
+                  x.isExplicitBindName(), ""s);
               decls_ << "::/" << symbol.name() << "/\n";
             }
           },
@@ -455,7 +456,7 @@ void ModFileWriter::PutSubprogram(const Symbol &symbol) {
   if (isInterface) {
     os << (isAbstract ? "abstract " : "") << "interface\n";
   }
-  PutAttrs(os, prefixAttrs, nullptr, ""s, " "s);
+  PutAttrs(os, prefixAttrs, nullptr, false, ""s, " "s);
   os << (details.isFunction() ? "function " : "subroutine ");
   os << symbol.name() << '(';
   int n = 0;
@@ -470,7 +471,8 @@ void ModFileWriter::PutSubprogram(const Symbol &symbol) {
     }
   }
   os << ')';
-  PutAttrs(os, bindAttrs, details.bindName(), " "s, ""s);
+  PutAttrs(os, bindAttrs, details.bindName(), details.isExplicitBindName(),
+      " "s, ""s);
   if (details.isFunction()) {
     const Symbol &result{details.result()};
     if (result.name() != symbol.name()) {
@@ -766,7 +768,7 @@ void PutBound(llvm::raw_ostream &os, const Bound &x) {
 void ModFileWriter::PutEntity(llvm::raw_ostream &os, const Symbol &symbol,
     std::function<void()> writeType, Attrs attrs) {
   writeType();
-  PutAttrs(os, attrs, symbol.GetBindName());
+  PutAttrs(os, attrs, symbol.GetBindName(), symbol.GetIsExplicitBindName());
   if (symbol.owner().kind() == Scope::Kind::DerivedType &&
       context_.IsTempName(symbol.name().ToString())) {
     os << "::%FILL";
@@ -778,14 +780,19 @@ void ModFileWriter::PutEntity(llvm::raw_ostream &os, const Symbol &symbol,
 // Put out each attribute to os, surrounded by `before` and `after` and
 // mapped to lower case.
 llvm::raw_ostream &ModFileWriter::PutAttrs(llvm::raw_ostream &os, Attrs attrs,
-    const std::string *bindName, std::string before, std::string after) const {
+    const std::string *bindName, bool isExplicitBindName, std::string before,
+    std::string after) const {
   attrs.set(Attr::PUBLIC, false); // no need to write PUBLIC
   attrs.set(Attr::EXTERNAL, false); // no need to write EXTERNAL
   if (isSubmodule_) {
     attrs.set(Attr::PRIVATE, false);
   }
-  if (bindName) {
-    os << before << "bind(c, name=\"" << *bindName << "\")" << after;
+  if (bindName || isExplicitBindName) {
+    os << before << "bind(c";
+    if (isExplicitBindName) {
+      os << ",name=\"" << (bindName ? *bindName : ""s) << '"';
+    }
+    os << ')' << after;
     attrs.set(Attr::BIND_C, false);
   }
   for (std::size_t i{0}; i < Attr_enumSize; ++i) {

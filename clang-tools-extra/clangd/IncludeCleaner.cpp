@@ -292,7 +292,7 @@ static bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
     // Convert the path to Unix slashes and try to match against the filter.
     llvm::SmallString<64> Path(Inc.Resolved);
     llvm::sys::path::native(Path, llvm::sys::path::Style::posix);
-    if (Filter(Inc.Resolved)) {
+    if (Filter(Path)) {
       dlog("{0} header is filtered out by the configuration", FE->getName());
       return false;
     }

@@ -120,11 +120,17 @@ public:
     /// This is a C++ 20 module partition implementation.
     ModulePartitionImplementation,
 
-    /// This is a fragment of the global module within some C++ module.
-    GlobalModuleFragment,
+    /// This is the explicit Global Module Fragment of a modular TU.
+    /// As per C++ [module.global.frag].
+    ExplicitGlobalModuleFragment,
 
     /// This is the private module fragment within some C++ module.
     PrivateModuleFragment,
+
+    /// This is an implicit fragment of the global module which contains
+    /// only language linkage declarations (made in the purview of the
+    /// named module).
+    ImplicitGlobalModuleFragment,
   };
 
   /// The kind of this module.
@@ -170,7 +176,15 @@ public:
 
   /// Does this Module scope describe a fragment of the global module within
   /// some C++ module.
-  bool isGlobalModule() const { return Kind == GlobalModuleFragment; }
+  bool isGlobalModule() const {
+    return isExplicitGlobalModule() || isImplicitGlobalModule();
+  }
+  bool isExplicitGlobalModule() const {
+    return Kind == ExplicitGlobalModuleFragment;
+  }
+  bool isImplicitGlobalModule() const {
+    return Kind == ImplicitGlobalModuleFragment;
+  }
 
   bool isPrivateModule() const { return Kind == PrivateModuleFragment; }
 

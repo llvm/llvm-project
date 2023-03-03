@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/errno/libc_errno.h"
 #include "src/time/asctime_r.h"
 #include "src/time/time_utils.h"
 #include "test/UnitTest/Test.h"
@@ -27,17 +28,17 @@ static inline char *call_asctime_r(struct tm *tm_data, int year, int month,
 TEST(LlvmLibcAsctimeR, Nullptr) {
   char *result;
   result = __llvm_libc::asctime_r(nullptr, nullptr);
-  ASSERT_EQ(EINVAL, llvmlibc_errno);
+  ASSERT_EQ(EINVAL, libc_errno);
   ASSERT_STREQ(nullptr, result);
 
   char buffer[TimeConstants::ASCTIME_BUFFER_SIZE];
   result = __llvm_libc::asctime_r(nullptr, buffer);
-  ASSERT_EQ(EINVAL, llvmlibc_errno);
+  ASSERT_EQ(EINVAL, libc_errno);
   ASSERT_STREQ(nullptr, result);
 
   struct tm tm_data;
   result = __llvm_libc::asctime_r(&tm_data, nullptr);
-  ASSERT_EQ(EINVAL, llvmlibc_errno);
+  ASSERT_EQ(EINVAL, libc_errno);
   ASSERT_STREQ(nullptr, result);
 }
 

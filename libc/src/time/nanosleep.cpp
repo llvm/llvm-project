@@ -8,11 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/time/nanosleep.h"
+
 #include "include/sys/syscall.h"          // For syscall numbers.
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/common.h"
-
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 
 namespace __llvm_libc {
 

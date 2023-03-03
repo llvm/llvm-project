@@ -596,7 +596,9 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
         name == "dshiftl" ? &Scalar<T>::DSHIFTL : &Scalar<T>::DSHIFTR};
     // Third argument can be of any kind. However, it must be smaller or equal
     // than BIT_SIZE. It can be converted to Int4 to simplify.
-    if (const auto *shiftCon{Folder<Int4>(context).Folding(args[2])}) {
+    if (const auto *argCon{Folder<T>(context).Folding(args[0])};
+        argCon && argCon->empty()) {
+    } else if (const auto *shiftCon{Folder<Int4>(context).Folding(args[2])}) {
       for (const auto &scalar : shiftCon->values()) {
         std::int64_t shiftVal{scalar.ToInt64()};
         if (shiftVal < 0) {
@@ -696,7 +698,9 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     } else {
       common::die("missing case to fold intrinsic function %s", name.c_str());
     }
-    if (const auto *posCon{Folder<Int4>(context).Folding(args[1])}) {
+    if (const auto *argCon{Folder<T>(context).Folding(args[0])};
+        argCon && argCon->empty()) {
+    } else if (const auto *posCon{Folder<Int4>(context).Folding(args[1])}) {
       for (const auto &scalar : posCon->values()) {
         std::int64_t posVal{scalar.ToInt64()};
         if (posVal < 0) {
@@ -720,7 +724,9 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   } else if (name == "ibits") {
     const auto *posCon{Folder<Int4>(context).Folding(args[1])};
     const auto *lenCon{Folder<Int4>(context).Folding(args[2])};
-    if (posCon && lenCon &&
+    if (const auto *argCon{Folder<T>(context).Folding(args[0])};
+        argCon && argCon->empty()) {
+    } else if (posCon && lenCon &&
         (posCon->size() == 1 || lenCon->size() == 1 ||
             posCon->size() == lenCon->size())) {
       auto posIter{posCon->values().begin()};
@@ -823,9 +829,17 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     return FoldBitReduction(
         context, std::move(funcRef), &Scalar<T>::IEOR, Scalar<T>{});
   } else if (name == "ishft" || name == "ishftc") {
+    const auto *argCon{Folder<T>(context).Folding(args[0])};
     const auto *shiftCon{Folder<Int4>(context).Folding(args[1])};
-    if (shiftCon) {
-      for (const auto &scalar : shiftCon->values()) {
+    const auto *shiftVals{shiftCon ? &shiftCon->values() : nullptr};
+    const auto *sizeCon{
+        args.size() == 3 ? Folder<Int4>(context).Folding(args[2]) : nullptr};
+    const auto *sizeVals{sizeCon ? &sizeCon->values() : nullptr};
+    if ((argCon && argCon->empty()) || !shiftVals || shiftVals->empty() ||
+        (sizeVals && sizeVals->empty())) {
+      // size= and shift= values don't need to be checked
+    } else {
+      for (const auto &scalar : *shiftVals) {
         std::int64_t shiftVal{scalar.ToInt64()};
         if (shiftVal < -T::Scalar::bits) {
           context.messages().Say(
@@ -839,10 +853,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           break;
         }
       }
-    }
-    if (args.size() == 3) { // ISHFTC
-      if (const auto *sizeCon{Folder<Int4>(context).Folding(args[2])}) {
-        for (const auto &scalar : sizeCon->values()) {
+      if (sizeVals) {
+        for (const auto &scalar : *sizeVals) {
           std::int64_t sizeVal{scalar.ToInt64()};
           if (sizeVal <= 0) {
             context.messages().Say(
@@ -856,22 +868,14 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
             break;
           }
         }
-        if (shiftCon &&
-            (shiftCon->size() == 1 || sizeCon->size() == 1 ||
-                shiftCon->size() == sizeCon->size())) {
-          auto shiftIter{shiftCon->values().begin()};
-          auto sizeIter{sizeCon->values().begin()};
-          for (; shiftIter != shiftCon->values().end() &&
-               sizeIter != sizeCon->values().end();
-               ++shiftIter, ++sizeIter) {
-            shiftIter = shiftIter == shiftCon->values().end()
-                ? shiftCon->values().begin()
-                : shiftIter;
-            sizeIter = sizeIter == sizeCon->values().end()
-                ? sizeCon->values().begin()
-                : sizeIter;
-            auto shiftVal{static_cast<int>(shiftIter->ToInt64())};
-            auto sizeVal{static_cast<int>(sizeIter->ToInt64())};
+        if (shiftVals->size() == 1 || sizeVals->size() == 1 ||
+            shiftVals->size() == sizeVals->size()) {
+          auto iters{std::max(shiftVals->size(), sizeVals->size())};
+          for (std::size_t j{0}; j < iters; ++j) {
+            auto shiftVal{static_cast<int>(
+                (*shiftVals)[j % shiftVals->size()].ToInt64())};
+            auto sizeVal{
+                static_cast<int>((*sizeVals)[j % sizeVals->size()].ToInt64())};
             if (sizeVal > 0 && std::abs(shiftVal) > sizeVal) {
               context.messages().Say(
                   "SHIFT=%jd count for ishftc is greater in magnitude than SIZE=%jd"_err_en_US,
@@ -900,7 +904,6 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           ScalarFunc<T, T, Int4, Int4>(
               [&](const Scalar<T> &i, const Scalar<Int4> &shift,
                   const Scalar<Int4> &size) -> Scalar<T> {
-                // Errors are caught in intrinsics.cpp
                 auto shiftVal{static_cast<int>(shift.ToInt64())};
                 auto sizeVal{static_cast<int>(size.ToInt64())};
                 return i.ISHFTC(shiftVal, sizeVal);
@@ -1154,7 +1157,9 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     } else {
       common::die("missing case to fold intrinsic function %s", name.c_str());
     }
-    if (const auto *shiftCon{Folder<Int4>(context).Folding(args[1])}) {
+    if (const auto *argCon{Folder<T>(context).Folding(args[0])};
+        argCon && argCon->empty()) {
+    } else if (const auto *shiftCon{Folder<Int4>(context).Folding(args[1])}) {
       for (const auto &scalar : shiftCon->values()) {
         std::int64_t shiftVal{scalar.ToInt64()};
         if (shiftVal < 0) {

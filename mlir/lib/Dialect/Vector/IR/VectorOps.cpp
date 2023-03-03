@@ -4201,7 +4201,9 @@ public:
         writeOp.getSource().getDefiningOp<vector::TransferWriteOp>();
     while (defWrite) {
       if (checkSameValueWAW(writeOp, defWrite)) {
-        writeToModify.getSourceMutable().assign(defWrite.getSource());
+        rewriter.updateRootInPlace(writeToModify, [&]() {
+          writeToModify.getSourceMutable().assign(defWrite.getSource());
+        });
         return success();
       }
       if (!isDisjointTransferIndices(
@@ -5495,7 +5497,7 @@ void mlir::vector::MaskOp::print(OpAsmPrinter &p) {
   // Print single masked operation and skip terminator.
   p << " { ";
   Block *singleBlock = &getMaskRegion().getBlocks().front();
-  if (singleBlock && singleBlock->getOperations().size() >= 1)
+  if (singleBlock && !singleBlock->getOperations().empty())
     p.printCustomOrGenericOp(&singleBlock->front());
   p << " }";
 
@@ -5530,13 +5532,12 @@ void MaskOp::ensureTerminator(Region &region, Builder &builder, Location loc) {
   opBuilder.create<vector::YieldOp>(loc, maskedOp->getResults());
   oldYieldOp->dropAllReferences();
   oldYieldOp->erase();
-  return;
 }
 
 LogicalResult MaskOp::verify() {
   // Structural checks.
   Block &block = getMaskRegion().getBlocks().front();
-  if (block.getOperations().size() < 1)
+  if (block.getOperations().empty())
     return emitOpError("expects a terminator within the mask region");
   if (block.getOperations().size() > 2)
     return emitOpError("expects only one operation to mask");

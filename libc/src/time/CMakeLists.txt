@@ -9,7 +9,6 @@ add_object_library(
   HDRS
     time_utils.h
   DEPENDS
-    libc.include.errno
     libc.include.time
     libc.src.errno.errno
 )
@@ -67,7 +66,6 @@ add_entrypoint_object(
     gettimeofday.h
   DEPENDS
     .clock_gettime
-    libc.include.errno
     libc.include.time
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -104,7 +102,6 @@ add_entrypoint_object(
     mktime.h
   DEPENDS
     .time_utils
-    libc.include.errno
     libc.include.time
     libc.src.errno.errno
 )
@@ -116,7 +113,6 @@ add_entrypoint_object(
   HDRS
     nanosleep.h
   DEPENDS
-    libc.include.errno
     libc.include.time
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil

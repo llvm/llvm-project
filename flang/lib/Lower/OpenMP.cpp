@@ -623,7 +623,8 @@ createBodyOfOp(Op &op, Fortran::lower::AbstractConverter &converter,
 static void
 createTargetDataOp(Fortran::lower::AbstractConverter &converter,
                    const Fortran::parser::OmpClauseList &opClauseList,
-                   const llvm::omp::Directive &directive) {
+                   const llvm::omp::Directive &directive,
+                   Fortran::lower::pft::Evaluation *eval = nullptr) {
   Fortran::lower::StatementContext stmtCtx;
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
@@ -728,9 +729,10 @@ createTargetDataOp(Fortran::lower::AbstractConverter &converter,
   mlir::Location currentLocation = converter.getCurrentLocation();
 
   if (directive == llvm::omp::Directive::OMPD_target_data) {
-    firOpBuilder.create<omp::DataOp>(
+    auto dataOp = firOpBuilder.create<omp::DataOp>(
         currentLocation, ifClauseOperand, deviceOperand, useDevicePtrOperand,
         useDeviceAddrOperand, mapOperands, mapTypesArrayAttr);
+    createBodyOfOp(dataOp, converter, currentLocation, *eval, &opClauseList);
   } else if (directive == llvm::omp::Directive::OMPD_target_enter_data) {
     firOpBuilder.create<omp::EnterDataOp>(currentLocation, ifClauseOperand,
                                           deviceOperand, nowaitAttr,
@@ -982,6 +984,10 @@ genOMP(Fortran::lower::AbstractConverter &converter,
     } else if (std::get_if<Fortran::parser::OmpClause::Threads>(&clause.u)) {
       // Nothing needs to be done for threads clause.
       continue;
+    } else if (std::get_if<Fortran::parser::OmpClause::Map>(&clause.u)) {
+      // Map clause is exclusive to Target Data directives. It is handled
+      // as part of the DataOp creation.
+      continue;
     } else if (const auto &finalClause =
                    std::get_if<Fortran::parser::OmpClause::Final>(&clause.u)) {
       mlir::Value finalVal = fir::getBase(converter.genExprValue(
@@ -997,8 +1003,13 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                        &clause.u)) {
       priorityClauseOperand = fir::getBase(converter.genExprValue(
           *Fortran::semantics::GetExpr(priorityClause->v), stmtCtx));
+    } else if (std::get_if<Fortran::parser::OmpClause::Reduction>(&clause.u)) {
+      TODO(currentLocation,
+           "Reduction in OpenMP " +
+               llvm::omp::getOpenMPDirectiveName(blockDirective.v) +
+               " construct");
     } else {
-      TODO(currentLocation, "OpenMP Block construct clauses");
+      TODO(converter.getCurrentLocation(), "OpenMP Block construct clause");
     }
   }
 
@@ -1044,6 +1055,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
         /*task_reductions=*/nullptr, allocateOperands, allocatorOperands);
     createBodyOfOp(taskGroupOp, converter, currentLocation, eval,
                    &opClauseList);
+  } else if (blockDirective.v == llvm::omp::OMPD_target_data) {
+    createTargetDataOp(converter, opClauseList, blockDirective.v, &eval);
   } else {
     TODO(converter.getCurrentLocation(), "Unhandled block directive");
   }

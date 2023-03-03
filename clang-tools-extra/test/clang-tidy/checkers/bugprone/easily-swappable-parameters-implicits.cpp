@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++17 %s bugprone-easily-swappable-parameters %t \
+// RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-easily-swappable-parameters %t \
 // RUN:   -config='{CheckOptions: [ \
 // RUN:     {key: bugprone-easily-swappable-parameters.MinimumLength, value: 2}, \
 // RUN:     {key: bugprone-easily-swappable-parameters.IgnoredParameterNames, value: ""}, \

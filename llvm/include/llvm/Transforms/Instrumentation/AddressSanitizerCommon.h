@@ -27,7 +27,7 @@ public:
   Use *PtrUse;
   bool IsWrite;
   Type *OpType;
-  uint64_t TypeSize;
+  TypeSize TypeStoreSize = TypeSize::Fixed(0);
   MaybeAlign Alignment;
   // The mask Value, if we're looking at a masked load/store.
   Value *MaybeMask;
@@ -38,7 +38,7 @@ public:
       : IsWrite(IsWrite), OpType(OpType), Alignment(Alignment),
         MaybeMask(MaybeMask) {
     const DataLayout &DL = I->getModule()->getDataLayout();
-    TypeSize = DL.getTypeStoreSizeInBits(OpType);
+    TypeStoreSize = DL.getTypeStoreSizeInBits(OpType);
     PtrUse = &I->getOperandUse(OperandNo);
   }
 

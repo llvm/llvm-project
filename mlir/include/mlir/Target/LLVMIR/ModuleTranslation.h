@@ -126,10 +126,12 @@ public:
   llvm::MDNode *getAliasScope(Operation *op, SymbolRefAttr aliasScopeRef) const;
 
   // Sets LLVM metadata for memory operations that are in a parallel loop.
-  void setAccessGroupsMetadata(Operation *op, llvm::Instruction *inst);
+  void setAccessGroupsMetadata(AccessGroupOpInterface op,
+                               llvm::Instruction *inst);
 
   // Sets LLVM metadata for memory operations that have alias scope information.
-  void setAliasScopeMetadata(Operation *op, llvm::Instruction *inst);
+  void setAliasScopeMetadata(AliasAnalysisOpInterface op,
+                             llvm::Instruction *inst);
 
   /// Sets LLVM TBAA metadata for memory operations that have TBAA attributes.
   void setTBAAMetadata(AliasAnalysisOpInterface op, llvm::Instruction *inst);
