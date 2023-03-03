@@ -80,6 +80,15 @@ class ScriptedProcesTestCase(TestBase):
         self.assertEqual(process.GetProcessID(), 666)
         self.assertEqual(process.GetNumThreads(), 0)
 
+        impl = process.GetScriptedImplementation()
+        self.assertTrue(impl)
+        impl = process.GetScriptedImplementation()
+        self.assertTrue(impl)
+        impl = process.GetScriptedImplementation()
+        self.assertTrue(impl)
+        impl = process.GetScriptedImplementation()
+        self.assertTrue(impl)
+
         addr = 0x500000000
         buff = process.ReadMemory(addr, 4, error)
         self.assertEqual(buff, None)
