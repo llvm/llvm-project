@@ -322,11 +322,6 @@ class LLVM_DbgIntrOp<string name, string argName> : LLVM_IntrOp<name, [], [], []
   }];
 }
 
-def LLVM_DbgAddrOp : LLVM_DbgIntrOp<"dbg.addr", "addr"> {
-  let summary = "Describe the current address of a local debug info variable.";
-  let arguments = (ins LLVM_AnyPointer:$addr, LLVM_DILocalVariableAttr:$varInfo);
-}
-
 def LLVM_DbgDeclareOp : LLVM_DbgIntrOp<"dbg.declare", "addr"> {
   let summary = "Declare the address of a local debug info variable.";
   let arguments = (ins LLVM_AnyPointer:$addr, LLVM_DILocalVariableAttr:$varInfo);
