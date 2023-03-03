@@ -876,6 +876,11 @@ void GenericUniformityAnalysisImpl<ContextT>::analyzeCycleExitDivergence(
     }
     if (!Promoted)
       break;
+
+    // Restore the set property for the temporary vector
+    llvm::sort(Temp);
+    Temp.erase(std::unique(Temp.begin(), Temp.end()), Temp.end());
+
     DomFrontier = Temp;
   }
 

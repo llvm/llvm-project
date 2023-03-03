@@ -795,6 +795,7 @@ BUILTIN(__nvvm_ldg_ui, "UiUiC*", "")
 BUILTIN(__nvvm_ldg_ul, "ULiULiC*", "")
 BUILTIN(__nvvm_ldg_ull, "ULLiULLiC*", "")
 
+BUILTIN(__nvvm_ldg_h, "hhC*", "")
 BUILTIN(__nvvm_ldg_f, "ffC*", "")
 BUILTIN(__nvvm_ldg_d, "ddC*", "")
 
@@ -814,6 +815,7 @@ BUILTIN(__nvvm_ldg_ui2, "E2UiE2UiC*", "")
 BUILTIN(__nvvm_ldg_ui4, "E4UiE4UiC*", "")
 BUILTIN(__nvvm_ldg_ull2, "E2ULLiE2ULLiC*", "")
 
+BUILTIN(__nvvm_ldg_h2, "E2hE2hC*", "")
 BUILTIN(__nvvm_ldg_f2, "E2fE2fC*", "")
 BUILTIN(__nvvm_ldg_f4, "E4fE4fC*", "")
 BUILTIN(__nvvm_ldg_d2, "E2dE2dC*", "")

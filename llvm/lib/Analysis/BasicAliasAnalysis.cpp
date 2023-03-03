@@ -1516,6 +1516,8 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
           assert(OBU.Inputs.size() == 2);
           const Value *Hint1 = OBU.Inputs[0].get();
           const Value *Hint2 = OBU.Inputs[1].get();
+          // This is often a no-op; instcombine rewrites this for us. No-op
+          // getUnderlyingObject calls are fast, though.
           const Value *HintO1 = getUnderlyingObject(Hint1);
           const Value *HintO2 = getUnderlyingObject(Hint2);
 

@@ -873,6 +873,9 @@ OperationFingerPrint::OperationFingerPrint(Operation *topOp) {
     //   - Successors
     for (unsigned i = 0, e = op->getNumSuccessors(); i != e; ++i)
       addDataToHash(hasher, op->getSuccessor(i));
+    //   - Result types
+    for (Type t : op->getResultTypes())
+      addDataToHash(hasher, t);
   });
   hash = hasher.result();
 }
