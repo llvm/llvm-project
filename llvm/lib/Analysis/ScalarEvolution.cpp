@@ -4111,39 +4111,15 @@ static bool impliesPoison(const SCEV *AssumedPoison, const SCEV *S) {
   // with the notable exception of umin_seq, where only poison from the first
   // operand is (unconditionally) propagated.
   struct SCEVPoisonCollector {
-    bool LookThroughSeq;
+    bool LookThroughMaybePoisonBlocking;
     SmallPtrSet<const SCEV *, 4> MaybePoison;
-    SCEVPoisonCollector(bool LookThroughSeq) : LookThroughSeq(LookThroughSeq) {}
+    SCEVPoisonCollector(bool LookThroughMaybePoisonBlocking)
+        : LookThroughMaybePoisonBlocking(LookThroughMaybePoisonBlocking) {}
 
     bool follow(const SCEV *S) {
-      if (!scevUnconditionallyPropagatesPoisonFromOperands(S->getSCEVType())) {
-        switch (S->getSCEVType()) {
-        case scConstant:
-        case scVScale:
-        case scTruncate:
-        case scZeroExtend:
-        case scSignExtend:
-        case scPtrToInt:
-        case scAddExpr:
-        case scMulExpr:
-        case scUDivExpr:
-        case scAddRecExpr:
-        case scUMaxExpr:
-        case scSMaxExpr:
-        case scUMinExpr:
-        case scSMinExpr:
-        case scUnknown:
-          llvm_unreachable("These all unconditionally propagate poison.");
-        case scSequentialUMinExpr:
-          // TODO: We can always follow the first operand,
-          // but the SCEVTraversal API doesn't support this.
-          if (!LookThroughSeq)
-            return false;
-          break;
-        case scCouldNotCompute:
-          llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
-        }
-      }
+      if (!LookThroughMaybePoisonBlocking &&
+          !scevUnconditionallyPropagatesPoisonFromOperands(S->getSCEVType()))
+        return false;
 
       if (auto *SU = dyn_cast<SCEVUnknown>(S)) {
         if (!isGuaranteedNotToBePoison(SU->getValue()))
@@ -4155,9 +4131,10 @@ static bool impliesPoison(const SCEV *AssumedPoison, const SCEV *S) {
   };
 
   // First collect all SCEVs that might result in AssumedPoison to be poison.
-  // We need to look through umin_seq here, because we want to find all SCEVs
-  // that *might* result in poison, not only those that are *required* to.
-  SCEVPoisonCollector PC1(/* LookThroughSeq */ true);
+  // We need to look through potentially poison-blocking operations here,
+  // because we want to find all SCEVs that *might* result in poison, not only
+  // those that are *required* to.
+  SCEVPoisonCollector PC1(/* LookThroughMaybePoisonBlocking */ true);
   visitAll(AssumedPoison, PC1);
 
   // AssumedPoison is never poison. As the assumption is false, the implication
@@ -4166,9 +4143,9 @@ static bool impliesPoison(const SCEV *AssumedPoison, const SCEV *S) {
     return true;
 
   // Collect all SCEVs in S that, if poison, *will* result in S being poison
-  // as well. We cannot look through umin_seq here, as its argument only *may*
-  // make the result poison.
-  SCEVPoisonCollector PC2(/* LookThroughSeq */ false);
+  // as well. We cannot look through potentially poison-blocking operations
+  // here, as their arguments only *may* make the result poison.
+  SCEVPoisonCollector PC2(/* LookThroughMaybePoisonBlocking */ false);
   visitAll(S, PC2);
 
   // Make sure that no matter which SCEV in PC1.MaybePoison is actually poison,
@@ -9807,6 +9784,42 @@ static Constant *BuildConstantFromSCEV(const SCEV *V) {
   llvm_unreachable("Unknown SCEV kind!");
 }
 
+const SCEV *
+ScalarEvolution::getWithOperands(const SCEV *S,
+                                 SmallVectorImpl<const SCEV *> &NewOps) {
+  switch (S->getSCEVType()) {
+  case scTruncate:
+  case scZeroExtend:
+  case scSignExtend:
+  case scPtrToInt:
+    return getCastExpr(S->getSCEVType(), NewOps[0], S->getType());
+  case scAddRecExpr: {
+    auto *AddRec = cast<SCEVAddRecExpr>(S);
+    return getAddRecExpr(NewOps, AddRec->getLoop(), AddRec->getNoWrapFlags());
+  }
+  case scAddExpr:
+    return getAddExpr(NewOps, cast<SCEVAddExpr>(S)->getNoWrapFlags());
+  case scMulExpr:
+    return getMulExpr(NewOps, cast<SCEVMulExpr>(S)->getNoWrapFlags());
+  case scUDivExpr:
+    return getUDivExpr(NewOps[0], NewOps[1]);
+  case scUMaxExpr:
+  case scSMaxExpr:
+  case scUMinExpr:
+  case scSMinExpr:
+    return getMinMaxExpr(S->getSCEVType(), NewOps);
+  case scSequentialUMinExpr:
+    return getSequentialMinMaxExpr(S->getSCEVType(), NewOps);
+  case scConstant:
+  case scVScale:
+  case scUnknown:
+    return S;
+  case scCouldNotCompute:
+    llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
+  }
+  llvm_unreachable("Unknown SCEV kind!");
+}
+
 const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
   switch (V->getSCEVType()) {
   case scConstant:
@@ -9889,33 +9902,7 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
           NewOps.push_back(OpAtScope);
         }
 
-        switch (V->getSCEVType()) {
-        case scTruncate:
-        case scZeroExtend:
-        case scSignExtend:
-        case scPtrToInt:
-          return getCastExpr(V->getSCEVType(), NewOps[0], V->getType());
-        case scAddExpr:
-          return getAddExpr(NewOps, cast<SCEVAddExpr>(V)->getNoWrapFlags());
-        case scMulExpr:
-          return getMulExpr(NewOps, cast<SCEVMulExpr>(V)->getNoWrapFlags());
-        case scUDivExpr:
-          return getUDivExpr(NewOps[0], NewOps[1]);
-        case scUMaxExpr:
-        case scSMaxExpr:
-        case scUMinExpr:
-        case scSMinExpr:
-          return getMinMaxExpr(V->getSCEVType(), NewOps);
-        case scSequentialUMinExpr:
-          return getSequentialMinMaxExpr(V->getSCEVType(), NewOps);
-        case scConstant:
-        case scVScale:
-        case scAddRecExpr:
-        case scUnknown:
-        case scCouldNotCompute:
-          llvm_unreachable("Can not get those expressions here.");
-        }
-        llvm_unreachable("Unknown n-ary-like SCEV type!");
+        return getWithOperands(V, NewOps);
       }
     }
     // If we got here, all operands are loop invariant.
@@ -15052,10 +15039,26 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       Predicate = CmpInst::getSwappedPredicate(Predicate);
     }
 
-    // Check whether LHS has already been rewritten. In that case we want to
-    // chain further rewrites onto the already rewritten value.
-    auto I = RewriteMap.find(LHS);
-    const SCEV *RewrittenLHS = I != RewriteMap.end() ? I->second : LHS;
+    // Puts rewrite rule \p From -> \p To into the rewrite map. Also if \p From
+    // and \p FromRewritten are the same (i.e. there has been no rewrite
+    // registered for \p From), then puts this value in the list of rewritten
+    // expressions.
+    auto AddRewrite = [&](const SCEV *From, const SCEV *FromRewritten,
+                          const SCEV *To) {
+      if (From == FromRewritten)
+        ExprsToRewrite.push_back(From);
+      RewriteMap[From] = To;
+    };
+
+    // Checks whether \p S has already been rewritten. In that case returns the
+    // existing rewrite because we want to chain further rewrites onto the
+    // already rewritten value. Otherwise returns \p S.
+    auto GetMaybeRewritten = [&](const SCEV *S) {
+      auto I = RewriteMap.find(S);
+      return I != RewriteMap.end() ? I->second : S;
+    };
+
+    const SCEV *RewrittenLHS = GetMaybeRewritten(LHS);
 
     const SCEV *RewrittenRHS = nullptr;
     switch (Predicate) {
@@ -15104,11 +15107,8 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       break;
     }
 
-    if (RewrittenRHS) {
-      RewriteMap[LHS] = RewrittenRHS;
-      if (LHS == RewrittenLHS)
-        ExprsToRewrite.push_back(LHS);
-    }
+    if (RewrittenRHS)
+      AddRewrite(LHS, RewrittenLHS, RewrittenRHS);
   };
 
   BasicBlock *Header = L->getHeader();

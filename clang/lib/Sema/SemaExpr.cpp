@@ -19897,6 +19897,18 @@ static void DoMarkVarDeclReferenced(
         // multiple times.
         SemaRef.PendingInstantiations
             .push_back(std::make_pair(Var, PointOfInstantiation));
+      } else {
+        for (auto &I : SemaRef.SavedPendingInstantiations) {
+          auto Iter = llvm::find_if(
+              I, [Var](const Sema::PendingImplicitInstantiation &P) {
+                return P.first == Var;
+              });
+          if (Iter != I.end()) {
+            SemaRef.PendingInstantiations.push_back(*Iter);
+            I.erase(Iter);
+            break;
+          }
+        }
       }
     }
   }

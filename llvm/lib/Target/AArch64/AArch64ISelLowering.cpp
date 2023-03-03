@@ -4364,10 +4364,7 @@ SDValue AArch64TargetLowering::LowerBITCAST(SDValue Op,
 
   Op = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Op.getOperand(0));
   Op = DAG.getNode(ISD::BITCAST, DL, MVT::f32, Op);
-  return SDValue(
-      DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL, OpVT, Op,
-                         DAG.getTargetConstant(AArch64::hsub, DL, MVT::i32)),
-      0);
+  return DAG.getTargetExtractSubreg(AArch64::hsub, DL, OpVT, Op);
 }
 
 static EVT getExtensionTo64Bits(const EVT &OrigVT) {
@@ -5726,6 +5723,15 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
   return SDValue();
 }
 
+static std::pair<SDValue, SDValue> splitInt128(SDValue N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, N,
+                           DAG.getConstant(0, DL, MVT::i64));
+  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, N,
+                           DAG.getConstant(1, DL, MVT::i64));
+  return std::make_pair(Lo, Hi);
+}
+
 /// Lower atomic or volatile 128-bit stores to a single STP instruction.
 SDValue AArch64TargetLowering::LowerStore128(SDValue Op,
                                              SelectionDAG &DAG) const {
@@ -5745,15 +5751,12 @@ SDValue AArch64TargetLowering::LowerStore128(SDValue Op,
                       ? StoreNode->getOperand(1)
                       : StoreNode->getOperand(2);
   SDLoc DL(Op);
-  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, Value,
-                           DAG.getConstant(0, DL, MVT::i64));
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, Value,
-                           DAG.getConstant(1, DL, MVT::i64));
-
+  auto StoreValue = splitInt128(Value, DAG);
   unsigned Opcode = IsStoreRelease ? AArch64ISD::STILP : AArch64ISD::STP;
   SDValue Result = DAG.getMemIntrinsicNode(
       Opcode, DL, DAG.getVTList(MVT::Other),
-      {StoreNode->getChain(), Lo, Hi, StoreNode->getBasePtr()},
+      {StoreNode->getChain(), StoreValue.first, StoreValue.second,
+       StoreNode->getBasePtr()},
       StoreNode->getMemoryVT(), StoreNode->getMemOperand());
   return Result;
 }
@@ -6144,16 +6147,11 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
 
     SDValue Chain = Op.getOperand(0);
     SDValue SysRegName = Op.getOperand(1);
-    SDValue Pair = Op.getOperand(2);
-
-    SDValue PairLo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, Pair,
-                                 DAG.getConstant(0, DL, MVT::i32));
-    SDValue PairHi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, Pair,
-                                 DAG.getConstant(1, DL, MVT::i32));
+    std::pair<SDValue, SDValue> Pair = splitInt128(Op.getOperand(2), DAG);
 
     // chain = MSRR(chain, sysregname, lo, hi)
     SDValue Result = DAG.getNode(AArch64ISD::MSRR, DL, MVT::Other, Chain,
-                                 SysRegName, PairLo, PairHi);
+                                 SysRegName, Pair.first, Pair.second);
 
     return Result;
   }
@@ -9358,25 +9356,16 @@ SDValue AArch64TargetLowering::LowerSELECT(SDValue Op,
   // If we are lowering a f16 and we do not have fullf16, convert to a f32 in
   // order to use FCSELSrrr
   if ((Ty == MVT::f16 || Ty == MVT::bf16) && !Subtarget->hasFullFP16()) {
-    TVal = SDValue(
-        DAG.getMachineNode(TargetOpcode::INSERT_SUBREG, DL, MVT::f32,
-                           DAG.getUNDEF(MVT::f32), TVal,
-                           DAG.getTargetConstant(AArch64::hsub, DL, MVT::i32)),
-        0);
-    FVal = SDValue(
-        DAG.getMachineNode(TargetOpcode::INSERT_SUBREG, DL, MVT::f32,
-                           DAG.getUNDEF(MVT::f32), FVal,
-                           DAG.getTargetConstant(AArch64::hsub, DL, MVT::i32)),
-        0);
+    TVal = DAG.getTargetInsertSubreg(AArch64::hsub, DL, MVT::f32,
+                                     DAG.getUNDEF(MVT::f32), TVal);
+    FVal = DAG.getTargetInsertSubreg(AArch64::hsub, DL, MVT::f32,
+                                     DAG.getUNDEF(MVT::f32), FVal);
   }
 
   SDValue Res = LowerSELECT_CC(CC, LHS, RHS, TVal, FVal, DL, DAG);
 
   if ((Ty == MVT::f16 || Ty == MVT::bf16) && !Subtarget->hasFullFP16()) {
-    Res = SDValue(
-        DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL, Ty, Res,
-                           DAG.getTargetConstant(AArch64::hsub, DL, MVT::i32)),
-        0);
+    return DAG.getTargetExtractSubreg(AArch64::hsub, DL, Ty, Res);
   }
 
   return Res;
@@ -22092,11 +22081,8 @@ void AArch64TargetLowering::ReplaceBITCASTResults(
   if (VT != MVT::i16 || (SrcVT != MVT::f16 && SrcVT != MVT::bf16))
     return;
 
-  Op = SDValue(
-      DAG.getMachineNode(TargetOpcode::INSERT_SUBREG, DL, MVT::f32,
-                         DAG.getUNDEF(MVT::i32), Op,
-                         DAG.getTargetConstant(AArch64::hsub, DL, MVT::i32)),
-      0);
+  Op = DAG.getTargetInsertSubreg(AArch64::hsub, DL, MVT::f32,
+                                 DAG.getUNDEF(MVT::i32), Op);
   Op = DAG.getNode(ISD::BITCAST, DL, MVT::i32, Op);
   Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Op));
 }
@@ -22160,15 +22146,6 @@ static void ReplaceReductionResults(SDNode *N,
   SDValue InterVal = DAG.getNode(InterOp, dl, LoVT, Lo, Hi);
   SDValue SplitVal = DAG.getNode(AcrossOp, dl, LoVT, InterVal);
   Results.push_back(SplitVal);
-}
-
-static std::pair<SDValue, SDValue> splitInt128(SDValue N, SelectionDAG &DAG) {
-  SDLoc DL(N);
-  SDValue Lo = DAG.getNode(ISD::TRUNCATE, DL, MVT::i64, N);
-  SDValue Hi = DAG.getNode(ISD::TRUNCATE, DL, MVT::i64,
-                           DAG.getNode(ISD::SRL, DL, MVT::i128, N,
-                                       DAG.getConstant(64, DL, MVT::i64)));
-  return std::make_pair(Lo, Hi);
 }
 
 void AArch64TargetLowering::ReplaceExtractSubVectorResults(
