@@ -7788,7 +7788,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_buffer_atomic_swap:
   case Intrinsic::amdgcn_buffer_atomic_add:
   case Intrinsic::amdgcn_buffer_atomic_sub:
-  case Intrinsic::amdgcn_buffer_atomic_cond_sub_u32:
   case Intrinsic::amdgcn_buffer_atomic_csub:
   case Intrinsic::amdgcn_buffer_atomic_smin:
   case Intrinsic::amdgcn_buffer_atomic_umin:
@@ -7855,9 +7854,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       break;
     case Intrinsic::amdgcn_buffer_atomic_fadd:
       Opcode = AMDGPUISD::BUFFER_ATOMIC_FADD;
-      break;
-    case Intrinsic::amdgcn_buffer_atomic_cond_sub_u32:
-      Opcode = AMDGPUISD::BUFFER_ATOMIC_COND_SUB_U32;
       break;
     default:
       llvm_unreachable("unhandled atomic opcode");

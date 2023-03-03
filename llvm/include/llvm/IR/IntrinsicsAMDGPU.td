@@ -1300,7 +1300,6 @@ def int_amdgcn_buffer_atomic_umax : AMDGPUBufferAtomic;
 def int_amdgcn_buffer_atomic_and : AMDGPUBufferAtomic;
 def int_amdgcn_buffer_atomic_or : AMDGPUBufferAtomic;
 def int_amdgcn_buffer_atomic_xor : AMDGPUBufferAtomic;
-def int_amdgcn_buffer_atomic_cond_sub_u32 : AMDGPUBufferAtomic;
 def int_amdgcn_buffer_atomic_cmpswap : Intrinsic<
   [llvm_i32_ty],
   [llvm_i32_ty,       // src(VGPR)
