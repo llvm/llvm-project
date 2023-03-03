@@ -38,21 +38,21 @@ program main
   external assumedlength
   character(5) :: assumedlength
   call subr1(explicitLength)
-  !CHECK: error: Actual argument function associated with procedure dummy argument 'f=' has incompatible result type
+  !CHECK: error: Actual argument function associated with procedure dummy argument 'f=' is not compatible: function results have distinct types: CHARACTER(KIND=1,LEN=5_8) vs CHARACTER(KIND=1,LEN=6_8)
   call subr1(badExplicitLength)
   call subr1(assumedLength)
-  !CHECK: error: Actual argument function associated with procedure dummy argument 'f=' has incompatible result type
+  !CHECK: error: Actual argument function associated with procedure dummy argument 'f=' is not compatible: function results have distinct types: CHARACTER(KIND=1,LEN=5_8) vs REAL(4)
   call subr1(notChar)
   call subr2(explicitLength)
   call subr2(assumedLength)
-  !CHECK: error: Actual argument function associated with procedure dummy argument 'f=' has incompatible result type
+  !CHECK: error: Actual argument function associated with procedure dummy argument 'f=' is not compatible: function results have distinct types: CHARACTER(KIND=1,LEN=*) vs REAL(4)
   call subr2(notChar)
   call subr3(explicitLength)
   !CHECK: warning: If the procedure's interface were explicit, this reference would be in error
-  !CHECK: because: Actual argument function associated with procedure dummy argument 'f=' has incompatible result type
+  !CHECK: because: Actual argument function associated with procedure dummy argument 'f=' is not compatible: function results have distinct types: CHARACTER(KIND=1,LEN=5_8) vs CHARACTER(KIND=1,LEN=6_8)
   call subr3(badExplicitLength)
   call subr3(assumedLength)
   !CHECK: warning: If the procedure's interface were explicit, this reference would be in error
-  !CHECK: because: Actual argument function associated with procedure dummy argument 'f=' has incompatible result type
+  !CHECK: because: Actual argument function associated with procedure dummy argument 'f=' is not compatible: function results have distinct types: CHARACTER(KIND=1,LEN=5_8) vs REAL(4)
   call subr3(notChar)
 end program

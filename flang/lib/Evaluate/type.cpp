@@ -245,8 +245,19 @@ using SetOfDerivedTypePairs =
     std::set<std::pair<const semantics::DerivedTypeSpec *,
         const semantics::DerivedTypeSpec *>>;
 
-static bool AreSameComponent(const semantics::Symbol &,
-    const semantics::Symbol &, SetOfDerivedTypePairs &inProgress);
+static bool AreSameComponent(const semantics::Symbol &x,
+    const semantics::Symbol &y,
+    SetOfDerivedTypePairs & /* inProgress - not yet used */) {
+  if (x.attrs() != y.attrs()) {
+    return false;
+  }
+  if (x.attrs().test(semantics::Attr::PRIVATE)) {
+    return false;
+  }
+  // TODO: compare types, parameters, bounds, &c.
+  return x.has<semantics::ObjectEntityDetails>() ==
+      y.has<semantics::ObjectEntityDetails>();
+}
 
 static bool AreSameDerivedType(const semantics::DerivedTypeSpec &x,
     const semantics::DerivedTypeSpec &y, SetOfDerivedTypePairs &inProgress) {
@@ -293,18 +304,10 @@ static bool AreSameDerivedType(const semantics::DerivedTypeSpec &x,
   return yComponentName == yEnd;
 }
 
-static bool AreSameComponent(const semantics::Symbol &x,
-    const semantics::Symbol &y,
-    SetOfDerivedTypePairs & /* inProgress - not yet used */) {
-  if (x.attrs() != y.attrs()) {
-    return false;
-  }
-  if (x.attrs().test(semantics::Attr::PRIVATE)) {
-    return false;
-  }
-  // TODO: compare types, parameters, bounds, &c.
-  return x.has<semantics::ObjectEntityDetails>() ==
-      y.has<semantics::ObjectEntityDetails>();
+bool AreSameDerivedType(
+    const semantics::DerivedTypeSpec &x, const semantics::DerivedTypeSpec &y) {
+  SetOfDerivedTypePairs inProgress;
+  return AreSameDerivedType(x, y, inProgress);
 }
 
 static bool AreCompatibleDerivedTypes(const semantics::DerivedTypeSpec *x,
@@ -312,8 +315,7 @@ static bool AreCompatibleDerivedTypes(const semantics::DerivedTypeSpec *x,
   if (!x || !y) {
     return false;
   } else {
-    SetOfDerivedTypePairs inProgress;
-    if (AreSameDerivedType(*x, *y, inProgress)) {
+    if (AreSameDerivedType(*x, *y)) {
       return true;
     } else {
       return isPolymorphic &&

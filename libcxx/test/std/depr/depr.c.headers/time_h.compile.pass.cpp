@@ -9,7 +9,8 @@
 // test <time.h>
 
 #include <time.h>
-#include <type_traits>
+
+#include "test_macros.h"
 
 #ifndef NULL
 #error NULL not defined
@@ -23,14 +24,14 @@ clock_t c = 0;
 size_t s = 0;
 time_t t = 0;
 tm tmv = {};
-static_assert((std::is_same<decltype(clock()), clock_t>::value), "");
-static_assert((std::is_same<decltype(difftime(t,t)), double>::value), "");
-static_assert((std::is_same<decltype(mktime(&tmv)), time_t>::value), "");
-static_assert((std::is_same<decltype(time(&t)), time_t>::value), "");
-static_assert((std::is_same<decltype(asctime(&tmv)), char*>::value), "");
-static_assert((std::is_same<decltype(ctime(&t)), char*>::value), "");
-static_assert((std::is_same<decltype(gmtime(&t)), tm*>::value), "");
-static_assert((std::is_same<decltype(localtime(&t)), tm*>::value), "");
 char* c1 = 0;
 const char* c2 = 0;
-static_assert((std::is_same<decltype(strftime(c1,s,c2,&tmv)), size_t>::value), "");
+ASSERT_SAME_TYPE(clock_t, decltype(clock()));
+ASSERT_SAME_TYPE(double,  decltype(difftime(t, t)));
+ASSERT_SAME_TYPE(time_t,  decltype(mktime(&tmv)));
+ASSERT_SAME_TYPE(time_t,  decltype(time(&t)));
+ASSERT_SAME_TYPE(char*,   decltype(asctime(&tmv)));
+ASSERT_SAME_TYPE(char*,   decltype(ctime(&t)));
+ASSERT_SAME_TYPE(tm*,     decltype(gmtime(&t)));
+ASSERT_SAME_TYPE(tm*,     decltype(localtime(&t)));
+ASSERT_SAME_TYPE(size_t,  decltype(strftime(c1, s, c2, &tmv)));

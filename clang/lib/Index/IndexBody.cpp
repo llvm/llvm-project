@@ -202,7 +202,7 @@ public:
   }
 
   bool VisitDesignatedInitExpr(DesignatedInitExpr *E) {
-    for (Designator &D : llvm::reverse(E->designators())) {
+    for (DesignatedInitExpr::Designator &D : llvm::reverse(E->designators())) {
       if (D.isFieldDesignator() && D.getField())
         return IndexCtx.handleReference(D.getField(), D.getFieldLoc(), Parent,
                                         ParentDC, SymbolRoleSet(), {}, E);
@@ -416,7 +416,7 @@ public:
     };
 
     auto visitSyntacticDesignatedInitExpr = [&](DesignatedInitExpr *E) -> bool {
-      for (Designator &D : llvm::reverse(E->designators())) {
+      for (DesignatedInitExpr::Designator &D : llvm::reverse(E->designators())) {
         if (D.isFieldDesignator() && D.getField())
           return IndexCtx.handleReference(D.getField(), D.getFieldLoc(),
                                           Parent, ParentDC, SymbolRoleSet(),

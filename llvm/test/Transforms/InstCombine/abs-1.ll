@@ -760,6 +760,89 @@ define i32 @abs_diff_signed_slt_no_nsw(i32 %a, i32 %b) {
   ret i32 %cond
 }
 
+define i8 @abs_diff_signed_sgt_nsw_nuw(i8 %a, i8 %b) {
+; CHECK-LABEL: @abs_diff_signed_sgt_nsw_nuw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nuw nsw i8 [[B]], [[A]]
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nuw nsw i8 [[A]], [[B]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i8 [[SUB_AB]], i8 [[SUB_BA]]
+; CHECK-NEXT:    ret i8 [[COND]]
+;
+  %cmp = icmp sgt i8 %a, %b
+  %sub_ba = sub nsw nuw i8 %b, %a
+  %sub_ab = sub nsw nuw i8 %a, %b
+  %cond = select i1 %cmp, i8 %sub_ab, i8 %sub_ba
+  ret i8 %cond
+}
+
+define i8 @abs_diff_signed_sgt_nuw(i8 %a, i8 %b) {
+; CHECK-LABEL: @abs_diff_signed_sgt_nuw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nuw i8 [[B]], [[A]]
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nuw i8 [[A]], [[B]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i8 [[SUB_AB]], i8 [[SUB_BA]]
+; CHECK-NEXT:    ret i8 [[COND]]
+;
+  %cmp = icmp sgt i8 %a, %b
+  %sub_ba = sub nuw i8 %b, %a
+  %sub_ab = sub nuw i8 %a, %b
+  %cond = select i1 %cmp, i8 %sub_ab, i8 %sub_ba
+  ret i8 %cond
+}
+
+define i8 @abs_diff_signed_sgt_nuw_extra_use1(i8 %a, i8 %b) {
+; CHECK-LABEL: @abs_diff_signed_sgt_nuw_extra_use1(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nuw i8 [[B]], [[A]]
+; CHECK-NEXT:    call void @extra_use(i8 [[SUB_BA]])
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nuw i8 [[A]], [[B]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i8 [[SUB_AB]], i8 [[SUB_BA]]
+; CHECK-NEXT:    ret i8 [[COND]]
+;
+  %cmp = icmp sgt i8 %a, %b
+  %sub_ba = sub nuw i8 %b, %a
+  call void @extra_use(i8 %sub_ba)
+  %sub_ab = sub nuw i8 %a, %b
+  %cond = select i1 %cmp, i8 %sub_ab, i8 %sub_ba
+  ret i8 %cond
+}
+
+define i8 @abs_diff_signed_sgt_nuw_extra_use2(i8 %a, i8 %b) {
+; CHECK-LABEL: @abs_diff_signed_sgt_nuw_extra_use2(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nuw i8 [[B]], [[A]]
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nuw i8 [[A]], [[B]]
+; CHECK-NEXT:    call void @extra_use(i8 [[SUB_AB]])
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i8 [[SUB_AB]], i8 [[SUB_BA]]
+; CHECK-NEXT:    ret i8 [[COND]]
+;
+  %cmp = icmp sgt i8 %a, %b
+  %sub_ba = sub nuw i8 %b, %a
+  %sub_ab = sub nuw i8 %a, %b
+  call void @extra_use(i8 %sub_ab)
+  %cond = select i1 %cmp, i8 %sub_ab, i8 %sub_ba
+  ret i8 %cond
+}
+
+define i8 @abs_diff_signed_sgt_nuw_extra_use3(i8 %a, i8 %b) {
+; CHECK-LABEL: @abs_diff_signed_sgt_nuw_extra_use3(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nuw i8 [[B]], [[A]]
+; CHECK-NEXT:    call void @extra_use(i8 [[SUB_BA]])
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nuw i8 [[A]], [[B]]
+; CHECK-NEXT:    call void @extra_use(i8 [[SUB_AB]])
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i8 [[SUB_AB]], i8 [[SUB_BA]]
+; CHECK-NEXT:    ret i8 [[COND]]
+;
+  %cmp = icmp sgt i8 %a, %b
+  %sub_ba = sub nuw i8 %b, %a
+  call void @extra_use(i8 %sub_ba)
+  %sub_ab = sub nuw i8 %a, %b
+  call void @extra_use(i8 %sub_ab)
+  %cond = select i1 %cmp, i8 %sub_ab, i8 %sub_ba
+  ret i8 %cond
+}
+
 define i32 @abs_diff_signed_slt_swap_wrong_pred1(i32 %a, i32 %b) {
 ; CHECK-LABEL: @abs_diff_signed_slt_swap_wrong_pred1(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]

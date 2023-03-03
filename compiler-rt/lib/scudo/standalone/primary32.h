@@ -762,8 +762,7 @@ private:
         compactPtrGroup(compactPtr(ClassId, Sci->CurrentRegion));
 
     ReleaseRecorder Recorder(Base);
-    PageReleaseContext Context(BlockSize, RegionSize, NumberOfRegions,
-                               /*ReleaseSize=*/RegionSize);
+    PageReleaseContext Context(BlockSize, RegionSize, NumberOfRegions);
 
     auto DecompactPtr = [](CompactPtrT CompactPtr) {
       return reinterpret_cast<uptr>(CompactPtr);

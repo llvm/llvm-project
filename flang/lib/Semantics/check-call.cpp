@@ -441,7 +441,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // technically legal but worth emitting a warning
   // llvm-project issue #58973: constant actual argument passed in where dummy
   // argument is marked volatile
-  if (dummyIsVolatile && !IsVariable(actual)) {
+  bool actualIsVariable{evaluate::IsVariable(actual)};
+  if (dummyIsVolatile && !actualIsVariable) {
     messages.Say(
         "actual argument associated with VOLATILE %s is not a variable"_warn_en_US,
         dummyName);
@@ -599,6 +600,24 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         "Actual argument associated with %s may not be null pointer %s"_err_en_US,
         dummyName, actual.AsFortran());
   }
+
+  // Warn about dubious actual argument association with a TARGET dummy argument
+  if (dummy.attrs.test(characteristics::DummyDataObject::Attr::Target)) {
+    bool actualIsTemp{!actualIsVariable || HasVectorSubscript(actual) ||
+        evaluate::ExtractCoarrayRef(actual)};
+    if (actualIsTemp) {
+      messages.Say(
+          "Any pointer associated with TARGET %s during this call will not be associated with the value of '%s' afterwards"_warn_en_US,
+          dummyName, actual.AsFortran());
+    } else {
+      auto actualSymbolVector{GetSymbolVector(actual)};
+      if (!evaluate::GetLastTarget(actualSymbolVector)) {
+        messages.Say(
+            "Any pointer associated with TARGET %s during this call must not be used afterwards, as '%s' is not a target"_warn_en_US,
+            dummyName, actual.AsFortran());
+      }
+    }
+  }
 }
 
 static void CheckProcedureArg(evaluate::ActualArgument &arg,
@@ -683,11 +702,12 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
                   dummyName);
             } else if (interface.IsFunction()) {
               if (argInterface.IsFunction()) {
+                std::string whyNot;
                 if (!interface.functionResult->IsCompatibleWith(
-                        *argInterface.functionResult)) {
+                        *argInterface.functionResult, &whyNot)) {
                   messages.Say(
-                      "Actual argument function associated with procedure %s has incompatible result type"_err_en_US,
-                      dummyName);
+                      "Actual argument function associated with procedure %s is not compatible: %s"_err_en_US,
+                      dummyName, whyNot);
                 }
               } else if (argInterface.IsSubroutine()) {
                 messages.Say(
