@@ -22,7 +22,7 @@ movn x0, #:abs_g1_s:zero-0x100010000
 # CHECK: relocation R_AARCH64_MOVW_SABS_G2 out of range: -281479271677952 is not in [-281474976710656, 281474976710655]
 movn x0, #:abs_g2_s:zero-0x1000100000000
 
-# CHECK: relocation R_AARCH64_MOVW_PREL_G0 out of range: 65536 is not in [-65536, 65535]
+# CHECK: relocation R_AARCH64_MOVW_PREL_G0 out of range: 65536 is not in [-65536, 65535]; references section '.text'
 movn x0, #:prel_g0:.+0x10000
 # CHECK: relocation R_AARCH64_MOVW_PREL_G1 out of range: 4294967296 is not in [-4294967296, 4294967295]
 movn x0, #:prel_g1:.+0x100000000
