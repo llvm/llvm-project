@@ -79,6 +79,7 @@ static_library("Support") {
     "FileCollector.cpp",
     "FileOutputBuffer.cpp",
     "FileUtilities.cpp",
+    "FloatingPointMode.cpp",
     "FoldingSet.cpp",
     "FormatVariadic.cpp",
     "FormattedStream.cpp",
