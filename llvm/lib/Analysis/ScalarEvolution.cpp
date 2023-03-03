@@ -9784,6 +9784,41 @@ static Constant *BuildConstantFromSCEV(const SCEV *V) {
   llvm_unreachable("Unknown SCEV kind!");
 }
 
+const SCEV *
+ScalarEvolution::getWithOperands(const SCEV *S,
+                                 SmallVectorImpl<const SCEV *> &NewOps) {
+  switch (S->getSCEVType()) {
+  case scTruncate:
+  case scZeroExtend:
+  case scSignExtend:
+  case scPtrToInt:
+    return getCastExpr(S->getSCEVType(), NewOps[0], S->getType());
+  case scAddRecExpr: {
+    auto *AddRec = cast<SCEVAddRecExpr>(S);
+    return getAddRecExpr(NewOps, AddRec->getLoop(), AddRec->getNoWrapFlags());
+  }
+  case scAddExpr:
+    return getAddExpr(NewOps, cast<SCEVAddExpr>(S)->getNoWrapFlags());
+  case scMulExpr:
+    return getMulExpr(NewOps, cast<SCEVMulExpr>(S)->getNoWrapFlags());
+  case scUDivExpr:
+    return getUDivExpr(NewOps[0], NewOps[1]);
+  case scUMaxExpr:
+  case scSMaxExpr:
+  case scUMinExpr:
+  case scSMinExpr:
+    return getMinMaxExpr(S->getSCEVType(), NewOps);
+  case scSequentialUMinExpr:
+    return getSequentialMinMaxExpr(S->getSCEVType(), NewOps);
+  case scConstant:
+  case scVScale:
+  case scUnknown:
+    return S;
+  case scCouldNotCompute:
+    llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
+  }
+}
+
 const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
   switch (V->getSCEVType()) {
   case scConstant:
@@ -9866,33 +9901,7 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
           NewOps.push_back(OpAtScope);
         }
 
-        switch (V->getSCEVType()) {
-        case scTruncate:
-        case scZeroExtend:
-        case scSignExtend:
-        case scPtrToInt:
-          return getCastExpr(V->getSCEVType(), NewOps[0], V->getType());
-        case scAddExpr:
-          return getAddExpr(NewOps, cast<SCEVAddExpr>(V)->getNoWrapFlags());
-        case scMulExpr:
-          return getMulExpr(NewOps, cast<SCEVMulExpr>(V)->getNoWrapFlags());
-        case scUDivExpr:
-          return getUDivExpr(NewOps[0], NewOps[1]);
-        case scUMaxExpr:
-        case scSMaxExpr:
-        case scUMinExpr:
-        case scSMinExpr:
-          return getMinMaxExpr(V->getSCEVType(), NewOps);
-        case scSequentialUMinExpr:
-          return getSequentialMinMaxExpr(V->getSCEVType(), NewOps);
-        case scConstant:
-        case scVScale:
-        case scAddRecExpr:
-        case scUnknown:
-        case scCouldNotCompute:
-          llvm_unreachable("Can not get those expressions here.");
-        }
-        llvm_unreachable("Unknown n-ary-like SCEV type!");
+        return getWithOperands(V, NewOps);
       }
     }
     // If we got here, all operands are loop invariant.
