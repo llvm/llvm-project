@@ -384,10 +384,35 @@ bool TGParser::addEntry(RecordsEntry E) {
 bool TGParser::resolve(const ForeachLoop &Loop, SubstStack &Substs,
                        bool Final, std::vector<RecordsEntry> *Dest,
                        SMLoc *Loc) {
+
   MapResolver R;
   for (const auto &S : Substs)
     R.set(S.first, S.second);
   Init *List = Loop.ListValue->resolveReferences(R);
+
+  // For if-then-else blocks, we lower to a foreach loop whose list is a
+  // ternary selection between lists of different length.  Since we don't
+  // have a means to track variable length record lists, we *must* resolve
+  // the condition here.  We want to defer final resolution of the arms
+  // until the resulting records are finalized.
+  // e.g. !if(!exists<SchedWrite>("__does_not_exist__"), [1], [])
+  if (auto *TI = dyn_cast<TernOpInit>(List);
+      TI && TI->getOpcode() == TernOpInit::IF && Final) {
+    Init *OldLHS = TI->getLHS();
+    R.setFinal(true);
+    Init *LHS = OldLHS->resolveReferences(R);
+    if (LHS == OldLHS) {
+      PrintError(Loop.Loc,
+                 Twine("unable to resolve if condition '") +
+                 LHS->getAsString() + "' at end of containing scope");
+      return true;
+    }
+    Init *MHS = TI->getMHS();
+    Init *RHS = TI->getRHS();
+    List = TernOpInit::get(TernOpInit::IF, LHS, MHS, RHS, TI->getType())
+      ->Fold(nullptr);
+  }
+
   auto LI = dyn_cast<ListInit>(List);
   if (!LI) {
     if (!Final) {
