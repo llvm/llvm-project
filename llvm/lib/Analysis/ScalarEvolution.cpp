@@ -4111,39 +4111,15 @@ static bool impliesPoison(const SCEV *AssumedPoison, const SCEV *S) {
   // with the notable exception of umin_seq, where only poison from the first
   // operand is (unconditionally) propagated.
   struct SCEVPoisonCollector {
-    bool LookThroughSeq;
+    bool LookThroughMaybePoisonBlocking;
     SmallPtrSet<const SCEV *, 4> MaybePoison;
-    SCEVPoisonCollector(bool LookThroughSeq) : LookThroughSeq(LookThroughSeq) {}
+    SCEVPoisonCollector(bool LookThroughMaybePoisonBlocking)
+        : LookThroughMaybePoisonBlocking(LookThroughMaybePoisonBlocking) {}
 
     bool follow(const SCEV *S) {
-      if (!scevUnconditionallyPropagatesPoisonFromOperands(S->getSCEVType())) {
-        switch (S->getSCEVType()) {
-        case scConstant:
-        case scVScale:
-        case scTruncate:
-        case scZeroExtend:
-        case scSignExtend:
-        case scPtrToInt:
-        case scAddExpr:
-        case scMulExpr:
-        case scUDivExpr:
-        case scAddRecExpr:
-        case scUMaxExpr:
-        case scSMaxExpr:
-        case scUMinExpr:
-        case scSMinExpr:
-        case scUnknown:
-          llvm_unreachable("These all unconditionally propagate poison.");
-        case scSequentialUMinExpr:
-          // TODO: We can always follow the first operand,
-          // but the SCEVTraversal API doesn't support this.
-          if (!LookThroughSeq)
-            return false;
-          break;
-        case scCouldNotCompute:
-          llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
-        }
-      }
+      if (!LookThroughMaybePoisonBlocking &&
+          !scevUnconditionallyPropagatesPoisonFromOperands(S->getSCEVType()))
+        return false;
 
       if (auto *SU = dyn_cast<SCEVUnknown>(S)) {
         if (!isGuaranteedNotToBePoison(SU->getValue()))
@@ -4155,9 +4131,10 @@ static bool impliesPoison(const SCEV *AssumedPoison, const SCEV *S) {
   };
 
   // First collect all SCEVs that might result in AssumedPoison to be poison.
-  // We need to look through umin_seq here, because we want to find all SCEVs
-  // that *might* result in poison, not only those that are *required* to.
-  SCEVPoisonCollector PC1(/* LookThroughSeq */ true);
+  // We need to look through potentially poison-blocking operations here,
+  // because we want to find all SCEVs that *might* result in poison, not only
+  // those that are *required* to.
+  SCEVPoisonCollector PC1(/* LookThroughMaybePoisonBlocking */ true);
   visitAll(AssumedPoison, PC1);
 
   // AssumedPoison is never poison. As the assumption is false, the implication
@@ -4166,9 +4143,9 @@ static bool impliesPoison(const SCEV *AssumedPoison, const SCEV *S) {
     return true;
 
   // Collect all SCEVs in S that, if poison, *will* result in S being poison
-  // as well. We cannot look through umin_seq here, as its argument only *may*
-  // make the result poison.
-  SCEVPoisonCollector PC2(/* LookThroughSeq */ false);
+  // as well. We cannot look through potentially poison-blocking operations
+  // here, as their arguments only *may* make the result poison.
+  SCEVPoisonCollector PC2(/* LookThroughMaybePoisonBlocking */ false);
   visitAll(S, PC2);
 
   // Make sure that no matter which SCEV in PC1.MaybePoison is actually poison,
