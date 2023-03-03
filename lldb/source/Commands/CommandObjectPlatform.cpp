@@ -1187,10 +1187,9 @@ protected:
 
       if (!m_class_options.GetName().empty()) {
         m_options.launch_info.SetProcessPluginName("ScriptedProcess");
-        m_options.launch_info.SetScriptedProcessClassName(
-            m_class_options.GetName());
-        m_options.launch_info.SetScriptedProcessDictionarySP(
-            m_class_options.GetStructuredData());
+        ScriptedMetadataSP metadata_sp = std::make_shared<ScriptedMetadata>(
+            m_class_options.GetName(), m_class_options.GetStructuredData());
+        m_options.launch_info.SetScriptedMetadata(metadata_sp);
         target->SetProcessLaunchInfo(m_options.launch_info);
       }
 
@@ -1607,10 +1606,9 @@ public:
 
       if (!m_class_options.GetName().empty()) {
         m_options.attach_info.SetProcessPluginName("ScriptedProcess");
-        m_options.attach_info.SetScriptedProcessClassName(
-            m_class_options.GetName());
-        m_options.attach_info.SetScriptedProcessDictionarySP(
-            m_class_options.GetStructuredData());
+        ScriptedMetadataSP metadata_sp = std::make_shared<ScriptedMetadata>(
+            m_class_options.GetName(), m_class_options.GetStructuredData());
+        m_options.attach_info.SetScriptedMetadata(metadata_sp);
       }
 
       Status err;

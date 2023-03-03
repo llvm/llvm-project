@@ -11,6 +11,10 @@
 
 #include "lldb/API/SBDefines.h"
 
+namespace lldb_private {
+class ScriptInterpreter;
+}
+
 namespace lldb {
 
 class SBTarget;
@@ -174,6 +178,8 @@ public:
 
 protected:
   friend class SBTarget;
+
+  friend class lldb_private::ScriptInterpreter;
 
   lldb_private::ProcessAttachInfo &ref();
 

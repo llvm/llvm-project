@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/Config.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
@@ -62,6 +63,13 @@ StructuredData::DictionarySP ScriptedProcessPythonInterface::GetCapabilities() {
     return {};
 
   return dict;
+}
+
+Status
+ScriptedProcessPythonInterface::Attach(const ProcessAttachInfo &attach_info) {
+  lldb::ProcessAttachInfoSP attach_info_sp =
+      std::make_shared<ProcessAttachInfo>(attach_info);
+  return GetStatusFromMethod("attach", attach_info_sp);
 }
 
 Status ScriptedProcessPythonInterface::Launch() {

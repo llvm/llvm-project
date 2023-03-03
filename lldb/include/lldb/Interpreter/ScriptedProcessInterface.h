@@ -29,6 +29,10 @@ public:
 
   virtual StructuredData::DictionarySP GetCapabilities() { return {}; }
 
+  virtual Status Attach(const ProcessAttachInfo &attach_info) {
+    return Status("ScriptedProcess did not attach");
+  }
+
   virtual Status Launch() { return Status("ScriptedProcess did not launch"); }
 
   virtual Status Resume() { return Status("ScriptedProcess did not resume"); }

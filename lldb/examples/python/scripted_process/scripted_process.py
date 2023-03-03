@@ -160,6 +160,18 @@ class ScriptedProcess(metaclass=ABCMeta):
         """
         return lldb.SBError()
 
+    def attach(self, attach_info):
+        """ Simulate the scripted process attach.
+
+        Args:
+            attach_info (lldb.SBAttachInfo): The information related to the
+            process we're attaching to.
+
+        Returns:
+            lldb.SBError: An `lldb.SBError` with error code 0.
+        """
+        return lldb.SBError()
+
     def resume(self):
         """ Simulate the scripted process resume.
 
