@@ -1259,6 +1259,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #  define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName) static_assert(true, "")
 #endif
 
+// TODO(varconst): currently, there are bugs in Clang's intrinsics when handling Objective-C++ `id`, so don't use
+// compiler intrinsics in the Objective-C++ mode.
+#  ifdef __OBJC__
+#    define _LIBCPP_WORKAROUND_OBJCXX_COMPILER_INTRINSICS
+#  endif
+
 #endif // __cplusplus
 
 #endif // _LIBCPP___CONFIG
