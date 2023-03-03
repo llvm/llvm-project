@@ -171,12 +171,16 @@ serializeAvailability(const AvailabilitySet &Availabilities) {
   for (const auto &AvailInfo : Availabilities) {
     Object Availability;
     Availability["domain"] = AvailInfo.Domain;
-    serializeObject(Availability, "introducedVersion",
-                    serializeSemanticVersion(AvailInfo.Introduced));
-    serializeObject(Availability, "deprecatedVersion",
-                    serializeSemanticVersion(AvailInfo.Deprecated));
-    serializeObject(Availability, "obsoletedVersion",
-                    serializeSemanticVersion(AvailInfo.Obsoleted));
+    if (AvailInfo.Unavailable)
+      Availability["isUnconditionallyUnavailable"] = true;
+    else {
+      serializeObject(Availability, "introducedVersion",
+                      serializeSemanticVersion(AvailInfo.Introduced));
+      serializeObject(Availability, "deprecatedVersion",
+                      serializeSemanticVersion(AvailInfo.Deprecated));
+      serializeObject(Availability, "obsoletedVersion",
+                      serializeSemanticVersion(AvailInfo.Obsoleted));
+    }
     AvailabilityArray.emplace_back(std::move(Availability));
   }
 
