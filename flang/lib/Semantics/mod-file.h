@@ -74,7 +74,7 @@ private:
   void PutUse(const Symbol &);
   void PutUseExtraAttr(Attr, const Symbol &, const Symbol &);
   llvm::raw_ostream &PutAttrs(llvm::raw_ostream &, Attrs,
-      const std::string * = nullptr, std::string before = ","s,
+      const std::string * = nullptr, bool = false, std::string before = ","s,
       std::string after = ""s) const;
 };
 

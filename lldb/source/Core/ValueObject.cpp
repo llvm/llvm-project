@@ -33,6 +33,7 @@
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/Variable.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
@@ -1539,6 +1540,14 @@ addr_t ValueObject::GetAddressOf(bool scalar_is_load_address,
   return LLDB_INVALID_ADDRESS;
 }
 
+addr_t ValueObject::GetStrippedPointerValue(addr_t address) {
+  ExecutionContext exe_ctx(GetExecutionContextRef());
+  if (Process *process = exe_ctx.GetProcessPtr())
+    if (ABISP abi_sp = process->GetABI())
+      return abi_sp->FixCodeAddress(address);
+  return address;
+}
+
 addr_t ValueObject::GetPointerValue(AddressType *address_type) {
   addr_t address = LLDB_INVALID_ADDRESS;
   if (address_type)
@@ -1554,11 +1563,15 @@ addr_t ValueObject::GetPointerValue(AddressType *address_type) {
     address = m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
     break;
 
-  case Value::ValueType::HostAddress:
+  case Value::ValueType::HostAddress: {
+    lldb::offset_t data_offset = 0;
+    address = m_data.GetAddress(&data_offset);
+  } break;
+
   case Value::ValueType::LoadAddress:
   case Value::ValueType::FileAddress: {
     lldb::offset_t data_offset = 0;
-    address = m_data.GetAddress(&data_offset);
+    address = GetStrippedPointerValue(m_data.GetAddress(&data_offset));
   } break;
   }
 
@@ -3112,6 +3125,11 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromAddress(
   if (type) {
     CompilerType pointer_type(type.GetPointerType());
     if (pointer_type) {
+      if (Process *process = exe_ctx.GetProcessPtr()) {
+        if (ABISP abi_sp = process->GetABI()) {
+          address = abi_sp->FixCodeAddress(address);
+        }
+      }
       lldb::DataBufferSP buffer(
           new lldb_private::DataBufferHeap(&address, sizeof(lldb::addr_t)));
       lldb::ValueObjectSP ptr_result_valobj_sp(ValueObjectConstResult::Create(

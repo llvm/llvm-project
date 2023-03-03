@@ -976,6 +976,7 @@ static bool isHighCostExpansion(const SCEV *S,
   switch (S->getSCEVType()) {
   case scUnknown:
   case scConstant:
+  case scVScale:
     return false;
   case scTruncate:
     return isHighCostExpansion(cast<SCEVTruncateExpr>(S)->getOperand(),
@@ -2812,9 +2813,10 @@ static bool isCompatibleIVType(Value *LVal, Value *RVal) {
 /// SCEVUnknown, we simply return the rightmost SCEV operand.
 static const SCEV *getExprBase(const SCEV *S) {
   switch (S->getSCEVType()) {
-  default: // uncluding scUnknown.
+  default: // including scUnknown.
     return S;
   case scConstant:
+  case scVScale:
     return nullptr;
   case scTruncate:
     return getExprBase(cast<SCEVTruncateExpr>(S)->getOperand());

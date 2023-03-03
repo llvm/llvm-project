@@ -25,8 +25,8 @@ if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()
 
-if(NOT (${LIBC_TARGET_OS} STREQUAL "linux"))
-  # Integration tests are currently only available for linux.
+if(NOT (${LIBC_TARGET_OS} STREQUAL "linux") OR CMAKE_COMPILER_IS_GNUCXX)
+  # Integration tests are currently only available for clang on linux.
   return()
 endif()
 add_subdirectory(integration)

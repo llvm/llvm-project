@@ -566,6 +566,7 @@ public:
   const SCEV *getLosslessPtrToIntExpr(const SCEV *Op, unsigned Depth = 0);
   const SCEV *getPtrToIntExpr(const SCEV *Op, Type *Ty);
   const SCEV *getTruncateExpr(const SCEV *Op, Type *Ty, unsigned Depth = 0);
+  const SCEV *getVScale(Type *Ty);
   const SCEV *getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth = 0);
   const SCEV *getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
                                     unsigned Depth = 0);

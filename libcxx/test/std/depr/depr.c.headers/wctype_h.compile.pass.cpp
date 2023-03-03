@@ -11,7 +11,6 @@
 // <wctype.h>
 
 #include <wctype.h>
-#include <type_traits>
 
 #include "test_macros.h"
 
@@ -94,21 +93,21 @@
 wint_t w = 0;
 wctrans_t wctr = 0;
 wctype_t wct = 0;
-static_assert((std::is_same<decltype(iswalnum(w)), int>::value), "");
-static_assert((std::is_same<decltype(iswalpha(w)), int>::value), "");
-static_assert((std::is_same<decltype(iswblank(w)), int>::value), "");
-static_assert((std::is_same<decltype(iswcntrl(w)), int>::value), "");
-static_assert((std::is_same<decltype(iswdigit(w)), int>::value), "");
-static_assert((std::is_same<decltype(iswgraph(w)), int>::value), "");
-static_assert((std::is_same<decltype(iswlower(w)), int>::value), "");
-static_assert((std::is_same<decltype(iswprint(w)), int>::value), "");
-static_assert((std::is_same<decltype(iswpunct(w)), int>::value), "");
-static_assert((std::is_same<decltype(iswspace(w)), int>::value), "");
-static_assert((std::is_same<decltype(iswupper(w)), int>::value), "");
-static_assert((std::is_same<decltype(iswxdigit(w)), int>::value), "");
-static_assert((std::is_same<decltype(iswctype(w, wct)), int>::value), "");
-static_assert((std::is_same<decltype(wctype("")), wctype_t>::value), "");
-static_assert((std::is_same<decltype(towlower(w)), wint_t>::value), "");
-static_assert((std::is_same<decltype(towupper(w)), wint_t>::value), "");
-static_assert((std::is_same<decltype(towctrans(w, wctr)), wint_t>::value), "");
-static_assert((std::is_same<decltype(wctrans("")), wctrans_t>::value), "");
+ASSERT_SAME_TYPE(int,       decltype(iswalnum(w)));
+ASSERT_SAME_TYPE(int,       decltype(iswalpha(w)));
+ASSERT_SAME_TYPE(int,       decltype(iswblank(w)));
+ASSERT_SAME_TYPE(int,       decltype(iswcntrl(w)));
+ASSERT_SAME_TYPE(int,       decltype(iswdigit(w)));
+ASSERT_SAME_TYPE(int,       decltype(iswgraph(w)));
+ASSERT_SAME_TYPE(int,       decltype(iswlower(w)));
+ASSERT_SAME_TYPE(int,       decltype(iswprint(w)));
+ASSERT_SAME_TYPE(int,       decltype(iswpunct(w)));
+ASSERT_SAME_TYPE(int,       decltype(iswspace(w)));
+ASSERT_SAME_TYPE(int,       decltype(iswupper(w)));
+ASSERT_SAME_TYPE(int,       decltype(iswxdigit(w)));
+ASSERT_SAME_TYPE(int,       decltype(iswctype(w, wct)));
+ASSERT_SAME_TYPE(wctype_t,  decltype(wctype("")));
+ASSERT_SAME_TYPE(wint_t,    decltype(towlower(w)));
+ASSERT_SAME_TYPE(wint_t,    decltype(towupper(w)));
+ASSERT_SAME_TYPE(wint_t,    decltype(towctrans(w, wctr)));
+ASSERT_SAME_TYPE(wctrans_t, decltype(wctrans("")));
