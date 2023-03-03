@@ -389,6 +389,7 @@ def err_unable_to_rename_temp : Error<
   "unable to rename temporary '%0' to output file '%1': '%2'">;
 def err_unable_to_make_temp : Error<
   "unable to make temporary file: %0">;
+def warn_cannot_access_file : Warning<"cannot access file '%0': %1">;
 def remark_sloc_usage : Remark<
   "source manager location address space usage:">,
   InGroup<DiagGroup<"sloc-usage">>, DefaultRemark, ShowInSystemHeader;
