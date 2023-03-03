@@ -8,12 +8,12 @@
   {
     "directory": "DIR",
     "file": "DIR/tu.c",
-    "command": "clang -fmodules -fmodules-cache-path=DIR/cache -c DIR/tu.c -o DIR/tu1.o"
+    "command": "clang -fmodules -fmodules-cache-path=DIR/cache -c DIR/tu.c -DONE -o DIR/tu1.o"
   },
   {
     "directory": "DIR",
     "file": "DIR/tu.c",
-    "command": "clang -fmodules -fmodules-cache-path=DIR/cache -c DIR/tu.c -o DIR/tu2.o"
+    "command": "clang -fmodules -fmodules-cache-path=DIR/cache -c DIR/tu.c -DTWO -o DIR/tu2.o"
   }
 ]
 
@@ -32,8 +32,8 @@
 // CHECK-NEXT:           "clang-context-hash": "{{.*}}",
 // CHECK-NEXT:           "clang-module-deps": [],
 // CHECK-NEXT:           "command-line": [
-// CHECK:                  "-o",
-// CHECK-NEXT:             "[[PREFIX]]/tu1.o",
+// CHECK:                  "-D"
+// CHECK-NEXT:             "ONE"
 // CHECK:                ],
 // CHECK-NEXT:           "executable": "clang",
 // CHECK-NEXT:           "file-deps": [
@@ -49,8 +49,8 @@
 // CHECK-NEXT:           "clang-context-hash": "{{.*}}",
 // CHECK-NEXT:           "clang-module-deps": [],
 // CHECK-NEXT:           "command-line": [
-// CHECK:                  "-o",
-// CHECK-NEXT:             "[[PREFIX]]/tu2.o",
+// CHECK:                  "-D"
+// CHECK-NEXT:             "TWO"
 // CHECK:                ],
 // CHECK-NEXT:           "executable": "clang",
 // CHECK-NEXT:           "file-deps": [
