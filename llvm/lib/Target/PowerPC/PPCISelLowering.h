@@ -1228,21 +1228,21 @@ namespace llvm {
     bool IsEligibleForTailCallOptimization(
         const GlobalValue *CalleeGV, CallingConv::ID CalleeCC,
         CallingConv::ID CallerCC, bool isVarArg,
-        const SmallVectorImpl<ISD::InputArg> &Ins, bool isByValArg) const;
+        const SmallVectorImpl<ISD::InputArg> &Ins) const;
 
     bool IsEligibleForTailCallOptimization_64SVR4(
         const GlobalValue *CalleeGV, CallingConv::ID CalleeCC,
         CallingConv::ID CallerCC, const CallBase *CB, bool isVarArg,
         const SmallVectorImpl<ISD::OutputArg> &Outs,
-        const SmallVectorImpl<ISD::InputArg> &Ins, bool isByValArg,
-        const Function *CallerFunc, bool isCalleeExternalSymbol) const;
+        const SmallVectorImpl<ISD::InputArg> &Ins, const Function *CallerFunc,
+        bool isCalleeExternalSymbol) const;
 
     bool isEligibleForTCO(const GlobalValue *CalleeGV, CallingConv::ID CalleeCC,
                           CallingConv::ID CallerCC, const CallBase *CB,
                           bool isVarArg,
                           const SmallVectorImpl<ISD::OutputArg> &Outs,
                           const SmallVectorImpl<ISD::InputArg> &Ins,
-                          bool isByValArg, const Function *CallerFunc,
+                          const Function *CallerFunc,
                           bool isCalleeExternalSymbol) const;
 
     SDValue EmitTailCallLoadFPAndRetAddr(SelectionDAG &DAG, int SPDiff,
