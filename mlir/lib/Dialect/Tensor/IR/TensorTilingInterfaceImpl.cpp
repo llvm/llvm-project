@@ -219,7 +219,7 @@ struct PackOpTiling
     (void)packOp.reifyResultShapes(b, outputShape);
     resultSizes.assign(sizes.begin(), sizes.end());
     for (auto dataTileDim : llvm::seq<unsigned>(inputRank, outputRank))
-      resultSizes.push_back(getAsOpFoldResult(outputShape[0][dataTileDim]));
+      resultSizes.push_back(outputShape[0][dataTileDim]);
 
     return success();
   }
