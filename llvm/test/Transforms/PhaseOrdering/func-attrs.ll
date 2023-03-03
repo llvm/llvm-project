@@ -16,7 +16,7 @@ define internal i32 @h2(i32 %a, i32 %b) {
 }
 
 define void @f(i32 %a, i32 %b) noinline {
-; CHECK: Function Attrs: noinline
+; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  end:
 ; CHECK-NEXT:    ret void
