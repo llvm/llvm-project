@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++17 %s performance-unnecessary-copy-initialization %t
+// RUN: %check_clang_tidy -std=c++17-or-later %s performance-unnecessary-copy-initialization %t
 
 template <typename T>
 struct Iterator {
