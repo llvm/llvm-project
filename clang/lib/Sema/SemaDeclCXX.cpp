@@ -16388,7 +16388,8 @@ Decl *Sema::ActOnFinishLinkageSpecification(Scope *S,
   // LinkageSpec isn't in the module created by itself. So we don't
   // need to pop it.
   if (getLangOpts().CPlusPlusModules && getCurrentModule() &&
-      getCurrentModule()->isGlobalModule() && getCurrentModule()->Parent)
+      getCurrentModule()->isImplicitGlobalModule() &&
+      getCurrentModule()->Parent)
     PopImplicitGlobalModuleFragment();
 
   PopDeclContext();
