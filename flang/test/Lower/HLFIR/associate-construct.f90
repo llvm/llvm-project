@@ -32,7 +32,7 @@ end subroutine
 
 subroutine associate_pointer(x)
   integer, pointer, contiguous :: x(:)
-  ! Check that "y" has the target and contiguous attributes.
+  ! Check that "y" has the target attribute.
   associate(y => x)
     print *, y
   end associate
@@ -44,7 +44,7 @@ end subroutine
 ! CHECK:  %[[VAL_4:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_5:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_4]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:  %[[VAL_6:.*]] = fir.shape_shift %[[VAL_5]]#0, %[[VAL_5]]#1 : (index, index) -> !fir.shapeshift<1>
-! CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_6]]) {fortran_attrs = #fir.var_attrs<contiguous, target>, uniq_name = "_QFassociate_pointerEy"} : (!fir.ptr<!fir.array<?xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ptr<!fir.array<?xi32>>)
+! CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_6]]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFassociate_pointerEy"} : (!fir.ptr<!fir.array<?xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ptr<!fir.array<?xi32>>)
 ! CHECK:  fir.call @_FortranAioEndIoStatement
 ! CHECK-NEXT:  return
 
@@ -92,6 +92,6 @@ end subroutine
 ! CHECK:  %[[VAL_6:.*]] = arith.constant 20 : index
 ! CHECK:  %[[VAL_8:.*]] = hlfir.designate %[[VAL_2]]{{.*}}
 ! CHECK:  %[[VAL_9:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
-! CHECK:  %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_8]](%[[VAL_9]]) {fortran_attrs = #fir.var_attrs<contiguous, target>, uniq_name = "_QFassociate_pointer_sectionEy"} : (!fir.ref<!fir.array<20xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<20xi32>>, !fir.ref<!fir.array<20xi32>>)
+! CHECK:  %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_8]](%[[VAL_9]]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFassociate_pointer_sectionEy"} : (!fir.ref<!fir.array<20xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<20xi32>>, !fir.ref<!fir.array<20xi32>>)
 ! CHECK:  fir.call @_FortranAioEndIoStatement
 ! CHECK-NEXT:  return

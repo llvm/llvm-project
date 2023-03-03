@@ -11,7 +11,7 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
-#include <src/errno/libc_errno.h>
+#include "src/errno/libc_errno.h"
 #include <sys/syscall.h> // For syscall numbers.
 #include <unistd.h>
 

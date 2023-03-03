@@ -45,6 +45,7 @@
 #include "lldb/Utility/StringExtractor.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Errno.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
 
@@ -214,6 +215,43 @@ static Status EnsureFDFlags(int fd, int flags) {
   return error;
 }
 
+static llvm::Error AddPtraceScopeNote(llvm::Error original_error) {
+  Expected<int> ptrace_scope = GetPtraceScope();
+  if (auto E = ptrace_scope.takeError()) {
+    Log *log = GetLog(POSIXLog::Process);
+    LLDB_LOG(log, "error reading value of ptrace_scope: {0}", E);
+
+    // The original error is probably more interesting than not being able to
+    // read or interpret ptrace_scope.
+    return original_error;
+  }
+
+  // We only have suggestions to provide for 1-3.
+  switch (*ptrace_scope) {
+  case 1:
+  case 2:
+    return llvm::createStringError(
+        std::error_code(errno, std::generic_category()),
+        "The current value of ptrace_scope is %d, which can cause ptrace to "
+        "fail to attach to a running process. To fix this, run:\n"
+        "\tsudo sysctl -w kernel.yama.ptrace_scope=0\n"
+        "For more information, see: "
+        "https://www.kernel.org/doc/Documentation/security/Yama.txt.",
+        *ptrace_scope);
+  case 3:
+    return llvm::createStringError(
+        std::error_code(errno, std::generic_category()),
+        "The current value of ptrace_scope is 3, which will cause ptrace to "
+        "fail to attach to a running process. This value cannot be changed "
+        "without rebooting.\n"
+        "For more information, see: "
+        "https://www.kernel.org/doc/Documentation/security/Yama.txt.");
+  case 0:
+  default:
+    return original_error;
+  }
+}
+
 // Public Static Methods
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
@@ -351,6 +389,11 @@ llvm::Expected<std::vector<::pid_t>> NativeProcessLinux::Attach(::pid_t pid) {
           if (status.GetError() == ESRCH) {
             it = tids_to_attach.erase(it);
             continue;
+          }
+          if (status.GetError() == EPERM) {
+            // Depending on the value of ptrace_scope, we can return a different
+            // error that suggests how to fix it.
+            return AddPtraceScopeNote(status.ToError());
           }
           return status.ToError();
         }

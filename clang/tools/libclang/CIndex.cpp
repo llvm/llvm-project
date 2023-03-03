@@ -2854,7 +2854,8 @@ void EnqueueVisitor::VisitDeclStmt(const DeclStmt *S) {
 }
 void EnqueueVisitor::VisitDesignatedInitExpr(const DesignatedInitExpr *E) {
   AddStmt(E->getInit());
-  for (const Designator &D : llvm::reverse(E->designators())) {
+  for (const DesignatedInitExpr::Designator &D :
+       llvm::reverse(E->designators())) {
     if (D.isFieldDesignator()) {
       if (FieldDecl *Field = D.getField())
         AddMemberRef(Field, D.getFieldLoc());

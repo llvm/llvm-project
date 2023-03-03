@@ -12,8 +12,8 @@
 #include "src/__support/common.h"
 #include "src/string/allocating_string_utils.h" // For strdup.
 
+#include "src/errno/libc_errno.h"
 #include <linux/limits.h> // This is safe to include without any name pollution.
-#include <src/errno/libc_errno.h>
 #include <stdlib.h>
 #include <sys/syscall.h> // For syscall numbers.
 

@@ -26,6 +26,14 @@
 ;;  sink();
 ;;}
 
+; Note: The instruction
+;  %dead = add i8 0, 0
+; in
+;  @variable_in_unused_subscope
+; and
+;  @calls_empty_function_with_unused_variable_in_unused_subscope
+; is just there to let ADCE remove debug intrinsics at all. It only removes
+; debug intrinsics if it also found something else to remove.
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 declare void @sink()
@@ -38,6 +46,7 @@ define void @variable_in_unused_subscope() !dbg !4 {
 entry:
   call void @llvm.dbg.value(metadata i32 0, metadata !15, metadata !17), !dbg !18
   call void @sink(), !dbg !19
+  %dead = add i8 0, 0
   ret void, !dbg !20
 }
 
@@ -61,6 +70,7 @@ define void @calls_empty_function_with_unused_variable_in_unused_subscope() !dbg
 entry:
   call void @llvm.dbg.value(metadata i32 0, metadata !26, metadata !17), !dbg !28
   call void @sink(), !dbg !31
+  %dead = add i8 0, 0
   ret void, !dbg !32
 }
 

@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_ANALYSIS_LOGICCOMBINE_H
+#define LLVM_ANALYSIS_LOGICCOMBINE_H
+
 #include "LogicalExpr.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
@@ -66,3 +69,5 @@ inline raw_ostream &operator<<(raw_ostream &OS, const LogicalOpNode &I) {
 }
 
 } // namespace llvm
+
+#endif // LLVM_ANALYSIS_LOGICCOMBINE_H

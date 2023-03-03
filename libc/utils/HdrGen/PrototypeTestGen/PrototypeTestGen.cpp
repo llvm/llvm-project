@@ -26,6 +26,8 @@ bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
   llvm_libc::APIIndexer G(records);
   std::unordered_set<std::string> headerFileSet;
   for (const auto &entrypoint : EntrypointNamesOption) {
+    if (entrypoint == "errno")
+      continue;
     auto match = G.FunctionToHeaderMap.find(entrypoint);
     if (match == G.FunctionToHeaderMap.end()) {
       auto objectMatch = G.ObjectToHeaderMap.find(entrypoint);
@@ -47,6 +49,8 @@ bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
 
   OS << "extern \"C\" int main() {\n";
   for (const auto &entrypoint : EntrypointNamesOption) {
+    if (entrypoint == "errno")
+      continue;
     auto match = G.FunctionSpecMap.find(entrypoint);
     if (match == G.FunctionSpecMap.end()) {
       auto objectMatch = G.ObjectSpecMap.find(entrypoint);
