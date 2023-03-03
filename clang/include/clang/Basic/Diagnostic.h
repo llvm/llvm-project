@@ -1565,7 +1565,7 @@ inline DiagnosticBuilder DiagnosticsEngine::Report(unsigned DiagID) {
 /// currently in-flight diagnostic.
 class Diagnostic {
   const DiagnosticsEngine *DiagObj;
-  StringRef StoredDiagMessage;
+  std::optional<StringRef> StoredDiagMessage;
 
 public:
   explicit Diagnostic(const DiagnosticsEngine *DO) : DiagObj(DO) {}
