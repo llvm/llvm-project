@@ -195,6 +195,34 @@ Status ScriptedProcess::DoResume() {
   return error;
 }
 
+Status ScriptedProcess::DoAttach(const ProcessAttachInfo &attach_info) {
+  Status error = GetInterface().Attach(attach_info);
+  SetPrivateState(eStateRunning);
+  SetPrivateState(eStateStopped);
+  if (error.Fail())
+    return error;
+  // NOTE: We need to set the PID before finishing to attach otherwise we will
+  // hit an assert when calling the attach completion handler.
+  DidLaunch();
+
+  return {};
+}
+
+Status
+ScriptedProcess::DoAttachToProcessWithID(lldb::pid_t pid,
+                                         const ProcessAttachInfo &attach_info) {
+  return DoAttach(attach_info);
+}
+
+Status ScriptedProcess::DoAttachToProcessWithName(
+    const char *process_name, const ProcessAttachInfo &attach_info) {
+  return DoAttach(attach_info);
+}
+
+void ScriptedProcess::DidAttach(ArchSpec &process_arch) {
+  process_arch = GetArchitecture();
+}
+
 Status ScriptedProcess::DoStop() {
   Log *log = GetLog(LLDBLog::Process);
 

@@ -193,28 +193,6 @@ public:
 
   lldb::ListenerSP GetListenerForProcess(Debugger &debugger);
 
-  bool IsScriptedProcess() const {
-    return !m_scripted_process_class_name.empty();
-  }
-
-  std::string GetScriptedProcessClassName() const {
-    return m_scripted_process_class_name;
-  }
-
-  void SetScriptedProcessClassName(std::string name) {
-    m_scripted_process_class_name = name;
-  }
-
-  lldb_private::StructuredData::DictionarySP
-  GetScriptedProcessDictionarySP() const {
-    return m_scripted_process_dictionary_sp;
-  }
-
-  void SetScriptedProcessDictionarySP(
-      lldb_private::StructuredData::DictionarySP dictionary_sp) {
-    m_scripted_process_dictionary_sp = dictionary_sp;
-  }
-
 protected:
   lldb::ListenerSP m_listener_sp;
   lldb::ListenerSP m_hijack_listener_sp;
@@ -232,11 +210,6 @@ protected:
       false; // Use an async attach where we start the attach and return
              // immediately (used by GUI programs with --waitfor so they can
              // call SBProcess::Stop() to cancel attach)
-  std::string m_scripted_process_class_name; // The name of the class that will
-                                             // manage a scripted process.
-  StructuredData::DictionarySP
-      m_scripted_process_dictionary_sp; // A dictionary that holds key/value
-                                        // pairs passed to the scripted process.
 };
 
 // This class tracks the Modification state of the process.  Things that can
