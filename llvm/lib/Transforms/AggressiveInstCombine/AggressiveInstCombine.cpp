@@ -19,6 +19,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/LogicCombine.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -824,13 +825,40 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
   return true;
 }
 
+/// Reduce bitwise logic sequences.
+static bool foldBitwiseLogic(Function &F, DominatorTree &DT) {
+  bool MadeChange = false;
+  for (BasicBlock &BB : F) {
+    // Ignore unreachable basic blocks.
+    if (!DT.isReachableFromEntry(&BB))
+      continue;
+
+    // TODO: Combining at the function-level would allow more caching of nodes
+    // which saves on compile-time, but it may hit the max value limits before
+    // finding a solution. We could split the combiner based on types to make
+    // the code more efficient, adjust the value of max depth/values, or use
+    // APInt to support tracking more than 63 leaf values.
+    LogicCombiner LC;
+    for (Instruction &I : BB) {
+      if (I.isBitwiseLogicOp()) {
+        Value *NewV = LC.simplify(&I);
+        if (NewV) {
+          MadeChange = true;
+          I.replaceAllUsesWith(NewV);
+        }
+      }
+    }
+  }
+  return MadeChange;
+}
+
 /// This is the entry point for folds that could be implemented in regular
 /// InstCombine, but they are separated because they are not expected to
 /// occur frequently and/or have more than a constant-length pattern match.
 static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
                                 TargetTransformInfo &TTI,
                                 TargetLibraryInfo &TLI, AliasAnalysis &AA) {
-  bool MadeChange = false;
+  bool MadeChange = foldBitwiseLogic(F, DT);
   for (BasicBlock &BB : F) {
     // Ignore unreachable basic blocks.
     if (!DT.isReachableFromEntry(&BB))
