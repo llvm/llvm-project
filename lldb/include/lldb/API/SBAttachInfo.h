@@ -164,6 +164,14 @@ public:
   /// allows a different listener to be used to listen for process events.
   void SetListener(SBListener &listener);
 
+  const char *GetScriptedProcessClassName() const;
+
+  void SetScriptedProcessClassName(const char *class_name);
+
+  lldb::SBStructuredData GetScriptedProcessDictionary() const;
+
+  void SetScriptedProcessDictionary(lldb::SBStructuredData dict);
+
 protected:
   friend class SBTarget;
 
