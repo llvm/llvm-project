@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/ReplaceConstant.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
@@ -131,6 +132,63 @@ void collectConstantExprPaths(
     if (!Paths.empty())
       CEPaths[&U] = Paths;
   }
+}
+
+bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts) {
+  // Find all ConstantExpr that are direct users Consts.
+  SmallVector<ConstantExpr *> Stack;
+  for (Constant *C : Consts)
+    for (User *U : C->users())
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(U))
+        Stack.push_back(CE);
+
+  // Expand to include constexpr users of direct users
+  SetVector<ConstantExpr *> ConstExprUsers;
+  while (!Stack.empty()) {
+    ConstantExpr *V = Stack.pop_back_val();
+    if (ConstExprUsers.contains(V))
+      continue;
+
+    ConstExprUsers.insert(V);
+
+    for (auto *Nested : V->users())
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Nested))
+        Stack.push_back(CE);
+  }
+
+  // Find all instructions that use any of the ConstExpr users
+  SetVector<Instruction *> InstructionWorklist;
+  for (ConstantExpr *CE : ConstExprUsers)
+    for (User *U : CE->users())
+      if (auto *I = dyn_cast<Instruction>(U))
+        InstructionWorklist.insert(I);
+
+  // Replace those ConstExpr operands with instructions
+  bool Changed = false;
+  while (!InstructionWorklist.empty()) {
+    Instruction *I = InstructionWorklist.pop_back_val();
+    for (Use &U : I->operands()) {
+      auto *BI = I;
+      if (auto *Phi = dyn_cast<PHINode>(I)) {
+        BasicBlock *BB = Phi->getIncomingBlock(U);
+        BasicBlock::iterator It = BB->getFirstInsertionPt();
+        assert(It != BB->end() && "Unexpected empty basic block");
+        BI = &*It;
+      }
+
+      if (ConstantExpr *C = dyn_cast<ConstantExpr>(U.get())) {
+        if (ConstExprUsers.contains(C)) {
+          Changed = true;
+          Instruction *NI = C->getAsInstruction(BI);
+          InstructionWorklist.insert(NI);
+          U.set(NI);
+          C->removeDeadConstantUsers();
+        }
+      }
+    }
+  }
+
+  return Changed;
 }
 
 } // namespace llvm
