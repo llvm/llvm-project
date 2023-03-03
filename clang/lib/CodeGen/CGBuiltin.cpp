@@ -18228,7 +18228,9 @@ CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID, const CallExpr *E) {
     // elements, its alignment is set to number of elements times the alignment
     // of its member: n*alignof(t)."
     return MakeLdg(Intrinsic::nvvm_ldg_global_i);
+  case NVPTX::BI__nvvm_ldg_h:
   case NVPTX::BI__nvvm_ldg_f:
+  case NVPTX::BI__nvvm_ldg_h2:
   case NVPTX::BI__nvvm_ldg_f2:
   case NVPTX::BI__nvvm_ldg_f4:
   case NVPTX::BI__nvvm_ldg_d:
