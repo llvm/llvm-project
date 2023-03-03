@@ -1486,11 +1486,10 @@ static bool PhiHasDebugValue(DILocalVariable *DIVar,
 /// (or fragment of the variable) described by \p DII.
 ///
 /// This is primarily intended as a helper for the different
-/// ConvertDebugDeclareToDebugValue functions. The dbg.declare/dbg.addr that is
-/// converted describes an alloca'd variable, so we need to use the
-/// alloc size of the value when doing the comparison. E.g. an i1 value will be
-/// identified as covering an n-bit fragment, if the store size of i1 is at
-/// least n bits.
+/// ConvertDebugDeclareToDebugValue functions. The dbg.declare that is converted
+/// describes an alloca'd variable, so we need to use the alloc size of the
+/// value when doing the comparison. E.g. an i1 value will be identified as
+/// covering an n-bit fragment, if the store size of i1 is at least n bits.
 static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
   const DataLayout &DL = DII->getModule()->getDataLayout();
   TypeSize ValueSize = DL.getTypeAllocSizeInBits(ValTy);
@@ -1519,7 +1518,7 @@ static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
 }
 
 /// Inserts a llvm.dbg.value intrinsic before a store to an alloca'd value
-/// that has an associated llvm.dbg.declare or llvm.dbg.addr intrinsic.
+/// that has an associated llvm.dbg.declare intrinsic.
 void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                            StoreInst *SI, DIBuilder &Builder) {
   assert(DII->isAddressOfVariable() || isa<DbgAssignIntrinsic>(DII));
@@ -1562,7 +1561,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
 }
 
 /// Inserts a llvm.dbg.value intrinsic before a load of an alloca'd value
-/// that has an associated llvm.dbg.declare or llvm.dbg.addr intrinsic.
+/// that has an associated llvm.dbg.declare intrinsic.
 void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                            LoadInst *LI, DIBuilder &Builder) {
   auto *DIVar = DII->getVariable();
@@ -1590,7 +1589,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
 }
 
 /// Inserts a llvm.dbg.value intrinsic after a phi that has an associated
-/// llvm.dbg.declare or llvm.dbg.addr intrinsic.
+/// llvm.dbg.declare intrinsic.
 void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                            PHINode *APN, DIBuilder &Builder) {
   auto *DIVar = DII->getVariable();
@@ -1773,8 +1772,8 @@ void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
 bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
                              DIBuilder &Builder, uint8_t DIExprFlags,
                              int Offset) {
-  auto DbgAddrs = FindDbgAddrUses(Address);
-  for (DbgVariableIntrinsic *DII : DbgAddrs) {
+  auto DbgDeclares = FindDbgDeclareUses(Address);
+  for (DbgVariableIntrinsic *DII : DbgDeclares) {
     const DebugLoc &Loc = DII->getDebugLoc();
     auto *DIVar = DII->getVariable();
     auto *DIExpr = DII->getExpression();
@@ -1785,7 +1784,7 @@ bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
     Builder.insertDeclare(NewAddress, DIVar, DIExpr, Loc, DII);
     DII->eraseFromParent();
   }
-  return !DbgAddrs.empty();
+  return !DbgDeclares.empty();
 }
 
 static void replaceOneDbgValueForAlloca(DbgValueInst *DVI, Value *NewAddress,
@@ -1881,9 +1880,8 @@ void llvm::salvageDebugInfoForDbgValues(
         continue;
     }
 
-    // Do not add DW_OP_stack_value for DbgDeclare and DbgAddr, because they
-    // are implicitly pointing out the value as a DWARF memory location
-    // description.
+    // Do not add DW_OP_stack_value for DbgDeclare, because they are implicitly
+    // pointing out the value as a DWARF memory location description.
     bool StackValue = isa<DbgValueInst>(DII);
     auto DIILocation = DII->location_ops();
     assert(
@@ -1923,9 +1921,9 @@ void llvm::salvageDebugInfoForDbgValues(
                    MaxDebugArgs) {
       DII->addVariableLocationOps(AdditionalValues, SalvagedExpr);
     } else {
-      // Do not salvage using DIArgList for dbg.addr/dbg.declare, as it is
-      // not currently supported in those instructions. Do not salvage using
-      // DIArgList for dbg.assign yet. FIXME: support this.
+      // Do not salvage using DIArgList for dbg.declare, as it is not currently
+      // supported in those instructions. Do not salvage using DIArgList for
+      // dbg.assign yet. FIXME: support this.
       // Also do not salvage if the resulting DIArgList would contain an
       // unreasonably large number of values.
       DII->setKillLocation();
