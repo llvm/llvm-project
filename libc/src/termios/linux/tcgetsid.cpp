@@ -10,9 +10,9 @@
 
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
+#include "src/errno/libc_errno.h"
 
 #include <asm/ioctls.h> // Safe to include without the risk of name pollution.
-#include <errno.h>
 #include <sys/syscall.h> // For syscall numbers
 #include <termios.h>
 
