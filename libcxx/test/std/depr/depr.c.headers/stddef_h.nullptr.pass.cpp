@@ -6,15 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-// test <setjmp.h>
+// <stddef.h>
 
-#include <setjmp.h>
+#include <stddef.h>
+#include <cassert>
 
-#include "test_macros.h"
+int main(int, char**) {
+    {
+        void *p = NULL;
+        assert(!p);
+    }
+    {
+        void *p = nullptr;
+        assert(!p);
+    }
 
-#ifndef setjmp
-#error setjmp not defined
-#endif
-
-jmp_buf jb;
-ASSERT_SAME_TYPE(void, decltype(longjmp(jb, 0)));
+    return 0;
+}

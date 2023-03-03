@@ -11,7 +11,8 @@
 // <locale.h>
 
 #include <locale.h>
-#include <type_traits>
+
+#include "test_macros.h"
 
 #ifndef LC_ALL
 #error LC_ALL not defined
@@ -42,5 +43,5 @@
 #endif
 
 lconv lc;
-static_assert((std::is_same<decltype(setlocale(0, "")), char*>::value), "");
-static_assert((std::is_same<decltype(localeconv()), lconv*>::value), "");
+ASSERT_SAME_TYPE(char*,  decltype(setlocale(0, "")));
+ASSERT_SAME_TYPE(lconv*, decltype(localeconv()));
