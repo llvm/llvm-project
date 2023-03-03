@@ -2230,12 +2230,18 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
       context_.SetError(symbol);
     }
   }
-  if (symbol.has<ObjectEntityDetails>() && !symbol.owner().IsModule()) {
-    messages_.Say(symbol.name(),
-        "A variable with BIND(C) attribute may only appear in the specification part of a module"_err_en_US);
-    context_.SetError(symbol);
-  }
-  if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
+  if (symbol.detailsIf<ObjectEntityDetails>()) {
+    if (!symbol.owner().IsModule()) {
+      messages_.Say(symbol.name(),
+          "A variable with BIND(C) attribute may only appear in the specification part of a module"_err_en_US);
+      context_.SetError(symbol);
+    }
+    if (auto extents{evaluate::GetConstantExtents(foldingContext_, symbol)};
+        extents && evaluate::GetSize(*extents) == 0) {
+      SayWithDeclaration(symbol, symbol.name(),
+          "Interoperable array must have at least one element"_err_en_US);
+    }
+  } else if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
     if (!proc->procInterface() ||
         !proc->procInterface()->attrs().test(Attr::BIND_C)) {
       messages_.Say(symbol.name(),
@@ -2259,30 +2265,38 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
       for (const auto &pair : *symbol.scope()) {
         const Symbol *component{&*pair.second};
         if (IsProcedure(*component)) { // C1804
-          messages_.Say(symbol.name(),
+          messages_.Say(component->name(),
               "A derived type with the BIND attribute cannot have a type bound procedure"_err_en_US);
           context_.SetError(symbol);
-          break;
-        } else if (IsAllocatableOrPointer(*component)) { // C1806
-          messages_.Say(symbol.name(),
+        }
+        if (IsAllocatableOrPointer(*component)) { // C1806
+          messages_.Say(component->name(),
               "A derived type with the BIND attribute cannot have a pointer or allocatable component"_err_en_US);
           context_.SetError(symbol);
-          break;
-        } else if (const auto *type{component->GetType()}) {
+        }
+        if (const auto *type{component->GetType()}) {
           if (const auto *derived{type->AsDerived()}) {
             if (!derived->typeSymbol().attrs().test(Attr::BIND_C)) {
-              messages_.Say(
-                  component->GetType()->AsDerived()->typeSymbol().name(),
-                  "The component of the interoperable derived type must have the BIND attribute"_err_en_US);
+              if (auto *msg{messages_.Say(component->name(),
+                      "Component '%s' of an interoperable derived type must have the BIND attribute"_err_en_US,
+                      component->name())}) {
+                msg->Attach(derived->typeSymbol().name(),
+                    "Non-interoperable component type"_en_US);
+              }
               context_.SetError(symbol);
-              break;
             }
           } else if (!IsInteroperableIntrinsicType(*type)) {
             messages_.Say(component->name(),
                 "Each component of an interoperable derived type must have an interoperable type"_err_en_US);
             context_.SetError(symbol);
-            break;
           }
+        }
+        if (auto extents{
+                evaluate::GetConstantExtents(foldingContext_, component)};
+            extents && evaluate::GetSize(*extents) == 0) {
+          messages_.Say(component->name(),
+              "An array component of an interoperable type must have at least one element"_err_en_US);
+          context_.SetError(symbol);
         }
       }
     }
