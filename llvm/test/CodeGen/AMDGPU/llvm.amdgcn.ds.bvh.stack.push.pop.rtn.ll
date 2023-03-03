@@ -63,7 +63,7 @@ define amdgpu_gs void @test_ds_bvh_stack_push8_pop1_1(i32 %addr, i32 %data0, <8 
   ret void
 }
 
-define amdgpu_gs void @test_ds_bvh_stack_push8_pop2(i32 %addr, i32 %data0, <8 x i32> %data1, i64 addrspace(1)* %out1, i32 addrspace(1)* %out2) {
+define amdgpu_gs void @test_ds_bvh_stack_push8_pop2(i32 %addr, i32 %data0, <8 x i32> %data1, ptr addrspace(1) %out1, ptr addrspace(1) %out2) {
 ; CHECK-LABEL: test_ds_bvh_stack_push8_pop2:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ds_bvh_stack_push8_pop2_rtn_b64 v[1:2], v0, v1, v[2:9]
@@ -80,7 +80,7 @@ define amdgpu_gs void @test_ds_bvh_stack_push8_pop2(i32 %addr, i32 %data0, <8 x 
   ret void
 }
 
-define amdgpu_gs void @test_ds_bvh_stack_push8_pop2_1(i32 %addr, i32 %data0, <8 x i32> %data1, i64 addrspace(1)* %out1, i32 addrspace(1)* %out2) {
+define amdgpu_gs void @test_ds_bvh_stack_push8_pop2_1(i32 %addr, i32 %data0, <8 x i32> %data1, ptr addrspace(1) %out1, ptr addrspace(1) %out2) {
 ; CHECK-LABEL: test_ds_bvh_stack_push8_pop2_1:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ds_bvh_stack_push8_pop2_rtn_b64 v[1:2], v0, v1, v[2:9] offset:1

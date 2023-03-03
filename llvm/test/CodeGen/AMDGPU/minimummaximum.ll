@@ -12,7 +12,7 @@ define amdgpu_ps float @test_minmax_f32(float %a, float %b, float %c) {
   ret float %minmax
 }
 
-define amdgpu_ps void @s_test_minmax_f32(float inreg %a, float inreg %b, float inreg %c, float addrspace(1)* inreg %out) {
+define amdgpu_ps void @s_test_minmax_f32(float inreg %a, float inreg %b, float inreg %c, ptr addrspace(1) inreg %out) {
 ; SDAG-LABEL: s_test_minmax_f32:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_maximum_f32 s0, s0, s1
@@ -39,7 +39,7 @@ define amdgpu_ps void @s_test_minmax_f32(float inreg %a, float inreg %b, float i
 ; GISEL-NEXT:    s_endpgm
   %smax = call float @llvm.maximum.f32(float %a, float %b)
   %sminmax = call float @llvm.minimum.f32(float %smax, float %c)
-  store float %sminmax, float addrspace(1)* %out
+  store float %sminmax, ptr addrspace(1) %out
   ret void
 }
 
@@ -103,7 +103,7 @@ define amdgpu_ps half @test_maxmin_commuted_f16(half %a, half %b, half %c) {
   ret half %maxmin
 }
 
-define amdgpu_ps void @s_test_minmax_f16(half inreg %a, half inreg %b, half inreg %c, half addrspace(1)* inreg %out) {
+define amdgpu_ps void @s_test_minmax_f16(half inreg %a, half inreg %b, half inreg %c, ptr addrspace(1) inreg %out) {
 ; SDAG-LABEL: s_test_minmax_f16:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_maximum_f16 s0, s0, s1
@@ -130,7 +130,7 @@ define amdgpu_ps void @s_test_minmax_f16(half inreg %a, half inreg %b, half inre
 ; GISEL-NEXT:    s_endpgm
   %smax = call half @llvm.maximum.f16(half %a, half %b)
   %sminmax = call half @llvm.minimum.f16(half %smax, half %c)
-  store half %sminmax, half addrspace(1)* %out
+  store half %sminmax, ptr addrspace(1) %out
   ret void
 }
 

@@ -93,54 +93,46 @@ define amdgpu_cs void @mixed_vmem_types(i32 inreg %globalTable, i32 inreg %perSh
   %.upto0 = insertelement <2 x i32> poison, i32 %descTable1, i64 0
   %1 = insertelement <2 x i32> %.upto0, i32 %.i1, i64 1
   %2 = bitcast <2 x i32> %1 to i64
-  %3 = inttoptr i64 %2 to i8 addrspace(4)*
+  %3 = inttoptr i64 %2 to ptr addrspace(4)
   %.upto03 = insertelement <2 x i32> poison, i32 %descTable0, i64 0
   %4 = insertelement <2 x i32> %.upto03, i32 %.i1, i64 1
   %5 = bitcast <2 x i32> %4 to i64
-  %6 = inttoptr i64 %5 to i8 addrspace(4)*
-  %7 = getelementptr i8, i8 addrspace(4)* %6, i64 80
-  %8 = bitcast i8 addrspace(4)* %7 to <4 x i32> addrspace(4)*
-  %9 = load <4 x i32>, <4 x i32> addrspace(4)* %8, align 16
-  %10 = getelementptr i8, i8 addrspace(4)* %3, i64 48
-  %11 = bitcast i8 addrspace(4)* %10 to <4 x i32> addrspace(4)*
-  %12 = load <4 x i32>, <4 x i32> addrspace(4)* %11, align 16
-  %13 = getelementptr i8, i8 addrspace(4)* %6, i64 64
-  %14 = bitcast i8 addrspace(4)* %13 to <4 x i32> addrspace(4)*
-  %15 = load <4 x i32>, <4 x i32> addrspace(4)* %14, align 16
-  %16 = getelementptr i8, i8 addrspace(4)* %6, i64 16
-  %17 = bitcast i8 addrspace(4)* %16 to <4 x i32> addrspace(4)*
-  %18 = load <4 x i32>, <4 x i32> addrspace(4)* %17, align 16
-  %19 = getelementptr i8, i8 addrspace(4)* %6, i64 32
-  %20 = bitcast i8 addrspace(4)* %19 to <8 x i32> addrspace(4)*
-  %21 = load <8 x i32>, <8 x i32> addrspace(4)* %20, align 32
-  %22 = bitcast i8 addrspace(4)* %6 to <4 x i32> addrspace(4)*
-  %23 = load <4 x i32>, <4 x i32> addrspace(4)* %22, align 16
-  %24 = call float @llvm.amdgcn.image.sample.lz.2d.f32.f16(i32 1, half 0xHBC00, half 0xHBC00, <8 x i32> %21, <4 x i32> %23, i1 false, i32 0, i32 0)
-  %25 = fcmp oeq float %24, 0.000000e+00
-  %26 = call i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32> %18, i32 0, i32 0, i32 0)
-  %.not = icmp eq i32 %26, 2752
-  %27 = call i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32> %15, i32 0, i32 0, i32 0)
-  %.not1 = icmp eq i32 %27, 2752
-  %28 = getelementptr i8, i8 addrspace(4)* %3, i64 16
-  %29 = bitcast i8 addrspace(4)* %28 to <8 x i32> addrspace(4)*
-  %30 = load <8 x i32>, <8 x i32> addrspace(4)* %29, align 32
-  %31 = bitcast i8 addrspace(4)* %3 to <4 x i32> addrspace(4)*
-  %32 = load <4 x i32>, <4 x i32> addrspace(4)* %31, align 16
-  %33 = call float @llvm.amdgcn.image.sample.lz.2d.f32.f16(i32 1, half 0xHBC00, half 0xHBC00, <8 x i32> %30, <4 x i32> %32, i1 false, i32 0, i32 0)
-  %34 = fcmp oeq float %33, 1.000000e+00
-  %35 = call i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32> %12, i32 0, i32 0, i32 0)
-  %.not2 = icmp eq i32 %35, 2752
-  %36 = select i1 %.not2, i1 %34, i1 false
-  %37 = select i1 %36, i1 %.not1, i1 false
-  %38 = select i1 %37, i1 %.not, i1 false
-  %narrow2 = select i1 %38, i1 %25, i1 false
+  %6 = inttoptr i64 %5 to ptr addrspace(4)
+  %7 = getelementptr i8, ptr addrspace(4) %6, i64 80
+  %8 = load <4 x i32>, ptr addrspace(4) %7, align 16
+  %9 = getelementptr i8, ptr addrspace(4) %3, i64 48
+  %10 = load <4 x i32>, ptr addrspace(4) %9, align 16
+  %11 = getelementptr i8, ptr addrspace(4) %6, i64 64
+  %12 = load <4 x i32>, ptr addrspace(4) %11, align 16
+  %13 = getelementptr i8, ptr addrspace(4) %6, i64 16
+  %14 = load <4 x i32>, ptr addrspace(4) %13, align 16
+  %15 = getelementptr i8, ptr addrspace(4) %6, i64 32
+  %16 = load <8 x i32>, ptr addrspace(4) %15, align 32
+  %17 = load <4 x i32>, ptr addrspace(4) %6, align 16
+  %18 = call float @llvm.amdgcn.image.sample.lz.2d.f32.f16(i32 1, half 0xHBC00, half 0xHBC00, <8 x i32> %16, <4 x i32> %17, i1 false, i32 0, i32 0)
+  %19 = fcmp oeq float %18, 0.000000e+00
+  %20 = call i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32> %14, i32 0, i32 0, i32 0)
+  %.not = icmp eq i32 %20, 2752
+  %21 = call i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32> %12, i32 0, i32 0, i32 0)
+  %.not1 = icmp eq i32 %21, 2752
+  %22 = getelementptr i8, ptr addrspace(4) %3, i64 16
+  %23 = load <8 x i32>, ptr addrspace(4) %22, align 32
+  %24 = load <4 x i32>, ptr addrspace(4) %3, align 16
+  %25 = call float @llvm.amdgcn.image.sample.lz.2d.f32.f16(i32 1, half 0xHBC00, half 0xHBC00, <8 x i32> %23, <4 x i32> %24, i1 false, i32 0, i32 0)
+  %26 = fcmp oeq float %25, 1.000000e+00
+  %27 = call i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32> %10, i32 0, i32 0, i32 0)
+  %.not2 = icmp eq i32 %27, 2752
+  %28 = select i1 %.not2, i1 %26, i1 false
+  %29 = select i1 %28, i1 %.not1, i1 false
+  %30 = select i1 %29, i1 %.not, i1 false
+  %narrow2 = select i1 %30, i1 %19, i1 false
   %.4 = zext i1 %narrow2 to i32
-  call void @llvm.amdgcn.raw.buffer.store.i32(i32 %.4, <4 x i32> %9, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.buffer.store.i32(i32 %.4, <4 x i32> %8, i32 0, i32 0, i32 0)
   ret void
 }
 
 declare <4 x float> @llvm.amdgcn.image.sample.l.2d.v4f32.f32(i32 immarg, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #1
-declare i8 addrspace(7)* @lgc.late.launder.fat.pointer(<4 x i32>) #2
+declare ptr addrspace(7) @lgc.late.launder.fat.pointer(<4 x i32>) #2
 declare i64 @llvm.amdgcn.s.getpc() #3
 declare <4 x float> @llvm.amdgcn.image.sample.lz.2d.v4f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #1
 declare <4 x float> @llvm.amdgcn.image.sample.lz.2d.v4f32.f16(i32 immarg, half, half, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #1
