@@ -17,9 +17,21 @@ struct String {
   // CHECK:   cir.store %arg0, %0 : !cir.ptr<!ty_22struct2EStringView22>
   // CHECK:   cir.store %arg1, %1 : !cir.ptr<!ty_22struct2EString22>
   // CHECK:   %2 = cir.load %0 : cir.ptr <!cir.ptr<!ty_22struct2EStringView22>>
-  // CHECK:   %3 = "cir.struct_element_addr"(%0) <{member_name = "size"}>
+
+  // Get address of `this->size`
+
+  // CHECK:   %3 = "cir.struct_element_addr"(%2) <{member_name = "size"}>
+
+  // Get address of `s`
+
   // CHECK:   %4 = cir.load %1 : cir.ptr <!cir.ptr<!ty_22struct2EString22>>
-  // CHECK:   %5 = "cir.struct_element_addr"(%0) <{member_name = "size"}>
+
+  // Get the address of s.size
+
+  // CHECK:   %5 = "cir.struct_element_addr"(%4) <{member_name = "size"}>
+
+  // Load value from s.size and store in this->size
+
   // CHECK:   %6 = cir.load %5 : cir.ptr <i64>, i64
   // CHECK:   cir.store %6, %3 : i64, cir.ptr <i64>
   // CHECK:   cir.return
@@ -38,9 +50,9 @@ struct String {
   // CHECK:   cir.store %arg1, %1 : !cir.ptr<!ty_22struct2EStringView22>
   // CHECK:   %3 = cir.load deref %0 : cir.ptr <!cir.ptr<!ty_22struct2EStringView22>>
   // CHECK:   %4 = cir.load %1 : cir.ptr <!cir.ptr<!ty_22struct2EStringView22>>
-  // CHECK:   %5 = "cir.struct_element_addr"(%0) <{member_name = "size"}>
+  // CHECK:   %5 = "cir.struct_element_addr"(%4) <{member_name = "size"}>
   // CHECK:   %6 = cir.load %5 : cir.ptr <i64>, i64
-  // CHECK:   %7 = "cir.struct_element_addr"(%0) <{member_name = "size"}>
+  // CHECK:   %7 = "cir.struct_element_addr"(%3) <{member_name = "size"}>
   // CHECK:   cir.store %6, %7 : i64, cir.ptr <i64>
   // CHECK:   cir.store %3, %2 : !cir.ptr<!ty_22struct2EStringView22>
   // CHECK:   %8 = cir.load %2 : cir.ptr <!cir.ptr<!ty_22struct2EStringView22>>

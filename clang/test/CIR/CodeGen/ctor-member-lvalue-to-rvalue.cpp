@@ -11,9 +11,9 @@ struct String {
 // CHECK:     cir.store %arg0, %0
 // CHECK:     cir.store %arg1, %1
 // CHECK:     %2 = cir.load %0
-// CHECK:     %3 = "cir.struct_element_addr"(%0) <{member_name = "size"}>
+// CHECK:     %3 = "cir.struct_element_addr"(%2) <{member_name = "size"}>
 // CHECK:     %4 = cir.load %1
-// CHECK:     %5 = "cir.struct_element_addr"(%0) <{member_name = "size"}>
+// CHECK:     %5 = "cir.struct_element_addr"(%4) <{member_name = "size"}>
 // CHECK:     %6 = cir.load %5 : cir.ptr <i64>, i64
 // CHECK:     cir.store %6, %3 : i64, cir.ptr <i64>
 // CHECK:     cir.return

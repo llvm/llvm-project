@@ -346,12 +346,12 @@ void CIRGenItaniumCXXABI::addImplicitStructorParams(CIRGenFunction &CGF,
   }
 }
 
-mlir::Operation *CIRGenCXXABI::loadIncomingCXXThis(CIRGenFunction &CGF) {
+mlir::Value CIRGenCXXABI::loadIncomingCXXThis(CIRGenFunction &CGF) {
   return CGF.createLoad(getThisDecl(CGF), "this");
 }
 
 void CIRGenCXXABI::setCXXABIThisValue(CIRGenFunction &CGF,
-                                      mlir::Operation *ThisPtr) {
+                                      mlir::Value ThisPtr) {
   /// Initialize the 'this' slot.
   assert(getThisDecl(CGF) && "no 'this' variable for function");
   CGF.CXXABIThisValue = ThisPtr;
