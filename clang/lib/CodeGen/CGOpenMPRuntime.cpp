@@ -6110,8 +6110,23 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
                                       DefaultValTeams, DefaultValThreads,
                                       IsOffloadEntry, OutlinedFn, OutlinedFnID);
 
-  if (OutlinedFn != nullptr)
-    CGM.getTargetCodeGenInfo().setTargetAttributes(nullptr, OutlinedFn, CGM);
+  if (!OutlinedFn)
+    return;
+
+  CGM.getTargetCodeGenInfo().setTargetAttributes(nullptr, OutlinedFn, CGM);
+
+  for (auto *C : D.getClausesOfKind<OMPXAttributeClause>()) {
+    for (auto *A : C->getAttrs()) {
+      if (auto *Attr = dyn_cast<CUDALaunchBoundsAttr>(A))
+        CGM.handleCUDALaunchBoundsAttr(OutlinedFn, Attr);
+      else if (auto *Attr = dyn_cast<AMDGPUFlatWorkGroupSizeAttr>(A))
+        CGM.handleAMDGPUFlatWorkGroupSizeAttr(OutlinedFn, Attr);
+      else if (auto *Attr = dyn_cast<AMDGPUWavesPerEUAttr>(A))
+        CGM.handleAMDGPUWavesPerEUAttr(OutlinedFn, Attr);
+      else
+        llvm_unreachable("Unexpected attribute kind");
+    }
+  }
 }
 
 /// Checks if the expression is constant or does not have non-trivial function

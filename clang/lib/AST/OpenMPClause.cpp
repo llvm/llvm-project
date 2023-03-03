@@ -2534,6 +2534,18 @@ void OMPClausePrinter::VisitOMPDoacrossClause(OMPDoacrossClause *Node) {
   OS << ")";
 }
 
+void OMPClausePrinter::VisitOMPXAttributeClause(OMPXAttributeClause *Node) {
+  OS << "ompx_attribute(";
+  bool IsFirst = true;
+  for (auto &Attr : Node->getAttrs()) {
+    if (!IsFirst)
+      OS << ", ";
+    Attr->printPretty(OS, Policy);
+    IsFirst = false;
+  }
+  OS << ")";
+}
+
 void OMPTraitInfo::getAsVariantMatchInfo(ASTContext &ASTCtx,
                                          VariantMatchInfo &VMI) const {
   for (const OMPTraitSet &Set : Sets) {
