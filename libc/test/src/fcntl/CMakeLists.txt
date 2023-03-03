@@ -9,8 +9,8 @@ add_libc_unittest(
   SRCS
     creat_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.fcntl
+    libc.src.errno.errno
     libc.src.fcntl.creat
     libc.src.fcntl.open
     libc.src.unistd.close
@@ -24,8 +24,8 @@ add_libc_unittest(
   SRCS
     openat_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.fcntl
+    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.fcntl.openat
     libc.src.unistd.close
