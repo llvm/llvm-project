@@ -423,62 +423,6 @@ CanBeUsedForElementCountPrinting(ValueObject &valobj) {
   return Status();
 }
 
-EvaluateExpressionOptions
-CommandObjectExpression::GetEvalOptions(const Target &target) {
-  EvaluateExpressionOptions options;
-  options.SetCoerceToId(m_varobj_options.use_objc);
-  if (m_command_options.m_verbosity ==
-      eLanguageRuntimeDescriptionDisplayVerbosityCompact)
-    options.SetSuppressPersistentResult(m_varobj_options.use_objc);
-  options.SetUnwindOnError(m_command_options.unwind_on_error);
-  options.SetIgnoreBreakpoints(m_command_options.ignore_breakpoints);
-  options.SetKeepInMemory(true);
-  options.SetUseDynamic(m_varobj_options.use_dynamic);
-  options.SetTryAllThreads(m_command_options.try_all_threads);
-  options.SetDebug(m_command_options.debug);
-
-  // BEGIN SWIFT
-  options.SetBindGenericTypes(m_command_options.bind_generic_types);
-  // If the language was not specified in the expression command,
-  // set it to the language in the target's properties if
-  // specified, else default to the language for the frame.
-  if (m_command_options.language != eLanguageTypeUnknown) {
-  // END SWIFT   
-  options.SetLanguage(m_command_options.language);
-  // BEGIN SWIFT
-  }
-  // END SWIFT
-
-  options.SetExecutionPolicy(
-      m_command_options.allow_jit
-          ? EvaluateExpressionOptions::default_execution_policy
-          : lldb_private::eExecutionPolicyNever);
-
-  bool auto_apply_fixits;
-  if (m_command_options.auto_apply_fixits == eLazyBoolCalculate)
-    auto_apply_fixits = target.GetEnableAutoApplyFixIts();
-  else
-    auto_apply_fixits = m_command_options.auto_apply_fixits == eLazyBoolYes;
-
-  options.SetAutoApplyFixIts(auto_apply_fixits);
-  options.SetRetriesWithFixIts(target.GetNumberOfRetriesWithFixits());
-
-  if (m_command_options.top_level)
-    options.SetExecutionPolicy(eExecutionPolicyTopLevel);
-
-  // If there is any chance we are going to stop and want to see what went
-  // wrong with our expression, we should generate debug info
-  if (!m_command_options.ignore_breakpoints ||
-      !m_command_options.unwind_on_error)
-    options.SetGenerateDebugInfo(true);
-
-  if (m_command_options.timeout > 0)
-    options.SetTimeout(std::chrono::microseconds(m_command_options.timeout));
-  else
-    options.SetTimeout(std::nullopt);
-  return options;
-}
-
 bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
                                                  Stream &output_stream,
                                                  Stream &error_stream,

@@ -1241,7 +1241,7 @@ void IRExecutionUnit::PopulateSymtab(lldb_private::ObjectFile *obj_file,
       }
     }
 
-    for (llvm::GlobalVariable &global_var : m_module->getGlobalList()) {
+    for (llvm::GlobalVariable &global_var : m_module->globals()) {
       if (global_var.isDeclaration() ||
           !(global_var.hasExternalLinkage() ||
             global_var.hasLinkOnceODRLinkage()))
