@@ -71,6 +71,10 @@ module std [system] {
     module stdint_h {
       header "stdint.h"
       export *
+      // FIXME: This module only exists on OS X and for some reason the
+      // wildcard above doesn't export it. Removing this breaks the tests
+      // for C compatibility headers in C++17 mode with modules enabled.
+      export Darwin.C.stdint
     }
     module stdio_h {
       // <stdio.h>'s __need_* macros require textual inclusion.
