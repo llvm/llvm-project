@@ -3,10 +3,14 @@
 ; RUN:   | FileCheck %s -check-prefixes=CHECK,RV32I-SMALL
 ; RUN: llc -mtriple=riscv32 -code-model=medium -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=CHECK,RV32I-MEDIUM
+; RUN: llc -mtriple=riscv32 -relocation-model=pic -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s -check-prefixes=CHECK,RV32I-PIC
 ; RUN: llc -mtriple=riscv64 -code-model=small -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64I-SMALL
 ; RUN: llc -mtriple=riscv64 -code-model=medium -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64I-MEDIUM
+; RUN: llc -mtriple=riscv64 -relocation-model=pic -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64I-PIC
 
 define void @below_threshold(i32 signext %in, ptr %out) nounwind {
 ; CHECK-LABEL: below_threshold:
@@ -133,6 +137,42 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV32I-MEDIUM-NEXT:  .LBB1_9: # %exit
 ; RV32I-MEDIUM-NEXT:    ret
 ;
+; RV32I-PIC-LABEL: above_threshold:
+; RV32I-PIC:       # %bb.0: # %entry
+; RV32I-PIC-NEXT:    addi a0, a0, -1
+; RV32I-PIC-NEXT:    li a2, 5
+; RV32I-PIC-NEXT:    bltu a2, a0, .LBB1_9
+; RV32I-PIC-NEXT:  # %bb.1: # %entry
+; RV32I-PIC-NEXT:    slli a0, a0, 2
+; RV32I-PIC-NEXT:  .Lpcrel_hi0:
+; RV32I-PIC-NEXT:    auipc a2, %pcrel_hi(.LJTI1_0)
+; RV32I-PIC-NEXT:    addi a2, a2, %pcrel_lo(.Lpcrel_hi0)
+; RV32I-PIC-NEXT:    add a0, a0, a2
+; RV32I-PIC-NEXT:    lw a0, 0(a0)
+; RV32I-PIC-NEXT:    add a0, a0, a2
+; RV32I-PIC-NEXT:    jr a0
+; RV32I-PIC-NEXT:  .LBB1_2: # %bb1
+; RV32I-PIC-NEXT:    li a0, 4
+; RV32I-PIC-NEXT:    j .LBB1_8
+; RV32I-PIC-NEXT:  .LBB1_3: # %bb2
+; RV32I-PIC-NEXT:    li a0, 3
+; RV32I-PIC-NEXT:    j .LBB1_8
+; RV32I-PIC-NEXT:  .LBB1_4: # %bb3
+; RV32I-PIC-NEXT:    li a0, 2
+; RV32I-PIC-NEXT:    j .LBB1_8
+; RV32I-PIC-NEXT:  .LBB1_5: # %bb4
+; RV32I-PIC-NEXT:    li a0, 1
+; RV32I-PIC-NEXT:    j .LBB1_8
+; RV32I-PIC-NEXT:  .LBB1_6: # %bb5
+; RV32I-PIC-NEXT:    li a0, 100
+; RV32I-PIC-NEXT:    j .LBB1_8
+; RV32I-PIC-NEXT:  .LBB1_7: # %bb6
+; RV32I-PIC-NEXT:    li a0, 200
+; RV32I-PIC-NEXT:  .LBB1_8: # %exit
+; RV32I-PIC-NEXT:    sw a0, 0(a1)
+; RV32I-PIC-NEXT:  .LBB1_9: # %exit
+; RV32I-PIC-NEXT:    ret
+;
 ; RV64I-SMALL-LABEL: above_threshold:
 ; RV64I-SMALL:       # %bb.0: # %entry
 ; RV64I-SMALL-NEXT:    addi a0, a0, -1
@@ -201,6 +241,42 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV64I-MEDIUM-NEXT:    sw a0, 0(a1)
 ; RV64I-MEDIUM-NEXT:  .LBB1_9: # %exit
 ; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-PIC-LABEL: above_threshold:
+; RV64I-PIC:       # %bb.0: # %entry
+; RV64I-PIC-NEXT:    addi a0, a0, -1
+; RV64I-PIC-NEXT:    li a2, 5
+; RV64I-PIC-NEXT:    bltu a2, a0, .LBB1_9
+; RV64I-PIC-NEXT:  # %bb.1: # %entry
+; RV64I-PIC-NEXT:    slli a0, a0, 2
+; RV64I-PIC-NEXT:  .Lpcrel_hi0:
+; RV64I-PIC-NEXT:    auipc a2, %pcrel_hi(.LJTI1_0)
+; RV64I-PIC-NEXT:    addi a2, a2, %pcrel_lo(.Lpcrel_hi0)
+; RV64I-PIC-NEXT:    add a0, a0, a2
+; RV64I-PIC-NEXT:    lw a0, 0(a0)
+; RV64I-PIC-NEXT:    add a0, a0, a2
+; RV64I-PIC-NEXT:    jr a0
+; RV64I-PIC-NEXT:  .LBB1_2: # %bb1
+; RV64I-PIC-NEXT:    li a0, 4
+; RV64I-PIC-NEXT:    j .LBB1_8
+; RV64I-PIC-NEXT:  .LBB1_3: # %bb2
+; RV64I-PIC-NEXT:    li a0, 3
+; RV64I-PIC-NEXT:    j .LBB1_8
+; RV64I-PIC-NEXT:  .LBB1_4: # %bb3
+; RV64I-PIC-NEXT:    li a0, 2
+; RV64I-PIC-NEXT:    j .LBB1_8
+; RV64I-PIC-NEXT:  .LBB1_5: # %bb4
+; RV64I-PIC-NEXT:    li a0, 1
+; RV64I-PIC-NEXT:    j .LBB1_8
+; RV64I-PIC-NEXT:  .LBB1_6: # %bb5
+; RV64I-PIC-NEXT:    li a0, 100
+; RV64I-PIC-NEXT:    j .LBB1_8
+; RV64I-PIC-NEXT:  .LBB1_7: # %bb6
+; RV64I-PIC-NEXT:    li a0, 200
+; RV64I-PIC-NEXT:  .LBB1_8: # %exit
+; RV64I-PIC-NEXT:    sw a0, 0(a1)
+; RV64I-PIC-NEXT:  .LBB1_9: # %exit
+; RV64I-PIC-NEXT:    ret
 entry:
   switch i32 %in, label %exit [
     i32 1, label %bb1
