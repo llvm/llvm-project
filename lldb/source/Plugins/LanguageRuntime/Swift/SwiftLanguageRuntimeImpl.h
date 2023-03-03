@@ -145,6 +145,10 @@ public:
       bool &child_is_deref_of_parent, ValueObject *valobj,
       uint64_t &language_flags);
 
+  CompilerType BindGenericTypeParameters(
+      CompilerType unbound_type,
+      std::function<CompilerType(unsigned, unsigned)> type_resolver);
+
   /// Like \p BindGenericTypeParameters but for TypeSystemSwiftTypeRef.
   CompilerType BindGenericTypeParameters(StackFrame &stack_frame,
                                          TypeSystemSwiftTypeRef &ts,
