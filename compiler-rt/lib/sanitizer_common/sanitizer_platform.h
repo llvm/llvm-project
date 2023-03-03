@@ -136,7 +136,7 @@
 #  define SANITIZER_MUSL 0
 #endif
 
-#define SANITIZER_POSIX                                     \
+#define SANITIZER_POSIX                                       \
   (SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_APPLE || \
    SANITIZER_NETBSD || SANITIZER_SOLARIS)
 
@@ -326,7 +326,7 @@
 // Whether the addresses are sign-extended from the VMA range to the word.
 // The SPARC64 Linux port implements this to split the VMA space into two
 // non-contiguous halves with a huge hole in the middle.
-#if defined(__sparc__) && SANITIZER_WORDSIZE == 64
+#if (defined(__sparc__) || defined(__riscv)) && SANITIZER_WORDSIZE == 64
 #  define SANITIZER_SIGN_EXTENDED_ADDRESSES 1
 #else
 #  define SANITIZER_SIGN_EXTENDED_ADDRESSES 0
@@ -390,7 +390,8 @@
 #  define SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT 0
 #endif
 
-#if SANITIZER_FREEBSD || SANITIZER_APPLE || SANITIZER_NETBSD || SANITIZER_SOLARIS
+#if SANITIZER_FREEBSD || SANITIZER_APPLE || SANITIZER_NETBSD || \
+    SANITIZER_SOLARIS
 #  define SANITIZER_MADVISE_DONTNEED MADV_FREE
 #else
 #  define SANITIZER_MADVISE_DONTNEED MADV_DONTNEED
