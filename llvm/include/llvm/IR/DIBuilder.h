@@ -47,7 +47,6 @@ namespace llvm {
     Function *DeclareFn;     ///< llvm.dbg.declare
     Function *ValueFn;       ///< llvm.dbg.value
     Function *LabelFn;       ///< llvm.dbg.label
-    Function *AddrFn;        ///< llvm.dbg.addr
     Function *AssignFn;      ///< llvm.dbg.assign
     Function *DefFn;         ///< llvm.dbg.def
     Function *KillFn;        ///< llvm.dbg.kill
@@ -1029,30 +1028,6 @@ namespace llvm {
                                          DIExpression *Expr,
                                          const DILocation *DL,
                                          Instruction *InsertBefore);
-
-    /// Insert a new llvm.dbg.addr intrinsic call.
-    /// \param Addr          llvm::Value of the address
-    /// \param VarInfo      Variable's debug info descriptor.
-    /// \param Expr         A complex location expression.
-    /// \param DL           Debug info location.
-    /// \param InsertAtEnd Location for the new intrinsic.
-    Instruction *insertDbgAddrIntrinsic(llvm::Value *Addr,
-                                        DILocalVariable *VarInfo,
-                                        DIExpression *Expr,
-                                        const DILocation *DL,
-                                        BasicBlock *InsertAtEnd);
-
-    /// Insert a new llvm.dbg.addr intrinsic call.
-    /// \param Addr         llvm::Value of the address.
-    /// \param VarInfo      Variable's debug info descriptor.
-    /// \param Expr         A complex location expression.
-    /// \param DL           Debug info location.
-    /// \param InsertBefore Location for the new intrinsic.
-    Instruction *insertDbgAddrIntrinsic(llvm::Value *Addr,
-                                        DILocalVariable *VarInfo,
-                                        DIExpression *Expr,
-                                        const DILocation *DL,
-                                        Instruction *InsertBefore);
 
     /// Replace the vtable holder in the given type.
     ///

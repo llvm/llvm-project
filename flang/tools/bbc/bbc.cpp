@@ -142,11 +142,10 @@ static llvm::cl::opt<bool> useHLFIR("hlfir",
 
 using ProgramName = std::string;
 
-// Print the module without the "module { ... }" wrapper.
+// Print the module with the "module { ... }" wrapper, preventing
+// information loss from attribute information appended to the module
 static void printModule(mlir::ModuleOp mlirModule, llvm::raw_ostream &out) {
-  for (auto &op : *mlirModule.getBody())
-    out << op << '\n';
-  out << '\n';
+  out << mlirModule << '\n';
 }
 
 static void registerAllPasses() {

@@ -332,6 +332,30 @@ void Symbol::SetBindName(std::string &&name) {
       details_);
 }
 
+bool Symbol::GetIsExplicitBindName() const {
+  return common::visit(
+      [&](auto &x) -> bool {
+        if constexpr (HasBindName<decltype(&x)>) {
+          return x.isExplicitBindName();
+        } else {
+          return false;
+        }
+      },
+      details_);
+}
+
+void Symbol::SetIsExplicitBindName(bool yes) {
+  common::visit(
+      [&](auto &x) {
+        if constexpr (HasBindName<decltype(&x)>) {
+          x.set_isExplicitBindName(yes);
+        } else {
+          DIE("bind name not allowed on this kind of symbol");
+        }
+      },
+      details_);
+}
+
 bool Symbol::IsFuncResult() const {
   return common::visit(
       common::visitors{[](const EntityDetails &x) { return x.isFuncResult(); },

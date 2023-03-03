@@ -106,7 +106,6 @@ TEST(BasicBlockTest, TestInstructionsWithoutDebug) {
   Argument *V = new Argument(Type::getInt32Ty(Ctx));
   Function *F = Function::Create(FT, Function::ExternalLinkage, "", M);
 
-  Function *DbgAddr = Intrinsic::getDeclaration(M, Intrinsic::dbg_addr);
   Function *DbgDeclare = Intrinsic::getDeclaration(M, Intrinsic::dbg_declare);
   Function *DbgValue = Intrinsic::getDeclaration(M, Intrinsic::dbg_value);
   Value *DIV = MetadataAsValue::get(Ctx, (Metadata *)nullptr);
@@ -122,7 +121,6 @@ TEST(BasicBlockTest, TestInstructionsWithoutDebug) {
   Instruction *MulInst = cast<Instruction>(Builder1.CreateMul(AddInst, V));
   Builder1.CreateCall(DbgDeclare, Args);
   Instruction *SubInst = cast<Instruction>(Builder1.CreateSub(MulInst, V));
-  Builder1.CreateCall(DbgAddr, Args);
 
   SmallVector<Instruction *, 4> Exp = {Var, AddInst, MulInst, SubInst};
   CHECK_ITERATORS(BB1->instructionsWithoutDebug(), Exp);

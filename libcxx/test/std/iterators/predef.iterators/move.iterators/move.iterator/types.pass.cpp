@@ -16,7 +16,7 @@
 // class move_iterator {
 // public:
 //  using iterator_type     = Iterator;
-//  using iterator_concept  = input_iterator_tag; // From C++20
+//  using iterator_concept  = see below; // From C++20
 //  using iterator_category = see below; // not always present starting from C++20
 //  using value_type        = iter_value_t<Iterator>; // Until C++20, iterator_traits<Iterator>::value_type
 //  using difference_type   = iter_difference_t<Iterator>; // Until C++20, iterator_traits<Iterator>::difference_type;
@@ -99,7 +99,11 @@ void test() {
 #endif
 
 #if TEST_STD_VER > 17
-  static_assert(std::is_same_v<typename R::iterator_concept, std::input_iterator_tag>);
+  static_assert(
+      std::is_same_v<typename R::iterator_concept,
+                     std::conditional_t<std::is_same_v<typename R::iterator_concept, std::contiguous_iterator_tag>,
+                                        std::random_access_iterator_tag,
+                                        typename R::iterator_concept>>);
 #endif
 }
 
@@ -142,11 +146,11 @@ int main(int, char**) {
 
 #if TEST_STD_VER > 17
   test<contiguous_iterator<char*>>();
-  static_assert(std::is_same_v<typename std::move_iterator<forward_iterator<char*>>::iterator_concept, std::input_iterator_tag>);
-  static_assert(std::is_same_v<typename std::move_iterator<bidirectional_iterator<char*>>::iterator_concept, std::input_iterator_tag>);
-  static_assert(std::is_same_v<typename std::move_iterator<random_access_iterator<char*>>::iterator_concept, std::input_iterator_tag>);
-  static_assert(std::is_same_v<typename std::move_iterator<contiguous_iterator<char*>>::iterator_concept, std::input_iterator_tag>);
-  static_assert(std::is_same_v<typename std::move_iterator<char*>::iterator_concept, std::input_iterator_tag>);
+  static_assert(std::is_same_v<typename std::move_iterator<forward_iterator<char*>>::iterator_concept, std::forward_iterator_tag>);
+  static_assert(std::is_same_v<typename std::move_iterator<bidirectional_iterator<char*>>::iterator_concept, std::bidirectional_iterator_tag>);
+  static_assert(std::is_same_v<typename std::move_iterator<random_access_iterator<char*>>::iterator_concept, std::random_access_iterator_tag>);
+  static_assert(std::is_same_v<typename std::move_iterator<contiguous_iterator<char*>>::iterator_concept, std::random_access_iterator_tag>);
+  static_assert(std::is_same_v<typename std::move_iterator<char*>::iterator_concept, std::random_access_iterator_tag>);
 #endif
 
   return 0;

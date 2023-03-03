@@ -113,6 +113,11 @@ struct BlockInfoType {
   bool terminatorIsLive() const { return TerminatorLiveInfo->Live; }
 };
 
+struct ADCEChanged {
+  bool ChangedAnything = false;
+  bool ChangedControlFlow = false;
+};
+
 class AggressiveDeadCodeElimination {
   Function &F;
 
@@ -179,7 +184,7 @@ class AggressiveDeadCodeElimination {
 
   /// Remove instructions not marked live, return if any instruction was
   /// removed.
-  bool removeDeadInstructions();
+  ADCEChanged removeDeadInstructions();
 
   /// Identify connected sections of the control flow graph which have
   /// dead terminators and rewrite the control flow graph to remove them.
@@ -197,12 +202,12 @@ public:
                                 PostDominatorTree &PDT)
       : F(F), DT(DT), PDT(PDT) {}
 
-  bool performDeadCodeElimination();
+  ADCEChanged performDeadCodeElimination();
 };
 
 } // end anonymous namespace
 
-bool AggressiveDeadCodeElimination::performDeadCodeElimination() {
+ADCEChanged AggressiveDeadCodeElimination::performDeadCodeElimination() {
   initialize();
   markLiveInstructions();
   return removeDeadInstructions();
@@ -504,9 +509,10 @@ void AggressiveDeadCodeElimination::markLiveBranchesFromControlDependences() {
 //  Routines to update the CFG and SSA information before removing dead code.
 //
 //===----------------------------------------------------------------------===//
-bool AggressiveDeadCodeElimination::removeDeadInstructions() {
+ADCEChanged AggressiveDeadCodeElimination::removeDeadInstructions() {
+  ADCEChanged Changed;
   // Updates control and dataflow around dead blocks
-  bool RegionsUpdated = updateDeadRegions();
+  Changed.ChangedControlFlow = updateDeadRegions();
 
   LLVM_DEBUG({
     for (Instruction &I : instructions(F)) {
@@ -569,7 +575,9 @@ bool AggressiveDeadCodeElimination::removeDeadInstructions() {
     I->eraseFromParent();
   }
 
-  return !Worklist.empty() || RegionsUpdated;
+  Changed.ChangedAnything = Changed.ChangedControlFlow || !Worklist.empty();
+
+  return Changed;
 }
 
 // A dead region is the set of dead blocks with a common live post-dominator.
@@ -699,17 +707,17 @@ PreservedAnalyses ADCEPass::run(Function &F, FunctionAnalysisManager &FAM) {
   // to update analysis if it is already available.
   auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
   auto &PDT = FAM.getResult<PostDominatorTreeAnalysis>(F);
-  if (!AggressiveDeadCodeElimination(F, DT, PDT).performDeadCodeElimination())
+  ADCEChanged Changed =
+      AggressiveDeadCodeElimination(F, DT, PDT).performDeadCodeElimination();
+  if (!Changed.ChangedAnything)
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
-  // TODO: We could track if we have actually done CFG changes.
-  if (!RemoveControlFlowFlag)
+  if (!Changed.ChangedControlFlow)
     PA.preserveSet<CFGAnalyses>();
-  else {
-    PA.preserve<DominatorTreeAnalysis>();
-    PA.preserve<PostDominatorTreeAnalysis>();
-  }
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<PostDominatorTreeAnalysis>();
+
   return PA;
 }
 
@@ -731,8 +739,9 @@ struct ADCELegacyPass : public FunctionPass {
     auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
     auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
     auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
-    return AggressiveDeadCodeElimination(F, DT, PDT)
-        .performDeadCodeElimination();
+    ADCEChanged Changed =
+        AggressiveDeadCodeElimination(F, DT, PDT).performDeadCodeElimination();
+    return Changed.ChangedAnything;
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {

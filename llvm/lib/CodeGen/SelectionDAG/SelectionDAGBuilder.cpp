@@ -496,7 +496,6 @@ getCopyToParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
     return getCopyToPartsVector(DAG, DL, Val, Parts, NumParts, PartVT, V,
                                 CallConv);
 
-  unsigned PartBits = PartVT.getSizeInBits();
   unsigned OrigNumParts = NumParts;
   assert(DAG.getTargetLoweringInfo().isTypeLegal(PartVT) &&
          "Copying to an illegal type!");
@@ -512,6 +511,7 @@ getCopyToParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
     return;
   }
 
+  unsigned PartBits = PartVT.getSizeInBits();
   if (NumParts * PartBits > ValueVT.getSizeInBits()) {
     // If the parts cover more bits than the value has, promote the value.
     if (PartVT.isFloatingPoint() && ValueVT.isFloatingPoint()) {
@@ -6086,13 +6086,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     DAG.setRoot(Res.getValue(1));
     return;
   }
-  case Intrinsic::dbg_addr:
   case Intrinsic::dbg_declare: {
-    // Debug intrinsics are handled seperately in assignment tracking mode.
+    // Debug intrinsics are handled separately in assignment tracking mode.
     if (isAssignmentTrackingEnabled(*I.getFunction()->getParent()))
       return;
-    // Assume dbg.addr and dbg.declare can not currently use DIArgList, i.e.
-    // they are non-variadic.
+    // Assume dbg.declare can not currently use DIArgList, i.e.
+    // it is non-variadic.
     const auto &DI = cast<DbgVariableIntrinsic>(I);
     assert(!DI.hasArgList() && "Only dbg.value should currently use DIArgList");
     DILocalVariable *Variable = DI.getVariable();
@@ -6127,19 +6126,11 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       FI = FuncInfo.getArgumentFrameIndex(Arg);
     }
 
-    // llvm.dbg.addr is control dependent and always generates indirect
-    // DBG_VALUE instructions. llvm.dbg.declare is handled as a frame index in
-    // the MachineFunction variable table.
+    // llvm.dbg.declare is handled as a frame index in the MachineFunction
+    // variable table.
     if (FI != std::numeric_limits<int>::max()) {
-      if (Intrinsic == Intrinsic::dbg_addr) {
-        SDDbgValue *SDV = DAG.getFrameIndexDbgValue(
-            Variable, Expression, FI, getRoot().getNode(), /*IsIndirect*/ true,
-            dl, SDNodeOrder);
-        DAG.AddDbgValue(SDV, isParameter);
-      } else {
-        LLVM_DEBUG(dbgs() << "Skipping " << DI
-                          << " (variable info stashed in MF side table)\n");
-      }
+      LLVM_DEBUG(dbgs() << "Skipping " << DI
+                        << " (variable info stashed in MF side table)\n");
       return;
     }
 

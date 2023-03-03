@@ -10260,81 +10260,70 @@ entry:
 define <8 x i64> @concat_smin_smax(<4 x i64> %a0, <4 x i64> %a1) {
 ; SSE2-LABEL: concat_smin_smax:
 ; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [2147483648,2147483648]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm4
-; SSE2-NEXT:    movdqa {{.*#+}} xmm7 = [2147483648,2147483648]
-; SSE2-NEXT:    movdqa %xmm0, %xmm6
-; SSE2-NEXT:    pxor %xmm7, %xmm6
-; SSE2-NEXT:    movdqa %xmm2, %xmm8
-; SSE2-NEXT:    pxor %xmm7, %xmm8
-; SSE2-NEXT:    movdqa %xmm8, %xmm0
-; SSE2-NEXT:    pcmpgtd %xmm6, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm0[0,0,2,2]
-; SSE2-NEXT:    movdqa %xmm8, %xmm9
-; SSE2-NEXT:    pcmpeqd %xmm6, %xmm9
-; SSE2-NEXT:    pshufd {{.*#+}} xmm10 = xmm9[1,1,3,3]
-; SSE2-NEXT:    pand %xmm10, %xmm5
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE2-NEXT:    por %xmm5, %xmm0
-; SSE2-NEXT:    movdqa %xmm4, %xmm5
-; SSE2-NEXT:    pand %xmm0, %xmm5
-; SSE2-NEXT:    pandn %xmm2, %xmm0
-; SSE2-NEXT:    por %xmm5, %xmm0
-; SSE2-NEXT:    movdqa %xmm1, %xmm9
-; SSE2-NEXT:    pxor %xmm7, %xmm9
-; SSE2-NEXT:    pxor %xmm3, %xmm7
-; SSE2-NEXT:    movdqa %xmm7, %xmm5
-; SSE2-NEXT:    pcmpgtd %xmm9, %xmm5
-; SSE2-NEXT:    pshufd {{.*#+}} xmm11 = xmm5[0,0,2,2]
-; SSE2-NEXT:    movdqa %xmm7, %xmm12
-; SSE2-NEXT:    pcmpeqd %xmm9, %xmm12
-; SSE2-NEXT:    pshufd {{.*#+}} xmm12 = xmm12[1,1,3,3]
-; SSE2-NEXT:    pand %xmm12, %xmm11
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[1,1,3,3]
-; SSE2-NEXT:    por %xmm11, %xmm5
-; SSE2-NEXT:    movdqa %xmm1, %xmm11
-; SSE2-NEXT:    pand %xmm5, %xmm11
-; SSE2-NEXT:    pandn %xmm3, %xmm5
-; SSE2-NEXT:    por %xmm11, %xmm5
-; SSE2-NEXT:    pcmpgtd %xmm8, %xmm6
-; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm6[0,0,2,2]
-; SSE2-NEXT:    pand %xmm10, %xmm8
+; SSE2-NEXT:    pxor %xmm6, %xmm4
+; SSE2-NEXT:    movdqa %xmm2, %xmm5
+; SSE2-NEXT:    pxor %xmm6, %xmm5
+; SSE2-NEXT:    movdqa %xmm5, %xmm7
+; SSE2-NEXT:    pcmpgtd %xmm4, %xmm7
+; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm7[0,0,2,2]
+; SSE2-NEXT:    pcmpeqd %xmm4, %xmm5
+; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm5[1,1,3,3]
+; SSE2-NEXT:    pand %xmm8, %xmm4
+; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm7[1,1,3,3]
+; SSE2-NEXT:    por %xmm4, %xmm5
+; SSE2-NEXT:    movdqa %xmm5, %xmm7
+; SSE2-NEXT:    pandn %xmm2, %xmm7
+; SSE2-NEXT:    movdqa %xmm0, %xmm4
+; SSE2-NEXT:    pand %xmm5, %xmm4
+; SSE2-NEXT:    por %xmm7, %xmm4
+; SSE2-NEXT:    movdqa %xmm1, %xmm7
+; SSE2-NEXT:    pxor %xmm6, %xmm7
+; SSE2-NEXT:    pxor %xmm3, %xmm6
+; SSE2-NEXT:    movdqa %xmm6, %xmm8
+; SSE2-NEXT:    pcmpgtd %xmm7, %xmm8
+; SSE2-NEXT:    pshufd {{.*#+}} xmm9 = xmm8[0,0,2,2]
+; SSE2-NEXT:    pcmpeqd %xmm7, %xmm6
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[1,1,3,3]
-; SSE2-NEXT:    por %xmm8, %xmm6
-; SSE2-NEXT:    pand %xmm6, %xmm4
-; SSE2-NEXT:    pandn %xmm2, %xmm6
-; SSE2-NEXT:    por %xmm4, %xmm6
-; SSE2-NEXT:    pcmpgtd %xmm7, %xmm9
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm9[0,0,2,2]
-; SSE2-NEXT:    pand %xmm12, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm9[1,1,3,3]
-; SSE2-NEXT:    por %xmm2, %xmm4
-; SSE2-NEXT:    pand %xmm4, %xmm1
-; SSE2-NEXT:    pandn %xmm3, %xmm4
-; SSE2-NEXT:    por %xmm1, %xmm4
-; SSE2-NEXT:    movdqa %xmm5, %xmm1
-; SSE2-NEXT:    movdqa %xmm6, %xmm2
-; SSE2-NEXT:    movdqa %xmm4, %xmm3
+; SSE2-NEXT:    pand %xmm9, %xmm6
+; SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm8[1,1,3,3]
+; SSE2-NEXT:    por %xmm6, %xmm7
+; SSE2-NEXT:    movdqa %xmm7, %xmm6
+; SSE2-NEXT:    pandn %xmm3, %xmm6
+; SSE2-NEXT:    movdqa %xmm7, %xmm8
+; SSE2-NEXT:    pandn %xmm1, %xmm8
+; SSE2-NEXT:    pand %xmm7, %xmm1
+; SSE2-NEXT:    por %xmm6, %xmm1
+; SSE2-NEXT:    pand %xmm5, %xmm2
+; SSE2-NEXT:    pandn %xmm0, %xmm5
+; SSE2-NEXT:    por %xmm5, %xmm2
+; SSE2-NEXT:    pand %xmm7, %xmm3
+; SSE2-NEXT:    por %xmm8, %xmm3
+; SSE2-NEXT:    movdqa %xmm4, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: concat_smin_smax:
 ; SSE4:       # %bb.0:
-; SSE4-NEXT:    movdqa %xmm0, %xmm4
+; SSE4-NEXT:    movdqa %xmm1, %xmm4
 ; SSE4-NEXT:    movdqa %xmm0, %xmm5
-; SSE4-NEXT:    pcmpgtq %xmm2, %xmm5
-; SSE4-NEXT:    movdqa %xmm0, %xmm6
-; SSE4-NEXT:    movdqa %xmm5, %xmm0
-; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm6
-; SSE4-NEXT:    movdqa %xmm1, %xmm7
-; SSE4-NEXT:    pcmpgtq %xmm3, %xmm7
-; SSE4-NEXT:    movdqa %xmm1, %xmm8
+; SSE4-NEXT:    movdqa %xmm2, %xmm8
+; SSE4-NEXT:    pcmpgtq %xmm0, %xmm8
+; SSE4-NEXT:    movdqa %xmm2, %xmm6
+; SSE4-NEXT:    movdqa %xmm8, %xmm0
+; SSE4-NEXT:    blendvpd %xmm0, %xmm5, %xmm6
+; SSE4-NEXT:    movdqa %xmm3, %xmm7
+; SSE4-NEXT:    pcmpgtq %xmm1, %xmm7
+; SSE4-NEXT:    movdqa %xmm3, %xmm1
 ; SSE4-NEXT:    movdqa %xmm7, %xmm0
-; SSE4-NEXT:    blendvpd %xmm0, %xmm3, %xmm8
-; SSE4-NEXT:    movdqa %xmm5, %xmm0
-; SSE4-NEXT:    blendvpd %xmm0, %xmm4, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm4, %xmm1
+; SSE4-NEXT:    movdqa %xmm8, %xmm0
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm5
 ; SSE4-NEXT:    movdqa %xmm7, %xmm0
-; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm3
+; SSE4-NEXT:    blendvpd %xmm0, %xmm3, %xmm4
 ; SSE4-NEXT:    movapd %xmm6, %xmm0
-; SSE4-NEXT:    movapd %xmm8, %xmm1
+; SSE4-NEXT:    movapd %xmm5, %xmm2
+; SSE4-NEXT:    movapd %xmm4, %xmm3
 ; SSE4-NEXT:    retq
 ;
 ; AVX1-LABEL: concat_smin_smax:

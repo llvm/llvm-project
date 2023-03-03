@@ -2512,6 +2512,9 @@ let Predicates = [HasSVEorSME] in {
     def : Pat<(nxv8f16 (bitconvert (nxv8bf16 ZPR:$src))), (nxv8f16 ZPR:$src)>;
     def : Pat<(nxv4f32 (bitconvert (nxv8bf16 ZPR:$src))), (nxv4f32 ZPR:$src)>;
     def : Pat<(nxv2f64 (bitconvert (nxv8bf16 ZPR:$src))), (nxv2f64 ZPR:$src)>;
+
+    def : Pat<(nxv16i1 (bitconvert (aarch64svcount PPR:$src))), (nxv16i1 PPR:$src)>;
+    def : Pat<(aarch64svcount (bitconvert (nxv16i1 PPR:$src))), (aarch64svcount PPR:$src)>;
   }
 
   // These allow casting from/to unpacked predicate types.

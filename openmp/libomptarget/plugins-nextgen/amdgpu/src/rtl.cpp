@@ -2634,7 +2634,7 @@ Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
   // TODO set correctly once host services available
   auto HostCallRequired = false;
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, GenericDevice.getDeviceId(),
-       "SGN:%s ConstWGSize:%d args:%d teamsXthrds:(%4dX%4d) "
+       "SGN:%s ConstWGSize:%d args:%d teamsXthrds:(%4luX%4d) "
        "reqd:(%4dX%4d) lds_usage:%uB sgpr_count:%u vgpr_count:%u "
        "sgpr_spill_count:%u vgpr_spill_count:%u tripcount:%lu rpc:%d n:%s\n",
        getExecutionModeName(), ConstWGSize, ArgNum, NumGroups, ThreadsPerGroup,

@@ -73,8 +73,7 @@ void llvm::GenericUniformityAnalysisImpl<SSAContext>::pushUsers(
 template <>
 bool llvm::GenericUniformityAnalysisImpl<SSAContext>::usesValueFromCycle(
     const Instruction &I, const Cycle &DefCycle) const {
-  if (isAlwaysUniform(I))
-    return false;
+  assert(!isAlwaysUniform(I));
   for (const Use &U : I.operands()) {
     if (auto *I = dyn_cast<Instruction>(&U)) {
       if (DefCycle.contains(I->getParent()))

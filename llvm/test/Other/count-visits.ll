@@ -2,8 +2,8 @@
 ; RUN: opt -passes=count-visits -stats 2>&1 -disable-output < %s | FileCheck %s --check-prefix=ONE
 ; RUN: opt -passes='cgscc(count-visits)' -stats 2>&1 -disable-output < %s | FileCheck %s --check-prefix=ONE
 ; RUN: opt -passes='cgscc(count-visits,instcombine)' -stats 2>&1 -disable-output < %s | FileCheck %s --check-prefix=TWO
-; RUN: opt -passes='default<O1>' -count-cgscc-max-visits -stats 2>&1 -disable-output < %s | FileCheck %s --check-prefix=PIPELINE
-; RUN: opt -passes='default<O3>' -count-cgscc-max-visits -stats 2>&1 -disable-output < %s | FileCheck %s --check-prefix=PIPELINE
+; RUN: opt -passes='default<O1>' -stats 2>&1 -disable-output < %s | FileCheck %s --check-prefix=PIPELINE
+; RUN: opt -passes='default<O3>' -stats 2>&1 -disable-output < %s | FileCheck %s --check-prefix=PIPELINE
 
 ; ONE: 1 count-visits - Max number of times we visited a function
 ; TWO: 2 count-visits - Max number of times we visited a function

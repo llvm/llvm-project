@@ -4,6 +4,7 @@
 // RUN:         {key: bugprone-exception-escape.FunctionsThatShouldNotThrow, value: 'enabled1,enabled2,enabled3'} \
 // RUN:     ]}" \
 // RUN:     -- -fexceptions
+// FIXME: Fix the checker to work in C++17 or later mode.
 
 struct throwing_destructor {
   ~throwing_destructor() {
