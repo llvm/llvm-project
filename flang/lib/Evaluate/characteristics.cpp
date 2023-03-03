@@ -1089,8 +1089,11 @@ bool Procedure::CanOverride(
     return false;
   }
   for (int j{0}; j < argCount; ++j) {
-    if ((!passIndex || j != *passIndex) &&
-        dummyArguments[j] != that.dummyArguments[j]) {
+    if (passIndex && j == *passIndex) {
+      if (!that.dummyArguments[j].IsCompatibleWith(dummyArguments[j])) {
+        return false;
+      }
+    } else if (dummyArguments[j] != that.dummyArguments[j]) {
       return false;
     }
   }
