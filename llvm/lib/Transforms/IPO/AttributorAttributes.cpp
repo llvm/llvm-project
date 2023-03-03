@@ -10234,6 +10234,33 @@ struct AANoFPClassImpl : AANoFPClass {
     }
   }
 
+  /// See followUsesInMBEC
+  bool followUseInMBEC(Attributor &A, const Use *U, const Instruction *I,
+                       AANoFPClass::StateType &State) {
+    const Value *UseV = U->get();
+    const DominatorTree *DT = nullptr;
+    AssumptionCache *AC = nullptr;
+    const TargetLibraryInfo *TLI = nullptr;
+    InformationCache &InfoCache = A.getInfoCache();
+
+    if (Function *F = getAnchorScope()) {
+      DT = InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(*F);
+      AC = InfoCache.getAnalysisResultForFunction<AssumptionAnalysis>(*F);
+      TLI = InfoCache.getTargetLibraryInfoForFunction(*F);
+    }
+
+    const DataLayout &DL = A.getDataLayout();
+
+    KnownFPClass KnownFPClass =
+        computeKnownFPClass(UseV, DL,
+                            /*InterestedClasses=*/fcAllFlags,
+                            /*Depth=*/0, TLI, AC, I, DT);
+    State.addKnownBits(~KnownFPClass.KnownFPClasses);
+
+    bool TrackUse = false;
+    return TrackUse;
+  }
+
   const std::string getAsStr() const override {
     std::string Result = "nofpclass";
     raw_string_ostream OS(Result);
@@ -10251,9 +10278,39 @@ struct AANoFPClassFloating : public AANoFPClassImpl {
   AANoFPClassFloating(const IRPosition &IRP, Attributor &A)
       : AANoFPClassImpl(IRP, A) {}
 
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    AANoFPClassImpl::initialize(A);
+  }
+
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
-    return indicatePessimisticFixpoint();
+    SmallVector<AA::ValueAndContext> Values;
+    bool UsedAssumedInformation = false;
+    if (!A.getAssumedSimplifiedValues(getIRPosition(), *this, Values,
+                                      AA::AnyScope, UsedAssumedInformation)) {
+      Values.push_back({getAssociatedValue(), getCtxI()});
+    }
+
+    StateType T;
+    auto VisitValueCB = [&](Value &V, const Instruction *CtxI) -> bool {
+      const auto &AA = A.getAAFor<AANoFPClass>(*this, IRPosition::value(V),
+                                               DepClassTy::REQUIRED);
+      if (this == &AA) {
+        T.indicatePessimisticFixpoint();
+      } else {
+        const AANoFPClass::StateType &S =
+            static_cast<const AANoFPClass::StateType &>(AA.getState());
+        T ^= S;
+      }
+      return T.isValidState();
+    };
+
+    for (const auto &VAC : Values)
+      if (!VisitValueCB(*VAC.getValue(), VAC.getCtxI()))
+        return indicatePessimisticFixpoint();
+
+    return clampStateAndIndicateChange(getState(), T);
   }
 
   /// See AbstractAttribute::trackStatistics()

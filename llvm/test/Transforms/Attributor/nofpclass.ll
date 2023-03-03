@@ -167,7 +167,7 @@ define void @arg_used_by_nofpclass_nan_callsite(float %arg) {
 define void @ninf_arg_used_by_nofpclass_nan_callsite(float nofpclass(inf) %arg) {
 ; CHECK-LABEL: define void @ninf_arg_used_by_nofpclass_nan_callsite
 ; CHECK-SAME: (float nofpclass(inf) [[ARG:%.*]]) {
-; CHECK-NEXT:    call void @extern.use(float nofpclass(nan) [[ARG]])
+; CHECK-NEXT:    call void @extern.use(float nofpclass(nan inf) [[ARG]])
 ; CHECK-NEXT:    ret void
 ;
   call void @extern.use(float nofpclass(nan) %arg)
@@ -260,7 +260,7 @@ define float @fcmp_uno_check(float %arg) local_unnamed_addr {
 ; CHECK-NEXT:    [[ISNAN:%.*]] = fcmp uno float [[ARG]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[ISNAN]], label [[BB0:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb0:
-; CHECK-NEXT:    [[CALL:%.*]] = call float @ret_nofpclass_nan()
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @ret_nofpclass_nan()
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi float [ [[CALL]], [[BB0]] ], [ [[ARG]], [[ENTRY:%.*]] ]
