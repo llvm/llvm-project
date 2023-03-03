@@ -10232,6 +10232,9 @@ struct AANoFPClassImpl : AANoFPClass {
       KnownFPClass KnownFPClass = computeKnownFPClass(&V, DL);
       addKnownBits(~KnownFPClass.KnownFPClasses);
     }
+
+    if (Instruction *CtxI = getCtxI())
+      followUsesInMBEC(*this, A, getState(), *CtxI);
   }
 
   /// See followUsesInMBEC

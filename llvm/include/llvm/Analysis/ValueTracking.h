@@ -219,9 +219,16 @@ Intrinsic::ID getIntrinsicForCallSite(const CallBase &CB,
 
 /// Returns a pair of values, which if passed to llvm.is.fpclass, returns the
 /// same result as an fcmp with the given operands.
+///
+/// If \p LookThroughSrc is true, consider the input value when computing the
+/// mask.
+///
+/// If \p LookThroughSrc is false, ignore the source value (i.e. the first pair
+/// element will always be LHS.
 std::pair<Value *, FPClassTest> fcmpToClassTest(CmpInst::Predicate Pred,
-                                                const Function &F,
-                                                Value *LHS, Value *RHS);
+                                                const Function &F, Value *LHS,
+                                                Value *RHS,
+                                                bool LookThroughSrc = true);
 
 struct KnownFPClass {
   /// Floating-point classes the value could be one of.
