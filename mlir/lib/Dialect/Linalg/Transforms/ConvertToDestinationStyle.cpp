@@ -367,46 +367,18 @@ Value linalg::bufferizeToAllocation(RewriterBase &rewriter, Value value,
 }
 
 namespace {
-/// Lower tensor.from_elements to a sequence of chained tensor.insert.
-struct FromElementsOpConverter : public OpRewritePattern<FromElementsOp> {
-  using OpRewritePattern<FromElementsOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(FromElementsOp fromElementsOp,
-                                PatternRewriter &rewriter) const override {
-    if (failed(
-            linalg::rewriteInDestinationPassingStyle(rewriter, fromElementsOp)))
-      return failure();
-    return success();
-  }
-};
+template <typename OpTy>
+LogicalResult rewriteOpInDestinationPassingStyle(OpTy op,
+                                                 PatternRewriter &rewriter) {
+  return linalg::rewriteInDestinationPassingStyle(rewriter, op);
+}
 
-/// Lower tensor.generate to linalg.generic.
-struct GenerateOpConverter : public OpRewritePattern<GenerateOp> {
-  using OpRewritePattern<GenerateOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(GenerateOp generateOp,
-                                PatternRewriter &rewriter) const override {
-    if (failed(linalg::rewriteInDestinationPassingStyle(rewriter, generateOp)))
-      return failure();
-    return success();
-  }
-};
-
-/// Lower tensor.pad to linalg.generic + tensor.insert_slice.
-struct PadOpConverter : public OpRewritePattern<PadOp> {
-  using OpRewritePattern<PadOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(PadOp padOp,
-                                PatternRewriter &rewriter) const override {
-    if (failed(linalg::rewriteInDestinationPassingStyle(rewriter, padOp)))
-      return failure();
-    return success();
-  }
-};
 } // namespace
 
 void linalg::populateConvertToDestinationStylePatterns(
     RewritePatternSet &patterns) {
-  patterns.insert<FromElementsOpConverter, GenerateOpConverter, PadOpConverter>(
-      patterns.getContext());
+  patterns.add(rewriteOpInDestinationPassingStyle<tensor::FromElementsOp>);
+  patterns.add(rewriteOpInDestinationPassingStyle<tensor::GenerateOp>);
+  patterns.add(rewriteOpInDestinationPassingStyle<tensor::PadOp>);
 }
