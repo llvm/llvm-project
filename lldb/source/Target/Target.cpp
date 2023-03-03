@@ -3079,6 +3079,17 @@ bool Target::SetSectionUnloaded(const lldb::SectionSP &section_sp,
 
 void Target::ClearAllLoadedSections() { m_section_load_history.Clear(); }
 
+void Target::SaveScriptedLaunchInfo(lldb_private::ProcessInfo &process_info) {
+  if (process_info.IsScriptedProcess()) {
+    // Only copy scripted process launch options.
+    ProcessLaunchInfo &default_launch_info = const_cast<ProcessLaunchInfo &>(
+        GetGlobalProperties().GetProcessLaunchInfo());
+    default_launch_info.SetProcessPluginName("ScriptedProcess");
+    default_launch_info.SetScriptedMetadata(process_info.GetScriptedMetadata());
+    SetProcessLaunchInfo(default_launch_info);
+  }
+}
+
 Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
   m_stats.SetLaunchOrAttachTime();
   Status error;
@@ -3108,19 +3119,7 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
 
   launch_info.GetFlags().Set(eLaunchFlagDebug);
 
-  if (launch_info.IsScriptedProcess()) {
-    // Only copy scripted process launch options.
-    ProcessLaunchInfo &default_launch_info = const_cast<ProcessLaunchInfo &>(
-        GetGlobalProperties().GetProcessLaunchInfo());
-
-    default_launch_info.SetProcessPluginName("ScriptedProcess");
-    default_launch_info.SetScriptedProcessClassName(
-        launch_info.GetScriptedProcessClassName());
-    default_launch_info.SetScriptedProcessDictionarySP(
-        launch_info.GetScriptedProcessDictionarySP());
-
-    SetProcessLaunchInfo(launch_info);
-  }
+  SaveScriptedLaunchInfo(launch_info);
 
   // Get the value of synchronous execution here.  If you wait till after you
   // have started to run, then you could have hit a breakpoint, whose command
@@ -3333,11 +3332,12 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
 
   Status error;
   if (state != eStateConnected && platform_sp != nullptr &&
-      platform_sp->CanDebugProcess()) {
+      platform_sp->CanDebugProcess() && !attach_info.IsScriptedProcess()) {
     SetPlatform(platform_sp);
     process_sp = platform_sp->Attach(attach_info, GetDebugger(), this, error);
   } else {
     if (state != eStateConnected) {
+      SaveScriptedLaunchInfo(attach_info);
       const char *plugin_name = attach_info.GetProcessPluginName();
       process_sp =
           CreateProcess(attach_info.GetListenerForProcess(GetDebugger()),
