@@ -1110,6 +1110,7 @@ public:
   };
 
   LValue MakeNaturalAlignPointeeAddrLValue(mlir::Value V, clang::QualType T);
+  LValue MakeNaturalAlignAddrLValue(mlir::Value V, QualType T);
 
   /// Load the value for 'this'. This function is only valid while generating
   /// code for an C++ member function.
@@ -1152,7 +1153,8 @@ public:
   /// will return the address of the reference and not the address of the value
   /// stored in the reference.
   LValue buildLValueForFieldInitialization(LValue Base,
-                                           const clang::FieldDecl *Field);
+                                           const clang::FieldDecl *Field,
+                                           llvm::StringRef FieldName);
 
   void buildInitializerForField(clang::FieldDecl *Field, LValue LHS,
                                 clang::Expr *Init);

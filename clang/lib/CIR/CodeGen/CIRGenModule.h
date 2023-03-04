@@ -149,6 +149,12 @@ public:
   /// that we don't re-emit the initializer.
   llvm::DenseMap<const Decl *, unsigned> DelayedCXXInitPosition;
 
+  /// Keep track of a map between lambda fields and names, this needs to be per
+  /// module since lambdas might get generated later as part of defered work,
+  /// and since the pointers are supposed to be uniqued, should be fine. Revisit
+  /// this if it ends up taking too much memory.
+  llvm::DenseMap<const clang::FieldDecl *, llvm::StringRef> LambdaFieldToName;
+
   /// If the declaration has internal linkage but is inside an
   /// extern "C" linkage specification, prepare to emit an alias for it
   /// to the expected name.

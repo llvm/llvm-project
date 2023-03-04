@@ -126,6 +126,8 @@ public:
 
   mlir::Value getBitcast(mlir::Location loc, mlir::Value src,
                          mlir::Type newTy) {
+    if (newTy == src.getType())
+      return src;
     return create<mlir::cir::CastOp>(loc, newTy, mlir::cir::CastKind::bitcast,
                                      src);
   }

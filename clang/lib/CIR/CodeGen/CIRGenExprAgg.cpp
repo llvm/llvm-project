@@ -215,9 +215,8 @@ void AggExprEmitter::EmitInitializationToLValue(Expr *E, LValue LV) {
     // Do nothing.
     return;
   } else if (type->isReferenceType()) {
-    llvm_unreachable("NYI");
-    // RValue RV = CGF.EmitReferenceBindingToExpr(E);
-    // return CGF.EmitStoreThroughLValue(RV, LV);
+    RValue RV = CGF.buildReferenceBindingToExpr(E);
+    return CGF.buildStoreThroughLValue(RV, LV);
   }
 
   switch (CGF.getEvaluationKind(type)) {
@@ -291,23 +290,38 @@ void AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
     llvm_unreachable("NYI");
   mlir::Operation *CleanupDominator = nullptr;
 
-  CXXRecordDecl::field_iterator CurField = E->getLambdaClass()->field_begin();
-  for (LambdaExpr::const_capture_init_iterator i = E->capture_init_begin(),
-                                               e = E->capture_init_end();
-       i != e; ++i, ++CurField) {
+  auto CurField = E->getLambdaClass()->field_begin();
+  auto captureInfo = E->capture_begin();
+  for (auto &captureInit : E->capture_inits()) {
+    // Pick a name for the field.
+    llvm::StringRef fieldName = CurField->getName();
+    const LambdaCapture &capture = *captureInfo;
+    if (capture.capturesVariable()) {
+      assert(!CurField->isBitField() && "lambdas don't have bitfield members!");
+      ValueDecl *v = capture.getCapturedVar();
+      fieldName = v->getName();
+      CGF.getCIRGenModule().LambdaFieldToName[*CurField] = fieldName;
+    } else {
+      llvm_unreachable("NYI");
+    }
+
     // Emit initialization
-    LValue LV = CGF.buildLValueForFieldInitialization(SlotLV, *CurField);
+    LValue LV =
+        CGF.buildLValueForFieldInitialization(SlotLV, *CurField, fieldName);
     if (CurField->hasCapturedVLAType()) {
       llvm_unreachable("NYI");
     }
 
-    EmitInitializationToLValue(*i, LV);
+    EmitInitializationToLValue(captureInit, LV);
 
     // Push a destructor if necessary.
     if (QualType::DestructionKind DtorKind =
             CurField->getType().isDestructedType()) {
       llvm_unreachable("NYI");
     }
+
+    CurField++;
+    captureInfo++;
   }
 
   // Deactivate all the partial cleanups in reverse order, which generally means
