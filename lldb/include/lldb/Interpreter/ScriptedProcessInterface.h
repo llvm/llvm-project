@@ -54,6 +54,12 @@ public:
     return {};
   }
 
+  virtual size_t WriteMemoryAtAddress(lldb::addr_t addr,
+                                      lldb::DataExtractorSP data_sp,
+                                      Status &error) {
+    return LLDB_INVALID_OFFSET;
+  };
+
   virtual StructuredData::ArraySP GetLoadedImages() { return {}; }
 
   virtual lldb::pid_t GetProcessID() { return LLDB_INVALID_PROCESS_ID; }

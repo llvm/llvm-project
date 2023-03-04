@@ -78,6 +78,7 @@ PythonObject ToSWIGWrapper(const SymbolContext &sym_ctx);
 
 PythonObject ToSWIGWrapper(lldb::ProcessAttachInfoSP attach_info_sp);
 PythonObject ToSWIGWrapper(lldb::ProcessLaunchInfoSP launch_info_sp);
+PythonObject ToSWIGWrapper(lldb::DataExtractorSP data_extractor_sp);
 
 PythonObject ToSWIGWrapper(std::unique_ptr<lldb::SBValue> value_sb);
 PythonObject ToSWIGWrapper(std::unique_ptr<lldb::SBStream> stream_sb);

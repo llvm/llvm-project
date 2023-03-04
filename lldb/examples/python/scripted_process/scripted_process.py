@@ -98,6 +98,21 @@ class ScriptedProcess(metaclass=ABCMeta):
         """
         pass
 
+    def write_memory_at_address(self, addr, data, error):
+        """ Write a buffer to the scripted process memory.
+
+        Args:
+            addr (int): Address from which we should start reading.
+            data (lldb.SBData): An `lldb.SBData` buffer to write to the
+                process memory.
+            error (lldb.SBError): Error object.
+
+        Returns:
+            size (int): Size of the memory to read.
+        """
+        error.SetErrorString("%s doesn't support memory writes." % self.__class__.__name__)
+        return 0
+
     def get_loaded_images(self):
         """ Get the list of loaded images for the scripted process.
 

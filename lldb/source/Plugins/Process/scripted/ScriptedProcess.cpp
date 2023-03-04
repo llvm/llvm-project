@@ -255,7 +255,31 @@ size_t ScriptedProcess::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
     return ScriptedInterface::ErrorWithMessage<size_t>(
         LLVM_PRETTY_FUNCTION, "Failed to copy read memory to buffer.", error);
 
-  return size;
+  // FIXME: We should use the diagnostic system to report a warning if the
+  // `bytes_copied` is different from `size`.
+
+  return bytes_copied;
+}
+
+size_t ScriptedProcess::DoWriteMemory(lldb::addr_t vm_addr, const void *buf,
+                                      size_t size, Status &error) {
+  lldb::DataExtractorSP data_extractor_sp = std::make_shared<DataExtractor>(
+      buf, size, GetByteOrder(), GetAddressByteSize());
+
+  if (!data_extractor_sp || !data_extractor_sp->GetByteSize())
+    return 0;
+
+  size_t bytes_written =
+      GetInterface().WriteMemoryAtAddress(vm_addr, data_extractor_sp, error);
+
+  if (!bytes_written || bytes_written == LLDB_INVALID_OFFSET)
+    return ScriptedInterface::ErrorWithMessage<size_t>(
+        LLVM_PRETTY_FUNCTION, "Failed to copy write buffer to memory.", error);
+
+  // FIXME: We should use the diagnostic system to report a warning if the
+  // `bytes_written` is different from `size`.
+
+  return bytes_written;
 }
 
 ArchSpec ScriptedProcess::GetArchitecture() {
