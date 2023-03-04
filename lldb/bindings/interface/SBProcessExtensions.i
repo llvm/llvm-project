@@ -2,6 +2,18 @@ STRING_EXTENSION_OUTSIDE(SBProcess)
 %extend lldb::SBProcess {
 #ifdef SWIGPYTHON
     %pythoncode %{
+        def WriteMemoryAsCString(self, addr, str, error):
+            '''
+              WriteMemoryAsCString(self, addr, str, error):
+                This functions the same as `WriteMemory` except a null-terminator is appended
+                to the end of the buffer if it is not there already.
+            '''
+            if not str or len(str) == 0:
+                return 0
+            if not str[-1] == '\0':
+                str += '\0'
+            return self.WriteMemory(addr, str, error)
+
         def __get_is_alive__(self):
             '''Returns "True" if the process is currently alive, "False" otherwise'''
             s = self.GetState()
