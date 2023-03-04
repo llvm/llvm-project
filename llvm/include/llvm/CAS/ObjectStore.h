@@ -330,8 +330,6 @@ private:
   ObjectHandle H;
 };
 
-
-
 std::unique_ptr<ObjectStore> createInMemoryCAS();
 
 /// \returns true if \c LLVM_ENABLE_ONDISK_CAS configuration was enabled.
@@ -380,6 +378,15 @@ Expected<std::unique_ptr<ObjectStore>> createCASFromIdentifier(StringRef Path);
 using ObjectStoreCreateFuncTy =
     Expected<std::unique_ptr<ObjectStore>>(const Twine &);
 void registerCASURLScheme(StringRef Prefix, ObjectStoreCreateFuncTy *Func);
+
+class ActionCache;
+
+/// Create \c ObjectStore and \c ActionCache instances using the plugin
+/// interface.
+Expected<std::pair<std::unique_ptr<ObjectStore>, std::unique_ptr<ActionCache>>>
+createPluginCASDatabases(
+    StringRef PluginPath, StringRef OnDiskPath,
+    ArrayRef<std::pair<std::string, std::string>> PluginArgs);
 
 } // namespace cas
 } // namespace llvm

@@ -21,7 +21,7 @@ using namespace llvm::cas::builtin;
 static StringRef getCASIDPrefix() { return "llvmcas://"; }
 void BuiltinCASContext::anchor() {}
 
-Expected<CASID> BuiltinCAS::parseID(StringRef Reference) {
+Expected<HashType> BuiltinCASContext::parseID(StringRef Reference) {
   if (!Reference.consume_front(getCASIDPrefix()))
     return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "invalid cas-id '" + Reference + "'");
@@ -36,13 +36,28 @@ Expected<CASID> BuiltinCAS::parseID(StringRef Reference) {
     return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "invalid hash in cas-id '" + Reference + "'");
 
-  return CASID::create(&getContext(), Binary);
+  assert(Binary.size() == sizeof(HashType));
+  HashType Digest;
+  llvm::copy(Binary, Digest.data());
+  return Digest;
+}
+
+Expected<CASID> BuiltinCAS::parseID(StringRef Reference) {
+  Expected<HashType> Digest = BuiltinCASContext::parseID(Reference);
+  if (!Digest)
+    return Digest.takeError();
+
+  return CASID::create(&getContext(), toStringRef(*Digest));
+}
+
+void BuiltinCASContext::printID(ArrayRef<uint8_t> Digest, raw_ostream &OS) {
+  SmallString<64> Hash;
+  toHex(Digest, /*LowerCase=*/true, Hash);
+  OS << getCASIDPrefix() << Hash;
 }
 
 void BuiltinCASContext::printIDImpl(raw_ostream &OS, const CASID &ID) const {
-  SmallString<64> Hash;
-  toHex(ID.getHash(), /*LowerCase=*/true, Hash);
-  OS << getCASIDPrefix() << Hash;
+  BuiltinCASContext::printID(ID.getHash(), OS);
 }
 
 const BuiltinCASContext &BuiltinCASContext::getDefaultContext() {

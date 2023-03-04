@@ -6774,6 +6774,16 @@ def fcas_path : Separate<["-"], "fcas-path">,
              " '-fcas-path=auto' chooses a path in the user's system cache.">,
     MarshallingInfoString<CASOpts<"CASPath">>;
 
+def fcas_plugin_path : Separate<["-"], "fcas-plugin-path">,
+    Group<f_Group>, MetaVarName<"<pathname>">,
+    HelpText<"Path to a shared library implementing the LLVM CAS plugin API.">,
+    MarshallingInfoString<CASOpts<"PluginPath">>;
+
+def fcas_plugin_option : Separate<["-"], "fcas-plugin-option">,
+    Group<f_Group>, MetaVarName<"<name>=<value>">,
+    HelpText<"Option to pass to the CAS plugin.">,
+    MarshallingInfoStringPairVector<CASOpts<"PluginOptions">>;
+
 // FIXME: Add to driver once it's supported by -fdepscan.
 def fcas_fs : Separate<["-"], "fcas-fs">,
     Group<f_Group>, MetaVarName<"<tree>">,
