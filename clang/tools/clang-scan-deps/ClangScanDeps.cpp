@@ -540,6 +540,8 @@ static llvm::json::Array toJSONSorted(std::vector<ModuleID> V) {
 // Thread safe.
 class FullDeps {
 public:
+  FullDeps(size_t NumInputs) : Inputs(NumInputs) {}
+
   void mergeDeps(StringRef Input, TranslationUnitDeps TUDeps,
                  size_t InputIndex) {
     mergeDeps(std::move(TUDeps.ModuleGraph), InputIndex);
@@ -553,8 +555,9 @@ public:
     ID.DriverCommandLine = std::move(TUDeps.DriverCommandLine);
     ID.Commands = std::move(TUDeps.Commands);
 
-    std::unique_lock<std::mutex> ul(Lock);
-    Inputs.push_back(std::move(ID));
+    assert(InputIndex < Inputs.size() && "Input index out of bounds");
+    assert(Inputs[InputIndex].FileName.empty() && "Result already populated");
+    Inputs[InputIndex] = std::move(ID);
   }
 
   void mergeDeps(ModuleDepsGraph Graph, size_t InputIndex) {
@@ -610,10 +613,6 @@ public:
                  return std::tie(A.ID.ModuleName, A.InputIndex) <
                         std::tie(B.ID.ModuleName, B.InputIndex);
                });
-
-    llvm::sort(Inputs, [](const InputDeps &A, const InputDeps &B) {
-      return A.FileName < B.FileName;
-    });
 
     using namespace llvm::json;
 
@@ -1107,7 +1106,7 @@ int main(int argc, const char **argv) {
       AdjustingCompilations->getAllCompileCommands();
 
   std::atomic<bool> HadErrors(false);
-  FullDeps FD;
+  std::optional<FullDeps> FD;
   P1689Deps PD;
   std::mutex Lock;
   size_t Index = 0;
@@ -1128,6 +1127,9 @@ int main(int argc, const char **argv) {
           MaybeIncludeTree(std::move(Tree)) {}
   };
   SmallVector<DepTreeResult> TreeResults;
+
+  if (Format == ScanningOutputFormat::Full)
+    FD.emplace(ModuleName.empty() ? Inputs.size() : 0);
 
   if (Verbose) {
     llvm::outs() << "Running clang-scan-deps on " << Inputs.size()
@@ -1229,15 +1231,15 @@ int main(int argc, const char **argv) {
           auto MaybeModuleDepsGraph = WorkerTools[I]->getModuleDependencies(
               *MaybeModuleName, Input->CommandLine, CWD, AlreadySeenModules,
               LookupOutput, PrefixMapping);
-          if (handleModuleResult(*MaybeModuleName, MaybeModuleDepsGraph, FD,
+          if (handleModuleResult(*MaybeModuleName, MaybeModuleDepsGraph, *FD,
                                  LocalIndex, DependencyOS, Errs))
             HadErrors = true;
         } else {
           auto MaybeTUDeps = WorkerTools[I]->getTranslationUnitDependencies(
               Input->CommandLine, CWD, AlreadySeenModules, LookupOutput,
               PrefixMapping);
-          if (handleTranslationUnitResult(Filename, MaybeTUDeps, FD, LocalIndex,
-                                          DependencyOS, Errs))
+          if (handleTranslationUnitResult(Filename, MaybeTUDeps, *FD,
+                                          LocalIndex, DependencyOS, Errs))
             HadErrors = true;
         }
       }
@@ -1246,7 +1248,7 @@ int main(int argc, const char **argv) {
   Pool.wait();
 
   if (RoundTripArgs)
-    if (FD.roundTripCommands(llvm::errs()))
+    if (FD && FD->roundTripCommands(llvm::errs()))
       HadErrors = true;
 
   std::sort(TreeResults.begin(), TreeResults.end(),
@@ -1269,7 +1271,7 @@ int main(int argc, const char **argv) {
     }
   } else if (Format == ScanningOutputFormat::Full ||
              Format == ScanningOutputFormat::FullTree) {
-    FD.printFullOutput(llvm::outs());
+    FD->printFullOutput(llvm::outs());
   } else if (Format == ScanningOutputFormat::P1689)
     PD.printDependencies(llvm::outs());
 
