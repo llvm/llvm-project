@@ -139,6 +139,14 @@ void *lldb_private::LLDBSWIGPython_CastPyObjectToSBData(PyObject *data) {
   return nullptr;
 }
 
+void *lldb_private::LLDBSWIGPython_CastPyObjectToSBAttachInfo(PyObject *data) {
+  return nullptr;
+}
+
+void *lldb_private::LLDBSWIGPython_CastPyObjectToSBLaunchInfo(PyObject *data) {
+  return nullptr;
+}
+
 void *lldb_private::LLDBSWIGPython_CastPyObjectToSBError(PyObject *data) {
   return nullptr;
 }
@@ -266,5 +274,20 @@ bool lldb_private::LLDBSwigPythonStopHookCallHandleStop(
 }
 
 python::PythonObject lldb_private::python::ToSWIGWrapper(const Status &status) {
+  return python::PythonObject();
+}
+
+python::PythonObject
+lldb_private::python::ToSWIGWrapper(lldb::ProcessAttachInfoSP) {
+  return python::PythonObject();
+}
+
+python::PythonObject
+lldb_private::python::ToSWIGWrapper(lldb::ProcessLaunchInfoSP) {
+  return python::PythonObject();
+}
+
+python::PythonObject
+lldb_private::python::ToSWIGWrapper(lldb::DataExtractorSP) {
   return python::PythonObject();
 }

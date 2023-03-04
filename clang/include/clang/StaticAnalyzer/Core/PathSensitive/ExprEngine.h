@@ -234,6 +234,11 @@ public:
     return (*G.roots_begin())->getLocation().getLocationContext();
   }
 
+  CFGBlock::ConstCFGElementRef getCFGElementRef() const {
+    const CFGBlock *blockPtr = currBldrCtx ? currBldrCtx->getBlock() : nullptr;
+    return {blockPtr, currStmtIdx};
+  }
+
   void GenerateAutoTransition(ExplodedNode *N);
   void enqueueEndOfPath(ExplodedNodeSet &S);
   void GenerateCallExitNode(ExplodedNode *N);

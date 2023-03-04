@@ -12,7 +12,7 @@
 #include "OptionGroupPythonClassWithDict.h"
 
 #include "lldb/Host/Host.h"
-#include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/StructuredData.h"
 
 namespace lldb_private {
@@ -22,9 +22,12 @@ public:
                    StructuredData::DictionarySP dict_sp)
       : m_class_name(class_name.data()), m_args_sp(dict_sp) {}
 
-  ScriptedMetadata(const ProcessLaunchInfo &launch_info) {
-    m_class_name = launch_info.GetScriptedProcessClassName();
-    m_args_sp = launch_info.GetScriptedProcessDictionarySP();
+  ScriptedMetadata(const ProcessInfo &process_info) {
+    lldb::ScriptedMetadataSP metadata_sp = process_info.GetScriptedMetadata();
+    if (metadata_sp) {
+      m_class_name = metadata_sp->GetClassName();
+      m_args_sp = metadata_sp->GetArgsSP();
+    }
   }
 
   ScriptedMetadata(const OptionGroupPythonClassWithDict &option_group) {
@@ -32,6 +35,8 @@ public:
     m_class_name = opt_group.GetName();
     m_args_sp = opt_group.GetStructuredData();
   }
+
+  explicit operator bool() const { return !m_class_name.empty(); }
 
   llvm::StringRef GetClassName() const { return m_class_name; }
   StructuredData::DictionarySP GetArgsSP() const { return m_args_sp; }

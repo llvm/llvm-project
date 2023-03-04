@@ -13,6 +13,7 @@
 
 namespace lldb_private {
 class SBLaunchInfoImpl;
+class ScriptInterpreter;
 }
 
 namespace lldb {
@@ -189,6 +190,8 @@ public:
 protected:
   friend class SBPlatform;
   friend class SBTarget;
+
+  friend class lldb_private::ScriptInterpreter;
 
   const lldb_private::ProcessLaunchInfo &ref() const;
   void set_ref(const lldb_private::ProcessLaunchInfo &info);

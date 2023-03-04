@@ -93,6 +93,21 @@ PythonObject ToSWIGWrapper(const SymbolContext &sym_ctx) {
                       SWIGTYPE_p_lldb__SBSymbolContext);
 }
 
+PythonObject ToSWIGWrapper(lldb::ProcessLaunchInfoSP launch_info_sp) {
+   return ToSWIGHelper(new lldb::ProcessLaunchInfoSP(std::move(launch_info_sp)),
+                       SWIGTYPE_p_lldb__SBLaunchInfo);
+ }
+
+ PythonObject ToSWIGWrapper(lldb::ProcessAttachInfoSP attach_info_sp) {
+   return ToSWIGHelper(new lldb::ProcessAttachInfoSP(std::move(attach_info_sp)),
+                       SWIGTYPE_p_lldb__SBAttachInfo);
+ }
+
+PythonObject ToSWIGWrapper(lldb::DataExtractorSP data_sp) {
+  return ToSWIGHelper(new lldb::DataExtractorSP(std::move(data_sp)),
+                      SWIGTYPE_p_lldb__SBData);
+}
+
 ScopedPythonObject<lldb::SBCommandReturnObject>
 ToSWIGWrapper(CommandReturnObject &cmd_retobj) {
   return ScopedPythonObject<lldb::SBCommandReturnObject>(

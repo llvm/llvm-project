@@ -9,8 +9,10 @@
 #ifndef LLDB_INTERPRETER_SCRIPTINTERPRETER_H
 #define LLDB_INTERPRETER_SCRIPTINTERPRETER_H
 
+#include "lldb/API/SBAttachInfo.h"
 #include "lldb/API/SBData.h"
 #include "lldb/API/SBError.h"
+#include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/PluginInterface.h"
@@ -584,6 +586,12 @@ public:
   GetDataExtractorFromSBData(const lldb::SBData &data) const;
 
   Status GetStatusFromSBError(const lldb::SBError &error) const;
+
+  lldb::ProcessAttachInfoSP
+  GetOpaqueTypeFromSBAttachInfo(const lldb::SBAttachInfo &attach_info) const;
+
+  lldb::ProcessLaunchInfoSP
+  GetOpaqueTypeFromSBLaunchInfo(const lldb::SBLaunchInfo &launch_info) const;
 
   std::optional<MemoryRegionInfo> GetOpaqueTypeFromSBMemoryRegionInfo(
       const lldb::SBMemoryRegionInfo &mem_region) const;

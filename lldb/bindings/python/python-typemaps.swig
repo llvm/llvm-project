@@ -61,6 +61,8 @@
   if (!$result) {
     $result = Py_None;
     Py_INCREF(Py_None);
+  } else {
+    Py_INCREF($result);
   }
 }
 

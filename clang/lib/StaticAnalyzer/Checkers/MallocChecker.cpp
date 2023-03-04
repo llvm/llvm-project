@@ -3446,7 +3446,8 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
               OS << OpCallE->getDirectCallee()->getDeclName();
             } else if (const auto *CallE = dyn_cast<CallExpr>(S)) {
               auto &CEMgr = BRC.getStateManager().getCallEventManager();
-              CallEventRef<> Call = CEMgr.getSimpleCall(CallE, state, CurrentLC);
+              CallEventRef<> Call =
+                  CEMgr.getSimpleCall(CallE, state, CurrentLC, {nullptr, 0});
               if (const auto *D = dyn_cast_or_null<NamedDecl>(Call->getDecl()))
                 OS << D->getDeclName();
               else
