@@ -1083,7 +1083,7 @@ void test_tuple_int(TestFunction check, ExceptionTest check_exception) {
   check(SV("__(42), (99)___"), SV("{:_^15n}"), input);
 
   // *** type ***
-  check(SV("__{(42), (99)}___"), SV("{:_^17m}"), input);
+  check_exception("The range-format-spec type m requires two elements for a pair or tuple", SV("{:m}"), input);
   check_exception("The range-format-spec type s requires formatting a character type", SV("{:s}"), input);
   check_exception("The range-format-spec type ?s requires formatting a character type", SV("{:?s}"), input);
   for (std::basic_string_view<CharT> fmt : fmt_invalid_types<CharT>("s"))
@@ -1184,7 +1184,7 @@ void test_tuple_int_int_int(TestFunction check, ExceptionTest check_exception) {
   check(SV("__(42, 99, 0), (1, 10, 100)___"), SV("{:_^30n}"), input);
 
   // *** type ***
-  check(SV("__{(42, 99, 0), (1, 10, 100)}___"), SV("{:_^32m}"), input);
+  check_exception("The range-format-spec type m requires two elements for a pair or tuple", SV("{:m}"), input);
   check_exception("The range-format-spec type s requires formatting a character type", SV("{:s}"), input);
   check_exception("The range-format-spec type ?s requires formatting a character type", SV("{:?s}"), input);
   for (std::basic_string_view<CharT> fmt : fmt_invalid_types<CharT>("s"))
