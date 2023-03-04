@@ -154,6 +154,8 @@ class __bit_const_reference
     friend typename _Cp::__self;
     friend class __bit_iterator<_Cp, true>;
 public:
+    using __container = typename _Cp::__self;
+
     _LIBCPP_INLINE_VISIBILITY
     __bit_const_reference(const __bit_const_reference&) = default;
 

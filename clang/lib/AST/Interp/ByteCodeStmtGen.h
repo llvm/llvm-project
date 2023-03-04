@@ -60,6 +60,7 @@ private:
   bool visitWhileStmt(const WhileStmt *S);
   bool visitDoStmt(const DoStmt *S);
   bool visitForStmt(const ForStmt *S);
+  bool visitCXXForRangeStmt(const CXXForRangeStmt *S);
   bool visitBreakStmt(const BreakStmt *S);
   bool visitContinueStmt(const ContinueStmt *S);
   bool visitSwitchStmt(const SwitchStmt *S);
