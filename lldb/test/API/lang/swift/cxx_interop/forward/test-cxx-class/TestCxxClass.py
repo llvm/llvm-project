@@ -17,3 +17,7 @@ class TestClass(TestBase):
 
         self.expect('v x', substrs=['CxxClass', 'a1', '10', 'a2', '20', 'a3', '30'])
         self.expect('po x', substrs=['CxxClass', 'a1', '10', 'a2', '20', 'a3', '30'])
+
+        self.expect('v y', substrs=['InheritedCxxClass', 'a1', '10', 'a2', '20', 'a3', '30', 'a4', '40'])
+        # FIXME: rdar://106216567
+        self.expect('po y', substrs=['InheritedCxxClass', 'a4', '40'])

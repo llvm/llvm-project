@@ -5,3 +5,6 @@ struct CxxClass {
   long long a3 = 30;
 };
 
+struct InheritedCxxClass: CxxClass {
+  long long a4 = 40;
+};
