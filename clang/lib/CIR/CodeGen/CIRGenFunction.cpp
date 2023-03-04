@@ -698,6 +698,14 @@ LValue CIRGenFunction::MakeNaturalAlignPointeeAddrLValue(mlir::Value V,
   return makeAddrLValue(Address(V, Align), T, BaseInfo);
 }
 
+LValue CIRGenFunction::MakeNaturalAlignAddrLValue(mlir::Value V, QualType T) {
+  LValueBaseInfo BaseInfo;
+  assert(!UnimplementedFeature::tbaa());
+  CharUnits Alignment = CGM.getNaturalTypeAlignment(T, &BaseInfo);
+  Address Addr(V, getTypes().convertTypeForMem(T), Alignment);
+  return LValue::makeAddr(Addr, T, getContext(), BaseInfo);
+}
+
 // Map the LangOption for exception behavior into the corresponding enum in
 // the IR.
 cir::fp::ExceptionBehavior

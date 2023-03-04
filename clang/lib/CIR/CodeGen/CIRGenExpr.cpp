@@ -47,7 +47,8 @@ static Address buildPreserveStructAccess(CIRGenFunction &CGF, LValue base,
 /// Get the address of a zero-sized field within a record. The resulting address
 /// doesn't necessarily have the right type.
 static Address buildAddrOfFieldStorage(CIRGenFunction &CGF, Address Base,
-                                       const FieldDecl *field) {
+                                       const FieldDecl *field,
+                                       llvm::StringRef fieldName) {
   if (field->isZeroSize(CGF.getContext()))
     llvm_unreachable("NYI");
 
@@ -56,8 +57,11 @@ static Address buildAddrOfFieldStorage(CIRGenFunction &CGF, Address Base,
   auto fieldType = CGF.convertType(field->getType());
   auto fieldPtr =
       mlir::cir::PointerType::get(CGF.getBuilder().getContext(), fieldType);
+  // For most cases fieldName is the same as field->getName() but for lambdas,
+  // which do not currently carry the name, so it can be passed down from the
+  // CaptureStmt.
   auto sea = CGF.getBuilder().create<mlir::cir::StructElementAddr>(
-      loc, fieldPtr, Base.getPointer(), field->getName());
+      loc, fieldPtr, Base.getPointer(), fieldName);
 
   // TODO: We could get the alignment from the CIRGenRecordLayout, but given the
   // member name based lookup of the member here we probably shouldn't be. We'll
@@ -105,16 +109,28 @@ LValue CIRGenFunction::buildLValueForField(LValue base,
     llvm_unreachable("NYI");
   } else {
     if (!IsInPreservedAIRegion &&
-        (!getDebugInfo() || !rec->hasAttr<BPFPreserveAccessIndexAttr>()))
-      addr = buildAddrOfFieldStorage(*this, addr, field);
-    else
+        (!getDebugInfo() || !rec->hasAttr<BPFPreserveAccessIndexAttr>())) {
+      llvm::StringRef fieldName = field->getName();
+      if (CGM.LambdaFieldToName.count(field))
+        fieldName = CGM.LambdaFieldToName[field];
+      addr = buildAddrOfFieldStorage(*this, addr, field, fieldName);
+    } else
       // Remember the original struct field index
       addr = buildPreserveStructAccess(*this, base, addr, field);
   }
 
   // If this is a reference field, load the reference right now.
   if (FieldType->isReferenceType()) {
-    llvm_unreachable("NYI");
+    assert(!UnimplementedFeature::tbaa());
+    LValue RefLVal = makeAddrLValue(addr, FieldType, FieldBaseInfo);
+    if (RecordCVR & Qualifiers::Volatile)
+      RefLVal.getQuals().addVolatile();
+    addr = buildLoadOfReference(RefLVal, getLoc(field->getSourceRange()),
+                                &FieldBaseInfo);
+
+    // Qualifiers on the struct don't apply to the referencee.
+    RecordCVR = 0;
+    FieldType = FieldType->getPointeeType();
   }
 
   // Make sure that the address is pointing to the right type. This is critical
@@ -141,13 +157,14 @@ LValue CIRGenFunction::buildLValueForField(LValue base,
 }
 
 LValue CIRGenFunction::buildLValueForFieldInitialization(
-    LValue Base, const clang::FieldDecl *Field) {
+    LValue Base, const clang::FieldDecl *Field, llvm::StringRef FieldName) {
   QualType FieldType = Field->getType();
 
   if (!FieldType->isReferenceType())
     return buildLValueForField(Base, Field);
 
-  Address V = buildAddrOfFieldStorage(*this, Base.getAddress(), Field);
+  Address V =
+      buildAddrOfFieldStorage(*this, Base.getAddress(), Field, FieldName);
 
   // Make sure that the address is pointing to the right type.
   auto memTy = getTypes().convertTypeForMem(FieldType);
@@ -373,6 +390,13 @@ static LValue buildGlobalVarDeclLValue(CIRGenFunction &CGF, const Expr *E,
   return LV;
 }
 
+static LValue buildCapturedFieldLValue(CIRGenFunction &CGF, const FieldDecl *FD,
+                                       mlir::Value ThisValue) {
+  QualType TagType = CGF.getContext().getTagDeclType(FD->getParent());
+  LValue LV = CGF.MakeNaturalAlignAddrLValue(ThisValue, TagType);
+  return CGF.buildLValueForField(LV, FD);
+}
+
 LValue CIRGenFunction::buildDeclRefLValue(const DeclRefExpr *E) {
   const NamedDecl *ND = E->getDecl();
   QualType T = E->getType();
@@ -384,7 +408,18 @@ LValue CIRGenFunction::buildDeclRefLValue(const DeclRefExpr *E) {
     // Global Named registers access via intrinsics only
     assert(VD->getStorageClass() != SC_Register && "not implemented");
     assert(E->isNonOdrUse() != NOUR_Constant && "not implemented");
-    assert(!E->refersToEnclosingVariableOrCapture() && "not implemented");
+
+    // Check for captured variables.
+    if (E->refersToEnclosingVariableOrCapture()) {
+      VD = VD->getCanonicalDecl();
+      if (auto *FD = LambdaCaptureFields.lookup(VD))
+        return buildCapturedFieldLValue(*this, FD, CXXABIThisValue);
+      assert(!UnimplementedFeature::CGCapturedStmtInfo() && "NYI");
+      llvm_unreachable("NYI");
+      // LLVM codegen:
+      // Address addr = GetAddrOfBlockDecl(VD);
+      // return MakeAddrLValue(addr, T, AlignmentSource::Decl);
+    }
   }
 
   // FIXME(CIR): We should be able to assert this for FunctionDecls as well!

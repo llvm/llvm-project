@@ -58,6 +58,7 @@ struct UnimplementedFeature {
   static bool shouldEmitLifetimeMarkers() { return false; }
   static bool peepholeProtection() { return false; }
   static bool attributeNoBuiltin() { return false; }
+  static bool CGCapturedStmtInfo() { return false; }
 };
 } // namespace cir
 
