@@ -3154,6 +3154,10 @@ defm LDURBB
              [(set GPR32:$Rt,
                     (zextloadi8 (am_unscaled16 GPR64sp:$Rn, simm9:$offset)))]>;
 
+// bf16 load pattern
+def : Pat <(bf16 (load (am_unscaled16 GPR64sp:$Rn, simm9:$offset))),
+           (LDURHi GPR64sp:$Rn, simm9:$offset)>;
+
 // Match all load 64 bits width whose type is compatible with FPR64
 let Predicates = [IsLE] in {
   def : Pat<(v2f32 (load (am_unscaled64 GPR64sp:$Rn, simm9:$offset))),

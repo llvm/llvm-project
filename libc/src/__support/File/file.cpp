@@ -10,8 +10,8 @@
 
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/span.h"
+#include "src/errno/libc_errno.h" // For error macros
 
-#include <errno.h> // For error macros
 #include <stdio.h>
 #include <stdlib.h>
 

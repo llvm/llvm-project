@@ -105,7 +105,7 @@ static uint32_t cpuSubtype() {
   if (config->outputType == MH_EXECUTE && !config->staticLink &&
       target->cpuSubtype == CPU_SUBTYPE_X86_64_ALL &&
       config->platform() == PLATFORM_MACOS &&
-      config->platformInfo.minimum >= VersionTuple(10, 5))
+      config->platformInfo.target.MinDeployment >= VersionTuple(10, 5))
     subtype |= CPU_SUBTYPE_LIB64;
 
   return subtype;

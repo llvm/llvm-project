@@ -1430,6 +1430,8 @@ public:
     return *m_frame_recognizer_manager_up;
   }
 
+  void SaveScriptedLaunchInfo(lldb_private::ProcessInfo &process_info);
+
   /// Add a signal for the target.  This will get copied over to the process
   /// if the signal exists on that target.  Only the values with Yes and No are
   /// set, Calculate values will be ignored.

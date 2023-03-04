@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CommandObjectPlatform.h"
+#include "CommandOptionsProcessAttach.h"
 #include "CommandOptionsProcessLaunch.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -18,6 +19,8 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionGroupFile.h"
 #include "lldb/Interpreter/OptionGroupPlatform.h"
+#include "lldb/Interpreter/OptionGroupPythonClassWithDict.h"
+#include "lldb/Interpreter/ScriptedMetadata.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
@@ -1144,8 +1147,11 @@ public:
       : CommandObjectParsed(interpreter, "platform process launch",
                             "Launch a new process on a remote platform.",
                             "platform process launch program",
-                            eCommandRequiresTarget | eCommandTryTargetAPILock) {
+                            eCommandRequiresTarget | eCommandTryTargetAPILock),
+        m_class_options("scripted process", true, 'C', 'k', 'v', 0) {
     m_all_options.Append(&m_options);
+    m_all_options.Append(&m_class_options, LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
+                         LLDB_OPT_SET_ALL);
     m_all_options.Finalize();
     CommandArgumentData run_arg_arg{eArgTypeRunArgs, eArgRepeatStar};
     m_arguments.push_back({run_arg_arg});
@@ -1178,6 +1184,14 @@ protected:
         if (!exe_path.empty())
           m_options.launch_info.GetArguments().AppendArgument(exe_path);
         m_options.launch_info.GetArchitecture() = exe_module->GetArchitecture();
+      }
+
+      if (!m_class_options.GetName().empty()) {
+        m_options.launch_info.SetProcessPluginName("ScriptedProcess");
+        ScriptedMetadataSP metadata_sp = std::make_shared<ScriptedMetadata>(
+            m_class_options.GetName(), m_class_options.GetStructuredData());
+        m_options.launch_info.SetScriptedMetadata(metadata_sp);
+        target->SetProcessLaunchInfo(m_options.launch_info);
       }
 
       if (argc > 0) {
@@ -1223,6 +1237,7 @@ protected:
   }
 
   CommandOptionsProcessLaunch m_options;
+  OptionGroupPythonClassWithDict m_class_options;
   OptionGroupOptions m_all_options;
 };
 
@@ -1572,71 +1587,16 @@ protected:
 
 class CommandObjectPlatformProcessAttach : public CommandObjectParsed {
 public:
-  class CommandOptions : public Options {
-  public:
-    CommandOptions() {
-      // Keep default values of all options in one place: OptionParsingStarting
-      // ()
-      OptionParsingStarting(nullptr);
-    }
-
-    ~CommandOptions() override = default;
-
-    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
-      char short_option = (char)m_getopt_table[option_idx].val;
-      switch (short_option) {
-      case 'p': {
-        lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
-        if (option_arg.getAsInteger(0, pid)) {
-          error.SetErrorStringWithFormat("invalid process ID '%s'",
-                                         option_arg.str().c_str());
-        } else {
-          attach_info.SetProcessID(pid);
-        }
-      } break;
-
-      case 'P':
-        attach_info.SetProcessPluginName(option_arg);
-        break;
-
-      case 'n':
-        attach_info.GetExecutableFile().SetFile(option_arg,
-                                                FileSpec::Style::native);
-        break;
-
-      case 'w':
-        attach_info.SetWaitForLaunch(true);
-        break;
-
-      default:
-        llvm_unreachable("Unimplemented option");
-      }
-      return error;
-    }
-
-    void OptionParsingStarting(ExecutionContext *execution_context) override {
-      attach_info.Clear();
-    }
-
-    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::ArrayRef(g_platform_process_attach_options);
-    }
-
-    // Options table: Required for subclasses of Options.
-
-    static OptionDefinition g_option_table[];
-
-    // Instance variables to hold the values for command options.
-
-    ProcessAttachInfo attach_info;
-  };
-
   CommandObjectPlatformProcessAttach(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "platform process attach",
                             "Attach to a process.",
-                            "platform process attach <cmd-options>") {}
+                            "platform process attach <cmd-options>"),
+        m_class_options("scripted process", true, 'C', 'k', 'v', 0) {
+    m_all_options.Append(&m_options);
+    m_all_options.Append(&m_class_options, LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
+                         LLDB_OPT_SET_ALL);
+    m_all_options.Finalize();
+  }
 
   ~CommandObjectPlatformProcessAttach() override = default;
 
@@ -1644,6 +1604,14 @@ public:
     PlatformSP platform_sp(
         GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
+
+      if (!m_class_options.GetName().empty()) {
+        m_options.attach_info.SetProcessPluginName("ScriptedProcess");
+        ScriptedMetadataSP metadata_sp = std::make_shared<ScriptedMetadata>(
+            m_class_options.GetName(), m_class_options.GetStructuredData());
+        m_options.attach_info.SetScriptedMetadata(metadata_sp);
+      }
+
       Status err;
       ProcessSP remote_process_sp = platform_sp->Attach(
           m_options.attach_info, GetDebugger(), nullptr, err);
@@ -1659,10 +1627,12 @@ public:
     return result.Succeeded();
   }
 
-  Options *GetOptions() override { return &m_options; }
+  Options *GetOptions() override { return &m_all_options; }
 
 protected:
-  CommandOptions m_options;
+  CommandOptionsProcessAttach m_options;
+  OptionGroupPythonClassWithDict m_class_options;
+  OptionGroupOptions m_all_options;
 };
 
 class CommandObjectPlatformProcess : public CommandObjectMultiword {

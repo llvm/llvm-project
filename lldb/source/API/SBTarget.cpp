@@ -434,7 +434,8 @@ lldb::SBProcess SBTarget::Attach(SBAttachInfo &sb_attach_info, SBError &error) {
 
   if (target_sp) {
     ProcessAttachInfo &attach_info = sb_attach_info.ref();
-    if (attach_info.ProcessIDIsValid() && !attach_info.UserIDIsValid()) {
+    if (attach_info.ProcessIDIsValid() && !attach_info.UserIDIsValid() &&
+        !attach_info.IsScriptedProcess()) {
       PlatformSP platform_sp = target_sp->GetPlatform();
       // See if we can pre-verify if a process exists or not
       if (platform_sp && platform_sp->IsConnected()) {

@@ -15,7 +15,7 @@ add_object_library(
     error_to_string.cpp
   DEPENDS
   .message_mapper
-  libc.include.errno
+  libc.src.errno.errno
   libc.src.__support.CPP.span
   libc.src.__support.CPP.string_view
   libc.src.__support.CPP.stringstream

@@ -89,11 +89,14 @@ class CallDescriptionConsumer : public ExprEngineConsumer {
 
     CallEventManager &CEMgr = Eng.getStateManager().getCallEventManager();
     CallEventRef<> Call = [=, &CEMgr]() -> CallEventRef<CallEvent> {
+      CFGBlock::ConstCFGElementRef ElemRef = {SFC->getCallSiteBlock(),
+                                              SFC->getIndex()};
       if (std::is_base_of<CallExpr, T>::value)
-        return CEMgr.getCall(E, State, SFC);
+        return CEMgr.getCall(E, State, SFC, ElemRef);
       if (std::is_same<T, CXXConstructExpr>::value)
         return CEMgr.getCXXConstructorCall(cast<CXXConstructExpr>(E),
-                                           /*Target=*/nullptr, State, SFC);
+                                           /*Target=*/nullptr, State, SFC,
+                                           ElemRef);
       llvm_unreachable("Only these expressions are supported for now.");
     }();
 

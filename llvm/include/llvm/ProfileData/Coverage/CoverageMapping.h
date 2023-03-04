@@ -622,7 +622,8 @@ public:
   load(ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFilename,
        vfs::FileSystem &FS, ArrayRef<StringRef> Arches = std::nullopt,
        StringRef CompilationDir = "",
-       const object::BuildIDFetcher *BIDFetcher = nullptr);
+       const object::BuildIDFetcher *BIDFetcher = nullptr,
+       bool CheckBinaryIDs = false);
 
   /// The number of functions that couldn't have their profiles mapped.
   ///

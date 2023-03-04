@@ -28,7 +28,6 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;

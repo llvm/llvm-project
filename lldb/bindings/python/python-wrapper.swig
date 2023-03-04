@@ -716,6 +716,30 @@ void *lldb_private::LLDBSWIGPython_CastPyObjectToSBData(PyObject * data) {
   return sb_ptr;
 }
 
+void *lldb_private::LLDBSWIGPython_CastPyObjectToSBAttachInfo(PyObject * data) {
+  lldb::SBAttachInfo *sb_ptr = nullptr;
+
+  int valid_cast =
+      SWIG_ConvertPtr(data, (void **)&sb_ptr, SWIGTYPE_p_lldb__SBAttachInfo, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
+void *lldb_private::LLDBSWIGPython_CastPyObjectToSBLaunchInfo(PyObject * data) {
+  lldb::SBLaunchInfo *sb_ptr = nullptr;
+
+  int valid_cast =
+      SWIG_ConvertPtr(data, (void **)&sb_ptr, SWIGTYPE_p_lldb__SBLaunchInfo, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
 void *lldb_private::LLDBSWIGPython_CastPyObjectToSBError(PyObject * data) {
   lldb::SBError *sb_ptr = nullptr;
 

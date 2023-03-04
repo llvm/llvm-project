@@ -51,6 +51,15 @@ public:
 
   Status DoResume() override;
 
+  Status DoAttachToProcessWithID(lldb::pid_t pid,
+                                 const ProcessAttachInfo &attach_info) override;
+
+  Status
+  DoAttachToProcessWithName(const char *process_name,
+                            const ProcessAttachInfo &attach_info) override;
+
+  void DidAttach(ArchSpec &process_arch) override;
+
   Status DoDestroy() override;
 
   void RefreshStateAfterStop() override;
@@ -59,6 +68,9 @@ public:
 
   size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                       Status &error) override;
+
+  size_t DoWriteMemory(lldb::addr_t vm_addr, const void *buf, size_t size,
+                       Status &error) override;
 
   ArchSpec GetArchitecture();
 
@@ -89,6 +101,8 @@ protected:
 
   Status DoGetMemoryRegionInfo(lldb::addr_t load_addr,
                                MemoryRegionInfo &range_info) override;
+
+  Status DoAttach(const ProcessAttachInfo &attach_info);
 
 private:
   friend class ScriptedThread;

@@ -15,12 +15,12 @@
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/threads/linux/futex_word.h" // For FutexWordType
+#include "src/errno/libc_errno.h"                   // For error macros
 
 #ifdef LIBC_TARGET_ARCH_IS_AARCH64
 #include <arm_acle.h>
 #endif
 
-#include <errno.h>
 #include <fcntl.h>
 #include <linux/futex.h>
 #include <linux/prctl.h> // For PR_SET_NAME
