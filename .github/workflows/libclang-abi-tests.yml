@@ -1,5 +1,8 @@
 name: libclang ABI Tests
 
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
   push:
