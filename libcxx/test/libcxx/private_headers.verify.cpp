@@ -23,6 +23,10 @@ for header in private_headers:
   if header.startswith('__support'):
     continue
 
+  # Skip the locale API headers, since they are platform-specific and thus inherently non-modular
+  if 'locale_base_api' in header:
+    continue
+
   print("{ifdef}#{indent}include <{header}> // {expected_error}@*:* {{{{use of private header from outside its module: '{header}'}}}}{endif}".format(
     ifdef='#if ' + header_restrictions[header] + '\n' if header in header_restrictions else '',
     indent='   ' if header in header_restrictions else '',
