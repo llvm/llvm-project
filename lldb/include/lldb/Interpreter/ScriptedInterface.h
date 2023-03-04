@@ -51,22 +51,13 @@ public:
 
   template <typename T = StructuredData::ObjectSP>
   bool CheckStructuredDataObject(llvm::StringRef caller, T obj, Status &error) {
-    if (!obj) {
-      return ErrorWithMessage<bool>(caller,
-                                    llvm::Twine("Null StructuredData object (" +
-                                                llvm::Twine(error.AsCString()) +
-                                                llvm::Twine(")."))
-                                        .str(),
+    if (!obj)
+      return ErrorWithMessage<bool>(caller, "Null Structured Data object",
                                     error);
-    }
 
     if (!obj->IsValid()) {
-      return ErrorWithMessage<bool>(
-          caller,
-          llvm::Twine("Invalid StructuredData object (" +
-                      llvm::Twine(error.AsCString()) + llvm::Twine(")."))
-              .str(),
-          error);
+      return ErrorWithMessage<bool>(caller, "Invalid StructuredData object",
+                                    error);
     }
 
     if (error.Fail())
