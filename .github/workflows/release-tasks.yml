@@ -1,5 +1,8 @@
 name: Release Task
 
+permissions:
+  contents: read
+
 on:
   push:
     tags:
@@ -8,6 +11,8 @@ on:
 
 jobs:
   release-tasks:
+    permissions:
+      contents: write # To upload assets to release.
     runs-on: ubuntu-latest
     if: github.repository == 'llvm/llvm-project'
     steps:
