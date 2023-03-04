@@ -135,6 +135,22 @@ lldb::DataExtractorSP ScriptedProcessPythonInterface::ReadMemoryAtAddress(
   return data_sp;
 }
 
+size_t ScriptedProcessPythonInterface::WriteMemoryAtAddress(
+    lldb::addr_t addr, lldb::DataExtractorSP data_sp, Status &error) {
+  Status py_error;
+  StructuredData::ObjectSP obj =
+      Dispatch("write_memory_at_address", py_error, addr, data_sp, error);
+
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
+    return LLDB_INVALID_OFFSET;
+
+  // If there was an error on the python call, surface it to the user.
+  if (py_error.Fail())
+    error = py_error;
+
+  return obj->GetIntegerValue(LLDB_INVALID_OFFSET);
+}
+
 StructuredData::ArraySP ScriptedProcessPythonInterface::GetLoadedImages() {
   Status error;
   StructuredData::ArraySP array =

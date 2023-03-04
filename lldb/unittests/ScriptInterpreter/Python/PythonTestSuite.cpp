@@ -286,3 +286,8 @@ python::PythonObject
 lldb_private::python::ToSWIGWrapper(lldb::ProcessLaunchInfoSP) {
   return python::PythonObject();
 }
+
+python::PythonObject
+lldb_private::python::ToSWIGWrapper(lldb::DataExtractorSP) {
+  return python::PythonObject();
+}
