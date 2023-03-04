@@ -736,7 +736,6 @@ bool LoopInterchangeLegality::findInductionAndReductions(
   if (!L->getLoopLatch() || !L->getLoopPredecessor())
     return false;
   for (PHINode &PHI : L->getHeader()->phis()) {
-    RecurrenceDescriptor RD;
     InductionDescriptor ID;
     if (InductionDescriptor::isInductionPHI(&PHI, L, SE, ID))
       Inductions.push_back(&PHI);
