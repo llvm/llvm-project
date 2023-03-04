@@ -72,6 +72,8 @@ public:
   size_t DoWriteMemory(lldb::addr_t vm_addr, const void *buf, size_t size,
                        Status &error) override;
 
+  Status EnableBreakpointSite(BreakpointSite *bp_site) override;
+
   ArchSpec GetArchitecture();
 
   Status
