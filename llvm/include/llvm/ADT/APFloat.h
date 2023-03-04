@@ -1280,6 +1280,9 @@ public:
     APFLOAT_DISPATCH_ON_SEMANTICS(isSmallestNormalized());
   }
 
+  /// Return the FPClassTest which will return true for the value.
+  FPClassTest classify() const;
+
   APFloat &operator=(const APFloat &RHS) = default;
   APFloat &operator=(APFloat &&RHS) = default;
 

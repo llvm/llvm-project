@@ -22,36 +22,39 @@ cc_library(
 libc_test(
     name = "atoi_test",
     srcs = ["atoi_test.cpp"],
-    deps = [":atoi_test_helper"],
     libc_function_deps = [
         "//libc:atoi",
     ],
+    deps = [":atoi_test_helper"],
 )
 
 libc_test(
     name = "atol_test",
     srcs = ["atol_test.cpp"],
-    deps = [":atoi_test_helper"],
     libc_function_deps = [
         "//libc:atol",
     ],
+    deps = [":atoi_test_helper"],
 )
 
 libc_test(
     name = "atoll_test",
     srcs = ["atoll_test.cpp"],
-    deps = [":atoi_test_helper"],
     libc_function_deps = [
         "//libc:atoll",
     ],
+    deps = [":atoi_test_helper"],
 )
 
 libc_test(
     name = "atof_test",
     srcs = ["atof_test.cpp"],
-    deps = ["//libc:__support_fputil_fp_bits"],
     libc_function_deps = [
         "//libc:atof",
+    ],
+    deps = [
+        "//libc:__support_fputil_fp_bits",
+        "//libc:errno",
     ],
 )
 
@@ -77,6 +80,7 @@ cc_library(
     deps = [
         "//libc:__support_cpp_limits",
         "//libc:__support_cpp_type_traits",
+        "//libc:errno",
         "//libc/test/UnitTest:LibcUnitTest",
     ],
 )
@@ -84,71 +88,74 @@ cc_library(
 libc_test(
     name = "strtol_test",
     srcs = ["strtol_test.cpp"],
-    deps = [":strtol_test_helper"],
     libc_function_deps = [
         "//libc:strtol",
     ],
+    deps = [":strtol_test_helper"],
 )
 
 libc_test(
     name = "strtoll_test",
     srcs = ["strtoll_test.cpp"],
-    deps = [":strtol_test_helper"],
     libc_function_deps = [
         "//libc:strtoll",
     ],
+    deps = [":strtol_test_helper"],
 )
 
 libc_test(
     name = "strtoul_test",
     srcs = ["strtoul_test.cpp"],
-    deps = [":strtol_test_helper"],
     libc_function_deps = [
         "//libc:strtoul",
     ],
+    deps = [":strtol_test_helper"],
 )
 
 libc_test(
     name = "strtoull_test",
     srcs = ["strtoull_test.cpp"],
-    deps = [":strtol_test_helper"],
     libc_function_deps = [
         "//libc:strtoull",
     ],
+    deps = [":strtol_test_helper"],
 )
 
 libc_test(
     name = "strtof_test",
     srcs = ["strtof_test.cpp"],
-    deps = [
-        "//libc:__support_fputil_fp_bits",
-        "//libc/utils/testutils:libc_test_utils",
-    ],
     libc_function_deps = [
         "//libc:strtof",
+    ],
+    deps = [
+        "//libc:__support_fputil_fp_bits",
+        "//libc:errno",
+        "//libc/utils/testutils:libc_test_utils",
     ],
 )
 
 libc_test(
     name = "strtod_test",
     srcs = ["strtod_test.cpp"],
-    deps = [
-        "//libc:__support_fputil_fp_bits",
-        "//libc/utils/testutils:libc_test_utils",
-    ],
     libc_function_deps = [
         "//libc:strtod",
+    ],
+    deps = [
+        "//libc:__support_fputil_fp_bits",
+        "//libc:errno",
+        "//libc/utils/testutils:libc_test_utils",
     ],
 )
 
 libc_test(
     name = "strtold_test",
     srcs = ["strtold_test.cpp"],
+    libc_function_deps = [
+        "//libc:strtold",
+    ],
     deps = [
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_uint128",
-    ],
-    libc_function_deps = [
-        "//libc:strtold",
+        "//libc:errno",
     ],
 )

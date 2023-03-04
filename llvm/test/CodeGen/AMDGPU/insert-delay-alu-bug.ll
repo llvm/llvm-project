@@ -116,7 +116,7 @@ define amdgpu_kernel void @f2(i32 %arg, i32 %arg1, i32 %arg2, i1 %arg3, i32 %arg
 ; GFX11-NEXT:    v_alignbit_b32 v0, s3, s9, 1
 ; GFX11-NEXT:    v_readfirstlane_b32 s3, v0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s24
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_or_b32 s3, s3, 1
 ; GFX11-NEXT:    s_lshr_b32 s3, s3, s30
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)

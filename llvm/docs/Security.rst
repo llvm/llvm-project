@@ -36,6 +36,7 @@ The members of the group represent a wide cross-section of the community, and me
 * Ahmed Bougacha (Apple) [ab]
 * Andy Kaylor (Intel) [andykaylor]
 * Artur Pilipenko (Azul Systems Inc) [apilipenko]
+* Boovaragavan Dasarathan (Nvidia) [mrragava]
 * Dimitry Andric (individual; FreeBSD) [dim]
 * Ed Maste (individual; FreeBSD) [emaste]
 * George Burgess IV (Google) [george.burgess.iv]

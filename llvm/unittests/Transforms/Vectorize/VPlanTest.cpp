@@ -1140,6 +1140,27 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   }
 
   {
+    // Test for a call to a function without side-effects.
+    LLVMContext C;
+    Module M("", C);
+    Function *TheFn = Intrinsic::getDeclaration(&M, Intrinsic::thread_pointer);
+
+    auto *Call = CallInst::Create(TheFn->getFunctionType(), TheFn);
+    VPValue Op1;
+    VPValue Op2;
+    SmallVector<VPValue *, 2> Args;
+    Args.push_back(&Op1);
+    Args.push_back(&Op2);
+    VPWidenCallRecipe Recipe(*Call, make_range(Args.begin(), Args.end()),
+                             false);
+    EXPECT_TRUE(Recipe.mayHaveSideEffects());
+    EXPECT_FALSE(Recipe.mayReadFromMemory());
+    EXPECT_FALSE(Recipe.mayWriteToMemory());
+    EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
+    delete Call;
+  }
+
+  {
     VPValue Op1;
     VPValue Op2;
     InductionDescriptor IndDesc;
