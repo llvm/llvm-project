@@ -1128,7 +1128,8 @@ int main(int argc, const char **argv) {
   };
   SmallVector<DepTreeResult> TreeResults;
 
-  if (Format == ScanningOutputFormat::Full)
+  if (Format == ScanningOutputFormat::Full ||
+      Format == ScanningOutputFormat::FullTree)
     FD.emplace(ModuleName.empty() ? Inputs.size() : 0);
 
   if (Verbose) {
