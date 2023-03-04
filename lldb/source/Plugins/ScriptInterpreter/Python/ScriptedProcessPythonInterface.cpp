@@ -80,21 +80,8 @@ Status ScriptedProcessPythonInterface::Launch() {
 }
 
 Status ScriptedProcessPythonInterface::Resume() {
-  return GetStatusFromMethod("resume");
-}
-
-bool ScriptedProcessPythonInterface::ShouldStop() {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("is_alive", error);
-
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
-    return {};
-
-  return obj->GetBooleanValue();
-}
-
-Status ScriptedProcessPythonInterface::Stop() {
-  return GetStatusFromMethod("stop");
+  // When calling ScriptedProcess.Resume from lldb we should always stop.
+  return GetStatusFromMethod("resume", /*should_stop=*/true);
 }
 
 std::optional<MemoryRegionInfo>

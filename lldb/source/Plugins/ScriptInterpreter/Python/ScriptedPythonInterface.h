@@ -113,6 +113,11 @@ protected:
     return {object};
   }
 
+  python::PythonObject Transform(bool arg) {
+    // Boolean arguments need to be turned into python objects.
+    return python::PythonBoolean(arg);
+  }
+
   python::PythonObject Transform(Status arg) {
     return python::ToSWIGWrapper(arg);
   }
@@ -139,6 +144,15 @@ protected:
   void ReverseTransform(T &original_arg, python::PythonObject transformed_arg,
                         Status &error) {
     original_arg = ExtractValueFromPythonObject<T>(transformed_arg, error);
+  }
+
+  template <>
+  void ReverseTransform(bool &original_arg,
+                        python::PythonObject transformed_arg, Status &error) {
+    python::PythonBoolean boolean_arg = python::PythonBoolean(
+        python::PyRefType::Borrowed, transformed_arg.get());
+    if (boolean_arg.IsValid())
+      original_arg = boolean_arg.GetValue();
   }
 
   template <std::size_t... I, typename... Args>
