@@ -70,3 +70,11 @@ PRAG("unknown2")
 void test(int x) {
   if (x=0) {}
 }
+
+#define DEPR _Pragma("GCC warning \"name is deprecated\"")
+#define PARAM "A" DEPR
+#define MAC(x) x
+
+void test2() {
+  (void)MAC(PARAM);
+}

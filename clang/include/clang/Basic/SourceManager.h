@@ -383,6 +383,11 @@ public:
                                        : ExpansionLocEnd;
   }
 
+  /// The actual value of \c ExpansionLocEnd, useful for serialization purposes.
+  SourceLocation getUnderlyingExpansionLocEnd() const {
+    return ExpansionLocEnd;
+  }
+
   bool isExpansionTokenRange() const { return ExpansionIsTokenRange; }
 
   CharSourceRange getExpansionLocRange() const {

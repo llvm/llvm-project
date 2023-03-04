@@ -55,8 +55,16 @@ struct FixItHint {
 struct SLocEntry {
   struct FileInfo {
     std::string Filename;
-    std::optional<std::string> Buffer;
+    // Using \c shared_ptr instead of \c unique_ptr to accomodate the YAML
+    // [de]serialization functions.
+    std::shared_ptr<MemoryBuffer> Buffer;
     std::optional<Location> IncludeLoc;
+
+    // Only used during compilation.
+    bool IsScratchBuffer = false;
+    // If this is for a scratch buffer, records the highest offset that a
+    // converted location resolved inside it. Only used during compilation.
+    unsigned HighestScratchBufferOffset = 0;
   };
 
   struct ExpansionInfo {
@@ -67,7 +75,27 @@ struct SLocEntry {
     bool IsTokenRange;
   };
 
-  std::variant<FileInfo, ExpansionInfo> Data;
+  std::variant<FileInfo, ExpansionInfo> Data = FileInfo();
+
+  bool isFileInfo() const { return std::holds_alternative<FileInfo>(Data); }
+
+  FileInfo &getAsFileInfo() {
+    assert(isFileInfo());
+    return std::get<FileInfo>(Data);
+  }
+  const FileInfo &getAsFileInfo() const {
+    assert(isFileInfo());
+    return std::get<FileInfo>(Data);
+  }
+
+  ExpansionInfo &getAsExpansionInfo() {
+    assert(!isFileInfo());
+    return std::get<ExpansionInfo>(Data);
+  }
+  const ExpansionInfo &getAsExpansionInfo() const {
+    assert(!isFileInfo());
+    return std::get<ExpansionInfo>(Data);
+  }
 };
 
 struct Diagnostic {
@@ -144,8 +172,13 @@ struct CachedDiagnosticSerializer {
   convertCachedFixIt(const cached_diagnostics::FixItHint &CachedFixIt);
 
   unsigned convertFileID(FileID FID, const SourceManager &SM);
-  unsigned convertFileIDFromScratchSpace(FileID FID, const SourceManager &SM);
   FileID convertCachedSLocEntry(unsigned Idx);
+
+  FileID getExistingFileIDForCachedSLocEntry(unsigned Idx) const {
+    if (Idx >= FileIDBySlocIdx.size())
+      return FileID();
+    return FileIDBySlocIdx[Idx];
+  }
 
   /// \returns a serialized buffer of the currently recorded
   /// \p cached_diagnostics::Diagnostics, or \p std::nullopt if there's no
@@ -220,6 +253,31 @@ CachedDiagnosticSerializer::convertLoc(const FullSourceLoc &Loc) {
   cached_diagnostics::Location CachedLoc;
   CachedLoc.SLocIdx = convertFileID(FID, Loc.getManager());
   CachedLoc.Offset = Offset;
+
+  auto &SLocEntry = CachedDiags.SLocEntries[CachedLoc.SLocIdx];
+  if (SLocEntry.isFileInfo()) {
+    auto &FI = SLocEntry.getAsFileInfo();
+    if (FI.IsScratchBuffer) {
+      if (FI.HighestScratchBufferOffset < Offset)
+        FI.HighestScratchBufferOffset = Offset;
+      FileID CachedScratchFID =
+          getExistingFileIDForCachedSLocEntry(CachedLoc.SLocIdx);
+      if (CachedScratchFID.isValid()) {
+        // Since the scratch buffer updates while parsing, use the line cache
+        // from the compilation's source manager, to make sure it is up-to-date.
+        auto LineMap = Loc.getManager()
+                           .getSLocEntry(FID)
+                           .getFile()
+                           .getContentCache()
+                           .SourceLineCache;
+        SourceMgr.getSLocEntry(CachedScratchFID)
+            .getFile()
+            .getContentCache()
+            .SourceLineCache = LineMap;
+      }
+    }
+  }
+
   return CachedLoc;
 }
 
@@ -279,9 +337,6 @@ FixItHint CachedDiagnosticSerializer::convertCachedFixIt(
 
 unsigned CachedDiagnosticSerializer::convertFileID(FileID FID,
                                                    const SourceManager &SM) {
-  if (SM.isWrittenInScratchSpace(SM.getLocForStartOfFile(FID)))
-    return convertFileIDFromScratchSpace(FID, SM);
-
   auto Found = FileIDToCachedSLocIdx.find(FID);
   if (Found != FileIDToCachedSLocIdx.end())
     return Found->second;
@@ -295,9 +350,12 @@ unsigned CachedDiagnosticSerializer::convertFileID(FileID FID,
       CachedFI.Filename = FE->getName();
     } else {
       CachedFI.Filename = FI.getName();
-      CachedFI.Buffer = *FI.getContentCache().getBufferDataIfLoaded();
+      CachedFI.Buffer =
+          MemoryBuffer::getMemBuffer(*FI.getContentCache().getBufferIfLoaded());
     }
     CachedFI.IncludeLoc = convertLoc(FullSourceLoc(FI.getIncludeLoc(), SM));
+    CachedFI.IsScratchBuffer =
+        SM.isWrittenInScratchSpace(SM.getLocForStartOfFile(FID));
     CachedEntry.Data = std::move(CachedFI);
   } else {
     const SrcMgr::ExpansionInfo &EI = Entry.getExpansion();
@@ -307,7 +365,7 @@ unsigned CachedDiagnosticSerializer::convertFileID(FileID FID,
     CachedEI.ExpansionStartLoc =
         convertLoc(FullSourceLoc(EI.getExpansionLocStart(), SM));
     CachedEI.ExpansionEndLoc =
-        convertLoc(FullSourceLoc(EI.getExpansionLocEnd(), SM));
+        convertLoc(FullSourceLoc(EI.getUnderlyingExpansionLocEnd(), SM));
     CachedEI.IsTokenRange = EI.isExpansionTokenRange();
     CachedEntry.Data = std::move(CachedEI);
   }
@@ -315,52 +373,6 @@ unsigned CachedDiagnosticSerializer::convertFileID(FileID FID,
   unsigned Idx = CachedDiags.SLocEntries.size();
   CachedDiags.SLocEntries.push_back(std::move(CachedEntry));
   FileIDToCachedSLocIdx[FID] = Idx;
-  return Idx;
-}
-
-unsigned CachedDiagnosticSerializer::convertFileIDFromScratchSpace(
-    FileID FID, const SourceManager &SM) {
-  // Scratch space is treated specially:
-  // 1. The scratch space buffer can get new contents as preprocessing proceeds,
-  //    so we update the \p cached_diagnostics::SLocEntry_FileInfo with the new
-  //    contents each time there's an update.
-  // 2. The allocated buffer is large (~4K) but commonly a very small part of
-  //    that is used, so we truncate it for serialization.
-
-  const SrcMgr::SLocEntry &Entry = SM.getSLocEntry(FID);
-  assert(Entry.isFile());
-  const SrcMgr::FileInfo &FI = Entry.getFile();
-  assert(FI.getIncludeLoc().isInvalid());
-  StringRef ScratchBuffer = *FI.getContentCache().getBufferDataIfLoaded();
-  // There's a '\0' between each addition in the scratch space, look for the end
-  // of actual contents using '\0\0'.
-  size_t EndIdx = ScratchBuffer.find(StringRef("\0\0", 2));
-  assert(EndIdx != StringRef::npos);
-  StringRef Contents = ScratchBuffer.substr(0, EndIdx);
-
-  unsigned Idx;
-  auto Found = FileIDToCachedSLocIdx.find(FID);
-  if (Found != FileIDToCachedSLocIdx.end()) {
-    Idx = Found->second;
-    auto &CachedFI = std::get<cached_diagnostics::SLocEntry::FileInfo>(
-        CachedDiags.SLocEntries[Idx].Data);
-    if (CachedFI.Buffer->size() != Contents.size()) {
-      CachedFI.Buffer = Contents;
-      // If a \p FileID is already associated, reset it so a new one is created
-      // for the new buffer next time it is needed.
-      if (Idx < FileIDBySlocIdx.size())
-        FileIDBySlocIdx[Idx] = FileID();
-    }
-  } else {
-    cached_diagnostics::SLocEntry CachedEntry;
-    cached_diagnostics::SLocEntry::FileInfo CachedFI;
-    CachedFI.Filename = FI.getName();
-    CachedFI.Buffer = Contents;
-    CachedEntry.Data = std::move(CachedFI);
-    Idx = CachedDiags.SLocEntries.size();
-    CachedDiags.SLocEntries.push_back(std::move(CachedEntry));
-    FileIDToCachedSLocIdx[FID] = Idx;
-  }
   return Idx;
 }
 
@@ -373,15 +385,13 @@ FileID CachedDiagnosticSerializer::convertCachedSLocEntry(unsigned Idx) {
   const cached_diagnostics::SLocEntry &CachedSLocEntry =
       CachedDiags.SLocEntries[Idx];
   FileID FID;
-  if (std::holds_alternative<cached_diagnostics::SLocEntry::FileInfo>(
-          CachedSLocEntry.Data)) {
-    const auto &FI =
-        std::get<cached_diagnostics::SLocEntry::FileInfo>(CachedSLocEntry.Data);
+  if (CachedSLocEntry.isFileInfo()) {
+    const auto &FI = CachedSLocEntry.getAsFileInfo();
     FullSourceLoc IncludeLoc = convertCachedLoc(FI.IncludeLoc);
     if (FI.Buffer) {
-      FID = SourceMgr.createFileID(
-          MemoryBufferRef(FI.Buffer.value(), FI.Filename), SrcMgr::C_User,
-          /*LoadedID*/ 0, /*LoadedOffset*/ 0, IncludeLoc);
+      FID = SourceMgr.createFileID(FI.Buffer->getMemBufferRef(), SrcMgr::C_User,
+                                   /*LoadedID*/ 0, /*LoadedOffset*/ 0,
+                                   IncludeLoc);
     } else {
       auto MemBufOrErr =
           SourceMgr.getFileManager().getBufferForFile(FI.Filename);
@@ -407,8 +417,7 @@ FileID CachedDiagnosticSerializer::convertCachedSLocEntry(unsigned Idx) {
       }
     }
   } else {
-    const auto &EI = std::get<cached_diagnostics::SLocEntry::ExpansionInfo>(
-        CachedSLocEntry.Data);
+    const auto &EI = CachedSLocEntry.getAsExpansionInfo();
     FullSourceLoc SpellingLoc = convertCachedLoc(EI.SpellingLoc);
     FullSourceLoc ExpansionStartLoc = convertCachedLoc(EI.ExpansionStartLoc);
     FullSourceLoc ExpansionEndLoc = convertCachedLoc(EI.ExpansionEndLoc);
@@ -427,14 +436,10 @@ namespace llvm::yaml {
 template <> struct MappingTraits<cached_diagnostics::SLocEntry> {
   static void mapping(IO &io, cached_diagnostics::SLocEntry &s) {
     if (io.outputting()) {
-      if (std::holds_alternative<cached_diagnostics::SLocEntry::FileInfo>(
-              s.Data)) {
-        io.mapRequired(
-            "file", std::get<cached_diagnostics::SLocEntry::FileInfo>(s.Data));
+      if (s.isFileInfo()) {
+        io.mapRequired("file", s.getAsFileInfo());
       } else {
-        io.mapRequired(
-            "expansion",
-            std::get<cached_diagnostics::SLocEntry::ExpansionInfo>(s.Data));
+        io.mapRequired("expansion", s.getAsExpansionInfo());
       }
     } else {
       std::optional<cached_diagnostics::SLocEntry::FileInfo> FI;
@@ -456,7 +461,17 @@ template <> struct MappingTraits<cached_diagnostics::SLocEntry::FileInfo> {
     io.mapOptional("include_loc", s.IncludeLoc);
     if (io.outputting()) {
       if (s.Buffer) {
-        std::string EncodedContents = encodeBase64(s.Buffer.value());
+        StringRef Contents = s.Buffer->getBuffer();
+        if (s.IsScratchBuffer) {
+          // The allocated buffer is large (~4K) but commonly a very small part
+          // of that is used, so we truncate to the useful part only.
+          // There's a '\0' between each addition in the scratch space, look for
+          // the end of the highest referenced section.
+          size_t EndIdx =
+              Contents.find('\0', /*From=*/s.HighestScratchBufferOffset);
+          Contents = Contents.substr(0, EndIdx);
+        }
+        std::string EncodedContents = encodeBase64(Contents);
         io.mapRequired("buffer", EncodedContents);
       }
     } else {
@@ -465,7 +480,8 @@ template <> struct MappingTraits<cached_diagnostics::SLocEntry::FileInfo> {
       if (EncodedContents) {
         std::vector<char> Decoded;
         cantFail(decodeBase64(*EncodedContents, Decoded));
-        s.Buffer = StringRef(Decoded.data(), Decoded.size());
+        s.Buffer = MemoryBuffer::getMemBufferCopy(
+            StringRef(Decoded.data(), Decoded.size()), s.Filename);
       }
     }
   }
