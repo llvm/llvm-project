@@ -935,9 +935,8 @@ private:
     const uptr ReleaseOffset = ReleaseBase - Region->RegionBeg;
 
     ReleaseRecorder Recorder(Region->RegionBeg, ReleaseOffset, &Region->Data);
-    PageReleaseContext Context(
-        BlockSize, Region->AllocatedUser, /*NumberOfRegions=*/1U,
-        ReleaseRangeSize, ReleaseOffset);
+    PageReleaseContext Context(BlockSize, /*NumberOfRegions=*/1U,
+                               ReleaseRangeSize, ReleaseOffset);
 
     for (BatchGroup &BG : GroupToRelease) {
       BG.PushedBlocksAtLastCheckpoint = BG.PushedBlocks;
@@ -949,6 +948,8 @@ private:
                                           ? GroupSize
                                           : AllocatedUserEnd - BatchGroupBase;
       const uptr BatchGroupUsedEnd = BatchGroupBase + AllocatedGroupSize;
+      const bool MayContainLastBlockInRegion =
+          BatchGroupUsedEnd == AllocatedUserEnd;
       const bool BlockAlignedWithUsedEnd =
           (BatchGroupUsedEnd - Region->RegionBeg) % BlockSize == 0;
 
@@ -965,13 +966,16 @@ private:
             DCHECK_EQ(compactPtrGroup(It.get(I)), BG.CompactPtrGroupBase);
 
         Context.markRangeAsAllCounted(BatchGroupBase, BatchGroupUsedEnd,
-                                      Region->RegionBeg);
+                                      Region->RegionBeg, /*RegionIndex=*/0,
+                                      Region->AllocatedUser);
       } else {
         DCHECK_LT(NumBlocks, MaxContainedBlocks);
         // Note that we don't always visit blocks in each BatchGroup so that we
         // may miss the chance of releasing certain pages that cross
         // BatchGroups.
-        Context.markFreeBlocks(BG.Batches, DecompactPtr, Region->RegionBeg);
+        Context.markFreeBlocksInRegion(
+            BG.Batches, DecompactPtr, Region->RegionBeg, /*RegionIndex=*/0,
+            Region->AllocatedUser, MayContainLastBlockInRegion);
       }
     }
 
