@@ -125,6 +125,10 @@ protected:
     return python::ToSWIGWrapper(arg);
   }
 
+  python::PythonObject Transform(lldb::DataExtractorSP arg) {
+    return python::ToSWIGWrapper(arg);
+  }
+
   template <typename T, typename U>
   void ReverseTransform(T &original_arg, U transformed_arg, Status &error) {
     // If U is not a PythonObject, don't touch it!
