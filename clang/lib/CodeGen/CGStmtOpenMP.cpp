@@ -425,7 +425,7 @@ void CodeGenFunction::GenerateXteamRedCapturedVars(
 
 void CodeGenFunction::GenerateOpenMPCapturedVars(
     const CapturedStmt &S, SmallVectorImpl<llvm::Value *> &CapturedVars,
-    bool GenXteamAllocation) {
+    const Stmt *XteamRedNestKey, bool GenXteamAllocation) {
   const RecordDecl *RD = S.getCapturedRecordDecl();
   auto CurField = RD->field_begin();
   auto CurCap = S.captures().begin();
@@ -470,7 +470,7 @@ void CodeGenFunction::GenerateOpenMPCapturedVars(
   }
 
   // The Xteam reduction variable capture must happen after all other captures.
-  const ForStmt *FStmt = CGM.getSingleForStmt(&S);
+  const ForStmt *FStmt = CGM.getSingleForStmt(XteamRedNestKey);
   if (FStmt && CGM.isXteamRedKernel(FStmt)) {
     assert(!CGM.getLangOpts().OpenMPIsDevice && "Expecting host CG");
     CodeGenModule::XteamRedVarMap &XteamRVM = CGM.getXteamRedVarMap(FStmt);
@@ -648,8 +648,9 @@ static llvm::Function *emitOutlinedFunctionPrologue(
 
   // If Xteam, add the new args here to the signature.
   if (isXteamKernel) {
-    assert(D.getAssociatedStmt() && "Directive has no statement");
-    const ForStmt *FStmt = CGM.getSingleForStmt(D.getAssociatedStmt());
+    assert(CGM.getOptKernelKey(D) &&
+           "Mapping key for Xteam reduction statement not found");
+    const ForStmt *FStmt = CGM.getSingleForStmt(CGM.getOptKernelKey(D));
     assert(FStmt && "For statement for directive not found");
     CodeGenModule::XteamRedVarMap &XteamRVM = CGM.getXteamRedVarMap(FStmt);
     for (auto &XteamRVElem : XteamRVM) {
@@ -809,8 +810,9 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
   // retrieved from the cache. This boolean will determine the signature of the
   // offloading function, both on the host and device.
   const ForStmt *FStmt = nullptr;
-  if (D.hasAssociatedStmt())
-    FStmt = CGM.getSingleForStmt(D.getAssociatedStmt());
+  const Stmt *OptKernelKey = CGM.getOptKernelKey(D);
+  if (OptKernelKey)
+    FStmt = CGM.getSingleForStmt(OptKernelKey);
   bool isXteamKernel = false;
   if (CGM.getLangOpts().OpenMPIsDevice)
     isXteamKernel = FStmt && CGM.isXteamRedKernel(FStmt);
@@ -823,6 +825,9 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
             CGM.checkAndSetXteamRedKernel(D) == CodeGenModule::NxSuccess;
       else
         isXteamKernel = true;
+    } else {
+      isXteamKernel =
+          CGM.checkAndSetXteamRedKernel(D) == CodeGenModule::NxSuccess;
     }
   }
 
@@ -847,23 +852,22 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
 
   // Generate specialized kernels for device only
   if (CGM.getLangOpts().OpenMPIsDevice && D.hasAssociatedStmt() &&
-      (CGM.isNoLoopKernel(D.getAssociatedStmt()) ||
+      ((FStmt && CGM.isNoLoopKernel(FStmt)) ||
        (FStmt && CGM.isBigJumpLoopKernel(FStmt)))) {
-    OMPPrivateScope PrivateScope(*this);
-    EmitOMPPrivateClause(D, PrivateScope);
-    (void)PrivateScope.Privatize();
-    if (CGM.isNoLoopKernel(D.getAssociatedStmt()))
-      EmitNoLoopKernel(D, Loc);
+    if (CGM.isNoLoopKernel(FStmt))
+      EmitOptKernel(
+          D, FStmt,
+          llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP, Loc,
+          /*Args=*/nullptr);
     else
-      EmitBigJumpLoopKernel(D, Loc);
+      EmitOptKernel(
+          D, FStmt,
+          llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP,
+          Loc, /*Args=*/nullptr);
   } else if (CGM.getLangOpts().OpenMPIsDevice && isXteamKernel) {
-    OMPPrivateScope PrivateScope(*this);
-    EmitOMPPrivateClause(D, PrivateScope);
-    (void)PrivateScope.Privatize();
-
-    EmitXteamRedKernel(
-        D, D.getAssociatedStmt(), Args,
-        CGM.getXteamRedStmts(CGM.getSingleForStmt(D.getAssociatedStmt())), Loc);
+    EmitOptKernel(D, FStmt,
+                  llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_XTEAM_RED,
+                  Loc, &Args);
   } else {
     CapturedStmtInfo->EmitBody(*this, CD->getBody());
   }
@@ -1810,7 +1814,7 @@ static void emitCommonOMPParallelDirective(
   // The following lambda takes care of appending the lower and upper bound
   // parameters when necessary
   CodeGenBoundParameters(CGF, S, CapturedVars);
-  CGF.GenerateOpenMPCapturedVars(*CS, CapturedVars);
+  CGF.GenerateOpenMPCapturedVars(*CS, CapturedVars, CGF.CGM.getOptKernelKey(S));
   CGF.CGM.getOpenMPRuntime().emitParallelCall(CGF, S.getBeginLoc(), OutlinedFn,
                                               CapturedVars, IfCond, NumThreads);
 }
@@ -6117,7 +6121,7 @@ void CodeGenFunction::EmitOMPOrderedDirective(const OMPOrderedDirective &S) {
           llvm::BasicBlock *FiniBB = splitBBWithSuffix(
               Builder, /*CreateBranch=*/false, ".ordered.after");
           llvm::SmallVector<llvm::Value *, 16> CapturedVars;
-          GenerateOpenMPCapturedVars(*CS, CapturedVars);
+          GenerateOpenMPCapturedVars(*CS, CapturedVars, CGM.getOptKernelKey(S));
           llvm::Function *OutlinedFn =
               emitOutlinedOrderedFunction(CGM, CS, S, S.getBeginLoc());
           assert(S.getBeginLoc().isValid() &&
@@ -6151,7 +6155,7 @@ void CodeGenFunction::EmitOMPOrderedDirective(const OMPOrderedDirective &S) {
     const CapturedStmt *CS = S.getInnermostCapturedStmt();
     if (C) {
       llvm::SmallVector<llvm::Value *, 16> CapturedVars;
-      CGF.GenerateOpenMPCapturedVars(*CS, CapturedVars);
+      CGF.GenerateOpenMPCapturedVars(*CS, CapturedVars, CGM.getOptKernelKey(S));
       llvm::Function *OutlinedFn =
           emitOutlinedOrderedFunction(CGM, CS, S, S.getBeginLoc());
       CGM.getOpenMPRuntime().emitOutlinedFunctionCall(CGF, S.getBeginLoc(),
@@ -6996,7 +7000,7 @@ static void emitCommonOMPTeamsDirective(CodeGenFunction &CGF,
 
   OMPTeamsScope Scope(CGF, S);
   llvm::SmallVector<llvm::Value *, 16> CapturedVars;
-  CGF.GenerateOpenMPCapturedVars(*CS, CapturedVars);
+  CGF.GenerateOpenMPCapturedVars(*CS, CapturedVars, CGF.CGM.getOptKernelKey(S));
   CGF.CGM.getOpenMPRuntime().emitTeamsCall(CGF, S, S.getBeginLoc(), OutlinedFn,
                                            CapturedVars);
 }

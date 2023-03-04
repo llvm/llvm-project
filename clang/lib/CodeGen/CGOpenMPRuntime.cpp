@@ -9861,9 +9861,9 @@ void CGOpenMPRuntime::emitTargetCall(
                                  D.hasClausesOfKind<OMPInReductionClause>();
   llvm::SmallVector<llvm::Value *, 16> CapturedVars;
   const CapturedStmt &CS = *D.getCapturedStmt(OMPD_target);
-  auto &&ArgsCodegen = [&CS, &CapturedVars](CodeGenFunction &CGF,
-                                            PrePostActionTy &) {
-    CGF.GenerateOpenMPCapturedVars(CS, CapturedVars,
+  auto &&ArgsCodegen = [&CS, &D, &CapturedVars](CodeGenFunction &CGF,
+                                                PrePostActionTy &) {
+    CGF.GenerateOpenMPCapturedVars(CS, CapturedVars, CGF.CGM.getOptKernelKey(D),
                                    /*GenXteamAllocation=*/true);
   };
   emitInlinedDirective(CGF, OMPD_unknown, ArgsCodegen);
@@ -9879,7 +9879,8 @@ void CGOpenMPRuntime::emitTargetCall(
     } else {
       if (RequiresOuterTask) {
         CapturedVars.clear();
-        CGF.GenerateOpenMPCapturedVars(CS, CapturedVars);
+        CGF.GenerateOpenMPCapturedVars(CS, CapturedVars,
+                                       CGF.CGM.getOptKernelKey(D));
       }
       emitOutlinedFunctionCall(CGF, D.getBeginLoc(), OutlinedFn, CapturedVars);
     }
@@ -10092,7 +10093,7 @@ void CGOpenMPRuntime::emitTargetCall(
     MEHandler.generateAllInfo(CombinedInfo, MappedVarSet);
 
     // If doing Xteam reduction, add the corresponding vars to Info
-    const ForStmt *FStmt = CGF.CGM.getSingleForStmt(D.getAssociatedStmt());
+    const ForStmt *FStmt = CGF.CGM.getSingleForStmt(CGF.CGM.getOptKernelKey(D));
     if (FStmt && CGF.CGM.isXteamRedKernel(FStmt)) {
       CodeGenModule::XteamRedVarMap &XteamRVM =
           CGF.CGM.getXteamRedVarMap(FStmt);
@@ -10175,7 +10176,7 @@ void CGOpenMPRuntime::emitTargetCall(
     ElseRCG(CGF);
   }
   // If in Xteam, generate the deallocate calls.
-  const ForStmt *FStmt = CGM.getSingleForStmt(D.getAssociatedStmt());
+  const ForStmt *FStmt = CGM.getSingleForStmt(CGM.getOptKernelKey(D));
   if (FStmt && CGM.isXteamRedKernel(FStmt)) {
     assert(!CGM.getLangOpts().OpenMPIsDevice && "Expecting host CG");
     CodeGenModule::XteamRedVarMap &XteamRVM = CGM.getXteamRedVarMap(FStmt);

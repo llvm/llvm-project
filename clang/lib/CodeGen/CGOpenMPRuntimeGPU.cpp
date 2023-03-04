@@ -1048,16 +1048,22 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
   bool flatAttrEmitted = false;
   unsigned compileTimeThreadLimit =
       CGM.getTarget().getGridValue().GV_Default_WG_Size;
+  bool isXteamRedKernel = CGM.isXteamRedKernel(D);
+  bool isBigJumpLoopKernel = CGM.isBigJumpLoopKernel(D);
+  bool isNoLoopKernel = CGM.isNoLoopKernel(D);
   // If constant ThreadLimit(), set reqd_work_group_size metadata
   if (isOpenMPTeamsDirective(D.getDirectiveKind()) ||
-      isOpenMPParallelDirective(D.getDirectiveKind()) ||
-      CGM.isXteamRedKernel(CGM.getSingleForStmt(D.getAssociatedStmt()))) {
-    // Call the work group size calculation for SPMD mode loops.
-    compileTimeThreadLimit = CGM.getWorkGroupSizeSPMDHelper(D);
-
-    // Apply Xteam reduction constraints on blocksize.
-    if (CGM.isXteamRedKernel(D))
+      isOpenMPParallelDirective(D.getDirectiveKind()) || isXteamRedKernel ||
+      isBigJumpLoopKernel || isNoLoopKernel) {
+    // Call the work group size calculation based on kernel type.
+    if (isXteamRedKernel)
       compileTimeThreadLimit = CGM.getXteamRedBlockSize(D);
+    else if (isBigJumpLoopKernel)
+      compileTimeThreadLimit = CGM.getBigJumpLoopBlockSize(D);
+    else if (isNoLoopKernel)
+      compileTimeThreadLimit = CGM.getNoLoopBlockSize(D);
+    else
+      compileTimeThreadLimit = CGM.getWorkGroupSizeSPMDHelper(D);
 
     // Add kernel metadata if ThreadLimit Clause is compile time constant > 0
     if (compileTimeThreadLimit > 0) {
@@ -1201,13 +1207,15 @@ computeExecutionMode(bool Mode, const Stmt *DirectiveStmt, CodeGenModule &CGM) {
   if (!Mode)
     return OMP_TGT_EXEC_MODE_GENERIC;
   if (DirectiveStmt) {
-    if (CGM.isNoLoopKernel(DirectiveStmt))
-      return OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
-    if (CGM.isBigJumpLoopKernel(CGM.getSingleForStmt(DirectiveStmt)))
-      return OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP;
-    const Stmt *S = CGM.getSingleForStmt(DirectiveStmt);
-    if (S && CGM.isXteamRedKernel(S))
-      return OMP_TGT_EXEC_MODE_XTEAM_RED;
+    const Stmt *KernelForStmt = CGM.getSingleForStmt(DirectiveStmt);
+    if (KernelForStmt) {
+      if (CGM.isNoLoopKernel(KernelForStmt))
+        return OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
+      if (CGM.isBigJumpLoopKernel(KernelForStmt))
+        return OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP;
+      if (CGM.isXteamRedKernel(KernelForStmt))
+        return OMP_TGT_EXEC_MODE_XTEAM_RED;
+    }
   }
   return OMP_TGT_EXEC_MODE_SPMD;
 }
@@ -1221,7 +1229,7 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
 
   assert(!ParentName.empty() && "Invalid target region parent name!");
 
-  const Stmt *DirectiveStmt = D.getAssociatedStmt();
+  const Stmt *DirectiveStmt = CGM.getOptKernelKey(D);
   bool Mode = supportsSPMDExecutionMode(CGM.getContext(), D);
   // Used by emitParallelCall
   CGM.setIsSPMDExecutionMode(Mode);
@@ -1254,23 +1262,11 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
   setPropertyExecutionMode(CGM, OutlinedFn->getName(),
                            computeExecutionMode(Mode, DirectiveStmt, CGM));
 
-  // Reset specialized kernel metadata if it exists
-  if (Mode && DirectiveStmt) {
-    if (CGM.isNoLoopKernel(DirectiveStmt))
-      CGM.resetNoLoopKernel(DirectiveStmt);
-    else if (CGM.isBigJumpLoopKernel(CGM.getSingleForStmt(DirectiveStmt)))
-      CGM.resetBigJumpLoopKernel(CGM.getSingleForStmt(DirectiveStmt));
-    else if (CGM.isXteamRedKernel(CGM.getSingleForStmt(DirectiveStmt)))
-      CGM.resetXteamRedKernel(CGM.getSingleForStmt(DirectiveStmt));
-  }
+  if (Mode && DirectiveStmt)
+    CGM.resetOptKernelMetadata(DirectiveStmt);
+
   // Reset cached mode
   CGM.setIsSPMDExecutionMode(false);
-  assert(!CGM.isNoLoopKernel(DirectiveStmt) &&
-         "No-loop attribute not reset after emit");
-  assert(!CGM.isBigJumpLoopKernel(CGM.getSingleForStmt(DirectiveStmt)) &&
-         "Big jump loop attribute not reset after emit");
-  assert(!CGM.isXteamRedKernel(CGM.getSingleForStmt(DirectiveStmt)) &&
-         "Xteam reduction attribute not reset after emit");
 }
 
 CGOpenMPRuntimeGPU::CGOpenMPRuntimeGPU(CodeGenModule &CGM)
@@ -4108,17 +4104,6 @@ llvm::Value *CGOpenMPRuntimeGPU::getGPUBlockID(CodeGenFunction &CGF) {
   llvm::Function *F =
       CGF.CGM.getIntrinsic(llvm::Intrinsic::amdgcn_workgroup_id_x);
   return Bld.CreateCall(F, std::nullopt, "gpu_block_id");
-}
-
-llvm::Value *
-CGOpenMPRuntimeGPU::getGPUCompleteBlockSize(CodeGenFunction &CGF,
-                                            const OMPExecutableDirective &D) {
-  // The following logic does not consider generic kernels, so use this
-  // interface for SPMD kernels only.
-
-  // Get effects of thread-controlling clauses on the current number of threads
-  // and any command line requests:
-  return llvm::ConstantInt::get(CGF.Int32Ty, CGM.getWorkGroupSizeSPMDHelper(D));
 }
 
 llvm::Value *CGOpenMPRuntimeGPU::getXteamRedBlockSize(CodeGenFunction &CGF,

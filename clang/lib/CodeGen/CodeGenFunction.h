@@ -3237,27 +3237,31 @@ public:
   /// calling EmitBlock, EmitBranch, or EmitStmt.
   void EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs = std::nullopt);
 
-  /// EmitNoLoopKernel - For an OpenMP target directive, emit the
+  /// EmitOptKernel - For an OpenMP target directive, emit the optimized
   /// kernel code assuming that related runtime environment variables
-  /// can be ignored.
-  ///
-  /// This function should be called after ensuring that legality
-  /// conditions for a no-loop kernel are met.
-  void EmitNoLoopKernel(const OMPExecutableDirective &D, SourceLocation Loc);
+  /// can be ignored. This function should be called after ensuring that
+  /// legality conditions for a no-loop kernel are met. There are 3 kinds of
+  /// optimized kernels that may be generated: No-Loop, Big-Jump-Loop, and Xteam
+  /// reduction.
+  void EmitOptKernel(const OMPExecutableDirective &D,
+                     const ForStmt *CapturedForStmt,
+                     llvm::omp::OMPTgtExecModeFlags OptKernelMode,
+                     SourceLocation Loc, const FunctionArgList *Args);
 
-  void EmitBigJumpLoopKernel(const OMPExecutableDirective &D,
-                             SourceLocation Loc);
+  void EmitOptKernelCode(const OMPExecutableDirective &D,
+                         const ForStmt *CapturedForStmt,
+                         llvm::omp::OMPTgtExecModeFlags OptKernelMode,
+                         SourceLocation Loc, const FunctionArgList *Args);
 
-  /// EmitXteamRedKernel - For an OpenMP target reduction directive, emit the
-  /// kernel code assuming that related runtime environment variables can be
-  /// ignored.
-  ///
-  /// This function should be called after ensuring that legality
-  /// conditions for an optimized reduction kernel are met.
-  void EmitXteamRedKernel(const OMPExecutableDirective &D, const Stmt *S,
-                          const FunctionArgList &Args,
-                          const CodeGenModule::NoLoopIntermediateStmts &,
-                          SourceLocation Loc);
+  void EmitNoLoopCode(const OMPExecutableDirective &D,
+                      const ForStmt *CapturedForStmt, SourceLocation Loc);
+
+  void EmitBigJumpLoopCode(const OMPExecutableDirective &D,
+                           const ForStmt *CapturedForStmt, SourceLocation Loc);
+
+  void EmitXteamRedCode(const OMPExecutableDirective &D,
+                        const ForStmt *CapturedForStmt, SourceLocation Loc,
+                        const FunctionArgList *Args);
 
   /// Used in No-Loop and Xteam codegen to emit the loop iteration and the
   /// associated variables. Returns the loop iteration variable and its address.
@@ -3400,6 +3404,7 @@ public:
                                      SourceLocation Loc);
   void GenerateOpenMPCapturedVars(const CapturedStmt &S,
                                   SmallVectorImpl<llvm::Value *> &CapturedVars,
+                                  const Stmt *XteamRedNestKey,
                                   bool GenXteamAllocation = false);
   void
   GenerateXteamRedCapturedVars(SmallVectorImpl<llvm::Value *> &CapturedVars,
