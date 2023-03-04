@@ -811,6 +811,57 @@ ExtractSwiftTypeFromCxxInteropType(CompilerType type, TypeSystemSwift &ts,
   return {};
 }
 
+/// Synthetic child that wraps a value object.
+class ValueObjectWrapperSyntheticChildren : public SyntheticChildren {
+  class ValueObjectWrapperFrontEndProvider : public SyntheticChildrenFrontEnd {
+  public:
+    ValueObjectWrapperFrontEndProvider(ValueObject &backend)
+        : SyntheticChildrenFrontEnd(backend) {}
+
+    size_t CalculateNumChildren() override {
+      return 1;
+    }
+
+    lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+      return idx == 0 ? m_backend.GetSP() : nullptr;
+    }
+
+    size_t GetIndexOfChildWithName(ConstString name) override {
+      return m_backend.GetName() == name ? 0 : UINT32_MAX;
+    }
+
+    bool Update() override { return false; }
+
+    bool MightHaveChildren() override { return true; }
+
+    ConstString GetSyntheticTypeName() override {
+      return m_backend.GetCompilerType().GetTypeName();
+    }
+  };
+
+public:
+  ValueObjectWrapperSyntheticChildren(ValueObjectSP valobj, const Flags &flags) 
+      : SyntheticChildren(flags), m_valobj(valobj) {}
+
+  SyntheticChildrenFrontEnd::AutoPointer
+  GetFrontEnd(ValueObject &backend) override {
+    if (!m_valobj)
+      return nullptr;
+    // We ignore the backend parameter here, as we have a more specific one
+    // available.
+    return std::make_unique<ValueObjectWrapperFrontEndProvider>(*m_valobj); 
+  }
+
+  bool IsScripted() override { return false; }
+
+  std::string GetDescription() override {
+    return "C++ bridged synthetic children";
+  }
+
+private:
+  ValueObjectSP m_valobj;
+};
+
 HardcodedFormatters::HardcodedSyntheticFinder
 SwiftLanguage::GetHardcodedSynthetics() {
   static std::once_flag g_initialize;
@@ -1007,11 +1058,68 @@ SwiftLanguage::GetHardcodedSynthetics() {
           swift_type = type_or_name.GetCompilerType();
           // Cast it to the more specific type.
           casted_to_swift = casted_to_swift->Cast(swift_type);
+          if (!casted_to_swift) {
+            LLDB_LOGF(log,
+                      "[Matching CxxBridgedSyntheticChildProvider] - "
+                      "Could not cast value object to dynamic swift type.");
+            return nullptr;
+          }
         }
       }
 
-      return swift_runtime->GetCxxBridgedSyntheticChildProvider(
-          casted_to_swift);
+      casted_to_swift->SetName(ConstString("Swift_Type"));
+
+      SyntheticChildrenSP synth_sp =
+          SyntheticChildrenSP(new ValueObjectWrapperSyntheticChildren(
+              casted_to_swift, SyntheticChildren::Flags()));
+      return synth_sp;
+    });
+    g_formatters.push_back([](lldb_private::ValueObject &valobj,
+                              lldb::DynamicValueType,
+                              FormatManager &) -> lldb::SyntheticChildrenSP {
+      // If C++ interop is enabled, format imported clang types as clang types,
+      // instead of attempting to disguise them as Swift types.
+
+      Log *log(GetLog(LLDBLog::DataFormatters));
+
+      if (!valobj.GetTargetSP()->GetSwiftEnableCxxInterop())
+        return nullptr;
+
+      CompilerType type(valobj.GetCompilerType());
+      auto swift_type_system =
+          type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+      if (!swift_type_system)
+        return nullptr;
+
+      CompilerType original_type;
+      if (!swift_type_system->IsImportedType(type.GetOpaqueQualType(),
+                                        &original_type))
+        return nullptr;
+
+      if (!original_type.GetTypeSystem().isa_and_nonnull<TypeSystemClang>())
+        return nullptr;
+
+      auto qual_type =
+          TypeSystemClang::GetQualType(original_type.GetOpaqueQualType());
+      auto *decl = qual_type->getAsCXXRecordDecl();
+      if (!decl) {
+        LLDB_LOGV(log, "[Matching Clang imported type] - "
+                       "Could not get decl from clang type");
+        return nullptr;
+      }
+      auto casted = valobj.Cast(original_type);
+      if (!casted) {
+        LLDB_LOGV(log, "[Matching Clang imported type] - "
+                       "Could not cast value object to clang type");
+        return nullptr;
+      }
+
+      casted->SetName(ConstString("Clang_Type"));
+
+      SyntheticChildrenSP synth_sp =
+          SyntheticChildrenSP(new ValueObjectWrapperSyntheticChildren(
+              casted, SyntheticChildren::Flags()));
+      return synth_sp;
     });
   });
 
