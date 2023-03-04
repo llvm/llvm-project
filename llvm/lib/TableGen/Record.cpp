@@ -1200,7 +1200,36 @@ std::optional<bool> BinOpInit::CompareInit(unsigned Opc, Init *LHS, Init *RHS) c
     }
     break;
   }
-  case RANGE: {
+  case LISTELEM: {
+    auto *TheList = dyn_cast<ListInit>(LHS);
+    auto *Idx = dyn_cast<IntInit>(RHS);
+    if (!TheList || !Idx)
+      break;
+    auto i = Idx->getValue();
+    if (i < 0 || i >= (ssize_t)TheList->size())
+      break;
+    return TheList->getElement(i);
+  }
+  case LISTSLICE: {
+    auto *TheList = dyn_cast<ListInit>(LHS);
+    auto *SliceIdxs = dyn_cast<ListInit>(RHS);
+    if (!TheList || !SliceIdxs)
+      break;
+    SmallVector<Init *, 8> Args;
+    Args.reserve(SliceIdxs->size());
+    for (auto *I : *SliceIdxs) {
+      auto *II = dyn_cast<IntInit>(I);
+      if (!II)
+        goto unresolved;
+      auto i = II->getValue();
+      if (i < 0 || i >= (ssize_t)TheList->size())
+        goto unresolved;
+      Args.push_back(TheList->getElement(i));
+    }
+    return ListInit::get(Args, TheList->getElementType());
+  }
+  case RANGE:
+  case RANGEC: {
     auto *LHSi = dyn_cast<IntInit>(LHS);
     auto *RHSi = dyn_cast<IntInit>(RHS);
     if (!LHSi || !RHSi)
@@ -1209,7 +1238,20 @@ std::optional<bool> BinOpInit::CompareInit(unsigned Opc, Init *LHS, Init *RHS) c
     auto Start = LHSi->getValue();
     auto End = RHSi->getValue();
     SmallVector<Init *, 8> Args;
-    if (Start < End) {
+    if (getOpcode() == RANGEC) {
+      // Closed interval
+      if (Start <= End) {
+        // Ascending order
+        Args.reserve(End - Start + 1);
+        for (auto i = Start; i <= End; ++i)
+          Args.push_back(IntInit::get(getRecordKeeper(), i));
+      } else {
+        // Descending order
+        Args.reserve(Start - End + 1);
+        for (auto i = Start; i >= End; --i)
+          Args.push_back(IntInit::get(getRecordKeeper(), i));
+      }
+    } else if (Start < End) {
       // Half-open interval (excludes `End`)
       Args.reserve(End - Start);
       for (auto i = Start; i < End; ++i)
@@ -1308,6 +1350,7 @@ std::optional<bool> BinOpInit::CompareInit(unsigned Opc, Init *LHS, Init *RHS) c
     break;
   }
   }
+unresolved:
   return const_cast<BinOpInit *>(this);
 }
 
@@ -1324,6 +1367,11 @@ Init *BinOpInit::resolveReferences(Resolver &R) const {
 std::string BinOpInit::getAsString() const {
   std::string Result;
   switch (getOpcode()) {
+  case LISTELEM:
+  case LISTSLICE:
+    return LHS->getAsString() + "[" + RHS->getAsString() + "]";
+  case RANGEC:
+    return LHS->getAsString() + "..." + RHS->getAsString();
   case CONCAT: Result = "!con"; break;
   case ADD: Result = "!add"; break;
   case SUB: Result = "!sub"; break;
