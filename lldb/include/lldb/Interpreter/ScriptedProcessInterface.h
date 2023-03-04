@@ -38,10 +38,6 @@ public:
 
   virtual Status Resume() { return Status("ScriptedProcess did not resume"); }
 
-  virtual bool ShouldStop() { return true; }
-
-  virtual Status Stop() { return Status("ScriptedProcess did not stop"); }
-
   virtual std::optional<MemoryRegionInfo>
   GetMemoryRegionContainingAddress(lldb::addr_t address, Status &error) {
     error.SetErrorString("ScriptedProcess have no memory region.");

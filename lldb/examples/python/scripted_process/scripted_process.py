@@ -160,30 +160,24 @@ class ScriptedProcess(metaclass=ABCMeta):
         """
         return lldb.SBError()
 
-    def resume(self):
+    def resume(self, should_stop=True):
         """ Simulate the scripted process resume.
 
-        Returns:
-            lldb.SBError: An `lldb.SBError` with error code 0.
-        """
-        return lldb.SBError()
-
-    @abstractmethod
-    def should_stop(self):
-        """ Check if the scripted process plugin should produce the stop event.
-
-        Returns:
-            bool: True if scripted process should broadcast a stop event.
-                  False otherwise.
-        """
-        pass
-
-    def stop(self):
-        """ Trigger the scripted process stop.
+        Args:
+            should_stop (bool): If True, resume will also 
 
         Returns:
             lldb.SBError: An `lldb.SBError` with error code 0.
         """
+        process = self.target.GetProcess()
+        if not process:
+            error = lldb.SBError()
+            error.SetErrorString("Invalid process.")
+            return error
+
+        process.ForceScriptedState(lldb.eStateRunning);
+        if (should_stop):
+            process.ForceScriptedState(lldb.eStateStopped);
         return lldb.SBError()
 
     @abstractmethod
