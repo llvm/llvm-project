@@ -83,9 +83,9 @@ public:
     // an s_delay_alu instruction.
     static constexpr unsigned TRANS_MAX = 4;
 
-    // The maximum number of SALU cycles we can encode in an s_delay_alu
-    // instruction.
-    static constexpr unsigned SALU_CYCLES_MAX = 3;
+    // One larger than the maximum number of SALU cycles we can encode in an
+    // s_delay_alu instruction.
+    static constexpr unsigned SALU_CYCLES_MAX = 4;
 
     // If it was written by a (non-TRANS) VALU, remember how many clock cycles
     // are left until it completes, and how many other (non-TRANS) VALU we have
@@ -284,6 +284,7 @@ public:
 
     // Wait for an SALU instruction.
     if (Delay.SALUCycles) {
+      assert(Delay.SALUCycles < DelayInfo::SALU_CYCLES_MAX);
       if (Imm & 0x780) {
         // We have already encoded a VALU and a TRANS delay. There's no room in
         // the encoding for an SALU delay as well, so just drop it.
