@@ -27,8 +27,8 @@ void error() {
   int ThreadID = get_local_id(0);
 
   while (j < ThreadID) {
-    // CHECK-NOTES: :[[@LINE-3]]:3: note: assignment of ID-dependent variable ThreadID
-    // CHECK-NOTES: :[[@LINE-2]]:10: warning: backward branch (while loop) is ID-dependent due to variable reference to 'ThreadID' and may cause performance degradation [altera-id-dependent-backward-branch]
+    // CHECK-NOTES: :[[@LINE-1]]:10: warning: backward branch (while loop) is ID-dependent due to variable reference to 'ThreadID' and may cause performance degradation [altera-id-dependent-backward-branch]
+    // CHECK-NOTES: :[[@LINE-4]]:3: note: assignment of ID-dependent variable ThreadID
     accumulator++;
   }
 
@@ -45,34 +45,34 @@ void error() {
   };
 
   for (int i = 0; i < ThreadID2; i++) {
-    // CHECK-NOTES: :[[@LINE-9]]:3: note: inferred assignment of ID-dependent value from ID-dependent variable ThreadID
-    // CHECK-NOTES: :[[@LINE-2]]:19: warning: backward branch (for loop) is ID-dependent due to variable reference to 'ThreadID2' and may cause performance degradation [altera-id-dependent-backward-branch]
+    // CHECK-NOTES: :[[@LINE-1]]:19: warning: backward branch (for loop) is ID-dependent due to variable reference to 'ThreadID2' and may cause performance degradation [altera-id-dependent-backward-branch]
+    // CHECK-NOTES: :[[@LINE-10]]:3: note: inferred assignment of ID-dependent value from ID-dependent variable ThreadID
     accumulator++;
   }
 
   do {
     accumulator++;
   } while (j < ThreadID);
-  // CHECK-NOTES: :[[@LINE-29]]:3: note: assignment of ID-dependent variable ThreadID
-  // CHECK-NOTES: :[[@LINE-2]]:12: warning: backward branch (do loop) is ID-dependent due to variable reference to 'ThreadID' and may cause performance degradation [altera-id-dependent-backward-branch]
+  // CHECK-NOTES: :[[@LINE-1]]:12: warning: backward branch (do loop) is ID-dependent due to variable reference to 'ThreadID' and may cause performance degradation [altera-id-dependent-backward-branch]
+  // CHECK-NOTES: :[[@LINE-30]]:3: note: assignment of ID-dependent variable ThreadID
 
   for (int i = 0; i < Example.IDDepField; i++) {
-    // CHECK-NOTES: :[[@LINE-24]]:3: note: assignment of ID-dependent field IDDepField
-    // CHECK-NOTES: :[[@LINE-2]]:19: warning: backward branch (for loop) is ID-dependent due to member reference to 'IDDepField' and may cause performance degradation [altera-id-dependent-backward-branch]
+    // CHECK-NOTES: :[[@LINE-1]]:19: warning: backward branch (for loop) is ID-dependent due to member reference to 'IDDepField' and may cause performance degradation [altera-id-dependent-backward-branch]
+    // CHECK-NOTES: :[[@LINE-25]]:3: note: assignment of ID-dependent field IDDepField
     accumulator++;
   }
 
   while (j < Example.IDDepField) {
-    // CHECK-NOTES: :[[@LINE-30]]:3: note: assignment of ID-dependent field IDDepField
-    // CHECK-NOTES: :[[@LINE-2]]:10: warning: backward branch (while loop) is ID-dependent due to member reference to 'IDDepField' and may cause performance degradation [altera-id-dependent-backward-branch]
+    // CHECK-NOTES: :[[@LINE-1]]:10: warning: backward branch (while loop) is ID-dependent due to member reference to 'IDDepField' and may cause performance degradation [altera-id-dependent-backward-branch]
+    // CHECK-NOTES: :[[@LINE-31]]:3: note: assignment of ID-dependent field IDDepField
     accumulator++;
   }
 
   do {
     accumulator++;
   } while (j < Example.IDDepField);
-  // CHECK-NOTES: :[[@LINE-38]]:3: note: assignment of ID-dependent field IDDepField
-  // CHECK-NOTES: :[[@LINE-2]]:12: warning: backward branch (do loop) is ID-dependent due to member reference to 'IDDepField' and may cause performance degradation [altera-id-dependent-backward-branch]
+  // CHECK-NOTES: :[[@LINE-1]]:12: warning: backward branch (do loop) is ID-dependent due to member reference to 'IDDepField' and may cause performance degradation [altera-id-dependent-backward-branch]
+  // CHECK-NOTES: :[[@LINE-39]]:3: note: assignment of ID-dependent field IDDepField
 }
 
 void success() {
