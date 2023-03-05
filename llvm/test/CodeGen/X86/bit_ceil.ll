@@ -4,6 +4,7 @@
 
 ; Check the assembly sequence generated for std::bit_ceil.
 
+; std::bit_ceil<uint32_t>(x)
 define i32 @bit_ceil_i32(i32 %x) {
 ; NOBMI-LABEL: bit_ceil_i32:
 ; NOBMI:       # %bb.0:
@@ -46,19 +47,63 @@ define i32 @bit_ceil_i32(i32 %x) {
   ret i32 %sel
 }
 
+; std::bit_ceil<uint32_t>(x + 1)
+define i32 @bit_ceil_i32_plus1(i32 noundef %x) {
+; NOBMI-LABEL: bit_ceil_i32_plus1:
+; NOBMI:       # %bb.0: # %entry
+; NOBMI-NEXT:    testl %edi, %edi
+; NOBMI-NEXT:    je .LBB1_1
+; NOBMI-NEXT:  # %bb.2: # %cond.false
+; NOBMI-NEXT:    bsrl %edi, %ecx
+; NOBMI-NEXT:    xorl $31, %ecx
+; NOBMI-NEXT:    jmp .LBB1_3
+; NOBMI-NEXT:  .LBB1_1:
+; NOBMI-NEXT:    movl $32, %ecx
+; NOBMI-NEXT:  .LBB1_3: # %cond.end
+; NOBMI-NEXT:    negb %cl
+; NOBMI-NEXT:    movl $1, %edx
+; NOBMI-NEXT:    movl $1, %eax
+; NOBMI-NEXT:    # kill: def $cl killed $cl killed $ecx
+; NOBMI-NEXT:    shll %cl, %eax
+; NOBMI-NEXT:    decl %edi
+; NOBMI-NEXT:    cmpl $-2, %edi
+; NOBMI-NEXT:    cmovael %edx, %eax
+; NOBMI-NEXT:    retq
+;
+; BMI-LABEL: bit_ceil_i32_plus1:
+; BMI:       # %bb.0: # %entry
+; BMI-NEXT:    lzcntl %edi, %eax
+; BMI-NEXT:    negb %al
+; BMI-NEXT:    movl $1, %ecx
+; BMI-NEXT:    shlxl %eax, %ecx, %eax
+; BMI-NEXT:    decl %edi
+; BMI-NEXT:    cmpl $-2, %edi
+; BMI-NEXT:    cmovael %ecx, %eax
+; BMI-NEXT:    retq
+entry:
+  %ctlz = tail call i32 @llvm.ctlz.i32(i32 %x, i1 false)
+  %cnt = sub i32 32, %ctlz
+  %shl = shl i32 1, %cnt
+  %dec = add i32 %x, -1
+  %ult = icmp ult i32 %dec, -2
+  %sel = select i1 %ult, i32 %shl, i32 1
+  ret i32 %sel
+}
+
+; std::bit_ceil<uint64_t>(x)
 define i64 @bit_ceil_i64(i64 %x) {
 ; NOBMI-LABEL: bit_ceil_i64:
 ; NOBMI:       # %bb.0:
 ; NOBMI-NEXT:    movq %rdi, %rax
 ; NOBMI-NEXT:    decq %rax
-; NOBMI-NEXT:    je .LBB1_1
+; NOBMI-NEXT:    je .LBB2_1
 ; NOBMI-NEXT:  # %bb.2: # %cond.false
 ; NOBMI-NEXT:    bsrq %rax, %rcx
 ; NOBMI-NEXT:    xorq $63, %rcx
-; NOBMI-NEXT:    jmp .LBB1_3
-; NOBMI-NEXT:  .LBB1_1:
+; NOBMI-NEXT:    jmp .LBB2_3
+; NOBMI-NEXT:  .LBB2_1:
 ; NOBMI-NEXT:    movl $64, %ecx
-; NOBMI-NEXT:  .LBB1_3: # %cond.end
+; NOBMI-NEXT:  .LBB2_3: # %cond.end
 ; NOBMI-NEXT:    negb %cl
 ; NOBMI-NEXT:    movl $1, %edx
 ; NOBMI-NEXT:    movl $1, %eax
@@ -84,6 +129,49 @@ define i64 @bit_ceil_i64(i64 %x) {
   %res = shl i64 1, %cnt
   %ugt = icmp ugt i64 %x, 1
   %sel = select i1 %ugt, i64 %res, i64 1
+  ret i64 %sel
+}
+
+; std::bit_ceil<uint64_t>(x + 1)
+define i64 @bit_ceil_i64_plus1(i64 noundef %x) {
+; NOBMI-LABEL: bit_ceil_i64_plus1:
+; NOBMI:       # %bb.0: # %entry
+; NOBMI-NEXT:    testq %rdi, %rdi
+; NOBMI-NEXT:    je .LBB3_1
+; NOBMI-NEXT:  # %bb.2: # %cond.false
+; NOBMI-NEXT:    bsrq %rdi, %rcx
+; NOBMI-NEXT:    xorq $63, %rcx
+; NOBMI-NEXT:    jmp .LBB3_3
+; NOBMI-NEXT:  .LBB3_1:
+; NOBMI-NEXT:    movl $64, %ecx
+; NOBMI-NEXT:  .LBB3_3: # %cond.end
+; NOBMI-NEXT:    negb %cl
+; NOBMI-NEXT:    movl $1, %edx
+; NOBMI-NEXT:    movl $1, %eax
+; NOBMI-NEXT:    # kill: def $cl killed $cl killed $rcx
+; NOBMI-NEXT:    shlq %cl, %rax
+; NOBMI-NEXT:    decq %rdi
+; NOBMI-NEXT:    cmpq $-2, %rdi
+; NOBMI-NEXT:    cmovaeq %rdx, %rax
+; NOBMI-NEXT:    retq
+;
+; BMI-LABEL: bit_ceil_i64_plus1:
+; BMI:       # %bb.0: # %entry
+; BMI-NEXT:    lzcntq %rdi, %rax
+; BMI-NEXT:    negb %al
+; BMI-NEXT:    movl $1, %ecx
+; BMI-NEXT:    shlxq %rax, %rcx, %rax
+; BMI-NEXT:    decq %rdi
+; BMI-NEXT:    cmpq $-2, %rdi
+; BMI-NEXT:    cmovaeq %rcx, %rax
+; BMI-NEXT:    retq
+entry:
+  %ctlz = tail call i64 @llvm.ctlz.i64(i64 %x, i1 false)
+  %cnt = sub i64 64, %ctlz
+  %shl = shl i64 1, %cnt
+  %dec = add i64 %x, -1
+  %ult = icmp ult i64 %dec, -2
+  %sel = select i1 %ult, i64 %shl, i64 1
   ret i64 %sel
 }
 
