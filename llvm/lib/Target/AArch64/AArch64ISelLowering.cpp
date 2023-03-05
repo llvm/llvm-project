@@ -415,6 +415,15 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
   }
 
+  if (Subtarget->hasSVE2p1() || Subtarget->hasSME2()) {
+    addRegisterClass(MVT::aarch64svcount, &AArch64::PPRRegClass);
+    setOperationPromotedToType(ISD::LOAD, MVT::aarch64svcount, MVT::nxv16i1);
+    setOperationPromotedToType(ISD::STORE, MVT::aarch64svcount, MVT::nxv16i1);
+
+    setOperationAction(ISD::SELECT, MVT::aarch64svcount, Custom);
+    setOperationAction(ISD::SELECT_CC, MVT::aarch64svcount, Expand);
+  }
+
   // Compute derived properties from the register classes
   computeRegisterProperties(Subtarget->getRegisterInfo());
 
@@ -4355,10 +4364,7 @@ SDValue AArch64TargetLowering::LowerBITCAST(SDValue Op,
 
   Op = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Op.getOperand(0));
   Op = DAG.getNode(ISD::BITCAST, DL, MVT::f32, Op);
-  return SDValue(
-      DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL, OpVT, Op,
-                         DAG.getTargetConstant(AArch64::hsub, DL, MVT::i32)),
-      0);
+  return DAG.getTargetExtractSubreg(AArch64::hsub, DL, OpVT, Op);
 }
 
 static EVT getExtensionTo64Bits(const EVT &OrigVT) {
@@ -5717,6 +5723,15 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
   return SDValue();
 }
 
+static std::pair<SDValue, SDValue> splitInt128(SDValue N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, N,
+                           DAG.getConstant(0, DL, MVT::i64));
+  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, N,
+                           DAG.getConstant(1, DL, MVT::i64));
+  return std::make_pair(Lo, Hi);
+}
+
 /// Lower atomic or volatile 128-bit stores to a single STP instruction.
 SDValue AArch64TargetLowering::LowerStore128(SDValue Op,
                                              SelectionDAG &DAG) const {
@@ -5736,15 +5751,12 @@ SDValue AArch64TargetLowering::LowerStore128(SDValue Op,
                       ? StoreNode->getOperand(1)
                       : StoreNode->getOperand(2);
   SDLoc DL(Op);
-  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, Value,
-                           DAG.getConstant(0, DL, MVT::i64));
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, Value,
-                           DAG.getConstant(1, DL, MVT::i64));
-
+  auto StoreValue = splitInt128(Value, DAG);
   unsigned Opcode = IsStoreRelease ? AArch64ISD::STILP : AArch64ISD::STP;
   SDValue Result = DAG.getMemIntrinsicNode(
       Opcode, DL, DAG.getVTList(MVT::Other),
-      {StoreNode->getChain(), Lo, Hi, StoreNode->getBasePtr()},
+      {StoreNode->getChain(), StoreValue.first, StoreValue.second,
+       StoreNode->getBasePtr()},
       StoreNode->getMemoryVT(), StoreNode->getMemOperand());
   return Result;
 }
@@ -6135,16 +6147,11 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
 
     SDValue Chain = Op.getOperand(0);
     SDValue SysRegName = Op.getOperand(1);
-    SDValue Pair = Op.getOperand(2);
-
-    SDValue PairLo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, Pair,
-                                 DAG.getConstant(0, DL, MVT::i32));
-    SDValue PairHi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, Pair,
-                                 DAG.getConstant(1, DL, MVT::i32));
+    std::pair<SDValue, SDValue> Pair = splitInt128(Op.getOperand(2), DAG);
 
     // chain = MSRR(chain, sysregname, lo, hi)
     SDValue Result = DAG.getNode(AArch64ISD::MSRR, DL, MVT::Other, Chain,
-                                 SysRegName, PairLo, PairHi);
+                                 SysRegName, Pair.first, Pair.second);
 
     return Result;
   }
@@ -6429,6 +6436,9 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
                RegVT.getVectorElementType() == MVT::i1) {
         FuncInfo->setIsSVECC(true);
         RC = &AArch64::PPRRegClass;
+      } else if (RegVT == MVT::aarch64svcount) {
+        FuncInfo->setIsSVECC(true);
+        RC = &AArch64::PPRRegClass;
       } else if (RegVT.isScalableVector()) {
         FuncInfo->setIsSVECC(true);
         RC = &AArch64::ZPRRegClass;
@@ -6463,9 +6473,9 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
       case CCValAssign::Full:
         break;
       case CCValAssign::Indirect:
-        assert((VA.getValVT().isScalableVector() ||
-                Subtarget->isWindowsArm64EC()) &&
-               "Indirect arguments should be scalable on most subtargets");
+        assert(
+            (VA.getValVT().isScalableVT() || Subtarget->isWindowsArm64EC()) &&
+            "Indirect arguments should be scalable on most subtargets");
         break;
       case CCValAssign::BCvt:
         ArgValue = DAG.getNode(ISD::BITCAST, DL, VA.getValVT(), ArgValue);
@@ -6544,9 +6554,9 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     }
 
     if (VA.getLocInfo() == CCValAssign::Indirect) {
-      assert(
-          (VA.getValVT().isScalableVector() || Subtarget->isWindowsArm64EC()) &&
-          "Indirect arguments should be scalable on most subtargets");
+      assert((VA.getValVT().isScalableVT() ||
+              Subtarget->isWindowsArm64EC()) &&
+             "Indirect arguments should be scalable on most subtargets");
 
       uint64_t PartSize = VA.getValVT().getStoreSize().getKnownMinValue();
       unsigned NumParts = 1;
@@ -7399,7 +7409,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       Arg = DAG.getNode(ISD::FP_EXTEND, DL, VA.getLocVT(), Arg);
       break;
     case CCValAssign::Indirect:
-      bool isScalable = VA.getValVT().isScalableVector();
+      bool isScalable = VA.getValVT().isScalableVT();
       assert((isScalable || Subtarget->isWindowsArm64EC()) &&
              "Indirect arguments should be scalable on most subtargets");
 
@@ -9288,10 +9298,17 @@ SDValue AArch64TargetLowering::LowerSELECT(SDValue Op,
   SDLoc DL(Op);
 
   EVT Ty = Op.getValueType();
+  if (Ty == MVT::aarch64svcount) {
+    TVal = DAG.getNode(ISD::BITCAST, DL, MVT::nxv16i1, TVal);
+    FVal = DAG.getNode(ISD::BITCAST, DL, MVT::nxv16i1, FVal);
+    SDValue Sel =
+        DAG.getNode(ISD::SELECT, DL, MVT::nxv16i1, CCVal, TVal, FVal);
+    return DAG.getNode(ISD::BITCAST, DL, Ty, Sel);
+  }
+
   if (Ty.isScalableVector()) {
-    SDValue TruncCC = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, CCVal);
     MVT PredVT = MVT::getVectorVT(MVT::i1, Ty.getVectorElementCount());
-    SDValue SplatPred = DAG.getNode(ISD::SPLAT_VECTOR, DL, PredVT, TruncCC);
+    SDValue SplatPred = DAG.getNode(ISD::SPLAT_VECTOR, DL, PredVT, CCVal);
     return DAG.getNode(ISD::VSELECT, DL, Ty, SplatPred, TVal, FVal);
   }
 
@@ -9339,25 +9356,16 @@ SDValue AArch64TargetLowering::LowerSELECT(SDValue Op,
   // If we are lowering a f16 and we do not have fullf16, convert to a f32 in
   // order to use FCSELSrrr
   if ((Ty == MVT::f16 || Ty == MVT::bf16) && !Subtarget->hasFullFP16()) {
-    TVal = SDValue(
-        DAG.getMachineNode(TargetOpcode::INSERT_SUBREG, DL, MVT::f32,
-                           DAG.getUNDEF(MVT::f32), TVal,
-                           DAG.getTargetConstant(AArch64::hsub, DL, MVT::i32)),
-        0);
-    FVal = SDValue(
-        DAG.getMachineNode(TargetOpcode::INSERT_SUBREG, DL, MVT::f32,
-                           DAG.getUNDEF(MVT::f32), FVal,
-                           DAG.getTargetConstant(AArch64::hsub, DL, MVT::i32)),
-        0);
+    TVal = DAG.getTargetInsertSubreg(AArch64::hsub, DL, MVT::f32,
+                                     DAG.getUNDEF(MVT::f32), TVal);
+    FVal = DAG.getTargetInsertSubreg(AArch64::hsub, DL, MVT::f32,
+                                     DAG.getUNDEF(MVT::f32), FVal);
   }
 
   SDValue Res = LowerSELECT_CC(CC, LHS, RHS, TVal, FVal, DL, DAG);
 
   if ((Ty == MVT::f16 || Ty == MVT::bf16) && !Subtarget->hasFullFP16()) {
-    Res = SDValue(
-        DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL, Ty, Res,
-                           DAG.getTargetConstant(AArch64::hsub, DL, MVT::i32)),
-        0);
+    return DAG.getTargetExtractSubreg(AArch64::hsub, DL, Ty, Res);
   }
 
   return Res;
@@ -12316,8 +12324,11 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     for (unsigned i = 0; i < NumElts; ++i) {
       SDValue V = Op.getOperand(i);
       const SDNode *N = V.getNode();
-      if (!isa<ConstantSDNode>(N->getOperand(1)))
+      if (!isa<ConstantSDNode>(N->getOperand(1))) {
+        Even = false;
+        Odd = false;
         break;
+      }
       SDValue N0 = N->getOperand(0);
 
       // All elements are extracted from the same vector.
@@ -14876,6 +14887,9 @@ bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
     return false;
 
   // FIXME: Update this method to support scalable addressing modes.
+  if (Ty->isScalableTargetExtTy())
+    return AM.HasBaseReg && !AM.BaseOffs && !AM.Scale;
+
   if (isa<ScalableVectorType>(Ty)) {
     uint64_t VecElemNumBytes =
         DL.getTypeSizeInBits(cast<VectorType>(Ty)->getElementType()) / 8;
@@ -20835,7 +20849,7 @@ static SDValue performSelectCombine(SDNode *N,
   if (N0.getOpcode() != ISD::SETCC)
     return SDValue();
 
-  if (ResVT.isScalableVector())
+  if (ResVT.isScalableVT())
     return SDValue();
 
   // Make sure the SETCC result is either i1 (initial DAG), or i32, the lowered
@@ -22067,11 +22081,8 @@ void AArch64TargetLowering::ReplaceBITCASTResults(
   if (VT != MVT::i16 || (SrcVT != MVT::f16 && SrcVT != MVT::bf16))
     return;
 
-  Op = SDValue(
-      DAG.getMachineNode(TargetOpcode::INSERT_SUBREG, DL, MVT::f32,
-                         DAG.getUNDEF(MVT::i32), Op,
-                         DAG.getTargetConstant(AArch64::hsub, DL, MVT::i32)),
-      0);
+  Op = DAG.getTargetInsertSubreg(AArch64::hsub, DL, MVT::f32,
+                                 DAG.getUNDEF(MVT::i32), Op);
   Op = DAG.getNode(ISD::BITCAST, DL, MVT::i32, Op);
   Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Op));
 }
@@ -22135,15 +22146,6 @@ static void ReplaceReductionResults(SDNode *N,
   SDValue InterVal = DAG.getNode(InterOp, dl, LoVT, Lo, Hi);
   SDValue SplitVal = DAG.getNode(AcrossOp, dl, LoVT, InterVal);
   Results.push_back(SplitVal);
-}
-
-static std::pair<SDValue, SDValue> splitInt128(SDValue N, SelectionDAG &DAG) {
-  SDLoc DL(N);
-  SDValue Lo = DAG.getNode(ISD::TRUNCATE, DL, MVT::i64, N);
-  SDValue Hi = DAG.getNode(ISD::TRUNCATE, DL, MVT::i64,
-                           DAG.getNode(ISD::SRL, DL, MVT::i128, N,
-                                       DAG.getConstant(64, DL, MVT::i64)));
-  return std::make_pair(Lo, Hi);
 }
 
 void AArch64TargetLowering::ReplaceExtractSubVectorResults(
@@ -23224,15 +23226,15 @@ bool AArch64TargetLowering::shouldLocalize(
 }
 
 bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
-  if (isa<ScalableVectorType>(Inst.getType()))
+  if (Inst.getType()->isScalableTy())
     return true;
 
   for (unsigned i = 0; i < Inst.getNumOperands(); ++i)
-    if (isa<ScalableVectorType>(Inst.getOperand(i)->getType()))
+    if (Inst.getOperand(i)->getType()->isScalableTy())
       return true;
 
   if (const AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
-    if (isa<ScalableVectorType>(AI->getAllocatedType()))
+    if (AI->getAllocatedType()->isScalableTy())
       return true;
   }
 

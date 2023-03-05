@@ -4,7 +4,6 @@
 ! Target_Enter Simple
 !===============================================================================
 
-
 !CHECK-LABEL: func.func @_QPomp_target_enter_simple() {
 subroutine omp_target_enter_simple
    integer :: a(1024)
@@ -48,8 +47,8 @@ subroutine omp_target_enter_if
    i = 5
    !CHECK: %[[VAL_3:.*]] = fir.load %[[VAL_1:.*]] : !fir.ref<i32>
    !CHECK: %[[VAL_4:.*]] = arith.constant 10 : i32
-   !CHECK: %[[VAL_5:.*]] = arith.cmpi slt, %[[VAL_3:.*]], %[[VAL_4:.*]] : i32
-   !CHECK: omp.target_enter_data   if(%[[VAL_5:.*]] : i1) map((to -> {{.*}} : !fir.ref<!fir.array<1024xi32>>))
+   !CHECK: %[[VAL_5:.*]] = arith.cmpi slt, %[[VAL_3]], %[[VAL_4]] : i32
+   !CHECK: omp.target_enter_data   if(%[[VAL_5]] : i1) map((to -> {{.*}} : !fir.ref<!fir.array<1024xi32>>))
    !$omp target enter data if(i<10) map(to: a)
 end subroutine omp_target_enter_if
 
@@ -61,7 +60,7 @@ end subroutine omp_target_enter_if
 subroutine omp_target_enter_device
    integer :: a(1024)
    !CHECK: %[[VAL_1:.*]] = arith.constant 2 : i32
-   !CHECK: omp.target_enter_data   device(%[[VAL_1:.*]] : i32) map((to -> {{.*}} : !fir.ref<!fir.array<1024xi32>>))
+   !CHECK: omp.target_enter_data   device(%[[VAL_1]] : i32) map((to -> {{.*}} : !fir.ref<!fir.array<1024xi32>>))
    !$omp target enter data map(to: a) device(2)
 end subroutine omp_target_enter_device
 
@@ -100,6 +99,28 @@ subroutine omp_target_exit_device
    integer :: a(1024)
    integer :: d
    !CHECK: %[[VAL_2:.*]] = fir.load %[[VAL_1:.*]] : !fir.ref<i32>
-   !CHECK: omp.target_exit_data   device(%[[VAL_2:.*]] : i32) map((from -> {{.*}} : !fir.ref<!fir.array<1024xi32>>))
+   !CHECK: omp.target_exit_data   device(%[[VAL_2]] : i32) map((from -> {{.*}} : !fir.ref<!fir.array<1024xi32>>))
    !$omp target exit data map(from: a) device(d)
 end subroutine omp_target_exit_device
+
+!===============================================================================
+! Target_Data with region
+!===============================================================================
+
+!CHECK-LABEL: func.func @_QPomp_target_data() {
+subroutine omp_target_data
+   !CHECK: %[[VAL_0:.*]] = fir.alloca !fir.array<1024xi32> {bindc_name = "a", uniq_name = "_QFomp_target_dataEa"}
+   integer :: a(1024)
+   !CHECK: omp.target_data   map((tofrom -> %[[VAL_0]] : !fir.ref<!fir.array<1024xi32>>)) {
+   !$omp target data map(tofrom: a)
+      !CHECK: %[[VAL_1:.*]] = arith.constant 10 : i32
+      !CHECK: %[[VAL_2:.*]] = arith.constant 1 : i64
+      !CHECK: %[[VAL_3:.*]] = arith.constant 1 : i64
+      !CHECK: %[[VAL_4:.*]] = arith.subi %[[VAL_2]], %[[VAL_3]] : i64
+      !CHECK: %[[VAL_5:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_4]] : (!fir.ref<!fir.array<1024xi32>>, i64) -> !fir.ref<i32>
+      !CHECK: fir.store %[[VAL_1]] to %[[VAL_5]] : !fir.ref<i32>
+      a(1) = 10
+   !CHECK: omp.terminator
+   !$omp end target data
+   !CHECK: }
+end subroutine omp_target_data

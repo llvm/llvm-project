@@ -306,15 +306,18 @@ Type Parser::parseExtendedType() {
 //===----------------------------------------------------------------------===//
 
 /// Parses a symbol, of type 'T', and returns it if parsing was successful. If
-/// parsing failed, nullptr is returned. The number of bytes read from the input
-/// string is returned in 'numRead'.
+/// parsing failed, nullptr is returned.
 template <typename T, typename ParserFn>
 static T parseSymbol(StringRef inputStr, MLIRContext *context,
-                     size_t *numReadOut, ParserFn &&parserFn) {
+                     size_t *numReadOut, bool isKnownNullTerminated,
+                     ParserFn &&parserFn) {
   // Set the buffer name to the string being parsed, so that it appears in error
   // diagnostics.
-  auto memBuffer = MemoryBuffer::getMemBuffer(inputStr, /*BufferName=*/inputStr,
-                                              /*RequiresNullTerminator=*/true);
+  auto memBuffer =
+      isKnownNullTerminated
+          ? MemoryBuffer::getMemBuffer(inputStr,
+                                       /*BufferName=*/inputStr)
+          : MemoryBuffer::getMemBufferCopy(inputStr, /*BufferName=*/inputStr);
   SourceMgr sourceMgr;
   sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
   SymbolState aliasState;
@@ -343,12 +346,14 @@ static T parseSymbol(StringRef inputStr, MLIRContext *context,
 }
 
 Attribute mlir::parseAttribute(StringRef attrStr, MLIRContext *context,
-                               Type type, size_t *numRead) {
+                               Type type, size_t *numRead,
+                               bool isKnownNullTerminated) {
   return parseSymbol<Attribute>(
-      attrStr, context, numRead,
+      attrStr, context, numRead, isKnownNullTerminated,
       [type](Parser &parser) { return parser.parseAttribute(type); });
 }
-Type mlir::parseType(StringRef typeStr, MLIRContext *context, size_t *numRead) {
-  return parseSymbol<Type>(typeStr, context, numRead,
+Type mlir::parseType(StringRef typeStr, MLIRContext *context, size_t *numRead,
+                     bool isKnownNullTerminated) {
+  return parseSymbol<Type>(typeStr, context, numRead, isKnownNullTerminated,
                            [](Parser &parser) { return parser.parseType(); });
 }

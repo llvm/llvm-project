@@ -53,11 +53,18 @@ TEST(APFloatTest, isSignaling) {
   // positive/negative distinction is included only since the getQNaN/getSNaN
   // API provides the option.
   APInt payload = APInt::getOneBitSet(4, 2);
-  EXPECT_FALSE(APFloat::getQNaN(APFloat::IEEEsingle(), false).isSignaling());
+  APFloat QNan = APFloat::getQNaN(APFloat::IEEEsingle(), false);
+  EXPECT_FALSE(QNan.isSignaling());
+  EXPECT_EQ(fcQNan, QNan.classify());
+
   EXPECT_FALSE(APFloat::getQNaN(APFloat::IEEEsingle(), true).isSignaling());
   EXPECT_FALSE(APFloat::getQNaN(APFloat::IEEEsingle(), false, &payload).isSignaling());
   EXPECT_FALSE(APFloat::getQNaN(APFloat::IEEEsingle(), true, &payload).isSignaling());
-  EXPECT_TRUE(APFloat::getSNaN(APFloat::IEEEsingle(), false).isSignaling());
+
+  APFloat SNan = APFloat::getSNaN(APFloat::IEEEsingle(), false);
+  EXPECT_TRUE(SNan.isSignaling());
+  EXPECT_EQ(fcSNan, SNan.classify());
+
   EXPECT_TRUE(APFloat::getSNaN(APFloat::IEEEsingle(), true).isSignaling());
   EXPECT_TRUE(APFloat::getSNaN(APFloat::IEEEsingle(), false, &payload).isSignaling());
   EXPECT_TRUE(APFloat::getSNaN(APFloat::IEEEsingle(), true, &payload).isSignaling());
@@ -626,6 +633,15 @@ TEST(APFloatTest, Denormal) {
     APFloat T(APFloat::IEEEsingle(), MinNormalStr);
     T.divide(Val2, rdmd);
     EXPECT_TRUE(T.isDenormal());
+    EXPECT_EQ(fcPosSubnormal, T.classify());
+
+
+    const char *NegMinNormalStr = "-1.17549435082228750797e-38";
+    EXPECT_FALSE(APFloat(APFloat::IEEEsingle(), NegMinNormalStr).isDenormal());
+    APFloat NegT(APFloat::IEEEsingle(), NegMinNormalStr);
+    NegT.divide(Val2, rdmd);
+    EXPECT_TRUE(NegT.isDenormal());
+    EXPECT_EQ(fcNegSubnormal, NegT.classify());
   }
 
   // Test double precision
@@ -638,6 +654,7 @@ TEST(APFloatTest, Denormal) {
     APFloat T(APFloat::IEEEdouble(), MinNormalStr);
     T.divide(Val2, rdmd);
     EXPECT_TRUE(T.isDenormal());
+    EXPECT_EQ(fcPosSubnormal, T.classify());
   }
 
   // Test Intel double-ext
@@ -650,6 +667,7 @@ TEST(APFloatTest, Denormal) {
     APFloat T(APFloat::x87DoubleExtended(), MinNormalStr);
     T.divide(Val2, rdmd);
     EXPECT_TRUE(T.isDenormal());
+    EXPECT_EQ(fcPosSubnormal, T.classify());
   }
 
   // Test quadruple precision
@@ -662,6 +680,7 @@ TEST(APFloatTest, Denormal) {
     APFloat T(APFloat::IEEEquad(), MinNormalStr);
     T.divide(Val2, rdmd);
     EXPECT_TRUE(T.isDenormal());
+    EXPECT_EQ(fcPosSubnormal, T.classify());
   }
 }
 
@@ -693,6 +712,8 @@ TEST(APFloatTest, IsSmallestNormalized) {
         APFloat::getSmallestNormalized(Semantics, true);
     EXPECT_TRUE(PosSmallestNormalized.isSmallestNormalized());
     EXPECT_TRUE(NegSmallestNormalized.isSmallestNormalized());
+    EXPECT_EQ(fcPosNormal, PosSmallestNormalized.classify());
+    EXPECT_EQ(fcNegNormal, NegSmallestNormalized.classify());
 
     for (APFloat *Val : {&PosSmallestNormalized, &NegSmallestNormalized}) {
       bool OldSign = Val->isNegative();
@@ -724,6 +745,9 @@ TEST(APFloatTest, Zero) {
   EXPECT_EQ(0.0,  APFloat(0.0).convertToDouble());
   EXPECT_EQ(-0.0, APFloat(-0.0).convertToDouble());
   EXPECT_TRUE(APFloat(-0.0).isNegative());
+
+  EXPECT_EQ(fcPosZero, APFloat(0.0).classify());
+  EXPECT_EQ(fcNegZero, APFloat(-0.0).classify());
 }
 
 TEST(APFloatTest, DecimalStringsWithoutNullTerminators) {
@@ -2195,9 +2219,12 @@ TEST(APFloatTest, isInfinity) {
   EXPECT_TRUE(PosInf.isInfinity());
   EXPECT_TRUE(PosInf.isPosInfinity());
   EXPECT_FALSE(PosInf.isNegInfinity());
+  EXPECT_EQ(fcPosInf, PosInf.classify());
+
   EXPECT_TRUE(NegInf.isInfinity());
   EXPECT_FALSE(NegInf.isPosInfinity());
   EXPECT_TRUE(NegInf.isNegInfinity());
+  EXPECT_EQ(fcNegInf, NegInf.classify());
 
   EXPECT_FALSE(APFloat::getZero(APFloat::IEEEsingle(), false).isInfinity());
   EXPECT_FALSE(APFloat::getNaN(APFloat::IEEEsingle(), false).isInfinity());

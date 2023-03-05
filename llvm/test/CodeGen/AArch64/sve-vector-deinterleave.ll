@@ -206,6 +206,45 @@ ret {<vscale x 8 x i64>, <vscale x 8 x i64>}  %retval
 }
 
 
+; Promote illegal type size
+
+define {<vscale x 8 x i8>, <vscale x 8 x i8>} @vector_deinterleave_nxv8i8_nxv16i8(<vscale x 16 x i8> %vec) {
+; CHECK-LABEL: vector_deinterleave_nxv8i8_nxv16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpkhi z1.h, z0.b
+; CHECK-NEXT:    uunpklo z2.h, z0.b
+; CHECK-NEXT:    uzp1 z0.h, z2.h, z1.h
+; CHECK-NEXT:    uzp2 z1.h, z2.h, z1.h
+; CHECK-NEXT:    ret
+%retval = call {<vscale x 8 x i8>, <vscale x 8 x i8>} @llvm.experimental.vector.deinterleave2.nxv16i8(<vscale x 16 x i8> %vec)
+ret {<vscale x 8 x i8>, <vscale x 8 x i8>} %retval
+}
+
+define {<vscale x 4 x i16>, <vscale x 4 x i16>} @vector_deinterleave_nxv4i16_nxv8i16(<vscale x 8 x i16> %vec) {
+; CHECK-LABEL: vector_deinterleave_nxv4i16_nxv8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpkhi z1.s, z0.h
+; CHECK-NEXT:    uunpklo z2.s, z0.h
+; CHECK-NEXT:    uzp1 z0.s, z2.s, z1.s
+; CHECK-NEXT:    uzp2 z1.s, z2.s, z1.s
+; CHECK-NEXT:    ret
+%retval = call {<vscale x 4 x i16>, <vscale x 4 x i16>} @llvm.experimental.vector.deinterleave2.nxv8i16(<vscale x 8 x i16> %vec)
+ret {<vscale x 4 x i16>, <vscale x 4 x i16>} %retval
+}
+
+define {<vscale x 2 x i32>, <vscale x 2 x i32>} @vector_deinterleave_nxv2i32_nxv4i32(<vscale x 4 x i32> %vec) {
+; CHECK-LABEL: vector_deinterleave_nxv2i32_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpkhi z1.d, z0.s
+; CHECK-NEXT:    uunpklo z2.d, z0.s
+; CHECK-NEXT:    uzp1 z0.d, z2.d, z1.d
+; CHECK-NEXT:    uzp2 z1.d, z2.d, z1.d
+; CHECK-NEXT:    ret
+%retval = call {<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.experimental.vector.deinterleave2.nxv4i32(<vscale x 4 x i32> %vec)
+ret {<vscale x 2 x i32>, <vscale x 2 x i32>} %retval
+}
+
+
 ; Floating declarations
 declare {<vscale x 2 x half>,<vscale x 2 x half>} @llvm.experimental.vector.deinterleave2.nxv4f16(<vscale x 4 x half>)
 declare {<vscale x 4 x half>, <vscale x 4 x half>} @llvm.experimental.vector.deinterleave2.nxv8f16(<vscale x 8 x half>)
@@ -229,3 +268,7 @@ declare {<vscale x 2 x i1>, <vscale x 2 x i1>} @llvm.experimental.vector.deinter
 ; Illegal size type
 declare {<vscale x 4 x i64>, <vscale x 4 x i64>} @llvm.experimental.vector.deinterleave2.nxv8i64(<vscale x 8 x i64>)
 declare {<vscale x 8 x i64>, <vscale x 8 x i64>} @llvm.experimental.vector.deinterleave2.nxv16i64(<vscale x 16 x i64>)
+
+declare {<vscale x 8 x i8>, <vscale x 8 x i8>} @llvm.experimental.vector.deinterleave2.nxv16i8(<vscale x 16 x i8>)
+declare {<vscale x 4 x i16>, <vscale x 4 x i16>} @llvm.experimental.vector.deinterleave2.nxv8i16(<vscale x 8 x i16>)
+declare {<vscale x 2 x i32>, <vscale x 2 x i32>} @llvm.experimental.vector.deinterleave2.nxv4i32(<vscale x 4 x i32>)

@@ -26,7 +26,8 @@
 // RUN: %clang --target=riscv64-linux -### %s -fsyntax-only 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=DEFAULT-LINUX
 
-// DEFAULT-LINUX: "-target-feature" "+m"
+// DEFAULT-LINUX: "-funwind-tables=2"
+// DEFAULT-LINUX-SAME: "-target-feature" "+m"
 // DEFAULT-LINUX-SAME: "-target-feature" "+a"
 // DEFAULT-LINUX-SAME: "-target-feature" "+f"
 // DEFAULT-LINUX-SAME: "-target-feature" "+d"

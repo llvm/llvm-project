@@ -5,6 +5,7 @@ add_entrypoint_object(
   HDRS
     atoi.h
   DEPENDS
+    libc.src.errno.errno
     libc.src.__support.str_to_integer
 )
 
@@ -15,6 +16,7 @@ add_entrypoint_object(
   HDRS
     atof.h
   DEPENDS
+    libc.src.errno.errno
     libc.src.__support.str_to_float
 )
 
@@ -25,6 +27,7 @@ add_entrypoint_object(
   HDRS
     atol.h
   DEPENDS
+    libc.src.errno.errno
     libc.src.__support.str_to_integer
 )
 
@@ -35,6 +38,7 @@ add_entrypoint_object(
   HDRS
     atoll.h
   DEPENDS
+    libc.src.errno.errno
     libc.src.__support.str_to_integer
 )
 
@@ -55,6 +59,7 @@ add_entrypoint_object(
   HDRS
     strtof.h
   DEPENDS
+    libc.src.errno.errno
     libc.src.__support.str_to_float
 )
 
@@ -65,6 +70,7 @@ add_entrypoint_object(
   HDRS
     strtod.h
   DEPENDS
+    libc.src.errno.errno
     libc.src.__support.str_to_float
 )
 
@@ -75,6 +81,7 @@ add_entrypoint_object(
   HDRS
     strtold.h
   DEPENDS
+    libc.src.errno.errno
     libc.src.__support.str_to_float
 )
 
@@ -85,6 +92,7 @@ add_entrypoint_object(
   HDRS
     strtol.h
   DEPENDS
+    libc.src.errno.errno
     libc.src.__support.str_to_integer
 )
 
@@ -95,6 +103,7 @@ add_entrypoint_object(
   HDRS
     strtoll.h
   DEPENDS
+    libc.src.errno.errno
     libc.src.__support.str_to_integer
 )
 
@@ -105,6 +114,7 @@ add_entrypoint_object(
   HDRS
     strtoul.h
   DEPENDS
+    libc.src.errno.errno
     libc.src.__support.str_to_integer
 )
 
@@ -115,6 +125,7 @@ add_entrypoint_object(
   HDRS
     strtoull.h
   DEPENDS
+    libc.src.errno.errno
     libc.src.__support.str_to_integer
 )
 

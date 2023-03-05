@@ -3,6 +3,8 @@
 
 module m
   public s
+  !ERROR: Interoperable array must have at least one element
+  real, bind(c) :: x(0)
 contains
   subroutine s
   end
@@ -31,10 +33,10 @@ program main
     integer :: x
   end type
 
-  ! ERROR: A derived type with the BIND attribute cannot have a type bound procedure
   type, bind(c) :: t4
     integer :: x
    contains
+    ! ERROR: A derived type with the BIND attribute cannot have a type bound procedure
     procedure, nopass :: b => s
   end type
 
@@ -42,22 +44,22 @@ program main
   type, bind(c) :: t5
   end type
 
-  ! ERROR: A derived type with the BIND attribute cannot have a pointer or allocatable component
   type, bind(c) :: t6
+    ! ERROR: A derived type with the BIND attribute cannot have a pointer or allocatable component
     integer, pointer :: x
   end type
 
-  ! ERROR: A derived type with the BIND attribute cannot have a pointer or allocatable component
   type, bind(c) :: t7
+    ! ERROR: A derived type with the BIND attribute cannot have a pointer or allocatable component
     integer, allocatable :: y
   end type
 
-  ! ERROR: The component of the interoperable derived type must have the BIND attribute
   type :: t8
     integer :: x
   end type
 
   type, bind(c) :: t9
+    !ERROR: Component 'y' of an interoperable derived type must have the BIND attribute
     type(t8) :: y
     integer :: z
   end type
@@ -81,6 +83,10 @@ program main
   type, bind(c) :: t14
     !ERROR: Each component of an interoperable derived type must have an interoperable type
     complex(kind=2) x
+  end type
+  type, bind(c) :: t15
+    !ERROR: An array component of an interoperable type must have at least one element
+    real :: x(0)
   end type
 
 end

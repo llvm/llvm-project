@@ -13,7 +13,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Option.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
-#include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <string>
 #include <vector>

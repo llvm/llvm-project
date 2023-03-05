@@ -765,8 +765,10 @@ static StringRef ModuleKindName(Module::ModuleKind MK) {
     return "Partition Implementation";
   case Module::ModuleHeaderUnit:
     return "Header Unit";
-  case Module::GlobalModuleFragment:
+  case Module::ExplicitGlobalModuleFragment:
     return "Global Module Fragment";
+  case Module::ImplicitGlobalModuleFragment:
+    return "Implicit Module Fragment";
   case Module::PrivateModuleFragment:
     return "Private Module Fragment";
   }

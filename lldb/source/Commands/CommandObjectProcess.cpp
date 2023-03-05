@@ -9,6 +9,7 @@
 #include "CommandObjectProcess.h"
 #include "CommandObjectBreakpoint.h"
 #include "CommandObjectTrace.h"
+#include "CommandOptionsProcessAttach.h"
 #include "CommandOptionsProcessLaunch.h"
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointIDList.h"
@@ -24,6 +25,7 @@
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupPythonClassWithDict.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Interpreter/ScriptedMetadata.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
@@ -199,10 +201,9 @@ protected:
 
     if (!m_class_options.GetName().empty()) {
       m_options.launch_info.SetProcessPluginName("ScriptedProcess");
-      m_options.launch_info.SetScriptedProcessClassName(
-          m_class_options.GetName());
-      m_options.launch_info.SetScriptedProcessDictionarySP(
-          m_class_options.GetStructuredData());
+      ScriptedMetadataSP metadata_sp = std::make_shared<ScriptedMetadata>(
+          m_class_options.GetName(), m_class_options.GetStructuredData());
+      m_options.launch_info.SetScriptedMetadata(metadata_sp);
       target->SetProcessLaunchInfo(m_options.launch_info);
     }
 
@@ -304,77 +305,20 @@ protected:
 #pragma mark CommandObjectProcessAttach
 class CommandObjectProcessAttach : public CommandObjectProcessLaunchOrAttach {
 public:
-  class CommandOptions : public Options {
-  public:
-    CommandOptions() {
-      // Keep default values of all options in one place: OptionParsingStarting
-      // ()
-      OptionParsingStarting(nullptr);
-    }
-
-    ~CommandOptions() override = default;
-
-    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
-      const int short_option = m_getopt_table[option_idx].val;
-      switch (short_option) {
-      case 'c':
-        attach_info.SetContinueOnceAttached(true);
-        break;
-
-      case 'p': {
-        lldb::pid_t pid;
-        if (option_arg.getAsInteger(0, pid)) {
-          error.SetErrorStringWithFormat("invalid process ID '%s'",
-                                         option_arg.str().c_str());
-        } else {
-          attach_info.SetProcessID(pid);
-        }
-      } break;
-
-      case 'P':
-        attach_info.SetProcessPluginName(option_arg);
-        break;
-
-      case 'n':
-        attach_info.GetExecutableFile().SetFile(option_arg,
-                                                FileSpec::Style::native);
-        break;
-
-      case 'w':
-        attach_info.SetWaitForLaunch(true);
-        break;
-
-      case 'i':
-        attach_info.SetIgnoreExisting(false);
-        break;
-
-      default:
-        llvm_unreachable("Unimplemented option");
-      }
-      return error;
-    }
-
-    void OptionParsingStarting(ExecutionContext *execution_context) override {
-      attach_info.Clear();
-    }
-
-    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::ArrayRef(g_process_attach_options);
-    }
-
-    ProcessAttachInfo attach_info;
-  };
-
   CommandObjectProcessAttach(CommandInterpreter &interpreter)
       : CommandObjectProcessLaunchOrAttach(
             interpreter, "process attach", "Attach to a process.",
-            "process attach <cmd-options>", 0, "attach") {}
+            "process attach <cmd-options>", 0, "attach"),
+        m_class_options("scripted process", true, 'C', 'k', 'v', 0) {
+    m_all_options.Append(&m_options);
+    m_all_options.Append(&m_class_options, LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
+                         LLDB_OPT_SET_ALL);
+    m_all_options.Finalize();
+  }
 
   ~CommandObjectProcessAttach() override = default;
 
-  Options *GetOptions() override { return &m_options; }
+  Options *GetOptions() override { return &m_all_options; }
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
@@ -407,6 +351,13 @@ protected:
         result.AppendError(error.AsCString("Error creating target"));
         return false;
       }
+    }
+
+    if (!m_class_options.GetName().empty()) {
+      m_options.attach_info.SetProcessPluginName("ScriptedProcess");
+      ScriptedMetadataSP metadata_sp = std::make_shared<ScriptedMetadata>(
+          m_class_options.GetName(), m_class_options.GetStructuredData());
+      m_options.attach_info.SetScriptedMetadata(metadata_sp);
     }
 
     // Record the old executable module, we want to issue a warning if the
@@ -483,7 +434,9 @@ protected:
     return result.Succeeded();
   }
 
-  CommandOptions m_options;
+  CommandOptionsProcessAttach m_options;
+  OptionGroupPythonClassWithDict m_class_options;
+  OptionGroupOptions m_all_options;
 };
 
 // CommandObjectProcessContinue

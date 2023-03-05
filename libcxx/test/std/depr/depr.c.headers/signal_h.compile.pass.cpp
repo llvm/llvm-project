@@ -9,7 +9,8 @@
 // test <signal.h>
 
 #include <signal.h>
-#include <type_traits>
+
+#include "test_macros.h"
 
 #ifndef SIG_DFL
 #error SIG_DFL not defined
@@ -49,5 +50,5 @@
 
 sig_atomic_t sig;
 typedef void (*func)(int);
-static_assert((std::is_same<decltype(signal(0, (func)0)), func>::value), "");
-static_assert((std::is_same<decltype(raise(0)), int>::value), "");
+ASSERT_SAME_TYPE(func, decltype(signal(0, (func)0)));
+ASSERT_SAME_TYPE(int,  decltype(raise(0)));

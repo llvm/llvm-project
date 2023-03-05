@@ -11,7 +11,7 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <sys/stat.h>
 #include <sys/syscall.h> // For syscall numbers.
 
@@ -25,7 +25,7 @@ LLVM_LIBC_FUNCTION(int, mkdirat, (int dfd, const char *path, mode_t mode)) {
 #endif
 
   if (ret < 0) {
-    errno = -ret;
+    libc_errno = -ret;
     return -1;
   }
   return 0;

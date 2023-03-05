@@ -14,7 +14,6 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/TargetParser/Host.h"
-#include "llvm/TargetParser/TargetParser.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;

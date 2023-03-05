@@ -1,0 +1,12 @@
+## Don't make symlinks on Windows.
+# UNSUPPORTED: system-windows
+# REQUIRES: llvm-driver
+
+# RUN: rm -rf %t
+# RUN: mkdir %t
+# RUN: ln -s %llvm %t/invalidtool
+# RUN: %t/invalidtool cxxfilt --help | FileCheck %s
+
+# CHECK: OVERVIEW: LLVM symbol undecoration tool
+
+# RUN: not %llvm invalidtool cxxfilt --help

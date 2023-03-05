@@ -80,6 +80,12 @@ bool Type::isIEEE() const {
   return APFloat::getZero(getFltSemantics()).isIEEE();
 }
 
+bool Type::isScalableTargetExtTy() const {
+  if (auto *TT = dyn_cast<TargetExtType>(this))
+    return isa<ScalableVectorType>(TT->getLayoutType());
+  return false;
+}
+
 Type *Type::getFloatingPointTy(LLVMContext &C, const fltSemantics &S) {
   Type *Ty;
   if (&S == &APFloat::IEEEhalf())

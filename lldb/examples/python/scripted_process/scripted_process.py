@@ -14,6 +14,7 @@ class ScriptedProcess(metaclass=ABCMeta):
                 THE METHODS EXPOSED MIGHT CHANGE IN THE FUTURE.
     """
 
+    capabilities = None
     memory_regions = None
     loaded_images = None
     threads = None
@@ -45,8 +46,18 @@ class ScriptedProcess(metaclass=ABCMeta):
         self.threads = {}
         self.loaded_images = []
         self.metadata = {}
+        self.capabilities = {}
 
-    @abstractmethod
+    def get_capabilities(self):
+        """ Get a dictionary containing the process capabilities.
+
+        Returns:
+            Dict[str:bool]: The dictionary of capability, with the capability
+            name as the key and a boolean flag as the value.
+            The dictionary can be empty.
+        """
+        return self.capabilities
+
     def get_memory_region_containing_address(self, addr):
         """ Get the memory region for the scripted process, containing a
             specific address.
@@ -59,7 +70,7 @@ class ScriptedProcess(metaclass=ABCMeta):
             lldb.SBMemoryRegionInfo: The memory region containing the address.
                 None if out of bounds.
         """
-        pass
+        return None
 
     def get_threads_info(self):
         """ Get the dictionary describing the process' Scripted Threads.
@@ -70,35 +81,6 @@ class ScriptedProcess(metaclass=ABCMeta):
             The dictionary can be empty.
         """
         return self.threads
-
-    @abstractmethod
-    def get_thread_with_id(self, tid):
-        """ Get the scripted process thread with a specific ID.
-
-        Args:
-            tid (int): Thread ID to look for in the scripted process.
-
-        Returns:
-            Dict: The thread represented as a dictionary, with the
-                tid thread ID. None if tid doesn't match any of the scripted
-                process threads.
-        """
-        pass
-
-    @abstractmethod
-    def get_registers_for_thread(self, tid):
-        """ Get the register context dictionary for a certain thread of
-            the scripted process.
-
-        Args:
-            tid (int): Thread ID for the thread's register context.
-
-        Returns:
-            Dict: The register context represented as a dictionary, for the
-                tid thread. None if tid doesn't match any of the scripted
-                process threads.
-        """
-        pass
 
     @abstractmethod
     def read_memory_at_address(self, addr, size, error):
@@ -115,6 +97,21 @@ class ScriptedProcess(metaclass=ABCMeta):
                 byte order storing the memory read.
         """
         pass
+
+    def write_memory_at_address(self, addr, data, error):
+        """ Write a buffer to the scripted process memory.
+
+        Args:
+            addr (int): Address from which we should start reading.
+            data (lldb.SBData): An `lldb.SBData` buffer to write to the
+                process memory.
+            error (lldb.SBError): Error object.
+
+        Returns:
+            size (int): Size of the memory to read.
+        """
+        error.SetErrorString("%s doesn't support memory writes." % self.__class__.__name__)
+        return 0
 
     def get_loaded_images(self):
         """ Get the list of loaded images for the scripted process.
@@ -145,6 +142,18 @@ class ScriptedProcess(metaclass=ABCMeta):
 
     def launch(self):
         """ Simulate the scripted process launch.
+
+        Returns:
+            lldb.SBError: An `lldb.SBError` with error code 0.
+        """
+        return lldb.SBError()
+
+    def attach(self, attach_info):
+        """ Simulate the scripted process attach.
+
+        Args:
+            attach_info (lldb.SBAttachInfo): The information related to the
+            process we're attaching to.
 
         Returns:
             lldb.SBError: An `lldb.SBError` with error code 0.

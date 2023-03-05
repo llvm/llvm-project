@@ -7,23 +7,23 @@
 // RUN: %clang_cc1 -std=c++20 -verify %t/global-vs-module.cppm -DUSING
 //
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/global-vs-module.cppm -o %t/M.pcm -DNO_GLOBAL -DEXPORT
-// RUN: %clang_cc1 -std=c++20 -verify %t/module-vs-global.cpp -fmodule-file=%t/M.pcm
+// RUN: %clang_cc1 -std=c++20 -verify %t/module-vs-global.cpp -fmodule-file=M=%t/M.pcm
 //
 // Some of the following tests intentionally have no -verify in their RUN
 // lines; we are testing that those cases do not produce errors.
 //
-// RUN: %clang_cc1 -std=c++20 %t/module-vs-module.cpp -fmodule-file=%t/M.pcm -DMODULE_INTERFACE -verify
-// RUN: %clang_cc1 -std=c++20 %t/module-vs-module.cpp -fmodule-file=%t/M.pcm -DMODULE_INTERFACE -DNO_IMPORT
+// RUN: %clang_cc1 -std=c++20 %t/module-vs-module.cpp -fmodule-file=M=%t/M.pcm -DMODULE_INTERFACE -verify
+// RUN: %clang_cc1 -std=c++20 %t/module-vs-module.cpp -fmodule-file=M=%t/M.pcm -DMODULE_INTERFACE -DNO_IMPORT
 //
-// RUN: %clang_cc1 -std=c++20 %t/module-vs-module.cpp -fmodule-file=%t/M.pcm -emit-module-interface -o %t/N.pcm -DMODULE_INTERFACE -DNO_ERRORS
-// RUN: %clang_cc1 -std=c++20 %t/module-vs-module.cpp -fmodule-file=%t/N.pcm -verify
+// RUN: %clang_cc1 -std=c++20 %t/module-vs-module.cpp -fmodule-file=M=%t/M.pcm -emit-module-interface -o %t/N.pcm -DMODULE_INTERFACE -DNO_ERRORS
+// RUN: %clang_cc1 -std=c++20 %t/module-vs-module.cpp -fmodule-file=M=%t/M.pcm -fmodule-file=N=%t/N.pcm -verify
 // FIXME: Once we start importing "import" declarations properly, this should
 // be rejected (-verify should be added to the following line).
-// RUN: %clang_cc1 -std=c++20 %t/module-vs-module.cpp -fmodule-file=%t/N.pcm -DNO_IMPORT
+// RUN: %clang_cc1 -std=c++20 %t/module-vs-module.cpp -fmodule-file=M=%t/M.pcm -fmodule-file=N=%t/N.pcm -DNO_IMPORT
 //
-// RUN: %clang_cc1 -std=c++20 %t/module-vs-module.cpp -fmodule-file=%t/M.pcm -emit-module-interface -o %t/N-no-M.pcm -DMODULE_INTERFACE -DNO_ERRORS -DNO_IMPORT
-// RUN: %clang_cc1 -std=c++20 %t/module-vs-module.cpp -fmodule-file=%t/N-no-M.pcm -verify
-// RUN: %clang_cc1 -std=c++20 %t/module-vs-module.cpp -fmodule-file=%t/N-no-M.pcm -DNO_IMPORT
+// RUN: %clang_cc1 -std=c++20 %t/module-vs-module.cpp -fmodule-file=M=%t/M.pcm -emit-module-interface -o %t/N-no-M.pcm -DMODULE_INTERFACE -DNO_ERRORS -DNO_IMPORT
+// RUN: %clang_cc1 -std=c++20 %t/module-vs-module.cpp -fmodule-file=M=%t/M.pcm -fmodule-file=N=%t/N-no-M.pcm -verify
+// RUN: %clang_cc1 -std=c++20 %t/module-vs-module.cpp -fmodule-file=N=%t/N-no-M.pcm -DNO_IMPORT
 
 //--- global-vs-module.cppm
 #ifndef NO_GLOBAL
