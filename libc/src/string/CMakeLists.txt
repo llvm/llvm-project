@@ -20,6 +20,7 @@ add_header_library(
     .memory_utils.memcpy_implementation
     libc.include.stdlib
     libc.src.__support.CPP.optional
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(
