@@ -567,12 +567,9 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     // Check for direct ivars access which helps us with implicit access to
     // ivars using "this" or "self".
     GetSymbolContext(eSymbolContextFunction | eSymbolContextBlock);
-    lldb::LanguageType method_language = eLanguageTypeUnknown;
-    bool is_instance_method = false;
     ConstString method_object_name;
-    if (m_sc.GetFunctionMethodInfo(method_language, is_instance_method,
-                                   method_object_name)) {
-      if (is_instance_method && method_object_name) {
+    if (m_sc.GetFunctionMethodInfo(method_object_name)) {
+      if (method_object_name) {
         var_sp = variable_list->FindVariable(method_object_name);
         if (var_sp) {
           separator_idx = 0;

@@ -34,13 +34,10 @@ ConstString CompilerDeclContext::GetScopeQualifiedName() const {
   return ConstString();
 }
 
-bool CompilerDeclContext::IsClassMethod(lldb::LanguageType *language_ptr,
-                                        bool *is_instance_method_ptr,
-                                        ConstString *language_object_name_ptr) {
+bool CompilerDeclContext::IsClassMethod(ConstString *language_object_name_ptr) {
   if (IsValid())
-    return m_type_system->DeclContextIsClassMethod(
-        m_opaque_decl_ctx, language_ptr, is_instance_method_ptr,
-        language_object_name_ptr);
+    return m_type_system->DeclContextIsClassMethod(m_opaque_decl_ctx,
+                                                   language_object_name_ptr);
   return false;
 }
 
