@@ -19888,16 +19888,11 @@ static void DoMarkVarDeclReferenced(
           DRE->setDecl(DRE->getDecl());
         else if (auto *ME = dyn_cast_or_null<MemberExpr>(E))
           ME->setMemberDecl(ME->getMemberDecl());
-      } else if (FirstInstantiation ||
-                 isa<VarTemplateSpecializationDecl>(Var)) {
-        // FIXME: For a specialization of a variable template, we don't
-        // distinguish between "declaration and type implicitly instantiated"
-        // and "implicit instantiation of definition requested", so we have
-        // no direct way to avoid enqueueing the pending instantiation
-        // multiple times.
+      } else if (FirstInstantiation) {
         SemaRef.PendingInstantiations
             .push_back(std::make_pair(Var, PointOfInstantiation));
       } else {
+        bool Inserted = false;
         for (auto &I : SemaRef.SavedPendingInstantiations) {
           auto Iter = llvm::find_if(
               I, [Var](const Sema::PendingImplicitInstantiation &P) {
@@ -19906,9 +19901,19 @@ static void DoMarkVarDeclReferenced(
           if (Iter != I.end()) {
             SemaRef.PendingInstantiations.push_back(*Iter);
             I.erase(Iter);
+            Inserted = true;
             break;
           }
         }
+
+        // FIXME: For a specialization of a variable template, we don't
+        // distinguish between "declaration and type implicitly instantiated"
+        // and "implicit instantiation of definition requested", so we have
+        // no direct way to avoid enqueueing the pending instantiation
+        // multiple times.
+        if (isa<VarTemplateSpecializationDecl>(Var) && !Inserted)
+          SemaRef.PendingInstantiations
+            .push_back(std::make_pair(Var, PointOfInstantiation));
       }
     }
   }
