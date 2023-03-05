@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/termios/cfgetispeed.h"
 #include "src/termios/cfgetospeed.h"
@@ -18,7 +19,6 @@
 #include "test/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <termios.h>
 
 using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
@@ -30,35 +30,35 @@ using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
 
 TEST(LlvmLibcTermiosTest, SpeedSmokeTest) {
   struct termios t;
-  errno = 0;
+  libc_errno = 0;
   ASSERT_THAT(__llvm_libc::cfsetispeed(&t, B50), Succeeds(0));
   ASSERT_EQ(__llvm_libc::cfgetispeed(&t), speed_t(B50));
   ASSERT_THAT(__llvm_libc::cfsetospeed(&t, B75), Succeeds(0));
   ASSERT_EQ(__llvm_libc::cfgetospeed(&t), speed_t(B75));
 
-  errno = 0;
+  libc_errno = 0;
   ASSERT_THAT(__llvm_libc::cfsetispeed(&t, ~CBAUD), Fails(EINVAL));
-  errno = 0;
+  libc_errno = 0;
   ASSERT_THAT(__llvm_libc::cfsetospeed(&t, ~CBAUD), Fails(EINVAL));
 }
 
 TEST(LlvmLibcTermiosTest, GetAttrSmokeTest) {
   struct termios t;
-  errno = 0;
+  libc_errno = 0;
   int fd = __llvm_libc::open("/dev/tty", O_RDONLY);
   if (fd < 0)
     return; // When /dev/tty is not available, no point continuing.
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   ASSERT_THAT(__llvm_libc::tcgetattr(fd, &t), Succeeds(0));
   ASSERT_EQ(__llvm_libc::close(fd), 0);
 }
 
 TEST(LlvmLibcTermiosTest, TcGetSidSmokeTest) {
-  errno = 0;
+  libc_errno = 0;
   int fd = __llvm_libc::open("/dev/tty", O_RDONLY);
   if (fd < 0)
     return; // When /dev/tty is not available, no point continuing.
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   ASSERT_GT(__llvm_libc::tcgetsid(fd), pid_t(0));
   ASSERT_EQ(__llvm_libc::close(fd), 0);
 }
