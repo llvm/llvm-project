@@ -21,7 +21,7 @@
 #include "src/__support/high_precision_decimal.h"
 #include "src/__support/str_to_integer.h"
 #include "src/__support/str_to_num_result.h"
-#include <errno.h>
+#include "src/errno/libc_errno.h" // For ERANGE
 
 namespace __llvm_libc {
 namespace internal {

@@ -2600,7 +2600,7 @@ struct BitIntegerState
 
   /// Keep only "assumed bits" also set in \p BitsEncoding but all known ones.
   BitIntegerState &intersectAssumedBits(base_t BitsEncoding) {
-    // Make sure we never loose any "known bits".
+    // Make sure we never lose any "known bits".
     this->Assumed = (this->Assumed & BitsEncoding) | this->Known;
     return *this;
   }
@@ -2641,14 +2641,14 @@ struct IncIntegerState
 
   /// Take minimum of assumed and \p Value.
   IncIntegerState &takeAssumedMinimum(base_t Value) {
-    // Make sure we never loose "known value".
+    // Make sure we never lose "known value".
     this->Assumed = std::max(std::min(this->Assumed, Value), this->Known);
     return *this;
   }
 
   /// Take maximum of known and \p Value.
   IncIntegerState &takeKnownMaximum(base_t Value) {
-    // Make sure we never loose "known value".
+    // Make sure we never lose "known value".
     this->Assumed = std::max(Value, this->Assumed);
     this->Known = std::max(Value, this->Known);
     return *this;
@@ -2677,14 +2677,14 @@ struct DecIntegerState : public IntegerStateBase<base_ty, 0, ~base_ty(0)> {
 
   /// Take maximum of assumed and \p Value.
   DecIntegerState &takeAssumedMaximum(base_t Value) {
-    // Make sure we never loose "known value".
+    // Make sure we never lose "known value".
     this->Assumed = std::min(std::max(this->Assumed, Value), this->Known);
     return *this;
   }
 
   /// Take minimum of known and \p Value.
   DecIntegerState &takeKnownMinimum(base_t Value) {
-    // Make sure we never loose "known value".
+    // Make sure we never lose "known value".
     this->Assumed = std::min(Value, this->Assumed);
     this->Known = std::min(Value, this->Known);
     return *this;
@@ -2811,7 +2811,7 @@ struct IntegerRangeState : public AbstractState {
 
   /// Unite assumed range with the passed state.
   void unionAssumed(const ConstantRange &R) {
-    // Don't loose a known range.
+    // Don't lose a known range.
     Assumed = Assumed.unionWith(R).intersectWith(Known);
   }
 

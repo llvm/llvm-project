@@ -13,7 +13,7 @@
 #include "src/__support/threads/fork_callbacks.h"
 #include "src/__support/threads/thread.h" // For thread self object
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace __llvm_libc {
@@ -42,7 +42,7 @@ LLVM_LIBC_FUNCTION(pid_t, fork, (void)) {
 
   if (ret < 0) {
     // Error case, a child process was not created.
-    errno = -ret;
+    libc_errno = -ret;
     return -1;
   }
 

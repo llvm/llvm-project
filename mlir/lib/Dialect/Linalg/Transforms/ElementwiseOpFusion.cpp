@@ -1798,8 +1798,8 @@ struct FoldFillWithGenericOp : public OpRewritePattern<GenericOp> {
       Value convertedVal =
           convertScalarToDtype(rewriter, fillOp.getLoc(), fillVal, resultType,
                                /*isUnsignedCast =*/false);
-      payload.getArgument(opOperand->getOperandNumber())
-          .replaceAllUsesWith(convertedVal);
+      rewriter.replaceAllUsesWith(
+          payload.getArgument(opOperand->getOperandNumber()), convertedVal);
     }
     return success(fillFound);
   }

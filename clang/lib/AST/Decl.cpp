@@ -1590,7 +1590,8 @@ Module *Decl::getOwningModuleForLinkage(bool IgnoreLinkage) const {
     return M;
 
   case Module::ModuleHeaderUnit:
-  case Module::GlobalModuleFragment: {
+  case Module::ExplicitGlobalModuleFragment:
+  case Module::ImplicitGlobalModuleFragment: {
     // External linkage declarations in the global module have no owning module
     // for linkage purposes. But internal linkage declarations in the global
     // module fragment of a particular module are owned by that module for

@@ -457,18 +457,6 @@
 // RUN:   | FileCheck --check-prefix=CHECK-UBSAN-STATIC-DARWIN %s
 // CHECK-UBSAN-STATIC-DARWIN: {{.*}}error: static UndefinedBehaviorSanitizer runtime is not supported on darwin
 
-// RUN: %clang -fsanitize=address -### %s 2>&1 \
-// RUN:     --target=x86_64-apple-darwin -fuse-ld=ld -static-libsan \
-// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
-// RUN:   | FileCheck --check-prefix=CHECK-ASAN-STATIC-DARWIN %s
-// CHECK-ASAN-STATIC-DARWIN: {{.*}}error: static AddressSanitizer runtime is not supported on darwin
-
-// RUN: %clang -fsanitize=thread -### %s 2>&1 \
-// RUN:     --target=x86_64-apple-darwin -fuse-ld=ld -static-libsan \
-// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
-// RUN:   | FileCheck --check-prefix=CHECK-TSAN-STATIC-DARWIN %s
-// CHECK-TSAN-STATIC-DARWIN: {{.*}}error: static ThreadSanitizer runtime is not supported on darwin
-
 // RUN: %clang -fsanitize=address,undefined -### %s 2>&1 \
 // RUN:     --target=i386-unknown-linux -fuse-ld=ld \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \

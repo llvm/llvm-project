@@ -357,7 +357,8 @@ SVal ExprEngine::computeObjectUnderConstruction(
       };
 
       if (const auto *CE = dyn_cast<CallExpr>(E)) {
-        CallEventRef<> Caller = CEMgr.getSimpleCall(CE, State, LCtx);
+        CallEventRef<> Caller =
+            CEMgr.getSimpleCall(CE, State, LCtx, getCFGElementRef());
         if (std::optional<SVal> V = getArgLoc(Caller))
           return *V;
         else
@@ -365,14 +366,15 @@ SVal ExprEngine::computeObjectUnderConstruction(
       } else if (const auto *CCE = dyn_cast<CXXConstructExpr>(E)) {
         // Don't bother figuring out the target region for the future
         // constructor because we won't need it.
-        CallEventRef<> Caller =
-            CEMgr.getCXXConstructorCall(CCE, /*Target=*/nullptr, State, LCtx);
+        CallEventRef<> Caller = CEMgr.getCXXConstructorCall(
+            CCE, /*Target=*/nullptr, State, LCtx, getCFGElementRef());
         if (std::optional<SVal> V = getArgLoc(Caller))
           return *V;
         else
           break;
       } else if (const auto *ME = dyn_cast<ObjCMessageExpr>(E)) {
-        CallEventRef<> Caller = CEMgr.getObjCMethodCall(ME, State, LCtx);
+        CallEventRef<> Caller =
+            CEMgr.getObjCMethodCall(ME, State, LCtx, getCFGElementRef());
         if (std::optional<SVal> V = getArgLoc(Caller))
           return *V;
         else
@@ -726,9 +728,9 @@ void ExprEngine::handleConstructor(const Expr *E,
   CallEventManager &CEMgr = getStateManager().getCallEventManager();
   CallEventRef<> Call =
       CIE ? (CallEventRef<>)CEMgr.getCXXInheritedConstructorCall(
-                CIE, TargetRegion, State, LCtx)
+                CIE, TargetRegion, State, LCtx, getCFGElementRef())
           : (CallEventRef<>)CEMgr.getCXXConstructorCall(
-                CE, TargetRegion, State, LCtx);
+                CE, TargetRegion, State, LCtx, getCFGElementRef());
 
   ExplodedNodeSet DstPreVisit;
   getCheckerManager().runCheckersForPreStmt(DstPreVisit, Pred, E, *this);
@@ -869,7 +871,8 @@ void ExprEngine::VisitCXXDestructor(QualType ObjectType,
     // it would interrupt the analysis instead.
     static SimpleProgramPointTag T("ExprEngine", "SkipInvalidDestructor");
     // FIXME: PostImplicitCall with a null decl may crash elsewhere anyway.
-    PostImplicitCall PP(/*Decl=*/nullptr, S->getEndLoc(), LCtx, &T);
+    PostImplicitCall PP(/*Decl=*/nullptr, S->getEndLoc(), LCtx,
+                        getCFGElementRef(), &T);
     NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
     Bldr.generateNode(PP, Pred->getState(), Pred);
     return;
@@ -894,8 +897,8 @@ void ExprEngine::VisitCXXDestructor(QualType ObjectType,
   }
 
   CallEventManager &CEMgr = getStateManager().getCallEventManager();
-  CallEventRef<CXXDestructorCall> Call =
-      CEMgr.getCXXDestructorCall(DtorDecl, S, Dest, IsBaseDtor, State, LCtx);
+  CallEventRef<CXXDestructorCall> Call = CEMgr.getCXXDestructorCall(
+      DtorDecl, S, Dest, IsBaseDtor, State, LCtx, getCFGElementRef());
 
   PrettyStackTraceLoc CrashInfo(getContext().getSourceManager(),
                                 Call->getSourceRange().getBegin(),
@@ -925,7 +928,7 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
                                 "Error evaluating New Allocator Call");
   CallEventManager &CEMgr = getStateManager().getCallEventManager();
   CallEventRef<CXXAllocatorCall> Call =
-    CEMgr.getCXXAllocatorCall(CNE, State, LCtx);
+      CEMgr.getCXXAllocatorCall(CNE, State, LCtx, getCFGElementRef());
 
   ExplodedNodeSet DstPreCall;
   getCheckerManager().runCheckersForPreCall(DstPreCall, Pred,
@@ -1023,7 +1026,7 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
 
   CallEventManager &CEMgr = getStateManager().getCallEventManager();
   CallEventRef<CXXAllocatorCall> Call =
-    CEMgr.getCXXAllocatorCall(CNE, State, LCtx);
+      CEMgr.getCXXAllocatorCall(CNE, State, LCtx, getCFGElementRef());
 
   if (!AMgr.getAnalyzerOptions().MayInlineCXXAllocator) {
     // Invalidate placement args.
@@ -1124,7 +1127,7 @@ void ExprEngine::VisitCXXDeleteExpr(const CXXDeleteExpr *CDE,
 
   CallEventManager &CEMgr = getStateManager().getCallEventManager();
   CallEventRef<CXXDeallocatorCall> Call = CEMgr.getCXXDeallocatorCall(
-      CDE, Pred->getState(), Pred->getLocationContext());
+      CDE, Pred->getState(), Pred->getLocationContext(), getCFGElementRef());
 
   ExplodedNodeSet DstPreCall;
   getCheckerManager().runCheckersForPreCall(DstPreCall, Pred, *Call, *this);

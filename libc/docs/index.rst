@@ -71,7 +71,7 @@ stages there is no ABI stability in any form.
 
    compiler_support
    build_and_test
-   developer_guides
+   dev/index.rst
    porting
    contributing
 

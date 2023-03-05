@@ -2197,17 +2197,8 @@ template <typename R> struct result_pair {
 
   friend class enumerator_iter<R>;
 
-  result_pair() = default;
   result_pair(std::size_t Index, IterOfRange<R> Iter)
       : Index(Index), Iter(Iter) {}
-
-  result_pair(const result_pair<R> &Other)
-      : Index(Other.Index), Iter(Other.Iter) {}
-  result_pair &operator=(const result_pair &Other) {
-    Index = Other.Index;
-    Iter = Other.Iter;
-    return *this;
-  }
 
   std::size_t index() const { return Index; }
   value_reference value() const { return *Iter; }
@@ -2256,12 +2247,6 @@ public:
     return Result.Iter == RHS.Result.Iter;
   }
 
-  enumerator_iter(const enumerator_iter &Other) : Result(Other.Result) {}
-  enumerator_iter &operator=(const enumerator_iter &Other) {
-    Result = Other.Result;
-    return *this;
-  }
-
 private:
   result_type Result;
 };
@@ -2294,13 +2279,13 @@ private:
 ///
 /// std::vector<char> Items = {'A', 'B', 'C', 'D'};
 /// for (auto X : enumerate(Items)) {
-///   printf("Item %d - %c\n", X.index(), X.value());
+///   printf("Item %zu - %c\n", X.index(), X.value());
 /// }
 ///
 /// or using structured bindings:
 ///
 /// for (auto [Index, Value] : enumerate(Items)) {
-///   printf("Item %d - %c\n", Index, Value);
+///   printf("Item %zu - %c\n", Index, Value);
 /// }
 ///
 /// Output:

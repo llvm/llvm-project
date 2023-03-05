@@ -610,8 +610,8 @@ void ExprEngine::VisitCallExpr(const CallExpr *CE, ExplodedNode *Pred,
   // Get the call in its initial state. We use this as a template to perform
   // all the checks.
   CallEventManager &CEMgr = getStateManager().getCallEventManager();
-  CallEventRef<> CallTemplate
-    = CEMgr.getSimpleCall(CE, Pred->getState(), Pred->getLocationContext());
+  CallEventRef<> CallTemplate = CEMgr.getSimpleCall(
+      CE, Pred->getState(), Pred->getLocationContext(), getCFGElementRef());
 
   // Evaluate the function call.  We try each of the checkers
   // to see if the can evaluate the function call.
@@ -837,7 +837,8 @@ void ExprEngine::conservativeEvalCall(const CallEvent &Call, NodeBuilder &Bldr,
   State = bindReturnValue(Call, Pred->getLocationContext(), State);
 
   // And make the result node.
-  Bldr.generateNode(Call.getProgramPoint(), State, Pred);
+  static SimpleProgramPointTag PT("ExprEngine", "Conservative eval call");
+  Bldr.generateNode(Call.getProgramPoint(false, &PT), State, Pred);
 }
 
 ExprEngine::CallInlinePolicy

@@ -5,12 +5,7 @@
 // RUN: split-file %s %t
 //
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/x.cppm -o %t/x.pcm
-// RUN: %clang_cc1 -std=c++20 -emit-module-interface -fmodule-file=%t/x.pcm %t/y.cppm -o %t/y.pcm
-//
-// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=%t/x.pcm -verify %t/use.cpp \
-// RUN:            -DMODULE_NAME=x
-// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=%t/y.pcm -verify %t/use.cpp \
-// RUN:            -DMODULE_NAME=y
+// RUN: %clang_cc1 -std=c++20 -emit-module-interface -fmodule-file=x=%t/x.pcm %t/y.cppm -o %t/y.pcm
 //
 // RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x=%t/x.pcm -verify %t/use.cpp \
 // RUN:            -DMODULE_NAME=x
@@ -21,8 +16,6 @@
 //
 // RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x=%t/a.pcm -verify %t/use.cpp \
 // RUN:            -DMODULE_NAME=x
-// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=%t/y.pcm -fmodule-file=x=%t/a.pcm -verify %t/use.cpp \
-// RUN:            -DMODULE_NAME=y
 // RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=y=%t/y.pcm -fmodule-file=x=%t/a.pcm -verify %t/use.cpp \
 // RUN:            -DMODULE_NAME=y
 //

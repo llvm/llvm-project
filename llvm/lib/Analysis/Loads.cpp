@@ -204,7 +204,7 @@ bool llvm::isDereferenceableAndAlignedPointer(
     const TargetLibraryInfo *TLI) {
   // For unsized types or scalable vectors we don't know exactly how many bytes
   // are dereferenced, so bail out.
-  if (!Ty->isSized() || isa<ScalableVectorType>(Ty))
+  if (!Ty->isSized() || Ty->isScalableTy())
     return false;
 
   // When dereferenceability information is provided by a dereferenceable

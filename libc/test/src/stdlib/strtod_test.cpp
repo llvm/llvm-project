@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/errno/libc_errno.h"
 #include "src/stdlib/strtod.h"
 
 #include "test/UnitTest/Test.h"
 #include "utils/testutils/RoundingModeUtils.h"
 
-#include <errno.h>
 #include <limits.h>
 #include <stddef.h>
 
@@ -43,7 +43,7 @@ public:
     __llvm_libc::fputil::FPBits<double> expected_fp =
         __llvm_libc::fputil::FPBits<double>(expectedRawData);
 
-    errno = 0;
+    libc_errno = 0;
     double result = __llvm_libc::strtod(inputString, &str_end);
 
     __llvm_libc::fputil::FPBits<double> actual_fp =
@@ -55,7 +55,7 @@ public:
     EXPECT_EQ(actual_fp.get_sign(), expected_fp.get_sign());
     EXPECT_EQ(actual_fp.get_exponent(), expected_fp.get_exponent());
     EXPECT_EQ(actual_fp.get_mantissa(), expected_fp.get_mantissa());
-    EXPECT_EQ(errno, expectedErrno);
+    EXPECT_EQ(libc_errno, expectedErrno);
   }
 };
 

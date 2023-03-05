@@ -246,7 +246,7 @@ define amdgpu_ps <8 x float> @test_fmaximum_v4f64_ss(<4 x double> inreg %a, <4 x
   ret <8 x float> %ret
 }
 
-define amdgpu_kernel void @fmaximumi_f32_move_to_valu(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr) {
+define amdgpu_kernel void @fmaximumi_f32_move_to_valu(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) {
 ; GCN-LABEL: fmaximumi_f32_move_to_valu:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_clause 0x1
@@ -262,14 +262,14 @@ define amdgpu_kernel void @fmaximumi_f32_move_to_valu(float addrspace(1)* %out, 
 ; GCN-NEXT:    global_store_b32 v0, v1, s[4:5]
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
-  %a = load volatile float, float addrspace(1)* %aptr, align 4
-  %b = load volatile float, float addrspace(1)* %bptr, align 4
+  %a = load volatile float, ptr addrspace(1) %aptr, align 4
+  %b = load volatile float, ptr addrspace(1) %bptr, align 4
   %v = call float @llvm.maximum.f32(float %a, float %b)
-  store float %v, float addrspace(1)* %out, align 4
+  store float %v, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @fmaximum_f16_move_to_valu(half addrspace(1)* %out, half addrspace(1)* %aptr, half addrspace(1)* %bptr) {
+define amdgpu_kernel void @fmaximum_f16_move_to_valu(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) {
 ; GCN-LABEL: fmaximum_f16_move_to_valu:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_clause 0x1
@@ -285,10 +285,10 @@ define amdgpu_kernel void @fmaximum_f16_move_to_valu(half addrspace(1)* %out, ha
 ; GCN-NEXT:    global_store_b16 v0, v1, s[4:5]
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
-  %a = load volatile half, half addrspace(1)* %aptr, align 4
-  %b = load volatile half, half addrspace(1)* %bptr, align 4
+  %a = load volatile half, ptr addrspace(1) %aptr, align 4
+  %b = load volatile half, ptr addrspace(1) %bptr, align 4
   %v = call half @llvm.maximum.f16(half %a, half %b)
-  store half %v, half addrspace(1)* %out, align 4
+  store half %v, ptr addrspace(1) %out, align 4
   ret void
 }
 

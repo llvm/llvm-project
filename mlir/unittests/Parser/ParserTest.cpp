@@ -95,5 +95,10 @@ TEST(MLIRParser, ParseAttr) {
               b.getI64IntegerAttr(10));
     EXPECT_EQ(numRead, size_t(4)); // includes trailing whitespace
   }
+  { // Parse without null-terminator
+    StringRef attrAsm("999", 1);
+    Attribute attr = parseAttribute(attrAsm, &context);
+    EXPECT_EQ(attr, b.getI64IntegerAttr(9));
+  }
 }
 } // namespace

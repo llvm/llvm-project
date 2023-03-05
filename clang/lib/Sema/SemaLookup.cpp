@@ -1579,7 +1579,8 @@ bool Sema::isUsableModule(const Module *M) {
   // [module.global.frag]p1:
   //   The global module fragment can be used to provide declarations that are
   //   attached to the global module and usable within the module unit.
-  if (M == GlobalModuleFragment ||
+  if (M == TheGlobalModuleFragment || M == TheImplicitGlobalModuleFragment ||
+      M == TheExportedImplicitGlobalModuleFragment ||
       // If M is the module we're parsing, it should be usable. This covers the
       // private module fragment. The private module fragment is usable only if
       // it is within the current module unit. And it must be the current

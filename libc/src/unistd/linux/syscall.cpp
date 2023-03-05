@@ -11,7 +11,7 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <stdarg.h>
 
 namespace __llvm_libc {
@@ -24,7 +24,7 @@ LLVM_LIBC_FUNCTION(long, __llvm_libc_syscall,
   // Syscalls may return large positive values that overflow, but will never
   // return values between -4096 and -1
   if (static_cast<unsigned long>(ret) > -4096UL) {
-    errno = -ret;
+    libc_errno = -ret;
     return -1;
   }
   return ret;

@@ -11,7 +11,7 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <sys/syscall.h> // For syscall numbers.
 #include <sys/wait.h>
 
@@ -22,7 +22,7 @@ LLVM_LIBC_FUNCTION(pid_t, wait4,
                     struct rusage *usage)) {
   pid = __llvm_libc::syscall_impl(SYS_wait4, pid, wait_status, options, usage);
   if (pid < 0) {
-    errno = -pid;
+    libc_errno = -pid;
     return -1;
   }
   return pid;

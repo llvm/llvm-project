@@ -78,7 +78,7 @@ public:
   std::size_t GetElementByteSize(const Descriptor &) const;
   std::size_t GetElements(const Descriptor &) const;
 
-  // For ocmponents that are descriptors, returns size of descriptor;
+  // For components that are descriptors, returns size of descriptor;
   // for Genre::Data, returns elemental byte size times element count.
   std::size_t SizeInBytes(const Descriptor &) const;
 

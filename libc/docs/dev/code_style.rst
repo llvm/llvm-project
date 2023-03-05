@@ -65,3 +65,40 @@ When defining functions inline in header files, we follow certain rules:
    definitions that are implicitly inline. Examples of such functions are
    class methods (static and non-static) defined inline and ``constexpr``
    functions.
+
+Setting ``errno`` from runtime code
+===================================
+
+Many libc functions set ``errno`` to indicate an error condition. If LLVM's libc
+is being used as the only libc, then the ``errno`` from LLVM's libc is affected.
+If LLVM's libc is being used in the :ref:`overlay_mode`, then the ``errno`` from
+the system libc is affected. When a libc function, which can potentially affect
+the ``errno``, is called from a unit test, we do not want the global ``errno``
+(as in, the ``errno`` of the process thread running the unit test) to be
+affected. If the global ``errno`` is affected, then the operation of the unit
+test infrastructure itself can be affected. To avoid perturbing the unit test
+infrastructure around the setting of ``errno``, the following rules are to be
+followed:
+
+#. A special macro named ``libc_errno`` defined in ``src/errno/libc_errno.h``
+   should be used when setting ``errno`` from libc runtime code. For example,
+   code to set ``errno`` to ``EINVAL`` should be:
+
+   .. code-block:: c++
+
+    libc_errno = EINVAL;
+
+#. ``errno`` should be set just before returning from the implementation of the
+   public function. It should not be set from within helper functions. Helper
+   functions should use idiomatic C++ constructs like
+   `cpp::optional <https://github.com/llvm/llvm-project/blob/main/libc/src/__support/CPP/optional.h>`_
+   and
+   `ErrorOr <https://github.com/llvm/llvm-project/blob/main/libc/src/__support/error_or.h>`_
+   to return error values.
+
+#. The header file ``src/errno/libc_errno.h`` is shipped as part of the target
+   corresponding to the ``errno`` entrypoint ``libc.src.errno.errno``. We do
+   not in general allow dependecies between entrypoints. However, the ``errno``
+   entrypoint is the only exceptional entrypoint on which other entrypoints
+   should explicitly depend on if they set ``errno`` to indicate error
+   conditions.

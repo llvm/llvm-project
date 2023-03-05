@@ -11,6 +11,10 @@
 
 #include "lldb/API/SBDefines.h"
 
+namespace lldb_private {
+class ScriptInterpreter;
+}
+
 namespace lldb {
 
 class SBTarget;
@@ -164,8 +168,18 @@ public:
   /// allows a different listener to be used to listen for process events.
   void SetListener(SBListener &listener);
 
+  const char *GetScriptedProcessClassName() const;
+
+  void SetScriptedProcessClassName(const char *class_name);
+
+  lldb::SBStructuredData GetScriptedProcessDictionary() const;
+
+  void SetScriptedProcessDictionary(lldb::SBStructuredData dict);
+
 protected:
   friend class SBTarget;
+
+  friend class lldb_private::ScriptInterpreter;
 
   lldb_private::ProcessAttachInfo &ref();
 

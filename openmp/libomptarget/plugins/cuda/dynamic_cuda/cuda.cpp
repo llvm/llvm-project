@@ -85,8 +85,12 @@ DLWRAP_FINALIZE()
 #define DYNAMIC_CUDA_PATH "libcuda.so"
 #endif
 
+#ifndef TARGET_NAME
 #define TARGET_NAME CUDA
+#endif
+#ifndef DEBUG_PREFIX
 #define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
+#endif
 
 static bool checkForCUDA() {
   // return true if dlopen succeeded and all functions found

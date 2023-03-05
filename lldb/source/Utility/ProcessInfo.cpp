@@ -8,6 +8,7 @@
 
 #include "lldb/Utility/ProcessInfo.h"
 
+#include "lldb/Interpreter/ScriptedMetadata.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
@@ -36,6 +37,7 @@ void ProcessInfo::Clear() {
   m_gid = UINT32_MAX;
   m_arch.Clear();
   m_pid = LLDB_INVALID_PROCESS_ID;
+  m_scripted_metadata_sp.reset();
 }
 
 const char *ProcessInfo::GetName() const {
@@ -107,6 +109,10 @@ void ProcessInfo::SetArguments(const Args &args, bool first_arg_is_executable) {
       m_executable.SetFile(first_arg, FileSpec::Style::native);
     }
   }
+}
+
+bool ProcessInfo::IsScriptedProcess() const {
+  return m_scripted_metadata_sp && *m_scripted_metadata_sp;
 }
 
 void ProcessInstanceInfo::Dump(Stream &s, UserIDResolver &resolver) const {

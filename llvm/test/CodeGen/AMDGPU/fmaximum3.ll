@@ -6,13 +6,13 @@
 ; GCN: buffer_load_b32 [[REGA:v[0-9]+]]
 ; GCN: v_maximum3_f32 [[RESULT:v[0-9]+]], [[REGC]], [[REGB]], [[REGA]]
 ; GCN: buffer_store_b32 [[RESULT]],
-define amdgpu_kernel void @test_fmaximum3_olt_0_f32(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) {
-  %a = load volatile float, float addrspace(1)* %aptr, align 4
-  %b = load volatile float, float addrspace(1)* %bptr, align 4
-  %c = load volatile float, float addrspace(1)* %cptr, align 4
+define amdgpu_kernel void @test_fmaximum3_olt_0_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) {
+  %a = load volatile float, ptr addrspace(1) %aptr, align 4
+  %b = load volatile float, ptr addrspace(1) %bptr, align 4
+  %c = load volatile float, ptr addrspace(1) %cptr, align 4
   %f0 = call float @llvm.maximum.f32(float %a, float %b)
   %f1 = call float @llvm.maximum.f32(float %f0, float %c)
-  store float %f1, float addrspace(1)* %out, align 4
+  store float %f1, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -23,13 +23,13 @@ define amdgpu_kernel void @test_fmaximum3_olt_0_f32(float addrspace(1)* %out, fl
 ; GCN: buffer_load_b32 [[REGC:v[0-9]+]]
 ; GCN: v_maximum3_f32 [[RESULT:v[0-9]+]], [[REGC]], [[REGB]], [[REGA]]
 ; GCN: buffer_store_b32 [[RESULT]],
-define amdgpu_kernel void @test_fmaximum3_olt_1_f32(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) {
-  %a = load volatile float, float addrspace(1)* %aptr, align 4
-  %b = load volatile float, float addrspace(1)* %bptr, align 4
-  %c = load volatile float, float addrspace(1)* %cptr, align 4
+define amdgpu_kernel void @test_fmaximum3_olt_1_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) {
+  %a = load volatile float, ptr addrspace(1) %aptr, align 4
+  %b = load volatile float, ptr addrspace(1) %bptr, align 4
+  %c = load volatile float, ptr addrspace(1) %cptr, align 4
   %f0 = call float @llvm.maximum.f32(float %a, float %b)
   %f1 = call float @llvm.maximum.f32(float %c, float %f0)
-  store float %f1, float addrspace(1)* %out, align 4
+  store float %f1, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -39,13 +39,13 @@ define amdgpu_kernel void @test_fmaximum3_olt_1_f32(float addrspace(1)* %out, fl
 ; GCN: buffer_load_u16 [[REGA:v[0-9]+]]
 ; GCN: v_maximum3_f16 [[RESULT:v[0-9]+]], [[REGC]], [[REGB]], [[REGA]]
 ; GCN: buffer_store_b16 [[RESULT]],
-define amdgpu_kernel void @test_fmaximum3_olt_0_f16(half addrspace(1)* %out, half addrspace(1)* %aptr, half addrspace(1)* %bptr, half addrspace(1)* %cptr) {
-  %a = load volatile half, half addrspace(1)* %aptr, align 2
-  %b = load volatile half, half addrspace(1)* %bptr, align 2
-  %c = load volatile half, half addrspace(1)* %cptr, align 2
+define amdgpu_kernel void @test_fmaximum3_olt_0_f16(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) {
+  %a = load volatile half, ptr addrspace(1) %aptr, align 2
+  %b = load volatile half, ptr addrspace(1) %bptr, align 2
+  %c = load volatile half, ptr addrspace(1) %cptr, align 2
   %f0 = call half @llvm.maximum.f16(half %a, half %b)
   %f1 = call half @llvm.maximum.f16(half %f0, half %c)
-  store half %f1, half addrspace(1)* %out, align 2
+  store half %f1, ptr addrspace(1) %out, align 2
   ret void
 }
 
@@ -55,13 +55,13 @@ define amdgpu_kernel void @test_fmaximum3_olt_0_f16(half addrspace(1)* %out, hal
 ; GCN: buffer_load_u16 [[REGC:v[0-9]+]]
 ; GCN: v_maximum3_f16 [[RESULT:v[0-9]+]], [[REGC]], [[REGA]], [[REGB]]
 ; GCN: buffer_store_b16 [[RESULT]],
-define amdgpu_kernel void @test_fmaximum3_olt_1_f16(half addrspace(1)* %out, half addrspace(1)* %aptr, half addrspace(1)* %bptr, half addrspace(1)* %cptr) {
-  %a = load volatile half, half addrspace(1)* %aptr, align 2
-  %b = load volatile half, half addrspace(1)* %bptr, align 2
-  %c = load volatile half, half addrspace(1)* %cptr, align 2
+define amdgpu_kernel void @test_fmaximum3_olt_1_f16(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) {
+  %a = load volatile half, ptr addrspace(1) %aptr, align 2
+  %b = load volatile half, ptr addrspace(1) %bptr, align 2
+  %c = load volatile half, ptr addrspace(1) %cptr, align 2
   %f0 = call half @llvm.maximum.f16(half %a, half %b)
   %f1 = call half @llvm.maximum.f16(half %c, half %f0)
-  store half %f1, half addrspace(1)* %out, align 2
+  store half %f1, ptr addrspace(1) %out, align 2
   ret void
 }
 
@@ -82,13 +82,13 @@ entry:
 
 ; GCN-LABEL: {{^}}no_fmaximum3_olt_0_f64:
 ; GCN-COUNT-2: v_maximum_f64
-define amdgpu_kernel void @no_fmaximum3_olt_0_f64(double addrspace(1)* %out, double addrspace(1)* %aptr, double addrspace(1)* %bptr, double addrspace(1)* %cptr) {
-  %a = load volatile double, double addrspace(1)* %aptr, align 4
-  %b = load volatile double, double addrspace(1)* %bptr, align 4
-  %c = load volatile double, double addrspace(1)* %cptr, align 4
+define amdgpu_kernel void @no_fmaximum3_olt_0_f64(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) {
+  %a = load volatile double, ptr addrspace(1) %aptr, align 4
+  %b = load volatile double, ptr addrspace(1) %bptr, align 4
+  %c = load volatile double, ptr addrspace(1) %cptr, align 4
   %f0 = call double @llvm.maximum.f64(double %a, double %b)
   %f1 = call double @llvm.maximum.f64(double %f0, double %c)
-  store double %f1, double addrspace(1)* %out, align 4
+  store double %f1, ptr addrspace(1) %out, align 4
   ret void
 }
 

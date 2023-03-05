@@ -101,9 +101,9 @@ contains
 
     !ERROR: Procedure pointer 'p_impure' associated with incompatible procedure designator 'f_impure2': incompatible dummy argument #1: incompatible dummy data object intents
     p_impure => f_impure2
-    !ERROR: Function pointer 'p_pure' associated with incompatible function designator 'f_pure2': function results have incompatible types: INTEGER(4) vs REAL(4)
+    !ERROR: Function pointer 'p_pure' associated with incompatible function designator 'f_pure2': function results have distinct types: INTEGER(4) vs REAL(4)
     p_pure => f_pure2
-    !ERROR: Function pointer 'p_pure' associated with incompatible function designator 'ccos': function results have incompatible types: INTEGER(4) vs COMPLEX(4)
+    !ERROR: Function pointer 'p_pure' associated with incompatible function designator 'ccos': function results have distinct types: INTEGER(4) vs COMPLEX(4)
     p_pure => ccos
     !ERROR: Procedure pointer 'p_impure' associated with incompatible procedure designator 'f_elemental2': incompatible procedure attributes: Elemental
     p_impure => f_elemental2

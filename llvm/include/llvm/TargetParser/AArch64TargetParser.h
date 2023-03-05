@@ -288,8 +288,8 @@ struct ArchInfo {
       return this->Version > Other.Version;
     }
     if (this->Version.getMajor() == 9 && Other.Version.getMajor() == 8) {
-      return this->Version.getMinor().value() + 5 >=
-             Other.Version.getMinor().value();
+      return this->Version.getMinor().value_or(0) + 5 >=
+             Other.Version.getMinor().value_or(0);
     }
     return false;
   }

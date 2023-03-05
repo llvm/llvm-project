@@ -4850,8 +4850,8 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
     const GlobalValue *CalleeGV, CallingConv::ID CalleeCC,
     CallingConv::ID CallerCC, const CallBase *CB, bool isVarArg,
     const SmallVectorImpl<ISD::OutputArg> &Outs,
-    const SmallVectorImpl<ISD::InputArg> &Ins, bool isByValArg,
-    const Function *CallerFunc, bool isCalleeExternalSymbol) const {
+    const SmallVectorImpl<ISD::InputArg> &Ins, const Function *CallerFunc,
+    bool isCalleeExternalSymbol) const {
   bool TailCallOpt = getTargetMachine().Options.GuaranteedTailCallOpt;
 
   if (DisableSCO && !TailCallOpt) return false;
@@ -4864,8 +4864,7 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
     return false;
 
   // Caller contains any byval parameter is not supported.
-  if (isByValArg ||
-      any_of(Ins, [](const ISD::InputArg &IA) { return IA.Flags.isByVal(); }))
+  if (any_of(Ins, [](const ISD::InputArg &IA) { return IA.Flags.isByVal(); }))
     return false;
 
   // Callee contains any byval parameter is not supported, too.
@@ -4937,7 +4936,7 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
 bool PPCTargetLowering::IsEligibleForTailCallOptimization(
     const GlobalValue *CalleeGV, CallingConv::ID CalleeCC,
     CallingConv::ID CallerCC, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, bool isByValArg) const {
+    const SmallVectorImpl<ISD::InputArg> &Ins) const {
   if (!getTargetMachine().Options.GuaranteedTailCallOpt)
     return false;
 
@@ -4947,8 +4946,7 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization(
 
   if (CalleeCC == CallingConv::Fast && CallerCC == CalleeCC) {
     // Functions containing by val parameters are not supported.
-    if (isByValArg ||
-        any_of(Ins, [](const ISD::InputArg &IA) { return IA.Flags.isByVal(); }))
+    if (any_of(Ins, [](const ISD::InputArg &IA) { return IA.Flags.isByVal(); }))
       return false;
 
     // Non-PIC/GOT tail calls are supported.
@@ -5667,27 +5665,27 @@ bool PPCTargetLowering::supportsTailCallFor(const CallBase *CB) const {
                 CalleeFunc->getAttributes(), Outs, *this,
                 CalleeFunc->getParent()->getDataLayout());
 
-  return isEligibleForTCO(
-      CalleeGV, CalleeCC, CallerCC, CB, CalleeFunc->isVarArg(), Outs, Ins,
-      false /*IsByValArg*/, CallerFunc, false /*isCalleeExternalSymbol*/);
+  return isEligibleForTCO(CalleeGV, CalleeCC, CallerCC, CB,
+                          CalleeFunc->isVarArg(), Outs, Ins, CallerFunc,
+                          false /*isCalleeExternalSymbol*/);
 }
 
 bool PPCTargetLowering::isEligibleForTCO(
     const GlobalValue *CalleeGV, CallingConv::ID CalleeCC,
     CallingConv::ID CallerCC, const CallBase *CB, bool isVarArg,
     const SmallVectorImpl<ISD::OutputArg> &Outs,
-    const SmallVectorImpl<ISD::InputArg> &Ins, bool isByValArg,
-    const Function *CallerFunc, bool isCalleeExternalSymbol) const {
+    const SmallVectorImpl<ISD::InputArg> &Ins, const Function *CallerFunc,
+    bool isCalleeExternalSymbol) const {
   if (Subtarget.useLongCalls() && !(CB && CB->isMustTailCall()))
     return false;
 
   if (Subtarget.isSVR4ABI() && Subtarget.isPPC64())
     return IsEligibleForTailCallOptimization_64SVR4(
-        CalleeGV, CalleeCC, CallerCC, CB, isVarArg, Outs, Ins, isByValArg,
-        CallerFunc, isCalleeExternalSymbol);
+        CalleeGV, CalleeCC, CallerCC, CB, isVarArg, Outs, Ins, CallerFunc,
+        isCalleeExternalSymbol);
   else
     return IsEligibleForTailCallOptimization(CalleeGV, CalleeCC, CallerCC,
-                                             isVarArg, Ins, isByValArg);
+                                             isVarArg, Ins);
 }
 
 SDValue
@@ -5713,9 +5711,9 @@ PPCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     const GlobalValue *GV = G ? G->getGlobal() : nullptr;
     bool IsCalleeExternalSymbol = isa<ExternalSymbolSDNode>(Callee);
 
-    isTailCall = isEligibleForTCO(GV, CallConv, CallerCC, CB, isVarArg, Outs,
-                                  Ins, false /*isByValArg*/,
-                                  &(MF.getFunction()), IsCalleeExternalSymbol);
+    isTailCall =
+        isEligibleForTCO(GV, CallConv, CallerCC, CB, isVarArg, Outs, Ins,
+                         &(MF.getFunction()), IsCalleeExternalSymbol);
     if (isTailCall) {
       ++NumTailCalls;
       if (!getTargetMachine().Options.GuaranteedTailCallOpt)

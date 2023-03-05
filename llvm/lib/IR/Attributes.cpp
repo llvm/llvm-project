@@ -431,56 +431,6 @@ static const char *getModRefStr(ModRefInfo MR) {
   llvm_unreachable("Invalid ModRefInfo");
 }
 
-// Every bitfield has a unique name and one or more aliasing names that cover
-// multiple bits. Names should be listed in order of preference, with higher
-// popcounts listed first.
-//
-// Bits are consumed as printed. Each field should only be represented in one
-// printed field.
-static constexpr std::pair<unsigned, StringLiteral> NoFPClassName[] = {
-  {fcAllFlags, "all"},
-  {fcNan, "nan"},
-  {fcSNan, "snan"},
-  {fcQNan, "qnan"},
-  {fcInf, "inf"},
-  {fcNegInf, "ninf"},
-  {fcPosInf, "pinf"},
-  {fcZero, "zero"},
-  {fcNegZero, "nzero"},
-  {fcPosZero, "pzero"},
-  {fcSubnormal, "sub"},
-  {fcNegSubnormal, "nsub"},
-  {fcPosSubnormal, "psub"},
-  {fcNormal, "norm"},
-  {fcNegNormal, "nnorm"},
-  {fcPosNormal, "pnorm"}
-};
-
-static std::string getNoFPClassAttrAsString(unsigned Mask) {
-  std::string Result("nofpclass(");
-  raw_string_ostream OS(Result);
-
-  if (Mask == 0) {
-    OS << "none)";
-    return Result;
-  }
-
-  ListSeparator LS(" ");
-  for (auto [BitTest, Name] : NoFPClassName) {
-    if ((Mask & BitTest) == BitTest) {
-      OS << LS << Name;
-
-      // Clear the bits so we don't print any aliased names later.
-      Mask &= ~BitTest;
-    }
-  }
-
-  assert(Mask == 0 && "didn't print some mask bits");
-
-  OS << ')';
-  return Result;
-}
-
 std::string Attribute::getAsString(bool InAttrGrp) const {
   if (!pImpl) return {};
 
@@ -614,8 +564,12 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     return Result;
   }
 
-  if (hasAttribute(Attribute::NoFPClass))
-    return getNoFPClassAttrAsString(getValueAsInt());
+  if (hasAttribute(Attribute::NoFPClass)) {
+    std::string Result = "nofpclass";
+    raw_string_ostream OS(Result);
+    OS << getNoFPClass();
+    return Result;
+  }
 
   // Convert target-dependent attributes to strings of the form:
   //

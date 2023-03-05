@@ -16,6 +16,7 @@
 // - estimate temporal locality by looking at CFG?
 
 #include "bolt/Passes/ReorderData.h"
+#include "llvm/ADT/MapVector.h"
 #include <algorithm>
 
 #undef  DEBUG_TYPE
@@ -172,8 +173,8 @@ DataOrder ReorderData::baseOrder(BinaryContext &BC,
 
 void ReorderData::assignMemData(BinaryContext &BC) {
   // Map of sections (or heap/stack) to count/size.
-  StringMap<uint64_t> Counts;
-  StringMap<uint64_t> JumpTableCounts;
+  MapVector<StringRef, uint64_t> Counts;
+  MapVector<StringRef, uint64_t> JumpTableCounts;
   uint64_t TotalCount = 0;
   for (auto &BFI : BC.getBinaryFunctions()) {
     const BinaryFunction &BF = BFI.second;
@@ -208,9 +209,9 @@ void ReorderData::assignMemData(BinaryContext &BC) {
 
   if (!Counts.empty()) {
     outs() << "BOLT-INFO: Memory stats breakdown:\n";
-    for (StringMapEntry<uint64_t> &Entry : Counts) {
-      StringRef Section = Entry.first();
-      const uint64_t Count = Entry.second;
+    for (const auto &KV : Counts) {
+      StringRef Section = KV.first;
+      const uint64_t Count = KV.second;
       outs() << "BOLT-INFO:   " << Section << " = " << Count
              << format(" (%.1f%%)\n", 100.0 * Count / TotalCount);
       if (JumpTableCounts.count(Section) != 0) {

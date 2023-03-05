@@ -5361,6 +5361,19 @@ APFloat::APFloat(const fltSemantics &Semantics, StringRef S)
   consumeError(StatusOrErr.takeError());
 }
 
+FPClassTest APFloat::classify() const {
+  if (isZero())
+    return isNegative() ? fcNegZero : fcPosZero;
+  if (isNormal())
+    return isNegative() ? fcNegNormal : fcPosNormal;
+  if (isDenormal())
+    return isNegative() ? fcNegSubnormal : fcPosSubnormal;
+  if (isInfinity())
+    return isNegative() ? fcNegInf : fcPosInf;
+  assert(isNaN() && "Other class of FP constant");
+  return isSignaling() ? fcSNan : fcQNan;
+}
+
 APFloat::opStatus APFloat::convert(const fltSemantics &ToSemantics,
                                    roundingMode RM, bool *losesInfo) {
   if (&getSemantics() == &ToSemantics) {

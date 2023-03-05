@@ -217,10 +217,14 @@ void GISelCSEInfo::handleRemoveInst(MachineInstr *MI) {
 }
 
 void GISelCSEInfo::handleRecordedInsts() {
+  if (HandlingRecordedInstrs)
+    return;
+  HandlingRecordedInstrs = true;
   while (!TemporaryInsts.empty()) {
     auto *MI = TemporaryInsts.pop_back_val();
     handleRecordedInst(MI);
   }
+  HandlingRecordedInstrs = false;
 }
 
 bool GISelCSEInfo::shouldCSE(unsigned Opc) const {
