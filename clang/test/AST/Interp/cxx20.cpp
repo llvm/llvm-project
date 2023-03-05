@@ -271,3 +271,250 @@ namespace ConstThis {
                                        // ref-error {{must have constant destruction}} \
                                        // ref-note {{in call to}}
 };
+
+namespace Destructors {
+
+  class Inc final {
+  public:
+    int &I;
+    constexpr Inc(int &I) : I(I) {}
+    constexpr ~Inc() {
+      I++;
+    }
+  };
+
+  class Dec final {
+  public:
+    int &I;
+    constexpr Dec(int &I) : I(I) {}
+    constexpr ~Dec() {
+      I--;
+    }
+  };
+
+
+
+  constexpr int m() {
+    int i = 0;
+    {
+      Inc f1(i);
+      Inc f2(i);
+      Inc f3(i);
+    }
+    return i;
+  }
+  static_assert(m() == 3, "");
+
+
+  constexpr int C() {
+    int i = 0;
+
+    while (i < 10) {
+      Inc inc(i);
+      continue;
+      Dec dec(i);
+    }
+    return i;
+  }
+  static_assert(C() == 10, "");
+
+
+  constexpr int D() {
+    int i = 0;
+
+    {
+      Inc i1(i);
+      {
+        Inc i2(i);
+        return i;
+      }
+    }
+
+    return i;
+  }
+  static_assert(D() == 0, "");
+
+  constexpr int E() {
+    int i = 0;
+
+    for(;;) {
+      Inc i1(i);
+      break;
+    }
+    return i;
+  }
+  static_assert(E() == 1, "");
+
+
+  /// FIXME: This should be rejected, since we call the destructor
+  ///   twice. However, GCC doesn't care either.
+  constexpr int ManualDtor() {
+    int i = 0;
+    {
+      Inc I(i); // ref-note {{destroying object 'I' whose lifetime has already ended}}
+      I.~Inc();
+    }
+    return i;
+  }
+  static_assert(ManualDtor() == 1, ""); // expected-error {{static assertion failed}} \
+                                        // expected-note {{evaluates to '2 == 1'}} \
+                                        // ref-error {{not an integral constant expression}} \
+                                        // ref-note {{in call to 'ManualDtor()'}}
+
+  constexpr void doInc(int &i) {
+    Inc I(i);
+    return;
+  }
+  constexpr int testInc() {
+    int i = 0;
+    doInc(i);
+    return i;
+  }
+  static_assert(testInc() == 1, "");
+  constexpr void doInc2(int &i) {
+    Inc I(i);
+    // No return statement.
+  }
+   constexpr int testInc2() {
+    int i = 0;
+    doInc2(i);
+    return i;
+  }
+  static_assert(testInc2() == 1, "");
+
+
+  namespace DtorOrder {
+    class A {
+      public:
+      int &I;
+      constexpr A(int &I) : I(I) {}
+      constexpr ~A() {
+        I = 1337;
+      }
+    };
+
+    class B : public A {
+      public:
+      constexpr B(int &I) : A(I) {}
+      constexpr ~B() {
+        I = 42;
+      }
+    };
+
+    constexpr int foo() {
+      int i = 0;
+      {
+        B b(i);
+      }
+      return i;
+    }
+
+    static_assert(foo() == 1337);
+  }
+
+  class FieldDtor1 {
+  public:
+    Inc I1;
+    Inc I2;
+    constexpr FieldDtor1(int &I) : I1(I), I2(I){}
+  };
+
+  constexpr int foo2() {
+    int i = 0;
+    {
+      FieldDtor1 FD1(i);
+    }
+    return i;
+  }
+
+  static_assert(foo2() == 2);
+
+  class FieldDtor2 {
+  public:
+    Inc Incs[3];
+    constexpr FieldDtor2(int &I)  : Incs{Inc(I), Inc(I), Inc(I)} {}
+  };
+
+  constexpr int foo3() {
+    int i = 0;
+    {
+      FieldDtor2 FD2(i);
+    }
+    return i;
+  }
+
+  static_assert(foo3() == 3);
+
+  struct ArrD {
+    int index;
+    int *arr;
+    int &p;
+    constexpr ~ArrD() {
+      arr[p] = index;
+      ++p;
+    }
+  };
+  constexpr bool ArrayOrder() {
+    int order[3] = {0, 0, 0};
+    int p = 0;
+    {
+      ArrD ds[3] = {
+        {1, order, p},
+        {2, order, p},
+        {3, order, p},
+      };
+      // ds will be destroyed.
+    }
+    return order[0] == 3 && order[1] == 2 && order[2] == 1;
+  }
+  static_assert(ArrayOrder());
+
+
+  // Static members aren't destroyed.
+  class Dec2 {
+  public:
+    int A = 0;
+    constexpr ~Dec2() {
+      A++;
+    }
+  };
+  class Foo {
+  public:
+    static constexpr Dec2 a;
+    static Dec2 b;
+  };
+  static_assert(Foo::a.A == 0);
+  constexpr bool f() {
+    Foo f;
+    return true;
+  }
+  static_assert(Foo::a.A == 0);
+  static_assert(f());
+  static_assert(Foo::a.A == 0);
+
+
+  struct NotConstexpr {
+    NotConstexpr() {}
+    ~NotConstexpr() {}
+  };
+
+  struct Outer {
+    constexpr Outer() = default;
+    constexpr ~Outer();
+
+    constexpr int foo() {
+      return 12;
+    }
+
+    constexpr int bar()const  {
+      return Outer{}.foo();
+    }
+
+    static NotConstexpr Val;
+  };
+
+  constexpr Outer::~Outer() {}
+
+  constexpr Outer O;
+  static_assert(O.bar() == 12);
+}
