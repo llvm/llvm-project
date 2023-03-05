@@ -73,7 +73,7 @@ static int findTool(int Argc, char **Argv, const char *Argv0) {
     return entry##_main(Argc, Argv, MakeDriverArgs());
 #include "LLVMDriverTools.def"
 
-  if (Is("llvm"))
+  if (Is("llvm") || Argv0 == Argv[0])
     return findTool(Argc - 1, Argv + 1, Argv0);
 
   printHelpMessage();

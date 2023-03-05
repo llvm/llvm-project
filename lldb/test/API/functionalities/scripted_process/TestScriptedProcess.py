@@ -80,6 +80,15 @@ class ScriptedProcesTestCase(TestBase):
         self.assertEqual(process.GetProcessID(), 666)
         self.assertEqual(process.GetNumThreads(), 0)
 
+        impl = process.GetScriptedImplementation()
+        self.assertTrue(impl)
+        impl = process.GetScriptedImplementation()
+        self.assertTrue(impl)
+        impl = process.GetScriptedImplementation()
+        self.assertTrue(impl)
+        impl = process.GetScriptedImplementation()
+        self.assertTrue(impl)
+
         addr = 0x500000000
         buff = process.ReadMemory(addr, 4, error)
         self.assertEqual(buff, None)
@@ -137,14 +146,19 @@ class ScriptedProcesTestCase(TestBase):
 
         target_1 = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.assertTrue(target_1, VALID_TARGET)
+
+        # We still need to specify a PID when attaching even for scripted processes
+        attach_info = lldb.SBAttachInfo(42)
+        attach_info.SetProcessPluginName("ScriptedProcess")
+        attach_info.SetScriptedProcessClassName("dummy_scripted_process.DummyScriptedProcess")
+
         error = lldb.SBError()
-        process_1 = target_1.Launch(launch_info, error)
+        process_1 = target_1.Attach(attach_info, error)
         self.assertTrue(process_1 and process_1.IsValid(), PROCESS_IS_VALID)
         self.assertEqual(process_1.GetProcessID(), 42)
         self.assertEqual(process_1.GetNumThreads(), 1)
 
         # ... then try reading from target #1 process ...
-        addr = 0x500000000
         message = "Hello, target 1"
         buff = process_1.ReadCStringFromMemory(addr, len(message) + 1, error)
         self.assertSuccess(error)
@@ -152,8 +166,18 @@ class ScriptedProcesTestCase(TestBase):
 
         # ... now, reading again from target #0 process to make sure the call
         # gets dispatched to the right target.
-        addr = 0x500000000
         message = "Hello, target 0"
+        buff = process_0.ReadCStringFromMemory(addr, len(message) + 1, error)
+        self.assertSuccess(error)
+        self.assertEqual(buff, message)
+
+        # Let's write some memory.
+        message = "Hello, world!"
+        bytes_written = process_0.WriteMemoryAsCString(addr, message, error)
+        self.assertSuccess(error)
+        self.assertEqual(bytes_written, len(message) + 1)
+
+        # ... and check if that memory was saved properly.
         buff = process_0.ReadCStringFromMemory(addr, len(message) + 1, error)
         self.assertSuccess(error)
         self.assertEqual(buff, message)

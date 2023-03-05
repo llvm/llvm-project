@@ -179,6 +179,7 @@ Changes to the Debug Info
 
 Changes to the LLVM tools
 ---------------------------------
+* llvm-lib now supports the /def option for generating a Windows import library from a definition file.
 
 Changes to LLDB
 ---------------------------------

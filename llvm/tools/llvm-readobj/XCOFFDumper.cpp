@@ -98,10 +98,11 @@ void XCOFFDumper::printFileHeaders() {
     // tests will let us know.
     time_t TimeDate = TimeStamp;
 
-    char FormattedTime[21] = {};
-    size_t BytesWritten =
-        strftime(FormattedTime, 21, "%Y-%m-%dT%H:%M:%SZ", gmtime(&TimeDate));
-    if (BytesWritten)
+    char FormattedTime[80] = {};
+
+    size_t BytesFormatted =
+      strftime(FormattedTime, sizeof(FormattedTime), "%F %T", gmtime(&TimeDate));
+    if (BytesFormatted)
       W.printHex("TimeStamp", FormattedTime, TimeStamp);
     else
       W.printHex("Timestamp", TimeStamp);

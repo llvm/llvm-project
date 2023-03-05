@@ -13,8 +13,8 @@
 #include "src/__support/CPP/stringstream.h"
 #include "src/__support/StringUtil/message_mapper.h"
 #include "src/__support/integer_to_string.h"
+#include "src/errno/libc_errno.h" // For error macros
 
-#include <errno.h>
 #include <stddef.h>
 
 namespace __llvm_libc {

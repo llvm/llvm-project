@@ -12,7 +12,7 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <signal.h>
 #include <stddef.h> // For size_t
 #include <sys/select.h>
@@ -56,7 +56,7 @@ LLVM_LIBC_FUNCTION(int, select,
   long ret = __llvm_libc::syscall_impl(SYS_pselect6, nfds, read_set, write_set,
                                        error_set, &ts, &pss);
   if (ret < 0) {
-    errno = -ret;
+    libc_errno = -ret;
     return -1;
   }
   return ret;

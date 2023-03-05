@@ -1737,10 +1737,10 @@ void StmtPrinter::VisitParenListExpr(ParenListExpr* Node) {
 
 void StmtPrinter::VisitDesignatedInitExpr(DesignatedInitExpr *Node) {
   bool NeedsEquals = true;
-  for (const Designator &D : Node->designators()) {
+  for (const DesignatedInitExpr::Designator &D : Node->designators()) {
     if (D.isFieldDesignator()) {
       if (D.getDotLoc().isInvalid()) {
-        if (const IdentifierInfo *II = D.getFieldName()) {
+        if (IdentifierInfo *II = D.getFieldName()) {
           OS << II->getName() << ":";
           NeedsEquals = false;
         }

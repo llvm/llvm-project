@@ -77,11 +77,15 @@ public:
   struct DelayInfo {
     // One larger than the maximum number of (non-TRANS) VALU instructions we
     // can encode in an s_delay_alu instruction.
-    static const unsigned VALU_MAX = 5;
+    static constexpr unsigned VALU_MAX = 5;
 
     // One larger than the maximum number of TRANS instructions we can encode in
     // an s_delay_alu instruction.
-    static const unsigned TRANS_MAX = 4;
+    static constexpr unsigned TRANS_MAX = 4;
+
+    // One larger than the maximum number of SALU cycles we can encode in an
+    // s_delay_alu instruction.
+    static constexpr unsigned SALU_CYCLES_MAX = 4;
 
     // If it was written by a (non-TRANS) VALU, remember how many clock cycles
     // are left until it completes, and how many other (non-TRANS) VALU we have
@@ -120,7 +124,9 @@ public:
         TRANSNumVALU = 0;
         break;
       case SALU:
-        SALUCycles = Cycles;
+        // Guard against pseudo-instructions like SI_CALL which are marked as
+        // SALU but with a very high latency.
+        SALUCycles = std::min(Cycles, SALU_CYCLES_MAX);
         break;
       }
     }
@@ -278,6 +284,7 @@ public:
 
     // Wait for an SALU instruction.
     if (Delay.SALUCycles) {
+      assert(Delay.SALUCycles < DelayInfo::SALU_CYCLES_MAX);
       if (Imm & 0x780) {
         // We have already encoded a VALU and a TRANS delay. There's no room in
         // the encoding for an SALU delay as well, so just drop it.
@@ -349,6 +356,7 @@ public:
 
       if (instructionWaitsForVALU(MI)) {
         // Forget about all outstanding VALU delays.
+        // TODO: This is overkill since it also forgets about SALU delays.
         State = DelayState();
       } else if (Type != OTHER) {
         DelayInfo Delay;

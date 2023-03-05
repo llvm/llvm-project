@@ -84,6 +84,10 @@ end
   scope" -- i.e., not scoped by `BLOCK` constructs.
   As most (but not all) compilers implement `BLOCK` scoping of construct
   names, so does f18, with a portability warning.
+* 15.6.4 paragraph 2 prohibits an implicitly typed statement function
+  from sharing the same name as a symbol in its scope's host, if it
+  has one.
+  We accept this usage with a portability warning.
 
 ## Extensions, deletions, and legacy features supported by default
 

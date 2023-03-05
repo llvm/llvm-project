@@ -42,8 +42,8 @@ AvailabilitySet::AvailabilitySet(const Decl *Decl) {
           Availability->Obsoleted = Attr->getObsoleted();
       } else {
         Availabilities.emplace_back(Domain, Attr->getIntroduced(),
-                                    Attr->getDeprecated(),
-                                    Attr->getObsoleted());
+                                    Attr->getDeprecated(), Attr->getObsoleted(),
+                                    Attr->getUnavailable());
       }
     }
   }

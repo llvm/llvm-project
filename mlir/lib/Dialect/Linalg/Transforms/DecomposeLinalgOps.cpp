@@ -329,15 +329,15 @@ DecomposeLinalgOp::matchAndRewrite(GenericOp genericOp,
        llvm::enumerate(genericOp.getBody()->getArguments())) {
     Value residualOpReplacementArg =
         residualGenericOpBody->getArgument(inputBlockArg.index());
-    inputBlockArg.value().replaceUsesWithIf(
-        residualOpReplacementArg, [&](OpOperand &use) {
+    rewriter.replaceUsesWithIf(
+        inputBlockArg.value(), residualOpReplacementArg, [&](OpOperand &use) {
           return use.getOwner()->getBlock() == residualGenericOpBody;
         });
 
     Value peeledOpReplacementArg =
         peeledGenericOpBody->getArgument(inputBlockArg.index());
-    inputBlockArg.value().replaceUsesWithIf(
-        peeledOpReplacementArg, [&](OpOperand &use) {
+    rewriter.replaceUsesWithIf(
+        inputBlockArg.value(), peeledOpReplacementArg, [&](OpOperand &use) {
           return use.getOwner()->getBlock() == peeledGenericOpBody;
         });
   }

@@ -9,7 +9,7 @@
 #include "src/stdio/fread_unlocked.h"
 #include "src/__support/File/file.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <stdio.h>
 
 namespace __llvm_libc {
@@ -22,7 +22,7 @@ LLVM_LIBC_FUNCTION(size_t, fread_unlocked,
   auto result = reinterpret_cast<__llvm_libc::File *>(stream)->read_unlocked(
       buffer, size * nmemb);
   if (result.has_error())
-    errno = result.error;
+    libc_errno = result.error;
   return result.value / size;
 }
 

@@ -9,8 +9,8 @@
 #include "src/termios/cfsetispeed.h"
 
 #include "src/__support/common.h"
+#include "src/errno/libc_errno.h"
 
-#include <errno.h>
 #include <termios.h>
 
 namespace __llvm_libc {
@@ -19,7 +19,7 @@ LLVM_LIBC_FUNCTION(int, cfsetispeed, (struct termios * t, speed_t speed)) {
   constexpr speed_t NOT_SPEED_MASK = ~speed_t(CBAUD);
   // A speed value is valid only if it is equal to one of the B<NN+> values.
   if (t == nullptr || ((speed & NOT_SPEED_MASK) != 0)) {
-    errno = EINVAL;
+    libc_errno = EINVAL;
     return -1;
   }
 

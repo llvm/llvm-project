@@ -9,11 +9,12 @@
 // test <setjmp.h>
 
 #include <setjmp.h>
-#include <type_traits>
+
+#include "test_macros.h"
 
 #ifndef setjmp
 #error setjmp not defined
 #endif
 
 jmp_buf jb;
-static_assert(std::is_same<decltype(longjmp(jb, 0)), void>::value, "");
+ASSERT_SAME_TYPE(void, decltype(longjmp(jb, 0)));

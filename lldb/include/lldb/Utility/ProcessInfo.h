@@ -14,6 +14,7 @@
 #include "lldb/Utility/Environment.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/NameMatches.h"
+#include "lldb/Utility/StructuredData.h"
 #include <vector>
 
 namespace lldb_private {
@@ -86,6 +87,16 @@ public:
   Environment &GetEnvironment() { return m_environment; }
   const Environment &GetEnvironment() const { return m_environment; }
 
+  bool IsScriptedProcess() const;
+
+  lldb::ScriptedMetadataSP GetScriptedMetadata() const {
+    return m_scripted_metadata_sp;
+  }
+
+  void SetScriptedMetadata(lldb::ScriptedMetadataSP metadata_sp) {
+    m_scripted_metadata_sp = metadata_sp;
+  }
+
 protected:
   FileSpec m_executable;
   std::string m_arg0; // argv[0] if supported. If empty, then use m_executable.
@@ -97,6 +108,7 @@ protected:
   uint32_t m_gid = UINT32_MAX;
   ArchSpec m_arch;
   lldb::pid_t m_pid = LLDB_INVALID_PROCESS_ID;
+  lldb::ScriptedMetadataSP m_scripted_metadata_sp = nullptr;
 };
 
 // ProcessInstanceInfo

@@ -3,8 +3,14 @@ on:
   issues:
     types: ['opened']
 
+permissions:
+  contents: read
+
 jobs:
   automate-issues-labels:
+    permissions:
+      issues: write  # for andymckay/labeler to label issues
+      pull-requests: write  # for andymckay/labeler to label PRs
     runs-on: ubuntu-latest
     if: github.repository == 'llvm/llvm-project'
     steps:

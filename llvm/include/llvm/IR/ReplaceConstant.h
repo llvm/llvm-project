@@ -19,6 +19,8 @@
 
 namespace llvm {
 
+template <typename T> class ArrayRef;
+class Constant;
 class ConstantExpr;
 class Instruction;
 class Use;
@@ -53,6 +55,10 @@ void convertConstantExprsToInstructions(
 void collectConstantExprPaths(
     Instruction *I, ConstantExpr *CE,
     std::map<Use *, std::vector<std::vector<ConstantExpr *>>> &CEPaths);
+
+/// Replace constant expressions users of the given constants with
+/// instructions. Return whether anything was changed.
+bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts);
 
 } // end namespace llvm
 

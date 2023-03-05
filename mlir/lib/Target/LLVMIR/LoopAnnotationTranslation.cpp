@@ -278,8 +278,8 @@ LoopAnnotationTranslation::getAccessGroup(Operation *op,
 }
 
 llvm::MDNode *
-LoopAnnotationTranslation::getAccessGroups(Operation *op,
-                                           ArrayAttr accessGroupRefs) const {
+LoopAnnotationTranslation::getAccessGroups(AccessGroupOpInterface op) const {
+  ArrayAttr accessGroupRefs = op.getAccessGroupsOrNull();
   if (!accessGroupRefs || accessGroupRefs.empty())
     return nullptr;
 

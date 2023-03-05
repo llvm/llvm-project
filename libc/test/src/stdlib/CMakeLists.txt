@@ -7,6 +7,7 @@ add_libc_unittest(
   SRCS
     atof_test.cpp
   DEPENDS
+    libc.src.errno.errno
     libc.src.stdlib.atof
 )
 
@@ -15,6 +16,7 @@ add_header_library(
   HDRS
     AtoiTest.h
   DEPENDS
+    libc.src.errno.errno
     libc.src.__support.CPP.type_traits
 )
 
@@ -58,6 +60,7 @@ add_libc_unittest(
   SRCS
     strtod_test.cpp
   DEPENDS
+    libc.src.errno.errno
     libc.src.stdlib.strtod
 )
 
@@ -68,6 +71,7 @@ add_libc_unittest(
   SRCS
     strtof_test.cpp
   DEPENDS
+    libc.src.errno.errno
     libc.src.stdlib.strtof
 )
 
@@ -78,7 +82,6 @@ add_header_library(
   DEPENDS
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
-    libc.include.errno
     libc.src.errno.errno
 )
 
@@ -100,6 +103,7 @@ add_libc_unittest(
   SRCS
     strtold_test.cpp
   DEPENDS
+    libc.src.errno.errno
     libc.src.__support.uint128
     libc.src.stdlib.strtold
 )

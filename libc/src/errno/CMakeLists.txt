@@ -1,4 +1,4 @@
-add_object_library(
+add_entrypoint_object(
   errno
   SRCS
     libc_errno.cpp

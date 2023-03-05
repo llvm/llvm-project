@@ -34,6 +34,8 @@ class LLVMFuncOp;
 /// of the libc).
 LLVM::LLVMFuncOp lookupOrCreatePrintI64Fn(ModuleOp moduleOp);
 LLVM::LLVMFuncOp lookupOrCreatePrintU64Fn(ModuleOp moduleOp);
+LLVM::LLVMFuncOp lookupOrCreatePrintF16Fn(ModuleOp moduleOp);
+LLVM::LLVMFuncOp lookupOrCreatePrintBF16Fn(ModuleOp moduleOp);
 LLVM::LLVMFuncOp lookupOrCreatePrintF32Fn(ModuleOp moduleOp);
 LLVM::LLVMFuncOp lookupOrCreatePrintF64Fn(ModuleOp moduleOp);
 LLVM::LLVMFuncOp lookupOrCreatePrintStrFn(ModuleOp moduleOp,

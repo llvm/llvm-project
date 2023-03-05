@@ -40,30 +40,24 @@ public:
                               LLDBLog log_caterogy = LLDBLog::Process) {
     LLDB_LOGF(GetLog(log_caterogy), "%s ERROR = %s", caller_name.data(),
               error_msg.data());
-    error.SetErrorString(llvm::Twine(caller_name + llvm::Twine(" ERROR = ") +
-                                     llvm::Twine(error_msg))
-                             .str());
+    llvm::Twine err = llvm::Twine(caller_name + llvm::Twine(" ERROR = ") +
+                                  llvm::Twine(error_msg));
+    if (const char *detailed_error = error.AsCString())
+      err.concat(llvm::Twine(" (") + llvm::Twine(detailed_error) +
+                 llvm::Twine(")"));
+    error.SetErrorString(err.str());
     return {};
   }
 
   template <typename T = StructuredData::ObjectSP>
   bool CheckStructuredDataObject(llvm::StringRef caller, T obj, Status &error) {
-    if (!obj) {
-      return ErrorWithMessage<bool>(caller,
-                                    llvm::Twine("Null StructuredData object (" +
-                                                llvm::Twine(error.AsCString()) +
-                                                llvm::Twine(")."))
-                                        .str(),
+    if (!obj)
+      return ErrorWithMessage<bool>(caller, "Null Structured Data object",
                                     error);
-    }
 
     if (!obj->IsValid()) {
-      return ErrorWithMessage<bool>(
-          caller,
-          llvm::Twine("Invalid StructuredData object (" +
-                      llvm::Twine(error.AsCString()) + llvm::Twine(")."))
-              .str(),
-          error);
+      return ErrorWithMessage<bool>(caller, "Invalid StructuredData object",
+                                    error);
     }
 
     if (error.Fail())

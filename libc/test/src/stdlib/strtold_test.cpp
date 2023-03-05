@@ -8,11 +8,11 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/UInt128.h"
+#include "src/errno/libc_errno.h"
 #include "src/stdlib/strtold.h"
 
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <limits.h>
 #include <stddef.h>
 
@@ -78,7 +78,7 @@ public:
         __llvm_libc::fputil::FPBits<long double>(expectedRawData);
     const int expected_errno = expectedErrno;
 
-    errno = 0;
+    libc_errno = 0;
     long double result = __llvm_libc::strtold(inputString, &str_end);
 
     __llvm_libc::fputil::FPBits<long double> actual_fp =
@@ -91,7 +91,7 @@ public:
     EXPECT_EQ(actual_fp.get_sign(), expected_fp.get_sign());
     EXPECT_EQ(actual_fp.get_exponent(), expected_fp.get_exponent());
     EXPECT_EQ(actual_fp.get_mantissa(), expected_fp.get_mantissa());
-    EXPECT_EQ(errno, expected_errno);
+    EXPECT_EQ(libc_errno, expected_errno);
   }
 };
 
