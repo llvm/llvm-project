@@ -13,7 +13,7 @@ Written by the `LLVM Team <https://llvm.org/>`_
   .. warning::
      These are in-progress notes for the upcoming Clang |version| release.
      Release notes for previous releases can be found on
-     `the Releases Page <https://llvm.org/releases>`_.
+     `the Releases Page <https://llvm.org/releases/>`_.
 
 Introduction
 ============
