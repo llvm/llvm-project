@@ -9751,36 +9751,25 @@ TypeSystemClang::DeclContextGetScopeQualifiedName(void *opaque_decl_ctx) {
 }
 
 bool TypeSystemClang::DeclContextIsClassMethod(
-    void *opaque_decl_ctx, lldb::LanguageType *language_ptr,
-    bool *is_instance_method_ptr, ConstString *language_object_name_ptr) {
+    void *opaque_decl_ctx, ConstString *language_object_name_ptr) {
   if (opaque_decl_ctx) {
     clang::DeclContext *decl_ctx = (clang::DeclContext *)opaque_decl_ctx;
     if (ObjCMethodDecl *objc_method =
             llvm::dyn_cast<clang::ObjCMethodDecl>(decl_ctx)) {
-      if (is_instance_method_ptr)
-        *is_instance_method_ptr = objc_method->isInstanceMethod();
-      if (language_ptr)
-        *language_ptr = eLanguageTypeObjC;
-      if (language_object_name_ptr)
-        language_object_name_ptr->SetCString("self");
+      if (objc_method->isInstanceMethod())
+        if (language_object_name_ptr)
+          language_object_name_ptr->SetCString("self");
       return true;
     } else if (CXXMethodDecl *cxx_method =
                    llvm::dyn_cast<clang::CXXMethodDecl>(decl_ctx)) {
-      if (is_instance_method_ptr)
-        *is_instance_method_ptr = cxx_method->isInstance();
-      if (language_ptr)
-        *language_ptr = eLanguageTypeC_plus_plus;
-      if (language_object_name_ptr)
-        language_object_name_ptr->SetCString("this");
+      if (cxx_method->isInstance())
+        if (language_object_name_ptr)
+          language_object_name_ptr->SetCString("this");
       return true;
     } else if (clang::FunctionDecl *function_decl =
                    llvm::dyn_cast<clang::FunctionDecl>(decl_ctx)) {
       ClangASTMetadata *metadata = GetMetadata(function_decl);
       if (metadata && metadata->HasObjectPtr()) {
-        if (is_instance_method_ptr)
-          *is_instance_method_ptr = true;
-        if (language_ptr)
-          *language_ptr = eLanguageTypeObjC;
         if (language_object_name_ptr)
           language_object_name_ptr->SetCString(metadata->GetObjectPtrName());
         return true;
