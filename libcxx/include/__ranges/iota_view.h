@@ -45,7 +45,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
   template<class _Int>
   struct __get_wider_signed {
-    static auto __call() {
+    consteval static auto __call() {
            if constexpr (sizeof(_Int) < sizeof(short)) return type_identity<short>{};
       else if constexpr (sizeof(_Int) < sizeof(int))   return type_identity<int>{};
       else if constexpr (sizeof(_Int) < sizeof(long))  return type_identity<long>{};
