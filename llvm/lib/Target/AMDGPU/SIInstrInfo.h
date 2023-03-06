@@ -367,14 +367,20 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::VALU;
   }
 
+  static bool isImage(const MachineInstr &MI) {
+    return isMIMG(MI) || isVSAMPLE(MI) || isVIMAGE(MI);
+  }
+
+  bool isImage(uint16_t Opcode) const {
+    return isMIMG(Opcode) || isVSAMPLE(Opcode) || isVIMAGE(Opcode);
+  }
+
   static bool isVMEM(const MachineInstr &MI) {
-    return isMUBUF(MI) || isMTBUF(MI) || isMIMG(MI) || isVSAMPLE(MI) ||
-           isVIMAGE(MI);
+    return isMUBUF(MI) || isMTBUF(MI) || isImage(MI);
   }
 
   bool isVMEM(uint16_t Opcode) const {
-    return isMUBUF(Opcode) || isMTBUF(Opcode) || isMIMG(Opcode) ||
-           isVSAMPLE(Opcode) || isVIMAGE(Opcode);
+    return isMUBUF(Opcode) || isMTBUF(Opcode) || isImage(Opcode);
   }
 
   static bool isSOP1(const MachineInstr &MI) {

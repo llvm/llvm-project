@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/errno.h"
 #include "include/signal.h"
 #include "src/signal/raise.h"
 #include "src/signal/sigfillset.h"
@@ -14,6 +13,8 @@
 
 #include "test/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
+
+#include <errno.h>
 
 TEST(LlvmLibcSigfillset, Invalid) {
   using __llvm_libc::testing::ErrnoSetterMatcher::Fails;

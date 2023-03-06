@@ -386,6 +386,9 @@ private:
   semantics::SemanticsContext &context_;
   FoldingContext &foldingContext_{context_.foldingContext()};
   std::map<parser::CharBlock, int> impliedDos_; // values are INTEGER kinds
+  std::map<parser::CharBlock,
+      std::pair<parser::CharBlock, evaluate::characteristics::Procedure>>
+      implicitInterfaces_;
   bool isWholeAssumedSizeArrayOk_{false};
   bool isNullPointerOk_{false};
   bool useSavedTypedExprs_{true};

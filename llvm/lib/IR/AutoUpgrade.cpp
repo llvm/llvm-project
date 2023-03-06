@@ -14,8 +14,10 @@
 
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -27,6 +29,7 @@
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -844,6 +847,11 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     break;
   }
   case 'd': {
+    if (Name == "dbg.addr") {
+      rename(F);
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::dbg_value);
+      return true;
+    }
     if (Name == "dbg.value" && F->arg_size() == 4) {
       rename(F);
       NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::dbg_value);
@@ -4128,7 +4136,20 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     NewCall = Builder.CreateCall(NewFn, {CI->getArgOperand(0)});
     break;
 
-  case Intrinsic::dbg_value:
+  case Intrinsic::dbg_value: {
+    StringRef Name = F->getName();
+    Name = Name.substr(5); // Strip llvm.
+    // Upgrade `dbg.addr` to `dbg.value` with `DW_OP_deref`.
+    if (Name.startswith("dbg.addr")) {
+      DIExpression *Expr = cast<DIExpression>(
+          cast<MetadataAsValue>(CI->getArgOperand(2))->getMetadata());
+      Expr = DIExpression::append(Expr, dwarf::DW_OP_deref);
+      NewCall =
+          Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1),
+                                     MetadataAsValue::get(C, Expr)});
+      break;
+    }
+
     // Upgrade from the old version that had an extra offset argument.
     assert(CI->arg_size() == 4);
     // Drop nonzero offsets instead of attempting to upgrade them.
@@ -4141,6 +4162,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       }
     CI->eraseFromParent();
     return;
+  }
 
   case Intrinsic::ptr_annotation:
     // Upgrade from versions that lacked the annotation attribute argument.

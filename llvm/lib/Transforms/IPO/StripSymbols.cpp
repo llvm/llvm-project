@@ -176,44 +176,6 @@ static bool stripDebugDeclareImpl(Module &M) {
   return true;
 }
 
-/// Collects compilation units referenced by functions or lexical scopes.
-/// Accepts any DIScope and uses recursive bottom-up approach to reach either
-/// DISubprogram or DILexicalBlockBase.
-static void
-collectCUsWithScope(const DIScope *Scope, std::set<DICompileUnit *> &LiveCUs,
-                    SmallPtrSet<const DIScope *, 8> &VisitedScopes) {
-  if (!Scope)
-    return;
-
-  auto InS = VisitedScopes.insert(Scope);
-  if (!InS.second)
-    return;
-
-  if (const auto *SP = dyn_cast<DISubprogram>(Scope)) {
-    if (SP->getUnit())
-      LiveCUs.insert(SP->getUnit());
-    return;
-  }
-  if (const auto *LB = dyn_cast<DILexicalBlockBase>(Scope)) {
-    const DISubprogram *SP = LB->getSubprogram();
-    if (SP && SP->getUnit())
-      LiveCUs.insert(SP->getUnit());
-    return;
-  }
-
-  collectCUsWithScope(Scope->getScope(), LiveCUs, VisitedScopes);
-}
-
-static void
-collectCUsForInlinedFuncs(const DILocation *Loc,
-                          std::set<DICompileUnit *> &LiveCUs,
-                          SmallPtrSet<const DIScope *, 8> &VisitedScopes) {
-  if (!Loc || !Loc->getInlinedAt())
-    return;
-  collectCUsWithScope(Loc->getScope(), LiveCUs, VisitedScopes);
-  collectCUsForInlinedFuncs(Loc->getInlinedAt(), LiveCUs, VisitedScopes);
-}
-
 static bool stripDeadDebugInfoImpl(Module &M) {
   bool Changed = false;
 
@@ -241,19 +203,15 @@ static bool stripDeadDebugInfoImpl(Module &M) {
   }
 
   std::set<DICompileUnit *> LiveCUs;
-  SmallPtrSet<const DIScope *, 8> VisitedScopes;
-  // Any CU is live if is referenced from a subprogram metadata that is attached
-  // to a function defined or inlined in the module.
-  for (const Function &Fn : M.functions()) {
-    collectCUsWithScope(Fn.getSubprogram(), LiveCUs, VisitedScopes);
-    for (const_inst_iterator I = inst_begin(&Fn), E = inst_end(&Fn); I != E;
-         ++I) {
-      if (!I->getDebugLoc())
-        continue;
-      const DILocation *DILoc = I->getDebugLoc().get();
-      collectCUsForInlinedFuncs(DILoc, LiveCUs, VisitedScopes);
-    }
+  DebugInfoFinder LiveCUFinder;
+  for (const Function &F : M.functions()) {
+    if (auto *SP = cast_or_null<DISubprogram>(F.getSubprogram()))
+      LiveCUFinder.processSubprogram(SP);
+    for (const Instruction &I : instructions(F))
+      LiveCUFinder.processInstruction(M, I);
   }
+  auto FoundCUs = LiveCUFinder.compile_units();
+  LiveCUs.insert(FoundCUs.begin(), FoundCUs.end());
 
   bool HasDeadCUs = false;
   for (DICompileUnit *DIC : F.compile_units()) {

@@ -28,6 +28,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Target/ThreadPlanStepInRange.h"
+#include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Timer.h"
 
 using namespace lldb;
@@ -39,6 +40,17 @@ char CPPLanguageRuntime::ID = 0;
 
 CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
     : LanguageRuntime(process) {}
+
+bool CPPLanguageRuntime::ShouldHideVariable(llvm::StringRef name) const {
+  // Matches the global function objects in std::ranges/std::ranges::views
+  // E.g.,
+  //   std::__1::ranges::views::__cpo::take
+  //   std::__1::ranges::__cpo::max_element
+  static RegularExpression ignore_global_ranges_pattern(
+      "std::__[[:alnum:]]+::ranges(::views)*::__cpo");
+
+  return ignore_global_ranges_pattern.Execute(name);
+}
 
 bool CPPLanguageRuntime::IsAllowedRuntimeValue(ConstString name) {
   return name == g_this;

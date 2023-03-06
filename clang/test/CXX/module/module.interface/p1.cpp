@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++2a %s -DERRORS -verify
 // RUN: %clang_cc1 -std=c++2a %s -emit-module-interface -o %t.pcm
-// RUN: %clang_cc1 -std=c++2a %s -fmodule-file=%t.pcm -DIMPLEMENTATION -verify -Db=b2 -Dc=c2
+// RUN: %clang_cc1 -std=c++2a %s -fmodule-file=M=%t.pcm -DIMPLEMENTATION -verify -Db=b2 -Dc=c2
 
 module;
 

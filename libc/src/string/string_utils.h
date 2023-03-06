@@ -166,8 +166,9 @@ LIBC_INLINE size_t complementary_span(const char *src, const char *segment) {
   cpp::bitset<256> bitset;
 
   for (; *segment; ++segment)
-    bitset.set(*segment);
-  for (; *src && !bitset.test(*src); ++src)
+    bitset.set(*reinterpret_cast<const unsigned char *>(segment));
+  for (; *src && !bitset.test(*reinterpret_cast<const unsigned char *>(src));
+       ++src)
     ;
   return src - initial;
 }

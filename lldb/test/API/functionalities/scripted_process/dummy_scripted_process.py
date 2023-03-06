@@ -7,28 +7,28 @@ from lldb.plugins.scripted_process import ScriptedProcess
 from lldb.plugins.scripted_process import ScriptedThread
 
 class DummyScriptedProcess(ScriptedProcess):
+    memory = None
+
     def __init__(self, exe_ctx: lldb.SBExecutionContext, args : lldb.SBStructuredData):
         super().__init__(exe_ctx, args)
         self.threads[0] = DummyScriptedThread(self, None)
-
-    def get_memory_region_containing_address(self, addr: int) -> lldb.SBMemoryRegionInfo:
-        return None
-
-    def get_thread_with_id(self, tid: int):
-        return {}
-
-    def get_registers_for_thread(self, tid: int):
-        return {}
-
-    def read_memory_at_address(self, addr: int, size: int, error: lldb.SBError) -> lldb.SBData:
+        self.memory = {}
+        addr = 0x500000000
         debugger = self.target.GetDebugger()
         index = debugger.GetIndexOfTarget(self.target)
+        self.memory[addr] = "Hello, target " + str(index)
+
+    def read_memory_at_address(self, addr: int, size: int, error: lldb.SBError) -> lldb.SBData:
         data = lldb.SBData().CreateDataFromCString(
                                     self.target.GetByteOrder(),
                                     self.target.GetCodeByteSize(),
-                                    "Hello, target " + str(index))
+                                    self.memory[addr])
 
         return data
+
+    def write_memory_at_address(self, addr, data, error):
+        self.memory[addr] = data.GetString(error, 0)
+        return len(self.memory[addr]) + 1
 
     def get_loaded_images(self):
         return self.loaded_images

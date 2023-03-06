@@ -2450,6 +2450,17 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, DependentCoawaitExpr>
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, CoyieldExpr>
     coyieldExpr;
 
+/// Matches coroutine body statements.
+///
+/// coroutineBodyStmt() matches the coroutine below
+/// \code
+///   generator<int> gen() {
+///     co_return;
+///   }
+/// \endcode
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, CoroutineBodyStmt>
+    coroutineBodyStmt;
+
 /// Matches nullptr literal.
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNullPtrLiteralExpr>
     cxxNullPtrLiteralExpr;
@@ -5460,9 +5471,10 @@ AST_MATCHER_P(ArraySubscriptExpr, hasBase,
   return false;
 }
 
-/// Matches a 'for', 'while', 'do' statement or a function definition that has
-/// a given body. Note that in case of functions this matcher only matches the
-/// definition itself and not the other declarations of the same function.
+/// Matches a 'for', 'while', 'while' statement or a function or coroutine
+/// definition that has a given body. Note that in case of functions or
+/// coroutines this matcher only matches the definition itself and not the
+/// other declarations of the same function or coroutine.
 ///
 /// Given
 /// \code
@@ -5483,12 +5495,11 @@ AST_MATCHER_P(ArraySubscriptExpr, hasBase,
 /// with compoundStmt()
 ///   matching '{}'
 ///   but does not match 'void f();'
-AST_POLYMORPHIC_MATCHER_P(hasBody,
-                          AST_POLYMORPHIC_SUPPORTED_TYPES(DoStmt, ForStmt,
-                                                          WhileStmt,
-                                                          CXXForRangeStmt,
-                                                          FunctionDecl),
-                          internal::Matcher<Stmt>, InnerMatcher) {
+AST_POLYMORPHIC_MATCHER_P(
+    hasBody,
+    AST_POLYMORPHIC_SUPPORTED_TYPES(DoStmt, ForStmt, WhileStmt, CXXForRangeStmt,
+                                    FunctionDecl, CoroutineBodyStmt),
+    internal::Matcher<Stmt>, InnerMatcher) {
   if (Finder->isTraversalIgnoringImplicitNodes() && isDefaultedHelper(&Node))
     return false;
   const Stmt *const Statement = internal::GetBodyMatcher<NodeType>::get(Node);

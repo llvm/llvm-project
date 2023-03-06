@@ -1058,7 +1058,7 @@ int runOrcJIT(const char *ProgName) {
       auto JDItr = std::prev(IdxToDylib.lower_bound(EAIdx));
       auto &JD = *JDItr->second;
       JD.addGenerator(ExitOnErr(orc::StaticLibraryDefinitionGenerator::Load(
-          J->getObjLinkingLayer(), EAItr->c_str(), *TT)));
+          J->getObjLinkingLayer(), EAItr->c_str())));
     }
   }
 

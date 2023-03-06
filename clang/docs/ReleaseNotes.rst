@@ -13,7 +13,7 @@ Written by the `LLVM Team <https://llvm.org/>`_
   .. warning::
      These are in-progress notes for the upcoming Clang |version| release.
      Release notes for previous releases can be found on
-     `the Releases Page <https://llvm.org/releases>`_.
+     `the Releases Page <https://llvm.org/releases/>`_.
 
 Introduction
 ============
@@ -81,6 +81,11 @@ C++20 Feature Support
 
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+
+- Implemented `P2036R3: Change scope of lambda trailing-return-type <https://wg21.link/P2036R3>`_
+  and `P2579R0 Mitigation strategies for P2036 <https://wg21.link/P2579R0>`_.
+  These proposals modify how variables captured in lambdas can appear in trailing return type
+  expressions and how their types are deduced therein, in all C++ language versions.
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -150,6 +155,8 @@ Improvements to Clang's diagnostics
 - Clang now warns by default for C++20 and later about deprecated capture of
   ``this`` with a capture default of ``=``. This warning can be disabled with
   ``-Wno-deprecated-this-capture``.
+- Clang had failed to emit some ``-Wundefined-internal`` for members of a local
+  class if that class was first introduced with a forward declaration.
 
 Bug Fixes in This Version
 -------------------------
@@ -169,6 +176,8 @@ Bug Fixes in This Version
   (`#60268 <https://github.com/llvm/llvm-project/issues/60268>`_)
 - Fix crash when taking the address of a consteval lambda call operator.
   (`#57682 <https://github.com/llvm/llvm-project/issues/57682>`_)
+- Clang now support export declarations in the language linkage.
+  (`#60405 <https://github.com/llvm/llvm-project/issues/60405>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -257,6 +266,11 @@ Floating Point Support in Clang
 
 AST Matchers
 ------------
+
+- Add ``coroutineBodyStmt`` matcher.
+
+- The ``hasBody`` matcher now matches coroutine body nodes in
+  ``CoroutineBodyStmts``.
 
 clang-format
 ------------

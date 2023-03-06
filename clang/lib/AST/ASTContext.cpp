@@ -6591,7 +6591,10 @@ bool ASTContext::FriendsDifferByConstraints(const FunctionDecl *X,
 
   // If the two functions share lexical declaration context, they are not in
   // separate instantations, and thus in the same scope.
-  if (X->getLexicalDeclContext() == Y->getLexicalDeclContext())
+  if (declaresSameEntity(cast<Decl>(X->getLexicalDeclContext()
+                             ->getRedeclContext()),
+                         cast<Decl>(Y->getLexicalDeclContext()
+                             ->getRedeclContext())))
     return false;
 
   if (!X->getDescribedFunctionTemplate()) {
@@ -6683,8 +6686,28 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
         return false;
     }
 
-    if (!isSameConstraintExpr(FuncX->getTrailingRequiresClause(),
-                              FuncY->getTrailingRequiresClause()))
+    // The trailing require clause of instantiated function may change during
+    // the semantic analysis. Trying to get the primary template function (if
+    // exists) to compare the primary trailing require clause.
+    auto TryToGetPrimaryTemplatedFunction =
+        [](const FunctionDecl *FD) -> const FunctionDecl * {
+      switch (FD->getTemplatedKind()) {
+      case FunctionDecl::TK_DependentNonTemplate:
+        return FD->getInstantiatedFromDecl();
+      case FunctionDecl::TK_FunctionTemplate:
+        return FD->getDescribedFunctionTemplate()->getTemplatedDecl();
+      case FunctionDecl::TK_MemberSpecialization:
+        return FD->getInstantiatedFromMemberFunction();
+      case FunctionDecl::TK_FunctionTemplateSpecialization:
+        return FD->getPrimaryTemplate()->getTemplatedDecl();
+      default:
+        return FD;
+      }
+    };
+    const FunctionDecl *PrimaryX = TryToGetPrimaryTemplatedFunction(FuncX);
+    const FunctionDecl *PrimaryY = TryToGetPrimaryTemplatedFunction(FuncY);
+    if (!isSameConstraintExpr(PrimaryX->getTrailingRequiresClause(),
+                              PrimaryY->getTrailingRequiresClause()))
       return false;
 
     // Constrained friends are different in certain cases, see: [temp.friend]p9.

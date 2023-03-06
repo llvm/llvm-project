@@ -11,7 +11,7 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <fcntl.h>
 #include <sys/syscall.h> // For syscall numbers.
 
@@ -30,7 +30,7 @@ LLVM_LIBC_FUNCTION(int, dup2, (int oldfd, int newfd)) {
     long ret = __llvm_libc::syscall_impl(SYS_fcntl, oldfd, F_GETFD);
     if (ret >= 0)
       return oldfd;
-    errno = -ret;
+    libc_errno = -ret;
     return -1;
   }
   long ret = __llvm_libc::syscall_impl(SYS_dup3, oldfd, newfd, 0);
@@ -38,7 +38,7 @@ LLVM_LIBC_FUNCTION(int, dup2, (int oldfd, int newfd)) {
 #error "SYS_dup2 and SYS_dup3 not available for the target."
 #endif
   if (ret < 0) {
-    errno = -ret;
+    libc_errno = -ret;
     return -1;
   }
   return ret;

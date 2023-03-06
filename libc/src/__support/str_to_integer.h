@@ -13,7 +13,7 @@
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/str_to_num_result.h"
-#include <errno.h>
+#include "src/errno/libc_errno.h" // For ERANGE
 #include <limits.h>
 
 namespace __llvm_libc {

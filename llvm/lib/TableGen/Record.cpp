@@ -1772,34 +1772,34 @@ void ExistsOpInit::Profile(FoldingSetNodeID &ID) const {
 
 Init *ExistsOpInit::Fold(Record *CurRec, bool IsFinal) const {
   if (StringInit *Name = dyn_cast<StringInit>(Expr)) {
-    if (!CurRec && !IsFinal)
-      return const_cast<ExistsOpInit *>(this);
-
-    // Self-references are allowed, but their resolution is delayed until
-    // the final resolve to ensure that we get the correct type for them.
-    auto *Anonymous = dyn_cast<AnonymousNameInit>(CurRec->getNameInit());
-    if (Name == CurRec->getNameInit() ||
-        (Anonymous && Name == Anonymous->getNameInit())) {
-      if (!IsFinal)
-        return const_cast<ExistsOpInit *>(this);
-
-      // No doubt that there exists a record, so we should check if types are
-      // compatiable.
-      return IntInit::get(getRecordKeeper(),
-                          CurRec->getType()->typeIsA(CheckType));
-    }
 
     // Look up all defined records to see if we can find one.
     Record *D = CheckType->getRecordKeeper().getDef(Name->getValue());
-    if (!D) {
-      if (IsFinal)
-        return IntInit::get(getRecordKeeper(), 0);
-      return const_cast<ExistsOpInit *>(this);
+    if (D) {
+      // Check if types are compatiable.
+      return IntInit::get(getRecordKeeper(),
+                          DefInit::get(D)->getType()->typeIsA(CheckType));
     }
 
-    // Check if types are compatiable.
-    return IntInit::get(getRecordKeeper(),
-                        DefInit::get(D)->getType()->typeIsA(CheckType));
+    if (CurRec) {
+      // Self-references are allowed, but their resolution is delayed until
+      // the final resolve to ensure that we get the correct type for them.
+      auto *Anonymous = dyn_cast<AnonymousNameInit>(CurRec->getNameInit());
+      if (Name == CurRec->getNameInit() ||
+          (Anonymous && Name == Anonymous->getNameInit())) {
+        if (!IsFinal)
+          return const_cast<ExistsOpInit *>(this);
+
+        // No doubt that there exists a record, so we should check if types are
+        // compatiable.
+        return IntInit::get(getRecordKeeper(),
+                            CurRec->getType()->typeIsA(CheckType));
+      }
+    }
+
+    if (IsFinal)
+      return IntInit::get(getRecordKeeper(), 0);
+    return const_cast<ExistsOpInit *>(this);
   }
   return const_cast<ExistsOpInit *>(this);
 }

@@ -154,7 +154,6 @@ static inline bool isDbgInfoIntrinsic(Intrinsic::ID ID) {
   switch (ID) {
   case Intrinsic::dbg_declare:
   case Intrinsic::dbg_value:
-  case Intrinsic::dbg_addr:
   case Intrinsic::dbg_label:
   case Intrinsic::dbg_assign:
     return true;
@@ -259,12 +258,11 @@ public:
 
   bool hasArgList() const { return isa<DIArgList>(getRawLocation()); }
 
-  /// Does this describe the address of a local variable. True for dbg.addr and
-  /// dbg.declare, but not dbg.value, which describes its value, or dbg.assign,
-  /// which describes a combination of the variable's value and address.
+  /// Does this describe the address of a local variable. True for dbg.declare,
+  /// but not dbg.value, which describes its value, or dbg.assign, which
+  /// describes a combination of the variable's value and address.
   bool isAddressOfVariable() const {
-    return getIntrinsicID() != Intrinsic::dbg_value &&
-           getIntrinsicID() != Intrinsic::dbg_assign;
+    return getIntrinsicID() == Intrinsic::dbg_declare;
   }
 
   void setKillLocation() {
@@ -327,7 +325,6 @@ public:
     switch (I->getIntrinsicID()) {
     case Intrinsic::dbg_declare:
     case Intrinsic::dbg_value:
-    case Intrinsic::dbg_addr:
     case Intrinsic::dbg_assign:
       return true;
     default:
@@ -363,25 +360,6 @@ public:
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
   /// @}
-};
-
-/// This represents the llvm.dbg.addr instruction.
-class DbgAddrIntrinsic : public DbgVariableIntrinsic {
-public:
-  Value *getAddress() const {
-    assert(getNumVariableLocationOps() == 1 &&
-           "dbg.addr must have exactly 1 location operand.");
-    return getVariableLocationOp(0);
-  }
-
-  /// \name Casting methods
-  /// @{
-  static bool classof(const IntrinsicInst *I) {
-    return I->getIntrinsicID() == Intrinsic::dbg_addr;
-  }
-  static bool classof(const Value *V) {
-    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
-  }
 };
 
 /// This represents the llvm.dbg.value instruction.

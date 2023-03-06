@@ -423,7 +423,6 @@ class BreakpointCommandTestCase(TestBase):
                         patterns=["bktptcmd.function"])
 
 
-
     def test_breakpoint_delete_disabled(self):
         """Test 'break delete --disabled' works"""
         self.build()
@@ -548,3 +547,26 @@ class BreakpointCommandTestCase(TestBase):
 
         source_map_json = self.get_source_map_json()
         self.assertEquals(len(source_map_json), 0, "source map should not be deduced")
+
+
+    def test_breakpoint_statistics_hitcount(self):
+        """Test breakpoints statistics have hitCount field."""
+        self.build()
+        target = self.createTestTarget()
+
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.c", self.line, num_expected_locations=1, loc_exact=True)
+
+        stream = lldb.SBStream()
+        res = target.GetStatistics().GetAsJSON(stream)
+        self.assertTrue(res.Success())
+        debug_stats = json.loads(stream.GetData())
+        self.assertEqual('targets' in debug_stats, True,
+                'Make sure the "targets" key in in target.GetStatistics()')
+        target_stats = debug_stats['targets'][0]
+        self.assertNotEqual(target_stats, None)
+
+        breakpoints_stats = target_stats['breakpoints']
+        self.assertNotEqual(breakpoints_stats, None)
+        for breakpoint_stats in breakpoints_stats:
+            self.assertIn("hitCount", breakpoint_stats)

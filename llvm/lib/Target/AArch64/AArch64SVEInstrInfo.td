@@ -2512,6 +2512,9 @@ let Predicates = [HasSVEorSME] in {
     def : Pat<(nxv8f16 (bitconvert (nxv8bf16 ZPR:$src))), (nxv8f16 ZPR:$src)>;
     def : Pat<(nxv4f32 (bitconvert (nxv8bf16 ZPR:$src))), (nxv4f32 ZPR:$src)>;
     def : Pat<(nxv2f64 (bitconvert (nxv8bf16 ZPR:$src))), (nxv2f64 ZPR:$src)>;
+
+    def : Pat<(nxv16i1 (bitconvert (aarch64svcount PPR:$src))), (nxv16i1 PPR:$src)>;
+    def : Pat<(aarch64svcount (bitconvert (nxv16i1 PPR:$src))), (aarch64svcount PPR:$src)>;
   }
 
   // These allow casting from/to unpacked predicate types.
@@ -2968,6 +2971,12 @@ let Predicates = [HasSVEorSME] in {
             (INSERT_SUBREG (nxv4f16 (IMPLICIT_DEF)), FPR16:$src, hsub)>;
   def : Pat<(nxv2f16 (vector_insert (nxv2f16 (undef)), (f16 FPR16:$src), 0)),
             (INSERT_SUBREG (nxv2f16 (IMPLICIT_DEF)), FPR16:$src, hsub)>;
+  def : Pat<(nxv8bf16 (vector_insert (nxv8bf16 (undef)), (bf16 FPR16:$src), 0)),
+            (INSERT_SUBREG (nxv8bf16 (IMPLICIT_DEF)), FPR16:$src, hsub)>;
+  def : Pat<(nxv4bf16 (vector_insert (nxv4bf16 (undef)), (bf16 FPR16:$src), 0)),
+            (INSERT_SUBREG (nxv4bf16 (IMPLICIT_DEF)), FPR16:$src, hsub)>;
+  def : Pat<(nxv2bf16 (vector_insert (nxv2bf16 (undef)), (bf16 FPR16:$src), 0)),
+            (INSERT_SUBREG (nxv2bf16 (IMPLICIT_DEF)), FPR16:$src, hsub)>;
   def : Pat<(nxv4f32 (vector_insert (nxv4f32 (undef)), (f32 FPR32:$src), 0)),
             (INSERT_SUBREG (nxv4f32 (IMPLICIT_DEF)), FPR32:$src, ssub)>;
   def : Pat<(nxv2f32 (vector_insert (nxv2f32 (undef)), (f32 FPR32:$src), 0)),
@@ -2986,6 +2995,8 @@ let Predicates = [HasSVEorSME] in {
             (CPY_ZPmR_D ZPR:$vec, (PTRUE_D 1), GPR64:$src)>;
 
   def : Pat<(nxv8f16 (vector_insert (nxv8f16 ZPR:$vec), (f16 FPR16:$src), 0)),
+            (SEL_ZPZZ_H (PTRUE_H 1), (INSERT_SUBREG (IMPLICIT_DEF), FPR16:$src, hsub), ZPR:$vec)>;
+  def : Pat<(nxv8bf16 (vector_insert (nxv8bf16 ZPR:$vec), (bf16 FPR16:$src), 0)),
             (SEL_ZPZZ_H (PTRUE_H 1), (INSERT_SUBREG (IMPLICIT_DEF), FPR16:$src, hsub), ZPR:$vec)>;
   def : Pat<(nxv4f32 (vector_insert (nxv4f32 ZPR:$vec), (f32 FPR32:$src), 0)),
             (SEL_ZPZZ_S (PTRUE_S 1), (INSERT_SUBREG (IMPLICIT_DEF), FPR32:$src, ssub), ZPR:$vec)>;
@@ -3037,6 +3048,24 @@ let Predicates = [HasSVEorSME] in {
                                        (INDEX_II_H 0, 1),
                                        (DUP_ZR_H (i32 (EXTRACT_SUBREG GPR64:$index, sub_32)))),
                         $src)>;
+  def : Pat<(nxv2bf16 (vector_insert (nxv2bf16 ZPR:$vec), (bf16 FPR16:$src), GPR64:$index)),
+            (CPY_ZPmV_H ZPR:$vec,
+                        (CMPEQ_PPzZZ_D (PTRUE_D 31),
+                                       (INDEX_II_D 0, 1),
+                                       (DUP_ZR_D GPR64:$index)),
+                        $src)>;
+  def : Pat<(nxv4bf16 (vector_insert (nxv4bf16 ZPR:$vec), (bf16 FPR16:$src), GPR64:$index)),
+            (CPY_ZPmV_H ZPR:$vec,
+                        (CMPEQ_PPzZZ_S (PTRUE_S 31),
+                                       (INDEX_II_S 0, 1),
+                                       (DUP_ZR_S (i32 (EXTRACT_SUBREG GPR64:$index, sub_32)))),
+                        $src)>;
+  def : Pat<(nxv8bf16 (vector_insert (nxv8bf16 ZPR:$vec), (bf16 FPR16:$src), GPR64:$index)),
+            (CPY_ZPmV_H ZPR:$vec,
+                        (CMPEQ_PPzZZ_H (PTRUE_H 31),
+                                       (INDEX_II_H 0, 1),
+                                       (DUP_ZR_H (i32 (EXTRACT_SUBREG GPR64:$index, sub_32)))),
+                        $src)>;
   def : Pat<(nxv2f32 (vector_insert (nxv2f32 ZPR:$vec), (f32 FPR32:$src), GPR64:$index)),
             (CPY_ZPmV_S ZPR:$vec,
                         (CMPEQ_PPzZZ_D (PTRUE_D 31),
@@ -3071,6 +3100,12 @@ let Predicates = [HasSVEorSME] in {
             (LASTB_VPZ_H (WHILELS_PXX_S XZR, GPR64:$index), ZPR:$vec)>;
   def : Pat<(f16 (vector_extract (nxv2f16 ZPR:$vec), GPR64:$index)),
             (LASTB_VPZ_H (WHILELS_PXX_D XZR, GPR64:$index), ZPR:$vec)>;
+  def : Pat<(bf16 (vector_extract (nxv8bf16 ZPR:$vec), GPR64:$index)),
+            (LASTB_VPZ_H (WHILELS_PXX_H XZR, GPR64:$index), ZPR:$vec)>;
+  def : Pat<(bf16 (vector_extract (nxv4bf16 ZPR:$vec), GPR64:$index)),
+            (LASTB_VPZ_H (WHILELS_PXX_S XZR, GPR64:$index), ZPR:$vec)>;
+  def : Pat<(bf16 (vector_extract (nxv2bf16 ZPR:$vec), GPR64:$index)),
+            (LASTB_VPZ_H (WHILELS_PXX_D XZR, GPR64:$index), ZPR:$vec)>;
   def : Pat<(f32 (vector_extract (nxv4f32 ZPR:$vec), GPR64:$index)),
             (LASTB_VPZ_S (WHILELS_PXX_S XZR, GPR64:$index), ZPR:$vec)>;
   def : Pat<(f32 (vector_extract (nxv2f32 ZPR:$vec), GPR64:$index)),
@@ -3092,6 +3127,12 @@ let Predicates = [HasSVEorSME] in {
   def : Pat<(f16 (vector_extract (nxv4f16 ZPR:$vec), sve_elm_idx_extdup_s:$index)),
             (EXTRACT_SUBREG (DUP_ZZI_S ZPR:$vec, sve_elm_idx_extdup_s:$index), hsub)>;
   def : Pat<(f16 (vector_extract (nxv2f16 ZPR:$vec), sve_elm_idx_extdup_d:$index)),
+            (EXTRACT_SUBREG (DUP_ZZI_D ZPR:$vec, sve_elm_idx_extdup_d:$index), hsub)>;
+  def : Pat<(bf16 (vector_extract (nxv8bf16 ZPR:$vec), sve_elm_idx_extdup_h:$index)),
+            (EXTRACT_SUBREG (DUP_ZZI_H ZPR:$vec, sve_elm_idx_extdup_h:$index), hsub)>;
+  def : Pat<(bf16 (vector_extract (nxv4bf16 ZPR:$vec), sve_elm_idx_extdup_s:$index)),
+            (EXTRACT_SUBREG (DUP_ZZI_S ZPR:$vec, sve_elm_idx_extdup_s:$index), hsub)>;
+  def : Pat<(bf16 (vector_extract (nxv2bf16 ZPR:$vec), sve_elm_idx_extdup_d:$index)),
             (EXTRACT_SUBREG (DUP_ZZI_D ZPR:$vec, sve_elm_idx_extdup_d:$index), hsub)>;
   def : Pat<(f32 (vector_extract (nxv4f32 ZPR:$vec), sve_elm_idx_extdup_s:$index)),
             (EXTRACT_SUBREG (DUP_ZZI_S ZPR:$vec, sve_elm_idx_extdup_s:$index), ssub)>;
@@ -3143,6 +3184,12 @@ let Predicates = [HasSVEorSME] in {
             (f16 (EXTRACT_SUBREG ZPR:$Zs, hsub))>;
   def : Pat<(vector_extract (nxv2f16 ZPR:$Zs), (i64 0)),
             (f16 (EXTRACT_SUBREG ZPR:$Zs, hsub))>;
+  def : Pat<(vector_extract (nxv8bf16 ZPR:$Zs), (i64 0)),
+            (bf16 (EXTRACT_SUBREG ZPR:$Zs, hsub))>;
+  def : Pat<(vector_extract (nxv4bf16 ZPR:$Zs), (i64 0)),
+            (bf16 (EXTRACT_SUBREG ZPR:$Zs, hsub))>;
+  def : Pat<(vector_extract (nxv2bf16 ZPR:$Zs), (i64 0)),
+            (bf16 (EXTRACT_SUBREG ZPR:$Zs, hsub))>;
   def : Pat<(vector_extract (nxv4f32 ZPR:$Zs), (i64 0)),
             (f32 (EXTRACT_SUBREG ZPR:$Zs, ssub))>;
   def : Pat<(vector_extract (nxv2f32 ZPR:$Zs), (i64 0)),

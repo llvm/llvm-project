@@ -20,8 +20,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 
-#include <utility>
 #include <optional>
+#include <utility>
 
 namespace py = pybind11;
 using namespace mlir;
@@ -1059,6 +1059,19 @@ PyOperationRef PyOperation::createDetached(PyMlirContextRef contextRef,
   return created;
 }
 
+PyOperationRef PyOperation::parse(PyMlirContextRef contextRef,
+                                  const std::string &sourceStr,
+                                  const std::string &sourceName) {
+  MlirOperation op =
+      mlirOperationCreateParse(contextRef->get(), toMlirStringRef(sourceStr),
+                               toMlirStringRef(sourceName));
+  // TODO: Include error diagnostic messages in the exception message
+  if (mlirOperationIsNull(op))
+    throw py::value_error(
+        "Unable to parse operation assembly (see diagnostics)");
+  return PyOperation::createDetached(std::move(contextRef), op);
+}
+
 void PyOperation::checkValid() const {
   if (!valid) {
     throw SetPyError(PyExc_RuntimeError, "the operation has been invalidated");
@@ -1326,10 +1339,10 @@ py::object PyOperation::createOpView() {
   checkValid();
   MlirIdentifier ident = mlirOperationGetName(get());
   MlirStringRef identStr = mlirIdentifierStr(ident);
-  auto opViewClass = PyGlobals::get().lookupRawOpViewClass(
+  auto operationCls = PyGlobals::get().lookupOperationClass(
       StringRef(identStr.data, identStr.length));
-  if (opViewClass)
-    return (*opViewClass)(getRef().getObject());
+  if (operationCls)
+    return PyOpView::constructDerived(*operationCls, *getRef().get());
   return py::cast(PyOpView(getRef().getObject()));
 }
 
@@ -1605,46 +1618,22 @@ PyOpView::buildGeneric(const py::object &cls, py::list resultTypeList,
                              /*regions=*/*regions, location, maybeIp);
 }
 
+pybind11::object PyOpView::constructDerived(const pybind11::object &cls,
+                                            const PyOperation &operation) {
+  // TODO: pybind11 2.6 supports a more direct form.
+  // Upgrade many years from now.
+  //   auto opViewType = py::type::of<PyOpView>();
+  py::handle opViewType = py::detail::get_type_handle(typeid(PyOpView), true);
+  py::object instance = cls.attr("__new__")(cls);
+  opViewType.attr("__init__")(instance, operation);
+  return instance;
+}
+
 PyOpView::PyOpView(const py::object &operationObject)
     // Casting through the PyOperationBase base-class and then back to the
     // Operation lets us accept any PyOperationBase subclass.
     : operation(py::cast<PyOperationBase &>(operationObject).getOperation()),
       operationObject(operation.getRef().getObject()) {}
-
-py::object PyOpView::createRawSubclass(const py::object &userClass) {
-  // This is... a little gross. The typical pattern is to have a pure python
-  // class that extends OpView like:
-  //   class AddFOp(_cext.ir.OpView):
-  //     def __init__(self, loc, lhs, rhs):
-  //       operation = loc.context.create_operation(
-  //           "addf", lhs, rhs, results=[lhs.type])
-  //       super().__init__(operation)
-  //
-  // I.e. The goal of the user facing type is to provide a nice constructor
-  // that has complete freedom for the op under construction. This is at odds
-  // with our other desire to sometimes create this object by just passing an
-  // operation (to initialize the base class). We could do *arg and **kwargs
-  // munging to try to make it work, but instead, we synthesize a new class
-  // on the fly which extends this user class (AddFOp in this example) and
-  // *give it* the base class's __init__ method, thus bypassing the
-  // intermediate subclass's __init__ method entirely. While slightly,
-  // underhanded, this is safe/legal because the type hierarchy has not changed
-  // (we just added a new leaf) and we aren't mucking around with __new__.
-  // Typically, this new class will be stored on the original as "_Raw" and will
-  // be used for casts and other things that need a variant of the class that
-  // is initialized purely from an operation.
-  py::object parentMetaclass =
-      py::reinterpret_borrow<py::object>((PyObject *)&PyType_Type);
-  py::dict attributes;
-  // TODO: pybind11 2.6 supports a more direct form. Upgrade many years from
-  // now.
-  //   auto opViewType = py::type::of<PyOpView>();
-  auto opViewType = py::detail::get_type_handle(typeid(PyOpView), true);
-  attributes["__init__"] = opViewType.attr("__init__");
-  py::str origName = userClass.attr("__name__");
-  py::str newName = py::str("_") + origName;
-  return parentMetaclass(newName, py::make_tuple(userClass), attributes);
-}
 
 //------------------------------------------------------------------------------
 // PyInsertionPoint.
@@ -2769,6 +2758,17 @@ void mlir::python::populateIRCore(py::module &m) {
                   py::arg("successors") = py::none(), py::arg("regions") = 0,
                   py::arg("loc") = py::none(), py::arg("ip") = py::none(),
                   kOperationCreateDocstring)
+      .def_static(
+          "parse",
+          [](const std::string &sourceStr, const std::string &sourceName,
+             DefaultingPyMlirContext context) {
+            return PyOperation::parse(context->getRef(), sourceStr, sourceName)
+                ->createOpView();
+          },
+          py::arg("source"), py::kw_only(), py::arg("source_name") = "",
+          py::arg("context") = py::none(),
+          "Parses an operation. Supports both text assembly format and binary "
+          "bytecode format.")
       .def_property_readonly("parent",
                              [](PyOperation &self) -> py::object {
                                auto parent = self.getParentOperation();
@@ -2820,6 +2820,30 @@ void mlir::python::populateIRCore(py::module &m) {
       py::arg("successors") = py::none(), py::arg("regions") = py::none(),
       py::arg("loc") = py::none(), py::arg("ip") = py::none(),
       "Builds a specific, generated OpView based on class level attributes.");
+  opViewClass.attr("parse") = classmethod(
+      [](const py::object &cls, const std::string &sourceStr,
+         const std::string &sourceName, DefaultingPyMlirContext context) {
+        PyOperationRef parsed =
+            PyOperation::parse(context->getRef(), sourceStr, sourceName);
+
+        // Check if the expected operation was parsed, and cast to to the
+        // appropriate `OpView` subclass if successful.
+        // NOTE: This accesses attributes that have been automatically added to
+        // `OpView` subclasses, and is not intended to be used on `OpView`
+        // directly.
+        std::string clsOpName =
+            py::cast<std::string>(cls.attr("OPERATION_NAME"));
+        MlirStringRef parsedOpName =
+            mlirIdentifierStr(mlirOperationGetName(*parsed.get()));
+        if (!mlirStringRefEqual(parsedOpName, toMlirStringRef(clsOpName)))
+          throw py::value_error(
+              "Expected a '" + clsOpName + "' op, got: '" +
+              std::string(parsedOpName.data, parsedOpName.length) + "'");
+        return PyOpView::constructDerived(cls, *parsed.get());
+      },
+      py::arg("cls"), py::arg("source"), py::kw_only(),
+      py::arg("source_name") = "", py::arg("context") = py::none(),
+      "Parses a specific, generated OpView based on class level attributes");
 
   //----------------------------------------------------------------------------
   // Mapping of PyRegion.

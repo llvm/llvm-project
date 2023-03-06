@@ -465,7 +465,7 @@ public:
       break;
     }
     c->cmdsize = getSize();
-    c->version = encodeVersion(platformInfo.minimum);
+    c->version = encodeVersion(platformInfo.target.MinDeployment);
     c->sdk = encodeVersion(platformInfo.sdk);
   }
 
@@ -490,7 +490,7 @@ public:
     c->cmdsize = getSize();
 
     c->platform = static_cast<uint32_t>(platformInfo.target.Platform);
-    c->minos = encodeVersion(platformInfo.minimum);
+    c->minos = encodeVersion(platformInfo.target.MinDeployment);
     c->sdk = encodeVersion(platformInfo.sdk);
 
     c->ntools = ntools;
@@ -764,7 +764,9 @@ static bool useLCBuildVersion(const PlatformInfo &platformInfo) {
   auto it = llvm::find_if(minVersion, [&](const auto &p) {
     return p.first == platformInfo.target.Platform;
   });
-  return it == minVersion.end() ? true : platformInfo.minimum >= it->second;
+  return it == minVersion.end()
+             ? true
+             : platformInfo.target.MinDeployment >= it->second;
 }
 
 template <class LP> void Writer::createLoadCommands() {

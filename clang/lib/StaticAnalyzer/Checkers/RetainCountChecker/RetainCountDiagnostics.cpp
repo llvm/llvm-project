@@ -234,8 +234,8 @@ static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
     os << "Operator 'new'";
   } else {
     assert(isa<ObjCMessageExpr>(S));
-    CallEventRef<ObjCMethodCall> Call =
-        Mgr.getObjCMethodCall(cast<ObjCMessageExpr>(S), CurrSt, LCtx);
+    CallEventRef<ObjCMethodCall> Call = Mgr.getObjCMethodCall(
+        cast<ObjCMessageExpr>(S), CurrSt, LCtx, {nullptr, 0});
 
     switch (Call->getMessageKind()) {
     case OCM_Message:
@@ -250,7 +250,7 @@ static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
     }
   }
 
-  std::optional<CallEventRef<>> CE = Mgr.getCall(S, CurrSt, LCtx);
+  std::optional<CallEventRef<>> CE = Mgr.getCall(S, CurrSt, LCtx, {nullptr, 0});
   auto Idx = findArgIdxOfSymbol(CurrSt, LCtx, Sym, CE);
 
   // If index is not found, we assume that the symbol was returned.

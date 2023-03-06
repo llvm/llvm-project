@@ -117,6 +117,18 @@ protected:
     return python::ToSWIGWrapper(arg);
   }
 
+  python::PythonObject Transform(lldb::ProcessAttachInfoSP arg) {
+    return python::ToSWIGWrapper(arg);
+  }
+
+  python::PythonObject Transform(lldb::ProcessLaunchInfoSP arg) {
+    return python::ToSWIGWrapper(arg);
+  }
+
+  python::PythonObject Transform(lldb::DataExtractorSP arg) {
+    return python::ToSWIGWrapper(arg);
+  }
+
   template <typename T, typename U>
   void ReverseTransform(T &original_arg, U transformed_arg, Status &error) {
     // If U is not a PythonObject, don't touch it!
@@ -197,6 +209,14 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
 template <>
 Status ScriptedPythonInterface::ExtractValueFromPythonObject<Status>(
     python::PythonObject &p, Status &error);
+
+template <>
+lldb::ProcessAttachInfoSP ScriptedPythonInterface::ExtractValueFromPythonObject<
+    lldb::ProcessAttachInfoSP>(python::PythonObject &p, Status &error);
+
+template <>
+lldb::ProcessLaunchInfoSP ScriptedPythonInterface::ExtractValueFromPythonObject<
+    lldb::ProcessLaunchInfoSP>(python::PythonObject &p, Status &error);
 
 template <>
 lldb::DataExtractorSP

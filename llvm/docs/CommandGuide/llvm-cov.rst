@@ -360,6 +360,11 @@ is compiled in and configured via the DEBUGINFOD_URLS environment variable.
 Provides local directories to search for objects corresponding to binary IDs in
 the profile (as with debuginfod). Defaults to system build ID directories.
 
+.. option:: -check-binary-id
+
+Fail if an object file cannot be found for a binary ID present in the profile,
+neither on the command line nor via binary ID lookup.
+
 .. program:: llvm-cov report
 
 .. _llvm-cov-report:
@@ -440,6 +445,11 @@ DEBUGINFOD_URLS.
 
 Provides a directory to search for objects corresponding to binary IDs in the
 profile.
+
+.. option:: -check-binary-id
+
+Fail if an object file cannot be found for a binary ID present in the profile,
+neither on the command line nor via binary ID lookup.
 
 .. program:: llvm-cov export
 
@@ -527,3 +537,8 @@ DEBUGINFOD_URLS.
 
 Provides a directory to search for objects corresponding to binary IDs in the
 profile.
+
+.. option:: -check-binary-id
+
+Fail if an object file cannot be found for a binary ID present in the profile,
+neither on the command line nor via binary ID lookup.

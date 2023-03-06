@@ -10,7 +10,7 @@
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <stdio.h>
 #include <stdlib.h>
 

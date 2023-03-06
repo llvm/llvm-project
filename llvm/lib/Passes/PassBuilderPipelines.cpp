@@ -14,6 +14,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
@@ -253,11 +254,6 @@ static cl::opt<bool>
     EnableMatrix("enable-matrix", cl::init(false), cl::Hidden,
                  cl::desc("Enable lowering of the matrix intrinsics"));
 
-static cl::opt<bool> CountCGSCCVisits(
-    "count-cgscc-max-visits", cl::init(false), cl::Hidden,
-    cl::desc("Keep track of the max number of times we visit a function in the "
-             "CGSCC pipeline as a statistic"));
-
 static cl::opt<bool> EnableConstraintElimination(
     "enable-constraint-elimination", cl::init(true), cl::Hidden,
     cl::desc(
@@ -318,7 +314,7 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
 
   FunctionPassManager FPM;
 
-  if (CountCGSCCVisits)
+  if (AreStatisticsEnabled())
     FPM.addPass(CountVisitsPass());
 
   // Form SSA out of local memory accesses after breaking apart aggregates into
@@ -471,7 +467,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   FunctionPassManager FPM;
 
-  if (CountCGSCCVisits)
+  if (AreStatisticsEnabled())
     FPM.addPass(CountVisitsPass());
 
   // Form SSA out of local memory accesses after breaking apart aggregates into
@@ -1021,19 +1017,13 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // Optimize globals to try and fold them into constants.
   MPM.addPass(GlobalOptPass());
 
-  // Promote any localized globals to SSA registers.
-  // FIXME: Should this instead by a run of SROA?
-  // FIXME: We should probably run instcombine and simplifycfg afterward to
-  // delete control flows that are dead once globals have been folded to
-  // constants.
-  MPM.addPass(createModuleToFunctionPassAdaptor(PromotePass()));
-
   // Create a small function pass pipeline to cleanup after all the global
   // optimizations.
   FunctionPassManager GlobalCleanupPM;
+  // FIXME: Should this instead by a run of SROA?
+  GlobalCleanupPM.addPass(PromotePass());
   GlobalCleanupPM.addPass(InstCombinePass());
   invokePeepholeEPCallbacks(GlobalCleanupPM, Level);
-
   GlobalCleanupPM.addPass(
       SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(GlobalCleanupPM),

@@ -42,6 +42,7 @@ end program
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
 ! ALL-NEXT: 'func.func' Pipeline
+! ALL-NEXT:   PolymorphicOpConversion
 ! ALL-NEXT:   CFGConversion
 
 ! ALL-NEXT: SCFToControlFlow

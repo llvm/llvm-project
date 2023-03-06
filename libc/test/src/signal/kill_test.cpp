@@ -13,7 +13,6 @@
 #include "test/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <signal.h>
 
 using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;

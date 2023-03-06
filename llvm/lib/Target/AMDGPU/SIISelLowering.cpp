@@ -1598,18 +1598,14 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
     return AlignedBy4;
   }
 
-  if (Subtarget->hasUnalignedBufferAccessEnabled()) {
-    // If we have a uniform constant load, it still requires using a slow
-    // buffer instruction if unaligned.
-    if (IsFast) {
-      // Accesses can really be issued as 1-byte aligned or 4-byte aligned, so
-      // 2-byte alignment is worse than 1 unless doing a 2-byte access.
-      *IsFast = (AddrSpace == AMDGPUAS::CONSTANT_ADDRESS ||
-                 AddrSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT) ?
-        Alignment >= Align(4) : Alignment != Align(2);
-    }
+  // So long as they are correct, wide global memory operations perform better
+  // than multiple smaller memory ops -- even when misaligned
+  if (AMDGPU::isExtendedGlobalAddrSpace(AddrSpace)) {
+    if (IsFast)
+      *IsFast = Size;
 
-    return true;
+    return Alignment >= Align(4) ||
+           Subtarget->hasUnalignedBufferAccessEnabled();
   }
 
   // Smaller than dword value must be aligned.
@@ -7788,7 +7784,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_buffer_atomic_swap:
   case Intrinsic::amdgcn_buffer_atomic_add:
   case Intrinsic::amdgcn_buffer_atomic_sub:
-  case Intrinsic::amdgcn_buffer_atomic_cond_sub_u32:
   case Intrinsic::amdgcn_buffer_atomic_csub:
   case Intrinsic::amdgcn_buffer_atomic_smin:
   case Intrinsic::amdgcn_buffer_atomic_umin:
@@ -7855,9 +7850,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       break;
     case Intrinsic::amdgcn_buffer_atomic_fadd:
       Opcode = AMDGPUISD::BUFFER_ATOMIC_FADD;
-      break;
-    case Intrinsic::amdgcn_buffer_atomic_cond_sub_u32:
-      Opcode = AMDGPUISD::BUFFER_ATOMIC_COND_SUB_U32;
       break;
     default:
       llvm_unreachable("unhandled atomic opcode");
@@ -12102,7 +12094,7 @@ static unsigned SubIdx2Lane(unsigned Idx) {
   }
 }
 
-/// Adjust the writemask of MIMG instructions
+/// Adjust the writemask of MIMG, VIMAGE or VSAMPLE instructions
 SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
                                           SelectionDAG &DAG) const {
   unsigned Opcode = Node->getMachineOpcode();
@@ -12120,7 +12112,7 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
   unsigned TFEIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::tfe) - 1;
   unsigned LWEIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::lwe) - 1;
   bool UsesTFC = ((int(TFEIdx) >= 0 && Node->getConstantOperandVal(TFEIdx)) ||
-                  Node->getConstantOperandVal(LWEIdx))
+                  (int(LWEIdx) >= 0 && Node->getConstantOperandVal(LWEIdx)))
                      ? true
                      : false;
   unsigned TFCLane = 0;
@@ -12328,7 +12320,7 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
   unsigned Opcode = Node->getMachineOpcode();
 
-  if (TII->isMIMG(Opcode) && !TII->get(Opcode).mayStore() &&
+  if (TII->isImage(Opcode) && !TII->get(Opcode).mayStore() &&
       !TII->isGather4(Opcode) &&
       AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::dmask)) {
     return adjustWritemask(Node, DAG);

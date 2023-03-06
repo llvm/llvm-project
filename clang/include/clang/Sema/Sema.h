@@ -2276,8 +2276,20 @@ private:
   };
   /// The modules we're currently parsing.
   llvm::SmallVector<ModuleScope, 16> ModuleScopes;
-  /// The global module fragment of the current translation unit.
-  clang::Module *GlobalModuleFragment = nullptr;
+  /// The explicit global module fragment of the current translation unit.
+  /// The explicit Global Module Fragment, as specified in C++
+  /// [module.global.frag].
+  clang::Module *TheGlobalModuleFragment = nullptr;
+
+  /// The implicit global module fragments of the current translation unit.
+  /// We would only create at most two implicit global module fragments to
+  /// avoid performance penalties when there are many language linkage
+  /// exports.
+  ///
+  /// The contents in the implicit global module fragment can't be discarded
+  /// no matter if it is exported or not.
+  clang::Module *TheImplicitGlobalModuleFragment = nullptr;
+  clang::Module *TheExportedImplicitGlobalModuleFragment = nullptr;
 
   /// Namespace definitions that we will export when they finish.
   llvm::SmallPtrSet<const NamespaceDecl*, 8> DeferredExportedNamespaces;
@@ -2293,10 +2305,16 @@ private:
     return getCurrentModule() ? getCurrentModule()->isModulePurview() : false;
   }
 
-  /// Enter the scope of the global module.
+  /// Enter the scope of the explicit global module fragment.
   Module *PushGlobalModuleFragment(SourceLocation BeginLoc);
-  /// Leave the scope of the global module.
+  /// Leave the scope of the explicit global module fragment.
   void PopGlobalModuleFragment();
+
+  /// Enter the scope of an implicit global module fragment.
+  Module *PushImplicitGlobalModuleFragment(SourceLocation BeginLoc,
+                                           bool IsExported);
+  /// Leave the scope of an implicit global module fragment.
+  void PopImplicitGlobalModuleFragment();
 
   VisibleModuleSet VisibleModules;
 
@@ -7089,14 +7107,20 @@ public:
           std::nullopt);
 
   /// Endow the lambda scope info with the relevant properties.
-  void buildLambdaScope(sema::LambdaScopeInfo *LSI,
-                        CXXMethodDecl *CallOperator,
+  void buildLambdaScope(sema::LambdaScopeInfo *LSI, CXXMethodDecl *CallOperator,
                         SourceRange IntroducerRange,
                         LambdaCaptureDefault CaptureDefault,
-                        SourceLocation CaptureDefaultLoc,
-                        bool ExplicitParams,
-                        bool ExplicitResultType,
+                        SourceLocation CaptureDefaultLoc, bool ExplicitParams,
                         bool Mutable);
+
+  CXXMethodDecl *CreateLambdaCallOperator(SourceRange IntroducerRange,
+                                          CXXRecordDecl *Class);
+  void CompleteLambdaCallOperator(
+      CXXMethodDecl *Method, SourceLocation LambdaLoc,
+      SourceLocation CallOperatorLoc, Expr *TrailingRequiresClause,
+      TypeSourceInfo *MethodTyInfo, ConstexprSpecKind ConstexprKind,
+      StorageClass SC, ArrayRef<ParmVarDecl *> Params,
+      bool HasExplicitResultType);
 
   /// Perform initialization analysis of the init-capture and perform
   /// any implicit conversions such as an lvalue-to-rvalue conversion if
@@ -7118,11 +7142,9 @@ public:
   ///
   ///  CodeGen handles emission of lambda captures, ignoring these dummy
   ///  variables appropriately.
-  VarDecl *createLambdaInitCaptureVarDecl(SourceLocation Loc,
-                                          QualType InitCaptureType,
-                                          SourceLocation EllipsisLoc,
-                                          IdentifierInfo *Id,
-                                          unsigned InitStyle, Expr *Init);
+  VarDecl *createLambdaInitCaptureVarDecl(
+      SourceLocation Loc, QualType InitCaptureType, SourceLocation EllipsisLoc,
+      IdentifierInfo *Id, unsigned InitStyle, Expr *Init, DeclContext *DeclCtx);
 
   /// Add an init-capture to a lambda scope.
   void addInitCapture(sema::LambdaScopeInfo *LSI, VarDecl *Var,
@@ -7132,28 +7154,38 @@ public:
   /// given lambda.
   void finishLambdaExplicitCaptures(sema::LambdaScopeInfo *LSI);
 
-  /// \brief This is called after parsing the explicit template parameter list
+  /// Deduce a block or lambda's return type based on the return
+  /// statements present in the body.
+  void deduceClosureReturnType(sema::CapturingScopeInfo &CSI);
+
+  /// Once the Lambdas capture are known, we can start to create the closure,
+  /// call operator method, and keep track of the captures.
+  /// We do the capture lookup here, but they are not actually captured until
+  /// after we know what the qualifiers of the call operator are.
+  void ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
+                                            Scope *CurContext);
+
+  /// This is called after parsing the explicit template parameter list
   /// on a lambda (if it exists) in C++2a.
-  void ActOnLambdaExplicitTemplateParameterList(SourceLocation LAngleLoc,
+  void ActOnLambdaExplicitTemplateParameterList(LambdaIntroducer &Intro,
+                                                SourceLocation LAngleLoc,
                                                 ArrayRef<NamedDecl *> TParams,
                                                 SourceLocation RAngleLoc,
                                                 ExprResult RequiresClause);
 
-  /// Introduce the lambda parameters into scope.
-  void addLambdaParameters(
-      ArrayRef<LambdaIntroducer::LambdaCapture> Captures,
-      CXXMethodDecl *CallOperator, Scope *CurScope);
+  void ActOnLambdaClosureQualifiers(LambdaIntroducer &Intro,
+                                    SourceLocation MutableLoc);
 
-  /// Deduce a block or lambda's return type based on the return
-  /// statements present in the body.
-  void deduceClosureReturnType(sema::CapturingScopeInfo &CSI);
+  void ActOnLambdaClosureParameters(
+      Scope *LambdaScope,
+      MutableArrayRef<DeclaratorChunk::ParamInfo> ParamInfo);
 
   /// ActOnStartOfLambdaDefinition - This is called just before we start
   /// parsing the body of a lambda; it analyzes the explicit captures and
   /// arguments, and sets up various data-structures for the body of the
   /// lambda.
   void ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
-                                    Declarator &ParamInfo, Scope *CurScope);
+                                    Declarator &ParamInfo, const DeclSpec &DS);
 
   /// ActOnLambdaError - If there is an error parsing a lambda, this callback
   /// is invoked to pop the information about the lambda.
@@ -7244,6 +7276,13 @@ private:
   /// instantiation scope, and set the parameter names to those used
   /// in the template.
   bool addInstantiatedParametersToScope(
+      FunctionDecl *Function, const FunctionDecl *PatternDecl,
+      LocalInstantiationScope &Scope,
+      const MultiLevelTemplateArgumentList &TemplateArgs);
+
+  /// Introduce the instantiated captures of the lambda into the local
+  /// instantiation scope.
+  bool addInstantiatedCapturesToScope(
       FunctionDecl *Function, const FunctionDecl *PatternDecl,
       LocalInstantiationScope &Scope,
       const MultiLevelTemplateArgumentList &TemplateArgs);
@@ -9808,14 +9847,21 @@ public:
   /// eagerly.
   SmallVector<PendingImplicitInstantiation, 1> LateParsedInstantiations;
 
+  SmallVector<SmallVector<VTableUse, 16>, 8> SavedVTableUses;
+  SmallVector<std::deque<PendingImplicitInstantiation>, 8>
+      SavedPendingInstantiations;
+
   class GlobalEagerInstantiationScope {
   public:
     GlobalEagerInstantiationScope(Sema &S, bool Enabled)
         : S(S), Enabled(Enabled) {
       if (!Enabled) return;
 
-      SavedPendingInstantiations.swap(S.PendingInstantiations);
-      SavedVTableUses.swap(S.VTableUses);
+      S.SavedPendingInstantiations.emplace_back();
+      S.SavedPendingInstantiations.back().swap(S.PendingInstantiations);
+
+      S.SavedVTableUses.emplace_back();
+      S.SavedVTableUses.back().swap(S.VTableUses);
     }
 
     void perform() {
@@ -9831,26 +9877,28 @@ public:
       // Restore the set of pending vtables.
       assert(S.VTableUses.empty() &&
              "VTableUses should be empty before it is discarded.");
-      S.VTableUses.swap(SavedVTableUses);
+      S.VTableUses.swap(S.SavedVTableUses.back());
+      S.SavedVTableUses.pop_back();
 
       // Restore the set of pending implicit instantiations.
       if (S.TUKind != TU_Prefix || !S.LangOpts.PCHInstantiateTemplates) {
         assert(S.PendingInstantiations.empty() &&
                "PendingInstantiations should be empty before it is discarded.");
-        S.PendingInstantiations.swap(SavedPendingInstantiations);
+        S.PendingInstantiations.swap(S.SavedPendingInstantiations.back());
+        S.SavedPendingInstantiations.pop_back();
       } else {
         // Template instantiations in the PCH may be delayed until the TU.
-        S.PendingInstantiations.swap(SavedPendingInstantiations);
-        S.PendingInstantiations.insert(S.PendingInstantiations.end(),
-                                       SavedPendingInstantiations.begin(),
-                                       SavedPendingInstantiations.end());
+        S.PendingInstantiations.swap(S.SavedPendingInstantiations.back());
+        S.PendingInstantiations.insert(
+            S.PendingInstantiations.end(),
+            S.SavedPendingInstantiations.back().begin(),
+            S.SavedPendingInstantiations.back().end());
+        S.SavedPendingInstantiations.pop_back();
       }
     }
 
   private:
     Sema &S;
-    SmallVector<VTableUse, 16> SavedVTableUses;
-    std::deque<PendingImplicitInstantiation> SavedPendingInstantiations;
     bool Enabled;
   };
 

@@ -131,15 +131,15 @@ int SI::*mp9 = nullptr;
 // CHECK: (Anonymous<int>) AnonInt = (AnonymousMember = 0)
 // CHECK: (Anonymous<A::B::C<void>>) AnonABCVoid = (AnonymousMember = 0)
 // CHECK: (Anonymous<A::B::C<void>>::D) AnonABCVoidD = (AnonymousDMember = 0)
-// CHECK: (void (SI::*)()) mp1 = 00 00 00 00 00 00 00 00
-// CHECK: (void (MI::*)()) mp2 = 00 00 00 00 00 00 00 00
-// CHECK: (void (MI2::*)()) mp3 = 00 00 00 00 00 00 00 00
-// CHECK: (void (VI::*)()) mp4 = 00 00 00 00 00 00 00 00
-// CHECK: (void (VI2::*)()) mp5 = 00 00 00 00 00 00 00 00
-// CHECK: (void (UI::*)()) mp6 = 00 00 00 00 00 00 00 00
+// CHECK: (void (SI::*)()) mp1 = 0x0000000000000000
+// CHECK: (void (MI::*)()) mp2 = 0x0000000000000000
+// CHECK: (void (MI2::*)()) mp3 = 0x0000000000000000
+// CHECK: (void (VI::*)()) mp4 = 0x0000000000000000
+// CHECK: (void (VI2::*)()) mp5 = 0x0000000000000000
+// CHECK: (void (UI::*)()) mp6 = 0x0000000000000000
 // CHECK: (void (MI::**)()) mp7 = 0x0000000000000000
 // CHECK: (void (VI2::**)()) mp8 = 0x0000000000000000
-// CHECK: (int SI::*) mp9 = ff ff ff ff
+// CHECK: (int SI::*) mp9 = 0xffffffff
 // CHECK: Dumping clang ast for 1 modules.
 // CHECK: TranslationUnitDecl {{.*}}
 // CHECK: |-CXXRecordDecl {{.*}} class TrivialC definition

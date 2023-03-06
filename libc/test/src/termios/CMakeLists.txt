@@ -7,8 +7,8 @@ add_libc_unittest(
   SRCS
     termios_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.termios
+    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.termios.cfgetispeed
     libc.src.termios.cfgetospeed

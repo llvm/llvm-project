@@ -1313,7 +1313,8 @@ void ExprEngine::ProcessNewAllocator(const CXXNewExpr *NE,
   else {
     NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
     const LocationContext *LCtx = Pred->getLocationContext();
-    PostImplicitCall PP(NE->getOperatorNew(), NE->getBeginLoc(), LCtx);
+    PostImplicitCall PP(NE->getOperatorNew(), NE->getBeginLoc(), LCtx,
+                        getCFGElementRef());
     Bldr.generateNode(PP, Pred->getState(), Pred);
   }
   Engine.enqueue(Dst, currBldrCtx->getBlock(), currStmtIdx);
@@ -1361,7 +1362,8 @@ void ExprEngine::ProcessAutomaticObjDtor(const CFGAutomaticObjDtor Dtor,
         static SimpleProgramPointTag PT(
             "ExprEngine", "Skipping automatic 0 length array destruction, "
                           "which shouldn't be in the CFG.");
-        PostImplicitCall PP(DtorDecl, varDecl->getLocation(), LCtx, &PT);
+        PostImplicitCall PP(DtorDecl, varDecl->getLocation(), LCtx,
+                            getCFGElementRef(), &PT);
         NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
         Bldr.generateSink(PP, Pred->getState(), Pred);
         return;
@@ -1378,7 +1380,8 @@ void ExprEngine::ProcessAutomaticObjDtor(const CFGAutomaticObjDtor Dtor,
 
   static SimpleProgramPointTag PT("ExprEngine",
                                   "Prepare for object destruction");
-  PreImplicitCall PP(DtorDecl, varDecl->getLocation(), LCtx, &PT);
+  PreImplicitCall PP(DtorDecl, varDecl->getLocation(), LCtx, getCFGElementRef(),
+                     &PT);
   Pred = Bldr.generateNode(PP, state, Pred);
 
   if (!Pred)
@@ -1406,7 +1409,7 @@ void ExprEngine::ProcessDeleteDtor(const CFGDeleteDtor Dtor,
     const CXXRecordDecl *RD = BTy->getAsCXXRecordDecl();
     const CXXDestructorDecl *Dtor = RD->getDestructor();
 
-    PostImplicitCall PP(Dtor, DE->getBeginLoc(), LCtx);
+    PostImplicitCall PP(Dtor, DE->getBeginLoc(), LCtx, getCFGElementRef());
     NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
     Bldr.generateNode(PP, Pred->getState(), Pred);
     return;
@@ -1439,7 +1442,8 @@ void ExprEngine::ProcessDeleteDtor(const CFGDeleteDtor Dtor,
 
         static SimpleProgramPointTag PT(
             "ExprEngine", "Skipping 0 length array delete destruction");
-        PostImplicitCall PP(getDtorDecl(DTy), DE->getBeginLoc(), LCtx, &PT);
+        PostImplicitCall PP(getDtorDecl(DTy), DE->getBeginLoc(), LCtx,
+                            getCFGElementRef(), &PT);
         NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
         Bldr.generateNode(PP, Pred->getState(), Pred);
         return;
@@ -1453,7 +1457,8 @@ void ExprEngine::ProcessDeleteDtor(const CFGDeleteDtor Dtor,
   NodeBuilder Bldr(Pred, Dst, getBuilderContext());
   static SimpleProgramPointTag PT("ExprEngine",
                                   "Prepare for object destruction");
-  PreImplicitCall PP(getDtorDecl(DTy), DE->getBeginLoc(), LCtx, &PT);
+  PreImplicitCall PP(getDtorDecl(DTy), DE->getBeginLoc(), LCtx,
+                     getCFGElementRef(), &PT);
   Pred = Bldr.generateNode(PP, State, Pred);
 
   if (!Pred)
@@ -1513,7 +1518,8 @@ void ExprEngine::ProcessMemberDtor(const CFGMemberDtor D,
         static SimpleProgramPointTag PT(
             "ExprEngine", "Skipping member 0 length array destruction, which "
                           "shouldn't be in the CFG.");
-        PostImplicitCall PP(DtorDecl, Member->getLocation(), LCtx, &PT);
+        PostImplicitCall PP(DtorDecl, Member->getLocation(), LCtx,
+                            getCFGElementRef(), &PT);
         NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
         Bldr.generateSink(PP, Pred->getState(), Pred);
         return;
@@ -1529,7 +1535,8 @@ void ExprEngine::ProcessMemberDtor(const CFGMemberDtor D,
 
   static SimpleProgramPointTag PT("ExprEngine",
                                   "Prepare for object destruction");
-  PreImplicitCall PP(DtorDecl, Member->getLocation(), LCtx, &PT);
+  PreImplicitCall PP(DtorDecl, Member->getLocation(), LCtx, getCFGElementRef(),
+                     &PT);
   Pred = Bldr.generateNode(PP, State, Pred);
 
   if (!Pred)
@@ -1565,7 +1572,7 @@ void ExprEngine::ProcessTemporaryDtor(const CFGTemporaryDtor D,
     NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
     PostImplicitCall PP(D.getDestructorDecl(getContext()),
                         D.getBindTemporaryExpr()->getBeginLoc(),
-                        Pred->getLocationContext());
+                        Pred->getLocationContext(), getCFGElementRef());
     Bldr.generateNode(PP, State, Pred);
     return;
   }

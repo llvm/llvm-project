@@ -17,7 +17,6 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
 
@@ -115,8 +114,14 @@ wrapInStructAndGetPointer(Type elementType, spirv::StorageClass storageClass) {
 // Type Conversion
 //===----------------------------------------------------------------------===//
 
+static spirv::ScalarType getIndexType(MLIRContext *ctx,
+                                      const SPIRVConversionOptions &options) {
+  return cast<spirv::ScalarType>(
+      IntegerType::get(ctx, options.use64bitIndex ? 64 : 32));
+}
+
 Type SPIRVTypeConverter::getIndexType() const {
-  return IntegerType::get(getContext(), options.use64bitIndex ? 64 : 32);
+  return ::getIndexType(getContext(), options);
 }
 
 MLIRContext *SPIRVTypeConverter::getContext() const {
@@ -242,12 +247,32 @@ convertScalarType(const spirv::TargetEnv &targetEnv,
                           intType.getSignedness());
 }
 
+/// Returns a type with the same shape but with any index element type converted
+/// to the matching integer type. This is a noop when the element type is not
+/// the index type.
+static ShapedType
+convertIndexElementType(ShapedType type,
+                        const SPIRVConversionOptions &options) {
+  Type indexType = dyn_cast<IndexType>(type.getElementType());
+  if (!indexType)
+    return type;
+
+  return type.clone(getIndexType(type.getContext(), options));
+}
+
 /// Converts a vector `type` to a suitable type under the given `targetEnv`.
 static Type
 convertVectorType(const spirv::TargetEnv &targetEnv,
                   const SPIRVConversionOptions &options, VectorType type,
                   std::optional<spirv::StorageClass> storageClass = {}) {
-  auto scalarType = type.getElementType().cast<spirv::ScalarType>();
+  type = cast<VectorType>(convertIndexElementType(type, options));
+  auto scalarType = dyn_cast_or_null<spirv::ScalarType>(type.getElementType());
+  if (!scalarType) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: cannot convert non-scalar element type\n");
+    return nullptr;
+  }
+
   if (type.getRank() <= 1 && type.getNumElements() == 1)
     return convertScalarType(targetEnv, options, scalarType, storageClass);
 
@@ -290,7 +315,8 @@ static Type convertTensorType(const spirv::TargetEnv &targetEnv,
     return nullptr;
   }
 
-  auto scalarType = type.getElementType().dyn_cast<spirv::ScalarType>();
+  type = cast<TensorType>(convertIndexElementType(type, options));
+  auto scalarType = dyn_cast_or_null<spirv::ScalarType>(type.getElementType());
   if (!scalarType) {
     LLVM_DEBUG(llvm::dbgs()
                << type << " illegal: cannot convert non-scalar element type\n");
@@ -396,6 +422,9 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
   } else if (auto scalarType = elementType.dyn_cast<spirv::ScalarType>()) {
     arrayElemType =
         convertScalarType(targetEnv, options, scalarType, storageClass);
+  } else if (auto indexType = elementType.dyn_cast<IndexType>()) {
+    type = convertIndexElementType(type, options).cast<MemRefType>();
+    arrayElemType = type.getElementType();
   } else {
     LLVM_DEBUG(
         llvm::dbgs()

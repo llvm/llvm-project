@@ -544,7 +544,7 @@ static void reportIllegalCopy(const SIInstrInfo *TII, MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MI,
                               const DebugLoc &DL, MCRegister DestReg,
                               MCRegister SrcReg, bool KillSrc,
-                              const char *Msg = "illegal SGPR to VGPR copy") {
+                              const char *Msg = "illegal VGPR to SGPR copy") {
   MachineFunction *MF = MBB.getParent();
   DiagnosticInfoUnsupported IllegalCopy(MF->getFunction(), Msg, DL, DS_Error);
   LLVMContext &C = MF->getFunction().getContext();
@@ -2562,12 +2562,6 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   BuildMI(&MBB, DL, get(AMDGPU::S_SETPC_B64))
     .addReg(PCReg);
 
-  // FIXME: If spilling is necessary, this will fail because this scavenger has
-  // no emergency stack slots. It is non-trivial to spill in this situation,
-  // because the restore code needs to be specially placed after the
-  // jump. BranchRelaxation then needs to be made aware of the newly inserted
-  // block.
-  //
   // If a spill is needed for the pc register pair, we need to insert a spill
   // restore block right before the destination block, and insert a short branch
   // into the old destination block's fallthrough predecessor.
@@ -6083,18 +6077,21 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return CreatedBB;
   }
 
-  // Legalize MIMG and MUBUF/MTBUF for shaders.
+  // Legalize MIMG/VIMAGE/VSAMPLE and MUBUF/MTBUF for shaders.
   //
   // Shaders only generate MUBUF/MTBUF instructions via intrinsics or via
   // scratch memory access. In both cases, the legalization never involves
   // conversion to the addr64 form.
-  if (isMIMG(MI) || (AMDGPU::isGraphics(MF.getFunction().getCallingConv()) &&
+  if (isImage(MI) || (AMDGPU::isGraphics(MF.getFunction().getCallingConv()) &&
                      (isMUBUF(MI) || isMTBUF(MI)))) {
-    MachineOperand *SRsrc = getNamedOperand(MI, AMDGPU::OpName::srsrc);
+    int RSrcOpName = (isVIMAGE(MI) || isVSAMPLE(MI)) ? AMDGPU::OpName::rsrc
+                                                     : AMDGPU::OpName::srsrc;
+    MachineOperand *SRsrc = getNamedOperand(MI, RSrcOpName);
     if (SRsrc && !RI.isSGPRClass(MRI.getRegClass(SRsrc->getReg())))
       CreatedBB = loadSRsrcFromVGPR(*this, MI, *SRsrc, MDT);
 
-    MachineOperand *SSamp = getNamedOperand(MI, AMDGPU::OpName::ssamp);
+    int SampOpName = isMIMG(MI) ? AMDGPU::OpName::ssamp : AMDGPU::OpName::samp;
+    MachineOperand *SSamp = getNamedOperand(MI, SampOpName);
     if (SSamp && !RI.isSGPRClass(MRI.getRegClass(SSamp->getReg())))
       CreatedBB = loadSRsrcFromVGPR(*this, MI, *SSamp, MDT);
 

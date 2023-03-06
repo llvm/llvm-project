@@ -11,7 +11,7 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <sys/ioctl.h>   // For ioctl numbers.
 #include <sys/syscall.h> // For syscall numbers.
 
@@ -26,7 +26,7 @@ LLVM_LIBC_FUNCTION(int, isatty, (int fd)) {
   if (result == 0)
     return 1;
 
-  errno = -result;
+  libc_errno = -result;
   return 0;
 }
 

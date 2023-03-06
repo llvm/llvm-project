@@ -103,7 +103,7 @@ SparseTensorEncodingAttr getSparseTensorEncoding(Type type);
 
 /// Returns true iff the given type is a COO type where the last level
 /// is unique.
-bool isUniqueCOOType(TensorType tp);
+bool isUniqueCOOType(Type tp);
 
 /// Returns the starting level for a trailing COO region that spans
 /// at least two levels.  If no such COO region is found, then returns
@@ -115,6 +115,17 @@ RankedTensorType getCOOFromTypeWithOrdering(RankedTensorType src,
                                             AffineMap ordering, bool ordered);
 
 RankedTensorType getCOOFromType(RankedTensorType src, bool ordered);
+
+/// Returns true iff MLIR operand has any sparse operand or result.
+inline bool hasAnySparseOperandOrResult(Operation *op) {
+  bool anySparseIn = llvm::any_of(op->getOperands().getTypes(), [](Type t) {
+    return getSparseTensorEncoding(t) != nullptr;
+  });
+  bool anySparseOut = llvm::any_of(op->getResults().getTypes(), [](Type t) {
+    return getSparseTensorEncoding(t) != nullptr;
+  });
+  return anySparseIn || anySparseOut;
+}
 
 //
 // Reordering.

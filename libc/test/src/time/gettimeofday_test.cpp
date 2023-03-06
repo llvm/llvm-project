@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <errno.h>
 #include <time.h>
 
 #include "src/time/gettimeofday.h"

@@ -553,6 +553,8 @@ public:
   /// parent.
   Module *createGlobalModuleFragmentForModuleUnit(SourceLocation Loc,
                                                   Module *Parent = nullptr);
+  Module *createImplicitGlobalModuleFragmentForModuleUnit(
+      SourceLocation Loc, bool IsExported, Module *Parent = nullptr);
 
   /// Create a global module fragment for a C++ module interface unit.
   Module *createPrivateModuleFragmentForInterfaceUnit(Module *Parent,

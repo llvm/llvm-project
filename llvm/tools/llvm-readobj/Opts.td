@@ -55,6 +55,7 @@ def section_groups : FF<"section-groups", "Display section groups">, Group<grp_e
 def gnu_hash_table : FF<"gnu-hash-table", "Display the GNU hash table for dynamic symbols">, Group<grp_elf>;
 def hash_symbols : FF<"hash-symbols", "Display the dynamic symbols derived from the hash section">, Group<grp_elf>;
 def hash_table : FF<"hash-table", "Display .hash section">, Group<grp_elf>;
+def memtag : FF<"memtag", "Display memory tagging metadata (modes, Android notes, global descriptors)">, Group<grp_elf>;
 def needed_libs : FF<"needed-libs", "Display the needed libraries">, Group<grp_elf>;
 def notes : FF<"notes", "Display notes">, Group<grp_elf>;
 def program_headers : FF<"program-headers", "Display program headers">, Group<grp_elf>;

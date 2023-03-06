@@ -37,7 +37,7 @@ What's New in Libc++ 17.0.0?
 
 Implemented Papers
 ------------------
-
+- P2520R0 - ``move_iterator<T*>`` should be a random access iterator
 - P1328R1 - ``constexpr type_info::operator==()``
 
 Improvements and New Features
@@ -63,6 +63,12 @@ Deprecations and Removals
 
 - The headers ``<experimental/algorithm>`` and ``<experimental/functional>`` have been removed, since all the contents
   have been implemented in namespace ``std`` for at least two releases.
+
+- The formatter specialization ``template<size_t N> struct formatter<const charT[N], charT>``
+  has been removed. Since libc++'s format library was marked experimental there
+  is no backwards compatibility option. This specialization has been removed
+  from the Standard since it was never used, the proper specialization to use
+  instead is ``template<size_t N> struct formatter<charT[N], charT>``.
 
 Upcoming Deprecations and Removals
 ----------------------------------

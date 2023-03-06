@@ -783,7 +783,7 @@ steps:
   - group: ":apple: Apple"
     steps:
     - label: "MacOS x86_64"
-      command: "libcxx/utils/ci/run-buildbot apple-cxx20"
+      command: "libcxx/utils/ci/run-buildbot generic-cxx20"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
@@ -798,7 +798,7 @@ steps:
       timeout_in_minutes: 120
 
     - label: "MacOS arm64"
-      command: "libcxx/utils/ci/run-buildbot apple-cxx20"
+      command: "libcxx/utils/ci/run-buildbot generic-cxx20"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
@@ -806,6 +806,20 @@ steps:
         queue: "libcxx-builders"
         os: "macos"
         arch: "arm64"
+      retry:
+        automatic:
+          - exit_status: -1  # Agent was lost
+            limit: 2
+      timeout_in_minutes: 120
+
+    - label: "MacOS with Modules"
+      command: "libcxx/utils/ci/run-buildbot generic-modules"
+      artifact_paths:
+        - "**/test-results.xml"
+        - "**/*.abilist"
+      agents:
+        queue: "libcxx-builders"
+        os: "macos"
       retry:
         automatic:
           - exit_status: -1  # Agent was lost

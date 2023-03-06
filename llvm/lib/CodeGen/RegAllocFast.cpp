@@ -948,6 +948,23 @@ void RegAllocFast::defineVirtReg(MachineInstr &MI, unsigned OpNum,
                         << LRI->Reloaded << '\n');
       bool Kill = LRI->LastUse == nullptr;
       spill(SpillBefore, VirtReg, PhysReg, Kill, LRI->LiveOut);
+
+      // We need to place additional spills for each indirect destination of an
+      // INLINEASM_BR.
+      if (MI.getOpcode() == TargetOpcode::INLINEASM_BR) {
+        int FI = StackSlotForVirtReg[VirtReg];
+        const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
+        for (MachineOperand &MO : MI.operands()) {
+          if (MO.isMBB()) {
+            MachineBasicBlock *Succ = MO.getMBB();
+            TII->storeRegToStackSlot(*Succ, Succ->begin(), PhysReg, Kill,
+                FI, &RC, TRI, VirtReg);
+            ++NumStores;
+            Succ->addLiveIn(PhysReg);
+          }
+        }
+      }
+
       LRI->LastUse = nullptr;
     }
     LRI->LiveOut = false;

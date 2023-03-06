@@ -127,6 +127,11 @@ def warn_module_system_bit_conflict : Warning<
   "module file '%0' was validated as a system module and is now being imported "
   "as a non-system module; any difference in diagnostic options will be ignored">,
   InGroup<ModuleConflict>;
+
+def warn_eagerly_load_for_standard_cplusplus_modules : Warning<
+  "the form '-fmodule-file=<BMI-path>' is deprecated for standard C++ named modules;"
+  "consider to use '-fmodule-file=<module-name>=<BMI-path>' instead">,
+  InGroup<DiagGroup<"eager-load-cxx-named-modules">>;
 } // let CategoryName
 
 let CategoryName = "AST Serialization Issue" in {

@@ -181,3 +181,35 @@ entry:
   %1 = load float, ptr %arrayidx, align 4
   ret float %1
 }
+
+; Vector combine + SLP should form a narrow load and a vector cast
+
+define void @PR51397(ptr noundef %dst, ptr noundef %srcp) {
+; SSE-LABEL: @PR51397(
+; SSE-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[SRCP:%.*]], align 16
+; SSE-NEXT:    [[TMP2:%.*]] = sitofp <4 x i32> [[TMP1]] to <4 x float>
+; SSE-NEXT:    store <4 x float> [[TMP2]], ptr [[DST:%.*]], align 16
+; SSE-NEXT:    ret void
+;
+; AVX-LABEL: @PR51397(
+; AVX-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[SRCP:%.*]], align 16
+; AVX-NEXT:    [[TMP2:%.*]] = sitofp <4 x i32> [[TMP1]] to <4 x float>
+; AVX-NEXT:    store <4 x float> [[TMP2]], ptr [[DST:%.*]], align 16
+; AVX-NEXT:    ret void
+;
+  %src = load <8 x i32>, ptr %srcp, align 16
+  %vecext = extractelement <8 x i32> %src, i32 0
+  %conv = sitofp i32 %vecext to float
+  %vecinit = insertelement <4 x float> undef, float %conv, i32 0
+  %vecext1 = extractelement <8 x i32> %src, i32 1
+  %conv2 = sitofp i32 %vecext1 to float
+  %vecinit3 = insertelement <4 x float> %vecinit, float %conv2, i32 1
+  %vecext4 = extractelement <8 x i32> %src, i32 2
+  %conv5 = sitofp i32 %vecext4 to float
+  %vecinit6 = insertelement <4 x float> %vecinit3, float %conv5, i32 2
+  %vecext7 = extractelement <8 x i32> %src, i32 3
+  %conv8 = sitofp i32 %vecext7 to float
+  %vecinit9 = insertelement <4 x float> %vecinit6, float %conv8, i32 3
+  store <4 x float> %vecinit9, ptr %dst, align 16
+  ret void
+}

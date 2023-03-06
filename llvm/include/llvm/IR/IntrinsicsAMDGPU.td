@@ -1300,7 +1300,6 @@ def int_amdgcn_buffer_atomic_umax : AMDGPUBufferAtomic;
 def int_amdgcn_buffer_atomic_and : AMDGPUBufferAtomic;
 def int_amdgcn_buffer_atomic_or : AMDGPUBufferAtomic;
 def int_amdgcn_buffer_atomic_xor : AMDGPUBufferAtomic;
-def int_amdgcn_buffer_atomic_cond_sub_u32 : AMDGPUBufferAtomic;
 def int_amdgcn_buffer_atomic_cmpswap : Intrinsic<
   [llvm_i32_ty],
   [llvm_i32_ty,       // src(VGPR)
@@ -1587,12 +1586,12 @@ def int_amdgcn_live_mask : DefaultAttrsIntrinsic <[llvm_i1_ty],
 def int_amdgcn_mbcnt_lo :
   ClangBuiltin<"__builtin_amdgcn_mbcnt_lo">,
   DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
-   [IntrNoMem]>;
+   [IntrNoMem, IntrConvergent]>;
 
 def int_amdgcn_mbcnt_hi :
   ClangBuiltin<"__builtin_amdgcn_mbcnt_hi">,
   DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
-            [IntrNoMem]>;
+            [IntrNoMem, IntrConvergent]>;
 
 // llvm.amdgcn.ds.swizzle src offset
 def int_amdgcn_ds_swizzle :

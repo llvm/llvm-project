@@ -431,6 +431,15 @@ static bool CheckFieldsInitialized(InterpState &S, CodePtr OpPC,
       Result = false;
     }
   }
+
+  // Check Fields in all bases
+  for (const Record::Base &B : R->bases()) {
+    Pointer P = Pointer(BasePtr.block(), B.Offset);
+    Result &= CheckFieldsInitialized(S, OpPC, P, B.R);
+  }
+
+  // TODO: Virtual bases
+
   return Result;
 }
 
