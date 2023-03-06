@@ -113,8 +113,6 @@ public:
     return OS;
   }
 
-  llvm::support::endianness getByteOrder() const { return ByteOrder; }
-
 private:
   FileWriter(const FileWriter &rhs) = delete;
   void operator=(const FileWriter &rhs) = delete;
