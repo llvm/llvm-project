@@ -15052,10 +15052,26 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       Predicate = CmpInst::getSwappedPredicate(Predicate);
     }
 
-    // Check whether LHS has already been rewritten. In that case we want to
-    // chain further rewrites onto the already rewritten value.
-    auto I = RewriteMap.find(LHS);
-    const SCEV *RewrittenLHS = I != RewriteMap.end() ? I->second : LHS;
+    // Puts rewrite rule \p From -> \p To into the rewrite map. Also if \p From
+    // and \p FromRewritten are the same (i.e. there has been no rewrite
+    // registered for \p From), then puts this value in the list of rewritten
+    // expressions.
+    auto AddRewrite = [&](const SCEV *From, const SCEV *FromRewritten,
+                          const SCEV *To) {
+      if (From == FromRewritten)
+        ExprsToRewrite.push_back(From);
+      RewriteMap[From] = To;
+    };
+
+    // Checks whether \p S has already been rewritten. In that case returns the
+    // existing rewrite because we want to chain further rewrites onto the
+    // already rewritten value. Otherwise returns \p S.
+    auto GetMaybeRewritten = [&](const SCEV *S) {
+      auto I = RewriteMap.find(S);
+      return I != RewriteMap.end() ? I->second : S;
+    };
+
+    const SCEV *RewrittenLHS = GetMaybeRewritten(LHS);
 
     const SCEV *RewrittenRHS = nullptr;
     switch (Predicate) {
@@ -15104,11 +15120,8 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       break;
     }
 
-    if (RewrittenRHS) {
-      RewriteMap[LHS] = RewrittenRHS;
-      if (LHS == RewrittenLHS)
-        ExprsToRewrite.push_back(LHS);
-    }
+    if (RewrittenRHS)
+      AddRewrite(LHS, RewrittenLHS, RewrittenRHS);
   };
 
   BasicBlock *Header = L->getHeader();
