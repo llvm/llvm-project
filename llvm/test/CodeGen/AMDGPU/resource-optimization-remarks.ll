@@ -2,7 +2,7 @@
 ; RUN: FileCheck -check-prefix=REMARK %s < %t
 
 ; STDERR: remark: foo.cl:27:0: Function Name: test_kernel
-; STDERR-NEXT: remark: foo.cl:27:0:     SGPRs: 24
+; STDERR-NEXT: remark: foo.cl:27:0:     SGPRs: 28
 ; STDERR-NEXT: remark: foo.cl:27:0:     VGPRs: 9
 ; STDERR-NEXT: remark: foo.cl:27:0:     AGPRs: 43
 ; STDERR-NEXT: remark: foo.cl:27:0:     ScratchSize [bytes/lane]: 0
@@ -27,7 +27,7 @@
 ; REMARK-NEXT: Function:        test_kernel
 ; REMARK-NEXT: Args:
 ; REMARK-NEXT:   - String:          '    SGPRs: '
-; REMARK-NEXT:   - NumSGPR:         '24'
+; REMARK-NEXT:   - NumSGPR:         '28'
 ; REMARK-NEXT: ...
 ; REMARK-NEXT: --- !Analysis
 ; REMARK-NEXT: Pass:            kernel-resource-usage
@@ -120,7 +120,7 @@ define void @test_func() !dbg !6 {
 }
 
 ; STDERR: remark: foo.cl:8:0: Function Name: empty_kernel
-; STDERR-NEXT: remark: foo.cl:8:0:     SGPRs: 0
+; STDERR-NEXT: remark: foo.cl:8:0:     SGPRs: 4
 ; STDERR-NEXT: remark: foo.cl:8:0:     VGPRs: 0
 ; STDERR-NEXT: remark: foo.cl:8:0:     AGPRs: 0
 ; STDERR-NEXT: remark: foo.cl:8:0:     ScratchSize [bytes/lane]: 0
