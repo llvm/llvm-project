@@ -15066,31 +15066,27 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       if (RHS->getType()->isPointerTy())
         break;
       const SCEV *One = getOne(RHS->getType());
-      RewrittenRHS =
-          getUMinExpr(RewrittenLHS, getMinusSCEV(getUMaxExpr(RHS, One), One));
-      break;
+      RHS = getMinusSCEV(getUMaxExpr(RHS, One), One);
+      LLVM_FALLTHROUGH;
     }
-    case CmpInst::ICMP_SLT:
-      RewrittenRHS =
-          getSMinExpr(RewrittenLHS, getMinusSCEV(RHS, getOne(RHS->getType())));
-      break;
     case CmpInst::ICMP_ULE:
       RewrittenRHS = getUMinExpr(RewrittenLHS, RHS);
       break;
+    case CmpInst::ICMP_SLT:
+      RHS = getMinusSCEV(RHS, getOne(RHS->getType()));
+      LLVM_FALLTHROUGH;
     case CmpInst::ICMP_SLE:
       RewrittenRHS = getSMinExpr(RewrittenLHS, RHS);
       break;
     case CmpInst::ICMP_UGT:
-      RewrittenRHS =
-          getUMaxExpr(RewrittenLHS, getAddExpr(RHS, getOne(RHS->getType())));
-      break;
-    case CmpInst::ICMP_SGT:
-      RewrittenRHS =
-          getSMaxExpr(RewrittenLHS, getAddExpr(RHS, getOne(RHS->getType())));
-      break;
+      RHS = getAddExpr(RHS, getOne(RHS->getType()));
+      LLVM_FALLTHROUGH;
     case CmpInst::ICMP_UGE:
       RewrittenRHS = getUMaxExpr(RewrittenLHS, RHS);
       break;
+    case CmpInst::ICMP_SGT:
+      RHS = getAddExpr(RHS, getOne(RHS->getType()));
+      LLVM_FALLTHROUGH;
     case CmpInst::ICMP_SGE:
       RewrittenRHS = getSMaxExpr(RewrittenLHS, RHS);
       break;
