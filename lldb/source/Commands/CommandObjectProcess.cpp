@@ -25,7 +25,6 @@
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupPythonClassWithDict.h"
 #include "lldb/Interpreter/Options.h"
-#include "lldb/Interpreter/ScriptedMetadata.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
@@ -33,6 +32,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/State.h"
 
 #include "llvm/ADT/ScopeExit.h"

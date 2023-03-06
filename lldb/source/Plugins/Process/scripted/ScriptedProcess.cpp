@@ -18,11 +18,11 @@
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupBoolean.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
-#include "lldb/Interpreter/ScriptedMetadata.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Queue.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/State.h"
 
 #include <mutex>
