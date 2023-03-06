@@ -9632,7 +9632,7 @@ AMDGPUTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
     return AddrSpace;
 
   // Only promote to address space 4 if VarDecl has constant initialization.
-  if (CGM.isTypeConstant(D->getType(), false) &&
+  if (CGM.isTypeConstant(D->getType(), false, false) &&
       D->hasConstantInitialization()) {
     if (auto ConstAS = CGM.getTarget().getConstantAddressSpace())
       return *ConstAS;
