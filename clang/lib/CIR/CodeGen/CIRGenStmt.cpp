@@ -451,9 +451,15 @@ mlir::LogicalResult CIRGenFunction::buildReturnStmt(const ReturnStmt &S) {
       builder.create<mlir::cir::StoreOp>(loc, V, *FnRetAlloca);
       break;
     case TEK_Complex:
+      llvm_unreachable("NYI");
+      break;
     case TEK_Aggregate:
-      llvm::errs() << "ReturnStmt EvaluationKind not implemented\n";
-      return mlir::failure();
+      buildAggExpr(RV,
+                   AggValueSlot::forAddr(
+                       ReturnValue, Qualifiers(), AggValueSlot::IsDestructed,
+                       AggValueSlot::DoesNotNeedGCBarriers,
+                       AggValueSlot::IsNotAliased, getOverlapForReturnValue()));
+      break;
     }
   }
 

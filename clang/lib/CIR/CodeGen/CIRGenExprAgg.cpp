@@ -280,6 +280,7 @@ void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *E) {
 }
 
 void AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
+  CIRGenFunction::SourceLocRAIIObject loc{CGF, CGF.getLoc(E->getSourceRange())};
   AggValueSlot Slot = EnsureSlot(E->getType());
   LLVM_ATTRIBUTE_UNUSED LValue SlotLV =
       CGF.makeAddrLValue(Slot.getAddress(), E->getType());

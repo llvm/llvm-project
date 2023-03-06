@@ -789,16 +789,16 @@ public:
 
   LValue buildCallExprLValue(const CallExpr *E);
 
-  /// buildAnyExprToTemp - Similarly to buildAnyExpr(), however, the result will
-  /// always be accessible even if no aggregate location is provided.
+  /// Similarly to buildAnyExpr(), however, the result will always be accessible
+  /// even if no aggregate location is provided.
   RValue buildAnyExprToTemp(const clang::Expr *E);
 
   CIRGenCallee buildCallee(const clang::Expr *E);
 
-  /// buildAnyExpr - Emit code to compute the specified expression which can
-  /// have any type. The result is returned as an RValue struct. If this is an
-  /// aggregate expression, the aggloc/agglocvolatile arguments indicate where
-  /// the result should be returned.
+  /// Emit code to compute the specified expression which can have any type. The
+  /// result is returned as an RValue struct. If this is an aggregate
+  /// expression, the aggloc/agglocvolatile arguments indicate where the result
+  /// should be returned.
   RValue buildAnyExpr(const clang::Expr *E,
                       AggValueSlot aggSlot = AggValueSlot::ignored(),
                       bool ignoreResult = false);
@@ -846,6 +846,14 @@ public:
                                  bool Accessed = false);
 
   mlir::LogicalResult buildDeclStmt(const clang::DeclStmt &S);
+
+  /// Determine whether a return value slot may overlap some other object.
+  AggValueSlot::Overlap_t getOverlapForReturnValue() {
+    // FIXME: Assuming no overlap here breaks guaranteed copy elision for base
+    // class subobjects. These cases may need to be revisited depending on the
+    // resolution of the relevant core issue.
+    return AggValueSlot::DoesNotOverlap;
+  }
 
   /// Get an appropriate 'undef' rvalue for the given type.
   /// TODO: What's the equivalent for MLIR? Currently we're only using this for
