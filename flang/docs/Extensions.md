@@ -557,6 +557,9 @@ end module
   obsolete module file from a previous compilation and then overwriting
   that file later.
 
+* F18 allows `OPTIONAL` dummy arguments to interoperable procedures
+  unless they are `VALUE` (C865).
+
 ## De Facto Standard Features
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the
