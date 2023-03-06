@@ -264,6 +264,7 @@ namespace clang {
     // Links each entry in LinkModules into our module.  Returns true on error.
     bool LinkInModules() {
       for (auto &LM : LinkModules) {
+        assert(LM.Module && "LinkModule does not actually have a module");
         if (LM.PropagateAttrs)
           for (Function &F : *LM.Module) {
             // Skip intrinsics. Keep consistent with how intrinsics are created
@@ -293,6 +294,7 @@ namespace clang {
         if (Err)
           return true;
       }
+      LinkModules.clear();
       return false; // success
     }
 
