@@ -222,6 +222,9 @@ enum FPClassTest : unsigned {
 
 LLVM_DECLARE_ENUM_AS_BITMASK(FPClassTest, /* LargestValue */ fcPosInf);
 
+/// Write a human readable form of \p Mask to \p OS
+raw_ostream &operator<<(raw_ostream &OS, FPClassTest Mask);
+
 } // namespace llvm
 
 #endif // LLVM_ADT_FLOATINGPOINTMODE_H
