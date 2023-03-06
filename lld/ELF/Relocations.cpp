@@ -99,8 +99,12 @@ void elf::reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
                            int64_t min, uint64_t max) {
   ErrorPlace errPlace = getErrorPlace(loc);
   std::string hint;
-  if (rel.sym && !rel.sym->isSection())
-    hint = "; references " + lld::toString(*rel.sym);
+  if (rel.sym) {
+    if (!rel.sym->isSection())
+      hint = "; references " + lld::toString(*rel.sym);
+    else if (auto *d = dyn_cast<Defined>(rel.sym))
+      hint = ("; references section '" + d->section->name + "'").str();
+  }
   if (!errPlace.srcLoc.empty())
     hint += "\n>>> referenced by " + errPlace.srcLoc;
   if (rel.sym && !rel.sym->isSection())
