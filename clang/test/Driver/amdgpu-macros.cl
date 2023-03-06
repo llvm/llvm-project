@@ -158,3 +158,19 @@
 // RUN:   -mwavefrontsize64 %s 2>&1 | FileCheck --check-prefix=WAVE64 %s
 // WAVE64-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
 // WAVE32-DAG: #define __AMDGCN_WAVEFRONT_SIZE 32
+
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx906 \
+// RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-ON %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx906 -mcumode \
+// RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-ON %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx906 -mno-cumode \
+// RUN:   %s 2>&1 | FileCheck --check-prefixes=CUMODE-ON,WARN-CUMODE %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1030 \
+// RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-OFF %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1030 -mcumode \
+// RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-ON %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1030 -mno-cumode \
+// RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-OFF %s
+// WARN-CUMODE-DAG: warning: ignoring '-mno-cumode' option as it is not currently supported for processor 'gfx906' [-Woption-ignored]
+// CUMODE-ON-DAG: #define __AMDGCN_CUMODE__ 1
+// CUMODE-OFF-DAG: #define __AMDGCN_CUMODE__ 0
