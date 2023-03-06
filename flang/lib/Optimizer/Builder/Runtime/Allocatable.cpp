@@ -24,7 +24,8 @@ mlir::Value fir::runtime::genMoveAlloc(fir::FirOpBuilder &builder,
   mlir::Value sourceLine{
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(6))};
   mlir::Value declaredTypeDesc;
-  if (fir::isPolymorphicType(from.getType())) {
+  if (fir::isPolymorphicType(from.getType()) &&
+      !fir::isUnlimitedPolymorphicType(from.getType())) {
     fir::ClassType clTy =
         fir::dyn_cast_ptrEleTy(from.getType()).dyn_cast<fir::ClassType>();
     mlir::Type derivedType = fir::unwrapInnerType(clTy.getEleTy());
