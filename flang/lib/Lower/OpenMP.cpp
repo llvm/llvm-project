@@ -168,9 +168,7 @@ void dataSharingProcessor::collectSymbolsForPrivatization() {
                        &clause.u)) {
       collectOmpObjectListSymbol(lastPrivateClause->v, privatizedSymbols);
       hasLastPrivateOp = true;
-    } else if (const auto &collapseClause =
-                   std::get_if<Fortran::parser::OmpClause::Collapse>(
-                       &clause.u)) {
+    } else if (std::get_if<Fortran::parser::OmpClause::Collapse>(&clause.u)) {
       hasCollapse = true;
     }
   }
@@ -204,8 +202,7 @@ void dataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
   mlir::arith::CmpIOp cmpOp;
   bool cmpCreated = false;
   for (const Fortran::parser::OmpClause &clause : opClauseList.v) {
-    if (const auto &lastPrivateClause =
-            std::get_if<Fortran::parser::OmpClause::Lastprivate>(&clause.u)) {
+    if (std::get_if<Fortran::parser::OmpClause::Lastprivate>(&clause.u)) {
       // TODO: Add lastprivate support for simd construct
       if (mlir::isa<omp::SectionOp>(op)) {
         if (&eval == &eval.parentConstruct->getLastNestedEvaluation()) {
