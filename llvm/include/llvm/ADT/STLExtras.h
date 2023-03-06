@@ -827,32 +827,28 @@ public:
 };
 
 template <typename... Iters>
-struct zip_first : public zip_common<zip_first<Iters...>, Iters...> {
-  using Base = zip_common<zip_first<Iters...>, Iters...>;
+struct zip_first : zip_common<zip_first<Iters...>, Iters...> {
+  using zip_common<zip_first, Iters...>::zip_common;
 
-  bool operator==(const zip_first<Iters...> &other) const {
+  bool operator==(const zip_first &other) const {
     return std::get<0>(this->iterators) == std::get<0>(other.iterators);
   }
-
-  zip_first(Iters &&... ts) : Base(std::forward<Iters>(ts)...) {}
 };
 
 template <typename... Iters>
-class zip_shortest : public zip_common<zip_shortest<Iters...>, Iters...> {
-  template <size_t... Ns>
-  bool test(const zip_shortest<Iters...> &other,
-            std::index_sequence<Ns...>) const {
-    return ((std::get<Ns>(this->iterators) != std::get<Ns>(other.iterators)) &&
-            ...);
+struct zip_shortest : zip_common<zip_shortest<Iters...>, Iters...> {
+  using zip_common<zip_shortest, Iters...>::zip_common;
+
+  bool operator==(const zip_shortest &other) const {
+    return any_iterator_equals(other, std::index_sequence_for<Iters...>{});
   }
 
-public:
-  using Base = zip_common<zip_shortest<Iters...>, Iters...>;
-
-  zip_shortest(Iters &&... ts) : Base(std::forward<Iters>(ts)...) {}
-
-  bool operator==(const zip_shortest<Iters...> &other) const {
-    return !test(other, std::index_sequence_for<Iters...>{});
+private:
+  template <size_t... Ns>
+  bool any_iterator_equals(const zip_shortest &other,
+                           std::index_sequence<Ns...>) const {
+    return ((std::get<Ns>(this->iterators) == std::get<Ns>(other.iterators)) ||
+            ...);
   }
 };
 
