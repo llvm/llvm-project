@@ -221,6 +221,8 @@ defm whole_archive: B<"whole-archive",
     "Force load of all members in a static library",
     "Do not force load of all members in a static library (default)">;
 
+def why_extract: JJ<"why-extract=">, HelpText<"Print to a file about why archive members are extracted">;
+
 defm check_features: BB<"check-features",
     "Check feature compatibility of linked objects (default)",
     "Ignore feature compatibility of linked objects">;
