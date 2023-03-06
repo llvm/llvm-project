@@ -765,6 +765,8 @@ public:
       // simple contiguity to allow their use in contexts like
       // data targets in pointer assignments with remapping.
       return true;
+    } else if (ultimate.has<semantics::AssocEntityDetails>()) {
+      return Base::operator()(ultimate); // use expr
     } else if (semantics::IsPointer(ultimate) ||
         semantics::IsAssumedShape(ultimate)) {
       return std::nullopt;
