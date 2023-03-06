@@ -1906,8 +1906,8 @@ public:
               class = __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value> >
         _LIBCPP_INLINE_VISIBILITY
         packaged_task(allocator_arg_t, const _Allocator& __a, _Fp&& __f)
-             : __f_(allocator_arg, __a, _VSTD::forward<_Fp>(__f)),
-               __p_(allocator_arg, __a) {}
+             : __f_(allocator_arg_t(), __a, _VSTD::forward<_Fp>(__f)),
+               __p_(allocator_arg_t(), __a) {}
     // ~packaged_task() = default;
 
     // no copy
@@ -2021,8 +2021,8 @@ public:
               class = __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value> >
         _LIBCPP_INLINE_VISIBILITY
         packaged_task(allocator_arg_t, const _Allocator& __a, _Fp&& __f)
-             : __f_(allocator_arg, __a, _VSTD::forward<_Fp>(__f)),
-               __p_(allocator_arg, __a) {}
+             : __f_(allocator_arg_t(), __a, _VSTD::forward<_Fp>(__f)),
+               __p_(allocator_arg_t(), __a) {}
     // ~packaged_task() = default;
 
     // no copy

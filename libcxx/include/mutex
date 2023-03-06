@@ -328,7 +328,7 @@ template <class _L0, class _L1>
 _LIBCPP_HIDE_FROM_ABI int
 try_lock(_L0& __l0, _L1& __l1)
 {
-    unique_lock<_L0> __u0(__l0, try_to_lock);
+    unique_lock<_L0> __u0(__l0, try_to_lock_t());
     if (__u0.owns_lock())
     {
         if (__l1.try_lock())
