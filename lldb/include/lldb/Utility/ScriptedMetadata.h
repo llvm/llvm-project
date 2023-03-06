@@ -9,7 +9,6 @@
 #ifndef LLDB_INTERPRETER_SCRIPTEDMETADATA_H
 #define LLDB_INTERPRETER_SCRIPTEDMETADATA_H
 
-#include "lldb/Host/Host.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/StructuredData.h"
 
