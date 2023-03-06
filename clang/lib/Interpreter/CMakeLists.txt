@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
    core
    native
+   MC
    Option
    OrcJit
    OrcShared
@@ -14,6 +15,7 @@ add_clang_library(clangInterpreter
   IncrementalExecutor.cpp
   IncrementalParser.cpp
   Interpreter.cpp
+  DeviceOffload.cpp
 
   DEPENDS
   intrinsics_gen

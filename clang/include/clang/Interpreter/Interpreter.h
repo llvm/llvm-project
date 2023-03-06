@@ -41,8 +41,34 @@ class IncrementalParser;
 /// Create a pre-configured \c CompilerInstance for incremental processing.
 class IncrementalCompilerBuilder {
 public:
+  IncrementalCompilerBuilder() {}
+
+  void SetCompilerArgs(const std::vector<const char *> &Args) {
+    UserArgs = Args;
+  }
+
+  // General C++
+  llvm::Expected<std::unique_ptr<CompilerInstance>> CreateCpp();
+
+  // Offload options
+  void SetOffloadArch(llvm::StringRef Arch) { OffloadArch = Arch; };
+
+  // CUDA specific
+  void SetCudaSDK(llvm::StringRef path) { CudaSDKPath = path; };
+
+  llvm::Expected<std::unique_ptr<CompilerInstance>> CreateCudaHost();
+  llvm::Expected<std::unique_ptr<CompilerInstance>> CreateCudaDevice();
+
+private:
   static llvm::Expected<std::unique_ptr<CompilerInstance>>
   create(std::vector<const char *> &ClangArgv);
+
+  llvm::Expected<std::unique_ptr<CompilerInstance>> createCuda(bool device);
+
+  std::vector<const char *> UserArgs;
+
+  llvm::StringRef OffloadArch;
+  llvm::StringRef CudaSDKPath;
 };
 
 /// Provides top-level interfaces for incremental compilation and execution.
@@ -50,6 +76,9 @@ class Interpreter {
   std::unique_ptr<llvm::orc::ThreadSafeContext> TSCtx;
   std::unique_ptr<IncrementalParser> IncrParser;
   std::unique_ptr<IncrementalExecutor> IncrExecutor;
+
+  // An optional parser for CUDA offloading
+  std::unique_ptr<IncrementalParser> DeviceParser;
 
   Interpreter(std::unique_ptr<CompilerInstance> CI, llvm::Error &Err);
 
@@ -59,6 +88,9 @@ public:
   ~Interpreter();
   static llvm::Expected<std::unique_ptr<Interpreter>>
   create(std::unique_ptr<CompilerInstance> CI);
+  static llvm::Expected<std::unique_ptr<Interpreter>>
+  createWithCUDA(std::unique_ptr<CompilerInstance> CI,
+                 std::unique_ptr<CompilerInstance> DCI);
   const CompilerInstance *getCompilerInstance() const;
   llvm::Expected<llvm::orc::LLJIT &> getExecutionEngine();
 
