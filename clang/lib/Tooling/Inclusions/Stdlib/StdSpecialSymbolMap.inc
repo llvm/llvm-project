@@ -247,6 +247,13 @@ SYMBOL(abs, None, <math.h>)
 // Don't set any header for it, as it comes with the type header.
 SYMBOL(get, std::, /*no headers*/)
 
+// cppreference symbol index page was missing these symbols.
+// Remove them when the cppreference offline archive catches up.
+SYMBOL(index_sequence, std::, <utility>)
+SYMBOL(index_sequence_for, std::, <utility>)
+SYMBOL(make_index_sequence, std::, <utility>)
+SYMBOL(make_integer_sequence, std::, <utility>)
+
 // Macros
 SYMBOL(NULL, None, <cstddef>)
 SYMBOL(NULL, None, <stddef.h>)
