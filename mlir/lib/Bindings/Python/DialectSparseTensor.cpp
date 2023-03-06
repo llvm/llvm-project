@@ -35,27 +35,27 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
           [](py::object cls,
              std::vector<MlirSparseTensorDimLevelType> dimLevelTypes,
              std::optional<MlirAffineMap> dimOrdering,
-             std::optional<MlirAffineMap> higherOrdering, int pointerBitWidth,
-             int indexBitWidth, MlirContext context) {
+             std::optional<MlirAffineMap> higherOrdering, int posWidth,
+             int crdWidth, MlirContext context) {
             return cls(mlirSparseTensorEncodingAttrGet(
                 context, dimLevelTypes.size(), dimLevelTypes.data(),
                 dimOrdering ? *dimOrdering : MlirAffineMap{nullptr},
                 higherOrdering ? *higherOrdering : MlirAffineMap{nullptr},
-                pointerBitWidth, indexBitWidth));
+                posWidth, crdWidth));
           },
           py::arg("cls"), py::arg("dim_level_types"), py::arg("dim_ordering"),
-          py::arg("higher_ordering"), py::arg("pointer_bit_width"),
-          py::arg("index_bit_width"), py::arg("context") = py::none(),
+          py::arg("higher_ordering"), py::arg("pos_width"),
+          py::arg("crd_width"), py::arg("context") = py::none(),
           "Gets a sparse_tensor.encoding from parameters.")
       .def_property_readonly(
           "dim_level_types",
           [](MlirAttribute self) {
+            const int lvlRank = mlirSparseTensorEncodingGetLvlRank(self);
             std::vector<MlirSparseTensorDimLevelType> ret;
-            for (int i = 0,
-                     e = mlirSparseTensorEncodingGetNumDimLevelTypes(self);
-                 i < e; ++i)
+            ret.reserve(lvlRank);
+            for (int l = 0; l < lvlRank; ++l)
               ret.push_back(
-                  mlirSparseTensorEncodingAttrGetDimLevelType(self, i));
+                  mlirSparseTensorEncodingAttrGetDimLevelType(self, l));
             return ret;
           })
       .def_property_readonly(
@@ -76,14 +76,10 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
               return {};
             return ret;
           })
-      .def_property_readonly(
-          "pointer_bit_width",
-          [](MlirAttribute self) {
-            return mlirSparseTensorEncodingAttrGetPointerBitWidth(self);
-          })
-      .def_property_readonly("index_bit_width", [](MlirAttribute self) {
-        return mlirSparseTensorEncodingAttrGetIndexBitWidth(self);
-      });
+      .def_property_readonly("pos_width",
+                             mlirSparseTensorEncodingAttrGetPosWidth)
+      .def_property_readonly("crd_width",
+                             mlirSparseTensorEncodingAttrGetCrdWidth);
 }
 
 PYBIND11_MODULE(_mlirDialectsSparseTensor, m) {

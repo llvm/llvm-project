@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s --linalg-generalize-named-ops --sparsification --cse --canonicalize | FileCheck %s
 
-#COO_2D = #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton" ], pointerBitWidth = 32, indexBitWidth = 32 }>
-#COO_3D = #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton-nu", "singleton" ], pointerBitWidth = 32, indexBitWidth = 32 }>
+#COO_2D = #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton" ], posWidth = 32, crdWidth = 32 }>
+#COO_3D = #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton-nu", "singleton" ], posWidth = 32, crdWidth = 32 }>
 
 // CHECK-LABEL:   func.func @sparse_reshape_fused(
 // CHECK-SAME:      %[[VAL_0:.*]]: tensor<5x6xf32>,
@@ -11,10 +11,10 @@
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
 // CHECK-DAG:       %[[VAL_6:.*]] = tensor.empty() : tensor<5x6xf32>
-// CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.pointers %[[VAL_1]] {dimension = 0 : index}
-// CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.indices %[[VAL_1]] {dimension = 0 : index}
-// CHECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.indices %[[VAL_1]] {dimension = 1 : index}
-// CHECK-DAG:       %[[VAL_10:.*]] = sparse_tensor.indices %[[VAL_1]] {dimension = 2 : index}
+// CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index}
+// CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.coordinates %[[VAL_1]] {level = 0 : index}
+// CHECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_1]] {level = 1 : index}
+// CHECK-DAG:       %[[VAL_10:.*]] = sparse_tensor.coordinates %[[VAL_1]] {level = 2 : index}
 // CHECK-DAG:       %[[VAL_11:.*]] = sparse_tensor.values %[[VAL_1]]
 // CHECK-DAG:       %[[VAL_12:.*]] = bufferization.to_memref %[[VAL_6]] : memref<5x6xf32>
 // CHECK:           scf.for %[[VAL_13:.*]] = %[[VAL_4]] to %[[VAL_2]] step %[[VAL_5]] {

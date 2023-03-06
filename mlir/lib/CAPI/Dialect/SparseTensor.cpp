@@ -46,17 +46,17 @@ bool mlirAttributeIsASparseTensorEncodingAttr(MlirAttribute attr) {
 }
 
 MlirAttribute mlirSparseTensorEncodingAttrGet(
-    MlirContext ctx, intptr_t numDimLevelTypes,
+    MlirContext ctx, intptr_t lvlRank,
     MlirSparseTensorDimLevelType const *dimLevelTypes,
-    MlirAffineMap dimOrdering, MlirAffineMap higherOrdering,
-    int pointerBitWidth, int indexBitWidth) {
+    MlirAffineMap dimOrdering, MlirAffineMap higherOrdering, int posWidth,
+    int crdWidth) {
   SmallVector<DimLevelType> cppDimLevelTypes;
-  cppDimLevelTypes.resize(numDimLevelTypes);
-  for (intptr_t i = 0; i < numDimLevelTypes; ++i)
-    cppDimLevelTypes[i] = static_cast<DimLevelType>(dimLevelTypes[i]);
+  cppDimLevelTypes.reserve(lvlRank);
+  for (intptr_t l = 0; l < lvlRank; ++l)
+    cppDimLevelTypes.push_back(static_cast<DimLevelType>(dimLevelTypes[l]));
   return wrap(SparseTensorEncodingAttr::get(
       unwrap(ctx), cppDimLevelTypes, unwrap(dimOrdering),
-      unwrap(higherOrdering), pointerBitWidth, indexBitWidth));
+      unwrap(higherOrdering), posWidth, crdWidth));
 }
 
 MlirAffineMap mlirSparseTensorEncodingAttrGetDimOrdering(MlirAttribute attr) {
@@ -69,7 +69,7 @@ mlirSparseTensorEncodingAttrGetHigherOrdering(MlirAttribute attr) {
       unwrap(attr).cast<SparseTensorEncodingAttr>().getHigherOrdering());
 }
 
-intptr_t mlirSparseTensorEncodingGetNumDimLevelTypes(MlirAttribute attr) {
+intptr_t mlirSparseTensorEncodingGetLvlRank(MlirAttribute attr) {
   return unwrap(attr).cast<SparseTensorEncodingAttr>().getLvlRank();
 }
 
@@ -79,10 +79,10 @@ mlirSparseTensorEncodingAttrGetDimLevelType(MlirAttribute attr, intptr_t lvl) {
       unwrap(attr).cast<SparseTensorEncodingAttr>().getLvlType(lvl));
 }
 
-int mlirSparseTensorEncodingAttrGetPointerBitWidth(MlirAttribute attr) {
-  return unwrap(attr).cast<SparseTensorEncodingAttr>().getPointerBitWidth();
+int mlirSparseTensorEncodingAttrGetPosWidth(MlirAttribute attr) {
+  return unwrap(attr).cast<SparseTensorEncodingAttr>().getPosWidth();
 }
 
-int mlirSparseTensorEncodingAttrGetIndexBitWidth(MlirAttribute attr) {
-  return unwrap(attr).cast<SparseTensorEncodingAttr>().getIndexBitWidth();
+int mlirSparseTensorEncodingAttrGetCrdWidth(MlirAttribute attr) {
+  return unwrap(attr).cast<SparseTensorEncodingAttr>().getCrdWidth();
 }

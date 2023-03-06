@@ -125,11 +125,11 @@ module {
     // CHECK-NEXT: ( 0, 126, 127, 254, 1, 253, 2, 0, 1, 3, 98, 126, 127, 128, 249, 253, 255, 0, 0, 0 )
     // CHECK-NEXT: ( -1, 2, -3, 4, -5, 6, -7, 8, -9, 10, -11, 12, -13, 14, -15, 16, -17, 0, 0, 0 )
     //
-    %p0 = sparse_tensor.pointers %0 { dimension = 0 : index }
+    %p0 = sparse_tensor.positions %0 { level = 0 : index }
       : tensor<?x?xf64, #SortedCOO> to memref<?xindex>
-    %i00 = sparse_tensor.indices %0 { dimension = 0 : index }
+    %i00 = sparse_tensor.coordinates %0 { level = 0 : index }
       : tensor<?x?xf64, #SortedCOO> to memref<?xindex, strided<[?], offset: ?>>
-    %i01 = sparse_tensor.indices %0 { dimension = 1 : index }
+    %i01 = sparse_tensor.coordinates %0 { level = 1 : index }
       : tensor<?x?xf64, #SortedCOO> to memref<?xindex, strided<[?], offset: ?>>
     %v0 = sparse_tensor.values %0
       : tensor<?x?xf64, #SortedCOO> to memref<?xf64>
@@ -144,11 +144,11 @@ module {
     // CHECK-NEXT: ( 0, 3, 1, 3, 2, 3, 3, 0, 3, 0, 3, 3, 3, 1, 3, 0, 3, 0, 0, 0 )
     // CHECK-NEXT: ( -1, 8, -5, -9, -7, 10, -11, 2, 12, -3, -13, 14, -15, 6, 16, 4, -17, 0, 0, 0 )
     //
-    %p1 = sparse_tensor.pointers %1 { dimension = 0 : index }
+    %p1 = sparse_tensor.positions %1 { level = 0 : index }
       : tensor<?x?xf64, #SortedCOOPermuted> to memref<?xindex>
-    %i10 = sparse_tensor.indices %1 { dimension = 0 : index }
+    %i10 = sparse_tensor.coordinates %1 { level = 0 : index }
       : tensor<?x?xf64, #SortedCOOPermuted> to memref<?xindex, strided<[?], offset: ?>>
-    %i11 = sparse_tensor.indices %1 { dimension = 1 : index }
+    %i11 = sparse_tensor.coordinates %1 { level = 1 : index }
       : tensor<?x?xf64, #SortedCOOPermuted> to memref<?xindex, strided<[?], offset: ?>>
     %v1 = sparse_tensor.values %1
       : tensor<?x?xf64, #SortedCOOPermuted> to memref<?xf64>
@@ -164,13 +164,13 @@ module {
     // CHECK-NEXT: ( 0, 0, 1, 1, 2, 2, 2, 2, 0, 0, 0, 1, 1, 1, 1, 2, 2, 0, 0, 0 )
     // CHECK-NEXT: ( 3, 63, 11, 100, 66, 61, 13, 43, 77, 10, 46, 61, 53, 3, 75, 22, 18, 0, 0, 0 )
     //
-    %p2 = sparse_tensor.pointers %2 { dimension = 0 : index }
+    %p2 = sparse_tensor.positions %2 { level = 0 : index }
       : tensor<?x?x?xf64, #SortedCOO3D> to memref<?xindex>
-    %i20 = sparse_tensor.indices %2 { dimension = 0 : index }
+    %i20 = sparse_tensor.coordinates %2 { level = 0 : index }
       : tensor<?x?x?xf64, #SortedCOO3D> to memref<?xindex, strided<[?], offset: ?>>
-    %i21 = sparse_tensor.indices %2 { dimension = 1 : index }
+    %i21 = sparse_tensor.coordinates %2 { level = 1 : index }
       : tensor<?x?x?xf64, #SortedCOO3D> to memref<?xindex, strided<[?], offset: ?>>
-    %i22 = sparse_tensor.indices %2 { dimension = 2 : index }
+    %i22 = sparse_tensor.coordinates %2 { level = 2 : index }
       : tensor<?x?x?xf64, #SortedCOO3D> to memref<?xindex, strided<[?], offset: ?>>
     %v2 = sparse_tensor.values %2
       : tensor<?x?x?xf64, #SortedCOO3D> to memref<?xf64>
@@ -187,13 +187,13 @@ module {
     // CHECK-NEXT: ( 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0 )
     // CHECK-NEXT: ( 66, 77, 61, 11, 61, 53, 22, 3, 100, 13, 10, 3, 18, 63, 43, 46, 75, 0, 0, 0 )
     //
-    %p3 = sparse_tensor.pointers %3 { dimension = 0 : index }
+    %p3 = sparse_tensor.positions %3 { level = 0 : index }
       : tensor<?x?x?xf64, #SortedCOO3DPermuted> to memref<?xindex>
-    %i30 = sparse_tensor.indices %3 { dimension = 0 : index }
+    %i30 = sparse_tensor.coordinates %3 { level = 0 : index }
       : tensor<?x?x?xf64, #SortedCOO3DPermuted> to memref<?xindex, strided<[?], offset: ?>>
-    %i31 = sparse_tensor.indices %3 { dimension = 1 : index }
+    %i31 = sparse_tensor.coordinates %3 { level = 1 : index }
       : tensor<?x?x?xf64, #SortedCOO3DPermuted> to memref<?xindex, strided<[?], offset: ?>>
-    %i32 = sparse_tensor.indices %3 { dimension = 2 : index }
+    %i32 = sparse_tensor.coordinates %3 { level = 2 : index }
       : tensor<?x?x?xf64, #SortedCOO3DPermuted> to memref<?xindex, strided<[?], offset: ?>>
     %v3 = sparse_tensor.values %3
       : tensor<?x?x?xf64, #SortedCOO3DPermuted> to memref<?xf64>
@@ -209,11 +209,11 @@ module {
     // CHECK-NEXT: ( 0, 3, 0, 3, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
    // CHECK-NEXT: ( 6, 5, 4, 3, 2, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
     //
-    %p4 = sparse_tensor.pointers %4 { dimension = 0 : index }
+    %p4 = sparse_tensor.positions %4 { level = 0 : index }
       : tensor<?x?xf64, #SortedCOO> to memref<?xindex>
-    %i40 = sparse_tensor.indices %4 { dimension = 0 : index }
+    %i40 = sparse_tensor.coordinates %4 { level = 0 : index }
       : tensor<?x?xf64, #SortedCOO> to memref<?xindex, strided<[?], offset: ?>>
-    %i41 = sparse_tensor.indices %4 { dimension = 1 : index }
+    %i41 = sparse_tensor.coordinates %4 { level = 1 : index }
       : tensor<?x?xf64, #SortedCOO> to memref<?xindex, strided<[?], offset: ?>>
     %v4 = sparse_tensor.values %4
       : tensor<?x?xf64, #SortedCOO> to memref<?xf64>
@@ -232,11 +232,11 @@ module {
     // CHECK-NEXT: ( 0, 3, 0, 3, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
     // CHECK-NEXT: ( 12, 10, 8, 6, 4, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
     //
-    %p5 = sparse_tensor.pointers %5 { dimension = 0 : index }
+    %p5 = sparse_tensor.positions %5 { level = 0 : index }
       : tensor<?x?xf64, #SortedCOO> to memref<?xindex>
-    %i50 = sparse_tensor.indices %5 { dimension = 0 : index }
+    %i50 = sparse_tensor.coordinates %5 { level = 0 : index }
       : tensor<?x?xf64, #SortedCOO> to memref<?xindex, strided<[?], offset: ?>>
-    %i51 = sparse_tensor.indices %5 { dimension = 1 : index }
+    %i51 = sparse_tensor.coordinates %5 { level = 1 : index }
       : tensor<?x?xf64, #SortedCOO> to memref<?xindex, strided<[?], offset: ?>>
     %v5 = sparse_tensor.values %5
       : tensor<?x?xf64, #SortedCOO> to memref<?xf64>
