@@ -834,47 +834,21 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
   Value *Src0 = II.getArgOperand(0);
   Value *Src1 = II.getArgOperand(1);
   const ConstantInt *CMask = cast<ConstantInt>(Src1);
-  uint32_t Mask = CMask->getZExtValue();
+  FPClassTest Mask = static_cast<FPClassTest>(CMask->getZExtValue());
+
   const bool IsStrict = II.isStrictFP();
 
   Value *FNegSrc;
   if (match(Src0, m_FNeg(m_Value(FNegSrc)))) {
     // is.fpclass (fneg x), mask -> is.fpclass x, (fneg mask)
-    unsigned NewMask = Mask & fcNan;
-    if (Mask & fcNegInf)
-      NewMask |= fcPosInf;
-    if (Mask & fcNegNormal)
-      NewMask |= fcPosNormal;
-    if (Mask & fcNegSubnormal)
-      NewMask |= fcPosSubnormal;
-    if (Mask & fcNegZero)
-      NewMask |= fcPosZero;
-    if (Mask & fcPosZero)
-      NewMask |= fcNegZero;
-    if (Mask & fcPosSubnormal)
-      NewMask |= fcNegSubnormal;
-    if (Mask & fcPosNormal)
-      NewMask |= fcNegNormal;
-    if (Mask & fcPosInf)
-      NewMask |= fcNegInf;
 
-    II.setArgOperand(1, ConstantInt::get(Src1->getType(), NewMask));
+    II.setArgOperand(1, ConstantInt::get(Src1->getType(), fneg(Mask)));
     return replaceOperand(II, 0, FNegSrc);
   }
 
   Value *FAbsSrc;
   if (match(Src0, m_FAbs(m_Value(FAbsSrc)))) {
-    unsigned NewMask = Mask & fcNan;
-    if (Mask & fcPosZero)
-      NewMask |= fcZero;
-    if (Mask & fcPosSubnormal)
-      NewMask |= fcSubnormal;
-    if (Mask & fcPosNormal)
-      NewMask |= fcNormal;
-    if (Mask & fcPosInf)
-      NewMask |= fcInf;
-
-    II.setArgOperand(1, ConstantInt::get(Src1->getType(), NewMask));
+    II.setArgOperand(1, ConstantInt::get(Src1->getType(), fabs(Mask)));
     return replaceOperand(II, 0, FAbsSrc);
   }
 

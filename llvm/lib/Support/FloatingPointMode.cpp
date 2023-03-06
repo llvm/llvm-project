@@ -11,6 +11,40 @@
 
 using namespace llvm;
 
+FPClassTest llvm::fneg(FPClassTest Mask) {
+  FPClassTest NewMask = Mask & fcNan;
+  if (Mask & fcNegInf)
+    NewMask |= fcPosInf;
+  if (Mask & fcNegNormal)
+    NewMask |= fcPosNormal;
+  if (Mask & fcNegSubnormal)
+    NewMask |= fcPosSubnormal;
+  if (Mask & fcNegZero)
+    NewMask |= fcPosZero;
+  if (Mask & fcPosZero)
+    NewMask |= fcNegZero;
+  if (Mask & fcPosSubnormal)
+    NewMask |= fcNegSubnormal;
+  if (Mask & fcPosNormal)
+    NewMask |= fcNegNormal;
+  if (Mask & fcPosInf)
+    NewMask |= fcNegInf;
+  return NewMask;
+}
+
+FPClassTest llvm::fabs(FPClassTest Mask) {
+  FPClassTest NewMask = Mask & fcNan;
+  if (Mask & fcPosZero)
+    NewMask |= fcZero;
+  if (Mask & fcPosSubnormal)
+    NewMask |= fcSubnormal;
+  if (Mask & fcPosNormal)
+    NewMask |= fcNormal;
+  if (Mask & fcPosInf)
+    NewMask |= fcInf;
+  return NewMask;
+}
+
 // Every bitfield has a unique name and one or more aliasing names that cover
 // multiple bits. Names should be listed in order of preference, with higher
 // popcounts listed first.
