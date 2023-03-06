@@ -15,7 +15,9 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/BuildID.h"
 #include "llvm/ProfileData/Coverage/CoverageMappingReader.h"
@@ -382,11 +384,10 @@ Error CoverageMapping::loadFromFile(
   return Error::success();
 }
 
-Expected<std::unique_ptr<CoverageMapping>>
-CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
-                      StringRef ProfileFilename, vfs::FileSystem &FS,
-                      ArrayRef<StringRef> Arches, StringRef CompilationDir,
-                      const object::BuildIDFetcher *BIDFetcher) {
+Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
+    ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFilename,
+    vfs::FileSystem &FS, ArrayRef<StringRef> Arches, StringRef CompilationDir,
+    const object::BuildIDFetcher *BIDFetcher, bool CheckBinaryIDs) {
   auto ProfileReaderOrErr = IndexedInstrProfReader::create(ProfileFilename, FS);
   if (Error E = ProfileReaderOrErr.takeError())
     return createFileError(ProfileFilename, std::move(E));
@@ -430,13 +431,19 @@ CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
 
     for (object::BuildIDRef BinaryID : BinaryIDsToFetch) {
       std::optional<std::string> PathOpt = BIDFetcher->fetch(BinaryID);
-      if (!PathOpt)
-        continue;
-      std::string Path = std::move(*PathOpt);
-      StringRef Arch = Arches.size() == 1 ? Arches.front() : StringRef();
-      if (Error E = loadFromFile(Path, Arch, CompilationDir, *ProfileReader,
-                                 *Coverage, DataFound))
-        return std::move(E);
+      if (PathOpt) {
+        std::string Path = std::move(*PathOpt);
+        StringRef Arch = Arches.size() == 1 ? Arches.front() : StringRef();
+        if (Error E = loadFromFile(Path, Arch, CompilationDir, *ProfileReader,
+                                  *Coverage, DataFound))
+          return std::move(E);
+      } else if (CheckBinaryIDs) {
+        return createFileError(
+            ProfileFilename,
+            createStringError(errc::no_such_file_or_directory,
+                              "Missing binary ID: " +
+                                  llvm::toHex(BinaryID, /*LowerCase=*/true)));
+      }
     }
   }
 
