@@ -204,7 +204,7 @@ linalg::rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
     newOperands.push_back(*paddedOperand);
   }
 
-  SmallVector<SmallVector<Value>> reifiedResultShapes;
+  ReifiedRankedShapedTypeDims reifiedResultShapes;
   if (failed(cast<ReifyRankedShapedTypeOpInterface>(opToPad.getOperation())
                  .reifyResultShapes(rewriter, reifiedResultShapes))) {
     LLVM_DEBUG(DBGS() << "--failed to reify result shapes -> FAIL\n");
@@ -231,11 +231,10 @@ linalg::rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
     int64_t rank = paddedResult.getType().cast<RankedTensorType>().getRank();
     SmallVector<OpFoldResult> offsets(rank, rewriter.getIndexAttr(0));
     SmallVector<OpFoldResult> sizes;
-    for (Value v : reifiedResultShapes[resultNumber])
-      sizes.push_back(getAsOpFoldResult(v));
     SmallVector<OpFoldResult> strides(rank, rewriter.getIndexAttr(1));
     paddedSubtensorResults.push_back(rewriter.create<tensor::ExtractSliceOp>(
-        loc, paddedResult, offsets, sizes, strides));
+        loc, paddedResult, offsets, reifiedResultShapes[resultNumber],
+        strides));
   }
   return paddedSubtensorResults;
 }

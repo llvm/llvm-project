@@ -75,7 +75,7 @@ struct FusePadOp : OpRewritePattern<tensor::PadOp> {
 
     // Create the tensor of same size as output of the pad op.
     RankedTensorType padResultType = padOp.getResultType();
-    auto resultSizes = getAsOpFoldResult(resultShape[0]);
+    auto resultSizes = resultShape[0];
     auto emptyTensor = rewriter.create<tensor::EmptyOp>(
         loc, resultSizes, padResultType.getElementType());
 

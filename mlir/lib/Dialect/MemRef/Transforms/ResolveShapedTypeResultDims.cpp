@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
@@ -92,7 +93,7 @@ struct DimOfReifyRankedShapedTypeOpInterface : public OpRewritePattern<OpTy> {
     if (!dimIndex)
       return failure();
 
-    SmallVector<SmallVector<Value>> reifiedResultShapes;
+    ReifiedRankedShapedTypeDims reifiedResultShapes;
     if (failed(
             rankedShapeTypeOp.reifyResultShapes(rewriter, reifiedResultShapes)))
       return failure();
@@ -106,7 +107,10 @@ struct DimOfReifyRankedShapedTypeOpInterface : public OpRewritePattern<OpTy> {
         static_cast<size_t>(sourceType.getRank()))
       return failure();
 
-    rewriter.replaceOp(dimOp, reifiedResultShapes[resultNumber][*dimIndex]);
+    rewriter.replaceOp(dimOp,
+                       getValueOrCreateConstantIndexOp(
+                           rewriter, dimOp.getLoc(),
+                           reifiedResultShapes[resultNumber][*dimIndex]));
     return success();
   }
 };

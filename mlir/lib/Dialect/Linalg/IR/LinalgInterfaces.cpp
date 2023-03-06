@@ -642,13 +642,12 @@ LinalgOp::reifyResultShapes(OpBuilder &b,
   int64_t pos = 0;
   ArrayRef<AffineExpr> shapeExprs = resultShapesFromInputShapesMap.getResults();
   for (OpOperand *opOperand : getDpsInitOperands()) {
-    SmallVector<Value> shapes;
+    SmallVector<OpFoldResult> shapes;
     for (int64_t dim : llvm::seq<int64_t>(0, getRank(opOperand))) {
       if (checkDimExpr.visit(shapeExprs[pos]))
         shapes.push_back(createOrFoldDimOp(b, loc, opOperand->get(), dim));
       else
-        shapes.push_back(
-            getValueOrCreateConstantIndexOp(b, loc, allResultDimValues[pos]));
+        shapes.push_back(allResultDimValues[pos]);
       pos++;
     }
     reifiedReturnShapes.emplace_back(std::move(shapes));

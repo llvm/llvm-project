@@ -60,6 +60,12 @@ struct TwoConstructors {
     int i;
 };
 
+struct TwoConstructorsTpl {
+  TwoConstructorsTpl() : i{7} {}
+  template <typename T> TwoConstructorsTpl(T, int) : i(8) {}
+  int i;
+};
+
 struct PositiveNotDefaultOOLInt {
   PositiveNotDefaultOOLInt(int);
   int i;
