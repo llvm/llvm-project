@@ -12240,8 +12240,8 @@ void SelectionDAG::copyExtraInfo(SDNode *From, SDNode *To) {
   // from the old From node. This avoids copying NodeExtraInfo to parts of the
   // DAG that is not new and should be left untouched.
   DenseSet<const SDNode *> Visited;
-  constexpr int MaxDepth = 16;
   auto VisitFrom = [&Visited](auto &&Self, SDNode *N, int Depth) {
+    constexpr int MaxDepth = 16;
     if (Depth >= MaxDepth)
       return;
     if (!Visited.insert(N).second)
