@@ -9,9 +9,9 @@
 #ifndef LLDB_SOURCE_PLUGINS_SCRIPTED_PROCESS_H
 #define LLDB_SOURCE_PLUGINS_SCRIPTED_PROCESS_H
 
-#include "lldb/Interpreter/ScriptedMetadata.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/Status.h"
 
 #include "ScriptedThread.h"

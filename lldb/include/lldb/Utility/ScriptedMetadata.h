@@ -9,8 +9,6 @@
 #ifndef LLDB_INTERPRETER_SCRIPTEDMETADATA_H
 #define LLDB_INTERPRETER_SCRIPTEDMETADATA_H
 
-#include "OptionGroupPythonClassWithDict.h"
-
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/StructuredData.h"
@@ -28,12 +26,6 @@ public:
       m_class_name = metadata_sp->GetClassName();
       m_args_sp = metadata_sp->GetArgsSP();
     }
-  }
-
-  ScriptedMetadata(const OptionGroupPythonClassWithDict &option_group) {
-    auto opt_group = const_cast<OptionGroupPythonClassWithDict &>(option_group);
-    m_class_name = opt_group.GetName();
-    m_args_sp = opt_group.GetStructuredData();
   }
 
   explicit operator bool() const { return !m_class_name.empty(); }
