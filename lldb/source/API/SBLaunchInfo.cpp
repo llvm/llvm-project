@@ -17,7 +17,7 @@
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
-#include "lldb/Interpreter/ScriptedMetadata.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 
 using namespace lldb;
 using namespace lldb_private;
