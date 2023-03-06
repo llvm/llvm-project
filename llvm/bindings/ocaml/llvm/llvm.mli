@@ -1268,11 +1268,6 @@ val const_intcast : llvalue -> lltype -> is_signed:bool -> llvalue
     See the method [llvm::ConstantExpr::getFPCast]. *)
 val const_fpcast : llvalue -> lltype -> llvalue
 
-(** [const_select cond t f] returns the constant conditional which returns value
-    [t] if the boolean constant [cond] is true and the value [f] otherwise.
-    See the method [llvm::ConstantExpr::getSelect]. *)
-val const_select : llvalue -> llvalue -> llvalue -> llvalue
-
 (** [const_extractelement vec i] returns the constant [i]th element of
     constant vector [vec]. [i] must be a constant [i32] value unsigned less than
     the size of the vector.

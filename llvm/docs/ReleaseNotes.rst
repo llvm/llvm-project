@@ -56,6 +56,11 @@ Changes to the LLVM IR
 * The ``nofpclass`` attribute was introduced. This allows more
   optimizations around special floating point value comparisons.
 
+* The constant expression variants of the following instructions have been
+  removed:
+
+  * ``select``
+
 Changes to building LLVM
 ------------------------
 
@@ -151,6 +156,12 @@ Changes to the C API
   These belonged to the no longer supported legacy pass manager.
 * As part of the opaque pointer transition, ``LLVMGetElementType`` no longer
   gives the pointee type of a pointer type.
+* The following functions for creating constant expressions have been removed,
+  because the underlying constant expressions are no longer supported. Instead,
+  an instruction should be created using the ``LLVMBuildXYZ`` APIs, which will
+  constant fold the operands if possible and create an instruction otherwise:
+
+  * ``LLVMConstSelect``
 
 Changes to the FastISel infrastructure
 --------------------------------------
