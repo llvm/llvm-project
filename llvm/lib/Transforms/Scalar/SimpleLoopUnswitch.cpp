@@ -3013,7 +3013,7 @@ injectPendingInvariantConditions(NonTrivialUnswitchCandidate Candidate, Loop &L,
   auto &Ctx = BB->getContext();
 
   assert(LHS->getType() == RHS->getType() && "Type mismatch!");
-  // Do not use builder here: CreateICmp may simplify this intro a constant and
+  // Do not use builder here: CreateICmp may simplify this into a constant and
   // unswitching will break. Better optimize it away later.
   auto *InjectedCond =
       ICmpInst::Create(Instruction::ICmp, Pred, LHS, RHS, "injected.cond",
