@@ -1025,6 +1025,19 @@ module polymorphic_test
 ! CHECK:  %[[RHS_CONV:.*]] = fir.convert %[[LOAD_P]] : (!fir.class<!fir.heap<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>) -> !fir.box<none>
 ! CHECK:  %{{.*}} = fir.call @_FortranAAssign(%[[LHS_CONV]], %[[RHS_CONV]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 
+  subroutine move_alloc_unlimited_poly(a, b)
+    class(*), allocatable :: a, b
+
+    call move_alloc(a, b)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPmove_alloc_unlimited_poly(
+! CHECK-SAME: %[[A:.*]]: !fir.ref<!fir.class<!fir.heap<none>>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<!fir.class<!fir.heap<none>>> {fir.bindc_name = "b"}) {
+! CHECK: %[[NULL:.*]] = fir.zero_bits !fir.ref<none>
+! CHECK: %[[B_CONV:.*]] = fir.convert %[[B]] : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[A_CONV:.*]] = fir.convert %[[A]] : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %{{.*}} = fir.call @_FortranAMoveAlloc(%[[B_CONV]], %[[A_CONV]], %[[NULL]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+
 end module
 
 program test
