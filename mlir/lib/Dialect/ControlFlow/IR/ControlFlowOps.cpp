@@ -147,8 +147,9 @@ simplifyBrToBlockWithSinglePred(BranchOp op, PatternRewriter &rewriter) {
     return failure();
 
   // Merge the successor into the current block and erase the branch.
-  rewriter.mergeBlocks(succ, opParent, op.getOperands());
+  SmallVector<Value> brOperands(op.getOperands());
   rewriter.eraseOp(op);
+  rewriter.mergeBlocks(succ, opParent, brOperands);
   return success();
 }
 
