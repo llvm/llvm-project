@@ -1,0 +1,28 @@
+
+// Format is Name/required. If 'required' is true then loading will fail if the
+// symbol is missing, otherwise loading will continue and the function pointer
+// will be null. Order is lexicographically by name.
+
+CASPLUGINAPI_FUNCTION(actioncache_get_for_digest, true)
+CASPLUGINAPI_FUNCTION(actioncache_put_for_digest, true)
+CASPLUGINAPI_FUNCTION(cas_contains_object, true)
+CASPLUGINAPI_FUNCTION(cas_create, true)
+CASPLUGINAPI_FUNCTION(cas_dispose, true)
+CASPLUGINAPI_FUNCTION(cas_get_hash_schema_name, true)
+CASPLUGINAPI_FUNCTION(cas_get_objectid, true)
+CASPLUGINAPI_FUNCTION(cas_load_object, true)
+CASPLUGINAPI_FUNCTION(cas_options_create, true)
+CASPLUGINAPI_FUNCTION(cas_options_dispose, true)
+CASPLUGINAPI_FUNCTION(cas_options_set_client_version, true)
+CASPLUGINAPI_FUNCTION(cas_options_set_ondisk_path, true)
+CASPLUGINAPI_FUNCTION(cas_options_set_option, true)
+CASPLUGINAPI_FUNCTION(cas_store_object, true)
+CASPLUGINAPI_FUNCTION(digest_parse, true)
+CASPLUGINAPI_FUNCTION(digest_print, true)
+CASPLUGINAPI_FUNCTION(get_plugin_version, true)
+CASPLUGINAPI_FUNCTION(loaded_object_get_data, true)
+CASPLUGINAPI_FUNCTION(loaded_object_get_refs, true)
+CASPLUGINAPI_FUNCTION(object_refs_get_count, true)
+CASPLUGINAPI_FUNCTION(object_refs_get_id, true)
+CASPLUGINAPI_FUNCTION(objectid_get_digest, true)
+CASPLUGINAPI_FUNCTION(string_dispose, true)

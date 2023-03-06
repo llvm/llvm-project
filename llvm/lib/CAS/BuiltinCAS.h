@@ -11,9 +11,8 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CAS/BuiltinCASContext.h"
 #include "llvm/CAS/ObjectStore.h"
-#include "llvm/Support/BLAKE3.h"
-#include "llvm/Support/Error.h"
 #include <cstddef>
 
 namespace llvm {
@@ -23,70 +22,6 @@ namespace ondisk {
 class UnifiedOnDiskCache;
 }
 namespace builtin {
-
-/// Current hash type for the internal CAS.
-///
-/// FIXME: This should be configurable via an enum to allow configuring the hash
-/// function. The enum should be sent into \a createInMemoryCAS() and \a
-/// createOnDiskCAS().
-///
-/// This is important (at least) for future-proofing, when we want to make new
-/// CAS instances use BLAKE7, but still know how to read/write BLAKE3.
-///
-/// Even just for BLAKE3, it would be useful to have these values:
-///
-///     BLAKE3     => 32B hash from BLAKE3
-///     BLAKE3_16B => 16B hash from BLAKE3 (truncated)
-///
-/// ... where BLAKE3_16 uses \a TruncatedBLAKE3<16>.
-///
-/// Motivation for a truncated hash is that it's cheaper to store. It's not
-/// clear if we always (or ever) need the full 32B, and for an ephemeral
-/// in-memory CAS, we almost certainly don't need it.
-///
-/// Note that the cost is linear in the number of objects for the builtin CAS,
-/// since we're using internal offsets and/or pointers as an optimization.
-///
-/// However, it's possible we'll want to hook up a local builtin CAS to, e.g.,
-/// a distributed generic hash map to use as an ActionCache. In that scenario,
-/// the transitive closure of the structured objects that are the results of
-/// the cached actions would need to be serialized into the map, something
-/// like:
-///
-///     "action:<schema>:<key>" -> "0123"
-///     "object:<schema>:0123"  -> "3,4567,89AB,CDEF,9,some data"
-///     "object:<schema>:4567"  -> ...
-///     "object:<schema>:89AB"  -> ...
-///     "object:<schema>:CDEF"  -> ...
-///
-/// These references would be full cost.
-using HasherT = BLAKE3;
-using HashType = decltype(HasherT::hash(std::declval<ArrayRef<uint8_t> &>()));
-
-class BuiltinCASContext : public CASContext {
-  void printIDImpl(raw_ostream &OS, const CASID &ID) const final;
-  void anchor() override;
-
-public:
-  /// Get the name of the hash for any table identifiers.
-  ///
-  /// FIXME: This should be configurable via an enum, with at the following values:
-  ///
-  ///     "BLAKE3"    => 32B hash from BLAKE3
-  ///     "BLAKE3.16" => 16B hash from BLAKE3 (truncated)
-  ///
-  /// Enum can be sent into \a createInMemoryCAS() and \a createOnDiskCAS().
-  static StringRef getHashName() { return "BLAKE3"; }
-  StringRef getHashSchemaIdentifier() const final {
-    static const std::string ID =
-        ("llvm.cas.builtin.v2[" + getHashName() + "]").str();
-    return ID;
-  }
-
-  static const BuiltinCASContext &getDefaultContext();
-
-  BuiltinCASContext() = default;
-};
 
 class BuiltinCAS : public ObjectStore {
 public:

@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include <string>
+#include <vector>
 
 namespace llvm {
 namespace cas {
@@ -55,6 +56,10 @@ public:
   /// - "auto" is an alias for an automatically chosen location in the user's
   ///   system cache.
   std::string CASPath;
+
+  std::string PluginPath;
+  /// Each entry is a (<option-name>, <value>) pair.
+  std::vector<std::pair<std::string, std::string>> PluginOptions;
 
   friend bool operator==(const CASConfiguration &LHS,
                          const CASConfiguration &RHS) {

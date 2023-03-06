@@ -59,6 +59,8 @@ void CASOptions::freezeConfig(DiagnosticsEngine &Diags) {
     // API and is observable.
     CurrentConfig.CASPath =
         Cache.CAS->getContext().getHashSchemaIdentifier().str();
+    CurrentConfig.PluginPath.clear();
+    CurrentConfig.PluginOptions.clear();
   }
 }
 
@@ -82,6 +84,20 @@ void CASOptions::initCache(DiagnosticsEngine &Diags) const {
 
   Cache.Config = CurrentConfig;
   StringRef CASPath = Cache.Config.CASPath;
+
+  if (!PluginPath.empty()) {
+    std::pair<std::unique_ptr<ObjectStore>, std::unique_ptr<ActionCache>> DBs;
+    if (llvm::Error E =
+            createPluginCASDatabases(PluginPath, CASPath, PluginOptions)
+                .moveInto(DBs)) {
+      Diags.Report(diag::err_plugin_cas_cannot_be_initialized)
+          << PluginPath << toString(std::move(E));
+      return;
+    }
+    std::tie(Cache.CAS, Cache.AC) = std::move(DBs);
+    return;
+  }
+
   if (CASPath.empty()) {
     Cache.CAS = llvm::cas::createInMemoryCAS();
     Cache.AC = llvm::cas::createInMemoryActionCache();

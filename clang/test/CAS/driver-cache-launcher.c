@@ -38,6 +38,12 @@
 // SPECIFIC-DAEMON-NOT: "-fdepscan-share-identifier"
 // SPECIFIC-DAEMON: "-cc1depscan" "-fdepscan=daemon" "-fdepscan-daemon=[[PREFIX]]/scand"
 
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas LLVM_CACHE_PLUGIN_PATH=%t/plugin LLVM_CACHE_PLUGIN_OPTIONS=some-opt=value \
+// RUN:   %clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=PLUGIN -DPREFIX=%t
+// PLUGIN: "-fcas-path" "[[PREFIX]]/cas"
+// PLUGIN: "-fcas-plugin-path" "[[PREFIX]]/plugin"
+// PLUGIN: "-fcas-plugin-options" "some-opt=value"
+
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas LLVM_CACHE_REMOTE_SERVICE_SOCKET_PATH=%t/ccremote %clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=REMOTE -DPREFIX=%t
 // REMOTE: "-fcompilation-caching-service-path" "[[PREFIX]]/ccremote"
 
