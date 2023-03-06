@@ -485,8 +485,8 @@ def S_PREFETCH_DATA        : SM_Prefetch_Pseudo <"s_prefetch_data", SReg_64, 1>;
 def S_PREFETCH_DATA_PC_REL : SM_Prefetch_Pseudo <"s_prefetch_data_pc_rel", SReg_64, 0>;
 def S_BUFFER_PREFETCH_DATA : SM_Prefetch_Pseudo <"s_buffer_prefetch_data", SReg_128, 1> {
   let is_buffer = 1;
-}
 } // end let SubtargetPredicate = isGFX12Plus
+}
 
 //===----------------------------------------------------------------------===//
 // Targets
@@ -1383,7 +1383,7 @@ defm S_ATC_PROBE_BUFFER : SM_Real_Probe_gfx11 <0x23, "S_ATC_PROBE_BUFFER">;
 class SMEM_Real_gfx12Plus<bits<6> op, SM_Pseudo ps, string opName,
                           int subtarget, RegisterWithSubRegs sgpr_null> :
     SM_Real<ps, opName>, SIMCInstr<ps.PseudoInstr, subtarget>, Enc64 {
-    
+
   let Inst{18-13} = op;
   let Inst{31-26} = 0x3d;
 
@@ -1400,9 +1400,6 @@ class SMEM_Real_gfx12<bits<6> op, SM_Pseudo ps, string opName = ps.Mnemonic> :
 
   let Inst{5-0}   = !if(ps.has_sbase, sbase{6-1}, ?);
   let Inst{12-6}  = !if(ps.has_sdst, sdst{6-0}, ?);
-
-  let Inst{22-21} = ?; // TODO-GFX12: cpol SCOPE
-  let Inst{24-23} = ?; // TODO-GFX12: cpol TH
 }
 
 class SMEM_Real_Prefetch_gfx12<bits<6> op, SM_Pseudo ps> :
@@ -1418,6 +1415,9 @@ class SMEM_Real_Load_gfx12<bits<6> op, string ps, string opName, OffsetMode offs
     SMEM_Real_gfx12<op, !cast<SM_Pseudo>(ps # offsets.Variant), opName> {
   RegisterClass BaseClass = !cast<SM_Load_Pseudo>(ps # offsets.Variant).BaseClass;
   let InOperandList = !con((ins BaseClass:$sbase), offsets.Ins, (ins CPol:$cpol));
+
+  let Inst{22-21} = cpol{4-3}; // scope
+  let Inst{24-23} = cpol{1-0}; // th - only lower 2 bits are supported
 }
 
 multiclass SM_Real_Loads_gfx12<bits<6> op, string ps, string opName> {
