@@ -422,6 +422,7 @@ private:
   /// Source Location tracking
   /// -------
 
+public:
   /// Use to track source locations across nested visitor traversals.
   /// Always use a `SourceLocRAIIObject` to change currSrcLoc.
   std::optional<mlir::Location> currSrcLoc;
@@ -442,7 +443,6 @@ private:
     ~SourceLocRAIIObject() { restore(); }
   };
 
-public:
   using SymTableScopeTy =
       llvm::ScopedHashTableScope<const clang::Decl *, mlir::Value>;
 
