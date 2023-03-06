@@ -448,8 +448,8 @@ define i8 @v8i32_or_and(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d, 
 ; PR61104 - peek through vselect allones operand
 ; combineBitcastvxi1 may be called before the fold vselect(c,-1,x) --> or(c,x) vXi1 fold
 
-define i8 @v8i32_or_select(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2) {
-; SSE2-SSSE3-LABEL: v8i32_or_select:
+define i8 @v8i32_or_vselect(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2) {
+; SSE2-SSSE3-LABEL: v8i32_or_vselect:
 ; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm3, %xmm1
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm2, %xmm0
@@ -461,7 +461,7 @@ define i8 @v8i32_or_select(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2) {
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq
 ;
-; AVX1-LABEL: v8i32_or_select:
+; AVX1-LABEL: v8i32_or_vselect:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
@@ -474,7 +474,7 @@ define i8 @v8i32_or_select(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2) {
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: v8i32_or_select:
+; AVX2-LABEL: v8i32_or_vselect:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpor %ymm2, %ymm0, %ymm0
@@ -483,7 +483,7 @@ define i8 @v8i32_or_select(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512F-LABEL: v8i32_or_select:
+; AVX512F-LABEL: v8i32_or_vselect:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpcmpeqd %ymm1, %ymm0, %k0
 ; AVX512F-NEXT:    vpxor %xmm0, %xmm0, %xmm0
@@ -494,7 +494,7 @@ define i8 @v8i32_or_select(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2) {
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
-; AVX512BW-LABEL: v8i32_or_select:
+; AVX512BW-LABEL: v8i32_or_vselect:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpcmpeqd %ymm1, %ymm0, %k0
 ; AVX512BW-NEXT:    vpxor %xmm0, %xmm0, %xmm0
@@ -511,6 +511,131 @@ define i8 @v8i32_or_select(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2) {
   ret i8 %res
 }
 
+define i8 @v8i32_or_select(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2, <8 x i32> %a3, i1 %a4) {
+; SSE2-SSSE3-LABEL: v8i32_or_select:
+; SSE2-SSSE3:       # %bb.0:
+; SSE2-SSSE3-NEXT:    pcmpeqd %xmm1, %xmm3
+; SSE2-SSSE3-NEXT:    pcmpeqd %xmm0, %xmm2
+; SSE2-SSSE3-NEXT:    packssdw %xmm3, %xmm2
+; SSE2-SSSE3-NEXT:    packssdw %xmm7, %xmm6
+; SSE2-SSSE3-NEXT:    testb $1, %dil
+; SSE2-SSSE3-NEXT:    jne .LBB7_1
+; SSE2-SSSE3-NEXT:  # %bb.2:
+; SSE2-SSSE3-NEXT:    pxor %xmm0, %xmm0
+; SSE2-SSSE3-NEXT:    jmp .LBB7_3
+; SSE2-SSSE3-NEXT:  .LBB7_1:
+; SSE2-SSSE3-NEXT:    pcmpeqd %xmm5, %xmm1
+; SSE2-SSSE3-NEXT:    pcmpeqd %xmm4, %xmm0
+; SSE2-SSSE3-NEXT:    packssdw %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:  .LBB7_3:
+; SSE2-SSSE3-NEXT:    por %xmm2, %xmm6
+; SSE2-SSSE3-NEXT:    por %xmm0, %xmm6
+; SSE2-SSSE3-NEXT:    packsswb %xmm6, %xmm6
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm6, %eax
+; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
+; SSE2-SSSE3-NEXT:    retq
+;
+; AVX1-LABEL: v8i32_or_select:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm6
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm6, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm5
+; AVX1-NEXT:    testb $1, %dil
+; AVX1-NEXT:    jne .LBB7_1
+; AVX1-NEXT:  # %bb.2:
+; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    jmp .LBB7_3
+; AVX1-NEXT:  .LBB7_1:
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm7
+; AVX1-NEXT:    vpcmpeqd %xmm7, %xmm6, %xmm6
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpackssdw %xmm6, %xmm0, %xmm0
+; AVX1-NEXT:  .LBB7_3:
+; AVX1-NEXT:    vpor %xmm1, %xmm5, %xmm1
+; AVX1-NEXT:    vpor %xmm4, %xmm3, %xmm2
+; AVX1-NEXT:    vpackssdw %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %eax
+; AVX1-NEXT:    # kill: def $al killed $al killed $eax
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: v8i32_or_select:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm1
+; AVX2-NEXT:    vpxor %xmm4, %xmm4, %xmm4
+; AVX2-NEXT:    vpcmpgtd %ymm3, %ymm4, %ymm3
+; AVX2-NEXT:    testb $1, %dil
+; AVX2-NEXT:    jne .LBB7_1
+; AVX2-NEXT:  # %bb.2:
+; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    jmp .LBB7_3
+; AVX2-NEXT:  .LBB7_1:
+; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX2-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:  .LBB7_3:
+; AVX2-NEXT:    vpor %ymm1, %ymm3, %ymm1
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vpmovmskb %xmm0, %eax
+; AVX2-NEXT:    # kill: def $al killed $al killed $eax
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: v8i32_or_select:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpcmpeqd %ymm1, %ymm0, %k0
+; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    vpcmpgtd %ymm3, %ymm1, %k1
+; AVX512F-NEXT:    testb $1, %dil
+; AVX512F-NEXT:    jne .LBB7_1
+; AVX512F-NEXT:  # %bb.2:
+; AVX512F-NEXT:    kxorw %k0, %k0, %k2
+; AVX512F-NEXT:    jmp .LBB7_3
+; AVX512F-NEXT:  .LBB7_1:
+; AVX512F-NEXT:    vpcmpeqd %ymm2, %ymm0, %k2
+; AVX512F-NEXT:  .LBB7_3:
+; AVX512F-NEXT:    korw %k0, %k1, %k0
+; AVX512F-NEXT:    korw %k2, %k0, %k0
+; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: v8i32_or_select:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpcmpeqd %ymm1, %ymm0, %k0
+; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpcmpgtd %ymm3, %ymm1, %k1
+; AVX512BW-NEXT:    testb $1, %dil
+; AVX512BW-NEXT:    jne .LBB7_1
+; AVX512BW-NEXT:  # %bb.2:
+; AVX512BW-NEXT:    kxorw %k0, %k0, %k2
+; AVX512BW-NEXT:    jmp .LBB7_3
+; AVX512BW-NEXT:  .LBB7_1:
+; AVX512BW-NEXT:    vpcmpeqd %ymm2, %ymm0, %k2
+; AVX512BW-NEXT:  .LBB7_3:
+; AVX512BW-NEXT:    korw %k0, %k1, %k0
+; AVX512BW-NEXT:    korw %k2, %k0, %k0
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+  %cmp0 = icmp eq <8 x i32> %a0, %a1
+  %cmp1 = icmp eq <8 x i32> %a0, %a2
+  %cmp2 = icmp slt <8 x i32> %a3, zeroinitializer
+  %sel = select i1 %a4, <8 x i1> %cmp1, <8 x i1> zeroinitializer
+  %or0 = or <8 x i1> %cmp2, %cmp0
+  %or1 = or <8 x i1> %or0, %sel
+  %res = bitcast <8 x i1> %or1 to i8
+  ret i8 %res
+}
 
 define i8 @v8f32_and(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float> %d) {
 ; SSE2-SSSE3-LABEL: v8f32_and:
