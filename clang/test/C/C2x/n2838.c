@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -std=c2x %s
+// RUN: %clang_cc1 -triple x86_64 -verify -std=c2x %s
 
 /* WG14 N2838: yes
  * Types and sizes
