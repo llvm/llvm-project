@@ -234,9 +234,10 @@ static DWARFRangeList GetRangesOrReportError(DWARFUnit &unit,
 // DW_AT_low_pc/DW_AT_high_pc pair, DW_AT_entry_pc, or DW_AT_ranges attributes.
 bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
     DWARFUnit *cu, const char *&name, const char *&mangled,
-    DWARFRangeList &ranges, int &decl_file, int &decl_line, int &decl_column,
-    int &call_file, int &call_line, int &call_column,
-    DWARFExpressionList *frame_base) const {
+    DWARFRangeList &ranges, std::optional<int> &decl_file,
+    std::optional<int> &decl_line, std::optional<int> &decl_column,
+    std::optional<int> &call_file, std::optional<int> &call_line,
+    std::optional<int> &call_column, DWARFExpressionList *frame_base) const {
   dw_addr_t lo_pc = LLDB_INVALID_ADDRESS;
   dw_addr_t hi_pc = LLDB_INVALID_ADDRESS;
   std::vector<DWARFDIE> dies;
@@ -315,32 +316,32 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
           break;
 
         case DW_AT_decl_file:
-          if (decl_file == 0)
+          if (!decl_file)
             decl_file = form_value.Unsigned();
           break;
 
         case DW_AT_decl_line:
-          if (decl_line == 0)
+          if (!decl_line)
             decl_line = form_value.Unsigned();
           break;
 
         case DW_AT_decl_column:
-          if (decl_column == 0)
+          if (!decl_column)
             decl_column = form_value.Unsigned();
           break;
 
         case DW_AT_call_file:
-          if (call_file == 0)
+          if (!call_file)
             call_file = form_value.Unsigned();
           break;
 
         case DW_AT_call_line:
-          if (call_line == 0)
+          if (!call_line)
             call_line = form_value.Unsigned();
           break;
 
         case DW_AT_call_column:
-          if (call_column == 0)
+          if (!call_column)
             call_column = form_value.Unsigned();
           break;
 
