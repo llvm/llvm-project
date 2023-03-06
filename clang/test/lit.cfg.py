@@ -127,9 +127,38 @@ def have_host_jit_feature_support(feature_name):
 
     return "true" in clang_repl_out
 
+def have_host_clang_repl_cuda():
+    clang_repl_exe = lit.util.which('clang-repl', config.clang_tools_dir)
 
-if have_host_jit_feature_support("jit"):
-    config.available_features.add("host-supports-jit")
+    if not clang_repl_exe:
+        return False
+
+    testcode = b'\n'.join([
+        b"__global__ void test_func() {}",
+        b"test_func<<<1,1>>>();",
+        b"extern \"C\" int puts(const char *s);",
+        b"puts(cudaGetLastError() ? \"failure\" : \"success\");",
+        b"%quit"
+    ])
+    try:
+        clang_repl_cmd = subprocess.run([clang_repl_exe, '--cuda'],
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE,
+                                        input=testcode)
+    except OSError:
+        return False
+
+    if clang_repl_cmd.returncode == 0:
+        if clang_repl_cmd.stdout.find(b"success") != -1:
+            return True
+
+    return False
+
+if have_host_jit_feature_support('jit'):
+    config.available_features.add('host-supports-jit')
+
+    if have_host_clang_repl_cuda():
+        config.available_features.add('host-supports-cuda')
 
 if config.clang_staticanalyzer:
     config.available_features.add("staticanalyzer")
