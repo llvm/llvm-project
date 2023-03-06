@@ -2544,8 +2544,6 @@ void PruneThreadPlans();
 
   virtual void *GetImplementation() { return nullptr; }
 
-  virtual void ForceScriptedState(lldb::StateType state) {}
-
 protected:
   friend class Trace;
 
