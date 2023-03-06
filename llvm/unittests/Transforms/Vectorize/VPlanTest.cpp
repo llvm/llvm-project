@@ -1153,7 +1153,7 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     Args.push_back(&Op2);
     VPWidenCallRecipe Recipe(*Call, make_range(Args.begin(), Args.end()),
                              false);
-    EXPECT_TRUE(Recipe.mayHaveSideEffects());
+    EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
     EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
