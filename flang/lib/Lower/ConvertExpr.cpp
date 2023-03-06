@@ -589,17 +589,6 @@ const Fortran::semantics::Symbol &getLastSym(const A &obj) {
   return obj.GetLastSymbol().GetUltimate();
 }
 
-static bool
-isIntrinsicModuleProcRef(const Fortran::evaluate::ProcedureRef &procRef) {
-  const Fortran::semantics::Symbol *symbol = procRef.proc().GetSymbol();
-  if (!symbol)
-    return false;
-  const Fortran::semantics::Symbol *module =
-      symbol->GetUltimate().owner().GetSymbol();
-  return module && module->attrs().test(Fortran::semantics::Attr::INTRINSIC) &&
-         module->name().ToString().find("omp_lib") == std::string::npos;
-}
-
 // Return true if TRANSPOSE should be lowered without a runtime call.
 static bool
 isTransposeOptEnabled(const Fortran::lower::AbstractConverter &converter) {
@@ -2442,7 +2431,7 @@ public:
             procRef.proc().GetSpecificIntrinsic())
       return genIntrinsicRef(procRef, resultType, *intrinsic);
 
-    if (isIntrinsicModuleProcRef(procRef))
+    if (Fortran::lower::isIntrinsicModuleProcRef(procRef))
       return genIntrinsicRef(procRef, resultType);
 
     if (isStatementFunctionCall(procRef))
@@ -4795,7 +4784,7 @@ private:
         // The intrinsic procedure is called once per element of the array.
         return genElementalIntrinsicProcRef(procRef, retTy, *intrin);
       }
-      if (isIntrinsicModuleProcRef(procRef))
+      if (Fortran::lower::isIntrinsicModuleProcRef(procRef))
         return genElementalIntrinsicProcRef(procRef, retTy);
       if (ScalarExprLowering::isStatementFunctionCall(procRef))
         fir::emitFatalError(loc, "statement function cannot be elemental");
