@@ -549,8 +549,11 @@ defm "" : LMULSchedReads<"ReadVISlideX">;
 defm "" : LMULSchedReads<"ReadVFSlideV">;
 defm "" : LMULSchedReads<"ReadVFSlideF">;
 // 16.4. Vector Register Gather Instructions
-defm "" : LMULSchedReads<"ReadVRGatherVV">;
-defm "" : LMULSchedReads<"ReadVRGatherVX">;
+defm "" : LMULSchedReads<"ReadVRGatherVV_data">;
+defm "" : LMULSchedReads<"ReadVRGatherVV_index">;
+defm "" : LMULSchedReads<"ReadVRGatherVX_data">;
+defm "" : LMULSchedReads<"ReadVRGatherVX_index">;
+defm "" : LMULSchedReads<"ReadVRGatherVI_data">;
 // 16.5. Vector Compress Instruction
 defm "" : LMULSchedReads<"ReadVCompressV">;
 // 16.6. Whole Vector Register Move
@@ -899,8 +902,11 @@ defm "" : LMULReadAdvance<"ReadVISlideV", 0>;
 defm "" : LMULReadAdvance<"ReadVISlideX", 0>;
 defm "" : LMULReadAdvance<"ReadVFSlideV", 0>;
 defm "" : LMULReadAdvance<"ReadVFSlideF", 0>;
-defm "" : LMULReadAdvance<"ReadVRGatherVV", 0>;
-defm "" : LMULReadAdvance<"ReadVRGatherVX", 0>;
+defm "" : LMULReadAdvance<"ReadVRGatherVV_data", 0>;
+defm "" : LMULReadAdvance<"ReadVRGatherVV_index", 0>;
+defm "" : LMULReadAdvance<"ReadVRGatherVX_data", 0>;
+defm "" : LMULReadAdvance<"ReadVRGatherVX_index", 0>;
+defm "" : LMULReadAdvance<"ReadVRGatherVI_data", 0>;
 defm "" : LMULReadAdvance<"ReadVCompressV", 0>;
 // These are already LMUL aware
 def : ReadAdvance<ReadVMov1V, 0>;
