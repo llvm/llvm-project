@@ -555,9 +555,8 @@ public:
   /// Find uses of `from` and replace them with `to` if the `functor` returns
   /// true. It also marks every modified uses and notifies the rewriter that an
   /// in-place operation modification is about to happen.
-  void
-  replaceUsesWithIf(Value from, Value to,
-                    llvm::unique_function<bool(OpOperand &) const> functor);
+  void replaceUsesWithIf(Value from, Value to,
+                         function_ref<bool(OpOperand &)> functor);
 
   /// Find uses of `from` and replace them with `to` except if the user is
   /// `exceptedUser`. It also marks every modified uses and notifies the
