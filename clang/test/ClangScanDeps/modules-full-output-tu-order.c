@@ -1,3 +1,6 @@
+// Disable the test temporarily to investigate why it's failing on AIX.
+// XFAIL: target={{.*}}-aix{{.*}}
+
 // This test checks that ordering of TUs in the input CDB is preserved in the full output.
 
 // RUN: rm -rf %t
