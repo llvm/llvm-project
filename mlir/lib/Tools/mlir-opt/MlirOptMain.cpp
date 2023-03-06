@@ -336,6 +336,7 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
   // Parse pass names in main to ensure static initialization completed.
   cl::ParseCommandLineOptions(argc, argv, helpHeader);
   MlirOptMainConfig config = MlirOptMainConfig::createFromCLOptions();
+  config.preloadDialectsInContext(preloadDialectsInContext);
 
   // Set up the input file.
   std::string errorMessage;
