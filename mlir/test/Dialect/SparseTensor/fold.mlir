@@ -22,13 +22,13 @@ func.func @sparse_dce_convert(%arg0: tensor<64xf32>) {
 
 // CHECK-LABEL: func @sparse_dce_getters(
 //  CHECK-SAME: %[[A:.*]]: tensor<64xf32, #sparse_tensor.encoding<{{{.*}}}>>)
-//   CHECK-NOT: sparse_tensor.pointers
-//   CHECK-NOT: sparse_tensor.indices
+//   CHECK-NOT: sparse_tensor.positions
+//   CHECK-NOT: sparse_tensor.coordinates
 //   CHECK-NOT: sparse_tensor.values
 //       CHECK: return
 func.func @sparse_dce_getters(%arg0: tensor<64xf32, #SparseVector>) {
-  %0 = sparse_tensor.pointers %arg0 { dimension = 0 : index } : tensor<64xf32, #SparseVector> to memref<?xindex>
-  %1 = sparse_tensor.indices %arg0 { dimension = 0 : index } : tensor<64xf32, #SparseVector> to memref<?xindex>
+  %0 = sparse_tensor.positions %arg0 { level = 0 : index } : tensor<64xf32, #SparseVector> to memref<?xindex>
+  %1 = sparse_tensor.coordinates %arg0 { level = 0 : index } : tensor<64xf32, #SparseVector> to memref<?xindex>
   %2 = sparse_tensor.values %arg0 : tensor<64xf32, #SparseVector> to memref<?xf32>
   return
 }
@@ -54,11 +54,11 @@ func.func @sparse_concat_dce(%arg0: tensor<2xf64, #SparseVector>,
 //   CHECK-NOT:  sparse_tensor.storage_specifier.get
 //       CHECK:  return %[[A1]]
 func.func @sparse_get_specifier_dce_fold(%arg0: !sparse_tensor.storage_specifier<#SparseVector>, %arg1: index, %arg2: index) -> index {
-  %0 = sparse_tensor.storage_specifier.set %arg0 dim_sz at 0 with %arg1
+  %0 = sparse_tensor.storage_specifier.set %arg0 lvl_sz at 0 with %arg1
        : !sparse_tensor.storage_specifier<#SparseVector>
-  %1 = sparse_tensor.storage_specifier.set %0 ptr_mem_sz at 0 with %arg2
+  %1 = sparse_tensor.storage_specifier.set %0 pos_mem_sz at 0 with %arg2
        : !sparse_tensor.storage_specifier<#SparseVector>
-  %2 = sparse_tensor.storage_specifier.get %1 dim_sz at 0
+  %2 = sparse_tensor.storage_specifier.get %1 lvl_sz at 0
        : !sparse_tensor.storage_specifier<#SparseVector>
   return %2 : index
 }

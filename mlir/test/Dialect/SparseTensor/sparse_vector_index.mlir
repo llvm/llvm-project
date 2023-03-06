@@ -25,8 +25,8 @@
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 1 : index
 // CHECK-DAG:       %[[VAL_7:.*]] = tensor.empty() : tensor<8xi64>
-// CHECK:           %[[VAL_8:.*]] = sparse_tensor.pointers %[[VAL_0]] {dimension = 0 : index} : tensor<8xi64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>> to memref<?xindex>
-// CHECK:           %[[VAL_9:.*]] = sparse_tensor.indices %[[VAL_0]] {dimension = 0 : index} : tensor<8xi64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>> to memref<?xindex>
+// CHECK:           %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<8xi64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>> to memref<?xindex>
+// CHECK:           %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<8xi64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>> to memref<?xindex>
 // CHECK:           %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<8xi64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>> to memref<?xi64>
 // CHECK:           %[[VAL_11:.*]] = bufferization.to_memref %[[VAL_7]] : memref<8xi64>
 // CHECK:           linalg.fill ins(%[[VAL_4]] : i64) outs(%[[VAL_11]] : memref<8xi64>)
@@ -67,8 +67,8 @@ func.func @sparse_index_1d_conj(%arga: tensor<8xi64, #SparseVector>) -> tensor<8
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant true
 // CHECK-DAG:       %[[VAL_7:.*]] = tensor.empty() : tensor<8xi64>
-// CHECK:           %[[VAL_8:.*]] = sparse_tensor.pointers %[[VAL_0]] {dimension = 0 : index} : tensor<8xi64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>> to memref<?xindex>
-// CHECK:           %[[VAL_9:.*]] = sparse_tensor.indices %[[VAL_0]] {dimension = 0 : index} : tensor<8xi64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>> to memref<?xindex>
+// CHECK:           %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<8xi64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>> to memref<?xindex>
+// CHECK:           %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<8xi64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>> to memref<?xindex>
 // CHECK:           %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<8xi64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>> to memref<?xi64>
 // CHECK:           %[[VAL_11:.*]] = bufferization.to_memref %[[VAL_7]] : memref<8xi64>
 // CHECK:           linalg.fill ins(%[[VAL_3]] : i64) outs(%[[VAL_11]] : memref<8xi64>)

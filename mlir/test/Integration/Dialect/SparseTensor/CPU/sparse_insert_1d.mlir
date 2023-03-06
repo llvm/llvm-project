@@ -36,13 +36,13 @@
 
 module {
 
-  // Dumps pointers, indices, values for verification.
+  // Dumps positions, indices, values for verification.
   func.func @dump(%argx: tensor<1024xf32, #SparseVector>) {
     %c0 = arith.constant 0 : index
     %f0 = arith.constant 0.0 : f32
-    %p = sparse_tensor.pointers %argx { dimension = 0 : index }
+    %p = sparse_tensor.positions %argx { level = 0 : index }
        : tensor<1024xf32, #SparseVector> to memref<?xindex>
-    %i = sparse_tensor.indices %argx { dimension = 0 : index }
+    %i = sparse_tensor.coordinates %argx { level = 0 : index }
        : tensor<1024xf32, #SparseVector> to memref<?xindex>
     %v = sparse_tensor.values %argx
        : tensor<1024xf32, #SparseVector> to memref<?xf32>

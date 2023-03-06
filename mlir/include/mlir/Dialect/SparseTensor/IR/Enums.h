@@ -40,12 +40,12 @@ namespace sparse_tensor {
 
 /// This type is used in the public API at all places where MLIR expects
 /// values with the built-in type "index".  For now, we simply assume that
-/// type is 64-bit, but targets with different "index" bit widths should
+/// type is 64-bit, but targets with different "index" bitwidths should
 /// link with an alternatively built runtime support library.
 // TODO: support such targets?
 using index_type = uint64_t;
 
-/// Encoding of overhead types (both pointer overhead and indices
+/// Encoding of overhead types (both position overhead and coordinate
 /// overhead), for "overloading" @newSparseTensor.
 enum class OverheadType : uint32_t {
   kIndex = 0,

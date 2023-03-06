@@ -87,8 +87,8 @@ func.func @scale_d(%arga: tensor<1024xf32, #DenseVector>, %b: f32, %argx: tensor
 
 #SparseVector = #sparse_tensor.encoding<{
   dimLevelType = [ "compressed" ],
-  pointerBitWidth = 32,
-  indexBitWidth = 32
+  posWidth = 32,
+  crdWidth = 32
 }>
 
 #trait_mul_s = {
@@ -310,8 +310,8 @@ func.func @reduction_d(%arga: tensor<1024xf32, #DenseVector>,
 
 #SparseMatrix = #sparse_tensor.encoding<{
   dimLevelType = [ "dense", "compressed" ],
-  pointerBitWidth = 32,
-  indexBitWidth = 32
+  posWidth = 32,
+  crdWidth = 32
 }>
 
 #trait_mul_ds = {

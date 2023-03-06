@@ -41,15 +41,15 @@
 // CHECK:           %[[VAL_25:.*]] = memref.cast %[[VAL_24]] : memref<300xindex> to memref<?xindex>
 // CHECK:           linalg.fill ins(%[[F0]] : f64) outs(%[[VAL_20]] : memref<300xf64>)
 // CHECK:           linalg.fill ins(%[[False]] : i1) outs(%[[VAL_22]] : memref<300xi1>)
-// CHECK:           %[[VAL_26:.*]] = call @sparsePointers0(%[[Arg0]], %[[I0]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
-// CHECK:           %[[VAL_27:.*]] = call @sparseIndices0(%[[Arg0]], %[[I0]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
-// CHECK:           %[[VAL_28:.*]] = call @sparsePointers0(%[[Arg0]], %[[I1]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
-// CHECK:           %[[VAL_29:.*]] = call @sparseIndices0(%[[Arg0]], %[[I1]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK:           %[[VAL_26:.*]] = call @sparsePositions0(%[[Arg0]], %[[I0]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK:           %[[VAL_27:.*]] = call @sparseCoordinates0(%[[Arg0]], %[[I0]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK:           %[[VAL_28:.*]] = call @sparsePositions0(%[[Arg0]], %[[I1]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK:           %[[VAL_29:.*]] = call @sparseCoordinates0(%[[Arg0]], %[[I1]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK:           %[[VAL_30:.*]] = call @sparseValuesF64(%[[Arg0]]) : (!llvm.ptr<i8>) -> memref<?xf64>
-// CHECK:           %[[VAL_31:.*]] = call @sparsePointers0(%[[Arg1]], %[[I0]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
-// CHECK:           %[[VAL_32:.*]] = call @sparseIndices0(%[[Arg1]], %[[I0]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
-// CHECK:           %[[VAL_33:.*]] = call @sparsePointers0(%[[Arg1]], %[[I1]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
-// CHECK:           %[[VAL_34:.*]] = call @sparseIndices0(%[[Arg1]], %[[I1]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK:           %[[VAL_31:.*]] = call @sparsePositions0(%[[Arg1]], %[[I0]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK:           %[[VAL_32:.*]] = call @sparseCoordinates0(%[[Arg1]], %[[I0]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK:           %[[VAL_33:.*]] = call @sparsePositions0(%[[Arg1]], %[[I1]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK:           %[[VAL_34:.*]] = call @sparseCoordinates0(%[[Arg1]], %[[I1]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK:           %[[VAL_35:.*]] = call @sparseValuesF64(%[[Arg1]]) : (!llvm.ptr<i8>) -> memref<?xf64>
 // CHECK:           %[[VAL_36:.*]] = memref.load %[[VAL_26]]{{\[}}%[[I0]]] : memref<?xindex>
 // CHECK:           %[[VAL_37:.*]] = memref.load %[[VAL_26]]{{\[}}%[[I1]]] : memref<?xindex>
