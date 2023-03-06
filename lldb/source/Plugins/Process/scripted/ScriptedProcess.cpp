@@ -282,20 +282,6 @@ size_t ScriptedProcess::DoWriteMemory(lldb::addr_t vm_addr, const void *buf,
   return bytes_written;
 }
 
-Status ScriptedProcess::EnableBreakpointSite(BreakpointSite *bp_site) {
-  assert(bp_site != nullptr);
-
-  if (bp_site->IsEnabled()) {
-    return {};
-  }
-
-  if (bp_site->HardwareRequired()) {
-    return Status("Scripted Processes don't support hardware breakpoints");
-  }
-
-  return EnableSoftwareBreakpoint(bp_site);
-}
-
 ArchSpec ScriptedProcess::GetArchitecture() {
   return GetTarget().GetArchitecture();
 }
