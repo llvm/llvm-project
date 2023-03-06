@@ -8,7 +8,7 @@
 ; RUN: llc -mtriple=riscv64 -code-model=medium -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64I-MEDIUM
 
-define void @below_threshold(i32 %in, ptr %out) nounwind {
+define void @below_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV32I-SMALL-LABEL: below_threshold:
 ; RV32I-SMALL:       # %bb.0: # %entry
 ; RV32I-SMALL-NEXT:    li a2, 2
@@ -75,7 +75,6 @@ define void @below_threshold(i32 %in, ptr %out) nounwind {
 ;
 ; RV64I-SMALL-LABEL: below_threshold:
 ; RV64I-SMALL:       # %bb.0: # %entry
-; RV64I-SMALL-NEXT:    sext.w a0, a0
 ; RV64I-SMALL-NEXT:    li a2, 2
 ; RV64I-SMALL-NEXT:    blt a2, a0, .LBB0_4
 ; RV64I-SMALL-NEXT:  # %bb.1: # %entry
@@ -108,7 +107,6 @@ define void @below_threshold(i32 %in, ptr %out) nounwind {
 ;
 ; RV64I-MEDIUM-LABEL: below_threshold:
 ; RV64I-MEDIUM:       # %bb.0: # %entry
-; RV64I-MEDIUM-NEXT:    sext.w a0, a0
 ; RV64I-MEDIUM-NEXT:    li a2, 2
 ; RV64I-MEDIUM-NEXT:    blt a2, a0, .LBB0_4
 ; RV64I-MEDIUM-NEXT:  # %bb.1: # %entry
@@ -161,7 +159,7 @@ exit:
   ret void
 }
 
-define void @above_threshold(i32 %in, ptr %out) nounwind {
+define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV32I-SMALL-LABEL: above_threshold:
 ; RV32I-SMALL:       # %bb.0: # %entry
 ; RV32I-SMALL-NEXT:    addi a0, a0, -1
@@ -233,7 +231,6 @@ define void @above_threshold(i32 %in, ptr %out) nounwind {
 ;
 ; RV64I-SMALL-LABEL: above_threshold:
 ; RV64I-SMALL:       # %bb.0: # %entry
-; RV64I-SMALL-NEXT:    sext.w a0, a0
 ; RV64I-SMALL-NEXT:    addi a0, a0, -1
 ; RV64I-SMALL-NEXT:    li a2, 5
 ; RV64I-SMALL-NEXT:    bltu a2, a0, .LBB1_9
@@ -268,7 +265,6 @@ define void @above_threshold(i32 %in, ptr %out) nounwind {
 ;
 ; RV64I-MEDIUM-LABEL: above_threshold:
 ; RV64I-MEDIUM:       # %bb.0: # %entry
-; RV64I-MEDIUM-NEXT:    sext.w a0, a0
 ; RV64I-MEDIUM-NEXT:    addi a0, a0, -1
 ; RV64I-MEDIUM-NEXT:    li a2, 5
 ; RV64I-MEDIUM-NEXT:    bltu a2, a0, .LBB1_9
