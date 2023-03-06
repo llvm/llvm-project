@@ -245,13 +245,15 @@ public:
     unsigned count = counter++;
 
     StringRef NameStr = Name.getIdentifier().str();
-
-    if (m_log) {
-      m_log->Printf("[LLDBExprNameLookup::lookupAdditions (%u)] Searching for %s",
-                    count, Name.getIdentifier().str().str().c_str());
-    }
+    if (NameStr.empty())
+      return false;
 
     ConstString name_const_str(NameStr);
+    if (m_log) {
+      m_log->Printf("[LLDBExprNameLookup::lookupAdditions (%u)] Searching for %s",
+                    count, name_const_str.AsCString("<anonymous>"));
+    }
+
     std::vector<swift::ValueDecl *> results;
 
     for (auto *alias : m_type_aliases) {
@@ -396,11 +398,13 @@ public:
     unsigned count = counter++;
 
     StringRef NameStr = Name.getIdentifier().str();
-    ConstString name_const_str(NameStr);
+    if (NameStr.empty())
+      return false;
 
+    ConstString name_const_str(NameStr);
     if (m_log) {
       m_log->Printf("[LLDBREPLNameLookup::lookupAdditions (%u)] Searching for %s",
-                    count, Name.getIdentifier().str().str().c_str());
+                    count, name_const_str.AsCString("<anonymous>"));
     }
 
     // Find decls that come from the current compilation.
