@@ -1208,12 +1208,6 @@ public:
   /// Return true if this is a compare constant expression
   bool isCompare() const;
 
-  /// Select constant expr
-  ///
-  /// \param OnlyIfReducedTy see \a getWithOperands() docs.
-  static Constant *getSelect(Constant *C, Constant *V1, Constant *V2,
-                             Type *OnlyIfReducedTy = nullptr);
-
   /// get - Return a binary or shift operator constant expression,
   /// folding if possible.
   ///

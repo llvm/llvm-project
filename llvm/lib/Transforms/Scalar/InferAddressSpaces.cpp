@@ -694,18 +694,6 @@ static Value *cloneConstantExprWithNewAddressSpace(
     return ConstantExpr::getAddrSpaceCast(CE, TargetType);
   }
 
-  if (CE->getOpcode() == Instruction::Select) {
-    Constant *Src0 = CE->getOperand(1);
-    Constant *Src1 = CE->getOperand(2);
-    if (Src0->getType()->getPointerAddressSpace() ==
-        Src1->getType()->getPointerAddressSpace()) {
-
-      return ConstantExpr::getSelect(
-          CE->getOperand(0), ConstantExpr::getAddrSpaceCast(Src0, TargetType),
-          ConstantExpr::getAddrSpaceCast(Src1, TargetType));
-    }
-  }
-
   if (CE->getOpcode() == Instruction::IntToPtr) {
     assert(isNoopPtrIntCastPair(cast<Operator>(CE), *DL, TTI));
     Constant *Src = cast<ConstantExpr>(CE->getOperand(0))->getOperand(0);
