@@ -285,3 +285,16 @@ class CppDataFormatterTestCase(TestBase):
             matching=False,
             substrs=['(int) iAmInt = 0x00000001'])
         self.expect("frame variable iAmInt", substrs=['(int) iAmInt = 1'])
+
+        # Check that pointer to members are correctly formatted
+        self.expect(
+            "frame variable member_ptr",
+            substrs=['member_ptr = 0x'])
+        self.expect(
+            "frame variable member_func_ptr",
+            substrs=['member_func_ptr = 0x',
+                     '(a.out`IUseCharStar::member_func(int) at main.cpp:61)'])
+        self.expect(
+            "frame variable ref_to_member_func_ptr",
+            substrs=['ref_to_member_func_ptr = 0x',
+                     '(a.out`IUseCharStar::member_func(int) at main.cpp:61)'])
