@@ -235,11 +235,25 @@ AIX improvements
 Changes to the RISC-V Backend
 -----------------------------
 
+* :doc:`RISCVUsage` was introduced to document the status of support within
+  LLVM for various RISC-V instruction set extensions.
 * Support for the unratified Zbe, Zbf, Zbm, Zbp, Zbr, and Zbt extensions have
   been removed.
 * i32 is now a native type in the datalayout string. This enables
   LoopStrengthReduce for loops with i32 induction variables, among other
   optimizations.
+* MC layer support was added for the experimental Zca, Zcd, Zcf, Zihintntl, Ztso,
+  and Zawrs extensions.
+* Codegen support was added for the experimental Zca extension and for the
+  Zfhmin extension.
+* MC layer and codegen support was added for the custom XVentanaCondOps and
+  XTHeadVdot extensions.
+* A target feature was introduced to force-enable atomics.
+* Support was added for lowering HWASAN intrinsics.
+* The short forward branch optimisation beneficial to the SiFive Series 7 was
+  implemented.
+* A Syntacore SCR1 CPU model was added.
+* Various codegen improvements.
 
 Changes to the SystemZ Backend
 ------------------------------
