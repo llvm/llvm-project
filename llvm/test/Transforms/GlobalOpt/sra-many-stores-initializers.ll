@@ -489,3 +489,118 @@ entry:
 
   ret void
 }
+
+; Same as @store_mixed_initializer, but the GEP constant expressions are not
+; inbounds.
+define void @store_mixed_initializer_geps_without_inbounds() {
+; CHECK-LABEL: @store_mixed_initializer_geps_without_inbounds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store ptr null, ptr @global.20ptr.4, align 8
+; CHECK-NEXT:    store ptr null, ptr getelementptr inbounds ([[STRUCT_20PTR:%.*]], ptr @global.20ptr.4, i64 0, i32 1), align 8
+; CHECK-NEXT:    store ptr @c, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 2), align 8
+; CHECK-NEXT:    store ptr @c, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 3), align 8
+; CHECK-NEXT:    store ptr @c, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 4), align 8
+; CHECK-NEXT:    store ptr @c, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 5), align 8
+; CHECK-NEXT:    store ptr @c, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 6), align 8
+; CHECK-NEXT:    store ptr @c, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 7), align 8
+; CHECK-NEXT:    store ptr @c, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 8), align 8
+; CHECK-NEXT:    store ptr @c, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 9), align 8
+; CHECK-NEXT:    store ptr @c, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 10), align 8
+; CHECK-NEXT:    store ptr @c, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 11), align 8
+; CHECK-NEXT:    store ptr @c, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 12), align 8
+; CHECK-NEXT:    store ptr @c, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 13), align 8
+; CHECK-NEXT:    store ptr @c, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 14), align 8
+; CHECK-NEXT:    store ptr @c, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 15), align 8
+; CHECK-NEXT:    store ptr @c, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 16), align 8
+; CHECK-NEXT:    [[L0:%.*]] = load ptr, ptr @global.20ptr.4, align 8
+; CHECK-NEXT:    store volatile ptr [[L0]], ptr @c, align 8
+; CHECK-NEXT:    [[L1:%.*]] = load ptr, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 1), align 8
+; CHECK-NEXT:    store volatile ptr [[L1]], ptr @c, align 8
+; CHECK-NEXT:    [[L2:%.*]] = load ptr, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 2), align 8
+; CHECK-NEXT:    store volatile ptr [[L2]], ptr @c, align 8
+; CHECK-NEXT:    [[L3:%.*]] = load ptr, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 3), align 8
+; CHECK-NEXT:    store volatile ptr [[L3]], ptr @c, align 8
+; CHECK-NEXT:    [[L4:%.*]] = load ptr, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 4), align 8
+; CHECK-NEXT:    store volatile ptr [[L4]], ptr @c, align 8
+; CHECK-NEXT:    [[L5:%.*]] = load ptr, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 5), align 8
+; CHECK-NEXT:    store volatile ptr [[L5]], ptr @c, align 8
+; CHECK-NEXT:    [[L6:%.*]] = load ptr, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 6), align 8
+; CHECK-NEXT:    store volatile ptr [[L6]], ptr @c, align 8
+; CHECK-NEXT:    [[L7:%.*]] = load ptr, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 7), align 8
+; CHECK-NEXT:    store volatile ptr [[L7]], ptr @c, align 8
+; CHECK-NEXT:    [[L8:%.*]] = load ptr, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 8), align 8
+; CHECK-NEXT:    store volatile ptr [[L8]], ptr @c, align 8
+; CHECK-NEXT:    [[L9:%.*]] = load ptr, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 9), align 8
+; CHECK-NEXT:    store volatile ptr [[L9]], ptr @c, align 8
+; CHECK-NEXT:    [[L10:%.*]] = load ptr, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 10), align 8
+; CHECK-NEXT:    store volatile ptr [[L10]], ptr @c, align 8
+; CHECK-NEXT:    [[L11:%.*]] = load ptr, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 11), align 8
+; CHECK-NEXT:    store volatile ptr [[L11]], ptr @c, align 8
+; CHECK-NEXT:    [[L12:%.*]] = load ptr, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 12), align 8
+; CHECK-NEXT:    store volatile ptr [[L12]], ptr @c, align 8
+; CHECK-NEXT:    [[L13:%.*]] = load ptr, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 13), align 8
+; CHECK-NEXT:    store volatile ptr [[L13]], ptr @c, align 8
+; CHECK-NEXT:    [[L14:%.*]] = load ptr, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 14), align 8
+; CHECK-NEXT:    store volatile ptr [[L14]], ptr @c, align 8
+; CHECK-NEXT:    [[L15:%.*]] = load ptr, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 15), align 8
+; CHECK-NEXT:    store volatile ptr [[L15]], ptr @c, align 8
+; CHECK-NEXT:    [[L16:%.*]] = load ptr, ptr getelementptr inbounds ([[STRUCT_20PTR]], ptr @global.20ptr.4, i64 0, i32 16), align 8
+; CHECK-NEXT:    store volatile ptr [[L16]], ptr @c, align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  store ptr null, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 0), align 8
+  store ptr null, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 1), align 8
+  store ptr @c, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 2), align 8
+  store ptr @c, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 3), align 8
+  store ptr @c, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 4), align 8
+  store ptr @c, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 5), align 8
+  store ptr @c, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 6), align 8
+  store ptr @c, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 7), align 8
+  store ptr @c, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 8), align 8
+  store ptr @c, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 9), align 8
+  store ptr @c, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 10), align 8
+  store ptr @c, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 11), align 8
+  store ptr @c, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 12), align 8
+  store ptr @c, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 13), align 8
+  store ptr @c, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 14), align 8
+  store ptr @c, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 15), align 8
+  store ptr @c, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 16), align 8
+
+  %l0 = load ptr, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 0), align 8
+  store volatile ptr %l0, ptr @c
+  %l1 = load ptr, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 1), align 8
+  store volatile ptr %l1, ptr @c
+  %l2 = load ptr, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 2), align 8
+  store volatile ptr %l2, ptr @c
+  %l3 = load ptr, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 3), align 8
+  store volatile ptr %l3, ptr @c
+  %l4 = load ptr, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 4), align 8
+  store volatile ptr %l4, ptr @c
+  %l5 = load ptr, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 5), align 8
+  store volatile ptr %l5, ptr @c
+  %l6 = load ptr, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 6), align 8
+  store volatile ptr %l6, ptr @c
+  %l7 = load ptr, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 7), align 8
+  store volatile ptr %l7, ptr @c
+  %l8 = load ptr, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 8), align 8
+  store volatile ptr %l8, ptr @c
+  %l9 = load ptr, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 9), align 8
+  store volatile ptr %l9, ptr @c
+  %l10 = load ptr, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 10), align 8
+  store volatile ptr %l10, ptr @c
+  %l11 = load ptr, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 11), align 8
+  store volatile ptr %l11, ptr @c
+  %l12 = load ptr, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 12), align 8
+  store volatile ptr %l12, ptr @c
+  %l13 = load ptr, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 13), align 8
+  store volatile ptr %l13, ptr @c
+  %l14 = load ptr, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 14), align 8
+  store volatile ptr %l14, ptr @c
+  %l15 = load ptr, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 15), align 8
+  store volatile ptr %l15, ptr @c
+  %l16 = load ptr, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 16), align 8
+  store volatile ptr %l16, ptr @c
+
+  ret void
+}
