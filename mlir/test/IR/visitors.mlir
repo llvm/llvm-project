@@ -71,6 +71,23 @@ func.func @structured_cfg() {
 // CHECK:       Visiting region 0 from operation 'func.func'
 // CHECK:       Visiting region 0 from operation 'builtin.module'
 
+// CHECK-LABEL: Op reverse post-order visits
+// CHECK:       Visiting op 'func.return'
+// CHECK:       Visiting op 'scf.yield'
+// CHECK:       Visiting op 'use3'
+// CHECK:       Visiting op 'scf.yield'
+// CHECK:       Visiting op 'use2'
+// CHECK:       Visiting op 'scf.yield'
+// CHECK:       Visiting op 'use1'
+// CHECK:       Visiting op 'scf.if'
+// CHECK:       Visiting op 'use0'
+// CHECK:       Visiting op 'scf.for'
+// CHECK:       Visiting op 'arith.constant'
+// CHECK:       Visiting op 'arith.constant'
+// CHECK:       Visiting op 'arith.constant'
+// CHECK:       Visiting op 'func.func'
+// CHECK:       Visiting op 'builtin.module'
+
 // CHECK-LABEL: Op pre-order erasures
 // CHECK:       Erasing op 'scf.for'
 // CHECK:       Erasing op 'func.return'
@@ -168,6 +185,29 @@ func.func @unstructured_cfg() {
 // CHECK:       Visiting block ^bb0 from region 0 from operation 'builtin.module'
 
 // CHECK-LABEL: Region post-order visits
+// CHECK:       Visiting region 0 from operation 'regionOp0'
+// CHECK:       Visiting region 0 from operation 'func.func'
+// CHECK:       Visiting region 0 from operation 'builtin.module'
+
+// CHECK-LABEL: Op reverse post-order visits
+// CHECK:       Visiting op 'func.return'
+// CHECK:       Visiting op 'op2'
+// CHECK:       Visiting op 'cf.br'
+// CHECK:       Visiting op 'op1'
+// CHECK:       Visiting op 'cf.br'
+// CHECK:       Visiting op 'op0'
+// CHECK:       Visiting op 'regionOp0'
+// CHECK:       Visiting op 'func.func'
+// CHECK:       Visiting op 'builtin.module'
+
+// CHECK-LABEL: Block reverse post-order visits
+// CHECK:       Visiting block ^bb2 from region 0 from operation 'regionOp0'
+// CHECK:       Visiting block ^bb1 from region 0 from operation 'regionOp0'
+// CHECK:       Visiting block ^bb0 from region 0 from operation 'regionOp0'
+// CHECK:       Visiting block ^bb0 from region 0 from operation 'func.func'
+// CHECK:       Visiting block ^bb0 from region 0 from operation 'builtin.module'
+
+// CHECK-LABEL: Region reverse post-order visits
 // CHECK:       Visiting region 0 from operation 'regionOp0'
 // CHECK:       Visiting region 0 from operation 'func.func'
 // CHECK:       Visiting region 0 from operation 'builtin.module'
