@@ -327,9 +327,9 @@ defm "" : LMULSchedWrites<"WriteVISlideI">;
 defm "" : LMULSchedWrites<"WriteVISlide1X">;
 defm "" : LMULSchedWrites<"WriteVFSlide1F">;
 // 16.4. Vector Register Gather Instructions
-defm "" : LMULSchedWrites<"WriteVGatherV">;
-defm "" : LMULSchedWrites<"WriteVGatherX">;
-defm "" : LMULSchedWrites<"WriteVGatherI">;
+defm "" : LMULSchedWrites<"WriteVRGatherVV">;
+defm "" : LMULSchedWrites<"WriteVRGatherVX">;
+defm "" : LMULSchedWrites<"WriteVRGatherVI">;
 // 16.5. Vector Compress Instruction
 defm "" : LMULSchedWrites<"WriteVCompressV">;
 // 16.6. Whole Vector Register Move
@@ -549,8 +549,8 @@ defm "" : LMULSchedReads<"ReadVISlideX">;
 defm "" : LMULSchedReads<"ReadVFSlideV">;
 defm "" : LMULSchedReads<"ReadVFSlideF">;
 // 16.4. Vector Register Gather Instructions
-defm "" : LMULSchedReads<"ReadVGatherV">;
-defm "" : LMULSchedReads<"ReadVGatherX">;
+defm "" : LMULSchedReads<"ReadVRGatherVV">;
+defm "" : LMULSchedReads<"ReadVRGatherVX">;
 // 16.5. Vector Compress Instruction
 defm "" : LMULSchedReads<"ReadVCompressV">;
 // 16.6. Whole Vector Register Move
@@ -741,9 +741,9 @@ defm "" : LMULWriteRes<"WriteVISlideX", []>;
 defm "" : LMULWriteRes<"WriteVISlideI", []>;
 defm "" : LMULWriteRes<"WriteVISlide1X", []>;
 defm "" : LMULWriteRes<"WriteVFSlide1F", []>;
-defm "" : LMULWriteRes<"WriteVGatherV", []>;
-defm "" : LMULWriteRes<"WriteVGatherX", []>;
-defm "" : LMULWriteRes<"WriteVGatherI", []>;
+defm "" : LMULWriteRes<"WriteVRGatherVV", []>;
+defm "" : LMULWriteRes<"WriteVRGatherVX", []>;
+defm "" : LMULWriteRes<"WriteVRGatherVI", []>;
 defm "" : LMULWriteRes<"WriteVCompressV", []>;
 // These are already LMUL aware
 def : WriteRes<WriteVMov1V, []>;
@@ -899,8 +899,8 @@ defm "" : LMULReadAdvance<"ReadVISlideV", 0>;
 defm "" : LMULReadAdvance<"ReadVISlideX", 0>;
 defm "" : LMULReadAdvance<"ReadVFSlideV", 0>;
 defm "" : LMULReadAdvance<"ReadVFSlideF", 0>;
-defm "" : LMULReadAdvance<"ReadVGatherV", 0>;
-defm "" : LMULReadAdvance<"ReadVGatherX", 0>;
+defm "" : LMULReadAdvance<"ReadVRGatherVV", 0>;
+defm "" : LMULReadAdvance<"ReadVRGatherVX", 0>;
 defm "" : LMULReadAdvance<"ReadVCompressV", 0>;
 // These are already LMUL aware
 def : ReadAdvance<ReadVMov1V, 0>;
