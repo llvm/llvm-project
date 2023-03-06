@@ -540,6 +540,8 @@ ADCEChanged AggressiveDeadCodeElimination::removeDeadInstructions() {
     }
   });
 
+  bool FoundNonDebugInstr = false;
+
   // The inverse of the live set is the dead set.  These are those instructions
   // that have no side effects and do not influence the control flow or return
   // value of the function, and may therefore be deleted safely.
@@ -560,6 +562,9 @@ ADCEChanged AggressiveDeadCodeElimination::removeDeadInstructions() {
         continue;
 
       // Fallthrough and drop the intrinsic.
+    } else {
+      // Remember that we found some non-debug instructions to delete.
+      FoundNonDebugInstr = true;
     }
 
     // Prepare to delete.
@@ -567,15 +572,22 @@ ADCEChanged AggressiveDeadCodeElimination::removeDeadInstructions() {
     salvageDebugInfo(I);
   }
 
-  for (Instruction *&I : Worklist)
-    I->dropAllReferences();
+  Changed.ChangedAnything = Changed.ChangedControlFlow || FoundNonDebugInstr;
 
-  for (Instruction *&I : Worklist) {
-    ++NumRemoved;
-    I->eraseFromParent();
+  // Only actually remove the dead instructions if we know we will invalidate
+  // cached analysis results. If we only found debug intrinsics to remove and
+  // we then invalidate analyses because of that, later passes may behave
+  // differently which then makes the presence of debug info affect code
+  // generation.
+  if (Changed.ChangedAnything) {
+    for (Instruction *&I : Worklist)
+      I->dropAllReferences();
+
+    for (Instruction *&I : Worklist) {
+      ++NumRemoved;
+      I->eraseFromParent();
+    }
   }
-
-  Changed.ChangedAnything = Changed.ChangedControlFlow || !Worklist.empty();
 
   return Changed;
 }
