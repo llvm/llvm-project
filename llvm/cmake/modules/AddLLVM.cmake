@@ -2049,13 +2049,19 @@ function(llvm_install_library_symlink name dest type)
   set(full_name ${CMAKE_${type}_LIBRARY_PREFIX}${name}${CMAKE_${type}_LIBRARY_SUFFIX})
   set(full_dest ${CMAKE_${type}_LIBRARY_PREFIX}${dest}${CMAKE_${type}_LIBRARY_SUFFIX})
 
+  if(LLVM_USE_SYMLINKS)
+    set(LLVM_LINK_OR_COPY create_symlink)
+  else()
+    set(LLVM_LINK_OR_COPY copy)
+  endif()
+
   set(output_dir lib${LLVM_LIBDIR_SUFFIX})
   if(WIN32 AND "${type}" STREQUAL "SHARED")
     set(output_dir "${CMAKE_INSTALL_BINDIR}")
   endif()
 
   install(SCRIPT ${INSTALL_SYMLINK}
-          CODE "install_symlink(\"${full_name}\" \"${full_dest}\" \"${output_dir}\")"
+          CODE "install_symlink(\"${full_name}\" \"${full_dest}\" \"${output_dir}\" \"${LLVM_LINK_OR_COPY}\")"
           COMPONENT ${component})
 
 endfunction()
@@ -2092,10 +2098,16 @@ function(llvm_install_symlink project name dest)
     set(full_dest llvm${CMAKE_EXECUTABLE_SUFFIX})
   endif()
 
+  if(LLVM_USE_SYMLINKS)
+    set(LLVM_LINK_OR_COPY create_symlink)
+  else()
+    set(LLVM_LINK_OR_COPY copy)
+  endif()
+
   set(output_dir "${${project}_TOOLS_INSTALL_DIR}")
 
   install(SCRIPT ${INSTALL_SYMLINK}
-          CODE "install_symlink(\"${full_name}\" \"${full_dest}\" \"${output_dir}\")"
+          CODE "install_symlink(\"${full_name}\" \"${full_dest}\" \"${output_dir}\" \"${LLVM_LINK_OR_COPY}\")"
           COMPONENT ${component})
 
   if (NOT LLVM_ENABLE_IDE AND NOT ARG_ALWAYS_GENERATE)
