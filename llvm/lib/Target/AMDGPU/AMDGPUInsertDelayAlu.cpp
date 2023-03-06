@@ -77,15 +77,15 @@ public:
   struct DelayInfo {
     // One larger than the maximum number of (non-TRANS) VALU instructions we
     // can encode in an s_delay_alu instruction.
-    static const unsigned VALU_MAX = 5;
+    static constexpr unsigned VALU_MAX = 5;
 
     // One larger than the maximum number of TRANS instructions we can encode in
     // an s_delay_alu instruction.
-    static const unsigned TRANS_MAX = 4;
+    static constexpr unsigned TRANS_MAX = 4;
 
     // The maximum number of SALU cycles we can encode in an s_delay_alu
     // instruction.
-    static const unsigned SALU_CYCLES_MAX = 3;
+    static constexpr unsigned SALU_CYCLES_MAX = 3;
 
     // If it was written by a (non-TRANS) VALU, remember how many clock cycles
     // are left until it completes, and how many other (non-TRANS) VALU we have
