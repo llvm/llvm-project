@@ -154,6 +154,13 @@ bool CompilerType::IsFunctionPointerType() const {
   return false;
 }
 
+bool CompilerType::IsMemberFunctionPointerType() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsMemberFunctionPointerType(m_type);
+  return false;
+}
+
 bool CompilerType::IsBlockPointerType(
     CompilerType *function_pointer_type_ptr) const {
   if (IsValid())
