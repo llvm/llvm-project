@@ -8,7 +8,7 @@
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface std-10-5-ex1-interface.cpp \
 // RUN: -o A.pcm
 
-// RUN: %clang_cc1 -std=c++20 std-10-5-ex1-use.cpp  -fmodule-file=A.pcm \
+// RUN: %clang_cc1 -std=c++20 std-10-5-ex1-use.cpp  -fmodule-file=A=A.pcm \
 // RUN:    -fsyntax-only -verify
 
 //--- std-10-5-ex1-interface.cpp
