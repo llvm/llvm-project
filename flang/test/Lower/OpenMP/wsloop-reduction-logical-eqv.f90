@@ -11,7 +11,7 @@
 !CHECK: ^bb0(%[[ARG0:.*]]: !fir.logical<4>, %[[ARG1:.*]]: !fir.logical<4>):
 !CHECK:  %[[arg0_i1:.*]] = fir.convert %[[ARG0]] : (!fir.logical<4>) -> i1
 !CHECK:  %[[arg1_i1:.*]] = fir.convert %[[ARG1]] : (!fir.logical<4>) -> i1
-!CHECK:  %[[RES:.*]] = arith.andi %[[arg0_i1]], %[[arg1_i1]] : i1
+!CHECK:  %[[RES:.*]] = arith.cmpi eq, %[[arg0_i1]], %[[arg1_i1]] : i1
 !CHECK:  %[[RES_logical:.*]] = fir.convert %[[RES]] : (i1) -> !fir.logical<4>
 !CHECK:  omp.yield(%[[RES_logical]] : !fir.logical<4>)
 !CHECK: }
@@ -41,9 +41,9 @@ subroutine simple_reduction(y)
   logical :: x, y(100)
   x = .true.
   !$omp parallel
-  !$omp do reduction(.and.:x)
+  !$omp do reduction(.eqv.:x)
   do i=1, 100
-    x = x .and. y(i)
+    x = x .eqv. y(i)
   end do
   !$omp end do
   !$omp end parallel
@@ -74,9 +74,9 @@ subroutine simple_reduction_switch_order(y)
   logical :: x, y(100)
   x = .true.
   !$omp parallel
-  !$omp do reduction(.and.:x)
+  !$omp do reduction(.eqv.:x)
   do i=1, 100
-  x = y(i) .and. x
+  x = y(i) .eqv. x
   end do
   !$omp end do
   !$omp end parallel
@@ -125,13 +125,12 @@ subroutine multiple_reductions(w)
   y = .true.
   z = .true.
   !$omp parallel
-  !$omp do reduction(.and.:x,y,z)
+  !$omp do reduction(.eqv.:x,y,z)
   do i=1, 100
-  x = x .and. w(i)
-  y = y .and. w(i)
-  z = z .and. w(i)
+  x = x .eqv. w(i)
+  y = y .eqv. w(i)
+  z = z .eqv. w(i)
   end do
   !$omp end do
   !$omp end parallel
 end subroutine
-
