@@ -387,12 +387,6 @@ public:
     return {};
   }
 
-  lldb::SyntheticChildrenSP
-  GetCxxBridgedSyntheticChildProvider(ValueObjectSP valobj) {
-    STUB_LOG();
-    return {};
-  }
-
   void WillStartExecutingUserExpression(bool runs_in_playground_or_repl) {
     if (!runs_in_playground_or_repl)
       STUB_LOG();
@@ -1849,77 +1843,6 @@ lldb::ValueObjectSP SwiftLanguageRuntime::ExtractSwiftValueObjectFromCxxWrapper(
   }
   return swift_valobj;
 }
-/// Synthetic child for Swift types wrapped in C++ interop wrapper classes.
-class CxxBridgedSyntheticChildren : public SyntheticChildren {
-  class CxxBridgedFrontEndProvider : public SyntheticChildrenFrontEnd {
-  public:
-    CxxBridgedFrontEndProvider(ValueObject &backend)
-        : SyntheticChildrenFrontEnd(backend) {}
-
-    size_t CalculateNumChildren() override {
-      return 1;
-    }
-
-    lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
-      return idx == 0 ? m_backend.GetSP() : nullptr;
-    }
-
-    size_t GetIndexOfChildWithName(ConstString name) override {
-      return m_backend.GetName() == name ? 0 : UINT32_MAX;
-    }
-
-    bool Update() override { return false; }
-
-    bool MightHaveChildren() override { return true; }
-
-    ConstString GetSyntheticTypeName() override {
-      return m_backend.GetCompilerType().GetTypeName();
-    }
-  };
-
-public:
-  CxxBridgedSyntheticChildren(ValueObjectSP valobj, const Flags &flags) 
-      : SyntheticChildren(flags), m_valobj(valobj) {}
-
-  SyntheticChildrenFrontEnd::AutoPointer
-  GetFrontEnd(ValueObject &backend) override {
-    if (!m_valobj)
-      return nullptr;
-    // We ignore the backend parameter here, as we have a more specific one
-    // available.
-    return std::make_unique<CxxBridgedFrontEndProvider>(*m_valobj); 
-  }
-
-  bool IsScripted() override { return false; }
-
-  std::string GetDescription() override {
-    return "C++ bridged synthetic children";
-  }
-
-private:
-  ValueObjectSP m_valobj;
-};
-
-lldb::SyntheticChildrenSP
-SwiftLanguageRuntimeImpl::GetCxxBridgedSyntheticChildProvider(
-    ValueObjectSP valobj) {
-  auto swift_type = valobj->GetCompilerType();
-  if (!swift_type)
-    return nullptr;
-  ConstString type_name = swift_type.GetDisplayTypeName();
-
-  if (!type_name.IsEmpty()) {
-    auto iter = m_bridged_synthetics_map.find(type_name.AsCString()),
-         end = m_bridged_synthetics_map.end();
-    if (iter != end)
-      return iter->second;
-  }
-
-  SyntheticChildrenSP synth_sp = SyntheticChildrenSP(
-      new CxxBridgedSyntheticChildren(valobj, SyntheticChildren::Flags()));
-  m_bridged_synthetics_map.insert({type_name.AsCString(), synth_sp});
-  return synth_sp;
-}
 
 void SwiftLanguageRuntimeImpl::WillStartExecutingUserExpression(
     bool runs_in_playground_or_repl) {
@@ -2546,12 +2469,6 @@ bool SwiftLanguageRuntime::IsValidErrorValue(ValueObject &in_value) {
 lldb::SyntheticChildrenSP
 SwiftLanguageRuntime::GetBridgedSyntheticChildProvider(ValueObject &valobj) {
   FORWARD(GetBridgedSyntheticChildProvider, valobj);
-}
-
-lldb::SyntheticChildrenSP
-SwiftLanguageRuntime::GetCxxBridgedSyntheticChildProvider(
-    ValueObjectSP valobj) {
-  FORWARD(GetCxxBridgedSyntheticChildProvider, valobj);
 }
 
 void SwiftLanguageRuntime::WillStartExecutingUserExpression(
