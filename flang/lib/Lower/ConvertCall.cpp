@@ -415,6 +415,7 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
     // in any cases.
     std::optional<Fortran::evaluate::DynamicType> retTy =
         caller.getCallDescription().proc().GetType();
+    bool cleanupWithDestroy = false;
     if (!fir::isPointerType(funcType.getResults()[0]) && retTy &&
         (retTy->category() == Fortran::common::TypeCategory::Derived ||
          retTy->IsPolymorphic() || retTy->IsUnlimitedPolymorphic())) {
@@ -424,6 +425,7 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
           fir::runtime::genDerivedTypeDestroy(*bldr, loc,
                                               fir::getBase(*allocatedResult));
         });
+        cleanupWithDestroy = true;
       } else {
         const Fortran::semantics::DerivedTypeSpec &typeSpec =
             retTy->GetDerivedTypeSpec();
@@ -433,12 +435,13 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
             mlir::Value box = bldr->createBox(loc, *allocatedResult);
             fir::runtime::genDerivedTypeDestroy(*bldr, loc, box);
           });
+          cleanupWithDestroy = true;
         }
       }
     }
     allocatedResult->match(
         [&](const fir::MutableBoxValue &box) {
-          if (box.isAllocatable()) {
+          if (box.isAllocatable() && !cleanupWithDestroy) {
             // 9.7.3.2 point 4. Finalize allocatables.
             fir::FirOpBuilder *bldr = &converter.getFirOpBuilder();
             stmtCtx.attachCleanup([bldr, loc, box]() {
