@@ -240,6 +240,10 @@ public:
                           CompilerType *function_pointer_type_ptr) override {
     return false;
   }
+  bool IsMemberFunctionPointerType(
+          lldb::opaque_compiler_type_t type) override {
+    return false;
+  }
   bool IsPolymorphicClass(lldb::opaque_compiler_type_t type) override {
     return false;
   }
