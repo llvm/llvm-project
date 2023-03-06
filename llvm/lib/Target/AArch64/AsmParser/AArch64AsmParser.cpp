@@ -50,7 +50,6 @@
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
-#include "llvm/TargetParser/TargetParser.h"
 #include <cassert>
 #include <cctype>
 #include <cstdint>
