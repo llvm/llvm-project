@@ -43,6 +43,9 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
   unsigned GPUFeatures;
   unsigned WavefrontSize;
 
+  /// Whether to use cumode or WGP mode. True for cumode. False for WGP mode.
+  bool CUMode;
+
   /// Target ID is device name followed by optional feature name postfixed
   /// by plus or minus sign delimitted by colon, e.g. gfx908:xnack+:sramecc-.
   /// If the target ID contains feature+, map it to true.
@@ -443,6 +446,10 @@ public:
       assert(F.front() == '+' || F.front() == '-');
       if (F == "+wavefrontsize64")
         WavefrontSize = 64;
+      else if (F == "+cumode")
+        CUMode = true;
+      else if (F == "-cumode")
+        CUMode = false;
       bool IsOn = F.front() == '+';
       StringRef Name = StringRef(F).drop_front();
       if (!llvm::is_contained(TargetIDFeatures, Name))
