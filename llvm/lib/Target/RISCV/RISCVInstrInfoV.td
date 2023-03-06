@@ -942,13 +942,13 @@ multiclass VSLD1_FV_F<string opcodestr, bits<6> funct6, string vw = "v"> {
 
 multiclass VGTR_IV_V_X_I<string opcodestr, bits<6> funct6, Operand optype = simm5, string vw = "v"> {
   def V  : VALUVV<funct6, OPIVV, opcodestr # "." # vw # "v">,
-           Sched<[WriteVRGatherVV_UpperBound, ReadVRGatherVV_UpperBound,
-                  ReadVRGatherVV_UpperBound, ReadVMask]>;
+           Sched<[WriteVRGatherVV_UpperBound, ReadVRGatherVV_data_UpperBound,
+                  ReadVRGatherVV_index_UpperBound, ReadVMask]>;
   def X  : VALUVX<funct6, OPIVX, opcodestr # "." # vw # "x">,
-           Sched<[WriteVRGatherVX_UpperBound, ReadVRGatherVV_UpperBound,
-                  ReadVRGatherVX_UpperBound, ReadVMask]>;
+           Sched<[WriteVRGatherVX_UpperBound, ReadVRGatherVX_data_UpperBound,
+                  ReadVRGatherVX_index_UpperBound, ReadVMask]>;
   def I  : VALUVI<funct6, opcodestr # "." # vw # "i", optype>,
-           Sched<[WriteVRGatherVI_UpperBound, ReadVRGatherVV_UpperBound,
+           Sched<[WriteVRGatherVI_UpperBound, ReadVRGatherVI_data_UpperBound,
                   ReadVMask]>;
 }
 
@@ -1662,8 +1662,8 @@ let Predicates = [HasVInstructions] in {
 let Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather in {
 defm VRGATHER_V : VGTR_IV_V_X_I<"vrgather", 0b001100, uimm5>;
 def VRGATHEREI16_VV : VALUVV<0b001110, OPIVV, "vrgatherei16.vv">,
-                      Sched<[WriteVRGatherVV_UpperBound, ReadVRGatherVV_UpperBound,
-                             ReadVRGatherVV_UpperBound]>;
+                      Sched<[WriteVRGatherVV_UpperBound, ReadVRGatherVV_data_UpperBound,
+                             ReadVRGatherVV_index_UpperBound]>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather
 
 // Vector Compress Instruction
