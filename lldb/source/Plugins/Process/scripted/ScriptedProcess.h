@@ -94,6 +94,8 @@ protected:
   ScriptedProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
                   const ScriptedMetadata &scripted_metadata, Status &error);
 
+  Status DoStop();
+
   void Clear();
 
   bool DoUpdateThreadList(ThreadList &old_thread_list,
