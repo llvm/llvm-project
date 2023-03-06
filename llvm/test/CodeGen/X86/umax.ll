@@ -44,18 +44,17 @@ define i8 @test_i8(i8 %a, i8 %b) nounwind {
 define i8 @test_i8_1(i8 %a) nounwind {
 ; X64-LABEL: test_i8_1:
 ; X64:       # %bb.0:
-; X64-NEXT:    cmpb $2, %dil
-; X64-NEXT:    movl $1, %eax
-; X64-NEXT:    cmovael %edi, %eax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    cmpb $1, %al
+; X64-NEXT:    adcl $0, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_i8_1:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    cmpb $2, %cl
-; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    cmovael %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmpb $1, %al
+; X86-NEXT:    adcl $0, %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
   %r = call i8 @llvm.umax.i8(i8 %a, i8 1)
@@ -86,18 +85,17 @@ define i16 @test_i16(i16 %a, i16 %b) nounwind {
 define i16 @test_i16_1(i16 %a) nounwind {
 ; X64-LABEL: test_i16_1:
 ; X64:       # %bb.0:
-; X64-NEXT:    cmpw $2, %di
-; X64-NEXT:    movl $1, %eax
-; X64-NEXT:    cmovael %edi, %eax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    cmpw $1, %ax
+; X64-NEXT:    adcl $0, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_i16_1:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    cmpw $2, %cx
-; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    cmovael %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmpw $1, %ax
+; X86-NEXT:    adcl $0, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
   %r = call i16 @llvm.umax.i16(i16 %a, i16 1)
@@ -149,17 +147,16 @@ define i32 @test_i32(i32 %a, i32 %b) nounwind {
 define i32 @test_i32_1(i32 %a) nounwind {
 ; X64-LABEL: test_i32_1:
 ; X64:       # %bb.0:
-; X64-NEXT:    cmpl $2, %edi
-; X64-NEXT:    movl $1, %eax
-; X64-NEXT:    cmovael %edi, %eax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    cmpl $1, %edi
+; X64-NEXT:    adcl $0, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_i32_1:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    cmpl $2, %ecx
-; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    cmovael %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmpl $1, %eax
+; X86-NEXT:    adcl $0, %eax
 ; X86-NEXT:    retl
   %r = call i32 @llvm.umax.i32(i32 %a, i32 1)
   ret i32 %r
@@ -198,9 +195,9 @@ define i64 @test_i64(i64 %a, i64 %b) nounwind {
 define i64 @test_i64_1(i64 %a) nounwind {
 ; X64-LABEL: test_i64_1:
 ; X64:       # %bb.0:
-; X64-NEXT:    cmpq $2, %rdi
-; X64-NEXT:    movl $1, %eax
-; X64-NEXT:    cmovaeq %rdi, %rax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    cmpq $1, %rdi
+; X64-NEXT:    adcq $0, %rax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_i64_1:
@@ -208,11 +205,11 @@ define i64 @test_i64_1(i64 %a) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    cmpl $2, %ecx
-; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    movl $1, %esi
-; X86-NEXT:    cmovael %ecx, %esi
+; X86-NEXT:    cmpl $1, %ecx
+; X86-NEXT:    movl %ecx, %esi
+; X86-NEXT:    adcl $0, %esi
 ; X86-NEXT:    testl %edx, %edx
+; X86-NEXT:    movl $1, %eax
 ; X86-NEXT:    cmovnel %ecx, %eax
 ; X86-NEXT:    cmovel %esi, %eax
 ; X86-NEXT:    popl %esi

@@ -20,7 +20,9 @@ class ThreadPool;
 } // namespace llvm
 
 namespace mlir {
-class DebugActionManager;
+namespace tracing {
+class ActionManager;
+}
 class DiagnosticEngine;
 class Dialect;
 class DialectRegistry;
@@ -30,6 +32,7 @@ class Location;
 class MLIRContextImpl;
 class RegisteredOperationName;
 class StorageUniquer;
+class IRUnit;
 
 /// MLIRContext is the top-level object for a collection of MLIR operations. It
 /// holds immortal uniqued objects like types, and the tables used to unique
@@ -215,7 +218,7 @@ public:
   StorageUniquer &getAttributeUniquer();
 
   /// Returns the manager of debug actions within the context.
-  DebugActionManager &getDebugActionManager();
+  tracing::ActionManager &getActionManager();
 
   /// These APIs are tracking whether the context will be used in a
   /// multithreading environment: this has no effect other than enabling

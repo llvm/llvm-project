@@ -157,6 +157,8 @@ Improvements to Clang's diagnostics
   ``-Wno-deprecated-this-capture``.
 - Clang had failed to emit some ``-Wundefined-internal`` for members of a local
   class if that class was first introduced with a forward declaration.
+- Diagnostic notes and fix-its are now generated for ``ifunc``/``alias`` attributes
+  which point to functions whose names are mangled.
 
 Bug Fixes in This Version
 -------------------------

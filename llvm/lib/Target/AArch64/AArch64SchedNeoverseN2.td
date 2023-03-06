@@ -758,8 +758,8 @@ def : InstRW<[N2Write_1cyc_1L01_1D_1I], (instrs STGPreIndex, STGPostIndex,
 // Store allocation tag to two granules, zeroing, signed offset
 // Store allocation tag and reg pair to memory, signed offset
 // Store multiple allocation tags
-def : InstRW<[N2Write_1cyc_1L01_1D], (instrs STGOffset, ST2GOffset, STZGOffset,
-                                             STZ2GOffset, STGPi, STGM, STZGM)>;
+def : InstRW<[N2Write_1cyc_1L01_1D], (instrs STGi, ST2Gi, STZGi,
+                                             STZ2Gi, STGPi, STGM, STZGM)>;
 
 // FP data processing instructions
 // -----------------------------------------------------------------------------

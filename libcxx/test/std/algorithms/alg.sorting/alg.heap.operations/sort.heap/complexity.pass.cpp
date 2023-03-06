@@ -21,8 +21,8 @@
 
 struct Stats {
   int compared = 0;
-  int copied = 0;
-  int moved = 0;
+  int copied   = 0;
+  int moved    = 0;
 } stats;
 
 struct MyInt {
@@ -46,30 +46,30 @@ struct MyInt {
   }
 };
 
-int main(int, char**)
-{
-  const int N = 100'000;
+int main(int, char**) {
+  constexpr int N = (1 << 20);
   std::vector<MyInt> v;
   v.reserve(N);
   std::mt19937 g;
-  for (int i = 0; i < N; ++i)
-    v.emplace_back(g());
-  std::make_heap(v.begin(), v.end());
-
-  // The exact stats of our current implementation are recorded here.
-  // If something changes to make them go a bit up or down, that's probably fine,
-  // and we can just update this test.
-  // But if they suddenly leap upward, that's a bad thing.
-
-  stats = {};
-  std::sort_heap(v.begin(), v.end());
-  assert(stats.copied == 0);
-  assert(stats.moved == 1'764'997);
+  for (int i = 0; i < N; ++i) {
+    v.emplace_back(i);
+  }
+  for (int logn = 10; logn <= 20; ++logn) {
+    const int n = (1 << logn);
+    auto first  = v.begin();
+    auto last   = v.begin() + n;
+    std::shuffle(first, last, g);
+    std::make_heap(first, last);
+    // The exact stats of our current implementation are recorded here.
+    stats = {};
+    std::sort_heap(first, last);
+    LIBCPP_ASSERT(stats.copied == 0);
+    LIBCPP_ASSERT(stats.moved <= 2 * n + n * logn);
 #ifndef _LIBCPP_ENABLE_DEBUG_MODE
-  assert(stats.compared == 1'534'701);
+    LIBCPP_ASSERT(stats.compared <= n * logn);
 #endif
-
-  assert(std::is_sorted(v.begin(), v.end()));
-
+    LIBCPP_ASSERT(std::is_sorted(first, last));
+    LIBCPP_ASSERT(stats.compared <= 2 * n * logn);
+  }
   return 0;
 }

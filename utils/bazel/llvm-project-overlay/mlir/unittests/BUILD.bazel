@@ -12,6 +12,23 @@ package(
 licenses(["notice"])
 
 cc_test(
+    name = "debug_tests",
+    size = "small",
+    srcs = glob([
+        "Debug/*.cpp",
+        "Debug/*.h",
+    ]),
+    deps = [
+        "//llvm:TestingSupport",
+        "//mlir:Debug",
+        "//mlir:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
     name = "ir_tests",
     size = "small",
     srcs = glob([
@@ -21,6 +38,7 @@ cc_test(
     deps = [
         "//llvm:Support",
         "//mlir:IR",
+        "//mlir:Support",
         "//mlir/test:TestDialect",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",

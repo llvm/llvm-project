@@ -692,6 +692,49 @@ TEST(ZipIteratorTest, Reverse) {
   EXPECT_TRUE(all_of(ascending, [](unsigned n) { return (n & 0x01) == 0; }));
 }
 
+// Int iterator that keeps track of the number of its copies.
+struct CountingIntIterator : IntIterator {
+  unsigned *cnt;
+
+  CountingIntIterator(int *it, unsigned &counter)
+      : IntIterator(it), cnt(&counter) {}
+
+  CountingIntIterator(const CountingIntIterator &other)
+      : IntIterator(other.I), cnt(other.cnt) {
+    ++(*cnt);
+  }
+  CountingIntIterator &operator=(const CountingIntIterator &other) {
+    this->I = other.I;
+    this->cnt = other.cnt;
+    ++(*cnt);
+    return *this;
+  }
+};
+
+// Check that the iterators do not get copied with each `zippy` iterator
+// increment.
+TEST(ZipIteratorTest, IteratorCopies) {
+  std::vector<int> ints(1000, 42);
+  unsigned total_copy_count = 0;
+  CountingIntIterator begin(ints.data(), total_copy_count);
+  CountingIntIterator end(ints.data() + ints.size(), total_copy_count);
+
+  size_t iters = 0;
+  auto zippy = zip_equal(ints, llvm::make_range(begin, end));
+  const unsigned creation_copy_count = total_copy_count;
+
+  for (auto [a, b] : zippy) {
+    EXPECT_EQ(a, b);
+    ++iters;
+  }
+  EXPECT_EQ(iters, ints.size());
+
+  // We expect the number of copies to be much smaller than the number of loop
+  // iterations.
+  unsigned loop_copy_count = total_copy_count - creation_copy_count;
+  EXPECT_LT(loop_copy_count, 10u);
+}
+
 TEST(RangeTest, Distance) {
   std::vector<int> v1;
   std::vector<int> v2{1, 2, 3};

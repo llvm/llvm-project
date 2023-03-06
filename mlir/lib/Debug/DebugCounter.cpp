@@ -6,13 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Support/DebugCounter.h"
+#include "mlir/Debug/Counter.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/ManagedStatic.h"
 
 using namespace mlir;
+using namespace mlir::tracing;
 
 //===----------------------------------------------------------------------===//
 // DebugCounter CommandLine Options
@@ -62,9 +63,9 @@ void DebugCounter::addCounter(StringRef actionTag, int64_t countToSkip,
 }
 
 // Register a counter with the specified name.
-FailureOr<bool> DebugCounter::shouldExecute(StringRef tag,
-                                            StringRef description) {
-  auto counterIt = counters.find(tag);
+FailureOr<bool> DebugCounter::execute(llvm::function_ref<void()> transform,
+                                      const Action &action) {
+  auto counterIt = counters.find(action.getTag());
   if (counterIt == counters.end())
     return true;
 

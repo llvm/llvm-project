@@ -1341,6 +1341,9 @@ bool SymbolFileNativePDB::ParseDebugMacros(CompileUnit &comp_unit) {
 llvm::Expected<uint32_t>
 SymbolFileNativePDB::GetFileIndex(const CompilandIndexItem &cii,
                                   uint32_t file_id) {
+  if (!cii.m_strings.hasChecksums() || !cii.m_strings.hasStrings())
+    return llvm::make_error<RawError>(raw_error_code::no_entry);
+
   const auto &checksums = cii.m_strings.checksums().getArray();
   const auto &strings = cii.m_strings.strings();
   // Indices in this structure are actually offsets of records in the
