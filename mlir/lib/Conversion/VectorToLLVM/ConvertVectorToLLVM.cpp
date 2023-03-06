@@ -21,6 +21,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/Support/Casting.h"
 #include <optional>
 
 using namespace mlir;
@@ -820,11 +821,10 @@ public:
   matchAndRewrite(vector::MaskOp maskOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override final {
     // Match against the maskable operation kind.
-    Operation *maskableOp = maskOp.getMaskableOp();
-    if (!isa<MaskedOp>(maskableOp))
+    auto maskedOp = llvm::dyn_cast_or_null<MaskedOp>(maskOp.getMaskableOp());
+    if (!maskedOp)
       return failure();
-    return matchAndRewriteMaskableOp(
-        maskOp, cast<MaskedOp>(maskOp.getMaskableOp()), rewriter);
+    return matchAndRewriteMaskableOp(maskOp, maskedOp, rewriter);
   }
 
 protected:
