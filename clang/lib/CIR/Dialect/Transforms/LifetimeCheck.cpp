@@ -51,9 +51,14 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   void checkLoad(LoadOp op);
   void checkCall(CallOp callOp);
   void checkAwait(AwaitOp awaitOp);
+  void checkReturn(ReturnOp retOp);
 
-  void checkPointerDeref(mlir::Value addr, mlir::Location loc);
+  // FIXME: classify tasks and lambdas prior to check ptr deref
+  // and pass down an enum.
+  void checkPointerDeref(mlir::Value addr, mlir::Location loc,
+                         bool forRetLambda = false);
   void checkCoroTaskStore(StoreOp storeOp);
+  void checkLambdaCaptureStore(StoreOp storeOp);
 
   void checkCtor(CallOp callOp, const clang::CXXConstructorDecl *ctor);
   void checkMoveAssignment(CallOp callOp, const clang::CXXMethodDecl *m);
@@ -76,7 +81,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
 
   // Diagnostic helpers.
   void emitInvalidHistory(mlir::InFlightDiagnostic &D, mlir::Value histKey,
-                          mlir::Location warningLoc);
+                          mlir::Location warningLoc, bool forRetLambda);
 
   ///
   /// Pass options handling
@@ -251,6 +256,8 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   // FIXME: this should be a ScopedHashTable for consistency.
   using PMapType = llvm::DenseMap<mlir::Value, PSetType>;
 
+  // FIXME: we probably don't need to track it at this level, perhaps
+  // just tracking at the scope level should be enough?
   PMapType *currPmap = nullptr;
   PMapType &getPmap() { return *currPmap; }
   void markPsetInvalid(mlir::Value ptr, InvalidStyle invalidStyle,
@@ -298,7 +305,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
 
   ///
   /// Coroutine tasks (promise_type)
-  /// ----------------------------------------------
+  /// ------------------------------
 
   // Track types we already know to be a coroutine task (promise_type)
   llvm::DenseMap<mlir::Type, bool> IsTaskTyCache;
@@ -310,6 +317,17 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   // Since coawait encapsulates several calls to a promise, do not emit
   // the same warning multiple times, e.g. under the same coawait.
   llvm::SmallSet<mlir::Location, 8, LocOrdering> emittedDanglingTasks;
+
+  ///
+  /// Lambdas
+  /// -------
+
+  // Track types we already know to be a lambda
+  llvm::DenseMap<mlir::Type, bool> IsLambdaTyCache;
+  // Check if a given cir type is a struct containing a lambda
+  bool isLambdaType(mlir::Type ty);
+  // Get the lambda struct from a member access to it.
+  mlir::Value getLambdaFromMemberAccess(mlir::Value addr);
 
   ///
   /// Scope, context and guards
@@ -336,6 +354,10 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
     // Value must come directly out of a cir.call to a cir.func which
     // is a coroutine.
     SmallPtrSet<mlir::Value, 2> localTempTasks;
+
+    // Track seen lambdas that escape out of the current scope
+    // (e.g. lambdas returned out of functions).
+    DenseMap<mlir::Value, mlir::Location> localRetLambdas;
 
     LLVM_DUMP_METHOD void dumpLocalValues();
   };
@@ -415,12 +437,20 @@ static Location getEndLocForHist(Operation *Op) {
   return getEndLoc(Op->getLoc());
 }
 
-static Location getEndLocForHist(Region *R) {
-  auto ifOp = dyn_cast<IfOp>(R->getParentOp());
+static Location getEndLocIf(IfOp ifOp, Region *R) {
   assert(ifOp && "what other regions create their own scope?");
   if (&ifOp.getThenRegion() == R)
     return getEndLoc(ifOp.getLoc());
   return getEndLoc(ifOp.getLoc(), /*idx=*/3);
+}
+
+static Location getEndLocForHist(Region *R) {
+  auto parentOp = R->getParentOp();
+  if (isa<IfOp>(parentOp))
+    return getEndLocIf(cast<IfOp>(parentOp), R);
+  if (isa<FuncOp>(parentOp))
+    return getEndLoc(parentOp->getLoc());
+  llvm_unreachable("what other regions create their own scope?");
 }
 
 static Location getEndLocForHist(LifetimeCheckPass::LexicalScopeContext &lsc) {
@@ -476,20 +506,19 @@ void LifetimeCheckPass::kill(const State &s, InvalidStyle invalidStyle,
     owners.erase(v);
     ptrs.erase(v);
     tasks.erase(v);
-    getPmap().erase(v);
   }
 }
 
 void LifetimeCheckPass::LexicalScopeGuard::cleanup() {
   auto *localScope = Pass.currScope;
-  // If we are cleaning up at the function level, nothing
-  // to do here cause we are past all possible deference points
-  if (localScope->Depth == 0)
-    return;
-
   for (auto pointee : localScope->localValues)
     Pass.kill(State::getLocalValue(pointee), InvalidStyle::EndOfScope,
               getEndLocForHist(*localScope));
+
+  // Catch interesting dangling references out of returns.
+  for (auto l : localScope->localRetLambdas)
+    Pass.checkPointerDeref(l.first, l.second,
+                           /*forRetLambda=*/true);
 }
 
 void LifetimeCheckPass::checkBlock(Block &block) {
@@ -521,18 +550,15 @@ void LifetimeCheckPass::checkFunc(Operation *op) {
   pmapNullHist.clear();
   invalidHist.clear();
 
-  // Add a new scope. Note that as part of the scope cleanup process
-  // we apply section 2.3 KILL(x) functionality, turning relevant
-  // references invalid.
-  LexicalScopeContext lexScope{op};
-  LexicalScopeGuard scopeGuard{*this, &lexScope};
-
   // Create a new pmap for this function.
   PMapType localPmap{};
   PmapGuard pmapGuard{*this, &localPmap};
 
+  // Add a new scope. Note that as part of the scope cleanup process
+  // we apply section 2.3 KILL(x) functionality, turning relevant
+  // references invalid.
   for (Region &region : op->getRegions())
-    checkRegion(region);
+    checkRegionWithScope(region);
 
   // FIXME: store the pmap result for this function, we
   // could do some interesting IPA stuff using this info.
@@ -661,6 +687,33 @@ void LifetimeCheckPass::checkAwait(AwaitOp awaitOp) {
   }
 
   joinPmaps(pmapOps);
+}
+
+void LifetimeCheckPass::checkReturn(ReturnOp retOp) {
+  // Upon return invalidate all local values. Since some return
+  // values might depend on other local address, check for the
+  // dangling aspects for this.
+  if (retOp.getNumOperands() == 0)
+    return;
+
+  auto retTy = retOp.getOperand(0).getType();
+  // FIXME: this can be extended to cover more leaking/dandling
+  // semantics out of functions.
+  if (!isLambdaType(retTy))
+    return;
+
+  // The return value is loaded from the return slot before
+  // returning.
+  auto loadOp = dyn_cast<LoadOp>(retOp.getOperand(0).getDefiningOp());
+  assert(loadOp && "expected cir.load");
+  if (!isa<AllocaOp>(loadOp.getAddr().getDefiningOp()))
+    return;
+
+  // Keep track of interesting lambda.
+  assert(!currScope->localRetLambdas.count(loadOp.getAddr()) &&
+         "lambda already returned?");
+  currScope->localRetLambdas.insert(
+      std::make_pair(loadOp.getAddr(), loadOp.getLoc()));
 }
 
 void LifetimeCheckPass::checkSwitch(SwitchOp switchOp) {
@@ -921,17 +974,45 @@ void LifetimeCheckPass::checkCoroTaskStore(StoreOp storeOp) {
   llvm_unreachable("expecting cir.call defining op");
 }
 
+mlir::Value LifetimeCheckPass::getLambdaFromMemberAccess(mlir::Value addr) {
+  auto op = addr.getDefiningOp();
+  // FIXME: we likely want to consider more indirections here...
+  if (!isa<mlir::cir::StructElementAddr>(op))
+    return nullptr;
+  auto allocaOp =
+      dyn_cast<mlir::cir::AllocaOp>(op->getOperand(0).getDefiningOp());
+  if (!allocaOp || !isLambdaType(allocaOp.getAllocaType()))
+    return nullptr;
+  return allocaOp;
+}
+
+void LifetimeCheckPass::checkLambdaCaptureStore(StoreOp storeOp) {
+  auto localByRefAddr = storeOp.getValue();
+  auto lambdaCaptureAddr = storeOp.getAddr();
+
+  if (!isa_and_nonnull<mlir::cir::AllocaOp>(localByRefAddr.getDefiningOp()))
+    return;
+  auto lambdaAddr = getLambdaFromMemberAccess(lambdaCaptureAddr);
+  if (!lambdaAddr)
+    return;
+
+  if (currScope->localValues.count(localByRefAddr))
+    getPmap()[lambdaAddr].insert(State::getLocalValue(localByRefAddr));
+}
+
 void LifetimeCheckPass::checkStore(StoreOp storeOp) {
   auto addr = storeOp.getAddr();
 
   // The bulk of the check is done on top of store to pointer categories,
   // which usually represent the most common case.
   //
-  // We handle some special local values, like coroutine tasks, which could
-  // be holding references to things with dangling lifetime.
+  // We handle some special local values, like coroutine tasks and lambdas,
+  // which could be holding references to things with dangling lifetime.
   if (!ptrs.count(addr)) {
     if (currScope->localTempTasks.count(storeOp.getValue()))
       checkCoroTaskStore(storeOp);
+    else
+      checkLambdaCaptureStore(storeOp);
     return;
   }
 
@@ -1006,7 +1087,8 @@ void LifetimeCheckPass::checkLoad(LoadOp loadOp) {
 
 void LifetimeCheckPass::emitInvalidHistory(mlir::InFlightDiagnostic &D,
                                            mlir::Value histKey,
-                                           mlir::Location warningLoc) {
+                                           mlir::Location warningLoc,
+                                           bool forRetLambda) {
   assert(invalidHist.count(histKey) && "expected invalid hist");
   auto &hist = invalidHist[histKey];
   unsigned limit = opts.histLimit;
@@ -1021,15 +1103,18 @@ void LifetimeCheckPass::emitInvalidHistory(mlir::InFlightDiagnostic &D,
       break;
     }
     case InvalidStyle::EndOfScope: {
-      if (!tasks.count(histKey)) {
-        StringRef outOfScopeVarName = getVarNameFromValue(*info.val);
-        D.attachNote(info.loc) << "pointee '" << outOfScopeVarName
-                               << "' invalidated at end of scope";
-      } else {
+      if (tasks.count(histKey)) {
         D.attachNote((*info.val).getLoc()) << "coroutine bound to resource "
                                            << "with expired lifetime";
         D.attachNote(info.loc) << "at the end of scope or full-expression";
         emittedDanglingTasks.insert(warningLoc);
+      } else if (forRetLambda) {
+        D.attachNote(info.val->getLoc())
+            << "declared here but invalid after function end";
+      } else {
+        StringRef outOfScopeVarName = getVarNameFromValue(*info.val);
+        D.attachNote(info.loc) << "pointee '" << outOfScopeVarName
+                               << "' invalidated at end of scope";
       }
       break;
     }
@@ -1043,8 +1128,8 @@ void LifetimeCheckPass::emitInvalidHistory(mlir::InFlightDiagnostic &D,
   }
 }
 
-void LifetimeCheckPass::checkPointerDeref(mlir::Value addr,
-                                          mlir::Location loc) {
+void LifetimeCheckPass::checkPointerDeref(mlir::Value addr, mlir::Location loc,
+                                          bool forRetLambda) {
   bool hasInvalid = getPmap()[addr].count(State::getInvalid());
   bool hasNullptr = getPmap()[addr].count(State::getNullPtr());
 
@@ -1076,13 +1161,15 @@ void LifetimeCheckPass::checkPointerDeref(mlir::Value addr,
   StringRef varName = getVarNameFromValue(addr);
   auto D = emitWarning(loc);
 
-  if (tasks.count(addr)) {
+  if (tasks.count(addr))
     D << "use of coroutine '" << varName << "' with dangling reference";
-  } else
+  else if (forRetLambda)
+    D << "returned lambda captures local variable";
+  else
     D << "use of invalid pointer '" << varName << "'";
 
   if (hasInvalid && opts.emitHistoryInvalid())
-    emitInvalidHistory(D, addr, loc);
+    emitInvalidHistory(D, addr, loc, forRetLambda);
 
   if (hasNullptr && opts.emitHistoryNull()) {
     assert(pmapNullHist.count(addr) && "expected nullptr hist");
@@ -1333,6 +1420,21 @@ bool LifetimeCheckPass::isOwnerOrPointerClassMethod(
   return false;
 }
 
+bool LifetimeCheckPass::isLambdaType(mlir::Type ty) {
+  if (IsLambdaTyCache.count(ty))
+    return IsLambdaTyCache[ty];
+
+  IsLambdaTyCache[ty] = false;
+  auto taskTy = ty.dyn_cast<mlir::cir::StructType>();
+  if (!taskTy)
+    return false;
+  auto recordDecl = taskTy.getAst()->getAstDecl();
+  if (recordDecl->isLambda())
+    IsLambdaTyCache[ty] = true;
+
+  return IsLambdaTyCache[ty];
+}
+
 bool LifetimeCheckPass::isTaskType(mlir::Value taskVal) {
   auto ty = taskVal.getType();
   if (IsTaskTyCache.count(ty))
@@ -1448,6 +1550,8 @@ void LifetimeCheckPass::checkOperation(Operation *op) {
     return checkCall(callOp);
   if (auto awaitOp = dyn_cast<AwaitOp>(op))
     return checkAwait(awaitOp);
+  if (auto returnOp = dyn_cast<ReturnOp>(op))
+    return checkReturn(returnOp);
 }
 
 void LifetimeCheckPass::runOnOperation() {
