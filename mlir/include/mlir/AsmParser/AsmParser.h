@@ -49,16 +49,21 @@ parseAsmSourceFile(const llvm::SourceMgr &sourceMgr, Block *block,
 /// If `numRead` is provided, it is set to the number of consumed characters on
 /// succesful parse. Otherwise, parsing fails if the entire string is not
 /// consumed.
+/// Some internal copying can be skipped if the source string is known to be
+/// null terminated.
 Attribute parseAttribute(llvm::StringRef attrStr, MLIRContext *context,
-                         Type type = {}, size_t *numRead = nullptr);
+                         Type type = {}, size_t *numRead = nullptr,
+                         bool isKnownNullTerminated = false);
 
 /// This parses a single MLIR type to an MLIR context if it was valid. If not,
 /// an error diagnostic is emitted to the context.
 /// If `numRead` is provided, it is set to the number of consumed characters on
 /// succesful parse. Otherwise, parsing fails if the entire string is not
 /// consumed.
+/// Some internal copying can be skipped if the source string is known to be
+/// null terminated.
 Type parseType(llvm::StringRef typeStr, MLIRContext *context,
-               size_t *numRead = nullptr);
+               size_t *numRead = nullptr, bool isKnownNullTerminated = false);
 
 /// This parses a single IntegerSet/AffineMap to an MLIR context if it was
 /// valid. If not, an error message is emitted through a new
