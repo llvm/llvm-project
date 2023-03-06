@@ -43671,6 +43671,7 @@ static bool checkBitcastSrcVectorSize(SDValue Src, unsigned Size,
   case ISD::OR:
     return checkBitcastSrcVectorSize(Src.getOperand(0), Size, AllowTruncate) &&
            checkBitcastSrcVectorSize(Src.getOperand(1), Size, AllowTruncate);
+  case ISD::SELECT:
   case ISD::VSELECT:
     return Src.getOperand(0).getScalarValueSizeInBits() == 1 &&
            checkBitcastSrcVectorSize(Src.getOperand(1), Size, AllowTruncate) &&
@@ -43742,6 +43743,7 @@ static SDValue signExtendBitcastSrcVector(SelectionDAG &DAG, EVT SExtVT,
         Src.getOpcode(), DL, SExtVT,
         signExtendBitcastSrcVector(DAG, SExtVT, Src.getOperand(0), DL),
         signExtendBitcastSrcVector(DAG, SExtVT, Src.getOperand(1), DL));
+  case ISD::SELECT:
   case ISD::VSELECT:
     return DAG.getSelect(
         DL, SExtVT, Src.getOperand(0),
