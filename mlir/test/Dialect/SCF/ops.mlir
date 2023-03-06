@@ -26,6 +26,17 @@ func.func @std_for(%arg0 : index, %arg1 : index, %arg2 : index) {
 //  CHECK-NEXT:       %{{.*}} = arith.select %{{.*}}, %{{.*}}, %{{.*}} : index
 //  CHECK-NEXT:       scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 
+func.func @std_for_i32(%arg0 : i32, %arg1 : i32, %arg2 : i32) {
+  scf.for %i0 = %arg0 to %arg1 step %arg2 : i32 {
+    scf.for %i1 = %arg0 to %arg1 step %arg2 : i32 {
+    }
+  }
+  return
+}
+// CHECK-LABEL: func @std_for_i32(
+//  CHECK-NEXT:   scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} : i32 {
+//  CHECK-NEXT:     scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} : i32 {
+
 func.func @std_if(%arg0: i1, %arg1: f32) {
   scf.if %arg0 {
     %0 = arith.addf %arg1, %arg1 : f32
