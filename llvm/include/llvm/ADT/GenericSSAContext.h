@@ -53,20 +53,36 @@ public:
   // indicated by the compiler.
   using FunctionT = typename _FunctionT::invalidTemplateInstanceError;
 
-  // Every FunctionT has a unique BlockT marked as its entry.
-  //
-  // static BlockT* getEntryBlock(FunctionT &F);
-
   // Initialize the SSA context with information about the FunctionT being
   // processed.
   //
   // void setFunction(FunctionT &function);
   // FunctionT* getFunction() const;
 
+  // Every FunctionT has a unique BlockT marked as its entry.
+  //
+  // static BlockT* getEntryBlock(FunctionT &F);
+
+  // Methods to examine basic blocks and values
+  //
+  // static void appendBlockDefs(SmallVectorImpl<ValueRefT> &defs,
+  //                             BlockT &block);
+  // static void appendBlockDefs(SmallVectorImpl<const ValueRefT> &defs,
+  //                             const BlockT &block);
+
+  // static void appendBlockTerms(SmallVectorImpl<InstT *> &terms,
+  //                              BlockT &block);
+  // static void appendBlockTerms(SmallVectorImpl<const InstT *> &terms,
+  //                              const BlockT &block);
+  //
+  // static bool comesBefore(const InstT *lhs, const InstT *rhs);
+  // static bool isConstantOrUndefValuePhi(const InstT &Instr);
+  // const BlockT *getDefBlock(const ValueRefT value) const;
+
   // Methods to print various objects.
   //
   // Printable print(BlockT *block) const;
-  // Printable print(InstructionT *inst) const;
+  // Printable print(InstT *inst) const;
   // Printable print(ValueRefT value) const;
 };
 } // namespace llvm
