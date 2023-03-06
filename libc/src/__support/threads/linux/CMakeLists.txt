@@ -28,6 +28,7 @@ add_object_library(
     .futex_word_type
     libc.config.linux.app_h
     libc.include.sys_syscall
+    libc.src.errno.errno
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.stringstream
     libc.src.__support.CPP.string_view

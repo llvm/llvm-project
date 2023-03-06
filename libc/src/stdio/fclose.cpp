@@ -9,7 +9,7 @@
 #include "src/stdio/fclose.h"
 #include "src/__support/File/file.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <stdio.h>
 
 namespace __llvm_libc {
@@ -18,7 +18,7 @@ LLVM_LIBC_FUNCTION(int, fclose, (::FILE * stream)) {
   auto *file = reinterpret_cast<__llvm_libc::File *>(stream);
   int result = File::cleanup(file);
   if (result != 0) {
-    errno = result;
+    libc_errno = result;
     return EOF;
   }
   return 0;
