@@ -672,7 +672,7 @@ static LogicalResult verifyPackUnPack(Operation *op, bool requiresStaticShape,
   // level-coordinates (cf., the op documentation).
   const auto coordsRank = coordinatesTp.getShape()[1];
   const auto tensorRank = tensorTp.getLvlRank();
-  if (!ShapedType::isDynamic(coordsRank) && coordsRank != tensorRank)
+  if (!ShapedType::isDynamic(coordsRank) && (unsigned)coordsRank != tensorRank)
     return op->emitError("input/output level-ranks don't match");
 
   return success();
