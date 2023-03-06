@@ -679,6 +679,8 @@ define i8 @nabs_extra_use_icmp_sub(i8 %x) {
   ret i8 %s
 }
 
+; TODO: negate-of-abs-diff
+
 define i32 @nabs_diff_signed_slt(i32 %a, i32 %b) {
 ; CHECK-LABEL: @nabs_diff_signed_slt(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
@@ -693,6 +695,8 @@ define i32 @nabs_diff_signed_slt(i32 %a, i32 %b) {
   %cond = select i1 %cmp, i32 %sub_ab, i32 %sub_ba
   ret i32 %cond
 }
+
+; TODO: negate-of-abs-diff
 
 define <2 x i8> @nabs_diff_signed_sle(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @nabs_diff_signed_sle(
@@ -711,11 +715,9 @@ define <2 x i8> @nabs_diff_signed_sle(<2 x i8> %a, <2 x i8> %b) {
 
 define i8 @abs_diff_signed_sgt(i8 %a, i8 %b) {
 ; CHECK-LABEL: @abs_diff_signed_sgt(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nsw i8 [[B]], [[A]]
-; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nsw i8 [[A]], [[B]]
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nsw i8 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    call void @extra_use(i8 [[SUB_AB]])
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i8 [[SUB_AB]], i8 [[SUB_BA]]
+; CHECK-NEXT:    [[COND:%.*]] = call i8 @llvm.abs.i8(i8 [[SUB_AB]], i1 true)
 ; CHECK-NEXT:    ret i8 [[COND]]
 ;
   %cmp = icmp sgt i8 %a, %b
@@ -728,12 +730,11 @@ define i8 @abs_diff_signed_sgt(i8 %a, i8 %b) {
 
 define i8 @abs_diff_signed_sge(i8 %a, i8 %b) {
 ; CHECK-LABEL: @abs_diff_signed_sge(
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp slt i8 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nsw i8 [[B]], [[A]]
+; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nsw i8 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    call void @extra_use(i8 [[SUB_BA]])
 ; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nsw i8 [[A]], [[B]]
 ; CHECK-NEXT:    call void @extra_use(i8 [[SUB_AB]])
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP_NOT]], i8 [[SUB_BA]], i8 [[SUB_AB]]
+; CHECK-NEXT:    [[COND:%.*]] = call i8 @llvm.abs.i8(i8 [[SUB_AB]], i1 true)
 ; CHECK-NEXT:    ret i8 [[COND]]
 ;
   %cmp = icmp sge i8 %a, %b
@@ -744,6 +745,8 @@ define i8 @abs_diff_signed_sge(i8 %a, i8 %b) {
   %cond = select i1 %cmp, i8 %sub_ab, i8 %sub_ba
   ret i8 %cond
 }
+
+; negative test - need nsw
 
 define i32 @abs_diff_signed_slt_no_nsw(i32 %a, i32 %b) {
 ; CHECK-LABEL: @abs_diff_signed_slt_no_nsw(
@@ -760,12 +763,12 @@ define i32 @abs_diff_signed_slt_no_nsw(i32 %a, i32 %b) {
   ret i32 %cond
 }
 
+; bonus nuw - it's fine to match the pattern, but nuw can't propagate
+
 define i8 @abs_diff_signed_sgt_nsw_nuw(i8 %a, i8 %b) {
 ; CHECK-LABEL: @abs_diff_signed_sgt_nsw_nuw(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nuw nsw i8 [[B]], [[A]]
-; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nuw nsw i8 [[A]], [[B]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i8 [[SUB_AB]], i8 [[SUB_BA]]
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nsw i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = call i8 @llvm.abs.i8(i8 [[SUB_AB]], i1 true)
 ; CHECK-NEXT:    ret i8 [[COND]]
 ;
   %cmp = icmp sgt i8 %a, %b
@@ -775,12 +778,12 @@ define i8 @abs_diff_signed_sgt_nsw_nuw(i8 %a, i8 %b) {
   ret i8 %cond
 }
 
+; this is absolute diff, but nuw can't propagate and nsw can be set.
+
 define i8 @abs_diff_signed_sgt_nuw(i8 %a, i8 %b) {
 ; CHECK-LABEL: @abs_diff_signed_sgt_nuw(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nuw i8 [[B]], [[A]]
-; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nuw i8 [[A]], [[B]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i8 [[SUB_AB]], i8 [[SUB_BA]]
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nsw i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = call i8 @llvm.abs.i8(i8 [[SUB_AB]], i1 true)
 ; CHECK-NEXT:    ret i8 [[COND]]
 ;
   %cmp = icmp sgt i8 %a, %b
@@ -789,14 +792,15 @@ define i8 @abs_diff_signed_sgt_nuw(i8 %a, i8 %b) {
   %cond = select i1 %cmp, i8 %sub_ab, i8 %sub_ba
   ret i8 %cond
 }
+
+; same as above
 
 define i8 @abs_diff_signed_sgt_nuw_extra_use1(i8 %a, i8 %b) {
 ; CHECK-LABEL: @abs_diff_signed_sgt_nuw_extra_use1(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nuw i8 [[B]], [[A]]
+; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nuw i8 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    call void @extra_use(i8 [[SUB_BA]])
-; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nuw i8 [[A]], [[B]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i8 [[SUB_AB]], i8 [[SUB_BA]]
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nsw i8 [[A]], [[B]]
+; CHECK-NEXT:    [[COND:%.*]] = call i8 @llvm.abs.i8(i8 [[SUB_AB]], i1 true)
 ; CHECK-NEXT:    ret i8 [[COND]]
 ;
   %cmp = icmp sgt i8 %a, %b
@@ -806,14 +810,14 @@ define i8 @abs_diff_signed_sgt_nuw_extra_use1(i8 %a, i8 %b) {
   %cond = select i1 %cmp, i8 %sub_ab, i8 %sub_ba
   ret i8 %cond
 }
+
+; nuw can't propagate, and the extra use prevents applying nsw
 
 define i8 @abs_diff_signed_sgt_nuw_extra_use2(i8 %a, i8 %b) {
 ; CHECK-LABEL: @abs_diff_signed_sgt_nuw_extra_use2(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nuw i8 [[B]], [[A]]
-; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nuw i8 [[A]], [[B]]
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub i8 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    call void @extra_use(i8 [[SUB_AB]])
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i8 [[SUB_AB]], i8 [[SUB_BA]]
+; CHECK-NEXT:    [[COND:%.*]] = call i8 @llvm.abs.i8(i8 [[SUB_AB]], i1 true)
 ; CHECK-NEXT:    ret i8 [[COND]]
 ;
   %cmp = icmp sgt i8 %a, %b
@@ -824,14 +828,15 @@ define i8 @abs_diff_signed_sgt_nuw_extra_use2(i8 %a, i8 %b) {
   ret i8 %cond
 }
 
+; same as above
+
 define i8 @abs_diff_signed_sgt_nuw_extra_use3(i8 %a, i8 %b) {
 ; CHECK-LABEL: @abs_diff_signed_sgt_nuw_extra_use3(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nuw i8 [[B]], [[A]]
+; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nuw i8 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    call void @extra_use(i8 [[SUB_BA]])
-; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nuw i8 [[A]], [[B]]
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub i8 [[A]], [[B]]
 ; CHECK-NEXT:    call void @extra_use(i8 [[SUB_AB]])
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i8 [[SUB_AB]], i8 [[SUB_BA]]
+; CHECK-NEXT:    [[COND:%.*]] = call i8 @llvm.abs.i8(i8 [[SUB_AB]], i1 true)
 ; CHECK-NEXT:    ret i8 [[COND]]
 ;
   %cmp = icmp sgt i8 %a, %b
@@ -842,6 +847,8 @@ define i8 @abs_diff_signed_sgt_nuw_extra_use3(i8 %a, i8 %b) {
   %cond = select i1 %cmp, i8 %sub_ab, i8 %sub_ba
   ret i8 %cond
 }
+
+; negative test - wrong predicate
 
 define i32 @abs_diff_signed_slt_swap_wrong_pred1(i32 %a, i32 %b) {
 ; CHECK-LABEL: @abs_diff_signed_slt_swap_wrong_pred1(
@@ -858,6 +865,8 @@ define i32 @abs_diff_signed_slt_swap_wrong_pred1(i32 %a, i32 %b) {
   ret i32 %cond
 }
 
+; negative test - wrong predicate
+
 define i32 @abs_diff_signed_slt_swap_wrong_pred2(i32 %a, i32 %b) {
 ; CHECK-LABEL: @abs_diff_signed_slt_swap_wrong_pred2(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[A:%.*]], [[B:%.*]]
@@ -872,6 +881,8 @@ define i32 @abs_diff_signed_slt_swap_wrong_pred2(i32 %a, i32 %b) {
   %cond = select i1 %cmp, i32 %sub_ba, i32 %sub_ab
   ret i32 %cond
 }
+
+; negative test - need common operands
 
 define i32 @abs_diff_signed_slt_swap_wrong_op(i32 %a, i32 %b, i32 %z) {
 ; CHECK-LABEL: @abs_diff_signed_slt_swap_wrong_op(
@@ -890,10 +901,8 @@ define i32 @abs_diff_signed_slt_swap_wrong_op(i32 %a, i32 %b, i32 %z) {
 
 define i32 @abs_diff_signed_slt_swap(i32 %a, i32 %b) {
 ; CHECK-LABEL: @abs_diff_signed_slt_swap(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nsw i32 [[B]], [[A]]
-; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nsw i32 [[A]], [[B]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SUB_BA]], i32 [[SUB_AB]]
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nsw i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB_AB]], i1 true)
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %cmp = icmp slt i32 %a, %b
@@ -905,10 +914,8 @@ define i32 @abs_diff_signed_slt_swap(i32 %a, i32 %b) {
 
 define <2 x i8> @abs_diff_signed_sle_swap(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @abs_diff_signed_sle_swap(
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp sgt <2 x i8> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nsw <2 x i8> [[B]], [[A]]
-; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nsw <2 x i8> [[A]], [[B]]
-; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP_NOT]], <2 x i8> [[SUB_AB]], <2 x i8> [[SUB_BA]]
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nsw <2 x i8> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = call <2 x i8> @llvm.abs.v2i8(<2 x i8> [[SUB_AB]], i1 true)
 ; CHECK-NEXT:    ret <2 x i8> [[COND]]
 ;
   %cmp = icmp sle <2 x i8> %a, %b
@@ -917,6 +924,8 @@ define <2 x i8> @abs_diff_signed_sle_swap(<2 x i8> %a, <2 x i8> %b) {
   %cond = select <2 x i1> %cmp, <2 x i8> %sub_ba, <2 x i8> %sub_ab
   ret <2 x i8> %cond
 }
+
+; TODO: negate-of-abs-diff
 
 define i8 @nabs_diff_signed_sgt_swap(i8 %a, i8 %b) {
 ; CHECK-LABEL: @nabs_diff_signed_sgt_swap(
@@ -934,6 +943,8 @@ define i8 @nabs_diff_signed_sgt_swap(i8 %a, i8 %b) {
   %cond = select i1 %cmp, i8 %sub_ba, i8 %sub_ab
   ret i8 %cond
 }
+
+; TODO: negate-of-abs-diff, but too many uses?
 
 define i8 @nabs_diff_signed_sge_swap(i8 %a, i8 %b) {
 ; CHECK-LABEL: @nabs_diff_signed_sge_swap(
@@ -953,6 +964,8 @@ define i8 @nabs_diff_signed_sge_swap(i8 %a, i8 %b) {
   %cond = select i1 %cmp, i8 %sub_ba, i8 %sub_ab
   ret i8 %cond
 }
+
+; negative test - need nsw
 
 define i32 @abs_diff_signed_slt_no_nsw_swap(i32 %a, i32 %b) {
 ; CHECK-LABEL: @abs_diff_signed_slt_no_nsw_swap(
