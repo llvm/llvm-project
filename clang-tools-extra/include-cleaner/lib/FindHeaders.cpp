@@ -118,7 +118,7 @@ headersForSpecialSymbol(const Symbol &S, const SourceManager &SM,
   if (!FD)
     return {};
 
-  llvm::StringRef FName = FD->getName();
+  llvm::StringRef FName = symbolName(S);
   llvm::SmallVector<tooling::stdlib::Header> Headers;
   if (FName == "move") {
     if (FD->getNumParams() == 1)
