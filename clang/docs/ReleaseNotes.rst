@@ -178,6 +178,8 @@ Bug Fixes in This Version
   (`#57682 <https://github.com/llvm/llvm-project/issues/57682>`_)
 - Clang now support export declarations in the language linkage.
   (`#60405 <https://github.com/llvm/llvm-project/issues/60405>`_)
+- Fix aggregate initialization inside lambda constexpr.
+  (`#60936 <https://github.com/llvm/llvm-project/issues/60936>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

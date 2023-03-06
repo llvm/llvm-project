@@ -147,7 +147,7 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
               resultDims[shapedValue.cast<OpResult>().getResultNumber()];
           for (const auto &dim : enumerate(tensorType.getShape()))
             if (ShapedType::isDynamic(dim.value()))
-              dynamicSizes.push_back(shape[dim.index()]);
+              dynamicSizes.push_back(shape[dim.index()].get<Value>());
         }
       }
     }

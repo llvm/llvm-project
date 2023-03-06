@@ -246,8 +246,12 @@ void UseDefaultMemberInitCheck::checkDefaultInit(
   // Check whether we have multiple hand-written constructors and bomb out, as
   // it is hard to reconcile their sets of member initializers.
   const auto *ClassDecl = cast<CXXRecordDecl>(Field->getParent());
-  if (llvm::count_if(ClassDecl->ctors(), [](const CXXConstructorDecl *Ctor) {
-        return !Ctor->isCopyOrMoveConstructor();
+  if (llvm::count_if(ClassDecl->decls(), [](const Decl *D) {
+        if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
+          D = FTD->getTemplatedDecl();
+        if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(D))
+          return !Ctor->isCopyOrMoveConstructor();
+        return false;
       }) > 1)
     return;
 
