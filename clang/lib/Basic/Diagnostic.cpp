@@ -801,8 +801,8 @@ static const char *getTokenDescForDiagnostic(tok::TokenKind Kind) {
 /// array.
 void Diagnostic::
 FormatDiagnostic(SmallVectorImpl<char> &OutStr) const {
-  if (!StoredDiagMessage.empty()) {
-    OutStr.append(StoredDiagMessage.begin(), StoredDiagMessage.end());
+  if (StoredDiagMessage.has_value()) {
+    OutStr.append(StoredDiagMessage->begin(), StoredDiagMessage->end());
     return;
   }
 
