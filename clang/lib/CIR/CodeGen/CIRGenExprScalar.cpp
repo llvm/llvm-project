@@ -1412,7 +1412,8 @@ mlir::Value ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
       llvm_unreachable("NYI");
     } else {
       CGF.buildNullabilityCheck(LHS, RHS, E->getExprLoc());
-      CGF.currSrcLoc = CGF.getLoc(E->getBeginLoc());
+      CIRGenFunction::SourceLocRAIIObject loc{CGF,
+                                              CGF.getLoc(E->getSourceRange())};
       CGF.buildStoreThroughLValue(RValue::get(RHS), LHS);
     }
   }
