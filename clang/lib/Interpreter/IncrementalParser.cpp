@@ -194,6 +194,15 @@ public:
   }
 };
 
+CodeGenerator *IncrementalParser::getCodeGen() const {
+  FrontendAction *WrappedAct = Act->getWrapped();
+  if (!WrappedAct->hasIRSupport())
+    return nullptr;
+  return static_cast<CodeGenAction *>(WrappedAct)->getCodeGenerator();
+}
+
+IncrementalParser::IncrementalParser() {}
+
 IncrementalParser::IncrementalParser(Interpreter &Interp,
                                      std::unique_ptr<CompilerInstance> Instance,
                                      llvm::LLVMContext &LLVMCtx,
@@ -211,6 +220,21 @@ IncrementalParser::IncrementalParser(Interpreter &Interp,
   P.reset(
       new Parser(CI->getPreprocessor(), CI->getSema(), /*SkipBodies=*/false));
   P->Initialize();
+
+  // An initial PTU is needed as CUDA includes some headers automatically
+  auto PTU = ParseOrWrapTopLevelDecl();
+  if (auto E = PTU.takeError()) {
+    consumeError(std::move(E)); // FIXME
+    return;                     // PTU.takeError();
+  }
+
+  if (CodeGenerator *CG = getCodeGen()) {
+    std::unique_ptr<llvm::Module> M(CG->ReleaseModule());
+    CG->StartModule("incr_module_" + std::to_string(PTUs.size()),
+                    M->getContext());
+    PTU->TheModule = std::move(M);
+    assert(PTU->TheModule && "Failed to create initial PTU");
+  }
 }
 
 IncrementalParser::~IncrementalParser() {
@@ -281,14 +305,6 @@ IncrementalParser::ParseOrWrapTopLevelDecl() {
   return LastPTU;
 }
 
-static CodeGenerator *getCodeGen(FrontendAction *Act) {
-  IncrementalAction *IncrAct = static_cast<IncrementalAction *>(Act);
-  FrontendAction *WrappedAct = IncrAct->getWrapped();
-  if (!WrappedAct->hasIRSupport())
-    return nullptr;
-  return static_cast<CodeGenAction *>(WrappedAct)->getCodeGenerator();
-}
-
 llvm::Expected<PartialTranslationUnit &>
 IncrementalParser::Parse(llvm::StringRef input) {
   Preprocessor &PP = CI->getPreprocessor();
@@ -351,7 +367,7 @@ IncrementalParser::Parse(llvm::StringRef input) {
 
 std::unique_ptr<llvm::Module> IncrementalParser::GenModule() {
   static unsigned ID = 0;
-  if (CodeGenerator *CG = getCodeGen(Act.get())) {
+  if (CodeGenerator *CG = getCodeGen()) {
     std::unique_ptr<llvm::Module> M(CG->ReleaseModule());
     CG->StartModule("incr_module_" + std::to_string(ID++), M->getContext());
     return M;
@@ -378,7 +394,7 @@ void IncrementalParser::CleanUpPTU(PartialTranslationUnit &PTU) {
 }
 
 llvm::StringRef IncrementalParser::GetMangledName(GlobalDecl GD) const {
-  CodeGenerator *CG = getCodeGen(Act.get());
+  CodeGenerator *CG = getCodeGen();
   assert(CG);
   return CG->GetMangledName(GD);
 }
