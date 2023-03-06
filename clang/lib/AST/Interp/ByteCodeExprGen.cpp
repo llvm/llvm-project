@@ -26,10 +26,10 @@ namespace clang {
 namespace interp {
 
 /// Scope used to handle temporaries in toplevel variable declarations.
-template <class Emitter> class DeclScope final : public LocalScope<Emitter> {
+template <class Emitter> class DeclScope final : public VariableScope<Emitter> {
 public:
   DeclScope(ByteCodeExprGen<Emitter> *Ctx, const ValueDecl *VD)
-      : LocalScope<Emitter>(Ctx), Scope(Ctx->P, VD) {}
+      : VariableScope<Emitter>(Ctx), Scope(Ctx->P, VD) {}
 
   void addExtended(const Scope::Local &Local) override {
     return this->addLocal(Local);
@@ -1855,6 +1855,80 @@ template <class Emitter>
 void ByteCodeExprGen<Emitter>::emitCleanup() {
   for (VariableScope<Emitter> *C = VarScope; C; C = C->getParent())
     C->emitDestruction();
+}
+
+/// When calling this, we have a pointer of the local-to-destroy
+/// on the stack.
+/// Emit destruction of record types (or arrays of record types).
+/// FIXME: Handle virtual destructors.
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::emitRecordDestruction(const Descriptor *Desc) {
+  assert(Desc);
+  assert(!Desc->isPrimitive());
+  assert(!Desc->isPrimitiveArray());
+
+  // Arrays.
+  if (Desc->isArray()) {
+    const Descriptor *ElemDesc = Desc->ElemDesc;
+    const Record *ElemRecord = ElemDesc->ElemRecord;
+    assert(ElemRecord); // This is not a primitive array.
+
+    if (const CXXDestructorDecl *Dtor = ElemRecord->getDestructor();
+        Dtor && !Dtor->isTrivial()) {
+      for (ssize_t I = Desc->getNumElems() - 1; I >= 0; --I) {
+        if (!this->emitConstUint64(I, SourceInfo{}))
+          return false;
+        if (!this->emitArrayElemPtrUint64(SourceInfo{}))
+          return false;
+        if (!this->emitRecordDestruction(Desc->ElemDesc))
+          return false;
+      }
+    }
+    return this->emitPopPtr(SourceInfo{});
+  }
+
+  const Record *R = Desc->ElemRecord;
+  assert(R);
+  // First, destroy all fields.
+  for (const Record::Field &Field : llvm::reverse(R->fields())) {
+    const Descriptor *D = Field.Desc;
+    if (!D->isPrimitive() && !D->isPrimitiveArray()) {
+      if (!this->emitDupPtr(SourceInfo{}))
+        return false;
+      if (!this->emitGetPtrField(Field.Offset, SourceInfo{}))
+        return false;
+      if (!this->emitRecordDestruction(D))
+        return false;
+    }
+  }
+
+  // FIXME: Unions need to be handled differently here. We don't want to
+  //   call the destructor of its members.
+
+  // Now emit the destructor and recurse into base classes.
+  if (const CXXDestructorDecl *Dtor = R->getDestructor();
+      Dtor && !Dtor->isTrivial()) {
+    const Function *DtorFunc = getFunction(Dtor);
+    if (DtorFunc && DtorFunc->isConstexpr()) {
+      assert(DtorFunc->hasThisPointer());
+      assert(DtorFunc->getNumParams() == 1);
+      if (!this->emitDupPtr(SourceInfo{}))
+        return false;
+      if (!this->emitCall(DtorFunc, SourceInfo{}))
+        return false;
+    }
+  }
+
+  for (const Record::Base &Base : llvm::reverse(R->bases())) {
+    if (!this->emitGetPtrBase(Base.Offset, SourceInfo{}))
+      return false;
+    if (!this->emitRecordDestruction(Base.Desc))
+      return false;
+  }
+  // FIXME: Virtual bases.
+
+  // Remove the instance pointer.
+  return this->emitPopPtr(SourceInfo{});
 }
 
 namespace clang {
