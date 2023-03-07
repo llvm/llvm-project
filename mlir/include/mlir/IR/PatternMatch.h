@@ -491,17 +491,36 @@ public:
   /// This method erases all operations in a block.
   virtual void eraseBlock(Block *block);
 
-  /// Merge the operations of block 'source' into the end of block 'dest'.
-  /// 'source's predecessors must either be empty or only contain 'dest`.
-  /// 'argValues' is used to replace the block arguments of 'source' after
-  /// merging.
-  virtual void mergeBlocks(Block *source, Block *dest,
-                           ValueRange argValues = std::nullopt);
+  /// Inline the operations of block 'source' into block 'dest' before the given
+  /// position. The source block will be deleted and must have no uses.
+  /// 'argValues' is used to replace the block arguments of 'source'.
+  ///
+  /// If the source block is inserted at the end of the dest block, the dest
+  /// block must have no successors. Similarly, if the source block is inserted
+  /// somewhere in the middle (or beginning) of the dest block, the source block
+  /// must have no successors. Otherwise, the resulting IR would have
+  /// unreachable operations.
+  virtual void inlineBlockBefore(Block *source, Block *dest,
+                                 Block::iterator before,
+                                 ValueRange argValues = std::nullopt);
 
-  // Merge the operations of block 'source' before the operation 'op'. Source
-  // block should not have existing predecessors or successors.
-  void mergeBlockBefore(Block *source, Operation *op,
-                        ValueRange argValues = std::nullopt);
+  /// Inline the operations of block 'source' before the operation 'op'. The
+  /// source block will be deleted and must have no uses. 'argValues' is used to
+  /// replace the block arguments of 'source'
+  ///
+  /// The source block must have no successors. Otherwise, the resulting IR
+  /// would have unreachable operations.
+  void inlineBlockBefore(Block *source, Operation *op,
+                         ValueRange argValues = std::nullopt);
+
+  /// Inline the operations of block 'source' into the end of block 'dest'. The
+  /// source block will be deleted and must have no uses. 'argValues' is used to
+  /// replace the block arguments of 'source'
+  ///
+  /// The dest block must have no successors. Otherwise, the resulting IR would
+  /// have unreachable operation.
+  void mergeBlocks(Block *source, Block *dest,
+                   ValueRange argValues = std::nullopt);
 
   /// Split the operations starting at "before" (inclusive) out of the given
   /// block into a new block, and return it.
@@ -555,9 +574,8 @@ public:
   /// Find uses of `from` and replace them with `to` if the `functor` returns
   /// true. It also marks every modified uses and notifies the rewriter that an
   /// in-place operation modification is about to happen.
-  void
-  replaceUsesWithIf(Value from, Value to,
-                    llvm::unique_function<bool(OpOperand &) const> functor);
+  void replaceUsesWithIf(Value from, Value to,
+                         function_ref<bool(OpOperand &)> functor);
 
   /// Find uses of `from` and replace them with `to` except if the user is
   /// `exceptedUser`. It also marks every modified uses and notifies the

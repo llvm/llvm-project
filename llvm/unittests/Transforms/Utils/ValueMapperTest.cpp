@@ -397,4 +397,28 @@ TEST(ValueMapperTest, mapValueLocalAsMetadataToConstant) {
   EXPECT_EQ(MDC, ValueMapper(VM).mapValue(*MDA));
 }
 
+// Type remapper which remaps all types to same destination.
+class TestTypeRemapper : public ValueMapTypeRemapper {
+public:
+  TestTypeRemapper(Type *Ty) : DstTy(Ty) { }
+  Type *remapType(Type *srcTy) { return DstTy; }
+private:
+  Type *DstTy;
+};
+
+TEST(ValueMapperTest, mapValuePoisonWithTypeRemap) {
+  LLVMContext C;
+  Type *OldTy = Type::getInt8Ty(C);
+  Type *NewTy = Type::getInt32Ty(C);
+
+  TestTypeRemapper TM(NewTy);
+  ValueToValueMapTy VM;
+  ValueMapper Mapper(VM, RF_None, &TM);
+
+  // Check that poison is still poison and has not been converted to undef.
+  auto *OldPoison = PoisonValue::get(OldTy);
+  auto *NewPoison = PoisonValue::get(NewTy);
+  EXPECT_EQ(NewPoison, Mapper.mapValue(*OldPoison));
+}
+
 } // end namespace

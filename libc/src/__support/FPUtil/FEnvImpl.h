@@ -28,6 +28,8 @@
 // the apple condition here should be removed.
 #elif defined(LIBC_TARGET_ARCH_IS_X86) && !defined(__APPLE__)
 #include "x86_64/FEnvImpl.h"
+#elif defined(LIBC_TARGET_ARCH_IS_ARM)
+#include "arm/FEnvImpl.h"
 #else
 
 namespace __llvm_libc::fputil {

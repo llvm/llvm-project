@@ -18,8 +18,8 @@ namespace scudo {
 
 class ReleaseRecorder {
 public:
-  ReleaseRecorder(uptr Base, MapPlatformData *Data = nullptr)
-      : Base(Base), Data(Data) {}
+  ReleaseRecorder(uptr Base, uptr Offset = 0, MapPlatformData *Data = nullptr)
+      : Base(Base), Offset(Offset), Data(Data) {}
 
   uptr getReleasedRangesCount() const { return ReleasedRangesCount; }
 
@@ -30,7 +30,7 @@ public:
   // Releases [From, To) range of pages back to OS.
   void releasePageRangeToOS(uptr From, uptr To) {
     const uptr Size = To - From;
-    releasePagesToOS(Base, From, Size, Data);
+    releasePagesToOS(Base, From + Offset, Size, Data);
     ReleasedRangesCount++;
     ReleasedBytes += Size;
   }
@@ -38,7 +38,14 @@ public:
 private:
   uptr ReleasedRangesCount = 0;
   uptr ReleasedBytes = 0;
+  // The starting address to release. Note that we may want to combine (Base +
+  // Offset) as a new Base. However, the Base is retrieved from
+  // `MapPlatformData` on Fuchsia, which means the offset won't be aware.
+  // Therefore, store them separately to make it work on all the platforms.
   uptr Base = 0;
+  // The release offset from Base. This is used when we know a given range after
+  // Base will not be released.
+  uptr Offset = 0;
   MapPlatformData *Data = nullptr;
 };
 
@@ -259,10 +266,10 @@ private:
 };
 
 struct PageReleaseContext {
-  PageReleaseContext(uptr BlockSize, uptr RegionSize, uptr NumberOfRegions) :
-      BlockSize(BlockSize),
-      RegionSize(RegionSize),
-      NumberOfRegions(NumberOfRegions) {
+  PageReleaseContext(uptr BlockSize, uptr RegionSize, uptr NumberOfRegions,
+                     uptr ReleaseSize, uptr ReleaseOffset = 0)
+      : BlockSize(BlockSize), RegionSize(RegionSize),
+        NumberOfRegions(NumberOfRegions) {
     PageSize = getPageSizeCached();
     if (BlockSize <= PageSize) {
       if (PageSize % BlockSize == 0) {
@@ -294,10 +301,20 @@ struct PageReleaseContext {
       }
     }
 
-    PagesCount = roundUp(RegionSize, PageSize) / PageSize;
+    // TODO: For multiple regions, it's more complicated to support partial
+    // region marking (which includes the complexity of how to handle the last
+    // block in a region). We may consider this after markFreeBlocks() accepts
+    // only free blocks from the same region.
+    if (NumberOfRegions != 1) {
+      DCHECK_EQ(ReleaseSize, RegionSize);
+      DCHECK_EQ(ReleaseOffset, 0U);
+    }
+
+    PagesCount = roundUp(ReleaseSize, PageSize) / PageSize;
     PageSizeLog = getLog2(PageSize);
-    RoundedRegionSize = PagesCount << PageSizeLog;
+    RoundedRegionSize = roundUp(RegionSize, PageSize);
     RoundedSize = NumberOfRegions * RoundedRegionSize;
+    ReleasePageOffset = ReleaseOffset >> PageSizeLog;
   }
 
   // PageMap is lazily allocated when markFreeBlocks() is invoked.
@@ -364,7 +381,7 @@ struct PageReleaseContext {
       uptr NumBlocksInFirstPage =
           (FromInRegion + PageSize - FirstBlockInRange + BlockSize - 1) /
           BlockSize;
-      PageMap.incN(RegionIndex, FromInRegion >> PageSizeLog,
+      PageMap.incN(RegionIndex, getPageIndex(FromInRegion),
                    NumBlocksInFirstPage);
       FromInRegion = roundUp(FromInRegion + 1, PageSize);
     }
@@ -392,8 +409,8 @@ struct PageReleaseContext {
       // The last block is not aligned to `To`, we need to increment the
       // counter of `next page` by 1.
       if (LastBlockInRange + BlockSize != ToInRegion) {
-        PageMap.incRange(RegionIndex, ToInRegion >> PageSizeLog,
-                         (LastBlockInRange + BlockSize - 1) >> PageSizeLog);
+        PageMap.incRange(RegionIndex, getPageIndex(ToInRegion),
+                         getPageIndex(LastBlockInRange + BlockSize - 1));
       }
     } else {
       ToInRegion = RegionSize;
@@ -402,8 +419,8 @@ struct PageReleaseContext {
     // After handling the first page and the last block, it's safe to mark any
     // page in between the range [From, To).
     if (FromInRegion < ToInRegion) {
-      PageMap.setAsAllCountedRange(RegionIndex, FromInRegion >> PageSizeLog,
-                                   (ToInRegion - 1) >> PageSizeLog);
+      PageMap.setAsAllCountedRange(RegionIndex, getPageIndex(FromInRegion),
+                                   getPageIndex(ToInRegion - 1));
     }
   }
 
@@ -411,6 +428,19 @@ struct PageReleaseContext {
   void markFreeBlocks(const IntrusiveList<TransferBatchT> &FreeList,
                       DecompactPtrT DecompactPtr, uptr Base) {
     ensurePageMapAllocated();
+
+    const uptr LastBlockInRegion = ((RegionSize / BlockSize) - 1U) * BlockSize;
+
+    // The last block in a region may not use the entire page, so if it's free,
+    // we mark the following "pretend" memory block(s) as free.
+    auto markLastBlock = [this, LastBlockInRegion](const uptr RegionIndex) {
+      uptr PInRegion = LastBlockInRegion + BlockSize;
+      while (PInRegion < RoundedRegionSize) {
+        PageMap.incRange(RegionIndex, getPageIndex(PInRegion),
+                         getPageIndex(PInRegion + BlockSize - 1));
+        PInRegion += BlockSize;
+      }
+    };
 
     // Iterate over free chunks and count how many free chunks affect each
     // allocated page.
@@ -423,14 +453,14 @@ struct PageReleaseContext {
             continue;
           const uptr RegionIndex = NumberOfRegions == 1U ? 0 : P / RegionSize;
           const uptr PInRegion = P - RegionIndex * RegionSize;
-          PageMap.inc(RegionIndex, PInRegion >> PageSizeLog);
+          PageMap.inc(RegionIndex, getPageIndex(PInRegion));
+          if (PInRegion == LastBlockInRegion)
+            markLastBlock(RegionIndex);
         }
       }
     } else {
       // In all other cases chunks might affect more than one page.
       DCHECK_GE(RegionSize, BlockSize);
-      const uptr LastBlockInRegion =
-          ((RegionSize / BlockSize) - 1U) * BlockSize;
       for (const auto &It : FreeList) {
         for (u16 I = 0; I < It.getCount(); I++) {
           const uptr P = DecompactPtr(It.get(I)) - Base;
@@ -438,26 +468,23 @@ struct PageReleaseContext {
             continue;
           const uptr RegionIndex = NumberOfRegions == 1U ? 0 : P / RegionSize;
           uptr PInRegion = P - RegionIndex * RegionSize;
-          PageMap.incRange(RegionIndex, PInRegion >> PageSizeLog,
-                            (PInRegion + BlockSize - 1) >> PageSizeLog);
-          // The last block in a region might straddle a page, so if it's
-          // free, we mark the following "pretend" memory block(s) as free.
-          if (PInRegion == LastBlockInRegion) {
-            PInRegion += BlockSize;
-            while (PInRegion < RoundedRegionSize) {
-              PageMap.incRange(RegionIndex, PInRegion >> PageSizeLog,
-                                (PInRegion + BlockSize - 1) >> PageSizeLog);
-              PInRegion += BlockSize;
-            }
-          }
+          PageMap.incRange(RegionIndex, getPageIndex(PInRegion),
+                           getPageIndex(PInRegion + BlockSize - 1));
+          if (PInRegion == LastBlockInRegion)
+            markLastBlock(RegionIndex);
         }
       }
     }
   }
 
+  uptr getPageIndex(uptr P) { return (P >> PageSizeLog) - ReleasePageOffset; }
+
   uptr BlockSize;
   uptr RegionSize;
   uptr NumberOfRegions;
+  // For partial region marking, some pages in front are not needed to be
+  // counted.
+  uptr ReleasePageOffset;
   uptr PageSize;
   uptr PagesCount;
   uptr PageSizeLog;
@@ -479,6 +506,7 @@ releaseFreeMemoryToOS(PageReleaseContext &Context,
   const uptr BlockSize = Context.BlockSize;
   const uptr PagesCount = Context.PagesCount;
   const uptr NumberOfRegions = Context.NumberOfRegions;
+  const uptr ReleasePageOffset = Context.ReleasePageOffset;
   const uptr FullPagesBlockCountMax = Context.FullPagesBlockCountMax;
   const bool SameBlockCountPerPage = Context.SameBlockCountPerPage;
   RegionPageMap &PageMap = Context.PageMap;
@@ -516,6 +544,10 @@ releaseFreeMemoryToOS(PageReleaseContext &Context,
       }
       uptr PrevPageBoundary = 0;
       uptr CurrentBoundary = 0;
+      if (ReleasePageOffset > 0) {
+        PrevPageBoundary = ReleasePageOffset * PageSize;
+        CurrentBoundary = roundUpSlow(PrevPageBoundary, BlockSize);
+      }
       for (uptr J = 0; J < PagesCount; J++) {
         const uptr PageBoundary = PrevPageBoundary + PageSize;
         uptr BlocksPerPage = Pn;
@@ -547,7 +579,8 @@ releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> &FreeList,
                       uptr RegionSize, uptr NumberOfRegions, uptr BlockSize,
                       ReleaseRecorderT &Recorder, DecompactPtrT DecompactPtr,
                       SkipRegionT SkipRegion) {
-  PageReleaseContext Context(BlockSize, RegionSize, NumberOfRegions);
+  PageReleaseContext Context(BlockSize, /*ReleaseSize=*/RegionSize, RegionSize,
+                             NumberOfRegions);
   Context.markFreeBlocks(FreeList, DecompactPtr, Recorder.getBase());
   releaseFreeMemoryToOS(Context, Recorder, SkipRegion);
 }

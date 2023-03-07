@@ -3557,6 +3557,21 @@ cc_library(
 )
 
 cc_library(
+    name = "Debug",
+    srcs = glob([
+        "lib/Debug/*.cpp",
+        "lib/Debug/*.h",
+    ]),
+    hdrs = glob(["include/mlir/Debug/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":Support",
+        ":IR",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "MlirLspServerSupportLib",
     srcs = glob(
         [
@@ -6836,6 +6851,7 @@ cc_library(
     deps = [
         ":BytecodeReader",
         ":BytecodeWriter",
+        ":Debug",
         ":IR",
         ":Parser",
         ":Pass",

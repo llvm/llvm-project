@@ -168,7 +168,7 @@ static LogicalResult genForeachOnSparseConstant(ForeachOp op,
         auto cloned = cast<ForeachOp>(rewriter.clone(*op.getOperation()));
         assert(args.size() == cloned.getBody()->getNumArguments());
         Operation *yield = cloned.getBody()->getTerminator();
-        rewriter.mergeBlockBefore(cloned.getBody(), op, args);
+        rewriter.inlineBlockBefore(cloned.getBody(), op, args);
         // clean up
         rewriter.eraseOp(cloned);
         reduc = yield->getOperands();
@@ -988,7 +988,8 @@ public:
       // This is annoying, since scf.for inserts a implicit yield op when
       // there is no reduction variable upon creation, in this case we need to
       // merge the block *before* the yield op.
-      rewriter.mergeBlockBefore(srcBlock, &*rewriter.getInsertionPoint(), args);
+      rewriter.inlineBlockBefore(srcBlock, &*rewriter.getInsertionPoint(),
+                                 args);
     }
 
     for (Dimension d = 0; d < dimRank; d++) {

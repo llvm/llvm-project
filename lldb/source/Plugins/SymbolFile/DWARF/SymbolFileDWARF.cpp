@@ -1284,12 +1284,12 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(
       const char *name = nullptr;
       const char *mangled_name = nullptr;
 
-      int decl_file = 0;
-      int decl_line = 0;
-      int decl_column = 0;
-      int call_file = 0;
-      int call_line = 0;
-      int call_column = 0;
+      std::optional<int> decl_file;
+      std::optional<int> decl_line;
+      std::optional<int> decl_column;
+      std::optional<int> call_file;
+      std::optional<int> call_line;
+      std::optional<int> call_column;
       if (die.GetDIENamesAndRanges(name, mangled_name, ranges, decl_file,
                                    decl_line, decl_column, call_file, call_line,
                                    call_column, nullptr)) {
@@ -1332,16 +1332,18 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(
         if (tag != DW_TAG_subprogram &&
             (name != nullptr || mangled_name != nullptr)) {
           std::unique_ptr<Declaration> decl_up;
-          if (decl_file != 0 || decl_line != 0 || decl_column != 0)
+          if (decl_file || decl_line || decl_column)
             decl_up = std::make_unique<Declaration>(
-                comp_unit.GetSupportFiles().GetFileSpecAtIndex(decl_file),
-                decl_line, decl_column);
+                comp_unit.GetSupportFiles().GetFileSpecAtIndex(
+                    decl_file ? *decl_file : 0),
+                decl_line ? *decl_line : 0, decl_column ? *decl_column : 0);
 
           std::unique_ptr<Declaration> call_up;
-          if (call_file != 0 || call_line != 0 || call_column != 0)
+          if (call_file || call_line || call_column)
             call_up = std::make_unique<Declaration>(
-                comp_unit.GetSupportFiles().GetFileSpecAtIndex(call_file),
-                call_line, call_column);
+                comp_unit.GetSupportFiles().GetFileSpecAtIndex(
+                    call_file ? *call_file : 0),
+                call_line ? *call_line : 0, call_column ? *call_column : 0);
 
           block->SetInlinedFunctionInfo(name, mangled_name, decl_up.get(),
                                         call_up.get());

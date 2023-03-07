@@ -582,25 +582,40 @@ define i32 @test_04(ptr noundef %p, i32 noundef %n, i32 noundef %limit, ptr noun
 ; CHECK-LABEL: @test_04(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[X_P:%.*]], align 4, !noundef !0
-; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK-NEXT:    [[INJECTED_COND:%.*]] = icmp ule i32 128, [[X]]
+; CHECK-NEXT:    br i1 [[INJECTED_COND]], label [[LOOP_US:%.*]], label [[LOOP:%.*]]
+; CHECK:       loop.us:
+; CHECK-NEXT:    [[IV_US:%.*]] = phi i32 [ [[IV_NEXT_US:%.*]], [[GUARDED_US:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[EL_PTR_US:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 [[IV_US]]
+; CHECK-NEXT:    [[EL_US:%.*]] = load i8, ptr [[EL_PTR_US]], align 4
+; CHECK-NEXT:    [[BOUND_CHECK_US:%.*]] = icmp slt i8 [[EL_US]], 0
+; CHECK-NEXT:    br i1 [[BOUND_CHECK_US]], label [[COMMON_RET:%.*]], label [[GUARDED_US]], !prof [[PROF5]]
+; CHECK:       guarded.us:
+; CHECK-NEXT:    [[EL_WIDE_US:%.*]] = zext i8 [[EL_US]] to i32
+; CHECK-NEXT:    [[RANGE_CHECK_US:%.*]] = icmp ult i32 [[EL_WIDE_US]], [[X]]
+; CHECK-NEXT:    [[ARR_PTR_US:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[EL_WIDE_US]]
+; CHECK-NEXT:    store i32 [[IV_US]], ptr [[ARR_PTR_US]], align 4
+; CHECK-NEXT:    [[IV_NEXT_US]] = add i32 [[IV_US]], 1
+; CHECK-NEXT:    [[LOOP_COND_US:%.*]] = icmp slt i32 [[IV_NEXT_US]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[LOOP_COND_US]], label [[LOOP_US]], label [[COMMON_RET]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 [[IV]]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i8, ptr [[P]], i32 [[IV]]
 ; CHECK-NEXT:    [[EL:%.*]] = load i8, ptr [[EL_PTR]], align 4
 ; CHECK-NEXT:    [[BOUND_CHECK:%.*]] = icmp slt i8 [[EL]], 0
-; CHECK-NEXT:    br i1 [[BOUND_CHECK]], label [[COMMON_RET:%.*]], label [[GUARDED:%.*]], !prof [[PROF5]]
+; CHECK-NEXT:    br i1 [[BOUND_CHECK]], label [[COMMON_RET]], label [[GUARDED:%.*]], !prof [[PROF5]]
 ; CHECK:       guarded:
 ; CHECK-NEXT:    [[EL_WIDE:%.*]] = zext i8 [[EL]] to i32
 ; CHECK-NEXT:    [[RANGE_CHECK:%.*]] = icmp ult i32 [[EL_WIDE]], [[X]]
-; CHECK-NEXT:    br i1 [[RANGE_CHECK]], label [[BACKEDGE]], label [[COMMON_RET]], !prof [[PROF1]]
+; CHECK-NEXT:    br i1 [[RANGE_CHECK]], label [[BACKEDGE]], label [[COMMON_RET]], !llvm.invariant.condition.injection.disabled !0
 ; CHECK:       backedge:
-; CHECK-NEXT:    [[ARR_PTR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[EL_WIDE]]
+; CHECK-NEXT:    [[ARR_PTR:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[EL_WIDE]]
 ; CHECK-NEXT:    store i32 [[IV]], ptr [[ARR_PTR]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[COMMON_RET]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 0, [[BACKEDGE]] ], [ -1, [[LOOP]] ], [ -2, [[GUARDED]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 0, [[BACKEDGE]] ], [ 0, [[GUARDED_US]] ], [ -1, [[LOOP]] ], [ -1, [[LOOP_US]] ], [ -2, [[GUARDED]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ;
 entry:

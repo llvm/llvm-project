@@ -65,3 +65,75 @@ subroutine fnmsub_testd(a, x, y)
 ! CHECK-FIR: fir.call @fir.__ppc_fnmsub.f64.f64.f64.f64
 ! CHECK-LLVMIR: call contract double @llvm.ppc.fnmsub.f64(double %{{[0-9]}}, double %{{[0-9]}}, double %{{[0-9]}})
 end
+
+! CHECK-LABEL: fctid_test
+subroutine fctid_test(x)
+  real(8) :: x, r
+  r = fctid(x)
+! CHECK-FIR: fir.call @fir.__ppc_fctid.f64.f64
+! CHECK-LLVMIR: call contract double @llvm.ppc.fctid(double %{{[0-9]}})
+end
+
+! CHECK-LABEL: fctidz_test
+subroutine fctidz_test(x)
+  real(8) :: x, r
+  r = fctidz(x)
+! CHECK-FIR: fir.call @fir.__ppc_fctidz.f64.f64
+! CHECK-LLVMIR: call contract double @llvm.ppc.fctidz(double %{{[0-9]}})
+end
+
+! CHECK-LABEL: fctiw_test
+subroutine fctiw_test(x)
+  real(8) :: x, r
+  r = fctiw(x)
+! CHECK-FIR: fir.call @fir.__ppc_fctiw.f64.f64
+! CHECK-LLVMIR: call contract double @llvm.ppc.fctiw(double %{{[0-9]}})
+end
+
+! CHECK-LABEL: fctiwz_test
+subroutine fctiwz_test(x)
+  real(8) :: x, r
+  r = fctiwz(x)
+! CHECK-FIR: fir.call @fir.__ppc_fctiwz.f64.f64
+! CHECK-LLVMIR: call contract double @llvm.ppc.fctiwz(double %{{[0-9]}})
+end
+
+! CHECK-LABEL: fctudz_test
+subroutine fctudz_test(x)
+  real(8) :: x, r
+  r = fctudz(x)
+! CHECK-FIR: fir.call @fir.__ppc_fctudz.f64.f64
+! CHECK-LLVMIR: call contract double @llvm.ppc.fctudz(double %{{[0-9]}})
+end
+
+! CHECK-LABEL: fctuwz_test
+subroutine fctuwz_test(x)
+  real(8) :: x, r
+  r = fctuwz(x)
+! CHECK-FIR: fir.call @fir.__ppc_fctuwz.f64.f64
+! CHECK-LLVMIR: call contract double @llvm.ppc.fctuwz(double %{{[0-9]}})
+end
+
+! CHECK-LABEL: fcfi_test
+subroutine fcfi_test(i)
+  real(8) :: i, r
+  r = fcfi(i)
+! CHECK-FIR: fir.call @fir.__ppc_fcfi.f64.f64
+! CHECK-LLVMIR: call contract double @llvm.ppc.fcfid(double %{{[0-9]}})
+end
+
+! CHECK-LABEL: fcfid_test
+subroutine fcfid_test(i)
+  real(8) :: i, r
+  r = fcfid(i)
+! CHECK-FIR: fir.call @fir.__ppc_fcfid.f64.f64
+! CHECK-LLVMIR: call contract double @llvm.ppc.fcfid(double %{{[0-9]}})
+end
+
+! CHECK-LABEL: fcfud_test
+subroutine fcfud_test(i)
+  real(8) :: i, r
+  r = fcfud(i)
+! CHECK-FIR: fir.call @fir.__ppc_fcfud.f64.f64
+! CHECK-LLVMIR: call contract double @llvm.ppc.fcfud(double %{{[0-9]}})
+end

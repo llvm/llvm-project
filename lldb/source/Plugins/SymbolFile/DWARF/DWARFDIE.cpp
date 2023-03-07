@@ -439,8 +439,9 @@ bool DWARFDIE::IsMethod() const {
 
 bool DWARFDIE::GetDIENamesAndRanges(
     const char *&name, const char *&mangled, DWARFRangeList &ranges,
-    int &decl_file, int &decl_line, int &decl_column, int &call_file,
-    int &call_line, int &call_column,
+    std::optional<int> &decl_file, std::optional<int> &decl_line,
+    std::optional<int> &decl_column, std::optional<int> &call_file,
+    std::optional<int> &call_line, std::optional<int> &call_column,
     lldb_private::DWARFExpressionList *frame_base) const {
   if (IsValid()) {
     return m_die->GetDIENamesAndRanges(

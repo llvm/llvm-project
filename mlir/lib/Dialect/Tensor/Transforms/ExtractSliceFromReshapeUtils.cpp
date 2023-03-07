@@ -116,8 +116,7 @@ tensor::ExtractSliceFromCollapseHelper::create(OpBuilder &b,
       dyn_cast<ReifyRankedShapedTypeOpInterface>(op.getOperation());
   if (failed(reifyShapedTypeInterface.reifyResultShapes(b, reifiedShapes)))
     return failure();
-  SmallVector<OpFoldResult> collapseShapeOutputShape =
-      getAsOpFoldResult(reifiedShapes[0]);
+  SmallVector<OpFoldResult> &collapseShapeOutputShape = reifiedShapes[0];
   SmallVector<ReassociationIndices> reassociationIndices =
       op.getReassociationIndices();
 

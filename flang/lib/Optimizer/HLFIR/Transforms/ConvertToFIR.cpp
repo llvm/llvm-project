@@ -112,11 +112,11 @@ public:
         // Indicate the runtime that it should not reallocate in case of length
         // mismatch, and that it should use the LHS explicit/assumed length if
         // allocating/reallocation the LHS.
-        TODO(loc, "assignment to explicit length whole allocatable");
+        fir::runtime::genAssignExplicitLengthCharacter(builder, loc, to, from);
       } else if (lhs.isPolymorphic()) {
         // Indicate the runtime that the LHS must have the RHS dynamic type
         // after the assignment.
-        TODO(loc, "assignment to whole polymorphic entity");
+        fir::runtime::genAssignPolymorphic(builder, loc, to, from);
       } else {
         fir::runtime::genAssign(builder, loc, to, from);
       }

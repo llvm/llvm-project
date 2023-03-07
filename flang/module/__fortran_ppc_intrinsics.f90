@@ -52,4 +52,72 @@ module __Fortran_PPC_intrinsics
   end interface fnmsub
   public :: fnmsub
 
+! fctid, fctidz, fctiw, fctiwz, fctudz, fctuwz
+  abstract interface
+    elemental real(8) function func_r8r8x(x)
+      real(8), intent(in) :: x
+    end function func_r8r8x
+  end interface
+
+  procedure(func_r8r8x) :: __ppc_fctid
+  interface fctid
+    procedure :: __ppc_fctid
+  end interface fctid
+  public :: fctid
+
+  procedure(func_r8r8x) :: __ppc_fctidz
+  interface fctidz
+    procedure :: __ppc_fctidz
+  end interface fctidz
+  public :: fctidz
+
+  procedure(func_r8r8x) :: __ppc_fctiw
+  interface fctiw
+    procedure :: __ppc_fctiw
+  end interface fctiw
+  public :: fctiw
+
+  procedure(func_r8r8x) :: __ppc_fctiwz
+  interface fctiwz
+    procedure :: __ppc_fctiwz
+  end interface fctiwz
+  public :: fctiwz
+
+  procedure(func_r8r8x) :: __ppc_fctudz
+  interface fctudz
+    procedure :: __ppc_fctudz
+  end interface fctudz
+  public :: fctudz
+
+  procedure(func_r8r8x) :: __ppc_fctuwz
+  interface fctuwz
+    procedure :: __ppc_fctuwz
+  end interface fctuwz
+  public :: fctuwz
+
+! fcfi, fcfid, fcfud
+  abstract interface
+    elemental real(8) function func_r8r8i(i)
+      real(8), intent(in) :: i
+    end function func_r8r8i
+  end interface
+
+  procedure(func_r8r8i) :: __ppc_fcfi
+  interface fcfi
+    procedure :: __ppc_fcfi
+  end interface fcfi
+  public :: fcfi
+
+  procedure(func_r8r8i) :: __ppc_fcfid
+  interface fcfid
+    procedure :: __ppc_fcfid
+  end interface fcfid
+  public :: fcfid
+
+  procedure(func_r8r8i) :: __ppc_fcfud
+  interface fcfud
+    procedure :: __ppc_fcfud
+  end interface fcfud
+  public :: fcfud
+
 end module __Fortran_PPC_intrinsics

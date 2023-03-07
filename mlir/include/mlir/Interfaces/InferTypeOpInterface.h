@@ -26,7 +26,7 @@
 namespace mlir {
 
 class ShapedTypeComponents;
-using ReifiedRankedShapedTypeDims = SmallVector<SmallVector<Value>>;
+using ReifiedRankedShapedTypeDims = SmallVector<SmallVector<OpFoldResult>>;
 
 /// Adaptor class to abstract the differences between whether value is from
 /// a ShapedType or ShapedTypeComponents or DenseIntElementsAttribute.

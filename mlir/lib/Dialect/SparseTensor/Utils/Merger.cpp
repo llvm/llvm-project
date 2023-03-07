@@ -1211,7 +1211,7 @@ static Value insertYieldOp(RewriterBase &rewriter, Location loc, Region &region,
   YieldOp clonedYield = cast<YieldOp>(clonedBlock.getTerminator());
   // Merge cloned block and return yield value.
   Operation *placeholder = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-  rewriter.mergeBlockBefore(&tmpRegion.front(), placeholder, vals);
+  rewriter.inlineBlockBefore(&tmpRegion.front(), placeholder, vals);
   Value val = clonedYield.getResult();
   rewriter.eraseOp(clonedYield);
   rewriter.eraseOp(placeholder);
