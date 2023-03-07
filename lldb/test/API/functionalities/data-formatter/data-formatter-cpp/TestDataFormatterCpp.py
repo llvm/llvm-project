@@ -292,9 +292,7 @@ class CppDataFormatterTestCase(TestBase):
             substrs=['member_ptr = 0x'])
         self.expect(
             "frame variable member_func_ptr",
-            substrs=['member_func_ptr = 0x',
-                     '(a.out`IUseCharStar::member_func(int) at main.cpp:61)'])
+            substrs=['member_func_ptr = 0x'])
         self.expect(
             "frame variable ref_to_member_func_ptr",
-            substrs=['ref_to_member_func_ptr = 0x',
-                     '(a.out`IUseCharStar::member_func(int) at main.cpp:61)'])
+            substrs=['ref_to_member_func_ptr = 0x'])

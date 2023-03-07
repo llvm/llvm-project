@@ -164,8 +164,6 @@ public:
 
   bool IsFunctionPointerType() const;
 
-  bool IsMemberFunctionPointerType() const;
-
   bool
   IsBlockPointerType(CompilerType *function_pointer_type_ptr = nullptr) const;
 
