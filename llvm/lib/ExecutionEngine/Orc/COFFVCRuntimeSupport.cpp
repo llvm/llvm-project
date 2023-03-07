@@ -160,7 +160,7 @@ COFFVCRuntimeBootstrapper::getMSVCToolchainPath() {
   if (!findVCToolChainViaCommandLine(*VFS, None, None, None, VCToolChainPath,
                                      VSLayout) &&
       !findVCToolChainViaEnvironment(*VFS, VCToolChainPath, VSLayout) &&
-      !findVCToolChainViaSetupConfig(*VFS, VCToolChainPath, VSLayout) &&
+      !findVCToolChainViaSetupConfig(*VFS, {}, VCToolChainPath, VSLayout) &&
       !findVCToolChainViaRegistry(VCToolChainPath, VSLayout))
     return make_error<StringError>("Couldn't find msvc toolchain.",
                                    inconvertibleErrorCode());
