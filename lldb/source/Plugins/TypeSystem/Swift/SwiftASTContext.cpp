@@ -5276,8 +5276,6 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
   case swift::TypeKind::Module:
   case swift::TypeKind::ElementArchetype:
   case swift::TypeKind::OpenedArchetype:
-  case swift::TypeKind::Pack:
-  case swift::TypeKind::PackExpansion:
   case swift::TypeKind::ParameterizedProtocol:
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::PrimaryArchetype:
@@ -5286,7 +5284,6 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILToken:
-  case swift::TypeKind::PackArchetype:
   case swift::TypeKind::TypeVariable:
   case swift::TypeKind::Unresolved:
   case swift::TypeKind::VariadicSequence:
@@ -5393,6 +5390,12 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
     break;
   case swift::TypeKind::DynamicSelf:
     swift_flags |= eTypeHasValue;
+    break;
+
+  case swift::TypeKind::Pack:
+  case swift::TypeKind::PackExpansion:
+  case swift::TypeKind::PackArchetype:
+    swift_flags |= eTypeIsPack;
     break;
 
   case swift::TypeKind::Optional:
