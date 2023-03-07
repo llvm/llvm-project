@@ -51,6 +51,15 @@ public:
 
   Status DoResume() override;
 
+  Status DoAttachToProcessWithID(lldb::pid_t pid,
+                                 const ProcessAttachInfo &attach_info) override;
+
+  Status
+  DoAttachToProcessWithName(const char *process_name,
+                            const ProcessAttachInfo &attach_info) override;
+
+  void DidAttach(ArchSpec &process_arch) override;
+
   Status DoDestroy() override;
 
   void RefreshStateAfterStop() override;
@@ -89,6 +98,8 @@ protected:
 
   Status DoGetMemoryRegionInfo(lldb::addr_t load_addr,
                                MemoryRegionInfo &range_info) override;
+
+  Status DoAttach(const ProcessAttachInfo &attach_info);
 
 private:
   friend class ScriptedThread;

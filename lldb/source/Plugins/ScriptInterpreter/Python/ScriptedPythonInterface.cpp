@@ -15,7 +15,6 @@
 // LLDB Python header must be included first
 #include "lldb-python.h"
 
-#include "SWIGPythonBridge.h"
 #include "ScriptInterpreterPythonImpl.h"
 #include "ScriptedPythonInterface.h"
 #include <optional>
@@ -69,6 +68,36 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DataExtractorSP>(
   }
 
   return m_interpreter.GetDataExtractorFromSBData(*sb_data);
+}
+
+template <>
+lldb::ProcessAttachInfoSP ScriptedPythonInterface::ExtractValueFromPythonObject<
+    lldb::ProcessAttachInfoSP>(python::PythonObject &p, Status &error) {
+  lldb::SBAttachInfo *sb_attach_info = reinterpret_cast<lldb::SBAttachInfo *>(
+      LLDBSWIGPython_CastPyObjectToSBAttachInfo(p.get()));
+
+  if (!sb_attach_info) {
+    error.SetErrorString(
+        "Couldn't cast lldb::SBAttachInfo to lldb::ProcessAttachInfoSP.");
+    return nullptr;
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBAttachInfo(*sb_attach_info);
+}
+
+template <>
+lldb::ProcessLaunchInfoSP ScriptedPythonInterface::ExtractValueFromPythonObject<
+    lldb::ProcessLaunchInfoSP>(python::PythonObject &p, Status &error) {
+  lldb::SBLaunchInfo *sb_launch_info = reinterpret_cast<lldb::SBLaunchInfo *>(
+      LLDBSWIGPython_CastPyObjectToSBLaunchInfo(p.get()));
+
+  if (!sb_launch_info) {
+    error.SetErrorString(
+        "Couldn't cast lldb::SBLaunchInfo to lldb::ProcessLaunchInfoSP.");
+    return nullptr;
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBLaunchInfo(*sb_launch_info);
 }
 
 template <>
