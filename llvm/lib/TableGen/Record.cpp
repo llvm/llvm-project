@@ -1790,7 +1790,7 @@ Init *ExistsOpInit::Fold(Record *CurRec, bool IsFinal) const {
     // Look up all defined records to see if we can find one.
     Record *D = CheckType->getRecordKeeper().getDef(Name->getValue());
     if (D) {
-      // Check if types are compatiable.
+      // Check if types are compatible.
       return IntInit::get(getRecordKeeper(),
                           DefInit::get(D)->getType()->typeIsA(CheckType));
     }
@@ -1805,7 +1805,7 @@ Init *ExistsOpInit::Fold(Record *CurRec, bool IsFinal) const {
           return const_cast<ExistsOpInit *>(this);
 
         // No doubt that there exists a record, so we should check if types are
-        // compatiable.
+        // compatible.
         return IntInit::get(getRecordKeeper(),
                             CurRec->getType()->typeIsA(CheckType));
       }
