@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 //
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -132,7 +133,8 @@ static SmallVector<Value> reifyOrComputeDynamicSizes(OpBuilder &b,
       for (int64_t i = 0; i < tensorType.getRank(); ++i) {
         if (tensorType.isDynamicDim(i))
           dynSizes.push_back(
-              reifiedShape[value.cast<OpResult>().getResultNumber()][i]);
+              reifiedShape[value.cast<OpResult>().getResultNumber()][i]
+                  .get<Value>());
       }
       return dynSizes;
     }
@@ -298,7 +300,7 @@ mlir::linalg::rewriteInDestinationPassingStyle(RewriterBase &rewriter,
   SmallVector<Value> dynamicSizes;
   for (int64_t i = 0; i < resultType.getRank(); ++i)
     if (resultType.isDynamicDim(i))
-      dynamicSizes.push_back(reifiedShape[0][i]);
+      dynamicSizes.push_back(reifiedShape[0][i].get<Value>());
 
   // If the `padOp` has a nofold attribute and all paddings are known to be 0,
   // explicitly insert a `linalg.copy`.

@@ -689,3 +689,18 @@ void Func1() {
 }
 
 }
+
+#if __cplusplus > 201402L
+namespace GH60936 {
+struct S {
+  int i;
+  // `&i` in default initializer causes implicit `this` access.
+  int *p = &i;
+};
+
+static_assert([]() constexpr {
+  S r = S{2};
+  return r.p != nullptr;
+}());
+} // namespace GH60936
+#endif

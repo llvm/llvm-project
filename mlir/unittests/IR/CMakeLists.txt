@@ -1,4 +1,5 @@
 add_mlir_unittest(MLIRIRTests
+  ActionTest.cpp
   AdaptorTest.cpp
   AttributeTest.cpp
   DialectTest.cpp

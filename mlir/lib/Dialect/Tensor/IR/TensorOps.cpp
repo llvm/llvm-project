@@ -87,7 +87,7 @@ FailureOr<Value> tensor::getOrCreateDestination(OpBuilder &b, Location loc,
       return failure();
     if (failed(reifyShapedTypeInterface.reifyResultShapes(b, reifiedShapes)))
       return failure();
-    mixedSizes = getAsOpFoldResult(reifiedShapes[opResult.getResultNumber()]);
+    mixedSizes = reifiedShapes[opResult.getResultNumber()];
   } else {
     // Static shape: Take static sizes directly.
     for (int64_t sz : tensorType.getShape())
@@ -523,14 +523,13 @@ LogicalResult EmptyOp::verify() {
 LogicalResult
 EmptyOp::reifyResultShapes(OpBuilder &builder,
                            ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
-  reifiedReturnShapes.resize(1, SmallVector<Value>(getType().getRank()));
+  reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(getType().getRank()));
   unsigned ctr = 0;
   for (int64_t i = 0; i < getType().getRank(); ++i) {
     if (getType().isDynamicDim(i)) {
       reifiedReturnShapes[0][i] = getDynamicSizes()[ctr++];
     } else {
-      reifiedReturnShapes[0][i] =
-          builder.create<arith::ConstantIndexOp>(getLoc(), i);
+      reifiedReturnShapes[0][i] = builder.getIndexAttr(getType().getDimSize(i));
     }
   }
   return success();
@@ -1004,14 +1003,14 @@ void GenerateOp::getAsmResultNames(
 
 LogicalResult GenerateOp::reifyResultShapes(
     OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
-  reifiedReturnShapes.resize(1, SmallVector<Value>(getType().getRank()));
+  reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(getType().getRank()));
   int idx = 0;
   for (auto dim : llvm::seq<int64_t>(0, getType().getRank())) {
     if (getType().isDynamicDim(dim)) {
       reifiedReturnShapes[0][dim] = getOperand(idx++);
     } else {
-      reifiedReturnShapes[0][dim] = builder.create<arith::ConstantIndexOp>(
-          getLoc(), getType().getDimSize(dim));
+      reifiedReturnShapes[0][dim] =
+          builder.getIndexAttr(getType().getDimSize(dim));
     }
   }
   return success();
@@ -1787,16 +1786,10 @@ LogicalResult ExtractSliceOp::reifyResultShapes(
   reifiedReturnShapes[0].reserve(getType().getRank());
   SmallVector<OpFoldResult> mixedSizes = getMixedSizes();
   llvm::SmallBitVector droppedDims = getDroppedDims();
-  Location loc = getLoc();
   for (const auto &size : enumerate(mixedSizes)) {
     if (droppedDims.test(size.index()))
       continue;
-    if (auto attr = size.value().dyn_cast<Attribute>()) {
-      reifiedReturnShapes[0].push_back(builder.create<arith::ConstantIndexOp>(
-          loc, attr.cast<IntegerAttr>().getInt()));
-      continue;
-    }
-    reifiedReturnShapes[0].push_back(size.value().get<Value>());
+    reifiedReturnShapes[0].push_back(size.value());
   }
   return success();
 }
@@ -2210,7 +2203,7 @@ OpFoldResult InsertSliceOp::fold(FoldAdaptor) {
 
 LogicalResult InsertSliceOp::reifyResultShapes(
     OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
-  reifiedReturnShapes.resize(1, SmallVector<Value>(getType().getRank()));
+  reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(getType().getRank()));
   for (auto dim : llvm::seq<int64_t>(0, getType().getRank())) {
     reifiedReturnShapes[0][dim] =
         builder.createOrFold<tensor::DimOp>(getLoc(), getDest(), dim);
@@ -3160,7 +3153,7 @@ reifyResultShapesImpl(OpTy op, OpBuilder &builder,
   static_assert(llvm::is_one_of<OpTy, PackOp, UnPackOp>::value,
                 "applies to only pack or unpack operations");
   int64_t destRank = op.getDestRank();
-  reifiedReturnShapes.resize(1, SmallVector<Value>(destRank));
+  reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(destRank));
   for (auto dim : llvm::seq<int64_t>(0, destRank)) {
     reifiedReturnShapes[0][dim] =
         builder.createOrFold<tensor::DimOp>(op.getLoc(), op.getDest(), dim);

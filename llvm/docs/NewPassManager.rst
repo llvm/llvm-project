@@ -92,9 +92,9 @@ Loop, where going through a CGSCC is optional.
   MPM.addPass(createModuleToFunctionPassAdaptor(FunctionFooPass()));
 
   // loop -> function -> cgscc -> module
-  MPM.addPass(createModuleToCGSCCPassAdaptor(createCGSCCToFunctionPassAdaptor(createFunctionToLoopPassAdaptor(LoopFooPass()))));
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(createCGSCCToFunctionPassAdaptor(createFunctionToLoopPassAdaptor(LoopFooPass()))));
   // function -> cgscc -> module
-  MPM.addPass(createModuleToCGSCCPassAdaptor(createCGSCCToFunctionPassAdaptor(FunctionFooPass())));
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(createCGSCCToFunctionPassAdaptor(FunctionFooPass())));
 
 
 A pass manager of a specific IR unit is also a pass of that kind. For
@@ -386,7 +386,7 @@ checked if they are invalidated:
 .. code-block:: c++
 
   bool FooAnalysisResult::invalidate(Function &F, const PreservedAnalyses &PA,
-                                     FunctionAnalysisManager::Invalidator &) {
+                                     FunctionAnalysisManager::Invalidator &Inv) {
     auto PAC = PA.getChecker<FooAnalysis>();
     if (!PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<Function>>())
       return true;

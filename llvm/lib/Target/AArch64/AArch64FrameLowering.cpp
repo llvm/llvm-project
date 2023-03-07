@@ -954,10 +954,10 @@ bool AArch64FrameLowering::shouldCombineCSRLocalStackBumpInEpilogue(
   switch (LastI->getOpcode()) {
   case AArch64::STGloop:
   case AArch64::STZGloop:
-  case AArch64::STGOffset:
-  case AArch64::STZGOffset:
-  case AArch64::ST2GOffset:
-  case AArch64::STZ2GOffset:
+  case AArch64::STGi:
+  case AArch64::STZGi:
+  case AArch64::ST2Gi:
+  case AArch64::STZ2Gi:
     return false;
   default:
     return true;
@@ -3455,8 +3455,8 @@ void TagStoreEdit::emitUnrolled(MachineBasicBlock::iterator InsertI) {
     int64_t InstrSize = (Size > 16) ? 32 : 16;
     unsigned Opcode =
         InstrSize == 16
-            ? (ZeroData ? AArch64::STZGOffset : AArch64::STGOffset)
-            : (ZeroData ? AArch64::STZ2GOffset : AArch64::ST2GOffset);
+            ? (ZeroData ? AArch64::STZGi : AArch64::STGi)
+            : (ZeroData ? AArch64::STZ2Gi : AArch64::ST2Gi);
     assert(BaseRegOffsetBytes % 16 == 0);
     MachineInstr *I = BuildMI(*MBB, InsertI, DL, TII->get(Opcode))
                           .addReg(AArch64::SP)
@@ -3638,8 +3638,8 @@ bool isMergeableStackTaggingInstruction(MachineInstr &MI, int64_t &Offset,
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   unsigned Opcode = MI.getOpcode();
-  ZeroData = (Opcode == AArch64::STZGloop || Opcode == AArch64::STZGOffset ||
-              Opcode == AArch64::STZ2GOffset);
+  ZeroData = (Opcode == AArch64::STZGloop || Opcode == AArch64::STZGi ||
+              Opcode == AArch64::STZ2Gi);
 
   if (Opcode == AArch64::STGloop || Opcode == AArch64::STZGloop) {
     if (!MI.getOperand(0).isDead() || !MI.getOperand(1).isDead())
@@ -3651,9 +3651,9 @@ bool isMergeableStackTaggingInstruction(MachineInstr &MI, int64_t &Offset,
     return true;
   }
 
-  if (Opcode == AArch64::STGOffset || Opcode == AArch64::STZGOffset)
+  if (Opcode == AArch64::STGi || Opcode == AArch64::STZGi)
     Size = 16;
-  else if (Opcode == AArch64::ST2GOffset || Opcode == AArch64::STZ2GOffset)
+  else if (Opcode == AArch64::ST2Gi || Opcode == AArch64::STZ2Gi)
     Size = 32;
   else
     return false;
@@ -3903,10 +3903,10 @@ void AArch64FrameLowering::orderFrameObjects(
       case AArch64::STZGloop:
         OpIndex = 3;
         break;
-      case AArch64::STGOffset:
-      case AArch64::STZGOffset:
-      case AArch64::ST2GOffset:
-      case AArch64::STZ2GOffset:
+      case AArch64::STGi:
+      case AArch64::STZGi:
+      case AArch64::ST2Gi:
+      case AArch64::STZ2Gi:
         OpIndex = 1;
         break;
       default:

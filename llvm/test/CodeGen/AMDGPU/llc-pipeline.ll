@@ -90,8 +90,8 @@
 ; GCN-O0-NEXT:        AMDGPU Annotate Uniform Values
 ; GCN-O0-NEXT:        Natural Loop Information
 ; GCN-O0-NEXT:        SI annotate control flow
-; GCN-O0-NEXT:        Post-Dominator Tree Construction
-; GCN-O0-NEXT:        Legacy Divergence Analysis
+; GCN-O0-NEXT:        Cycle Info Analysis
+; GCN-O0-NEXT:        Uniformity Analysis
 ; GCN-O0-NEXT:        AMDGPU Rewrite Undef for PHI
 ; GCN-O0-NEXT:        LCSSA Verifier
 ; GCN-O0-NEXT:        Loop-Closed SSA Form Pass
@@ -204,11 +204,11 @@
 ; GCN-O1-NEXT:      AMDGPU Promote Alloca
 ; GCN-O1-NEXT:      Dominator Tree Construction
 ; GCN-O1-NEXT:      SROA
-; GCN-O1-NEXT:      Post-Dominator Tree Construction
-; GCN-O1-NEXT:      Natural Loop Information
-; GCN-O1-NEXT:      Legacy Divergence Analysis
+; GCN-O1-NEXT:      Cycle Info Analysis
+; GCN-O1-NEXT:      Uniformity Analysis
 ; GCN-O1-NEXT:      AMDGPU IR optimizations
 ; GCN-O1-NEXT:      Basic Alias Analysis (stateless AA impl)
+; GCN-O1-NEXT:      Natural Loop Information
 ; GCN-O1-NEXT:      Canonicalize natural loops
 ; GCN-O1-NEXT:      Scalar Evolution Analysis
 ; GCN-O1-NEXT:      Loop Pass Manager
@@ -257,12 +257,12 @@
 ; GCN-O1-NEXT:        Function Alias Analysis Results
 ; GCN-O1-NEXT:        Flatten the CFG
 ; GCN-O1-NEXT:        Dominator Tree Construction
-; GCN-O1-NEXT:        Post-Dominator Tree Construction
-; GCN-O1-NEXT:        Natural Loop Information
-; GCN-O1-NEXT:        Legacy Divergence Analysis
+; GCN-O1-NEXT:        Cycle Info Analysis
+; GCN-O1-NEXT:        Uniformity Analysis
 ; GCN-O1-NEXT:        AMDGPU IR late optimizations
 ; GCN-O1-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-NEXT:        Function Alias Analysis Results
+; GCN-O1-NEXT:        Natural Loop Information
 ; GCN-O1-NEXT:        Code sinking
 ; GCN-O1-NEXT:        AMDGPUConditionalDiscard
 ; GCN-O1-NEXT:        Post-Dominator Tree Construction
@@ -289,8 +289,8 @@
 ; GCN-O1-NEXT:        AMDGPU Annotate Uniform Values
 ; GCN-O1-NEXT:        Natural Loop Information
 ; GCN-O1-NEXT:        SI annotate control flow
-; GCN-O1-NEXT:        Post-Dominator Tree Construction
-; GCN-O1-NEXT:        Legacy Divergence Analysis
+; GCN-O1-NEXT:        Cycle Info Analysis
+; GCN-O1-NEXT:        Uniformity Analysis
 ; GCN-O1-NEXT:        AMDGPU Rewrite Undef for PHI
 ; GCN-O1-NEXT:        LCSSA Verifier
 ; GCN-O1-NEXT:        Loop-Closed SSA Form Pass
@@ -505,8 +505,8 @@
 ; GCN-O1-OPTS-NEXT:      Scalar Evolution Analysis
 ; GCN-O1-OPTS-NEXT:      Nary reassociation
 ; GCN-O1-OPTS-NEXT:      Early CSE
-; GCN-O1-OPTS-NEXT:      Post-Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:      Legacy Divergence Analysis
+; GCN-O1-OPTS-NEXT:      Cycle Info Analysis
+; GCN-O1-OPTS-NEXT:      Uniformity Analysis
 ; GCN-O1-OPTS-NEXT:      AMDGPU IR optimizations
 ; GCN-O1-OPTS-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-OPTS-NEXT:      Canonicalize natural loops
@@ -564,12 +564,12 @@
 ; GCN-O1-OPTS-NEXT:        Function Alias Analysis Results
 ; GCN-O1-OPTS-NEXT:        Flatten the CFG
 ; GCN-O1-OPTS-NEXT:        Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:        Post-Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:        Natural Loop Information
-; GCN-O1-OPTS-NEXT:        Legacy Divergence Analysis
+; GCN-O1-OPTS-NEXT:        Cycle Info Analysis
+; GCN-O1-OPTS-NEXT:        Uniformity Analysis
 ; GCN-O1-OPTS-NEXT:        AMDGPU IR late optimizations
 ; GCN-O1-OPTS-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-OPTS-NEXT:        Function Alias Analysis Results
+; GCN-O1-OPTS-NEXT:        Natural Loop Information
 ; GCN-O1-OPTS-NEXT:        Code sinking
 ; GCN-O1-OPTS-NEXT:        AMDGPUConditionalDiscard
 ; GCN-O1-OPTS-NEXT:        Post-Dominator Tree Construction
@@ -596,8 +596,8 @@
 ; GCN-O1-OPTS-NEXT:        AMDGPU Annotate Uniform Values
 ; GCN-O1-OPTS-NEXT:        Natural Loop Information
 ; GCN-O1-OPTS-NEXT:        SI annotate control flow
-; GCN-O1-OPTS-NEXT:        Post-Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:        Legacy Divergence Analysis
+; GCN-O1-OPTS-NEXT:        Cycle Info Analysis
+; GCN-O1-OPTS-NEXT:        Uniformity Analysis
 ; GCN-O1-OPTS-NEXT:        AMDGPU Rewrite Undef for PHI
 ; GCN-O1-OPTS-NEXT:        LCSSA Verifier
 ; GCN-O1-OPTS-NEXT:        Loop-Closed SSA Form Pass
@@ -819,8 +819,8 @@
 ; GCN-O2-NEXT:      Scalar Evolution Analysis
 ; GCN-O2-NEXT:      Nary reassociation
 ; GCN-O2-NEXT:      Early CSE
-; GCN-O2-NEXT:      Post-Dominator Tree Construction
-; GCN-O2-NEXT:      Legacy Divergence Analysis
+; GCN-O2-NEXT:      Cycle Info Analysis
+; GCN-O2-NEXT:      Uniformity Analysis
 ; GCN-O2-NEXT:      AMDGPU IR optimizations
 ; GCN-O2-NEXT:      Canonicalize natural loops
 ; GCN-O2-NEXT:      Scalar Evolution Analysis
@@ -877,12 +877,12 @@
 ; GCN-O2-NEXT:        Function Alias Analysis Results
 ; GCN-O2-NEXT:        Flatten the CFG
 ; GCN-O2-NEXT:        Dominator Tree Construction
-; GCN-O2-NEXT:        Post-Dominator Tree Construction
-; GCN-O2-NEXT:        Natural Loop Information
-; GCN-O2-NEXT:        Legacy Divergence Analysis
+; GCN-O2-NEXT:        Cycle Info Analysis
+; GCN-O2-NEXT:        Uniformity Analysis
 ; GCN-O2-NEXT:        AMDGPU IR late optimizations
 ; GCN-O2-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O2-NEXT:        Function Alias Analysis Results
+; GCN-O2-NEXT:        Natural Loop Information
 ; GCN-O2-NEXT:        Code sinking
 ; GCN-O2-NEXT:        AMDGPUConditionalDiscard
 ; GCN-O2-NEXT:        Post-Dominator Tree Construction
@@ -909,8 +909,8 @@
 ; GCN-O2-NEXT:        AMDGPU Annotate Uniform Values
 ; GCN-O2-NEXT:        Natural Loop Information
 ; GCN-O2-NEXT:        SI annotate control flow
-; GCN-O2-NEXT:        Post-Dominator Tree Construction
-; GCN-O2-NEXT:        Legacy Divergence Analysis
+; GCN-O2-NEXT:        Cycle Info Analysis
+; GCN-O2-NEXT:        Uniformity Analysis
 ; GCN-O2-NEXT:        AMDGPU Rewrite Undef for PHI
 ; GCN-O2-NEXT:        LCSSA Verifier
 ; GCN-O2-NEXT:        Loop-Closed SSA Form Pass
@@ -1138,8 +1138,8 @@
 ; GCN-O3-NEXT:      Scalar Evolution Analysis
 ; GCN-O3-NEXT:      Nary reassociation
 ; GCN-O3-NEXT:      Early CSE
-; GCN-O3-NEXT:      Post-Dominator Tree Construction
-; GCN-O3-NEXT:      Legacy Divergence Analysis
+; GCN-O3-NEXT:      Cycle Info Analysis
+; GCN-O3-NEXT:      Uniformity Analysis
 ; GCN-O3-NEXT:      AMDGPU IR optimizations
 ; GCN-O3-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:      Canonicalize natural loops
@@ -1203,12 +1203,12 @@
 ; GCN-O3-NEXT:        Function Alias Analysis Results
 ; GCN-O3-NEXT:        Flatten the CFG
 ; GCN-O3-NEXT:        Dominator Tree Construction
-; GCN-O3-NEXT:        Post-Dominator Tree Construction
-; GCN-O3-NEXT:        Natural Loop Information
-; GCN-O3-NEXT:        Legacy Divergence Analysis
+; GCN-O3-NEXT:        Cycle Info Analysis
+; GCN-O3-NEXT:        Uniformity Analysis
 ; GCN-O3-NEXT:        AMDGPU IR late optimizations
 ; GCN-O3-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:        Function Alias Analysis Results
+; GCN-O3-NEXT:        Natural Loop Information
 ; GCN-O3-NEXT:        Code sinking
 ; GCN-O3-NEXT:        AMDGPUConditionalDiscard
 ; GCN-O3-NEXT:        Post-Dominator Tree Construction
@@ -1235,8 +1235,8 @@
 ; GCN-O3-NEXT:        AMDGPU Annotate Uniform Values
 ; GCN-O3-NEXT:        Natural Loop Information
 ; GCN-O3-NEXT:        SI annotate control flow
-; GCN-O3-NEXT:        Post-Dominator Tree Construction
-; GCN-O3-NEXT:        Legacy Divergence Analysis
+; GCN-O3-NEXT:        Cycle Info Analysis
+; GCN-O3-NEXT:        Uniformity Analysis
 ; GCN-O3-NEXT:        AMDGPU Rewrite Undef for PHI
 ; GCN-O3-NEXT:        LCSSA Verifier
 ; GCN-O3-NEXT:        Loop-Closed SSA Form Pass
