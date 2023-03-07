@@ -2071,8 +2071,7 @@ define i32 @shl2_cttz(i32 %x) {
 ; shift (X, amt | bitwidth - 1) -> shift (X, bitwidth - 1)
 define i6 @shl_or7_eq_shl7(i6 %x, i6 %c) {
 ; CHECK-LABEL: @shl_or7_eq_shl7(
-; CHECK-NEXT:    [[AMT:%.*]] = or i6 [[C:%.*]], 5
-; CHECK-NEXT:    [[Y:%.*]] = shl nsw i6 [[X:%.*]], [[AMT]]
+; CHECK-NEXT:    [[Y:%.*]] = shl nsw i6 [[X:%.*]], 5
 ; CHECK-NEXT:    ret i6 [[Y]]
 ;
   %amt = or i6 %c, 5
@@ -2083,8 +2082,7 @@ define i6 @shl_or7_eq_shl7(i6 %x, i6 %c) {
 
 define <2 x i8> @lshr_vec_or7_eq_shl7(<2 x i8> %x, <2 x i8> %c) {
 ; CHECK-LABEL: @lshr_vec_or7_eq_shl7(
-; CHECK-NEXT:    [[AMT:%.*]] = or <2 x i8> [[C:%.*]], <i8 7, i8 7>
-; CHECK-NEXT:    [[Y:%.*]] = lshr exact <2 x i8> [[X:%.*]], [[AMT]]
+; CHECK-NEXT:    [[Y:%.*]] = lshr exact <2 x i8> [[X:%.*]], <i8 7, i8 7>
 ; CHECK-NEXT:    ret <2 x i8> [[Y]]
 ;
   %amt = or <2 x i8> %c, <i8 7, i8 7>
@@ -2095,8 +2093,7 @@ define <2 x i8> @lshr_vec_or7_eq_shl7(<2 x i8> %x, <2 x i8> %c) {
 
 define <2 x i8> @ashr_vec_or7_eq_ashr7(<2 x i8> %x, <2 x i8> %c) {
 ; CHECK-LABEL: @ashr_vec_or7_eq_ashr7(
-; CHECK-NEXT:    [[AMT:%.*]] = or <2 x i8> [[C:%.*]], <i8 7, i8 7>
-; CHECK-NEXT:    [[Y:%.*]] = ashr <2 x i8> [[X:%.*]], [[AMT]]
+; CHECK-NEXT:    [[Y:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 7, i8 7>
 ; CHECK-NEXT:    ret <2 x i8> [[Y]]
 ;
   %amt = or <2 x i8> %c, <i8 7, i8 7>
