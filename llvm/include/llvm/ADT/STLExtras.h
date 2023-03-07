@@ -775,6 +775,7 @@ using zip_traits = iterator_facade_base<
 template <typename ZipType, typename... Iters>
 struct zip_common : public zip_traits<ZipType, Iters...> {
   using Base = zip_traits<ZipType, Iters...>;
+  using IndexSequence = std::index_sequence_for<Iters...>;
   using value_type = typename Base::value_type;
 
   std::tuple<Iters...> iterators;
@@ -784,19 +785,17 @@ protected:
     return value_type(*std::get<Ns>(iterators)...);
   }
 
-  template <size_t... Ns>
-  decltype(iterators) tup_inc(std::index_sequence<Ns...>) const {
-    return std::tuple<Iters...>(std::next(std::get<Ns>(iterators))...);
+  template <size_t... Ns> void tup_inc(std::index_sequence<Ns...>) {
+    (++std::get<Ns>(iterators), ...);
   }
 
-  template <size_t... Ns>
-  decltype(iterators) tup_dec(std::index_sequence<Ns...>) const {
-    return std::tuple<Iters...>(std::prev(std::get<Ns>(iterators))...);
+  template <size_t... Ns> void tup_dec(std::index_sequence<Ns...>) {
+    (--std::get<Ns>(iterators), ...);
   }
 
   template <size_t... Ns>
   bool test_all_equals(const zip_common &other,
-            std::index_sequence<Ns...>) const {
+                       std::index_sequence<Ns...>) const {
     return ((std::get<Ns>(this->iterators) == std::get<Ns>(other.iterators)) &&
             ...);
   }
@@ -804,25 +803,23 @@ protected:
 public:
   zip_common(Iters &&... ts) : iterators(std::forward<Iters>(ts)...) {}
 
-  value_type operator*() const {
-    return deref(std::index_sequence_for<Iters...>{});
-  }
+  value_type operator*() const { return deref(IndexSequence{}); }
 
   ZipType &operator++() {
-    iterators = tup_inc(std::index_sequence_for<Iters...>{});
-    return *reinterpret_cast<ZipType *>(this);
+    tup_inc(IndexSequence{});
+    return static_cast<ZipType &>(*this);
   }
 
   ZipType &operator--() {
     static_assert(Base::IsBidirectional,
                   "All inner iterators must be at least bidirectional.");
-    iterators = tup_dec(std::index_sequence_for<Iters...>{});
-    return *reinterpret_cast<ZipType *>(this);
+    tup_dec(IndexSequence{});
+    return static_cast<ZipType &>(*this);
   }
 
   /// Return true if all the iterator are matching `other`'s iterators.
   bool all_equals(zip_common &other) {
-    return test_all_equals(other, std::index_sequence_for<Iters...>{});
+    return test_all_equals(other, IndexSequence{});
   }
 };
 
