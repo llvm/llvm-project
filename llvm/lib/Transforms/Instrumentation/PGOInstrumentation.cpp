@@ -345,7 +345,7 @@ static std::string getBranchCondString(Instruction *TI) {
 
   std::string result;
   raw_string_ostream OS(result);
-  OS << CmpInst::getPredicateName(CI->getPredicate()) << "_";
+  OS << CI->getPredicate() << "_";
   CI->getOperand(0)->getType()->print(OS, true);
 
   Value *RHS = CI->getOperand(1);

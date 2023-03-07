@@ -714,7 +714,7 @@ void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
   const Instruction *UI = getUnderlyingInstr();
   O << " = " << UI->getOpcodeName() << " ";
   if (auto *Cmp = dyn_cast<CmpInst>(UI))
-    O << CmpInst::getPredicateName(Cmp->getPredicate()) << " ";
+    O << Cmp->getPredicate() << " ";
   printOperands(O, SlotTracker);
 }
 
