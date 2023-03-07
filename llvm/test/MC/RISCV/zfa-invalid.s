@@ -34,3 +34,15 @@ fli.d ft1, 3.560000e+02
 # CHECK-NO-RV64: error: operand must be a valid floating-point constant
 # CHECK-NO-RV32: error: operand must be a valid floating-point constant
 fli.h ft1, 1.600000e+00
+
+# CHECK-NO-RV64: error: invalid floating point immediate
+# CHECK-NO-RV32: error: invalid floating point immediate
+fli.s ft1, -min
+
+# CHECK-NO-RV64: error: invalid floating point immediate
+# CHECK-NO-RV32: error: invalid floating point immediate
+fli.s ft1, -inf
+
+# CHECK-NO-RV64: error: invalid floating point immediate
+# CHECK-NO-RV32: error: invalid floating point immediate
+fli.s ft1, -nan
