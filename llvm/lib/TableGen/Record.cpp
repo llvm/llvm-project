@@ -778,6 +778,14 @@ void UnOpInit::Profile(FoldingSetNodeID &ID) const {
 Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
   RecordKeeper &RK = getRecordKeeper();
   switch (getOpcode()) {
+  case TOLOWER:
+    if (StringInit *LHSs = dyn_cast<StringInit>(LHS))
+      return StringInit::get(RK, LHSs->getValue().lower());
+    break;
+  case TOUPPER:
+    if (StringInit *LHSs = dyn_cast<StringInit>(LHS))
+      return StringInit::get(RK, LHSs->getValue().upper());
+    break;
   case CAST:
     if (isa<StringRecTy>(getType())) {
       if (StringInit *LHSs = dyn_cast<StringInit>(LHS))
@@ -927,6 +935,12 @@ std::string UnOpInit::getAsString() const {
   case EMPTY: Result = "!empty"; break;
   case GETDAGOP: Result = "!getdagop"; break;
   case LOG2 : Result = "!logtwo"; break;
+  case TOLOWER:
+    Result = "!tolower";
+    break;
+  case TOUPPER:
+    Result = "!toupper";
+    break;
   }
   return Result + "(" + LHS->getAsString() + ")";
 }
