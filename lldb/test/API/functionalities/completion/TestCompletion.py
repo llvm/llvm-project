@@ -36,42 +36,55 @@ class CommandLineCompletionTestCase(TestBase):
 
     def test_frame_variable(self):
         self.build()
-        self.main_source = "main.cpp"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
-                                          '// Break here', self.main_source_spec)
+        _, process, _, _ = lldbutil.run_to_source_breakpoint(
+            self, '// Break here', lldb.SBFileSpec("main.cpp"))
         self.assertState(process.GetState(), lldb.eStateStopped)
 
         # Since CommandInterpreter has been corrected to update the current execution
         # context at the beginning of HandleCompletion, we're here explicitly testing
         # the scenario where "frame var" is completed without any preceding commands.
+        self.do_test_variable_completion('frame variable')
 
-        self.complete_from_to('frame variable fo',
-                              'frame variable fooo')
-        self.complete_from_to('frame variable fooo.',
-                              'frame variable fooo.')
-        self.complete_from_to('frame variable fooo.dd',
-                              'frame variable fooo.dd')
+    def test_dwim_print(self):
+        self.build()
 
-        self.complete_from_to('frame variable ptr_fooo->',
-                              'frame variable ptr_fooo->')
-        self.complete_from_to('frame variable ptr_fooo->dd',
-                              'frame variable ptr_fooo->dd')
+        _, process, _, _ = lldbutil.run_to_source_breakpoint(
+            self, '// Break here', lldb.SBFileSpec("main.cpp"))
+        self.assertState(process.GetState(), lldb.eStateStopped)
 
-        self.complete_from_to('frame variable cont',
-                              'frame variable container')
-        self.complete_from_to('frame variable container.',
-                              'frame variable container.MemberVar')
-        self.complete_from_to('frame variable container.Mem',
-                              'frame variable container.MemberVar')
+        # Since CommandInterpreter has been corrected to update the current execution
+        # context at the beginning of HandleCompletion, we're here explicitly testing
+        # the scenario where "frame var" is completed without any preceding commands.
+        self.do_test_variable_completion('dwim-print')
 
-        self.complete_from_to('frame variable ptr_cont',
-                              'frame variable ptr_container')
-        self.complete_from_to('frame variable ptr_container->',
-                              'frame variable ptr_container->MemberVar')
-        self.complete_from_to('frame variable ptr_container->Mem',
-                              'frame variable ptr_container->MemberVar')
+
+    def do_test_variable_completion(self, command):
+        self.complete_from_to(f'{command} fo',
+                              f'{command} fooo')
+        self.complete_from_to(f'{command} fooo.',
+                              f'{command} fooo.')
+        self.complete_from_to(f'{command} fooo.dd',
+                              f'{command} fooo.dd')
+
+        self.complete_from_to(f'{command} ptr_fooo->',
+                              f'{command} ptr_fooo->')
+        self.complete_from_to(f'{command} ptr_fooo->dd',
+                              f'{command} ptr_fooo->dd')
+
+        self.complete_from_to(f'{command} cont',
+                              f'{command} container')
+        self.complete_from_to(f'{command} container.',
+                              f'{command} container.MemberVar')
+        self.complete_from_to(f'{command} container.Mem',
+                              f'{command} container.MemberVar')
+
+        self.complete_from_to(f'{command} ptr_cont',
+                              f'{command} ptr_container')
+        self.complete_from_to(f'{command} ptr_container->',
+                              f'{command} ptr_container->MemberVar')
+        self.complete_from_to(f'{command} ptr_container->Mem',
+                              f'{command} ptr_container->MemberVar')
 
     def test_process_attach_dash_dash_con(self):
         """Test that 'process attach --con' completes to 'process attach --continue '."""

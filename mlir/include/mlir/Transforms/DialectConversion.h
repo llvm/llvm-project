@@ -702,8 +702,10 @@ public:
   /// PatternRewriter hook for splitting a block into two parts.
   Block *splitBlock(Block *block, Block::iterator before) override;
 
-  /// PatternRewriter hook for merging a block into another.
-  void mergeBlocks(Block *source, Block *dest, ValueRange argValues) override;
+  /// PatternRewriter hook for inlining the ops of a block into another block.
+  void inlineBlockBefore(Block *source, Block *dest, Block::iterator before,
+                         ValueRange argValues = std::nullopt) override;
+  using PatternRewriter::inlineBlockBefore;
 
   /// PatternRewriter hook for moving blocks out of a region.
   void inlineRegionBefore(Region &region, Region &parent,

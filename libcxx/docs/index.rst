@@ -117,10 +117,10 @@ Libc++ also supports common platforms and architectures:
 Target platform Target architecture       Notes
 =============== ========================= ============================
 macOS 10.9+     i386, x86_64, arm64       Building the shared library itself requires targetting macOS 10.11+
-FreeBSD 10+     i386, x86_64, arm
-Linux           i386, x86_64, arm, arm64
+FreeBSD 12+     i386, x86_64, arm
+Linux           i386, x86_64, arm, arm64  Only glibc-2.24 and later and no other libc is officially supported
 Windows         i386, x86_64              Both MSVC and MinGW style environments
-AIX             powerpc, powerpc64
+AIX 7.2TL5+     powerpc, powerpc64
 =============== ========================= ============================
 
 Generally speaking, libc++ should work on any platform that provides a fairly complete

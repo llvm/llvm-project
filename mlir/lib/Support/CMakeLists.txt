@@ -1,5 +1,4 @@
 set(LLVM_OPTIONAL_SOURCES
-  DebugCounter.cpp
   FileUtilities.cpp
   IndentedOstream.cpp
   InterfaceSupport.cpp
@@ -10,7 +9,6 @@ set(LLVM_OPTIONAL_SOURCES
 )
 
 add_mlir_library(MLIRSupport
-  DebugCounter.cpp
   FileUtilities.cpp
   IndentedOstream.cpp
   InterfaceSupport.cpp

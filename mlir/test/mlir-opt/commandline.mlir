@@ -1,4 +1,4 @@
-// RUN: mlir-opt --show-dialects | FileCheck %s
+// RUN: echo "" | mlir-opt --show-dialects | FileCheck %s
 // CHECK: Available Dialects:
 // CHECK-NEXT: acc
 // CHECK-NEXT: affine

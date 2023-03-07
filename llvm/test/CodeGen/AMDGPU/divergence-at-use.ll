@@ -3,10 +3,11 @@
 
 @local = addrspace(3) global i32 undef
 
-define amdgpu_kernel void @reducible(i32 %x) {
+define amdgpu_kernel void @reducible() {
 ; CHECK-LABEL: reducible:
 ; CHECK-NOT: dpp
 entry:
+  %x = call i32 @llvm.amdgcn.workitem.id.x()
   br label %loop
 loop:
   %i = phi i32 [ 0, %entry ], [ %i1, %loop ]
@@ -18,3 +19,5 @@ exit:
   %old = atomicrmw add ptr addrspace(3) %gep, i32 %x acq_rel
   ret void
 }
+
+declare i32 @llvm.amdgcn.workitem.id.x()

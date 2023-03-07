@@ -8758,16 +8758,19 @@ public:
       return false;
     }
     Result = *Info.CurrentCall->This;
-    // If we are inside a lambda's call operator, the 'this' expression refers
-    // to the enclosing '*this' object (either by value or reference) which is
-    // either copied into the closure object's field that represents the '*this'
-    // or refers to '*this'.
-    if (isLambdaCallOperator(Info.CurrentCall->Callee)) {
-      // Ensure we actually have captured 'this'. (an error will have
-      // been previously reported if not).
-      if (!Info.CurrentCall->LambdaThisCaptureField)
-        return false;
 
+    if (isLambdaCallOperator(Info.CurrentCall->Callee)) {
+      // Ensure we actually have captured 'this'. If something was wrong with
+      // 'this' capture, the error would have been previously reported.
+      // Otherwise we can be inside of a default initialization of an object
+      // declared by lambda's body, so no need to return false.
+      if (!Info.CurrentCall->LambdaThisCaptureField)
+        return true;
+
+      // If we have captured 'this',  the 'this' expression refers
+      // to the enclosing '*this' object (either by value or reference) which is
+      // either copied into the closure object's field that represents the
+      // '*this' or refers to '*this'.
       // Update 'Result' to refer to the data member/field of the closure object
       // that represents the '*this' capture.
       if (!HandleLValueMember(Info, E, Result,

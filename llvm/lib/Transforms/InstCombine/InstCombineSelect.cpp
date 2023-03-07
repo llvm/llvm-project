@@ -950,6 +950,47 @@ static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
   return nullptr;
 }
 
+/// Try to match patterns with select and subtract as absolute difference.
+static Value *foldAbsDiff(ICmpInst *Cmp, Value *TVal, Value *FVal,
+                          InstCombiner::BuilderTy &Builder) {
+  auto *TI = dyn_cast<Instruction>(TVal);
+  auto *FI = dyn_cast<Instruction>(FVal);
+  if (!TI || !FI)
+    return nullptr;
+
+  // Normalize predicate to gt/lt rather than ge/le.
+  ICmpInst::Predicate Pred = Cmp->getStrictPredicate();
+  Value *A = Cmp->getOperand(0);
+  Value *B = Cmp->getOperand(1);
+
+  // Normalize "A - B" as the true value of the select.
+  if (match(FI, m_Sub(m_Specific(A), m_Specific(B)))) {
+    std::swap(FI, TI);
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+  }
+
+  // With any pair of no-wrap subtracts:
+  // (A > B) ? (A - B) : (B - A) --> abs(A - B)
+  if (Pred == CmpInst::ICMP_SGT &&
+      match(TI, m_Sub(m_Specific(A), m_Specific(B))) &&
+      match(FI, m_Sub(m_Specific(B), m_Specific(A))) &&
+      (TI->hasNoSignedWrap() || TI->hasNoUnsignedWrap()) &&
+      (FI->hasNoSignedWrap() || FI->hasNoUnsignedWrap())) {
+    // The remaining subtract is not "nuw" any more.
+    // If there's one use of the subtract (no other use than the use we are
+    // about to replace), then we know that the sub is "nsw" in this context
+    // even if it was only "nuw" before. If there's another use, then we can't
+    // add "nsw" to the existing instruction because it may not be safe in the
+    // other user's context.
+    TI->setHasNoUnsignedWrap(false);
+    if (!TI->hasNoSignedWrap())
+      TI->setHasNoSignedWrap(TI->hasOneUse());
+    return Builder.CreateBinaryIntrinsic(Intrinsic::abs, TI, Builder.getTrue());
+  }
+
+  return nullptr;
+}
+
 /// Fold the following code sequence:
 /// \code
 ///   int a = ctlz(x & -x);
@@ -1788,6 +1829,9 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = canonicalizeSaturatedAdd(ICI, TrueVal, FalseVal, Builder))
+    return replaceInstUsesWith(SI, V);
+
+  if (Value *V = foldAbsDiff(ICI, TrueVal, FalseVal, Builder))
     return replaceInstUsesWith(SI, V);
 
   return Changed ? &SI : nullptr;
@@ -2999,6 +3043,14 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   if (match(CondVal, m_Select(m_Value(A), m_Value(B), m_Zero())) &&
       match(TrueVal, m_Specific(B)) && match(FalseVal, m_Zero()))
     return replaceOperand(SI, 0, A);
+  // select a, (select ~a, true, b), false -> select a, b, false
+  if (match(TrueVal, m_c_LogicalOr(m_Not(m_Specific(CondVal)), m_Value(B))) &&
+      match(FalseVal, m_Zero()))
+    return replaceOperand(SI, 1, B);
+  // select a, true, (select ~a, b, false) -> select a, true, b
+  if (match(FalseVal, m_c_LogicalAnd(m_Not(m_Specific(CondVal)), m_Value(B))) &&
+      match(TrueVal, m_One()))
+    return replaceOperand(SI, 2, B);
 
   // ~(A & B) & (A | B) --> A ^ B
   if (match(&SI, m_c_LogicalAnd(m_Not(m_LogicalAnd(m_Value(A), m_Value(B))),

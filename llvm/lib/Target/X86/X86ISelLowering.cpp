@@ -43671,13 +43671,14 @@ static bool checkBitcastSrcVectorSize(SDValue Src, unsigned Size,
   case ISD::OR:
     return checkBitcastSrcVectorSize(Src.getOperand(0), Size, AllowTruncate) &&
            checkBitcastSrcVectorSize(Src.getOperand(1), Size, AllowTruncate);
+  case ISD::SELECT:
   case ISD::VSELECT:
     return Src.getOperand(0).getScalarValueSizeInBits() == 1 &&
            checkBitcastSrcVectorSize(Src.getOperand(1), Size, AllowTruncate) &&
            checkBitcastSrcVectorSize(Src.getOperand(2), Size, AllowTruncate);
   case ISD::BUILD_VECTOR:
-    return ISD::isBuildVectorAllZeros(Src.getNode());
-
+    return ISD::isBuildVectorAllZeros(Src.getNode()) ||
+           ISD::isBuildVectorAllOnes(Src.getNode());
   }
   return false;
 }
@@ -43742,6 +43743,7 @@ static SDValue signExtendBitcastSrcVector(SelectionDAG &DAG, EVT SExtVT,
         Src.getOpcode(), DL, SExtVT,
         signExtendBitcastSrcVector(DAG, SExtVT, Src.getOperand(0), DL),
         signExtendBitcastSrcVector(DAG, SExtVT, Src.getOperand(1), DL));
+  case ISD::SELECT:
   case ISD::VSELECT:
     return DAG.getSelect(
         DL, SExtVT, Src.getOperand(0),
@@ -47425,6 +47427,32 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
                          DAG.getTargetConstant(CC, DL, MVT::i8), Cond};
         return DAG.getNode(X86ISD::CMOV, DL, N->getValueType(0), Ops);
       }
+    }
+  }
+
+  // Transform:
+  //
+  //   (cmov 1 T (uge T 2))
+  //
+  // to:
+  //
+  //   (adc T 0 (sub T 1))
+  if (CC == X86::COND_AE && isOneConstant(FalseOp) &&
+      Cond.getOpcode() == X86ISD::SUB && Cond->hasOneUse()) {
+    SDValue Cond0 = Cond.getOperand(0);
+    if (Cond0.getOpcode() == ISD::TRUNCATE)
+      Cond0 = Cond0.getOperand(0);
+    auto *Sub1C = dyn_cast<ConstantSDNode>(Cond.getOperand(1));
+    if (Cond0 == TrueOp && Sub1C && Sub1C->getZExtValue() == 2) {
+      EVT CondVT = Cond->getValueType(0);
+      EVT OuterVT = N->getValueType(0);
+      // Subtract 1 and generate a carry.
+      SDValue NewSub =
+          DAG.getNode(X86ISD::SUB, DL, Cond->getVTList(), Cond.getOperand(0),
+                      DAG.getConstant(1, DL, CondVT));
+      SDValue EFLAGS(NewSub.getNode(), 1);
+      return DAG.getNode(X86ISD::ADC, DL, DAG.getVTList(OuterVT, MVT::i32),
+                         TrueOp, DAG.getConstant(0, DL, OuterVT), EFLAGS);
     }
   }
 

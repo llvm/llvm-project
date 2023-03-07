@@ -25,6 +25,7 @@
 #include <array>
 #include <concepts>
 #include <functional>
+#include <random>
 #include <ranges>
 
 #include "almost_satisfies_types.h"
@@ -212,9 +213,63 @@ constexpr bool test() {
   return true;
 }
 
+struct Stats {
+  int compared = 0;
+  int copied   = 0;
+  int moved    = 0;
+} stats;
+
+struct MyInt {
+  int value;
+  explicit MyInt(int xval) : value(xval) {}
+  MyInt(const MyInt& other) : value(other.value) { ++stats.copied; }
+  MyInt(MyInt&& other) : value(other.value) { ++stats.moved; }
+  MyInt& operator=(const MyInt& other) {
+    value = other.value;
+    ++stats.copied;
+    return *this;
+  }
+  MyInt& operator=(MyInt&& other) {
+    value = other.value;
+    ++stats.moved;
+    return *this;
+  }
+  static bool Comp(const MyInt& a, const MyInt& b) {
+    ++stats.compared;
+    return a.value < b.value;
+  }
+};
+
+void test_complexity() {
+  constexpr int N = (1 << 20);
+  std::vector<MyInt> v;
+  v.reserve(N);
+  std::mt19937 g;
+  for (int i = 0; i < N; ++i) {
+    v.emplace_back(i);
+  }
+  for (int logn = 10; logn <= 20; ++logn) {
+    const int n = (1 << logn);
+    auto first  = v.begin();
+    auto last   = v.begin() + n;
+    std::shuffle(first, last, g);
+    std::make_heap(first, last, &MyInt::Comp);
+    // The exact stats of our current implementation are recorded here.
+    stats = {};
+    std::ranges::sort_heap(first, last, &MyInt::Comp);
+    LIBCPP_ASSERT(stats.copied == 0);
+    LIBCPP_ASSERT(stats.moved <= 2 * n + n * logn);
+#ifndef _LIBCPP_ENABLE_DEBUG_MODE
+    LIBCPP_ASSERT(stats.compared <= n * logn);
+#endif
+    LIBCPP_ASSERT(std::is_sorted(first, last, &MyInt::Comp));
+    LIBCPP_ASSERT(stats.compared <= 2 * n * logn);
+  }
+}
+
 int main(int, char**) {
   test();
   static_assert(test());
-
+  test_complexity();
   return 0;
 }

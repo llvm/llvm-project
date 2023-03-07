@@ -1089,6 +1089,159 @@ TEST_F(DILocationTest, Merge) {
     EXPECT_EQ(SPI, M->getScope());
     EXPECT_EQ(nullptr, M->getInlinedAt());
   }
+
+  // Merge a location in C, which is inlined-at in B that is inlined in A,
+  // with a location in A that has the same scope, line and column as B's
+  // inlined-at location.
+  {
+    auto *FA = getFile();
+    auto *FB = getFile();
+    auto *FC = getFile();
+
+    auto *SPA = DISubprogram::getDistinct(Context, FA, "a", "a", FA, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPB = DISubprogram::getDistinct(Context, FB, "b", "b", FB, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPC = DISubprogram::getDistinct(Context, FC, "c", "c", FC, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *A = DILocation::get(Context, 3, 2, SPA);
+    auto *B = DILocation::get(Context, 2, 4, SPB, A);
+    auto *C = DILocation::get(Context, 13, 2, SPC, B);
+    auto *M = DILocation::getMergedLocation(A, C);
+    EXPECT_EQ(3u, M->getLine());
+    EXPECT_EQ(2u, M->getColumn());
+    EXPECT_TRUE(isa<DILocalScope>(M->getScope()));
+    EXPECT_EQ(SPA, M->getScope());
+    EXPECT_EQ(nullptr, M->getInlinedAt());
+  }
+
+  // Two inlined locations with the same scope, line and column
+  // in the same inlined-at function at different line and column.
+  {
+    auto *FA = getFile();
+    auto *FB = getFile();
+    auto *FC = getFile();
+
+    auto *SPA = DISubprogram::getDistinct(Context, FA, "a", "a", FA, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPB = DISubprogram::getDistinct(Context, FB, "b", "b", FB, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPC = DISubprogram::getDistinct(Context, FC, "c", "c", FC, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *A = DILocation::get(Context, 10, 20, SPA);
+    auto *B1 = DILocation::get(Context, 3, 2, SPB, A);
+    auto *B2 = DILocation::get(Context, 4, 5, SPB, A);
+    auto *C1 = DILocation::get(Context, 2, 4, SPC, B1);
+    auto *C2 = DILocation::get(Context, 2, 4, SPC, B2);
+
+    auto *M = DILocation::getMergedLocation(C1, C2);
+    EXPECT_EQ(2u, M->getLine());
+    EXPECT_EQ(4u, M->getColumn());
+    EXPECT_EQ(SPC, M->getScope());
+    ASSERT_NE(nullptr, M->getInlinedAt());
+
+    auto *I1 = M->getInlinedAt();
+    EXPECT_EQ(0u, I1->getLine());
+    EXPECT_EQ(0u, I1->getColumn());
+    EXPECT_EQ(SPB, I1->getScope());
+    EXPECT_EQ(A, I1->getInlinedAt());
+  }
+
+  // Two locations, different line/column and scope in the same subprogram,
+  // inlined at the same place. This should result in a 0:0 location with
+  // the nearest common scope in the inlined function.
+  {
+    auto *FA = getFile();
+    auto *FI = getFile();
+
+    auto *SPA = DISubprogram::getDistinct(Context, FA, "a", "a", FA, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPI = DISubprogram::getDistinct(Context, FI, "i", "i", FI, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    // Nearest common scope for the two locations in a.
+    auto *SPAScope1 = DILexicalBlock::getDistinct(Context, SPA, FA, 4, 9);
+
+    // Scope for the first location in a.
+    auto *SPAScope2 =
+        DILexicalBlock::getDistinct(Context, SPAScope1, FA, 10, 12);
+
+    // Scope for the second location in a.
+    auto *SPAScope3 =
+        DILexicalBlock::getDistinct(Context, SPAScope1, FA, 20, 8);
+    auto *SPAScope4 =
+        DILexicalBlock::getDistinct(Context, SPAScope3, FA, 21, 12);
+
+    auto *I = DILocation::get(Context, 3, 8, SPI);
+    auto *A1 = DILocation::get(Context, 12, 7, SPAScope2, I);
+    auto *A2 = DILocation::get(Context, 21, 15, SPAScope4, I);
+    auto *M = DILocation::getMergedLocation(A1, A2);
+    EXPECT_EQ(0u, M->getLine());
+    EXPECT_EQ(0u, M->getColumn());
+    EXPECT_TRUE(isa<DILocalScope>(M->getScope()));
+    EXPECT_EQ(SPAScope1, M->getScope());
+    EXPECT_EQ(I, M->getInlinedAt());
+  }
+
+  // Regression test to catch a case where an iterator was invalidated due to
+  // handling the chain of inlined-at locations after the nearest common
+  // location for the two arguments were found.
+  {
+    auto *FA = getFile();
+    auto *FB = getFile();
+    auto *FI = getFile();
+
+    auto *SPA = DISubprogram::getDistinct(Context, FA, "a", "a", FA, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPB = DISubprogram::getDistinct(Context, FB, "b", "b", FB, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPI = DISubprogram::getDistinct(Context, FI, "i", "i", FI, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPAScope1 = DILexicalBlock::getDistinct(Context, SPA, FA, 4, 9);
+    auto *SPAScope2 = DILexicalBlock::getDistinct(Context, SPA, FA, 8, 3);
+
+    DILocation *InlinedAt = nullptr;
+
+    // Create a chain of inlined-at locations.
+    for (int i = 0; i < 256; i++) {
+      InlinedAt = DILocation::get(Context, 3 + i, 8 + i, SPI, InlinedAt);
+    }
+
+    auto *A1 = DILocation::get(Context, 5, 9, SPAScope1, InlinedAt);
+    auto *A2 = DILocation::get(Context, 9, 8, SPAScope2, InlinedAt);
+    auto *B = DILocation::get(Context, 10, 3, SPB, A1);
+    auto *M1 = DILocation::getMergedLocation(B, A2);
+    EXPECT_EQ(0u, M1->getLine());
+    EXPECT_EQ(0u, M1->getColumn());
+    EXPECT_TRUE(isa<DILocalScope>(M1->getScope()));
+    EXPECT_EQ(SPA, M1->getScope());
+    EXPECT_EQ(InlinedAt, M1->getInlinedAt());
+
+    // Test the other argument order for good measure.
+    auto *M2 = DILocation::getMergedLocation(A2, B);
+    EXPECT_EQ(M1, M2);
+  }
 }
 
 TEST_F(DILocationTest, getDistinct) {

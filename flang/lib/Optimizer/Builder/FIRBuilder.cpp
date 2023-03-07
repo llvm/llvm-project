@@ -614,6 +614,18 @@ mlir::Value fir::FirOpBuilder::genExtentFromTriplet(mlir::Location loc,
   return create<mlir::arith::SelectOp>(loc, cmp, div, zero);
 }
 
+mlir::Value fir::FirOpBuilder::genAbsentOp(mlir::Location loc,
+                                           mlir::Type argTy) {
+  if (!fir::isCharacterProcedureTuple(argTy))
+    return create<fir::AbsentOp>(loc, argTy);
+
+  auto boxProc =
+      create<fir::AbsentOp>(loc, argTy.cast<mlir::TupleType>().getType(0));
+  mlir::Value charLen = create<fir::UndefOp>(loc, getCharacterLengthType());
+  return fir::factory::createCharacterProcedureTuple(*this, loc, argTy, boxProc,
+                                                     charLen);
+}
+
 void fir::FirOpBuilder::setCommonAttributes(mlir::Operation *op) const {
   auto fmi = mlir::dyn_cast<mlir::arith::ArithFastMathInterface>(*op);
   if (!fmi)

@@ -1126,8 +1126,8 @@ define i1 @not_d_bools_negative_use2(i1 %c, i1 %x, i1 %y) {
 }
 
 ; A & (~C | B)
-define i1 @test1(i1 %a, i1 %b, i1 %c) {
-; CHECK-LABEL: @test1(
+define i1 @logical_and_or_with_not_op(i1 %a, i1 %b, i1 %c) {
+; CHECK-LABEL: @logical_and_or_with_not_op(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[C:%.*]], true
 ; CHECK-NEXT:    [[OR:%.*]] = or i1 [[NOT]], [[B:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = select i1 [[A:%.*]], i1 [[OR]], i1 false
@@ -1139,13 +1139,11 @@ define i1 @test1(i1 %a, i1 %b, i1 %c) {
   ret i1 %and
 }
 
-; As test1 but with C=A
+; As logical_and_or_with_not_op but with C=A
 ; A & (~A | B) --> A & B
-define i1 @test1_variant1(i1 %a, i1 %b) {
-; CHECK-LABEL: @test1_variant1(
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[NOT]], [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[A]], i1 [[OR]], i1 false
+define i1 @logical_and_or_with_common_not_op_variant1(i1 %a, i1 %b) {
+; CHECK-LABEL: @logical_and_or_with_common_not_op_variant1(
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %not = xor i1 %a, true
@@ -1154,13 +1152,11 @@ define i1 @test1_variant1(i1 %a, i1 %b) {
   ret i1 %and
 }
 
-; As test1_variant1 but operating on vectors
+; As logical_and_or_with_common_not_op_variant1 but operating on vectors
 ; A & (~A | B) --> A & B
-define <2 x i1> @test1_variant2(<2 x i1> %a, <2 x i1> %b) {
-; CHECK-LABEL: @test1_variant2(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i1> [[NOT]], [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[A]], <2 x i1> [[OR]], <2 x i1> zeroinitializer
+define <2 x i1> @logical_and_or_with_common_not_op_variant2(<2 x i1> %a, <2 x i1> %b) {
+; CHECK-LABEL: @logical_and_or_with_common_not_op_variant2(
+; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[A:%.*]], <2 x i1> [[B:%.*]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[AND]]
 ;
   %not = xor <2 x i1> %a, <i1 true, i1 true>
@@ -1169,13 +1165,12 @@ define <2 x i1> @test1_variant2(<2 x i1> %a, <2 x i1> %b) {
   ret <2 x i1> %and
 }
 
-; As test1_variant1 but with "or" implemented as "select X, true, Y"
+; As logical_and_or_with_common_not_op_variant1 but with "or" implemented as
+; "select X, true, Y"
 ; A & (~A | B) --> A & B
-define i1 @test1_variant3(i1 %a, i1 %b) {
-; CHECK-LABEL: @test1_variant3(
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[NOT]], i1 true, i1 [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[A]], i1 [[OR]], i1 false
+define i1 @logical_and_or_with_common_not_op_variant3(i1 %a, i1 %b) {
+; CHECK-LABEL: @logical_and_or_with_common_not_op_variant3(
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %not = xor i1 %a, true
@@ -1184,13 +1179,14 @@ define i1 @test1_variant3(i1 %a, i1 %b) {
   ret i1 %and
 }
 
-; As test1_variant3 but operating on vectors where each operand has other uses
+; As logical_and_or_with_common_not_op_variant3 but operating on vectors where
+; each operand has other uses
 ; A & (~A | B) --> A & B
-define <2 x i1> @test1_variant4(<2 x i1> %a, <2 x i1> %b) {
-; CHECK-LABEL: @test1_variant4(
+define <2 x i1> @logical_and_or_with_common_not_op_variant4(<2 x i1> %a, <2 x i1> %b) {
+; CHECK-LABEL: @logical_and_or_with_common_not_op_variant4(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
 ; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[NOT]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[A]], <2 x i1> [[OR]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[A]], <2 x i1> [[B]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    call void @use2(<2 x i1> [[A]])
 ; CHECK-NEXT:    call void @use2(<2 x i1> [[B]])
 ; CHECK-NEXT:    call void @use2(<2 x i1> [[OR]])
@@ -1205,14 +1201,12 @@ define <2 x i1> @test1_variant4(<2 x i1> %a, <2 x i1> %b) {
   ret <2 x i1> %and
 }
 
-; As test1_variant1 but with |'s operands swapped
+; As logical_and_or_with_common_not_op_variant1 but with |'s operands swapped
 ; A & (B | ~A) --> A & B
-define i1 @test1_variant5(i1 %a) {
-; CHECK-LABEL: @test1_variant5(
+define i1 @logical_and_or_with_common_not_op_variant5(i1 %a) {
+; CHECK-LABEL: @logical_and_or_with_common_not_op_variant5(
 ; CHECK-NEXT:    [[B:%.*]] = call i1 @gen()
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[B]], [[NOT]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[A]], i1 [[OR]], i1 false
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[A:%.*]], i1 [[B]], i1 false
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %b = call i1 @gen()
@@ -1223,8 +1217,8 @@ define i1 @test1_variant5(i1 %a) {
 }
 
 ; A | (~C & B)
-define i1 @test2(i1 %a, i1 %b, i1 %c) {
-; CHECK-LABEL: @test2(
+define i1 @logical_or_and_with_not_op(i1 %a, i1 %b, i1 %c) {
+; CHECK-LABEL: @logical_or_and_with_not_op(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[C:%.*]], true
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[NOT]], [[B:%.*]]
 ; CHECK-NEXT:    [[OR:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[AND]]
@@ -1236,13 +1230,11 @@ define i1 @test2(i1 %a, i1 %b, i1 %c) {
   ret i1 %or
 }
 
-; As test2 but with C=A
+; As logical_or_and_with_not_op but with C=A
 ; A | (~A & B) --> A | B
-define i1 @test2_variant1(i1 %a, i1 %b) {
-; CHECK-LABEL: @test2_variant1(
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[NOT]], [[B:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[A]], i1 true, i1 [[AND]]
+define i1 @logical_or_and_with_common_not_op_variant1(i1 %a, i1 %b) {
+; CHECK-LABEL: @logical_or_and_with_common_not_op_variant1(
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %not = xor i1 %a, true
@@ -1251,13 +1243,11 @@ define i1 @test2_variant1(i1 %a, i1 %b) {
   ret i1 %or
 }
 
-; As test2_variant1 but operating on vectors
+; As logical_or_and_with_common_not_op_variant1 but operating on vectors
 ; A | (~A & B) --> A | B
-define <2 x i1> @test2_variant2(<2 x i1> %a, <2 x i1> %b) {
-; CHECK-LABEL: @test2_variant2(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i1> [[NOT]], [[B:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[A]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[AND]]
+define <2 x i1> @logical_or_and_with_common_not_op_variant2(<2 x i1> %a, <2 x i1> %b) {
+; CHECK-LABEL: @logical_or_and_with_common_not_op_variant2(
+; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[A:%.*]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %not = xor <2 x i1> %a, <i1 true, i1 true>
@@ -1266,13 +1256,12 @@ define <2 x i1> @test2_variant2(<2 x i1> %a, <2 x i1> %b) {
   ret <2 x i1> %or
 }
 
-; As test2_variant1 but with "and" implemented as "select X, Y, false"
+; As logical_or_and_with_common_not_op_variant1 but with "and" implemented as
+; "select X, Y, false"
 ; A | (~A & B) --> A | B
-define i1 @test2_variant3(i1 %a, i1 %b) {
-; CHECK-LABEL: @test2_variant3(
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[NOT]], i1 [[B:%.*]], i1 false
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[A]], i1 true, i1 [[AND]]
+define i1 @logical_or_and_with_common_not_op_variant3(i1 %a, i1 %b) {
+; CHECK-LABEL: @logical_or_and_with_common_not_op_variant3(
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %not = xor i1 %a, true
@@ -1281,13 +1270,14 @@ define i1 @test2_variant3(i1 %a, i1 %b) {
   ret i1 %or
 }
 
-; As test2_variant3 but operating on vectors where each operand has other uses
+; As logical_or_and_with_common_not_op_variant3 but operating on vectors where
+; each operand has other uses
 ; A | (~A & B) --> A | B
-define <2 x i1> @test2_variant4(<2 x i1> %a, <2 x i1> %b) {
-; CHECK-LABEL: @test2_variant4(
+define <2 x i1> @logical_or_and_with_common_not_op_variant4(<2 x i1> %a, <2 x i1> %b) {
+; CHECK-LABEL: @logical_or_and_with_common_not_op_variant4(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
 ; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[NOT]], <2 x i1> [[B:%.*]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[A]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[AND]]
+; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[A]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[B]]
 ; CHECK-NEXT:    call void @use2(<2 x i1> [[A]])
 ; CHECK-NEXT:    call void @use2(<2 x i1> [[B]])
 ; CHECK-NEXT:    call void @use2(<2 x i1> [[AND]])
@@ -1302,14 +1292,12 @@ define <2 x i1> @test2_variant4(<2 x i1> %a, <2 x i1> %b) {
   ret <2 x i1> %or
 }
 
-; As test2_variant1 but with &'s operands swapped
+; As logical_or_and_with_common_not_op_variant1 but with &'s operands swapped
 ; A | (B & ~A) --> A | B
-define i1 @test2_variant5(i1 %a) {
-; CHECK-LABEL: @test2_variant5(
+define i1 @logical_or_and_with_common_not_op_variant5(i1 %a) {
+; CHECK-LABEL: @logical_or_and_with_common_not_op_variant5(
 ; CHECK-NEXT:    [[B:%.*]] = call i1 @gen()
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[B]], [[NOT]]
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[A]], i1 true, i1 [[AND]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %b = call i1 @gen()
