@@ -73,8 +73,8 @@ add_test_input_binary(shared source/shared.cl source/shared.so -mcode-object-ver
 add_test_input_binary(shared-debug source/shared.cl source/shared-debug.so -g -mcode-object-version=4)
 
 configure_file("source/source1.cl" "source/source1.cl" COPYONLY)
-configure_file("source/source1-device-libs.cl" "source/source1-device-libs.cl" COPYONLY)
 configure_file("source/source2.cl" "source/source2.cl" COPYONLY)
+configure_file("source/device_libs.cl" "source/device_libs.cl" COPYONLY)
 configure_file("source/include-a.h" "source/include-a.h" COPYONLY)
 configure_file("source/source1.s" "source/source1.s" COPYONLY)
 configure_file("source/shared.cl" "source/shared.cl" COPYONLY)
