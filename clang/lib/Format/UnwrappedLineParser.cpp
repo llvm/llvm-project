@@ -3441,17 +3441,6 @@ void UnwrappedLineParser::parseConstraintExpression() {
                       /*ClosingBraceKind=*/tok::greater);
       break;
 
-    case tok::kw_bool:
-      // bool is only allowed if it is directly followed by a paren for a cast:
-      // concept C = bool(...);
-      // and bool is the only type, all other types as cast must be inside a
-      // cast to bool an thus are handled by the other cases.
-      if (Tokens->peekNextToken()->isNot(tok::l_paren))
-        return;
-      nextToken();
-      parseParens();
-      break;
-
     default:
       if (!FormatTok->Tok.getIdentifierInfo()) {
         // Identifiers are part of the default case, we check for more then
