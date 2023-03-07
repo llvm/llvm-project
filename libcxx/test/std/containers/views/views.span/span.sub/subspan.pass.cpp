@@ -15,8 +15,7 @@
 // constexpr span<element_type, dynamic_extent> subspan(
 //   size_type offset, size_type count = dynamic_extent) const;
 //
-//  Requires: (0 <= Offset && Offset <= size())
-//      && (Count == dynamic_extent || Count >= 0 && Offset + Count <= size())
+// Mandates: Offset <= Extent && (Count == dynamic_extent || Count <= Extent - Offset) is true.
 
 #include <span>
 #include <cassert>
