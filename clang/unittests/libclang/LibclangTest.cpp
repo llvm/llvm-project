@@ -485,7 +485,8 @@ protected:
   void CreateIndex() override {
     InitializePreambleDir();
 
-    CXIndexOptions Opts = {sizeof(CXIndexOptions)};
+    CXIndexOptions Opts{};
+    Opts.Size = sizeof(CXIndexOptions);
     Opts.PreambleStoragePath = PreambleStoragePath();
     Index = clang_createIndexWithOptions(&Opts);
     ASSERT_TRUE(Index);
