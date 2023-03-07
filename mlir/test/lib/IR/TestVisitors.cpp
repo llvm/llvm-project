@@ -64,6 +64,16 @@ static void testPureCallbacks(Operation *op) {
   llvm::outs() << "Region post-order visits"
                << "\n";
   op->walk<WalkOrder::PostOrder>(regionPure);
+
+  llvm::outs() << "Op reverse post-order visits"
+               << "\n";
+  op->walk<WalkOrder::PostOrder, ReverseIterator>(opPure);
+  llvm::outs() << "Block reverse post-order visits"
+               << "\n";
+  op->walk<WalkOrder::PostOrder, ReverseIterator>(blockPure);
+  llvm::outs() << "Region reverse post-order visits"
+               << "\n";
+  op->walk<WalkOrder::PostOrder, ReverseIterator>(regionPure);
 }
 
 /// Tests erasure callbacks that skip the walk.
