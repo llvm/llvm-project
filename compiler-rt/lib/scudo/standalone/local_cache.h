@@ -62,8 +62,8 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
   struct BatchGroup {
     // `Next` is used by IntrusiveList.
     BatchGroup *Next;
-    // The identifier of each group
-    uptr GroupId;
+    // The compact base address of each group
+    uptr CompactPtrGroupBase;
     // Cache value of TransferBatch::getMaxCached()
     u16 MaxCachedPerBatch;
     // Number of blocks pushed into this group. This is an increment-only
