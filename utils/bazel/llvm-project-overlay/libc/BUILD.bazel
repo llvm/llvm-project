@@ -380,6 +380,7 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_properties_architectures",
         ":__support_macros_sanitizer",
+        ":errno",
         ":libc_root",
     ],
 )
