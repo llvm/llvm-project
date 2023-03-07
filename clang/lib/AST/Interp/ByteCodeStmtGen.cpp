@@ -428,6 +428,7 @@ bool ByteCodeStmtGen<Emitter>::visitBreakStmt(const BreakStmt *S) {
   if (!BreakLabel)
     return false;
 
+  this->emitCleanup();
   return this->jump(*BreakLabel);
 }
 
@@ -436,6 +437,7 @@ bool ByteCodeStmtGen<Emitter>::visitContinueStmt(const ContinueStmt *S) {
   if (!ContinueLabel)
     return false;
 
+  this->emitCleanup();
   return this->jump(*ContinueLabel);
 }
 
