@@ -256,8 +256,6 @@ private:
     return FPO.getRoundingMode();
   }
 
-  bool emitRecordDestruction(const Descriptor *Desc);
-
 protected:
   /// Variable to storage mapping.
   llvm::DenseMap<const ValueDecl *, Scope::Local> Locals;
@@ -335,20 +333,9 @@ public:
     this->Ctx->Descriptors[*Idx].emplace_back(Local);
   }
 
-  /// Emit destruction of the local variable. This includes
-  /// object destructors.
   void emitDestruction() override {
     if (!Idx)
       return;
-    // Emit destructor calls for local variables of record
-    // type with a destructor.
-    for (Scope::Local &Local : this->Ctx->Descriptors[*Idx]) {
-      if (!Local.Desc->isPrimitive() && !Local.Desc->isPrimitiveArray()) {
-        this->Ctx->emitGetPtrLocal(Local.Offset, SourceInfo{});
-        this->Ctx->emitRecordDestruction(Local.Desc);
-      }
-    }
-
     this->Ctx->emitDestroy(*Idx, SourceInfo{});
   }
 
