@@ -1379,6 +1379,15 @@ bool SimplifyCFGOpt::PerformValueComparisonIntoPredecessorFolding(
 /// on the same value.  If so, and if safe to do so, fold them together.
 bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
                                                          IRBuilder<> &Builder) {
+  // FIXME: For AMDGPU, we are lowering switch into branches, but the
+  // switch-lower currently has some limitation to do it optimally. This is a
+  // quick workaround for important workload. We will revisit this after we
+  // improve the switch lower. I just borrow the hasBranchDivergence() check
+  // for AMDGPU, where there is no native switch support. This helps avoiding
+  // test check changes to make merge process easy.
+  if (TTI.hasBranchDivergence())
+    return false;
+
   BasicBlock *BB = TI->getParent();
   Value *CV = isValueEqualityComparison(TI); // CondVal
   assert(CV && "Not a comparison?");
