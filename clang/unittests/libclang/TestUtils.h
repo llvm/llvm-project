@@ -22,11 +22,11 @@
 #include <vector>
 
 class LibclangParseTest : public ::testing::Test {
-  // std::greater<> to remove files before their parent dirs in TearDown().
-  std::set<std::string, std::greater<>> Files;
   typedef std::unique_ptr<std::string> fixed_addr_string;
   std::map<fixed_addr_string, fixed_addr_string> UnsavedFileContents;
 public:
+  // std::greater<> to remove files before their parent dirs in TearDown().
+  std::set<std::string, std::greater<>> FilesAndDirsToRemove;
   std::string TestDir;
   bool RemoveTestDirRecursivelyDuringTeardown = false;
   CXIndex Index;
@@ -40,7 +40,7 @@ public:
     TestDir = std::string(Dir.str());
     TUFlags = CXTranslationUnit_DetailedPreprocessingRecord |
       clang_defaultEditingTranslationUnitOptions();
-    Index = clang_createIndex(0, 0);
+    CreateIndex();
     ClangTU = nullptr;
   }
   void TearDown() override {
@@ -48,7 +48,7 @@ public:
     clang_disposeIndex(Index);
 
     namespace fs = llvm::sys::fs;
-    for (const std::string &Path : Files)
+    for (const std::string &Path : FilesAndDirsToRemove)
       EXPECT_FALSE(fs::remove(Path, /*IgnoreNonExisting=*/false));
     if (RemoveTestDirRecursivelyDuringTeardown)
       EXPECT_FALSE(fs::remove_directories(TestDir, /*IgnoreErrors=*/false));
@@ -63,7 +63,7 @@ public:
            FileI != FileEnd; ++FileI) {
         ASSERT_NE(*FileI, ".");
         path::append(Path, *FileI);
-        Files.emplace(Path.str());
+        FilesAndDirsToRemove.emplace(Path.str());
       }
       Filename = std::string(Path.str());
     }
@@ -100,6 +100,9 @@ public:
     clang_disposeString(cx_string);
     return string;
   };
+
+protected:
+  virtual void CreateIndex() { Index = clang_createIndex(0, 0); }
 
 private:
   template<typename TState>
