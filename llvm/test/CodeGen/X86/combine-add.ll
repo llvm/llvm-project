@@ -514,16 +514,12 @@ define i1 @PR51238(i1 %b, i8 %x, i8 %y, i8 %z) {
 define <2 x i64> @add_vec_x_notx(<2 x i64> %v0) nounwind {
 ; SSE-LABEL: add_vec_x_notx:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE-NEXT:    pxor %xmm0, %xmm1
-; SSE-NEXT:    paddq %xmm1, %xmm0
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: add_vec_x_notx:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm1
-; AVX-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %x = xor <2 x i64> %v0, <i64 -1, i64 -1>
   %y = add <2 x i64> %v0, %x
@@ -533,16 +529,12 @@ define <2 x i64> @add_vec_x_notx(<2 x i64> %v0) nounwind {
 define <2 x i64> @add_vec_notx_x(<2 x i64> %v0) nounwind {
 ; SSE-LABEL: add_vec_notx_x:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE-NEXT:    pxor %xmm0, %xmm1
-; SSE-NEXT:    paddq %xmm1, %xmm0
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: add_vec_notx_x:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm1
-; AVX-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %x = xor <2 x i64> %v0, <i64 -1, i64 -1>
   %y = add <2 x i64> %x, %v0
@@ -552,9 +544,7 @@ define <2 x i64> @add_vec_notx_x(<2 x i64> %v0) nounwind {
 define i64 @add_x_notx(i64 %v0) nounwind {
 ; CHECK-LABEL: add_x_notx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    notq %rax
-; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    movq $-1, %rax
 ; CHECK-NEXT:    retq
   %x = xor i64 %v0, -1
   %y = add i64 %v0, %x
@@ -564,9 +554,7 @@ define i64 @add_x_notx(i64 %v0) nounwind {
 define i64 @add_notx_x(i64 %v0) nounwind {
 ; CHECK-LABEL: add_notx_x:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    notq %rax
-; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    movq $-1, %rax
 ; CHECK-NEXT:    retq
   %x = xor i64 %v0, -1
   %y = add i64 %x, %v0
