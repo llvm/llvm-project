@@ -76,7 +76,6 @@ void *MemprofDlSymNext(const char *sym);
 
 extern int memprof_inited;
 extern int memprof_timestamp_inited;
-extern int memprof_init_done;
 // Used to avoid infinite recursion in __memprof_init().
 extern bool memprof_init_is_running;
 extern void (*death_callback)(void);
