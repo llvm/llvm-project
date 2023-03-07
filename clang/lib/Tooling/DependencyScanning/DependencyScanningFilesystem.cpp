@@ -181,7 +181,11 @@ static bool shouldCacheStatFailures(StringRef Filename) {
   StringRef Ext = llvm::sys::path::extension(Filename);
   if (Ext.empty())
     return false; // This may be the module cache directory.
-  // Only cache stat failures on source files.
+  // Only cache stat failures on files that are not expected to change during
+  // the build.
+  StringRef FName = llvm::sys::path::filename(Filename);
+  if (FName == "module.modulemap" || FName == "module.map")
+    return true;
   return shouldScanForDirectivesBasedOnExtension(Filename);
 }
 
