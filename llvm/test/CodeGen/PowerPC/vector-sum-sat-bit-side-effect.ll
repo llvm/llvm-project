@@ -9,8 +9,6 @@
 define void @test1(<16 x i8> %0) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlxor v3, v3, v3
-; CHECK-NEXT:    vsum4sbs v2, v2, v3
 ; CHECK-NEXT:    blr
 entry:
   %1 = tail call <4 x i32> @llvm.ppc.altivec.vsum4sbs(<16 x i8> %0, <4 x i32> zeroinitializer)
@@ -20,8 +18,6 @@ entry:
 define void @test2(<8 x i16> %0) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlxor v3, v3, v3
-; CHECK-NEXT:    vsum4shs v2, v2, v3
 ; CHECK-NEXT:    blr
 entry:
   %1 = tail call <4 x i32> @llvm.ppc.altivec.vsum4shs(<8 x i16> %0, <4 x i32> zeroinitializer)
@@ -31,8 +27,6 @@ entry:
 define void @test3(<16 x i8> %0) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlxor v3, v3, v3
-; CHECK-NEXT:    vsum4ubs v2, v2, v3
 ; CHECK-NEXT:    blr
 entry:
   %1 = tail call <4 x i32> @llvm.ppc.altivec.vsum4ubs(<16 x i8> %0, <4 x i32> zeroinitializer)
@@ -108,9 +102,8 @@ entry:
 define <4 x i32> @test10(<16 x i8> %0, <16 x i8> %1) {
 ; CHECK-LABEL: test10:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlxor v4, v4, v4
-; CHECK-NEXT:    vsum4sbs v2, v2, v4
-; CHECK-NEXT:    vsum4sbs v3, v3, v4
+; CHECK-NEXT:    xxlxor v3, v3, v3
+; CHECK-NEXT:    vsum4sbs v2, v2, v3
 ; CHECK-NEXT:    blr
 entry:
   %2 = tail call <4 x i32> @llvm.ppc.altivec.vsum4sbs(<16 x i8> %0, <4 x i32> zeroinitializer)
@@ -121,9 +114,8 @@ entry:
 define <4 x i32> @test11(<8 x i16> %0, <8 x i16> %1) {
 ; CHECK-LABEL: test11:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlxor v4, v4, v4
-; CHECK-NEXT:    vsum4shs v2, v2, v4
-; CHECK-NEXT:    vsum4shs v3, v3, v4
+; CHECK-NEXT:    xxlxor v3, v3, v3
+; CHECK-NEXT:    vsum4shs v2, v2, v3
 ; CHECK-NEXT:    blr
 entry:
   %2 = tail call <4 x i32> @llvm.ppc.altivec.vsum4shs(<8 x i16> %0, <4 x i32> zeroinitializer)
@@ -134,9 +126,8 @@ entry:
 define <4 x i32> @test12(<16 x i8> %0, <16 x i8> %1) {
 ; CHECK-LABEL: test12:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlxor v4, v4, v4
-; CHECK-NEXT:    vsum4ubs v2, v2, v4
-; CHECK-NEXT:    vsum4ubs v3, v3, v4
+; CHECK-NEXT:    xxlxor v3, v3, v3
+; CHECK-NEXT:    vsum4ubs v2, v2, v3
 ; CHECK-NEXT:    blr
 entry:
   %2 = tail call <4 x i32> @llvm.ppc.altivec.vsum4ubs(<16 x i8> %0, <4 x i32> zeroinitializer)
