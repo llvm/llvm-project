@@ -1157,7 +1157,7 @@ uint32_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
       // Directive not convertable to compact unwind, bail out.
       DEBUG_WITH_TYPE("compact-unwind",
                       llvm::dbgs()
-                          << "CFI directive not compatiable with comact "
+                          << "CFI directive not compatible with compact "
                              "unwind encoding, opcode=" << Inst.getOperation()
                           << "\n");
       return CU::UNWIND_ARM_MODE_DWARF;
