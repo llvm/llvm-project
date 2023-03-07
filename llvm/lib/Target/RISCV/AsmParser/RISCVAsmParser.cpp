@@ -1563,34 +1563,40 @@ RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
 OperandMatchResultTy RISCVAsmParser::parseFPImm(OperandVector &Operands) {
   SMLoc S = getLoc();
 
-  // Handle negation, as that still comes through as a separate token.
-  bool IsNegative = parseOptionalToken(AsmToken::Minus);
-
-  const AsmToken &Tok = getTok();
-  if (!Tok.is(AsmToken::Real) && !Tok.is(AsmToken::Integer) &&
-      !Tok.is(AsmToken::Identifier)) {
-    TokError("invalid floating point immediate");
-    return MatchOperand_ParseFail;
-  }
-
   // Parse special floats (inf/nan/min) representation.
-  if (Tok.is(AsmToken::Identifier)) {
-    if (Tok.getString().compare_insensitive("inf") == 0) {
+  if (getTok().is(AsmToken::Identifier)) {
+    StringRef Identifier = getTok().getIdentifier();
+    if (Identifier.compare_insensitive("inf") == 0) {
       APFloat SpecialVal = APFloat::getInf(APFloat::IEEEsingle());
       Operands.push_back(RISCVOperand::createFPImm(
           SpecialVal.bitcastToAPInt().getZExtValue(), S));
-    } else if (Tok.getString().compare_insensitive("nan") == 0) {
+    } else if (Identifier.compare_insensitive("nan") == 0) {
       APFloat SpecialVal = APFloat::getNaN(APFloat::IEEEsingle());
       Operands.push_back(RISCVOperand::createFPImm(
           SpecialVal.bitcastToAPInt().getZExtValue(), S));
-    } else if (Tok.getString().compare_insensitive("min") == 0) {
+    } else if (Identifier.compare_insensitive("min") == 0) {
       unsigned SpecialVal = RISCVLoadFPImm::getFPImm(1);
       Operands.push_back(RISCVOperand::createFPImm(SpecialVal, S));
     } else {
       TokError("invalid floating point literal");
       return MatchOperand_ParseFail;
     }
-  } else if (Tok.is(AsmToken::Integer)) {
+
+    Lex(); // Eat the token.
+
+    return MatchOperand_Success;
+  }
+
+  // Handle negation, as that still comes through as a separate token.
+  bool IsNegative = parseOptionalToken(AsmToken::Minus);
+
+  const AsmToken &Tok = getTok();
+  if (!Tok.is(AsmToken::Real) && !Tok.is(AsmToken::Integer)) {
+    TokError("invalid floating point immediate");
+    return MatchOperand_ParseFail;
+  }
+
+  if (Tok.is(AsmToken::Integer)) {
     // Parse integer representation.
     if (Tok.getIntVal() > 31 || IsNegative) {
       TokError("encoded floating point value out of range");
