@@ -10999,7 +10999,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     InformationCache &InfoCache = A.getInfoCache();
     if (InfoCache.isOnlyUsedByAssume(LI)) {
       if (!llvm::all_of(PotentialValueOrigins, [&](Instruction *I) {
-            if (!I)
+            if (!I || isa<AssumeInst>(I))
               return true;
             if (auto *SI = dyn_cast<StoreInst>(I))
               return A.isAssumedDead(SI->getOperandUse(0), this,
