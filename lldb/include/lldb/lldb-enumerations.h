@@ -1103,7 +1103,8 @@ FLAGS_ENUM(TypeFlags){
     eTypeIsTuple = (1u << 26),
     eTypeIsMetatype = (1u << 27),
     eTypeHasUnboundGeneric = (1u << 28),
-    eTypeHasDynamicSelf = (1u << 29)};
+    eTypeHasDynamicSelf = (1u << 29),
+    eTypeIsPack = (1u << 30)};
 
 FLAGS_ENUM(CommandFlags){
     /// eCommandRequiresTarget

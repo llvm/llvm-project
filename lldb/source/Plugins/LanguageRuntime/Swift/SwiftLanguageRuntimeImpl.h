@@ -257,6 +257,12 @@ public:
   };
 
 protected:
+  static void
+  ForEachGenericParameter(swift::Demangle::NodePointer node,
+                          std::function<void(unsigned, unsigned)> callback) {
+    SwiftLanguageRuntime::ForEachGenericParameter(node, callback);
+  }
+
   /// Use the reflection context to build a TypeRef object.
   const swift::reflection::TypeRef *
   GetTypeRef(CompilerType type, TypeSystemSwiftTypeRef *module_holder);
@@ -272,7 +278,11 @@ protected:
   Value::ValueType GetValueType(ValueObject &in_value,
                                 CompilerType dynamic_type,
                                 bool is_indirect_enum_case);
-
+  bool GetDynamicTypeAndAddress_Pack(ValueObject &in_value,
+                                     CompilerType pack_type,
+                                     lldb::DynamicValueType use_dynamic,
+                                     TypeAndOrName &class_type_or_name,
+                                     Address &address);
   bool GetDynamicTypeAndAddress_Class(ValueObject &in_value,
                                       CompilerType class_type,
                                       lldb::DynamicValueType use_dynamic,

@@ -267,6 +267,51 @@ public:
       const SymbolContext &sc,
       llvm::DenseMap<ArchetypePath, llvm::StringRef> &dict);
 
+  /// Invoke callback for each DependentGenericParamType.
+  static void
+  ForEachGenericParameter(swift::Demangle::NodePointer node,
+                          std::function<void(unsigned, unsigned)> callback);
+
+  /// One element for each value pack / pack expansion in the signature.
+  struct GenericSignature {
+    /// Represents a single generic parameter.
+    struct GenericParam {
+      unsigned depth;
+      unsigned index;
+      /// A vector of |generic_params| bits, indicating which other
+      /// generic_params share the same shape.
+      llvm::BitVector same_shape;
+      GenericParam(unsigned d, unsigned i, unsigned nparams)
+          : depth(d), index(i), same_shape(nparams) {}
+    };
+
+    struct PackExpansion {
+      llvm::BitVector generic_params;
+      ConstString mangled_type;
+      unsigned shape;
+      PackExpansion(unsigned nparams, unsigned shape)
+          : generic_params(nparams), shape(shape) {}
+    };
+
+    llvm::SmallVector<GenericParam, 4> generic_params;
+    /// Indices of the shape of the pack expansions.
+    llvm::SmallVector<PackExpansion> pack_expansions;
+
+    llvm::SmallVector<unsigned, 4> count_for_value_pack;
+    llvm::SmallVector<unsigned, 4> count_for_type_pack;
+
+    unsigned GetNumValuePacks() { return count_for_value_pack.size(); }
+    unsigned GetNumTypePacks() { return count_for_type_pack.size(); }
+    unsigned GetCountForValuePack(unsigned i) {
+      return count_for_value_pack[i];
+    }
+    unsigned GetCountForTypePack(unsigned i) { return count_for_type_pack[i]; }
+  };
+  /// Extract the generic signature out of a mangled Swift function name.
+  static llvm::Optional<GenericSignature>
+  GetGenericSignature(llvm::StringRef function_name,
+                      TypeSystemSwiftTypeRef &ts);
+
   /// Using the generic type parameters of \p stack_frame return a
   /// version of \p base_type that replaces all generic type
   /// parameters with bound generic types. If a generic type parameter
