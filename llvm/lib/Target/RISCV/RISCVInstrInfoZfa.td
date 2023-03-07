@@ -178,7 +178,21 @@ def : InstAlias<"fgeq.h $rd, $rs, $rt",
 // Codegen patterns
 //===----------------------------------------------------------------------===//
 
+def fp32imm_to_loadfpimm : SDNodeXForm<fpimm, [{
+  return CurDAG->getTargetConstant(RISCVLoadFPImm::getLoadFP32Imm(N->getValueAPF()), 
+                                   SDLoc(N), Subtarget->getXLenVT());}]>;
+
+def fp64imm_to_loadfpimm : SDNodeXForm<fpimm, [{
+  return CurDAG->getTargetConstant(RISCVLoadFPImm::getLoadFP64Imm(N->getValueAPF()), 
+                                   SDLoc(N), Subtarget->getXLenVT());}]>;
+
+def fp16imm_to_loadfpimm : SDNodeXForm<fpimm, [{
+  return CurDAG->getTargetConstant(RISCVLoadFPImm::getLoadFP16Imm(N->getValueAPF()), 
+                                   SDLoc(N), Subtarget->getXLenVT());}]>;
+
 let Predicates = [HasStdExtZfa] in {
+def : Pat<(f32 fpimm:$imm), (FLI_S (fp32imm_to_loadfpimm fpimm:$imm))>;
+
 def: PatFprFpr<fminimum, FMINM_S, FPR32>;
 def: PatFprFpr<fmaximum, FMAXM_S, FPR32>;
 
@@ -201,6 +215,8 @@ def: PatSetCC<FPR32, strict_fsetcc, SETOLE, FLEQ_S>;
 } // Predicates = [HasStdExtZfa]
 
 let Predicates = [HasStdExtZfa, HasStdExtD] in {
+def : Pat<(f64 fpimm:$imm), (FLI_D (fp64imm_to_loadfpimm fpimm:$imm))>;
+
 def: PatFprFpr<fminimum, FMINM_D, FPR64>;
 def: PatFprFpr<fmaximum, FMAXM_D, FPR64>;
 
@@ -229,6 +245,8 @@ def : Pat<(RISCVBuildPairF64 GPR:$rs1, GPR:$rs2),
 }
 
 let Predicates = [HasStdExtZfa, HasStdExtZfh] in {
+def : Pat<(f16 fpimm:$imm), (FLI_H (fp16imm_to_loadfpimm fpimm:$imm))>;
+
 def: PatFprFpr<fminimum, FMINM_H, FPR16>;
 def: PatFprFpr<fmaximum, FMAXM_H, FPR16>;
 
