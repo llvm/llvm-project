@@ -4154,6 +4154,11 @@ StringRef CmpInst::getPredicateName(Predicate Pred) {
   }
 }
 
+raw_ostream &llvm::operator<<(raw_ostream &OS, CmpInst::Predicate Pred) {
+  OS << CmpInst::getPredicateName(Pred);
+  return OS;
+}
+
 ICmpInst::Predicate ICmpInst::getSignedPredicate(Predicate pred) {
   switch (pred) {
     default: llvm_unreachable("Unknown icmp predicate!");

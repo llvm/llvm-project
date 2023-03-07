@@ -1074,6 +1074,8 @@ struct OperandTraits<CmpInst> : public FixedNumOperandTraits<CmpInst, 2> {
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CmpInst, Value)
 
+raw_ostream &operator<<(raw_ostream &OS, CmpInst::Predicate Pred);
+
 /// A lightweight accessor for an operand bundle meant to be passed
 /// around by value.
 struct OperandBundleUse {
