@@ -3128,7 +3128,9 @@ TypeSystemSwiftTypeRef::ShouldPrintAsOneLiner(opaque_compiler_type_t type,
                                               ValueObject *valobj) {
   auto impl = [&]() {
     if (type) {
-      if (IsImportedType(type, nullptr))
+      auto canonical = GetCanonicalType(type);
+      if (canonical)
+        if (IsImportedType(canonical.GetOpaqueQualType(), nullptr))
         return eLazyBoolNo;
     }
     if (valobj) {
