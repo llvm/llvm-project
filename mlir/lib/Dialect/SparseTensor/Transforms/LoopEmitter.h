@@ -190,6 +190,11 @@ private:
   Value genAddress(OpBuilder &builder, Location loc, size_t tid, size_t dim,
                    Value iv);
 
+  /// Generates the segment high for a non-unique level (to fast forward
+  /// duplicated coordinates).
+  Value genSegmentHigh(OpBuilder &builder, Location loc, size_t tid, size_t lvl,
+                       Value pos, Value pHi);
+
   /// Generates instructions to compute the coordinate of tensors[tid][lvl]
   /// under the current loop context.  The final argument is the
   /// collapsed-output level, whereas this function handles converting
@@ -262,6 +267,8 @@ private:
   /// are updated to remain current within the current loop.
   // TODO: we may want to rename "pidx(s)" to `posCursor(s)` or similar.
   std::vector<std::vector<Value>> pidxs;
+  // The segment upper bound for non-uniques level after de-duplication.
+  std::vector<std::vector<Value>> segHi;
   std::vector<std::vector<Value>> coord;
   std::vector<std::vector<Value>> highs;
   std::vector<std::vector<Value>> lvlSizes;
