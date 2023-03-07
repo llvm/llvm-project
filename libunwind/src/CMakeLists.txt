@@ -35,7 +35,8 @@ set(LIBUNWIND_ASM_SOURCES
 # CMake doesn't work correctly with assembly on AIX. Workaround by compiling
 # as C files as well.
 if((APPLE AND CMAKE_VERSION VERSION_LESS 3.19) OR
-   (MINGW AND CMAKE_VERSION VERSION_LESS 3.17))
+   (MINGW AND CMAKE_VERSION VERSION_LESS 3.17) OR
+   (${CMAKE_SYSTEM_NAME} MATCHES "AIX"))
   set_source_files_properties(${LIBUNWIND_ASM_SOURCES} PROPERTIES LANGUAGE C)
 endif()
 
