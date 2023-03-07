@@ -24,6 +24,15 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
+.ifdef ERR
+.section .note,"a",@note; note:
+# ERROR: :[[#@LINE+1]]:7: error: unsupported relocation type
+.quad extern-note
+.section .rodata,"a",@progbits; rodata:
+# ERROR: :[[#@LINE+1]]:7: error: unsupported relocation type
+.quad extern-rodata
+.endif
+
 .section .alloc_w,"aw",@progbits; w:
 .quad extern-w
 .quad w-extern
