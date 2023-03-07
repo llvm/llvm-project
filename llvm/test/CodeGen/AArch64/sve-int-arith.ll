@@ -337,8 +337,10 @@ define <vscale x 16 x i8> @uqsub_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b
   ret <vscale x 16 x i8> %res
 }
 
-define <vscale x 16 x i8> @mla_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
-; CHECK-LABEL: mla_i8:
+; Next four cases should generate mad instruction once pseudo instructions are emitted for MLA/MAD
+
+define <vscale x 16 x i8> @mad_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
+; CHECK-LABEL: mad_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mla z2.b, p0/m, z0.b, z1.b
@@ -347,6 +349,86 @@ define <vscale x 16 x i8> @mla_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, 
   %prod = mul <vscale x 16 x i8> %a, %b
   %res = add <vscale x 16 x i8> %c, %prod
   ret <vscale x 16 x i8> %res
+}
+
+define <vscale x 8 x i16> @mad_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c) {
+; CHECK-LABEL: mad_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mla z2.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    ret
+  %prod = mul <vscale x 8 x i16> %a, %b
+  %res = add <vscale x 8 x i16> %c, %prod
+  ret <vscale x 8 x i16> %res
+}
+
+define <vscale x 4 x i32> @mad_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) {
+; CHECK-LABEL: mad_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mla z2.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    ret
+  %prod = mul <vscale x 4 x i32> %a, %b
+  %res = add <vscale x 4 x i32> %c, %prod
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 2 x i64> @mad_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c) {
+; CHECK-LABEL: mad_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mla z2.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    ret
+  %prod = mul <vscale x 2 x i64> %a, %b
+  %res = add <vscale x 2 x i64> %c, %prod
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 16 x i8> @mla_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
+; CHECK-LABEL: mla_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    mla z0.b, p0/m, z1.b, z2.b
+; CHECK-NEXT:    ret
+  %prod = mul <vscale x 16 x i8> %b, %c
+  %res = add <vscale x 16 x i8> %a, %prod
+  ret <vscale x 16 x i8> %res
+}
+
+define <vscale x 8 x i16> @mla_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c) {
+; CHECK-LABEL: mla_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mla z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    ret
+  %prod = mul <vscale x 8 x i16> %b, %c
+  %res = add <vscale x 8 x i16> %a, %prod
+  ret <vscale x 8 x i16> %res
+}
+
+define <vscale x 4 x i32> @mla_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) {
+; CHECK-LABEL: mla_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mla z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    ret
+  %prod = mul <vscale x 4 x i32> %b, %c
+  %res = add <vscale x 4 x i32> %a, %prod
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 2 x i64> @mla_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c) {
+; CHECK-LABEL: mla_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mla z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %prod = mul <vscale x 2 x i64> %b, %c
+  %res = add <vscale x 2 x i64> %a, %prod
+  ret <vscale x 2 x i64> %res
 }
 
 define <vscale x 16 x i8> @mla_i8_multiuse(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, <vscale x 16 x i8>* %p) {
@@ -363,8 +445,10 @@ define <vscale x 16 x i8> @mla_i8_multiuse(<vscale x 16 x i8> %a, <vscale x 16 x
   ret <vscale x 16 x i8> %res
 }
 
-define <vscale x 16 x i8> @mls_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
-; CHECK-LABEL: mls_i8:
+; Next four cases should generate msb instruction once psuedo instruction is emitted for MLS/MSB
+
+define <vscale x 16 x i8> @msb_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
+; CHECK-LABEL: msb_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mls z2.b, p0/m, z0.b, z1.b
@@ -373,6 +457,308 @@ define <vscale x 16 x i8> @mls_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, 
   %prod = mul <vscale x 16 x i8> %a, %b
   %res = sub <vscale x 16 x i8> %c, %prod
   ret <vscale x 16 x i8> %res
+}
+
+define <vscale x 8 x i16> @msb_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c) {
+; CHECK-LABEL: msb_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mls z2.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    ret
+  %prod = mul <vscale x 8 x i16> %a, %b
+  %res = sub <vscale x 8 x i16> %c, %prod
+  ret <vscale x 8 x i16> %res
+}
+
+define <vscale x 4 x i32> @msb_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) {
+; CHECK-LABEL: msb_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mls z2.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    ret
+  %prod = mul <vscale x 4 x i32> %a, %b
+  %res = sub <vscale x 4 x i32> %c, %prod
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 2 x i64> @msb_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c) {
+; CHECK-LABEL: msb_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mls z2.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    ret
+  %prod = mul <vscale x 2 x i64> %a, %b
+  %res = sub <vscale x 2 x i64> %c, %prod
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 16 x i8> @mls_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
+; CHECK-LABEL: mls_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    mls z0.b, p0/m, z1.b, z2.b
+; CHECK-NEXT:    ret
+  %prod = mul <vscale x 16 x i8> %b, %c
+  %res = sub <vscale x 16 x i8> %a, %prod
+  ret <vscale x 16 x i8> %res
+}
+
+define <vscale x 8 x i16> @mls_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c) {
+; CHECK-LABEL: mls_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mls z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    ret
+  %prod = mul <vscale x 8 x i16> %b, %c
+  %res = sub <vscale x 8 x i16> %a, %prod
+  ret <vscale x 8 x i16> %res
+}
+
+define <vscale x 4 x i32> @mls_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) {
+; CHECK-LABEL: mls_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mls z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    ret
+  %prod = mul <vscale x 4 x i32> %b, %c
+  %res = sub <vscale x 4 x i32> %a, %prod
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 2 x i64> @mls_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c) {
+; CHECK-LABEL: mls_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mls z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %prod = mul <vscale x 2 x i64> %b, %c
+  %res = sub <vscale x 2 x i64> %a, %prod
+  ret <vscale x 2 x i64> %res
+}
+
+; Test cases below have one of the add/sub operands as constant splat
+
+ define <vscale x 2 x i64> @muladd_i64_positiveAddend(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
+; CHECK-LABEL: muladd_i64_positiveAddend:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z2.d, #0xffffffff
+; CHECK-NEXT:    mla z2.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    ret
+{
+  %1 = mul <vscale x 2 x i64> %a, %b
+  %2 = add <vscale x 2 x i64> %1, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 4294967295, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  ret <vscale x 2 x i64> %2
+}
+
+define <vscale x 2 x i64> @muladd_i64_negativeAddend(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
+; CHECK-LABEL: muladd_i64_negativeAddend:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z2.d, #0xffffffff00000001
+; CHECK-NEXT:    mla z2.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    ret
+{
+  %1 = mul <vscale x 2 x i64> %a, %b
+  %2 = add <vscale x 2 x i64> %1, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 -4294967295, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  ret <vscale x 2 x i64> %2
+}
+
+
+define <vscale x 4 x i32> @muladd_i32_positiveAddend(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
+; CHECK-LABEL: muladd_i32_positiveAddend:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z2.s, #0x10000
+; CHECK-NEXT:    mla z2.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    ret
+{
+  %1 = mul <vscale x 4 x i32> %a, %b
+  %2 = add <vscale x 4 x i32> %1, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 65536, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @muladd_i32_negativeAddend(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
+; CHECK-LABEL: muladd_i32_negativeAddend:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z2.s, #0xffff0000
+; CHECK-NEXT:    mla z2.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    ret
+{
+  %1 = mul <vscale x 4 x i32> %a, %b
+  %2 = add <vscale x 4 x i32> %1, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -65536, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 8 x i16> @muladd_i16_positiveAddend(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
+; CHECK-LABEL: muladd_i16_positiveAddend:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mul z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    add z0.h, z0.h, #255 // =0xff
+; CHECK-NEXT:    ret
+{
+  %1 = mul <vscale x 8 x i16> %a, %b
+  %2 = add <vscale x 8 x i16> %1, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 255, i16 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  ret <vscale x 8 x i16> %2
+}
+
+define <vscale x 8 x i16> @muladd_i16_negativeAddend(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
+; CHECK-LABEL: muladd_i16_negativeAddend:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mov z2.h, #-255 // =0xffffffffffffff01
+; CHECK-NEXT:    mla z2.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    ret
+{
+  %1 = mul <vscale x 8 x i16> %a, %b
+  %2 = add <vscale x 8 x i16> %1, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 -255, i16 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  ret <vscale x 8 x i16> %2
+}
+
+define <vscale x 16 x i8> @muladd_i8_positiveAddend(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
+; CHECK-LABEL: muladd_i8_positiveAddend:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    mul z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    add z0.b, z0.b, #15 // =0xf
+; CHECK-NEXT:    ret
+{
+  %1 = mul <vscale x 16 x i8> %a, %b
+  %2 = add <vscale x 16 x i8> %1, shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 15, i8 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
+  ret <vscale x 16 x i8> %2
+}
+
+define <vscale x 16 x i8> @muladd_i8_negativeAddend(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
+; CHECK-LABEL: muladd_i8_negativeAddend:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    mul z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    add z0.b, z0.b, #241 // =0xf1
+; CHECK-NEXT:    ret
+{
+  %1 = mul <vscale x 16 x i8> %a, %b
+  %2 = add <vscale x 16 x i8> %1, shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 -15, i8 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
+  ret <vscale x 16 x i8> %2
+}
+
+define <vscale x 2 x i64> @mulsub_i64_positiveAddend(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
+; CHECK-LABEL: mulsub_i64_positiveAddend:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    mov z1.d, #0xffffffff
+; CHECK-NEXT:    sub z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+{
+  %1 = mul <vscale x 2 x i64> %a, %b
+  %2 = sub <vscale x 2 x i64> %1, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 4294967295, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  ret <vscale x 2 x i64> %2
+}
+
+define <vscale x 2 x i64> @mulsub_i64_negativeAddend(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
+; CHECK-LABEL: mulsub_i64_negativeAddend:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    mov z1.d, #0xffffffff00000001
+; CHECK-NEXT:    sub z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+{
+  %1 = mul <vscale x 2 x i64> %a, %b
+  %2 = sub <vscale x 2 x i64> %1, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 -4294967295, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  ret <vscale x 2 x i64> %2
+}
+
+
+define <vscale x 4 x i32> @mulsub_i32_positiveAddend(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
+; CHECK-LABEL: mulsub_i32_positiveAddend:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mul z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    mov z1.s, #0x10000
+; CHECK-NEXT:    sub z0.s, z0.s, z1.s
+; CHECK-NEXT:    ret
+{
+  %1 = mul <vscale x 4 x i32> %a, %b
+  %2 = sub <vscale x 4 x i32> %1, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 65536, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @mulsub_i32_negativeAddend(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
+; CHECK-LABEL: mulsub_i32_negativeAddend:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mul z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    mov z1.s, #0xffff0000
+; CHECK-NEXT:    sub z0.s, z0.s, z1.s
+; CHECK-NEXT:    ret
+{
+  %1 = mul <vscale x 4 x i32> %a, %b
+  %2 = sub <vscale x 4 x i32> %1, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -65536, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 8 x i16> @mulsub_i16_positiveAddend(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
+; CHECK-LABEL: mulsub_i16_positiveAddend:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mul z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    sub z0.h, z0.h, #255 // =0xff
+; CHECK-NEXT:    ret
+{
+  %1 = mul <vscale x 8 x i16> %a, %b
+  %2 = sub <vscale x 8 x i16> %1, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 255, i16 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  ret <vscale x 8 x i16> %2
+}
+
+define <vscale x 8 x i16> @mulsub_i16_negativeAddend(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
+; CHECK-LABEL: mulsub_i16_negativeAddend:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mul z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    mov z1.h, #-255 // =0xffffffffffffff01
+; CHECK-NEXT:    sub z0.h, z0.h, z1.h
+; CHECK-NEXT:    ret
+{
+  %1 = mul <vscale x 8 x i16> %a, %b
+  %2 = sub <vscale x 8 x i16> %1, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 -255, i16 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  ret <vscale x 8 x i16> %2
+}
+
+define <vscale x 16 x i8> @mulsub_i8_positiveAddend(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
+; CHECK-LABEL: mulsub_i8_positiveAddend:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    mul z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    sub z0.b, z0.b, #15 // =0xf
+; CHECK-NEXT:    ret
+{
+  %1 = mul <vscale x 16 x i8> %a, %b
+  %2 = sub <vscale x 16 x i8> %1, shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 15, i8 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
+  ret <vscale x 16 x i8> %2
+}
+
+define <vscale x 16 x i8> @mulsub_i8_negativeAddend(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
+; CHECK-LABEL: mulsub_i8_negativeAddend:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    mul z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    sub z0.b, z0.b, #241 // =0xf1
+; CHECK-NEXT:    ret
+{
+  %1 = mul <vscale x 16 x i8> %a, %b
+  %2 = sub <vscale x 16 x i8> %1, shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 -15, i8 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
+  ret <vscale x 16 x i8> %2
 }
 
 declare <vscale x 16 x i8> @llvm.sadd.sat.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>)
