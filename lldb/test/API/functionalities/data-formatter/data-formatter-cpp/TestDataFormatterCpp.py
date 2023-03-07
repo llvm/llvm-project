@@ -289,7 +289,7 @@ class CppDataFormatterTestCase(TestBase):
     def test_mem_func_ptr_formats(self):
         self.build()
 
-        lldbutil.run_to_name_breakpoint(self, "has_local_mem_func_pointers")
+        lldbutil.run_to_source_breakpoint(self, "Break in has_local_mem_func_pointers", lldb.SBFileSpec("main.cpp"))
 
         # FIXME: don't format pointer to members as bytes, but rather as regular pointers
         self.expect(
