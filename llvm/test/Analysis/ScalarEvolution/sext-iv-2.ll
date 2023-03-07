@@ -3,7 +3,7 @@
 ; CHECK: %tmp3 = sext i8 %tmp2 to i32
 ; CHECK: -->  (sext i8 {0,+,1}<%bb1> to i32){{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: -1
 ; CHECK: %tmp4 = mul i32 %tmp3, %i.02
-; CHECK: -->  ((sext i8 {0,+,1}<%bb1> to i32) * {0,+,1}<%bb>){{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: {0,+,-1}<%bb>
+; CHECK: -->  ((sext i8 {0,+,1}<%bb1> to i32) * {0,+,1}<nuw><nsw><%bb>){{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: {0,+,-1}<nw><%bb>
 
 ; These sexts are not foldable.
 

@@ -282,16 +282,16 @@ define void @test4(i32 %arg) {
 ; CHECK-NEXT:    %sub = add nsw i32 %index, -2
 ; CHECK-NEXT:    --> {(-2 + %arg)<nsw>,+,1}<nsw><%for.body> U: full-set S: full-set Exits: (-3 + (10 smax (1 + %arg)<nsw>))<nsw> LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %idxprom = sext i32 %sub to i64
-; CHECK-NEXT:    --> {(-2 + (sext i32 %arg to i64))<nsw>,+,1}<nsw><%for.body> U: [-2147483650,4294967304) S: [-2147483650,4294967304) Exits: (-2 + (zext i32 (-1 + (-1 * %arg) + (10 smax (1 + %arg)<nsw>)) to i64) + (sext i32 %arg to i64)) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {(-2 + (sext i32 %arg to i64))<nsw>,+,1}<nsw><%for.body> U: [-2147483650,4294967303) S: [-2147483650,4294967303) Exits: (-2 + (zext i32 (-1 + (-1 * %arg) + (10 smax (1 + %arg)<nsw>)) to i64) + (sext i32 %arg to i64)) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds [10 x i32], ptr %array, i64 0, i64 %idxprom
 ; CHECK-NEXT:    --> {(-8 + (4 * (sext i32 %arg to i64))<nsw> + %array),+,4}<nw><%for.body> U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: (-8 + (4 * (zext i32 (-1 + (-1 * %arg) + (10 smax (1 + %arg)<nsw>)) to i64))<nuw><nsw> + (4 * (sext i32 %arg to i64))<nsw> + %array) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %data = load i32, ptr %arrayidx, align 4
 ; CHECK-NEXT:    --> %data U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %inc5 = add nsw i32 %index, 1
-; CHECK-NEXT:    --> {(1 + %arg)<nsw>,+,1}<nsw><%for.body> U: full-set S: full-set Exits: (10 smax (1 + %arg)<nsw>) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {(1 + %arg)<nsw>,+,1}<nsw><%for.body> U: [-2147483647,-2147483648) S: [-2147483647,-2147483648) Exits: (10 smax (1 + %arg)<nsw>) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test4
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + (-1 * %arg) + (10 smax (1 + %arg)<nsw>))
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -2147483638
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -2147483639
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + (-1 * %arg) + (10 smax (1 + %arg)<nsw>))
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + (-1 * %arg) + (10 smax (1 + %arg)<nsw>))
 ; CHECK-NEXT:   Predicates:
