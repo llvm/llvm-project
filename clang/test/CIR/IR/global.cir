@@ -2,11 +2,11 @@
 
 module {
   cir.global external @a = 3 : i32
-  cir.global external @rgb = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i8 x 3>>
-  cir.global external @b = #cir.cst_array<"example\00" : !cir.array<i8 x 8>>
+  cir.global external @rgb = #cir.const_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i8 x 3>>
+  cir.global external @b = #cir.const_array<"example\00" : !cir.array<i8 x 8>>
   cir.global "private" constant internal @".str" : !cir.array<i8 x 8> {alignment = 1 : i64}
   cir.global "private" internal @c : i32
-  cir.global "private" constant internal @".str2" = #cir.cst_array<"example\00" : !cir.array<i8 x 8>> : !cir.array<i8 x 8> {alignment = 1 : i64}
+  cir.global "private" constant internal @".str2" = #cir.const_array<"example\00" : !cir.array<i8 x 8>> : !cir.array<i8 x 8> {alignment = 1 : i64}
   cir.global external @s = @".str2": !cir.ptr<i8>
   cir.func @use_global() {
     %0 = cir.get_global @a : cir.ptr <i32>
@@ -15,11 +15,11 @@ module {
 }
 
 // CHECK: cir.global external @a = 3 : i32
-// CHECK: cir.global external @rgb = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i8 x 3>>
-// CHECK: cir.global external @b = #cir.cst_array<"example\00" : !cir.array<i8 x 8>>
+// CHECK: cir.global external @rgb = #cir.const_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i8 x 3>>
+// CHECK: cir.global external @b = #cir.const_array<"example\00" : !cir.array<i8 x 8>>
 // CHECK: cir.global "private" constant internal @".str" : !cir.array<i8 x 8> {alignment = 1 : i64}
 // CHECK: cir.global "private" internal @c : i32
-// CHECK: cir.global "private" constant internal @".str2" = #cir.cst_array<"example\00" : !cir.array<i8 x 8>> : !cir.array<i8 x 8> {alignment = 1 : i64}
+// CHECK: cir.global "private" constant internal @".str2" = #cir.const_array<"example\00" : !cir.array<i8 x 8>> : !cir.array<i8 x 8> {alignment = 1 : i64}
 // CHECK: cir.global external @s = @".str2": !cir.ptr<i8>
 
 // CHECK: cir.func @use_global()

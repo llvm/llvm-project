@@ -158,8 +158,8 @@ VoidTask silly_task() {
 
 // Get coroutine id with __builtin_coro_id.
 
-// CHECK: %[[#NullPtr:]] = cir.cst(#cir.null : !cir.ptr<i8>) : !cir.ptr<i8>
-// CHECK: %[[#Align:]] = cir.cst(16 : i32) : i32
+// CHECK: %[[#NullPtr:]] = cir.const(#cir.null : !cir.ptr<i8>) : !cir.ptr<i8>
+// CHECK: %[[#Align:]] = cir.const(16 : i32) : i32
 // CHECK: %[[#CoroId:]] = cir.call @__builtin_coro_id(%[[#Align]], %[[#NullPtr]], %[[#NullPtr]], %[[#NullPtr]])
 
 // Perform allocation calling operator 'new' depending on __builtin_coro_alloc and
@@ -264,8 +264,8 @@ VoidTask silly_task() {
 
 // Call builtin coro end and return
 
-// CHECK-NEXT: %[[#CoroEndArg0:]] = cir.cst(#cir.null : !cir.ptr<i8>)
-// CHECK-NEXT: %[[#CoroEndArg1:]] = cir.cst(false) : !cir.bool
+// CHECK-NEXT: %[[#CoroEndArg0:]] = cir.const(#cir.null : !cir.ptr<i8>)
+// CHECK-NEXT: %[[#CoroEndArg1:]] = cir.const(false) : !cir.bool
 // CHECK-NEXT: = cir.call @__builtin_coro_end(%[[#CoroEndArg0]], %[[#CoroEndArg1]])
 
 // CHECK: %[[#Tmp1:]] = cir.load %[[#VoidTaskAddr]]
@@ -318,7 +318,7 @@ folly::coro::Task<int> go1() {
 // The call to go(1) has its own scope due to full-expression rules.
 // CHECK: cir.scope {
 // CHECK:   %[[#OneAddr:]] = cir.alloca i32, cir.ptr <i32>, ["ref.tmp1", init] {alignment = 4 : i64}
-// CHECK:   %[[#One:]] = cir.cst(1 : i32) : i32
+// CHECK:   %[[#One:]] = cir.const(1 : i32) : i32
 // CHECK:   cir.store %[[#One]], %[[#OneAddr]] : i32, cir.ptr <i32>
 // CHECK:   %[[#IntTaskTmp:]] = cir.call @_Z2goRKi(%[[#OneAddr]]) : (!cir.ptr<i32>) -> ![[IntTask]]
 // CHECK:   cir.store %[[#IntTaskTmp]], %[[#IntTaskAddr]] : ![[IntTask]], cir.ptr <![[IntTask]]>

@@ -22,10 +22,10 @@ void test() {
 // CHECK-NEXT:   cir.store %arg0, %0
 // CHECK-NEXT:   %1 = cir.load %0
 // CHECK-NEXT:   %2 = "cir.struct_element_addr"(%1) <{member_name = "storage"}>
-// CHECK-NEXT:   %3 = cir.cst(#cir.null : !cir.ptr<i8>) : !cir.ptr<i8>
+// CHECK-NEXT:   %3 = cir.const(#cir.null : !cir.ptr<i8>) : !cir.ptr<i8>
 // CHECK-NEXT:   cir.store %3, %2 : !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>
 // CHECK-NEXT:   %4 = "cir.struct_element_addr"(%1) <{member_name = "size"}> : (!cir.ptr<!ty_22class2EString22>) -> !cir.ptr<i64>
-// CHECK-NEXT:   %5 = cir.cst(0 : i32) : i32
+// CHECK-NEXT:   %5 = cir.const(0 : i32) : i32
 // CHECK-NEXT:   %6 = cir.cast(integral, %5 : i32), i64
 // CHECK-NEXT:   cir.store %6, %4 : i64, cir.ptr <i64>
 // CHECK-NEXT:   cir.return
@@ -37,7 +37,7 @@ void test() {
 // CHECK-NEXT:   cir.store %arg1, %1
 // CHECK-NEXT:   %2 = cir.load %0
 // CHECK-NEXT:   %3 = "cir.struct_element_addr"(%2) <{member_name = "storage"}>
-// CHECK-NEXT:   %4 = cir.cst(#cir.null : !cir.ptr<i8>)
+// CHECK-NEXT:   %4 = cir.const(#cir.null : !cir.ptr<i8>)
 // CHECK-NEXT:   cir.store %4, %3
 // CHECK-NEXT:   %5 = "cir.struct_element_addr"(%2) <{member_name = "size"}> : (!cir.ptr<!ty_22class2EString22>) -> !cir.ptr<i64>
 // CHECK-NEXT:   %6 = cir.load %1 : cir.ptr <i32>, i32
@@ -53,7 +53,7 @@ void test() {
 // CHECK-NEXT:   cir.store %arg1, %1 : !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>
 // CHECK-NEXT:   %2 = cir.load %0 : cir.ptr <!cir.ptr<!ty_22class2EString22>>, !cir.ptr<!ty_22class2EString22>
 // CHECK-NEXT:   %3 = "cir.struct_element_addr"(%2) <{member_name = "storage"}> : (!cir.ptr<!ty_22class2EString22>) -> !cir.ptr<!cir.ptr<i8>>
-// CHECK-NEXT:   %4 = cir.cst(#cir.null : !cir.ptr<i8>) : !cir.ptr<i8>
+// CHECK-NEXT:   %4 = cir.const(#cir.null : !cir.ptr<i8>) : !cir.ptr<i8>
 // CHECK-NEXT:   cir.store %4, %3 : !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>
 // CHECK-NEXT:   cir.return
 

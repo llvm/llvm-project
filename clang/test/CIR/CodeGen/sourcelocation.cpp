@@ -31,13 +31,13 @@ int s0(int a, int b) {
 // CHECK:     cir.store %6, %3 : i32, cir.ptr <i32> loc(#loc23)
 // CHECK:     cir.scope {
 // CHECK:       %9 = cir.load %3 : cir.ptr <i32>, i32 loc(#loc13)
-// CHECK:       %10 = cir.cst(0 : i32) : i32 loc(#loc14)
+// CHECK:       %10 = cir.const(0 : i32) : i32 loc(#loc14)
 // CHECK:       %11 = cir.cmp(gt, %9, %10) : i32, !cir.bool loc(#loc26)
 // CHECK:       cir.if %11 {
-// CHECK:         %12 = cir.cst(0 : i32) : i32 loc(#loc16)
+// CHECK:         %12 = cir.const(0 : i32) : i32 loc(#loc16)
 // CHECK:         cir.store %12, %3 : i32, cir.ptr <i32> loc(#loc28)
 // CHECK:       } else {
-// CHECK:         %12 = cir.cst(1 : i32) : i32 loc(#loc12)
+// CHECK:         %12 = cir.const(1 : i32) : i32 loc(#loc12)
 // CHECK:         cir.store %12, %3 : i32, cir.ptr <i32> loc(#loc29)
 // CHECK:       } loc(#loc27)
 // CHECK:     } loc(#loc25)

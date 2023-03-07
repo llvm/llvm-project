@@ -5,7 +5,7 @@ module {
     cir.func @foo() -> i32  {
         %0 = cir.alloca i32, cir.ptr <i32>, ["__retval"] {alignment = 4 : i64}
         %1 = cir.alloca i32, cir.ptr <i32>, ["a", init] {alignment = 4 : i64}
-        %2 = cir.cst(1 : i32) : i32
+        %2 = cir.const(1 : i32) : i32
         cir.store %2, %1 : i32, cir.ptr <i32>
         %3 = cir.load %1 : cir.ptr <i32>, i32
         %4 = cir.unary(not, %3) : i32, i32

@@ -5,7 +5,7 @@ module {
   cir.func @foo() {
     cir.scope {
       %0 = cir.alloca i32, cir.ptr <i32>, ["a", init] {alignment = 4 : i64}
-      %1 = cir.cst(4 : i32) : i32
+      %1 = cir.const(4 : i32) : i32
       cir.store %1, %0 : i32, cir.ptr <i32>
     }
     cir.return

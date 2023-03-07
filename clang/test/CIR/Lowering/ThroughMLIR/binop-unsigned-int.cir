@@ -6,8 +6,8 @@ module {
     %0 = cir.alloca i32, cir.ptr <i32>, ["a", init] {alignment = 4 : i64}
     %1 = cir.alloca i32, cir.ptr <i32>, ["b", init] {alignment = 4 : i64}
     %2 = cir.alloca i32, cir.ptr <i32>, ["x", init] {alignment = 4 : i64}
-    %3 = cir.cst(2 : i32) : i32    cir.store %3, %0 : i32, cir.ptr <i32>
-    %4 = cir.cst(1 : i32) : i32    cir.store %4, %1 : i32, cir.ptr <i32>
+    %3 = cir.const(2 : i32) : i32    cir.store %3, %0 : i32, cir.ptr <i32>
+    %4 = cir.const(1 : i32) : i32    cir.store %4, %1 : i32, cir.ptr <i32>
     %5 = cir.load %0 : cir.ptr <i32>, i32
     %6 = cir.load %1 : cir.ptr <i32>, i32
     %7 = cir.binop(mul, %5, %6) : i32

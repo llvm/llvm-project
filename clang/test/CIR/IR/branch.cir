@@ -4,7 +4,7 @@
 cir.func @b0() {
   cir.scope {
     cir.loop while(cond :  {
-      %0 = cir.cst(true) : !cir.bool
+      %0 = cir.const(true) : !cir.bool
       cir.brcond %0 ^bb1, ^bb2
       ^bb1:
         cir.yield continue
@@ -24,7 +24,7 @@ cir.func @b0() {
 // CHECK: cir.func @b0
 // CHECK-NEXT:  cir.scope {
 // CHECK-NEXT:    cir.loop while(cond :  {
-// CHECK-NEXT:      %0 = cir.cst(true) : !cir.bool
+// CHECK-NEXT:      %0 = cir.const(true) : !cir.bool
 // CHECK-NEXT:      cir.brcond %0 ^bb1, ^bb2
 // CHECK-NEXT:      ^bb1:
 // CHECK-NEXT:        cir.yield continue

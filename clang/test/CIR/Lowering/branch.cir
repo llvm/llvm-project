@@ -4,10 +4,10 @@
 cir.func @foo(%arg0: !cir.bool) -> i32 {
   cir.brcond %arg0 ^bb1, ^bb2
   ^bb1:
-    %0 = cir.cst(1: i32) : i32
+    %0 = cir.const(1: i32) : i32
     cir.return %0 : i32
   ^bb2:
-    %1 = cir.cst(0: i32) : i32
+    %1 = cir.const(0: i32) : i32
     cir.return %1 : i32
 }
 

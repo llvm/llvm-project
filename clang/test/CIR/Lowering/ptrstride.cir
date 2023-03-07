@@ -6,7 +6,7 @@ module {
     %0 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["a", init] {alignment = 8 : i64}
     cir.store %arg0, %0 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
     %1 = cir.load %0 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
-    %2 = cir.cst(1 : i32) : i32
+    %2 = cir.const(1 : i32) : i32
     %3 = cir.ptr_stride(%1 : !cir.ptr<i32>, %2 : i32), !cir.ptr<i32>
     %4 = cir.load %3 : cir.ptr <i32>, i32
     cir.return

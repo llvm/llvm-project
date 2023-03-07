@@ -12,7 +12,7 @@ int go1() {
 // CHECK: %[[#XAddr:]] = cir.alloca i32, cir.ptr <i32>, ["x", init] {alignment = 4 : i64}
 // CHECK: %[[#RVal:]] = cir.scope {
 // CHECK-NEXT:   %[[#TmpAddr:]] = cir.alloca i32, cir.ptr <i32>, ["ref.tmp0", init] {alignment = 4 : i64}
-// CHECK-NEXT:   %[[#One:]] = cir.cst(1 : i32) : i32
+// CHECK-NEXT:   %[[#One:]] = cir.const(1 : i32) : i32
 // CHECK-NEXT:   cir.store %[[#One]], %[[#TmpAddr]] : i32, cir.ptr <i32>
 // CHECK-NEXT:   %[[#RValTmp:]] = cir.call @_Z2goRKi(%[[#TmpAddr]]) : (!cir.ptr<i32>) -> i32
 // CHECK-NEXT:   cir.yield %[[#RValTmp]] : i32
