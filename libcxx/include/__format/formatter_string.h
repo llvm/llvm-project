@@ -115,17 +115,6 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<_CharT[_Size],
   }
 };
 
-// Formatter const char[].
-template <__fmt_char_type _CharT, size_t _Size>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<const _CharT[_Size], _CharT>
-    : public __formatter_string<_CharT> {
-  using _Base = __formatter_string<_CharT>;
-
-  _LIBCPP_HIDE_FROM_ABI auto format(const _CharT __str[_Size], auto& __ctx) const -> decltype(__ctx.out()) {
-    return _Base::format(basic_string_view<_CharT>(__str, _Size), __ctx);
-  }
-};
-
 // Formatter std::string.
 template <__fmt_char_type _CharT, class _Traits, class _Allocator>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<basic_string<_CharT, _Traits, _Allocator>, _CharT>
