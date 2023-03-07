@@ -220,10 +220,6 @@ public:
     // Replace the call to the dummy control point.
     OldCtrlPointCall->eraseFromParent();
 
-    // Get the result of the control point call. If it returns true, that means
-    // the stopgap interpreter has interpreted a return so we need to return as
-    // well.
-
     // Create the new exit block.
     BasicBlock *ExitBB = BasicBlock::Create(Context, "", Caller);
     Builder.SetInsertPoint(ExitBB);
