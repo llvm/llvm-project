@@ -78,6 +78,7 @@ GetValueAdapter(const GetValueRequest &Request, RemoteCacheProvider &Provider,
 
         GetValueResponse grpcResponse;
         if (*Response) {
+          grpcResponse.set_outcome(GetValueResponse_Outcome_SUCCESS);
           StringRef Value = **Response;
           grpcResponse.mutable_value()->ParseFromArray(Value.data(),
                                                        Value.size());
