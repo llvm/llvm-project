@@ -112,6 +112,16 @@ public:
 
     void
     SetListener (lldb::SBListener &listener);
+
+    const char *
+    GetScriptedProcessClassName() const;
+
+    void SetScriptedProcessClassName(const char *class_name);
+
+    lldb::SBStructuredData
+    GetScriptedProcessDictionary() const;
+
+    void SetScriptedProcessDictionary(lldb::SBStructuredData dict);
 };
 
 } // namespace lldb

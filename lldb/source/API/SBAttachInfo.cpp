@@ -10,8 +10,10 @@
 #include "Utils.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBListener.h"
+#include "lldb/API/SBStructuredData.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -250,4 +252,74 @@ void SBAttachInfo::SetListener(SBListener &listener) {
   LLDB_INSTRUMENT_VA(this, listener);
 
   m_opaque_sp->SetListener(listener.GetSP());
+}
+
+const char *SBAttachInfo::GetScriptedProcessClassName() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  ScriptedMetadataSP metadata_sp = m_opaque_sp->GetScriptedMetadata();
+
+  if (!metadata_sp || !*metadata_sp)
+    return nullptr;
+
+  // Constify this string so that it is saved in the string pool.  Otherwise it
+  // would be freed when this function goes out of scope.
+  ConstString class_name(metadata_sp->GetClassName().data());
+  return class_name.AsCString();
+}
+
+void SBAttachInfo::SetScriptedProcessClassName(const char *class_name) {
+  LLDB_INSTRUMENT_VA(this, class_name);
+
+  ScriptedMetadataSP metadata_sp = m_opaque_sp->GetScriptedMetadata();
+
+  if (!metadata_sp)
+    metadata_sp = std::make_shared<ScriptedMetadata>(class_name, nullptr);
+  else
+    metadata_sp = std::make_shared<ScriptedMetadata>(class_name,
+                                                     metadata_sp->GetArgsSP());
+
+  m_opaque_sp->SetScriptedMetadata(metadata_sp);
+}
+
+lldb::SBStructuredData SBAttachInfo::GetScriptedProcessDictionary() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  ScriptedMetadataSP metadata_sp = m_opaque_sp->GetScriptedMetadata();
+
+  SBStructuredData data;
+  if (!metadata_sp)
+    return data;
+
+  lldb_private::StructuredData::DictionarySP dict_sp = metadata_sp->GetArgsSP();
+  data.m_impl_up->SetObjectSP(dict_sp);
+
+  return data;
+}
+
+void SBAttachInfo::SetScriptedProcessDictionary(lldb::SBStructuredData dict) {
+  LLDB_INSTRUMENT_VA(this, dict);
+
+  if (!dict.IsValid() || !dict.m_impl_up)
+    return;
+
+  StructuredData::ObjectSP obj_sp = dict.m_impl_up->GetObjectSP();
+
+  if (!obj_sp)
+    return;
+
+  StructuredData::DictionarySP dict_sp =
+      std::make_shared<StructuredData::Dictionary>(obj_sp);
+  if (!dict_sp || dict_sp->GetType() == lldb::eStructuredDataTypeInvalid)
+    return;
+
+  ScriptedMetadataSP metadata_sp = m_opaque_sp->GetScriptedMetadata();
+
+  if (!metadata_sp)
+    metadata_sp = std::make_shared<ScriptedMetadata>("", dict_sp);
+  else
+    metadata_sp = std::make_shared<ScriptedMetadata>(
+        metadata_sp->GetClassName(), dict_sp);
+
+  m_opaque_sp->SetScriptedMetadata(metadata_sp);
 }

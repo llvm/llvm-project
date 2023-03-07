@@ -17,6 +17,7 @@
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -331,25 +332,36 @@ bool SBLaunchInfo::GetDetachOnError() const {
 const char *SBLaunchInfo::GetScriptedProcessClassName() const {
   LLDB_INSTRUMENT_VA(this);
 
+  ScriptedMetadataSP metadata_sp = m_opaque_sp->GetScriptedMetadata();
+
+  if (!metadata_sp || !*metadata_sp)
+    return nullptr;
+
   // Constify this string so that it is saved in the string pool.  Otherwise it
   // would be freed when this function goes out of scope.
-  ConstString class_name(m_opaque_sp->GetScriptedProcessClassName().c_str());
+  ConstString class_name(metadata_sp->GetClassName().data());
   return class_name.AsCString();
 }
 
 void SBLaunchInfo::SetScriptedProcessClassName(const char *class_name) {
   LLDB_INSTRUMENT_VA(this, class_name);
-
-  m_opaque_sp->SetScriptedProcessClassName(class_name);
+  ScriptedMetadataSP metadata_sp = m_opaque_sp->GetScriptedMetadata();
+  StructuredData::DictionarySP dict_sp =
+      metadata_sp ? metadata_sp->GetArgsSP() : nullptr;
+  metadata_sp = std::make_shared<ScriptedMetadata>(class_name, dict_sp);
+  m_opaque_sp->SetScriptedMetadata(metadata_sp);
 }
 
 lldb::SBStructuredData SBLaunchInfo::GetScriptedProcessDictionary() const {
   LLDB_INSTRUMENT_VA(this);
 
-  lldb_private::StructuredData::DictionarySP dict_sp =
-      m_opaque_sp->GetScriptedProcessDictionarySP();
+  ScriptedMetadataSP metadata_sp = m_opaque_sp->GetScriptedMetadata();
 
   SBStructuredData data;
+  if (!metadata_sp)
+    return data;
+
+  lldb_private::StructuredData::DictionarySP dict_sp = metadata_sp->GetArgsSP();
   data.m_impl_up->SetObjectSP(dict_sp);
 
   return data;
@@ -370,5 +382,8 @@ void SBLaunchInfo::SetScriptedProcessDictionary(lldb::SBStructuredData dict) {
   if (!dict_sp || dict_sp->GetType() == lldb::eStructuredDataTypeInvalid)
     return;
 
-  m_opaque_sp->SetScriptedProcessDictionarySP(dict_sp);
+  ScriptedMetadataSP metadata_sp = m_opaque_sp->GetScriptedMetadata();
+  llvm::StringRef class_name = metadata_sp ? metadata_sp->GetClassName() : "";
+  metadata_sp = std::make_shared<ScriptedMetadata>(class_name, dict_sp);
+  m_opaque_sp->SetScriptedMetadata(metadata_sp);
 }

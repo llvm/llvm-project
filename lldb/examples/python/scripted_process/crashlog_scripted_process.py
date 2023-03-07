@@ -62,8 +62,8 @@ class CrashLogScriptedProcess(ScriptedProcess):
                                                                self.addr_mask,
                                                                self.target)
 
-    def __init__(self, target: lldb.SBTarget, args : lldb.SBStructuredData):
-        super().__init__(target, args)
+    def __init__(self, exe_ctx: lldb.SBExecutionContext, args : lldb.SBStructuredData):
+        super().__init__(exe_ctx, args)
 
         if not self.target or not self.target.IsValid():
             # Return error
@@ -93,15 +93,6 @@ class CrashLogScriptedProcess(ScriptedProcess):
         self.exception = None
         self.extended_thread_info = None
         self.parse_crashlog()
-
-    def get_memory_region_containing_address(self, addr: int) -> lldb.SBMemoryRegionInfo:
-        return None
-
-    def get_thread_with_id(self, tid: int):
-        return {}
-
-    def get_registers_for_thread(self, tid: int):
-        return {}
 
     def read_memory_at_address(self, addr: int, size: int, error: lldb.SBError) -> lldb.SBData:
         # NOTE: CrashLogs don't contain any memory.

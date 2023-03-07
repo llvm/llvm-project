@@ -27,6 +27,12 @@ public:
     return {};
   }
 
+  virtual StructuredData::DictionarySP GetCapabilities() { return {}; }
+
+  virtual Status Attach(const ProcessAttachInfo &attach_info) {
+    return Status("ScriptedProcess did not attach");
+  }
+
   virtual Status Launch() { return Status("ScriptedProcess did not launch"); }
 
   virtual Status Resume() { return Status("ScriptedProcess did not resume"); }
@@ -43,18 +49,16 @@ public:
 
   virtual StructuredData::DictionarySP GetThreadsInfo() { return {}; }
 
-  virtual StructuredData::DictionarySP GetThreadWithID(lldb::tid_t tid) {
-    return {};
-  }
-
-  virtual StructuredData::DictionarySP GetRegistersForThread(lldb::tid_t tid) {
-    return {};
-  }
-
   virtual lldb::DataExtractorSP
   ReadMemoryAtAddress(lldb::addr_t address, size_t size, Status &error) {
     return {};
   }
+
+  virtual size_t WriteMemoryAtAddress(lldb::addr_t addr,
+                                      lldb::DataExtractorSP data_sp,
+                                      Status &error) {
+    return LLDB_INVALID_OFFSET;
+  };
 
   virtual StructuredData::ArraySP GetLoadedImages() { return {}; }
 

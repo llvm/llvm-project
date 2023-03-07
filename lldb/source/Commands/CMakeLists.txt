@@ -44,6 +44,7 @@ add_lldb_library(lldbCommands
   CommandObjectWatchpoint.cpp
   CommandObjectWatchpointCommand.cpp
   CommandOptionArgumentTable.cpp
+  CommandOptionsProcessAttach.cpp
   CommandOptionsProcessLaunch.cpp
 
   ${Healtcheck_SOURCES}
