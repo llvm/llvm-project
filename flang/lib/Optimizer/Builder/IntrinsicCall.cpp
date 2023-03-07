@@ -1348,6 +1348,16 @@ static constexpr MathOperation mathOperations[] = {
 };
 
 static constexpr MathOperation ppcMathOperations[] = {
+    // fcfi is just another name for fcfid, there is no llvm.ppc.fcfi.
+    {"__ppc_fcfi", "llvm.ppc.fcfid", genF64F64FuncType, genLibCall},
+    {"__ppc_fcfid", "llvm.ppc.fcfid", genF64F64FuncType, genLibCall},
+    {"__ppc_fcfud", "llvm.ppc.fcfud", genF64F64FuncType, genLibCall},
+    {"__ppc_fctid", "llvm.ppc.fctid", genF64F64FuncType, genLibCall},
+    {"__ppc_fctidz", "llvm.ppc.fctidz", genF64F64FuncType, genLibCall},
+    {"__ppc_fctiw", "llvm.ppc.fctiw", genF64F64FuncType, genLibCall},
+    {"__ppc_fctiwz", "llvm.ppc.fctiwz", genF64F64FuncType, genLibCall},
+    {"__ppc_fctudz", "llvm.ppc.fctudz", genF64F64FuncType, genLibCall},
+    {"__ppc_fctuwz", "llvm.ppc.fctuwz", genF64F64FuncType, genLibCall},
     {"__ppc_fmadd", "llvm.fma.f32", genF32F32F32F32FuncType,
      genMathOp<mlir::math::FmaOp>},
     {"__ppc_fmadd", "llvm.fma.f64", genF64F64F64F64FuncType,
