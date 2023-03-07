@@ -467,7 +467,7 @@ func.func @complex_sign(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[IMAG:.*]] = complex.im %[[ARG]] : complex<f32>
 // CHECK: %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK: %[[REAL_IS_ZERO:.*]] = arith.cmpf oeq, %[[REAL]], %[[ZERO]] : f32
-// CHECK: %[[IMAG_IS_ZERO:.*]] = arith.cmpf oeq, %1, %cst : f32
+// CHECK: %[[IMAG_IS_ZERO:.*]] = arith.cmpf oeq, %[[IMAG]], %[[ZERO]] : f32
 // CHECK: %[[IS_ZERO:.*]] = arith.andi %[[REAL_IS_ZERO]], %[[IMAG_IS_ZERO]] : i1
 // CHECK: %[[REAL2:.*]] = complex.re %[[ARG]] : complex<f32>
 // CHECK: %[[IMAG2:.*]] = complex.im %[[ARG]] : complex<f32>
@@ -682,7 +682,7 @@ func.func @complex_conj(%arg: complex<f32>) -> complex<f32> {
 
 // CHECK-LABEL:   func.func @complex_pow
 func.func @complex_pow(%lhs: complex<f32>,
-                         %rhs: complex<f32>) -> complex<f32> {
+                       %rhs: complex<f32>) -> complex<f32> {
   %pow = complex.pow %lhs, %rhs : complex<f32>
   return %pow : complex<f32>
 }
