@@ -319,8 +319,12 @@ static bool AddVariableInfo(
   }
 
   // If the import failed, give up.
-  if (!target_type.IsValid())
+  if (!target_type.IsValid()) {
+    // Treat an invalid type for self as a fatal error.
+    if (is_self)
+      return false;
     return true;
+  }
 
   // If we couldn't fully realize the type, then we aren't going
   // to get very far making a local out of it, so discard it here.
