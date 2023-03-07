@@ -49,7 +49,7 @@ bool CPPLanguageRuntime::ShouldHideVariable(llvm::StringRef name) const {
   static RegularExpression ignore_global_ranges_pattern(
       "std::__[[:alnum:]]+::ranges(::views)*::__cpo");
 
-  return ignore_global_ranges_pattern.Execute(name);
+  return ignore_globale_ranges_pattern.Execute(name);
 }
 
 bool CPPLanguageRuntime::IsAllowedRuntimeValue(ConstString name) {
