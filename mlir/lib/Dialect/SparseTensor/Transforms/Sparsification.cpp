@@ -1450,9 +1450,6 @@ static void genStmt(CodegenEnv &env, RewriterBase &rewriter, unsigned exp,
   unsigned ldx = at == 0 ? -1u : env.topSortAt(at - 1);
   unsigned lts = env.merger().optimizeSet(env.merger().buildLattices(exp, idx));
 
-  // TODO: sort
-  // TODO: dedup
-
   // Start a loop sequence.
   bool needsUniv = startLoopSeq(env, rewriter, exp, at, idx, ldx, lts);
 
