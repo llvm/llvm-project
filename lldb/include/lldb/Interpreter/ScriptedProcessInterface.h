@@ -50,14 +50,6 @@ public:
 
   virtual StructuredData::DictionarySP GetThreadsInfo() { return {}; }
 
-  virtual StructuredData::DictionarySP GetThreadWithID(lldb::tid_t tid) {
-    return {};
-  }
-
-  virtual StructuredData::DictionarySP GetRegistersForThread(lldb::tid_t tid) {
-    return {};
-  }
-
   virtual lldb::DataExtractorSP
   ReadMemoryAtAddress(lldb::addr_t address, size_t size, Status &error) {
     return {};
