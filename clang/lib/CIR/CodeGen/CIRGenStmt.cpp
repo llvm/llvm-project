@@ -428,7 +428,15 @@ mlir::LogicalResult CIRGenFunction::buildReturnStmt(const ReturnStmt &S) {
 
   if (getContext().getLangOpts().ElideConstructors && S.getNRVOCandidate() &&
       S.getNRVOCandidate()->isNRVOVariable()) {
-    assert(0 && "not implemented");
+    assert(!UnimplementedFeature::openMP());
+    // Apply the named return value optimization for this return statement,
+    // which means doing nothing: the appropriate result has already been
+    // constructed into the NRVO variable.
+
+    // If there is an NRVO flag for this variable, set it to 1 into indicate
+    // that the cleanup code should not destroy the variable.
+    if (auto NRVOFlag = NRVOFlags[S.getNRVOCandidate()])
+      llvm_unreachable("NYI");
   } else if (!ReturnValue.isValid() || (RV && RV->getType()->isVoidType())) {
     // Make sure not to return anything, but evaluate the expression
     // for side effects.

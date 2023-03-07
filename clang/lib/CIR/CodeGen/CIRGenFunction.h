@@ -502,6 +502,10 @@ public:
   /// invalid iff the function has no return value.
   Address ReturnValue = Address::invalid();
 
+  /// A mapping from NRVO variables to the flags used to indicate
+  /// when the NRVO has been applied to this variable.
+  llvm::DenseMap<const VarDecl *, mlir::Value> NRVOFlags;
+
   /// Counts of the number return expressions in the function.
   unsigned NumReturnExprs = 0;
 
@@ -1001,7 +1005,7 @@ public:
   void buildNullabilityCheck(LValue LHS, mlir::Value RHS,
                              clang::SourceLocation Loc);
 
-  void buildScalarInit(const clang::Expr *init, const clang::ValueDecl *D,
+  void buildScalarInit(const clang::Expr *init, mlir::Location loc,
                        LValue lvalue);
 
   LValue buildDeclRefLValue(const clang::DeclRefExpr *E);

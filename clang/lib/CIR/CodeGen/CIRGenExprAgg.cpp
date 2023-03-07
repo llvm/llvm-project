@@ -224,17 +224,15 @@ void AggExprEmitter::EmitInitializationToLValue(Expr *E, LValue LV) {
     llvm_unreachable("NYI");
     return;
   case TEK_Aggregate:
-    llvm_unreachable("NYI");
-    // CGF.EmitAggExpr(E, AggValueSlot::forLValue(
-    //                        LV, CGF, AggValueSlot::IsDestructed,
-    //                        AggValueSlot::DoesNotNeedGCBarriers,
-    //                        AggValueSlot::IsNotAliased,
-    //                        AggValueSlot::MayOverlap, Dest.isZeroed()));
+    CGF.buildAggExpr(
+        E, AggValueSlot::forLValue(LV, AggValueSlot::IsDestructed,
+                                   AggValueSlot::DoesNotNeedGCBarriers,
+                                   AggValueSlot::IsNotAliased,
+                                   AggValueSlot::MayOverlap, Dest.isZeroed()));
     return;
   case TEK_Scalar:
     if (LV.isSimple()) {
-      llvm_unreachable("NYI");
-      // CGF.EmitScalarInit(E, /*D=*/nullptr, LV, /*Captured=*/false);
+      CGF.buildScalarInit(E, CGF.getLoc(E->getSourceRange()), LV);
     } else {
       llvm_unreachable("NYI");
       // CGF.EmitStoreThroughLValue(RValue::get(CGF.EmitScalarExpr(E)), LV);
