@@ -12,6 +12,7 @@
 #include "AttributeDetail.h"
 #include "IntegerSetDetail.h"
 #include "TypeDetail.h"
+#include "mlir/IR/Action.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
@@ -23,7 +24,6 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Types.h"
-#include "mlir/Support/DebugAction.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -124,7 +124,7 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// An action manager for use within the context.
-  DebugActionManager debugActionManager;
+  tracing::ActionManager actionManager;
 
   //===--------------------------------------------------------------------===//
   // Diagnostics
@@ -348,8 +348,8 @@ static ArrayRef<T> copyArrayRefInto(llvm::BumpPtrAllocator &allocator,
 // Debugging
 //===----------------------------------------------------------------------===//
 
-DebugActionManager &MLIRContext::getDebugActionManager() {
-  return getImpl().debugActionManager;
+tracing::ActionManager &MLIRContext::getActionManager() {
+  return getImpl().actionManager;
 }
 
 //===----------------------------------------------------------------------===//

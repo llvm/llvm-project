@@ -1,4 +1,4 @@
-//===- DebugAction.h - Debug Action Support ---------------------*- C++ -*-===//
+//===- Action.h -  Action Support ---------------------*- C++ -*-=============//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains definitions for the debug action framework. This framework
+// This file contains definitions for the action framework. This framework
 // allows for external entities to control certain actions taken by the compiler
 // by registering handler functions.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_SUPPORT_DEBUGACTION_H
-#define MLIR_SUPPORT_DEBUGACTION_H
+#ifndef MLIR_IR_ACTION_H
+#define MLIR_IR_ACTION_H
 
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/TypeID.h"
@@ -26,53 +26,58 @@
 #include <type_traits>
 
 namespace mlir {
+namespace tracing {
 
-/// This class represents the base class of a debug action.
-class DebugActionBase {
+/// An action is a specific action that is to be taken by the compiler,
+/// that can be toggled and controlled by an external user. There are no
+/// constraints on the granularity of an action, it could be as simple as
+/// "perform this fold" and as complex as "run this pass pipeline". Via template
+/// parameters `ParameterTs`, a user may provide the set of argument types that
+/// are provided when handling a query on this action.
+///
+/// This class represents the base class of the ActionImpl class (see below).
+/// This holds the template-invariant elements of the Action class.
+class Action {
 public:
-  virtual ~DebugActionBase() = default;
+  virtual ~Action() = default;
 
   /// Return the unique action id of this action, use for casting
   /// functionality.
   TypeID getActionID() const { return actionID; }
 
-  StringRef getTag() const { return tag; }
-
-  StringRef getDescription() const { return desc; }
+  /// Return a string "tag" which intends to uniquely identify this type of
+  /// action. For example "pass-application" or "pattern-rewrite".
+  virtual StringRef getTag() const = 0;
 
   virtual void print(raw_ostream &os) const {
-    os << "Action \"" << tag << "\" : " << desc << "\n";
+    os << "Action \"" << getTag() << "\"";
   }
 
 protected:
-  DebugActionBase(TypeID actionID, StringRef tag, StringRef desc)
-      : actionID(actionID), tag(tag), desc(desc) {}
+  Action(TypeID actionID) : actionID(actionID) {}
 
-  /// The type of the derived action class. This allows for detecting the
-  /// specific handler of a given action type.
+  /// The type of the derived action class, used for `isa`/`dyn_cast`.
   TypeID actionID;
-  StringRef tag;
-  StringRef desc;
 };
 
 //===----------------------------------------------------------------------===//
-// DebugActionManager
+// ActionManager
 //===----------------------------------------------------------------------===//
 
-/// This class represents manages debug actions, and orchestrates the
+/// This class represents manages actions, and orchestrates the
 /// communication between action queries and action handlers. An action handler
 /// is either an action specific handler, i.e. a derived class of
 /// `MyActionType::Handler`, or a generic handler, i.e. a derived class of
-/// `DebugActionManager::GenericHandler`. For more details on action specific
-/// handlers, see the definition of `DebugAction::Handler` below. For more
-/// details on generic handlers, see `DebugActionManager::GenericHandler` below.
-class DebugActionManager {
+/// `ActionManager::GenericHandler`. For more details on action specific
+/// handlers, see the definition of `Action::Handler` below. For more
+/// details on generic handlers, see `ActionManager::GenericHandler` below.
+class ActionManager {
 public:
   //===--------------------------------------------------------------------===//
   // Handlers
   //===--------------------------------------------------------------------===//
 
-  /// This class represents the base class of a debug action handler.
+  /// This class represents the base class of an action handler.
   class HandlerBase {
   public:
     virtual ~HandlerBase() = default;
@@ -104,12 +109,12 @@ public:
     /// return failure if the handler could not process the action, or whether
     /// the `transform` was executed or not.
     virtual FailureOr<bool> execute(function_ref<void()> transform,
-                                    const DebugActionBase &action) {
+                                    const Action &action) {
       return failure();
     }
 
     /// Provide classof to allow casting between handler types.
-    static bool classof(const DebugActionManager::HandlerBase *handler) {
+    static bool classof(const ActionManager::HandlerBase *handler) {
       return handler->getHandlerID() == TypeID::get<GenericHandler>();
     }
   };
@@ -193,39 +198,26 @@ private:
   SmallVector<std::unique_ptr<HandlerBase>> actionHandlers;
 };
 
-//===----------------------------------------------------------------------===//
-// DebugAction
-//===----------------------------------------------------------------------===//
-
-/// A debug action is a specific action that is to be taken by the compiler,
-/// that can be toggled and controlled by an external user. There are no
-/// constraints on the granularity of an action, it could be as simple as
-/// "perform this fold" and as complex as "run this pass pipeline". Via template
-/// parameters `ParameterTs`, a user may provide the set of argument types that
-/// are provided when handling a query on this action. Derived classes are
-/// expected to provide the following:
-///   * static llvm::StringRef getTag()
+/// CRTP Implementation of an action. This class provides a base class for
+/// implementing specific actions.
+///  Derived classes are expected to provide the following:
+///   * static constexpr StringLiteral tag = "...";
 ///     - This method returns a unique string identifier, similar to a command
 ///       line flag or DEBUG_TYPE.
-///   * static llvm::StringRef getDescription()
-///     - This method returns a short description of what the action represents.
-///
-/// This class provides a handler class that can be derived from to handle
-/// instances of this action. The parameters to its query methods map 1-1 to the
-/// types on the action type.
 template <typename Derived, typename... ParameterTs>
-class DebugAction : public DebugActionBase {
+class ActionImpl : public Action {
 public:
-  DebugAction()
-      : DebugActionBase(TypeID::get<Derived>(), Derived::getTag(),
-                        Derived::getDescription()) {}
+  ActionImpl() : Action(TypeID::get<Derived>()) {}
 
   /// Provide classof to allow casting between action types.
-  static bool classof(const DebugActionBase *action) {
+  static bool classof(const Action *action) {
     return action->getActionID() == TypeID::get<Derived>();
   }
 
-  class Handler : public DebugActionManager::HandlerBase {
+  /// Forward tag access to the derived class.
+  StringRef getTag() const final { return Derived::tag; }
+
+  class Handler : public ActionManager::HandlerBase {
   public:
     Handler() : HandlerBase(TypeID::get<Derived>()) {}
 
@@ -239,7 +231,7 @@ public:
     }
 
     /// Provide classof to allow casting between handler types.
-    static bool classof(const DebugActionManager::HandlerBase *handler) {
+    static bool classof(const ActionManager::HandlerBase *handler) {
       return handler->getHandlerID() == TypeID::get<Derived>();
     }
   };
@@ -254,9 +246,10 @@ private:
   }
 
   /// Allow access to `canHandleWith`.
-  friend class DebugActionManager;
+  friend class ActionManager;
 };
 
+} // namespace tracing
 } // namespace mlir
 
-#endif // MLIR_SUPPORT_DEBUGACTION_H
+#endif // MLIR_IR_ACTION_H
