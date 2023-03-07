@@ -64,9 +64,9 @@ void yoyo(incomplete *i) {}
 // CHECK-NEXT:   %1 = cir.alloca i32, cir.ptr <i32>, ["result", init] {alignment = 4 : i64}
 // CHECK-NEXT:   %2 = cir.alloca !ty_22struct2EFoo22, cir.ptr <!ty_22struct2EFoo22>, ["f"] {alignment = 4 : i64}
 // CHECK-NEXT:   cir.call @_ZN3Bar6methodEv(%0) : (!cir.ptr<!ty_22struct2EBar22>) -> ()
-// CHECK-NEXT:   %3 = cir.cst(4 : i32) : i32
+// CHECK-NEXT:   %3 = cir.const(4 : i32) : i32
 // CHECK-NEXT:   cir.call @_ZN3Bar7method2Ei(%0, %3) : (!cir.ptr<!ty_22struct2EBar22>, i32) -> ()
-// CHECK-NEXT:   %4 = cir.cst(4 : i32) : i32
+// CHECK-NEXT:   %4 = cir.const(4 : i32) : i32
 // CHECK-NEXT:   %5 = cir.call @_ZN3Bar7method3Ei(%0, %4) : (!cir.ptr<!ty_22struct2EBar22>, i32) -> i32
 // CHECK-NEXT:   cir.store %5, %1 : i32, cir.ptr <i32>
 // CHECK-NEXT:   cir.return

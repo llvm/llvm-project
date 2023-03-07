@@ -4,18 +4,18 @@
 module {
   cir.func @foo() {
     %0 = cir.alloca i32, cir.ptr <i32>, ["b", init] {alignment = 4 : i64}
-    %1 = cir.cst(1 : i32) : i32
+    %1 = cir.const(1 : i32) : i32
     cir.store %1, %0 : i32, cir.ptr <i32>
     cir.br ^bb2
   ^bb1:  // no predecessors
     %2 = cir.load %0 : cir.ptr <i32>, i32
-    %3 = cir.cst(1 : i32) : i32
+    %3 = cir.const(1 : i32) : i32
     %4 = cir.binop(add, %2, %3) : i32
     cir.store %4, %0 : i32, cir.ptr <i32>
     cir.br ^bb2
   ^bb2:  // 2 preds: ^bb0, ^bb1
     %5 = cir.load %0 : cir.ptr <i32>, i32
-    %6 = cir.cst(2 : i32) : i32
+    %6 = cir.const(2 : i32) : i32
     %7 = cir.binop(add, %5, %6) : i32
     cir.store %7, %0 : i32, cir.ptr <i32>
     cir.return

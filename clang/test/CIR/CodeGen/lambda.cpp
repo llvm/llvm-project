@@ -28,7 +28,7 @@ void l0() {
 // CHECK: %2 = "cir.struct_element_addr"(%1) <{member_name = "i"}> : (!cir.ptr<!ty_22class2Eanon221>) -> !cir.ptr<!cir.ptr<i32>>
 // CHECK: %3 = cir.load %2 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
 // CHECK: %4 = cir.load %3 : cir.ptr <i32>, i32
-// CHECK: %5 = cir.cst(1 : i32) : i32
+// CHECK: %5 = cir.const(1 : i32) : i32
 // CHECK: %6 = cir.binop(add, %4, %5) : i32
 // CHECK: %7 = "cir.struct_element_addr"(%1) <{member_name = "i"}> : (!cir.ptr<!ty_22class2Eanon221>) -> !cir.ptr<!cir.ptr<i32>>
 // CHECK: %8 = cir.load %7 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
@@ -47,7 +47,7 @@ auto g() {
 // CHECK: cir.func @_Z1gv() -> !ty_22class2Eanon222 {
 // CHECK: %0 = cir.alloca !ty_22class2Eanon222, cir.ptr <!ty_22class2Eanon222>, ["__retval"] {alignment = 8 : i64}
 // CHECK: %1 = cir.alloca i32, cir.ptr <i32>, ["i", init] {alignment = 4 : i64}
-// CHECK: %2 = cir.cst(12 : i32) : i32
+// CHECK: %2 = cir.const(12 : i32) : i32
 // CHECK: cir.store %2, %1 : i32, cir.ptr <i32>
 // CHECK: %3 = "cir.struct_element_addr"(%0) <{member_name = "i"}> : (!cir.ptr<!ty_22class2Eanon222>) -> !cir.ptr<!cir.ptr<i32>>
 // CHECK: cir.store %1, %3 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>

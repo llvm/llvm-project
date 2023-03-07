@@ -1,27 +1,27 @@
 // Test attempts to build bogus CIR
 // RUN: cir-tool %s -verify-diagnostics -split-input-file
 
-// expected-error@+2 {{'cir.cst' op nullptr expects pointer type}}
+// expected-error@+2 {{'cir.const' op nullptr expects pointer type}}
 cir.func @p0() {
-  %1 = cir.cst(#cir.null : !cir.ptr<i32>) : i32
+  %1 = cir.const(#cir.null : !cir.ptr<i32>) : i32
   cir.return
 }
 
 // -----
 
-// expected-error@+2 {{'cir.cst' op result type ('i32') must be '!cir.bool' for 'true'}}
+// expected-error@+2 {{'cir.const' op result type ('i32') must be '!cir.bool' for 'true'}}
 cir.func @b0() {
-  %1 = cir.cst(true) : i32
+  %1 = cir.const(true) : i32
   cir.return
 }
 
 // -----
 
 cir.func @if0() {
-  %0 = cir.cst(true) : !cir.bool
+  %0 = cir.const(true) : !cir.bool
   // expected-error@+1 {{'cir.if' op  region control flow edge from Region #0 to parent results: source has 1 operands, but target successor needs 0}}
   cir.if %0 {
-    %6 = cir.cst(3 : i32) : i32
+    %6 = cir.const(3 : i32) : i32
     cir.yield %6 : i32
   }
   cir.return
@@ -30,7 +30,7 @@ cir.func @if0() {
 // -----
 
 cir.func @yield0() {
-  %0 = cir.cst(true) : !cir.bool
+  %0 = cir.const(true) : !cir.bool
   cir.if %0 { // expected-error {{custom op 'cir.if' expected at least one block with cir.yield or cir.return}}
     cir.br ^a
   ^a:
@@ -41,7 +41,7 @@ cir.func @yield0() {
 // -----
 
 cir.func @yieldfallthrough() {
-  %0 = cir.cst(true) : !cir.bool
+  %0 = cir.const(true) : !cir.bool
   cir.if %0 {
     cir.yield fallthrough // expected-error {{'cir.yield' op fallthrough only expected within 'cir.switch'}}
   }
@@ -51,7 +51,7 @@ cir.func @yieldfallthrough() {
 // -----
 
 cir.func @yieldbreak() {
-  %0 = cir.cst(true) : !cir.bool
+  %0 = cir.const(true) : !cir.bool
   cir.if %0 {
     cir.yield break // expected-error {{shall be dominated by 'cir.loop' or 'cir.switch'}}
   }
@@ -61,7 +61,7 @@ cir.func @yieldbreak() {
 // -----
 
 cir.func @yieldcontinue() {
-  %0 = cir.cst(true) : !cir.bool
+  %0 = cir.const(true) : !cir.bool
   cir.if %0 {
     cir.yield continue // expected-error {{shall be dominated by 'cir.loop'}}
   }
@@ -71,10 +71,10 @@ cir.func @yieldcontinue() {
 // -----
 
 cir.func @s0() {
-  %1 = cir.cst(2 : i32) : i32
+  %1 = cir.const(2 : i32) : i32
   cir.switch (%1 : i32) [
     case (equal, 5) {
-      %2 = cir.cst(3 : i32) : i32
+      %2 = cir.const(3 : i32) : i32
     }
   ] // expected-error {{blocks are expected to be explicitly terminated}}
   cir.return
@@ -83,7 +83,7 @@ cir.func @s0() {
 // -----
 
 cir.func @s1() {
-  %1 = cir.cst(2 : i32) : i32
+  %1 = cir.const(2 : i32) : i32
   cir.switch (%1 : i32) [
     case (equal, 5) {
     }
@@ -94,7 +94,7 @@ cir.func @s1() {
 // -----
 
 cir.func @badstride(%x: !cir.ptr<i32>) {
-  %idx = cir.cst(2 : i32) : i32
+  %idx = cir.const(2 : i32) : i32
   %4 = cir.ptr_stride(%x : !cir.ptr<i32>, %idx : i32), !cir.ptr<f32> // expected-error {{requires the same type for first operand and result}}
   cir.return
 }
@@ -140,7 +140,7 @@ cir.func @cast4(%p: !cir.ptr<i32>) {
 cir.func @b0() {
   cir.scope {
     cir.loop while(cond :  {  // expected-error {{cond region must be terminated with 'cir.yield' or 'cir.yield continue'}}
-      %0 = cir.cst(true) : !cir.bool
+      %0 = cir.const(true) : !cir.bool
       cir.brcond %0 ^bb1, ^bb2
       ^bb1:
         cir.yield break
@@ -160,31 +160,31 @@ cir.func @b0() {
 // -----
 
 module {
-  cir.global external @a = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i32 x 3>> // expected-error {{constant array element should match array element type}}
+  cir.global external @a = #cir.const_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i32 x 3>> // expected-error {{constant array element should match array element type}}
 } // expected-error {{expected constant attribute to match type}}
 
 // -----
 
 module {
-  cir.global external @a = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i8 x 4>> // expected-error {{constant array size should match type size}}
+  cir.global external @a = #cir.const_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i8 x 4>> // expected-error {{constant array size should match type size}}
 } // expected-error {{expected constant attribute to match type}}
 
 // -----
 
 module {
-  cir.global external @b = #cir.cst_array<"example\00" : !cir.array<i32 x 8>> // expected-error {{constant array element for string literals expects i8 array element type}}
+  cir.global external @b = #cir.const_array<"example\00" : !cir.array<i32 x 8>> // expected-error {{constant array element for string literals expects i8 array element type}}
 } // expected-error {{expected constant attribute to match type}}
 
 // -----
 
 module {
-  cir.global "private" constant external @".str2" = #cir.cst_array<"example\00"> {alignment = 1 : i64} // expected-error {{expected type declaration for string literal}}
+  cir.global "private" constant external @".str2" = #cir.const_array<"example\00"> {alignment = 1 : i64} // expected-error {{expected type declaration for string literal}}
 } // expected-error@-1 {{expected constant attribute to match type}}
 
 // -----
 
 module {
-  cir.global @a = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i32 x 3>> // expected-error {{expected string or keyword containing one of the following enum values for attribute 'linkage' [external, available_externally, linkonce, linkonce_odr, weak, weak_odr, internal, private, extern_weak, common]}}
+  cir.global @a = #cir.const_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i32 x 3>> // expected-error {{expected string or keyword containing one of the following enum values for attribute 'linkage' [external, available_externally, linkonce, linkonce_odr, weak, weak_odr, internal, private, extern_weak, common]}}
 }
 
 // -----
@@ -203,7 +203,7 @@ module {
 
 cir.func @unary0() {
   %0 = cir.alloca i32, cir.ptr <i32>, ["a", init] {alignment = 4 : i64}
-  %1 = cir.cst(2 : i32) : i32
+  %1 = cir.const(2 : i32) : i32
 
   %3 = cir.unary(inc, %1) : i32, i32 // expected-error {{'cir.unary' op requires input to be defined by a memory load}}
   cir.store %3, %0 : i32, cir.ptr <i32>
@@ -214,7 +214,7 @@ cir.func @unary0() {
 
 cir.func @unary1() {
   %0 = cir.alloca i32, cir.ptr <i32>, ["a", init] {alignment = 4 : i64}
-  %1 = cir.cst(2 : i32) : i32
+  %1 = cir.const(2 : i32) : i32
   cir.store %1, %0 : i32, cir.ptr <i32>
 
   %2 = cir.load %0 : cir.ptr <i32>, i32

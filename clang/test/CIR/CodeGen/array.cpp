@@ -15,8 +15,8 @@ void a1() {
 
 // CHECK: cir.func @_Z2a1v() {
 // CHECK-NEXT:  %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr <!cir.array<i32 x 10>>, ["a"] {alignment = 16 : i64}
-// CHECK-NEXT:  %1 = cir.cst(1 : i32) : i32
-// CHECK-NEXT:  %2 = cir.cst(0 : i32) : i32
+// CHECK-NEXT:  %1 = cir.const(1 : i32) : i32
+// CHECK-NEXT:  %2 = cir.const(0 : i32) : i32
 // CHECK-NEXT:  %3 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<i32>
 // CHECK-NEXT:  %4 = cir.ptr_stride(%3 : !cir.ptr<i32>, %2 : i32), !cir.ptr<i32>
 // CHECK-NEXT:  cir.store %1, %4 : i32, cir.ptr <i32>
@@ -29,7 +29,7 @@ int *a2() {
 // CHECK: cir.func @_Z2a2v() -> !cir.ptr<i32> {
 // CHECK-NEXT:   %0 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["__retval"] {alignment = 8 : i64}
 // CHECK-NEXT:   %1 = cir.alloca !cir.array<i32 x 4>, cir.ptr <!cir.array<i32 x 4>>, ["a"] {alignment = 16 : i64}
-// CHECK-NEXT:   %2 = cir.cst(0 : i32) : i32
+// CHECK-NEXT:   %2 = cir.const(0 : i32) : i32
 // CHECK-NEXT:   %3 = cir.cast(array_to_ptrdecay, %1 : !cir.ptr<!cir.array<i32 x 4>>), !cir.ptr<i32>
 // CHECK-NEXT:   %4 = cir.ptr_stride(%3 : !cir.ptr<i32>, %2 : i32), !cir.ptr<i32>
 // CHECK-NEXT:   cir.store %4, %0 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
@@ -40,7 +40,7 @@ void local_stringlit() {
   const char *s = "whatnow";
 }
 
-// CHECK: cir.global "private" constant internal @".str" = #cir.cst_array<"whatnow\00" : !cir.array<i8 x 8>> : !cir.array<i8 x 8> {alignment = 1 : i64}
+// CHECK: cir.global "private" constant internal @".str" = #cir.const_array<"whatnow\00" : !cir.array<i8 x 8>> : !cir.array<i8 x 8> {alignment = 1 : i64}
 // CHECK: cir.func @_Z15local_stringlitv() {
 // CHECK-NEXT:  %0 = cir.alloca !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>, ["s", init] {alignment = 8 : i64}
 // CHECK-NEXT:  %1 = cir.get_global @".str" : cir.ptr <!cir.array<i8 x 8>>

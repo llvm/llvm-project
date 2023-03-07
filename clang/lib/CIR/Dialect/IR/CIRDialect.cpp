@@ -145,7 +145,7 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
   }
 
   if (attrType.isa<ZeroAttr>()) {
-    // FIXME: should also support arrays / cst_arrays.
+    // FIXME: should also support arrays / const_arrays.
     if (opType.isa<::mlir::cir::StructType>())
       return success();
     return op->emitOpError("zero expects struct type");
@@ -168,8 +168,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   }
 
-  if (attrType.isa<mlir::cir::CstArrayAttr>()) {
-    // CstArrayAttr is already verified to bing with cir.array type.
+  if (attrType.isa<mlir::cir::ConstArrayAttr>()) {
+    // ConstArrayAttr is already verified to bing with cir.array type.
     return success();
   }
 
@@ -202,8 +202,8 @@ static ParseResult parseConstantValue(OpAsmParser &parser,
   return success();
 }
 
-// FIXME: create a CIRCstAttr and hide this away for both global
-// initialization and cir.cst operation.
+// FIXME: create a CIRConstAttr and hide this away for both global
+// initialization and cir.const operation.
 static void printConstant(OpAsmPrinter &p, Attribute value) {
   p.printAttribute(value);
 }
@@ -1054,7 +1054,7 @@ parseGlobalOpTypeAndInitialValue(OpAsmParser &parser, TypeAttr &typeAttr,
 
   // Parse constant with initializer, examples:
   //  cir.global @y = 3.400000e+00 : f32
-  //  cir.global @rgb = #cir.cst_array<[...] : !cir.array<i8 x 3>>
+  //  cir.global @rgb = #cir.const_array<[...] : !cir.array<i8 x 3>>
   if (parseConstantValue(parser, initialValueAttr).failed())
     return failure();
 
@@ -1515,7 +1515,7 @@ mlir::OpTrait::impl::verifySameFirstOperandAndResultType(Operation *op) {
 // CIR attributes
 //===----------------------------------------------------------------------===//
 
-LogicalResult mlir::cir::CstArrayAttr::verify(
+LogicalResult mlir::cir::ConstArrayAttr::verify(
     ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
     ::mlir::Type type, Attribute attr) {
 
@@ -1559,8 +1559,8 @@ LogicalResult mlir::cir::CstArrayAttr::verify(
   return eltTypeCheck;
 }
 
-::mlir::Attribute CstArrayAttr::parse(::mlir::AsmParser &parser,
-                                      ::mlir::Type type) {
+::mlir::Attribute ConstArrayAttr::parse(::mlir::AsmParser &parser,
+                                        ::mlir::Type type) {
   ::mlir::FailureOr<::mlir::Type> resultTy;
   ::mlir::FailureOr<Attribute> resultVal;
   ::llvm::SMLoc loc = parser.getCurrentLocation();
@@ -1572,9 +1572,10 @@ LogicalResult mlir::cir::CstArrayAttr::verify(
   // Parse variable 'value'
   resultVal = ::mlir::FieldParser<Attribute>::parse(parser);
   if (failed(resultVal)) {
-    parser.emitError(parser.getCurrentLocation(),
-                     "failed to parse CstArrayAttr parameter 'value' which is "
-                     "to be a `Attribute`");
+    parser.emitError(
+        parser.getCurrentLocation(),
+        "failed to parse ConstArrayAttr parameter 'value' which is "
+        "to be a `Attribute`");
     return {};
   }
 
@@ -1587,9 +1588,10 @@ LogicalResult mlir::cir::CstArrayAttr::verify(
     // Parse variable 'type'
     resultTy = ::mlir::FieldParser<::mlir::Type>::parse(parser);
     if (failed(resultTy)) {
-      parser.emitError(parser.getCurrentLocation(),
-                       "failed to parse CstArrayAttr parameter 'type' which is "
-                       "to be a `::mlir::Type`");
+      parser.emitError(
+          parser.getCurrentLocation(),
+          "failed to parse ConstArrayAttr parameter 'type' which is "
+          "to be a `::mlir::Type`");
       return {};
     }
   } else {
@@ -1606,11 +1608,11 @@ LogicalResult mlir::cir::CstArrayAttr::verify(
   // Parse literal '>'
   if (parser.parseGreater())
     return {};
-  return parser.getChecked<CstArrayAttr>(loc, parser.getContext(),
-                                         resultTy.value(), resultVal.value());
+  return parser.getChecked<ConstArrayAttr>(loc, parser.getContext(),
+                                           resultTy.value(), resultVal.value());
 }
 
-void CstArrayAttr::print(::mlir::AsmPrinter &printer) const {
+void ConstArrayAttr::print(::mlir::AsmPrinter &printer) const {
   printer << "<";
   printer.printStrippedAttrOrType(getValue());
   if (getValue().isa<ArrayAttr>()) {

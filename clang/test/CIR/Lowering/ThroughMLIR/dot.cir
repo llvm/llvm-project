@@ -10,7 +10,7 @@ module {
     cir.store %arg0, %0 : !cir.ptr<f64>, cir.ptr <!cir.ptr<f64>>
     %3 = cir.load %0 : cir.ptr <!cir.ptr<f64>>, !cir.ptr<f64>
     cir.store %3, %2 : !cir.ptr<f64>, cir.ptr <!cir.ptr<f64>>
-    %4 = cir.cst(0 : i32) : i32
+    %4 = cir.const(0 : i32) : i32
     %5 = cir.load %1 : cir.ptr <i32>, i32
     cir.return %5 : i32
   }

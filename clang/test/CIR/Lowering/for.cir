@@ -4,11 +4,11 @@
 module {
   cir.func @foo() {
     %0 = cir.alloca i32, cir.ptr <i32>, ["i", init] {alignment = 4 : i64}
-    %1 = cir.cst(0 : i32) : i32
+    %1 = cir.const(0 : i32) : i32
     cir.store %1, %0 : i32, cir.ptr <i32>
     cir.loop for(cond : {
       %2 = cir.load %0 : cir.ptr <i32>, i32
-      %3 = cir.cst(10 : i32) : i32
+      %3 = cir.const(10 : i32) : i32
       %4 = cir.cmp(lt, %2, %3) : i32, i32
       %5 = cir.cast(int_to_bool, %4 : i32), !cir.bool
       cir.brcond %5 ^bb1, ^bb2

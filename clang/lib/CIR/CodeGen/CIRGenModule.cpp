@@ -91,10 +91,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
                            const clang::CodeGenOptions &CGO,
                            DiagnosticsEngine &Diags)
     : builder(context), astCtx(astctx), langOpts(astctx.getLangOpts()),
-      codeGenOpts(CGO),
-      theModule{mlir::ModuleOp::create(builder.getUnknownLoc())}, Diags(Diags),
-      target(astCtx.getTargetInfo()), ABI(createCXXABI(*this)),
-      genTypes{*this} {
+      codeGenOpts(CGO), theModule{mlir::ModuleOp::create(
+                            builder.getUnknownLoc())},
+      Diags(Diags), target(astCtx.getTargetInfo()),
+      ABI(createCXXABI(*this)), genTypes{*this} {
   mlir::cir::sob::SignedOverflowBehavior sob;
   switch (langOpts.getSignedOverflowBehavior()) {
   case clang::LangOptions::SignedOverflowBehaviorTy::SOB_Defined:
@@ -906,9 +906,9 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *E) {
     auto eltTy = getTypes().ConvertType(CAT->getElementType());
     auto TheType =
         mlir::cir::ArrayType::get(builder.getContext(), eltTy, finalSize);
-    auto cstArray = mlir::cir::CstArrayAttr::get(
+    auto constArray = mlir::cir::ConstArrayAttr::get(
         TheType, mlir::StringAttr::get(Str, TheType));
-    return cstArray;
+    return constArray;
   }
 
   assert(0 && "not implemented");

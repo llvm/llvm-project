@@ -106,7 +106,7 @@ def PtrStrideOp : CIR_Op<"ptr_stride",
     a stride. Currently only used for array subscripts.
 
     ```mlir
-    %3 = cir.cst(0 : i32) : i32
+    %3 = cir.const(0 : i32) : i32
     %4 = cir.ptr_stride(%2 : !cir.ptr<i32>, %3 : i32), !cir.ptr<i32>
     ```
   }];
@@ -134,20 +134,20 @@ def PtrStrideOp : CIR_Op<"ptr_stride",
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
-def ConstantOp : CIR_Op<"cst",
+def ConstantOp : CIR_Op<"const",
     [ConstantLike, Pure]> {
   // FIXME: Use SameOperandsAndResultType or similar and prevent eye bleeding
   // type repetition in the assembly form.
 
   let summary = "Defines a CIR constant";
   let description = [{
-    The `cir.cst` operation turns a literal into an SSA value. The data is
+    The `cir.const` operation turns a literal into an SSA value. The data is
     attached to the operation as an attribute.
 
     ```mlir
-      %0 = cir.cst(42 : i32) : i32
-      %1 = cir.cst(4.2 : f32) : f32
-      %2 = cir.cst(nullptr : !cir.ptr<i32>) : !cir.ptr<i32>
+      %0 = cir.const(42 : i32) : i32
+      %1 = cir.const(4.2 : f32) : f32
+      %2 = cir.const(nullptr : !cir.ptr<i32>) : !cir.ptr<i32>
     ```
   }];
 
@@ -961,7 +961,7 @@ def LoopOp : CIR_Op<"loop",
         cir.yield
       })  {
         %3 = cir.load %1 : cir.ptr <i32>, i32
-        %4 = cir.cst(1 : i32) : i32
+        %4 = cir.const(1 : i32) : i32
         %5 = cir.binop(add, %3, %4) : i32
         cir.store %5, %1 : i32, cir.ptr <i32>
         cir.yield

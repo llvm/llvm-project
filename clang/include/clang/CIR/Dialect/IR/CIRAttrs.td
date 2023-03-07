@@ -56,10 +56,10 @@ def ZeroAttr : CIR_Attr<"Zero", "zero", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
-// CstArrayAttr
+// ConstArrayAttr
 //===----------------------------------------------------------------------===//
 
-def CstArrayAttr : CIR_Attr<"CstArray", "cst_array", [TypedAttrInterface]> {
+def ConstArrayAttr : CIR_Attr<"ConstArray", "const_array", [TypedAttrInterface]> {
   let summary = "A constant array from ArrayAttr or StringRefAttr";
   let description = [{
     An CIR array attribute is an array of literals of the specified attr types.

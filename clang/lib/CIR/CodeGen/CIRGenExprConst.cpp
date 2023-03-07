@@ -1244,7 +1244,7 @@ buildArrayConstant(CIRGenModule &CGM, mlir::Type DesiredType,
     for (auto const &Element : Elements)
       Eles.push_back(Element);
 
-    return mlir::cir::CstArrayAttr::get(
+    return mlir::cir::ConstArrayAttr::get(
         mlir::cir::ArrayType::get(CGM.getBuilder().getContext(),
                                   CommonElementType, ArrayBound),
         mlir::ArrayAttr::get(CGM.getBuilder().getContext(), Eles));

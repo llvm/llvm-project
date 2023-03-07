@@ -42,7 +42,7 @@ struct SimplifyRetYieldBlocks : public mlir::OpRewritePattern<ScopeLikeOpTy> {
     // Rewrite something like this:
     //
     // cir.if %2 {
-    //    %3 = cir.cst(3 : i32) : i32
+    //    %3 = cir.const(3 : i32) : i32
     //    cir.br ^bb1
     //  ^bb1:  // pred: ^bb0
     //    cir.return %3 : i32
@@ -51,7 +51,7 @@ struct SimplifyRetYieldBlocks : public mlir::OpRewritePattern<ScopeLikeOpTy> {
     // to this:
     //
     // cir.if %2 {
-    //    %3 = cir.cst(3 : i32) : i32
+    //    %3 = cir.const(3 : i32) : i32
     //    cir.return %3 : i32
     // }
     //

@@ -20,7 +20,7 @@ void sw1(int a) {
 // CHECK: cir.switch (%3 : i32) [
 // CHECK-NEXT: case (equal, 0 : i32)  {
 // CHECK-NEXT:   %4 = cir.load %1 : cir.ptr <i32>, i32
-// CHECK-NEXT:   %5 = cir.cst(1 : i32) : i32
+// CHECK-NEXT:   %5 = cir.const(1 : i32) : i32
 // CHECK-NEXT:   %6 = cir.binop(add, %4, %5) : i32
 // CHECK-NEXT:   cir.store %6, %1 : i32, cir.ptr <i32>
 // CHECK-NEXT:   cir.yield break
@@ -32,10 +32,10 @@ void sw1(int a) {
 // CHECK-NEXT:   cir.scope {
 // CHECK-NEXT:       %4 = cir.alloca i32, cir.ptr <i32>, ["yolo", init]
 // CHECK-NEXT:       %5 = cir.load %1 : cir.ptr <i32>, i32
-// CHECK-NEXT:       %6 = cir.cst(1 : i32) : i32
+// CHECK-NEXT:       %6 = cir.const(1 : i32) : i32
 // CHECK-NEXT:       %7 = cir.binop(add, %5, %6) : i32
 // CHECK-NEXT:       cir.store %7, %1 : i32, cir.ptr <i32>
-// CHECK-NEXT:       %8 = cir.cst(100 : i32) : i32
+// CHECK-NEXT:       %8 = cir.const(100 : i32) : i32
 // CHECK-NEXT:       cir.store %8, %4 : i32, cir.ptr <i32>
 // CHECK-NEXT:       cir.yield break
 // CHECK-NEXT:     }
@@ -58,7 +58,7 @@ void sw2(int a) {
 // CHECK-NEXT:   %2 = cir.alloca i32, cir.ptr <i32>, ["fomo", init]
 // CHECK:        cir.switch (%4 : i32) [
 // CHECK-NEXT:   case (equal, 3 : i32)  {
-// CHECK-NEXT:     %5 = cir.cst(0 : i32) : i32
+// CHECK-NEXT:     %5 = cir.const(0 : i32) : i32
 // CHECK-NEXT:     cir.store %5, %2 : i32, cir.ptr <i32>
 
 void sw3(int a) {
@@ -92,7 +92,7 @@ int sw4(int a) {
 // CHECK:       cir.switch (%4 : i32) [
 // CHECK-NEXT:       case (equal, 42 : i32)  {
 // CHECK-NEXT:         cir.scope {
-// CHECK-NEXT:           %5 = cir.cst(3 : i32) : i32
+// CHECK-NEXT:           %5 = cir.const(3 : i32) : i32
 // CHECK-NEXT:           cir.store %5, %1 : i32, cir.ptr <i32>
 // CHECK-NEXT:           %6 = cir.load %1 : cir.ptr <i32>, i32
 // CHECK-NEXT:           cir.return %6 : i32
@@ -100,7 +100,7 @@ int sw4(int a) {
 // CHECK-NEXT:         cir.yield fallthrough
 // CHECK-NEXT:       },
 // CHECK-NEXT:       case (default)  {
-// CHECK-NEXT:         %5 = cir.cst(2 : i32) : i32
+// CHECK-NEXT:         %5 = cir.const(2 : i32) : i32
 // CHECK-NEXT:         cir.store %5, %1 : i32, cir.ptr <i32>
 // CHECK-NEXT:         %6 = cir.load %1 : cir.ptr <i32>, i32
 // CHECK-NEXT:         cir.return %6 : i32

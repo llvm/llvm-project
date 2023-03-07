@@ -20,7 +20,7 @@ add_clang_library(clangCIR
   CIRGenDecl.cpp
   CIRGenDeclCXX.cpp
   CIRGenExpr.cpp
-  CIRGenExprCst.cpp
+  CIRGenExprConst.cpp
   CIRGenExprAgg.cpp
   CIRGenExprCXX.cpp
   CIRGenExprScalar.cpp
