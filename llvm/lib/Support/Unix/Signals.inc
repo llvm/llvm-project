@@ -62,6 +62,9 @@
 #if HAVE_MACH_MACH_H
 #include <mach/mach.h>
 #endif
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
 #if HAVE_LINK_H
 #include <link.h>
 #endif
@@ -461,7 +464,7 @@ void llvm::sys::AddSignalHandler(sys::SignalHandlerCallback FnPtr,
   RegisterHandlers();
 }
 
-#if defined(HAVE_BACKTRACE) && ENABLE_BACKTRACES && HAVE_LINK_H &&             \
+#if ENABLE_BACKTRACES && defined(HAVE_BACKTRACE) && HAVE_LINK_H &&             \
     (defined(__linux__) || defined(__FreeBSD__) ||                             \
      defined(__FreeBSD_kernel__) || defined(__NetBSD__))
 struct DlIteratePhdrData {
@@ -507,16 +510,50 @@ static bool findModulesAndOffsets(void **StackTrace, int Depth,
   dl_iterate_phdr(dl_iterate_phdr_cb, &data);
   return true;
 }
+#elif ENABLE_BACKTRACES && defined(__APPLE__) && defined(__LP64__)
+static bool findModulesAndOffsets(void **StackTrace, int Depth,
+                                  const char **Modules, intptr_t *Offsets,
+                                  const char *MainExecutableName,
+                                  StringSaver &StrPool) {
+  uint32_t NumImgs = _dyld_image_count();
+  for (uint32_t ImageIndex = 0; ImageIndex < NumImgs; ImageIndex++) {
+    const char *Name = _dyld_get_image_name(ImageIndex);
+    intptr_t Slide = _dyld_get_image_vmaddr_slide(ImageIndex);
+    auto *Header =
+        (const struct mach_header_64 *)_dyld_get_image_header(ImageIndex);
+    if (Header == NULL)
+      continue;
+    auto Cmd = (const struct load_command *)(&Header[1]);
+    for (uint32_t CmdNum = 0; CmdNum < Header->ncmds; ++CmdNum) {
+      uint32_t BaseCmd = Cmd->cmd & ~LC_REQ_DYLD;
+      if (BaseCmd == LC_SEGMENT_64) {
+        auto CmdSeg64 = (const struct segment_command_64 *)Cmd;
+        for (int j = 0; j < Depth; j++) {
+          if (Modules[j])
+            continue;
+          intptr_t Addr = (intptr_t)StackTrace[j];
+          if ((intptr_t)CmdSeg64->vmaddr + Slide <= Addr &&
+              Addr < intptr_t(CmdSeg64->vmaddr + CmdSeg64->vmsize + Slide)) {
+            Modules[j] = Name;
+            Offsets[j] = Addr - Slide;
+          }
+        }
+      }
+      Cmd = (const load_command *)(((const char *)Cmd) + (Cmd->cmdsize));
+    }
+  }
+  return true;
+}
 #else
-/// This platform does not have dl_iterate_phdr, so we do not yet know how to
-/// find all loaded DSOs.
+/// Backtraces are not enabled or we don't yet know how to find all loaded DSOs
+/// on this platform.
 static bool findModulesAndOffsets(void **StackTrace, int Depth,
                                   const char **Modules, intptr_t *Offsets,
                                   const char *MainExecutableName,
                                   StringSaver &StrPool) {
   return false;
 }
-#endif // defined(HAVE_BACKTRACE) && ENABLE_BACKTRACES && ...
+#endif // ENABLE_BACKTRACES && ... (findModulesAndOffsets variants)
 
 #if ENABLE_BACKTRACES && defined(HAVE__UNWIND_BACKTRACE)
 static int unwindBacktrace(void **StackTrace, int MaxEntries) {
