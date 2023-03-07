@@ -243,6 +243,7 @@ const HeaderMapCollector::RegexHeaderMap *getSTLPostfixHeaderMap() {
       {"mutex$", "<mutex>"},
       {"new$", "<new>"},
       {"numeric$", "<numeric>"},
+      {"optional$", "<optional>"},
       {"ostream$", "<ostream>"},
       {"queue$", "<queue>"},
       {"random$", "<random>"},
