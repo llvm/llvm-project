@@ -63,8 +63,8 @@ define ptr @fmul_v4f16(ptr %p, ptr %ps, <4 x half> %t) {
 ;
 ; CHECK-FP16-LABEL: fmul_v4f16:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    ld1r { v1.4h }, [x0], #2
-; CHECK-FP16-NEXT:    fmul v0.4h, v1.4h, v0.4h
+; CHECK-FP16-NEXT:    ldr h1, [x0], #2
+; CHECK-FP16-NEXT:    fmul v0.4h, v0.4h, v1.h[0]
 ; CHECK-FP16-NEXT:    str d0, [x1]
 ; CHECK-FP16-NEXT:    ret
   %l = load half, ptr %p
@@ -93,8 +93,8 @@ define ptr @fmla_v4f16(ptr %p, ptr %ps, <4 x half> %t, <4 x half> %u) {
 ;
 ; CHECK-FP16-LABEL: fmla_v4f16:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    ld1r { v2.4h }, [x0], #2
-; CHECK-FP16-NEXT:    fmla v1.4h, v0.4h, v2.4h
+; CHECK-FP16-NEXT:    ldr h2, [x0], #2
+; CHECK-FP16-NEXT:    fmla v1.4h, v0.4h, v2.h[0]
 ; CHECK-FP16-NEXT:    str d1, [x1]
 ; CHECK-FP16-NEXT:    ret
   %l = load half, ptr %p
@@ -110,8 +110,8 @@ define ptr @fmla_v4f16(ptr %p, ptr %ps, <4 x half> %t, <4 x half> %u) {
 define ptr @fmul_v4f32(ptr %p, ptr %ps, <4 x float> %t) {
 ; CHECK-LABEL: fmul_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1r { v1.4s }, [x0], #4
-; CHECK-NEXT:    fmul v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    ldr s1, [x0], #4
+; CHECK-NEXT:    fmul v0.4s, v0.4s, v1.s[0]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
   %l = load float, ptr %p
@@ -126,8 +126,8 @@ define ptr @fmul_v4f32(ptr %p, ptr %ps, <4 x float> %t) {
 define ptr @fmla_v4f32(ptr %p, ptr %ps, <4 x float> %t, <4 x float> %u) {
 ; CHECK-LABEL: fmla_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1r { v2.4s }, [x0], #4
-; CHECK-NEXT:    fmla v1.4s, v0.4s, v2.4s
+; CHECK-NEXT:    ldr s2, [x0], #4
+; CHECK-NEXT:    fmla v1.4s, v0.4s, v2.s[0]
 ; CHECK-NEXT:    str q1, [x1]
 ; CHECK-NEXT:    ret
   %l = load float, ptr %p
@@ -143,8 +143,8 @@ define ptr @fmla_v4f32(ptr %p, ptr %ps, <4 x float> %t, <4 x float> %u) {
 define ptr @fmul_v2f64(ptr %p, ptr %ps, <2 x double> %t) {
 ; CHECK-LABEL: fmul_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1r { v1.2d }, [x0], #8
-; CHECK-NEXT:    fmul v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    ldr d1, [x0], #8
+; CHECK-NEXT:    fmul v0.2d, v0.2d, v1.d[0]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
   %l = load double, ptr %p
@@ -159,8 +159,8 @@ define ptr @fmul_v2f64(ptr %p, ptr %ps, <2 x double> %t) {
 define ptr @fmla_v2f64(ptr %p, ptr %ps, <2 x double> %t, <2 x double> %u) {
 ; CHECK-LABEL: fmla_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1r { v2.2d }, [x0], #8
-; CHECK-NEXT:    fmla v1.2d, v0.2d, v2.2d
+; CHECK-NEXT:    ldr d2, [x0], #8
+; CHECK-NEXT:    fmla v1.2d, v0.2d, v2.d[0]
 ; CHECK-NEXT:    str q1, [x1]
 ; CHECK-NEXT:    ret
   %l = load double, ptr %p
