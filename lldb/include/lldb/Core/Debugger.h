@@ -28,6 +28,7 @@
 #include "lldb/Target/TargetList.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Diagnostics.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UserID.h"
@@ -596,6 +597,7 @@ protected:
   lldb::ListenerSP m_forward_listener_sp;
   llvm::once_flag m_clear_once;
   lldb::TargetSP m_dummy_target_sp;
+  Diagnostics::CallbackID m_diagnostics_callback_id;
 
   lldb_private::DebuggerDestroyCallback m_destroy_callback = nullptr;
   void *m_destroy_callback_baton = nullptr;
