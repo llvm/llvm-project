@@ -109,7 +109,12 @@ static void addCommonArgs(bool ForDriver, SmallVectorImpl<const char *> &Args,
   }
   if (auto PluginOpts =
           llvm::sys::Process::GetEnv("LLVM_CACHE_PLUGIN_OPTIONS")) {
-    addCC1Args({"-fcas-plugin-options", Saver.save(*PluginOpts).data()});
+    StringRef Remaining = *PluginOpts;
+    while (!Remaining.empty()) {
+      StringRef Opt;
+      std::tie(Opt, Remaining) = Remaining.split(':');
+      addCC1Args({"-fcas-plugin-option", Saver.save(Opt).data()});
+    }
   }
 }
 
