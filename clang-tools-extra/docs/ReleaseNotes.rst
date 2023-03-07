@@ -169,6 +169,11 @@ Changes in existing checks
   <clang-tidy/checks/misc/unused-using-decls>` check.
   Global options of the same name should be used instead.
 
+- In :doc:`modernize-use-default-member-init
+  <clang-tidy/checks/modernize/use-default-member-init>` count template
+  constructors toward hand written constructors so that they are skipped if more
+  than one exists.
+
 - Fixed reading `HungarianNotation.CString.*` options in
   :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check.
