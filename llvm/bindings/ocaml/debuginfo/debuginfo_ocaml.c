@@ -64,6 +64,13 @@ typedef enum {
   i_DIFlagPtrToMemberRep
 } LLVMDIFlag_i;
 
+typedef unsigned LLVMDWARFMemorySpace_i;
+
+static LLVMDWARFMemorySpace
+map_DWARFMemorySpace(LLVMDWARFMemorySpace_i MemorySpace) {
+  return (LLVMDWARFMemorySpace)MemorySpace;
+}
+
 static LLVMDIFlags map_DIFlag(LLVMDIFlag_i DIF) {
   switch (DIF) {
   case i_DIFlagZero:
@@ -493,11 +500,13 @@ value llvm_dibuild_create_basic_type(value Builder, value Name,
 value llvm_dibuild_create_pointer_type_native(value Builder, value PointeeTy,
                                               value SizeInBits,
                                               value AlignInBits,
-                                              value AddressSpace, value Name) {
+                                              value AddressSpace,
+                                              value MemorySpace, value Name) {
   LLVMMetadataRef Metadata = LLVMDIBuilderCreatePointerType(
       DIBuilder_val(Builder), Metadata_val(PointeeTy),
       (uint64_t)Int_val(SizeInBits), Int_val(AlignInBits),
-      Int_val(AddressSpace), String_val(Name), caml_string_length(Name));
+      Int_val(AddressSpace), map_DWARFMemorySpace(Int_val(MemorySpace)),
+      String_val(Name), caml_string_length(Name));
   return to_val(Metadata);
 }
 
@@ -507,7 +516,8 @@ value llvm_dibuild_create_pointer_type_bytecode(value *argv, int argn) {
                                                  argv[2], // SizeInBits
                                                  argv[3], // AlignInBits
                                                  argv[4], // AddressSpace
-                                                 argv[5]  // Name
+                                                 argv[5], // MemorySpace
+                                                 argv[6]  // Name
   );
 }
 
@@ -628,9 +638,12 @@ value llvm_dibuild_create_qualified_type(value Builder, value Tag, value Type) {
   return to_val(Metadata);
 }
 
-value llvm_dibuild_create_reference_type(value Builder, value Tag, value Type) {
+value llvm_dibuild_create_reference_type(value Builder, value Tag, value Type,
+                                         value AddressSpace,
+                                         value MemorySpace) {
   LLVMMetadataRef Metadata = LLVMDIBuilderCreateReferenceType(
-      DIBuilder_val(Builder), Int_val(Tag), Metadata_val(Type));
+      DIBuilder_val(Builder), Int_val(Tag), Metadata_val(Type),
+      Int_val(AddressSpace), map_DWARFMemorySpace(Int_val(MemorySpace)));
   return to_val(Metadata);
 }
 
@@ -873,13 +886,14 @@ value llvm_dibuild_create_constant_value_expression(value Builder,
 value llvm_dibuild_create_global_variable_expression_native(
     value Builder, value Scope, value Name, value Linkage, value File,
     value Line, value Ty, value LocalToUnit, value Expr, value Decl,
-    value AlignInBits) {
+    value MemorySpace, value AlignInBits) {
   LLVMMetadataRef Metadata = LLVMDIBuilderCreateGlobalVariableExpression(
       DIBuilder_val(Builder), Metadata_val(Scope), String_val(Name),
       caml_string_length(Name), String_val(Linkage),
       caml_string_length(Linkage), Metadata_val(File), Int_val(Line),
       Metadata_val(Ty), Bool_val(LocalToUnit), Metadata_val(Expr),
-      Metadata_val(Decl), Int_val(AlignInBits));
+      Metadata_val(Decl), map_DWARFMemorySpace(Int_val(MemorySpace)),
+      Int_val(AlignInBits));
   return to_val(Metadata);
 }
 
@@ -887,17 +901,18 @@ value llvm_dibuild_create_global_variable_expression_bytecode(value *argv,
                                                               int arg) {
 
   return llvm_dibuild_create_global_variable_expression_native(
-      argv[0], // Builder
-      argv[1], // Scope
-      argv[2], // Name
-      argv[3], // Linkage
-      argv[4], // File
-      argv[5], // Line
-      argv[6], // Ty
-      argv[7], // LocalToUnit
-      argv[8], // Expr
-      argv[9], // Decl
-      argv[10] // AlignInBits
+      argv[0],  // Builder
+      argv[1],  // Scope
+      argv[2],  // Name
+      argv[3],  // Linkage
+      argv[4],  // File
+      argv[5],  // Line
+      argv[6],  // Ty
+      argv[7],  // LocalToUnit
+      argv[8],  // Expr
+      argv[9],  // Decl
+      argv[10], // MemorySpace
+      argv[11]  // AlignInBits
   );
 }
 
@@ -918,16 +933,14 @@ value llvm_get_metadata_kind(value Metadata) {
   return Val_int(LLVMGetMetadataKind(Metadata_val(Metadata)));
 }
 
-value llvm_dibuild_create_auto_variable_native(value Builder, value Scope,
-                                               value Name, value File,
-                                               value Line, value Ty,
-                                               value AlwaysPreserve,
-                                               value Flags, value AlignInBits) {
+value llvm_dibuild_create_auto_variable_native(
+    value Builder, value Scope, value Name, value File, value Line, value Ty,
+    value AlwaysPreserve, value Flags, value MemorySpace, value AlignInBits) {
   return to_val(LLVMDIBuilderCreateAutoVariable(
       DIBuilder_val(Builder), Metadata_val(Scope), String_val(Name),
       caml_string_length(Name), Metadata_val(File), Int_val(Line),
       Metadata_val(Ty), Bool_val(AlwaysPreserve), DIFlags_val(Flags),
-      Int_val(AlignInBits)));
+      map_DWARFMemorySpace(Int_val(MemorySpace)), Int_val(AlignInBits)));
 }
 
 value llvm_dibuild_create_auto_variable_bytecode(value *argv, int arg) {
@@ -940,7 +953,8 @@ value llvm_dibuild_create_auto_variable_bytecode(value *argv, int arg) {
                                                   argv[5], // Ty
                                                   argv[6], // AlwaysPreserve
                                                   argv[7], // Flags
-                                                  argv[8]  // AlignInBits
+                                                  argv[8], // MemorySpace
+                                                  argv[9]  // AlignInBits
   );
 }
 

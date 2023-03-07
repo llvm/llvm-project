@@ -1005,7 +1005,18 @@ static LLVMDIFlags map_to_llvmDIFlags(DINode::DIFlags Flags) {
 }
 
 static MemorySpace map_to_llvmMSPACE(LLVMDWARFMemorySpace MS) {
-  return static_cast<MemorySpace>(MS);
+  switch (MS) {
+#define HANDLE_DW_MSPACE(ID, NAME)                                             \
+  case ID:                                                                     \
+    return DW_MSPACE_LLVM_##NAME;
+#include "llvm/BinaryFormat/Dwarf.def"
+  default:
+    if (MemorySpace::DW_MSPACE_LLVM_lo_user <= MS &&
+        MS <= MemorySpace::DW_MSPACE_LLVM_hi_user)
+      return static_cast<MemorySpace>(MS);
+    break;
+  }
+  llvm_unreachable("LLVMDWARFMemorySpace out-of-range");
 }
 
 static DISubprogram::DISPFlags
@@ -1461,8 +1472,8 @@ LLVMMetadataRef LLVMDIBuilderCreateReferenceType(LLVMDIBuilderRef Builder,
                                                  LLVMMetadataRef Type,
                                                  unsigned AddressSpace,
                                                  LLVMDWARFMemorySpace MS) {
-  return wrap(unwrap(Builder)->createReferenceType(Tag,
-                                                   unwrapDI<DIType>(Type)));
+  return wrap(unwrap(Builder)->createReferenceType(
+      Tag, unwrapDI<DIType>(Type), 0, 0, AddressSpace, map_to_llvmMSPACE(MS)));
 }
 
 LLVMMetadataRef

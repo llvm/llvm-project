@@ -235,7 +235,7 @@ let test_global_variable_expression dibuilder f_di m_di =
   let gvexpr_di =
     Llvm_debuginfo.dibuild_create_global_variable_expression dibuilder
       ~scope:m_di ~name:"my_global" ~linkage:"" ~file:f_di ~line:5 ~ty
-      ~is_local_to_unit:true ~expr:cexpr_di ~decl:null_metadata ~align_in_bits:0
+      ~is_local_to_unit:true ~expr:cexpr_di ~decl:null_metadata ~memory_space:DW_MSPACE_LLVM_constant ~align_in_bits:0
   in
   insist
     ( Llvm_debuginfo.get_metadata_kind gvexpr_di
@@ -248,7 +248,7 @@ let test_global_variable_expression dibuilder f_di m_di =
         ( Llvm_debuginfo.get_metadata_kind gvexpr_var_di
         = Llvm_debuginfo.MetadataKind.DIGlobalVariableMetadataKind );
       stdout_metadata gvexpr_var_di
-      (* CHECK: [[GV_PTR:<0x[0-9a-f]*>]] = distinct !DIGlobalVariable(name: "my_global", scope: [[MODULE_PTR]], file: [[FILE_PTR]], line: 5, type: [[INT64TY_PTR]], isLocal: true, isDefinition: true)
+      (* CHECK: [[GV_PTR:<0x[0-9a-f]*>]] = distinct !DIGlobalVariable(name: "my_global", scope: [[MODULE_PTR]], file: [[FILE_PTR]], line: 5, type: [[INT64TY_PTR]], isLocal: true, isDefinition: true, memorySpace: DW_MSPACE_LLVM_constant)
        *)
   | None -> insist false );
   stdout_metadata gvexpr_di;
@@ -266,10 +266,10 @@ let test_variables f dibuilder file_di fun_di =
   let auto_var =
     Llvm_debuginfo.dibuild_create_auto_variable dibuilder ~scope:fun_di
       ~name:"my_local" ~file:file_di ~line:10 ~ty
-      ~always_preserve:false flags_zero ~align_in_bits:0
+      ~always_preserve:false flags_zero ~memory_space:DW_MSPACE_LLVM_constant ~align_in_bits:0
   in
   stdout_metadata auto_var;
-  (* CHECK: [[LOCAL_VAR_PTR:<0x[0-9a-f]*>]] = !DILocalVariable(name: "my_local", scope: <{{0x[0-9a-f]*}}>, file: <{{0x[0-9a-f]*}}>, line: 10, type: [[INT64TY_PTR]])
+  (* CHECK: [[LOCAL_VAR_PTR:<0x[0-9a-f]*>]] = !DILocalVariable(name: "my_local", scope: <{{0x[0-9a-f]*}}>, file: <{{0x[0-9a-f]*}}>, line: 10, type: [[INT64TY_PTR]], memorySpace: DW_MSPACE_LLVM_constant)
   *)
   let builder = Llvm.builder_before context entry_term in
   let all = Llvm.build_alloca (Llvm.i64_type context)  "my_alloca" builder in
@@ -338,10 +338,10 @@ let test_types dibuilder file_di m_di =
   let structptr_di =
     Llvm_debuginfo.dibuild_create_pointer_type dibuilder
       ~pointee_ty:struct_ty_di ~size_in_bits:192 ~align_in_bits:0
-      ~address_space:0 ~name:""
+      ~address_space:0 ~memory_space:DW_MSPACE_LLVM_constant ~name:""
   in
   stdout_metadata structptr_di;
-  (* CHECK: [[STRUCTPTR_PTR:<0x[0-9a-f]*>]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[STRUCT_PTR]], size: 192, address_space: 0)
+  (* CHECK: [[STRUCTPTR_PTR:<0x[0-9a-f]*>]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[STRUCT_PTR]], size: 192, addressSpace: 0, memorySpace: DW_MSPACE_LLVM_constant)
    *)
   insist
     ( Llvm_debuginfo.get_metadata_kind structptr_di

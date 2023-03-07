@@ -96,6 +96,15 @@ module DIFlag : sig
     | PtrToMemberRep
 end
 
+module DWARFMemorySpace : sig
+  type t =
+    | DW_MSPACE_LLVM_none
+    | DW_MSPACE_LLVM_global
+    | DW_MSPACE_LLVM_constant
+    | DW_MSPACE_LLVM_group
+    | DW_MSPACE_LLVM_private
+end
+
 type lldiflags
 (** An opaque type to represent OR of multiple DIFlag.t. *)
 
@@ -304,6 +313,7 @@ val dibuild_create_global_variable_expression :
   is_local_to_unit:bool ->
   expr:Llvm.llmetadata ->
   decl:Llvm.llmetadata ->
+  memory_space:DWARFMemorySpace.t ->
   align_in_bits:int ->
   Llvm.llmetadata
 (** [dibuild_create_global_variable_expression] Create a new descriptor for
@@ -407,6 +417,7 @@ val dibuild_create_pointer_type :
   size_in_bits:int ->
   align_in_bits:int ->
   address_space:int ->
+  memory_space:DWARFMemorySpace.t ->
   name:string ->
   Llvm.llmetadata
 (** [dibuild_create_pointer_type] Create debugging information entry for a
@@ -483,7 +494,12 @@ val dibuild_create_qualified_type :
     [tag] identifyies the type and [ty] is the base type. *)
 
 val dibuild_create_reference_type :
-  lldibuilder -> tag:int -> Llvm.llmetadata -> Llvm.llmetadata
+  lldibuilder ->
+  tag:int ->
+  ty:Llvm.llmetadata ->
+  address_space:int ->
+  memory_space:DWARFMemorySpace.t ->
+  Llvm.llmetadata
 (** [dibuild_create_reference_type dib tag ty] Create debugging information
     entry for a reference type. [dib] is the dibuilder value, [tag] identifyies
     the type and [ty] is the base type. *)
@@ -633,6 +649,7 @@ val dibuild_create_auto_variable :
   ty:Llvm.llmetadata ->
   always_preserve:bool ->
   lldiflags ->
+  memory_space:DWARFMemorySpace.t ->
   align_in_bits:int ->
   Llvm.llmetadata
 (** [dibuild_create_auto_variable] Create a new descriptor for a
