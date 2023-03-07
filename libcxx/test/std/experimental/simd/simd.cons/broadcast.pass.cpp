@@ -43,7 +43,7 @@ void compile_narrowing_conversion() {
   supported_native_simd_ctor<int64_t>(3);
   supported_native_simd_ctor<uint8_t>(3);
   supported_native_simd_ctor<uint16_t>(3);
-  supported_native_simd_ctor<uint32_t>(3);
+  supported_native_simd_ctor<std::uint32_t>(3);
   supported_native_simd_ctor<uint64_t>(3);
   supported_native_simd_ctor<float>(3.f);
   supported_native_simd_ctor<double>(3.);
