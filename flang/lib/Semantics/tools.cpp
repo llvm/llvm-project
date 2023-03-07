@@ -611,16 +611,19 @@ bool IsOrContainsEventOrLockComponent(const Symbol &original) {
 }
 
 // Check this symbol suitable as a type-bound procedure - C769
-bool CanBeTypeBoundProc(const Symbol *symbol) {
-  if (!symbol || IsDummy(*symbol) || IsProcedurePointer(*symbol)) {
+bool CanBeTypeBoundProc(const Symbol &symbol) {
+  if (IsDummy(symbol) || IsProcedurePointer(symbol)) {
     return false;
-  } else if (symbol->has<SubprogramNameDetails>()) {
-    return symbol->owner().kind() == Scope::Kind::Module;
-  } else if (auto *details{symbol->detailsIf<SubprogramDetails>()}) {
-    return symbol->owner().kind() == Scope::Kind::Module ||
-        details->isInterface();
-  } else if (const auto *proc{symbol->detailsIf<ProcEntityDetails>()}) {
-    return !symbol->attrs().test(Attr::INTRINSIC) &&
+  } else if (symbol.has<SubprogramNameDetails>()) {
+    return symbol.owner().kind() == Scope::Kind::Module;
+  } else if (auto *details{symbol.detailsIf<SubprogramDetails>()}) {
+    if (details->isInterface()) {
+      return !symbol.attrs().test(Attr::ABSTRACT);
+    } else {
+      return symbol.owner().kind() == Scope::Kind::Module;
+    }
+  } else if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
+    return !symbol.attrs().test(Attr::INTRINSIC) &&
         proc->HasExplicitInterface();
   } else {
     return false;

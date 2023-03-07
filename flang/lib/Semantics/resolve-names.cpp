@@ -4000,9 +4000,8 @@ Symbol &SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
     }
     if (isGeneric()) {
       Symbol &genericSymbol{GetGenericSymbol()};
-      if (genericSymbol.has<GenericDetails>()) {
-        genericSymbol.get<GenericDetails>().AddSpecificProc(
-            *symbol, name.source);
+      if (auto *details{genericSymbol.detailsIf<GenericDetails>()}) {
+        details->AddSpecificProc(*symbol, name.source);
       } else {
         CHECK(context().HasError(genericSymbol));
       }
@@ -5147,8 +5146,8 @@ void DeclarationVisitor::Post(
       procedure = NoteInterfaceName(procedureName);
     }
     if (procedure) {
-      if (auto *s{
-              MakeTypeSymbol(bindingName, ProcBindingDetails{*procedure})}) {
+      const Symbol &bindTo{BypassGeneric(*procedure)};
+      if (auto *s{MakeTypeSymbol(bindingName, ProcBindingDetails{bindTo})}) {
         SetPassNameOn(*s);
         if (GetAttrs().test(Attr::DEFERRED)) {
           context().SetError(*s);
@@ -5165,7 +5164,11 @@ void DeclarationVisitor::CheckBindings(
     auto &bindingName{std::get<parser::Name>(declaration.t)};
     if (Symbol * binding{FindInScope(bindingName)}) {
       if (auto *details{binding->detailsIf<ProcBindingDetails>()}) {
-        const Symbol *procedure{FindSubprogram(details->symbol())};
+        const Symbol &ultimate{details->symbol().GetUltimate()};
+        const Symbol &procedure{BypassGeneric(ultimate)};
+        if (&procedure != &ultimate) {
+          details->ReplaceSymbol(procedure);
+        }
         if (!CanBeTypeBoundProc(procedure)) {
           if (details->symbol().name() != binding->name()) {
             Say(binding->name(),
