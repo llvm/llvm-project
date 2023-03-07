@@ -1129,6 +1129,8 @@ bool lldb_private::formatters::swift::SIMDVector_SummaryProvider(
   uint64_t type_size = *opt_type_size;
 
   ::swift::TypeBase *swift_type = GetSwiftType(simd_type).getPointer();
+  if (!swift_type)
+    return false;
   auto bound_type = dyn_cast<::swift::BoundGenericType>(swift_type);
   if (!bound_type)
     return false;
