@@ -35,7 +35,8 @@
 
 static llvm::cl::opt<bool> useHlfirIntrinsicOps(
     "use-hlfir-intrinsic-ops", llvm::cl::init(true),
-    llvm::cl::desc("Lower via HLFIR transformational intrinsic operations such as hlfir.sum"));
+    llvm::cl::desc("Lower via HLFIR transformational intrinsic operations such "
+                   "as hlfir.sum"));
 
 /// Helper to package a Value and its properties into an ExtendedValue.
 static fir::ExtendedValue toExtendedValue(mlir::Location loc, mlir::Value base,
@@ -560,6 +561,8 @@ struct CallContext {
         stmtCtx{stmtCtx}, resultType{resultType}, loc{loc} {}
 
   fir::FirOpBuilder &getBuilder() { return converter.getFirOpBuilder(); }
+
+  std::string getProcedureName() const { return procRef.proc().GetName(); }
 
   /// Is this a call to an elemental procedure with at least one array argument?
   bool isElementalProcWithArrayArgs() const {
@@ -1146,7 +1149,7 @@ genUserCall(PreparedActualArguments &loweredActuals,
 /// pre-lowered but have not yet been prepared according to the interface.
 static std::optional<hlfir::EntityWithAttributes>
 genIntrinsicRefCore(PreparedActualArguments &loweredActuals,
-                    const Fortran::evaluate::SpecificIntrinsic &intrinsic,
+                    const Fortran::evaluate::SpecificIntrinsic *intrinsic,
                     const fir::IntrinsicArgumentLoweringRules *argLowering,
                     CallContext &callContext) {
   llvm::SmallVector<fir::ExtendedValue> operands;
@@ -1213,10 +1216,10 @@ genIntrinsicRefCore(PreparedActualArguments &loweredActuals,
   std::optional<mlir::Type> scalarResultType;
   if (callContext.resultType)
     scalarResultType = hlfir::getFortranElementType(*callContext.resultType);
+  const std::string intrinsicName = callContext.getProcedureName();
   // Let the intrinsic library lower the intrinsic procedure call.
-  auto [resultExv, mustBeFreed] =
-      genIntrinsicCall(callContext.getBuilder(), loc, intrinsic.name,
-                       scalarResultType, operands);
+  auto [resultExv, mustBeFreed] = genIntrinsicCall(
+      callContext.getBuilder(), loc, intrinsicName, scalarResultType, operands);
   if (!fir::getBase(resultExv))
     return std::nullopt;
   hlfir::EntityWithAttributes resultEntity = extendedValueToHlfirEntity(
@@ -1229,7 +1232,7 @@ genIntrinsicRefCore(PreparedActualArguments &loweredActuals,
     // (this is the only intrinsic implemented in that way so far). The
     // ownership of this address cannot be taken here since it may not be a
     // temp.
-    if (intrinsic.name == "merge")
+    if (intrinsicName == "merge")
       asExpr = builder.create<hlfir::AsExprOp>(loc, resultEntity);
     else
       asExpr = builder.create<hlfir::AsExprOp>(
@@ -1243,11 +1246,12 @@ genIntrinsicRefCore(PreparedActualArguments &loweredActuals,
 /// pre-lowered but have not yet been prepared according to the interface.
 static std::optional<hlfir::EntityWithAttributes>
 genHLFIRIntrinsicRefCore(PreparedActualArguments &loweredActuals,
-                         const Fortran::evaluate::SpecificIntrinsic &intrinsic,
+                         const Fortran::evaluate::SpecificIntrinsic *intrinsic,
                          const fir::IntrinsicArgumentLoweringRules *argLowering,
                          CallContext &callContext) {
   if (!useHlfirIntrinsicOps)
-    return genIntrinsicRefCore(loweredActuals, intrinsic, argLowering, callContext);
+    return genIntrinsicRefCore(loweredActuals, intrinsic, argLowering,
+                               callContext);
 
   fir::FirOpBuilder &builder = callContext.getBuilder();
   mlir::Location loc = callContext.loc;
@@ -1293,8 +1297,8 @@ genHLFIRIntrinsicRefCore(PreparedActualArguments &loweredActuals,
     return hlfir::ExprType::get(builder.getContext(), resultShape, elementType,
                                 /*polymorphic=*/false);
   };
-
-  if (intrinsic.name == "sum") {
+  const std::string intrinsicName = callContext.getProcedureName();
+  if (intrinsicName == "sum") {
     llvm::SmallVector<mlir::Value> operands = getOperandVector(loweredActuals);
     assert(operands.size() == 3);
     mlir::Value array = operands[0];
@@ -1308,7 +1312,7 @@ genHLFIRIntrinsicRefCore(PreparedActualArguments &loweredActuals,
         builder.create<hlfir::SumOp>(loc, resultTy, array, dim, mask);
     return {hlfir::EntityWithAttributes{sumOp.getResult()}};
   }
-  if (intrinsic.name == "matmul") {
+  if (intrinsicName == "matmul") {
     llvm::SmallVector<mlir::Value> operands = getOperandVector(loweredActuals);
     mlir::Type resultTy =
         computeResultType(operands[0], *callContext.resultType);
@@ -1317,7 +1321,7 @@ genHLFIRIntrinsicRefCore(PreparedActualArguments &loweredActuals,
 
     return {hlfir::EntityWithAttributes{matmulOp.getResult()}};
   }
-  if (intrinsic.name == "transpose") {
+  if (intrinsicName == "transpose") {
     llvm::SmallVector<mlir::Value> operands = getOperandVector(loweredActuals);
     hlfir::ExprType::Shape resultShape;
     mlir::Type normalisedResult =
@@ -1509,7 +1513,7 @@ class ElementalIntrinsicCallBuilder
     : public ElementalCallBuilder<ElementalIntrinsicCallBuilder> {
 public:
   ElementalIntrinsicCallBuilder(
-      const Fortran::evaluate::SpecificIntrinsic &intrinsic,
+      const Fortran::evaluate::SpecificIntrinsic *intrinsic,
       const fir::IntrinsicArgumentLoweringRules *argLowering, bool isFunction)
       : intrinsic{intrinsic}, argLowering{argLowering}, isFunction{isFunction} {
   }
@@ -1530,11 +1534,12 @@ public:
   mlir::Value
   computeDynamicCharacterResultLength(PreparedActualArguments &loweredActuals,
                                       CallContext &callContext) {
-    if (intrinsic.name == "adjustr" || intrinsic.name == "adjustl" ||
-        intrinsic.name == "merge")
-      return hlfir::genCharLength(
-          callContext.loc, callContext.getBuilder(),
-          loweredActuals[0].value().getOriginalActual());
+    if (intrinsic)
+      if (intrinsic->name == "adjustr" || intrinsic->name == "adjustl" ||
+          intrinsic->name == "merge")
+        return hlfir::genCharLength(
+            callContext.loc, callContext.getBuilder(),
+            loweredActuals[0].value().getOriginalActual());
     // Character MIN/MAX is the min/max of the arguments length that are
     // present.
     TODO(callContext.loc,
@@ -1542,7 +1547,7 @@ public:
   }
 
 private:
-  const Fortran::evaluate::SpecificIntrinsic &intrinsic;
+  const Fortran::evaluate::SpecificIntrinsic *intrinsic;
   const fir::IntrinsicArgumentLoweringRules *argLowering;
   const bool isFunction;
 };
@@ -1581,18 +1586,22 @@ genIsPresentIfArgMaybeAbsent(mlir::Location loc, hlfir::Entity actual,
 }
 
 /// Lower an intrinsic procedure reference.
+/// \p intrinsic is null if this is an intrinsic module procedure that must be
+/// lowered as if it were an intrinsic module procedure (like C_LOC which is a
+/// procedure from intrinsic module iso_c_binding). Otherwise, \p intrinsic
+/// must not be null.
 static std::optional<hlfir::EntityWithAttributes>
-genIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic &intrinsic,
+genIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
                 CallContext &callContext) {
   mlir::Location loc = callContext.loc;
   auto &converter = callContext.converter;
-  if (Fortran::lower::intrinsicRequiresCustomOptionalHandling(
-          callContext.procRef, intrinsic, converter))
+  if (intrinsic && Fortran::lower::intrinsicRequiresCustomOptionalHandling(
+                       callContext.procRef, *intrinsic, converter))
     TODO(loc, "special cases of intrinsic with optional arguments");
 
   PreparedActualArguments loweredActuals;
   const fir::IntrinsicArgumentLoweringRules *argLowering =
-      fir::getIntrinsicArgumentLowering(intrinsic.name);
+      fir::getIntrinsicArgumentLowering(callContext.getProcedureName());
   for (const auto &arg : llvm::enumerate(callContext.procRef.arguments())) {
     auto *expr =
         Fortran::evaluate::UnwrapExpr<Fortran::lower::SomeExpr>(arg.value());
@@ -1638,7 +1647,9 @@ static std::optional<hlfir::EntityWithAttributes>
 genProcedureRef(CallContext &callContext) {
   mlir::Location loc = callContext.loc;
   if (auto *intrinsic = callContext.procRef.proc().GetSpecificIntrinsic())
-    return genIntrinsicRef(*intrinsic, callContext);
+    return genIntrinsicRef(intrinsic, callContext);
+  if (Fortran::lower::isIntrinsicModuleProcRef(callContext.procRef))
+    return genIntrinsicRef(nullptr, callContext);
 
   if (callContext.isStatementFunctionCall())
     return genStmtFunctionRef(loc, callContext.converter, callContext.symMap,
@@ -1697,6 +1708,17 @@ genProcedureRef(CallContext &callContext) {
         loweredActuals, isImpure, callContext);
   }
   return genUserCall(loweredActuals, caller, callSiteType, callContext);
+}
+
+bool Fortran::lower::isIntrinsicModuleProcRef(
+    const Fortran::evaluate::ProcedureRef &procRef) {
+  const Fortran::semantics::Symbol *symbol = procRef.proc().GetSymbol();
+  if (!symbol)
+    return false;
+  const Fortran::semantics::Symbol *module =
+      symbol->GetUltimate().owner().GetSymbol();
+  return module && module->attrs().test(Fortran::semantics::Attr::INTRINSIC) &&
+         module->name().ToString().find("omp_lib") == std::string::npos;
 }
 
 std::optional<hlfir::EntityWithAttributes> Fortran::lower::convertCallToHLFIR(
