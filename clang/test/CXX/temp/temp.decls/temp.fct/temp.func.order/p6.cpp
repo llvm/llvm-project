@@ -89,6 +89,10 @@ void f() {
   Y3<int, 1, 1, A{}, S, int> c;
 }
 
+// Per [temp.func.order]p6.2.2, specifically "if the function parameters that
+// positionally correspond between the two templates are not of the same type",
+// this partial specialization does not work.
+// See https://github.com/llvm/llvm-project/issues/58896
 template<C T, C V> struct Y4; // expected-note {{template is declared here}}
 template<D T, C V> struct Y4<V, T>; // expected-error {{class template partial specialization is not more specialized than the primary template}}
 
