@@ -59,6 +59,7 @@ struct IUseCharStar
 	IUseCharStar() : pointer("Hello world") {}
 
         char const *member_func(int) { return ""; }
+        virtual void virt_member_func() {}
 };
 
 int main (int argc, const char * argv[])
@@ -113,6 +114,9 @@ int main (int argc, const char * argv[])
     const char *(IUseCharStar::*member_func_ptr)(int) =
         &IUseCharStar::member_func;
     auto &ref_to_member_func_ptr = member_func_ptr;
+
+    void (IUseCharStar::*virt_member_func_ptr)() =
+        &IUseCharStar::virt_member_func;
 
     return 0; // Set break point at this line.
 }
