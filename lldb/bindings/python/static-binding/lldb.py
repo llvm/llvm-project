@@ -1965,6 +1965,22 @@ class SBAttachInfo(object):
     def SetListener(self, listener):
         r"""SetListener(SBAttachInfo self, SBListener listener)"""
         return _lldb.SBAttachInfo_SetListener(self, listener)
+
+    def GetScriptedProcessClassName(self):
+        r"""GetScriptedProcessClassName(SBAttachInfo self) -> char const *"""
+        return _lldb.SBAttachInfo_GetScriptedProcessClassName(self)
+
+    def SetScriptedProcessClassName(self, class_name):
+        r"""SetScriptedProcessClassName(SBAttachInfo self, char const * class_name)"""
+        return _lldb.SBAttachInfo_SetScriptedProcessClassName(self, class_name)
+
+    def GetScriptedProcessDictionary(self):
+        r"""GetScriptedProcessDictionary(SBAttachInfo self) -> SBStructuredData"""
+        return _lldb.SBAttachInfo_GetScriptedProcessDictionary(self)
+
+    def SetScriptedProcessDictionary(self, dict):
+        r"""SetScriptedProcessDictionary(SBAttachInfo self, SBStructuredData dict)"""
+        return _lldb.SBAttachInfo_SetScriptedProcessDictionary(self, dict)
     __swig_destroy__ = _lldb.delete_SBAttachInfo
 
 # Register SBAttachInfo in _lldb:
@@ -8688,6 +8704,18 @@ class SBProcess(object):
     def __repr__(self):
         r"""__repr__(SBProcess self) -> std::string"""
         return _lldb.SBProcess___repr__(self)
+
+    def WriteMemoryAsCString(self, addr, str, error):
+        '''
+          WriteMemoryAsCString(self, addr, str, error):
+            This functions the same as `WriteMemory` except a null-terminator is appended
+            to the end of the buffer if it is not there already.
+        '''
+        if not str or len(str) == 0:
+            return 0
+        if not str[-1] == '\0':
+            str += '\0'
+        return self.WriteMemory(addr, str, error)
 
     def __get_is_alive__(self):
         '''Returns "True" if the process is currently alive, "False" otherwise'''
