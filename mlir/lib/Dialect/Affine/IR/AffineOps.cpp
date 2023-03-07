@@ -2724,7 +2724,7 @@ struct AlwaysTrueOrFalseIf : public OpRewritePattern<AffineIfOp> {
     Operation *blockToMoveTerminator = blockToMove->getTerminator();
     // Promote the "blockToMove" block to the parent operation block between the
     // prologue and epilogue of "op".
-    rewriter.mergeBlockBefore(blockToMove, op);
+    rewriter.inlineBlockBefore(blockToMove, op);
     // Replace the "op" operation with the operands of the
     // "blockToMoveTerminator" operation. Note that "blockToMoveTerminator" is
     // the affine.yield operation present in the "blockToMove" block. It has no
