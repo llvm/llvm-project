@@ -11,14 +11,14 @@
 
 #SparseVector64 = #sparse_tensor.encoding<{
   dimLevelType = ["compressed"],
-  pointerBitWidth = 64,
-  indexBitWidth = 64
+  posWidth = 64,
+  crdWidth = 64
 }>
 
 #SparseVector32 = #sparse_tensor.encoding<{
   dimLevelType = ["compressed"],
-  pointerBitWidth = 32,
-  indexBitWidth = 32
+  posWidth = 32,
+  crdWidth = 32
 }>
 
 #SparseVector = #sparse_tensor.encoding<{
@@ -107,14 +107,14 @@ func.func @sparse_convert(%arg0: tensor<?xf32, #SparseVector64>) -> tensor<?xf32
 
 #SparseSingleton64 = #sparse_tensor.encoding<{
   dimLevelType = ["singleton"],
-  pointerBitWidth = 64,
-  indexBitWidth = 64
+  posWidth = 64,
+  crdWidth = 64
 }>
 
 #SparseSingleton32 = #sparse_tensor.encoding<{
   dimLevelType = ["singleton"],
-  pointerBitWidth = 32,
-  indexBitWidth = 32
+  posWidth = 32,
+  crdWidth = 32
 }>
 
 // CHECK-COO-LABEL: func @sparse_convert_singleton(

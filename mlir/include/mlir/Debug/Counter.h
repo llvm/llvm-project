@@ -6,31 +6,32 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_SUPPORT_DEBUGCOUNTER_H
-#define MLIR_SUPPORT_DEBUGCOUNTER_H
+#ifndef MLIR_TRACING_DEBUGCOUNTER_H
+#define MLIR_TRACING_DEBUGCOUNTER_H
 
-#include "mlir/Support/DebugAction.h"
+#include "mlir/IR/Action.h"
 #include "llvm/ADT/StringMap.h"
 #include <string>
 
 namespace mlir {
+namespace tracing {
 
-/// This class implements a debug action handler that attaches a counter value
+/// This class implements an action handler that attaches a counter value
 /// to debug actions and enables/disables execution of these action based on the
 /// value of the counter. The counter controls the execution of the action with
 /// a "skip" and "count" value. The "skip" value is used to skip a certain
-/// number of initial executions of a debug action. The "count" value is used to
-/// prevent a debug action from executing after it has executed for a set number
+/// number of initial executions of an action. The "count" value is used to
+/// prevent an action from executing after it has executed for a set number
 /// of times (not including any executions that have been skipped). For example,
-/// a counter for a debug action with `skip=47` and `count=2`, would skip the
+/// a counter for an action with `skip=47` and `count=2`, would skip the
 /// first 47 executions, then execute twice, and finally prevent any further
 /// executions.
-class DebugCounter : public DebugActionManager::GenericHandler {
+class DebugCounter : public ActionManager::GenericHandler {
 public:
   DebugCounter();
   ~DebugCounter() override;
 
-  /// Add a counter for the given debug action tag. `countToSkip` is the number
+  /// Add a counter for the given action tag. `countToSkip` is the number
   /// of counter executions to skip before enabling execution of the action.
   /// `countToStopAfter` is the number of executions of the counter to allow
   /// before preventing the action from executing any more.
@@ -38,7 +39,8 @@ public:
                   int64_t countToStopAfter);
 
   /// Register a counter with the specified name.
-  FailureOr<bool> shouldExecute(StringRef tag, StringRef description) final;
+  FailureOr<bool> execute(llvm::function_ref<void()> transform,
+                          const Action &action) final;
 
   /// Print the counters that have been registered with this instance to the
   /// provided output stream.
@@ -68,6 +70,7 @@ private:
   llvm::StringMap<Counter> counters;
 };
 
+} // namespace tracing
 } // namespace mlir
 
-#endif
+#endif // MLIR_TRACING_DEBUGCOUNTER_H

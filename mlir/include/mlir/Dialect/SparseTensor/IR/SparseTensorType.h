@@ -226,22 +226,20 @@ public:
   bool isOrderedLvl(Level l) const { return isOrderedDLT(getLvlType(l)); }
   bool isUniqueLvl(Level l) const { return isUniqueDLT(getLvlType(l)); }
 
-  /// Returns the index-overhead bitwidth, defaulting to zero.
-  unsigned getIndexBitWidth() const { return enc ? enc.getIndexBitWidth() : 0; }
+  /// Returns the coordinate-overhead bitwidth, defaulting to zero.
+  unsigned getCrdWidth() const { return enc ? enc.getCrdWidth() : 0; }
 
-  /// Returns the pointer-overhead bitwidth, defaulting to zero.
-  unsigned getPointerBitWidth() const {
-    return enc ? enc.getPointerBitWidth() : 0;
+  /// Returns the position-overhead bitwidth, defaulting to zero.
+  unsigned getPosWidth() const { return enc ? enc.getPosWidth() : 0; }
+
+  /// Returns the coordinate-overhead MLIR type, defaulting to `IndexType`.
+  Type getCrdType() const {
+    return detail::getIntegerOrIndexType(getContext(), getCrdWidth());
   }
 
-  /// Returns the index-overhead MLIR type, defaulting to `IndexType`.
-  Type getIndexType() const {
-    return detail::getIntegerOrIndexType(getContext(), getIndexBitWidth());
-  }
-
-  /// Returns the pointer-overhead MLIR type, defaulting to `IndexType`.
-  Type getPointerType() const {
-    return detail::getIntegerOrIndexType(getContext(), getPointerBitWidth());
+  /// Returns the position-overhead MLIR type, defaulting to `IndexType`.
+  Type getPosType() const {
+    return detail::getIntegerOrIndexType(getContext(), getPosWidth());
   }
 
 private:

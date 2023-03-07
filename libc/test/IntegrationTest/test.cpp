@@ -29,4 +29,9 @@ void *malloc(size_t s) {
 
 void free(void *) {}
 
+void *realloc(void *ptr, size_t s) {
+  free(ptr);
+  return malloc(s);
+}
+
 } // extern "C"

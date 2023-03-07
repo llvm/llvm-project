@@ -36,7 +36,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `[string.cmp] <https://wg21.link/string.cmp>`_,| `basic_string <https://reviews.llvm.org/D131421>`_,None,Mark de Wever,|Complete|
 | `[string.view.comparison] <https://wg21.link/string.view.comparison>`_,| `basic_string_view <https://reviews.llvm.org/D130295>`_,None,Mark de Wever,|Complete|
 | `[array.syn] <https://wg21.link/array.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| `array <https://reviews.llvm.org/D132265>`_,[expos.only.func],Adrian Vogelsgesang,|In Progress|
-| `[deque.syn] <https://wg21.link/deque.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| deque <https://reviews.llvm.org/D144821>,[expos.only.func],Hristo Hristov,|Complete|
+| `[deque.syn] <https://wg21.link/deque.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| `deque <https://reviews.llvm.org/D144821>`_,[expos.only.func],Hristo Hristov,|Complete|
 | `[forward.list.syn] <https://wg21.link/forward.list.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| `forward_list <https://reviews.llvm.org/D145172>`_,[expos.only.func],Hristo Hristov,|Complete|
 | `[list.syn] <https://wg21.link/list.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| `list <https://reviews.llvm.org/D132312>`_,[expos.only.func],Adrian Vogelsgesang,|Complete|
 | `[vector.syn] <https://wg21.link/vector.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| `vector <https://reviews.llvm.org/D132268>`_,[expos.only.func],Adrian Vogelsgesang,|In Progress|
@@ -47,8 +47,8 @@ Section,Description,Dependencies,Assignee,Complete
 | `[queue.ops] <https://wg21.link/queue.ops>`_,| queue,None,Unassigned,|Not Started|
 | `[stack.ops] <https://wg21.link/stack.ops>`_,| stack,None,Unassigned,|Not Started|
 | `[reverse.iter.cmp] <https://wg21.link/reverse.iter.cmp>`_,| `reverse_iterator <https://reviews.llvm.org/D113695>`_,None,Mikhail Maltsev,|Complete|
-| `[move.iter.op.comp] <https://wg21.link/move.iter.op.comp>`_,| move_iterator,None,Unassigned,|Not Started|
-| `[counted.iter.cmp] <https://wg21.link/counted.iter.cmp>`_,| counted_iterator,None,Unassigned,|Not Started|
+| `[move.iter.op.comp] <https://wg21.link/move.iter.op.comp>`_,| `move_iterator <https://reviews.llvm.org/D117656>`_,None,Arthur O'Dwyer,|Complete|
+| `[counted.iter.cmp] <https://wg21.link/counted.iter.cmp>`_,| `counted_iterator <https://reviews.llvm.org/D106205>`_,None,Zoe Carver,|Complete|
 | `[range.iota.iterator] <https://wg21.link/range.iota.iterator>`_,| `ranges::iota_view::iterator <https://reviews.llvm.org/D110774>`_,[concepts.cmp],Arthur O'Dwyer,|Complete|
 | `[range.transform.iterator] <https://wg21.link/range.transform.iterator>`_,| `ranges::transform_view::iterator <https://reviews.llvm.org/D110774>`_,[concepts.cmp],Arthur O'Dwyer,|Complete|
 | `[range.elements.iterator] <https://wg21.link/range.elements.iterator>`_,| ranges::elements_view::iterator,[concepts.cmp],Hui Xie,|Complete|

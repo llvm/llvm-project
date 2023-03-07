@@ -14,8 +14,7 @@
 //
 // constexpr span<element_type, dynamic_extent> last(size_type count) const;
 //
-//  Requires: Count <= size().
-
+// Mandates: Count <= Extent is true.
 
 #include <span>
 #include <cassert>

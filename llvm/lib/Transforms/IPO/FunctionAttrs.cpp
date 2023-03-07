@@ -1763,6 +1763,13 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
                                                   CGSCCAnalysisManager &AM,
                                                   LazyCallGraph &CG,
                                                   CGSCCUpdateResult &) {
+  // Skip non-recursive functions if requested.
+  if (C.size() == 1 && SkipNonRecursive) {
+    LazyCallGraph::Node &N = *C.begin();
+    if (!N->lookup(N))
+      return PreservedAnalyses::all();
+  }
+
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
 
@@ -1806,6 +1813,14 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
   // We already invalidated all relevant function analyses above.
   PA.preserveSet<AllAnalysesOn<Function>>();
   return PA;
+}
+
+void PostOrderFunctionAttrsPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<PostOrderFunctionAttrsPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  if (SkipNonRecursive)
+    OS << "<skip-non-recursive>";
 }
 
 template <typename AARGetterT>

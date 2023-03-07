@@ -122,25 +122,6 @@ StructuredData::DictionarySP ScriptedProcessPythonInterface::GetThreadsInfo() {
   return dict;
 }
 
-StructuredData::DictionarySP
-ScriptedProcessPythonInterface::GetThreadWithID(lldb::tid_t tid) {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("get_thread_with_id", error, tid);
-
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
-    return {};
-
-  StructuredData::DictionarySP dict{obj->GetAsDictionary()};
-
-  return dict;
-}
-
-StructuredData::DictionarySP
-ScriptedProcessPythonInterface::GetRegistersForThread(lldb::tid_t tid) {
-  // TODO: Implement
-  return {};
-}
-
 lldb::DataExtractorSP ScriptedProcessPythonInterface::ReadMemoryAtAddress(
     lldb::addr_t address, size_t size, Status &error) {
   Status py_error;
@@ -152,6 +133,22 @@ lldb::DataExtractorSP ScriptedProcessPythonInterface::ReadMemoryAtAddress(
     error = py_error;
 
   return data_sp;
+}
+
+size_t ScriptedProcessPythonInterface::WriteMemoryAtAddress(
+    lldb::addr_t addr, lldb::DataExtractorSP data_sp, Status &error) {
+  Status py_error;
+  StructuredData::ObjectSP obj =
+      Dispatch("write_memory_at_address", py_error, addr, data_sp, error);
+
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
+    return LLDB_INVALID_OFFSET;
+
+  // If there was an error on the python call, surface it to the user.
+  if (py_error.Fail())
+    error = py_error;
+
+  return obj->GetIntegerValue(LLDB_INVALID_OFFSET);
 }
 
 StructuredData::ArraySP ScriptedProcessPythonInterface::GetLoadedImages() {

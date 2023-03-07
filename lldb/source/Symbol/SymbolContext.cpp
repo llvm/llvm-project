@@ -539,17 +539,12 @@ Block *SymbolContext::GetFunctionBlock() {
   return nullptr;
 }
 
-bool SymbolContext::GetFunctionMethodInfo(lldb::LanguageType &language,
-                                          bool &is_instance_method,
-                                          ConstString &language_object_name)
-
-{
+bool SymbolContext::GetFunctionMethodInfo(ConstString &language_object_name) {
   Block *function_block = GetFunctionBlock();
   if (function_block) {
     CompilerDeclContext decl_ctx = function_block->GetDeclContext();
     if (decl_ctx)
-      return decl_ctx.IsClassMethod(&language, &is_instance_method,
-                                    &language_object_name);
+      return decl_ctx.IsClassMethod(&language_object_name);
   }
   return false;
 }

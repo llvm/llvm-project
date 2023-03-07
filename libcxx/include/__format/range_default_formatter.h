@@ -83,23 +83,6 @@ inline constexpr range_format format_kind<_Rp> = [] {
     return range_format::sequence;
 }();
 
-// This is a non-standard work-around to fix instantiation of
-//   formatter<const _CharT[N], _CharT>
-// const _CharT[N] satisfies the ranges::input_range concept.
-// remove_cvref_t<const _CharT[N]> is _CharT[N] so it does not satisfy the
-// requirement of the above specialization. Instead it will instantiate the
-// primary template, which is ill-formed.
-//
-// An alternative solution is to remove the offending formatter.
-//
-// https://godbolt.org/z/bqjhhaexx
-//
-// The removal is proposed in LWG3833, but use the work-around until the issue
-// has been adopted.
-// TODO FMT Implement LWG3833.
-template <class _CharT, size_t N>
-inline constexpr range_format format_kind<const _CharT[N]> = range_format::disabled;
-
 template <range_format _Kp, ranges::input_range _Rp, class _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT __range_default_formatter;
 

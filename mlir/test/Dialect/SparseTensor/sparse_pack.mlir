@@ -2,7 +2,7 @@
 
 #COO = #sparse_tensor.encoding<{
   dimLevelType = ["compressed-nu", "singleton"],
-  indexBitWidth=32
+  crdWidth=32
 }>
 
 // CHECK-LABEL:   func.func @sparse_pack(
@@ -19,19 +19,19 @@
 // CHECK:           %[[VAL_10:.*]] = sparse_tensor.storage_specifier.init :
 // CHECK:           %[[VAL_11:.*]] = arith.constant 6 : index
 // CHECK:           %[[VAL_12:.*]] = arith.constant 100 : index
-// CHECK:           %[[VAL_14:.*]] = sparse_tensor.storage_specifier.set %[[VAL_10]]  dim_sz at 0 with %[[VAL_12]]
+// CHECK:           %[[VAL_14:.*]] = sparse_tensor.storage_specifier.set %[[VAL_10]]  lvl_sz at 0 with %[[VAL_12]]
 // CHECK:           %[[VAL_15:.*]] = arith.constant 2 : index
-// CHECK:           %[[VAL_17:.*]] = sparse_tensor.storage_specifier.set %[[VAL_14]]  ptr_mem_sz at 0 with %[[VAL_15]]
-// CHECK:           %[[VAL_19:.*]] = sparse_tensor.storage_specifier.set %[[VAL_17]]  idx_mem_sz at 0 with %[[VAL_11]]
-// CHECK:           %[[VAL_20:.*]] = sparse_tensor.storage_specifier.set %[[VAL_19]]  dim_sz at 1 with %[[VAL_12]]
-// CHECK:           %[[VAL_21:.*]] = sparse_tensor.storage_specifier.set %[[VAL_20]]  idx_mem_sz at 1 with %[[VAL_11]]
+// CHECK:           %[[VAL_17:.*]] = sparse_tensor.storage_specifier.set %[[VAL_14]]  pos_mem_sz at 0 with %[[VAL_15]]
+// CHECK:           %[[VAL_19:.*]] = sparse_tensor.storage_specifier.set %[[VAL_17]]  crd_mem_sz at 0 with %[[VAL_11]]
+// CHECK:           %[[VAL_20:.*]] = sparse_tensor.storage_specifier.set %[[VAL_19]]  lvl_sz at 1 with %[[VAL_12]]
+// CHECK:           %[[VAL_21:.*]] = sparse_tensor.storage_specifier.set %[[VAL_20]]  crd_mem_sz at 1 with %[[VAL_11]]
 // CHECK:           %[[VAL_22:.*]] = sparse_tensor.storage_specifier.set %[[VAL_21]]  val_mem_sz with %[[VAL_11]]
 // CHECK:           return %[[VAL_4]], %[[VAL_7]], %[[VAL_9]], %[[VAL_22]] : memref<?xindex>, memref<?xi32>, memref<?xf64>,
 // CHECK:         }
-func.func @sparse_pack(%data: tensor<6xf64>, %index: tensor<6x2xi32>)
+func.func @sparse_pack(%values: tensor<6xf64>, %coordinates: tensor<6x2xi32>)
                     -> tensor<100x100xf64, #COO> {
-  %0 = sparse_tensor.pack %data, %index : tensor<6xf64>, tensor<6x2xi32>
-                                       to tensor<100x100xf64, #COO>
+  %0 = sparse_tensor.pack %values, %coordinates
+     : tensor<6xf64>, tensor<6x2xi32> to tensor<100x100xf64, #COO>
   return %0 : tensor<100x100xf64, #COO>
 }
 

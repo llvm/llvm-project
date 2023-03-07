@@ -47,12 +47,11 @@ public:
 
   StructuredData::DictionarySP GetThreadsInfo() override;
 
-  StructuredData::DictionarySP GetThreadWithID(lldb::tid_t tid) override;
-
-  StructuredData::DictionarySP GetRegistersForThread(lldb::tid_t tid) override;
-
   lldb::DataExtractorSP ReadMemoryAtAddress(lldb::addr_t address, size_t size,
                                             Status &error) override;
+
+  size_t WriteMemoryAtAddress(lldb::addr_t addr, lldb::DataExtractorSP data_sp,
+                              Status &error) override;
 
   StructuredData::ArraySP GetLoadedImages() override;
 

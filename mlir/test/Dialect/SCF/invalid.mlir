@@ -1,7 +1,7 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -verify-diagnostics
 
 func.func @loop_for_lb(%arg0: f32, %arg1: index) {
-  // expected-error@+1 {{operand #0 must be index}}
+  // expected-error@+1 {{operand #0 must be signless integer or index}}
   "scf.for"(%arg0, %arg1, %arg1) ({}) : (f32, index, index) -> ()
   return
 }
@@ -9,7 +9,7 @@ func.func @loop_for_lb(%arg0: f32, %arg1: index) {
 // -----
 
 func.func @loop_for_ub(%arg0: f32, %arg1: index) {
-  // expected-error@+1 {{operand #1 must be index}}
+  // expected-error@+1 {{operand #1 must be signless integer or index}}
   "scf.for"(%arg1, %arg0, %arg1) ({}) : (index, f32, index) -> ()
   return
 }
@@ -17,8 +17,16 @@ func.func @loop_for_ub(%arg0: f32, %arg1: index) {
 // -----
 
 func.func @loop_for_step(%arg0: f32, %arg1: index) {
-  // expected-error@+1 {{operand #2 must be index}}
+  // expected-error@+1 {{operand #2 must be signless integer or index}}
   "scf.for"(%arg1, %arg1, %arg0) ({}) : (index, index, f32) -> ()
+  return
+}
+
+// -----
+
+func.func @loop_for_mismatch(%arg0: i32, %arg1: index) {
+  // expected-error@+1 {{all of {lowerBound, upperBound, step} have same type}}
+  "scf.for"(%arg1, %arg0, %arg1) ({}) : (index, i32, index) -> ()
   return
 }
 
@@ -63,7 +71,7 @@ func.func @loop_for_single_block(%arg0: index) {
 // -----
 
 func.func @loop_for_single_index_argument(%arg0: index) {
-  // expected-error@+1 {{op expected body first argument to be an index argument for the induction variable}}
+  // expected-error@+1 {{expected induction variable to be same type as bounds}}
   "scf.for"(%arg0, %arg0, %arg0) (
     {
     ^bb0(%i0 : f32):

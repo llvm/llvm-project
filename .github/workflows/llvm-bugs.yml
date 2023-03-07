@@ -1,5 +1,9 @@
 name: LLVM Bugs notifier
 
+permissions:
+  contents: read
+  issues: read
+
 on:
   issues:
     types:

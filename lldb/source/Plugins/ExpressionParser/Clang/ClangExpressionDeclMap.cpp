@@ -1173,8 +1173,7 @@ SymbolContextList ClangExpressionDeclMap::SearchFunctionsInSymbolContexts(
     // class/instance methods, since they'll be skipped in the code that
     // follows anyway.
     CompilerDeclContext func_decl_context = function->GetDeclContext();
-    if (!func_decl_context ||
-        func_decl_context.IsClassMethod(nullptr, nullptr, nullptr))
+    if (!func_decl_context || func_decl_context.IsClassMethod())
       continue;
     // We can only prune functions for which we can copy the type.
     CompilerType func_clang_type = function->GetType()->GetFullCompilerType();
@@ -1308,7 +1307,7 @@ void ClangExpressionDeclMap::LookupFunction(
           continue;
 
         // Filter out class/instance methods.
-        if (decl_ctx.IsClassMethod(nullptr, nullptr, nullptr))
+        if (decl_ctx.IsClassMethod())
           continue;
 
         AddOneFunction(context, sym_ctx.function, nullptr);

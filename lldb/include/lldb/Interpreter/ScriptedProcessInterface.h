@@ -50,18 +50,16 @@ public:
 
   virtual StructuredData::DictionarySP GetThreadsInfo() { return {}; }
 
-  virtual StructuredData::DictionarySP GetThreadWithID(lldb::tid_t tid) {
-    return {};
-  }
-
-  virtual StructuredData::DictionarySP GetRegistersForThread(lldb::tid_t tid) {
-    return {};
-  }
-
   virtual lldb::DataExtractorSP
   ReadMemoryAtAddress(lldb::addr_t address, size_t size, Status &error) {
     return {};
   }
+
+  virtual size_t WriteMemoryAtAddress(lldb::addr_t addr,
+                                      lldb::DataExtractorSP data_sp,
+                                      Status &error) {
+    return LLDB_INVALID_OFFSET;
+  };
 
   virtual StructuredData::ArraySP GetLoadedImages() { return {}; }
 

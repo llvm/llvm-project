@@ -80,6 +80,15 @@ class ScriptedProcesTestCase(TestBase):
         self.assertEqual(process.GetProcessID(), 666)
         self.assertEqual(process.GetNumThreads(), 0)
 
+        impl = process.GetScriptedImplementation()
+        self.assertTrue(impl)
+        impl = process.GetScriptedImplementation()
+        self.assertTrue(impl)
+        impl = process.GetScriptedImplementation()
+        self.assertTrue(impl)
+        impl = process.GetScriptedImplementation()
+        self.assertTrue(impl)
+
         addr = 0x500000000
         buff = process.ReadMemory(addr, 4, error)
         self.assertEqual(buff, None)
@@ -150,7 +159,6 @@ class ScriptedProcesTestCase(TestBase):
         self.assertEqual(process_1.GetNumThreads(), 1)
 
         # ... then try reading from target #1 process ...
-        addr = 0x500000000
         message = "Hello, target 1"
         buff = process_1.ReadCStringFromMemory(addr, len(message) + 1, error)
         self.assertSuccess(error)
@@ -158,8 +166,18 @@ class ScriptedProcesTestCase(TestBase):
 
         # ... now, reading again from target #0 process to make sure the call
         # gets dispatched to the right target.
-        addr = 0x500000000
         message = "Hello, target 0"
+        buff = process_0.ReadCStringFromMemory(addr, len(message) + 1, error)
+        self.assertSuccess(error)
+        self.assertEqual(buff, message)
+
+        # Let's write some memory.
+        message = "Hello, world!"
+        bytes_written = process_0.WriteMemoryAsCString(addr, message, error)
+        self.assertSuccess(error)
+        self.assertEqual(bytes_written, len(message) + 1)
+
+        # ... and check if that memory was saved properly.
         buff = process_0.ReadCStringFromMemory(addr, len(message) + 1, error)
         self.assertSuccess(error)
         self.assertEqual(buff, message)

@@ -14,7 +14,7 @@
 
 #include "AMDGPU.h"
 #include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
@@ -46,7 +46,7 @@ class AMDGPULateCodeGenPrepare
   const DataLayout *DL = nullptr;
 
   AssumptionCache *AC = nullptr;
-  LegacyDivergenceAnalysis *DA = nullptr;
+  UniformityInfo *UA = nullptr;
 
 public:
   static char ID;
@@ -59,7 +59,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<LegacyDivergenceAnalysis>();
+    AU.addRequired<UniformityInfoWrapperPass>();
     AU.setPreservesAll();
   }
 
@@ -91,7 +91,7 @@ bool AMDGPULateCodeGenPrepare::runOnFunction(Function &F) {
     return false;
 
   AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  DA = &getAnalysis<LegacyDivergenceAnalysis>();
+  UA = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
 
   bool Changed = false;
   for (auto &BB : F)
@@ -122,7 +122,7 @@ bool AMDGPULateCodeGenPrepare::canWidenScalarExtLoad(LoadInst &LI) const {
   if (LI.getAlign() < DL->getABITypeAlign(Ty))
     return false;
   // It should be uniform, i.e. a scalar load.
-  return DA->isUniform(&LI);
+  return UA->isUniform(&LI);
 }
 
 bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
@@ -184,7 +184,7 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
 INITIALIZE_PASS_BEGIN(AMDGPULateCodeGenPrepare, DEBUG_TYPE,
                       "AMDGPU IR late optimizations", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(LegacyDivergenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_END(AMDGPULateCodeGenPrepare, DEBUG_TYPE,
                     "AMDGPU IR late optimizations", false, false)
 

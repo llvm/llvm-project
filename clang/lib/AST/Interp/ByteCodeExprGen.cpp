@@ -1337,6 +1337,8 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
     return true;
   } else if (const auto *CLE = dyn_cast<CompoundLiteralExpr>(Initializer)) {
     return visitInitializer(CLE->getInitializer());
+  } else if (const auto *EWC = dyn_cast<ExprWithCleanups>(Initializer)) {
+    return visitInitializer(EWC->getSubExpr());
   }
 
   assert(false && "Unknown expression for array initialization");
@@ -1411,6 +1413,8 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
   } else if (const auto *DIE = dyn_cast<CXXDefaultInitExpr>(Initializer)) {
     return this->visitInitializer(DIE->getExpr());
   } else if (const auto *CE = dyn_cast<CastExpr>(Initializer)) {
+    return this->visitInitializer(CE->getSubExpr());
+  } else if (const auto *CE = dyn_cast<CXXBindTemporaryExpr>(Initializer)) {
     return this->visitInitializer(CE->getSubExpr());
   }
 

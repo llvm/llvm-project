@@ -14,9 +14,7 @@
 #include "test_macros.h"
 
 template <class CharT, class TestFunction, class ExceptionTest>
-void format_tests(TestFunction check, ExceptionTest check_exception) {
-  std::vector input{true, true, false};
-
+void format_test_vector_bool(TestFunction check, ExceptionTest check_exception, auto&& input) {
   check(SV("[true, true, false]"), SV("{}"), input);
 
   // ***** underlying has no format-spec
@@ -111,6 +109,17 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
 
   check_exception("Argument index out of bounds", SV("{:^^{}::>5}"), input);
   check_exception("Argument index out of bounds", SV("{:^^{}::>{}}"), input, 32);
+}
+
+template <class CharT, class TestFunction, class ExceptionTest>
+void format_tests(TestFunction check, ExceptionTest check_exception) {
+  format_test_vector_bool<CharT>(check, check_exception, std::vector{true, true, false});
+
+  // The const_reference shall be a bool.
+  // However libc++ uses a __bit_const_reference<vector> when
+  // _LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL is defined.
+  const std::vector input{true, true, false};
+  format_test_vector_bool<CharT>(check, check_exception, input);
 }
 
 #endif // TEST_STD_CONTAINERS_SEQUENCES_VECTOR_BOOL_VECTOR_BOOL_FMT_FORMAT_FUNCTIONS_TESTS_H

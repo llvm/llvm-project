@@ -42,22 +42,22 @@ func.func private @tensor_no_permutation(%arg0: tensor<16x32xf32, #a>) -> ()
 
 // -----
 
-#a = #sparse_tensor.encoding<{pointerBitWidth = "x"}> // expected-error {{expected an integral pointer bitwidth}}
+#a = #sparse_tensor.encoding<{posWidth = "x"}> // expected-error {{expected an integral position bitwidth}}
 func.func private @tensor_no_int_ptr(%arg0: tensor<16x32xf32, #a>) -> ()
 
 // -----
 
-#a = #sparse_tensor.encoding<{pointerBitWidth = 42}> // expected-error {{unexpected pointer bitwidth: 42}}
+#a = #sparse_tensor.encoding<{posWidth = 42}> // expected-error {{unexpected position bitwidth: 42}}
 func.func private @tensor_invalid_int_ptr(%arg0: tensor<16x32xf32, #a>) -> ()
 
 // -----
 
-#a = #sparse_tensor.encoding<{indexBitWidth = "not really"}> // expected-error {{expected an integral index bitwidth}}
+#a = #sparse_tensor.encoding<{crdWidth = "not really"}> // expected-error {{expected an integral index bitwidth}}
 func.func private @tensor_no_int_index(%arg0: tensor<16x32xf32, #a>) -> ()
 
 // -----
 
-#a = #sparse_tensor.encoding<{indexBitWidth = 128}> // expected-error {{unexpected index bitwidth: 128}}
+#a = #sparse_tensor.encoding<{crdWidth = 128}> // expected-error {{unexpected coordinate bitwidth: 128}}
 func.func private @tensor_invalid_int_index(%arg0: tensor<16x32xf32, #a>) -> ()
 
 // -----

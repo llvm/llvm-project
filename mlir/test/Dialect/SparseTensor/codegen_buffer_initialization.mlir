@@ -17,12 +17,12 @@
 //       CHECK:     %[[VAL_9:.*]] = memref.cast %[[VAL_8]] : memref<16xf64> to memref<?xf64>
 //       CHECK:     linalg.fill ins(%[[VAL_2]] : f64) outs(%[[VAL_8]] : memref<16xf64>)
 //       CHECK:     %[[VAL_10:.*]] = sparse_tensor.storage_specifier.init : !sparse_tensor.storage_specifier
-//       CHECK:     %[[VAL_12:.*]] = sparse_tensor.storage_specifier.set %[[VAL_10]]  dim_sz at 0 with %[[VAL_0]] : !sparse_tensor.storage_specifier
-//       CHECK:     %[[VAL_14:.*]] = sparse_tensor.storage_specifier.get %[[VAL_12]]  ptr_mem_sz at 0 : !sparse_tensor.storage_specifier
+//       CHECK:     %[[VAL_12:.*]] = sparse_tensor.storage_specifier.set %[[VAL_10]]  lvl_sz at 0 with %[[VAL_0]] : !sparse_tensor.storage_specifier
+//       CHECK:     %[[VAL_14:.*]] = sparse_tensor.storage_specifier.get %[[VAL_12]]  pos_mem_sz at 0 : !sparse_tensor.storage_specifier
 //       CHECK:     %[[VAL_15:.*]], %[[VAL_17:.*]] = sparse_tensor.push_back %[[VAL_14]], %[[VAL_5]], %[[VAL_3]] : index, memref<?xindex>, index
-//       CHECK:     %[[VAL_18:.*]] = sparse_tensor.storage_specifier.set %[[VAL_12]]  ptr_mem_sz at 0 with %[[VAL_17]] : !sparse_tensor.storage_specifier
+//       CHECK:     %[[VAL_18:.*]] = sparse_tensor.storage_specifier.set %[[VAL_12]]  pos_mem_sz at 0 with %[[VAL_17]] : !sparse_tensor.storage_specifier
 //       CHECK:     %[[VAL_19:.*]], %[[VAL_21:.*]] = sparse_tensor.push_back %[[VAL_17]], %[[VAL_15]], %[[VAL_3]], %[[VAL_1]] : index, memref<?xindex>, index, index
-//       CHECK:     %[[VAL_22:.*]] = sparse_tensor.storage_specifier.set %[[VAL_18]]  ptr_mem_sz at 0 with %[[VAL_21]] : !sparse_tensor.storage_specifier
+//       CHECK:     %[[VAL_22:.*]] = sparse_tensor.storage_specifier.set %[[VAL_18]]  pos_mem_sz at 0 with %[[VAL_21]] : !sparse_tensor.storage_specifier
 //       CHECK:     return %[[VAL_19]], %[[VAL_7]], %[[VAL_9]], %[[VAL_22]] : memref<?xindex>, memref<?xindex>, memref<?xf64>, !sparse_tensor.storage_specifier
 func.func @sparse_alloc_sparse_vector(%arg0: index) -> tensor<?xf64, #SV> {
   %0 = bufferization.alloc_tensor(%arg0) : tensor<?xf64, #SV>

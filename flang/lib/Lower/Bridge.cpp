@@ -3038,7 +3038,12 @@ private:
                   lhs = fir::getBase(genExprBox(loc, assign.lhs, stmtCtx));
                 mlir::Value rhs =
                     fir::getBase(genExprBox(loc, assign.rhs, stmtCtx));
-                fir::runtime::genAssign(*builder, loc, lhs, rhs);
+                if ((lhsType->IsPolymorphic() ||
+                     lhsType->IsUnlimitedPolymorphic()) &&
+                    Fortran::lower::isWholeAllocatable(assign.lhs))
+                  fir::runtime::genAssignPolymorphic(*builder, loc, lhs, rhs);
+                else
+                  fir::runtime::genAssign(*builder, loc, lhs, rhs);
                 return;
               }
 
