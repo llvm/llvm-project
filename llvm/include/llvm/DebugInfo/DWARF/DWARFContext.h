@@ -445,7 +445,16 @@ public:
   /// address.
   /// TODO: change input parameter from "uint64_t Address"
   ///       into "SectionedAddress Address"
-  DWARFCompileUnit *getCompileUnitForAddress(uint64_t Address);
+  DWARFCompileUnit *getCompileUnitForCodeAddress(uint64_t Address);
+
+  /// Return the compile unit which contains data with the provided address.
+  /// Note: This is more expensive than `getCompileUnitForAddress`, as if
+  /// `Address` isn't found in the CU ranges (which is cheap), then it falls
+  /// back to an expensive O(n) walk of all CU's looking for data that spans the
+  /// address.
+  /// TODO: change input parameter from "uint64_t Address" into
+  ///       "SectionedAddress Address"
+  DWARFCompileUnit *getCompileUnitForDataAddress(uint64_t Address);
 
   /// Returns whether CU/TU should be populated manually. TU Index populated
   /// manually only for DWARF5.
