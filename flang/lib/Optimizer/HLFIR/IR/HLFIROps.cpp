@@ -336,7 +336,9 @@ mlir::LogicalResult hlfir::DesignateOp::verify() {
   // length may differ because of substrings.
   if (resultElementType != outputElementType &&
       !(resultElementType.isa<fir::CharacterType>() &&
-        outputElementType.isa<fir::CharacterType>()))
+        outputElementType.isa<fir::CharacterType>()) &&
+      !(resultElementType.isa<mlir::FloatType>() &&
+        outputElementType.isa<fir::RealType>()))
     return emitOpError(
                "result element type is not consistent with operands, expected ")
            << outputElementType;
