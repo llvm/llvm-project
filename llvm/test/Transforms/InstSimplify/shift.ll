@@ -354,8 +354,7 @@ define <vscale x 4 x i16> @lshr_scalable_overshift(<vscale x 4 x i16> %va) {
 ; shl nsw+nuw is 0
 define i8 @shl_nsw_nuw_7_eq_0(i8 %x) {
 ; CHECK-LABEL: @shl_nsw_nuw_7_eq_0(
-; CHECK-NEXT:    [[Y:%.*]] = shl nuw nsw i8 [[X:%.*]], 7
-; CHECK-NEXT:    ret i8 [[Y]]
+; CHECK-NEXT:    ret i8 0
 ;
   %y = shl nsw nuw i8 %x, 7
   ret i8 %y
@@ -364,8 +363,7 @@ define i8 @shl_nsw_nuw_7_eq_0(i8 %x) {
 ; Make sure we match the element width
 define <2 x i8> @shl_vec_nsw_nuw_7_eq_0(<2 x i8> %x) {
 ; CHECK-LABEL: @shl_vec_nsw_nuw_7_eq_0(
-; CHECK-NEXT:    [[Y:%.*]] = shl nuw nsw <2 x i8> [[X:%.*]], <i8 7, i8 7>
-; CHECK-NEXT:    ret <2 x i8> [[Y]]
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
   %y = shl nsw nuw <2 x i8> %x, <i8 7, i8 7>
   ret <2 x i8> %y
