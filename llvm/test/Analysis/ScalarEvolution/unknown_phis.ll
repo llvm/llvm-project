@@ -43,9 +43,9 @@ define void @merge_values_with_ranges_looped(ptr %a_len_ptr, ptr %b_len_ptr) {
 ; CHECK-NEXT:    %p2 = phi i32 [ %len_b, %entry ], [ %p1, %loop ]
 ; CHECK-NEXT:    --> %p2 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,100) S: [0,100) Exits: 99 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,100) S: [0,100) Exits: 99 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,101) S: [1,101) Exits: 100 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,101) S: [1,101) Exits: 100 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @merge_values_with_ranges_looped
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 99
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 99

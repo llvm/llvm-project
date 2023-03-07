@@ -5679,6 +5679,12 @@ const SCEV *ScalarEvolution::createSimpleAffineAddRec(PHINode *PN,
   const SCEV *PHISCEV = getAddRecExpr(StartVal, Accum, L, Flags);
   insertValueToMap(PN, PHISCEV);
 
+  if (auto *AR = dyn_cast<SCEVAddRecExpr>(PHISCEV)) {
+    setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR),
+                   (SCEV::NoWrapFlags)(AR->getNoWrapFlags() |
+                                       proveNoWrapViaConstantRanges(AR)));
+  }
+
   // We can add Flags to the post-inc expression only if we
   // know that it is *undefined behavior* for BEValueV to
   // overflow.
@@ -5803,6 +5809,12 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
         // entries for the scalars that use the symbolic expression.
         forgetMemoizedResults(SymbolicName);
         insertValueToMap(PN, PHISCEV);
+
+        if (auto *AR = dyn_cast<SCEVAddRecExpr>(PHISCEV)) {
+          setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR),
+                         (SCEV::NoWrapFlags)(AR->getNoWrapFlags() |
+                                             proveNoWrapViaConstantRanges(AR)));
+        }
 
         // We can add Flags to the post-inc expression only if we
         // know that it is *undefined behavior* for BEValueV to

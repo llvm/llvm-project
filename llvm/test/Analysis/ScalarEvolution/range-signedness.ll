@@ -35,9 +35,9 @@ define void @y(ptr %addr) {
 ; CHECK-LABEL: 'y'
 ; CHECK-NEXT:  Classifying expressions for: @y
 ; CHECK-NEXT:    %idx = phi i8 [ -5, %entry ], [ %idx.inc, %loop ]
-; CHECK-NEXT:    --> {-5,+,1}<%loop> U: [-5,6) S: [-5,6) Exits: 5 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {-5,+,1}<nsw><%loop> U: [-5,6) S: [-5,6) Exits: 5 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx.inc = add i8 %idx, 1
-; CHECK-NEXT:    --> {-4,+,1}<%loop> U: [-4,7) S: [-4,7) Exits: 6 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {-4,+,1}<nsw><%loop> U: [-4,7) S: [-4,7) Exits: 6 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @y
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 10
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 10

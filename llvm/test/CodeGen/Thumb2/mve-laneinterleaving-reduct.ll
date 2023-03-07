@@ -123,10 +123,10 @@ define void @correlate(ptr nocapture noundef readonly %ID, ptr nocapture noundef
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.lr.ph
 ; CHECK-NEXT:    ldr r7, [sp, #48]
 ; CHECK-NEXT:    mov r0, r3
-; CHECK-NEXT:    ldr.w r10, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    ldr.w r9, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    adds r3, r2, #3
 ; CHECK-NEXT:    mov.w r11, #0
-; CHECK-NEXT:    mov r9, r2
+; CHECK-NEXT:    mov r10, r2
 ; CHECK-NEXT:    uxth.w r12, r7
 ; CHECK-NEXT:    adr r7, .LCPI4_0
 ; CHECK-NEXT:    vldrw.u32 q0, [r7]
@@ -139,8 +139,8 @@ define void @correlate(ptr nocapture noundef readonly %ID, ptr nocapture noundef
 ; CHECK-NEXT:    ldr r7, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    lsrs r1, r6, #16
 ; CHECK-NEXT:    subs r3, #1
-; CHECK-NEXT:    add.w r10, r10, #2
-; CHECK-NEXT:    sub.w r9, r9, #1
+; CHECK-NEXT:    add.w r9, r9, #2
+; CHECK-NEXT:    sub.w r10, r10, #1
 ; CHECK-NEXT:    strh.w r1, [r7, r11, lsl #1]
 ; CHECK-NEXT:    add.w r11, r11, #1
 ; CHECK-NEXT:    cmp r11, r0
@@ -162,12 +162,13 @@ define void @correlate(ptr nocapture noundef readonly %ID, ptr nocapture noundef
 ; CHECK-NEXT:    b .LBB4_10
 ; CHECK-NEXT:  .LBB4_7: @ %vector.ph
 ; CHECK-NEXT:    @ in Loop: Header=BB4_4 Depth=1
-; CHECK-NEXT:    bic r7, r8, #7
+; CHECK-NEXT:    bic r7, r10, #7
 ; CHECK-NEXT:    movs r1, #1
-; CHECK-NEXT:    sub.w r6, r7, #8
-; CHECK-NEXT:    mov r5, r10
-; CHECK-NEXT:    add.w lr, r1, r6, lsr #3
+; CHECK-NEXT:    subs r7, #8
 ; CHECK-NEXT:    movs r6, #0
+; CHECK-NEXT:    mov r5, r9
+; CHECK-NEXT:    add.w lr, r1, r7, lsr #3
+; CHECK-NEXT:    bic r7, r8, #7
 ; CHECK-NEXT:    ldr r4, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:  .LBB4_8: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB4_4 Depth=1
