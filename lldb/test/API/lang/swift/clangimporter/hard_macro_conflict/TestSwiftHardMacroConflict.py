@@ -35,7 +35,7 @@ class TestSwiftHardMacroConflict(TestBase):
         process.Continue()
         threads = lldbutil.get_threads_stopped_at_breakpoint(
             process, b_breakpoint)
-        self.expect("p foo", error=True)
+        self.expect("expression foo", error=True)
 
         per_module_fallback = 0
         import io

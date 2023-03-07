@@ -82,13 +82,13 @@ class TestSwiftRewriteClangPaths(TestBase):
 
         if remap:
             comment = "returns correct value"
-            self.expect("p foo", comment, substrs=["x", "23"])
-            self.expect("p bar", comment, substrs=["y", "42"])
+            self.expect("expression foo", comment, substrs=["x", "23"])
+            self.expect("expression bar", comment, substrs=["y", "42"])
             self.expect("fr var foo", comment, substrs=["x", "23"])
             self.expect("fr var bar", comment, substrs=["y", "42"])
             self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
         else:
-            self.expect("p foo", error=True)
+            self.expect("expression foo", error=True)
 
         # Scan through the types log.
         errs = 0
