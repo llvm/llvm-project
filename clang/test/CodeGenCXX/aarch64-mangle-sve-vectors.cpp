@@ -31,6 +31,8 @@ void f11(S<__SVFloat64_t>) {}
 void f12(S<__SVBFloat16_t>) {}
 // CHECK: _Z3f131SIu10__SVBool_tE
 void f13(S<__SVBool_t>) {}
+// CHECK: _Z3f141SIu11__SVCount_tE
+void f14(S<__SVCount_t>) {}
 
 // The tuple types don't use the internal name for mangling.
 
