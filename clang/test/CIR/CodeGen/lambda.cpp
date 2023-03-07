@@ -53,3 +53,23 @@ auto g() {
 // CHECK: cir.store %1, %3 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
 // CHECK: %4 = cir.load %0 : cir.ptr <!ty_22class2Eanon222>, !ty_22class2Eanon222
 // CHECK: cir.return %4 : !ty_22class2Eanon222
+
+auto g2() {
+  int i = 12;
+  auto lam = [&] {
+    i += 100;
+    return i;
+  };
+  return lam;
+}
+
+// Should be same as above because of NRVO
+// CHECK: cir.func @_Z2g2v() -> !ty_22class2Eanon223 {
+// CHECK-NEXT: %0 = cir.alloca !ty_22class2Eanon223, cir.ptr <!ty_22class2Eanon223>, ["__retval", init] {alignment = 8 : i64}
+// CHECK-NEXT: %1 = cir.alloca i32, cir.ptr <i32>, ["i", init] {alignment = 4 : i64}
+// CHECK-NEXT: %2 = cir.const(12 : i32) : i32
+// CHECK-NEXT: cir.store %2, %1 : i32, cir.ptr <i32>
+// CHECK-NEXT: %3 = "cir.struct_element_addr"(%0) <{member_name = "i"}> : (!cir.ptr<!ty_22class2Eanon223>) -> !cir.ptr<!cir.ptr<i32>>
+// CHECK-NEXT: cir.store %1, %3 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
+// CHECK-NEXT: %4 = cir.load %0 : cir.ptr <!ty_22class2Eanon223>, !ty_22class2Eanon223
+// CHECK-NEXT: cir.return %4 : !ty_22class2Eanon223

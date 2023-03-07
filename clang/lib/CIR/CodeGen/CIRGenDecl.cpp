@@ -80,9 +80,29 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D) {
       emission.IsConstantAggregate = true;
     }
 
-    if (NRVO)
-      llvm_unreachable("NYI");
-    else {
+    // A normal fixed sized variable becomes an alloca in the entry block,
+    // unless:
+    // - it's an NRVO variable.
+    // - we are compiling OpenMP and it's an OpenMP local variable.
+    if (NRVO) {
+      // The named return value optimization: allocate this variable in the
+      // return slot, so that we can elide the copy when returning this
+      // variable (C++0x [class.copy]p34).
+      address = ReturnValue;
+      allocaAddr = ReturnValue;
+
+      if (const RecordType *RecordTy = Ty->getAs<RecordType>()) {
+        const auto *RD = RecordTy->getDecl();
+        const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
+        if ((CXXRD && !CXXRD->hasTrivialDestructor()) ||
+            RD->isNonTrivialToPrimitiveDestroy()) {
+          // In LLVM: Create a flag that is used to indicate when the NRVO was
+          // applied to this variable. Set it to zero to indicate that NRVO was
+          // not applied.
+          llvm_unreachable("NYI");
+        }
+      }
+    } else {
       if (isEscapingByRef)
         llvm_unreachable("NYI");
 
@@ -275,11 +295,11 @@ void CIRGenFunction::buildNullabilityCheck(LValue LHS, mlir::Value RHS,
   llvm_unreachable("NYI");
 }
 
-void CIRGenFunction::buildScalarInit(const Expr *init, const ValueDecl *D,
+void CIRGenFunction::buildScalarInit(const Expr *init, mlir::Location loc,
                                      LValue lvalue) {
   // TODO: this is where a lot of ObjC lifetime stuff would be done.
   mlir::Value value = buildScalarExpr(init);
-  SourceLocRAIIObject Loc{*this, getLoc(D->getSourceRange())};
+  SourceLocRAIIObject Loc{*this, loc};
   buildStoreThroughLValue(RValue::get(value), lvalue);
   return;
 }
@@ -301,7 +321,7 @@ void CIRGenFunction::buildExprAsInit(const Expr *init, const ValueDecl *D,
   }
   switch (CIRGenFunction::getEvaluationKind(type)) {
   case TEK_Scalar:
-    buildScalarInit(init, D, lvalue);
+    buildScalarInit(init, getLoc(D->getSourceRange()), lvalue);
     return;
   case TEK_Complex: {
     assert(0 && "not implemented");
