@@ -114,7 +114,7 @@ class TestSwiftInterfaceDSYM(TestBase):
         # prints the type *name*.
         self.assertEqual(var.GetTypeName(), "AA.MyPoint")
         # Evaluating an expression fails, though.
-        self.expect("p x", error=1)
+        self.expect("expression x", error=1)
 
     @swiftTest
     @skipIf(archs=no_match("x86_64"))
@@ -153,7 +153,7 @@ class TestSwiftInterfaceDSYM(TestBase):
 
         # The expression evaluator sees the whole program, so it also
         # sees the private members.
-        self.expect("p x", substrs=["x = 10"])
+        self.expect("expression x", substrs=["x = 10"])
         # FIXME: this doesn't work, the summary/value is null/null.
         #lldbutil.check_expression(
         #    self, frame, "x", "x = 10", use_summary=False)
@@ -168,5 +168,5 @@ class TestSwiftInterfaceDSYM(TestBase):
         # MyPoint.x is private and we should still see it.
         child_x = var.GetChildMemberWithName("x")
         lldbutil.check_variable(self, child_x, value="10")
-        self.expect("p self", substrs=["x = 10"])
+        self.expect("expression self", substrs=["x = 10"])
 
