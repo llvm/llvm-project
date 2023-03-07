@@ -43,19 +43,19 @@ mwait
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      2     0.50                        addsubpd	%xmm0, %xmm2
-# CHECK-NEXT:  2      9     0.50    *                   addsubpd	(%rax), %xmm2
-# CHECK-NEXT:  1      2     0.50                        addsubps	%xmm0, %xmm2
-# CHECK-NEXT:  2      9     0.50    *                   addsubps	(%rax), %xmm2
-# CHECK-NEXT:  3      5     2.00                        haddpd	%xmm0, %xmm2
-# CHECK-NEXT:  4      11    2.00    *                   haddpd	(%rax), %xmm2
+# CHECK-NEXT:  1      3     0.50                        addsubpd	%xmm0, %xmm2
+# CHECK-NEXT:  2      10    0.50    *                   addsubpd	(%rax), %xmm2
+# CHECK-NEXT:  1      3     0.50                        addsubps	%xmm0, %xmm2
+# CHECK-NEXT:  2      10    0.50    *                   addsubps	(%rax), %xmm2
+# CHECK-NEXT:  3      6     2.00                        haddpd	%xmm0, %xmm2
+# CHECK-NEXT:  4      12    2.00    *                   haddpd	(%rax), %xmm2
 # CHECK-NEXT:  3      6     2.00                        haddps	%xmm0, %xmm2
 # CHECK-NEXT:  4      12    2.00    *                   haddps	(%rax), %xmm2
-# CHECK-NEXT:  3      5     2.00                        hsubpd	%xmm0, %xmm2
-# CHECK-NEXT:  4      11    2.00    *                   hsubpd	(%rax), %xmm2
+# CHECK-NEXT:  3      6     2.00                        hsubpd	%xmm0, %xmm2
+# CHECK-NEXT:  4      12    2.00    *                   hsubpd	(%rax), %xmm2
 # CHECK-NEXT:  3      6     2.00                        hsubps	%xmm0, %xmm2
 # CHECK-NEXT:  4      12    2.00    *                   hsubps	(%rax), %xmm2
-# CHECK-NEXT:  1      6     0.33    *                   lddqu	(%rax), %xmm2
+# CHECK-NEXT:  1      7     0.33    *                   lddqu	(%rax), %xmm2
 # CHECK-NEXT:  1      100   0.25                  U     monitor
 # CHECK-NEXT:  1      1     1.00                        movddup	%xmm0, %xmm2
 # CHECK-NEXT:  1      7     0.33    *                   movddup	(%rax), %xmm2
