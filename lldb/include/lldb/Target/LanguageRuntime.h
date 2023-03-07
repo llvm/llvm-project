@@ -172,11 +172,6 @@ public:
     return llvm::None;
   }
 
-  /// Returns 'true' if we the variable with the specified 'name'
-  /// should be hidden from variable views (e.g., when listing variables in
-  /// 'frame variable' or 'target variable')
-  virtual bool ShouldHideVariable(llvm::StringRef name) const { return false; }
-
   void ModulesDidLoad(const ModuleList &module_list) override {}
 
   // Called by ClangExpressionParser::PrepareForExecution to query for any
