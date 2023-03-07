@@ -33,7 +33,9 @@ declare !type !0 extern_weak void @f()
 ; CHECK: define zeroext i1 @check_f()
 define zeroext i1 @check_f() {
 entry:
-; CHECK: ret i1 icmp ne (ptr select (i1 icmp ne (ptr @f, ptr null), ptr @[[JT:.*]], ptr null), ptr null)
+; CHECK: %0 = select i1 icmp ne (ptr @f, ptr null), ptr @[[JT:.*]], ptr null
+; CHECK: %1 = icmp ne ptr %0, null
+; ret i1 %1
   ret i1 icmp ne (ptr @f, ptr null)
 }
 
@@ -58,11 +60,21 @@ define i1 @foo(ptr %p) {
 
 ; CHECK: define internal void @__cfi_global_var_init() section ".text.startup" {
 ; CHECK-NEXT: entry:
-; CHECK-NEXT: store ptr select (i1 icmp ne (ptr @f, ptr null), ptr @[[JT]], ptr null), ptr @x, align 8
-; CHECK-NEXT: store ptr select (i1 icmp ne (ptr @f, ptr null), ptr @[[JT]], ptr null), ptr @x2, align 8
-; CHECK-NEXT: store ptr select (i1 icmp ne (ptr @f, ptr null), ptr @[[JT]], ptr null), ptr @x3, align 8
-; CHECK-NEXT: store ptr getelementptr (i8, ptr select (i1 icmp ne (ptr @f, ptr null), ptr @[[JT]], ptr null), i64 42), ptr @x4, align 8
-; CHECK-NEXT: store { ptr, ptr, i32 } { ptr select (i1 icmp ne (ptr @f, ptr null), ptr @[[JT]], ptr null), ptr select (i1 icmp ne (ptr @f, ptr null), ptr @[[JT]], ptr null), i32 42 }, ptr @s, align 8
+; CHECK-NEXT: %0 = select i1 icmp ne (ptr @f, ptr null), ptr @[[JT]], ptr null
+; CHECK-NEXT: store ptr %0, ptr @x, align 8
+; CHECK-NEXT: %1 = select i1 icmp ne (ptr @f, ptr null), ptr @[[JT]], ptr null
+; CHECK-NEXT: store ptr %1, ptr @x2, align 8
+; CHECK-NEXT: %2 = select i1 icmp ne (ptr @f, ptr null), ptr @[[JT]], ptr null
+; CHECK-NEXT: store ptr %2, ptr @x3, align 8
+; CHECK-NEXT: %3 = select i1 icmp ne (ptr @f, ptr null), ptr @[[JT]], ptr null
+; CHECK-NEXT: %4 = getelementptr i8, ptr %3, i64 42
+; CHECK-NEXT: store ptr %4, ptr @x4, align 8
+; CHECK-NEXT: %5 = select i1 icmp ne (ptr @f, ptr null), ptr @[[JT]], ptr null
+; CHECK-NEXT: %6 = insertvalue { ptr, ptr, i32 } poison, ptr %5, 0
+; CHECK-NEXT: %7 = select i1 icmp ne (ptr @f, ptr null), ptr @[[JT]], ptr null
+; CHECK-NEXT: %8 = insertvalue { ptr, ptr, i32 } %6, ptr %7, 1
+; CHECK-NEXT: %9 = insertvalue { ptr, ptr, i32 } %8, i32 42, 2
+; CHECK-NEXT: store { ptr, ptr, i32 } %9, ptr @s, align 8
 ; CHECK-NEXT: ret void
 ; CHECK-NEXT: }
 

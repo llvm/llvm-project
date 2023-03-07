@@ -241,6 +241,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genIchar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genFindloc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIeeeIsFinite(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genIeeeIsNormal(mlir::Type, llvm::ArrayRef<mlir::Value>);
   template <mlir::arith::CmpIPredicate pred>
   fir::ExtendedValue genIeeeTypeCompare(mlir::Type,
                                         llvm::ArrayRef<fir::ExtendedValue>);
@@ -251,6 +252,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genIsContiguous(mlir::Type,
                                      llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIsNan(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genIsFPClass(mlir::Type, llvm::ArrayRef<mlir::Value>,
+                           int fpclass);
   mlir::Value genIshft(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIshftc(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -623,6 +626,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"ieee_class_ne", &I::genIeeeTypeCompare<mlir::arith::CmpIPredicate::ne>},
     {"ieee_is_finite", &I::genIeeeIsFinite},
     {"ieee_is_nan", &I::genIsNan},
+    {"ieee_is_normal", &I::genIeeeIsNormal},
     {"ieee_round_eq", &I::genIeeeTypeCompare<mlir::arith::CmpIPredicate::eq>},
     {"ieee_round_ne", &I::genIeeeTypeCompare<mlir::arith::CmpIPredicate::ne>},
     {"ieor", &I::genIeor},
@@ -1344,6 +1348,16 @@ static constexpr MathOperation mathOperations[] = {
 };
 
 static constexpr MathOperation ppcMathOperations[] = {
+    // fcfi is just another name for fcfid, there is no llvm.ppc.fcfi.
+    {"__ppc_fcfi", "llvm.ppc.fcfid", genF64F64FuncType, genLibCall},
+    {"__ppc_fcfid", "llvm.ppc.fcfid", genF64F64FuncType, genLibCall},
+    {"__ppc_fcfud", "llvm.ppc.fcfud", genF64F64FuncType, genLibCall},
+    {"__ppc_fctid", "llvm.ppc.fctid", genF64F64FuncType, genLibCall},
+    {"__ppc_fctidz", "llvm.ppc.fctidz", genF64F64FuncType, genLibCall},
+    {"__ppc_fctiw", "llvm.ppc.fctiw", genF64F64FuncType, genLibCall},
+    {"__ppc_fctiwz", "llvm.ppc.fctiwz", genF64F64FuncType, genLibCall},
+    {"__ppc_fctudz", "llvm.ppc.fctudz", genF64F64FuncType, genLibCall},
+    {"__ppc_fctuwz", "llvm.ppc.fctuwz", genF64F64FuncType, genLibCall},
     {"__ppc_fmadd", "llvm.fma.f32", genF32F32F32F32FuncType,
      genMathOp<mlir::math::FmaOp>},
     {"__ppc_fmadd", "llvm.fma.f64", genF64F64F64F64FuncType,
@@ -3603,6 +3617,13 @@ IntrinsicLibrary::genIeeeIsFinite(mlir::Type resultType,
                                           exponent, maxExponent));
 }
 
+mlir::Value
+IntrinsicLibrary::genIeeeIsNormal(mlir::Type resultType,
+                                  llvm::ArrayRef<mlir::Value> args) {
+  // Check if is positive or negative normal
+  return genIsFPClass(resultType, args, 0b101101000);
+}
+
 // IEOR
 mlir::Value IntrinsicLibrary::genIeor(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value> args) {
@@ -3693,18 +3714,24 @@ IntrinsicLibrary::genIsContiguous(mlir::Type resultType,
       fir::runtime::genIsContiguous(builder, loc, fir::getBase(args[0])));
 }
 
-mlir::Value IntrinsicLibrary::genIsNan(mlir::Type resultType,
-                                       llvm::ArrayRef<mlir::Value> args) {
+mlir::Value IntrinsicLibrary::genIsFPClass(mlir::Type resultType,
+                                           llvm::ArrayRef<mlir::Value> args,
+                                           int fpclass) {
   assert(args.size() == 1);
   mlir::MLIRContext *context = builder.getContext();
   mlir::IntegerType i1ty = mlir::IntegerType::get(context, 1);
   mlir::IntegerType i32ty = mlir::IntegerType::get(context, 32);
-  // The last two bits indicate we are checking for signalling or quiet nan.
-  mlir::Value nan = builder.createIntegerConstant(loc, i32ty, 0b11);
 
-  mlir::Value isnan =
-      builder.create<mlir::LLVM::IsFPClass>(loc, i1ty, args[0], nan);
-  return builder.createConvert(loc, resultType, isnan);
+  mlir::Value test = builder.createIntegerConstant(loc, i32ty, fpclass);
+  mlir::Value isfpclass =
+      builder.create<mlir::LLVM::IsFPClass>(loc, i1ty, args[0], test);
+  return builder.createConvert(loc, resultType, isfpclass);
+}
+
+mlir::Value IntrinsicLibrary::genIsNan(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  // Check is signaling or quiet nan
+  return genIsFPClass(resultType, args, 0b11);
 }
 
 // ISHFT

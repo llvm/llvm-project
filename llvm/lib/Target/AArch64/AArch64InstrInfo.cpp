@@ -2369,7 +2369,7 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::LDNF1D_IMM:
     return 3;
   case AArch64::ADDG:
-  case AArch64::STGOffset:
+  case AArch64::STGi:
   case AArch64::LDR_PXI:
   case AArch64::STR_PXI:
     return 2;
@@ -2874,8 +2874,8 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     MaxOffset = 63;
     break;
   case AArch64::LDG:
-  case AArch64::STGOffset:
-  case AArch64::STZGOffset:
+  case AArch64::STGi:
+  case AArch64::STZGi:
     Scale = TypeSize::Fixed(16);
     Width = 16;
     MinOffset = -256;
@@ -3033,8 +3033,8 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     MinOffset = -8;
     MaxOffset = 7;
     break;
-  case AArch64::ST2GOffset:
-  case AArch64::STZ2GOffset:
+  case AArch64::ST2Gi:
+  case AArch64::STZ2Gi:
     Scale = TypeSize::Fixed(16);
     Width = 32;
     MinOffset = -256;
@@ -3151,10 +3151,10 @@ int AArch64InstrInfo::getMemScale(unsigned Opc) {
   case AArch64::LDPQi:
   case AArch64::LDRQpre:
   case AArch64::STPQi:
-  case AArch64::STGOffset:
-  case AArch64::STZGOffset:
-  case AArch64::ST2GOffset:
-  case AArch64::STZ2GOffset:
+  case AArch64::STGi:
+  case AArch64::STZGi:
+  case AArch64::ST2Gi:
+  case AArch64::STZ2Gi:
   case AArch64::STGPi:
     return 16;
   }

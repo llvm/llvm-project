@@ -1244,7 +1244,7 @@ LogicalResult OpWithResultShapePerDimInterfaceOp::reifyResultShapes(
     auto currShape = llvm::to_vector<4>(llvm::map_range(
         llvm::seq<int64_t>(
             0, operand.getType().cast<RankedTensorType>().getRank()),
-        [&](int64_t dim) -> Value {
+        [&](int64_t dim) -> OpFoldResult {
           return builder.createOrFold<tensor::DimOp>(loc, operand, dim);
         }));
     shapes.emplace_back(std::move(currShape));

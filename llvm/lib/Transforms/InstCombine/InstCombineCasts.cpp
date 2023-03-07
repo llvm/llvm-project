@@ -918,11 +918,18 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     // removed by the trunc.
     if (match(C, m_SpecificInt_ICMP(ICmpInst::ICMP_ULE,
                                     APInt(SrcWidth, MaxShiftAmt)))) {
+      auto GetNewShAmt = [&](unsigned Width) {
+        Constant *MaxAmt = ConstantInt::get(SrcTy, Width - 1, false);
+        Constant *Cmp =
+            ConstantFoldCompareInstOperands(ICmpInst::ICMP_ULT, C, MaxAmt, DL);
+        Constant *ShAmt = ConstantFoldSelectInstruction(Cmp, C, MaxAmt);
+        return ConstantFoldCastOperand(Instruction::Trunc, ShAmt, A->getType(),
+                                       DL);
+      };
+
       // trunc (lshr (sext A), C) --> ashr A, C
       if (A->getType() == DestTy) {
-        Constant *MaxAmt = ConstantInt::get(SrcTy, DestWidth - 1, false);
-        Constant *ShAmt = ConstantExpr::getUMin(C, MaxAmt);
-        ShAmt = ConstantExpr::getTrunc(ShAmt, A->getType());
+        Constant *ShAmt = GetNewShAmt(DestWidth);
         ShAmt = Constant::mergeUndefsWith(ShAmt, C);
         return IsExact ? BinaryOperator::CreateExactAShr(A, ShAmt)
                        : BinaryOperator::CreateAShr(A, ShAmt);
@@ -930,9 +937,7 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
       // The types are mismatched, so create a cast after shifting:
       // trunc (lshr (sext A), C) --> sext/trunc (ashr A, C)
       if (Src->hasOneUse()) {
-        Constant *MaxAmt = ConstantInt::get(SrcTy, AWidth - 1, false);
-        Constant *ShAmt = ConstantExpr::getUMin(C, MaxAmt);
-        ShAmt = ConstantExpr::getTrunc(ShAmt, A->getType());
+        Constant *ShAmt = GetNewShAmt(AWidth);
         Value *Shift = Builder.CreateAShr(A, ShAmt, "", IsExact);
         return CastInst::CreateIntegerCast(Shift, DestTy, true);
       }

@@ -184,7 +184,6 @@ CGSCC_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 #endif
 CGSCC_PASS("argpromotion", ArgumentPromotionPass())
 CGSCC_PASS("invalidate<all>", InvalidateAllAnalysesPass())
-CGSCC_PASS("function-attrs", PostOrderFunctionAttrsPass())
 CGSCC_PASS("attributor-cgscc", AttributorCGSCCPass())
 CGSCC_PASS("openmp-opt-cgscc", OpenMPOptCGSCCPass())
 CGSCC_PASS("no-op-cgscc", NoOpCGSCCPass())
@@ -207,6 +206,13 @@ CGSCC_PASS_WITH_PARAMS("coro-split",
                        },
                        parseCoroSplitPassOptions,
                        "reuse-storage")
+CGSCC_PASS_WITH_PARAMS("function-attrs",
+                       "PostOrderFunctionAttrsPass",
+                       [](bool SkipNonRecursive) {
+                         return PostOrderFunctionAttrsPass(SkipNonRecursive);
+                       },
+                       parsePostOrderFunctionAttrsPassOptions,
+                       "skip-non-recursive")
 #undef CGSCC_PASS_WITH_PARAMS
 
 #ifndef FUNCTION_ANALYSIS
