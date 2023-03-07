@@ -44,7 +44,6 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Utility/AnsiTerminal.h"
-#include "lldb/Utility/Diagnostics.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Listener.h"
@@ -842,6 +841,22 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   if (!GetOutputFile().GetIsTerminalWithColors())
     SetUseColor(false);
 
+  if (Diagnostics::Enabled()) {
+    m_diagnostics_callback_id = Diagnostics::Instance().AddCallback(
+        [this](const FileSpec &dir) -> llvm::Error {
+          for (auto &entry : m_stream_handlers) {
+            llvm::StringRef log_path = entry.first();
+            llvm::StringRef file_name = llvm::sys::path::filename(log_path);
+            FileSpec destination = dir.CopyByAppendingPathComponent(file_name);
+            std::error_code ec =
+                llvm::sys::fs::copy_file(log_path, destination.GetPath());
+            if (ec)
+              return llvm::errorCodeToError(ec);
+          }
+          return llvm::Error::success();
+        });
+  }
+
 #if defined(_WIN32) && defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
   // Enabling use of ANSI color codes because LLDB is using them to highlight
   // text.
@@ -880,6 +895,9 @@ void Debugger::Clear() {
     GetInputFile().Close();
 
     m_command_interpreter_up->Clear();
+
+    if (Diagnostics::Enabled())
+      Diagnostics::Instance().RemoveCallback(m_diagnostics_callback_id);
   });
 }
 
