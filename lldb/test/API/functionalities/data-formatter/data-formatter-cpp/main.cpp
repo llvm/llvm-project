@@ -70,6 +70,8 @@ void has_local_mem_func_pointers() {
   
   void (IUseCharStar::*virt_member_func_ptr)() =
       &IUseCharStar::virt_member_func;
+
+  ::puts("Break in has_local_mem_func_pointers");
 }
 
 int main (int argc, const char * argv[])
