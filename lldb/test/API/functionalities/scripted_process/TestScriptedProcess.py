@@ -137,8 +137,14 @@ class ScriptedProcesTestCase(TestBase):
 
         target_1 = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.assertTrue(target_1, VALID_TARGET)
+
+        # We still need to specify a PID when attaching even for scripted processes
+        attach_info = lldb.SBAttachInfo(42)
+        attach_info.SetProcessPluginName("ScriptedProcess")
+        attach_info.SetScriptedProcessClassName("dummy_scripted_process.DummyScriptedProcess")
+
         error = lldb.SBError()
-        process_1 = target_1.Launch(launch_info, error)
+        process_1 = target_1.Attach(attach_info, error)
         self.assertTrue(process_1 and process_1.IsValid(), PROCESS_IS_VALID)
         self.assertEqual(process_1.GetProcessID(), 42)
         self.assertEqual(process_1.GetNumThreads(), 1)
