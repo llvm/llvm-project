@@ -13,8 +13,6 @@ struct task {
 
     explicit task(promise_type& p) { throw 1; p.return_val = this; }
 
-    task(const task&) = delete;
-
     T value;
 };
 
