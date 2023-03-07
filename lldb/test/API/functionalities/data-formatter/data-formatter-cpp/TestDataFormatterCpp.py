@@ -11,7 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class CppDataFormatterTestCase(TestBase):
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -285,6 +284,12 @@ class CppDataFormatterTestCase(TestBase):
             matching=False,
             substrs=['(int) iAmInt = 0x00000001'])
         self.expect("frame variable iAmInt", substrs=['(int) iAmInt = 1'])
+
+    @skipIfWindows
+    def test_mem_func_ptr_formats(self):
+        self.build()
+
+        lldbutil.run_to_name_breakpoint(self, "has_local_mem_func_pointers")
 
         # FIXME: don't format pointer to members as bytes, but rather as regular pointers
         self.expect(
