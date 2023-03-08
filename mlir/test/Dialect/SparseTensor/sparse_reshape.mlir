@@ -47,8 +47,8 @@
 // CHECK-RWT-DAG:     %[[C0:.*]] = arith.constant 0 : index
 // CHECK-RWT-DAG:     %[[C1:.*]] = arith.constant 1 : index
 // CHECK-RWT:         %[[B:.*]] = bufferization.alloc_tensor()
-// CHECK-RWT:         %[[P0:.*]] = sparse_tensor.pointers %[[S]] {dimension = 0 : index}
-// CHECK-RWT:         %[[I0:.*]] = sparse_tensor.indices %[[S]] {dimension = 0 : index}
+// CHECK-RWT:         %[[P0:.*]] = sparse_tensor.positions %[[S]] {level = 0 : index}
+// CHECK-RWT:         %[[I0:.*]] = sparse_tensor.coordinates %[[S]] {level = 0 : index}
 // CHECK-RWT:         %[[V:.*]] = sparse_tensor.values %[[S]]
 // CHECK-RWT:         %[[S0:.*]] = memref.load %[[P0]]{{\[}}%[[C0]]] : memref<?xindex>
 // CHECK-RWT:         %[[E0:.*]] = memref.load %[[P0]]{{\[}}%[[C1]]] : memref<?xindex>
@@ -111,10 +111,10 @@ func.func @sparse_expand(%arg0: tensor<100xf64, #SparseVector>) -> tensor<10x10x
 // CHECK-RWT-DAG:     %[[C0:.*]] = arith.constant 0 : index
 // CHECK-RWT-DAG:     %[[C1:.*]] = arith.constant 1 : index
 // CHECK-RWT:         %[[B:.*]] = bufferization.alloc_tensor()
-// CHECK-RWT:         %[[P0:.*]] = sparse_tensor.pointers %[[S]] {dimension = 0 : index}
-// CHECK-RWT:         %[[I0:.*]] = sparse_tensor.indices %[[S]] {dimension = 0 : index}
-// CHECK-RWT:         %[[P1:.*]] = sparse_tensor.pointers %[[S]] {dimension = 1 : index}
-// CHECK-RWT:         %[[I1:.*]] = sparse_tensor.indices %[[S]] {dimension = 1 : index}
+// CHECK-RWT:         %[[P0:.*]] = sparse_tensor.positions %[[S]] {level = 0 : index}
+// CHECK-RWT:         %[[I0:.*]] = sparse_tensor.coordinates %[[S]] {level = 0 : index}
+// CHECK-RWT:         %[[P1:.*]] = sparse_tensor.positions %[[S]] {level = 1 : index}
+// CHECK-RWT:         %[[I1:.*]] = sparse_tensor.coordinates %[[S]] {level = 1 : index}
 // CHECK-RWT:         %[[V:.*]] = sparse_tensor.values %[[S]]
 // CHECK-RWT:         %[[S0:.*]] = memref.load %[[P0]]{{\[}}%[[C0]]] : memref<?xindex>
 // CHECK-RWT:         %[[E0:.*]] = memref.load %[[P0]]{{\[}}%[[C1]]] : memref<?xindex>
@@ -191,8 +191,8 @@ func.func @sparse_collapse(%arg0: tensor<10x10xf64, #SparseMatrix>) -> tensor<10
 // CHECK-RWT:         %[[SD:.*]] = tensor.dim %[[S]], %[[C0]]
 // CHECK-RWT:         %[[DD0:.*]] = arith.divui %[[SD]], %[[C10]] : index
 // CHECK-RWT:         %[[B:.*]] = bufferization.alloc_tensor(%[[DD0]])
-// CHECK-RWT:         %[[P0:.*]] = sparse_tensor.pointers %[[S]] {dimension = 0 : index}
-// CHECK-RWT:         %[[I0:.*]] = sparse_tensor.indices %[[S]] {dimension = 0 : index}
+// CHECK-RWT:         %[[P0:.*]] = sparse_tensor.positions %[[S]] {level = 0 : index}
+// CHECK-RWT:         %[[I0:.*]] = sparse_tensor.coordinates %[[S]] {level = 0 : index}
 // CHECK-RWT:         %[[V:.*]] = sparse_tensor.values %[[S]]
 // CHECK-RWT:         %[[S0:.*]] = memref.load %[[P0]]{{\[}}%[[C0]]] : memref<?xindex>
 // CHECK-RWT:         %[[E0:.*]] = memref.load %[[P0]]{{\[}}%[[C1]]] : memref<?xindex>
@@ -265,10 +265,10 @@ func.func @dynamic_sparse_expand(%arg0: tensor<?xf64, #SparseVector>) -> tensor<
 // CHECK-RWT:         %[[SD1:.*]] = tensor.dim %[[S]], %[[C1]]
 // CHECK-RWT:         %[[DD0:.*]] = arith.muli %[[SD1]], %[[C10]] : index
 // CHECK-RWT:         %[[B:.*]] = bufferization.alloc_tensor(%[[DD0]])
-// CHECK-RWT:         %[[P0:.*]] = sparse_tensor.pointers %[[S]] {dimension = 0 : index}
-// CHECK-RWT:         %[[I0:.*]] = sparse_tensor.indices %[[S]] {dimension = 0 : index}
-// CHECK-RWT:         %[[P1:.*]] = sparse_tensor.pointers %[[S]] {dimension = 1 : index}
-// CHECK-RWT:         %[[I1:.*]] = sparse_tensor.indices %[[S]] {dimension = 1 : index}
+// CHECK-RWT:         %[[P0:.*]] = sparse_tensor.positions %[[S]] {level = 0 : index}
+// CHECK-RWT:         %[[I0:.*]] = sparse_tensor.coordinates %[[S]] {level = 0 : index}
+// CHECK-RWT:         %[[P1:.*]] = sparse_tensor.positions %[[S]] {level = 1 : index}
+// CHECK-RWT:         %[[I1:.*]] = sparse_tensor.coordinates %[[S]] {level = 1 : index}
 // CHECK-RWT:         %[[V:.*]] = sparse_tensor.values %[[S]]
 // CHECK-RWT:         %[[S0:.*]] = memref.load %[[P0]]{{\[}}%[[C0]]] : memref<?xindex>
 // CHECK-RWT:         %[[E0:.*]] = memref.load %[[P0]]{{\[}}%[[C1]]] : memref<?xindex>
