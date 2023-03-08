@@ -1081,6 +1081,9 @@ static mlir::Value genLibCall(fir::FirOpBuilder &builder, mlir::Location loc,
              libFuncType.dump(); llvm::dbgs() << "\n");
   mlir::func::FuncOp funcOp =
       builder.addNamedFunction(loc, libFuncName, libFuncType);
+  // C-interoperability rules apply to these library functions.
+  funcOp->setAttr(fir::getSymbolAttrName(),
+                  mlir::StringAttr::get(builder.getContext(), libFuncName));
   // TODO: ensure 'strictfp' setting on the call for "precise/strict"
   //       FP mode. Set appropriate Fast-Math Flags otherwise.
   // TODO: we should also mark as many libm function as possible
