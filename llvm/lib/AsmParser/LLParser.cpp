@@ -3330,6 +3330,12 @@ Value *LLParser::PerFunctionState::getVal(const std::string &Name, Type *Ty,
   } else {
     FwdVal = new Argument(Ty, Name);
   }
+  if (FwdVal->getName() != Name) {
+    P.error(Loc, "name is too long which can result in name collisions, "
+                 "consider making the name shorter or "
+                 "increasing -non-global-value-max-name-size");
+    return nullptr;
+  }
 
   ForwardRefVals[Name] = std::make_pair(FwdVal, Loc);
   return FwdVal;
