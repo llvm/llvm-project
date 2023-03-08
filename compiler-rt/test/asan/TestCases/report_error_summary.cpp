@@ -6,7 +6,7 @@
 #include <stdio.h>
 
 extern "C" void __sanitizer_report_error_summary(const char *summary) {
-  fprintf(stderr, "test_report_error_summary\n", summary);
+  fprintf(stderr, "test_report_error_summary\n");
   // CHECK: test_report_error_summary
   fflush(stderr);
 }
