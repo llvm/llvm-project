@@ -297,10 +297,12 @@ class CppDataFormatterTestCase(TestBase):
             patterns=['member_ptr = 0x[0-9a-z]+'])
         self.expect(
             "frame variable member_func_ptr",
-            patterns=['member_func_ptr = 0x[0-9a-z]+'])
+            patterns=['member_func_ptr = 0x[0-9a-z]+'],
+            substrs=['(a.out`IUseCharStar::member_func(int) at main.cpp:61)'])
         self.expect(
             "frame variable ref_to_member_func_ptr",
-            patterns=['ref_to_member_func_ptr = 0x[0-9a-z]+'])
+            patterns=['ref_to_member_func_ptr = 0x[0-9a-z]+'],
+            substrs=['(a.out`IUseCharStar::member_func(int) at main.cpp:61)'])
         self.expect(
             "frame variable virt_member_func_ptr",
-            patterns=['virt_member_func_ptr = 0x[0-9a-z]+'])
+            patterns=['virt_member_func_ptr = 0x[0-9a-z]+$'])
