@@ -238,8 +238,8 @@ LogicalResult mlir::MlirOptMain(llvm::raw_ostream &outputStream,
                                 DialectRegistry &registry,
                                 const MlirOptMainConfig &config) {
   if (config.shouldShowDialects()) {
-    llvm::outs() << "Available Dialects:\n";
-    interleave(registry.getDialectNames(), llvm::outs(), "\n");
+    llvm::outs() << "Available Dialects: ";
+    interleave(registry.getDialectNames(), llvm::outs(), ",");
     llvm::outs() << "\n";
   }
 
