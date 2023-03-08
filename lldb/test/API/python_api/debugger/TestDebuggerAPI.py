@@ -30,7 +30,7 @@ class DebuggerAPITestCase(TestBase):
         self.dbg.SetPrompt(None)
         self.dbg.SetCurrentPlatform(None)
         self.dbg.SetCurrentPlatformSDKRoot(None)
-        
+
         fresh_dbg = lldb.SBDebugger()
         self.assertEquals(len(fresh_dbg), 0)
 
@@ -146,3 +146,16 @@ class DebuggerAPITestCase(TestBase):
         self.assertEqual(platform2.GetName(), expected_platform)
         self.assertTrue(platform2.GetWorkingDirectory().endswith("bar"),
                 platform2.GetWorkingDirectory())
+
+    def test_SetDestroyCallback(self):
+        destroy_dbg_id = None
+        def foo(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal destroy_dbg_id
+            destroy_dbg_id = dbg_id
+
+        self.dbg.SetDestroyCallback(foo)
+
+        original_dbg_id = self.dbg.GetID()
+        self.dbg.Destroy(self.dbg)
+        self.assertEqual(destroy_dbg_id,  original_dbg_id)
