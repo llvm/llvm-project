@@ -26,10 +26,10 @@ namespace tracing {
 /// a counter for an action with `skip=47` and `count=2`, would skip the
 /// first 47 executions, then execute twice, and finally prevent any further
 /// executions.
-class DebugCounter : public ActionManager::GenericHandler {
+class DebugCounter {
 public:
   DebugCounter();
-  ~DebugCounter() override;
+  ~DebugCounter();
 
   /// Add a counter for the given action tag. `countToSkip` is the number
   /// of counter executions to skip before enabling execution of the action.
@@ -38,9 +38,8 @@ public:
   void addCounter(StringRef actionTag, int64_t countToSkip,
                   int64_t countToStopAfter);
 
-  /// Register a counter with the specified name.
-  FailureOr<bool> execute(llvm::function_ref<void()> transform,
-                          const Action &action) final;
+  /// Entry point for handling actions.
+  void operator()(llvm::function_ref<void()> transform, const Action &action);
 
   /// Print the counters that have been registered with this instance to the
   /// provided output stream.
@@ -50,6 +49,9 @@ public:
   static void registerCLOptions();
 
 private:
+  // Returns true if the next action matching this tag should be executed.
+  bool shouldExecute(StringRef tag);
+
   /// Apply the registered CL options to this debug counter instance.
   void applyCLOptions();
 
