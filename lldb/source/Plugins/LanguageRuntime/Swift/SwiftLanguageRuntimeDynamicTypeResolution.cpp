@@ -277,19 +277,19 @@ public:
     if (log && log->GetVerbose()) {
       std::stringstream ss;
       type_ref->dump(ss);
-      LLDB_LOG(log, "[TargetReflectionContext::getTypeInfo] Getting "
+      LLDB_LOGF(log, "[TargetReflectionContext::getTypeInfo] Getting "
                   "type info for typeref:\n%s",
-                  ss.str());
+                  ss.str().c_str());
     }
 
     auto type_info = m_reflection_ctx.getTypeInfo(type_ref, provider);
     if (log && !type_info) {
       std::stringstream ss;
       type_ref->dump(ss);
-      LLDB_LOG(log,
+      LLDB_LOGF(log,
                 "[TargetReflectionContext::getTypeInfo] Could not get "
                 "type info for typeref:\n%s",
-                ss.str());
+                ss.str().c_str());
     }
 
     if (log && log->GetVerbose()) {
@@ -1020,6 +1020,7 @@ llvm::Optional<unsigned>
 SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
                                          ExecutionContextScope *exe_scope) {
   LLDB_SCOPED_TIMER();
+
   auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
   if (!ts)
     return {};
@@ -1033,14 +1034,14 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
   const swift::reflection::TypeRef *tr = nullptr;
   auto *ti = GetSwiftRuntimeTypeInfo(type, exe_scope, &tr);
   if (!ti) {
-    LLDB_LOG(GetLog(LLDBLog::Types), "GetSwiftRuntimeTypeInfo() failed for {0}",
-             type.GetMangledTypeName());
+    LLDB_LOGF(GetLog(LLDBLog::Types), "GetSwiftRuntimeTypeInfo() failed for %s",
+              type.GetMangledTypeName().GetCString());
     return {};
   }
   // Structs and Tuples.
   if (auto *rti = llvm::dyn_cast<swift::reflection::RecordTypeInfo>(ti)) {
-    LLDB_LOG(GetLog(LLDBLog::Types), "{0}: RecordTypeInfo(num_fields={1})",
-             type.GetMangledTypeName(), rti->getNumFields());
+    LLDB_LOGF(GetLog(LLDBLog::Types), "%s: RecordTypeInfo(num_fields=%i)",
+             type.GetMangledTypeName().GetCString(), rti->getNumFields());
     switch (rti->getRecordKind()) {
     case swift::reflection::RecordKind::ExistentialMetatype:
     case swift::reflection::RecordKind::ThickFunction:
@@ -1058,14 +1059,15 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
     }
   }
   if (auto *eti = llvm::dyn_cast<swift::reflection::EnumTypeInfo>(ti)) {
-    LLDB_LOG(GetLog(LLDBLog::Types), "{0}: EnumTypeInfo(num_payload_cases={1})",
-             type.GetMangledTypeName(), eti->getNumPayloadCases());
+    LLDB_LOGF(GetLog(LLDBLog::Types), "%s: EnumTypeInfo(num_payload_cases=%i)",
+              type.GetMangledTypeName().GetCString(),
+              eti->getNumPayloadCases());
     return eti->getNumPayloadCases();
   }
   // Objects.
   if (auto *rti = llvm::dyn_cast<swift::reflection::ReferenceTypeInfo>(ti)) {
-    LLDB_LOG(GetLog(LLDBLog::Types), "{0}: ReferenceTypeInfo()",
-             type.GetMangledTypeName());
+    LLDB_LOGF(GetLog(LLDBLog::Types), "%s: ReferenceTypeInfo()",
+              type.GetMangledTypeName().GetCString());
     switch (rti->getReferenceKind()) {
     case swift::reflection::ReferenceKind::Weak:
     case swift::reflection::ReferenceKind::Unowned:
@@ -1090,8 +1092,8 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
     if (auto *rti =
             llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(cti)) {
       LLDB_LOG(GetLog(LLDBLog::Types),
-               "{0}: class RecordTypeInfo(num_fields={1})",
-               type.GetMangledTypeName(), rti->getNumFields());
+               "%s: class RecordTypeInfo(num_fields=%i)",
+               type.GetMangledTypeName().GetCString(), rti->getNumFields());
 
       // The superclass, if any, is an extra child.
       if (builder.lookupSuperclass(tr))
@@ -1102,8 +1104,8 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
     return {};
   }
   // FIXME: Implement more cases.
-  LLDB_LOG(GetLog(LLDBLog::Types), "{0}: unimplemented type info",
-            type.GetMangledTypeName());
+  LLDB_LOG(GetLog(LLDBLog::Types), "%s: unimplemented type info",
+           type.GetMangledTypeName().GetCString());
   return {};
 }
 
@@ -1853,7 +1855,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Pack(
     auto typeref_or_err =
         decodeMangledType(reflection_ctx->getBuilder(), pack_element);
     if (typeref_or_err.isError()) {
-      LLDB_LOG(log, "Couldn't get TypeRef for %s",
+      LLDB_LOGF(log, "Couldn't get TypeRef for %s",
                pack_type.GetMangledTypeName().GetCString());
       return false;
     }
@@ -2468,8 +2470,9 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
     return ts.GetTypeFromMangledTypename(mangled_name);
   }
   CompilerType bound_type =  scratch_ctx->RemangleAsType(dem, node);
-  LLDB_LOG(GetLog(LLDBLog::Expressions | LLDBLog::Types), "Bound {0} -> {1}.",
-           mangled_name, bound_type.GetMangledTypeName());
+  LLDB_LOGF(GetLog(LLDBLog::Expressions | LLDBLog::Types), "Bound %s -> %s.",
+            mangled_name.GetCString(),
+            bound_type.GetMangledTypeName().GetCString());
   return bound_type;
 }
 
@@ -3204,9 +3207,9 @@ SwiftLanguageRuntimeImpl::GetTypeRef(CompilerType type,
                                      TypeSystemSwiftTypeRef *module_holder) {
   Log *log(GetLog(LLDBLog::Types));
   if (log && log->GetVerbose())
-    LLDB_LOG(log, "[SwiftLanguageRuntimeImpl::GetTypeRef] Getting typeref for "
+    LLDB_LOGF(log, "[SwiftLanguageRuntimeImpl::GetTypeRef] Getting typeref for "
                 "type: %s\n",
-                type.GetMangledTypeName());
+                type.GetMangledTypeName().GetCString());
 
   // Demangle the mangled name.
   swift::Demangle::Demangler dem;
@@ -3227,10 +3230,10 @@ SwiftLanguageRuntimeImpl::GetTypeRef(CompilerType type,
   auto type_ref_or_err =
       swift::Demangle::decodeMangledType(reflection_ctx->getBuilder(), node);
   if (type_ref_or_err.isError()) {
-    LLDB_LOG(log,
+    LLDB_LOGF(log,
               "[SwiftLanguageRuntimeImpl::GetTypeRef] Could not find typeref "
               "for type: %s. Decode mangled type failed. Error: %s\n.",
-              type.GetMangledTypeName(),
+              type.GetMangledTypeName().GetCString(),
               type_ref_or_err.getError()->copyErrorString());
     return nullptr;
   }
@@ -3238,9 +3241,9 @@ SwiftLanguageRuntimeImpl::GetTypeRef(CompilerType type,
   if (log && log->GetVerbose()) {
     std::stringstream ss;
     type_ref->dump(ss);
-    LLDB_LOG(log, "[SwiftLanguageRuntimeImpl::GetTypeRef] Found typeref for "
+    LLDB_LOGF(log, "[SwiftLanguageRuntimeImpl::GetTypeRef] Found typeref for "
                 "type: %s:\n%s",
-                type.GetMangledTypeName(), ss.str());
+                type.GetMangledTypeName().GetCString(), ss.str().c_str());
   }
   return type_ref;
 }
@@ -3252,9 +3255,9 @@ SwiftLanguageRuntimeImpl::GetSwiftRuntimeTypeInfo(
   Log *log(GetLog(LLDBLog::Types));
 
   if (log && log->GetVerbose())
-    LLDB_LOG(log, "[SwiftLanguageRuntimeImpl::GetSwiftRuntimeTypeInfo] Getting "
+    LLDB_LOGF(log, "[SwiftLanguageRuntimeImpl::GetSwiftRuntimeTypeInfo] Getting "
                 "type info for type: %s\n",
-                type.GetMangledTypeName());
+                type.GetMangledTypeName().GetCString());
 
   auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
   if (!ts)
