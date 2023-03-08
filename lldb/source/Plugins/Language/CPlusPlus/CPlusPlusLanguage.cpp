@@ -1394,8 +1394,7 @@ CPlusPlusLanguage::GetHardcodedSummaries() {
                   TypeSummaryImpl::Flags(),
                   lldb_private::formatters::CXXFunctionPointerSummaryProvider,
                   "Function pointer summary provider"));
-          if (CompilerType CT = valobj.GetCompilerType();
-              CT.IsFunctionPointerType() || CT.IsMemberFunctionPointerType()) {
+          if (valobj.GetCompilerType().IsFunctionPointerType()) {
             return formatter_sp;
           }
           return nullptr;
