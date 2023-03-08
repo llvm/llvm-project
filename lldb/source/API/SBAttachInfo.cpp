@@ -11,9 +11,9 @@
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBStructuredData.h"
-#include "lldb/Interpreter/ScriptedMetadata.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 
 using namespace lldb;
 using namespace lldb_private;

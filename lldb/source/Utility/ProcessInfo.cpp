@@ -8,8 +8,8 @@
 
 #include "lldb/Utility/ProcessInfo.h"
 
-#include "lldb/Interpreter/ScriptedMetadata.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UserIDResolver.h"
