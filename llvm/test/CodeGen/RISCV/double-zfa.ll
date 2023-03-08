@@ -4,6 +4,79 @@
 ; RUN: llc -mtriple=riscv64 -target-abi lp64d -mattr=+experimental-zfa,+d < %s \
 ; RUN:     | FileCheck --check-prefixes=CHECK,RV64DZFA %s
 
+define double @loadfpimm1() {
+; CHECK-LABEL: loadfpimm1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa0, 6.250000e-02
+; CHECK-NEXT:    ret
+  ret double 0.0625
+}
+
+define double @loadfpimm2() {
+; CHECK-LABEL: loadfpimm2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa0, 7.500000e-01
+; CHECK-NEXT:    ret
+  ret double 0.75
+}
+
+define double @loadfpimm3() {
+; CHECK-LABEL: loadfpimm3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa0, 1.250000e+00
+; CHECK-NEXT:    ret
+  ret double 1.25
+}
+
+define double @loadfpimm4() {
+; CHECK-LABEL: loadfpimm4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa0, 3.000000e+00
+; CHECK-NEXT:    ret
+  ret double 3.0
+}
+
+define double @loadfpimm5() {
+; CHECK-LABEL: loadfpimm5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa0, 2.560000e+02
+; CHECK-NEXT:    ret
+  ret double 256.0
+}
+
+define double @loadfpimm6() {
+; CHECK-LABEL: loadfpimm6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa0, inf
+; CHECK-NEXT:    ret
+  ret double 0x7FF0000000000000
+}
+
+define double @loadfpimm7() {
+; CHECK-LABEL: loadfpimm7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa0, nan
+; CHECK-NEXT:    ret
+  ret double 0x7FF8000000000000
+}
+
+define double @loadfpimm8() {
+; CHECK-LABEL: loadfpimm8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa0, min
+; CHECK-NEXT:    ret
+  ret double 0x0010000000000000
+}
+
+define double @loadfpimm9() {
+; CHECK-LABEL: loadfpimm9:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(.LCPI8_0)
+; CHECK-NEXT:    fld fa0, %lo(.LCPI8_0)(a0)
+; CHECK-NEXT:    ret
+  ret double 255.0
+}
+
 declare double @llvm.minimum.f64(double, double)
 
 define double @fminm_d(double %a, double %b) nounwind {
