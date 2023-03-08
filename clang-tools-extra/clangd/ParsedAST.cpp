@@ -687,9 +687,13 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
                    std::move(Macros), std::move(Marks), std::move(ParsedDecls),
                    std::move(Diags), std::move(Includes),
                    std::move(CanonIncludes));
-  if (Result.Diags)
-    llvm::move(issueIncludeCleanerDiagnostics(Result, Inputs.Contents),
-               std::back_inserter(*Result.Diags));
+  if (Result.Diags) {
+    auto UnusedHeadersDiags =
+        issueUnusedIncludesDiagnostics(Result, Inputs.Contents);
+    Result.Diags->insert(Result.Diags->end(),
+                         make_move_iterator(UnusedHeadersDiags.begin()),
+                         make_move_iterator(UnusedHeadersDiags.end()));
+  }
   return std::move(Result);
 }
 
