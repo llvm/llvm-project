@@ -2209,8 +2209,13 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
   bool Changed = false;
 
   if (MOI.isAtomic()) {
-    if (MOI.getOrdering() == AtomicOrdering::Acquire ||
-        MOI.getOrdering() == AtomicOrdering::Release ||
+    if (MOI.getOrdering() == AtomicOrdering::Acquire)
+      Changed |= CC->insertWait(MI, MOI.getScope(), MOI.getOrderingAddrSpace(),
+                                SIMemOp::LOAD | SIMemOp::STORE,
+                                MOI.getIsCrossAddressSpaceOrdering(),
+                                Position::BEFORE);
+
+    if (MOI.getOrdering() == AtomicOrdering::Release ||
         MOI.getOrdering() == AtomicOrdering::AcquireRelease ||
         MOI.getOrdering() == AtomicOrdering::SequentiallyConsistent)
       /// TODO: This relies on a barrier always generating a waitcnt
