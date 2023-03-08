@@ -11645,60 +11645,6 @@ void BoUpSLP::computeMinimumValueSizes() {
     MinBWs[Scalar] = std::make_pair(MaxBitWidth, !IsKnownPositive);
 }
 
-namespace {
-
-/// The SLPVectorizer Pass.
-struct SLPVectorizer : public FunctionPass {
-  SLPVectorizerPass Impl;
-
-  /// Pass identification, replacement for typeid
-  static char ID;
-
-  explicit SLPVectorizer() : FunctionPass(ID) {
-    initializeSLPVectorizerPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool doInitialization(Module &M) override { return false; }
-
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
-
-    auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-    auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
-    auto *TLI = TLIP ? &TLIP->getTLI(F) : nullptr;
-    auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-    auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    auto *AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    auto *DB = &getAnalysis<DemandedBitsWrapperPass>().getDemandedBits();
-    auto *ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
-
-    return Impl.runImpl(F, SE, TTI, TLI, AA, LI, DT, AC, DB, ORE);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    FunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<ScalarEvolutionWrapperPass>();
-    AU.addRequired<AAResultsWrapperPass>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<DemandedBitsWrapperPass>();
-    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-    AU.addRequired<InjectTLIMappingsLegacy>();
-    AU.addPreserved<LoopInfoWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addPreserved<AAResultsWrapperPass>();
-    AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.setPreservesCFG();
-  }
-};
-
-} // end anonymous namespace
-
 PreservedAnalyses SLPVectorizerPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto *SE = &AM.getResult<ScalarEvolutionAnalysis>(F);
   auto *TTI = &AM.getResult<TargetIRAnalysis>(F);
@@ -14600,20 +14546,3 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
   }
   return Changed;
 }
-
-char SLPVectorizer::ID = 0;
-
-static const char lv_name[] = "SLP Vectorizer";
-
-INITIALIZE_PASS_BEGIN(SLPVectorizer, SV_NAME, lv_name, false, false)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
-INITIALIZE_PASS_DEPENDENCY(DemandedBitsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(InjectTLIMappingsLegacy)
-INITIALIZE_PASS_END(SLPVectorizer, SV_NAME, lv_name, false, false)
-
-Pass *llvm::createSLPVectorizerPass() { return new SLPVectorizer(); }
