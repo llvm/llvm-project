@@ -90,10 +90,6 @@ public:
 
   void *GetImplementation() override;
 
-  void ForceScriptedState(lldb::StateType state) override {
-    SetPrivateState(state);
-  }
-
 protected:
   ScriptedProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
                   const ScriptedMetadata &scripted_metadata, Status &error);
