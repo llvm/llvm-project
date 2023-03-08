@@ -291,8 +291,8 @@ static bool DefaultComponentwiseIO(IoStatementState &io,
   return true;
 }
 
-std::optional<bool> DefinedFormattedIo(
-    IoStatementState &, const Descriptor &, const typeInfo::SpecialBinding &);
+std::optional<bool> DefinedFormattedIo(IoStatementState &, const Descriptor &,
+    const typeInfo::DerivedType &, const typeInfo::SpecialBinding &);
 
 template <Direction DIR>
 static bool FormattedDerivedTypeIO(
@@ -308,15 +308,15 @@ static bool FormattedDerivedTypeIO(
               ? typeInfo::SpecialBinding::Which::ReadFormatted
               : typeInfo::SpecialBinding::Which::WriteFormatted)}) {
     if (std::optional<bool> wasDefined{
-            DefinedFormattedIo(io, descriptor, *special)}) {
+            DefinedFormattedIo(io, descriptor, *type, *special)}) {
       return *wasDefined; // user-defined I/O was applied
     }
   }
   return DefaultComponentwiseIO<DIR>(io, descriptor, *type);
 }
 
-bool DefinedUnformattedIo(
-    IoStatementState &, const Descriptor &, const typeInfo::SpecialBinding &);
+bool DefinedUnformattedIo(IoStatementState &, const Descriptor &,
+    const typeInfo::DerivedType &, const typeInfo::SpecialBinding &);
 
 // Unformatted I/O
 template <Direction DIR>
@@ -332,7 +332,7 @@ static bool UnformattedDescriptorIO(
                 ? typeInfo::SpecialBinding::Which::ReadUnformatted
                 : typeInfo::SpecialBinding::Which::WriteUnformatted)}) {
       // User-defined derived type unformatted I/O
-      return DefinedUnformattedIo(io, descriptor, *special);
+      return DefinedUnformattedIo(io, descriptor, *type, *special);
     } else {
       // Default derived type unformatted I/O
       // TODO: If no component at any level has user defined READ or WRITE
