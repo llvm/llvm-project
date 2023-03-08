@@ -20,6 +20,15 @@ set(TARGET_LIBC_ENTRYPOINTS
     # errno.h entrypoints
     libc.src.errno.errno
 
+    # fcntl.h entrypoints
+    libc.src.fcntl.creat
+    libc.src.fcntl.open
+    libc.src.fcntl.openat
+
+    # sched.h entrypoints
+    libc.src.sched.sched_getaffinity
+    libc.src.sched.sched_setaffinity
+
     # string.h entrypoints
     libc.src.string.bcmp
     libc.src.string.bcopy
@@ -41,6 +50,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strcmp
     libc.src.string.strcpy
     libc.src.string.strcspn
+    libc.src.string.strdup
+    libc.src.string.strerror
+    libc.src.string.strerror_r
     libc.src.string.strlcat
     libc.src.string.strlcpy
     libc.src.string.strlen
@@ -48,9 +60,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strncat
     libc.src.string.strncmp
     libc.src.string.strncpy
+    libc.src.string.strndup
     libc.src.string.strnlen
     libc.src.string.strpbrk
     libc.src.string.strrchr
+    libc.src.string.strsignal
     libc.src.string.strspn
     libc.src.string.strstr
     libc.src.string.strtok
@@ -82,6 +96,96 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strtoll
     libc.src.stdlib.strtoul
     libc.src.stdlib.strtoull
+
+    # stdlib.h external entrypoints
+    libc.src.stdlib.malloc
+    libc.src.stdlib.calloc
+    libc.src.stdlib.realloc
+    libc.src.stdlib.aligned_alloc
+    libc.src.stdlib.free
+
+    # stdio.h entrypoints
+    libc.src.stdio.remove
+
+    # sys/mman.h entrypoints
+    libc.src.sys.mman.madvise
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.mprotect
+    libc.src.sys.mman.munmap
+    libc.src.sys.mman.posix_madvise
+
+    # sys/random.h entrypoints
+    libc.src.sys.random.getrandom
+
+    # sys/resource.h entrypoints
+    libc.src.sys.resource.getrlimit
+    libc.src.sys.resource.setrlimit
+
+    # sys/sendfile entrypoints
+    libc.src.sys.sendfile.sendfile
+
+    # sys/stat.h entrypoints
+    libc.src.sys.stat.chmod
+    libc.src.sys.stat.fchmod
+    libc.src.sys.stat.fchmodat
+    libc.src.sys.stat.fstat
+    libc.src.sys.stat.lstat
+    libc.src.sys.stat.mkdir
+    libc.src.sys.stat.mkdirat
+    libc.src.sys.stat.stat
+
+    # sys/utsname.h entrypoints
+    libc.src.sys.utsname.uname
+
+    # sys/wait.h entrypoints
+    libc.src.sys.wait.wait
+    libc.src.sys.wait.wait4
+    libc.src.sys.wait.waitpid
+
+    # termios.h entrypoints
+    libc.src.termios.cfgetispeed
+    libc.src.termios.cfgetospeed
+    libc.src.termios.cfsetispeed
+    libc.src.termios.cfsetospeed
+    libc.src.termios.tcgetattr
+    libc.src.termios.tcgetsid
+    libc.src.termios.tcdrain
+    libc.src.termios.tcflow
+    libc.src.termios.tcflush
+    libc.src.termios.tcsendbreak
+    libc.src.termios.tcsetattr
+
+    # unistd.h entrypoints
+    libc.src.unistd.access
+    libc.src.unistd.chdir
+    libc.src.unistd.close
+    libc.src.unistd.dup
+    libc.src.unistd.dup2
+    libc.src.unistd.dup3
+    libc.src.unistd.fchdir
+    libc.src.unistd.fsync
+    libc.src.unistd.ftruncate
+    libc.src.unistd.getcwd
+    libc.src.unistd.geteuid
+    libc.src.unistd.getpid
+    libc.src.unistd.getppid
+    libc.src.unistd.getuid
+    libc.src.unistd.link
+    libc.src.unistd.linkat
+    libc.src.unistd.lseek
+    libc.src.unistd.pread
+    libc.src.unistd.pwrite
+    libc.src.unistd.read
+    libc.src.unistd.readlink
+    libc.src.unistd.readlinkat
+    libc.src.unistd.rmdir
+    libc.src.unistd.symlink
+    libc.src.unistd.symlinkat
+    libc.src.unistd.sysconf
+    libc.src.unistd.truncate
+    libc.src.unistd.unlink
+    libc.src.unistd.unlinkat
+    libc.src.unistd.write
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
