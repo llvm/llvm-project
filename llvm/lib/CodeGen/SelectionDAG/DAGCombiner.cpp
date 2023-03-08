@@ -2582,6 +2582,12 @@ static bool isADDLike(SDValue V, const SelectionDAG &DAG) {
   return false;
 }
 
+static bool
+areBitwiseNotOfEachother(SDValue Op0, SDValue Op1) {
+  return (isBitwiseNot(Op0) && Op0.getOperand(0) == Op1) ||
+         (isBitwiseNot(Op1) && Op1.getOperand(0) == Op0);
+}
+
 /// Try to fold a node that behaves like an ADD (note that N isn't necessarily
 /// an ISD::ADD here, it could for example be an ISD::OR if we know that there
 /// are no common bits set in the operands).
@@ -6624,6 +6630,10 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
       !DAG.isConstantIntBuildVectorOrConstantInt(N1))
     return DAG.getNode(ISD::AND, SDLoc(N), VT, N1, N0);
+
+  if (areBitwiseNotOfEachother(N0, N1))
+    return DAG.getConstant(APInt::getZero(VT.getScalarSizeInBits()), SDLoc(N),
+                           VT);
 
   // fold vector ops
   if (VT.isVector()) {
