@@ -25,7 +25,8 @@ LLVM_LIBC_FUNCTION(float, acoshf, (float x)) {
 
   if (LIBC_UNLIKELY(x < 1.0f)) {
     // x < 1.
-    fputil::set_except(FE_INVALID);
+    fputil::set_errno_if_required(EDOM);
+    fputil::raise_except_if_required(FE_INVALID);
     return FPBits_t::build_quiet_nan(0);
   }
 

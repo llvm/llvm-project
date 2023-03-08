@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/log10.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/dyadic_float.h"
@@ -953,9 +954,13 @@ LLVM_LIBC_FUNCTION(double, log10, (double x)) {
                     xbits.uintval() > FPBits_t::MAX_NORMAL)) {
     if (xbits.is_zero()) {
       // return -Inf and raise FE_DIVBYZERO.
-      return -1.0 / 0.0;
+      fputil::set_errno_if_required(ERANGE);
+      fputil::raise_except_if_required(FE_DIVBYZERO);
+      return static_cast<double>(FPBits_t::neg_inf());
     }
     if (xbits.get_sign() && !xbits.is_nan()) {
+      fputil::set_errno_if_required(EDOM);
+      fputil::raise_except_if_required(FE_INVALID);
       return FPBits_t::build_quiet_nan(0);
     }
     if (xbits.is_inf_or_nan()) {
