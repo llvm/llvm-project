@@ -1254,13 +1254,19 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 // macro is used to mark them as such, which suppresses the
 // '-Wctad-maybe-unsupported' compiler warning when CTAD is used in user code
 // with these classes.
-#if _LIBCPP_STD_VER >= 17
-#    define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName)                                                                \
-      template <class ..._Tag>                                                                                         \
-      _ClassName(typename _Tag::__allow_ctad...) -> _ClassName<_Tag...>
-#else
-#  define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName) static_assert(true, "")
-#endif
+#  if _LIBCPP_STD_VER >= 17
+#    ifdef _LIBCPP_COMPILER_CLANG_BASED
+#      define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName)                                                              \
+        template <class... _Tag>                                                                                       \
+        [[maybe_unused]] _ClassName(typename _Tag::__allow_ctad...)->_ClassName<_Tag...>
+#    else
+#      define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(ClassName)                                                               \
+        template <class... _Tag>                                                                                       \
+        ClassName(typename _Tag::__allow_ctad...)->ClassName<_Tag...>
+#    endif
+#  else
+#    define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName) static_assert(true, "")
+#  endif
 
 // TODO(varconst): currently, there are bugs in Clang's intrinsics when handling Objective-C++ `id`, so don't use
 // compiler intrinsics in the Objective-C++ mode.
