@@ -1497,137 +1497,263 @@ define amdgpu_gfx <512 x i32> @return_512xi32() #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, s0
 ; GFX11-NEXT:    v_dual_mov_b32 v4, s3 :: v_dual_mov_b32 v3, s2
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
-; GFX11-NEXT:    s_clause 0x3e
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:2032
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:2016
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:2000
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1984
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1968
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1952
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1936
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1920
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1904
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1888
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1872
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1856
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1840
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1824
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1808
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1792
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1776
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1760
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1744
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1728
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1712
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1696
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1680
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1664
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1648
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1632
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1616
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1600
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1584
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1568
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1552
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1536
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1520
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1504
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1488
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1472
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1456
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1440
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1424
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1408
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1392
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1376
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1360
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1344
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1328
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1312
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1296
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1280
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1264
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1248
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1232
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1216
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1200
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1184
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1168
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1152
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1136
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1120
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1104
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1088
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1072
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1056
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1040
-; GFX11-NEXT:    s_clause 0x3e
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1024
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1008
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:992
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:976
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:960
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:944
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:928
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:912
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:896
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:880
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:864
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:848
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:832
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:816
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:800
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:784
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:768
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:752
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:736
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:720
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:704
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:688
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:672
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:656
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:640
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:624
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:608
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:592
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:576
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:560
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:544
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:528
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:512
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:496
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:480
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:464
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:448
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:432
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:416
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:400
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:384
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:368
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:352
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:336
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:320
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:304
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:288
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:272
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:256
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:240
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:224
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:208
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:192
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:176
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:160
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:144
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:128
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:112
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:96
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:80
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:64
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:48
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:32
-; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:16
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x7f0
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x7e0
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s0
+; GFX11-NEXT:    s_add_i32 s3, s0, 0x7d0
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s3
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x7c0
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x7b0
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x7a0
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x790
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x780
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x770
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x760
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x750
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x740
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x730
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x720
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x710
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x700
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x6f0
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x6e0
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x6d0
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x6c0
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x6b0
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x6a0
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x690
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x680
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x670
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x660
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x650
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x640
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x630
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x620
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x610
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x600
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x5f0
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x5e0
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x5d0
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x5c0
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x5b0
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x5a0
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x590
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x580
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x570
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x560
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x550
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x540
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x530
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x520
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x510
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x500
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x4f0
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x4e0
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x4d0
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x4c0
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x4b0
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x4a0
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x490
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x480
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x470
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x460
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x450
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x440
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x430
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x420
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x410
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x400
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x3f0
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x3e0
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x3d0
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x3c0
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x3b0
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x3a0
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x390
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x380
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x370
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x360
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x350
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x340
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x330
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x320
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x310
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x300
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x2f0
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x2e0
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x2d0
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x2c0
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x2b0
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x2a0
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x290
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x280
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x270
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x260
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x250
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x240
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x230
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x220
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x210
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x200
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x1f0
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x1e0
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x1d0
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x1c0
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x1b0
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x1a0
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x190
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x180
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x170
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x160
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x150
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x140
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x130
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x120
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x110
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x100
+; GFX11-NEXT:    s_add_i32 s2, s0, 0xf0
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0xe0
+; GFX11-NEXT:    s_add_i32 s2, s0, 0xd0
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0xc0
+; GFX11-NEXT:    s_add_i32 s2, s0, 0xb0
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0xa0
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x90
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x80
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x70
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 0x60
+; GFX11-NEXT:    s_add_i32 s2, s0, 0x50
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 64
+; GFX11-NEXT:    s_add_i32 s2, s0, 48
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s2
+; GFX11-NEXT:    s_add_i32 s1, s0, 32
+; GFX11-NEXT:    s_add_i32 s0, s0, 16
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s1
+; GFX11-NEXT:    scratch_store_b128 off, v[1:4], s0
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
