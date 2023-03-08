@@ -124,7 +124,9 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
   }
 
   // Generate a complete header for target specific intrinsics.
-  if (!IntrinsicPrefix.empty()) {
+  if (IntrinsicPrefix.empty()) {
+    OS << "#ifdef GET_INTRINSIC_ENUM_VALUES\n";
+  } else {
     std::string UpperPrefix = StringRef(IntrinsicPrefix).upper();
     OS << "#ifndef LLVM_IR_INTRINSIC_" << UpperPrefix << "_ENUMS_H\n";
     OS << "#define LLVM_IR_INTRINSIC_" << UpperPrefix << "_ENUMS_H\n\n";
@@ -151,6 +153,7 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
   // Emit num_intrinsics into the target neutral enum.
   if (IntrinsicPrefix.empty()) {
     OS << "    num_intrinsics = " << (Ints.size() + 1) << "\n";
+    OS << "#endif\n\n";
   } else {
     OS << "}; // enum\n";
     OS << "} // namespace Intrinsic\n";
