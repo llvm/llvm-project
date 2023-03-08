@@ -1513,19 +1513,21 @@ template <typename ContainerTy> auto make_second_range(ContainerTy &&c) {
 //     Extra additions to <utility>
 //===----------------------------------------------------------------------===//
 
-/// Function object to check whether the first component of a std::pair
-/// compares less than the first component of another std::pair.
+/// Function object to check whether the first component of a container
+/// supported by std::get (like std::pair and std::tuple) compares less than the
+/// first component of another container.
 struct less_first {
   template <typename T> bool operator()(const T &lhs, const T &rhs) const {
-    return std::less<>()(lhs.first, rhs.first);
+    return std::less<>()(std::get<0>(lhs), std::get<0>(rhs));
   }
 };
 
-/// Function object to check whether the second component of a std::pair
-/// compares less than the second component of another std::pair.
+/// Function object to check whether the second component of a container
+/// supported by std::get (like std::pair and std::tuple) compares less than the
+/// second component of another container.
 struct less_second {
   template <typename T> bool operator()(const T &lhs, const T &rhs) const {
-    return std::less<>()(lhs.second, rhs.second);
+    return std::less<>()(std::get<1>(lhs), std::get<1>(rhs));
   }
 };
 
