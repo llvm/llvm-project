@@ -1065,8 +1065,9 @@ void request_completions(const llvm::json::Object &request) {
     text = text.substr(1);
     actual_column--;
   } else {
-    text = "p " + text;
-    actual_column += 2;
+    char command[] = "expression -- ";
+    text = command + text;
+    actual_column += strlen(command);
   }
   lldb::SBStringList matches;
   lldb::SBStringList descriptions;
