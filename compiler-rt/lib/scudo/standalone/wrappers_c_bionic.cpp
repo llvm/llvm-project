@@ -32,21 +32,6 @@ static scudo::Allocator<scudo::AndroidConfig, SCUDO_PREFIX(malloc_postinit)>
 #undef SCUDO_ALLOCATOR
 #undef SCUDO_PREFIX
 
-// Svelte MallocDispatch definitions.
-#define SCUDO_PREFIX(name) CONCATENATE(scudo_svelte_, name)
-#define SCUDO_ALLOCATOR SvelteAllocator
-
-extern "C" void SCUDO_PREFIX(malloc_postinit)();
-SCUDO_REQUIRE_CONSTANT_INITIALIZATION
-static scudo::Allocator<scudo::AndroidSvelteConfig,
-                        SCUDO_PREFIX(malloc_postinit)>
-    SCUDO_ALLOCATOR;
-
-#include "wrappers_c.inc"
-
-#undef SCUDO_ALLOCATOR
-#undef SCUDO_PREFIX
-
 // TODO(kostyak): support both allocators.
 INTERFACE void __scudo_print_stats(void) { Allocator.printStats(); }
 
