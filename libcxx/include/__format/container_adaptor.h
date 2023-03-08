@@ -19,6 +19,8 @@
 #include <__format/concepts.h>
 #include <__format/formatter.h>
 #include <__format/range_default_formatter.h>
+#include <__ranges/all.h>
+#include <__ranges/ref_view.h>
 #include <queue>
 #include <stack>
 
@@ -35,8 +37,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Adaptor, class _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT __formatter_container_adaptor {
 private:
-  using __maybe_const_adaptor = __fmt_maybe_const<_Adaptor, _CharT>;
-  formatter<typename _Adaptor::container_type, _CharT> __underlying_;
+  using __maybe_const_container = __fmt_maybe_const<typename _Adaptor::container_type, _CharT>;
+  using __maybe_const_adaptor   = __maybe_const<is_const_v<__maybe_const_container>, _Adaptor>;
+  formatter<ranges::ref_view<__maybe_const_container>, _CharT> __underlying_;
 
 public:
   template <class _ParseContext>
