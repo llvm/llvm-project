@@ -16,8 +16,10 @@
 #include "flang/ISO_Fortran_binding.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/TypeCode.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
@@ -49,9 +51,6 @@ namespace fir {
 
 // fir::LLVMTypeConverter for converting to LLVM IR dialect types.
 #include "TypeConverter.h"
-
-using BindingTable = llvm::DenseMap<llvm::StringRef, unsigned>;
-using BindingTables = llvm::DenseMap<llvm::StringRef, BindingTable>;
 
 // TODO: This should really be recovered from the specified target.
 static constexpr unsigned defaultAlign = 8;
@@ -106,7 +105,7 @@ class FIROpConversion : public mlir::ConvertOpToLLVMPattern<FromOp> {
 public:
   explicit FIROpConversion(fir::LLVMTypeConverter &lowering,
                            const fir::FIRToLLVMPassOptions &options,
-                           const BindingTables &bindingTables)
+                           const fir::BindingTables &bindingTables)
       : mlir::ConvertOpToLLVMPattern<FromOp>(lowering), options(options),
         bindingTables(bindingTables) {}
 
@@ -359,7 +358,7 @@ protected:
   }
 
   const fir::FIRToLLVMPassOptions &options;
-  const BindingTables &bindingTables;
+  const fir::BindingTables &bindingTables;
 };
 
 /// FIR conversion pattern template
@@ -993,7 +992,7 @@ struct DispatchOpConversion : public FIROpConversion<fir::DispatchOp> {
              << "cannot find binding table for " << recordType.getName();
 
     // Lookup for the binding.
-    const BindingTable &bindingTable = bindingsIter->second;
+    const fir::BindingTable &bindingTable = bindingsIter->second;
     auto bindingIter = bindingTable.find(dispatch.getMethod());
     if (bindingIter == bindingTable.end())
       return emitError(loc)
@@ -1336,22 +1335,6 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     return CFI_attribute_other;
   }
 
-  static fir::RecordType unwrapIfDerived(fir::BaseBoxType boxTy) {
-    return fir::unwrapSequenceType(fir::dyn_cast_ptrOrBoxEleTy(boxTy))
-        .template dyn_cast<fir::RecordType>();
-  }
-  static bool isDerivedTypeWithLenParams(fir::BaseBoxType boxTy) {
-    auto recTy = unwrapIfDerived(boxTy);
-    return recTy && recTy.getNumLenParams() > 0;
-  }
-  static bool isDerivedType(fir::BaseBoxType boxTy) {
-    return static_cast<bool>(unwrapIfDerived(boxTy));
-  }
-  static bool hasAddendum(fir::BaseBoxType boxTy) {
-    return static_cast<bool>(unwrapIfDerived(boxTy)) ||
-           fir::isUnlimitedPolymorphicType(boxTy);
-  }
-
   // Get the element size and CFI type code of the boxed value.
   std::tuple<mlir::Value, mlir::Value> getSizeAndTypeCode(
       mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
@@ -1571,7 +1554,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     descriptor =
         insertField(rewriter, loc, descriptor, {kAttributePosInBox},
                     this->genI32Constant(loc, rewriter, getCFIAttr(boxTy)));
-    const bool hasAddendum = isDerivedType(boxTy) || isUnlimitedPolymorphic;
+    const bool hasAddendum = fir::boxHasAddendum(boxTy);
     descriptor =
         insertField(rewriter, loc, descriptor, {kF18AddendumPosInBox},
                     this->genI32Constant(loc, rewriter, hasAddendum ? 1 : 0));
@@ -1591,8 +1574,8 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
                 loc, ::getVoidPtrType(mod.getContext()));
           }
         } else {
-          typeDesc =
-              getTypeDescriptor(mod, rewriter, loc, unwrapIfDerived(boxTy));
+          typeDesc = getTypeDescriptor(mod, rewriter, loc,
+                                       fir::unwrapIfDerived(boxTy));
         }
       }
       if (typeDesc)
@@ -1674,7 +1657,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
       // TODO: For initial box that are unlimited polymorphic entities, this
       // code must be made conditional because unlimited polymorphic entities
       // with intrinsic type spec does not have addendum.
-      if (hasAddendum(inputBoxTy))
+      if (fir::boxHasAddendum(inputBoxTy))
         typeDesc = this->loadTypeDescAddress(loc, box.getBox().getType(),
                                              loweredBox, rewriter);
     }
@@ -1826,7 +1809,7 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
         /*rank=*/0, /*lenParams=*/operands.drop_front(1), sourceBox,
         sourceBoxType);
     dest = insertBaseAddress(rewriter, embox.getLoc(), dest, operands[0]);
-    if (isDerivedTypeWithLenParams(boxTy)) {
+    if (fir::isDerivedTypeWithLenParams(boxTy)) {
       TODO(embox.getLoc(),
            "fir.embox codegen of derived with length parameters");
       return mlir::failure();
@@ -2010,7 +1993,7 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
                              fieldIndices, substringOffset);
     }
     dest = insertBaseAddress(rewriter, loc, dest, base);
-    if (isDerivedTypeWithLenParams(boxTy))
+    if (fir::isDerivedTypeWithLenParams(boxTy))
       TODO(loc, "fir.embox codegen of derived with length parameters");
 
     mlir::Value result =
@@ -3670,7 +3653,7 @@ template <typename FromOp>
 struct MustBeDeadConversion : public FIROpConversion<FromOp> {
   explicit MustBeDeadConversion(fir::LLVMTypeConverter &lowering,
                                 const fir::FIRToLLVMPassOptions &options,
-                                const BindingTables &bindingTables)
+                                const fir::BindingTables &bindingTables)
       : FIROpConversion<FromOp>(lowering, options, bindingTables) {}
   using OpAdaptor = typename FromOp::Adaptor;
 
@@ -3781,24 +3764,8 @@ public:
     if (mlir::failed(runPipeline(mathConvertionPM, mod)))
       return signalPassFailure();
 
-    // Reconstruct binding tables for dynamic dispatch. The binding tables
-    // are defined in FIR from lowering as fir.dispatch_table operation.
-    // Go through each binding tables and store the procedure name
-    // and binding index for later use by the fir.dispatch conversion pattern.
-    BindingTables bindingTables;
-    for (auto dispatchTableOp : mod.getOps<fir::DispatchTableOp>()) {
-      unsigned bindingIdx = 0;
-      BindingTable bindings;
-      if (dispatchTableOp.getRegion().empty()) {
-        bindingTables[dispatchTableOp.getSymName()] = bindings;
-        continue;
-      }
-      for (auto dtEntry : dispatchTableOp.getBlock().getOps<fir::DTEntryOp>()) {
-        bindings[dtEntry.getMethod()] = bindingIdx;
-        ++bindingIdx;
-      }
-      bindingTables[dispatchTableOp.getSymName()] = bindings;
-    }
+    fir::BindingTables bindingTables;
+    fir::buildBindingTables(bindingTables, mod);
 
     auto *context = getModule().getContext();
     fir::LLVMTypeConverter typeConverter{getModule(),

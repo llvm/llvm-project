@@ -5,6 +5,7 @@ add_flang_library(FIRSupport
   InitFIR.cpp
   InternalNames.cpp
   KindMapping.cpp
+  Utils.cpp
 
   DEPENDS
   FIROpsIncGen

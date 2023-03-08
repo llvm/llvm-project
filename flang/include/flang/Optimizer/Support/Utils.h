@@ -15,14 +15,23 @@
 
 #include "flang/Common/default-kinds.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace fir {
 /// Return the integer value of a arith::ConstantOp.
 inline std::int64_t toInt(mlir::arith::ConstantOp cop) {
   return cop.getValue().cast<mlir::IntegerAttr>().getValue().getSExtValue();
 }
+
+// Reconstruct binding tables for dynamic dispatch.
+using BindingTable = llvm::DenseMap<llvm::StringRef, unsigned>;
+using BindingTables = llvm::DenseMap<llvm::StringRef, BindingTable>;
+void buildBindingTables(BindingTables &, mlir::ModuleOp mod);
 
 // Translate front-end KINDs for use in the IR and code gen.
 inline std::vector<fir::KindTy>

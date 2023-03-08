@@ -219,12 +219,8 @@ mlir::Type dyn_cast_ptrOrBoxEleTy(mlir::Type t) {
   return llvm::TypeSwitch<mlir::Type, mlir::Type>(t)
       .Case<fir::ReferenceType, fir::PointerType, fir::HeapType,
             fir::LLVMPointerType>([](auto p) { return p.getEleTy(); })
-      .Case<fir::BaseBoxType>([](auto p) {
-        auto eleTy = p.getEleTy();
-        if (auto ty = fir::dyn_cast_ptrEleTy(eleTy))
-          return ty;
-        return eleTy;
-      })
+      .Case<fir::BaseBoxType>(
+          [](auto p) { return unwrapRefType(p.getEleTy()); })
       .Default([](mlir::Type) { return mlir::Type{}; });
 }
 
