@@ -301,6 +301,162 @@ define <2 x double> @loadv2f64_offset(ptr %p) {
 }
 
 
+define <8 x i8> @loadv8i8_noffset(ptr %p) {
+; CHECK-LABEL: loadv8i8_noffset:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldur b0, [x0, #-1]
+; CHECK-NEXT:    ret
+  %g = getelementptr inbounds i8, ptr %p, i64 -1
+  %l = load i8, ptr %g
+  %v = insertelement <8 x i8> zeroinitializer, i8 %l, i32 0
+  ret <8 x i8> %v
+}
+
+define <16 x i8> @loadv16i8_noffset(ptr %p) {
+; CHECK-LABEL: loadv16i8_noffset:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldur b0, [x0, #-1]
+; CHECK-NEXT:    ret
+  %g = getelementptr inbounds i8, ptr %p, i64 -1
+  %l = load i8, ptr %g
+  %v = insertelement <16 x i8> zeroinitializer, i8 %l, i32 0
+  ret <16 x i8> %v
+}
+
+define <4 x i16> @loadv4i16_noffset(ptr %p) {
+; CHECK-LABEL: loadv4i16_noffset:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldur h0, [x0, #-1]
+; CHECK-NEXT:    ret
+  %g = getelementptr inbounds i8, ptr %p, i64 -1
+  %l = load i16, ptr %g
+  %v = insertelement <4 x i16> zeroinitializer, i16 %l, i32 0
+  ret <4 x i16> %v
+}
+
+define <8 x i16> @loadv8i16_noffset(ptr %p) {
+; CHECK-LABEL: loadv8i16_noffset:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldur h0, [x0, #-1]
+; CHECK-NEXT:    ret
+  %g = getelementptr inbounds i8, ptr %p, i64 -1
+  %l = load i16, ptr %g
+  %v = insertelement <8 x i16> zeroinitializer, i16 %l, i32 0
+  ret <8 x i16> %v
+}
+
+define <2 x i32> @loadv2i32_noffset(ptr %p) {
+; CHECK-LABEL: loadv2i32_noffset:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldur s0, [x0, #-1]
+; CHECK-NEXT:    ret
+  %g = getelementptr inbounds i8, ptr %p, i64 -1
+  %l = load i32, ptr %g
+  %v = insertelement <2 x i32> zeroinitializer, i32 %l, i32 0
+  ret <2 x i32> %v
+}
+
+define <4 x i32> @loadv4i32_noffset(ptr %p) {
+; CHECK-LABEL: loadv4i32_noffset:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldur s0, [x0, #-1]
+; CHECK-NEXT:    ret
+  %g = getelementptr inbounds i8, ptr %p, i64 -1
+  %l = load i32, ptr %g
+  %v = insertelement <4 x i32> zeroinitializer, i32 %l, i32 0
+  ret <4 x i32> %v
+}
+
+define <2 x i64> @loadv2i64_noffset(ptr %p) {
+; CHECK-LABEL: loadv2i64_noffset:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldur d0, [x0, #-1]
+; CHECK-NEXT:    ret
+  %g = getelementptr inbounds i8, ptr %p, i64 -1
+  %l = load i64, ptr %g
+  %v = insertelement <2 x i64> zeroinitializer, i64 %l, i32 0
+  ret <2 x i64> %v
+}
+
+
+define <4 x half> @loadv4f16_noffset(ptr %p) {
+; CHECK-LABEL: loadv4f16_noffset:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldur h0, [x0, #-1]
+; CHECK-NEXT:    ret
+  %g = getelementptr inbounds i8, ptr %p, i64 -1
+  %l = load half, ptr %g
+  %v = insertelement <4 x half> zeroinitializer, half %l, i32 0
+  ret <4 x half> %v
+}
+
+define <8 x half> @loadv8f16_noffset(ptr %p) {
+; CHECK-LABEL: loadv8f16_noffset:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldur h0, [x0, #-1]
+; CHECK-NEXT:    ret
+  %g = getelementptr inbounds i8, ptr %p, i64 -1
+  %l = load half, ptr %g
+  %v = insertelement <8 x half> zeroinitializer, half %l, i32 0
+  ret <8 x half> %v
+}
+
+define <4 x bfloat> @loadv4bf16_noffset(ptr %p) {
+; CHECK-LABEL: loadv4bf16_noffset:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldur h0, [x0, #-1]
+; CHECK-NEXT:    ret
+  %g = getelementptr inbounds i8, ptr %p, i64 -1
+  %l = load bfloat, ptr %g
+  %v = insertelement <4 x bfloat> zeroinitializer, bfloat %l, i32 0
+  ret <4 x bfloat> %v
+}
+
+define <8 x bfloat> @loadv8bf16_noffset(ptr %p) {
+; CHECK-LABEL: loadv8bf16_noffset:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldur h0, [x0, #-1]
+; CHECK-NEXT:    ret
+  %g = getelementptr inbounds i8, ptr %p, i64 -1
+  %l = load bfloat, ptr %g
+  %v = insertelement <8 x bfloat> zeroinitializer, bfloat %l, i32 0
+  ret <8 x bfloat> %v
+}
+
+define <2 x float> @loadv2f32_noffset(ptr %p) {
+; CHECK-LABEL: loadv2f32_noffset:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldur s0, [x0, #-1]
+; CHECK-NEXT:    ret
+  %g = getelementptr inbounds i8, ptr %p, i64 -1
+  %l = load float, ptr %g
+  %v = insertelement <2 x float> zeroinitializer, float %l, i32 0
+  ret <2 x float> %v
+}
+
+define <4 x float> @loadv4f32_noffset(ptr %p) {
+; CHECK-LABEL: loadv4f32_noffset:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldur s0, [x0, #-1]
+; CHECK-NEXT:    ret
+  %g = getelementptr inbounds i8, ptr %p, i64 -1
+  %l = load float, ptr %g
+  %v = insertelement <4 x float> zeroinitializer, float %l, i32 0
+  ret <4 x float> %v
+}
+
+define <2 x double> @loadv2f64_noffset(ptr %p) {
+; CHECK-LABEL: loadv2f64_noffset:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldur d0, [x0, #-1]
+; CHECK-NEXT:    ret
+  %g = getelementptr inbounds i8, ptr %p, i64 -1
+  %l = load double, ptr %g
+  %v = insertelement <2 x double> zeroinitializer, double %l, i32 0
+  ret <2 x double> %v
+}
+
+
 define void @predictor_4x4_neon(ptr nocapture noundef writeonly %0, i64 noundef %1, ptr nocapture noundef readonly %2, ptr nocapture noundef readnone %3) {
 ; CHECK-LABEL: predictor_4x4_neon:
 ; CHECK:       // %bb.0:
