@@ -166,11 +166,6 @@ fli.s ft1, 3.276800e+04
 # CHECK-NO-EXT: error: instruction requires the following: 'Zfa' (Additional Floating-Point){{$}}
 fli.s ft1, 6.553600e+04
 
-# CHECK-ASM-AND-OBJ: fli.s ft1, 6.553600e+04
-# CHECK-ASM: encoding: [0xd3,0x80,0x1e,0xf0]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zfa' (Additional Floating-Point){{$}}
-fli.s ft1, 29
-
 # CHECK-ASM-AND-OBJ: fli.s ft1, inf
 # CHECK-ASM: encoding: [0xd3,0x00,0x1f,0xf0]
 # CHECK-NO-EXT: error: instruction requires the following: 'Zfa' (Additional Floating-Point){{$}}
@@ -225,11 +220,6 @@ fli.d ft1, 1.250000e-01
 # CHECK-ASM: encoding: [0xd3,0x00,0x14,0xf2]
 # CHECK-NO-EXT: error: instruction requires the following: 'Zfa' (Additional Floating-Point){{$}}
 fli.d ft1, 2.500000e-01
-
-# CHECK-ASM-AND-OBJ: fli.d ft1, 2.500000e-01
-# CHECK-ASM: encoding: [0xd3,0x00,0x14,0xf2]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zfa' (Additional Floating-Point){{$}}
-fli.d ft1, 8
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 3.125000e-01
 # CHECK-ASM: encoding: [0xd3,0x80,0x14,0xf2]
@@ -335,11 +325,6 @@ fli.d ft1, 3.276800e+04
 # CHECK-ASM: encoding: [0xd3,0x80,0x1e,0xf2]
 # CHECK-NO-EXT: error: instruction requires the following: 'Zfa' (Additional Floating-Point){{$}}
 fli.d ft1, 6.553600e+04
-
-# CHECK-ASM-AND-OBJ: fli.d ft1, 6.553600e+04
-# CHECK-ASM: encoding: [0xd3,0x80,0x1e,0xf2]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zfa' (Additional Floating-Point){{$}}
-fli.d ft1, 29
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, inf
 # CHECK-ASM: encoding: [0xd3,0x00,0x1f,0xf2]
@@ -500,11 +485,6 @@ fli.h ft1, 3.276800e+04
 # CHECK-ASM: encoding: [0xd3,0x80,0x1e,0xf4]
 # CHECK-NO-EXT: error: instruction requires the following: 'Zfa' (Additional Floating-Point){{$}}
 fli.h ft1, 6.553600e+04
-
-# CHECK-ASM-AND-OBJ: fli.h ft1, 6.553600e+04
-# CHECK-ASM: encoding: [0xd3,0x80,0x1e,0xf4]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zfa' (Additional Floating-Point){{$}}
-fli.h ft1, 29
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, inf
 # CHECK-ASM: encoding: [0xd3,0x00,0x1f,0xf4]
