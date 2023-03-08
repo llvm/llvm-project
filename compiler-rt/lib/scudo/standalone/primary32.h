@@ -788,8 +788,12 @@ private:
         continue;
 
       const uptr GroupBase = decompactGroupBase(BG.CompactPtrGroupBase);
-      uptr AllocatedGroupSize =
-          GroupBase == CurGroupBase ? Sci->CurrentRegionAllocated : GroupSize;
+      // The `GroupSize` may not be divided by `BlockSize`, which means there is
+      // an unused space at the end of Region. Exclude that space to avoid
+      // unused page map entry.
+      uptr AllocatedGroupSize = GroupBase == CurGroupBase
+                                    ? Sci->CurrentRegionAllocated
+                                    : roundDownSlow(GroupSize, BlockSize);
       if (AllocatedGroupSize == 0)
         continue;
 
