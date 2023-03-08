@@ -46,6 +46,10 @@ LIBC_INLINE int set_except(int) { return 0; }
 
 LIBC_INLINE int raise_except(int) { return 0; }
 
+LIBC_INLINE int enable_except(int) { return 0; }
+
+LIBC_INLINE int disable_except(int) { return 0; }
+
 LIBC_INLINE int get_round() { return FE_TONEAREST; }
 
 LIBC_INLINE int set_round(int) { return 0; }
