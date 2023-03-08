@@ -98,8 +98,10 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
   if (frame) {
     auto valobj_sp = frame->FindVariable(ConstString(expr));
     if (valobj_sp && valobj_sp->GetError().Success()) {
-      if (!eval_options.GetSuppressPersistentResult())
-        valobj_sp = valobj_sp->Persist();
+      if (!eval_options.GetSuppressPersistentResult()) {
+        if (auto persisted_valobj = valobj_sp->Persist())
+          valobj_sp = persisted_valobj;
+      }
 
       if (verbosity == eDWIMPrintVerbosityFull) {
         StringRef flags;
