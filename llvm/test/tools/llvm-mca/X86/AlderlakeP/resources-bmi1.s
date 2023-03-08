@@ -49,26 +49,26 @@ tzcnt       (%rax), %rcx
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      1     0.33                        andnl	%eax, %ebx, %ecx
-# CHECK-NEXT:  2      6     0.33    *                   andnl	(%rax), %ebx, %ecx
-# CHECK-NEXT:  1      1     0.33                        andnq	%rax, %rbx, %rcx
-# CHECK-NEXT:  2      6     0.33    *                   andnq	(%rax), %rbx, %rcx
-# CHECK-NEXT:  2      2     1.00                        bextrl	%eax, %ebx, %ecx
-# CHECK-NEXT:  3      7     1.00    *                   bextrl	%eax, (%rbx), %ecx
-# CHECK-NEXT:  2      2     1.00                        bextrq	%rax, %rbx, %rcx
-# CHECK-NEXT:  3      7     1.00    *                   bextrq	%rax, (%rbx), %rcx
-# CHECK-NEXT:  1      1     0.33                        blsil	%eax, %ecx
-# CHECK-NEXT:  2      6     0.33    *                   blsil	(%rax), %ecx
-# CHECK-NEXT:  1      1     0.33                        blsiq	%rax, %rcx
-# CHECK-NEXT:  2      6     0.33    *                   blsiq	(%rax), %rcx
-# CHECK-NEXT:  1      1     0.33                        blsmskl	%eax, %ecx
-# CHECK-NEXT:  2      6     0.33    *                   blsmskl	(%rax), %ecx
-# CHECK-NEXT:  1      1     0.33                        blsmskq	%rax, %rcx
-# CHECK-NEXT:  2      6     0.33    *                   blsmskq	(%rax), %rcx
-# CHECK-NEXT:  1      1     0.33                        blsrl	%eax, %ecx
-# CHECK-NEXT:  2      6     0.33    *                   blsrl	(%rax), %ecx
-# CHECK-NEXT:  1      1     0.33                        blsrq	%rax, %rcx
-# CHECK-NEXT:  2      6     0.33    *                   blsrq	(%rax), %rcx
+# CHECK-NEXT:  1      2     0.33                        andnl	%eax, %ebx, %ecx
+# CHECK-NEXT:  2      7     0.33    *                   andnl	(%rax), %ebx, %ecx
+# CHECK-NEXT:  1      2     0.33                        andnq	%rax, %rbx, %rcx
+# CHECK-NEXT:  2      7     0.33    *                   andnq	(%rax), %rbx, %rcx
+# CHECK-NEXT:  2      6     1.00                        bextrl	%eax, %ebx, %ecx
+# CHECK-NEXT:  3      11    1.00    *                   bextrl	%eax, (%rbx), %ecx
+# CHECK-NEXT:  2      6     1.00                        bextrq	%rax, %rbx, %rcx
+# CHECK-NEXT:  3      11    1.00    *                   bextrq	%rax, (%rbx), %rcx
+# CHECK-NEXT:  1      2     0.33                        blsil	%eax, %ecx
+# CHECK-NEXT:  2      7     0.33    *                   blsil	(%rax), %ecx
+# CHECK-NEXT:  1      2     0.33                        blsiq	%rax, %rcx
+# CHECK-NEXT:  2      7     0.33    *                   blsiq	(%rax), %rcx
+# CHECK-NEXT:  1      2     0.33                        blsmskl	%eax, %ecx
+# CHECK-NEXT:  2      7     0.33    *                   blsmskl	(%rax), %ecx
+# CHECK-NEXT:  1      2     0.33                        blsmskq	%rax, %rcx
+# CHECK-NEXT:  2      7     0.33    *                   blsmskq	(%rax), %rcx
+# CHECK-NEXT:  1      2     0.33                        blsrl	%eax, %ecx
+# CHECK-NEXT:  2      7     0.33    *                   blsrl	(%rax), %ecx
+# CHECK-NEXT:  1      2     0.33                        blsrq	%rax, %rcx
+# CHECK-NEXT:  2      7     0.33    *                   blsrq	(%rax), %rcx
 # CHECK-NEXT:  1      3     1.00                        tzcntw	%ax, %cx
 # CHECK-NEXT:  2      8     1.00    *                   tzcntw	(%rax), %cx
 # CHECK-NEXT:  1      3     1.00                        tzcntl	%eax, %ecx
