@@ -159,6 +159,9 @@ Improvements to Clang's diagnostics
   class if that class was first introduced with a forward declaration.
 - Diagnostic notes and fix-its are now generated for ``ifunc``/``alias`` attributes
   which point to functions whose names are mangled.
+- Diagnostics relating to macros on the command line of a preprocessed assembly
+  file are now reported as coming from the file ``<command line>`` instead of
+  ``<built-in>``.
 
 Bug Fixes in This Version
 -------------------------
