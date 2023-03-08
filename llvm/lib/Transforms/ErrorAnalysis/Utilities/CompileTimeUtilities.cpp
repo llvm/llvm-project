@@ -1,5 +1,5 @@
 #include <string>
-#include "llvm/Transforms/ErrorAnalysis/Utilities/Utilities.h"
+#include "llvm/Transforms/ErrorAnalysis/Utilities/CompileTimeUtilities.h"
 #include "llvm/Transforms/ErrorAnalysis/AtomicCondition/AmplificationFactor.h"
 #include "llvm/Transforms/ErrorAnalysis/Utilities/FunctionMatchers.h"
 #include "llvm/IR/IRBuilder.h"

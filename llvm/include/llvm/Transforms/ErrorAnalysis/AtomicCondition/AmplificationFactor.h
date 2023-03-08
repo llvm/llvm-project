@@ -6,6 +6,7 @@
 #define LLVM_AMPLIFICATIONFACTOR_H
 
 #include "AtomicCondition.h"
+#include "../Utilities/RunTimeUtilities.h"
 #include "stdlib.h"
 
 /*----------------------------------------------------------------------------*/
@@ -80,7 +81,7 @@ struct AFProduct {
 
 typedef struct AFProduct AFProduct;
 
-void fAFCreateAFComponent(AFProduct **AddressToAllocateAt,
+void fAFCreateAFProduct(AFProduct **AddressToAllocateAt,
                           int ItemId,
                           int LengthOfLists) {
   if((*AddressToAllocateAt = (AFProduct *)malloc(sizeof(AFProduct))) == NULL) {
@@ -95,28 +96,40 @@ void fAFCreateAFComponent(AFProduct **AddressToAllocateAt,
     printf("#fAF: Not enough memory for Factors!");
     exit(EXIT_FAILURE);
   }
-  (*AddressToAllocateAt)->Factors[0] = NULL;
+  // Initialize all Factors to NULL
+  for (int I = 0; I < LengthOfLists; ++I) {
+    (*AddressToAllocateAt)->Factors[I] = NULL;
+  }
 
   if(((*AddressToAllocateAt)->ProductTails = (AFProduct **)malloc(sizeof(AFProduct *) *
                                                            LengthOfLists)) == NULL) {
     printf("#fAF: Not enough memory for ProductTails!");
     exit(EXIT_FAILURE);
   }
-  (*AddressToAllocateAt)->ProductTails[0] = NULL;
+  // Initialize all ProductTails to NULL
+  for (int I = 0; I < LengthOfLists; ++I) {
+    (*AddressToAllocateAt)->ProductTails[I] = NULL;
+  }
 
   if(((*AddressToAllocateAt)->Inputs = (char **)malloc(sizeof(char *) *
                                                                    LengthOfLists)) == NULL) {
     printf("#fAF: Not enough memory for Inputs!");
     exit(EXIT_FAILURE);
   }
-  (*AddressToAllocateAt)->Inputs[0] = NULL;
+  // Initialize all Inputs to NULL
+  for (int I = 0; I < LengthOfLists; ++I) {
+    (*AddressToAllocateAt)->Inputs[I] = NULL;
+  }
 
   if(((*AddressToAllocateAt)->AFs = (double *)malloc(sizeof(double *) *
                                                         LengthOfLists)) == NULL) {
     printf("#fAF: Not enough memory for AFs!");
     exit(EXIT_FAILURE);
   }
-  (*AddressToAllocateAt)->AFs[0] = 0.0;
+  // Initialize all AFs to 0.0
+  for (int I = 0; I < LengthOfLists; ++I) {
+    (*AddressToAllocateAt)->AFs[I] = 0.0;
+  }
 
   (*AddressToAllocateAt)->Height = 1;
   (*AddressToAllocateAt)->NumberOfInputs = 0;
@@ -162,9 +175,16 @@ void fAFPrintAFProduct(AFProduct *ProductObject) {
   }
   printf("],\n");
 
-  printf("\t\t\t\"AFs\": [%0.15lf", ProductObject->AFs[0]);
+
+  if(isinf(ProductObject->AFs[0]))
+    printf("\t\t\t\"AFs\": [ \"inf\"");
+  else
+    printf("\t\t\t\"AFs\": [%0.15lf", ProductObject->AFs[0]);
   for (int I = 1; I < ProductObject->NumberOfInputs; ++I) {
-    printf(",%0.15lf", ProductObject->AFs[I]);
+    if(isinf(ProductObject->AFs[I]))
+      printf(", \"inf\"");
+    else
+      printf(",%0.15lf", ProductObject->AFs[I]);
   }
   printf("],\n");
 }
@@ -208,6 +228,8 @@ void fAFStoreAFProducts(FILE *FP, AFProduct **ObjectPointerList, uint64_t NumObj
             "\t\t\t\"ProductItemId\": %d,\n",
             ObjectPointerList[J]->ItemId);
 
+//    int M = findMaxIndex(ObjectPointerList[J]->AFs, ObjectPointerList[J]->NumberOfInputs);
+
     fprintf(FP, "\t\t\t\"ACItemIds\": [%d", ObjectPointerList[J]->Factors[0]->ItemId);
     for (int I = 1; I < ObjectPointerList[J]->NumberOfInputs; ++I) {
       fprintf(FP, ",%d", ObjectPointerList[J]->Factors[I]->ItemId);
@@ -236,9 +258,15 @@ void fAFStoreAFProducts(FILE *FP, AFProduct **ObjectPointerList, uint64_t NumObj
     }
     fprintf(FP, "],\n");
 
-    fprintf(FP, "\t\t\t\"AFs\": [%0.15lf", ObjectPointerList[J]->AFs[0]);
+    if(isinf(ObjectPointerList[J]->AFs[0]))
+      fprintf(FP,"\t\t\t\"AFs\": [ \"inf\"");
+    else
+      fprintf(FP,"\t\t\t\"AFs\": [%0.15lf", ObjectPointerList[J]->AFs[0]);
     for (int I = 1; I < ObjectPointerList[J]->NumberOfInputs; ++I) {
-      fprintf(FP, ",%0.15lf", ObjectPointerList[J]->AFs[I]);
+      if(isinf(ObjectPointerList[J]->AFs[I]))
+        fprintf(FP, ", \"inf\"");
+      else
+        fprintf(FP, ",%0.15lf", ObjectPointerList[J]->AFs[I]);
     }
     fprintf(FP, "],\n");
 
@@ -354,9 +382,15 @@ void fAFStoreAFItems(FILE *FP, AFItem **ObjectPointerList, uint64_t NumObjects) 
       }
       fprintf(FP, "],\n");
 
-      fprintf(FP, "\t\t\t\"AFs\": [%0.15lf", ObjectPointerList[K]->Components[J]->AFs[0]);
+      if(isinf(ObjectPointerList[K]->Components[J]->AFs[0]))
+        fprintf(FP,"\t\t\t\"AFs\": [ \"inf\"");
+      else
+        fprintf(FP,"\t\t\t\"AFs\": [%0.15lf", ObjectPointerList[K]->Components[J]->AFs[0]);
       for (int I = 1; I < ObjectPointerList[K]->Components[J]->NumberOfInputs; ++I) {
-        fprintf(FP, ",%0.15lf", ObjectPointerList[K]->Components[J]->AFs[I]);
+        if(isinf(ObjectPointerList[K]->Components[J]->AFs[I]))
+          fprintf(FP, ", \"inf\"");
+        else
+          fprintf(FP, ",%0.15lf", ObjectPointerList[K]->Components[J]->AFs[I]);
       }
       fprintf(FP, "],\n");
 
@@ -500,7 +534,10 @@ void fAFStoreInFile(AFItem **ObjectToStore) {
 
     fprintf(FP, "\t\t\t\"AFs\": [%0.15lf", (*ObjectToStore)->Components[J]->AFs[0]);
     for (int I = 1; I < (*ObjectToStore)->Components[J]->NumberOfInputs; ++I) {
-      fprintf(FP, ",%0.15lf", (*ObjectToStore)->Components[J]->AFs[I]);
+      if(isinf((*ObjectToStore)->Components[J]->AFs[I]))
+        fprintf(FP, ", \"inf\"");
+      else
+        fprintf(FP, ",%0.15lf", (*ObjectToStore)->Components[J]->AFs[I]);
     }
     fprintf(FP, "],\n");
 
@@ -589,43 +626,31 @@ void fAFInitialize() {
 /* Analysis Functions                                                         */
 /*----------------------------------------------------------------------------*/
 
-// Inputs: AC Record corresponding to the current instruction and the AF Records
-//  corresponding the operands.
+// Inputs: AC Record corresponding to the current instruction,
+// AF Records corresponding the operands, Number of Operands, Instruction Id,
+// Number of times the instruction is to be executed.
 // Note: The current instruction information can be found in the AC record.
-// Steps:
-//  Create a new AF record and initialize data members and allocate memory for
-//    AFComponents array.
-//  Loop over the AF Records corresponding to each operand and for each operand:
-//    If AFRecord is not NULL:
-//      Loop over the AFProduct for this AF Record and for each Component
-//        Create a new AFProduct and copy the corresponding AFProduct from the
-//        AFItem for that operand and also the ACItem and set the AF.
-//        Add this new AFProduct to the new AFItem
-//    Else:
-//      Create a new AFProduct and copy the ACItem and set the AF.
-//      Add this new AFProduct to the new AFItem
-//  Add AFItem to the AFTable
-//  Return the AFItem
+// Return the AFItem
 #if MEMORY_OPT
 AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
                       int NumOperands,
                       int InstructionId,
                       int NumFunctionEvaluations) {
-#if FAF_DEBUG>=2
-  printf("\nCreating AFItem\n");
-  printf("\tACId: %d\n", (*AC)->ItemId);
-  printf("\tInstructionId: %d\n", InstructionId);
-  printf("\tExecutionId: %d\n", ExecutionCounter);
-  printf("\tNumber of Operands: %d\n", NumOperands);
-  printf("\tRootNode: %s\n", (*AC)->ResultVar);
-  printf("\tComponents:\n");
-  for (int I = 0; I < NumOperands; ++I) {
-    if(AFItemWRTOperands[I] != NULL)
-      printf("\t\tAFId %d #Components: %d\n",
-             (*AFItemWRTOperands[I])->ItemId,
-             (*AFItemWRTOperands[I])->NumAFComponents);
+#if FAF_DEBUG >= 2
+  printf("\n\tCreating AFItem\n");
+  printf("\t\tACId: %d\n", (*AC)->ItemId);
+  printf("\t\tInstructionId: %d\n", InstructionId);
+  printf("\t\tExecutionId: %d\n", ExecutionCounter);
+  printf("\t\tNumber of Operands: %d\n", NumOperands);
+  printf("\t\tRootNode: %s\n", (*AC)->ResultVar);
+  printf("\t\tComponents:\n");
+  for (int OperandIndex = 0; OperandIndex < NumOperands; ++OperandIndex) {
+    if (AFItemWRTOperands[OperandIndex] != NULL)
+      printf("\t\t\tAFId %d #Components: %d\n",
+             (*AFItemWRTOperands[OperandIndex])->ItemId,
+             (*AFItemWRTOperands[OperandIndex])->NumAFComponents);
     else
-      printf("\t\tAFId %d #Components: 0\n", -1);
+      printf("\t\t\tAFId %d #Components: 0\n", -1);
   }
 
   printf("\n");
@@ -635,18 +660,15 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
   //  AFComponents array.
   AFItem *UpdatingAFItem = NULL;
 
-  fAFCreateAFItem(&UpdatingAFItem,
-                  AFItemCounter,
-                  InstructionId,
-                  ExecutionCounter,
-                  0);
+  fAFCreateAFItem(&UpdatingAFItem, AFItemCounter, InstructionId,
+                  ExecutionCounter, 0);
   AFItemCounter++;
 
   int TotalAFComponents = 0;
-  TotalAFComponents+=NumOperands;
+  TotalAFComponents += NumOperands;
 
-#if FAF_DEBUG>=2
-  printf("\tTotalAFComponents: %d\n\n", TotalAFComponents);
+#if FAF_DEBUG >= 3
+  printf("\t\tTotalAFComponents: %d\n\n", TotalAFComponents);
 #endif
 
   if ((UpdatingAFItem->Components = (AFProduct **)malloc(
@@ -657,55 +679,80 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
 
   // Generating AFProduct Data
   // Loop over the AF Records corresponding to each operand and for each operand:
-  for (int I = 0; I < NumOperands; ++I) {
+  for (int OperandIndex = 0; OperandIndex < NumOperands; ++OperandIndex) {
+#if FAF_DEBUG >= 3
+    printf("\t\tOperandIndex: %d\n", OperandIndex);
+#endif
+
     // Create a new AFProduct and copy the ACItem and set the AF.
     AFProduct *NewAFComponent = NULL;
 
-    if(AFItemWRTOperands[I] != NULL) {
-      assert((*AFItemWRTOperands[I])->Components[0] != NULL);
-      double GreatestAF = (*AFItemWRTOperands[I])->Components[0]->AFs[0] *
-                          (*AC)->ACWRTOperands[I];
+    if (AFItemWRTOperands[OperandIndex] != NULL) {
+      assert((*AFItemWRTOperands[OperandIndex])->Components[0] != NULL);
+      double GreatestAF =
+          (*AFItemWRTOperands[OperandIndex])->Components[0]->AFs[0] *
+          (*AC)->ACWRTOperands[OperandIndex];
       int CandidateIndex = 0;
 
       // Loop through all Components of this child. Do not skip 0th component to
       //  optimize getting the greatest AF or you will miss some components.
-      for (int J = 0; J < (*AFItemWRTOperands[I])->NumAFComponents; ++J) {
+      for (int AFItemsChildComponentIndex = 0;
+           AFItemsChildComponentIndex <
+           (*AFItemWRTOperands[OperandIndex])->NumAFComponents;
+           ++AFItemsChildComponentIndex) {
         // Get the greatest AF and index of the corresponding component.
-        if (GreatestAF < (*AFItemWRTOperands[I])->Components[J]->AFs[0] *
-                             (*AC)->ACWRTOperands[I]) {
-          GreatestAF = (*AFItemWRTOperands[I])->Components[J]->AFs[0] *
-                       (*AC)->ACWRTOperands[I];
-          CandidateIndex = J;
+        if (GreatestAF < (*AFItemWRTOperands[OperandIndex])
+                                 ->Components[AFItemsChildComponentIndex]
+                                 ->AFs[0] *
+                             (*AC)->ACWRTOperands[OperandIndex]) {
+          GreatestAF = (*AFItemWRTOperands[OperandIndex])
+                           ->Components[AFItemsChildComponentIndex]
+                           ->AFs[0] *
+                       (*AC)->ACWRTOperands[OperandIndex];
+          CandidateIndex = AFItemsChildComponentIndex;
         }
       }
 
       // Create a new AFProduct and copy the corresponding AFProduct from
       // the AFItem for that operand and also the ACItem and set the AF.
-      fAFCreateAFComponent(&NewAFComponent,
-                           AFComponentCounter,
-                           1);
-      NewAFComponent->Inputs[0] = (*AFItemWRTOperands[I])->Components[CandidateIndex]->Inputs[0];
+      fAFCreateAFProduct(&NewAFComponent, AFComponentCounter, 1);
+      NewAFComponent->Inputs[0] = (*AFItemWRTOperands[OperandIndex])
+                                      ->Components[CandidateIndex]
+                                      ->Inputs[0];
       NewAFComponent->Factors[0] = *AC;
-      NewAFComponent->ProductTails[0] = (*AFItemWRTOperands[I])->Components[CandidateIndex];
-      NewAFComponent->AFs[0] = (*AFItemWRTOperands[I])->Components[CandidateIndex]->AFs[0] *
-                               (*AC)->ACWRTOperands[I];
-      NewAFComponent->Height = (*AFItemWRTOperands[I])->Components[CandidateIndex]->Height+1;
+      NewAFComponent->ProductTails[0] =
+          (*AFItemWRTOperands[OperandIndex])->Components[CandidateIndex];
+      NewAFComponent->AFs[0] = (*AFItemWRTOperands[OperandIndex])
+                                   ->Components[CandidateIndex]
+                                   ->AFs[0] *
+                               (*AC)->ACWRTOperands[OperandIndex];
+      NewAFComponent->Height = (*AFItemWRTOperands[OperandIndex])
+                                   ->Components[CandidateIndex]
+                                   ->Height +
+                               1;
       NewAFComponent->NumberOfInputs++;
       AFComponentCounter++;
     } else {
-      fAFCreateAFComponent(&NewAFComponent,
-                           AFComponentCounter,
-                           NumFunctionEvaluations);
-      NewAFComponent->Inputs[NewAFComponent->NumberOfInputs] = (*AC)->OperandNames[I];
+      fAFCreateAFProduct(&NewAFComponent, AFComponentCounter,
+                         NumFunctionEvaluations);
+      NewAFComponent->Inputs[NewAFComponent->NumberOfInputs] =
+          (*AC)->OperandNames[OperandIndex];
       NewAFComponent->Factors[NewAFComponent->NumberOfInputs] = *AC;
-      NewAFComponent->AFs[NewAFComponent->NumberOfInputs] = (*AC)->ACWRTOperands[I];
+      NewAFComponent->AFs[NewAFComponent->NumberOfInputs] =
+          (*AC)->ACWRTOperands[OperandIndex];
       NewAFComponent->NumberOfInputs++;
       AFComponentCounter++;
     }
 
     // Add this new AFProduct to the new AFItem
-    UpdatingAFItem->Components[UpdatingAFItem->NumAFComponents] = NewAFComponent;
+    UpdatingAFItem->Components[UpdatingAFItem->NumAFComponents] =
+        NewAFComponent;
     UpdatingAFItem->NumAFComponents++;
+
+#if FAF_DEBUG >= 3
+    fAFPrintAFProduct(NewAFComponent);
+    printf("\n");
+#endif
   }
 
   //  Add AFItem to the AFTable
@@ -713,36 +760,37 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
   AFs->ListLength++;
   ExecutionCounter++;
 
-#if FAF_DEBUG>=2
-  printf("\nAFItem Created\n");
-  printf("\tAFId: %d\n", AFs->AFItems[AFs->ListLength-1]->ItemId);
-  printf("\tNumComponents: %d\n", AFs->AFItems[AFs->ListLength-1]->NumAFComponents);
+#if FAF_DEBUG >= 2
+  printf("\n\tAFItem Created\n");
+  printf("\t\tAFId: %d\n", AFs->AFItems[AFs->ListLength - 1]->ItemId);
+  printf("\t\tNumComponents: %d\n",
+         AFs->AFItems[AFs->ListLength - 1]->NumAFComponents);
   printf("\n");
 #endif
 
   //  Return the AFItem
-  return &AFs->AFItems[AFs->ListLength-1];
+  return &AFs->AFItems[AFs->ListLength - 1];
 }
 #else
 AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
                       int NumOperands,
                       int InstructionId,
                       int NumFunctionEvaluations) {
-#if FAF_DEBUG>=2
-  printf("\nCreating AFItem\n");
-  printf("\tACId: %d\n", (*AC)->ItemId);
-  printf("\tInstructionId: %d\n", InstructionId);
-  printf("\tExecutionId: %d\n", ExecutionCounter);
-  printf("\tNumber of Operands: %d\n", NumOperands);
-  printf("\tRootNode: %s\n", (*AC)->ResultVar);
-  printf("\tComponents:\n");
-  for (int I = 0; I < NumOperands; ++I) {
-    if(AFItemWRTOperands[I] != NULL)
-      printf("\t\tAFId %d #Components: %d\n",
-             (*AFItemWRTOperands[I])->ItemId,
-             (*AFItemWRTOperands[I])->NumAFComponents);
+#if FAF_DEBUG >= 2
+  printf("\n\tCreating AFItem\n");
+  printf("\t\tACId: %d\n", (*AC)->ItemId);
+  printf("\t\tInstructionId: %d\n", InstructionId);
+  printf("\t\tExecutionId: %d\n", ExecutionCounter);
+  printf("\t\tNumber of Operands: %d\n", NumOperands);
+  printf("\t\tRootNode: %s\n", (*AC)->ResultVar);
+  printf("\t\tComponents:\n");
+  for (int OperandIndex = 0; OperandIndex < NumOperands; ++OperandIndex) {
+    if (AFItemWRTOperands[OperandIndex] != NULL)
+      printf("\t\t\tAFId %d #Components: %d\n",
+             (*AFItemWRTOperands[OperandIndex])->ItemId,
+             (*AFItemWRTOperands[OperandIndex])->NumAFComponents);
     else
-      printf("\t\tAFId %d #Components: 0\n", -1);
+      printf("\t\t\tAFId %d #Components: 0\n", -1);
   }
 
   printf("\n");
@@ -751,18 +799,16 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
   // This determines whether we create a new AFItem or update an existing one.
   int NewAFItem = 0;
 
-  // Find an existing AFItem with the same InstructionId and ExecutionId or create
-  // a new one.
+  // Find an existing AFItem with the same InstructionId and ExecutionId or create a new one.
   AFItem *UpdatingAFItem = NULL;
-  UpdatingAFItem = fAFGetAFItemFromList(AFs->AFItems,
-                                        AFs->ListLength,
-                                        InstructionId,
-                                        ExecutionCounter);
-  if(UpdatingAFItem == NULL) {
+  UpdatingAFItem = fAFGetAFItemFromList(AFs->AFItems, AFs->ListLength,
+                                        InstructionId, ExecutionCounter);
+  if (UpdatingAFItem == NULL) {
     printf("Creating a new AFItem\n");
     NewAFItem = 1;
 
-    fAFCreateAFItem(&UpdatingAFItem, AFItemCounter, InstructionId, ExecutionCounter, 0);
+    fAFCreateAFItem(&UpdatingAFItem, AFItemCounter, InstructionId,
+                    ExecutionCounter, 0);
     AFItemCounter++;
   }
 
@@ -770,16 +816,16 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
 
   // Computing the number of Components/AFPaths that contribute to the Relative
   // Error of this instruction.
-  for (int I = 0; I < NumOperands; ++I) {
-    if (AFItemWRTOperands[I] != NULL)
-      TotalAFComponents+=(*AFItemWRTOperands[I])->NumAFComponents;
+  for (int OperandIndex = 0; OperandIndex < NumOperands; ++OperandIndex) {
+    if (AFItemWRTOperands[OperandIndex] != NULL)
+      TotalAFComponents += (*AFItemWRTOperands[OperandIndex])->NumAFComponents;
     else
       TotalAFComponents++;
   }
 
-#if FAF_DEBUG>=2
-  printf("\tTotalAFComponents: %d\n\n", TotalAFComponents);
-  printf("\tNewAFItem: %d\n", NewAFItem);
+#if FAF_DEBUG >= 3
+  printf("\t\tTotalAFComponents: %d", TotalAFComponents);
+  printf("\t\tNewAFItem: %d\n\n", NewAFItem);
 #endif
 
   if (NewAFItem) {
@@ -790,76 +836,104 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
     }
   }
 
-  int K = 0;
+  int AFItemComponentIndex = 0;
 
   // Generating AFProduct Data
   // Loop over the AF Records corresponding to each operand and for each operand:
-  for (int I = 0; I < NumOperands; ++I) {
-    if(AFItemWRTOperands[I] != NULL) {
+  for (int OperandIndex = 0; OperandIndex < NumOperands; ++OperandIndex) {
+#if FAF_DEBUG >= 3
+    printf("\t\tOperandIndex: %d\n", OperandIndex);
+#endif
+    if (AFItemWRTOperands[OperandIndex] != NULL) {
 
       // Loop through all Components of this child.
-      for (int J = 0; J < (*AFItemWRTOperands[I])->NumAFComponents; ++J) {
+      for (int AFItemsChildComponentIndex = 0;
+           AFItemsChildComponentIndex <
+           (*AFItemWRTOperands[OperandIndex])->NumAFComponents;
+           ++AFItemsChildComponentIndex) {
         // Create a new AFProduct and copy the corresponding AFProduct from
         // the AFItem for that operand and also the ACItem and set the AF.
         AFProduct *UpdatingAFComponent = NULL;
 
         if (NewAFItem) {
-          fAFCreateAFComponent(&UpdatingAFComponent, AFComponentCounter,
-                               NumFunctionEvaluations);
+          fAFCreateAFProduct(&UpdatingAFComponent, AFComponentCounter,
+                             NumFunctionEvaluations);
           AFComponentCounter++;
-        }
-        else
-          UpdatingAFComponent = UpdatingAFItem->Components[K];
+        } else
+          UpdatingAFComponent =
+              UpdatingAFItem->Components[AFItemComponentIndex];
 
-        UpdatingAFComponent->Inputs = (*AFItemWRTOperands[I])->Components[J]->Inputs;
+        UpdatingAFComponent->Inputs =
+            (*AFItemWRTOperands[OperandIndex])
+                ->Components[AFItemsChildComponentIndex]
+                ->Inputs;
         UpdatingAFComponent->Factors[UpdatingAFComponent->NumberOfInputs] = *AC;
-        UpdatingAFComponent->ProductTails[UpdatingAFComponent->NumberOfInputs] = (*AFItemWRTOperands[I])->Components[J];
+        UpdatingAFComponent->ProductTails[UpdatingAFComponent->NumberOfInputs] =
+            (*AFItemWRTOperands[OperandIndex])
+                ->Components[AFItemsChildComponentIndex];
         UpdatingAFComponent->AFs[UpdatingAFComponent->NumberOfInputs] =
-            (*AFItemWRTOperands[I])->Components[J]->AFs[(*AFItemWRTOperands[I])->Components[J]->NumberOfInputs] *
-            (*AC)->ACWRTOperands[I];
-        UpdatingAFComponent->Height = (*AFItemWRTOperands[I])->Components[J]->Height+1;
+            (*AFItemWRTOperands[OperandIndex])
+                ->Components[AFItemsChildComponentIndex]
+                ->AFs[(*AFItemWRTOperands[OperandIndex])
+                          ->Components[AFItemsChildComponentIndex]
+                          ->NumberOfInputs] *
+            (*AC)->ACWRTOperands[OperandIndex];
+        UpdatingAFComponent->Height =
+            (*AFItemWRTOperands[OperandIndex])
+                ->Components[AFItemsChildComponentIndex]
+                ->Height +
+            1;
         UpdatingAFComponent->NumberOfInputs++;
 
-        if(NewAFItem) {
+        if (NewAFItem) {
           // Add this new AFProduct to the new AFItem
           UpdatingAFItem->Components[UpdatingAFItem->NumAFComponents] =
               UpdatingAFComponent;
           UpdatingAFItem->NumAFComponents++;
         }
 
-//        printf("J: %d\n", J);
-//        fAFPrintAFProduct(UpdatingAFComponent);
-//        printf("\n");
+#if FAF_DEBUG >= 3
+        printf("\t\tAFItem's Child's Component Number: %d\n", AFItemsChildComponentIndex);
+        printf("\t\tAFItem's Component Number: %d\n", AFItemComponentIndex);
+        fAFPrintAFProduct(UpdatingAFComponent);
+        printf("\n");
+#endif
 
-        K++;
+        AFItemComponentIndex++;
       }
     } else {
       // Create a new AFProduct and copy the ACItem and set the AF.
       AFProduct *UpdatingAFComponent = NULL;
 
       if (NewAFItem) {
-        fAFCreateAFComponent(&UpdatingAFComponent, AFComponentCounter,
-                             NumFunctionEvaluations);
+        fAFCreateAFProduct(&UpdatingAFComponent, AFComponentCounter,
+                           NumFunctionEvaluations);
         AFComponentCounter++;
-      }
-      else
-        UpdatingAFComponent = UpdatingAFItem->Components[K];
-      UpdatingAFComponent->Inputs[UpdatingAFComponent->NumberOfInputs] = (*AC)->OperandNames[I];
+      } else
+        UpdatingAFComponent = UpdatingAFItem->Components[AFItemComponentIndex];
+      UpdatingAFComponent->Inputs[UpdatingAFComponent->NumberOfInputs] =
+          (*AC)->OperandNames[OperandIndex];
       UpdatingAFComponent->Factors[UpdatingAFComponent->NumberOfInputs] = *AC;
-      UpdatingAFComponent->ProductTails[UpdatingAFComponent->NumberOfInputs] = NULL;
-      UpdatingAFComponent->AFs[UpdatingAFComponent->NumberOfInputs] = (*AC)->ACWRTOperands[I];
+      UpdatingAFComponent->ProductTails[UpdatingAFComponent->NumberOfInputs] =
+          NULL;
+      UpdatingAFComponent->AFs[UpdatingAFComponent->NumberOfInputs] =
+          (*AC)->ACWRTOperands[OperandIndex];
       UpdatingAFComponent->NumberOfInputs++;
 
-      if(NewAFItem) {
+      if (NewAFItem) {
         // Add this new AFProduct to the new AFItem
         UpdatingAFItem->Components[UpdatingAFItem->NumAFComponents] =
             UpdatingAFComponent;
         UpdatingAFItem->NumAFComponents++;
       }
-//      fAFPrintAFProduct(UpdatingAFComponent);
-//      printf("\n");
 
-      K++;
+#if FAF_DEBUG >= 3
+      printf("\t\tAFItem's Component Number: %d\n", AFItemComponentIndex);
+      fAFPrintAFProduct(UpdatingAFComponent);
+      printf("\n");
+#endif
+
+      AFItemComponentIndex++;
     }
   }
 
@@ -868,25 +942,26 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
   AFs->ListLength++;
   ExecutionCounter++;
 
-#if FAF_DEBUG>=2
-  printf("\nAFItem Created\n");
-  printf("\tAFId: %d\n", AFs->AFItems[AFs->ListLength-1]->ItemId);
-  printf("\tNumComponents: %d\n", AFs->AFItems[AFs->ListLength-1]->NumAFComponents);
+#if FAF_DEBUG >= 2
+  printf("\n\tAFItem Created\n");
+  printf("\t\tAFId: %d\n", AFs->AFItems[AFs->ListLength - 1]->ItemId);
+  printf("\t\tNumComponents: %d\n",
+         AFs->AFItems[AFs->ListLength - 1]->NumAFComponents);
   printf("\n");
 #endif
 
   //  Return the AFItem
-  return &AFs->AFItems[AFs->ListLength-1];
+  return &AFs->AFItems[AFs->ListLength - 1];
 }
 #endif
 
 // This function prints the ItemId and LineNumber corresponding to the ACItems
-// in the flattenedProductTail of an AFProduct
-void fAFPrintAFProductSources(AFProduct *AFProduct) {
-  printf("(%d, %d)", AFProduct->Factors[0]->ItemId, AFProduct->Factors[0]->LineNumber);
+// in the flattenedProductTail at index M of an AFProduct
+void fAFPrintAFProductSources(AFProduct *AFProduct, int M) {
+  printf("(%d, %d)", AFProduct->Factors[M]->ItemId, AFProduct->Factors[M]->LineNumber);
   if(AFProduct->ProductTails[0] != NULL) {
     printf(", ");
-    fAFPrintAFProductSources(AFProduct->ProductTails[0]);
+    fAFPrintAFProductSources(AFProduct->ProductTails[M], M);
   }
 }
 
@@ -901,14 +976,16 @@ void fAFPrintTopAmplificationPaths() {
   printf("\n");
   printf("The top Amplification Paths are:\n");
   for (int I = 0; I < min(5, AFs->AFItems[AFs->ListLength-1]->NumAFComponents); ++I) {
-    printf("AF: %0.15lf (ULPErr: %lf; %lf digits) of Node with AFId:%d WRT Input:%s through path: [",
-           AFs->AFItems[AFs->ListLength-1]->Components[I]->AFs[0],
-           ceil(log2(AFs->AFItems[AFs->ListLength-1]->Components[I]->AFs[0])),
-           ceil(log10(log2(AFs->AFItems[AFs->ListLength-1]->Components[I]->AFs[0]))),
-           AFs->AFItems[AFs->ListLength-1]->Components[I]->ItemId,
-           AFs->AFItems[AFs->ListLength-1]->Components[I]->Inputs[0]);
+    int M = findMaxIndex(Paths[I]->AFs, Paths[I]->NumberOfInputs);
 
-    fAFPrintAFProductSources(AFs->AFItems[AFs->ListLength-1]->Components[I]);
+    printf("AF: %0.15lf (ULPErr: %lf; %lf digits) of Node with AFId:%d WRT Input:%s through path: [",
+           AFs->AFItems[AFs->ListLength-1]->Components[I]->AFs[M],
+           ceil(log2(AFs->AFItems[AFs->ListLength-1]->Components[I]->AFs[M])),
+           ceil(log10(log2(AFs->AFItems[AFs->ListLength-1]->Components[I]->AFs[M]))),
+           AFs->AFItems[AFs->ListLength-1]->Components[I]->ItemId,
+           AFs->AFItems[AFs->ListLength-1]->Components[I]->Inputs[M]);
+
+    fAFPrintAFProductSources(AFs->AFItems[AFs->ListLength-1]->Components[I], M);
     printf("]\n");
   }
   printf("\n");
@@ -930,14 +1007,16 @@ void fAFPrintTopFromAllAmplificationPaths() {
   printf("\n");
   printf("The top Amplification Paths are:\n");
   for (int I = 0; I < min(10, AFComponentCounter); ++I) {
-    printf("AF: %0.15lf (ULPErr: %lf; %lf digits) of Node with AFId:%d WRT Input:%s through path: [",
-           Paths[I]->AFs[0],
-           ceil(log2(Paths[I]->AFs[0])),
-           ceil(log10(log2(Paths[I]->AFs[0]))),
-           Paths[I]->ItemId,
-           Paths[I]->Inputs[0]);
+    int M = findMaxIndex(Paths[I]->AFs, Paths[I]->NumberOfInputs);
 
-    fAFPrintAFProductSources(Paths[I]);
+    printf("AF: %0.15lf (ULPErr: %lf; %lf digits) of Node with AFId:%d WRT Input:%s through path: [",
+           Paths[I]->AFs[M],
+           ceil(log2(Paths[I]->AFs[M])),
+           ceil(log10(log2(Paths[I]->AFs[M]))),
+           Paths[I]->ItemId,
+           Paths[I]->Inputs[M]);
+
+    fAFPrintAFProductSources(Paths[I], M);
     printf("]\n");
   }
   printf("\n");

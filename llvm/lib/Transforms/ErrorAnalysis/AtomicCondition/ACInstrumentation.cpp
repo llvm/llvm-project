@@ -1,6 +1,6 @@
 #include <string>
 #include "llvm/Transforms/ErrorAnalysis/AtomicCondition/ACInstrumentation.h"
-#include "llvm/Transforms/ErrorAnalysis/Utilities/Utilities.h"
+#include "llvm/Transforms/ErrorAnalysis/Utilities/CompileTimeUtilities.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/DebugInfo.h"
 

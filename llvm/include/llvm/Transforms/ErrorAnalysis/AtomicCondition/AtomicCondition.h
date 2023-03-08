@@ -796,17 +796,17 @@ ACItem **fACComputeAC(const char *ResultVar,
                       int LineNumber) {
   int NumOperands = fACFuncHasXNumOperands(F);
 
-#if FAF_DEBUG>=2
-  printf("Creating ACItem Record:\n");
-  printf("\tFunction       : %d\n", F);
-  printf("\tResultVar      : %s\n", ResultVar);
+#if FAF_DEBUG >= 2
+  printf("\tCreating ACItem Record:\n");
+  printf("\t\tFunction       : %d\n", F);
+  printf("\t\tResultVar      : %s\n", ResultVar);
   for (int I = 0; I < NumOperands; ++I) {
-    printf("\tOperand %d Name : %s\n"
-           "\tOperand %d Value: %0.15lf\n",
+    printf("\t\tOperand %d Name : %s\n"
+           "\t\tOperand %d Value: %0.15lf\n",
            I, OperandNames[I], I, OperandValues[I]);
   }
-  printf("\tFileName       : %s\n", FileName);
-  printf("\tLine Number    : %d\n", LineNumber);
+  printf("\t\tFileName       : %s\n", FileName);
+  printf("\t\tLine Number    : %d\n", LineNumber);
   printf("\n");
 #endif
 
@@ -995,31 +995,31 @@ ACItem **fACComputeAC(const char *ResultVar,
   fACSetACItem(ACs, &Item);
 
 
-#if FAF_DEBUG>=2
+#if FAF_DEBUG >= 2
   NumOperands = ACs->ACItems[Item.ItemId]->NumOperands;
 
-  printf("ACItem Created:\n");
-  printf("\tItem Id        : %d\n", ACs->ACItems[Item.ItemId]->ItemId);
-  printf("\tFunction       : %d\n", ACs->ACItems[Item.ItemId]->F);
-  printf("\tResultVar      : %s\n", ACs->ACItems[Item.ItemId]->ResultVar);
-  printf("\tHP Result      : %0.15lf\n", ACs->ACItems[Item.ItemId]->HPResult);
+  printf("\tACItem Created:\n");
+  printf("\t\tItem Id        : %d\n", ACs->ACItems[Item.ItemId]->ItemId);
+  printf("\t\tFunction       : %d\n", ACs->ACItems[Item.ItemId]->F);
+  printf("\t\tResultVar      : %s\n", ACs->ACItems[Item.ItemId]->ResultVar);
+  printf("\t\tHP Result      : %0.15lf\n", ACs->ACItems[Item.ItemId]->HPResult);
   for (int I = 0; I < NumOperands; ++I) {
-    printf("\tOperand %d Name : %s\n"
-           "\tOperand %d Value: %lf\n",
+    printf("\t\tOperand %d Name : %s\n"
+           "\t\tOperand %d Value: %lf\n",
            I, ACs->ACItems[Item.ItemId]->OperandNames[I], I,
            ACs->ACItems[Item.ItemId]->OperandValues[I]);
   }
   for (int I = 0; I < NumOperands; ++I) {
-    printf("\tACWRTOperand %d : %0.15lf\n", I,
+    printf("\t\tACWRTOperand %d : %0.15lf\n", I,
            ACs->ACItems[Item.ItemId]->ACWRTOperands[I]);
   }
   for (int I = 0; I < NumOperands; ++I) {
-    printf("\tACStringWRTOp %d: %s\n", I,
+    printf("\t\tACStringWRTOp %d: %s\n", I,
            ACs->ACItems[Item.ItemId]->ACStrings[I]);
   }
 
-  printf("\tFile Name      : %s\n", ACs->ACItems[Item.ItemId]->FileName);
-  printf("\tLine Number    : %d\n\n", ACs->ACItems[Item.ItemId]->LineNumber);
+  printf("\t\tFile Name      : %s\n", ACs->ACItems[Item.ItemId]->FileName);
+  printf("\t\tLine Number    : %d\n\n", ACs->ACItems[Item.ItemId]->LineNumber);
 #endif
 
   return &ACs->ACItems[Item.ItemId];
