@@ -494,8 +494,12 @@ public:
   bool isLoadFPImm() const {
     if (isImm())
       return isUImm5();
-    return Kind == KindTy::FPImmediate &&
-           RISCVLoadFPImm::getLoadFP32Imm(APInt(32, getFPConst())) != -1;
+    if (Kind != KindTy::FPImmediate)
+      return false;
+    int Idx = RISCVLoadFPImm::getLoadFP32Imm(APInt(32, getFPConst()));
+    // Don't allow decimal version of the minimum value. It is a different value
+    // for each supported data type.
+    return Idx >= 0 && Idx != 1;
   }
 
   bool isImmXLenLI() const {
