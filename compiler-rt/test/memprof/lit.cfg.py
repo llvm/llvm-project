@@ -65,9 +65,6 @@ clang_memprof_cxxflags = clang_memprof_static_cxxflags + memprof_dynamic_flags
 def build_invocation(compile_flags):
   return ' ' + ' '.join([config.clang] + compile_flags) + ' '
 
-# We need llvm-profdata for tests with raw binary profiles.
-config.substitutions.append( ("%llvm_profdata ", config.llvm_tools_dir+'/llvm-profdata ') )
-
 config.substitutions.append( ("%clang ", build_invocation(target_cflags)) )
 config.substitutions.append( ("%clangxx ", build_invocation(target_cxxflags)) )
 config.substitutions.append( ("%clang_memprof ", build_invocation(clang_memprof_cflags)) )
