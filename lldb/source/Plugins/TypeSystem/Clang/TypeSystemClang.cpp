@@ -4985,6 +4985,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
 
     // ARM -- Scalable Vector Extension
     case clang::BuiltinType::SveBool:
+    case clang::BuiltinType::SveCount:
     case clang::BuiltinType::SveInt8:
     case clang::BuiltinType::SveInt8x2:
     case clang::BuiltinType::SveInt8x3:
@@ -5033,7 +5034,6 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::SveFloat64x2:
     case clang::BuiltinType::SveFloat64x3:
     case clang::BuiltinType::SveFloat64x4:
-    case clang::BuiltinType::SveCount:
       break;
 
     // RISC-V V builtin types.
