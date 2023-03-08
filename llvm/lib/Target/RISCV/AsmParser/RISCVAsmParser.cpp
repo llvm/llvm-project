@@ -492,6 +492,8 @@ public:
 
   /// Return true if the operand is a valid fli.s floating-point immediate.
   bool isLoadFPImm() const {
+    if (isImm())
+      return isUImm5();
     return Kind == KindTy::FPImmediate &&
            RISCVLoadFPImm::getLoadFP32Imm(APInt(32, getFPConst())) != -1;
   }
@@ -973,6 +975,11 @@ public:
 
   void addFPImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
+    if (isImm()) {
+      addExpr(Inst, getImm(), isRV64Imm());
+      return;
+    }
+
     int Imm = RISCVLoadFPImm::getLoadFP32Imm(APInt(32, getFPConst()));
     Inst.addOperand(MCOperand::createImm(Imm));
   }
@@ -1567,16 +1574,17 @@ OperandMatchResultTy RISCVAsmParser::parseFPImm(OperandVector &Operands) {
   if (getTok().is(AsmToken::Identifier)) {
     StringRef Identifier = getTok().getIdentifier();
     if (Identifier.compare_insensitive("inf") == 0) {
-      APFloat SpecialVal = APFloat::getInf(APFloat::IEEEsingle());
-      Operands.push_back(RISCVOperand::createFPImm(
-          SpecialVal.bitcastToAPInt().getZExtValue(), S));
+      Operands.push_back(
+          RISCVOperand::createImm(MCConstantExpr::create(30, getContext()), S,
+                                  getTok().getEndLoc(), isRV64()));
     } else if (Identifier.compare_insensitive("nan") == 0) {
-      APFloat SpecialVal = APFloat::getNaN(APFloat::IEEEsingle());
-      Operands.push_back(RISCVOperand::createFPImm(
-          SpecialVal.bitcastToAPInt().getZExtValue(), S));
+      Operands.push_back(
+          RISCVOperand::createImm(MCConstantExpr::create(31, getContext()), S,
+                                  getTok().getEndLoc(), isRV64()));
     } else if (Identifier.compare_insensitive("min") == 0) {
-      unsigned SpecialVal = RISCVLoadFPImm::getFPImm(1);
-      Operands.push_back(RISCVOperand::createFPImm(SpecialVal, S));
+      Operands.push_back(
+          RISCVOperand::createImm(MCConstantExpr::create(1, getContext()), S,
+                                  getTok().getEndLoc(), isRV64()));
     } else {
       TokError("invalid floating point literal");
       return MatchOperand_ParseFail;
@@ -1602,8 +1610,9 @@ OperandMatchResultTy RISCVAsmParser::parseFPImm(OperandVector &Operands) {
       TokError("encoded floating point value out of range");
       return MatchOperand_ParseFail;
     }
-    unsigned F = RISCVLoadFPImm::getFPImm(Tok.getIntVal());
-    Operands.push_back(RISCVOperand::createFPImm(F, S));
+    Operands.push_back(RISCVOperand::createImm(
+        MCConstantExpr::create(Tok.getIntVal(), getContext()), S,
+        Tok.getEndLoc(), isRV64()));
   } else {
     // Parse FP representation.
     APFloat RealVal(APFloat::IEEEsingle());
