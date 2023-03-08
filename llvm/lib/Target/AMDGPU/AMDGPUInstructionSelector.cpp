@@ -4103,6 +4103,9 @@ AMDGPUInstructionSelector::selectScratchSVAddr(MachineOperand &Root) const {
   Register LHS = AddrDef->MI->getOperand(1).getReg();
   auto LHSDef = getDefSrcRegIgnoringCopies(LHS, *MRI);
 
+  if (!isFlatScratchBaseLegal(LHS) || !isFlatScratchBaseLegal(RHS))
+    return std::nullopt;
+
   if (checkFlatScratchSVSSwizzleBug(RHS, LHS, ImmOffset))
     return std::nullopt;
 
