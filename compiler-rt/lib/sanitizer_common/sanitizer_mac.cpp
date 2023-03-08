@@ -989,7 +989,7 @@ static void VerifyInterceptorsWorking() {
   // "wrap_puts" within our own dylib.
   Dl_info info_puts, info_runtime;
   RAW_CHECK(dladdr(dlsym(RTLD_DEFAULT, "puts"), &info_puts));
-  RAW_CHECK(dladdr((void *)__sanitizer_report_error_summary, &info_runtime));
+  RAW_CHECK(dladdr((void *)&VerifyInterceptorsWorking, &info_runtime));
   if (internal_strcmp(info_puts.dli_fname, info_runtime.dli_fname) != 0) {
     Report(
         "ERROR: Interceptors are not working. This may be because %s is "
@@ -1039,7 +1039,7 @@ static void StripEnv() {
     return;
 
   Dl_info info;
-  RAW_CHECK(dladdr((void *)__sanitizer_report_error_summary, &info));
+  RAW_CHECK(dladdr((void *)&StripEnv, &info));
   const char *dylib_name = StripModuleName(info.dli_fname);
   bool lib_is_in_env = internal_strstr(dyld_insert_libraries, dylib_name);
   if (!lib_is_in_env)
