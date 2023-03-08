@@ -71,6 +71,10 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
     return false;
   }
 
+  // If the user has not specified, default to disabling persistent results.
+  if (m_expr_options.suppress_persistent_result == eLazyBoolCalculate)
+    m_expr_options.suppress_persistent_result = eLazyBoolYes;
+
   auto verbosity = GetDebugger().GetDWIMPrintVerbosity();
 
   Target *target_ptr = m_exe_ctx.GetTargetPtr();
