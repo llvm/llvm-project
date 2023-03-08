@@ -201,6 +201,7 @@ template <> struct PythonFormat<short> : PassthroughFormat<short, 'h'> {};
 template <>
 struct PythonFormat<unsigned short> : PassthroughFormat<unsigned short, 'H'> {};
 template <> struct PythonFormat<int> : PassthroughFormat<int, 'i'> {};
+template <> struct PythonFormat<bool> : PassthroughFormat<bool, 'p'> {};
 template <>
 struct PythonFormat<unsigned int> : PassthroughFormat<unsigned int, 'I'> {};
 template <> struct PythonFormat<long> : PassthroughFormat<long, 'l'> {};
