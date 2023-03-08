@@ -77,6 +77,15 @@ define float @loadfpimm9() {
   ret float 255.0
 }
 
+; FIXME: This is the f16 minimum value. It should not be supported for f32.
+define float @loadfpimm10() {
+; CHECK-LABEL: loadfpimm10:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa0, min
+; CHECK-NEXT:    ret
+  ret float 0.00006103515625
+}
+
 declare float @llvm.minimum.f32(float, float)
 
 define float @fminm_s(float %a, float %b) nounwind {
