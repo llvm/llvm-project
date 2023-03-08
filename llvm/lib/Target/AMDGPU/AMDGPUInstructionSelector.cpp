@@ -4010,7 +4010,7 @@ AMDGPUInstructionSelector::selectScratchSAddr(MachineOperand &Root) const {
   // possible.
   std::tie(PtrBase, ConstOffset) = getPtrBaseWithConstantOffset(Addr, *MRI);
 
-  if (ConstOffset != 0 &&
+  if (ConstOffset != 0 && isFlatScratchBaseLegal(PtrBase) &&
       TII.isLegalFLATOffset(ConstOffset, AMDGPUAS::PRIVATE_ADDRESS,
                             SIInstrFlags::FlatScratch)) {
     Addr = PtrBase;
@@ -4231,6 +4231,16 @@ bool AMDGPUInstructionSelector::isDSOffset2Legal(Register Base, int64_t Offset0,
 
   // On Southern Islands instruction with a negative base value and an offset
   // don't seem to work.
+  return KnownBits->signBitIsZero(Base);
+}
+
+bool AMDGPUInstructionSelector::isFlatScratchBaseLegal(
+    Register Base, uint64_t FlatVariant) const {
+  if (FlatVariant != SIInstrFlags::FlatScratch)
+    return true;
+
+  // When value in 32-bit Base can be negative calculate scratch offset using
+  // 32-bit add instruction, otherwise use Base(unsigned) + offset.
   return KnownBits->signBitIsZero(Base);
 }
 
