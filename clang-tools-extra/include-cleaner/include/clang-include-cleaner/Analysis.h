@@ -73,8 +73,6 @@ AnalysisResults analyze(llvm::ArrayRef<Decl *> ASTRoots,
 std::string fixIncludes(const AnalysisResults &Results, llvm::StringRef Code,
                         const format::FormatStyle &IncludeStyle);
 
-std::string spellHeader(const Header &H, HeaderSearch &HS,
-                        const FileEntry *Main);
 } // namespace include_cleaner
 } // namespace clang
 
