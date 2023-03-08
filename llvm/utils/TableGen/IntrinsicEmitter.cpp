@@ -252,6 +252,9 @@ void IntrinsicEmitter::EmitIntrinsicToOverloadTable(
   OS << "#endif\n\n";
 }
 
+#define OLD 1
+#if OLD
+
 // NOTE: This must be kept in synch with the copy in lib/IR/Function.cpp!
 enum IIT_Info {
   // Common values should be encoded with 0-15.
@@ -528,10 +531,13 @@ static void UpdateArgCodes(Record *R, std::vector<unsigned char> &ArgCodes,
 #pragma optimize("", on)
 #endif
 
+#endif // OLD
+
 /// ComputeFixedEncoding - If we can encode the type signature for this
 /// intrinsic into 32 bits, return it.  If not, return ~0U.
 static void ComputeFixedEncoding(const CodeGenIntrinsic &Int,
                                  std::vector<unsigned char> &TypeSig) {
+#if OLD
   std::vector<unsigned char> ArgCodes;
 
   // Add codes for any overloaded result VTs.
@@ -571,6 +577,22 @@ static void ComputeFixedEncoding(const CodeGenIntrinsic &Int,
   for (unsigned i = 0, e = Int.IS.ParamTypeDefs.size(); i != e; ++i)
     EncodeFixedType(Int.IS.ParamTypeDefs[i], ArgCodes, NextArgCode, TypeSig,
                     ArgMapping);
+#endif // OLD
+
+  if (auto *R = Int.TheDef->getValue("TypeSig")) {
+#if OLD
+    auto OrigTS = std::move(TypeSig);
+    TypeSig.clear();
+#endif // OLD
+    for (auto &a : cast<ListInit>(R->getValue())->getValues()) {
+      for (auto &b : cast<ListInit>(a)->getValues())
+        TypeSig.push_back(cast<IntInit>(b)->getValue());
+    }
+
+#if OLD
+    assert(TypeSig == OrigTS);
+#endif
+  }
 }
 
 static void printIITEntry(raw_ostream &OS, unsigned char X) {
