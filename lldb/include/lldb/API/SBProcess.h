@@ -187,6 +187,14 @@ public:
   ///   The stop event corresponding to stop ID.
   lldb::SBEvent GetStopEventForStopID(uint32_t stop_id);
 
+  /// If the process is a scripted process, changes its private state.
+  /// No-op otherwise.
+  ///
+  /// \param [in] new_state
+  ///   The new private state that the scripted process should be set to.
+  ///
+  void ForceScriptedState(StateType new_state);
+
   size_t ReadMemory(addr_t addr, void *buf, size_t size, lldb::SBError &error);
 
   size_t WriteMemory(addr_t addr, const void *buf, size_t size,
