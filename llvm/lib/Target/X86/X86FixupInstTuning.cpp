@@ -57,6 +57,7 @@ public:
 private:
   const X86InstrInfo *TII = nullptr;
   const X86Subtarget *ST = nullptr;
+  const MCSchedModel *SM = nullptr;
 };
 } // end anonymous namespace
 
@@ -68,6 +69,14 @@ FunctionPass *llvm::createX86FixupInstTuning() {
   return new X86FixupInstTuningPass();
 }
 
+template <typename T>
+static std::optional<bool> CmpOptionals(T NewVal, T CurVal) {
+  if (NewVal.has_value() && CurVal.has_value() && *NewVal != *CurVal)
+    return *NewVal < *CurVal;
+
+  return std::nullopt;
+}
+
 bool X86FixupInstTuningPass::processInstruction(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator &I) {
@@ -75,10 +84,54 @@ bool X86FixupInstTuningPass::processInstruction(
   unsigned Opc = MI.getOpcode();
   unsigned NumOperands = MI.getDesc().getNumOperands();
 
+  auto GetInstTput = [&](unsigned Opcode) -> std::optional<double> {
+    // We already checked that SchedModel exists in `NewOpcPreferable`.
+    return MCSchedModel::getReciprocalThroughput(
+        *ST, *(SM->getSchedClassDesc(TII->get(Opcode).getSchedClass())));
+  };
+
+  auto GetInstLat = [&](unsigned Opcode) -> std::optional<double> {
+    // We already checked that SchedModel exists in `NewOpcPreferable`.
+    return MCSchedModel::computeInstrLatency(
+        *ST, *(SM->getSchedClassDesc(TII->get(Opcode).getSchedClass())));
+  };
+
+  auto GetInstSize = [&](unsigned Opcode) -> std::optional<unsigned> {
+    if (unsigned Size = TII->get(Opcode).getSize())
+      return Size;
+    // Zero size means we where unable to compute it.
+    return std::nullopt;
+  };
+
+  auto NewOpcPreferable = [&](unsigned NewOpc,
+                              bool ReplaceInTie = true) -> bool {
+    std::optional<bool> Res;
+    if (SM->hasInstrSchedModel()) {
+      // Compare tput -> lat -> code size.
+      Res = CmpOptionals(GetInstTput(NewOpc), GetInstTput(Opc));
+      if (Res.has_value())
+        return *Res;
+
+      Res = CmpOptionals(GetInstLat(NewOpc), GetInstLat(Opc));
+      if (Res.has_value())
+        return *Res;
+    }
+
+    Res = CmpOptionals(GetInstSize(Opc), GetInstSize(NewOpc));
+    if (Res.has_value())
+      return *Res;
+
+    // We either have either were unable to get tput/lat/codesize or all values
+    // were equal. Return specified option for a tie.
+    return ReplaceInTie;
+  };
+
   // `vpermilps r, i` -> `vshufps r, r, i`
-  // `vshufps` is always as fast or faster than `vpermilps` and takes 1 less
-  // byte of code size.
+  // `vshufps` is always as fast or faster than
+  // `vpermilps` and takes 1 less byte of code size.
   auto ProcessVPERMILPSri = [&](unsigned NewOpc) -> bool {
+    if (!NewOpcPreferable(NewOpc))
+      return false;
     unsigned MaskImm = MI.getOperand(NumOperands - 1).getImm();
     MI.removeOperand(NumOperands - 1);
     MI.addOperand(MI.getOperand(1));
@@ -93,10 +146,32 @@ bool X86FixupInstTuningPass::processInstruction(
   auto ProcessVPERMILPSmi = [&](unsigned NewOpc) -> bool {
     // TODO: Might be work adding bypass delay if -Os/-Oz is enabled as
     // `vpshufd` saves a byte of code size.
-    if (!ST->hasNoDomainDelayShuffle())
+    if (!ST->hasNoDomainDelayShuffle() &&
+        !NewOpcPreferable(NewOpc, /*ReplaceInTie*/ false))
       return false;
     MI.setDesc(TII->get(NewOpc));
     return true;
+  };
+
+  // `vunpcklpd/vmovlhps r, r` -> `vshufps r, r, 0x44`
+  // `vunpckhpd/vmovlhps r, r` -> `vshufps r, r, 0xee`
+  // iff `vshufps` is faster than `vunpck{l|h}pd`. Otherwise stick with
+  // `vunpck{l|h}pd` as it uses less code size.
+  // TODO: Look into using `{VP}UNPCK{L|H}QDQ{...}` instead of `{V}SHUF{...}PS`
+  // as the replacement. `{VP}UNPCK{L|H}QDQ{...}` has no codesize cost.
+  auto ProcessUNPCKPD = [&](unsigned NewOpc, unsigned MaskImm) -> bool {
+    if (!NewOpcPreferable(NewOpc, /*ReplaceInTie*/ false))
+      return false;
+
+    MI.setDesc(TII->get(NewOpc));
+    MI.addOperand(MachineOperand::CreateImm(MaskImm));
+    return true;
+  };
+  auto ProcessUNPCKLPDrr = [&](unsigned NewOpc) -> bool {
+    return ProcessUNPCKPD(NewOpc, 0x44);
+  };
+  auto ProcessUNPCKHPDrr = [&](unsigned NewOpc) -> bool {
+    return ProcessUNPCKPD(NewOpc, 0xee);
   };
 
   // TODO: Add masked predicate execution variants.
@@ -123,6 +198,41 @@ bool X86FixupInstTuningPass::processInstruction(
     return ProcessVPERMILPSmi(X86::VPSHUFDZ256mi);
   case X86::VPERMILPSZmi:
     return ProcessVPERMILPSmi(X86::VPSHUFDZmi);
+
+    // TODO: {V}UNPCK{L|H}PD{...} is probably safe to transform to
+    // `{VP}UNPCK{L|H}QDQ{...}` which gets the same perf benefit as
+    // `{V}SHUF{...}PS` but 1) without increasing code size and 2) can also
+    // handle the `mr` case. ICL doesn't have a domain penalty for replacing
+    // float unpck -> int unpck, but at this time, I haven't verified the set of
+    // processors where its safe.
+  case X86::MOVLHPSrr:
+  case X86::UNPCKLPDrr:
+    return ProcessUNPCKLPDrr(X86::SHUFPSrri);
+  case X86::VMOVLHPSrr:
+  case X86::VUNPCKLPDrr:
+    return ProcessUNPCKLPDrr(X86::VSHUFPSrri);
+  case X86::VUNPCKLPDYrr:
+    return ProcessUNPCKLPDrr(X86::VSHUFPSYrri);
+    // VMOVLHPS is always 128 bits.
+  case X86::VMOVLHPSZrr:
+  case X86::VUNPCKLPDZ128rr:
+    return ProcessUNPCKLPDrr(X86::VSHUFPSZ128rri);
+  case X86::VUNPCKLPDZ256rr:
+    return ProcessUNPCKLPDrr(X86::VSHUFPSZ256rri);
+  case X86::VUNPCKLPDZrr:
+    return ProcessUNPCKLPDrr(X86::VSHUFPSZrri);
+  case X86::UNPCKHPDrr:
+    return ProcessUNPCKHPDrr(X86::SHUFPSrri);
+  case X86::VUNPCKHPDrr:
+    return ProcessUNPCKHPDrr(X86::VSHUFPSrri);
+  case X86::VUNPCKHPDYrr:
+    return ProcessUNPCKHPDrr(X86::VSHUFPSYrri);
+  case X86::VUNPCKHPDZ128rr:
+    return ProcessUNPCKHPDrr(X86::VSHUFPSZ128rri);
+  case X86::VUNPCKHPDZ256rr:
+    return ProcessUNPCKHPDrr(X86::VSHUFPSZ256rri);
+  case X86::VUNPCKHPDZrr:
+    return ProcessUNPCKHPDrr(X86::VSHUFPSZrri);
   default:
     return false;
   }
@@ -133,6 +243,8 @@ bool X86FixupInstTuningPass::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   ST = &MF.getSubtarget<X86Subtarget>();
   TII = ST->getInstrInfo();
+  SM = &ST->getSchedModel();
+
   for (MachineBasicBlock &MBB : MF) {
     for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
       if (processInstruction(MF, MBB, I)) {
