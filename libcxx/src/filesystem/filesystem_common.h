@@ -44,9 +44,11 @@
 #endif
 #endif
 
+// TODO: Check whether these functions actually need internal linkage, or if they can be made normal header functions
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wunused-function")
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wunused-function")
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wunused-template")
 
 #if defined(_LIBCPP_WIN32API)
 #  define PATHSTR(x) (L##x)

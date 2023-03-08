@@ -42,6 +42,7 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include <optional>
 
 #define DEBUG_TYPE "flang-lower-intrinsic"
@@ -179,6 +180,7 @@ struct IntrinsicLibrary {
                                   llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAnint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genAny(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genAtand(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue
       genCommandArgumentCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genAssociated(mlir::Type,
@@ -489,6 +491,7 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genAssociated,
      {{{"pointer", asInquired}, {"target", asInquired}}},
      /*isElemental=*/false},
+    {"atand", &I::genAtand},
     {"bessel_jn",
      &I::genBesselJn,
      {{{"n1", asValue}, {"n2", asValue}, {"x", asValue}}},
@@ -2331,6 +2334,20 @@ IntrinsicLibrary::genAny(mlir::Type resultType,
   // Call runtime. The runtime is allocating the result.
   fir::runtime::genAnyDescriptor(builder, loc, resultIrBox, mask, dim);
   return readAndAddCleanUp(resultMutableBox, resultType, "ANY");
+}
+
+mlir::Value IntrinsicLibrary::genAtand(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+  mlir::Value atan = getRuntimeCallGenerator("atan", ftype)(builder, loc, args);
+  llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
+  mlir::Value dfactor = builder.createRealConstant(
+      loc, mlir::FloatType::getF64(context), llvm::APFloat(180.0) / pi);
+  mlir::Value factor = builder.createConvert(loc, resultType, dfactor);
+  return builder.create<mlir::arith::MulFOp>(loc, atan, factor);
 }
 
 // ASSOCIATED

@@ -359,9 +359,9 @@ define void @pred_cfg1(i32 %k, i32 %j) {
 ; CHECK-NEXT:   pred.store.continue:
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): next.0.0
+; CHECK-NEXT: Successor(s): next.0.1
 ; CHECK-EMPTY:
-; CHECK-NEXT: next.0.0:
+; CHECK-NEXT: next.0.1:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + vp<[[CAN_IV]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
@@ -456,9 +456,9 @@ define void @pred_cfg2(i32 %k, i32 %j) {
 ; CHECK-NEXT:   pred.store.continue:
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): then.1.0
+; CHECK-NEXT: Successor(s): then.1.1
 ; CHECK-EMPTY:
-; CHECK-NEXT: then.1.0:
+; CHECK-NEXT: then.1.1:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + vp<[[CAN_IV]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
@@ -561,9 +561,9 @@ define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK-NEXT:   pred.store.continue:
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): then.1.1
+; CHECK-NEXT: Successor(s): then.1.2
 ; CHECK-EMPTY:
-; CHECK-NEXT: then.1.1:
+; CHECK-NEXT: then.1.2:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + vp<[[CAN_IV]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
@@ -664,9 +664,9 @@ define void @merge_3_replicate_region(i32 %k, i32 %j) {
 ; CHECK-NEXT:   pred.store.continue:
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): then.0.0
+; CHECK-NEXT: Successor(s): then.0.4
 ; CHECK-EMPTY:
-; CHECK-NEXT: then.0.0:
+; CHECK-NEXT: then.0.4:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + vp<[[CAN_IV]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors

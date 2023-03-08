@@ -245,17 +245,13 @@ public:
   ///     represented by this symbol context object, nullptr otherwise.
   Block *GetFunctionBlock();
 
-  /// If this symbol context represents a function that is a method, return
-  /// true and provide information about the method.
+  /// Determines the name of the instance variable for the this decl context.
   ///
-  /// \param[out] language_object_name
-  ///     If \b true is returned, the name of the artificial variable
-  ///     for the language ("this" for C++, "self" for ObjC).
+  /// For C++ the name is "this", for Objective-C the name is "self".
   ///
   /// \return
-  ///     \b True if this symbol context represents a function that
-  ///     is a method of a class, \b false otherwise.
-  bool GetFunctionMethodInfo(ConstString &language_object_name);
+  ///     Returns a string for the name of the instance variable.
+  ConstString GetInstanceVariableName();
 
   /// Sorts the types in TypeMap according to SymbolContext to TypeList
   ///
