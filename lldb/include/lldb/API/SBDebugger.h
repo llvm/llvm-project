@@ -316,6 +316,9 @@ public:
 
   void SetLoggingCallback(lldb::LogOutputCallback log_callback, void *baton);
 
+  void SetDestroyCallback(lldb::SBDebuggerDestroyCallback destroy_callback,
+                          void *baton);
+
   // DEPRECATED
 #ifndef SWIG
   void DispatchInput(void *baton, const void *data, size_t data_len);

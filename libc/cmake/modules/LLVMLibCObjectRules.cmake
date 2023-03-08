@@ -198,17 +198,38 @@ endfunction()
 #       <target_name>
 #       HDRS <list of header files>
 #       SRCS <list of source files>
-#       DEPENDS <list of dependencies>
+#       [ALIAS] <If this object library is an alias for another object library.>
+#       DEPENDS <list of dependencies; Should be a single item for ALIAS libraries>
 #       COMPILE_OPTIONS <optional list of special compile options for this target>
 #       FLAGS <optional list of flags>
 function(create_object_library fq_target_name)
   cmake_parse_arguments(
     "ADD_OBJECT"
-    "NO_GPU_BUNDLE" # No optional arguments
+    "ALIAS;NO_GPU_BUNDLE" # optional arguments
     "CXX_STANDARD" # Single value arguments
     "SRCS;HDRS;COMPILE_OPTIONS;DEPENDS;FLAGS" # Multivalue arguments
     ${ARGN}
   )
+
+  get_fq_deps_list(fq_deps_list ${ADD_OBJECT_DEPENDS})
+
+  if(ADD_OBJECT_ALIAS)
+    if(ADD_OBJECT_SRCS OR ADD_OBJECT_HDRS)
+      message(FATAL_ERROR
+              "${fq_target_name}: object library alias cannot have SRCS and/or HDRS.")
+    endif()
+    list(LENGTH fq_deps_list depends_size)
+    if(NOT ${depends_size} EQUAL 1)
+      message(FATAL_ERROR
+              "${fq_targe_name}: object library alias should have exactly one DEPENDS.")
+    endif()
+    add_library(
+      ${fq_target_name}
+      ALIAS
+      ${fq_deps_list}
+    )
+    return()
+  endif()
 
   if(NOT ADD_OBJECT_SRCS)
     message(FATAL_ERROR "'add_object_library' rule requires SRCS to be specified.")
@@ -221,7 +242,6 @@ function(create_object_library fq_target_name)
     set(internal_target_name ${fq_target_name})
   endif()
 
-  get_fq_deps_list(fq_deps_list ${ADD_OBJECT_DEPENDS})
   _get_common_compile_options(
     compile_options
     "${ADD_OBJECT_FLAGS}"

@@ -238,10 +238,12 @@ public:
     template <__span_compatible_iterator<element_type> _It, __span_compatible_sentinel_for<_It> _End>
     _LIBCPP_INLINE_VISIBILITY
     constexpr explicit span(_It __first, _End __last) : __data_{_VSTD::to_address(__first)} {
-      (void)__last;
-      _LIBCPP_ASSERT((__last - __first >= 0), "invalid range in span's constructor (iterator, sentinel)");
-      _LIBCPP_ASSERT(__last - __first == _Extent,
-                     "invalid range in span's constructor (iterator, sentinel): last - first != extent");
+      // [span.cons]/10
+      // Throws: When and what last - first throws.
+      [[maybe_unused]] auto __dist = __last - __first;
+      _LIBCPP_ASSERT(__dist >= 0, "invalid range in span's constructor (iterator, sentinel)");
+      _LIBCPP_ASSERT(
+          __dist == _Extent, "invalid range in span's constructor (iterator, sentinel): last - first != extent");
     }
 
     _LIBCPP_INLINE_VISIBILITY constexpr span(type_identity_t<element_type> (&__arr)[_Extent]) noexcept : __data_{__arr} {}

@@ -152,12 +152,14 @@ LLVM_LIBC_FUNCTION(float, log10f, (float x)) {
   if (LIBC_UNLIKELY(x_u < FPBits::MIN_NORMAL || x_u > FPBits::MAX_NORMAL)) {
     if (xbits.is_zero()) {
       // Return -inf and raise FE_DIVBYZERO
-      fputil::raise_except(FE_DIVBYZERO);
+      fputil::set_errno_if_required(ERANGE);
+      fputil::raise_except_if_required(FE_DIVBYZERO);
       return static_cast<float>(FPBits::neg_inf());
     }
     if (xbits.get_sign() && !xbits.is_nan()) {
       // Return NaN and raise FE_INVALID
-      fputil::raise_except(FE_INVALID);
+      fputil::set_errno_if_required(EDOM);
+      fputil::raise_except_if_required(FE_INVALID);
       return FPBits::build_quiet_nan(0);
     }
     if (xbits.is_inf_or_nan()) {

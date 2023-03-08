@@ -74,19 +74,19 @@ SparseTensorStorageBase::SparseTensorStorageBase( // NOLINT
 MLIR_SPARSETENSOR_FOREVERY_V(IMPL_NEWENUMERATOR)
 #undef IMPL_NEWENUMERATOR
 
-#define IMPL_GETPOINTERS(PNAME, P)                                             \
-  void SparseTensorStorageBase::getPointers(std::vector<P> **, uint64_t) {     \
-    FATAL_PIV("getPointers" #PNAME);                                           \
+#define IMPL_GETPOSITIONS(PNAME, P)                                            \
+  void SparseTensorStorageBase::getPositions(std::vector<P> **, uint64_t) {    \
+    FATAL_PIV("getPositions" #PNAME);                                          \
   }
-MLIR_SPARSETENSOR_FOREVERY_FIXED_O(IMPL_GETPOINTERS)
-#undef IMPL_GETPOINTERS
+MLIR_SPARSETENSOR_FOREVERY_FIXED_O(IMPL_GETPOSITIONS)
+#undef IMPL_GETPOSITIONS
 
-#define IMPL_GETINDICES(INAME, I)                                              \
-  void SparseTensorStorageBase::getIndices(std::vector<I> **, uint64_t) {      \
-    FATAL_PIV("getIndices" #INAME);                                            \
+#define IMPL_GETCOORDINATES(CNAME, C)                                          \
+  void SparseTensorStorageBase::getCoordinates(std::vector<C> **, uint64_t) {  \
+    FATAL_PIV("getCoordinates" #CNAME);                                        \
   }
-MLIR_SPARSETENSOR_FOREVERY_FIXED_O(IMPL_GETINDICES)
-#undef IMPL_GETINDICES
+MLIR_SPARSETENSOR_FOREVERY_FIXED_O(IMPL_GETCOORDINATES)
+#undef IMPL_GETCOORDINATES
 
 #define IMPL_GETVALUES(VNAME, V)                                               \
   void SparseTensorStorageBase::getValues(std::vector<V> **) {                 \

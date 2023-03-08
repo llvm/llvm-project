@@ -1176,3 +1176,53 @@ define <4 x i32> @neg_scalar_broadcast_two_uses(i32 %a0, <4 x i32> %a1, ptr %a2)
   %4 = and <4 x i32> %3, %a1
   ret <4 x i32> %4
 }
+
+define <2 x i64> @andnp_xx(<2 x i64> %v0) nounwind {
+; SSE-LABEL: andnp_xx:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: andnp_xx:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %x = xor <2 x i64> %v0, <i64 -1, i64 -1>
+  %y = and <2 x i64> %v0, %x
+  ret <2 x i64> %y
+}
+
+define <2 x i64> @andnp_xx_2(<2 x i64> %v0) nounwind {
+; SSE-LABEL: andnp_xx_2:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: andnp_xx_2:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %x = xor <2 x i64> %v0, <i64 -1, i64 -1>
+  %y = and <2 x i64> %x, %v0
+  ret <2 x i64> %y
+}
+
+define i64 @andn_xx(i64 %v0) nounwind {
+; CHECK-LABEL: andn_xx:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
+  %x = xor i64 %v0, -1
+  %y = and i64 %v0, %x
+  ret i64 %y
+}
+
+define i64 @andn_xx_2(i64 %v0) nounwind {
+; CHECK-LABEL: andn_xx_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
+  %x = xor i64 %v0, -1
+  %y = and i64 %x, %v0
+  ret i64 %y
+}

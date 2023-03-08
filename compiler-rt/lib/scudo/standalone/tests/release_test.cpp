@@ -220,12 +220,12 @@ template <class SizeClassMap> void testReleaseFreeMemoryToOS() {
     auto SkipRegion = [](UNUSED scudo::uptr RegionIndex) { return false; };
     auto DecompactPtr = [](scudo::uptr P) { return P; };
     ReleasedPagesRecorder Recorder;
-    scudo::PageReleaseContext Context(BlockSize,
-                                      /*RegionSize=*/MaxBlocks * BlockSize,
-                                      /*NumberOfRegions=*/1U,
+    scudo::PageReleaseContext Context(BlockSize, /*NumberOfRegions=*/1U,
                                       /*ReleaseSize=*/MaxBlocks * BlockSize);
     ASSERT_FALSE(Context.hasBlockMarked());
-    Context.markFreeBlocks(FreeList, DecompactPtr, Recorder.getBase());
+    Context.markFreeBlocksInRegion(FreeList, DecompactPtr, Recorder.getBase(),
+                                   /*RegionIndex=*/0, MaxBlocks * BlockSize,
+                                   /*MayContainLastBlockInRegion=*/true);
     ASSERT_TRUE(Context.hasBlockMarked());
     releaseFreeMemoryToOS(Context, Recorder, SkipRegion);
     scudo::RegionPageMap &PageMap = Context.PageMap;
@@ -328,10 +328,10 @@ template <class SizeClassMap> void testPageMapMarkRange() {
       const scudo::uptr GroupBeg = GroupId * GroupSize;
       const scudo::uptr GroupEnd = GroupBeg + GroupSize;
 
-      scudo::PageReleaseContext Context(BlockSize, RegionSize,
-                                        /*NumberOfRegions=*/1U,
+      scudo::PageReleaseContext Context(BlockSize, /*NumberOfRegions=*/1U,
                                         /*ReleaseSize=*/RegionSize);
-      Context.markRangeAsAllCounted(GroupBeg, GroupEnd, /*Base=*/0U);
+      Context.markRangeAsAllCounted(GroupBeg, GroupEnd, /*Base=*/0U,
+                                    /*RegionIndex=*/0, RegionSize);
 
       scudo::uptr FirstBlock =
           ((GroupBeg + BlockSize - 1) / BlockSize) * BlockSize;
@@ -398,10 +398,10 @@ template <class SizeClassMap> void testPageMapMarkRange() {
     } // Iterate each Group
 
     // Release the entire region. This is to ensure the last page is counted.
-    scudo::PageReleaseContext Context(BlockSize, RegionSize,
-                                      /*NumberOfRegions=*/1U,
+    scudo::PageReleaseContext Context(BlockSize, /*NumberOfRegions=*/1U,
                                       /*ReleaseSize=*/RegionSize);
-    Context.markRangeAsAllCounted(/*From=*/0U, /*To=*/RegionSize, /*Base=*/0);
+    Context.markRangeAsAllCounted(/*From=*/0U, /*To=*/RegionSize, /*Base=*/0,
+                                  /*RegionIndex=*/0, RegionSize);
     for (scudo::uptr Page = 0; Page < RoundedRegionSize / PageSize; ++Page)
       EXPECT_TRUE(Context.PageMap.isAllCounted(/*Region=*/0, Page));
   } // Iterate each size class
@@ -439,7 +439,7 @@ template <class SizeClassMap> void testReleasePartialRegion() {
     }
 
     // This follows the logic how we count the last page. It should be
-    // consistent with how markFreeBlocks() handles the last block.
+    // consistent with how markFreeBlocksInRegion() handles the last block.
     if (RoundedRegionSize % BlockSize != 0)
       ++Pages.back();
 
@@ -477,10 +477,12 @@ template <class SizeClassMap> void testReleasePartialRegion() {
     // Test marking by visiting each block.
     {
       auto DecompactPtr = [](scudo::uptr P) { return P; };
-      scudo::PageReleaseContext Context(
-          BlockSize, RegionSize, /*NumberOfRegions=*/1U,
-          /*ReleaseSize=*/RegionSize - PageSize, ReleaseBase);
-      Context.markFreeBlocks(FreeList, DecompactPtr, /*Base=*/0U);
+      scudo::PageReleaseContext Context(BlockSize, /*NumberOfRegions=*/1U,
+                                        /*ReleaseSize=*/RegionSize - PageSize,
+                                        ReleaseBase);
+      Context.markFreeBlocksInRegion(FreeList, DecompactPtr, /*Base=*/0U,
+                                     /*RegionIndex=*/0, RegionSize,
+                                     /*MayContainLastBlockInRegion=*/true);
       for (const Batch &It : FreeList) {
         for (scudo::u16 I = 0; I < It.getCount(); I++) {
           scudo::uptr Block = It.get(I);
@@ -497,10 +499,11 @@ template <class SizeClassMap> void testReleasePartialRegion() {
 
     // Test range marking.
     {
-      scudo::PageReleaseContext Context(
-          BlockSize, RegionSize, /*NumberOfRegions=*/1U,
-          /*ReleaseSize=*/RegionSize - PageSize, ReleaseBase);
-      Context.markRangeAsAllCounted(ReleaseBase, RegionSize, /*Base=*/0U);
+      scudo::PageReleaseContext Context(BlockSize, /*NumberOfRegions=*/1U,
+                                        /*ReleaseSize=*/RegionSize - PageSize,
+                                        ReleaseBase);
+      Context.markRangeAsAllCounted(ReleaseBase, RegionSize, /*Base=*/0U,
+                                    /*RegionIndex=*/0, RegionSize);
       for (scudo::uptr Page = ReleaseBase / PageSize;
            Page < RoundedRegionSize / PageSize; ++Page) {
         if (Context.PageMap.get(/*Region=*/0, Page - BasePageOffset) !=
@@ -515,13 +518,12 @@ template <class SizeClassMap> void testReleasePartialRegion() {
 
     // Check the buffer size of PageMap.
     {
-      scudo::PageReleaseContext Full(BlockSize, RegionSize,
-                                     /*NumberOfRegions=*/1U,
+      scudo::PageReleaseContext Full(BlockSize, /*NumberOfRegions=*/1U,
                                      /*ReleaseSize=*/RegionSize);
       Full.ensurePageMapAllocated();
-      scudo::PageReleaseContext Partial(
-          BlockSize, RegionSize, /*NumberOfRegions=*/1U,
-          /*ReleaseSize=*/RegionSize - PageSize, ReleaseBase);
+      scudo::PageReleaseContext Partial(BlockSize, /*NumberOfRegions=*/1U,
+                                        /*ReleaseSize=*/RegionSize - PageSize,
+                                        ReleaseBase);
       Partial.ensurePageMapAllocated();
 
       EXPECT_GE(Full.PageMap.getBufferSize(), Partial.PageMap.getBufferSize());

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/errno/libc_errno.h"
 #include "src/math/sinf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -25,7 +26,7 @@ namespace mpfr = __llvm_libc::testing::mpfr;
 DECLARE_SPECIAL_CONSTANTS(float)
 
 TEST(LlvmLibcSinfTest, SpecialNumbers) {
-  errno = 0;
+  libc_errno = 0;
 
   EXPECT_FP_EQ(aNaN, __llvm_libc::sinf(aNaN));
   EXPECT_MATH_ERRNO(0);

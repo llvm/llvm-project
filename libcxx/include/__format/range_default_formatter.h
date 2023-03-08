@@ -95,11 +95,11 @@ private:
   range_formatter<remove_cvref_t<ranges::range_reference_t<__maybe_const_r>>, _CharT> __underlying_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI constexpr void set_separator(basic_string_view<_CharT> __separator) {
+  _LIBCPP_HIDE_FROM_ABI constexpr void set_separator(basic_string_view<_CharT> __separator) noexcept {
     __underlying_.set_separator(__separator);
   }
   _LIBCPP_HIDE_FROM_ABI constexpr void
-  set_brackets(basic_string_view<_CharT> __opening_bracket, basic_string_view<_CharT> __closing_bracket) {
+  set_brackets(basic_string_view<_CharT> __opening_bracket, basic_string_view<_CharT> __closing_bracket) noexcept {
     __underlying_.set_brackets(__opening_bracket, __closing_bracket);
   }
 

@@ -29839,6 +29839,17 @@ static SDValue LowerMINMAX(SDValue Op, const X86Subtarget &Subtarget,
   if (VT == MVT::v32i16 || VT == MVT::v64i8)
     return splitVectorIntBinary(Op, DAG);
 
+  // umax(x,1) --> sub(x,cmpeq(x,0))
+  // TODO: Move this to expandIntMINMAX?
+  if (VT.isVector() && Op.getOpcode() == ISD::UMAX &&
+      llvm::isOneOrOneSplat(Op.getOperand(1), true)) {
+    SDLoc DL(Op);
+    SDValue X = DAG.getFreeze(Op.getOperand(0));
+    SDValue Zero = getZeroVector(VT, Subtarget, DAG, DL);
+    return DAG.getNode(ISD::SUB, DL, VT, X,
+                       DAG.getSetCC(DL, VT, X, Zero, ISD::SETEQ));
+  }
+
   // Default to expand.
   return SDValue();
 }
@@ -35398,9 +35409,9 @@ bool X86TargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
   return false;
 }
 
-bool X86TargetLowering::isNarrowingProfitable(EVT VT1, EVT VT2) const {
+bool X86TargetLowering::isNarrowingProfitable(EVT SrcVT, EVT DestVT) const {
   // i16 instructions are longer (0x66 prefix) and potentially slower.
-  return !(VT1 == MVT::i32 && VT2 == MVT::i16);
+  return !(SrcVT == MVT::i32 && DestVT == MVT::i16);
 }
 
 bool X86TargetLowering::shouldFoldSelectWithIdentityConstant(unsigned Opcode,

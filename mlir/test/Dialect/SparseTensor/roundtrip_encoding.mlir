@@ -9,12 +9,12 @@ func.func private @sparse_1d_tensor(tensor<32xf64, #sparse_tensor.encoding<{ dim
 #CSR = #sparse_tensor.encoding<{
   dimLevelType = [ "dense", "compressed" ],
   dimOrdering = affine_map<(i,j) -> (i,j)>,
-  pointerBitWidth = 64,
-  indexBitWidth = 64
+  posWidth = 64,
+  crdWidth = 64
 }>
 
 // CHECK-LABEL: func private @sparse_csr(
-// CHECK-SAME: tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 64, indexBitWidth = 64 }>>)
+// CHECK-SAME: tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], posWidth = 64, crdWidth = 64 }>>)
 func.func private @sparse_csr(tensor<?x?xf32, #CSR>)
 
 // -----
@@ -22,8 +22,8 @@ func.func private @sparse_csr(tensor<?x?xf32, #CSR>)
 #CSC = #sparse_tensor.encoding<{
   dimLevelType = [ "dense", "compressed" ],
   dimOrdering = affine_map<(i,j) -> (j,i)>,
-  pointerBitWidth = 0,
-  indexBitWidth = 0
+  posWidth = 0,
+  crdWidth = 0
 }>
 
 // CHECK-LABEL: func private @sparse_csc(
@@ -35,12 +35,12 @@ func.func private @sparse_csc(tensor<?x?xf32, #CSC>)
 #DCSC = #sparse_tensor.encoding<{
   dimLevelType = [ "compressed", "compressed" ],
   dimOrdering = affine_map<(i,j) -> (j,i)>,
-  pointerBitWidth = 0,
-  indexBitWidth = 64
+  posWidth = 0,
+  crdWidth = 64
 }>
 
 // CHECK-LABEL: func private @sparse_dcsc(
-// CHECK-SAME: tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)>, indexBitWidth = 64 }>>)
+// CHECK-SAME: tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)>, crdWidth = 64 }>>)
 func.func private @sparse_dcsc(tensor<?x?xf32, #DCSC>)
 
 // -----

@@ -568,6 +568,48 @@ func.func @atan2() {
 }
 
 
+// -------------------------------------------------------------------------- //
+// Cbrt.
+// -------------------------------------------------------------------------- //
+
+func.func @cbrt_f32(%a : f32) {
+  %r = math.cbrt %a : f32
+  vector.print %r : f32
+  return
+}
+
+func.func @cbrt() {
+  // CHECK: 1
+  %a = arith.constant 1.0 : f32
+  call @cbrt_f32(%a) : (f32) -> ()
+
+  // CHECK: -1
+  %b = arith.constant -1.0 : f32
+  call @cbrt_f32(%b) : (f32) -> ()
+
+  // CHECK: 0
+  %c = arith.constant 0.0 : f32
+  call @cbrt_f32(%c) : (f32) -> ()
+
+  // CHECK: -0
+  %d = arith.constant -0.0 : f32
+  call @cbrt_f32(%d) : (f32) -> ()
+
+  // CHECK: 10
+  %e = arith.constant 1000.0 : f32
+  call @cbrt_f32(%e) : (f32) -> ()
+
+  // CHECK: -10
+  %f = arith.constant -1000.0 : f32
+  call @cbrt_f32(%f) : (f32) -> ()
+
+  // CHECK: 2.57128
+  %g = arith.constant 17.0 : f32
+  call @cbrt_f32(%g) : (f32) -> ()
+
+  return
+}
+
 func.func @main() {
   call @tanh(): () -> ()
   call @log(): () -> ()
@@ -580,5 +622,8 @@ func.func @main() {
   call @cos(): () -> ()
   call @atan() : () -> ()
   call @atan2() : () -> ()
+  call @cbrt() : () -> ()
   return
 }
+
+

@@ -155,11 +155,11 @@ public:
   const std::vector<std::vector<Value>> &getPidxs() const { return pidxs; };
   const std::vector<std::vector<Value>> &getCoord() const { return coord; };
   const std::vector<std::vector<Value>> &getHighs() const { return highs; };
-  const std::vector<std::vector<Value>> &getPtrBuffer() const {
-    return ptrBuffer;
+  const std::vector<std::vector<Value>> &getPosBuffer() const {
+    return posBuffer;
   };
-  const std::vector<std::vector<Value>> &getIdxBuffer() const {
-    return idxBuffer;
+  const std::vector<std::vector<Value>> &getCrdBuffer() const {
+    return crdBuffer;
   };
   const std::vector<Value> &getValBuffer() const { return valBuffer; };
 
@@ -190,9 +190,17 @@ private:
   Value genAddress(OpBuilder &builder, Location loc, size_t tid, size_t dim,
                    Value iv);
 
-  /// Generates instructions to compute the coordinate of tesnors[tid] on `l`
-  /// under the current loop context.
-  Value genSparseCoord(OpBuilder &builder, Location loc, size_t tid, size_t l);
+  /// Generates the segment high for a non-unique level (to fast forward
+  /// duplicated coordinates).
+  Value genSegmentHigh(OpBuilder &builder, Location loc, size_t tid, size_t lvl,
+                       Value pos, Value pHi);
+
+  /// Generates instructions to compute the coordinate of tensors[tid][lvl]
+  /// under the current loop context.  The final argument is the
+  /// collapsed-output level, whereas this function handles converting
+  /// that to the uncollapsed-input level
+  Value genSparseCrd(OpBuilder &builder, Location loc, size_t tid,
+                     size_t dstLvl);
 
   bool isOutputTensor(size_t tid) {
     return hasOutput && tid == tensors.size() - 1;
@@ -257,12 +265,15 @@ private:
   std::vector<std::vector<DimLevelType>> dimTypes;
   /// Sparse iteration information (by tensor and dim). These arrays
   /// are updated to remain current within the current loop.
+  // TODO: we may want to rename "pidx(s)" to `posCursor(s)` or similar.
   std::vector<std::vector<Value>> pidxs;
+  // The segment upper bound for non-uniques level after de-duplication.
+  std::vector<std::vector<Value>> segHi;
   std::vector<std::vector<Value>> coord;
   std::vector<std::vector<Value>> highs;
   std::vector<std::vector<Value>> lvlSizes;
-  std::vector<std::vector<Value>> ptrBuffer; // to_pointers
-  std::vector<std::vector<Value>> idxBuffer; // to_indices
+  std::vector<std::vector<Value>> posBuffer; // to_positions
+  std::vector<std::vector<Value>> crdBuffer; // to_coordinates
   std::vector<Value> valBuffer;              // to_value
 
   /// Whether the sparse input is a slice.

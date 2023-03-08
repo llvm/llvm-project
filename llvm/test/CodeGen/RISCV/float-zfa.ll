@@ -4,6 +4,88 @@
 ; RUN: llc -mtriple=riscv64 -target-abi lp64f -mattr=+experimental-zfa < %s \
 ; RUN:     | FileCheck %s
 
+define float @loadfpimm1() {
+; CHECK-LABEL: loadfpimm1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa0, 6.250000e-02
+; CHECK-NEXT:    ret
+  ret float 0.0625
+}
+
+define float @loadfpimm2() {
+; CHECK-LABEL: loadfpimm2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa0, 7.500000e-01
+; CHECK-NEXT:    ret
+  ret float 0.75
+}
+
+define float @loadfpimm3() {
+; CHECK-LABEL: loadfpimm3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa0, 1.250000e+00
+; CHECK-NEXT:    ret
+  ret float 1.25
+}
+
+define float @loadfpimm4() {
+; CHECK-LABEL: loadfpimm4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa0, 3.000000e+00
+; CHECK-NEXT:    ret
+  ret float 3.0
+}
+
+define float @loadfpimm5() {
+; CHECK-LABEL: loadfpimm5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa0, 2.560000e+02
+; CHECK-NEXT:    ret
+  ret float 256.0
+}
+
+define float @loadfpimm6() {
+; CHECK-LABEL: loadfpimm6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa0, inf
+; CHECK-NEXT:    ret
+  ret float 0x7FF0000000000000
+}
+
+define float @loadfpimm7() {
+; CHECK-LABEL: loadfpimm7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa0, nan
+; CHECK-NEXT:    ret
+  ret float 0x7FF8000000000000
+}
+
+define float @loadfpimm8() {
+; CHECK-LABEL: loadfpimm8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa0, min
+; CHECK-NEXT:    ret
+  ret float 0x3810000000000000
+}
+
+define float @loadfpimm9() {
+; CHECK-LABEL: loadfpimm9:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 276464
+; CHECK-NEXT:    fmv.w.x fa0, a0
+; CHECK-NEXT:    ret
+  ret float 255.0
+}
+
+; FIXME: This is the f16 minimum value. It should not be supported for f32.
+define float @loadfpimm10() {
+; CHECK-LABEL: loadfpimm10:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa0, min
+; CHECK-NEXT:    ret
+  ret float 0.00006103515625
+}
+
 declare float @llvm.minimum.f32(float, float)
 
 define float @fminm_s(float %a, float %b) nounwind {

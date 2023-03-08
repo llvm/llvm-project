@@ -131,6 +131,13 @@ constexpr void test_iterators() {
     auto range = std::ranges::subrange(It(a), Sent(It(a + 5)));
     assert(std::ranges::binary_search(range, 1));
   }
+
+  { // check that false is returned when the element doesn't exist, but an element with a greater value is in the range
+    int a[] = {1, 2, 4};
+    assert(!std::ranges::binary_search(It(a), Sent(It(a + 3)), 3));
+    auto range = std::ranges::subrange(It(a), Sent(It(a + 3)));
+    assert(!std::ranges::binary_search(range, 3));
+  }
 }
 
 constexpr bool test() {

@@ -846,7 +846,8 @@ enum RankFlags {
   RF_PPC_GOT = 1 << 3,
   RF_PPC_BRANCH_LT = 1 << 2,
   RF_MIPS_GPREL = 1 << 1,
-  RF_MIPS_NOT_GOT = 1 << 0
+  RF_MIPS_NOT_GOT = 1 << 0,
+  RF_RISCV_SDATA = 1 << 0,
 };
 
 static unsigned getSectionRank(const OutputSection &osec) {
@@ -972,6 +973,14 @@ static unsigned getSectionRank(const OutputSection &osec) {
       rank |= RF_MIPS_NOT_GOT;
   }
 
+  if (config->emachine == EM_RISCV) {
+    // .sdata and .sbss are placed closer to make GP relaxation more profitable
+    // and match GNU ld.
+    StringRef name = osec.name;
+    if (name == ".sdata" || (osec.type == SHT_NOBITS && name != ".sbss"))
+      rank |= RF_RISCV_SDATA;
+  }
+
   return rank;
 }
 
@@ -1087,8 +1096,12 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
       ElfSym::end2->section = last->lastSec;
   }
 
-  if (ElfSym::bss)
-    ElfSym::bss->section = findSection(".bss");
+  if (ElfSym::bss) {
+    // On RISC-V, set __bss_start to the start of .sbss if present.
+    OutputSection *sbss =
+        config->emachine == EM_RISCV ? findSection(".sbss") : nullptr;
+    ElfSym::bss->section = sbss ? sbss : findSection(".bss");
+  }
 
   // Setup MIPS _gp_disp/__gnu_local_gp symbols which should
   // be equal to the _gp symbol's value.

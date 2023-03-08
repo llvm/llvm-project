@@ -149,8 +149,12 @@ Error report(Error E, const StringRef Context) {
 }
 
 bool isRuntimePath(const StringRef Path) {
-  return StringRef(llvm::sys::path::convert_to_slash(Path))
-      .contains("memprof/memprof_");
+  const StringRef Filename = llvm::sys::path::filename(Path);
+  // This list should be updated in case new files with additional interceptors
+  // are added to the memprof runtime.
+  return Filename.equals("memprof_malloc_linux.cpp") ||
+         Filename.equals("memprof_interceptors.cpp") ||
+         Filename.equals("memprof_new_delete.cpp");
 }
 
 std::string getBuildIdString(const SegmentEntry &Entry) {

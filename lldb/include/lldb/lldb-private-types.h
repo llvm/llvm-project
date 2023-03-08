@@ -116,6 +116,8 @@ typedef struct type256 { uint64_t x[4]; } type256;
 using ValueObjectProviderTy =
     std::function<lldb::ValueObjectSP(ConstString, StackFrame *)>;
 
+typedef void (*DebuggerDestroyCallback)(lldb::user_id_t debugger_id,
+                                        void *baton);
 } // namespace lldb_private
 
 #endif // #if defined(__cplusplus)

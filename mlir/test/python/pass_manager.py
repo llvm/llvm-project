@@ -118,7 +118,7 @@ run(testInvalidNesting)
 
 
 # Verify that a pass manager can execute on IR
-# CHECK-LABEL: TEST: testRun
+# CHECK-LABEL: TEST: testRunPipeline
 def testRunPipeline():
   with Context():
     pm = PassManager.parse("any(print-op-stats{json=false})")
@@ -128,3 +128,20 @@ def testRunPipeline():
 # CHECK: func.func      , 1
 # CHECK: func.return        , 1
 run(testRunPipeline)
+
+# CHECK-LABEL: TEST: testRunPipelineError
+@run
+def testRunPipelineError():
+  with Context() as ctx:
+    ctx.allow_unregistered_dialects = True
+    op = Operation.parse('"test.op"() : () -> ()')
+    pm = PassManager.parse("any(cse)")
+    try:
+      pm.run(op)
+    except MLIRError as e:
+      # CHECK: Exception: <
+      # CHECK:   Failure while executing pass pipeline:
+      # CHECK:   error: "-":1:1: 'test.op' op trying to schedule a pass on an unregistered operation
+      # CHECK:    note: "-":1:1: see current operation: "test.op"() : () -> ()
+      # CHECK: >
+      print(f"Exception: <{e}>")

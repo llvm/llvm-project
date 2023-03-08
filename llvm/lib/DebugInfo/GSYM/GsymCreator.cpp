@@ -34,8 +34,10 @@ uint32_t GsymCreator::insertFile(StringRef Path, llvm::sys::path::Style Style) {
   // requirements.
   const uint32_t Dir = insertString(directory);
   const uint32_t Base = insertString(filename);
-  FileEntry FE(Dir, Base);
+  return insertFileEntry(FileEntry(Dir, Base));
+}
 
+uint32_t GsymCreator::insertFileEntry(FileEntry FE) {
   std::lock_guard<std::mutex> Guard(Mutex);
   const auto NextIndex = Files.size();
   // Find FE in hash map and insert if not present.
@@ -45,8 +47,26 @@ uint32_t GsymCreator::insertFile(StringRef Path, llvm::sys::path::Style Style) {
   return R.first->second;
 }
 
+uint32_t GsymCreator::copyFile(const GsymCreator &SrcGC, uint32_t FileIdx) {
+  // File index zero is reserved for a FileEntry with no directory and no
+  // filename. Any other file and we need to copy the strings for the directory
+  // and filename.
+  if (FileIdx == 0)
+    return 0;
+  const FileEntry SrcFE = SrcGC.Files[FileIdx];
+  // Copy the strings for the file and then add the newly converted file entry.
+  uint32_t Dir = StrTab.add(SrcGC.StringOffsetMap.find(SrcFE.Dir)->second);
+  uint32_t Base = StrTab.add(SrcGC.StringOffsetMap.find(SrcFE.Base)->second);
+  FileEntry DstFE(Dir, Base);
+  return insertFileEntry(DstFE);
+}
+
+
 llvm::Error GsymCreator::save(StringRef Path,
-                              llvm::support::endianness ByteOrder) const {
+                              llvm::support::endianness ByteOrder,
+                              std::optional<uint64_t> SegmentSize) const {
+  if (SegmentSize)
+    return saveSegments(Path, ByteOrder, *SegmentSize);
   std::error_code EC;
   raw_fd_ostream OutStrm(Path, EC);
   if (EC)
@@ -68,16 +88,17 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
     return createStringError(std::errc::invalid_argument,
                              "too many FunctionInfos");
 
-  const uint64_t MinAddr =
-      BaseAddress ? *BaseAddress : Funcs.front().startAddress();
-  const uint64_t MaxAddr = Funcs.back().startAddress();
-  const uint64_t AddrDelta = MaxAddr - MinAddr;
+  std::optional<uint64_t> BaseAddress = getBaseAddress();
+  // Base address should be valid if we have any functions.
+  if (!BaseAddress)
+    return createStringError(std::errc::invalid_argument,
+                             "invalid base address");
   Header Hdr;
   Hdr.Magic = GSYM_MAGIC;
   Hdr.Version = GSYM_VERSION;
-  Hdr.AddrOffSize = 0;
+  Hdr.AddrOffSize = getAddressOffsetSize();
   Hdr.UUIDSize = static_cast<uint8_t>(UUID.size());
-  Hdr.BaseAddress = MinAddr;
+  Hdr.BaseAddress = *BaseAddress;
   Hdr.NumAddresses = static_cast<uint32_t>(Funcs.size());
   Hdr.StrtabOffset = 0; // We will fix this up later.
   Hdr.StrtabSize = 0;   // We will fix this up later.
@@ -85,15 +106,6 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
   if (UUID.size() > sizeof(Hdr.UUID))
     return createStringError(std::errc::invalid_argument,
                              "invalid UUID size %u", (uint32_t)UUID.size());
-  // Set the address offset size correctly in the GSYM header.
-  if (AddrDelta <= UINT8_MAX)
-    Hdr.AddrOffSize = 1;
-  else if (AddrDelta <= UINT16_MAX)
-    Hdr.AddrOffSize = 2;
-  else if (AddrDelta <= UINT32_MAX)
-    Hdr.AddrOffSize = 4;
-  else
-    Hdr.AddrOffSize = 8;
   // Copy the UUID value if we have one.
   if (UUID.size() > 0)
     memcpy(Hdr.UUID, UUID.data(), UUID.size());
@@ -102,10 +114,17 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
   if (Err)
     return Err;
 
+  const uint64_t MaxAddressOffset = getMaxAddressOffset();
   // Write out the address offsets.
   O.alignTo(Hdr.AddrOffSize);
   for (const auto &FuncInfo : Funcs) {
     uint64_t AddrOffset = FuncInfo.startAddress() - Hdr.BaseAddress;
+    // Make sure we calculated the address offsets byte size correctly by
+    // verifying the current address offset is within ranges. We have seen bugs
+    // introduced when the code changes that can cause problems here so it is
+    // good to catch this during testing.
+    assert(AddrOffset <= MaxAddressOffset);
+    (void)MaxAddressOffset;
     switch (Hdr.AddrOffSize) {
     case 1:
       O.writeU8(static_cast<uint8_t>(AddrOffset));
@@ -142,7 +161,7 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
     O.writeU32(File.Base);
   }
 
-  // Write out the sting table.
+  // Write out the string table.
   const off_t StrtabOffset = O.tell();
   StrTab.write(O.get_stream());
   const off_t StrtabSize = O.tell() - StrtabOffset;
@@ -300,6 +319,13 @@ llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
   return Error::success();
 }
 
+uint32_t GsymCreator::copyString(const GsymCreator &SrcGC, uint32_t StrOff) {
+  // String offset at zero is always the empty string, no copying needed.
+  if (StrOff == 0)
+    return 0;
+  return StrTab.add(SrcGC.StringOffsetMap.find(StrOff)->second);
+}
+
 uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
   if (S.empty())
     return 0;
@@ -318,7 +344,13 @@ uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
       CHStr = CachedHashStringRef{StringStorage.insert(S).first->getKey(),
                                   CHStr.hash()};
   }
-  return StrTab.add(CHStr);
+  const uint32_t StrOff = StrTab.add(CHStr);
+  // Save a mapping of string offsets to the cached string reference in case
+  // we need to segment the GSYM file and copy string from one string table to
+  // another.
+  if (StringOffsetMap.count(StrOff) == 0)
+    StringOffsetMap.insert(std::make_pair(StrOff, CHStr));
+  return StrOff;
 }
 
 void GsymCreator::addFunctionInfo(FunctionInfo &&FI) {
@@ -359,4 +391,188 @@ bool GsymCreator::IsValidTextAddress(uint64_t Addr) const {
 bool GsymCreator::hasFunctionInfoForAddress(uint64_t Addr) const {
   std::lock_guard<std::mutex> Guard(Mutex);
   return Ranges.contains(Addr);
+}
+
+std::optional<uint64_t> GsymCreator::getFirstFunctionAddress() const {
+  if (Finalized && !Funcs.empty())
+    return std::optional<uint64_t>(Funcs.front().startAddress());
+  // This code gets used by the segmentation of GSYM files to help determine the
+  // size of the GSYM header while continually adding new FunctionInfo objects
+  // to this object, so we haven't finalized this object yet.
+  if (Ranges.empty())
+    return std::nullopt;
+  return std::optional<uint64_t>(Ranges.begin()->start());
+}
+
+std::optional<uint64_t> GsymCreator::getLastFunctionAddress() const {
+  if (Finalized && !Funcs.empty())
+    return std::optional<uint64_t>(Funcs.back().startAddress());
+  // This code gets used by the segmentation of GSYM files to help determine the
+  // size of the GSYM header while continually adding new FunctionInfo objects
+  // to this object, so we haven't finalized this object yet.
+  if (Ranges.empty())
+    return std::nullopt;
+  return std::optional<uint64_t>((Ranges.end() - 1)->end());
+}
+
+std::optional<uint64_t> GsymCreator::getBaseAddress() const {
+  if (BaseAddress)
+    return BaseAddress;
+  return getFirstFunctionAddress();
+}
+
+uint64_t GsymCreator::getMaxAddressOffset() const {
+  switch (getAddressOffsetSize()) {
+    case 1: return UINT8_MAX;
+    case 2: return UINT16_MAX;
+    case 4: return UINT32_MAX;
+    case 8: return UINT64_MAX;
+  }
+  llvm_unreachable("invalid address offset");
+}
+
+uint8_t GsymCreator::getAddressOffsetSize() const {
+  const std::optional<uint64_t> BaseAddress = getBaseAddress();
+  const std::optional<uint64_t> LastFuncAddr = getLastFunctionAddress();
+  if (BaseAddress && LastFuncAddr) {
+    const uint64_t AddrDelta = *LastFuncAddr - *BaseAddress;
+    if (AddrDelta <= UINT8_MAX)
+      return 1;
+    else if (AddrDelta <= UINT16_MAX)
+      return 2;
+    else if (AddrDelta <= UINT32_MAX)
+      return 4;
+    return 8;
+  }
+  return 1;
+}
+
+uint64_t GsymCreator::calculateHeaderAndTableSize() const {
+  uint64_t Size = sizeof(Header);
+  const size_t NumFuncs = Funcs.size();
+  // Add size of address offset table
+  Size += NumFuncs * getAddressOffsetSize();
+  // Add size of address info offsets which are 32 bit integers in version 1.
+  Size += NumFuncs * sizeof(uint32_t);
+  // Add file table size
+  Size += Files.size() * sizeof(FileEntry);
+  // Add string table size
+  Size += StrTab.getSize();
+
+  return Size;
+}
+
+// This function takes a InlineInfo class that was copy constructed from an
+// InlineInfo from the \a SrcGC and updates all members that point to strings
+// and files to point to strings and files from this GsymCreator.
+void GsymCreator::fixupInlineInfo(const GsymCreator &SrcGC, InlineInfo &II) {
+  II.Name = copyString(SrcGC, II.Name);
+  II.CallFile = copyFile(SrcGC, II.CallFile);
+  for (auto &ChildII: II.Children)
+    fixupInlineInfo(SrcGC, ChildII);
+}
+
+uint64_t GsymCreator::copyFunctionInfo(const GsymCreator &SrcGC, size_t FuncIdx) {
+  // To copy a function info we need to copy any files and strings over into
+  // this GsymCreator and then copy the function info and update the string
+  // table offsets to match the new offsets.
+  const FunctionInfo &SrcFI = SrcGC.Funcs[FuncIdx];
+  Ranges.insert(SrcFI.Range);
+
+  FunctionInfo DstFI;
+  DstFI.Range = SrcFI.Range;
+  DstFI.Name = copyString(SrcGC, SrcFI.Name);
+  // Copy the line table if there is one.
+  if (SrcFI.OptLineTable) {
+    // Copy the entire line table.
+    DstFI.OptLineTable = LineTable(SrcFI.OptLineTable.value());
+    // Fixup all LineEntry::File entries which are indexes in the the file table
+    // from SrcGC and must be converted to file indexes from this GsymCreator.
+    LineTable &DstLT = DstFI.OptLineTable.value();
+    const size_t NumLines = DstLT.size();
+    for (size_t I=0; I<NumLines; ++I) {
+      LineEntry &LE = DstLT.get(I);
+      LE.File = copyFile(SrcGC, LE.File);
+    }
+  }
+  // Copy the inline information if needed.
+  if (SrcFI.Inline) {
+    // Make a copy of the source inline information.
+    DstFI.Inline = SrcFI.Inline.value();
+    // Fixup all strings and files in the copied inline information.
+    fixupInlineInfo(SrcGC, *DstFI.Inline);
+  }
+  std::lock_guard<std::mutex> Guard(Mutex);
+  Funcs.push_back(DstFI);
+  return Funcs.back().cacheEncoding();
+}
+
+llvm::Error GsymCreator::saveSegments(StringRef Path,
+                                      llvm::support::endianness ByteOrder,
+                                      uint64_t SegmentSize) const {
+  if (SegmentSize == 0)
+    return createStringError(std::errc::invalid_argument,
+                             "invalid segment size zero");
+
+  size_t FuncIdx = 0;
+  const size_t NumFuncs = Funcs.size();
+  while (FuncIdx < NumFuncs) {
+    llvm::Expected<std::unique_ptr<GsymCreator>> ExpectedGC =
+        createSegment(SegmentSize, FuncIdx);
+    if (ExpectedGC) {
+      GsymCreator *GC = ExpectedGC->get();
+      if (GC == NULL)
+        break; // We had not more functions to encode.
+      raw_null_ostream ErrorStrm;
+      llvm::Error Err = GC->finalize(ErrorStrm);
+      if (Err)
+        return Err;
+      std::string SegmentedGsymPath;
+      raw_string_ostream SGP(SegmentedGsymPath);
+      std::optional<uint64_t> FirstFuncAddr = GC->getFirstFunctionAddress();
+      if (FirstFuncAddr) {
+        SGP << Path << "-" << llvm::format_hex(*FirstFuncAddr, 1);
+        SGP.flush();
+        Err = GC->save(SegmentedGsymPath, ByteOrder, std::nullopt);
+        if (Err)
+          return Err;
+      }
+    } else {
+      return ExpectedGC.takeError();
+    }
+  }
+  return Error::success();
+}
+
+llvm::Expected<std::unique_ptr<GsymCreator>>
+GsymCreator::createSegment(uint64_t SegmentSize, size_t &FuncIdx) const {
+  // No function entries, return empty unique pointer
+  if (FuncIdx >= Funcs.size())
+    return std::unique_ptr<GsymCreator>();
+
+  std::unique_ptr<GsymCreator> GC(new GsymCreator(/*Quiet=*/true));
+  // Set the base address if there is one.
+  if (BaseAddress)
+    GC->setBaseAddress(*BaseAddress);
+  // Copy the UUID value from this object into the new creator.
+  GC->setUUID(UUID);
+  const size_t NumFuncs = Funcs.size();
+  // Track how big the function infos are for the current segment so we can
+  // emit segments that are close to the requested size. It is quick math to
+  // determine the current header and tables sizes, so we can do that each loop.
+  uint64_t SegmentFuncInfosSize = 0;
+  for (; FuncIdx < NumFuncs; ++FuncIdx) {
+    const uint64_t HeaderAndTableSize = GC->calculateHeaderAndTableSize();
+    if (HeaderAndTableSize + SegmentFuncInfosSize >= SegmentSize) {
+      if (SegmentFuncInfosSize == 0)
+        return createStringError(std::errc::invalid_argument,
+                                 "a segment size of %" PRIu64 " is to small to "
+                                 "fit any function infos, specify a larger value",
+                                 SegmentSize);
+
+      break;
+    }
+    SegmentFuncInfosSize += alignTo(GC->copyFunctionInfo(*this, FuncIdx), 4);
+  }
+  return std::move(GC);
 }

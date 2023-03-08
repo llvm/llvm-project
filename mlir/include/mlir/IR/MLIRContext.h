@@ -21,7 +21,7 @@ class ThreadPool;
 
 namespace mlir {
 namespace tracing {
-class ActionManager;
+class Action;
 }
 class DiagnosticEngine;
 class Dialect;
@@ -217,9 +217,6 @@ public:
   /// instances. This should not be used directly.
   StorageUniquer &getAttributeUniquer();
 
-  /// Returns the manager of debug actions within the context.
-  tracing::ActionManager &getActionManager();
-
   /// These APIs are tracking whether the context will be used in a
   /// multithreading environment: this has no effect other than enabling
   /// assertions on misuses of some APIs.
@@ -242,9 +239,56 @@ public:
   /// (attributes, operations, types, etc.).
   llvm::hash_code getRegistryHash();
 
+  //===--------------------------------------------------------------------===//
+  // Action API
+  //===--------------------------------------------------------------------===//
+
+  /// Signatures for the action handler that can be registered with the context.
+  using HandlerTy =
+      std::function<void(function_ref<void()>, const tracing::Action &)>;
+
+  /// Register a handler for handling actions that are dispatched through this
+  /// context. A nullptr handler can be set to disable a previously set handler.
+  void registerActionHandler(HandlerTy handler);
+
+  /// Return true if a valid ActionHandler is set.
+  bool hasActionHandler();
+
+  /// Dispatch the provided action to the handler if any, or just execute it.
+  void executeAction(function_ref<void()> actionFn,
+                     const tracing::Action &action) {
+    if (LLVM_UNLIKELY(hasActionHandler()))
+      executeActionInternal(actionFn, action);
+    else
+      actionFn();
+  }
+
+  /// Dispatch the provided action to the handler if any, or just execute it.
+  template <typename ActionTy, typename... Args>
+  void executeAction(function_ref<void()> actionFn, Args &&...args) {
+    if (LLVM_UNLIKELY(hasActionHandler()))
+      executeActionInternal<ActionTy, Args...>(actionFn,
+                                               std::forward<Args>(args)...);
+    else
+      actionFn();
+  }
+
 private:
   /// Return true if the given dialect is currently loading.
   bool isDialectLoading(StringRef dialectNamespace);
+
+  /// Internal helper for the dispatch method.
+  void executeActionInternal(function_ref<void()> actionFn,
+                             const tracing::Action &action);
+
+  /// Internal helper for the dispatch method. We get here after checking that
+  /// there is a handler, for the purpose of keeping this code out-of-line. and
+  /// avoid calling the ctor for the Action unnecessarily.
+  template <typename ActionTy, typename... Args>
+  LLVM_ATTRIBUTE_NOINLINE void
+  executeActionInternal(function_ref<void()> actionFn, Args &&...args) {
+    executeActionInternal(actionFn, ActionTy(std::forward<Args>(args)...));
+  }
 
   const std::unique_ptr<MLIRContextImpl> impl;
 

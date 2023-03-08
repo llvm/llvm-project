@@ -17,6 +17,29 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
+// 5-bit floating-point immediate encodings.
+def LoadFPImmOperand : AsmOperandClass {
+  let Name = "LoadFPImm";
+  let ParserMethod = "parseFPImm";
+  let RenderMethod = "addFPImmOperands";
+  let DiagnosticType = "InvalidLoadFPImm";
+}
+
+def loadfp32imm : Operand<f32> {
+  let ParserMatchClass = LoadFPImmOperand;
+  let PrintMethod = "printFPImmOperand";
+}
+
+def loadfp64imm : Operand<f64> {
+  let ParserMatchClass = LoadFPImmOperand;
+  let PrintMethod = "printFPImmOperand";
+}
+
+def loadfp16imm : Operand<f16> {
+  let ParserMatchClass = LoadFPImmOperand;
+  let PrintMethod = "printFPImmOperand";
+}
+
 def RTZArg : AsmOperandClass {
   let Name = "RTZArg";
   let RenderMethod = "addFRMArgOperands";
@@ -40,6 +63,21 @@ class FPBinaryOp_rr<bits<7> funct7, bits<3> funct3, DAGOperand rdty,
     : RVInstR<funct7, funct3, OPC_OP_FP, (outs rdty:$rd), 
               (ins rsty:$rs1, rsty:$rs2), opcodestr, "$rd, $rs1, $rs2">;
 
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1 in
+class FPUnaryOp_imm<bits<7> funct7, bits<5> rs2val, bits<3> funct3, RISCVOpcode opcode, 
+                    dag outs, dag ins, string opcodestr, string argstr>
+    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
+  bits<5> imm;
+  bits<5> rd;
+
+  let Inst{31-25} = funct7;
+  let Inst{24-20} = rs2val;
+  let Inst{19-15} = imm;
+  let Inst{14-12} = funct3;
+  let Inst{11-7} = rd;
+  let Opcode = opcode.Value;
+}
+
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1,
     UseNamedOperandTable = 1, hasPostISelHook = 1 in
 class FPUnaryOp_r_rtz<bits<7> funct7, bits<5> rs2val, DAGOperand rdty,
@@ -55,6 +93,9 @@ class FPUnaryOp_r_rtz<bits<7> funct7, bits<5> rs2val, DAGOperand rdty,
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZfa] in {
+def FLI_S : FPUnaryOp_imm<0b1111000, 0b00001, 0b000, OPC_OP_FP, (outs FPR32:$rd),
+            (ins loadfp32imm:$imm), "fli.s", "$rd, $imm">;
+
 def FMINM_S: FPALU_rr<0b0010100, 0b010, "fminm.s", FPR32, /*Commutable*/ 1>;
 def FMAXM_S: FPALU_rr<0b0010100, 0b011, "fmaxm.s", FPR32, /*Commutable*/ 1>;
 
@@ -66,6 +107,9 @@ def FLEQ_S : FPCmp_rr<0b1010000, 0b100, "fleq.s", FPR32>;
 } // Predicates = [HasStdExtZfa]
 
 let Predicates = [HasStdExtZfa, HasStdExtD] in {
+def FLI_D : FPUnaryOp_imm<0b1111001, 0b00001, 0b000, OPC_OP_FP, (outs FPR64:$rd),
+            (ins loadfp64imm:$imm), "fli.d", "$rd, $imm">;
+
 def FMINM_D: FPALU_rr<0b0010101, 0b010, "fminm.d", FPR64, /*Commutable*/ 1>;
 def FMAXM_D: FPALU_rr<0b0010101, 0b011, "fmaxm.d", FPR64, /*Commutable*/ 1>;
 
@@ -92,6 +136,9 @@ def FMV_X_W_FPR64 : FPUnaryOp_r<0b1110000, 0b00000, 0b000, GPR, FPR64,
 } // Predicates = [HasStdExtZfa, HasStdExtD, IsRV32]
 
 let Predicates = [HasStdExtZfa, HasStdExtZfh] in {
+def FLI_H : FPUnaryOp_imm<0b1111010, 0b00001, 0b000, OPC_OP_FP, (outs FPR16:$rd),
+            (ins loadfp16imm:$imm), "fli.h", "$rd, $imm">;
+
 def FMINM_H: FPALU_rr<0b0010110, 0b010, "fminm.h", FPR16, /*Commutable*/ 1>;
 def FMAXM_H: FPALU_rr<0b0010110, 0b011, "fmaxm.h", FPR16, /*Commutable*/ 1>;
 
@@ -131,7 +178,21 @@ def : InstAlias<"fgeq.h $rd, $rs, $rt",
 // Codegen patterns
 //===----------------------------------------------------------------------===//
 
+def fp32imm_to_loadfpimm : SDNodeXForm<fpimm, [{
+  return CurDAG->getTargetConstant(RISCVLoadFPImm::getLoadFP32Imm(N->getValueAPF()), 
+                                   SDLoc(N), Subtarget->getXLenVT());}]>;
+
+def fp64imm_to_loadfpimm : SDNodeXForm<fpimm, [{
+  return CurDAG->getTargetConstant(RISCVLoadFPImm::getLoadFP64Imm(N->getValueAPF()), 
+                                   SDLoc(N), Subtarget->getXLenVT());}]>;
+
+def fp16imm_to_loadfpimm : SDNodeXForm<fpimm, [{
+  return CurDAG->getTargetConstant(RISCVLoadFPImm::getLoadFP16Imm(N->getValueAPF()), 
+                                   SDLoc(N), Subtarget->getXLenVT());}]>;
+
 let Predicates = [HasStdExtZfa] in {
+def : Pat<(f32 fpimm:$imm), (FLI_S (fp32imm_to_loadfpimm fpimm:$imm))>;
+
 def: PatFprFpr<fminimum, FMINM_S, FPR32>;
 def: PatFprFpr<fmaximum, FMAXM_S, FPR32>;
 
@@ -154,6 +215,8 @@ def: PatSetCC<FPR32, strict_fsetcc, SETOLE, FLEQ_S>;
 } // Predicates = [HasStdExtZfa]
 
 let Predicates = [HasStdExtZfa, HasStdExtD] in {
+def : Pat<(f64 fpimm:$imm), (FLI_D (fp64imm_to_loadfpimm fpimm:$imm))>;
+
 def: PatFprFpr<fminimum, FMINM_D, FPR64>;
 def: PatFprFpr<fmaximum, FMAXM_D, FPR64>;
 
@@ -182,6 +245,8 @@ def : Pat<(RISCVBuildPairF64 GPR:$rs1, GPR:$rs2),
 }
 
 let Predicates = [HasStdExtZfa, HasStdExtZfh] in {
+def : Pat<(f16 fpimm:$imm), (FLI_H (fp16imm_to_loadfpimm fpimm:$imm))>;
+
 def: PatFprFpr<fminimum, FMINM_H, FPR16>;
 def: PatFprFpr<fmaximum, FMAXM_H, FPR16>;
 
