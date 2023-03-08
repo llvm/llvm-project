@@ -461,7 +461,7 @@ TEST(IncludeCleaner, GenerateMissingHeaderDiags) {
   Config Cfg;
   Cfg.Diagnostics.MissingIncludes = Config::IncludesPolicy::Strict;
   Cfg.Diagnostics.Includes.IgnoreHeader = {[](llvm::StringRef Header) {
-    return Header == testPath("buzz.h", llvm::sys::path::Style::posix);
+    return Header.ends_with("buzz.h");
   }};
   WithContextValue Ctx(Config::Key, std::move(Cfg));
   Annotations MainFile(R"cpp(
