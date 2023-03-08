@@ -249,19 +249,19 @@ TEST_F(ConfigCompileTests, DiagnosticsIncludeCleaner) {
   // Defaults to None.
   EXPECT_TRUE(compileAndApply());
   EXPECT_EQ(Conf.Diagnostics.UnusedIncludes,
-            Config::IncludesPolicy::None);
+            Config::UnusedIncludesPolicy::None);
 
   Frag = {};
   Frag.Diagnostics.UnusedIncludes.emplace("None");
   EXPECT_TRUE(compileAndApply());
   EXPECT_EQ(Conf.Diagnostics.UnusedIncludes,
-            Config::IncludesPolicy::None);
+            Config::UnusedIncludesPolicy::None);
 
   Frag = {};
   Frag.Diagnostics.UnusedIncludes.emplace("Strict");
   EXPECT_TRUE(compileAndApply());
   EXPECT_EQ(Conf.Diagnostics.UnusedIncludes,
-            Config::IncludesPolicy::Strict);
+            Config::UnusedIncludesPolicy::Strict);
 
   Frag = {};
   EXPECT_TRUE(Conf.Diagnostics.Includes.IgnoreHeader.empty())
