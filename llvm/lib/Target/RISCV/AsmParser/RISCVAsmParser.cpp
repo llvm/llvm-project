@@ -1603,36 +1603,25 @@ OperandMatchResultTy RISCVAsmParser::parseFPImm(OperandVector &Operands) {
   bool IsNegative = parseOptionalToken(AsmToken::Minus);
 
   const AsmToken &Tok = getTok();
-  if (!Tok.is(AsmToken::Real) && !Tok.is(AsmToken::Integer)) {
+  if (!Tok.is(AsmToken::Real)) {
     TokError("invalid floating point immediate");
     return MatchOperand_ParseFail;
   }
 
-  if (Tok.is(AsmToken::Integer)) {
-    // Parse integer representation.
-    if (Tok.getIntVal() > 31 || IsNegative) {
-      TokError("encoded floating point value out of range");
-      return MatchOperand_ParseFail;
-    }
-    Operands.push_back(RISCVOperand::createImm(
-        MCConstantExpr::create(Tok.getIntVal(), getContext()), S,
-        Tok.getEndLoc(), isRV64()));
-  } else {
-    // Parse FP representation.
-    APFloat RealVal(APFloat::IEEEsingle());
-    auto StatusOrErr =
-        RealVal.convertFromString(Tok.getString(), APFloat::rmTowardZero);
-    if (errorToBool(StatusOrErr.takeError())) {
-      TokError("invalid floating point representation");
-      return MatchOperand_ParseFail;
-    }
-
-    if (IsNegative)
-      RealVal.changeSign();
-
-    Operands.push_back(RISCVOperand::createFPImm(
-        RealVal.bitcastToAPInt().getZExtValue(), S));
+  // Parse FP representation.
+  APFloat RealVal(APFloat::IEEEsingle());
+  auto StatusOrErr =
+      RealVal.convertFromString(Tok.getString(), APFloat::rmTowardZero);
+  if (errorToBool(StatusOrErr.takeError())) {
+    TokError("invalid floating point representation");
+    return MatchOperand_ParseFail;
   }
+
+  if (IsNegative)
+    RealVal.changeSign();
+
+  Operands.push_back(RISCVOperand::createFPImm(
+      RealVal.bitcastToAPInt().getZExtValue(), S));
 
   Lex(); // Eat the token.
 

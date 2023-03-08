@@ -72,3 +72,7 @@ fli.d ft1, 1.1754943508222875079687365372222456778186655567720875215087517062784
 # CHECK-NO-RV32: error: operand must be a valid floating-point constant
 fli.h ft1, 1.1754943508222875079687365372222456778186655567720875215087517062784172594547271728515625e-38
 
+# Don't accept integers.
+# CHECK-NO-RV32: error: invalid floating point immediate
+# CHECK-NO-RV64: error: invalid floating point immediate
+fli.s ft1, 1
