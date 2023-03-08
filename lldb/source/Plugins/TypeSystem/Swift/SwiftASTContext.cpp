@@ -4156,7 +4156,9 @@ static SwiftASTContext::TypeOrDecl DeclToTypeOrDecl(swift::ASTContext *ast,
     case swift::DeclKind::IfConfig:
     case swift::DeclKind::Param:
     case swift::DeclKind::Macro:
+    case swift::DeclKind::MacroExpansion:     
     case swift::DeclKind::Module:
+    case swift::DeclKind::Missing:
     case swift::DeclKind::MissingMember:
     case swift::DeclKind::MacroExpansion:
       break;
@@ -5395,6 +5397,8 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
   case swift::TypeKind::Pack:
   case swift::TypeKind::PackExpansion:
   case swift::TypeKind::PackArchetype:
+  case swift::TypeKind::BuiltinPackIndex:
+  case swift::TypeKind::SILPack:
     swift_flags |= eTypeIsPack;
     break;
 
@@ -5418,6 +5422,7 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
   case swift::TypeKind::BuiltinDefaultActorStorage:
   case swift::TypeKind::BuiltinExecutor:
   case swift::TypeKind::BuiltinJob:
+  case swift::TypeKind::BuiltinPackIndex:    
   case swift::TypeKind::BuiltinTuple:
   case swift::TypeKind::Pack:
   case swift::TypeKind::PackExpansion:
@@ -5426,6 +5431,7 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::SILBox:
   case swift::TypeKind::SILMoveOnlyWrapped:
+  case swift::TypeKind::SILPack:
   case swift::TypeKind::SILToken:
   case swift::TypeKind::PackArchetype:
   case swift::TypeKind::Unresolved:
@@ -5911,8 +5917,10 @@ lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type,
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
   case swift::TypeKind::Module:
+  case swift::TypeKind::BuiltinPackIndex:
   case swift::TypeKind::Pack:
   case swift::TypeKind::PackExpansion:
+  case swift::TypeKind::SILPack:
   case swift::TypeKind::ParameterizedProtocol:
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
@@ -6012,8 +6020,10 @@ uint32_t SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
   case swift::TypeKind::Module:
+  case swift::TypeKind::BuiltinPackIndex:
   case swift::TypeKind::Pack:
   case swift::TypeKind::PackExpansion:
+  case swift::TypeKind::SILPack:
   case swift::TypeKind::ParameterizedProtocol:
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
@@ -6150,8 +6160,10 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
   case swift::TypeKind::Module:
+  case swift::TypeKind::BuiltinPackIndex:
   case swift::TypeKind::Pack:
   case swift::TypeKind::PackExpansion:
+  case swift::TypeKind::SILPack:
   case swift::TypeKind::ParameterizedProtocol:
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
@@ -6379,8 +6391,10 @@ CompilerType SwiftASTContext::GetFieldAtIndex(opaque_compiler_type_t type,
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
   case swift::TypeKind::Module:
+  case swift::TypeKind::BuiltinPackIndex:
   case swift::TypeKind::Pack:
   case swift::TypeKind::PackExpansion:
+  case swift::TypeKind::SILPack:
   case swift::TypeKind::ParameterizedProtocol:
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
@@ -6566,8 +6580,10 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(opaque_compiler_type_t type) {
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
   case swift::TypeKind::Module:
+  case swift::TypeKind::BuiltinPackIndex:
   case swift::TypeKind::Pack:
   case swift::TypeKind::PackExpansion:
+  case swift::TypeKind::SILPack:
   case swift::TypeKind::ParameterizedProtocol:
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
@@ -6719,8 +6735,10 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
   case swift::TypeKind::Module:
+  case swift::TypeKind::BuiltinPackIndex:
   case swift::TypeKind::Pack:
   case swift::TypeKind::PackExpansion:
+  case swift::TypeKind::SILPack:
   case swift::TypeKind::ParameterizedProtocol:
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
@@ -7027,8 +7045,10 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     case swift::TypeKind::Error:
     case swift::TypeKind::InOut:
     case swift::TypeKind::Module:
+    case swift::TypeKind::BuiltinPackIndex:
     case swift::TypeKind::Pack:
     case swift::TypeKind::PackExpansion:
+    case swift::TypeKind::SILPack:
     case swift::TypeKind::ParameterizedProtocol:
     case swift::TypeKind::Placeholder:
     case swift::TypeKind::SILBlockStorage:
@@ -7411,8 +7431,10 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
   case swift::TypeKind::Module:
+  case swift::TypeKind::BuiltinPackIndex:
   case swift::TypeKind::Pack:
   case swift::TypeKind::PackExpansion:
+  case swift::TypeKind::SILPack:
   case swift::TypeKind::ParameterizedProtocol:
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
@@ -7978,6 +8000,9 @@ static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
         break;
       case swift::SourceFileKind::Main:
         s.PutCString("Main");
+        break;
+      case swift::SourceFileKind::MacroExpansion:
+        s.PutCString("Macro Expansion");
         break;
       case swift::SourceFileKind::SIL:
         s.PutCString("SIL");
