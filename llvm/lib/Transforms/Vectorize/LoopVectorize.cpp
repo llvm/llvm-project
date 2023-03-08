@@ -8622,9 +8622,9 @@ void VPRecipeBuilder::fixHeaderPhis() {
   }
 }
 
-VPBasicBlock *VPRecipeBuilder::handleReplication(Instruction *I, VFRange &Range,
-                                                 VPBasicBlock *VPBB,
-                                                 VPlan &Plan) {
+VPRecipeOrVPValueTy VPRecipeBuilder::handleReplication(Instruction *I,
+                                                       VFRange &Range,
+                                                       VPlan &Plan) {
   bool IsUniform = LoopVectorizationPlanner::getDecisionAndClampRange(
       [&](ElementCount VF) { return CM.isUniformAfterVectorization(I, VF); },
       Range);
@@ -8661,60 +8661,53 @@ VPBasicBlock *VPRecipeBuilder::handleReplication(Instruction *I, VFRange &Range,
       break;
     }
   }
+  VPValue *BlockInMask = nullptr;
+  if (!IsPredicated) {
+    // Finalize the recipe for Instr, first if it is not predicated.
+    LLVM_DEBUG(dbgs() << "LV: Scalarizing:" << *I << "\n");
+  } else {
+    LLVM_DEBUG(dbgs() << "LV: Scalarizing and predicating:" << *I << "\n");
+    // Instructions marked for predication are replicated and a mask operand is
+    // added initially. Masked replicate recipes will later be placed under an
+    // if-then construct to prevent side-effects. Generate recipes to compute
+    // the block mask for this region.
+    BlockInMask = createBlockInMask(I->getParent(), Plan);
+  }
 
   auto *Recipe = new VPReplicateRecipe(I, Plan.mapToVPValues(I->operands()),
-                                       IsUniform, IsPredicated);
-
-  // Finalize the recipe for Instr, first if it is not predicated.
-  if (!IsPredicated) {
-    LLVM_DEBUG(dbgs() << "LV: Scalarizing:" << *I << "\n");
-    setRecipe(I, Recipe);
-    Plan.addVPValue(I, Recipe);
-    VPBB->appendRecipe(Recipe);
-    return VPBB;
-  }
-  LLVM_DEBUG(dbgs() << "LV: Scalarizing and predicating:" << *I << "\n");
-
-  VPBlockBase *SingleSucc = VPBB->getSingleSuccessor();
-  assert(SingleSucc && "VPBB must have a single successor when handling "
-                       "predicated replication.");
-  VPBlockUtils::disconnectBlocks(VPBB, SingleSucc);
-  // Record predicated instructions for above packing optimizations.
-  VPBlockBase *Region = createReplicateRegion(Recipe, Plan);
-  VPBlockUtils::insertBlockAfter(Region, VPBB);
-  auto *RegSucc = new VPBasicBlock();
-  VPBlockUtils::insertBlockAfter(RegSucc, Region);
-  VPBlockUtils::connectBlocks(RegSucc, SingleSucc);
-  return RegSucc;
+                                       IsUniform, BlockInMask);
+  return toVPRecipeResult(Recipe);
 }
 
 VPRegionBlock *
 VPRecipeBuilder::createReplicateRegion(VPReplicateRecipe *PredRecipe,
                                        VPlan &Plan) {
   Instruction *Instr = PredRecipe->getUnderlyingInstr();
-  // Instructions marked for predication are replicated and placed under an
-  // if-then construct to prevent side-effects.
-  // Generate recipes to compute the block mask for this region.
-  VPValue *BlockInMask = createBlockInMask(Instr->getParent(), Plan);
-
   // Build the triangular if-then region.
   std::string RegionName = (Twine("pred.") + Instr->getOpcodeName()).str();
   assert(Instr->getParent() && "Predicated instruction not in any basic block");
+  auto *BlockInMask = PredRecipe->getMask();
+  // Replace predicated replicate recipe with a replicate recipe without a
+  // mask but in the replicate region.
+  auto *RecipeWithoutMask = new VPReplicateRecipe(
+      PredRecipe->getUnderlyingInstr(),
+      make_range(PredRecipe->op_begin(), std::prev(PredRecipe->op_end())),
+      PredRecipe->isUniform());
+  PredRecipe->replaceAllUsesWith(RecipeWithoutMask);
+  PredRecipe->eraseFromParent();
+
   auto *BOMRecipe = new VPBranchOnMaskRecipe(BlockInMask);
   auto *Entry = new VPBasicBlock(Twine(RegionName) + ".entry", BOMRecipe);
-  auto *PHIRecipe = Instr->getType()->isVoidTy()
+  auto *PHIRecipe = RecipeWithoutMask->getNumUsers() == 0
                         ? nullptr
-                        : new VPPredInstPHIRecipe(PredRecipe);
+                        : new VPPredInstPHIRecipe(RecipeWithoutMask);
   if (PHIRecipe) {
-    setRecipe(Instr, PHIRecipe);
-    Plan.addVPValue(Instr, PHIRecipe);
-  } else {
-    setRecipe(Instr, PredRecipe);
-    Plan.addVPValue(Instr, PredRecipe);
+    RecipeWithoutMask->replaceAllUsesWith(PHIRecipe);
+    PHIRecipe->setOperand(0, RecipeWithoutMask);
   }
 
   auto *Exiting = new VPBasicBlock(Twine(RegionName) + ".continue", PHIRecipe);
-  auto *Pred = new VPBasicBlock(Twine(RegionName) + ".if", PredRecipe);
+  auto *Pred = new VPBasicBlock(Twine(RegionName) + ".if", RecipeWithoutMask);
   VPRegionBlock *Region = new VPRegionBlock(Entry, Exiting, RegionName, true);
 
   // Note: first set Entry as region entry and then connect successors starting
@@ -9046,7 +9039,6 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   for (BasicBlock *BB : make_range(DFS.beginRPO(), DFS.endRPO())) {
     // Relevant instructions from basic block BB will be grouped into VPRecipe
     // ingredients and fill a new VPBasicBlock.
-    unsigned VPBBsForBB = 0;
     if (VPBB != HeaderVPBB)
       VPBB->setName(BB->getName());
     Builder.setInsertPoint(VPBB);
@@ -9078,46 +9070,36 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
           Legal->isInvariantAddressOfReduction(SI->getPointerOperand()))
         continue;
 
-      if (auto RecipeOrValue = RecipeBuilder.tryToCreateWidenRecipe(
-              Instr, Operands, Range, VPBB, Plan)) {
-        // If Instr can be simplified to an existing VPValue, use it.
-        if (RecipeOrValue.is<VPValue *>()) {
-          auto *VPV = RecipeOrValue.get<VPValue *>();
-          Plan->addVPValue(Instr, VPV);
-          // If the re-used value is a recipe, register the recipe for the
-          // instruction, in case the recipe for Instr needs to be recorded.
-          if (VPRecipeBase *R = VPV->getDefiningRecipe())
-            RecipeBuilder.setRecipe(Instr, R);
-          continue;
-        }
-        // Otherwise, add the new recipe.
-        VPRecipeBase *Recipe = RecipeOrValue.get<VPRecipeBase *>();
-        for (auto *Def : Recipe->definedValues()) {
-          auto *UV = Def->getUnderlyingValue();
-          Plan->addVPValue(UV, Def);
-        }
-
-        RecipeBuilder.setRecipe(Instr, Recipe);
-        if (isa<VPWidenIntOrFpInductionRecipe>(Recipe) &&
-            HeaderVPBB->getFirstNonPhi() != VPBB->end()) {
-          // Move VPWidenIntOrFpInductionRecipes for optimized truncates to the
-          // phi section of HeaderVPBB.
-          assert(isa<TruncInst>(Instr));
-          Recipe->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
-        } else
-          VPBB->appendRecipe(Recipe);
+      auto RecipeOrValue = RecipeBuilder.tryToCreateWidenRecipe(
+          Instr, Operands, Range, VPBB, Plan);
+      if (!RecipeOrValue)
+        RecipeOrValue = RecipeBuilder.handleReplication(Instr, Range, *Plan);
+      // If Instr can be simplified to an existing VPValue, use it.
+      if (RecipeOrValue.is<VPValue *>()) {
+        auto *VPV = RecipeOrValue.get<VPValue *>();
+        Plan->addVPValue(Instr, VPV);
+        // If the re-used value is a recipe, register the recipe for the
+        // instruction, in case the recipe for Instr needs to be recorded.
+        if (VPRecipeBase *R = VPV->getDefiningRecipe())
+          RecipeBuilder.setRecipe(Instr, R);
         continue;
       }
-
-      // Otherwise, if all widening options failed, Instruction is to be
-      // replicated. This may create a successor for VPBB.
-      VPBasicBlock *NextVPBB =
-          RecipeBuilder.handleReplication(Instr, Range, VPBB, *Plan);
-      if (NextVPBB != VPBB) {
-        VPBB = NextVPBB;
-        VPBB->setName(BB->hasName() ? BB->getName() + "." + Twine(VPBBsForBB++)
-                                    : "");
+      // Otherwise, add the new recipe.
+      VPRecipeBase *Recipe = RecipeOrValue.get<VPRecipeBase *>();
+      for (auto *Def : Recipe->definedValues()) {
+        auto *UV = Def->getUnderlyingValue();
+        Plan->addVPValue(UV, Def);
       }
+
+      RecipeBuilder.setRecipe(Instr, Recipe);
+      if (isa<VPWidenIntOrFpInductionRecipe>(Recipe) &&
+          HeaderVPBB->getFirstNonPhi() != VPBB->end()) {
+        // Move VPWidenIntOrFpInductionRecipes for optimized truncates to the
+        // phi section of HeaderVPBB.
+        assert(isa<TruncInst>(Instr));
+        Recipe->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
+      } else
+        VPBB->appendRecipe(Recipe);
     }
 
     VPBlockUtils::insertBlockAfter(new VPBasicBlock(), VPBB);
@@ -9193,6 +9175,9 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
 
   VPlanTransforms::optimizeInductions(*Plan, *PSE.getSE());
   VPlanTransforms::removeDeadRecipes(*Plan);
+
+  // Convert masked VPReplicateRecipes to if-then region blocks.
+  VPlanTransforms::addReplicateRegions(*Plan, RecipeBuilder);
 
   bool ShouldSimplify = true;
   while (ShouldSimplify) {

@@ -1508,9 +1508,12 @@ class VPReplicateRecipe : public VPRecipeBase, public VPValue {
 public:
   template <typename IterT>
   VPReplicateRecipe(Instruction *I, iterator_range<IterT> Operands,
-                    bool IsUniform, bool IsPredicated = false)
+                    bool IsUniform, VPValue *Mask = nullptr)
       : VPRecipeBase(VPDef::VPReplicateSC, Operands), VPValue(this, I),
-        IsUniform(IsUniform), IsPredicated(IsPredicated) {}
+        IsUniform(IsUniform), IsPredicated(Mask) {
+    if (Mask)
+      addOperand(Mask);
+  }
 
   ~VPReplicateRecipe() override = default;
 
@@ -1549,6 +1552,12 @@ public:
   /// VPPredInstPHIRecipe. In this case, the scalar values should also be packed
   /// in a vector.
   bool shouldPack() const;
+
+  /// Return the mask of a predicated VPReplicateRecipe.
+  VPValue *getMask() {
+    assert(isPredicated() && "Trying to get the mask of a unpredicated recipe");
+    return getOperand(getNumOperands() - 1);
+  }
 };
 
 /// A recipe for generating conditional branches on the bits of a mask.
