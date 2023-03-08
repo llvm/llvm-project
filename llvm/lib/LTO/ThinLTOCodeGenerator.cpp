@@ -452,18 +452,20 @@ public:
     sys::fs::remove(OutputPath);
     // Cache is enabled, hard-link the entry (or copy if hard-link fails).
     std::string CacheEntryPath = getEntryPath();
-    auto Err = sys::fs::create_hard_link(CacheEntryPath, OutputPath);
-    if (!Err)
-      return Error::success();
-    // Hard linking failed, try to copy.
-    Err = sys::fs::copy_file(CacheEntryPath, OutputPath);
-    if (!Err)
-      return Error::success();
-    // Copy failed (could be because the CacheEntry was removed from the cache
-    // in the meantime by another process), fall back and try to write down the
-    // buffer to the output.
-    errs() << "remark: can't link or copy from cached entry '" << CacheEntryPath
-           << "' to '" << OutputPath << "'\n";
+    if (!CacheEntryPath.empty()) {
+      auto Err = sys::fs::create_hard_link(CacheEntryPath, OutputPath);
+      if (!Err)
+        return Error::success();
+      // Hard linking failed, try to copy.
+      Err = sys::fs::copy_file(CacheEntryPath, OutputPath);
+      if (!Err)
+        return Error::success();
+      // Copy failed (could be because the CacheEntry was removed from the cache
+      // in the meantime by another process), fall back and try to write down
+      // the buffer to the output.
+      errs() << "remark: can't link or copy from cached entry '"
+             << CacheEntryPath << "' to '" << OutputPath << "'\n";
+    }
     // Fallback to default.
     return ModuleCacheEntry::writeObject(OutputBuffer, OutputPath);
   }
