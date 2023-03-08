@@ -670,6 +670,10 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   if (args.hasArg(clang::driver::options::OPT_fopenmp)) {
     res.getFrontendOpts().features.Enable(
         Fortran::common::LanguageFeature::OpenMP);
+
+    if (args.hasArg(clang::driver::options::OPT_fopenmp_is_device)) {
+      res.getLangOpts().OpenMPIsDevice = 1;
+    }
   }
 
   // -pedantic

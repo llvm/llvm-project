@@ -38,6 +38,7 @@
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/unparse-with-symbols.h"
 #include "flang/Version.inc"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
@@ -121,6 +122,11 @@ static llvm::cl::opt<bool> pftDumpTest(
 static llvm::cl::opt<bool> enableOpenMP("fopenmp",
                                         llvm::cl::desc("enable openmp"),
                                         llvm::cl::init(false));
+
+static llvm::cl::opt<bool>
+    enableOpenMPDevice("fopenmp-is-device",
+                       llvm::cl::desc("enable openmp device compilation"),
+                       llvm::cl::init(false));
 
 static llvm::cl::opt<bool> enableOpenACC("fopenacc",
                                          llvm::cl::desc("enable openacc"),
@@ -237,6 +243,8 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
       kindMap, loweringOptions, {});
   burnside.lower(parseTree, semanticsContext);
   mlir::ModuleOp mlirModule = burnside.getModule();
+  if (enableOpenMP)
+    mlir::omp::OpenMPDialect::setIsDevice(mlirModule, enableOpenMPDevice);
   std::error_code ec;
   std::string outputName = outputFilename;
   if (!outputName.size())
