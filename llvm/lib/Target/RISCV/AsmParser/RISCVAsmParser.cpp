@@ -1570,7 +1570,7 @@ OperandMatchResultTy RISCVAsmParser::parseFPImm(OperandVector &Operands) {
   if (!Tok.is(AsmToken::Real) && !Tok.is(AsmToken::Integer) &&
       !Tok.is(AsmToken::Identifier)) {
     TokError("invalid floating point immediate");
-    return MatchOperand_NoMatch;
+    return MatchOperand_ParseFail;
   }
 
   // Parse special floats (inf/nan/min) representation.
