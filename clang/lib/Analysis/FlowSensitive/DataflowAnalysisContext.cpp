@@ -20,14 +20,17 @@
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include <cassert>
 #include <memory>
 #include <utility>
 
-static llvm::cl::opt<std::string>
-    DataflowLog("dataflow-log", llvm::cl::Hidden, llvm::cl::ValueOptional,
-                llvm::cl::desc("Emit log of dataflow analysis. With no arg, "
-                               "writes textual log to stderr."));
+static llvm::cl::opt<std::string> DataflowLog(
+    "dataflow-log", llvm::cl::Hidden, llvm::cl::ValueOptional,
+    llvm::cl::desc("Emit log of dataflow analysis. With no arg, writes textual "
+                   "log to stderr. With an arg, writes HTML logs under the "
+                   "specified directory (one per analyzed function)."));
 
 namespace clang {
 namespace dataflow {
@@ -218,6 +221,34 @@ DataflowAnalysisContext::getControlFlowContext(const FunctionDecl *F) {
   return nullptr;
 }
 
+static std::unique_ptr<Logger> makeLoggerFromCommandLine() {
+  if (DataflowLog.empty())
+    return Logger::textual(llvm::errs());
+
+  llvm::StringRef Dir = DataflowLog;
+  if (auto EC = llvm::sys::fs::create_directories(Dir))
+    llvm::errs() << "Failed to create log dir: " << EC.message() << "\n";
+  // All analysis runs within a process will log to the same directory.
+  // Share a counter so they don't all overwrite each other's 0.html.
+  // (Don't share a logger, it's not threadsafe).
+  static std::atomic<unsigned> Counter = {0};
+  auto StreamFactory =
+      [Dir(Dir.str())]() mutable -> std::unique_ptr<llvm::raw_ostream> {
+    llvm::SmallString<256> File(Dir);
+    llvm::sys::path::append(File,
+                            std::to_string(Counter.fetch_add(1)) + ".html");
+    std::error_code EC;
+    auto OS = std::make_unique<llvm::raw_fd_ostream>(File, EC);
+    if (EC) {
+      llvm::errs() << "Failed to create log " << File << ": " << EC.message()
+                   << "\n";
+      return std::make_unique<llvm::raw_null_ostream>();
+    }
+    return OS;
+  };
+  return Logger::html(std::move(StreamFactory));
+}
+
 DataflowAnalysisContext::DataflowAnalysisContext(std::unique_ptr<Solver> S,
                                                  Options Opts)
     : S(std::move(S)), A(std::make_unique<Arena>()), Opts(Opts) {
@@ -227,7 +258,7 @@ DataflowAnalysisContext::DataflowAnalysisContext(std::unique_ptr<Solver> S,
   // based tools.
   if (Opts.Log == nullptr) {
     if (DataflowLog.getNumOccurrences() > 0) {
-      LogOwner = Logger::textual(llvm::errs());
+      LogOwner = makeLoggerFromCommandLine();
       this->Opts.Log = LogOwner.get();
       // FIXME: if the flag is given a value, write an HTML log to a file.
     } else {
