@@ -670,9 +670,11 @@ static LogicalResult verifyPackUnPack(Operation *op, bool requiresStaticShape,
 
   // NOTE: We use `getLvlRank` because the `coordinatesTp` is for
   // level-coordinates (cf., the op documentation).
-  const auto coordsRank = coordinatesTp.getShape()[1];
-  const auto tensorRank = tensorTp.getLvlRank();
-  if (!ShapedType::isDynamic(coordsRank) && (unsigned)coordsRank != tensorRank)
+  const DynSize coordsRank = coordinatesTp.getShape()[1];
+  const Level tensorRank = tensorTp.getLvlRank();
+  // FIXME: replace the `operator!=` with our backported `safelyNE`.
+  if (!ShapedType::isDynamic(coordsRank) &&
+      coordsRank != static_cast<DynSize>(tensorRank))
     return op->emitError("input/output level-ranks don't match");
 
   return success();
