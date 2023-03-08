@@ -594,13 +594,21 @@ static llvm::Triple computeTargetTriple(const Driver &D,
     }
   }
 
+  // The `-maix[32|64]` flags are only valid for AIX targets.
+  if (Arg *A = Args.getLastArgNoClaim(options::OPT_maix32, options::OPT_maix64);
+      A && !Target.isOSAIX())
+    D.Diag(diag::err_drv_unsupported_opt_for_target)
+        << A->getAsString(Args) << Target.str();
+
   // Handle pseudo-target flags '-m64', '-mx32', '-m32' and '-m16'.
   Arg *A = Args.getLastArg(options::OPT_m64, options::OPT_mx32,
-                           options::OPT_m32, options::OPT_m16);
+                           options::OPT_m32, options::OPT_m16,
+                           options::OPT_maix32, options::OPT_maix64);
   if (A) {
     llvm::Triple::ArchType AT = llvm::Triple::UnknownArch;
 
-    if (A->getOption().matches(options::OPT_m64)) {
+    if (A->getOption().matches(options::OPT_m64) ||
+        A->getOption().matches(options::OPT_maix64)) {
       AT = Target.get64BitArchVariant().getArch();
       if (Target.getEnvironment() == llvm::Triple::GNUX32)
         Target.setEnvironment(llvm::Triple::GNU);
@@ -613,7 +621,8 @@ static llvm::Triple computeTargetTriple(const Driver &D,
         Target.setEnvironment(llvm::Triple::MuslX32);
       else
         Target.setEnvironment(llvm::Triple::GNUX32);
-    } else if (A->getOption().matches(options::OPT_m32)) {
+    } else if (A->getOption().matches(options::OPT_m32) ||
+               A->getOption().matches(options::OPT_maix32)) {
       AT = Target.get32BitArchVariant().getArch();
       if (Target.getEnvironment() == llvm::Triple::GNUX32)
         Target.setEnvironment(llvm::Triple::GNU);
