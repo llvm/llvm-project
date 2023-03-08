@@ -4260,12 +4260,6 @@ def offload_add_rpath: Flag<["--"], "offload-add-rpath">, Flags<[NoArgumentUnuse
   HelpText<"Add -rpath with HIP runtime library directory to the linker flags">;
 def no_offload_add_rpath: Flag<["--"], "no-offload-add-rpath">, Flags<[NoArgumentUnused]>,
   HelpText<"Do not add -rpath with HIP runtime library directory to the linker flags">;
-defm openmp_implicit_rpath: BoolFOption<"openmp-implicit-rpath",
-  LangOpts<"OpenMP">,
-  DefaultTrue,
-  PosFlag<SetTrue, [], "Set rpath on OpenMP executables">,
-  NegFlag<SetFalse>,
-  BothFlags<[NoArgumentUnused]>>;
 def r : Flag<["-"], "r">, Flags<[LinkerInput,NoArgumentUnused]>,
         Group<Link_Group>;
 def save_temps_EQ : Joined<["-", "--"], "save-temps=">, Flags<[CC1Option, FlangOption, NoXarchOption]>,
