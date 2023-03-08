@@ -64,11 +64,14 @@ FormatControl<CONTEXT>::FormatControl(const Terminator &terminator,
 
 template <typename CONTEXT>
 int FormatControl<CONTEXT>::GetIntField(
-    IoErrorHandler &handler, CharType firstCh) {
+    IoErrorHandler &handler, CharType firstCh, bool *hadError) {
   CharType ch{firstCh ? firstCh : PeekNext()};
   if (ch != '-' && ch != '+' && (ch < '0' || ch > '9')) {
     handler.SignalError(IostatErrorInFormat,
         "Invalid FORMAT: integer expected at '%c'", static_cast<char>(ch));
+    if (hadError) {
+      *hadError = true;
+    }
     return 0;
   }
   int result{0};
@@ -86,6 +89,9 @@ int FormatControl<CONTEXT>::GetIntField(
         std::numeric_limits<int>::max() / 10 - (static_cast<int>(ch) - '0')) {
       handler.SignalError(
           IostatErrorInFormat, "FORMAT integer field out of range");
+      if (hadError) {
+        *hadError = true;
+      }
       return result;
     }
     result = 10 * result + ch - '0';
@@ -99,6 +105,9 @@ int FormatControl<CONTEXT>::GetIntField(
   if (negate && (result *= -1) > 0) {
     handler.SignalError(
         IostatErrorInFormat, "FORMAT integer field out of range");
+    if (hadError) {
+      *hadError = true;
+    }
   }
   return result;
 }
@@ -401,7 +410,7 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
 
 // Returns the next data edit descriptor
 template <typename CONTEXT>
-DataEdit FormatControl<CONTEXT>::GetNextDataEdit(
+std::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
     Context &context, int maxRepeat) {
   int repeat{CueUpNextDataEdit(context)};
   auto start{offset_};
@@ -420,7 +429,7 @@ DataEdit FormatControl<CONTEXT>::GetNextDataEdit(
     if (auto quote{static_cast<char>(PeekNext())};
         quote == '\'' || quote == '"') {
       // Capture the quoted 'iotype'
-      bool ok{false}, tooLong{false};
+      bool ok{false};
       for (++offset_; offset_ < formatLength_;) {
         auto ch{static_cast<char>(format_[offset_++])};
         if (ch == quote &&
@@ -428,31 +437,36 @@ DataEdit FormatControl<CONTEXT>::GetNextDataEdit(
                 static_cast<char>(format_[offset_]) != quote)) {
           ok = true;
           break; // that was terminating quote
-        } else if (edit.ioTypeChars >= edit.maxIoTypeChars) {
-          tooLong = true;
-        } else {
-          edit.ioType[edit.ioTypeChars++] = ch;
-          if (ch == quote) {
-            ++offset_;
-          }
+        }
+        if (edit.ioTypeChars >= edit.maxIoTypeChars) {
+          ReportBadFormat(context, "Excessive DT'iotype' in FORMAT", start);
+          return std::nullopt;
+        }
+        edit.ioType[edit.ioTypeChars++] = ch;
+        if (ch == quote) {
+          ++offset_;
         }
       }
       if (!ok) {
         ReportBadFormat(context, "Unclosed DT'iotype' in FORMAT", start);
-      } else if (tooLong) {
-        ReportBadFormat(context, "Excessive DT'iotype' in FORMAT", start);
+        return std::nullopt;
       }
     }
     if (PeekNext() == '(') {
       // Capture the v_list arguments
-      bool ok{false}, tooLong{false};
+      bool ok{false};
       for (++offset_; offset_ < formatLength_;) {
-        int n{GetIntField(context)};
-        if (edit.vListEntries >= edit.maxVListEntries) {
-          tooLong = true;
-        } else {
-          edit.vList[edit.vListEntries++] = n;
+        bool hadError{false};
+        int n{GetIntField(context, '\0', &hadError)};
+        if (hadError) {
+          ok = false;
+          break;
         }
+        if (edit.vListEntries >= edit.maxVListEntries) {
+          ReportBadFormat(context, "Excessive DT(v_list) in FORMAT", start);
+          return std::nullopt;
+        }
+        edit.vList[edit.vListEntries++] = n;
         auto ch{static_cast<char>(GetNextChar(context))};
         if (ch != ',') {
           ok = ch == ')';
@@ -461,8 +475,7 @@ DataEdit FormatControl<CONTEXT>::GetNextDataEdit(
       }
       if (!ok) {
         ReportBadFormat(context, "Unclosed DT(v_list) in FORMAT", start);
-      } else if (tooLong) {
-        ReportBadFormat(context, "Excessive DT(v_list) in FORMAT", start);
+        return std::nullopt;
       }
     }
   }
