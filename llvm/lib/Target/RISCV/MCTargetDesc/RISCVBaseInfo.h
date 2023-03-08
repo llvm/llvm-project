@@ -376,6 +376,7 @@ static inline int getLoadFPImm(uint8_t Sign, uint8_t Exp, uint8_t Mantissa) {
 
 namespace RISCVLoadFPImm {
 inline static uint32_t getFPImm(unsigned Imm) {
+  assert(Imm != 1 && Imm != 30 && Imm != 31 && "Unsupported immediate");
   uint8_t Sign;
   uint8_t Exp;
   uint8_t Mantissa;
