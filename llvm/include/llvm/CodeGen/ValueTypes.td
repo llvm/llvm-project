@@ -16,6 +16,11 @@ class ValueType<int size, int value> {
   string Namespace = "MVT";
   int Size = size;
   int Value = value;
+  int isOverloaded = false;
+}
+
+class VTAny<int value> : ValueType<0, value> {
+  let isOverloaded = true;
 }
 
 def OtherVT : ValueType<0,   1>;  // "Other" value
@@ -245,22 +250,22 @@ def MetadataVT : ValueType<0, 249>;  // Metadata
 
 // Pseudo valuetype mapped to the current pointer size to any address space.
 // Should only be used in TableGen.
-def iPTRAny    : ValueType<0, 250>;
+def iPTRAny    : VTAny<250>;
 
 // Pseudo valuetype to represent "vector of any size"
-def vAny       : ValueType<0, 251>;
+def vAny       : VTAny<251>;
 
 // Pseudo valuetype to represent "float of any format"
-def fAny       : ValueType<0, 252>;
+def fAny       : VTAny<252>;
 
 // Pseudo valuetype to represent "integer of any bit width"
-def iAny       : ValueType<0, 253>;
+def iAny       : VTAny<253>;
 
 // Pseudo valuetype mapped to the current pointer size.
 def iPTR       : ValueType<0, 254>;
 
 // Pseudo valuetype to represent "any type of any size".
-def Any        : ValueType<0, 255>;
+def Any        : VTAny<255>;
 
 /// This class is for targets that want to use pointer types in patterns
 /// with the GlobalISelEmitter.  Targets must define their own pointer
