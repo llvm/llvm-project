@@ -398,11 +398,6 @@ inline static uint32_t getFPImm(unsigned Imm) {
 /// floating-point immediate value. If the value cannot be represented as a
 /// 5-bit binary encoding, then return -1.
 static inline int getLoadFP32Imm(const APInt &Imm) {
-  if ((Imm.extractBitsAsZExtValue(9, 23) == 0b001110001 &&
-       Imm.extractBitsAsZExtValue(23, 0) == 0) ||
-       Imm.extractBitsAsZExtValue(32, 0) == 0)
-    return 1;
-
   if (Imm.extractBitsAsZExtValue(20, 0) != 0)
     return -1;
 
