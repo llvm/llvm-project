@@ -92,6 +92,11 @@ public:
   void set(T rhs) { val = rhs; }
 };
 
+// Issue a thread fence with the given memory ordering.
+LIBC_INLINE void atomic_thread_fence(MemoryOrder mem_ord) {
+  __atomic_thread_fence(int(mem_ord));
+}
+
 } // namespace cpp
 } // namespace __llvm_libc
 
