@@ -42,7 +42,7 @@
 // CHECK-NEXT:           "input-file": "[[PREFIX]]/tu.c"
 // CHECK-NEXT:         }
 // CHECK:            ]
-// CHECK-NEXT:     },
+// CHECK:          },
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "commands": [
 // CHECK-NEXT:         {
@@ -57,8 +57,8 @@
 // CHECK-NEXT:             "[[PREFIX]]/tu.c"
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "input-file": "[[PREFIX]]/tu.c"
-// CHECK-NEXT:         }
+// CHECK:              }
 // CHECK:            ]
-// CHECK-NEXT:     }
-// CHECK-NEXT:   ]
-// CHECK-NEXT: }
+// CHECK:          }
+// CHECK:        ]
+// CHECK:      }

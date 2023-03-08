@@ -11,8 +11,8 @@
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/properties/architectures.h"
+#include "src/errno/libc_errno.h"
 
-#include <errno.h>
 #include <fenv.h>
 #include <math.h>
 
@@ -28,6 +28,8 @@
 // the apple condition here should be removed.
 #elif defined(LIBC_TARGET_ARCH_IS_X86) && !defined(__APPLE__)
 #include "x86_64/FEnvImpl.h"
+#elif defined(LIBC_TARGET_ARCH_IS_ARM)
+#include "arm/FEnvImpl.h"
 #else
 
 namespace __llvm_libc::fputil {
@@ -69,7 +71,7 @@ LIBC_INLINE int raise_except_if_required(int excepts) {
 
 LIBC_INLINE void set_errno_if_required(int err) {
   if (math_errhandling & MATH_ERRNO)
-    errno = err;
+    libc_errno = err;
 }
 
 } // namespace __llvm_libc::fputil

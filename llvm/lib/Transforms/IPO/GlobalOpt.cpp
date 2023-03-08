@@ -392,8 +392,25 @@ static bool collectSRATypes(DenseMap<uint64_t, GlobalPart> &Parts,
       if (isa<ScalableVectorType>(Ty))
         return false;
 
+      auto IsStored = [GV, &DL, &Offset](Value *V) {
+        auto *SI = dyn_cast<StoreInst>(V);
+        if (!SI)
+          return false;
+
+        Constant *StoredConst = dyn_cast<Constant>(SI->getOperand(0));
+        if (!StoredConst)
+          return true;
+
+        // Don't consider stores that only write the initializer value.
+        if (Constant *Result = ConstantFoldLoadFromConst(
+                GV->getInitializer(), StoredConst->getType(), Offset, DL))
+          return Result != StoredConst;
+
+        return true;
+      };
+
       It->second.IsLoaded |= isa<LoadInst>(V);
-      It->second.IsStored |= isa<StoreInst>(V);
+      It->second.IsStored |= IsStored(V);
       continue;
     }
 
@@ -497,12 +514,12 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
 
   // Check that the types are non-overlapping.
   uint64_t Offset = 0;
-  for (const auto &Pair : TypesVector) {
+  for (const auto &[OffsetForTy, Ty] : TypesVector) {
     // Overlaps with previous type.
-    if (Pair.first < Offset)
+    if (OffsetForTy < Offset)
       return nullptr;
 
-    Offset = Pair.first + DL.getTypeAllocSize(Pair.second);
+    Offset = OffsetForTy + DL.getTypeAllocSize(Ty);
   }
 
   // Some accesses go beyond the end of the global, don't bother.
@@ -512,16 +529,16 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
   // Collect initializers for new globals.
   Constant *OrigInit = GV->getInitializer();
   DenseMap<uint64_t, Constant *> Initializers;
-  for (const auto &Pair : TypesVector) {
-    Constant *NewInit = ConstantFoldLoadFromConst(OrigInit, Pair.second,
-                                                  APInt(64, Pair.first), DL);
+  for (const auto &[OffsetForTy, Ty] : TypesVector) {
+    Constant *NewInit =
+        ConstantFoldLoadFromConst(OrigInit, Ty, APInt(64, OffsetForTy), DL);
     if (!NewInit) {
       LLVM_DEBUG(dbgs() << "Global SRA: Failed to evaluate initializer of "
-                        << *GV << " with type " << *Pair.second << " at offset "
-                        << Pair.first << "\n");
+                        << *GV << " with type " << *Ty << " at offset "
+                        << OffsetForTy << "\n");
       return nullptr;
     }
-    Initializers.insert({Pair.first, NewInit});
+    Initializers.insert({OffsetForTy, NewInit});
   }
 
   LLVM_DEBUG(dbgs() << "PERFORMING GLOBAL SRA ON: " << *GV << "\n");
@@ -534,26 +551,24 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
   // Create replacement globals.
   DenseMap<uint64_t, GlobalVariable *> NewGlobals;
   unsigned NameSuffix = 0;
-  for (auto &Pair : TypesVector) {
-    uint64_t Offset = Pair.first;
-    Type *Ty = Pair.second;
+  for (auto &[OffsetForTy, Ty] : TypesVector) {
     GlobalVariable *NGV = new GlobalVariable(
         *GV->getParent(), Ty, false, GlobalVariable::InternalLinkage,
-        Initializers[Offset], GV->getName() + "." + Twine(NameSuffix++), GV,
-        GV->getThreadLocalMode(), GV->getAddressSpace());
+        Initializers[OffsetForTy], GV->getName() + "." + Twine(NameSuffix++),
+        GV, GV->getThreadLocalMode(), GV->getAddressSpace());
     NGV->copyAttributesFrom(GV);
-    NewGlobals.insert({Offset, NGV});
+    NewGlobals.insert({OffsetForTy, NGV});
 
     // Calculate the known alignment of the field.  If the original aggregate
     // had 256 byte alignment for example, something might depend on that:
     // propagate info to each field.
-    Align NewAlign = commonAlignment(StartAlignment, Offset);
+    Align NewAlign = commonAlignment(StartAlignment, OffsetForTy);
     if (NewAlign > DL.getABITypeAlign(Ty))
       NGV->setAlignment(NewAlign);
 
     // Copy over the debug info for the variable.
-    transferSRADebugInfo(GV, NGV, Offset * 8, DL.getTypeAllocSizeInBits(Ty),
-                         VarSize);
+    transferSRADebugInfo(GV, NGV, OffsetForTy * 8,
+                         DL.getTypeAllocSizeInBits(Ty), VarSize);
   }
 
   // Replace uses of the original global with uses of the new global.

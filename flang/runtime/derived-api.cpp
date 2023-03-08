@@ -87,11 +87,22 @@ static const typeInfo::DerivedType *GetDerivedType(const Descriptor &desc) {
 }
 
 bool RTNAME(SameTypeAs)(const Descriptor &a, const Descriptor &b) {
+  // Unlimited polymorphic with intrinsic dynamic type.
+  if (a.raw().type != CFI_type_struct && a.raw().type != CFI_type_other &&
+      b.raw().type != CFI_type_struct && b.raw().type != CFI_type_other)
+    return a.raw().type == b.raw().type;
+
   const typeInfo::DerivedType *derivedTypeA{GetDerivedType(a)};
   const typeInfo::DerivedType *derivedTypeB{GetDerivedType(b)};
-  if (derivedTypeA == nullptr || derivedTypeB == nullptr) {
-    return false;
+
+  // One of the descriptor is an unallocated unlimited polymorphic descriptor.
+  // This is processor depedent according to the standard. Align the result
+  // with other compilers.
+  if ((!a.IsAllocated() && derivedTypeA == nullptr) ||
+      (!b.IsAllocated() && derivedTypeB == nullptr)) {
+    return true;
   }
+
   // Exact match of derived type.
   if (derivedTypeA == derivedTypeB) {
     return true;

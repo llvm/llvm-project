@@ -128,7 +128,9 @@ public:
     SourceMgr = &CI.getSourceManager();
     Includes.collect(CI);
     if (Config::current().Diagnostics.UnusedIncludes ==
-        Config::UnusedIncludesPolicy::Experiment)
+                Config::IncludesPolicy::Experiment ||
+            Config::current().Diagnostics.MissingIncludes ==
+            Config::IncludesPolicy::Strict)
       Pragmas.record(CI);
     if (BeforeExecuteCallback)
       BeforeExecuteCallback(CI);
@@ -641,7 +643,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   auto BuiltPreamble = PrecompiledPreamble::Build(
       CI, ContentsBuffer.get(), Bounds, *PreambleDiagsEngine,
       Stats ? TimedFS : StatCacheFS, std::make_shared<PCHContainerOperations>(),
-      StoreInMemory, CapturedInfo);
+      StoreInMemory, /*StoragePath=*/StringRef(), CapturedInfo);
   PreambleTimer.stopTimer();
 
   // When building the AST for the main file, we do want the function

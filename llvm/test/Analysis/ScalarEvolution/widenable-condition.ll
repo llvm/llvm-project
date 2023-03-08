@@ -14,9 +14,9 @@ define i32 @wc_max() {
 ; CHECK-LABEL: 'wc_max'
 ; CHECK-NEXT:  Classifying expressions for: @wc_max
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,2000) S: [0,2000) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,2000) S: [0,2000) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,2001) S: [1,2001) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,2001) S: [1,2001) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %widenable_cond3 = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    --> %widenable_cond3 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %exiplicit_guard_cond4 = and i1 %cond_1, %widenable_cond3

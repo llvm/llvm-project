@@ -159,16 +159,16 @@ static LogicalResult genForeachOnSparseConstant(ForeachOp op,
   // Foreach on constant.
   foreachInSparseConstant(
       loc, rewriter, attr, op.getOrder().value_or(AffineMap()),
-      [&reduc, &rewriter, op](ArrayRef<Value> coords, Value v) mutable {
+      [&reduc, &rewriter, op](ArrayRef<Value> cvs, Value v) mutable {
         SmallVector<Value> args;
-        args.append(coords.begin(), coords.end());
+        args.append(cvs.begin(), cvs.end());
         args.push_back(v);
         args.append(reduc);
         // Clones the foreach op to get a copy of the loop body.
         auto cloned = cast<ForeachOp>(rewriter.clone(*op.getOperation()));
         assert(args.size() == cloned.getBody()->getNumArguments());
         Operation *yield = cloned.getBody()->getTerminator();
-        rewriter.mergeBlockBefore(cloned.getBody(), op, args);
+        rewriter.inlineBlockBefore(cloned.getBody(), op, args);
         // clean up
         rewriter.eraseOp(cloned);
         reduc = yield->getOperands();
@@ -386,7 +386,7 @@ public:
     // Implement the sparse2sparse reshape as follows:
     //   %tmp = bufferization.alloc_tensor : unordered COO
     //   foreach srcCoords %srcTensor
-    //     insert translateIndicesArray(srcCoords), %tmp
+    //     insert reshapeCvs(srcCoords), %tmp
     //   %t = sparse_tensor.cast %tmp
     Value nnz = rewriter.create<NumberOfEntriesOp>(loc, srcTensor);
     RankedTensorType cooTp = getUnorderedCOOFromType(dstTp);
@@ -398,18 +398,20 @@ public:
 
     ForeachOp foreachOp = rewriter.create<ForeachOp>(
         loc, srcTensor, cooBuffer,
-        [&](OpBuilder &builder, Location loc, ValueRange args, Value v,
+        [&](OpBuilder &builder, Location loc, ValueRange srcLcvs, Value v,
             ValueRange reduc) {
-          SmallVector<Value> srcIndices;
-          SmallVector<Value> dstIndices;
-          for (Dimension d = 0, dimRank = srcTp.getRank(); d < dimRank; d++) {
+          const Dimension dimRank = srcTp.getRank();
+          SmallVector<Value> srcDcvs;
+          srcDcvs.reserve(dimRank);
+          for (Dimension d = 0; d < dimRank; d++) {
             // FIXME: `toStoredDim` is deprecated
             Level lvl = toStoredDim(encSrc, d);
-            srcIndices.push_back(args[lvl]);
+            srcDcvs.push_back(srcLcvs[lvl]);
           }
-          translateIndicesArray(builder, loc, op.getReassociationIndices(),
-                                srcIndices, srcSizes, dstSizes, dstIndices);
-          auto t = builder.create<InsertOp>(loc, v, reduc.front(), dstIndices);
+          SmallVector<Value> dstDcvs;
+          reshapeCvs(builder, loc, op.getReassociationIndices(), srcSizes,
+                     srcDcvs, dstSizes, dstDcvs);
+          auto t = builder.create<InsertOp>(loc, v, reduc.front(), dstDcvs);
           builder.create<sparse_tensor::YieldOp>(loc, t);
         });
     auto t = rewriter.create<LoadOp>(loc, foreachOp.getResult(0), true);
@@ -468,7 +470,7 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
     const Location loc = op.getLoc();
     const auto dstTp = getSparseTensorType(op);
     const Dimension dimRank = dstTp.getDimRank();
-    const Dimension conDim = op.getDimension().getZExtValue();
+    const Dimension conDim = op.getDimension();
     SmallVector<Value> sizes;
     concatSizesFromInputs(rewriter, sizes, loc, dstTp, op.getInputs(), conDim);
 
@@ -523,12 +525,12 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
         // Create a view of the values buffer to match the unannotated dense
         // tensor.
         Value valuesBuffer = genToValues(rewriter, loc, dst);
-        Value idxBuffer =
+        Value dimCoords =
             genAlloca(rewriter, loc, dimRank, rewriter.getIndexType(),
                       /*staticShape=*/true);
         annotatedDenseDst = dst;
         dst = reshapeValuesToLevels(rewriter, loc, encDst, sizes, valuesBuffer,
-                                    idxBuffer);
+                                    dimCoords);
       }
     } else {
       // TODO: Dense buffers should be allocated/deallocated via the callback
@@ -546,16 +548,16 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
       // output tensor.
       foreachOp = rewriter.create<ForeachOp>(
           loc, input, initArgs,
-          [&](OpBuilder &builder, Location loc, ValueRange args, Value v,
+          [&](OpBuilder &builder, Location loc, ValueRange dcvs, Value v,
               ValueRange reduc) {
-            SmallVector<Value> indices(dstTp.getLvlRank());
+            SmallVector<Value> dstLcvs(dstTp.getLvlRank());
             for (Dimension d = 0; d < dimRank; d++) {
-              Value idx = args[d];
+              Value crd = dcvs[d];
               if (d == conDim)
                 // Transform coordinates for the concatenating dim.
-                idx = builder.create<arith::AddIOp>(loc, idx, offset);
+                crd = builder.create<arith::AddIOp>(loc, crd, offset);
               // FIXME: `toStoredDim` is deprecated
-              indices[toStoredDim(encDst, d)] = idx;
+              dstLcvs[toStoredDim(encDst, d)] = crd;
             }
             if (encDst && !allDense) {
               Value cond = genIsNonzero(rewriter, loc, v);
@@ -563,14 +565,14 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
                   loc, TypeRange(reduc.front().getType()), cond, /*else*/ true);
               builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
               Value t =
-                  builder.create<InsertOp>(loc, v, reduc.front(), indices);
+                  builder.create<InsertOp>(loc, v, reduc.front(), dstLcvs);
               rewriter.create<scf::YieldOp>(loc, t);
               rewriter.setInsertionPointToStart(&ifOp.getElseRegion().front());
               rewriter.create<scf::YieldOp>(loc, reduc.front());
               rewriter.setInsertionPointAfter(ifOp);
               rewriter.create<sparse_tensor::YieldOp>(loc, ifOp.getResult(0));
             } else {
-              builder.create<memref::StoreOp>(loc, v, dst, indices);
+              builder.create<memref::StoreOp>(loc, v, dst, dstLcvs);
               builder.create<sparse_tensor::YieldOp>(loc);
             }
           });
@@ -654,7 +656,7 @@ private:
   // To fill the COO tensor from a sparse constant in COO format:
   //   for i in range(NNZ)
   //     val = values[i]
-  //     [i1,..,ik] = indices[i]
+  //     [i1,..,ik] = coordinates[i]
   //     t->add(val, [i1,..,ik], [p1,..,pk])
   LogicalResult dense2SparseRewrite(ConvertOp op,
                                     PatternRewriter &rewriter) const {
@@ -687,23 +689,23 @@ private:
         rewriter.create<AllocTensorOp>(loc, bufferTp, dynSizes).getResult();
     auto foreachOp = rewriter.create<ForeachOp>(
         loc, src, buffer,
-        [&](OpBuilder &builder, Location loc, ValueRange indices, Value v,
+        [&](OpBuilder &builder, Location loc, ValueRange dcvs, Value v,
             ValueRange reduc) {
           Value input = reduc.front();
           const Dimension dimRank = dstTp.getDimRank();
-          SmallVector<Value> indicesArray(dimRank);
+          const Level lvlRank = dstTp.getLvlRank();
+          SmallVector<Value> lcvs(lvlRank);
           for (Dimension d = 0; d < dimRank; d++)
             // FIXME: `toStoredDim` is deprecated
-            indicesArray[toStoredDim(encDst, d)] = indices[d];
+            lcvs[toStoredDim(encDst, d)] = dcvs[d];
           if (fromSparseConst) {
-            input = builder.create<InsertOp>(loc, v, input, indicesArray);
+            input = builder.create<InsertOp>(loc, v, input, lcvs);
           } else {
             Value cond = genIsNonzero(builder, loc, v);
             auto ifOp = builder.create<scf::IfOp>(
                 loc, TypeRange(input.getType()), cond, /*else*/ true);
             builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-            Value insert =
-                builder.create<InsertOp>(loc, v, input, indicesArray);
+            Value insert = builder.create<InsertOp>(loc, v, input, lcvs);
             builder.create<scf::YieldOp>(loc, insert);
             builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
             builder.create<scf::YieldOp>(loc, input);
@@ -728,7 +730,7 @@ private:
   // Handles sparse tensor to dense tensor conversion as follows:
   //   dst = new dense tensor;
   //   foreach elemment in src
-  //     dst[elemment.indices] = element.value
+  //     dst[element.coords] = element.value
   LogicalResult sparse2DenseRewrite(ConvertOp op,
                                     PatternRewriter &rewriter) const {
     Location loc = op->getLoc();
@@ -811,16 +813,15 @@ private:
                    .getResult();
       auto foreachOp = rewriter.create<ForeachOp>(
           loc, src, tmpCoo,
-          [&](OpBuilder &builder, Location loc, ValueRange args, Value v,
+          [&](OpBuilder &builder, Location loc, ValueRange dcvs, Value v,
               ValueRange reduc) {
-            SmallVector<Value> dstIndices(dstLvlRank);
+            SmallVector<Value> dstLcvs(dstLvlRank);
             for (Dimension d = 0; d < dimRank; d++) {
               // FIXME: `toStoredDim` is deprecated
               Level l = toStoredDim(encDst, d);
-              dstIndices[l] = args[d];
+              dstLcvs[l] = dcvs[d];
             }
-            auto t =
-                builder.create<InsertOp>(loc, v, reduc.front(), dstIndices);
+            auto t = builder.create<InsertOp>(loc, v, reduc.front(), dstLcvs);
             builder.create<sparse_tensor::YieldOp>(loc, t);
           });
       src = rewriter.create<LoadOp>(loc, foreachOp.getResult(0), true);
@@ -836,18 +837,17 @@ private:
       Value y = genToValues(rewriter, loc, src);
       const auto encSrc = srcTp.getEncoding();
       // Sort the COO tensor so that its elements are ordered via increasing
-      // indices for the storage ordering of the dst tensor. Use SortCoo if the
-      // COO tensor has the same dim ordering as the dst tensor.
+      // coordinates for the storage ordering of the dst tensor.  Use SortCoo
+      // if the COO tensor has the same ordering as the dst tensor.
       if (dimRank > 1 && srcTp.hasSameDimToLvlMap(dstTp)) {
-        MemRefType indTp =
-            get1DMemRefType(getIndexOverheadType(rewriter, encSrc),
-                            /*withLayout=*/false);
-        Value xs = rewriter.create<ToIndicesBufferOp>(loc, indTp, src);
+        MemRefType coordsTp =
+            get1DMemRefType(encSrc.getCrdType(), /*withLayout=*/false);
+        Value xs = rewriter.create<ToCoordinatesBufferOp>(loc, coordsTp, src);
         rewriter.create<SortCooOp>(
             loc, nnz, xs, ValueRange{y}, rewriter.getIndexAttr(dimRank),
             rewriter.getIndexAttr(0), SparseTensorSortKind::HybridQuickSort);
       } else {
-        // Gather the indices-arrays in the dst tensor storage order.
+        // Gather the coordinates-arrays in the dst tensor storage order.
         SmallVector<Value> xs(dstLvlRank);
         const Level srcLvlRank = srcTp.getLvlRank();
         for (Level srcLvl = 0; srcLvl < srcLvlRank; srcLvl++) {
@@ -855,7 +855,8 @@ private:
           Dimension dim = toOrigDim(encSrc, srcLvl);
           // FIXME: `toStoredDim` is deprecated
           Level dstLvl = toStoredDim(encDst, dim);
-          xs[dstLvl] = genToIndices(rewriter, loc, src, srcLvl, /*cooStart=*/0);
+          xs[dstLvl] =
+              genToCoordinates(rewriter, loc, src, srcLvl, /*cooStart=*/0);
         }
         rewriter.create<SortOp>(loc, nnz, xs, ValueRange{y},
                                 SparseTensorSortKind::HybridQuickSort);
@@ -870,17 +871,17 @@ private:
                                            dynDstSizes, Value(),
                                            /*sizeHint=*/nnz, Attribute())
                     .getResult();
-    SmallVector<Value> indices(dstLvlRank);
+    SmallVector<Value> dstLcvs(dstLvlRank);
     auto foreachOp = rewriter.create<ForeachOp>(
         loc, src, dst,
-        [&](OpBuilder &builder, Location loc, ValueRange args, Value v,
+        [&](OpBuilder &builder, Location loc, ValueRange dcvs, Value v,
             ValueRange reduc) {
           for (Dimension d = 0; d < dimRank; d++) {
             // FIXME: `toStoredDim` is deprecated
             Level l = toStoredDim(encDst, d);
-            indices[l] = args[d];
+            dstLcvs[l] = dcvs[d];
           }
-          auto t = builder.create<InsertOp>(loc, v, reduc.front(), indices);
+          auto t = builder.create<InsertOp>(loc, v, reduc.front(), dstLcvs);
           builder.create<sparse_tensor::YieldOp>(loc, t);
         });
 
@@ -913,6 +914,7 @@ public:
     SmallVector<Value> reduc = op.getInitArgs();
     const auto stt = getSparseTensorType(input);
     const Dimension dimRank = stt.getDimRank();
+    const Level lvlRank = stt.getLvlRank();
 
     // Special-case: for each over a sparse constant uses its own rewriting
     // rule.
@@ -933,34 +935,32 @@ public:
     for (Dimension d = 0; d < dimRank; d++) {
       // TODO: provide utility function for loop sequences that only contains
       // one for loop?
-      Dimension ld =
-          op.getOrder()
-              ? op.getOrder()->getResult(d).cast<AffineDimExpr>().getPosition()
-              : d;
-      loopEmitter.enterNewLoopSeq(rewriter, loc, 0, static_cast<size_t>(ld));
+      const Level l = op.getOrder() ? op.getOrder()->getDimPosition(d) : d;
+      loopEmitter.enterNewLoopSeq(rewriter, loc, 0, static_cast<size_t>(l));
       // Note that reduc will be taken care of by loop emitter and get updated
       // in place.
 
-      loopEmitter.enterLoopOverTensorAtDim(rewriter, loc, 0, ld, reduc);
+      loopEmitter.enterLoopOverTensorAtDim(rewriter, loc, 0, l, reduc);
     }
 
-    SmallVector<Value> coords;
-    coords.reserve(dimRank);
-    loopEmitter.getCoordinateArray(coords);
+    SmallVector<Value> lcvs;
+    lcvs.reserve(lvlRank);
+    loopEmitter.getCoordinateArray(lcvs);
 
     if (op.getOrder()) {
-      SmallVector<Value> tmp = coords; // keep a copy
+      // FIXME: There is some dim/lvl confusion here since `dimRank != lvlRank`
+      SmallVector<Value> dcvs = lcvs; // keep a copy
       for (Dimension d = 0; d < dimRank; d++) {
         auto l = op.getOrder()->getDimPosition(d);
-        coords[l] = tmp[d];
+        lcvs[l] = dcvs[d];
       }
     }
     Value vals = loopEmitter.getValBuffer()[0];
     Value pidx = loopEmitter.getPidxs()[0].back();
-    // Loads the value from sparse tensor using pointer index;
-    // loads the value from dense tensor using coordinate array.
+    // Loads the value from sparse tensor using position-index;
+    // loads the value from dense tensor using coords.
     Value val = enc ? rewriter.create<memref::LoadOp>(loc, vals, pidx)
-                    : rewriter.create<memref::LoadOp>(loc, vals, coords);
+                    : rewriter.create<memref::LoadOp>(loc, vals, lcvs);
 
     // 2. Inline the block in the foreach operator.
     Block *srcBlock = op.getBody();
@@ -969,8 +969,8 @@ public:
     SmallVector<Value> args;
     for (Dimension d = 0; d < dimRank; d++) {
       // FIXME: `toStoredDim` is deprecated
-      Value actual = coords[toStoredDim(enc, d)];
-      args.push_back(actual);
+      Value dimCrd = lcvs[toStoredDim(enc, d)];
+      args.push_back(dimCrd);
     }
     // Remap value.
     args.push_back(val);
@@ -988,7 +988,8 @@ public:
       // This is annoying, since scf.for inserts a implicit yield op when
       // there is no reduction variable upon creation, in this case we need to
       // merge the block *before* the yield op.
-      rewriter.mergeBlockBefore(srcBlock, &*rewriter.getInsertionPoint(), args);
+      rewriter.inlineBlockBefore(srcBlock, &*rewriter.getInsertionPoint(),
+                                 args);
     }
 
     for (Dimension d = 0; d < dimRank; d++) {
@@ -1018,7 +1019,7 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
 
     // Implement the NewOp as follows:
     //   %orderedCoo = sparse_tensor.new %filename
-    //   %t = sparse_tensor.ConvertOp %orderedCoo
+    //   %t = sparse_tensor.convert %orderedCoo
     RankedTensorType cooTp =
         getCOOFromTypeWithOrdering(dstTp, encDst.getDimOrdering(), true);
     Value cooTensor = rewriter.create<NewOp>(loc, cooTp, op.getSource());
@@ -1042,7 +1043,7 @@ struct OutRewriter : public OpRewritePattern<OutOp> {
     Value src = op.getTensor();
     Value nnz = rewriter.create<NumberOfEntriesOp>(loc, src);
 
-    // Allocate a temporary buffer for storing dimension sizes and indices.
+    // Allocate a temporary buffer for storing dimension-sizes/coordinates.
     const auto srcTp = getSparseTensorType(src);
     const Dimension dimRank = srcTp.getDimRank();
     Type indexTp = rewriter.getIndexType();
@@ -1067,7 +1068,7 @@ struct OutRewriter : public OpRewritePattern<OutOp> {
     createFuncCall(rewriter, loc, "outSparseTensorWriterMetaData", {},
                    {writer, rankValue, nnz, dimSizes}, EmitCInterface::On);
 
-    Value indices = dimSizes; // Reuse the dimSizes buffer for indices.
+    Value dimCoords = dimSizes; // Reuse the dimSizes buffer for dimCoords.
     Type eltTp = srcTp.getElementType();
     SmallString<29> outNextFuncName{"outSparseTensorWriterNext",
                                     primaryTypeFunctionSuffix(eltTp)};
@@ -1076,14 +1077,14 @@ struct OutRewriter : public OpRewritePattern<OutOp> {
     // For each element in the source tensor, output the element.
     rewriter.create<ForeachOp>(
         loc, src, std::nullopt,
-        [&](OpBuilder &builder, Location loc, ValueRange args, Value v,
+        [&](OpBuilder &builder, Location loc, ValueRange dcvs, Value v,
             ValueRange reduc) {
           for (Dimension d = 0; d < dimRank; d++) {
-            rewriter.create<memref::StoreOp>(loc, args[d], indices,
+            rewriter.create<memref::StoreOp>(loc, dcvs[d], dimCoords,
                                              constantIndex(builder, loc, d));
           }
           rewriter.create<memref::StoreOp>(loc, v, value);
-          SmallVector<Value> operands{writer, rankValue, indices, value};
+          SmallVector<Value> operands{writer, rankValue, dimCoords, value};
           FlatSymbolRefAttr fn = getFunc(module, outNextFuncName, {}, operands,
                                          EmitCInterface::On);
           builder.create<func::CallOp>(loc, TypeRange(), fn, operands);

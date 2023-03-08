@@ -17,8 +17,7 @@ size_t OptionValueArgs::GetArgs(Args &args) const {
   args.Clear();
   for (const auto &value : m_values) {
     llvm::StringRef string_value = value->GetStringValue();
-    if (!string_value.empty())
-      args.AppendArgument(string_value);
+    args.AppendArgument(string_value);
   }
 
   return args.GetArgumentCount();

@@ -775,6 +775,7 @@ using zip_traits = iterator_facade_base<
 template <typename ZipType, typename... Iters>
 struct zip_common : public zip_traits<ZipType, Iters...> {
   using Base = zip_traits<ZipType, Iters...>;
+  using IndexSequence = std::index_sequence_for<Iters...>;
   using value_type = typename Base::value_type;
 
   std::tuple<Iters...> iterators;
@@ -784,19 +785,17 @@ protected:
     return value_type(*std::get<Ns>(iterators)...);
   }
 
-  template <size_t... Ns>
-  decltype(iterators) tup_inc(std::index_sequence<Ns...>) const {
-    return std::tuple<Iters...>(std::next(std::get<Ns>(iterators))...);
+  template <size_t... Ns> void tup_inc(std::index_sequence<Ns...>) {
+    (++std::get<Ns>(iterators), ...);
   }
 
-  template <size_t... Ns>
-  decltype(iterators) tup_dec(std::index_sequence<Ns...>) const {
-    return std::tuple<Iters...>(std::prev(std::get<Ns>(iterators))...);
+  template <size_t... Ns> void tup_dec(std::index_sequence<Ns...>) {
+    (--std::get<Ns>(iterators), ...);
   }
 
   template <size_t... Ns>
   bool test_all_equals(const zip_common &other,
-            std::index_sequence<Ns...>) const {
+                       std::index_sequence<Ns...>) const {
     return ((std::get<Ns>(this->iterators) == std::get<Ns>(other.iterators)) &&
             ...);
   }
@@ -804,55 +803,49 @@ protected:
 public:
   zip_common(Iters &&... ts) : iterators(std::forward<Iters>(ts)...) {}
 
-  value_type operator*() const {
-    return deref(std::index_sequence_for<Iters...>{});
-  }
+  value_type operator*() const { return deref(IndexSequence{}); }
 
   ZipType &operator++() {
-    iterators = tup_inc(std::index_sequence_for<Iters...>{});
-    return *reinterpret_cast<ZipType *>(this);
+    tup_inc(IndexSequence{});
+    return static_cast<ZipType &>(*this);
   }
 
   ZipType &operator--() {
     static_assert(Base::IsBidirectional,
                   "All inner iterators must be at least bidirectional.");
-    iterators = tup_dec(std::index_sequence_for<Iters...>{});
-    return *reinterpret_cast<ZipType *>(this);
+    tup_dec(IndexSequence{});
+    return static_cast<ZipType &>(*this);
   }
 
   /// Return true if all the iterator are matching `other`'s iterators.
   bool all_equals(zip_common &other) {
-    return test_all_equals(other, std::index_sequence_for<Iters...>{});
+    return test_all_equals(other, IndexSequence{});
   }
 };
 
 template <typename... Iters>
-struct zip_first : public zip_common<zip_first<Iters...>, Iters...> {
-  using Base = zip_common<zip_first<Iters...>, Iters...>;
+struct zip_first : zip_common<zip_first<Iters...>, Iters...> {
+  using zip_common<zip_first, Iters...>::zip_common;
 
-  bool operator==(const zip_first<Iters...> &other) const {
+  bool operator==(const zip_first &other) const {
     return std::get<0>(this->iterators) == std::get<0>(other.iterators);
   }
-
-  zip_first(Iters &&... ts) : Base(std::forward<Iters>(ts)...) {}
 };
 
 template <typename... Iters>
-class zip_shortest : public zip_common<zip_shortest<Iters...>, Iters...> {
-  template <size_t... Ns>
-  bool test(const zip_shortest<Iters...> &other,
-            std::index_sequence<Ns...>) const {
-    return ((std::get<Ns>(this->iterators) != std::get<Ns>(other.iterators)) &&
-            ...);
+struct zip_shortest : zip_common<zip_shortest<Iters...>, Iters...> {
+  using zip_common<zip_shortest, Iters...>::zip_common;
+
+  bool operator==(const zip_shortest &other) const {
+    return any_iterator_equals(other, std::index_sequence_for<Iters...>{});
   }
 
-public:
-  using Base = zip_common<zip_shortest<Iters...>, Iters...>;
-
-  zip_shortest(Iters &&... ts) : Base(std::forward<Iters>(ts)...) {}
-
-  bool operator==(const zip_shortest<Iters...> &other) const {
-    return !test(other, std::index_sequence_for<Iters...>{});
+private:
+  template <size_t... Ns>
+  bool any_iterator_equals(const zip_shortest &other,
+                           std::index_sequence<Ns...>) const {
+    return ((std::get<Ns>(this->iterators) == std::get<Ns>(other.iterators)) ||
+            ...);
   }
 };
 
@@ -1520,19 +1513,21 @@ template <typename ContainerTy> auto make_second_range(ContainerTy &&c) {
 //     Extra additions to <utility>
 //===----------------------------------------------------------------------===//
 
-/// Function object to check whether the first component of a std::pair
-/// compares less than the first component of another std::pair.
+/// Function object to check whether the first component of a container
+/// supported by std::get (like std::pair and std::tuple) compares less than the
+/// first component of another container.
 struct less_first {
   template <typename T> bool operator()(const T &lhs, const T &rhs) const {
-    return std::less<>()(lhs.first, rhs.first);
+    return std::less<>()(std::get<0>(lhs), std::get<0>(rhs));
   }
 };
 
-/// Function object to check whether the second component of a std::pair
-/// compares less than the second component of another std::pair.
+/// Function object to check whether the second component of a container
+/// supported by std::get (like std::pair and std::tuple) compares less than the
+/// second component of another container.
 struct less_second {
   template <typename T> bool operator()(const T &lhs, const T &rhs) const {
-    return std::less<>()(lhs.second, rhs.second);
+    return std::less<>()(std::get<1>(lhs), std::get<1>(rhs));
   }
 };
 

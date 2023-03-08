@@ -426,6 +426,10 @@ public:
                                    mlir::Value ub, mlir::Value step,
                                    mlir::Type type);
 
+  /// Create an AbsentOp of \p argTy type and handle special cases, such as
+  /// Character Procedure Tuple arguments.
+  mlir::Value genAbsentOp(mlir::Location loc, mlir::Type argTy);
+
   /// Set default FastMathFlags value for all operations
   /// supporting mlir::arith::FastMathAttr that will be created
   /// by this builder.

@@ -114,8 +114,7 @@ LLVM_LIBC_FUNCTION(float, tanf, (float x)) {
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_INVALID);
       }
-      return x +
-             FPBits::build_nan(1 << (fputil::MantissaWidth<float>::VALUE - 1));
+      return x + FPBits::build_quiet_nan(0);
     }
     // Other large exceptional values
     if (auto r = TANF_EXCEPTS.lookup_odd(x_abs, x_sign);

@@ -1518,6 +1518,14 @@ bool RISCVTargetLowering::isOffsetFoldingLegal(
 
 bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                        bool ForCodeSize) const {
+  if (Subtarget.hasStdExtZfa()) {
+    if ((VT == MVT::f64 && RISCVLoadFPImm::getLoadFP64Imm(Imm) != -1) || 
+        (VT == MVT::f16 && RISCVLoadFPImm::getLoadFP16Imm(Imm) != -1) ||
+        (VT == MVT::f32 && RISCVLoadFPImm::getLoadFP32Imm(Imm) != -1 && 
+         !Imm.isPosZero()))
+      return true;
+  }
+  
   if (VT == MVT::f16 && !Subtarget.hasStdExtZfhOrZfhmin())
     return false;
   if (VT == MVT::f32 && !Subtarget.hasStdExtF())

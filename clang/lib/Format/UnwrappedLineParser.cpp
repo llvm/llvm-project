@@ -3441,17 +3441,6 @@ void UnwrappedLineParser::parseConstraintExpression() {
                       /*ClosingBraceKind=*/tok::greater);
       break;
 
-    case tok::kw_bool:
-      // bool is only allowed if it is directly followed by a paren for a cast:
-      // concept C = bool(...);
-      // and bool is the only type, all other types as cast must be inside a
-      // cast to bool an thus are handled by the other cases.
-      if (Tokens->peekNextToken()->isNot(tok::l_paren))
-        return;
-      nextToken();
-      parseParens();
-      break;
-
     default:
       if (!FormatTok->Tok.getIdentifierInfo()) {
         // Identifiers are part of the default case, we check for more then
@@ -3701,13 +3690,13 @@ void UnwrappedLineParser::parseJavaEnumBody() {
 void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   const FormatToken &InitialToken = *FormatTok;
   nextToken();
+  handleAttributes();
 
   // The actual identifier can be a nested name specifier, and in macros
   // it is often token-pasted.
-  // An [[attribute]] can be before the identifier.
   while (FormatTok->isOneOf(tok::identifier, tok::coloncolon, tok::hashhash,
                             tok::kw___attribute, tok::kw___declspec,
-                            tok::kw_alignas, tok::l_square, tok::r_square) ||
+                            tok::kw_alignas) ||
          ((Style.Language == FormatStyle::LK_Java || Style.isJavaScript()) &&
           FormatTok->isOneOf(tok::period, tok::comma))) {
     if (Style.isJavaScript() &&
@@ -3725,15 +3714,10 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
         FormatTok->is(tok::identifier) &&
         FormatTok->TokenText != FormatTok->TokenText.upper();
     nextToken();
-    // We can have macros or attributes in between 'class' and the class name.
+    // We can have macros in between 'class' and the class name.
     if (!IsNonMacroIdentifier) {
       if (FormatTok->is(tok::l_paren)) {
         parseParens();
-      } else if (FormatTok->is(TT_AttributeSquare)) {
-        parseSquare();
-        // Consume the closing TT_AttributeSquare.
-        if (FormatTok->Next && FormatTok->is(TT_AttributeSquare))
-          nextToken();
       }
     }
   }

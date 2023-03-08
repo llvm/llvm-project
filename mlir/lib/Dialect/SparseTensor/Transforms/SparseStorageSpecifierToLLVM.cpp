@@ -29,11 +29,11 @@ static SmallVector<Type, 2> getSpecifierFields(StorageSpecifierType tp) {
   SmallVector<Type, 2> result;
   // TODO: how can we get the lowering type for index type in the later pipeline
   // to be consistent? LLVM::StructureType does not allow index fields.
-  auto indexType = IntegerType::get(tp.getContext(), 64);
-  auto dimSizes = LLVM::LLVMArrayType::get(ctx, indexType, lvlRank);
-  auto memSizes = LLVM::LLVMArrayType::get(ctx, indexType,
+  auto sizeType = IntegerType::get(tp.getContext(), 64);
+  auto lvlSizes = LLVM::LLVMArrayType::get(ctx, sizeType, lvlRank);
+  auto memSizes = LLVM::LLVMArrayType::get(ctx, sizeType,
                                            getNumDataFieldsFromEncoding(enc));
-  result.push_back(dimSizes);
+  result.push_back(lvlSizes);
   result.push_back(memSizes);
   return result;
 }
@@ -47,7 +47,7 @@ static Type convertSpecifier(StorageSpecifierType tp) {
 // Specifier struct builder.
 //===----------------------------------------------------------------------===//
 
-constexpr uint64_t kDimSizePosInSpecifier = 0;
+constexpr uint64_t kLvlSizePosInSpecifier = 0;
 constexpr uint64_t kMemSizePosInSpecifier = 1;
 
 class SpecifierStructBuilder : public StructBuilder {
@@ -71,14 +71,15 @@ public:
     assert(value);
   }
 
-  // Undef value for dimension sizes, all zero value for memory sizes.
+  // Undef value for level-sizes, all zero values for memory-sizes.
   static Value getInitValue(OpBuilder &builder, Location loc, Type structType);
 
-  Value dimSize(OpBuilder &builder, Location loc, unsigned dim);
-  void setDimSize(OpBuilder &builder, Location loc, unsigned dim, Value size);
+  Value lvlSize(OpBuilder &builder, Location loc, Level lvl);
+  void setLvlSize(OpBuilder &builder, Location loc, Level lvl, Value size);
 
-  Value memSize(OpBuilder &builder, Location loc, unsigned pos);
-  void setMemSize(OpBuilder &builder, Location loc, unsigned pos, Value size);
+  Value memSize(OpBuilder &builder, Location loc, FieldIndex fidx);
+  void setMemSize(OpBuilder &builder, Location loc, FieldIndex fidx,
+                  Value size);
 };
 
 Value SpecifierStructBuilder::getInitValue(OpBuilder &builder, Location loc,
@@ -97,32 +98,38 @@ Value SpecifierStructBuilder::getInitValue(OpBuilder &builder, Location loc,
   return md;
 }
 
-/// Builds IR inserting the pos-th size into the descriptor.
-Value SpecifierStructBuilder::dimSize(OpBuilder &builder, Location loc,
-                                      unsigned dim) {
-  return extractField(builder, loc,
-                      ArrayRef<int64_t>{kDimSizePosInSpecifier, dim});
+/// Builds IR extracting the `lvl`-th level-size from the descriptor.
+Value SpecifierStructBuilder::lvlSize(OpBuilder &builder, Location loc,
+                                      Level lvl) {
+  // This static_cast makes the narrowing of `lvl` explicit, as required
+  // by the braces notation for the ctor.
+  return extractField(
+      builder, loc,
+      ArrayRef<int64_t>{kLvlSizePosInSpecifier, static_cast<int64_t>(lvl)});
 }
 
-/// Builds IR inserting the pos-th size into the descriptor.
-void SpecifierStructBuilder::setDimSize(OpBuilder &builder, Location loc,
-                                        unsigned dim, Value size) {
-
-  insertField(builder, loc, ArrayRef<int64_t>{kDimSizePosInSpecifier, dim},
-              size);
+/// Builds IR inserting the `lvl`-th level-size into the descriptor.
+void SpecifierStructBuilder::setLvlSize(OpBuilder &builder, Location loc,
+                                        Level lvl, Value size) {
+  // This static_cast makes the narrowing of `lvl` explicit, as required
+  // by the braces notation for the ctor.
+  insertField(
+      builder, loc,
+      ArrayRef<int64_t>{kLvlSizePosInSpecifier, static_cast<int64_t>(lvl)},
+      size);
 }
 
-/// Builds IR extracting the pos-th memory size into the descriptor.
+/// Builds IR extracting the `fidx`-th memory-size from the descriptor.
 Value SpecifierStructBuilder::memSize(OpBuilder &builder, Location loc,
-                                      unsigned pos) {
+                                      FieldIndex fidx) {
   return extractField(builder, loc,
-                      ArrayRef<int64_t>{kMemSizePosInSpecifier, pos});
+                      ArrayRef<int64_t>{kMemSizePosInSpecifier, fidx});
 }
 
-/// Builds IR inserting the pos-th memory size into the descriptor.
+/// Builds IR inserting the `fidx`-th memory-size into the descriptor.
 void SpecifierStructBuilder::setMemSize(OpBuilder &builder, Location loc,
-                                        unsigned pos, Value size) {
-  insertField(builder, loc, ArrayRef<int64_t>{kMemSizePosInSpecifier, pos},
+                                        FieldIndex fidx, Value size) {
+  insertField(builder, loc, ArrayRef<int64_t>{kMemSizePosInSpecifier, fidx},
               size);
 }
 
@@ -134,7 +141,7 @@ void SpecifierStructBuilder::setMemSize(OpBuilder &builder, Location loc,
 
 StorageSpecifierToLLVMTypeConverter::StorageSpecifierToLLVMTypeConverter() {
   addConversion([](Type type) { return type; });
-  addConversion([](StorageSpecifierType tp) { return convertSpecifier(tp); });
+  addConversion(convertSpecifier);
 }
 
 //===----------------------------------------------------------------------===//
@@ -152,17 +159,15 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     SpecifierStructBuilder spec(adaptor.getSpecifier());
     Value v;
-    if (op.getSpecifierKind() == StorageSpecifierKind::DimSize) {
-      v = Base::onDimSize(rewriter, op, spec,
-                          op.getDim().value().getZExtValue());
+    if (op.getSpecifierKind() == StorageSpecifierKind::LvlSize) {
+      assert(op.getLevel().has_value());
+      v = Base::onLvlSize(rewriter, op, spec, op.getLevel().value());
     } else {
       auto enc = op.getSpecifier().getType().getEncoding();
       StorageLayout layout(enc);
-      std::optional<unsigned> dim;
-      if (op.getDim())
-        dim = op.getDim().value().getZExtValue();
-      unsigned idx = layout.getMemRefFieldIndex(op.getSpecifierKind(), dim);
-      v = Base::onMemSize(rewriter, op, spec, idx);
+      FieldIndex fidx =
+          layout.getMemRefFieldIndex(op.getSpecifierKind(), op.getLevel());
+      v = Base::onMemSize(rewriter, op, spec, fidx);
     }
 
     rewriter.replaceOp(op, v);
@@ -174,15 +179,15 @@ struct StorageSpecifierSetOpConverter
     : public SpecifierGetterSetterOpConverter<StorageSpecifierSetOpConverter,
                                               SetStorageSpecifierOp> {
   using SpecifierGetterSetterOpConverter::SpecifierGetterSetterOpConverter;
-  static Value onDimSize(OpBuilder &builder, SetStorageSpecifierOp op,
-                         SpecifierStructBuilder &spec, unsigned d) {
-    spec.setDimSize(builder, op.getLoc(), d, op.getValue());
+  static Value onLvlSize(OpBuilder &builder, SetStorageSpecifierOp op,
+                         SpecifierStructBuilder &spec, Level lvl) {
+    spec.setLvlSize(builder, op.getLoc(), lvl, op.getValue());
     return spec;
   }
 
   static Value onMemSize(OpBuilder &builder, SetStorageSpecifierOp op,
-                         SpecifierStructBuilder &spec, unsigned i) {
-    spec.setMemSize(builder, op.getLoc(), i, op.getValue());
+                         SpecifierStructBuilder &spec, FieldIndex fidx) {
+    spec.setMemSize(builder, op.getLoc(), fidx, op.getValue());
     return spec;
   }
 };
@@ -191,13 +196,13 @@ struct StorageSpecifierGetOpConverter
     : public SpecifierGetterSetterOpConverter<StorageSpecifierGetOpConverter,
                                               GetStorageSpecifierOp> {
   using SpecifierGetterSetterOpConverter::SpecifierGetterSetterOpConverter;
-  static Value onDimSize(OpBuilder &builder, GetStorageSpecifierOp op,
-                         SpecifierStructBuilder &spec, unsigned d) {
-    return spec.dimSize(builder, op.getLoc(), d);
+  static Value onLvlSize(OpBuilder &builder, GetStorageSpecifierOp op,
+                         SpecifierStructBuilder &spec, Level lvl) {
+    return spec.lvlSize(builder, op.getLoc(), lvl);
   }
   static Value onMemSize(OpBuilder &builder, GetStorageSpecifierOp op,
-                         SpecifierStructBuilder &spec, unsigned i) {
-    return spec.memSize(builder, op.getLoc(), i);
+                         SpecifierStructBuilder &spec, FieldIndex fidx) {
+    return spec.memSize(builder, op.getLoc(), fidx);
   }
 };
 

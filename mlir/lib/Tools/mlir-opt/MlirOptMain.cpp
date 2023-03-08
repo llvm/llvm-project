@@ -13,6 +13,7 @@
 
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "mlir/Bytecode/BytecodeWriter.h"
+#include "mlir/Debug/Counter.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -23,7 +24,6 @@
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Support/DebugCounter.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/Timing.h"
 #include "mlir/Support/ToolUtilities.h"
@@ -31,6 +31,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/StringSaver.h"
@@ -39,6 +40,71 @@
 
 using namespace mlir;
 using namespace llvm;
+
+namespace {
+/// This class is intended to manage the handling of command line options for
+/// creating a *-opt config. This is a singleton.
+struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
+  MlirOptMainConfigCLOptions() {
+    // These options are static but all uses ExternalStorage to initialize the
+    // members of the parent class. This is unusual but since this class is a
+    // singleton it basically attaches command line option to the singleton
+    // members.
+
+    static cl::opt<bool, /*ExternalStorage=*/true> allowUnregisteredDialects(
+        "allow-unregistered-dialect",
+        cl::desc("Allow operation with no registered dialects"),
+        cl::location(allowUnregisteredDialectsFlag), cl::init(false));
+
+    static cl::opt<bool, /*ExternalStorage=*/true> dumpPassPipeline(
+        "dump-pass-pipeline", cl::desc("Print the pipeline that will be run"),
+        cl::location(dumpPassPipelineFlag), cl::init(false));
+
+    static cl::opt<bool, /*ExternalStorage=*/true> emitBytecode(
+        "emit-bytecode", cl::desc("Emit bytecode when generating output"),
+        cl::location(emitBytecodeFlag), cl::init(false));
+
+    static cl::opt<bool, /*ExternalStorage=*/true> explicitModule(
+        "no-implicit-module",
+        cl::desc("Disable implicit addition of a top-level module op during "
+                 "parsing"),
+        cl::location(useExplicitModuleFlag), cl::init(false));
+
+    static cl::opt<bool, /*ExternalStorage=*/true> showDialects(
+        "show-dialects",
+        cl::desc("Print the list of registered dialects and exit"),
+        cl::location(showDialectsFlag), cl::init(false));
+
+    static cl::opt<bool, /*ExternalStorage=*/true> splitInputFile(
+        "split-input-file",
+        cl::desc("Split the input file into pieces and process each "
+                 "chunk independently"),
+        cl::location(splitInputFileFlag), cl::init(false));
+
+    static cl::opt<bool, /*ExternalStorage=*/true> verifyDiagnostics(
+        "verify-diagnostics",
+        cl::desc("Check that emitted diagnostics match "
+                 "expected-* lines on the corresponding line"),
+        cl::location(verifyDiagnosticsFlag), cl::init(false));
+
+    static cl::opt<bool, /*ExternalStorage=*/true> verifyPasses(
+        "verify-each",
+        cl::desc("Run the verifier after each transformation pass"),
+        cl::location(verifyPassesFlag), cl::init(true));
+
+    static PassPipelineCLParser passPipeline("", "Compiler passes to run", "p");
+    setPassPipelineParser(passPipeline);
+  }
+};
+} // namespace
+
+ManagedStatic<MlirOptMainConfigCLOptions> clOptionsConfig;
+
+void MlirOptMainConfig::registerCLOptions() { *clOptionsConfig; }
+
+MlirOptMainConfig MlirOptMainConfig::createFromCLOptions() {
+  return *clOptionsConfig;
+}
 
 MlirOptMainConfig &MlirOptMainConfig::setPassPipelineParser(
     const PassPipelineCLParser &passPipeline) {
@@ -146,7 +212,7 @@ static LogicalResult processBuffer(raw_ostream &os,
   context.allowUnregisteredDialects(config.shouldAllowUnregisteredDialects());
   if (config.shouldVerifyDiagnostics())
     context.printOpOnDiagnostic(false);
-  context.getDebugActionManager().registerActionHandler<DebugCounter>();
+  context.registerActionHandler(tracing::DebugCounter());
 
   // If we are in verify diagnostics mode then we have a lot of work to do,
   // otherwise just perform the actions without worrying about it.
@@ -171,6 +237,12 @@ LogicalResult mlir::MlirOptMain(llvm::raw_ostream &outputStream,
                                 std::unique_ptr<llvm::MemoryBuffer> buffer,
                                 DialectRegistry &registry,
                                 const MlirOptMainConfig &config) {
+  if (config.shouldShowDialects()) {
+    llvm::outs() << "Available Dialects: ";
+    interleave(registry.getDialectNames(), llvm::outs(), ",");
+    llvm::outs() << "\n";
+  }
+
   // The split-input-file mode is a very specific mode that slices the file
   // up into small pieces and checks each independently.
   // We use an explicit threadpool to avoid creating and joining/destroying
@@ -244,54 +316,15 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
                                              cl::value_desc("filename"),
                                              cl::init("-"));
 
-  static cl::opt<bool> splitInputFile(
-      "split-input-file",
-      cl::desc("Split the input file into pieces and process each "
-               "chunk independently"),
-      cl::init(false));
-
-  static cl::opt<bool> verifyDiagnostics(
-      "verify-diagnostics",
-      cl::desc("Check that emitted diagnostics match "
-               "expected-* lines on the corresponding line"),
-      cl::init(false));
-
-  static cl::opt<bool> verifyPasses(
-      "verify-each",
-      cl::desc("Run the verifier after each transformation pass"),
-      cl::init(true));
-
-  static cl::opt<bool> allowUnregisteredDialects(
-      "allow-unregistered-dialect",
-      cl::desc("Allow operation with no registered dialects (discouraged: testing only!)"), cl::init(false));
-
-  static cl::opt<bool> showDialects(
-      "show-dialects", cl::desc("Print the list of registered dialects"),
-      cl::init(false));
-
-  static cl::opt<bool> emitBytecode(
-      "emit-bytecode", cl::desc("Emit bytecode when generating output"),
-      cl::init(false));
-
-  static cl::opt<bool> explicitModule{
-      "no-implicit-module",
-      cl::desc(
-          "Disable implicit addition of a top-level module op during parsing"),
-      cl::init(false)};
-
-  static cl::opt<bool> dumpPassPipeline{
-      "dump-pass-pipeline", cl::desc("Print the pipeline that will be run"),
-      cl::init(false)};
-
   InitLLVM y(argc, argv);
 
   // Register any command line options.
+  MlirOptMainConfig::registerCLOptions();
   registerAsmPrinterCLOptions();
   registerMLIRContextCLOptions();
   registerPassManagerCLOptions();
   registerDefaultTimingManagerCLOptions();
-  DebugCounter::registerCLOptions();
-  PassPipelineCLParser passPipeline("", "Compiler passes to run", "p");
+  tracing::DebugCounter::registerCLOptions();
 
   // Build the list of dialects as a header for the --help message.
   std::string helpHeader = (toolName + "\nAvailable Dialects: ").str();
@@ -302,14 +335,8 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
   }
   // Parse pass names in main to ensure static initialization completed.
   cl::ParseCommandLineOptions(argc, argv, helpHeader);
-
-  if (showDialects) {
-    llvm::outs() << "Available Dialects:\n";
-    interleave(
-        registry.getDialectNames(), llvm::outs(),
-        [](auto name) { llvm::outs() << name; }, "\n");
-    return success();
-  }
+  MlirOptMainConfig config = MlirOptMainConfig::createFromCLOptions();
+  config.preloadDialectsInContext(preloadDialectsInContext);
 
   // Set up the input file.
   std::string errorMessage;
@@ -324,18 +351,6 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
     llvm::errs() << errorMessage << "\n";
     return failure();
   }
-  // Setup the configuration for the main function.
-  MlirOptMainConfig config;
-  config.setPassPipelineParser(passPipeline)
-      .splitInputFile(splitInputFile)
-      .verifyDiagnostics(verifyDiagnostics)
-      .verifyPasses(verifyPasses)
-      .allowUnregisteredDialects(allowUnregisteredDialects)
-      .preloadDialectsInContext(preloadDialectsInContext)
-      .emitBytecode(emitBytecode)
-      .useExplicitModule(explicitModule)
-      .dumpPassPipeline(dumpPassPipeline);
-
   if (failed(MlirOptMain(output->os(), std::move(file), registry, config)))
     return failure();
 

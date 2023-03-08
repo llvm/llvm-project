@@ -106,12 +106,8 @@ LIBC_INLINE static void inline_memset(Ptr dst, uint8_t value, size_t count) {
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
   static constexpr size_t kMaxSize = aarch64::kNeon ? 16 : 8;
   return inline_memset_aarch64<kMaxSize>(dst, value, count);
-#elif defined(LIBC_TARGET_ARCH_IS_ARM)
-  return inline_memset_embedded_tiny(dst, value, count);
-#elif defined(LIBC_TARGET_ARCH_IS_GPU)
-  return inline_memset_embedded_tiny(dst, value, count);
 #else
-#error "Unsupported platform"
+  return inline_memset_embedded_tiny(dst, value, count);
 #endif
 }
 

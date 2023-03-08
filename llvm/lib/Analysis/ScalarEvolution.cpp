@@ -5679,6 +5679,12 @@ const SCEV *ScalarEvolution::createSimpleAffineAddRec(PHINode *PN,
   const SCEV *PHISCEV = getAddRecExpr(StartVal, Accum, L, Flags);
   insertValueToMap(PN, PHISCEV);
 
+  if (auto *AR = dyn_cast<SCEVAddRecExpr>(PHISCEV)) {
+    setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR),
+                   (SCEV::NoWrapFlags)(AR->getNoWrapFlags() |
+                                       proveNoWrapViaConstantRanges(AR)));
+  }
+
   // We can add Flags to the post-inc expression only if we
   // know that it is *undefined behavior* for BEValueV to
   // overflow.
@@ -5803,6 +5809,12 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
         // entries for the scalars that use the symbolic expression.
         forgetMemoizedResults(SymbolicName);
         insertValueToMap(PN, PHISCEV);
+
+        if (auto *AR = dyn_cast<SCEVAddRecExpr>(PHISCEV)) {
+          setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR),
+                         (SCEV::NoWrapFlags)(AR->getNoWrapFlags() |
+                                             proveNoWrapViaConstantRanges(AR)));
+        }
 
         // We can add Flags to the post-inc expression only if we
         // know that it is *undefined behavior* for BEValueV to
@@ -14582,8 +14594,7 @@ void SCEVComparePredicate::print(raw_ostream &OS, unsigned Depth) const {
   if (Pred == ICmpInst::ICMP_EQ)
     OS.indent(Depth) << "Equal predicate: " << *LHS << " == " << *RHS << "\n";
   else
-    OS.indent(Depth) << "Compare predicate: " << *LHS
-                     << " " << CmpInst::getPredicateName(Pred) << ") "
+    OS.indent(Depth) << "Compare predicate: " << *LHS << " " << Pred << ") "
                      << *RHS << "\n";
 
 }
@@ -15066,31 +15077,27 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       if (RHS->getType()->isPointerTy())
         break;
       const SCEV *One = getOne(RHS->getType());
-      RewrittenRHS =
-          getUMinExpr(RewrittenLHS, getMinusSCEV(getUMaxExpr(RHS, One), One));
-      break;
+      RHS = getMinusSCEV(getUMaxExpr(RHS, One), One);
+      LLVM_FALLTHROUGH;
     }
-    case CmpInst::ICMP_SLT:
-      RewrittenRHS =
-          getSMinExpr(RewrittenLHS, getMinusSCEV(RHS, getOne(RHS->getType())));
-      break;
     case CmpInst::ICMP_ULE:
       RewrittenRHS = getUMinExpr(RewrittenLHS, RHS);
       break;
+    case CmpInst::ICMP_SLT:
+      RHS = getMinusSCEV(RHS, getOne(RHS->getType()));
+      LLVM_FALLTHROUGH;
     case CmpInst::ICMP_SLE:
       RewrittenRHS = getSMinExpr(RewrittenLHS, RHS);
       break;
     case CmpInst::ICMP_UGT:
-      RewrittenRHS =
-          getUMaxExpr(RewrittenLHS, getAddExpr(RHS, getOne(RHS->getType())));
-      break;
-    case CmpInst::ICMP_SGT:
-      RewrittenRHS =
-          getSMaxExpr(RewrittenLHS, getAddExpr(RHS, getOne(RHS->getType())));
-      break;
+      RHS = getAddExpr(RHS, getOne(RHS->getType()));
+      LLVM_FALLTHROUGH;
     case CmpInst::ICMP_UGE:
       RewrittenRHS = getUMaxExpr(RewrittenLHS, RHS);
       break;
+    case CmpInst::ICMP_SGT:
+      RHS = getAddExpr(RHS, getOne(RHS->getType()));
+      LLVM_FALLTHROUGH;
     case CmpInst::ICMP_SGE:
       RewrittenRHS = getSMaxExpr(RewrittenLHS, RHS);
       break;

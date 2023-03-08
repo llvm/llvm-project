@@ -189,3 +189,28 @@ for.body:
 for.end:
   ret void
 }
+
+; FIXME: It would be better to compute ((-2 + %n) /u 2) as trip count here.
+define void @pr54191(i64 %n) mustprogress {
+; CHECK-LABEL: 'pr54191'
+; CHECK-NEXT:  Determining loop execution counts for: @pr54191
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-3 + (4 smax (1 + %n)<nsw>))<nsw> /u 2)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 4611686018427387901
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-3 + (4 smax (1 + %n)<nsw>))<nsw> /u 2)
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-3 + (4 smax (1 + %n)<nsw>))<nsw> /u 2)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %guard = icmp sgt i64 %n, 1
+  br i1 %guard, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ 2, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nuw nsw i64 %iv, 2
+  %cmp = icmp sle i64 %iv.next, %n
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}

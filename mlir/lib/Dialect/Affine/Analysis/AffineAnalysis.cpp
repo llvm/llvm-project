@@ -322,9 +322,10 @@ getNumCommonLoops(const FlatAffineValueConstraints &srcDomain,
 }
 
 /// Returns the closest surrounding block common to `opA` and `opB`. `opA` and
-/// `opB` should be in the same affine scope and thus such a block is guaranteed
-/// to exist.
-static Block *getCommonBlock(Operation *opA, Operation *opB) {
+/// `opB` should be in the same affine scope. Returns nullptr if such a block
+/// does not exist (when the two ops are in different blocks of an op starting
+/// an `AffineScope`).
+static Block *getCommonBlockInAffineScope(Operation *opA, Operation *opB) {
   // Get the chain of ancestor blocks for the given `MemRefAccess` instance. The
   // chain extends up to and includnig an op that starts an affine scope.
   auto getChainOfAncestorBlocks =
@@ -342,7 +343,7 @@ static Block *getCommonBlock(Operation *opA, Operation *opB) {
         ancestorBlocks.push_back(currBlock);
       };
 
-  // Find the closest common block including those in AffineIf.
+  // Find the closest common block.
   SmallVector<Block *, 4> srcAncestorBlocks, dstAncestorBlocks;
   getChainOfAncestorBlocks(opA, srcAncestorBlocks);
   getChainOfAncestorBlocks(opB, dstAncestorBlocks);
@@ -352,28 +353,31 @@ static Block *getCommonBlock(Operation *opA, Operation *opB) {
        i >= 0 && j >= 0 && srcAncestorBlocks[i] == dstAncestorBlocks[j];
        i--, j--)
     commonBlock = srcAncestorBlocks[i];
-  // This is guaranteed since both ops are from the same affine scope.
-  assert(commonBlock && "ops expected to have a common surrounding block");
+
   return commonBlock;
 }
 
 /// Returns true if the ancestor operation of 'srcAccess' appears before the
 /// ancestor operation of 'dstAccess' in their common ancestral block. The
 /// operations for `srcAccess` and `dstAccess` are expected to be in the same
-/// affine scope.
+/// affine scope and have a common surrounding block within it.
 static bool srcAppearsBeforeDstInAncestralBlock(const MemRefAccess &srcAccess,
                                                 const MemRefAccess &dstAccess) {
   // Get Block common to 'srcAccess.opInst' and 'dstAccess.opInst'.
-  auto *commonBlock = getCommonBlock(srcAccess.opInst, dstAccess.opInst);
+  Block *commonBlock =
+      getCommonBlockInAffineScope(srcAccess.opInst, dstAccess.opInst);
+  assert(commonBlock &&
+         "ops expected to have a common surrounding block in affine scope");
+
   // Check the dominance relationship between the respective ancestors of the
   // src and dst in the Block of the innermost among the common loops.
-  auto *srcInst = commonBlock->findAncestorOpInBlock(*srcAccess.opInst);
-  assert(srcInst && "src access op must lie in common block");
-  auto *dstInst = commonBlock->findAncestorOpInBlock(*dstAccess.opInst);
-  assert(dstInst && "dest access op must lie in common block");
+  Operation *srcOp = commonBlock->findAncestorOpInBlock(*srcAccess.opInst);
+  assert(srcOp && "src access op must lie in common block");
+  Operation *dstOp = commonBlock->findAncestorOpInBlock(*dstAccess.opInst);
+  assert(dstOp && "dest access op must lie in common block");
 
-  // Determine whether dstInst comes after srcInst.
-  return srcInst->isBeforeInBlock(dstInst);
+  // Determine whether dstOp comes after srcOp.
+  return srcOp->isBeforeInBlock(dstOp);
 }
 
 // Adds ordering constraints to 'dependenceDomain' based on number of loops
@@ -607,8 +611,8 @@ DependenceResult mlir::checkMemrefAccessDependence(
     SmallVector<DependenceComponent, 2> *dependenceComponents, bool allowRAR) {
   LLVM_DEBUG(llvm::dbgs() << "Checking for dependence at depth: "
                           << Twine(loopDepth) << " between:\n";);
-  LLVM_DEBUG(srcAccess.opInst->dump(););
-  LLVM_DEBUG(dstAccess.opInst->dump(););
+  LLVM_DEBUG(srcAccess.opInst->dump());
+  LLVM_DEBUG(dstAccess.opInst->dump());
 
   // Return 'NoDependence' if these accesses do not access the same memref.
   if (srcAccess.memref != dstAccess.memref)
@@ -620,8 +624,11 @@ DependenceResult mlir::checkMemrefAccessDependence(
       !isa<AffineWriteOpInterface>(dstAccess.opInst))
     return DependenceResult::NoDependence;
 
-  // We can't analyze further if the ops lie in different affine scopes.
+  // We can't analyze further if the ops lie in different affine scopes or have
+  // no common block in an affine scope.
   if (getAffineScope(srcAccess.opInst) != getAffineScope(dstAccess.opInst))
+    return DependenceResult::Failure;
+  if (!getCommonBlockInAffineScope(srcAccess.opInst, dstAccess.opInst))
     return DependenceResult::Failure;
 
   // Create access relation from each MemRefAccess.

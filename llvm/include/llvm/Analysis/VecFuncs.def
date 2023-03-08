@@ -525,7 +525,6 @@ TLI_DEFINE_VECFUNC( "sinh", "_ZGVnN2v_sinh", FIXED(2))
 TLI_DEFINE_VECFUNC( "llvm.sinh.f64", "_ZGVnN2v_sinh", FIXED(2))
 
 TLI_DEFINE_VECFUNC( "sqrt", "_ZGVnN2v_sqrt", FIXED(2))
-TLI_DEFINE_VECFUNC( "llvm.sqrt.f64", "_ZGVnN2v_sqrt", FIXED(2))
 
 TLI_DEFINE_VECFUNC( "tan", "_ZGVnN2v_tan", FIXED(2))
 TLI_DEFINE_VECFUNC( "llvm.tan.f64", "_ZGVnN2v_tan", FIXED(2))
@@ -595,7 +594,6 @@ TLI_DEFINE_VECFUNC( "sinhf", "_ZGVnN4v_sinhf", FIXED(4))
 TLI_DEFINE_VECFUNC( "llvm.sinh.f32", "_ZGVnN4v_sinhf", FIXED(4))
 
 TLI_DEFINE_VECFUNC( "sqrtf", "_ZGVnN4v_sqrtf", FIXED(4))
-TLI_DEFINE_VECFUNC( "llvm.sqrt.f32", "_ZGVnN4v_sqrtf", FIXED(4))
 
 TLI_DEFINE_VECFUNC( "tanf", "_ZGVnN4v_tanf", FIXED(4))
 TLI_DEFINE_VECFUNC( "llvm.tan.f32", "_ZGVnN4v_tanf", FIXED(4))

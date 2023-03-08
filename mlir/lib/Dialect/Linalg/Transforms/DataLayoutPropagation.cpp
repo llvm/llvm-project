@@ -157,7 +157,7 @@ getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
   AffineMap origIndexingMap = genericOp.getMatchingIndexingMap(opOperand);
   llvm::DenseMap<int64_t, int64_t> domainDimToOperandDim;
   SmallVector<AffineExpr> exprs(origIndexingMap.getResults());
-  if (genericOp.isScalar(opOperand) || exprs.size() == 0)
+  if (genericOp.isScalar(opOperand) || exprs.empty())
     return std::make_tuple(opOperand->get(),
                            AffineMap::get(numLoops, 0, exprs, b.getContext()));
 

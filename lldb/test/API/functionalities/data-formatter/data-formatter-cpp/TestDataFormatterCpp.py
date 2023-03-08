@@ -11,7 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class CppDataFormatterTestCase(TestBase):
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -286,15 +285,23 @@ class CppDataFormatterTestCase(TestBase):
             substrs=['(int) iAmInt = 0x00000001'])
         self.expect("frame variable iAmInt", substrs=['(int) iAmInt = 1'])
 
-        # Check that pointer to members are correctly formatted
+    @skipIfWindows
+    def test_mem_func_ptr_formats(self):
+        self.build()
+
+        lldbutil.run_to_source_breakpoint(self, "Break in has_local_mem_func_pointers", lldb.SBFileSpec("main.cpp"))
+
         self.expect(
             "frame variable member_ptr",
-            substrs=['member_ptr = 0x'])
+            patterns=['member_ptr = 0x[0-9a-z]+'])
         self.expect(
             "frame variable member_func_ptr",
-            substrs=['member_func_ptr = 0x',
-                     '(a.out`IUseCharStar::member_func(int) at main.cpp:61)'])
+            patterns=['member_func_ptr = 0x[0-9a-z]+'],
+            substrs=['(a.out`IUseCharStar::member_func(int) at main.cpp:61)'])
         self.expect(
             "frame variable ref_to_member_func_ptr",
-            substrs=['ref_to_member_func_ptr = 0x',
-                     '(a.out`IUseCharStar::member_func(int) at main.cpp:61)'])
+            patterns=['ref_to_member_func_ptr = 0x[0-9a-z]+'],
+            substrs=['(a.out`IUseCharStar::member_func(int) at main.cpp:61)'])
+        self.expect(
+            "frame variable virt_member_func_ptr",
+            patterns=['virt_member_func_ptr = 0x[0-9a-z]+$'])

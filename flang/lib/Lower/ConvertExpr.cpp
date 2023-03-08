@@ -589,17 +589,6 @@ const Fortran::semantics::Symbol &getLastSym(const A &obj) {
   return obj.GetLastSymbol().GetUltimate();
 }
 
-static bool
-isIntrinsicModuleProcRef(const Fortran::evaluate::ProcedureRef &procRef) {
-  const Fortran::semantics::Symbol *symbol = procRef.proc().GetSymbol();
-  if (!symbol)
-    return false;
-  const Fortran::semantics::Symbol *module =
-      symbol->GetUltimate().owner().GetSymbol();
-  return module && module->attrs().test(Fortran::semantics::Attr::INTRINSIC) &&
-         module->name().ToString().find("omp_lib") == std::string::npos;
-}
-
 // Return true if TRANSPOSE should be lowered without a runtime call.
 static bool
 isTransposeOptEnabled(const Fortran::lower::AbstractConverter &converter) {
@@ -2442,7 +2431,7 @@ public:
             procRef.proc().GetSpecificIntrinsic())
       return genIntrinsicRef(procRef, resultType, *intrinsic);
 
-    if (isIntrinsicModuleProcRef(procRef))
+    if (Fortran::lower::isIntrinsicModuleProcRef(procRef))
       return genIntrinsicRef(procRef, resultType);
 
     if (isStatementFunctionCall(procRef))
@@ -2466,7 +2455,7 @@ public:
       mlir::Type argTy = callSiteType.getInput(arg.firArgument);
       if (!actual) {
         // Optional dummy argument for which there is no actual argument.
-        caller.placeInput(arg, builder.create<fir::AbsentOp>(loc, argTy));
+        caller.placeInput(arg, builder.genAbsentOp(loc, argTy));
         continue;
       }
       const auto *expr = actual->UnwrapExpr();
@@ -4795,7 +4784,7 @@ private:
         // The intrinsic procedure is called once per element of the array.
         return genElementalIntrinsicProcRef(procRef, retTy, *intrin);
       }
-      if (isIntrinsicModuleProcRef(procRef))
+      if (Fortran::lower::isIntrinsicModuleProcRef(procRef))
         return genElementalIntrinsicProcRef(procRef, retTy);
       if (ScalarExprLowering::isStatementFunctionCall(procRef))
         fir::emitFatalError(loc, "statement function cannot be elemental");
@@ -7247,7 +7236,7 @@ updateBoxForParentComponent(Fortran::lower::AbstractConverter &converter,
   auto &builder = converter.getFirOpBuilder();
   mlir::Value boxBase = fir::getBase(box);
   mlir::Operation *op = boxBase.getDefiningOp();
-  fir::BoxType boxTy = boxBase.getType().dyn_cast<fir::BoxType>();
+  auto boxTy = boxBase.getType().dyn_cast<fir::BaseBoxType>();
   mlir::Type boxEleTy = fir::unwrapAllRefAndSeqType(boxTy.getEleTy());
   auto originalRecTy = boxEleTy.dyn_cast<fir::RecordType>();
   mlir::Type actualTy = converter.genType(expr);
@@ -7255,9 +7244,10 @@ updateBoxForParentComponent(Fortran::lower::AbstractConverter &converter,
   auto parentCompTy = eleTy.dyn_cast<fir::RecordType>();
   assert(parentCompTy && "expecting derived-type");
 
-  assert(
-      (mlir::dyn_cast<fir::EmboxOp>(op) || mlir::dyn_cast<fir::ReboxOp>(op)) &&
-      "expecting fir.embox or fir.rebox operation");
+  assert((mlir::dyn_cast<fir::EmboxOp>(op) ||
+          mlir::dyn_cast<fir::ReboxOp>(op) ||
+          mlir::dyn_cast<fir::ConvertOp>(op)) &&
+         "expecting fir.embox or fir.rebox or fir.convert operation");
 
   if (parentCompTy.getTypeList().empty())
     TODO(loc, "parent component with no component");
@@ -7270,6 +7260,12 @@ updateBoxForParentComponent(Fortran::lower::AbstractConverter &converter,
       loc, fieldTy, firstComponent.first, originalRecTy,
       /*typeParams=*/mlir::ValueRange{});
 
+  if (auto convert = mlir::dyn_cast<fir::ConvertOp>(op)) {
+    auto rebox = builder.create<fir::ReboxOp>(loc, fir::BoxType::get(actualTy),
+                                              convert.getValue(), mlir::Value{},
+                                              mlir::Value{});
+    return fir::substBase(box, fir::getBase(rebox));
+  }
   if (auto embox = mlir::dyn_cast<fir::EmboxOp>(op)) {
     mlir::Value slice = createSliceForParentComp(builder, loc, embox, box,
                                                  field, expr.Rank() > 0);

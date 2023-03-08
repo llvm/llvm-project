@@ -190,7 +190,7 @@ template <typename T, bool IsReverse> struct SafeIntIterator {
   using value_type = T;
   using difference_type = intmax_t;
   using pointer = T *;
-  using reference = T &;
+  using reference = value_type; // The iterator does not reference memory.
 
   // Construct from T.
   explicit SafeIntIterator(T Value) : SI(CheckedInt::from<T>(Value)) {}
@@ -198,9 +198,9 @@ template <typename T, bool IsReverse> struct SafeIntIterator {
   SafeIntIterator(const SafeIntIterator<T, !IsReverse> &O) : SI(O.SI) {}
 
   // Dereference
-  value_type operator*() const { return SI.to<T>(); }
+  reference operator*() const { return SI.to<T>(); }
   // Indexing
-  value_type operator[](intmax_t Offset) const { return *(*this + Offset); }
+  reference operator[](intmax_t Offset) const { return *(*this + Offset); }
 
   // Can be compared for equivalence using the equality/inequality operators.
   bool operator==(const SafeIntIterator &O) const { return SI == O.SI; }

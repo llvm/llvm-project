@@ -345,6 +345,10 @@ TEST_F(TokenAnnotatorTest, UnderstandsClasses) {
   Tokens = annotate("const class {} c;");
   EXPECT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_ClassLBrace);
+
+  Tokens = annotate("class [[deprecated(\"\")]] C { int i; };");
+  EXPECT_EQ(Tokens.size(), 17u) << Tokens;
+  EXPECT_TOKEN(Tokens[10], tok::l_brace, TT_ClassLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsStructs) {

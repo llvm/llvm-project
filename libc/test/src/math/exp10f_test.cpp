@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/errno/libc_errno.h"
 #include "src/math/exp10f.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -21,7 +22,7 @@ namespace mpfr = __llvm_libc::testing::mpfr;
 DECLARE_SPECIAL_CONSTANTS(float)
 
 TEST(LlvmLibcExp10fTest, SpecialNumbers) {
-  errno = 0;
+  libc_errno = 0;
 
   EXPECT_FP_EQ(aNaN, __llvm_libc::exp10f(aNaN));
   EXPECT_MATH_ERRNO(0);
@@ -40,7 +41,7 @@ TEST(LlvmLibcExp10fTest, SpecialNumbers) {
 }
 
 TEST(LlvmLibcExp10fTest, Overflow) {
-  errno = 0;
+  libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
       inf, __llvm_libc::exp10f(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
@@ -55,7 +56,7 @@ TEST(LlvmLibcExp10fTest, Overflow) {
 }
 
 TEST(LlvmLibcExp10fTest, Underflow) {
-  errno = 0;
+  libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
       0.0f, __llvm_libc::exp10f(float(FPBits(0xff7fffffU))), FE_UNDERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
@@ -96,7 +97,7 @@ TEST(LlvmLibcExp10fTest, TrickyInputs) {
       0x41200000, // x = 10.0f
   };
   for (int i = 0; i < N; ++i) {
-    errno = 0;
+    libc_errno = 0;
     float x = float(FPBits(INPUTS[i]));
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, x,
                                    __llvm_libc::exp10f(x), 0.5);
@@ -112,7 +113,7 @@ TEST(LlvmLibcExp10fTest, InFloatRange) {
     float x = float(FPBits(v));
     if (isnan(x) || isinf(x))
       continue;
-    errno = 0;
+    libc_errno = 0;
     float result = __llvm_libc::exp10f(x);
 
     // If the computation resulted in an error or did not produce valid result

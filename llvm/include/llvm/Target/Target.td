@@ -1058,45 +1058,6 @@ class InstrInfo {
   //
   // This option is a temporary migration help. It will go away.
   bit guessInstructionProperties = true;
-
-  // TableGen's instruction encoder generator has support for matching operands
-  // to bit-field variables both by name and by position. Support for matching
-  // by position is DEPRECATED, and WILL BE REMOVED. Positional matching is
-  // confusing to use, and makes it very easy to accidentally write buggy
-  // instruction definitions.
-  //
-  // In previous versions of LLVM, the ability to match operands by position was
-  // enabled unconditionally. It is now controllable by this option -- and
-  // disabled by default. The previous behavior can be restored by setting this
-  // option to true.
-  //
-  // This option is temporary, and will go away once all in-tree targets have
-  // migrated.
-  //
-  // TODO: clean up and remove these options.
-  bit useDeprecatedPositionallyEncodedOperands = false;
-
-  // If positional encoding rules are used for the encoder generator, they may
-  // also need to be used by the decoder generator -- if so, enable this
-  // variable.
-  //
-  // This option is a no-op unless useDeprecatedPositionallyEncodedOperands is
-  // true.
-  //
-  // This option is temporary, and will go away once all in-tree targets have
-  // migrated.
-  bit decodePositionallyEncodedOperands = false;
-
-  // When set, this indicates that there will be no overlap between those
-  // operands that are matched by ordering (positional operands) and those
-  // matched by name.
-  //
-  // This is a no-op unless useDeprecatedPositionallyEncodedOperands is true
-  // (though it does modify the "would've used positional operand XXX" error.)
-  //
-  // This option is temporary, and will go away once all in-tree targets have
-  // migrated.
-  bit noNamedPositionallyEncodedOperands = false;
 }
 
 // Standard Pseudo Instructions.

@@ -39,7 +39,7 @@ module {
   func.func private @createSparseTensorReader(!Filename) -> (!TensorReader)
   func.func private @delSparseTensorReader(!TensorReader) -> ()
   func.func private @getSparseTensorReaderRank(!TensorReader) -> (index)
-  func.func private @getSparseTensorReaderNNZ(!TensorReader) -> (index)
+  func.func private @getSparseTensorReaderNSE(!TensorReader) -> (index)
   func.func private @getSparseTensorReaderIsSymmetric(!TensorReader) -> (i1)
   func.func private @copySparseTensorReaderDimSizes(!TensorReader,
     memref<?xindex>) -> () attributes { llvm.emit_c_interface }
@@ -87,12 +87,12 @@ module {
     %c2 = arith.constant 2 : index
 
     %rank = call @getSparseTensorReaderRank(%tensor) : (!TensorReader) -> index
-    %nnz = call @getSparseTensorReaderNNZ(%tensor) : (!TensorReader) -> index
+    %nse = call @getSparseTensorReaderNSE(%tensor) : (!TensorReader) -> index
 
     // Assume rank == 2.
-    %isize = arith.muli %c2, %nnz : index
+    %isize = arith.muli %c2, %nse : index
     %xs = memref.alloc(%isize) : memref<?xindex>
-    %vs = memref.alloc(%nnz) : memref<?xf32>
+    %vs = memref.alloc(%nse) : memref<?xf32>
     %dim2lvl = memref.alloca(%c2) : memref<?xindex>
     memref.store %c0, %dim2lvl[%c0] : memref<?xindex>
     memref.store %c1, %dim2lvl[%c1] : memref<?xindex>
@@ -110,8 +110,8 @@ module {
       : (!Filename) -> (!TensorReader)
     %rank = call @getSparseTensorReaderRank(%tensor) : (!TensorReader) -> index
     vector.print %rank : index
-    %nnz = call @getSparseTensorReaderNNZ(%tensor) : (!TensorReader) -> index
-    vector.print %nnz : index
+    %nse = call @getSparseTensorReaderNSE(%tensor) : (!TensorReader) -> index
+    vector.print %nse : index
     %symmetric = call @getSparseTensorReaderIsSymmetric(%tensor)
       : (!TensorReader) -> i1
     vector.print %symmetric : i1
@@ -122,9 +122,9 @@ module {
 
     %xs, %vs, %isSorted = call @readTensorFile(%tensor)
       : (!TensorReader) -> (memref<?xindex>, memref<?xf32>, i1)
-    %x0s = memref.subview %xs[%c0][%nnz][%c2]
+    %x0s = memref.subview %xs[%c0][%nse][%c2]
       : memref<?xindex> to memref<?xindex, strided<[2], offset: ?>>
-    %x1s = memref.subview %xs[%c1][%nnz][%c2]
+    %x1s = memref.subview %xs[%c1][%nse][%c2]
       : memref<?xindex> to memref<?xindex, strided<[2], offset: ?>>
     vector.print %isSorted : i1
     call @dumpi2(%x0s) : (memref<?xindex, strided<[2], offset: ?>>) -> ()
@@ -152,18 +152,18 @@ module {
       : (!Filename) -> (!TensorWriter)
 
     %rank = call @getSparseTensorReaderRank(%tensor0) : (!TensorReader) -> index
-    %nnz = call @getSparseTensorReaderNNZ(%tensor0) : (!TensorReader) -> index
+    %nse = call @getSparseTensorReaderNSE(%tensor0) : (!TensorReader) -> index
     %dimSizes = memref.alloc(%rank) : memref<?xindex>
     func.call @copySparseTensorReaderDimSizes(%tensor0, %dimSizes)
       : (!TensorReader, memref<?xindex>) -> ()
-    call @outSparseTensorWriterMetaData(%tensor1, %rank, %nnz, %dimSizes)
+    call @outSparseTensorWriterMetaData(%tensor1, %rank, %nse, %dimSizes)
       : (!TensorWriter, index, index, memref<?xindex>) -> ()
 
     //TODO: handle isSymmetric.
     // Assume rank == 2.
     %indices = memref.alloc(%rank) : memref<?xindex>
     %value = memref.alloca() : memref<f32>
-    scf.for %i = %c0 to %nnz step %c1 {
+    scf.for %i = %c0 to %nse step %c1 {
       func.call @getSparseTensorReaderNextF32(%tensor0, %indices, %value)
         : (!TensorReader, memref<?xindex>, memref<f32>) -> ()
       func.call @outSparseTensorWriterNextF32(%tensor1, %rank, %indices, %value)

@@ -8,6 +8,7 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
+#include "src/errno/libc_errno.h"
 #include "src/math/exp2f.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -22,7 +23,7 @@ namespace mpfr = __llvm_libc::testing::mpfr;
 DECLARE_SPECIAL_CONSTANTS(float)
 
 TEST(LlvmLibcExp2fTest, SpecialNumbers) {
-  errno = 0;
+  libc_errno = 0;
 
   EXPECT_FP_EQ(aNaN, __llvm_libc::exp2f(aNaN));
   EXPECT_MATH_ERRNO(0);
@@ -41,7 +42,7 @@ TEST(LlvmLibcExp2fTest, SpecialNumbers) {
 }
 
 TEST(LlvmLibcExp2fTest, Overflow) {
-  errno = 0;
+  libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
       inf, __llvm_libc::exp2f(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
@@ -72,7 +73,7 @@ TEST(LlvmLibcExp2fTest, TrickyInputs) {
       0xc3150000U, /*-0x1.2ap+7f*/
   };
   for (int i = 0; i < N; ++i) {
-    errno = 0;
+    libc_errno = 0;
     float x = float(FPBits(INPUTS[i]));
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2, x,
                                    __llvm_libc::exp2f(x), 0.5);
@@ -81,7 +82,7 @@ TEST(LlvmLibcExp2fTest, TrickyInputs) {
 }
 
 TEST(LlvmLibcExp2fTest, Underflow) {
-  errno = 0;
+  libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
       0.0f, __llvm_libc::exp2f(float(FPBits(0xff7fffffU))), FE_UNDERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
@@ -109,7 +110,7 @@ TEST(LlvmLibcExp2fTest, InFloatRange) {
     float x = float(FPBits(v));
     if (isnan(x) || isinf(x))
       continue;
-    errno = 0;
+    libc_errno = 0;
     float result = __llvm_libc::exp2f(x);
 
     // If the computation resulted in an error or did not produce valid result

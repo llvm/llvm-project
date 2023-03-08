@@ -44,7 +44,6 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Utility/AnsiTerminal.h"
-#include "lldb/Utility/Diagnostics.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Listener.h"
@@ -560,6 +559,12 @@ void Debugger::Terminate() {
   assert(g_debugger_list_ptr &&
          "Debugger::Terminate called without a matching Debugger::Initialize!");
 
+  if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
+    std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
+    for (const auto &debugger : *g_debugger_list_ptr)
+      debugger->HandleDestroyCallback();
+  }
+
   if (g_thread_pool) {
     // The destructor will wait for all the threads to complete.
     delete g_thread_pool;
@@ -679,10 +684,18 @@ DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
   return debugger_sp;
 }
 
+void Debugger::HandleDestroyCallback() {
+  if (m_destroy_callback) {
+    m_destroy_callback(GetID(), m_destroy_callback_baton);
+    m_destroy_callback = nullptr;
+  }
+}
+
 void Debugger::Destroy(DebuggerSP &debugger_sp) {
   if (!debugger_sp)
     return;
 
+  debugger_sp->HandleDestroyCallback();
   CommandInterpreter &cmd_interpreter = debugger_sp->GetCommandInterpreter();
 
   if (cmd_interpreter.GetSaveSessionOnQuit()) {
@@ -828,6 +841,22 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   if (!GetOutputFile().GetIsTerminalWithColors())
     SetUseColor(false);
 
+  if (Diagnostics::Enabled()) {
+    m_diagnostics_callback_id = Diagnostics::Instance().AddCallback(
+        [this](const FileSpec &dir) -> llvm::Error {
+          for (auto &entry : m_stream_handlers) {
+            llvm::StringRef log_path = entry.first();
+            llvm::StringRef file_name = llvm::sys::path::filename(log_path);
+            FileSpec destination = dir.CopyByAppendingPathComponent(file_name);
+            std::error_code ec =
+                llvm::sys::fs::copy_file(log_path, destination.GetPath());
+            if (ec)
+              return llvm::errorCodeToError(ec);
+          }
+          return llvm::Error::success();
+        });
+  }
+
 #if defined(_WIN32) && defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
   // Enabling use of ANSI color codes because LLDB is using them to highlight
   // text.
@@ -866,6 +895,9 @@ void Debugger::Clear() {
     GetInputFile().Close();
 
     m_command_interpreter_up->Clear();
+
+    if (Diagnostics::Enabled())
+      Diagnostics::Instance().RemoveCallback(m_diagnostics_callback_id);
   });
 }
 
@@ -1283,6 +1315,12 @@ void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
   // callback.
   m_callback_handler_sp =
       std::make_shared<CallbackLogHandler>(log_callback, baton);
+}
+
+void Debugger::SetDestroyCallback(
+    lldb_private::DebuggerDestroyCallback destroy_callback, void *baton) {
+  m_destroy_callback = destroy_callback;
+  m_destroy_callback_baton = baton;
 }
 
 static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,

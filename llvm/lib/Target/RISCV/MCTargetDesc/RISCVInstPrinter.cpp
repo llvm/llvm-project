@@ -154,6 +154,20 @@ void RISCVInstPrinter::printFRMArg(const MCInst *MI, unsigned OpNo,
   O << ", " << RISCVFPRndMode::roundingModeToString(FRMArg);
 }
 
+void RISCVInstPrinter::printFPImmOperand(const MCInst *MI, unsigned OpNo,
+                                         const MCSubtargetInfo &STI,
+                                         raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNo);
+  if (MO.getImm() == 1)
+    O << "min";
+  else if (MO.getImm() == 30)
+    O << "inf";
+  else if (MO.getImm() == 31)
+    O << "nan";
+  else
+    O << bit_cast<float>(RISCVLoadFPImm::getFPImm(MO.getImm()));
+}
+
 void RISCVInstPrinter::printZeroOffsetMemOp(const MCInst *MI, unsigned OpNo,
                                             const MCSubtargetInfo &STI,
                                             raw_ostream &O) {

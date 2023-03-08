@@ -162,9 +162,13 @@ CompilandIndexItem &CompileUnitIndex::GetOrCreateCompiland(uint16_t modi) {
   ParseExtendedInfo(m_index, *cci);
   ParseInlineeLineTableForCompileUnit(*cci);
 
-  cci->m_strings.initialize(cci->m_debug_stream.getSubsectionsArray());
-  PDBStringTable &strings = cantFail(m_index.pdb().getStringTable());
-  cci->m_strings.setStrings(strings.getStringTable());
+  auto strings = m_index.pdb().getStringTable();
+  if (strings) {
+    cci->m_strings.initialize(cci->m_debug_stream.getSubsectionsArray());
+    cci->m_strings.setStrings(strings->getStringTable());
+  } else {
+    consumeError(strings.takeError());
+  }
 
   // We want the main source file to always comes first.  Note that we can't
   // just push_back the main file onto the front because `GetMainSourceFile`

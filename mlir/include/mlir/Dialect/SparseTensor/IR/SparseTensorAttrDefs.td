@@ -20,6 +20,41 @@ class SparseTensor_Attr<string name,
     : AttrDef<SparseTensor_Dialect, name, traits>;
 
 //===----------------------------------------------------------------------===//
+// Type aliases.
+//
+// These attributes are just like `IndexAttr` (include/mlir/IR/OpBase.td),
+// except that:
+// (1) the `summary` is more specific (i.e., the fourth parameter to
+//     `TypedAttrBase`), which helps tablegen provide better error messages.
+// (2) tablegen-generated getters will have the given `returnType`, in
+//     lieu of the `APInt` that `IndexAttr` uses.  This avoids the boilerplate
+//     of needing to say `get{FOO}().getZExtValue()`, as well as using
+//     C++ types which better document intent.
+//===----------------------------------------------------------------------===//
+
+def DimensionAttr :
+    TypedAttrBase<
+      Index, "IntegerAttr",
+      And<[CPred<"$_self.isa<::mlir::IntegerAttr>()">,
+           CPred<"$_self.cast<::mlir::IntegerAttr>().getType()"
+                 ".isa<::mlir::IndexType>()">]>,
+      "dimension attribute"> {
+  let returnType = [{::mlir::sparse_tensor::Dimension}];
+  let convertFromStorage = [{$_self.getValue().getZExtValue()}];
+}
+
+def LevelAttr :
+    TypedAttrBase<
+      Index, "IntegerAttr",
+      And<[CPred<"$_self.isa<::mlir::IntegerAttr>()">,
+           CPred<"$_self.cast<::mlir::IntegerAttr>().getType()"
+                 ".isa<::mlir::IndexType>()">]>,
+      "level attribute"> {
+  let returnType = [{::mlir::sparse_tensor::Level}];
+  let convertFromStorage = [{$_self.getValue().getZExtValue()}];
+}
+
+//===----------------------------------------------------------------------===//
 // Sparse Tensor Dimension Slice Attribute.
 //===----------------------------------------------------------------------===//
 
@@ -92,73 +127,86 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
     The attribute consists of the following fields.
 
-    - Dimension level type for each dimension of a tensor type:
-        - **dense** : dimension is dense, all entries along this dimension
-          are stored
-        - **compressed** : dimension is sparse, only nonzeros along this dimensions
-          are stored
-        - **singleton** : dimension stores individual indices with no siblings
-      By default, each dimension level types has the property of being unique
-      (no duplicates at that level) and ordered (indices appear sorted at that
-      level). The following two suffixes can be used to make the last two
-      dimension level types not-unique (duplicates may appear) and not-ordered
-      (indices may appear unsorted).
+    - Level-type for each level of a tensor type:
+        - **dense** : all entries along this level are stored.
+        - **compressed** : only nonzeros along this level are stored.
+        - **singleton** : a variant of the compressed level-format,
+          for when coordinates are guaranteed to have no siblings at this level.
+      By default, each level-type has the property of being unique (no
+      duplicates at that level) and ordered (coordinates appear sorted
+      at that level).  The following two suffixes can be used to specify
+      that the level should instead be non-unique (duplicates may appear)
+      and/or non-ordered (coordinates may appear unsorted).
         - **-nu** : not unique
         - **-no** : not ordered
-      Currently, these suffixes, is present, should appear in this order.
-      In the future, we may introduce many more dimension level types and
-      properties, and separate specifying the two completely rather than
-      using this suffix mechanism.
+      Currently, these suffixes (if present) must appear in this order.
+      In the future, we may introduce additional level-types and
+      properties, and split up how the level-format and properties are
+      specified rather than using this suffix mechanism.
 
-    - An optional dimension ordering on the indices of this tensor type. Unlike
-      dense storage, most sparse storage schemes do not provide fast random
-      access.  This affine map specifies the order of dimensions that should be
-      supported by the sparse storage scheme. For example, for a 2-d tensor,
-      `(i, j) -> (i, j)` requests row-wise storage and `(i, j) -> (j, i)`
-      requests column-wise storage.  By default, an identify mapping is used,
-      which implies that the original indices directly correspond to stored
-      indices.
+      TODO: This field is called "dimLevelType" for historical reasons,
+      even though the types are per-level rather than per-dimension.
+      (This will be corrected in an upcoming change that completely
+      overhauls the syntax of this attribute.)
 
-    - An optional higher-ordering mapping from the original index space of
-      the tensor to a higher-order index space, used to define block-sparse
-      storage or ELL (jagged diagonal) storage. For example, for a 2-d tensor,
-      the mapping `(i, j) -> (i floordiv 2, j floordiv 3, i mod 2, j mod 3)`
-      imposes an higher-order partitioning into 2x3 blocks along the matrix
-      layout. A dimension ordering can be used to define a desired ordering
-      on this higher-order index space. Likewise, the dimension level types
-      define dense or compressed storage along this higher-order index space.
-      For block-sparse, blocks are typically stored with compression while
-      dense storage is used within each block (although hybrid schemes are
-      possible as well). The higher-order mapping also provides a notion of
-      "counting a dimension", where every stored element with the same index
-      is mapped to a new slice. For instance, ELL storage of a 2-d tensor can
-      be defined with the mapping `(i, j) -> (#i, i, j)` using the notation
-      of [Chou20]. Lacking the `#` symbol in MLIR's affine mapping, we use
-      a free symbol `c` to define such counting, together with a constant
-      that denotes the number of resulting slices. For example, the mapping
-      `(i, j)[c] -> (c * 3 * i, i, j)` with the first two higher-order indices
-      stored dense and the innermost compressed denotes ELL storage with
-      three jagged diagonals that count the dimension `i`.
+    - An optional permutation which maps (higher-ordering)-coordinates
+      to level-coordinates; defaulting to the identity permutation.
+      For example, given a 2-d tensor with the default higher-ordering,
+      `(i, j) -> (i, j)` specifies row-wise storage and `(i, j) ->
+      (j, i)` specifies column-wise storage.
 
-      TODO: introduce a real counting symbol to MLIR's mapping, since an
-            expression like 3*c*i has no direct interpretation?
+      TODO: this field is called "dimOrdering" for historical reasons,
+      even though it actually operates on level-coordinates rather than
+      dimension-coordinates.
+      (This will be corrected in an upcoming change that completely
+      overhauls the syntax of this attribute.)
 
-    - The required bit width for "pointer" storage (integral offsets into
-      the sparse storage scheme). A narrow width reduces the memory footprint
-      of overhead storage, as long as the width suffices to define the total
-      required range (viz. the maximum number of stored entries over all indirection
-      dimensions). The choices are `8`, `16`, `32`, `64`, or, the default, `0` to
-      indicate the native bit width.
+    - An optional higher-order mapping from dimension-coordinates to
+      a higher-order coordinate space; defaulting to the identity map.
+      This is applied before the `dimOrdering`, thus we have the composite:
+      dimCoords --higherOrdering--> hoCoords --dimOrdering--> lvlCoords.
+      The higher-order mapping is used to define block-sparse storage,
+      jagged-diagonal (JDS/ELL/ITPACK) storage, etc.
 
-    - The required bit width for "index" storage (elements of the coordinates of
-      stored entries). A narrow width reduces the memory footprint of overhead
-      storage, as long as the width suffices to define the total required range
-      (viz. the maximum value of each tensor index over all dimensions). The
-      choices are `8`, `16`, `32`, `64`, or, the default, `0` to indicate a
-      native bit width.
+      For example, given a 2-d tensor, the mapping
+      `(i, j) -> (i floordiv 2, j floordiv 3, i mod 2, j mod 3)`
+      imposes an higher-order partitioning into 2x3 blocks along the
+      matrix layout.  For block-sparsity, blocks are typically stored
+      with compression while dense storage is used within each block
+      (although hybrid schemes are possible as well).
 
-    - An optional array of SparseTensorDimSliceAttr, which specifies how the sparse
-      tensor is partitioned on each level.
+      TODO: the following example is out-of-date and will be implemented
+      in a different manner than described here.
+      (This will be corrected in an upcoming change that completely
+      overhauls the syntax of this attribute.)
+
+      The higher-order mapping also provides a notion of "counting a
+      dimension", where every stored element with the same coordinate
+      is mapped to a new slice.  For instance, ELL storage of a 2-d
+      tensor can be defined with the mapping `(i, j) -> (#i, i, j)`
+      using the notation of [Chou20].  Lacking the `#` symbol in MLIR's
+      affine mapping, we use a free symbol `c` to define such counting,
+      together with a constant that denotes the number of resulting
+      slices.  For example, the mapping `(i, j)[c] -> (c * 3 * i, i, j)`
+      with the level-types `["dense", "dense", "compressed"]` denotes ELL
+      storage with three jagged diagonals that count the dimension `i`.
+
+    - The required bitwidth for "position" storage (integral offsets
+      into the sparse storage scheme).  A narrow width reduces the memory
+      footprint of overhead storage, as long as the width suffices to
+      define the total required range (viz. the maximum number of stored
+      entries over all indirection levels).  The choices are `8`, `16`,
+      `32`, `64`, or, the default, `0` to indicate the native bitwidth.
+
+    - The required bitwidth for "coordinate" storage (the coordinates
+      of stored entries).  A narrow width reduces the memory footprint
+      of overhead storage, as long as the width suffices to define
+      the total required range (viz. the maximum value of each tensor
+      coordinate over all levels).  The choices are `8`, `16`, `32`,
+      `64`, or, the default, `0` to indicate a native bitwidth.
+
+    - An optional array of `SparseTensorDimSliceAttr`, which specifies
+      how the sparse tensor is partitioned on each dimension.
 
     Examples:
 
@@ -179,8 +227,8 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     #DCSC = #sparse_tensor.encoding<{
       dimLevelType = [ "compressed", "compressed" ],
       dimOrdering = affine_map<(i, j) -> (j, i)>,
-      pointerBitWidth = 32,
-      indexBitWidth = 8
+      posWidth = 32,
+      crdWidth = 8
     }>
     ... tensor<8x8xf64, #DCSC> ...
 
@@ -214,20 +262,20 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
   // Data in sparse tensor encoding.
   let parameters = (
     ins
-    // A dimension level type for each dimension of the tensor type.
+    // A level-type for each level of the sparse storage.
     ArrayRefParameter<
       "::mlir::sparse_tensor::DimLevelType",
-      "per dimension level type"
+      "level-types"
       >: $dimLevelType,
-    // A dimension order on the indices of this tensor type.
+    // A permutation from (higher-ordering)-coordinates to level-coordinates.
     "AffineMap":$dimOrdering,
-    // A mapping between the original and higher-ordering index space.
+    // A mapping from dimension-coordinates to (higher-ordering)-coordinates.
     "AffineMap":$higherOrdering,
-    // The required bit width for pointer storage.
-    "unsigned":$pointerBitWidth,
-    // The required bit width for index storage.
-    "unsigned":$indexBitWidth,
-    // A dimension level type for each dimension of the tensor type.
+    // The required bitwidth for position storage.
+    "unsigned":$posWidth,
+    // The required bitwidth for coordinate storage.
+    "unsigned":$crdWidth,
+    // A slice attribute for each dimension of the tensor type.
     ArrayRefParameter<
       "::mlir::sparse_tensor::SparseTensorDimSliceAttr",
       "per dimension slice metadata"
@@ -238,23 +286,23 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     AttrBuilder<(ins "ArrayRef<::mlir::sparse_tensor::DimLevelType>":$dimLevelType,
                      "AffineMap":$dimOrdering,
                      "AffineMap":$higherOrdering,
-                     "unsigned":$pointerBitWidth,
-                     "unsigned":$indexBitWidth), [{
+                     "unsigned":$posWidth,
+                     "unsigned":$crdWidth), [{
       return $_get($_ctxt, dimLevelType,
                          dimOrdering,
                          higherOrdering,
-                         pointerBitWidth,
-                         indexBitWidth,
+                         posWidth,
+                         crdWidth,
                          ArrayRef<::mlir::sparse_tensor::SparseTensorDimSliceAttr>{});
     }]>
   ];
 
   let extraClassDeclaration = [{
-    /// Returns the type for pointer storage based on pointerBitWidth
-    Type getPointerType() const;
+    /// Returns the type for position storage based on posWidth
+    Type getPosType() const;
 
-    /// Returns the type for index storage based on indexBitWidth
-    Type getIndexType() const;
+    /// Returns the type for coordinate storage based on crdWidth
+    Type getCrdType() const;
 
     /// Constructs a new encoding with the dimOrdering and higherOrdering
     /// reset to the default/identity.
@@ -316,9 +364,9 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 // The C++ enum for Storage Specifier kind.
 def SparseTensorStorageSpecifierKindEnum
     : I32EnumAttr<"StorageSpecifierKind", "sparse tensor storage specifier kind", [
-        I32EnumAttrCase<"DimSize",    0, "dim_sz">,
-        I32EnumAttrCase<"PtrMemSize", 1, "ptr_mem_sz">,
-        I32EnumAttrCase<"IdxMemSize", 2, "idx_mem_sz">,
+        I32EnumAttrCase<"LvlSize",    0, "lvl_sz">,
+        I32EnumAttrCase<"PosMemSize", 1, "pos_mem_sz">,
+        I32EnumAttrCase<"CrdMemSize", 2, "crd_mem_sz">,
         I32EnumAttrCase<"ValMemSize", 3, "val_mem_sz">,
       ]> {
   let genSpecializedAttr = 0;

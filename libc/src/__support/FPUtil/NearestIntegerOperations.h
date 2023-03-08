@@ -15,7 +15,6 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 
-#include <errno.h>
 #include <math.h>
 
 namespace __llvm_libc {
@@ -238,10 +237,8 @@ LIBC_INLINE I rounded_float_to_signed_integer(F x) {
   constexpr I INTEGER_MAX = -(INTEGER_MIN + 1);
   FPBits<F> bits(x);
   auto set_domain_error_and_raise_invalid = []() {
-    if (math_errhandling & MATH_ERRNO)
-      errno = EDOM;
-    if (math_errhandling & MATH_ERREXCEPT)
-      raise_except(FE_INVALID);
+    set_errno_if_required(EDOM);
+    raise_except_if_required(FE_INVALID);
   };
 
   if (bits.is_inf_or_nan()) {
