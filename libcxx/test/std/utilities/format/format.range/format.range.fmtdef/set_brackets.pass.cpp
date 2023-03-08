@@ -17,14 +17,11 @@
 
 // <format>
 
-// template<class T, class charT = char>
-//   requires same_as<remove_cvref_t<T>, T> && formattable<T, charT>
-// class range_formatter
+// template<ranges::input_range R, class charT>
+//   struct range-default-formatter<range_format::sequence, R, charT>
 
-// constexpr void set_separator(basic_string_view<charT> sep) noexcept;
-
-// Note this tests the basics of this function. It's tested in more detail in
-// the format functions test.
+// constexpr void constexpr void set_brackets(basic_string_view<charT> opening,
+//                                            basic_string_view<charT> closing) noexcept;
 
 #include <format>
 #include <cassert>
@@ -39,10 +36,10 @@
 
 template <class CharT>
 constexpr void test_setter() {
-  std::range_formatter<int, CharT> formatter;
-  formatter.set_separator(SV("sep"));
+  std::formatter<std::vector<int>, CharT> formatter;
+  formatter.set_brackets(SV("open"), SV("close"));
   // Note the SV macro may throw, so can't use it.
-  static_assert(noexcept(formatter.set_separator(std::basic_string_view<CharT>{})));
+  static_assert(noexcept(formatter.set_brackets(std::basic_string_view<CharT>{}, std::basic_string_view<CharT>{})));
 
   // Note there is no direct way to validate this function modified the object.
   if (!std::is_constant_evaluated()) {
@@ -54,7 +51,7 @@ constexpr void test_setter() {
     OutIt out             = std::back_inserter(result);
     FormatCtxT format_ctx = test_format_context_create<OutIt, CharT>(out, std::make_format_args<FormatCtxT>());
     formatter.format(std::vector<int>{0, 42, 99}, format_ctx);
-    assert(result == SV("[0sep42sep99]"));
+    assert(result == SV("open0, 42, 99close"));
   }
 }
 
