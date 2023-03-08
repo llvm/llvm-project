@@ -224,7 +224,7 @@ void test_char() {
     // Unicode fitting in a 32-bit wchar_t
 
     constexpr wchar_t x  = 0x1ffff;
-    constexpr uint32_t y = 0x1ffff;
+    constexpr std::uint32_t y = 0x1ffff;
     static_assert(x == y);
 
     using V = std::basic_string_view<CharT>;
