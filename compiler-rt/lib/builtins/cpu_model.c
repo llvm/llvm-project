@@ -924,6 +924,9 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
 #define HWCAP_SB (1 << 29)
 #endif
 
+#ifndef AT_HWCAP2
+#define AT_HWCAP2 26
+#endif
 #ifndef HWCAP2_DCPODP
 #define HWCAP2_DCPODP (1 << 0)
 #endif
