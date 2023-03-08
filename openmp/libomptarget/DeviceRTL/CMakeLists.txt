@@ -56,33 +56,29 @@ set(devicertl_base_directory ${CMAKE_CURRENT_SOURCE_DIR})
 set(include_directory ${devicertl_base_directory}/include)
 set(source_directory ${devicertl_base_directory}/src)
 
-set(all_capabilities 35 37 50 52 53 60 61 62 70 72 75 80 86 89 90)
+set(all_amdgpu_architectures "gfx700;gfx701;gfx801;gfx803;gfx900;gfx902;gfx906"
+                             "gfx908;gfx90a;gfx90c;gfx940;gfx1010;gfx1030"
+                             "gfx1031;gfx1032;gfx1033;gfx1034;gfx1035;gfx1036"
+                             "gfx1100;gfx1101;gfx1102;gfx1103")
+set(all_nvptx_architectures "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62"
+                            "sm_70;sm_72;sm_75;sm_80;sm_86;sm_89;sm_90")
+set(all_gpu_architectures
+    "${all_amdgpu_architectures};${all_nvptx_architectures}")
 
-set(LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES ${all_capabilities} CACHE STRING
-  "List of CUDA Compute Capabilities to be used to compile the NVPTX DeviceRTL.")
-string(TOLOWER ${LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES} LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES)
+set(LIBOMPTARGET_DEVICE_ARCHITECTURES "all" CACHE STRING
+    "List of device architectures to be used to compile the OpenMP DeviceRTL.")
 
-if (LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES STREQUAL "all")
-  set(nvptx_sm_list ${all_capabilities})
-elseif(LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES STREQUAL "auto")
-  if (NOT LIBOMPTARGET_DEP_CUDA_FOUND)
-    libomptarget_error_say("[NVPTX] Cannot auto detect compute capability as CUDA not found.")
+if(LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "all")
+  set(LIBOMPTARGET_DEVICE_ARCHITECTURES ${all_gpu_architectures})
+elseif(LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "auto")
+  if(NOT LIBOMPTARGET_NVPTX_ARCH AND NOT LIBOMPTARGET_AMDGPU_ARCH)
+    libomptarget_error_say(
+      "Could not find 'amdgpu-arch' and 'nvptx-arch' tools required for 'auto'")
+  elseif(NOT LIBOMPTARGET_FOUND_NVIDIA_GPU AND NOT LIBOMPTARGET_FOUND_AMDGPU_GPU)
+    libomptarget_error_say("No AMD or Nvidia found on the system when using 'auto'")
   endif()
-  set(nvptx_sm_list ${LIBOMPTARGET_DEP_CUDA_ARCH})
-else()
-  string(REPLACE "," ";" nvptx_sm_list "${LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES}")
-endif()
-
-# Check all SM values
-foreach(sm ${nvptx_sm_list})
-  if (NOT ${sm} IN_LIST all_capabilities)
-    libomptarget_warning_say("[NVPTX] Compute capability ${sm} is not supported. Make sure clang can work with it.")
-  endif()
-endforeach()
-
-set(amdgpu_mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908 gfx90a gfx90c gfx940 gfx1010 gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036 gfx1100 gfx1101 gfx1102 gfx1103)
-if (DEFINED LIBOMPTARGET_AMDGCN_GFXLIST)
-  set(amdgpu_mcpus ${LIBOMPTARGET_AMDGCN_GFXLIST})
+  set(LIBOMPTARGET_DEVICE_ARCHITECTURES
+      "${LIBOMPTARGET_NVPTX_DETECTED_ARCH_LIST};${LIBOMPTARGET_AMDGPU_DETECTED_ARCH_LIST}")
 endif()
 
 set(include_files
@@ -272,15 +268,17 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
   set_property(TARGET omptarget.devicertl.all_objs APPEND PROPERTY IMPORTED_OBJECTS ${output_name})
 endfunction()
 
-# Generate a Bitcode library for all the compute capabilities the user requested
+# Generate a Bitcode library for all the gpu architectures the user requested.
 add_custom_target(omptarget.devicertl.nvptx)
-foreach(sm ${nvptx_sm_list})
-  compileDeviceRTLLibrary(sm_${sm} nvptx nvptx64-nvidia-cuda -fopenmp-targets=nvptx64-nvidia-cuda --cuda-feature=+ptx61)
-endforeach()
-
 add_custom_target(omptarget.devicertl.amdgpu)
-foreach(mcpu ${amdgpu_mcpus})
-  compileDeviceRTLLibrary(${mcpu} amdgpu amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa)
+foreach(gpu_arch ${LIBOMPTARGET_DEVICE_ARCHITECTURES})
+  if("${gpu_arch}" IN_LIST all_amdgpu_architectures)
+    compileDeviceRTLLibrary(${gpu_arch} amdgpu amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa)
+  elseif("${gpu_arch}" IN_LIST all_nvptx_architectures)
+    compileDeviceRTLLibrary(${gpu_arch} nvptx nvptx64-nvidia-cuda -fopenmp-targets=nvptx64-nvidia-cuda --cuda-feature=+ptx61)
+  else()
+    libomptarget_error_say("Unknown GPU architecture '${gpu_arch}'")
+  endif()
 endforeach()
 
 # Archive all the object files generated above into a static library
