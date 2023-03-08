@@ -3508,6 +3508,7 @@ bool Sema::checkTargetClonesAttrString(
   enum SecondParam { None, CPU, Tune };
   enum ThirdParam { Target, TargetClones };
   HasCommas = HasCommas || Str.contains(',');
+  const TargetInfo &TInfo = Context.getTargetInfo();
   // Warn on empty at the beginning of a string.
   if (Str.size() == 0)
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
@@ -3517,9 +3518,9 @@ bool Sema::checkTargetClonesAttrString(
   while (!Parts.second.empty()) {
     Parts = Parts.second.split(',');
     StringRef Cur = Parts.first.trim();
-    SourceLocation CurLoc = Literal->getLocationOfByte(
-        Cur.data() - Literal->getString().data(), getSourceManager(),
-        getLangOpts(), Context.getTargetInfo());
+    SourceLocation CurLoc =
+        Literal->getLocationOfByte(Cur.data() - Literal->getString().data(),
+                                   getSourceManager(), getLangOpts(), TInfo);
 
     bool DefaultIsDupe = false;
     bool HasCodeGenImpact = false;
@@ -3527,7 +3528,7 @@ bool Sema::checkTargetClonesAttrString(
       return Diag(CurLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << "" << TargetClones;
 
-    if (Context.getTargetInfo().getTriple().isAArch64()) {
+    if (TInfo.getTriple().isAArch64()) {
       // AArch64 target clones specific
       if (Cur == "default") {
         DefaultIsDupe = HasDefault;
@@ -3542,13 +3543,12 @@ bool Sema::checkTargetClonesAttrString(
         while (!CurParts.second.empty()) {
           CurParts = CurParts.second.split('+');
           StringRef CurFeature = CurParts.first.trim();
-          if (!Context.getTargetInfo().validateCpuSupports(CurFeature)) {
+          if (!TInfo.validateCpuSupports(CurFeature)) {
             Diag(CurLoc, diag::warn_unsupported_target_attribute)
                 << Unsupported << None << CurFeature << TargetClones;
             continue;
           }
-          std::string Options;
-          if (Context.getTargetInfo().getFeatureDepOptions(CurFeature, Options))
+          if (TInfo.doesFeatureAffectCodeGen(CurFeature))
             HasCodeGenImpact = true;
           CurFeatures.push_back(CurFeature);
         }
