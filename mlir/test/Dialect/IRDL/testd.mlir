@@ -56,6 +56,56 @@ func.func @failedEqConstraint() {
 // -----
 
 //===----------------------------------------------------------------------===//
+// AnyOf constraint
+//===----------------------------------------------------------------------===//
+
+func.func @succeededAnyOfConstraint() {
+  // CHECK: "testd.anyof"() : () -> i32
+  "testd.anyof"() : () -> i32
+  // CHECK: "testd.anyof"() : () -> i64
+  "testd.anyof"() : () -> i64
+  return
+}
+
+// -----
+
+func.func @failedAnyOfConstraint() {
+  // expected-error@+1 {{'i1' does not satisfy the constraint}}
+  "testd.anyof"() : () -> i1
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// AllOf constraint
+//===----------------------------------------------------------------------===//
+
+func.func @succeededAllOfConstraint() {
+  // CHECK: "testd.all_of"() : () -> i64
+  "testd.all_of"() : () -> i64
+  return
+}
+
+// -----
+
+func.func @failedAllOfConstraint1() {
+  // expected-error@+1 {{'i1' does not satisfy the constraint}}
+  "testd.all_of"() : () -> i1
+  return
+}
+
+// -----
+
+func.func @failedAllOfConstraint2() {
+  // expected-error@+1 {{expected 'i64' but got 'i32'}}
+  "testd.all_of"() : () -> i32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // Any constraint
 //===----------------------------------------------------------------------===//
 
@@ -76,8 +126,10 @@ func.func @succeededAnyConstraint() {
 func.func @succeededDynBaseConstraint() {
   // CHECK: "testd.dynbase"() : () -> !testd.parametric<i32>
   "testd.dynbase"() : () -> !testd.parametric<i32>
-  // CHECK: "testd.dynbase"() : () -> !testd.parametric<!testd.parametric<i32>>
-  "testd.dynbase"() : () -> !testd.parametric<!testd.parametric<i32>>
+  // CHECK: "testd.dynbase"() : () -> !testd.parametric<i64>
+  "testd.dynbase"() : () -> !testd.parametric<i64>
+  // CHECK: "testd.dynbase"() : () -> !testd.parametric<!testd.parametric<i64>>
+  "testd.dynbase"() : () -> !testd.parametric<!testd.parametric<i64>>
   return
 }
 
@@ -98,6 +150,8 @@ func.func @failedDynBaseConstraint() {
 func.func @succeededDynParamsConstraint() {
   // CHECK: "testd.dynparams"() : () -> !testd.parametric<i32>
   "testd.dynparams"() : () -> !testd.parametric<i32>
+  // CHECK: "testd.dynparams"() : () -> !testd.parametric<i64>
+  "testd.dynparams"() : () -> !testd.parametric<i64>
   return
 }
 
@@ -112,7 +166,7 @@ func.func @failedDynParamsConstraintBase() {
 // -----
 
 func.func @failedDynParamsConstraintParam() {
-  // expected-error@+1 {{expected 'i32' but got 'i1'}}
+  // expected-error@+1 {{'i1' does not satisfy the constraint}}
   "testd.dynparams"() : () -> !testd.parametric<i1>
   return
 }
