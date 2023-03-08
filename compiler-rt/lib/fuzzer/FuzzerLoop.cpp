@@ -160,8 +160,6 @@ Fuzzer::Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
   memset(BaseSha1, 0, sizeof(BaseSha1));
 }
 
-Fuzzer::~Fuzzer() {}
-
 void Fuzzer::AllocateCurrentUnitData() {
   if (CurrentUnitData || MaxInputLen == 0)
     return;
