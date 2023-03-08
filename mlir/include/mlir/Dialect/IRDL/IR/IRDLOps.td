@@ -15,6 +15,7 @@
 
 include "IRDL.td"
 include "IRDLTypes.td"
+include "IRDLInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
@@ -264,7 +265,8 @@ def IRDL_ResultsOp : IRDL_Op<"results", [HasParent<"OperationOp">]> {
 //===----------------------------------------------------------------------===//
 
 class IRDL_ConstraintOp<string mnemonic, list<Trait> traits = []>
-    : IRDL_Op<mnemonic, traits> {
+    : IRDL_Op<mnemonic, [VerifyConstraintInterface,
+        DeclareOpInterfaceMethods<VerifyConstraintInterface>] # traits> {
 }
 
 def IRDL_Is : IRDL_ConstraintOp<"is",
