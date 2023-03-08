@@ -103,7 +103,6 @@ static cl::opt<VectorizerChoice, true> Vectorizer(
     "polly-vectorizer", cl::desc("Select the vectorization strategy"),
     cl::values(
         clEnumValN(VECTORIZER_NONE, "none", "No Vectorization"),
-        clEnumValN(VECTORIZER_POLLY, "polly", "Polly internal vectorizer"),
         clEnumValN(
             VECTORIZER_STRIPMINE, "stripmine",
             "Strip-mine outer loops for the loop-vectorizer to trigger")),
