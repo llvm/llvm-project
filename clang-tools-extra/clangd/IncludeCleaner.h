@@ -20,17 +20,37 @@
 
 #include "Headers.h"
 #include "ParsedAST.h"
+#include "clang-include-cleaner/Types.h"
 #include "index/CanonicalIncludes.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
+#include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include <optional>
+#include <tuple>
 #include <vector>
 
 namespace clang {
 namespace clangd {
+
+// Data needed for missing include diagnostics.
+struct MissingIncludeDiagInfo {
+  include_cleaner::Symbol Symbol;
+  syntax::FileRange SymRefRange;
+  std::vector<include_cleaner::Header> Providers;
+
+  bool operator==(const MissingIncludeDiagInfo &Other) const {
+    return std::tie(SymRefRange, Providers, Symbol) ==
+           std::tie(Other.SymRefRange, Other.Providers, Other.Symbol);
+  }
+};
+
+struct IncludeCleanerFindings {
+  std::vector<const Inclusion *> UnusedIncludes;
+  std::vector<MissingIncludeDiagInfo> MissingIncludes;
+};
 
 struct ReferencedLocations {
   llvm::DenseSet<SourceLocation> User;
@@ -96,13 +116,10 @@ getUnused(ParsedAST &AST,
           const llvm::DenseSet<IncludeStructure::HeaderID> &ReferencedFiles,
           const llvm::StringSet<> &ReferencedPublicHeaders);
 
+IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST);
 std::vector<const Inclusion *> computeUnusedIncludes(ParsedAST &AST);
-// The same as computeUnusedIncludes, but it is an experimental and
-// include-cleaner-lib-based implementation.
-std::vector<const Inclusion *>
-computeUnusedIncludesExperimental(ParsedAST &AST);
 
-std::vector<Diag> issueUnusedIncludesDiagnostics(ParsedAST &AST,
+std::vector<Diag> issueIncludeCleanerDiagnostics(ParsedAST &AST,
                                                  llvm::StringRef Code);
 
 /// Affects whether standard library includes should be considered for

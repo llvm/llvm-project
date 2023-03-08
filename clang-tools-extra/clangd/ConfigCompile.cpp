@@ -431,22 +431,32 @@ struct FragmentCompiler {
           });
 
     if (F.UnusedIncludes)
-      if (auto Val =
-              compileEnum<Config::UnusedIncludesPolicy>("UnusedIncludes",
-                                                        **F.UnusedIncludes)
-                  .map("Strict", Config::UnusedIncludesPolicy::Strict)
-                  .map("Experiment", Config::UnusedIncludesPolicy::Experiment)
-                  .map("None", Config::UnusedIncludesPolicy::None)
-                  .value())
+      if (auto Val = compileEnum<Config::IncludesPolicy>("UnusedIncludes",
+                                                         **F.UnusedIncludes)
+                         .map("Strict", Config::IncludesPolicy::Strict)
+                         .map("Experiment", Config::IncludesPolicy::Experiment)
+                         .map("None", Config::IncludesPolicy::None)
+                         .value())
         Out.Apply.push_back([Val](const Params &, Config &C) {
           C.Diagnostics.UnusedIncludes = *Val;
         });
+
     if (F.AllowStalePreamble) {
       if (auto Val = F.AllowStalePreamble)
         Out.Apply.push_back([Val](const Params &, Config &C) {
           C.Diagnostics.AllowStalePreamble = **Val;
         });
     }
+
+    if (F.MissingIncludes)
+      if (auto Val = compileEnum<Config::IncludesPolicy>("MissingIncludes",
+                                                         **F.MissingIncludes)
+                         .map("Strict", Config::IncludesPolicy::Strict)
+                         .map("None", Config::IncludesPolicy::None)
+                         .value())
+        Out.Apply.push_back([Val](const Params &, Config &C) {
+          C.Diagnostics.MissingIncludes = *Val;
+        });
 
     compile(std::move(F.Includes));
     compile(std::move(F.ClangTidy));
