@@ -285,3 +285,17 @@ class CppDataFormatterTestCase(TestBase):
             matching=False,
             substrs=['(int) iAmInt = 0x00000001'])
         self.expect("frame variable iAmInt", substrs=['(int) iAmInt = 1'])
+
+        # FIXME: don't format pointer to members as bytes, but rather as regular pointers
+        self.expect(
+            "frame variable member_ptr",
+            patterns=['member_ptr = [0-9a-z]{2}\s'])
+        self.expect(
+            "frame variable member_func_ptr",
+            patterns=['member_func_ptr = [0-9a-z]{2}\s'])
+        self.expect(
+            "frame variable ref_to_member_func_ptr",
+            patterns=['ref_to_member_func_ptr = [0-9a-z]{2}\s'])
+        self.expect(
+            "frame variable virt_member_func_ptr",
+            patterns=['virt_member_func_ptr = [0-9a-z]{2}\s'])
