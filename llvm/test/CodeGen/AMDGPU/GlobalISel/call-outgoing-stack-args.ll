@@ -416,6 +416,7 @@ define void @func_caller_byval(ptr addrspace(5) %argptr) {
 ; FLATSCR-NEXT:    s_mov_b64 exec, s[2:3]
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[1:2], v0, off
 ; FLATSCR-NEXT:    s_add_i32 s32, s32, 16
+; FLATSCR-NEXT:    v_add_u32_e32 v3, 8, v0
 ; FLATSCR-NEXT:    v_writelane_b32 v41, s0, 0
 ; FLATSCR-NEXT:    s_add_u32 s0, s32, 8
 ; FLATSCR-NEXT:    v_writelane_b32 v40, s30, 0
@@ -423,30 +424,36 @@ define void @func_caller_byval(ptr addrspace(5) %argptr) {
 ; FLATSCR-NEXT:    v_writelane_b32 v40, s31, 1
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[1:2], s32
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[1:2], v0, off offset:8
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[1:2], v3, off
+; FLATSCR-NEXT:    v_add_u32_e32 v3, 16, v0
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[1:2], s0
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[1:2], v0, off offset:16
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[1:2], v3, off
 ; FLATSCR-NEXT:    s_add_u32 s0, s32, 16
+; FLATSCR-NEXT:    v_add_u32_e32 v3, 24, v0
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[1:2], s0
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[1:2], v0, off offset:24
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[1:2], v3, off
 ; FLATSCR-NEXT:    s_add_u32 s0, s32, 24
+; FLATSCR-NEXT:    v_add_u32_e32 v3, 32, v0
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[1:2], s0
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[1:2], v0, off offset:32
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[1:2], v3, off
 ; FLATSCR-NEXT:    s_add_u32 s0, s32, 32
+; FLATSCR-NEXT:    v_add_u32_e32 v3, 40, v0
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[1:2], s0
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[1:2], v0, off offset:40
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[1:2], v3, off
 ; FLATSCR-NEXT:    s_add_u32 s0, s32, 40
+; FLATSCR-NEXT:    v_add_u32_e32 v3, 48, v0
+; FLATSCR-NEXT:    v_add_u32_e32 v0, 56, v0
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[1:2], s0
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[1:2], v0, off offset:48
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[1:2], v3, off
 ; FLATSCR-NEXT:    s_add_u32 s0, s32, 48
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[1:2], s0
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], v0, off offset:56
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], v0, off
 ; FLATSCR-NEXT:    s_getpc_b64 s[0:1]
 ; FLATSCR-NEXT:    s_add_u32 s0, s0, external_void_func_byval@rel32@lo+4
 ; FLATSCR-NEXT:    s_addc_u32 s1, s1, external_void_func_byval@rel32@hi+12
