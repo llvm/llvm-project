@@ -41,6 +41,7 @@ class CIndexer {
 
   std::string ToolchainPath;
 
+  std::string PreambleStoragePath;
   std::string InvocationEmissionPath;
 
 public:
@@ -76,6 +77,12 @@ public:
   const std::string &getClangResourcesPath();
 
   StringRef getClangToolchainPath();
+
+  void setPreambleStoragePath(StringRef Str) {
+    PreambleStoragePath = Str.str();
+  }
+
+  StringRef getPreambleStoragePath() const { return PreambleStoragePath; }
 
   void setInvocationEmissionPath(StringRef Str) {
     InvocationEmissionPath = std::string(Str);
