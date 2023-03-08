@@ -767,8 +767,7 @@ define i1 @trunc_negative_destbits_not_enough(i33 %x) {
 
 define i1 @bitreverse_ne_22(i8 %x) {
 ; CHECK-LABEL: @bitreverse_ne_22(
-; CHECK-NEXT:    [[Y:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[X:%.*]])
-; CHECK-NEXT:    [[Z:%.*]] = icmp ne i8 [[Y]], 22
+; CHECK-NEXT:    [[Z:%.*]] = icmp ne i8 [[X:%.*]], 104
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %y = call i8 @llvm.bitreverse.i8(i8 %x)
@@ -790,8 +789,7 @@ define i1 @bitreverse_ult_22_fail_not_equality_pred(i8 %x) {
 
 define <2 x i1> @bitreverse_vec_eq_2_2(<2 x i8> %x) {
 ; CHECK-LABEL: @bitreverse_vec_eq_2_2(
-; CHECK-NEXT:    [[Y:%.*]] = call <2 x i8> @llvm.bitreverse.v2i8(<2 x i8> [[X:%.*]])
-; CHECK-NEXT:    [[Z:%.*]] = icmp eq <2 x i8> [[Y]], <i8 2, i8 2>
+; CHECK-NEXT:    [[Z:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 64, i8 64>
 ; CHECK-NEXT:    ret <2 x i1> [[Z]]
 ;
   %y = call <2 x i8> @llvm.bitreverse.v2i8(<2 x i8> %x)
