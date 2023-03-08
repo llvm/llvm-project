@@ -685,8 +685,19 @@ def testInvalidOperationStrSoftFails():
     # CHECK: "builtin.module"() ({
     # CHECK: }) : () -> ()
     print(invalid_op)
-    # CHECK: .verify = False
-    print(f".verify = {invalid_op.operation.verify()}")
+    try:
+      invalid_op.verify()
+    except MLIRError as e:
+      # CHECK: Exception: <
+      # CHECK:   Verification failed:
+      # CHECK:   error: unknown: 'builtin.module' op requires one region
+      # CHECK:    note: unknown: see current operation:
+      # CHECK:     "builtin.module"() ({
+      # CHECK:     ^bb0:
+      # CHECK:     }, {
+      # CHECK:     }) : () -> ()
+      # CHECK: >
+      print(f"Exception: <{e}>")
 
 
 # CHECK-LABEL: TEST: testInvalidModuleStrSoftFails
@@ -920,7 +931,7 @@ def testOperationParse():
     assert isinstance(m, ModuleOp)
     try:
       ModuleOp.parse('"test.foo"() : () -> ()')
-    except ValueError as e:
+    except MLIRError as e:
       # CHECK: error: Expected a 'builtin.module' op, got: 'test.foo'
       print(f"error: {e}")
     else:

@@ -100,8 +100,29 @@ def _site_initialize():
       # all dialects. It is being done here in order to preserve existing
       # behavior. See: https://github.com/llvm/llvm-project/issues/56037
       self.load_all_available_dialects()
-
   ir.Context = Context
+
+  class MLIRError(Exception):
+    """
+    An exception with diagnostic information. Has the following fields:
+      message: str
+      error_diagnostics: List[ir.DiagnosticInfo]
+    """
+    def __init__(self, message, error_diagnostics):
+      self.message = message
+      self.error_diagnostics = error_diagnostics
+      super().__init__(message, error_diagnostics)
+
+    def __str__(self):
+      s = self.message
+      if self.error_diagnostics:
+        s += ':'
+      for diag in self.error_diagnostics:
+        s += "\nerror: "  + str(diag.location)[4:-1] + ": " + diag.message.replace('\n', '\n  ')
+        for note in diag.notes:
+          s += "\n note: "  + str(note.location)[4:-1] + ": " + note.message.replace('\n', '\n  ')
+      return s
+  ir.MLIRError = MLIRError
 
 
 _site_initialize()
