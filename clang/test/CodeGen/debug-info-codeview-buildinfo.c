@@ -33,7 +33,7 @@ int main(void) { return 42; }
 // RELATIVE: 0x{{.+}} | LF_BUILDINFO [size = {{.+}}]
 // RELATIVE:          0x{{.+}}: `.`
 
-// DISABLE-NOT: cc1
+// DISABLE-NOT: "-cc1"
 // DISABLE: 0x{{.+}} | LF_BUILDINFO [size = {{.+}}]
 // DISABLE-NEXT:          0x{{.+}}: `{{.*}}`
 // DISABLE-NEXT:          <no type>: ``
