@@ -65,6 +65,7 @@ public:
   void init(s32 ReleaseToOsInterval) NO_THREAD_SAFETY_ANALYSIS {
     DCHECK(isAligned(reinterpret_cast<uptr>(this), alignof(ThisT)));
     DCHECK_EQ(PrimaryBase, 0U);
+
     // Reserve the space required for the Primary.
     PrimaryBase = reinterpret_cast<uptr>(map(
         nullptr, PrimarySize, "scudo:primary_reserve", MAP_NOACCESS, &Data));
@@ -78,13 +79,15 @@ public:
       RegionInfo *Region = getRegionInfo(I);
       // The actual start of a region is offset by a random number of pages
       // when PrimaryEnableRandomOffset is set.
-      Region->RegionBeg = getRegionBaseByClassId(I) +
+      Region->RegionBeg = (PrimaryBase + (I << Config::PrimaryRegionSizeLog)) +
                           (Config::PrimaryEnableRandomOffset
                                ? ((getRandomModN(&Seed, 16) + 1) * PageSize)
                                : 0);
       Region->RandState = getRandomU32(&Seed);
       Region->ReleaseInfo.LastReleaseAtNs = Time;
     }
+    shuffle(RegionInfoArray, NumClasses, &Seed);
+
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
   }
 
@@ -420,8 +423,10 @@ private:
     return &RegionInfoArray[ClassId];
   }
 
-  uptr getRegionBaseByClassId(uptr ClassId) const {
-    return PrimaryBase + (ClassId << Config::PrimaryRegionSizeLog);
+  uptr getRegionBaseByClassId(uptr ClassId) {
+    return roundDown(getRegionInfo(ClassId)->RegionBeg - PrimaryBase,
+                     RegionSize) +
+           PrimaryBase;
   }
 
   static CompactPtrT compactPtrInternal(uptr Base, uptr Ptr) {
