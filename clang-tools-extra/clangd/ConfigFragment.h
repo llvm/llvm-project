@@ -221,7 +221,7 @@ struct Fragment {
     /// This often has other advantages, such as skipping some analysis.
     std::vector<Located<std::string>> Suppress;
 
-    /// Controls how clangd will correct "unnecessary #include directives.
+    /// Controls how clangd will correct "unnecessary" #include directives.
     /// clangd can warn if a header is `#include`d but not used, and suggest
     /// removing it.
     //
@@ -236,8 +236,22 @@ struct Fragment {
     /// - None
     std::optional<Located<std::string>> UnusedIncludes;
 
+
     /// Enable emitting diagnostics using stale preambles.
     std::optional<Located<bool>> AllowStalePreamble;
+
+    /// Controls if clangd should analyze missing #include directives.
+    /// clangd will warn if no header providing a symbol is `#include`d
+    /// (missing) directly, and suggest adding it.
+    ///
+    /// Strict means a header providing a symbol is missing if it is not
+    /// *directly #include'd. The file might still compile if the header is
+    /// included transitively.
+    ///
+    /// Valid values are:
+    /// - Strict
+    /// - None
+    std::optional<Located<std::string>> MissingIncludes;
 
     /// Controls IncludeCleaner diagnostics.
     struct IncludesBlock {
