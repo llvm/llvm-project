@@ -624,8 +624,17 @@ public:
       }
     }
     if (bulkLoadElementType) {
-      auto shapedType = mlirRankedTensorTypeGet(
-          shape.size(), shape.data(), *bulkLoadElementType, encodingAttr);
+      MlirType shapedType;
+      if (mlirTypeIsAShaped(*bulkLoadElementType)) {
+        if (explicitShape) {
+          throw std::invalid_argument("Shape can only be specified explicitly "
+                                      "when the type is not a shaped type.");
+        }
+        shapedType = *bulkLoadElementType;
+      } else {
+        shapedType = mlirRankedTensorTypeGet(
+            shape.size(), shape.data(), *bulkLoadElementType, encodingAttr);
+      }
       size_t rawBufferSize = arrayInfo.size * arrayInfo.itemsize;
       MlirAttribute attr = mlirDenseElementsAttrRawBufferGet(
           shapedType, rawBufferSize, arrayInfo.ptr);
