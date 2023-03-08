@@ -9,6 +9,7 @@
 #include "src/inttypes/strtoumax.h"
 #include "src/__support/common.h"
 #include "src/__support/str_to_integer.h"
+#include "src/errno/libc_errno.h"
 
 namespace __llvm_libc {
 
@@ -17,7 +18,7 @@ LLVM_LIBC_FUNCTION(uintmax_t, strtoumax,
                     int base)) {
   auto result = internal::strtointeger<uintmax_t>(str, base);
   if (result.has_error())
-    errno = result.error;
+    libc_errno = result.error;
 
   if (str_end != nullptr)
     *str_end = const_cast<char *>(str + result.parsed_len);
