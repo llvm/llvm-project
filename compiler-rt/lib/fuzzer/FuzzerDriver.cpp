@@ -797,7 +797,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   if (Flags.verbosity)
     Printf("INFO: Seed: %u\n", Seed);
 
-  if (Flags.collect_data_flow && !Flags.fork &&
+  if (Flags.collect_data_flow && Flags.data_flow_trace && !Flags.fork &&
       !(Flags.merge || Flags.set_cover_merge)) {
     if (RunIndividualFiles)
       return CollectDataFlow(Flags.collect_data_flow, Flags.data_flow_trace,
