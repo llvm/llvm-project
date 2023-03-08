@@ -18,6 +18,8 @@
 #include "aarch64/syscall.h"
 #elif defined(LIBC_TARGET_ARCH_IS_ARM)
 #include "arm/syscall.h"
+#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
+#include "riscv64/syscall.h"
 #endif
 
 namespace __llvm_libc {
