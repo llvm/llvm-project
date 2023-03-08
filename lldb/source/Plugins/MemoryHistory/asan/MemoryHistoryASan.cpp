@@ -67,8 +67,11 @@ const char *memory_history_asan_command_prefix = R"(
         size_t __asan_get_alloc_stack(void *addr, void **trace, size_t size, int *thread_id);
         size_t __asan_get_free_stack(void *addr, void **trace, size_t size, int *thread_id);
     }
+)";
 
-    struct data {
+const char *memory_history_asan_command_format =
+    R"(
+    struct {
         void *alloc_trace[256];
         size_t alloc_count;
         int alloc_tid;
@@ -76,12 +79,7 @@ const char *memory_history_asan_command_prefix = R"(
         void *free_trace[256];
         size_t free_count;
         int free_tid;
-    };
-)";
-
-const char *memory_history_asan_command_format =
-    R"(
-    data t;
+    } t;
 
     t.alloc_count = __asan_get_alloc_stack((void *)0x%)" PRIx64
     R"(, t.alloc_trace, 256, &t.alloc_tid);
