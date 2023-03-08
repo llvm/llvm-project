@@ -88,6 +88,9 @@ extern "C"
     int (*ptr__tsan_get_report_loc_object_type)(void *report, unsigned long idx, const char **object_type);
     int (*ptr__tsan_get_report_tag)(void *report, unsigned long *tag);
 }
+)";
+
+const char *thread_sanitizer_retrieve_report_data_command = R"(
 
 const int REPORT_TRACE_SIZE = 128;
 const int REPORT_ARRAY_SIZE = 4;
@@ -156,11 +159,7 @@ struct data {
         int idx;
         int tid;
     } unique_tids[REPORT_ARRAY_SIZE];
-};
-)";
-
-const char *thread_sanitizer_retrieve_report_data_command = R"(
-data t = {0};
+} t = {0};
 
 ptr__tsan_get_report_loc_object_type = (typeof(ptr__tsan_get_report_loc_object_type))(void *)dlsym((void*)-2 /*RTLD_DEFAULT*/, "__tsan_get_report_loc_object_type");
 ptr__tsan_get_report_tag = (typeof(ptr__tsan_get_report_tag))(void *)dlsym((void*)-2 /*RTLD_DEFAULT*/, "__tsan_get_report_tag");
