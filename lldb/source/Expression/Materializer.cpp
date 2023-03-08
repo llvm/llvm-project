@@ -511,14 +511,15 @@ public:
           valobj_sp->GetAddressOf(scalar_is_load_address, &address_type);
 
       // BEGIN Swift.
-      if (lldb::ProcessSP process_sp =
-          map.GetBestExecutionContextScope()->CalculateProcess())
-        if (auto runtime = process_sp->GetLanguageRuntime(
-                valobj_type.GetMinimumLanguage())) {
-          Status read_error;
-          addr_of_valobj =
-              runtime->FixupAddress(addr_of_valobj, valobj_type, read_error);
-        }
+      if (addr_of_valobj != LLDB_INVALID_ADDRESS)
+        if (lldb::ProcessSP process_sp =
+                map.GetBestExecutionContextScope()->CalculateProcess())
+          if (auto runtime = process_sp->GetLanguageRuntime(
+                  valobj_type.GetMinimumLanguage())) {
+            Status read_error;
+            addr_of_valobj =
+                runtime->FixupAddress(addr_of_valobj, valobj_type, read_error);
+          }
       // END Swift.
 
       if (addr_of_valobj != LLDB_INVALID_ADDRESS) {
