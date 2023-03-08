@@ -8,57 +8,25 @@
 
 #include "Annotations.h"
 #include "Config.h"
-#include "Diagnostics.h"
 #include "IncludeCleaner.h"
-#include "ParsedAST.h"
 #include "SourceCode.h"
 #include "TestFS.h"
 #include "TestTU.h"
-#include "clang-include-cleaner/Analysis.h"
-#include "clang-include-cleaner/Types.h"
 #include "support/Context.h"
-#include "clang/AST/DeclBase.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <cstddef>
-#include <string>
-#include <vector>
 
 namespace clang {
 namespace clangd {
 namespace {
 
-using ::testing::AllOf;
 using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
 using ::testing::IsEmpty;
-using ::testing::Matcher;
 using ::testing::Pointee;
 using ::testing::UnorderedElementsAre;
-
-Matcher<const Diag &> withFix(::testing::Matcher<Fix> FixMatcher) {
-  return Field(&Diag::Fixes, ElementsAre(FixMatcher));
-}
-
-MATCHER_P2(Diag, Range, Message,
-           "Diag at " + llvm::to_string(Range) + " = [" + Message + "]") {
-  return arg.Range == Range && arg.Message == Message;
-}
-
-MATCHER_P3(Fix, Range, Replacement, Message,
-           "Fix " + llvm::to_string(Range) + " => " +
-               ::testing::PrintToString(Replacement) + " = [" + Message + "]") {
-  return arg.Message == Message && arg.Edits.size() == 1 &&
-         arg.Edits[0].range == Range && arg.Edits[0].newText == Replacement;
-}
 
 std::string guard(llvm::StringRef Code) {
   return "#pragma once\n" + Code.str();
@@ -374,8 +342,7 @@ TEST(IncludeCleaner, StdlibUnused) {
   auto AST = TU.build();
   EXPECT_THAT(computeUnusedIncludes(AST),
               ElementsAre(Pointee(writtenInclusion("<queue>"))));
-  IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
-  EXPECT_THAT(Findings.UnusedIncludes,
+  EXPECT_THAT(computeUnusedIncludesExperimental(AST),
               ElementsAre(Pointee(writtenInclusion("<queue>"))));
 }
 
@@ -412,10 +379,8 @@ TEST(IncludeCleaner, GetUnusedHeaders) {
       computeUnusedIncludes(AST),
       UnorderedElementsAre(Pointee(writtenInclusion("\"unused.h\"")),
                            Pointee(writtenInclusion("\"dir/unused.h\""))));
-
-  IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
   EXPECT_THAT(
-      Findings.UnusedIncludes,
+      computeUnusedIncludesExperimental(AST),
       UnorderedElementsAre(Pointee(writtenInclusion("\"unused.h\"")),
                            Pointee(writtenInclusion("\"dir/unused.h\""))));
 }
@@ -698,7 +663,7 @@ TEST(IncludeCleaner, IWYUPragmas) {
     void foo() {}
   )cpp");
   Config Cfg;
-  Cfg.Diagnostics.UnusedIncludes = Config::IncludesPolicy::Experiment;
+  Cfg.Diagnostics.UnusedIncludes = Config::UnusedIncludesPolicy::Experiment;
   WithContextValue Ctx(Config::Key, std::move(Cfg));
   ParsedAST AST = TU.build();
 
@@ -714,8 +679,7 @@ TEST(IncludeCleaner, IWYUPragmas) {
       ReferencedFiles.User.contains(AST.getSourceManager().getMainFileID()));
   EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
   EXPECT_THAT(computeUnusedIncludes(AST), IsEmpty());
-  IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
-  EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
+  EXPECT_THAT(computeUnusedIncludesExperimental(AST), IsEmpty());
 }
 
 TEST(IncludeCleaner, RecursiveInclusion) {
@@ -744,8 +708,7 @@ TEST(IncludeCleaner, RecursiveInclusion) {
 
   EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
   EXPECT_THAT(computeUnusedIncludes(AST), IsEmpty());
-  IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
-  EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
+  EXPECT_THAT(computeUnusedIncludesExperimental(AST), IsEmpty());
 }
 
 TEST(IncludeCleaner, IWYUPragmaExport) {
@@ -770,8 +733,7 @@ TEST(IncludeCleaner, IWYUPragmaExport) {
   // FIXME: This is not correct: foo.h is unused but is not diagnosed as such
   // because we ignore headers with IWYU export pragmas for now.
   EXPECT_THAT(computeUnusedIncludes(AST), IsEmpty());
-  IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
-  EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
+  EXPECT_THAT(computeUnusedIncludesExperimental(AST), IsEmpty());
 }
 
 TEST(IncludeCleaner, NoDiagsForObjC) {
@@ -790,9 +752,7 @@ TEST(IncludeCleaner, NoDiagsForObjC) {
   TU.ExtraArgs.emplace_back("-xobjective-c");
 
   Config Cfg;
-
-  Cfg.Diagnostics.UnusedIncludes = Config::IncludesPolicy::Strict;
-  Cfg.Diagnostics.MissingIncludes = Config::IncludesPolicy::Strict;
+  Cfg.Diagnostics.UnusedIncludes = Config::UnusedIncludesPolicy::Strict;
   WithContextValue Ctx(Config::Key, std::move(Cfg));
   ParsedAST AST = TU.build();
   EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
