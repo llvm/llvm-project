@@ -27,7 +27,7 @@ define <2 x i32> @stest_f64i32(<2 x double> %x) {
 ; CHECK-NOV-NEXT:    blt a0, a3, .LBB0_2
 ; CHECK-NOV-NEXT:  .LBB0_6: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a3
-; CHECK-NOV-NEXT:    blt a2, a0, .LBB0_3
+; CHECK-NOV-NEXT:    blt a2, a3, .LBB0_3
 ; CHECK-NOV-NEXT:  .LBB0_7: # %entry
 ; CHECK-NOV-NEXT:    lui a0, 524288
 ; CHECK-NOV-NEXT:    blt a2, a1, .LBB0_4
@@ -182,7 +182,7 @@ define <4 x i32> @stest_f32i32(<4 x float> %x) {
 ; CHECK-NOV-NEXT:    blt a5, a6, .LBB3_4
 ; CHECK-NOV-NEXT:  .LBB3_13: # %entry
 ; CHECK-NOV-NEXT:    mv a5, a6
-; CHECK-NOV-NEXT:    blt a3, a5, .LBB3_5
+; CHECK-NOV-NEXT:    blt a3, a6, .LBB3_5
 ; CHECK-NOV-NEXT:  .LBB3_14: # %entry
 ; CHECK-NOV-NEXT:    lui a5, 524288
 ; CHECK-NOV-NEXT:    blt a3, a4, .LBB3_6
@@ -431,7 +431,7 @@ define <4 x i32> @stest_f16i32(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    blt a3, a4, .LBB6_4
 ; CHECK-NOV-NEXT:  .LBB6_13: # %entry
 ; CHECK-NOV-NEXT:    mv a3, a4
-; CHECK-NOV-NEXT:    blt a1, a3, .LBB6_5
+; CHECK-NOV-NEXT:    blt a1, a4, .LBB6_5
 ; CHECK-NOV-NEXT:  .LBB6_14: # %entry
 ; CHECK-NOV-NEXT:    lui a3, 524288
 ; CHECK-NOV-NEXT:    blt a1, a2, .LBB6_6
@@ -3324,7 +3324,7 @@ define <2 x i32> @stest_f64i32_mm(<2 x double> %x) {
 ; CHECK-NOV-NEXT:    blt a0, a3, .LBB27_2
 ; CHECK-NOV-NEXT:  .LBB27_6: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a3
-; CHECK-NOV-NEXT:    blt a2, a0, .LBB27_3
+; CHECK-NOV-NEXT:    blt a2, a3, .LBB27_3
 ; CHECK-NOV-NEXT:  .LBB27_7: # %entry
 ; CHECK-NOV-NEXT:    lui a0, 524288
 ; CHECK-NOV-NEXT:    blt a2, a1, .LBB27_4
@@ -3474,7 +3474,7 @@ define <4 x i32> @stest_f32i32_mm(<4 x float> %x) {
 ; CHECK-NOV-NEXT:    blt a5, a6, .LBB30_4
 ; CHECK-NOV-NEXT:  .LBB30_13: # %entry
 ; CHECK-NOV-NEXT:    mv a5, a6
-; CHECK-NOV-NEXT:    blt a3, a5, .LBB30_5
+; CHECK-NOV-NEXT:    blt a3, a6, .LBB30_5
 ; CHECK-NOV-NEXT:  .LBB30_14: # %entry
 ; CHECK-NOV-NEXT:    lui a5, 524288
 ; CHECK-NOV-NEXT:    blt a3, a4, .LBB30_6
@@ -3718,7 +3718,7 @@ define <4 x i32> @stest_f16i32_mm(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    blt a3, a4, .LBB33_4
 ; CHECK-NOV-NEXT:  .LBB33_13: # %entry
 ; CHECK-NOV-NEXT:    mv a3, a4
-; CHECK-NOV-NEXT:    blt a1, a3, .LBB33_5
+; CHECK-NOV-NEXT:    blt a1, a4, .LBB33_5
 ; CHECK-NOV-NEXT:  .LBB33_14: # %entry
 ; CHECK-NOV-NEXT:    lui a3, 524288
 ; CHECK-NOV-NEXT:    blt a1, a2, .LBB33_6

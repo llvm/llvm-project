@@ -92,7 +92,7 @@ define i32 @stest_f64i32(double %x) {
 ; RV64IFD-NEXT:    ret
 ; RV64IFD-NEXT:  .LBB0_3: # %entry
 ; RV64IFD-NEXT:    mv a0, a2
-; RV64IFD-NEXT:    blt a1, a0, .LBB0_2
+; RV64IFD-NEXT:    blt a1, a2, .LBB0_2
 ; RV64IFD-NEXT:  .LBB0_4: # %entry
 ; RV64IFD-NEXT:    lui a0, 524288
 ; RV64IFD-NEXT:    ret
@@ -273,7 +273,7 @@ define i32 @stest_f32i32(float %x) {
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB3_3: # %entry
 ; RV64-NEXT:    mv a0, a2
-; RV64-NEXT:    blt a1, a0, .LBB3_2
+; RV64-NEXT:    blt a1, a2, .LBB3_2
 ; RV64-NEXT:  .LBB3_4: # %entry
 ; RV64-NEXT:    lui a0, 524288
 ; RV64-NEXT:    ret
@@ -2043,7 +2043,7 @@ define i32 @stest_f64i32_mm(double %x) {
 ; RV64IFD-NEXT:    ret
 ; RV64IFD-NEXT:  .LBB27_3: # %entry
 ; RV64IFD-NEXT:    mv a0, a2
-; RV64IFD-NEXT:    blt a1, a0, .LBB27_2
+; RV64IFD-NEXT:    blt a1, a2, .LBB27_2
 ; RV64IFD-NEXT:  .LBB27_4: # %entry
 ; RV64IFD-NEXT:    lui a0, 524288
 ; RV64IFD-NEXT:    ret
@@ -2211,7 +2211,7 @@ define i32 @stest_f32i32_mm(float %x) {
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB30_3: # %entry
 ; RV64-NEXT:    mv a0, a2
-; RV64-NEXT:    blt a1, a0, .LBB30_2
+; RV64-NEXT:    blt a1, a2, .LBB30_2
 ; RV64-NEXT:  .LBB30_4: # %entry
 ; RV64-NEXT:    lui a0, 524288
 ; RV64-NEXT:    ret

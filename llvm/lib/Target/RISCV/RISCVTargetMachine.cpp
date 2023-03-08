@@ -66,6 +66,11 @@ static cl::opt<int> RVVVectorBitsMinOpt(
              "autovectorization with fixed width vectors."),
     cl::init(-1), cl::Hidden);
 
+static cl::opt<bool> EnableRISCVCopyPropagation(
+    "riscv-enable-copy-propagation",
+    cl::desc("Enable the copy propagation with RISCV copy instr"),
+    cl::init(true), cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
@@ -336,6 +341,12 @@ void RISCVPassConfig::addPreEmitPass() {
 
 void RISCVPassConfig::addPreEmitPass2() {
   addPass(createRISCVExpandPseudoPass());
+
+  // Do the copy propagation after expanding pseudos because we may produce some
+  // MVs when expanding.
+  if (TM->getOptLevel() >= CodeGenOpt::Default && EnableRISCVCopyPropagation)
+    addPass(createMachineCopyPropagationPass(true));
+
   // Schedule the expansion of AMOs at the last possible moment, avoiding the
   // possibility for other passes to break the requirements for forward
   // progress in the LR/SC block.
