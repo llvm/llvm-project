@@ -423,26 +423,18 @@ define <2 x i64> @test_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 define <2 x i64> @test_v2i64_1(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; SSE-LABEL: test_v2i64_1:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [9223372039002259456,9223372039002259456]
-; SSE-NEXT:    pxor %xmm0, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
-; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[0,0,2,2]
-; SSE-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; SSE-NEXT:    pand %xmm3, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; SSE-NEXT:    por %xmm2, %xmm1
-; SSE-NEXT:    pand %xmm1, %xmm0
-; SSE-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE-NEXT:    por %xmm1, %xmm0
+; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,0,3,2]
+; SSE-NEXT:    pand %xmm1, %xmm2
+; SSE-NEXT:    psubq %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v2i64_1:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
-; AVX-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX-NEXT:    vmovapd {{.*#+}} xmm2 = [1,1]
-; AVX-NEXT:    vblendvpd %xmm1, %xmm0, %xmm2, %xmm0
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; X86-LABEL: test_v2i64_1:
@@ -632,12 +624,8 @@ define <4 x i32> @test_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 define <4 x i32> @test_v4i32_1(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; SSE-LABEL: test_v4i32_1:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
-; SSE-NEXT:    pxor %xmm0, %xmm1
-; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE-NEXT:    pand %xmm1, %xmm0
-; SSE-NEXT:    paddd %xmm1, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm1
 ; SSE-NEXT:    psubd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -781,20 +769,12 @@ define <8 x i32> @test_v8i32(<8 x i32> %a, <8 x i32> %b) nounwind {
 define <8 x i32> @test_v8i32_1(<8 x i32> %a, <8 x i32> %b) nounwind {
 ; SSE-LABEL: test_v8i32_1:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE-NEXT:    pxor %xmm2, %xmm2
 ; SSE-NEXT:    movdqa %xmm0, %xmm3
-; SSE-NEXT:    pxor %xmm2, %xmm3
-; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [2147483649,2147483649,2147483649,2147483649]
-; SSE-NEXT:    pcmpgtd %xmm4, %xmm3
-; SSE-NEXT:    pand %xmm3, %xmm0
-; SSE-NEXT:    paddd %xmm3, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm3, %xmm3
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm3
 ; SSE-NEXT:    psubd %xmm3, %xmm0
-; SSE-NEXT:    pxor %xmm1, %xmm2
-; SSE-NEXT:    pcmpgtd %xmm4, %xmm2
-; SSE-NEXT:    pand %xmm2, %xmm1
-; SSE-NEXT:    paddd %xmm2, %xmm1
-; SSE-NEXT:    psubd %xmm3, %xmm1
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm2
+; SSE-NEXT:    psubd %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test_v8i32_1:
@@ -945,9 +925,9 @@ define <8 x i16> @test_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 define <8 x i16> @test_v8i16_1(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; SSE-LABEL: test_v8i16_1:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [1,1,1,1,1,1,1,1]
-; SSE-NEXT:    psubusw %xmm0, %xmm1
-; SSE-NEXT:    paddw %xmm1, %xmm0
+; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    pcmpeqw %xmm0, %xmm1
+; SSE-NEXT:    psubw %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v8i16_1:
