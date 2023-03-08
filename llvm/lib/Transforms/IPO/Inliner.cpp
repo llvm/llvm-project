@@ -555,7 +555,8 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
 
       // If we inlined or deleted the last possible call site to the function,
       // delete the function body now.
-      if (Callee && Callee->use_empty() && Callee->hasLocalLinkage() &&
+      assert(Callee && "Expected to be non-null due to check at start of loop");
+      if (Callee->use_empty() && Callee->hasLocalLinkage() &&
           // TODO: Can remove if in SCC now.
           !SCCFunctions.count(Callee) &&
           // The function may be apparently dead, but if there are indirect
