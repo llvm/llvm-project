@@ -19,6 +19,9 @@
 #include <__config>
 #include <__format/concepts.h>
 #include <__format/format_arg.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/extent.h>
+#include <__type_traits/is_same.h>
 #include <__utility/forward.h>
 #include <string>
 #include <string_view>

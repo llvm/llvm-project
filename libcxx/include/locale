@@ -202,6 +202,7 @@ template <class charT> class messages_byname;
 #include <__iterator/ostreambuf_iterator.h>
 #include <__locale>
 #include <__memory/unique_ptr.h>
+#include <__type_traits/make_unsigned.h>
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
