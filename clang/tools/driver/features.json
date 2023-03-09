@@ -13,6 +13,9 @@
       "name": "vfs-redirecting-with"
     },
     {
+      "name": "extract-api-ignores"
+    },
+    {
       "name": "deployment-target-environment-variables",
       "value": [
         "MACOSX_DEPLOYMENT_TARGET",
