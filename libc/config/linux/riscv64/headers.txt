@@ -4,6 +4,8 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.inttypes
     libc.include.math
     libc.include.sched
+    libc.include.stdio
     libc.include.stdlib
     libc.include.string
+    libc.include.time
 )
