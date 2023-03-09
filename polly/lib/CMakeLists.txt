@@ -126,6 +126,12 @@ else ()
     $<TARGET_OBJECTS:obj.Polly>
   )
 
+  # Only add the dependencies that are not part of LLVM. The latter are assumed
+  # to be already available in the address space the module is loaded into.
+  # Adding them once more would have the effect that both copies try to register
+  # the same command line options, to which LLVM reacts with an error.
+  target_link_libraries(LLVMPolly PUBLIC ${ISL_TARGET})
+
   set_target_properties(LLVMPolly
     PROPERTIES
     LINKER_LANGUAGE CXX
