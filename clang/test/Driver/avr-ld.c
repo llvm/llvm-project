@@ -43,3 +43,17 @@
 
 // RUN: %clang -### --target=avr -mmcu=atxmega128a1 --rtlib=libgcc --sysroot %S/Inputs/basic_avr_tree %s 2>&1 | FileCheck -check-prefix LINKO %s
 // LINKO: {{".*ld.*"}} {{.*}} {{"-L.*avrxmega7"}} {{.*}} "--defsym=__DATA_REGION_ORIGIN__=0x802000" "--start-group" {{.*}} "-latxmega128a1" {{.*}} "--end-group" "--relax" "-mavrxmega7"
+
+// RUN: %clang -### --target=avr -mmcu=atmega328 -flto --sysroot %S/Inputs/basic_avr_tree %s 2>&1 | FileCheck -check-prefix LINKP %s
+// LINKP: {{".*ld.*"}} {{.*}} "--defsym=__DATA_REGION_ORIGIN__=0x800100" "-plugin" {{.*}}  "-plugin-opt=mcpu=atmega328"
+
+// RUN: %clang -### --target=avr -flto --sysroot %S/Inputs/basic_avr_tree %s 2>&1 | FileCheck -check-prefix LINKQ %s
+// LINKQ: {{".*ld.*"}} {{.*}} "-plugin"
+// LINKQ-NOT: "-plugin-opt=mcpu"
+
+// RUN: %clang -### --target=avr -mmcu=atmega328 -flto=thin --sysroot %S/Inputs/basic_avr_tree %s 2>&1 | FileCheck -check-prefix LINKR %s
+// LINKR: {{".*ld.*"}} {{.*}} "--defsym=__DATA_REGION_ORIGIN__=0x800100" "-plugin" {{.*}}  "-plugin-opt=mcpu=atmega328" "-plugin-opt=thinlto"
+
+// RUN: %clang -### --target=avr -mmcu=atmega328 -flto --sysroot %S/Inputs/basic_avr_tree %s 2>&1 | FileCheck -check-prefix LINKS %s
+// LINKS: {{".*ld.*"}} {{.*}} "--defsym=__DATA_REGION_ORIGIN__=0x800100" "-plugin" {{.*}}  "-plugin-opt=mcpu=atmega328"
+// LINKS-NOT: "-plugin-opt=thinlto"
