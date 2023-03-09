@@ -58,6 +58,10 @@ public:
       : SparseTensorType(
             RankedTensorType::get(stp.getShape(), stp.getElementType(), enc)) {}
 
+  // Copy-assignment would be implicitly deleted (because our fields
+  // are const), so we explicitly delete it for clarity.
+  SparseTensorType &operator=(const SparseTensorType &) = delete;
+
   /// Constructs a new `SparseTensorType` with the same dimension-shape
   /// and element type, but with the encoding replaced by the given encoding.
   SparseTensorType withEncoding(SparseTensorEncodingAttr newEnc) const {
