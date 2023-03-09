@@ -1536,20 +1536,20 @@ bool RISCVTargetLowering::isOffsetFoldingLegal(
 
 bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                        bool ForCodeSize) const {
-  if (Subtarget.hasStdExtZfa()) {
-    if ((VT == MVT::f64 && RISCVLoadFPImm::getLoadFP64Imm(Imm) != -1) ||
-        (VT == MVT::f16 && RISCVLoadFPImm::getLoadFP16Imm(Imm) != -1) ||
-        (VT == MVT::f32 && RISCVLoadFPImm::getLoadFP32Imm(Imm) != -1 &&
-         !Imm.isPosZero()))
-      return true;
-  }
-
   if (VT == MVT::f16 && !Subtarget.hasStdExtZfhOrZfhmin())
     return false;
   if (VT == MVT::f32 && !Subtarget.hasStdExtF())
     return false;
   if (VT == MVT::f64 && !Subtarget.hasStdExtD())
     return false;
+
+  if (Subtarget.hasStdExtZfa()) {
+    if ((VT == MVT::f64 && RISCVLoadFPImm::getLoadFP64Imm(Imm) != -1) ||
+        (VT == MVT::f16 && RISCVLoadFPImm::getLoadFP16Imm(Imm) != -1) ||
+        (VT == MVT::f32 && RISCVLoadFPImm::getLoadFP32Imm(Imm) != -1))
+      return true;
+  }
+
   // Cannot create a 64 bit floating-point immediate value for rv32.
   if (Subtarget.getXLen() < VT.getScalarSizeInBits()) {
     // td can handle +0.0 or -0.0 already.
