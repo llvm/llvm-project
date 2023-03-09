@@ -746,7 +746,7 @@ ELFFile<ELFT>::getSectionAndRelocations(
       SecToRelocMap[ContentsSec] = &Sec;
   }
   if(Errors)
-    return Errors;
+    return std::move(Errors);
   return SecToRelocMap;
 }
 
