@@ -6,9 +6,7 @@ declare void @llvm.riscv.seg2.store.v8i8.p0.iXLen(<8 x i8>, <8 x i8>, ptr, iXLen
 define void @store_factor2(<8 x i8> %v0, <8 x i8> %v1, ptr %ptr) {
 ; CHECK-LABEL: store_factor2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $v9 killed $v9 killed $v8_v9 def $v8_v9
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v8_v9 def $v8_v9
 ; CHECK-NEXT:    vsseg2e8.v v8, (a0)
 ; CHECK-NEXT:    ret
     call void @llvm.riscv.seg2.store.v8i8.p0.iXLen(<8 x i8> %v0, <8 x i8> %v1, ptr %ptr, iXLen 8)
@@ -19,10 +17,7 @@ declare void @llvm.riscv.seg3.store.v8i8.p0.iXLen(<8 x i8>, <8 x i8>, <8 x i8>, 
 define void @store_factor3(<8 x i8> %v0, <8 x i8> %v1, <8 x i8> %v2, ptr %ptr) {
 ; CHECK-LABEL: store_factor3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $v10 killed $v10 killed $v8_v9_v10 def $v8_v9_v10
-; CHECK-NEXT:    # kill: def $v9 killed $v9 killed $v8_v9_v10 def $v8_v9_v10
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v8_v9_v10 def $v8_v9_v10
 ; CHECK-NEXT:    vsseg3e8.v v8, (a0)
 ; CHECK-NEXT:    ret
     call void @llvm.riscv.seg3.store.v8i8.p0.iXLen(<8 x i8> %v0, <8 x i8> %v1, <8 x i8> %v2, ptr %ptr, iXLen 8)
@@ -33,11 +28,7 @@ declare void @llvm.riscv.seg4.store.v8i8.p0.iXLen(<8 x i8>, <8 x i8>, <8 x i8>, 
 define void @store_factor4(<8 x i8> %v0, <8 x i8> %v1, <8 x i8> %v2, <8 x i8> %v3, ptr %ptr) {
 ; CHECK-LABEL: store_factor4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $v11 killed $v11 killed $v8_v9_v10_v11 def $v8_v9_v10_v11
-; CHECK-NEXT:    # kill: def $v10 killed $v10 killed $v8_v9_v10_v11 def $v8_v9_v10_v11
-; CHECK-NEXT:    # kill: def $v9 killed $v9 killed $v8_v9_v10_v11 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v8_v9_v10_v11 def $v8_v9_v10_v11
 ; CHECK-NEXT:    vsseg4e8.v v8, (a0)
 ; CHECK-NEXT:    ret
     call void @llvm.riscv.seg4.store.v8i8.p0.iXLen(<8 x i8> %v0, <8 x i8> %v1, <8 x i8> %v2, <8 x i8> %v3, ptr %ptr, iXLen 8)
@@ -48,12 +39,7 @@ declare void @llvm.riscv.seg5.store.v8i8.p0.iXLen(<8 x i8>, <8 x i8>, <8 x i8>, 
 define void @store_factor5(<8 x i8> %v0, <8 x i8> %v1, <8 x i8> %v2, <8 x i8> %v3, <8 x i8> %v4, ptr %ptr) {
 ; CHECK-LABEL: store_factor5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $v12 killed $v12 killed $v8_v9_v10_v11_v12 def $v8_v9_v10_v11_v12
-; CHECK-NEXT:    # kill: def $v11 killed $v11 killed $v8_v9_v10_v11_v12 def $v8_v9_v10_v11_v12
-; CHECK-NEXT:    # kill: def $v10 killed $v10 killed $v8_v9_v10_v11_v12 def $v8_v9_v10_v11_v12
-; CHECK-NEXT:    # kill: def $v9 killed $v9 killed $v8_v9_v10_v11_v12 def $v8_v9_v10_v11_v12
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v8_v9_v10_v11_v12 def $v8_v9_v10_v11_v12
 ; CHECK-NEXT:    vsseg5e8.v v8, (a0)
 ; CHECK-NEXT:    ret
     call void @llvm.riscv.seg5.store.v8i8.p0.iXLen(<8 x i8> %v0, <8 x i8> %v1, <8 x i8> %v2, <8 x i8> %v3, <8 x i8> %v4, ptr %ptr, iXLen 8)
@@ -64,13 +50,7 @@ declare void @llvm.riscv.seg6.store.v8i8.p0.iXLen(<8 x i8>, <8 x i8>, <8 x i8>, 
 define void @store_factor6(<8 x i8> %v0, <8 x i8> %v1, <8 x i8> %v2, <8 x i8> %v3, <8 x i8> %v4, <8 x i8> %v5, ptr %ptr) {
 ; CHECK-LABEL: store_factor6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $v13 killed $v13 killed $v8_v9_v10_v11_v12_v13 def $v8_v9_v10_v11_v12_v13
-; CHECK-NEXT:    # kill: def $v12 killed $v12 killed $v8_v9_v10_v11_v12_v13 def $v8_v9_v10_v11_v12_v13
-; CHECK-NEXT:    # kill: def $v11 killed $v11 killed $v8_v9_v10_v11_v12_v13 def $v8_v9_v10_v11_v12_v13
-; CHECK-NEXT:    # kill: def $v10 killed $v10 killed $v8_v9_v10_v11_v12_v13 def $v8_v9_v10_v11_v12_v13
-; CHECK-NEXT:    # kill: def $v9 killed $v9 killed $v8_v9_v10_v11_v12_v13 def $v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v8_v9_v10_v11_v12_v13 def $v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    vsseg6e8.v v8, (a0)
 ; CHECK-NEXT:    ret
     call void @llvm.riscv.seg6.store.v8i8.p0.iXLen(<8 x i8> %v0, <8 x i8> %v1, <8 x i8> %v2, <8 x i8> %v3, <8 x i8> %v4, <8 x i8> %v5, ptr %ptr, iXLen 8)
@@ -81,14 +61,7 @@ declare void @llvm.riscv.seg7.store.v8i8.p0.iXLen(<8 x i8>, <8 x i8>, <8 x i8>, 
 define void @store_factor7(<8 x i8> %v0, <8 x i8> %v1, <8 x i8> %v2, <8 x i8> %v3, <8 x i8> %v4, <8 x i8> %v5, <8 x i8> %v6, ptr %ptr) {
 ; CHECK-LABEL: store_factor7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $v14 killed $v14 killed $v8_v9_v10_v11_v12_v13_v14 def $v8_v9_v10_v11_v12_v13_v14
-; CHECK-NEXT:    # kill: def $v13 killed $v13 killed $v8_v9_v10_v11_v12_v13_v14 def $v8_v9_v10_v11_v12_v13_v14
-; CHECK-NEXT:    # kill: def $v12 killed $v12 killed $v8_v9_v10_v11_v12_v13_v14 def $v8_v9_v10_v11_v12_v13_v14
-; CHECK-NEXT:    # kill: def $v11 killed $v11 killed $v8_v9_v10_v11_v12_v13_v14 def $v8_v9_v10_v11_v12_v13_v14
-; CHECK-NEXT:    # kill: def $v10 killed $v10 killed $v8_v9_v10_v11_v12_v13_v14 def $v8_v9_v10_v11_v12_v13_v14
-; CHECK-NEXT:    # kill: def $v9 killed $v9 killed $v8_v9_v10_v11_v12_v13_v14 def $v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v8_v9_v10_v11_v12_v13_v14 def $v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    vsseg7e8.v v8, (a0)
 ; CHECK-NEXT:    ret
     call void @llvm.riscv.seg7.store.v8i8.p0.iXLen(<8 x i8> %v0, <8 x i8> %v1, <8 x i8> %v2, <8 x i8> %v3, <8 x i8> %v4, <8 x i8> %v5, <8 x i8> %v6, ptr %ptr, iXLen 8)
@@ -99,15 +72,7 @@ declare void @llvm.riscv.seg8.store.v8i8.p0.iXLen(<8 x i8>, <8 x i8>, <8 x i8>, 
 define void @store_factor8(<8 x i8> %v0, <8 x i8> %v1, <8 x i8> %v2, <8 x i8> %v3, <8 x i8> %v4, <8 x i8> %v5, <8 x i8> %v6, <8 x i8> %v7, ptr %ptr) {
 ; CHECK-LABEL: store_factor8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $v15 killed $v15 killed $v8_v9_v10_v11_v12_v13_v14_v15 def $v8_v9_v10_v11_v12_v13_v14_v15
-; CHECK-NEXT:    # kill: def $v14 killed $v14 killed $v8_v9_v10_v11_v12_v13_v14_v15 def $v8_v9_v10_v11_v12_v13_v14_v15
-; CHECK-NEXT:    # kill: def $v13 killed $v13 killed $v8_v9_v10_v11_v12_v13_v14_v15 def $v8_v9_v10_v11_v12_v13_v14_v15
-; CHECK-NEXT:    # kill: def $v12 killed $v12 killed $v8_v9_v10_v11_v12_v13_v14_v15 def $v8_v9_v10_v11_v12_v13_v14_v15
-; CHECK-NEXT:    # kill: def $v11 killed $v11 killed $v8_v9_v10_v11_v12_v13_v14_v15 def $v8_v9_v10_v11_v12_v13_v14_v15
-; CHECK-NEXT:    # kill: def $v10 killed $v10 killed $v8_v9_v10_v11_v12_v13_v14_v15 def $v8_v9_v10_v11_v12_v13_v14_v15
-; CHECK-NEXT:    # kill: def $v9 killed $v9 killed $v8_v9_v10_v11_v12_v13_v14_v15 def $v8_v9_v10_v11_v12_v13_v14_v15
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v8_v9_v10_v11_v12_v13_v14_v15 def $v8_v9_v10_v11_v12_v13_v14_v15
 ; CHECK-NEXT:    vsseg8e8.v v8, (a0)
 ; CHECK-NEXT:    ret
     call void @llvm.riscv.seg8.store.v8i8.p0.iXLen(<8 x i8> %v0, <8 x i8> %v1, <8 x i8> %v2, <8 x i8> %v3, <8 x i8> %v4, <8 x i8> %v5, <8 x i8> %v6, <8 x i8> %v7, ptr %ptr, iXLen 8)
