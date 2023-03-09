@@ -55893,7 +55893,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
   if (llvm::all_of(Ops, [Op0](SDValue Op) {
         return Op.getOpcode() == Op0.getOpcode();
       })) {
-    auto ConcatSubOperand = [&](MVT VT, ArrayRef<SDValue> SubOps, unsigned I) {
+    auto ConcatSubOperand = [&](EVT VT, ArrayRef<SDValue> SubOps, unsigned I) {
       SmallVector<SDValue> Subs;
       for (SDValue SubOp : SubOps)
         Subs.push_back(SubOp.getOperand(I));
@@ -56045,6 +56045,20 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           MVT IntMaskVT = MVT::getVectorVT(IntMaskSVT, NumOps * NumSrcElts);
           SDValue Mask = getConstVector(ConcatMask, IntMaskVT, DAG, DL, true);
           return DAG.getNode(X86ISD::VPERMV3, DL, VT, Src0, Mask, Src1);
+        }
+      }
+      break;
+    case ISD::TRUNCATE:
+      if (!IsSplat && NumOps == 2 && VT.is256BitVector()) {
+        EVT SrcVT = Ops[0].getOperand(0).getValueType();
+        if (SrcVT.is256BitVector() && SrcVT.isSimple() &&
+            SrcVT == Ops[1].getOperand(0).getValueType() &&
+            Subtarget.useAVX512Regs() &&
+            Subtarget.getPreferVectorWidth() >= 512 &&
+            (SrcVT.getScalarSizeInBits() > 16 || Subtarget.useBWIRegs())) {
+          EVT NewSrcVT = SrcVT.getDoubleNumVectorElementsVT(*DAG.getContext());
+          return DAG.getNode(ISD::TRUNCATE, DL, VT,
+                             ConcatSubOperand(NewSrcVT, Ops, 0));
         }
       }
       break;
