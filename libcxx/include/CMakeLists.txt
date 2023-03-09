@@ -294,6 +294,7 @@ set(files
   __concepts/semiregular.h
   __concepts/swappable.h
   __concepts/totally_ordered.h
+  __condition_variable/condition_variable.h
   __config
   __coroutine/coroutine_handle.h
   __coroutine/coroutine_traits.h
@@ -474,7 +475,10 @@ set(files
   __memory_resource/pool_options.h
   __memory_resource/synchronized_pool_resource.h
   __memory_resource/unsynchronized_pool_resource.h
-  __mutex_base
+  __mutex/lock_guard.h
+  __mutex/mutex.h
+  __mutex/tag_types.h
+  __mutex/unique_lock.h
   __node_handle
   __numeric/accumulate.h
   __numeric/adjacent_difference.h
