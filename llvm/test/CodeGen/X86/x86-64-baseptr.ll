@@ -77,16 +77,18 @@ entry:
 define void @clobber_base() #0 {
 ; CHECK-LABEL: clobber_base:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movq %rsp, %rbp
-; CHECK-NEXT:    .cfi_def_cfa_register %rbp
-; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %r10
+; CHECK-NEXT:    .cfi_def_cfa %r10, 0
 ; CHECK-NEXT:    andq $-128, %rsp
-; CHECK-NEXT:    subq $128, %rsp
-; CHECK-NEXT:    movq %rsp, %rbx
-; CHECK-NEXT:    .cfi_offset %rbx, -24
+; CHECK-NEXT:    pushq -16(%r10)
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    movq %rsp, %rbp
+; CHECK-NEXT:    .cfi_escape 0x10, 0x06, 0x02, 0x76, 0x00 #
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    subq $232, %rsp
+; CHECK-NEXT:    movq %r10, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    .cfi_escape 0x10, 0x03, 0x02, 0x76, 0x78 #
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x04, 0x76, 0x88, 0x7f, 0x06 #
 ; CHECK-NEXT:    callq helper@PLT
 ; CHECK-NEXT:    movq %rsp, %rcx
 ; CHECK-NEXT:    movl %eax, %eax
@@ -102,27 +104,31 @@ define void @clobber_base() #0 {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    movl $8, %edx
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    movl %edx, (%rbx)
+; CHECK-NEXT:    movl %edx, -112(%rbp)
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    movl $0, (%rcx,%rax)
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r10 # 8-byte Reload
 ; CHECK-NEXT:    leaq -8(%rbp), %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    leaq -16(%r10), %rsp
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
 ;
 ; X32ABI-LABEL: clobber_base:
 ; X32ABI:       # %bb.0: # %entry
-; X32ABI-NEXT:    pushq %rbp
-; X32ABI-NEXT:    .cfi_def_cfa_offset 16
-; X32ABI-NEXT:    .cfi_offset %rbp, -16
-; X32ABI-NEXT:    movl %esp, %ebp
-; X32ABI-NEXT:    .cfi_def_cfa_register %rbp
-; X32ABI-NEXT:    pushq %rbx
+; X32ABI-NEXT:    leaq {{[0-9]+}}(%esp), %r10
+; X32ABI-NEXT:    .cfi_def_cfa %r10, 0
 ; X32ABI-NEXT:    andl $-128, %esp
-; X32ABI-NEXT:    subl $128, %esp
-; X32ABI-NEXT:    movl %esp, %ebx
-; X32ABI-NEXT:    .cfi_offset %rbx, -24
+; X32ABI-NEXT:    pushq -16(%r10)
+; X32ABI-NEXT:    pushq %rbp
+; X32ABI-NEXT:    movl %esp, %ebp
+; X32ABI-NEXT:    .cfi_escape 0x10, 0x06, 0x02, 0x76, 0x00 #
+; X32ABI-NEXT:    pushq %rbx
+; X32ABI-NEXT:    subl $232, %esp
+; X32ABI-NEXT:    movq %r10, {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Spill
+; X32ABI-NEXT:    .cfi_escape 0x10, 0x03, 0x02, 0x76, 0x78 #
+; X32ABI-NEXT:    .cfi_escape 0x0f, 0x04, 0x76, 0x88, 0x7f, 0x06 #
 ; X32ABI-NEXT:    callq helper@PLT
 ; X32ABI-NEXT:    # kill: def $eax killed $eax def $rax
 ; X32ABI-NEXT:    leal 31(,%rax,4), %eax
@@ -138,12 +144,14 @@ define void @clobber_base() #0 {
 ; X32ABI-NEXT:    #NO_APP
 ; X32ABI-NEXT:    movl $8, %edx
 ; X32ABI-NEXT:    #APP
-; X32ABI-NEXT:    movl %edx, (%ebx)
+; X32ABI-NEXT:    movl %edx, -112(%ebp)
 ; X32ABI-NEXT:    #NO_APP
 ; X32ABI-NEXT:    movl $0, (%ecx,%eax)
+; X32ABI-NEXT:    movq {{[-0-9]+}}(%e{{[sb]}}p), %r10 # 8-byte Reload
 ; X32ABI-NEXT:    leal -8(%ebp), %esp
 ; X32ABI-NEXT:    popq %rbx
 ; X32ABI-NEXT:    popq %rbp
+; X32ABI-NEXT:    leaq -16(%r10), %rsp
 ; X32ABI-NEXT:    .cfi_def_cfa %rsp, 8
 ; X32ABI-NEXT:    retq
 entry:
@@ -160,14 +168,15 @@ entry:
 define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 %param3, i32 %param4, i32 %param5, i32 %param6, i32 %param7, i32 %param8, i32 %param9, i32 %param10, i32 %param11, i32 %param12) #0 {
 ; CHECK-LABEL: clobber_baseptr_argptr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movq %rsp, %rbp
-; CHECK-NEXT:    .cfi_def_cfa_register %rbp
-; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %r10
+; CHECK-NEXT:    .cfi_def_cfa %r10, 0
 ; CHECK-NEXT:    andq $-128, %rsp
-; CHECK-NEXT:    subq $256, %rsp # imm = 0x100
+; CHECK-NEXT:    pushq -16(%r10)
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    movq %rsp, %rbp
+; CHECK-NEXT:    .cfi_escape 0x10, 0x06, 0x02, 0x76, 0x00 #
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    subq $360, %rsp # imm = 0x168
 ; CHECK-NEXT:    movaps %xmm15, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps %xmm14, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps %xmm13, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -176,17 +185,18 @@ define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 
 ; CHECK-NEXT:    movaps %xmm10, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps %xmm9, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    movq %rsp, %rbx
-; CHECK-NEXT:    .cfi_offset %rbx, -24
-; CHECK-NEXT:    .cfi_offset %xmm8, -160
-; CHECK-NEXT:    .cfi_offset %xmm9, -144
-; CHECK-NEXT:    .cfi_offset %xmm10, -128
-; CHECK-NEXT:    .cfi_offset %xmm11, -112
-; CHECK-NEXT:    .cfi_offset %xmm12, -96
-; CHECK-NEXT:    .cfi_offset %xmm13, -80
-; CHECK-NEXT:    .cfi_offset %xmm14, -64
-; CHECK-NEXT:    .cfi_offset %xmm15, -48
-; CHECK-NEXT:    movl 16(%rbp), %r14d
+; CHECK-NEXT:    movq %r10, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    .cfi_escape 0x10, 0x03, 0x02, 0x76, 0x78 #
+; CHECK-NEXT:    .cfi_escape 0x10, 0x19, 0x02, 0x76, 0xf0, 0x7e #
+; CHECK-NEXT:    .cfi_escape 0x10, 0x1a, 0x02, 0x76, 0x80, 0x7f #
+; CHECK-NEXT:    .cfi_escape 0x10, 0x1b, 0x02, 0x76, 0x90, 0x7f #
+; CHECK-NEXT:    .cfi_escape 0x10, 0x1c, 0x02, 0x76, 0xa0, 0x7f #
+; CHECK-NEXT:    .cfi_escape 0x10, 0x1d, 0x02, 0x76, 0xb0, 0x7f #
+; CHECK-NEXT:    .cfi_escape 0x10, 0x1e, 0x02, 0x76, 0x40 #
+; CHECK-NEXT:    .cfi_escape 0x10, 0x1f, 0x02, 0x76, 0x50 #
+; CHECK-NEXT:    .cfi_escape 0x10, 0x20, 0x02, 0x76, 0x60 #
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x04, 0x76, 0x88, 0x7e, 0x06 #
+; CHECK-NEXT:    movl (%r10), %r14d
 ; CHECK-NEXT:    callq helper@PLT
 ; CHECK-NEXT:    movq %rsp, %rcx
 ; CHECK-NEXT:    movl %eax, %eax
@@ -205,7 +215,7 @@ define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    movl $8, %edx
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    movl %edx, (%rbx)
+; CHECK-NEXT:    movl %edx, -240(%rbp)
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    movl %r14d, (%rcx,%rax)
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm8 # 16-byte Reload
@@ -216,22 +226,25 @@ define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Reload
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r10 # 8-byte Reload
 ; CHECK-NEXT:    leaq -8(%rbp), %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    leaq -16(%r10), %rsp
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
 ;
 ; X32ABI-LABEL: clobber_baseptr_argptr:
 ; X32ABI:       # %bb.0: # %entry
-; X32ABI-NEXT:    pushq %rbp
-; X32ABI-NEXT:    .cfi_def_cfa_offset 16
-; X32ABI-NEXT:    .cfi_offset %rbp, -16
-; X32ABI-NEXT:    movl %esp, %ebp
-; X32ABI-NEXT:    .cfi_def_cfa_register %rbp
-; X32ABI-NEXT:    pushq %rbx
+; X32ABI-NEXT:    leaq {{[0-9]+}}(%esp), %r10
+; X32ABI-NEXT:    .cfi_def_cfa %r10, 0
 ; X32ABI-NEXT:    andl $-128, %esp
-; X32ABI-NEXT:    subl $256, %esp # imm = 0x100
+; X32ABI-NEXT:    pushq -16(%r10)
+; X32ABI-NEXT:    pushq %rbp
+; X32ABI-NEXT:    movl %esp, %ebp
+; X32ABI-NEXT:    .cfi_escape 0x10, 0x06, 0x02, 0x76, 0x00 #
+; X32ABI-NEXT:    pushq %rbx
+; X32ABI-NEXT:    subl $360, %esp # imm = 0x168
 ; X32ABI-NEXT:    movaps %xmm15, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X32ABI-NEXT:    movaps %xmm14, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X32ABI-NEXT:    movaps %xmm13, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
@@ -240,17 +253,18 @@ define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 
 ; X32ABI-NEXT:    movaps %xmm10, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X32ABI-NEXT:    movaps %xmm9, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X32ABI-NEXT:    movaps %xmm8, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X32ABI-NEXT:    movl %esp, %ebx
-; X32ABI-NEXT:    .cfi_offset %rbx, -24
-; X32ABI-NEXT:    .cfi_offset %xmm8, -160
-; X32ABI-NEXT:    .cfi_offset %xmm9, -144
-; X32ABI-NEXT:    .cfi_offset %xmm10, -128
-; X32ABI-NEXT:    .cfi_offset %xmm11, -112
-; X32ABI-NEXT:    .cfi_offset %xmm12, -96
-; X32ABI-NEXT:    .cfi_offset %xmm13, -80
-; X32ABI-NEXT:    .cfi_offset %xmm14, -64
-; X32ABI-NEXT:    .cfi_offset %xmm15, -48
-; X32ABI-NEXT:    movl 16(%ebp), %r14d
+; X32ABI-NEXT:    movq %r10, {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Spill
+; X32ABI-NEXT:    .cfi_escape 0x10, 0x03, 0x02, 0x76, 0x78 #
+; X32ABI-NEXT:    .cfi_escape 0x10, 0x19, 0x02, 0x76, 0xf0, 0x7e #
+; X32ABI-NEXT:    .cfi_escape 0x10, 0x1a, 0x02, 0x76, 0x80, 0x7f #
+; X32ABI-NEXT:    .cfi_escape 0x10, 0x1b, 0x02, 0x76, 0x90, 0x7f #
+; X32ABI-NEXT:    .cfi_escape 0x10, 0x1c, 0x02, 0x76, 0xa0, 0x7f #
+; X32ABI-NEXT:    .cfi_escape 0x10, 0x1d, 0x02, 0x76, 0xb0, 0x7f #
+; X32ABI-NEXT:    .cfi_escape 0x10, 0x1e, 0x02, 0x76, 0x40 #
+; X32ABI-NEXT:    .cfi_escape 0x10, 0x1f, 0x02, 0x76, 0x50 #
+; X32ABI-NEXT:    .cfi_escape 0x10, 0x20, 0x02, 0x76, 0x60 #
+; X32ABI-NEXT:    .cfi_escape 0x0f, 0x04, 0x76, 0x88, 0x7e, 0x06 #
+; X32ABI-NEXT:    movl (%r10), %r14d
 ; X32ABI-NEXT:    callq helper@PLT
 ; X32ABI-NEXT:    # kill: def $eax killed $eax def $rax
 ; X32ABI-NEXT:    leal 31(,%rax,4), %eax
@@ -269,7 +283,7 @@ define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 
 ; X32ABI-NEXT:    #NO_APP
 ; X32ABI-NEXT:    movl $8, %edx
 ; X32ABI-NEXT:    #APP
-; X32ABI-NEXT:    movl %edx, (%ebx)
+; X32ABI-NEXT:    movl %edx, -240(%ebp)
 ; X32ABI-NEXT:    #NO_APP
 ; X32ABI-NEXT:    movl %r14d, (%ecx,%eax)
 ; X32ABI-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm8 # 16-byte Reload
@@ -280,9 +294,11 @@ define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 
 ; X32ABI-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm13 # 16-byte Reload
 ; X32ABI-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm14 # 16-byte Reload
 ; X32ABI-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm15 # 16-byte Reload
+; X32ABI-NEXT:    movq {{[-0-9]+}}(%e{{[sb]}}p), %r10 # 8-byte Reload
 ; X32ABI-NEXT:    leal -8(%ebp), %esp
 ; X32ABI-NEXT:    popq %rbx
 ; X32ABI-NEXT:    popq %rbp
+; X32ABI-NEXT:    leaq -16(%r10), %rsp
 ; X32ABI-NEXT:    .cfi_def_cfa %rsp, 8
 ; X32ABI-NEXT:    retq
 entry:
@@ -298,6 +314,6 @@ entry:
   ret void
 }
 
-attributes #0 = { "frame-pointer"="all"}
+attributes #0 = {"frame-pointer"="all"}
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"override-stack-alignment", i32 32}
