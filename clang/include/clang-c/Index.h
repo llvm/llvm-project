@@ -362,11 +362,11 @@ typedef struct CXIndexOptions {
   /**
    * \see clang_createIndex()
    */
-  int ExcludeDeclarationsFromPCH : 1;
+  unsigned ExcludeDeclarationsFromPCH : 1;
   /**
    * \see clang_createIndex()
    */
-  int DisplayDiagnostics : 1;
+  unsigned DisplayDiagnostics : 1;
   /**
    * The path to a directory, in which to store temporary PCH files. If null or
    * empty, the default system temporary directory is used. These PCH files are
