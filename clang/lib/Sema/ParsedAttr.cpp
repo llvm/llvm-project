@@ -126,9 +126,8 @@ const ParsedAttrInfo &ParsedAttrInfo::get(const AttributeCommonInfo &A) {
     SyntaxUsed = AttributeCommonInfo::AS_Keyword;
 
   for (auto &Ptr : getAttributePluginInstances())
-    for (auto &S : Ptr->Spellings)
-      if (S.Syntax == SyntaxUsed && S.NormalizedFullName == FullName)
-        return *Ptr;
+    if (Ptr->hasSpelling(SyntaxUsed, FullName))
+      return *Ptr;
 
   // If we failed to find a match then return a default ParsedAttrInfo.
   static const ParsedAttrInfo DefaultParsedAttrInfo(
