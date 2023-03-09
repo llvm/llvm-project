@@ -639,6 +639,8 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
  T __builtin_elementwise_log(T x)            return the natural logarithm of x                                floating point types
  T __builtin_elementwise_log2(T x)           return the base 2 logarithm of x                                 floating point types
  T __builtin_elementwise_log10(T x)          return the base 10 logarithm of x                                floating point types
+ T __builtin_elementwise_exp(T x)            returns the base-e exponential, e^x, of the specified value      floating point types
+ T __builtin_elementwise_exp2(T x)           returns the base-2 exponential, 2^x, of the specified value      floating point types
  T __builtin_elementwise_roundeven(T x)      round x to the nearest integer value in floating point format,   floating point types
                                              rounding halfway cases to even (that is, to the nearest value
                                              that is an even integer), regardless of the current rounding
