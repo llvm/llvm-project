@@ -12,6 +12,7 @@ add_flang_library(HLFIRTransforms
   LINK_LIBS
   FIRDialect
   FIRBuilder
+  FIRDialectSupport
   FIRSupport
   HLFIRDialect
   MLIRIR

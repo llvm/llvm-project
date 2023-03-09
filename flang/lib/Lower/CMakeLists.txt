@@ -27,17 +27,16 @@ add_flang_library(FortranLower
   Runtime.cpp
   SymbolMap.cpp
   VectorSubscripts.cpp
-
+  
   DEPENDS
   FIRDialect
-  FIRBuilder
-  FIRSupport
   FIRTransforms
   HLFIRDialect
   ${dialect_libs}
 
   LINK_LIBS
   FIRDialect
+  FIRDialectSupport
   FIRBuilder
   FIRSupport
   FIRTransforms
