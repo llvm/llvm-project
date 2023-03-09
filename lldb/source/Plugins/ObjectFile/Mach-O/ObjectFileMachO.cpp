@@ -7074,6 +7074,8 @@ bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
           &process, image.filename, image.uuid, image.load_address,
           false /* value_is_offset */, image.currently_executing,
           false /* notify */);
+      if (module_sp)
+        continue;
     }
 
     // If we have a slide, we need to find the original binary
@@ -7084,6 +7086,8 @@ bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
           &process, image.filename, image.uuid, image.slide,
           true /* value_is_offset */, image.currently_executing,
           false /* notify */);
+      if (module_sp)
+        continue;
     }
 
     // Try to find the binary by UUID or filename on the local
