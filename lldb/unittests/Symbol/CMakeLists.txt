@@ -12,6 +12,7 @@ if (NOT LLDB_ENABLE_SWIFT_SUPPORT)
 endif()
 
 add_lldb_unittest(SymbolTests
+  JSONSymbolTest.cpp
   LocateSymbolFileTest.cpp
   MangledTest.cpp
   PostfixExpressionTest.cpp
