@@ -1145,6 +1145,10 @@ bool ObjectFileMachO::IsSharedCacheBinary() const {
   return m_header.flags & MH_DYLIB_IN_CACHE;
 }
 
+bool ObjectFileMachO::IsKext() const {
+  return m_header.filetype == MH_KEXT_BUNDLE;
+}
+
 uint32_t ObjectFileMachO::GetAddressByteSize() const {
   return m_data.GetAddressByteSize();
 }
