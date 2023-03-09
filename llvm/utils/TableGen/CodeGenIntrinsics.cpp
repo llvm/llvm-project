@@ -20,13 +20,6 @@
 #include <algorithm>
 #include <cassert>
 using namespace llvm;
-using namespace llvm::tmp;
-
-/// getValueType - Return the MVT::SimpleValueType that the specified TableGen
-/// record corresponds to.
-MVT::SimpleValueType llvm::tmp::getValueType(Record *Rec) {
-  return (MVT::SimpleValueType)Rec->getValueAsInt("Value");
-}
 
 //===----------------------------------------------------------------------===//
 // CodeGenIntrinsic Implementation
@@ -120,123 +113,16 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
                                   TargetPrefix + ".'!");
   }
 
-#define OLD 1
-
-#if OLD
-  ListInit *RetTypes = R->getValueAsListInit("RetTypes");
-  ListInit *ParamTypes = R->getValueAsListInit("ParamTypes");
-
-  // First collate a list of overloaded types.
-  std::vector<MVT::SimpleValueType> OverloadedVTs;
-  for (ListInit *TypeList : {RetTypes, ParamTypes}) {
-    for (unsigned i = 0, e = TypeList->size(); i != e; ++i) {
-      Record *TyEl = TypeList->getElementAsRecord(i);
-      assert(TyEl->isSubClassOf("LLVMType") && "Expected a type!");
-
-      if (TyEl->isSubClassOf("LLVMMatchType"))
-        continue;
-
-      MVT::SimpleValueType VT = getValueType(TyEl->getValueAsDef("VT"));
-      if (MVT(VT).isOverloaded()) {
-        OverloadedVTs.push_back(VT);
-        isOverloaded = true;
-      }
-    }
-  }
-
-  // Parse the list of return types.
-  ListInit *TypeList = RetTypes;
-  for (unsigned i = 0, e = TypeList->size(); i != e; ++i) {
-    Record *TyEl = TypeList->getElementAsRecord(i);
-    assert(TyEl->isSubClassOf("LLVMType") && "Expected a type!");
-    MVT::SimpleValueType VT;
-    if (TyEl->isSubClassOf("LLVMMatchType")) {
-      unsigned MatchTy = TyEl->getValueAsInt("Number");
-      assert(MatchTy < OverloadedVTs.size() && "Invalid matching number!");
-      VT = OverloadedVTs[MatchTy];
-      // It only makes sense to use the extended and truncated vector element
-      // variants with iAny types; otherwise, if the intrinsic is not
-      // overloaded, all the types can be specified directly.
-      assert(((!TyEl->isSubClassOf("LLVMExtendedType") &&
-               !TyEl->isSubClassOf("LLVMTruncatedType")) ||
-              VT == MVT::iAny || VT == MVT::vAny) &&
-             "Expected iAny or vAny type");
-    } else {
-      VT = getValueType(TyEl->getValueAsDef("VT"));
-    }
-
-    // Reject invalid types.
-    if (VT == MVT::isVoid)
-      PrintFatalError(DefLoc, "Intrinsic '" + DefName +
-                                  " has void in result type list!");
-
-    IS.RetVTs.push_back(VT);
-    IS.RetTypeDefs.push_back(TyEl);
-  }
-
-  // Parse the list of parameter types.
-  TypeList = ParamTypes;
-  for (unsigned i = 0, e = TypeList->size(); i != e; ++i) {
-    Record *TyEl = TypeList->getElementAsRecord(i);
-    assert(TyEl->isSubClassOf("LLVMType") && "Expected a type!");
-    MVT::SimpleValueType VT;
-    if (TyEl->isSubClassOf("LLVMMatchType")) {
-      unsigned MatchTy = TyEl->getValueAsInt("Number");
-      if (MatchTy >= OverloadedVTs.size()) {
-        PrintError(R->getLoc(), "Parameter #" + Twine(i) +
-                                    " has out of bounds matching "
-                                    "number " +
-                                    Twine(MatchTy));
-        PrintFatalError(DefLoc,
-                        Twine("ParamTypes is ") + TypeList->getAsString());
-      }
-      VT = OverloadedVTs[MatchTy];
-      // It only makes sense to use the extended and truncated vector element
-      // variants with iAny types; otherwise, if the intrinsic is not
-      // overloaded, all the types can be specified directly.
-      assert(((!TyEl->isSubClassOf("LLVMExtendedType") &&
-               !TyEl->isSubClassOf("LLVMTruncatedType")) ||
-              VT == MVT::iAny || VT == MVT::vAny) &&
-             "Expected iAny or vAny type");
-    } else
-      VT = getValueType(TyEl->getValueAsDef("VT"));
-
-    // Reject invalid types.
-    if (VT == MVT::isVoid && i != e - 1 /*void at end means varargs*/)
-      PrintFatalError(DefLoc, "Intrinsic '" + DefName +
-                                  " has void in result type list!");
-
-    IS.ParamVTs.push_back(VT);
-    IS.ParamTypeDefs.push_back(TyEl);
-  }
-#endif // OLD
-
   if (auto *Types = R->getValue("Types")) {
-#if OLD
-    auto OrigRetVTs = std::move(IS.RetVTs);
-    auto OrigParamVTs = std::move(IS.ParamVTs);
-    auto OrigOverloaded = isOverloaded;
-    IS.RetVTs.clear();
-    IS.ParamVTs.clear();
-#endif // OLD
-
     auto *TypeList = cast<ListInit>(Types->getValue());
     isOverloaded = R->getValueAsBit("isOverloaded");
 
     unsigned I = 0;
     for (unsigned E = R->getValueAsListInit("RetTypes")->size(); I < E; ++I)
-      IS.RetVTs.push_back(
-          getValueType(TypeList->getElementAsRecord(I)->getValueAsDef("VT")));
+      IS.RetTys.push_back(TypeList->getElementAsRecord(I));
 
     for (unsigned E = TypeList->size(); I < E; ++I)
-      IS.ParamVTs.push_back(
-          getValueType(TypeList->getElementAsRecord(I)->getValueAsDef("VT")));
-
-#if OLD
-    assert(IS.RetVTs == OrigRetVTs);
-    assert(IS.ParamVTs == OrigParamVTs);
-    assert(OrigOverloaded == isOverloaded);
-#endif
+      IS.ParamTys.push_back(TypeList->getElementAsRecord(I));
   }
 
   // Parse the intrinsic properties.
@@ -353,10 +239,10 @@ void CodeGenIntrinsic::setProperty(Record *R) {
 }
 
 bool CodeGenIntrinsic::isParamAPointer(unsigned ParamIdx) const {
-  if (ParamIdx >= IS.ParamVTs.size())
+  if (ParamIdx >= IS.ParamTys.size())
     return false;
-  MVT ParamType = MVT(IS.ParamVTs[ParamIdx]);
-  return ParamType == MVT::iPTR || ParamType == MVT::iPTRAny;
+  return (IS.ParamTys[ParamIdx]->isSubClassOf("LLVMQualPointerType") ||
+          IS.ParamTys[ParamIdx]->isSubClassOf("LLVMAnyPointerType"));
 }
 
 bool CodeGenIntrinsic::isParamImmArg(unsigned ParamIdx) const {
