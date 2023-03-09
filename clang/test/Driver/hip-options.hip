@@ -126,3 +126,15 @@
 // RUN:   --offload-arch=gfx906 %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=KANNEG %s
 // KANNEG-NOT: "-fhip-kernel-arg-name"
+
+// RUN: %clang -### -nogpuinc -nogpulib -mno-amdgpu-ieee -mamdgpu-ieee \
+// RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefix=IEEE-ON %s
+// IEEE-ON-NOT: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-m{{(no-)?}}amdgpu-ieee"
+
+// RUN: %clang -### -nogpuinc -nogpulib -mamdgpu-ieee -mno-amdgpu-ieee -ffast-math \
+// RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefixes=IEEE-OFF %s
+// IEEE-OFF: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-mno-amdgpu-ieee"
+
+// RUN: %clang -### -nogpuinc -nogpulib -mamdgpu-ieee -mno-amdgpu-ieee -ffast-math \
+// RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefixes=IEEE-OFF-NEG %s
+// IEEE-OFF-NEG-NOT: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-mamdgpu-ieee"
