@@ -63,9 +63,11 @@ bool useAAPCSForMachO(const llvm::Triple &T);
 void getARMArchCPUFromArgs(const llvm::opt::ArgList &Args,
                            llvm::StringRef &Arch, llvm::StringRef &CPU,
                            bool FromAs = false);
-void getARMTargetFeatures(const Driver &D, const llvm::Triple &Triple,
-                          const llvm::opt::ArgList &Args,
-                          std::vector<llvm::StringRef> &Features, bool ForAS);
+llvm::ARM::FPUKind getARMTargetFeatures(const Driver &D,
+                                        const llvm::Triple &Triple,
+                                        const llvm::opt::ArgList &Args,
+                                        std::vector<llvm::StringRef> &Features,
+                                        bool ForAS);
 int getARMSubArchVersionNumber(const llvm::Triple &Triple);
 bool isARMMProfile(const llvm::Triple &Triple);
 bool isARMAProfile(const llvm::Triple &Triple);

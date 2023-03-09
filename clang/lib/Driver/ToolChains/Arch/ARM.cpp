@@ -463,9 +463,11 @@ static bool hasIntegerMVE(const std::vector<StringRef> &F) {
          (NoMVE == F.rend() || std::distance(MVE, NoMVE) > 0);
 }
 
-void arm::getARMTargetFeatures(const Driver &D, const llvm::Triple &Triple,
-                               const ArgList &Args,
-                               std::vector<StringRef> &Features, bool ForAS) {
+llvm::ARM::FPUKind arm::getARMTargetFeatures(const Driver &D,
+                                             const llvm::Triple &Triple,
+                                             const ArgList &Args,
+                                             std::vector<StringRef> &Features,
+                                             bool ForAS) {
   bool KernelOrKext =
       Args.hasArg(options::OPT_mkernel, options::OPT_fapple_kext);
   arm::FloatABI ABI = arm::getARMFloatABI(D, Triple, Args);
@@ -661,6 +663,7 @@ fp16_fml_fallthrough:
     Features.insert(Features.end(),
                     {"-dotprod", "-fp16fml", "-bf16", "-mve", "-mve.fp"});
     HasFPRegs = false;
+    FPUKind = llvm::ARM::FK_NONE;
   } else if (FPUKind == llvm::ARM::FK_NONE ||
              ArchArgFPUKind == llvm::ARM::FK_NONE ||
              CPUArgFPUKind == llvm::ARM::FK_NONE) {
@@ -671,6 +674,7 @@ fp16_fml_fallthrough:
     Features.insert(Features.end(),
                     {"-dotprod", "-fp16fml", "-bf16", "-mve.fp"});
     HasFPRegs = hasIntegerMVE(Features);
+    FPUKind = llvm::ARM::FK_NONE;
   }
   if (!HasFPRegs)
     Features.emplace_back("-fpregs");
@@ -931,6 +935,8 @@ fp16_fml_fallthrough:
     Features.push_back("+no-bti-at-return-twice");
 
   checkARMFloatABI(D, Args, HasFPRegs);
+
+  return FPUKind;
 }
 
 std::string arm::getARMArch(StringRef Arch, const llvm::Triple &Triple) {

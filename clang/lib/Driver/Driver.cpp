@@ -2217,6 +2217,17 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
     return false;
   }
 
+  if (C.getArgs().hasArg(options::OPT_print_multi_flags)) {
+    Multilib::flags_list ArgFlags = TC.getMultilibFlags(C.getArgs());
+    llvm::StringSet<> ExpandedFlags = TC.getMultilibs().expandFlags(ArgFlags);
+    std::set<llvm::StringRef> SortedFlags;
+    for (const auto &FlagEntry : ExpandedFlags)
+      SortedFlags.insert(FlagEntry.getKey());
+    for (auto Flag : SortedFlags)
+      llvm::outs() << Flag << '\n';
+    return false;
+  }
+
   if (C.getArgs().hasArg(options::OPT_print_multi_directory)) {
     const Multilib &Multilib = TC.getMultilib();
     if (Multilib.gccSuffix().empty())
