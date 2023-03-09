@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_CPP_ATOMIC_H
 #define LLVM_LIBC_SRC_SUPPORT_CPP_ATOMIC_H
 
+#include "src/__support/macros/attributes.h"
+
 #include "type_traits.h"
 
 namespace __llvm_libc {
