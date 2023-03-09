@@ -1,3 +1,4 @@
+// REQUIRES: x86-registered-target
 // RUN: %clang_cc1 -O3 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-unknown -target-feature +avx -target-feature +avx512f  -target-feature +avx512fp16 -S -o - | FileCheck %s
 
 

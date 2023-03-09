@@ -498,12 +498,28 @@ struct PageReleaseContext {
           ((RegionSize / BlockSize) - 1U) * BlockSize;
       // The last block in a region may not use the entire page, we mark the
       // following "pretend" memory block(s) as free in advance.
+      //
+      //     Region Boundary
+      //         v
+      //  -----+-----------------------+
+      //       |      Last Page        | <- Rounded Region Boundary
+      //  -----+-----------------------+
+      //   |-----||- trailing blocks  -|
+      //      ^
+      //   last block
       const uptr RoundedRegionSize = roundUp(RegionSize, PageSize);
-      uptr PInRegion = LastBlockInRegion + BlockSize;
-      while (PInRegion < RoundedRegionSize) {
-        PageMap.incRange(RegionIndex, getPageIndex(PInRegion),
-                         getPageIndex(PInRegion + BlockSize - 1));
-        PInRegion += BlockSize;
+      const uptr TrailingBlockBase = LastBlockInRegion + BlockSize;
+      // Only the last page touched by the last block needs to mark the trailing
+      // blocks. If the difference between `RoundedRegionSize` and
+      // `TrailingBlockBase` is larger than a page, that implies the reported
+      // `RegionSize` may not be accurate.
+      DCHECK_LT(RoundedRegionSize - TrailingBlockBase, PageSize);
+      uptr NumTrailingBlocks =
+          roundUpSlow(RoundedRegionSize - TrailingBlockBase, BlockSize) /
+          BlockSize;
+      if (NumTrailingBlocks > 0) {
+        PageMap.incN(RegionIndex, getPageIndex(TrailingBlockBase),
+                     NumTrailingBlocks);
       }
     }
 

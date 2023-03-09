@@ -775,7 +775,7 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
   // is vector-typed. Thus, to keep the representation compact, we only use
   // vector-typed operands for loop-varying values.
 
-  if (State.VF.isVector() && IsPtrLoopInvariant && IsIndexLoopInvariant.all()) {
+  if (State.VF.isVector() && areAllOperandsInvariant()) {
     // If we are vectorizing, but the GEP has only loop-invariant operands,
     // the GEP we build (by only using vector-typed operands for
     // loop-varying values) would be a scalar pointer. Thus, to ensure we
@@ -805,7 +805,7 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
     for (unsigned Part = 0; Part < State.UF; ++Part) {
       // The pointer operand of the new GEP. If it's loop-invariant, we
       // won't broadcast it.
-      auto *Ptr = IsPtrLoopInvariant
+      auto *Ptr = isPointerLoopInvariant()
                       ? State.get(getOperand(0), VPIteration(0, 0))
                       : State.get(getOperand(0), Part);
 
@@ -814,7 +814,7 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
       SmallVector<Value *, 4> Indices;
       for (unsigned I = 1, E = getNumOperands(); I < E; I++) {
         VPValue *Operand = getOperand(I);
-        if (IsIndexLoopInvariant[I - 1])
+        if (isIndexLoopInvariant(I - 1))
           Indices.push_back(State.get(Operand, VPIteration(0, 0)));
         else
           Indices.push_back(State.get(Operand, Part));
@@ -844,10 +844,9 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
 void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
                              VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-GEP ";
-  O << (IsPtrLoopInvariant ? "Inv" : "Var");
-  size_t IndicesNumber = IsIndexLoopInvariant.size();
-  for (size_t I = 0; I < IndicesNumber; ++I)
-    O << "[" << (IsIndexLoopInvariant[I] ? "Inv" : "Var") << "]";
+  O << (isPointerLoopInvariant() ? "Inv" : "Var");
+  for (size_t I = 0; I < getNumOperands() - 1; ++I)
+    O << "[" << (isIndexLoopInvariant(I) ? "Inv" : "Var") << "]";
 
   O << " ";
   printAsOperand(O, SlotTracker);

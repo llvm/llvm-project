@@ -3375,14 +3375,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Result);
   }
 
-  case Builtin::BI__builtin_set_flt_rounds: {
-    Function *F = CGM.getIntrinsic(Intrinsic::set_rounding);
-
-    Value *V = EmitScalarExpr(E->getArg(0));
-    Builder.CreateCall(F, V);
-    return RValue::get(nullptr);
-  }
-
   case Builtin::BI__builtin_fpclassify: {
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(*this, E);
     // FIXME: for strictfp/IEEE-754 we need to not trap on SNaN here.

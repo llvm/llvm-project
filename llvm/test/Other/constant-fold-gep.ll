@@ -457,7 +457,7 @@ define ptr @different_addrspace() nounwind noinline {
   %p = getelementptr inbounds i8, ptr addrspacecast (ptr addrspace(12) @p12 to ptr),
                                   i32 2
   ret ptr %p
-; OPT: ret ptr getelementptr (i8, ptr addrspacecast (ptr addrspace(12) @p12 to ptr), i64 2)
+; OPT: ret ptr getelementptr inbounds (i8, ptr addrspacecast (ptr addrspace(12) @p12 to ptr), i64 2)
 }
 
 define ptr @same_addrspace() nounwind noinline {

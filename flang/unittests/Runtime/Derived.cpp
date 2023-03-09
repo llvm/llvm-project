@@ -24,21 +24,30 @@ TEST(Derived, SameTypeAs) {
       4, nullptr, 0, nullptr, CFI_attribute_pointer)};
   EXPECT_FALSE(RTNAME(SameTypeAs)(*i1, *r1));
 
-  // CLASS(*), ALLOCATABLE :: p1
-  auto p1{Descriptor::Create(TypeCode{Fortran::common::TypeCategory::Real, 4},
+  // CLASS(*), ALLOCATABLE :: a1
+  auto a1{Descriptor::Create(TypeCode{Fortran::common::TypeCategory::Real, 4},
       4, nullptr, 0, nullptr, CFI_attribute_allocatable)};
+  a1->raw().elem_len = 0;
+  a1->raw().type = CFI_type_other;
+
+  EXPECT_FALSE(RTNAME(SameTypeAs)(*i1, *a1));
+  EXPECT_FALSE(RTNAME(SameTypeAs)(*a1, *i1));
+  EXPECT_FALSE(RTNAME(SameTypeAs)(*r1, *a1));
+
+  // CLASS(*), ALLOCATABLE :: a2
+  auto a2{Descriptor::Create(TypeCode{Fortran::common::TypeCategory::Real, 4},
+      4, nullptr, 0, nullptr, CFI_attribute_allocatable)};
+  a2->raw().elem_len = 0;
+  a2->raw().type = CFI_type_other;
+
+  EXPECT_FALSE(RTNAME(SameTypeAs)(*a1, *a2));
+
+  // CLASS(*), POINTER :: p1
+  auto p1{Descriptor::Create(TypeCode{Fortran::common::TypeCategory::Real, 4},
+      4, nullptr, 0, nullptr, CFI_attribute_pointer)};
   p1->raw().elem_len = 0;
   p1->raw().type = CFI_type_other;
 
-  EXPECT_TRUE(RTNAME(SameTypeAs)(*i1, *p1));
-  EXPECT_TRUE(RTNAME(SameTypeAs)(*p1, *i1));
-  EXPECT_TRUE(RTNAME(SameTypeAs)(*r1, *p1));
-
-  // CLASS(*), ALLOCATABLE :: p2
-  auto p2{Descriptor::Create(TypeCode{Fortran::common::TypeCategory::Real, 4},
-      4, nullptr, 0, nullptr, CFI_attribute_allocatable)};
-  p2->raw().elem_len = 0;
-  p2->raw().type = CFI_type_other;
-
-  EXPECT_TRUE(RTNAME(SameTypeAs)(*p1, *p2));
+  EXPECT_FALSE(RTNAME(SameTypeAs)(*i1, *p1));
+  EXPECT_FALSE(RTNAME(SameTypeAs)(*p1, *i1));
 }
