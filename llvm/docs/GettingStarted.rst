@@ -79,6 +79,16 @@ Getting the Source Code and Building LLVM
      * ``-DLLVM_ENABLE_ASSERTIONS=ON`` --- Compile with assertion checks enabled
        (default is ON for Debug builds, OFF for all other build types).
 
+     * ``-DLLVM_USE_LINKER=lld`` --- Link with the `lld linker`_, assuming it
+       is installed on your system. This can dramatically speed up link times
+       if the default linker is slow.
+
+     * ``-DLLVM_PARALLEL_{COMPILE,LINK}_JOBS=N`` --- Limit the number of
+       compile/link jobs running in parallel at the same time. This is
+       especially important for linking since linking can use lots of memory. If
+       you run into memory issues building LLVM, try setting this to limit the
+       maximum number of compile/link jobs running at the same time.
+
    * ``cmake --build . [--target <target>]`` or the build system specified
      above directly.
 
