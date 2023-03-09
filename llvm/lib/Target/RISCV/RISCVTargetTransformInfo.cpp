@@ -8,7 +8,9 @@
 
 #include "RISCVTargetTransformInfo.h"
 #include "MCTargetDesc/RISCVMatInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -321,6 +323,34 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // TODO: vrgather could be slower than vmv.v.x. It is
     // implementation-dependent.
     return LT.first * getLMULCost(LT.second);
+  }
+
+  if (isa<FixedVectorType>(Tp) && Kind == TTI::SK_PermuteSingleSrc &&
+      Mask.size() >= 2) {
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
+    if (LT.second.isFixedLengthVector()) {
+      MVT EltTp = LT.second.getVectorElementType();
+      // If the size of the element is < ELEN then shuffles of interleaves and
+      // deinterleaves of 2 vectors can be lowered into the following sequences
+      if (EltTp.getScalarSizeInBits() < ST->getELEN()) {
+        auto InterleaveMask = createInterleaveMask(Mask.size() / 2, 2);
+        // Example sequence:
+        //   vsetivli	zero, 4, e8, mf4, ta, ma (ignored)
+        //   vwaddu.vv	v10, v8, v9
+        //   li		a0, -1                   (ignored)
+        //   vwmaccu.vx	v10, a0, v9
+        if (equal(InterleaveMask, Mask))
+          return 2 * LT.first * getLMULCost(LT.second);
+
+        if (Mask[0] == 0 || Mask[0] == 1) {
+          auto DeinterleaveMask = createStrideMask(Mask[0], 2, Mask.size());
+          // Example sequence:
+          //   vnsrl.wi	v10, v8, 0
+          if (equal(DeinterleaveMask, Mask))
+            return LT.first * getLMULCost(LT.second);
+        }
+      }
+    }
   }
 
   return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
