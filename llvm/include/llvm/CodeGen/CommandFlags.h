@@ -94,8 +94,6 @@ std::string getTrapFuncName();
 
 bool getUseCtors();
 
-bool getLowerGlobalDtorsViaCxaAtExit();
-
 bool getRelaxELFRelocations();
 
 bool getDataSections();
