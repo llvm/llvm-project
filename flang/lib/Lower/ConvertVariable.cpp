@@ -727,15 +727,26 @@ static void deallocateIntentOut(Fortran::lower::AbstractConverter &converter,
       mlir::Location loc = converter.getCurrentLocation();
       fir::FirOpBuilder &builder = converter.getFirOpBuilder();
       auto genDeallocateWithTypeDesc = [&]() {
-        if (mutBox->isPolymorphic()) {
-          mlir::Value declaredTypeDesc;
-          assert(sym.GetType());
-          if (const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec =
-                  sym.GetType()->AsDerived()) {
-            declaredTypeDesc = Fortran::lower::getTypeDescAddr(
-                converter, loc, *derivedTypeSpec);
-          }
-          genDeallocateBox(converter, *mutBox, loc, declaredTypeDesc);
+        if (mutBox->isDerived() || mutBox->isPolymorphic() ||
+            mutBox->isUnlimitedPolymorphic()) {
+          mlir::Value isAlloc = fir::factory::genIsAllocatedOrAssociatedTest(
+              builder, loc, *mutBox);
+          builder.genIfThen(loc, isAlloc)
+              .genThen([&]() {
+                if (mutBox->isPolymorphic()) {
+                  mlir::Value declaredTypeDesc;
+                  assert(sym.GetType());
+                  if (const Fortran::semantics::DerivedTypeSpec
+                          *derivedTypeSpec = sym.GetType()->AsDerived()) {
+                    declaredTypeDesc = Fortran::lower::getTypeDescAddr(
+                        converter, loc, *derivedTypeSpec);
+                  }
+                  genDeallocateBox(converter, *mutBox, loc, declaredTypeDesc);
+                } else {
+                  genDeallocateBox(converter, *mutBox, loc);
+                }
+              })
+              .end();
         } else {
           genDeallocateBox(converter, *mutBox, loc);
         }
@@ -748,16 +759,7 @@ static void deallocateIntentOut(Fortran::lower::AbstractConverter &converter,
             .genThen([&]() { genDeallocateWithTypeDesc(); })
             .end();
       } else {
-        if (mutBox->isDerived() || mutBox->isPolymorphic() ||
-            mutBox->isUnlimitedPolymorphic()) {
-          mlir::Value isAlloc = fir::factory::genIsAllocatedOrAssociatedTest(
-              builder, loc, *mutBox);
-          builder.genIfThen(loc, isAlloc)
-              .genThen([&]() { genDeallocateWithTypeDesc(); })
-              .end();
-        } else {
-          genDeallocateBox(converter, *mutBox, loc);
-        }
+        genDeallocateWithTypeDesc();
       }
     }
   }
