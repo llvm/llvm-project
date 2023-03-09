@@ -1544,9 +1544,13 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     return false;
 
   if (Subtarget.hasStdExtZfa()) {
-    if ((VT == MVT::f64 && RISCVLoadFPImm::getLoadFP64Imm(Imm) != -1) ||
-        (VT == MVT::f16 && RISCVLoadFPImm::getLoadFP16Imm(Imm) != -1) ||
-        (VT == MVT::f32 && RISCVLoadFPImm::getLoadFP32Imm(Imm) != -1))
+    // fli.h requires Zfh, but we might only have Zfhmin.
+    if (VT == MVT::f16 && Subtarget.hasStdExtZfh() &&
+        RISCVLoadFPImm::getLoadFP16Imm(Imm) != -1)
+      return true;
+    if (VT == MVT::f32 && RISCVLoadFPImm::getLoadFP32Imm(Imm) != -1)
+      return true;
+    if (VT == MVT::f64 && RISCVLoadFPImm::getLoadFP64Imm(Imm) != -1)
       return true;
   }
 
