@@ -336,23 +336,38 @@ bool GCNDownwardRPTracker::advanceBeforeNext() {
   assert(SI.isValid());
 
   // Remove dead registers or mask bits.
-  for (auto &It : LiveRegs) {
-    const LiveInterval &LI = LIS.getInterval(It.first);
+  SmallSet<Register, 8> SeenRegs;
+  for (auto &MO : LastTrackedMI->operands()) {
+    if (!MO.isReg() || !MO.getReg().isVirtual())
+      continue;
+    if (MO.isUse() && !MO.readsReg())
+      continue;
+    if (!SeenRegs.insert(MO.getReg()).second)
+      continue;
+    const LiveInterval &LI = LIS.getInterval(MO.getReg());
     if (LI.hasSubRanges()) {
+      auto It = LiveRegs.end();
       for (const auto &S : LI.subranges()) {
         if (!S.liveAt(SI)) {
-          auto PrevMask = It.second;
-          It.second &= ~S.LaneMask;
-          CurPressure.inc(It.first, PrevMask, It.second, *MRI);
+          if (It == LiveRegs.end()) {
+            It = LiveRegs.find(MO.getReg());
+            if (It == LiveRegs.end())
+              llvm_unreachable("register isn't live");
+          }
+          auto PrevMask = It->second;
+          It->second &= ~S.LaneMask;
+          CurPressure.inc(MO.getReg(), PrevMask, It->second, *MRI);
         }
       }
+      if (It != LiveRegs.end() && It->second.none())
+        LiveRegs.erase(It);
     } else if (!LI.liveAt(SI)) {
-      auto PrevMask = It.second;
-      It.second = LaneBitmask::getNone();
-      CurPressure.inc(It.first, PrevMask, It.second, *MRI);
+      auto It = LiveRegs.find(MO.getReg());
+      if (It == LiveRegs.end())
+        llvm_unreachable("register isn't live");
+      CurPressure.inc(MO.getReg(), It->second, LaneBitmask::getNone(), *MRI);
+      LiveRegs.erase(It);
     }
-    if (It.second.none())
-      LiveRegs.erase(It.first);
   }
 
   MaxPressure = max(MaxPressure, CurPressure);
