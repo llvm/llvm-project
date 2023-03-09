@@ -36,6 +36,7 @@
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/FileCollector.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
@@ -796,12 +797,14 @@ int dsymutil_main(int argc, char **argv) {
         ErrorOr<vfs::Status> stat = Options.LinkOpts.VFS->status(File.path());
         if (!stat)
           break;
-        FileOffset += stat->getSize();
         if (FileOffset > UINT32_MAX) {
-          WithColor::error() << "the universal binary has a slice with an "
-              "offset exceeds 4GB and will produce an invalid Mach-O file.";
+          WithColor::error() << formatv(
+              "the universal binary has a slice with a starting offset ({0:x}) "
+              "that exceeds 4GB and will produce an invalid Mach-O file.",
+              FileOffset);
           return EXIT_FAILURE;
         }
+        FileOffset += stat->getSize();
       }
       if (!MachOUtils::generateUniversalBinary(TempFiles,
                                                OutputLocationOrErr->DWARFFile,
