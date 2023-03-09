@@ -386,7 +386,6 @@ class LLVMAnyType<ValueType vt> : LLVMType<vt> {
 class LLVMQualPointerType<LLVMType elty, int addrspace>
   : LLVMType<iPTR>{
   LLVMType ElTy = elty;
-  int AddrSpace = addrspace;
   assert !and(!le(0, addrspace), !le(addrspace, 255)),
     "Address space exceeds 255";
 
@@ -449,7 +448,6 @@ class LLVMTruncatedType<int num> : LLVMMatchType<num, IIT_TRUNC_ARG>;
 // number of elements.
 class LLVMScalarOrSameVectorWidth<int idx, LLVMType elty>
   : LLVMMatchType<idx, IIT_SAME_VEC_WIDTH_ARG> {
-  ValueType ElTy = elty.VT;
   let Sig = !listconcat([
     IIT_SAME_VEC_WIDTH_ARG.Number,
     EncSameWidth<idx>.ret,
