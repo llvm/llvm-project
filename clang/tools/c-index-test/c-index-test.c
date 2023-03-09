@@ -67,6 +67,27 @@ extern char *basename(const char *);
 extern char *dirname(char *);
 #endif
 
+CXIndex createIndexWithInvocationEmissionPath(int ExcludeDeclarationsFromPCH,
+                                              int DisplayDiagnostics) {
+    CXIndex Idx;
+
+    CXIndexOptions Opts;
+    memset(&Opts, 0, sizeof(Opts));
+    Opts.Size = sizeof(CXIndexOptions);
+    Opts.ExcludeDeclarationsFromPCH = ExcludeDeclarationsFromPCH;
+    Opts.DisplayDiagnostics = DisplayDiagnostics;
+    Opts.InvocationEmissionPath = getenv("CINDEXTEST_INVOCATION_EMISSION_PATH");
+
+    Idx = clang_createIndexWithOptions(&Opts);
+    if (!Idx) {
+        fprintf(stderr,
+                "clang_createIndexWithOptions() failed. "
+                "CINDEX_VERSION_MINOR = %d, sizeof(CXIndexOptions) = %u\n",
+                CINDEX_VERSION_MINOR, Opts.Size);
+    }
+    return Idx;
+}
+
 /** Return the default parsing options. */
 static unsigned getDefaultParsingOptions(void) {
   unsigned options = CXTranslationUnit_DetailedPreprocessingRecord;
@@ -2046,18 +2067,17 @@ int perform_test_load_source(int argc, const char **argv,
   int result;
   unsigned Repeats = 0;
   unsigned I;
-  const char *InvocationPath;
 
-  Idx = clang_createIndex(/* excludeDeclsFromPCH */
-                          (!strcmp(filter, "local") ||
-                           !strcmp(filter, "local-display") ||
-                           !strcmp(filter, "local-pretty"))
-                              ? 1
-                              : 0,
-                          /* displayDiagnostics=*/1);
-  InvocationPath = getenv("CINDEXTEST_INVOCATION_EMISSION_PATH");
-  if (InvocationPath)
-    clang_CXIndex_setInvocationEmissionPathOption(Idx, InvocationPath);
+  Idx =
+      createIndexWithInvocationEmissionPath(/* excludeDeclsFromPCH */
+                                            (!strcmp(filter, "local") ||
+                                             !strcmp(filter, "local-display") ||
+                                             !strcmp(filter, "local-pretty"))
+                                                ? 1
+                                                : 0,
+                                            /* displayDiagnostics=*/1);
+  if (!Idx)
+    return -1;
 
   if ((CommentSchemaFile = parse_comments_schema(argc, argv))) {
     argc--;
@@ -2701,7 +2721,6 @@ int perform_code_completion(int argc, const char **argv, int timing_only) {
   CXTranslationUnit TU;
   unsigned I, Repeats = 1;
   unsigned completionOptions = clang_defaultCodeCompleteOptions();
-  const char *InvocationPath;
 
   if (getenv("CINDEXTEST_CODE_COMPLETE_PATTERNS"))
     completionOptions |= CXCodeComplete_IncludeCodePatterns;
@@ -2724,10 +2743,9 @@ int perform_code_completion(int argc, const char **argv, int timing_only) {
   if (parse_remapped_files(argc, argv, 2, &unsaved_files, &num_unsaved_files))
     return -1;
 
-  CIdx = clang_createIndex(0, 0);
-  InvocationPath = getenv("CINDEXTEST_INVOCATION_EMISSION_PATH");
-  if (InvocationPath)
-    clang_CXIndex_setInvocationEmissionPathOption(CIdx, InvocationPath);
+  CIdx = createIndexWithInvocationEmissionPath(0, 0);
+  if (!CIdx)
+    return -1;
 
   if (getenv("CINDEXTEST_EDITING"))
     Repeats = 5;
@@ -4816,17 +4834,15 @@ static int perform_test_single_symbol_sgf(const char *input, int argc,
   int num_unsaved_files = 0;
   enum CXErrorCode Err;
   int result = 0;
-  const char *InvocationPath;
   CXString SGF;
   const char *usr;
 
   usr = input + strlen("-single-symbol-sgf-for=");
 
-  Idx = clang_createIndex(/* excludeDeclsFromPCH */ 1,
-                          /* displayDiagnostics=*/0);
-  InvocationPath = getenv("CINDEXTEST_INVOCATION_EMISSION_PATH");
-  if (InvocationPath)
-    clang_CXIndex_setInvocationEmissionPathOption(Idx, InvocationPath);
+  Idx = createIndexWithInvocationEmissionPath(/* excludeDeclsFromPCH */ 1,
+                                              /* displayDiagnostics=*/0);
+  if (!Idx)
+    return -1;
 
   if (parse_remapped_files(argc, argv, 0, &unsaved_files, &num_unsaved_files)) {
     result = -1;

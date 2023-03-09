@@ -58,7 +58,7 @@ using InputRangeNotIndirectlyReadable = UncheckedRange<InputIteratorNotIndirectl
 static_assert(std::input_or_output_iterator<InputIteratorNotIndirectlyReadable>);
 static_assert(!std::indirectly_readable<InputIteratorNotIndirectlyReadable>);
 static_assert(!std::input_iterator<InputIteratorNotIndirectlyReadable>);
-static_assert(!std::ranges::input_range<InputIteratorNotIndirectlyReadable>);
+static_assert(!std::ranges::input_range<InputRangeNotIndirectlyReadable>);
 
 class InputIteratorNotInputOrOutputIterator {
 public:
@@ -287,7 +287,7 @@ using OutputRangeNotInputOrOutputIterator = UncheckedRange<InputIteratorNotInput
 static_assert(!std::input_or_output_iterator<OutputIteratorNotInputOrOutputIterator>);
 static_assert(std::indirectly_writable<OutputIteratorNotInputOrOutputIterator, int>);
 static_assert(!std::output_iterator<OutputIteratorNotInputOrOutputIterator, int>);
-static_assert(!std::ranges::input_range<OutputRangeNotInputOrOutputIterator>);
+static_assert(!std::ranges::output_range<OutputRangeNotInputOrOutputIterator, int>);
 
 class OutputIteratorNotIndirectlyWritable {
 public:

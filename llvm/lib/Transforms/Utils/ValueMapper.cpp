@@ -1181,6 +1181,10 @@ void ValueMapper::remapFunction(Function &F) {
   FlushingMapper(pImpl)->remapFunction(F);
 }
 
+void ValueMapper::remapGlobalObjectMetadata(GlobalObject &GO) {
+  FlushingMapper(pImpl)->remapGlobalObjectMetadata(GO);
+}
+
 void ValueMapper::scheduleMapGlobalInitializer(GlobalVariable &GV,
                                                Constant &Init,
                                                unsigned MCID) {

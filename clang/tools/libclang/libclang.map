@@ -421,6 +421,7 @@ LLVM_16 {
 LLVM_17 {
   global:
     clang_CXXMethod_isExplicit;
+    clang_createIndexWithOptions;
 };
 
 # Example of how to add a new symbol version entry.  If you do add a new symbol

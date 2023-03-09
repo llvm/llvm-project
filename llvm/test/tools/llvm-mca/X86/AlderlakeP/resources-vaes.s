@@ -22,14 +22,14 @@ vaesenclast      (%rax), %ymm1, %ymm3
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      3     0.50                        vaesdec	%ymm0, %ymm1, %ymm3
-# CHECK-NEXT:  2      11    0.50    *                   vaesdec	(%rax), %ymm1, %ymm3
-# CHECK-NEXT:  1      3     0.50                        vaesdeclast	%ymm0, %ymm1, %ymm3
-# CHECK-NEXT:  2      11    0.50    *                   vaesdeclast	(%rax), %ymm1, %ymm3
-# CHECK-NEXT:  1      3     0.50                        vaesenc	%ymm0, %ymm1, %ymm3
-# CHECK-NEXT:  2      11    0.50    *                   vaesenc	(%rax), %ymm1, %ymm3
-# CHECK-NEXT:  1      3     0.50                        vaesenclast	%ymm0, %ymm1, %ymm3
-# CHECK-NEXT:  2      11    0.50    *                   vaesenclast	(%rax), %ymm1, %ymm3
+# CHECK-NEXT:  1      5     0.50                        vaesdec	%ymm0, %ymm1, %ymm3
+# CHECK-NEXT:  2      12    0.50    *                   vaesdec	(%rax), %ymm1, %ymm3
+# CHECK-NEXT:  1      5     0.50                        vaesdeclast	%ymm0, %ymm1, %ymm3
+# CHECK-NEXT:  2      12    0.50    *                   vaesdeclast	(%rax), %ymm1, %ymm3
+# CHECK-NEXT:  1      5     0.50                        vaesenc	%ymm0, %ymm1, %ymm3
+# CHECK-NEXT:  2      12    0.50    *                   vaesenc	(%rax), %ymm1, %ymm3
+# CHECK-NEXT:  1      5     0.50                        vaesenclast	%ymm0, %ymm1, %ymm3
+# CHECK-NEXT:  2      12    0.50    *                   vaesenclast	(%rax), %ymm1, %ymm3
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - ADLPPort00

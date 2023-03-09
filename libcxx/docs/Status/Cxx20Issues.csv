@@ -268,7 +268,7 @@
 "`3354 <https://wg21.link/LWG3354>`__","``has_strong_structural_equality``\  has a meaningless definition","Prague","|Nothing To Do|","","|spaceship|"
 "`3355 <https://wg21.link/LWG3355>`__","The memory algorithms should support move-only input iterators introduced by P1207","Prague","|Complete|","15.0","|ranges|"
 "`3356 <https://wg21.link/LWG3356>`__","``__cpp_lib_nothrow_convertible``\  should be ``__cpp_lib_is_nothrow_convertible``\ ","Prague","|Complete|","12.0"
-"`3358 <https://wg21.link/LWG3358>`__","|sect|\ [span.cons] is mistaken that ``to_address``\  can throw","Prague","",""
+"`3358 <https://wg21.link/LWG3358>`__","|sect|\ [span.cons] is mistaken that ``to_address``\  can throw","Prague","|Complete|","17.0"
 "`3359 <https://wg21.link/LWG3359>`__","``<chrono>``\  leap second support should allow for negative leap seconds","Prague","","","|chrono|"
 "`3360 <https://wg21.link/LWG3360>`__","``three_way_comparable_with``\  is inconsistent with similar concepts","Prague","|Nothing To Do|","","|spaceship|"
 "`3362 <https://wg21.link/LWG3362>`__","Strike ``stop_source``\ 's ``operator!=``\ ","Prague","",""

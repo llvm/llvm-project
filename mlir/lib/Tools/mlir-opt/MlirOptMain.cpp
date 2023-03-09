@@ -212,7 +212,7 @@ static LogicalResult processBuffer(raw_ostream &os,
   context.allowUnregisteredDialects(config.shouldAllowUnregisteredDialects());
   if (config.shouldVerifyDiagnostics())
     context.printOpOnDiagnostic(false);
-  context.getActionManager().registerActionHandler<tracing::DebugCounter>();
+  context.registerActionHandler(tracing::DebugCounter());
 
   // If we are in verify diagnostics mode then we have a lot of work to do,
   // otherwise just perform the actions without worrying about it.
@@ -238,8 +238,8 @@ LogicalResult mlir::MlirOptMain(llvm::raw_ostream &outputStream,
                                 DialectRegistry &registry,
                                 const MlirOptMainConfig &config) {
   if (config.shouldShowDialects()) {
-    llvm::outs() << "Available Dialects:\n";
-    interleave(registry.getDialectNames(), llvm::outs(), "\n");
+    llvm::outs() << "Available Dialects: ";
+    interleave(registry.getDialectNames(), llvm::outs(), ",");
     llvm::outs() << "\n";
   }
 

@@ -483,6 +483,9 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
   if (Instruction *Logic = foldShiftOfShiftedBinOp(I, Builder))
     return Logic;
 
+  if (match(Op1, m_Or(m_Value(), m_SpecificInt(BitWidth - 1))))
+    return replaceOperand(I, 1, ConstantInt::get(Ty, BitWidth - 1));
+
   return nullptr;
 }
 

@@ -3,8 +3,8 @@
 
 #SparseVector = #sparse_tensor.encoding<{
   dimLevelType = [ "compressed" ],
-  pointerBitWidth = 32,
-  indexBitWidth = 32
+  posWidth = 32,
+  crdWidth = 32
 }>
 
 #trait_mul_s = {

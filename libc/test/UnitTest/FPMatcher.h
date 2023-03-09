@@ -14,7 +14,6 @@
 #include "test/UnitTest/Test.h"
 #include "utils/testutils/RoundingModeUtils.h"
 
-#include <errno.h>
 #include <math.h>
 
 namespace __llvm_libc {
@@ -106,8 +105,8 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
 #define EXPECT_MATH_ERRNO(expected)                                            \
   do {                                                                         \
     if (math_errhandling & MATH_ERRNO) {                                       \
-      int actual = errno;                                                      \
-      errno = 0;                                                               \
+      int actual = libc_errno;                                                 \
+      libc_errno = 0;                                                          \
       EXPECT_EQ(actual, expected);                                             \
     }                                                                          \
   } while (0)
@@ -115,8 +114,8 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
 #define ASSERT_MATH_ERRNO(expected)                                            \
   do {                                                                         \
     if (math_errhandling & MATH_ERRNO) {                                       \
-      int actual = errno;                                                      \
-      errno = 0;                                                               \
+      int actual = libc_errno;                                                 \
+      libc_errno = 0;                                                          \
       ASSERT_EQ(actual, expected);                                             \
     }                                                                          \
   } while (0)

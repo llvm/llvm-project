@@ -117,8 +117,7 @@ LLVM_LIBC_FUNCTION(float, cosf, (float x)) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
     }
-    return x +
-           FPBits::build_nan(1 << (fputil::MantissaWidth<float>::VALUE - 1));
+    return x + FPBits::build_quiet_nan(0);
   }
 
   // Combine the results with the sine of sum formula:

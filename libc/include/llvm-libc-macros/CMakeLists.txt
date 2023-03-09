@@ -21,9 +21,21 @@ add_header(
 )
 
 add_header(
+  fenv_macros
+  HDR
+    fenv-macros.h
+)
+
+add_header(
   file_seek_macros
   HDR
     file-seek-macros.h
+)
+
+add_header(
+  math_macros
+  HDR
+    math-macros.h
 )
 
 add_header(

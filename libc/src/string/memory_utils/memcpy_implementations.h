@@ -36,15 +36,14 @@ inline_memcpy_embedded_tiny(Ptr __restrict dst, CPtr __restrict src,
 LIBC_INLINE void inline_memcpy(Ptr __restrict dst, CPtr __restrict src,
                                size_t count) {
   using namespace __llvm_libc::builtin;
-#if defined(LIBC_COPT_MEMCPY_USE_EMBEDDED_TINY) ||                             \
-    defined(LIBC_TARGET_ARCH_IS_ARM) || defined(LIBC_TARGET_ARCH_IS_GPU)
+#if defined(LIBC_COPT_MEMCPY_USE_EMBEDDED_TINY)
   return inline_memcpy_embedded_tiny(dst, src, count);
 #elif defined(LIBC_TARGET_ARCH_IS_X86)
   return inline_memcpy_x86_maybe_interpose_repmovsb(dst, src, count);
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
   return inline_memcpy_aarch64(dst, src, count);
 #else
-#error "Unsupported platform"
+  return inline_memcpy_embedded_tiny(dst, src, count);
 #endif
 }
 

@@ -2,7 +2,7 @@
 
 // expected-no-diagnostics
 
-namespace P1073R3 {
+namespace P1937R2 {
 struct N {
   constexpr N() {}
   N(N const&) = delete;
@@ -11,12 +11,22 @@ struct N {
 template<typename T> constexpr void bad_assert_copyable() { T t; T t2 = t; }
 using ineffective = decltype(bad_assert_copyable<N>());
 
-// bad_assert_copyable<N> is not needed for constant evaluation
-// (and thus not instantiated)
 template<typename T> consteval void assert_copyable() { T t; T t2 = t; }
+// Prior to P1937R2 consteval functions were evaluated even in otherwise
+// unevaluated context, now this is well-formed.
 using check = decltype(assert_copyable<N>());
-// FIXME: this should give an error because assert_copyable<N> is instantiated
-// (because it is needed for constant evaluation), but the attempt to copy t is
-// ill-formed.
-} // namespace P1073R3
+
+template<typename T>
+__add_rvalue_reference(T) declval();
+
+constexpr auto add1(auto lhs, auto rhs) {
+    return lhs + rhs;
+}
+using T = decltype(add1(declval<int>(), declval<int>()));
+
+consteval auto add2(auto lhs, auto rhs) {
+    return lhs + rhs;
+}
+using T = decltype(add2(declval<int>(), declval<int>()));
+} // namespace P1937R2
 

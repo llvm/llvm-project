@@ -778,6 +778,14 @@ void UnOpInit::Profile(FoldingSetNodeID &ID) const {
 Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
   RecordKeeper &RK = getRecordKeeper();
   switch (getOpcode()) {
+  case TOLOWER:
+    if (StringInit *LHSs = dyn_cast<StringInit>(LHS))
+      return StringInit::get(RK, LHSs->getValue().lower());
+    break;
+  case TOUPPER:
+    if (StringInit *LHSs = dyn_cast<StringInit>(LHS))
+      return StringInit::get(RK, LHSs->getValue().upper());
+    break;
   case CAST:
     if (isa<StringRecTy>(getType())) {
       if (StringInit *LHSs = dyn_cast<StringInit>(LHS))
@@ -927,6 +935,12 @@ std::string UnOpInit::getAsString() const {
   case EMPTY: Result = "!empty"; break;
   case GETDAGOP: Result = "!getdagop"; break;
   case LOG2 : Result = "!logtwo"; break;
+  case TOLOWER:
+    Result = "!tolower";
+    break;
+  case TOUPPER:
+    Result = "!toupper";
+    break;
   }
   return Result + "(" + LHS->getAsString() + ")";
 }
@@ -1776,7 +1790,7 @@ Init *ExistsOpInit::Fold(Record *CurRec, bool IsFinal) const {
     // Look up all defined records to see if we can find one.
     Record *D = CheckType->getRecordKeeper().getDef(Name->getValue());
     if (D) {
-      // Check if types are compatiable.
+      // Check if types are compatible.
       return IntInit::get(getRecordKeeper(),
                           DefInit::get(D)->getType()->typeIsA(CheckType));
     }
@@ -1791,7 +1805,7 @@ Init *ExistsOpInit::Fold(Record *CurRec, bool IsFinal) const {
           return const_cast<ExistsOpInit *>(this);
 
         // No doubt that there exists a record, so we should check if types are
-        // compatiable.
+        // compatible.
         return IntInit::get(getRecordKeeper(),
                             CurRec->getType()->typeIsA(CheckType));
       }
@@ -2259,7 +2273,7 @@ Init *CondOpInit::Fold(Record *CurRec) const {
   }
 
   PrintFatalError(CurRec->getLoc(),
-                  CurRec->getName() +
+                  CurRec->getNameInitAsString() +
                   " does not have any true condition in:" +
                   this->getAsString());
   return nullptr;

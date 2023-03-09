@@ -34,6 +34,8 @@ LANGOPT(NoSignedZeros, 1, false)
 LANGOPT(AssociativeMath, 1, false)
 /// Allow division operations to be reassociated
 LANGOPT(ReciprocalMath, 1, false)
+/// Generate code only for OpenMP target device
+LANGOPT(OpenMPIsDevice, 1, false)
 
 #undef LANGOPT
 #undef ENUM_LANGOPT

@@ -22,11 +22,11 @@ using namespace sparse_tensor;
 // Private helper methods.
 //===----------------------------------------------------------------------===//
 
-static IntegerAttr fromOptionalInt(MLIRContext *ctx,
-                                   std::optional<unsigned> dim) {
-  if (!dim)
-    return nullptr;
-  return IntegerAttr::get(IndexType::get(ctx), dim.value());
+/// Constructs a nullable `LevelAttr` from the `std::optional<Level>`.
+static IntegerAttr optionalLevelAttr(MLIRContext *ctx,
+                                     std::optional<Level> lvl) {
+  return lvl ? IntegerAttr::get(IndexType::get(ctx), lvl.value())
+             : IntegerAttr();
 }
 
 // This is only ever called from `SparseTensorTypeToBufferConverter`,
@@ -82,36 +82,37 @@ Value SparseTensorSpecifier::getInitValue(OpBuilder &builder, Location loc,
 
 Value SparseTensorSpecifier::getSpecifierField(OpBuilder &builder, Location loc,
                                                StorageSpecifierKind kind,
-                                               std::optional<unsigned> dim) {
+                                               std::optional<Level> lvl) {
   return builder.create<GetStorageSpecifierOp>(
-      loc, specifier, kind, fromOptionalInt(specifier.getContext(), dim));
+      loc, specifier, kind, optionalLevelAttr(specifier.getContext(), lvl));
 }
 
 void SparseTensorSpecifier::setSpecifierField(OpBuilder &builder, Location loc,
                                               Value v,
                                               StorageSpecifierKind kind,
-                                              std::optional<unsigned> dim) {
+                                              std::optional<Level> lvl) {
+  // TODO: make `v` have type `TypedValue<IndexType>` instead.
   assert(v.getType().isIndex());
   specifier = builder.create<SetStorageSpecifierOp>(
-      loc, specifier, kind, fromOptionalInt(specifier.getContext(), dim), v);
+      loc, specifier, kind, optionalLevelAttr(specifier.getContext(), lvl), v);
 }
 
 //===----------------------------------------------------------------------===//
 // SparseTensorDescriptor methods.
 //===----------------------------------------------------------------------===//
 
-Value sparse_tensor::SparseTensorDescriptor::getIdxMemRefOrView(
-    OpBuilder &builder, Location loc, Level idxLvl) const {
+Value sparse_tensor::SparseTensorDescriptor::getCrdMemRefOrView(
+    OpBuilder &builder, Location loc, Level lvl) const {
   const Level cooStart = getCOOStart(rType.getEncoding());
-  if (idxLvl < cooStart)
-    return getMemRefField(SparseTensorFieldKind::IdxMemRef, idxLvl);
+  if (lvl < cooStart)
+    return getMemRefField(SparseTensorFieldKind::CrdMemRef, lvl);
 
   Value stride = constantIndex(builder, loc, rType.getLvlRank() - cooStart);
-  Value size = getIdxMemSize(builder, loc, cooStart);
+  Value size = getCrdMemSize(builder, loc, cooStart);
   size = builder.create<arith::DivUIOp>(loc, size, stride);
   return builder.create<memref::SubViewOp>(
-      loc, getMemRefField(SparseTensorFieldKind::IdxMemRef, cooStart),
-      /*offset=*/ValueRange{constantIndex(builder, loc, idxLvl - cooStart)},
+      loc, getMemRefField(SparseTensorFieldKind::CrdMemRef, cooStart),
+      /*offset=*/ValueRange{constantIndex(builder, loc, lvl - cooStart)},
       /*size=*/ValueRange{size},
       /*step=*/ValueRange{stride});
 }
@@ -129,8 +130,8 @@ void sparse_tensor::foreachFieldInSparseTensor(
         callback) {
   assert(enc);
 
-#define RETURN_ON_FALSE(idx, kind, dim, dlt)                                   \
-  if (!(callback(idx, kind, dim, dlt)))                                        \
+#define RETURN_ON_FALSE(fidx, kind, dim, dlt)                                  \
+  if (!(callback(fidx, kind, dim, dlt)))                                       \
     return;
 
   const auto lvlTypes = enc.getDimLevelType();
@@ -145,10 +146,10 @@ void sparse_tensor::foreachFieldInSparseTensor(
     // order.
     const auto dlt = lvlTypes[l];
     if (isCompressedDLT(dlt)) {
-      RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::PtrMemRef, l, dlt);
-      RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::IdxMemRef, l, dlt);
+      RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::PosMemRef, l, dlt);
+      RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::CrdMemRef, l, dlt);
     } else if (isSingletonDLT(dlt)) {
-      RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::IdxMemRef, l, dlt);
+      RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::CrdMemRef, l, dlt);
     } else {
       assert(isDenseDLT(dlt)); // no fields
     }
@@ -171,30 +172,30 @@ void sparse_tensor::foreachFieldAndTypeInSparseTensor(
         callback) {
   assert(stt.hasEncoding());
   // Construct the basic types.
-  Type idxType = stt.getIndexType();
-  Type ptrType = stt.getPointerType();
-  Type eltType = stt.getElementType();
+  const Type crdType = stt.getCrdType();
+  const Type posType = stt.getPosType();
+  const Type eltType = stt.getElementType();
 
-  Type metaDataType = StorageSpecifierType::get(stt.getEncoding());
-  // memref<? x ptr>  pointers
-  Type ptrMemType = MemRefType::get({ShapedType::kDynamic}, ptrType);
-  // memref<? x idx>  indices
-  Type idxMemType = MemRefType::get({ShapedType::kDynamic}, idxType);
+  const Type metaDataType = StorageSpecifierType::get(stt.getEncoding());
+  // memref<? x pos>  positions
+  const Type posMemType = MemRefType::get({ShapedType::kDynamic}, posType);
+  // memref<? x crd>  coordinates
+  const Type crdMemType = MemRefType::get({ShapedType::kDynamic}, crdType);
   // memref<? x eltType> values
-  Type valMemType = MemRefType::get({ShapedType::kDynamic}, eltType);
+  const Type valMemType = MemRefType::get({ShapedType::kDynamic}, eltType);
 
   foreachFieldInSparseTensor(
       stt.getEncoding(),
-      [metaDataType, ptrMemType, idxMemType, valMemType,
+      [metaDataType, posMemType, crdMemType, valMemType,
        callback](FieldIndex fieldIdx, SparseTensorFieldKind fieldKind,
                  Level lvl, DimLevelType dlt) -> bool {
         switch (fieldKind) {
         case SparseTensorFieldKind::StorageSpec:
           return callback(metaDataType, fieldIdx, fieldKind, lvl, dlt);
-        case SparseTensorFieldKind::PtrMemRef:
-          return callback(ptrMemType, fieldIdx, fieldKind, lvl, dlt);
-        case SparseTensorFieldKind::IdxMemRef:
-          return callback(idxMemType, fieldIdx, fieldKind, lvl, dlt);
+        case SparseTensorFieldKind::PosMemRef:
+          return callback(posMemType, fieldIdx, fieldKind, lvl, dlt);
+        case SparseTensorFieldKind::CrdMemRef:
+          return callback(crdMemType, fieldIdx, fieldKind, lvl, dlt);
         case SparseTensorFieldKind::ValMemRef:
           return callback(valMemType, fieldIdx, fieldKind, lvl, dlt);
         };

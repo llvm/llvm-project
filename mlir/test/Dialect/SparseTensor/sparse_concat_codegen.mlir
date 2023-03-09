@@ -16,10 +16,10 @@
 //       CHECK:  %[[TMP_c5:.*]] = arith.constant 5 : index
 //       CHECK:  %[[TMP_c2:.*]] = arith.constant 2 : index
 //       CHECK:  %[[TMP_0:.*]] = bufferization.alloc_tensor() : tensor<9x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_1:.*]] = sparse_tensor.pointers %[[TMP_arg0]] {dimension = 0 : index} : tensor<2x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_2:.*]] = sparse_tensor.indices %[[TMP_arg0]] {dimension = 0 : index} : tensor<2x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_3:.*]] = sparse_tensor.pointers %[[TMP_arg0]] {dimension = 1 : index} : tensor<2x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_4:.*]] = sparse_tensor.indices %[[TMP_arg0]] {dimension = 1 : index} : tensor<2x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_1:.*]] = sparse_tensor.positions %[[TMP_arg0]] {level = 0 : index} : tensor<2x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_2:.*]] = sparse_tensor.coordinates %[[TMP_arg0]] {level = 0 : index} : tensor<2x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_3:.*]] = sparse_tensor.positions %[[TMP_arg0]] {level = 1 : index} : tensor<2x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_4:.*]] = sparse_tensor.coordinates %[[TMP_arg0]] {level = 1 : index} : tensor<2x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_5:.*]] = sparse_tensor.values %[[TMP_arg0]] : tensor<2x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_6:.*]] = memref.load %[[TMP_1]][%[[TMP_c0]]] : memref<?xindex>
 //       CHECK:  %[[TMP_7:.*]] = memref.load %[[TMP_1]][%[[TMP_c1]]] : memref<?xindex>
@@ -36,10 +36,10 @@
 //       CHECK:    }
 //       CHECK:    scf.yield %[[RET_4]]
 //       CHECK:  }
-//       CHECK:  %[[TMP_8:.*]] = sparse_tensor.pointers %[[TMP_arg1]] {dimension = 0 : index} : tensor<3x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_9:.*]] = sparse_tensor.indices %[[TMP_arg1]] {dimension = 0 : index} : tensor<3x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_10:.*]] = sparse_tensor.pointers %[[TMP_arg1]] {dimension = 1 : index} : tensor<3x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_11:.*]] = sparse_tensor.indices %[[TMP_arg1]] {dimension = 1 : index} : tensor<3x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_8:.*]] = sparse_tensor.positions %[[TMP_arg1]] {level = 0 : index} : tensor<3x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_9:.*]] = sparse_tensor.coordinates %[[TMP_arg1]] {level = 0 : index} : tensor<3x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_10:.*]] = sparse_tensor.positions %[[TMP_arg1]] {level = 1 : index} : tensor<3x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_11:.*]] = sparse_tensor.coordinates %[[TMP_arg1]] {level = 1 : index} : tensor<3x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_12:.*]] = sparse_tensor.values %[[TMP_arg1]] : tensor<3x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_13:.*]] = memref.load %[[TMP_8]][%[[TMP_c0]]] : memref<?xindex>
 //       CHECK:  %[[TMP_14:.*]] = memref.load %[[TMP_8]][%[[TMP_c1]]] : memref<?xindex>
@@ -57,10 +57,10 @@
 //       CHECK:    }
 //       CHECK:    scf.yield %[[RET_5]]
 //       CHECK:  }
-//       CHECK:  %[[TMP_15:.*]] = sparse_tensor.pointers %[[TMP_arg2]] {dimension = 0 : index} : tensor<4x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_16:.*]] = sparse_tensor.indices %[[TMP_arg2]] {dimension = 0 : index} : tensor<4x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_17:.*]] = sparse_tensor.pointers %[[TMP_arg2]] {dimension = 1 : index} : tensor<4x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_18:.*]] = sparse_tensor.indices %[[TMP_arg2]] {dimension = 1 : index} : tensor<4x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_15:.*]] = sparse_tensor.positions %[[TMP_arg2]] {level = 0 : index} : tensor<4x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_16:.*]] = sparse_tensor.coordinates %[[TMP_arg2]] {level = 0 : index} : tensor<4x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_17:.*]] = sparse_tensor.positions %[[TMP_arg2]] {level = 1 : index} : tensor<4x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_18:.*]] = sparse_tensor.coordinates %[[TMP_arg2]] {level = 1 : index} : tensor<4x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_19:.*]] = sparse_tensor.values %[[TMP_arg2]] : tensor<4x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_20:.*]] = memref.load %[[TMP_15]][%[[TMP_c0]]] : memref<?xindex>
 //       CHECK:  %[[TMP_21:.*]] = memref.load %[[TMP_15]][%[[TMP_c1]]] : memref<?xindex>
@@ -102,10 +102,10 @@ func.func @concat_sparse_sparse(%arg0: tensor<2x4xf64, #DCSR>,
 //   CHECK-DAG:  %[[TMP_c9:.*]] = arith.constant 9 : index
 //   CHECK-DAG:  %[[TMP_c4:.*]] = arith.constant 4 : index
 //       CHECK:  %[[TMP_0:.*]] = bufferization.alloc_tensor(%[[TMP_c9]], %[[TMP_c4]]) : tensor<?x?xf64, #sparse_tensor
-//       CHECK:  %[[TMP_1:.*]] = sparse_tensor.pointers %[[TMP_arg0]] {dimension = 0 : index} : tensor<2x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_2:.*]] = sparse_tensor.indices %[[TMP_arg0]] {dimension = 0 : index} : tensor<2x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_3:.*]] = sparse_tensor.pointers %[[TMP_arg0]] {dimension = 1 : index} : tensor<2x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_4:.*]] = sparse_tensor.indices %[[TMP_arg0]] {dimension = 1 : index} : tensor<2x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_1:.*]] = sparse_tensor.positions %[[TMP_arg0]] {level = 0 : index} : tensor<2x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_2:.*]] = sparse_tensor.coordinates %[[TMP_arg0]] {level = 0 : index} : tensor<2x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_3:.*]] = sparse_tensor.positions %[[TMP_arg0]] {level = 1 : index} : tensor<2x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_4:.*]] = sparse_tensor.coordinates %[[TMP_arg0]] {level = 1 : index} : tensor<2x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_5:.*]] = sparse_tensor.values %[[TMP_arg0]] : tensor<2x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_6:.*]] = memref.load %[[TMP_1]][%[[TMP_c0]]] : memref<?xindex>
 //       CHECK:  %[[TMP_7:.*]] = memref.load %[[TMP_1]][%[[TMP_c1]]] : memref<?xindex>
@@ -122,10 +122,10 @@ func.func @concat_sparse_sparse(%arg0: tensor<2x4xf64, #DCSR>,
 //       CHECK:    }
 //       CHECK:    scf.yield %[[RET_4]]
 //       CHECK:  }
-//       CHECK:  %[[TMP_8:.*]] = sparse_tensor.pointers %[[TMP_arg1]] {dimension = 0 : index} : tensor<3x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_9:.*]] = sparse_tensor.indices %[[TMP_arg1]] {dimension = 0 : index} : tensor<3x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_10:.*]] = sparse_tensor.pointers %[[TMP_arg1]] {dimension = 1 : index} : tensor<3x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_11:.*]] = sparse_tensor.indices %[[TMP_arg1]] {dimension = 1 : index} : tensor<3x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_8:.*]] = sparse_tensor.positions %[[TMP_arg1]] {level = 0 : index} : tensor<3x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_9:.*]] = sparse_tensor.coordinates %[[TMP_arg1]] {level = 0 : index} : tensor<3x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_10:.*]] = sparse_tensor.positions %[[TMP_arg1]] {level = 1 : index} : tensor<3x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_11:.*]] = sparse_tensor.coordinates %[[TMP_arg1]] {level = 1 : index} : tensor<3x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_12:.*]] = sparse_tensor.values %[[TMP_arg1]] : tensor<3x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_13:.*]] = memref.load %[[TMP_8]][%[[TMP_c0]]] : memref<?xindex>
 //       CHECK:  %[[TMP_14:.*]] = memref.load %[[TMP_8]][%[[TMP_c1]]] : memref<?xindex>
@@ -143,10 +143,10 @@ func.func @concat_sparse_sparse(%arg0: tensor<2x4xf64, #DCSR>,
 //       CHECK:    }
 //       CHECK:    scf.yield %[[RET_5]]
 //       CHECK:  }
-//       CHECK:  %[[TMP_15:.*]] = sparse_tensor.pointers %[[TMP_arg2]] {dimension = 0 : index} : tensor<4x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_16:.*]] = sparse_tensor.indices %[[TMP_arg2]] {dimension = 0 : index} : tensor<4x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_17:.*]] = sparse_tensor.pointers %[[TMP_arg2]] {dimension = 1 : index} : tensor<4x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_18:.*]] = sparse_tensor.indices %[[TMP_arg2]] {dimension = 1 : index} : tensor<4x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_15:.*]] = sparse_tensor.positions %[[TMP_arg2]] {level = 0 : index} : tensor<4x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_16:.*]] = sparse_tensor.coordinates %[[TMP_arg2]] {level = 0 : index} : tensor<4x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_17:.*]] = sparse_tensor.positions %[[TMP_arg2]] {level = 1 : index} : tensor<4x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_18:.*]] = sparse_tensor.coordinates %[[TMP_arg2]] {level = 1 : index} : tensor<4x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_19:.*]] = sparse_tensor.values %[[TMP_arg2]] : tensor<4x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_20:.*]] = memref.load %[[TMP_15]][%[[TMP_c0]]] : memref<?xindex>
 //       CHECK:  %[[TMP_21:.*]] = memref.load %[[TMP_15]][%[[TMP_c1]]] : memref<?xindex>
@@ -190,10 +190,10 @@ func.func @concat_sparse_sparse_dynamic(%arg0: tensor<2x4xf64, #DCSR>,
 //   CHECK-DAG:  %[[TMP_d0:.*]] = arith.constant 0.000000e+00 : f64
 //       CHECK:  %[[A:.*]] = memref.alloc(%[[TMP_c9]], %[[TMP_c4]]) : memref<?x?xf64>
 //       CHECK:  linalg.fill ins(%[[TMP_d0]] : f64) outs(%[[A]] : memref<?x?xf64>)
-//       CHECK:  %[[TMP_1:.*]] = sparse_tensor.pointers %[[TMP_arg0]] {dimension = 0 : index} : tensor<2x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_2:.*]] = sparse_tensor.indices %[[TMP_arg0]] {dimension = 0 : index} : tensor<2x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_3:.*]] = sparse_tensor.pointers %[[TMP_arg0]] {dimension = 1 : index} : tensor<2x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_4:.*]] = sparse_tensor.indices %[[TMP_arg0]] {dimension = 1 : index} : tensor<2x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_1:.*]] = sparse_tensor.positions %[[TMP_arg0]] {level = 0 : index} : tensor<2x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_2:.*]] = sparse_tensor.coordinates %[[TMP_arg0]] {level = 0 : index} : tensor<2x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_3:.*]] = sparse_tensor.positions %[[TMP_arg0]] {level = 1 : index} : tensor<2x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_4:.*]] = sparse_tensor.coordinates %[[TMP_arg0]] {level = 1 : index} : tensor<2x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_5:.*]] = sparse_tensor.values %[[TMP_arg0]] : tensor<2x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_6:.*]] = memref.load %[[TMP_1]][%[[TMP_c0]]] : memref<?xindex>
 //       CHECK:  %[[TMP_7:.*]] = memref.load %[[TMP_1]][%[[TMP_c1]]] : memref<?xindex>
@@ -208,10 +208,10 @@ func.func @concat_sparse_sparse_dynamic(%arg0: tensor<2x4xf64, #DCSR>,
 //       CHECK:      memref.store %[[TMP_28]], %[[A]]{{\[}}%[[TMP_23]], %[[TMP_27]]] : memref<?x?xf64>
 //       CHECK:    }
 //       CHECK:  }
-//       CHECK:  %[[TMP_8:.*]] = sparse_tensor.pointers %[[TMP_arg1]] {dimension = 0 : index} : tensor<3x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_9:.*]] = sparse_tensor.indices %[[TMP_arg1]] {dimension = 0 : index} : tensor<3x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_10:.*]] = sparse_tensor.pointers %[[TMP_arg1]] {dimension = 1 : index} : tensor<3x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_11:.*]] = sparse_tensor.indices %[[TMP_arg1]] {dimension = 1 : index} : tensor<3x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_8:.*]] = sparse_tensor.positions %[[TMP_arg1]] {level = 0 : index} : tensor<3x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_9:.*]] = sparse_tensor.coordinates %[[TMP_arg1]] {level = 0 : index} : tensor<3x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_10:.*]] = sparse_tensor.positions %[[TMP_arg1]] {level = 1 : index} : tensor<3x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_11:.*]] = sparse_tensor.coordinates %[[TMP_arg1]] {level = 1 : index} : tensor<3x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_12:.*]] = sparse_tensor.values %[[TMP_arg1]] : tensor<3x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_13:.*]] = memref.load %[[TMP_8]][%[[TMP_c0]]] : memref<?xindex>
 //       CHECK:  %[[TMP_14:.*]] = memref.load %[[TMP_8]][%[[TMP_c1]]] : memref<?xindex>
@@ -227,10 +227,10 @@ func.func @concat_sparse_sparse_dynamic(%arg0: tensor<2x4xf64, #DCSR>,
 //       CHECK:      memref.store %[[TMP_28]], %[[A]]{{\[}}%[[TMP_29]], %[[TMP_27]]] : memref<?x?xf64>
 //       CHECK:    }
 //       CHECK:  }
-//       CHECK:  %[[TMP_15:.*]] = sparse_tensor.pointers %[[TMP_arg2]] {dimension = 0 : index} : tensor<4x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_16:.*]] = sparse_tensor.indices %[[TMP_arg2]] {dimension = 0 : index} : tensor<4x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_17:.*]] = sparse_tensor.pointers %[[TMP_arg2]] {dimension = 1 : index} : tensor<4x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_18:.*]] = sparse_tensor.indices %[[TMP_arg2]] {dimension = 1 : index} : tensor<4x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_15:.*]] = sparse_tensor.positions %[[TMP_arg2]] {level = 0 : index} : tensor<4x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_16:.*]] = sparse_tensor.coordinates %[[TMP_arg2]] {level = 0 : index} : tensor<4x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_17:.*]] = sparse_tensor.positions %[[TMP_arg2]] {level = 1 : index} : tensor<4x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_18:.*]] = sparse_tensor.coordinates %[[TMP_arg2]] {level = 1 : index} : tensor<4x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_19:.*]] = sparse_tensor.values %[[TMP_arg2]] : tensor<4x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_20:.*]] = memref.load %[[TMP_15]][%[[TMP_c0]]] : memref<?xindex>
 //       CHECK:  %[[TMP_21:.*]] = memref.load %[[TMP_15]][%[[TMP_c1]]] : memref<?xindex>
@@ -275,10 +275,10 @@ func.func @concat_sparse_sparse_dense(%arg0: tensor<2x4xf64, #DCSR>,
 //       CHECK:  memref.store %[[TMP_c9]], %[[DIM_0]][%[[TMP_c0]]] : memref<2xindex>
 //       CHECK:  memref.store %[[TMP_c4]], %[[DIM_0]][%[[TMP_c1]]] : memref<2xindex>
 //       CHECK:  %[[VAL_1:.*]] = memref.reshape %[[VAL_0]](%[[DIM_0]]) : (memref<?xf64>, memref<2xindex>) -> memref<?x?xf64>
-//       CHECK:  %[[TMP_1:.*]] = sparse_tensor.pointers %[[TMP_arg0]] {dimension = 0 : index} : tensor<2x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_2:.*]] = sparse_tensor.indices %[[TMP_arg0]] {dimension = 0 : index} : tensor<2x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_3:.*]] = sparse_tensor.pointers %[[TMP_arg0]] {dimension = 1 : index} : tensor<2x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_4:.*]] = sparse_tensor.indices %[[TMP_arg0]] {dimension = 1 : index} : tensor<2x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_1:.*]] = sparse_tensor.positions %[[TMP_arg0]] {level = 0 : index} : tensor<2x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_2:.*]] = sparse_tensor.coordinates %[[TMP_arg0]] {level = 0 : index} : tensor<2x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_3:.*]] = sparse_tensor.positions %[[TMP_arg0]] {level = 1 : index} : tensor<2x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_4:.*]] = sparse_tensor.coordinates %[[TMP_arg0]] {level = 1 : index} : tensor<2x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_5:.*]] = sparse_tensor.values %[[TMP_arg0]] : tensor<2x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_6:.*]] = memref.load %[[TMP_1]][%[[TMP_c0]]] : memref<?xindex>
 //       CHECK:  %[[TMP_7:.*]] = memref.load %[[TMP_1]][%[[TMP_c1]]] : memref<?xindex>
@@ -293,10 +293,10 @@ func.func @concat_sparse_sparse_dense(%arg0: tensor<2x4xf64, #DCSR>,
 //       CHECK:      memref.store %[[TMP_28]], %[[VAL_1]][%[[TMP_23]], %[[TMP_27]]] : memref<?x?xf64>
 //       CHECK:    }
 //       CHECK:  }
-//       CHECK:  %[[TMP_8:.*]] = sparse_tensor.pointers %[[TMP_arg1]] {dimension = 0 : index} : tensor<3x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_9:.*]] = sparse_tensor.indices %[[TMP_arg1]] {dimension = 0 : index} : tensor<3x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_10:.*]] = sparse_tensor.pointers %[[TMP_arg1]] {dimension = 1 : index} : tensor<3x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_11:.*]] = sparse_tensor.indices %[[TMP_arg1]] {dimension = 1 : index} : tensor<3x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_8:.*]] = sparse_tensor.positions %[[TMP_arg1]] {level = 0 : index} : tensor<3x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_9:.*]] = sparse_tensor.coordinates %[[TMP_arg1]] {level = 0 : index} : tensor<3x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_10:.*]] = sparse_tensor.positions %[[TMP_arg1]] {level = 1 : index} : tensor<3x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_11:.*]] = sparse_tensor.coordinates %[[TMP_arg1]] {level = 1 : index} : tensor<3x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_12:.*]] = sparse_tensor.values %[[TMP_arg1]] : tensor<3x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_13:.*]] = memref.load %[[TMP_8]][%[[TMP_c0]]] : memref<?xindex>
 //       CHECK:  %[[TMP_14:.*]] = memref.load %[[TMP_8]][%[[TMP_c1]]] : memref<?xindex>
@@ -312,10 +312,10 @@ func.func @concat_sparse_sparse_dense(%arg0: tensor<2x4xf64, #DCSR>,
 //       CHECK:      memref.store %[[TMP_28]], %[[VAL_1]][%[[TMP_29]], %[[TMP_27]]] : memref<?x?xf64>
 //       CHECK:    }
 //       CHECK:  }
-//       CHECK:  %[[TMP_15:.*]] = sparse_tensor.pointers %[[TMP_arg2]] {dimension = 0 : index} : tensor<4x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_16:.*]] = sparse_tensor.indices %[[TMP_arg2]] {dimension = 0 : index} : tensor<4x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_17:.*]] = sparse_tensor.pointers %[[TMP_arg2]] {dimension = 1 : index} : tensor<4x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_18:.*]] = sparse_tensor.indices %[[TMP_arg2]] {dimension = 1 : index} : tensor<4x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_15:.*]] = sparse_tensor.positions %[[TMP_arg2]] {level = 0 : index} : tensor<4x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_16:.*]] = sparse_tensor.coordinates %[[TMP_arg2]] {level = 0 : index} : tensor<4x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_17:.*]] = sparse_tensor.positions %[[TMP_arg2]] {level = 1 : index} : tensor<4x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_18:.*]] = sparse_tensor.coordinates %[[TMP_arg2]] {level = 1 : index} : tensor<4x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_19:.*]] = sparse_tensor.values %[[TMP_arg2]] : tensor<4x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_20:.*]] = memref.load %[[TMP_15]][%[[TMP_c0]]] : memref<?xindex>
 //       CHECK:  %[[TMP_21:.*]] = memref.load %[[TMP_15]][%[[TMP_c1]]] : memref<?xindex>
@@ -360,10 +360,10 @@ func.func @concat_sparse_sparse_annotated_dense(%arg0: tensor<2x4xf64, #DCSR>,
 //       CHECK:  memref.store %[[TMP_c4]], %[[DIM_0]][%[[TMP_c0]]] : memref<2xindex>
 //       CHECK:  memref.store %[[TMP_c9]], %[[DIM_0]][%[[TMP_c1]]] : memref<2xindex>
 //       CHECK:  %[[VAL_1:.*]] = memref.reshape %[[VAL_0]](%[[DIM_0]]) : (memref<?xf64>, memref<2xindex>) -> memref<?x?xf64>
-//       CHECK:  %[[TMP_1:.*]] = sparse_tensor.pointers %[[TMP_arg0]] {dimension = 0 : index} : tensor<2x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_2:.*]] = sparse_tensor.indices %[[TMP_arg0]] {dimension = 0 : index} : tensor<2x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_3:.*]] = sparse_tensor.pointers %[[TMP_arg0]] {dimension = 1 : index} : tensor<2x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_4:.*]] = sparse_tensor.indices %[[TMP_arg0]] {dimension = 1 : index} : tensor<2x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_1:.*]] = sparse_tensor.positions %[[TMP_arg0]] {level = 0 : index} : tensor<2x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_2:.*]] = sparse_tensor.coordinates %[[TMP_arg0]] {level = 0 : index} : tensor<2x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_3:.*]] = sparse_tensor.positions %[[TMP_arg0]] {level = 1 : index} : tensor<2x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_4:.*]] = sparse_tensor.coordinates %[[TMP_arg0]] {level = 1 : index} : tensor<2x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_5:.*]] = sparse_tensor.values %[[TMP_arg0]] : tensor<2x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_6:.*]] = memref.load %[[TMP_1]][%[[TMP_c0]]] : memref<?xindex>
 //       CHECK:  %[[TMP_7:.*]] = memref.load %[[TMP_1]][%[[TMP_c1]]] : memref<?xindex>
@@ -378,10 +378,10 @@ func.func @concat_sparse_sparse_annotated_dense(%arg0: tensor<2x4xf64, #DCSR>,
 //       CHECK:      memref.store %[[TMP_28]], %[[VAL_1]][%[[TMP_27]], %[[TMP_23]]] : memref<?x?xf64>
 //       CHECK:    }
 //       CHECK:  }
-//       CHECK:  %[[TMP_8:.*]] = sparse_tensor.pointers %[[TMP_arg1]] {dimension = 0 : index} : tensor<3x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_9:.*]] = sparse_tensor.indices %[[TMP_arg1]] {dimension = 0 : index} : tensor<3x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_10:.*]] = sparse_tensor.pointers %[[TMP_arg1]] {dimension = 1 : index} : tensor<3x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_11:.*]] = sparse_tensor.indices %[[TMP_arg1]] {dimension = 1 : index} : tensor<3x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_8:.*]] = sparse_tensor.positions %[[TMP_arg1]] {level = 0 : index} : tensor<3x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_9:.*]] = sparse_tensor.coordinates %[[TMP_arg1]] {level = 0 : index} : tensor<3x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_10:.*]] = sparse_tensor.positions %[[TMP_arg1]] {level = 1 : index} : tensor<3x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_11:.*]] = sparse_tensor.coordinates %[[TMP_arg1]] {level = 1 : index} : tensor<3x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_12:.*]] = sparse_tensor.values %[[TMP_arg1]] : tensor<3x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_13:.*]] = memref.load %[[TMP_8]][%[[TMP_c0]]] : memref<?xindex>
 //       CHECK:  %[[TMP_14:.*]] = memref.load %[[TMP_8]][%[[TMP_c1]]] : memref<?xindex>
@@ -397,10 +397,10 @@ func.func @concat_sparse_sparse_annotated_dense(%arg0: tensor<2x4xf64, #DCSR>,
 //       CHECK:      memref.store %[[TMP_28]], %[[VAL_1]][%[[TMP_27]], %[[TMP_29]]] : memref<?x?xf64>
 //       CHECK:    }
 //       CHECK:  }
-//       CHECK:  %[[TMP_15:.*]] = sparse_tensor.pointers %[[TMP_arg2]] {dimension = 0 : index} : tensor<4x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_16:.*]] = sparse_tensor.indices %[[TMP_arg2]] {dimension = 0 : index} : tensor<4x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_17:.*]] = sparse_tensor.pointers %[[TMP_arg2]] {dimension = 1 : index} : tensor<4x4xf64, #sparse_tensor
-//       CHECK:  %[[TMP_18:.*]] = sparse_tensor.indices %[[TMP_arg2]] {dimension = 1 : index} : tensor<4x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_15:.*]] = sparse_tensor.positions %[[TMP_arg2]] {level = 0 : index} : tensor<4x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_16:.*]] = sparse_tensor.coordinates %[[TMP_arg2]] {level = 0 : index} : tensor<4x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_17:.*]] = sparse_tensor.positions %[[TMP_arg2]] {level = 1 : index} : tensor<4x4xf64, #sparse_tensor
+//       CHECK:  %[[TMP_18:.*]] = sparse_tensor.coordinates %[[TMP_arg2]] {level = 1 : index} : tensor<4x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_19:.*]] = sparse_tensor.values %[[TMP_arg2]] : tensor<4x4xf64, #sparse_tensor
 //       CHECK:  %[[TMP_20:.*]] = memref.load %[[TMP_15]][%[[TMP_c0]]] : memref<?xindex>
 //       CHECK:  %[[TMP_21:.*]] = memref.load %[[TMP_15]][%[[TMP_c1]]] : memref<?xindex>

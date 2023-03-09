@@ -14,7 +14,7 @@ pclmulqdq     $11, (%rax), %xmm2
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      3     1.00                        pclmulqdq	$11, %xmm0, %xmm2
-# CHECK-NEXT:  2      9     1.00    *                   pclmulqdq	$11, (%rax), %xmm2
+# CHECK-NEXT:  2      10    1.00    *                   pclmulqdq	$11, (%rax), %xmm2
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - ADLPPort00

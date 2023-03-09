@@ -7985,7 +7985,7 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
   }
 
   // If the target has FMINIMUM/FMAXIMUM but not FMINNUM/FMAXNUM use that
-  // instead if there are no NaNs and there can't be an incompatiable zero
+  // instead if there are no NaNs and there can't be an incompatible zero
   // compare: at least one operand isn't +/-0, or there are no signed-zeros.
   if (Node->getFlags().hasNoNaNs() &&
       (Node->getFlags().hasNoSignedZeros() ||

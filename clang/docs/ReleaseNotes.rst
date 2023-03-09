@@ -159,6 +159,9 @@ Improvements to Clang's diagnostics
   class if that class was first introduced with a forward declaration.
 - Diagnostic notes and fix-its are now generated for ``ifunc``/``alias`` attributes
   which point to functions whose names are mangled.
+- Diagnostics relating to macros on the command line of a preprocessed assembly
+  file are now reported as coming from the file ``<command line>`` instead of
+  ``<built-in>``.
 
 Bug Fixes in This Version
 -------------------------
@@ -290,6 +293,14 @@ libclang
 - Introduced the new function ``clang_CXXMethod_isExplicit``,
   which identifies whether a constructor or conversion function cursor
   was marked with the explicit identifier.
+
+- Introduced the new ``CXIndex`` constructor function
+  ``clang_createIndexWithOptions``, which allows overriding precompiled preamble
+  storage path.
+
+- Deprecated two functions ``clang_CXIndex_setGlobalOptions`` and
+  ``clang_CXIndex_setInvocationEmissionPathOption`` in favor of the new
+  function ``clang_createIndexWithOptions`` in order to improve thread safety.
 
 Static Analyzer
 ---------------

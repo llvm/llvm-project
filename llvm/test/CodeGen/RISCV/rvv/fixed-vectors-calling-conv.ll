@@ -1188,17 +1188,15 @@ define <32 x i32> @vector_arg_via_stack(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, 
 ; LMULMAX8-LABEL: vector_arg_via_stack:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 32
-; LMULMAX8-NEXT:    mv a1, sp
 ; LMULMAX8-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; LMULMAX8-NEXT:    vle32.v v16, (a1)
+; LMULMAX8-NEXT:    vle32.v v16, (sp)
 ; LMULMAX8-NEXT:    vadd.vv v8, v8, v16
 ; LMULMAX8-NEXT:    ret
 ;
 ; LMULMAX4-LABEL: vector_arg_via_stack:
 ; LMULMAX4:       # %bb.0:
 ; LMULMAX4-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; LMULMAX4-NEXT:    mv a0, sp
-; LMULMAX4-NEXT:    vle32.v v16, (a0)
+; LMULMAX4-NEXT:    vle32.v v16, (sp)
 ; LMULMAX4-NEXT:    addi a0, sp, 64
 ; LMULMAX4-NEXT:    vle32.v v20, (a0)
 ; LMULMAX4-NEXT:    vadd.vv v8, v8, v16
@@ -1210,8 +1208,7 @@ define <32 x i32> @vector_arg_via_stack(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, 
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; LMULMAX2-NEXT:    addi a0, sp, 64
 ; LMULMAX2-NEXT:    vle32.v v16, (a0)
-; LMULMAX2-NEXT:    mv a0, sp
-; LMULMAX2-NEXT:    vle32.v v18, (a0)
+; LMULMAX2-NEXT:    vle32.v v18, (sp)
 ; LMULMAX2-NEXT:    addi a0, sp, 32
 ; LMULMAX2-NEXT:    vle32.v v20, (a0)
 ; LMULMAX2-NEXT:    addi a0, sp, 96
@@ -1235,8 +1232,7 @@ define <32 x i32> @vector_arg_via_stack(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, 
 ; LMULMAX1-NEXT:    vle32.v v19, (a0)
 ; LMULMAX1-NEXT:    addi a0, sp, 32
 ; LMULMAX1-NEXT:    vle32.v v20, (a0)
-; LMULMAX1-NEXT:    mv a0, sp
-; LMULMAX1-NEXT:    vle32.v v21, (a0)
+; LMULMAX1-NEXT:    vle32.v v21, (sp)
 ; LMULMAX1-NEXT:    addi a0, sp, 16
 ; LMULMAX1-NEXT:    vle32.v v22, (a0)
 ; LMULMAX1-NEXT:    addi a0, sp, 48

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/errno/libc_errno.h"
 #include "src/math/log1pf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -75,7 +76,7 @@ TEST(LlvmLibclog1pfTest, InFloatRange) {
     float x = float(FPBits(v));
     if (isnan(x) || isinf(x))
       continue;
-    errno = 0;
+    libc_errno = 0;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log1p, x,
                                    __llvm_libc::log1pf(x), 0.5);
   }

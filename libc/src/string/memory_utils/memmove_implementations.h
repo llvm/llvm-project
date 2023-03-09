@@ -102,12 +102,8 @@ LIBC_INLINE void inline_memmove(Ptr dst, CPtr src, size_t count) {
     return generic::Memmove<64, kMaxSize>::loop_and_tail_backward(dst, src,
                                                                   count);
   }
-#elif defined(LIBC_TARGET_ARCH_IS_ARM)
-  return inline_memmove_embedded_tiny(dst, src, count);
-#elif defined(LIBC_TARGET_ARCH_IS_GPU)
-  return inline_memmove_embedded_tiny(dst, src, count);
 #else
-#error "Unsupported platform"
+  return inline_memmove_embedded_tiny(dst, src, count);
 #endif
 }
 
