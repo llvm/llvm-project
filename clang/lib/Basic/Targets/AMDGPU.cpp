@@ -257,9 +257,13 @@ bool AMDGPUTargetInfo::initFeatureMap(
     case GK_GFX940:
       Features["gfx940-insts"] = true;
       Features["fp8-insts"] = true;
+      Features["atomic-ds-pk-add-16-insts"] = true;
+      Features["atomic-flat-pk-add-16-insts"] = true;
+      Features["atomic-global-pk-add-bf16-inst"] = true;
       [[fallthrough]];
     case GK_GFX90A:
       Features["gfx90a-insts"] = true;
+      Features["atomic-buffer-global-pk-add-f16-insts"] = true;
       [[fallthrough]];
     case GK_GFX908:
       Features["dot3-insts"] = true;
