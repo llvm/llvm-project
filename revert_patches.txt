@@ -1,7 +1,3 @@
-SROA breaks MIOpen
-Revert "[SROA] Create additional vector type candidates based on store and load slices"
-Revert "[SROA] Fix bug where CandidateTys is appended while being iterated"
-
 Rana: HipCatch2 and olcTest conformance fails
 Revert "[AMDGPU] __builtin_amdgcn_read_exec_* should be implemented with llvm.amdgcn.ballot"
 

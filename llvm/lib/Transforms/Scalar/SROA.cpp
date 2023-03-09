@@ -2073,7 +2073,10 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
     if (!VectorType::isValidElementType(Ty))
       continue;
     unsigned TypeSize = DL.getTypeSizeInBits(Ty).getFixedValue();
-    for (VectorType *&VTy : CandidateTys) {
+    // Make a copy of CandidateTys and iterate through it, because we might
+    // append to CandidateTys in the loop.
+    SmallVector<VectorType *, 4> CandidateTysCopy = CandidateTys;
+    for (VectorType *&VTy : CandidateTysCopy) {
       unsigned VectorSize = DL.getTypeSizeInBits(VTy).getFixedValue();
       unsigned ElementSize =
           DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
