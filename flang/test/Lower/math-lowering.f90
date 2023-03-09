@@ -57,11 +57,11 @@ end function
 ! RELAXED: {{%[A-Za-z0-9._]+}} = complex.abs {{%[A-Za-z0-9._]+}} : complex<f64>
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @cabs({{%[A-Za-z0-9._]+}}) {{.*}}: (!fir.complex<8>) -> f64
 
-! PRECISE-DAG: func.func private @fabsf(f32) -> f32 attributes {fir.bindc_name = "fabsf"}
-! PRECISE-DAG: func.func private @fabs(f64) -> f64 attributes {fir.bindc_name = "fabs"}
-! PRECISE-DAG: func.func private @llvm.fabs.f128(f128) -> f128 attributes {fir.bindc_name = "llvm.fabs.f128"}
-! PRECISE-DAG: func.func private @cabsf(!fir.complex<4>) -> f32 attributes {fir.bindc_name = "cabsf"}
-! PRECISE-DAG: func.func private @cabs(!fir.complex<8>) -> f64 attributes {fir.bindc_name = "cabs"}
+! PRECISE-DAG: func.func private @fabsf(f32) -> f32 attributes {fir.bindc_name = "fabsf", fir.runtime}
+! PRECISE-DAG: func.func private @fabs(f64) -> f64 attributes {fir.bindc_name = "fabs", fir.runtime}
+! PRECISE-DAG: func.func private @llvm.fabs.f128(f128) -> f128 attributes {fir.bindc_name = "llvm.fabs.f128", fir.runtime}
+! PRECISE-DAG: func.func private @cabsf(!fir.complex<4>) -> f32 attributes {fir.bindc_name = "cabsf", fir.runtime}
+! PRECISE-DAG: func.func private @cabs(!fir.complex<8>) -> f64 attributes {fir.bindc_name = "cabs", fir.runtime}
 
 //--- aint.f90
 ! RUN: bbc -emit-fir %t/aint.f90 -o - --math-runtime=fast | FileCheck --check-prefixes=ALL %t/aint.f90
@@ -101,9 +101,9 @@ end function
 !  test_real16 = aint(x)
 !end function
 
-! ALL-DAG: func.func private @llvm.trunc.f32(f32) -> f32 attributes {fir.bindc_name = "llvm.trunc.f32"}
-! ALL-DAG: func.func private @llvm.trunc.f64(f64) -> f64 attributes {fir.bindc_name = "llvm.trunc.f64"}
-! ALL-DAG: func.func private @llvm.trunc.f80(f80) -> f80 attributes {fir.bindc_name = "llvm.trunc.f80"}
+! ALL-DAG: func.func private @llvm.trunc.f32(f32) -> f32 attributes {fir.bindc_name = "llvm.trunc.f32", fir.runtime}
+! ALL-DAG: func.func private @llvm.trunc.f64(f64) -> f64 attributes {fir.bindc_name = "llvm.trunc.f64", fir.runtime}
+! ALL-DAG: func.func private @llvm.trunc.f80(f80) -> f80 attributes {fir.bindc_name = "llvm.trunc.f80", fir.runtime}
 
 //--- anint.f90
 ! RUN: bbc -emit-fir %t/anint.f90 -o - --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST %t/anint.f90
@@ -149,9 +149,9 @@ end function
 !  test_real16 = anint(x)
 !end function
 
-! PRECISE-DAG: func.func private @llvm.round.f32(f32) -> f32 attributes {fir.bindc_name = "llvm.round.f32"}
-! PRECISE-DAG: func.func private @llvm.round.f64(f64) -> f64 attributes {fir.bindc_name = "llvm.round.f64"}
-! PRECISE-DAG: func.func private @llvm.round.f80(f80) -> f80 attributes {fir.bindc_name = "llvm.round.f80"}
+! PRECISE-DAG: func.func private @llvm.round.f32(f32) -> f32 attributes {fir.bindc_name = "llvm.round.f32", fir.runtime}
+! PRECISE-DAG: func.func private @llvm.round.f64(f64) -> f64 attributes {fir.bindc_name = "llvm.round.f64", fir.runtime}
+! PRECISE-DAG: func.func private @llvm.round.f80(f80) -> f80 attributes {fir.bindc_name = "llvm.round.f80", fir.runtime}
 
 //--- atan.f90
 ! RUN: bbc -emit-fir %t/atan.f90 -o - --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST %t/atan.f90
@@ -181,8 +181,8 @@ end function
 ! RELAXED: {{%[A-Za-z0-9._]+}} = math.atan {{%[A-Za-z0-9._]+}} {{.*}}: f64
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @atan({{%[A-Za-z0-9._]+}}) {{.*}}: (f64) -> f64
 
-! PRECISE-DAG: func.func private @atanf(f32) -> f32 attributes {fir.bindc_name = "atanf"}
-! PRECISE-DAG: func.func private @atan(f64) -> f64 attributes {fir.bindc_name = "atan"}
+! PRECISE-DAG: func.func private @atanf(f32) -> f32 attributes {fir.bindc_name = "atanf", fir.runtime}
+! PRECISE-DAG: func.func private @atan(f64) -> f64 attributes {fir.bindc_name = "atan", fir.runtime}
 
 //--- atan2.f90
 ! RUN: bbc -emit-fir %t/atan2.f90 -o - --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST %t/atan2.f90
@@ -212,8 +212,8 @@ end function
 ! RELAXED: {{%[A-Za-z0-9._]+}} = math.atan2 {{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}} {{.*}}: f64
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @atan2({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) {{.*}}: (f64, f64) -> f64
 
-! PRECISE-DAG: func.func private @atan2f(f32, f32) -> f32 attributes {fir.bindc_name = "atan2f"}
-! PRECISE-DAG: func.func private @atan2(f64, f64) -> f64 attributes {fir.bindc_name = "atan2"}
+! PRECISE-DAG: func.func private @atan2f(f32, f32) -> f32 attributes {fir.bindc_name = "atan2f", fir.runtime}
+! PRECISE-DAG: func.func private @atan2(f64, f64) -> f64 attributes {fir.bindc_name = "atan2", fir.runtime}
 
 //--- ceiling.f90
 ! RUN: bbc -emit-fir %t/ceiling.f90 -o - --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST %t/ceiling.f90
@@ -243,8 +243,8 @@ end function
 ! RELAXED: {{%[A-Za-z0-9._]+}} = math.ceil {{%[A-Za-z0-9._]+}} {{.*}}: f64
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @ceil({{%[A-Za-z0-9._]+}}) {{.*}}: (f64) -> f64
 
-! PRECISE-DAG: func.func private @ceilf(f32) -> f32 attributes {fir.bindc_name = "ceilf"}
-! PRECISE-DAG: func.func private @ceil(f64) -> f64 attributes {fir.bindc_name = "ceil"}
+! PRECISE-DAG: func.func private @ceilf(f32) -> f32 attributes {fir.bindc_name = "ceilf", fir.runtime}
+! PRECISE-DAG: func.func private @ceil(f64) -> f64 attributes {fir.bindc_name = "ceil", fir.runtime}
 
 //--- cos.f90
 ! RUN: bbc -emit-fir %t/cos.f90 -o - --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST %t/cos.f90
@@ -274,8 +274,8 @@ end function
 ! RELAXED: {{%[A-Za-z0-9._]+}} = math.cos {{%[A-Za-z0-9._]+}} {{.*}}: f64
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @cos({{%[A-Za-z0-9._]+}}) {{.*}}: (f64) -> f64
 
-! PRECISE-DAG: func.func private @cosf(f32) -> f32 attributes {fir.bindc_name = "cosf"}
-! PRECISE-DAG: func.func private @cos(f64) -> f64 attributes {fir.bindc_name = "cos"}
+! PRECISE-DAG: func.func private @cosf(f32) -> f32 attributes {fir.bindc_name = "cosf", fir.runtime}
+! PRECISE-DAG: func.func private @cos(f64) -> f64 attributes {fir.bindc_name = "cos", fir.runtime}
 
 //--- cosh.f90
 ! RUN: bbc -emit-fir %t/cosh.f90 -o - --math-runtime=fast | FileCheck --check-prefixes=ALL %t/cosh.f90
@@ -301,8 +301,8 @@ end function
 ! ALL-LABEL: @_QPtest_real8
 ! ALL: {{%[A-Za-z0-9._]+}} = fir.call @cosh({{%[A-Za-z0-9._]+}}) {{.*}}: (f64) -> f64
 
-! ALL-DAG: func.func private @coshf(f32) -> f32 attributes {fir.bindc_name = "coshf"}
-! ALL-DAG: func.func private @cosh(f64) -> f64 attributes {fir.bindc_name = "cosh"}
+! ALL-DAG: func.func private @coshf(f32) -> f32 attributes {fir.bindc_name = "coshf", fir.runtime}
+! ALL-DAG: func.func private @cosh(f64) -> f64 attributes {fir.bindc_name = "cosh", fir.runtime}
 
 //--- erf.f90
 ! RUN: bbc -emit-fir %t/erf.f90 -o - --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST %t/erf.f90
@@ -332,8 +332,8 @@ end function
 ! RELAXED: {{%[A-Za-z0-9._]+}} = math.erf {{%[A-Za-z0-9._]+}} {{.*}}: f64
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @erf({{%[A-Za-z0-9._]+}}) {{.*}}: (f64) -> f64
 
-! PRECISE-DAG: func.func private @erff(f32) -> f32 attributes {fir.bindc_name = "erff"}
-! PRECISE-DAG: func.func private @erf(f64) -> f64 attributes {fir.bindc_name = "erf"}
+! PRECISE-DAG: func.func private @erff(f32) -> f32 attributes {fir.bindc_name = "erff", fir.runtime}
+! PRECISE-DAG: func.func private @erf(f64) -> f64 attributes {fir.bindc_name = "erf", fir.runtime}
 
 //--- exp.f90
 ! RUN: bbc -emit-fir %t/exp.f90 -o - --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST %t/exp.f90
@@ -363,8 +363,8 @@ end function
 ! RELAXED: {{%[A-Za-z0-9._]+}} = math.exp {{%[A-Za-z0-9._]+}} {{.*}}: f64
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @exp({{%[A-Za-z0-9._]+}}) {{.*}}: (f64) -> f64
 
-! PRECISE-DAG: func.func private @expf(f32) -> f32 attributes {fir.bindc_name = "expf"}
-! PRECISE-DAG: func.func private @exp(f64) -> f64 attributes {fir.bindc_name = "exp"}
+! PRECISE-DAG: func.func private @expf(f32) -> f32 attributes {fir.bindc_name = "expf", fir.runtime}
+! PRECISE-DAG: func.func private @exp(f64) -> f64 attributes {fir.bindc_name = "exp", fir.runtime}
 
 //--- floor.f90
 ! RUN: bbc -emit-fir %t/floor.f90 -o - --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST %t/floor.f90
@@ -394,8 +394,8 @@ end function
 ! RELAXED: {{%[A-Za-z0-9._]+}} = math.floor {{%[A-Za-z0-9._]+}} {{.*}}: f64
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @floor({{%[A-Za-z0-9._]+}}) {{.*}}: (f64) -> f64
 
-! PRECISE-DAG: func.func private @floorf(f32) -> f32 attributes {fir.bindc_name = "floorf"}
-! PRECISE-DAG: func.func private @floor(f64) -> f64 attributes {fir.bindc_name = "floor"}
+! PRECISE-DAG: func.func private @floorf(f32) -> f32 attributes {fir.bindc_name = "floorf", fir.runtime}
+! PRECISE-DAG: func.func private @floor(f64) -> f64 attributes {fir.bindc_name = "floor", fir.runtime}
 
 //--- log.f90
 ! RUN: bbc -emit-fir %t/log.f90 -o - --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST %t/log.f90
@@ -425,8 +425,8 @@ end function
 ! RELAXED: {{%[A-Za-z0-9._]+}} = math.log {{%[A-Za-z0-9._]+}} {{.*}}: f64
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @log({{%[A-Za-z0-9._]+}}) {{.*}}: (f64) -> f64
 
-! PRECISE-DAG: func.func private @logf(f32) -> f32 attributes {fir.bindc_name = "logf"}
-! PRECISE-DAG: func.func private @log(f64) -> f64 attributes {fir.bindc_name = "log"}
+! PRECISE-DAG: func.func private @logf(f32) -> f32 attributes {fir.bindc_name = "logf", fir.runtime}
+! PRECISE-DAG: func.func private @log(f64) -> f64 attributes {fir.bindc_name = "log", fir.runtime}
 
 //--- log10.f90
 ! RUN: bbc -emit-fir %t/log10.f90 -o - --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST %t/log10.f90
@@ -456,8 +456,8 @@ end function
 ! RELAXED: {{%[A-Za-z0-9._]+}} = math.log10 {{%[A-Za-z0-9._]+}} {{.*}}: f64
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @log10({{%[A-Za-z0-9._]+}}) {{.*}}: (f64) -> f64
 
-! PRECISE-DAG: func.func private @log10f(f32) -> f32 attributes {fir.bindc_name = "log10f"}
-! PRECISE-DAG: func.func private @log10(f64) -> f64 attributes {fir.bindc_name = "log10"}
+! PRECISE-DAG: func.func private @log10f(f32) -> f32 attributes {fir.bindc_name = "log10f", fir.runtime}
+! PRECISE-DAG: func.func private @log10(f64) -> f64 attributes {fir.bindc_name = "log10", fir.runtime}
 
 //--- nint.f90
 ! RUN: bbc -emit-fir %t/nint.f90 -o - --math-runtime=fast | FileCheck --check-prefixes=ALL %t/nint.f90
@@ -485,10 +485,10 @@ end function
 ! ALL: {{%[A-Za-z0-9._]+}} = fir.call @llvm.lround.i32.f64({{%[A-Za-z0-9._]+}}) {{.*}}: (f64) -> i32
 ! ALL: {{%[A-Za-z0-9._]+}} = fir.call @llvm.lround.i64.f64({{%[A-Za-z0-9._]+}}) {{.*}}: (f64) -> i64
 
-! ALL-DAG: func.func private @llvm.lround.i32.f32(f32) -> i32 attributes {fir.bindc_name = "llvm.lround.i32.f32"}
-! ALL-DAG: func.func private @llvm.lround.i64.f32(f32) -> i64 attributes {fir.bindc_name = "llvm.lround.i64.f32"}
-! ALL-DAG: func.func private @llvm.lround.i32.f64(f64) -> i32 attributes {fir.bindc_name = "llvm.lround.i32.f64"}
-! ALL-DAG: func.func private @llvm.lround.i64.f64(f64) -> i64 attributes {fir.bindc_name = "llvm.lround.i64.f64"}
+! ALL-DAG: func.func private @llvm.lround.i32.f32(f32) -> i32 attributes {fir.bindc_name = "llvm.lround.i32.f32", fir.runtime}
+! ALL-DAG: func.func private @llvm.lround.i64.f32(f32) -> i64 attributes {fir.bindc_name = "llvm.lround.i64.f32", fir.runtime}
+! ALL-DAG: func.func private @llvm.lround.i32.f64(f64) -> i32 attributes {fir.bindc_name = "llvm.lround.i32.f64", fir.runtime}
+! ALL-DAG: func.func private @llvm.lround.i64.f64(f64) -> i64 attributes {fir.bindc_name = "llvm.lround.i64.f64", fir.runtime}
 
 //--- exponentiation.f90
 ! RUN: bbc -emit-fir %t/exponentiation.f90 -o - --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST %t/exponentiation.f90
@@ -544,12 +544,12 @@ end function
 ! RELAXED: {{%[A-Za-z0-9._]+}} = math.fpowi {{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}} {{.*}}: f64, i64
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @_FortranAFPow8k({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) {{.*}}: (f64, i64) -> f64
 
-! PRECISE-DAG: func.func private @_FortranAFPow4i(f32, i32) -> f32 attributes {fir.bindc_name = "_FortranAFPow4i"}
-! PRECISE-DAG: func.func private @powf(f32, f32) -> f32 attributes {fir.bindc_name = "powf"}
-! PRECISE-DAG: func.func private @_FortranAFPow4k(f32, i64) -> f32 attributes {fir.bindc_name = "_FortranAFPow4k"}
-! PRECISE-DAG: func.func private @_FortranAFPow8i(f64, i32) -> f64 attributes {fir.bindc_name = "_FortranAFPow8i"}
-! PRECISE-DAG: func.func private @pow(f64, f64) -> f64 attributes {fir.bindc_name = "pow"}
-! PRECISE-DAG: func.func private @_FortranAFPow8k(f64, i64) -> f64 attributes {fir.bindc_name = "_FortranAFPow8k"}
+! PRECISE-DAG: func.func private @_FortranAFPow4i(f32, i32) -> f32 attributes {fir.bindc_name = "_FortranAFPow4i", fir.runtime}
+! PRECISE-DAG: func.func private @powf(f32, f32) -> f32 attributes {fir.bindc_name = "powf", fir.runtime}
+! PRECISE-DAG: func.func private @_FortranAFPow4k(f32, i64) -> f32 attributes {fir.bindc_name = "_FortranAFPow4k", fir.runtime}
+! PRECISE-DAG: func.func private @_FortranAFPow8i(f64, i32) -> f64 attributes {fir.bindc_name = "_FortranAFPow8i", fir.runtime}
+! PRECISE-DAG: func.func private @pow(f64, f64) -> f64 attributes {fir.bindc_name = "pow", fir.runtime}
+! PRECISE-DAG: func.func private @_FortranAFPow8k(f64, i64) -> f64 attributes {fir.bindc_name = "_FortranAFPow8k", fir.runtime}
 
 //--- sign.f90
 ! RUN: bbc -emit-fir %t/sign.f90 -o - --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST %t/sign.f90
@@ -599,10 +599,10 @@ end function
 ! RELAXED: {{%[A-Za-z0-9._]+}} = math.copysign {{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}} {{.*}}: f128
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @llvm.copysign.f128({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) {{.*}}: (f128, f128) -> f128
 
-! PRECISE-DAG: func.func private @copysignf(f32, f32) -> f32 attributes {fir.bindc_name = "copysignf"}
-! PRECISE-DAG: func.func private @copysign(f64, f64) -> f64 attributes {fir.bindc_name = "copysign"}
-! PRECISE-DAG: func.func private @copysignl(f80, f80) -> f80 attributes {fir.bindc_name = "copysignl"}
-! PRECISE-DAG: func.func private @llvm.copysign.f128(f128, f128) -> f128 attributes {fir.bindc_name = "llvm.copysign.f128"}
+! PRECISE-DAG: func.func private @copysignf(f32, f32) -> f32 attributes {fir.bindc_name = "copysignf", fir.runtime}
+! PRECISE-DAG: func.func private @copysign(f64, f64) -> f64 attributes {fir.bindc_name = "copysign", fir.runtime}
+! PRECISE-DAG: func.func private @copysignl(f80, f80) -> f80 attributes {fir.bindc_name = "copysignl", fir.runtime}
+! PRECISE-DAG: func.func private @llvm.copysign.f128(f128, f128) -> f128 attributes {fir.bindc_name = "llvm.copysign.f128", fir.runtime}
 
 //--- sin.f90
 ! RUN: bbc -emit-fir %t/sin.f90 -o - --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST %t/sin.f90
@@ -632,8 +632,8 @@ end function
 ! RELAXED: {{%[A-Za-z0-9._]+}} = math.sin {{%[A-Za-z0-9._]+}} {{.*}}: f64
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @sin({{%[A-Za-z0-9._]+}}) {{.*}}: (f64) -> f64
 
-! PRECISE-DAG: func.func private @sinf(f32) -> f32 attributes {fir.bindc_name = "sinf"}
-! PRECISE-DAG: func.func private @sin(f64) -> f64 attributes {fir.bindc_name = "sin"}
+! PRECISE-DAG: func.func private @sinf(f32) -> f32 attributes {fir.bindc_name = "sinf", fir.runtime}
+! PRECISE-DAG: func.func private @sin(f64) -> f64 attributes {fir.bindc_name = "sin", fir.runtime}
 
 //--- sinh.f90
 ! RUN: bbc -emit-fir %t/sinh.f90 -o - --math-runtime=fast | FileCheck --check-prefixes=ALL %t/sinh.f90
@@ -659,8 +659,8 @@ end function
 ! ALL-LABEL: @_QPtest_real8
 ! ALL: {{%[A-Za-z0-9._]+}} = fir.call @sinh({{%[A-Za-z0-9._]+}}) {{.*}}: (f64) -> f64
 
-! ALL-DAG: func.func private @sinhf(f32) -> f32 attributes {fir.bindc_name = "sinhf"}
-! ALL-DAG: func.func private @sinh(f64) -> f64 attributes {fir.bindc_name = "sinh"}
+! ALL-DAG: func.func private @sinhf(f32) -> f32 attributes {fir.bindc_name = "sinhf", fir.runtime}
+! ALL-DAG: func.func private @sinh(f64) -> f64 attributes {fir.bindc_name = "sinh", fir.runtime}
 
 //--- tanh.f90
 ! RUN: bbc -emit-fir %t/tanh.f90 -o - --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST %t/tanh.f90
@@ -690,8 +690,8 @@ end function
 ! RELAXED: {{%[A-Za-z0-9._]+}} = math.tanh {{%[A-Za-z0-9._]+}} {{.*}}: f64
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @tanh({{%[A-Za-z0-9._]+}}) {{.*}}: (f64) -> f64
 
-! PRECISE-DAG: func.func private @tanhf(f32) -> f32 attributes {fir.bindc_name = "tanhf"}
-! PRECISE-DAG: func.func private @tanh(f64) -> f64 attributes {fir.bindc_name = "tanh"}
+! PRECISE-DAG: func.func private @tanhf(f32) -> f32 attributes {fir.bindc_name = "tanhf", fir.runtime}
+! PRECISE-DAG: func.func private @tanh(f64) -> f64 attributes {fir.bindc_name = "tanh", fir.runtime}
 
 //--- tan.f90
 ! RUN: bbc -emit-fir %t/tan.f90 -o - --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST %t/tan.f90
@@ -721,5 +721,5 @@ end function
 ! RELAXED: {{%[A-Za-z0-9._]+}} = math.tan {{%[A-Za-z0-9._]+}} {{.*}}: f64
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @tan({{%[A-Za-z0-9._]+}}) {{.*}}: (f64) -> f64
 
-! PRECISE-DAG: func.func private @tanf(f32) -> f32 attributes {fir.bindc_name = "tanf"}
-! PRECISE-DAG: func.func private @tan(f64) -> f64 attributes {fir.bindc_name = "tan"}
+! PRECISE-DAG: func.func private @tanf(f32) -> f32 attributes {fir.bindc_name = "tanf", fir.runtime}
+! PRECISE-DAG: func.func private @tan(f64) -> f64 attributes {fir.bindc_name = "tan", fir.runtime}
