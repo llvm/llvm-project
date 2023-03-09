@@ -802,6 +802,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::VECTOR_REVERSE, ISD::VECTOR_SPLICE}, VT, Custom);
 
       setOperationAction(FloatingPointVPOps, VT, Custom);
+
+      setOperationAction(ISD::STRICT_FP_EXTEND, VT, Custom);
     };
 
     // Sets common extload/truncstore actions on RVV floating-point vector
@@ -1014,6 +1016,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(FloatingPointVecReduceOps, VT, Custom);
 
         setOperationAction(FloatingPointVPOps, VT, Custom);
+
+        setOperationAction(ISD::STRICT_FP_EXTEND, VT, Custom);
       }
 
       // Custom-legalize bitcasts from fixed-length vectors to scalar types.
@@ -4096,6 +4100,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     if (!Op.getValueType().isVector())
       return Op;
     return lowerVectorFPExtendOrRoundLike(Op, DAG);
+  case ISD::STRICT_FP_EXTEND:
+    return lowerStrictFPExtend(Op, DAG);
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
   case ISD::SINT_TO_FP:
@@ -5311,6 +5317,46 @@ SDValue RISCVTargetLowering::lowerVectorTruncLike(SDValue Op,
     Result = convertFromScalableVector(VT, Result, DAG, Subtarget);
 
   return Result;
+}
+
+SDValue RISCVTargetLowering::lowerStrictFPExtend(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Chain = Op.getOperand(0);
+  SDValue Src = Op.getOperand(1);
+  MVT VT = Op.getSimpleValueType();
+  MVT SrcVT = Src.getSimpleValueType();
+
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector()) {
+    MVT SrcContainerVT = getContainerForFixedLengthVector(SrcVT);
+    ContainerVT =
+        SrcContainerVT.changeVectorElementType(VT.getVectorElementType());
+    Src = convertToScalableVector(SrcContainerVT, Src, DAG, Subtarget);
+  }
+
+  auto [Mask, VL] = getDefaultVLOps(SrcVT, ContainerVT, DL, DAG, Subtarget);
+
+  // RVV can only widen fp to types double the size as the source, so it needs
+  // two vfwcvt to achieve extending fp16 to fp64.
+  if (VT.getVectorElementType() == MVT::f64 &&
+      SrcVT.getVectorElementType() == MVT::f16) {
+    MVT InterVT = ContainerVT.changeVectorElementType(MVT::f32);
+    Src = DAG.getNode(RISCVISD::STRICT_FP_EXTEND_VL, DL,
+                      DAG.getVTList(InterVT, MVT::Other), Chain, Src, Mask, VL);
+    Chain = Src.getValue(1);
+  }
+
+  SDValue Res =
+      DAG.getNode(RISCVISD::STRICT_FP_EXTEND_VL, DL,
+                  DAG.getVTList(ContainerVT, MVT::Other), Chain, Src, Mask, VL);
+  if (VT.isFixedLengthVector()) {
+    // StrictFP operations have two result values. Their lowered result should
+    // have same result count.
+    SDValue SubVec = convertFromScalableVector(VT, Res, DAG, Subtarget);
+    Res = DAG.getMergeValues({SubVec, Res.getValue(1)}, DL);
+  }
+  return Res;
 }
 
 SDValue
@@ -13962,6 +14008,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VFCVT_RM_F_XU_VL)
   NODE_NAME_CASE(VFCVT_RM_F_X_VL)
   NODE_NAME_CASE(FP_EXTEND_VL)
+  NODE_NAME_CASE(STRICT_FP_EXTEND_VL)
   NODE_NAME_CASE(FP_ROUND_VL)
   NODE_NAME_CASE(VWMUL_VL)
   NODE_NAME_CASE(VWMULU_VL)
