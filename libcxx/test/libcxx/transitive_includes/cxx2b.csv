@@ -110,11 +110,8 @@ complex version
 concepts cstddef
 concepts version
 condition_variable cstddef
-condition_variable cstdint
 condition_variable cstdlib
-condition_variable cstring
 condition_variable ctime
-condition_variable initializer_list
 condition_variable iosfwd
 condition_variable limits
 condition_variable new
@@ -403,9 +400,7 @@ memory_resource version
 mutex cstddef
 mutex cstdint
 mutex cstdlib
-mutex cstring
 mutex ctime
-mutex initializer_list
 mutex iosfwd
 mutex limits
 mutex new
@@ -519,6 +514,7 @@ set optional
 set stdexcept
 set tuple
 set version
+shared_mutex cerrno
 shared_mutex cstddef
 shared_mutex ctime
 shared_mutex iosfwd
@@ -591,12 +587,9 @@ system_error string
 system_error version
 thread compare
 thread cstddef
-thread cstdint
-thread cstring
 thread ctime
 thread iosfwd
 thread limits
-thread new
 thread ratio
 thread system_error
 thread tuple

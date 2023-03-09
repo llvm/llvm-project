@@ -31,6 +31,7 @@
 
 #include <cassert>
 #include <concepts>
+#include <ratio>
 #include <sstream>
 
 #include "make_string.h"
