@@ -1421,12 +1421,20 @@ static void doInstrumentAddress(AddressSanitizer *Pass, Instruction *I,
                                 uint32_t Exp) {
   // Instrument a 1-, 2-, 4-, 8-, or 16- byte access with one check
   // if the data is properly aligned.
-  if (!TypeStoreSize.isScalable() &&
-      (TypeStoreSize == 8 || TypeStoreSize == 16 || TypeStoreSize == 32 ||
-       TypeStoreSize == 64 || TypeStoreSize == 128) &&
-      (!Alignment || *Alignment >= Granularity || *Alignment >= TypeStoreSize / 8))
-    return Pass->instrumentAddress(I, InsertBefore, Addr, TypeStoreSize, IsWrite,
-                                   nullptr, UseCalls, Exp);
+  if (!TypeStoreSize.isScalable()) {
+    const auto FixedSize = TypeStoreSize.getFixedValue();
+    switch (FixedSize) {
+    case 8:
+    case 16:
+    case 32:
+    case 64:
+    case 128:
+      if (!Alignment || *Alignment >= Granularity ||
+          *Alignment >= FixedSize / 8)
+        return Pass->instrumentAddress(I, InsertBefore, Addr, FixedSize,
+                                       IsWrite, nullptr, UseCalls, Exp);
+    }
+  }
   Pass->instrumentUnusualSizeOrAlignment(I, InsertBefore, Addr, TypeStoreSize,
                                          IsWrite, nullptr, UseCalls, Exp);
 }
