@@ -147,6 +147,8 @@ Changes to the C API
   pointer, has been removed.
 * Functions for adding legacy passes like ``LLVMAddInstructionCombiningPass``
   have been removed.
+* Removed ``LLVMPassManagerBuilderRef`` and functions interacting with it.
+  These belonged to the no longer supported legacy pass manager.
 
 Changes to the FastISel infrastructure
 --------------------------------------

@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
-#include "llvm-c/Transforms/PassManagerBuilder.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -361,69 +360,4 @@ void PassManagerBuilder::populateModulePassManager(
   // resulted in single-entry-single-exit or empty blocks. Clean up the CFG.
   MPM.add(createCFGSimplificationPass(
       SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
-}
-
-LLVMPassManagerBuilderRef LLVMPassManagerBuilderCreate() {
-  PassManagerBuilder *PMB = new PassManagerBuilder();
-  return wrap(PMB);
-}
-
-void LLVMPassManagerBuilderDispose(LLVMPassManagerBuilderRef PMB) {
-  PassManagerBuilder *Builder = unwrap(PMB);
-  delete Builder;
-}
-
-void
-LLVMPassManagerBuilderSetOptLevel(LLVMPassManagerBuilderRef PMB,
-                                  unsigned OptLevel) {
-  PassManagerBuilder *Builder = unwrap(PMB);
-  Builder->OptLevel = OptLevel;
-}
-
-void
-LLVMPassManagerBuilderSetSizeLevel(LLVMPassManagerBuilderRef PMB,
-                                   unsigned SizeLevel) {
-  PassManagerBuilder *Builder = unwrap(PMB);
-  Builder->SizeLevel = SizeLevel;
-}
-
-void
-LLVMPassManagerBuilderSetDisableUnitAtATime(LLVMPassManagerBuilderRef PMB,
-                                            LLVMBool Value) {
-  // NOTE: The DisableUnitAtATime switch has been removed.
-}
-
-void
-LLVMPassManagerBuilderSetDisableUnrollLoops(LLVMPassManagerBuilderRef PMB,
-                                            LLVMBool Value) {
-  PassManagerBuilder *Builder = unwrap(PMB);
-  Builder->DisableUnrollLoops = Value;
-}
-
-void
-LLVMPassManagerBuilderSetDisableSimplifyLibCalls(LLVMPassManagerBuilderRef PMB,
-                                                 LLVMBool Value) {
-  // NOTE: The simplify-libcalls pass has been removed.
-}
-
-void
-LLVMPassManagerBuilderUseInlinerWithThreshold(LLVMPassManagerBuilderRef PMB,
-                                              unsigned Threshold) {
-  // TODO: remove this
-}
-
-void
-LLVMPassManagerBuilderPopulateFunctionPassManager(LLVMPassManagerBuilderRef PMB,
-                                                  LLVMPassManagerRef PM) {
-  PassManagerBuilder *Builder = unwrap(PMB);
-  legacy::FunctionPassManager *FPM = unwrap<legacy::FunctionPassManager>(PM);
-  Builder->populateFunctionPassManager(*FPM);
-}
-
-void
-LLVMPassManagerBuilderPopulateModulePassManager(LLVMPassManagerBuilderRef PMB,
-                                                LLVMPassManagerRef PM) {
-  PassManagerBuilder *Builder = unwrap(PMB);
-  legacy::PassManagerBase *MPM = unwrap(PM);
-  Builder->populateModulePassManager(*MPM);
 }
