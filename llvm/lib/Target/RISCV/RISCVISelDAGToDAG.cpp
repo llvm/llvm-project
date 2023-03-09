@@ -843,9 +843,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   case ISD::ConstantFP: {
     const APFloat &APF = cast<ConstantFPSDNode>(Node)->getValueAPF();
     if (Subtarget->hasStdExtZfa()) {
-      if ((VT == MVT::f64 && RISCVLoadFPImm::getLoadFP64Imm(APF) != -1) || 
+      if ((VT == MVT::f64 && RISCVLoadFPImm::getLoadFP64Imm(APF) != -1) ||
           (VT == MVT::f16 && RISCVLoadFPImm::getLoadFP16Imm(APF) != -1) ||
-          (VT == MVT::f32 && RISCVLoadFPImm::getLoadFP32Imm(APF) != -1 && 
+          (VT == MVT::f32 && RISCVLoadFPImm::getLoadFP32Imm(APF) != -1 &&
            !APF.isPosZero()))
         break;
     }
