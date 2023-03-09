@@ -278,6 +278,8 @@ void test_float_builtins(__fp16 *H, float F, double D, long double LD) {
 
   res = __builtin_flt_rounds();
   // CHECK: call i32 @llvm.get.rounding(
+  __builtin_set_flt_rounds(1);
+  // CHECK: call void @llvm.set.rounding(i32 1)
 }
 
 // CHECK-LABEL: define{{.*}} void @test_float_builtin_ops
