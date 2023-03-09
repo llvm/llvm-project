@@ -77,7 +77,6 @@ STATISTIC(VersionedScops, "Number of SCoPs that required versioning.");
 
 STATISTIC(SequentialLoops, "Number of generated sequential for-loops");
 STATISTIC(ParallelLoops, "Number of generated parallel for-loops");
-STATISTIC(VectorLoops, "Number of generated vector for-loops");
 STATISTIC(IfConditions, "Number of generated if-conditions");
 
 /// OpenMP backend options
