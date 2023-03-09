@@ -76,8 +76,8 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
               Plan->getOrAddVPValue(Store->getValueOperand()), nullptr /*Mask*/,
               false /*Consecutive*/, false /*Reverse*/);
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
-          NewRecipe = new VPWidenGEPRecipe(
-              GEP, Plan->mapToVPValues(GEP->operands()), OrigLoop);
+          NewRecipe =
+              new VPWidenGEPRecipe(GEP, Plan->mapToVPValues(GEP->operands()));
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
           NewRecipe =
               new VPWidenCallRecipe(*CI, Plan->mapToVPValues(CI->args()),
