@@ -1445,10 +1445,11 @@ static Value *simplifyShlInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
           simplifyShift(Instruction::Shl, Op0, Op1, IsNSW, Q, MaxRecurse))
     return V;
 
+  Type *Ty = Op0->getType();
   // undef << X -> 0
   // undef << X -> undef if (if it's NSW/NUW)
   if (Q.isUndefValue(Op0))
-    return IsNSW || IsNUW ? Op0 : Constant::getNullValue(Op0->getType());
+    return IsNSW || IsNUW ? Op0 : Constant::getNullValue(Ty);
 
   // (X >> A) << A -> X
   Value *X;
@@ -1461,6 +1462,13 @@ static Value *simplifyShlInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
     return Op0;
   // NOTE: could use computeKnownBits() / LazyValueInfo,
   // but the cost-benefit analysis suggests it isn't worth it.
+
+  // "nuw" guarantees that only zeros are shifted out, and "nsw" guarantees
+  // that the sign-bit does not change, so the only input that does not
+  // produce poison is 0, and "0 << (bitwidth-1) --> 0".
+  if (IsNSW && IsNUW &&
+      match(Op1, m_SpecificInt(Ty->getScalarSizeInBits() - 1)))
+    return Constant::getNullValue(Ty);
 
   return nullptr;
 }

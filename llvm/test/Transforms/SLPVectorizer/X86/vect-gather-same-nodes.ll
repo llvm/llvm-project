@@ -13,16 +13,16 @@ define void @test(ptr %a, ptr %b) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr null, align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP2]], float [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP5]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[TMP7:%.*]] = fmul <4 x float> [[SHUFFLE]], [[TMP6]]
-; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <4 x float> [[TMP7]], <4 x float> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
-; CHECK-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <4 x float> [[SHUFFLE]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul <4 x float> [[SHUFFLE2]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd <4 x float> [[SHUFFLE1]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd <4 x float> [[TMP9]], zeroinitializer
-; CHECK-NEXT:    store <4 x float> [[TMP10]], ptr [[RESULT]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP2]], float [[TMP0]], i32 3
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> [[TMP6]], float [[TMP3]], i32 2
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul <4 x float> [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul <4 x float> [[TMP5]], zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = fadd <4 x float> [[TMP9]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = fadd <4 x float> [[TMP12]], zeroinitializer
+; CHECK-NEXT:    store <4 x float> [[TMP13]], ptr [[RESULT]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY]]
 ;
 entry:

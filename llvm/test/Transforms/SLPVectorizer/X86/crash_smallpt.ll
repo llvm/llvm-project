@@ -33,13 +33,9 @@ define void @main() #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x double> <double 0.000000e+00, double undef>, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[TMP1]], <double 1.400000e+02, double 1.400000e+02>
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], <double 5.000000e+01, double 5.200000e+01>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr undef, align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> <double poison, double undef>, double [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> <double undef, double poison>, double [[TMP5]], i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    store <2 x double> [[TMP8]], ptr [[AGG_TMP101211_SROA_0_0_IDX]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[AGG_TMP101211_SROA_0_0_IDX]], align 8
 ; CHECK-NEXT:    unreachable
 ; CHECK:       cond.true63.us:
 ; CHECK-NEXT:    unreachable

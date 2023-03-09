@@ -54,74 +54,11 @@ def IntTypesAPI : PublicAPI<"inttypes.h"> {
   let Types = ["imaxdiv_t"];
 }
 
-def MathErrHandlingMacro : MacroDef<"math_errhandling"> {
-  let Defn = [{
-    #ifndef math_errhandling
-    #ifdef __FAST_MATH__
-    #define math_errhandling 0
-    #elif defined __NO_MATH_ERRNO__
-    #define math_errhandling (MATH_ERREXCEPT)
-    #else
-    #define math_errhandling (MATH_ERRNO | MATH_ERREXCEPT)
-    #endif
-    #endif // math_errhandling not defined
-  }];
-}
-
-def IsFiniteMacro : MacroDef<"isfinite"> {
-  let Defn = [{
-    #define isfinite(x) __builtin_isfinite(x)
-  }];
-}
-
-def IsInfMacro : MacroDef<"isinf"> {
-  let Defn = [{
-    #define isinf(x) __builtin_isinf(x)
-  }];
-}
-
-def IsNanMacro : MacroDef<"isnan"> {
-  let Defn = [{
-    #define isnan(x) __builtin_isnan(x)
-  }];
-}
-
 def MathAPI : PublicAPI<"math.h"> {
-  let Macros = [
-    SimpleMacroDef<"MATH_ERRNO", "1">,
-    SimpleMacroDef<"MATH_ERREXCEPT", "2">,
-    MathErrHandlingMacro,
-
-    SimpleMacroDef<"HUGE_VAL", "__builtin_huge_val()">,
-    SimpleMacroDef<"INFINITY", "__builtin_inff()">,
-    SimpleMacroDef<"NAN", "__builtin_nanf(\"\")">,
-
-    SimpleMacroDef<"FP_ILOGB0", "(-__INT_MAX__ - 1)">, // INT_MIN
-    SimpleMacroDef<"FP_ILOGBNAN", "__INT_MAX__">,
-
-    IsFiniteMacro,
-    IsInfMacro,
-    IsNanMacro,
-  ];
   let Types = ["double_t", "float_t"];
 }
 
 def FenvAPI: PublicAPI<"fenv.h"> {
-  let Macros = [
-    SimpleMacroDef<"FE_DIVBYZERO", "1">,
-    SimpleMacroDef<"FE_INEXACT", "2">,
-    SimpleMacroDef<"FE_INVALID", "4">,
-    SimpleMacroDef<"FE_OVERFLOW", "8">,
-    SimpleMacroDef<"FE_UNDERFLOW", "16">,
-    SimpleMacroDef<"FE_ALL_EXCEPT", "(FE_DIVBYZERO|FE_INEXACT|FE_INVALID|FE_OVERFLOW|FE_UNDERFLOW)">,
-
-    SimpleMacroDef<"FE_DOWNWARD", "1">,
-    SimpleMacroDef<"FE_TONEAREST", "2">,
-    SimpleMacroDef<"FE_TOWARDZERO", "4">,
-    SimpleMacroDef<"FE_UPWARD", "8">,
-
-    SimpleMacroDef<"FE_DFL_ENV", "((fenv_t *)-1)">,
-  ];
   let Types = ["fenv_t", "fexcept_t"];
 }
 

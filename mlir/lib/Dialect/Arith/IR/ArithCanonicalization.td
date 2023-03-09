@@ -49,6 +49,27 @@ def AddISubConstantLHS :
           (ConstantLikeMatcher APIntAttr:$c1)),
         (Arith_SubIOp (Arith_ConstantOp (AddIntAttrs $res, $c0, $c1)), $x)>;
 
+def IsScalarOrSplatNegativeOne :
+    Constraint<And<[
+      CPred<"succeeded(getIntOrSplatIntValue($0))">,
+      CPred<"getIntOrSplatIntValue($0)->isAllOnes()">]>>;
+
+// addi(x, muli(y, -1)) -> subi(x, y)
+def AddIMulNegativeOneRhs :
+    Pat<(Arith_AddIOp
+           $x,
+           (Arith_MulIOp $y, (ConstantLikeMatcher AnyAttr:$c0))),
+        (Arith_SubIOp $x, $y),
+        [(IsScalarOrSplatNegativeOne $c0)]>;
+
+// addi(muli(x, -1), y) -> subi(y, x)
+def AddIMulNegativeOneLhs :
+    Pat<(Arith_AddIOp
+           (Arith_MulIOp $x, (ConstantLikeMatcher AnyAttr:$c0)),
+           $y),
+        (Arith_SubIOp $y, $x),
+        [(IsScalarOrSplatNegativeOne $c0)]>;
+
 //===----------------------------------------------------------------------===//
 // AddUIExtendedOp
 //===----------------------------------------------------------------------===//

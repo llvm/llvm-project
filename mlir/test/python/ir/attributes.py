@@ -28,16 +28,17 @@ def testParsePrint():
 
 
 # CHECK-LABEL: TEST: testParseError
-# TODO: Hook the diagnostic manager to capture a more meaningful error
-# message.
 @run
 def testParseError():
   with Context():
     try:
       t = Attribute.parse("BAD_ATTR_DOES_NOT_EXIST")
-    except ValueError as e:
-      # CHECK: Unable to parse attribute: 'BAD_ATTR_DOES_NOT_EXIST'
-      print("testParseError:", e)
+    except MLIRError as e:
+      # CHECK: testParseError: <
+      # CHECK:   Unable to parse attribute:
+      # CHECK:   error: "BAD_ATTR_DOES_NOT_EXIST":1:1: expected attribute value
+      # CHECK: >
+      print(f"testParseError: <{e}>")
     else:
       print("Exception not produced")
 
@@ -180,8 +181,9 @@ def testFloatAttr():
     try:
       fattr_invalid = FloatAttr.get(
           IntegerType.get_signless(32), 42)
-    except ValueError as e:
-      # CHECK: invalid 'Type(i32)' and expected floating point type.
+    except MLIRError as e:
+      # CHECK: Invalid attribute:
+      # CHECK: error: unknown: expected floating point type
       print(e)
     else:
       print("Exception not produced")

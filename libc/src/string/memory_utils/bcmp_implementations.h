@@ -167,12 +167,8 @@ LIBC_INLINE BcmpReturnType inline_bcmp(CPtr p1, CPtr p2, size_t count) {
   return inline_bcmp_x86(p1, p2, count);
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
   return inline_bcmp_aarch64(p1, p2, count);
-#elif defined(LIBC_TARGET_ARCH_IS_ARM)
-  return inline_bcmp_embedded_tiny(p1, p2, count);
-#elif defined(LIBC_TARGET_ARCH_IS_GPU)
-  return inline_bcmp_embedded_tiny(p1, p2, count);
 #else
-#error "Unsupported platform"
+  return inline_bcmp_embedded_tiny(p1, p2, count);
 #endif
 }
 

@@ -34,7 +34,7 @@
  * compatible, thus CINDEX_VERSION_MAJOR is expected to remain stable.
  */
 #define CINDEX_VERSION_MAJOR 0
-#define CINDEX_VERSION_MINOR 63
+#define CINDEX_VERSION_MINOR 64
 
 #define CINDEX_VERSION_ENCODE(major, minor) (((major)*10000) + ((minor)*1))
 
@@ -277,6 +277,22 @@ CINDEX_LINKAGE void clang_disposeIndex(CXIndex index);
 
 typedef enum {
   /**
+   * Use the default value of an option that may depend on the process
+   * environment.
+   */
+  CXChoice_Default = 0,
+  /**
+   * Enable the option.
+   */
+  CXChoice_Enabled = 1,
+  /**
+   * Disable the option.
+   */
+  CXChoice_Disabled = 2
+} CXChoice;
+
+typedef enum {
+  /**
    * Used to indicate that no special CXIndex options are needed.
    */
   CXGlobalOpt_None = 0x0,
@@ -310,7 +326,114 @@ typedef enum {
 } CXGlobalOptFlags;
 
 /**
+ * Index initialization options.
+ *
+ * 0 is the default value of each member of this struct except for Size.
+ * Initialize the struct in one of the following two ways to avoid adapting code
+ * each time a new member is added to it:
+ * \code
+ * CXIndexOptions Opts;
+ * memset(&Opts, 0, sizeof(Opts));
+ * Opts.Size = sizeof(CXIndexOptions);
+ * \endcode
+ * or explicitly initialize the first data member and zero-initialize the rest:
+ * \code
+ * CXIndexOptions Opts = { sizeof(CXIndexOptions) };
+ * \endcode
+ */
+typedef struct CXIndexOptions {
+  /**
+   * The size of struct CXIndexOptions used for option versioning.
+   *
+   * Always initialize this member to sizeof(CXIndexOptions), or assign
+   * sizeof(CXIndexOptions) to it right after creating a CXIndexOptions object.
+   */
+  unsigned Size;
+  /**
+   * A CXChoice enumerator that specifies the indexing priority policy.
+   * \sa CXGlobalOpt_ThreadBackgroundPriorityForIndexing
+   */
+  unsigned char ThreadBackgroundPriorityForIndexing;
+  /**
+   * A CXChoice enumerator that specifies the editing priority policy.
+   * \sa CXGlobalOpt_ThreadBackgroundPriorityForEditing
+   */
+  unsigned char ThreadBackgroundPriorityForEditing;
+  /**
+   * \see clang_createIndex()
+   */
+  int ExcludeDeclarationsFromPCH : 1;
+  /**
+   * \see clang_createIndex()
+   */
+  int DisplayDiagnostics : 1;
+  /**
+   * The path to a directory, in which to store temporary PCH files. If null or
+   * empty, the default system temporary directory is used. These PCH files are
+   * deleted on clean exit but stay on disk if the program crashes or is killed.
+   *
+   * Libclang does not create the directory at the specified path in the file
+   * system. Therefore it must exist, or storing PCH files will fail.
+   */
+  const char *PreambleStoragePath;
+  /**
+   * Specifies a path which will contain log files for certain libclang
+   * invocations. A null value implies that libclang invocations are not logged.
+   */
+  const char *InvocationEmissionPath;
+} CXIndexOptions;
+
+/**
+ * Provides a shared context for creating translation units.
+ *
+ * Call this function instead of clang_createIndex() if you need to configure
+ * the additional options in CXIndexOptions.
+ *
+ * \returns The created index or null in case of error, such as an unsupported
+ * value of options->Size.
+ *
+ * For example:
+ * \code
+ * CXIndex createIndex(const char *ApplicationTemporaryPath) {
+ *   const int ExcludeDeclarationsFromPCH = 1;
+ *   const int DisplayDiagnostics = 1;
+ *   CXIndex Idx;
+ * #if CINDEX_VERSION_MINOR >= 64
+ *   CXIndexOptions Opts;
+ *   memset(&Opts, 0, sizeof(Opts));
+ *   Opts.Size = sizeof(CXIndexOptions);
+ *   Opts.ThreadBackgroundPriorityForIndexing = 1;
+ *   Opts.ExcludeDeclarationsFromPCH = ExcludeDeclarationsFromPCH;
+ *   Opts.DisplayDiagnostics = DisplayDiagnostics;
+ *   Opts.PreambleStoragePath = ApplicationTemporaryPath;
+ *   Idx = clang_createIndexWithOptions(&Opts);
+ *   if (Idx)
+ *     return Idx;
+ *   fprintf(stderr,
+ *           "clang_createIndexWithOptions() failed. "
+ *           "CINDEX_VERSION_MINOR = %d, sizeof(CXIndexOptions) = %u\n",
+ *           CINDEX_VERSION_MINOR, Opts.Size);
+ * #else
+ *   (void)ApplicationTemporaryPath;
+ * #endif
+ *   Idx = clang_createIndex(ExcludeDeclarationsFromPCH, DisplayDiagnostics);
+ *   clang_CXIndex_setGlobalOptions(
+ *       Idx, clang_CXIndex_getGlobalOptions(Idx) |
+ *                CXGlobalOpt_ThreadBackgroundPriorityForIndexing);
+ *   return Idx;
+ * }
+ * \endcode
+ *
+ * \sa clang_createIndex()
+ */
+CINDEX_LINKAGE CXIndex
+clang_createIndexWithOptions(const CXIndexOptions *options);
+
+/**
  * Sets general options associated with a CXIndex.
+ *
+ * This function is DEPRECATED. Set CXIndexOptions::GlobalOptions and call
+ * clang_createIndexWithOptions() instead.
  *
  * For example:
  * \code
@@ -327,6 +450,9 @@ CINDEX_LINKAGE void clang_CXIndex_setGlobalOptions(CXIndex, unsigned options);
 /**
  * Gets the general options associated with a CXIndex.
  *
+ * This function allows to obtain the final option values used by libclang after
+ * specifying the option policies via CXChoice enumerators.
+ *
  * \returns A bitmask of options, a bitwise OR of CXGlobalOpt_XXX flags that
  * are associated with the given CXIndex object.
  */
@@ -334,6 +460,9 @@ CINDEX_LINKAGE unsigned clang_CXIndex_getGlobalOptions(CXIndex);
 
 /**
  * Sets the invocation emission path option in a CXIndex.
+ *
+ * This function is DEPRECATED. Set CXIndexOptions::InvocationEmissionPath and
+ * call clang_createIndexWithOptions() instead.
  *
  * The invocation emission path specifies a path which will contain log
  * files for certain libclang invocations. A null value (default) implies that

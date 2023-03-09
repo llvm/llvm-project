@@ -150,7 +150,7 @@
 
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32id -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32ID %s
-// RV32ID: error: invalid arch name 'rv32id'
+// RV32ID: "-target-feature" "+f" "-target-feature" "+d"
 
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32l -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32L %s
@@ -178,7 +178,7 @@
 
 // RUN: %clang --target=riscv64-unknown-elf -march=rv64id -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV64ID %s
-// RV64ID: error: invalid arch name 'rv64id'
+// RV64ID: "-target-feature" "+f" "-target-feature" "+d"
 
 // RUN: %clang --target=riscv64-unknown-elf -march=rv64l -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV64L %s
@@ -227,11 +227,6 @@
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV64-EER %s
 // RV64-EER: error: invalid arch name 'rv64e',
 // RV64-EER: standard user-level extension 'e' requires 'rv32'
-
-// RUN: %clang --target=riscv32-unknown-elf -march=rv32id -### %s \
-// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-DER %s
-// RV32-DER: error: invalid arch name 'rv32id',
-// RV32-DER: d requires f extension to also be specified
 
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32izve32f -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZVE32F-ER %s

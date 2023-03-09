@@ -88,6 +88,7 @@ private:
     std::string componentName{};
     mlir::Value componentShape;
     hlfir::DesignateOp::Subscripts subscripts;
+    std::optional<bool> complexPart;
     mlir::Value resultShape;
     llvm::SmallVector<mlir::Value> typeParams;
     llvm::SmallVector<mlir::Value, 2> substring;
@@ -98,8 +99,14 @@ private:
   // fir.box)...
   template <typename T>
   mlir::Type computeDesignatorType(mlir::Type resultValueType,
-                                   const PartInfo &partInfo,
+                                   PartInfo &partInfo,
                                    const T &designatorNode) {
+    // Get base's shape if its a sequence type with no previously computed
+    // result shape
+    if (partInfo.base && resultValueType.isa<fir::SequenceType>() &&
+        !partInfo.resultShape)
+      partInfo.resultShape =
+          hlfir::genShape(getLoc(), getBuilder(), *partInfo.base);
     // Dynamic type of polymorphic base must be kept if the designator is
     // polymorphic.
     if (isPolymorphic(designatorNode))
@@ -144,11 +151,10 @@ private:
   fir::FortranVariableOpInterface
   genDesignate(mlir::Type designatorType, PartInfo &partInfo,
                fir::FortranVariableFlagsAttr attributes) {
-    std::optional<bool> complexPart;
     auto designate = getBuilder().create<hlfir::DesignateOp>(
         getLoc(), designatorType, partInfo.base.value().getBase(),
         partInfo.componentName, partInfo.componentShape, partInfo.subscripts,
-        partInfo.substring, complexPart, partInfo.resultShape,
+        partInfo.substring, partInfo.complexPart, partInfo.resultShape,
         partInfo.typeParams, attributes);
     return mlir::cast<fir::FortranVariableOpInterface>(
         designate.getOperation());
@@ -240,7 +246,21 @@ private:
 
   fir::FortranVariableOpInterface
   gen(const Fortran::evaluate::ComplexPart &complexPart) {
-    TODO(getLoc(), "lowering complex part to HLFIR");
+    PartInfo partInfo;
+    fir::factory::Complex cmplxHelper(getBuilder(), getLoc());
+
+    bool complexBit =
+        complexPart.part() == Fortran::evaluate::ComplexPart::Part::IM;
+    partInfo.complexPart = {complexBit};
+
+    mlir::Type resultType = visit(complexPart.complex(), partInfo);
+
+    // Determine complex part type
+    mlir::Type base = hlfir::getFortranElementType(resultType);
+    mlir::Type cmplxValueType = cmplxHelper.getComplexPartType(base);
+    mlir::Type designatorType = changeElementType(resultType, cmplxValueType);
+
+    return genDesignate(designatorType, partInfo, complexPart);
   }
 
   fir::FortranVariableOpInterface

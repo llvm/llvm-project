@@ -40,7 +40,7 @@ define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB0_3:
 ; RV64I-NEXT:    mv a0, a2
-; RV64I-NEXT:    blt a1, a0, .LBB0_2
+; RV64I-NEXT:    blt a1, a2, .LBB0_2
 ; RV64I-NEXT:  .LBB0_4:
 ; RV64I-NEXT:    lui a0, 524288
 ; RV64I-NEXT:    ret

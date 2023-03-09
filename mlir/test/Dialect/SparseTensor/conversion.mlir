@@ -6,14 +6,14 @@
 
 #SparseVector64 = #sparse_tensor.encoding<{
   dimLevelType = ["compressed"],
-  pointerBitWidth = 64,
-  indexBitWidth = 64
+  posWidth = 64,
+  crdWidth = 64
 }>
 
 #SparseVector32 = #sparse_tensor.encoding<{
   dimLevelType = ["compressed"],
-  pointerBitWidth = 32,
-  indexBitWidth = 32
+  posWidth = 32,
+  crdWidth = 32
 }>
 
 #CSR = #sparse_tensor.encoding<{
@@ -174,63 +174,63 @@ func.func @sparse_nop_cast(%arg0: tensor<64xf32, #SparseVector>) -> tensor<?xf32
   return %0 : tensor<?xf32, #SparseVector>
 }
 
-// CHECK-LABEL: func @sparse_pointers(
+// CHECK-LABEL: func @sparse_positions(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
 //       CHECK: %[[C:.*]] = arith.constant 0 : index
-//       CHECK: %[[T:.*]] = call @sparsePointers0(%[[A]], %[[C]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+//       CHECK: %[[T:.*]] = call @sparsePositions0(%[[A]], %[[C]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 //       CHECK: return %[[T]] : memref<?xindex>
-func.func @sparse_pointers(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xindex> {
-  %0 = sparse_tensor.pointers %arg0 { dimension = 0 : index } : tensor<128xf64, #SparseVector> to memref<?xindex>
+func.func @sparse_positions(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xindex> {
+  %0 = sparse_tensor.positions %arg0 { level = 0 : index } : tensor<128xf64, #SparseVector> to memref<?xindex>
   return %0 : memref<?xindex>
 }
 
-// CHECK-LABEL: func @sparse_pointers64(
+// CHECK-LABEL: func @sparse_positions64(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
 //       CHECK: %[[C:.*]] = arith.constant 0 : index
-//       CHECK: %[[T:.*]] = call @sparsePointers64(%[[A]], %[[C]]) : (!llvm.ptr<i8>, index) -> memref<?xi64>
+//       CHECK: %[[T:.*]] = call @sparsePositions64(%[[A]], %[[C]]) : (!llvm.ptr<i8>, index) -> memref<?xi64>
 //       CHECK: return %[[T]] : memref<?xi64>
-func.func @sparse_pointers64(%arg0: tensor<128xf64, #SparseVector64>) -> memref<?xi64> {
-  %0 = sparse_tensor.pointers %arg0 { dimension = 0 : index } : tensor<128xf64, #SparseVector64> to memref<?xi64>
+func.func @sparse_positions64(%arg0: tensor<128xf64, #SparseVector64>) -> memref<?xi64> {
+  %0 = sparse_tensor.positions %arg0 { level = 0 : index } : tensor<128xf64, #SparseVector64> to memref<?xi64>
   return %0 : memref<?xi64>
 }
 
-// CHECK-LABEL: func @sparse_pointers32(
+// CHECK-LABEL: func @sparse_positions32(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
 //       CHECK: %[[C:.*]] = arith.constant 0 : index
-//       CHECK: %[[T:.*]] = call @sparsePointers32(%[[A]], %[[C]]) : (!llvm.ptr<i8>, index) -> memref<?xi32>
+//       CHECK: %[[T:.*]] = call @sparsePositions32(%[[A]], %[[C]]) : (!llvm.ptr<i8>, index) -> memref<?xi32>
 //       CHECK: return %[[T]] : memref<?xi32>
-func.func @sparse_pointers32(%arg0: tensor<128xf64, #SparseVector32>) -> memref<?xi32> {
-  %0 = sparse_tensor.pointers %arg0 { dimension = 0 : index } : tensor<128xf64, #SparseVector32> to memref<?xi32>
+func.func @sparse_positions32(%arg0: tensor<128xf64, #SparseVector32>) -> memref<?xi32> {
+  %0 = sparse_tensor.positions %arg0 { level = 0 : index } : tensor<128xf64, #SparseVector32> to memref<?xi32>
   return %0 : memref<?xi32>
 }
 
 // CHECK-LABEL: func @sparse_indices(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
 //       CHECK: %[[C:.*]] = arith.constant 0 : index
-//       CHECK: %[[T:.*]] = call @sparseIndices0(%[[A]], %[[C]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+//       CHECK: %[[T:.*]] = call @sparseCoordinates0(%[[A]], %[[C]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 //       CHECK: return %[[T]] : memref<?xindex>
 func.func @sparse_indices(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xindex> {
-  %0 = sparse_tensor.indices %arg0 { dimension = 0 : index } : tensor<128xf64, #SparseVector> to memref<?xindex>
+  %0 = sparse_tensor.coordinates %arg0 { level = 0 : index } : tensor<128xf64, #SparseVector> to memref<?xindex>
   return %0 : memref<?xindex>
 }
 
 // CHECK-LABEL: func @sparse_indices64(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
 //       CHECK: %[[C:.*]] = arith.constant 0 : index
-//       CHECK: %[[T:.*]] = call @sparseIndices64(%[[A]], %[[C]]) : (!llvm.ptr<i8>, index) -> memref<?xi64>
+//       CHECK: %[[T:.*]] = call @sparseCoordinates64(%[[A]], %[[C]]) : (!llvm.ptr<i8>, index) -> memref<?xi64>
 //       CHECK: return %[[T]] : memref<?xi64>
 func.func @sparse_indices64(%arg0: tensor<128xf64, #SparseVector64>) -> memref<?xi64> {
-  %0 = sparse_tensor.indices %arg0 { dimension = 0 : index } : tensor<128xf64, #SparseVector64> to memref<?xi64>
+  %0 = sparse_tensor.coordinates %arg0 { level = 0 : index } : tensor<128xf64, #SparseVector64> to memref<?xi64>
   return %0 : memref<?xi64>
 }
 
 // CHECK-LABEL: func @sparse_indices32(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
 //       CHECK: %[[C:.*]] = arith.constant 0 : index
-//       CHECK: %[[T:.*]] = call @sparseIndices32(%[[A]], %[[C]]) : (!llvm.ptr<i8>, index) -> memref<?xi32>
+//       CHECK: %[[T:.*]] = call @sparseCoordinates32(%[[A]], %[[C]]) : (!llvm.ptr<i8>, index) -> memref<?xi32>
 //       CHECK: return %[[T]] : memref<?xi32>
 func.func @sparse_indices32(%arg0: tensor<128xf64, #SparseVector32>) -> memref<?xi32> {
-  %0 = sparse_tensor.indices %arg0 { dimension = 0 : index } : tensor<128xf64, #SparseVector32> to memref<?xi32>
+  %0 = sparse_tensor.coordinates %arg0 { level = 0 : index } : tensor<128xf64, #SparseVector32> to memref<?xi32>
   return %0 : memref<?xi32>
 }
 

@@ -1630,6 +1630,12 @@ and non-0 as true.
     This operator produces 1 if the string, list, or DAG *a* is empty; 0 otherwise.
     A dag is empty if it has no arguments; the operator does not count.
 
+``!tolower(``\ *a*\ ``)``
+  This operator converts a string input *a* to lower case.
+
+``!toupper(``\ *a*\ ``)``
+  This operator converts a string input *a* to upper case.
+
 ``!eq(`` *a*\ `,` *b*\ ``)``
     This operator produces 1 if *a* is equal to *b*; 0 otherwise.
     The arguments must be ``bit``, ``bits``, ``int``, ``string``, or

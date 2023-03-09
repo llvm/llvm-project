@@ -45,6 +45,7 @@ add_gen_header(
   GEN_HDR fenv.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-macros.fenv_macros
     .llvm-libc-types.fenv_t
     .llvm-libc-types.fexcept_t
 )
@@ -64,6 +65,7 @@ add_gen_header(
   GEN_HDR math.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-macros.math_macros
     .llvm-libc-types.double_t
     .llvm-libc-types.float_t
 )

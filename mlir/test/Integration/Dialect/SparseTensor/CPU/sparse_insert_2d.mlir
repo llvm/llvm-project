@@ -57,9 +57,9 @@ module {
     %c0 = arith.constant 0 : index
     %cu = arith.constant -1 : index
     %fu = arith.constant 99.0 : f64
-    %p0 = sparse_tensor.pointers %arg0 { dimension = 0 : index } : tensor<4x3xf64, #SortedCOO> to memref<?xindex>
-    %i0 = sparse_tensor.indices  %arg0 { dimension = 0 : index } : tensor<4x3xf64, #SortedCOO> to memref<?xindex, strided<[?], offset: ?>>
-    %i1 = sparse_tensor.indices  %arg0 { dimension = 1 : index } : tensor<4x3xf64, #SortedCOO> to memref<?xindex, strided<[?], offset: ?>>
+    %p0 = sparse_tensor.positions %arg0 { level = 0 : index } : tensor<4x3xf64, #SortedCOO> to memref<?xindex>
+    %i0 = sparse_tensor.coordinates  %arg0 { level = 0 : index } : tensor<4x3xf64, #SortedCOO> to memref<?xindex, strided<[?], offset: ?>>
+    %i1 = sparse_tensor.coordinates  %arg0 { level = 1 : index } : tensor<4x3xf64, #SortedCOO> to memref<?xindex, strided<[?], offset: ?>>
     %v = sparse_tensor.values %arg0 : tensor<4x3xf64, #SortedCOO> to memref<?xf64>
     %vp0 = vector.transfer_read %p0[%c0], %cu: memref<?xindex>, vector<2xindex>
     vector.print %vp0 : vector<2xindex>
@@ -76,8 +76,8 @@ module {
     %c0 = arith.constant 0 : index
     %cu = arith.constant -1 : index
     %fu = arith.constant 99.0 : f64
-    %p1 = sparse_tensor.pointers %arg0 { dimension = 1 : index } : tensor<4x3xf64, #CSR> to memref<?xindex>
-    %i1 = sparse_tensor.indices  %arg0 { dimension = 1 : index } : tensor<4x3xf64, #CSR> to memref<?xindex>
+    %p1 = sparse_tensor.positions %arg0 { level = 1 : index } : tensor<4x3xf64, #CSR> to memref<?xindex>
+    %i1 = sparse_tensor.coordinates  %arg0 { level = 1 : index } : tensor<4x3xf64, #CSR> to memref<?xindex>
     %v = sparse_tensor.values %arg0 : tensor<4x3xf64, #CSR> to memref<?xf64>
     %vp1 = vector.transfer_read %p1[%c0], %cu: memref<?xindex>, vector<5xindex>
     vector.print %vp1 : vector<5xindex>
@@ -92,10 +92,10 @@ module {
     %c0 = arith.constant 0 : index
     %cu = arith.constant -1 : index
     %fu = arith.constant 99.0 : f64
-    %p0 = sparse_tensor.pointers %arg0 { dimension = 0 : index } : tensor<4x3xf64, #DCSR> to memref<?xindex>
-    %i0 = sparse_tensor.indices  %arg0 { dimension = 0 : index } : tensor<4x3xf64, #DCSR> to memref<?xindex>
-    %p1 = sparse_tensor.pointers %arg0 { dimension = 1 : index } : tensor<4x3xf64, #DCSR> to memref<?xindex>
-    %i1 = sparse_tensor.indices  %arg0 { dimension = 1 : index } : tensor<4x3xf64, #DCSR> to memref<?xindex>
+    %p0 = sparse_tensor.positions %arg0 { level = 0 : index } : tensor<4x3xf64, #DCSR> to memref<?xindex>
+    %i0 = sparse_tensor.coordinates  %arg0 { level = 0 : index } : tensor<4x3xf64, #DCSR> to memref<?xindex>
+    %p1 = sparse_tensor.positions %arg0 { level = 1 : index } : tensor<4x3xf64, #DCSR> to memref<?xindex>
+    %i1 = sparse_tensor.coordinates  %arg0 { level = 1 : index } : tensor<4x3xf64, #DCSR> to memref<?xindex>
     %v = sparse_tensor.values %arg0 : tensor<4x3xf64, #DCSR> to memref<?xf64>
     %vp0 = vector.transfer_read %p0[%c0], %cu: memref<?xindex>, vector<2xindex>
     vector.print %vp0 : vector<2xindex>
@@ -114,8 +114,8 @@ module {
     %c0 = arith.constant 0 : index
     %cu = arith.constant -1 : index
     %fu = arith.constant 99.0 : f64
-    %p0 = sparse_tensor.pointers %arg0 { dimension = 0 : index } : tensor<4x3xf64, #Row> to memref<?xindex>
-    %i0 = sparse_tensor.indices  %arg0 { dimension = 0 : index } : tensor<4x3xf64, #Row> to memref<?xindex>
+    %p0 = sparse_tensor.positions %arg0 { level = 0 : index } : tensor<4x3xf64, #Row> to memref<?xindex>
+    %i0 = sparse_tensor.coordinates  %arg0 { level = 0 : index } : tensor<4x3xf64, #Row> to memref<?xindex>
     %v = sparse_tensor.values %arg0 : tensor<4x3xf64, #Row> to memref<?xf64>
     %vp0 = vector.transfer_read %p0[%c0], %cu: memref<?xindex>, vector<2xindex>
     vector.print %vp0 : vector<2xindex>

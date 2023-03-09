@@ -5,7 +5,6 @@ add_entrypoint_object(
   HDRS
     ../sched_getaffinity.h
   DEPENDS
-    libc.include.errno
     libc.include.sched
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
@@ -18,7 +17,6 @@ add_entrypoint_object(
   HDRS
     ../sched_setaffinity.h
   DEPENDS
-    libc.include.errno
     libc.include.sched
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno

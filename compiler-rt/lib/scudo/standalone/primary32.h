@@ -775,7 +775,7 @@ private:
         compactPtrGroupBase(compactPtr(ClassId, Sci->CurrentRegion));
 
     ReleaseRecorder Recorder(Base);
-    PageReleaseContext Context(BlockSize, RegionSize, NumberOfRegions,
+    PageReleaseContext Context(BlockSize, NumberOfRegions,
                                /*ReleaseSize=*/RegionSize);
 
     auto DecompactPtr = [](CompactPtrT CompactPtr) {
@@ -787,10 +787,9 @@ private:
       if (PushedBytesDelta * BlockSize < PageSize)
         continue;
 
+      const uptr GroupBase = decompactGroupBase(BG.CompactPtrGroupBase);
       uptr AllocatedGroupSize =
-          decompactGroupBase(BG.CompactPtrGroupBase) == CurGroupBase
-              ? Sci->CurrentRegionAllocated
-              : GroupSize;
+          GroupBase == CurGroupBase ? Sci->CurrentRegionAllocated : GroupSize;
       if (AllocatedGroupSize == 0)
         continue;
 
@@ -810,34 +809,25 @@ private:
       BG.PushedBlocksAtLastCheckpoint = BG.PushedBlocks;
 
       const uptr MaxContainedBlocks = AllocatedGroupSize / BlockSize;
-      // The first condition to do range marking is that all the blocks in the
-      // range need to be from the same region. In SizeClassAllocator32, this is
-      // true when GroupSize and RegionSize are the same. Another tricky case,
-      // while range marking, the last block in a region needs the logic to mark
-      // the last page. However, in SizeClassAllocator32, the RegionSize
-      // recorded in PageReleaseContext may be different from
-      // `CurrentRegionAllocated` of the current region. This exception excludes
-      // the chance of doing range marking for the current region.
-      const bool CanDoRangeMark =
-          GroupSize == RegionSize &&
-          decompactGroupBase(BG.CompactPtrGroupBase) != CurGroupBase;
+      const uptr RegionIndex = (GroupBase - Base) / RegionSize;
 
-      if (CanDoRangeMark && NumBlocks == MaxContainedBlocks) {
+      if (NumBlocks == MaxContainedBlocks) {
         for (const auto &It : BG.Batches)
           for (u16 I = 0; I < It.getCount(); ++I)
             DCHECK_EQ(compactPtrGroupBase(It.get(I)), BG.CompactPtrGroupBase);
 
-        const uptr From = decompactGroupBase(BG.CompactPtrGroupBase);
-        const uptr To = From + AllocatedGroupSize;
-        Context.markRangeAsAllCounted(From, To, Base);
+        const uptr To = GroupBase + AllocatedGroupSize;
+        Context.markRangeAsAllCounted(GroupBase, To, GroupBase, RegionIndex,
+                                      AllocatedGroupSize);
       } else {
-        if (CanDoRangeMark)
-          DCHECK_LT(NumBlocks, MaxContainedBlocks);
+        DCHECK_LT(NumBlocks, MaxContainedBlocks);
 
         // Note that we don't always visit blocks in each BatchGroup so that we
         // may miss the chance of releasing certain pages that cross
         // BatchGroups.
-        Context.markFreeBlocks(BG.Batches, DecompactPtr, Base);
+        Context.markFreeBlocksInRegion(BG.Batches, DecompactPtr, GroupBase,
+                                       RegionIndex, AllocatedGroupSize,
+                                       /*MayContainLastBlockInRegion=*/true);
       }
     }
 

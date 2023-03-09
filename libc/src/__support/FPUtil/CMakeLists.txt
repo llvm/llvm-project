@@ -3,7 +3,6 @@ add_header_library(
   HDRS
     FEnvImpl.h
   DEPENDS
-    libc.include.errno
     libc.include.fenv
     libc.include.math
     libc.src.__support.macros.attributes
@@ -52,7 +51,6 @@ add_header_library(
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
     libc.include.math
-    libc.include.errno
     libc.src.errno.errno
 )
 
@@ -80,7 +78,6 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.macros.optimization
     libc.include.math
-    libc.include.errno
     libc.src.errno.errno
 )
 

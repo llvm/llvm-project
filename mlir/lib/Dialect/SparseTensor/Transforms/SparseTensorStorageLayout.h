@@ -38,38 +38,38 @@ namespace sparse_tensor {
 //   ;  if dense:
 //        <nothing>
 //   ;  if compresed:
-//        memref<? x ptr>  pointers-l  ; pointers for sparse level l
-//        memref<? x idx>  indices-l   ; indices for sparse level l
+//        memref<? x pos>  positions-l   ; positions for sparse level l
+//        memref<? x crd>  coordinates-l ; coordinates for sparse level l
 //   ;  if singleton:
-//        memref<? x idx>  indices-l   ; indices for singleton level l
+//        memref<? x crd>  coordinates-l ; coordinates for singleton level l
 //
 //   memref<? x eltType> values        ; values
 //
 //   struct sparse_tensor.storage_specifier {
-//     array<rank x int> dimSizes    ; sizes for each dimension
-//     array<n x int> memSizes;      ; sizes for each data memref
+//     array<rank x int> lvlSizes    ; sizes/cardinalities for each level
+//     array<n x int> memSizes;      ; sizes/lengths for each data memref
 //   }
 // };
 //
 // In addition, for a "trailing COO region", defined as a compressed level
-// followed by one ore more singleton levels, the default SOA storage that
+// followed by one or more singleton levels, the default SOA storage that
 // is inherent to the TACO format is optimized into an AOS storage where
-// all indices of a stored element appear consecutively.  In such cases,
-// a special operation (sparse_tensor.indices_buffer) must be used to
-// access the AOS index array. In the code below, the method `getCOOStart`
+// all coordinates of a stored element appear consecutively.  In such cases,
+// a special operation (sparse_tensor.coordinates_buffer) must be used to
+// access the AOS coordinates array. In the code below, the method `getCOOStart`
 // is used to find the start of the "trailing COO region".
 //
 // Examples.
 //
 // #CSR storage of 2-dim matrix yields
-//   memref<?xindex>                           ; pointers-1
-//   memref<?xindex>                           ; indices-1
+//   memref<?xindex>                           ; positions-1
+//   memref<?xindex>                           ; coordinates-1
 //   memref<?xf64>                             ; values
 //   struct<(array<2 x i64>, array<3 x i64>)>) ; lvl0, lvl1, 3xsizes
 //
 // #COO storage of 2-dim matrix yields
-//   memref<?xindex>,                          ; pointers-0, essentially [0,sz]
-//   memref<?xindex>                           ; AOS index storage
+//   memref<?xindex>,                          ; positions-0, essentially [0,sz]
+//   memref<?xindex>                           ; AOS coordinates storage
 //   memref<?xf64>                             ; values
 //   struct<(array<2 x i64>, array<3 x i64>)>) ; lvl0, lvl1, 3xsizes
 //
@@ -77,15 +77,15 @@ namespace sparse_tensor {
 
 enum class SparseTensorFieldKind : uint32_t {
   StorageSpec = 0,
-  PtrMemRef = 1,
-  IdxMemRef = 2,
+  PosMemRef = 1,
+  CrdMemRef = 2,
   ValMemRef = 3
 };
 
-static_assert(static_cast<uint32_t>(SparseTensorFieldKind::PtrMemRef) ==
-              static_cast<uint32_t>(StorageSpecifierKind::PtrMemSize));
-static_assert(static_cast<uint32_t>(SparseTensorFieldKind::IdxMemRef) ==
-              static_cast<uint32_t>(StorageSpecifierKind::IdxMemSize));
+static_assert(static_cast<uint32_t>(SparseTensorFieldKind::PosMemRef) ==
+              static_cast<uint32_t>(StorageSpecifierKind::PosMemSize));
+static_assert(static_cast<uint32_t>(SparseTensorFieldKind::CrdMemRef) ==
+              static_cast<uint32_t>(StorageSpecifierKind::CrdMemSize));
 static_assert(static_cast<uint32_t>(SparseTensorFieldKind::ValMemRef) ==
               static_cast<uint32_t>(StorageSpecifierKind::ValMemSize));
 
@@ -98,13 +98,13 @@ using FieldIndex = unsigned;
 // `FieldIndex` for their return type, via the same reasoning for why
 // `Dimension`/`Level` are used both for identifiers and ranks.
 
-/// For each field that will be allocated for the given sparse tensor encoding,
-/// calls the callback with the corresponding field index, field kind, dimension
-/// (for sparse tensor level memrefs) and dimlevelType.
-/// The field index always starts with zero and increments by one between two
-/// callback invocations.
-/// Ideally, all other methods should rely on this function to query a sparse
-/// tensor fields instead of relying on ad-hoc index computation.
+/// For each field that will be allocated for the given sparse tensor
+/// encoding, calls the callback with the corresponding field index,
+/// field kind, level, and level-type (the last two are only for level
+/// memrefs).  The field index always starts with zero and increments
+/// by one between each callback invocation.  Ideally, all other methods
+/// should rely on this function to query a sparse tensor fields instead
+/// of relying on ad-hoc index computation.
 void foreachFieldInSparseTensor(
     SparseTensorEncodingAttr,
     llvm::function_ref<bool(
@@ -124,8 +124,8 @@ void foreachFieldAndTypeInSparseTensor(
 // TODO: See note [NUMFIELDS].
 unsigned getNumFieldsFromEncoding(SparseTensorEncodingAttr enc);
 
-/// Gets the total number of data fields (index arrays, pointer arrays, and a
-/// value array) for the given sparse tensor encoding.
+/// Gets the total number of data fields (coordinate arrays, position
+/// arrays, and a value array) for the given sparse tensor encoding.
 // TODO: See note [NUMFIELDS].
 unsigned getNumDataFieldsFromEncoding(SparseTensorEncodingAttr enc);
 
@@ -135,7 +135,7 @@ inline StorageSpecifierKind toSpecifierKind(SparseTensorFieldKind kind) {
 }
 
 inline SparseTensorFieldKind toFieldKind(StorageSpecifierKind kind) {
-  assert(kind != StorageSpecifierKind::DimSize);
+  assert(kind != StorageSpecifierKind::LvlSize);
   return static_cast<SparseTensorFieldKind>(kind);
 }
 
@@ -177,7 +177,7 @@ public:
                          std::optional<Level> lvl) const {
     FieldIndex fieldIdx = -1u;
     unsigned stride = 1;
-    if (kind == SparseTensorFieldKind::IdxMemRef) {
+    if (kind == SparseTensorFieldKind::CrdMemRef) {
       assert(lvl.has_value());
       const Level cooStart = getCOOStart(enc);
       const Level lvlRank = enc.getLvlRank();
@@ -206,40 +206,22 @@ private:
   SparseTensorEncodingAttr enc;
 };
 
-// FIXME: Functions/methods marked with [CLARIFY_DIM_LVL] require
-// clarification on whether their "dim" argument should actually
-// be `Level` or `Dimension`.  In particular, it's unclear whether
-// `StorageSpecifierKind::DimSize` actually means to refer to dimension-sizes
-// vs level-sizes.  If it's the latter (which seems unlikely), then all the
-// noted functions should use the `Level` type alias.  If it's the former,
-// then the functions which specifically use `DimSize` should be changed
-// to use the `Dimension` type alias; however, the functions which take
-// an unknown `StorageSpecifierKind` must be adjusted to ensure that they
-// correctly interpret the "dim" argument since the interpretation depends
-// on the `StorageSpecifierKind` value.  Since wrengr couldn't figure this
-// out from context, Peiming or Bixia should review these functions and
-// update them as appropriate.
-
 class SparseTensorSpecifier {
 public:
   explicit SparseTensorSpecifier(Value specifier)
       : specifier(cast<TypedValue<StorageSpecifierType>>(specifier)) {}
 
-  // Undef value for dimension sizes, all zero value for memory sizes.
+  // Undef value for level-sizes, all zero values for memory-sizes.
   static Value getInitValue(OpBuilder &builder, Location loc,
                             SparseTensorType stt);
 
   /*implicit*/ operator Value() { return specifier; }
 
-  // FIXME: see note [CLARIFY_DIM_LVL].
   Value getSpecifierField(OpBuilder &builder, Location loc,
-                          StorageSpecifierKind kind,
-                          std::optional<unsigned> dim);
+                          StorageSpecifierKind kind, std::optional<Level> lvl);
 
-  // FIXME: see note [CLARIFY_DIM_LVL].
   void setSpecifierField(OpBuilder &builder, Location loc, Value v,
-                         StorageSpecifierKind kind,
-                         std::optional<unsigned> dim);
+                         StorageSpecifierKind kind, std::optional<Level> lvl);
 
 private:
   TypedValue<StorageSpecifierType> specifier;
@@ -280,21 +262,19 @@ public:
 
   Value getSpecifier() const { return fields.back(); }
 
-  // FIXME: see note [CLARIFY_DIM_LVL].
   Value getSpecifierField(OpBuilder &builder, Location loc,
                           StorageSpecifierKind kind,
-                          std::optional<unsigned> dim) const {
+                          std::optional<Level> lvl) const {
     SparseTensorSpecifier md(fields.back());
-    return md.getSpecifierField(builder, loc, kind, dim);
+    return md.getSpecifierField(builder, loc, kind, lvl);
   }
 
-  // FIXME: see note [CLARIFY_DIM_LVL].
-  Value getDimSize(OpBuilder &builder, Location loc, unsigned dim) const {
-    return getSpecifierField(builder, loc, StorageSpecifierKind::DimSize, dim);
+  Value getLvlSize(OpBuilder &builder, Location loc, Level lvl) const {
+    return getSpecifierField(builder, loc, StorageSpecifierKind::LvlSize, lvl);
   }
 
-  Value getPtrMemRef(Level lvl) const {
-    return getMemRefField(SparseTensorFieldKind::PtrMemRef, lvl);
+  Value getPosMemRef(Level lvl) const {
+    return getMemRefField(SparseTensorFieldKind::PosMemRef, lvl);
   }
 
   Value getValMemRef() const {
@@ -311,13 +291,13 @@ public:
     return getField(fidx);
   }
 
-  Value getPtrMemSize(OpBuilder &builder, Location loc, Level lvl) const {
-    return getSpecifierField(builder, loc, StorageSpecifierKind::PtrMemSize,
+  Value getPosMemSize(OpBuilder &builder, Location loc, Level lvl) const {
+    return getSpecifierField(builder, loc, StorageSpecifierKind::PosMemSize,
                              lvl);
   }
 
-  Value getIdxMemSize(OpBuilder &builder, Location loc, Level lvl) const {
-    return getSpecifierField(builder, loc, StorageSpecifierKind::IdxMemSize,
+  Value getCrdMemSize(OpBuilder &builder, Location loc, Level lvl) const {
+    return getSpecifierField(builder, loc, StorageSpecifierKind::CrdMemSize,
                              lvl);
   }
 
@@ -341,15 +321,15 @@ public:
     return fields.drop_back();
   }
 
-  std::pair<FieldIndex, unsigned> getIdxMemRefIndexAndStride(Level lvl) const {
+  std::pair<FieldIndex, unsigned> getCrdMemRefIndexAndStride(Level lvl) const {
     StorageLayout layout(rType.getEncoding());
-    return layout.getFieldIndexAndStride(SparseTensorFieldKind::IdxMemRef, lvl);
+    return layout.getFieldIndexAndStride(SparseTensorFieldKind::CrdMemRef, lvl);
   }
 
   Value getAOSMemRef() const {
     const Level cooStart = getCOOStart(rType.getEncoding());
     assert(cooStart < rType.getLvlRank());
-    return getMemRefField(SparseTensorFieldKind::IdxMemRef, cooStart);
+    return getMemRefField(SparseTensorFieldKind::CrdMemRef, cooStart);
   }
 
   RankedTensorType getRankedTensorType() const { return rType; }
@@ -366,7 +346,7 @@ public:
   SparseTensorDescriptor(SparseTensorType stt, ValueRange buffers)
       : SparseTensorDescriptorImpl<ValueRange>(stt, buffers) {}
 
-  Value getIdxMemRefOrView(OpBuilder &builder, Location loc, Level lvl) const;
+  Value getCrdMemRefOrView(OpBuilder &builder, Location loc, Level lvl) const;
 };
 
 /// Uses SmallVectorImpl<Value> & for mutable descriptors.
@@ -409,12 +389,11 @@ public:
     fields[fidx] = v;
   }
 
-  // FIXME: see note [CLARIFY_DIM_LVL].
   void setSpecifierField(OpBuilder &builder, Location loc,
-                         StorageSpecifierKind kind, std::optional<unsigned> dim,
+                         StorageSpecifierKind kind, std::optional<Level> lvl,
                          Value v) {
     SparseTensorSpecifier md(fields.back());
-    md.setSpecifierField(builder, loc, v, kind, dim);
+    md.setSpecifierField(builder, loc, v, kind, lvl);
     fields.back() = md;
   }
 
@@ -423,17 +402,16 @@ public:
                       std::nullopt, v);
   }
 
-  void setIdxMemSize(OpBuilder &builder, Location loc, Level lvl, Value v) {
-    setSpecifierField(builder, loc, StorageSpecifierKind::IdxMemSize, lvl, v);
+  void setCrdMemSize(OpBuilder &builder, Location loc, Level lvl, Value v) {
+    setSpecifierField(builder, loc, StorageSpecifierKind::CrdMemSize, lvl, v);
   }
 
-  void setPtrMemSize(OpBuilder &builder, Location loc, Level lvl, Value v) {
-    setSpecifierField(builder, loc, StorageSpecifierKind::PtrMemSize, lvl, v);
+  void setPosMemSize(OpBuilder &builder, Location loc, Level lvl, Value v) {
+    setSpecifierField(builder, loc, StorageSpecifierKind::PosMemSize, lvl, v);
   }
 
-  // FIXME: see note [CLARIFY_DIM_LVL].
-  void setDimSize(OpBuilder &builder, Location loc, unsigned dim, Value v) {
-    setSpecifierField(builder, loc, StorageSpecifierKind::DimSize, dim, v);
+  void setLvlSize(OpBuilder &builder, Location loc, Level lvl, Value v) {
+    setSpecifierField(builder, loc, StorageSpecifierKind::LvlSize, lvl, v);
   }
 };
 

@@ -1185,8 +1185,12 @@ void Preprocessor::HandleDirective(Token &Result) {
                                     CurPPLexer->getConditionalStackDepth() > 0);
     return;
   case tok::numeric_constant:  // # 7  GNU line marker directive.
-    if (getLangOpts().AsmPreprocessor)
-      break;  // # 4 is not a preprocessor directive in .S files.
+    // In a .S file "# 4" may be a comment so don't treat it as a preprocessor
+    // directive. However do permit it in the predefines file, as we use line
+    // markers to mark the builtin macros as being in a system header.
+    if (getLangOpts().AsmPreprocessor &&
+        SourceMgr.getFileID(SavedHash.getLocation()) != getPredefinesFileID())
+      break;
     return HandleDigitDirective(Result);
   default:
     IdentifierInfo *II = Result.getIdentifierInfo();

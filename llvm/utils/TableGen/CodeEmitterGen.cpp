@@ -51,8 +51,7 @@ private:
   std::string getInstructionCaseForEncoding(Record *R, Record *EncodingDef,
                                             CodeGenTarget &Target);
   bool addCodeToMergeInOperand(Record *R, BitsInit *BI,
-                               const std::string &VarName, unsigned &NumberedOp,
-                               std::set<unsigned> &NamedOpIndices,
+                               const std::string &VarName,
                                std::string &Case, CodeGenTarget &Target);
 
   void emitInstructionBaseValues(
@@ -81,8 +80,6 @@ int CodeEmitterGen::getVariableBit(const std::string &VarName,
 // Returns true if it succeeds, false if an error.
 bool CodeEmitterGen::addCodeToMergeInOperand(Record *R, BitsInit *BI,
                                              const std::string &VarName,
-                                             unsigned &NumberedOp,
-                                             std::set<unsigned> &NamedOpIndices,
                                              std::string &Case,
                                              CodeGenTarget &Target) {
   CodeGenInstruction &CGI = Target.getInstruction(R);
@@ -114,52 +111,8 @@ bool CodeEmitterGen::addCodeToMergeInOperand(Record *R, BitsInit *BI,
     // Get the machine operand number for the indicated operand.
     OpIdx = CGI.Operands[OpIdx].MIOperandNo;
   } else {
-    // Fall back to positional lookup. By default, we now disable positional
-    // lookup (and print an error, below), but even so, we'll do the lookup to
-    // help print a helpful diagnostic message.
-    //
-    // TODO: When we remove useDeprecatedPositionallyEncodedOperands, delete all
-    // this code, just leaving a "no operand named X in record Y" error.
-
-    unsigned NumberOps = CGI.Operands.size();
-    /// If this operand is not supposed to be emitted by the
-    /// generated emitter, skip it.
-    while (NumberedOp < NumberOps &&
-           (CGI.Operands.isFlatOperandNotEmitted(NumberedOp) ||
-              (!NamedOpIndices.empty() && NamedOpIndices.count(
-                CGI.Operands.getSubOperandNumber(NumberedOp).first)))) {
-      ++NumberedOp;
-    }
-
-    if (NumberedOp >=
-        CGI.Operands.back().MIOperandNo + CGI.Operands.back().MINumOperands) {
-      if (!Target.getInstructionSet()->getValueAsBit(
-              "useDeprecatedPositionallyEncodedOperands")) {
-        PrintError(R, Twine("No operand named ") + VarName + " in record " +
-                          R->getName() +
-                          " (would've given 'too few operands' error with "
-                          "useDeprecatedPositionallyEncodedOperands=true)");
-      } else {
-        PrintError(R, "Too few operands in record " + R->getName() +
-                          " (no match for variable " + VarName + ")");
-      }
-      return false;
-    }
-
-    OpIdx = NumberedOp++;
-
-    if (!Target.getInstructionSet()->getValueAsBit(
-            "useDeprecatedPositionallyEncodedOperands")) {
-      std::pair<unsigned, unsigned> SO =
-          CGI.Operands.getSubOperandNumber(OpIdx);
-      std::string OpName = CGI.Operands[SO.first].Name;
-      PrintError(R, Twine("No operand named ") + VarName + " in record " +
-                        R->getName() + " (would've used positional operand #" +
-                        Twine(SO.first) + " ('" + OpName + "') sub-op #" +
-                        Twine(SO.second) +
-                        " with useDeprecatedPositionallyEncodedOperands=true)");
-      return false;
-    }
+    PrintError(R, Twine("No operand named ") + VarName + " in record " + R->getName());
+    return false;
   }
 
   if (CGI.Operands.isFlatOperandNotEmitted(OpIdx)) {
@@ -320,22 +273,6 @@ std::string CodeEmitterGen::getInstructionCaseForEncoding(Record *R, Record *Enc
                                                           CodeGenTarget &Target) {
   std::string Case;
   BitsInit *BI = EncodingDef->getValueAsBitsInit("Inst");
-  unsigned NumberedOp = 0;
-  std::set<unsigned> NamedOpIndices;
-
-  // Collect the set of operand indices that might correspond to named
-  // operand, and skip these when assigning operands based on position.
-  if (Target.getInstructionSet()->
-       getValueAsBit("noNamedPositionallyEncodedOperands")) {
-    CodeGenInstruction &CGI = Target.getInstruction(R);
-    for (const RecordVal &RV : R->getValues()) {
-      unsigned OpIdx;
-      if (!CGI.Operands.hasOperandNamed(RV.getName(), OpIdx))
-        continue;
-
-      NamedOpIndices.insert(OpIdx);
-    }
-  }
 
   // Loop over all of the fields in the instruction, determining which are the
   // operands to the instruction.
@@ -347,8 +284,8 @@ std::string CodeEmitterGen::getInstructionCaseForEncoding(Record *R, Record *Enc
       continue;
 
     Success &=
-        addCodeToMergeInOperand(R, BI, std::string(RV.getName()), NumberedOp,
-                                NamedOpIndices, Case, Target);
+        addCodeToMergeInOperand(R, BI, std::string(RV.getName()),
+                                Case, Target);
   }
 
   if (!Success) {

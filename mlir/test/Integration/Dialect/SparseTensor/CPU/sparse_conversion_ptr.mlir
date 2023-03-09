@@ -28,27 +28,27 @@
 
 #DCSR  = #sparse_tensor.encoding<{
   dimLevelType = [ "compressed", "compressed" ],
-  pointerBitWidth = 8,
-  indexBitWidth = 8
+  posWidth = 8,
+  crdWidth = 8
 }>
 
 #DCSC  = #sparse_tensor.encoding<{
   dimLevelType = [ "compressed", "compressed" ],
   dimOrdering = affine_map<(i,j) -> (j,i)>,
-  pointerBitWidth = 64,
-  indexBitWidth = 64
+  posWidth = 64,
+  crdWidth = 64
 }>
 
 #CSC  = #sparse_tensor.encoding<{
   dimLevelType = [ "dense", "compressed" ],
   dimOrdering = affine_map<(i,j) -> (j,i)>,
-  pointerBitWidth = 16,
-  indexBitWidth = 32
+  posWidth = 16,
+  crdWidth = 32
 }>
 
 //
 // Integration test that tests conversions between sparse tensors,
-// where the pointer and index sizes in the overhead storage change
+// where the position and index sizes in the overhead storage change
 // in addition to layout.
 //
 module {
@@ -136,12 +136,12 @@ module {
     // CHECK-NEXT: ( 0, 1, 63, 0, 1, 0, 63, 0 )
     // CHECK-NEXT: ( 0, 1, 63, 0, 1, 0, 63, 0 )
     //
-    %i1 = sparse_tensor.indices %1 { dimension = 1 : index } : tensor<32x64xf64, #DCSR> to memref<?xi8>
-    %i2 = sparse_tensor.indices %2 { dimension = 1 : index } : tensor<32x64xf64, #DCSC> to memref<?xi64>
-    %i3 = sparse_tensor.indices %3 { dimension = 1 : index } : tensor<32x64xf64, #CSC>  to memref<?xi32>
-    %i4 = sparse_tensor.indices %4 { dimension = 1 : index } : tensor<32x64xf64, #DCSC> to memref<?xi64>
-    %i5 = sparse_tensor.indices %5 { dimension = 1 : index } : tensor<32x64xf64, #DCSR> to memref<?xi8>
-    %i6 = sparse_tensor.indices %6 { dimension = 1 : index } : tensor<32x64xf64, #DCSR> to memref<?xi8>
+    %i1 = sparse_tensor.coordinates %1 { level = 1 : index } : tensor<32x64xf64, #DCSR> to memref<?xi8>
+    %i2 = sparse_tensor.coordinates %2 { level = 1 : index } : tensor<32x64xf64, #DCSC> to memref<?xi64>
+    %i3 = sparse_tensor.coordinates %3 { level = 1 : index } : tensor<32x64xf64, #CSC>  to memref<?xi32>
+    %i4 = sparse_tensor.coordinates %4 { level = 1 : index } : tensor<32x64xf64, #DCSC> to memref<?xi64>
+    %i5 = sparse_tensor.coordinates %5 { level = 1 : index } : tensor<32x64xf64, #DCSR> to memref<?xi8>
+    %i6 = sparse_tensor.coordinates %6 { level = 1 : index } : tensor<32x64xf64, #DCSR> to memref<?xi8>
     call @dumpi08(%i1) : (memref<?xi8>)  -> ()
     call @dumpi64(%i2) : (memref<?xi64>) -> ()
     call @dumpi32(%i3) : (memref<?xi32>) -> ()

@@ -89,6 +89,7 @@ def testDiagnosticEmptyNotes():
 @run
 def testDiagnosticNonEmptyNotes():
   ctx = Context()
+  ctx.emit_error_diagnostics = True
   def callback(d):
     # CHECK: DIAGNOSTIC:
     # CHECK:   message='arith.addi' op requires one result
@@ -99,7 +100,10 @@ def testDiagnosticNonEmptyNotes():
     return True
   handler = ctx.attach_diagnostic_handler(callback)
   loc = Location.unknown(ctx)
-  Operation.create('arith.addi', loc=loc).verify()
+  try:
+    Operation.create('arith.addi', loc=loc).verify()
+  except MLIRError:
+    pass
   assert not handler.had_error
 
 # CHECK-LABEL: TEST: testDiagnosticCallbackException
