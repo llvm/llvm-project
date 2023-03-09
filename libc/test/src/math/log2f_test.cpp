@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/errno/libc_errno.h"
 #include "src/math/log2f.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -50,7 +51,7 @@ TEST(LlvmLibcLog2fTest, InFloatRange) {
     float x = float(FPBits(v));
     if (isnan(x) || isinf(x))
       continue;
-    errno = 0;
+    libc_errno = 0;
     float result = __llvm_libc::log2f(x);
     // If the computation resulted in an error or did not produce valid result
     // in the single-precision floating point range, then ignore comparing with

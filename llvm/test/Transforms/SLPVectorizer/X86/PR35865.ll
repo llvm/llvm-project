@@ -4,14 +4,11 @@
 define void @test(<16 x half> %v) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <16 x half> [[V:%.*]], i32 4
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x half> [[V]], i32 5
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x half> poison, half [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x half> [[TMP2]], half [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = fpext <2 x half> [[TMP3]] to <2 x float>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x float> [[TMP4]] to <2 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[VECINS_I_5_I1:%.*]] = shufflevector <8 x i32> [[TMP6]], <8 x i32> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <16 x half> [[V:%.*]], <16 x half> poison, <2 x i32> <i32 4, i32 5>
+; CHECK-NEXT:    [[TMP1:%.*]] = fpext <2 x half> [[TMP0]] to <2 x float>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x float> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[VECINS_I_5_I1:%.*]] = shufflevector <8 x i32> [[TMP3]], <8 x i32> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 14, i32 15>
 ; CHECK-NEXT:    ret void
 ;
 entry:

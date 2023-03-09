@@ -21,7 +21,7 @@
 //   requires same_as<remove_cvref_t<T>, T> && formattable<T, charT>
 // class range_formatter
 
-// constexpr void set_separator(basic_string_view<charT> sep);
+// constexpr void set_separator(basic_string_view<charT> sep) noexcept;
 
 // Note this tests the basics of this function. It's tested in more detail in
 // the format functions test.
@@ -41,6 +41,8 @@ template <class CharT>
 constexpr void test_setter() {
   std::range_formatter<int, CharT> formatter;
   formatter.set_separator(SV("sep"));
+  // Note the SV macro may throw, so can't use it.
+  static_assert(noexcept(formatter.set_separator(std::basic_string_view<CharT>{})));
 
   // Note there is no direct way to validate this function modified the object.
   if (!std::is_constant_evaluated()) {

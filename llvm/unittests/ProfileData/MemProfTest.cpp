@@ -321,14 +321,23 @@ TEST(MemProf, SymbolizationFilter) {
                                                 specifier(), false))
       .Times(1)
       .WillRepeatedly(Return(makeInliningInfo({
-          {"foo", 10, 5, 30},
+          {"foo", 10, 5, 30, "memprof/memprof_test_file.cpp"},
+      })));
+
+  EXPECT_CALL(*Symbolizer, symbolizeInlinedCode(SectionedAddress{0x5000},
+                                                specifier(), false))
+      .Times(1)
+      .WillRepeatedly(Return(makeInliningInfo({
+          // Depending on how the runtime was compiled, only the filename
+          // may be present in the debug information.
+          {"malloc", 70, 57, 3, "memprof_malloc_linux.cpp"},
       })));
 
   CallStackMap CSM;
   CSM[0x1] = {0x1000, 0x2000, 0x3000, 0x4000};
   // This entry should be dropped since all PCs are either not
   // symbolizable or belong to the runtime.
-  CSM[0x2] = {0x1000, 0x2000};
+  CSM[0x2] = {0x1000, 0x2000, 0x5000};
 
   llvm::MapVector<uint64_t, MemInfoBlock> Prof;
   Prof[0x1].AllocCount = 1;

@@ -457,6 +457,8 @@ static void sortSections(MutableArrayRef<InputSectionBase *> vec,
     return llvm::stable_sort(vec, nameComparator);
   case SortSectionPolicy::Priority:
     return llvm::stable_sort(vec, priorityComparator);
+  case SortSectionPolicy::Reverse:
+    return std::reverse(vec.begin(), vec.end());
   }
 }
 

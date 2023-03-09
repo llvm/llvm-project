@@ -27,8 +27,8 @@
 
 #SortedCOOI32 = #sparse_tensor.encoding<{
   dimLevelType = [ "compressed-nu", "singleton" ],
-  pointerBitWidth = 32,
-  indexBitWidth = 32
+  posWidth = 32,
+  crdWidth = 32
 }>
 
 module {

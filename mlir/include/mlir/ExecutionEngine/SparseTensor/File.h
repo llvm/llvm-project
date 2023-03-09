@@ -46,7 +46,7 @@ struct is_complex<std::complex<T>> final : public std::true_type {};
 /// then returns an arbitrary value.  If `IsPattern` is false, then
 /// reads the value from the current line buffer beginning at `linePtr`.
 template <typename V, bool IsPattern>
-inline std::enable_if_t<!is_complex<V>::value, V> readCOOValue(char **linePtr) {
+inline std::enable_if_t<!is_complex<V>::value, V> readValue(char **linePtr) {
   // The external formats always store these numerical values with the type
   // double, but we cast these values to the sparse tensor object type.
   // For a pattern tensor, we arbitrarily pick the value 1 for all entries.
@@ -59,7 +59,7 @@ inline std::enable_if_t<!is_complex<V>::value, V> readCOOValue(char **linePtr) {
 /// then returns an arbitrary value.  If `IsPattern` is false, then reads
 /// the value from the current line buffer beginning at `linePtr`.
 template <typename V, bool IsPattern>
-inline std::enable_if_t<is_complex<V>::value, V> readCOOValue(char **linePtr) {
+inline std::enable_if_t<is_complex<V>::value, V> readValue(char **linePtr) {
   // Read two values to make a complex. The external formats always store
   // numerical values with the type double, but we cast these values to the
   // sparse tensor object type. For a pattern tensor, we arbitrarily pick the
@@ -72,14 +72,12 @@ inline std::enable_if_t<is_complex<V>::value, V> readCOOValue(char **linePtr) {
   return V(re, im);
 }
 
-/// Returns an element-value.  If `is_pattern` is true, then returns an
-/// arbitrary value.  If `is_pattern` is false, then reads the value from
+/// Returns an element-value.  If `isPattern` is true, then returns an
+/// arbitrary value.  If `isPattern` is false, then reads the value from
 /// the current line buffer beginning at `linePtr`.
 template <typename V>
-inline V readCOOValue(char **linePtr, bool is_pattern) {
-  if (is_pattern)
-    return readCOOValue<V, true>(linePtr);
-  return readCOOValue<V, false>(linePtr);
+inline V readValue(char **linePtr, bool isPattern) {
+  return isPattern ? readValue<V, true>(linePtr) : readValue<V, false>(linePtr);
 }
 
 } // namespace detail
@@ -171,15 +169,17 @@ public:
     return isSymmetric_;
   }
 
-  /// Gets the rank of the tensor.  Is only valid after parsing the header.
+  /// Gets the dimension-rank of the tensor.  Is only valid after parsing
+  /// the header.
   uint64_t getRank() const {
     assert(isValid() && "Attempt to getRank() before readHeader()");
     return idata[0];
   }
 
-  /// Gets the number of non-zeros.  Is only valid after parsing the header.
-  uint64_t getNNZ() const {
-    assert(isValid() && "Attempt to getNNZ() before readHeader()");
+  /// Gets the number of stored elements.  Is only valid after parsing
+  /// the header.
+  uint64_t getNSE() const {
+    assert(isValid() && "Attempt to getNSE() before readHeader()");
     return idata[1];
   }
 
@@ -201,23 +201,22 @@ public:
 
   /// Reads a sparse tensor element from the next line in the input file and
   /// returns the value of the element. Stores the coordinates of the element
-  /// to the `indices` array.
+  /// to the `dimCoords` array.
   template <typename V>
-  V readCOOElement(uint64_t rank, uint64_t *indices) {
-    assert(rank == getRank() && "rank mismatch");
-    char *linePtr = readCOOIndices(indices);
-    return detail::readCOOValue<V>(&linePtr, isPattern());
+  V readElement(uint64_t dimRank, uint64_t *dimCoords) {
+    assert(dimRank == getRank() && "rank mismatch");
+    char *linePtr = readCoords(dimCoords);
+    return detail::readValue<V>(&linePtr, isPattern());
   }
 
   /// Allocates a new COO object for `lvlSizes`, initializes it by reading
-  /// all the elements from the file and applying `dim2lvl` to their indices,
-  /// and then closes the file.
+  /// all the elements from the file and applying `dim2lvl` to their
+  /// dim-coordinates, and then closes the file.
   ///
   /// Preconditions:
   /// * `lvlSizes` must be valid for `lvlRank`.
   /// * `dim2lvl` must be valid for `getRank()`.
-  /// * `dim2lvl` maps indices valid for `getDimSizes()` to indices
-  ///   valid for `lvlSizes`.
+  /// * `dim2lvl` maps `getDimSizes()`-coordinates to `lvlSizes`-coordinates.
   /// * the file's actual value type can be read as `V`.
   ///
   /// Asserts:
@@ -263,22 +262,22 @@ private:
   void readLine();
 
   /// Reads the next line of the input file and parses the coordinates
-  /// into the `indices` argument.  Returns the position in the `line`
+  /// into the `dimCoords` argument.  Returns the position in the `line`
   /// buffer where the element's value should be parsed from.  This method
-  /// has been factored out from `readCOOElement` to minimize code bloat
+  /// has been factored out from `readElement` to minimize code bloat
   /// for the generated library.
   ///
-  /// Precondition: `indices` is valid for `getRank()`.
-  template <typename I>
-  char *readCOOIndices(I *indices) {
+  /// Precondition: `dimCoords` is valid for `getRank()`.
+  template <typename C>
+  char *readCoords(C *dimCoords) {
     readLine();
     // Local variable for tracking the parser's position in the `line` buffer.
     char *linePtr = line;
     for (uint64_t dimRank = getRank(), d = 0; d < dimRank; ++d) {
-      // Parse the 1-based index.
-      uint64_t idx = strtoul(linePtr, &linePtr, 10);
-      // Store the 0-based index.
-      indices[d] = static_cast<I>(idx - 1);
+      // Parse the 1-based coordinate.
+      uint64_t c = strtoul(linePtr, &linePtr, 10);
+      // Store the 0-based coordinate.
+      dimCoords[d] = static_cast<C>(c - 1);
     }
     return linePtr;
   }
@@ -334,8 +333,8 @@ SparseTensorCOO<V> *SparseTensorReader::readCOO(uint64_t lvlRank,
   const uint64_t dimRank = getRank();
   assert(lvlRank == dimRank && "Rank mismatch");
   detail::PermutationRef d2l(dimRank, dim2lvl);
-  // Prepare a COO object with the number of nonzeros as initial capacity.
-  auto *lvlCOO = new SparseTensorCOO<V>(lvlRank, lvlSizes, getNNZ());
+  // Prepare a COO object with the number of stored elems as initial capacity.
+  auto *lvlCOO = new SparseTensorCOO<V>(lvlRank, lvlSizes, getNSE());
   // Do some manual LICM, to avoid assertions in the for-loop.
   const bool IsPattern = isPattern();
   if (IsPattern)
@@ -352,17 +351,17 @@ void SparseTensorReader::readCOOLoop(uint64_t lvlRank,
                                      detail::PermutationRef dim2lvl,
                                      SparseTensorCOO<V> *lvlCOO) {
   const uint64_t dimRank = getRank();
-  std::vector<uint64_t> dimInd(dimRank);
-  std::vector<uint64_t> lvlInd(lvlRank);
-  for (uint64_t nnz = getNNZ(), k = 0; k < nnz; ++k) {
-    // We inline `readCOOElement` here in order to avoid redundant
+  std::vector<uint64_t> dimCoords(dimRank);
+  std::vector<uint64_t> lvlCoords(lvlRank);
+  for (uint64_t nse = getNSE(), k = 0; k < nse; ++k) {
+    // We inline `readElement` here in order to avoid redundant
     // assertions, since they're guaranteed by the call to `isValid()`
-    // and the construction of `dimInd` above.
-    char *linePtr = readCOOIndices(dimInd.data());
-    const V value = detail::readCOOValue<V, IsPattern>(&linePtr);
-    dim2lvl.pushforward(dimRank, dimInd.data(), lvlInd.data());
+    // and the construction of `dimCoords` above.
+    char *linePtr = readCoords(dimCoords.data());
+    const V value = detail::readValue<V, IsPattern>(&linePtr);
+    dim2lvl.pushforward(dimRank, dimCoords.data(), lvlCoords.data());
     // TODO: <https://github.com/llvm/llvm-project/issues/54179>
-    lvlCOO->add(lvlInd, value);
+    lvlCOO->add(lvlCoords, value);
   }
 }
 
@@ -371,6 +370,10 @@ bool SparseTensorReader::readToBuffers(uint64_t lvlRank,
                                        const uint64_t *dim2lvl,
                                        C *lvlCoordinates, V *values) {
   assert(isValid() && "Attempt to readCOO() before readHeader()");
+  // Construct a `PermutationRef` for the `pushforward` below.
+  // TODO: This specific implementation does not generalize to arbitrary
+  // mappings, but once we functionalize the `dim2lvl` argument we can
+  // simply use that function instead.
   const uint64_t dimRank = getRank();
   assert(lvlRank == dimRank && "Rank mismatch");
   detail::PermutationRef d2l(dimRank, dim2lvl);
@@ -391,19 +394,19 @@ bool SparseTensorReader::readToBuffersLoop(uint64_t lvlRank,
                                            detail::PermutationRef dim2lvl,
                                            C *lvlCoordinates, V *values) {
   const uint64_t dimRank = getRank();
-  const uint64_t nse = getNNZ();
+  const uint64_t nse = getNSE();
   std::vector<C> dimCoords(dimRank);
   // Read the first element with isSorted=false as a way to avoid accessing its
   // previous element.
   bool isSorted = false;
   char *linePtr;
-  // We inline `readCOOElement` here in order to avoid redundant assertions,
+  // We inline `readElement` here in order to avoid redundant assertions,
   // since they're guaranteed by the call to `isValid()` and the construction
   // of `dimCoords` above.
-  auto readElement = [&]() {
-    linePtr = readCOOIndices<C>(dimCoords.data());
+  const auto readNextElement = [&]() {
+    linePtr = readCoords<C>(dimCoords.data());
     dim2lvl.pushforward(dimRank, dimCoords.data(), lvlCoordinates);
-    *values = detail::readCOOValue<V, IsPattern>(&linePtr);
+    *values = detail::readValue<V, IsPattern>(&linePtr);
     if (isSorted) {
       // Note that isSorted was set to false while reading the first element,
       // to guarantee the safeness of using prevLvlCoords.
@@ -421,10 +424,10 @@ bool SparseTensorReader::readToBuffersLoop(uint64_t lvlRank,
     lvlCoordinates += lvlRank;
     ++values;
   };
-  readElement();
+  readNextElement();
   isSorted = true;
   for (uint64_t n = 1; n < nse; ++n)
-    readElement();
+    readNextElement();
 
   return isSorted;
 }
@@ -434,21 +437,21 @@ template <typename V>
 inline void writeExtFROSTT(const SparseTensorCOO<V> &coo,
                            const char *filename) {
   assert(filename && "Got nullptr for filename");
-  auto &dimSizes = coo.getDimSizes();
-  auto &elements = coo.getElements();
-  const uint64_t rank = coo.getRank();
-  const uint64_t nnz = elements.size();
+  const auto &dimSizes = coo.getDimSizes();
+  const auto &elements = coo.getElements();
+  const uint64_t dimRank = coo.getRank();
+  const uint64_t nse = elements.size();
   std::fstream file;
   file.open(filename, std::ios_base::out | std::ios_base::trunc);
   assert(file.is_open());
-  file << "; extended FROSTT format\n" << rank << " " << nnz << std::endl;
-  for (uint64_t r = 0; r < rank - 1; ++r)
-    file << dimSizes[r] << " ";
-  file << dimSizes[rank - 1] << std::endl;
-  for (uint64_t i = 0; i < nnz; ++i) {
-    auto &idx = elements[i].indices;
-    for (uint64_t r = 0; r < rank; ++r)
-      file << (idx[r] + 1) << " ";
+  file << "; extended FROSTT format\n" << dimRank << " " << nse << std::endl;
+  for (uint64_t d = 0; d < dimRank - 1; ++d)
+    file << dimSizes[d] << " ";
+  file << dimSizes[dimRank - 1] << std::endl;
+  for (uint64_t i = 0; i < nse; ++i) {
+    const auto &coords = elements[i].coords;
+    for (uint64_t d = 0; d < dimRank; ++d)
+      file << (coords[d] + 1) << " ";
     file << elements[i].value << std::endl;
   }
   file.flush();

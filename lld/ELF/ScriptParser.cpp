@@ -660,6 +660,7 @@ StringMatcher ScriptParser::readFilePatterns() {
 
 SortSectionPolicy ScriptParser::peekSortKind() {
   return StringSwitch<SortSectionPolicy>(peek())
+      .Case("REVERSE", SortSectionPolicy::Reverse)
       .Cases("SORT", "SORT_BY_NAME", SortSectionPolicy::Name)
       .Case("SORT_BY_ALIGNMENT", SortSectionPolicy::Alignment)
       .Case("SORT_BY_INIT_PRIORITY", SortSectionPolicy::Priority)

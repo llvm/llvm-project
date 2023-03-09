@@ -8,11 +8,11 @@ add_libc_unittest(
   SRCS
     dirent_test.cpp
   DEPENDS
-    libc.include.dirent
     libc.src.__support.CPP.string_view
     libc.src.dirent.closedir
     libc.src.dirent.dirfd
     libc.src.dirent.opendir
     libc.src.dirent.readdir
+    libc.src.errno.errno
 )
 

@@ -102,3 +102,15 @@ followed:
    entrypoint is the only exceptional entrypoint on which other entrypoints
    should explicitly depend on if they set ``errno`` to indicate error
    conditions.
+
+Assertions in libc runtime code
+===============================
+
+The libc developers should, and are encouraged to, use assertions freely in
+the libc runtime code. However, the assertion should be listed via the macro
+``LIBC_ASSERT`` defined in ``src/__support/libc_assert.h``. This macro can be
+used from anywhere in the libc runtime code. Internally, all it does is to
+print the assertion expression and exit. It does not implement the semantics
+of the standard ``assert`` macro. Hence, it can be used from any where in the
+libc runtime code without causing any recursive calls or chicken-and-egg
+situations.

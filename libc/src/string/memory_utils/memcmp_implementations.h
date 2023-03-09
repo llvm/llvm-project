@@ -139,12 +139,8 @@ LIBC_INLINE MemcmpReturnType inline_memcmp(CPtr p1, CPtr p2, size_t count) {
   else
     return inline_memcmp_generic_gt16(p1, p2, count);
 #endif
-#elif defined(LIBC_TARGET_ARCH_IS_ARM)
-  return inline_memcmp_embedded_tiny(p1, p2, count);
-#elif defined(LIBC_TARGET_ARCH_IS_GPU)
-  return inline_memcmp_embedded_tiny(p1, p2, count);
 #else
-#error "Unsupported platform"
+  return inline_memcmp_embedded_tiny(p1, p2, count);
 #endif
 }
 

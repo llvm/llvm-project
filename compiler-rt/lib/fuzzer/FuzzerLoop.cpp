@@ -160,8 +160,6 @@ Fuzzer::Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
   memset(BaseSha1, 0, sizeof(BaseSha1));
 }
 
-Fuzzer::~Fuzzer() {}
-
 void Fuzzer::AllocateCurrentUnitData() {
   if (CurrentUnitData || MaxInputLen == 0)
     return;
@@ -301,7 +299,7 @@ void Fuzzer::AlarmCallback() {
     Printf("       and the timeout value is %d (use -timeout=N to change)\n",
            Options.UnitTimeoutSec);
     DumpCurrentUnit("timeout-");
-    Printf("==%lu== ERROR: libFuzzer: timeout after %d seconds\n", GetPid(),
+    Printf("==%lu== ERROR: libFuzzer: timeout after %zu seconds\n", GetPid(),
            Seconds);
     PrintStackTrace();
     Printf("SUMMARY: libFuzzer: timeout\n");
@@ -314,9 +312,8 @@ void Fuzzer::RssLimitCallback() {
   if (EF->__sanitizer_acquire_crash_state &&
       !EF->__sanitizer_acquire_crash_state())
     return;
-  Printf(
-      "==%lu== ERROR: libFuzzer: out-of-memory (used: %zdMb; limit: %zdMb)\n",
-      GetPid(), GetPeakRSSMb(), Options.RssLimitMb);
+  Printf("==%lu== ERROR: libFuzzer: out-of-memory (used: %zdMb; limit: %dMb)\n",
+         GetPid(), GetPeakRSSMb(), Options.RssLimitMb);
   Printf("   To change the out-of-memory limit use -rss_limit_mb=<N>\n\n");
   PrintMemoryProfile();
   DumpCurrentUnit("oom-");
@@ -371,7 +368,7 @@ void Fuzzer::PrintFinalStats() {
   Printf("stat::number_of_executed_units: %zd\n", TotalNumberOfRuns);
   Printf("stat::average_exec_per_sec:     %zd\n", ExecPerSec);
   Printf("stat::new_units_added:          %zd\n", NumberOfNewUnitsAdded);
-  Printf("stat::slowest_unit_time_sec:    %zd\n", TimeOfLongestUnitInSeconds);
+  Printf("stat::slowest_unit_time_sec:    %ld\n", TimeOfLongestUnitInSeconds);
   Printf("stat::peak_rss_mb:              %zd\n", GetPeakRSSMb());
 }
 
@@ -455,7 +452,7 @@ void Fuzzer::PrintPulseAndReportSlowInput(const uint8_t *Data, size_t Size) {
       static_cast<long>(static_cast<double>(TimeOfLongestUnitInSeconds) * 1.1);
   if (TimeOfUnit > Threshhold && TimeOfUnit >= Options.ReportSlowUnits) {
     TimeOfLongestUnitInSeconds = TimeOfUnit;
-    Printf("Slowest unit: %zd s:\n", TimeOfLongestUnitInSeconds);
+    Printf("Slowest unit: %ld s:\n", TimeOfLongestUnitInSeconds);
     WriteUnitToFileWithPrefix({Data, Data + Size}, "slow-unit-");
   }
 }

@@ -2367,6 +2367,7 @@ void format_test_floating_point_default_precision(TestFunction check) {
 
   // *** alternate form **
   // When precision is zero there's no decimal point except when the alternate form is specified.
+  // Note unlike the g and G option the trailing zeros are still removed.
   check(SV("answer is '0'"), SV("answer is '{:.0}'"), F(0));
   check(SV("answer is '0.'"), SV("answer is '{:#.0}'"), F(0));
 
@@ -2449,6 +2450,57 @@ void format_test_floating_point_default_precision(TestFunction check) {
   // See locale-specific_form.pass.cpp
 }
 
+template <class F, class CharT, class TestFunction>
+void format_test_floating_point_PR58714(TestFunction check) {
+  check(SV("+1234"), SV("{:+}"), F(1234.0));
+  check(SV("+1.348p+10"), SV("{:+a}"), F(1234.0));
+  check(SV("+1.234000e+03"), SV("{:+e}"), F(1234.0));
+  check(SV("+1234.000000"), SV("{:+f}"), F(1234.0));
+  check(SV("+1234"), SV("{:+g}"), F(1234.0));
+
+  check(SV("1234."), SV("{:#}"), F(1234.0));
+  check(SV("1.348p+10"), SV("{:#a}"), F(1234.0));
+  check(SV("1.234000e+03"), SV("{:#e}"), F(1234.0));
+  check(SV("1234.000000"), SV("{:#f}"), F(1234.0));
+  check(SV("1234.00"), SV("{:#g}"), F(1234.0));
+
+  check(SV("4.e+30"), SV("{:#}"), F(4.0e+30));
+  check(SV("1.p+102"), SV("{:#a}"), F(0x4.0p+100));
+  check(SV("4.000000e+30"), SV("{:#e}"), F(4.0e+30));
+  check(SV("5070602400912917605986812821504.000000"), SV("{:#f}"), F(0x4.0p+100));
+  check(SV("4.00000e+30"), SV("{:#g}"), F(4.0e+30));
+
+  check(SV("1234."), SV("{:#.6}"), F(1234.0)); // # does not restore zeros
+  check(SV("1.348000p+10"), SV("{:#.6a}"), F(1234.0));
+  check(SV("1.234000e+03"), SV("{:#.6e}"), F(1234.0));
+  check(SV("1234.000000"), SV("{:#.6f}"), F(1234.0));
+  check(SV("1234.00"), SV("{:#.6g}"), F(1234.0));
+
+  check(SV("-1234."), SV("{:#}"), F(-1234.0));
+  check(SV("-1.348p+10"), SV("{:#a}"), F(-1234.0));
+  check(SV("-1.234000e+03"), SV("{:#e}"), F(-1234.0));
+  check(SV("-1234.000000"), SV("{:#f}"), F(-1234.0));
+  check(SV("-1234.00"), SV("{:#g}"), F(-1234.0));
+
+  check(SV("-1234."), SV("{:#.6}"), F(-1234.0)); // # does not restore zeros
+  check(SV("-1.348000p+10"), SV("{:#.6a}"), F(-1234.0));
+  check(SV("-1.234000e+03"), SV("{:#.6e}"), F(-1234.0));
+  check(SV("-1234.000000"), SV("{:#.6f}"), F(-1234.0));
+  check(SV("-1234.00"), SV("{:#.6g}"), F(-1234.0));
+
+  check(SV("+1234."), SV("{:+#}"), F(1234.0));
+  check(SV("+1.348p+10"), SV("{:+#a}"), F(1234.0));
+  check(SV("+1.234000e+03"), SV("{:+#e}"), F(1234.0));
+  check(SV("+1234.000000"), SV("{:+#f}"), F(1234.0));
+  check(SV("+1234.00"), SV("{:+#g}"), F(1234.0));
+
+  check(SV("+1234."), SV("{:+#.6}"), F(1234.0)); // # does not restore zeros
+  check(SV("+1.348000p+10"), SV("{:+#.6a}"), F(1234.0));
+  check(SV("+1.234000e+03"), SV("{:+#.6e}"), F(1234.0));
+  check(SV("+1234.000000"), SV("{:+#.6f}"), F(1234.0));
+  check(SV("+1234.00"), SV("{:+#.6g}"), F(1234.0));
+}
+
 template <class F, class CharT, class TestFunction, class ExceptionTest>
 void format_test_floating_point(TestFunction check, ExceptionTest check_exception) {
   format_test_floating_point_hex_lower_case<F, CharT>(check);
@@ -2467,6 +2519,8 @@ void format_test_floating_point(TestFunction check, ExceptionTest check_exceptio
 
   format_test_floating_point_default<F, CharT>(check);
   format_test_floating_point_default_precision<F, CharT>(check);
+
+  format_test_floating_point_PR58714<F, CharT>(check);
 
   // *** type ***
   for (const auto& fmt : invalid_types<CharT>("aAeEfFgG"))

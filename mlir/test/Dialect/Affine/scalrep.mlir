@@ -868,3 +868,23 @@ func.func @dead_affine_region_op() {
   // CHECK-NEXT:   affine.load
   return
 }
+
+// We perform no scalar replacement here since we don't depend on dominance
+// info, which would be needed in such cases when ops fall in different blocks
+// of a CFG region.
+
+// CHECK-LABEL: func @cross_block
+func.func @cross_block() {
+  %c10 = arith.constant 10 : index
+  %alloc_83 = memref.alloc() : memref<1x13xf32>
+  %alloc_99 = memref.alloc() : memref<13xi1>
+  %true_110 = arith.constant true
+  affine.store %true_110, %alloc_99[%c10] : memref<13xi1>
+  %true = arith.constant true
+  affine.store %true, %alloc_99[%c10] : memref<13xi1>
+  cf.br ^bb1(%alloc_83 : memref<1x13xf32>)
+^bb1(%35: memref<1x13xf32>):
+  // CHECK: affine.load
+  %69 = affine.load %alloc_99[%c10] : memref<13xi1>
+  return
+}

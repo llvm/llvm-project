@@ -151,11 +151,6 @@ public:
   /// from the user interface.
   virtual bool IsAllowedRuntimeValue(ConstString name) { return false; }
 
-  /// Returns 'true' if we the variable with the specified 'name'
-  /// should be hidden from variable views (e.g., when listing variables in
-  /// 'frame variable' or 'target variable')
-  virtual bool ShouldHideVariable(llvm::StringRef name) const { return false; }
-
   virtual std::optional<CompilerType> GetRuntimeType(CompilerType base_type) {
     return std::nullopt;
   }

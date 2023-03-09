@@ -117,15 +117,16 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
       .def(
           "run",
           [](PyPassManager &passManager, PyOperationBase &op) {
+            PyMlirContext::ErrorCapture errors(op.getOperation().getContext());
             MlirLogicalResult status = mlirPassManagerRunOnOp(
                 passManager.get(), op.getOperation().get());
             if (mlirLogicalResultIsFailure(status))
-              throw SetPyError(PyExc_RuntimeError,
-                               "Failure while executing pass pipeline.");
+              throw MLIRError("Failure while executing pass pipeline",
+                              errors.take());
           },
           py::arg("operation"),
-          "Run the pass manager on the provided operation, throw a "
-          "RuntimeError on failure.")
+          "Run the pass manager on the provided operation, raising an "
+          "MLIRError on failure.")
       .def(
           "__str__",
           [](PyPassManager &self) {
