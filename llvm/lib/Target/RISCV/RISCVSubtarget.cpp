@@ -30,7 +30,7 @@ using namespace llvm;
 #include "RISCVGenSubtargetInfo.inc"
 
 static cl::opt<bool> EnableSubRegLiveness("riscv-enable-subreg-liveness",
-                                          cl::init(false), cl::Hidden);
+                                          cl::init(true), cl::Hidden);
 
 static cl::opt<unsigned> RVVVectorLMULMax(
     "riscv-v-fixed-length-vector-lmul-max",
