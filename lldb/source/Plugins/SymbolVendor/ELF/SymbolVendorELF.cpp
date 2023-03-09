@@ -111,7 +111,7 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
   SectionList *module_section_list = module_sp->GetSectionList();
   SectionList *objfile_section_list = dsym_objfile_sp->GetSectionList();
 
-  if (!module_section_list || !!objfile_section_list)
+  if (!module_section_list || !objfile_section_list)
     return nullptr;
 
   static const SectionType g_sections[] = {
