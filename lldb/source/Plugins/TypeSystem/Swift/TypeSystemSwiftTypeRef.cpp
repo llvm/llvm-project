@@ -3369,7 +3369,7 @@ CompilerType TypeSystemSwiftTypeRef::CreateSILPackType(CompilerType type,
 }
 
 static llvm::Optional<TypeSystemSwiftTypeRef::PackTypeInfo>
-decodeSILPackType(swift::Demangle::Demangler dem, CompilerType type,
+decodeSILPackType(swift::Demangle::Demangler &dem, CompilerType type,
                   swift::Demangle::NodePointer &node) {
   TypeSystemSwiftTypeRef::PackTypeInfo info;
   node = GetDemangledType(dem, type.GetMangledTypeName().GetStringRef());
