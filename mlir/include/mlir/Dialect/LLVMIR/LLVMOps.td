@@ -173,7 +173,8 @@ def LLVM_FNegOp : LLVM_UnaryFloatArithmeticOp<
 def LLVM_AllocaOp : LLVM_Op<"alloca">, LLVM_MemOpPatterns {
   let arguments = (ins AnyInteger:$arraySize,
                    OptionalAttr<I64Attr>:$alignment,
-                   OptionalAttr<TypeAttr>:$elem_type);
+                   OptionalAttr<TypeAttr>:$elem_type,
+                   UnitAttr:$inalloca);
   let results = (outs Res<LLVM_AnyPointer, "",
                           [MemAlloc<AutomaticAllocationScopeResource>]>:$res);
   string llvmInstName = "Alloca";
@@ -184,16 +185,18 @@ def LLVM_AllocaOp : LLVM_Op<"alloca">, LLVM_MemOpPatterns {
                    : op.getType().cast<LLVMPointerType>().getElementType());
     auto *inst = builder.CreateAlloca(elementType, addrSpace, $arraySize);
     }] # setAlignmentCode # [{
+    inst->setUsedWithInAlloca($inalloca);
     $res = inst;
   }];
-  // FIXME: Import attributes.
   string mlirBuilder = [{
     auto *allocaInst = cast<llvm::AllocaInst>(inst);
     Type allocatedType =
       moduleImport.convertType(allocaInst->getAllocatedType());
     unsigned alignment = allocaInst->getAlign().value();
     $res = $_builder.create<LLVM::AllocaOp>(
-      $_location, $_resultType, allocatedType, $arraySize, alignment);
+      $_location, $_resultType, $arraySize,
+      alignment == 0 ? IntegerAttr() : $_builder.getI64IntegerAttr(alignment),
+      TypeAttr::get(allocatedType), allocaInst->isUsedWithInAlloca());
   }];
   let builders = [
     OpBuilder<(ins "Type":$resultType, "Value":$arraySize,
@@ -203,9 +206,9 @@ def LLVM_AllocaOp : LLVM_Op<"alloca">, LLVM_MemOpPatterns {
              "pass the allocated type explicitly if opaque pointers are used");
       if (alignment == 0)
         return build($_builder, $_state, resultType, arraySize, IntegerAttr(),
-                     TypeAttr());
+                     TypeAttr(), false);
       build($_builder, $_state, resultType, arraySize,
-        $_builder.getI64IntegerAttr(alignment), TypeAttr());
+        $_builder.getI64IntegerAttr(alignment), TypeAttr(), false);
     }]>,
     OpBuilder<(ins "Type":$resultType, "Type":$elementType, "Value":$arraySize,
                CArg<"unsigned", "0">:$alignment),
@@ -216,7 +219,7 @@ def LLVM_AllocaOp : LLVM_Op<"alloca">, LLVM_MemOpPatterns {
       build($_builder, $_state, resultType, arraySize,
             alignment == 0 ? IntegerAttr()
                            : $_builder.getI64IntegerAttr(alignment),
-            elemTypeAttr);
+            elemTypeAttr, false);
 
     }]>
     ];
