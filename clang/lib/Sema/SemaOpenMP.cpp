@@ -2203,14 +2203,11 @@ bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
           ++EI;
           if (EI == EE)
             return false;
-          auto Last = std::prev(EE);
-          const auto *UO =
-              dyn_cast<UnaryOperator>(Last->getAssociatedExpression());
-          if ((UO && UO->getOpcode() == UO_Deref) ||
-              isa<ArraySubscriptExpr>(Last->getAssociatedExpression()) ||
-              isa<OMPArraySectionExpr>(Last->getAssociatedExpression()) ||
+
+          if (isa<ArraySubscriptExpr>(EI->getAssociatedExpression()) ||
+              isa<OMPArraySectionExpr>(EI->getAssociatedExpression()) ||
               isa<MemberExpr>(EI->getAssociatedExpression()) ||
-              isa<OMPArrayShapingExpr>(Last->getAssociatedExpression())) {
+              isa<OMPArrayShapingExpr>(EI->getAssociatedExpression())) {
             IsVariableAssociatedWithSection = true;
             // There is nothing more we need to know about this variable.
             return true;
