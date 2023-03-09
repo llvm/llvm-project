@@ -140,8 +140,11 @@ endif()
 # Check for -nostdlib++ first; if there's no C++ standard library yet,
 # all check_cxx_compiler_flag commands will fail until we add -nostdlib++
 # (or -nodefaultlibs).
-llvm_check_compiler_linker_flag(CXX "-nostdlib++" CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+# TODO: Switch to check_linker_flag after raise the minimum CMake version past 3.14.
+check_cxx_compiler_flag(-nostdlib++ CXX_SUPPORTS_NOSTDLIBXX_FLAG)
 if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+  # TODO: This is link only flag and should be added to CMAKE_REQUIRED_LINK_OPTIONS
+  # but that's only supported since CMake 3.14.
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
 endif()
 check_cxx_compiler_flag(-nostdinc++ CXX_SUPPORTS_NOSTDINCXX_FLAG)
