@@ -812,11 +812,10 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       }
     }
 
-    if (m_module_sp && m_uuid.IsValid() && m_module_sp->GetUUID() == m_uuid) {
-      ObjectFileMachO *ondisk_objfile_macho =
-          llvm::dyn_cast_or_null<ObjectFileMachO>(
-              m_module_sp ? m_module_sp->GetObjectFile() : nullptr);
-      if (ondisk_objfile_macho) {
+    if (m_module_sp && m_uuid.IsValid() && m_module_sp->GetUUID() == m_uuid &&
+        m_module_sp->GetObjectFile()) {
+      if (ObjectFileMachO *ondisk_objfile_macho =
+              llvm::dyn_cast<ObjectFileMachO>(m_module_sp->GetObjectFile())) {
         if (!IsKernel() && !ondisk_objfile_macho->IsKext()) {
           // We have a non-kext, non-kernel binary.  If we already have this
           // loaded in the Target with load addresses, don't re-load it again.
