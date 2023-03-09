@@ -1537,13 +1537,13 @@ bool RISCVTargetLowering::isOffsetFoldingLegal(
 bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                        bool ForCodeSize) const {
   if (Subtarget.hasStdExtZfa()) {
-    if ((VT == MVT::f64 && RISCVLoadFPImm::getLoadFP64Imm(Imm) != -1) || 
+    if ((VT == MVT::f64 && RISCVLoadFPImm::getLoadFP64Imm(Imm) != -1) ||
         (VT == MVT::f16 && RISCVLoadFPImm::getLoadFP16Imm(Imm) != -1) ||
-        (VT == MVT::f32 && RISCVLoadFPImm::getLoadFP32Imm(Imm) != -1 && 
+        (VT == MVT::f32 && RISCVLoadFPImm::getLoadFP32Imm(Imm) != -1 &&
          !Imm.isPosZero()))
       return true;
   }
-  
+
   if (VT == MVT::f16 && !Subtarget.hasStdExtZfhOrZfhmin())
     return false;
   if (VT == MVT::f32 && !Subtarget.hasStdExtF())
@@ -13790,11 +13790,11 @@ bool RISCVTargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
     return false;
 
   SDNode *Copy = *N->use_begin();
-  
+
   if (Copy->getOpcode() == ISD::BITCAST) {
     return isUsedByReturnOnly(Copy, Chain);
   }
-  
+
   // TODO: Handle additional opcodes in order to support tail-calling libcalls
   // with soft float ABIs.
   if (Copy->getOpcode() != ISD::CopyToReg) {
