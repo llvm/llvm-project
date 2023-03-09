@@ -593,9 +593,6 @@ Improvements to Clang's diagnostics
   language version and specifies in which version it will be a keyword. This
   supports both C and C++.
 
-- When diagnosing multi-level pack expansions of mismatched lengths, Clang will
-  now, in most cases, be able to point to the relevant outer parameter.
-
 - ``no_sanitize("...")`` on a global variable for known but not relevant
   sanitizers is now just a warning. It now says that this will be ignored
   instead of incorrectly saying no_sanitize only applies to functions and
@@ -781,9 +778,6 @@ Bug Fixes to Attribute Support
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
-- Fix multi-level pack expansion of undeclared function parameters.
-  (`#56094 <https://github.com/llvm/llvm-project/issues/56094>`_)
-
 - Address the thread identification problems in coroutines.
   (`#47177 <https://github.com/llvm/llvm-project/issues/47177>`_,
   `#47179 <https://github.com/llvm/llvm-project/issues/47179>`_)
