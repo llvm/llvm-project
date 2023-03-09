@@ -48,6 +48,13 @@ TEST_CONSTEXPR_CXX20 bool tests()
     test_contiguous(C(A{}));
     test_contiguous(C(9, 11.0, A{}));
     }
+    {
+      typedef double T;
+      typedef safe_allocator<T> A;
+      typedef std::vector<T, A> C;
+      test_contiguous(C(A{}));
+      test_contiguous(C(9, 11.0, A{}));
+    }
 #endif
 
     return true;
