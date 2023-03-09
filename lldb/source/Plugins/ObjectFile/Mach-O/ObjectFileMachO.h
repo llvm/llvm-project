@@ -89,6 +89,8 @@ public:
 
   bool IsSharedCacheBinary() const;
 
+  bool IsKext() const;
+
   uint32_t GetAddressByteSize() const override;
 
   lldb_private::AddressClass GetAddressClass(lldb::addr_t file_addr) override;
@@ -148,6 +150,8 @@ public:
 
   bool AllowAssemblyEmulationUnwindPlans() override;
 
+  lldb_private::Section *GetMachHeaderSection();
+
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
@@ -189,8 +193,6 @@ protected:
   /// does not match the process' shared cache UUID, this optimization
   /// should not be used.
   void GetLLDBSharedCacheUUID(lldb::addr_t &base_addir, lldb_private::UUID &uuid);
-
-  lldb_private::Section *GetMachHeaderSection();
 
   lldb::addr_t CalculateSectionLoadAddressForMemoryImage(
       lldb::addr_t mach_header_load_address,
