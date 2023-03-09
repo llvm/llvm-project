@@ -132,6 +132,9 @@ Removed Compiler Flags
   or higher to use standard C++ modules instead.
 - The deprecated flag `-fcoroutines-ts` is removed. Please use ``-std=c++20``
   or higher to use standard C++ coroutines instead.
+- The CodeGen flag `-lower-global-dtors-via-cxa-atexit` which affects how global
+  destructors are lowered for MachO is removed without replacement. The default
+  of `-lower-global-dtors-via-cxa-atexit=true` is now the only supported way.
 
 Attribute Changes in Clang
 --------------------------
