@@ -71,7 +71,7 @@ public:
         nullptr, PrimarySize, "scudo:primary_reserve", MAP_NOACCESS, &Data));
 
     u32 Seed;
-    const u64 Time = getMonotonicTime();
+    const u64 Time = getMonotonicTimeFast();
     if (!getRandom(reinterpret_cast<void *>(&Seed), sizeof(Seed)))
       Seed = static_cast<u32>(Time ^ (PrimaryBase >> 12));
     const uptr PageSize = getPageSizeCached();
@@ -796,7 +796,7 @@ private:
         return 0;
       if (Region->ReleaseInfo.LastReleaseAtNs +
               static_cast<u64>(IntervalMs) * 1000000 >
-          getMonotonicTime()) {
+          getMonotonicTimeFast()) {
         return 0; // Memory was returned recently.
       }
     }
@@ -995,7 +995,7 @@ private:
       Region->ReleaseInfo.RangesReleased += Recorder.getReleasedRangesCount();
       Region->ReleaseInfo.LastReleasedBytes = Recorder.getReleasedBytes();
     }
-    Region->ReleaseInfo.LastReleaseAtNs = getMonotonicTime();
+    Region->ReleaseInfo.LastReleaseAtNs = getMonotonicTimeFast();
 
     // Merge GroupToRelease back to the Region::FreeList. Note that both
     // `Region->FreeList` and `GroupToRelease` are sorted.
