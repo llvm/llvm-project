@@ -191,9 +191,6 @@ used variables that control features of LLVM and enabled subprojects.
 
 **CMAKE_BUILD_TYPE**:STRING
   This configures the optimization level for ``make`` or ``ninja`` builds.
-  The default ``CMAKE_BUILD_TYPE`` is set to ``Debug`` but you should
-  carefully read the list below to figure out what configuration matches
-  your use case the best.
 
   Possible values:
 

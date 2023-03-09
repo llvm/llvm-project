@@ -1353,6 +1353,8 @@ llvm.func @alloca(%size : i64) {
   llvm.alloca %size x i32 {alignment = 8} : (i64) -> (!llvm.ptr<i32>)
   // CHECK-NEXT: alloca {{.*}} addrspace(3)
   llvm.alloca %size x i32 {alignment = 0} : (i64) -> (!llvm.ptr<i32, 3>)
+  // CHECK-NEXT: alloca inalloca {{.*}} align 4
+  llvm.alloca inalloca %size x i32 : (i64) -> !llvm.ptr
   llvm.return
 }
 

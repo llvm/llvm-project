@@ -292,13 +292,6 @@ static bool runIPSCCP(
         if (!CB || CB->getCalledFunction() != F)
           continue;
 
-        // Limit to cases where the return value is guaranteed to be neither
-        // poison nor undef. Poison will be outside any range and currently
-        // values outside of the specified range cause immediate undefined
-        // behavior.
-        if (!isGuaranteedNotToBeUndefOrPoison(CB, nullptr, CB))
-          continue;
-
         // Do not touch existing metadata for now.
         // TODO: We should be able to take the intersection of the existing
         // metadata and the inferred range.

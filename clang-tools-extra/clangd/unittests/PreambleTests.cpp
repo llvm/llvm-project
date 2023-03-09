@@ -665,7 +665,7 @@ TEST(PreamblePatch, DiagnosticsFromMainASTAreInRightPlace) {
 TEST(PreamblePatch, DiagnosticsToPreamble) {
   Config Cfg;
   Cfg.Diagnostics.AllowStalePreamble = true;
-  Cfg.Diagnostics.UnusedIncludes = Config::UnusedIncludesPolicy::Strict;
+  Cfg.Diagnostics.UnusedIncludes = Config::IncludesPolicy::Strict;
   WithContextValue WithCfg(Config::Key, std::move(Cfg));
 
   llvm::StringMap<std::string> AdditionalFiles;

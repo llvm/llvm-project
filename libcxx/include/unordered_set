@@ -1819,6 +1819,7 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <concepts>
 #  include <functional>
 #  include <iterator>
+#  include <type_traits>
 #endif
 
 #endif // _LIBCPP_UNORDERED_SET

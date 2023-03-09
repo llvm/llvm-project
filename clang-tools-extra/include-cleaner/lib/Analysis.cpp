@@ -49,8 +49,8 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
   }
 }
 
-static std::string spellHeader(const Header &H, HeaderSearch &HS,
-                               const FileEntry *Main) {
+std::string spellHeader(const Header &H, HeaderSearch &HS,
+                        const FileEntry *Main) {
   switch (H.kind()) {
   case Header::Physical: {
     bool IsSystem = false;

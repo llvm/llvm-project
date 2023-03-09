@@ -1874,8 +1874,8 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
 
 bool CommandInterpreter::HandleCommand(const char *command_line,
                                        LazyBool lazy_add_to_history,
-                                       CommandReturnObject &result) {
-
+                                       CommandReturnObject &result,
+                                       bool force_repeat_command) {
   std::string command_string(command_line);
   std::string original_command_string(command_line);
 
@@ -2004,17 +2004,26 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   // arguments.
 
   if (cmd_obj != nullptr) {
+    bool generate_repeat_command = add_to_history;
     // If we got here when empty_command was true, then this command is a
     // stored "repeat command" which we should give a chance to produce it's
     // repeat command, even though we don't add repeat commands to the history.
-    if (add_to_history || empty_command) {
+    generate_repeat_command |= empty_command;
+    // For `command regex`, the regex command (ex `bt`) is added to history, but
+    // the resolved command (ex `thread backtrace`) is _not_ added to history.
+    // However, the resolved command must be given the opportunity to provide a
+    // repeat command. `force_repeat_command` supports this case.
+    generate_repeat_command |= force_repeat_command;
+    if (generate_repeat_command) {
       Args command_args(command_string);
       std::optional<std::string> repeat_command =
           cmd_obj->GetRepeatCommand(command_args, 0);
-      if (repeat_command)
+      if (repeat_command) {
+        LLDB_LOGF(log, "Repeat command: %s", repeat_command->data());
         m_repeat_command.assign(*repeat_command);
-      else
+      } else {
         m_repeat_command.assign(original_command_string);
+      }
     }
 
     if (add_to_history)

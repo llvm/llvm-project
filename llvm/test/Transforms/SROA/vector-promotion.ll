@@ -891,34 +891,26 @@ define <2 x i64> @test13(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; cast to a different vector type
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X_SROA_0:%.*]] = alloca <2 x i64>, align 16
-; CHECK-NEXT:    store i32 [[A:%.*]], ptr [[X_SROA_0]], align 16
-; CHECK-NEXT:    [[X_SROA_0_4_X_TMP2_SROA_IDX1:%.*]] = getelementptr inbounds i8, ptr [[X_SROA_0]], i64 4
-; CHECK-NEXT:    store i32 [[B:%.*]], ptr [[X_SROA_0_4_X_TMP2_SROA_IDX1]], align 4
-; CHECK-NEXT:    [[X_SROA_0_8_X_TMP3_SROA_IDX2:%.*]] = getelementptr inbounds i8, ptr [[X_SROA_0]], i64 8
-; CHECK-NEXT:    store i32 [[C:%.*]], ptr [[X_SROA_0_8_X_TMP3_SROA_IDX2]], align 8
-; CHECK-NEXT:    [[X_SROA_0_12_X_TMP4_SROA_IDX3:%.*]] = getelementptr inbounds i8, ptr [[X_SROA_0]], i64 12
-; CHECK-NEXT:    store i32 [[D:%.*]], ptr [[X_SROA_0_12_X_TMP4_SROA_IDX3]], align 4
-; CHECK-NEXT:    [[X_SROA_0_0_X_SROA_0_0_RESULT:%.*]] = load <2 x i64>, ptr [[X_SROA_0]], align 16
-; CHECK-NEXT:    ret <2 x i64> [[X_SROA_0_0_X_SROA_0_0_RESULT]]
+; CHECK-NEXT:    [[X_SROA_0_0_VEC_INSERT:%.*]] = insertelement <4 x i32> undef, i32 [[A:%.*]], i32 0
+; CHECK-NEXT:    [[X_SROA_0_4_VEC_INSERT:%.*]] = insertelement <4 x i32> [[X_SROA_0_0_VEC_INSERT]], i32 [[B:%.*]], i32 1
+; CHECK-NEXT:    [[X_SROA_0_8_VEC_INSERT:%.*]] = insertelement <4 x i32> [[X_SROA_0_4_VEC_INSERT]], i32 [[C:%.*]], i32 2
+; CHECK-NEXT:    [[X_SROA_0_12_VEC_INSERT:%.*]] = insertelement <4 x i32> [[X_SROA_0_8_VEC_INSERT]], i32 [[D:%.*]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[X_SROA_0_12_VEC_INSERT]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[TMP0]]
 ;
 ; DEBUG-LABEL: @test13(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:    [[X_SROA_0:%.*]] = alloca <2 x i64>, align 16, !dbg [[DBG354:![0-9]+]]
-; DEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata [[META349:![0-9]+]], metadata !DIExpression()), !dbg [[DBG354]]
-; DEBUG-NEXT:    store i32 [[A:%.*]], ptr [[X_SROA_0]], align 16, !dbg [[DBG355:![0-9]+]]
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata [[META349:![0-9]+]], metadata !DIExpression()), !dbg [[DBG354:![0-9]+]]
+; DEBUG-NEXT:    [[X_SROA_0_0_VEC_INSERT:%.*]] = insertelement <4 x i32> undef, i32 [[A:%.*]], i32 0, !dbg [[DBG355:![0-9]+]]
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata [[META350:![0-9]+]], metadata !DIExpression()), !dbg [[DBG356:![0-9]+]]
-; DEBUG-NEXT:    [[X_SROA_0_4_X_TMP2_SROA_IDX1:%.*]] = getelementptr inbounds i8, ptr [[X_SROA_0]], i64 4, !dbg [[DBG357:![0-9]+]]
-; DEBUG-NEXT:    store i32 [[B:%.*]], ptr [[X_SROA_0_4_X_TMP2_SROA_IDX1]], align 4, !dbg [[DBG357]]
+; DEBUG-NEXT:    [[X_SROA_0_4_VEC_INSERT:%.*]] = insertelement <4 x i32> [[X_SROA_0_0_VEC_INSERT]], i32 [[B:%.*]], i32 1, !dbg [[DBG357:![0-9]+]]
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata [[META351:![0-9]+]], metadata !DIExpression()), !dbg [[DBG358:![0-9]+]]
-; DEBUG-NEXT:    [[X_SROA_0_8_X_TMP3_SROA_IDX2:%.*]] = getelementptr inbounds i8, ptr [[X_SROA_0]], i64 8, !dbg [[DBG359:![0-9]+]]
-; DEBUG-NEXT:    store i32 [[C:%.*]], ptr [[X_SROA_0_8_X_TMP3_SROA_IDX2]], align 8, !dbg [[DBG359]]
+; DEBUG-NEXT:    [[X_SROA_0_8_VEC_INSERT:%.*]] = insertelement <4 x i32> [[X_SROA_0_4_VEC_INSERT]], i32 [[C:%.*]], i32 2, !dbg [[DBG359:![0-9]+]]
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata [[META352:![0-9]+]], metadata !DIExpression()), !dbg [[DBG360:![0-9]+]]
-; DEBUG-NEXT:    [[X_SROA_0_12_X_TMP4_SROA_IDX3:%.*]] = getelementptr inbounds i8, ptr [[X_SROA_0]], i64 12, !dbg [[DBG361:![0-9]+]]
-; DEBUG-NEXT:    store i32 [[D:%.*]], ptr [[X_SROA_0_12_X_TMP4_SROA_IDX3]], align 4, !dbg [[DBG361]]
-; DEBUG-NEXT:    [[X_SROA_0_0_X_SROA_0_0_RESULT:%.*]] = load <2 x i64>, ptr [[X_SROA_0]], align 16, !dbg [[DBG362:![0-9]+]]
-; DEBUG-NEXT:    call void @llvm.dbg.value(metadata <2 x i64> [[X_SROA_0_0_X_SROA_0_0_RESULT]], metadata [[META353:![0-9]+]], metadata !DIExpression()), !dbg [[DBG362]]
-; DEBUG-NEXT:    ret <2 x i64> [[X_SROA_0_0_X_SROA_0_0_RESULT]], !dbg [[DBG363:![0-9]+]]
+; DEBUG-NEXT:    [[X_SROA_0_12_VEC_INSERT:%.*]] = insertelement <4 x i32> [[X_SROA_0_8_VEC_INSERT]], i32 [[D:%.*]], i32 3, !dbg [[DBG361:![0-9]+]]
+; DEBUG-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[X_SROA_0_12_VEC_INSERT]] to <2 x i64>, !dbg [[DBG362:![0-9]+]]
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata <2 x i64> [[TMP0]], metadata [[META353:![0-9]+]], metadata !DIExpression()), !dbg [[DBG362]]
+; DEBUG-NEXT:    ret <2 x i64> [[TMP0]], !dbg [[DBG363:![0-9]+]]
 ;
 entry:
   %x = alloca [4 x i32]
@@ -938,43 +930,35 @@ define i32 @test14(<2 x i64> %x) {
 ; cast to a different vector type
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X_ADDR:%.*]] = alloca <2 x i64>, align 16
-; CHECK-NEXT:    store <2 x i64> [[X:%.*]], ptr [[X_ADDR]], align 16
-; CHECK-NEXT:    [[X_ADDR_0_A:%.*]] = load i32, ptr [[X_ADDR]], align 16
-; CHECK-NEXT:    [[X_ADDR_4_X_TMP2_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[X_ADDR]], i64 4
-; CHECK-NEXT:    [[X_ADDR_4_B:%.*]] = load i32, ptr [[X_ADDR_4_X_TMP2_SROA_IDX]], align 4
-; CHECK-NEXT:    [[X_ADDR_8_X_TMP3_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[X_ADDR]], i64 8
-; CHECK-NEXT:    [[X_ADDR_8_C:%.*]] = load i32, ptr [[X_ADDR_8_X_TMP3_SROA_IDX]], align 8
-; CHECK-NEXT:    [[X_ADDR_12_X_TMP4_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[X_ADDR]], i64 12
-; CHECK-NEXT:    [[X_ADDR_12_D:%.*]] = load i32, ptr [[X_ADDR_12_X_TMP4_SROA_IDX]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X_ADDR_0_A]], [[X_ADDR_4_B]]
-; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[X_ADDR_8_C]], [[X_ADDR_12_D]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[X:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[X_ADDR_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP0]], i32 0
+; CHECK-NEXT:    [[X_ADDR_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP0]], i32 1
+; CHECK-NEXT:    [[X_ADDR_SROA_0_8_VEC_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP0]], i32 2
+; CHECK-NEXT:    [[X_ADDR_SROA_0_12_VEC_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP0]], i32 3
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X_ADDR_SROA_0_0_VEC_EXTRACT]], [[X_ADDR_SROA_0_4_VEC_EXTRACT]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[X_ADDR_SROA_0_8_VEC_EXTRACT]], [[X_ADDR_SROA_0_12_VEC_EXTRACT]]
 ; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD]], [[ADD1]]
 ; CHECK-NEXT:    ret i32 [[ADD2]]
 ;
 ; DEBUG-LABEL: @test14(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:    [[X_ADDR:%.*]] = alloca <2 x i64>, align 16, !dbg [[DBG378:![0-9]+]]
-; DEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr [[X_ADDR]], metadata [[META366:![0-9]+]], metadata !DIExpression()), !dbg [[DBG378]]
-; DEBUG-NEXT:    store <2 x i64> [[X:%.*]], ptr [[X_ADDR]], align 16, !dbg [[DBG379:![0-9]+]]
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata [[META366:![0-9]+]], metadata !DIExpression()), !dbg [[DBG378:![0-9]+]]
+; DEBUG-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[X:%.*]] to <4 x i32>, !dbg [[DBG379:![0-9]+]]
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata [[META367:![0-9]+]], metadata !DIExpression()), !dbg [[DBG380:![0-9]+]]
-; DEBUG-NEXT:    [[X_ADDR_0_A:%.*]] = load i32, ptr [[X_ADDR]], align 16, !dbg [[DBG381:![0-9]+]]
-; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_ADDR_0_A]], metadata [[META368:![0-9]+]], metadata !DIExpression()), !dbg [[DBG381]]
+; DEBUG-NEXT:    [[X_ADDR_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP0]], i32 0, !dbg [[DBG381:![0-9]+]]
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_ADDR_SROA_0_0_VEC_EXTRACT]], metadata [[META368:![0-9]+]], metadata !DIExpression()), !dbg [[DBG381]]
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata [[META369:![0-9]+]], metadata !DIExpression()), !dbg [[DBG382:![0-9]+]]
-; DEBUG-NEXT:    [[X_ADDR_4_X_TMP2_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[X_ADDR]], i64 4, !dbg [[DBG383:![0-9]+]]
-; DEBUG-NEXT:    [[X_ADDR_4_B:%.*]] = load i32, ptr [[X_ADDR_4_X_TMP2_SROA_IDX]], align 4, !dbg [[DBG383]]
-; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_ADDR_4_B]], metadata [[META370:![0-9]+]], metadata !DIExpression()), !dbg [[DBG383]]
+; DEBUG-NEXT:    [[X_ADDR_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP0]], i32 1, !dbg [[DBG383:![0-9]+]]
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_ADDR_SROA_0_4_VEC_EXTRACT]], metadata [[META370:![0-9]+]], metadata !DIExpression()), !dbg [[DBG383]]
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata [[META371:![0-9]+]], metadata !DIExpression()), !dbg [[DBG384:![0-9]+]]
-; DEBUG-NEXT:    [[X_ADDR_8_X_TMP3_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[X_ADDR]], i64 8, !dbg [[DBG385:![0-9]+]]
-; DEBUG-NEXT:    [[X_ADDR_8_C:%.*]] = load i32, ptr [[X_ADDR_8_X_TMP3_SROA_IDX]], align 8, !dbg [[DBG385]]
-; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_ADDR_8_C]], metadata [[META372:![0-9]+]], metadata !DIExpression()), !dbg [[DBG385]]
+; DEBUG-NEXT:    [[X_ADDR_SROA_0_8_VEC_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP0]], i32 2, !dbg [[DBG385:![0-9]+]]
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_ADDR_SROA_0_8_VEC_EXTRACT]], metadata [[META372:![0-9]+]], metadata !DIExpression()), !dbg [[DBG385]]
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata [[META373:![0-9]+]], metadata !DIExpression()), !dbg [[DBG386:![0-9]+]]
-; DEBUG-NEXT:    [[X_ADDR_12_X_TMP4_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[X_ADDR]], i64 12, !dbg [[DBG387:![0-9]+]]
-; DEBUG-NEXT:    [[X_ADDR_12_D:%.*]] = load i32, ptr [[X_ADDR_12_X_TMP4_SROA_IDX]], align 4, !dbg [[DBG387]]
-; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_ADDR_12_D]], metadata [[META374:![0-9]+]], metadata !DIExpression()), !dbg [[DBG387]]
-; DEBUG-NEXT:    [[ADD:%.*]] = add i32 [[X_ADDR_0_A]], [[X_ADDR_4_B]], !dbg [[DBG388:![0-9]+]]
+; DEBUG-NEXT:    [[X_ADDR_SROA_0_12_VEC_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP0]], i32 3, !dbg [[DBG387:![0-9]+]]
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_ADDR_SROA_0_12_VEC_EXTRACT]], metadata [[META374:![0-9]+]], metadata !DIExpression()), !dbg [[DBG387]]
+; DEBUG-NEXT:    [[ADD:%.*]] = add i32 [[X_ADDR_SROA_0_0_VEC_EXTRACT]], [[X_ADDR_SROA_0_4_VEC_EXTRACT]], !dbg [[DBG388:![0-9]+]]
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[ADD]], metadata [[META375:![0-9]+]], metadata !DIExpression()), !dbg [[DBG388]]
-; DEBUG-NEXT:    [[ADD1:%.*]] = add i32 [[X_ADDR_8_C]], [[X_ADDR_12_D]], !dbg [[DBG389:![0-9]+]]
+; DEBUG-NEXT:    [[ADD1:%.*]] = add i32 [[X_ADDR_SROA_0_8_VEC_EXTRACT]], [[X_ADDR_SROA_0_12_VEC_EXTRACT]], !dbg [[DBG389:![0-9]+]]
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[ADD1]], metadata [[META376:![0-9]+]], metadata !DIExpression()), !dbg [[DBG389]]
 ; DEBUG-NEXT:    [[ADD2:%.*]] = add i32 [[ADD]], [[ADD1]], !dbg [[DBG390:![0-9]+]]
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[ADD2]], metadata [[META377:![0-9]+]], metadata !DIExpression()), !dbg [[DBG390]]

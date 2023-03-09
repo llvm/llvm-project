@@ -513,8 +513,6 @@ put_time(const tm* __tm, const _CharT* __fmt)
     return __iom_t10<_CharT>(__tm, __fmt);
 }
 
-#if _LIBCPP_STD_VER >= 11
-
 template <class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 __quoted_output(basic_ostream<_CharT, _Traits>& __os,
@@ -621,8 +619,6 @@ __quoted(basic_string<_CharT, _Traits, _Allocator>& __s, _CharT __delim = _CharT
 {
     return __quoted_proxy<_CharT, _Traits, _Allocator>(__s, __delim, __escape);
 }
-
-#endif // _LIBCPP_STD_VER >= 11
 
 #if _LIBCPP_STD_VER >= 14
 

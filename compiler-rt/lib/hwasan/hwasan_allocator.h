@@ -68,15 +68,21 @@ struct AP64 {
 
 #if defined(HWASAN_ALIASING_MODE)
   static const uptr kSpaceSize = 1ULL << kAddressTagShift;
+  typedef __sanitizer::DefaultSizeClassMap SizeClassMap;
+#elif SANITIZER_LINUX && !SANITIZER_ANDROID
+  static const uptr kSpaceSize = 0x40000000000ULL;  // 4T.
+  typedef __sanitizer::DefaultSizeClassMap SizeClassMap;
 #else
-  static const uptr kSpaceSize = 0x2000000000ULL;
-#endif
-  static const uptr kMetadataSize = sizeof(Metadata);
+  static const uptr kSpaceSize = 0x2000000000ULL;  // 128G.
   typedef __sanitizer::VeryDenseSizeClassMap SizeClassMap;
+#endif
+
+  static const uptr kMetadataSize = sizeof(Metadata);
   using AddressSpaceView = LocalAddressSpaceView;
   typedef HwasanMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags = 0;
 };
+
 typedef SizeClassAllocator64<AP64> PrimaryAllocator;
 typedef CombinedAllocator<PrimaryAllocator> Allocator;
 typedef Allocator::AllocatorCache AllocatorCache;

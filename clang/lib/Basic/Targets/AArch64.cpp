@@ -606,16 +606,18 @@ unsigned AArch64TargetInfo::multiVersionFeatureCost() const {
   return llvm::AArch64::ExtensionInfo::MaxFMVPriority;
 }
 
-bool AArch64TargetInfo::getFeatureDepOptions(StringRef Name,
-                                             std::string &FeatureVec) const {
-  FeatureVec = "";
-  for (const auto &E : llvm::AArch64::Extensions) {
-    if (Name == E.Name) {
-      FeatureVec = E.DependentFeatures;
-      break;
-    }
-  }
-  return FeatureVec != "";
+bool AArch64TargetInfo::doesFeatureAffectCodeGen(StringRef Name) const {
+  auto F = llvm::find_if(llvm::AArch64::Extensions, [&](const auto &E) {
+    return Name == E.Name && !E.DependentFeatures.empty();
+  });
+  return F != std::end(llvm::AArch64::Extensions);
+}
+
+StringRef AArch64TargetInfo::getFeatureDependencies(StringRef Name) const {
+  auto F = llvm::find_if(llvm::AArch64::Extensions,
+                         [&](const auto &E) { return Name == E.Name; });
+  return F != std::end(llvm::AArch64::Extensions) ? F->DependentFeatures
+                                                  : StringRef();
 }
 
 bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
@@ -962,18 +964,18 @@ bool AArch64TargetInfo::initFeatureMap(
   }
 
   // Process target and dependent features. This is done in two loops collecting
-  // them into UpdatedFeaturesVec: first to add dependent '+'features,
-  // second to add target '+/-'features that can later disable some of
-  // features added on the first loop.
+  // them into UpdatedFeaturesVec: first to add dependent '+'features, second to
+  // add target '+/-'features that can later disable some of features added on
+  // the first loop. Function Multi Versioning features begin with '?'.
   for (const auto &Feature : FeaturesVec)
-    if ((Feature[0] == '?' || Feature[0] == '+')) {
-      std::string Options;
-      if (AArch64TargetInfo::getFeatureDepOptions(Feature.substr(1), Options)) {
-        SmallVector<StringRef, 1> AttrFeatures;
-        StringRef(Options).split(AttrFeatures, ",");
-        for (auto F : AttrFeatures)
-          UpdatedFeaturesVec.push_back(F.str());
-      }
+    if (((Feature[0] == '?' || Feature[0] == '+')) &&
+        AArch64TargetInfo::doesFeatureAffectCodeGen(Feature.substr(1))) {
+      StringRef DepFeatures =
+          AArch64TargetInfo::getFeatureDependencies(Feature.substr(1));
+      SmallVector<StringRef, 1> AttrFeatures;
+      DepFeatures.split(AttrFeatures, ",");
+      for (auto F : AttrFeatures)
+        UpdatedFeaturesVec.push_back(F.str());
     }
   for (const auto &Feature : FeaturesVec)
     if (Feature[0] != '?') {

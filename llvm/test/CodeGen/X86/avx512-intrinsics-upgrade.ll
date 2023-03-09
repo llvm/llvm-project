@@ -1033,7 +1033,7 @@ define <16 x float>@test_int_x86_avx512_mask_vpermil_ps_512(<16 x float> %x0, <1
 ; X86-LABEL: test_int_x86_avx512_mask_vpermil_ps_512:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 ## encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vpermilps $22, %zmm0, %zmm1 {%k1} ## encoding: [0x62,0xf3,0x7d,0x49,0x04,0xc8,0x16]
+; X86-NEXT:    vshufps $22, %zmm0, %zmm0, %zmm1 {%k1} ## encoding: [0x62,0xf1,0x7c,0x49,0xc6,0xc8,0x16]
 ; X86-NEXT:    ## zmm1 {%k1} = zmm0[2,1,1,0,6,5,5,4,10,9,9,8,14,13,13,12]
 ; X86-NEXT:    vmovaps %zmm1, %zmm0 ## encoding: [0x62,0xf1,0x7c,0x48,0x28,0xc1]
 ; X86-NEXT:    retl ## encoding: [0xc3]
@@ -1041,7 +1041,7 @@ define <16 x float>@test_int_x86_avx512_mask_vpermil_ps_512(<16 x float> %x0, <1
 ; X64-LABEL: test_int_x86_avx512_mask_vpermil_ps_512:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
-; X64-NEXT:    vpermilps $22, %zmm0, %zmm1 {%k1} ## encoding: [0x62,0xf3,0x7d,0x49,0x04,0xc8,0x16]
+; X64-NEXT:    vshufps $22, %zmm0, %zmm0, %zmm1 {%k1} ## encoding: [0x62,0xf1,0x7c,0x49,0xc6,0xc8,0x16]
 ; X64-NEXT:    ## zmm1 {%k1} = zmm0[2,1,1,0,6,5,5,4,10,9,9,8,14,13,13,12]
 ; X64-NEXT:    vmovaps %zmm1, %zmm0 ## encoding: [0x62,0xf1,0x7c,0x48,0x28,0xc1]
 ; X64-NEXT:    retq ## encoding: [0xc3]
@@ -1053,14 +1053,14 @@ define <16 x float>@test_int_x86_avx512_maskz_vpermil_ps_512(<16 x float> %x0, i
 ; X86-LABEL: test_int_x86_avx512_maskz_vpermil_ps_512:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 ## encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vpermilps $22, %zmm0, %zmm0 {%k1} {z} ## encoding: [0x62,0xf3,0x7d,0xc9,0x04,0xc0,0x16]
+; X86-NEXT:    vshufps $22, %zmm0, %zmm0, %zmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7c,0xc9,0xc6,0xc0,0x16]
 ; X86-NEXT:    ## zmm0 {%k1} {z} = zmm0[2,1,1,0,6,5,5,4,10,9,9,8,14,13,13,12]
 ; X86-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X64-LABEL: test_int_x86_avx512_maskz_vpermil_ps_512:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
-; X64-NEXT:    vpermilps $22, %zmm0, %zmm0 {%k1} {z} ## encoding: [0x62,0xf3,0x7d,0xc9,0x04,0xc0,0x16]
+; X64-NEXT:    vshufps $22, %zmm0, %zmm0, %zmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7c,0xc9,0xc6,0xc0,0x16]
 ; X64-NEXT:    ## zmm0 {%k1} {z} = zmm0[2,1,1,0,6,5,5,4,10,9,9,8,14,13,13,12]
 ; X64-NEXT:    retq ## encoding: [0xc3]
   %res = call <16 x float> @llvm.x86.avx512.mask.vpermil.ps.512(<16 x float> %x0, i32 22, <16 x float> zeroinitializer, i16 %x3)

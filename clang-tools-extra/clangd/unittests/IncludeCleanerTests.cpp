@@ -8,25 +8,57 @@
 
 #include "Annotations.h"
 #include "Config.h"
+#include "Diagnostics.h"
 #include "IncludeCleaner.h"
+#include "ParsedAST.h"
 #include "SourceCode.h"
 #include "TestFS.h"
 #include "TestTU.h"
+#include "clang-include-cleaner/Analysis.h"
+#include "clang-include-cleaner/Types.h"
 #include "support/Context.h"
+#include "clang/AST/DeclBase.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <cstddef>
+#include <string>
+#include <vector>
 
 namespace clang {
 namespace clangd {
 namespace {
 
+using ::testing::AllOf;
 using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
 using ::testing::IsEmpty;
+using ::testing::Matcher;
 using ::testing::Pointee;
 using ::testing::UnorderedElementsAre;
+
+Matcher<const Diag &> withFix(::testing::Matcher<Fix> FixMatcher) {
+  return Field(&Diag::Fixes, ElementsAre(FixMatcher));
+}
+
+MATCHER_P2(Diag, Range, Message,
+           "Diag at " + llvm::to_string(Range) + " = [" + Message + "]") {
+  return arg.Range == Range && arg.Message == Message;
+}
+
+MATCHER_P3(Fix, Range, Replacement, Message,
+           "Fix " + llvm::to_string(Range) + " => " +
+               ::testing::PrintToString(Replacement) + " = [" + Message + "]") {
+  return arg.Message == Message && arg.Edits.size() == 1 &&
+         arg.Edits[0].range == Range && arg.Edits[0].newText == Replacement;
+}
 
 std::string guard(llvm::StringRef Code) {
   return "#pragma once\n" + Code.str();
@@ -342,7 +374,8 @@ TEST(IncludeCleaner, StdlibUnused) {
   auto AST = TU.build();
   EXPECT_THAT(computeUnusedIncludes(AST),
               ElementsAre(Pointee(writtenInclusion("<queue>"))));
-  EXPECT_THAT(computeUnusedIncludesExperimental(AST),
+  IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
+  EXPECT_THAT(Findings.UnusedIncludes,
               ElementsAre(Pointee(writtenInclusion("<queue>"))));
 }
 
@@ -379,10 +412,136 @@ TEST(IncludeCleaner, GetUnusedHeaders) {
       computeUnusedIncludes(AST),
       UnorderedElementsAre(Pointee(writtenInclusion("\"unused.h\"")),
                            Pointee(writtenInclusion("\"dir/unused.h\""))));
+
+  IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
   EXPECT_THAT(
-      computeUnusedIncludesExperimental(AST),
+      Findings.UnusedIncludes,
       UnorderedElementsAre(Pointee(writtenInclusion("\"unused.h\"")),
                            Pointee(writtenInclusion("\"dir/unused.h\""))));
+}
+
+TEST(IncludeCleaner, ComputeMissingHeaders) {
+  Annotations MainFile(R"cpp(
+    #include "a.h"
+
+    void foo() {
+      $b[[b]]();
+    })cpp");
+  TestTU TU;
+  TU.Filename = "foo.cpp";
+  TU.AdditionalFiles["a.h"] = guard("#include \"b.h\"");
+  TU.AdditionalFiles["b.h"] = guard("void b();");
+
+  TU.Code = MainFile.code();
+  ParsedAST AST = TU.build();
+
+  IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
+  const SourceManager &SM = AST.getSourceManager();
+  const NamedDecl *BDecl = nullptr;
+  for (Decl *D : AST.getASTContext().getTranslationUnitDecl()->decls()) {
+    const NamedDecl *CandidateDecl = llvm::dyn_cast<NamedDecl>(D);
+    std::string Name = CandidateDecl->getQualifiedNameAsString();
+    if (Name != "b")
+      continue;
+    BDecl = CandidateDecl;
+  }
+  ASSERT_TRUE(BDecl);
+  include_cleaner::Symbol B{*BDecl};
+  auto Range = MainFile.range("b");
+  size_t Start = llvm::cantFail(positionToOffset(MainFile.code(), Range.start));
+  size_t End = llvm::cantFail(positionToOffset(MainFile.code(), Range.end));
+  syntax::FileRange BRange{SM.getMainFileID(), static_cast<unsigned int>(Start),
+                           static_cast<unsigned int>(End)};
+  include_cleaner::Header Header{*SM.getFileManager().getFile("b.h")};
+  MissingIncludeDiagInfo BInfo{B, BRange, {Header}};
+  EXPECT_THAT(Findings.MissingIncludes, ElementsAre(BInfo));
+}
+
+TEST(IncludeCleaner, GenerateMissingHeaderDiags) {
+  Config Cfg;
+  Cfg.Diagnostics.MissingIncludes = Config::IncludesPolicy::Strict;
+  Cfg.Diagnostics.Includes.IgnoreHeader = {
+      [](llvm::StringRef Header) { return Header.ends_with("buzz.h"); }};
+  WithContextValue Ctx(Config::Key, std::move(Cfg));
+  Annotations MainFile(R"cpp(
+#include "a.h"
+$insert_b[[]]#include "baz.h"
+#include "dir/c.h"
+$insert_d[[]]#include "fuzz.h"
+#include "header.h"
+$insert_foobar[[]]#include <e.h>
+$insert_f[[]]$insert_vector[[]]
+
+    void foo() {
+      $b[[b]]();
+
+      ns::$bar[[Bar]] bar;
+      bar.d();
+      $f[[f]](); 
+
+      // this should not be diagnosed, because it's ignored in the config
+      buzz(); 
+
+      $foobar[[foobar]]();
+
+      std::$vector[[vector]] v;
+    })cpp");
+
+  TestTU TU;
+  TU.Filename = "foo.cpp";
+  TU.AdditionalFiles["a.h"] = guard("#include \"b.h\"");
+  TU.AdditionalFiles["b.h"] = guard("void b();");
+
+  TU.AdditionalFiles["dir/c.h"] = guard("#include \"d.h\"");
+  TU.AdditionalFiles["dir/d.h"] =
+      guard("namespace ns { struct Bar { void d(); }; }");
+
+  TU.AdditionalFiles["system/e.h"] = guard("#include <f.h>");
+  TU.AdditionalFiles["system/f.h"] = guard("void f();");
+  TU.ExtraArgs.push_back("-isystem" + testPath("system"));
+
+  TU.AdditionalFiles["fuzz.h"] = guard("#include \"buzz.h\"");
+  TU.AdditionalFiles["buzz.h"] = guard("void buzz();");
+
+  TU.AdditionalFiles["baz.h"] = guard("#include \"private.h\"");
+  TU.AdditionalFiles["private.h"] = guard(R"cpp(
+    // IWYU pragma: private, include "public.h"
+    void foobar();
+  )cpp");
+  TU.AdditionalFiles["header.h"] = guard(R"cpp(
+  namespace std { class vector {}; }
+  )cpp");
+
+  TU.Code = MainFile.code();
+  ParsedAST AST = TU.build();
+
+  std::vector<clangd::Diag> Diags =
+      issueIncludeCleanerDiagnostics(AST, TU.Code);
+  EXPECT_THAT(
+      Diags,
+      UnorderedElementsAre(
+          AllOf(Diag(MainFile.range("b"),
+                     "No header providing \"b\" is directly included"),
+                withFix(Fix(MainFile.range("insert_b"), "#include \"b.h\"\n",
+                            "#include \"b.h\""))),
+          AllOf(Diag(MainFile.range("bar"),
+                     "No header providing \"ns::Bar\" is directly included"),
+                withFix(Fix(MainFile.range("insert_d"),
+                            "#include \"dir/d.h\"\n", "#include \"dir/d.h\""))),
+          AllOf(Diag(MainFile.range("f"),
+                     "No header providing \"f\" is directly included"),
+                withFix(Fix(MainFile.range("insert_f"), "#include <f.h>\n",
+                            "#include <f.h>"))),
+          AllOf(
+              Diag(MainFile.range("foobar"),
+                   "No header providing \"foobar\" is directly included"),
+              withFix(Fix(MainFile.range("insert_foobar"),
+                          "#include \"public.h\"\n", "#include \"public.h\""))),
+          AllOf(
+              Diag(MainFile.range("vector"),
+                   "No header providing \"std::vector\" is directly included"),
+              withFix(Fix(MainFile.range("insert_vector"),
+                          "#include <vector>\n", "#include <vector>")))));
 }
 
 TEST(IncludeCleaner, VirtualBuffers) {
@@ -538,7 +697,7 @@ TEST(IncludeCleaner, IWYUPragmas) {
     void foo() {}
   )cpp");
   Config Cfg;
-  Cfg.Diagnostics.UnusedIncludes = Config::UnusedIncludesPolicy::Experiment;
+  Cfg.Diagnostics.UnusedIncludes = Config::IncludesPolicy::Experiment;
   WithContextValue Ctx(Config::Key, std::move(Cfg));
   ParsedAST AST = TU.build();
 
@@ -554,7 +713,8 @@ TEST(IncludeCleaner, IWYUPragmas) {
       ReferencedFiles.User.contains(AST.getSourceManager().getMainFileID()));
   EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
   EXPECT_THAT(computeUnusedIncludes(AST), IsEmpty());
-  EXPECT_THAT(computeUnusedIncludesExperimental(AST), IsEmpty());
+  IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
+  EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
 }
 
 TEST(IncludeCleaner, RecursiveInclusion) {
@@ -583,7 +743,8 @@ TEST(IncludeCleaner, RecursiveInclusion) {
 
   EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
   EXPECT_THAT(computeUnusedIncludes(AST), IsEmpty());
-  EXPECT_THAT(computeUnusedIncludesExperimental(AST), IsEmpty());
+  IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
+  EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
 }
 
 TEST(IncludeCleaner, IWYUPragmaExport) {
@@ -608,7 +769,8 @@ TEST(IncludeCleaner, IWYUPragmaExport) {
   // FIXME: This is not correct: foo.h is unused but is not diagnosed as such
   // because we ignore headers with IWYU export pragmas for now.
   EXPECT_THAT(computeUnusedIncludes(AST), IsEmpty());
-  EXPECT_THAT(computeUnusedIncludesExperimental(AST), IsEmpty());
+  IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
+  EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
 }
 
 TEST(IncludeCleaner, NoDiagsForObjC) {
@@ -627,7 +789,9 @@ TEST(IncludeCleaner, NoDiagsForObjC) {
   TU.ExtraArgs.emplace_back("-xobjective-c");
 
   Config Cfg;
-  Cfg.Diagnostics.UnusedIncludes = Config::UnusedIncludesPolicy::Strict;
+
+  Cfg.Diagnostics.UnusedIncludes = Config::IncludesPolicy::Strict;
+  Cfg.Diagnostics.MissingIncludes = Config::IncludesPolicy::Strict;
   WithContextValue Ctx(Config::Key, std::move(Cfg));
   ParsedAST AST = TU.build();
   EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));

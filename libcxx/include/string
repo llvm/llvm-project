@@ -561,7 +561,14 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <__string/char_traits.h>
 #include <__string/extern_template_lists.h>
 #include <__type_traits/is_allocator.h>
+#include <__type_traits/is_array.h>
+#include <__type_traits/is_nothrow_default_constructible.h>
+#include <__type_traits/is_nothrow_move_assignable.h>
+#include <__type_traits/is_same.h>
+#include <__type_traits/is_standard_layout.h>
+#include <__type_traits/is_trivial.h>
 #include <__type_traits/noexcept_move_assign_container.h>
+#include <__type_traits/remove_cvref.h>
 #include <__utility/auto_cast.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
@@ -574,7 +581,6 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <limits>
 #include <stdexcept>
 #include <string_view>
-#include <type_traits>
 #include <version>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
@@ -4625,6 +4631,7 @@ _LIBCPP_POP_MACROS
 #  include <functional>
 #  include <iterator>
 #  include <new>
+#  include <type_traits>
 #  include <typeinfo>
 #  include <utility>
 #  include <vector>

@@ -497,6 +497,9 @@ public:
   shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
   void emitExpandAtomicRMW(AtomicRMWInst *AI) const override;
 
+  LoadInst *
+  lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const override;
+
   const TargetRegisterClass *getRegClassFor(MVT VT,
                                             bool isDivergent) const override;
   bool requiresUniformRegister(MachineFunction &MF,

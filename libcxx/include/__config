@@ -50,6 +50,7 @@
 #    define _LIBCPP_FREESTANDING
 #  endif
 
+// NOLINTBEGIN(libcpp-cpp-version-check)
 #  ifndef _LIBCPP_STD_VER
 #    if __cplusplus <= 201103L
 #      define _LIBCPP_STD_VER 11
@@ -64,6 +65,7 @@
 #      define _LIBCPP_STD_VER 23
 #    endif
 #  endif // _LIBCPP_STD_VER
+// NOLINTEND(libcpp-cpp-version-check)
 
 #  if defined(__ELF__)
 #    define _LIBCPP_OBJECT_FORMAT_ELF 1
@@ -164,6 +166,12 @@
 #    if defined(__FreeBSD__)
 #      define _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
 #    endif
+// For XCOFF linkers, we have problems if we see a weak hidden version of a symbol
+// in user code (like you get with -fvisibility-inlines-hidden) and then a strong def
+// in the library, so we need to always rely on the library version.
+#    if defined(_AIX)
+#      define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
+#    endif
 #  endif
 
 #  if defined(_LIBCPP_BUILDING_LIBRARY) || _LIBCPP_ABI_VERSION >= 2
@@ -181,6 +189,7 @@
 #  define _LIBCPP_TOSTRING2(x) #x
 #  define _LIBCPP_TOSTRING(x) _LIBCPP_TOSTRING2(x)
 
+// NOLINTNEXTLINE(libcpp-cpp-version-check)
 #  if __cplusplus < 201103L
 #    define _LIBCPP_CXX03_LANG
 #  endif
@@ -1251,13 +1260,19 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 // macro is used to mark them as such, which suppresses the
 // '-Wctad-maybe-unsupported' compiler warning when CTAD is used in user code
 // with these classes.
-#if _LIBCPP_STD_VER >= 17
-#    define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName)                                                                \
-      template <class ..._Tag>                                                                                         \
-      _ClassName(typename _Tag::__allow_ctad...) -> _ClassName<_Tag...>
-#else
-#  define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName) static_assert(true, "")
-#endif
+#  if _LIBCPP_STD_VER >= 17
+#    ifdef _LIBCPP_COMPILER_CLANG_BASED
+#      define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName)                                                              \
+        template <class... _Tag>                                                                                       \
+        [[maybe_unused]] _ClassName(typename _Tag::__allow_ctad...)->_ClassName<_Tag...>
+#    else
+#      define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(ClassName)                                                               \
+        template <class... _Tag>                                                                                       \
+        ClassName(typename _Tag::__allow_ctad...)->ClassName<_Tag...>
+#    endif
+#  else
+#    define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName) static_assert(true, "")
+#  endif
 
 // TODO(varconst): currently, there are bugs in Clang's intrinsics when handling Objective-C++ `id`, so don't use
 // compiler intrinsics in the Objective-C++ mode.
