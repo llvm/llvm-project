@@ -10178,10 +10178,8 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
       Built.DependentInits[Cnt] = nullptr;
       Built.FinalsConditions[Cnt] = nullptr;
       if (IS.IsNonRectangularLB || IS.IsNonRectangularUB) {
-        Built.DependentCounters[Cnt] =
-            Built.Counters[NestedLoopCount - 1 - IS.LoopDependentIdx];
-        Built.DependentInits[Cnt] =
-            Built.Inits[NestedLoopCount - 1 - IS.LoopDependentIdx];
+        Built.DependentCounters[Cnt] = Built.Counters[IS.LoopDependentIdx - 1];
+        Built.DependentInits[Cnt] = Built.Inits[IS.LoopDependentIdx - 1];
         Built.FinalsConditions[Cnt] = IS.FinalCondition;
       }
     }
