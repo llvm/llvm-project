@@ -1179,6 +1179,8 @@ Value *PPCLoopInstrFormPrep::getNodeForInc(Loop *L, Instruction *MemI,
 
     // Get the incoming value from the loop latch and check if the value has
     // the add form with the required increment.
+    if (CurrentPHINode->getBasicBlockIndex(LatchBB) < 0)
+      continue;
     if (Instruction *I = dyn_cast<Instruction>(
             CurrentPHINode->getIncomingValueForBlock(LatchBB))) {
       Value *StrippedBaseI = I;

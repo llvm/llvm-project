@@ -1213,6 +1213,99 @@ LogicalResult SinAndCosApproximation<isSine, OpTy>::matchAndRewrite(
 }
 
 //----------------------------------------------------------------------------//
+// Cbrt approximation.
+//----------------------------------------------------------------------------//
+
+namespace {
+struct CbrtApproximation : public OpRewritePattern<math::CbrtOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(math::CbrtOp op,
+                                PatternRewriter &rewriter) const final;
+};
+} // namespace
+
+// Estimation of cube-root using an algorithm defined in
+// Hacker's Delight 2nd Edition.
+LogicalResult
+CbrtApproximation::matchAndRewrite(math::CbrtOp op,
+                                   PatternRewriter &rewriter) const {
+  auto operand = op.getOperand();
+  if (!getElementTypeOrSelf(operand).isF32())
+    return rewriter.notifyMatchFailure(op, "unsupported operand type");
+
+  ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+  ArrayRef<int64_t> shape = vectorShape(operand);
+
+  Type floatTy = getElementTypeOrSelf(operand.getType());
+  Type intTy = b.getIntegerType(floatTy.getIntOrFloatBitWidth());
+
+  // Convert to vector types if necessary.
+  floatTy = broadcast(floatTy, shape);
+  intTy = broadcast(intTy, shape);
+
+  auto bconst = [&](Attribute attr) -> Value {
+    Value value = b.create<arith::ConstantOp>(attr);
+    return broadcast(b, value, shape);
+  };
+
+  // Declare the initial values:
+  Value intTwo = bconst(b.getI32IntegerAttr(2));
+  Value intFour = bconst(b.getI32IntegerAttr(4));
+  Value intEight = bconst(b.getI32IntegerAttr(8));
+  Value intMagic = bconst(b.getI32IntegerAttr(0x2a5137a0));
+  Value fpThird = bconst(b.getF32FloatAttr(0.33333333f));
+  Value fpTwo = bconst(b.getF32FloatAttr(2.0f));
+  Value fpZero = bconst(b.getF32FloatAttr(0.0f));
+
+  // Compute an approximation of one third:
+  // union {int ix; float x;};
+  // x = x0;
+  // ix = ix/4 + ix/16;
+  Value absValue = b.create<math::AbsFOp>(operand);
+  Value intValue = b.create<arith::BitcastOp>(intTy, absValue);
+  Value divideBy4 = b.create<arith::ShRSIOp>(intValue, intTwo);
+  Value divideBy16 = b.create<arith::ShRSIOp>(intValue, intFour);
+  intValue = b.create<arith::AddIOp>(divideBy4, divideBy16);
+
+  // ix = ix + ix/16;
+  divideBy16 = b.create<arith::ShRSIOp>(intValue, intFour);
+  intValue = b.create<arith::AddIOp>(intValue, divideBy16);
+
+  // ix = ix + ix/256;
+  Value divideBy256 = b.create<arith::ShRSIOp>(intValue, intEight);
+  intValue = b.create<arith::AddIOp>(intValue, divideBy256);
+
+  // ix = 0x2a5137a0 + ix;
+  intValue = b.create<arith::AddIOp>(intValue, intMagic);
+
+  // Perform one newtons step:
+  // x = 0.33333333f*(2.0f*x + x0/(x*x));
+  Value floatValue = b.create<arith::BitcastOp>(floatTy, intValue);
+  Value squared = b.create<arith::MulFOp>(floatValue, floatValue);
+  Value mulTwo = b.create<arith::MulFOp>(floatValue, fpTwo);
+  Value divSquared = b.create<arith::DivFOp>(absValue, squared);
+  floatValue = b.create<arith::AddFOp>(mulTwo, divSquared);
+  floatValue = b.create<arith::MulFOp>(floatValue, fpThird);
+
+  // x = 0.33333333f*(2.0f*x + x0/(x*x));
+  squared = b.create<arith::MulFOp>(floatValue, floatValue);
+  mulTwo = b.create<arith::MulFOp>(floatValue, fpTwo);
+  divSquared = b.create<arith::DivFOp>(absValue, squared);
+  floatValue = b.create<arith::AddFOp>(mulTwo, divSquared);
+  floatValue = b.create<arith::MulFOp>(floatValue, fpThird);
+
+  // Check for zero and restore sign.
+  Value isZero =
+      b.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, absValue, fpZero);
+  floatValue = b.create<arith::SelectOp>(isZero, fpZero, floatValue);
+  floatValue = b.create<math::CopySignOp>(floatValue, operand);
+
+  rewriter.replaceOp(op, floatValue);
+  return success();
+}
+
+//----------------------------------------------------------------------------//
 // Rsqrt approximation.
 //----------------------------------------------------------------------------//
 
@@ -1291,7 +1384,7 @@ void mlir::populateMathPolynomialApproximationPatterns(
   patterns.add<AtanApproximation, Atan2Approximation, TanhApproximation,
                LogApproximation, Log2Approximation, Log1pApproximation,
                ErfPolynomialApproximation, ExpApproximation, ExpM1Approximation,
-               ReuseF32Expansion<math::Atan2Op>,
+               CbrtApproximation, ReuseF32Expansion<math::Atan2Op>,
                SinAndCosApproximation<true, math::SinOp>,
                SinAndCosApproximation<false, math::CosOp>>(
       patterns.getContext());

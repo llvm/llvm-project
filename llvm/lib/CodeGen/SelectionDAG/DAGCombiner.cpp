@@ -30,6 +30,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
@@ -721,6 +722,11 @@ namespace {
     /// store chains.
     SDValue getMergeStoreChains(SmallVectorImpl<MemOpLink> &StoreNodes,
                                 unsigned NumStores);
+
+    /// Helper function for mergeConsecutiveStores which checks if all the store
+    /// nodes have the same underlying object. We can still reuse the first
+    /// store's pointer info if all the stores are from the same object.
+    bool hasSameUnderlyingObj(ArrayRef<MemOpLink> StoreNodes);
 
     /// This is a helper function for mergeConsecutiveStores. When the source
     /// elements of the consecutive stores are all constants or all extracted
@@ -2582,6 +2588,12 @@ static bool isADDLike(SDValue V, const SelectionDAG &DAG) {
   return false;
 }
 
+static bool
+areBitwiseNotOfEachother(SDValue Op0, SDValue Op1) {
+  return (isBitwiseNot(Op0) && Op0.getOperand(0) == Op1) ||
+         (isBitwiseNot(Op1) && Op1.getOperand(0) == Op0);
+}
+
 /// Try to fold a node that behaves like an ADD (note that N isn't necessarily
 /// an ISD::ADD here, it could for example be an ISD::OR if we know that there
 /// are no common bits set in the operands).
@@ -2605,6 +2617,10 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
       !DAG.isConstantIntBuildVectorOrConstantInt(N1))
     return DAG.getNode(ISD::ADD, DL, VT, N1, N0);
+
+  if (areBitwiseNotOfEachother(N0, N1))
+    return DAG.getConstant(APInt::getAllOnes(VT.getScalarSizeInBits()),
+                           SDLoc(N), VT);
 
   // fold vector ops
   if (VT.isVector()) {
@@ -6624,6 +6640,10 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
       !DAG.isConstantIntBuildVectorOrConstantInt(N1))
     return DAG.getNode(ISD::AND, SDLoc(N), VT, N1, N0);
+
+  if (areBitwiseNotOfEachother(N0, N1))
+    return DAG.getConstant(APInt::getZero(VT.getScalarSizeInBits()), SDLoc(N),
+                           VT);
 
   // fold vector ops
   if (VT.isVector()) {
@@ -18988,6 +19008,30 @@ SDValue DAGCombiner::getMergeStoreChains(SmallVectorImpl<MemOpLink> &StoreNodes,
   return DAG.getTokenFactor(StoreDL, Chains);
 }
 
+bool DAGCombiner::hasSameUnderlyingObj(ArrayRef<MemOpLink> StoreNodes) {
+  const Value *UnderlyingObj = nullptr;
+  for (const auto &MemOp : StoreNodes) {
+    const MachineMemOperand *MMO = MemOp.MemNode->getMemOperand();
+    // Pseudo value like stack frame has its own frame index and size, should
+    // not use the first store's frame index for other frames.
+    if (MMO->getPseudoValue())
+      return false;
+
+    if (!MMO->getValue())
+      return false;
+
+    const Value *Obj = getUnderlyingObject(MMO->getValue());
+
+    if (UnderlyingObj && UnderlyingObj != Obj)
+      return false;
+
+    if (!UnderlyingObj)
+      UnderlyingObj = Obj;
+  }
+
+  return true;
+}
+
 bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
     SmallVectorImpl<MemOpLink> &StoreNodes, EVT MemVT, unsigned NumStores,
     bool IsConstantSrc, bool UseVector, bool UseTrunc) {
@@ -19139,13 +19183,21 @@ bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
 
   LSBaseSDNode *FirstInChain = StoreNodes[0].MemNode;
   SDValue NewChain = getMergeStoreChains(StoreNodes, NumStores);
+  bool CanReusePtrInfo = hasSameUnderlyingObj(StoreNodes);
 
   // make sure we use trunc store if it's necessary to be legal.
+  // When generate the new widen store, if the first store's pointer info can
+  // not be reused, discard the pointer info except the address space because
+  // now the widen store can not be represented by the original pointer info
+  // which is for the narrow memory object.
   SDValue NewStore;
   if (!UseTrunc) {
-    NewStore = DAG.getStore(NewChain, DL, StoredVal, FirstInChain->getBasePtr(),
-                            FirstInChain->getPointerInfo(),
-                            FirstInChain->getAlign(), *Flags, AAInfo);
+    NewStore = DAG.getStore(
+        NewChain, DL, StoredVal, FirstInChain->getBasePtr(),
+        CanReusePtrInfo
+            ? FirstInChain->getPointerInfo()
+            : MachinePointerInfo(FirstInChain->getPointerInfo().getAddrSpace()),
+        FirstInChain->getAlign(), *Flags, AAInfo);
   } else { // Must be realized as a trunc store
     EVT LegalizedStoredValTy =
         TLI.getTypeToTransformTo(*DAG.getContext(), StoredVal.getValueType());
@@ -19156,8 +19208,11 @@ bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
                         LegalizedStoredValTy);
     NewStore = DAG.getTruncStore(
         NewChain, DL, ExtendedStoreVal, FirstInChain->getBasePtr(),
-        FirstInChain->getPointerInfo(), StoredVal.getValueType() /*TVT*/,
-        FirstInChain->getAlign(), *Flags, AAInfo);
+        CanReusePtrInfo
+            ? FirstInChain->getPointerInfo()
+            : MachinePointerInfo(FirstInChain->getPointerInfo().getAddrSpace()),
+        StoredVal.getValueType() /*TVT*/, FirstInChain->getAlign(), *Flags,
+        AAInfo);
   }
 
   // Replace all merged stores with the new store.
@@ -19850,6 +19905,7 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
     // using the first's chain is acceptable.
 
     SDValue NewStoreChain = getMergeStoreChains(StoreNodes, NumElem);
+    bool CanReusePtrInfo = hasSameUnderlyingObj(StoreNodes);
     AddToWorklist(NewStoreChain.getNode());
 
     MachineMemOperand::Flags LdMMOFlags =
@@ -19879,7 +19935,9 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
       }
       NewStore = DAG.getStore(
           NewStoreChain, StoreDL, StoreOp, FirstInChain->getBasePtr(),
-          FirstInChain->getPointerInfo(), FirstStoreAlign, StMMOFlags);
+          CanReusePtrInfo ? FirstInChain->getPointerInfo()
+                          : MachinePointerInfo(FirstStoreAS),
+          FirstStoreAlign, StMMOFlags);
     } else { // This must be the truncstore/extload case
       EVT ExtendedTy =
           TLI.getTypeToTransformTo(*DAG.getContext(), JointMemOpVT);
@@ -19889,8 +19947,10 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
                                FirstLoadAlign, LdMMOFlags);
       NewStore = DAG.getTruncStore(
           NewStoreChain, StoreDL, NewLoad, FirstInChain->getBasePtr(),
-          FirstInChain->getPointerInfo(), JointMemOpVT,
-          FirstInChain->getAlign(), FirstInChain->getMemOperand()->getFlags());
+          CanReusePtrInfo ? FirstInChain->getPointerInfo()
+                          : MachinePointerInfo(FirstStoreAS),
+          JointMemOpVT, FirstInChain->getAlign(),
+          FirstInChain->getMemOperand()->getFlags());
     }
 
     // Transfer chain users from old loads to the new load.

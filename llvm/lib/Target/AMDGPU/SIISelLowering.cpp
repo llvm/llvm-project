@@ -2423,11 +2423,14 @@ SDValue SITargetLowering::LowerFormalArguments(
 
   if (IsGraphics) {
     assert(!Info->hasDispatchPtr() && !Info->hasKernargSegmentPtr() &&
-           (!Info->hasFlatScratchInit() || Subtarget->enableFlatScratch()) &&
-           !Info->hasWorkGroupIDX() && !Info->hasWorkGroupIDY() &&
-           !Info->hasWorkGroupIDZ() && !Info->hasWorkGroupInfo() &&
-           !Info->hasLDSKernelId() && !Info->hasWorkItemIDX() &&
-           !Info->hasWorkItemIDY() && !Info->hasWorkItemIDZ());
+           !Info->hasWorkGroupInfo() && !Info->hasLDSKernelId() &&
+           !Info->hasWorkItemIDX() && !Info->hasWorkItemIDY() &&
+           !Info->hasWorkItemIDZ());
+    if (!Subtarget->enableFlatScratch())
+      assert(!Info->hasFlatScratchInit());
+    if (CallConv != CallingConv::AMDGPU_CS || !Subtarget->hasArchitectedSGPRs())
+      assert(!Info->hasWorkGroupIDX() && !Info->hasWorkGroupIDY() &&
+             !Info->hasWorkGroupIDZ());
   }
 
   if (CallConv == CallingConv::AMDGPU_PS) {
@@ -10588,45 +10591,41 @@ static unsigned minMaxOpcToMin3Max3Opc(unsigned Opc) {
   }
 }
 
-SDValue SITargetLowering::performIntMed3ImmCombine(
-  SelectionDAG &DAG, const SDLoc &SL,
-  SDValue Op0, SDValue Op1, bool Signed) const {
-  ConstantSDNode *K1 = dyn_cast<ConstantSDNode>(Op1);
-  if (!K1)
-    return SDValue();
+SDValue SITargetLowering::performIntMed3ImmCombine(SelectionDAG &DAG,
+                                                   const SDLoc &SL, SDValue Src,
+                                                   SDValue MinVal,
+                                                   SDValue MaxVal,
+                                                   bool Signed) const {
 
-  ConstantSDNode *K0 = dyn_cast<ConstantSDNode>(Op0.getOperand(1));
-  if (!K0)
+  // med3 comes from
+  //    min(max(x, K0), K1), K0 < K1
+  //    max(min(x, K0), K1), K1 < K0
+  //
+  // "MinVal" and "MaxVal" respectively refer to the rhs of the
+  // min/max op.
+  ConstantSDNode *MinK = dyn_cast<ConstantSDNode>(MinVal);
+  ConstantSDNode *MaxK = dyn_cast<ConstantSDNode>(MaxVal);
+
+  if (!MinK || !MaxK)
     return SDValue();
 
   if (Signed) {
-    if (K0->getAPIntValue().sge(K1->getAPIntValue()))
+    if (MaxK->getAPIntValue().sge(MinK->getAPIntValue()))
       return SDValue();
   } else {
-    if (K0->getAPIntValue().uge(K1->getAPIntValue()))
+    if (MaxK->getAPIntValue().uge(MinK->getAPIntValue()))
       return SDValue();
   }
 
-  EVT VT = K0->getValueType(0);
+  EVT VT = MinK->getValueType(0);
   unsigned Med3Opc = Signed ? AMDGPUISD::SMED3 : AMDGPUISD::UMED3;
-  if (VT == MVT::i32 || (VT == MVT::i16 && Subtarget->hasMed3_16())) {
-    return DAG.getNode(Med3Opc, SL, VT,
-                       Op0.getOperand(0), SDValue(K0, 0), SDValue(K1, 0));
-  }
+  if (VT == MVT::i32 || (VT == MVT::i16 && Subtarget->hasMed3_16()))
+    return DAG.getNode(Med3Opc, SL, VT, Src, MaxVal, MinVal);
 
-  // If there isn't a 16-bit med3 operation, convert to 32-bit.
-  if (VT == MVT::i16) {
-    MVT NVT = MVT::i32;
-    unsigned ExtOp = Signed ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
-
-    SDValue Tmp1 = DAG.getNode(ExtOp, SL, NVT, Op0->getOperand(0));
-    SDValue Tmp2 = DAG.getNode(ExtOp, SL, NVT, Op0->getOperand(1));
-    SDValue Tmp3 = DAG.getNode(ExtOp, SL, NVT, Op1);
-
-    SDValue Med3 = DAG.getNode(Med3Opc, SL, NVT, Tmp1, Tmp2, Tmp3);
-    return DAG.getNode(ISD::TRUNCATE, SL, VT, Med3);
-  }
-
+  // Note: we could also extend to i32 and use i32 med3 if i16 med3 is
+  // not available, but this is unlikely to be profitable as constants
+  // will often need to be materialized & extended, especially on
+  // pre-GFX10 where VOP3 instructions couldn't take literal operands.
   return SDValue();
 }
 
@@ -10738,13 +10737,26 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
   }
 
   // min(max(x, K0), K1), K0 < K1 -> med3(x, K0, K1)
+  // max(min(x, K0), K1), K1 < K0 -> med3(x, K1, K0)
   if (Opc == ISD::SMIN && Op0.getOpcode() == ISD::SMAX && Op0.hasOneUse()) {
-    if (SDValue Med3 = performIntMed3ImmCombine(DAG, SDLoc(N), Op0, Op1, true))
+    if (SDValue Med3 = performIntMed3ImmCombine(
+            DAG, SDLoc(N), Op0->getOperand(0), Op1, Op0->getOperand(1), true))
+      return Med3;
+  }
+  if (Opc == ISD::SMAX && Op0.getOpcode() == ISD::SMIN && Op0.hasOneUse()) {
+    if (SDValue Med3 = performIntMed3ImmCombine(
+            DAG, SDLoc(N), Op0->getOperand(0), Op0->getOperand(1), Op1, true))
       return Med3;
   }
 
   if (Opc == ISD::UMIN && Op0.getOpcode() == ISD::UMAX && Op0.hasOneUse()) {
-    if (SDValue Med3 = performIntMed3ImmCombine(DAG, SDLoc(N), Op0, Op1, false))
+    if (SDValue Med3 = performIntMed3ImmCombine(
+            DAG, SDLoc(N), Op0->getOperand(0), Op1, Op0->getOperand(1), false))
+      return Med3;
+  }
+  if (Opc == ISD::UMAX && Op0.getOpcode() == ISD::UMIN && Op0.hasOneUse()) {
+    if (SDValue Med3 = performIntMed3ImmCombine(
+            DAG, SDLoc(N), Op0->getOperand(0), Op0->getOperand(1), Op1, false))
       return Med3;
   }
 

@@ -39,8 +39,8 @@
 
 #SparseMatrix = #sparse_tensor.encoding<{
   dimLevelType = [ "dense", "compressed" ],
-  pointerBitWidth = 8,
-  indexBitWidth = 8
+  posWidth = 8,
+  crdWidth = 8
 }>
 
 #matvec = {

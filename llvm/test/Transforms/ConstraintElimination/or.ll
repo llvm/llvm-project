@@ -454,13 +454,13 @@ define void @test_or_as_add_ult(i8 %init_val, i8 %high) {
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_1:%.*]] = or i8 [[START]], 1
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 [[START_1]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_2:%.*]] = or i8 [[START]], 2
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i8 [[START_2]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_3:%.*]] = or i8 [[START]], 3
 ; CHECK-NEXT:    [[T_3:%.*]] = icmp ult i8 [[START_3]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[T_3]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_4:%.*]] = or i8 [[START]], 4
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp ult i8 [[START_4]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[C_4]])
@@ -523,13 +523,13 @@ define void @test_or_as_add_ule(i8 %init_val, i8 %high) {
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_1:%.*]] = or i8 [[START]], 1
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[START_1]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_2:%.*]] = or i8 [[START]], 2
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 [[START_2]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_3:%.*]] = or i8 [[START]], 3
 ; CHECK-NEXT:    [[T_3:%.*]] = icmp ule i8 [[START_3]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[T_3]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_4:%.*]] = or i8 [[START]], 4
 ; CHECK-NEXT:    [[T_4:%.*]] = icmp ule i8 [[START_4]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[T_4]])
@@ -599,13 +599,13 @@ define void @test_or_as_add_ugt(i8 %init_val, i8 %high) {
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[START_1:%.*]] = or i8 [[START]], 1
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp ugt i8 [[START_1]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[START_2:%.*]] = or i8 [[START]], 2
 ; CHECK-NEXT:    [[F_2:%.*]] = icmp ugt i8 [[START_2]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[F_2]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[START_3:%.*]] = or i8 [[START]], 3
 ; CHECK-NEXT:    [[F_3:%.*]] = icmp ugt i8 [[START_3]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[F_3]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[START_4:%.*]] = or i8 [[START]], 4
 ; CHECK-NEXT:    [[F_4:%.*]] = icmp ugt i8 [[START_4]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[F_4]])
@@ -674,13 +674,13 @@ define void @test_or_as_add_uge(i8 %init_val, i8 %high) {
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[START_1:%.*]] = or i8 [[START]], 1
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp uge i8 [[START_1]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[START_2:%.*]] = or i8 [[START]], 2
 ; CHECK-NEXT:    [[F_2:%.*]] = icmp uge i8 [[START_2]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[F_2]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[START_3:%.*]] = or i8 [[START]], 3
 ; CHECK-NEXT:    [[F_3:%.*]] = icmp uge i8 [[START_3]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[F_3]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[START_4:%.*]] = or i8 [[START]], 4
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp uge i8 [[START_4]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[C_4]])

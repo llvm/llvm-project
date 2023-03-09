@@ -250,6 +250,14 @@ void test_char(TestFunction check, ExceptionTest check_exception) {
   test_char_escaped_string<CharT>(
       check, check_exception, std::priority_queue{input.begin(), input.end(), std::greater{}});
   test_char_escaped_string<CharT>(check, check_exception, std::stack{input.begin(), input.end()});
+
+  // LWG3881 fixes formatting container adaptors backed by a std::string.
+  test_char_default<CharT>(check, check_exception, std::queue{std::basic_string<CharT>{input.begin(), input.end()}});
+  test_char_default<CharT>(
+      check,
+      check_exception,
+      std::priority_queue{std::greater{}, std::basic_string<CharT>{input.begin(), input.end()}});
+  test_char_default<CharT>(check, check_exception, std::stack{std::basic_string<CharT>{input.begin(), input.end()}});
 }
 
 //

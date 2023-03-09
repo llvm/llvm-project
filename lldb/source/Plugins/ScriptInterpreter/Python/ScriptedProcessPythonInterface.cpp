@@ -7,15 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/Config.h"
+#if LLDB_ENABLE_PYTHON
+// LLDB Python header must be included first
+#include "lldb-python.h"
+#endif
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
 
 #if LLDB_ENABLE_PYTHON
-
-// LLDB Python header must be included first
-#include "lldb-python.h"
 
 #include "SWIGPythonBridge.h"
 #include "ScriptInterpreterPythonImpl.h"

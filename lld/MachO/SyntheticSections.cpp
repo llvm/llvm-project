@@ -95,7 +95,7 @@ uint64_t MachHeaderSection::getSize() const {
   // If we are emitting an encryptable binary, our load commands must have a
   // separate (non-encrypted) page to themselves.
   if (config->emitEncryptionInfo)
-    size = alignTo(size, target->getPageSize());
+    size = alignToPowerOf2(size, target->getPageSize());
   return size;
 }
 
@@ -1642,7 +1642,7 @@ void CStringSection::finalizeContents() {
       // handled.
       uint32_t pieceAlign = 1
                             << llvm::countr_zero(isec->align | piece.inSecOff);
-      offset = alignTo(offset, pieceAlign);
+      offset = alignToPowerOf2(offset, pieceAlign);
       piece.outSecOff = offset;
       isec->isFinal = true;
       StringRef string = isec->getStringRef(i);
@@ -1717,7 +1717,8 @@ void DeduplicatedCStringSection::finalizeContents() {
       assert(it != stringOffsetMap.end());
       StringOffset &offsetInfo = it->second;
       if (offsetInfo.outSecOff == UINT64_MAX) {
-        offsetInfo.outSecOff = alignTo(size, 1ULL << offsetInfo.trailingZeros);
+        offsetInfo.outSecOff =
+            alignToPowerOf2(size, 1ULL << offsetInfo.trailingZeros);
         size =
             offsetInfo.outSecOff + s.size() + 1; // account for null terminator
       }

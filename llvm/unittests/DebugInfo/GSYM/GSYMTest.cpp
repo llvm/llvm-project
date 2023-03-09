@@ -2443,3 +2443,211 @@ TEST(GSYMTest, TestGsymCreatorMultipleSymbolsWithNoSize) {
                    1, // NumAddresses
                    ArrayRef<uint8_t>(UUID));
 }
+
+// Helper function to quickly create a FunctionInfo in a GsymCreator for testing.
+static void AddFunctionInfo(GsymCreator &GC, const char *FuncName,
+                            uint64_t FuncAddr, const char *SourcePath,
+                            const char *HeaderPath) {
+  FunctionInfo FI(FuncAddr, 0x30, GC.insertString(FuncName));
+  FI.OptLineTable = LineTable();
+  const uint32_t SourceFileIdx = GC.insertFile(SourcePath);
+  const uint32_t HeaderFileIdx = GC.insertFile(HeaderPath);
+  FI.OptLineTable->push(LineEntry(FuncAddr+0x00, SourceFileIdx, 5));
+  FI.OptLineTable->push(LineEntry(FuncAddr+0x10, HeaderFileIdx, 10));
+  FI.OptLineTable->push(LineEntry(FuncAddr+0x12, HeaderFileIdx, 20));
+  FI.OptLineTable->push(LineEntry(FuncAddr+0x14, HeaderFileIdx, 11));
+  FI.OptLineTable->push(LineEntry(FuncAddr+0x16, HeaderFileIdx, 30));
+  FI.OptLineTable->push(LineEntry(FuncAddr+0x18, HeaderFileIdx, 12));
+  FI.OptLineTable->push(LineEntry(FuncAddr+0x20, SourceFileIdx, 8));
+  FI.Inline = InlineInfo();
+
+  std::string InlineName1(FuncName); InlineName1.append("1");
+  std::string InlineName2(FuncName); InlineName2.append("2");
+  std::string InlineName3(FuncName); InlineName3.append("3");
+
+  FI.Inline->Name = GC.insertString(InlineName1);
+  FI.Inline->CallFile = SourceFileIdx;
+  FI.Inline->CallLine = 6;
+  FI.Inline->Ranges.insert(AddressRange(FuncAddr + 0x10, FuncAddr + 0x20));
+  InlineInfo Inline2;
+  Inline2.Name = GC.insertString(InlineName2);
+  Inline2.CallFile = HeaderFileIdx;
+  Inline2.CallLine = 33;
+  Inline2.Ranges.insert(AddressRange(FuncAddr + 0x12, FuncAddr + 0x14));
+  FI.Inline->Children.emplace_back(Inline2);
+  InlineInfo Inline3;
+  Inline3.Name = GC.insertString(InlineName3);
+  Inline3.CallFile = HeaderFileIdx;
+  Inline3.CallLine = 35;
+  Inline3.Ranges.insert(AddressRange(FuncAddr + 0x16, FuncAddr + 0x18));
+  FI.Inline->Children.emplace_back(Inline3);
+  GC.addFunctionInfo(std::move(FI));
+}
+
+// Finalize a GsymCreator, encode it and decode it and return the error or
+// GsymReader that was successfully decoded.
+static Expected<GsymReader> FinalizeEncodeAndDecode(GsymCreator &GC) {
+  Error FinalizeErr = GC.finalize(llvm::nulls());
+  if (FinalizeErr)
+    return std::move(FinalizeErr);
+  SmallString<1024> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = support::endian::system_endianness();
+  FileWriter FW(OutStrm, ByteOrder);
+  llvm::Error Err = GC.encode(FW);
+  if (Err)
+    return std::move(Err);
+  return GsymReader::copyBuffer(OutStrm.str());
+}
+
+TEST(GSYMTest, TestGsymSegmenting) {
+  // Test creating a GSYM file with function infos and segment the information.
+  // We verify segmenting is working by creating a full GSYM and also by
+  // encoding multiple segments, then we verify that we get the same information
+  // when doing lookups on the full GSYM that was decoded from encoding the
+  // entire GSYM and also by decoding information from the segments themselves.
+  GsymCreator GC;
+  GC.setBaseAddress(0);
+  AddFunctionInfo(GC, "main", 0x1000, "/tmp/main.c", "/tmp/main.h");
+  AddFunctionInfo(GC, "foo", 0x2000, "/tmp/foo.c", "/tmp/foo.h");
+  AddFunctionInfo(GC, "bar", 0x3000, "/tmp/bar.c", "/tmp/bar.h");
+  AddFunctionInfo(GC, "baz", 0x4000, "/tmp/baz.c", "/tmp/baz.h");
+  Expected<GsymReader> GR = FinalizeEncodeAndDecode(GC);
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  //GR->dump(outs());
+
+  // Create segmented GSYM files where each file contains 1 function. We will
+  // then test doing lookups on the "GR", or the full GSYM file and then test
+  // doing lookups on the GsymReader objects for each segment to ensure we get
+  // the exact same information. So after all of the code below we will have
+  // GsymReader objects that each contain one function. We name the creators
+  // and readers to match the one and only address they contain.
+  // GC1000 and GR1000 are for [0x1000-0x1030)
+  // GC2000 and GR2000 are for [0x2000-0x2030)
+  // GC3000 and GR3000 are for [0x3000-0x3030)
+  // GC4000 and GR4000 are for [0x4000-0x4030)
+
+  // Create the segments and verify that FuncIdx, an in/out parameter, gets
+  // updated as expected.
+  size_t FuncIdx = 0;
+  // Make sure we get an error if the segment size is too small to encode a
+  // single function info.
+  llvm::Expected<std::unique_ptr<GsymCreator>> GCError =
+      GC.createSegment(57, FuncIdx);
+  ASSERT_FALSE((bool)GCError);
+  checkError("a segment size of 57 is to small to fit any function infos, "
+             "specify a larger value", GCError.takeError());
+  // Make sure that the function index didn't get incremented when we didn't
+  // encode any values into the segmented GsymCreator.
+  ASSERT_EQ(FuncIdx, (size_t)0);
+
+  llvm::Expected<std::unique_ptr<GsymCreator>> GC1000 =
+      GC.createSegment(128, FuncIdx);
+  ASSERT_THAT_EXPECTED(GC1000, Succeeded());
+  ASSERT_EQ(FuncIdx, (size_t)1);
+  llvm::Expected<std::unique_ptr<GsymCreator>> GC2000 =
+      GC.createSegment(128, FuncIdx);
+  ASSERT_THAT_EXPECTED(GC2000, Succeeded());
+  ASSERT_EQ(FuncIdx, (size_t)2);
+  llvm::Expected<std::unique_ptr<GsymCreator>> GC3000 =
+      GC.createSegment(128, FuncIdx);
+  ASSERT_THAT_EXPECTED(GC3000, Succeeded());
+  ASSERT_EQ(FuncIdx, (size_t)3);
+  llvm::Expected<std::unique_ptr<GsymCreator>> GC4000 =
+      GC.createSegment(128, FuncIdx);
+  ASSERT_THAT_EXPECTED(GC4000, Succeeded());
+  ASSERT_EQ(FuncIdx, (size_t)4);
+  // When there are no function infos left to encode we expect to get  no error
+  // and get a NULL GsymCreator in the return value from createSegment.
+  llvm::Expected<std::unique_ptr<GsymCreator>> GCNull =
+      GC.createSegment(128, FuncIdx);
+  ASSERT_THAT_EXPECTED(GCNull, Succeeded());
+  ASSERT_TRUE(GC1000.get() != nullptr);
+  ASSERT_TRUE(GC2000.get() != nullptr);
+  ASSERT_TRUE(GC3000.get() != nullptr);
+  ASSERT_TRUE(GC4000.get() != nullptr);
+  ASSERT_TRUE(GCNull.get() == nullptr);
+  // Encode and decode the GsymReader for each segment and verify they succeed.
+  Expected<GsymReader> GR1000 = FinalizeEncodeAndDecode(*GC1000.get());
+  ASSERT_THAT_EXPECTED(GR1000, Succeeded());
+  Expected<GsymReader> GR2000 = FinalizeEncodeAndDecode(*GC2000.get());
+  ASSERT_THAT_EXPECTED(GR2000, Succeeded());
+  Expected<GsymReader> GR3000 = FinalizeEncodeAndDecode(*GC3000.get());
+  ASSERT_THAT_EXPECTED(GR3000, Succeeded());
+  Expected<GsymReader> GR4000 = FinalizeEncodeAndDecode(*GC4000.get());
+  ASSERT_THAT_EXPECTED(GR4000, Succeeded());
+
+  // Verify that all lookups match the range [0x1000-0x1030) when doing lookups
+  // in the GsymReader that contains all functions and from the segmented
+  // GsymReader in GR1000.
+  for (uint64_t Addr = 0x1000; Addr < 0x1030; ++Addr) {
+    // Lookup in the main GsymReader that contains all function infos
+    auto MainLR = GR->lookup(Addr);
+    ASSERT_THAT_EXPECTED(MainLR, Succeeded());
+    auto SegmentLR = GR1000->lookup(Addr);
+    ASSERT_THAT_EXPECTED(SegmentLR, Succeeded());
+    // Make sure the lookup results match.
+    EXPECT_EQ(MainLR.get(), SegmentLR.get());
+    // Make sure that the lookups on the functions that are not in the segment
+    // fail as expected.
+    ASSERT_THAT_EXPECTED(GR1000->lookup(0x2000), Failed());
+    ASSERT_THAT_EXPECTED(GR1000->lookup(0x3000), Failed());
+    ASSERT_THAT_EXPECTED(GR1000->lookup(0x4000), Failed());
+  }
+
+  // Verify that all lookups match the range [0x2000-0x2030) when doing lookups
+  // in the GsymReader that contains all functions and from the segmented
+  // GsymReader in GR2000.
+  for (uint64_t Addr = 0x2000; Addr < 0x2030; ++Addr) {
+    // Lookup in the main GsymReader that contains all function infos
+    auto MainLR = GR->lookup(Addr);
+    ASSERT_THAT_EXPECTED(MainLR, Succeeded());
+    auto SegmentLR = GR2000->lookup(Addr);
+    ASSERT_THAT_EXPECTED(SegmentLR, Succeeded());
+    // Make sure the lookup results match.
+    EXPECT_EQ(MainLR.get(), SegmentLR.get());
+    // Make sure that the lookups on the functions that are not in the segment
+    // fail as expected.
+    ASSERT_THAT_EXPECTED(GR2000->lookup(0x1000), Failed());
+    ASSERT_THAT_EXPECTED(GR2000->lookup(0x3000), Failed());
+    ASSERT_THAT_EXPECTED(GR2000->lookup(0x4000), Failed());
+
+  }
+
+  // Verify that all lookups match the range [0x3000-0x3030) when doing lookups
+  // in the GsymReader that contains all functions and from the segmented
+  // GsymReader in GR3000.
+  for (uint64_t Addr = 0x3000; Addr < 0x3030; ++Addr) {
+    // Lookup in the main GsymReader that contains all function infos
+    auto MainLR = GR->lookup(Addr);
+    ASSERT_THAT_EXPECTED(MainLR, Succeeded());
+    auto SegmentLR = GR3000->lookup(Addr);
+    ASSERT_THAT_EXPECTED(SegmentLR, Succeeded());
+    // Make sure the lookup results match.
+    EXPECT_EQ(MainLR.get(), SegmentLR.get());
+    // Make sure that the lookups on the functions that are not in the segment
+    // fail as expected.
+    ASSERT_THAT_EXPECTED(GR3000->lookup(0x1000), Failed());
+    ASSERT_THAT_EXPECTED(GR3000->lookup(0x2000), Failed());
+    ASSERT_THAT_EXPECTED(GR3000->lookup(0x4000), Failed());
+}
+
+  // Verify that all lookups match the range [0x4000-0x4030) when doing lookups
+  // in the GsymReader that contains all functions and from the segmented
+  // GsymReader in GR4000.
+  for (uint64_t Addr = 0x4000; Addr < 0x4030; ++Addr) {
+    // Lookup in the main GsymReader that contains all function infos
+    auto MainLR = GR->lookup(Addr);
+    ASSERT_THAT_EXPECTED(MainLR, Succeeded());
+    // Lookup in the GsymReader for that contains 0x4000
+    auto SegmentLR = GR4000->lookup(Addr);
+    ASSERT_THAT_EXPECTED(SegmentLR, Succeeded());
+    // Make sure the lookup results match.
+    EXPECT_EQ(MainLR.get(), SegmentLR.get());
+    // Make sure that the lookups on the functions that are not in the segment
+    // fail as expected.
+    ASSERT_THAT_EXPECTED(GR4000->lookup(0x1000), Failed());
+    ASSERT_THAT_EXPECTED(GR4000->lookup(0x2000), Failed());
+    ASSERT_THAT_EXPECTED(GR4000->lookup(0x3000), Failed());
+  }
+}

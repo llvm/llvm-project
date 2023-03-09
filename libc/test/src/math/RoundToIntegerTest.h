@@ -42,7 +42,7 @@ private:
 
   void test_one_input(RoundToIntegerFunc func, F input, I expected,
                       bool expectError) {
-    errno = 0;
+    libc_errno = 0;
     __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);
 
     ASSERT_EQ(func(input), expected);

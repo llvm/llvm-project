@@ -21,8 +21,8 @@
 //   requires same_as<remove_cvref_t<T>, T> && formattable<T, charT>
 // class range_formatter
 
-// constexpr formatter<T, charT>& underlying();
-// constexpr const formatter<T, charT>& underlying() const;
+// constexpr formatter<T, charT>& underlying() noexcept;
+// constexpr const formatter<T, charT>& underlying() const noexcept;
 
 #include <concepts>
 #include <format>
@@ -34,10 +34,12 @@ constexpr void test_underlying() {
   {
     std::range_formatter<int, CharT> formatter;
     [[maybe_unused]] std::same_as<std::formatter<int, CharT>&> decltype(auto) underlying = formatter.underlying();
+    static_assert(noexcept(formatter.underlying()));
   }
   {
     const std::range_formatter<int, CharT> formatter;
     [[maybe_unused]] std::same_as<const std::formatter<int, CharT>&> decltype(auto) underlying = formatter.underlying();
+    static_assert(noexcept(formatter.underlying()));
   }
 }
 

@@ -735,6 +735,72 @@ func.func @doubleAddSub2(%arg0: index, %arg1 : index) -> index {
   return %add : index
 }
 
+// CHECK-LABEL: @addiMuliToSubiRhsI32
+//  CHECK-SAME:   (%[[ARG0:.+]]: i32, %[[ARG1:.+]]: i32)
+//       CHECK:   %[[SUB:.+]] = arith.subi %[[ARG0]], %[[ARG1]] : i32
+//       CHECK:   return %[[SUB]]
+func.func @addiMuliToSubiRhsI32(%arg0: i32, %arg1: i32) -> i32 {
+  %c-1 = arith.constant -1 : i32
+  %neg = arith.muli %arg1, %c-1 : i32
+  %add = arith.addi %arg0, %neg : i32
+  return %add : i32
+}
+
+// CHECK-LABEL: @addiMuliToSubiRhsIndex
+//  CHECK-SAME:   (%[[ARG0:.+]]: index, %[[ARG1:.+]]: index)
+//       CHECK:   %[[SUB:.+]] = arith.subi %[[ARG0]], %[[ARG1]] : index
+//       CHECK:   return %[[SUB]]
+func.func @addiMuliToSubiRhsIndex(%arg0: index, %arg1: index) -> index {
+  %c-1 = arith.constant -1 : index
+  %neg = arith.muli %arg1, %c-1 : index
+  %add = arith.addi %arg0, %neg : index
+  return %add : index
+}
+
+// CHECK-LABEL: @addiMuliToSubiRhsVector
+//  CHECK-SAME:   (%[[ARG0:.+]]: vector<3xi64>, %[[ARG1:.+]]: vector<3xi64>)
+//       CHECK:   %[[SUB:.+]] = arith.subi %[[ARG0]], %[[ARG1]] : vector<3xi64>
+//       CHECK:   return %[[SUB]]
+func.func @addiMuliToSubiRhsVector(%arg0: vector<3xi64>, %arg1: vector<3xi64>) -> vector<3xi64> {
+  %c-1 = arith.constant dense<-1> : vector<3xi64>
+  %neg = arith.muli %arg1, %c-1 : vector<3xi64>
+  %add = arith.addi %arg0, %neg : vector<3xi64>
+  return %add : vector<3xi64>
+}
+
+// CHECK-LABEL: @addiMuliToSubiLhsI32
+//  CHECK-SAME:   (%[[ARG0:.+]]: i32, %[[ARG1:.+]]: i32)
+//       CHECK:   %[[SUB:.+]] = arith.subi %[[ARG0]], %[[ARG1]] : i32
+//       CHECK:   return %[[SUB]]
+func.func @addiMuliToSubiLhsI32(%arg0: i32, %arg1: i32) -> i32 {
+  %c-1 = arith.constant -1 : i32
+  %neg = arith.muli %arg1, %c-1 : i32
+  %add = arith.addi %neg, %arg0 : i32
+  return %add : i32
+}
+
+// CHECK-LABEL: @addiMuliToSubiLhsIndex
+//  CHECK-SAME:   (%[[ARG0:.+]]: index, %[[ARG1:.+]]: index)
+//       CHECK:   %[[SUB:.+]] = arith.subi %[[ARG0]], %[[ARG1]] : index
+//       CHECK:   return %[[SUB]]
+func.func @addiMuliToSubiLhsIndex(%arg0: index, %arg1: index) -> index {
+  %c-1 = arith.constant -1 : index
+  %neg = arith.muli %arg1, %c-1 : index
+  %add = arith.addi %neg, %arg0 : index
+  return %add : index
+}
+
+// CHECK-LABEL: @addiMuliToSubiLhsVector
+//  CHECK-SAME:   (%[[ARG0:.+]]: vector<3xi64>, %[[ARG1:.+]]: vector<3xi64>)
+//       CHECK:   %[[SUB:.+]] = arith.subi %[[ARG0]], %[[ARG1]] : vector<3xi64>
+//       CHECK:   return %[[SUB]]
+func.func @addiMuliToSubiLhsVector(%arg0: vector<3xi64>, %arg1: vector<3xi64>) -> vector<3xi64> {
+  %c-1 = arith.constant dense<-1> : vector<3xi64>
+  %neg = arith.muli %arg1, %c-1 : vector<3xi64>
+  %add = arith.addi %neg, %arg0 : vector<3xi64>
+  return %add : vector<3xi64>
+}
+
 // CHECK-LABEL: @adduiExtendedZeroRhs
 //  CHECK-NEXT:   %[[false:.+]] = arith.constant false
 //  CHECK-NEXT:   return %arg0, %[[false]]

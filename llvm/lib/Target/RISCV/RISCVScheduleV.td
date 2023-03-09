@@ -45,12 +45,29 @@ multiclass LMULReadAdvanceImpl<string name, int val,
   }
 }
 
+// Define classes to define list containing all SchedWrites for each (name, LMUL)
+// pair for each LMUL in each of the SchedMxList variants above and name in
+// argument `names`. These classes can be used to construct a list of existing
+// definitions of writes corresponding to each (name, LMUL) pair, that are needed
+// by the ReadAdvance. For example:
+// ```
+//   defm "" : LMULReadAdvance<"ReadVIALUX", 1,
+//                             LMULSchedWriteList<["WriteVIMovVX"]>.value>;
+// ```
+class LMULSchedWriteListImpl<list<string> names, list<string> MxList> {
+  list<SchedWrite> value = !foldl([]<SchedWrite>,
+                                  !foreach(name, names,
+                                    !foreach(mx, MxList, !cast<SchedWrite>(name # "_" # mx))),
+                                  all, writes, !listconcat(all, writes));
+}
+
 multiclass LMULSchedWrites<string name> : LMULSchedWritesImpl<name, SchedMxList>;
 multiclass LMULSchedReads<string name> : LMULSchedReadsImpl<name, SchedMxList>;
 multiclass LMULWriteRes<string name, list<ProcResourceKind> resources>
   : LMULWriteResImpl<name, resources>;
 multiclass LMULReadAdvance<string name, int val, list<SchedWrite> writes = []>
   : LMULReadAdvanceImpl<name, val, writes>;
+class LMULSchedWriteList<list<string> names> : LMULSchedWriteListImpl<names, SchedMxList>;
 
 multiclass LMULSchedWritesW<string name> : LMULSchedWritesImpl<name, SchedMxListW>;
 multiclass LMULSchedReadsW<string name> : LMULSchedReadsImpl<name, SchedMxListW>;
@@ -58,6 +75,7 @@ multiclass LMULWriteResW<string name, list<ProcResourceKind> resources>
   : LMULWriteResImpl<name, resources>;
 multiclass LMULReadAdvanceW<string name, int val, list<SchedWrite> writes = []>
   : LMULReadAdvanceImpl<name, val, writes>;
+class LMULSchedWriteListW<list<string> names> : LMULSchedWriteListImpl<names, SchedMxListW>;
 
 multiclass LMULSchedWritesFW<string name> : LMULSchedWritesImpl<name, SchedMxListFW>;
 multiclass LMULSchedReadsFW<string name> : LMULSchedReadsImpl<name, SchedMxListFW>;
@@ -65,10 +83,12 @@ multiclass LMULWriteResFW<string name, list<ProcResourceKind> resources>
   : LMULWriteResImpl<name, resources>;
 multiclass LMULReadAdvanceFW<string name, int val, list<SchedWrite> writes = []>
   : LMULReadAdvanceImpl<name, val, writes>;
+class LMULSchedWriteListFW<list<string> names> : LMULSchedWriteListImpl<names, SchedMxListFW>;
 
 multiclass LMULSchedWritesFWRed<string name> : LMULSchedWritesImpl<name, SchedMxListFWRed>;
 multiclass LMULWriteResFWRed<string name, list<ProcResourceKind> resources>
   : LMULWriteResImpl<name, resources>;
+class LMULSchedWriteListFWRed<list<string> names> : LMULSchedWriteListImpl<names, SchedMxListFWRed>;
 
 
 // 3.6 Vector Byte Length vlenb

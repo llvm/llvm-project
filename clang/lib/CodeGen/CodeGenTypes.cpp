@@ -618,6 +618,8 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
                                            Info.EC.getKnownMinValue() *
                                                Info.NumVectors);
     }
+    case BuiltinType::SveCount:
+      return llvm::TargetExtType::get(getLLVMContext(), "aarch64.svcount");
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
     case BuiltinType::Id: \
       ResultType = \

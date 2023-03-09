@@ -591,10 +591,6 @@ private:
     return false;
   }
 
-  bool isCpp11AttributeSpecifier(const FormatToken &Tok) {
-    return isCppAttribute(Style.isCpp(), Tok);
-  }
-
   bool parseSquare() {
     if (!CurrentToken)
       return false;
@@ -617,7 +613,7 @@ private:
 
     const bool IsInnerSquare = Contexts.back().InCpp11AttributeSpecifier;
     const bool IsCpp11AttributeSpecifier =
-        isCpp11AttributeSpecifier(*Left) || IsInnerSquare;
+        isCppAttribute(Style.isCpp(), *Left) || IsInnerSquare;
 
     // Treat C# Attributes [STAThread] much like C++ attributes [[...]].
     bool IsCSharpAttributeSpecifier =
@@ -2244,7 +2240,7 @@ private:
     if (Tok.Next->isOneOf(tok::kw_noexcept, tok::kw_volatile, tok::kw_const,
                           tok::kw_requires, tok::kw_throw, tok::arrow,
                           Keywords.kw_override, Keywords.kw_final) ||
-        isCpp11AttributeSpecifier(*Tok.Next)) {
+        isCppAttribute(Style.isCpp(), *Tok.Next)) {
       return false;
     }
 

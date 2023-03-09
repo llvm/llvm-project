@@ -110,6 +110,10 @@ class LLDB_API SBUnixSignals;
 typedef bool (*SBBreakpointHitCallback)(void *baton, SBProcess &process,
                                         SBThread &thread,
                                         lldb::SBBreakpointLocation &location);
+
+typedef void (*SBDebuggerDestroyCallback)(lldb::user_id_t debugger_id,
+                                          void *baton);
+
 typedef void *ScriptedObject;
 }
 

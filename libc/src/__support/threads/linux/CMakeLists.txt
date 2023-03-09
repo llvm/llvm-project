@@ -40,3 +40,15 @@ add_object_library(
     -fno-omit-frame-pointer # This allows us to sniff out the thread args from
                             # the new thread's stack reliably.
 )
+
+add_object_library(
+  callonce
+  SRCS
+    callonce.cpp
+  HDRS
+    ../callonce.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.CPP.atomic
+    libc.src.__support.OSUtil.osutil
+)

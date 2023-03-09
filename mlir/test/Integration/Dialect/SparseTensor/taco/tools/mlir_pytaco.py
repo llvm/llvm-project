@@ -48,9 +48,9 @@ from . import mlir_pytaco_utils as utils
 _TACO_INDEX_PREFIX = "i"
 _TACO_TENSOR_PREFIX = "A"
 
-# Bitwidths for pointers and indices.
-_POINTER_BIT_WIDTH = 0
-_INDEX_BIT_WIDTH = 0
+# Bitwidths for positions and coordinates.
+_POS_WIDTH = 0
+_CRD_WIDTH = 0
 # The entry point to the JIT compiled program.
 _ENTRY_NAME = "main"
 
@@ -366,8 +366,7 @@ class Format:
     mlir_storage_format = [f.value for f in self.format_pack.formats]
     return sparse_tensor.EncodingAttr.get(mlir_storage_format,
                                           ir.AffineMap.get_permutation(order),
-                                          None, _POINTER_BIT_WIDTH,
-                                          _INDEX_BIT_WIDTH)
+                                          None, _POS_WIDTH, _CRD_WIDTH)
 
 
 def _make_format(formats: List[ModeFormat],

@@ -59,7 +59,6 @@ public:
   enum Kind : uint8_t {
     ObjKind,
     SharedKind,
-    ArchiveKind,
     BitcodeKind,
     BinaryKind,
   };

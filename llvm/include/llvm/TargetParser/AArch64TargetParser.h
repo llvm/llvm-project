@@ -288,6 +288,8 @@ struct ArchInfo {
       return this->Version > Other.Version;
     }
     if (this->Version.getMajor() == 9 && Other.Version.getMajor() == 8) {
+      assert(this->Version.getMinor() && Other.Version.getMinor() &&
+             "AArch64::ArchInfo should have a minor version.");
       return this->Version.getMinor().value_or(0) + 5 >=
              Other.Version.getMinor().value_or(0);
     }

@@ -25,7 +25,7 @@
 // CHECK:           %[[VAL_9:.*]] = arith.addi %[[VAL_4]], %[[VAL_8]] : index
 // CHECK:           %[[VAL_10:.*]] = memref.load %[[VAL_0]]{{\[}}%[[VAL_4]]] : memref<?xindex>
 // CHECK:           %[[VAL_11:.*]] = memref.load %[[VAL_0]]{{\[}}%[[VAL_9]]] : memref<?xindex>
-// CHECK:           %[[VAL_13:.*]] = sparse_tensor.storage_specifier.get %[[VAL_3]]  idx_mem_sz at 1 : !sparse_tensor.storage_specifier
+// CHECK:           %[[VAL_13:.*]] = sparse_tensor.storage_specifier.get %[[VAL_3]]  crd_mem_sz at 1 : !sparse_tensor.storage_specifier
 // CHECK:           %[[VAL_14:.*]] = arith.subi %[[VAL_11]], %[[VAL_8]] : index
 // CHECK:           %[[VAL_15:.*]] = arith.cmpi ult, %[[VAL_10]], %[[VAL_11]] : index
 // CHECK:           %[[VAL_16:.*]] = scf.if %[[VAL_15]] -> (i1) {
@@ -42,7 +42,7 @@
 // CHECK:             %[[VAL_21:.*]] = arith.addi %[[VAL_13]], %[[VAL_8]] : index
 // CHECK:             memref.store %[[VAL_21]], %[[VAL_0]]{{\[}}%[[VAL_9]]] : memref<?xindex>
 // CHECK:             %[[VAL_22:.*]], %[[VAL_24:.*]] = sparse_tensor.push_back %[[VAL_13]], %[[VAL_1]], %[[VAL_5]] : index, memref<?xindex>, index
-// CHECK:             %[[VAL_25:.*]] = sparse_tensor.storage_specifier.set %[[VAL_3]]  idx_mem_sz at 1 with %[[VAL_24]] : !sparse_tensor.storage_specifier
+// CHECK:             %[[VAL_25:.*]] = sparse_tensor.storage_specifier.set %[[VAL_3]]  crd_mem_sz at 1 with %[[VAL_24]] : !sparse_tensor.storage_specifier
 // CHECK:             scf.yield %[[VAL_22]], %[[VAL_25]] : memref<?xindex>, !sparse_tensor.storage_specifier
 // CHECK:           }
 // CHECK:           %[[VAL_28:.*]] = sparse_tensor.storage_specifier.get %[[VAL_27:.*]]#1  val_mem_sz : !sparse_tensor.storage_specifier
@@ -73,13 +73,13 @@
 // CHECK:           %[[VAL_18:.*]] = memref.alloc() : memref<16xf64>
 // CHECK:           %[[VAL_19:.*]] = memref.cast %[[VAL_18]] : memref<16xf64> to memref<?xf64>
 // CHECK:           %[[VAL_20:.*]] = sparse_tensor.storage_specifier.init : !sparse_tensor.storage_specifier
-// CHECK:           %[[VAL_21:.*]] = sparse_tensor.storage_specifier.set %[[VAL_20]]  dim_sz at 0 with %[[VAL_8]] : !sparse_tensor.storage_specifier
-// CHECK:           %[[VAL_22:.*]] = sparse_tensor.storage_specifier.set %[[VAL_21]]  dim_sz at 1 with %[[VAL_8]] : !sparse_tensor.storage_specifier
-// CHECK:           %[[VAL_23:.*]] = sparse_tensor.storage_specifier.get %[[VAL_22]]  ptr_mem_sz at 1 : !sparse_tensor.storage_specifier
+// CHECK:           %[[VAL_21:.*]] = sparse_tensor.storage_specifier.set %[[VAL_20]]  lvl_sz at 0 with %[[VAL_8]] : !sparse_tensor.storage_specifier
+// CHECK:           %[[VAL_22:.*]] = sparse_tensor.storage_specifier.set %[[VAL_21]]  lvl_sz at 1 with %[[VAL_8]] : !sparse_tensor.storage_specifier
+// CHECK:           %[[VAL_23:.*]] = sparse_tensor.storage_specifier.get %[[VAL_22]]  pos_mem_sz at 1 : !sparse_tensor.storage_specifier
 // CHECK:           %[[VAL_24:.*]], %[[VAL_25:.*]] = sparse_tensor.push_back %[[VAL_23]], %[[VAL_15]], %[[VAL_10]] : index, memref<?xindex>, index
-// CHECK:           %[[VAL_26:.*]] = sparse_tensor.storage_specifier.set %[[VAL_22]]  ptr_mem_sz at 1 with %[[VAL_25]] : !sparse_tensor.storage_specifier
+// CHECK:           %[[VAL_26:.*]] = sparse_tensor.storage_specifier.set %[[VAL_22]]  pos_mem_sz at 1 with %[[VAL_25]] : !sparse_tensor.storage_specifier
 // CHECK:           %[[VAL_27:.*]], %[[VAL_28:.*]] = sparse_tensor.push_back %[[VAL_25]], %[[VAL_24]], %[[VAL_10]], %[[VAL_8]] : index, memref<?xindex>, index, index
-// CHECK:           %[[VAL_29:.*]] = sparse_tensor.storage_specifier.set %[[VAL_26]]  ptr_mem_sz at 1 with %[[VAL_28]] : !sparse_tensor.storage_specifier
+// CHECK:           %[[VAL_29:.*]] = sparse_tensor.storage_specifier.set %[[VAL_26]]  pos_mem_sz at 1 with %[[VAL_28]] : !sparse_tensor.storage_specifier
 // CHECK:           %[[VAL_30:.*]] = memref.alloc() : memref<4xf64>
 // CHECK:           %[[VAL_31:.*]] = m
 // CHECK:           %[[VAL_32:.*]] = memref.alloc() : memref<4xindex>
@@ -131,7 +131,7 @@
 // CHECK:           memref.dealloc %[[VAL_30]] : memref<4xf64>
 // CHECK:           memref.dealloc %[[VAL_31]] : memref<4xi1>
 // CHECK:           memref.dealloc %[[VAL_32]] : memref<4xindex>
-// CHECK:           %[[VAL_76:.*]] = sparse_tensor.storage_specifier.get %[[VAL_77:.*]]#3  ptr_mem_sz at 1 : !sparse_tensor.storage_specifier
+// CHECK:           %[[VAL_76:.*]] = sparse_tensor.storage_specifier.get %[[VAL_77:.*]]#3  pos_mem_sz at 1 : !sparse_tensor.storage_specifier
 // CHECK:           %[[VAL_78:.*]] = memref.load %[[VAL_77]]#0{{\[}}%[[VAL_10]]] : memref<?xindex>
 // CHECK:           %[[VAL_79:.*]] = scf.for %[[VAL_80:.*]] = %[[VAL_11]] to %[[VAL_76]] step %[[VAL_11]] iter_args(%[[VAL_81:.*]] = %[[VAL_78]]) -> (index) {
 // CHECK:             %[[VAL_82:.*]] = memref.load %[[VAL_77]]#0{{\[}}%[[VAL_80]]] : memref<?xindex>

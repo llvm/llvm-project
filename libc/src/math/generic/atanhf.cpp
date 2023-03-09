@@ -24,15 +24,15 @@ LLVM_LIBC_FUNCTION(float, atanhf, (float x)) {
     if (xbits.is_nan()) {
       return x;
     }
-    // |x| == 0
+    // |x| == 1.0
     if (x_abs == 0x3F80'0000U) {
-      fputil::set_except(FE_DIVBYZERO);
-      return with_errno(FPBits::inf(sign).get_val(), ERANGE);
+      fputil::set_errno_if_required(ERANGE);
+      fputil::raise_except_if_required(FE_DIVBYZERO);
+      return FPBits::inf(sign).get_val();
     } else {
-      fputil::set_except(FE_INVALID);
-      return with_errno(
-          FPBits::build_nan(1 << (fputil::MantissaWidth<float>::VALUE - 1)),
-          EDOM);
+      fputil::set_errno_if_required(EDOM);
+      fputil::raise_except_if_required(FE_INVALID);
+      return FPBits::build_quiet_nan(0);
     }
   }
 

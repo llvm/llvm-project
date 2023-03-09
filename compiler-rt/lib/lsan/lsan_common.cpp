@@ -948,7 +948,7 @@ void LeakReport::PrintSummary() {
 
 uptr LeakReport::ApplySuppressions() {
   LeakSuppressionContext *suppressions = GetSuppressionContext();
-  uptr new_suppressions = false;
+  uptr new_suppressions = 0;
   for (uptr i = 0; i < leaks_.size(); i++) {
     if (suppressions->Suppress(leaks_[i].stack_trace_id, leaks_[i].hit_count,
                                leaks_[i].total_size)) {

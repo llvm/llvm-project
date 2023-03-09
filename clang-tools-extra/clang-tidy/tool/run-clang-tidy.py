@@ -300,7 +300,7 @@ def main():
                                   build_path)
 
   tmpdir = None
-  if args.fix or (yaml and args.export_fixes):
+  if args.fix:
     clang_apply_replacements_binary = find_binary(
       args.clang_apply_replacements_binary, "clang-apply-replacements",
       build_path)

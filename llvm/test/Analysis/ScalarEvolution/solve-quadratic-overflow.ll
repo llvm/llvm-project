@@ -11,13 +11,13 @@ define signext i32 @f0() {
 ; CHECK-LABEL: 'f0'
 ; CHECK-NEXT:  Classifying expressions for: @f0
 ; CHECK-NEXT:    %v1 = phi i16 [ 0, %b0 ], [ %v2, %b1 ]
-; CHECK-NEXT:    --> {0,+,-1}<%b1> U: [-255,1) S: [-255,1) Exits: -255 LoopDispositions: { %b1: Computable }
+; CHECK-NEXT:    --> {0,+,-1}<nsw><%b1> U: [-255,1) S: [-255,1) Exits: -255 LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:    %v2 = add i16 %v1, -1
-; CHECK-NEXT:    --> {-1,+,-1}<%b1> U: [-256,0) S: [-256,0) Exits: -256 LoopDispositions: { %b1: Computable }
+; CHECK-NEXT:    --> {-1,+,-1}<nsw><%b1> U: [-256,0) S: [-256,0) Exits: -256 LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:    %v3 = mul i16 %v2, %v2
 ; CHECK-NEXT:    --> {1,+,3,+,2}<%b1> U: full-set S: full-set Exits: 0 LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:    %v5 = phi i16 [ %v2, %b1 ]
-; CHECK-NEXT:    --> {-1,+,-1}<%b1> U: [-256,0) S: [-256,0) --> -256 U: [-256,-255) S: [-256,-255)
+; CHECK-NEXT:    --> {-1,+,-1}<nsw><%b1> U: [-256,0) S: [-256,0) --> -256 U: [-256,-255) S: [-256,-255)
 ; CHECK-NEXT:    %v6 = phi i16 [ %v3, %b1 ]
 ; CHECK-NEXT:    --> {1,+,3,+,2}<%b1> U: full-set S: full-set --> 0 U: [0,1) S: [0,1)
 ; CHECK-NEXT:    %v7 = sext i16 %v5 to i32
