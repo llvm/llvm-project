@@ -149,6 +149,8 @@ Changes to the C API
   have been removed.
 * Removed ``LLVMPassManagerBuilderRef`` and functions interacting with it.
   These belonged to the no longer supported legacy pass manager.
+* As part of the opaque pointer transition, ``LLVMGetElementType`` no longer
+  gives the pointee type of a pointer type.
 
 Changes to the FastISel infrastructure
 --------------------------------------
