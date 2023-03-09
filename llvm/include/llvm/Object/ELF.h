@@ -14,6 +14,7 @@
 #define LLVM_OBJECT_ELF_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -392,6 +393,14 @@ public:
   Expected<ArrayRef<uint8_t>> getSectionContents(const Elf_Shdr &Sec) const;
   Expected<ArrayRef<uint8_t>> getSegmentContents(const Elf_Phdr &Phdr) const;
   Expected<std::vector<BBAddrMap>> decodeBBAddrMap(const Elf_Shdr &Sec) const;
+
+  /// Returns a map from every section matching \p IsMatch to its relocation
+  /// section, or \p nullptr if it has no relocation section. This function
+  /// returns an error if any of the \p IsMatch calls fail or if it fails to
+  /// retrieve the content section of any relocation section.
+  Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>>
+  getSectionAndRelocations(
+      std::function<Expected<bool>(const Elf_Shdr &)> IsMatch) const;
 
   void createFakeSections();
 };
