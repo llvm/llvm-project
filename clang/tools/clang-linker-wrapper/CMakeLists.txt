@@ -39,8 +39,6 @@ set(CLANG_LINKER_WRAPPER_LIB_DEPS
   clangBasic
   )
 
-add_dependencies(clang clang-linker-wrapper)
-
 target_link_libraries(clang-linker-wrapper
   PRIVATE
   ${CLANG_LINKER_WRAPPER_LIB_DEPS}
