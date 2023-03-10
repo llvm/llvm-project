@@ -47,13 +47,7 @@ namespace fir {
 class LLVMTypeConverter : public mlir::LLVMTypeConverter {
 public:
   LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA)
-      : mlir::LLVMTypeConverter(module.getContext(),
-                                [&] {
-                                  mlir::LowerToLLVMOptions options(
-                                      module.getContext());
-                                  options.useOpaquePointers = false;
-                                  return options;
-                                }()),
+      : mlir::LLVMTypeConverter(module.getContext()),
         kindMapping(getKindMapping(module)),
         specifics(CodeGenSpecifics::get(module.getContext(),
                                         getTargetTriple(module),
