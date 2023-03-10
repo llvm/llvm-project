@@ -51,3 +51,16 @@ TEST(Derived, SameTypeAs) {
   EXPECT_FALSE(RTNAME(SameTypeAs)(*i1, *p1));
   EXPECT_FALSE(RTNAME(SameTypeAs)(*p1, *i1));
 }
+
+TEST(Derived, ExtendsTypeOf) {
+  // CLASS(*), POINTER :: i1 - INTEGER dynamic type
+  auto i1{
+      Descriptor::Create(TypeCode{Fortran::common::TypeCategory::Integer, 4}, 4,
+          nullptr, 0, nullptr, CFI_attribute_pointer)};
+  EXPECT_TRUE(RTNAME(ExtendsTypeOf)(*i1, *i1));
+
+  // CLASS(*), POINTER :: r1 - REAL dynamic type
+  auto r1{Descriptor::Create(TypeCode{Fortran::common::TypeCategory::Real, 4},
+      4, nullptr, 0, nullptr, CFI_attribute_pointer)};
+  EXPECT_FALSE(RTNAME(SameTypeAs)(*i1, *r1));
+}

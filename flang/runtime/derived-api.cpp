@@ -110,6 +110,10 @@ bool RTNAME(SameTypeAs)(const Descriptor &a, const Descriptor &b) {
 }
 
 bool RTNAME(ExtendsTypeOf)(const Descriptor &a, const Descriptor &mold) {
+  if (a.raw().type != CFI_type_struct && a.raw().type != CFI_type_other &&
+      mold.raw().type != CFI_type_struct && mold.raw().type != CFI_type_other)
+    return a.raw().type == mold.raw().type;
+
   const typeInfo::DerivedType *derivedTypeA{GetDerivedType(a)};
   const typeInfo::DerivedType *derivedTypeMold{GetDerivedType(mold)};
 
