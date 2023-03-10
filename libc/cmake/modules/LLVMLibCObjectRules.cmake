@@ -257,8 +257,7 @@ function(create_object_library fq_target_name)
       SRCS ${ADD_OBJECT_SRCS}
       HDRS ${ADD_OBJECT_HDRS}
       DEPENDS ${fq_deps_list}
-      COMPILE_OPTIONS ${common_compile_options}
-      FLAGS "${ADD_ENTRYPOINT_OBJ_FLAGS}"
+      COMPILE_OPTIONS ${compile_options}
     )
   else()
     add_library(

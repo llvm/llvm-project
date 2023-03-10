@@ -1,0 +1,38 @@
+REQUIRES: curl
+UNSUPPORTED: system-windows
+
+RUN: rm -rf %t/*
+RUN: mkdir -p %t/buildid/012345678901234{5,6}
+RUN: echo 'f' > %t/buildid/0123456789012345/debuginfo
+RUN: cp %t/buildid/012345678901234{5,6}/debuginfo
+RUN: mkdir %t/cache
+RUN: env DEBUGINFOD_CACHE_PATH=%t/cache DEBUGINFOD_URLS=file://%t \
+RUN:   llvm-debuginfod-find --debuginfo 0123456789012345 > /dev/null
+RUN: ls %t/cache | FileCheck --check-prefix=FIRST --match-full-lines --implicit-check-not {{.}} %s
+
+# Set policy to discard all but one file.
+RUN: env DEBUGINFOD_CACHE_POLICY=prune_interval=0s:cache_size_files=1 \
+RUN:     DEBUGINFOD_CACHE_PATH=%t/cache DEBUGINFOD_URLS=file://%t \
+RUN:     llvm-debuginfod-find --debuginfo 0123456789012346 > /dev/null
+RUN: ls %t/cache | FileCheck --check-prefix=SECOND --match-full-lines --implicit-check-not {{.}} %s
+
+# Add the first file back to the cache.
+RUN: env DEBUGINFOD_CACHE_PATH=%t/cache DEBUGINFOD_URLS=file://%t \
+RUN:     llvm-debuginfod-find --debuginfo 0123456789012345 > /dev/null
+RUN: ls %t/cache | FileCheck --check-prefix=BOTH --match-full-lines --implicit-check-not {{.}} %s
+
+# An invalid cache policy has no effect.
+RUN: env DEBUGINFOD_CACHE_POLICY=invalid:prune_interval=0s:cache_size_files=1 \
+RUN:     DEBUGINFOD_CACHE_PATH=%t/cache DEBUGINFOD_URLS=file://%t \
+RUN:     llvm-debuginfod-find --debuginfo 0123456789012346 > /dev/null
+RUN: ls %t/cache | FileCheck --check-prefix=BOTH --match-full-lines --implicit-check-not {{.}} %s
+
+FIRST: llvmcache-6663022027345102449
+FIRST: llvmcache.timestamp
+
+SECOND: llvmcache-6762748755046480574
+SECOND: llvmcache.timestamp
+
+BOTH: llvmcache-6663022027345102449
+BOTH: llvmcache-6762748755046480574
+BOTH: llvmcache.timestamp
