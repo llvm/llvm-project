@@ -192,6 +192,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/too-small-loop-variable>` check. Basic support
   for bit-field and integer members as a loop variable or upper limit were added.
 
+- Improved :doc:`readability-magic-numbers 
+  <clang-tidy/checks/readability/magic-numbers>` check, now allows for
+  magic numbers in type aliases such as ``using`` and ``typedef`` declarations if
+  the new ``IgnoreTypeAliases`` option is set to true.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
