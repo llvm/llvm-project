@@ -205,8 +205,7 @@ linalg::rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
   }
 
   ReifiedRankedShapedTypeDims reifiedResultShapes;
-  if (failed(cast<ReifyRankedShapedTypeOpInterface>(opToPad.getOperation())
-                 .reifyResultShapes(rewriter, reifiedResultShapes))) {
+  if (failed(reifyResultShapes(rewriter, opToPad, reifiedResultShapes))) {
     LLVM_DEBUG(DBGS() << "--failed to reify result shapes -> FAIL\n");
     return rewriter.notifyMatchFailure(opToPad,
                                        "failed to reify result shapes");

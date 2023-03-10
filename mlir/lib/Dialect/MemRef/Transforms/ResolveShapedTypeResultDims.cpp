@@ -84,33 +84,18 @@ struct DimOfReifyRankedShapedTypeOpInterface : public OpRewritePattern<OpTy> {
     OpResult dimValue = dimOp.getSource().template dyn_cast<OpResult>();
     if (!dimValue)
       return failure();
-    auto rankedShapeTypeOp =
-        dyn_cast<ReifyRankedShapedTypeOpInterface>(dimValue.getOwner());
-    if (!rankedShapeTypeOp)
-      return failure();
-
     std::optional<int64_t> dimIndex = dimOp.getConstantIndex();
     if (!dimIndex)
       return failure();
 
     ReifiedRankedShapedTypeDims reifiedResultShapes;
-    if (failed(
-            rankedShapeTypeOp.reifyResultShapes(rewriter, reifiedResultShapes)))
+    if (failed(reifyResultShapes(rewriter, dimValue.getOwner(),
+                                 reifiedResultShapes)))
       return failure();
-
-    if (reifiedResultShapes.size() != rankedShapeTypeOp->getNumResults())
-      return failure();
-
     unsigned resultNumber = dimValue.getResultNumber();
-    auto sourceType = dimValue.getType().dyn_cast<RankedTensorType>();
-    if (reifiedResultShapes[resultNumber].size() !=
-        static_cast<size_t>(sourceType.getRank()))
-      return failure();
-
-    rewriter.replaceOp(dimOp,
-                       getValueOrCreateConstantIndexOp(
-                           rewriter, dimOp.getLoc(),
-                           reifiedResultShapes[resultNumber][*dimIndex]));
+    Value replacement = getValueOrCreateConstantIndexOp(
+        rewriter, dimOp.getLoc(), reifiedResultShapes[resultNumber][*dimIndex]);
+    rewriter.replaceOp(dimOp, replacement);
     return success();
   }
 };

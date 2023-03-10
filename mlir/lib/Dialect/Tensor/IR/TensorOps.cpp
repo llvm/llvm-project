@@ -81,11 +81,7 @@ FailureOr<Value> tensor::getOrCreateDestination(OpBuilder &b, Location loc,
   if (!tensorType.hasStaticShape()) {
     // Dynamic shape: Query ReifyRankedShapedTypeOpInterface.
     ReifiedRankedShapedTypeDims reifiedShapes;
-    ReifyRankedShapedTypeOpInterface reifyShapedTypeInterface =
-        dyn_cast<ReifyRankedShapedTypeOpInterface>(opResult.getDefiningOp());
-    if (!reifyShapedTypeInterface)
-      return failure();
-    if (failed(reifyShapedTypeInterface.reifyResultShapes(b, reifiedShapes)))
+    if (failed(reifyResultShapes(b, opResult.getDefiningOp(), reifiedShapes)))
       return failure();
     mixedSizes = reifiedShapes[opResult.getResultNumber()];
   } else {
