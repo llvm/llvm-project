@@ -56,11 +56,7 @@ static uint64_t getCallStackHash(const DILocation *DIL) {
   while (InlinedAt) {
     Hash ^= MD5Hash(std::to_string(InlinedAt->getLine()));
     Hash ^= MD5Hash(std::to_string(InlinedAt->getColumn()));
-    const DISubprogram *SP = InlinedAt->getScope()->getSubprogram();
-    // Use linkage name for C++ if possible.
-    auto Name = SP->getLinkageName();
-    if (Name.empty())
-      Name = SP->getName();
+    auto Name = InlinedAt->getSubprogramLinkageName();
     Hash ^= MD5Hash(Name);
     InlinedAt = InlinedAt->getInlinedAt();
   }
