@@ -1525,11 +1525,16 @@ LinkageInfo LinkageComputer::getLVForDecl(const NamedDecl *D,
   if (std::optional<LinkageInfo> LI = lookup(D, computation))
     return *LI;
 
+#ifndef NDEBUG
   LinkageInfo LV = computeLVForDecl(D, computation);
   if (D->hasCachedLinkage())
     assert(D->getCachedLinkage() == LV.getLinkage());
 
   D->setCachedLinkage(LV.getLinkage());
+#else
+  LinkageInfo LV = D->hasCachedLinkage() ? D->getCachedLinkage() :
+                   computeLVForDecl(D, computation);
+#endif
   cache(D, computation, LV);
 
 #ifndef NDEBUG
