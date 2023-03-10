@@ -7,7 +7,7 @@
 define float @loadfpimm1() {
 ; CHECK-LABEL: loadfpimm1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fli.s fa0, 6.250000e-02
+; CHECK-NEXT:    fli.s fa0, 0.0625
 ; CHECK-NEXT:    ret
   ret float 0.0625
 }
@@ -15,7 +15,7 @@ define float @loadfpimm1() {
 define float @loadfpimm2() {
 ; CHECK-LABEL: loadfpimm2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fli.s fa0, 7.500000e-01
+; CHECK-NEXT:    fli.s fa0, 0.75
 ; CHECK-NEXT:    ret
   ret float 0.75
 }
@@ -23,7 +23,7 @@ define float @loadfpimm2() {
 define float @loadfpimm3() {
 ; CHECK-LABEL: loadfpimm3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fli.s fa0, 1.250000e+00
+; CHECK-NEXT:    fli.s fa0, 1.25
 ; CHECK-NEXT:    ret
   ret float 1.25
 }
@@ -31,7 +31,7 @@ define float @loadfpimm3() {
 define float @loadfpimm4() {
 ; CHECK-LABEL: loadfpimm4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fli.s fa0, 3.000000e+00
+; CHECK-NEXT:    fli.s fa0, 3.0
 ; CHECK-NEXT:    ret
   ret float 3.0
 }
@@ -39,7 +39,7 @@ define float @loadfpimm4() {
 define float @loadfpimm5() {
 ; CHECK-LABEL: loadfpimm5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fli.s fa0, 2.560000e+02
+; CHECK-NEXT:    fli.s fa0, 256.0
 ; CHECK-NEXT:    ret
   ret float 256.0
 }
