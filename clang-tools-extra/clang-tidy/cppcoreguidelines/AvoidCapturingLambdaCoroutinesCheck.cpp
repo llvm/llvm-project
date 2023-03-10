@@ -12,34 +12,34 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
+
+namespace {
+AST_MATCHER(LambdaExpr, hasCoroutineBody) {
+  const Stmt *Body = Node.getBody();
+  return Body != nullptr && CoroutineBodyStmt::classof(Body);
+}
+
+AST_MATCHER(LambdaExpr, hasCaptures) { return Node.capture_size() != 0U; }
+} // namespace
 
 void AvoidCapturingLambdaCoroutinesCheck::registerMatchers(
     MatchFinder *Finder) {
-  Finder->addMatcher(lambdaExpr().bind("lambda"), this);
+  Finder->addMatcher(
+      lambdaExpr(hasCaptures(), hasCoroutineBody()).bind("lambda"), this);
+}
+
+bool AvoidCapturingLambdaCoroutinesCheck::isLanguageVersionSupported(
+    const LangOptions &LangOpts) const {
+  return LangOpts.CPlusPlus20;
 }
 
 void AvoidCapturingLambdaCoroutinesCheck::check(
     const MatchFinder::MatchResult &Result) {
-  const auto *Lambda = Result.Nodes.getNodeAs<LambdaExpr>("lambda");
-  if (!Lambda) {
-    return;
-  }
-
-  const auto *Body = dyn_cast<CoroutineBodyStmt>(Lambda->getBody());
-  if (!Body) {
-    return;
-  }
-
-  if (Lambda->captures().empty()) {
-    return;
-  }
-
-  diag(Lambda->getBeginLoc(), "found capturing coroutine lambda");
+  const auto *MatchedLambda = Result.Nodes.getNodeAs<LambdaExpr>("lambda");
+  diag(MatchedLambda->getExprLoc(),
+       "coroutine lambda may cause use-after-free, avoid captures or ensure "
+       "lambda closure object has guaranteed lifetime");
 }
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines

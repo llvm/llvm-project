@@ -123,9 +123,9 @@ New checks
 - New :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines
   <clang-tidy/checks/cppcoreguidelines/avoid-capturing-lambda-coroutines>` check.
 
-  Adds check for cpp core guideline: "CP.51: Do not use capturing lambdas that
-  are coroutines."
-
+  Flags C++20 coroutine lambdas with non-empty capture lists that may cause
+  use-after-free errors and suggests avoiding captures or ensuring the lambda
+  closure object has a guaranteed lifetime.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^

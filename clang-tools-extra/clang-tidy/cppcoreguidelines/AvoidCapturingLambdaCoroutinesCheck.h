@@ -11,26 +11,23 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 
-/// The normal usage of captures in lambdas are problematic when the lambda is a
-/// coroutine because the captures are destroyed after the first suspension
-/// point. Using the captures after this point is a use-after-free issue.
+/// Flags C++20 coroutine lambdas with non-empty capture lists that may cause
+/// use-after-free errors and suggests avoiding captures or ensuring the lambda
+/// closure object has a guaranteed lifetime.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-avoid-capturing-lambda-coroutines.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/avoid-capturing-lambda-coroutines.html
 class AvoidCapturingLambdaCoroutinesCheck : public ClangTidyCheck {
 public:
   AvoidCapturingLambdaCoroutinesCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override;
 };
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_AVOIDCAPTURINGLAMBDACOROUTINESCHECK_H
