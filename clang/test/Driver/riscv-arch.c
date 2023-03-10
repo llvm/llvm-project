@@ -583,3 +583,13 @@
 // RUN: %clang -target riscv32-unknown-elf -march=rv32i_zmmul1p0 -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZMMUL-GOODVERS %s
 // RV32-ZMMUL-GOODVERS: "-target-feature" "+zmmul"
+
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32ifzfinx -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-F-ZFINX-ER %s
+// RV32-F-ZFINX-ER: error: invalid arch name 'rv32ifzfinx',
+// RV32-F-ZFINX-ER: 'f' and 'zfinx' extensions are incompatible
+
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32idzdinx -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-D-ZDINX-ER %s
+// RV32-D-ZDINX-ER: error: invalid arch name 'rv32idzdinx',
+// RV32-D-ZFINX-ER: 'f' and 'zfinx' extensions are incompatible
