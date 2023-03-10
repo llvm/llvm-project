@@ -23,8 +23,8 @@
 #include "mlir/IR/Operation.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 
-#include <type_traits>
 #include <optional>
+#include <type_traits>
 
 namespace mlir {
 class Builder;
@@ -633,7 +633,7 @@ public:
   class Impl
       : public TraitBase<ConcreteType, OneTypedResult<ResultType>::Impl> {
   public:
-   mlir::TypedValue<ResultType> getResult() {
+    mlir::TypedValue<ResultType> getResult() {
       return cast<mlir::TypedValue<ResultType>>(
           this->getOperation()->getResult(0));
     }
@@ -1254,6 +1254,14 @@ struct HasParent {
              << "expects parent op "
              << (sizeof...(ParentOpTypes) != 1 ? "to be one of '" : "'")
              << llvm::ArrayRef({ParentOpTypes::getOperationName()...}) << "'";
+    }
+
+    template <typename ParentOpType =
+                  std::tuple_element_t<0, std::tuple<ParentOpTypes...>>>
+    std::enable_if_t<sizeof...(ParentOpTypes) == 1, ParentOpType>
+    getParentOp() {
+      Operation *parent = this->getOperation()->getParentOp();
+      return llvm::cast<ParentOpType>(parent);
     }
   };
 };
