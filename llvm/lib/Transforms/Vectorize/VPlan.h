@@ -980,8 +980,12 @@ struct VPWidenSelectRecipe : public VPRecipeBase, public VPValue {
              VPSlotTracker &SlotTracker) const override;
 #endif
 
+  VPValue *getCond() const {
+    return getOperand(0);
+  }
+
   bool isInvariantCond() const {
-    return getOperand(0)->isDefinedOutsideVectorRegions();
+    return getCond()->isDefinedOutsideVectorRegions();
   }
 };
 
