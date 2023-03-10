@@ -339,9 +339,15 @@ public:
   CompilerType RemangleAsType(swift::Demangle::Demangler &dem,
                               swift::Demangle::NodePointer node);
 
-  /// Search the debug info for a Clang type with the specified name and cache
-  /// the result.
-  lldb::TypeSP LookupClangType(llvm::StringRef name);
+  /// Search the debug info for a non-nested Clang type with the specified name
+  /// and cache the result. Users should prefer the version that takes in the
+  /// decl_context.
+  lldb::TypeSP LookupClangType(llvm::StringRef name_ref);
+
+  /// Search the debug info for a Clang type with the specified name and decl
+  /// context, and cache the result.
+  lldb::TypeSP LookupClangType(llvm::StringRef name_ref,
+                               llvm::ArrayRef<CompilerContext> decl_context);
 
 protected:
   /// Helper that creates an AST type from \p type.
@@ -387,7 +393,8 @@ protected:
   clang::api_notes::APINotesManager *
   GetAPINotesManager(ClangExternalASTSourceCallbacks *source, unsigned id);
 
-  CompilerType LookupClangForwardType(llvm::StringRef name);
+  CompilerType LookupClangForwardType(llvm::StringRef name, 
+                  llvm::ArrayRef<CompilerContext> decl_context);
 
   std::pair<swift::Demangle::NodePointer, CompilerType>
   ResolveTypeAlias(swift::Demangle::Demangler &dem,
