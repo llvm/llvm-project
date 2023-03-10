@@ -32,7 +32,7 @@ using namespace std::chrono;
 class Fuzzer final {
 public:
   Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
-         FuzzingOptions &Options);
+         const FuzzingOptions &Options);
   ~Fuzzer() = delete;
   void Loop(std::vector<SizedFile> &CorporaFiles);
   void ReadAndExecuteSeedCorpora(std::vector<SizedFile> &CorporaFiles);
