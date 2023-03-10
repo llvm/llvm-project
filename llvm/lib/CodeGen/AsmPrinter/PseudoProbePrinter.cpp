@@ -32,11 +32,7 @@ void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
   SmallVector<InlineSite, 8> ReversedInlineStack;
   auto *InlinedAt = DebugLoc ? DebugLoc->getInlinedAt() : nullptr;
   while (InlinedAt) {
-    const DISubprogram *SP = InlinedAt->getScope()->getSubprogram();
-    // Use linkage name for C++ if possible.
-    auto Name = SP->getLinkageName();
-    if (Name.empty())
-      Name = SP->getName();
+    auto Name = InlinedAt->getSubprogramLinkageName();
     // Use caching to avoid redundant md5 computation for build speed.
     uint64_t &CallerGuid = NameGuidMap[Name];
     if (!CallerGuid)
