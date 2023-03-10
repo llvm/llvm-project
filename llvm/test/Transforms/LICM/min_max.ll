@@ -745,10 +745,10 @@ exit:
   ret i32 %iv
 }
 
-; Do not turn to umin: non-poison of %inv_1 and %inv_2 is not guaranteed.
+; TODO: inv_2 needs freeze because hoisted umax would create a new use that didn't exist before.
 ; Counter-example: %cmp_1 = false, %inv_2 = poison.
-define i32 @test_logical_and_ult_neg(i32 %start, i32 %inv_1, i32 %inv_2) {
-; CHECK-LABEL: @test_logical_and_ult_neg(
+define i32 @test_logical_and_ult_needs_freeze(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_logical_and_ult_needs_freeze(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -809,10 +809,9 @@ exit:
   ret i32 %iv
 }
 
-; Do not turn to umin: non-poison of %inv_1 and %inv_2 is not guaranteed.
-; Counter-example: %cmp_1 = true, %inv_2 = poison.
-define i32 @test_logical_or_ult_inv_neg(i32 %start, i32 %inv_1, i32 %inv_2) {
-; CHECK-LABEL: @test_logical_or_ult_inv_neg(
+; TODO: inv_2 needs freeze because hoisted umax would create a new use that didn't exist before.
+define i32 @test_logical_or_ult_inv_needs_freeze(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_logical_or_ult_inv_needs_freeze(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
