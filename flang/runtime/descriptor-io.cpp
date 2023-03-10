@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "descriptor-io.h"
+#include "flang/Common/restorer.h"
 
 namespace Fortran::runtime::io::descr {
 
@@ -47,6 +48,8 @@ std::optional<bool> DefinedFormattedIo(IoStatementState &io,
       external = &ExternalFileUnit::NewUnit(handler, true);
     }
     ChildIo &child{external->PushChildIo(io)};
+    // Child formatted I/O is nonadvancing by definition (F'2018 12.6.2.4).
+    auto restorer{common::ScopedSet(io.mutableModes().nonAdvancing, true)};
     int unit{external->unitNumber()};
     int ioStat{IostatOk};
     char ioMsg[100];
