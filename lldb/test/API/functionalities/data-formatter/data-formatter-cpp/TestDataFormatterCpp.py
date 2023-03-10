@@ -291,7 +291,6 @@ class CppDataFormatterTestCase(TestBase):
 
         lldbutil.run_to_source_breakpoint(self, "Break in has_local_mem_func_pointers", lldb.SBFileSpec("main.cpp"))
 
-        # FIXME: don't format pointer to members as bytes, but rather as regular pointers
         self.expect(
             "frame variable member_ptr",
             patterns=['member_ptr = 0x[0-9a-z]+'])

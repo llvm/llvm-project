@@ -19,6 +19,7 @@
 #include <cstdio> // for printf
 #include <string>
 #include <system_error>
+#include <type_traits>
 #include <vector>
 
 #include "assert_macros.h"

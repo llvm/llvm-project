@@ -58,13 +58,13 @@ def rtzarg : Operand<XLenVT> {
 //===----------------------------------------------------------------------===//
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1 in
-class FPBinaryOp_rr<bits<7> funct7, bits<3> funct3, DAGOperand rdty, 
+class FPBinaryOp_rr<bits<7> funct7, bits<3> funct3, DAGOperand rdty,
                     DAGOperand rsty, string opcodestr>
-    : RVInstR<funct7, funct3, OPC_OP_FP, (outs rdty:$rd), 
+    : RVInstR<funct7, funct3, OPC_OP_FP, (outs rdty:$rd),
               (ins rsty:$rs1, rsty:$rs2), opcodestr, "$rd, $rs1, $rs2">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1 in
-class FPUnaryOp_imm<bits<7> funct7, bits<5> rs2val, bits<3> funct3, RISCVOpcode opcode, 
+class FPUnaryOp_imm<bits<7> funct7, bits<5> rs2val, bits<3> funct3, RISCVOpcode opcode,
                     dag outs, dag ins, string opcodestr, string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
   bits<5> imm;
@@ -179,15 +179,15 @@ def : InstAlias<"fgeq.h $rd, $rs, $rt",
 //===----------------------------------------------------------------------===//
 
 def fp32imm_to_loadfpimm : SDNodeXForm<fpimm, [{
-  return CurDAG->getTargetConstant(RISCVLoadFPImm::getLoadFP32Imm(N->getValueAPF()), 
+  return CurDAG->getTargetConstant(RISCVLoadFPImm::getLoadFP32Imm(N->getValueAPF()),
                                    SDLoc(N), Subtarget->getXLenVT());}]>;
 
 def fp64imm_to_loadfpimm : SDNodeXForm<fpimm, [{
-  return CurDAG->getTargetConstant(RISCVLoadFPImm::getLoadFP64Imm(N->getValueAPF()), 
+  return CurDAG->getTargetConstant(RISCVLoadFPImm::getLoadFP64Imm(N->getValueAPF()),
                                    SDLoc(N), Subtarget->getXLenVT());}]>;
 
 def fp16imm_to_loadfpimm : SDNodeXForm<fpimm, [{
-  return CurDAG->getTargetConstant(RISCVLoadFPImm::getLoadFP16Imm(N->getValueAPF()), 
+  return CurDAG->getTargetConstant(RISCVLoadFPImm::getLoadFP16Imm(N->getValueAPF()),
                                    SDLoc(N), Subtarget->getXLenVT());}]>;
 
 let Predicates = [HasStdExtZfa] in {

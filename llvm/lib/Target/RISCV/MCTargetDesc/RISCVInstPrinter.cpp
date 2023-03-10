@@ -165,7 +165,7 @@ void RISCVInstPrinter::printFPImmOperand(const MCInst *MI, unsigned OpNo,
   else if (MO.getImm() == 31)
     O << "nan";
   else
-    O << bit_cast<float>(RISCVLoadFPImm::getFPImm(MO.getImm()));
+    O << RISCVLoadFPImm::getFPImm(MO.getImm());
 }
 
 void RISCVInstPrinter::printZeroOffsetMemOp(const MCInst *MI, unsigned OpNo,

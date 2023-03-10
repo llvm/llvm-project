@@ -9,6 +9,7 @@
 // UNSUPPORTED: c++03, c++11
 
 #include <string>
+#include <utility>
 
 #include "test_macros.h"
 

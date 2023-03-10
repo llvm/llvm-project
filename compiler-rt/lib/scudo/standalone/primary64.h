@@ -65,12 +65,13 @@ public:
   void init(s32 ReleaseToOsInterval) NO_THREAD_SAFETY_ANALYSIS {
     DCHECK(isAligned(reinterpret_cast<uptr>(this), alignof(ThisT)));
     DCHECK_EQ(PrimaryBase, 0U);
+
     // Reserve the space required for the Primary.
     PrimaryBase = reinterpret_cast<uptr>(map(
         nullptr, PrimarySize, "scudo:primary_reserve", MAP_NOACCESS, &Data));
 
     u32 Seed;
-    const u64 Time = getMonotonicTime();
+    const u64 Time = getMonotonicTimeFast();
     if (!getRandom(reinterpret_cast<void *>(&Seed), sizeof(Seed)))
       Seed = static_cast<u32>(Time ^ (PrimaryBase >> 12));
     const uptr PageSize = getPageSizeCached();
@@ -78,13 +79,15 @@ public:
       RegionInfo *Region = getRegionInfo(I);
       // The actual start of a region is offset by a random number of pages
       // when PrimaryEnableRandomOffset is set.
-      Region->RegionBeg = getRegionBaseByClassId(I) +
+      Region->RegionBeg = (PrimaryBase + (I << Config::PrimaryRegionSizeLog)) +
                           (Config::PrimaryEnableRandomOffset
                                ? ((getRandomModN(&Seed, 16) + 1) * PageSize)
                                : 0);
       Region->RandState = getRandomU32(&Seed);
       Region->ReleaseInfo.LastReleaseAtNs = Time;
     }
+    shuffle(RegionInfoArray, NumClasses, &Seed);
+
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
   }
 
@@ -420,8 +423,10 @@ private:
     return &RegionInfoArray[ClassId];
   }
 
-  uptr getRegionBaseByClassId(uptr ClassId) const {
-    return PrimaryBase + (ClassId << Config::PrimaryRegionSizeLog);
+  uptr getRegionBaseByClassId(uptr ClassId) {
+    return roundDown(getRegionInfo(ClassId)->RegionBeg - PrimaryBase,
+                     RegionSize) +
+           PrimaryBase;
   }
 
   static CompactPtrT compactPtrInternal(uptr Base, uptr Ptr) {
@@ -791,7 +796,7 @@ private:
         return 0;
       if (Region->ReleaseInfo.LastReleaseAtNs +
               static_cast<u64>(IntervalMs) * 1000000 >
-          getMonotonicTime()) {
+          getMonotonicTimeFast()) {
         return 0; // Memory was returned recently.
       }
     }
@@ -990,7 +995,7 @@ private:
       Region->ReleaseInfo.RangesReleased += Recorder.getReleasedRangesCount();
       Region->ReleaseInfo.LastReleasedBytes = Recorder.getReleasedBytes();
     }
-    Region->ReleaseInfo.LastReleaseAtNs = getMonotonicTime();
+    Region->ReleaseInfo.LastReleaseAtNs = getMonotonicTimeFast();
 
     // Merge GroupToRelease back to the Region::FreeList. Note that both
     // `Region->FreeList` and `GroupToRelease` are sorted.

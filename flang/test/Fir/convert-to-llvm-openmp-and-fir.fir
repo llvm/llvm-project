@@ -485,3 +485,72 @@ func.func @_QPsb() {
 // CHECK:    }
 // CHECK:    llvm.return
 // CHECK:  }
+
+// -----
+
+// CHECK:  omp.reduction.declare @[[EQV_REDUCTION:.*]] : i32 init {
+// CHECK:  ^bb0(%{{.*}}: i32):
+// CHECK:    %[[TRUE:.*]] = llvm.mlir.constant(true) : i1
+// CHECK:    %[[TRUE_EXT:.*]] = llvm.zext %[[TRUE]] : i1 to i32
+// CHECK:    omp.yield(%[[TRUE_EXT]] : i32)
+// CHECK:  } combiner {
+// CHECK:  ^bb0(%[[ARG_1:.*]]: i32, %[[ARG_2:.*]]: i32):
+// CHECK:    %[[ZERO_1:.*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK:    %[[ARGVAL_1:.*]] = llvm.icmp "ne" %[[ARG_1]], %[[ZERO_1]] : i32
+// CHECK:    %[[ZERO_2:.*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK:    %[[ARGVAL_2:.*]] = llvm.icmp "ne" %[[ARG_2]], %[[ZERO_2]] : i32
+// CHECK:    %[[RES:.*]] = llvm.icmp "eq" %[[ARGVAL_1]], %[[ARGVAL_2]] : i1
+// CHECK:    %[[RES_EXT:.*]] = llvm.zext %[[RES]] : i1 to i32
+// CHECK:    omp.yield(%[[RES_EXT]] : i32)
+// CHECK:  } 
+// CHECK-LABEL:  @_QPsimple_reduction
+// CHECK-SAME: %[[ARRAY_REF:.*]]: !llvm.ptr<array<100 x i32>>
+// CHECK:    %[[RED_ACCUMULATOR:.*]] = llvm.alloca %2 x i32 {bindc_name = "x", in_type = !fir.logical<4>, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFsimple_reductionEx"} : (i64) -> !llvm.ptr<i32>
+// CHECK:    omp.parallel   {
+// CHECK:      omp.wsloop   reduction(@[[EQV_REDUCTION]] -> %[[RED_ACCUMULATOR]] : !llvm.ptr<i32>) for
+// CHECK:        %[[ARRAY_ELEM_REF:.*]] = llvm.getelementptr %[[ARRAY_REF]][0, %{{.*}}] : (!llvm.ptr<array<100 x i32>>, i64) -> !llvm.ptr<i32>
+// CHECK:        %[[ARRAY_ELEM:.*]] = llvm.load %[[ARRAY_ELEM_REF]] : !llvm.ptr<i32>
+// CHECK:        omp.reduction %[[ARRAY_ELEM]], %[[RED_ACCUMULATOR]] : i32, !llvm.ptr<i32>
+// CHECK:        omp.yield
+// CHECK:      omp.terminator
+// CHECK:    llvm.return
+
+omp.reduction.declare @eqv_reduction : !fir.logical<4> init {
+^bb0(%arg0: !fir.logical<4>):
+  %true = arith.constant true
+  %0 = fir.convert %true : (i1) -> !fir.logical<4>
+  omp.yield(%0 : !fir.logical<4>)
+} combiner {
+^bb0(%arg0: !fir.logical<4>, %arg1: !fir.logical<4>):
+  %0 = fir.convert %arg0 : (!fir.logical<4>) -> i1
+  %1 = fir.convert %arg1 : (!fir.logical<4>) -> i1
+  %2 = arith.cmpi eq, %0, %1 : i1
+  %3 = fir.convert %2 : (i1) -> !fir.logical<4>
+  omp.yield(%3 : !fir.logical<4>)
+} 
+func.func @_QPsimple_reduction(%arg0: !fir.ref<!fir.array<100x!fir.logical<4>>> {fir.bindc_name = "y"}) {
+  %0 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsimple_reductionEi"}
+  %1 = fir.alloca !fir.logical<4> {bindc_name = "x", uniq_name = "_QFsimple_reductionEx"}
+  %true = arith.constant true
+  %2 = fir.convert %true : (i1) -> !fir.logical<4>
+  fir.store %2 to %1 : !fir.ref<!fir.logical<4>>
+  omp.parallel   {
+    %3 = fir.alloca i32 {adapt.valuebyref, pinned}
+    %c1_i32 = arith.constant 1 : i32
+    %c100_i32 = arith.constant 100 : i32
+    %c1_i32_0 = arith.constant 1 : i32
+    omp.wsloop   reduction(@eqv_reduction -> %1 : !fir.ref<!fir.logical<4>>) for  (%arg1) : i32 = (%c1_i32) to (%c100_i32) inclusive step (%c1_i32_0) {
+      fir.store %arg1 to %3 : !fir.ref<i32>
+      %4 = fir.load %3 : !fir.ref<i32>
+      %5 = fir.convert %4 : (i32) -> i64
+      %c1_i64 = arith.constant 1 : i64
+      %6 = arith.subi %5, %c1_i64 : i64
+      %7 = fir.coordinate_of %arg0, %6 : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
+      %8 = fir.load %7 : !fir.ref<!fir.logical<4>>
+      omp.reduction %8, %1 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
+      omp.yield
+    }
+    omp.terminator
+  }
+  return
+}

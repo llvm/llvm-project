@@ -21,16 +21,6 @@ using namespace lld::macho;
 static_assert(sizeof(void *) != 8 || sizeof(Reloc) == 24,
               "Try to minimize Reloc's size; we create many instances");
 
-InputSection *Reloc::getReferentInputSection() const {
-  if (const auto *sym = referent.dyn_cast<Symbol *>()) {
-    if (const auto *d = dyn_cast<Defined>(sym))
-      return d->isec;
-    return nullptr;
-  } else {
-    return referent.get<InputSection *>();
-  }
-}
-
 bool macho::validateSymbolRelocation(const Symbol *sym,
                                      const InputSection *isec, const Reloc &r) {
   const RelocAttrs &relocAttrs = target->getRelocAttrs(r.type);

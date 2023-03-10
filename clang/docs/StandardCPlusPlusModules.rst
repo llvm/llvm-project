@@ -200,7 +200,7 @@ Then we are able to compile the example by the following command:
   $ clang++ -std=c++20 interface_part.cppm --precompile -o M-interface_part.pcm
   $ clang++ -std=c++20 impl_part.cppm --precompile -fprebuilt-module-path=. -o M-impl_part.pcm
   $ clang++ -std=c++20 M.cppm --precompile -fprebuilt-module-path=. -o M.pcm
-  $ clang++ -std=c++20 Impl.cpp -fmodule-file=M.pcm -c -o Impl.o
+  $ clang++ -std=c++20 Impl.cpp -fmodule-file=M=M.pcm -c -o Impl.o
 
   # Compiling the user
   $ clang++ -std=c++20 User.cpp -fprebuilt-module-path=. -c -o User.o
@@ -332,7 +332,7 @@ How to specify the dependent BMIs
 There are 3 methods to specify the dependent BMIs:
 
 * (1) ``-fprebuilt-module-path=<path/to/direcotry>``.
-* (2) ``-fmodule-file=<path/to/BMI>``.
+* (2) ``-fmodule-file=<path/to/BMI>`` (Deprecated).
 * (3) ``-fmodule-file=<module-name>=<path/to/BMI>``.
 
 The option ``-fprebuilt-module-path`` tells the compiler the path where to search for dependent BMIs.
@@ -348,7 +348,8 @@ The option ``-fmodule-file=<module-name>=<path/to/BMI>`` tells the compiler to l
 for the module specified by ``<module-name>`` when necessary. The main difference is that
 ``-fmodule-file=<path/to/BMI>`` will load the BMI eagerly, whereas
 ``-fmodule-file=<module-name>=<path/to/BMI>`` will only load the BMI lazily, which is similar
-with ``-fprebuilt-module-path``.
+with ``-fprebuilt-module-path``. The option ``-fmodule-file=<path/to/BMI>`` for named modules is deprecated
+and is planning to be removed in future versions.
 
 In case all ``-fprebuilt-module-path=<path/to/direcotry>``, ``-fmodule-file=<path/to/BMI>`` and
 ``-fmodule-file=<module-name>=<path/to/BMI>`` exist, the ``-fmodule-file=<path/to/BMI>`` option
@@ -372,7 +373,6 @@ the above example could be rewritten into:
 
 .. code-block:: console
 
-  $ clang++ -std=c++20 M.cppm --precompile -fmodule-file=M-interface_part.pcm -fmodule-file=M-impl_part.pcm -o M.pcm
   $ clang++ -std=c++20 M.cppm --precompile -fmodule-file=M:interface_part=M-interface_part.pcm -fmodule-file=M:impl_part=M-impl_part.pcm -o M.pcm
 
 ``-fprebuilt-module-path`` is more convenient and ``-fmodule-file`` is faster since
@@ -486,7 +486,7 @@ source files. For example:
 
   $ clang++ -std=c++20 M.cppm --precompile -o M.pcm
   $ rm M.cppm
-  $ clang++ -std=c++20 Use.cpp -fmodule-file=M.pcm
+  $ clang++ -std=c++20 Use.cpp -fmodule-file=M=M.pcm
 
 The compiler would reject the example since the compiler failed to find the source file to check the consistency.
 So the following example would be rejected too.
@@ -495,7 +495,7 @@ So the following example would be rejected too.
 
   $ clang++ -std=c++20 M.cppm --precompile -o M.pcm
   $ echo "int i=0;" >> M.cppm
-  $ clang++ -std=c++20 Use.cpp -fmodule-file=M.pcm
+  $ clang++ -std=c++20 Use.cpp -fmodule-file=M=M.pcm
 
 The compiler would reject it too since the compiler detected the file was changed.
 
@@ -506,7 +506,7 @@ But it is OK to move the BMI as long as the source files remain:
   $ clang++ -std=c++20 M.cppm --precompile -o M.pcm
   $ mkdir -p tmp
   $ mv M.pcm tmp/M.pcm
-  $ clang++ -std=c++20 Use.cpp -fmodule-file=tmp/M.pcm
+  $ clang++ -std=c++20 Use.cpp -fmodule-file=M=tmp/M.pcm
 
 The above example would be accepted.
 
@@ -517,7 +517,7 @@ the user could try to use ``-Xclang -fmodules-embed-all-files`` when producing B
 
   $ clang++ -std=c++20 M.cppm --precompile -Xclang -fmodules-embed-all-files -o M.pcm
   $ rm M.cppm
-  $ clang++ -std=c++20 Use.cpp -fmodule-file=M.pcm
+  $ clang++ -std=c++20 Use.cpp -fmodule-file=M=M.pcm
 
 Now the compiler would accept the above example.
 Important note: Xclang options are intended to be used by compiler internally and its semantics
@@ -553,7 +553,7 @@ Then it is problematic if we remove ``foo.h`` before import `foo` module.
   $ clang++ -std=c++20 foo.cppm --precompile  -o foo.pcm
   $ mv foo.h foo.orig.h
   # The following one is rejected
-  $ clang++ -std=c++20 Use.cpp -fmodule-file=foo.pcm -c
+  $ clang++ -std=c++20 Use.cpp -fmodule-file=foo=foo.pcm -c
 
 The above case will rejected. And we're still able to workaround it by ``-Xclang -fmodules-embed-all-files`` option:
 
@@ -561,7 +561,7 @@ The above case will rejected. And we're still able to workaround it by ``-Xclang
 
   $ clang++ -std=c++20 foo.cppm --precompile  -Xclang -fmodules-embed-all-files -o foo.pcm
   $ mv foo.h foo.orig.h
-  $ clang++ -std=c++20 Use.cpp -fmodule-file=foo.pcm -c -o Use.o
+  $ clang++ -std=c++20 Use.cpp -fmodule-file=foo=foo.pcm -c -o Use.o
   $ clang++ Use.o foo.pcm
 
 ABI Impacts

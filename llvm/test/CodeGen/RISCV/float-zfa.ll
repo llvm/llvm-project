@@ -77,11 +77,12 @@ define float @loadfpimm9() {
   ret float 255.0
 }
 
-; FIXME: This is the f16 minimum value. It should not be supported for f32.
+; This is the f16 minimum value. Make sure we don't use fli.s.
 define float @loadfpimm10() {
 ; CHECK-LABEL: loadfpimm10:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fli.s fa0, min
+; CHECK-NEXT:    lui a0, 231424
+; CHECK-NEXT:    fmv.w.x fa0, a0
 ; CHECK-NEXT:    ret
   ret float 0.00006103515625
 }
