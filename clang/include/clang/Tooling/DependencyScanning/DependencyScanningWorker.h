@@ -45,6 +45,31 @@ class DependencyConsumer {
 public:
   virtual ~DependencyConsumer() {}
 
+  virtual void handleBuildCommand(Command Cmd) {}
+
+  virtual void
+  handleDependencyOutputOpts(const DependencyOutputOptions &Opts) = 0;
+
+  virtual void handleFileDependency(StringRef Filename) = 0;
+
+  virtual void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) = 0;
+
+  virtual void handleModuleDependency(ModuleDeps MD) = 0;
+
+  virtual void handleContextHash(std::string Hash) = 0;
+
+  virtual void handleCASFileSystemRootID(std::string ID) {}
+};
+
+/// Dependency scanner callbacks that are used during scanning to influence the
+/// behaviour of the scan - for example, to customize the scanned invocations.
+class DependencyActionController {
+public:
+  virtual ~DependencyActionController();
+
+  virtual std::string lookupModuleOutput(const ModuleID &ID,
+                                         ModuleOutputKind Kind) = 0;
+
   virtual llvm::Error initialize(CompilerInstance &ScanInstance,
                                  CompilerInvocation &NewInvocation) {
     return llvm::Error::success();
@@ -70,72 +95,18 @@ public:
     return llvm::Error::success();
   }
 
-  virtual void handleBuildCommand(Command Cmd) = 0;
-
-  virtual void
-  handleDependencyOutputOpts(const DependencyOutputOptions &Opts) = 0;
-
-  virtual void handleFileDependency(StringRef Filename) = 0;
-
-  virtual void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) = 0;
-
-  virtual void handleModuleDependency(ModuleDeps MD) = 0;
-
-  virtual void handleContextHash(std::string Hash) = 0;
-
-  virtual void handleCASFileSystemRootID(cas::CASID ID) = 0;
-};
-
-/// Dependency scanner callbacks that are used during scanning to influence the
-/// behaviour of the scan - for example, to customize the scanned invocations.
-class DependencyActionController {
-public:
-  virtual ~DependencyActionController();
-
-  virtual std::string lookupModuleOutput(const ModuleID &ID,
-                                         ModuleOutputKind Kind) = 0;
-};
-
-// FIXME: This may need to merge with \p DependencyConsumer in order to support
-// clang modules for the include-tree.
-class PPIncludeActionsConsumer : public DependencyConsumer {
-public:
-  virtual void enteredInclude(Preprocessor &PP, FileID FID) = 0;
+  virtual void enteredInclude(Preprocessor &PP, FileID FID) {}
 
   virtual void exitedInclude(Preprocessor &PP, FileID IncludedBy,
-                             FileID Include, SourceLocation ExitLoc) = 0;
+                             FileID Include, SourceLocation ExitLoc) {}
 
-  virtual void handleHasIncludeCheck(Preprocessor &PP, bool Result) = 0;
+  virtual void handleHasIncludeCheck(Preprocessor &PP, bool Result) {}
 
   /// FIXME: This is temporary until we eliminate the split between consumers in
   /// \p DependencyScanningTool and collectors in \p DependencyScanningWorker
   /// and have them both in the same file. see FIXME in \p
   /// DependencyScanningAction::runInvocation.
-  virtual const DepscanPrefixMapping &getPrefixMapping() = 0;
-
-protected:
-  void handleBuildCommand(Command) override {}
-  void handleDependencyOutputOpts(const DependencyOutputOptions &Opts) override {
-    llvm::report_fatal_error("unexpected callback for include-tree");
-  }
-  void handleFileDependency(StringRef Filename) override {
-    llvm::report_fatal_error("unexpected callback for include-tree");
-  }
-  void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) override {
-    llvm::report_fatal_error("unexpected callback for include-tree");
-  }
-  void handleModuleDependency(ModuleDeps MD) override {
-    llvm::report_fatal_error("unexpected callback for include-tree");
-  }
-  void handleContextHash(std::string Hash) override {
-    llvm::report_fatal_error("unexpected callback for include-tree");
-  }
-  void handleCASFileSystemRootID(cas::CASID ID) override {
-    llvm::report_fatal_error("unexpected callback for include-tree");
-  }
-  std::string lookupModuleOutput(const ModuleID &, ModuleOutputKind) override {
-    llvm::report_fatal_error("unexpected callback for include-tree");
-  }
+  virtual const DepscanPrefixMapping *getPrefixMapping() { return nullptr; }
 };
 
 /// An individual dependency scanning worker that is able to run on its own
@@ -177,8 +148,8 @@ public:
   void computeDependenciesFromCompilerInvocation(
       std::shared_ptr<CompilerInvocation> Invocation,
       StringRef WorkingDirectory, DependencyConsumer &Consumer,
-      DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
-      bool DiagGenerationAsCompilation);
+      DependencyActionController &Controller, DiagnosticConsumer &DiagsConsumer,
+      raw_ostream *VerboseOS, bool DiagGenerationAsCompilation);
 
   ScanningOutputFormat getScanningFormat() const { return Format; }
 
