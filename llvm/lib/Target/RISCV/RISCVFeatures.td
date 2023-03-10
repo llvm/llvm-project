@@ -424,6 +424,12 @@ def FeatureStdExtZvfh
                        "'Zvfh' (Vector Half-Precision Floating-Point)",
                        [FeatureStdExtZve32f]>;
 
+def HasStdExtZfhOrZvfh
+    : Predicate<"Subtarget->hasStdExtZfh() || Subtarget->hasStdExtZvfh()">,
+                AssemblerPredicate<(any_of FeatureStdExtZfh, FeatureStdExtZvfh),
+                                   "'Zfh' (Half-Precision Floating-Point) or "
+                                   "'Zvfh' (Vector Half-Precision Floating-Point)">;
+
 def FeatureStdExtZicbom
     : SubtargetFeature<"zicbom", "HasStdExtZicbom", "true",
                        "'Zicbom' (Cache-Block Management Instructions)">;
