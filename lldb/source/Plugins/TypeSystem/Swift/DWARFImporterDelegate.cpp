@@ -219,6 +219,7 @@ public:
 
     // Find the type in the debug info.
     TypeSP clang_type_sp;
+    // FIXME: LookupClangType won't work for nested C++ types.
     if (m_swift_typesystem.GetModule())
       clang_type_sp = m_swift_typesystem.LookupClangType(name);
     else if (TargetSP target_sp = m_swift_typesystem.GetTargetWP().lock()) {
@@ -242,6 +243,7 @@ public:
         auto swift_ts = llvm::dyn_cast_or_null<TypeSystemSwift>(ts->get());
         if (!swift_ts)
           continue;
+        // FIXME: LookupClangType won't work for nested C++ types.
         clang_type_sp = swift_ts->GetTypeSystemSwiftTypeRef().LookupClangType(name);
         if (clang_type_sp)
           break;

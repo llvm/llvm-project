@@ -196,10 +196,17 @@ GetMangledName(swift::Demangle::Demangler &dem,
 
 /// Find a Clang type by name in the modules in \p module_holder.
 TypeSP TypeSystemSwiftTypeRef::LookupClangType(StringRef name_ref) {
-  auto lookup = [](Module &M, ConstString name) -> TypeSP {
-    llvm::SmallVector<CompilerContext, 2> decl_context;
-    decl_context.push_back({CompilerContextKind::AnyModule, ConstString()});
-    decl_context.push_back({CompilerContextKind::AnyType, ConstString(name)});
+  llvm::SmallVector<CompilerContext, 2> decl_context;
+  // Make up a decl context for non-nested types.
+  decl_context.push_back({CompilerContextKind::AnyModule, ConstString()});
+  decl_context.push_back({CompilerContextKind::AnyType, ConstString(name_ref)});
+  return LookupClangType(name_ref, decl_context);
+}
+
+/// Find a Clang type by name in the modules in \p module_holder.
+TypeSP TypeSystemSwiftTypeRef::LookupClangType(
+    StringRef name_ref, llvm::ArrayRef<CompilerContext> decl_context) {
+  auto lookup = [&decl_context](Module &M, ConstString name) -> TypeSP {
     llvm::DenseSet<SymbolFile *> searched_symbol_files;
     TypeMap clang_types;
     M.FindTypes(decl_context, TypeSystemClang::GetSupportedLanguagesForTypes(),
@@ -241,8 +248,9 @@ TypeSP TypeSystemSwiftTypeRef::LookupClangType(StringRef name_ref) {
 }
 
 /// Find a Clang type by name in module \p M.
-CompilerType TypeSystemSwiftTypeRef::LookupClangForwardType(StringRef name) {
-  if (TypeSP type = LookupClangType(name))
+CompilerType TypeSystemSwiftTypeRef::LookupClangForwardType(
+    StringRef name, llvm::ArrayRef<CompilerContext> decl_context) {
+  if (TypeSP type = LookupClangType(name, decl_context))
     return type->GetForwardCompilerType();
   return {};
 }
@@ -467,6 +475,38 @@ GetBuiltinAnyObjectNode(swift::Demangle::Demangler &dem) {
   return proto_list_any;
 }
 
+/// Builds the decl context to look up clang types with.
+static bool
+IsClangImportedType(NodePointer node,
+                 llvm::SmallVectorImpl<CompilerContext> &decl_context) {
+  if (node->getKind() == Node::Kind::Module && node->hasText() &&
+      node->getText() == swift::MANGLING_MODULE_OBJC) {
+    decl_context.push_back({CompilerContextKind::AnyModule, ConstString()});
+    return true;
+  }
+
+  if (node->getNumChildren() != 2 || !node->getLastChild()->hasText())
+    return false;
+
+  switch (node->getKind()) {
+  case Node::Kind::Structure:
+  case Node::Kind::Class:
+  case Node::Kind::Enum:
+  case Node::Kind::TypeAlias:
+    if (!IsClangImportedType(node->getFirstChild(), decl_context))
+    return false;
+
+    // When C++ interop is enabled, Swift enums represent Swift namespaces.
+    decl_context.push_back({node->getKind() == Node::Kind::Enum
+                                ? CompilerContextKind::Namespace
+                                : CompilerContextKind::AnyType,
+                            ConstString(node->getLastChild()->getText())});
+    return true;
+  default:
+    return false;
+  }
+}
+
 /// Resolve a type alias node and return a demangle tree for the
 /// resolved type. If the type alias resolves to a Clang type, return
 /// a Clang CompilerType.
@@ -479,22 +519,6 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
                                          swift::Demangle::NodePointer node,
                                          bool prefer_clang_types) {
   LLDB_SCOPED_TIMER();
-  auto resolve_clang_type = [&]() -> CompilerType {
-    auto maybe_module_and_type_names = GetNominal(dem, node);
-    if (!maybe_module_and_type_names)
-      return {};
-
-    auto module_name = maybe_module_and_type_names->first;
-    if (module_name != swift::MANGLING_MODULE_OBJC)
-      return {};
-
-    // Resolve the typedef within the Clang debug info.
-    auto clang_type = LookupClangForwardType(node->getChild(1)->getText());
-    if (!clang_type)
-      return {};
-
-    return clang_type.GetCanonicalType();
-  };
 
   // Hardcode that the Swift.AnyObject type alias always resolves to
   // the builtin AnyObject type.
@@ -513,6 +537,25 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
     return {{}, {}};
   }
   ConstString mangled(mangling.result());
+
+  auto resolve_clang_type = [&]() -> CompilerType {
+    auto maybe_module_and_type_names = GetNominal(dem, node);
+    if (!maybe_module_and_type_names)
+      return {};
+
+    // This is an imported Objective-C type; look it up in the debug info.
+    llvm::SmallVector<CompilerContext, 2> decl_context;
+    if (!IsClangImportedType(node, decl_context))
+      return {};
+
+    // Resolve the typedef within the Clang debug info.
+    auto clang_type = LookupClangForwardType(mangled.GetStringRef(), decl_context);
+    if (!clang_type)
+      return {};
+
+    return clang_type.GetCanonicalType();
+  };
+
   TypeList types;
   if (!prefer_clang_types) {
     llvm::DenseSet<SymbolFile *> searched_symbol_files;
@@ -869,14 +912,6 @@ CompilerType TypeSystemSwiftTypeRef::GetBuiltinRawPointerType() {
   return GetTypeFromMangledTypename(ConstString("$sBpD"));
 }
 
-/// Determine whether \p node is an Objective-C type and return its name.
-static StringRef GetObjCTypeName(swift::Demangle::NodePointer node) {
-  if (node && node->getNumChildren() == 2 && node->getChild(0)->hasText() &&
-      node->getChild(0)->getText() == swift::MANGLING_MODULE_OBJC &&
-      node->getChild(1)->hasText())
-    return node->getChild(1)->getText();
-  return {};
-}
 
 swift::Demangle::NodePointer
 TypeSystemSwiftTypeRef::GetSwiftified(swift::Demangle::Demangler &dem,
@@ -884,16 +919,20 @@ TypeSystemSwiftTypeRef::GetSwiftified(swift::Demangle::Demangler &dem,
                                       bool resolve_objc_module) {
   LLDB_SCOPED_TIMER();
 
-  using namespace swift::Demangle;
-  StringRef ident = GetObjCTypeName(node);
-  if (ident.empty())
+  auto mangling = GetMangledName(dem, node);
+  if (!mangling.isSuccess()) {
+    LLDB_LOGF(GetLog(LLDBLog::Types), "Failed while getting swiftified (%d:%u)",
+              mangling.error().code, mangling.error().line);
+    return node;
+  }
+
+  llvm::SmallVector<CompilerContext, 2> decl_context;
+  if (!IsClangImportedType(node, decl_context))
     return node;
 
-  if (ident.equals("NSURL") || ident.equals("URL"))
-    llvm::errs();
   // This is an imported Objective-C type; look it up in the
   // debug info.
-  TypeSP clang_type = LookupClangType(ident);
+  TypeSP clang_type = LookupClangType(mangling.result(), decl_context);
   if (!clang_type)
     return node;
 
@@ -1199,33 +1238,38 @@ TypeSystemSwiftTypeRef::CollectTypeInfo(swift::Demangle::Demangler &dem,
     }
     case Node::Kind::BoundGenericStructure:
     case Node::Kind::Structure: {
-      swift_flags |= eTypeHasChildren | eTypeIsStructUnion;
-      if (node->getNumChildren() != 2)
-        break;
-      auto module = node->getChild(0);
-      auto ident = node->getChild(1);
-      // Builtin types.
-      if (module->hasText() && module->getText() == swift::STDLIB_NAME) {
-        if (ident->hasText() &&
-            ident->getText().startswith(swift::BUILTIN_TYPE_NAME_INT))
-          swift_flags |= eTypeIsScalar | eTypeIsInteger;
-        else if (ident->hasText() &&
-                 ident->getText().startswith(swift::BUILTIN_TYPE_NAME_FLOAT))
-          swift_flags |= eTypeIsScalar | eTypeIsFloat;
-      }
-
-      // Clang-imported types.
-      if (module->hasText() &&
-          module->getText() == swift::MANGLING_MODULE_OBJC) {
-        if (ident->getKind() != Node::Kind::Identifier || !ident->hasText())
-          break;
-
-        // Look up the Clang type in DWARF.
-        CompilerType clang_type = LookupClangForwardType(ident->getText());
-        collect_clang_type(clang_type.GetCanonicalType());
-        return swift_flags;
-      }
+    swift_flags |= eTypeHasChildren | eTypeIsStructUnion;
+    if (node->getNumChildren() != 2)
       break;
+    auto module = node->getChild(0);
+    auto ident = node->getChild(1);
+    // Builtin types.
+    if (module->hasText() && module->getText() == swift::STDLIB_NAME) {
+      if (ident->hasText() &&
+          ident->getText().startswith(swift::BUILTIN_TYPE_NAME_INT))
+        swift_flags |= eTypeIsScalar | eTypeIsInteger;
+      else if (ident->hasText() &&
+               ident->getText().startswith(swift::BUILTIN_TYPE_NAME_FLOAT))
+        swift_flags |= eTypeIsScalar | eTypeIsFloat;
+    }
+
+    // Clang-imported types.
+    llvm::SmallVector<CompilerContext, 2> decl_context;
+    if (!IsClangImportedType(node, decl_context))
+      break;
+
+    auto mangling = GetMangledName(dem, node);
+    if (!mangling.isSuccess()) {
+      LLDB_LOGF(GetLog(LLDBLog::Types),
+                "Failed mangling while collecting type infos (%d:%u)",
+                mangling.error().code, mangling.error().line);
+
+      return {};
+    }
+    // Resolve the typedef within the Clang debug info.
+    auto clang_type = LookupClangForwardType(mangling.result(), decl_context);
+    collect_clang_type(clang_type.GetCanonicalType());
+    return swift_flags;
     }
     case Node::Kind::BoundGenericClass:
     case Node::Kind::Class:
@@ -3230,11 +3274,11 @@ bool TypeSystemSwiftTypeRef::IsImportedType(opaque_compiler_type_t type,
                 AsMangledName(type));
 
     // This is an imported Objective-C type; look it up in the debug info.
-    StringRef ident = GetObjCTypeName(node);
-    if (ident.empty())
-      return {};
+    llvm::SmallVector<CompilerContext, 2> decl_context;
+    if (!IsClangImportedType(node, decl_context))
+      return false;
     if (original_type)
-      if (TypeSP clang_type = LookupClangType(ident))
+      if (TypeSP clang_type = LookupClangType(AsMangledName(type), decl_context))
         *original_type = clang_type->GetForwardCompilerType();
     return true;
   };
