@@ -92,9 +92,6 @@ struct Config {
     /// Diagnose missing and unused includes.
     Strict,
     None,
-    /// The same as Strict, but using the include-cleaner library for
-    /// unused includes.
-    Experiment,
   };
   /// Controls warnings and errors when parsing code.
   struct {

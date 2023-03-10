@@ -232,7 +232,6 @@ struct Fragment {
     ///
     /// Valid values are:
     /// - Strict
-    /// - Experiment
     /// - None
     std::optional<Located<std::string>> UnusedIncludes;
 
