@@ -872,3 +872,130 @@ loop:
 exit:
   ret i32 %iv
 }
+
+; Mismatched predicates, do not optimize.
+define i32 @test_mismatched_predicates_neg(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_mismatched_predicates_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[IV]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ule i32 [[IV]], [[INV_2:%.*]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = and i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp ult i32 %iv, %inv_1
+  %cmp_2 = icmp ule i32 %iv, %inv_2
+  %loop_cond = and i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
+
+; TODO: Turn ule against constant into ult against constant, then do the same as in test_ult.
+; https://alive2.llvm.org/ce/z/rucunQ
+define i32 @test_mismatched_predicates_constant_pos_1(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_mismatched_predicates_constant_pos_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[IV]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ule i32 [[IV]], 100
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = and i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp ult i32 %iv, %inv_1
+  %cmp_2 = icmp ule i32 %iv, 100
+  %loop_cond = and i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
+
+; TODO: Turn ult against a constant into ule, then do the same as in test_ule.
+; https://alive2.llvm.org/ce/z/-ht-pU
+define i32 @test_mismatched_predicates_constant_pos_2(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_mismatched_predicates_constant_pos_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[IV]], 100
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ule i32 [[IV]], [[INV_2:%.*]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = and i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp ult i32 %iv, 100
+  %cmp_2 = icmp ule i32 %iv, %inv_2
+  %loop_cond = and i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
+
+; Do not optimize: `ule -1` cannot be turned into `ult 0` because of overflow.
+; However, this condition is trivially true anyways, so do not bother about it.
+define i32 @test_mismatched_predicates_constant_neg(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_mismatched_predicates_constant_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[IV]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ule i32 [[IV]], -1
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = and i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp ult i32 %iv, %inv_1
+  %cmp_2 = icmp ule i32 %iv, -1
+  %loop_cond = and i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
