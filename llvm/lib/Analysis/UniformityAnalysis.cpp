@@ -48,13 +48,10 @@ template <>
 void llvm::GenericUniformityAnalysisImpl<SSAContext>::pushUsers(
     const Value *V) {
   for (const auto *User : V->users()) {
-    const auto *UserInstr = dyn_cast<const Instruction>(User);
-    if (!UserInstr)
-      continue;
-    if (isAlwaysUniform(*UserInstr))
-      continue;
-    if (markDivergent(*UserInstr)) {
-      Worklist.push_back(UserInstr);
+    if (const auto *UserInstr = dyn_cast<const Instruction>(User)) {
+      if (markDivergent(*UserInstr)) {
+        Worklist.push_back(UserInstr);
+      }
     }
   }
 }

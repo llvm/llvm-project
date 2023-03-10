@@ -214,4 +214,53 @@ bool RISCVRVC::uncompress(MCInst &OutInst, const MCInst &MI,
   return uncompressInst(OutInst, MI, STI);
 }
 
+// We expect an 5-bit binary encoding of a floating-point constant here.
+static constexpr std::pair<uint8_t, uint8_t> LoadFPImmArr[] = {
+    {0b00000001, 0b000}, {0b01101111, 0b000}, {0b01110000, 0b000},
+    {0b01110111, 0b000}, {0b01111000, 0b000}, {0b01111011, 0b000},
+    {0b01111100, 0b000}, {0b01111101, 0b000}, {0b01111101, 0b010},
+    {0b01111101, 0b100}, {0b01111101, 0b110}, {0b01111110, 0b000},
+    {0b01111110, 0b010}, {0b01111110, 0b100}, {0b01111110, 0b110},
+    {0b01111111, 0b000}, {0b01111111, 0b010}, {0b01111111, 0b100},
+    {0b01111111, 0b110}, {0b10000000, 0b000}, {0b10000000, 0b010},
+    {0b10000000, 0b100}, {0b10000001, 0b000}, {0b10000010, 0b000},
+    {0b10000011, 0b000}, {0b10000110, 0b000}, {0b10000111, 0b000},
+    {0b10001110, 0b000}, {0b10001111, 0b000}, {0b11111111, 0b000},
+    {0b11111111, 0b100},
+};
+
+int RISCVLoadFPImm::getLoadFPImm(uint8_t Sign, uint8_t Exp, uint8_t Mantissa) {
+  if (Sign == 0b1 && Exp == 0b01111111 && Mantissa == 0b000)
+    return 0;
+
+  if (Sign == 0b0) {
+    auto EMI = llvm::lower_bound(LoadFPImmArr, std::make_pair(Exp, Mantissa));
+    if (EMI != std::end(LoadFPImmArr) && EMI->first == Exp &&
+        EMI->second == Mantissa)
+      return std::distance(std::begin(LoadFPImmArr), EMI) + 1;
+  }
+
+  return -1;
+}
+
+float RISCVLoadFPImm::getFPImm(unsigned Imm) {
+  assert(Imm != 1 && Imm != 30 && Imm != 31 && "Unsupported immediate");
+  uint8_t Sign;
+  uint8_t Exp;
+  uint8_t Mantissa;
+
+  if (Imm == 0) {
+    Sign = 0b1;
+    Exp = 0b01111111;
+    Mantissa = 0b000;
+  } else {
+    Sign = 0b0;
+    Exp = LoadFPImmArr[Imm - 1].first;
+    Mantissa = LoadFPImmArr[Imm - 1].second;
+  }
+
+  uint32_t I = Sign << 31 | Exp << 23 | Mantissa << 20;
+  return bit_cast<float>(I);
+}
+
 } // namespace llvm

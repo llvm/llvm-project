@@ -419,7 +419,12 @@ Generic Link Algorithm
 ======================
 
 JITLink provides a generic link algorithm which can be extended / modified at
-certain points by the introduction of JITLink :ref:`passes`:
+certain points by the introduction of JITLink :ref:`passes`.
+
+At the end of each phase the linker packages its state into a *continuation*
+and calls the ``JITLinkContext`` object to perform a (potentialy high-latency)
+asynchronous operation: allocating memory, resolving external symbols, and
+finally transferring linked memory to the executing process.
 
 #. Phase 1
 
@@ -457,20 +462,17 @@ certain points by the introduction of JITLink :ref:`passes`:
       Notable use cases: Building Global Offset Table (GOT), Procedure Linkage
       Table (PLT), and Thread Local Variable (TLV) entries.
 
-   #. Sort blocks into segments.
-
-      Sorts all blocks by ordinal and then address. Collects sections with
-      matching permissions into segments and computes the size of these
-      segments for memory allocation.
-
-   #. Allocate segment memory, update node addresses.
+   #. Asynchronously allocate memory.
 
       Calls the ``JITLinkContext``'s ``JITLinkMemoryManager`` to allocate both
-      working and target memory for the graph, then updates all node addresses
-      to their assigned target address.
+      working and target memory for the graph. As part of this process the
+      ``JITLinkMemoryManager`` will update the the addresses of all nodes
+      defined in the graph to their assigned target address.
 
       Note: This step only updates the addresses of nodes defined in this graph.
       External symbols will still have null addresses.
+
+#. Phase 2
 
    #. Run post-allocation passes.
 
@@ -497,15 +499,9 @@ certain points by the introduction of JITLink :ref:`passes`:
    #. Identify external symbols and resolve their addresses asynchronously.
 
       Calls the ``JITLinkContext`` to resolve the target address of any external
-      symbols in the graph. This step is asynchronous -- JITLink will pack the
-      link state into a *continuation* to be run once the symbols are resolved.
+      symbols in the graph.
 
-      This is the final step of Phase 1.
-
-#. Phase 2
-
-   This phase is called by the continuation constructed at the end of the
-   external symbol resolution step above.
+#. Phase 3
 
    #. Apply external symbol resolution results.
 
@@ -541,21 +537,14 @@ certain points by the introduction of JITLink :ref:`passes`:
    #. Finalize memory asynchronously.
 
       Calls the ``JITLinkMemoryManager`` to copy working memory to the executor
-      process and apply the requested permissions. This step is asynchronous --
-      JITLink will pack the link state into a *continuation* to be run once
-      memory has been copied and protected.
-
-      This is the final step of Phase 2.
+      process and apply the requested permissions.
 
 #. Phase 3.
-
-   This phase is called by the continuation constructed at the end of the
-   memory finalization step above.
 
    #. Notify the context that the graph has been emitted.
 
       Calls ``JITLinkContext::notifyFinalized`` and hands off the
-      ``JITLinkMemoryManager::Allocation`` object for this graph's memory
+      ``JITLinkMemoryManager::FinalizedAlloc`` object for this graph's memory
       allocation. This allows the context to track/hold memory allocations and
       react to the newly emitted definitions. In ORC this is used to update the
       ``ExecutionSession`` instance's dependence graph, which may result in
@@ -664,58 +653,84 @@ the common case of running across processes on the same machine for security)
 via the host operating system's virtual memory management APIs.
 
 To satisfy these requirements ``JITLinkMemoryManager`` adopts the following
-design: The memory manager itself has just one virtual method that returns a
-``JITLinkMemoryManager::Allocation``:
+design: The memory manager itself has just two virtual methods for asynchronous
+operations (each with convenience overloads for calling synchronously):
 
 .. code-block:: c++
 
-  virtual Expected<std::unique_ptr<Allocation>>
-  allocate(const JITLinkDylib *JD, const SegmentsRequestMap &Request) = 0;
+  /// Called when allocation has been completed.
+  using OnAllocatedFunction =
+    unique_function<void(Expected<std::unique_ptr<InFlightAlloc>)>;
 
-This method takes a ``JITLinkDylib*`` representing the target simulated
-dylib, and the full set of sections that must be allocated for this object.
+  /// Called when deallocation has completed.
+  using OnDeallocatedFunction = unique_function<void(Error)>;
+
+  /// Call to allocate memory.
+  virtual void allocate(const JITLinkDylib *JD, LinkGraph &G,
+                        OnAllocatedFunction OnAllocated) = 0;
+
+  /// Call to deallocate memory.
+  virtual void deallocate(std::vector<FinalizedAlloc> Allocs,
+                          OnDeallocatedFunction OnDeallocated) = 0;
+
+The ``allocate`` method takes a ``JITLinkDylib*`` representing the target
+simulated dylib, a reference to the ``LinkGraph`` that must be allocated for,
+and a callback to run once an ``InFlightAlloc`` has been constructed.
 ``JITLinkMemoryManager`` implementations can (optionally) use the ``JD``
 argument to manage a per-simulated-dylib memory pool (since code model
 constraints are typically imposed on a per-dylib basis, and not across
-dylibs) [2]_. The ``Request`` argument, by describing all sections in the current
-object up-front, allows the implementer to allocate those sections as a
-single slab, either within a pre-allocated per-jitdylib pool or directly
-from system memory.
+dylibs) [2]_. The ``LinkGraph`` describes the object file that we need to
+allocate memory for. The allocator must allocate working memory for all of
+the Blocks defined in the graph, assign address space for each Block within the
+executing processes memory, and update the Blocks' addresses to reflect this
+assignment. Block content should be copied to working memory, but does not need
+to be transferred to executor memory yet (that will be done once the content is
+fixed up). ``JITLinkMemoryManager`` implementations can take full
+responsibility for these steps, or use the ``BasicLayout`` utility to reduce
+the task to allocating working and executor memory for *segments*: chunks of
+memory defined by permissions, alignments, content sizes, and zero-fill sizes.
+Once the allocation step is complete the memory manager should construct an
+``InFlightAlloc`` object to represent the allocation, and then pass this object
+to the ``OnAllocated`` callback.
 
-All subsequent operations are provided by the
-``JITLinkMemoryManager::Allocation`` interface:
+The ``InFlightAlloc`` object has two virtual methods:
 
-* ``virtual MutableArrayRef<char> getWorkingMemory(ProtectionFlags Seg)``
+.. code-block:: c++
 
-  Should be overridden to return the address in working memory of the segment
-  with the given protection flags.
+    using OnFinalizedFunction = unique_function<void(Expected<FinalizedAlloc>)>;
+    using OnAbandonedFunction = unique_function<void(Error)>;
 
-* ``virtual JITTargetAddress getTargetMemory(ProtectionFlags Seg)``
+    /// Called prior to finalization if the allocation should be abandoned.
+    virtual void abandon(OnAbandonedFunction OnAbandoned) = 0;
 
-  Should be overridden to return the address in the executor's address space of
-  the segment with the given protection flags.
+    /// Called to transfer working memory to the target and apply finalization.
+    virtual void finalize(OnFinalizedFunction OnFinalized) = 0;
 
-* ``virtual void finalizeAsync(FinalizeContinuation OnFinalize)``
+The linking process will call the ``finalize`` method on the ``InFlightAlloc``
+object if linking succeeds up to the finalization step, otherwise it will call
+``abandon`` to indicate that some error occurred during linking. A call to the
+``InFlightAlloc::finalize`` method should cause content for the allocation to be
+transferred from working to executor memory, and permissions to be run. A call
+to ``abandon`` should result in both kinds of memory being deallocated.
 
-  Should be overridden to copy the contents of working memory to the target
-  address space and apply memory protections for all segments. Where working
-  memory and target memory are separate, this method should deallocate the
-  working memory.
+On successful finalization, the ``InFlightAlloc::finalize`` method should
+construct a ``FinalizedAlloc`` object (an opaque uint64_t id that the
+``JITLinkMemoryManager`` can use to identify executor memory for deallocation)
+and pass it to the ``OnFinalized`` callback.
 
-* ``virtual Error deallocate()``
-
-  Should be overridden to deallocate memory in the target address space.
+Finalized allocations (represented by ``FinalizedAlloc`` objects) can be
+deallocated by calling the ``JITLinkMemoryManager::dealloc`` method. This method
+takes a vector of ``FinalizedAlloc`` objects, since it is common to deallocate
+multiple objects at the same time and this allows us to batch these requsets for
+transmission to the executing process.
 
 JITLink provides a simple in-process implementation of this interface:
 ``InProcessMemoryManager``. It allocates pages once and re-uses them as both
 working and target memory.
 
-ORC provides a cross-process ``JITLinkMemoryManager`` based on an ORC-RPC-based
-implementation of the ``orc::TargetProcessControl`` API:
-``OrcRPCTPCJITLinkMemoryManager``. This API uses TargetProcessControl API calls
-to allocate and manage memory in a remote process. The underlying communication
-channel is determined by the ORC-RPC channel type. Common options include unix
-sockets or TCP.
+ORC provides a cross-process-capable ``MapperJITLinkMemoryManager`` that can use
+shared memory or ORC-RPC-based communication to transfer content to the executing
+process.
 
 JITLinkMemoryManager and Security
 ---------------------------------
