@@ -1647,8 +1647,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
     ++pass;
 
     // With Thunk Size much smaller than branch range we expect to
-    // converge quickly; if we get to 15 something has gone wrong.
-    if (changed && pass >= 15) {
+    // converge quickly; if we get to 30 something has gone wrong.
+    if (changed && pass >= 30) {
       error(target->needsThunks ? "thunk creation not converged"
                                 : "relaxation not converged");
       break;
