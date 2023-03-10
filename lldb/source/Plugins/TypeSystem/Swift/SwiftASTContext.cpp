@@ -7657,6 +7657,27 @@ CompilerType SwiftASTContext::GetBuiltinRawPointerType() {
   return GetTypeFromMangledTypename(ConstString("$sBpD"));
 }
 
+CompilerType
+SwiftASTContext::ConvertClangTypeToSwiftType(CompilerType clang_type) {
+  auto typeref_type = 
+      GetTypeSystemSwiftTypeRef().ConvertClangTypeToSwiftType(clang_type);
+
+  if (!typeref_type)
+    return {};
+
+  Status error;
+  auto *ast_type = ReconstructType(typeref_type.GetMangledTypeName(), error);
+  if (error.Fail()) {
+    LLDB_LOGF(GetLog(LLDBLog::Types),
+              "[SwiftASTContext::ConvertClangTypeToSwiftType] Could not "
+              "reconstruct type. Error: %s",
+              error.AsCString());
+    return {};
+  }
+
+  return {this->weak_from_this(), ast_type};
+}
+
 bool SwiftASTContext::TypeHasArchetype(CompilerType type) {
   auto swift_type = GetSwiftType(type);
   if (swift_type)

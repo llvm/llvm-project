@@ -177,6 +177,10 @@ public:
 
   virtual CompilerType GetBuiltinRawPointerType() = 0;
 
+  /// Attempts to convert a Clang type into a Swift type.
+  /// For example, int is converted to Int32.
+  virtual CompilerType ConvertClangTypeToSwiftType(CompilerType clang_type) = 0;
+
   void DumpValue(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
                  Stream *s, lldb::Format format, const DataExtractor &data,
                  lldb::offset_t data_offset, size_t data_byte_size,
