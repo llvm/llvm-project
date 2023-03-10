@@ -496,3 +496,251 @@ loop:
 exit:
   ret i32 %iv
 }
+
+; TODO: turn to %iv <u umin(inv_1, inv_2) and hoist it out of loop.
+define i32 @test_ult_swapped(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_ult_swapped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ugt i32 [[INV_1:%.*]], [[IV]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ugt i32 [[INV_2:%.*]], [[IV]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = and i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp ugt i32 %inv_1, %iv
+  %cmp_2 = icmp ugt i32 %inv_2, %iv
+  %loop_cond = and i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
+
+; TODO: turn to %iv <=u umin(inv_1, inv_2) and hoist it out of loop.
+define i32 @test_ule_swapped(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_ule_swapped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp uge i32 [[INV_1:%.*]], [[IV]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp uge i32 [[INV_2:%.*]], [[IV]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = and i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp uge i32 %inv_1, %iv
+  %cmp_2 = icmp uge i32 %inv_2, %iv
+  %loop_cond = and i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
+
+; TODO: turn to %iv <s smin(inv_1, inv_2) and hoist it out of loop.
+define i32 @test_slt_swapped(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_slt_swapped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sgt i32 [[INV_1:%.*]], [[IV]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp sgt i32 [[INV_2:%.*]], [[IV]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = and i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp sgt i32 %inv_1, %iv
+  %cmp_2 = icmp sgt i32 %inv_2, %iv
+  %loop_cond = and i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
+
+; TODO: turn to %iv <=s smin(inv_1, inv_2) and hoist it out of loop.
+define i32 @test_sle_swapped(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_sle_swapped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sge i32 [[INV_1:%.*]], [[IV]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp sge i32 [[INV_2:%.*]], [[IV]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = and i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp sge i32 %inv_1, %iv
+  %cmp_2 = icmp sge i32 %inv_2, %iv
+  %loop_cond = and i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
+
+; TODO: turn to %iv >u umax(inv_1, inv_2) and hoist it out of loop.
+define i32 @test_ugt_swapped(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_ugt_swapped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[INV_1:%.*]], [[IV]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i32 [[INV_2:%.*]], [[IV]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = and i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp ult i32 %inv_1, %iv
+  %cmp_2 = icmp ult i32 %inv_2, %iv
+  %loop_cond = and i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
+
+; TODO: turn to %iv >=u umax(inv_1, inv_2) and hoist it out of loop.
+define i32 @test_uge_swapped(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_uge_swapped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ule i32 [[INV_1:%.*]], [[IV]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ule i32 [[INV_2:%.*]], [[IV]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = and i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp ule i32 %inv_1, %iv
+  %cmp_2 = icmp ule i32 %inv_2, %iv
+  %loop_cond = and i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
+
+; TODO: turn to %iv >s smax(inv_1, inv_2) and hoist it out of loop.
+define i32 @test_sgt_swapped(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_sgt_swapped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp slt i32 [[INV_1:%.*]], [[IV]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp slt i32 [[INV_2:%.*]], [[IV]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = and i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp slt i32 %inv_1, %iv
+  %cmp_2 = icmp slt i32 %inv_2, %iv
+  %loop_cond = and i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
+
+; TODO: turn to %iv >=s smax(inv_1, inv_2) and hoist it out of loop.
+define i32 @test_sge_swapped(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_sge_swapped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sle i32 [[INV_1:%.*]], [[IV]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp sle i32 [[INV_2:%.*]], [[IV]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = and i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp sle i32 %inv_1, %iv
+  %cmp_2 = icmp sle i32 %inv_2, %iv
+  %loop_cond = and i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
