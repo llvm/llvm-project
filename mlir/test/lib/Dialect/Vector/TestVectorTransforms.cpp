@@ -11,6 +11,7 @@
 
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -195,6 +196,33 @@ struct TestVectorContractionLowering
     populateVectorContractLoweringPatterns(patterns, options);
     populateVectorMaskOpLoweringPatterns(patterns);
     populateVectorShapeCastLoweringPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
+
+struct TestVectorContractionPrepareForMMTLowering
+    : public PassWrapper<TestVectorContractionPrepareForMMTLowering,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestVectorContractionPrepareForMMTLowering)
+
+  StringRef getArgument() const final {
+    return "test-vector-contraction-prepare-for-mmt-lowering";
+  }
+  StringRef getDescription() const final {
+    return "Test vector.contraction matmul canonicalization for MMT lowering.";
+  }
+  TestVectorContractionPrepareForMMTLowering() = default;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry
+        .insert<AffineDialect, arith::ArithDialect, vector::VectorDialect>();
+  }
+
+  void runOnOperation() override {
+    MLIRContext *ctx = &getContext();
+    RewritePatternSet patterns(ctx);
+    vector::populateVectorContractCanonicalizeMatmulToMMT(patterns);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
@@ -891,6 +919,8 @@ void registerTestVectorLowerings() {
   PassRegistration<TestVectorToVectorLowering>();
 
   PassRegistration<TestVectorContractionLowering>();
+
+  PassRegistration<TestVectorContractionPrepareForMMTLowering>();
 
   PassRegistration<TestVectorTransposeLowering>();
 

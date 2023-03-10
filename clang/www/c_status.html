@@ -829,7 +829,15 @@ conformance.</p>
     <tr>
       <td>Compatibility of Pointers to Arrays with Qualifiers</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2607.pdf">N2607</a></td>
-      <td class="partial" align="center">Partial</td>
+      <td class="partial" align="center">
+        <details><summary>Partial</summary>
+          Much of the proposal is implemented, but Clang lacks pedantic diagnostics
+          in C17 and earlier regarding use of incompatible pointer types as an
+          extension. Further, Clang does not properly compute the correct result
+          type for the <code>?:</code> operator when the result type should be a
+          qualified array type.
+        </details>
+      </td>
     </tr>
     <tr>
       <td>Unclear type relationship between a format specifier and its argument</td>

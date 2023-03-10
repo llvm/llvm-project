@@ -93,18 +93,6 @@ FailureOr<AffineMap>
 getLaneIdToLdMatrixMatrixCoord(OpBuilder &builder, Location loc,
                                const LdMatrixParams &params);
 
-/// Transform `vector.contract` into (m,k)x(n,k)x(m,n) form so that it can be
-/// converted to `nvgpu.mma.sync`. This specific form is meant to indicate that
-/// the vector operands are organized such that the reduction dimension is
-/// contiguous.
-struct PrepareContractToGPUMMASync
-    : public OpRewritePattern<vector::ContractionOp> {
-  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(vector::ContractionOp op,
-                                PatternRewriter &rewriter) const override;
-};
-
 } // namespace nvgpu
 } // namespace mlir
 

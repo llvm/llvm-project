@@ -1,37 +1,6 @@
 REQUIRES: x86_64-linux
 
-The input raw profile test has been generated from the following source code:
-
-```
-#include <stdlib.h>
-#include <string.h>
-int main(int argc, char **argv) {
-  char *x = (char *)malloc(10);
-  memset(x, 0, 10);
-  free(x);
-  x = (char *)malloc(10);
-  memset(x, 0, 10);
-  free(x);
-  return 0;
-}
-```
-
-The following commands were used to compile the source to a memprof instrumented
-executable and collect a raw binary format profile. Since the profile contains
-virtual addresses for the callstack, we do not expect the raw binary profile to
-be deterministic. The summary should be deterministic apart from changes to
-the shared libraries linked in which could change the number of segments
-recorded.
-
-```
-clang -fuse-ld=lld -Wl,--no-rosegment -gmlt -fdebug-info-for-profiling \
-      -fmemory-profile -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer \
-      -fno-optimize-sibling-calls -m64 -Wl,-build-id -no-pie \
-      source.c -o basic.memprofexe
-
-env MEMPROF_OPTIONS=log_path=stdout ./basic.memprofexe > basic.memprofraw
-```
-
+To update the inputs used below run Inputs/update_memprof_inputs.sh /path/to/updated/clang
 RUN: llvm-profdata show --memory %p/Inputs/basic.memprofraw --profiled-binary %p/Inputs/basic.memprofexe -o - | FileCheck %s
 
 We expect 2 MIB entries, 1 each for the malloc calls in the program. Any

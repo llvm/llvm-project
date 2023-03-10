@@ -20,8 +20,7 @@ namespace llvm::CodeGenOpt {
 enum Level : int;
 } // namespace llvm::CodeGenOpt
 
-namespace lld {
-namespace wasm {
+namespace lld::wasm {
 
 class InputFile;
 class Symbol;
@@ -125,7 +124,6 @@ struct Configuration {
 // The only instance of Configuration struct.
 extern Configuration *config;
 
-} // namespace wasm
-} // namespace lld
+} // namespace lld::wasm
 
 #endif

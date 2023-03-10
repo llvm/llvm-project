@@ -368,7 +368,11 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>;
 #include <__config>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/allocator_destructor.h>
+#include <__memory/shared_ptr.h>
+#include <__memory/unique_ptr.h>
 #include <__memory/uses_allocator.h>
+#include <__type_traits/aligned_storage.h>
+#include <__type_traits/alignment_of.h>
 #include <__type_traits/strip_signature.h>
 #include <__utility/auto_cast.h>
 #include <__utility/forward.h>

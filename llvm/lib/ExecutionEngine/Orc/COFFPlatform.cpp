@@ -352,11 +352,11 @@ bool COFFPlatform::supportedTarget(const Triple &TT) {
 COFFPlatform::COFFPlatform(ExecutionSession &ES,
                            ObjectLinkingLayer &ObjLinkingLayer,
                            JITDylib &PlatformJD, const char *OrcRuntimePath,
-                           LoadDynamicLibrary LoadDynLibrary,
+                           LoadDynamicLibrary LoadDynamicLibrary,
                            bool StaticVCRuntime, const char *VCRuntimePath,
                            Error &Err)
     : ES(ES), ObjLinkingLayer(ObjLinkingLayer),
-      LoadDynLibrary(std::move(LoadDynLibrary)),
+      LoadDynLibrary(std::move(LoadDynamicLibrary)),
       StaticVCRuntime(StaticVCRuntime),
       COFFHeaderStartSymbol(ES.intern("__ImageBase")) {
   ErrorAsOutParameter _(&Err);

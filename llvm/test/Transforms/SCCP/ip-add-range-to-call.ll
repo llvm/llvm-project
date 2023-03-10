@@ -4,7 +4,7 @@
 ; Test 1.
 ; Both arguments and return value of @callee can be tracked. The inferred range
 ; can be added to call sites.
-define internal noundef i32 @callee(i32 %x) {
+define internal i32 @callee(i32 %x) {
 ; CHECK-LABEL: @callee(
 ; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
@@ -42,7 +42,7 @@ define i32 @caller2(i32 %x) {
 
 declare void @use_cb1(ptr)
 
-define internal noundef i32 @callee2(i32 %x) {
+define internal i32 @callee2(i32 %x) {
 ; CHECK-LABEL: @callee2(
 ; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
@@ -69,7 +69,7 @@ define void @caller_cb1() {
 
 declare void @use_cb2(ptr)
 
-define internal noundef i32 @callee3(i32 %x) {
+define internal i32 @callee3(i32 %x) {
 ; CHECK-LABEL: @callee3(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 10
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 500, i32 600
@@ -99,7 +99,7 @@ define void @caller_cb2() {
 
 declare void @use_cb3(ptr)
 
-define internal noundef i32 @callee4(i32 %x, i32 %y) {
+define internal i32 @callee4(i32 %x, i32 %y) {
 ; CHECK-LABEL: @callee4(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 10
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 500, i32 [[Y:%.*]]
@@ -128,7 +128,7 @@ define void @caller_cb3() {
 ; Test 5.
 ; Range for the return value of callee5 includes undef. No range metadata
 ; should be added at call sites.
-define internal noundef i32 @callee5(i32 %x, i32 %y) {
+define internal i32 @callee5(i32 %x, i32 %y) {
 ; CHECK-LABEL: @callee5(
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[X:%.*]], 15
 ; CHECK-NEXT:    br i1 [[C]], label [[BB1:%.*]], label [[BB2:%.*]]

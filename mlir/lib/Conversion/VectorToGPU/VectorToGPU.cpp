@@ -24,6 +24,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -1173,9 +1174,8 @@ void mlir::populatePrepareVectorToMMAPatterns(RewritePatternSet &patterns,
         patterns.getContext());
     return;
   }
-  patterns
-      .add<nvgpu::PrepareContractToGPUMMASync, CombineTransferReadOpTranspose>(
-          patterns.getContext());
+  vector::populateVectorContractCanonicalizeMatmulToMMT(patterns);
+  patterns.add<CombineTransferReadOpTranspose>(patterns.getContext());
 }
 
 LogicalResult mlir::convertVectorToMMAOps(RewriterBase &rewriter,

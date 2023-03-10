@@ -15,8 +15,9 @@
 //   operator<<(basic_ostream<charT, traits>& os,
 //              const basic_string_view<charT,traits> str);
 
-#include <string_view>
 #include <iosfwd>
+#include <string_view>
+#include <utility>
 
 template <class SV, class = void>
 struct HasDecl : std::false_type {};

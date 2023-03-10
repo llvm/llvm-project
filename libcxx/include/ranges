@@ -377,7 +377,6 @@ namespace std {
 #include <__ranges/view_interface.h>
 #include <__ranges/views.h>
 #include <__ranges/zip_view.h>
-#include <type_traits>
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
@@ -397,6 +396,10 @@ namespace std {
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
+#endif
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <type_traits>
 #endif
 
 #endif // _LIBCPP_RANGES

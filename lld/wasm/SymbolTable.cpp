@@ -20,8 +20,7 @@ using namespace llvm;
 using namespace llvm::wasm;
 using namespace llvm::object;
 
-namespace lld {
-namespace wasm {
+namespace lld::wasm {
 SymbolTable *symtab;
 
 void SymbolTable::addFile(InputFile *file) {
@@ -966,5 +965,4 @@ void SymbolTable::handleSymbolVariants() {
   }
 }
 
-} // namespace wasm
-} // namespace lld
+} // namespace wasm::lld

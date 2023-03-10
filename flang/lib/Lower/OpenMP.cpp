@@ -1112,7 +1112,7 @@ static int getOperationIdentity(llvm::StringRef reductionOpName,
                                 mlir::Location loc) {
   if (reductionOpName.contains("add"))
     return 0;
-  if (reductionOpName.contains("multiply") || reductionOpName.contains("and"))
+  if (reductionOpName.contains("multiply") || reductionOpName.contains("and") || reductionOpName.contains("eqv"))
     return 1;
   TODO(loc, "Reduction of some intrinsic operators is not supported");
 }
@@ -1120,14 +1120,19 @@ static int getOperationIdentity(llvm::StringRef reductionOpName,
 static Value getReductionInitValue(mlir::Location loc, mlir::Type type,
                                    llvm::StringRef reductionOpName,
                                    fir::FirOpBuilder &builder) {
-  assert(type.isIntOrIndexOrFloat() &&
-         "only integer and float types are currently supported");
   if (type.isa<FloatType>())
     return builder.create<mlir::arith::ConstantOp>(
         loc, type,
         builder.getFloatAttr(
             type, (double)getOperationIdentity(reductionOpName, loc)));
 
+  if (type.isa<fir::LogicalType>()) {
+    Value intConst = builder.create<mlir::arith::ConstantOp>(
+        loc, builder.getI1Type(),
+        builder.getIntegerAttr(builder.getI1Type(),
+                               getOperationIdentity(reductionOpName, loc)));
+    return builder.createConvert(loc, type, intConst);
+  }
   return builder.create<mlir::arith::ConstantOp>(
       loc, type,
       builder.getIntegerAttr(type, getOperationIdentity(reductionOpName, loc)));
@@ -1187,9 +1192,25 @@ static omp::ReductionDeclareOp createReductionDecl(
         getReductionOperation<mlir::arith::MulFOp, mlir::arith::MulIOp>(
             builder, type, loc, op1, op2);
     break;
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::AND:
-    reductionOp = builder.create<mlir::arith::AndIOp>(loc, op1, op2);
+  case Fortran::parser::DefinedOperator::IntrinsicOperator::AND: {
+    Value op1_i1 = builder.createConvert(loc, builder.getI1Type(), op1);
+    Value op2_i1 = builder.createConvert(loc, builder.getI1Type(), op2);
+
+    Value andiOp = builder.create<mlir::arith::AndIOp>(loc, op1_i1, op2_i1);
+
+    reductionOp = builder.createConvert(loc, type, andiOp);
     break;
+  }
+  case Fortran::parser::DefinedOperator::IntrinsicOperator::EQV: {
+    Value op1_i1 = builder.createConvert(loc, builder.getI1Type(), op1);
+    Value op2_i1 = builder.createConvert(loc, builder.getI1Type(), op2);
+
+    Value cmpiOp = builder.create<mlir::arith::CmpIOp>(
+        loc, arith::CmpIPredicate::eq, op1_i1, op2_i1);
+
+    reductionOp = builder.createConvert(loc, type, cmpiOp);
+    break;
+  }
   default:
     TODO(loc, "Reduction of some intrinsic operators is not supported");
   }
@@ -1276,6 +1297,8 @@ static std::string getReductionName(
     break;
   case Fortran::parser::DefinedOperator::IntrinsicOperator::AND:
     return "and_reduction";
+  case Fortran::parser::DefinedOperator::IntrinsicOperator::EQV:
+    return "eqv_reduction";
   default:
     reductionName = "other_reduction";
     break;
@@ -1385,6 +1408,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
         case Fortran::parser::DefinedOperator::IntrinsicOperator::Add:
         case Fortran::parser::DefinedOperator::IntrinsicOperator::Multiply:
         case Fortran::parser::DefinedOperator::IntrinsicOperator::AND:
+        case Fortran::parser::DefinedOperator::IntrinsicOperator::EQV:
           break;
 
         default:
@@ -1401,8 +1425,11 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
                   symVal.getType().cast<fir::ReferenceType>().getEleTy();
               reductionVars.push_back(symVal);
               if (redType.isa<fir::LogicalType>())
-                redType = firOpBuilder.getI1Type();
-              if (redType.isIntOrIndexOrFloat()) {
+                decl = createReductionDecl(
+                    firOpBuilder,
+                    getReductionName(intrinsicOp, firOpBuilder.getI1Type()),
+                    intrinsicOp, redType, currentLocation);
+              else if (redType.isIntOrIndexOrFloat()) {
                 decl = createReductionDecl(
                     firOpBuilder, getReductionName(intrinsicOp, redType),
                     intrinsicOp, redType, currentLocation);
@@ -2105,6 +2132,7 @@ void Fortran::lower::genOpenMPReduction(
         case Fortran::parser::DefinedOperator::IntrinsicOperator::Add:
         case Fortran::parser::DefinedOperator::IntrinsicOperator::Multiply:
         case Fortran::parser::DefinedOperator::IntrinsicOperator::AND:
+        case Fortran::parser::DefinedOperator::IntrinsicOperator::EQV:
           break;
         default:
           continue;
@@ -2116,9 +2144,7 @@ void Fortran::lower::genOpenMPReduction(
               mlir::Value reductionVal = converter.getSymbolAddress(*symbol);
               mlir::Type reductionType =
                   reductionVal.getType().cast<fir::ReferenceType>().getEleTy();
-
-              if (intrinsicOp !=
-                  Fortran::parser::DefinedOperator::IntrinsicOperator::AND) {
+              if (!reductionType.isa<fir::LogicalType>()) {
                 if (!reductionType.isIntOrIndexOrFloat())
                   continue;
               }
@@ -2126,8 +2152,7 @@ void Fortran::lower::genOpenMPReduction(
                 if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(
                         reductionValUse.getOwner())) {
                   mlir::Value loadVal = loadOp.getRes();
-                  if (intrinsicOp == Fortran::parser::DefinedOperator::
-                                         IntrinsicOperator::AND) {
+                  if (reductionType.isa<fir::LogicalType>()) {
                     mlir::Operation *reductionOp = findReductionChain(loadVal);
                     fir::ConvertOp convertOp =
                         getConvertFromReductionOp(reductionOp, loadVal);

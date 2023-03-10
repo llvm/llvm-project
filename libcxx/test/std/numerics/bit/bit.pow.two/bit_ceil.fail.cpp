@@ -41,7 +41,7 @@ int main(int, char**)
 
     static_assert(toobig<uint8_t>(), "");   // expected-error-re {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
     static_assert(toobig<uint16_t>(), "");  // expected-error-re {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
-    static_assert(toobig<uint32_t>(), "");  // expected-error-re {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
+    static_assert(toobig<std::uint32_t>(), "");  // expected-error-re {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
     static_assert(toobig<uint64_t>(), "");  // expected-error-re {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
     static_assert(toobig<size_t>(), "");    // expected-error-re {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
     static_assert(toobig<uintmax_t>(), ""); // expected-error-re {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}

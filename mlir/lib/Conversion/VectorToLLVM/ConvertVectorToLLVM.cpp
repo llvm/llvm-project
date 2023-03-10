@@ -819,7 +819,7 @@ public:
 
   LogicalResult
   matchAndRewrite(vector::MaskOp maskOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override final {
+                  ConversionPatternRewriter &rewriter) const final {
     // Match against the maskable operation kind.
     auto maskedOp = llvm::dyn_cast_or_null<MaskedOp>(maskOp.getMaskableOp());
     if (!maskedOp)
@@ -841,7 +841,7 @@ public:
   using VectorMaskOpConversionBase<
       vector::ReductionOp>::VectorMaskOpConversionBase;
 
-  virtual LogicalResult matchAndRewriteMaskableOp(
+  LogicalResult matchAndRewriteMaskableOp(
       vector::MaskOp maskOp, MaskableOpInterface maskableOp,
       ConversionPatternRewriter &rewriter) const override {
     auto reductionOp = cast<ReductionOp>(maskableOp.getOperation());

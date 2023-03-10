@@ -375,7 +375,8 @@ static inline int getLoadFPImm(uint8_t Sign, uint8_t Exp, uint8_t Mantissa) {
 }
 
 namespace RISCVLoadFPImm {
-inline static uint32_t getFPImm(unsigned Imm) {
+inline static float getFPImm(unsigned Imm) {
+  assert(Imm != 1 && Imm != 30 && Imm != 31 && "Unsupported immediate");
   uint8_t Sign;
   uint8_t Exp;
   uint8_t Mantissa;
@@ -390,18 +391,14 @@ inline static uint32_t getFPImm(unsigned Imm) {
     Mantissa = LoadFPImmArr[Imm - 1].second;
   }
 
-  return Sign << 31 | Exp << 23 | Mantissa << 20;
+  uint32_t I = Sign << 31 | Exp << 23 | Mantissa << 20;
+  return bit_cast<float>(I);
 }
 
 /// getLoadFP32Imm - Return a 5-bit binary encoding of the 32-bit
 /// floating-point immediate value. If the value cannot be represented as a
 /// 5-bit binary encoding, then return -1.
 static inline int getLoadFP32Imm(const APInt &Imm) {
-  if ((Imm.extractBitsAsZExtValue(9, 23) == 0b001110001 &&
-       Imm.extractBitsAsZExtValue(23, 0) == 0) ||
-       Imm.extractBitsAsZExtValue(32, 0) == 0)
-    return 1;
-
   if (Imm.extractBitsAsZExtValue(20, 0) != 0)
     return -1;
 

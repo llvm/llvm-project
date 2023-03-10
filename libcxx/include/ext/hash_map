@@ -208,7 +208,6 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <ext/__hash>
 #include <functional>
 #include <stdexcept>
-#include <type_traits>
 
 #if defined(__DEPRECATED) && __DEPRECATED
 #if defined(_LIBCPP_WARNING)
@@ -985,6 +984,7 @@ operator!=(const hash_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <concepts>
 #  include <iterator>
+#  include <type_traits>
 #endif
 
 #endif // _LIBCPP_HASH_MAP

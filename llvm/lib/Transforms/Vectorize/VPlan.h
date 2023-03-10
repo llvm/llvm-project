@@ -990,25 +990,25 @@ public:
 
 /// A recipe for handling GEP instructions.
 class VPWidenGEPRecipe : public VPRecipeBase, public VPValue {
-  bool IsPtrLoopInvariant;
-  SmallBitVector IsIndexLoopInvariant;
+  bool isPointerLoopInvariant() const {
+    return getOperand(0)->isDefinedOutsideVectorRegions();
+  }
+
+  bool isIndexLoopInvariant(unsigned I) const {
+    return getOperand(I + 1)->isDefinedOutsideVectorRegions();
+  }
+
+  bool areAllOperandsInvariant() const {
+    return all_of(operands(), [](VPValue *Op) {
+      return Op->isDefinedOutsideVectorRegions();
+    });
+  }
 
 public:
   template <typename IterT>
   VPWidenGEPRecipe(GetElementPtrInst *GEP, iterator_range<IterT> Operands)
-      : VPRecipeBase(VPDef::VPWidenGEPSC, Operands), VPValue(this, GEP),
-        IsIndexLoopInvariant(GEP->getNumIndices(), false) {}
+      : VPRecipeBase(VPDef::VPWidenGEPSC, Operands), VPValue(this, GEP) {}
 
-  template <typename IterT>
-  VPWidenGEPRecipe(GetElementPtrInst *GEP, iterator_range<IterT> Operands,
-                   Loop *OrigLoop)
-      : VPRecipeBase(VPDef::VPWidenGEPSC, Operands), VPValue(this, GEP),
-        IsIndexLoopInvariant(GEP->getNumIndices(), false) {
-    IsPtrLoopInvariant = OrigLoop->isLoopInvariant(GEP->getPointerOperand());
-    for (auto Index : enumerate(GEP->indices()))
-      IsIndexLoopInvariant[Index.index()] =
-          OrigLoop->isLoopInvariant(Index.value().get());
-  }
   ~VPWidenGEPRecipe() override = default;
 
   VP_CLASSOF_IMPL(VPDef::VPWidenGEPSC)
@@ -1508,9 +1508,12 @@ class VPReplicateRecipe : public VPRecipeBase, public VPValue {
 public:
   template <typename IterT>
   VPReplicateRecipe(Instruction *I, iterator_range<IterT> Operands,
-                    bool IsUniform, bool IsPredicated = false)
+                    bool IsUniform, VPValue *Mask = nullptr)
       : VPRecipeBase(VPDef::VPReplicateSC, Operands), VPValue(this, I),
-        IsUniform(IsUniform), IsPredicated(IsPredicated) {}
+        IsUniform(IsUniform), IsPredicated(Mask) {
+    if (Mask)
+      addOperand(Mask);
+  }
 
   ~VPReplicateRecipe() override = default;
 
@@ -1549,6 +1552,12 @@ public:
   /// VPPredInstPHIRecipe. In this case, the scalar values should also be packed
   /// in a vector.
   bool shouldPack() const;
+
+  /// Return the mask of a predicated VPReplicateRecipe.
+  VPValue *getMask() {
+    assert(isPredicated() && "Trying to get the mask of a unpredicated recipe");
+    return getOperand(getNumOperands() - 1);
+  }
 };
 
 /// A recipe for generating conditional branches on the bits of a mask.

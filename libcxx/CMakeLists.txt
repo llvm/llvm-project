@@ -568,9 +568,15 @@ function(cxx_add_warning_flags target)
   else()
     target_add_compile_flags_if_supported(${target} PRIVATE -Wall)
   endif()
-  target_add_compile_flags_if_supported(${target} PRIVATE -Wextra -W -Wwrite-strings
-                                                          -Wno-unused-parameter -Wno-long-long
-                                                          -Werror=return-type -Wextra-semi -Wundef
+  target_add_compile_flags_if_supported(${target} PRIVATE -Wextra
+                                                          -W
+                                                          -Wwrite-strings
+                                                          -Wno-unused-parameter
+                                                          -Wno-long-long
+                                                          -Werror=return-type
+                                                          -Wextra-semi
+                                                          -Wundef
+                                                          -Wunused-template
                                                           -Wformat-nonliteral)
   if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     target_add_compile_flags_if_supported(${target} PRIVATE
