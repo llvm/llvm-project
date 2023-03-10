@@ -2418,11 +2418,19 @@ static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   auto *Preheader = L.getLoopPreheader();
   assert(Preheader && "Loop is not in simplify form?");
   bool Inverse = false;
+  bool IsLogical = false;
   using namespace PatternMatch;
   Value *Cond1, *Cond2;
   if (match(&I, m_Or(m_Value(Cond1), m_Value(Cond2))))
     Inverse = true;
-  else if (!match(&I, m_And(m_Value(Cond1), m_Value(Cond2))))
+  else if (match(&I, m_LogicalOr(m_Value(Cond1), m_Value(Cond2)))) {
+    Inverse = true;
+    IsLogical = true;
+  } else if (match(&I, m_And(m_Value(Cond1), m_Value(Cond2)))) {
+    // Do nothing
+  } else if (match(&I, m_LogicalAnd(m_Value(Cond1), m_Value(Cond2))))
+    IsLogical = true;
+  else
     return false;
 
   auto MatchICmpAgainstInvariant = [&](Value *C, ICmpInst::Predicate &P,
@@ -2458,6 +2466,12 @@ static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
                          ? (UseMin ? Intrinsic::smin : Intrinsic::smax)
                          : (UseMin ? Intrinsic::umin : Intrinsic::umax);
   IRBuilder<> Builder(Preheader->getTerminator());
+  // We are about to create a new guaranteed use for RHS2 which might not exist
+  // before (if it was a non-taken input of logical and/or instruction). If it
+  // was poison, we need to freeze it. Note that no new use for LHS and RHS1 are
+  // introduced, so they don't need this.
+  if (IsLogical)
+    RHS2 = Builder.CreateFreeze(RHS2, RHS2->getName() + ".fr");
   Value *NewRHS = Builder.CreateBinaryIntrinsic(
       id, RHS1, RHS2, nullptr, StringRef("invariant.") +
                                    (ICmpInst::isSigned(P1) ? "s" : "u") +
