@@ -721,17 +721,17 @@ exit:
   ret i32 %iv
 }
 
-; inv_2 needs freeze because hoisted umax would create a new use that didn't exist before.
+; TODO: inv_2 needs freeze because hoisted umax would create a new use that didn't exist before.
 ; Counter-example: %cmp_1 = false, %inv_2 = poison.
 define i32 @test_logical_and_ult_needs_freeze(i32 %start, i32 %inv_1, i32 %inv_2) {
 ; CHECK-LABEL: @test_logical_and_ult_needs_freeze(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INV_2_FR:%.*]] = freeze i32 [[INV_2:%.*]]
-; CHECK-NEXT:    [[INVARIANT_UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[INV_1:%.*]], i32 [[INV_2_FR]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV]], [[INVARIANT_UMIN]]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[IV]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i32 [[IV]], [[INV_2:%.*]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = select i1 [[CMP_1]], i1 [[CMP_2]], i1 false
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -753,17 +753,17 @@ exit:
   ret i32 %iv
 }
 
-; turn to %iv <u umin(inv_1, inv_2) and hoist it out of loop.
+; TODO: turn to %iv <u umin(inv_1, inv_2) and hoist it out of loop.
 ; https://alive2.llvm.org/ce/z/mhKGtT
 define i32 @test_logical_and_ult_pos(i32 %start, i32 %inv_1, i32 noundef %inv_2) {
 ; CHECK-LABEL: @test_logical_and_ult_pos(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INV_2_FR:%.*]] = freeze i32 [[INV_2:%.*]]
-; CHECK-NEXT:    [[INVARIANT_UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[INV_1:%.*]], i32 [[INV_2_FR]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV]], [[INVARIANT_UMIN]]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[IV]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i32 [[IV]], [[INV_2:%.*]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = select i1 [[CMP_1]], i1 [[CMP_2]], i1 false
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -785,16 +785,16 @@ exit:
   ret i32 %iv
 }
 
-; inv_2 needs freeze because hoisted umax would create a new use that didn't exist before.
+; TODO: inv_2 needs freeze because hoisted umax would create a new use that didn't exist before.
 define i32 @test_logical_or_ult_inv_needs_freeze(i32 %start, i32 %inv_1, i32 %inv_2) {
 ; CHECK-LABEL: @test_logical_or_ult_inv_needs_freeze(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INV_2_FR:%.*]] = freeze i32 [[INV_2:%.*]]
-; CHECK-NEXT:    [[INVARIANT_UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[INV_1:%.*]], i32 [[INV_2_FR]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV]], [[INVARIANT_UMAX]]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[IV]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i32 [[IV]], [[INV_2:%.*]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = select i1 [[CMP_1]], i1 true, i1 [[CMP_2]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -816,17 +816,17 @@ exit:
   ret i32 %iv
 }
 
-; turn to %iv <u umax(inv_1, inv_2) and hoist it out of loop.
+; TODO: turn to %iv <u umax(inv_1, inv_2) and hoist it out of loop.
 ; https://alive2.llvm.org/ce/z/zgyG5N
 define i32 @test_logical_or_ult_inv_pos(i32 %start, i32 %inv_1, i32 noundef %inv_2) {
 ; CHECK-LABEL: @test_logical_or_ult_inv_pos(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INV_2_FR:%.*]] = freeze i32 [[INV_2:%.*]]
-; CHECK-NEXT:    [[INVARIANT_UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[INV_1:%.*]], i32 [[INV_2_FR]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV]], [[INVARIANT_UMAX]]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[IV]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i32 [[IV]], [[INV_2:%.*]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = select i1 [[CMP_1]], i1 true, i1 [[CMP_2]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
