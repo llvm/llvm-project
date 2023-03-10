@@ -1,6 +1,12 @@
 // RUN: %check_clang_tidy %s readability-redundant-string-cstr %t -- -- -isystem %clang_tidy_headers
 #include <string>
 
+template <typename T>
+struct iterator {
+  T *operator->();
+  T &operator*();
+};
+
 namespace llvm {
 struct StringRef {
   StringRef(const char *p);
@@ -200,6 +206,31 @@ void m1(std::string&&) {
   using m1tp = void (*)(std::string &&);
   m1tp m1p2 = m1;
   m1p2(s.c_str());  
+}
+
+// Test for overloaded operator->
+void it(iterator<std::string> i)
+{
+  std::string tmp;
+  tmp = i->c_str();
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
+  // CHECK-FIXES: {{^  }}tmp = *i;{{$}}
+
+  // An unlikely situation and the outcome is not ideal, but at least the fix doesn't generate broken code.
+  tmp = i.operator->()->c_str();
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
+  // CHECK-FIXES: {{^  }}tmp = *i.operator->();{{$}}
+
+  // The fix contains an unnecessary set of parentheses, but these have no effect.
+  iterator<std::string> *pi = &i;
+  tmp = (*pi)->c_str();
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
+  // CHECK-FIXES: {{^  }}tmp = *(*pi);{{$}}
+
+  // An unlikely situation, but at least the fix doesn't generate broken code.
+  tmp = pi->operator->()->c_str();
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
+  // CHECK-FIXES: {{^  }}tmp = *pi->operator->();{{$}}
 }
 
 namespace PR45286 {

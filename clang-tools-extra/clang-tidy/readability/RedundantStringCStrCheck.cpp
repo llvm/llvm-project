@@ -52,6 +52,10 @@ formatDereference(const ast_matchers::MatchFinder::MatchResult &Result,
 
   if (Text.empty())
     return std::string();
+
+  // Remove remaining '->' from overloaded operator call
+  Text.consume_back("->");
+
   // Add leading '*'.
   if (needParensAfterUnaryOperator(ExprNode)) {
     return (llvm::Twine("*(") + Text + ")").str();
