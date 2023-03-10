@@ -706,6 +706,50 @@ ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec) const {
   return FunctionEntries;
 }
 
+template <class ELFT>
+Expected<
+    MapVector<const typename ELFT::Shdr *, const typename ELFT::Shdr *>>
+ELFFile<ELFT>::getSectionAndRelocations(
+    std::function<Expected<bool>(const Elf_Shdr &)> IsMatch) const {
+  MapVector<const Elf_Shdr *, const Elf_Shdr *> SecToRelocMap;
+  Error Errors = Error::success();
+  for (const Elf_Shdr &Sec : cantFail(this->sections())) {
+    Expected<bool> DoesSectionMatch = IsMatch(Sec);
+    if (!DoesSectionMatch) {
+      Errors = joinErrors(std::move(Errors), DoesSectionMatch.takeError());
+      continue;
+    }
+    if (*DoesSectionMatch) {
+      if (SecToRelocMap.insert(std::make_pair(&Sec, (const Elf_Shdr *)nullptr))
+              .second)
+        continue;
+    }
+
+    if (Sec.sh_type != ELF::SHT_RELA && Sec.sh_type != ELF::SHT_REL)
+      continue;
+
+    Expected<const Elf_Shdr *> RelSecOrErr = this->getSection(Sec.sh_info);
+    if (!RelSecOrErr) {
+      Errors = joinErrors(std::move(Errors),
+                          createError(describe(*this, Sec) +
+                                      ": failed to get a relocated section: " +
+                                      toString(RelSecOrErr.takeError())));
+      continue;
+    }
+    const Elf_Shdr *ContentsSec = *RelSecOrErr;
+    Expected<bool> DoesRelTargetMatch = IsMatch(*ContentsSec);
+    if (!DoesRelTargetMatch) {
+      Errors = joinErrors(std::move(Errors), DoesRelTargetMatch.takeError());
+      continue;
+    }
+    if (*DoesRelTargetMatch)
+      SecToRelocMap[ContentsSec] = &Sec;
+  }
+  if(Errors)
+    return std::move(Errors);
+  return SecToRelocMap;
+}
+
 template class llvm::object::ELFFile<ELF32LE>;
 template class llvm::object::ELFFile<ELF32BE>;
 template class llvm::object::ELFFile<ELF64LE>;

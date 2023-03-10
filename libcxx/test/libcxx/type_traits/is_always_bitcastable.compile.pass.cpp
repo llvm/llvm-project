@@ -89,7 +89,7 @@ constexpr void test() {
 #endif
 
     // 32-bit types.
-    using integral_32 = types::type_list<char32_t, int32_t, uint32_t>;
+    using integral_32 = types::type_list<char32_t, int32_t, std::uint32_t>;
 #if !defined(TEST_HAS_NO_WIDE_CHARACTERS) && __WCHAR_WIDTH__ == 32
     check<true, types::concatenate_t<integral_32, types::type_list<wchar_t>>>();
 #else

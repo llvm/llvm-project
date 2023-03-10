@@ -11,11 +11,11 @@
 // template<class I>
 // unspecified iter_move;
 
-#include <iterator>
-
-#include <array>
 #include <algorithm>
+#include <array>
 #include <cassert>
+#include <iterator>
+#include <type_traits>
 #include <utility>
 
 #include "../unqualified_lookup_wrapper.h"

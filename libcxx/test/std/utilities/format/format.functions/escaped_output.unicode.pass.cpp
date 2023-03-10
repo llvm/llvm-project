@@ -202,14 +202,9 @@ void test_char() {
     test_format(V{L"'\\u{600}'"}, L"{:?}", L'\x600');   // ARABIC NUMBER SIGN
     test_format(V{L"'\\u{feff}'"}, L"{:?}", L'\xfeff'); // ZERO WIDTH NO-BREAK SPACE
 
-    if constexpr (sizeof(CharT) == 2) {
-      // Incomplete surrogate pair in UTF-16
-      test_format(V{L"'\\x{d800}'"}, L"{:?}", L'\xd800'); // <surrogate-D800>
-      test_format(V{L"'\\x{dfff}'"}, L"{:?}", L'\xdfff'); // <surrogate-DFFF>
-    } else {
-      test_format(V{L"'\\u{d800}'"}, L"{:?}", L'\xd800'); // <surrogate-D800>
-      test_format(V{L"'\\u{dfff}'"}, L"{:?}", L'\xdfff'); // <surrogate-DFFF>
-    }
+    // Incomplete surrogate pair in UTF-16
+    test_format(V{L"'\\x{d800}'"}, L"{:?}", L'\xd800'); // <surrogate-D800>
+    test_format(V{L"'\\x{dfff}'"}, L"{:?}", L'\xdfff'); // <surrogate-DFFF>
 
     // Private_Use
     test_format(V{L"'\\u{e000}'"}, L"{:?}", L'\xe000'); // <private-use-E000>
@@ -230,7 +225,7 @@ void test_char() {
     // Unicode fitting in a 32-bit wchar_t
 
     constexpr wchar_t x  = 0x1ffff;
-    constexpr uint32_t y = 0x1ffff;
+    constexpr std::uint32_t y = 0x1ffff;
     static_assert(x == y);
 
     using V = std::basic_string_view<CharT>;
@@ -277,6 +272,48 @@ void test_string() {
     // Ill-formend UTF-8
     test_format(SV(R"(["\x{c3}"])"), SV("[{:?}]"), "\xc3");
     test_format(SV(R"(["\x{c3}("])"), SV("[{:?}]"), "\xc3\x28");
+
+    /* U+0000..U+0007F 1 code unit range, encoded in 2 code units. */
+    test_format(SV(R"(["\x{c0}\x{80}"])"), SV("[{:?}]"), "\xc0\x80"); // U+0000
+    test_format(SV(R"(["\x{c1}\x{bf}"])"), SV("[{:?}]"), "\xc1\xbf"); // U+007F
+    test_format(SV(R"(["\u{80}"])"), SV("[{:?}]"), "\xc2\x80");       // U+0080 first valid (General_Category=Control)
+
+    /* U+0000..U+07FFF 1 and 2 code unit range, encoded in 3 code units. */
+    test_format(SV(R"(["\x{e0}\x{80}\x{80}"])"), SV("[{:?}]"), "\xe0\x80\x80"); // U+0000
+    test_format(SV(R"(["\x{e0}\x{81}\x{bf}"])"), SV("[{:?}]"), "\xe0\x81\xbf"); // U+007F
+    test_format(SV(R"(["\x{e0}\x{82}\x{80}"])"), SV("[{:?}]"), "\xe0\x82\x80"); // U+0080
+    test_format(SV(R"(["\x{e0}\x{9f}\x{bf}"])"), SV("[{:?}]"), "\xe0\x9f\xbf"); // U+07FF
+    test_format(SV("[\"\u0800\"]"), SV("[{:?}]"), "\xe0\xa0\x80");              // U+0800 first valid
+
+#if 0
+	// This code point is in the Hangul Jamo Extended-B block and at the time of writing
+	// it's unassigned. When it comes defined, this branch might become true.
+    test_format(SV("[\"\ud7ff\"]"), SV("[{:?}]"), "\xed\x9f\xbf");              // U+D7FF last valid
+#else
+    /* U+D800..D+DFFFF surrogate range */
+    test_format(SV(R"(["\u{d7ff}"])"), SV("[{:?}]"), "\xed\x9f\xbf");           // U+D7FF last valid
+#endif
+    test_format(SV(R"(["\x{ed}\x{a0}\x{80}"])"), SV("[{:?}]"), "\xed\xa0\x80"); // U+D800
+    test_format(SV(R"(["\x{ed}\x{af}\x{bf}"])"), SV("[{:?}]"), "\xed\xaf\xbf"); // U+DBFF
+    test_format(SV(R"(["\x{ed}\x{bf}\x{80}"])"), SV("[{:?}]"), "\xed\xbf\x80"); // U+DC00
+    test_format(SV(R"(["\x{ed}\x{bf}\x{bf}"])"), SV("[{:?}]"), "\xed\xbf\xbf"); // U+DFFF
+    test_format(SV(R"(["\u{e000}"])"), SV("[{:?}]"), "\xee\x80\x80");           // U+E000 first valid
+                                                                                // (in the Private Use Area block)
+
+    /* U+0000..U+FFFF 1, 2, and 3 code unit range */
+    test_format(SV(R"(["\x{f0}\x{80}\x{80}\x{80}"])"), SV("[{:?}]"), "\xf0\x80\x80\x80"); // U+0000
+    test_format(SV(R"(["\x{f0}\x{80}\x{81}\x{bf}"])"), SV("[{:?}]"), "\xf0\x80\x81\xbf"); // U+007F
+    test_format(SV(R"(["\x{f0}\x{80}\x{82}\x{80}"])"), SV("[{:?}]"), "\xf0\x80\x82\x80"); // U+0080
+    test_format(SV(R"(["\x{f0}\x{80}\x{9f}\x{bf}"])"), SV("[{:?}]"), "\xf0\x80\x9f\xbf"); // U+07FF
+    test_format(SV(R"(["\x{f0}\x{80}\x{a0}\x{80}"])"), SV("[{:?}]"), "\xf0\x80\xa0\x80"); // U+0800
+    test_format(SV(R"(["\x{f0}\x{8f}\x{bf}\x{bf}"])"), SV("[{:?}]"), "\xf0\x8f\xbf\xbf"); // U+FFFF
+    test_format(SV("[\"\U00010000\"]"), SV("[{:?}]"), "\xf0\x90\x80\x80");                // U+10000 first valid
+
+    /* U+10FFFF..U+1FFFFF invalid range */
+    test_format(SV(R"(["\u{10ffff}"])"), SV("[{:?}]"), "\xf4\x8f\xbf\xbf"); // U+10FFFF last valid
+                                                                            // (in Supplementary Private Use Area-B)
+    test_format(SV(R"(["\x{f4}\x{90}\x{80}\x{80}"])"), SV("[{:?}]"), "\xf4\x90\x80\x80"); // U+110000
+    test_format(SV(R"(["\x{f4}\x{bf}\x{bf}\x{bf}"])"), SV("[{:?}]"), "\xf4\xbf\xbf\xbf"); // U+11FFFF
   } else {
     // Valid UTF-16 and UTF-32
     test_format(SV("[\"\u00c3\"]"), SV("[{:?}]"), L"\xc3"); // LATIN CAPITAL LETTER A WITH TILDE
@@ -320,11 +357,8 @@ void test_string() {
     // Format
     test_format(V{LR"("\u{ad}\u{600}\u{feff}")"}, L"{:?}", L"\xad\x600\xfeff");
 
-    if constexpr (sizeof(CharT) == 2)
-      // Incomplete surrogate pair in UTF-16
-      test_format(V{LR"("\x{d800}")"}, L"{:?}", L"\xd800");
-    else
-      test_format(V{LR"("\u{d800}")"}, L"{:?}", L"\xd800");
+    // Incomplete surrogate pair in UTF-16
+    test_format(V{LR"("\x{d800}")"}, L"{:?}", L"\xd800");
 
     // Private_Use
     test_format(V{LR"("\u{e000}\u{f8ff}")"}, L"{:?}", L"\xe000\xf8ff");
@@ -341,7 +375,7 @@ void test_string() {
     // Unicode fitting in a 32-bit wchar_t
 
     constexpr wchar_t x  = 0x1ffff;
-    constexpr uint32_t y = 0x1ffff;
+    constexpr std::uint32_t y = 0x1ffff;
     static_assert(x == y);
 
     using V = std::basic_string_view<CharT>;

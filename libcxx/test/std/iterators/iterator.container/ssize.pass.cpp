@@ -13,14 +13,16 @@
 //     -> common_type_t<ptrdiff_t, make_signed_t<decltype(c.size())>>;                    // C++20
 // template <class T, ptrdiff_t> constexpr ptrdiff_t ssize(const T (&array)[N]) noexcept; // C++20
 
-#include <iterator>
-#include <cassert>
-#include <vector>
 #include <array>
-#include <list>
+#include <cassert>
+#include <cstdint>
 #include <initializer_list>
-#include <string_view>
+#include <iterator>
 #include <limits>
+#include <list>
+#include <string_view>
+#include <type_traits>
+#include <vector>
 
 #include "test_macros.h"
 

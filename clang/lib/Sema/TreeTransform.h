@@ -5897,7 +5897,6 @@ bool TreeTransform<Derived>::TransformFunctionTypeParams(
                                        = dyn_cast<PackExpansionType>(OldType)) {
       // We have a function parameter pack that may need to be expanded.
       QualType Pattern = Expansion->getPattern();
-      NumExpansions = Expansion->getNumExpansions();
       SmallVector<UnexpandedParameterPack, 2> Unexpanded;
       getSema().collectUnexpandedParameterPacks(Pattern, Unexpanded);
 
@@ -8051,6 +8050,12 @@ TreeTransform<Derived>::TransformCoroutineBodyStmt(CoroutineBodyStmt *S) {
     if (DeallocRes.isInvalid())
       return StmtError();
     Builder.Deallocate = DeallocRes.get();
+
+    assert(S->getResultDecl() && "ResultDecl must already be built");
+    StmtResult ResultDecl = getDerived().TransformStmt(S->getResultDecl());
+    if (ResultDecl.isInvalid())
+      return StmtError();
+    Builder.ResultDecl = ResultDecl.get();
 
     if (auto *ReturnStmt = S->getReturnStmt()) {
       StmtResult Res = getDerived().TransformStmt(ReturnStmt);

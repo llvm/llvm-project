@@ -22,7 +22,7 @@ define void @load.v1i32(ptr %p) sanitize_address {
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp sge i8 [[TMP10]], [[TMP5]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13]]
 ; CHECK:       12:
-; CHECK-NEXT:    call void @__asan_report_load4(i64 [[TMP1]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    call void @__asan_report_load4(i64 [[TMP1]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       13:
 ; CHECK-NEXT:    [[TMP14:%.*]] = load <1 x i32>, ptr [[P]], align 4
@@ -48,7 +48,7 @@ define void @load.v2i32(ptr %p) sanitize_address {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i8 [[TMP5]], 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP8:%.*]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__asan_report_load8(i64 [[TMP1]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @__asan_report_load8(i64 [[TMP1]]) #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x i32>, ptr [[P]], align 8
@@ -74,7 +74,7 @@ define void @load.v4i32(ptr %p) sanitize_address {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i16 [[TMP5]], 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP8:%.*]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__asan_report_load16(i64 [[TMP1]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @__asan_report_load16(i64 [[TMP1]]) #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = load <4 x i32>, ptr [[P]], align 16
@@ -108,7 +108,7 @@ define void @load.v8i32(ptr %p) sanitize_address {
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp sge i8 [[TMP12]], [[TMP8]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15]]
 ; CHECK:       14:
-; CHECK-NEXT:    call void @__asan_report_load_n(i64 [[TMP4]], i64 32) #[[ATTR3]]
+; CHECK-NEXT:    call void @__asan_report_load_n(i64 [[TMP4]], i64 32) #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       15:
 ; CHECK-NEXT:    [[TMP16:%.*]] = ptrtoint ptr [[TMP3]] to i64
@@ -124,7 +124,7 @@ define void @load.v8i32(ptr %p) sanitize_address {
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp sge i8 [[TMP24]], [[TMP20]]
 ; CHECK-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP27]]
 ; CHECK:       26:
-; CHECK-NEXT:    call void @__asan_report_load_n(i64 [[TMP16]], i64 32) #[[ATTR3]]
+; CHECK-NEXT:    call void @__asan_report_load_n(i64 [[TMP16]], i64 32) #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       27:
 ; CHECK-NEXT:    [[TMP28:%.*]] = load <8 x i32>, ptr [[P]], align 32
@@ -158,7 +158,7 @@ define void @load.v16i32(ptr %p) sanitize_address {
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp sge i8 [[TMP12]], [[TMP8]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15]]
 ; CHECK:       14:
-; CHECK-NEXT:    call void @__asan_report_load_n(i64 [[TMP4]], i64 64) #[[ATTR3]]
+; CHECK-NEXT:    call void @__asan_report_load_n(i64 [[TMP4]], i64 64) #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       15:
 ; CHECK-NEXT:    [[TMP16:%.*]] = ptrtoint ptr [[TMP3]] to i64
@@ -174,7 +174,7 @@ define void @load.v16i32(ptr %p) sanitize_address {
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp sge i8 [[TMP24]], [[TMP20]]
 ; CHECK-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP27]]
 ; CHECK:       26:
-; CHECK-NEXT:    call void @__asan_report_load_n(i64 [[TMP16]], i64 64) #[[ATTR3]]
+; CHECK-NEXT:    call void @__asan_report_load_n(i64 [[TMP16]], i64 64) #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       27:
 ; CHECK-NEXT:    [[TMP28:%.*]] = load <16 x i32>, ptr [[P]], align 64
@@ -207,7 +207,7 @@ define void @store.v1i32(ptr %p) sanitize_address {
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp sge i8 [[TMP10]], [[TMP5]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13]]
 ; CHECK:       12:
-; CHECK-NEXT:    call void @__asan_report_store4(i64 [[TMP1]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @__asan_report_store4(i64 [[TMP1]]) #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       13:
 ; CHECK-NEXT:    store <1 x i32> zeroinitializer, ptr [[P]], align 4
@@ -233,7 +233,7 @@ define void @store.v2i32(ptr %p) sanitize_address {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i8 [[TMP5]], 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP8:%.*]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__asan_report_store8(i64 [[TMP1]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @__asan_report_store8(i64 [[TMP1]]) #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[P]], align 8
@@ -259,7 +259,7 @@ define void @store.v4i32(ptr %p) sanitize_address {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i16 [[TMP5]], 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP8:%.*]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__asan_report_store16(i64 [[TMP1]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @__asan_report_store16(i64 [[TMP1]]) #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[P]], align 16
@@ -293,7 +293,7 @@ define void @store.v8i32(ptr %p) sanitize_address {
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp sge i8 [[TMP12]], [[TMP8]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15]]
 ; CHECK:       14:
-; CHECK-NEXT:    call void @__asan_report_store_n(i64 [[TMP4]], i64 32) #[[ATTR3]]
+; CHECK-NEXT:    call void @__asan_report_store_n(i64 [[TMP4]], i64 32) #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       15:
 ; CHECK-NEXT:    [[TMP16:%.*]] = ptrtoint ptr [[TMP3]] to i64
@@ -309,7 +309,7 @@ define void @store.v8i32(ptr %p) sanitize_address {
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp sge i8 [[TMP24]], [[TMP20]]
 ; CHECK-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP27]]
 ; CHECK:       26:
-; CHECK-NEXT:    call void @__asan_report_store_n(i64 [[TMP16]], i64 32) #[[ATTR3]]
+; CHECK-NEXT:    call void @__asan_report_store_n(i64 [[TMP16]], i64 32) #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       27:
 ; CHECK-NEXT:    store <8 x i32> zeroinitializer, ptr [[P]], align 32
@@ -343,7 +343,7 @@ define void @store.v16i32(ptr %p) sanitize_address {
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp sge i8 [[TMP12]], [[TMP8]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15]]
 ; CHECK:       14:
-; CHECK-NEXT:    call void @__asan_report_store_n(i64 [[TMP4]], i64 64) #[[ATTR3]]
+; CHECK-NEXT:    call void @__asan_report_store_n(i64 [[TMP4]], i64 64) #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       15:
 ; CHECK-NEXT:    [[TMP16:%.*]] = ptrtoint ptr [[TMP3]] to i64
@@ -359,7 +359,7 @@ define void @store.v16i32(ptr %p) sanitize_address {
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp sge i8 [[TMP24]], [[TMP20]]
 ; CHECK-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP27]]
 ; CHECK:       26:
-; CHECK-NEXT:    call void @__asan_report_store_n(i64 [[TMP16]], i64 64) #[[ATTR3]]
+; CHECK-NEXT:    call void @__asan_report_store_n(i64 [[TMP16]], i64 64) #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       27:
 ; CHECK-NEXT:    store <16 x i32> zeroinitializer, ptr [[P]], align 64
@@ -372,6 +372,578 @@ define void @store.v16i32(ptr %p) sanitize_address {
 ; CALLS-NEXT:    ret void
 ;
   store <16 x i32> zeroinitializer, ptr %p
+  ret void
+}
+
+
+define void @load.nxv1i32(ptr %p) sanitize_address {
+; CHECK-LABEL: @load.nxv1i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 32
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i64 [[TMP8]], 3
+; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP9]], 17592186044416
+; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to ptr
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP12]], 0
+; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP19:%.*]], !prof [[PROF0]]
+; CHECK:       14:
+; CHECK-NEXT:    [[TMP15:%.*]] = and i64 [[TMP8]], 7
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP15]] to i8
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp sge i8 [[TMP16]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[TMP18:%.*]], label [[TMP19]]
+; CHECK:       18:
+; CHECK-NEXT:    call void @__asan_report_load_n(i64 [[TMP8]], i64 [[TMP3]]) #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       19:
+; CHECK-NEXT:    [[TMP20:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    [[TMP21:%.*]] = lshr i64 [[TMP20]], 3
+; CHECK-NEXT:    [[TMP22:%.*]] = or i64 [[TMP21]], 17592186044416
+; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP22]] to ptr
+; CHECK-NEXT:    [[TMP24:%.*]] = load i8, ptr [[TMP23]], align 1
+; CHECK-NEXT:    [[TMP25:%.*]] = icmp ne i8 [[TMP24]], 0
+; CHECK-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP31:%.*]], !prof [[PROF0]]
+; CHECK:       26:
+; CHECK-NEXT:    [[TMP27:%.*]] = and i64 [[TMP20]], 7
+; CHECK-NEXT:    [[TMP28:%.*]] = trunc i64 [[TMP27]] to i8
+; CHECK-NEXT:    [[TMP29:%.*]] = icmp sge i8 [[TMP28]], [[TMP24]]
+; CHECK-NEXT:    br i1 [[TMP29]], label [[TMP30:%.*]], label [[TMP31]]
+; CHECK:       30:
+; CHECK-NEXT:    call void @__asan_report_load_n(i64 [[TMP20]], i64 [[TMP3]]) #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       31:
+; CHECK-NEXT:    [[TMP32:%.*]] = load <vscale x 1 x i32>, ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+; CALLS-LABEL: @load.nxv1i32(
+; CALLS-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CALLS-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 32
+; CALLS-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
+; CALLS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CALLS-NEXT:    call void @__asan_loadN(i64 [[TMP4]], i64 [[TMP3]])
+; CALLS-NEXT:    [[TMP5:%.*]] = load <vscale x 1 x i32>, ptr [[P]], align 4
+; CALLS-NEXT:    ret void
+;
+  load <vscale x 1 x i32>, ptr %p
+  ret void
+}
+
+define void @load.nxv2i32(ptr %p) sanitize_address {
+; CHECK-LABEL: @load.nxv2i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 64
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i64 [[TMP8]], 3
+; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP9]], 17592186044416
+; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to ptr
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP12]], 0
+; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP19:%.*]], !prof [[PROF0]]
+; CHECK:       14:
+; CHECK-NEXT:    [[TMP15:%.*]] = and i64 [[TMP8]], 7
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP15]] to i8
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp sge i8 [[TMP16]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[TMP18:%.*]], label [[TMP19]]
+; CHECK:       18:
+; CHECK-NEXT:    call void @__asan_report_load_n(i64 [[TMP8]], i64 [[TMP3]]) #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       19:
+; CHECK-NEXT:    [[TMP20:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    [[TMP21:%.*]] = lshr i64 [[TMP20]], 3
+; CHECK-NEXT:    [[TMP22:%.*]] = or i64 [[TMP21]], 17592186044416
+; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP22]] to ptr
+; CHECK-NEXT:    [[TMP24:%.*]] = load i8, ptr [[TMP23]], align 1
+; CHECK-NEXT:    [[TMP25:%.*]] = icmp ne i8 [[TMP24]], 0
+; CHECK-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP31:%.*]], !prof [[PROF0]]
+; CHECK:       26:
+; CHECK-NEXT:    [[TMP27:%.*]] = and i64 [[TMP20]], 7
+; CHECK-NEXT:    [[TMP28:%.*]] = trunc i64 [[TMP27]] to i8
+; CHECK-NEXT:    [[TMP29:%.*]] = icmp sge i8 [[TMP28]], [[TMP24]]
+; CHECK-NEXT:    br i1 [[TMP29]], label [[TMP30:%.*]], label [[TMP31]]
+; CHECK:       30:
+; CHECK-NEXT:    call void @__asan_report_load_n(i64 [[TMP20]], i64 [[TMP3]]) #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       31:
+; CHECK-NEXT:    [[TMP32:%.*]] = load <vscale x 2 x i32>, ptr [[P]], align 8
+; CHECK-NEXT:    ret void
+;
+; CALLS-LABEL: @load.nxv2i32(
+; CALLS-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CALLS-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 64
+; CALLS-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
+; CALLS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CALLS-NEXT:    call void @__asan_loadN(i64 [[TMP4]], i64 [[TMP3]])
+; CALLS-NEXT:    [[TMP5:%.*]] = load <vscale x 2 x i32>, ptr [[P]], align 8
+; CALLS-NEXT:    ret void
+;
+  load <vscale x 2 x i32>, ptr %p
+  ret void
+}
+
+define void @load.nxv4i32(ptr %p) sanitize_address {
+; CHECK-LABEL: @load.nxv4i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 128
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i64 [[TMP8]], 3
+; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP9]], 17592186044416
+; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to ptr
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP12]], 0
+; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP19:%.*]], !prof [[PROF0]]
+; CHECK:       14:
+; CHECK-NEXT:    [[TMP15:%.*]] = and i64 [[TMP8]], 7
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP15]] to i8
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp sge i8 [[TMP16]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[TMP18:%.*]], label [[TMP19]]
+; CHECK:       18:
+; CHECK-NEXT:    call void @__asan_report_load_n(i64 [[TMP8]], i64 [[TMP3]]) #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       19:
+; CHECK-NEXT:    [[TMP20:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    [[TMP21:%.*]] = lshr i64 [[TMP20]], 3
+; CHECK-NEXT:    [[TMP22:%.*]] = or i64 [[TMP21]], 17592186044416
+; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP22]] to ptr
+; CHECK-NEXT:    [[TMP24:%.*]] = load i8, ptr [[TMP23]], align 1
+; CHECK-NEXT:    [[TMP25:%.*]] = icmp ne i8 [[TMP24]], 0
+; CHECK-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP31:%.*]], !prof [[PROF0]]
+; CHECK:       26:
+; CHECK-NEXT:    [[TMP27:%.*]] = and i64 [[TMP20]], 7
+; CHECK-NEXT:    [[TMP28:%.*]] = trunc i64 [[TMP27]] to i8
+; CHECK-NEXT:    [[TMP29:%.*]] = icmp sge i8 [[TMP28]], [[TMP24]]
+; CHECK-NEXT:    br i1 [[TMP29]], label [[TMP30:%.*]], label [[TMP31]]
+; CHECK:       30:
+; CHECK-NEXT:    call void @__asan_report_load_n(i64 [[TMP20]], i64 [[TMP3]]) #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       31:
+; CHECK-NEXT:    [[TMP32:%.*]] = load <vscale x 4 x i32>, ptr [[P]], align 16
+; CHECK-NEXT:    ret void
+;
+; CALLS-LABEL: @load.nxv4i32(
+; CALLS-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CALLS-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 128
+; CALLS-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
+; CALLS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CALLS-NEXT:    call void @__asan_loadN(i64 [[TMP4]], i64 [[TMP3]])
+; CALLS-NEXT:    [[TMP5:%.*]] = load <vscale x 4 x i32>, ptr [[P]], align 16
+; CALLS-NEXT:    ret void
+;
+  load <vscale x 4 x i32>, ptr %p
+  ret void
+}
+
+define void @load.nxv8i32(ptr %p) sanitize_address {
+; CHECK-LABEL: @load.nxv8i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 256
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i64 [[TMP8]], 3
+; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP9]], 17592186044416
+; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to ptr
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP12]], 0
+; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP19:%.*]], !prof [[PROF0]]
+; CHECK:       14:
+; CHECK-NEXT:    [[TMP15:%.*]] = and i64 [[TMP8]], 7
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP15]] to i8
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp sge i8 [[TMP16]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[TMP18:%.*]], label [[TMP19]]
+; CHECK:       18:
+; CHECK-NEXT:    call void @__asan_report_load_n(i64 [[TMP8]], i64 [[TMP3]]) #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       19:
+; CHECK-NEXT:    [[TMP20:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    [[TMP21:%.*]] = lshr i64 [[TMP20]], 3
+; CHECK-NEXT:    [[TMP22:%.*]] = or i64 [[TMP21]], 17592186044416
+; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP22]] to ptr
+; CHECK-NEXT:    [[TMP24:%.*]] = load i8, ptr [[TMP23]], align 1
+; CHECK-NEXT:    [[TMP25:%.*]] = icmp ne i8 [[TMP24]], 0
+; CHECK-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP31:%.*]], !prof [[PROF0]]
+; CHECK:       26:
+; CHECK-NEXT:    [[TMP27:%.*]] = and i64 [[TMP20]], 7
+; CHECK-NEXT:    [[TMP28:%.*]] = trunc i64 [[TMP27]] to i8
+; CHECK-NEXT:    [[TMP29:%.*]] = icmp sge i8 [[TMP28]], [[TMP24]]
+; CHECK-NEXT:    br i1 [[TMP29]], label [[TMP30:%.*]], label [[TMP31]]
+; CHECK:       30:
+; CHECK-NEXT:    call void @__asan_report_load_n(i64 [[TMP20]], i64 [[TMP3]]) #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       31:
+; CHECK-NEXT:    [[TMP32:%.*]] = load <vscale x 8 x i32>, ptr [[P]], align 32
+; CHECK-NEXT:    ret void
+;
+; CALLS-LABEL: @load.nxv8i32(
+; CALLS-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CALLS-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 256
+; CALLS-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
+; CALLS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CALLS-NEXT:    call void @__asan_loadN(i64 [[TMP4]], i64 [[TMP3]])
+; CALLS-NEXT:    [[TMP5:%.*]] = load <vscale x 8 x i32>, ptr [[P]], align 32
+; CALLS-NEXT:    ret void
+;
+  load <vscale x 8 x i32>, ptr %p
+  ret void
+}
+
+define void @load.nxv16i32(ptr %p) sanitize_address {
+; CHECK-LABEL: @load.nxv16i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 512
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i64 [[TMP8]], 3
+; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP9]], 17592186044416
+; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to ptr
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP12]], 0
+; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP19:%.*]], !prof [[PROF0]]
+; CHECK:       14:
+; CHECK-NEXT:    [[TMP15:%.*]] = and i64 [[TMP8]], 7
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP15]] to i8
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp sge i8 [[TMP16]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[TMP18:%.*]], label [[TMP19]]
+; CHECK:       18:
+; CHECK-NEXT:    call void @__asan_report_load_n(i64 [[TMP8]], i64 [[TMP3]]) #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       19:
+; CHECK-NEXT:    [[TMP20:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    [[TMP21:%.*]] = lshr i64 [[TMP20]], 3
+; CHECK-NEXT:    [[TMP22:%.*]] = or i64 [[TMP21]], 17592186044416
+; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP22]] to ptr
+; CHECK-NEXT:    [[TMP24:%.*]] = load i8, ptr [[TMP23]], align 1
+; CHECK-NEXT:    [[TMP25:%.*]] = icmp ne i8 [[TMP24]], 0
+; CHECK-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP31:%.*]], !prof [[PROF0]]
+; CHECK:       26:
+; CHECK-NEXT:    [[TMP27:%.*]] = and i64 [[TMP20]], 7
+; CHECK-NEXT:    [[TMP28:%.*]] = trunc i64 [[TMP27]] to i8
+; CHECK-NEXT:    [[TMP29:%.*]] = icmp sge i8 [[TMP28]], [[TMP24]]
+; CHECK-NEXT:    br i1 [[TMP29]], label [[TMP30:%.*]], label [[TMP31]]
+; CHECK:       30:
+; CHECK-NEXT:    call void @__asan_report_load_n(i64 [[TMP20]], i64 [[TMP3]]) #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       31:
+; CHECK-NEXT:    [[TMP32:%.*]] = load <vscale x 16 x i32>, ptr [[P]], align 64
+; CHECK-NEXT:    ret void
+;
+; CALLS-LABEL: @load.nxv16i32(
+; CALLS-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CALLS-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 512
+; CALLS-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
+; CALLS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CALLS-NEXT:    call void @__asan_loadN(i64 [[TMP4]], i64 [[TMP3]])
+; CALLS-NEXT:    [[TMP5:%.*]] = load <vscale x 16 x i32>, ptr [[P]], align 64
+; CALLS-NEXT:    ret void
+;
+  load <vscale x 16 x i32>, ptr %p
+  ret void
+}
+
+
+define void @store.nxv1i32(ptr %p) sanitize_address {
+; CHECK-LABEL: @store.nxv1i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 32
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i64 [[TMP8]], 3
+; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP9]], 17592186044416
+; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to ptr
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP12]], 0
+; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP19:%.*]], !prof [[PROF0]]
+; CHECK:       14:
+; CHECK-NEXT:    [[TMP15:%.*]] = and i64 [[TMP8]], 7
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP15]] to i8
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp sge i8 [[TMP16]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[TMP18:%.*]], label [[TMP19]]
+; CHECK:       18:
+; CHECK-NEXT:    call void @__asan_report_store_n(i64 [[TMP8]], i64 [[TMP3]]) #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       19:
+; CHECK-NEXT:    [[TMP20:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    [[TMP21:%.*]] = lshr i64 [[TMP20]], 3
+; CHECK-NEXT:    [[TMP22:%.*]] = or i64 [[TMP21]], 17592186044416
+; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP22]] to ptr
+; CHECK-NEXT:    [[TMP24:%.*]] = load i8, ptr [[TMP23]], align 1
+; CHECK-NEXT:    [[TMP25:%.*]] = icmp ne i8 [[TMP24]], 0
+; CHECK-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP31:%.*]], !prof [[PROF0]]
+; CHECK:       26:
+; CHECK-NEXT:    [[TMP27:%.*]] = and i64 [[TMP20]], 7
+; CHECK-NEXT:    [[TMP28:%.*]] = trunc i64 [[TMP27]] to i8
+; CHECK-NEXT:    [[TMP29:%.*]] = icmp sge i8 [[TMP28]], [[TMP24]]
+; CHECK-NEXT:    br i1 [[TMP29]], label [[TMP30:%.*]], label [[TMP31]]
+; CHECK:       30:
+; CHECK-NEXT:    call void @__asan_report_store_n(i64 [[TMP20]], i64 [[TMP3]]) #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       31:
+; CHECK-NEXT:    store <vscale x 1 x i32> zeroinitializer, ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+; CALLS-LABEL: @store.nxv1i32(
+; CALLS-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CALLS-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 32
+; CALLS-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
+; CALLS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CALLS-NEXT:    call void @__asan_storeN(i64 [[TMP4]], i64 [[TMP3]])
+; CALLS-NEXT:    store <vscale x 1 x i32> zeroinitializer, ptr [[P]], align 4
+; CALLS-NEXT:    ret void
+;
+  store <vscale x 1 x i32> zeroinitializer, ptr %p
+  ret void
+}
+
+define void @store.nxv2i32(ptr %p) sanitize_address {
+; CHECK-LABEL: @store.nxv2i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 64
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i64 [[TMP8]], 3
+; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP9]], 17592186044416
+; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to ptr
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP12]], 0
+; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP19:%.*]], !prof [[PROF0]]
+; CHECK:       14:
+; CHECK-NEXT:    [[TMP15:%.*]] = and i64 [[TMP8]], 7
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP15]] to i8
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp sge i8 [[TMP16]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[TMP18:%.*]], label [[TMP19]]
+; CHECK:       18:
+; CHECK-NEXT:    call void @__asan_report_store_n(i64 [[TMP8]], i64 [[TMP3]]) #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       19:
+; CHECK-NEXT:    [[TMP20:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    [[TMP21:%.*]] = lshr i64 [[TMP20]], 3
+; CHECK-NEXT:    [[TMP22:%.*]] = or i64 [[TMP21]], 17592186044416
+; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP22]] to ptr
+; CHECK-NEXT:    [[TMP24:%.*]] = load i8, ptr [[TMP23]], align 1
+; CHECK-NEXT:    [[TMP25:%.*]] = icmp ne i8 [[TMP24]], 0
+; CHECK-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP31:%.*]], !prof [[PROF0]]
+; CHECK:       26:
+; CHECK-NEXT:    [[TMP27:%.*]] = and i64 [[TMP20]], 7
+; CHECK-NEXT:    [[TMP28:%.*]] = trunc i64 [[TMP27]] to i8
+; CHECK-NEXT:    [[TMP29:%.*]] = icmp sge i8 [[TMP28]], [[TMP24]]
+; CHECK-NEXT:    br i1 [[TMP29]], label [[TMP30:%.*]], label [[TMP31]]
+; CHECK:       30:
+; CHECK-NEXT:    call void @__asan_report_store_n(i64 [[TMP20]], i64 [[TMP3]]) #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       31:
+; CHECK-NEXT:    store <vscale x 2 x i32> zeroinitializer, ptr [[P]], align 8
+; CHECK-NEXT:    ret void
+;
+; CALLS-LABEL: @store.nxv2i32(
+; CALLS-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CALLS-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 64
+; CALLS-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
+; CALLS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CALLS-NEXT:    call void @__asan_storeN(i64 [[TMP4]], i64 [[TMP3]])
+; CALLS-NEXT:    store <vscale x 2 x i32> zeroinitializer, ptr [[P]], align 8
+; CALLS-NEXT:    ret void
+;
+  store <vscale x 2 x i32> zeroinitializer, ptr %p
+  ret void
+}
+
+define void @store.nxv4i32(ptr %p) sanitize_address {
+; CHECK-LABEL: @store.nxv4i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 128
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i64 [[TMP8]], 3
+; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP9]], 17592186044416
+; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to ptr
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP12]], 0
+; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP19:%.*]], !prof [[PROF0]]
+; CHECK:       14:
+; CHECK-NEXT:    [[TMP15:%.*]] = and i64 [[TMP8]], 7
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP15]] to i8
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp sge i8 [[TMP16]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[TMP18:%.*]], label [[TMP19]]
+; CHECK:       18:
+; CHECK-NEXT:    call void @__asan_report_store_n(i64 [[TMP8]], i64 [[TMP3]]) #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       19:
+; CHECK-NEXT:    [[TMP20:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    [[TMP21:%.*]] = lshr i64 [[TMP20]], 3
+; CHECK-NEXT:    [[TMP22:%.*]] = or i64 [[TMP21]], 17592186044416
+; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP22]] to ptr
+; CHECK-NEXT:    [[TMP24:%.*]] = load i8, ptr [[TMP23]], align 1
+; CHECK-NEXT:    [[TMP25:%.*]] = icmp ne i8 [[TMP24]], 0
+; CHECK-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP31:%.*]], !prof [[PROF0]]
+; CHECK:       26:
+; CHECK-NEXT:    [[TMP27:%.*]] = and i64 [[TMP20]], 7
+; CHECK-NEXT:    [[TMP28:%.*]] = trunc i64 [[TMP27]] to i8
+; CHECK-NEXT:    [[TMP29:%.*]] = icmp sge i8 [[TMP28]], [[TMP24]]
+; CHECK-NEXT:    br i1 [[TMP29]], label [[TMP30:%.*]], label [[TMP31]]
+; CHECK:       30:
+; CHECK-NEXT:    call void @__asan_report_store_n(i64 [[TMP20]], i64 [[TMP3]]) #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       31:
+; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr [[P]], align 16
+; CHECK-NEXT:    ret void
+;
+; CALLS-LABEL: @store.nxv4i32(
+; CALLS-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CALLS-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 128
+; CALLS-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
+; CALLS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CALLS-NEXT:    call void @__asan_storeN(i64 [[TMP4]], i64 [[TMP3]])
+; CALLS-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr [[P]], align 16
+; CALLS-NEXT:    ret void
+;
+  store <vscale x 4 x i32> zeroinitializer, ptr %p
+  ret void
+}
+
+define void @store.nxv8i32(ptr %p) sanitize_address {
+; CHECK-LABEL: @store.nxv8i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 256
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i64 [[TMP8]], 3
+; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP9]], 17592186044416
+; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to ptr
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP12]], 0
+; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP19:%.*]], !prof [[PROF0]]
+; CHECK:       14:
+; CHECK-NEXT:    [[TMP15:%.*]] = and i64 [[TMP8]], 7
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP15]] to i8
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp sge i8 [[TMP16]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[TMP18:%.*]], label [[TMP19]]
+; CHECK:       18:
+; CHECK-NEXT:    call void @__asan_report_store_n(i64 [[TMP8]], i64 [[TMP3]]) #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       19:
+; CHECK-NEXT:    [[TMP20:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    [[TMP21:%.*]] = lshr i64 [[TMP20]], 3
+; CHECK-NEXT:    [[TMP22:%.*]] = or i64 [[TMP21]], 17592186044416
+; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP22]] to ptr
+; CHECK-NEXT:    [[TMP24:%.*]] = load i8, ptr [[TMP23]], align 1
+; CHECK-NEXT:    [[TMP25:%.*]] = icmp ne i8 [[TMP24]], 0
+; CHECK-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP31:%.*]], !prof [[PROF0]]
+; CHECK:       26:
+; CHECK-NEXT:    [[TMP27:%.*]] = and i64 [[TMP20]], 7
+; CHECK-NEXT:    [[TMP28:%.*]] = trunc i64 [[TMP27]] to i8
+; CHECK-NEXT:    [[TMP29:%.*]] = icmp sge i8 [[TMP28]], [[TMP24]]
+; CHECK-NEXT:    br i1 [[TMP29]], label [[TMP30:%.*]], label [[TMP31]]
+; CHECK:       30:
+; CHECK-NEXT:    call void @__asan_report_store_n(i64 [[TMP20]], i64 [[TMP3]]) #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       31:
+; CHECK-NEXT:    store <vscale x 8 x i32> zeroinitializer, ptr [[P]], align 32
+; CHECK-NEXT:    ret void
+;
+; CALLS-LABEL: @store.nxv8i32(
+; CALLS-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CALLS-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 256
+; CALLS-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
+; CALLS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CALLS-NEXT:    call void @__asan_storeN(i64 [[TMP4]], i64 [[TMP3]])
+; CALLS-NEXT:    store <vscale x 8 x i32> zeroinitializer, ptr [[P]], align 32
+; CALLS-NEXT:    ret void
+;
+  store <vscale x 8 x i32> zeroinitializer, ptr %p
+  ret void
+}
+
+define void @store.nxv16i32(ptr %p) sanitize_address {
+; CHECK-LABEL: @store.nxv16i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 512
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i64 [[TMP8]], 3
+; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP9]], 17592186044416
+; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to ptr
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP12]], 0
+; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP19:%.*]], !prof [[PROF0]]
+; CHECK:       14:
+; CHECK-NEXT:    [[TMP15:%.*]] = and i64 [[TMP8]], 7
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP15]] to i8
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp sge i8 [[TMP16]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[TMP18:%.*]], label [[TMP19]]
+; CHECK:       18:
+; CHECK-NEXT:    call void @__asan_report_store_n(i64 [[TMP8]], i64 [[TMP3]]) #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       19:
+; CHECK-NEXT:    [[TMP20:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    [[TMP21:%.*]] = lshr i64 [[TMP20]], 3
+; CHECK-NEXT:    [[TMP22:%.*]] = or i64 [[TMP21]], 17592186044416
+; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP22]] to ptr
+; CHECK-NEXT:    [[TMP24:%.*]] = load i8, ptr [[TMP23]], align 1
+; CHECK-NEXT:    [[TMP25:%.*]] = icmp ne i8 [[TMP24]], 0
+; CHECK-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP31:%.*]], !prof [[PROF0]]
+; CHECK:       26:
+; CHECK-NEXT:    [[TMP27:%.*]] = and i64 [[TMP20]], 7
+; CHECK-NEXT:    [[TMP28:%.*]] = trunc i64 [[TMP27]] to i8
+; CHECK-NEXT:    [[TMP29:%.*]] = icmp sge i8 [[TMP28]], [[TMP24]]
+; CHECK-NEXT:    br i1 [[TMP29]], label [[TMP30:%.*]], label [[TMP31]]
+; CHECK:       30:
+; CHECK-NEXT:    call void @__asan_report_store_n(i64 [[TMP20]], i64 [[TMP3]]) #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       31:
+; CHECK-NEXT:    store <vscale x 16 x i32> zeroinitializer, ptr [[P]], align 64
+; CHECK-NEXT:    ret void
+;
+; CALLS-LABEL: @store.nxv16i32(
+; CALLS-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CALLS-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 512
+; CALLS-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
+; CALLS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CALLS-NEXT:    call void @__asan_storeN(i64 [[TMP4]], i64 [[TMP3]])
+; CALLS-NEXT:    store <vscale x 16 x i32> zeroinitializer, ptr [[P]], align 64
+; CALLS-NEXT:    ret void
+;
+  store <vscale x 16 x i32> zeroinitializer, ptr %p
   ret void
 }
 

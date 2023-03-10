@@ -1527,7 +1527,6 @@ cc_library(
     hdrs = glob([
         "include/llvm/Transforms/IPO/*.h",
     ]) + [
-        "include/llvm-c/Transforms/PassManagerBuilder.h",
         "include/llvm/Transforms/IPO.h",
     ],
     copts = llvm_copts,

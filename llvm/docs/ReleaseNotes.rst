@@ -147,6 +147,8 @@ Changes to the C API
   pointer, has been removed.
 * Functions for adding legacy passes like ``LLVMAddInstructionCombiningPass``
   have been removed.
+* Removed ``LLVMPassManagerBuilderRef`` and functions interacting with it.
+  These belonged to the no longer supported legacy pass manager.
 
 Changes to the FastISel infrastructure
 --------------------------------------
@@ -184,9 +186,9 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
-* In the results of commands such as `expr` and `frame var`, type summaries will now
+* In the results of commands such as ``expr`` and ``frame var``, type summaries will now
   omit defaulted template parameters. The full template parameter list can still be
-  viewed with `expr --raw-output`/`frame var --raw-output`. (`D141828 <https://reviews.llvm.org/D141828>`_)
+  viewed with ``expr --raw-output``/``frame var --raw-output``. (`D141828 <https://reviews.llvm.org/D141828>`_)
 
 Changes to Sanitizers
 ---------------------

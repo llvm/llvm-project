@@ -17,20 +17,24 @@
 ! CHECK-SAME:  "-o" "[[object_file:.*\.o]]" {{.*}}Inputs/hello.f90
 
 ! Linker invocation to generate the executable
-! GNU-LABEL:  "{{.*}}ld" 
+! NOTE: Since we are cross-compiling, the host toolchain executables may
+!       run on any other platform, such as Windows that use a .exe
+!       suffix. Clang's driver will try to resolve the path to the ld
+!       executable and may find the GNU linker from MinGW or Cygwin.
+! GNU-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! GNU-SAME: "[[object_file]]"
 ! GNU-SAME: -lFortran_main
 ! GNU-SAME: -lFortranRuntime
 ! GNU-SAME: -lFortranDecimal
 ! GNU-SAME: -lm
 
-! DARWIN-LABEL:  "{{.*}}ld" 
+! DARWIN-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! DARWIN-SAME: "[[object_file]]"
 ! DARWIN-SAME: -lFortran_main
 ! DARWIN-SAME: -lFortranRuntime
 ! DARWIN-SAME: -lFortranDecimal
 
-! MINGW-LABEL:  "{{.*}}ld" 
+! MINGW-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! MINGW-SAME: "[[object_file]]"
 ! MINGW-SAME: -lFortran_main
 ! MINGW-SAME: -lFortranRuntime

@@ -578,7 +578,8 @@ static Value reallocOrSubView(OpBuilder &builder, Location loc, int64_t len,
 
   Value targetLen = constantIndex(builder, loc, len);
   Value bufferLen = linalg::createOrFoldDimOp(builder, loc, buffer, 0);
-  Value reallocP = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
+  // Reallocates if target length is greater than the actual buffer len.
+  Value reallocP = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt,
                                                  targetLen, bufferLen);
   scf::IfOp ifOp = builder.create<scf::IfOp>(loc, retTp, reallocP, true);
   // If targetLen > bufferLen, reallocate to get enough sparse to return.

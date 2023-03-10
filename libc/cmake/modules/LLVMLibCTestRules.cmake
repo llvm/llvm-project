@@ -150,7 +150,7 @@ function(create_libc_unittest fq_target_name)
   )
   target_compile_options(
     ${fq_build_target_name}
-    PRIVATE ${LIBC_COMPILE_OPTIONS_DEFAULT}
+    PRIVATE -fpie ${LIBC_COMPILE_OPTIONS_DEFAULT}
   )
   if(LIBC_UNITTEST_COMPILE_OPTIONS)
     target_compile_options(
@@ -512,7 +512,7 @@ function(add_integration_test test_name)
       ${LIBC_BUILD_DIR}/include
   )
   target_compile_options(${fq_build_target_name}
-                         PRIVATE -ffreestanding ${INTEGRATION_TEST_COMPILE_OPTIONS})
+                         PRIVATE -fpie -ffreestanding ${INTEGRATION_TEST_COMPILE_OPTIONS})
   target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
   target_link_libraries(${fq_build_target_name}
                         ${INTEGRATION_TEST_STARTUP} ${fq_target_name}.__libc__

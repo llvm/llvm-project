@@ -188,12 +188,13 @@ template <class T, class Allocator, class Predicate>
 #include <__memory_resource/polymorphic_allocator.h>
 #include <__split_buffer>
 #include <__type_traits/is_allocator.h>
+#include <__type_traits/is_same.h>
+#include <__type_traits/type_identity.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <limits>
 #include <stdexcept>
-#include <type_traits>
 #include <version>
 
 // standard-mandated includes
@@ -2456,6 +2457,7 @@ _LIBCPP_POP_MACROS
 #  include <functional>
 #  include <iosfwd>
 #  include <iterator>
+#  include <type_traits>
 #  include <typeinfo>
 #endif
 
