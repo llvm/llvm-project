@@ -3724,6 +3724,13 @@ CXIndex clang_createIndexWithOptions(const CXIndexOptions *options) {
   // if (options->Size >= offsetof(CXIndexOptions, RecentlyAddedMember))
   //   do_something(options->RecentlyAddedMember);
 
+  // An exception: if a new option is small enough, it can be squeezed into the
+  // /*Reserved*/ bits in CXIndexOptions. Since the default value of each option
+  // is guaranteed to be 0 and the callers are advised to zero out the struct,
+  // programs built against older libclang versions would implicitly set the new
+  // options to default values, which should keep the behavior of previous
+  // libclang versions and thus be backward-compatible.
+
   // If options->Size > sizeof(CXIndexOptions), the user may have set an option
   // we can't handle, in which case we return nullptr to report failure.
   // Replace `!=` with `>` here to support older struct versions. `!=` has the
