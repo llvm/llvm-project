@@ -188,7 +188,7 @@ bool DerivedTypeSpec::HasDefaultInitialization(bool ignoreAllocatable) const {
 }
 
 bool DerivedTypeSpec::HasDestruction() const {
-  if (!typeSymbol().get<DerivedTypeDetails>().finals().empty()) {
+  if (!FinalsForDerivedTypeInstantiation(*this).empty()) {
     return true;
   }
   DirectComponentIterator components{*this};
@@ -366,7 +366,7 @@ void DerivedTypeSpec::Instantiate(Scope &containingScope) {
     }
     newScope.set_instantiationContext(contextMessage);
   }
-  // Instantiate every non-parameter symbol from the original derived
+  // Instantiate nearly every non-parameter symbol from the original derived
   // type's scope into the new instance.
   auto restorer2{foldingContext.messages().SetContext(contextMessage)};
   if (PlumbPDTInstantiationDepth(&containingScope) > 100) {
