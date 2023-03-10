@@ -18,8 +18,7 @@
 #include "llvm/BinaryFormat/WasmTraits.h"
 #include <optional>
 
-namespace lld {
-namespace wasm {
+namespace lld::wasm {
 
 class InputSegment;
 
@@ -144,7 +143,6 @@ private:
 
 extern SymbolTable *symtab;
 
-} // namespace wasm
-} // namespace lld
+} // namespace lld::wasm
 
 #endif
