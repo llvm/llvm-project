@@ -212,7 +212,7 @@ static void HandleControl(CONTEXT &context, char ch, char next, int n) {
 // format validator gauntlet.
 template <typename CONTEXT>
 int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
-  int unlimitedLoopCheck{-1};
+  bool hitUnlimitedLoopEnd{false};
   // Do repetitions remain on an unparenthesized data edit?
   while (height_ > 1 && format_[stack_[height_ - 1].start] != '(') {
     offset_ = stack_[height_ - 1].start;
@@ -267,7 +267,6 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
       RUNTIME_CHECK(context, format_[stack_[height_].start] == '(');
       if (unlimited || height_ == 0) {
         stack_[height_].remaining = Iteration::unlimited;
-        unlimitedLoopCheck = offset_ - 1;
       } else if (repeat) {
         if (*repeat <= 0) {
           *repeat = 1; // error recovery
@@ -305,12 +304,13 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
               restart);
           return 0;
         }
-        if (offset_ == unlimitedLoopCheck) {
+        if (hitUnlimitedLoopEnd) {
           ReportBadFormat(context,
               "Unlimited repetition in FORMAT lacks data edit descriptors",
               restart);
           return 0;
         }
+        hitUnlimitedLoopEnd = true;
         offset_ = restart;
       } else if (stack_[height_ - 1].remaining-- > 0) {
         offset_ = restart;
