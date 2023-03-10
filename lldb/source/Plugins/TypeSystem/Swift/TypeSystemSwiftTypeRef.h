@@ -349,6 +349,10 @@ public:
   lldb::TypeSP LookupClangType(llvm::StringRef name_ref,
                                llvm::ArrayRef<CompilerContext> decl_context);
 
+  /// Attempts to convert a Clang type into a Swift type.
+  /// For example, int is converted to Int32.
+  CompilerType ConvertClangTypeToSwiftType(CompilerType clang_type) override;
+
 protected:
   /// Helper that creates an AST type from \p type.
   void *ReconstructType(lldb::opaque_compiler_type_t type);

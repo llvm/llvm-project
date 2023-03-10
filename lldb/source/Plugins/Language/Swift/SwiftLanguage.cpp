@@ -747,7 +747,6 @@ ExtractSwiftTypeFromCxxInteropType(CompilerType type, TypeSystemSwift &ts,
   //   static inline constexpr $sClassMangledNameHere __swift_mangled_name = 0;
   // }
 
-
   Log *log(GetLog(LLDBLog::DataFormatters));
   // This only makes sense for Clang types.
   auto tsc = type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
@@ -803,14 +802,21 @@ ExtractSwiftTypeFromCxxInteropType(CompilerType type, TypeSystemSwift &ts,
             return {};
 
           auto templated_type = type.GetTypeTemplateArgument(index);
-          return ExtractSwiftTypeFromCxxInteropType(templated_type, ts,
-                                                    runtime);
+          auto substituted_type =
+              ExtractSwiftTypeFromCxxInteropType(templated_type, ts, runtime);
+
+          // The generic type might also not be a user defined type which
+          // ExtractSwiftTypeFromCxxInteropType can find, but which is still
+          // convertible to Swift (for example, int -> Int32). Attempt to
+          // convert it to a Swift type.
+          if (!substituted_type)
+            substituted_type = ts.ConvertClangTypeToSwiftType(templated_type);
+          return substituted_type;
         });
     return bound_type;
   }
   return {};
 }
-
 
 /// Synthetic child that wraps a value object.
 class ValueObjectWrapperSyntheticChildren : public SyntheticChildren {
