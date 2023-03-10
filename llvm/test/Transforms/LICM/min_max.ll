@@ -1163,4 +1163,74 @@ exit:
   ret i32 %iv
 }
 
+; Do not optimize: comparison against different variant values.
+define i32 @test_ult_different_variants_neg(i32 %start_1, i32 %start_2, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_ult_different_variants_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV_1:%.*]] = phi i32 [ [[START_1:%.*]], [[ENTRY:%.*]] ], [ [[IV_1_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ [[START_2:%.*]], [[ENTRY]] ], [ [[IV_2_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[IV_1]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i32 [[IV_2]], [[INV_2:%.*]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = and i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_1_NEXT]] = add i32 [[IV_1]], 1
+; CHECK-NEXT:    [[IV_2_NEXT]] = add i32 [[IV_2]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_1_LCSSA:%.*]] = phi i32 [ [[IV_1]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_1_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv_1 = phi i32 [%start_1, %entry], [%iv_1.next, %loop]
+  %iv_2 = phi i32 [%start_2, %entry], [%iv_2.next, %loop]
+  %cmp_1 = icmp ult i32 %iv_1, %inv_1
+  %cmp_2 = icmp ult i32 %iv_2, %inv_2
+  %loop_cond = and i1 %cmp_1, %cmp_2
+  %iv_1.next = add i32 %iv_1, 1
+  %iv_2.next = add i32 %iv_2, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv_1
+}
+
+; Do not optimize: one of comparisons is against loop-variant.
+define i32 @test_ult_compare_against_variant_neg(i32 %start_1, i32 %start_2, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_ult_compare_against_variant_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV_1:%.*]] = phi i32 [ [[START_1:%.*]], [[ENTRY:%.*]] ], [ [[IV_1_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ [[START_2:%.*]], [[ENTRY]] ], [ [[IV_2_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[IV_1]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i32 [[IV_1]], [[IV_2]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = and i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_1_NEXT]] = add i32 [[IV_1]], 1
+; CHECK-NEXT:    [[IV_2_NEXT]] = add i32 [[IV_2]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_1_LCSSA:%.*]] = phi i32 [ [[IV_1]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_1_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv_1 = phi i32 [%start_1, %entry], [%iv_1.next, %loop]
+  %iv_2 = phi i32 [%start_2, %entry], [%iv_2.next, %loop]
+  %cmp_1 = icmp ult i32 %iv_1, %inv_1
+  %cmp_2 = icmp ult i32 %iv_1, %iv_2
+  %loop_cond = and i1 %cmp_1, %cmp_2
+  %iv_1.next = add i32 %iv_1, 1
+  %iv_2.next = add i32 %iv_2, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv_1
+}
+
 declare void @use(i1)
