@@ -15,10 +15,13 @@ public:
   };
   using promise_type = invoker_promise;
   invoker() {}
-  invoker(const invoker &) = delete;
-  invoker &operator=(const invoker &) = delete;
-  invoker(invoker &&) = delete;
-  invoker &operator=(invoker &&) = delete;
+  // TODO: implement RVO for get_return_object type matching
+  // function return type.
+  //
+  // invoker(const invoker &) = delete;
+  // invoker &operator=(const invoker &) = delete;
+  // invoker(invoker &&) = delete;
+  // invoker &operator=(invoker &&) = delete;
 };
 
 invoker f() {
