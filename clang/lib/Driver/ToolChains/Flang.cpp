@@ -252,6 +252,7 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   const Driver &D = TC.getDriver();
   ArgStringList CmdArgs;
+  DiagnosticsEngine &Diags = D.getDiags();
 
   // Invoke ourselves in -fc1 mode.
   CmdArgs.push_back("-fc1");
@@ -299,8 +300,20 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // to avoid warn_drv_unused_argument.
   Args.getLastArg(options::OPT_fcolor_diagnostics,
                   options::OPT_fno_color_diagnostics);
-  if (D.getDiags().getDiagnosticOptions().ShowColors)
+  if (Diags.getDiagnosticOptions().ShowColors)
     CmdArgs.push_back("-fcolor-diagnostics");
+
+  // LTO mode is parsed by the Clang driver library.
+  LTOKind LTOMode = D.getLTOMode(/* IsOffload */ false);
+  assert(LTOMode != LTOK_Unknown && "Unknown LTO mode.");
+  if (LTOMode == LTOK_Full)
+    CmdArgs.push_back("-flto=full");
+  else if (LTOMode == LTOK_Thin) {
+    Diags.Report(
+        Diags.getCustomDiagID(DiagnosticsEngine::Warning,
+                              "the option '-flto=thin' is a work in progress"));
+    CmdArgs.push_back("-flto=thin");
+  }
 
   // -fPIC and related options.
   addPicOptions(Args, CmdArgs);
