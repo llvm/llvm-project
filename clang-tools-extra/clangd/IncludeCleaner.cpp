@@ -15,6 +15,7 @@
 #include "SourceCode.h"
 #include "URI.h"
 #include "clang-include-cleaner/Analysis.h"
+#include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
 #include "support/Logger.h"
 #include "support/Path.h"
@@ -90,10 +91,10 @@ bool isFilteredByConfig(const Config &Cfg, llvm::StringRef HeaderPath) {
 }
 
 static bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
-                              const Config &Cfg) {
-  if (Inc.BehindPragmaKeep)
+                              const Config &Cfg,
+                              const include_cleaner::PragmaIncludes *PI) {
+  if (PI && PI->shouldKeep(Inc.HashLine + 1))
     return false;
-
   // FIXME(kirillbobyrev): We currently do not support the umbrella headers.
   // System headers are likely to be standard library headers.
   // Until we have good support for umbrella headers, don't warn about them.
@@ -104,10 +105,6 @@ static bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
   }
   assert(Inc.HeaderID);
   auto HID = static_cast<IncludeStructure::HeaderID>(*Inc.HeaderID);
-  // FIXME: Ignore the headers with IWYU export pragmas for now, remove this
-  // check when we have more precise tracking of exported headers.
-  if (AST.getIncludeStructure().hasIWYUExport(HID))
-    return false;
   auto FE = AST.getSourceManager().getFileManager().getFileRef(
       AST.getIncludeStructure().getRealPath(HID));
   assert(FE);
@@ -333,7 +330,7 @@ getUnused(ParsedAST &AST,
       continue;
     auto IncludeID = static_cast<IncludeStructure::HeaderID>(*MFI.HeaderID);
     bool Used = ReferencedFiles.contains(IncludeID);
-    if (!Used && !mayConsiderUnused(MFI, AST, Cfg)) {
+    if (!Used && !mayConsiderUnused(MFI, AST, Cfg, AST.getPragmaIncludes())) {
       dlog("{0} was not used, but is not eligible to be diagnosed as unused",
            MFI.Written);
       continue;
