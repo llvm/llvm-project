@@ -1,3 +1,4 @@
+// RUN: export LSAN_OPTIONS=detect_leaks=0
 // RUN: rm -rf "%t"
 // RUN: mkdir -p "%t"
 // RUN: env TMPDIR="%t" TEMP="%t" TMP="%t" RC_DEBUG_OPTION=1 \

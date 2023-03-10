@@ -2,9 +2,8 @@ add_flang_library(FIRAnalysis
   AliasAnalysis.cpp
 
   DEPENDS
-  FIRBuilder
   FIRDialect
-  FIRSupport
+  MLIRIR
 
   LINK_LIBS
   FIRBuilder

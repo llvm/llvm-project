@@ -19,7 +19,7 @@
 #include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "flang/Optimizer/Support/KindMapping.h"
+#include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "mlir/IR/BuiltinOps.h"
 
 namespace Fortran {
