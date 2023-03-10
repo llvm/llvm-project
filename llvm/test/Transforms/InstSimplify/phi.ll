@@ -153,7 +153,8 @@ EXIT:
   ret i8 %r
 }
 
-; FIXME: This is a miscompile.
+; Should not fold srem to -1 due to incorrect context instruction when
+; threading over phi.
 define i32 @pr61312() {
 ; CHECK-LABEL: @pr61312(
 ; CHECK-NEXT:  entry:
@@ -166,7 +167,8 @@ define i32 @pr61312() {
 ; CHECK-NEXT:    [[DEC]] = add nsw i32 [[A_0]], -1
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret i32 -1
+; CHECK-NEXT:    [[REM:%.*]] = srem i32 -1, [[A_0]]
+; CHECK-NEXT:    ret i32 [[REM]]
 ;
 entry:
   br label %for.cond
