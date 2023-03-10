@@ -551,7 +551,7 @@ public:
     ID.ContextHash = std::move(TUDeps.ID.ContextHash);
     ID.FileDeps = std::move(TUDeps.FileDeps);
     ID.ModuleDeps = std::move(TUDeps.ClangModuleDeps);
-    ID.CASFileSystemRootID = TUDeps.CASFileSystemRootID;
+    ID.CASFileSystemRootID = std::move(TUDeps.CASFileSystemRootID);
     ID.DriverCommandLine = std::move(TUDeps.DriverCommandLine);
     ID.Commands = std::move(TUDeps.Commands);
 
@@ -646,7 +646,7 @@ public:
               {"command-line", Cmd.Arguments},
           };
           if (I.CASFileSystemRootID)
-            O.try_emplace("casfs-root-id", I.CASFileSystemRootID->toString());
+            O.try_emplace("casfs-root-id", I.CASFileSystemRootID);
           Commands.push_back(std::move(O));
         }
       } else {
@@ -659,7 +659,7 @@ public:
             {"command-line", I.DriverCommandLine},
         };
         if (I.CASFileSystemRootID)
-          O.try_emplace("casfs-root-id", I.CASFileSystemRootID->toString());
+          O.try_emplace("casfs-root-id", I.CASFileSystemRootID);
         Commands.push_back(std::move(O));
       }
       TUs.push_back(Object{
@@ -699,7 +699,7 @@ private:
     std::string ContextHash;
     std::vector<std::string> FileDeps;
     std::vector<ModuleID> ModuleDeps;
-    std::optional<llvm::cas::CASID> CASFileSystemRootID;
+    std::optional<std::string> CASFileSystemRootID;
     std::vector<std::string> DriverCommandLine;
     std::vector<Command> Commands;
   };

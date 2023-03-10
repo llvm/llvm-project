@@ -84,65 +84,6 @@ protected:
 
 llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
     const std::vector<std::string> &CommandLine, StringRef CWD) {
-  /// Prints out all of the gathered dependencies into a string.
-  class MakeDependencyPrinterConsumer : public DependencyConsumer {
-  public:
-    void handleBuildCommand(Command) override {}
-
-    void
-    handleDependencyOutputOpts(const DependencyOutputOptions &Opts) override {
-      this->Opts = std::make_unique<DependencyOutputOptions>(Opts);
-    }
-
-    void handleFileDependency(StringRef File) override {
-      Dependencies.push_back(std::string(File));
-    }
-
-    void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) override {
-      // Same as `handleModuleDependency`.
-    }
-
-    void handleModuleDependency(ModuleDeps MD) override {
-      // These are ignored for the make format as it can't support the full
-      // set of deps, and handleFileDependency handles enough for implicitly
-      // built modules to work.
-    }
-
-    void handleContextHash(std::string Hash) override {}
-    void handleCASFileSystemRootID(cas::CASID) override {}
-
-    std::string lookupModuleOutput(const ModuleID &ID,
-                                   ModuleOutputKind Kind) override {
-      llvm::report_fatal_error("unexpected call to lookupModuleOutput");
-    }
-
-    void printDependencies(std::string &S) {
-      assert(Opts && "Handled dependency output options.");
-
-      class DependencyPrinter : public DependencyFileGenerator {
-      public:
-        DependencyPrinter(DependencyOutputOptions &Opts,
-                          ArrayRef<std::string> Dependencies)
-            : DependencyFileGenerator(Opts) {
-          for (const auto &Dep : Dependencies)
-            addDependency(Dep);
-        }
-
-        void printDependencies(std::string &S) {
-          llvm::raw_string_ostream OS(S);
-          outputDependencyFile(OS);
-        }
-      };
-
-      DependencyPrinter Generator(*Opts, Dependencies);
-      Generator.printDependencies(S);
-    }
-
-  private:
-    std::unique_ptr<DependencyOutputOptions> Opts;
-    std::vector<std::string> Dependencies;
-  };
-
   MakeDependencyPrinterConsumer Consumer;
   CallbackActionController Controller(nullptr);
   auto Result =
@@ -186,8 +127,7 @@ public:
                                    "failed to get casfs");
   }
 
-  GetDependencyTree(llvm::cas::CachingOnDiskFileSystem &FS)
-      : FS(FS) {}
+  GetDependencyTree(llvm::cas::CachingOnDiskFileSystem &FS) : FS(FS) {}
 
 private:
   llvm::cas::CachingOnDiskFileSystem &FS;
@@ -202,7 +142,8 @@ DependencyScanningTool::getDependencyTree(
   GetDependencyTree Consumer(*Worker.getCASFS());
   CASFSActionController Controller(nullptr, *Worker.getCASFS(),
                                    std::move(PrefixMapping));
-  auto Result = Worker.computeDependencies(CWD, CommandLine, Consumer, Controller);
+  auto Result =
+      Worker.computeDependencies(CWD, CommandLine, Consumer, Controller);
   if (Result)
     return std::move(Result);
   return Consumer.getTree();
@@ -217,8 +158,8 @@ DependencyScanningTool::getDependencyTreeFromCompilerInvocation(
   CASFSActionController Controller(nullptr, *Worker.getCASFS(),
                                    std::move(PrefixMapping));
   Worker.computeDependenciesFromCompilerInvocation(
-      std::move(Invocation), CWD, Consumer, Controller, DiagsConsumer, VerboseOS,
-      DiagGenerationAsCompilation);
+      std::move(Invocation), CWD, Consumer, Controller, DiagsConsumer,
+      VerboseOS, DiagGenerationAsCompilation);
   return Consumer.getTree();
 }
 
@@ -226,8 +167,9 @@ namespace {
 class IncludeTreeActionController : public CallbackActionController {
 public:
   IncludeTreeActionController(cas::ObjectStore &DB,
-                        const DepscanPrefixMapping &PrefixMapping)
-      : CallbackActionController(nullptr), DB(DB), PrefixMapping(PrefixMapping) {}
+                              const DepscanPrefixMapping &PrefixMapping)
+      : CallbackActionController(nullptr), DB(DB),
+        PrefixMapping(PrefixMapping) {}
 
   Expected<cas::IncludeTreeRoot> getIncludeTree();
 
@@ -311,8 +253,8 @@ addReversePrefixMappingFileSystem(const llvm::PrefixMapper &PrefixMapper,
   ScanInstance.getFileManager().setVirtualFileSystem(std::move(FS));
 }
 
-Error IncludeTreeActionController::initialize(CompilerInstance &ScanInstance,
-                                        CompilerInvocation &NewInvocation) {
+Error IncludeTreeActionController::initialize(
+    CompilerInstance &ScanInstance, CompilerInvocation &NewInvocation) {
   if (Error E =
           PrefixMapping.configurePrefixMapper(NewInvocation, PrefixMapper))
     return E;
@@ -361,9 +303,10 @@ void IncludeTreeActionController::enteredInclude(Preprocessor &PP, FileID FID) {
   IncludeStack.push_back({FI.getFileCharacteristic(), *FileRef, {}, {}});
 }
 
-void IncludeTreeActionController::exitedInclude(Preprocessor &PP, FileID IncludedBy,
-                                          FileID Include,
-                                          SourceLocation ExitLoc) {
+void IncludeTreeActionController::exitedInclude(Preprocessor &PP,
+                                                FileID IncludedBy,
+                                                FileID Include,
+                                                SourceLocation ExitLoc) {
   if (hasErrorOccurred())
     return;
 
@@ -380,7 +323,7 @@ void IncludeTreeActionController::exitedInclude(Preprocessor &PP, FileID Include
 }
 
 void IncludeTreeActionController::handleHasIncludeCheck(Preprocessor &PP,
-                                                  bool Result) {
+                                                        bool Result) {
   if (hasErrorOccurred())
     return;
 
@@ -388,7 +331,7 @@ void IncludeTreeActionController::handleHasIncludeCheck(Preprocessor &PP,
 }
 
 Error IncludeTreeActionController::finalize(CompilerInstance &ScanInstance,
-                                      CompilerInvocation &NewInvocation) {
+                                            CompilerInvocation &NewInvocation) {
   FileManager &FM = ScanInstance.getFileManager();
 
   auto addFile = [&](StringRef FilePath,
@@ -489,9 +432,8 @@ IncludeTreeActionController::getObjectForFile(Preprocessor &PP, FileID FID) {
   return *FileRef;
 }
 
-Expected<cas::ObjectRef>
-IncludeTreeActionController::getObjectForFileNonCached(FileManager &FM,
-                                                 const SrcMgr::FileInfo &FI) {
+Expected<cas::ObjectRef> IncludeTreeActionController::getObjectForFileNonCached(
+    FileManager &FM, const SrcMgr::FileInfo &FI) {
   const FileEntry *FE = FI.getContentCache().OrigEntry;
   assert(FE);
 
@@ -517,7 +459,8 @@ IncludeTreeActionController::getObjectForBuffer(const SrcMgr::FileInfo &FI) {
 }
 
 Expected<cas::ObjectRef>
-IncludeTreeActionController::addToFileList(FileManager &FM, const FileEntry *FE) {
+IncludeTreeActionController::addToFileList(FileManager &FM,
+                                           const FileEntry *FE) {
   StringRef Filename = FE->getName();
   llvm::ErrorOr<std::optional<cas::ObjectRef>> CASContents =
       FM.getObjectRefForFileContent(Filename);
@@ -557,7 +500,7 @@ IncludeTreeActionController::getCASTreeForFileIncludes(FilePPState &&PPState) {
 
 Expected<cas::IncludeFile>
 IncludeTreeActionController::createIncludeFile(StringRef Filename,
-                                         cas::ObjectRef Contents) {
+                                               cas::ObjectRef Contents) {
   SmallString<256> MappedPath;
   if (!PrefixMapper.empty()) {
     PrefixMapper.map(Filename, MappedPath);
@@ -588,7 +531,8 @@ Expected<cas::IncludeTreeRoot> DependencyScanningTool::getIncludeTree(
     StringRef CWD, const DepscanPrefixMapping &PrefixMapping) {
   EmptyDependencyConsumer Consumer;
   IncludeTreeActionController Controller(DB, PrefixMapping);
-  llvm::Error Result = Worker.computeDependencies(CWD, CommandLine, Consumer, Controller);
+  llvm::Error Result =
+      Worker.computeDependencies(CWD, CommandLine, Consumer, Controller);
   if (Result)
     return std::move(Result);
   return Controller.getIncludeTree();
@@ -603,8 +547,8 @@ DependencyScanningTool::getIncludeTreeFromCompilerInvocation(
   EmptyDependencyConsumer Consumer;
   IncludeTreeActionController Controller(DB, PrefixMapping);
   Worker.computeDependenciesFromCompilerInvocation(
-      std::move(Invocation), CWD, Consumer, Controller, DiagsConsumer, VerboseOS,
-      DiagGenerationAsCompilation);
+      std::move(Invocation), CWD, Consumer, Controller, DiagsConsumer,
+      VerboseOS, DiagGenerationAsCompilation);
   return Controller.getIncludeTree();
 }
 
@@ -619,8 +563,6 @@ llvm::Expected<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
         : Filename(Command.Filename), Rule(Rule) {
       Rule.PrimaryOutput = Command.Output;
     }
-
-    void handleCASFileSystemRootID(cas::CASID ID) override {}
 
     void handleProvidedAndRequiredStdCXXModules(
         std::optional<P1689ModuleInfo> Provided,
@@ -672,7 +614,8 @@ DependencyScanningTool::getTranslationUnitDependencies(
     LookupModuleOutputCallback LookupModuleOutput,
     DepscanPrefixMapping PrefixMapping) {
   FullDependencyConsumer Consumer(AlreadySeen);
-  auto Controller = createActionController(LookupModuleOutput, std::move(PrefixMapping));
+  auto Controller =
+      createActionController(LookupModuleOutput, std::move(PrefixMapping));
   llvm::Error Result =
       Worker.computeDependencies(CWD, CommandLine, Consumer, *Controller);
   if (Result)
@@ -686,7 +629,8 @@ llvm::Expected<ModuleDepsGraph> DependencyScanningTool::getModuleDependencies(
     LookupModuleOutputCallback LookupModuleOutput,
     DepscanPrefixMapping PrefixMapping) {
   FullDependencyConsumer Consumer(AlreadySeen);
-  auto Controller = createActionController(LookupModuleOutput, std::move(PrefixMapping));
+  auto Controller =
+      createActionController(LookupModuleOutput, std::move(PrefixMapping));
   llvm::Error Result = Worker.computeDependencies(CWD, CommandLine, Consumer,
                                                   *Controller, ModuleName);
   if (Result)
@@ -733,7 +677,6 @@ ModuleDepsGraph FullDependencyConsumer::takeModuleGraphDeps() {
 }
 
 CallbackActionController::~CallbackActionController() {}
-
 
 std::unique_ptr<DependencyActionController>
 DependencyScanningTool::createActionController(
@@ -890,8 +833,8 @@ Error CASFSActionController::finalizeModuleBuild(
   return Error::success();
 }
 
-Error CASFSActionController::finalizeModuleInvocation(
-    CompilerInvocation &CI, const ModuleDeps &MD) {
+Error CASFSActionController::finalizeModuleInvocation(CompilerInvocation &CI,
+                                                      const ModuleDeps &MD) {
   if (auto ID = MD.CASFileSystemRootID) {
     configureInvocationForCaching(CI, CASOpts, ID->toString(),
                                   CacheFS.getCurrentWorkingDirectory().get(),
