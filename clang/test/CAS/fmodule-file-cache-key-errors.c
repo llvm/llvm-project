@@ -16,11 +16,31 @@
 // RUN:   -fcache-compile-job -Rcompile-job-cache &> %t/invalid.txt
 // RUN: cat %t/invalid.txt | FileCheck %s -check-prefix=INVALID
 
-// INVALID: error: option '-fmodule-file-cache-key' should be of the form <path>=<key>
+// INVALID: error: unknown argument: '-fmodule-file-cache-key=INVALID'
 
 // RUN: not %clang_cc1 -triple x86_64-apple-macos11 \
 // RUN:   -fmodules -fno-implicit-modules \
-// RUN:   -fmodule-file-cache-key=PATH=KEY \
+// RUN:   -fmodule-file-cache-key INVALID \
+// RUN:   -fsyntax-only %t/tu.c \
+// RUN:   -fcas-path %t.cas -fcas-fs @%t/casid \
+// RUN:   -fcache-compile-job -Rcompile-job-cache &> %t/invalid2.txt
+// RUN: FileCheck %s -check-prefix=INVALID2 -input-file=%t/invalid2.txt
+
+// INVALID2: error: CAS cannot load module with key '-fsyntax-only' from -fmodule-file-cache-key
+
+// RUN: not %clang_cc1 -triple x86_64-apple-macos11 \
+// RUN:   -fmodules -fno-implicit-modules \
+// RUN:   -fmodule-file-cache-key INVALID ALSO_INVALID MORE_INVALID \
+// RUN:   -fsyntax-only %t/tu.c \
+// RUN:   -fcas-path %t.cas -fcas-fs @%t/casid \
+// RUN:   -fcache-compile-job -Rcompile-job-cache &> %t/invalid3.txt
+// RUN: FileCheck %s -check-prefix=INVALID3 -input-file=%t/invalid3.txt
+
+// INVALID3: error: error reading 'MORE_INVALID'
+
+// RUN: not %clang_cc1 -triple x86_64-apple-macos11 \
+// RUN:   -fmodules -fno-implicit-modules \
+// RUN:   -fmodule-file-cache-key PATH KEY \
 // RUN:   -fsyntax-only %t/tu.c \
 // RUN:   -fcas-path %t.cas -fcas-fs @%t/casid \
 // RUN:   -fcache-compile-job -Rcompile-job-cache &> %t/bad_key.txt
@@ -28,7 +48,7 @@
 
 // BAD_KEY: error: CAS cannot load module with key 'KEY' from -fmodule-file-cache-key: invalid cas-id 'KEY'
 
-// RUN: echo -n '-fmodule-file-cache-key=PATH=' > %t/bad_key2.rsp
+// RUN: echo -n '-fmodule-file-cache-key PATH ' > %t/bad_key2.rsp
 // RUN: cat %t/casid >> %t/bad_key2.rsp
 
 // RUN: not %clang_cc1 -triple x86_64-apple-macos11 \
@@ -56,7 +76,7 @@
 
 // RUN: llvm-cas --cas %t.cas_2 --import --upstream-cas %t.cas @%t/A.key
 
-// RUN: echo -n '-fmodule-file-cache-key=PATH=' > %t/not_in_cache.rsp
+// RUN: echo -n '-fmodule-file-cache-key PATH ' > %t/not_in_cache.rsp
 // RUN: cat %t/A.key >> %t/not_in_cache.rsp
 
 // RUN: not %clang_cc1 -triple x86_64-apple-macos11 \

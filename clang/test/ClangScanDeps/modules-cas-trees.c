@@ -80,7 +80,9 @@
 // CHECK-NEXT:         "[[LEFT_PCM:.*outputs.*Left-.*\.pcm]]"
 // CHECK:              "-fcache-compile-job"
 // CHECK:              "-emit-module"
-// CHECK:              "-fmodule-file-cache-key=[[TOP_PCM:.*outputs.*Top-.*\.pcm]]=[[TOP_CACHE_KEY:llvmcas://[[:xdigit:]]+]]"
+// CHECK:              "-fmodule-file-cache-key"
+// CHECK:              "[[TOP_PCM:.*outputs.*Top-.*\.pcm]]"
+// CHECK:              "[[TOP_CACHE_KEY:llvmcas://[[:xdigit:]]+]]"
 // CHECK:              "-fmodule-file={{(Top=)?}}[[TOP_PCM]]"
 // CHECK:            ]
 // CHECK:            "file-deps": [
@@ -106,7 +108,9 @@
 // CHECK-NEXT:         "[[RIGHT_PCM:.*outputs.*Right-.*\.pcm]]"
 // CHECK:              "-fcache-compile-job"
 // CHECK:              "-emit-module"
-// CHECK:              "-fmodule-file-cache-key=[[TOP_PCM]]=[[TOP_CACHE_KEY:llvmcas://[[:xdigit:]]+]]"
+// CHECK:              "-fmodule-file-cache-key"
+// CHECK:              "[[TOP_PCM]]"
+// CHECK:              "[[TOP_CACHE_KEY:llvmcas://[[:xdigit:]]+]]"
 // CHECK:              "-fmodule-file={{(Top=)?}}[[TOP_PCM]]"
 // CHECK:            ]
 // CHECK:            "file-deps": [
@@ -156,8 +160,12 @@
 // CHECK:                  "-fcas-fs"
 // CHECK-NEXT:             "[[TU_ROOT_ID]]"
 // CHECK:                  "-fcache-compile-job"
-// CHECK:                  "-fmodule-file-cache-key=[[LEFT_PCM]]={{llvmcas://[[:xdigit:]]+}}"
-// CHECK:                  "-fmodule-file-cache-key=[[RIGHT_PCM]]={{llvmcas://[[:xdigit:]]+}}"
+// CHECK:                  "-fmodule-file-cache-key"
+// CHECK:                  "[[LEFT_PCM]]"
+// CHECK:                  "{{llvmcas://[[:xdigit:]]+}}"
+// CHECK:                  "-fmodule-file-cache-key"
+// CHECK:                  "[[RIGHT_PCM]]"
+// CHECK:                  "{{llvmcas://[[:xdigit:]]+}}"
 // CHECK:                  "-fmodule-file={{(Left=)?}}[[LEFT_PCM]]"
 // CHECK:                  "-fmodule-file={{(Right=)?}}[[RIGHT_PCM]]"
 // CHECK:                ]
