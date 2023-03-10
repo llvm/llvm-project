@@ -17,7 +17,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Optimizer/Support/FIRContext.h"
+#include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"

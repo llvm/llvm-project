@@ -22,8 +22,7 @@
 using namespace llvm;
 using namespace llvm::wasm;
 
-namespace lld {
-namespace wasm {
+namespace lld::wasm {
 
 OutStruct out;
 
@@ -922,5 +921,4 @@ void BuildIdSection::writeBuildId(llvm::ArrayRef<uint8_t> buf) {
   memcpy(hashPlaceholderPtr, buf.data(), hashSize);
 }
 
-} // namespace wasm
-} // namespace lld
+} // namespace wasm::lld

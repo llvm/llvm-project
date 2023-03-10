@@ -18,8 +18,8 @@
 #include "Target.h"
 #include "flang/Optimizer/Builder/Todo.h" // remove when TODO's are done
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Optimizer/Support/FIRContext.h"
-#include "flang/Optimizer/Support/KindMapping.h"
+#include "flang/Optimizer/Dialect/Support/FIRContext.h"
+#include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "llvm/Support/Debug.h"
 

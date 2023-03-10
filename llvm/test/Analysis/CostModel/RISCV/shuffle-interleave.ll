@@ -4,7 +4,7 @@
 define <8 x i8> @interleave2_v8i8(<4 x i8> %v0, <4 x i8> %v1) {
 ; CHECK-LABEL: 'interleave2_v8i8'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %concat = shufflevector <4 x i8> %v0, <4 x i8> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %res = shufflevector <8 x i8> %concat, <8 x i8> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = shufflevector <8 x i8> %concat, <8 x i8> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i8> %res
 ;
   %concat = shufflevector <4 x i8> %v0, <4 x i8> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -15,7 +15,7 @@ define <8 x i8> @interleave2_v8i8(<4 x i8> %v0, <4 x i8> %v1) {
 define <8 x i32> @interleave2_v8i32(<4 x i32> %v0, <4 x i32> %v1) {
 ; CHECK-LABEL: 'interleave2_v8i32'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %concat = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %res = shufflevector <8 x i32> %concat, <8 x i32> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res = shufflevector <8 x i32> %concat, <8 x i32> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %res
 ;
   %concat = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
