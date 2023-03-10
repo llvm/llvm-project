@@ -234,8 +234,9 @@ int RISCVLoadFPImm::getLoadFPImm(uint8_t Sign, uint8_t Exp, uint8_t Mantissa) {
     return 0;
 
   if (Sign == 0b0) {
-    auto EMI = llvm::find(LoadFPImmArr, std::make_pair(Exp, Mantissa));
-    if (EMI != std::end(LoadFPImmArr))
+    auto EMI = llvm::lower_bound(LoadFPImmArr, std::make_pair(Exp, Mantissa));
+    if (EMI != std::end(LoadFPImmArr) && EMI->first == Exp &&
+        EMI->second == Mantissa)
       return std::distance(std::begin(LoadFPImmArr), EMI) + 1;
   }
 
