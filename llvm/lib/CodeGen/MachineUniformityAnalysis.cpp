@@ -75,8 +75,6 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::pushUsers(
     Register Reg) {
   const auto &RegInfo = F.getRegInfo();
   for (MachineInstr &UserInstr : RegInfo.use_instructions(Reg)) {
-    if (isAlwaysUniform(UserInstr))
-      continue;
     if (markDivergent(UserInstr))
       Worklist.push_back(&UserInstr);
   }
