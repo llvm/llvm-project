@@ -32,7 +32,7 @@ struct VPlanTransforms {
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes.
   static void
-  VPInstructionsToVPRecipes(Loop *OrigLoop, VPlanPtr &Plan,
+  VPInstructionsToVPRecipes(VPlanPtr &Plan,
                             function_ref<const InductionDescriptor *(PHINode *)>
                                 GetIntOrFpInductionDescriptor,
                             SmallPtrSetImpl<Instruction *> &DeadInstructions,
