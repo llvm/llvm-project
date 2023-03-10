@@ -161,8 +161,6 @@ private:
   std::map<std::pair<SourceName, const Symbol *>, SymbolRef> moduleProcs_;
   // Collection of symbols with global names, BIND(C) or otherwise
   std::map<std::string, SymbolRef> globalNames_;
-  // Derived types that have defined input/output procedures
-  std::vector<TypeWithDefinedIo> seenDefinedIoTypes_;
 };
 
 class DistinguishabilityHelper {
@@ -2428,24 +2426,32 @@ bool CheckHelper::CheckDioDummyIsData(
 
 void CheckHelper::CheckAlreadySeenDefinedIo(const DerivedTypeSpec &derivedType,
     GenericKind::DefinedIo ioKind, const Symbol &proc, const Symbol &generic) {
-  for (TypeWithDefinedIo definedIoType : seenDefinedIoTypes_) {
-    // It's okay to have two or more distinct derived type I/O procedures
-    // for the same type if they're coming from distinct non-type-bound
-    // interfaces.  (The non-type-bound interfaces would have been merged into
-    // a single generic if both were visible in the same scope.)
-    if (derivedType == definedIoType.type && ioKind == definedIoType.ioKind &&
-        proc != definedIoType.proc &&
-        (generic.owner().IsDerivedType() ||
-            definedIoType.generic.owner().IsDerivedType())) {
-      SayWithDeclaration(proc, definedIoType.proc.name(),
-          "Derived type '%s' already has defined input/output procedure"
-          " '%s'"_err_en_US,
-          derivedType.name(), GenericKind::AsFortran(ioKind));
-      return;
+  // Check for conflict between non-type-bound UDDTIO and type-bound generics.
+  // It's okay to have two or more distinct derived type I/O procedures
+  // for the same type if they're coming from distinct non-type-bound
+  // interfaces.  (The non-type-bound interfaces would have been merged into
+  // a single generic -- with errors where indistinguishable --  if both were
+  // visible in the same scope.)
+  if (generic.owner().IsDerivedType()) {
+    return;
+  }
+  if (const Scope * dtScope{derivedType.scope()}) {
+    if (auto iter{dtScope->find(generic.name())}; iter != dtScope->end()) {
+      for (auto specRef : iter->second->get<GenericDetails>().specificProcs()) {
+        const Symbol &specific{specRef->get<ProcBindingDetails>().symbol()};
+        if (specific == proc) { // unambiguous, accept
+          continue;
+        }
+        if (const auto *specDT{GetDtvArgDerivedType(specific)};
+            specDT && evaluate::AreSameDerivedType(derivedType, *specDT)) {
+          SayWithDeclaration(*specRef, proc.name(),
+              "Derived type '%s' has conflicting type-bound input/output procedure '%s'"_err_en_US,
+              derivedType.name(), GenericKind::AsFortran(ioKind));
+          return;
+        }
+      }
     }
   }
-  seenDefinedIoTypes_.emplace_back(
-      TypeWithDefinedIo{derivedType, ioKind, proc, generic});
 }
 
 void CheckHelper::CheckDioDummyIsDerived(const Symbol &subp, const Symbol &arg,

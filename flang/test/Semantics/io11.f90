@@ -391,7 +391,7 @@ contains
 end module
 
 module m18
-  ! Test the same defined input/output procedure specified as a type-bound 
+  ! Test the same defined input/output procedure specified as a type-bound
   ! procedure and as a generic
   type t
     integer c
@@ -435,7 +435,7 @@ contains
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
   end subroutine
-  !ERROR: Derived type 't' already has defined input/output procedure 'read(unformatted)'
+  !ERROR: Derived type 't' has conflicting type-bound input/output procedure 'read(unformatted)'
   subroutine unformattedReadProc(dtv,unit,iostat,iomsg)
     class(t),intent(inout) :: dtv
     integer,intent(in) :: unit
@@ -499,7 +499,7 @@ contains
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
   end subroutine
-  !ERROR: Derived type 't' already has defined input/output procedure 'read(unformatted)'
+  !ERROR: Derived type 't' has conflicting type-bound input/output procedure 'read(unformatted)'
   subroutine unformattedReadProc1(dtv,unit,iostat,iomsg)
     class(t(4)),intent(inout) :: dtv
     integer,intent(in) :: unit
@@ -510,7 +510,7 @@ contains
 end module
 
 module m22
-  ! Test read and write defined input/output procedures specified as a 
+  ! Test read and write defined input/output procedures specified as a
   ! type-bound procedure and as a generic for the same derived type with a
   ! KIND type parameter where they have different values
   type t(typeParam)
@@ -542,10 +542,10 @@ end module
 
 module m23
   type t(typeParam)
-  ! Test read and write defined input/output procedures specified as a 
+  ! Test read and write defined input/output procedures specified as a
   ! type-bound procedure and as a generic for the same derived type with a
-  ! LEN type parameter where they have different values
-    integer, len :: typeParam = 4
+  ! KIND type parameter where they have different values
+    integer, kind :: typeParam = 4
     integer c
   contains
     procedure :: unformattedReadProc
@@ -556,7 +556,7 @@ module m23
   end interface
 contains
   subroutine unformattedReadProc(dtv,unit,iostat,iomsg)
-    class(t(*)),intent(inout) :: dtv
+    class(t(2)),intent(inout) :: dtv
     integer,intent(in) :: unit
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
@@ -571,10 +571,42 @@ contains
   end subroutine
 end module
 
+module m23a
+  type t(typeParam)
+  ! Test read and write defined input/output procedures specified as a
+  ! type-bound procedure and as a generic for the same derived type with a
+  ! KIND type parameter where they have the same value
+    integer, kind :: typeParam = 4
+    integer c
+  contains
+    procedure :: unformattedReadProc
+    generic :: read(unformatted) => unformattedReadProc
+  end type
+  interface read(unformatted)
+    module procedure unformattedReadProc1
+  end interface
+contains
+  subroutine unformattedReadProc(dtv,unit,iostat,iomsg)
+    class(t),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+  end subroutine
+  !ERROR: Derived type 't' has conflicting type-bound input/output procedure 'read(unformatted)'
+  subroutine unformattedReadProc1(dtv,unit,iostat,iomsg)
+    class(t(4)),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+  end subroutine
+end module
+
 module m24
   ! Test read and write defined input/output procedures specified as a 
   ! type-bound procedure and as a generic for the same derived type with a
-  ! LEN type parameter where they have the same value
+  ! LEN type parameter where they are both assumed
   type t(typeParam)
     integer, len :: typeParam = 4
     integer c
@@ -593,7 +625,7 @@ contains
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
   end subroutine
-  !ERROR: Derived type 't' already has defined input/output procedure 'read(unformatted)'
+  !ERROR: Derived type 't' has conflicting type-bound input/output procedure 'read(unformatted)'
   subroutine unformattedReadProc1(dtv,unit,iostat,iomsg)
     class(t(*)),intent(inout) :: dtv
     integer,intent(in) :: unit

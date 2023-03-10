@@ -631,5 +631,20 @@ bool HasDefinedIo(
 std::forward_list<std::string> GetAllNames(
     const SemanticsContext &, const SourceName &);
 
+// Determines the derived type of a procedure's initial "dtv" dummy argument,
+// assuming that the procedure is a specific procedure of a user-defined
+// derived type I/O generic interface,
+const DerivedTypeSpec *GetDtvArgDerivedType(const Symbol &);
+
+// Locates a non-type-bound generic interface in the enclosing scopes for a
+// given user-defined derived type I/O operation, given a specific derived type
+// spec. Intended for use when lowering I/O data list items to identify a remote
+// or dynamic non-type-bound UDDTIO subroutine so that it can be passed to the
+// I/O runtime's NonTypeBoundDefinedIo() API.
+std::pair<const Symbol *, bool /*isPolymorphic*/> FindNonTypeBoundDefinedIo(
+    const SemanticsContext, const parser::OutputItem &, bool isFormatted);
+std::pair<const Symbol *, bool /*isPolymorphic*/> FindNonTypeBoundDefinedIo(
+    const SemanticsContext, const parser::InputItem &, bool isFormatted);
+
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_
