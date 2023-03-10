@@ -18,9 +18,9 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
-#include "flang/Optimizer/Support/FIRContext.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace hlfir {
