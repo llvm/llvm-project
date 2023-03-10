@@ -58,6 +58,7 @@ static cl::opt<bool> ViewBFIAfter("fs-viewbfi-after", cl::Hidden,
                                   cl::init(false),
                                   cl::desc("View BFI after MIR loader"));
 
+extern cl::opt<bool> ImprovedFSDiscriminator;
 char MIRProfileLoaderPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(MIRProfileLoaderPass, DEBUG_TYPE,
@@ -165,6 +166,11 @@ protected:
   unsigned HighBit;
 
   bool ProfileIsValid = true;
+  ErrorOr<uint64_t> getInstWeight(const MachineInstr &MI) override {
+    if (ImprovedFSDiscriminator && MI.isMetaInstruction())
+      return std::error_code();
+    return getInstWeightImpl(MI);
+  }
 };
 
 template <>
