@@ -231,9 +231,9 @@ define void @vector_reductions(float %0, <8 x float> %1, <8 x i32> %2) {
   %4 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %2)
   ; CHECK: "llvm.intr.vector.reduce.and"(%{{.*}}) : (vector<8xi32>) -> i32
   %5 = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> %2)
-  ; CHECK: "llvm.intr.vector.reduce.fmax"(%{{.*}}) : (vector<8xf32>) -> f32
+  ; CHECK: llvm.intr.vector.reduce.fmax(%{{.*}}) : (vector<8xf32>) -> f32
   %6 = call float @llvm.vector.reduce.fmax.v8f32(<8 x float> %1)
-  ; CHECK: "llvm.intr.vector.reduce.fmin"(%{{.*}}) : (vector<8xf32>) -> f32
+  ; CHECK: llvm.intr.vector.reduce.fmin(%{{.*}}) : (vector<8xf32>) -> f32
   %7 = call float @llvm.vector.reduce.fmin.v8f32(<8 x float> %1)
   ; CHECK: "llvm.intr.vector.reduce.mul"(%{{.*}}) : (vector<8xi32>) -> i32
   %8 = call i32 @llvm.vector.reduce.mul.v8i32(<8 x i32> %2)
