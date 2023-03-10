@@ -20,6 +20,7 @@
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -334,8 +335,8 @@ struct ConvertCIRToLLVMPass
     : public mlir::PassWrapper<ConvertCIRToLLVMPass,
                                mlir::OperationPass<mlir::ModuleOp>> {
   void getDependentDialects(mlir::DialectRegistry &registry) const override {
-    registry.insert<mlir::BuiltinDialect, mlir::LLVM::LLVMDialect,
-                    mlir::func::FuncDialect>();
+    registry.insert<mlir::BuiltinDialect, mlir::DLTIDialect,
+                    mlir::LLVM::LLVMDialect, mlir::func::FuncDialect>();
   }
   void runOnOperation() final;
 

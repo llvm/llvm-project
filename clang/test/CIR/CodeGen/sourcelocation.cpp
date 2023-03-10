@@ -17,7 +17,7 @@ int s0(int a, int b) {
 // CHECK: #loc6 = loc("{{.*}}sourcelocation.cpp":4:19)
 // CHECK: #loc21 = loc(fused[#loc3, #loc4])
 // CHECK: #loc22 = loc(fused[#loc5, #loc6])
-// CHECK: module attributes {cir.sob = #cir.signed_overflow_behavior<undefined>} {
+// CHECK: module attributes {cir.sob = #cir.signed_overflow_behavior<undefined>
 // CHECK:   cir.func @_Z2s0ii(%arg0: i32 loc(fused[#loc3, #loc4]), %arg1: i32 loc(fused[#loc5, #loc6])) -> i32 {
 // CHECK:     %0 = cir.alloca i32, cir.ptr <i32>, ["a", init] {alignment = 4 : i64} loc(#loc21)
 // CHECK:     %1 = cir.alloca i32, cir.ptr <i32>, ["b", init] {alignment = 4 : i64} loc(#loc22)
