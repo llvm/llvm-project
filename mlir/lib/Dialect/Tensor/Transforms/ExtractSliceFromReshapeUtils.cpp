@@ -112,9 +112,7 @@ tensor::ExtractSliceFromCollapseHelper::create(OpBuilder &b,
   // Materialize the output shape of the collapse_shape operation. This will
   // create IR describing the output shape in terms of the input shape.
   ReifiedRankedShapedTypeDims reifiedShapes;
-  ReifyRankedShapedTypeOpInterface reifyShapedTypeInterface =
-      dyn_cast<ReifyRankedShapedTypeOpInterface>(op.getOperation());
-  if (failed(reifyShapedTypeInterface.reifyResultShapes(b, reifiedShapes)))
+  if (failed(reifyResultShapes(b, op, reifiedShapes)))
     return failure();
   SmallVector<OpFoldResult> &collapseShapeOutputShape = reifiedShapes[0];
   SmallVector<ReassociationIndices> reassociationIndices =

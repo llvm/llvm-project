@@ -381,16 +381,27 @@ def LLVM_StackRestoreOp : LLVM_ZeroResultIntrOp<"stackrestore"> {
 //
 
 // LLVM vector reduction over a single vector.
-class LLVM_VecReductionBase<string mnem, Type element>
+class LLVM_VecReductionBase<string mnem, Type element, bit requiresFastmath=0>
     : LLVM_OneResultIntrOp<"vector.reduce." # mnem, [], [0],
-                           [Pure, SameOperandsAndResultElementType]>,
-      Arguments<(ins LLVM_VectorOf<element>)>;
+                           [Pure, SameOperandsAndResultElementType],
+                           requiresFastmath> {
+      dag commonArgs = (ins LLVM_VectorOf<element>:$in);
+}
 
 class LLVM_VecReductionF<string mnem>
-    : LLVM_VecReductionBase<mnem, AnyFloat>;
+    : LLVM_VecReductionBase<mnem, AnyFloat, /*requiresFastmath=*/1> {
+  dag fmfArg = (
+    ins DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
+  let arguments = !con(commonArgs, fmfArg);
+
+  let assemblyFormat = "`(` operands `)` custom<LLVMOpAttrs>(attr-dict) `:` "
+      "functional-type(operands, results)";
+}
 
 class LLVM_VecReductionI<string mnem>
-    : LLVM_VecReductionBase<mnem, AnySignlessInteger>;
+    : LLVM_VecReductionBase<mnem, AnySignlessInteger> {
+      let arguments = commonArgs;
+}
 
 // LLVM vector reduction over a single vector, with an initial value,
 // and with permission to reassociate the reduction operations.

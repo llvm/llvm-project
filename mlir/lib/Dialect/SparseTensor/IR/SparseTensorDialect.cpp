@@ -620,6 +620,12 @@ static LogicalResult verifySparsifierGetterSetter(
   const auto enc = md.getType().getEncoding();
   const Level lvlRank = enc.getLvlRank();
 
+  // TODO:
+  //  if (mdKind == StorageSpecifierKind::DimOffset ||
+  //      mdKind == StorageSpecifierKind::DimStride)
+  //    if (!enc.isSlice())
+  //      return op->emitError("requested slice data on non-slice tensor");
+
   if (mdKind != StorageSpecifierKind::ValMemSize) {
     if (!lvl)
       return op->emitError("missing level argument");

@@ -107,7 +107,8 @@ public:
 
   // Conversions to constant initializers
   std::optional<Expr<SomeType>> AsConstant(FoldingContext &,
-      const DynamicType &, const ConstantSubscripts &, bool padWithZero = false,
+      const DynamicType &, std::optional<std::int64_t> charLength,
+      const ConstantSubscripts &, bool padWithZero = false,
       ConstantSubscript offset = 0) const;
   std::optional<Expr<SomeType>> AsConstantPointer(
       ConstantSubscript offset = 0) const;

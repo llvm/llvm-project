@@ -228,8 +228,7 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
             while (spec) {
               bool anyElemental{false};
               const Symbol *anyRankMatch{nullptr};
-              for (const auto &[_, ref] :
-                  spec->typeSymbol().get<DerivedTypeDetails>().finals()) {
+              for (auto ref : FinalsForDerivedTypeInstantiation(*spec)) {
                 const Symbol &ultimate{ref->GetUltimate()};
                 anyElemental |= ultimate.attrs().test(Attr::ELEMENTAL);
                 if (const auto *subp{ultimate.detailsIf<SubprogramDetails>()}) {

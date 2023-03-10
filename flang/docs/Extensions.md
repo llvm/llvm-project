@@ -199,10 +199,10 @@ end
 * DATA statement initialization is allowed for procedure pointers outside
   structure constructors.
 * Nonstandard intrinsic functions: ISNAN, SIZEOF
-* A forward reference to a default INTEGER scalar dummy argument is
-  permitted to appear in a specification expression, such as an array
-  bound, in a scope with IMPLICIT NONE(TYPE) if the name
-  of the dummy argument would have caused it to be implicitly typed
+* A forward reference to a default INTEGER scalar dummy argument or
+  `COMMON` block variable is permitted to appear in a specification
+  expression, such as an array bound, in a scope with IMPLICIT NONE(TYPE)
+  if the name of the variable would have caused it to be implicitly typed
   as default INTEGER if IMPLICIT NONE(TYPE) were absent.
 * OPEN(ACCESS='APPEND') is interpreted as OPEN(POSITION='APPEND')
   to ease porting from Sun Fortran.
@@ -556,6 +556,9 @@ end module
   This feature forestalls any risk of such a `USE` statement reading an
   obsolete module file from a previous compilation and then overwriting
   that file later.
+
+* F18 allows `OPTIONAL` dummy arguments to interoperable procedures
+  unless they are `VALUE` (C865).
 
 ## De Facto Standard Features
 

@@ -236,7 +236,7 @@ define float @add_S_init_42(<4 x float> %bin.rdx)  {
   ret float %r
 }
 
-; FIXME: The faddp.4s in the loop should not use v0.4s as second operand,
+; The faddp.4s in the loop should not use v0.4s as second operand,
 ; because this introduces an unnecessary cross-iteration dependency.
 define float @fadd_reduction_v4f32_in_loop(ptr %ptr.start) {
 ; CHECK-LABEL: fadd_reduction_v4f32_in_loop:
@@ -273,7 +273,7 @@ exit:
   ret float %red.next
 }
 
-; FIXME: The faddp.4h in the loop should not use v0.4h as second operand,
+; The faddp.4h in the loop should not use v0.4h as second operand,
 ; because this introduces an unnecessary cross-iteration dependency.
 define half @fadd_reduction_v4f16_in_loop(ptr %ptr.start) {
 ; FULLFP16-LABEL: fadd_reduction_v4f16_in_loop:
@@ -342,7 +342,7 @@ exit:
   ret half %red.next
 }
 
-; FIXME: The faddp.8h in the loop should not use v0.8h as second operand,
+; The faddp.8h in the loop should not use v0.8h as second operand,
 ; because this introduces an unnecessary cross-iteration dependency.
 define half @fadd_reduction_v8f16_in_loop(ptr %ptr.start) {
 ; FULLFP16-LABEL: fadd_reduction_v8f16_in_loop:

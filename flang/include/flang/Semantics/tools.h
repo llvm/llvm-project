@@ -108,7 +108,7 @@ bool IsBindCProcedure(const Scope &);
 // Returns a pointer to the function's symbol when true, else null
 const Symbol *IsFunctionResultWithSameNameAsFunction(const Symbol &);
 bool IsOrContainsEventOrLockComponent(const Symbol &);
-bool CanBeTypeBoundProc(const Symbol *);
+bool CanBeTypeBoundProc(const Symbol &);
 // Does a non-PARAMETER symbol have explicit initialization with =value or
 // =>target in its declaration (but not in a DATA statement)? (Being
 // ALLOCATABLE or having a derived type with default component initialization
@@ -169,6 +169,7 @@ inline bool IsProtected(const Symbol &symbol) {
 inline bool IsImpliedDoIndex(const Symbol &symbol) {
   return symbol.owner().kind() == Scope::Kind::ImpliedDos;
 }
+SymbolVector FinalsForDerivedTypeInstantiation(const DerivedTypeSpec &);
 bool IsFinalizable(
     const Symbol &, std::set<const DerivedTypeSpec *> * = nullptr);
 bool IsFinalizable(
@@ -252,7 +253,7 @@ const Symbol *FindExternallyVisibleObject(
       expr.u);
 }
 
-// Apply GetUltimate(), then if the symbol is a generic procedure shadowing a
+// Applies GetUltimate(), then if the symbol is a generic procedure shadowing a
 // specific procedure of the same name, return it instead.
 const Symbol &BypassGeneric(const Symbol &);
 

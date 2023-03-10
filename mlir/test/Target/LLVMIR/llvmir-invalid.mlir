@@ -172,7 +172,7 @@ llvm.func @vec_reduce_add_intr_wrong_type(%arg0 : vector<4xi32>) -> f32 {
 
 llvm.func @vec_reduce_fmax_intr_wrong_type(%arg0 : vector<4xi32>) -> i32 {
   // expected-error @below{{op operand #0 must be LLVM dialect-compatible vector of floating-point}}
-  %0 = "llvm.intr.vector.reduce.fmax"(%arg0) : (vector<4xi32>) -> i32
+  %0 = llvm.intr.vector.reduce.fmax(%arg0) : (vector<4xi32>) -> i32
   llvm.return %0 : i32
 }
 

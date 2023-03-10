@@ -553,7 +553,7 @@ void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,
   getOperand(1)->printAsOperand(O, SlotTracker);
   O << ", ";
   getOperand(2)->printAsOperand(O, SlotTracker);
-  O << (InvariantCond ? " (condition is loop invariant)" : "");
+  O << (isInvariantCond() ? " (condition is loop invariant)" : "");
 }
 #endif
 
@@ -566,10 +566,10 @@ void VPWidenSelectRecipe::execute(VPTransformState &State) {
   // We have to take the 'vectorized' value and pick the first lane.
   // Instcombine will make this a no-op.
   auto *InvarCond =
-      InvariantCond ? State.get(getOperand(0), VPIteration(0, 0)) : nullptr;
+      isInvariantCond() ? State.get(getCond(), VPIteration(0, 0)) : nullptr;
 
   for (unsigned Part = 0; Part < State.UF; ++Part) {
-    Value *Cond = InvarCond ? InvarCond : State.get(getOperand(0), Part);
+    Value *Cond = InvarCond ? InvarCond : State.get(getCond(), Part);
     Value *Op0 = State.get(getOperand(1), Part);
     Value *Op1 = State.get(getOperand(2), Part);
     Value *Sel = State.Builder.CreateSelect(Cond, Op0, Op1);

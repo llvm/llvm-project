@@ -379,9 +379,8 @@ static Decomposition decompose(Value *V,
   if (match(V, m_NUWShl(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI)) {
     if (CI->getSExtValue() < 0 || CI->getSExtValue() >= 64)
       return {V, IsKnownNonNegative};
-    int64_t Mult = 1 << CI->getSExtValue();
     auto Result = decompose(Op1, Preconditions, IsSigned, DL);
-    Result.mul(Mult);
+    Result.mul(int64_t{1} << CI->getSExtValue());
     return Result;
   }
 
