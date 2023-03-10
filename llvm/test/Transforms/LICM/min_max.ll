@@ -744,3 +744,131 @@ loop:
 exit:
   ret i32 %iv
 }
+
+; Do not turn to umin: non-poison of %inv_1 and %inv_2 is not guaranteed.
+; Counter-example: %cmp_1 = false, %inv_2 = poison.
+define i32 @test_logical_and_ult_neg(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_logical_and_ult_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[IV]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i32 [[IV]], [[INV_2:%.*]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = select i1 [[CMP_1]], i1 [[CMP_2]], i1 false
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp ult i32 %iv, %inv_1
+  %cmp_2 = icmp ult i32 %iv, %inv_2
+  %loop_cond = select i1 %cmp_1, i1 %cmp_2, i1 false
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
+
+; TODO: turn to %iv <u umin(inv_1, inv_2) and hoist it out of loop.
+; https://alive2.llvm.org/ce/z/mhKGtT
+define i32 @test_logical_and_ult_pos(i32 %start, i32 %inv_1, i32 noundef %inv_2) {
+; CHECK-LABEL: @test_logical_and_ult_pos(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[IV]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i32 [[IV]], [[INV_2:%.*]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = select i1 [[CMP_1]], i1 [[CMP_2]], i1 false
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp ult i32 %iv, %inv_1
+  %cmp_2 = icmp ult i32 %iv, %inv_2
+  %loop_cond = select i1 %cmp_1, i1 %cmp_2, i1 false
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
+
+; Do not turn to umin: non-poison of %inv_1 and %inv_2 is not guaranteed.
+; Counter-example: %cmp_1 = true, %inv_2 = poison.
+define i32 @test_logical_or_ult_inv_neg(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_logical_or_ult_inv_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[IV]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i32 [[IV]], [[INV_2:%.*]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = select i1 [[CMP_1]], i1 true, i1 [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp ult i32 %iv, %inv_1
+  %cmp_2 = icmp ult i32 %iv, %inv_2
+  %loop_cond = select i1 %cmp_1, i1 true, i1 %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
+
+; TODO: turn to %iv <u umax(inv_1, inv_2) and hoist it out of loop.
+; https://alive2.llvm.org/ce/z/zgyG5N
+define i32 @test_logical_or_ult_inv_pos(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_logical_or_ult_inv_pos(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[IV]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i32 [[IV]], [[INV_2:%.*]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = select i1 [[CMP_1]], i1 true, i1 [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp ult i32 %iv, %inv_1
+  %cmp_2 = icmp ult i32 %iv, %inv_2
+  %loop_cond = select i1 %cmp_1, i1 true, i1 %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+}
