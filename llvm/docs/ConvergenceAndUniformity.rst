@@ -393,15 +393,19 @@ instance is determined as follows:
 
 1. The semantics of the instruction may specify the output to be
    uniform.
-2. Otherwise, if it is a PHI node, its output is uniform if and only
-   if for every pair of converged dynamic instances produced by all
-   threads in ``S``:
+2. Otherwise, the output is divergent if the static instance is not
+   :ref:`m-converged <convergence-m-converged>`.
+3. Otherwise, if the static instance is m-converged:
 
-   a. Both instances choose the same output from converged
-      dynamic instances, and,
-   b. That output is uniform for all threads in ``S``.
-3. Otherwise, the output is uniform if and only if the input
-   operands are uniform for all threads in ``S``.
+   1. If it is a PHI node, its output is uniform if and only
+      if for every pair of converged dynamic instances produced by all
+      threads in ``S``:
+
+      a. Both instances choose the same output from converged
+         dynamic instances, and,
+      b. That output is uniform for all threads in ``S``.
+   2. Otherwise, the output is uniform if and only if the input
+      operands are uniform for all threads in ``S``.
 
 Divergent Cycle Exits
 ---------------------
@@ -432,6 +436,8 @@ result, a static analysis cannot always determine the convergence of
 nodes in irreducible cycles, and any uniformity analysis is limited to
 those static instances whose convergence is independent of the cycle
 hierarchy:
+
+.. _convergence-m-converged:
 
   **m-converged static instances:**
 
@@ -474,9 +480,8 @@ only if:
    if the whole CFG is reducible, then all nodes in the CFG are
    m-converged.
 
-If a static instance is not m-converged, then every output is assumed
-to be divergent. Otherwise, for an m-converged static instance, the
-uniformity of each output is determined using the criteria
+The uniformity of each output of a static instance
+is determined using the criteria
 :ref:`described earlier <convergence-uniformity>`. The discovery of
 divergent outputs may cause their uses (including branches) to also
 become divergent. The analysis propagates this divergence until a
