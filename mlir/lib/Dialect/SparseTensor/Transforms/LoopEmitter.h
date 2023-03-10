@@ -12,10 +12,35 @@
 #include <vector>
 
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
+#include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
+#include "mlir/Dialect/SparseTensor/Utils/Merger.h"
 #include "mlir/IR/PatternMatch.h"
 
 namespace mlir {
 namespace sparse_tensor {
+
+//===----------------------------------------------------------------------===//
+/// The position of a loop in the loop-stack, or the position of a
+/// `LoopId` in a topologically-sorted list of `LoopId`s.
+///
+/// Although this type may have the same cardinality as `LoopId`, it must
+/// not be confused with that type.  The `LoopId` type is used by the `Merger`
+/// as a unique identifier for loop-variables, regardless of the ordering
+/// of those loops.  Whereas the `LoopOrd` type is used by the `LoopEmitter`
+/// (and `CodegenEnv`) to refer to the actual order in which loops are
+/// generated.
+///
+/// TODO: further explicate the correspondences between these various
+/// types.  In particular, since the `$dim` argument to `linalg::IndexOp`
+/// is a De Bruijn index, it seems like that should correspond to `LoopOrd`,
+/// and yet the `Merger` has that correspond with `LoopId` instead.
+/// In addition `LoopEmitter::genAffine` has `AffineDimExpr::position`
+/// correspond to `LoopId`, however it is unclear what the providence
+/// of those `AffineDimExpr` is.
+//
+// TODO: use a struct/class rather than a typedef, so that we can actually
+// typecheck this to avoid mixups in the code.
+using LoopOrd = unsigned;
 
 //===----------------------------------------------------------------------===//
 // SparseTensorLoopEmiter class, manages sparse tensors and helps to
@@ -33,13 +58,13 @@ namespace sparse_tensor {
 //
 // One can use
 //
-// SparseTensorLoopEmiter loopEmiter({T1, T1});
+// LoopEmiter loopEmiter({T1, T1});
 // loopEmiter.initializeLoopEmit();
-// loopEmiter.enterLoopOverTensorAtDim(T1, 0);
-// loopEmiter.enterLoopOverTensorAtDim(T2, 0);
-// loopEmiter.enterLoopOverTensorAtDim(T1, 1);
+// loopEmiter.enterLoopOverTensorAtLvl(T1, 0);
+// loopEmiter.enterLoopOverTensorAtLvl(T2, 0);
+// loopEmiter.enterLoopOverTensorAtLvl(T1, 1);
 // loopEmiter.exitCurrentLoop();
-// loopEmiter.enterLoopOverTensorAtDim(T2, 1);
+// loopEmiter.enterLoopOverTensorAtLvl(T2, 1);
 // loopEmiter.exitCurrentLoop(); // exit k
 // loopEmiter.exitCurrentLoop(); // exit j
 // loopEmiter.exitCurrentLoop(); // exit i
@@ -54,30 +79,31 @@ public:
 
   LoopEmitter() = default;
 
-  /// Takes an array of tensors inputs, on which the generated loops will
-  /// iterate on. The index of the tensor in the array is also the tensor id
-  /// (tid) used in related functions. If isSparseOut is set, loop emitter
-  /// assume that the sparse output tensor is empty, and will always generate
-  /// loops on it based on the dim sizes. An optional array could be provided
-  /// (by sparsification) to indicate the loop id sequence that will be
-  /// generated. It is used to establish the mapping between affineDimExpr to
-  /// the corresponding loop index in the loop stack that are maintained by the
-  /// loop emitter.
+  /// Takes an array of input tensors, which the generated loops will
+  /// iterate over.  Each tensor is given a `TensorId` (numerically equal
+  /// to the position of that tensor `Value` in the array).  Setting
+  /// `isSparseOut` indicates that the sparse output tensor is empty,
+  /// so the loop emitter will generate loops over it according to the
+  /// level-sizes.  The `topSort` array specifies the actual order in
+  /// which loops are generated, thus providing a mapping from `LoopOrd`
+  /// to `LoopId`.
   void initialize(ValueRange tensors, StringAttr loopTag = nullptr,
                   bool hasOutput = false, bool isSparseOut = false,
-                  ArrayRef<unsigned> topSort = {});
+                  ArrayRef<LoopId> topSort = {});
 
   explicit LoopEmitter(ValueRange tensors, StringAttr loopTag = nullptr,
                        bool hasOutput = false, bool isSparseOut = false,
-                       ArrayRef<unsigned> topSort = {});
+                       ArrayRef<LoopId> topSort = {});
 
-  /// Starts a loop emitting session by generating all the buffers needed to
-  /// iterate tensors.
+  /// Starts a loop emitting session by generating all the buffers needed
+  /// for iterating over the tensors.
   void initializeLoopEmit(OpBuilder &builder, Location loc,
                           OutputUpdater updater = nullptr);
 
-  /// Generates a list of operations to compute the affine expression.
-  Value genAffine(OpBuilder &builder, AffineExpr a, Location loc);
+  /// Generates code to compute an affine expression whose variables are
+  /// `LoopId`s (i.e., `a.cast<AffineDimExpr>().getPosition()` is a valid
+  /// `LoopId`).
+  Value genAffine(OpBuilder &builder, Location loc, AffineExpr a);
 
   /// Enters a new loop sequence, the loops within the same sequence starts
   /// from the break points of previous loop instead of starting over from 0.
@@ -93,73 +119,77 @@ public:
   ///     ...
   ///   // loop sequence end.
   /// }
-  void enterNewLoopSeq(OpBuilder &builder, Location loc, ArrayRef<size_t> tids,
-                       ArrayRef<size_t> dims);
+  void enterNewLoopSeq(OpBuilder &builder, Location loc,
+                       ArrayRef<TensorId> tids, ArrayRef<Level> lvls);
 
-  // exit the current loop sequence, this will reset universal index to 0.
+  /// Exits the current loop sequence, this will reset universal index to 0.
   void exitCurrentLoopSeq() {
     assert(loopSeqStack.size() == loopStack.size() + 1);
     loopSeqStack.pop_back();
   }
 
-  // TODO: Gets rid of `dim` in the argument list? Track the dimension we
-  // are currently at internally. Then it would be enterNextDimForTensor.
-  // Still need a way to specify the dim for non annoated dense tensor though,
-  // as it can be accessed out of order.
-  /// Emits loop over tensor_tid_dim, it assumes that loops between
-  /// tensor_tid_[0, dim - 1] have already been generated.
+  // TODO: Get rid of `lvls` in the argument list? Track the level we
+  // are currently at internally. Then it would be enterNextLvlForTensor.
+  // Still need a way to specify the lvl for non-annotated tensors though,
+  // as those can be accessed out of order.
+  //
+  /// Emits loop over tensor_tid_lvl, it assumes that loops between
+  /// tensor_tid_[0, lvl - 1] have already been generated.
   /// The function will also perform in-place update on the `reduc` vector to
   /// return the reduction variable used inside the generated loop.
-  Operation *enterLoopOverTensorAtDim(OpBuilder &builder, Location loc,
-                                      ArrayRef<size_t> tids,
-                                      ArrayRef<size_t> dims,
+  Operation *enterLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
+                                      ArrayRef<TensorId> tids,
+                                      ArrayRef<Level> lvls,
                                       MutableArrayRef<Value> reduc = {},
                                       bool isParallel = false);
 
-  Operation *enterFilterLoopOverTensorAtDim(OpBuilder &builder, Location loc,
-                                            size_t tid, size_t dim,
+  Operation *enterFilterLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
+                                            TensorId tid, Level lvl,
                                             AffineExpr affine,
                                             MutableArrayRef<Value> reduc = {});
 
-  void genDenseAffineAddressAtCurLevel(OpBuilder &builder, Location loc,
-                                       size_t tid, size_t dim,
-                                       AffineExpr affine);
+  void genDenseAffineAddress(OpBuilder &builder, Location loc, TensorId tid,
+                             Level lvl, AffineExpr lvlExpr);
 
   /// Emits a co-iteration loop over a set of tensors.
-  Operation *enterCoIterationOverTensorsAtDims(
-      OpBuilder &builder, Location loc, ArrayRef<size_t> tids,
-      ArrayRef<size_t> dims, bool needsUniv, MutableArrayRef<Value> reduc = {});
+  Operation *enterCoIterationOverTensorsAtLvls(
+      OpBuilder &builder, Location loc, ArrayRef<TensorId> tids,
+      ArrayRef<Level> lvls, bool needsUniv, MutableArrayRef<Value> reduc = {});
 
   void exitCurrentLoop(RewriterBase &rewriter, Location loc,
                        MutableArrayRef<Value> reduc = {});
 
-  /// Returns the array of coordinate for all the loop generated till now.
-  void getCoordinateArray(SmallVectorImpl<Value> &coords) const {
+  /// Fills the out-parameter with the loop induction variables for all
+  /// loops in the current loop-stack.  The variables are given in the
+  /// same order as the loop-stack, hence `ivs` should be indexed into
+  /// by `LoopOrd` (not `LoopId`).
+  void getLoopIVs(SmallVectorImpl<Value> &ivs) const {
+    ivs.clear();
+    ivs.reserve(getCurrentDepth());
     for (auto &l : loopStack)
-      coords.push_back(l.iv);
+      ivs.push_back(l.iv);
   }
 
-  /// Gets loop induction variable at the given level.
-  unsigned getCurrentDepth() const { return loopStack.size(); }
+  /// Gets the current depth of the loop-stack.  The result is given
+  /// the type `LoopOrd` for the same reason as one-past-the-end iterators.
+  LoopOrd getCurrentDepth() const { return loopStack.size(); }
 
-  /// Gets loop induction variable at the given level.
-  Value getLoopIV(size_t level) const {
-    if (level < loopStack.size())
-      return loopStack[level].iv;
-    return nullptr;
+  /// Gets loop induction variable for the given `LoopOrd`.
+  Value getLoopIV(LoopOrd n) const {
+    return n < getCurrentDepth() ? loopStack[n].iv : Value();
   }
 
   ///
   /// Getters.
   ///
-  const std::vector<std::vector<Value>> &getPidxs() const { return pidxs; };
-  const std::vector<std::vector<Value>> &getCoord() const { return coord; };
+  const std::vector<std::vector<Value>> &getPosits() const { return posits; };
+  const std::vector<std::vector<Value>> &getCoords() const { return coords; };
   const std::vector<std::vector<Value>> &getHighs() const { return highs; };
-  const std::vector<std::vector<Value>> &getPosBuffer() const {
-    return posBuffer;
+  const std::vector<std::vector<Value>> &getPositionBuffers() const {
+    return positionsBuffers;
   };
-  const std::vector<std::vector<Value>> &getCrdBuffer() const {
-    return crdBuffer;
+  const std::vector<std::vector<Value>> &getCoordinateBuffers() const {
+    return coordinatesBuffers;
   };
   const std::vector<Value> &getValBuffer() const { return valBuffer; };
 
@@ -168,64 +198,74 @@ public:
   }
 
 private:
-  struct LoopLevelInfo {
-    LoopLevelInfo(ArrayRef<size_t> tids, ArrayRef<size_t> dims, Operation *loop,
-                  Block *userBlock, Value iv, StringAttr loopTag)
-        : tids(tids), dims(dims), loop(loop), userCodeBlock(userBlock), iv(iv) {
+  struct LoopInfo {
+    LoopInfo(ArrayRef<TensorId> tids, ArrayRef<Level> lvls, Operation *loop,
+             Block *userBlock, Value iv, StringAttr loopTag)
+        : tids(tids), lvls(lvls), loop(loop), userCodeBlock(userBlock), iv(iv) {
       // Attached a special tag to loop emitter generated loop.
       if (loopTag)
         loop->setAttr(LoopEmitter::getLoopEmitterLoopAttrName(), loopTag);
     }
-    // TODO: maybe use a vector<pair> for tid and dim?
+    // TODO: maybe use a vector<pair> for tid and lvl?
+    //       (Better yet, compress them together a la `TensorLoopId`.)
     // The set of tensors that the loop is operating on
-    const llvm::SmallVector<size_t> tids;
-    // The corresponding dims for the tensors
-    const llvm::SmallVector<size_t> dims;
+    const llvm::SmallVector<TensorId> tids;
+    // The corresponding levels for the tensors
+    const llvm::SmallVector<Level> lvls;
     const Operation *loop;      // the loop operation
     Block *const userCodeBlock; // the block holding users' generated code.
     const Value iv;             // the induction variable for the loop
   };
 
-  /// Linearizes address for dense dimension (i.e., p = (i * d0) + j).
-  Value genAddress(OpBuilder &builder, Location loc, size_t tid, size_t dim,
+  /// Linearizes address for dense level (i.e., p = (i * d0) + j).
+  Value genAddress(OpBuilder &builder, Location loc, TensorId tid, Level lvl,
                    Value iv);
 
   /// Generates the segment high for a non-unique level (to fast forward
-  /// duplicated coordinates).
-  Value genSegmentHigh(OpBuilder &builder, Location loc, size_t tid, size_t lvl,
-                       Value pos, Value pHi);
+  /// duplicated coordinates).  That is, it generates the code:
+  ///
+  ///   crd = coordinates_tid_lvl[pos]
+  ///   while (pos < pHi && coordinates_tid_lvl[pos] == crd)
+  ///      pos++;
+  ///   <return pos>;
+  Value genSegmentHigh(OpBuilder &builder, Location loc, TensorId tid,
+                       Level lvl, Value pos, Value pHi);
 
   /// Generates instructions to compute the coordinate of tensors[tid][lvl]
   /// under the current loop context.  The final argument is the
   /// collapsed-output level, whereas this function handles converting
   /// that to the uncollapsed-input level
-  Value genSparseCrd(OpBuilder &builder, Location loc, size_t tid,
-                     size_t dstLvl);
+  Value genSparseCrd(OpBuilder &builder, Location loc, TensorId tid,
+                     Level dstLvl);
 
   /// Generates a predicate to determine whether the tranformed coordinates are
   /// in the given slice.
   /// Returns std::pair<Transformed coordinates, Predicate>
   std::pair<Value, Value> genSliceLegitPredicate(OpBuilder &builder,
                                                  Location loc, Value crd,
-                                                 unsigned tid, unsigned lvl);
+                                                 TensorId tid, Level lvl);
 
-  bool isOutputTensor(size_t tid) {
-    return hasOutput && tid == tensors.size() - 1;
+  TensorId getNumTensors() const { return tensors.size(); }
+
+  bool isOutputTensor(TensorId tid) const {
+    return hasOutput && tid == static_cast<TensorId>(getNumTensors() - 1);
   }
 
-  bool isSparseOutput(size_t tid) { return isOutputTensor(tid) && isSparseOut; }
+  bool isSparseOutput(TensorId tid) const {
+    return isOutputTensor(tid) && isSparseOut;
+  }
 
-  /// Setups [lo, hi] for iterating tensor[dim], it assumes that tensor[0
-  /// ...dims-1] has already been setup.
-  void prepareLoopOverTensorAtDim(OpBuilder &builder, Location loc, size_t tid,
-                                  size_t dim);
+  /// Prepares loop for iterating over `tensor[lvl]`, under the assumption
+  /// that `tensor[0...lvl-1]` loops have already been set up.
+  void prepareLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
+                                  TensorId tid, Level lvl);
 
   /// Emits extra locals, since the locals might not be in simplified lattices
-  /// point used to generate the loops, but are still required to generates
+  /// point used to generate the loops, but are still required to generate
   /// expressions.
-  void emitExtraLocalsForTensorsAtDenseDims(OpBuilder &builder, Location loc,
-                                            ArrayRef<size_t> tids,
-                                            ArrayRef<size_t> dims);
+  void emitExtraLocalsForTensorsAtDenseLvls(OpBuilder &builder, Location loc,
+                                            ArrayRef<TensorId> tids,
+                                            ArrayRef<Level> lvls);
 
   /// Exits a for loop, returns the reduction results, e.g.,
   /// For sequential for loops:
@@ -258,6 +298,38 @@ private:
   void exitCoIterationLoop(OpBuilder &builder, Location loc,
                            MutableArrayRef<Value> reduc);
 
+  //
+  // View-based-reshape methods.
+  //
+
+  /// Get the collapse reassociation for `tensors[tid][dstLvl]`.
+  /// For unreshaped operands, the reassociation is simply an identity
+  /// transformation.
+  ///
+  /// NOTE: the result uses `Level` rather than the `int64_t` of
+  /// `ReassociationIndices`, since the former gives clarity to what
+  /// the values actually mean.
+  ///
+  /// TODO: why not do this computation when we first store the reassoc,
+  /// instead of doing it every time we look it up?
+  SmallVector<Level, 2> getCollapseReassociation(TensorId tid, Level dstLvl) {
+    assert(tid < getNumTensors() && "Invalid TensorId");
+    assert(collapseReassoc.size() == getNumTensors());
+    if (const auto reassoc = collapseReassoc[tid]) {
+      // TODO: store the dstLvlRank in the LoopEmitter so that we can
+      // check `dstLvl < dstLvlRank` at the top; and only here need to
+      // assert that `reassoc.size() == dstLvlRank`.
+      assert(dstLvl < reassoc.size() && "Level is out-of-bounds");
+      const auto srcLvls = reassoc[dstLvl].cast<ArrayAttr>();
+      return llvm::to_vector<2>(
+          llvm::map_range(srcLvls, [&](Attribute srcLvl) -> Level {
+            // TODO: replace this with the converter for `LevelAttr`.
+            return srcLvl.cast<IntegerAttr>().getValue().getZExtValue();
+          }));
+    }
+    return {dstLvl};
+  }
+
   /// A optional string attribute that should be attached to the loop
   /// generated by loop emitter, it might help following passes to identify
   /// loops that operates on sparse tensors more easily.
@@ -266,22 +338,41 @@ private:
   /// tensor.
   bool hasOutput;
   bool isSparseOut;
+
+  //
+  // Fields which have `numTensor` many entries.
+  //
+  // TODO: switch to an AOS style to avoid any possible mismatches.
+  //
+
   /// Input and (optional) output tensors.
   std::vector<Value> tensors;
-  /// The dim type array for each tensor.
-  std::vector<std::vector<DimLevelType>> dimTypes;
-  /// Sparse iteration information (by tensor and dim). These arrays
-  /// are updated to remain current within the current loop.
-  // TODO: we may want to rename "pidx(s)" to `posCursor(s)` or similar.
-  std::vector<std::vector<Value>> pidxs;
+  /// Level-types for each `(TensorId, Level)` pair.
+  std::vector<std::vector<DimLevelType>> lvlTypes;
+  // Sparse iteration information for each `(TensorId, Level)` pair.
+  // These arrays are updated to remain current within the current loop.
+  // TODO: Clarify which of these are indexed by dstLvl vs srcLvl.
+  //
+  /// The collection of positions for a given element (one such collection
+  /// for each tensor).  This is the position analogue of the "coords"
+  /// naming convention.
+  ///
+  /// FIXME: [CLARIFY_POSITS_LVL] It's unclear which levels are used
+  /// to index the `posits` array.  On the one hand `genSparseCrd`
+  /// uses dstLvl; on the other hand `enterLoopOverTensorAtLvl`,
+  /// `prepareLoopOverTensorAtLvl`, and `enterCoIterationOverTensorsAtLvls`
+  /// uses srcLvl.  So which is it?
+  std::vector<std::vector<Value>> posits;
+  /// The collection of coordinates for a given element (one such
+  /// collection for each tensor).
+  std::vector<std::vector<Value>> coords;
   // The segment upper bound for non-uniques level after de-duplication.
   std::vector<std::vector<Value>> segHi;
-  std::vector<std::vector<Value>> coord;
   std::vector<std::vector<Value>> highs;
   std::vector<std::vector<Value>> lvlSizes;
-  std::vector<std::vector<Value>> posBuffer; // to_positions
-  std::vector<std::vector<Value>> crdBuffer; // to_coordinates
-  std::vector<Value> valBuffer;              // to_value
+  std::vector<std::vector<Value>> positionsBuffers;   // to_positions
+  std::vector<std::vector<Value>> coordinatesBuffers; // to_coordinates
+  std::vector<Value> valBuffer;                       // to_value
 
   /// Whether the sparse input is a slice.
   std::vector<bool> isSparseSlices;
@@ -289,44 +380,30 @@ private:
   std::vector<std::vector<Value>> sliceOffsets;
   std::vector<std::vector<Value>> sliceStrides;
 
-  /// Loop Stack, stores the information of all the nested loops that are
-  /// alive.
-  std::vector<LoopLevelInfo> loopStack;
-
-  /// Loop Sequence Stack, stores the unversial index for the current loop
-  /// sequence.
-  std::vector<Value> loopSeqStack;
-
-  /// Maps AffineDimExpr to the index of the loop in loopStack.
-  /// TODO: We should probably use a callback function here to make it more
-  /// general.
-  std::vector<unsigned> sparsiferLoopLvlMap;
-
-  //
-  // View based reshape related-fields and methods
-  //
-
   /// Collapse Reassociations related to a specific tensor
   // TODO: support expand.
   std::vector<ArrayAttr> collapseReassoc;
 
-  /// Get the collapse reassociation for tensors[tid] on l. For unreshaped
-  /// operands, the reassociation is simply an identity transformation.
-  SmallVector<int64_t, 2> getCollapseReassociation(unsigned tid, unsigned l) {
-    // Returns for SmallVector<int64_t, 2> just like `ReassociaionIndices`
-    if (auto reass = collapseReassoc[tid]) {
-      auto attr = reass[l];
-      return llvm::to_vector<2>(
-          llvm::map_range(attr.cast<ArrayAttr>(), [&](Attribute indexAttr) {
-            return indexAttr.cast<IntegerAttr>().getInt();
-          }));
-    }
-    return {l};
-  }
-
   /// TODO: not yet used, it should track the current level for each tensor
-  /// to help eliminate `dim` paramters from above APIs.
-  /// std::vector<size_t> curLv;
+  /// to help eliminate `lvls` paramters from above APIs.
+  /// std::vector<Level> curLvl;
+
+  //
+  // Fields which have at most `numLoops` many entries.
+  //
+
+  /// Loop Stack, stores the information of all the nested loops that are
+  /// alive.
+  std::vector<LoopInfo> loopStack;
+
+  /// Loop Sequence Stack, stores the universal index for the current loop
+  /// sequence.
+  std::vector<Value> loopSeqStack;
+
+  /// Maps `LoopId` (used by `AffineDimExpr`) to `LoopOrd` (in the `loopStack`).
+  /// TODO: We should probably use a callback function here to make it more
+  /// general.
+  std::vector<LoopOrd> loopIdToOrd;
 };
 
 } // namespace sparse_tensor
