@@ -252,6 +252,21 @@ install(FILES
 
 #File reorg Backward compatibility function
 if(FILE_REORG_BACKWARD_COMPATIBILITY)
+# To enable/disable #error in wrapper header files
+ if(NOT DEFINED ROCM_HEADER_WRAPPER_WERROR)
+      if(DEFINED ENV{ROCM_HEADER_WRAPPER_WERROR})
+          set(ROCM_HEADER_WRAPPER_WERROR "$ENV{ROCM_HEADER_WRAPPER_WERROR}"
+                  CACHE STRING "Header wrapper warnings as errors.")
+      else()
+          set(ROCM_HEADER_WRAPPER_WERROR "ON" CACHE STRING "Header wrapper warnings as errors.")
+      endif()
+  endif()
+  if(ROCM_HEADER_WRAPPER_WERROR)
+      set(deprecated_error 1)
+  else()
+      set(deprecated_error 0)
+  endif()
+
   include(comgr-backward-compat.cmake)
 endif()
 

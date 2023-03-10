@@ -50,7 +50,18 @@ function(create_header_template)
 #ifndef @include_guard@
 #define @include_guard@
 
+#ifndef ROCM_HEADER_WRAPPER_WERROR
+#define ROCM_HEADER_WRAPPER_WERROR @deprecated_error@
+#endif
+#if ROCM_HEADER_WRAPPER_WERROR  /* ROCM_HEADER_WRAPPER_WERROR 1 */
 #error \"This file is deprecated. Use file from include path /opt/rocm-ver/include/ and prefix with amd_comgr\"
+#else   /* ROCM_HEADER_WRAPPER_WERROR 0 */
+#if defined(__GNUC__)
+#warning \"This file is deprecated. Use file from include path /opt/rocm-ver/include/ and prefix with amd_comgr\"
+#else
+#pragma message(\"This file is deprecated. Use file from include path /opt/rocm-ver/include/ and prefix with amd_comgr\")
+#endif
+#endif /* ROCM_HEADER_WRAPPER_WERROR */
 
 @include_statements@
 
