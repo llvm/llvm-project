@@ -140,7 +140,8 @@ std::size_t DynamicType::GetAlignment(
 }
 
 std::optional<Expr<SubscriptInteger>> DynamicType::MeasureSizeInBytes(
-    FoldingContext &context, bool aligned) const {
+    FoldingContext &context, bool aligned,
+    std::optional<std::int64_t> charLength) const {
   switch (category_) {
   case TypeCategory::Integer:
   case TypeCategory::Real:
@@ -149,7 +150,9 @@ std::optional<Expr<SubscriptInteger>> DynamicType::MeasureSizeInBytes(
     return Expr<SubscriptInteger>{
         context.targetCharacteristics().GetByteSize(category_, kind_)};
   case TypeCategory::Character:
-    if (auto len{GetCharLength()}) {
+    if (auto len{charLength ? Expr<SubscriptInteger>{Constant<SubscriptInteger>{
+                                  *charLength}}
+                            : GetCharLength()}) {
       return Fold(context,
           Expr<SubscriptInteger>{
               context.targetCharacteristics().GetByteSize(category_, kind_)} *
