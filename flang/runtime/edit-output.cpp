@@ -14,12 +14,20 @@
 
 namespace Fortran::runtime::io {
 
+// In output statement, add a space between numbers and characters.
+static void addSpaceBeforeCharacter(IoStatementState &io) {
+  if (auto *list{io.get_if<ListDirectedStatementState<Direction::Output>>()}) {
+    list->set_lastWasUndelimitedCharacter(false);
+  }
+}
+
 // B/O/Z output of arbitrarily sized data emits a binary/octal/hexadecimal
 // representation of what is interpreted to be a single unsigned integer value.
 // When used with character data, endianness is exposed.
 template <int LOG2_BASE>
 static bool EditBOZOutput(IoStatementState &io, const DataEdit &edit,
     const unsigned char *data0, std::size_t bytes) {
+  addSpaceBeforeCharacter(io);
   int digits{static_cast<int>((bytes * 8) / LOG2_BASE)};
   int get{static_cast<int>(bytes * 8) - digits * LOG2_BASE};
   if (get > 0) {
@@ -100,6 +108,7 @@ static bool EditBOZOutput(IoStatementState &io, const DataEdit &edit,
 template <int KIND>
 bool EditIntegerOutput(IoStatementState &io, const DataEdit &edit,
     common::HostSignedIntType<8 * KIND> n) {
+  addSpaceBeforeCharacter(io);
   char buffer[130], *end{&buffer[sizeof buffer]}, *p{end};
   bool isNegative{n < 0};
   using Unsigned = common::HostUnsignedIntType<8 * KIND>;
@@ -255,6 +264,7 @@ decimal::ConversionToDecimalResult RealOutputEditing<binaryPrecision>::Convert(
 // 13.7.2.3.3 in F'2018
 template <int binaryPrecision>
 bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
+  addSpaceBeforeCharacter(io_);
   int editDigits{edit.digits.value_or(0)}; // 'd' field
   int editWidth{edit.width.value_or(0)}; // 'w' field
   int significantDigits{editDigits};
@@ -381,6 +391,7 @@ bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
 // 13.7.2.3.2 in F'2018
 template <int binaryPrecision>
 bool RealOutputEditing<binaryPrecision>::EditFOutput(const DataEdit &edit) {
+  addSpaceBeforeCharacter(io_);
   int fracDigits{edit.digits.value_or(0)}; // 'd' field
   const int editWidth{edit.width.value_or(0)}; // 'w' field
   enum decimal::FortranRounding rounding{edit.modes.round};

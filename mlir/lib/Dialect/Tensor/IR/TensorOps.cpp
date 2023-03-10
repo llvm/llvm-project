@@ -81,11 +81,7 @@ FailureOr<Value> tensor::getOrCreateDestination(OpBuilder &b, Location loc,
   if (!tensorType.hasStaticShape()) {
     // Dynamic shape: Query ReifyRankedShapedTypeOpInterface.
     ReifiedRankedShapedTypeDims reifiedShapes;
-    ReifyRankedShapedTypeOpInterface reifyShapedTypeInterface =
-        dyn_cast<ReifyRankedShapedTypeOpInterface>(opResult.getDefiningOp());
-    if (!reifyShapedTypeInterface)
-      return failure();
-    if (failed(reifyShapedTypeInterface.reifyResultShapes(b, reifiedShapes)))
+    if (failed(reifyResultShapes(b, opResult.getDefiningOp(), reifiedShapes)))
       return failure();
     mixedSizes = reifiedShapes[opResult.getResultNumber()];
   } else {
@@ -2205,8 +2201,13 @@ LogicalResult InsertSliceOp::reifyResultShapes(
     OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
   reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(getType().getRank()));
   for (auto dim : llvm::seq<int64_t>(0, getType().getRank())) {
-    reifiedReturnShapes[0][dim] =
-        builder.createOrFold<tensor::DimOp>(getLoc(), getDest(), dim);
+    if (getType().isDynamicDim(dim)) {
+      reifiedReturnShapes[0][dim] =
+          builder.createOrFold<tensor::DimOp>(getLoc(), getDest(), dim);
+    } else {
+      reifiedReturnShapes[0][dim] =
+          builder.getIndexAttr(getType().getDimSize(dim));
+    }
   }
   return success();
 }
@@ -3154,9 +3155,15 @@ reifyResultShapesImpl(OpTy op, OpBuilder &builder,
                 "applies to only pack or unpack operations");
   int64_t destRank = op.getDestRank();
   reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(destRank));
+  ShapedType resultType = op.getResult().getType().template cast<ShapedType>();
   for (auto dim : llvm::seq<int64_t>(0, destRank)) {
-    reifiedReturnShapes[0][dim] =
-        builder.createOrFold<tensor::DimOp>(op.getLoc(), op.getDest(), dim);
+    if (resultType.isDynamicDim(dim)) {
+      reifiedReturnShapes[0][dim] =
+          builder.createOrFold<tensor::DimOp>(op.getLoc(), op.getDest(), dim);
+    } else {
+      reifiedReturnShapes[0][dim] =
+          builder.getIndexAttr(resultType.getDimSize(dim));
+    }
   }
   return success();
 }

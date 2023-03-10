@@ -263,8 +263,22 @@ bool DummyDataObject::operator==(const DummyDataObject &that) const {
 }
 
 static bool AreCompatibleDummyDataObjectShapes(const Shape &x, const Shape &y) {
-  // TODO: Validate more than just compatible ranks
-  return GetRank(x) == GetRank(y);
+  int n{GetRank(x)};
+  if (n != GetRank(y)) {
+    return false;
+  }
+  auto xIter{x.begin()};
+  auto yIter{y.begin()};
+  for (; n-- > 0; ++xIter, ++yIter) {
+    if (auto xVal{ToInt64(*xIter)}) {
+      if (auto yVal{ToInt64(*yIter)}) {
+        if (*xVal != *yVal) {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
 }
 
 bool DummyDataObject::IsCompatibleWith(

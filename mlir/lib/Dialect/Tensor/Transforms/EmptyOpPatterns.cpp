@@ -26,10 +26,7 @@ struct FoldEmptyTensorWithReshapeOp : public OpRewritePattern<ReshapeOp> {
       return failure();
     Location loc = reshapeOp.getLoc();
     ReifiedRankedShapedTypeDims resultShapes;
-    ReifyRankedShapedTypeOpInterface reifyShapedTypeInterface =
-        cast<ReifyRankedShapedTypeOpInterface>(reshapeOp.getOperation());
-    if (failed(reifyShapedTypeInterface.reifyResultShapes(rewriter,
-                                                          resultShapes)) ||
+    if (failed(reifyResultShapes(rewriter, reshapeOp, resultShapes)) ||
         !llvm::hasSingleElement(resultShapes))
       return failure();
     // TODO: Do not drop tensor type encoding.

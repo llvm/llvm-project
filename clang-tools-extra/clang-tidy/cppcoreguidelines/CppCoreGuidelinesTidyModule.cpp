@@ -15,6 +15,7 @@
 #include "../modernize/UseOverrideCheck.h"
 #include "../readability/MagicNumbersCheck.h"
 #include "AvoidCaptureDefaultWhenCapturingThisCheck.h"
+#include "AvoidCapturingLambdaCoroutinesCheck.h"
 #include "AvoidConstOrRefDataMembersCheck.h"
 #include "AvoidDoWhileCheck.h"
 #include "AvoidGotoCheck.h"
@@ -50,6 +51,8 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AvoidCaptureDefaultWhenCapturingThisCheck>(
         "cppcoreguidelines-avoid-capture-default-when-capturing-this");
+    CheckFactories.registerCheck<AvoidCapturingLambdaCoroutinesCheck>(
+        "cppcoreguidelines-avoid-capturing-lambda-coroutines");
     CheckFactories.registerCheck<modernize::AvoidCArraysCheck>(
         "cppcoreguidelines-avoid-c-arrays");
     CheckFactories.registerCheck<AvoidConstOrRefDataMembersCheck>(

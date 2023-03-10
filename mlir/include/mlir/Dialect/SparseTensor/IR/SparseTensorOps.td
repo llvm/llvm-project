@@ -358,21 +358,44 @@ def SparseTensor_ToSliceStrideOp : SparseTensor_Op<"slice.stride", [Pure]>,
 }
 
 def SparseTensor_StorageSpecifierInitOp : SparseTensor_Op<"storage_specifier.init", [Pure]>,
+    Arguments<(ins Optional<SparseTensorStorageSpecifier>:$source)>,
     Results<(outs SparseTensorStorageSpecifier:$result)> {
   let summary = "";
   let description = [{
     Returns an initial storage specifier value.  A storage specifier
     value holds the level-sizes, position arrays, coordinate arrays,
     and the value array.
+    If this is a specifier for slices, it also holds the extra strides/offsets
+    for each tensor dimension.
+
+    TODO: The sparse tensor slice support is currently in a unstable state, and
+    is subject to change in the future.
 
     Example:
 
     ```mlir
+    #CSR = #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ]}>
+    #CSR_SLICE = #sparse_tensor.encoding<{
+      dimLevelType = [ "dense", "compressed" ],
+      slice = [ (1, 4, 1), (1, 4, 2) ]
+    }>
+
     %0 = sparse_tensor.storage_specifier.init :  !sparse_tensor.storage_specifier<#CSR>
+    %1 = sparse_tensor.storage_specifier.init with %src
+         : !sparse_tensor.storage_specifier<#CSR> to
+           !sparse_tensor.storage_specifier<#CSR_SLICE>
     ```
   }];
 
-  let assemblyFormat = "attr-dict `:` qualified(type($result))";
+  let builders = [
+    OpBuilder<(ins "Type":$result),
+    [{
+      build($_builder, $_state, result, Value());
+    }]>
+  ];
+
+  let assemblyFormat = "attr-dict (`with` $source^)? `:` (`from` qualified(type($source))^ `to`)?"
+                                                        " qualified(type($result))";
 }
 
 def SparseTensor_GetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.get", [Pure]>,

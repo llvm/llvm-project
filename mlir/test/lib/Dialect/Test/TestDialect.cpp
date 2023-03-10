@@ -1241,11 +1241,16 @@ LogicalResult OpWithResultShapePerDimInterfaceOp::reifyResultShapes(
   Location loc = getLoc();
   shapes.reserve(getNumOperands());
   for (Value operand : llvm::reverse(getOperands())) {
+    auto tensorType = operand.getType().cast<RankedTensorType>();
     auto currShape = llvm::to_vector<4>(llvm::map_range(
-        llvm::seq<int64_t>(
-            0, operand.getType().cast<RankedTensorType>().getRank()),
+        llvm::seq<int64_t>(0, tensorType.getRank()),
         [&](int64_t dim) -> OpFoldResult {
-          return builder.createOrFold<tensor::DimOp>(loc, operand, dim);
+          return tensorType.isDynamicDim(dim)
+                     ? static_cast<OpFoldResult>(
+                           builder.createOrFold<tensor::DimOp>(loc, operand,
+                                                               dim))
+                     : static_cast<OpFoldResult>(
+                           builder.getIndexAttr(tensorType.getDimSize(dim)));
         }));
     shapes.emplace_back(std::move(currShape));
   }

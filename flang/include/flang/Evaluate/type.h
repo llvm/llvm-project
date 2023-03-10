@@ -157,8 +157,9 @@ public:
   std::optional<Expr<SubscriptInteger>> GetCharLength() const;
 
   std::size_t GetAlignment(const TargetCharacteristics &) const;
-  std::optional<Expr<SubscriptInteger>> MeasureSizeInBytes(
-      FoldingContext &, bool aligned) const;
+  std::optional<Expr<SubscriptInteger>> MeasureSizeInBytes(FoldingContext &,
+      bool aligned,
+      std::optional<std::int64_t> charLength = std::nullopt) const;
 
   std::string AsFortran() const;
   std::string AsFortran(std::string &&charLenExpr) const;

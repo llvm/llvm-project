@@ -277,3 +277,14 @@ subroutine WorkingPolymorphism
       print *, "default"
   end select
 end
+
+subroutine CheckNotProcedure
+  use m1
+  !ERROR: Selector may not be a procedure
+  select type (x=>f)
+  end select
+ contains
+  function f() result(res)
+    class(shape), allocatable :: res
+  end
+end
