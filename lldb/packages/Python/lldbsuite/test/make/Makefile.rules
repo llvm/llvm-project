@@ -352,7 +352,14 @@ ifeq "$(MAKE_GMODULES)" "YES"
 endif
 
 CFLAGS += $(CFLAGS_EXTRAS)
-CXXFLAGS += -std=c++11 $(CFLAGS) $(ARCH_CXXFLAGS)
+
+ifeq "$(SWIFT_CXX_INTEROP)" "1"
+CXXFLAGS += -std=c++17 
+else
+CXXFLAGS += -std=c++11 
+endif
+CXXFLAGS += $(CFLAGS) $(ARCH_CXXFLAGS)
+
 LD = $(CC)
 LDFLAGS ?= $(CFLAGS)
 LDFLAGS += $(LD_EXTRAS) $(ARCH_LDFLAGS)
@@ -608,6 +615,7 @@ endif
 #----------------------------------------------------------------------
 ifeq "$(SWIFT_CXX_INTEROP)" "1"
 	SWIFTFLAGS += -Xfrontend -enable-experimental-cxx-interop -Xfrontend -validate-tbd-against-ir=none 
+	SWIFTFLAGS += -Xcc -std=c++17
 endif
 
 #----------------------------------------------------------------------
@@ -665,7 +673,7 @@ VPATHSOURCES=$(patsubst %,$(VPATH)/%,$(SWIFT_SOURCES)) $(patsubst %,$(VPATH)/%,$
 	$(SWIFT_FE) -c -primary-file $< \
 	  $(filter-out $(VPATH)/$<,$(filter-out $<,$(VPATHSOURCES))) \
 	  $(SWIFT_FEFLAGS) $(SWIFT_HFLAGS) $(PARSE_AS_LIBRARY) \
-	  -module-name $(MODULENAME) -emit-module-path \
+	  -module-name $(MODULENAME)  -emit-module-path \
 	  $(patsubst %.o,$(BUILDDIR)/%.partial.swiftmodule,$@) \
 	  -o $(BUILDDIR)/$@
 

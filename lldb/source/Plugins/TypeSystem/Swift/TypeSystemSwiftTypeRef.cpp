@@ -913,6 +913,16 @@ CompilerType TypeSystemSwiftTypeRef::GetBuiltinRawPointerType() {
 }
 
 
+static bool IsImportedType(swift::Demangle::NodePointer node) {
+  if (!node)
+    return false;
+  if (node->hasText() && node->getText() == "__C")
+    return true;
+  if (node->hasChildren())
+    return IsImportedType(node->getFirstChild());
+  return false;
+}
+
 swift::Demangle::NodePointer
 TypeSystemSwiftTypeRef::GetSwiftified(swift::Demangle::Demangler &dem,
                                       swift::Demangle::NodePointer node,
@@ -3273,6 +3283,12 @@ bool TypeSystemSwiftTypeRef::IsImportedType(opaque_compiler_type_t type,
                 "Checking if type %s which contains a generic parameter is "
                 "an imported type",
                 AsMangledName(type));
+
+    if (!::IsImportedType(node))
+      return false;
+    // Early return if we don't need to look up the original type.
+    if (!original_type)
+      return true;
 
     // This is an imported Objective-C type; look it up in the debug info.
     llvm::SmallVector<CompilerContext, 2> decl_context;
