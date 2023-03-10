@@ -846,24 +846,24 @@ Error RISCVISAInfo::checkDependency() {
   if (HasZve32f && !HasF && !HasZfinx)
     return createStringError(
         errc::invalid_argument,
-        "zve32f requires f or zfinx extension to also be specified");
+        "'zve32f' requires 'f' or 'zfinx' extension to also be specified");
 
   if (HasZve64d && !HasD && !HasZdinx)
     return createStringError(
         errc::invalid_argument,
-        "zve64d requires d or zdinx extension to also be specified");
+        "'zve64d' requires 'd' or 'zdinx' extension to also be specified");
 
   if (Exts.count("zvfh") && !Exts.count("zfh") && !Exts.count("zfhmin") &&
       !Exts.count("zhinx") && !Exts.count("zhinxmin"))
     return createStringError(
         errc::invalid_argument,
-        "zvfh requires zfh, zfhmin, zhinx or zhinxmin extension to also be "
-        "specified");
+        "'zvfh' requires 'zfh', 'zfhmin', 'zhinx' or 'zhinxmin' extension to "
+        "also be specified");
 
   if (HasZvl && !HasVector)
     return createStringError(
         errc::invalid_argument,
-        "zvl*b requires v or zve* extension to also be specified");
+        "'zvl*b' requires 'v' or 'zve*' extension to also be specified");
 
   // Additional dependency checks.
   // TODO: The 'q' extension requires rv64.

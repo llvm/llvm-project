@@ -69,7 +69,7 @@ struct TranslationUnitDeps {
   std::vector<ModuleID> ClangModuleDeps;
 
   /// The CASID for input file dependency tree.
-  llvm::Optional<llvm::cas::CASID> CASFileSystemRootID;
+  std::optional<llvm::cas::CASID> CASFileSystemRootID;
 
   /// The sequence of commands required to build the translation unit. Commands
   /// should be executed in order.
@@ -107,6 +107,22 @@ public:
   llvm::Expected<std::string>
   getDependencyFile(const std::vector<std::string> &CommandLine, StringRef CWD);
 
+  /// Collect the module dependency in P1689 format for C++20 named modules.
+  ///
+  /// \param MakeformatOutput The output parameter for dependency information
+  /// in make format if the command line requires to generate make-format
+  /// dependency information by `-MD -MF <dep_file>`.
+  ///
+  /// \param MakeformatOutputPath The output parameter for the path to
+  /// \param MakeformatOutput.
+  ///
+  /// \returns A \c StringError with the diagnostic output if clang errors
+  /// occurred, P1689 dependency format rules otherwise.
+  llvm::Expected<P1689Rule>
+  getP1689ModuleDependencyFile(const clang::tooling::CompileCommand &Command,
+                               StringRef CWD, std::string &MakeformatOutput,
+                               std::string &MakeformatOutputPath);
+
   /// Collect dependency tree.
   llvm::Expected<llvm::cas::ObjectProxy>
   getDependencyTree(const std::vector<std::string> &CommandLine, StringRef CWD,
@@ -138,22 +154,6 @@ public:
       DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
       bool DiagGenerationAsCompilation);
 
-  /// Collect the module dependency in P1689 format for C++20 named modules.
-  ///
-  /// \param MakeformatOutput The output parameter for dependency information
-  /// in make format if the command line requires to generate make-format
-  /// dependency information by `-MD -MF <dep_file>`.
-  ///
-  /// \param MakeformatOutputPath The output parameter for the path to
-  /// \param MakeformatOutput.
-  ///
-  /// \returns A \c StringError with the diagnostic output if clang errors
-  /// occurred, P1689 dependency format rules otherwise.
-  llvm::Expected<P1689Rule>
-  getP1689ModuleDependencyFile(const clang::tooling::CompileCommand &Command,
-                               StringRef CWD, std::string &MakeformatOutput,
-                               std::string &MakeformatOutputPath);
-
   /// Given a Clang driver command-line for a translation unit, gather the
   /// modular dependencies and return the information needed for explicit build.
   ///
@@ -173,7 +173,7 @@ public:
                                  StringRef CWD,
                                  const llvm::StringSet<> &AlreadySeen,
                                  LookupModuleOutputCallback LookupModuleOutput,
-                                 DepscanPrefixMapping PrefixMapping = {});
+                                 DepscanPrefixMapping PrefixMapping);
 
   /// Given a compilation context specified via the Clang driver command-line,
   /// gather modular dependencies of module with the given name, and return the
@@ -183,7 +183,7 @@ public:
                         const std::vector<std::string> &CommandLine,
                         StringRef CWD, const llvm::StringSet<> &AlreadySeen,
                         LookupModuleOutputCallback LookupModuleOutput,
-                        DepscanPrefixMapping PrefixMapping = {});
+                        DepscanPrefixMapping PrefixMapping);
 
   ScanningOutputFormat getScanningFormat() const {
     return Worker.getScanningFormat();

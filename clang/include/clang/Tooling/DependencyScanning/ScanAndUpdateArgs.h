@@ -10,9 +10,9 @@
 #define LLVM_CLANG_DRIVER_SCANANDUPDATEARGS_H
 
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 
 namespace llvm {
 class StringSaver;
