@@ -372,6 +372,8 @@ typedef struct CXIndexOptions {
    * \see clang_createIndex()
    */
   unsigned DisplayDiagnostics : 1;
+  unsigned /*Reserved*/ : 14;
+
   /**
    * The path to a directory, in which to store temporary PCH files. If null or
    * empty, the default system temporary directory is used. These PCH files are
