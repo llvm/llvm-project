@@ -287,7 +287,7 @@ ValueObjectConstResult::GetDynamicValue(lldb::DynamicValueType use_dynamic) {
       if (process && process->IsPossibleDynamicValue(*this))
         m_dynamic_value = new ValueObjectDynamicValue(*this, use_dynamic);
     }
-    if (m_dynamic_value)
+    if (m_dynamic_value && m_dynamic_value->GetError().Success())
       return m_dynamic_value->GetSP();
   }
   return ValueObjectSP();
