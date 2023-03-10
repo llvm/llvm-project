@@ -91,3 +91,7 @@ ABI Affecting Changes
 
 Build System Changes
 --------------------
+
+- Building libc++ and libc++abi for Apple platforms now requires targeting macOS 10.13 and later.
+  This is relevant for vendors building the libc++ shared library and for folks statically linking
+  libc++ into an application that has back-deployment requirements on Apple platforms.
