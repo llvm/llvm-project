@@ -547,6 +547,25 @@ def UnnamedAddr : LLVM_EnumAttr<
 }
 
 //===----------------------------------------------------------------------===//
+// Visibility
+//===----------------------------------------------------------------------===//
+
+def VisibilityDefault
+    : LLVM_EnumAttrCase<"Default", "", "DefaultVisibility", 0>;
+def VisibilityHidden
+    : LLVM_EnumAttrCase<"Hidden", "hidden", "HiddenVisibility", 1>;
+def VisibilityProtected
+    : LLVM_EnumAttrCase<"Protected", "protected", "ProtectedVisibility", 2>;
+
+def Visibility : LLVM_EnumAttr<
+    "Visibility",
+    "::llvm::GlobalValue::VisibilityTypes",
+    "LLVM GlobalValue Visibility",
+    [VisibilityDefault, VisibilityHidden, VisibilityProtected]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
+//===----------------------------------------------------------------------===//
 // ModRefInfo
 //===----------------------------------------------------------------------===//
 

@@ -179,3 +179,17 @@ define void @passthrough_combined() alignstack(16) noinline "probe-stack" "alloc
 define void @passthrough_string_only() "no-enum-attr" {
   ret void
 }
+
+// -----
+
+; CHECK-LABEL: llvm.func hidden @hidden()
+define hidden void @hidden() {
+  ret void
+}
+
+// -----
+
+; CHECK-LABEL: llvm.func protected @protected()
+define protected void @protected() {
+  ret void
+}
