@@ -1627,7 +1627,7 @@ private:
 };
 
 /// A function for mutating LinkGraphs.
-using LinkGraphPassFunction = std::function<Error(LinkGraph &)>;
+using LinkGraphPassFunction = unique_function<Error(LinkGraph &)>;
 
 /// A list of LinkGraph passes.
 using LinkGraphPassList = std::vector<LinkGraphPassFunction>;
