@@ -128,7 +128,7 @@ public:
     SourceMgr = &CI.getSourceManager();
     Includes.collect(CI);
     if (Config::current().Diagnostics.UnusedIncludes ==
-                Config::IncludesPolicy::Experiment ||
+                Config::IncludesPolicy::Strict ||
             Config::current().Diagnostics.MissingIncludes ==
             Config::IncludesPolicy::Strict)
       Pragmas.record(CI);
