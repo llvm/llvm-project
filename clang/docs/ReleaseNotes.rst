@@ -78,6 +78,8 @@ C++ Language Changes
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+- Support for out-of-line definitions of constrained templates has been improved.
+  This partially fixes `https://github.com/llvm/llvm-project/issues/49620`.
 
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
