@@ -1061,3 +1061,106 @@ loop:
 exit:
   ret i32 %iv
 }
+
+; Do not optimize: extra use.
+define i32 @test_ult_extra_use_1_neg(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_ult_extra_use_1_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[IV]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i32 [[IV]], [[INV_2:%.*]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = and i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1_LCSSA:%.*]] = phi i1 [ [[CMP_1]], [[LOOP]] ]
+; CHECK-NEXT:    call void @use(i1 [[CMP_1_LCSSA]])
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp ult i32 %iv, %inv_1
+  %cmp_2 = icmp ult i32 %iv, %inv_2
+  %loop_cond = and i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  call void @use(i1 %cmp_1)
+  ret i32 %iv
+}
+
+define i32 @test_ult_extra_use_2_neg(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_ult_extra_use_2_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[IV]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i32 [[IV]], [[INV_2:%.*]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = and i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_2_LCSSA:%.*]] = phi i1 [ [[CMP_2]], [[LOOP]] ]
+; CHECK-NEXT:    call void @use(i1 [[CMP_2_LCSSA]])
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp ult i32 %iv, %inv_1
+  %cmp_2 = icmp ult i32 %iv, %inv_2
+  %loop_cond = and i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  call void @use(i1 %cmp_2)
+  ret i32 %iv
+}
+
+; TODO: This can be optimized, despite the fact that loop_cond has other uses.
+define i32 @test_ult_extra_use_result_pos(i32 %start, i32 %inv_1, i32 %inv_2) {
+; CHECK-LABEL: @test_ult_extra_use_result_pos(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[IV]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i32 [[IV]], [[INV_2:%.*]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = and i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    [[LOOP_COND_LCSSA:%.*]] = phi i1 [ [[LOOP_COND]], [[LOOP]] ]
+; CHECK-NEXT:    call void @use(i1 [[LOOP_COND_LCSSA]])
+; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp ult i32 %iv, %inv_1
+  %cmp_2 = icmp ult i32 %iv, %inv_2
+  %loop_cond = and i1 %cmp_1, %cmp_2
+  %iv.next = add i32 %iv, 1
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  call void @use(i1 %loop_cond)
+  ret i32 %iv
+}
+
+declare void @use(i1)
