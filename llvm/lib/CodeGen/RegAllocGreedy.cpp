@@ -1960,7 +1960,7 @@ unsigned RAGreedy::tryLastChanceRecoloring(const LiveInterval &VirtReg,
     // don't add it to NewVRegs because its physical register will be restored
     // below. Other vregs in CurrentNewVRegs are created by calling
     // selectOrSplit and should be added into NewVRegs.
-    for (Register &R : CurrentNewVRegs) {
+    for (Register R : CurrentNewVRegs) {
       if (RecoloringCandidates.count(&LIS->getInterval(R)))
         continue;
       NewVRegs.push_back(R);
