@@ -464,17 +464,9 @@ void MCPlusBuilder::initAliases() {
   }
 
   // Propagate smaller alias info upwards. Skip reg 0 (mapped to NoRegister)
-  std::queue<MCPhysReg> Worklist;
   for (MCPhysReg I = 1, E = RegInfo->getNumRegs(); I < E; ++I)
-    Worklist.push(I);
-  while (!Worklist.empty()) {
-    MCPhysReg I = Worklist.front();
-    Worklist.pop();
     for (MCSubRegIterator SI(I, RegInfo); SI.isValid(); ++SI)
       SmallerAliasMap[I] |= SmallerAliasMap[*SI];
-    for (MCSuperRegIterator SI(I, RegInfo); SI.isValid(); ++SI)
-      Worklist.push(*SI);
-  }
 
   LLVM_DEBUG({
     dbgs() << "Dumping reg alias table:\n";
