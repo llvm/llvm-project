@@ -1,0 +1,4 @@
+module ReturnsSTL {
+  header "returns-stl.h"
+  requires cplusplus
+}
