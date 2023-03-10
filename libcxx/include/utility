@@ -117,22 +117,22 @@ struct common_type<pair<T1, T2>, pair<U1, U2>>;                                 
 
 template<class T1, class T2> pair(T1, T2) -> pair<T1, T2>;
 
-template <class T1, class T2>
-bool operator==(const pair<T1,T2>&, const pair<T1,T2>&);                         // constexpr in C++14
-template <class T1, class T2>
-bool operator!=(const pair<T1,T2>&, const pair<T1,T2>&);                         // constexpr in C++14, removed in C++20
-template <class T1, class T2>
-bool operator< (const pair<T1,T2>&, const pair<T1,T2>&);                         // constexpr in C++14, removed in C++20
-template <class T1, class T2>
-bool operator> (const pair<T1,T2>&, const pair<T1,T2>&);                         // constexpr in C++14, removed in C++20
-template <class T1, class T2>
-bool operator>=(const pair<T1,T2>&, const pair<T1,T2>&);                         // constexpr in C++14, removed in C++20
-template <class T1, class T2>
-bool operator<=(const pair<T1,T2>&, const pair<T1,T2>&);                         // constexpr in C++14, removed in C++20
-template <class T1, class T2>
-  constexpr common_comparison_type_t<synth-three-way-result<T1>,
-                                     synth-three-way-result<T2>>
-    operator<=>(const pair<T1,T2>&, const pair<T1,T2>&);                         // C++20
+template <class T1, class T2, class U1, class U2>
+bool operator==(const pair<T1,T2>&, const pair<U1,U2>&);                         // constexpr in C++14
+template <class T1, class T2, class U1, class U2>
+bool operator!=(const pair<T1,T2>&, const pair<U1,U2>&);                         // constexpr in C++14, removed in C++20
+template <class T1, class T2, class U1, class U2>
+bool operator< (const pair<T1,T2>&, const pair<U1,U2>&);                         // constexpr in C++14, removed in C++20
+template <class T1, class T2, class U1, class U2>
+bool operator> (const pair<T1,T2>&, const pair<U1,U2>&);                         // constexpr in C++14, removed in C++20
+template <class T1, class T2, class U1, class U2>
+bool operator>=(const pair<T1,T2>&, const pair<U1,U2>&);                         // constexpr in C++14, removed in C++20
+template <class T1, class T2, class U1, class U2>
+bool operator<=(const pair<T1,T2>&, const pair<U1,U2>&);                         // constexpr in C++14, removed in C++20
+template <class T1, class T2, class U1, class U2>
+  constexpr common_comparison_type_t<synth-three-way-result<T1,U1>,
+                                     synth-three-way-result<T2,U2>>
+    operator<=>(const pair<T1,T2>&, const pair<U1,U2>&);                         // C++20
 
 template <class T1, class T2> pair<V1, V2> make_pair(T1&&, T2&&);                // constexpr in C++14
 template <class T1, class T2>
