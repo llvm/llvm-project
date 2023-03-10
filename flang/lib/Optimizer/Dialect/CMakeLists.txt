@@ -1,3 +1,5 @@
+add_subdirectory(Support)
+
 add_flang_library(FIRDialect
   FIRAttr.cpp
   FIRDialect.cpp
@@ -8,11 +10,11 @@ add_flang_library(FIRDialect
 
   DEPENDS
   CanonicalizationPatternsIncGen
-  FIRSupport
+  MLIRIR
   FIROpsIncGen
 
   LINK_LIBS
-  FIRSupport
+  FIRDialectSupport
   MLIRArithDialect
   MLIROpenMPToLLVM
   MLIRLLVMToLLVMIRTranslation
