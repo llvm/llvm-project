@@ -465,18 +465,16 @@ class SMRD_Real_si <bits<5> op, SM_Pseudo ps>
   let Inst{31-27} = 0x18; //encoding
 }
 
-multiclass SM_Real_Loads_si<bits<5> op, string ps,
-                            SM_Load_Pseudo immPs = !cast<SM_Load_Pseudo>(ps#_IMM),
-                            SM_Load_Pseudo sgprPs = !cast<SM_Load_Pseudo>(ps#_SGPR)> {
-
+multiclass SM_Real_Loads_si<bits<5> op, string ps> {
+  defvar immPs = !cast<SM_Load_Pseudo>(ps#_IMM);
   def _IMM_si : SMRD_Real_si <op, immPs> {
     let InOperandList = (ins immPs.BaseClass:$sbase, smrd_offset_8:$offset, CPol:$cpol);
   }
 
+  defvar sgprPs = !cast<SM_Load_Pseudo>(ps#_SGPR);
   def _SGPR_si : SMRD_Real_si <op, sgprPs> {
     let InOperandList = (ins sgprPs.BaseClass:$sbase, SReg_32:$soffset, CPol:$cpol);
   }
-
 }
 
 defm S_LOAD_DWORD           : SM_Real_Loads_si <0x00, "S_LOAD_DWORD">;
@@ -1000,19 +998,20 @@ class SMEM_Real_Store_gfx10<bits<8> op, SM_Pseudo ps> : SMEM_Real_gfx10<op, ps> 
   let Inst{12-6} = !if(ps.has_sdst, sdata{6-0}, ?);
 }
 
-multiclass SM_Real_Stores_gfx10<bits<8> op, string ps,
-                                SM_Store_Pseudo immPs = !cast<SM_Store_Pseudo>(ps#_IMM),
-                                SM_Store_Pseudo sgprPs = !cast<SM_Store_Pseudo>(ps#_SGPR)> {
+multiclass SM_Real_Stores_gfx10<bits<8> op, string ps> {
+  defvar immPs = !cast<SM_Store_Pseudo>(ps#_IMM);
   def _IMM_gfx10 : SMEM_Real_Store_gfx10 <op, immPs> {
     let InOperandList = (ins immPs.SrcClass:$sdata, immPs.BaseClass:$sbase, smem_offset:$offset, CPol:$cpol);
   }
 
+  defvar sgprPs = !cast<SM_Store_Pseudo>(ps#_SGPR);
   def _SGPR_gfx10 : SMEM_Real_Store_gfx10 <op, sgprPs> {
     let InOperandList = (ins sgprPs.SrcClass:$sdata, sgprPs.BaseClass:$sbase, SReg_32:$soffset, CPol:$cpol);
   }
 
-  def _SGPR_IMM_gfx10 : SMEM_Real_Store_gfx10 <op, !cast<SM_Store_Pseudo>(ps#_SGPR_IMM)> {
-    let InOperandList = (ins sgprPs.SrcClass:$sdata, sgprPs.BaseClass:$sbase,
+  defvar sgprImmPs = !cast<SM_Store_Pseudo>(ps#_SGPR_IMM);
+  def _SGPR_IMM_gfx10 : SMEM_Real_Store_gfx10 <op, sgprImmPs> {
+    let InOperandList = (ins sgprImmPs.SrcClass:$sdata, sgprImmPs.BaseClass:$sbase,
                              SReg_32:$soffset, smem_offset_mod:$offset, CPol:$cpol);
   }
 }
