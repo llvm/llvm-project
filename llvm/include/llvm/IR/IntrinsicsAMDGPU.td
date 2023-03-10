@@ -12,6 +12,7 @@
 
 def flat_ptr_i32_ty : LLVMQualPointerType<llvm_i32_ty, 0>;
 def global_ptr_i32_ty : LLVMQualPointerType<llvm_i32_ty, 1>;
+def global_ptr_i64_ty : LLVMQualPointerType<llvm_i64_ty, 1>;
 
 class AMDGPUReadPreloadRegisterIntrinsic
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
@@ -267,6 +268,17 @@ def int_amdgcn_iglp_opt : ClangBuiltin<"__builtin_amdgcn_iglp_opt">,
 
 def int_amdgcn_s_waitcnt : ClangBuiltin<"__builtin_amdgcn_s_waitcnt">,
   Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+
+// gfx12 intrinsics
+class AMDGPUWaitIntrinsic :
+  Intrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+def int_amdgcn_s_wait_bvhcnt         : AMDGPUWaitIntrinsic;
+def int_amdgcn_s_wait_dscnt          : AMDGPUWaitIntrinsic;
+def int_amdgcn_s_wait_expcnt         : AMDGPUWaitIntrinsic;
+def int_amdgcn_s_wait_kmcnt          : AMDGPUWaitIntrinsic;
+def int_amdgcn_s_wait_loadcnt        : AMDGPUWaitIntrinsic;
+def int_amdgcn_s_wait_samplecnt      : AMDGPUWaitIntrinsic;
+def int_amdgcn_s_wait_storecnt       : AMDGPUWaitIntrinsic;
 
 def int_amdgcn_div_scale : DefaultAttrsIntrinsic<
   // 1st parameter: Numerator
@@ -2248,7 +2260,7 @@ class AMDGPUAtomicCondSub<LLVMType vt, LLVMType pt> : Intrinsic <
 
 def int_amdgcn_flat_atomic_cond_sub_u32 : AMDGPUAtomicCondSub<llvm_i32_ty, flat_ptr_i32_ty>;
 def int_amdgcn_global_atomic_cond_sub_u32 : AMDGPUAtomicCondSub<llvm_i32_ty, global_ptr_i32_ty>;
-def int_amdgcn_global_atomic_ordered_add_b64 : AMDGPUAtomicCondSub<llvm_i64_ty, global_ptr_i32_ty>;
+def int_amdgcn_global_atomic_ordered_add_b64 : AMDGPUAtomicCondSub<llvm_i64_ty, global_ptr_i64_ty>;
 
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
