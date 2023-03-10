@@ -948,6 +948,13 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       CI.getDiagnostics().Report(diag::err_module_map_not_found) << Filename;
   }
 
+  // Provide any modules from the action cache.
+  for (const auto &KeyPair : CI.getFrontendOpts().ModuleCacheKeys)
+    if (CI.addCachedModuleFile(KeyPair.first, KeyPair.second,
+                               "-fmodule-file-cache-key"))
+      return false;
+
+
   // If compiling implementation of a module, load its module map file now.
   (void)CI.getPreprocessor().getCurrentModuleImplementation();
 
@@ -1061,12 +1068,6 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
            "modules enabled but created an external source that "
            "doesn't support modules");
   }
-
-  // Provide any modules from the action cache.
-  for (const auto &KeyPair : CI.getFrontendOpts().ModuleCacheKeys)
-    if (CI.addCachedModuleFile(KeyPair.first, KeyPair.second,
-                               "-fmodule-file-cache-key"))
-      return false;
 
   // If we were asked to load any module files, do so now.
   for (const auto &ModuleFile : CI.getFrontendOpts().ModuleFiles)
