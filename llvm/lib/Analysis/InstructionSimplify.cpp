@@ -539,12 +539,16 @@ static Value *threadBinOpOverPHI(Instruction::BinaryOps Opcode, Value *LHS,
 
   // Evaluate the BinOp on the incoming phi values.
   Value *CommonValue = nullptr;
-  for (Value *Incoming : PI->incoming_values()) {
+  for (Use &Incoming : PI->incoming_values()) {
     // If the incoming value is the phi node itself, it can safely be skipped.
     if (Incoming == PI)
       continue;
-    Value *V = PI == LHS ? simplifyBinOp(Opcode, Incoming, RHS, Q, MaxRecurse)
-                         : simplifyBinOp(Opcode, LHS, Incoming, Q, MaxRecurse);
+    Instruction *InTI = PI->getIncomingBlock(Incoming)->getTerminator();
+    Value *V = PI == LHS
+                   ? simplifyBinOp(Opcode, Incoming, RHS,
+                                   Q.getWithInstruction(InTI), MaxRecurse)
+                   : simplifyBinOp(Opcode, LHS, Incoming,
+                                   Q.getWithInstruction(InTI), MaxRecurse);
     // If the operation failed to simplify, or simplified to a different value
     // to previously, then give up.
     if (!V || (CommonValue && V != CommonValue))
