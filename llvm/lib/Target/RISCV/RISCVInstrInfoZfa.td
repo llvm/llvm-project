@@ -135,10 +135,11 @@ def FMV_X_W_FPR64 : FPUnaryOp_r<0b1110000, 0b00000, 0b000, GPR, FPR64,
                     Sched<[WriteFMovF32ToI32, ReadFMovF32ToI32]>;
 } // Predicates = [HasStdExtZfa, HasStdExtD, IsRV32]
 
-let Predicates = [HasStdExtZfa, HasStdExtZfh] in {
+let Predicates = [HasStdExtZfa, HasStdExtZfhOrZvfh] in
 def FLI_H : FPUnaryOp_imm<0b1111010, 0b00001, 0b000, OPC_OP_FP, (outs FPR16:$rd),
             (ins loadfp16imm:$imm), "fli.h", "$rd, $imm">;
 
+let Predicates = [HasStdExtZfa, HasStdExtZfh] in {
 def FMINM_H: FPALU_rr<0b0010110, 0b010, "fminm.h", FPR16, /*Commutable*/ 1>;
 def FMAXM_H: FPALU_rr<0b0010110, 0b011, "fmaxm.h", FPR16, /*Commutable*/ 1>;
 
