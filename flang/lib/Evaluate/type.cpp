@@ -262,6 +262,71 @@ static bool AreSameComponent(const semantics::Symbol &x,
       y.has<semantics::ObjectEntityDetails>();
 }
 
+// TODO: These utilities were cloned out of Semantics to avoid a cyclic
+// dependency and should be repackaged into then "namespace semantics"
+// part of Evaluate/tools.cpp.
+
+static const semantics::Symbol *GetParentComponent(
+    const semantics::DerivedTypeDetails &details,
+    const semantics::Scope &scope) {
+  if (auto extends{details.GetParentComponentName()}) {
+    if (auto iter{scope.find(*extends)}; iter != scope.cend()) {
+      if (const Symbol & symbol{*iter->second};
+          symbol.test(semantics::Symbol::Flag::ParentComp)) {
+        return &symbol;
+      }
+    }
+  }
+  return nullptr;
+}
+
+static const semantics::Symbol *GetParentComponent(
+    const semantics::Symbol *symbol, const semantics::Scope &scope) {
+  if (symbol) {
+    if (const auto *dtDetails{
+            symbol->detailsIf<semantics::DerivedTypeDetails>()}) {
+      return GetParentComponent(*dtDetails, scope);
+    }
+  }
+  return nullptr;
+}
+
+static const semantics::DerivedTypeSpec *GetParentTypeSpec(
+    const semantics::Symbol *symbol, const semantics::Scope &scope) {
+  if (const Symbol * parentComponent{GetParentComponent(symbol, scope)}) {
+    return &parentComponent->get<semantics::ObjectEntityDetails>()
+                .type()
+                ->derivedTypeSpec();
+  } else {
+    return nullptr;
+  }
+}
+
+static const semantics::Scope *GetDerivedTypeParent(
+    const semantics::Scope *scope) {
+  if (scope) {
+    CHECK(scope->IsDerivedType());
+    if (const auto *parent{GetParentTypeSpec(scope->GetSymbol(), *scope)}) {
+      return parent->scope();
+    }
+  }
+  return nullptr;
+}
+
+static const semantics::Symbol *FindComponent(
+    const semantics::Scope *scope, parser::CharBlock name) {
+  if (!scope) {
+    return nullptr;
+  }
+  CHECK(scope->IsDerivedType());
+  auto found{scope->find(name)};
+  if (found != scope->end()) {
+    return &*found->second;
+  } else {
+    return FindComponent(GetDerivedTypeParent(scope), name);
+  }
+}
+
 static bool AreTypeParamCompatible(const semantics::DerivedTypeSpec &x,
     const semantics::DerivedTypeSpec &y, bool ignoreLenParameters) {
   const auto *xScope{x.typeSymbol().scope()};
@@ -271,8 +336,8 @@ static bool AreTypeParamCompatible(const semantics::DerivedTypeSpec &x,
     if (!yValue) {
       return false;
     }
-    const auto *xParm{xScope ? xScope->FindComponent(paramName) : nullptr};
-    const auto *yParm{yScope ? yScope->FindComponent(paramName) : nullptr};
+    const auto *xParm{FindComponent(xScope, paramName)};
+    const auto *yParm{FindComponent(yScope, paramName)};
     if (xParm && yParm) {
       const auto *xTPD{xParm->detailsIf<semantics::TypeParamDetails>()};
       const auto *yTPD{yParm->detailsIf<semantics::TypeParamDetails>()};
