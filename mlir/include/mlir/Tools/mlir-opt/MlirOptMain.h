@@ -78,6 +78,13 @@ public:
   }
   bool shouldEmitBytecode() const { return emitBytecodeFlag; }
 
+  /// Set the IRDL file to load before processing the input.
+  MlirOptMainConfig &setIrdlFile(StringRef file) {
+    irdlFileFlag = file;
+    return *this;
+  }
+  StringRef getIrdlFile() const { return irdlFileFlag; }
+
   /// Set the filename to use for logging actions, use "-" for stdout.
   MlirOptMainConfig &logActionsTo(StringRef filename) {
     logActionsToFlag = filename;
@@ -172,6 +179,9 @@ protected:
 
   /// Emit bytecode instead of textual assembly when generating output.
   bool emitBytecodeFlag = false;
+
+  /// IRDL file to register before processing the input.
+  std::string irdlFileFlag = "";
 
   /// Log action execution to the given file (or "-" for stdout)
   std::string logActionsToFlag;
