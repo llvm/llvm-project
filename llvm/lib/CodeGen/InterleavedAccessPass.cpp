@@ -58,6 +58,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
@@ -112,6 +113,16 @@ private:
   /// Transform an interleaved store into target specific intrinsics.
   bool lowerInterleavedStore(StoreInst *SI,
                              SmallVector<Instruction *, 32> &DeadInsts);
+
+  /// Transform a load and a deinterleave intrinsic into target specific
+  /// instructions.
+  bool lowerDeinterleaveIntrinsic(IntrinsicInst *II,
+                                  SmallVector<Instruction *, 32> &DeadInsts);
+
+  /// Transform an interleave intrinsic and a store into target specific
+  /// instructions.
+  bool lowerInterleaveIntrinsic(IntrinsicInst *II,
+                                SmallVector<Instruction *, 32> &DeadInsts);
 
   /// Returns true if the uses of an interleaved load by the
   /// extractelement instructions in \p Extracts can be replaced by uses of the
@@ -446,6 +457,47 @@ bool InterleavedAccess::lowerInterleavedStore(
   return true;
 }
 
+bool InterleavedAccess::lowerDeinterleaveIntrinsic(
+    IntrinsicInst *DI, SmallVector<Instruction *, 32> &DeadInsts) {
+  LoadInst *LI = dyn_cast<LoadInst>(DI->getOperand(0));
+
+  if (!LI || !LI->hasOneUse() || !LI->isSimple())
+    return false;
+
+  LLVM_DEBUG(dbgs() << "IA: Found a deinterleave intrinsic: " << *DI << "\n");
+
+  // Try and match this with target specific intrinsics.
+  if (!TLI->lowerDeinterleaveIntrinsicToLoad(DI, LI))
+    return false;
+
+  // We now have a target-specific load, so delete the old one.
+  DeadInsts.push_back(DI);
+  DeadInsts.push_back(LI);
+  return true;
+}
+
+bool InterleavedAccess::lowerInterleaveIntrinsic(
+    IntrinsicInst *II, SmallVector<Instruction *, 32> &DeadInsts) {
+  if (!II->hasOneUse())
+    return false;
+
+  StoreInst *SI = dyn_cast<StoreInst>(*(II->users().begin()));
+
+  if (!SI || !SI->isSimple())
+    return false;
+
+  LLVM_DEBUG(dbgs() << "IA: Found an interleave intrinsic: " << *II << "\n");
+
+  // Try and match this with target specific intrinsics.
+  if (!TLI->lowerInterleaveIntrinsicToStore(II, SI))
+    return false;
+
+  // We now have a target-specific store, so delete the old one.
+  DeadInsts.push_back(SI);
+  DeadInsts.push_back(II);
+  return true;
+}
+
 bool InterleavedAccess::runOnFunction(Function &F) {
   auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
   if (!TPC || !LowerInterleavedAccesses)
@@ -468,6 +520,15 @@ bool InterleavedAccess::runOnFunction(Function &F) {
 
     if (auto *SI = dyn_cast<StoreInst>(&I))
       Changed |= lowerInterleavedStore(SI, DeadInsts);
+
+    if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+      // At present, we only have intrinsics to represent (de)interleaving
+      // with a factor of 2.
+      if (II->getIntrinsicID() == Intrinsic::experimental_vector_deinterleave2)
+        Changed |= lowerDeinterleaveIntrinsic(II, DeadInsts);
+      if (II->getIntrinsicID() == Intrinsic::experimental_vector_interleave2)
+        Changed |= lowerInterleaveIntrinsic(II, DeadInsts);
+    }
   }
 
   for (auto *I : DeadInsts)
