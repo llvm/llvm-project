@@ -256,36 +256,36 @@ public:
         Found = true;
         Entry = Entries[I];
         Entries[I].CommitBase = 0;
+        EntriesCount--;
         break;
       }
     }
-    if (Found) {
-      *H = reinterpret_cast<LargeBlock::Header *>(
-          LargeBlock::addHeaderTag<Config>(HeaderPos));
-      *Zeroed = Entry.Time == 0;
-      if (useMemoryTagging<Config>(Options))
-        setMemoryPermission(Entry.CommitBase, Entry.CommitSize, 0, &Entry.Data);
-      uptr NewBlockBegin = reinterpret_cast<uptr>(*H + 1);
-      if (useMemoryTagging<Config>(Options)) {
-        if (*Zeroed)
-          storeTags(LargeBlock::addHeaderTag<Config>(Entry.CommitBase),
-                    NewBlockBegin);
-        else if (Entry.BlockBegin < NewBlockBegin)
-          storeTags(Entry.BlockBegin, NewBlockBegin);
-        else
-          storeTags(untagPointer(NewBlockBegin),
-                    untagPointer(Entry.BlockBegin));
-      }
-      (*H)->CommitBase = Entry.CommitBase;
-      (*H)->CommitSize = Entry.CommitSize;
-      (*H)->MapBase = Entry.MapBase;
-      (*H)->MapSize = Entry.MapSize;
-      (*H)->Data = Entry.Data;
+    if (!Found)
+      return false;
 
-      ScopedLock L(Mutex);
-      EntriesCount--;
+    *H = reinterpret_cast<LargeBlock::Header *>(
+        LargeBlock::addHeaderTag<Config>(HeaderPos));
+    *Zeroed = Entry.Time == 0;
+    if (useMemoryTagging<Config>(Options))
+      setMemoryPermission(Entry.CommitBase, Entry.CommitSize, 0, &Entry.Data);
+    uptr NewBlockBegin = reinterpret_cast<uptr>(*H + 1);
+    if (useMemoryTagging<Config>(Options)) {
+      if (*Zeroed) {
+        storeTags(LargeBlock::addHeaderTag<Config>(Entry.CommitBase),
+                  NewBlockBegin);
+      } else if (Entry.BlockBegin < NewBlockBegin) {
+        storeTags(Entry.BlockBegin, NewBlockBegin);
+      } else {
+        storeTags(untagPointer(NewBlockBegin),
+                  untagPointer(Entry.BlockBegin));
+      }
     }
-    return Found;
+    (*H)->CommitBase = Entry.CommitBase;
+    (*H)->CommitSize = Entry.CommitSize;
+    (*H)->MapBase = Entry.MapBase;
+    (*H)->MapSize = Entry.MapSize;
+    (*H)->Data = Entry.Data;
+    return true;
   }
 
   bool canCache(uptr Size) {
