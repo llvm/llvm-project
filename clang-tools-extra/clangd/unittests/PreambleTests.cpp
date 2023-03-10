@@ -216,7 +216,6 @@ TEST(PreamblePatchTest, PatchesPreambleIncludes) {
           Field(&Inclusion::Written, "\"a.h\""),
           Field(&Inclusion::Resolved, testPath("a.h")),
           Field(&Inclusion::HeaderID, testing::Not(testing::Eq(std::nullopt))),
-          Field(&Inclusion::BehindPragmaKeep, true),
           Field(&Inclusion::FileKind, SrcMgr::CharacteristicKind::C_User))));
 }
 

@@ -147,7 +147,6 @@ MATCHER_P(written, Name, "") { return arg.Written == Name; }
 MATCHER_P(resolved, Name, "") { return arg.Resolved == Name; }
 MATCHER_P(includeLine, N, "") { return arg.HashLine == N; }
 MATCHER_P(directive, D, "") { return arg.Directive == D; }
-MATCHER_P(hasPragmaKeep, H, "") { return arg.BehindPragmaKeep == H; }
 
 MATCHER_P2(Distance, File, D, "") {
   if (arg.getFirst() != File)
@@ -291,18 +290,6 @@ TEST_F(HeadersTest, IncludeDirective) {
               UnorderedElementsAre(directive(tok::pp_include),
                                    directive(tok::pp_import),
                                    directive(tok::pp_include_next)));
-}
-
-TEST_F(HeadersTest, IWYUPragmaKeep) {
-  FS.Files[MainFile] = R"cpp(
-#include "bar.h" // IWYU pragma: keep
-#include "foo.h"
-)cpp";
-
-  EXPECT_THAT(
-      collectIncludes().MainFileIncludes,
-      UnorderedElementsAre(AllOf(written("\"foo.h\""), hasPragmaKeep(false)),
-                           AllOf(written("\"bar.h\""), hasPragmaKeep(true))));
 }
 
 TEST_F(HeadersTest, InsertInclude) {
@@ -455,33 +442,6 @@ void foo();
   EXPECT_TRUE(Includes.isSelfContained(getID("recursive.h", Includes)));
   EXPECT_FALSE(Includes.isSelfContained(getID("nonguarded.h", Includes)));
   EXPECT_FALSE(Includes.isSelfContained(getID("pp_depend.h", Includes)));
-}
-
-TEST_F(HeadersTest, HasIWYUPragmas) {
-  FS.Files[MainFile] = R"cpp(
-#include "export.h"
-#include "begin_exports.h"
-#include "none.h"
-)cpp";
-  FS.Files["export.h"] = R"cpp(
-#pragma once
-#include "none.h" // IWYU pragma: export
-)cpp";
-  FS.Files["begin_exports.h"] = R"cpp(
-#pragma once
-// IWYU pragma: begin_exports
-#include "none.h"
-// IWYU pragma: end_exports
-)cpp";
-  FS.Files["none.h"] = R"cpp(
-#pragma once
-// Not a pragma.
-)cpp";
-
-  auto Includes = collectIncludes();
-  EXPECT_TRUE(Includes.hasIWYUExport(getID("export.h", Includes)));
-  EXPECT_TRUE(Includes.hasIWYUExport(getID("begin_exports.h", Includes)));
-  EXPECT_FALSE(Includes.hasIWYUExport(getID("none.h", Includes)));
 }
 
 } // namespace
