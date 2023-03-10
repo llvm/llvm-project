@@ -23,13 +23,13 @@ module {
     %12 = llvm.mlir.constant(3 : i64) : i64
     %v = llvm.insertelement %3, %11[%12 : i64] : vector<4xf32>
 
-    %max = "llvm.intr.vector.reduce.fmax"(%v)
+    %max = llvm.intr.vector.reduce.fmax(%v)
         : (vector<4xf32>) -> f32
     llvm.call @printF32(%max) : (f32) -> ()
     llvm.call @printNewline() : () -> ()
     // CHECK: 4
 
-    %min = "llvm.intr.vector.reduce.fmin"(%v)
+    %min = llvm.intr.vector.reduce.fmin(%v)
         : (vector<4xf32>) -> f32
     llvm.call @printF32(%min) : (f32) -> ()
     llvm.call @printNewline() : () -> ()
