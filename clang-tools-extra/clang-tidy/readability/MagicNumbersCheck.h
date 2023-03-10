@@ -84,6 +84,7 @@ private:
   const bool IgnoreAllFloatingPointValues;
   const bool IgnoreBitFieldsWidths;
   const bool IgnorePowersOf2IntegerValues;
+  const bool IgnoreTypeAliases;
   const StringRef RawIgnoredIntegerValues;
   const StringRef RawIgnoredFloatingPointValues;
 
