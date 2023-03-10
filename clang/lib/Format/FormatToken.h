@@ -1801,6 +1801,13 @@ struct AdditionalKeywords {
                                     kw_input, kw_output, kw_sequence)));
   }
 
+  /// Returns whether \p Tok is a Verilog keyword that starts a
+  /// structured procedure like 'always'.
+  bool isVerilogStructuredProcedure(const FormatToken &Tok) const {
+    return Tok.isOneOf(kw_always, kw_always_comb, kw_always_ff, kw_always_latch,
+                       kw_final, kw_forever, kw_initial);
+  }
+
   bool isVerilogQualifier(const FormatToken &Tok) const {
     switch (Tok.Tok.getKind()) {
     case tok::kw_extern:
