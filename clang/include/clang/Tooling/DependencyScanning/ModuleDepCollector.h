@@ -27,6 +27,7 @@ namespace clang {
 namespace tooling {
 namespace dependencies {
 
+class DependencyActionController;
 class DependencyConsumer;
 
 /// Modular dependency that has already been built prior to the dependency scan.
@@ -201,6 +202,7 @@ class ModuleDepCollector final : public DependencyCollector {
 public:
   ModuleDepCollector(std::unique_ptr<DependencyOutputOptions> Opts,
                      CompilerInstance &ScanInstance, DependencyConsumer &C,
+                     DependencyActionController &Controller,
                      CompilerInvocation OriginalCI, bool OptimizeArgs,
                      bool EagerLoadModules, bool IsStdModuleP1689Format);
 
@@ -218,6 +220,8 @@ private:
   CompilerInstance &ScanInstance;
   /// The consumer of collected dependency information.
   DependencyConsumer &Consumer;
+  /// Callbacks for computing dependency information.
+  DependencyActionController &Controller;
   /// Path to the main source file.
   std::string MainFile;
   /// Hash identifying the compilation conditions of the current TU.
