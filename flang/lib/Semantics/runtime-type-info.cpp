@@ -1112,15 +1112,18 @@ void RuntimeTableBuilder::DescribeSpecialProc(
       }
     } else { // user defined derived type I/O
       CHECK(proc->dummyArguments.size() >= 4);
+      const auto *ddo{std::get_if<evaluate::characteristics::DummyDataObject>(
+          &proc->dummyArguments[0].u)};
+      if (!ddo) {
+        return;
+      }
       if (derivedTypeSpec &&
-          !std::get<evaluate::characteristics::DummyDataObject>(
-              proc->dummyArguments[0].u)
-               .type.type()
-               .IsTkCompatibleWith(evaluate::DynamicType{*derivedTypeSpec})) {
+          !ddo->type.type().IsTkCompatibleWith(
+              evaluate::DynamicType{*derivedTypeSpec})) {
         // Defined I/O specific procedure is not for this derived type.
         return;
       }
-      if (binding) {
+      if (ddo->type.type().IsPolymorphic()) {
         isArgDescriptorSet |= 1;
       }
       switch (io.value()) {

@@ -14,6 +14,8 @@
 #include <array>
 #include <climits>
 #include <list>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -1053,6 +1055,38 @@ TEST(STLExtrasTest, addEnumValues) {
   static_assert(addEnumValues(ULongLongMax, C::Two) ==
                     static_cast<unsigned long long>(ULLONG_MAX) + 2,
                 "addEnumValues(ULongLongMax, C::Two) failed.");
+}
+
+TEST(STLExtrasTest, LessFirst) {
+  {
+    std::pair<int, int> A(0, 1);
+    std::pair<int, int> B(1, 0);
+    EXPECT_TRUE(less_first()(A, B));
+    EXPECT_FALSE(less_first()(B, A));
+  }
+
+  {
+    std::tuple<int, int> A(0, 1);
+    std::tuple<int, int> B(1, 0);
+    EXPECT_TRUE(less_first()(A, B));
+    EXPECT_FALSE(less_first()(B, A));
+  }
+}
+
+TEST(STLExtrasTest, LessSecond) {
+  {
+    std::pair<int, int> A(0, 1);
+    std::pair<int, int> B(1, 0);
+    EXPECT_FALSE(less_second()(A, B));
+    EXPECT_TRUE(less_second()(B, A));
+  }
+
+  {
+    std::tuple<int, int> A(0, 1);
+    std::tuple<int, int> B(1, 0);
+    EXPECT_FALSE(less_second()(A, B));
+    EXPECT_TRUE(less_second()(B, A));
+  }
 }
 
 } // namespace

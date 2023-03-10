@@ -547,7 +547,6 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__utility/piecewise_construct.h>
 #include <__utility/swap.h>
 #include <tuple>
-#include <type_traits>
 #include <version>
 
 // standard-mandated includes
@@ -2355,6 +2354,7 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <concepts>
 #  include <functional>
 #  include <iterator>
+#  include <type_traits>
 #  include <utility>
 #endif
 

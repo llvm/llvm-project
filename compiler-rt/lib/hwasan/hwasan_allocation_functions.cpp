@@ -24,6 +24,18 @@ using namespace __hwasan;
 
 struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
   static bool UseImpl() { return !hwasan_inited; }
+  static void OnAllocate(const void *ptr, uptr size) {
+#  if CAN_SANITIZE_LEAKS
+    // Suppress leaks from dlerror(). Previously dlsym hack on global array was
+    // used by leak sanitizer as a root region.
+    __lsan_register_root_region(ptr, size);
+#  endif
+  }
+  static void OnFree(const void *ptr, uptr size) {
+#  if CAN_SANITIZE_LEAKS
+    __lsan_unregister_root_region(ptr, size);
+#  endif
+  }
 };
 
 extern "C" {

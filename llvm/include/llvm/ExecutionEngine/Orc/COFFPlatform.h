@@ -138,7 +138,7 @@ private:
 
   COFFPlatform(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
                JITDylib &PlatformJD, const char *OrcRuntimePath,
-               LoadDynamicLibrary LoadDynLibrary, bool StaticVCRuntime,
+               LoadDynamicLibrary LoadDynamicLibrary, bool StaticVCRuntime,
                const char *VCRuntimePath, Error &Err);
 
   // Associate COFFPlatform JIT-side runtime support functions with handlers.

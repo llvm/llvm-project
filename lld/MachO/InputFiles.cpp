@@ -1272,10 +1272,13 @@ static CIE parseCIE(const InputSection *isec, const EhReader &reader,
     }
   }
   if (personalityAddrOff != 0) {
-    const auto *personalityReloc = isec->getRelocAt(personalityAddrOff);
-    if (!personalityReloc)
+    auto personalityRelocIt =
+        llvm::find_if(isec->relocs, [=](const macho::Reloc &r) {
+          return r.offset == personalityAddrOff;
+        });
+    if (personalityRelocIt == isec->relocs.end())
       reader.failOn(off, "Failed to locate relocation for personality symbol");
-    cie.personalitySymbol = personalityReloc->referent.get<macho::Symbol *>();
+    cie.personalitySymbol = personalityRelocIt->referent.get<macho::Symbol *>();
   }
   return cie;
 }

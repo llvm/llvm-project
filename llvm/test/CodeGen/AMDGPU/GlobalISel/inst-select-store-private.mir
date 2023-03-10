@@ -857,13 +857,19 @@ body: |
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX11-NEXT: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
-    ; GFX11-NEXT: SCRATCH_STORE_DWORD [[COPY]], [[V_LSHRREV_B32_e64_]], 4095, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 5)
+    ; GFX11-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4095
+    ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
+    ; GFX11-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_LSHRREV_B32_e64_]], [[COPY1]], 0, implicit $exec
+    ; GFX11-NEXT: SCRATCH_STORE_DWORD [[COPY]], [[V_ADD_U32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 5)
     ; GFX12-LABEL: name: function_store_private_s32_to_4_wave_address_offset_copy_constant_4095
     ; GFX12: liveins: $vgpr0, $vgpr1
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX12-NEXT: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
-    ; GFX12-NEXT: SCRATCH_STORE_DWORD [[COPY]], [[V_LSHRREV_B32_e64_]], 4095, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 5)
+    ; GFX12-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4095
+    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
+    ; GFX12-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_LSHRREV_B32_e64_]], [[COPY1]], 0, implicit $exec
+    ; GFX12-NEXT: SCRATCH_STORE_DWORD [[COPY]], [[V_ADD_U32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 5)
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
     %2:sgpr(s32) = G_CONSTANT i32 4095
@@ -906,13 +912,17 @@ body: |
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX11-NEXT: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
-    ; GFX11-NEXT: SCRATCH_STORE_DWORD [[COPY]], [[V_LSHRREV_B32_e64_]], 4095, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 5)
+    ; GFX11-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4095, implicit $exec
+    ; GFX11-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_LSHRREV_B32_e64_]], [[V_MOV_B32_e32_]], 0, implicit $exec
+    ; GFX11-NEXT: SCRATCH_STORE_DWORD [[COPY]], [[V_ADD_U32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 5)
     ; GFX12-LABEL: name: function_store_private_s32_to_4_wave_address_offset_4095
     ; GFX12: liveins: $vgpr0, $vgpr1
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX12-NEXT: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
-    ; GFX12-NEXT: SCRATCH_STORE_DWORD [[COPY]], [[V_LSHRREV_B32_e64_]], 4095, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 5)
+    ; GFX12-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4095, implicit $exec
+    ; GFX12-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_LSHRREV_B32_e64_]], [[V_MOV_B32_e32_]], 0, implicit $exec
+    ; GFX12-NEXT: SCRATCH_STORE_DWORD [[COPY]], [[V_ADD_U32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 5)
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
     %2:vgpr(s32) = G_CONSTANT i32 4095
@@ -967,7 +977,10 @@ body: |
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX12-NEXT: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
-    ; GFX12-NEXT: SCRATCH_STORE_DWORD [[COPY]], [[V_LSHRREV_B32_e64_]], 4096, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 5)
+    ; GFX12-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
+    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
+    ; GFX12-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_LSHRREV_B32_e64_]], [[COPY1]], 0, implicit $exec
+    ; GFX12-NEXT: SCRATCH_STORE_DWORD [[COPY]], [[V_ADD_U32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 5)
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
     %2:sgpr(s32) = G_CONSTANT i32 4096

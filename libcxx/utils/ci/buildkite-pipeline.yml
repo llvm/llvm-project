@@ -1025,3 +1025,22 @@ steps:
           - exit_status: -1  # Agent was lost
             limit: 2
       timeout_in_minutes: 120
+
+  - group: "FreeBSD"
+    steps:
+    - label: "FreeBSD 13 amd64"
+      command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
+      artifact_paths:
+        - "**/test-results.xml"
+        - "**/*.abilist"
+      env:
+          CC: "clang15"
+          CXX: "clang++15"
+      agents:
+        queue: "libcxx-builders"
+        os: "freebsd"
+      retry:
+        automatic:
+          - exit_status: -1  # Agent was lost
+            limit: 2
+      timeout_in_minutes: 120

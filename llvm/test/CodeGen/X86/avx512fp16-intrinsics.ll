@@ -1231,10 +1231,7 @@ define <16 x half> @test_mm256_castph128_ph256_freeze(<8 x half> %a0) nounwind {
 define <32 x half> @test_mm512_castph128_ph512_freeze(<8 x half> %a0) nounwind {
 ; CHECK-LABEL: test_mm512_castph128_ph512_freeze:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
-; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; CHECK-NEXT:    retq
   %a1 = freeze <8 x half> poison
   %res = shufflevector <8 x half> %a0, <8 x half> %a1, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>

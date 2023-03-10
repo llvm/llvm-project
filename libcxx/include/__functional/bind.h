@@ -15,7 +15,6 @@
 #include <__functional/weak_result_type.h>
 #include <cstddef>
 #include <tuple>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

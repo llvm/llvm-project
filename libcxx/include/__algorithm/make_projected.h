@@ -60,7 +60,7 @@ template <class _Pred,
           __enable_if_t<!(!is_member_pointer<typename decay<_Pred>::type>::value &&
                             __is_identity<typename decay<_Proj>::type>::value),
                         int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR static _ProjectedPred<_Pred, _Proj>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _ProjectedPred<_Pred, _Proj>
 __make_projected(_Pred& __pred, _Proj& __proj) {
   return _ProjectedPred<_Pred, _Proj>(__pred, __proj);
 }
@@ -73,7 +73,7 @@ template <class _Pred,
           __enable_if_t<!is_member_pointer<typename decay<_Pred>::type>::value &&
                           __is_identity<typename decay<_Proj>::type>::value,
                         int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR static _Pred& __make_projected(_Pred& __pred, _Proj&) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Pred& __make_projected(_Pred& __pred, _Proj&) {
   return __pred;
 }
 
@@ -86,7 +86,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 
 template <class _Comp, class _Proj1, class _Proj2>
-_LIBCPP_HIDE_FROM_ABI constexpr static
+_LIBCPP_HIDE_FROM_ABI constexpr
 decltype(auto) __make_projected_comp(_Comp& __comp, _Proj1& __proj1, _Proj2& __proj2) {
   if constexpr (__is_identity<decay_t<_Proj1>>::value && __is_identity<decay_t<_Proj2>>::value &&
                 !is_member_pointer_v<decay_t<_Comp>>) {

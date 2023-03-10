@@ -27,7 +27,7 @@ int main() {
   // of the fault.
   // CHECK: in main {{.*}}use-after-free.c:[[@LINE-6]]
   // Offset is 5 or 11 depending on left/right alignment.
-  // CHECK: is a small unallocated heap chunk; size: 32 offset: {{5|11}}
+  // CHECK: is a small unallocated heap chunk; size: {{16|32}} offset: {{5|11}}
   // CHECK: Cause: use-after-free
   // CHECK: is located 5 bytes inside a 10-byte region
   //

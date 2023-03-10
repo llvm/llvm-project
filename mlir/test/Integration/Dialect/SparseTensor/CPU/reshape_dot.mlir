@@ -56,6 +56,18 @@ module {
     return %ret1 :  tensor<?x?x?xf32>
   }
 
+  func.func @test_sparse_all_2(%arg0: tensor<5x6xf32, #COO_2D>, %arg1: tensor<2x3x6xf32, #COO_3D>) -> tensor<?x?x?xf32> {
+    // collapse the first two level this time, as this is the level requires coiterations.
+    %collapsed = tensor.collapse_shape %arg1 [[0, 1], [2]] : tensor<2x3x6xf32, #COO_3D> into tensor<6x6xf32, #COO_2D>
+    %0 = tensor.empty() : tensor<5x6xf32>
+    %cst = arith.constant 0.000000e+00 : f32
+    %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<5x6xf32>) -> tensor<5x6xf32>
+    %2 = linalg.matmul ins(%arg0, %collapsed : tensor<5x6xf32, #COO_2D>, tensor<6x6xf32, #COO_2D>) outs(%1 : tensor<5x6xf32>) -> tensor<5x6xf32>
+    %expanded = tensor.expand_shape %2 [[0], [1, 2]] : tensor<5x6xf32> into tensor<5x2x3xf32>
+    %ret1 = tensor.cast %expanded : tensor<5x2x3xf32> to tensor<?x?x?xf32>
+    return %ret1 : tensor<?x?x?xf32>
+  }
+
 
   func.func @entry() {
     // Setup two sparse vectors.
@@ -68,9 +80,12 @@ module {
       [ [0, 0, 0], [1, 1, 1], [2, 1, 1] ],
         [     6.0,       7.0,      8.0]
     > : tensor<6x2x3xf32>
+    %shape = arith.constant dense<[2, 3, 6]> : tensor<3xi32>
 
+    %d3 = tensor.reshape %d2(%shape): (tensor<6x2x3xf32>, tensor<3xi32>) -> tensor<2x3x6xf32>
     %s1 = sparse_tensor.convert %d1 : tensor<5x6xf32> to tensor<5x6xf32, #COO_2D>
     %s2 = sparse_tensor.convert %d2 : tensor<6x2x3xf32> to tensor<6x2x3xf32, #COO_3D>
+    %s3 = sparse_tensor.convert %d3 : tensor<2x3x6xf32> to tensor<2x3x6xf32, #COO_3D>
 
     //      CHECK: Memref base@ = {{.*}} rank = 3 offset = 0 sizes = [5, 2, 3] strides = [6, 3, 1] data =
     // CHECK-NEXT:[
@@ -134,11 +149,34 @@ module {
     %so2 = call @test_sparse_all(%s1, %s2): (tensor<5x6xf32, #COO_2D>, tensor<6x2x3xf32, #COO_3D>) -> tensor<?x?x?xf32>
     call @printMemref3dF32(%so2) : (tensor<?x?x?xf32>) -> ()
 
+    // Same results.
+    // CHECK-NEXT: Memref base@ = {{.*}} rank = 3 offset = 0 sizes = [5, 2, 3] strides = [6, 3, 1] data =
+    // CHECK-NEXT:[
+    // CHECK-SAME: [
+    // CHECK-SAME:  [6,    0,    0],
+    // CHECK-NEXT:  [0,    0,    0]],
+    // CHECK-NEXT: [
+    // CHECK-SAME:  [0,    0,    0],
+    // CHECK-NEXT:  [0,    14,    0]],
+    // CHECK-NEXT: [
+    // CHECK-SAME:  [0,    0,    0],
+    // CHECK-NEXT:  [0,    24,    0]],
+    // CHECK-NEXT: [
+    // CHECK-SAME:  [0,    0,    0],
+    // CHECK-NEXT:  [0,    0,    0]],
+    // CHECK-NEXT: [
+    // CHECK-SAME:  [0,    0,    0],
+    // CHECK-NEXT:  [0,    0,    0]]]
+    %so3 = call @test_sparse_all_2(%s1, %s3): (tensor<5x6xf32, #COO_2D>, tensor<2x3x6xf32, #COO_3D>) -> tensor<?x?x?xf32>
+    call @printMemref3dF32(%so2) : (tensor<?x?x?xf32>) -> ()
+
     bufferization.dealloc_tensor %s1 : tensor<5x6xf32, #COO_2D>
     bufferization.dealloc_tensor %s2 : tensor<6x2x3xf32, #COO_3D>
+    bufferization.dealloc_tensor %s3 : tensor<2x3x6xf32, #COO_3D>
     bufferization.dealloc_tensor %do1 : tensor<?x?x?xf32>
     bufferization.dealloc_tensor %so1 : tensor<?x?x?xf32>
     bufferization.dealloc_tensor %so2 : tensor<?x?x?xf32>
+    bufferization.dealloc_tensor %so3 : tensor<?x?x?xf32>
     return
   }
 }

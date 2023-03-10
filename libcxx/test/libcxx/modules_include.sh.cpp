@@ -13,8 +13,6 @@
 // The system-provided <uchar.h> seems to be broken on AIX
 // XFAIL: LIBCXX-AIX-FIXME
 
-// XFAIL: LIBCXX-FREEBSD-FIXME
-
 // GCC doesn't support -fcxx-modules
 // UNSUPPORTED: gcc
 

@@ -2,14 +2,18 @@
 ! RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s
 
 !CHECK-LABEL: omp.reduction.declare
-!CHECK-SAME: @[[RED_NAME:.*]] : i1 init {
-!CHECK: ^bb0(%{{.*}}: i1):
+!CHECK-SAME: @[[RED_NAME:.*]] : !fir.logical<4> init {
+!CHECK: ^bb0(%{{.*}}: !fir.logical<4>):
 !CHECK:  %true = arith.constant true
-!CHECK:  omp.yield(%true : i1)
+!CHECK:  %[[true_fir:.*]] = fir.convert %true : (i1) -> !fir.logical<4>
+!CHECK:  omp.yield(%[[true_fir]]  : !fir.logical<4>)
 !CHECK: } combiner {
-!CHECK: ^bb0(%[[ARG0:.*]]: i1, %[[ARG1:.*]]: i1):
-!CHECK:  %[[RES:.*]] = arith.andi %[[ARG0]], %[[ARG1]] : i1
-!CHECK:  omp.yield(%[[RES]] : i1)
+!CHECK: ^bb0(%[[ARG0:.*]]: !fir.logical<4>, %[[ARG1:.*]]: !fir.logical<4>):
+!CHECK:  %[[arg0_i1:.*]] = fir.convert %[[ARG0]] : (!fir.logical<4>) -> i1
+!CHECK:  %[[arg1_i1:.*]] = fir.convert %[[ARG1]] : (!fir.logical<4>) -> i1
+!CHECK:  %[[RES:.*]] = arith.andi %[[arg0_i1]], %[[arg1_i1]] : i1
+!CHECK:  %[[RES_logical:.*]] = fir.convert %[[RES]] : (i1) -> !fir.logical<4>
+!CHECK:  omp.yield(%[[RES_logical]] : !fir.logical<4>)
 !CHECK: }
 
 !CHECK-LABEL: func.func @_QPsimple_reduction(

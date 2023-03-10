@@ -18,10 +18,10 @@
 #include <__ranges/owning_view.h>
 #include <__ranges/range_adaptor.h>
 #include <__ranges/ref_view.h>
+#include <__type_traits/decay.h>
 #include <__utility/auto_cast.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
