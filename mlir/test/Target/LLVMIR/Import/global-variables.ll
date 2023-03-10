@@ -196,3 +196,13 @@ define void @foo() {
 define void @bar() {
   ret void
 }
+
+; // -----
+
+; Visibility attribute.
+
+; CHECK: llvm.mlir.global external hidden constant @hidden("string")
+@hidden = hidden constant [6 x i8] c"string"
+
+; CHECK: llvm.mlir.global external protected constant @protected(42 : i64)
+@protected = protected constant i64 42
