@@ -1938,7 +1938,7 @@ ValueObjectSP ValueObject::GetDynamicValue(DynamicValueType use_dynamic) {
   if (!IsDynamic() && m_dynamic_value == nullptr) {
     CalculateDynamicValue(use_dynamic);
   }
-  if (m_dynamic_value)
+  if (m_dynamic_value && m_dynamic_value->GetError().Success())
     return m_dynamic_value->GetSP();
   else
     return ValueObjectSP();
