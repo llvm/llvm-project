@@ -843,7 +843,7 @@ exit:
 
 ; TODO: turn to %iv <u umax(inv_1, inv_2) and hoist it out of loop.
 ; https://alive2.llvm.org/ce/z/zgyG5N
-define i32 @test_logical_or_ult_inv_pos(i32 %start, i32 %inv_1, i32 %inv_2) {
+define i32 @test_logical_or_ult_inv_pos(i32 %start, i32 %inv_1, i32 noundef %inv_2) {
 ; CHECK-LABEL: @test_logical_or_ult_inv_pos(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
