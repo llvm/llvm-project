@@ -12,6 +12,7 @@
 
 // REQUIRES: crash-recovery
 // UNSUPPORTED: libstdcxx-safe-mode
+// UNSUPPORTED: hwasan
 
 @import Crash;
 
