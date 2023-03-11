@@ -42,6 +42,9 @@ struct basic_string {
   _Type& insert(size_type pos, const C* s);
   _Type& insert(size_type pos, const C* s, size_type n);
 
+  _Type& operator[](size_type);
+  const _Type& operator[](size_type) const;
+
   _Type& operator+=(const _Type& str);
   _Type& operator+=(const C* s);
   _Type& operator=(const _Type& str);
