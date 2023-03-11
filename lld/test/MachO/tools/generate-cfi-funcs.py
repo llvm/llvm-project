@@ -23,7 +23,7 @@ def print_function(name):
   global lsda_odds
   have_lsda = (random.random() < lsda_odds)
   frame_size = random.randint(4, 64) * 16
-  frame_offset = -random.randint(0, (frame_size/16 - 4)) * 16
+  frame_offset = -random.randint(0, int(frame_size/16 - 4)) * 16
   global func_size_low, func_size_high
   func_size = random.randint(func_size_low, func_size_high) * 0x10
   func_size_high += 1
