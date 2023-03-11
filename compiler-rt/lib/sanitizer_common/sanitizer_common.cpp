@@ -66,8 +66,8 @@ void NORETURN ReportMunmapFailureAndDie(void *addr, uptr size, error_t err,
   static int recursion_count;
   if (raw_report || recursion_count) {
     // If raw report is requested or we went into recursion just die.  The
-    // Report() and CHECK calls below may call mmap recursively and fail.
-    RawWrite("ERROR: Failed to mmap\n");
+    // Report() and CHECK calls below may call munmap recursively and fail.
+    RawWrite("ERROR: Failed to munmap\n");
     Die();
   }
   recursion_count++;
