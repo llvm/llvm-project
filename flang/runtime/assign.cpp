@@ -199,19 +199,17 @@ static void DoScalarDefinedAssignment(const Descriptor &to,
 }
 
 static void DoElementalDefinedAssignment(const Descriptor &to,
-    const Descriptor &from, const typeInfo::SpecialBinding &special) {
+    const Descriptor &from, const typeInfo::DerivedType &derived,
+    const typeInfo::SpecialBinding &special) {
   SubscriptValue toAt[maxRank], fromAt[maxRank];
   to.GetLowerBounds(toAt);
   from.GetLowerBounds(fromAt);
   StaticDescriptor<maxRank, true, 8 /*?*/> statDesc[2];
   Descriptor &toElementDesc{statDesc[0].descriptor()};
   Descriptor &fromElementDesc{statDesc[1].descriptor()};
-  toElementDesc = to;
-  toElementDesc.raw().attribute = CFI_attribute_pointer;
-  toElementDesc.raw().rank = 0;
-  fromElementDesc = from;
-  fromElementDesc.raw().attribute = CFI_attribute_pointer;
-  fromElementDesc.raw().rank = 0;
+  toElementDesc.Establish(derived, nullptr, 0, nullptr, CFI_attribute_pointer);
+  fromElementDesc.Establish(
+      derived, nullptr, 0, nullptr, CFI_attribute_pointer);
   for (std::size_t toElements{to.Elements()}; toElements-- > 0;
        to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
     toElementDesc.set_base_addr(to.Element<char>(toAt));
@@ -268,7 +266,7 @@ static void Assign(
       }
       if (const auto *special{toDerived->FindSpecialBinding(
               typeInfo::SpecialBinding::Which::ElementalAssignment)}) {
-        return DoElementalDefinedAssignment(to, from, *special);
+        return DoElementalDefinedAssignment(to, from, *toDerived, *special);
       }
     }
     if ((flags & NeedFinalization) && toDerived->noFinalizationNeeded()) {

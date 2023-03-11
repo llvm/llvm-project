@@ -102,7 +102,7 @@ public:
   // Extracts the next data edit descriptor, handling control edit descriptors
   // along the way.  If maxRepeat==0, this is a peek at the next data edit
   // descriptor.
-  DataEdit GetNextDataEdit(Context &, int maxRepeat = 1);
+  std::optional<DataEdit> GetNextDataEdit(Context &, int maxRepeat = 1);
 
   // Emit any remaining character literals after the last data item (on output)
   // and perform remaining record positioning actions.
@@ -142,7 +142,8 @@ private:
     }
     return format_[offset_++];
   }
-  int GetIntField(IoErrorHandler &, CharType firstCh = '\0');
+  int GetIntField(
+      IoErrorHandler &, CharType firstCh = '\0', bool *hadError = nullptr);
 
   // Advances through the FORMAT until the next data edit
   // descriptor has been found; handles control edit descriptors

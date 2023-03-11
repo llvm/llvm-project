@@ -418,9 +418,8 @@ define void @arm_q15_to_q31_altorder(ptr nocapture noundef readonly %pSrc, ptr n
 ; CHECK-NEXT:    sub sp, #8
 ; CHECK-NEXT:    mov r7, r2
 ; CHECK-NEXT:    lsrs r3, r2, #2
-; CHECK-NEXT:    bne .LBB1_1
-; CHECK-NEXT:    b .LBB1_12
-; CHECK-NEXT:  .LBB1_1: @ %while.body.preheader
+; CHECK-NEXT:    beq .LBB1_6
+; CHECK-NEXT:  @ %bb.1: @ %while.body.preheader
 ; CHECK-NEXT:    movs r5, #3
 ; CHECK-NEXT:    ands r5, r3
 ; CHECK-NEXT:    subs r2, r3, #1
@@ -441,7 +440,7 @@ define void @arm_q15_to_q31_altorder(ptr nocapture noundef readonly %pSrc, ptr n
 ; CHECK-NEXT:    str r6, [r1, #4]
 ; CHECK-NEXT:    subs r1, #8
 ; CHECK-NEXT:    cmp r5, #1
-; CHECK-NEXT:    bne .LBB1_5
+; CHECK-NEXT:    bne .LBB1_11
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:    adds r1, #16
 ; CHECK-NEXT:    adds r0, #8
@@ -450,9 +449,86 @@ define void @arm_q15_to_q31_altorder(ptr nocapture noundef readonly %pSrc, ptr n
 ; CHECK-NEXT:    ldr r7, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:  .LBB1_4: @ %while.body.prol.loopexit
 ; CHECK-NEXT:    cmp r2, #3
-; CHECK-NEXT:    bhs .LBB1_9
-; CHECK-NEXT:    b .LBB1_12
-; CHECK-NEXT:  .LBB1_5: @ %while.body.prol.1
+; CHECK-NEXT:    blo .LBB1_6
+; CHECK-NEXT:  .LBB1_5: @ %while.body
+; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldrh r2, [r0]
+; CHECK-NEXT:    ldrh r4, [r0, #2]
+; CHECK-NEXT:    ldrh r5, [r0, #4]
+; CHECK-NEXT:    ldrh r6, [r0, #6]
+; CHECK-NEXT:    lsls r6, r6, #16
+; CHECK-NEXT:    str r6, [r1, #12]
+; CHECK-NEXT:    lsls r5, r5, #16
+; CHECK-NEXT:    str r5, [r1, #8]
+; CHECK-NEXT:    lsls r4, r4, #16
+; CHECK-NEXT:    str r4, [r1, #4]
+; CHECK-NEXT:    lsls r2, r2, #16
+; CHECK-NEXT:    str r2, [r1]
+; CHECK-NEXT:    ldrh r2, [r0, #8]
+; CHECK-NEXT:    ldrh r4, [r0, #10]
+; CHECK-NEXT:    ldrh r5, [r0, #12]
+; CHECK-NEXT:    ldrh r6, [r0, #14]
+; CHECK-NEXT:    lsls r6, r6, #16
+; CHECK-NEXT:    str r6, [r1, #28]
+; CHECK-NEXT:    lsls r5, r5, #16
+; CHECK-NEXT:    str r5, [r1, #24]
+; CHECK-NEXT:    lsls r4, r4, #16
+; CHECK-NEXT:    str r4, [r1, #20]
+; CHECK-NEXT:    lsls r2, r2, #16
+; CHECK-NEXT:    str r2, [r1, #16]
+; CHECK-NEXT:    ldrh r2, [r0, #16]
+; CHECK-NEXT:    ldrh r4, [r0, #18]
+; CHECK-NEXT:    ldrh r5, [r0, #20]
+; CHECK-NEXT:    ldrh r6, [r0, #22]
+; CHECK-NEXT:    lsls r6, r6, #16
+; CHECK-NEXT:    str r6, [r1, #44]
+; CHECK-NEXT:    lsls r5, r5, #16
+; CHECK-NEXT:    str r5, [r1, #40]
+; CHECK-NEXT:    lsls r4, r4, #16
+; CHECK-NEXT:    str r4, [r1, #36]
+; CHECK-NEXT:    lsls r2, r2, #16
+; CHECK-NEXT:    str r2, [r1, #32]
+; CHECK-NEXT:    ldrh r2, [r0, #24]
+; CHECK-NEXT:    ldrh r4, [r0, #26]
+; CHECK-NEXT:    ldrh r5, [r0, #28]
+; CHECK-NEXT:    ldrh r6, [r0, #30]
+; CHECK-NEXT:    lsls r6, r6, #16
+; CHECK-NEXT:    str r6, [r1, #60]
+; CHECK-NEXT:    lsls r5, r5, #16
+; CHECK-NEXT:    str r5, [r1, #56]
+; CHECK-NEXT:    lsls r4, r4, #16
+; CHECK-NEXT:    str r4, [r1, #52]
+; CHECK-NEXT:    lsls r2, r2, #16
+; CHECK-NEXT:    str r2, [r1, #48]
+; CHECK-NEXT:    adds r1, #64
+; CHECK-NEXT:    subs r3, r3, #4
+; CHECK-NEXT:    adds r0, #32
+; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    bne .LBB1_5
+; CHECK-NEXT:  .LBB1_6: @ %while.end
+; CHECK-NEXT:    movs r2, #3
+; CHECK-NEXT:    ands r7, r2
+; CHECK-NEXT:    beq .LBB1_10
+; CHECK-NEXT:  @ %bb.7: @ %while.body12
+; CHECK-NEXT:    ldrh r2, [r0]
+; CHECK-NEXT:    lsls r2, r2, #16
+; CHECK-NEXT:    str r2, [r1]
+; CHECK-NEXT:    cmp r7, #1
+; CHECK-NEXT:    beq .LBB1_10
+; CHECK-NEXT:  @ %bb.8: @ %while.body12.1
+; CHECK-NEXT:    ldrh r2, [r0, #2]
+; CHECK-NEXT:    lsls r2, r2, #16
+; CHECK-NEXT:    str r2, [r1, #4]
+; CHECK-NEXT:    cmp r7, #2
+; CHECK-NEXT:    beq .LBB1_10
+; CHECK-NEXT:  @ %bb.9: @ %while.body12.2
+; CHECK-NEXT:    ldrh r0, [r0, #4]
+; CHECK-NEXT:    lsls r0, r0, #16
+; CHECK-NEXT:    str r0, [r1, #8]
+; CHECK-NEXT:  .LBB1_10: @ %while.end17
+; CHECK-NEXT:    add sp, #8
+; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-NEXT:  .LBB1_11: @ %while.body.prol.1
 ; CHECK-NEXT:    ldrh r2, [r0, #8]
 ; CHECK-NEXT:    ldrh r4, [r0, #10]
 ; CHECK-NEXT:    ldrh r6, [r0, #12]
@@ -466,13 +542,13 @@ define void @arm_q15_to_q31_altorder(ptr nocapture noundef readonly %pSrc, ptr n
 ; CHECK-NEXT:    str r6, [r1, #24]
 ; CHECK-NEXT:    str r7, [r1, #28]
 ; CHECK-NEXT:    cmp r5, #2
-; CHECK-NEXT:    bne .LBB1_7
-; CHECK-NEXT:  @ %bb.6:
+; CHECK-NEXT:    bne .LBB1_13
+; CHECK-NEXT:  @ %bb.12:
 ; CHECK-NEXT:    subs r3, r3, #2
 ; CHECK-NEXT:    adds r1, #32
 ; CHECK-NEXT:    adds r0, #16
-; CHECK-NEXT:    b .LBB1_8
-; CHECK-NEXT:  .LBB1_7: @ %while.body.prol.2
+; CHECK-NEXT:    b .LBB1_14
+; CHECK-NEXT:  .LBB1_13: @ %while.body.prol.2
 ; CHECK-NEXT:    ldrh r2, [r0, #16]
 ; CHECK-NEXT:    ldrh r4, [r0, #18]
 ; CHECK-NEXT:    ldrh r5, [r0, #20]
@@ -487,119 +563,12 @@ define void @arm_q15_to_q31_altorder(ptr nocapture noundef readonly %pSrc, ptr n
 ; CHECK-NEXT:    subs r3, r3, #3
 ; CHECK-NEXT:    adds r1, #48
 ; CHECK-NEXT:    adds r0, #24
-; CHECK-NEXT:  .LBB1_8: @ %while.body.prol.loopexit
+; CHECK-NEXT:  .LBB1_14: @ %while.body.prol.loopexit
 ; CHECK-NEXT:    ldr r7, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    ldr r2, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    cmp r2, #3
-; CHECK-NEXT:    blo .LBB1_12
-; CHECK-NEXT:  .LBB1_9: @ %while.body.preheader1
-; CHECK-NEXT:    adds r0, #30
-; CHECK-NEXT:  .LBB1_10: @ %while.body
-; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mov r2, r0
-; CHECK-NEXT:    subs r2, #30
-; CHECK-NEXT:    ldrh r2, [r2]
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    subs r4, #28
-; CHECK-NEXT:    ldrh r4, [r4]
-; CHECK-NEXT:    mov r5, r0
-; CHECK-NEXT:    subs r5, #26
-; CHECK-NEXT:    ldrh r5, [r5]
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    subs r6, #24
-; CHECK-NEXT:    ldrh r6, [r6]
-; CHECK-NEXT:    lsls r6, r6, #16
-; CHECK-NEXT:    str r6, [r1, #12]
-; CHECK-NEXT:    lsls r5, r5, #16
-; CHECK-NEXT:    str r5, [r1, #8]
-; CHECK-NEXT:    lsls r4, r4, #16
-; CHECK-NEXT:    str r4, [r1, #4]
-; CHECK-NEXT:    lsls r2, r2, #16
-; CHECK-NEXT:    str r2, [r1]
-; CHECK-NEXT:    mov r2, r0
-; CHECK-NEXT:    subs r2, #22
-; CHECK-NEXT:    ldrh r2, [r2]
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    subs r4, #20
-; CHECK-NEXT:    ldrh r4, [r4]
-; CHECK-NEXT:    mov r5, r0
-; CHECK-NEXT:    subs r5, #18
-; CHECK-NEXT:    ldrh r5, [r5]
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    subs r6, #16
-; CHECK-NEXT:    ldrh r6, [r6]
-; CHECK-NEXT:    lsls r6, r6, #16
-; CHECK-NEXT:    str r6, [r1, #28]
-; CHECK-NEXT:    lsls r5, r5, #16
-; CHECK-NEXT:    str r5, [r1, #24]
-; CHECK-NEXT:    lsls r4, r4, #16
-; CHECK-NEXT:    str r4, [r1, #20]
-; CHECK-NEXT:    lsls r2, r2, #16
-; CHECK-NEXT:    str r2, [r1, #16]
-; CHECK-NEXT:    mov r2, r0
-; CHECK-NEXT:    subs r2, #14
-; CHECK-NEXT:    ldrh r2, [r2]
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    subs r4, #12
-; CHECK-NEXT:    ldrh r4, [r4]
-; CHECK-NEXT:    mov r5, r0
-; CHECK-NEXT:    subs r5, #10
-; CHECK-NEXT:    ldrh r5, [r5]
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    subs r6, #8
-; CHECK-NEXT:    ldrh r6, [r6]
-; CHECK-NEXT:    lsls r6, r6, #16
-; CHECK-NEXT:    str r6, [r1, #44]
-; CHECK-NEXT:    lsls r5, r5, #16
-; CHECK-NEXT:    str r5, [r1, #40]
-; CHECK-NEXT:    lsls r4, r4, #16
-; CHECK-NEXT:    str r4, [r1, #36]
-; CHECK-NEXT:    lsls r2, r2, #16
-; CHECK-NEXT:    str r2, [r1, #32]
-; CHECK-NEXT:    subs r2, r0, #6
-; CHECK-NEXT:    ldrh r2, [r2]
-; CHECK-NEXT:    subs r4, r0, #4
-; CHECK-NEXT:    ldrh r4, [r4]
-; CHECK-NEXT:    subs r5, r0, #2
-; CHECK-NEXT:    ldrh r5, [r5]
-; CHECK-NEXT:    ldrh r6, [r0]
-; CHECK-NEXT:    lsls r6, r6, #16
-; CHECK-NEXT:    str r6, [r1, #60]
-; CHECK-NEXT:    lsls r5, r5, #16
-; CHECK-NEXT:    str r5, [r1, #56]
-; CHECK-NEXT:    lsls r4, r4, #16
-; CHECK-NEXT:    str r4, [r1, #52]
-; CHECK-NEXT:    lsls r2, r2, #16
-; CHECK-NEXT:    str r2, [r1, #48]
-; CHECK-NEXT:    adds r1, #64
-; CHECK-NEXT:    adds r0, #32
-; CHECK-NEXT:    subs r3, r3, #4
-; CHECK-NEXT:    bne .LBB1_10
-; CHECK-NEXT:  @ %bb.11: @ %while.end.loopexit
-; CHECK-NEXT:    subs r0, #30
-; CHECK-NEXT:  .LBB1_12: @ %while.end
-; CHECK-NEXT:    movs r2, #3
-; CHECK-NEXT:    ands r7, r2
-; CHECK-NEXT:    beq .LBB1_16
-; CHECK-NEXT:  @ %bb.13: @ %while.body12
-; CHECK-NEXT:    ldrh r2, [r0]
-; CHECK-NEXT:    lsls r2, r2, #16
-; CHECK-NEXT:    str r2, [r1]
-; CHECK-NEXT:    cmp r7, #1
-; CHECK-NEXT:    beq .LBB1_16
-; CHECK-NEXT:  @ %bb.14: @ %while.body12.1
-; CHECK-NEXT:    ldrh r2, [r0, #2]
-; CHECK-NEXT:    lsls r2, r2, #16
-; CHECK-NEXT:    str r2, [r1, #4]
-; CHECK-NEXT:    cmp r7, #2
-; CHECK-NEXT:    beq .LBB1_16
-; CHECK-NEXT:  @ %bb.15: @ %while.body12.2
-; CHECK-NEXT:    ldrh r0, [r0, #4]
-; CHECK-NEXT:    lsls r0, r0, #16
-; CHECK-NEXT:    str r0, [r1, #8]
-; CHECK-NEXT:  .LBB1_16: @ %while.end17
-; CHECK-NEXT:    add sp, #8
-; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-NEXT:    bhs .LBB1_5
+; CHECK-NEXT:    b .LBB1_6
 entry:
   %cmp.not18 = icmp ult i32 %blockSize, 4
   br i1 %cmp.not18, label %while.end, label %while.body.preheader

@@ -62,10 +62,7 @@ struct FusePadOp : OpRewritePattern<tensor::PadOp> {
           padOp, "only supported for ops with all parallel iterator types");
     }
     ReifiedRankedShapedTypeDims resultShape;
-    ReifyRankedShapedTypeOpInterface reifyShapedTypeInterface =
-        dyn_cast<ReifyRankedShapedTypeOpInterface>(padOp.getOperation());
-    if (failed(reifyShapedTypeInterface.reifyResultShapes(rewriter,
-                                                          resultShape)) ||
+    if (failed(reifyResultShapes(rewriter, padOp, resultShape)) ||
         resultShape.size() != 1) {
       return rewriter.notifyMatchFailure(
           padOp, "failed to get shape of pad op result");

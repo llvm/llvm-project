@@ -64,7 +64,7 @@ module iso_c_binding
     c_double_complex = c_double, &
     c_long_double_complex = c_long_double
 
-  integer, parameter :: c_bool = 1 ! TODO: or default LOGICAL?
+  integer, parameter :: c_bool = 1
   integer, parameter :: c_char = 1
 
   ! C characters with special semantics

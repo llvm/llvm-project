@@ -839,6 +839,10 @@ Error RISCVISAInfo::checkDependency() {
         errc::invalid_argument,
         "standard user-level extension 'e' requires 'rv32'");
 
+  if (HasF && HasZfinx)
+    return createStringError(errc::invalid_argument,
+                             "'f' and 'zfinx' extensions are incompatible");
+
   if (HasZve32f && !HasF && !HasZfinx)
     return createStringError(
         errc::invalid_argument,

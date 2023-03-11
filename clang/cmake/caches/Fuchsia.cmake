@@ -144,7 +144,7 @@ endif()
 set(BOOTSTRAP_LLVM_ENABLE_LLD ON CACHE BOOL "")
 set(BOOTSTRAP_LLVM_ENABLE_LTO ON CACHE BOOL "")
 
-set(CLANG_BOOTSTRAP_TARGETS
+set(_FUCHSIA_BOOTSTRAP_TARGETS
   check-all
   check-clang
   check-lld
@@ -160,13 +160,15 @@ set(CLANG_BOOTSTRAP_TARGETS
   install-distribution
   install-distribution-stripped
   install-distribution-toolchain
-  clang CACHE STRING "")
+  clang)
 
 set(FUCHSIA_ENABLE_LLDB OFF CACHE BOOL "Enable LLDB")
 if(FUCHSIA_ENABLE_LLDB)
   list(APPEND _FUCHSIA_ENABLE_PROJECTS lldb)
+  list(APPEND _FUCHSIA_BOOTSTRAP_TARGETS check-lldb lldb-test-depends)
 endif()
 set(LLVM_ENABLE_PROJECTS ${_FUCHSIA_ENABLE_PROJECTS} CACHE STRING "")
+set(CLANG_BOOTSTRAP_TARGETS ${_FUCHSIA_BOOTSTRAP_TARGETS} CACHE STRING "")
 
 get_cmake_property(variableNames VARIABLES)
 foreach(variableName ${variableNames})
