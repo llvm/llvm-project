@@ -204,9 +204,10 @@ void macho::writeMapFile() {
       if (auto *concatOsec = dyn_cast<ConcatOutputSection>(osec)) {
         for (const InputSection *isec : concatOsec->inputs) {
           for (Defined *sym : isec->symbols)
-            os << format("0x%08llX\t0x%08llX\t[%3u] %s\n", sym->getVA(),
-                         sym->size, readerToFileOrdinal[sym->getFile()],
-                         sym->getName().str().data());
+            if (!(isPrivateLabel(sym->getName()) && sym->size == 0))
+              os << format("0x%08llX\t0x%08llX\t[%3u] %s\n", sym->getVA(),
+                           sym->size, readerToFileOrdinal[sym->getFile()],
+                           sym->getName().str().data());
         }
       } else if (osec == in.cStringSection || osec == in.objcMethnameSection) {
         const auto &liveCStrings = info.liveCStringsForSection.lookup(osec);
