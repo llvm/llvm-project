@@ -291,6 +291,9 @@ Bug Fixes to C++ Support
   template parameters with different nested constraints.
 - Fix type equivalence comparison between auto types to take constraints into
   account.
+- Fix bug in the computation of the ``__has_unique_object_representations``
+  builtin for types with unnamed bitfields.
+  (`#61336 <https://github.com/llvm/llvm-project/issues/61336>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
