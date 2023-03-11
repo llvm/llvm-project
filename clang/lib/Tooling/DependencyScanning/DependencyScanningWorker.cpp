@@ -8,6 +8,7 @@
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Basic/DiagnosticCAS.h"
+#include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Driver/Compilation.h"
@@ -27,6 +28,8 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/CAS/ObjectStore.h"
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/PrefixMapper.h"
 
@@ -619,16 +622,29 @@ llvm::Error DependencyScanningWorker::computeDependencies(
 }
 
 static bool forEachDriverJob(
-    ArrayRef<std::string> Args, DiagnosticsEngine &Diags, FileManager &FM,
+    ArrayRef<std::string> ArgStrs, DiagnosticsEngine &Diags, FileManager &FM,
     llvm::function_ref<bool(const driver::Command &Cmd)> Callback) {
+  SmallVector<const char *, 256> Argv;
+  Argv.reserve(ArgStrs.size());
+  for (const std::string &Arg : ArgStrs)
+    Argv.push_back(Arg.c_str());
+
+  llvm::vfs::FileSystem *FS = &FM.getVirtualFileSystem();
+
   std::unique_ptr<driver::Driver> Driver = std::make_unique<driver::Driver>(
-      Args[0], llvm::sys::getDefaultTargetTriple(), Diags,
-      "clang LLVM compiler", &FM.getVirtualFileSystem());
+      Argv[0], llvm::sys::getDefaultTargetTriple(), Diags,
+      "clang LLVM compiler", FS);
   Driver->setTitle("clang_based_tool");
 
-  std::vector<const char *> Argv;
-  for (const std::string &Arg : Args)
-    Argv.push_back(Arg.c_str());
+  llvm::BumpPtrAllocator Alloc;
+  bool CLMode = driver::IsClangCL(
+      driver::getDriverMode(Argv[0], ArrayRef(Argv).slice(1)));
+
+  if (llvm::Error E = driver::expandResponseFiles(Argv, CLMode, Alloc, FS)) {
+    Diags.Report(diag::err_drv_expand_response_file)
+        << llvm::toString(std::move(E));
+    return false;
+  }
 
   const std::unique_ptr<driver::Compilation> Compilation(
       Driver->BuildCompilation(llvm::makeArrayRef(Argv)));
