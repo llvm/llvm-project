@@ -354,12 +354,12 @@ float getFPImm(unsigned Imm);
 /// floating-point immediate value. If the value cannot be represented as a
 /// 5-bit binary encoding, then return -1.
 static inline int getLoadFP32Imm(const APInt &Imm) {
-  if (Imm.extractBitsAsZExtValue(20, 0) != 0)
+  if (Imm.extractBitsAsZExtValue(21, 0) != 0)
     return -1;
 
   uint8_t Sign = Imm.extractBitsAsZExtValue(1, 31);
   uint8_t Exp = Imm.extractBitsAsZExtValue(8, 23);
-  uint8_t Mantissa = Imm.extractBitsAsZExtValue(3, 20);
+  uint8_t Mantissa = Imm.extractBitsAsZExtValue(2, 21);
   return getLoadFPImm(Sign, Exp, Mantissa);
 }
 
@@ -371,11 +371,11 @@ static inline int getLoadFP32Imm(const APFloat &FPImm) {
 /// floating-point immediate value. If the value cannot be represented as a
 /// 5-bit binary encoding, then return -1.
 static inline int getLoadFP64Imm(const APInt &Imm) {
-  if (Imm.extractBitsAsZExtValue(49, 0) != 0)
+  if (Imm.extractBitsAsZExtValue(50, 0) != 0)
     return -1;
 
   uint8_t Sign = Imm.extractBitsAsZExtValue(1, 63);
-  uint8_t Mantissa = Imm.extractBitsAsZExtValue(3, 49);
+  uint8_t Mantissa = Imm.extractBitsAsZExtValue(2, 50);
   uint8_t Exp;
   if (Imm.extractBitsAsZExtValue(11, 52) == 1)
     Exp = 0b00000001;
@@ -395,11 +395,11 @@ static inline int getLoadFP64Imm(const APFloat &FPImm) {
 /// floating-point immediate value. If the value cannot be represented as a
 /// 5-bit binary encoding, then return -1.
 static inline int getLoadFP16Imm(const APInt &Imm) {
-  if (Imm.extractBitsAsZExtValue(7, 0) != 0)
+  if (Imm.extractBitsAsZExtValue(8, 0) != 0)
     return -1;
 
   uint8_t Sign = Imm.extractBitsAsZExtValue(1, 15);
-  uint8_t Mantissa = Imm.extractBitsAsZExtValue(3, 7);
+  uint8_t Mantissa = Imm.extractBitsAsZExtValue(2, 8);
   uint8_t Exp;
   if (Imm.extractBitsAsZExtValue(5, 10) == 1)
     Exp = 0b00000001;
