@@ -6,11 +6,15 @@ define void @base() #0 {
 ; CHECK-LABEL: base:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %ebp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    .cfi_offset %ebp, -8
 ; CHECK-NEXT:    movl %esp, %ebp
+; CHECK-NEXT:    .cfi_def_cfa_register %ebp
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    andl $-32, %esp
 ; CHECK-NEXT:    subl $32, %esp
 ; CHECK-NEXT:    movl %esp, %esi
+; CHECK-NEXT:    .cfi_offset %esi, -12
 ; CHECK-NEXT:    calll helper@PLT
 ; CHECK-NEXT:    movl %esp, %ecx
 ; CHECK-NEXT:    leal 31(,%eax,4), %eax
@@ -23,6 +27,7 @@ define void @base() #0 {
 ; CHECK-NEXT:    leal -4(%ebp), %esp
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %ebp
+; CHECK-NEXT:    .cfi_def_cfa %esp, 4
 ; CHECK-NEXT:    retl
 entry:
   %k = call i32 @helper()
@@ -35,11 +40,15 @@ define void @clobber_base() #0 {
 ; CHECK-LABEL: clobber_base:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %ebp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    .cfi_offset %ebp, -8
 ; CHECK-NEXT:    movl %esp, %ebp
+; CHECK-NEXT:    .cfi_def_cfa_register %ebp
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    andl $-128, %esp
 ; CHECK-NEXT:    subl $128, %esp
 ; CHECK-NEXT:    movl %esp, %esi
+; CHECK-NEXT:    .cfi_offset %esi, -12
 ; CHECK-NEXT:    calll helper@PLT
 ; CHECK-NEXT:    movl %esp, %ecx
 ; CHECK-NEXT:    leal 31(,%eax,4), %eax
@@ -60,6 +69,7 @@ define void @clobber_base() #0 {
 ; CHECK-NEXT:    leal -4(%ebp), %esp
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %ebp
+; CHECK-NEXT:    .cfi_def_cfa %esp, 4
 ; CHECK-NEXT:    retl
 entry:
   %k = call i32 @helper()
@@ -76,11 +86,15 @@ define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 
 ; CHECK-LABEL: clobber_baseptr_argptr:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %ebp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    .cfi_offset %ebp, -8
 ; CHECK-NEXT:    movl %esp, %ebp
+; CHECK-NEXT:    .cfi_def_cfa_register %ebp
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    andl $-128, %esp
 ; CHECK-NEXT:    subl $128, %esp
 ; CHECK-NEXT:    movl %esp, %esi
+; CHECK-NEXT:    .cfi_offset %ebx, -12
 ; CHECK-NEXT:    movl 8(%ebp), %edi
 ; CHECK-NEXT:    calll helper@PLT
 ; CHECK-NEXT:    movl %esp, %ecx
@@ -106,6 +120,7 @@ define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 
 ; CHECK-NEXT:    leal -4(%ebp), %esp
 ; CHECK-NEXT:    popl %ebx
 ; CHECK-NEXT:    popl %ebp
+; CHECK-NEXT:    .cfi_def_cfa %esp, 4
 ; CHECK-NEXT:    retl
 entry:
   %k = call i32 @helper()
@@ -120,6 +135,6 @@ entry:
   ret void
 }
 
-attributes #0 = { nounwind "frame-pointer"="all"}
+attributes #0 = { "frame-pointer"="all"}
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"override-stack-alignment", i32 32}
