@@ -596,23 +596,24 @@ int ExpressionAnalyzer::AnalyzeKindParam(
   if (!kindParam) {
     return defaultKind;
   }
-  return common::visit(
+  std::int64_t kind{common::visit(
       common::visitors{
-          [](std::uint64_t k) { return static_cast<int>(k); },
+          [](std::uint64_t k) { return static_cast<std::int64_t>(k); },
           [&](const parser::Scalar<
               parser::Integer<parser::Constant<parser::Name>>> &n) {
             if (MaybeExpr ie{Analyze(n)}) {
-              if (std::optional<std::int64_t> i64{ToInt64(*ie)}) {
-                int iv = *i64;
-                if (iv == *i64) {
-                  return iv;
-                }
-              }
+              return ToInt64(*ie).value_or(defaultKind);
             }
-            return defaultKind;
+            return static_cast<std::int64_t>(defaultKind);
           },
       },
-      kindParam->u);
+      kindParam->u)};
+  if (kind != static_cast<int>(kind)) {
+    Say("Unsupported type kind value (%jd)"_err_en_US,
+        static_cast<std::intmax_t>(kind));
+    kind = defaultKind;
+  }
+  return static_cast<int>(kind);
 }
 
 // Common handling of parser::IntLiteralConstant and SignedIntLiteralConstant
@@ -657,7 +658,7 @@ struct IntTypeVisitor {
   }
   ExpressionAnalyzer &analyzer;
   parser::CharBlock digits;
-  int kind;
+  std::int64_t kind;
   bool isDefaultKind;
   bool isNegated;
 };

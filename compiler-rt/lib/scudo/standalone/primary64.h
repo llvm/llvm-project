@@ -89,6 +89,43 @@ public:
     shuffle(RegionInfoArray, NumClasses, &Seed);
 
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
+
+    const uptr GroupSize = (1U << GroupSizeLog);
+    const uptr PagesInGroup = GroupSize / PageSize;
+    const uptr MinSizeClass = getSizeByClassId(1);
+    // When trying to release pages back to memory, visiting smaller size
+    // classes is expensive. Therefore, we only try to release smaller size
+    // classes when the amount of free blocks goes over a certain threshold (See
+    // the comment in releaseToOSMaybe() for more details). For example, for
+    // size class 32, we only do the release when the size of free blocks is
+    // greater than 97% of pages in a group. However, this may introduce another
+    // issue that if the number of free blocks is bouncing between 97% ~ 100%.
+    // Which means we may try many page releases but only release very few of
+    // them (less than 3% in a group). Even though we have
+    // `&ReleaseToOsIntervalMs` which slightly reduce the frequency of these
+    // calls but it will be better to have another guard to mitigate this issue.
+    //
+    // Here we add another constraint on the minimum size requirement. The
+    // constraint is determined by the size of in-use blocks in the minimal size
+    // class. Take size class 32 as an example,
+    //
+    //   +-     one memory group      -+
+    //   +----------------------+------+
+    //   |  97% of free blocks  |      |
+    //   +----------------------+------+
+    //                           \    /
+    //                      3% in-use blocks
+    //
+    //   * The release size threshold is 97%.
+    //
+    // The 3% size in a group is about 7 pages. For two consecutive
+    // releaseToOSMaybe(), we require the difference between `PushedBlocks`
+    // should be greater than 7 pages. This mitigates the page releasing
+    // thrashing which is caused by memory usage bouncing around the threshold.
+    // The smallest size class takes longest time to do the page release so we
+    // use its size of in-use blocks as a heuristic.
+    SmallerBlockReleasePageDelta =
+        PagesInGroup * (1 + MinSizeClass / 16U) / 100;
   }
 
   void unmapTestOnly() NO_THREAD_SAFETY_ANALYSIS {
@@ -414,6 +451,9 @@ private:
   static_assert(sizeof(RegionInfo) % SCUDO_CACHE_LINE_SIZE == 0, "");
 
   uptr PrimaryBase = 0;
+  // The minimum size of pushed blocks that we will try to release the pages in
+  // that size class.
+  uptr SmallerBlockReleasePageDelta = 0;
   MapPlatformData Data = {};
   atomic_s32 ReleaseToOsIntervalMs = {};
   alignas(SCUDO_CACHE_LINE_SIZE) RegionInfo RegionInfoArray[NumClasses];
@@ -781,7 +821,7 @@ private:
     if (BytesPushed < PageSize)
       return 0; // Nothing new to release.
 
-    bool CheckDensity = BlockSize < PageSize / 16U;
+    const bool CheckDensity = BlockSize < PageSize / 16U;
     // Releasing smaller blocks is expensive, so we want to make sure that a
     // significant amount of bytes are free, and that there has been a good
     // amount of batches pushed to the freelist before attempting to release.
@@ -869,11 +909,23 @@ private:
       // bytes used by free blocks exceed certain proportion of group size. Note
       // that this heuristic only applies when all the spaces in a BatchGroup
       // are allocated.
-      if (CheckDensity && (BytesInBG * 100U) / AllocatedGroupSize <
-                              (100U - 1U - BlockSize / 16U)) {
-        Prev = BG;
-        BG = BG->Next;
-        continue;
+      if (CheckDensity) {
+        const bool HighDensity = (BytesInBG * 100U) / AllocatedGroupSize >=
+                                 (100U - 1U - BlockSize / 16U);
+        const bool MayHaveReleasedAll = NumBlocks >= (GroupSize / BlockSize);
+        // If all blocks in the group are released, we will do range marking
+        // which is fast. Otherwise, we will wait until we have accumulated
+        // a certain amount of free memory.
+        const bool ReachReleaseDelta =
+            MayHaveReleasedAll ? true
+                               : PushedBytesDelta * BlockSize >=
+                                     PageSize * SmallerBlockReleasePageDelta;
+
+        if (!HighDensity || !ReachReleaseDelta) {
+          Prev = BG;
+          BG = BG->Next;
+          continue;
+        }
       }
 
       // If `BG` is the first BatchGroup in the list, we only need to advance

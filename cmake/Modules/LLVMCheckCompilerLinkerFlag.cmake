@@ -1,28 +1,20 @@
-include(CMakePushCheckState)
+include(CheckLinkerFlag OPTIONAL)
 
-include(CheckCompilerFlag OPTIONAL)
+if (COMMAND check_linker_flag)
+  macro(llvm_check_compiler_linker_flag)
+    check_linker_flag(${ARGN})
+  endmacro()
+else()
+  # Until the minimum CMAKE version is 3.18
 
-if(NOT COMMAND check_compiler_flag)
-  include(CheckCCompilerFlag)
   include(CheckCXXCompilerFlag)
-endif()
 
-function(llvm_check_compiler_linker_flag lang flag out_var)
-  # If testing a flag with check_c_compiler_flag, it gets added to the compile
-  # command only, but not to the linker command in that test. If the flag
-  # is vital for linking to succeed, the test would fail even if it would
-  # have succeeded if it was included on both commands.
-  #
-  # Therefore, try adding the flag to CMAKE_REQUIRED_FLAGS, which gets
-  # added to both compiling and linking commands in the tests.
-
-  cmake_push_check_state()
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} ${flag}")
-  if(COMMAND check_compiler_flag)
-    check_compiler_flag("${lang}" "" ${out_var})
-  else()
-    # Until the minimum CMAKE version is 3.19
-    # cmake builtin compatible, except we assume lang is C or CXX
+  # cmake builtin compatible, except we assume lang is C or CXX
+  function(llvm_check_compiler_linker_flag lang flag out_var)
+    cmake_policy(PUSH)
+    cmake_policy(SET CMP0056 NEW)
+    set(_CMAKE_EXE_LINKER_FLAGS_SAVE ${CMAKE_EXE_LINKER_FLAGS})
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${flag}")
     if("${lang}" STREQUAL "C")
       check_c_compiler_flag("" ${out_var})
     elseif("${lang}" STREQUAL "CXX")
@@ -30,6 +22,7 @@ function(llvm_check_compiler_linker_flag lang flag out_var)
     else()
       message(FATAL_ERROR "\"${lang}\" is not C or CXX")
     endif()
-  endif()
-  cmake_pop_check_state()
-endfunction()
+    set(CMAKE_EXE_LINKER_FLAGS ${_CMAKE_EXE_LINKER_FLAGS_SAVE})
+    cmake_policy(POP)
+  endfunction()
+endif()

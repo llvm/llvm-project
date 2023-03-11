@@ -62,9 +62,18 @@ namespace clang {
 /// often used as if it meant "present".
 ///
 /// The actual scope is described by getScopeRep().
+///
+/// If the kind of getScopeRep() is TypeSpec then TemplateParamLists may be empty
+/// or contain the template parameter lists attached to the current declaration.
+/// Consider the following example:
+/// template <class T> void SomeType<T>::some_method() {}
+/// If CXXScopeSpec refers to SomeType<T> then TemplateParamLists will contain
+/// a single element referring to template <class T>.
+
 class CXXScopeSpec {
   SourceRange Range;
   NestedNameSpecifierLocBuilder Builder;
+  ArrayRef<TemplateParameterList *> TemplateParamLists;
 
 public:
   SourceRange getRange() const { return Range; }
@@ -73,6 +82,13 @@ public:
   void setEndLoc(SourceLocation Loc) { Range.setEnd(Loc); }
   SourceLocation getBeginLoc() const { return Range.getBegin(); }
   SourceLocation getEndLoc() const { return Range.getEnd(); }
+
+  void setTemplateParamLists(ArrayRef<TemplateParameterList *> L) {
+    TemplateParamLists = L;
+  }
+  ArrayRef<TemplateParameterList *> getTemplateParamLists() const {
+    return TemplateParamLists;
+  }
 
   /// Retrieve the representation of the nested-name-specifier.
   NestedNameSpecifier *getScopeRep() const {

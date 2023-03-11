@@ -1227,11 +1227,6 @@ const Symbol *FindCommonBlockContaining(const Symbol &);
 int CountLenParameters(const DerivedTypeSpec &);
 int CountNonConstantLenParameters(const DerivedTypeSpec &);
 
-// 15.5.2.4(4), type compatibility for dummy and actual arguments.
-// Also used for assignment compatibility checking
-bool AreTypeParamCompatible(
-    const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
-
 const Symbol &GetUsedModule(const UseDetails &);
 const Symbol *FindFunctionResult(const Symbol &);
 

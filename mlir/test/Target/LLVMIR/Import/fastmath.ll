@@ -41,9 +41,11 @@ declare float @llvm.exp.f32(float)
 declare float @llvm.powi.f32.i32(float, i32)
 declare float @llvm.pow.f32(float, float)
 declare float @llvm.fmuladd.f32(float, float, float)
+declare float @llvm.vector.reduce.fmin.v2f32(<2 x float>)
+declare float @llvm.vector.reduce.fmax.v2f32(<2 x float>)
 
 ; CHECK-LABEL: @fastmath_intr
-define void @fastmath_intr(float %arg1, i32 %arg2) {
+define void @fastmath_intr(float %arg1, i32 %arg2, <2 x float> %arg3) {
   ; CHECK: llvm.intr.exp(%{{.*}}) {fastmathFlags = #llvm.fastmath<nnan, ninf>} : (f32) -> f32
   %1 = call nnan ninf float @llvm.exp.f32(float %arg1)
   ; CHECK: llvm.intr.powi(%{{.*}}, %{{.*}}) {fastmathFlags = #llvm.fastmath<fast>} : (f32, i32) -> f32
@@ -52,5 +54,10 @@ define void @fastmath_intr(float %arg1, i32 %arg2) {
   %3 = call fast float @llvm.pow.f32(float %arg1, float %arg1)
   ; CHECK: llvm.intr.fmuladd(%{{.*}}, %{{.*}}, %{{.*}}) {fastmathFlags = #llvm.fastmath<fast>} : (f32, f32, f32) -> f32
   %4 = call fast float @llvm.fmuladd.f32(float %arg1, float %arg1, float %arg1)
+  ; CHECK: %{{.*}} = llvm.intr.vector.reduce.fmin({{.*}}) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
+  %5 = call nnan float @llvm.vector.reduce.fmin.v2f32(<2 x float> %arg3)
+  ; CHECK: %{{.*}} = llvm.intr.vector.reduce.fmax({{.*}}) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
+  %6 = call nnan float @llvm.vector.reduce.fmax.v2f32(<2 x float> %arg3)
+
   ret void
 }

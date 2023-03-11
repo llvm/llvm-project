@@ -1538,6 +1538,24 @@ bool RISCVTargetLowering::isOffsetFoldingLegal(
   return false;
 }
 
+bool RISCVTargetLowering::isLegalZfaFPImm(const APFloat &Imm, EVT VT) const {
+  if (!Subtarget.hasStdExtZfa() || !VT.isSimple())
+    return false;
+
+  switch (VT.getSimpleVT().SimpleTy) {
+  default:
+    return false;
+  case MVT::f16:
+    return (Subtarget.hasStdExtZfh() || Subtarget.hasStdExtZvfh()) &&
+           RISCVLoadFPImm::getLoadFP16Imm(Imm) != -1;
+  case MVT::f32:
+    return RISCVLoadFPImm::getLoadFP32Imm(Imm) != -1;
+  case MVT::f64:
+    assert(Subtarget.hasStdExtD() && "Expect D extension");
+    return RISCVLoadFPImm::getLoadFP64Imm(Imm) != -1;
+  }
+}
+
 bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                        bool ForCodeSize) const {
   if (VT == MVT::f16 && !Subtarget.hasStdExtZfhOrZfhmin())
@@ -1547,16 +1565,8 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   if (VT == MVT::f64 && !Subtarget.hasStdExtD())
     return false;
 
-  if (Subtarget.hasStdExtZfa()) {
-    // fli.h requires Zfh, but we might only have Zfhmin.
-    if (VT == MVT::f16 && Subtarget.hasStdExtZfh() &&
-        RISCVLoadFPImm::getLoadFP16Imm(Imm) != -1)
-      return true;
-    if (VT == MVT::f32 && RISCVLoadFPImm::getLoadFP32Imm(Imm) != -1)
-      return true;
-    if (VT == MVT::f64 && RISCVLoadFPImm::getLoadFP64Imm(Imm) != -1)
-      return true;
-  }
+  if (isLegalZfaFPImm(Imm, VT))
+    return true;
 
   // Cannot create a 64 bit floating-point immediate value for rv32.
   if (Subtarget.getXLen() < VT.getScalarSizeInBits()) {

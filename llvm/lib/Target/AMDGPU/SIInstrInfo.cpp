@@ -4353,7 +4353,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
 
       // Adjust for packed 16 bit values
       if (D16 && D16->getImm() && !ST.hasUnpackedD16VMem())
-        RegCount >>= 1;
+        RegCount = divideCeil(RegCount, 2);
 
       // Adjust if using LWE or TFE
       if ((LWE && LWE->getImm()) || (TFE && TFE->getImm()))

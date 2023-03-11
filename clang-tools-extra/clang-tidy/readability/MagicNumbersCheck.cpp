@@ -14,6 +14,8 @@
 #include "MagicNumbersCheck.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTTypeTraits.h"
+#include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/STLExtras.h"
 #include <algorithm>
@@ -42,6 +44,18 @@ static bool isUsedToInitializeAConstant(const MatchFinder::MatchResult &Result,
                       });
 }
 
+static bool isUsedToDefineATypeAlias(const MatchFinder::MatchResult &Result,
+                                     const DynTypedNode &Node) {
+
+  if (Node.get<TypeAliasDecl>() || Node.get<TypedefNameDecl>())
+    return true;
+
+  return llvm::any_of(Result.Context->getParents(Node),
+                      [&Result](const DynTypedNode &Parent) {
+                        return isUsedToDefineATypeAlias(Result, Parent);
+                      });
+}
+
 static bool isUsedToDefineABitField(const MatchFinder::MatchResult &Result,
                                     const DynTypedNode &Node) {
   const auto *AsFieldDecl = Node.get<FieldDecl>();
@@ -66,6 +80,7 @@ MagicNumbersCheck::MagicNumbersCheck(StringRef Name, ClangTidyContext *Context)
       IgnoreBitFieldsWidths(Options.get("IgnoreBitFieldsWidths", true)),
       IgnorePowersOf2IntegerValues(
           Options.get("IgnorePowersOf2IntegerValues", false)),
+      IgnoreTypeAliases(Options.get("IgnoreTypeAliases", false)),
       RawIgnoredIntegerValues(
           Options.get("IgnoredIntegerValues", DefaultIgnoredIntegerValues)),
       RawIgnoredFloatingPointValues(Options.get(
@@ -114,6 +129,7 @@ void MagicNumbersCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreBitFieldsWidths", IgnoreBitFieldsWidths);
   Options.store(Opts, "IgnorePowersOf2IntegerValues",
                 IgnorePowersOf2IntegerValues);
+  Options.store(Opts, "IgnoreTypeAliases", IgnoreTypeAliases);
   Options.store(Opts, "IgnoredIntegerValues", RawIgnoredIntegerValues);
   Options.store(Opts, "IgnoredFloatingPointValues",
                 RawIgnoredFloatingPointValues);
@@ -137,8 +153,11 @@ bool MagicNumbersCheck::isConstant(const MatchFinder::MatchResult &Result,
                                    const Expr &ExprResult) const {
   return llvm::any_of(
       Result.Context->getParents(ExprResult),
-      [&Result](const DynTypedNode &Parent) {
+      [this, &Result](const DynTypedNode &Parent) {
         if (isUsedToInitializeAConstant(Result, Parent))
+          return true;
+
+        if (IgnoreTypeAliases && isUsedToDefineATypeAlias(Result, Parent))
           return true;
 
         // Ignore this instance, because this matches an

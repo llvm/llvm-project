@@ -124,6 +124,7 @@ void registerTestTransformDialectEraseSchedulePass();
 void registerTestTransformDialectInterpreterPass();
 void registerTestWrittenToPass();
 void registerTestVectorLowerings();
+void registerTestVectorReductionToSPIRVDotProd();
 void registerTestNvgpuLowerings();
 } // namespace test
 } // namespace mlir
@@ -231,6 +232,7 @@ void registerTestPasses() {
   mlir::test::registerTestTransformDialectEraseSchedulePass();
   mlir::test::registerTestTransformDialectInterpreterPass();
   mlir::test::registerTestVectorLowerings();
+  mlir::test::registerTestVectorReductionToSPIRVDotProd();
   mlir::test::registerTestNvgpuLowerings();
   mlir::test::registerTestWrittenToPass();
 }

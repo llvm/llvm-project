@@ -28,6 +28,12 @@ namespace mlir {
 class ShapedTypeComponents;
 using ReifiedRankedShapedTypeDims = SmallVector<SmallVector<OpFoldResult>>;
 
+/// Reify the shape of the result of an operation (typically in terms of the
+/// shape of its operands).
+LogicalResult
+reifyResultShapes(OpBuilder &b, Operation *op,
+                  ReifiedRankedShapedTypeDims &reifiedReturnShapes);
+
 /// Adaptor class to abstract the differences between whether value is from
 /// a ShapedType or ShapedTypeComponents or DenseIntElementsAttribute.
 class ShapeAdaptor {

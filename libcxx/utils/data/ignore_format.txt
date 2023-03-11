@@ -212,7 +212,6 @@ libcxx/include/__algorithm/unwrap_range.h
 libcxx/include/__algorithm/upper_bound.h
 libcxx/include/any
 libcxx/include/array
-libcxx/include/atomic
 libcxx/include/__atomic/atomic_base.h
 libcxx/include/__atomic/atomic_flag.h
 libcxx/include/__atomic/atomic.h

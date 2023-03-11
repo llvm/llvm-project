@@ -72,19 +72,18 @@ define void @scatter_f16_index_offset_var(ptr %base, i64 %offset, i64 %scale, <v
 ; CHECK-LABEL: scatter_f16_index_offset_var:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    index z1.d, #0, #1
-; CHECK-NEXT:    mov z3.d, x1
-; CHECK-NEXT:    mov z2.d, z1.d
-; CHECK-NEXT:    mov z4.d, z3.d
 ; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    mov z2.d, z1.d
+; CHECK-NEXT:    mov z3.d, x1
 ; CHECK-NEXT:    incd z2.d
-; CHECK-NEXT:    mla z3.d, p1/m, z1.d, z3.d
-; CHECK-NEXT:    mla z4.d, p1/m, z2.d, z4.d
+; CHECK-NEXT:    mad z1.d, p1/m, z3.d, z3.d
+; CHECK-NEXT:    mad z2.d, p1/m, z3.d, z3.d
 ; CHECK-NEXT:    punpklo p1.h, p0.b
-; CHECK-NEXT:    uunpklo z1.d, z0.s
+; CHECK-NEXT:    uunpklo z3.d, z0.s
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uunpkhi z0.d, z0.s
-; CHECK-NEXT:    st1h { z1.d }, p1, [x0, z3.d, lsl #1]
-; CHECK-NEXT:    st1h { z0.d }, p0, [x0, z4.d, lsl #1]
+; CHECK-NEXT:    st1h { z3.d }, p1, [x0, z1.d, lsl #1]
+; CHECK-NEXT:    st1h { z0.d }, p0, [x0, z2.d, lsl #1]
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
   %t1 = shufflevector <vscale x 4 x i64> %t0, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer

@@ -482,9 +482,7 @@ struct FoldFillWithPad final : public OpRewritePattern<tensor::PadOp> {
       return failure();
 
     ReifiedRankedShapedTypeDims reifiedShape;
-    ReifyRankedShapedTypeOpInterface interface =
-        cast<ReifyRankedShapedTypeOpInterface>(padOp.getOperation());
-    if (failed(interface.reifyResultShapes(rewriter, reifiedShape)))
+    if (failed(reifyResultShapes(rewriter, padOp, reifiedShape)))
       return rewriter.notifyMatchFailure(
           padOp, "failed to reify tensor.pad op result shape");
 
