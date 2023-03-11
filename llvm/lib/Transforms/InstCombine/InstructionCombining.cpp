@@ -4651,10 +4651,9 @@ PreservedAnalyses InstCombinePass::run(Function &F,
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
 
-  // TODO: Only use LoopInfo when the option is set. This requires that the
-  //       callers in the pass pipeline explicitly set the option.
-  auto *LI = AM.getCachedResult<LoopAnalysis>(F);
-  if (!LI && Options.UseLoopInfo)
+  // Only use LoopInfo when the option is set by callers.
+  LoopInfo *LI = nullptr;
+  if (Options.UseLoopInfo)
     LI = &AM.getResult<LoopAnalysis>(F);
 
   auto *AA = &AM.getResult<AAManager>(F);
