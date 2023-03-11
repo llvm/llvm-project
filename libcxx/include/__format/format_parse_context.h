@@ -12,6 +12,7 @@
 
 #include <__config>
 #include <__format/format_error.h>
+#include <__type_traits/is_constant_evaluated.h>
 #include <string_view>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

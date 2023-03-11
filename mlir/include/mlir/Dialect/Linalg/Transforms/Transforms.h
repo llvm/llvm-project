@@ -1041,6 +1041,19 @@ struct DownscaleDepthwiseConv2DNhwcHwcOp final
   }
 };
 
+struct DownscaleConv2DOp final : public OpRewritePattern<Conv2DOp> {
+  DownscaleConv2DOp(MLIRContext *context, PatternBenefit benefit = 1)
+      : OpRewritePattern<Conv2DOp>(context, benefit) {}
+
+  FailureOr<Conv1DOp> returningMatchAndRewrite(Conv2DOp convOp,
+                                               PatternRewriter &rewriter) const;
+
+  LogicalResult matchAndRewrite(Conv2DOp convOp,
+                                PatternRewriter &rewriter) const override {
+    return returningMatchAndRewrite(convOp, rewriter);
+  }
+};
+
 ///
 /// Linalg generalization pattern.
 ///

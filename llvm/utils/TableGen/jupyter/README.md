@@ -32,7 +32,7 @@ Then run one of:
     # Then in the notebook interface, select 'LLVM TableGen' from the 'New' menu.
 
     # To run the example notebook in this folder.
-    jupyter notebook LLVM_Tablegen.ipynb
+    jupyter notebook LLVM_TableGen.ipynb
 
     # To use the kernel from the command line.
     jupyter console --kernel tablegen

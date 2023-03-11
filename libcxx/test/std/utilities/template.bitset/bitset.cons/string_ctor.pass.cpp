@@ -8,11 +8,12 @@
 
 // bitset(string, pos, n, zero, one); // constexpr since C++23
 
-#include <bitset>
 #include <algorithm> // for 'min' and 'max'
+#include <bitset>
 #include <cassert>
 #include <stdexcept> // for 'invalid_argument'
 #include <string>
+#include <type_traits>
 
 #include "test_macros.h"
 

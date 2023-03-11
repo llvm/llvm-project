@@ -14,6 +14,7 @@
 #define FORTRAN_OPTIMIZER_SUPPORT_UTILS_H
 
 #include "flang/Common/default-kinds.h"
+#include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -31,7 +32,27 @@ inline std::int64_t toInt(mlir::arith::ConstantOp cop) {
 // Reconstruct binding tables for dynamic dispatch.
 using BindingTable = llvm::DenseMap<llvm::StringRef, unsigned>;
 using BindingTables = llvm::DenseMap<llvm::StringRef, BindingTable>;
-void buildBindingTables(BindingTables &, mlir::ModuleOp mod);
+
+inline void buildBindingTables(BindingTables &bindingTables,
+                               mlir::ModuleOp mod) {
+
+  // The binding tables are defined in FIR from lowering as fir.dispatch_table
+  // operation. Go through each binding tables and store the procedure name and
+  // binding index for later use by the fir.dispatch conversion pattern.
+  for (auto dispatchTableOp : mod.getOps<fir::DispatchTableOp>()) {
+    unsigned bindingIdx = 0;
+    BindingTable bindings;
+    if (dispatchTableOp.getRegion().empty()) {
+      bindingTables[dispatchTableOp.getSymName()] = bindings;
+      continue;
+    }
+    for (auto dtEntry : dispatchTableOp.getBlock().getOps<fir::DTEntryOp>()) {
+      bindings[dtEntry.getMethod()] = bindingIdx;
+      ++bindingIdx;
+    }
+    bindingTables[dispatchTableOp.getSymName()] = bindings;
+  }
+}
 
 // Translate front-end KINDs for use in the IR and code gen.
 inline std::vector<fir::KindTy>

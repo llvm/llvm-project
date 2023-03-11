@@ -23,3 +23,11 @@ revert dbb6344b2 "[Libomptarget] Add the CUDA feature to the packager
 
 "Revert D118493 "Set rpath on openmp executables""
 "Revert "[Libomptarget] Update handling of architectures for DeviceRTL"
+
+FP16
+Revert "[X86][MemFold] Update some records for X86MemFoldTables.inc"
+
+SROA breaks MIOpen
+Revert "[SROA] Create additional vector type candidates based on store and load slices"
+Revert "[SROA] Fix bug where CandidateTys is appended while being iterated"
+

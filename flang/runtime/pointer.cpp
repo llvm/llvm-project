@@ -206,7 +206,7 @@ bool RTNAME(PointerIsAssociatedWith)(
   if (!target) {
     return pointer.raw().base_addr != nullptr;
   }
-  if (!target->raw().base_addr || target->ElementBytes() == 0) {
+  if (!target->raw().base_addr) {
     return false;
   }
   int rank{pointer.rank()};

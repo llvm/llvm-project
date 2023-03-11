@@ -267,6 +267,11 @@ public:
     return ldx >= numNativeLoops;
   }
 
+  /// Returns true if the expression is `(kTensor t)`.
+  bool expIsTensor(unsigned e, unsigned t) const {
+    return tensorExps[e].kind == kTensor && tensorExps[e].tensor == t;
+  }
+
   /// Returns true if the expression contains the `t` as an operand.
   bool expContainsTensor(unsigned e, unsigned t) const;
 

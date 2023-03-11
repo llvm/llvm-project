@@ -55,8 +55,6 @@ public:
   // Return the source line corresponding to an address, or the empty string.
   // Format: Source.cpp:123 (/path/to/Source.cpp:123)
   std::string getSourceLocation(uint64_t off) const;
-  // Return the relocation at \p off, if it exists. This does a linear search.
-  const Reloc *getRelocAt(uint32_t off) const;
   // Whether the data at \p off in this InputSection is live.
   virtual bool isLive(uint64_t off) const = 0;
   virtual void markLive(uint64_t off) = 0;
@@ -220,10 +218,6 @@ public:
     return toStringRef(data.slice(begin, end - begin));
   }
 
-  StringRef getStringRefAtOffset(uint64_t off) const {
-    return getStringRef(getStringPieceIndex(off));
-  }
-
   // Returns i'th piece as a CachedHashStringRef. This function is very hot when
   // string merging is enabled, so we want to inline.
   LLVM_ATTRIBUTE_ALWAYS_INLINE
@@ -238,9 +232,6 @@ public:
 
   bool deduplicateLiterals = false;
   std::vector<StringPiece> pieces;
-
-private:
-  size_t getStringPieceIndex(uint64_t off) const;
 };
 
 class WordLiteralInputSection final : public InputSection {

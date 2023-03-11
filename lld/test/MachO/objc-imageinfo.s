@@ -153,10 +153,13 @@ _OBJC_CLASS_$_FooClass:
 
 .section __DATA,__objc_const
 .p2align 3
+__OBJC_$_CATEGORY_INSTANCE_METHODS_FooClass_$_barcat:
+
+.p2align 3
 __OBJC_$_CATEGORY_FooClass_$_barcat:
 .quad L_CAT_NAME
 .quad _OBJC_CLASS_$_FooClass
-.quad 0
+.quad __OBJC_$_CATEGORY_INSTANCE_METHODS_FooClass_$_barcat
 .quad 0
 .quad 0
 .quad 0

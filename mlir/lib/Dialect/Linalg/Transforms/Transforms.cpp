@@ -1361,14 +1361,71 @@ DownscaleDepthwiseConv2DNhwcHwcOp::returningMatchAndRewrite(
   return conv1DOp;
 }
 
+FailureOr<Conv1DOp>
+DownscaleConv2DOp::returningMatchAndRewrite(Conv2DOp convOp,
+                                            PatternRewriter &rewriter) const {
+  if (convOp.hasBufferSemantics())
+    return failure(); // To be implemented.
+
+  Value input = convOp.getInputs().front();
+  Value kernel = convOp.getInputs().back();
+  Value output = convOp.getOutputs().front();
+
+  auto inputType = input.getType().dyn_cast<RankedTensorType>();
+  auto kernelType = kernel.getType().dyn_cast<RankedTensorType>();
+  auto outputType = output.getType().dyn_cast<RankedTensorType>();
+
+  auto kernelShape = kernelType.getShape();
+  auto outputShape = outputType.getShape();
+
+  // Only handle the case where at least one of the window dimensions is
+  // of size 1. Other cases can rely on tiling to reduce to such cases.
+  int64_t khSize = kernelShape[0], kwSize = kernelShape[1];
+  int64_t ohSize = outputShape[0], owSize = outputShape[1];
+  bool removeH = (khSize == 1 && ohSize == 1);
+  bool removeW = (kwSize == 1 && owSize == 1);
+  if (!removeH && !removeW)
+    return failure();
+
+  // Get new shapes and types for all operands by removing the size-1
+  // dimension.
+  using RTTBuilder = RankedTensorType::Builder;
+  RankedTensorType newInputType =
+      RTTBuilder(inputType).dropDim((removeH ? 0 : 1));
+  RankedTensorType newKernelType =
+      RTTBuilder(kernelType).dropDim((removeH ? 0 : 1));
+  RankedTensorType newOutputType =
+      RTTBuilder(outputType).dropDim(removeH ? 0 : 1);
+
+  // Rank-reduce operands.
+  Location loc = convOp.getLoc();
+  Value newInput = tensor::createCanonicalRankReducingExtractSliceOp(
+      rewriter, loc, input, newInputType);
+  Value newKernel = tensor::createCanonicalRankReducingExtractSliceOp(
+      rewriter, loc, kernel, newKernelType);
+  Value newOutput = tensor::createCanonicalRankReducingExtractSliceOp(
+      rewriter, loc, output, newOutputType);
+
+  auto conv1DOp = rewriter.create<Conv1DOp>(loc, newOutputType,
+                                            ValueRange{newInput, newKernel},
+                                            ValueRange{newOutput});
+
+  // Insert back.
+  Value inserted = tensor::createCanonicalRankReducingInsertSliceOp(
+      rewriter, loc, conv1DOp.getResult(0), output);
+  rewriter.replaceOp(convOp, inserted);
+
+  return conv1DOp;
+}
+
 void linalg::populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
                                                   PatternBenefit benefit) {
   patterns.add<DownscaleSizeOneWindowed2DConvolution<linalg::Conv2DNhwcHwcfOp,
                                                      Conv1DNwcWcfOp>,
                DownscaleSizeOneWindowed2DConvolution<linalg::Conv2DNchwFchwOp,
                                                      Conv1DNcwFcwOp>,
-               DownscaleDepthwiseConv2DNhwcHwcOp>(patterns.getContext(),
-                                                  benefit);
+               DownscaleDepthwiseConv2DNhwcHwcOp, DownscaleConv2DOp>(
+      patterns.getContext(), benefit);
   patterns.add<
       DownscaleSizeOneWindowed2DConvolution<PoolingNhwcSumOp, PoolingNwcSumOp>,
       DownscaleSizeOneWindowed2DConvolution<PoolingNchwSumOp, PoolingNcwSumOp>,

@@ -131,6 +131,8 @@ public:
         IRB(M.getContext()) {
     // FIXME: Make it work with other formats.
     assert(TargetTriple.isOSBinFormatELF() && "ELF only");
+    assert(!(TargetTriple.isNVPTX() || TargetTriple.isAMDGPU()) &&
+           "Device targets are not supported");
   }
 
   bool run();

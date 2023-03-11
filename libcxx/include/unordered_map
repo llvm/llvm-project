@@ -2648,6 +2648,7 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <bit>
 #  include <concepts>
 #  include <iterator>
+#  include <type_traits>
 #endif
 
 #endif // _LIBCPP_UNORDERED_MAP

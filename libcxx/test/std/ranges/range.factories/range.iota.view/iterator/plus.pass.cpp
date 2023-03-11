@@ -13,8 +13,9 @@
 // friend constexpr iterator operator+(difference_type n, iterator i)
 //   requires advanceable<W>;
 
-#include <ranges>
 #include <cassert>
+#include <ranges>
+#include <type_traits>
 
 #include "test_macros.h"
 #include "../types.h"

@@ -325,8 +325,8 @@ func.func @mixed_vect(%arg0: vector<8xf32>, %arg1: vector<4xf32>, %arg2: vector<
 func.func @alloca(%size : i64) {
   // CHECK: llvm.alloca %{{.*}} x i32 : (i64) -> !llvm.ptr<i32>
   llvm.alloca %size x i32 {alignment = 0} : (i64) -> (!llvm.ptr<i32>)
-  // CHECK: llvm.alloca %{{.*}} x i32 {alignment = 8 : i64} : (i64) -> !llvm.ptr<i32>
-  llvm.alloca %size x i32 {alignment = 8} : (i64) -> (!llvm.ptr<i32>)
+  // CHECK: llvm.alloca inalloca %{{.*}} x i32 {alignment = 8 : i64} : (i64) -> !llvm.ptr<i32>
+  llvm.alloca inalloca %size x i32 {alignment = 8} : (i64) -> (!llvm.ptr<i32>)
   llvm.return
 }
 

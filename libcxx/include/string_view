@@ -219,10 +219,16 @@ namespace std {
 #include <__ranges/enable_view.h>
 #include <__ranges/size.h>
 #include <__string/char_traits.h>
+#include <__type_traits/is_array.h>
+#include <__type_traits/is_same.h>
+#include <__type_traits/is_standard_layout.h>
+#include <__type_traits/is_trivial.h>
+#include <__type_traits/remove_cvref.h>
+#include <__type_traits/remove_reference.h>
+#include <__type_traits/type_identity.h>
 #include <iosfwd>
 #include <limits>
 #include <stdexcept>
-#include <type_traits>
 #include <version>
 
 // standard-mandated includes
@@ -1040,6 +1046,7 @@ _LIBCPP_POP_MACROS
 #  include <concepts>
 #  include <functional>
 #  include <iterator>
+#  include <type_traits>
 #endif
 
 #endif // _LIBCPP_STRING_VIEW

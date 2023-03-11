@@ -187,6 +187,8 @@ public:
   Register
   getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
+  unsigned getInlineAsmMemConstraint(StringRef ConstraintCode) const override;
+
 private:
   unsigned GetAlignedArgumentStackSize(unsigned StackSize,
                                        SelectionDAG &DAG) const;

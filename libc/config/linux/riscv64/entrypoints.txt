@@ -231,7 +231,6 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ceil
     libc.src.math.ceilf
     libc.src.math.ceill
-    # libc.src.math.cos
     libc.src.math.coshf
     libc.src.math.cosf
     libc.src.math.expf
@@ -274,7 +273,6 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.llround
     libc.src.math.llroundf
     libc.src.math.llroundl
-    libc.src.math.log10
     libc.src.math.log10f
     libc.src.math.log1pf
     libc.src.math.log2f
@@ -313,20 +311,74 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.scalbn
     libc.src.math.scalbnf
     libc.src.math.scalbnl
-    # libc.src.math.sin
     libc.src.math.sincosf
     libc.src.math.sinhf
     libc.src.math.sinf
     libc.src.math.sqrt
     libc.src.math.sqrtf
     libc.src.math.sqrtl
-    # libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl
 )
+
+if(LLVM_LIBC_FULL_BUILD)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # network.h entrypoints
+    libc.src.network.htonl
+    libc.src.network.htons
+    libc.src.network.ntohl
+    libc.src.network.ntohs
+
+    # sched.h entrypoints
+    libc.src.sched.__sched_getcpucount
+
+    # stdio.h entrypoints
+    libc.src.stdio.clearerr
+    libc.src.stdio.clearerr_unlocked
+    libc.src.stdio.fclose
+    libc.src.stdio.flockfile
+    libc.src.stdio.feof
+    libc.src.stdio.feof_unlocked
+    libc.src.stdio.ferror
+    libc.src.stdio.ferror_unlocked
+    libc.src.stdio.fgetc
+    libc.src.stdio.fflush
+    libc.src.stdio.fopen
+    libc.src.stdio.fputc
+    libc.src.stdio.fputs
+    libc.src.stdio.fopencookie
+    libc.src.stdio.fread
+    libc.src.stdio.fread_unlocked
+    libc.src.stdio.fseek
+    libc.src.stdio.funlockfile
+    libc.src.stdio.fwrite
+    libc.src.stdio.fwrite_unlocked
+    libc.src.stdio.fprintf
+    libc.src.stdio.printf
+    libc.src.stdio.putc
+    libc.src.stdio.putchar
+    libc.src.stdio.puts
+    libc.src.stdio.stderr
+    libc.src.stdio.stdin
+    libc.src.stdio.stdout
+
+    # time.h entrypoints
+    libc.src.time.asctime
+    libc.src.time.asctime_r
+    libc.src.time.clock_gettime
+    libc.src.time.clock
+    libc.src.time.difftime
+    libc.src.time.gettimeofday
+    libc.src.time.gmtime
+    libc.src.time.gmtime_r
+    libc.src.time.mktime
+    libc.src.time.nanosleep
+    libc.src.time.time
+  )
+endif()
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS
   ${TARGET_LIBC_ENTRYPOINTS}

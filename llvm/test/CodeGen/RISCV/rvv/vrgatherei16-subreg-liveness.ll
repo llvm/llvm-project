@@ -12,7 +12,6 @@
 define internal void @foo(<vscale x 1 x i16> %v15, <vscale x 1 x i16> %0, <vscale x 1 x i16> %vs12.i.i.i, <vscale x 1 x i16> %1, <vscale x 8 x i8> %v37) {
 ; NOSUBREG-LABEL: foo:
 ; NOSUBREG:       # %bb.0: # %loopIR.preheader.i.i
-; NOSUBREG-NEXT:    # kill: def $v10 killed $v10 def $v10m2
 ; NOSUBREG-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; NOSUBREG-NEXT:    vmv.v.i v14, 0
 ; NOSUBREG-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
