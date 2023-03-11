@@ -6434,3 +6434,58 @@ llvm::StringRef clang::driver::getDriverMode(StringRef ProgName,
 }
 
 bool driver::IsClangCL(StringRef DriverMode) { return DriverMode.equals("cl"); }
+
+llvm::Error driver::expandResponseFiles(SmallVectorImpl<const char *> &Args,
+                                        bool ClangCLMode,
+                                        llvm::BumpPtrAllocator &Alloc,
+                                        llvm::vfs::FileSystem *FS) {
+  // Parse response files using the GNU syntax, unless we're in CL mode. There
+  // are two ways to put clang in CL compatibility mode: ProgName is either
+  // clang-cl or cl, or --driver-mode=cl is on the command line. The normal
+  // command line parsing can't happen until after response file parsing, so we
+  // have to manually search for a --driver-mode=cl argument the hard way.
+  // Finally, our -cc1 tools don't care which tokenization mode we use because
+  // response files written by clang will tokenize the same way in either mode.
+  enum { Default, POSIX, Windows } RSPQuoting = Default;
+  for (const char *F : Args) {
+    if (strcmp(F, "--rsp-quoting=posix") == 0)
+      RSPQuoting = POSIX;
+    else if (strcmp(F, "--rsp-quoting=windows") == 0)
+      RSPQuoting = Windows;
+  }
+
+  // Determines whether we want nullptr markers in Args to indicate response
+  // files end-of-lines. We only use this for the /LINK driver argument with
+  // clang-cl.exe on Windows.
+  bool MarkEOLs = ClangCLMode;
+
+  llvm::cl::TokenizerCallback Tokenizer;
+  if (RSPQuoting == Windows || (RSPQuoting == Default && ClangCLMode))
+    Tokenizer = &llvm::cl::TokenizeWindowsCommandLine;
+  else
+    Tokenizer = &llvm::cl::TokenizeGNUCommandLine;
+
+  if (MarkEOLs && Args.size() > 1 && StringRef(Args[1]).startswith("-cc1"))
+    MarkEOLs = false;
+
+  llvm::cl::ExpansionContext ECtx(Alloc, Tokenizer);
+  ECtx.setMarkEOLs(MarkEOLs);
+  if (FS)
+    ECtx.setVFS(FS);
+
+  if (llvm::Error Err = ECtx.expandResponseFiles(Args))
+    return Err;
+
+  // If -cc1 came from a response file, remove the EOL sentinels.
+  auto FirstArg = llvm::find_if(llvm::drop_begin(Args),
+                                [](const char *A) { return A != nullptr; });
+  if (FirstArg != Args.end() && StringRef(*FirstArg).startswith("-cc1")) {
+    // If -cc1 came from a response file, remove the EOL sentinels.
+    if (MarkEOLs) {
+      auto newEnd = std::remove(Args.begin(), Args.end(), nullptr);
+      Args.resize(newEnd - Args.begin());
+    }
+  }
+
+  return llvm::Error::success();
+}
