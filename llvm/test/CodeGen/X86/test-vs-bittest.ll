@@ -571,6 +571,22 @@ define i64 @is_upper_bit_clear_i64(i64 %x) {
   ret i64 %r
 }
 
+define i32 @is_upper_bit_clear_i64_trunc(i64 %x) {
+; CHECK-LABEL: is_upper_bit_clear_i64_trunc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    shrq $42, %rax
+; CHECK-NEXT:    notl %eax
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    retq
+  %sh = lshr i64 %x, 42
+  %t = trunc i64 %sh to i32
+  %m = and i32 %t, 1
+  %r = xor i32 %m, 1
+  ret i32 %r
+}
+
 define i64 @is_upper_bit_clear_i64_not(i64 %x) {
 ; CHECK-LABEL: is_upper_bit_clear_i64_not:
 ; CHECK:       # %bb.0:
