@@ -5,9 +5,11 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/c-string-literal.s -o %t/c-string-literal.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/baz.s -o %t/baz.o
 
+# RUN: llvm-ar --format=darwin crs %t/libfoo.a %t/foo.o
 # RUN: %lld -dylib %t/baz.o -o %t/libbaz.dylib
-# RUN: %lld -demangle -map %t/map %t/test.o %t/foo.o %t/c-string-literal.o \
-# RUN:   %t/libbaz.dylib --time-trace -o %t/test --no-deduplicate-strings
+# RUN: %lld -demangle -map %t/map %t/test.o -force_load %t/libfoo.a \
+# RUN:   %t/c-string-literal.o %t/libbaz.dylib --time-trace -o %t/test \
+# RUN:   --no-deduplicate-strings
 # RUN: llvm-objdump --syms --section-headers %t/test > %t/objdump
 ## Check that symbols in cstring sections aren't emitted
 ## Also check that we don't have redundant EH_Frame symbols (regression test)
@@ -42,11 +44,11 @@
 # CHECK-NEXT: # Arch: x86_64
 # CHECK-NEXT: # Object files:
 # CHECK-NEXT: [  0] linker synthesized
-# CHECK-NEXT: [  1] {{.*}}{{/|\\}}usr/lib{{/|\\}}libSystem.tbd
-# CHECK-NEXT: [  2] {{.*}}{{/|\\}}map-file.s.tmp/test.o
-# CHECK-NEXT: [  3] {{.*}}{{/|\\}}map-file.s.tmp/foo.o
-# CHECK-NEXT: [  4] {{.*}}{{/|\\}}map-file.s.tmp/c-string-literal.o
-# CHECK-NEXT: [  5] {{.*}}{{/|\\}}map-file.s.tmp/libbaz.dylib
+# CHECK-NEXT: [  1] {{.*}}{{/|\\}}usr/lib{{/|\\}}libSystem.tbd{{$}}
+# CHECK-NEXT: [  2] {{.*}}{{/|\\}}map-file.s.tmp/test.o{{$}}
+# CHECK-NEXT: [  3] {{.*}}{{/|\\}}map-file.s.tmp/libfoo.a(foo.o){{$}}
+# CHECK-NEXT: [  4] {{.*}}{{/|\\}}map-file.s.tmp/c-string-literal.o{{$}}
+# CHECK-NEXT: [  5] {{.*}}{{/|\\}}map-file.s.tmp/libbaz.dylib{{$}}
 
 # CHECK-NEXT: # Sections:
 # CHECK-NEXT: # Address           Size            Segment  Section
@@ -87,8 +89,8 @@
 
 # MAPFILE: "name":"Total Write map file"
 
-# RUN: %lld -demangle -dead_strip -map %t/stripped-map %t/test.o %t/foo.o \
-# RUN:   %t/c-string-literal.o %t/libbaz.dylib -o %t/stripped
+# RUN: %lld -demangle -dead_strip -map %t/stripped-map %t/test.o -force_load \
+# RUN:   %t/libfoo.a %t/c-string-literal.o %t/libbaz.dylib -o %t/stripped
 # RUN: FileCheck --check-prefix=STRIPPED %s < %t/stripped-map
 
 # STRIPPED-LABEL: Dead Stripped Symbols:
@@ -98,8 +100,8 @@
 # STRIPPED-DAG:   <<dead>>  0x0000000F  [  4] literal string: Hello, it's me
 # STRIPPED-DAG:   <<dead>>  0x0000000E  [  4] literal string: Hello world!\n
 
-# RUN: %lld --icf=all -map %t/icf-map %t/test.o %t/foo.o %t/c-string-literal.o \
-# RUN:   %t/libbaz.dylib -o /dev/null
+# RUN: %lld --icf=all -map %t/icf-map %t/test.o -force_load %t/libfoo.a \
+# RUN:   %t/c-string-literal.o %t/libbaz.dylib -o /dev/null
 # RUN: FileCheck --check-prefix=ICF %s < %t/icf-map
 
 ## Verify that folded symbols and cstrings have size zero. Note that ld64 prints
