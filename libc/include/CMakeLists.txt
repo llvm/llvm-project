@@ -295,6 +295,7 @@ add_gen_header(
     .llvm_libc_common_h
     .llvm-libc-macros.sys_mman_macros
     .llvm-libc-types.off_t
+    .llvm-libc-types.size_t
     .llvm-libc-types.ssize_t
 )
 

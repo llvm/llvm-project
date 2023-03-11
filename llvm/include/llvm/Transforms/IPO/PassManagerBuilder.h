@@ -14,7 +14,6 @@
 #ifndef LLVM_TRANSFORMS_IPO_PASSMANAGERBUILDER_H
 #define LLVM_TRANSFORMS_IPO_PASSMANAGERBUILDER_H
 
-#include "llvm-c/Transforms/PassManagerBuilder.h"
 #include <functional>
 #include <string>
 #include <vector>
@@ -121,14 +120,6 @@ public:
   /// populateModulePassManager - This sets up the primary pass manager.
   void populateModulePassManager(legacy::PassManagerBase &MPM);
 };
-
-inline PassManagerBuilder *unwrap(LLVMPassManagerBuilderRef P) {
-    return reinterpret_cast<PassManagerBuilder*>(P);
-}
-
-inline LLVMPassManagerBuilderRef wrap(PassManagerBuilder *P) {
-  return reinterpret_cast<LLVMPassManagerBuilderRef>(P);
-}
 
 } // end namespace llvm
 #endif

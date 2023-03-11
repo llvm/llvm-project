@@ -25,6 +25,9 @@ namespace llvm {
 class Triple;
 
 namespace AArch64 {
+// Function Multi Versioning CPU features. They must be kept in sync with
+// compiler-rt enum CPUFeatures in lib/builtins/cpu_model.c with FEAT_MAX as
+// sentinel.
 enum CPUFeatures {
   FEAT_RNG,
   FEAT_FLAGM,
@@ -86,6 +89,9 @@ enum CPUFeatures {
   FEAT_SME2,
   FEAT_MAX
 };
+
+static_assert(FEAT_MAX <= 64,
+              "CPUFeatures enum must not have more than 64 entries");
 
 // Arch extension modifiers for CPUs. These are labelled with their Arm ARM
 // feature name (though the canonical reference for those is AArch64.td)
@@ -155,17 +161,18 @@ enum ArchExtKind : uint64_t {
 // SubtargetFeature which may represent either an actual extension or some
 // internal LLVM property.
 struct ExtensionInfo {
-  StringRef Name;       // Human readable name, e.g. "profile".
-  ArchExtKind ID;       // Corresponding to the ArchExtKind, this extensions
-                        // representation in the bitfield.
-  StringRef Feature;    // -mattr enable string, e.g. "+spe"
-  StringRef NegFeature; // -mattr disable string, e.g. "-spe"
-
-  // FIXME These were added by D127812 FMV support and need documenting:
-  CPUFeatures CPUFeature; // Bitfield value set in __aarch64_cpu_features
-  StringRef DependentFeatures;
-  unsigned FmvPriority;
-  static constexpr unsigned MaxFMVPriority = 1000;
+  StringRef Name;              // Human readable name, e.g. "profile".
+  ArchExtKind ID;              // Corresponding to the ArchExtKind, this
+                               // extensions representation in the bitfield.
+  StringRef Feature;           // -mattr enable string, e.g. "+spe"
+  StringRef NegFeature;        // -mattr disable string, e.g. "-spe"
+  CPUFeatures CPUFeature;      // Function Multi Versioning (FMV) bitfield value
+                               // set in __aarch64_cpu_features
+  StringRef DependentFeatures; // FMV enabled features string,
+                               // e.g. "+dotprod,+fp-armv8,+neon"
+  unsigned FmvPriority;        // FMV feature priority
+  static constexpr unsigned MaxFMVPriority =
+      1000; // Maximum priority for FMV feature
 };
 
 // clang-format off
@@ -559,6 +566,10 @@ std::optional<CpuInfo> parseCpu(StringRef Name);
 void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values);
 
 bool isX18ReservedByDefault(const Triple &TT);
+
+// For given feature names, return a bitmask corresponding to the entries of
+// AArch64::CPUFeatures. The values in CPUFeatures are not bitmasks
+// themselves, they are sequential (0, 1, 2, 3, ...).
 uint64_t getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
 
 } // namespace AArch64

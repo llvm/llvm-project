@@ -352,7 +352,8 @@ public:
                      CommandReturnObject &result);
 
   bool HandleCommand(const char *command_line, LazyBool add_to_history,
-                     CommandReturnObject &result);
+                     CommandReturnObject &result,
+                     bool force_repeat_command = false);
 
   bool WasInterrupted() const;
 

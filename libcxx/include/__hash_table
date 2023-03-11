@@ -17,6 +17,7 @@
 #include <__config>
 #include <__debug>
 #include <__functional/hash.h>
+#include <__functional/invoke.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>
 #include <__memory/allocator_traits.h>
@@ -25,6 +26,16 @@
 #include <__memory/swap_allocator.h>
 #include <__memory/unique_ptr.h>
 #include <__type_traits/can_extract_key.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/is_const.h>
+#include <__type_traits/is_copy_constructible.h>
+#include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_nothrow_default_constructible.h>
+#include <__type_traits/is_nothrow_move_constructible.h>
+#include <__type_traits/is_pointer.h>
+#include <__type_traits/is_reference.h>
+#include <__type_traits/remove_const.h>
+#include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
@@ -32,7 +43,6 @@
 #include <cmath>
 #include <cstring>
 #include <initializer_list>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

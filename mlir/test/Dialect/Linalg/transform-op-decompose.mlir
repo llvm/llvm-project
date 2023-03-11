@@ -56,6 +56,23 @@ func.func @depthwise_conv_2d_nhwc_hwc(%input: tensor<1x1x113x96xf32>, %filter: t
   return %0: tensor<1x1x56x96xf32>
 }
 
+// CHECK-LABEL: @conv_2d
+// CHECK-SAME: (%[[ARG0:[0-9a-z]+]]: tensor<1x?xf32>,
+// CHECK-SAME: %[[ARG1:[0-9a-z]+]]: tensor<1x?xf32>,
+// CHECK-SAME: %[[ARG2:[0-9a-z]+]]: tensor<1x?xf32>)
+func.func @conv_2d(%input: tensor<1x?xf32>, %filter: tensor<1x?xf32>, %init: tensor<1x?xf32>) -> tensor<1x?xf32> {
+  // CHECK: %[[SLICE0:.+]] = tensor.extract_slice %[[ARG0]]
+  // CHECK: %[[SLICE1:.+]] = tensor.extract_slice %[[ARG1]]
+  // CHECK: %[[SLICE2:.+]] = tensor.extract_slice %[[ARG2]]
+  // CHECK: %[[SLICERES:.+]] = linalg.conv_1d
+  // CHECK: %[[RES:.+]] = tensor.insert_slice %[[SLICERES]] into %[[ARG2]]
+  %0 = linalg.conv_2d
+     ins (%input, %filter: tensor<1x?xf32>, tensor<1x?xf32>)
+    outs (%init: tensor<1x?xf32>) -> tensor<1x?xf32>
+  // CHECK: return %[[RES]]
+  return %0 : tensor<1x?xf32>
+}
+
 // CHECK-LABEL: @pooling_nhwc_sum
 // CHECK-SAME: %[[ARG0:.+]]: tensor<?x1x?x?xf32>,
 // CHECK-SAME: %[[ARG1:.+]]: tensor<1x?xf32>

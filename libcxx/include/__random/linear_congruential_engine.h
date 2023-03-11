@@ -11,9 +11,11 @@
 
 #include <__config>
 #include <__random/is_seed_sequence.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/integral_constant.h>
+#include <__type_traits/is_unsigned.h>
 #include <cstdint>
 #include <iosfwd>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

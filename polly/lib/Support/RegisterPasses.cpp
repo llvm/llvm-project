@@ -217,14 +217,6 @@ static StaticInitializer InitializeEverything;
 void initializePollyPasses(llvm::PassRegistry &Registry) {
   initializeCodeGenerationPass(Registry);
 
-#ifdef GPU_CODEGEN
-  initializePPCGCodeGenerationPass(Registry);
-  initializeManagedMemoryRewritePassPass(Registry);
-  LLVMInitializeNVPTXTarget();
-  LLVMInitializeNVPTXTargetInfo();
-  LLVMInitializeNVPTXTargetMC();
-  LLVMInitializeNVPTXAsmPrinter();
-#endif
   initializeCodePreparationPass(Registry);
   initializeDeadCodeElimWrapperPassPass(Registry);
   initializeDependenceInfoPass(Registry);

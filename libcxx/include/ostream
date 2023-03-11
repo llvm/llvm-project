@@ -167,6 +167,9 @@ basic_ostream<wchar_t, traits>& operator<<(basic_ostream<wchar_t, traits>&, cons
 #include <__config>
 #include <__memory/shared_ptr.h>
 #include <__memory/unique_ptr.h>
+#include <__type_traits/conjunction.h>
+#include <__type_traits/void_t.h>
+#include <__utility/declval.h>
 #include <bitset>
 #include <ios>
 #include <locale>

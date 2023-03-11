@@ -1141,6 +1141,10 @@ bool ObjectFileMachO::IsSharedCacheBinary() const {
   return m_header.flags & MH_DYLIB_IN_CACHE;
 }
 
+bool ObjectFileMachO::IsKext() const {
+  return m_header.filetype == MH_KEXT_BUNDLE;
+}
+
 uint32_t ObjectFileMachO::GetAddressByteSize() const {
   return m_data.GetAddressByteSize();
 }
@@ -7028,6 +7032,8 @@ bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
           &process, image.filename, image.uuid, image.load_address,
           false /* value_is_offset */, image.currently_executing,
           false /* notify */);
+      if (module_sp)
+        continue;
     }
 
     // If we have a slide, we need to find the original binary
@@ -7038,6 +7044,8 @@ bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
           &process, image.filename, image.uuid, image.slide,
           true /* value_is_offset */, image.currently_executing,
           false /* notify */);
+      if (module_sp)
+        continue;
     }
 
     // Try to find the binary by UUID or filename on the local

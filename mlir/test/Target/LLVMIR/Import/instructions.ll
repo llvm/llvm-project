@@ -341,9 +341,11 @@ define ptr @alloca(i64 %size) {
   ; CHECK:  llvm.alloca %[[C1]] x f64 {alignment = 8 : i64} : (i32) -> !llvm.ptr
   ; CHECK:  llvm.alloca %[[SIZE]] x i32 {alignment = 8 : i64} : (i64) -> !llvm.ptr
   ; CHECK:  llvm.alloca %[[SIZE]] x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr<3>
+  ; CHECK:  llvm.alloca inalloca %[[SIZE]] x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
   %1 = alloca double
   %2 = alloca i32, i64 %size, align 8
   %3 = alloca i32, i64 %size, addrspace(3)
+  %4 = alloca inalloca i32, i64 %size
   ret ptr %1
 }
 

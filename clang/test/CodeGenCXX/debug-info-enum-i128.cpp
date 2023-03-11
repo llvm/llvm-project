@@ -1,9 +1,10 @@
+// FIXME: llvm.org/pr51221, the APSInt leaks
+// RUN: export LSAN_OPTIONS=detect_leaks=0
+
 // RUN: %clang_cc1 %s -triple x86_64-windows-msvc -gcodeview -debug-info-kind=limited -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 %s -triple x86_64-linux-gnu -debug-info-kind=limited -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 %s -triple powerpc64-ibm-aix-xcoff -debug-info-kind=limited -emit-llvm -o - | FileCheck %s
 
-// FIXME: llvm.org/pr51221, the APSInt leaks
-// UNSUPPORTED: asan
 
 enum class uns : __uint128_t { unsval = __uint128_t(1) << 64 };
 uns t1() { return uns::unsval; }

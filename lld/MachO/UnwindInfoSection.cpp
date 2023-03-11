@@ -8,7 +8,6 @@
 
 #include "UnwindInfoSection.h"
 #include "InputSection.h"
-#include "Layout.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
@@ -89,18 +88,41 @@ using namespace lld::macho;
 
 // TODO(gkm): how do we align the 2nd-level pages?
 
-// The various fields in the on-disk representation of each compact unwind
-// entry.
-#define FOR_EACH_CU_FIELD(DO)                                                  \
-  DO(Ptr, functionAddress)                                                     \
-  DO(uint32_t, functionLength)                                                 \
-  DO(compact_unwind_encoding_t, encoding)                                      \
-  DO(Ptr, personality)                                                         \
-  DO(Ptr, lsda)
+// The offsets of various fields in the on-disk representation of each compact
+// unwind entry.
+struct CompactUnwindOffsets {
+  uint32_t functionAddress;
+  uint32_t functionLength;
+  uint32_t encoding;
+  uint32_t personality;
+  uint32_t lsda;
 
-CREATE_LAYOUT_CLASS(CompactUnwind, FOR_EACH_CU_FIELD);
+  CompactUnwindOffsets(size_t wordSize) {
+    if (wordSize == 8)
+      init<uint64_t>();
+    else {
+      assert(wordSize == 4);
+      init<uint32_t>();
+    }
+  }
 
-#undef FOR_EACH_CU_FIELD
+private:
+  template <class Ptr> void init() {
+    functionAddress = offsetof(Layout<Ptr>, functionAddress);
+    functionLength = offsetof(Layout<Ptr>, functionLength);
+    encoding = offsetof(Layout<Ptr>, encoding);
+    personality = offsetof(Layout<Ptr>, personality);
+    lsda = offsetof(Layout<Ptr>, lsda);
+  }
+
+  template <class Ptr> struct Layout {
+    Ptr functionAddress;
+    uint32_t functionLength;
+    compact_unwind_encoding_t encoding;
+    Ptr personality;
+    Ptr lsda;
+  };
+};
 
 // LLD's internal representation of a compact unwind entry.
 struct CompactUnwindEntry {
@@ -126,7 +148,7 @@ struct SecondLevelPage {
 // lengthy definition of UnwindInfoSection.
 class UnwindInfoSectionImpl final : public UnwindInfoSection {
 public:
-  UnwindInfoSectionImpl() : cuLayout(target->wordSize) {}
+  UnwindInfoSectionImpl() : cuOffsets(target->wordSize) {}
   uint64_t getSize() const override { return unwindInfoSize; }
   void prepare() override;
   void finalize() override;
@@ -140,7 +162,7 @@ private:
 
   uint64_t unwindInfoSize = 0;
   std::vector<decltype(symbols)::value_type> symbolsVec;
-  CompactUnwindLayout cuLayout;
+  CompactUnwindOffsets cuOffsets;
   std::vector<std::pair<compact_unwind_encoding_t, size_t>> commonEncodings;
   EncodingMap commonEncodingIndexes;
   // The entries here will be in the same order as their originating symbols
@@ -239,7 +261,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
     // compact unwind entries that references them, and thus appear as section
     // relocs. There is no need to prepare them. We only prepare relocs for
     // personality functions.
-    if (r.offset != cuLayout.personalityOffset)
+    if (r.offset != cuOffsets.personality)
       continue;
 
     if (auto *s = r.referent.dyn_cast<Symbol *>()) {
@@ -351,13 +373,17 @@ void UnwindInfoSectionImpl::relocateCompactUnwind(
     auto buf = reinterpret_cast<const uint8_t *>(d->unwindEntry->data.data()) -
                target->wordSize;
     cu.functionLength =
-        support::endian::read32le(buf + cuLayout.functionLengthOffset);
-    cu.encoding = support::endian::read32le(buf + cuLayout.encodingOffset);
+        support::endian::read32le(buf + cuOffsets.functionLength);
+    cu.encoding = support::endian::read32le(buf + cuOffsets.encoding);
     for (const Reloc &r : d->unwindEntry->relocs) {
-      if (r.offset == cuLayout.personalityOffset)
+      if (r.offset == cuOffsets.personality) {
         cu.personality = r.referent.get<Symbol *>();
-      else if (r.offset == cuLayout.lsdaOffset)
-        cu.lsda = r.getReferentInputSection();
+      } else if (r.offset == cuOffsets.lsda) {
+        if (auto *referentSym = r.referent.dyn_cast<Symbol *>())
+          cu.lsda = cast<Defined>(referentSym)->isec;
+        else
+          cu.lsda = r.referent.get<InputSection *>();
+      }
     }
   });
 }

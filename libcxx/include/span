@@ -141,11 +141,13 @@ template<class R>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/enable_view.h>
 #include <__ranges/size.h>
+#include <__type_traits/remove_cvref.h>
+#include <__type_traits/remove_reference.h>
+#include <__type_traits/type_identity.h>
 #include <__utility/forward.h>
 #include <array>        // for array
 #include <cstddef>      // for byte
 #include <limits>
-#include <type_traits>  // for remove_cv, etc
 #include <version>
 
 // standard-mandated includes
@@ -595,6 +597,7 @@ _LIBCPP_POP_MACROS
 #  include <concepts>
 #  include <functional>
 #  include <iterator>
+#  include <type_traits>
 #endif
 
 #endif // _LIBCPP_SPAN

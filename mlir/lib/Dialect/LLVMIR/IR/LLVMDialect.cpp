@@ -185,21 +185,31 @@ void AllocaOp::print(OpAsmPrinter &p) {
   auto funcTy =
       FunctionType::get(getContext(), {getArraySize().getType()}, {getType()});
 
+  if (getInalloca())
+    p << " inalloca";
+
   p << ' ' << getArraySize() << " x " << elemTy;
   if (getAlignment() && *getAlignment() != 0)
-    p.printOptionalAttrDict((*this)->getAttrs(), {kElemTypeAttrName});
-  else
     p.printOptionalAttrDict((*this)->getAttrs(),
-                            {"alignment", kElemTypeAttrName});
+                            {kElemTypeAttrName, getInallocaAttrName()});
+  else
+    p.printOptionalAttrDict(
+        (*this)->getAttrs(),
+        {getAlignmentAttrName(), kElemTypeAttrName, getInallocaAttrName()});
   p << " : " << funcTy;
 }
 
-// <operation> ::= `llvm.alloca` ssa-use `x` type attribute-dict?
-//                 `:` type `,` type
+// <operation> ::= `llvm.alloca` `inalloca`? ssa-use `x` type
+//                  attribute-dict? `:` type `,` type
 ParseResult AllocaOp::parse(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::UnresolvedOperand arraySize;
   Type type, elemType;
   SMLoc trailingTypeLoc;
+
+  if (succeeded(parser.parseOptionalKeyword("inalloca")))
+    result.addAttribute(getInallocaAttrName(result.name),
+                        UnitAttr::get(parser.getContext()));
+
   if (parser.parseOperand(arraySize) || parser.parseKeyword("x") ||
       parser.parseType(elemType) ||
       parser.parseOptionalAttrDict(result.attributes) || parser.parseColon() ||

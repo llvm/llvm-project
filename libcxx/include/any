@@ -87,13 +87,25 @@ namespace std {
 #include <__memory/allocator_destructor.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/unique_ptr.h>
+#include <__type_traits/add_const.h>
+#include <__type_traits/add_pointer.h>
+#include <__type_traits/aligned_storage.h>
+#include <__type_traits/alignment_of.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/is_constructible.h>
+#include <__type_traits/is_function.h>
+#include <__type_traits/is_nothrow_move_constructible.h>
+#include <__type_traits/is_reference.h>
+#include <__type_traits/is_same.h>
+#include <__type_traits/remove_cv.h>
+#include <__type_traits/remove_cvref.h>
+#include <__type_traits/remove_reference.h>
 #include <__utility/forward.h>
 #include <__utility/in_place.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
 #include <cstdlib>
 #include <initializer_list>
-#include <type_traits>
 #include <typeinfo>
 #include <version>
 
@@ -706,6 +718,7 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <iosfwd>
 #  include <iterator>
 #  include <memory>
+#  include <type_traits>
 #  include <variant>
 #endif
 

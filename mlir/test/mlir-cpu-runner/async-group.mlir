@@ -1,3 +1,10 @@
+// This is crashing in CI "most of the time" on a AMD Rome CPU VM on GCP with:
+//    Tracer caught signal 11: addr=0x7a800028 pc=0x2e81ba sp=0x7efd2a7ffd50
+//    LeakSanitizer has encountered a fatal error.
+// This is hard to reproduce locally unfortunately. Disable it with ASAN/LSAN
+// to keep the bot green for now.
+// RUN: export LSAN_OPTIONS=detect_leaks=0
+
 // RUN:   mlir-opt %s -pass-pipeline="builtin.module(async-to-async-runtime,func.func(async-runtime-ref-counting,async-runtime-ref-counting-opt),convert-async-to-llvm,func.func(convert-arith-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts)" \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:     -e main -entry-point-result=void -O0                               \
@@ -5,13 +12,6 @@
 // RUN:     -shared-libs=%mlir_runner_utils    \
 // RUN:     -shared-libs=%mlir_async_runtime   \
 // RUN: | FileCheck %s
-
-// This is crashing in CI "most of the time" on a AMD Rome CPU VM on GCP with:
-//    Tracer caught signal 11: addr=0x7a800028 pc=0x2e81ba sp=0x7efd2a7ffd50
-//    LeakSanitizer has encountered a fatal error.
-// This is hard to reproduce locally unfortunately. Disable it with ASAN/LSAN
-// to keep the bot green for now.
-// UNSUPPORTED: asan
 
 // FIXME: https://github.com/llvm/llvm-project/issues/57231
 // UNSUPPORTED: hwasan

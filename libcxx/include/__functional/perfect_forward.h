@@ -15,7 +15,6 @@
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <tuple>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

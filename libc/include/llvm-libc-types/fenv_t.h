@@ -23,6 +23,8 @@ typedef struct {
 typedef struct {
   unsigned int __fpscr;
 } fenv_t;
+#elif defined(__riscv)
+typedef unsigned int fenv_t;
 #else
 #error "fenv_t not defined for your platform"
 #endif

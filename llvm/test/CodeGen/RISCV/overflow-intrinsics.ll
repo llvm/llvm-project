@@ -1281,3 +1281,41 @@ exit:
   ret void
 }
 
+define i16 @overflow_not_used(i16 %a, i16 %b, ptr %res) nounwind ssp {
+; RV32-LABEL: overflow_not_used:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lui a3, 16
+; RV32-NEXT:    addi a3, a3, -1
+; RV32-NEXT:    and a0, a0, a3
+; RV32-NEXT:    and a4, a1, a3
+; RV32-NEXT:    add a0, a4, a0
+; RV32-NEXT:    and a3, a0, a3
+; RV32-NEXT:    bne a3, a0, .LBB37_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    li a1, 42
+; RV32-NEXT:  .LBB37_2:
+; RV32-NEXT:    sh a0, 0(a2)
+; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: overflow_not_used:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lui a3, 16
+; RV64-NEXT:    addiw a3, a3, -1
+; RV64-NEXT:    and a0, a0, a3
+; RV64-NEXT:    and a4, a1, a3
+; RV64-NEXT:    add a0, a4, a0
+; RV64-NEXT:    and a3, a0, a3
+; RV64-NEXT:    bne a3, a0, .LBB37_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    li a1, 42
+; RV64-NEXT:  .LBB37_2:
+; RV64-NEXT:    sh a0, 0(a2)
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    ret
+  %add = add i16 %b, %a
+  %cmp = icmp ult i16 %add, %b
+  %Q = select i1 %cmp, i16 %b, i16 42
+  store i16 %add, ptr %res
+  ret i16 %Q
+}
