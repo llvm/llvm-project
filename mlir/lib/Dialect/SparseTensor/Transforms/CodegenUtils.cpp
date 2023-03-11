@@ -694,3 +694,23 @@ Value sparse_tensor::genValMemSize(OpBuilder &builder, Location loc,
                                    Value tensor) {
   return getDescriptorFromTensorTuple(tensor).getValMemSize(builder, loc);
 }
+
+Value sparse_tensor::createOrFoldSliceOffsetOp(OpBuilder &builder, Location loc,
+                                               Value tensor, Dimension dim) {
+  auto enc = getSparseTensorEncoding(tensor.getType());
+  assert(enc && enc.isSlice());
+  std::optional<unsigned> offset = enc.getStaticDimSliceOffset(dim);
+  if (offset.has_value())
+    return constantIndex(builder, loc, *offset);
+  return builder.create<ToSliceOffsetOp>(loc, tensor, APInt(64, dim));
+}
+
+Value sparse_tensor::createOrFoldSliceStrideOp(OpBuilder &builder, Location loc,
+                                               Value tensor, Dimension dim) {
+  auto enc = getSparseTensorEncoding(tensor.getType());
+  assert(enc && enc.isSlice());
+  std::optional<unsigned> stride = enc.getStaticDimSliceStride(dim);
+  if (stride.has_value())
+    return constantIndex(builder, loc, *stride);
+  return builder.create<ToSliceStrideOp>(loc, tensor, APInt(64, dim));
+}

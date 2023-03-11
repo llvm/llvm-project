@@ -202,6 +202,13 @@ private:
   Value genSparseCrd(OpBuilder &builder, Location loc, size_t tid,
                      size_t dstLvl);
 
+  /// Generates a predicate to determine whether the tranformed coordinates are
+  /// in the given slice.
+  /// Returns std::pair<Transformed coordinates, Predicate>
+  std::pair<Value, Value> genSliceLegitPredicate(OpBuilder &builder,
+                                                 Location loc, Value crd,
+                                                 unsigned tid, unsigned lvl);
+
   bool isOutputTensor(size_t tid) {
     return hasOutput && tid == tensors.size() - 1;
   }
@@ -278,6 +285,9 @@ private:
 
   /// Whether the sparse input is a slice.
   std::vector<bool> isSparseSlices;
+  /// Values related to slices.
+  std::vector<std::vector<Value>> sliceOffsets;
+  std::vector<std::vector<Value>> sliceStrides;
 
   /// Loop Stack, stores the information of all the nested loops that are
   /// alive.
