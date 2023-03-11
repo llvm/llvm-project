@@ -79,7 +79,7 @@ C++ Language Changes
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - Support for out-of-line definitions of constrained templates has been improved.
-  This partially fixes `https://github.com/llvm/llvm-project/issues/49620`.
+  This partially fixes `#49620 <https://github.com/llvm/llvm-project/issues/49620>`_.
 
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -95,8 +95,7 @@ Resolutions to C++ Defect Reports
 C Language Changes
 ------------------
 - Support for outputs from asm goto statements along indirect edges has been
-  added. This fixes
-  `Issue 53562 <https://github.com/llvm/llvm-project/issues/53562>`_.
+  added. (`#53562 <https://github.com/llvm/llvm-project/issues/53562>`_)
 
 C2x Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -153,7 +152,7 @@ Improvements to Clang's diagnostics
 -----------------------------------
 - We now generate a diagnostic for signed integer overflow due to unary minus
   in a non-constant expression context.
-  (`#31643 <https://github.com/llvm/llvm-project/issues/31643>`)
+  (`#31643 <https://github.com/llvm/llvm-project/issues/31643>`_)
 - Clang now warns by default for C++20 and later about deprecated capture of
   ``this`` with a capture default of ``=``. This warning can be disabled with
   ``-Wno-deprecated-this-capture``.
@@ -310,7 +309,7 @@ Static Analyzer
 ---------------
 - Fix incorrect alignment attribute on the this parameter of certain
   non-complete destructors when using the Microsoft ABI.
-  `Issue 60465 <https://github.com/llvm/llvm-project/issues/60465>`_.
+  (`#60465 <https://github.com/llvm/llvm-project/issues/60465>`_)
 
 .. _release-notes-sanitizers:
 
