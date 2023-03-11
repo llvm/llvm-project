@@ -83,8 +83,6 @@ struct RecordKeeperImpl {
   FoldingSet<ExistsOpInit> TheExistsOpInitPool;
   DenseMap<std::pair<RecTy *, Init *>, VarInit *> TheVarInitPool;
   DenseMap<std::pair<TypedInit *, unsigned>, VarBitInit *> TheVarBitInitPool;
-  DenseMap<std::pair<TypedInit *, unsigned>, VarListElementInit *>
-      TheVarListElementInitPool;
   FoldingSet<VarDefInit> TheVarDefInitPool;
   DenseMap<std::pair<Init *, StringInit *>, FieldInit *> TheFieldInitPool;
   FoldingSet<CondOpInit> TheCondOpInitPool;
@@ -668,23 +666,6 @@ Init *ListInit::convertInitializerTo(RecTy *Ty) const {
   }
 
   return nullptr;
-}
-
-Init *ListInit::convertInitListSlice(ArrayRef<unsigned> Elements) const {
-  if (Elements.size() == 1) {
-    if (Elements[0] >= size())
-      return nullptr;
-    return getElement(Elements[0]);
-  }
-
-  SmallVector<Init *, 8> Vals;
-  Vals.reserve(Elements.size());
-  for (unsigned Element : Elements) {
-    if (Element >= size())
-      return nullptr;
-    Vals.push_back(getElement(Element));
-  }
-  return ListInit::get(Vals, getElementType());
 }
 
 Record *ListInit::getElementAsRecord(unsigned i) const {
@@ -1956,22 +1937,6 @@ Init *TypedInit::getCastTo(RecTy *Ty) const {
       ->Fold(nullptr);
 }
 
-Init *TypedInit::convertInitListSlice(ArrayRef<unsigned> Elements) const {
-  ListRecTy *T = dyn_cast<ListRecTy>(getType());
-  if (!T)
-    return nullptr; // Cannot subscript a non-list variable.
-
-  if (Elements.size() == 1)
-    return VarListElementInit::get(const_cast<TypedInit *>(this), Elements[0]);
-
-  SmallVector<Init *, 8> ListInits;
-  ListInits.reserve(Elements.size());
-  for (unsigned Element : Elements)
-    ListInits.push_back(
-        VarListElementInit::get(const_cast<TypedInit *>(this), Element));
-  return ListInit::get(ListInits, T->getElementType());
-}
-
 VarInit *VarInit::get(StringRef VN, RecTy *T) {
   Init *Value = StringInit::get(T->getRecordKeeper(), VN);
   return VarInit::get(Value, T);
@@ -2022,38 +1987,8 @@ Init *VarBitInit::resolveReferences(Resolver &R) const {
   return const_cast<VarBitInit*>(this);
 }
 
-VarListElementInit *VarListElementInit::get(TypedInit *T, unsigned E) {
-  detail::RecordKeeperImpl &RK = T->getRecordKeeper().getImpl();
-  VarListElementInit *&I = RK.TheVarListElementInitPool[std::make_pair(T, E)];
-  if (!I)
-    I = new (RK.Allocator) VarListElementInit(T, E);
-  return I;
-}
-
-std::string VarListElementInit::getAsString() const {
-  return TI->getAsString() + "[" + utostr(Element) + "]";
-}
-
-Init *VarListElementInit::resolveReferences(Resolver &R) const {
-  Init *NewTI = TI->resolveReferences(R);
-  if (ListInit *List = dyn_cast<ListInit>(NewTI)) {
-    // Leave out-of-bounds array references as-is. This can happen without
-    // being an error, e.g. in the untaken "branch" of an !if expression.
-    if (getElementNum() < List->size())
-      return List->getElement(getElementNum());
-  }
-  if (NewTI != TI && isa<TypedInit>(NewTI))
-    return VarListElementInit::get(cast<TypedInit>(NewTI), getElementNum());
-  return const_cast<VarListElementInit *>(this);
-}
-
-Init *VarListElementInit::getBit(unsigned Bit) const {
-  if (getType() == BitRecTy::get(getRecordKeeper()))
-    return const_cast<VarListElementInit *>(this);
-  return VarBitInit::get(const_cast<VarListElementInit *>(this), Bit);
-}
-
-DefInit::DefInit(Record *D) : TypedInit(IK_DefInit, D->getType()), Def(D) {}
+DefInit::DefInit(Record *D)
+    : TypedInit(IK_DefInit, D->getType()), Def(D) {}
 
 DefInit *DefInit::get(Record *R) {
   return R->getDefInit();

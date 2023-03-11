@@ -744,12 +744,12 @@ TypedInit *TGParser::ParseSliceElement(Record *CurRec) {
     break;
   }
   case tgtok::IntVal: { // Deprecated "-num"
-    auto *RHSi = IntInit::get(Records, -Lex.getCurIntVal());
-    if (RHSi->getValue() < 0) {
+    auto i = -Lex.getCurIntVal();
+    if (i < 0) {
       TokError("invalid range, cannot be negative");
       return nullptr;
     }
-    RHS = RHSi;
+    RHS = IntInit::get(Records, i);
     Lex.Lex(); // eat IntVal
     break;
   }
