@@ -199,10 +199,14 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/too-small-loop-variable>` check. Basic support
   for bit-field and integer members as a loop variable or upper limit were added.
 
-- Improved :doc:`readability-magic-numbers 
+- Improved :doc:`readability-magic-numbers
   <clang-tidy/checks/readability/magic-numbers>` check, now allows for
   magic numbers in type aliases such as ``using`` and ``typedef`` declarations if
   the new ``IgnoreTypeAliases`` option is set to true.
+
+- Fixed a false positive in :doc:`cppcoreguidelines-slicing
+  <clang-tidy/checks/cppcoreguidelines/slicing>` check when warning would be
+  emitted in constructor for virtual base class initialization.
 
 Removed checks
 ^^^^^^^^^^^^^^
