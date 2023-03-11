@@ -65,7 +65,7 @@ def DeprecatedCoroutine :
 def AlwaysInlineCoroutine :
   DiagGroup<"always-inline-coroutine">;
 def CoroNonAlignedAllocationFunction :
-  DiagGroup<"coro-non-aligned-allocation-funciton">;
+  DiagGroup<"coro-non-aligned-allocation-function">;
 def Coroutine : DiagGroup<"coroutine", [CoroutineMissingUnhandledException, DeprecatedCoroutine,
                                         AlwaysInlineCoroutine, CoroNonAlignedAllocationFunction]>;
 def ObjCBoolConstantConversion : DiagGroup<"objc-bool-constant-conversion">;
