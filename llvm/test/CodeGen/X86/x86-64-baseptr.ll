@@ -137,6 +137,121 @@ entry:
   ret void
 }
 
+define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 %param3, i32 %param4, i32 %param5, i32 %param6, i32 %param7, i32 %param8, i32 %param9, i32 %param10, i32 %param11, i32 %param12) #0 {
+; CHECK-LABEL: clobber_baseptr_argptr:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    movq %rsp, %rbp
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    andq $-128, %rsp
+; CHECK-NEXT:    subq $256, %rsp # imm = 0x100
+; CHECK-NEXT:    movaps %xmm15, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm14, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm13, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm12, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm11, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm10, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm9, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movq %rsp, %rbx
+; CHECK-NEXT:    movl 16(%rbp), %r14d
+; CHECK-NEXT:    callq helper@PLT
+; CHECK-NEXT:    movq %rsp, %rcx
+; CHECK-NEXT:    movl %eax, %eax
+; CHECK-NEXT:    leaq 31(,%rax,4), %rax
+; CHECK-NEXT:    andq $-32, %rax
+; CHECK-NEXT:    movq %rcx, %rdx
+; CHECK-NEXT:    subq %rax, %rdx
+; CHECK-NEXT:    movq %rdx, %rsp
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    movl $405, %ebx # imm = 0x195
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    movl $8, %edx
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    movl %edx, (%rbx)
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    movl %r14d, (%rcx,%rax)
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm8 # 16-byte Reload
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Reload
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm10 # 16-byte Reload
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm11 # 16-byte Reload
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Reload
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Reload
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
+; CHECK-NEXT:    leaq -8(%rbp), %rsp
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    retq
+;
+; X32ABI-LABEL: clobber_baseptr_argptr:
+; X32ABI:       # %bb.0: # %entry
+; X32ABI-NEXT:    pushq %rbp
+; X32ABI-NEXT:    movl %esp, %ebp
+; X32ABI-NEXT:    pushq %rbx
+; X32ABI-NEXT:    andl $-128, %esp
+; X32ABI-NEXT:    subl $256, %esp # imm = 0x100
+; X32ABI-NEXT:    movaps %xmm15, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X32ABI-NEXT:    movaps %xmm14, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X32ABI-NEXT:    movaps %xmm13, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X32ABI-NEXT:    movaps %xmm12, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X32ABI-NEXT:    movaps %xmm11, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X32ABI-NEXT:    movaps %xmm10, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X32ABI-NEXT:    movaps %xmm9, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X32ABI-NEXT:    movaps %xmm8, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X32ABI-NEXT:    movl %esp, %ebx
+; X32ABI-NEXT:    movl 16(%ebp), %r14d
+; X32ABI-NEXT:    callq helper@PLT
+; X32ABI-NEXT:    # kill: def $eax killed $eax def $rax
+; X32ABI-NEXT:    leal 31(,%rax,4), %eax
+; X32ABI-NEXT:    andl $-32, %eax
+; X32ABI-NEXT:    movl %esp, %ecx
+; X32ABI-NEXT:    movl %ecx, %edx
+; X32ABI-NEXT:    subl %eax, %edx
+; X32ABI-NEXT:    negl %eax
+; X32ABI-NEXT:    movl %edx, %esp
+; X32ABI-NEXT:    movl $405, %ebx # imm = 0x195
+; X32ABI-NEXT:    #APP
+; X32ABI-NEXT:    nop
+; X32ABI-NEXT:    #NO_APP
+; X32ABI-NEXT:    #APP
+; X32ABI-NEXT:    nop
+; X32ABI-NEXT:    #NO_APP
+; X32ABI-NEXT:    movl $8, %edx
+; X32ABI-NEXT:    #APP
+; X32ABI-NEXT:    movl %edx, (%ebx)
+; X32ABI-NEXT:    #NO_APP
+; X32ABI-NEXT:    movl %r14d, (%ecx,%eax)
+; X32ABI-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm8 # 16-byte Reload
+; X32ABI-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm9 # 16-byte Reload
+; X32ABI-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm10 # 16-byte Reload
+; X32ABI-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm11 # 16-byte Reload
+; X32ABI-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm12 # 16-byte Reload
+; X32ABI-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm13 # 16-byte Reload
+; X32ABI-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm14 # 16-byte Reload
+; X32ABI-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm15 # 16-byte Reload
+; X32ABI-NEXT:    leal -8(%ebp), %esp
+; X32ABI-NEXT:    popq %rbx
+; X32ABI-NEXT:    popq %rbp
+; X32ABI-NEXT:    retq
+entry:
+  %k = call i32 @helper()
+  %a = alloca i32, align 128
+  %b = alloca i32, i32 %k, align 4
+  ; clobber base pointer register
+  tail call void asm sideeffect "nop", "{bx}"(i32 405)
+  ; clobber argument pointer register
+  tail call void asm sideeffect "nop", "~{bx},~{r10},~{r11}"()
+  call void asm sideeffect "movl $0, $1", "r,*m"(i32 8, ptr elementtype(i32) %a)
+  store i32 %param12, ptr %b, align 4
+  ret void
+}
+
 attributes #0 = { nounwind "frame-pointer"="all"}
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"override-stack-alignment", i32 32}
