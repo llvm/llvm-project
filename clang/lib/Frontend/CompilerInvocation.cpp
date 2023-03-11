@@ -663,6 +663,18 @@ static void GenerateArg(SmallVectorImpl<const char *> &Args,
                     Opt.getKind(), 0, Value);
 }
 
+static void GenerateMultiArg(SmallVectorImpl<const char *> &Args,
+                             llvm::opt::OptSpecifier OptSpecifier,
+                             ArrayRef<StringRef> Values,
+                             CompilerInvocation::StringAllocator SA) {
+  Option Opt = getDriverOptTable().getOption(OptSpecifier);
+  assert(Opt.getKind() == Option::MultiArgClass);
+  assert(Opt.getNumArgs() == Values.size());
+  Args.push_back(SA(Opt.getPrefix() + Opt.getName()));
+  for (StringRef Value : Values)
+    Args.push_back(SA(Value));
+}
+
 // Parse command line arguments into CompilerInvocation.
 using ParseFn =
     llvm::function_ref<bool(CompilerInvocation &, ArrayRef<const char *>,
@@ -2921,7 +2933,7 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
   for (const auto &ModuleFile : Opts.ModuleFiles)
     GenerateArg(Args, OPT_fmodule_file, ModuleFile, SA);
   for (const auto &A : Opts.ModuleCacheKeys)
-    GenerateArg(Args, OPT_fmodule_file_cache_key, A.first + "=" + A.second, SA);
+    GenerateMultiArg(Args, OPT_fmodule_file_cache_key, {A.first, A.second}, SA);
 
   if (Opts.AuxTargetCPU)
     GenerateArg(Args, OPT_aux_target_cpu, *Opts.AuxTargetCPU, SA);
@@ -3157,12 +3169,9 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
       Opts.ModuleFiles.push_back(std::string(Val));
   }
   for (const Arg *A : Args.filtered(OPT_fmodule_file_cache_key)) {
-    auto [Path, Key] = StringRef(A->getValue()).rsplit('=');
-    if (Key.empty() || Path.empty()) {
-      Diags.Report(diag::err_module_cache_key_spelling);
-    } else {
-      Opts.ModuleCacheKeys.emplace_back(std::string(Path), std::string(Key));
-    }
+    ArrayRef<const char *> Values = A->getValues();
+    assert(Values.size() == 2);
+    Opts.ModuleCacheKeys.emplace_back(Values[0], Values[1]);
   }
 
   if (Opts.ProgramAction != frontend::GenerateModule && Opts.IsSystemModule)

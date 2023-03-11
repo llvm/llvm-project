@@ -20,7 +20,7 @@
 
 // == Build A, importing B
 
-// RUN: echo -n '-fmodule-file-cache-key=%t/B.pcm=' > %t/B.import.rsp
+// RUN: echo -n '-fmodule-file-cache-key %t/B.pcm ' > %t/B.import.rsp
 // RUN: cat %t/B.key >> %t/B.import.rsp
 
 // RUN: %clang_cc1 -triple x86_64-apple-macos11 \
@@ -34,7 +34,7 @@
 
 // == Build tu, importing A (implicitly importing B)
 
-// RUN: echo -n '-fmodule-file-cache-key=%t/A.pcm=' > %t/A.import.rsp
+// RUN: echo -n '-fmodule-file-cache-key %t/A.pcm ' > %t/A.import.rsp
 // RUN: cat %t/A.key >> %t/A.import.rsp
 
 // RUN: %clang_cc1 -triple x86_64-apple-macos11 \

@@ -67,7 +67,9 @@
 // PCH-NEXT:         "[[A_PCM:.*outputs.*A-.*\.pcm]]"
 // PCH:              "-fcache-compile-job"
 // PCH:              "-emit-module"
-// PCH:              "-fmodule-file-cache-key=[[B_PCM:.*outputs.*B-.*\.pcm]]=[[B_CACHE_KEY:llvmcas://[[:xdigit:]]+]]"
+// PCH:              "-fmodule-file-cache-key"
+// PCH:              "[[B_PCM:.*outputs.*B-.*\.pcm]]"
+// PCH:              "[[B_CACHE_KEY:llvmcas://[[:xdigit:]]+]]"
 // PCH:              "-fmodule-file={{(B=)?}}[[B_PCM]]"
 // PCH:            ]
 // PCH:            "file-deps": [
@@ -116,7 +118,9 @@
 // PCH:                  "-fno-pch-timestamp"
 // PCH:                  "-fcache-compile-job"
 // PCH:                  "-emit-pch"
-// PCH:                  "-fmodule-file-cache-key=[[A_PCM]]={{llvmcas://[[:xdigit:]]+}}"
+// PCH:                  "-fmodule-file-cache-key"
+// PCH:                  "[[A_PCM]]"
+// PCH:                  "{{llvmcas://[[:xdigit:]]+}}"
 // PCH:                  "-fmodule-file={{(A=)?}}[[A_PCM]]"
 // PCH:                ]
 // PCH:                "file-deps": [
@@ -140,7 +144,9 @@
 // CHECK:              "-fcache-compile-job"
 // CHECK:              "-emit-module"
 // CHECK:              "-fmodule-file={{(B=)?}}[[B_PCM:.*outputs.*B-.*\.pcm]]"
-// CHECK:              "-fmodule-file-cache-key=[[B_PCM]]=[[B_CACHE_KEY:llvmcas://[[:xdigit:]]+]]"
+// CHECK:              "-fmodule-file-cache-key"
+// CHECK:              "[[B_PCM]]"
+// CHECK:              "[[B_CACHE_KEY:llvmcas://[[:xdigit:]]+]]"
 // CHECK:            ]
 // CHECK:            "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]{{.}}C.h"
@@ -167,7 +173,9 @@
 // CHECK-NEXT:             "[[TU_ROOT_ID]]"
 // CHECK:                  "-fno-pch-timestamp"
 // CHECK:                  "-fcache-compile-job"
-// CHECK:                  "-fmodule-file-cache-key=[[C_PCM]]={{llvmcas://[[:xdigit:]]+}}"
+// CHECK:                  "-fmodule-file-cache-key"
+// CHECK:                  "[[C_PCM]]"
+// CHECK:                  "{{llvmcas://[[:xdigit:]]+}}"
 // CHECK:                  "-fmodule-file={{(C=)?}}[[C_PCM]]"
 // CHECK:                ]
 // CHECK:                "file-deps": [
