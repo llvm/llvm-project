@@ -56,7 +56,6 @@ void polly::registerCanonicalicationPasses(llvm::legacy::PassManagerBase &PM) {
     PM.add(createBarrierNoopPass());
   }
   PM.add(llvm::createInstructionCombiningPass());
-  PM.add(llvm::createIndVarSimplifyPass());
 }
 
 /// Adapted from llvm::PassBuilder::buildInlinerPipeline
