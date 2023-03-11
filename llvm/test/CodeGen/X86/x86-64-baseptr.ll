@@ -15,11 +15,15 @@ define void @base() #0 {
 ; CHECK-LABEL: base:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movq %rsp, %rbp
+; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    andq $-32, %rsp
 ; CHECK-NEXT:    subq $32, %rsp
 ; CHECK-NEXT:    movq %rsp, %rbx
+; CHECK-NEXT:    .cfi_offset %rbx, -24
 ; CHECK-NEXT:    callq helper@PLT
 ; CHECK-NEXT:    movq %rsp, %rcx
 ; CHECK-NEXT:    movl %eax, %eax
@@ -33,16 +37,21 @@ define void @base() #0 {
 ; CHECK-NEXT:    leaq -8(%rbp), %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
 ;
 ; X32ABI-LABEL: base:
 ; X32ABI:       # %bb.0: # %entry
 ; X32ABI-NEXT:    pushq %rbp
+; X32ABI-NEXT:    .cfi_def_cfa_offset 16
+; X32ABI-NEXT:    .cfi_offset %rbp, -16
 ; X32ABI-NEXT:    movl %esp, %ebp
+; X32ABI-NEXT:    .cfi_def_cfa_register %rbp
 ; X32ABI-NEXT:    pushq %rbx
 ; X32ABI-NEXT:    andl $-32, %esp
 ; X32ABI-NEXT:    subl $32, %esp
 ; X32ABI-NEXT:    movl %esp, %ebx
+; X32ABI-NEXT:    .cfi_offset %rbx, -24
 ; X32ABI-NEXT:    callq helper@PLT
 ; X32ABI-NEXT:    # kill: def $eax killed $eax def $rax
 ; X32ABI-NEXT:    leal 31(,%rax,4), %eax
@@ -56,6 +65,7 @@ define void @base() #0 {
 ; X32ABI-NEXT:    leal -8(%ebp), %esp
 ; X32ABI-NEXT:    popq %rbx
 ; X32ABI-NEXT:    popq %rbp
+; X32ABI-NEXT:    .cfi_def_cfa %rsp, 8
 ; X32ABI-NEXT:    retq
 entry:
   %k = call i32 @helper()
@@ -68,11 +78,15 @@ define void @clobber_base() #0 {
 ; CHECK-LABEL: clobber_base:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movq %rsp, %rbp
+; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    andq $-128, %rsp
 ; CHECK-NEXT:    subq $128, %rsp
 ; CHECK-NEXT:    movq %rsp, %rbx
+; CHECK-NEXT:    .cfi_offset %rbx, -24
 ; CHECK-NEXT:    callq helper@PLT
 ; CHECK-NEXT:    movq %rsp, %rcx
 ; CHECK-NEXT:    movl %eax, %eax
@@ -94,16 +108,21 @@ define void @clobber_base() #0 {
 ; CHECK-NEXT:    leaq -8(%rbp), %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
 ;
 ; X32ABI-LABEL: clobber_base:
 ; X32ABI:       # %bb.0: # %entry
 ; X32ABI-NEXT:    pushq %rbp
+; X32ABI-NEXT:    .cfi_def_cfa_offset 16
+; X32ABI-NEXT:    .cfi_offset %rbp, -16
 ; X32ABI-NEXT:    movl %esp, %ebp
+; X32ABI-NEXT:    .cfi_def_cfa_register %rbp
 ; X32ABI-NEXT:    pushq %rbx
 ; X32ABI-NEXT:    andl $-128, %esp
 ; X32ABI-NEXT:    subl $128, %esp
 ; X32ABI-NEXT:    movl %esp, %ebx
+; X32ABI-NEXT:    .cfi_offset %rbx, -24
 ; X32ABI-NEXT:    callq helper@PLT
 ; X32ABI-NEXT:    # kill: def $eax killed $eax def $rax
 ; X32ABI-NEXT:    leal 31(,%rax,4), %eax
@@ -125,6 +144,7 @@ define void @clobber_base() #0 {
 ; X32ABI-NEXT:    leal -8(%ebp), %esp
 ; X32ABI-NEXT:    popq %rbx
 ; X32ABI-NEXT:    popq %rbp
+; X32ABI-NEXT:    .cfi_def_cfa %rsp, 8
 ; X32ABI-NEXT:    retq
 entry:
   %k = call i32 @helper()
@@ -141,7 +161,10 @@ define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 
 ; CHECK-LABEL: clobber_baseptr_argptr:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movq %rsp, %rbp
+; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    andq $-128, %rsp
 ; CHECK-NEXT:    subq $256, %rsp # imm = 0x100
@@ -154,6 +177,15 @@ define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 
 ; CHECK-NEXT:    movaps %xmm9, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movq %rsp, %rbx
+; CHECK-NEXT:    .cfi_offset %rbx, -24
+; CHECK-NEXT:    .cfi_offset %xmm8, -160
+; CHECK-NEXT:    .cfi_offset %xmm9, -144
+; CHECK-NEXT:    .cfi_offset %xmm10, -128
+; CHECK-NEXT:    .cfi_offset %xmm11, -112
+; CHECK-NEXT:    .cfi_offset %xmm12, -96
+; CHECK-NEXT:    .cfi_offset %xmm13, -80
+; CHECK-NEXT:    .cfi_offset %xmm14, -64
+; CHECK-NEXT:    .cfi_offset %xmm15, -48
 ; CHECK-NEXT:    movl 16(%rbp), %r14d
 ; CHECK-NEXT:    callq helper@PLT
 ; CHECK-NEXT:    movq %rsp, %rcx
@@ -187,12 +219,16 @@ define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 
 ; CHECK-NEXT:    leaq -8(%rbp), %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
 ;
 ; X32ABI-LABEL: clobber_baseptr_argptr:
 ; X32ABI:       # %bb.0: # %entry
 ; X32ABI-NEXT:    pushq %rbp
+; X32ABI-NEXT:    .cfi_def_cfa_offset 16
+; X32ABI-NEXT:    .cfi_offset %rbp, -16
 ; X32ABI-NEXT:    movl %esp, %ebp
+; X32ABI-NEXT:    .cfi_def_cfa_register %rbp
 ; X32ABI-NEXT:    pushq %rbx
 ; X32ABI-NEXT:    andl $-128, %esp
 ; X32ABI-NEXT:    subl $256, %esp # imm = 0x100
@@ -205,6 +241,15 @@ define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 
 ; X32ABI-NEXT:    movaps %xmm9, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X32ABI-NEXT:    movaps %xmm8, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X32ABI-NEXT:    movl %esp, %ebx
+; X32ABI-NEXT:    .cfi_offset %rbx, -24
+; X32ABI-NEXT:    .cfi_offset %xmm8, -160
+; X32ABI-NEXT:    .cfi_offset %xmm9, -144
+; X32ABI-NEXT:    .cfi_offset %xmm10, -128
+; X32ABI-NEXT:    .cfi_offset %xmm11, -112
+; X32ABI-NEXT:    .cfi_offset %xmm12, -96
+; X32ABI-NEXT:    .cfi_offset %xmm13, -80
+; X32ABI-NEXT:    .cfi_offset %xmm14, -64
+; X32ABI-NEXT:    .cfi_offset %xmm15, -48
 ; X32ABI-NEXT:    movl 16(%ebp), %r14d
 ; X32ABI-NEXT:    callq helper@PLT
 ; X32ABI-NEXT:    # kill: def $eax killed $eax def $rax
@@ -238,6 +283,7 @@ define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 
 ; X32ABI-NEXT:    leal -8(%ebp), %esp
 ; X32ABI-NEXT:    popq %rbx
 ; X32ABI-NEXT:    popq %rbp
+; X32ABI-NEXT:    .cfi_def_cfa %rsp, 8
 ; X32ABI-NEXT:    retq
 entry:
   %k = call i32 @helper()
@@ -252,6 +298,6 @@ entry:
   ret void
 }
 
-attributes #0 = { nounwind "frame-pointer"="all"}
+attributes #0 = { "frame-pointer"="all"}
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"override-stack-alignment", i32 32}
