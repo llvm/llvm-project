@@ -634,12 +634,6 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
   }
 }
 
-// Symbols with `l` or `L` as a prefix are linker-private and never appear in
-// the output.
-static bool isPrivateLabel(StringRef name) {
-  return name.startswith("l") || name.startswith("L");
-}
-
 template <class NList>
 static macho::Symbol *createDefined(const NList &sym, StringRef name,
                                     InputSection *isec, uint64_t value,

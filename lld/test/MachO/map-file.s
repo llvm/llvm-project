@@ -19,7 +19,7 @@
 
 # CHECK:       Sections:
 # CHECK-NEXT:  Idx  Name         Size     VMA               Type
-# CHECK-NEXT:  0 __text          0000001b [[#%x,TEXT:]]     TEXT
+# CHECK-NEXT:  0 __text          0000001c [[#%x,TEXT:]]     TEXT
 # CHECK-NEXT:  1 __stubs         0000000c [[#%x,STUBS:]]    TEXT
 # CHECK-NEXT:  2 __stub_helper   0000001a [[#%x,HELPER:]]   TEXT
 # CHECK-NEXT:  3 __cstring       0000002b [[#%x,CSTR:]]     DATA
@@ -69,6 +69,7 @@
 # CHECK-NEXT: 0x[[#%X,MAIN]]           0x00000019  [  2] _main
 # CHECK-NEXT: 0x[[#%X,BAR]]            0x00000001  [  2] _bar
 # CHECK-NEXT: 0x[[#%X,FOO]]            0x00000001  [  3] __ZTIN3foo3bar4MethE
+# CHECK-NEXT: 0x[[#%X,FOO+1]]          0x00000001  [  3] ltmp1
 # CHECK-NEXT: 0x[[#%X,STUBS]]          0x00000006  [  5] _baz
 # CHECK-NEXT: 0x[[#%X,STUBS+6]]        0x00000006  [  2] _bar
 # CHECK-NEXT: 0x[[#%X,HELPER]]         0x0000001A  [  0] helper helper
@@ -86,6 +87,7 @@
 # CHECK-NEXT: 0x[[#%X,DYLD]]           0x00000000  [  0] __dyld_private
 # CHECK-NEXT: 0x[[#%X,TLVP]]           0x00000008  [  0] non-lazy-pointer-to-local: _baz_tlv
 # CHECK-NEXT: 0x[[#%X,BSS]]            0x00000001  [  2] _number
+# CHECK-EMPTY:
 
 # MAPFILE: "name":"Total Write map file"
 
@@ -115,9 +117,17 @@
 
 #--- foo.s
 .globl __ZTIN3foo3bar4MethE
+## This should not appear in the map file since it is a zero-size private label
+## symbol.
+ltmp0:
 ## This C++ symbol makes it clear that we do not print the demangled name in
 ## the map file, even if `-demangle` is passed.
 __ZTIN3foo3bar4MethE:
+  nop
+
+## This private label symbol will appear in the map file since it has nonzero
+## size.
+ltmp1:
   nop
 
 .subsections_via_symbols
