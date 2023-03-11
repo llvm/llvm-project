@@ -229,35 +229,38 @@ static constexpr std::pair<uint8_t, uint8_t> LoadFPImmArr[] = {
     {0b11111111, 0b10},
 };
 
-int RISCVLoadFPImm::getLoadFPImm(uint8_t Sign, uint8_t Exp, uint8_t Mantissa) {
-  if (Sign == 0b1 && Exp == 0b01111111 && Mantissa == 0b00)
-    return 0;
+int RISCVLoadFPImm::getLoadFPImm(bool Sign, uint8_t Exp, uint8_t Mantissa) {
+  // Lookup in the table, ignoring the sign.
+  auto EMI = llvm::lower_bound(LoadFPImmArr, std::make_pair(Exp, Mantissa));
+  if (EMI == std::end(LoadFPImmArr) || EMI->first != Exp ||
+      EMI->second != Mantissa)
+    return -1;
 
-  if (Sign == 0b0) {
-    auto EMI = llvm::lower_bound(LoadFPImmArr, std::make_pair(Exp, Mantissa));
-    if (EMI != std::end(LoadFPImmArr) && EMI->first == Exp &&
-        EMI->second == Mantissa)
-      return std::distance(std::begin(LoadFPImmArr), EMI) + 1;
+  // Table doesn't have entry 0.
+  int Entry = std::distance(std::begin(LoadFPImmArr), EMI) + 1;
+
+  // The only legal negative value is -1.0(entry 0). 1.0 is entry 16.
+  if (Sign) {
+    if (Entry == 16)
+      return 0;
+    return false;
   }
 
-  return -1;
+  return Entry;
 }
 
 float RISCVLoadFPImm::getFPImm(unsigned Imm) {
   assert(Imm != 1 && Imm != 30 && Imm != 31 && "Unsupported immediate");
-  uint8_t Sign;
-  uint8_t Exp;
-  uint8_t Mantissa;
 
+  // Entry 0 is -1.0, the only negative value. Entry 16 is 1.0.
+  uint32_t Sign = 0;
   if (Imm == 0) {
     Sign = 0b1;
-    Exp = 0b01111111;
-    Mantissa = 0b00;
-  } else {
-    Sign = 0b0;
-    Exp = LoadFPImmArr[Imm - 1].first;
-    Mantissa = LoadFPImmArr[Imm - 1].second;
+    Imm = 16;
   }
+
+  uint32_t Exp = LoadFPImmArr[Imm - 1].first;
+  uint32_t Mantissa = LoadFPImmArr[Imm - 1].second;
 
   uint32_t I = Sign << 31 | Exp << 23 | Mantissa << 21;
   return bit_cast<float>(I);
