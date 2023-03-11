@@ -130,17 +130,18 @@ Value SpecifierStructBuilder::getInitValue(OpBuilder &builder, Location loc,
 /// Builds IR extracting the pos-th offset from the descriptor.
 Value SpecifierStructBuilder::dimOffset(OpBuilder &builder, Location loc,
                                         Dimension dim) const {
-  return builder.create<LLVM::ExtractValueOp>(
-      loc, value,
-      ArrayRef<int64_t>({kDimOffsetPosInSpecifier, static_cast<int64_t>(dim)}));
+  return extractField(
+      builder, loc,
+      ArrayRef<int64_t>{kDimOffsetPosInSpecifier, static_cast<int64_t>(dim)});
 }
 
 /// Builds IR inserting the pos-th offset into the descriptor.
 void SpecifierStructBuilder::setDimOffset(OpBuilder &builder, Location loc,
                                           Dimension dim, Value size) {
-  value = builder.create<LLVM::InsertValueOp>(
-      loc, value, size,
-      ArrayRef<int64_t>({kDimOffsetPosInSpecifier, static_cast<int64_t>(dim)}));
+  insertField(
+      builder, loc,
+      ArrayRef<int64_t>{kDimOffsetPosInSpecifier, static_cast<int64_t>(dim)},
+      size);
 }
 
 /// Builds IR extracting the `lvl`-th level-size from the descriptor.
