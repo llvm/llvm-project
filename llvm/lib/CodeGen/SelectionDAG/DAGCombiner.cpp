@@ -6446,12 +6446,6 @@ SDValue DAGCombiner::unfoldExtremeBitClearingToShifts(SDNode *N) {
 static SDValue combineShiftAnd1ToBitTest(SDNode *And, SelectionDAG &DAG) {
   assert(And->getOpcode() == ISD::AND && "Expected an 'and' op");
 
-  // This is probably not worthwhile without a supported type.
-  EVT VT = And->getValueType(0);
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!TLI.isTypeLegal(VT))
-    return SDValue();
-
   // Look through an optional extension.
   SDValue And0 = And->getOperand(0), And1 = And->getOperand(1);
   if (And0.getOpcode() == ISD::ANY_EXTEND && And0.hasOneUse())
@@ -6479,13 +6473,17 @@ static SDValue combineShiftAnd1ToBitTest(SDNode *And, SelectionDAG &DAG) {
   if (Src.getOpcode() != ISD::SRL || !Src.hasOneUse())
     return SDValue();
 
+  // This is probably not worthwhile without a supported type.
+  EVT SrcVT = Src.getValueType();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!TLI.isTypeLegal(SrcVT))
+    return SDValue();
+
   // We might have looked through casts that make this transform invalid.
-  // TODO: If the source type is wider than the result type, do the mask and
-  //       compare in the source type.
-  unsigned VTBitWidth = VT.getScalarSizeInBits();
+  unsigned BitWidth = SrcVT.getScalarSizeInBits();
   SDValue ShiftAmt = Src.getOperand(1);
   auto *ShiftAmtC = dyn_cast<ConstantSDNode>(ShiftAmt);
-  if (!ShiftAmtC || !ShiftAmtC->getAPIntValue().ult(VTBitWidth))
+  if (!ShiftAmtC || !ShiftAmtC->getAPIntValue().ult(BitWidth))
     return SDValue();
 
   // Set source to shift source.
@@ -6506,14 +6504,15 @@ static SDValue combineShiftAnd1ToBitTest(SDNode *And, SelectionDAG &DAG) {
   // and (not (srl X, C)), 1 --> (and X, 1<<C) == 0
   // and (srl (not X), C)), 1 --> (and X, 1<<C) == 0
   SDLoc DL(And);
-  SDValue X = DAG.getZExtOrTrunc(Src, DL, VT);
-  EVT CCVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  SDValue X = DAG.getZExtOrTrunc(Src, DL, SrcVT);
+  EVT CCVT =
+      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
   SDValue Mask = DAG.getConstant(
-      APInt::getOneBitSet(VTBitWidth, ShiftAmtC->getZExtValue()), DL, VT);
-  SDValue NewAnd = DAG.getNode(ISD::AND, DL, VT, X, Mask);
-  SDValue Zero = DAG.getConstant(0, DL, VT);
+      APInt::getOneBitSet(BitWidth, ShiftAmtC->getZExtValue()), DL, SrcVT);
+  SDValue NewAnd = DAG.getNode(ISD::AND, DL, SrcVT, X, Mask);
+  SDValue Zero = DAG.getConstant(0, DL, SrcVT);
   SDValue Setcc = DAG.getSetCC(DL, CCVT, NewAnd, Zero, ISD::SETEQ);
-  return DAG.getZExtOrTrunc(Setcc, DL, VT);
+  return DAG.getZExtOrTrunc(Setcc, DL, And->getValueType(0));
 }
 
 /// For targets that support usubsat, match a bit-hack form of that operation
