@@ -150,6 +150,51 @@ define i64 @and_i32_shl_zext_add_i64(i64 %t0, i32 %t1) {
   ret i64 %t6
 }
 
+define i64 @shl_and_i8_zext_add_i64(i64 %t0, i8 %t1) {
+; CHECK-LABEL: shl_and_i8_zext_add_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    shlb $2, %sil
+; CHECK-NEXT:    andb $60, %sil
+; CHECK-NEXT:    movzbl %sil, %eax
+; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    retq
+  %s = shl i8 %t1, 2
+  %m = and i8 %s, 60
+  %z = zext i8 %m to i64
+  %a = add i64 %t0, %z
+  ret i64 %a
+}
+
+define i64 @shl_and_i16_zext_add_i64(i64 %t0, i16 %t1) {
+; CHECK-LABEL: shl_and_i16_zext_add_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    leal (%rsi,%rsi), %eax
+; CHECK-NEXT:    andl $16, %eax
+; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    retq
+  %s = shl i16 %t1, 1
+  %m = and i16 %s, 17
+  %z = zext i16 %m to i64
+  %a = add i64 %t0, %z
+  ret i64 %a
+}
+
+define i64 @shl_and_i32_zext_add_i64(i64 %t0, i32 %t1) {
+; CHECK-LABEL: shl_and_i32_zext_add_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    leal (,%rsi,8), %eax
+; CHECK-NEXT:    andl $5992, %eax # imm = 0x1768
+; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    retq
+  %s = shl i32 %t1, 3
+  %m = and i32 %s, 5999
+  %z = zext i32 %m to i64
+  %a = add i64 %t0, %z
+  ret i64 %a
+}
+
 ; Negative test - shift can't be converted to scale factor.
 
 define i64 @and_i32_zext_shl_add_i64_overshift(i64 %t0, i32 %t1) {
