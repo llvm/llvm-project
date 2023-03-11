@@ -73,7 +73,7 @@ attributes #0 = { "use-sample-profile" }
 !15 = !DILocation(line: 6, scope: !12)
 
 
-;; Check the profile of funciton sum is only merged once though the original callsite is replicted.
+;; Check the profile of function sum is only merged once though the original callsite is replicted.
 ; CHECK: name: "sum"
 ; CHECK-NEXT: {!"function_entry_count", i64 46}
 ; CHECK: !{!"branch_weights", i32 11, i32 37}

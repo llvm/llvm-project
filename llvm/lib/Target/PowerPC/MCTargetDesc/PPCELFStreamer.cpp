@@ -184,7 +184,7 @@ void PPCELFStreamer::emitGOTToPCRelLabel(const MCInst &Inst) {
   emitLabel(LabelSym, Inst.getLoc());
 }
 
-// This funciton checks if the parameter Inst is part of the setup for a link
+// This function checks if the parameter Inst is part of the setup for a link
 // time GOT PC Relative optimization. For example in this situation:
 // <MCInst PLDpc <MCOperand Reg:282> <MCOperand Expr:(glob_double@got@pcrel)>
 //   <MCOperand Imm:0> <MCOperand Expr:(.Lpcrel@<<invalid>>)>>
