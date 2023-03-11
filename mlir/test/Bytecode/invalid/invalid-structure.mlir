@@ -9,7 +9,7 @@
 //===--------------------------------------------------------------------===//
 
 // RUN: not mlir-opt %S/invalid-structure-version.mlirbc 2>&1 | FileCheck %s --check-prefix=VERSION
-// VERSION: bytecode version 127 is newer than the current version 0
+// VERSION: bytecode version 127 is newer than the current version 1
 
 //===--------------------------------------------------------------------===//
 // Producer

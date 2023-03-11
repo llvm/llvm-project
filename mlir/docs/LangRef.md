@@ -845,3 +845,18 @@ The [builtin dialect](Dialects/Builtin.md) defines a set of attribute values
 that are directly usable by any other dialect in MLIR. These types cover a range
 from primitive integer and floating-point values, attribute dictionaries, dense
 multi-dimensional arrays, and more.
+
+### IR Versionning
+
+A dialect can opt-in to handle versioning through the
+`BytecodeDialectInterface`. Few hooks are exposed to the dialect to allow
+managing a version encoded into the bytecode file. The version is loaded lazily
+and allows to retrieve the version information while parsing the input IR, and
+gives an opportunity to each dialect for which a version is present to perform
+IR upgrades post-parsing through the `upgradeFromVersion` method. Custom
+Attribute and Type encodings can also be upgraded according to the dialect
+version using readAttribute and readType methods.
+
+There is no restriction on what kind of information a dialect is allowed to
+encode to model its versioning. Currently, versioning is supported only for
+bytecode formats.
