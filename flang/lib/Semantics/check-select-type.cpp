@@ -254,16 +254,16 @@ void SelectTypeChecker::Enter(const parser::SelectTypeConstruct &construct) {
       std::get<parser::Statement<parser::SelectTypeStmt>>(construct.t)};
   const auto &selectType{selectTypeStmt.statement};
   const auto &unResolvedSel{std::get<parser::Selector>(selectType.t)};
-  const auto *selector{GetExprFromSelector(unResolvedSel)};
-
-  if (!selector) {
-    return; // expression semantics failed on Selector
-  }
-  if (auto exprType{selector->GetType()}) {
-    const auto &typeCaseList{
-        std::get<std::list<parser::SelectTypeConstruct::TypeCase>>(
-            construct.t)};
-    TypeCaseValues{context_, *exprType}.Check(typeCaseList);
+  if (const auto *selector{GetExprFromSelector(unResolvedSel)}) {
+    if (IsProcedure(*selector)) {
+      context_.Say(
+          selectTypeStmt.source, "Selector may not be a procedure"_err_en_US);
+    } else if (auto exprType{selector->GetType()}) {
+      const auto &typeCaseList{
+          std::get<std::list<parser::SelectTypeConstruct::TypeCase>>(
+              construct.t)};
+      TypeCaseValues{context_, *exprType}.Check(typeCaseList);
+    }
   }
 }
 

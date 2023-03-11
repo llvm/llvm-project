@@ -136,7 +136,7 @@ void Fuzzer::HandleMalloc(size_t Size) {
 }
 
 Fuzzer::Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
-               FuzzingOptions Options)
+               const FuzzingOptions &Options)
     : CB(CB), Corpus(Corpus), MD(MD), Options(Options) {
   if (EF->__sanitizer_set_death_callback)
     EF->__sanitizer_set_death_callback(StaticDeathCallback);

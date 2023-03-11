@@ -68,6 +68,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PatternMatch.h"
@@ -102,6 +103,8 @@ STATISTIC(NumMovedCalls, "Number of call insts hoisted or sunk");
 STATISTIC(NumPromotionCandidates, "Number of promotion candidates");
 STATISTIC(NumLoadPromoted, "Number of load-only promotions");
 STATISTIC(NumLoadStorePromoted, "Number of load and store promotions");
+STATISTIC(NumMinMaxHoisted,
+          "Number min/max expressions hoisted out of the loop");
 
 /// Memory promotion is enabled by default.
 static cl::opt<bool>
@@ -167,6 +170,11 @@ static bool pointerInvalidatedByLoop(MemorySSA *MSSA, MemoryUse *MU,
                                      bool InvariantGroup);
 static bool pointerInvalidatedByBlock(BasicBlock &BB, MemorySSA &MSSA,
                                       MemoryUse &MU);
+/// Try to simplify things like (A < INV_1 AND icmp A < INV_2) into (A <
+/// min(INV_1, INV_2)), if INV_1 and INV_2 are both loop invariants and their
+/// minimun can be computed outside of loop, and X is not a loop-invariant.
+static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
+                        MemorySSAUpdater &MSSAU);
 static Instruction *cloneInstructionInExitBlock(
     Instruction &I, BasicBlock &ExitBlock, PHINode &PN, const LoopInfo *LI,
     const LoopSafetyInfo *SafetyInfo, MemorySSAUpdater &MSSAU);
@@ -979,6 +987,15 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
           Changed = true;
           continue;
         }
+      }
+
+      // Optimize complex patterns, such as (x < INV1 && x < INV2), turning them
+      // into (x < min(INV1, INV2)), and hoisting the invariant part of this
+      // expression out of the loop.
+      if (hoistMinMax(I, *CurLoop, *SafetyInfo, MSSAU)) {
+        ++NumMinMaxHoisted;
+        Changed = true;
+        continue;
       }
 
       // Remember possibly hoistable branches so we can actually hoist them
@@ -2394,6 +2411,68 @@ bool pointerInvalidatedByBlock(BasicBlock &BB, MemorySSA &MSSA, MemoryUse &MU) {
         if (MU.getBlock() != MD->getBlock() || !MSSA.locallyDominates(MD, &MU))
           return true;
   return false;
+}
+
+static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
+                        MemorySSAUpdater &MSSAU) {
+  bool Inverse = false;
+  using namespace PatternMatch;
+  Value *Cond1, *Cond2;
+  if (match(&I, m_Or(m_Value(Cond1), m_Value(Cond2))))
+    Inverse = true;
+  else if (!match(&I, m_And(m_Value(Cond1), m_Value(Cond2))))
+    return false;
+
+  auto MatchICmpAgainstInvariant = [&](Value *C, ICmpInst::Predicate &P,
+                                       Value *&LHS, Value *&RHS) {
+    if (!match(C, m_OneUse(m_ICmp(P, m_Value(LHS), m_Value(RHS)))))
+      return false;
+    if (!ICmpInst::isRelational(P))
+      return false;
+    if (L.isLoopInvariant(LHS)) {
+      std::swap(LHS, RHS);
+      P = ICmpInst::getSwappedPredicate(P);
+    }
+    if (L.isLoopInvariant(LHS) || !L.isLoopInvariant(RHS))
+      return false;
+    if (Inverse)
+      P = ICmpInst::getInversePredicate(P);
+    return true;
+  };
+  ICmpInst::Predicate P1, P2;
+  Value *LHS1, *LHS2, *RHS1, *RHS2;
+  if (!MatchICmpAgainstInvariant(Cond1, P1, LHS1, RHS1) ||
+      !MatchICmpAgainstInvariant(Cond2, P2, LHS2, RHS2))
+    return false;
+  if (P1 != P2 || LHS1 != LHS2)
+    return false;
+
+  // Everything is fine, we can do the transform.
+  bool UseMin = ICmpInst::isLT(P1) || ICmpInst::isLE(P1);
+  assert(
+      (UseMin || ICmpInst::isGT(P1) || ICmpInst::isGE(P1)) &&
+      "Relational predicate is either less (or equal) or greater (or equal)!");
+  Intrinsic::ID id = ICmpInst::isSigned(P1)
+                         ? (UseMin ? Intrinsic::smin : Intrinsic::smax)
+                         : (UseMin ? Intrinsic::umin : Intrinsic::umax);
+  auto *Preheader = L.getLoopPreheader();
+  assert(Preheader && "Loop is not in simplify form?");
+  IRBuilder<> Builder(Preheader->getTerminator());
+  Value *NewRHS = Builder.CreateBinaryIntrinsic(
+      id, RHS1, RHS2, nullptr, StringRef("invariant.") +
+                                   (ICmpInst::isSigned(P1) ? "s" : "u") +
+                                   (UseMin ? "min" : "max"));
+  Builder.SetInsertPoint(&I);
+  ICmpInst::Predicate P = P1;
+  if (Inverse)
+    P = ICmpInst::getInversePredicate(P);
+  Value *NewCond = Builder.CreateICmp(P, LHS1, NewRHS);
+  NewCond->takeName(&I);
+  I.replaceAllUsesWith(NewCond);
+  eraseInstruction(I, SafetyInfo, MSSAU);
+  eraseInstruction(*cast<Instruction>(Cond1), SafetyInfo, MSSAU);
+  eraseInstruction(*cast<Instruction>(Cond2), SafetyInfo, MSSAU);
+  return true;
 }
 
 /// Little predicate that returns true if the specified basic block is in

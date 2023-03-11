@@ -784,6 +784,9 @@ bool GenericUniformityAnalysisImpl<ContextT>::markDivergent(
     return false;
   }
 
+  if (isAlwaysUniform(I))
+    return false;
+
   return markDefsDivergent(I);
 }
 
@@ -952,10 +955,6 @@ void GenericUniformityAnalysisImpl<ContextT>::taintAndPushAllDefs(
     if (I.isTerminator())
       break;
 
-    // Mark this as divergent. We don't check if the instruction is
-    // always uniform. In a cycle where the thread convergence is not
-    // statically known, the instruction is not statically converged,
-    // and its outputs cannot be statically uniform.
     if (markDivergent(I))
       Worklist.push_back(&I);
   }

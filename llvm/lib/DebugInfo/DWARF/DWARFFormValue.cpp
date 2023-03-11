@@ -751,10 +751,7 @@ DWARFFormValue::getAsFile(DILineInfoSpecifier::FileLineInfoKind Kind) const {
   return std::nullopt;
 }
 
-namespace llvm {
-namespace dwarf {
-
-bool doesFormBelongToClass(dwarf::Form Form, DWARFFormValue::FormClass FC,
+bool llvm::dwarf::doesFormBelongToClass(dwarf::Form Form, DWARFFormValue::FormClass FC,
                            uint16_t DwarfVersion) {
   // First, check DWARF5 form classes.
   if (Form < ArrayRef(DWARF5FormClasses).size() &&
@@ -783,6 +780,3 @@ bool doesFormBelongToClass(dwarf::Form Form, DWARFFormValue::FormClass FC,
     return false;
   }
 }
-
-} // end namespace dwarf
-} // end namespace llvm

@@ -41,6 +41,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestTransforms
     MLIRTilingInterfaceTestPasses
     MLIRVectorTestPasses
+    MLIRTestVectorToSPIRV
     MLIRLLVMTestPasses
     )
 endif()

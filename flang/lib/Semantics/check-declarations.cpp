@@ -254,7 +254,9 @@ void CheckHelper::Check(const Symbol &symbol) {
   if (symbol.attrs().test(Attr::VOLATILE)) {
     CheckVolatile(symbol, derived);
   }
-  CheckBindC(symbol);
+  if (symbol.attrs().test(Attr::BIND_C)) {
+    CheckBindC(symbol);
+  }
   CheckGlobalName(symbol);
   if (isDone) {
     return; // following checks do not apply
@@ -430,7 +432,9 @@ void CheckHelper::Check(const Symbol &symbol) {
 
 void CheckHelper::CheckCommonBlock(const Symbol &symbol) {
   CheckGlobalName(symbol);
-  CheckBindC(symbol);
+  if (symbol.attrs().test(Attr::BIND_C)) {
+    CheckBindC(symbol);
+  }
 }
 
 void CheckHelper::CheckBindCFunctionResult(const Symbol &symbol) { // C1553
@@ -2218,13 +2222,16 @@ void CheckHelper::CheckGlobalName(const Symbol &symbol) {
 }
 
 void CheckHelper::CheckBindC(const Symbol &symbol) {
-  if (!symbol.attrs().test(Attr::BIND_C)) {
-    return;
+  bool isExplicitBindC{symbol.attrs().test(Attr::BIND_C)};
+  if (isExplicitBindC) {
+    CheckConflicting(symbol, Attr::BIND_C, Attr::PARAMETER);
+    CheckConflicting(symbol, Attr::BIND_C, Attr::ELEMENTAL);
+  } else {
+    // symbol must be interoperable (e.g., dummy argument of interoperable
+    // procedure interface) but is not itself BIND(C).
   }
-  CheckConflicting(symbol, Attr::BIND_C, Attr::PARAMETER);
-  CheckConflicting(symbol, Attr::BIND_C, Attr::ELEMENTAL);
   if (const std::string * bindName{symbol.GetBindName()};
-      bindName) { // BIND(C,NAME=...)
+      bindName) { // has a binding name
     if (!bindName->empty()) {
       bool ok{bindName->front() == '_' || parser::IsLetter(bindName->front())};
       for (char ch : *bindName) {
@@ -2237,7 +2244,7 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
       }
     }
   }
-  if (symbol.GetIsExplicitBindName()) { // C1552, C1529
+  if (symbol.GetIsExplicitBindName()) { // BIND(C,NAME=...); C1552, C1529
     auto defClass{ClassifyProcedure(symbol)};
     if (IsProcedurePointer(symbol)) {
       messages_.Say(symbol.name(),
@@ -2256,32 +2263,66 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
       context_.SetError(symbol);
     }
   }
-  if (symbol.detailsIf<ObjectEntityDetails>()) {
-    if (!symbol.owner().IsModule()) {
+  if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+    if (isExplicitBindC && !symbol.owner().IsModule()) {
       messages_.Say(symbol.name(),
           "A variable with BIND(C) attribute may only appear in the specification part of a module"_err_en_US);
       context_.SetError(symbol);
     }
-    if (auto extents{evaluate::GetConstantExtents(foldingContext_, symbol)};
-        extents && evaluate::GetSize(*extents) == 0) {
-      SayWithDeclaration(symbol, symbol.name(),
-          "Interoperable array must have at least one element"_err_en_US);
-    }
-    if (const auto *type{symbol.GetType()}) {
-      if (const auto *derived{type->AsDerived()}) {
-        if (!derived->typeSymbol().attrs().test(Attr::BIND_C)) {
-          if (auto *msg{messages_.Say(symbol.name(),
-                  "The derived type of a BIND(C) object must also be BIND(C)"_err_en_US)}) {
-            msg->Attach(
-                derived->typeSymbol().name(), "Non-interoperable type"_en_US);
-          }
+    if (auto shape{evaluate::GetShape(foldingContext_, symbol)}) {
+      if (evaluate::GetRank(*shape) == 0) { // 18.3.4
+        if (isExplicitBindC && IsAllocatableOrPointer(symbol)) {
+          messages_.Say(symbol.name(),
+              "A scalar interoperable variable may not be ALLOCATABLE or POINTER"_err_en_US);
           context_.SetError(symbol);
         }
-      } else if (!IsInteroperableIntrinsicType(*type)) {
+      } else { // 18.3.5
+        if (auto extents{
+                evaluate::AsConstantExtents(foldingContext_, *shape)}) {
+          if (evaluate::GetSize(*extents) == 0) {
+            SayWithDeclaration(symbol, symbol.name(),
+                "Interoperable array must have at least one element"_err_en_US);
+            context_.SetError(symbol);
+          }
+        } else if ((isExplicitBindC || symbol.attrs().test(Attr::VALUE)) &&
+            !evaluate::IsExplicitShape(symbol) && !object->IsAssumedSize()) {
+          SayWithDeclaration(symbol, symbol.name(),
+              "BIND(C) array must have explicit shape or be assumed-size unless a dummy argument without the VALUE attribute"_err_en_US);
+          context_.SetError(symbol);
+        }
+      }
+    }
+    if (const auto *type{symbol.GetType()}) {
+      const auto *derived{type->AsDerived()};
+      if (derived && !derived->typeSymbol().attrs().test(Attr::BIND_C)) {
+        if (auto *msg{messages_.Say(symbol.name(),
+                "The derived type of a BIND(C) object must also be BIND(C)"_err_en_US)}) {
+          msg->Attach(
+              derived->typeSymbol().name(), "Non-interoperable type"_en_US);
+        }
+        context_.SetError(symbol);
+      }
+      if (type->IsAssumedType() || IsAssumedLengthCharacter(symbol)) {
+        // ok
+      } else if (IsAllocatableOrPointer(symbol) &&
+          type->category() == DeclTypeSpec::Character &&
+          type->characterTypeSpec().length().isDeferred()) {
+        // ok; F'2018 18.3.6 p2(6)
+      } else if (derived || IsInteroperableIntrinsicType(*type)) {
+        // F'2018 18.3.6 p2(4,5)
+      } else if (symbol.attrs().test(Attr::VALUE)) {
+        messages_.Say(symbol.name(),
+            "A BIND(C) VALUE dummy argument must have an interoperable type"_err_en_US);
+        context_.SetError(symbol);
+      } else {
         messages_.Say(symbol.name(),
             "A BIND(C) object must have an interoperable type"_err_en_US);
         context_.SetError(symbol);
       }
+    }
+    if (IsOptional(symbol) && !symbol.attrs().test(Attr::VALUE)) {
+      messages_.Say(symbol.name(),
+          "An interoperable procedure with an OPTIONAL dummy argument might not be portable"_port_en_US);
     }
   } else if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
     if (!proc->procInterface() ||
@@ -2289,6 +2330,16 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
       messages_.Say(symbol.name(),
           "An interface name with BIND attribute must be specified if the BIND attribute is specified in a procedure declaration statement"_err_en_US);
       context_.SetError(symbol);
+    }
+  } else if (const auto *subp{symbol.detailsIf<SubprogramDetails>()}) {
+    for (const Symbol *dummy : subp->dummyArgs()) {
+      if (dummy) {
+        CheckBindC(*dummy);
+      } else {
+        messages_.Say(symbol.name(),
+            "A subprogram interface with the BIND attribute may not have an alternate return argument"_err_en_US);
+        context_.SetError(symbol);
+      }
     }
   } else if (const auto *derived{symbol.detailsIf<DerivedTypeDetails>()}) {
     if (derived->sequence()) { // C1801

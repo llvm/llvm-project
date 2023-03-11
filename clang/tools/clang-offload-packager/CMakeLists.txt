@@ -11,8 +11,6 @@ add_clang_tool(clang-offload-packager
   ${tablegen_deps}
   )
 
-add_dependencies(clang clang-offload-packager)
-
 clang_target_link_libraries(clang-offload-packager
   PRIVATE
   clangBasic

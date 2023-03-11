@@ -203,7 +203,7 @@ private:
       ChildListIoStatementState<Direction::Input>,
       ChildUnformattedIoStatementState<Direction::Output>,
       ChildUnformattedIoStatementState<Direction::Input>, InquireUnitState,
-      ErroneousIoStatementState>
+      ErroneousIoStatementState, ExternalMiscIoStatementState>
       u_;
   std::optional<IoStatementState> io_;
 };

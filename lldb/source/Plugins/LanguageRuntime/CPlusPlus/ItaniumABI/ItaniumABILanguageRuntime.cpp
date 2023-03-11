@@ -583,7 +583,11 @@ ValueObjectSP ItaniumABILanguageRuntime::GetExceptionObjectForThread(
   ValueObjectSP exception = ValueObject::CreateValueObjectFromData(
       "exception", exception_isw.GetAsData(m_process->GetByteOrder()), exe_ctx,
       voidstar);
-  exception = exception->GetDynamicValue(eDynamicDontRunTarget);
+  ValueObjectSP dyn_exception 
+      = exception->GetDynamicValue(eDynamicDontRunTarget);
+  // If we succeed in making a dynamic value, return that:
+  if (dyn_exception) 
+     return dyn_exception;
 
   return exception;
 }
