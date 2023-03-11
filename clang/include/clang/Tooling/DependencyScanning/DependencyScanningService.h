@@ -98,14 +98,11 @@ private:
   std::shared_ptr<llvm::cas::ActionCache> Cache;
   /// Whether to optimize the modules' command-line arguments.
   const bool OptimizeArgs;
-
+  /// Whether to set up command-lines to load PCM files eagerly.
+  const bool EagerLoadModules;
   /// Shared CachingOnDiskFileSystem. Set to nullptr to not use CAS dependency
   /// scanning.
   IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> SharedFS;
-
-  /// Whether to set up command-lines to load PCM files eagerly.
-  const bool EagerLoadModules;
-
   /// The global file system cache.
   std::optional<DependencyScanningFilesystemSharedCache> SharedCache;
 };

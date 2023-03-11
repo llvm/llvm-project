@@ -194,21 +194,23 @@ static CXErrorCode getFullDependencies(DependencyScanningWorker *Worker,
                                        std::optional<StringRef> ModuleName,
                                        HandleTUDepsCallback HandleTUDeps) {
   llvm::StringSet<> AlreadySeen;
-  FullDependencyConsumer DepConsumer(AlreadySeen, LookupOutput,
-                                     Worker->getCASFS());
+  FullDependencyConsumer DepConsumer(AlreadySeen);
+  auto Controller = DependencyScanningTool::createActionController(
+      *Worker, std::move(LookupOutput), /*PrefixMapping=*/{});
 
   bool HasDiagConsumer = DiagConsumer;
   bool HasError = Error;
   assert(HasDiagConsumer ^ HasError && "Both DiagConsumer and Error provided");
 
   if (DiagConsumer) {
-    bool Result = Worker->computeDependencies(
-        WorkingDirectory, Compilation, DepConsumer, *DiagConsumer, ModuleName);
+    bool Result =
+        Worker->computeDependencies(WorkingDirectory, Compilation, DepConsumer,
+                                    *Controller, *DiagConsumer, ModuleName);
     if (!Result)
       return CXError_Failure;
   } else if (Error) {
-    auto Result = Worker->computeDependencies(WorkingDirectory, Compilation,
-                                              DepConsumer, ModuleName);
+    auto Result = Worker->computeDependencies(
+        WorkingDirectory, Compilation, DepConsumer, *Controller, ModuleName);
     if (Result) {
       *Error = cxstring::createDup(llvm::toString(std::move(Result)));
       return CXError_Failure;
@@ -255,7 +257,7 @@ static CXErrorCode getFileDependencies(CXDependencyScannerWorker W, int argc,
 
   DependencyScanningWorker *Worker = unwrap(W);
 
-  if (Worker->getFormat() != ScanningOutputFormat::Full)
+  if (Worker->getScanningFormat() != ScanningOutputFormat::Full)
     return CXError_InvalidArguments;
 
   std::vector<std::string> Compilation{argv, argv + argc};
