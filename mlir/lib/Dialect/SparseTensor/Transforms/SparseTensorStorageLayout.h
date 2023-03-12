@@ -403,6 +403,8 @@ public:
     fields[fidx] = v;
   }
 
+  void setSpecifier(Value newSpec) { fields.back() = newSpec; }
+
   void setSpecifierField(OpBuilder &builder, Location loc,
                          StorageSpecifierKind kind, std::optional<Level> lvl,
                          Value v) {

@@ -3149,4 +3149,43 @@ def TestCSEOfSingleBlockOp : TEST_Op<"cse_of_single_block_op",
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// Test Ops to upgrade base on the dialect versions
+//===----------------------------------------------------------------------===//
+
+def TestVersionedOpA : TEST_Op<"versionedA"> {
+  // A previous version of the dialect (let's say 1.*) supported an attribute
+  // named "dimensions":
+  // let arguments = (ins
+  //   AnyI64Attr:$dimensions
+  // );
+
+  // In the current version (2.0) "dimensions" was renamed to "dims", and a new
+  // boolean attribute "modifier" was added. The previous version of the op
+  // corresponds to "modifier=false". We support loading old IR through
+  // upgrading, see `upgradeFromVersion()` in `TestBytecodeDialectInterface`.
+  let arguments = (ins
+   AnyI64Attr:$dims,
+   BoolAttr:$modifier
+  );
+}
+
+def TestVersionedOpB : TEST_Op<"versionedB"> {
+  // A previous version of the dialect (let's say 1.*) we encoded TestAttrParams
+  // with a custom encoding:
+  //
+  //    #test.attr_params<X, Y> -> { varInt: Y, varInt: X }
+  //
+  // In the current version (2.0) the encoding changed and the two parameters of
+  // the attribute are swapped:
+  //
+  //    #test.attr_params<X, Y> -> { varInt: X, varInt: Y }
+  //
+  // We support loading old IR through a custom readAttribute method, see
+  // `readAttribute()` in `TestBytecodeDialectInterface`
+  let arguments = (ins
+    TestAttrParams:$attribute
+  );
+}
+
 #endif // TEST_OPS
