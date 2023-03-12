@@ -14,7 +14,7 @@
 
 template <class T>
 class small_pointer {
-  uint16_t offset;
+  std::uint16_t offset;
 };
 
 template <class T>
@@ -22,8 +22,8 @@ class small_iter_allocator {
 public:
   using value_type      = T;
   using pointer         = small_pointer<T>;
-  using size_type       = int16_t;
-  using difference_type = int16_t;
+  using size_type       = std::int16_t;
+  using difference_type = std::int16_t;
 
   small_iter_allocator() TEST_NOEXCEPT {}
 

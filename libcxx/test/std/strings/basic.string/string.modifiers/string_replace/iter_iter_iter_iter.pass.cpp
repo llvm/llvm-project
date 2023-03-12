@@ -1028,8 +1028,8 @@ TEST_CONSTEXPR_CXX20 bool test9() {
   }
 
   { // test assigning a different type
-    const uint8_t pc[] = "ABCD";
-    uint8_t        p[] = "EFGH";
+    const std::uint8_t pc[] = "ABCD";
+    std::uint8_t        p[] = "EFGH";
 
     S s;
     s.replace(s.begin(), s.end(), pc, pc + 4);
