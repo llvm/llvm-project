@@ -187,12 +187,12 @@ constexpr const char* output_max_digit[] = {"skip0", "skip1", "11", "12", "13", 
     "1t", "1u", "1v", "1w", "1x", "1y", "1z"};
 
 // https://www.wolframalpha.com : Table[BaseForm[k, n], {k, {MEOW, MEOW, MEOW}}, {n, 2, 36}]
-constexpr uint64_t stress_chunks_positive                          = 12000000345000678900ULL;
-constexpr pair<uint64_t, array<const char*, 37>> output_positive[] = {
+constexpr std::uint64_t stress_chunks_positive                          = 12000000345000678900ULL;
+constexpr pair<std::uint64_t, array<const char*, 37>> output_positive[] = {
     {123U, {{"skip0", "skip1", "1111011", "11120", "1323", "443", "323", "234", "173", "146", "123", "102", "a3", "96",
                "8b", "83", "7b", "74", "6f", "69", "63", "5i", "5d", "58", "53", "4n", "4j", "4f", "4b", "47", "43",
                "3u", "3r", "3o", "3l", "3i", "3f"}}},
-    {uint64_t{INT8_MAX}, {{"skip0", "skip1", "1111111", "11201", "1333", "1002", "331", "241", "177", "151", "127",
+    {std::uint64_t{INT8_MAX}, {{"skip0", "skip1", "1111111", "11201", "1333", "1002", "331", "241", "177", "151", "127",
                              "106", "a7", "9a", "91", "87", "7f", "78", "71", "6d", "67", "61", "5h", "5c", "57", "52",
                              "4n", "4j", "4f", "4b", "47", "43", "3v", "3s", "3p", "3m", "3j"}}},
     {161U, {{"skip0", "skip1", "10100001", "12222", "2201", "1121", "425", "320", "241", "188", "161", "137", "115",
@@ -204,7 +204,7 @@ constexpr pair<uint64_t, array<const char*, 37>> output_positive[] = {
     {1729U, {{"skip0", "skip1", "11011000001", "2101001", "123001", "23404", "12001", "5020", "3301", "2331", "1729",
                 "1332", "1001", "a30", "8b7", "7a4", "6c1", "5gc", "561", "4f0", "469", "3j7", "3cd", "364", "301",
                 "2j4", "2ed", "2a1", "25l", "21i", "1rj", "1oo", "1m1", "1jd", "1gt", "1ee", "1c1"}}},
-    {uint64_t{INT16_MAX}, {{"skip0", "skip1", "111111111111111", "1122221121", "13333333", "2022032", "411411",
+    {std::uint64_t{INT16_MAX}, {{"skip0", "skip1", "111111111111111", "1122221121", "13333333", "2022032", "411411",
                               "164350", "77777", "48847", "32767", "22689", "16b67", "11bb7", "bd27", "9a97", "7fff",
                               "6b68", "5b27", "4eeb", "41i7", "3b67", "31f9", "2flf", "28l7", "22ah", "1mc7", "1hpg",
                               "1dm7", "19rq", "16c7", "1330", "vvv", "u2v", "sbp", "qq7", "pa7"}}},
@@ -221,7 +221,7 @@ constexpr pair<uint64_t, array<const char*, 37>> output_positive[] = {
                     "1b9a06b2", "11973ba8", "9636514", "639e338", "43d49e6", "2g19gfb", "21b9d18", "19dec94", "124addi",
                     "h8f25b", "dhdfa6", "b13hg2", "8m91he", "7720j3", "5pgj58", "4pmelq", "43k17i", "3dg8ek", "2ro898",
                     "2f0et8", "23qif6", "1qw5lh", "1j7l7s", "1cdvli", "16cgrq"}}},
-    {uint64_t{INT32_MAX},
+    {std::uint64_t{INT32_MAX},
         {{"skip0", "skip1", "1111111111111111111111111111111", "12112122212110202101", "1333333333333333",
             "13344223434042", "553032005531", "104134211161", "17777777777", "5478773671", "2147483647", "a02220281",
             "4bb2308a7", "282ba4aaa", "1652ca931", "c87e66b7", "7fffffff", "53g7f548", "3928g3h1", "27c57h32",
@@ -247,7 +247,7 @@ constexpr pair<uint64_t, array<const char*, 37>> output_positive[] = {
             "4d0d5e232c53", "2d63h403i580", "1bf5h8185hdj", "kc3g550fkcg", "d41id5k9984", "8ef5n0him4g", "5i2dijfe1la",
             "3me22fm5fhi", "2hfmhgg73kd", "1ngpfabr53c", "18i7220bh11", "rm0lcjngpa", "kk1elesni1", "fgfge3c3fg",
             "bp4q5l6bjg", "8xna46jp0k", "6wejomvji5", "5di2s1qhv4"}}},
-    {uint64_t{INT64_MAX},
+    {std::uint64_t{INT64_MAX},
         {{"skip0", "skip1", "111111111111111111111111111111111111111111111111111111111111111",
             "2021110011022210012102010021220101220221", "13333333333333333333333333333333",
             "1104332401304422434310311212", "1540241003031030222122211", "22341010611245052052300",
@@ -290,8 +290,8 @@ constexpr pair<uint64_t, array<const char*, 37>> output_positive[] = {
 };
 
 // https://www.wolframalpha.com : Table[BaseForm[k, n], {k, {MEOW, MEOW, MEOW}}, {n, 2, 36}]
-constexpr int64_t stress_chunks_negative                          = -9000876000000054321LL;
-constexpr pair<int64_t, array<const char*, 37>> output_negative[] = {
+constexpr std::int64_t stress_chunks_negative                          = -9000876000000054321LL;
+constexpr pair<std::int64_t, array<const char*, 37>> output_negative[] = {
     {-85, {{"skip0", "skip1", "-1010101", "-10011", "-1111", "-320", "-221", "-151", "-125", "-104", "-85", "-78",
               "-71", "-67", "-61", "-5a", "-55", "-50", "-4d", "-49", "-45", "-41", "-3j", "-3g", "-3d", "-3a", "-37",
               "-34", "-31", "-2r", "-2p", "-2n", "-2l", "-2j", "-2h", "-2f", "-2d"}}},
@@ -360,7 +360,7 @@ void test_integer_to_chars() {
         test_integer_to_chars(static_cast<T>(base * 2 - 1), base, output_max_digit[base]);
 
         for (const auto& p : output_positive) {
-            if (p.first <= static_cast<uint64_t>(numeric_limits<T>::max())) {
+            if (p.first <= static_cast<std::uint64_t>(numeric_limits<T>::max())) {
                 test_integer_to_chars(static_cast<T>(p.first), base, p.second[static_cast<size_t>(base)]);
             }
         }
@@ -369,7 +369,7 @@ void test_integer_to_chars() {
             test_integer_to_chars(static_cast<T>(-1), base, "-1");
 
             for (const auto& p : output_negative) {
-                if (p.first >= static_cast<int64_t>(numeric_limits<T>::min())) {
+                if (p.first >= static_cast<std::int64_t>(numeric_limits<T>::min())) {
                     test_integer_to_chars(static_cast<T>(p.first), base, p.second[static_cast<size_t>(base)]);
                 }
             }
@@ -402,7 +402,7 @@ void test_from_chars(const string_view input, const BaseOrFmt base_or_fmt, const
     if (correct_ec == errc{} || (is_floating_point_v<T> && correct_ec == errc::result_out_of_range)) {
         if constexpr (is_floating_point_v<T>) {
             if (mode == TestFromCharsMode::Normal) {
-                using Uint = conditional_t<is_same_v<T, float>, std::uint32_t, uint64_t>;
+                using Uint = conditional_t<is_same_v<T, float>, std::uint32_t, std::uint64_t>;
                 assert(opt_correct.has_value());
                 assert(_Bit_cast<Uint>(dest) == _Bit_cast<Uint>(opt_correct.value()));
             } else {
@@ -553,7 +553,7 @@ void assert_message_bits(const bool b, const char* const msg, const std::uint32_
     }
 }
 
-void assert_message_bits(const bool b, const char* const msg, const uint64_t bits) {
+void assert_message_bits(const bool b, const char* const msg, const std::uint64_t bits) {
     if (!b) {
         // libc++ uses long for 64-bit values.
         fprintf(stderr, "%s failed for 0x%016llX\n", msg, static_cast<unsigned long long>(bits));
@@ -570,7 +570,7 @@ static_assert(FractionBits <= 23, "There are only 23 fraction bits in a float.")
 
 constexpr std::uint32_t Fractions = 1U << FractionBits;
 constexpr std::uint32_t Mask32    = ~((1U << FractionBits) - 1U);
-constexpr uint64_t Mask64    = ~((1ULL << FractionBits) - 1ULL);
+constexpr std::uint64_t Mask64    = ~((1ULL << FractionBits) - 1ULL);
 
 constexpr std::uint32_t PrefixesToTest = 100; // Tunable for test coverage vs. performance.
 static_assert(PrefixesToTest >= 1, "Must test at least 1 prefix.");
@@ -581,9 +581,9 @@ constexpr std::uint32_t PrefixLimit = 2 // sign bit
 static_assert(PrefixesToTest <= PrefixLimit, "Too many prefixes.");
 
 template <bool IsDouble>
-void test_floating_prefix(const conditional_t<IsDouble, uint64_t, std::uint32_t> prefix) {
+void test_floating_prefix(const conditional_t<IsDouble, std::uint64_t, std::uint32_t> prefix) {
 
-    using UIntType     = conditional_t<IsDouble, uint64_t, std::uint32_t>;
+    using UIntType     = conditional_t<IsDouble, std::uint64_t, std::uint32_t>;
     using FloatingType = conditional_t<IsDouble, double, float>;
 
     // "-1.2345678901234567e-100" or "-1.23456789e-10"
@@ -643,9 +643,9 @@ void test_floating_prefix(const conditional_t<IsDouble, uint64_t, std::uint32_t>
 }
 
 template <bool IsDouble>
-void test_floating_hex_prefix(const conditional_t<IsDouble, uint64_t, std::uint32_t> prefix) {
+void test_floating_hex_prefix(const conditional_t<IsDouble, std::uint64_t, std::uint32_t> prefix) {
 
-    using UIntType     = conditional_t<IsDouble, uint64_t, std::uint32_t>;
+    using UIntType     = conditional_t<IsDouble, std::uint64_t, std::uint32_t>;
     using FloatingType = conditional_t<IsDouble, double, float>;
 
     // The precision is the number of hexits after the decimal point.
@@ -681,9 +681,9 @@ void test_floating_hex_prefix(const conditional_t<IsDouble, uint64_t, std::uint3
 }
 
 template <bool IsDouble>
-void test_floating_precision_prefix(const conditional_t<IsDouble, uint64_t, std::uint32_t> prefix) {
+void test_floating_precision_prefix(const conditional_t<IsDouble, std::uint64_t, std::uint32_t> prefix) {
 
-    using UIntType     = conditional_t<IsDouble, uint64_t, std::uint32_t>;
+    using UIntType     = conditional_t<IsDouble, std::uint64_t, std::uint32_t>;
     using FloatingType = conditional_t<IsDouble, double, float>;
 
     // Precision for min subnormal in fixed notation. (More than enough for scientific notation.)
@@ -748,10 +748,10 @@ void test_floating_precision_prefix(const conditional_t<IsDouble, uint64_t, std:
 
 void test_floating_prefixes(mt19937_64& mt64) {
     {
-        set<uint64_t> prefixes64;
+        set<std::uint64_t> prefixes64;
 
         while (prefixes64.size() < PrefixesToTest) {
-            const uint64_t val = mt64();
+            const std::uint64_t val = mt64();
 
             if ((val & 0x7FF0000000000000ULL) != 0x7FF0000000000000ULL) { // skip INF/NAN
                 prefixes64.insert(val & Mask64);
