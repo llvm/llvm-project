@@ -26,6 +26,7 @@ struct basic_string {
   const C *data() const;
 
   bool empty() const;
+  size_type size() const;
 
   _Type& append(const C *s);
   _Type& append(const C *s, size_type n);
@@ -79,6 +80,10 @@ bool operator==(const char*, const std::string&);
 bool operator!=(const std::string&, const std::string&);
 bool operator!=(const std::string&, const char*);
 bool operator!=(const char*, const std::string&);
+
+bool operator==(const std::wstring&, const std::wstring&);
+bool operator==(const std::wstring&, const wchar_t*);
+bool operator==(const wchar_t*, const std::wstring&);
 }
 
 #endif // _STRING_
