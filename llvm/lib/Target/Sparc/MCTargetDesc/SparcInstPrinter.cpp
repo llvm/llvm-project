@@ -197,10 +197,6 @@ void SparcInstPrinter::printCCOperand(const MCInst *MI, int opNum,
     // Make sure CC is a cp conditional flag.
     CC = (CC < SPCC::CPCC_BEGIN) ? (CC + SPCC::CPCC_BEGIN) : CC;
     break;
-  case SP::BPR:
-  case SP::BPRA:
-  case SP::BPRNT:
-  case SP::BPRANT:
   case SP::MOVRri:
   case SP::MOVRrr:
   case SP::FMOVRS:
