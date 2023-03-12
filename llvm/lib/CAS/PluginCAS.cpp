@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PluginAPI.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/ObjectStore.h"
@@ -120,14 +121,20 @@ Expected<std::shared_ptr<PluginCASContext>> PluginCASContext::create(
 
 namespace {
 
-class PluginObjectStore : public ObjectStore {
+class PluginObjectStore
+    : public ObjectStore,
+      public std::enable_shared_from_this<PluginObjectStore> {
 public:
   Expected<CASID> parseID(StringRef ID) final;
   Expected<ObjectRef> store(ArrayRef<ObjectRef> Refs,
                             ArrayRef<char> Data) final;
   CASID getID(ObjectRef Ref) const final;
   std::optional<ObjectRef> getReference(const CASID &ID) const final;
-  Expected<ObjectHandle> load(ObjectRef Ref) final;
+  Expected<std::optional<ObjectHandle>> loadIfExists(ObjectRef Ref) final;
+  void
+  loadIfExistsAsync(ObjectRef Ref,
+                    unique_function<void(Expected<std::optional<ObjectHandle>>)>
+                        Callback) final;
   uint64_t getDataSize(ObjectHandle Node) const final;
   Error forEachRef(ObjectHandle Node,
                    function_ref<Error(ObjectRef)> Callback) const final;
@@ -230,7 +237,8 @@ PluginObjectStore::getReference(const CASID &ID) const {
   return ObjectRef::getFromInternalRef(*this, c_id.opaque);
 }
 
-Expected<ObjectHandle> PluginObjectStore::load(ObjectRef Ref) {
+Expected<std::optional<ObjectHandle>>
+PluginObjectStore::loadIfExists(ObjectRef Ref) {
   llcas_objectid_t c_id{Ref.getInternalRef(*this)};
   llcas_loaded_object_t c_obj;
   char *c_err = nullptr;
@@ -240,10 +248,48 @@ Expected<ObjectHandle> PluginObjectStore::load(ObjectRef Ref) {
   case LLCAS_LOOKUP_RESULT_SUCCESS:
     return makeObjectHandle(c_obj.opaque);
   case LLCAS_LOOKUP_RESULT_NOTFOUND:
-    report_fatal_error("PluginCAS: object reference not found");
+    return std::nullopt;
   case LLCAS_LOOKUP_RESULT_ERROR:
     return Ctx->errorAndDispose(c_err);
   }
+}
+
+void PluginObjectStore::loadIfExistsAsync(
+    ObjectRef Ref,
+    unique_function<void(Expected<std::optional<ObjectHandle>>)> Callback) {
+  llcas_objectid_t c_id{Ref.getInternalRef(*this)};
+
+  struct LoadObjCtx {
+    std::shared_ptr<PluginObjectStore> CAS;
+    unique_function<void(Expected<std::optional<ObjectHandle>>)> Callback;
+
+    LoadObjCtx(
+        std::shared_ptr<PluginObjectStore> CAS,
+        unique_function<void(Expected<std::optional<ObjectHandle>>)> Callback)
+        : CAS(std::move(CAS)), Callback(std::move(Callback)) {}
+  };
+  auto LoadObjCB = [](void *c_ctx, llcas_lookup_result_t c_result,
+                      llcas_loaded_object_t c_obj, char *c_err) {
+    auto getObjAndDispose =
+        [&](LoadObjCtx *Ctx) -> Expected<std::optional<ObjectHandle>> {
+      auto _ = make_scope_exit([Ctx]() { delete Ctx; });
+      switch (c_result) {
+      case LLCAS_LOOKUP_RESULT_SUCCESS:
+        return Ctx->CAS->makeObjectHandle(c_obj.opaque);
+      case LLCAS_LOOKUP_RESULT_NOTFOUND:
+        return std::nullopt;
+      case LLCAS_LOOKUP_RESULT_ERROR:
+        return Ctx->CAS->Ctx->errorAndDispose(c_err);
+      }
+    };
+
+    LoadObjCtx *Ctx = static_cast<LoadObjCtx *>(c_ctx);
+    auto Callback = std::move(Ctx->Callback);
+    Callback(getObjAndDispose(Ctx));
+  };
+
+  LoadObjCtx *CallCtx = new LoadObjCtx(shared_from_this(), std::move(Callback));
+  Ctx->Functions.cas_load_object_async(Ctx->c_cas, c_id, CallCtx, LoadObjCB);
 }
 
 namespace {
@@ -322,9 +368,10 @@ namespace {
 
 class PluginActionCache : public ActionCache {
 public:
-  Expected<std::optional<CASID>>
-  getImpl(ArrayRef<uint8_t> ResolvedKey) const final;
-  Error putImpl(ArrayRef<uint8_t> ResolvedKey, const CASID &Result) final;
+  Expected<std::optional<CASID>> getImpl(ArrayRef<uint8_t> ResolvedKey,
+                                         bool Globally) const final;
+  Error putImpl(ArrayRef<uint8_t> ResolvedKey, const CASID &Result,
+                bool Globally) final;
 
   PluginActionCache(std::shared_ptr<PluginCASContext>);
 
@@ -335,12 +382,12 @@ private:
 } // anonymous namespace
 
 Expected<std::optional<CASID>>
-PluginActionCache::getImpl(ArrayRef<uint8_t> ResolvedKey) const {
+PluginActionCache::getImpl(ArrayRef<uint8_t> ResolvedKey, bool Globally) const {
   llcas_objectid_t c_value;
   char *c_err = nullptr;
   llcas_lookup_result_t c_result = Ctx->Functions.actioncache_get_for_digest(
       Ctx->c_cas, llcas_digest_t{ResolvedKey.data(), ResolvedKey.size()},
-      &c_value, &c_err);
+      &c_value, Globally, &c_err);
   switch (c_result) {
   case LLCAS_LOOKUP_RESULT_SUCCESS: {
     llcas_digest_t c_digest =
@@ -355,7 +402,7 @@ PluginActionCache::getImpl(ArrayRef<uint8_t> ResolvedKey) const {
 }
 
 Error PluginActionCache::putImpl(ArrayRef<uint8_t> ResolvedKey,
-                                 const CASID &Result) {
+                                 const CASID &Result, bool Globally) {
   ArrayRef<uint8_t> Hash = Result.getHash();
   llcas_objectid_t c_value;
   char *c_err = nullptr;
@@ -366,7 +413,7 @@ Error PluginActionCache::putImpl(ArrayRef<uint8_t> ResolvedKey,
 
   if (Ctx->Functions.actioncache_put_for_digest(
           Ctx->c_cas, llcas_digest_t{ResolvedKey.data(), ResolvedKey.size()},
-          c_value, &c_err))
+          c_value, Globally, &c_err))
     return Ctx->errorAndDispose(c_err);
 
   return Error::success();
@@ -379,7 +426,7 @@ PluginActionCache::PluginActionCache(std::shared_ptr<PluginCASContext> CASCtx)
 // createPluginCASDatabases API
 //===----------------------------------------------------------------------===//
 
-Expected<std::pair<std::unique_ptr<ObjectStore>, std::unique_ptr<ActionCache>>>
+Expected<std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>>
 cas::createPluginCASDatabases(
     StringRef PluginPath, StringRef OnDiskPath,
     ArrayRef<std::pair<std::string, std::string>> PluginArgs) {
@@ -387,7 +434,7 @@ cas::createPluginCASDatabases(
   if (Error E = PluginCASContext::create(PluginPath, OnDiskPath, PluginArgs)
                     .moveInto(Ctx))
     return std::move(E);
-  auto CAS = std::make_unique<PluginObjectStore>(Ctx);
-  auto AC = std::make_unique<PluginActionCache>(std::move(Ctx));
+  auto CAS = std::make_shared<PluginObjectStore>(Ctx);
+  auto AC = std::make_shared<PluginActionCache>(std::move(Ctx));
   return std::make_pair(std::move(CAS), std::move(AC));
 }

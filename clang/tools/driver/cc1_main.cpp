@@ -274,7 +274,8 @@ private:
   /// Replay a cache hit.
   ///
   /// Return status if should exit immediately, otherwise None.
-  std::optional<int> replayCachedResult(llvm::cas::ObjectRef ResultID,
+  std::optional<int> replayCachedResult(const llvm::cas::CASID &ResultCacheKey,
+                                        llvm::cas::ObjectRef ResultID,
                                         bool JustComputedResult);
 
   std::shared_ptr<llvm::cas::ObjectStore> CAS;
@@ -561,7 +562,8 @@ Expected<bool> ObjectStoreCachingOutputs::tryReplayCachedResult(
       Diags.Report(diag::remark_compile_job_cache_timing_backend_key_query)
           << llvm::format("%.6fs", Seconds);
     });
-    if (Error E = Cache->get(ResultCacheKey).moveInto(Result))
+    if (Error E =
+            Cache->get(ResultCacheKey, /*Globally=*/true).moveInto(Result))
       return std::move(E);
   }
 
@@ -583,11 +585,11 @@ Expected<bool> ObjectStoreCachingOutputs::tryReplayCachedResult(
     return false;
   }
 
-  Diags.Report(diag::remark_compile_job_cache_hit)
-      << ResultCacheKey.toString() << CAS->getID(*ResultRef).toString();
-  std::optional<int> Status =
-      replayCachedResult(*ResultRef, /*JustComputedResult=*/false);
-  assert(Status && "Expected a status for a cache hit");
+  // \c replayCachedResult emits remarks for a cache hit or miss.
+  std::optional<int> Status = replayCachedResult(ResultCacheKey, *ResultRef,
+                                                 /*JustComputedResult=*/false);
+  if (!Status)
+    return false; // cache miss.
   assert(*Status == 0 && "Expected success status for a cache hit");
   return true;
 }
@@ -771,12 +773,13 @@ Error ObjectStoreCachingOutputs::finishComputedResult(
       Diags.Report(diag::remark_compile_job_cache_timing_backend_key_update)
           << llvm::format("%.6fs", Seconds);
     });
-    if (llvm::Error E = Cache->put(ResultCacheKey, CAS->getID(*Result)))
+    if (llvm::Error E =
+            Cache->put(ResultCacheKey, CAS->getID(*Result), /*Globally=*/true))
       return E;
   }
 
   // Replay / decanonicalize as necessary.
-  std::optional<int> Status = replayCachedResult(*Result,
+  std::optional<int> Status = replayCachedResult(ResultCacheKey, *Result,
                                                  /*JustComputedResult=*/true);
   (void)Status;
   assert(Status == std::nullopt);
@@ -784,9 +787,9 @@ Error ObjectStoreCachingOutputs::finishComputedResult(
 }
 
 /// Replay a result after a cache hit.
-std::optional<int>
-ObjectStoreCachingOutputs::replayCachedResult(llvm::cas::ObjectRef ResultID,
-                                              bool JustComputedResult) {
+std::optional<int> ObjectStoreCachingOutputs::replayCachedResult(
+    const llvm::cas::CASID &ResultCacheKey, llvm::cas::ObjectRef ResultID,
+    bool JustComputedResult) {
   if (JustComputedResult)
     return std::nullopt;
 
@@ -796,19 +799,30 @@ ObjectStoreCachingOutputs::replayCachedResult(llvm::cas::ObjectRef ResultID,
   if (Error E = Schema.load(ResultID).moveInto(Result))
     llvm::report_fatal_error(std::move(E));
 
-  auto Err = Result->forEachOutput([&](clang::cas::CompileJobCacheResult::Output
-                                           O) -> Error {
+  DiagnosticsEngine &Diags = Clang.getDiagnostics();
+  bool HasMissingOutput = false;
+  std::optional<llvm::cas::ObjectProxy> SerialDiags;
+
+  auto processOutput = [&](clang::cas::CompileJobCacheResult::Output O,
+                           std::optional<llvm::cas::ObjectProxy> Obj) -> Error {
+    if (!Obj.has_value()) {
+      Diags.Report(diag::remark_compile_job_cache_backend_output_not_found)
+          << clang::cas::CompileJobCacheResult::getOutputKindName(O.Kind)
+          << ResultCacheKey.toString() << CAS->getID(O.Object).toString();
+      HasMissingOutput = true;
+      return Error::success();
+    }
+    if (HasMissingOutput)
+      return Error::success();
+
     if (O.Kind == OutputKind::SerializedDiagnostics) {
-      std::optional<llvm::cas::ObjectProxy> DiagsObj;
-      if (Error E = CAS->getProxy(O.Object).moveInto(DiagsObj))
-        return E;
-      return replayCachedDiagnostics(DiagsObj->getData());
+      SerialDiags = Obj;
+      return Error::success();
     }
 
     std::string Path = std::string(getPathForOutputKind(O.Kind));
     if (Path.empty())
-      // The output may be always generated but not needed with this invocation,
-      // like the serialized diagnostics file.
+      // The output may be always generated but not needed with this invocation.
       return Error::success(); // continue
 
     // Always create parent directory of outputs, since it is hard to precisely
@@ -824,14 +838,11 @@ ObjectStoreCachingOutputs::replayCachedResult(llvm::cas::ObjectRef ResultID,
     if (O.Kind == OutputKind::Dependencies) {
       llvm::raw_svector_ostream OS(ContentsStorage);
       if (auto E = CASDependencyCollector::replay(
-              Clang.getDependencyOutputOpts(), *CAS, O.Object, OS))
+              Clang.getDependencyOutputOpts(), *CAS, *Obj, OS))
         return E;
       Contents = ContentsStorage;
     } else {
-      std::optional<llvm::cas::ObjectProxy> Bytes;
-      if (Error E = CAS->getProxy(O.Object).moveInto(Bytes))
-        return E;
-      Contents = Bytes->getData();
+      Contents = Obj->getData();
     }
 
     std::unique_ptr<llvm::FileOutputBuffer> Output;
@@ -840,11 +851,28 @@ ObjectStoreCachingOutputs::replayCachedResult(llvm::cas::ObjectRef ResultID,
       return E;
     llvm::copy(*Contents, Output->getBufferStart());
     return Output->commit();
-  });
+  };
 
   // FIXME: Stop calling report_fatal_error().
-  if (Err)
+  if (auto Err = Result->forEachLoadedOutput(processOutput))
     llvm::report_fatal_error(std::move(Err));
+
+  if (HasMissingOutput) {
+    Diags.Report(diag::remark_compile_job_cache_miss)
+        << ResultCacheKey.toString();
+    return std::nullopt;
+  }
+
+  if (!JustComputedResult) {
+    Diags.Report(diag::remark_compile_job_cache_hit)
+        << ResultCacheKey.toString() << CAS->getID(ResultID).toString();
+
+    if (SerialDiags) {
+      // FIXME: Stop calling report_fatal_error().
+      if (Error E = replayCachedDiagnostics(SerialDiags->getData()))
+        llvm::report_fatal_error(std::move(E));
+    }
+  }
 
   if (JustComputedResult)
     return std::nullopt;

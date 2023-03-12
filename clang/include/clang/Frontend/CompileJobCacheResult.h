@@ -46,10 +46,20 @@ public:
   llvm::Error
   forEachOutput(llvm::function_ref<llvm::Error(Output)> Callback) const;
 
+  /// Loads all outputs concurrently and passes the resulting \c ObjectProxy
+  /// objects to \p Callback. If there was an error during loading then the
+  /// callback will not be invoked.
+  llvm::Error forEachLoadedOutput(
+      llvm::function_ref<llvm::Error(Output, std::optional<ObjectProxy>)>
+          Callback);
+
   size_t getNumOutputs() const;
 
   /// Retrieves a specific output specified by \p Kind, if it exists.
   std::optional<Output> getOutput(OutputKind Kind) const;
+
+  /// \returns a string for the given \p Kind.
+  static StringRef getOutputKindName(OutputKind Kind);
 
   /// Print this result to \p OS.
   llvm::Error print(llvm::raw_ostream &OS);

@@ -23,7 +23,7 @@ public:
                                 ArrayRef<ObjectRef> Refs,
                                 ArrayRef<char> Data) final;
 
-  Expected<ObjectHandle> load(ObjectRef Ref) final;
+  Expected<std::optional<ObjectHandle>> loadIfExists(ObjectRef Ref) final;
 
   CASID getID(ObjectRef Ref) const final;
 
@@ -95,13 +95,14 @@ ArrayRef<char> OnDiskCAS::getDataConst(ObjectHandle Node) const {
   return DB->getObjectData(convertHandle(Node));
 }
 
-Expected<ObjectHandle> OnDiskCAS::load(ObjectRef ExternalRef) {
+Expected<std::optional<ObjectHandle>>
+OnDiskCAS::loadIfExists(ObjectRef ExternalRef) {
   Expected<std::optional<ondisk::ObjectHandle>> ObjHnd =
       DB->load(convertRef(ExternalRef));
   if (!ObjHnd)
     return ObjHnd.takeError();
   if (!*ObjHnd)
-    return createUnknownObjectError(getID(ExternalRef));
+    return std::nullopt;
   return convertHandle(**ObjHnd);
 }
 

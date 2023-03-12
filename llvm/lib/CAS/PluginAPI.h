@@ -53,6 +53,8 @@ struct llcas_functions_t {
   llcas_lookup_result_t (*cas_load_object)(llcas_cas_t, llcas_objectid_t,
                                            llcas_loaded_object_t *,
                                            char **error);
+  void (*cas_load_object_async)(llcas_cas_t, llcas_objectid_t, void *ctx_cb,
+                                llcas_cas_load_object_cb);
 
   bool (*cas_store_object)(llcas_cas_t, llcas_data_t,
                            const llcas_objectid_t *refs, size_t refs_count,
@@ -75,10 +77,12 @@ struct llcas_functions_t {
   llcas_lookup_result_t (*actioncache_get_for_digest)(llcas_cas_t,
                                                       llcas_digest_t key,
                                                       llcas_objectid_t *p_value,
+                                                      bool globally,
                                                       char **error);
 
   bool (*actioncache_put_for_digest)(llcas_cas_t, llcas_digest_t key,
-                                     llcas_objectid_t value, char **error);
+                                     llcas_objectid_t value, bool globally,
+                                     char **error);
 };
 
 #endif // LLVM_LIB_CAS_PLUGINAPI_H
