@@ -203,6 +203,7 @@ Clang-Tidy Checks
    `cppcoreguidelines-pro-type-static-cast-downcast <cppcoreguidelines/pro-type-static-cast-downcast.html>`_, "Yes"
    `cppcoreguidelines-pro-type-union-access <cppcoreguidelines/pro-type-union-access.html>`_,
    `cppcoreguidelines-pro-type-vararg <cppcoreguidelines/pro-type-vararg.html>`_,
+   `cppcoreguidelines-rvalue-reference-param-not-moved <cppcoreguidelines/rvalue-reference-param-not-moved.html>`_,
    `cppcoreguidelines-slicing <cppcoreguidelines/slicing.html>`_,
    `cppcoreguidelines-special-member-functions <cppcoreguidelines/special-member-functions.html>`_,
    `cppcoreguidelines-virtual-class-destructor <cppcoreguidelines/virtual-class-destructor.html>`_, "Yes"

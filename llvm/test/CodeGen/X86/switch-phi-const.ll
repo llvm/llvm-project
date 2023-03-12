@@ -91,13 +91,11 @@ default:
 define void @switch_trunc_phi_const(i32 %x) {
 ; CHECK-LABEL: switch_trunc_phi_const:
 ; CHECK:       # %bb.0: # %bb0
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    movzbl %dil, %ecx
-; CHECK-NEXT:    decl %ecx
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    leal -1(%rax), %ecx
 ; CHECK-NEXT:    cmpl $54, %ecx
 ; CHECK-NEXT:    ja .LBB1_8
 ; CHECK-NEXT:  # %bb.1: # %bb0
-; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    movl $3895, %edx # imm = 0xF37
 ; CHECK-NEXT:    jmpq *.LJTI1_0(,%rcx,8)
 ; CHECK-NEXT:  .LBB1_8: # %default
