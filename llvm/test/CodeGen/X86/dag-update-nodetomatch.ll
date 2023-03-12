@@ -116,9 +116,8 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movq x1@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movl (%rax), %ebx
-; CHECK-NEXT:    movl %ebx, %r9d
-; CHECK-NEXT:    andl $511, %r9d # imm = 0x1FF
-; CHECK-NEXT:    leaq 1(%r9), %rax
+; CHECK-NEXT:    andl $511, %ebx # imm = 0x1FF
+; CHECK-NEXT:    leaq 1(%rbx), %rax
 ; CHECK-NEXT:    movq x4@GOTPCREL(%rip), %rcx
 ; CHECK-NEXT:    movl %eax, (%rcx)
 ; CHECK-NEXT:    movq x3@GOTPCREL(%rip), %rcx
@@ -135,12 +134,11 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    addq %rsi, %rdi
 ; CHECK-NEXT:    movq x2@GOTPCREL(%rip), %r8
 ; CHECK-NEXT:    movl (%r8), %edx
-; CHECK-NEXT:    leal 8(,%r9,8), %eax
+; CHECK-NEXT:    leal 8(,%rbx,8), %eax
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    leaq 8(%rsi), %rax
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    leaq 32(%rsi), %r11
-; CHECK-NEXT:    andl $511, %ebx # imm = 0x1FF
 ; CHECK-NEXT:    leaq 8(,%rbx,8), %rbx
 ; CHECK-NEXT:    xorl %r14d, %r14d
 ; CHECK-NEXT:    movq x0@GOTPCREL(%rip), %r15
