@@ -78,11 +78,11 @@ define double @loadfpimm9() {
 }
 
 ; Negative test. This is 1 * 2^256.
-; FIXME: This should not use fli.d
 define double @loadfpimm10() {
 ; CHECK-LABEL: loadfpimm10:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fli.d fa0, 2.0
+; CHECK-NEXT:    lui a0, %hi(.LCPI9_0)
+; CHECK-NEXT:    fld fa0, %lo(.LCPI9_0)(a0)
 ; CHECK-NEXT:    ret
   ret double 0x1000000000000000
 }

@@ -136,12 +136,10 @@ define half @loadfpimm9() {
 }
 
 ; This is 1 * 2^-16
-; FIXME: this should use fli.h
 define half @loadfpimm10() {
 ; CHECK-LABEL: loadfpimm10:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 256
-; CHECK-NEXT:    fmv.h.x fa0, a0
+; CHECK-NEXT:    fli.h fa0, 3.0517578125e-05
 ; CHECK-NEXT:    ret
 ;
 ; ZFHMIN-LABEL: loadfpimm10:
@@ -153,12 +151,10 @@ define half @loadfpimm10() {
 }
 
 ; This is 1 * 2^-15
-; FIXME: This should use fli.h
 define half @loadfpimm11() {
 ; CHECK-LABEL: loadfpimm11:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 512
-; CHECK-NEXT:    fmv.h.x fa0, a0
+; CHECK-NEXT:    fli.h fa0, 1.52587890625e-05
 ; CHECK-NEXT:    ret
 ;
 ; ZFHMIN-LABEL: loadfpimm11:
