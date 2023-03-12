@@ -7236,53 +7236,26 @@ updateBoxForParentComponent(Fortran::lower::AbstractConverter &converter,
   auto &builder = converter.getFirOpBuilder();
   mlir::Value boxBase = fir::getBase(box);
   mlir::Operation *op = boxBase.getDefiningOp();
-  auto boxTy = boxBase.getType().dyn_cast<fir::BaseBoxType>();
-  mlir::Type boxEleTy = fir::unwrapAllRefAndSeqType(boxTy.getEleTy());
-  auto originalRecTy = boxEleTy.dyn_cast<fir::RecordType>();
   mlir::Type actualTy = converter.genType(expr);
-  mlir::Type eleTy = fir::unwrapAllRefAndSeqType(actualTy);
-  auto parentCompTy = eleTy.dyn_cast<fir::RecordType>();
-  assert(parentCompTy && "expecting derived-type");
 
-  assert((mlir::dyn_cast<fir::EmboxOp>(op) ||
-          mlir::dyn_cast<fir::ReboxOp>(op) ||
-          mlir::dyn_cast<fir::ConvertOp>(op)) &&
-         "expecting fir.embox or fir.rebox or fir.convert operation");
-
-  if (parentCompTy.getTypeList().empty())
-    TODO(loc, "parent component with no component");
-
-  // Creating a slice with a path to the first component of the parent component
-  // of the extended type.
-  auto firstComponent = parentCompTy.getTypeList().front();
-  auto fieldTy = fir::FieldType::get(boxTy.getContext());
-  auto field = builder.create<fir::FieldIndexOp>(
-      loc, fieldTy, firstComponent.first, originalRecTy,
-      /*typeParams=*/mlir::ValueRange{});
-
-  if (auto convert = mlir::dyn_cast<fir::ConvertOp>(op)) {
-    auto rebox = builder.create<fir::ReboxOp>(loc, fir::BoxType::get(actualTy),
-                                              convert.getValue(), mlir::Value{},
-                                              mlir::Value{});
-    return fir::substBase(box, fir::getBase(rebox));
-  }
   if (auto embox = mlir::dyn_cast<fir::EmboxOp>(op)) {
-    mlir::Value slice = createSliceForParentComp(builder, loc, embox, box,
-                                                 field, expr.Rank() > 0);
     auto newBox = builder.create<fir::EmboxOp>(
         loc, fir::BoxType::get(actualTy), embox.getMemref(), embox.getShape(),
-        slice, embox.getTypeparams());
-    return fir::substBase(box, fir::getBase(newBox));
+        embox.getSlice(), embox.getTypeparams());
+    return fir::substBase(box, newBox);
   }
   if (auto rebox = mlir::dyn_cast<fir::ReboxOp>(op)) {
-    mlir::Value slice = createSliceForParentComp(builder, loc, rebox, box,
-                                                 field, expr.Rank() > 0);
-    auto newBox =
-        builder.create<fir::ReboxOp>(loc, fir::BoxType::get(actualTy),
-                                     rebox.getBox(), rebox.getShape(), slice);
-    return fir::substBase(box, fir::getBase(newBox));
+    auto newBox = builder.create<fir::ReboxOp>(loc, fir::BoxType::get(actualTy),
+                                               rebox.getBox(), rebox.getShape(),
+                                               rebox.getSlice());
+    return fir::substBase(box, newBox);
   }
-  return box;
+
+  mlir::Value empty;
+  mlir::ValueRange emptyRange;
+  return builder.create<fir::ReboxOp>(loc, fir::BoxType::get(actualTy), boxBase,
+                                      /*shape=*/empty,
+                                      /*slice=*/empty);
 }
 
 fir::ExtendedValue Fortran::lower::createBoxValue(
