@@ -6731,13 +6731,27 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
       ISD::matchBinaryPredicate(N0.getOperand(1), N1, MatchSubset))
     return N1;
 
-  // fold (and (any_ext V), c) -> (zero_ext V) if 'and' only clears top bits.
   if (N1C && N0.getOpcode() == ISD::ANY_EXTEND) {
     SDValue N0Op0 = N0.getOperand(0);
+    EVT SrcVT = N0Op0.getValueType();
+    unsigned SrcBitWidth = SrcVT.getScalarSizeInBits();
     APInt Mask = ~N1C->getAPIntValue();
-    Mask = Mask.trunc(N0Op0.getScalarValueSizeInBits());
+    Mask = Mask.trunc(SrcBitWidth);
+
+    // fold (and (any_ext V), c) -> (zero_ext V) if 'and' only clears top bits.
     if (DAG.MaskedValueIsZero(N0Op0, Mask))
-      return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), N0.getValueType(), N0Op0);
+      return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), VT, N0Op0);
+
+    // fold (and (any_ext V), c) -> (zero_ext (and (trunc V), c)) if profitable.
+    if (N1C->getAPIntValue().countLeadingZeros() >= (BitWidth - SrcBitWidth) &&
+        TLI.isTruncateFree(VT, SrcVT) && TLI.isZExtFree(SrcVT, VT) &&
+        TLI.isTypeDesirableForOp(ISD::AND, SrcVT) &&
+        TLI.isNarrowingProfitable(VT, SrcVT)) {
+      SDLoc DL(N);
+      return DAG.getNode(ISD::ZERO_EXTEND, DL, VT,
+                         DAG.getNode(ISD::AND, DL, SrcVT, N0Op0,
+                                     DAG.getZExtOrTrunc(N1, DL, SrcVT)));
+    }
   }
 
   // fold (and (ext (and V, c1)), c2) -> (and (ext V), (and c1, (ext c2)))

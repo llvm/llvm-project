@@ -2130,9 +2130,8 @@ define <16 x i32> @pr52561(<16 x i32> %a, <16 x i32> %b) "min-legal-vector-width
 define <8 x i16> @pr59628_xmm(i16 %arg) {
 ; X64-LABEL: pr59628_xmm:
 ; X64:       # %bb.0:
-; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X64-NEXT:    vmovw %edi, %xmm0
 ; X64-NEXT:    vpbroadcastw %edi, %xmm1
-; X64-NEXT:    vmovsh %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpcmpneqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %k1
 ; X64-NEXT:    vmovdqu16 %xmm0, %xmm0 {%k1} {z}
 ; X64-NEXT:    retq
