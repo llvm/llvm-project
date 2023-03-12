@@ -683,7 +683,6 @@ define { i64, i1 } @addcarry_carry_not_zext(i64 %a, i64 %b, i64 %carryin) nounwi
 define { i64, i1 } @addcarry_carry_not_i1(i64 %a, i64 %b, i8 %carryin) nounwind {
 ; CHECK-LABEL: addcarry_carry_not_i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
 ; CHECK-NEXT:    addq %rsi, %rdi
 ; CHECK-NEXT:    setb %cl
 ; CHECK-NEXT:    movzbl %dl, %eax

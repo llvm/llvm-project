@@ -7,7 +7,6 @@ declare void @llvm.memset.inline.p0.i64(ptr nocapture, i8, i64, i1) nounwind
 define void @test1(ptr %a, i8 %value) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
 ; CHECK-NEXT:    movzbl %sil, %eax
 ; CHECK-NEXT:    movabsq $72340172838076673, %rcx # imm = 0x101010101010101
 ; CHECK-NEXT:    imulq %rax, %rcx
@@ -29,7 +28,6 @@ define void @regular_memset_calls_external_function(ptr %a, i8 %value) nounwind 
 define void @inlined_set_doesnt_call_external_function(ptr %a, i8 %value) nounwind {
 ; CHECK-LABEL: inlined_set_doesnt_call_external_function:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
 ; CHECK-NEXT:    movzbl %sil, %ecx
 ; CHECK-NEXT:    movabsq $72340172838076673, %rax # imm = 0x101010101010101
 ; CHECK-NEXT:    imulq %rcx, %rax
