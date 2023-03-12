@@ -143,9 +143,8 @@ private:
 
 class FullDependencyConsumer : public DependencyConsumer {
 public:
-  FullDependencyConsumer(const llvm::StringSet<> &AlreadySeen,
-                         LookupModuleOutputCallback LookupModuleOutput)
-      : AlreadySeen(AlreadySeen), LookupModuleOutput(LookupModuleOutput) {}
+  FullDependencyConsumer(const llvm::StringSet<> &AlreadySeen)
+      : AlreadySeen(AlreadySeen) {}
 
   void handleBuildCommand(Command Cmd) override {
     Commands.push_back(std::move(Cmd));
@@ -169,11 +168,6 @@ public:
     ContextHash = std::move(Hash);
   }
 
-  std::string lookupModuleOutput(const ModuleID &ID,
-                                 ModuleOutputKind Kind) override {
-    return LookupModuleOutput(ID, Kind);
-  }
-
   TranslationUnitDeps takeTranslationUnitDeps();
   ModuleDepsGraph takeModuleGraphDeps();
 
@@ -186,6 +180,30 @@ private:
   std::string ContextHash;
   std::vector<std::string> OutputPaths;
   const llvm::StringSet<> &AlreadySeen;
+};
+
+/// A simple dependency action controller that uses a callback. If no callback
+/// is provided, it is assumed that looking up module outputs is unreachable.
+class CallbackActionController : public DependencyActionController {
+public:
+  virtual ~CallbackActionController();
+
+  CallbackActionController(LookupModuleOutputCallback LMO)
+      : LookupModuleOutput(std::move(LMO)) {
+    if (!LookupModuleOutput) {
+      LookupModuleOutput = [](const ModuleID &,
+                              ModuleOutputKind) -> std::string {
+        llvm::report_fatal_error("unexpected call to lookupModuleOutput");
+      };
+    }
+  }
+
+  std::string lookupModuleOutput(const ModuleID &ID,
+                                 ModuleOutputKind Kind) override {
+    return LookupModuleOutput(ID, Kind);
+  }
+
+private:
   LookupModuleOutputCallback LookupModuleOutput;
 };
 

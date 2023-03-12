@@ -87,6 +87,7 @@ template <class E> void rethrow_if_nested(const E& e);
 #include <__type_traits/is_copy_constructible.h>
 #include <__type_traits/is_final.h>
 #include <__type_traits/is_polymorphic.h>
+#include <__utility/forward.h>
 #include <cstddef>
 #include <cstdlib>
 #include <version>
@@ -313,20 +314,16 @@ struct __throw_with_nested<_Tp, _Up, true> {
     _LIBCPP_NORETURN static inline _LIBCPP_INLINE_VISIBILITY void
     __do_throw(_Tp&& __t)
     {
-        throw __nested<_Up>(static_cast<_Tp&&>(__t));
+        throw __nested<_Up>(std::forward<_Tp>(__t));
     }
 };
 
 template <class _Tp, class _Up>
 struct __throw_with_nested<_Tp, _Up, false> {
     _LIBCPP_NORETURN static inline _LIBCPP_INLINE_VISIBILITY void
-#ifndef _LIBCPP_CXX03_LANG
     __do_throw(_Tp&& __t)
-#else
-    __do_throw (_Tp& __t)
-#endif // _LIBCPP_CXX03_LANG
     {
-        throw static_cast<_Tp&&>(__t);
+        throw std::forward<_Tp>(__t);
     }
 };
 #endif
@@ -343,7 +340,7 @@ throw_with_nested(_Tp&& __t)
         is_class<_Up>::value &&
         !is_base_of<nested_exception, _Up>::value &&
         !__libcpp_is_final<_Up>::value>::
-            __do_throw(static_cast<_Tp&&>(__t));
+            __do_throw(std::forward<_Tp>(__t));
 #else
     ((void)__t);
     // FIXME: Make this abort

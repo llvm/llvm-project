@@ -46,11 +46,6 @@ public:
 
   void handleContextHash(std::string Hash) override {}
 
-  std::string lookupModuleOutput(const ModuleID &ID,
-                                 ModuleOutputKind Kind) override {
-    llvm::report_fatal_error("unexpected call to lookupModuleOutput");
-  }
-
   void printDependencies(std::string &S) {
     assert(Opts && "Handled dependency output options.");
 
@@ -82,7 +77,9 @@ protected:
 llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
     const std::vector<std::string> &CommandLine, StringRef CWD) {
   MakeDependencyPrinterConsumer Consumer;
-  auto Result = Worker.computeDependencies(CWD, CommandLine, Consumer);
+  CallbackActionController Controller(nullptr);
+  auto Result =
+      Worker.computeDependencies(CWD, CommandLine, Consumer, Controller);
   if (Result)
     return std::move(Result);
   std::string Output;
@@ -117,20 +114,25 @@ llvm::Expected<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
       return Opts->OutputFile;
     }
 
-    // The lookupModuleOutput is for clang modules. P1689 format don't need it.
-    std::string lookupModuleOutput(const ModuleID &ID,
-                                 ModuleOutputKind Kind) override {
-      return "";
-    }
-
   private:
     StringRef Filename;
     P1689Rule &Rule;
   };
 
+  class P1689ActionController : public DependencyActionController {
+  public:
+    // The lookupModuleOutput is for clang modules. P1689 format don't need it.
+    std::string lookupModuleOutput(const ModuleID &,
+                                   ModuleOutputKind Kind) override {
+      return "";
+    }
+  };
+
   P1689Rule Rule;
   P1689ModuleDependencyPrinterConsumer Consumer(Rule, Command);
-  auto Result = Worker.computeDependencies(CWD, Command.CommandLine, Consumer);
+  P1689ActionController Controller;
+  auto Result = Worker.computeDependencies(CWD, Command.CommandLine, Consumer,
+                                           Controller);
   if (Result)
     return std::move(Result);
 
@@ -145,8 +147,10 @@ DependencyScanningTool::getTranslationUnitDependencies(
     const std::vector<std::string> &CommandLine, StringRef CWD,
     const llvm::StringSet<> &AlreadySeen,
     LookupModuleOutputCallback LookupModuleOutput) {
-  FullDependencyConsumer Consumer(AlreadySeen, LookupModuleOutput);
-  llvm::Error Result = Worker.computeDependencies(CWD, CommandLine, Consumer);
+  FullDependencyConsumer Consumer(AlreadySeen);
+  CallbackActionController Controller(LookupModuleOutput);
+  llvm::Error Result =
+      Worker.computeDependencies(CWD, CommandLine, Consumer, Controller);
   if (Result)
     return std::move(Result);
   return Consumer.takeTranslationUnitDeps();
@@ -156,9 +160,10 @@ llvm::Expected<ModuleDepsGraph> DependencyScanningTool::getModuleDependencies(
     StringRef ModuleName, const std::vector<std::string> &CommandLine,
     StringRef CWD, const llvm::StringSet<> &AlreadySeen,
     LookupModuleOutputCallback LookupModuleOutput) {
-  FullDependencyConsumer Consumer(AlreadySeen, LookupModuleOutput);
-  llvm::Error Result =
-      Worker.computeDependencies(CWD, CommandLine, Consumer, ModuleName);
+  FullDependencyConsumer Consumer(AlreadySeen);
+  CallbackActionController Controller(LookupModuleOutput);
+  llvm::Error Result = Worker.computeDependencies(CWD, CommandLine, Consumer,
+                                                  Controller, ModuleName);
   if (Result)
     return std::move(Result);
   return Consumer.takeModuleGraphDeps();
@@ -200,3 +205,5 @@ ModuleDepsGraph FullDependencyConsumer::takeModuleGraphDeps() {
 
   return ModuleGraph;
 }
+
+CallbackActionController::~CallbackActionController() {}

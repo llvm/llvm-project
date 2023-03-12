@@ -251,17 +251,25 @@ Expected<std::string> getCachedOrDownloadArtifact(
 
     // Perform the HTTP request and if successful, write the response body to
     // the cache.
-    StreamedHTTPResponseHandler Handler(
-        [&]() { return CacheAddStream(Task, ""); }, Client);
-    HTTPRequest Request(ArtifactUrl);
-    Request.Headers = getHeaders();
-    Error Err = Client.perform(Request, Handler);
-    if (Err)
-      return std::move(Err);
+    {
+      StreamedHTTPResponseHandler Handler(
+          [&]() { return CacheAddStream(Task, ""); }, Client);
+      HTTPRequest Request(ArtifactUrl);
+      Request.Headers = getHeaders();
+      Error Err = Client.perform(Request, Handler);
+      if (Err)
+        return std::move(Err);
 
-    unsigned Code = Client.responseCode();
-    if (Code && Code != 200)
-      continue;
+      unsigned Code = Client.responseCode();
+      if (Code && Code != 200)
+        continue;
+    }
+
+    Expected<CachePruningPolicy> PruningPolicyOrErr =
+        parseCachePruningPolicy(std::getenv("DEBUGINFOD_CACHE_POLICY"));
+    if (!PruningPolicyOrErr)
+      return PruningPolicyOrErr.takeError();
+    pruneCache(CacheDirectoryPath, *PruningPolicyOrErr);
 
     // Return the path to the artifact on disk.
     return std::string(AbsCachedArtifactPath);

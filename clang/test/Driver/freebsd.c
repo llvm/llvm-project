@@ -146,9 +146,10 @@
 
 // RUN: %clang -### %s --target=arm-unknown-freebsd10.0 -no-integrated-as 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-ARM %s
-// CHECK-ARM: "-cc1"{{.*}}" "-exception-model=sjlj"
-// CHECK-ARM: as{{.*}}" "-mfpu=softvfp"{{.*}}"-matpcs"
-// CHECK-ARM-EABI-NOT: as{{.*}}" "-mfpu=vfp"
+// CHECK-ARM-NOT: "-cc1"{{.*}}" "-exception-model=sjlj"
+// CHECK-ARM: as{{.*}}" "-mfpu=softvfp"{{.*}}"-meabi=5"
+// CHECK-ARM-NOT: as{{.*}}" "-mfpu=vfp"
+// CHECK-ARM-NOT: as{{.*}}" "-matpcs"
 
 // RUN: %clang -### %s --target=arm-gnueabi-freebsd10.0 -no-integrated-as 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-ARM-EABI %s
