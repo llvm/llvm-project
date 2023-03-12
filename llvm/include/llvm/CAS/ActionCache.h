@@ -48,24 +48,35 @@ class ActionCache {
 
 public:
   /// Get a previously computed result for \p ActionKey.
-  Expected<Optional<CASID>> get(const CacheKey &ActionKey) const {
-    return getImpl(arrayRefFromStringRef(ActionKey.getKey()));
+  ///
+  /// \param Globally if true it is a hint to the underlying implementation that
+  /// the lookup is profitable to be done on a distributed caching level, not
+  /// just locally. The implementation is free to ignore this flag.
+  Expected<Optional<CASID>> get(const CacheKey &ActionKey,
+                                bool Globally = false) const {
+    return getImpl(arrayRefFromStringRef(ActionKey.getKey()), Globally);
   }
 
   /// Cache \p Result for the \p ActionKey computation.
-  Error put(const CacheKey &ActionKey, const CASID &Result) {
+  ///
+  /// \param Globally if true it is a hint to the underlying implementation that
+  /// the association is profitable to be done on a distributed caching level,
+  /// not just locally. The implementation is free to ignore this flag.
+  Error put(const CacheKey &ActionKey, const CASID &Result,
+            bool Globally = false) {
     assert(Result.getContext().getHashSchemaIdentifier() ==
                getContext().getHashSchemaIdentifier() &&
            "Hash schema mismatch");
-    return putImpl(arrayRefFromStringRef(ActionKey.getKey()), Result);
+    return putImpl(arrayRefFromStringRef(ActionKey.getKey()), Result, Globally);
   }
 
   virtual ~ActionCache() = default;
 
 protected:
-  virtual Expected<Optional<CASID>>
-  getImpl(ArrayRef<uint8_t> ResolvedKey) const = 0;
-  virtual Error putImpl(ArrayRef<uint8_t> ResolvedKey, const CASID &Result) = 0;
+  virtual Expected<Optional<CASID>> getImpl(ArrayRef<uint8_t> ResolvedKey,
+                                            bool Globally) const = 0;
+  virtual Error putImpl(ArrayRef<uint8_t> ResolvedKey, const CASID &Result,
+                        bool Globally) = 0;
 
   ActionCache(const CASContext &Context) : Context(Context) {}
 

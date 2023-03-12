@@ -176,7 +176,7 @@ public:
     return makeObjectHandle(reinterpret_cast<uintptr_t>(&Node));
   }
 
-  Expected<ObjectHandle> load(ObjectRef Ref) override {
+  Expected<std::optional<ObjectHandle>> loadIfExists(ObjectRef Ref) override {
     return getObjectHandle(asInMemoryObject(Ref));
   }
 

@@ -17,10 +17,12 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h" // FIXME: Split out sys::fs::file_status.
 #include <cstddef>
+#include <future>
 
 namespace llvm {
 
 class MemoryBuffer;
+template <typename T> class unique_function;
 
 namespace cas {
 
@@ -156,7 +158,16 @@ protected:
   /// Load the object referenced by \p Ref.
   ///
   /// Errors if the object cannot be loaded.
-  virtual Expected<ObjectHandle> load(ObjectRef Ref) = 0;
+  /// \returns \c std::nullopt if the object is missing from the CAS.
+  virtual Expected<std::optional<ObjectHandle>> loadIfExists(ObjectRef Ref) = 0;
+
+  /// Asynchronous version of \c loadIfExists.
+  virtual void loadIfExistsAsync(
+      ObjectRef Ref,
+      unique_function<void(Expected<std::optional<ObjectHandle>>)> Callback);
+
+  /// Like \c loadIfExists but returns an error if the object is missing.
+  Expected<ObjectHandle> load(ObjectRef Ref);
 
   /// Get the size of some data.
   virtual uint64_t getDataSize(ObjectHandle Node) const = 0;
@@ -235,6 +246,13 @@ public:
   /// Create ObjectProxy from ObjectRef. If the object can't be loaded, get an
   /// error.
   Expected<ObjectProxy> getProxy(ObjectRef Ref);
+
+  /// \returns \c std::nullopt if the object is missing from the CAS.
+  Expected<std::optional<ObjectProxy>> getProxyIfExists(ObjectRef Ref);
+
+  /// Asynchronous version of \c getProxyIfExists.
+  std::future<Expected<std::optional<ObjectProxy>>>
+  getProxyAsync(ObjectRef Ref);
 
   /// Read the data from \p Data into \p OS.
   uint64_t readData(ObjectHandle Node, raw_ostream &OS, uint64_t Offset = 0,
@@ -383,7 +401,7 @@ class ActionCache;
 
 /// Create \c ObjectStore and \c ActionCache instances using the plugin
 /// interface.
-Expected<std::pair<std::unique_ptr<ObjectStore>, std::unique_ptr<ActionCache>>>
+Expected<std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>>
 createPluginCASDatabases(
     StringRef PluginPath, StringRef OnDiskPath,
     ArrayRef<std::pair<std::string, std::string>> PluginArgs);

@@ -16,6 +16,7 @@
 #include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/ThreadPool.h"
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -47,8 +48,10 @@ namespace {
 
 struct CASPluginOptions {
   std::string OnDiskPath;
+  std::string UpstreamPath;
   std::string FirstPrefix;
   std::string SecondPrefix;
+  bool SimulateMissingObjects = false;
 
   Error setOption(StringRef Name, StringRef Value);
 };
@@ -62,6 +65,10 @@ Error CASPluginOptions::setOption(StringRef Name, StringRef Value) {
     FirstPrefix = Value;
   else if (Name == "second-prefix")
     SecondPrefix = Value;
+  else if (Name == "upstream-path")
+    UpstreamPath = Value;
+  else if (Name == "simulate-missing-objects")
+    SimulateMissingObjects = true;
   else
     return createStringError(errc::invalid_argument,
                              Twine("unknown option: ") + Name);
@@ -95,12 +102,141 @@ namespace {
 struct CASWrapper {
   std::string FirstPrefix;
   std::string SecondPrefix;
+  /// If true, asynchronous "download" of an object will treat it as missing.
+  bool SimulateMissingObjects = false;
   std::unique_ptr<UnifiedOnDiskCache> DB;
+  /// Used for testing the \c globally parameter of action cache APIs. Simulates
+  /// "uploading"/"downloading" objects from/to the primary on-disk path.
+  std::unique_ptr<UnifiedOnDiskCache> UpstreamDB;
+  ThreadPool Pool{llvm::hardware_concurrency()};
+
+  std::mutex Lock{};
+
+  /// Load the object, potentially "downloading" it from upstream.
+  Expected<std::optional<ondisk::ObjectHandle>> loadObject(ObjectID ID);
+
+  /// "Uploads" the full object node graph.
+  Expected<ObjectID> upstreamNode(ObjectID Node);
+  /// "Downloads" only a single object node. The rest of the nodes in the graph
+  /// will be "downloaded" lazily as they are visited.
+  Expected<ObjectID> downstreamNode(ObjectID Node);
+
+  /// "Uploads" a key the associated full node graph.
+  Error upstreamKey(ArrayRef<uint8_t> Key, ObjectID Value);
+  /// "Downloads" the single root node that is associated with the key. The rest
+  /// of the nodes in the graph will be "downloaded" lazily as they are visited.
+  Expected<std::optional<ObjectID>> downstreamKey(ArrayRef<uint8_t> Key);
+
+  /// Synchronized access to \c llvm::errs().
+  void syncErrs(llvm::function_ref<void(raw_ostream &OS)> Fn) {
+    std::unique_lock<std::mutex> LockGuard(Lock);
+    Fn(errs());
+    errs().flush();
+  }
 };
 
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(CASWrapper, llcas_cas_t)
 
 } // namespace
+
+Expected<std::optional<ondisk::ObjectHandle>>
+CASWrapper::loadObject(ObjectID ID) {
+  std::optional<ondisk::ObjectHandle> Obj;
+  if (Error E = DB->getGraphDB().load(ID).moveInto(Obj))
+    return std::move(E);
+  if (Obj)
+    return Obj;
+  if (!UpstreamDB)
+    return std::nullopt;
+
+  // Try "downloading" the node from upstream.
+  ObjectID UpstreamID =
+      UpstreamDB->getGraphDB().getReference(DB->getGraphDB().getDigest(ID));
+  std::optional<ObjectID> Ret;
+  if (Error E = downstreamNode(UpstreamID).moveInto(Ret))
+    return std::move(E);
+  return DB->getGraphDB().load(ID);
+}
+
+/// Imports a single object node.
+static Expected<ObjectID> importNode(ObjectID FromID, OnDiskGraphDB &FromDB,
+                                     OnDiskGraphDB &ToDB) {
+  ObjectID ToID = ToDB.getReference(FromDB.getDigest(FromID));
+  if (ToDB.containsObject(ToID))
+    return ToID;
+
+  std::optional<ondisk::ObjectHandle> FromH;
+  if (Error E = FromDB.load(FromID).moveInto(FromH))
+    return std::move(E);
+  if (!FromH)
+    return ToID;
+
+  auto Data = FromDB.getObjectData(*FromH);
+  auto FromRefs = FromDB.getObjectRefs(*FromH);
+  SmallVector<ObjectID> Refs;
+  for (ObjectID FromRef : FromRefs)
+    Refs.push_back(ToDB.getReference(FromDB.getDigest(FromRef)));
+
+  if (Error E = ToDB.store(ToID, Refs, Data))
+    return std::move(E);
+  return ToID;
+}
+
+Expected<ObjectID> CASWrapper::upstreamNode(ObjectID Node) {
+  OnDiskGraphDB &FromDB = DB->getGraphDB();
+  OnDiskGraphDB &ToDB = UpstreamDB->getGraphDB();
+
+  std::optional<ondisk::ObjectHandle> FromH;
+  if (Error E = FromDB.load(Node).moveInto(FromH))
+    return std::move(E);
+  if (!FromH)
+    return createStringError(errc::invalid_argument, "node doesn't exist");
+
+  for (ObjectID Ref : FromDB.getObjectRefs(*FromH)) {
+    std::optional<ObjectID> ID;
+    if (Error E = upstreamNode(Ref).moveInto(ID))
+      return std::move(E);
+  }
+
+  return importNode(Node, FromDB, ToDB);
+}
+
+Expected<ObjectID> CASWrapper::downstreamNode(ObjectID Node) {
+  OnDiskGraphDB &FromDB = UpstreamDB->getGraphDB();
+  OnDiskGraphDB &ToDB = DB->getGraphDB();
+  return importNode(Node, FromDB, ToDB);
+}
+
+Error CASWrapper::upstreamKey(ArrayRef<uint8_t> Key, ObjectID Value) {
+  Expected<ObjectID> UpstreamVal = upstreamNode(Value);
+  if (!UpstreamVal)
+    return UpstreamVal.takeError();
+  Expected<ObjectID> PutValue = UpstreamDB->KVPut(Key, *UpstreamVal);
+  if (!PutValue)
+    return PutValue.takeError();
+  assert(*PutValue == *UpstreamVal);
+  return Error::success();
+}
+
+Expected<std::optional<ObjectID>>
+CASWrapper::downstreamKey(ArrayRef<uint8_t> Key) {
+  std::optional<ObjectID> UpstreamValue;
+  if (Error E = UpstreamDB->KVGet(Key).moveInto(UpstreamValue))
+    return std::move(E);
+  if (!UpstreamValue)
+    return std::nullopt;
+
+  Expected<ObjectID> Value = downstreamNode(*UpstreamValue);
+  if (!Value)
+    return Value.takeError();
+  assert(DB->getGraphDB().getDigest(*Value) ==
+         UpstreamDB->getGraphDB().getDigest(*UpstreamValue));
+  Expected<ObjectID> PutValue = DB->KVPut(Key, *Value);
+  if (!PutValue)
+    return PutValue.takeError();
+  assert(*PutValue == *Value);
+  return PutValue;
+}
 
 llcas_cas_t llcas_cas_create(llcas_cas_options_t c_opts, char **error) {
   auto &Opts = *unwrap(c_opts);
@@ -109,8 +245,19 @@ llcas_cas_t llcas_cas_create(llcas_cas_options_t c_opts, char **error) {
       BuiltinCASContext::getHashName(), sizeof(HashType));
   if (!DB)
     return reportError<llcas_cas_t>(DB.takeError(), error);
-  return wrap(
-      new CASWrapper{Opts.FirstPrefix, Opts.SecondPrefix, std::move(*DB)});
+
+  std::unique_ptr<UnifiedOnDiskCache> UpstreamDB;
+  if (!Opts.UpstreamPath.empty()) {
+    if (Error E = UnifiedOnDiskCache::open(
+                      Opts.UpstreamPath, /*SizeLimit=*/std::nullopt,
+                      BuiltinCASContext::getHashName(), sizeof(HashType))
+                      .moveInto(UpstreamDB))
+      return reportError<llcas_cas_t>(std::move(E), error);
+  }
+
+  return wrap(new CASWrapper{Opts.FirstPrefix, Opts.SecondPrefix,
+                             Opts.SimulateMissingObjects, std::move(*DB),
+                             std::move(UpstreamDB)});
 }
 
 void llcas_cas_dispose(llcas_cas_t c_cas) { delete unwrap(c_cas); }
@@ -188,9 +335,9 @@ llcas_lookup_result_t llcas_cas_load_object(llcas_cas_t c_cas,
                                             llcas_objectid_t c_id,
                                             llcas_loaded_object_t *c_obj_p,
                                             char **error) {
-  auto &CAS = unwrap(c_cas)->DB->getGraphDB();
   ObjectID ID = ObjectID::fromOpaqueData(c_id.opaque);
-  Expected<std::optional<ondisk::ObjectHandle>> ObjOpt = CAS.load(ID);
+  Expected<std::optional<ondisk::ObjectHandle>> ObjOpt =
+      unwrap(c_cas)->loadObject(ID);
   if (!ObjOpt)
     return reportError(ObjOpt.takeError(), error, LLCAS_LOOKUP_RESULT_ERROR);
   if (!*ObjOpt)
@@ -199,6 +346,64 @@ llcas_lookup_result_t llcas_cas_load_object(llcas_cas_t c_cas,
   ondisk::ObjectHandle Obj = **ObjOpt;
   *c_obj_p = llcas_loaded_object_t{Obj.getOpaqueData()};
   return LLCAS_LOOKUP_RESULT_SUCCESS;
+}
+
+void llcas_cas_load_object_async(llcas_cas_t c_cas, llcas_objectid_t c_id,
+                                 void *ctx_cb, llcas_cas_load_object_cb cb) {
+  std::string PrintedDigest;
+  {
+    llcas_digest_t c_digest = llcas_objectid_get_digest(c_cas, c_id);
+    char *printed_id;
+    char *c_err;
+    bool failed = llcas_digest_print(c_cas, c_digest, &printed_id, &c_err);
+    if (failed)
+      report_fatal_error(Twine("digest printing failed: ") + c_err);
+    PrintedDigest = printed_id;
+    llcas_string_dispose(printed_id);
+  }
+
+  auto passObject = [ctx_cb,
+                     cb](Expected<std::optional<ondisk::ObjectHandle>> Obj) {
+    if (!Obj) {
+      cb(ctx_cb, LLCAS_LOOKUP_RESULT_ERROR, llcas_loaded_object_t(),
+         copyNewMallocString(toString(Obj.takeError())));
+    } else if (!*Obj) {
+      cb(ctx_cb, LLCAS_LOOKUP_RESULT_NOTFOUND, llcas_loaded_object_t(),
+         nullptr);
+    } else {
+      cb(ctx_cb, LLCAS_LOOKUP_RESULT_SUCCESS,
+         llcas_loaded_object_t{(*Obj)->getOpaqueData()}, nullptr);
+    }
+  };
+
+  auto &CAS = unwrap(c_cas)->DB->getGraphDB();
+  ObjectID ID = ObjectID::fromOpaqueData(c_id.opaque);
+  if (CAS.containsObject(ID)) {
+    unwrap(c_cas)->syncErrs([&](raw_ostream &OS) {
+      OS << "load_object_async existing: " << PrintedDigest << '\n';
+    });
+    return passObject(unwrap(c_cas)->loadObject(ID));
+  }
+
+  if (!unwrap(c_cas)->UpstreamDB)
+    return passObject(std::nullopt);
+
+  // Try "downloading" the node from upstream.
+
+  unwrap(c_cas)->syncErrs([&](raw_ostream &OS) {
+    OS << "load_object_async downstream begin: " << PrintedDigest << '\n';
+  });
+  unwrap(c_cas)->Pool.async([=] {
+    // Wait a bit for the caller to proceed.
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    auto &Wrap = *unwrap(c_cas);
+    Wrap.syncErrs([&](raw_ostream &OS) {
+      OS << "load_object_async downstream end: " << PrintedDigest << '\n';
+    });
+    if (Wrap.SimulateMissingObjects)
+      return passObject(std::nullopt);
+    passObject(Wrap.loadObject(ID));
+  });
 }
 
 bool llcas_cas_store_object(llcas_cas_t c_cas, llcas_data_t c_data,
@@ -258,29 +463,47 @@ llcas_objectid_t llcas_object_refs_get_id(llcas_cas_t c_cas,
 }
 
 llcas_lookup_result_t
-llcas_actioncache_get_for_digest(llcas_cas_t c_cas, llcas_digest_t key,
-                                 llcas_objectid_t *p_value, char **error) {
-  auto &DB = *unwrap(c_cas)->DB;
-  Expected<std::optional<ObjectID>> Value =
-      DB.KVGet(ArrayRef(key.data, key.size));
-  if (!Value)
-    return reportError(Value.takeError(), error, LLCAS_LOOKUP_RESULT_ERROR);
-  if (!*Value)
-    return LLCAS_LOOKUP_RESULT_NOTFOUND;
-  *p_value = llcas_objectid_t{(*Value)->getOpaqueData()};
+llcas_actioncache_get_for_digest(llcas_cas_t c_cas, llcas_digest_t c_key,
+                                 llcas_objectid_t *p_value, bool globally,
+                                 char **error) {
+  auto &Wrap = *unwrap(c_cas);
+  auto &DB = *Wrap.DB;
+  ArrayRef Key(c_key.data, c_key.size);
+  std::optional<ObjectID> Value;
+  if (Error E = DB.KVGet(Key).moveInto(Value))
+    return reportError(std::move(E), error, LLCAS_LOOKUP_RESULT_ERROR);
+  if (!Value) {
+    if (!globally)
+      return LLCAS_LOOKUP_RESULT_NOTFOUND;
+
+    if (Error E = Wrap.downstreamKey(Key).moveInto(Value))
+      return reportError(std::move(E), error, LLCAS_LOOKUP_RESULT_ERROR);
+    if (!Value)
+      return LLCAS_LOOKUP_RESULT_NOTFOUND;
+  }
+  *p_value = llcas_objectid_t{Value->getOpaqueData()};
   return LLCAS_LOOKUP_RESULT_SUCCESS;
 }
 
-bool llcas_actioncache_put_for_digest(llcas_cas_t c_cas, llcas_digest_t key,
-                                      llcas_objectid_t c_value, char **error) {
-  auto &DB = *unwrap(c_cas)->DB;
+bool llcas_actioncache_put_for_digest(llcas_cas_t c_cas, llcas_digest_t c_key,
+                                      llcas_objectid_t c_value, bool globally,
+                                      char **error) {
+  auto &Wrap = *unwrap(c_cas);
+  auto &DB = *Wrap.DB;
   ObjectID Value = ObjectID::fromOpaqueData(c_value.opaque);
-  Expected<ObjectID> Ret = DB.KVPut(ArrayRef(key.data, key.size), Value);
+  ArrayRef Key(c_key.data, c_key.size);
+  Expected<ObjectID> Ret = DB.KVPut(Key, Value);
   if (!Ret)
     return reportError(Ret.takeError(), error, true);
   if (*Ret != Value)
     return reportError(
         createStringError(errc::invalid_argument, "cache poisoned"), error,
         true);
+
+  if (globally) {
+    if (Error E = Wrap.upstreamKey(Key, Value))
+      return reportError(std::move(E), error, true);
+  }
+
   return false;
 }
