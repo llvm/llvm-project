@@ -270,6 +270,8 @@ Floating Point Support in Clang
 - Add ``__builtin_elementwise_log`` builtin for floating point types only.
 - Add ``__builtin_elementwise_log10`` builtin for floating point types only.
 - Add ``__builtin_elementwise_log2`` builtin for floating point types only.
+- Add ``__builtin_elementwise_exp`` builtin for floating point types only.
+- Add ``__builtin_elementwise_exp2`` builtin for floating point types only.
 
 AST Matchers
 ------------

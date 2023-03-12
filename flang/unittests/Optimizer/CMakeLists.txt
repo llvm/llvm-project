@@ -4,6 +4,7 @@ set(LIBS
   FIRBuilder
   FIRCodeGen
   FIRDialect
+  FIRDialectSupport
   FIRSupport
   HLFIRDialect
   ${dialect_libs}

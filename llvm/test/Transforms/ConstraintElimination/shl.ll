@@ -1223,3 +1223,55 @@ entry:
   %f.1 = icmp ule i8 %start.add.2.13, %start.shl.4
   ret i1 %f.1
 }
+
+define i1 @shl_overflow(i64 %start) {
+; CHECK-LABEL: @shl_overflow(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PRE_COND:%.*]] = icmp ugt i64 [[START:%.*]], 0
+; CHECK-NEXT:    br i1 [[PRE_COND]], label [[MAIN:%.*]], label [[EXIT:%.*]]
+; CHECK:       main:
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[START]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp uge i64 [[TMP0]], [[START]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %pre.cond = icmp ugt i64 %start, 0
+  br i1 %pre.cond, label %main, label %exit
+
+main:
+  %0 = shl nuw nsw i64 %start, -1
+  %1 = icmp uge i64 %0, %start
+  ret i1 %1
+
+exit:
+  ret i1 0
+}
+
+
+define i1 @shl_overflow_2() {
+; CHECK-LABEL: @shl_overflow_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHL_UB:%.*]] = shl nuw nsw i256 0, 64
+; CHECK-NEXT:    [[SHL_CMP:%.*]] = icmp uge i256 [[SHL_UB]], 0
+; CHECK-NEXT:    ret i1 [[SHL_CMP]]
+;
+entry:
+  %shl.ub = shl nuw nsw i256 0, 64
+  %shl.cmp = icmp uge i256 %shl.ub, 0
+  ret i1 %shl.cmp
+}
+
+define i1 @shl_overflow_3() {
+; CHECK-LABEL: @shl_overflow_3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHL_UB:%.*]] = shl nuw nsw i256 0, 65
+; CHECK-NEXT:    [[SHL_CMP:%.*]] = icmp uge i256 [[SHL_UB]], 0
+; CHECK-NEXT:    ret i1 [[SHL_CMP]]
+;
+entry:
+  %shl.ub = shl nuw nsw i256 0, 65
+  %shl.cmp = icmp uge i256 %shl.ub, 0
+  ret i1 %shl.cmp
+}

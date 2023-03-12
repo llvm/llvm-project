@@ -12,10 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/CodeGen/CodeGen.h"
-#include "flang/Optimizer/Support/FIRContext.h"
+#include "flang/Optimizer/Dialect/Support/FIRContext.h"
+#include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/InitFIR.h"
 #include "flang/Optimizer/Support/InternalNames.h"
-#include "flang/Optimizer/Support/KindMapping.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinOps.h"

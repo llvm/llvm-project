@@ -95,12 +95,9 @@ bool RTNAME(SameTypeAs)(const Descriptor &a, const Descriptor &b) {
   const typeInfo::DerivedType *derivedTypeA{GetDerivedType(a)};
   const typeInfo::DerivedType *derivedTypeB{GetDerivedType(b)};
 
-  // One of the descriptor is an unallocated unlimited polymorphic descriptor.
-  // This is processor depedent according to the standard. Align the result
-  // with other compilers.
-  if ((!a.IsAllocated() && derivedTypeA == nullptr) ||
-      (!b.IsAllocated() && derivedTypeB == nullptr)) {
-    return true;
+  // No dynamic type in one or both descriptor.
+  if (derivedTypeA == nullptr || derivedTypeB == nullptr) {
+    return false;
   }
 
   // Exact match of derived type.

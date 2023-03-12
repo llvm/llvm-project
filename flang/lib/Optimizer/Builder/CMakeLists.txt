@@ -27,12 +27,12 @@ add_flang_library(FIRBuilder
 
   DEPENDS
   FIRDialect
-  FIRSupport
   HLFIRDialect
   ${dialect_libs}
 
   LINK_LIBS
   FIRDialect
+  FIRDialectSupport
   FIRSupport
   HLFIRDialect
   ${dialect_libs}

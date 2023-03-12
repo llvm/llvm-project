@@ -78,20 +78,28 @@ MCInst RISCVInstrInfo::getNop() const {
 }
 
 unsigned RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
-                                             int &FrameIndex) const {
+                                             int &FrameIndex,
+                                             unsigned &MemBytes) const {
   switch (MI.getOpcode()) {
   default:
     return 0;
   case RISCV::LB:
   case RISCV::LBU:
+    MemBytes = 1;
+    break;
   case RISCV::LH:
   case RISCV::LHU:
   case RISCV::FLH:
+    MemBytes = 2;
+    break;
   case RISCV::LW:
   case RISCV::FLW:
   case RISCV::LWU:
+    MemBytes = 4;
+    break;
   case RISCV::LD:
   case RISCV::FLD:
+    MemBytes = 8;
     break;
   }
 
@@ -105,17 +113,25 @@ unsigned RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 }
 
 unsigned RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
-                                            int &FrameIndex) const {
+                                            int &FrameIndex,
+                                            unsigned &MemBytes) const {
   switch (MI.getOpcode()) {
   default:
     return 0;
   case RISCV::SB:
+    MemBytes = 1;
+    break;
   case RISCV::SH:
-  case RISCV::SW:
   case RISCV::FSH:
+    MemBytes = 2;
+    break;
+  case RISCV::SW:
   case RISCV::FSW:
+    MemBytes = 4;
+    break;
   case RISCV::SD:
   case RISCV::FSD:
+    MemBytes = 8;
     break;
   }
 

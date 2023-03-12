@@ -24,8 +24,7 @@
 
 #define DEBUG_TYPE "lld"
 
-namespace lld {
-namespace wasm {
+namespace lld::wasm {
 
 // An init entry to be written to either the synthetic init func or the
 // linking metadata.
@@ -127,8 +126,7 @@ inline bool operator==(const ImportKey<T> &lhs, const ImportKey<T> &rhs) {
          lhs.importName == rhs.importName && lhs.type == rhs.type;
 }
 
-} // namespace wasm
-} // namespace lld
+} // namespace wasm::lld
 
 // `ImportKey<T>` can be used as a key in a `DenseMap` if `T` can be used as a
 // key in a `DenseMap`.

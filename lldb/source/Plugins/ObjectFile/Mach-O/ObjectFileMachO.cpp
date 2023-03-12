@@ -7032,8 +7032,12 @@ bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
           &process, image.filename, image.uuid, image.load_address,
           false /* value_is_offset */, image.currently_executing,
           false /* notify */);
-      if (module_sp)
+      if (module_sp) {
+        // We've already set the load address in the Target,
+        // don't do any more processing on this module.
+        added_modules.Append(module_sp, false /* notify */);
         continue;
+      }
     }
 
     // If we have a slide, we need to find the original binary
@@ -7044,8 +7048,12 @@ bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
           &process, image.filename, image.uuid, image.slide,
           true /* value_is_offset */, image.currently_executing,
           false /* notify */);
-      if (module_sp)
+      if (module_sp) {
+        // We've already set the load address in the Target,
+        // don't do any more processing on this module.
+        added_modules.Append(module_sp, false /* notify */);
         continue;
+      }
     }
 
     // Try to find the binary by UUID or filename on the local

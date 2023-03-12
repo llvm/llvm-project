@@ -41,6 +41,8 @@
 ! HELP-NEXT:                        Specify where to find the compiled intrinsic modules
 ! HELP-NEXT: -flarge-sizes          Use INTEGER(KIND=8) for the result type in size-related intrinsics
 ! HELP-NEXT: -flogical-abbreviations Enable logical abbreviations
+! HELP-NEXT: -flto=<value> Set LTO mode
+! HELP-NEXT: -flto Enable LTO in 'full' mode
 ! HELP-NEXT: -fno-automatic         Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
 ! HELP-NEXT: -fno-color-diagnostics  Disable colors in diagnostics
 ! HELP-NEXT: -fno-integrated-as      Disable the integrated assembler
@@ -130,6 +132,8 @@
 ! HELP-FC1-NEXT:                        Specify where to find the compiled intrinsic modules
 ! HELP-FC1-NEXT: -flarge-sizes          Use INTEGER(KIND=8) for the result type in size-related intrinsics
 ! HELP-FC1-NEXT: -flogical-abbreviations Enable logical abbreviations
+! HELP-FC1-NEXT: -flto=<value>           Set LTO mode
+! HELP-FC1-NEXT: -flto                   Enable LTO in 'full' mode
 ! HELP-FC1-NEXT: -fno-analyzed-objects-for-unparse
 ! HELP-FC1-NEXT:                        Do not use the analyzed objects when unparsing
 ! HELP-FC1-NEXT: -fno-automatic         Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE

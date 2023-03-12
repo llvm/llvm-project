@@ -42,8 +42,7 @@ using namespace llvm::object;
 using namespace llvm::sys;
 using namespace llvm::wasm;
 
-namespace lld {
-namespace wasm {
+namespace lld::wasm {
 Configuration *config;
 
 namespace {
@@ -1218,5 +1217,4 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   writeResult();
 }
 
-} // namespace wasm
-} // namespace lld
+} // namespace wasm::lld

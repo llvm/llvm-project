@@ -97,18 +97,18 @@ TEST_CONSTEXPR_CXX20 bool tests()
             assert(v[j] == 0);
     }
     {
-        std::vector<int, min_allocator<int>> v(100);
-        std::vector<int, min_allocator<int>>::iterator i = v.insert(v.cbegin() + 10, 5, 1);
-        assert(v.size() == 105);
-        assert(is_contiguous_container_asan_correct(v));
-        assert(i == v.begin() + 10);
-        int j;
-        for (j = 0; j < 10; ++j)
-            assert(v[j] == 0);
-        for (; j < 15; ++j)
-            assert(v[j] == 1);
-        for (++j; j < 105; ++j)
-            assert(v[j] == 0);
+      std::vector<int, safe_allocator<int>> v(100);
+      std::vector<int, safe_allocator<int>>::iterator i = v.insert(v.cbegin() + 10, 5, 1);
+      assert(v.size() == 105);
+      assert(is_contiguous_container_asan_correct(v));
+      assert(i == v.begin() + 10);
+      int j;
+      for (j = 0; j < 10; ++j)
+        assert(v[j] == 0);
+      for (; j < 15; ++j)
+        assert(v[j] == 1);
+      for (++j; j < 105; ++j)
+        assert(v[j] == 0);
     }
 #endif
 

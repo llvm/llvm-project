@@ -925,13 +925,16 @@ Error LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
     }
   }
 
+  uint64_t ModuleId = ThinLTO.ModuleMap.size();
   if (Error Err =
           BM.readSummary(ThinLTO.CombinedIndex, BM.getModuleIdentifier(),
-                         ThinLTO.ModuleMap.size(), [&](GlobalValue::GUID GUID) {
+                         ModuleId, [&](GlobalValue::GUID GUID) {
                            return ThinLTO.PrevailingModuleForGUID[GUID] ==
                                   BM.getModuleIdentifier();
                          }))
     return Err;
+  LLVM_DEBUG(dbgs() << "Module " << ModuleId << ": " << BM.getModuleIdentifier()
+                    << "\n");
 
   for (const InputFile::Symbol &Sym : Syms) {
     assert(ResI != ResE);

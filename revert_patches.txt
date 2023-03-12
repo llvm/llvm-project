@@ -31,3 +31,5 @@ SROA breaks MIOpen
 Revert "[SROA] Create additional vector type candidates based on store and load slices"
 Revert "[SROA] Fix bug where CandidateTys is appended while being iterated"
 
+d0ed9a9d3 [Libomptarget] Remove unused arguments from bitcode compilation
+

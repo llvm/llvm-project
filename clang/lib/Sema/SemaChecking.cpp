@@ -2146,14 +2146,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     break;
 
-  case Builtin::BI__builtin_set_flt_rounds:
-    if (CheckBuiltinTargetInSupported(*this, BuiltinID, TheCall,
-                                      {llvm::Triple::x86, llvm::Triple::x86_64,
-                                       llvm::Triple::arm, llvm::Triple::thumb,
-                                       llvm::Triple::aarch64}))
-      return ExprError();
-    break;
-
   case Builtin::BI__builtin_isgreater:
   case Builtin::BI__builtin_isgreaterequal:
   case Builtin::BI__builtin_isless:
@@ -2622,6 +2614,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   // types only.
   case Builtin::BI__builtin_elementwise_ceil:
   case Builtin::BI__builtin_elementwise_cos:
+  case Builtin::BI__builtin_elementwise_exp:
+  case Builtin::BI__builtin_elementwise_exp2:
   case Builtin::BI__builtin_elementwise_floor:
   case Builtin::BI__builtin_elementwise_log:
   case Builtin::BI__builtin_elementwise_log2:

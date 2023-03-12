@@ -328,12 +328,6 @@ protected:
   void printRelocatableStackSizes(std::function<void()> PrintHeader);
   void printNonRelocatableStackSizes(std::function<void()> PrintHeader);
 
-  /// Retrieves sections with corresponding relocation sections based on
-  /// IsMatch.
-  void getSectionAndRelocations(
-      std::function<bool(const Elf_Shdr &)> IsMatch,
-      llvm::MapVector<const Elf_Shdr *, const Elf_Shdr *> &SecToRelocMap);
-
   const object::ELFObjectFile<ELFT> &ObjF;
   const ELFFile<ELFT> &Obj;
   StringRef FileName;
@@ -6282,37 +6276,10 @@ void ELFDumper<ELFT>::printNonRelocatableStackSizes(
 }
 
 template <class ELFT>
-void ELFDumper<ELFT>::getSectionAndRelocations(
-    std::function<bool(const Elf_Shdr &)> IsMatch,
-    llvm::MapVector<const Elf_Shdr *, const Elf_Shdr *> &SecToRelocMap) {
-  for (const Elf_Shdr &Sec : cantFail(Obj.sections())) {
-    if (IsMatch(Sec))
-      if (SecToRelocMap.insert(std::make_pair(&Sec, (const Elf_Shdr *)nullptr))
-              .second)
-        continue;
-
-    if (Sec.sh_type != ELF::SHT_RELA && Sec.sh_type != ELF::SHT_REL)
-      continue;
-
-    Expected<const Elf_Shdr *> RelSecOrErr = Obj.getSection(Sec.sh_info);
-    if (!RelSecOrErr) {
-      reportUniqueWarning(describe(Sec) +
-                          ": failed to get a relocated section: " +
-                          toString(RelSecOrErr.takeError()));
-      continue;
-    }
-    const Elf_Shdr *ContentsSec = *RelSecOrErr;
-    if (IsMatch(*ContentsSec))
-      SecToRelocMap[ContentsSec] = &Sec;
-  }
-}
-
-template <class ELFT>
 void ELFDumper<ELFT>::printRelocatableStackSizes(
     std::function<void()> PrintHeader) {
   // Build a map between stack size sections and their corresponding relocation
   // sections.
-  llvm::MapVector<const Elf_Shdr *, const Elf_Shdr *> StackSizeRelocMap;
   auto IsMatch = [&](const Elf_Shdr &Sec) -> bool {
     StringRef SectionName;
     if (Expected<StringRef> NameOrErr = Obj.getSectionName(Sec))
@@ -6322,9 +6289,16 @@ void ELFDumper<ELFT>::printRelocatableStackSizes(
 
     return SectionName == ".stack_sizes";
   };
-  getSectionAndRelocations(IsMatch, StackSizeRelocMap);
 
-  for (const auto &StackSizeMapEntry : StackSizeRelocMap) {
+  Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>>
+      StackSizeRelocMapOrErr = Obj.getSectionAndRelocations(IsMatch);
+  if (!StackSizeRelocMapOrErr) {
+    reportUniqueWarning("unable to get stack size map section(s): " +
+                        toString(StackSizeRelocMapOrErr.takeError()));
+    return;
+  }
+
+  for (const auto &StackSizeMapEntry : *StackSizeRelocMapOrErr) {
     PrintHeader();
     const Elf_Shdr *StackSizesELFSec = StackSizeMapEntry.first;
     const Elf_Shdr *RelocSec = StackSizeMapEntry.second;
@@ -7148,14 +7122,19 @@ static bool getSymbolIndices(const typename ELFT::Shdr *CGRelSection,
 }
 
 template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
-  llvm::MapVector<const Elf_Shdr *, const Elf_Shdr *> SecToRelocMap;
-
   auto IsMatch = [](const Elf_Shdr &Sec) -> bool {
     return Sec.sh_type == ELF::SHT_LLVM_CALL_GRAPH_PROFILE;
   };
-  this->getSectionAndRelocations(IsMatch, SecToRelocMap);
 
-  for (const auto &CGMapEntry : SecToRelocMap) {
+  Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>> SecToRelocMapOrErr =
+      this->Obj.getSectionAndRelocations(IsMatch);
+  if (!SecToRelocMapOrErr) {
+    this->reportUniqueWarning("unable to get CG Profile section(s): " +
+                              toString(SecToRelocMapOrErr.takeError()));
+    return;
+  }
+
+  for (const auto &CGMapEntry : *SecToRelocMapOrErr) {
     const Elf_Shdr *CGSection = CGMapEntry.first;
     const Elf_Shdr *CGRelSection = CGMapEntry.second;
 

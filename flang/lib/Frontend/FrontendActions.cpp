@@ -18,9 +18,9 @@
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/Verifier.h"
-#include "flang/Optimizer/Support/FIRContext.h"
+#include "flang/Optimizer/Dialect/Support/FIRContext.h"
+#include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/InitFIR.h"
-#include "flang/Optimizer/Support/KindMapping.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/parsing.h"
@@ -727,7 +727,12 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   // Create the pass manager.
   llvm::ModulePassManager mpm;
   if (opts.OptimizationLevel == 0)
-    mpm = pb.buildO0DefaultPipeline(level, false);
+    mpm = pb.buildO0DefaultPipeline(level, opts.PrepareForFullLTO ||
+                                               opts.PrepareForThinLTO);
+  else if (opts.PrepareForFullLTO)
+    mpm = pb.buildLTOPreLinkDefaultPipeline(level);
+  else if (opts.PrepareForThinLTO)
+    mpm = pb.buildThinLTOPreLinkDefaultPipeline(level);
   else
     mpm = pb.buildPerModuleDefaultPipeline(level);
 

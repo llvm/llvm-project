@@ -34,21 +34,6 @@ if sys.version_info.major >= 3:
 else:
     from io import BytesIO as StringIO
 
-def process_subprocess_result(proc, args):
-  stdout, stderr = proc.communicate()
-  if proc.returncode != 0:
-    sys.exit(proc.returncode)
-  if not args.i:
-    with open(filename) as f:
-      code = f.readlines()
-    formatted_code = StringIO(stdout).readlines()
-    diff = difflib.unified_diff(code, formatted_code,
-                                filename, filename,
-                                '(before formatting)',
-                                '(after formatting)')
-    diff_string = ''.join(diff)
-    if len(diff_string) > 0:
-      sys.stdout.write(diff_string)
 
 def main():
   parser = argparse.ArgumentParser(description=__doc__,
@@ -80,9 +65,6 @@ def main():
                       'file to use.')
   parser.add_argument('-binary', default='clang-format',
                       help='location of binary to use for clang-format')
-  parser.add_argument('-j', default=1, type=int, metavar='N',
-                      help='number of concurrent clang-format processes to spawn in '
-                      'parallel')
   args = parser.parse_args()
 
   # Extract changed lines for each file.
@@ -124,54 +106,46 @@ def main():
           ['-lines', str(start_line) + ':' + str(end_line)])
 
   # Reformat files containing changes in place.
-  lbf = list(lines_by_file.items())
-  procs = [None for i in range(args.j)]
-  while lbf:
-    spawned_one = False
-    for i, proc in enumerate(procs):
-      if not lbf:
-        break
-      if proc is not None and proc.poll() is not None:
-        process_subprocess_result(proc, args)
-        # Set to None to flag the slot as free to start a new process
-        procs[i] = None
-        proc = None
-      if proc is None:
-        filename, lines = lbf.pop()
-        spawned_one = True
-        if args.i and args.verbose:
-          print('Formatting {}'.format(filename))
-        command = [args.binary, filename]
-        if args.i:
-          command.append('-i')
-        if args.sort_includes:
-          command.append('-sort-includes')
-        command.extend(lines)
-        if args.style:
-          command.extend(['-style', args.style])
-        if args.fallback_style:
-          command.extend(['-fallback-style', args.fallback_style])
-        try:
-          procs[i] = subprocess.Popen(command,
-                                      stdout=subprocess.PIPE,
-                                      stderr=None,
-                                      stdin=subprocess.PIPE,
-                                      universal_newlines=True)
-        except OSError as e:
-          # Give the user more context when clang-format isn't
-          # found/isn't executable, etc.
-          raise RuntimeError(
-              'Failed to run "%s" - %s"' % (" ".join(command), e.strerror))
-    # If we didn't spawn a single process after iterating through the whole
-    # list, wait on one of them to finish until we iterate through again, to
-    # prevent spinning in the case where we have a small number of jobs.
-    if not spawned_one:
-      procs[0].wait()
-  # Be sure not to leave any stray processes when exiting.
-  for proc in procs:
-    if proc:
-      proc.wait()
-      process_subprocess_result(proc, args)
+  for filename, lines in lines_by_file.items():
+    if args.i and args.verbose:
+      print('Formatting {}'.format(filename))
+    command = [args.binary, filename]
+    if args.i:
+      command.append('-i')
+    if args.sort_includes:
+      command.append('-sort-includes')
+    command.extend(lines)
+    if args.style:
+      command.extend(['-style', args.style])
+    if args.fallback_style:
+      command.extend(['-fallback-style', args.fallback_style])
+
+    try:
+      p = subprocess.Popen(command,
+                           stdout=subprocess.PIPE,
+                           stderr=None,
+                           stdin=subprocess.PIPE,
+                           universal_newlines=True)
+    except OSError as e:
+      # Give the user more context when clang-format isn't
+      # found/isn't executable, etc.
+      raise RuntimeError(
+        'Failed to run "%s" - %s"' % (" ".join(command), e.strerror))
+
+    stdout, stderr = p.communicate()
+    if p.returncode != 0:
+      sys.exit(p.returncode)
+
+    if not args.i:
+      with open(filename) as f:
+        code = f.readlines()
+      formatted_code = StringIO(stdout).readlines()
+      diff = difflib.unified_diff(code, formatted_code,
+                                  filename, filename,
+                                  '(before formatting)', '(after formatting)')
+      diff_string = ''.join(diff)
+      if len(diff_string) > 0:
+        sys.stdout.write(diff_string)
 
 if __name__ == '__main__':
   main()

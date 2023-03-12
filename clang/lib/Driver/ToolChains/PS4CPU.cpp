@@ -304,19 +304,6 @@ void toolchains::PS4PS5Base::AddClangSystemIncludeArgs(
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
-  // Add dirs specified via 'configure --with-c-include-dirs'.
-  StringRef CIncludeDirs(C_INCLUDE_DIRS);
-  if (!CIncludeDirs.empty()) {
-    SmallVector<StringRef, 5> dirs;
-    CIncludeDirs.split(dirs, ":");
-    for (StringRef dir : dirs) {
-      StringRef Prefix =
-        llvm::sys::path::is_absolute(dir) ? StringRef(D.SysRoot) : "";
-      addExternCSystemInclude(DriverArgs, CC1Args, Prefix + dir);
-    }
-    return;
-  }
-
   addExternCSystemInclude(DriverArgs, CC1Args,
                           SDKRootDir + "/target/include");
   addExternCSystemInclude(DriverArgs, CC1Args,

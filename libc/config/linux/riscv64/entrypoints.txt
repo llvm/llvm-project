@@ -365,6 +365,34 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.stdin
     libc.src.stdio.stdout
 
+    # stdlib.h entrypoints
+    libc.src.stdlib._Exit
+    libc.src.stdlib.atexit
+    libc.src.stdlib.exit
+    libc.src.stdlib.getenv
+
+    # threads.h entrypoints
+    libc.src.threads.call_once
+    libc.src.threads.cnd_broadcast
+    libc.src.threads.cnd_destroy
+    libc.src.threads.cnd_init
+    libc.src.threads.cnd_signal
+    libc.src.threads.cnd_wait
+    libc.src.threads.mtx_destroy
+    libc.src.threads.mtx_init
+    libc.src.threads.mtx_lock
+    libc.src.threads.mtx_unlock
+    libc.src.threads.thrd_create
+    libc.src.threads.thrd_current
+    libc.src.threads.thrd_detach
+    libc.src.threads.thrd_equal
+    libc.src.threads.thrd_exit
+    libc.src.threads.thrd_join
+    libc.src.threads.tss_create
+    libc.src.threads.tss_delete
+    libc.src.threads.tss_get
+    libc.src.threads.tss_set
+
     # time.h entrypoints
     libc.src.time.asctime
     libc.src.time.asctime_r
@@ -377,6 +405,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.mktime
     libc.src.time.nanosleep
     libc.src.time.time
+
+    # unistd.h entrypoints
+    libc.src.unistd.environ
   )
 endif()
 

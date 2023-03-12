@@ -1981,7 +1981,13 @@ void OmpStructureChecker::CheckReductionTypeList(
   CheckIntentInPointerAndDefinable(
       ompObjectList, llvm::omp::Clause::OMPC_reduction);
   CheckReductionArraySection(ompObjectList);
-  CheckMultipleAppearanceAcrossContext(ompObjectList);
+  // If this is a worksharing construct then ensure the reduction variable
+  // is not private in the parallel region that it binds to.
+  OmpDirectiveSet workshareSet{llvm::omp::Directive::OMPD_do,
+      llvm::omp::Directive::OMPD_sections, llvm::omp::Directive::OMPD_do_simd};
+  if (workshareSet.test(GetContext().directive)) {
+    CheckSharedBindingInOuterContext(ompObjectList);
+  }
 }
 
 void OmpStructureChecker::CheckIntentInPointerAndDefinable(
@@ -2026,7 +2032,7 @@ void OmpStructureChecker::CheckReductionArraySection(
   }
 }
 
-void OmpStructureChecker::CheckMultipleAppearanceAcrossContext(
+void OmpStructureChecker::CheckSharedBindingInOuterContext(
     const parser::OmpObjectList &redObjectList) {
   //  TODO: Verify the assumption here that the immediately enclosing region is
   //  the parallel region to which the worksharing construct having reduction

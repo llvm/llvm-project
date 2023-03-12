@@ -6141,7 +6141,8 @@ static bool HasPreprocessOutput(const Action &JA) {
 
 const char *Driver::CreateTempFile(Compilation &C, StringRef Prefix,
                                    StringRef Suffix, bool MultipleArchs,
-                                   StringRef BoundArch) const {
+                                   StringRef BoundArch,
+                                   bool NeedUniqueDirectory) const {
   SmallString<128> TmpName;
   Arg *A = C.getArgs().getLastArg(options::OPT_fcrash_diagnostics_dir);
   std::optional<std::string> CrashDirectory =
@@ -6161,9 +6162,15 @@ const char *Driver::CreateTempFile(Compilation &C, StringRef Prefix,
     }
   } else {
     if (MultipleArchs && !BoundArch.empty()) {
-      TmpName = GetTemporaryDirectory(Prefix);
-      llvm::sys::path::append(TmpName,
-                              Twine(Prefix) + "-" + BoundArch + "." + Suffix);
+      if (NeedUniqueDirectory) {
+        TmpName = GetTemporaryDirectory(Prefix);
+        llvm::sys::path::append(TmpName,
+                                Twine(Prefix) + "-" + BoundArch + "." + Suffix);
+      } else {
+        TmpName =
+            GetTemporaryPath((Twine(Prefix) + "-" + BoundArch).str(), Suffix);
+      }
+
     } else {
       TmpName = GetTemporaryPath(Prefix, Suffix);
     }
@@ -6271,7 +6278,6 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
   if (!AtTopLevel && isa<PrecompileJobAction>(JA) &&
       JA.getType() == types::TY_ModuleFile && SpecifiedModuleOutput)
     return GetModuleOutputPath(C, JA, BaseInput);
-
   // Output to a temporary file?
   if ((!AtTopLevel && !isSaveTempsEnabled() &&
        !C.getArgs().hasArg(options::OPT__SLASH_Fo)) ||
@@ -6285,35 +6291,18 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
       fname.append(BoundArch);
     }
     SmallString<128> TmpName;
-    const char *Suffix = nullptr;
-    if (Name.ends_with(".a"))
-      Suffix = "a";
-    else
-      Suffix = types::getTypeTempSuffix(JA.getType(), IsCLMode());
-
-    Arg *A = C.getArgs().getLastArg(options::OPT_fcrash_diagnostics_dir);
-    if (CCGenDiagnostics && A) {
-      SmallString<128> CrashDirectory(A->getValue());
-      if (!getVFS().exists(CrashDirectory))
-        llvm::sys::fs::create_directories(CrashDirectory);
-      llvm::sys::path::append(CrashDirectory, fname);
-      const char *Middle = Suffix ? "-%%%%%%." : "-%%%%%%";
-      std::error_code EC = llvm::sys::fs::createUniqueFile(
-          CrashDirectory + Middle + Suffix, TmpName);
-      if (EC) {
-        Diag(clang::diag::err_unable_to_make_temp) << EC.message();
-        return "";
-      }
-    } else {
-      if (MultipleArchs && !BoundArch.empty()) {
-        TmpName = GetTemporaryDirectory(PrefixName);
-        llvm::sys::path::append(TmpName,
-                                PrefixName + "-" + BoundArch + "." + Suffix);
-      } else {
-        TmpName = GetTemporaryPath(PrefixName, Suffix);
-      }
-    }
-    return C.addTempFile(C.getArgs().MakeArgString(TmpName));
+    std::pair<StringRef, StringRef> Split = Name.split('.');
+    const char *Suffix = types::getTypeTempSuffix(JA.getType(), IsCLMode());
+    // The non-offloading toolchain on Darwin requires deterministic input
+    // file name for binaries to be deterministic, therefore it needs unique
+    // directory.
+    llvm::Triple Triple(C.getDriver().getTargetTriple());
+    bool NeedUniqueDirectory =
+        (JA.getOffloadingDeviceKind() == Action::OFK_None ||
+         JA.getOffloadingDeviceKind() == Action::OFK_Host) &&
+        Triple.isOSDarwin();
+    return CreateTempFile(C, Split.first, Suffix, MultipleArchs, BoundArch,
+                          NeedUniqueDirectory);
   }
 
   SmallString<128> BasePath(BaseInput);

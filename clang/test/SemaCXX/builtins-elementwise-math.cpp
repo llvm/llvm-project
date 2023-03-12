@@ -67,6 +67,20 @@ void test_builtin_elementwise_cos() {
   static_assert(!is_const<decltype(__builtin_elementwise_cos(b))>::value);
 }
 
+void test_builtin_elementwise_exp() {
+  const float a = 42.0;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_exp(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_exp(b))>::value);
+}
+
+void test_builtin_elementwise_exp2() {
+  const float a = 42.0;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_exp2(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_exp2(b))>::value);
+}
+
 void test_builtin_elementwise_sin() {
   const float a = 42.0;
   float b = 42.3;

@@ -45,8 +45,7 @@
 using namespace llvm;
 using namespace llvm::wasm;
 
-namespace lld {
-namespace wasm {
+namespace lld::wasm {
 static constexpr int stackAlignment = 16;
 static constexpr int heapAlignment = 16;
 
@@ -1865,5 +1864,4 @@ void Writer::createHeader() {
 
 void writeResult() { Writer().run(); }
 
-} // namespace wasm
-} // namespace lld
+} // namespace wasm::lld

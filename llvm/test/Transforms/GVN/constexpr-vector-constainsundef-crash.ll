@@ -8,7 +8,9 @@
 define <4 x ptr> @test(ptr %ptr) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <4 x ptr> getelementptr (i64, ptr null, <4 x i64> <i64 0, i64 0, i64 0, i64 -128>)
+; CHECK-NEXT:    [[L3:%.*]] = load i64, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[I6:%.*]] = insertelement <4 x ptr> getelementptr inbounds (i64, ptr null, <4 x i64> <i64 0, i64 0, i64 0, i64 -128>), ptr undef, i64 [[L3]]
+; CHECK-NEXT:    ret <4 x ptr> [[I6]]
 ;
 entry:
   %B9 = sdiv i16 -32768, 256

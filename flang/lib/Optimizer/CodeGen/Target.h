@@ -13,7 +13,7 @@
 #ifndef FORTRAN_OPTMIZER_CODEGEN_TARGET_H
 #define FORTRAN_OPTMIZER_CODEGEN_TARGET_H
 
-#include "flang/Optimizer/Support/KindMapping.h"
+#include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/TargetParser/Triple.h"
 #include <memory>

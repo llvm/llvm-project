@@ -85,6 +85,17 @@ u64 getMonotonicTime() {
          static_cast<u64>(TS.tv_nsec);
 }
 
+u64 getMonotonicTimeFast() {
+#if defined(CLOCK_MONOTONIC_COARSE)
+  timespec TS;
+  clock_gettime(CLOCK_MONOTONIC_COARSE, &TS);
+  return static_cast<u64>(TS.tv_sec) * (1000ULL * 1000 * 1000) +
+         static_cast<u64>(TS.tv_nsec);
+#else
+  return getMonotonicTime();
+#endif
+}
+
 u32 getNumberOfCPUs() { return 0; }
 
 u32 getThreadID() { return 0; }

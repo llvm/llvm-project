@@ -139,35 +139,47 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
        args.filtered(clang::driver::options::OPT_fembed_offload_object_EQ))
     opts.OffloadObjects.push_back(a->getValue());
 
+  // -flto=full/thin option.
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_flto_EQ)) {
+    llvm::StringRef s = a->getValue();
+    assert((s == "full" || s == "thin") && "Unknown LTO mode.");
+    if (s == "full")
+      opts.PrepareForFullLTO = true;
+    else
+      opts.PrepareForThinLTO = true;
+  }
+
   // -mrelocation-model option.
-  if (const llvm::opt::Arg *A =
+  if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_mrelocation_model)) {
-    llvm::StringRef ModelName = A->getValue();
-    auto RM = llvm::StringSwitch<std::optional<llvm::Reloc::Model>>(ModelName)
-                  .Case("static", llvm::Reloc::Static)
-                  .Case("pic", llvm::Reloc::PIC_)
-                  .Case("dynamic-no-pic", llvm::Reloc::DynamicNoPIC)
-                  .Case("ropi", llvm::Reloc::ROPI)
-                  .Case("rwpi", llvm::Reloc::RWPI)
-                  .Case("ropi-rwpi", llvm::Reloc::ROPI_RWPI)
-                  .Default(std::nullopt);
-    if (RM.has_value())
-      opts.setRelocationModel(*RM);
+    llvm::StringRef modelName = a->getValue();
+    auto relocModel =
+        llvm::StringSwitch<std::optional<llvm::Reloc::Model>>(modelName)
+            .Case("static", llvm::Reloc::Static)
+            .Case("pic", llvm::Reloc::PIC_)
+            .Case("dynamic-no-pic", llvm::Reloc::DynamicNoPIC)
+            .Case("ropi", llvm::Reloc::ROPI)
+            .Case("rwpi", llvm::Reloc::RWPI)
+            .Case("ropi-rwpi", llvm::Reloc::ROPI_RWPI)
+            .Default(std::nullopt);
+    if (relocModel.has_value())
+      opts.setRelocationModel(*relocModel);
     else
       diags.Report(clang::diag::err_drv_invalid_value)
-          << A->getAsString(args) << ModelName;
+          << a->getAsString(args) << modelName;
   }
 
   // -pic-level and -pic-is-pie option.
-  if (int PICLevel = getLastArgIntValue(
+  if (int picLevel = getLastArgIntValue(
           args, clang::driver::options::OPT_pic_level, 0, diags)) {
-    if (PICLevel > 2)
+    if (picLevel > 2)
       diags.Report(clang::diag::err_drv_invalid_value)
           << args.getLastArg(clang::driver::options::OPT_pic_level)
                  ->getAsString(args)
-          << PICLevel;
+          << picLevel;
 
-    opts.PICLevel = PICLevel;
+    opts.PICLevel = picLevel;
     if (args.hasArg(clang::driver::options::OPT_pic_is_pie))
       opts.IsPIE = 1;
   }

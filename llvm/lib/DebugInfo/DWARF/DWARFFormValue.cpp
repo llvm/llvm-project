@@ -214,35 +214,7 @@ bool DWARFFormValue::skipValue(dwarf::Form Form, DataExtractor DebugInfoData,
 }
 
 bool DWARFFormValue::isFormClass(DWARFFormValue::FormClass FC) const {
-  // First, check DWARF5 form classes.
-  if (Form < ArrayRef(DWARF5FormClasses).size() &&
-      DWARF5FormClasses[Form] == FC)
-    return true;
-  // Check more forms from extensions and proposals.
-  switch (Form) {
-  case DW_FORM_GNU_ref_alt:
-    return (FC == FC_Reference);
-  case DW_FORM_GNU_addr_index:
-    return (FC == FC_Address);
-  case DW_FORM_GNU_str_index:
-  case DW_FORM_GNU_strp_alt:
-    return (FC == FC_String);
-  case DW_FORM_LLVM_addrx_offset:
-    return (FC == FC_Address);
-  default:
-    break;
-  }
-
-  if (FC == FC_SectionOffset) {
-    if (Form == DW_FORM_strp || Form == DW_FORM_line_strp)
-      return true;
-    // In DWARF3 DW_FORM_data4 and DW_FORM_data8 served also as a section
-    // offset. If we don't have a DWARFUnit, default to the old behavior.
-    if (Form == DW_FORM_data4 || Form == DW_FORM_data8)
-      return !U || U->getVersion() <= 3;
-  }
-
-  return false;
+  return doesFormBelongToClass(Form, FC, U ? U->getVersion() : 3);
 }
 
 bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
@@ -778,3 +750,39 @@ DWARFFormValue::getAsFile(DILineInfoSpecifier::FileLineInfoKind Kind) const {
   }
   return std::nullopt;
 }
+
+namespace llvm {
+namespace dwarf {
+
+bool doesFormBelongToClass(dwarf::Form Form, DWARFFormValue::FormClass FC,
+                           uint16_t DwarfVersion) {
+  // First, check DWARF5 form classes.
+  if (Form < ArrayRef(DWARF5FormClasses).size() &&
+      DWARF5FormClasses[Form] == FC)
+    return true;
+  // Check more forms from extensions and proposals.
+  switch (Form) {
+  case DW_FORM_GNU_ref_alt:
+    return (FC == DWARFFormValue::FC_Reference);
+  case DW_FORM_GNU_addr_index:
+    return (FC == DWARFFormValue::FC_Address);
+  case DW_FORM_GNU_str_index:
+  case DW_FORM_GNU_strp_alt:
+    return (FC == DWARFFormValue::FC_String);
+  case DW_FORM_LLVM_addrx_offset:
+    return (FC == DWARFFormValue::FC_Address);
+  case DW_FORM_strp:
+  case DW_FORM_line_strp:
+    return (FC == DWARFFormValue::FC_SectionOffset);
+  case DW_FORM_data4:
+  case DW_FORM_data8:
+    // In DWARF3 DW_FORM_data4 and DW_FORM_data8 served also as a section
+    // offset.
+    return (FC == DWARFFormValue::FC_SectionOffset) && (DwarfVersion <= 3);
+  default:
+    return false;
+  }
+}
+
+} // end namespace dwarf
+} // end namespace llvm

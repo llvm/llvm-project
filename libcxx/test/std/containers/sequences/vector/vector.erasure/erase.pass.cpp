@@ -68,6 +68,7 @@ TEST_CONSTEXPR_CXX20 bool tests()
     test<std::vector<int>>();
     test<std::vector<int, min_allocator<int>>> ();
     test<std::vector<int, test_allocator<int>>> ();
+    test<std::vector<int, safe_allocator<int>>>();
 
     test<std::vector<long>>();
     test<std::vector<double>>();

@@ -124,6 +124,8 @@ void EmitClangOptDocs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
 void EmitClangOpenCLBuiltins(llvm::RecordKeeper &Records,
                              llvm::raw_ostream &OS);
+void EmitClangOpenCLBuiltinHeader(llvm::RecordKeeper &Records,
+                                  llvm::raw_ostream &OS);
 void EmitClangOpenCLBuiltinTests(llvm::RecordKeeper &Records,
                                  llvm::raw_ostream &OS);
 

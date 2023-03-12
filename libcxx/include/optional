@@ -167,6 +167,8 @@ template<class T>
 #include <__functional/unary_function.h>
 #include <__memory/construct_at.h>
 #include <__tuple_dir/sfinae_helpers.h>
+#include <__type_traits/conjunction.h>
+#include <__type_traits/disjunction.h>
 #include <__type_traits/is_trivially_copy_assignable.h>
 #include <__type_traits/is_trivially_copy_constructible.h>
 #include <__type_traits/is_trivially_destructible.h>

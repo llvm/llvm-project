@@ -7,87 +7,8 @@
 ; REQUIRES: x86_64-linux
 
 ;; TODO: Use text profile inputs once that is available for memprof.
-
-;; The input IR and raw profiles have been generated from the following source:
-;;
-;; #include <stdlib.h>
-;; #include <string.h>
-;; #include <unistd.h>
-;; char *foo() {
-;;   return new char[10];
-;; }
-;; char *foo2() {
-;;   return foo();
-;; }
-;; char *bar() {
-;;   return foo2();
-;; }
-;; char *baz() {
-;;   return foo2();
-;; }
-;; char *recurse(unsigned n) {
-;;   if (!n)
-;;     return foo();
-;;   return recurse(n-1);
-;; }
-;; int main(int argc, char **argv) {
-;;   // Test allocations with different combinations of stack contexts and
-;;   // coldness (based on lifetime, since they are all accessed a single time
-;;   // per byte via the memset).
-;;   char *a = new char[10];
-;;   char *b = new char[10];
-;;   char *c = foo();
-;;   char *d = foo();
-;;   char *e = bar();
-;;   char *f = baz();
-;;   memset(a, 0, 10);
-;;   memset(b, 0, 10);
-;;   memset(c, 0, 10);
-;;   memset(d, 0, 10);
-;;   memset(e, 0, 10);
-;;   memset(f, 0, 10);
-;;   // a and c have short lifetimes
-;;   delete[] a;
-;;   delete[] c;
-;;   // b, d, e, and f have long lifetimes and will be detected as cold by default.
-;;   sleep(200);
-;;   delete[] b;
-;;   delete[] d;
-;;   delete[] e;
-;;   delete[] f;
-;;   // Loop ensures the two calls to recurse have stack contexts that only differ
-;;   // in one level of recursion. We should get two stack contexts reflecting the
-;;   // different levels of recursion and different allocation behavior (since the
-;;   // first has a very long lifetime and the second has a short lifetime).
-;;   for (unsigned i = 0; i < 2; i++) {
-;;     char *g = recurse(i + 3);
-;;     memset(g, 0, 10);
-;;     if (!i)
-;;       sleep(200);
-;;     delete[] g;
-;;   }
-;;   return 0;
-;; }
-;;
-;; The following commands were used to compile the source to instrumented
-;; executables and collect raw binary format profiles:
-;;
-;; # Collect memory profile:
-;; $ clang++ -fuse-ld=lld -no-pie -Wl,--no-rosegment -gmlt \
-;; 	-fdebug-info-for-profiling -mno-omit-leaf-frame-pointer \
-;;	-fno-omit-frame-pointer -fno-optimize-sibling-calls -m64 -Wl,-build-id \
-;; 	memprof.cc -o memprof.exe -fmemory-profile
-;; $ env MEMPROF_OPTIONS=log_path=stdout ./memprof.exe > memprof.memprofraw
-;;
-;; # Collect IR PGO profile:
-;; $ clang++ -fuse-ld=lld -no-pie -Wl,--no-rosegment -gmlt \
-;; 	-fdebug-info-for-profiling -mno-omit-leaf-frame-pointer \
-;;	-fno-omit-frame-pointer -fno-optimize-sibling-calls -m64 -Wl,-build-id \
-;; 	memprof.cc -o pgo.exe -fprofile-generate=.
-;; $ ./pgo.exe
-;; $ mv default_*.profraw memprof_pgo.profraw
-;;
-;; # Generate below LLVM IR for use in matching:
+;; # To update the Inputs below, run Inputs/update_memprof_inputs.sh.
+;; # To generate below LLVM IR for use in matching:
 ;; $ clang++ -gmlt -fdebug-info-for-profiling -fno-omit-frame-pointer \
 ;;	-fno-optimize-sibling-calls memprof.cc -S -emit-llvm
 

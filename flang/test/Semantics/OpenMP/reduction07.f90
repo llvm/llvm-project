@@ -78,42 +78,6 @@ a = a + 10
 !$omp parallel reduction(*:a)
 !$omp end parallel
 
-
-!$omp parallel reduction(+:a)
-!ERROR: REDUCTION clause is not allowed on the WORKSHARE directive
-!ERROR: REDUCTION variable 'a' is REDUCTION in outer context must be shared in the parallel regions to which any of the worksharing regions arising from the worksharing construct bind.
-!$omp workshare reduction(*:a)
-a = a + 10
-!$omp end workshare
-!$omp end parallel
-
-!$omp parallel reduction(*:a)
-!$omp end parallel
-
-
-!$omp parallel reduction(+:a)
-!ERROR: REDUCTION clause is not allowed on the SINGLE directive
-!ERROR: REDUCTION variable 'a' is REDUCTION in outer context must be shared in the parallel regions to which any of the worksharing regions arising from the worksharing construct bind.
-!$omp single reduction(*:a)
-a = a + 10
-!$omp end single
-!$omp end parallel
-
-!$omp parallel reduction(+:a)
-!$omp end parallel
-
-
-!$omp parallel reduction(+:a)
-!ERROR: REDUCTION clause is not allowed on the SINGLE directive
-!ERROR: REDUCTION variable 'a' is REDUCTION in outer context must be shared in the parallel regions to which any of the worksharing regions arising from the worksharing construct bind.
-!$omp single reduction(iand:a)
-a = a + 10
-!$omp end single
-!$omp end parallel
-
-!$omp parallel reduction(iand:a)
-!$omp end parallel
-
 !$omp parallel reduction(ieor:a)
 !ERROR: REDUCTION variable 'a' is REDUCTION in outer context must be shared in the parallel regions to which any of the worksharing regions arising from the worksharing construct bind.
 !$omp sections reduction(+:a)
@@ -121,7 +85,17 @@ a = ieor(a, 10)
 !$omp end sections
 !$omp end parallel
 
+!$omp parallel private(a)
 !$omp parallel reduction(ieor:a)
 !$omp end parallel
+!$omp end parallel
+
+!$omp task firstprivate(a)
+!$omp parallel do reduction(+:a)
+do i=1,10
+  a=a+j
+end do
+!$omp end parallel do
+!$omp end task
 
 end program omp_reduction

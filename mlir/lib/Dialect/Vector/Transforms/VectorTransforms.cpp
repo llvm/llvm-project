@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 
+#include <functional>
 #include <optional>
 #include <type_traits>
 
@@ -24,6 +25,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -31,6 +33,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
+#include "mlir/Support/LogicalResult.h"
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
@@ -3053,6 +3056,104 @@ struct ScanToArithOps : public OpRewritePattern<vector::ScanOp> {
   }
 };
 
+/// Canonicalization of a `vector.contraction %a, %b, %c` with row-major matmul
+/// semantics to a contraction suitable for MMT (matrix matrix multiplication
+/// with the RHS transposed) lowering.
+struct CanonicalizeContractMatmulToMMT final
+    : OpRewritePattern<vector::ContractionOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  using FilterConstraintType =
+      std::function<LogicalResult(vector::ContractionOp op)>;
+
+  CanonicalizeContractMatmulToMMT(MLIRContext *context, PatternBenefit benefit,
+                                  FilterConstraintType constraint)
+      : OpRewritePattern<vector::ContractionOp>(context, benefit),
+        filter(std::move(constraint)) {}
+
+  LogicalResult matchAndRewrite(vector::ContractionOp op,
+                                PatternRewriter &rewriter) const override {
+    // TODO: Remove native masks from contraction op?
+    if (!op.getMasks().empty())
+      return failure();
+
+    if (failed(filter(op)))
+      return failure();
+
+    Location loc = op.getLoc();
+    Value lhs = op.getLhs();
+    Value rhs = op.getRhs();
+    Value res = op.getAcc();
+
+    // Set up the parallel/reduction structure in right form.
+    using MapList = ArrayRef<ArrayRef<AffineExpr>>;
+    auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
+    AffineExpr m;
+    AffineExpr n;
+    AffineExpr k;
+    bindDims(rewriter.getContext(), m, n, k);
+    static constexpr std::array<int64_t, 2> perm = {1, 0};
+    auto iteratorTypes = op.getIteratorTypes().getValue();
+    SmallVector<AffineMap, 4> maps = op.getIndexingMapsArray();
+    if (iteratorTypes.size() != 3 ||
+        !vector::isParallelIterator(iteratorTypes[0]) ||
+        !vector::isParallelIterator(iteratorTypes[1]) ||
+        !vector::isReductionIterator(iteratorTypes[2]))
+      return rewriter.notifyMatchFailure(op, "contraction is not a gemm");
+
+    // The canonical form is "TNT" = A row-major, B col-major, C row-major.
+    const auto canonicalForm = infer({{m, k}, {n, k}, {m, n}});
+    if (maps == canonicalForm)
+      return rewriter.notifyMatchFailure(op, "already in the canonical form");
+
+    // Create a vector transpose making sure to emit zero/sign-extend at the
+    // end.
+    auto createTranspose = [&rewriter, loc](Value mat) -> Value {
+      if (auto sext = mat.getDefiningOp<arith::ExtSIOp>()) {
+        Value trans =
+            rewriter.create<vector::TransposeOp>(loc, sext.getIn(), perm);
+        return rewriter.create<arith::ExtSIOp>(loc, mat.getType(), trans);
+      }
+      if (auto zext = mat.getDefiningOp<arith::ExtUIOp>()) {
+        Value trans =
+            rewriter.create<vector::TransposeOp>(loc, zext.getIn(), perm);
+        return rewriter.create<arith::ExtUIOp>(loc, mat.getType(), trans);
+      }
+      return rewriter.create<vector::TransposeOp>(loc, mat, perm);
+    };
+
+    if (maps == infer({{m, k}, {k, n}, {m, n}})) {
+      rhs = createTranspose(rhs);
+    } else if (maps == infer({{k, m}, {n, k}, {m, n}})) {
+      lhs = createTranspose(lhs);
+    } else if (maps == infer({{k, m}, {k, n}, {m, n}})) {
+      rhs = createTranspose(rhs);
+      lhs = createTranspose(lhs);
+    } else if (maps == infer({{k, m}, {k, n}, {n, m}})) {
+      std::swap(rhs, lhs);
+      rhs = createTranspose(rhs);
+      lhs = createTranspose(lhs);
+    } else if (maps == infer({{k, m}, {n, k}, {n, m}})) {
+      std::swap(rhs, lhs);
+      rhs = createTranspose(rhs);
+    } else if (maps == infer({{m, k}, {k, n}, {n, m}})) {
+      std::swap(lhs, rhs);
+      lhs = createTranspose(lhs);
+    } else if (maps == infer({{m, k}, {n, k}, {n, m}})) {
+      std::swap(lhs, rhs);
+    } else {
+      return rewriter.notifyMatchFailure(op, "unhandled contraction form");
+    }
+    rewriter.replaceOpWithNewOp<vector::ContractionOp>(
+        op, lhs, rhs, res, rewriter.getAffineMapArrayAttr(canonicalForm),
+        op.getIteratorTypes());
+    return success();
+  };
+
+private:
+  FilterConstraintType filter;
+};
+
 } // namespace
 
 void mlir::vector::populateVectorMaskMaterializationPatterns(
@@ -3102,6 +3203,14 @@ void mlir::vector::populateVectorContractLoweringPatterns(
   patterns.add<ContractionOpLowering, ContractionOpToMatmulOpLowering,
                ContractionOpToOuterProductOpLowering>(
       options, patterns.getContext(), benefit);
+}
+
+void mlir::vector::populateVectorContractCanonicalizeMatmulToMMT(
+    RewritePatternSet &patterns,
+    std::function<LogicalResult(vector::ContractionOp)> constraint,
+    PatternBenefit benefit) {
+  patterns.add<CanonicalizeContractMatmulToMMT>(patterns.getContext(), benefit,
+                                                std::move(constraint));
 }
 
 void mlir::vector::populateVectorTransposeLoweringPatterns(

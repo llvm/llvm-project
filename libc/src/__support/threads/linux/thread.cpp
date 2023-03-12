@@ -55,6 +55,16 @@ static constexpr unsigned CLONE_SYSCALL_FLAGS =
                            // wake the joining thread.
     | CLONE_SETTLS;        // Setup the thread pointer of the new thread.
 
+#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+#define CLONE_RESULT_REGISTER "x0"
+#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
+#define CLONE_RESULT_REGISTER "t0"
+#elif defined(LIBC_TARGET_ARCH_IS_X86_64)
+#define CLONE_RESULT_REGISTER "rax"
+#else
+#error "CLONE_RESULT_REGISTER not defined for your target architecture"
+#endif
+
 LIBC_INLINE ErrorOr<void *> alloc_stack(size_t size) {
   long mmap_result =
       __llvm_libc::syscall_impl(MMAP_SYSCALL_NUMBER,
@@ -106,7 +116,8 @@ __attribute__((always_inline)) inline uintptr_t get_start_args_addr() {
          // on to the stack. So, we have to step past two 64-bit values to get
          // to the start args.
          + sizeof(uintptr_t) * 2;
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                  \
+    defined(LIBC_TARGET_ARCH_IS_RISCV64)
   // The frame pointer after cloning the new thread in the Thread::run method
   // is set to the stack pointer where start args are stored. So, we fetch
   // from there.
@@ -190,16 +201,17 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
   // Also, we want the result of the syscall to be in a register as the child
   // thread gets a completely different stack after it is created. The stack
   // variables from this function will not be availalbe to the child thread.
-#ifdef LIBC_TARGET_ARCH_IS_X86_64
-  long register clone_result asm("rax");
+#if defined(LIBC_TARGET_ARCH_IS_X86_64)
+  long register clone_result asm(CLONE_RESULT_REGISTER);
   clone_result = __llvm_libc::syscall_impl(
       SYS_clone, CLONE_SYSCALL_FLAGS, adjusted_stack,
       &attrib->tid,    // The address where the child tid is written
       &clear_tid->val, // The futex where the child thread status is signalled
       tls.tp           // The thread pointer value for the new thread.
   );
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
-  long register clone_result asm("x0");
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                  \
+    defined(LIBC_TARGET_ARCH_IS_RISCV64)
+  long register clone_result asm(CLONE_RESULT_REGISTER);
   clone_result = __llvm_libc::syscall_impl(
       SYS_clone, CLONE_SYSCALL_FLAGS, adjusted_stack,
       &attrib->tid,   // The address where the child tid is written
@@ -220,6 +232,8 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
 #else
     asm volatile("mov x29, sp");
 #endif
+#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
+    asm volatile("mv fp, sp");
 #endif
     start_thread();
   } else if (clone_result < 0) {

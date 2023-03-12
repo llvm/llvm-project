@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_CPP_ATOMIC_H
 #define LLVM_LIBC_SRC_SUPPORT_CPP_ATOMIC_H
 
+#include "src/__support/macros/attributes.h"
+
 #include "type_traits.h"
 
 namespace __llvm_libc {
@@ -91,6 +93,11 @@ public:
   // in initializing atomic values without a constructor.
   void set(T rhs) { val = rhs; }
 };
+
+// Issue a thread fence with the given memory ordering.
+LIBC_INLINE void atomic_thread_fence(MemoryOrder mem_ord) {
+  __atomic_thread_fence(int(mem_ord));
+}
 
 } // namespace cpp
 } // namespace __llvm_libc

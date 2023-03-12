@@ -16,8 +16,7 @@
 using namespace llvm;
 using namespace llvm::wasm;
 
-namespace lld {
-namespace wasm {
+namespace lld::wasm {
 
 static bool requiresGOTAccess(const Symbol *sym) {
   if (!config->isPic &&
@@ -176,5 +175,4 @@ void scanRelocations(InputChunk *chunk) {
   }
 }
 
-} // namespace wasm
-} // namespace lld
+} // namespace lld::wasm
