@@ -235,6 +235,17 @@ public:
   virtual void writeOwnedBlob(ArrayRef<char> blob) = 0;
 };
 
+//===--------------------------------------------------------------------===//
+// Dialect Version Interface.
+//===--------------------------------------------------------------------===//
+
+/// This class is used to represent the version of a dialect, for the purpose
+/// of polymorphic destruction.
+class DialectVersion {
+public:
+  virtual ~DialectVersion() = default;
+};
+
 //===----------------------------------------------------------------------===//
 // BytecodeDialectInterface
 //===----------------------------------------------------------------------===//
@@ -256,11 +267,37 @@ public:
     return Attribute();
   }
 
+  /// Read a versioned attribute encoding belonging to this dialect from the
+  /// given reader. This method should return null in the case of failure, and
+  /// falls back to the non-versioned reader in case the dialect implements
+  /// versioning but it does not support versioned custom encodings for the
+  /// attributes.
+  virtual Attribute readAttribute(DialectBytecodeReader &reader,
+                                  const DialectVersion &version) const {
+    reader.emitError()
+        << "dialect " << getDialect()->getNamespace()
+        << " does not support reading versioned attributes from bytecode";
+    return Attribute();
+  }
+
   /// Read a type belonging to this dialect from the given reader. This method
   /// should return null in the case of failure.
   virtual Type readType(DialectBytecodeReader &reader) const {
     reader.emitError() << "dialect " << getDialect()->getNamespace()
                        << " does not support reading types from bytecode";
+    return Type();
+  }
+
+  /// Read a versioned type encoding belonging to this dialect from the given
+  /// reader. This method should return null in the case of failure, and
+  /// falls back to the non-versioned reader in case the dialect implements
+  /// versioning but it does not support versioned custom encodings for the
+  /// types.
+  virtual Type readType(DialectBytecodeReader &reader,
+                        const DialectVersion &version) const {
+    reader.emitError()
+        << "dialect " << getDialect()->getNamespace()
+        << " does not support reading versioned types from bytecode";
     return Type();
   }
 
@@ -284,6 +321,27 @@ public:
   virtual LogicalResult writeType(Type type,
                                   DialectBytecodeWriter &writer) const {
     return failure();
+  }
+
+  /// Write the version of this dialect to the given writer.
+  virtual void writeVersion(DialectBytecodeWriter &writer) const {}
+
+  // Read the version of this dialect from the provided reader and return it as
+  // a `unique_ptr` to a dialect version object.
+  virtual std::unique_ptr<DialectVersion>
+  readVersion(DialectBytecodeReader &reader) const {
+    reader.emitError("Dialect does not support versioning");
+    return nullptr;
+  }
+
+  /// Hook invoked after parsing completed, if a version directive was present
+  /// and included an entry for the current dialect. This hook offers the
+  /// opportunity to the dialect to visit the IR and upgrades constructs emitted
+  /// by the version of the dialect corresponding to the provided version.
+  virtual LogicalResult
+  upgradeFromVersion(Operation *topLevelOp,
+                     const DialectVersion &version) const {
+    return success();
   }
 };
 
