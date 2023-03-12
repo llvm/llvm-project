@@ -834,6 +834,9 @@ public:
   /// Always print operations in the generic form.
   OpPrintingFlags &printGenericOpForm();
 
+  /// Skip printing regions.
+  OpPrintingFlags &skipRegions();
+
   /// Do not verify the operation when using custom operation printers.
   OpPrintingFlags &assumeVerified();
 
@@ -861,6 +864,9 @@ public:
   /// Return if operations should be printed in the generic form.
   bool shouldPrintGenericOpForm() const;
 
+  /// Return if regions should be skipped.
+  bool shouldSkipRegions() const;
+
   /// Return if operation verification should be skipped.
   bool shouldAssumeVerified() const;
 
@@ -881,6 +887,9 @@ private:
 
   /// Print operations in the generic form.
   bool printGenericOpFormFlag : 1;
+
+  /// Always skip Regions.
+  bool skipRegionsFlag : 1;
 
   /// Skip operation verification.
   bool assumeVerifiedFlag : 1;
