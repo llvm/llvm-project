@@ -229,7 +229,7 @@ storage-class-specifier const error_category& iostream_category() noexcept;
 #include <iosfwd>
 
 #if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
-#include <atomic>     // for __xindex_
+#  include <__atomic/atomic.h> // for __xindex_
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -1039,6 +1039,7 @@ defaultfloat(ios_base& __str)
 _LIBCPP_END_NAMESPACE_STD
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <atomic>
 #  include <concepts>
 #  include <cstddef>
 #  include <cstdlib>

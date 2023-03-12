@@ -570,7 +570,7 @@ Level mlir::sparse_tensor::toStoredDim(RankedTensorType type, Dimension d) {
 /// We normalized sparse tensor encoding attribute by always using
 /// ordered/unique DLT such that "compressed-nu-no" and "compressed-nu" (as well
 /// as other variants) lead to the same storage specifier type, and stripping
-/// irrelevant fields that does not alter the sparse tensor memory layout.
+/// irrelevant fields that do not alter the sparse tensor memory layout.
 static SparseTensorEncodingAttr
 getNormalizedEncodingForSpecifier(SparseTensorEncodingAttr enc) {
   SmallVector<DimLevelType> dlts;
@@ -582,13 +582,10 @@ getNormalizedEncodingForSpecifier(SparseTensorEncodingAttr enc) {
       AffineMap(), // dimOrdering (irrelavant to storage speicifer)
       AffineMap(), // highLvlOrdering (irrelavant to storage specifer)
       // Always use `index` for memSize and lvlSize instead of reusing
-      // `getPosWidth`/`getCrdWidth`.
-      // It allows us to reuse the same SSA value for different bitwidth,
-      // It also avoids casting between index/integer (returned by DimOp)
-      0, 0,
-      // FIXME: we should keep the slice information, for now it is okay as only
-      // constant can be used for slice
-      ArrayRef<SparseTensorDimSliceAttr>{} /*enc.getDimSlices()*/);
+      // `getPosWidth` and `getCrdWidth`. It allows us to reuse the same SSA
+      // value for different bitwidth, it also avoids casting between index and
+      // integer (returned by DimOp)
+      0, 0, enc.getDimSlices());
 }
 
 StorageSpecifierType
@@ -619,6 +616,11 @@ static LogicalResult verifySparsifierGetterSetter(
 
   const auto enc = md.getType().getEncoding();
   const Level lvlRank = enc.getLvlRank();
+
+  if (mdKind == StorageSpecifierKind::DimOffset ||
+      mdKind == StorageSpecifierKind::DimStride)
+    if (!enc.isSlice())
+      return op->emitError("requested slice data on non-slice tensor");
 
   if (mdKind != StorageSpecifierKind::ValMemSize) {
     if (!lvl)

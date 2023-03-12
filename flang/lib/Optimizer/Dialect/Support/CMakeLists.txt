@@ -6,6 +6,7 @@ add_flang_library(FIRDialectSupport
 
   DEPENDS
   MLIRIR
+  intrinsics_gen
 
   LINK_LIBS
   ${dialect_libs}

@@ -962,17 +962,10 @@ public:
 };
 
 /// A recipe for widening select instructions.
-class VPWidenSelectRecipe : public VPRecipeBase, public VPValue {
-
-  /// Is the condition of the select loop invariant?
-  bool InvariantCond;
-
-public:
+struct VPWidenSelectRecipe : public VPRecipeBase, public VPValue {
   template <typename IterT>
-  VPWidenSelectRecipe(SelectInst &I, iterator_range<IterT> Operands,
-                      bool InvariantCond)
-      : VPRecipeBase(VPDef::VPWidenSelectSC, Operands), VPValue(this, &I),
-        InvariantCond(InvariantCond) {}
+  VPWidenSelectRecipe(SelectInst &I, iterator_range<IterT> Operands)
+      : VPRecipeBase(VPDef::VPWidenSelectSC, Operands), VPValue(this, &I) {}
 
   ~VPWidenSelectRecipe() override = default;
 
@@ -986,6 +979,14 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+
+  VPValue *getCond() const {
+    return getOperand(0);
+  }
+
+  bool isInvariantCond() const {
+    return getCond()->isDefinedOutsideVectorRegions();
+  }
 };
 
 /// A recipe for handling GEP instructions.

@@ -2223,6 +2223,7 @@ cc_library(
     deps = [
         ":AffineDialect",
         ":ArithDialect",
+        ":ArithUtils",
         ":BufferizationDialect",
         ":BufferizationTransforms",
         ":ComplexDialect",
@@ -4263,9 +4264,11 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":ArithDialect",
         ":ConversionPassIncGen",
         ":IR",
         ":Pass",
+        ":Support",
         ":SPIRVConversion",
         ":SPIRVDialect",
         ":Transforms",
@@ -7077,6 +7080,7 @@ cc_binary(
         "//mlir/test:TestTransforms",
         "//mlir/test:TestTypeDialect",
         "//mlir/test:TestVector",
+        "//mlir/test:TestVectorToSPIRV",
     ],
 )
 

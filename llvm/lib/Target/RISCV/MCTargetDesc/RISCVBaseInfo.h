@@ -346,65 +346,20 @@ inline static bool isValidRoundingMode(unsigned Mode) {
 // Floating-point Immediates
 //
 
-// We expect an 5-bit binary encoding of a floating-point constant here.
-static const std::pair<uint8_t, uint8_t> LoadFPImmArr[] = {
-    {0b00000001, 0b000}, {0b01101111, 0b000}, {0b01110000, 0b000},
-    {0b01110111, 0b000}, {0b01111000, 0b000}, {0b01111011, 0b000},
-    {0b01111100, 0b000}, {0b01111101, 0b000}, {0b01111101, 0b010},
-    {0b01111101, 0b100}, {0b01111101, 0b110}, {0b01111110, 0b000},
-    {0b01111110, 0b010}, {0b01111110, 0b100}, {0b01111110, 0b110},
-    {0b01111111, 0b000}, {0b01111111, 0b010}, {0b01111111, 0b100},
-    {0b01111111, 0b110}, {0b10000000, 0b000}, {0b10000000, 0b010},
-    {0b10000000, 0b100}, {0b10000001, 0b000}, {0b10000010, 0b000},
-    {0b10000011, 0b000}, {0b10000110, 0b000}, {0b10000111, 0b000},
-    {0b10001110, 0b000}, {0b10001111, 0b000}, {0b11111111, 0b000},
-    {0b11111111, 0b100},
-};
-
-static inline int getLoadFPImm(uint8_t Sign, uint8_t Exp, uint8_t Mantissa) {
-  if (Sign == 0b1 && Exp == 0b01111111 && Mantissa == 0b000)
-    return 0;
-
-  if (Sign == 0b0) {
-    auto EMI = llvm::find(LoadFPImmArr, std::make_pair(Exp, Mantissa));
-    if (EMI != std::end(LoadFPImmArr))
-      return std::distance(std::begin(LoadFPImmArr), EMI) + 1;
-  }
-
-  return -1;
-}
-
 namespace RISCVLoadFPImm {
-inline static float getFPImm(unsigned Imm) {
-  assert(Imm != 1 && Imm != 30 && Imm != 31 && "Unsupported immediate");
-  uint8_t Sign;
-  uint8_t Exp;
-  uint8_t Mantissa;
-
-  if (Imm == 0) {
-    Sign = 0b1;
-    Exp = 0b01111111;
-    Mantissa = 0b000;
-  } else {
-    Sign = 0b0;
-    Exp = LoadFPImmArr[Imm - 1].first;
-    Mantissa = LoadFPImmArr[Imm - 1].second;
-  }
-
-  uint32_t I = Sign << 31 | Exp << 23 | Mantissa << 20;
-  return bit_cast<float>(I);
-}
+int getLoadFPImm(bool Sign, uint8_t Exp, uint8_t Mantissa);
+float getFPImm(unsigned Imm);
 
 /// getLoadFP32Imm - Return a 5-bit binary encoding of the 32-bit
 /// floating-point immediate value. If the value cannot be represented as a
 /// 5-bit binary encoding, then return -1.
 static inline int getLoadFP32Imm(const APInt &Imm) {
-  if (Imm.extractBitsAsZExtValue(20, 0) != 0)
+  if (Imm.extractBitsAsZExtValue(21, 0) != 0)
     return -1;
 
-  uint8_t Sign = Imm.extractBitsAsZExtValue(1, 31);
+  bool Sign = Imm.extractBitsAsZExtValue(1, 31);
   uint8_t Exp = Imm.extractBitsAsZExtValue(8, 23);
-  uint8_t Mantissa = Imm.extractBitsAsZExtValue(3, 20);
+  uint8_t Mantissa = Imm.extractBitsAsZExtValue(2, 21);
   return getLoadFPImm(Sign, Exp, Mantissa);
 }
 
@@ -416,11 +371,11 @@ static inline int getLoadFP32Imm(const APFloat &FPImm) {
 /// floating-point immediate value. If the value cannot be represented as a
 /// 5-bit binary encoding, then return -1.
 static inline int getLoadFP64Imm(const APInt &Imm) {
-  if (Imm.extractBitsAsZExtValue(49, 0) != 0)
+  if (Imm.extractBitsAsZExtValue(50, 0) != 0)
     return -1;
 
-  uint8_t Sign = Imm.extractBitsAsZExtValue(1, 63);
-  uint8_t Mantissa = Imm.extractBitsAsZExtValue(3, 49);
+  bool Sign = Imm.extractBitsAsZExtValue(1, 63);
+  uint8_t Mantissa = Imm.extractBitsAsZExtValue(2, 50);
   uint8_t Exp;
   if (Imm.extractBitsAsZExtValue(11, 52) == 1)
     Exp = 0b00000001;
@@ -440,11 +395,11 @@ static inline int getLoadFP64Imm(const APFloat &FPImm) {
 /// floating-point immediate value. If the value cannot be represented as a
 /// 5-bit binary encoding, then return -1.
 static inline int getLoadFP16Imm(const APInt &Imm) {
-  if (Imm.extractBitsAsZExtValue(7, 0) != 0)
+  if (Imm.extractBitsAsZExtValue(8, 0) != 0)
     return -1;
 
-  uint8_t Sign = Imm.extractBitsAsZExtValue(1, 15);
-  uint8_t Mantissa = Imm.extractBitsAsZExtValue(3, 7);
+  bool Sign = Imm.extractBitsAsZExtValue(1, 15);
+  uint8_t Mantissa = Imm.extractBitsAsZExtValue(2, 8);
   uint8_t Exp;
   if (Imm.extractBitsAsZExtValue(5, 10) == 1)
     Exp = 0b00000001;

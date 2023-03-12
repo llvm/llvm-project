@@ -21,14 +21,9 @@
 #include "Headers.h"
 #include "ParsedAST.h"
 #include "clang-include-cleaner/Types.h"
-#include "index/CanonicalIncludes.h"
-#include "clang/Basic/SourceLocation.h"
-#include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringSet.h"
-#include <optional>
 #include <tuple>
 #include <vector>
 
@@ -52,63 +47,6 @@ struct IncludeCleanerFindings {
   std::vector<MissingIncludeDiagInfo> MissingIncludes;
 };
 
-struct ReferencedLocations {
-  llvm::DenseSet<SourceLocation> User;
-  llvm::DenseSet<tooling::stdlib::Symbol> Stdlib;
-};
-
-/// Finds locations of all symbols used in the main file.
-///
-/// - RecursiveASTVisitor finds references to symbols and records their
-///   associated locations. These may be macro expansions, and are not resolved
-///   to their spelling or expansion location. These locations are later used to
-///   determine which headers should be marked as "used" and "directly used".
-/// - If \p Tokens is not nullptr, we also examine all identifier tokens in the
-///   file in case they reference macros macros.
-/// We use this to compute unused headers, so we:
-///
-/// - cover the whole file in a single traversal for efficiency
-/// - don't attempt to describe where symbols were referenced from in
-///   ambiguous cases (e.g. implicitly used symbols, multiple declarations)
-/// - err on the side of reporting all possible locations
-ReferencedLocations findReferencedLocations(ASTContext &Ctx, Preprocessor &PP,
-                                            const syntax::TokenBuffer *Tokens);
-ReferencedLocations findReferencedLocations(ParsedAST &AST);
-
-struct ReferencedFiles {
-  llvm::DenseSet<FileID> User;
-  llvm::DenseSet<tooling::stdlib::Header> Stdlib;
-  /// Files responsible for the symbols referenced in the main file and defined
-  /// in private headers (private headers have IWYU pragma: private, include
-  /// "public.h"). We store spelling of the public header (with quotes or angle
-  /// brackets) files here to avoid dealing with full filenames and visibility.
-  llvm::StringSet<> SpelledUmbrellas;
-};
-
-/// Retrieves IDs of all files containing SourceLocations from \p Locs.
-/// The output only includes things SourceManager sees as files (not macro IDs).
-/// This can include <built-in>, <scratch space> etc that are not true files.
-/// \p HeaderResponsible returns the public header that should be included given
-/// symbols from a file with the given FileID (example: public headers should be
-/// preferred to non self-contained and private headers).
-/// \p UmbrellaHeader returns the public public header is responsible for
-/// providing symbols from a file with the given FileID (example: MyType.h
-/// should be included instead of MyType_impl.h).
-ReferencedFiles findReferencedFiles(
-    const ReferencedLocations &Locs, const SourceManager &SM,
-    llvm::function_ref<FileID(FileID)> HeaderResponsible,
-    llvm::function_ref<std::optional<StringRef>(FileID)> UmbrellaHeader);
-ReferencedFiles findReferencedFiles(const ReferencedLocations &Locs,
-                                    const IncludeStructure &Includes,
-                                    const CanonicalIncludes &CanonIncludes,
-                                    const SourceManager &SM);
-
-/// Maps FileIDs to the internal IncludeStructure representation (HeaderIDs).
-/// FileIDs that are not true files (<built-in> etc) are dropped.
-llvm::DenseSet<IncludeStructure::HeaderID>
-translateToHeaderIDs(const ReferencedFiles &Files,
-                     const IncludeStructure &Includes, const SourceManager &SM);
-
 /// Retrieves headers that are referenced from the main file but not used.
 /// In unclear cases, headers are not marked as unused.
 std::vector<const Inclusion *>
@@ -117,7 +55,6 @@ getUnused(ParsedAST &AST,
           const llvm::StringSet<> &ReferencedPublicHeaders);
 
 IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST);
-std::vector<const Inclusion *> computeUnusedIncludes(ParsedAST &AST);
 
 std::vector<Diag> issueIncludeCleanerDiagnostics(ParsedAST &AST,
                                                  llvm::StringRef Code);

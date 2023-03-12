@@ -24,6 +24,16 @@ Examples of magic values:
 
 .. code-block:: c++
 
+   template<typename T, size_t N>
+   struct CustomType {
+      T arr[N];
+   };
+
+   struct OtherType {
+      CustomType<int, 30> container;
+   }
+   CustomType<int, 30> values;
+
    double circleArea = 3.1415926535 * radius * radius;
 
    double totalCharge = 1.08 * itemPrice;
@@ -39,6 +49,19 @@ Examples of magic values:
 Example with magic values refactored:
 
 .. code-block:: c++
+
+   template<typename T, size_t N>
+   struct CustomType {
+      T arr[N];
+   };
+
+   const size_t NUMBER_OF_ELEMENTS = 30;
+   using containerType = CustomType<int, NUMBER_OF_ELEMENTS>;
+   
+   struct OtherType {
+      containerType container;
+   }
+   containerType values;
 
    double circleArea = M_PI * radius * radius;
 
@@ -116,3 +139,8 @@ Options
    Boolean value indicating whether to accept magic numbers as bit field widths
    without warning. This is useful for example for register definitions which
    are generated from hardware specifications. Default value is `true`.
+
+.. option:: IgnoreTypeAliases
+
+   Boolean value indicating whether to accept magic numbers in ``typedef`` or
+   ``using`` declarations. Default value is `false`.

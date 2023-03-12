@@ -383,6 +383,12 @@ inline bool needsBinding(const Symbol *sym) {
     return defined->isExternalWeakDef() || defined->interposable;
   return false;
 }
+
+// Symbols with `l` or `L` as a prefix are linker-private and never appear in
+// the output.
+inline bool isPrivateLabel(StringRef name) {
+  return name.startswith("l") || name.startswith("L");
+}
 } // namespace macho
 
 std::string toString(const macho::Symbol &);

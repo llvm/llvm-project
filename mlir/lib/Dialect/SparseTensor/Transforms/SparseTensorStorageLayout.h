@@ -59,6 +59,11 @@ namespace sparse_tensor {
 // access the AOS coordinates array. In the code below, the method `getCOOStart`
 // is used to find the start of the "trailing COO region".
 //
+// If the sparse tensor is a slice (produced by `tensor.extract_slice`
+// operation), instead of allocating a new sparse tensor for it, it reuses the
+// same sets of MemRefs but attaching a additional set of slicing-metadata for
+// per-dimension slice offset and stride.
+//
 // Examples.
 //
 // #CSR storage of 2-dim matrix yields
@@ -72,6 +77,15 @@ namespace sparse_tensor {
 //   memref<?xindex>                           ; AOS coordinates storage
 //   memref<?xf64>                             ; values
 //   struct<(array<2 x i64>, array<3 x i64>)>) ; lvl0, lvl1, 3xsizes
+//
+// Slice on #COO storage of 2-dim matrix yields
+//   ;; Inherited from the original sparse tensors
+//   memref<?xindex>,                          ; positions-0, essentially [0,sz]
+//   memref<?xindex>                           ; AOS coordinates storage
+//   memref<?xf64>                             ; values
+//   struct<(array<2 x i64>, array<3 x i64>,   ; lvl0, lvl1, 3xsizes
+//   ;; Extra slicing-metadata
+//           array<2 x i64>, array<2 x i64>)>) ; dim offset, dim stride.
 //
 //===----------------------------------------------------------------------===//
 
@@ -388,6 +402,8 @@ public:
     assert(fidx < fields.size());
     fields[fidx] = v;
   }
+
+  void setSpecifier(Value newSpec) { fields.back() = newSpec; }
 
   void setSpecifierField(OpBuilder &builder, Location loc,
                          StorageSpecifierKind kind, std::optional<Level> lvl,

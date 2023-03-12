@@ -120,6 +120,13 @@ New checks
   Checks that all implicit and explicit inline functions in header files are
   tagged with the ``LIBC_INLINE`` macro.
 
+- New :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines
+  <clang-tidy/checks/cppcoreguidelines/avoid-capturing-lambda-coroutines>` check.
+
+  Flags C++20 coroutine lambdas with non-empty capture lists that may cause
+  use-after-free errors and suggests avoiding captures or ensuring the lambda
+  closure object has a guaranteed lifetime.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
@@ -191,6 +198,15 @@ Changes in existing checks
 - Improved :doc:`bugprone-too-small-loop-variable
   <clang-tidy/checks/bugprone/too-small-loop-variable>` check. Basic support
   for bit-field and integer members as a loop variable or upper limit were added.
+
+- Improved :doc:`readability-magic-numbers
+  <clang-tidy/checks/readability/magic-numbers>` check, now allows for
+  magic numbers in type aliases such as ``using`` and ``typedef`` declarations if
+  the new ``IgnoreTypeAliases`` option is set to true.
+
+- Fixed a false positive in :doc:`cppcoreguidelines-slicing
+  <clang-tidy/checks/cppcoreguidelines/slicing>` check when warning would be
+  emitted in constructor for virtual base class initialization.
 
 Removed checks
 ^^^^^^^^^^^^^^

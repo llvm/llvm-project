@@ -296,16 +296,14 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             "Actual argument associated with TYPE(*) %s may not have type-bound procedure '%s'"_err_en_US,
             dummyName, tbp->name());
       }
-      const auto &finals{
-          derived->typeSymbol().get<DerivedTypeDetails>().finals()};
+      auto finals{FinalsForDerivedTypeInstantiation(*derived)};
       if (!finals.empty()) { // 15.5.2.4(2)
+        SourceName name{finals.front()->name()};
         if (auto *msg{messages.Say(
                 "Actual argument associated with TYPE(*) %s may not have derived type '%s' with FINAL subroutine '%s'"_err_en_US,
-                dummyName, derived->typeSymbol().name(),
-                finals.begin()->first)}) {
-          msg->Attach(finals.begin()->first,
-              "FINAL subroutine '%s' in derived type '%s'"_en_US,
-              finals.begin()->first, derived->typeSymbol().name());
+                dummyName, derived->typeSymbol().name(), name)}) {
+          msg->Attach(name, "FINAL subroutine '%s' in derived type '%s'"_en_US,
+              name, derived->typeSymbol().name());
         }
       }
     }

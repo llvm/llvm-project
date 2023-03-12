@@ -430,16 +430,24 @@ struct FragmentCompiler {
               C.Diagnostics.Suppress.insert(N);
           });
 
-    if (F.UnusedIncludes)
-      if (auto Val = compileEnum<Config::IncludesPolicy>("UnusedIncludes",
-                                                         **F.UnusedIncludes)
-                         .map("Strict", Config::IncludesPolicy::Strict)
-                         .map("Experiment", Config::IncludesPolicy::Experiment)
-                         .map("None", Config::IncludesPolicy::None)
-                         .value())
+    if (F.UnusedIncludes) {
+      auto Val = compileEnum<Config::IncludesPolicy>("UnusedIncludes",
+                                                     **F.UnusedIncludes)
+                     .map("Strict", Config::IncludesPolicy::Strict)
+                     .map("None", Config::IncludesPolicy::None)
+                     .value();
+      if (!Val && **F.UnusedIncludes == "Experiment") {
+        diag(Warning,
+             "Experiment is deprecated for UnusedIncludes, use Strict instead.",
+             F.UnusedIncludes->Range);
+        Val = Config::IncludesPolicy::Strict;
+      }
+      if (Val) {
         Out.Apply.push_back([Val](const Params &, Config &C) {
           C.Diagnostics.UnusedIncludes = *Val;
         });
+      }
+    }
 
     if (F.AllowStalePreamble) {
       if (auto Val = F.AllowStalePreamble)

@@ -644,10 +644,18 @@ LinalgOp::reifyResultShapes(OpBuilder &b,
   for (OpOperand *opOperand : getDpsInitOperands()) {
     SmallVector<OpFoldResult> shapes;
     for (int64_t dim : llvm::seq<int64_t>(0, getRank(opOperand))) {
-      if (checkDimExpr.visit(shapeExprs[pos]))
-        shapes.push_back(createOrFoldDimOp(b, loc, opOperand->get(), dim));
-      else
-        shapes.push_back(allResultDimValues[pos]);
+      auto shapedType = opOperand->get().getType().cast<ShapedType>();
+      if (!shapedType.isDynamicDim(dim)) {
+        // Static dim: Return IntegerAttr.
+        shapes.push_back(b.getIndexAttr(shapedType.getDimSize(dim)));
+      } else {
+        // Dynamic dim: Return Value.
+        OpFoldResult ofr =
+            checkDimExpr.visit(shapeExprs[pos])
+                ? createOrFoldDimOp(b, loc, opOperand->get(), dim)
+                : allResultDimValues[pos];
+        shapes.push_back(getValueOrCreateConstantIndexOp(b, loc, ofr));
+      }
       pos++;
     }
     reifiedReturnShapes.emplace_back(std::move(shapes));

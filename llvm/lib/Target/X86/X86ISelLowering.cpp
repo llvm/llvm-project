@@ -11547,7 +11547,7 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG,
     SDValue SubVec = Op.getOperand(i);
     if (SubVec.isUndef())
       continue;
-    if (ISD::isFreezeUndef(SubVec.getNode()))
+    if (ISD::isFreezeUndef(SubVec.getNode()) && SubVec.hasOneUse())
       ++NumFreezeUndef;
     else if (ISD::isBuildVectorAllZeros(SubVec.getNode()))
       ++NumZero;

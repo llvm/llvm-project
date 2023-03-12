@@ -1,1 +1,2 @@
 add_subdirectory(FuncToLLVM)
+add_subdirectory(VectorToSPIRV)

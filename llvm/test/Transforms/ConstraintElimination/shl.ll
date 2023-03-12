@@ -1275,3 +1275,16 @@ entry:
   %shl.cmp = icmp uge i256 %shl.ub, 0
   ret i1 %shl.cmp
 }
+
+define i1 @shl_55() {
+; CHECK-LABEL: @shl_55(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHL_UB:%.*]] = shl nuw nsw i256 1, 55
+; CHECK-NEXT:    [[SHL_CMP:%.*]] = icmp uge i256 [[SHL_UB]], 1
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %shl.ub = shl nuw nsw i256 1, 55
+  %shl.cmp = icmp uge i256 %shl.ub, 1
+  ret i1 %shl.cmp
+}
