@@ -44,7 +44,7 @@ int main ( )
   int i;
   int j;
   int m = 3;
-  int n = 20;
+  int n = 200000;
   double *t;
   double t_final;
   double *x;
