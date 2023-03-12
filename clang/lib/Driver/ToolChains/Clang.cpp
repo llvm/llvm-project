@@ -6322,24 +6322,18 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             << A->getAsString(Args) << TripleStr;
     }
   }
-
+  if (Arg *A = Args.getLastArgNoClaim(options::OPT_p)) {
+    if (TC.getTriple().isOSAIX()) {
+      CmdArgs.push_back("-pg");
+    } else if (!TC.getTriple().isOSOpenBSD()) {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << TripleStr;
+    }
+  }
   if (Arg *A = Args.getLastArgNoClaim(options::OPT_pg)) {
     if (TC.getTriple().isOSzOS()) {
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
-    }
-  }
-  if (Arg *A = Args.getLastArgNoClaim(options::OPT_p)) {
-    if (!(TC.getTriple().isOSAIX() || TC.getTriple().isOSOpenBSD())) {
-      D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << A->getAsString(Args) << TripleStr;
-    }
-  }
-  if (Arg *A = Args.getLastArgNoClaim(options::OPT_p, options::OPT_pg)) {
-    if (A->getOption().matches(options::OPT_p)) {
-      A->claim();
-      if (TC.getTriple().isOSAIX() && !Args.hasArgNoClaim(options::OPT_pg))
-        CmdArgs.push_back("-pg");
     }
   }
 
