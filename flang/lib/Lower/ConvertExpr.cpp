@@ -7238,17 +7238,19 @@ updateBoxForParentComponent(Fortran::lower::AbstractConverter &converter,
   mlir::Operation *op = boxBase.getDefiningOp();
   mlir::Type actualTy = converter.genType(expr);
 
-  if (auto embox = mlir::dyn_cast<fir::EmboxOp>(op)) {
-    auto newBox = builder.create<fir::EmboxOp>(
-        loc, fir::BoxType::get(actualTy), embox.getMemref(), embox.getShape(),
-        embox.getSlice(), embox.getTypeparams());
-    return fir::substBase(box, newBox);
-  }
-  if (auto rebox = mlir::dyn_cast<fir::ReboxOp>(op)) {
-    auto newBox = builder.create<fir::ReboxOp>(loc, fir::BoxType::get(actualTy),
-                                               rebox.getBox(), rebox.getShape(),
-                                               rebox.getSlice());
-    return fir::substBase(box, newBox);
+  if (op) {
+    if (auto embox = mlir::dyn_cast<fir::EmboxOp>(op)) {
+      auto newBox = builder.create<fir::EmboxOp>(
+          loc, fir::BoxType::get(actualTy), embox.getMemref(), embox.getShape(),
+          embox.getSlice(), embox.getTypeparams());
+      return fir::substBase(box, newBox);
+    }
+    if (auto rebox = mlir::dyn_cast<fir::ReboxOp>(op)) {
+      auto newBox = builder.create<fir::ReboxOp>(
+          loc, fir::BoxType::get(actualTy), rebox.getBox(), rebox.getShape(),
+          rebox.getSlice());
+      return fir::substBase(box, newBox);
+    }
   }
 
   mlir::Value empty;
