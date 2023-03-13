@@ -4184,13 +4184,6 @@ KMP_EXPORT void *__kmpc_threadprivate_cached(ident_t *loc, kmp_int32 global_tid,
                                              void *data, size_t size,
                                              void ***cache);
 
-// Symbols for MS mutual detection.
-extern int _You_must_link_with_exactly_one_OpenMP_library;
-extern int _You_must_link_with_Intel_OpenMP_library;
-#if KMP_OS_WINDOWS && (KMP_VERSION_MAJOR > 4)
-extern int _You_must_link_with_Microsoft_OpenMP_library;
-#endif
-
 // The routines below are not exported.
 // Consider making them 'static' in corresponding source files.
 void kmp_threadprivate_insert_private_data(int gtid, void *pc_addr,
