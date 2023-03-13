@@ -1,4 +1,5 @@
-// RUN: %check_clang_tidy %s readability-container-data-pointer %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s readability-container-data-pointer %t -- -- -isystem %clang_tidy_headers -fno-delayed-template-parsing
+#include <string>
 
 typedef __SIZE_TYPE__ size_t;
 
@@ -16,22 +17,6 @@ struct vector {
   T &operator[](size_type);
   const T &operator[](size_type) const;
 };
-
-template <typename T>
-struct basic_string {
-  using size_type = size_t;
-
-  basic_string();
-
-  T *data();
-  const T *data() const;
-
-  T &operator[](size_t);
-  const T &operator[](size_type) const;
-};
-
-typedef basic_string<char> string;
-typedef basic_string<wchar_t> wstring;
 
 template <typename T>
 struct is_integral;

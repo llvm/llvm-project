@@ -20,8 +20,6 @@ define i8 @abd_ext_i8(i8 %a, i8 %b) nounwind {
 ;
 ; X64-LABEL: abd_ext_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movzbl %dil, %ecx
 ; X64-NEXT:    movzbl %sil, %eax
 ; X64-NEXT:    subq %rax, %rcx
@@ -52,8 +50,6 @@ define i8 @abd_ext_i8_undef(i8 %a, i8 %b) nounwind {
 ;
 ; X64-LABEL: abd_ext_i8_undef:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movzbl %dil, %ecx
 ; X64-NEXT:    movzbl %sil, %eax
 ; X64-NEXT:    subq %rax, %rcx
@@ -84,8 +80,6 @@ define i16 @abd_ext_i16(i16 %a, i16 %b) nounwind {
 ;
 ; X64-LABEL: abd_ext_i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movzwl %di, %ecx
 ; X64-NEXT:    movzwl %si, %eax
 ; X64-NEXT:    subq %rax, %rcx
@@ -116,8 +110,6 @@ define i16 @abd_ext_i16_undef(i16 %a, i16 %b) nounwind {
 ;
 ; X64-LABEL: abd_ext_i16_undef:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movzwl %di, %ecx
 ; X64-NEXT:    movzwl %si, %eax
 ; X64-NEXT:    subq %rax, %rcx

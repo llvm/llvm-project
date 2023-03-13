@@ -592,7 +592,7 @@ define amdgpu_kernel void @global_volatile_workgroup_acquire_load(
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    global_load_b32 v1, v0, s[0:1] th:TH_LOAD_NT
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
-; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    global_inv scope:SCOPE_SE
 ; GFX12-WGP-NEXT:    global_store_b32 v0, v1, s[2:3]
 ; GFX12-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-WGP-NEXT:    s_endpgm

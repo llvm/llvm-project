@@ -9315,7 +9315,7 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       // Exclude somes case where LD_SPLAT is worse than scalar_to_vector:
       // Below cases should also happen for "lfiwzx/lfiwax + LE target + index
       // 1" and "lxvrhx + BE target + index 7" and "lxvrbx + BE target + index
-      // 15", but funciton IsValidSplatLoad() now will only return true when
+      // 15", but function IsValidSplatLoad() now will only return true when
       // the data at index 0 is not nullptr. So we will not get into trouble for
       // these cases.
       //

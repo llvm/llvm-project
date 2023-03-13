@@ -605,20 +605,6 @@ static LinkageInfo getInternalLinkageFor(const NamedDecl *D) {
 }
 
 static LinkageInfo getExternalLinkageFor(const NamedDecl *D) {
-  // C++ [basic.link]p4.8:
-  //   - if the declaration of the name is attached to a named module and is not
-  //   exported
-  //     the name has module linkage;
-  //
-  // [basic.namespace.general]/p2
-  //   A namespace is never attached to a named module and never has a name with
-  //   module linkage.
-  if (isInModulePurview(D) &&
-      !isExportedFromModuleInterfaceUnit(
-          cast<NamedDecl>(D->getCanonicalDecl())) &&
-      !isa<NamespaceDecl>(D))
-    return LinkageInfo(ModuleLinkage, DefaultVisibility, false);
-
   return LinkageInfo::external();
 }
 
@@ -1163,6 +1149,29 @@ Linkage NamedDecl::getLinkageInternal() const {
   return LinkageComputer{}
       .getLVForDecl(this, LVComputationKind::forLinkageOnly())
       .getLinkage();
+}
+
+/// Get the linkage from a semantic point of view. Entities in
+/// anonymous namespaces are external (in c++98).
+Linkage NamedDecl::getFormalLinkage() const {
+  Linkage InternalLinkage = getLinkageInternal();
+
+  // C++ [basic.link]p4.8:
+  //   - if the declaration of the name is attached to a named module and is not
+  //   exported
+  //     the name has module linkage;
+  //
+  // [basic.namespace.general]/p2
+  //   A namespace is never attached to a named module and never has a name with
+  //   module linkage.
+  if (isInModulePurview(this) &&
+      InternalLinkage == ExternalLinkage &&
+      !isExportedFromModuleInterfaceUnit(
+          cast<NamedDecl>(this->getCanonicalDecl())) &&
+      !isa<NamespaceDecl>(this))
+    InternalLinkage = ModuleLinkage;
+
+  return clang::getFormalLinkage(InternalLinkage);
 }
 
 LinkageInfo NamedDecl::getLinkageAndVisibility() const {

@@ -102,17 +102,12 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   if (OptLevel > 1) {
     // Speculative execution if the target has divergent branches; otherwise nop.
     MPM.add(createSpeculativeExecutionIfHasBranchDivergencePass());
-
-    MPM.add(createJumpThreadingPass());         // Thread jumps.
-    MPM.add(createCorrelatedValuePropagationPass()); // Propagate conditionals
   }
   MPM.add(
       createCFGSimplificationPass(SimplifyCFGOptions().convertSwitchRangeToICmp(
           true))); // Merge & remove BBs
   // Combine silly seq's
   MPM.add(createInstructionCombiningPass());
-  if (SizeLevel == 0)
-    MPM.add(createLibCallsShrinkWrapPass());
 
   // TODO: Investigate the cost/benefit of tail call elimination on debugging.
   if (OptLevel > 1)
@@ -151,7 +146,6 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
       SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
   MPM.add(createInstructionCombiningPass());
   // We resume loop passes creating a second loop pipeline here.
-  MPM.add(createIndVarSimplifyPass());        // Canonicalize indvars
 
   // Unroll small loops and perform peeling.
   MPM.add(createSimpleLoopUnrollPass(OptLevel, DisableUnrollLoops,
@@ -174,16 +168,10 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   // Run instcombine after redundancy elimination to exploit opportunities
   // opened up by them.
   MPM.add(createInstructionCombiningPass());
-  if (OptLevel > 1) {
-    MPM.add(createJumpThreadingPass());         // Thread jumps
-    MPM.add(createCorrelatedValuePropagationPass());
-  }
-  MPM.add(createAggressiveDCEPass()); // Delete dead instructions
 
   MPM.add(createMemCpyOptPass());               // Remove memcpy / form memset
   // TODO: Investigate if this is too expensive at O1.
   if (OptLevel > 1) {
-    MPM.add(createDeadStoreEliminationPass());  // Delete dead stores
     MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap,
                            /*AllowSpeculation=*/true));
   }
@@ -198,8 +186,6 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
 /// FIXME: Should LTO cause any differences to this set of passes?
 void PassManagerBuilder::addVectorPasses(legacy::PassManagerBase &PM,
                                          bool IsFullLTO) {
-  PM.add(createLoopVectorizePass(!LoopsInterleaved, !LoopVectorize));
-
   if (IsFullLTO) {
     // The vectorizer may have significantly shortened a loop body; unroll
     // again. Unroll small loops to hide loop backedge latency and saturate any
@@ -235,11 +221,6 @@ void PassManagerBuilder::addVectorPasses(legacy::PassManagerBase &PM,
   if (IsFullLTO) {
     PM.add(createInstructionCombiningPass()); // Clean up again
     PM.add(createBitTrackingDCEPass());
-  }
-
-  // Optimize parallel scalar instruction chains into SIMD instructions.
-  if (SLPVectorize) {
-    PM.add(createSLPVectorizerPass());
   }
 
   if (!IsFullLTO) {

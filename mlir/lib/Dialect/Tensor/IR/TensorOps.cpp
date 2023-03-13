@@ -1233,7 +1233,7 @@ int64_t ExpandShapeOp::getCorrespondingSourceDim(int64_t resultDim) {
   assert(resultDim >= 0 && resultDim < getResultType().getRank() &&
          "invalid resultDim");
   for (const auto &it : llvm::enumerate(getReassociationIndices()))
-    if (llvm::find(it.value(), resultDim) != it.value().end())
+    if (llvm::is_contained(it.value(), resultDim))
       return it.index();
   llvm_unreachable("could not find reassociation group");
 }

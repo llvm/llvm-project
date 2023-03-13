@@ -1888,6 +1888,12 @@ bool SIInsertWaitcnts::mayAccessLDSThroughFlat(const MachineInstr &MI) const {
   return false;
 }
 
+static bool isCacheInvOrWBInst(MachineInstr &Inst) {
+  auto Opc = Inst.getOpcode();
+  return Opc == AMDGPU::GLOBAL_INV || Opc == AMDGPU::GLOBAL_WB ||
+         Opc == AMDGPU::GLOBAL_WBINV;
+}
+
 void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
                                                WaitcntBrackets *ScoreBrackets) {
   // Now look at the instruction opcode. If it is a memory access
@@ -1903,6 +1909,10 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ScoreBrackets->updateByEvent(TII, TRI, MRI, LDS_ACCESS, Inst);
     }
   } else if (TII->isFLAT(Inst)) {
+    // TODO: Track this properly.
+    if (isCacheInvOrWBInst(Inst))
+      return;
+
     assert(Inst.mayLoadOrStore());
 
     int FlatASCount = 0;

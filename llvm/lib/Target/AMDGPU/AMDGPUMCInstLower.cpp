@@ -13,6 +13,7 @@
 //
 
 #include "AMDGPUMCInstLower.h"
+#include "AMDGPU.h"
 #include "AMDGPUAsmPrinter.h"
 #include "AMDGPUMachineFunction.h"
 #include "AMDGPUTargetMachine.h"
@@ -168,12 +169,11 @@ bool AMDGPUAsmPrinter::lowerOperand(const MachineOperand &MO,
 const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV) {
 
   // Intercept LDS variables with known addresses
-  if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(CV)) {
-    if (AMDGPUMachineFunction::isKnownAddressLDSGlobal(*GV)) {
-      unsigned offset =
-          AMDGPUMachineFunction::calculateKnownAddressOfLDSGlobal(*GV);
-      Constant *C = ConstantInt::get(CV->getContext(), APInt(32, offset));
-      return AsmPrinter::lowerConstant(C);
+  if (const GlobalVariable *GV = dyn_cast<const GlobalVariable>(CV)) {
+    if (std::optional<uint32_t> Address =
+            AMDGPUMachineFunction::getLDSAbsoluteAddress(*GV)) {
+      auto *IntTy = Type::getInt32Ty(CV->getContext());
+      return AsmPrinter::lowerConstant(ConstantInt::get(IntTy, *Address));
     }
   }
 

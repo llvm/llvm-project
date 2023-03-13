@@ -550,6 +550,7 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <__iterator/iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
 #include <__iterator/wrap_iter.h>
+#include <__memory/addressof.h>
 #include <__memory/allocate_at_least.h>
 #include <__memory/allocator.h>
 #include <__memory/allocator_traits.h>
@@ -562,6 +563,7 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <__string/extern_template_lists.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_array.h>
+#include <__type_traits/is_convertible.h>
 #include <__type_traits/is_nothrow_default_constructible.h>
 #include <__type_traits/is_nothrow_move_assignable.h>
 #include <__type_traits/is_same.h>

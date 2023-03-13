@@ -720,6 +720,10 @@ option(LLVM_BUILD_TESTS
   "Build LLVM unit tests. If OFF, just generate build targets." OFF)
 option(LLVM_INCLUDE_TESTS "Generate build targets for the LLVM unit tests." ON)
 
+option(LLVM_INSTALL_GTEST
+  "Install the llvm gtest library.  This should be on if you want to do
+   stand-alone builds of the other projects and run their unit tests." OFF)
+
 option(LLVM_BUILD_BENCHMARKS "Add LLVM benchmark targets to the list of default
 targets. If OFF, benchmarks still could be built using Benchmarks target." OFF)
 option(LLVM_INCLUDE_BENCHMARKS "Generate benchmark targets. If OFF, benchmarks can't be built." ON)

@@ -134,3 +134,33 @@ define half @loadfpimm9() {
 ; ZFHMIN-NEXT:    ret
   ret half 255.0
 }
+
+; This is 1 * 2^-16
+define half @loadfpimm10() {
+; CHECK-LABEL: loadfpimm10:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.h fa0, 1.52587890625e-05
+; CHECK-NEXT:    ret
+;
+; ZFHMIN-LABEL: loadfpimm10:
+; ZFHMIN:       # %bb.0:
+; ZFHMIN-NEXT:    li a0, 256
+; ZFHMIN-NEXT:    fmv.h.x fa0, a0
+; ZFHMIN-NEXT:    ret
+  ret half 0xH0100
+}
+
+; This is 1 * 2^-15
+define half @loadfpimm11() {
+; CHECK-LABEL: loadfpimm11:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.h fa0, 3.0517578125e-05
+; CHECK-NEXT:    ret
+;
+; ZFHMIN-LABEL: loadfpimm11:
+; ZFHMIN:       # %bb.0:
+; ZFHMIN-NEXT:    li a0, 512
+; ZFHMIN-NEXT:    fmv.h.x fa0, a0
+; ZFHMIN-NEXT:    ret
+  ret half 0xH0200
+}

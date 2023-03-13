@@ -204,8 +204,7 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapForeachToBlocksImpl(
   // Ensure we have 3 block sizes, one for each id.
   Value one;
   for (auto attr : mappingAttributes) {
-    if (std::find(blockMapping.begin(), blockMapping.end(), attr) ==
-        blockMapping.end()) {
+    if (!llvm::is_contained(blockMapping, attr)) {
       blockMapping.push_back(attr);
       one = one ? one : rewriter.create<arith::ConstantIndexOp>(loc, 1);
       numBlocks.push_back(one);
@@ -404,8 +403,7 @@ static DiagnosedSilenceableFailure rewriteOneForallToGpuThreads(
   // Ensure we have 3 block sizes, one for each id.
   Value one;
   for (auto attr : threadMappingAttributes) {
-    if (std::find(threadMapping.begin(), threadMapping.end(), attr) ==
-        threadMapping.end()) {
+    if (!llvm::is_contained(threadMapping, attr)) {
       threadMapping.push_back(attr);
       one = one ? one : rewriter.create<arith::ConstantIndexOp>(loc, 1);
       numThreads.push_back(one);

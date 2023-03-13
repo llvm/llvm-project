@@ -13,7 +13,7 @@ $_f2 = comdat any
 @_f2 = linkonce_odr hidden local_unnamed_addr addrspace(3) global %vec_type undef, comdat, align 1
 
 ;.
-; CHECK: @[[LLVM_AMDGCN_KERNEL_TEST_LDS:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [[LLVM_AMDGCN_KERNEL_TEST_LDS_T:%.*]] undef, align 4
+; CHECK: @[[LLVM_AMDGCN_KERNEL_TEST_LDS:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [[LLVM_AMDGCN_KERNEL_TEST_LDS_T:%.*]] undef, align 4, !absolute_symbol !0
 ;.
 define protected amdgpu_kernel void @test(ptr addrspace(1) nocapture %ptr.coerce) local_unnamed_addr #0 {
 ; GCN-LABEL: test:
@@ -33,13 +33,13 @@ define protected amdgpu_kernel void @test(ptr addrspace(1) nocapture %ptr.coerce
 ; GCN-NEXT:    s_endpgm
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i8 3, ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, align 4, !alias.scope !0, !noalias !3
-; CHECK-NEXT:    tail call void @llvm.memcpy.p3.p3.i64(ptr addrspace(3) noundef align 1 dereferenceable(3) getelementptr inbounds (%llvm.amdgcn.kernel.test.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, i32 0, i32 2), ptr addrspace(3) noundef align 1 dereferenceable(3) @llvm.amdgcn.kernel.test.lds, i64 3, i1 false), !alias.scope !5, !noalias !6
-; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.test.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, i32 0, i32 2), align 4, !alias.scope !3, !noalias !0
+; CHECK-NEXT:    store i8 3, ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, align 4, !alias.scope !1, !noalias !4
+; CHECK-NEXT:    tail call void @llvm.memcpy.p3.p3.i64(ptr addrspace(3) noundef align 1 dereferenceable(3) getelementptr inbounds (%llvm.amdgcn.kernel.test.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, i32 0, i32 2), ptr addrspace(3) noundef align 1 dereferenceable(3) @llvm.amdgcn.kernel.test.lds, i64 3, i1 false), !alias.scope !6, !noalias !7
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.test.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, i32 0, i32 2), align 4, !alias.scope !4, !noalias !1
 ; CHECK-NEXT:    [[CMP_I_I:%.*]] = icmp eq i8 [[TMP4]], 3
-; CHECK-NEXT:    store i8 2, ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, align 4, !alias.scope !0, !noalias !3
-; CHECK-NEXT: tail call void @llvm.memcpy.p3.p3.i64(ptr addrspace(3) noundef align 1 dereferenceable(3) getelementptr inbounds (%llvm.amdgcn.kernel.test.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, i32 0, i32 2), ptr addrspace(3) noundef align 1 dereferenceable(3) @llvm.amdgcn.kernel.test.lds, i64 3, i1 false), !alias.scope !5, !noalias !6
-; CHECK-NEXT:    [[TMP9:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.test.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, i32 0, i32 2), align 4, !alias.scope !3, !noalias !0
+; CHECK-NEXT:    store i8 2, ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, align 4, !alias.scope !1, !noalias !4
+; CHECK-NEXT: tail call void @llvm.memcpy.p3.p3.i64(ptr addrspace(3) noundef align 1 dereferenceable(3) getelementptr inbounds (%llvm.amdgcn.kernel.test.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, i32 0, i32 2), ptr addrspace(3) noundef align 1 dereferenceable(3) @llvm.amdgcn.kernel.test.lds, i64 3, i1 false), !alias.scope !6, !noalias !7
+; CHECK-NEXT:    [[TMP9:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.test.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, i32 0, i32 2), align 4, !alias.scope !4, !noalias !1
 ; CHECK-NEXT:    [[CMP_I_I19:%.*]] = icmp eq i8 [[TMP9]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = and i1 [[CMP_I_I19]], [[CMP_I_I]]
 ; CHECK-NEXT:    [[FROMBOOL8:%.*]] = zext i1 [[TMP10]] to i8
@@ -66,11 +66,12 @@ declare void @llvm.memcpy.p3.p3.i64(ptr addrspace(3) noalias nocapture writeonly
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 ;.
-; CHECK: [[META0:![0-9]+]] = !{!1}
-; CHECK: [[META1:![0-9]+]] = distinct !{!1, !2}
-; CHECK: [[META2:![0-9]+]] = distinct !{!2}
-; CHECK: [[META3:![0-9]+]] = !{!4}
-; CHECK: [[META4:![0-9]+]] = distinct !{!4, !2}
-; CHECK: [[META5:![0-9]+]] = !{!4, !1}
-; CHECK: [[META6:![0-9]+]] = !{}
+; CHECK: [[META0:![0-9]+]] = !{i64 0, i64 1}
+; CHECK: [[META1:![0-9]+]] = !{!2}
+; CHECK: [[META2:![0-9]+]] = distinct !{!2, !3}
+; CHECK: [[META3:![0-9]+]] = distinct !{!3}
+; CHECK: [[META4:![0-9]+]] = !{!5}
+; CHECK: [[META5:![0-9]+]] = distinct !{!5, !3}
+; CHECK: [[META6:![0-9]+]] = !{!5, !2}
+; CHECK: [[META7:![0-9]+]] = !{}
 ;.

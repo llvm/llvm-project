@@ -1142,6 +1142,12 @@ bool AMDGPUDAGToDAGISel::isFlatScratchBaseLegal(SDValue Base,
                                                 uint64_t FlatVariant) const {
   if (FlatVariant != SIInstrFlags::FlatScratch)
     return true;
+
+  // Starting with GFX12, VADDR and SADDR fields in VSCRATCH can use negative
+  // values.
+  if (AMDGPU::isGFX12Plus(*Subtarget))
+    return true;
+
   // When value in 32-bit Base can be negative calculate scratch offset using
   // 32-bit add instruction, otherwise use Base(unsigned) + offset.
   return CurDAG->SignBitIsZero(Base);

@@ -31,6 +31,37 @@ exit:
   ret i32 %iv
 }
 
+; Do not optimize: pointer types.
+define ptr @test_ult_ptr_neg(ptr %start, ptr %inv_1, ptr %inv_2) {
+; CHECK-LABEL: @test_ult_ptr_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult ptr [[IV]], [[INV_1:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult ptr [[IV]], [[INV_2:%.*]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = and i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[IV_NEXT]] = getelementptr i32, ptr [[IV]], i64 4
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi ptr [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    ret ptr [[IV_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi ptr [%start, %entry], [%iv.next, %loop]
+  %cmp_1 = icmp ult ptr %iv, %inv_1
+  %cmp_2 = icmp ult ptr %iv, %inv_2
+  %loop_cond = and i1 %cmp_1, %cmp_2
+  %iv.next = getelementptr i32, ptr %iv, i64 4
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret ptr %iv
+}
+
 ; turn to %iv <=u umin(inv_1, inv_2) and hoist it out of loop.
 define i32 @test_ule(i32 %start, i32 %inv_1, i32 %inv_2) {
 ; CHECK-LABEL: @test_ule(
@@ -721,17 +752,17 @@ exit:
   ret i32 %iv
 }
 
-; TODO: inv_2 needs freeze because hoisted umax would create a new use that didn't exist before.
+; inv_2 needs freeze because hoisted umax would create a new use that didn't exist before.
 ; Counter-example: %cmp_1 = false, %inv_2 = poison.
 define i32 @test_logical_and_ult_needs_freeze(i32 %start, i32 %inv_1, i32 %inv_2) {
 ; CHECK-LABEL: @test_logical_and_ult_needs_freeze(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INV_2_FR:%.*]] = freeze i32 [[INV_2:%.*]]
+; CHECK-NEXT:    [[INVARIANT_UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[INV_1:%.*]], i32 [[INV_2_FR]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[IV]], [[INV_1:%.*]]
-; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i32 [[IV]], [[INV_2:%.*]]
-; CHECK-NEXT:    [[LOOP_COND:%.*]] = select i1 [[CMP_1]], i1 [[CMP_2]], i1 false
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV]], [[INVARIANT_UMIN]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -753,17 +784,17 @@ exit:
   ret i32 %iv
 }
 
-; TODO: turn to %iv <u umin(inv_1, inv_2) and hoist it out of loop.
+; turn to %iv <u umin(inv_1, inv_2) and hoist it out of loop.
 ; https://alive2.llvm.org/ce/z/mhKGtT
 define i32 @test_logical_and_ult_pos(i32 %start, i32 %inv_1, i32 noundef %inv_2) {
 ; CHECK-LABEL: @test_logical_and_ult_pos(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INV_2_FR:%.*]] = freeze i32 [[INV_2:%.*]]
+; CHECK-NEXT:    [[INVARIANT_UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[INV_1:%.*]], i32 [[INV_2_FR]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[IV]], [[INV_1:%.*]]
-; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i32 [[IV]], [[INV_2:%.*]]
-; CHECK-NEXT:    [[LOOP_COND:%.*]] = select i1 [[CMP_1]], i1 [[CMP_2]], i1 false
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV]], [[INVARIANT_UMIN]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -785,16 +816,16 @@ exit:
   ret i32 %iv
 }
 
-; TODO: inv_2 needs freeze because hoisted umax would create a new use that didn't exist before.
+; inv_2 needs freeze because hoisted umax would create a new use that didn't exist before.
 define i32 @test_logical_or_ult_inv_needs_freeze(i32 %start, i32 %inv_1, i32 %inv_2) {
 ; CHECK-LABEL: @test_logical_or_ult_inv_needs_freeze(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INV_2_FR:%.*]] = freeze i32 [[INV_2:%.*]]
+; CHECK-NEXT:    [[INVARIANT_UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[INV_1:%.*]], i32 [[INV_2_FR]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[IV]], [[INV_1:%.*]]
-; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i32 [[IV]], [[INV_2:%.*]]
-; CHECK-NEXT:    [[LOOP_COND:%.*]] = select i1 [[CMP_1]], i1 true, i1 [[CMP_2]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV]], [[INVARIANT_UMAX]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -816,17 +847,17 @@ exit:
   ret i32 %iv
 }
 
-; TODO: turn to %iv <u umax(inv_1, inv_2) and hoist it out of loop.
+; turn to %iv <u umax(inv_1, inv_2) and hoist it out of loop.
 ; https://alive2.llvm.org/ce/z/zgyG5N
 define i32 @test_logical_or_ult_inv_pos(i32 %start, i32 %inv_1, i32 noundef %inv_2) {
 ; CHECK-LABEL: @test_logical_or_ult_inv_pos(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INV_2_FR:%.*]] = freeze i32 [[INV_2:%.*]]
+; CHECK-NEXT:    [[INVARIANT_UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[INV_1:%.*]], i32 [[INV_2_FR]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[IV]], [[INV_1:%.*]]
-; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i32 [[IV]], [[INV_2:%.*]]
-; CHECK-NEXT:    [[LOOP_COND:%.*]] = select i1 [[CMP_1]], i1 true, i1 [[CMP_2]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV]], [[INVARIANT_UMAX]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:

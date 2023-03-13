@@ -395,9 +395,7 @@ public:
 
   /// Get the linkage from a semantic point of view. Entities in
   /// anonymous namespaces are external (in c++98).
-  Linkage getFormalLinkage() const {
-    return clang::getFormalLinkage(getLinkageInternal());
-  }
+  Linkage getFormalLinkage() const;
 
   /// True if this decl has external linkage.
   bool hasExternalFormalLinkage() const {

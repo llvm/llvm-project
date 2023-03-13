@@ -1608,10 +1608,10 @@ public:
 
   bool isOne() const { return Value->isOne(); }
   bool isZero() const { return Value->isZero(); }
-  // NOTE: This is soft-deprecated.  Please use `isZero()` instead.
+  LLVM_DEPRECATED("use isZero instead", "isZero")
   bool isNullValue() const { return isZero(); }
   bool isAllOnes() const { return Value->isMinusOne(); }
-  // NOTE: This is soft-deprecated.  Please use `isAllOnes()` instead.
+  LLVM_DEPRECATED("use isAllOnes instead", "isAllOnes")
   bool isAllOnesValue() const { return isAllOnes(); }
   bool isMaxSignedValue() const { return Value->isMaxValue(true); }
   bool isMinSignedValue() const { return Value->isMinValue(true); }
