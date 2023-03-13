@@ -141,10 +141,15 @@ public:
     setNumTombstones(0);
   }
 
+  /// Return true if the specified key is in the map, false otherwise.
+  bool contains(const_arg_type_t<KeyT> Val) const {
+    const BucketT *TheBucket;
+    return LookupBucketFor(Val, TheBucket);
+  }
+
   /// Return 1 if the specified key is in the map, 0 otherwise.
   size_type count(const_arg_type_t<KeyT> Val) const {
-    const BucketT *TheBucket;
-    return LookupBucketFor(Val, TheBucket) ? 1 : 0;
+    return contains(Val) ? 1 : 0;
   }
 
   iterator find(const_arg_type_t<KeyT> Val) {
