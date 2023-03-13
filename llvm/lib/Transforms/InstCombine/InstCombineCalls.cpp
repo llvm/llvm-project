@@ -597,8 +597,7 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
   }
 
   // Add range metadata since known bits can't completely reflect what we know.
-  // TODO: Handle splat vectors.
-  auto *IT = dyn_cast<IntegerType>(Op0->getType());
+  auto *IT = cast<IntegerType>(Op0->getType()->getScalarType());
   if (IT && IT->getBitWidth() != 1 && !II.getMetadata(LLVMContext::MD_range)) {
     Metadata *LowAndHigh[] = {
         ConstantAsMetadata::get(ConstantInt::get(IT, DefiniteZeros)),
@@ -681,12 +680,8 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
                                                   Constant::getNullValue(Ty)),
                             Ty);
 
-  // FIXME: Try to simplify vectors of integers.
-  auto *IT = dyn_cast<IntegerType>(Ty);
-  if (!IT)
-    return nullptr;
-
   // Add range metadata since known bits can't completely reflect what we know.
+  auto *IT = cast<IntegerType>(Ty->getScalarType());
   unsigned MinCount = Known.countMinPopulation();
   unsigned MaxCount = Known.countMaxPopulation();
   if (IT->getBitWidth() != 1 && !II.getMetadata(LLVMContext::MD_range)) {

@@ -280,7 +280,7 @@ static bool runIPSCCP(
 
     // If there is a known constant range for the return value, add !range
     // metadata to the function's call sites.
-    if (F->getReturnType()->isIntegerTy() && ReturnValue.isConstantRange() &&
+    if (ReturnValue.isConstantRange() &&
         !ReturnValue.getConstantRange().isSingleElement()) {
       // Do not add range metadata if the return value may include undef.
       if (ReturnValue.isConstantRangeIncludingUndef())
