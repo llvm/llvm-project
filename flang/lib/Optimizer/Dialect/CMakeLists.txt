@@ -17,6 +17,7 @@ add_flang_library(FIRDialect
   LINK_LIBS
   FIRDialectSupport
   MLIRArithDialect
+  MLIRBuiltinToLLVMIRTranslation
   MLIROpenMPToLLVM
   MLIRLLVMToLLVMIRTranslation
   MLIRTargetLLVMIRExport
