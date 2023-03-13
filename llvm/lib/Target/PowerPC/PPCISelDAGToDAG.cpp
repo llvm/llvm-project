@@ -2846,9 +2846,6 @@ public:
   }
 };
 
-static bool isLogicOp(unsigned Opc) {
-  return Opc == ISD::AND || Opc == ISD::OR || Opc == ISD::XOR;
-}
 // The obvious case for wanting to keep the value in a GPR. Namely, the
 // result of the comparison is actually needed in a GPR.
 SDNode *IntegerCompareEliminator::tryEXTEND(SDNode *N) {
@@ -2858,7 +2855,7 @@ SDNode *IntegerCompareEliminator::tryEXTEND(SDNode *N) {
   SDValue WideRes;
   // If we are zero-extending the result of a logical operation on i1
   // values, we can keep the values in GPRs.
-  if (isLogicOp(N->getOperand(0).getOpcode()) &&
+  if (ISD::isBitwiseLogicOp(N->getOperand(0).getOpcode()) &&
       N->getOperand(0).getValueType() == MVT::i1 &&
       N->getOpcode() == ISD::ZERO_EXTEND)
     WideRes = computeLogicOpInGPR(N->getOperand(0));
@@ -2894,7 +2891,7 @@ SDNode *IntegerCompareEliminator::tryEXTEND(SDNode *N) {
 SDNode *IntegerCompareEliminator::tryLogicOpOfCompares(SDNode *N) {
   if (N->getValueType(0) != MVT::i1)
     return nullptr;
-  assert(isLogicOp(N->getOpcode()) &&
+  assert(ISD::isBitwiseLogicOp(N->getOpcode()) &&
          "Expected a logic operation on setcc results.");
   SDValue LoweredLogical = computeLogicOpInGPR(SDValue(N, 0));
   if (!LoweredLogical)
@@ -2974,7 +2971,7 @@ SDNode *IntegerCompareEliminator::tryLogicOpOfCompares(SDNode *N) {
 // There is also a special case that is handled (namely a complement operation
 // achieved with xor %a, -1).
 SDValue IntegerCompareEliminator::computeLogicOpInGPR(SDValue LogicOp) {
-  assert(isLogicOp(LogicOp.getOpcode()) &&
+  assert(ISD::isBitwiseLogicOp(LogicOp.getOpcode()) &&
         "Can only handle logic operations here.");
   assert(LogicOp.getValueType() == MVT::i1 &&
          "Can only handle logic operations on i1 values here.");
@@ -2999,7 +2996,7 @@ SDValue IntegerCompareEliminator::computeLogicOpInGPR(SDValue LogicOp) {
                                             PPC::RLDICL, dl, InVT, InputOp,
                                             S->getI64Imm(0, dl),
                                             S->getI64Imm(63, dl)), 0);
-    } else if (isLogicOp(OperandOpcode))
+    } else if (ISD::isBitwiseLogicOp(OperandOpcode))
       return computeLogicOpInGPR(Operand);
     return SDValue();
   };
@@ -3888,7 +3885,7 @@ static bool allUsesExtend(SDValue Compare, SelectionDAG *CurDAG) {
     if (CompareUse->getOpcode() != ISD::SIGN_EXTEND &&
         CompareUse->getOpcode() != ISD::ZERO_EXTEND &&
         CompareUse->getOpcode() != ISD::SELECT &&
-        !isLogicOp(CompareUse->getOpcode())) {
+        !ISD::isBitwiseLogicOp(CompareUse->getOpcode())) {
       OmittedForNonExtendUses++;
       return false;
     }

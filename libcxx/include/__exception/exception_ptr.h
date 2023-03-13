@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__exception/operations.h>
+#include <__memory/addressof.h>
 #include <cstddef>
 #include <cstdlib>
 

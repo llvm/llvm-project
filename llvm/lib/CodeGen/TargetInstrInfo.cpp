@@ -1017,6 +1017,17 @@ void TargetInstrInfo::reassociateOps(
   InsInstrs.push_back(MIB2);
   DelInstrs.push_back(&Prev);
   DelInstrs.push_back(&Root);
+
+  // We transformed:
+  // B = A op X (Prev)
+  // C = B op Y (Root)
+  // Into:
+  // B = X op Y (MIB1)
+  // C = A op B (MIB2)
+  // C has the same value as before, B doesn't; as such, keep the debug number
+  // of C but not of B.
+  if (unsigned OldRootNum = Root.peekDebugInstrNum())
+    MIB2.getInstr()->setDebugInstrNum(OldRootNum);
 }
 
 void TargetInstrInfo::genAlternativeCodeSequence(
