@@ -235,6 +235,50 @@ private:
       ObjectForFile;
   std::optional<llvm::Error> ErrorToReport;
 };
+
+/// A utility for adding \c PPCallbacks to a compiler instance at the
+/// appropriate time.
+struct PPCallbacksDependencyCollector : public DependencyCollector {
+  using MakeCB =
+      llvm::unique_function<std::unique_ptr<PPCallbacks>(Preprocessor &)>;
+  MakeCB Create;
+  PPCallbacksDependencyCollector(MakeCB Create) : Create(std::move(Create)) {}
+  void attachToPreprocessor(Preprocessor &PP) final {
+    std::unique_ptr<PPCallbacks> CB = Create(PP);
+    assert(CB);
+    PP.addPPCallbacks(std::move(CB));
+  }
+};
+
+struct IncludeTreePPCallbacks : public PPCallbacks {
+  DependencyActionController &Controller;
+  Preprocessor &PP;
+
+public:
+  IncludeTreePPCallbacks(DependencyActionController &Controller,
+                         Preprocessor &PP)
+      : Controller(Controller), PP(PP) {}
+
+  void LexedFileChanged(FileID FID, LexedFileChangeReason Reason,
+                        SrcMgr::CharacteristicKind FileType, FileID PrevFID,
+                        SourceLocation Loc) override {
+    switch (Reason) {
+    case LexedFileChangeReason::EnterFile:
+      Controller.enteredInclude(PP, FID);
+      break;
+    case LexedFileChangeReason::ExitFile: {
+      Controller.exitedInclude(PP, FID, PrevFID, Loc);
+      break;
+    }
+    }
+  }
+
+  void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
+                  OptionalFileEntryRef File,
+                  SrcMgr::CharacteristicKind FileType) override {
+    Controller.handleHasIncludeCheck(PP, File.has_value());
+  }
+};
 } // namespace
 
 /// The PCH recorded file paths with canonical paths, create a VFS that
@@ -274,6 +318,14 @@ Error IncludeTreeActionController::initialize(
       PrefixMapper.mapInPlace(Include);
   };
   ensurePathRemapping();
+
+  // Attach callbacks for the IncludeTree of the TU. The preprocessor
+  // does not exist yet, so we need to indirect this via DependencyCollector.
+  auto DC = std::make_shared<PPCallbacksDependencyCollector>(
+      [this](Preprocessor &PP) {
+        return std::make_unique<IncludeTreePPCallbacks>(*this, PP);
+      });
+  ScanInstance.addDependencyCollector(std::move(DC));
 
   return Error::success();
 }

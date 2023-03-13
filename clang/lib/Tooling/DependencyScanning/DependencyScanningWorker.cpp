@@ -162,48 +162,17 @@ static void sanitizeDiagOpts(DiagnosticOptions &DiagOpts) {
   DiagOpts.IgnoreWarnings = true;
 }
 
-struct IncludeTreePPCallbacks : public PPCallbacks {
-  DependencyActionController &Controller;
-  Preprocessor &PP;
-
-public:
-  IncludeTreePPCallbacks(DependencyActionController &Controller,
-                         Preprocessor &PP)
-      : Controller(Controller), PP(PP) {}
-
-  void LexedFileChanged(FileID FID, LexedFileChangeReason Reason,
-                        SrcMgr::CharacteristicKind FileType, FileID PrevFID,
-                        SourceLocation Loc) override {
-    switch (Reason) {
-    case LexedFileChangeReason::EnterFile:
-      Controller.enteredInclude(PP, FID);
-      break;
-    case LexedFileChangeReason::ExitFile: {
-      Controller.exitedInclude(PP, FID, PrevFID, Loc);
-      break;
-    }
-    }
-  }
-
-  void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
-                  OptionalFileEntryRef File,
-                  SrcMgr::CharacteristicKind FileType) override {
-    Controller.handleHasIncludeCheck(PP, File.has_value());
-  }
-};
-
-class IncludeTreeCollector : public DependencyFileGenerator {
-  DependencyActionController &Controller;
-  std::unique_ptr<DependencyOutputOptions> Opts;
-  bool EmitDependencyFile = false;
+/// Builds a dependency file after reversing prefix mappings. This allows
+/// emitting a .d file that has real paths where they would otherwise be
+/// canonicalized.
+class ReversePrefixMappingDependencyFileGenerator
+    : public DependencyFileGenerator {
   llvm::PrefixMapper ReverseMapper;
 
 public:
-  IncludeTreeCollector(DependencyActionController &Controller,
-                       std::unique_ptr<DependencyOutputOptions> Opts,
-                       bool EmitDependencyFile)
-      : DependencyFileGenerator(*Opts), Controller(Controller),
-        Opts(std::move(Opts)), EmitDependencyFile(EmitDependencyFile) {}
+  ReversePrefixMappingDependencyFileGenerator(
+      const DependencyOutputOptions &Opts)
+      : DependencyFileGenerator(Opts) {}
 
   Error initialize(const CompilerInvocation &CI,
                    const DepscanPrefixMapping &PrefixMapping) {
@@ -218,11 +187,6 @@ public:
     return Error::success();
   }
 
-  void attachToPreprocessor(Preprocessor &PP) override {
-    PP.addPPCallbacks(std::make_unique<IncludeTreePPCallbacks>(Controller, PP));
-    DependencyFileGenerator::attachToPreprocessor(PP);
-  }
-
   void maybeAddDependency(StringRef Filename, bool FromModule, bool IsSystem,
                           bool IsModuleFile, bool IsMissing) override {
     if (ReverseMapper.empty())
@@ -235,11 +199,6 @@ public:
     ReverseMapper.mapInPlace(New);
     return DependencyFileGenerator::maybeAddDependency(
         New, FromModule, IsSystem, IsModuleFile, IsMissing);
-  }
-
-  void finishedMainFile(DiagnosticsEngine &Diags) override {
-    if (EmitDependencyFile)
-      DependencyFileGenerator::finishedMainFile(Diags);
   }
 };
 
@@ -456,18 +415,20 @@ public:
           std::make_shared<DependencyConsumerForwarder>(
               std::move(Opts), WorkingDirectory, Consumer, EmitDependencyFile));
       break;
-    case ScanningOutputFormat::IncludeTree: {
-      auto IncTreeCollector = std::make_shared<IncludeTreeCollector>(
-          Controller, std::move(Opts), EmitDependencyFile);
-      if (Error E = IncTreeCollector->initialize(
-              ScanInstance.getInvocation(), *Controller.getPrefixMapping()))
-        return reportError(std::move(E));
-      ScanInstance.addDependencyCollector(std::move(IncTreeCollector));
-      break;
-    }
+    case ScanningOutputFormat::IncludeTree:
     case ScanningOutputFormat::P1689:
     case ScanningOutputFormat::Full:
     case ScanningOutputFormat::FullTree:
+      if (EmitDependencyFile) {
+        auto DFG =
+            std::make_shared<ReversePrefixMappingDependencyFileGenerator>(
+                *Opts);
+        if (auto *Mapping = Controller.getPrefixMapping())
+          if (auto E = DFG->initialize(ScanInstance.getInvocation(), *Mapping))
+            return reportError(std::move(E));
+        ScanInstance.addDependencyCollector(std::move(DFG));
+      }
+
       MDC = std::make_shared<ModuleDepCollector>(
           std::move(Opts), ScanInstance, Consumer, Controller,
           OriginalInvocation, OptimizeArgs, EagerLoadModules,
