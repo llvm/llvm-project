@@ -1558,11 +1558,15 @@ bool RISCVTargetLowering::isLegalZfaFPImm(const APFloat &Imm, EVT VT) const {
 
 bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                        bool ForCodeSize) const {
-  if (VT == MVT::f16 && !Subtarget.hasStdExtZfhOrZfhmin())
-    return false;
-  if (VT == MVT::f32 && !Subtarget.hasStdExtF())
-    return false;
-  if (VT == MVT::f64 && !Subtarget.hasStdExtD())
+  bool IsLegalVT = false;
+  if (VT == MVT::f16)
+    IsLegalVT = Subtarget.hasStdExtZfhOrZfhmin();
+  else if (VT == MVT::f32)
+    IsLegalVT = Subtarget.hasStdExtF();
+  else if (VT == MVT::f64)
+    IsLegalVT = Subtarget.hasStdExtD();
+
+  if (!IsLegalVT)
     return false;
 
   if (isLegalZfaFPImm(Imm, VT))
