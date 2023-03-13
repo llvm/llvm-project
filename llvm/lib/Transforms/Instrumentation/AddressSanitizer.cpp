@@ -1469,6 +1469,38 @@ static void SplitBlockAndInsertSimpleForLoop(Value *End,
   Index = IV;
 }
 
+/// Utility function for performing a given action on each lane of a vector
+/// with \p EC elements.  To simplify porting legacy code, this defaults to
+/// unrolling the implied loop for non-scalable element counts, but this is
+/// not considered to be part of the contract of this routine, and is
+/// expected to change in the future.
+static void
+SplitBlockAndInsertForEachLane(ElementCount EC,
+                               Type *IndexTy,
+                               Instruction *InsertBefore,
+                               std::function<void(IRBuilderBase&, Value*)> Func) {
+
+  IRBuilder<> IRB(InsertBefore);
+
+  if (EC.isScalable()) {
+    Value *NumElements = IRB.CreateElementCount(IndexTy, EC);
+
+    Instruction *BodyIP;
+    Value *Index;
+    SplitBlockAndInsertSimpleForLoop(NumElements, InsertBefore,
+                                     BodyIP, Index);
+
+    IRB.SetInsertPoint(BodyIP);
+    Func(IRB, Index);
+    return;
+  }
+
+  unsigned Num = EC.getFixedValue();
+  for (unsigned Idx = 0; Idx < Num; ++Idx) {
+    IRB.SetInsertPoint(InsertBefore);
+    Func(IRB, ConstantInt::get(IndexTy, Idx));
+  }
+}
 
 static void instrumentMaskedLoadOrStore(AddressSanitizer *Pass,
                                         const DataLayout &DL, Type *IntptrTy,
@@ -1482,57 +1514,25 @@ static void instrumentMaskedLoadOrStore(AddressSanitizer *Pass,
   TypeSize ElemTypeSize = DL.getTypeStoreSizeInBits(VTy->getScalarType());
   auto Zero = ConstantInt::get(IntptrTy, 0);
 
-  // For fixed length vectors, it's legal to fallthrough into the generic loop
-  // lowering below, but we chose to unroll and specialize instead.  We might want
-  // to revisit this heuristic decision.
-  if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
-    unsigned Num = FVTy->getNumElements();
-    for (unsigned Idx = 0; Idx < Num; ++Idx) {
-      Value *InstrumentedAddress = nullptr;
-      Instruction *InsertBefore = I;
-      if (auto *Vector = dyn_cast<ConstantVector>(Mask)) {
-        // dyn_cast as we might get UndefValue
-        if (auto *Masked = dyn_cast<ConstantInt>(Vector->getOperand(Idx))) {
-          if (Masked->isZero())
-            // Mask is constant false, so no instrumentation needed.
-            continue;
-          // If we have a true or undef value, fall through to doInstrumentAddress
-          // with InsertBefore == I
-        }
-      } else {
-        IRBuilder<> IRB(I);
-        Value *MaskElem = IRB.CreateExtractElement(Mask, Idx);
-        Instruction *ThenTerm = SplitBlockAndInsertIfThen(MaskElem, I, false);
-        InsertBefore = ThenTerm;
-      }
-
-      IRBuilder<> IRB(InsertBefore);
-      InstrumentedAddress =
-        IRB.CreateGEP(VTy, Addr, {Zero, ConstantInt::get(IntptrTy, Idx)});
-      doInstrumentAddress(Pass, I, InsertBefore, InstrumentedAddress, Alignment,
-                          Granularity, ElemTypeSize, IsWrite,
-                          SizeArgument, UseCalls, Exp);
+  SplitBlockAndInsertForEachLane(VTy->getElementCount(), IntptrTy, I,
+                                 [&](IRBuilderBase &IRB, Value *Index) {
+    Value *MaskElem = IRB.CreateExtractElement(Mask, Index);
+    if (auto *MaskElemC = dyn_cast<ConstantInt>(MaskElem)) {
+      if (MaskElemC->isZero())
+        // No check
+        return;
+      // Unconditional check
+    } else {
+      // Conditional check
+      Instruction *ThenTerm = SplitBlockAndInsertIfThen(MaskElem, &*IRB.GetInsertPoint(), false);
+      IRB.SetInsertPoint(ThenTerm);
     }
-    return;
-  }
 
-
-  IRBuilder<> IRB(I);
-  Value *NumElements = IRB.CreateElementCount(IntptrTy, VTy->getElementCount());
-
-  Instruction *BodyIP;
-  Value *Index;
-  SplitBlockAndInsertSimpleForLoop(NumElements, I, BodyIP, Index);
-
-  IRB.SetInsertPoint(BodyIP);
-  Value *MaskElem = IRB.CreateExtractElement(Mask, Index);
-  Instruction *ThenTerm = SplitBlockAndInsertIfThen(MaskElem, BodyIP, false);
-  IRB.SetInsertPoint(ThenTerm);
-
-  Value *InstrumentedAddress = IRB.CreateGEP(VTy, Addr, {Zero, Index});
-  doInstrumentAddress(Pass, I, &*IRB.GetInsertPoint(), InstrumentedAddress, Alignment,
-                      Granularity, ElemTypeSize, IsWrite, SizeArgument,
-                      UseCalls, Exp);
+    Value *InstrumentedAddress = IRB.CreateGEP(VTy, Addr, {Zero, Index});
+    doInstrumentAddress(Pass, I, &*IRB.GetInsertPoint(), InstrumentedAddress, Alignment,
+                        Granularity, ElemTypeSize, IsWrite, SizeArgument,
+                        UseCalls, Exp);
+  });
 }
 
 void AddressSanitizer::instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
