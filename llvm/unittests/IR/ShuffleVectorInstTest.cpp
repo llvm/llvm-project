@@ -116,4 +116,33 @@ TEST(ShuffleVectorInst, isOneUseSingleSourceMask) {
       ShuffleVectorInst::isOneUseSingleSourceMask({0, 1, 2, 3, 3, 3, 1, 0}, 4));
 }
 
+TEST(ShuffleVectorInst, isInterleaveMask) {
+  SmallVector<unsigned> StartIndexes;
+  ASSERT_TRUE(ShuffleVectorInst::isInterleaveMask({0, 4, 1, 5, 2, 6, 3, 7}, 2,
+                                                  8, StartIndexes));
+  ASSERT_EQ(StartIndexes, SmallVector<unsigned>({0, 4}));
+
+  ASSERT_FALSE(
+      ShuffleVectorInst::isInterleaveMask({0, 4, 1, 6, 2, 6, 3, 7}, 2, 8));
+
+  ASSERT_TRUE(ShuffleVectorInst::isInterleaveMask({4, 0, 5, 1, 6, 2, 7, 3}, 2,
+                                                  8, StartIndexes));
+  ASSERT_EQ(StartIndexes, SmallVector<unsigned>({4, 0}));
+
+  ASSERT_TRUE(ShuffleVectorInst::isInterleaveMask({4, 0, -1, 1, -1, 2, 7, 3}, 2,
+                                                  8, StartIndexes));
+  ASSERT_EQ(StartIndexes, SmallVector<unsigned>({4, 0}));
+
+  ASSERT_TRUE(ShuffleVectorInst::isInterleaveMask({0, 2, 4, 1, 3, 5}, 3, 6,
+                                                  StartIndexes));
+  ASSERT_EQ(StartIndexes, SmallVector<unsigned>({0, 2, 4}));
+
+  ASSERT_TRUE(ShuffleVectorInst::isInterleaveMask({4, -1, 0, 5, 3, 1}, 3, 6,
+                                                  StartIndexes));
+  ASSERT_EQ(StartIndexes, SmallVector<unsigned>({4, 2, 0}));
+
+  ASSERT_FALSE(
+      ShuffleVectorInst::isInterleaveMask({8, 2, 12, 4, 9, 3, 13, 5}, 4, 8));
+}
+
 } // end anonymous namespace
