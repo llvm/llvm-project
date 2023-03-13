@@ -40,6 +40,7 @@ add_libc_unittest(
   DEPENDS
     libc.src.__support.str_to_float
     libc.src.__support.uint128
+    libc.src.errno.errno
 )
 
 add_libc_unittest(
