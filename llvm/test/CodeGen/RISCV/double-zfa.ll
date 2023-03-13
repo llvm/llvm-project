@@ -77,6 +77,16 @@ define double @loadfpimm9() {
   ret double 255.0
 }
 
+; Negative test. This is 1 * 2^256.
+define double @loadfpimm10() {
+; CHECK-LABEL: loadfpimm10:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(.LCPI9_0)
+; CHECK-NEXT:    fld fa0, %lo(.LCPI9_0)(a0)
+; CHECK-NEXT:    ret
+  ret double 0x1000000000000000
+}
+
 declare double @llvm.minimum.f64(double, double)
 
 define double @fminm_d(double %a, double %b) nounwind {

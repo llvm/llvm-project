@@ -167,6 +167,10 @@ public:
     /// List of relocations associated with data in the constant island
     std::map<uint64_t, Relocation> Relocations;
 
+    /// Set true if constant island contains dynamic relocations, which may
+    /// happen if binary is linked with -z notext option.
+    bool HasDynamicRelocations{false};
+
     /// Offsets in function that are data values in a constant island identified
     /// after disassembling
     std::map<uint64_t, MCSymbol *> Offsets;
@@ -1943,6 +1947,28 @@ public:
       Islands->Symbols.insert(Symbol);
     }
     return Symbol;
+  }
+
+  /// Support dynamic relocations in constant islands, which may happen if
+  /// binary is linked with -z notext option.
+  void markIslandDynamicRelocationAtAddress(uint64_t Address) {
+    if (!isInConstantIsland(Address)) {
+      errs() << "BOLT-ERROR: dynamic relocation found for text section at 0x"
+             << Twine::utohexstr(Address) << "\n";
+      exit(1);
+    }
+
+    // Mark island to have dynamic relocation
+    Islands->HasDynamicRelocations = true;
+
+    // Create island access, so we would emit the label and
+    // move binary data during updateOutputValues, making us emit
+    // dynamic relocation with the right offset value.
+    getOrCreateIslandAccess(Address);
+  }
+
+  bool hasDynamicRelocationAtIsland() const {
+    return !!(Islands && Islands->HasDynamicRelocations);
   }
 
   /// Called by an external function which wishes to emit references to constant

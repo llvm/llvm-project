@@ -652,6 +652,7 @@ utility limits
 utility version
 valarray cmath
 valarray cstddef
+valarray cstdint
 valarray cstdlib
 valarray initializer_list
 valarray limits

@@ -19,7 +19,9 @@ cc_test(
         "Debug/*.h",
     ]),
     deps = [
+        "//llvm:Support",
         "//llvm:TestingSupport",
+        "//mlir:BreakpointManagers",
         "//mlir:Debug",
         "//mlir:Support",
         "//third-party/unittest:gmock",

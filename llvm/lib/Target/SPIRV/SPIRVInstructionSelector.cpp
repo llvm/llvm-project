@@ -1080,8 +1080,8 @@ Register SPIRVInstructionSelector::buildOnesVal(bool AllOnes,
                                                 const SPIRVType *ResType,
                                                 MachineInstr &I) const {
   unsigned BitWidth = GR.getScalarOrVectorBitWidth(ResType);
-  APInt One = AllOnes ? APInt::getAllOnesValue(BitWidth)
-                      : APInt::getOneBitSet(BitWidth, 0);
+  APInt One =
+      AllOnes ? APInt::getAllOnes(BitWidth) : APInt::getOneBitSet(BitWidth, 0);
   if (ResType->getOpcode() == SPIRV::OpTypeVector)
     return GR.getOrCreateConsIntVector(One.getZExtValue(), I, ResType, TII);
   return GR.getOrCreateConstInt(One.getZExtValue(), I, ResType, TII);
@@ -1180,10 +1180,10 @@ bool SPIRVInstructionSelector::selectConst(Register ResVReg,
                                            const APInt &Imm,
                                            MachineInstr &I) const {
   unsigned TyOpcode = ResType->getOpcode();
-  assert(TyOpcode != SPIRV::OpTypePointer || Imm.isNullValue());
+  assert(TyOpcode != SPIRV::OpTypePointer || Imm.isZero());
   MachineBasicBlock &BB = *I.getParent();
   if ((TyOpcode == SPIRV::OpTypePointer || TyOpcode == SPIRV::OpTypeEvent) &&
-      Imm.isNullValue())
+      Imm.isZero())
     return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantNull))
         .addDef(ResVReg)
         .addUse(GR.getSPIRVTypeID(ResType))

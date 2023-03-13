@@ -206,6 +206,7 @@ def IsTupleCreate             : FlagType<0x100000000>;
 def IsTupleGet                : FlagType<0x200000000>;
 def IsTupleSet                : FlagType<0x400000000>;
 def ReverseMergeAnyBinOp      : FlagType<0x800000000>; // e.g. Implement SUBR_X using SUB_X.
+def ReverseMergeAnyAccOp      : FlagType<0x1000000000>; // e.g. Implement MSB_X using MLS_X.
 
 // These must be kept in sync with the flags in include/clang/Basic/TargetBuiltins.h
 class ImmCheckType<int val> {
@@ -788,20 +789,20 @@ defm SVSUBR   : SInstZPZZ<"svsubr", "csilUcUsUiUl", "aarch64_sve_subr",  "aarch6
 
 //------------------------------------------------------------------------------
 
-multiclass SInstZPZZZ<string name, string types, string intrinsic, list<FlagType> flags=[]> {
-  def _M   : SInst<name # "[_{d}]",   "dPddd", types, MergeOp1,  intrinsic, flags>;
-  def _X   : SInst<name # "[_{d}]",   "dPddd", types, MergeAny,  intrinsic, flags>;
-  def _Z   : SInst<name # "[_{d}]",   "dPddd", types, MergeZero, intrinsic, flags>;
+multiclass SInstZPZZZ<string name, string types, string m_intrinsic, string x_intrinsic, list<FlagType> flags=[]> {
+  def _M   : SInst<name # "[_{d}]",   "dPddd", types, MergeOp1,  m_intrinsic, flags>;
+  def _X   : SInst<name # "[_{d}]",   "dPddd", types, MergeAny,  x_intrinsic, flags>;
+  def _Z   : SInst<name # "[_{d}]",   "dPddd", types, MergeZero, m_intrinsic, flags>;
 
-  def _N_M : SInst<name # "[_n_{d}]", "dPdda", types, MergeOp1,  intrinsic, flags>;
-  def _N_X : SInst<name # "[_n_{d}]", "dPdda", types, MergeAny,  intrinsic, flags>;
-  def _N_Z : SInst<name # "[_n_{d}]", "dPdda", types, MergeZero, intrinsic, flags>;
+  def _N_M : SInst<name # "[_n_{d}]", "dPdda", types, MergeOp1,  m_intrinsic, flags>;
+  def _N_X : SInst<name # "[_n_{d}]", "dPdda", types, MergeAny,  x_intrinsic, flags>;
+  def _N_Z : SInst<name # "[_n_{d}]", "dPdda", types, MergeZero, m_intrinsic, flags>;
 }
 
-defm SVMAD : SInstZPZZZ<"svmad", "csilUcUsUiUl", "aarch64_sve_mad">;
-defm SVMLA : SInstZPZZZ<"svmla", "csilUcUsUiUl", "aarch64_sve_mla">;
-defm SVMLS : SInstZPZZZ<"svmls", "csilUcUsUiUl", "aarch64_sve_mls">;
-defm SVMSB : SInstZPZZZ<"svmsb", "csilUcUsUiUl", "aarch64_sve_msb">;
+defm SVMAD : SInstZPZZZ<"svmad", "csilUcUsUiUl", "aarch64_sve_mad", "aarch64_sve_mad">;
+defm SVMLA : SInstZPZZZ<"svmla", "csilUcUsUiUl", "aarch64_sve_mla", "aarch64_sve_mla">;
+defm SVMLS : SInstZPZZZ<"svmls", "csilUcUsUiUl", "aarch64_sve_mls", "aarch64_sve_mls">;
+defm SVMSB : SInstZPZZZ<"svmsb", "csilUcUsUiUl", "aarch64_sve_msb", "aarch64_sve_msb">;
 
 //------------------------------------------------------------------------------
 
@@ -980,18 +981,18 @@ defm SVREVW : SInstZPZ<"svrevw", "lUl",          "aarch64_sve_revw">;
 defm SVABS_F : SInstZPZ<"svabs", "hfd", "aarch64_sve_fabs">;
 defm SVNEG_F : SInstZPZ<"svneg", "hfd", "aarch64_sve_fneg">;
 
-defm SVABD_F  : SInstZPZZ<"svabd",  "hfd", "aarch64_sve_fabd",   "aarch64_sve_fabd">;
-defm SVADD_F  : SInstZPZZ<"svadd",  "hfd", "aarch64_sve_fadd",   "aarch64_sve_fadd">;
-defm SVDIV_F  : SInstZPZZ<"svdiv",  "hfd", "aarch64_sve_fdiv",   "aarch64_sve_fdiv">;
-defm SVDIVR_F : SInstZPZZ<"svdivr", "hfd", "aarch64_sve_fdivr",  "aarch64_sve_fdivr">;
-defm SVMAX_F  : SInstZPZZ<"svmax",  "hfd", "aarch64_sve_fmax",   "aarch64_sve_fmax">;
-defm SVMAXNM  : SInstZPZZ<"svmaxnm","hfd", "aarch64_sve_fmaxnm", "aarch64_sve_fmaxnm">;
-defm SVMIN_F  : SInstZPZZ<"svmin",  "hfd", "aarch64_sve_fmin",   "aarch64_sve_fmin">;
-defm SVMINNM  : SInstZPZZ<"svminnm","hfd", "aarch64_sve_fminnm", "aarch64_sve_fminnm">;
-defm SVMUL_F  : SInstZPZZ<"svmul",  "hfd", "aarch64_sve_fmul",   "aarch64_sve_fmul">;
-defm SVMULX   : SInstZPZZ<"svmulx", "hfd", "aarch64_sve_fmulx",  "aarch64_sve_fmulx">;
-defm SVSUB_F  : SInstZPZZ<"svsub",  "hfd", "aarch64_sve_fsub",   "aarch64_sve_fsub">;
-defm SVSUBR_F : SInstZPZZ<"svsubr", "hfd", "aarch64_sve_fsubr",  "aarch64_sve_fsubr">;
+defm SVABD_F  : SInstZPZZ<"svabd",  "hfd", "aarch64_sve_fabd",   "aarch64_sve_fabd_u">;
+defm SVADD_F  : SInstZPZZ<"svadd",  "hfd", "aarch64_sve_fadd",   "aarch64_sve_fadd_u">;
+defm SVDIV_F  : SInstZPZZ<"svdiv",  "hfd", "aarch64_sve_fdiv",   "aarch64_sve_fdiv_u">;
+defm SVDIVR_F : SInstZPZZ<"svdivr", "hfd", "aarch64_sve_fdivr",  "aarch64_sve_fdiv_u", [ReverseMergeAnyBinOp]>;
+defm SVMAX_F  : SInstZPZZ<"svmax",  "hfd", "aarch64_sve_fmax",   "aarch64_sve_fmax_u">;
+defm SVMAXNM  : SInstZPZZ<"svmaxnm","hfd", "aarch64_sve_fmaxnm", "aarch64_sve_fmaxnm_u">;
+defm SVMIN_F  : SInstZPZZ<"svmin",  "hfd", "aarch64_sve_fmin",   "aarch64_sve_fmin_u">;
+defm SVMINNM  : SInstZPZZ<"svminnm","hfd", "aarch64_sve_fminnm", "aarch64_sve_fminnm_u">;
+defm SVMUL_F  : SInstZPZZ<"svmul",  "hfd", "aarch64_sve_fmul",   "aarch64_sve_fmul_u">;
+defm SVMULX   : SInstZPZZ<"svmulx", "hfd", "aarch64_sve_fmulx",  "aarch64_sve_fmulx_u">;
+defm SVSUB_F  : SInstZPZZ<"svsub",  "hfd", "aarch64_sve_fsub",   "aarch64_sve_fsub_u">;
+defm SVSUBR_F : SInstZPZZ<"svsubr", "hfd", "aarch64_sve_fsubr",  "aarch64_sve_fsub_u", [ReverseMergeAnyBinOp]>;
 
 defm SVRECPX : SInstZPZ<"svrecpx", "hfd", "aarch64_sve_frecpx">;
 defm SVRINTA : SInstZPZ<"svrinta", "hfd", "aarch64_sve_frinta">;
@@ -1016,14 +1017,14 @@ def SVSCALE_N_M : SInst<"svscale[_n_{d}]", "dPdK", "hfd", MergeOp1,  "aarch64_sv
 def SVSCALE_N_X : SInst<"svscale[_n_{d}]", "dPdK", "hfd", MergeAny,  "aarch64_sve_fscale">;
 def SVSCALE_N_Z : SInst<"svscale[_n_{d}]", "dPdK", "hfd", MergeZero, "aarch64_sve_fscale">;
 
-defm SVMAD_F  : SInstZPZZZ<"svmad",  "hfd", "aarch64_sve_fmad">;
-defm SVMLA_F  : SInstZPZZZ<"svmla",  "hfd", "aarch64_sve_fmla">;
-defm SVMLS_F  : SInstZPZZZ<"svmls",  "hfd", "aarch64_sve_fmls">;
-defm SVMSB_F  : SInstZPZZZ<"svmsb",  "hfd", "aarch64_sve_fmsb">;
-defm SVNMAD_F : SInstZPZZZ<"svnmad", "hfd", "aarch64_sve_fnmad">;
-defm SVNMLA_F : SInstZPZZZ<"svnmla", "hfd", "aarch64_sve_fnmla">;
-defm SVNMLS_F : SInstZPZZZ<"svnmls", "hfd", "aarch64_sve_fnmls">;
-defm SVNMSB_F : SInstZPZZZ<"svnmsb", "hfd", "aarch64_sve_fnmsb">;
+defm SVMAD_F  : SInstZPZZZ<"svmad",  "hfd", "aarch64_sve_fmad",  "aarch64_sve_fmla_u",  [ReverseMergeAnyAccOp]>;
+defm SVMLA_F  : SInstZPZZZ<"svmla",  "hfd", "aarch64_sve_fmla",  "aarch64_sve_fmla_u">;
+defm SVMLS_F  : SInstZPZZZ<"svmls",  "hfd", "aarch64_sve_fmls",  "aarch64_sve_fmls_u">;
+defm SVMSB_F  : SInstZPZZZ<"svmsb",  "hfd", "aarch64_sve_fmsb",  "aarch64_sve_fmls_u",  [ReverseMergeAnyAccOp]>;
+defm SVNMAD_F : SInstZPZZZ<"svnmad", "hfd", "aarch64_sve_fnmad", "aarch64_sve_fnmla_u", [ReverseMergeAnyAccOp]>;
+defm SVNMLA_F : SInstZPZZZ<"svnmla", "hfd", "aarch64_sve_fnmla", "aarch64_sve_fnmla_u">;
+defm SVNMLS_F : SInstZPZZZ<"svnmls", "hfd", "aarch64_sve_fnmls", "aarch64_sve_fnmls_u">;
+defm SVNMSB_F : SInstZPZZZ<"svnmsb", "hfd", "aarch64_sve_fnmsb", "aarch64_sve_fnmls_u", [ReverseMergeAnyAccOp]>;
 
 def SVCADD_M : SInst<"svcadd[_{d}]", "dPddi",  "hfd", MergeOp1,  "aarch64_sve_fcadd", [], [ImmCheck<3, ImmCheckComplexRot90_270>]>;
 def SVCADD_X : SInst<"svcadd[_{d}]", "dPddi",  "hfd", MergeAny,  "aarch64_sve_fcadd", [], [ImmCheck<3, ImmCheckComplexRot90_270>]>;

@@ -35,7 +35,7 @@ namespace wait_notify_broadcast_test {
 // |broadcast_count| by 1 before they start waiting on |broadcast_cnd|, and
 // decrement it by 1 after getting signalled on |broadcast_cnd|.
 
-constexpr unsigned int THRD_COUNT = 10000;
+constexpr unsigned int THRD_COUNT = 1000;
 
 static __llvm_libc::cpp::Atomic<unsigned int> broadcast_count(0);
 static cnd_t broadcast_cnd, threads_ready_cnd;

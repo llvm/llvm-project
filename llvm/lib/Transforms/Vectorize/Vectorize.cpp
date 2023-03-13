@@ -22,8 +22,6 @@ using namespace llvm;
 
 /// Initialize all passes linked into the Vectorization library.
 void llvm::initializeVectorization(PassRegistry &Registry) {
-  initializeLoopVectorizePass(Registry);
-  initializeSLPVectorizerPass(Registry);
   initializeLoadStoreVectorizerLegacyPassPass(Registry);
 }
 

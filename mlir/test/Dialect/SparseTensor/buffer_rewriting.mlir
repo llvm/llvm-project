@@ -132,13 +132,24 @@ func.func @sparse_push_back_inbound(%arg0: index, %arg1: memref<?xf64>, %arg2: f
 // CHECK-SAME:                                                   %[[Y0:.*]]: memref<?xf32>,
 // CHECK-SAME:                                                   %[[Y1:.*]]: memref<?xindex>) {
 // CHECK:           %[[C1:.*]] = arith.constant 1
-// CHECK:           %[[Lb:.*]] = arith.addi %[[L]], %[[C1]]
-// CHECK:           %[[COND:.*]] = arith.cmpi ult, %[[Lb]], %[[H]]
-// CHECK:           scf.if %[[COND]] {
-// CHECK:             %[[P:.*]] = func.call @_sparse_partition_1_i8_f32_index(%[[L]], %[[H]], %[[X0]], %[[Y0]], %[[Y1]])
-// CHECK:             func.call @_sparse_qsort_1_i8_f32_index(%[[L]], %[[P]], %[[X0]], %[[Y0]], %[[Y1]])
-// CHECK:             %[[P2:.*]] = arith.addi %[[P]], %[[C1]] : index
-// CHECK:             func.call @_sparse_qsort_1_i8_f32_index(%[[P2]], %[[H]], %[[X0]], %[[Y0]], %[[Y1]])
+// CHECK:           scf.while (%[[L2:.*]] = %[[L]], %[[H2:.*]] = %[[H]])
+// CHECK:             %[[Lb:.*]] = arith.addi %[[L2]], %[[C1]]
+// CHECK:             %[[COND:.*]] = arith.cmpi ult, %[[Lb]], %[[H2]]
+// CHECK:             scf.condition(%[[COND]]) %[[L2]], %[[H2]]
+// CHECK:           } do {
+// CHECK:           ^bb0(%[[L3:.*]]: index, %[[H3:.*]]: index)
+// CHECK:             %[[P:.*]] = func.call @_sparse_partition_1_i8_f32_index(%[[L3]], %[[H3]], %[[X0]], %[[Y0]], %[[Y1]])
+// CHECK:             %[[PP1:.*]] = arith.addi %[[P]], %[[C1]] : index
+// CHECK:             %[[LenL:.*]] = arith.subi %[[P]], %[[L3]]
+// CHECK:             %[[LenH:.*]] = arith.subi %[[H3]], %[[P]]
+// CHECK:             %[[Cmp:.*]] = arith.cmpi ule, %[[LenL]], %[[LenH]]
+// CHECK:             %[[L4:.*]] = arith.select %[[Cmp]], %[[PP1]], %[[L3]]
+// CHECK:             %[[H4:.*]] = arith.select %[[Cmp]], %[[H3]], %[[P]]
+// CHECK:             scf.if %[[Cmp]]
+// CHECK:               func.call @_sparse_qsort_1_i8_f32_index(%[[L3]], %[[P]], %[[X0]], %[[Y0]], %[[Y1]])
+// CHECK:             else
+// CHECK:               func.call @_sparse_qsort_1_i8_f32_index(%[[PP1]], %[[H3]], %[[X0]], %[[Y0]], %[[Y1]])
+// CHECK:             scf.yield %[[L4]], %[[H4]]
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
@@ -187,7 +198,7 @@ func.func @sparse_sort_3d_quick(%arg0: index, %arg1: memref<10xindex>, %arg2: me
 // CHECK-DAG:     func.func private @_sparse_heap_sort_3_index(%arg0: index, %arg1: index, %arg2: memref<?xindex>, %arg3: memref<?xindex>, %arg4: memref<?xindex>) {
 // CHECK-DAG:     func.func private @_sparse_compare_eq_3_index(%arg0: index, %arg1: index, %arg2: memref<?xindex>, %arg3: memref<?xindex>, %arg4: memref<?xindex>) -> i1 {
 // CHECK-DAG:     func.func private @_sparse_partition_3_index(%arg0: index, %arg1: index, %arg2: memref<?xindex>, %arg3: memref<?xindex>, %arg4: memref<?xindex>) -> index {
-// CHECK-DAG:     func.func private @_sparse_hybrid_qsort_3_index(%arg0: index, %arg1: index, %arg2: memref<?xindex>, %arg3: memref<?xindex>, %arg4: memref<?xindex>, %arg5: memref<i64>) {
+// CHECK-DAG:     func.func private @_sparse_hybrid_qsort_3_index(%arg0: index, %arg1: index, %arg2: memref<?xindex>, %arg3: memref<?xindex>, %arg4: memref<?xindex>, %arg5: i64) {
 // CHECK-LABEL:   func.func @sparse_sort_3d_hybrid
 func.func @sparse_sort_3d_hybrid(%arg0: index, %arg1: memref<10xindex>, %arg2: memref<?xindex>, %arg3: memref<10xindex>) -> (memref<10xindex>, memref<?xindex>, memref<10xindex>) {
   sparse_tensor.sort hybrid_quick_sort %arg0, %arg1, %arg2, %arg3 : memref<10xindex>, memref<?xindex>, memref<10xindex>
@@ -249,7 +260,7 @@ func.func @sparse_sort_coo_quick(%arg0: index, %arg1: memref<100xindex>, %arg2: 
 // CHECK-DAG:     func.func private @_sparse_heap_sort_2_index_coo_1_f32_i32(%arg0: index, %arg1: index, %arg2: memref<?xindex>, %arg3: memref<?xf32>, %arg4: memref<?xi32>) {
 // CHECK-DAG:     func.func private @_sparse_compare_eq_2_index_coo_1(%arg0: index, %arg1: index, %arg2: memref<?xindex>) -> i1 {
 // CHECK-DAG:     func.func private @_sparse_partition_2_index_coo_1_f32_i32(%arg0: index, %arg1: index, %arg2: memref<?xindex>, %arg3: memref<?xf32>, %arg4: memref<?xi32>) -> index {
-// CHECK-DAG:     func.func private @_sparse_hybrid_qsort_2_index_coo_1_f32_i32(%arg0: index, %arg1: index, %arg2: memref<?xindex>, %arg3: memref<?xf32>, %arg4: memref<?xi32>, %arg5: memref<i64>) {
+// CHECK-DAG:     func.func private @_sparse_hybrid_qsort_2_index_coo_1_f32_i32(%arg0: index, %arg1: index, %arg2: memref<?xindex>, %arg3: memref<?xf32>, %arg4: memref<?xi32>, %arg5: i64) {
 // CHECK-LABEL:   func.func @sparse_sort_coo_hybrid
 func.func @sparse_sort_coo_hybrid(%arg0: index, %arg1: memref<100xindex>, %arg2: memref<?xf32>, %arg3: memref<10xi32>) -> (memref<100xindex>, memref<?xf32>, memref<10xi32>) {
   sparse_tensor.sort_coo hybrid_quick_sort %arg0, %arg1 jointly %arg2, %arg3 {nx = 2 : index, ny = 1: index} : memref<100xindex> jointly memref<?xf32>, memref<10xi32>

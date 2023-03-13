@@ -2489,34 +2489,60 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     // match the shift as a scale factor.
     if (AM.IndexReg.getNode() != nullptr || AM.Scale != 1)
       break;
-    if (N.getOperand(0).getOpcode() != ISD::SHL || !N.getOperand(0).hasOneUse())
+
+    // Peek through mask: zext(and(shl(x,c1),c2))
+    SDValue Src = N.getOperand(0);
+    APInt Mask = APInt::getAllOnes(Src.getScalarValueSizeInBits());
+    if (Src.getOpcode() == ISD::AND && Src.hasOneUse())
+      if (auto *MaskC = dyn_cast<ConstantSDNode>(Src.getOperand(1))) {
+        Mask = MaskC->getAPIntValue();
+        Src = Src.getOperand(0);
+      }
+
+    if (Src.getOpcode() != ISD::SHL || !Src.hasOneUse())
       break;
 
     // Give up if the shift is not a valid scale factor [1,2,3].
-    SDValue Shl = N.getOperand(0);
-    auto *ShAmtC = dyn_cast<ConstantSDNode>(Shl.getOperand(1));
-    if (!ShAmtC || ShAmtC->getZExtValue() > 3)
+    SDValue ShlSrc = Src.getOperand(0);
+    SDValue ShlAmt = Src.getOperand(1);
+    auto *ShAmtC = dyn_cast<ConstantSDNode>(ShlAmt);
+    if (!ShAmtC)
+      break;
+    unsigned ShAmtV = ShAmtC->getZExtValue();
+    if (ShAmtV > 3)
       break;
 
     // The narrow shift must only shift out zero bits (it must be 'nuw').
     // That makes it safe to widen to the destination type.
-    APInt HighZeros = APInt::getHighBitsSet(Shl.getValueSizeInBits(),
-                                            ShAmtC->getZExtValue());
-    if (!CurDAG->MaskedValueIsZero(Shl.getOperand(0), HighZeros))
+    APInt HighZeros =
+        APInt::getHighBitsSet(ShlSrc.getValueSizeInBits(), ShAmtV);
+    if (!CurDAG->MaskedValueIsZero(ShlSrc, HighZeros & Mask))
       break;
 
-    // zext (shl nuw i8 %x, C) to i32 --> shl (zext i8 %x to i32), (zext C)
+    // zext (shl nuw i8 %x, C1) to i32
+    // --> shl (zext i8 %x to i32), (zext C1)
+    // zext (and (shl nuw i8 %x, C1), C2) to i32
+    // --> shl (zext i8 (and %x, C2 >> C1) to i32), (zext C1)
+    MVT SrcVT = ShlSrc.getSimpleValueType();
     MVT VT = N.getSimpleValueType();
     SDLoc DL(N);
-    SDValue Zext = CurDAG->getNode(ISD::ZERO_EXTEND, DL, VT, Shl.getOperand(0));
-    SDValue NewShl = CurDAG->getNode(ISD::SHL, DL, VT, Zext, Shl.getOperand(1));
+
+    SDValue Res = ShlSrc;
+    if (!Mask.isAllOnes()) {
+      Res = CurDAG->getConstant(Mask.lshr(ShAmtV), DL, SrcVT);
+      insertDAGNode(*CurDAG, N, Res);
+      Res = CurDAG->getNode(ISD::AND, DL, SrcVT, ShlSrc, Res);
+      insertDAGNode(*CurDAG, N, Res);
+    }
+    SDValue Zext = CurDAG->getNode(ISD::ZERO_EXTEND, DL, VT, Res);
+    insertDAGNode(*CurDAG, N, Zext);
+    SDValue NewShl = CurDAG->getNode(ISD::SHL, DL, VT, Zext, ShlAmt);
+    insertDAGNode(*CurDAG, N, NewShl);
 
     // Convert the shift to scale factor.
-    AM.Scale = 1 << ShAmtC->getZExtValue();
+    AM.Scale = 1 << ShAmtV;
     AM.IndexReg = Zext;
 
-    insertDAGNode(*CurDAG, N, Zext);
-    insertDAGNode(*CurDAG, N, NewShl);
     CurDAG->ReplaceAllUsesWith(N, NewShl);
     CurDAG->RemoveDeadNode(N.getNode());
     return false;

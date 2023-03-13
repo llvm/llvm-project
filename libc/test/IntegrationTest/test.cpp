@@ -34,4 +34,7 @@ void *realloc(void *ptr, size_t s) {
   return malloc(s);
 }
 
+// Integration tests are linked with -nostdlib. BFD linker expects
+// __dso_handle when -nostdlib is used.
+void *__dso_handle = nullptr;
 } // extern "C"

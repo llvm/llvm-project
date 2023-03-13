@@ -634,12 +634,6 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
   }
 }
 
-// Symbols with `l` or `L` as a prefix are linker-private and never appear in
-// the output.
-static bool isPrivateLabel(StringRef name) {
-  return name.startswith("l") || name.startswith("L");
-}
-
 template <class NList>
 static macho::Symbol *createDefined(const NList &sym, StringRef name,
                                     InputSection *isec, uint64_t value,
@@ -849,15 +843,12 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
     // We populate subsections by repeatedly splitting the last (highest
     // address) subsection.
     llvm::stable_sort(symbolIndices, [&](uint32_t lhs, uint32_t rhs) {
-      // Put private-label symbols that have no flags after other symbols at the
-      // same address.
-      StringRef lhsName = getSymName(nList[lhs]);
-      StringRef rhsName = getSymName(nList[rhs]);
-      if (nList[lhs].n_value == nList[rhs].n_value) {
-        if (isPrivateLabel(lhsName) && isPrivateLabel(rhsName))
-          return nList[lhs].n_desc > nList[rhs].n_desc;
-        return !isPrivateLabel(lhsName) && isPrivateLabel(rhsName);
-      }
+      // Put extern weak symbols after other symbols at the same address so
+      // that weak symbol coalescing works correctly. See
+      // SymbolTable::addDefined() for details.
+      if (nList[lhs].n_value == nList[rhs].n_value &&
+          nList[lhs].n_type & N_EXT && nList[rhs].n_type & N_EXT)
+        return !(nList[lhs].n_desc & N_WEAK_DEF) && (nList[rhs].n_desc & N_WEAK_DEF);
       return nList[lhs].n_value < nList[rhs].n_value;
     });
     for (size_t j = 0; j < symbolIndices.size(); ++j) {
@@ -883,17 +874,8 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       if (!subsectionsViaSymbols || symbolOffset == 0 ||
           sym.n_desc & N_ALT_ENTRY || !isa<ConcatInputSection>(isec)) {
         isec->hasAltEntry = symbolOffset != 0;
-        // If we have an private-label symbol that's an alias, and that alias
-        // doesn't have any flags of its own, then we can just reuse the aliased
-        // symbol. Our sorting step above ensures that any such symbols will
-        // appear after the non-private-label ones. See weak-def-alias-ignored.s
-        // for the motivation behind this.
-        if (symbolOffset == 0 && isPrivateLabel(name) && j != 0 &&
-            sym.n_desc == 0)
-          symbols[symIndex] = symbols[symbolIndices[j - 1]];
-        else
-          symbols[symIndex] = createDefined(sym, name, isec, symbolOffset,
-                                            symbolSize, forceHidden);
+        symbols[symIndex] = createDefined(sym, name, isec, symbolOffset,
+                                          symbolSize, forceHidden);
         continue;
       }
       auto *concatIsec = cast<ConcatInputSection>(isec);

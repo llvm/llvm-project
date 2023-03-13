@@ -22,6 +22,7 @@
 #include <charconv>
 #include <limits>
 #include <string>
+#include <string_view>
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
 #  include <locale>

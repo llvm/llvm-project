@@ -22,9 +22,6 @@
 #include <unistd.h>
 
 extern "C" int main(int, char **, char **);
-// The BFD linker requires a reference to __dso_handle to trigger creating
-// a symbol for it when -nostdlib is used..
-extern "C" void *__dso_handle = nullptr;
 
 namespace __llvm_libc {
 

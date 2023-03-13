@@ -115,64 +115,6 @@ static cl::opt<bool> ThreadAcrossLoopHeaders(
     cl::desc("Allow JumpThreading to thread across loop headers, for testing"),
     cl::init(false), cl::Hidden);
 
-
-namespace {
-
-  /// This pass performs 'jump threading', which looks at blocks that have
-  /// multiple predecessors and multiple successors.  If one or more of the
-  /// predecessors of the block can be proven to always jump to one of the
-  /// successors, we forward the edge from the predecessor to the successor by
-  /// duplicating the contents of this block.
-  ///
-  /// An example of when this can occur is code like this:
-  ///
-  ///   if () { ...
-  ///     X = 4;
-  ///   }
-  ///   if (X < 3) {
-  ///
-  /// In this case, the unconditional branch at the end of the first if can be
-  /// revectored to the false side of the second if.
-  class JumpThreading : public FunctionPass {
-  public:
-    static char ID; // Pass identification
-
-    JumpThreading(int T = -1) : FunctionPass(ID) {
-      initializeJumpThreadingPass(*PassRegistry::getPassRegistry());
-    }
-
-    bool runOnFunction(Function &F) override;
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<DominatorTreeWrapperPass>();
-      AU.addPreserved<DominatorTreeWrapperPass>();
-      AU.addRequired<AAResultsWrapperPass>();
-      AU.addRequired<LazyValueInfoWrapperPass>();
-      AU.addPreserved<LazyValueInfoWrapperPass>();
-      AU.addPreserved<GlobalsAAWrapperPass>();
-      AU.addRequired<TargetLibraryInfoWrapperPass>();
-      AU.addRequired<TargetTransformInfoWrapperPass>();
-    }
-  };
-
-} // end anonymous namespace
-
-char JumpThreading::ID = 0;
-
-INITIALIZE_PASS_BEGIN(JumpThreading, "jump-threading",
-                "Jump Threading", false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LazyValueInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(JumpThreading, "jump-threading",
-                "Jump Threading", false, false)
-
-// Public interface to the Jump Threading pass
-FunctionPass *llvm::createJumpThreadingPass(int Threshold) {
-  return new JumpThreading(Threshold);
-}
-
 JumpThreadingPass::JumpThreadingPass(int T) {
   DefaultBBDupThreshold = (T == -1) ? BBDuplicateThreshold : unsigned(T);
 }
@@ -301,35 +243,6 @@ static void updatePredecessorProfileMetadata(PHINode *PN, BasicBlock *BB) {
                         MDBuilder(PredBr->getParent()->getContext())
                             .createBranchWeights(Weights));
   }
-}
-
-/// runOnFunction - Toplevel algorithm.
-bool JumpThreading::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-  auto TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  // Jump Threading has no sense for the targets with divergent CF
-  if (TTI->hasBranchDivergence())
-    return false;
-  auto TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  auto DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto LVI = &getAnalysis<LazyValueInfoWrapperPass>().getLVI();
-  auto AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-
-  LoopInfo LI{*DT};
-  auto BPI = std::make_unique<BranchProbabilityInfo>(F, LI, TLI);
-  auto BFI = std::make_unique<BlockFrequencyInfo>(F, *BPI, LI);
-
-  JumpThreadingPass Impl;
-  bool Changed = Impl.runImpl(F, nullptr, TLI, TTI, LVI, AA,
-                              std::make_unique<DomTreeUpdater>(
-                                  DT, DomTreeUpdater::UpdateStrategy::Lazy),
-                              BFI.get(), BPI.get());
-  if (PrintLVIAfterJumpThreading) {
-    dbgs() << "LVI for function '" << F.getName() << "':\n";
-    LVI->printLVI(F, Impl.getDomTreeUpdater()->getDomTree(), dbgs());
-  }
-  return Changed;
 }
 
 PreservedAnalyses JumpThreadingPass::run(Function &F,
