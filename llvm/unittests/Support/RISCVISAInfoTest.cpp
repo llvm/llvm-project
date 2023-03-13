@@ -60,7 +60,7 @@ TEST(ParseNormalizedArchString, AcceptsValidBaseISAsAndSetsXLen) {
   EXPECT_EQ(InfoRV32E.getExtensions().size(), 1UL);
   EXPECT_TRUE(InfoRV32E.getExtensions().at("e") ==
               (RISCVExtensionInfo{"e", 2, 0}));
-  EXPECT_EQ(InfoRV32I.getXLen(), 32U);
+  EXPECT_EQ(InfoRV32E.getXLen(), 32U);
 
   auto MaybeRV64I = RISCVISAInfo::parseNormalizedArchString("rv64i2p0");
   ASSERT_THAT_EXPECTED(MaybeRV64I, Succeeded());
@@ -76,7 +76,7 @@ TEST(ParseNormalizedArchString, AcceptsValidBaseISAsAndSetsXLen) {
   EXPECT_EQ(InfoRV64E.getExtensions().size(), 1UL);
   EXPECT_TRUE(InfoRV64E.getExtensions().at("e") ==
               (RISCVExtensionInfo{"e", 2, 0}));
-  EXPECT_EQ(InfoRV64I.getXLen(), 64U);
+  EXPECT_EQ(InfoRV64E.getXLen(), 64U);
 }
 
 TEST(ParseNormalizedArchString, AcceptsArbitraryExtensionsAndVersions) {
