@@ -920,7 +920,8 @@ static bool detectAsFloorDiv(const FlatAffineValueConstraints &cst,
 std::pair<AffineMap, AffineMap>
 FlatAffineValueConstraints::getLowerAndUpperBound(
     unsigned pos, unsigned offset, unsigned num, unsigned symStartPos,
-    ArrayRef<AffineExpr> localExprs, MLIRContext *context) const {
+    ArrayRef<AffineExpr> localExprs, MLIRContext *context,
+    bool closedUB) const {
   assert(pos + offset < getNumDimVars() && "invalid dim start pos");
   assert(symStartPos >= (pos + offset) && "invalid sym start pos");
   assert(getNumLocalVars() == localExprs.size() &&
@@ -970,8 +971,8 @@ FlatAffineValueConstraints::getLowerAndUpperBound(
     auto expr =
         getAffineExprFromFlatForm(ub, dimCount, symCount, localExprs, context);
     expr = expr.floorDiv(std::abs(ineq[pos + offset]));
-    // Upper bound is exclusive.
-    ubExprs.push_back(expr + 1);
+    int64_t ubAdjustment = closedUB ? 0 : 1;
+    ubExprs.push_back(expr + ubAdjustment);
   }
 
   // Equalities. It's both a lower and a upper bound.
@@ -1009,7 +1010,7 @@ FlatAffineValueConstraints::getLowerAndUpperBound(
 void FlatAffineValueConstraints::getSliceBounds(
     unsigned offset, unsigned num, MLIRContext *context,
     SmallVectorImpl<AffineMap> *lbMaps, SmallVectorImpl<AffineMap> *ubMaps,
-    bool getClosedUB) {
+    bool closedUB) {
   assert(num < getNumDimVars() && "invalid range");
 
   // Basic simplification.
@@ -1108,7 +1109,7 @@ void FlatAffineValueConstraints::getSliceBounds(
     // again.
   } while (changed);
 
-  int64_t ubAdjustment = getClosedUB ? 0 : 1;
+  int64_t ubAdjustment = closedUB ? 0 : 1;
 
   // Set the lower and upper bound maps for all the variables that were
   // computed as affine expressions of the rest as the "detected expr" and
@@ -1140,7 +1141,8 @@ void FlatAffineValueConstraints::getSliceBounds(
           tmpClone->removeRedundantInequalities();
         }
         std::tie(lbMap, ubMap) = tmpClone->getLowerAndUpperBound(
-            pos, offset, num, getNumDimVars(), /*localExprs=*/{}, context);
+            pos, offset, num, getNumDimVars(), /*localExprs=*/{}, context,
+            closedUB);
       }
 
       // If the above fails, we'll just use the constant lower bound and the
