@@ -76,6 +76,7 @@ private:
   }
 
   cas::ObjectStore &DB;
+  CASOptions CASOpts;
   DepscanPrefixMapping PrefixMapping;
   llvm::PrefixMapper PrefixMapper;
   std::optional<cas::ObjectRef> PCHRef;
@@ -181,6 +182,8 @@ Error IncludeTreeActionController::initialize(
         return std::make_unique<IncludeTreePPCallbacks>(*this, PP);
       });
   ScanInstance.addDependencyCollector(std::move(DC));
+
+  CASOpts = ScanInstance.getCASOpts();
 
   return Error::success();
 }
@@ -323,9 +326,12 @@ Error IncludeTreeActionController::finalize(CompilerInstance &ScanInstance,
   if (!IncludeTreeRoot)
     return IncludeTreeRoot.takeError();
 
-  // FIXME: use configureInvocationForCaching
-  NewInvocation.getFrontendOpts().CASIncludeTreeID =
-      IncludeTreeRoot->getID().toString();
+  configureInvocationForCaching(NewInvocation, CASOpts,
+                                IncludeTreeRoot->getID().toString(),
+                                /*CASFSWorkingDir=*/"",
+                                /*ProduceIncludeTree=*/true);
+
+  DepscanPrefixMapping::remapInvocationPaths(NewInvocation, PrefixMapper);
 
   return Error::success();
 }

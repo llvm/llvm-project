@@ -40,7 +40,7 @@ TEST(IncludeTree, IncludeTreeScan) {
 
   DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
                                     ScanningOutputFormat::IncludeTree,
-                                    CASOptions(), nullptr, nullptr);
+                                    CASOptions(), nullptr, nullptr, nullptr);
   DependencyScanningTool ScanTool(Service, std::move(VFS));
 
   std::vector<std::string> CommandLine = {"clang",

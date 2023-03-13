@@ -880,7 +880,7 @@ int ScanServer::listen() {
       ProduceIncludeTree
           ? tooling::dependencies::ScanningOutputFormat::IncludeTree
           : tooling::dependencies::ScanningOutputFormat::Tree,
-      CASOpts, Cache, FS,
+      CASOpts, CAS, Cache, FS,
       /*ReuseFileManager=*/false,
       /*SkipExcludedPPRanges=*/true);
 
@@ -1111,7 +1111,7 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1Inline(
       ProduceIncludeTree
           ? tooling::dependencies::ScanningOutputFormat::IncludeTree
           : tooling::dependencies::ScanningOutputFormat::Tree,
-      CASOpts, Cache, FS,
+      CASOpts, DB, Cache, FS,
       /*ReuseFileManager=*/false,
       /*SkipExcludedPPRanges=*/true);
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> UnderlyingFS =

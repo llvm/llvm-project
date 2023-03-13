@@ -52,6 +52,9 @@ enum class ScanningOutputFormat {
   /// This emits the CAS ID of the include tree.
   IncludeTree,
 
+  /// This emits the full dependency graph but with include tree.
+  FullIncludeTree,
+
   /// This outputs the dependency graph for standard c++ modules in P1689R5
   /// format.
   P1689,
@@ -63,6 +66,7 @@ class DependencyScanningService {
 public:
   DependencyScanningService(
       ScanningMode Mode, ScanningOutputFormat Format, CASOptions CASOpts,
+      std::shared_ptr<llvm::cas::ObjectStore> CAS,
       std::shared_ptr<llvm::cas::ActionCache> Cache,
       IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> SharedFS,
       bool OptimizeArgs = false, bool EagerLoadModules = false);
@@ -82,19 +86,19 @@ public:
   }
 
   const CASOptions &getCASOpts() const { return CASOpts; }
-  llvm::cas::ActionCache &getCache() const {
-    assert(Cache && "Cache is not initialized");
-    return *Cache;
-  }
+
+  std::shared_ptr<llvm::cas::ObjectStore> getCAS() const { return CAS; }
+  std::shared_ptr<llvm::cas::ActionCache> getCache() const { return Cache; }
 
   llvm::cas::CachingOnDiskFileSystem &getSharedFS() { return *SharedFS; }
 
-  bool useCASScanning() const { return (bool)SharedFS; }
+  bool useCASFS() const { return (bool)SharedFS; }
 
 private:
   const ScanningMode Mode;
   const ScanningOutputFormat Format;
   CASOptions CASOpts;
+  std::shared_ptr<llvm::cas::ObjectStore> CAS;
   std::shared_ptr<llvm::cas::ActionCache> Cache;
   /// Whether to optimize the modules' command-line arguments.
   const bool OptimizeArgs;
