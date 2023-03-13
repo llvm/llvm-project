@@ -2,6 +2,7 @@
 #include "clang/Basic/AttrSubjectMatchRules.h"
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/ParsedAttrInfo.h"
 using namespace clang;
 
 static int hasAttributeImpl(AttributeCommonInfo::Syntax Syntax, StringRef Name,
@@ -39,6 +40,11 @@ int clang::hasAttribute(AttributeCommonInfo::Syntax Syntax,
   int res = hasAttributeImpl(Syntax, Name, ScopeName, Target, LangOpts);
   if (res)
     return res;
+
+  // Check if any plugin provides this attribute.
+  for (auto &Ptr : getAttributePluginInstances())
+    if (Ptr->hasSpelling(Syntax, Name))
+      return 1;
 
   return 0;
 }
