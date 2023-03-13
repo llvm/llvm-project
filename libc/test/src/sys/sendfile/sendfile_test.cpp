@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/string_view.h"
+#include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/sys/sendfile/sendfile.h"
 #include "src/unistd/close.h"
@@ -17,7 +18,6 @@
 #include "test/UnitTest/Test.h"
 #include "utils/testutils/FDReader.h"
 
-#include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 
@@ -36,20 +36,20 @@ TEST(LlvmLibcSendfileTest, CreateAndTransfer) {
   constexpr const char *OUT_FILE = "testdata/sendfile_out.test";
   const char IN_DATA[] = "sendfile test";
   constexpr ssize_t IN_SIZE = ssize_t(sizeof(IN_DATA));
-  errno = 0;
+  libc_errno = 0;
 
   int in_fd = __llvm_libc::open(IN_FILE, O_CREAT | O_WRONLY, S_IRWXU);
   ASSERT_GT(in_fd, 0);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   ASSERT_EQ(__llvm_libc::write(in_fd, IN_DATA, IN_SIZE), IN_SIZE);
   ASSERT_THAT(__llvm_libc::close(in_fd), Succeeds(0));
 
   in_fd = __llvm_libc::open(IN_FILE, O_RDONLY);
   ASSERT_GT(in_fd, 0);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   int out_fd = __llvm_libc::open(OUT_FILE, O_CREAT | O_WRONLY, S_IRWXU);
   ASSERT_GT(out_fd, 0);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   ssize_t size = __llvm_libc::sendfile(in_fd, out_fd, nullptr, IN_SIZE);
   ASSERT_EQ(size, IN_SIZE);
   ASSERT_THAT(__llvm_libc::close(in_fd), Succeeds(0));
@@ -57,7 +57,7 @@ TEST(LlvmLibcSendfileTest, CreateAndTransfer) {
 
   out_fd = __llvm_libc::open(OUT_FILE, O_RDONLY);
   ASSERT_GT(out_fd, 0);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   char buf[IN_SIZE];
   ASSERT_EQ(IN_SIZE, __llvm_libc::read(out_fd, buf, IN_SIZE));
   ASSERT_EQ(cpp::string_view(buf), cpp::string_view(IN_DATA));

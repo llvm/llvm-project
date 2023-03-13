@@ -12,7 +12,6 @@
 #include "test/UnitTest/Test.h"
 #include "utils/testutils/FDReader.h"
 
-#include <errno.h>
 #include <fcntl.h>
 
 TEST(LlvmLibcMkdiratTest, CreateAndRemove) {
