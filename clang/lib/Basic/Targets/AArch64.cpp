@@ -373,7 +373,8 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__ARM_ALIGN_MAX_STACK_PWR", "4");
 
   // 0xe implies support for half, single and double precision operations.
-  Builder.defineMacro("__ARM_FP", "0xE");
+  if (FPU & FPUMode)
+    Builder.defineMacro("__ARM_FP", "0xE");
 
   // PCS specifies this for SysV variants, which is all we support. Other ABIs
   // may choose __ARM_FP16_FORMAT_ALTERNATIVE.
@@ -709,6 +710,8 @@ void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
 bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
                                              DiagnosticsEngine &Diags) {
   for (const auto &Feature : Features) {
+    if (Feature == "-fp-armv8")
+      HasNoFP = true;
     if (Feature == "-neon")
       HasNoNeon = true;
     if (Feature == "-sve")
@@ -937,6 +940,11 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   setDataLayout();
   setArchFeatures();
 
+  if (HasNoFP) {
+    FPU &= ~FPUMode;
+    FPU &= ~NeonMode;
+    FPU &= ~SveMode;
+  }
   if (HasNoNeon) {
     FPU &= ~NeonMode;
     FPU &= ~SveMode;
