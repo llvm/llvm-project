@@ -607,7 +607,7 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node,
                         MFMATable<0, NAME # "_vgprcd_e64">;
     }
 
-    foreach _ = BoolToList<NoDstOverlap>.ret in {
+    if NoDstOverlap then {
       let Constraints = !if(NoDstOverlap, "$vdst = $src2", ""),
           isConvertibleToThreeAddress = NoDstOverlap,
           Mnemonic = OpName in {
@@ -1015,7 +1015,7 @@ multiclass VOP3P_Real_MFMA_gfx940_aliases<string NameFrom, string NameTo, string
                                           VOPProfile Pfl_ACD = PS_ACD.Pfl,
                                           VOPProfile Pfl_VCD = PS_VCD.Pfl> {
   let Predicates = [isGFX940Plus] in {
-    foreach _ = BoolToList<!ne(NameFrom, NameTo)>.ret in {
+    if !ne(NameFrom, NameTo) then {
       def : InstAlias <NameTo # " " # PS_ACD.AsmOperands,
                        (!cast<VOP3P_Real>(Op # "_gfx940_acd") Pfl_ACD.DstRC:$vdst,
                            Pfl_ACD.Src0RC64:$src0, Pfl_ACD.Src1RC64:$src1, Pfl_ACD.Src2RC64:$src2,
@@ -1043,7 +1043,7 @@ multiclass VOP3P_Real_MFMA_gfx940<bits<7> op, string Name = !cast<VOP3_Pseudo>(N
 
   defm : VOP3P_Real_MFMA_gfx940_aliases<Name, PS_ACD.Mnemonic, NAME>;
 
-  foreach _ = BoolToList<!ne(!subst("_1k", "", PS_ACD.Mnemonic), PS_ACD.Mnemonic)>.ret in
+  if !ne(!subst("_1k", "", PS_ACD.Mnemonic), PS_ACD.Mnemonic) then
   defm : VOP3P_Real_MFMA_gfx940_aliases<Name, !subst("_1k", "", PS_ACD.Mnemonic), NAME>;
 }
 
