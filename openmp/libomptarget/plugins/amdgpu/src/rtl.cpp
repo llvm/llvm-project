@@ -3397,8 +3397,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
 
       DeviceInfo().addOffloadEntry(DeviceId, Entry);
 
-      if (DeviceInfo().RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
-          E->flags & OMP_DECLARE_TARGET_LINK) {
+      if (DeviceInfo().RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
         // If unified memory is present any target link variables
         // can access host addresses directly. There is no longer a
         // need for device copies.
