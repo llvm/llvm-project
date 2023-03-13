@@ -1201,15 +1201,24 @@ unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
     *Addr += Info.PCOffset;
   }
 
-  dwarf::Form Form = AttrSpec.Form;
-
-  // DWARFLinker does not use addrx forms since it generates relocated
-  // addresses. Replace DW_FORM_addrx with DW_FORM_addr here.
-  if (Form == dwarf::DW_FORM_addrx)
-    Form = dwarf::DW_FORM_addr;
+  switch (AttrSpec.Form) {
+  case dwarf::DW_FORM_addrx:
+  case dwarf::DW_FORM_addrx1:
+  case dwarf::DW_FORM_addrx2:
+  case dwarf::DW_FORM_addrx3:
+  case dwarf::DW_FORM_addrx4: {
+    // DWARFLinker does not use addrx forms since it generates relocated
+    // addresses. Replace DW_FORM_addrx* with DW_FORM_addr here.
+    AttrSpec.Form = dwarf::DW_FORM_addr;
+    break;
+  }
+  default:
+    // Nothing to do.
+    break;
+  }
 
   Die.addValue(DIEAlloc, static_cast<dwarf::Attribute>(AttrSpec.Attr),
-               static_cast<dwarf::Form>(Form), DIEInteger(*Addr));
+               AttrSpec.Form, DIEInteger(*Addr));
   return Unit.getOrigUnit().getAddressByteSize();
 }
 
@@ -1358,6 +1367,10 @@ unsigned DWARFLinker::DIECloner::cloneAttribute(
                                IsLittleEndian);
   case dwarf::DW_FORM_addr:
   case dwarf::DW_FORM_addrx:
+  case dwarf::DW_FORM_addrx1:
+  case dwarf::DW_FORM_addrx2:
+  case dwarf::DW_FORM_addrx3:
+  case dwarf::DW_FORM_addrx4:
     return cloneAddressAttribute(Die, InputDIE, AttrSpec, AttrSize, Val, Unit,
                                  Info);
   case dwarf::DW_FORM_data1:

@@ -202,6 +202,9 @@ Bug Fixes to C++ Support
 - Fix crash when evaluating consteval constructor of derived class whose base
   has more than one field.
   (`#60166 <https://github.com/llvm/llvm-project/issues/60166>`_)
+- Fix an issue about ``decltype`` in the members of class templates derived from
+  templates with related parameters.
+  (`#58674 <https://github.com/llvm/llvm-project/issues/58674>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -296,6 +299,11 @@ libclang
 - Introduced the new function ``clang_CXXMethod_isExplicit``,
   which identifies whether a constructor or conversion function cursor
   was marked with the explicit identifier.
+- Added check in ``clang_getFieldDeclBitWidth`` for whether a bit field
+  has an evaluable bit width. Fixes undefined behavior when called on a
+  bit field whose width depends on a template paramter.
+- Added function ``clang_isBitFieldDecl`` to check if a struct/class field is a
+  bit field.
 
 - Introduced the new ``CXIndex`` constructor function
   ``clang_createIndexWithOptions``, which allows overriding precompiled preamble

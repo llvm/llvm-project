@@ -5591,8 +5591,7 @@ SDValue DAGCombiner::hoistLogicOpWithSameOpcodeHands(SDNode *N) {
   EVT VT = N0.getValueType();
   unsigned LogicOpcode = N->getOpcode();
   unsigned HandOpcode = N0.getOpcode();
-  assert((LogicOpcode == ISD::AND || LogicOpcode == ISD::OR ||
-          LogicOpcode == ISD::XOR) && "Expected logic opcode");
+  assert(ISD::isBitwiseLogicOp(LogicOpcode) && "Expected logic opcode");
   assert(HandOpcode == N1.getOpcode() && "Bad input!");
 
   // Bail early if none of these transforms apply.
@@ -6560,9 +6559,8 @@ static SDValue foldAndToUsubsat(SDNode *N, SelectionDAG &DAG) {
 static SDValue foldLogicOfShifts(SDNode *N, SDValue LogicOp, SDValue ShiftOp,
                                  SelectionDAG &DAG) {
   unsigned LogicOpcode = N->getOpcode();
-  assert((LogicOpcode == ISD::AND || LogicOpcode == ISD::OR ||
-          LogicOpcode == ISD::XOR)
-         && "Expected bitwise logic operation");
+  assert(ISD::isBitwiseLogicOp(LogicOpcode) &&
+         "Expected bitwise logic operation");
 
   if (!LogicOp.hasOneUse() || !ShiftOp.hasOneUse())
     return SDValue();
@@ -6609,8 +6607,8 @@ static SDValue foldLogicOfShifts(SDNode *N, SDValue LogicOp, SDValue ShiftOp,
 static SDValue foldLogicTreeOfShifts(SDNode *N, SDValue LeftHand,
                                      SDValue RightHand, SelectionDAG &DAG) {
   unsigned LogicOpcode = N->getOpcode();
-  assert((LogicOpcode == ISD::AND || LogicOpcode == ISD::OR ||
-          LogicOpcode == ISD::XOR));
+  assert(ISD::isBitwiseLogicOp(LogicOpcode) &&
+         "Expected bitwise logic operation");
   if (LeftHand.getOpcode() != LogicOpcode ||
       RightHand.getOpcode() != LogicOpcode)
     return SDValue();
@@ -12503,8 +12501,7 @@ SDValue DAGCombiner::CombineZExtLogicopShiftLoad(SDNode *N) {
 
   // and/or/xor
   SDValue N0 = N->getOperand(0);
-  if (!(N0.getOpcode() == ISD::AND || N0.getOpcode() == ISD::OR ||
-        N0.getOpcode() == ISD::XOR) ||
+  if (!ISD::isBitwiseLogicOp(N0.getOpcode()) ||
       N0.getOperand(1).getOpcode() != ISD::Constant ||
       (LegalOperations && !TLI.isOperationLegal(N0.getOpcode(), VT)))
     return SDValue();
@@ -12984,8 +12981,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
 
   // fold (sext (and/or/xor (load x), cst)) ->
   //      (and/or/xor (sextload x), (sext cst))
-  if ((N0.getOpcode() == ISD::AND || N0.getOpcode() == ISD::OR ||
-       N0.getOpcode() == ISD::XOR) &&
+  if (ISD::isBitwiseLogicOp(N0.getOpcode()) &&
       isa<LoadSDNode>(N0.getOperand(0)) &&
       N0.getOperand(1).getOpcode() == ISD::Constant &&
       (!LegalOperations && TLI.isOperationLegal(N0.getOpcode(), VT))) {
@@ -13287,8 +13283,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
   //      (and/or/xor (zextload x), (zext cst))
   // Unless (and (load x) cst) will match as a zextload already and has
   // additional users.
-  if ((N0.getOpcode() == ISD::AND || N0.getOpcode() == ISD::OR ||
-       N0.getOpcode() == ISD::XOR) &&
+  if (ISD::isBitwiseLogicOp(N0.getOpcode()) &&
       isa<LoadSDNode>(N0.getOperand(0)) &&
       N0.getOperand(1).getOpcode() == ISD::Constant &&
       (!LegalOperations && TLI.isOperationLegal(N0.getOpcode(), VT))) {
