@@ -292,6 +292,8 @@ DependencyScanningTool::createActionController(
     DependencyScanningWorker &Worker,
     LookupModuleOutputCallback LookupModuleOutput,
     DepscanPrefixMapping PrefixMapping) {
+  if (Worker.getScanningFormat() == ScanningOutputFormat::FullIncludeTree)
+    return createIncludeTreeActionController(*Worker.getCAS(), std::move(PrefixMapping));
   if (auto CacheFS = Worker.getCASFS())
     return createCASFSActionController(LookupModuleOutput, *CacheFS,
                                        std::move(PrefixMapping));

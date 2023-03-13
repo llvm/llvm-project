@@ -20,6 +20,59 @@
 // CHECK-NEXT: [[PREFIX]]/n3.h
 // CHECK-NOT: [[PREFIX]]
 
+// RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-include-tree-full -cas-path %t/cas > %t/deps.json
+
+// RUN: cat %t/result.txt > %t/full.txt
+// RUN: echo "FULL DEPS START" >> %t/full.txt
+// RUN: cat %t/deps.json | sed 's:\\\\\?:/:g' >> %t/full.txt
+
+// RUN: FileCheck %s -DPREFIX=%/t -check-prefix=FULL -input-file %t/full.txt
+
+// Capture the tree id from experimental-include-tree ; ensure that it matches
+// the result from experimental-full.
+// FULL: [[TREE_ID:llvmcas://[[:xdigit:]]+]] - [[PREFIX]]/t.c
+// FULL: FULL DEPS START
+
+// FULL-NEXT: {
+// FULL-NEXT:   "modules": []
+// FULL-NEXT:   "translation-units": [
+// FULL-NEXT:     {
+// FULL-NEXT:       "commands": [
+// FULL-NEXT:         {
+// FULL:                "clang-module-deps": []
+// FULL:                "command-line": [
+// FULL-NEXT:             "-cc1"
+// FULL:                  "-fcas-path"
+// FULL-NEXT:             "[[PREFIX]]/cas"
+// FULL:                  "-disable-free"
+// FULL:                  "-fcas-include-tree"
+// FULL-NEXT:             "[[TREE_ID]]"
+// FULL:                  "-fcache-compile-job"
+// FULL:                  "-fsyntax-only"
+// FULL:                  "-x"
+// FULL-NEXT:             "c"
+// FULL-NOT:              "t.c"
+// FULL:                  "-main-file-name"
+// FULL-NEXT:             "t.c"
+// FULL-NOT:              "t.c"
+// FULL:                ]
+// FULL:                "executable": "clang"
+// FULL:                "file-deps": [
+// FULL-NEXT:             "[[PREFIX]]/t.c"
+// FULL-NEXT:             "[[PREFIX]]/t.h"
+// FULL-NEXT:             "[[PREFIX]]/prefix.pch"
+// FULL-NEXT:           ]
+// FULL:                "input-file": "[[PREFIX]]/t.c"
+// FULL:              }
+// FULL:            ]
+// FULL:          }
+// FULL:        ]
+// FULL:      }
+
+// Build the include-tree command
+// RUN: %deps-to-rsp %t/deps.json --tu-index 0 > %t/tu.rsp
+// RUN: %clang @%t/tu.rsp
+
 //--- prefix.h
 #include "n1.h"
 #import "n2.h"

@@ -149,6 +149,9 @@ static llvm::cl::opt<ScanningOutputFormat> Format(
         clEnumValN(ScanningOutputFormat::IncludeTree,
                    "experimental-include-tree",
                    "Write out a CAS include tree."),
+        clEnumValN(ScanningOutputFormat::FullIncludeTree,
+                   "experimental-include-tree-full",
+                   "Full dependency graph with include tree."),
         clEnumValN(ScanningOutputFormat::Full, "experimental-full",
                    "Full dependency graph suitable"
                    " for explicitly building modules. This format "
@@ -496,6 +499,7 @@ static bool outputFormatRequiresCAS() {
     case ScanningOutputFormat::Tree:
     case ScanningOutputFormat::FullTree:
     case ScanningOutputFormat::IncludeTree:
+    case ScanningOutputFormat::FullIncludeTree:
       return true;
     default:
       return false;
@@ -882,7 +886,7 @@ int main(int argc, const char **argv) {
     std::tie(CAS, Cache) = CASOpts.getOrCreateDatabases(Diags);
     if (!CAS)
       return 1;
-    if (Format != ScanningOutputFormat::IncludeTree)
+    if (Format != ScanningOutputFormat::IncludeTree && Format != ScanningOutputFormat::FullIncludeTree)
       FS = llvm::cantFail(llvm::cas::createCachingOnDiskFileSystem(*CAS));
   }
 
@@ -893,7 +897,7 @@ int main(int argc, const char **argv) {
     PrefixMapping.NewSDKPath = PrefixMapSDK;
   PrefixMapping.PrefixMap.append(PrefixMaps.begin(), PrefixMaps.end());
 
-  DependencyScanningService Service(ScanMode, Format, CASOpts, Cache, FS,
+  DependencyScanningService Service(ScanMode, Format, CASOpts, CAS, Cache, FS,
                                     OptimizeArgs, EagerLoadModules);
   llvm::ThreadPool Pool(llvm::hardware_concurrency(NumThreads));
 
@@ -1038,7 +1042,8 @@ int main(int argc, const char **argv) {
         HadErrors = true;
     }
   } else if (Format == ScanningOutputFormat::Full ||
-             Format == ScanningOutputFormat::FullTree) {
+             Format == ScanningOutputFormat::FullTree ||
+             Format == ScanningOutputFormat::FullIncludeTree) {
     FD.printFullOutput(llvm::outs());
   }
 

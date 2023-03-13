@@ -156,8 +156,8 @@ public:
   ScanningOutputFormat getScanningFormat() const { return Format; }
 
   CachingOnDiskFileSystemPtr getCASFS() { return CacheFS; }
-  bool useCAS() const { return UseCAS; }
   const CASOptions &getCASOpts() const { return CASOpts; }
+  std::shared_ptr<cas::ObjectStore> getCAS() const { return CAS; }
 
   /// If \p DependencyScanningService enabled sharing of \p FileManager this
   /// will return the same instance, otherwise it will create a new one for
@@ -187,7 +187,7 @@ private:
   /// The CAS Dependency Filesytem. This is not set at the sametime as DepFS;
   llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS;
   CASOptions CASOpts;
-  bool UseCAS;
+  std::shared_ptr<cas::ObjectStore> CAS;
 };
 
 } // end namespace dependencies
