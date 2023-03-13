@@ -104,12 +104,13 @@ add_unittest(ClangdUnitTests ClangdTests
 
   support/CancellationTests.cpp
   support/ContextTests.cpp
+  support/FileCacheTests.cpp
   support/FunctionTests.cpp
   support/MarkupTests.cpp
   support/MemoryTreeTests.cpp
   support/PathTests.cpp
-  support/ThreadingTests.cpp
   support/TestTracer.cpp
+  support/ThreadingTests.cpp
   support/TraceTests.cpp
 
   tweaks/AddUsingTests.cpp
@@ -130,6 +131,7 @@ add_unittest(ClangdUnitTests ClangdTests
   tweaks/RawStringLiteralTests.cpp
   tweaks/RemoveUsingNamespaceTests.cpp
   tweaks/ShowSelectionTreeTests.cpp
+  tweaks/SpecialMembersTests.cpp
   tweaks/SwapIfBranchesTests.cpp
   tweaks/TweakTesting.cpp
   tweaks/TweakTests.cpp
