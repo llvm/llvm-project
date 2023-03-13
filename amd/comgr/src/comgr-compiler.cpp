@@ -1209,7 +1209,7 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
 
       std::string isa_name = ActionInfo->IsaName;
       size_t index = isa_name.find("gfx");
-      std::string bundle_entry_id = "hip-amdgcn-amd-amdhsa-gfx" +
+      std::string bundle_entry_id = "hip-amdgcn-amd-amdhsa--gfx" +
         isa_name.substr(index + 3);
 
       // Write data to file system so that Offload Bundler can process
@@ -1296,7 +1296,7 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
 
       std::string isa_name = ActionInfo->IsaName;
       size_t index = isa_name.find("gfx");
-      std::string bundle_entry_id = "hip-amdgcn-amd-amdhsa-gfx" +
+      std::string bundle_entry_id = "hip-amdgcn-amd-amdhsa--gfx" +
         isa_name.substr(index + 3);
 
       // Write data to file system so that Offload Bundler can process
