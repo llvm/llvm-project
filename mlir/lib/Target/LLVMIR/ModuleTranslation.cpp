@@ -706,6 +706,8 @@ LogicalResult ModuleTranslation::convertGlobals() {
     if (alignment.has_value())
       var->setAlignment(llvm::MaybeAlign(alignment.value()));
 
+    var->setVisibility(convertVisibilityToLLVM(op.getVisibility_()));
+
     globalsMapping.try_emplace(op, var);
   }
 
@@ -975,6 +977,9 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
     if (failed(forwardPassthroughAttributes(
             function.getLoc(), function.getPassthrough(), llvmFunc)))
       return failure();
+
+    // Convert visibility attribute.
+    llvmFunc->setVisibility(convertVisibilityToLLVM(function.getVisibility_()));
   }
 
   return success();

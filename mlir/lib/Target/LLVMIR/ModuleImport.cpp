@@ -893,6 +893,8 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   }
   if (globalVar->hasSection())
     globalOp.setSection(globalVar->getSection());
+  globalOp.setVisibility_(
+      convertVisibilityFromLLVM(globalVar->getVisibility()));
 
   return success();
 }
@@ -1610,6 +1612,8 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
 
   if (func->hasGC())
     funcOp.setGarbageCollector(StringRef(func->getGC()));
+
+  funcOp.setVisibility_(convertVisibilityFromLLVM(func->getVisibility()));
 
   // Handle Function attributes.
   processFunctionAttributes(func, funcOp);

@@ -17,10 +17,10 @@
 ; GCN: ds_read_b32
 
 ; CHECK-LABEL: @no_clobber_ds_load_stores_x2
-; CHECK: store i32 1, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2.lds, align 16, !alias.scope !0, !noalias !3
-; CHECK: %val.a = load i32, ptr addrspace(3) %gep.a, align 4, !alias.scope !0, !noalias !3
-; CHECK: store i32 2, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2.lds, i32 0, i32 1), align 16, !alias.scope !3, !noalias !0
-; CHECK: %val.b = load i32, ptr addrspace(3) %gep.b, align 4, !alias.scope !3, !noalias !0
+; CHECK: store i32 1, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2.lds, align 16, !alias.scope !1, !noalias !4
+; CHECK: %val.a = load i32, ptr addrspace(3) %gep.a, align 4, !alias.scope !1, !noalias !4
+; CHECK: store i32 2, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2.lds, i32 0, i32 1), align 16, !alias.scope !4, !noalias !1
+; CHECK: %val.b = load i32, ptr addrspace(3) %gep.b, align 4, !alias.scope !4, !noalias !1
 
 define amdgpu_kernel void @no_clobber_ds_load_stores_x2(ptr addrspace(1) %arg, i32 %i) {
 bb:
@@ -44,13 +44,13 @@ bb:
 ; GCN-DAG: ds_read_b32
 
 ; CHECK-LABEL: @no_clobber_ds_load_stores_x3
-; CHECK: store i32 1, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x3.lds, align 16, !alias.scope !5, !noalias !8
+; CHECK: store i32 1, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x3.lds, align 16, !alias.scope !6, !noalias !9
 ; CHECK: %gep.a = getelementptr inbounds [64 x i32], ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x3.lds, i32 0, i32 %i
-; CHECK: %val.a = load i32, ptr addrspace(3) %gep.a, align 4, !alias.scope !5, !noalias !8
-; CHECK: store i32 2, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.no_clobber_ds_load_stores_x3.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x3.lds, i32 0, i32 1), align 16, !alias.scope !11, !noalias !12
-; CHECK: %val.b = load i32, ptr addrspace(3) %gep.b, align 4, !alias.scope !11, !noalias !12
-; CHECK: store i32 3, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.no_clobber_ds_load_stores_x3.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x3.lds, i32 0, i32 2), align 16, !alias.scope !13, !noalias !14
-; CHECK: %val.c = load i32, ptr addrspace(3) %gep.c, align 4, !alias.scope !13, !noalias !14
+; CHECK: %val.a = load i32, ptr addrspace(3) %gep.a, align 4, !alias.scope !6, !noalias !9
+; CHECK: store i32 2, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.no_clobber_ds_load_stores_x3.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x3.lds, i32 0, i32 1), align 16, !alias.scope !12, !noalias !13
+; CHECK: %val.b = load i32, ptr addrspace(3) %gep.b, align 4, !alias.scope !12, !noalias !13
+; CHECK: store i32 3, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.no_clobber_ds_load_stores_x3.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x3.lds, i32 0, i32 2), align 16, !alias.scope !14, !noalias !15
+; CHECK: %val.c = load i32, ptr addrspace(3) %gep.c, align 4, !alias.scope !14, !noalias !15
 
 define amdgpu_kernel void @no_clobber_ds_load_stores_x3(ptr addrspace(1) %arg, i32 %i) {
 bb:
@@ -69,18 +69,19 @@ bb:
   ret void
 }
 
-; CHECK: !0 = !{!1}
-; CHECK: !1 = distinct !{!1, !2}
-; CHECK: !2 = distinct !{!2}
-; CHECK: !3 = !{!4}
-; CHECK: !4 = distinct !{!4, !2}
-; CHECK: !5 = !{!6}
-; CHECK: !6 = distinct !{!6, !7}
-; CHECK: !7 = distinct !{!7}
-; CHECK: !8 = !{!9, !10}
-; CHECK: !9 = distinct !{!9, !7}
-; CHECK: !10 = distinct !{!10, !7}
-; CHECK: !11 = !{!9}
-; CHECK: !12 = !{!6, !10}
-; CHECK: !13 = !{!10}
-; CHECK: !14 = !{!6, !9}
+; CHECK: !0 = !{i64 0, i64 1}
+; CHECK: !1 = !{!2}
+; CHECK: !2 = distinct !{!2, !3}
+; CHECK: !3 = distinct !{!3}
+; CHECK: !4 = !{!5}
+; CHECK: !5 = distinct !{!5, !3}
+; CHECK: !6 = !{!7}
+; CHECK: !7 = distinct !{!7, !8}
+; CHECK: !8 = distinct !{!8}
+; CHECK: !9 = !{!10, !11}
+; CHECK: !10 = distinct !{!10, !8}
+; CHECK: !11 = distinct !{!11, !8}
+; CHECK: !12 = !{!10}
+; CHECK: !13 = !{!7, !11}
+; CHECK: !14 = !{!11}
+; CHECK: !15 = !{!7, !10}

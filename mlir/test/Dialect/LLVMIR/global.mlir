@@ -90,6 +90,16 @@ llvm.mlir.global private unnamed_addr constant @foo(42 : i64) : i64
 // CHECK: llvm.mlir.global internal constant @sectionvar("teststring") {addr_space = 0 : i32, section = ".mysection"}
 llvm.mlir.global internal constant @sectionvar("teststring")  {section = ".mysection"}: !llvm.array<10 x i8>
 
+// CHECK: llvm.mlir.global internal thread_local constant @thread_local(42 : i32)
+llvm.mlir.global internal thread_local constant @thread_local(42 : i32) : i32
+
+// Visibility types.
+// CHECK: llvm.mlir.global internal hidden constant @hidden(42 : i32)
+llvm.mlir.global internal hidden constant @hidden(42 : i32) : i32
+
+// CHECK: llvm.mlir.global internal protected unnamed_addr @protected(42 : i32)
+llvm.mlir.global internal protected unnamed_addr @protected(42 : i32) : i32
+
 // -----
 
 // expected-error @+1 {{op requires attribute 'sym_name'}}

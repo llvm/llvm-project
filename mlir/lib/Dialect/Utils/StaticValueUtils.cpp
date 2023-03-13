@@ -102,6 +102,16 @@ SmallVector<OpFoldResult> getAsOpFoldResult(ArrayAttr arrayAttr) {
   return res;
 }
 
+OpFoldResult getAsIndexOpFoldResult(MLIRContext *ctx, int64_t val) {
+  return IntegerAttr::get(IndexType::get(ctx), val);
+}
+
+SmallVector<OpFoldResult> getAsIndexOpFoldResult(MLIRContext *ctx,
+                                                 ArrayRef<int64_t> values) {
+  return llvm::to_vector<4>(llvm::map_range(
+      values, [ctx](int64_t v) { return getAsIndexOpFoldResult(ctx, v); }));
+}
+
 /// If ofr is a constant integer or an IntegerAttr, return the integer.
 std::optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
   // Case 1: Check for Constant integer.

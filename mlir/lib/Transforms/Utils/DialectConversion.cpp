@@ -12,6 +12,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/Iterators.h"
 #include "mlir/Rewrite/PatternApplicator.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
@@ -26,55 +27,6 @@ using namespace mlir;
 using namespace mlir::detail;
 
 #define DEBUG_TYPE "dialect-conversion"
-
-/// Recursively collect all of the operations to convert from within 'region'.
-/// If 'target' is nonnull, operations that are recursively legal have their
-/// regions pre-filtered to avoid considering them for legalization.
-static LogicalResult
-computeConversionSet(iterator_range<Region::iterator> region,
-                     Location regionLoc,
-                     SmallVectorImpl<Operation *> &toConvert,
-                     ConversionTarget *target = nullptr) {
-  if (region.empty())
-    return success();
-
-  // Traverse starting from the entry block.
-  SmallVector<Block *, 16> worklist(1, &*region.begin());
-  DenseSet<Block *> visitedBlocks;
-  visitedBlocks.insert(worklist.front());
-  while (!worklist.empty()) {
-    Block *block = worklist.pop_back_val();
-
-    // Compute the conversion set of each of the nested operations.
-    for (Operation &op : *block) {
-      toConvert.emplace_back(&op);
-
-      // Don't check this operation's children for conversion if the operation
-      // is recursively legal.
-      auto legalityInfo =
-          target ? target->isLegal(&op)
-                 : std::optional<ConversionTarget::LegalOpDetails>();
-      if (legalityInfo && legalityInfo->isRecursivelyLegal)
-        continue;
-      for (auto &region : op.getRegions()) {
-        if (failed(computeConversionSet(region.getBlocks(), region.getLoc(),
-                                        toConvert, target)))
-          return failure();
-      }
-    }
-
-    // Recurse to children that haven't been visited.
-    for (Block *succ : block->getSuccessors())
-      if (visitedBlocks.insert(succ).second)
-        worklist.push_back(succ);
-  }
-
-  // Check that all blocks in the region were visited.
-  if (llvm::any_of(llvm::drop_begin(region, 1),
-                   [&](Block &block) { return !visitedBlocks.count(&block); }))
-    return emitError(regionLoc, "unreachable blocks were not converted");
-  return success();
-}
 
 /// A utility function to log a successful result for the given reason.
 template <typename... Args>
@@ -957,10 +909,6 @@ struct ConversionPatternRewriterImpl {
   void notifyRegionIsBeingInlinedBefore(Region &region, Region &parent,
                                         Region::iterator before);
 
-  /// Notifies that the blocks of a region were cloned into another.
-  void notifyRegionWasClonedBefore(iterator_range<Region::iterator> &blocks,
-                                   Location origRegionLoc);
-
   /// Notifies that a pattern match failed for the given reason.
   LogicalResult
   notifyMatchFailure(Location loc,
@@ -1467,20 +1415,6 @@ void ConversionPatternRewriterImpl::notifyRegionIsBeingInlinedBefore(
   blockActions.push_back(BlockAction::getMove(laterBlock, {&region, nullptr}));
 }
 
-void ConversionPatternRewriterImpl::notifyRegionWasClonedBefore(
-    iterator_range<Region::iterator> &blocks, Location origRegionLoc) {
-  for (Block &block : blocks)
-    blockActions.push_back(BlockAction::getCreate(&block));
-
-  // Compute the conversion set for the inlined region.
-  auto result = computeConversionSet(blocks, origRegionLoc, createdOps);
-
-  // This original region has already had its conversion set computed, so there
-  // shouldn't be any new failures.
-  (void)result;
-  assert(succeeded(result) && "expected region to have no unreachable blocks");
-}
-
 LogicalResult ConversionPatternRewriterImpl::notifyMatchFailure(
     Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
   LLVM_DEBUG({
@@ -1640,12 +1574,15 @@ void ConversionPatternRewriter::cloneRegionBefore(Region &region,
                                                   IRMapping &mapping) {
   if (region.empty())
     return;
+
   PatternRewriter::cloneRegionBefore(region, parent, before, mapping);
 
-  // Collect the range of the cloned blocks.
-  auto clonedBeginIt = mapping.lookup(&region.front())->getIterator();
-  auto clonedBlocks = llvm::make_range(clonedBeginIt, before);
-  impl->notifyRegionWasClonedBefore(clonedBlocks, region.getLoc());
+  for (Block &b : ForwardDominanceIterator<>::makeIterable(region)) {
+    Block *cloned = mapping.lookup(&b);
+    impl->notifyCreatedBlock(cloned);
+    cloned->walk<WalkOrder::PreOrder, ForwardDominanceIterator<>>(
+        [&](Operation *op) { notifyOperationInserted(op); });
+  }
 }
 
 void ConversionPatternRewriter::notifyOperationInserted(Operation *op) {
@@ -2454,11 +2391,16 @@ LogicalResult OperationConverter::convertOperations(
   // Compute the set of operations and blocks to convert.
   SmallVector<Operation *> toConvert;
   for (auto *op : ops) {
-    toConvert.emplace_back(op);
-    for (auto &region : op->getRegions())
-      if (failed(computeConversionSet(region.getBlocks(), region.getLoc(),
-                                      toConvert, &target)))
-        return failure();
+    op->walk<WalkOrder::PreOrder, ForwardDominanceIterator<>>(
+        [&](Operation *op) {
+          toConvert.push_back(op);
+          // Don't check this operation's children for conversion if the
+          // operation is recursively legal.
+          auto legalityInfo = target.isLegal(op);
+          if (legalityInfo && legalityInfo->isRecursivelyLegal)
+            return WalkResult::skip();
+          return WalkResult::advance();
+        });
   }
 
   // Convert each operation and discard rewrites on failure.

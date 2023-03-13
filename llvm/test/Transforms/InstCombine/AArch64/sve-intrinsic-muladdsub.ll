@@ -15,6 +15,18 @@ define <vscale x 8 x half> @combine_fmla(<vscale x 16 x i1> %p, <vscale x 8 x ha
   ret <vscale x 8 x half> %3
 }
 
+define <vscale x 8 x half> @combine_fmla_u(<vscale x 16 x i1> %p, <vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c) #0 {
+; CHECK-LABEL: @combine_fmla_u(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[P:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> [[TMP1]], <vscale x 8 x half> [[C:%.*]], <vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]])
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP2]]
+;
+  %1 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %p)
+  %2 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmul.u.nxv8f16(<vscale x 8 x i1> %1, <vscale x 8 x half> %a, <vscale x 8 x half> %b)
+  %3 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fadd.u.nxv8f16(<vscale x 8 x i1> %1, <vscale x 8 x half> %c, <vscale x 8 x half> %2)
+  ret <vscale x 8 x half> %3
+}
+
 define <vscale x 16 x i8> @combine_mla_i8(<vscale x 16 x i1> %p, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) #0 {
 ; CHECK-LABEL: @combine_mla_i8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.mla.nxv16i8(<vscale x 16 x i1> [[P:%.*]], <vscale x 16 x i8> [[C:%.*]], <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]])
@@ -56,6 +68,18 @@ define <vscale x 8 x half> @combine_fmls(<vscale x 16 x i1> %p, <vscale x 8 x ha
   %1 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %p)
   %2 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmul.nxv8f16(<vscale x 8 x i1> %1, <vscale x 8 x half> %a, <vscale x 8 x half> %b)
   %3 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fsub.nxv8f16(<vscale x 8 x i1> %1, <vscale x 8 x half> %c, <vscale x 8 x half> %2)
+  ret <vscale x 8 x half> %3
+}
+
+define <vscale x 8 x half> @combine_fmls_u(<vscale x 16 x i1> %p, <vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c) #0 {
+; CHECK-LABEL: @combine_fmls_u(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[P:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <vscale x 8 x half> @llvm.aarch64.sve.fmls.u.nxv8f16(<vscale x 8 x i1> [[TMP1]], <vscale x 8 x half> [[C:%.*]], <vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]])
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP2]]
+;
+  %1 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %p)
+  %2 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmul.u.nxv8f16(<vscale x 8 x i1> %1, <vscale x 8 x half> %a, <vscale x 8 x half> %b)
+  %3 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fsub.u.nxv8f16(<vscale x 8 x i1> %1, <vscale x 8 x half> %c, <vscale x 8 x half> %2)
   ret <vscale x 8 x half> %3
 }
 
@@ -173,6 +197,9 @@ declare <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x
 declare <vscale x 8 x half> @llvm.aarch64.sve.fmul.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>, <vscale x 8 x half>)
 declare <vscale x 8 x half> @llvm.aarch64.sve.fadd.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>, <vscale x 8 x half>)
 declare <vscale x 8 x half> @llvm.aarch64.sve.fsub.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>, <vscale x 8 x half>)
+declare <vscale x 8 x half> @llvm.aarch64.sve.fmul.u.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>, <vscale x 8 x half>)
+declare <vscale x 8 x half> @llvm.aarch64.sve.fadd.u.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>, <vscale x 8 x half>)
+declare <vscale x 8 x half> @llvm.aarch64.sve.fsub.u.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>, <vscale x 8 x half>)
 declare <vscale x 16 x i8> @llvm.aarch64.sve.mul.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 16 x i8> @llvm.aarch64.sve.add.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 16 x i8> @llvm.aarch64.sve.sub.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>)

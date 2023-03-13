@@ -1,12 +1,15 @@
 # Do not build unittest libraries automatically, they will be pulled in
 # by unittests if these are built.
-set(EXCLUDE_FROM_ALL ON)
+if (NOT ${LLVM_INSTALL_GTEST})
+  set (BUILDTREE_ONLY BUILDTREE_ONLY)
+  set(EXCLUDE_FROM_ALL ON)
+endif()
 
 add_llvm_library(LLVMTestingSupport
   Error.cpp
   SupportHelpers.cpp
 
-  BUILDTREE_ONLY
+  ${BUILDTREE_ONLY}
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Testing/Support

@@ -110,6 +110,17 @@ llvm.mlir.global weak_odr @weak_odr(42 : i32) : i32
 // CHECK: @external = external global i32
 llvm.mlir.global external @external() : i32
 
+
+//
+// Visibility attribute.
+//
+
+// CHECK: @hidden = hidden constant [6 x i8] c"string"
+llvm.mlir.global external hidden constant @hidden("string")
+
+// CHECK: @protected = protected constant i64 42
+llvm.mlir.global external protected constant @protected(42 : i64) : i64
+
 //
 // UnnamedAddr attribute.
 //
@@ -481,6 +492,20 @@ llvm.func @more_imperfectly_nested_loops() {
 
 // CHECK: define internal void @func_internal
 llvm.func internal @func_internal() {
+  llvm.return
+}
+
+//
+// Visibility attribute.
+//
+
+// CHECK-LABEL: define hidden void @hidden_func()
+llvm.func hidden @hidden_func() {
+  llvm.return
+}
+
+// CHECK-LABEL: define protected void @protected_func()
+llvm.func protected @protected_func() {
   llvm.return
 }
 
