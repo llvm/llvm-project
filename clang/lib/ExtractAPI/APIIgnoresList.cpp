@@ -31,20 +31,29 @@ std::error_code IgnoresFileNotFound::convertToErrorCode() const {
   return llvm::inconvertibleErrorCode();
 }
 
-Expected<APIIgnoresList> APIIgnoresList::create(StringRef IgnoresFilePath,
-                                                FileManager &FM) {
-  auto BufferOrErr = FM.getBufferForFile(IgnoresFilePath);
-  if (!BufferOrErr)
-    return make_error<IgnoresFileNotFound>(IgnoresFilePath);
-
-  auto Buffer = std::move(BufferOrErr.get());
+Expected<APIIgnoresList>
+APIIgnoresList::create(const FilePathList &IgnoresFilePathList,
+                       FileManager &FM) {
   SmallVector<StringRef, 32> Lines;
-  Buffer->getBuffer().split(Lines, '\n', /*MaxSplit*/ -1, /*KeepEmpty*/ false);
-  // Symbol names don't have spaces in them, let's just remove these in case the
-  // input is slighlty malformed.
+  BufferList symbolBufferList;
+
+  for (const auto &CurrentIgnoresFilePath : IgnoresFilePathList) {
+    auto BufferOrErr = FM.getBufferForFile(CurrentIgnoresFilePath);
+
+    if (!BufferOrErr)
+      return make_error<IgnoresFileNotFound>(CurrentIgnoresFilePath);
+
+    auto Buffer = std::move(BufferOrErr.get());
+    Buffer->getBuffer().split(Lines, '\n', /*MaxSplit*/ -1,
+                              /*KeepEmpty*/ false);
+    symbolBufferList.push_back(std::move(Buffer));
+  }
+
+  // Symbol names don't have spaces in them, let's just remove these in case
+  // the input is slighlty malformed.
   transform(Lines, Lines.begin(), [](StringRef Line) { return Line.trim(); });
   sort(Lines);
-  return APIIgnoresList(std::move(Lines), std::move(Buffer));
+  return APIIgnoresList(std::move(Lines), std::move(symbolBufferList));
 }
 
 bool APIIgnoresList::shouldIgnore(StringRef SymbolName) const {

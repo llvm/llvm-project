@@ -300,10 +300,9 @@ TEST(IncludeCleaner, IWYUPragmaExport) {
   ParsedAST AST = TU.build();
 
   EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
-  // FIXME: This is not correct: foo.h is unused but is not diagnosed as such
-  // because we ignore headers with IWYU export pragmas for now.
   IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
-  EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
+  EXPECT_THAT(Findings.UnusedIncludes,
+              ElementsAre(Pointee(writtenInclusion("\"foo.h\""))));
 }
 
 TEST(IncludeCleaner, NoDiagsForObjC) {

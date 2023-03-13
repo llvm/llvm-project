@@ -422,6 +422,7 @@ LLVM_17 {
   global:
     clang_CXXMethod_isExplicit;
     clang_createIndexWithOptions;
+    clang_isBitFieldDecl;
 };
 
 # Example of how to add a new symbol version entry.  If you do add a new symbol

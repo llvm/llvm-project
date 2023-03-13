@@ -454,8 +454,7 @@ bool FastISel::selectBinaryOp(const User *I, unsigned ISDOpcode) {
   if (!TLI.isTypeLegal(VT)) {
     // MVT::i1 is special. Allow AND, OR, or XOR because they
     // don't require additional zeroing, which makes them easy.
-    if (VT == MVT::i1 && (ISDOpcode == ISD::AND || ISDOpcode == ISD::OR ||
-                          ISDOpcode == ISD::XOR))
+    if (VT == MVT::i1 && ISD::isBitwiseLogicOp(ISDOpcode))
       VT = TLI.getTypeToTransformTo(I->getContext(), VT);
     else
       return false;

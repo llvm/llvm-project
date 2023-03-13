@@ -354,8 +354,8 @@ unsigned SparcInstrInfo::removeBranch(MachineBasicBlock &MBB,
         !isUncondBranchOpcode(I->getOpcode()))
       break; // Not a branch
 
-    I->eraseFromParent();
     Removed += getInstSizeInBytes(*I);
+    I->eraseFromParent();
     I = MBB.end();
     ++Count;
   }

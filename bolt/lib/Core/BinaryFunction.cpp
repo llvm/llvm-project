@@ -4088,6 +4088,16 @@ void BinaryFunction::updateOutputValues(const MCAsmLayout &Layout) {
       const uint64_t DataOffset =
           Layout.getSymbolOffset(*getFunctionConstantIslandLabel());
       setOutputDataAddress(BaseAddress + DataOffset);
+      for (auto It : Islands->Offsets) {
+        const uint64_t OldOffset = It.first;
+        BinaryData *BD = BC.getBinaryDataAtAddress(getAddress() + OldOffset);
+        if (!BD)
+          continue;
+
+        MCSymbol *Symbol = It.second;
+        const uint64_t NewOffset = Layout.getSymbolOffset(*Symbol);
+        BD->setOutputLocation(*getCodeSection(), NewOffset);
+      }
     }
     if (isSplit()) {
       for (FunctionFragment &FF : getLayout().getSplitFragments()) {

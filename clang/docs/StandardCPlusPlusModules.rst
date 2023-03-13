@@ -591,6 +591,19 @@ The result would be ``NS::foo@M()``, which reads as ``NS::foo()`` in module ``M`
 The ABI implies that we can't declare something in a module unit and define it in a non-module unit (or vice-versa),
 as this would result in linking errors.
 
+If we still want to implement declarations within the compatible ABI in module unit,
+we can use the language-linkage specifier. Since the declarations in the language-linkage specifier
+is attached to the global module fragments. For example:
+
+.. code-block:: c++
+
+  export module M;
+  namespace NS {
+    export extern "C++" int foo();
+  }
+
+Now the linkage name of ``NS::foo()`` will be ``_ZN2NS3fooEv``.
+
 Known Problems
 --------------
 

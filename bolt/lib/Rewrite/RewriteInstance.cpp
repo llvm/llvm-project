@@ -1278,6 +1278,25 @@ void RewriteInstance::discoverFileObjects() {
     llvm_unreachable("Unknown marker");
   }
 
+  if (BC->isAArch64()) {
+    // Check for dynamic relocations that might be contained in
+    // constant islands.
+    for (const BinarySection &Section : BC->allocatableSections()) {
+      const uint64_t SectionAddress = Section.getAddress();
+      for (const Relocation &Rel : Section.dynamicRelocations()) {
+        const uint64_t RelAddress = SectionAddress + Rel.Offset;
+        BinaryFunction *BF =
+            BC->getBinaryFunctionContainingAddress(RelAddress,
+                                                   /*CheckPastEnd*/ false,
+                                                   /*UseMaxSize*/ true);
+        if (BF) {
+          assert(Rel.isRelative() && "Expected relative relocation for island");
+          BF->markIslandDynamicRelocationAtAddress(RelAddress);
+        }
+      }
+    }
+  }
+
   if (opts::LinuxKernelMode) {
     // Read all special linux kernel sections and their relocations
     processLKSections();
@@ -1679,9 +1698,6 @@ Error RewriteInstance::readSpecialSections() {
   HasSymbolTable = (bool)BC->getUniqueSectionByName(".symtab");
   LSDASection = BC->getUniqueSectionByName(".gcc_except_table");
   EHFrameSection = BC->getUniqueSectionByName(".eh_frame");
-  GOTPLTSection = BC->getUniqueSectionByName(".got.plt");
-  RelaPLTSection = BC->getUniqueSectionByName(".rela.plt");
-  RelaDynSection = BC->getUniqueSectionByName(".rela.dyn");
   BuildIDSection = BC->getUniqueSectionByName(".note.gnu.build-id");
   SDTSection = BC->getUniqueSectionByName(".note.stapsdt");
   PseudoProbeDescSection = BC->getUniqueSectionByName(".pseudo_probe_desc");
@@ -3176,6 +3192,12 @@ void RewriteInstance::postProcessFunctions() {
   BC->SumExecutionCount = 0;
   for (auto &BFI : BC->getBinaryFunctions()) {
     BinaryFunction &Function = BFI.second;
+
+    // Set function as non-simple if it has dynamic relocations
+    // in constant island, we don't want this function to be optimized
+    // e.g. function splitting is unsupported.
+    if (Function.hasDynamicRelocationAtIsland())
+      Function.setSimple(false);
 
     if (Function.empty())
       continue;
@@ -5133,6 +5155,7 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
   auto setSectionFileOffsets = [&](uint64_t Address, uint64_t &Start,
                                    uint64_t &End) {
     ErrorOr<BinarySection &> Section = BC->getSectionForAddress(Address);
+    assert(Section && "cannot get relocation section");
     Start = Section->getInputFileOffset();
     End = Start + Section->getSize();
   };
@@ -5157,6 +5180,11 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
 
   auto writeRelocations = [&](bool PatchRelative) {
     for (BinarySection &Section : BC->allocatableSections()) {
+      const uint64_t SectionInputAddress = Section.getAddress();
+      uint64_t SectionAddress = Section.getOutputAddress();
+      if (!SectionAddress)
+        SectionAddress = SectionInputAddress;
+
       for (const Relocation &Rel : Section.dynamicRelocations()) {
         const bool IsRelative = Rel.isRelative();
         if (PatchRelative != IsRelative)
@@ -5166,13 +5194,13 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
           ++DynamicRelativeRelocationsCount;
 
         Elf_Rela NewRelA;
-        uint64_t SectionAddress = Section.getOutputAddress();
-        SectionAddress =
-            SectionAddress == 0 ? Section.getAddress() : SectionAddress;
         MCSymbol *Symbol = Rel.Symbol;
         uint32_t SymbolIdx = 0;
         uint64_t Addend = Rel.Addend;
+        uint64_t RelOffset =
+            getNewFunctionOrDataAddress(SectionInputAddress + Rel.Offset);
 
+        RelOffset = RelOffset == 0 ? SectionAddress + Rel.Offset : RelOffset;
         if (Rel.Symbol) {
           SymbolIdx = getOutputDynamicSymbolIndex(Symbol);
         } else {
@@ -5183,7 +5211,7 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
         }
 
         NewRelA.setSymbolAndType(SymbolIdx, Rel.Type, EF.isMips64EL());
-        NewRelA.r_offset = SectionAddress + Rel.Offset;
+        NewRelA.r_offset = RelOffset;
         NewRelA.r_addend = Addend;
 
         const bool IsJmpRel =

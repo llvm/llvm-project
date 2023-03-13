@@ -218,7 +218,7 @@ bool RISCVRVC::uncompress(MCInst &OutInst, const MCInst &MI,
 // NOTE: The exponent for entry 1 is larger than entry 2 and 3 because they
 // are denormals.
 static constexpr std::pair<uint8_t, uint8_t> LoadFP16ImmArr[] = {
-    {0b00001, 0b00}, {0b00000, 0b10}, {0b00000, 0b01}, {0b00111, 0b00},
+    {0b00001, 0b00}, {0b00000, 0b01}, {0b00000, 0b10}, {0b00111, 0b00},
     {0b01000, 0b00}, {0b01011, 0b00}, {0b01100, 0b00}, {0b01101, 0b00},
     {0b01101, 0b01}, {0b01101, 0b10}, {0b01101, 0b11}, {0b01110, 0b00},
     {0b01110, 0b01}, {0b01110, 0b10}, {0b01110, 0b11}, {0b01111, 0b00},

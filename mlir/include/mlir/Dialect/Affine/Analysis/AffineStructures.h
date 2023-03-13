@@ -225,11 +225,11 @@ public:
   /// null AffineMap if such a bound can't be found (or yet unimplemented).
   ///
   /// By default the returned lower bounds are closed and upper bounds are open.
-  /// This can be changed by getClosedUB.
+  /// If `closedUb` is true, the upper bound is closed.
   void getSliceBounds(unsigned offset, unsigned num, MLIRContext *context,
                       SmallVectorImpl<AffineMap> *lbMaps,
                       SmallVectorImpl<AffineMap> *ubMaps,
-                      bool getClosedUB = false);
+                      bool closedUB = false);
 
   /// Composes an affine map whose dimensions and symbols match one to one with
   /// the dimensions and symbols of this FlatAffineConstraints. The results of
@@ -241,13 +241,15 @@ public:
   /// treating [0, offset) U [offset + num, symStartPos) as dimensions and
   /// [symStartPos, getNumDimAndSymbolVars) as symbols, and `pos` lies in
   /// [0, num). The multi-dimensional maps in the returned pair represent the
-  /// max and min of potentially multiple affine expressions. The upper bound is
-  /// exclusive. `localExprs` holds pre-computed AffineExpr's for all local
-  /// variables in the system.
+  /// max and min of potentially multiple affine expressions. `localExprs` holds
+  /// pre-computed AffineExpr's for all local variables in the system.
+  ///
+  /// By default the returned lower bounds are closed and upper bounds are open.
+  /// If `closedUb` is true, the upper bound is closed.
   std::pair<AffineMap, AffineMap>
   getLowerAndUpperBound(unsigned pos, unsigned offset, unsigned num,
                         unsigned symStartPos, ArrayRef<AffineExpr> localExprs,
-                        MLIRContext *context) const;
+                        MLIRContext *context, bool closedUB = false) const;
 
   /// Returns the bound for the variable at `pos` from the inequality at
   /// `ineqPos` as a 1-d affine value map (affine map + operands). The returned

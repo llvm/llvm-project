@@ -1445,4 +1445,596 @@ define <8 x half> @shuffle(ptr %p) {
   ret <8 x half> %2
 }
 
+declare half @llvm.minnum.f16(half, half)
+
+define half @pr61271(half %0, half %1) #0 {
+; CHECK-LIBCALL-LABEL: pr61271:
+; CHECK-LIBCALL:       # %bb.0:
+; CHECK-LIBCALL-NEXT:    pushq %rbx
+; CHECK-LIBCALL-NEXT:    subq $16, %rsp
+; CHECK-LIBCALL-NEXT:    movl %edi, %ebx
+; CHECK-LIBCALL-NEXT:    movzwl %si, %edi
+; CHECK-LIBCALL-NEXT:    callq __gnu_h2f_ieee@PLT
+; CHECK-LIBCALL-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; CHECK-LIBCALL-NEXT:    movzwl %bx, %edi
+; CHECK-LIBCALL-NEXT:    callq __gnu_h2f_ieee@PLT
+; CHECK-LIBCALL-NEXT:    movaps %xmm0, %xmm1
+; CHECK-LIBCALL-NEXT:    cmpunordss %xmm0, %xmm1
+; CHECK-LIBCALL-NEXT:    movaps %xmm1, %xmm2
+; CHECK-LIBCALL-NEXT:    movaps (%rsp), %xmm3 # 16-byte Reload
+; CHECK-LIBCALL-NEXT:    andps %xmm3, %xmm2
+; CHECK-LIBCALL-NEXT:    minss %xmm0, %xmm3
+; CHECK-LIBCALL-NEXT:    andnps %xmm3, %xmm1
+; CHECK-LIBCALL-NEXT:    orps %xmm2, %xmm1
+; CHECK-LIBCALL-NEXT:    movaps %xmm1, %xmm0
+; CHECK-LIBCALL-NEXT:    callq __gnu_f2h_ieee@PLT
+; CHECK-LIBCALL-NEXT:    addq $16, %rsp
+; CHECK-LIBCALL-NEXT:    popq %rbx
+; CHECK-LIBCALL-NEXT:    retq
+;
+; BWON-F16C-LABEL: pr61271:
+; BWON-F16C:       # %bb.0:
+; BWON-F16C-NEXT:    movzwl %di, %eax
+; BWON-F16C-NEXT:    vmovd %eax, %xmm0
+; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
+; BWON-F16C-NEXT:    movzwl %si, %eax
+; BWON-F16C-NEXT:    vmovd %eax, %xmm1
+; BWON-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
+; BWON-F16C-NEXT:    vminss %xmm0, %xmm1, %xmm2
+; BWON-F16C-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm0
+; BWON-F16C-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; BWON-F16C-NEXT:    vmovd %xmm0, %eax
+; BWON-F16C-NEXT:    # kill: def $ax killed $ax killed $eax
+; BWON-F16C-NEXT:    retq
+;
+; CHECK-I686-LABEL: pr61271:
+; CHECK-I686:       # %bb.0:
+; CHECK-I686-NEXT:    pushl %esi
+; CHECK-I686-NEXT:    subl $24, %esp
+; CHECK-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %esi
+; CHECK-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    movl %eax, (%esp)
+; CHECK-I686-NEXT:    calll __gnu_h2f_ieee
+; CHECK-I686-NEXT:    movl %esi, (%esp)
+; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    calll __gnu_h2f_ieee
+; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    movaps %xmm1, %xmm2
+; CHECK-I686-NEXT:    cmpunordss %xmm1, %xmm2
+; CHECK-I686-NEXT:    movaps %xmm2, %xmm3
+; CHECK-I686-NEXT:    andps %xmm0, %xmm3
+; CHECK-I686-NEXT:    minss %xmm1, %xmm0
+; CHECK-I686-NEXT:    andnps %xmm0, %xmm2
+; CHECK-I686-NEXT:    orps %xmm3, %xmm2
+; CHECK-I686-NEXT:    movss %xmm2, (%esp)
+; CHECK-I686-NEXT:    calll __gnu_f2h_ieee
+; CHECK-I686-NEXT:    addl $24, %esp
+; CHECK-I686-NEXT:    popl %esi
+; CHECK-I686-NEXT:    retl
+  %3 = call fast half @llvm.minnum.f16(half %0, half %1)
+  ret half %3
+}
+
+declare <8 x half> @llvm.maxnum.v8f16(<8 x half>, <8 x half>)
+
+define <8 x half> @maxnum_v8f16(<8 x half> %0, <8 x half> %1) #0 {
+; BWOFF-LABEL: maxnum_v8f16:
+; BWOFF:       # %bb.0:
+; BWOFF-NEXT:    pushq %rbp
+; BWOFF-NEXT:    pushq %r15
+; BWOFF-NEXT:    pushq %r14
+; BWOFF-NEXT:    pushq %r13
+; BWOFF-NEXT:    pushq %r12
+; BWOFF-NEXT:    pushq %rbx
+; BWOFF-NEXT:    subq $168, %rsp
+; BWOFF-NEXT:    movl %r9d, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; BWOFF-NEXT:    movl %r8d, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; BWOFF-NEXT:    movl %ecx, %r12d
+; BWOFF-NEXT:    movl %edx, %ebp
+; BWOFF-NEXT:    movl %esi, %r15d
+; BWOFF-NEXT:    movq %rdi, %rbx
+; BWOFF-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
+; BWOFF-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; BWOFF-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
+; BWOFF-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; BWOFF-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
+; BWOFF-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; BWOFF-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
+; BWOFF-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; BWOFF-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
+; BWOFF-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; BWOFF-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
+; BWOFF-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; BWOFF-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
+; BWOFF-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; BWOFF-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
+; BWOFF-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; BWOFF-NEXT:    movzwl {{[0-9]+}}(%rsp), %r13d
+; BWOFF-NEXT:    movzwl {{[0-9]+}}(%rsp), %r14d
+; BWOFF-NEXT:    movzwl {{[0-9]+}}(%rsp), %edi
+; BWOFF-NEXT:    callq __gnu_h2f_ieee@PLT
+; BWOFF-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; BWOFF-NEXT:    movzwl %r15w, %edi
+; BWOFF-NEXT:    callq __gnu_h2f_ieee@PLT
+; BWOFF-NEXT:    movaps %xmm0, %xmm1
+; BWOFF-NEXT:    cmpunordss %xmm0, %xmm1
+; BWOFF-NEXT:    movaps %xmm1, %xmm2
+; BWOFF-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
+; BWOFF-NEXT:    andps %xmm3, %xmm2
+; BWOFF-NEXT:    maxss %xmm0, %xmm3
+; BWOFF-NEXT:    andnps %xmm3, %xmm1
+; BWOFF-NEXT:    orps %xmm2, %xmm1
+; BWOFF-NEXT:    movaps %xmm1, %xmm0
+; BWOFF-NEXT:    callq __gnu_f2h_ieee@PLT
+; BWOFF-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
+; BWOFF-NEXT:    movl %r14d, %edi
+; BWOFF-NEXT:    callq __gnu_h2f_ieee@PLT
+; BWOFF-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; BWOFF-NEXT:    movzwl %bp, %edi
+; BWOFF-NEXT:    callq __gnu_h2f_ieee@PLT
+; BWOFF-NEXT:    movaps %xmm0, %xmm1
+; BWOFF-NEXT:    cmpunordss %xmm0, %xmm1
+; BWOFF-NEXT:    movaps %xmm1, %xmm2
+; BWOFF-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
+; BWOFF-NEXT:    andps %xmm3, %xmm2
+; BWOFF-NEXT:    maxss %xmm0, %xmm3
+; BWOFF-NEXT:    andnps %xmm3, %xmm1
+; BWOFF-NEXT:    orps %xmm2, %xmm1
+; BWOFF-NEXT:    movaps %xmm1, %xmm0
+; BWOFF-NEXT:    callq __gnu_f2h_ieee@PLT
+; BWOFF-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
+; BWOFF-NEXT:    movl %r13d, %edi
+; BWOFF-NEXT:    callq __gnu_h2f_ieee@PLT
+; BWOFF-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; BWOFF-NEXT:    movzwl %r12w, %edi
+; BWOFF-NEXT:    callq __gnu_h2f_ieee@PLT
+; BWOFF-NEXT:    movaps %xmm0, %xmm1
+; BWOFF-NEXT:    cmpunordss %xmm0, %xmm1
+; BWOFF-NEXT:    movaps %xmm1, %xmm2
+; BWOFF-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
+; BWOFF-NEXT:    andps %xmm3, %xmm2
+; BWOFF-NEXT:    maxss %xmm0, %xmm3
+; BWOFF-NEXT:    andnps %xmm3, %xmm1
+; BWOFF-NEXT:    orps %xmm2, %xmm1
+; BWOFF-NEXT:    movaps %xmm1, %xmm0
+; BWOFF-NEXT:    callq __gnu_f2h_ieee@PLT
+; BWOFF-NEXT:    movw %ax, %r12w
+; BWOFF-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
+; BWOFF-NEXT:    callq __gnu_h2f_ieee@PLT
+; BWOFF-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; BWOFF-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 2-byte Folded Reload
+; BWOFF-NEXT:    callq __gnu_h2f_ieee@PLT
+; BWOFF-NEXT:    movaps %xmm0, %xmm1
+; BWOFF-NEXT:    cmpunordss %xmm0, %xmm1
+; BWOFF-NEXT:    movaps %xmm1, %xmm2
+; BWOFF-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
+; BWOFF-NEXT:    andps %xmm3, %xmm2
+; BWOFF-NEXT:    maxss %xmm0, %xmm3
+; BWOFF-NEXT:    andnps %xmm3, %xmm1
+; BWOFF-NEXT:    orps %xmm2, %xmm1
+; BWOFF-NEXT:    movaps %xmm1, %xmm0
+; BWOFF-NEXT:    callq __gnu_f2h_ieee@PLT
+; BWOFF-NEXT:    movw %ax, %r14w
+; BWOFF-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
+; BWOFF-NEXT:    callq __gnu_h2f_ieee@PLT
+; BWOFF-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; BWOFF-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 2-byte Folded Reload
+; BWOFF-NEXT:    callq __gnu_h2f_ieee@PLT
+; BWOFF-NEXT:    movaps %xmm0, %xmm1
+; BWOFF-NEXT:    cmpunordss %xmm0, %xmm1
+; BWOFF-NEXT:    movaps %xmm1, %xmm2
+; BWOFF-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
+; BWOFF-NEXT:    andps %xmm3, %xmm2
+; BWOFF-NEXT:    maxss %xmm0, %xmm3
+; BWOFF-NEXT:    andnps %xmm3, %xmm1
+; BWOFF-NEXT:    orps %xmm2, %xmm1
+; BWOFF-NEXT:    movaps %xmm1, %xmm0
+; BWOFF-NEXT:    callq __gnu_f2h_ieee@PLT
+; BWOFF-NEXT:    movw %ax, %bp
+; BWOFF-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
+; BWOFF-NEXT:    callq __gnu_h2f_ieee@PLT
+; BWOFF-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; BWOFF-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
+; BWOFF-NEXT:    callq __gnu_h2f_ieee@PLT
+; BWOFF-NEXT:    movaps %xmm0, %xmm1
+; BWOFF-NEXT:    cmpunordss %xmm0, %xmm1
+; BWOFF-NEXT:    movaps %xmm1, %xmm2
+; BWOFF-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
+; BWOFF-NEXT:    andps %xmm3, %xmm2
+; BWOFF-NEXT:    maxss %xmm0, %xmm3
+; BWOFF-NEXT:    andnps %xmm3, %xmm1
+; BWOFF-NEXT:    orps %xmm2, %xmm1
+; BWOFF-NEXT:    movaps %xmm1, %xmm0
+; BWOFF-NEXT:    callq __gnu_f2h_ieee@PLT
+; BWOFF-NEXT:    movw %ax, %r15w
+; BWOFF-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
+; BWOFF-NEXT:    callq __gnu_h2f_ieee@PLT
+; BWOFF-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; BWOFF-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
+; BWOFF-NEXT:    callq __gnu_h2f_ieee@PLT
+; BWOFF-NEXT:    movaps %xmm0, %xmm1
+; BWOFF-NEXT:    cmpunordss %xmm0, %xmm1
+; BWOFF-NEXT:    movaps %xmm1, %xmm2
+; BWOFF-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
+; BWOFF-NEXT:    andps %xmm3, %xmm2
+; BWOFF-NEXT:    maxss %xmm0, %xmm3
+; BWOFF-NEXT:    andnps %xmm3, %xmm1
+; BWOFF-NEXT:    orps %xmm2, %xmm1
+; BWOFF-NEXT:    movaps %xmm1, %xmm0
+; BWOFF-NEXT:    callq __gnu_f2h_ieee@PLT
+; BWOFF-NEXT:    movw %ax, %r13w
+; BWOFF-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
+; BWOFF-NEXT:    callq __gnu_h2f_ieee@PLT
+; BWOFF-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; BWOFF-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
+; BWOFF-NEXT:    callq __gnu_h2f_ieee@PLT
+; BWOFF-NEXT:    movaps %xmm0, %xmm1
+; BWOFF-NEXT:    cmpunordss %xmm0, %xmm1
+; BWOFF-NEXT:    movaps %xmm1, %xmm2
+; BWOFF-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
+; BWOFF-NEXT:    andps %xmm3, %xmm2
+; BWOFF-NEXT:    maxss %xmm0, %xmm3
+; BWOFF-NEXT:    andnps %xmm3, %xmm1
+; BWOFF-NEXT:    orps %xmm2, %xmm1
+; BWOFF-NEXT:    movaps %xmm1, %xmm0
+; BWOFF-NEXT:    callq __gnu_f2h_ieee@PLT
+; BWOFF-NEXT:    movw %ax, 14(%rbx)
+; BWOFF-NEXT:    movw %r13w, 12(%rbx)
+; BWOFF-NEXT:    movw %r15w, 10(%rbx)
+; BWOFF-NEXT:    movw %bp, 8(%rbx)
+; BWOFF-NEXT:    movw %r14w, 6(%rbx)
+; BWOFF-NEXT:    movw %r12w, 4(%rbx)
+; BWOFF-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
+; BWOFF-NEXT:    movw %ax, 2(%rbx)
+; BWOFF-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
+; BWOFF-NEXT:    movw %ax, (%rbx)
+; BWOFF-NEXT:    movq %rbx, %rax
+; BWOFF-NEXT:    addq $168, %rsp
+; BWOFF-NEXT:    popq %rbx
+; BWOFF-NEXT:    popq %r12
+; BWOFF-NEXT:    popq %r13
+; BWOFF-NEXT:    popq %r14
+; BWOFF-NEXT:    popq %r15
+; BWOFF-NEXT:    popq %rbp
+; BWOFF-NEXT:    retq
+;
+; BWON-F16C-LABEL: maxnum_v8f16:
+; BWON-F16C:       # %bb.0:
+; BWON-F16C-NEXT:    movq %rdi, %rax
+; BWON-F16C-NEXT:    movzwl {{[0-9]+}}(%rsp), %edi
+; BWON-F16C-NEXT:    vmovd %edi, %xmm0
+; BWON-F16C-NEXT:    movzwl %si, %esi
+; BWON-F16C-NEXT:    vmovd %esi, %xmm1
+; BWON-F16C-NEXT:    movzwl {{[0-9]+}}(%rsp), %esi
+; BWON-F16C-NEXT:    vmovd %esi, %xmm2
+; BWON-F16C-NEXT:    movzwl %dx, %edx
+; BWON-F16C-NEXT:    vmovd %edx, %xmm3
+; BWON-F16C-NEXT:    movzwl {{[0-9]+}}(%rsp), %edx
+; BWON-F16C-NEXT:    vmovd %edx, %xmm4
+; BWON-F16C-NEXT:    movzwl %cx, %ecx
+; BWON-F16C-NEXT:    vmovd %ecx, %xmm5
+; BWON-F16C-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; BWON-F16C-NEXT:    vmovd %ecx, %xmm6
+; BWON-F16C-NEXT:    movzwl %r8w, %ecx
+; BWON-F16C-NEXT:    vmovd %ecx, %xmm7
+; BWON-F16C-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; BWON-F16C-NEXT:    vmovd %ecx, %xmm8
+; BWON-F16C-NEXT:    movzwl %r9w, %ecx
+; BWON-F16C-NEXT:    vmovd %ecx, %xmm9
+; BWON-F16C-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; BWON-F16C-NEXT:    vmovd %ecx, %xmm10
+; BWON-F16C-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; BWON-F16C-NEXT:    vmovd %ecx, %xmm11
+; BWON-F16C-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; BWON-F16C-NEXT:    vmovd %ecx, %xmm12
+; BWON-F16C-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; BWON-F16C-NEXT:    vmovd %ecx, %xmm13
+; BWON-F16C-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; BWON-F16C-NEXT:    vmovd %ecx, %xmm14
+; BWON-F16C-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
+; BWON-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
+; BWON-F16C-NEXT:    vmaxss %xmm1, %xmm0, %xmm15
+; BWON-F16C-NEXT:    vcmpunordss %xmm1, %xmm1, %xmm1
+; BWON-F16C-NEXT:    vblendvps %xmm1, %xmm0, %xmm15, %xmm0
+; BWON-F16C-NEXT:    vmovd %ecx, %xmm1
+; BWON-F16C-NEXT:    vcvtph2ps %xmm2, %xmm2
+; BWON-F16C-NEXT:    vcvtph2ps %xmm3, %xmm3
+; BWON-F16C-NEXT:    vmaxss %xmm3, %xmm2, %xmm15
+; BWON-F16C-NEXT:    vcmpunordss %xmm3, %xmm3, %xmm3
+; BWON-F16C-NEXT:    vblendvps %xmm3, %xmm2, %xmm15, %xmm2
+; BWON-F16C-NEXT:    vcvtph2ps %xmm4, %xmm3
+; BWON-F16C-NEXT:    vcvtph2ps %xmm5, %xmm4
+; BWON-F16C-NEXT:    vmaxss %xmm4, %xmm3, %xmm5
+; BWON-F16C-NEXT:    vcmpunordss %xmm4, %xmm4, %xmm4
+; BWON-F16C-NEXT:    vblendvps %xmm4, %xmm3, %xmm5, %xmm3
+; BWON-F16C-NEXT:    vcvtph2ps %xmm6, %xmm4
+; BWON-F16C-NEXT:    vcvtph2ps %xmm7, %xmm5
+; BWON-F16C-NEXT:    vmaxss %xmm5, %xmm4, %xmm6
+; BWON-F16C-NEXT:    vcmpunordss %xmm5, %xmm5, %xmm5
+; BWON-F16C-NEXT:    vblendvps %xmm5, %xmm4, %xmm6, %xmm4
+; BWON-F16C-NEXT:    vcvtph2ps %xmm8, %xmm5
+; BWON-F16C-NEXT:    vcvtph2ps %xmm9, %xmm6
+; BWON-F16C-NEXT:    vmaxss %xmm6, %xmm5, %xmm7
+; BWON-F16C-NEXT:    vcmpunordss %xmm6, %xmm6, %xmm6
+; BWON-F16C-NEXT:    vblendvps %xmm6, %xmm5, %xmm7, %xmm5
+; BWON-F16C-NEXT:    vcvtph2ps %xmm10, %xmm6
+; BWON-F16C-NEXT:    vcvtph2ps %xmm11, %xmm7
+; BWON-F16C-NEXT:    vmaxss %xmm6, %xmm7, %xmm8
+; BWON-F16C-NEXT:    vcmpunordss %xmm6, %xmm6, %xmm6
+; BWON-F16C-NEXT:    vblendvps %xmm6, %xmm7, %xmm8, %xmm6
+; BWON-F16C-NEXT:    vcvtph2ps %xmm12, %xmm7
+; BWON-F16C-NEXT:    vcvtph2ps %xmm13, %xmm8
+; BWON-F16C-NEXT:    vmaxss %xmm7, %xmm8, %xmm9
+; BWON-F16C-NEXT:    vcmpunordss %xmm7, %xmm7, %xmm7
+; BWON-F16C-NEXT:    vblendvps %xmm7, %xmm8, %xmm9, %xmm7
+; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
+; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
+; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
+; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm5, %xmm5
+; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm6, %xmm6
+; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm7, %xmm7
+; BWON-F16C-NEXT:    vcvtph2ps %xmm14, %xmm8
+; BWON-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
+; BWON-F16C-NEXT:    vmaxss %xmm8, %xmm1, %xmm9
+; BWON-F16C-NEXT:    vcmpunordss %xmm8, %xmm8, %xmm8
+; BWON-F16C-NEXT:    vblendvps %xmm8, %xmm1, %xmm9, %xmm1
+; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; BWON-F16C-NEXT:    vpextrw $0, %xmm1, 14(%rax)
+; BWON-F16C-NEXT:    vpextrw $0, %xmm7, 12(%rax)
+; BWON-F16C-NEXT:    vpextrw $0, %xmm6, 10(%rax)
+; BWON-F16C-NEXT:    vpextrw $0, %xmm5, 8(%rax)
+; BWON-F16C-NEXT:    vpextrw $0, %xmm4, 6(%rax)
+; BWON-F16C-NEXT:    vpextrw $0, %xmm3, 4(%rax)
+; BWON-F16C-NEXT:    vpextrw $0, %xmm2, 2(%rax)
+; BWON-F16C-NEXT:    vpextrw $0, %xmm0, (%rax)
+; BWON-F16C-NEXT:    retq
+;
+; CHECK-I686-LABEL: maxnum_v8f16:
+; CHECK-I686:       # %bb.0:
+; CHECK-I686-NEXT:    pushl %ebp
+; CHECK-I686-NEXT:    pushl %ebx
+; CHECK-I686-NEXT:    pushl %edi
+; CHECK-I686-NEXT:    pushl %esi
+; CHECK-I686-NEXT:    subl $252, %esp
+; CHECK-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %esi
+; CHECK-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %ebp
+; CHECK-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %edi
+; CHECK-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %ebx
+; CHECK-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    movl %eax, (%esp)
+; CHECK-I686-NEXT:    calll __gnu_h2f_ieee
+; CHECK-I686-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
+; CHECK-I686-NEXT:    movl %ebx, (%esp)
+; CHECK-I686-NEXT:    calll __gnu_h2f_ieee
+; CHECK-I686-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
+; CHECK-I686-NEXT:    movl %edi, (%esp)
+; CHECK-I686-NEXT:    calll __gnu_h2f_ieee
+; CHECK-I686-NEXT:    movl %ebp, (%esp)
+; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
+; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    movaps %xmm1, %xmm3
+; CHECK-I686-NEXT:    cmpunordss %xmm1, %xmm3
+; CHECK-I686-NEXT:    movaps %xmm3, %xmm2
+; CHECK-I686-NEXT:    andps %xmm0, %xmm2
+; CHECK-I686-NEXT:    maxss %xmm1, %xmm0
+; CHECK-I686-NEXT:    andnps %xmm0, %xmm3
+; CHECK-I686-NEXT:    orps %xmm2, %xmm3
+; CHECK-I686-NEXT:    movaps %xmm3, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; CHECK-I686-NEXT:    calll __gnu_h2f_ieee
+; CHECK-I686-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-I686-NEXT:    movss %xmm0, (%esp)
+; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
+; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    movaps %xmm1, %xmm3
+; CHECK-I686-NEXT:    cmpunordss %xmm1, %xmm3
+; CHECK-I686-NEXT:    movaps %xmm3, %xmm2
+; CHECK-I686-NEXT:    andps %xmm0, %xmm2
+; CHECK-I686-NEXT:    maxss %xmm1, %xmm0
+; CHECK-I686-NEXT:    andnps %xmm0, %xmm3
+; CHECK-I686-NEXT:    orps %xmm2, %xmm3
+; CHECK-I686-NEXT:    movaps %xmm3, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; CHECK-I686-NEXT:    calll __gnu_f2h_ieee
+; CHECK-I686-NEXT:    movw %ax, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; CHECK-I686-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-I686-NEXT:    movss %xmm0, (%esp)
+; CHECK-I686-NEXT:    calll __gnu_f2h_ieee
+; CHECK-I686-NEXT:    movw %ax, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; CHECK-I686-NEXT:    movl %esi, (%esp)
+; CHECK-I686-NEXT:    calll __gnu_h2f_ieee
+; CHECK-I686-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
+; CHECK-I686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; CHECK-I686-NEXT:    movl %eax, (%esp)
+; CHECK-I686-NEXT:    calll __gnu_h2f_ieee
+; CHECK-I686-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
+; CHECK-I686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; CHECK-I686-NEXT:    movl %eax, (%esp)
+; CHECK-I686-NEXT:    calll __gnu_h2f_ieee
+; CHECK-I686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; CHECK-I686-NEXT:    movl %eax, (%esp)
+; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
+; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    movaps %xmm1, %xmm3
+; CHECK-I686-NEXT:    cmpunordss %xmm1, %xmm3
+; CHECK-I686-NEXT:    movaps %xmm3, %xmm2
+; CHECK-I686-NEXT:    andps %xmm0, %xmm2
+; CHECK-I686-NEXT:    maxss %xmm1, %xmm0
+; CHECK-I686-NEXT:    andnps %xmm0, %xmm3
+; CHECK-I686-NEXT:    orps %xmm2, %xmm3
+; CHECK-I686-NEXT:    movaps %xmm3, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; CHECK-I686-NEXT:    calll __gnu_h2f_ieee
+; CHECK-I686-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-I686-NEXT:    movss %xmm0, (%esp)
+; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
+; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    movaps %xmm1, %xmm3
+; CHECK-I686-NEXT:    cmpunordss %xmm1, %xmm3
+; CHECK-I686-NEXT:    movaps %xmm3, %xmm2
+; CHECK-I686-NEXT:    andps %xmm0, %xmm2
+; CHECK-I686-NEXT:    maxss %xmm1, %xmm0
+; CHECK-I686-NEXT:    andnps %xmm0, %xmm3
+; CHECK-I686-NEXT:    orps %xmm2, %xmm3
+; CHECK-I686-NEXT:    movaps %xmm3, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; CHECK-I686-NEXT:    calll __gnu_f2h_ieee
+; CHECK-I686-NEXT:    movw %ax, %si
+; CHECK-I686-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-I686-NEXT:    movss %xmm0, (%esp)
+; CHECK-I686-NEXT:    calll __gnu_f2h_ieee
+; CHECK-I686-NEXT:    movw %ax, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; CHECK-I686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; CHECK-I686-NEXT:    movl %eax, (%esp)
+; CHECK-I686-NEXT:    calll __gnu_h2f_ieee
+; CHECK-I686-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
+; CHECK-I686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; CHECK-I686-NEXT:    movl %eax, (%esp)
+; CHECK-I686-NEXT:    calll __gnu_h2f_ieee
+; CHECK-I686-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
+; CHECK-I686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; CHECK-I686-NEXT:    movl %eax, (%esp)
+; CHECK-I686-NEXT:    calll __gnu_h2f_ieee
+; CHECK-I686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; CHECK-I686-NEXT:    movl %eax, (%esp)
+; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
+; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    movaps %xmm1, %xmm3
+; CHECK-I686-NEXT:    cmpunordss %xmm1, %xmm3
+; CHECK-I686-NEXT:    movaps %xmm3, %xmm2
+; CHECK-I686-NEXT:    andps %xmm0, %xmm2
+; CHECK-I686-NEXT:    maxss %xmm1, %xmm0
+; CHECK-I686-NEXT:    andnps %xmm0, %xmm3
+; CHECK-I686-NEXT:    orps %xmm2, %xmm3
+; CHECK-I686-NEXT:    movaps %xmm3, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; CHECK-I686-NEXT:    calll __gnu_h2f_ieee
+; CHECK-I686-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-I686-NEXT:    movss %xmm0, (%esp)
+; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
+; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    movaps %xmm1, %xmm3
+; CHECK-I686-NEXT:    cmpunordss %xmm1, %xmm3
+; CHECK-I686-NEXT:    movaps %xmm3, %xmm2
+; CHECK-I686-NEXT:    andps %xmm0, %xmm2
+; CHECK-I686-NEXT:    maxss %xmm1, %xmm0
+; CHECK-I686-NEXT:    andnps %xmm0, %xmm3
+; CHECK-I686-NEXT:    orps %xmm2, %xmm3
+; CHECK-I686-NEXT:    movaps %xmm3, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; CHECK-I686-NEXT:    calll __gnu_f2h_ieee
+; CHECK-I686-NEXT:    movw %ax, %bx
+; CHECK-I686-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-I686-NEXT:    movss %xmm0, (%esp)
+; CHECK-I686-NEXT:    calll __gnu_f2h_ieee
+; CHECK-I686-NEXT:    movw %ax, %bp
+; CHECK-I686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; CHECK-I686-NEXT:    movl %eax, (%esp)
+; CHECK-I686-NEXT:    calll __gnu_h2f_ieee
+; CHECK-I686-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
+; CHECK-I686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; CHECK-I686-NEXT:    movl %eax, (%esp)
+; CHECK-I686-NEXT:    calll __gnu_h2f_ieee
+; CHECK-I686-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
+; CHECK-I686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; CHECK-I686-NEXT:    movl %eax, (%esp)
+; CHECK-I686-NEXT:    calll __gnu_h2f_ieee
+; CHECK-I686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; CHECK-I686-NEXT:    movl %eax, (%esp)
+; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
+; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    movaps %xmm1, %xmm3
+; CHECK-I686-NEXT:    cmpunordss %xmm1, %xmm3
+; CHECK-I686-NEXT:    movaps %xmm3, %xmm2
+; CHECK-I686-NEXT:    andps %xmm0, %xmm2
+; CHECK-I686-NEXT:    maxss %xmm1, %xmm0
+; CHECK-I686-NEXT:    andnps %xmm0, %xmm3
+; CHECK-I686-NEXT:    orps %xmm2, %xmm3
+; CHECK-I686-NEXT:    movaps %xmm3, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; CHECK-I686-NEXT:    calll __gnu_h2f_ieee
+; CHECK-I686-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-I686-NEXT:    movss %xmm0, (%esp)
+; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
+; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    movaps %xmm1, %xmm3
+; CHECK-I686-NEXT:    cmpunordss %xmm1, %xmm3
+; CHECK-I686-NEXT:    movaps %xmm3, %xmm2
+; CHECK-I686-NEXT:    andps %xmm0, %xmm2
+; CHECK-I686-NEXT:    maxss %xmm1, %xmm0
+; CHECK-I686-NEXT:    andnps %xmm0, %xmm3
+; CHECK-I686-NEXT:    orps %xmm2, %xmm3
+; CHECK-I686-NEXT:    movaps %xmm3, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; CHECK-I686-NEXT:    calll __gnu_f2h_ieee
+; CHECK-I686-NEXT:    movw %ax, %di
+; CHECK-I686-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-I686-NEXT:    movss %xmm0, (%esp)
+; CHECK-I686-NEXT:    calll __gnu_f2h_ieee
+; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-I686-NEXT:    movw %ax, 14(%ecx)
+; CHECK-I686-NEXT:    movw %di, 12(%ecx)
+; CHECK-I686-NEXT:    movw %bp, 10(%ecx)
+; CHECK-I686-NEXT:    movw %bx, 8(%ecx)
+; CHECK-I686-NEXT:    movw {{[-0-9]+}}(%e{{[sb]}}p), %ax # 2-byte Reload
+; CHECK-I686-NEXT:    movw %ax, 6(%ecx)
+; CHECK-I686-NEXT:    movw %si, 4(%ecx)
+; CHECK-I686-NEXT:    movw {{[-0-9]+}}(%e{{[sb]}}p), %ax # 2-byte Reload
+; CHECK-I686-NEXT:    movw %ax, 2(%ecx)
+; CHECK-I686-NEXT:    movw {{[-0-9]+}}(%e{{[sb]}}p), %ax # 2-byte Reload
+; CHECK-I686-NEXT:    movw %ax, (%ecx)
+; CHECK-I686-NEXT:    movl %ecx, %eax
+; CHECK-I686-NEXT:    addl $252, %esp
+; CHECK-I686-NEXT:    popl %esi
+; CHECK-I686-NEXT:    popl %edi
+; CHECK-I686-NEXT:    popl %ebx
+; CHECK-I686-NEXT:    popl %ebp
+; CHECK-I686-NEXT:    retl $4
+  %3 = call fast <8 x half> @llvm.maxnum.v8f16(<8 x half> %0, <8 x half> %1)
+  ret <8 x half> %3
+}
+
 attributes #0 = { nounwind }
