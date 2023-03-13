@@ -97,9 +97,8 @@
 ; GCN-O0-NEXT:        Safe Stack instrumentation pass
 ; GCN-O0-NEXT:        Insert stack protectors
 ; GCN-O0-NEXT:        Dominator Tree Construction
-; GCN-O0-NEXT:        Post-Dominator Tree Construction
-; GCN-O0-NEXT:        Natural Loop Information
-; GCN-O0-NEXT:        Legacy Divergence Analysis
+; GCN-O0-NEXT:        Cycle Info Analysis
+; GCN-O0-NEXT:        Uniformity Analysis
 ; GCN-O0-NEXT:        Assignment Tracking Analysis
 ; GCN-O0-NEXT:        AMDGPU DAG->DAG Pattern Instruction Selection
 ; GCN-O0-NEXT:        MachineDominator Tree Construction
@@ -291,11 +290,12 @@
 ; GCN-O1-NEXT:        Safe Stack instrumentation pass
 ; GCN-O1-NEXT:        Insert stack protectors
 ; GCN-O1-NEXT:        Dominator Tree Construction
-; GCN-O1-NEXT:        Post-Dominator Tree Construction
-; GCN-O1-NEXT:        Natural Loop Information
-; GCN-O1-NEXT:        Legacy Divergence Analysis
+; GCN-O1-NEXT:        Cycle Info Analysis
+; GCN-O1-NEXT:        Uniformity Analysis
 ; GCN-O1-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-NEXT:        Function Alias Analysis Results
+; GCN-O1-NEXT:        Natural Loop Information
+; GCN-O1-NEXT:        Post-Dominator Tree Construction
 ; GCN-O1-NEXT:        Branch Probability Analysis
 ; GCN-O1-NEXT:        Assignment Tracking Analysis
 ; GCN-O1-NEXT:        Lazy Branch Probability Analysis
@@ -589,11 +589,12 @@
 ; GCN-O1-OPTS-NEXT:        Safe Stack instrumentation pass
 ; GCN-O1-OPTS-NEXT:        Insert stack protectors
 ; GCN-O1-OPTS-NEXT:        Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:        Post-Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:        Natural Loop Information
-; GCN-O1-OPTS-NEXT:        Legacy Divergence Analysis
+; GCN-O1-OPTS-NEXT:        Cycle Info Analysis
+; GCN-O1-OPTS-NEXT:        Uniformity Analysis
 ; GCN-O1-OPTS-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-OPTS-NEXT:        Function Alias Analysis Results
+; GCN-O1-OPTS-NEXT:        Natural Loop Information
+; GCN-O1-OPTS-NEXT:        Post-Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Branch Probability Analysis
 ; GCN-O1-OPTS-NEXT:        Assignment Tracking Analysis
 ; GCN-O1-OPTS-NEXT:        Lazy Branch Probability Analysis
@@ -896,11 +897,12 @@
 ; GCN-O2-NEXT:        Safe Stack instrumentation pass
 ; GCN-O2-NEXT:        Insert stack protectors
 ; GCN-O2-NEXT:        Dominator Tree Construction
-; GCN-O2-NEXT:        Post-Dominator Tree Construction
-; GCN-O2-NEXT:        Natural Loop Information
-; GCN-O2-NEXT:        Legacy Divergence Analysis
+; GCN-O2-NEXT:        Cycle Info Analysis
+; GCN-O2-NEXT:        Uniformity Analysis
 ; GCN-O2-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O2-NEXT:        Function Alias Analysis Results
+; GCN-O2-NEXT:        Natural Loop Information
+; GCN-O2-NEXT:        Post-Dominator Tree Construction
 ; GCN-O2-NEXT:        Branch Probability Analysis
 ; GCN-O2-NEXT:        Assignment Tracking Analysis
 ; GCN-O2-NEXT:        Lazy Branch Probability Analysis
@@ -1215,11 +1217,12 @@
 ; GCN-O3-NEXT:        Safe Stack instrumentation pass
 ; GCN-O3-NEXT:        Insert stack protectors
 ; GCN-O3-NEXT:        Dominator Tree Construction
-; GCN-O3-NEXT:        Post-Dominator Tree Construction
-; GCN-O3-NEXT:        Natural Loop Information
-; GCN-O3-NEXT:        Legacy Divergence Analysis
+; GCN-O3-NEXT:        Cycle Info Analysis
+; GCN-O3-NEXT:        Uniformity Analysis
 ; GCN-O3-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:        Function Alias Analysis Results
+; GCN-O3-NEXT:        Natural Loop Information
+; GCN-O3-NEXT:        Post-Dominator Tree Construction
 ; GCN-O3-NEXT:        Branch Probability Analysis
 ; GCN-O3-NEXT:        Assignment Tracking Analysis
 ; GCN-O3-NEXT:        Lazy Branch Probability Analysis
