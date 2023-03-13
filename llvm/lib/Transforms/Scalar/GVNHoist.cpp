@@ -816,7 +816,7 @@ void GVNHoist::checkSafety(CHIArgs C, BasicBlock *BB, GVNHoist::InsKind K,
     // If the Terminator is some kind of "exotic terminator" that produces a
     // value (such as InvokeInst, CallBrInst, or CatchSwitchInst) which the CHI
     // uses, it is not safe to hoist the use above the def.
-    if (!T->use_empty() && is_contained(Insn->operands(), T))
+    if (!T->use_empty() && is_contained(Insn->operands(), cast<const Value>(T)))
       continue;
     if (K == InsKind::Scalar) {
       if (safeToHoistScalar(BB, Insn->getParent(), NumBBsOnAllPaths))
