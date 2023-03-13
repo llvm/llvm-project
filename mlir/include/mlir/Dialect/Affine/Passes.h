@@ -18,6 +18,7 @@
 #include <limits>
 
 namespace mlir {
+
 namespace func {
 class FuncOp;
 } // namespace func
@@ -109,10 +110,6 @@ createLoopUnrollAndJamPass(int unrollJamFactor = -1);
 /// Creates a pass to pipeline explicit movement of data across levels of the
 /// memory hierarchy.
 std::unique_ptr<OperationPass<func::FuncOp>> createPipelineDataTransferPass();
-
-/// Populate patterns that expand affine index operations into more fundamental
-/// operations (not necessarily restricted to Affine dialect).
-void populateAffineExpandIndexOpsPatterns(RewritePatternSet &patterns);
 
 /// Creates a pass to expand affine index operations into more fundamental
 /// operations (not necessarily restricted to Affine dialect).
