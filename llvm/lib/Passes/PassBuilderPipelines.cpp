@@ -1500,9 +1500,6 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     OptimizationLevel Level, const ModuleSummaryIndex *ImportSummary) {
   ModulePassManager MPM;
 
-  // Convert @llvm.global.annotations to !annotation metadata.
-  MPM.addPass(Annotation2MetadataPass());
-
   if (ImportSummary) {
     // These passes import type identifier resolutions for whole-program
     // devirtualization and CFI. They must run early because other passes may
@@ -1563,9 +1560,6 @@ ModulePassManager
 PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
                                      ModuleSummaryIndex *ExportSummary) {
   ModulePassManager MPM;
-
-  // Convert @llvm.global.annotations to !annotation metadata.
-  MPM.addPass(Annotation2MetadataPass());
 
   for (auto &C : FullLinkTimeOptimizationEarlyEPCallbacks)
     C(MPM, Level);
