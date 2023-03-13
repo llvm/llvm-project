@@ -1,6 +1,11 @@
 // RUN: %clangxx -O1 %s -o %t && %run %t
 // UNSUPPORTED: android
 
+// Fail on powerpc64 bots with:
+// AddressSanitizer: CHECK failed: asan_thread.cpp:315 "((AddrIsInStack((uptr)&local))) != (0)"
+// https://lab.llvm.org/buildbot/#/builders/18/builds/8162
+// UNSUPPORTED: target=powerpc64{{.*}}
+
 #include <assert.h>
 #include <stdlib.h>
 #include <sys/resource.h>
