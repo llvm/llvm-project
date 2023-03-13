@@ -22,16 +22,19 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
+#include "llvm/Support/Process.h"
 
 using namespace clang;
 using namespace clang::tooling::dependencies;
 
 namespace {
 struct DependencyScannerServiceOptions {
-  ScanningOutputFormat Format = ScanningOutputFormat::Full;
+  ScanningOutputFormat ConfiguredFormat = ScanningOutputFormat::Full;
   CASOptions CASOpts;
   std::shared_ptr<cas::ObjectStore> CAS;
   std::shared_ptr<cas::ActionCache> Cache;
+
+  ScanningOutputFormat getFormat() const;
 };
 } // end anonymous namespace
 
@@ -93,7 +96,7 @@ void clang_experimental_DependencyScannerServiceOptions_dispose(
 
 void clang_experimental_DependencyScannerServiceOptions_setDependencyMode(
     CXDependencyScannerServiceOptions Opts, CXDependencyMode Mode) {
-  unwrap(Opts)->Format = unwrap(Mode);
+  unwrap(Opts)->ConfiguredFormat = unwrap(Mode);
 }
 
 void clang_experimental_DependencyScannerServiceOptions_setCASDatabases(
@@ -122,8 +125,25 @@ clang_experimental_DependencyScannerService_create_v0(CXDependencyMode Format) {
   IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
   return wrap(new DependencyScanningService(
       ScanningMode::DependencyDirectivesScan, unwrap(Format), CASOpts,
-      /*ActionCache=*/nullptr, FS,
+      /*CAS=*/nullptr, /*ActionCache=*/nullptr, FS,
       /*ReuseFilemanager=*/false));
+}
+
+ScanningOutputFormat DependencyScannerServiceOptions::getFormat() const {
+  if (ConfiguredFormat != ScanningOutputFormat::Full)
+    return ConfiguredFormat;
+
+  if (!CAS || !Cache)
+    return ConfiguredFormat;
+
+  if (llvm::sys::Process::GetEnv("CLANG_CACHE_USE_INCLUDE_TREE"))
+    return ScanningOutputFormat::FullIncludeTree;
+
+  if (llvm::sys::Process::GetEnv("CLANG_CACHE_USE_CASFS_DEPSCAN"))
+    return ScanningOutputFormat::FullTree;
+
+  // Note: default caching behaviour is currently cas-fs.
+  return ConfiguredFormat;
 }
 
 CXDependencyScannerService
@@ -137,11 +157,11 @@ clang_experimental_DependencyScannerService_create_v1(
     assert(unwrap(Opts)->CASOpts.getKind() != CASOptions::UnknownCAS &&
            "CAS and ActionCache must match CASOptions");
     FS = llvm::cantFail(
-        llvm::cas::createCachingOnDiskFileSystem(std::move(CAS)));
+        llvm::cas::createCachingOnDiskFileSystem(CAS));
   }
   return wrap(new DependencyScanningService(
-      ScanningMode::DependencyDirectivesScan, unwrap(Opts)->Format,
-      unwrap(Opts)->CASOpts, std::move(Cache), std::move(FS),
+      ScanningMode::DependencyDirectivesScan, unwrap(Opts)->getFormat(),
+      unwrap(Opts)->CASOpts, std::move(CAS), std::move(Cache), std::move(FS),
       /*ReuseFilemanager=*/false));
 }
 
@@ -257,7 +277,9 @@ static CXErrorCode getFileDependencies(CXDependencyScannerWorker W, int argc,
 
   DependencyScanningWorker *Worker = unwrap(W);
 
-  if (Worker->getScanningFormat() != ScanningOutputFormat::Full)
+  if (Worker->getScanningFormat() != ScanningOutputFormat::Full &&
+      Worker->getScanningFormat() != ScanningOutputFormat::FullTree &&
+      Worker->getScanningFormat() != ScanningOutputFormat::FullIncludeTree)
     return CXError_InvalidArguments;
 
   std::vector<std::string> Compilation{argv, argv + argc};
