@@ -379,6 +379,11 @@ public:
     // DO NOTHING by default.
     return false;
   }
+
+  /// Return an LLVM type that corresponds to an OpenCL type.
+  virtual llvm::Type *getOpenCLType(CodeGenModule &CGM, const Type *T) const {
+    return nullptr;
+  }
 };
 
 } // namespace CodeGen

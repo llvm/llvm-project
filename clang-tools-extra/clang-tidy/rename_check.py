@@ -94,10 +94,14 @@ def deleteMatchingLines(fileName, pattern):
 
 def getListOfFiles(clang_tidy_path):
   files = glob.glob(os.path.join(clang_tidy_path, '**'), recursive=True)
+  files += [os.path.normpath(os.path.join(clang_tidy_path,
+                                           '../docs/ReleaseNotes.rst'))]
   files += glob.glob(os.path.join(clang_tidy_path, '..', 'test',
                                   'clang-tidy', 'checkers', '**'), recursive=True)
   files += glob.glob(os.path.join(clang_tidy_path, '..', 'docs',
-                                  'clang-tidy', 'checks', '*'))
+                                  'clang-tidy', 'checks', '*.rst'))
+  files += glob.glob(os.path.join(clang_tidy_path, '..', 'docs',
+                                  'clang-tidy', 'checks', "*", "*.rst"), recursive=True)
   return [filename for filename in files if os.path.isfile(filename)]
 
 
@@ -213,9 +217,11 @@ def add_release_notes(clang_tidy_path, old_check_name, new_check_name):
         if header_found and add_note_here:
           if not line.startswith('^^^^'):
             f.write("""- The '%s' check was renamed to :doc:`%s
-  <clang-tidy/checks/%s>`
+  <clang-tidy/checks/%s/%s>`
 
-""" % (old_check_name, new_check_name, new_check_name))
+                    """ % (old_check_name, new_check_name,
+                           new_check_name.split('-', 1)[0],
+                           '-'.join(new_check_name.split('-')[1:])))
             note_added = True
 
       f.write(line)
@@ -232,15 +238,18 @@ def main():
 
   old_module = args.old_check_name.split('-')[0]
   new_module = args.new_check_name.split('-')[0]
+  old_name = '-'.join(args.old_check_name.split('-')[1:])
+  new_name  = '-'.join(args.new_check_name.split('-')[1:])
+
   if args.check_class_name:
     check_name_camel = args.check_class_name
   else:
     check_name_camel = (''.join(map(lambda elem: elem.capitalize(),
-                                    args.old_check_name.split('-')[1:])) +
+                                    old_name.split('-'))) +
                         'Check')
 
   new_check_name_camel = (''.join(map(lambda elem: elem.capitalize(),
-                                      args.new_check_name.split('-')[1:])) +
+                                      new_name.split('-'))) +
                           'Check')
 
   clang_tidy_path = os.path.dirname(__file__)
@@ -255,7 +264,7 @@ def main():
   old_module_path = os.path.join(clang_tidy_path, old_module)
   new_module_path = os.path.join(clang_tidy_path, new_module)
 
-  if (args.old_check_name != args.new_check_name):
+  if (old_module != new_module):
     # Remove the check from the old module.
     cmake_lists = os.path.join(old_module_path, 'CMakeLists.txt')
     check_found = deleteMatchingLines(cmake_lists, '\\b' + check_name_camel)
@@ -270,12 +279,10 @@ def main():
     deleteMatchingLines(os.path.join(old_module_path, modulecpp),
                       '\\b' + check_name_camel + '|\\b' + args.old_check_name)
 
-  old_check_filename = '-'.join(args.old_check_name.split('-')[1:])
-  new_check_filename = '-'.join(args.new_check_name.split('-')[1:])
-
   for filename in getListOfFiles(clang_tidy_path):
     originalName = filename
-    filename = fileRename(filename, old_check_filename, new_check_filename)
+    filename = fileRename(filename, old_module + "/" + old_name, new_module + "/" + new_name)
+    filename = fileRename(filename, args.old_check_name, args.new_check_name)
     filename = fileRename(filename, check_name_camel, new_check_name_camel)
     replaceInFile(filename, generateCommentLineHeader(originalName),
                   generateCommentLineHeader(filename))
@@ -284,7 +291,7 @@ def main():
     for header_guard in header_guard_variants:
       replaceInFile(filename, header_guard, header_guard_new)
 
-    if args.new_check_name + '.rst' in filename:
+    if new_module + '/'+ new_name + '.rst' in filename:
       replaceInFile(
           filename,
           args.old_check_name + '\n' + '=' * len(args.old_check_name) + '\n',
@@ -295,6 +302,8 @@ def main():
                   new_module + '::' + new_check_name_camel)
     replaceInFile(filename, old_module + '/' + check_name_camel,
                   new_module + '/' + new_check_name_camel)
+    replaceInFile(filename, old_module + '/' + old_name,
+                  new_module + '/' + new_name)
     replaceInFile(filename, check_name_camel, new_check_name_camel)
 
   if old_module != new_module or new_module == 'llvm':
@@ -311,13 +320,12 @@ def main():
                          'namespace clang::tidy::' + old_module + '[^ \n]*',
                          'namespace clang::tidy::' + new_namespace)
 
-  if (args.old_check_name == args.new_check_name):
-    return
+  if old_module != new_module:
 
-  # Add check to the new module.
-  adapt_cmake(new_module_path, new_check_name_camel)
-  adapt_module(new_module_path, new_module, args.new_check_name,
-               new_check_name_camel)
+      # Add check to the new module.
+      adapt_cmake(new_module_path, new_check_name_camel)
+      adapt_module(new_module_path, new_module, args.new_check_name,
+                   new_check_name_camel)
 
   os.system(os.path.join(clang_tidy_path, 'add_new_check.py')
             + ' --update-docs')

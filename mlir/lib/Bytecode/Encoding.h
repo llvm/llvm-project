@@ -23,8 +23,11 @@ namespace bytecode {
 //===----------------------------------------------------------------------===//
 
 enum {
+  /// The minimum supported version of the bytecode.
+  kMinSupportedVersion = 0,
+
   /// The current bytecode version.
-  kVersion = 0,
+  kVersion = 1,
 
   /// An arbitrary value used to fill alignment padding.
   kAlignmentByte = 0xCB,
@@ -61,8 +64,11 @@ enum ID : uint8_t {
   /// section.
   kResourceOffset = 6,
 
+  /// This section contains the versions of each dialect.
+  kDialectVersions = 7,
+
   /// The total number of section types.
-  kNumSections = 7,
+  kNumSections = 8,
 };
 } // namespace Section
 

@@ -163,7 +163,7 @@ define <8 x i32> @sext_zext(<8 x i16> %a) {
 define <8 x float> @sitofp_4i32_8i16(<4 x i32> %a, <8 x i16> %b) {
 ; CHECK-LABEL: @sitofp_4i32_8i16(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sitofp <4 x i32> [[A:%.*]] to <4 x float>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[B:%.*]], <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[B:%.*]], <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = sitofp <4 x i16> [[TMP2]] to <4 x float>
 ; CHECK-NEXT:    [[R71:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    ret <8 x float> [[R71]]
@@ -201,11 +201,11 @@ define <8 x float> @sitofp_uitofp_4i32_8i16_16i8(<4 x i32> %a, <8 x i16> %b, <16
 ; CHECK-NEXT:    [[TMP1:%.*]] = sitofp <4 x i32> [[A:%.*]] to <4 x float>
 ; CHECK-NEXT:    [[TMP2:%.*]] = uitofp <4 x i32> [[A]] to <4 x float>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i16> [[B:%.*]], <8 x i16> undef, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i16> [[B:%.*]], <8 x i16> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = sitofp <2 x i16> [[TMP4]] to <2 x float>
 ; CHECK-NEXT:    [[TMP6:%.*]] = uitofp <2 x i16> [[TMP4]] to <2 x float>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> [[TMP6]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <16 x i8> [[C:%.*]], <16 x i8> undef, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <16 x i8> [[C:%.*]], <16 x i8> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP9:%.*]] = sitofp <2 x i8> [[TMP8]] to <2 x float>
 ; CHECK-NEXT:    [[TMP10:%.*]] = uitofp <2 x i8> [[TMP8]] to <2 x float>
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> [[TMP10]], <2 x i32> <i32 0, i32 3>

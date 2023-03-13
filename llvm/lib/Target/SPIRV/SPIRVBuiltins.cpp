@@ -305,7 +305,7 @@ static bool buildSelectInst(MachineIRBuilder &MIRBuilder,
 
   if (ReturnType->getOpcode() == SPIRV::OpTypeVector) {
     unsigned Bits = GR->getScalarOrVectorBitWidth(ReturnType);
-    uint64_t AllOnes = APInt::getAllOnesValue(Bits).getZExtValue();
+    uint64_t AllOnes = APInt::getAllOnes(Bits).getZExtValue();
     TrueConst = GR->getOrCreateConsIntVector(AllOnes, MIRBuilder, ReturnType);
     FalseConst = GR->getOrCreateConsIntVector(0, MIRBuilder, ReturnType);
   } else {

@@ -74,17 +74,6 @@ struct ForwardIterator {
   }
 };
 
-/// This iterator enumerates elements in "reverse" order. It is a wrapper around
-/// llvm::reverse.
-struct ReverseIterator {
-  template <typename RangeT>
-  static constexpr auto makeIterable(RangeT &&range) {
-    // llvm::reverse uses RangeT::rbegin and RangeT::rend.
-    return llvm::reverse(
-        ForwardIterator::makeIterable(std::forward<RangeT>(range)));
-  }
-};
-
 /// A utility class to encode the current walk stage for "generic" walkers.
 /// When walking an operation, we can either choose a Pre/Post order walker
 /// which invokes the callback on an operation before/after all its attached

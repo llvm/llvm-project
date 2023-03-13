@@ -279,7 +279,7 @@ namespace FunctionPointers {
   constexpr auto Select(int n) -> int (*)(int) {
     return n == 2 ? &Double : n == 3 ? &Triple : n == 4 ? &Quadruple : 0;
   }
-  constexpr int Apply(int (*F)(int), int n) { return F(n); } // expected-note {{subexpression}}
+  constexpr int Apply(int (*F)(int), int n) { return F(n); } // expected-note {{'F' evaluates to a null function pointer}}
 
   static_assert(1 + Apply(Select(4), 5) + Apply(Select(3), 7) == 42, "");
 

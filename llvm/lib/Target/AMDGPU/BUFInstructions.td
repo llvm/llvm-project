@@ -2697,11 +2697,11 @@ multiclass MUBUF_Real_vi_gfx90a<bits<7> op, MUBUF_Pseudo ps, bit isTFE = 0> {
   def _vi :     MUBUF_Real_vi<op, ps>;
 
   if !not(isTFE) then {
-    foreach _ = BoolToList<!not(ps.FPAtomic)>.ret in
+    if !not(ps.FPAtomic) then
       def _gfx90a : MUBUF_Real_gfx90a<op, ps>;
   }
 
-  foreach _ = BoolToList<ps.FPAtomic>.ret in {
+  if ps.FPAtomic then {
     def _gfx90a : MUBUF_Real_gfx90a<op, ps, 0> {
       let SubtargetPredicate = isGFX90AOnly;
       let AssemblerPredicate = isGFX90AOnly;

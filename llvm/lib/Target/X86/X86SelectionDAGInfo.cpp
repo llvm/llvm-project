@@ -182,7 +182,8 @@ static SDValue emitRepmovsB(const X86Subtarget &Subtarget, SelectionDAG &DAG,
 
 /// Returns the best type to use with repmovs depending on alignment.
 static MVT getOptimalRepmovsType(const X86Subtarget &Subtarget,
-                                 uint64_t Align) {
+                                 Align Alignment) {
+  uint64_t Align = Alignment.value();
   assert((Align != 0) && "Align is normalized");
   assert(isPowerOf2_64(Align) && "Align is a power of 2");
   switch (Align) {
@@ -204,7 +205,7 @@ static MVT getOptimalRepmovsType(const X86Subtarget &Subtarget,
 static SDValue emitConstantSizeRepmov(
     SelectionDAG &DAG, const X86Subtarget &Subtarget, const SDLoc &dl,
     SDValue Chain, SDValue Dst, SDValue Src, uint64_t Size, EVT SizeVT,
-    unsigned Align, bool isVolatile, bool AlwaysInline,
+    Align Alignment, bool isVolatile, bool AlwaysInline,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) {
 
   /// TODO: Revisit next line: big copy with ERMSB on march >= haswell are very
@@ -219,10 +220,10 @@ static SDValue emitConstantSizeRepmov(
   assert(!Subtarget.hasERMSB() && "No efficient RepMovs");
   /// We assume runtime memcpy will do a better job for unaligned copies when
   /// ERMS is not present.
-  if (!AlwaysInline && (Align & 3) != 0)
+  if (!AlwaysInline && (Alignment.value() & 3) != 0)
     return SDValue();
 
-  const MVT BlockType = getOptimalRepmovsType(Subtarget, Align);
+  const MVT BlockType = getOptimalRepmovsType(Subtarget, Alignment);
   const uint64_t BlockBytes = BlockType.getSizeInBits() / 8;
   const uint64_t BlockCount = Size / BlockBytes;
   const uint64_t BytesLeft = Size % BlockBytes;
@@ -251,7 +252,7 @@ static SDValue emitConstantSizeRepmov(
       Chain, dl,
       DAG.getNode(ISD::ADD, dl, DstVT, Dst, DAG.getConstant(Offset, dl, DstVT)),
       DAG.getNode(ISD::ADD, dl, SrcVT, Src, DAG.getConstant(Offset, dl, SrcVT)),
-      DAG.getConstant(BytesLeft, dl, SizeVT), llvm::Align(Align), isVolatile,
+      DAG.getConstant(BytesLeft, dl, SizeVT), Alignment, isVolatile,
       /*AlwaysInline*/ true, /*isTailCall*/ false,
       DstPtrInfo.getWithOffset(Offset), SrcPtrInfo.getWithOffset(Offset)));
   return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Results);
@@ -281,10 +282,10 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemcpy(
 
   /// Handle constant sizes,
   if (ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size))
-    return emitConstantSizeRepmov(
-        DAG, Subtarget, dl, Chain, Dst, Src, ConstantSize->getZExtValue(),
-        Size.getValueType(), Alignment.value(), isVolatile, AlwaysInline,
-        DstPtrInfo, SrcPtrInfo);
+    return emitConstantSizeRepmov(DAG, Subtarget, dl, Chain, Dst, Src,
+                                  ConstantSize->getZExtValue(),
+                                  Size.getValueType(), Alignment, isVolatile,
+                                  AlwaysInline, DstPtrInfo, SrcPtrInfo);
 
   return SDValue();
 }

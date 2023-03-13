@@ -114,13 +114,13 @@ public:
 
   static unsigned RelocSymbol64(const ELFRelocation &rel);
 
-  static unsigned RelocOffset32(const ELFRelocation &rel);
+  static elf_addr RelocOffset32(const ELFRelocation &rel);
 
-  static unsigned RelocOffset64(const ELFRelocation &rel);
+  static elf_addr RelocOffset64(const ELFRelocation &rel);
 
-  static unsigned RelocAddend32(const ELFRelocation &rel);
+  static elf_sxword RelocAddend32(const ELFRelocation &rel);
 
-  static unsigned RelocAddend64(const ELFRelocation &rel);
+  static elf_sxword RelocAddend64(const ELFRelocation &rel);
 
   bool IsRela() { return (reloc.is<ELFRela *>()); }
 
@@ -185,28 +185,28 @@ unsigned ELFRelocation::RelocSymbol64(const ELFRelocation &rel) {
     return ELFRela::RelocSymbol64(*rel.reloc.get<ELFRela *>());
 }
 
-unsigned ELFRelocation::RelocOffset32(const ELFRelocation &rel) {
+elf_addr ELFRelocation::RelocOffset32(const ELFRelocation &rel) {
   if (rel.reloc.is<ELFRel *>())
     return rel.reloc.get<ELFRel *>()->r_offset;
   else
     return rel.reloc.get<ELFRela *>()->r_offset;
 }
 
-unsigned ELFRelocation::RelocOffset64(const ELFRelocation &rel) {
+elf_addr ELFRelocation::RelocOffset64(const ELFRelocation &rel) {
   if (rel.reloc.is<ELFRel *>())
     return rel.reloc.get<ELFRel *>()->r_offset;
   else
     return rel.reloc.get<ELFRela *>()->r_offset;
 }
 
-unsigned ELFRelocation::RelocAddend32(const ELFRelocation &rel) {
+elf_sxword ELFRelocation::RelocAddend32(const ELFRelocation &rel) {
   if (rel.reloc.is<ELFRel *>())
     return 0;
   else
     return rel.reloc.get<ELFRela *>()->r_addend;
 }
 
-unsigned ELFRelocation::RelocAddend64(const ELFRelocation &rel) {
+elf_sxword  ELFRelocation::RelocAddend64(const ELFRelocation &rel) {
   if (rel.reloc.is<ELFRel *>())
     return 0;
   else
@@ -2593,6 +2593,50 @@ ObjectFileELF::ParseTrampolineSymbols(Symtab *symbol_table, user_id_t start_id,
                              rel_data, symtab_data, strtab_data);
 }
 
+static void ApplyELF64ABS64Relocation(Symtab *symtab, ELFRelocation &rel,
+                                      DataExtractor &debug_data,
+                                      Section *rel_section) {
+  Symbol *symbol = symtab->FindSymbolByID(ELFRelocation::RelocSymbol64(rel));
+  if (symbol) {
+    addr_t value = symbol->GetAddressRef().GetFileAddress();
+    DataBufferSP &data_buffer_sp = debug_data.GetSharedDataBuffer();
+    // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
+    WritableDataBuffer *data_buffer =
+        llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
+    uint64_t *dst = reinterpret_cast<uint64_t *>(
+        data_buffer->GetBytes() + rel_section->GetFileOffset() +
+        ELFRelocation::RelocOffset64(rel));
+    uint64_t val_offset = value + ELFRelocation::RelocAddend64(rel);
+    memcpy(dst, &val_offset, sizeof(uint64_t));
+  }
+}
+
+static void ApplyELF64ABS32Relocation(Symtab *symtab, ELFRelocation &rel,
+                                      DataExtractor &debug_data,
+                                      Section *rel_section, bool is_signed) {
+  Symbol *symbol = symtab->FindSymbolByID(ELFRelocation::RelocSymbol64(rel));
+  if (symbol) {
+    addr_t value = symbol->GetAddressRef().GetFileAddress();
+    value += ELFRelocation::RelocAddend32(rel);
+    if ((!is_signed && (value > UINT32_MAX)) ||
+        (is_signed &&
+         ((int64_t)value > INT32_MAX || (int64_t)value < INT32_MIN))) {
+      Log *log = GetLog(LLDBLog::Modules);
+      LLDB_LOGF(log, "Failed to apply debug info relocations");
+      return;
+    }
+    uint32_t truncated_addr = (value & 0xFFFFFFFF);
+    DataBufferSP &data_buffer_sp = debug_data.GetSharedDataBuffer();
+    // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
+    WritableDataBuffer *data_buffer =
+        llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
+    uint32_t *dst = reinterpret_cast<uint32_t *>(
+        data_buffer->GetBytes() + rel_section->GetFileOffset() +
+        ELFRelocation::RelocOffset32(rel));
+    memcpy(dst, &truncated_addr, sizeof(uint32_t));
+  }
+}
+
 unsigned ObjectFileELF::ApplyRelocations(
     Symtab *symtab, const ELFHeader *hdr, const ELFSectionHeader *rel_hdr,
     const ELFSectionHeader *symtab_hdr, const ELFSectionHeader *debug_hdr,
@@ -2656,55 +2700,50 @@ unsigned ObjectFileELF::ApplyRelocations(
                                  reloc_type(rel));
       }
     } else {
-      switch (reloc_type(rel)) {
-      case R_AARCH64_ABS64:
-      case R_X86_64_64: {
-        symbol = symtab->FindSymbolByID(reloc_symbol(rel));
-        if (symbol) {
-          addr_t value = symbol->GetAddressRef().GetFileAddress();
-          DataBufferSP &data_buffer_sp = debug_data.GetSharedDataBuffer();
-          // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
-          WritableDataBuffer *data_buffer =
-              llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
-          uint64_t *dst = reinterpret_cast<uint64_t *>(
-              data_buffer->GetBytes() + rel_section->GetFileOffset() +
-              ELFRelocation::RelocOffset64(rel));
-          uint64_t val_offset = value + ELFRelocation::RelocAddend64(rel);
-          memcpy(dst, &val_offset, sizeof(uint64_t));
+      switch (hdr->e_machine) {
+      case llvm::ELF::EM_AARCH64:
+        switch (reloc_type(rel)) {
+        case R_AARCH64_ABS64:
+          ApplyELF64ABS64Relocation(symtab, rel, debug_data, rel_section);
+          break;
+        case R_AARCH64_ABS32:
+          ApplyELF64ABS32Relocation(symtab, rel, debug_data, rel_section, true);
+          break;
+        default:
+          assert(false && "unexpected relocation type");
         }
         break;
-      }
-      case R_X86_64_32:
-      case R_X86_64_32S:
-      case R_AARCH64_ABS32: {
-        symbol = symtab->FindSymbolByID(reloc_symbol(rel));
-        if (symbol) {
-          addr_t value = symbol->GetAddressRef().GetFileAddress();
-          value += ELFRelocation::RelocAddend32(rel);
-          if ((reloc_type(rel) == R_X86_64_32 && (value > UINT32_MAX)) ||
-              (reloc_type(rel) == R_X86_64_32S &&
-               ((int64_t)value > INT32_MAX && (int64_t)value < INT32_MIN)) ||
-              (reloc_type(rel) == R_AARCH64_ABS32 &&
-               ((int64_t)value > INT32_MAX && (int64_t)value < INT32_MIN))) {
-            Log *log = GetLog(LLDBLog::Modules);
-            LLDB_LOGF(log, "Failed to apply debug info relocations");
-            break;
-          }
-          uint32_t truncated_addr = (value & 0xFFFFFFFF);
-          DataBufferSP &data_buffer_sp = debug_data.GetSharedDataBuffer();
-          // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
-          WritableDataBuffer *data_buffer =
-              llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
-          uint32_t *dst = reinterpret_cast<uint32_t *>(
-              data_buffer->GetBytes() + rel_section->GetFileOffset() +
-              ELFRelocation::RelocOffset32(rel));
-          memcpy(dst, &truncated_addr, sizeof(uint32_t));
+      case llvm::ELF::EM_LOONGARCH:
+        switch (reloc_type(rel)) {
+        case R_LARCH_64:
+          ApplyELF64ABS64Relocation(symtab, rel, debug_data, rel_section);
+          break;
+        case R_LARCH_32:
+          ApplyELF64ABS32Relocation(symtab, rel, debug_data, rel_section, true);
+          break;
+        default:
+          assert(false && "unexpected relocation type");
         }
         break;
-      }
-      case R_X86_64_PC32:
+      case llvm::ELF::EM_X86_64:
+        switch (reloc_type(rel)) {
+        case R_X86_64_64:
+          ApplyELF64ABS64Relocation(symtab, rel, debug_data, rel_section);
+          break;
+        case R_X86_64_32:
+          ApplyELF64ABS32Relocation(symtab, rel, debug_data, rel_section,
+                                    false);
+          break;
+        case R_X86_64_32S:
+          ApplyELF64ABS32Relocation(symtab, rel, debug_data, rel_section, true);
+          break;
+        case R_X86_64_PC32:
+        default:
+          assert(false && "unexpected relocation type");
+        }
+        break;
       default:
-        assert(false && "unexpected relocation type");
+        assert(false && "unsupported machine");
       }
     }
   }

@@ -1,5 +1,5 @@
 ; Do NOT use -O3. It will lower exp2 to ldexp, and the test will fail.
-; RUN: opt -vector-library=sleefgnuabi -replace-with-veclib -loop-unroll -loop-vectorize -S < %s | FileCheck %s
+; RUN: opt -vector-library=sleefgnuabi -replace-with-veclib < %s | opt -vector-library=sleefgnuabi -passes=inject-tli-mappings,loop-unroll,loop-vectorize -S | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"

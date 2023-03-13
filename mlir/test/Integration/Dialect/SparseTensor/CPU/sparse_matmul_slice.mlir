@@ -38,10 +38,32 @@
   slice = [ (0, 4, 2), (1, 4, 1) ]
 }>
 
+#CSR_SLICE_dyn = #sparse_tensor.encoding<{
+  dimLevelType = [ "dense", "compressed" ],
+  slice = [ (?, 4, ?), (?, 4, ?) ]
+}>
+
+#DCSR_SLICE_dyn = #sparse_tensor.encoding<{
+  dimLevelType = [ "compressed", "compressed" ],
+  slice = [ (?, 4, ?), (?, 4, ?) ]
+}>
+
+
 module {
   func.func private @printMemrefF64(%ptr : tensor<*xf64>)
   func.func private @printMemref1dF64(%ptr : memref<?xf64>) attributes { llvm.emit_c_interface }
 
+  //
+  // Computes C = A x B with all matrices dynamic sparse slice (SpMSpM) in CSR and DCSR
+  //
+  func.func @matmul_dyn(%A: tensor<4x4xf64, #CSR_SLICE_dyn>,
+                        %B: tensor<4x4xf64, #DCSR_SLICE_dyn>) -> tensor<4x4xf64, #CSR> {
+    %C = bufferization.alloc_tensor() : tensor<4x4xf64, #CSR>
+    %D = linalg.matmul
+      ins(%A, %B: tensor<4x4xf64, #CSR_SLICE_dyn>, tensor<4x4xf64, #DCSR_SLICE_dyn>)
+         outs(%C: tensor<4x4xf64, #CSR>) -> tensor<4x4xf64, #CSR>
+    return %D: tensor<4x4xf64, #CSR>
+  }
 
   //
   // Computes C = A x B with one matrix CSR sparse slices and the other DSCR sparse slice.
@@ -83,7 +105,9 @@ module {
   // Main driver.
   //
   func.func @entry() {
-    %c0 = arith.constant 0 : index
+    %c_0 = arith.constant 0 : index
+    %c_1 = arith.constant 1 : index
+    %c_2 = arith.constant 2 : index
     %f0 = arith.constant 0.0 : f64
 
     %sa = arith.constant dense<[
@@ -158,10 +182,26 @@ module {
     %4 = call @matmul1(%s2, %s1)
        : (tensor<4x4xf64, #CSR_SLICE_1>,
           tensor<4x4xf64, #DCSR_SLICE_1>) -> tensor<4x4xf64, #CSR>
-
     %c4 = sparse_tensor.convert %4 : tensor<4x4xf64, #CSR> to tensor<4x4xf64>
     %c4u = tensor.cast %c4 : tensor<4x4xf64> to tensor<*xf64>
     call @printMemrefF64(%c4u) : (tensor<*xf64>) -> ()
+
+    // slice x slice (same as above, but with dynamic stride information)
+    //
+    // CHECK:      [2.3,   0,   0,   0],
+    // CHECK-NEXT: [6.9,   0,   0,   0],
+    // CHECK-NEXT: [0,   0,   0,   0],
+    // CHECK-NEXT: [12.6,   0,   0,   0]]
+    //
+    %s1_dyn = tensor.extract_slice %tmp[%c_0, %c_1][4, 4][%c_2, %c_1] : tensor<8x8xf64, #DCSR> to tensor<4x4xf64, #DCSR_SLICE_dyn>
+    %s2_dyn = tensor.extract_slice %b1[%c_0, %c_0][4, 4][%c_2, %c_1] : tensor<8x4xf64, #CSR> to tensor<4x4xf64, #CSR_SLICE_dyn>
+    %dyn_4 = call @matmul_dyn(%s2_dyn, %s1_dyn)
+       : (tensor<4x4xf64, #CSR_SLICE_dyn>,
+          tensor<4x4xf64, #DCSR_SLICE_dyn>) -> tensor<4x4xf64, #CSR>
+
+    %c4_dyn = sparse_tensor.convert %dyn_4 : tensor<4x4xf64, #CSR> to tensor<4x4xf64>
+    %c4u_dyn = tensor.cast %c4_dyn : tensor<4x4xf64> to tensor<*xf64>
+    call @printMemrefF64(%c4u_dyn) : (tensor<*xf64>) -> ()
 
     // sparse slices should generate the same result as dense slices
     //
@@ -179,7 +219,7 @@ module {
     %du = tensor.cast %r : tensor<4x4xf64> to tensor<*xf64>
     call @printMemrefF64(%du) : (tensor<*xf64>) -> ()
 
-    // Releases resources.
+    // Releases resources (we do not need to deallocate slices).
     bufferization.dealloc_tensor %b1 : tensor<8x4xf64, #CSR>
     bufferization.dealloc_tensor %t1 : tensor<8x8xf64, #CSR>
     bufferization.dealloc_tensor %b  : tensor<8x4xf64, #DCSR>
@@ -187,6 +227,7 @@ module {
     bufferization.dealloc_tensor %4  : tensor<4x4xf64, #CSR>
     bufferization.dealloc_tensor %3  : tensor<4x4xf64, #CSR>
     bufferization.dealloc_tensor %2  : tensor<4x4xf64, #DCSR>
+    bufferization.dealloc_tensor %dyn_4 : tensor<4x4xf64, #CSR>
 
     return
   }

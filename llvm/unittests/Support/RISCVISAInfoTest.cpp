@@ -10,6 +10,8 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
+using ::testing::ElementsAre;
+
 using namespace llvm;
 
 bool operator==(const llvm::RISCVExtensionInfo &A,
@@ -58,7 +60,7 @@ TEST(ParseNormalizedArchString, AcceptsValidBaseISAsAndSetsXLen) {
   EXPECT_EQ(InfoRV32E.getExtensions().size(), 1UL);
   EXPECT_TRUE(InfoRV32E.getExtensions().at("e") ==
               (RISCVExtensionInfo{"e", 2, 0}));
-  EXPECT_EQ(InfoRV32I.getXLen(), 32U);
+  EXPECT_EQ(InfoRV32E.getXLen(), 32U);
 
   auto MaybeRV64I = RISCVISAInfo::parseNormalizedArchString("rv64i2p0");
   ASSERT_THAT_EXPECTED(MaybeRV64I, Succeeded());
@@ -74,7 +76,7 @@ TEST(ParseNormalizedArchString, AcceptsValidBaseISAsAndSetsXLen) {
   EXPECT_EQ(InfoRV64E.getExtensions().size(), 1UL);
   EXPECT_TRUE(InfoRV64E.getExtensions().at("e") ==
               (RISCVExtensionInfo{"e", 2, 0}));
-  EXPECT_EQ(InfoRV64I.getXLen(), 64U);
+  EXPECT_EQ(InfoRV64E.getXLen(), 64U);
 }
 
 TEST(ParseNormalizedArchString, AcceptsArbitraryExtensionsAndVersions) {
@@ -102,4 +104,352 @@ TEST(ParseNormalizedArchString, UpdatesFLenMinVLenMaxELen) {
   EXPECT_EQ(Info.getFLen(), 64U);
   EXPECT_EQ(Info.getMinVLen(), 64U);
   EXPECT_EQ(Info.getMaxELen(), 64U);
+}
+
+TEST(ParseArchString, RejectsUpperCase) {
+  for (StringRef Input : {"RV32", "rV64", "rv32i2P0", "rv64i2p0_A2p0"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "string must be lowercase");
+  }
+}
+
+TEST(ParseArchString, RejectsInvalidBaseISA) {
+  for (StringRef Input : {"rv32", "rv64", "rv65i"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "string must begin with rv32{i,e,g} or rv64{i,g}");
+  }
+  for (StringRef Input : {"rv32j", "rv64k", "rv32_i"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "first letter should be 'e', 'i' or 'g'");
+  }
+}
+
+TEST(ParseArchString, RejectsUnsupportedBaseISA) {
+  EXPECT_EQ(toString(RISCVISAInfo::parseArchString("rv64e", true).takeError()),
+            "standard user-level extension 'e' requires 'rv32'");
+  for (StringRef Input : {"rv128i", "rv128g"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "string must begin with rv32{i,e,g} or rv64{i,g}");
+  }
+}
+
+TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
+  auto MaybeRV32I = RISCVISAInfo::parseArchString("rv32i", true);
+  ASSERT_THAT_EXPECTED(MaybeRV32I, Succeeded());
+  RISCVISAInfo &InfoRV32I = **MaybeRV32I;
+  RISCVISAInfo::OrderedExtensionMap ExtsRV32I = InfoRV32I.getExtensions();
+  EXPECT_EQ(ExtsRV32I.size(), 1UL);
+  EXPECT_TRUE(ExtsRV32I.at("i") == (RISCVExtensionInfo{"i", 2, 0}));
+  EXPECT_EQ(InfoRV32I.getXLen(), 32U);
+  EXPECT_EQ(InfoRV32I.getFLen(), 0U);
+
+  auto MaybeRV32E = RISCVISAInfo::parseArchString("rv32e", true);
+  ASSERT_THAT_EXPECTED(MaybeRV32E, Succeeded());
+  RISCVISAInfo &InfoRV32E = **MaybeRV32E;
+  RISCVISAInfo::OrderedExtensionMap ExtsRV32E = InfoRV32E.getExtensions();
+  EXPECT_EQ(ExtsRV32E.size(), 1UL);
+  EXPECT_TRUE(ExtsRV32E.at("e") == (RISCVExtensionInfo{"e", 1, 9}));
+  EXPECT_EQ(InfoRV32E.getXLen(), 32U);
+  EXPECT_EQ(InfoRV32E.getFLen(), 0U);
+
+  auto MaybeRV32G = RISCVISAInfo::parseArchString("rv32g", true);
+  ASSERT_THAT_EXPECTED(MaybeRV32G, Succeeded());
+  RISCVISAInfo &InfoRV32G = **MaybeRV32G;
+  RISCVISAInfo::OrderedExtensionMap ExtsRV32G = InfoRV32G.getExtensions();
+  EXPECT_EQ(ExtsRV32G.size(), 5UL);
+  EXPECT_TRUE(ExtsRV32G.at("i") == (RISCVExtensionInfo{"i", 2, 0}));
+  EXPECT_TRUE(ExtsRV32G.at("m") == (RISCVExtensionInfo{"m", 2, 0}));
+  EXPECT_TRUE(ExtsRV32G.at("a") == (RISCVExtensionInfo{"a", 2, 0}));
+  EXPECT_TRUE(ExtsRV32G.at("f") == (RISCVExtensionInfo{"f", 2, 0}));
+  EXPECT_TRUE(ExtsRV32G.at("d") == (RISCVExtensionInfo{"d", 2, 0}));
+  EXPECT_EQ(InfoRV32G.getXLen(), 32U);
+  EXPECT_EQ(InfoRV32G.getFLen(), 64U);
+
+  auto MaybeRV64I = RISCVISAInfo::parseArchString("rv64i", true);
+  ASSERT_THAT_EXPECTED(MaybeRV64I, Succeeded());
+  RISCVISAInfo &InfoRV64I = **MaybeRV64I;
+  RISCVISAInfo::OrderedExtensionMap ExtsRV64I = InfoRV64I.getExtensions();
+  EXPECT_EQ(ExtsRV64I.size(), 1UL);
+  EXPECT_TRUE(ExtsRV64I.at("i") == (RISCVExtensionInfo{"i", 2, 0}));
+  EXPECT_EQ(InfoRV64I.getXLen(), 64U);
+  EXPECT_EQ(InfoRV64I.getFLen(), 0U);
+
+  auto MaybeRV64G = RISCVISAInfo::parseArchString("rv64g", true);
+  ASSERT_THAT_EXPECTED(MaybeRV64G, Succeeded());
+  RISCVISAInfo &InfoRV64G = **MaybeRV64G;
+  RISCVISAInfo::OrderedExtensionMap ExtsRV64G = InfoRV64G.getExtensions();
+  EXPECT_EQ(ExtsRV64G.size(), 5UL);
+  EXPECT_TRUE(ExtsRV64G.at("i") == (RISCVExtensionInfo{"i", 2, 0}));
+  EXPECT_TRUE(ExtsRV64G.at("m") == (RISCVExtensionInfo{"m", 2, 0}));
+  EXPECT_TRUE(ExtsRV64G.at("a") == (RISCVExtensionInfo{"a", 2, 0}));
+  EXPECT_TRUE(ExtsRV64G.at("f") == (RISCVExtensionInfo{"f", 2, 0}));
+  EXPECT_TRUE(ExtsRV64G.at("d") == (RISCVExtensionInfo{"d", 2, 0}));
+  EXPECT_EQ(InfoRV64G.getXLen(), 64U);
+  EXPECT_EQ(InfoRV64G.getFLen(), 64U);
+}
+
+TEST(ParseArchString, RequiresCanonicalOrderForExtensions) {
+  EXPECT_EQ(
+      toString(RISCVISAInfo::parseArchString("rv64idf", true).takeError()),
+      "standard user-level extension not given in canonical order 'f'");
+  EXPECT_EQ(
+      toString(RISCVISAInfo::parseArchString("rv32iam", true).takeError()),
+      "standard user-level extension not given in canonical order 'm'");
+  EXPECT_EQ(
+      toString(
+          RISCVISAInfo::parseArchString("rv32i_zfinx_a", true).takeError()),
+      "invalid extension prefix 'a'");
+  EXPECT_EQ(
+      toString(RISCVISAInfo::parseArchString("rv64i_svnapot_zicsr", true)
+                   .takeError()),
+      "standard user-level extension not given in canonical order 'zicsr'");
+  EXPECT_THAT_EXPECTED(
+      RISCVISAInfo::parseArchString("rv64imafdc_zicsr_svnapot", true),
+      Succeeded());
+}
+
+TEST(ParseArchString, RejectsUnrecognizedExtensionNamesByDefault) {
+  EXPECT_EQ(toString(RISCVISAInfo::parseArchString("rv64ib", true).takeError()),
+            "unsupported standard user-level extension 'b'");
+  EXPECT_EQ(
+      toString(
+          RISCVISAInfo::parseArchString("rv32i_zmadeup", true).takeError()),
+      "unsupported standard user-level extension 'zmadeup'");
+  EXPECT_EQ(
+      toString(
+          RISCVISAInfo::parseArchString("rv64g_smadeup", true).takeError()),
+      "unsupported standard supervisor-level extension 'smadeup'");
+  EXPECT_EQ(
+      toString(
+          RISCVISAInfo::parseArchString("rv64g_sxmadeup", true).takeError()),
+      "unsupported non-standard supervisor-level extension 'sxmadeup'");
+  EXPECT_EQ(
+      toString(
+          RISCVISAInfo::parseArchString("rv64g_xmadeup", true).takeError()),
+      "unsupported non-standard user-level extension 'xmadeup'");
+}
+
+TEST(ParseArchString, IgnoresUnrecognizedExtensionNamesWithIgnoreUnknown) {
+  for (StringRef Input : {"rv32ib", "rv32i_zmadeup", "rv64i_smadeup",
+                          "rv32i_sxmadeup", "rv64i_xmadeup"}) {
+    auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true, false, true);
+    ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+    RISCVISAInfo &Info = **MaybeISAInfo;
+    RISCVISAInfo::OrderedExtensionMap Exts = Info.getExtensions();
+    EXPECT_EQ(Exts.size(), 1UL);
+    EXPECT_TRUE(Exts.at("i") == (RISCVExtensionInfo{"i", 2, 0}));
+  }
+
+  // Checks that supported extensions aren't incorrectly ignored when a
+  // version is present (an early version of the patch had this mistake).
+  auto MaybeISAInfo =
+      RISCVISAInfo::parseArchString("rv32i_zbc1p0_xmadeup", true, false, true);
+  ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+  RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
+  EXPECT_TRUE(Exts.at("zbc") == (RISCVExtensionInfo{"zbc", 1, 0}));
+}
+
+TEST(ParseArchString, AcceptsVersionInLongOrShortForm) {
+  for (StringRef Input : {"rv64i2", "rv64i2p0"}) {
+    auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true);
+    ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+    RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
+    EXPECT_TRUE(Exts.at("i") == (RISCVExtensionInfo{"i", 2, 0}));
+  }
+  for (StringRef Input : {"rv32i_zfinx1", "rv32i_zfinx1p0"}) {
+    auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true);
+    ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+    RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
+    EXPECT_TRUE(Exts.at("zfinx") == (RISCVExtensionInfo{"zfinx", 1, 0}));
+  }
+}
+
+TEST(ParseArchString, RejectsUnrecognizedExtensionVersionsByDefault) {
+  EXPECT_EQ(
+      toString(RISCVISAInfo::parseArchString("rv64i1p0", true).takeError()),
+      "unsupported version number 1.0 for extension 'i'");
+  EXPECT_EQ(
+      toString(RISCVISAInfo::parseArchString("rv64i9p9", true).takeError()),
+      "unsupported version number 9.9 for extension 'i'");
+  EXPECT_EQ(
+      toString(RISCVISAInfo::parseArchString("rv32im0p1", true).takeError()),
+      "unsupported version number 0.1 for extension 'm'");
+  EXPECT_EQ(toString(RISCVISAInfo::parseArchString("rv32izifencei10p10", true)
+                         .takeError()),
+            "unsupported version number 10.10 for extension 'zifencei'");
+}
+
+TEST(ParseArchString, RejectsUnrecognisedBaseISAVersionEvenWithIgnoreUnknown) {
+  EXPECT_EQ(
+      toString(RISCVISAInfo::parseArchString("rv64i1p0", true, false, true)
+                   .takeError()),
+      "unsupported version number 1.0 for extension 'i'");
+}
+
+TEST(ParseArchString,
+     IgnoresExtensionsWithUnrecognizedVersionsWithIgnoreUnknown) {
+  for (StringRef Input : {"rv32im1p1", "rv64i_svnapot10p9", "rv32i_zicsr0p5"}) {
+    auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true, false, true);
+    ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+    RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
+    EXPECT_EQ(Exts.size(), 1UL);
+    EXPECT_TRUE(Exts.at("i") == (RISCVExtensionInfo{"i", 2, 0}));
+  }
+}
+
+TEST(ParseArchString, AcceptsUnderscoreSplittingExtensions) {
+  for (StringRef Input : {"rv32imafdczifencei", "rv32i_m_a_f_d_c_zifencei"}) {
+    auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true);
+    ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+    RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
+    EXPECT_EQ(Exts.size(), 7UL);
+    EXPECT_EQ(Exts.at("i").ExtName, "i");
+    EXPECT_EQ(Exts.at("m").ExtName, "m");
+    EXPECT_EQ(Exts.at("a").ExtName, "a");
+    EXPECT_EQ(Exts.at("f").ExtName, "f");
+    EXPECT_EQ(Exts.at("d").ExtName, "d");
+    EXPECT_EQ(Exts.at("c").ExtName, "c");
+    EXPECT_EQ(Exts.at("zifencei").ExtName, "zifencei");
+  }
+}
+
+TEST(ParseArchString, RejectsDoubleOrTrailingUnderscore) {
+  EXPECT_EQ(
+      toString(RISCVISAInfo::parseArchString("rv64i__m", true).takeError()),
+      "invalid standard user-level extension '_'");
+  EXPECT_EQ(
+      toString(RISCVISAInfo::parseArchString("rv32ezicsr_", true).takeError()),
+      "extension name missing after separator '_'");
+
+  // FIXME: Trailing underscores after single letter extensions are accepted,
+  // which is inconsistent.
+  ASSERT_THAT_EXPECTED(RISCVISAInfo::parseArchString("rv32i_", true),
+                       Succeeded());
+  ASSERT_THAT_EXPECTED(RISCVISAInfo::parseArchString("rv64im_", true),
+                       Succeeded());
+}
+
+TEST(ParseArchString, RejectsDuplicateExtensionNames) {
+  EXPECT_EQ(toString(RISCVISAInfo::parseArchString("rv64ii", true).takeError()),
+            "invalid standard user-level extension 'i'");
+  EXPECT_EQ(toString(RISCVISAInfo::parseArchString("rv32ee", true).takeError()),
+            "invalid standard user-level extension 'e'");
+  EXPECT_EQ(
+      toString(RISCVISAInfo::parseArchString("rv64imm", true).takeError()),
+      "standard user-level extension not given in canonical order 'm'");
+  EXPECT_EQ(
+      toString(
+          RISCVISAInfo::parseArchString("rv32i_zicsr_zicsr", true).takeError()),
+      "duplicated standard user-level extension 'zicsr'");
+}
+
+TEST(ParseArchString,
+     RejectsExperimentalExtensionsIfNotEnableExperimentalExtension) {
+  EXPECT_EQ(
+      toString(
+          RISCVISAInfo::parseArchString("rv64izihintntl", false).takeError()),
+      "requires '-menable-experimental-extensions' for experimental extension "
+      "'zihintntl'");
+}
+
+TEST(ParseArchString,
+     AcceptsExperimentalExtensionsIfEnableExperimentalExtension) {
+  // Note: If zihintntl becomes none-experimental, this test will need
+  // updating (and unfortunately, it will still pass). The failure of
+  // RejectsExperimentalExtensionsIfNotEnableExperimentalExtension will
+  // hopefully serve as a reminder to update.
+  auto MaybeISAInfo =
+      RISCVISAInfo::parseArchString("rv64izihintntl", true, false);
+  ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+  RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
+  EXPECT_EQ(Exts.size(), 2UL);
+  EXPECT_EQ(Exts.at("zihintntl").ExtName, "zihintntl");
+  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString("rv64izihintntl0p2", true);
+  ASSERT_THAT_EXPECTED(MaybeISAInfo2, Succeeded());
+  RISCVISAInfo::OrderedExtensionMap Exts2 = (*MaybeISAInfo2)->getExtensions();
+  EXPECT_EQ(Exts2.size(), 2UL);
+  EXPECT_EQ(Exts2.at("zihintntl").ExtName, "zihintntl");
+}
+
+TEST(ParseArchString,
+     RequiresExplicitVersionNumberForExperimentalExtensionByDefault) {
+  EXPECT_EQ(
+      toString(
+          RISCVISAInfo::parseArchString("rv64izihintntl", true).takeError()),
+      "experimental extension requires explicit version number `zihintntl`");
+}
+
+TEST(ParseArchString,
+     AcceptsUnrecognizedVersionIfNotExperimentalExtensionVersionCheck) {
+  auto MaybeISAInfo =
+      RISCVISAInfo::parseArchString("rv64izihintntl9p9", true, false);
+  ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+  RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
+  EXPECT_EQ(Exts.size(), 2UL);
+  EXPECT_TRUE(Exts.at("zihintntl") == (RISCVExtensionInfo{"zihintntl", 9, 9}));
+}
+
+TEST(ParseArchString, RejectsUnrecognizedVersionForExperimentalExtension) {
+  EXPECT_EQ(
+      toString(
+          RISCVISAInfo::parseArchString("rv64izihintntl9p9", true).takeError()),
+      "unsupported version number 9.9 for experimental extension 'zihintntl' "
+      "(this compiler supports 0.2)");
+}
+
+TEST(ParseArchString, AcceptsExtensionVersionForG) {
+  // FIXME: As there is no versioning scheme for G, arguably an error should
+  // be produced.
+  auto MaybeISAInfo = RISCVISAInfo::parseArchString("rv64g9p9", true, false);
+  ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+  RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
+  EXPECT_EQ(Exts.size(), 5UL);
+  EXPECT_TRUE(Exts.at("i") == (RISCVExtensionInfo{"i", 2, 0}));
+}
+
+TEST(ParseArchString, AddsImpliedExtensions) {
+  // Does not attempt to exhaustively test all implications.
+  auto MaybeRV64ID = RISCVISAInfo::parseArchString("rv64id", true);
+  ASSERT_THAT_EXPECTED(MaybeRV64ID, Succeeded());
+  RISCVISAInfo::OrderedExtensionMap ExtsRV64ID =
+      (*MaybeRV64ID)->getExtensions();
+  EXPECT_EQ(ExtsRV64ID.size(), 3UL);
+  EXPECT_EQ(ExtsRV64ID.at("i").ExtName, "i");
+  EXPECT_EQ(ExtsRV64ID.at("f").ExtName, "f");
+  EXPECT_EQ(ExtsRV64ID.at("d").ExtName, "d");
+
+  auto MaybeRV32IZKN = RISCVISAInfo::parseArchString("rv64izkn", true);
+  ASSERT_THAT_EXPECTED(MaybeRV32IZKN, Succeeded());
+  RISCVISAInfo::OrderedExtensionMap ExtsRV32IZKN =
+      (*MaybeRV32IZKN)->getExtensions();
+  EXPECT_EQ(ExtsRV32IZKN.size(), 8UL);
+  EXPECT_EQ(ExtsRV32IZKN.at("i").ExtName, "i");
+  EXPECT_EQ(ExtsRV32IZKN.at("zbkb").ExtName, "zbkb");
+  EXPECT_EQ(ExtsRV32IZKN.at("zbkc").ExtName, "zbkc");
+  EXPECT_EQ(ExtsRV32IZKN.at("zbkx").ExtName, "zbkx");
+  EXPECT_EQ(ExtsRV32IZKN.at("zkne").ExtName, "zkne");
+  EXPECT_EQ(ExtsRV32IZKN.at("zknd").ExtName, "zknd");
+  EXPECT_EQ(ExtsRV32IZKN.at("zknh").ExtName, "zknh");
+  EXPECT_EQ(ExtsRV32IZKN.at("zkn").ExtName, "zkn");
+}
+
+TEST(ParseArchString, RejectsConflictingExtensions) {
+  for (StringRef Input : {"rv32ifzfinx", "rv64gzdinx"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'f' and 'zfinx' extensions are incompatible");
+  }
+}
+
+TEST(ToFeatureVector, IIsDroppedAndExperimentalExtensionsArePrefixed) {
+  auto MaybeISAInfo1 =
+      RISCVISAInfo::parseArchString("rv64im_zihintntl", true, false);
+  ASSERT_THAT_EXPECTED(MaybeISAInfo1, Succeeded());
+  EXPECT_THAT((*MaybeISAInfo1)->toFeatureVector(),
+              ElementsAre("+m", "+experimental-zihintntl"));
+
+  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString(
+      "rv32e_zihintntl_xventanacondops", true, false);
+  ASSERT_THAT_EXPECTED(MaybeISAInfo2, Succeeded());
+  EXPECT_THAT((*MaybeISAInfo2)->toFeatureVector(),
+              ElementsAre("+e", "+experimental-zihintntl", "+xventanacondops"));
 }

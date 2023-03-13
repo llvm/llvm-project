@@ -1004,7 +1004,8 @@ bool DwarfLinkerForBinary::AddressManager::isLiveSubprogram(
 
   dwarf::Form Form = Abbrev->getFormByIndex(*LowPcIdx);
 
-  if (Form == dwarf::DW_FORM_addr) {
+  switch (Form) {
+  case dwarf::DW_FORM_addr: {
     uint64_t Offset = DIE.getOffset() + getULEB128Size(Abbrev->getCode());
     uint64_t LowPcOffset, LowPcEndOffset;
     std::tie(LowPcOffset, LowPcEndOffset) =
@@ -1012,8 +1013,11 @@ bool DwarfLinkerForBinary::AddressManager::isLiveSubprogram(
     return hasValidRelocationAt(ValidDebugInfoRelocs, LowPcOffset,
                                 LowPcEndOffset, MyInfo);
   }
-
-  if (Form == dwarf::DW_FORM_addrx) {
+  case dwarf::DW_FORM_addrx:
+  case dwarf::DW_FORM_addrx1:
+  case dwarf::DW_FORM_addrx2:
+  case dwarf::DW_FORM_addrx3:
+  case dwarf::DW_FORM_addrx4: {
     std::optional<DWARFFormValue> AddrValue = DIE.find(dwarf::DW_AT_low_pc);
     if (std::optional<uint64_t> AddrOffsetSectionBase =
             DIE.getDwarfUnit()->getAddrOffsetSectionBase()) {
@@ -1022,11 +1026,14 @@ bool DwarfLinkerForBinary::AddressManager::isLiveSubprogram(
           StartOffset + DIE.getDwarfUnit()->getAddressByteSize();
       return hasValidRelocationAt(ValidDebugAddrRelocs, StartOffset, EndOffset,
                                   MyInfo);
-    } else
-      Linker.reportWarning("no base offset for address table", SrcFileName);
-  }
+    }
 
-  return false;
+    Linker.reportWarning("no base offset for address table", SrcFileName);
+    return false;
+  }
+  default:
+    return false;
+  }
 }
 
 uint64_t
