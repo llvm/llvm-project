@@ -20,11 +20,11 @@
 namespace lldb_private {
 
 struct JSONSymbol {
-  std::optional<uint64_t> address;
-  std::optional<uint64_t> value;
-  std::optional<uint64_t> size;
-  std::optional<uint64_t> id;
-  std::optional<lldb::SymbolType> type;
+  llvm::Optional<uint64_t> address;
+  llvm::Optional<uint64_t> value;
+  llvm::Optional<uint64_t> size;
+  llvm::Optional<uint64_t> id;
+  llvm::Optional<lldb::SymbolType> type;
   std::string name;
 };
 
