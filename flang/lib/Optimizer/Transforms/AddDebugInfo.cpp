@@ -604,7 +604,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   }
 
   auto addTargetOpDISP = [&](bool lineTableOnly,
-                             llvm::ArrayRef<mlir::LLVM::DINodeAttr> entities) {
+                             llvm::ArrayRef<mlir::Attribute> entities) {
     // When we process the DeclareOp inside the OpenMP target region, all the
     // variables get the DISubprogram of the parent function of the target op as
     // the scope. In the codegen (to llvm ir), OpenMP target op results in the
@@ -656,8 +656,8 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
 
       // Make sure that information about the imported modules is copied in the
       // new function.
-      llvm::SmallVector<mlir::LLVM::DINodeAttr> opEntities;
-      for (mlir::LLVM::DINodeAttr N : entities) {
+      llvm::SmallVector<mlir::Attribute> opEntities;
+      for (mlir::Attribute N : entities) {
         if (auto entity = mlir::dyn_cast<mlir::LLVM::DIImportedEntityAttr>(N)) {
           auto importedEntity = mlir::LLVM::DIImportedEntityAttr::get(
               context, entity.getTag(), spAttr, entity.getEntity(),
@@ -695,7 +695,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   });
 
   mlir::LLVM::DISubprogramAttr spAttr;
-  llvm::SmallVector<mlir::LLVM::DINodeAttr> retainedNodes;
+  llvm::SmallVector<mlir::Attribute> retainedNodes;
 
   if (hasUseStmts) {
     mlir::DistinctAttr recId =

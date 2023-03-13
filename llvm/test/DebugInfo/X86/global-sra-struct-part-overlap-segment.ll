@@ -171,10 +171,10 @@ declare void @llvm.experimental.noalias.scope.decl(metadata)
 !3 = distinct !DICompileUnit(language: DW_LANG_Fortran90, file: !4, producer: " F90 Flang - 1.5 2017-05-01", isOptimized: true, flags: "'+flang -g -O3 -S -emit-llvm -o -O1'", runtimeVersion: 0, emissionKind: FullDebug, enums: !5, retainedTypes: !5, globals: !6, imports: !5, nameTableKind: None)
 !4 = !DIFile(filename: "global-sra-struct-part-overlap-segment_0.f90", directory: "/tmp")
 !5 = !{}
-!6 = !{!0, !7, !29}
+!6 = !{!0}
 !7 = !DIGlobalVariableExpression(var: !8, expr: !DIExpression())
 !8 = distinct !DIGlobalVariable(name: "rvar", scope: !9, file: !4, line: 13, type: !19, isLocal: true, isDefinition: true)
-!9 = distinct !DISubprogram(name: "bar", scope: !2, file: !4, line: 10, type: !10, scopeLine: 10, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !3)
+!9 = distinct !DISubprogram(name: "bar", scope: !2, file: !4, line: 10, type: !10, scopeLine: 10, retainedNodes: !32, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !3)
 !10 = !DISubroutineType(types: !11)
 !11 = !{null, !12, !16}
 !12 = !DICompositeType(tag: DW_TAG_array_type, baseType: !13, size: 96, align: 32, elements: !14)
@@ -197,3 +197,4 @@ declare void @llvm.experimental.noalias.scope.decl(metadata)
 !29 = !DIGlobalVariableExpression(var: !30, expr: !DIExpression(DW_OP_plus_uconst, 4))
 !30 = distinct !DIGlobalVariable(name: "ivar", scope: !9, file: !4, line: 13, type: !31, isLocal: true, isDefinition: true)
 !31 = !DIBasicType(name: "integer*8", size: 64, align: 32, encoding: DW_ATE_signed)
+!32 = !{!7, !29}

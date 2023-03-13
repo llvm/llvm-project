@@ -1564,6 +1564,28 @@ public:
   /// Shrink the operands by 1.
   void pop_back() { resize(getNumOperands() - 1); }
 
+  /// Filter out tuple elements that satisfy predicate.
+  /// Return this if no elements should be filtered out (without re-uniquing).
+  template <typename T> MDTuple *filter(T &&RemovePred) {
+    ArrayRef<MDOperand> Ops = operands();
+    // Find first node to be removed from the tuple.
+    auto FirstToRemove = find_if(Ops, RemovePred);
+
+    // Exit if no nodes should be removed.
+    if (FirstToRemove == Ops.end())
+      return this;
+
+    // Copy all nodes before the first removed.
+    SmallVector<Metadata *> MDs(Ops.begin(), FirstToRemove);
+    MDs.reserve(Ops.size());
+
+    // Filter the rest of the nodes
+    std::copy_if(FirstToRemove + 1, Ops.end(), std::back_inserter(MDs),
+                 [&](Metadata *N) { return !RemovePred(N); });
+
+    return get(getContext(), MDs);
+  }
+
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == MDTupleKind;
   }

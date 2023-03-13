@@ -673,7 +673,7 @@ uint32_t BTFDebug::processDISubprogram(const DISubprogram *SP,
   uint32_t FuncId = addType(std::move(FuncTypeEntry));
 
   // Process argument annotations.
-  for (const DINode *DN : SP->getRetainedNodes()) {
+  for (const MDNode *DN : SP->getRetainedNodes()) {
     if (const auto *DV = dyn_cast<DILocalVariable>(DN)) {
       uint32_t Arg = DV->getArg();
       if (Arg)
@@ -1324,7 +1324,7 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
   // Use RetainedNodes so we can collect all argument names
   // even if the argument is not used.
   std::unordered_map<uint32_t, StringRef> FuncArgNames;
-  for (const DINode *DN : SP->getRetainedNodes()) {
+  for (const MDNode *DN : SP->getRetainedNodes()) {
     if (const auto *DV = dyn_cast<DILocalVariable>(DN)) {
       // Collect function arguments for subprogram func type.
       uint32_t Arg = DV->getArg();
