@@ -364,6 +364,10 @@ public:
 
   CompilerType GetBuiltinRawPointerType() override;
 
+  /// Attempts to convert a Clang type into a Swift type.
+  /// For example, int is converted to Int32.
+  CompilerType ConvertClangTypeToSwiftType(CompilerType clang_type) override;
+
   bool TypeHasArchetype(CompilerType type);
 
   /// Use \p ClangImporter to swiftify the decl's name.
