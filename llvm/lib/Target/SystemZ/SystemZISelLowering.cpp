@@ -1265,12 +1265,10 @@ SystemZTargetLowering::getRegForInlineAsmConstraint(
 Register
 SystemZTargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                          const MachineFunction &MF) const {
-  const SystemZSubtarget *Subtarget = &MF.getSubtarget<SystemZSubtarget>();
-
   Register Reg =
       StringSwitch<Register>(RegName)
-          .Case("r4", Subtarget->isTargetXPLINK64() ? SystemZ::R4D : 0)
-          .Case("r15", Subtarget->isTargetELF() ? SystemZ::R15D : 0)
+          .Case("r4", Subtarget.isTargetXPLINK64() ? SystemZ::R4D : 0)
+          .Case("r15", Subtarget.isTargetELF() ? SystemZ::R15D : 0)
           .Default(0);
 
   if (Reg)
@@ -4375,8 +4373,7 @@ SystemZTargetLowering::getTargetMMOFlags(const Instruction &I) const {
 SDValue SystemZTargetLowering::lowerSTACKSAVE(SDValue Op,
                                               SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
-  const SystemZSubtarget *Subtarget = &MF.getSubtarget<SystemZSubtarget>();
-  auto *Regs = Subtarget->getSpecialRegisters();
+  auto *Regs = Subtarget.getSpecialRegisters();
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     report_fatal_error("Variable-sized stack allocations are not supported "
                        "in GHC calling convention");
@@ -4387,8 +4384,7 @@ SDValue SystemZTargetLowering::lowerSTACKSAVE(SDValue Op,
 SDValue SystemZTargetLowering::lowerSTACKRESTORE(SDValue Op,
                                                  SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
-  const SystemZSubtarget *Subtarget = &MF.getSubtarget<SystemZSubtarget>();
-  auto *Regs = Subtarget->getSpecialRegisters();
+  auto *Regs = Subtarget.getSpecialRegisters();
   bool StoreBackchain = MF.getFunction().hasFnAttribute("backchain");
 
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
