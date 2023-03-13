@@ -14,7 +14,7 @@ public struct SwiftStruct {
 }
 
 @frozen
-public struct GenericPair<T, T2> {
+public struct GenericStructPair<T, T2> {
     var x: T
     var y: T2
 
@@ -24,11 +24,16 @@ public struct GenericPair<T, T2> {
     }
 }
 
+@frozen public enum GenericEnum<T> {
+    case none
+    case some(T)
+}
+
 public func returnSwiftClass() -> SwiftClass {
   return SwiftClass()
 }
 
-public func returnSwiftSubclassAsClass() -> SwiftClass {
+public func returnSwiftSubclass() -> SwiftSubclass {
   return SwiftSubclass()
 }
 
@@ -36,6 +41,16 @@ public func returnSwiftStruct() -> SwiftStruct {
   return SwiftStruct()
 }
 
-public func returnPair<T, U>(t: T, u: U) -> GenericPair<T, U> {
-  return GenericPair<T, U>(x: t, y: u)
+public func returnStructPair<T, U>(t: T, u: U) -> GenericStructPair<T, U> {
+  return GenericStructPair<T, U>(x: t, y: u)
+}
+
+public func returnGenericEnum<T>(t: T) -> GenericEnum<T> {
+  return .some(t)
+}
+
+public typealias MyAliasedClass = SwiftClass;
+
+public func returnAliasedClass() -> MyAliasedClass {
+  return SwiftClass()
 }
