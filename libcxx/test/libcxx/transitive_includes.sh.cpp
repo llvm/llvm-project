@@ -32,11 +32,6 @@
 // this test instead.
 // UNSUPPORTED: transitive-includes-disabled
 
-// Prevent <ext/hash_map> from generating deprecated warnings for this test.
-#if defined(__DEPRECATED)
-#    undef __DEPRECATED
-#endif
-
 /*
 BEGIN-SCRIPT
 
@@ -541,14 +536,6 @@ END-SCRIPT
 // RUN: %{cxx} %s %{flags} %{compile_flags} --trace-includes -fshow-skipped-includes --preprocess -DTEST_137 > /dev/null 2> %t/header.experimental_vector
 #if defined(TEST_137)
 #include <experimental/vector>
-#endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} --trace-includes -fshow-skipped-includes --preprocess -DTEST_138 > /dev/null 2> %t/header.ext_hash_map
-#if defined(TEST_138)
-#include <ext/hash_map>
-#endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} --trace-includes -fshow-skipped-includes --preprocess -DTEST_139 > /dev/null 2> %t/header.ext_hash_set
-#if defined(TEST_139)
-#include <ext/hash_set>
 #endif
 // RUN: %{python} %S/transitive_includes_to_csv.py %t > %t/transitive_includes.csv
 // RUN: diff -w %S/transitive_includes/%{cxx_std}.csv %t/transitive_includes.csv

@@ -9,11 +9,6 @@
 // Test that headers are not tripped up by the surrounding code defining various
 // alphabetic macros.
 
-// Prevent <ext/hash_map> from generating deprecated warnings for this test.
-#if defined(__DEPRECATED)
-#    undef __DEPRECATED
-#endif
-
 #define NASTY_MACRO This should not be expanded!!!
 
 // libc++ does not use single-letter names as a matter of principle.
@@ -384,6 +379,4 @@ END-SCRIPT
 #if __cplusplus >= 201103L
 #   include <experimental/vector>
 #endif
-#include <ext/hash_map>
-#include <ext/hash_set>
 // GENERATED-MARKER
