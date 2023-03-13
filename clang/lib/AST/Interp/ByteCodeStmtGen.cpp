@@ -471,7 +471,7 @@ bool ByteCodeStmtGen<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
       const Expr *Value = CS->getLHS();
       PrimType ValueT = this->classifyPrim(Value->getType());
 
-      // Compare the case statment's value to the switch condition.
+      // Compare the case statement's value to the switch condition.
       if (!this->emitGetLocal(CondT, CondVar, CS))
         return false;
       if (!this->visit(Value))
