@@ -11,6 +11,7 @@
 #include "mlir/CAPI/IR.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/InitAllPasses.h"
+#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 
 void mlirRegisterAllDialects(MlirDialectRegistry registry) {
@@ -18,7 +19,9 @@ void mlirRegisterAllDialects(MlirDialectRegistry registry) {
 }
 
 void mlirRegisterAllLLVMTranslations(MlirContext context) {
-  mlir::registerLLVMDialectTranslation(*unwrap(context));
+  auto &ctx = *unwrap(context);
+  mlir::registerBuiltinDialectTranslation(ctx);
+  mlir::registerLLVMDialectTranslation(ctx);
 }
 
 void mlirRegisterAllPasses() { mlir::registerAllPasses(); }

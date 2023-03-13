@@ -86,6 +86,7 @@ add_mlir_library(MLIRExecutionEngine
   ${LLVM_JIT_LISTENER_LIB}
 
   LINK_LIBS PUBLIC
+  MLIRBuiltinToLLVMIRTranslation
   MLIRExecutionEngineUtils
   MLIRLLVMDialect
   MLIRLLVMToLLVMIRTranslation

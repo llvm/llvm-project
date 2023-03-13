@@ -34,6 +34,7 @@ add_flang_library(flangFrontend
   HLFIRDialect
   HLFIRTransforms
   MLIRTransforms
+  MLIRBuiltinToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
   MLIRSCFToControlFlow
   MLIRTargetLLVMIRImport
