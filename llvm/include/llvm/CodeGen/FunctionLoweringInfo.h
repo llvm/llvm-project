@@ -35,7 +35,6 @@ namespace llvm {
 class Argument;
 class BasicBlock;
 class BranchProbabilityInfo;
-class LegacyDivergenceAnalysis;
 class Function;
 class Instruction;
 class MachineFunction;
@@ -44,6 +43,11 @@ class MachineRegisterInfo;
 class MVT;
 class SelectionDAG;
 class TargetLowering;
+
+template <typename T> class GenericSSAContext;
+using SSAContext = GenericSSAContext<Function>;
+template <typename T> class GenericUniformityInfo;
+using UniformityInfo = GenericUniformityInfo<SSAContext>;
 
 //===--------------------------------------------------------------------===//
 /// FunctionLoweringInfo - This contains information that is global to a
@@ -56,7 +60,7 @@ public:
   const TargetLowering *TLI;
   MachineRegisterInfo *RegInfo;
   BranchProbabilityInfo *BPI;
-  const LegacyDivergenceAnalysis *DA;
+  const UniformityInfo *UA;
   /// CanLowerReturn - true iff the function's return value can be lowered to
   /// registers.
   bool CanLowerReturn;
