@@ -49,35 +49,6 @@ MaxIntegerBW("float2int-max-integer-bw", cl::init(64), cl::Hidden,
              cl::desc("Max integer bitwidth to consider in float2int"
                       "(default=64)"));
 
-namespace {
-  struct Float2IntLegacyPass : public FunctionPass {
-    static char ID; // Pass identification, replacement for typeid
-    Float2IntLegacyPass() : FunctionPass(ID) {
-      initializeFloat2IntLegacyPassPass(*PassRegistry::getPassRegistry());
-    }
-
-    bool runOnFunction(Function &F) override {
-      if (skipFunction(F))
-        return false;
-
-      const DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-      return Impl.runImpl(F, DT);
-    }
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesCFG();
-      AU.addRequired<DominatorTreeWrapperPass>();
-      AU.addPreserved<GlobalsAAWrapperPass>();
-    }
-
-  private:
-    Float2IntPass Impl;
-  };
-}
-
-char Float2IntLegacyPass::ID = 0;
-INITIALIZE_PASS(Float2IntLegacyPass, "float2int", "Float to int", false, false)
-
 // Given a FCmp predicate, return a matching ICmp predicate if one
 // exists, otherwise return BAD_ICMP_PREDICATE.
 static CmpInst::Predicate mapFCmpPred(CmpInst::Predicate P) {
@@ -529,9 +500,6 @@ bool Float2IntPass::runImpl(Function &F, const DominatorTree &DT) {
   return Modified;
 }
 
-namespace llvm {
-FunctionPass *createFloat2IntPass() { return new Float2IntLegacyPass(); }
-
 PreservedAnalyses Float2IntPass::run(Function &F, FunctionAnalysisManager &AM) {
   const DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
   if (!runImpl(F, DT))
@@ -541,4 +509,3 @@ PreservedAnalyses Float2IntPass::run(Function &F, FunctionAnalysisManager &AM) {
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
-} // End namespace llvm
