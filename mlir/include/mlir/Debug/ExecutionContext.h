@@ -117,7 +117,7 @@ private:
   /// Next point to stop execution as describe by `Control` enum.
   /// This is handle by indicating at which levels of depth the next
   /// break should happen.
-  Optional<int> depthToBreak;
+  std::optional<int> depthToBreak;
 
   /// Observers that are notified before and after the callback is executed.
   SmallVector<Observer *> observers;
