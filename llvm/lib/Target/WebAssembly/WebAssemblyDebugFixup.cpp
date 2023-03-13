@@ -65,14 +65,14 @@ FunctionPass *llvm::createWebAssemblyDebugFixup() {
 // Because Wasm cannot access values in LLVM virtual registers in the debugger,
 // these dangling DBG_VALUEs in effect kill the effect of any previous DBG_VALUE
 // associated with the variable, which will appear as "optimized out".
-static void nullifyDanglingDebugValues(MachineBasicBlock &MBB,
-                                       const TargetInstrInfo *TII) {
+static void setDanglingDebugValuesUndef(MachineBasicBlock &MBB,
+                                        const TargetInstrInfo *TII) {
   for (auto &MI : llvm::make_early_inc_range(MBB)) {
     if (MI.isDebugValue() && MI.getDebugOperand(0).isReg() &&
         !MI.isUndefDebugValue()) {
-      LLVM_DEBUG(dbgs() << "Warning: dangling DBG_VALUE nullified: " << MI
+      LLVM_DEBUG(dbgs() << "Warning: dangling DBG_VALUE set to undef: " << MI
                         << "\n");
-      MI.getDebugOperand(0).setReg(Register());
+      MI.setDebugValueUndef();
     }
   }
 }
@@ -154,7 +154,7 @@ bool WebAssemblyDebugFixup::runOnMachineFunction(MachineFunction &MF) {
     assert(Stack.empty() &&
            "WebAssemblyDebugFixup: Stack not empty at end of basic block!");
 
-    nullifyDanglingDebugValues(MBB, TII);
+    setDanglingDebugValuesUndef(MBB, TII);
   }
 
   return true;
