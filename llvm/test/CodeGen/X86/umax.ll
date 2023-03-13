@@ -293,7 +293,7 @@ define i128 @test_i128(i128 %a, i128 %b) nounwind {
   ret i128 %r
 }
 
-define i128 @test_i128_1(i128 %a, i128 %b) nounwind {
+define i128 @test_i128_1(i128 %a) nounwind {
 ; X64-LABEL: test_i128_1:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rsi, %rdx
@@ -420,7 +420,7 @@ define <2 x i64> @test_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
   ret <2 x i64> %r
 }
 
-define <2 x i64> @test_v2i64_1(<2 x i64> %a, <2 x i64> %b) nounwind {
+define <2 x i64> @test_v2i64_1(<2 x i64> %a) nounwind {
 ; SSE-LABEL: test_v2i64_1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pxor %xmm1, %xmm1
@@ -621,7 +621,7 @@ define <4 x i32> @test_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
   ret <4 x i32> %r
 }
 
-define <4 x i32> @test_v4i32_1(<4 x i32> %a, <4 x i32> %b) nounwind {
+define <4 x i32> @test_v4i32_1(<4 x i32> %a) nounwind {
 ; SSE-LABEL: test_v4i32_1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pxor %xmm1, %xmm1
@@ -766,7 +766,7 @@ define <8 x i32> @test_v8i32(<8 x i32> %a, <8 x i32> %b) nounwind {
   ret <8 x i32> %r
 }
 
-define <8 x i32> @test_v8i32_1(<8 x i32> %a, <8 x i32> %b) nounwind {
+define <8 x i32> @test_v8i32_1(<8 x i32> %a) nounwind {
 ; SSE-LABEL: test_v8i32_1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pxor %xmm2, %xmm2
@@ -922,7 +922,7 @@ define <8 x i16> @test_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
   ret <8 x i16> %r
 }
 
-define <8 x i16> @test_v8i16_1(<8 x i16> %a, <8 x i16> %b) nounwind {
+define <8 x i16> @test_v8i16_1(<8 x i16> %a) nounwind {
 ; SSE-LABEL: test_v8i16_1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pxor %xmm1, %xmm1
@@ -1125,7 +1125,7 @@ define <16 x i8> @test_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
   ret <16 x i8> %r
 }
 
-define <16 x i8> @test_v16i8_1(<16 x i8> %a, <16 x i8> %b) nounwind {
+define <16 x i8> @test_v16i8_1(<16 x i8> %a) nounwind {
 ; SSE-LABEL: test_v16i8_1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pmaxub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0

@@ -17,14 +17,13 @@ add_flang_library(FIRTransforms
   PolymorphicOpConversion.cpp
 
   DEPENDS
-  FIRBuilder
   FIRDialect
-  FIRSupport
   FIROptTransformsPassIncGen
 
   LINK_LIBS
   FIRBuilder
   FIRDialect
+  FIRDialectSupport
   FIRSupport
   HLFIRDialect
   MLIRAffineUtils

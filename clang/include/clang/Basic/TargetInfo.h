@@ -1333,10 +1333,14 @@ public:
   }
 
   /// Returns true if feature has an impact on target code
-  /// generation and get its dependent options in second argument.
-  virtual bool getFeatureDepOptions(StringRef Feature,
-                                    std::string &Options) const {
+  /// generation.
+  virtual bool doesFeatureAffectCodeGen(StringRef Feature) const {
     return true;
+  }
+
+  /// For given feature return dependent ones.
+  virtual StringRef getFeatureDependencies(StringRef Feature) const {
+    return StringRef();
   }
 
   struct BranchProtectionInfo {

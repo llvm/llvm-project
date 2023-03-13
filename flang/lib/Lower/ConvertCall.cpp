@@ -409,7 +409,7 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
 
   if (allocatedResult) {
     // 7.5.6.3 point 5. Derived-type finalization for nonpointer function.
-    // Check if the derived-type is finalizable if it is a monorphic
+    // Check if the derived-type is finalizable if it is a monomorphic
     // derived-type.
     // For polymorphic and unlimited polymorphic enities call the runtime
     // in any cases.

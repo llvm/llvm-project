@@ -17,6 +17,7 @@ endif()
 set(SOURCES
     abi_tag_on_virtual.cpp
     hide_from_abi.cpp
+    proper_version_checks.cpp
     qualify_declval.cpp
     robust_against_adl.cpp
     uglify_attributes.cpp

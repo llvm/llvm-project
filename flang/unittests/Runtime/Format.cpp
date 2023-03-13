@@ -10,6 +10,7 @@
 #include "../runtime/connection.h"
 #include "../runtime/format-implementation.h"
 #include "../runtime/io-error.h"
+#include <optional>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -29,7 +30,7 @@ public:
   bool AdvanceRecord(int = 1);
   void HandleRelativePosition(std::int64_t);
   void HandleAbsolutePosition(std::int64_t);
-  void Report(const DataEdit &);
+  void Report(const std::optional<DataEdit> &);
   ResultsTy results;
   MutableModes &mutableModes() { return mutableModes_; }
   ConnectionState &GetConnectionState() { return connectionState_; }
@@ -64,25 +65,29 @@ void TestFormatContext::HandleRelativePosition(std::int64_t n) {
   }
 }
 
-void TestFormatContext::Report(const DataEdit &edit) {
-  std::string str{edit.descriptor};
-  if (edit.repeat != 1) {
-    str = std::to_string(edit.repeat) + '*' + str;
+void TestFormatContext::Report(const std::optional<DataEdit> &edit) {
+  if (edit) {
+    std::string str{edit->descriptor};
+    if (edit->repeat != 1) {
+      str = std::to_string(edit->repeat) + '*' + str;
+    }
+    if (edit->variation) {
+      str += edit->variation;
+    }
+    if (edit->width) {
+      str += std::to_string(*edit->width);
+    }
+    if (edit->digits) {
+      str += "."s + std::to_string(*edit->digits);
+    }
+    if (edit->expoDigits) {
+      str += "E"s + std::to_string(*edit->expoDigits);
+    }
+    // modes?
+    results.push_back(str);
+  } else {
+    results.push_back("(nullopt)"s);
   }
-  if (edit.variation) {
-    str += edit.variation;
-  }
-  if (edit.width) {
-    str += std::to_string(*edit.width);
-  }
-  if (edit.digits) {
-    str += "."s + std::to_string(*edit.digits);
-  }
-  if (edit.expoDigits) {
-    str += "E"s + std::to_string(*edit.expoDigits);
-  }
-  // modes?
-  results.push_back(str);
 }
 
 struct FormatTests : public CrashHandlerFixture {};

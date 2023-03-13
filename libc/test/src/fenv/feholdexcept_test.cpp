@@ -16,7 +16,7 @@
 #include <fenv.h>
 
 TEST(LlvmLibcFEnvTest, RaiseAndCrash) {
-#if defined(LIBC_TARGET_ARCH_IS_ANY_ARM)
+#if defined(LIBC_TARGET_ARCH_IS_ANY_ARM) || defined(LIBC_TARGET_ARCH_IS_RISCV64)
   // Few Arm HW implementations do not trap exceptions. We skip this test
   // completely on such HW.
   //
@@ -28,7 +28,7 @@ TEST(LlvmLibcFEnvTest, RaiseAndCrash) {
   __llvm_libc::fputil::enable_except(FE_DIVBYZERO);
   if (__llvm_libc::fputil::get_except() == 0)
     return;
-#endif // defined(LIBC_TARGET_ARCH_IS_ANY_ARM)
+#endif // Architectures where exception trapping is not supported
 
   int excepts[] = {FE_DIVBYZERO, FE_INVALID, FE_INEXACT, FE_OVERFLOW,
                    FE_UNDERFLOW};

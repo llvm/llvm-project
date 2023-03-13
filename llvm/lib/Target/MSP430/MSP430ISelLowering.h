@@ -126,7 +126,6 @@ namespace llvm {
     /// out to 16 bits.
     bool isZExtFree(Type *Ty1, Type *Ty2) const override;
     bool isZExtFree(EVT VT1, EVT VT2) const override;
-    bool isZExtFree(SDValue Val, EVT VT2) const override;
 
     bool isLegalICmpImmediate(int64_t) const override;
     bool shouldAvoidTransformToShift(EVT VT, unsigned Amount) const override;

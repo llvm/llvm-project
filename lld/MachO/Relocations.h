@@ -67,8 +67,6 @@ struct Reloc {
         int64_t addend, llvm::PointerUnion<Symbol *, InputSection *> referent)
       : type(type), pcrel(pcrel), length(length), offset(offset),
         addend(addend), referent(referent) {}
-
-  InputSection *getReferentInputSection() const;
 };
 
 bool validateSymbolRelocation(const Symbol *, const InputSection *,

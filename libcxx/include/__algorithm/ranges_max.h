@@ -20,6 +20,7 @@
 #include <__iterator/projected.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
+#include <__type_traits/is_trivially_copyable.h>
 #include <__utility/move.h>
 #include <initializer_list>
 
@@ -67,7 +68,7 @@ struct __fn {
 
     _LIBCPP_ASSERT(__first != __last, "range must contain at least one element");
 
-    if constexpr (forward_range<_Rp>) {
+    if constexpr (forward_range<_Rp> && !__is_cheap_to_copy<range_value_t<_Rp>>) {
       auto __comp_lhs_rhs_swapped = [&](auto&& __lhs, auto&& __rhs) { return std::invoke(__comp, __rhs, __lhs); };
       return *ranges::__min_element_impl(std::move(__first), std::move(__last), __comp_lhs_rhs_swapped, __proj);
     } else {

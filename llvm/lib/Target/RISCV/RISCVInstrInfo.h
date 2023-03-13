@@ -51,8 +51,12 @@ public:
 
   unsigned isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
+  unsigned isLoadFromStackSlot(const MachineInstr &MI, int &FrameIndex,
+                               unsigned &MemBytes) const override;
   unsigned isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
+  unsigned isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
+                              unsigned &MemBytes) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                    const DebugLoc &DL, MCRegister DstReg, MCRegister SrcReg,

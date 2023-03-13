@@ -749,10 +749,10 @@ void format_test_unsigned_integer(TestFunction check, ExceptionTest check_except
   check(SV("65535"), SV("{:#}"), std::numeric_limits<uint16_t>::max());
   check(SV("0xffff"), SV("{:#x}"), std::numeric_limits<uint16_t>::max());
 
-  check(SV("0b11111111111111111111111111111111"), SV("{:#b}"), std::numeric_limits<uint32_t>::max());
-  check(SV("037777777777"), SV("{:#o}"), std::numeric_limits<uint32_t>::max());
-  check(SV("4294967295"), SV("{:#}"), std::numeric_limits<uint32_t>::max());
-  check(SV("0xffffffff"), SV("{:#x}"), std::numeric_limits<uint32_t>::max());
+  check(SV("0b11111111111111111111111111111111"), SV("{:#b}"), std::numeric_limits<std::uint32_t>::max());
+  check(SV("037777777777"), SV("{:#o}"), std::numeric_limits<std::uint32_t>::max());
+  check(SV("4294967295"), SV("{:#}"), std::numeric_limits<std::uint32_t>::max());
+  check(SV("0xffffffff"), SV("{:#x}"), std::numeric_limits<std::uint32_t>::max());
 
   check(SV("0b1111111111111111111111111111111111111111111111111111111111111111"),
         SV("{:#b}"),

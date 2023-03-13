@@ -82,6 +82,9 @@
 #elif defined(__aarch64__)
 #define MINSIGSTKSZ 5120
 #define SIGSTKSZ 16384
+#elif defined(__riscv)
+#define MINSIGSTKSZ 2048
+#define SIGSTKSZ 8192
 #else
 #error "Signal stack sizes not defined for your platform."
 #endif

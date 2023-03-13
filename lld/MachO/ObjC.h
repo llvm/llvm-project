@@ -20,9 +20,6 @@ constexpr const char metaclass[] = "_OBJC_METACLASS_$_";
 constexpr const char ehtype[] = "_OBJC_EHTYPE_$_";
 constexpr const char ivar[] = "_OBJC_IVAR_$_";
 
-// Check for duplicate method names within related categories / classes.
-void checkCategories();
-
 } // namespace objc
 
 bool hasObjCSection(llvm::MemoryBufferRef);

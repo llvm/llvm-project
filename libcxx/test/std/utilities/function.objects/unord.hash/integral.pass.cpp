@@ -94,7 +94,7 @@ int main(int, char**)
 
     test<uint8_t>();
     test<uint16_t>();
-    test<uint32_t>();
+    test<std::uint32_t>();
     test<uint64_t>();
 
     test<uint_fast8_t>();

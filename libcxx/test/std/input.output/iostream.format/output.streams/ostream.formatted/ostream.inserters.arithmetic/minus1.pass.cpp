@@ -65,7 +65,7 @@ int main(int, char**)
 
     test_octal<uint16_t>(                "177777");
     test_octal< int16_t>(                "177777");
-    test_octal<uint32_t>(           "37777777777");
+    test_octal<std::uint32_t>(           "37777777777");
     test_octal< int32_t>(           "37777777777");
     test_octal<uint64_t>("1777777777777777777777");
     test_octal< int64_t>("1777777777777777777777");
@@ -85,7 +85,7 @@ int main(int, char**)
 
     test_dec<uint16_t>(               "65535");
     test_dec< int16_t>(                  "-1");
-    test_dec<uint32_t>(          "4294967295");
+    test_dec<std::uint32_t>(          "4294967295");
     test_dec< int32_t>(                  "-1");
     test_dec<uint64_t>("18446744073709551615");
     test_dec< int64_t>(                  "-1");
@@ -100,7 +100,7 @@ int main(int, char**)
 
     test_hex<uint16_t>(            "FFFF");
     test_hex< int16_t>(            "FFFF");
-    test_hex<uint32_t>(        "FFFFFFFF");
+    test_hex<std::uint32_t>(        "FFFFFFFF");
     test_hex< int32_t>(        "FFFFFFFF");
     test_hex<uint64_t>("FFFFFFFFFFFFFFFF");
     test_hex< int64_t>("FFFFFFFFFFFFFFFF");

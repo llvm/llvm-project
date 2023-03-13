@@ -158,6 +158,9 @@ private:
   bool isDSOffsetLegal(SDValue Base, unsigned Offset) const;
   bool isDSOffset2Legal(SDValue Base, unsigned Offset0, unsigned Offset1,
                         unsigned Size) const;
+  bool isFlatScratchBaseLegal(
+      SDValue Base, uint64_t FlatVariant = SIInstrFlags::FlatScratch) const;
+
   bool SelectDS1Addr1Offset(SDValue Ptr, SDValue &Base, SDValue &Offset) const;
   bool SelectDS64Bit4ByteAligned(SDValue Ptr, SDValue &Base, SDValue &Offset0,
                                  SDValue &Offset1) const;

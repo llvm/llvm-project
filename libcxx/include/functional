@@ -545,7 +545,6 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #include <__utility/forward.h>
 #include <exception>
 #include <memory> // TODO: find out why removing this breaks the modules build
-#include <type_traits>
 #include <typeinfo>
 #include <version>
 
@@ -554,8 +553,10 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <atomic>
 #  include <concepts>
 #  include <tuple>
+#  include <type_traits>
 #  include <utility>
 #endif
 

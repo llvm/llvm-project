@@ -88,7 +88,7 @@ bool BlockCoverage::AppendCoverage(std::istream &IN) {
 //   * a function with a less frequently executed code gets bigger weight.
 std::vector<double> BlockCoverage::FunctionWeights(size_t NumFunctions) const {
   std::vector<double> Res(NumFunctions);
-  for (auto It : Functions) {
+  for (const auto &It : Functions) {
     auto FunctionID = It.first;
     auto Counters = It.second;
     assert(FunctionID < NumFunctions);

@@ -4706,7 +4706,7 @@ define amdgpu_kernel void @udiv_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX6-NEXT:    v_and_b32_e32 v3, 0x7fff, v4
 ; GFX6-NEXT:    v_lshl_b64 v[0:1], v[0:1], 30
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v3, 15, v3
-; GFX6-NEXT:    v_or_b32_e32 v2, v2, v3
+; GFX6-NEXT:    v_or_b32_e32 v2, v3, v2
 ; GFX6-NEXT:    v_or_b32_e32 v0, v2, v0
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
@@ -4901,7 +4901,7 @@ define amdgpu_kernel void @urem_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX6-NEXT:    v_lshl_b64 v[0:1], v[0:1], 30
 ; GFX6-NEXT:    v_and_b32_e32 v2, 0x7fff, v6
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v3, 15, v3
-; GFX6-NEXT:    v_or_b32_e32 v2, v2, v3
+; GFX6-NEXT:    v_or_b32_e32 v2, v3, v2
 ; GFX6-NEXT:    v_or_b32_e32 v0, v2, v0
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
@@ -5116,7 +5116,7 @@ define amdgpu_kernel void @sdiv_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX6-NEXT:    v_and_b32_e32 v3, 0x7fff, v4
 ; GFX6-NEXT:    v_lshl_b64 v[0:1], v[0:1], 30
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v3, 15, v3
-; GFX6-NEXT:    v_or_b32_e32 v2, v2, v3
+; GFX6-NEXT:    v_or_b32_e32 v2, v3, v2
 ; GFX6-NEXT:    v_or_b32_e32 v0, v2, v0
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
@@ -5353,7 +5353,7 @@ define amdgpu_kernel void @srem_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX6-NEXT:    v_lshl_b64 v[0:1], v[0:1], 30
 ; GFX6-NEXT:    v_and_b32_e32 v3, 0x7fff, v4
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v2, 15, v2
-; GFX6-NEXT:    v_or_b32_e32 v2, v3, v2
+; GFX6-NEXT:    v_or_b32_e32 v2, v2, v3
 ; GFX6-NEXT:    v_or_b32_e32 v0, v2, v0
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_waitcnt expcnt(0)

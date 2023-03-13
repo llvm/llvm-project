@@ -29,7 +29,7 @@ static_assert(ex::is_simd_mask<ex::native_simd_mask<int32_t>>::value, "");
 static_assert(ex::is_simd_mask<ex::native_simd_mask<int64_t>>::value, "");
 static_assert(ex::is_simd_mask<ex::native_simd_mask<uint8_t>>::value, "");
 static_assert(ex::is_simd_mask<ex::native_simd_mask<uint16_t>>::value, "");
-static_assert(ex::is_simd_mask<ex::native_simd_mask<uint32_t>>::value, "");
+static_assert(ex::is_simd_mask<ex::native_simd_mask<std::uint32_t>>::value, "");
 static_assert(ex::is_simd_mask<ex::native_simd_mask<uint64_t>>::value, "");
 static_assert(ex::is_simd_mask<ex::native_simd_mask<float>>::value, "");
 static_assert(ex::is_simd_mask<ex::native_simd_mask<double>>::value, "");
@@ -45,7 +45,7 @@ static_assert(ex::is_simd_mask<ex::fixed_size_simd_mask<uint8_t, 1>>::value,
               "");
 static_assert(ex::is_simd_mask<ex::fixed_size_simd_mask<uint16_t, 1>>::value,
               "");
-static_assert(ex::is_simd_mask<ex::fixed_size_simd_mask<uint32_t, 1>>::value,
+static_assert(ex::is_simd_mask<ex::fixed_size_simd_mask<std::uint32_t, 1>>::value,
               "");
 static_assert(ex::is_simd_mask<ex::fixed_size_simd_mask<uint64_t, 1>>::value,
               "");
@@ -63,7 +63,7 @@ static_assert(ex::is_simd_mask<ex::fixed_size_simd_mask<uint8_t, 3>>::value,
               "");
 static_assert(ex::is_simd_mask<ex::fixed_size_simd_mask<uint16_t, 3>>::value,
               "");
-static_assert(ex::is_simd_mask<ex::fixed_size_simd_mask<uint32_t, 3>>::value,
+static_assert(ex::is_simd_mask<ex::fixed_size_simd_mask<std::uint32_t, 3>>::value,
               "");
 static_assert(ex::is_simd_mask<ex::fixed_size_simd_mask<uint64_t, 3>>::value,
               "");
@@ -82,7 +82,7 @@ static_assert(ex::is_simd_mask<ex::fixed_size_simd_mask<uint8_t, 32>>::value,
               "");
 static_assert(ex::is_simd_mask<ex::fixed_size_simd_mask<uint16_t, 32>>::value,
               "");
-static_assert(ex::is_simd_mask<ex::fixed_size_simd_mask<uint32_t, 32>>::value,
+static_assert(ex::is_simd_mask<ex::fixed_size_simd_mask<std::uint32_t, 32>>::value,
               "");
 static_assert(ex::is_simd_mask<ex::fixed_size_simd_mask<uint64_t, 32>>::value,
               "");
@@ -103,7 +103,7 @@ static_assert(ex::is_simd_mask_v<ex::native_simd_mask<int32_t>>, "");
 static_assert(ex::is_simd_mask_v<ex::native_simd_mask<int64_t>>, "");
 static_assert(ex::is_simd_mask_v<ex::native_simd_mask<uint8_t>>, "");
 static_assert(ex::is_simd_mask_v<ex::native_simd_mask<uint16_t>>, "");
-static_assert(ex::is_simd_mask_v<ex::native_simd_mask<uint32_t>>, "");
+static_assert(ex::is_simd_mask_v<ex::native_simd_mask<std::uint32_t>>, "");
 static_assert(ex::is_simd_mask_v<ex::native_simd_mask<uint64_t>>, "");
 static_assert(ex::is_simd_mask_v<ex::native_simd_mask<float>>, "");
 static_assert(ex::is_simd_mask_v<ex::native_simd_mask<double>>, "");
@@ -114,7 +114,7 @@ static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<int32_t, 1>>, "");
 static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<int64_t, 1>>, "");
 static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<uint8_t, 1>>, "");
 static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<uint16_t, 1>>, "");
-static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<uint32_t, 1>>, "");
+static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<std::uint32_t, 1>>, "");
 static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<uint64_t, 1>>, "");
 static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<float, 1>>, "");
 static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<double, 1>>, "");
@@ -125,7 +125,7 @@ static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<int32_t, 3>>, "");
 static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<int64_t, 3>>, "");
 static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<uint8_t, 3>>, "");
 static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<uint16_t, 3>>, "");
-static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<uint32_t, 3>>, "");
+static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<std::uint32_t, 3>>, "");
 static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<uint64_t, 3>>, "");
 static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<float, 3>>, "");
 static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<double, 3>>, "");
@@ -136,7 +136,7 @@ static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<int32_t, 32>>, "");
 static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<int64_t, 32>>, "");
 static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<uint8_t, 32>>, "");
 static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<uint16_t, 32>>, "");
-static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<uint32_t, 32>>, "");
+static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<std::uint32_t, 32>>, "");
 static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<uint64_t, 32>>, "");
 static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<float, 32>>, "");
 static_assert(ex::is_simd_mask_v<ex::fixed_size_simd_mask<double, 32>>, "");

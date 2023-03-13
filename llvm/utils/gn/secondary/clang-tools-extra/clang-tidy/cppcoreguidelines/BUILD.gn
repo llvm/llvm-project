@@ -17,6 +17,7 @@ static_library("cppcoreguidelines") {
   ]
   sources = [
     "AvoidCaptureDefaultWhenCapturingThisCheck.cpp",
+    "AvoidCapturingLambdaCoroutinesCheck.cpp",
     "AvoidConstOrRefDataMembersCheck.cpp",
     "AvoidDoWhileCheck.cpp",
     "AvoidGotoCheck.cpp",
@@ -40,6 +41,7 @@ static_library("cppcoreguidelines") {
     "ProTypeStaticCastDowncastCheck.cpp",
     "ProTypeUnionAccessCheck.cpp",
     "ProTypeVarargCheck.cpp",
+    "RvalueReferenceParamNotMovedCheck.cpp",
     "SlicingCheck.cpp",
     "SpecialMemberFunctionsCheck.cpp",
     "VirtualClassDestructorCheck.cpp",

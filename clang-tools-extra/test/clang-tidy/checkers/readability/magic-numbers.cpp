@@ -3,7 +3,8 @@
 // RUN:  [{key: readability-magic-numbers.IgnoredIntegerValues, value: "0;1;2;10;100;"}, \
 // RUN:   {key: readability-magic-numbers.IgnoredFloatingPointValues, value: "3.14;2.71828;9.81;10000.0;101.0;0x1.2p3"}, \
 // RUN:   {key: readability-magic-numbers.IgnoreBitFieldsWidths, value: false}, \
-// RUN:   {key: readability-magic-numbers.IgnorePowersOf2IntegerValues, value: true}]}' \
+// RUN:   {key: readability-magic-numbers.IgnorePowersOf2IntegerValues, value: true}, \
+// RUN:   {key: readability-magic-numbers.IgnoreTypeAliases, value: false}]}' \
 // RUN: --
 
 template <typename T, int V>
@@ -96,6 +97,10 @@ struct HardwareGateway {
    // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: 3 is a magic number; consider replacing it with a named constant [readability-magic-numbers]
 };
 
+using NumberInTypeAlias = ValueBucket<int, 25>;
+// CHECK-MESSAGES: :[[@LINE-1]]:44: warning: 25 is a magic number; consider replacing it with a named constant [readability-magic-numbers]
+typedef ValueBucket<char, 243> NumberInTypedef;
+// CHECK-MESSAGES: :[[@LINE-1]]:27: warning: 243 is a magic number; consider replacing it with a named constant [readability-magic-numbers]
 
 /*
  * Clean code

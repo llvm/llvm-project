@@ -18,7 +18,8 @@ There are two buildmasters running.
   the build.
 * The staging buildmaster at `<https://lab.llvm.org/staging>`_. All builders
   attached to this machine will be completely silent by default when the build
-  is broken.
+  is broken. This buildmaster is reconfigured every two hours with any new
+  commits from the llvm-zorg repository.
 
 In order to remain connected to the main buildmaster (and thus notify
 developers of failures), a builbot must:

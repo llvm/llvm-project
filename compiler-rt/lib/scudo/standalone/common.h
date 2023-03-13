@@ -147,6 +147,9 @@ const char *getEnv(const char *Name);
 uptr GetRSS();
 
 u64 getMonotonicTime();
+// Gets the time faster but with less accuracy. Can call getMonotonicTime
+// if no fast version is available.
+u64 getMonotonicTimeFast();
 
 u32 getThreadID();
 

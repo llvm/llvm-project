@@ -20,8 +20,8 @@ int Initialize(const Descriptor &instance, const typeInfo::DerivedType &derived,
   std::size_t elements{instance.Elements()};
   std::size_t byteStride{instance.ElementBytes()};
   int stat{StatOk};
-  // Initialize data components in each element; the per-element iteration
-  // constitutes the inner loops, not outer
+  // Initialize data components in each element; the per-element iterations
+  // constitute the inner loops, not the outer ones
   std::size_t myComponents{componentDesc.Elements()};
   for (std::size_t k{0}; k < myComponents; ++k) {
     const auto &comp{
@@ -36,7 +36,14 @@ int Initialize(const Descriptor &instance, const typeInfo::DerivedType &derived,
         if (comp.genre() == typeInfo::Component::Genre::Automatic) {
           stat = ReturnError(terminator, allocDesc.Allocate(), errMsg, hasStat);
           if (stat == StatOk) {
-            stat = Initialize(allocDesc, derived, terminator, hasStat, errMsg);
+            if (const DescriptorAddendum * addendum{allocDesc.Addendum()}) {
+              if (const auto *derived{addendum->derivedType()}) {
+                if (!derived->noInitializationNeeded()) {
+                  stat = Initialize(
+                      allocDesc, *derived, terminator, hasStat, errMsg);
+                }
+              }
+            }
           }
           if (stat != StatOk) {
             break;

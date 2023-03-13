@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
 class RewritePatternSet;
@@ -146,6 +147,27 @@ void populateVectorContractLoweringPatterns(
     RewritePatternSet &patterns,
     VectorTransformsOptions options = VectorTransformsOptions(),
     PatternBenefit benefit = 1);
+
+/// Canonicalization of a `vector.contraction %a, %b, %c` with row-major matmul
+/// semantics to a contraction with MMT semantics (matrix matrix multiplication
+/// with the RHS transposed). This specific form is meant to have the vector
+/// operands are organized such that the reduction dimension is contiguous.
+/// Example:
+/// ```
+/// vector.contract {indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+///                                   affine_map<(m, n, k) -> (n, k)>,
+///                                   affine_map<(m, n, k) -> (m, n)>],
+///                  iterator_types = ["parallel", "parallel", "reduction"],
+///                  kind = #vector.kind<add>} %a, %b, %c : ...
+/// ```
+///
+///  The `constraint` predicate is used to decide which `vector.contraction` ops
+///  to filter out.
+void populateVectorContractCanonicalizeMatmulToMMT(
+    RewritePatternSet &patterns,
+    std::function<LogicalResult(vector::ContractionOp)> constraint =
+        [](vector::ContractionOp) { return success(); },
+    PatternBenefit = 1);
 
 /// Collect patterns to convert reduction op to vector.contract and fold
 /// transpose/broadcast ops into the contract.

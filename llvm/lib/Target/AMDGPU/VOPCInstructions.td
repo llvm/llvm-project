@@ -299,7 +299,7 @@ multiclass VOPC_Pseudos <string opName,
     let isCommutable = 1;
   }
 
-  foreach _ = BoolToList<P.HasExtSDWA>.ret in
+  if P.HasExtSDWA then
   def _sdwa : VOPC_SDWA_Pseudo <opName, P> {
     let Defs = !if(DefExec, [EXEC], []);
     let SchedRW = P.Schedule;
@@ -360,7 +360,7 @@ multiclass VOPCX_Pseudos <string opName,
     let IsVCMPX = 1;
   }
 
-  foreach _ = BoolToList<P_NoSDst.HasExtSDWA>.ret in
+  if P_NoSDst.HasExtSDWA then
   def _nosdst_sdwa : VOPC_SDWA_Pseudo <opName#"_nosdst", P_NoSDst> {
     let Defs = [EXEC];
     let SchedRW = P_NoSDst.Schedule;
@@ -854,7 +854,7 @@ multiclass VOPC_Class_Pseudos <string opName, VOPC_Profile p, bit DefExec,
     let SchedRW = p.Schedule;
   }
 
-  foreach _ = BoolToList<p.HasExtSDWA>.ret in
+  if p.HasExtSDWA then
   def _sdwa : VOPC_SDWA_Pseudo <opName, p> {
     let Defs = !if(DefExec, !if(DefVcc, [VCC, EXEC], [EXEC]),
                             !if(DefVcc, [VCC], []));
@@ -902,7 +902,7 @@ multiclass VOPCX_Class_Pseudos <string opName,
     let SubtargetPredicate = HasNoSdstCMPX;
   }
 
-  foreach _ = BoolToList<P_NoSDst.HasExtSDWA>.ret in
+  if P_NoSDst.HasExtSDWA then
   def _nosdst_sdwa : VOPC_SDWA_Pseudo <opName#"_nosdst", P_NoSDst> {
     let Defs = [EXEC];
     let SchedRW = P_NoSDst.Schedule;
@@ -1320,7 +1320,7 @@ multiclass VOPC_Real_Base<GFXGen Gen, bits<9> op> {
 
     defm : VOPCInstAliases<NAME, !substr(Gen.Suffix,1)>;
 
-    foreach _ = BoolToList<ps32.Pfl.HasExtDPP>.ret in {
+    if ps32.Pfl.HasExtDPP then {
       defvar psDPP = !cast<VOP_DPP_Pseudo>(NAME #"_e32" #"_dpp");
       defvar AsmDPP = ps32.Pfl.AsmDPP16;
       let DecoderNamespace = "DPP"#Gen.DecoderNamespace in {
@@ -1351,7 +1351,7 @@ multiclass VOPC_Real_Base<GFXGen Gen, bits<9> op> {
         }
       }
     }
-    foreach _ = BoolToList<ps64.Pfl.HasExtVOP3DPP>.ret in {
+    if ps64.Pfl.HasExtVOP3DPP then {
       defvar psDPP = !cast<VOP_DPP_Pseudo>(NAME #"_e64" #"_dpp");
       defvar AsmDPP = ps64.Pfl.AsmVOP3DPP16;
       let DecoderNamespace = "DPP"#Gen.DecoderNamespace in {
@@ -1419,7 +1419,7 @@ multiclass VOPC_Real_with_name<GFXGen Gen, bits<9> op, string OpName,
 
     defm : VOPCInstAliases<OpName, !substr(Gen.Suffix, 1), NAME, asm_name>;
 
-    foreach _ = BoolToList<ps32.Pfl.HasExtDPP>.ret in {
+    if ps32.Pfl.HasExtDPP then {
       defvar psDPP = !cast<VOP_DPP_Pseudo>(OpName #"_e32" #"_dpp");
       defvar AsmDPP = ps32.Pfl.AsmDPP16;
       let DecoderNamespace = "DPP"#Gen.DecoderNamespace in {
@@ -1456,7 +1456,7 @@ multiclass VOPC_Real_with_name<GFXGen Gen, bits<9> op, string OpName,
       }
     }
 
-    foreach _ = BoolToList<ps64.Pfl.HasExtVOP3DPP>.ret in {
+    if ps64.Pfl.HasExtVOP3DPP then {
       defvar psDPP = !cast<VOP_DPP_Pseudo>(OpName #"_e64" #"_dpp");
       defvar AsmDPP = ps64.Pfl.AsmVOP3DPP16;
       let DecoderNamespace = "DPP"#Gen.DecoderNamespace in {
@@ -1521,7 +1521,7 @@ multiclass VOPCX_Real<GFXGen Gen, bits<9> op> {
 
     defm : VOPCXInstAliases<NAME, !substr(Gen.Suffix, 1)>;
 
-    foreach _ = BoolToList<ps32.Pfl.HasExtDPP>.ret in {
+    if ps32.Pfl.HasExtDPP then {
       defvar psDPP = !cast<VOP_DPP_Pseudo>(NAME #"_nosdst_e32" #"_dpp");
       defvar AsmDPP = ps32.Pfl.AsmDPP16;
       let DecoderNamespace = "DPP"#Gen.DecoderNamespace in {
@@ -1538,7 +1538,7 @@ multiclass VOPCX_Real<GFXGen Gen, bits<9> op> {
       }
     }
 
-    foreach _ = BoolToList<ps64.Pfl.HasExtVOP3DPP>.ret in {
+    if ps64.Pfl.HasExtVOP3DPP then {
       defvar psDPP = !cast<VOP_DPP_Pseudo>(NAME #"_nosdst_e64" #"_dpp");
       defvar AsmDPP = ps64.Pfl.AsmVOP3DPP16;
       let DecoderNamespace = "DPP"#Gen.DecoderNamespace in {
@@ -1589,7 +1589,7 @@ multiclass VOPCX_Real_with_name<GFXGen Gen, bits<9> op, string OpName,
 
     defm : VOPCXInstAliases<OpName, !substr(Gen.Suffix, 1), NAME, asm_name>;
 
-    foreach _ = BoolToList<ps32.Pfl.HasExtDPP>.ret in {
+    if ps32.Pfl.HasExtDPP then {
       defvar psDPP = !cast<VOP_DPP_Pseudo>(OpName#"_nosdst_e32"#"_dpp");
       let DecoderNamespace = "DPP"#Gen.DecoderNamespace in {
         def _e32_dpp#Gen.Suffix : VOPC_DPP16_SIMC<op{7-0}, psDPP,
@@ -1599,7 +1599,7 @@ multiclass VOPCX_Real_with_name<GFXGen Gen, bits<9> op, string OpName,
         def _e32_dpp8#Gen.Suffix : VOPC_DPP8<op{7-0}, ps32, asm_name>;
       }
     }
-    foreach _ = BoolToList<ps64.Pfl.HasExtVOP3DPP>.ret in {
+    if ps64.Pfl.HasExtVOP3DPP then {
       defvar psDPP = !cast<VOP_DPP_Pseudo>(OpName#"_nosdst_e64"#"_dpp");
       defvar AsmDPP = ps64.Pfl.AsmVOP3DPP16;
       let DecoderNamespace = "DPP"#Gen.DecoderNamespace in {
@@ -1861,7 +1861,7 @@ let AssemblerPredicate = isGFX10Only in {
       }
     } // End DecoderNamespace = "GFX10"
 
-    foreach _ = BoolToList<!cast<VOPC_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA9>.ret in
+    if !cast<VOPC_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA9 then
     def _sdwa_gfx10 :
       VOP_SDWA10_Real<!cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa")>,
       VOPC_SDWA9e<op{7-0}, !cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
@@ -1887,7 +1887,7 @@ let AssemblerPredicate = isGFX10Only in {
         }
     } // End DecoderNamespace = "GFX10"
 
-    foreach _ = BoolToList<!cast<VOPC_Pseudo>(NAME#"_nosdst_e32").Pfl.HasExtSDWA9>.ret in
+    if !cast<VOPC_Pseudo>(NAME#"_nosdst_e32").Pfl.HasExtSDWA9 then
     def _sdwa_gfx10 :
       VOP_SDWA10_Real<!cast<VOPC_SDWA_Pseudo>(NAME#"_nosdst_sdwa")>,
       VOPC_SDWA9e<op{7-0}, !cast<VOPC_SDWA_Pseudo>(NAME#"_nosdst_sdwa").Pfl> {
@@ -2217,12 +2217,12 @@ multiclass VOPC_Real_vi <bits<10> op> {
     }
   }
 
-  foreach _ = BoolToList<!cast<VOPC_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA>.ret in
+  if !cast<VOPC_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA then
   def _sdwa_vi :
     VOP_SDWA_Real <!cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa")>,
     VOPC_SDWAe <op{7-0}, !cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
 
-  foreach _ = BoolToList<!cast<VOPC_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA9>.ret in
+  if !cast<VOPC_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA9 then
   def _sdwa_gfx9 :
     VOP_SDWA9_Real <!cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa")>,
     VOPC_SDWA9e <op{7-0}, !cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;

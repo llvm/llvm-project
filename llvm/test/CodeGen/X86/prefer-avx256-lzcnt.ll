@@ -64,17 +64,15 @@ define <16 x i8> @testv16i8(<16 x i8> %in) {
 define <16 x i16> @testv16i16(<16 x i16> %in) {
 ; AVX256-LABEL: testv16i16:
 ; AVX256:       # %bb.0:
-; AVX256-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX256-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX256-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX256-NEXT:    vplzcntd %ymm1, %ymm1
 ; AVX256-NEXT:    vpmovdw %ymm1, %xmm1
-; AVX256-NEXT:    vmovdqa {{.*#+}} xmm2 = [16,16,16,16,16,16,16,16]
-; AVX256-NEXT:    vpsubw %xmm2, %xmm1, %xmm1
+; AVX256-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX256-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX256-NEXT:    vplzcntd %ymm0, %ymm0
 ; AVX256-NEXT:    vpmovdw %ymm0, %xmm0
-; AVX256-NEXT:    vpsubw %xmm2, %xmm0, %xmm0
-; AVX256-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX256-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX256-NEXT:    vpsubw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX256-NEXT:    retq
 ;
 ; AVX512-LABEL: testv16i16:
@@ -104,17 +102,15 @@ define <32 x i8> @testv32i8(<32 x i8> %in) {
 ;
 ; AVX512-LABEL: testv32i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero,xmm1[8],zero,zero,zero,xmm1[9],zero,zero,zero,xmm1[10],zero,zero,zero,xmm1[11],zero,zero,zero,xmm1[12],zero,zero,zero,xmm1[13],zero,zero,zero,xmm1[14],zero,zero,zero,xmm1[15],zero,zero,zero
+; AVX512-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; AVX512-NEXT:    vplzcntd %zmm1, %zmm1
 ; AVX512-NEXT:    vpmovdb %zmm1, %xmm1
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm2 = [24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24]
-; AVX512-NEXT:    vpsubb %xmm2, %xmm1, %xmm1
+; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX512-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; AVX512-NEXT:    vplzcntd %zmm0, %zmm0
 ; AVX512-NEXT:    vpmovdb %zmm0, %xmm0
-; AVX512-NEXT:    vpsubb %xmm2, %xmm0, %xmm0
-; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX512-NEXT:    vpsubb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %out = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %in, i1 false)
   ret <32 x i8> %out

@@ -30,6 +30,8 @@
 #include "x86_64/FEnvImpl.h"
 #elif defined(LIBC_TARGET_ARCH_IS_ARM)
 #include "arm/FEnvImpl.h"
+#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
+#include "riscv64/FEnvImpl.h"
 #else
 
 namespace __llvm_libc::fputil {
@@ -43,6 +45,10 @@ LIBC_INLINE int test_except(int) { return 0; }
 LIBC_INLINE int set_except(int) { return 0; }
 
 LIBC_INLINE int raise_except(int) { return 0; }
+
+LIBC_INLINE int enable_except(int) { return 0; }
+
+LIBC_INLINE int disable_except(int) { return 0; }
 
 LIBC_INLINE int get_round() { return FE_TONEAREST; }
 

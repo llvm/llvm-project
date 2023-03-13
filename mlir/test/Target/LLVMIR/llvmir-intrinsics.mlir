@@ -251,9 +251,9 @@ llvm.func @vector_reductions(%arg0: f32, %arg1: vector<8xf32>, %arg2: vector<8xi
   // CHECK: call i32 @llvm.vector.reduce.and.v8i32
   "llvm.intr.vector.reduce.and"(%arg2) : (vector<8xi32>) -> i32
   // CHECK: call float @llvm.vector.reduce.fmax.v8f32
-  "llvm.intr.vector.reduce.fmax"(%arg1) : (vector<8xf32>) -> f32
+  llvm.intr.vector.reduce.fmax(%arg1) : (vector<8xf32>) -> f32
   // CHECK: call float @llvm.vector.reduce.fmin.v8f32
-  "llvm.intr.vector.reduce.fmin"(%arg1) : (vector<8xf32>) -> f32
+  llvm.intr.vector.reduce.fmin(%arg1) : (vector<8xf32>) -> f32
   // CHECK: call i32 @llvm.vector.reduce.mul.v8i32
   "llvm.intr.vector.reduce.mul"(%arg2) : (vector<8xi32>) -> i32
   // CHECK: call i32 @llvm.vector.reduce.or.v8i32

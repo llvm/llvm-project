@@ -52,6 +52,10 @@ formatDereference(const ast_matchers::MatchFinder::MatchResult &Result,
 
   if (Text.empty())
     return std::string();
+
+  // Remove remaining '->' from overloaded operator call
+  Text.consume_back("->");
+
   // Add leading '*'.
   if (needParensAfterUnaryOperator(ExprNode)) {
     return (llvm::Twine("*(") + Text + ")").str();
@@ -178,6 +182,20 @@ void RedundantStringCStrCheck::registerMatchers(
               // directly.
               hasArgument(0, StringCStrCallExpr))),
       this);
+
+  if (getLangOpts().CPlusPlus20) {
+    // Detect redundant 'c_str()' calls in parameters passed to std::format in
+    // C++20 onwards and std::print in C++23 onwards.
+    Finder->addMatcher(
+        traverse(TK_AsIs,
+                 callExpr(callee(functionDecl(
+                              getLangOpts().CPlusPlus2b
+                                  ? hasAnyName("::std::print", "::std::format")
+                                  : hasName("::std::format"))),
+                          forEachArgumentWithParam(StringCStrCallExpr,
+                                                   parmVarDecl()))),
+        this);
+  }
 }
 
 void RedundantStringCStrCheck::check(const MatchFinder::MatchResult &Result) {

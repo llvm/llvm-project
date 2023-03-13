@@ -329,8 +329,8 @@ typedef enum {
  * Index initialization options.
  *
  * 0 is the default value of each member of this struct except for Size.
- * Initialize the struct in one of the following two ways to avoid adapting code
- * each time a new member is added to it:
+ * Initialize the struct in one of the following three ways to avoid adapting
+ * code each time a new member is added to it:
  * \code
  * CXIndexOptions Opts;
  * memset(&Opts, 0, sizeof(Opts));
@@ -339,6 +339,11 @@ typedef enum {
  * or explicitly initialize the first data member and zero-initialize the rest:
  * \code
  * CXIndexOptions Opts = { sizeof(CXIndexOptions) };
+ * \endcode
+ * or to prevent the -Wmissing-field-initializers warning for the above version:
+ * \code
+ * CXIndexOptions Opts{};
+ * Opts.Size = sizeof(CXIndexOptions);
  * \endcode
  */
 typedef struct CXIndexOptions {
@@ -362,11 +367,13 @@ typedef struct CXIndexOptions {
   /**
    * \see clang_createIndex()
    */
-  int ExcludeDeclarationsFromPCH : 1;
+  unsigned ExcludeDeclarationsFromPCH : 1;
   /**
    * \see clang_createIndex()
    */
-  int DisplayDiagnostics : 1;
+  unsigned DisplayDiagnostics : 1;
+  unsigned /*Reserved*/ : 14;
+
   /**
    * The path to a directory, in which to store temporary PCH files. If null or
    * empty, the default system temporary directory is used. These PCH files are

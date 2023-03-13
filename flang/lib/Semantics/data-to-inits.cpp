@@ -569,7 +569,8 @@ static void PopulateWithComponentDefaults(SymbolDataInitialization &init,
               if (auto extents{evaluate::GetConstantExtents(
                       foldingContext, component)}) {
                 if (auto extant{init.image.AsConstant(foldingContext, *dyType,
-                        *extents, false /*don't pad*/, componentOffset)}) {
+                        std::nullopt, *extents, false /*don't pad*/,
+                        componentOffset)}) {
                   initialized = !(*extant == *object->init());
                 }
               }
@@ -905,8 +906,8 @@ void ConstructInitializer(const Symbol &symbol,
       }
     } else if (auto symbolType{evaluate::DynamicType::From(symbol)}) {
       if (auto extents{evaluate::GetConstantExtents(context, symbol)}) {
-        mutableObject.set_init(
-            initialization.image.AsConstant(context, *symbolType, *extents));
+        mutableObject.set_init(initialization.image.AsConstant(
+            context, *symbolType, std::nullopt, *extents));
       } else {
         exprAnalyzer.Say(symbol.name(),
             "internal: unknown shape for '%s' while constructing initializer from DATA"_err_en_US,

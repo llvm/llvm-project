@@ -349,6 +349,14 @@ toBlock(const std::optional<DWARFFormValue> &V) {
   return std::nullopt;
 }
 
+/// Check whether specified \p Form belongs to the \p FC class.
+/// \param Form an attribute form.
+/// \param FC an attribute form class to check.
+/// \param DwarfVersion the version of DWARF debug info keeping the attribute.
+/// \returns true if specified \p Form belongs to the \p FC class.
+bool doesFormBelongToClass(dwarf::Form Form, DWARFFormValue::FormClass FC,
+                           uint16_t DwarfVersion);
+
 } // end namespace dwarf
 
 } // end namespace llvm

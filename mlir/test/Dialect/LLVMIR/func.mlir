@@ -194,6 +194,16 @@ module {
   llvm.func @memory_attr() attributes {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = readwrite>} {
     llvm.return
   }
+
+  // CHECK-LABEL: llvm.func hidden @hidden
+  llvm.func hidden @hidden() {
+    llvm.return
+  }
+
+  // CHECK-LABEL: llvm.func protected @protected
+  llvm.func protected @protected() {
+    llvm.return
+  }
 }
 
 // -----

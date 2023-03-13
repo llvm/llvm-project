@@ -118,7 +118,7 @@ int main(int, char**)
 #endif
     static_assert(test<uint8_t>());
     static_assert(test<uint16_t>());
-    static_assert(test<uint32_t>());
+    static_assert(test<std::uint32_t>());
     static_assert(test<uint64_t>());
     static_assert(test<uintmax_t>());
     static_assert(test<uintptr_t>());
@@ -134,7 +134,7 @@ int main(int, char**)
 #endif
     test<uint8_t>();
     test<uint16_t>();
-    test<uint32_t>();
+    test<std::uint32_t>();
     test<uint64_t>();
     test<uintmax_t>();
     test<uintptr_t>();

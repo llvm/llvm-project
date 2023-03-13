@@ -16,7 +16,6 @@
 #include <__memory/addressof.h>
 #include <__utility/forward.h>
 #include <optional>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

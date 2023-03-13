@@ -12,6 +12,7 @@
 
 #include "mlir/Conversion/VectorToSPIRV/VectorToSPIRV.h"
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
@@ -20,6 +21,9 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/TypeUtilities.h"
+#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -436,6 +440,84 @@ struct VectorShuffleOpConvert final
   }
 };
 
+struct VectorReductionToDotProd final : OpRewritePattern<vector::ReductionOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ReductionOp op,
+                                PatternRewriter &rewriter) const override {
+    if (op.getKind() != vector::CombiningKind::ADD)
+      return rewriter.notifyMatchFailure(op, "combining kind is not 'add'");
+
+    auto resultType = dyn_cast<IntegerType>(op.getType());
+    if (!resultType)
+      return rewriter.notifyMatchFailure(op, "result is not an integer");
+
+    int64_t resultBitwidth = resultType.getIntOrFloatBitWidth();
+    if (!llvm::is_contained({32, 64}, resultBitwidth))
+      return rewriter.notifyMatchFailure(op, "unsupported integer bitwidth");
+
+    VectorType inVecTy = op.getSourceVectorType();
+    if (inVecTy.getNumElements() != 4 || inVecTy.getShape().size() != 1 ||
+        inVecTy.isScalable())
+      return rewriter.notifyMatchFailure(op, "unsupported vector shape");
+
+    auto mul = op.getVector().getDefiningOp<arith::MulIOp>();
+    if (!mul)
+      return rewriter.notifyMatchFailure(
+          op, "reduction operand is not 'arith.muli'");
+
+    if (succeeded(handleCase<arith::ExtSIOp, arith::ExtSIOp, spirv::SDotOp,
+                             spirv::SDotAccSatOp, false>(op, mul, rewriter)))
+      return success();
+
+    if (succeeded(handleCase<arith::ExtUIOp, arith::ExtUIOp, spirv::UDotOp,
+                             spirv::UDotAccSatOp, false>(op, mul, rewriter)))
+      return success();
+
+    if (succeeded(handleCase<arith::ExtSIOp, arith::ExtUIOp, spirv::SUDotOp,
+                             spirv::SUDotAccSatOp, false>(op, mul, rewriter)))
+      return success();
+
+    if (succeeded(handleCase<arith::ExtUIOp, arith::ExtSIOp, spirv::SUDotOp,
+                             spirv::SUDotAccSatOp, true>(op, mul, rewriter)))
+      return success();
+
+    return failure();
+  }
+
+private:
+  template <typename LhsExtensionOp, typename RhsExtensionOp, typename DotOp,
+            typename DotAccOp, bool SwapOperands>
+  static LogicalResult handleCase(vector::ReductionOp op, arith::MulIOp mul,
+                                  PatternRewriter &rewriter) {
+    auto lhs = mul.getLhs().getDefiningOp<LhsExtensionOp>();
+    if (!lhs || !getElementTypeOrSelf(lhs.getIn().getType()).isInteger(8))
+      return failure();
+
+    auto rhs = mul.getRhs().getDefiningOp<RhsExtensionOp>();
+    if (!rhs || !getElementTypeOrSelf(rhs.getIn().getType()).isInteger(8))
+      return failure();
+
+    Value lhsIn = lhs.getIn();
+    Value rhsIn = rhs.getIn();
+
+    // There's no variant of dot prod ops for unsigned LHS and signed RHS, so
+    // we have to swap operands instead in that case.
+    if (SwapOperands)
+      std::swap(lhsIn, rhsIn);
+
+    if (Value acc = op.getAcc()) {
+      rewriter.replaceOpWithNewOp<DotAccOp>(op, op.getType(), lhsIn, rhsIn, acc,
+                                            nullptr);
+    } else {
+      rewriter.replaceOpWithNewOp<DotOp>(op, op.getType(), lhsIn, rhsIn,
+                                         nullptr);
+    }
+
+    return success();
+  }
+};
+
 } // namespace
 #define CL_MAX_MIN_OPS                                                         \
   spirv::CLFMaxOp, spirv::CLFMinOp, spirv::CLUMaxOp, spirv::CLUMinOp,          \
@@ -456,4 +538,9 @@ void mlir::populateVectorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
       VectorReductionPattern<CL_MAX_MIN_OPS>, VectorInsertStridedSliceOpConvert,
       VectorShuffleOpConvert, VectorSplatPattern>(typeConverter,
                                                   patterns.getContext());
+}
+
+void mlir::populateVectorReductionToSPIRVDotProductPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<VectorReductionToDotProd>(patterns.getContext());
 }

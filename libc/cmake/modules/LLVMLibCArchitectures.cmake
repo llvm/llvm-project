@@ -178,8 +178,8 @@ if(explicit_target_triple AND
   set(LIBC_CROSSBUILD TRUE)
   if(CMAKE_COMPILER_IS_GNUCXX)
     message(FATAL_ERROR
-            "GCC target triple and the explicity specified target triple do "
-            "not match.")
+            "GCC target triple (${libc_compiler_triple}) and the explicity "
+            "specified target triple (${explicit_target_triple}) do not match.")
   else()
     list(APPEND
          LIBC_COMPILE_OPTIONS_DEFAULT "--target=${explicit_target_triple}")

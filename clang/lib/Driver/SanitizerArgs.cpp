@@ -1100,13 +1100,16 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   // NVPTX doesn't currently support sanitizers.  Bailing out here means
   // that e.g. -fsanitize=address applies only to host code, which is what we
   // want for now.
-  //
-  // AMDGPU sanitizer support is experimental and controlled by -fgpu-sanitize.
-  if (TC.getTriple().isNVPTX() ||
-      (TC.getTriple().isAMDGPU() &&
-       !Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
-                     true)))
+  if (TC.getTriple().isNVPTX())
     return;
+  // AMDGPU sanitizer support is experimental and controlled by -fgpu-sanitize.
+  bool GPUSanitize = false;
+  if (TC.getTriple().isAMDGPU()) {
+    if (!Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
+                      true))
+      return;
+    GPUSanitize = true;
+  }
 
   // Translate available CoverageFeatures to corresponding clang-cc1 flags.
   // Do it even if Sanitizers.empty() since some forms of coverage don't require
@@ -1143,20 +1146,22 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   addSpecialCaseListOpt(Args, CmdArgs, "-fsanitize-coverage-ignorelist=",
                         CoverageIgnorelistFiles);
 
-  // Translate available BinaryMetadataFeatures to corresponding clang-cc1
-  // flags. Does not depend on any other sanitizers.
-  const std::pair<int, std::string> BinaryMetadataFlags[] = {
-      std::make_pair(BinaryMetadataCovered, "covered"),
-      std::make_pair(BinaryMetadataAtomics, "atomics"),
-      std::make_pair(BinaryMetadataUAR, "uar")};
-  for (const auto &F : BinaryMetadataFlags) {
-    if (BinaryMetadataFeatures & F.first)
-      CmdArgs.push_back(
-          Args.MakeArgString("-fexperimental-sanitize-metadata=" + F.second));
+  if (!GPUSanitize) {
+    // Translate available BinaryMetadataFeatures to corresponding clang-cc1
+    // flags. Does not depend on any other sanitizers. Unsupported on GPUs.
+    const std::pair<int, std::string> BinaryMetadataFlags[] = {
+        std::make_pair(BinaryMetadataCovered, "covered"),
+        std::make_pair(BinaryMetadataAtomics, "atomics"),
+        std::make_pair(BinaryMetadataUAR, "uar")};
+    for (const auto &F : BinaryMetadataFlags) {
+      if (BinaryMetadataFeatures & F.first)
+        CmdArgs.push_back(
+            Args.MakeArgString("-fexperimental-sanitize-metadata=" + F.second));
+    }
+    addSpecialCaseListOpt(Args, CmdArgs,
+                          "-fexperimental-sanitize-metadata-ignorelist=",
+                          BinaryMetadataIgnorelistFiles);
   }
-  addSpecialCaseListOpt(Args, CmdArgs,
-                        "-fexperimental-sanitize-metadata-ignorelist=",
-                        BinaryMetadataIgnorelistFiles);
 
   if (TC.getTriple().isOSWindows() && needsUbsanRt()) {
     // Instruct the code generator to embed linker directives in the object file

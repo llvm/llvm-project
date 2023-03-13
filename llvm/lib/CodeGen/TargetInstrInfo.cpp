@@ -1038,14 +1038,12 @@ void TargetInstrInfo::genAlternativeCodeSequence(
     Prev = MRI.getUniqueVRegDef(Root.getOperand(2).getReg());
     break;
   default:
-    break;
+    llvm_unreachable("Unknown pattern for machine combiner");
   }
 
   // Don't reassociate if Prev and Root are in different blocks.
   if (Prev->getParent() != Root.getParent())
     return;
-
-  assert(Prev && "Unknown pattern for machine combiner");
 
   reassociateOps(Root, *Prev, Pattern, InsInstrs, DelInstrs, InstIdxForVirtReg);
 }

@@ -39,10 +39,10 @@ void supported_load(...) = delete;
 
 void compile_load() {
   supported_load<int>((int*)nullptr, ex::element_aligned_tag());
-  supported_load<uint32_t>((int*)nullptr, ex::element_aligned_tag());
+  supported_load<std::uint32_t>((int*)nullptr, ex::element_aligned_tag());
   supported_load<double>((float*)nullptr, ex::element_aligned_tag());
   supported_load<uint16_t>((unsigned int*)nullptr, ex::element_aligned_tag());
-  supported_load<uint32_t>((float*)nullptr, ex::element_aligned_tag());
+  supported_load<std::uint32_t>((float*)nullptr, ex::element_aligned_tag());
 
   not_supported_load<int>((int*)nullptr, int());
 }

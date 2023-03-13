@@ -12,7 +12,6 @@ static_library("POSIX") {
   sources = [
     "CrashReason.cpp",
     "NativeProcessELF.cpp",
-    "ProcessMessage.cpp",
     "ProcessPOSIXLog.cpp",
   ]
 }

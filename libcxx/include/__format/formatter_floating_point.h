@@ -26,6 +26,7 @@
 #include <__format/formatter_output.h>
 #include <__format/parser_std_format_spec.h>
 #include <__memory/allocator.h>
+#include <__type_traits/conditional.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
 #include <charconv>

@@ -324,6 +324,18 @@ public:
   void emit() override;
 };
 
+// OpenCL builtin header generator.  This class processes the same TableGen
+// input as BuiltinNameEmitter, but generates a .h file that contains a
+// prototype for each builtin function described in the .td input.
+class OpenCLBuiltinHeaderEmitter : public OpenCLBuiltinFileEmitterBase {
+public:
+  OpenCLBuiltinHeaderEmitter(RecordKeeper &Records, raw_ostream &OS)
+      : OpenCLBuiltinFileEmitterBase(Records, OS) {}
+
+  // Entrypoint to generate the header.
+  void emit() override;
+};
+
 } // namespace
 
 void BuiltinNameEmitter::Emit() {
@@ -1260,9 +1272,74 @@ void OpenCLBuiltinTestEmitter::emit() {
   }
 }
 
+void OpenCLBuiltinHeaderEmitter::emit() {
+  emitSourceFileHeader("OpenCL Builtin declarations", OS);
+
+  emitExtensionSetup();
+
+  OS << R"(
+#define __ovld __attribute__((overloadable))
+#define __conv __attribute__((convergent))
+#define __purefn __attribute__((pure))
+#define __cnfn __attribute__((const))
+
+)";
+
+  // Iterate over all builtins; sort to follow order of definition in .td file.
+  std::vector<Record *> Builtins = Records.getAllDerivedDefinitions("Builtin");
+  llvm::sort(Builtins, LessRecord());
+
+  for (const auto *B : Builtins) {
+    StringRef Name = B->getValueAsString("Name");
+
+    std::string OptionalExtensionEndif = emitExtensionGuard(B);
+    std::string OptionalVersionEndif = emitVersionGuard(B);
+
+    SmallVector<SmallVector<std::string, 2>, 4> FTypes;
+    expandTypesInSignature(B->getValueAsListOfDefs("Signature"), FTypes);
+
+    for (const auto &Signature : FTypes) {
+      StringRef OptionalTypeExtEndif = emitTypeExtensionGuards(Signature);
+
+      // Emit function declaration.
+      OS << Signature[0] << " __ovld ";
+      if (B->getValueAsBit("IsConst"))
+        OS << "__cnfn ";
+      if (B->getValueAsBit("IsPure"))
+        OS << "__purefn ";
+      if (B->getValueAsBit("IsConv"))
+        OS << "__conv ";
+
+      OS << Name << "(";
+      if (Signature.size() > 1) {
+        for (unsigned I = 1; I < Signature.size(); I++) {
+          if (I != 1)
+            OS << ", ";
+          OS << Signature[I];
+        }
+      }
+      OS << ");\n";
+
+      OS << OptionalTypeExtEndif;
+    }
+
+    OS << OptionalVersionEndif;
+    OS << OptionalExtensionEndif;
+  }
+
+  OS << "\n// Disable any extensions we may have enabled previously.\n"
+        "#pragma OPENCL EXTENSION all : disable";
+}
+
 void clang::EmitClangOpenCLBuiltins(RecordKeeper &Records, raw_ostream &OS) {
   BuiltinNameEmitter NameChecker(Records, OS);
   NameChecker.Emit();
+}
+
+void clang::EmitClangOpenCLBuiltinHeader(RecordKeeper &Records,
+                                         raw_ostream &OS) {
+  OpenCLBuiltinHeaderEmitter HeaderFileGenerator(Records, OS);
+  HeaderFileGenerator.emit();
 }
 
 void clang::EmitClangOpenCLBuiltinTests(RecordKeeper &Records,

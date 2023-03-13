@@ -64,7 +64,6 @@ public:
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -413,5 +412,9 @@ void __throw_bad_cast()
 #endif
 }
 _LIBCPP_END_NAMESPACE_STD
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <type_traits>
+#endif
 
 #endif // __LIBCPP_TYPEINFO

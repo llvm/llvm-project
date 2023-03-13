@@ -562,3 +562,24 @@ TEST(ScudoReleaseTest, ReleasePartialRegion) {
   testReleasePartialRegion<scudo::FuchsiaSizeClassMap>();
   testReleasePartialRegion<scudo::SvelteSizeClassMap>();
 }
+
+TEST(ScudoReleaseTest, BufferPool) {
+  constexpr scudo::uptr StaticBufferCount = SCUDO_WORDSIZE - 1;
+  constexpr scudo::uptr StaticBufferSize = 512U;
+  scudo::BufferPool<StaticBufferCount, StaticBufferSize> Pool;
+
+  std::vector<std::pair<scudo::uptr *, scudo::uptr>> Buffers;
+  for (scudo::uptr I = 0; I < StaticBufferCount; ++I) {
+    scudo::uptr *P = Pool.getBuffer(StaticBufferSize);
+    EXPECT_TRUE(Pool.isStaticBufferTestOnly(P, StaticBufferSize));
+    Buffers.emplace_back(P, StaticBufferSize);
+  }
+
+  // The static buffer is supposed to be used up.
+  scudo::uptr *P = Pool.getBuffer(StaticBufferSize);
+  EXPECT_FALSE(Pool.isStaticBufferTestOnly(P, StaticBufferSize));
+
+  Pool.releaseBuffer(P, StaticBufferSize);
+  for (auto &Buffer : Buffers)
+    Pool.releaseBuffer(Buffer.first, Buffer.second);
+}

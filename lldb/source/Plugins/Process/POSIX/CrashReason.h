@@ -54,8 +54,6 @@ enum class CrashReason {
 std::string GetCrashReasonString(CrashReason reason, lldb::addr_t fault_addr);
 std::string GetCrashReasonString(CrashReason reason, const siginfo_t &info);
 
-const char *CrashReasonAsString(CrashReason reason);
-
 CrashReason GetCrashReason(const siginfo_t &info);
 
 #endif // #ifndef liblldb_CrashReason_H_

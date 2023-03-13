@@ -57,6 +57,7 @@ public:
 private:
   const X86InstrInfo *TII = nullptr;
   const X86Subtarget *ST = nullptr;
+  const MCSchedModel *SM = nullptr;
 };
 } // end anonymous namespace
 
@@ -68,6 +69,14 @@ FunctionPass *llvm::createX86FixupInstTuning() {
   return new X86FixupInstTuningPass();
 }
 
+template <typename T>
+static std::optional<bool> CmpOptionals(T NewVal, T CurVal) {
+  if (NewVal.has_value() && CurVal.has_value() && *NewVal != *CurVal)
+    return *NewVal < *CurVal;
+
+  return std::nullopt;
+}
+
 bool X86FixupInstTuningPass::processInstruction(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator &I) {
@@ -75,13 +84,58 @@ bool X86FixupInstTuningPass::processInstruction(
   unsigned Opc = MI.getOpcode();
   unsigned NumOperands = MI.getDesc().getNumOperands();
 
+  auto GetInstTput = [&](unsigned Opcode) -> std::optional<double> {
+    // We already checked that SchedModel exists in `NewOpcPreferable`.
+    return MCSchedModel::getReciprocalThroughput(
+        *ST, *(SM->getSchedClassDesc(TII->get(Opcode).getSchedClass())));
+  };
+
+  auto GetInstLat = [&](unsigned Opcode) -> std::optional<double> {
+    // We already checked that SchedModel exists in `NewOpcPreferable`.
+    return MCSchedModel::computeInstrLatency(
+        *ST, *(SM->getSchedClassDesc(TII->get(Opcode).getSchedClass())));
+  };
+
+  auto GetInstSize = [&](unsigned Opcode) -> std::optional<unsigned> {
+    if (unsigned Size = TII->get(Opcode).getSize())
+      return Size;
+    // Zero size means we where unable to compute it.
+    return std::nullopt;
+  };
+
+  auto NewOpcPreferable = [&](unsigned NewOpc,
+                              bool ReplaceInTie = true) -> bool {
+    std::optional<bool> Res;
+    if (SM->hasInstrSchedModel()) {
+      // Compare tput -> lat -> code size.
+      Res = CmpOptionals(GetInstTput(NewOpc), GetInstTput(Opc));
+      if (Res.has_value())
+        return *Res;
+
+      Res = CmpOptionals(GetInstLat(NewOpc), GetInstLat(Opc));
+      if (Res.has_value())
+        return *Res;
+    }
+
+    Res = CmpOptionals(GetInstSize(Opc), GetInstSize(NewOpc));
+    if (Res.has_value())
+      return *Res;
+
+    // We either have either were unable to get tput/lat/codesize or all values
+    // were equal. Return specified option for a tie.
+    return ReplaceInTie;
+  };
+
   // `vpermilps r, i` -> `vshufps r, r, i`
-  // `vshufps` is always as fast or faster than `vpermilps` and takes 1 less
-  // byte of code size.
+  // `vpermilps r, i, k` -> `vshufps r, r, i, k`
+  // `vshufps` is always as fast or faster than `vpermilps` and takes
+  // 1 less byte of code size for VEX and SSE encoding.
   auto ProcessVPERMILPSri = [&](unsigned NewOpc) -> bool {
+    if (!NewOpcPreferable(NewOpc))
+      return false;
     unsigned MaskImm = MI.getOperand(NumOperands - 1).getImm();
     MI.removeOperand(NumOperands - 1);
-    MI.addOperand(MI.getOperand(1));
+    MI.addOperand(MI.getOperand(NumOperands - 2));
     MI.setDesc(TII->get(NewOpc));
     MI.addOperand(MachineOperand::CreateImm(MaskImm));
     return true;
@@ -93,13 +147,36 @@ bool X86FixupInstTuningPass::processInstruction(
   auto ProcessVPERMILPSmi = [&](unsigned NewOpc) -> bool {
     // TODO: Might be work adding bypass delay if -Os/-Oz is enabled as
     // `vpshufd` saves a byte of code size.
-    if (!ST->hasNoDomainDelayShuffle())
+    if (!ST->hasNoDomainDelayShuffle() &&
+        !NewOpcPreferable(NewOpc, /*ReplaceInTie*/ false))
       return false;
     MI.setDesc(TII->get(NewOpc));
     return true;
   };
 
-  // TODO: Add masked predicate execution variants.
+  // `vunpcklpd/vmovlhps r, r` -> `vshufps r, r, 0x44`
+  // `vunpckhpd/vmovlhps r, r` -> `vshufps r, r, 0xee`
+  // `vunpcklpd r, r, k` -> `vshufps r, r, 0x44, k`
+  // `vunpckhpd r, r, k` -> `vshufps r, r, 0xee, k`
+  // iff `vshufps` is faster than `vunpck{l|h}pd`. Otherwise stick with
+  // `vunpck{l|h}pd` as it uses less code size.
+  // TODO: Look into using `{VP}UNPCK{L|H}QDQ{...}` instead of `{V}SHUF{...}PS`
+  // as the replacement. `{VP}UNPCK{L|H}QDQ{...}` has no codesize cost.
+  auto ProcessUNPCKPD = [&](unsigned NewOpc, unsigned MaskImm) -> bool {
+    if (!NewOpcPreferable(NewOpc, /*ReplaceInTie*/ false))
+      return false;
+
+    MI.setDesc(TII->get(NewOpc));
+    MI.addOperand(MachineOperand::CreateImm(MaskImm));
+    return true;
+  };
+  auto ProcessUNPCKLPDrr = [&](unsigned NewOpc) -> bool {
+    return ProcessUNPCKPD(NewOpc, 0x44);
+  };
+  auto ProcessUNPCKHPDrr = [&](unsigned NewOpc) -> bool {
+    return ProcessUNPCKPD(NewOpc, 0xee);
+  };
+
   switch (Opc) {
   case X86::VPERMILPSri:
     return ProcessVPERMILPSri(X86::VSHUFPSrri);
@@ -111,6 +188,18 @@ bool X86FixupInstTuningPass::processInstruction(
     return ProcessVPERMILPSri(X86::VSHUFPSZ256rri);
   case X86::VPERMILPSZri:
     return ProcessVPERMILPSri(X86::VSHUFPSZrri);
+  case X86::VPERMILPSZ128rikz:
+    return ProcessVPERMILPSri(X86::VSHUFPSZ128rrikz);
+  case X86::VPERMILPSZ256rikz:
+    return ProcessVPERMILPSri(X86::VSHUFPSZ256rrikz);
+  case X86::VPERMILPSZrikz:
+    return ProcessVPERMILPSri(X86::VSHUFPSZrrikz);
+  case X86::VPERMILPSZ128rik:
+    return ProcessVPERMILPSri(X86::VSHUFPSZ128rrik);
+  case X86::VPERMILPSZ256rik:
+    return ProcessVPERMILPSri(X86::VSHUFPSZ256rrik);
+  case X86::VPERMILPSZrik:
+    return ProcessVPERMILPSri(X86::VSHUFPSZrrik);
   case X86::VPERMILPSmi:
     return ProcessVPERMILPSmi(X86::VPSHUFDmi);
   case X86::VPERMILPSYmi:
@@ -123,6 +212,77 @@ bool X86FixupInstTuningPass::processInstruction(
     return ProcessVPERMILPSmi(X86::VPSHUFDZ256mi);
   case X86::VPERMILPSZmi:
     return ProcessVPERMILPSmi(X86::VPSHUFDZmi);
+  case X86::VPERMILPSZ128mikz:
+    return ProcessVPERMILPSmi(X86::VPSHUFDZ128mikz);
+  case X86::VPERMILPSZ256mikz:
+    return ProcessVPERMILPSmi(X86::VPSHUFDZ256mikz);
+  case X86::VPERMILPSZmikz:
+    return ProcessVPERMILPSmi(X86::VPSHUFDZmikz);
+  case X86::VPERMILPSZ128mik:
+    return ProcessVPERMILPSmi(X86::VPSHUFDZ128mik);
+  case X86::VPERMILPSZ256mik:
+    return ProcessVPERMILPSmi(X86::VPSHUFDZ256mik);
+  case X86::VPERMILPSZmik:
+    return ProcessVPERMILPSmi(X86::VPSHUFDZmik);
+
+    // TODO: {V}UNPCK{L|H}PD{...} is probably safe to transform to
+    // `{VP}UNPCK{L|H}QDQ{...}` which gets the same perf benefit as
+    // `{V}SHUF{...}PS` but 1) without increasing code size and 2) can also
+    // handle the `mr` case. ICL doesn't have a domain penalty for replacing
+    // float unpck -> int unpck, but at this time, I haven't verified the set of
+    // processors where its safe.
+  case X86::MOVLHPSrr:
+  case X86::UNPCKLPDrr:
+    return ProcessUNPCKLPDrr(X86::SHUFPSrri);
+  case X86::VMOVLHPSrr:
+  case X86::VUNPCKLPDrr:
+    return ProcessUNPCKLPDrr(X86::VSHUFPSrri);
+  case X86::VUNPCKLPDYrr:
+    return ProcessUNPCKLPDrr(X86::VSHUFPSYrri);
+    // VMOVLHPS is always 128 bits.
+  case X86::VMOVLHPSZrr:
+  case X86::VUNPCKLPDZ128rr:
+    return ProcessUNPCKLPDrr(X86::VSHUFPSZ128rri);
+  case X86::VUNPCKLPDZ256rr:
+    return ProcessUNPCKLPDrr(X86::VSHUFPSZ256rri);
+  case X86::VUNPCKLPDZrr:
+    return ProcessUNPCKLPDrr(X86::VSHUFPSZrri);
+  case X86::VUNPCKLPDZ128rrk:
+    return ProcessUNPCKLPDrr(X86::VSHUFPSZ128rrik);
+  case X86::VUNPCKLPDZ256rrk:
+    return ProcessUNPCKLPDrr(X86::VSHUFPSZ256rrik);
+  case X86::VUNPCKLPDZrrk:
+    return ProcessUNPCKLPDrr(X86::VSHUFPSZrrik);
+  case X86::VUNPCKLPDZ128rrkz:
+    return ProcessUNPCKLPDrr(X86::VSHUFPSZ128rrikz);
+  case X86::VUNPCKLPDZ256rrkz:
+    return ProcessUNPCKLPDrr(X86::VSHUFPSZ256rrikz);
+  case X86::VUNPCKLPDZrrkz:
+    return ProcessUNPCKLPDrr(X86::VSHUFPSZrrikz);
+  case X86::UNPCKHPDrr:
+    return ProcessUNPCKHPDrr(X86::SHUFPSrri);
+  case X86::VUNPCKHPDrr:
+    return ProcessUNPCKHPDrr(X86::VSHUFPSrri);
+  case X86::VUNPCKHPDYrr:
+    return ProcessUNPCKHPDrr(X86::VSHUFPSYrri);
+  case X86::VUNPCKHPDZ128rr:
+    return ProcessUNPCKHPDrr(X86::VSHUFPSZ128rri);
+  case X86::VUNPCKHPDZ256rr:
+    return ProcessUNPCKHPDrr(X86::VSHUFPSZ256rri);
+  case X86::VUNPCKHPDZrr:
+    return ProcessUNPCKHPDrr(X86::VSHUFPSZrri);
+  case X86::VUNPCKHPDZ128rrk:
+    return ProcessUNPCKHPDrr(X86::VSHUFPSZ128rrik);
+  case X86::VUNPCKHPDZ256rrk:
+    return ProcessUNPCKHPDrr(X86::VSHUFPSZ256rrik);
+  case X86::VUNPCKHPDZrrk:
+    return ProcessUNPCKHPDrr(X86::VSHUFPSZrrik);
+  case X86::VUNPCKHPDZ128rrkz:
+    return ProcessUNPCKHPDrr(X86::VSHUFPSZ128rrikz);
+  case X86::VUNPCKHPDZ256rrkz:
+    return ProcessUNPCKHPDrr(X86::VSHUFPSZ256rrikz);
+  case X86::VUNPCKHPDZrrkz:
+    return ProcessUNPCKHPDrr(X86::VSHUFPSZrrikz);
   default:
     return false;
   }
@@ -133,6 +293,8 @@ bool X86FixupInstTuningPass::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   ST = &MF.getSubtarget<X86Subtarget>();
   TII = ST->getInstrInfo();
+  SM = &ST->getSchedModel();
+
   for (MachineBasicBlock &MBB : MF) {
     for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
       if (processInstruction(MF, MBB, I)) {

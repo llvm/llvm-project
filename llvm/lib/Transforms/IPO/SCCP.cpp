@@ -280,7 +280,7 @@ static bool runIPSCCP(
 
     // If there is a known constant range for the return value, add !range
     // metadata to the function's call sites.
-    if (ReturnValue.isConstantRange() &&
+    if (F->getReturnType()->isIntegerTy() && ReturnValue.isConstantRange() &&
         !ReturnValue.getConstantRange().isSingleElement()) {
       // Do not add range metadata if the return value may include undef.
       if (ReturnValue.isConstantRangeIncludingUndef())
@@ -290,13 +290,6 @@ static bool runIPSCCP(
       for (User *User : F->users()) {
         auto *CB = dyn_cast<CallBase>(User);
         if (!CB || CB->getCalledFunction() != F)
-          continue;
-
-        // Limit to cases where the return value is guaranteed to be neither
-        // poison nor undef. Poison will be outside any range and currently
-        // values outside of the specified range cause immediate undefined
-        // behavior.
-        if (!isGuaranteedNotToBeUndefOrPoison(CB, nullptr, CB))
           continue;
 
         // Do not touch existing metadata for now.

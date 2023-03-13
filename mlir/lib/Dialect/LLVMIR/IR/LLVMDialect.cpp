@@ -185,21 +185,31 @@ void AllocaOp::print(OpAsmPrinter &p) {
   auto funcTy =
       FunctionType::get(getContext(), {getArraySize().getType()}, {getType()});
 
+  if (getInalloca())
+    p << " inalloca";
+
   p << ' ' << getArraySize() << " x " << elemTy;
   if (getAlignment() && *getAlignment() != 0)
-    p.printOptionalAttrDict((*this)->getAttrs(), {kElemTypeAttrName});
-  else
     p.printOptionalAttrDict((*this)->getAttrs(),
-                            {"alignment", kElemTypeAttrName});
+                            {kElemTypeAttrName, getInallocaAttrName()});
+  else
+    p.printOptionalAttrDict(
+        (*this)->getAttrs(),
+        {getAlignmentAttrName(), kElemTypeAttrName, getInallocaAttrName()});
   p << " : " << funcTy;
 }
 
-// <operation> ::= `llvm.alloca` ssa-use `x` type attribute-dict?
-//                 `:` type `,` type
+// <operation> ::= `llvm.alloca` `inalloca`? ssa-use `x` type
+//                  attribute-dict? `:` type `,` type
 ParseResult AllocaOp::parse(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::UnresolvedOperand arraySize;
   Type type, elemType;
   SMLoc trailingTypeLoc;
+
+  if (succeeded(parser.parseOptionalKeyword("inalloca")))
+    result.addAttribute(getInallocaAttrName(result.name),
+                        UnitAttr::get(parser.getContext()));
+
   if (parser.parseOperand(arraySize) || parser.parseKeyword("x") ||
       parser.parseType(elemType) ||
       parser.parseOptionalAttrDict(result.attributes) || parser.parseColon() ||
@@ -1613,13 +1623,16 @@ void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
 
 void GlobalOp::print(OpAsmPrinter &p) {
   p << ' ' << stringifyLinkage(getLinkage()) << ' ';
+  StringRef visibility = stringifyVisibility(getVisibility_());
+  if (!visibility.empty())
+    p << visibility << ' ';
+  if (getThreadLocal_())
+    p << "thread_local ";
   if (auto unnamedAddr = getUnnamedAddr()) {
     StringRef str = stringifyUnnamedAddr(*unnamedAddr);
     if (!str.empty())
       p << str << ' ';
   }
-  if (getThreadLocal_())
-    p << "thread_local ";
   if (getConstant())
     p << "constant ";
   p.printSymbolName(getSymName());
@@ -1630,11 +1643,12 @@ void GlobalOp::print(OpAsmPrinter &p) {
   // Note that the alignment attribute is printed using the
   // default syntax here, even though it is an inherent attribute
   // (as defined in https://mlir.llvm.org/docs/LangRef/#attributes)
-  p.printOptionalAttrDict(
-      (*this)->getAttrs(),
-      {SymbolTable::getSymbolAttrName(), getGlobalTypeAttrName(),
-       getConstantAttrName(), getValueAttrName(), getLinkageAttrName(),
-       getUnnamedAddrAttrName(), getThreadLocal_AttrName()});
+  p.printOptionalAttrDict((*this)->getAttrs(),
+                          {SymbolTable::getSymbolAttrName(),
+                           getGlobalTypeAttrName(), getConstantAttrName(),
+                           getValueAttrName(), getLinkageAttrName(),
+                           getUnnamedAddrAttrName(), getThreadLocal_AttrName(),
+                           getVisibility_AttrName()});
 
   // Print the trailing type unless it's a string global.
   if (getValueOrNull().dyn_cast_or_null<StringAttr>())
@@ -1674,6 +1688,7 @@ struct EnumTraits {};
 REGISTER_ENUM_TYPE(Linkage);
 REGISTER_ENUM_TYPE(UnnamedAddr);
 REGISTER_ENUM_TYPE(CConv);
+REGISTER_ENUM_TYPE(Visibility);
 } // namespace
 
 /// Parse an enum from the keyword, or default to the provided default value.
@@ -1707,15 +1722,21 @@ ParseResult GlobalOp::parse(OpAsmParser &parser, OperationState &result) {
                           ctx, parseOptionalLLVMKeyword<Linkage>(
                                    parser, result, LLVM::Linkage::External)));
 
-  if (succeeded(parser.parseOptionalKeyword("thread_local")))
-    result.addAttribute(getThreadLocal_AttrName(result.name),
-                        parser.getBuilder().getUnitAttr());
+  // Parse optional visibility, default to Default.
+  result.addAttribute(getVisibility_AttrName(result.name),
+                      parser.getBuilder().getI64IntegerAttr(
+                          parseOptionalLLVMKeyword<LLVM::Visibility, int64_t>(
+                              parser, result, LLVM::Visibility::Default)));
 
   // Parse optional UnnamedAddr, default to None.
   result.addAttribute(getUnnamedAddrAttrName(result.name),
                       parser.getBuilder().getI64IntegerAttr(
                           parseOptionalLLVMKeyword<UnnamedAddr, int64_t>(
                               parser, result, LLVM::UnnamedAddr::None)));
+
+  if (succeeded(parser.parseOptionalKeyword("thread_local")))
+    result.addAttribute(getThreadLocal_AttrName(result.name),
+                        parser.getBuilder().getUnitAttr());
 
   if (succeeded(parser.parseOptionalKeyword("constant")))
     result.addAttribute(getConstantAttrName(result.name),
@@ -2037,6 +2058,12 @@ ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
                        parseOptionalLLVMKeyword<Linkage>(
                            parser, result, LLVM::Linkage::External)));
 
+  // Parse optional visibility, default to Default.
+  result.addAttribute(getVisibility_AttrName(result.name),
+                      parser.getBuilder().getI64IntegerAttr(
+                          parseOptionalLLVMKeyword<LLVM::Visibility, int64_t>(
+                              parser, result, LLVM::Visibility::Default)));
+
   // Default to C Calling Convention if no keyword is provided.
   result.addAttribute(
       getCConvAttrName(result.name),
@@ -2087,6 +2114,9 @@ void LLVMFuncOp::print(OpAsmPrinter &p) {
   p << ' ';
   if (getLinkage() != LLVM::Linkage::External)
     p << stringifyLinkage(getLinkage()) << ' ';
+  StringRef visibility = stringifyVisibility(getVisibility_());
+  if (!visibility.empty())
+    p << visibility << ' ';
   if (getCConv() != LLVM::CConv::C)
     p << stringifyCConv(getCConv()) << ' ';
 
@@ -2108,7 +2138,7 @@ void LLVMFuncOp::print(OpAsmPrinter &p) {
   function_interface_impl::printFunctionAttributes(
       p, *this,
       {getFunctionTypeAttrName(), getArgAttrsAttrName(), getResAttrsAttrName(),
-       getLinkageAttrName(), getCConvAttrName()});
+       getLinkageAttrName(), getCConvAttrName(), getVisibility_AttrName()});
 
   // Print the body if this is not an external function.
   Region &body = getBody();

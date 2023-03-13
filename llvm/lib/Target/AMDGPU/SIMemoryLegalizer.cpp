@@ -570,6 +570,14 @@ public:
                   SIMemOp Op,
                   bool IsCrossAddrSpaceOrdering,
                   Position Pos) const override;
+
+  bool insertAcquire(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
+                     SIAtomicAddrSpace AddrSpace, Position Pos) const override;
+
+  // TODO-GFX12: We might need to introduce a GLOBAL_WB upon release.
+  // bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
+  //                    SIAtomicAddrSpace AddrSpace, bool
+  //                    IsCrossAddrSpaceOrdering, Position Pos) const override;
 };
 
 class SIMemoryLegalizer final : public MachineFunctionPass {
@@ -2139,6 +2147,9 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
 
   MachineBasicBlock &MBB = *MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
+
+  // TODO-GFX12: The kinds of waits that are inserted should not depend on MI's
+  // opcode.
   unsigned Opcode = MI->getOpcode();
 
   bool LOADCnt = false;
@@ -2271,6 +2282,62 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
   return Changed;
 }
 
+bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
+                                        SIAtomicScope Scope,
+                                        SIAtomicAddrSpace AddrSpace,
+                                        Position Pos) const {
+  if (!InsertCacheInv)
+    return false;
+
+  MachineBasicBlock &MBB = *MI->getParent();
+  DebugLoc DL = MI->getDebugLoc();
+
+  /// The scratch address space does not need the global memory cache
+  /// to be flushed as all memory operations by the same thread are
+  /// sequentially consistent, and no other thread can access scratch
+  /// memory.
+
+  /// Other address spaces do not have a cache.
+  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) == SIAtomicAddrSpace::NONE)
+    return false;
+
+  AMDGPU::CPol::CPol ScopeImm = AMDGPU::CPol::SCOPE_DEV;
+  switch (Scope) {
+  case SIAtomicScope::SYSTEM:
+    ScopeImm = AMDGPU::CPol::SCOPE_SYS;
+    break;
+  case SIAtomicScope::AGENT:
+    ScopeImm = AMDGPU::CPol::SCOPE_DEV;
+    break;
+  case SIAtomicScope::WORKGROUP:
+    // In WGP mode the waves of a work-group can be executing on either CU of
+    // the WGP. Therefore we need to invalidate the L0 which is per CU.
+    // Otherwise in CU mode all waves of a work-group are on the same CU, and so
+    // the L0 does not need to be invalidated.
+    if (ST.isCuModeEnabled())
+      return false;
+
+    ScopeImm = AMDGPU::CPol::SCOPE_SE;
+    break;
+  case SIAtomicScope::WAVEFRONT:
+  case SIAtomicScope::SINGLETHREAD:
+    // No cache to invalidate.
+    return false;
+  default:
+    llvm_unreachable("Unsupported synchronization scope");
+  }
+
+  if (Pos == Position::AFTER)
+    ++MI;
+
+  BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_INV)).addImm(ScopeImm);
+
+  if (Pos == Position::AFTER)
+    --MI;
+
+  return true;
+}
+
 bool SIMemoryLegalizer::removeAtomicPseudoMIs() {
   if (AtomicPseudoMIs.empty())
     return false;
@@ -2368,8 +2435,13 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
   bool Changed = false;
 
   if (MOI.isAtomic()) {
-    if (MOI.getOrdering() == AtomicOrdering::Acquire ||
-        MOI.getOrdering() == AtomicOrdering::Release ||
+    if (MOI.getOrdering() == AtomicOrdering::Acquire)
+      Changed |= CC->insertWait(MI, MOI.getScope(), MOI.getOrderingAddrSpace(),
+                                SIMemOp::LOAD | SIMemOp::STORE,
+                                MOI.getIsCrossAddressSpaceOrdering(),
+                                Position::BEFORE);
+
+    if (MOI.getOrdering() == AtomicOrdering::Release ||
         MOI.getOrdering() == AtomicOrdering::AcquireRelease ||
         MOI.getOrdering() == AtomicOrdering::SequentiallyConsistent)
       /// TODO: This relies on a barrier always generating a waitcnt

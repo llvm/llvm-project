@@ -235,8 +235,14 @@ std::optional<Expr<SomeType>> FoldTransfer(
     }
   }
   std::optional<DynamicType> moldType;
-  if (arguments[1]) {
+  std::optional<std::int64_t> moldLength;
+  if (arguments[1]) { // MOLD=
     moldType = arguments[1]->GetType();
+    if (moldType && moldType->category() == TypeCategory::Character) {
+      if (const auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(arguments[1])}) {
+        moldLength = ToInt64(Fold(context, chExpr->LEN()));
+      }
+    }
   }
   std::optional<ConstantSubscripts> extents;
   if (arguments.size() == 2) { // no SIZE=
@@ -260,7 +266,8 @@ std::optional<Expr<SomeType>> FoldTransfer(
       }
     }
   }
-  if (sourceBytes && IsActuallyConstant(*source) && moldType && extents) {
+  if (sourceBytes && IsActuallyConstant(*source) && moldType && extents &&
+      (moldLength || moldType->category() != TypeCategory::Character)) {
     std::size_t elements{
         extents->empty() ? 1 : static_cast<std::size_t>((*extents)[0])};
     std::size_t totalBytes{*sourceBytes * elements};
@@ -272,7 +279,7 @@ std::optional<Expr<SomeType>> FoldTransfer(
           image.Add(0, *sourceBytes, *source, context)};
       CHECK(imageResult == InitialImage::Ok);
       return image.AsConstant(
-          context, *moldType, *extents, true /*pad with 0*/);
+          context, *moldType, moldLength, *extents, true /*pad with 0*/);
     }
   }
   return std::nullopt;

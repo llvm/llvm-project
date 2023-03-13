@@ -21,10 +21,11 @@
 // REQUIRES: -faligned-allocation
 // ADDITIONAL_COMPILE_FLAGS: -faligned-allocation
 
-#include <new>
-#include <typeinfo>
-#include <string>
 #include <cassert>
+#include <new>
+#include <string>
+#include <type_traits>
+#include <typeinfo>
 
 #include "test_macros.h"
 

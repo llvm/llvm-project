@@ -30,9 +30,12 @@
 #include <__ranges/copyable_box.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/view_interface.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/is_nothrow_copy_constructible.h>
+#include <__type_traits/make_unsigned.h>
+#include <__type_traits/type_identity.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

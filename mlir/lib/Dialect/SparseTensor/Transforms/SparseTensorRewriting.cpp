@@ -681,14 +681,21 @@ private:
     // COO tensor.
     // TODO: enhance foreachOp to take ordering to remove the need of a
     // temporary COO tensor here.
-    const RankedTensorType bufferTp = dstTp.isIdentity()
+    const RankedTensorType bufferTp = dstTp.isIdentity() || fromSparseConst
                                           ? dstTp.getRankedTensorType()
                                           : getUnorderedCOOFromTypeWithOrdering(
                                                 dstTp, dstTp.getDimToLvlMap());
+    // Only imposes foreach order on dense constant (which will be statically
+    // sorted by the sparse compiler), otherwise the rotated loop sequence
+    // results to bad cache locality.
+    AffineMapAttr foreachOrder = nullptr;
+    if (encDst.getDimOrdering() && fromSparseConst)
+      foreachOrder = AffineMapAttr::get(encDst.getDimOrdering());
+
     auto buffer =
         rewriter.create<AllocTensorOp>(loc, bufferTp, dynSizes).getResult();
     auto foreachOp = rewriter.create<ForeachOp>(
-        loc, src, buffer,
+        loc, src, buffer, foreachOrder,
         [&](OpBuilder &builder, Location loc, ValueRange dcvs, Value v,
             ValueRange reduc) {
           Value input = reduc.front();
@@ -795,7 +802,6 @@ private:
     // tensor (e.g., src tensor is not ordered or src tensor haves a different
     // dimOrdering).
     if (const SparseTensorType srcTp(srcRTT);
-        !isUniqueCOOType(srcRTT) &&
         !(srcTp.isAllOrdered() && srcTp.hasSameDimToLvlMap(dstTp))) {
       // Construct a COO tensor from the src tensor.
       // TODO: there may be cases for which more efficiently without

@@ -73,7 +73,7 @@ public:
     DCHECK(isAligned(reinterpret_cast<uptr>(this), alignof(ThisT)));
     PossibleRegions.init();
     u32 Seed;
-    const u64 Time = getMonotonicTime();
+    const u64 Time = getMonotonicTimeFast();
     if (!getRandom(reinterpret_cast<void *>(&Seed), sizeof(Seed)))
       Seed = static_cast<u32>(
           Time ^ (reinterpret_cast<uptr>(SizeClassInfoArray) >> 6));
@@ -758,7 +758,7 @@ private:
         return 0;
       if (Sci->ReleaseInfo.LastReleaseAtNs +
               static_cast<u64>(IntervalMs) * 1000000 >
-          getMonotonicTime()) {
+          getMonotonicTimeFast()) {
         return 0; // Memory was returned recently.
       }
     }
@@ -788,8 +788,12 @@ private:
         continue;
 
       const uptr GroupBase = decompactGroupBase(BG.CompactPtrGroupBase);
-      uptr AllocatedGroupSize =
-          GroupBase == CurGroupBase ? Sci->CurrentRegionAllocated : GroupSize;
+      // The `GroupSize` may not be divided by `BlockSize`, which means there is
+      // an unused space at the end of Region. Exclude that space to avoid
+      // unused page map entry.
+      uptr AllocatedGroupSize = GroupBase == CurGroupBase
+                                    ? Sci->CurrentRegionAllocated
+                                    : roundDownSlow(GroupSize, BlockSize);
       if (AllocatedGroupSize == 0)
         continue;
 
@@ -846,7 +850,7 @@ private:
       Sci->ReleaseInfo.LastReleasedBytes = Recorder.getReleasedBytes();
       TotalReleasedBytes += Sci->ReleaseInfo.LastReleasedBytes;
     }
-    Sci->ReleaseInfo.LastReleaseAtNs = getMonotonicTime();
+    Sci->ReleaseInfo.LastReleaseAtNs = getMonotonicTimeFast();
 
     return TotalReleasedBytes;
   }

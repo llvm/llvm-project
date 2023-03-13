@@ -842,13 +842,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   }
   case ISD::ConstantFP: {
     const APFloat &APF = cast<ConstantFPSDNode>(Node)->getValueAPF();
-    if (Subtarget->hasStdExtZfa()) {
-      if ((VT == MVT::f64 && RISCVLoadFPImm::getLoadFP64Imm(APF) != -1) || 
-          (VT == MVT::f16 && RISCVLoadFPImm::getLoadFP16Imm(APF) != -1) ||
-          (VT == MVT::f32 && RISCVLoadFPImm::getLoadFP32Imm(APF) != -1 && 
-           !APF.isPosZero()))
-        break;
-    }
+    if (static_cast<const RISCVTargetLowering *>(TLI)->isLegalZfaFPImm(APF, VT))
+      break;
 
     bool NegZeroF64 = APF.isNegZero() && VT == MVT::f64;
     SDValue Imm;
@@ -2969,8 +2964,14 @@ bool RISCVDAGToDAGISel::selectFPImm(SDValue N, SDValue &Imm) {
   // td can handle +0.0 already.
   if (APF.isPosZero())
     return false;
+
+  MVT VT = CFP->getSimpleValueType(0);
+
+  if (static_cast<const RISCVTargetLowering *>(TLI)->isLegalZfaFPImm(APF, VT))
+    return false;
+
   MVT XLenVT = Subtarget->getXLenVT();
-  if (CFP->getValueType(0) == MVT::f64 && !Subtarget->is64Bit()) {
+  if (VT == MVT::f64 && !Subtarget->is64Bit()) {
     assert(APF.isNegZero() && "Unexpected constant.");
     return false;
   }

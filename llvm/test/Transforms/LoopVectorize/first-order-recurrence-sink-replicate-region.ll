@@ -39,9 +39,9 @@ define void @sink_replicate_region_1(i32 %x, ptr %ptr, ptr noalias %dst) optsize
 ; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED1:%.+]]> = ir<%lv>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): loop.1
+; CHECK-NEXT: Successor(s): loop.0
 ; CHECK-EMPTY:
-; CHECK-NEXT: loop.1:
+; CHECK-NEXT: loop.0:
 ; CHECK-NEXT:   WIDEN ir<%conv> = sext vp<[[PRED1]]>
 ; CHECK-NEXT:   EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%0> ir<%conv>
 ; CHECK-NEXT: Successor(s): pred.store
@@ -199,9 +199,9 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED:%.+]]> = ir<%rem>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): loop.0.split
+; CHECK-NEXT: Successor(s): loop.0
 ; CHECK-EMPTY:
-; CHECK-NEXT: loop.0.split:
+; CHECK-NEXT: loop.0:
 ; CHECK-NEXT:   WIDEN ir<%add> = add vp<[[PRED]]>, ir<%recur.next>
 ; CHECK-NEXT:   WIDEN ir<%and.red.next> = and ir<%and.red>, ir<%add>
 ; CHECK-NEXT:   EMIT vp<[[SEL:%.+]]> = select vp<[[MASK]]> ir<%and.red.next> ir<%and.red>
@@ -272,9 +272,9 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, ptr 
 ; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED:%.+]]> = ir<%lv>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): loop.1
+; CHECK-NEXT: Successor(s): loop.0
 ; CHECK-EMPTY:
-; CHECK-NEXT: loop.1:
+; CHECK-NEXT: loop.0:
 ; CHECK-NEXT:   WIDEN ir<%conv> = sext vp<[[PRED]]>
 ; CHECK-NEXT:   EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%0> ir<%conv>
 ; CHECK-NEXT: Successor(s): pred.store
@@ -363,8 +363,8 @@ define void @sink_replicate_region_after_replicate_region(ptr %ptr, ptr noalias 
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
-; CHECK-NEXT:     REPLICATE ir<%rem> = srem vp<[[SPLICE]]>, ir<%x>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     REPLICATE ir<%rem> = srem vp<[[SPLICE]]>, ir<%x>
 ; CHECK-NEXT:     REPLICATE ir<%rem.div> = sdiv ir<20>, ir<%rem>
 ; CHECK-NEXT:     REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEPS]]>
 ; CHECK-NEXT:     REPLICATE store ir<%rem.div>, ir<%gep>

@@ -155,12 +155,12 @@ exit:
   ret i32 20
 }
 
-define void @loop_header_dom_or(i32 %y, i1 %c) {
+define void @loop_header_dom_or(i32 %y, i1 %c, i32 %start) {
 ; CHECK-LABEL: @loop_header_dom_or(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP_HEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[X_1:%.*]] = icmp ule i32 [[X]], 10
 ; CHECK-NEXT:    [[Y_1:%.*]] = icmp ugt i32 [[Y:%.*]], 99
 ; CHECK-NEXT:    [[OR:%.*]] = or i1 [[X_1]], [[Y_1]]
@@ -193,7 +193,7 @@ entry:
   br i1 %c, label %loop.header, label %exit
 
 loop.header:
-  %x = phi i32 [ 0, %entry ], [ %x.next, %loop.latch ]
+  %x = phi i32 [ %start, %entry ], [ %x.next, %loop.latch ]
   %x.1 = icmp ule i32 %x, 10
   %y.1 = icmp ugt i32 %y, 99
   %or = or i1 %x.1, %y.1

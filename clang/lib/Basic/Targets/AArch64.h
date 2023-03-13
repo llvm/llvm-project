@@ -143,9 +143,8 @@ public:
 
   std::optional<std::pair<unsigned, unsigned>>
   getVScaleRange(const LangOptions &LangOpts) const override;
-
-  bool getFeatureDepOptions(StringRef Feature,
-                            std::string &Options) const override;
+  bool doesFeatureAffectCodeGen(StringRef Name) const override;
+  StringRef getFeatureDependencies(StringRef Name) const override;
   bool validateCpuSupports(StringRef FeatureStr) const override;
   bool hasFeature(StringRef Feature) const override;
   void setFeatureEnabled(llvm::StringMap<bool> &Features, StringRef Name,

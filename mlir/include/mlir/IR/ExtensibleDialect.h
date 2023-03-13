@@ -69,6 +69,17 @@ public:
   get(StringRef name, ExtensibleDialect *dialect, VerifierFn &&verifier,
       ParserFn &&parser, PrinterFn &&printer);
 
+  /// Sets the verifier function for this attribute. It should emits an error
+  /// message and returns failure if a problem is detected, or returns success
+  /// if everything is ok.
+  void setVerifyFn(VerifierFn &&verify) { verifier = std::move(verify); }
+
+  /// Sets the static hook for parsing this attribute assembly.
+  void setParseFn(ParserFn &&parse) { parser = std::move(parse); }
+
+  /// Sets the static hook for printing this attribute assembly.
+  void setPrintFn(PrinterFn &&print) { printer = std::move(print); }
+
   /// Check that the attribute parameters are valid.
   LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
                        ArrayRef<Attribute> params) const {
@@ -213,6 +224,17 @@ public:
   static std::unique_ptr<DynamicTypeDefinition>
   get(StringRef name, ExtensibleDialect *dialect, VerifierFn &&verifier,
       ParserFn &&parser, PrinterFn &&printer);
+
+  /// Sets the verifier function for this type. It should emits an error
+  /// message and returns failure if a problem is detected, or returns success
+  /// if everything is ok.
+  void setVerifyFn(VerifierFn &&verify) { verifier = std::move(verify); }
+
+  /// Sets the static hook for parsing this type assembly.
+  void setParseFn(ParserFn &&parse) { parser = std::move(parse); }
+
+  /// Sets the static hook for printing this type assembly.
+  void setPrintFn(PrinterFn &&print) { printer = std::move(print); }
 
   /// Check that the type parameters are valid.
   LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,

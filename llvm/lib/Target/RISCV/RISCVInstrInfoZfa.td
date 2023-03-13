@@ -58,13 +58,13 @@ def rtzarg : Operand<XLenVT> {
 //===----------------------------------------------------------------------===//
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1 in
-class FPBinaryOp_rr<bits<7> funct7, bits<3> funct3, DAGOperand rdty, 
+class FPBinaryOp_rr<bits<7> funct7, bits<3> funct3, DAGOperand rdty,
                     DAGOperand rsty, string opcodestr>
-    : RVInstR<funct7, funct3, OPC_OP_FP, (outs rdty:$rd), 
+    : RVInstR<funct7, funct3, OPC_OP_FP, (outs rdty:$rd),
               (ins rsty:$rs1, rsty:$rs2), opcodestr, "$rd, $rs1, $rs2">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1 in
-class FPUnaryOp_imm<bits<7> funct7, bits<5> rs2val, bits<3> funct3, RISCVOpcode opcode, 
+class FPUnaryOp_imm<bits<7> funct7, bits<5> rs2val, bits<3> funct3, RISCVOpcode opcode,
                     dag outs, dag ins, string opcodestr, string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
   bits<5> imm;
@@ -135,10 +135,11 @@ def FMV_X_W_FPR64 : FPUnaryOp_r<0b1110000, 0b00000, 0b000, GPR, FPR64,
                     Sched<[WriteFMovF32ToI32, ReadFMovF32ToI32]>;
 } // Predicates = [HasStdExtZfa, HasStdExtD, IsRV32]
 
-let Predicates = [HasStdExtZfa, HasStdExtZfh] in {
+let Predicates = [HasStdExtZfa, HasStdExtZfhOrZvfh] in
 def FLI_H : FPUnaryOp_imm<0b1111010, 0b00001, 0b000, OPC_OP_FP, (outs FPR16:$rd),
             (ins loadfp16imm:$imm), "fli.h", "$rd, $imm">;
 
+let Predicates = [HasStdExtZfa, HasStdExtZfh] in {
 def FMINM_H: FPALU_rr<0b0010110, 0b010, "fminm.h", FPR16, /*Commutable*/ 1>;
 def FMAXM_H: FPALU_rr<0b0010110, 0b011, "fmaxm.h", FPR16, /*Commutable*/ 1>;
 
@@ -179,15 +180,15 @@ def : InstAlias<"fgeq.h $rd, $rs, $rt",
 //===----------------------------------------------------------------------===//
 
 def fp32imm_to_loadfpimm : SDNodeXForm<fpimm, [{
-  return CurDAG->getTargetConstant(RISCVLoadFPImm::getLoadFP32Imm(N->getValueAPF()), 
+  return CurDAG->getTargetConstant(RISCVLoadFPImm::getLoadFP32Imm(N->getValueAPF()),
                                    SDLoc(N), Subtarget->getXLenVT());}]>;
 
 def fp64imm_to_loadfpimm : SDNodeXForm<fpimm, [{
-  return CurDAG->getTargetConstant(RISCVLoadFPImm::getLoadFP64Imm(N->getValueAPF()), 
+  return CurDAG->getTargetConstant(RISCVLoadFPImm::getLoadFP64Imm(N->getValueAPF()),
                                    SDLoc(N), Subtarget->getXLenVT());}]>;
 
 def fp16imm_to_loadfpimm : SDNodeXForm<fpimm, [{
-  return CurDAG->getTargetConstant(RISCVLoadFPImm::getLoadFP16Imm(N->getValueAPF()), 
+  return CurDAG->getTargetConstant(RISCVLoadFPImm::getLoadFP16Imm(N->getValueAPF()),
                                    SDLoc(N), Subtarget->getXLenVT());}]>;
 
 let Predicates = [HasStdExtZfa] in {

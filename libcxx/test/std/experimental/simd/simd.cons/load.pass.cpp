@@ -38,13 +38,13 @@ void supported_native_simd_ctor(...) = delete;
 
 void compile_load_ctor() {
   supported_native_simd_ctor<int>((int*)nullptr, ex::element_aligned_tag());
-  supported_native_simd_ctor<uint32_t>((int*)nullptr,
+  supported_native_simd_ctor<std::uint32_t>((int*)nullptr,
                                        ex::element_aligned_tag());
   supported_native_simd_ctor<double>((float*)nullptr,
                                      ex::element_aligned_tag());
   supported_native_simd_ctor<uint16_t>((unsigned int*)nullptr,
                                        ex::element_aligned_tag());
-  supported_native_simd_ctor<uint32_t>((float*)nullptr,
+  supported_native_simd_ctor<std::uint32_t>((float*)nullptr,
                                        ex::element_aligned_tag());
 
   not_supported_native_simd_ctor<int>((int*)nullptr, int());

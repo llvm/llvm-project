@@ -508,6 +508,20 @@ cc_library(
 )
 
 cc_library(
+    name = "TestVectorToSPIRV",
+    srcs = glob(["lib/Conversion/VectorToSPIRV/*.cpp"]),
+    deps = [
+        "//mlir:ArithDialect",
+        "//mlir:FuncDialect",
+        "//mlir:Pass",
+        "//mlir:SPIRVDialect",
+        "//mlir:Transforms",
+        "//mlir:VectorDialect",
+        "//mlir:VectorToSPIRV",
+    ],
+)
+
+cc_library(
     name = "TestAffine",
     srcs = glob([
         "lib/Dialect/Affine/*.cpp",
@@ -826,6 +840,7 @@ cc_library(
     deps = [
         "//mlir:AffineDialect",
         "//mlir:Analysis",
+        "//mlir:ArithDialect",
         "//mlir:FuncDialect",
         "//mlir:GPUDialect",
         "//mlir:LLVMDialect",

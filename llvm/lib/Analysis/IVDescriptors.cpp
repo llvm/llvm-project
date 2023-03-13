@@ -1107,7 +1107,7 @@ Value *RecurrenceDescriptor::getRecurrenceIdentity(RecurKind K, Type *Tp,
       return ConstantFP::get(Tp, 0.0L);
     return ConstantFP::get(Tp, -0.0L);
   case RecurKind::UMin:
-    return ConstantInt::get(Tp, -1);
+    return ConstantInt::get(Tp, -1, true);
   case RecurKind::UMax:
     return ConstantInt::get(Tp, 0);
   case RecurKind::SMin:

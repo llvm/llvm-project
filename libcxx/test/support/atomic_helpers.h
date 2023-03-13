@@ -10,6 +10,7 @@
 #define ATOMIC_HELPERS_H
 
 #include <cassert>
+#include <cstdint>
 
 #include "test_macros.h"
 
@@ -88,7 +89,7 @@ struct TestEachIntegralType {
     TestFunctor<int16_t>()();
     TestFunctor<uint16_t>()();
     TestFunctor<int32_t>()();
-    TestFunctor<uint32_t>()();
+    TestFunctor<std::uint32_t>()();
     TestFunctor<int64_t>()();
     TestFunctor<uint64_t>()();
   }

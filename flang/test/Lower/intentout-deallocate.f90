@@ -238,5 +238,26 @@ contains
 ! CHECK:   %{{.*}} = fir.call @_FortranAAllocatableDeallocatePolymorphic(%[[BOX_NONE]], %[[NULL_TYPE_DESC]], %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK: }
 
+  subroutine sub16(p)
+    class(t), optional, intent(out), allocatable :: p
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMmod1Psub16(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.type<_QMmod1Tt{a:i32}>>>> {fir.bindc_name = "p", fir.optional}) {
+! CHECK: %[[IS_PRESENT:.*]] = fir.is_present %[[ARG0]] : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMmod1Tt{a:i32}>>>>) -> i1
+! CHECK: fir.if %[[IS_PRESENT]] {
+! CHECK:   %[[BOX:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMmod1Tt{a:i32}>>>>
+! CHECK:   %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.class<!fir.heap<!fir.type<_QMmod1Tt{a:i32}>>>) -> !fir.heap<!fir.type<_QMmod1Tt{a:i32}>>
+! CHECK:   %[[BOX_ADDR_PTR:.*]] = fir.convert %[[BOX_ADDR]] : (!fir.heap<!fir.type<_QMmod1Tt{a:i32}>>) -> i64
+! CHECK:   %[[C0:.*]] = arith.constant 0 : i64
+! CHECK:   %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_PTR]], %[[C0]] : i64
+! CHECK:   fir.if %[[IS_ALLOCATED]] {
+! CHECK:     %[[TYPE_DESC:.*]] = fir.type_desc !fir.type<_QMmod1Tt{a:i32}>
+! CHECK:     %[[BOX_NONE:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMmod1Tt{a:i32}>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:     %[[TYPE_NONE:.*]] = fir.convert %[[TYPE_DESC]] : (!fir.tdesc<!fir.type<_QMmod1Tt{a:i32}>>) -> !fir.ref<none> 
+! CHECK:     %{{.*}} = fir.call @_FortranAAllocatableDeallocatePolymorphic(%[[BOX_NONE]], %[[TYPE_NONE]], %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:   }
+! CHECK: }
+
 end module
 

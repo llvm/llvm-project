@@ -108,9 +108,16 @@ void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
     Builder.defineMacro("__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__", Str);
   }
 
-  // Tell users about the kernel if there is one.
-  if (Triple.isOSDarwin())
+  if (Triple.isOSDarwin()) {
+    // Any darwin OS defines a general darwin OS version macro in addition
+    // to the other OS specific macros.
+    assert(OsVersion.getMinor().value_or(0) < 100 &&
+           OsVersion.getSubminor().value_or(0) < 100 && "Invalid version!");
+    Builder.defineMacro("__ENVIRONMENT_OS_VERSION_MIN_REQUIRED__", Str);
+
+    // Tell users about the kernel if there is one.
     Builder.defineMacro("__MACH__");
+  }
 
   PlatformMinVersion = OsVersion;
 }

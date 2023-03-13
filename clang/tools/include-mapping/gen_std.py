@@ -245,9 +245,8 @@ def main():
       # We don't index std literal operators (e.g.
       # std::literals::chrono_literals::operator""d), these symbols can't be
       # accessed by std::<symbol_name>.
-      # FIXME: index std::placeholders symbols, placeholders.html page is
-      # different (which contains one entry for _1, _2, ..., _N), we need special
-      # handling.
+      #
+      # std::placeholders symbols are handled manually in StdSpecialSymbolMap.inc
       (symbol_index_root, "chrono.html", "std::chrono::"),
       (symbol_index_root, "filesystem.html", "std::filesystem::"),
       (symbol_index_root, "pmr.html", "std::pmr::"),

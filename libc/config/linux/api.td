@@ -108,9 +108,6 @@ def SchedAPI : PublicAPI<"sched.h"> {
 
 def SysMManAPI : PublicAPI<"sys/mman.h"> {
   let Types = ["off_t", "size_t"];
-  let Macros = [
-  ];
-
 }
 
 def SignalAPI : PublicAPI<"signal.h"> {
@@ -177,7 +174,8 @@ def DirentAPI : PublicAPI<"dirent.h"> {
 }
 
 def UniStdAPI : PublicAPI<"unistd.h"> {
-  let Types = ["__exec_argv_t", "__exec_envp_t", "off_t", "pid_t", "size_t", "ssize_t", "uid_t", "__getoptargv_t"];
+  let Types = ["__exec_argv_t", "__exec_envp_t", "off_t", "pid_t", "size_t",
+               "ssize_t", "uid_t", "__getoptargv_t"];
 }
 
 def SysRandomAPI : PublicAPI<"sys/random.h"> {
@@ -185,7 +183,8 @@ def SysRandomAPI : PublicAPI<"sys/random.h"> {
 }
 
 def SysSelectAPI : PublicAPI<"sys/select.h"> {
-  let Types = ["fd_set", "sigset_t", "suseconds_t", "time_t", "struct timespec", "struct timeval"];
+  let Types = ["fd_set", "sigset_t", "suseconds_t", "time_t", "struct timespec",
+               "struct timeval"];
 }
 
 def SysResourceAPI : PublicAPI<"sys/resource.h"> {

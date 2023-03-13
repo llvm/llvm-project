@@ -1416,7 +1416,6 @@ sw:
 define void @int_max_table_cluster(i8 %x) {
 ; CHECK-LABEL: int_max_table_cluster:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    cmpb $-9, %dil
 ; CHECK-NEXT:    ja .LBB15_4
 ; CHECK-NEXT:  # %bb.1: # %entry

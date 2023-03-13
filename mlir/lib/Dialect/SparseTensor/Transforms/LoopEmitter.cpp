@@ -43,29 +43,25 @@ static Value genIndexLoad(OpBuilder &builder, Location loc, Value mem,
   return load;
 }
 
-// TODO: Support dynamic sized slice.
-static Value getSliceOffset(OpBuilder &builder, Location loc,
-                            SparseTensorEncodingAttr enc, unsigned lvl) {
-  return constantIndex(builder, loc, *enc.getStaticLvlSliceOffset(lvl));
+static Value genSliceOffset(OpBuilder &builder, Location loc, Value tensor,
+                            unsigned lvl) {
+  auto enc = getSparseTensorEncoding(tensor.getType());
+  // FIXME: `toOrigDim` is deprecated
+  return createOrFoldSliceOffsetOp(builder, loc, tensor, toOrigDim(enc, lvl));
 }
 
-static Value getSliceSize(OpBuilder &builder, Location loc,
-                          SparseTensorEncodingAttr enc, unsigned lvl) {
-  return constantIndex(builder, loc, *enc.getStaticLvlSliceSize(lvl));
-}
-
-static Value getSliceStride(OpBuilder &builder, Location loc,
-                            SparseTensorEncodingAttr enc, unsigned lvl) {
-  return constantIndex(builder, loc, *enc.getStaticLvlSliceStride(lvl));
+static Value genSliceStride(OpBuilder &builder, Location loc, Value tensor,
+                            unsigned lvl) {
+  auto enc = getSparseTensorEncoding(tensor.getType());
+  // FIXME: `toOrigDim` is deprecated
+  return createOrFoldSliceStrideOp(builder, loc, tensor, toOrigDim(enc, lvl));
 }
 
 // Converts a coordinate relative to the slice to the coordinate relative
 // to the underlying tensor.
 static Value toSliceCoord(OpBuilder &builder, Location loc, Value v,
-                          SparseTensorEncodingAttr enc, unsigned lvl) {
-
-  Value stride = getSliceStride(builder, loc, enc, lvl);
-  Value offset = getSliceOffset(builder, loc, enc, lvl);
+                          Value offset, Value stride, Value tensor,
+                          unsigned lvl) {
   // iv = iv * stride + offset
   v = builder.create<arith::MulIOp>(loc, v, stride);
   v = builder.create<arith::AddIOp>(loc, v, offset);
@@ -75,40 +71,58 @@ static Value toSliceCoord(OpBuilder &builder, Location loc, Value v,
 // Converts a coordinate relative to the underlying tensor to the coordinate
 // relative to the slice, returns a extra reminder value
 static std::pair<Value, Value> fromSliceCrd(OpBuilder &builder, Location loc,
-                                            Value v,
-                                            SparseTensorEncodingAttr enc,
+                                            Value iv, Value offset,
+                                            Value stride, Value tensor,
                                             unsigned lvl) {
-  Value stride = getSliceStride(builder, loc, enc, lvl);
-  Value offset = getSliceOffset(builder, loc, enc, lvl);
   // iv = (iv - offset) / stride
-  v = builder.create<arith::SubIOp>(loc, v, offset);
-  Value rem = builder.create<arith::RemUIOp>(loc, v, stride);
-  v = builder.create<arith::DivUIOp>(loc, v, stride);
-  return std::make_pair(v, rem);
+  iv = builder.create<arith::SubIOp>(loc, iv, offset);
+  Value rem = builder.create<arith::RemUIOp>(loc, iv, stride);
+  iv = builder.create<arith::DivUIOp>(loc, iv, stride);
+  return std::make_pair(iv, rem);
 }
 
-static std::pair<Value, Value>
-genSliceLegitPredicate(OpBuilder &builder, Location loc, Value crd,
-                       SparseTensorEncodingAttr enc, unsigned lvl) {
-  std::pair<Value, Value> trans = fromSliceCrd(builder, loc, crd, enc, lvl);
-  // First, crd >= offset (TODO: seems unsigned >= 0 won't be folded, skip
-  // the check if the offset is zero).
-  auto geOffset =
-      builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::uge, crd,
-                                    getSliceOffset(builder, loc, enc, lvl));
+std::pair<Value, Value>
+LoopEmitter::genSliceLegitPredicate(OpBuilder &builder, Location loc, Value crd,
+                                    unsigned tid, unsigned lvl) {
+  assert(isSparseSlices[tid]);
+  Value slice = tensors[tid];
+  Value offset = sliceOffsets[tid][lvl];
+  Value stride = sliceStrides[tid][lvl];
+  auto enc = getSparseTensorEncoding(slice.getType());
+
+  std::pair<Value, Value> transformedCrd =
+      fromSliceCrd(builder, loc, crd, offset, stride, slice, lvl);
+
+  SmallVector<Value, 3> conds; // at most 3 conditions
+
+  // First, coord >= offset (skip the check if offset is known to be 0).
+  if (auto staticOffset = enc.getStaticLvlSliceOffset(lvl);
+      !(staticOffset.has_value() && *staticOffset == 0)) {
+    auto geOffset = builder.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::uge, crd, offset);
+    conds.push_back(geOffset);
+  }
+
   // Second, coord_in_slice < length
-  auto ltLength =
-      builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult, trans.first,
-                                    getSliceSize(builder, loc, enc, lvl));
+  auto ltLength = builder.create<arith::CmpIOp>(
+      loc, arith::CmpIPredicate::ult, transformedCrd.first, lvlSizes[tid][lvl]);
+  conds.push_back(ltLength);
 
-  // Third, rem == 0; confirmed that (a % 1) will be folded to 0
-  auto fitStride =
-      builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, trans.second,
-                                    constantIndex(builder, loc, 0));
+  // Third, rem == 0 (skip the check if stride is known to be 1).
+  if (auto staticStride = enc.getStaticLvlSliceStride(lvl);
+      !(staticStride.has_value() && *staticStride == 1)) {
+    auto fitStride = builder.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::eq, transformedCrd.second,
+        constantIndex(builder, loc, 0));
+    conds.push_back(fitStride);
+  }
 
-  auto pred = builder.create<arith::AndIOp>(loc, geOffset, ltLength);
-  pred = builder.create<arith::AndIOp>(loc, pred, fitStride);
-  return {trans.first, pred};
+  // Must meet all condition to be a valid coordinate in slice.
+  auto pred = conds.front();
+  for (auto cond : ValueRange(conds).drop_front())
+    pred = builder.create<arith::AndIOp>(loc, pred, cond);
+
+  return {transformedCrd.first, pred};
 }
 
 //===----------------------------------------------------------------------===//
@@ -119,10 +133,9 @@ Value LoopEmitter::genAddress(OpBuilder &builder, Location loc, size_t tid,
                               size_t dim, Value iv) {
   Value p = dim == 0 ? constantIndex(builder, loc, 0) : pidxs[tid][dim - 1];
   Value mul = builder.create<arith::MulIOp>(loc, highs[tid][dim], p);
-  if (isSparseSlices[tid]) {
-    auto enc = getSparseTensorEncoding(tensors[tid].getType());
-    iv = toSliceCoord(builder, loc, iv, enc, dim);
-  }
+  if (isSparseSlices[tid])
+    iv = toSliceCoord(builder, loc, iv, sliceOffsets[tid][dim],
+                      sliceStrides[tid][dim], tensors[tid], dim);
   Value add = builder.create<arith::AddIOp>(loc, mul, iv);
   return add;
 }
@@ -204,6 +217,8 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
   this->isSparseOut = isSparseOut;
   this->tensors.assign(ts.begin(), ts.end());
   this->isSparseSlices.assign(tensors.size(), false);
+  this->sliceOffsets.assign(tensors.size(), std::vector<Value>());
+  this->sliceStrides.assign(tensors.size(), std::vector<Value>());
   this->dimTypes.assign(tensors.size(), std::vector<DimLevelType>());
   this->pidxs.assign(tensors.size(), std::vector<Value>());
   this->segHi.assign(tensors.size(), std::vector<Value>());
@@ -246,6 +261,8 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
       dimTypes[tid].assign(rank, DimLevelType::Dense);
 
     // Initialize using empty value.
+    sliceOffsets[tid].assign(rank, Value());
+    sliceStrides[tid].assign(rank, Value());
     pidxs[tid].assign(rank, Value());
     segHi[tid].assign(rank, Value());
     coord[tid].assign(rank, Value());
@@ -300,11 +317,17 @@ void LoopEmitter::initializeLoopEmit(OpBuilder &builder, Location loc,
         assert(isDenseDLT(dlt));
       }
 
-      // Find upper bound in current dimension.
       // FIXME: `toOrigDim` is deprecated
-      const Dimension d = toOrigDim(enc, l);
-      lvlSizes[t][l] = highs[t][l] =
-          mlir::linalg::createOrFoldDimOp(builder, loc, tensor, d);
+      // Since we do not have HigherOrdering now, we can always rely on the 1:1
+      // mapping from level to dimension to retrieve the level size.
+      Value lvlSz = mlir::linalg::createOrFoldDimOp(builder, loc, tensor,
+                                                    toOrigDim(enc, l));
+      // Find upper bound in current dimension.
+      highs[t][l] = lvlSizes[t][l] = lvlSz;
+      if (isSparseSlices[t]) {
+        sliceOffsets[t][l] = genSliceOffset(builder, loc, tensors[t], l);
+        sliceStrides[t][l] = genSliceStride(builder, loc, tensors[t], l);
+      }
     }
 
     // Perform the required bufferization. Dense inputs materialize
@@ -405,14 +428,15 @@ Operation *LoopEmitter::enterLoopOverTensorAtDim(
     isSparseInput = isSparseInput || isSparse;
   }
 
-  auto enc = getSparseTensorEncoding(tensors[tid].getType());
   const auto reassoc = getCollapseReassociation(tid, dim);
-  dim = reassoc.front();
   // TODO: support dynamic slices.
+  // Uses the first dimension here to build the loop bound (which is also the
+  // biggest range).
+  const auto fdim = reassoc.front();
   Value step = constantIndex(builder, loc, 1);
-  Value lo = isSparseInput ? pidxs[tid][dim]      // current offset
+  Value lo = isSparseInput ? pidxs[tid][fdim]     // current offset
                            : loopSeqStack.back(); // universal index
-  Value hi = highs[tid][dim];
+  Value hi = highs[tid][fdim];
 
   Operation *loop = nullptr;
   Value iv;
@@ -466,7 +490,7 @@ Operation *LoopEmitter::enterLoopOverTensorAtDim(
     for (Value red : reduc)
       types.push_back(red.getType());
 
-    auto [trans, pred] = genSliceLegitPredicate(builder, loc, crd, enc, dim);
+    auto [trans, pred] = genSliceLegitPredicate(builder, loc, crd, tid, dim);
     bool hasReduc = !types.empty();
     scf::IfOp ifOp = builder.create<scf::IfOp>(loc, types, pred,
                                                /*else*/ hasReduc);
@@ -585,9 +609,17 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtDims(
   for (auto [tid, dim] : llvm::zip(tids, dims)) {
     if (isCompressedDLT(dimTypes[tid][dim]) ||
         isSingletonDLT(dimTypes[tid][dim])) {
+      const auto reassoc = getCollapseReassociation(tid, dim);
+      for (unsigned i = 0, e = reassoc.size() - 1; i < e; i++) {
+        if (!isUniqueDLT(dimTypes[tid][reassoc[i]])) {
+          // This is the segment high for each non-unique levels.
+          types.push_back(indexType);
+          operands.push_back(constantIndex(builder, loc, 0));
+        }
+      }
       assert(pidxs[tid][dim]);
       types.push_back(indexType);
-      operands.push_back(pidxs[tid][dim]);
+      operands.push_back(pidxs[tid][reassoc.front()]);
     }
   }
   // The position where user-supplied reduction variable starts.
@@ -616,15 +648,22 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtDims(
     unsigned tid = t; // Why `t` can not be captured by lambda?
     if (isCompressedDLT(dimTypes[tid][lvl]) ||
         isSingletonDLT(dimTypes[tid][lvl])) {
+      const auto reassoc = getCollapseReassociation(tid, lvl);
+      assert(reassoc.size() == 1 || isUniqueCOOType(tensors[tid].getType()));
+      for (unsigned i = 0, e = reassoc.size() - 1; i < e; i++) {
+        if (!isUniqueDLT(dimTypes[tid][reassoc[i]])) {
+          // Links the SSA chain for segHi.
+          segHi[tid][reassoc[i]] = after->getArgument(o++);
+        }
+      }
       Value op1 = before->getArgument(o);
-      Value op2 = highs[tid][lvl];
+      // We used the first level bound as the bound the collapsed set of levels.
+      Value op2 = highs[tid][reassoc.front()];
       Value opc = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
                                                 op1, op2);
       cond = cond ? builder.create<arith::AndIOp>(loc, cond, opc) : opc;
       // Update positions
       Value pos = after->getArgument(o++);
-      const auto reassoc = getCollapseReassociation(tid, lvl);
-      assert(reassoc.size() == 1 || isUniqueCOOType(tensors[tid].getType()));
       // For COO, the position is the same across consecutive levels.
       llvm::for_each(reassoc,
                      [this, tid, pos](Level lvl) { pidxs[tid][lvl] = pos; });
@@ -643,11 +682,8 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtDims(
         isSingletonDLT(dimTypes[tid][dim])) {
       coord[tid][dim] = genSparseCrd(builder, loc, tid, dim);
       if (isSparseSlices[tid]) {
-        Value load =
-            genIndexLoad(builder, loc, crdBuffer[tid][dim], pidxs[tid][dim]);
-        auto enc = getSparseTensorEncoding(tensors[tid].getType());
         auto [trans, pred] =
-            genSliceLegitPredicate(builder, loc, load, enc, dim);
+            genSliceLegitPredicate(builder, loc, coord[tid][dim], tid, dim);
         slicesPreds.emplace_back(pred, i);
         // Updates to the relative coordinate to the slice.
         coord[tid][dim] = trans;
@@ -662,7 +698,7 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtDims(
     // Generates a list of if statments
     //  pidx = in_slice ? pidx : pidx + 1
     // TODO: instead of always picking pidx + 1, we should set pidx = high to
-    // break to loop the coordinates is larger than the slice size.
+    // break to loop if the coordinates is larger than the slice size.
     for (auto [pred, idx] : slicesPreds) {
       Value nextPidx = builder.create<arith::AddIOp>(
           loc, yields[idx], constantIndex(builder, loc, 1));
@@ -714,9 +750,48 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtDims(
   assert(loopStack.size() == loopSeqStack.size());
 
   for (auto [tid, dim] : llvm::zip(tids, dims)) {
-    if (!isUniqueDLT(dimTypes[tid][dim])) {
-      segHi[tid][dim] = genSegmentHigh(builder, loc, tid, dim, pidxs[tid][dim],
-                                       highs[tid][dim]);
+    const auto reassoc = getCollapseReassociation(tid, dim);
+    assert(reassoc.size() == 1 || isUniqueCOOType(tensors[tid].getType()));
+    // TODO: Refactors this into smaller functions.
+    // NOTE: For all the collapsed level (except for the last one, that is why
+    // the loop ends with `reassoc.size() - 1`), as each iteration is advanced
+    // by the segment size of the last level, which does not always invalidate
+    // the segment size for the previous levels, thus we need to propagate the
+    // segment sizes across loop iterations and only forward if needed.
+    //
+    // E.g., for a COO tensor with the following coordinates array.
+    // (0, 0, 1),
+    // (0, 0, 2),
+    // (1, 1, 1),
+    // segHi[lvl=0] = segHi[lvl=1] = 2
+    // segHi[lvl=2] = 1,
+    // the first iteration does not invalidate segHi[0] and segHi[1]
+    for (unsigned i = 0, e = reassoc.size() - 1; i < e; i++) {
+      const auto lvl = reassoc[i];
+      if (!isUniqueDLT(dimTypes[tid][lvl])) {
+        Value pos = pidxs[tid][lvl];
+        assert(segHi[tid][lvl]);
+        Value newSegHi = builder.create<arith::CmpIOp>(
+            loc, arith::CmpIPredicate::uge, pos, segHi[tid][lvl]);
+        auto ifOp = builder.create<scf::IfOp>(loc, builder.getIndexType(),
+                                              newSegHi, true);
+        {
+          OpBuilder::InsertionGuard guard(builder);
+          builder.setInsertionPointToStart(ifOp.thenBlock());
+          builder.create<scf::YieldOp>(
+              loc,
+              genSegmentHigh(builder, loc, tid, lvl, pos, highs[tid][lvl]));
+          // Else, resues the same segment high.
+          builder.setInsertionPointToStart(ifOp.elseBlock());
+          builder.create<scf::YieldOp>(loc, segHi[tid][lvl]);
+        }
+        highs[tid][lvl + 1] = segHi[tid][lvl] = ifOp.getResult(0);
+      }
+    };
+    const auto lvl = reassoc.back();
+    if (!isUniqueDLT(dimTypes[tid][lvl])) {
+      segHi[tid][lvl] = genSegmentHigh(builder, loc, tid, lvl, pidxs[tid][lvl],
+                                       highs[tid][lvl]);
     }
   }
 
@@ -906,6 +981,15 @@ void LoopEmitter::exitCoIterationLoop(OpBuilder &builder, Location loc,
   for (auto [tid, dim] : llvm::zip(tids, dims)) {
     if (isCompressedDLT(dimTypes[tid][dim]) ||
         isSingletonDLT(dimTypes[tid][dim])) {
+      const auto reassoc = getCollapseReassociation(tid, dim);
+      assert(reassoc.size() == 1 || isUniqueCOOType(tensors[tid].getType()));
+      for (unsigned i = 0, e = reassoc.size() - 1; i < e; i++) {
+        const auto lvl = reassoc[i];
+        if (!isUniqueDLT(dimTypes[tid][lvl])) {
+          operands.push_back(segHi[tid][lvl]);
+          o++;
+        }
+      }
       Value op1 = coord[tid][dim];
       Value op3 = pidxs[tid][dim];
       Value cmp =
@@ -913,13 +997,18 @@ void LoopEmitter::exitCoIterationLoop(OpBuilder &builder, Location loc,
       // If the loop contains a coiteration with non-unique level, we fast
       // forward all the duplicated coords by setting the position to the
       // segment high.
-      Value add = !isUniqueDLT(dimTypes[tid][dim])
-                      ? segHi[tid][dim]
+      // If this is a collapsed dim, we forward pidx based on the last level in
+      // the collapsed level set.
+      Value add = !isUniqueDLT(dimTypes[tid][reassoc.back()])
+                      ? segHi[tid][reassoc.back()]
                       : builder.create<arith::AddIOp>(loc, op3, one);
+
       operands.push_back(builder.create<arith::SelectOp>(loc, cmp, add, op3));
       // Following loops continue iteration from the break point of the
       // current while loop.
-      pidxs[tid][dim] = whileOp->getResult(o++);
+      Value pos = whileOp->getResult(o++);
+      const auto t = tid;
+      llvm::for_each(reassoc, [this, t, pos](Level l) { pidxs[t][l] = pos; });
       // The coordinates are invalid now.
       coord[tid][dim] = nullptr;
       // The segment high are invalid now

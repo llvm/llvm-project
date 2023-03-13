@@ -26,16 +26,21 @@ class Loop;
 class PredicatedScalarEvolution;
 class TargetLibraryInfo;
 class VPBuilder;
+class VPRecipeBuilder;
 
 struct VPlanTransforms {
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes.
   static void
-  VPInstructionsToVPRecipes(Loop *OrigLoop, VPlanPtr &Plan,
+  VPInstructionsToVPRecipes(VPlanPtr &Plan,
                             function_ref<const InductionDescriptor *(PHINode *)>
                                 GetIntOrFpInductionDescriptor,
                             SmallPtrSetImpl<Instruction *> &DeadInstructions,
                             ScalarEvolution &SE, const TargetLibraryInfo &TLI);
+
+  /// Wrap predicated VPReplicateRecipes with a mask operand in an if-then
+  /// region block and remove the mask operand.
+  static void addReplicateRegions(VPlan &Plan, VPRecipeBuilder &Builder);
 
   static bool sinkScalarOperands(VPlan &Plan);
 

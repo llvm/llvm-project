@@ -167,6 +167,11 @@ basic_ostream<wchar_t, traits>& operator<<(basic_ostream<wchar_t, traits>&, cons
 #include <__config>
 #include <__memory/shared_ptr.h>
 #include <__memory/unique_ptr.h>
+#include <__type_traits/conjunction.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/is_base_of.h>
+#include <__type_traits/void_t.h>
+#include <__utility/declval.h>
 #include <bitset>
 #include <ios>
 #include <locale>
@@ -1189,6 +1194,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostream<wchar_t>;
 _LIBCPP_END_NAMESPACE_STD
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <atomic>
 #  include <concepts>
 #  include <iterator>
 #  include <type_traits>

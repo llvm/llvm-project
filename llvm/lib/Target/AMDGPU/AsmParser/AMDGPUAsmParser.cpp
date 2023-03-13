@@ -4820,6 +4820,12 @@ bool AMDGPUAsmParser::validateTHAndScopeBits(const MCInst &Inst,
   if (TH == 0)
     return true;
 
+  if ((TID.TSFlags & SIInstrFlags::SMRD) &&
+      ((TH == AMDGPU::CPol::TH_NT_RT) ||
+       (TH == AMDGPU::CPol::TH_RT_NT) ||
+       (TH == AMDGPU::CPol::TH_NT_HT)))
+    return PrintError("invalid th value for SMEM instruction");
+
   if (TH == AMDGPU::CPol::TH_BYPASS) {
     if ((Scope != AMDGPU::CPol::SCOPE_SYS &&
          CPol & AMDGPU::CPol::TH_REAL_BYPASS) ||
@@ -4827,7 +4833,6 @@ bool AMDGPUAsmParser::validateTHAndScopeBits(const MCInst &Inst,
          !(CPol & AMDGPU::CPol::TH_REAL_BYPASS)))
       return PrintError("scope and th combination is not valid");
   }
-
 
   bool IsStore = TID.mayStore();
   bool IsAtomic =

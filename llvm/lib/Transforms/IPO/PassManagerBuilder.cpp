@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
-#include "llvm-c/Transforms/PassManagerBuilder.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -103,17 +102,12 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   if (OptLevel > 1) {
     // Speculative execution if the target has divergent branches; otherwise nop.
     MPM.add(createSpeculativeExecutionIfHasBranchDivergencePass());
-
-    MPM.add(createJumpThreadingPass());         // Thread jumps.
-    MPM.add(createCorrelatedValuePropagationPass()); // Propagate conditionals
   }
   MPM.add(
       createCFGSimplificationPass(SimplifyCFGOptions().convertSwitchRangeToICmp(
           true))); // Merge & remove BBs
   // Combine silly seq's
   MPM.add(createInstructionCombiningPass());
-  if (SizeLevel == 0)
-    MPM.add(createLibCallsShrinkWrapPass());
 
   // TODO: Investigate the cost/benefit of tail call elimination on debugging.
   if (OptLevel > 1)
@@ -152,7 +146,6 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
       SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
   MPM.add(createInstructionCombiningPass());
   // We resume loop passes creating a second loop pipeline here.
-  MPM.add(createIndVarSimplifyPass());        // Canonicalize indvars
 
   // Unroll small loops and perform peeling.
   MPM.add(createSimpleLoopUnrollPass(OptLevel, DisableUnrollLoops,
@@ -175,16 +168,10 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   // Run instcombine after redundancy elimination to exploit opportunities
   // opened up by them.
   MPM.add(createInstructionCombiningPass());
-  if (OptLevel > 1) {
-    MPM.add(createJumpThreadingPass());         // Thread jumps
-    MPM.add(createCorrelatedValuePropagationPass());
-  }
-  MPM.add(createAggressiveDCEPass()); // Delete dead instructions
 
   MPM.add(createMemCpyOptPass());               // Remove memcpy / form memset
   // TODO: Investigate if this is too expensive at O1.
   if (OptLevel > 1) {
-    MPM.add(createDeadStoreEliminationPass());  // Delete dead stores
     MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap,
                            /*AllowSpeculation=*/true));
   }
@@ -199,8 +186,6 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
 /// FIXME: Should LTO cause any differences to this set of passes?
 void PassManagerBuilder::addVectorPasses(legacy::PassManagerBase &PM,
                                          bool IsFullLTO) {
-  PM.add(createLoopVectorizePass(!LoopsInterleaved, !LoopVectorize));
-
   if (IsFullLTO) {
     // The vectorizer may have significantly shortened a loop body; unroll
     // again. Unroll small loops to hide loop backedge latency and saturate any
@@ -236,11 +221,6 @@ void PassManagerBuilder::addVectorPasses(legacy::PassManagerBase &PM,
   if (IsFullLTO) {
     PM.add(createInstructionCombiningPass()); // Clean up again
     PM.add(createBitTrackingDCEPass());
-  }
-
-  // Optimize parallel scalar instruction chains into SIMD instructions.
-  if (SLPVectorize) {
-    PM.add(createSLPVectorizerPass());
   }
 
   if (!IsFullLTO) {
@@ -360,69 +340,4 @@ void PassManagerBuilder::populateModulePassManager(
   // resulted in single-entry-single-exit or empty blocks. Clean up the CFG.
   MPM.add(createCFGSimplificationPass(
       SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
-}
-
-LLVMPassManagerBuilderRef LLVMPassManagerBuilderCreate() {
-  PassManagerBuilder *PMB = new PassManagerBuilder();
-  return wrap(PMB);
-}
-
-void LLVMPassManagerBuilderDispose(LLVMPassManagerBuilderRef PMB) {
-  PassManagerBuilder *Builder = unwrap(PMB);
-  delete Builder;
-}
-
-void
-LLVMPassManagerBuilderSetOptLevel(LLVMPassManagerBuilderRef PMB,
-                                  unsigned OptLevel) {
-  PassManagerBuilder *Builder = unwrap(PMB);
-  Builder->OptLevel = OptLevel;
-}
-
-void
-LLVMPassManagerBuilderSetSizeLevel(LLVMPassManagerBuilderRef PMB,
-                                   unsigned SizeLevel) {
-  PassManagerBuilder *Builder = unwrap(PMB);
-  Builder->SizeLevel = SizeLevel;
-}
-
-void
-LLVMPassManagerBuilderSetDisableUnitAtATime(LLVMPassManagerBuilderRef PMB,
-                                            LLVMBool Value) {
-  // NOTE: The DisableUnitAtATime switch has been removed.
-}
-
-void
-LLVMPassManagerBuilderSetDisableUnrollLoops(LLVMPassManagerBuilderRef PMB,
-                                            LLVMBool Value) {
-  PassManagerBuilder *Builder = unwrap(PMB);
-  Builder->DisableUnrollLoops = Value;
-}
-
-void
-LLVMPassManagerBuilderSetDisableSimplifyLibCalls(LLVMPassManagerBuilderRef PMB,
-                                                 LLVMBool Value) {
-  // NOTE: The simplify-libcalls pass has been removed.
-}
-
-void
-LLVMPassManagerBuilderUseInlinerWithThreshold(LLVMPassManagerBuilderRef PMB,
-                                              unsigned Threshold) {
-  // TODO: remove this
-}
-
-void
-LLVMPassManagerBuilderPopulateFunctionPassManager(LLVMPassManagerBuilderRef PMB,
-                                                  LLVMPassManagerRef PM) {
-  PassManagerBuilder *Builder = unwrap(PMB);
-  legacy::FunctionPassManager *FPM = unwrap<legacy::FunctionPassManager>(PM);
-  Builder->populateFunctionPassManager(*FPM);
-}
-
-void
-LLVMPassManagerBuilderPopulateModulePassManager(LLVMPassManagerBuilderRef PMB,
-                                                LLVMPassManagerRef PM) {
-  PassManagerBuilder *Builder = unwrap(PMB);
-  legacy::PassManagerBase *MPM = unwrap(PM);
-  Builder->populateModulePassManager(*MPM);
 }

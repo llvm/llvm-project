@@ -1313,7 +1313,7 @@ class VOP3InstBase<string OpName, VOPProfile P, SDPatternOperator node = null_fr
 multiclass VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_frag> {
   def _e64 : VOP3InstBase<OpName, P, node>;
   let SubtargetPredicate = isGFX11Plus in {
-    foreach _ = BoolToList<P.HasExtVOP3DPP>.ret in
+    if P.HasExtVOP3DPP then
       def _e64_dpp : VOP3_DPP_Pseudo <OpName, P>;
   } // end SubtargetPredicate = isGFX11Plus
 }
@@ -1419,11 +1419,11 @@ multiclass VOP3_Real_Base<GFXGen Gen, bits<10> op, string opName = NAME,
                           bit isSingle = 0> {
   defvar ps = !cast<VOP_Pseudo>(opName#"_e64");
   let IsSingle = !or(isSingle, ps.Pfl.IsSingle) in {
-  foreach _ = BoolToList<ps.Pfl.HasOpSel>.ret in
+  if ps.Pfl.HasOpSel then
     def _e64#Gen.Suffix :
       VOP3_Real_Gen<ps, Gen>,
       VOP3OpSel_gfx11_gfx12<op, ps.Pfl>;
-  foreach _ = BoolToList<!not(ps.Pfl.HasOpSel)>.ret in
+  if !not(ps.Pfl.HasOpSel) then
     def _e64#Gen.Suffix :
       VOP3_Real_Gen<ps, Gen>,
       VOP3e_gfx11_gfx12<op, ps.Pfl>;
@@ -1445,11 +1445,11 @@ multiclass VOP3_Real_with_name<GFXGen Gen, bits<10> op, string opName,
   defvar ps = !cast<VOP_Pseudo>(opName#"_e64");
   let AsmString = asmName # ps.AsmOperands,
       IsSingle = !or(isSingle, ps.Pfl.IsSingle) in {
-  foreach _ = BoolToList<ps.Pfl.HasOpSel>.ret in
+  if ps.Pfl.HasOpSel then
     def _e64#Gen.Suffix :
       VOP3_Real_Gen<ps, Gen>,
       VOP3OpSel_gfx11_gfx12<op, ps.Pfl>;
-  foreach _ = BoolToList<!not(ps.Pfl.HasOpSel)>.ret in
+  if !not(ps.Pfl.HasOpSel) then
     def _e64#Gen.Suffix :
       VOP3_Real_Gen<ps, Gen>,
       VOP3e_gfx11_gfx12<op, ps.Pfl>;

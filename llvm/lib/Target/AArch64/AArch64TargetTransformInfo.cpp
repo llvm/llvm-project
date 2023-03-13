@@ -1619,9 +1619,17 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_fadd:
   case Intrinsic::aarch64_sve_add:
     return instCombineSVEVectorAdd(IC, II);
+  case Intrinsic::aarch64_sve_fadd_u:
+    return instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_fmul_u,
+                                             Intrinsic::aarch64_sve_fmla_u>(
+        IC, II, true);
   case Intrinsic::aarch64_sve_fsub:
   case Intrinsic::aarch64_sve_sub:
     return instCombineSVEVectorSub(IC, II);
+  case Intrinsic::aarch64_sve_fsub_u:
+    return instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_fmul_u,
+                                             Intrinsic::aarch64_sve_fmls_u>(
+        IC, II, true);
   case Intrinsic::aarch64_sve_tbl:
     return instCombineSVETBL(IC, II);
   case Intrinsic::aarch64_sve_uunpkhi:

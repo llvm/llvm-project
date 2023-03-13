@@ -1421,14 +1421,54 @@ static void doInstrumentAddress(AddressSanitizer *Pass, Instruction *I,
                                 uint32_t Exp) {
   // Instrument a 1-, 2-, 4-, 8-, or 16- byte access with one check
   // if the data is properly aligned.
-  if ((TypeStoreSize == 8 || TypeStoreSize == 16 || TypeStoreSize == 32 || TypeStoreSize == 64 ||
-       TypeStoreSize == 128) &&
-      (!Alignment || *Alignment >= Granularity || *Alignment >= TypeStoreSize / 8))
-    return Pass->instrumentAddress(I, InsertBefore, Addr, TypeStoreSize, IsWrite,
-                                   nullptr, UseCalls, Exp);
+  if (!TypeStoreSize.isScalable()) {
+    const auto FixedSize = TypeStoreSize.getFixedValue();
+    switch (FixedSize) {
+    case 8:
+    case 16:
+    case 32:
+    case 64:
+    case 128:
+      if (!Alignment || *Alignment >= Granularity ||
+          *Alignment >= FixedSize / 8)
+        return Pass->instrumentAddress(I, InsertBefore, Addr, FixedSize,
+                                       IsWrite, nullptr, UseCalls, Exp);
+    }
+  }
   Pass->instrumentUnusualSizeOrAlignment(I, InsertBefore, Addr, TypeStoreSize,
                                          IsWrite, nullptr, UseCalls, Exp);
 }
+
+static void SplitBlockAndInsertSimpleForLoop(Value *End,
+                                             Instruction *SplitBefore,
+                                             Instruction *&BodyIP,
+                                             Value *&Index) {
+  BasicBlock *LoopPred = SplitBefore->getParent();
+  BasicBlock *LoopBody = SplitBlock(SplitBefore->getParent(), SplitBefore);
+  BasicBlock *LoopExit = SplitBlock(SplitBefore->getParent(), SplitBefore);
+
+  auto *Ty = End->getType();
+  auto &DL = SplitBefore->getModule()->getDataLayout();
+  const unsigned Bitwidth = DL.getTypeSizeInBits(Ty);
+
+  IRBuilder<> Builder(LoopBody->getTerminator());
+  auto *IV = Builder.CreatePHI(Ty, 2, "iv");
+  auto *IVNext =
+    Builder.CreateAdd(IV, ConstantInt::get(Ty, 1), IV->getName() + ".next",
+                      /*HasNUW=*/true, /*HasNSW=*/Bitwidth != 2);
+  auto *IVCheck = Builder.CreateICmpEQ(IVNext, End,
+                                       IV->getName() + ".check");
+  Builder.CreateCondBr(IVCheck, LoopExit, LoopBody);
+  LoopBody->getTerminator()->eraseFromParent();
+
+  // Populate the IV PHI.
+  IV->addIncoming(ConstantInt::get(Ty, 0), LoopPred);
+  IV->addIncoming(IVNext, LoopBody);
+
+  BodyIP = LoopBody->getFirstNonPHI();
+  Index = IV;
+}
+
 
 static void instrumentMaskedLoadOrStore(AddressSanitizer *Pass,
                                         const DataLayout &DL, Type *IntptrTy,
@@ -1437,36 +1477,65 @@ static void instrumentMaskedLoadOrStore(AddressSanitizer *Pass,
                                         unsigned Granularity, Type *OpType,
                                         bool IsWrite, Value *SizeArgument,
                                         bool UseCalls, uint32_t Exp) {
-  auto *VTy = cast<FixedVectorType>(OpType);
-  uint64_t ElemTypeSize = DL.getTypeStoreSizeInBits(VTy->getScalarType());
-  unsigned Num = VTy->getNumElements();
-  auto Zero = ConstantInt::get(IntptrTy, 0);
-  for (unsigned Idx = 0; Idx < Num; ++Idx) {
-    Value *InstrumentedAddress = nullptr;
-    Instruction *InsertBefore = I;
-    if (auto *Vector = dyn_cast<ConstantVector>(Mask)) {
-      // dyn_cast as we might get UndefValue
-      if (auto *Masked = dyn_cast<ConstantInt>(Vector->getOperand(Idx))) {
-        if (Masked->isZero())
-          // Mask is constant false, so no instrumentation needed.
-          continue;
-        // If we have a true or undef value, fall through to doInstrumentAddress
-        // with InsertBefore == I
-      }
-    } else {
-      IRBuilder<> IRB(I);
-      Value *MaskElem = IRB.CreateExtractElement(Mask, Idx);
-      Instruction *ThenTerm = SplitBlockAndInsertIfThen(MaskElem, I, false);
-      InsertBefore = ThenTerm;
-    }
+  auto *VTy = cast<VectorType>(OpType);
 
-    IRBuilder<> IRB(InsertBefore);
-    InstrumentedAddress =
+  TypeSize ElemTypeSize = DL.getTypeStoreSizeInBits(VTy->getScalarType());
+  auto Zero = ConstantInt::get(IntptrTy, 0);
+
+  // For fixed length vectors, it's legal to fallthrough into the generic loop
+  // lowering below, but we chose to unroll and specialize instead.  We might want
+  // to revisit this heuristic decision.
+  if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
+    unsigned Num = FVTy->getNumElements();
+    for (unsigned Idx = 0; Idx < Num; ++Idx) {
+      Value *InstrumentedAddress = nullptr;
+      Instruction *InsertBefore = I;
+      if (auto *Vector = dyn_cast<ConstantVector>(Mask)) {
+        // dyn_cast as we might get UndefValue
+        if (auto *Masked = dyn_cast<ConstantInt>(Vector->getOperand(Idx))) {
+          if (Masked->isZero())
+            // Mask is constant false, so no instrumentation needed.
+            continue;
+          // If we have a true or undef value, fall through to doInstrumentAddress
+          // with InsertBefore == I
+        }
+      } else {
+        IRBuilder<> IRB(I);
+        Value *MaskElem = IRB.CreateExtractElement(Mask, Idx);
+        Instruction *ThenTerm = SplitBlockAndInsertIfThen(MaskElem, I, false);
+        InsertBefore = ThenTerm;
+      }
+
+      IRBuilder<> IRB(InsertBefore);
+      InstrumentedAddress =
         IRB.CreateGEP(VTy, Addr, {Zero, ConstantInt::get(IntptrTy, Idx)});
-    doInstrumentAddress(Pass, I, InsertBefore, InstrumentedAddress, Alignment,
-                        Granularity, TypeSize::Fixed(ElemTypeSize), IsWrite,
-                        SizeArgument, UseCalls, Exp);
+      doInstrumentAddress(Pass, I, InsertBefore, InstrumentedAddress, Alignment,
+                          Granularity, ElemTypeSize, IsWrite,
+                          SizeArgument, UseCalls, Exp);
+    }
+    return;
   }
+
+
+  IRBuilder<> IRB(I);
+  Constant *MinNumElem =
+    ConstantInt::get(IntptrTy, VTy->getElementCount().getKnownMinValue());
+  assert(isa<ScalableVectorType>(VTy) && "generalize if reused for fixed length");
+  Value *NumElements = IRB.CreateVScale(MinNumElem);
+
+  Instruction *BodyIP;
+  Value *Index;
+  SplitBlockAndInsertSimpleForLoop(NumElements, I, BodyIP, Index);
+
+  IRB.SetInsertPoint(BodyIP);
+  Value *MaskElem = IRB.CreateExtractElement(Mask, Index);
+  Instruction *ThenTerm = SplitBlockAndInsertIfThen(MaskElem, BodyIP, false);
+  IRB.SetInsertPoint(ThenTerm);
+
+  Value *InstrumentedAddress = IRB.CreateGEP(VTy, Addr, {Zero, Index});
+  doInstrumentAddress(Pass, I, &*IRB.GetInsertPoint(), InstrumentedAddress, Alignment,
+                      Granularity, ElemTypeSize, IsWrite, SizeArgument,
+                      UseCalls, Exp);
 }
 
 void AddressSanitizer::instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
@@ -1676,7 +1745,12 @@ void AddressSanitizer::instrumentUnusualSizeOrAlignment(
     Instruction *I, Instruction *InsertBefore, Value *Addr, TypeSize TypeStoreSize,
     bool IsWrite, Value *SizeArgument, bool UseCalls, uint32_t Exp) {
   IRBuilder<> IRB(InsertBefore);
-  Value *Size = ConstantInt::get(IntptrTy, TypeStoreSize / 8);
+  Constant *MinBits =
+    ConstantInt::get(IntptrTy, TypeStoreSize.getKnownMinValue());
+  Value *NumBits =
+    !TypeStoreSize.isScalable() ? MinBits : IRB.CreateVScale(MinBits);
+  Value *Size = IRB.CreateLShr(NumBits, ConstantInt::get(IntptrTy, 3));
+
   Value *AddrLong = IRB.CreatePointerCast(Addr, IntptrTy);
   if (UseCalls) {
     if (Exp == 0)
@@ -1686,8 +1760,9 @@ void AddressSanitizer::instrumentUnusualSizeOrAlignment(
       IRB.CreateCall(AsanMemoryAccessCallbackSized[IsWrite][1],
                      {AddrLong, Size, ConstantInt::get(IRB.getInt32Ty(), Exp)});
   } else {
+    Value *SizeMinusOne = IRB.CreateSub(Size, ConstantInt::get(IntptrTy, 1));
     Value *LastByte = IRB.CreateIntToPtr(
-        IRB.CreateAdd(AddrLong, ConstantInt::get(IntptrTy, TypeStoreSize / 8 - 1)),
+        IRB.CreateAdd(AddrLong, SizeMinusOne),
         Addr->getType());
     instrumentAddress(I, InsertBefore, Addr, 8, IsWrite, Size, false, Exp);
     instrumentAddress(I, InsertBefore, LastByte, 8, IsWrite, Size, false, Exp);

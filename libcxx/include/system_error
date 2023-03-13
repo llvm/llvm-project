@@ -152,7 +152,6 @@ template <> struct hash<std::error_condition>;
 #include <__memory/addressof.h>
 #include <stdexcept>
 #include <string>
-#include <type_traits>
 #include <version>
 
 // standard-mandated includes
@@ -544,5 +543,9 @@ _LIBCPP_NORETURN _LIBCPP_FUNC_VIS
 void __throw_system_error(int __ev, const char* __what_arg);
 
 _LIBCPP_END_NAMESPACE_STD
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <type_traits>
+#endif
 
 #endif // _LIBCPP_SYSTEM_ERROR

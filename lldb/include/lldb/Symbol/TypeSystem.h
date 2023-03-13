@@ -127,12 +127,12 @@ public:
   virtual ConstString
   DeclContextGetScopeQualifiedName(void *opaque_decl_ctx) = 0;
 
-  virtual bool
-  DeclContextIsClassMethod(void *opaque_decl_ctx,
-                           ConstString *language_object_name_ptr) = 0;
+  virtual bool DeclContextIsClassMethod(void *opaque_decl_ctx) = 0;
 
   virtual bool DeclContextIsContainedInLookup(void *opaque_decl_ctx,
                                               void *other_opaque_decl_ctx) = 0;
+
+  virtual lldb::LanguageType DeclContextGetLanguage(void *opaque_decl_ctx) = 0;
 
   // Tests
 #ifndef NDEBUG
@@ -201,6 +201,10 @@ public:
 
   // TypeSystems can support more than one language
   virtual bool SupportsLanguage(lldb::LanguageType language) = 0;
+
+  /// The name of the variable used for explicitly accessing data scoped to the
+  /// current instance (or type). C++ uses "this", ObjC uses "self".
+  virtual ConstString GetInstanceVariableName(lldb::LanguageType language) = 0;
 
   // Type Completion
 

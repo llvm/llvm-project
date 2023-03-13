@@ -371,13 +371,12 @@ private:
     fir::MutableBoxValue boxAddr =
         genMutableBoxValue(converter, loc, alloc.getAllocObj());
 
-    if (sourceExpr) {
-      genSourceAllocation(alloc, boxAddr);
-    } else if (moldExpr) {
-      genMoldAllocation(alloc, boxAddr);
-    } else {
+    if (sourceExpr)
+      genSourceMoldAllocation(alloc, boxAddr, /*isSource=*/true);
+    else if (moldExpr)
+      genSourceMoldAllocation(alloc, boxAddr, /*isSource=*/false);
+    else
       genSimpleAllocation(alloc, boxAddr);
-    }
   }
 
   static bool lowerBoundsAreOnes(const Allocation &alloc) {
@@ -557,8 +556,10 @@ private:
     }
   }
 
-  void genSourceAllocation(const Allocation &alloc,
-                           const fir::MutableBoxValue &box) {
+  void genSourceMoldAllocation(const Allocation &alloc,
+                               const fir::MutableBoxValue &box, bool isSource) {
+    fir::ExtendedValue exv = isSource ? sourceExv : moldExv;
+    ;
     // Generate a sequence of runtime calls.
     errorManager.genStatCheck(builder, loc);
     genAllocateObjectInit(box);
@@ -568,24 +569,17 @@ private:
     // from source for the deferred length parameter.
     if (lenParams.empty() && box.isCharacter() &&
         !box.hasNonDeferredLenParams())
-      lenParams.push_back(fir::factory::readCharLen(builder, loc, sourceExv));
-    if (alloc.type.IsPolymorphic())
-      genRuntimeAllocateApplyMold(builder, loc, box, sourceExv,
+      lenParams.push_back(fir::factory::readCharLen(builder, loc, exv));
+    if (!isSource || alloc.type.IsPolymorphic())
+      genRuntimeAllocateApplyMold(builder, loc, box, exv,
                                   alloc.getSymbol().Rank());
     genSetDeferredLengthParameters(alloc, box);
     genAllocateObjectBounds(alloc, box);
-    mlir::Value stat =
-        genRuntimeAllocateSource(builder, loc, box, sourceExv, errorManager);
-    fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
-    errorManager.assignStat(builder, loc, stat);
-  }
-
-  void genMoldAllocation(const Allocation &alloc,
-                         const fir::MutableBoxValue &box) {
-    genRuntimeAllocateApplyMold(builder, loc, box, moldExv,
-                                alloc.getSymbol().Rank());
-    errorManager.genStatCheck(builder, loc);
-    mlir::Value stat = genRuntimeAllocate(builder, loc, box, errorManager);
+    mlir::Value stat;
+    if (isSource)
+      stat = genRuntimeAllocateSource(builder, loc, box, exv, errorManager);
+    else
+      stat = genRuntimeAllocate(builder, loc, box, errorManager);
     fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
     errorManager.assignStat(builder, loc, stat);
   }

@@ -142,7 +142,7 @@ int main(int, char**)
     test< int16_t> ();
     test<uint16_t> ();
     test< int32_t> ();
-    test<uint32_t> ();
+    test<std::uint32_t> ();
     test< int64_t> ();
     test<uint64_t> ();
 

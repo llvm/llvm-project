@@ -13,8 +13,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Object/Wasm.h"
 
-namespace lld {
-namespace wasm {
+namespace lld::wasm {
 
 class InputSegment;
 
@@ -49,7 +48,6 @@ public:
   std::string header;
 };
 
-} // namespace wasm
-} // namespace lld
+} // namespace lld::wasm
 
 #endif // LLD_WASM_OUTPUT_SEGMENT_H

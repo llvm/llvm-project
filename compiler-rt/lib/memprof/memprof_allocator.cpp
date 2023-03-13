@@ -75,7 +75,7 @@ static int GetCpuId(void) {
   // _memprof_preinit is called via the preinit_array, which subsequently calls
   // malloc. Since this is before _dl_init calls VDSO_SETUP, sched_getcpu
   // will seg fault as the address of __vdso_getcpu will be null.
-  if (!memprof_init_done)
+  if (!memprof_inited)
     return -1;
   return sched_getcpu();
 }
@@ -445,8 +445,7 @@ struct Allocator {
 
     u64 user_requested_size =
         atomic_exchange(&m->user_requested_size, 0, memory_order_acquire);
-    if (memprof_inited && memprof_init_done &&
-        atomic_load_relaxed(&constructed) &&
+    if (memprof_inited && atomic_load_relaxed(&constructed) &&
         !atomic_load_relaxed(&destructing)) {
       u64 c = GetShadowCount(p, user_requested_size);
       long curtime = GetTimestamp();

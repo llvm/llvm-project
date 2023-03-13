@@ -430,23 +430,41 @@ struct FragmentCompiler {
               C.Diagnostics.Suppress.insert(N);
           });
 
-    if (F.UnusedIncludes)
-      if (auto Val =
-              compileEnum<Config::UnusedIncludesPolicy>("UnusedIncludes",
-                                                        **F.UnusedIncludes)
-                  .map("Strict", Config::UnusedIncludesPolicy::Strict)
-                  .map("Experiment", Config::UnusedIncludesPolicy::Experiment)
-                  .map("None", Config::UnusedIncludesPolicy::None)
-                  .value())
+    if (F.UnusedIncludes) {
+      auto Val = compileEnum<Config::IncludesPolicy>("UnusedIncludes",
+                                                     **F.UnusedIncludes)
+                     .map("Strict", Config::IncludesPolicy::Strict)
+                     .map("None", Config::IncludesPolicy::None)
+                     .value();
+      if (!Val && **F.UnusedIncludes == "Experiment") {
+        diag(Warning,
+             "Experiment is deprecated for UnusedIncludes, use Strict instead.",
+             F.UnusedIncludes->Range);
+        Val = Config::IncludesPolicy::Strict;
+      }
+      if (Val) {
         Out.Apply.push_back([Val](const Params &, Config &C) {
           C.Diagnostics.UnusedIncludes = *Val;
         });
+      }
+    }
+
     if (F.AllowStalePreamble) {
       if (auto Val = F.AllowStalePreamble)
         Out.Apply.push_back([Val](const Params &, Config &C) {
           C.Diagnostics.AllowStalePreamble = **Val;
         });
     }
+
+    if (F.MissingIncludes)
+      if (auto Val = compileEnum<Config::IncludesPolicy>("MissingIncludes",
+                                                         **F.MissingIncludes)
+                         .map("Strict", Config::IncludesPolicy::Strict)
+                         .map("None", Config::IncludesPolicy::None)
+                         .value())
+        Out.Apply.push_back([Val](const Params &, Config &C) {
+          C.Diagnostics.MissingIncludes = *Val;
+        });
 
     compile(std::move(F.Includes));
     compile(std::move(F.ClangTidy));

@@ -18,7 +18,6 @@
 #include <__memory/construct_at.h>
 #include <__utility/move.h>
 #include <optional>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

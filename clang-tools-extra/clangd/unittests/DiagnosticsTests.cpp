@@ -1900,7 +1900,7 @@ $fix[[  $diag[[#include "unused.h"]]
   // Off by default.
   EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
   Config Cfg;
-  Cfg.Diagnostics.UnusedIncludes = Config::UnusedIncludesPolicy::Strict;
+  Cfg.Diagnostics.UnusedIncludes = Config::IncludesPolicy::Strict;
   // Set filtering.
   Cfg.Diagnostics.Includes.IgnoreHeader.emplace_back(
       [](llvm::StringRef Header) { return Header.endswith("ignore.h"); });

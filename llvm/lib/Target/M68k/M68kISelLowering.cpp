@@ -201,6 +201,14 @@ M68kTargetLowering::getExceptionSelectorRegister(const Constant *) const {
   return M68k::D1;
 }
 
+unsigned
+M68kTargetLowering::getInlineAsmMemConstraint(StringRef ConstraintCode) const {
+  return StringSwitch<unsigned>(ConstraintCode)
+      .Case("Q", InlineAsm::Constraint_Q)
+      .Case("U", InlineAsm::Constraint_Um) // We borrow Constraint_Um for 'U'.
+      .Default(TargetLowering::getInlineAsmMemConstraint(ConstraintCode));
+}
+
 EVT M68kTargetLowering::getSetCCResultType(const DataLayout &DL,
                                            LLVMContext &Context, EVT VT) const {
   // M68k SETcc producess either 0x00 or 0xFF
@@ -2764,6 +2772,9 @@ M68kTargetLowering::getConstraintType(StringRef Constraint) const {
           break;
         }
       break;
+    case 'Q':
+    case 'U':
+      return C_Memory;
     default:
       break;
     }

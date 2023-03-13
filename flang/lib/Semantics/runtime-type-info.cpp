@@ -573,12 +573,11 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
       // do not (the runtime will call all of them).
       std::map<int, evaluate::StructureConstructor> specials{
           DescribeSpecialGenerics(dtScope, dtScope, derivedTypeSpec)};
-      const DerivedTypeDetails &dtDetails{dtSymbol->get<DerivedTypeDetails>()};
-      for (const auto &pair : dtDetails.finals()) {
-        DescribeSpecialProc(specials, *pair.second, false /*!isAssignment*/,
-            true, std::nullopt, nullptr, derivedTypeSpec);
-      }
       if (derivedTypeSpec) {
+        for (auto &ref : FinalsForDerivedTypeInstantiation(*derivedTypeSpec)) {
+          DescribeSpecialProc(specials, *ref, false /*!isAssignment*/, true,
+              std::nullopt, nullptr, derivedTypeSpec);
+        }
         IncorporateDefinedIoGenericInterfaces(specials,
             GenericKind::DefinedIo::ReadFormatted, &scope, derivedTypeSpec);
         IncorporateDefinedIoGenericInterfaces(specials,
@@ -1112,15 +1111,18 @@ void RuntimeTableBuilder::DescribeSpecialProc(
       }
     } else { // user defined derived type I/O
       CHECK(proc->dummyArguments.size() >= 4);
+      const auto *ddo{std::get_if<evaluate::characteristics::DummyDataObject>(
+          &proc->dummyArguments[0].u)};
+      if (!ddo) {
+        return;
+      }
       if (derivedTypeSpec &&
-          !std::get<evaluate::characteristics::DummyDataObject>(
-              proc->dummyArguments[0].u)
-               .type.type()
-               .IsTkCompatibleWith(evaluate::DynamicType{*derivedTypeSpec})) {
+          !ddo->type.type().IsTkCompatibleWith(
+              evaluate::DynamicType{*derivedTypeSpec})) {
         // Defined I/O specific procedure is not for this derived type.
         return;
       }
-      if (binding) {
+      if (ddo->type.type().IsPolymorphic()) {
         isArgDescriptorSet |= 1;
       }
       switch (io.value()) {

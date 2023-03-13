@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
 #include "Plugins/Platform/MacOSX/PlatformDarwinKernel.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
@@ -713,6 +714,7 @@ void DynamicLoaderDarwinKernel::KextImageInfo::SetIsKernel(bool is_kernel) {
 
 bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
     Process *process) {
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   if (IsLoaded())
     return true;
 
@@ -810,6 +812,27 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       }
     }
 
+    if (m_module_sp && m_uuid.IsValid() && m_module_sp->GetUUID() == m_uuid &&
+        m_module_sp->GetObjectFile()) {
+      if (ObjectFileMachO *ondisk_objfile_macho =
+              llvm::dyn_cast<ObjectFileMachO>(m_module_sp->GetObjectFile())) {
+        if (!IsKernel() && !ondisk_objfile_macho->IsKext()) {
+          // We have a non-kext, non-kernel binary.  If we already have this
+          // loaded in the Target with load addresses, don't re-load it again.
+          ModuleSP existing_module_sp = target.GetImages().FindModule(m_uuid);
+          if (existing_module_sp &&
+              existing_module_sp->IsLoadedInTarget(&target)) {
+            LLDB_LOGF(log,
+                      "'%s' with UUID %s is not a kext or kernel, and is "
+                      "already registered in target, not loading.",
+                      m_name.c_str(), m_uuid.GetAsString().c_str());
+            // It's already loaded, return true.
+            return true;
+          }
+        }
+      }
+    }
+
     // If we managed to find a module, append it to the target's list of
     // images. If we also have a memory module, require that they have matching
     // UUIDs
@@ -836,6 +859,34 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
         // The memory_module for kexts may have an invalid __LINKEDIT seg; skip
         // it.
         const bool ignore_linkedit = !IsKernel();
+
+        // Normally a kext will have its segment load commands
+        // (LC_SEGMENT vmaddrs) corrected in memory to have their
+        // actual segment addresses.
+        // Userland proceses have their libraries updated the same way
+        // by dyld.  The Mach-O load commands in memory are the canonical
+        // addresses.
+        //
+        // If the kernel gives us a binary where the in-memory segment
+        // vmaddr is incorrect, then this binary was put in memory without
+        // updating its Mach-O load commands.  We should assume a static
+        // slide value will be applied to every segment; we don't have the
+        // correct addresses for each individual segment.
+        addr_t fixed_slide = LLDB_INVALID_ADDRESS;
+        if (ObjectFileMachO *memory_objfile_macho =
+                llvm::dyn_cast<ObjectFileMachO>(memory_object_file)) {
+          if (Section *header_sect =
+                  memory_objfile_macho->GetMachHeaderSection()) {
+            if (header_sect->GetFileAddress() != m_load_address) {
+              fixed_slide = m_load_address - header_sect->GetFileAddress();
+              LLDB_LOGF(
+                  log,
+                  "kext %s in-memory LC_SEGMENT vmaddr is not correct, using a "
+                  "fixed slide of 0x%" PRIx64,
+                  m_name.c_str(), fixed_slide);
+            }
+          }
+        }
 
         SectionList *ondisk_section_list = ondisk_object_file->GetSectionList();
         SectionList *memory_section_list = memory_object_file->GetSectionList();
@@ -865,14 +916,20 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
                   ondisk_section_sp->GetName() == g_section_name_LINKEDIT)
                 continue;
 
-              const Section *memory_section =
-                  memory_section_list
-                      ->FindSectionByName(ondisk_section_sp->GetName())
-                      .get();
-              if (memory_section) {
-                target.SetSectionLoadAddress(ondisk_section_sp,
-                                             memory_section->GetFileAddress());
-                ++num_sections_loaded;
+              if (fixed_slide != LLDB_INVALID_ADDRESS) {
+                target.SetSectionLoadAddress(
+                    ondisk_section_sp,
+                    ondisk_section_sp->GetFileAddress() + fixed_slide);
+              } else {
+                const Section *memory_section =
+                    memory_section_list
+                        ->FindSectionByName(ondisk_section_sp->GetName())
+                        .get();
+                if (memory_section) {
+                  target.SetSectionLoadAddress(
+                      ondisk_section_sp, memory_section->GetFileAddress());
+                  ++num_sections_loaded;
+                }
               }
             }
           }

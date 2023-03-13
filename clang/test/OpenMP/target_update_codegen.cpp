@@ -748,18 +748,18 @@ void lvalue(struct S *s, int l, int e) {
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 #ifdef CK13
 
-// CK13: [[SIZE00:@.+]] = {{.+}}constant [1 x i64] [i64 4]
-// CK13: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 1]
+// CK13: [[SIZE00:@.+]] = {{.+}}constant [2 x i64] [i64 {{4|8}}, i64 4]
+// CK13: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 1, i64 17]
 
 // CK13-LABEL: lvalue
 void lvalue(int **BB, int a, int b) {
 
-  // CK13-DAG: call void @__tgt_target_data_update_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE00]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}}, i8** null)
+  // CK13-DAG: call void @__tgt_target_data_update_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[SIZE00]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE00]]{{.+}}, i8** null)
   // CK13-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK13-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-  // CK13-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-  // CK13-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+  // CK13-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
+  // CK13-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
   // CK13-DAG: [[BPC0:%.+]] = bitcast i8** [[BP0]] to i32***
   // CK13-DAG: [[PC0:%.+]] = bitcast i8** [[P0]] to i32**
   // CK13-DAG: store i32** [[B_VAL1:%.+]], i32*** [[BPC0]]
@@ -772,7 +772,6 @@ void lvalue(int **BB, int a, int b) {
   // CK13-32-DAG: [[ADD_PTR]] = getelementptr inbounds i32*, i32** [[B_VAL:%.+]], i32 [[A_ADDR:%.+]]
   // CK13-64-DAG: [[IDX_EXT]] = sext i32 [[TWO:%.+]] to i64
   // CK13-DAG: [[B_VAL]] = load i32**, i32*** [[BB_ADDR:%.+]]
-  // CK13-DAG: [[B_VAL1]] = load i32**, i32*** [[BB_ADDR]]
   #pragma omp target update to(*(*(BB+a)+b))
   *(*(BB+a)+b) = 1;
   #pragma omp target update from(*(*(BB+a)+b))
@@ -977,8 +976,8 @@ void lvalue_find_base(float *f, int *i) {
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 #ifdef CK17
 
-// CK17: [[SIZE00:@.+]] = {{.+}}constant [1 x i64] [i64 4]
-// CK17: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 1]
+// CK17: [[SIZE00:@.+]] = {{.+}}constant [2 x i64] [i64 {{8|4}}, i64 4]
+// CK17: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 1, i64 17]
 
 struct SSA {
   int i;
@@ -988,12 +987,12 @@ struct SSA {
 //CK17-LABEL: lvalue_find_base
 void lvalue_find_base(float **f, SSA *sa) {
 
-  // CK17-DAG: call void @__tgt_target_data_update_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE00]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}}, i8** null)
+  // CK17-DAG: call void @__tgt_target_data_update_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[SIZE00]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE00]]{{.+}}, i8** null)
   // CK17-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK17-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-  // CK17-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-  // CK17-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+  // CK17-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
+  // CK17-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
   // CK17-DAG: [[BPC0:%.+]] = bitcast i8** [[BP0]] to float***
   // CK17-DAG: [[PC0:%.+]] = bitcast i8** [[P0]] to float**
   // CK17-DAG: store float** [[F_VAL:%.+]], float*** [[BPC0]],
@@ -1011,7 +1010,6 @@ void lvalue_find_base(float **f, SSA *sa) {
   // CK17-DAG: [[I_2]] = getelementptr inbounds [[SSA:%.+]], [[SSA]]* [[FOUR:%.+]], i32 0, i32 0
   // CK17-DAG: [[FOUR]] = load [[SSA]]*, [[SSA]]** [[SSA_ADDR:%.+]],
   // CK17-DAG: [[F]] = load float**, float*** [[F_ADDR:%.+]],
-  // CK17-DAG: [[F_VAL]] = load float**, float*** [[F_ADDR]],
 
   #pragma omp target update to(*(sa->sa->i+*(1+sa->i+f)))
   *(sa->sa->i+*(1+sa->i+f)) = 1;

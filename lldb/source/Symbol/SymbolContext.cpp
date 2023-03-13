@@ -539,14 +539,16 @@ Block *SymbolContext::GetFunctionBlock() {
   return nullptr;
 }
 
-bool SymbolContext::GetFunctionMethodInfo(ConstString &language_object_name) {
-  Block *function_block = GetFunctionBlock();
-  if (function_block) {
-    CompilerDeclContext decl_ctx = function_block->GetDeclContext();
-    if (decl_ctx)
-      return decl_ctx.IsClassMethod(&language_object_name);
-  }
-  return false;
+ConstString SymbolContext::GetInstanceVariableName() {
+  if (Block *function_block = GetFunctionBlock())
+    if (CompilerDeclContext decl_ctx = function_block->GetDeclContext()) {
+      auto language = decl_ctx.GetLanguage();
+      if (language == eLanguageTypeUnknown)
+        language = GetLanguage();
+      return decl_ctx.GetInstanceVariableName(language);
+    }
+
+  return {};
 }
 
 void SymbolContext::SortTypeList(TypeMap &type_map, TypeList &type_list) const {

@@ -7,6 +7,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+unaligned-scratch-access -mattr=+enable-flat-scratch < %s | FileCheck --check-prefix=GFX10-FLASTSCR %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+unaligned-scratch-access < %s | FileCheck --check-prefix=GFX11 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+unaligned-scratch-access -mattr=+enable-flat-scratch < %s | FileCheck --check-prefix=GFX11-FLASTSCR %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+unaligned-scratch-access < %s | FileCheck --check-prefix=GFX12 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+unaligned-scratch-access -mattr=+enable-flat-scratch < %s | FileCheck --check-prefix=GFX12-FLASTSCR %s
 
 ; Should not merge this to a dword load
 define i32 @private_load_2xi16_align2(ptr addrspace(5) %p) #0 {
@@ -46,10 +48,11 @@ define i32 @private_load_2xi16_align2(ptr addrspace(5) %p) #0 {
 ; GFX9-FLASTSCR-LABEL: private_load_2xi16_align2:
 ; GFX9-FLASTSCR:       ; %bb.0:
 ; GFX9-FLASTSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-FLASTSCR-NEXT:    scratch_load_ushort v1, v0, off
-; GFX9-FLASTSCR-NEXT:    scratch_load_ushort v2, v0, off offset:2
+; GFX9-FLASTSCR-NEXT:    v_add_u32_e32 v1, 2, v0
+; GFX9-FLASTSCR-NEXT:    scratch_load_ushort v2, v0, off
+; GFX9-FLASTSCR-NEXT:    scratch_load_ushort v3, v1, off
 ; GFX9-FLASTSCR-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FLASTSCR-NEXT:    v_lshl_or_b32 v0, v2, 16, v1
+; GFX9-FLASTSCR-NEXT:    v_lshl_or_b32 v0, v3, 16, v2
 ; GFX9-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: private_load_2xi16_align2:
@@ -67,34 +70,67 @@ define i32 @private_load_2xi16_align2(ptr addrspace(5) %p) #0 {
 ; GFX10-FLASTSCR:       ; %bb.0:
 ; GFX10-FLASTSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-FLASTSCR-NEXT:    v_add_nc_u32_e32 v1, 2, v0
 ; GFX10-FLASTSCR-NEXT:    s_clause 0x1
-; GFX10-FLASTSCR-NEXT:    scratch_load_ushort v1, v0, off
-; GFX10-FLASTSCR-NEXT:    scratch_load_ushort v2, v0, off offset:2
+; GFX10-FLASTSCR-NEXT:    scratch_load_ushort v2, v0, off
+; GFX10-FLASTSCR-NEXT:    scratch_load_ushort v3, v1, off
 ; GFX10-FLASTSCR-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-FLASTSCR-NEXT:    v_lshl_or_b32 v0, v2, 16, v1
+; GFX10-FLASTSCR-NEXT:    v_lshl_or_b32 v0, v3, 16, v2
 ; GFX10-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: private_load_2xi16_align2:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_add_nc_u32_e32 v1, 2, v0
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    scratch_load_u16 v1, v0, off
-; GFX11-NEXT:    scratch_load_u16 v0, v0, off offset:2
+; GFX11-NEXT:    scratch_load_u16 v0, v0, off
+; GFX11-NEXT:    scratch_load_u16 v1, v1, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX11-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FLASTSCR-LABEL: private_load_2xi16_align2:
 ; GFX11-FLASTSCR:       ; %bb.0:
 ; GFX11-FLASTSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-FLASTSCR-NEXT:    v_add_nc_u32_e32 v1, 2, v0
 ; GFX11-FLASTSCR-NEXT:    s_clause 0x1
-; GFX11-FLASTSCR-NEXT:    scratch_load_u16 v1, v0, off
-; GFX11-FLASTSCR-NEXT:    scratch_load_u16 v0, v0, off offset:2
+; GFX11-FLASTSCR-NEXT:    scratch_load_u16 v0, v0, off
+; GFX11-FLASTSCR-NEXT:    scratch_load_u16 v1, v1, off
 ; GFX11-FLASTSCR-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FLASTSCR-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX11-FLASTSCR-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX11-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: private_load_2xi16_align2:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_clause 0x1
+; GFX12-NEXT:    scratch_load_u16 v1, v0, off
+; GFX12-NEXT:    scratch_load_u16 v0, v0, off offset:2
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-FLASTSCR-LABEL: private_load_2xi16_align2:
+; GFX12-FLASTSCR:       ; %bb.0:
+; GFX12-FLASTSCR-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_expcnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_storecnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_samplecnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_clause 0x1
+; GFX12-FLASTSCR-NEXT:    scratch_load_u16 v1, v0, off
+; GFX12-FLASTSCR-NEXT:    scratch_load_u16 v0, v0, off offset:2
+; GFX12-FLASTSCR-NEXT:    s_wait_loadcnt 0x0
+; GFX12-FLASTSCR-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX12-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
   %gep.p = getelementptr i16, ptr addrspace(5) %p, i64 1
   %p.0 = load i16, ptr addrspace(5) %p, align 2
   %p.1 = load i16, ptr addrspace(5) %gep.p, align 2
@@ -142,10 +178,11 @@ define void @private_store_2xi16_align2(ptr addrspace(5) %p, ptr addrspace(5) %r
 ; GFX9-FLASTSCR-LABEL: private_store_2xi16_align2:
 ; GFX9-FLASTSCR:       ; %bb.0:
 ; GFX9-FLASTSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-FLASTSCR-NEXT:    v_mov_b32_e32 v0, 1
-; GFX9-FLASTSCR-NEXT:    scratch_store_short v1, v0, off
-; GFX9-FLASTSCR-NEXT:    v_mov_b32_e32 v0, 2
-; GFX9-FLASTSCR-NEXT:    scratch_store_short v1, v0, off offset:2
+; GFX9-FLASTSCR-NEXT:    v_mov_b32_e32 v2, 1
+; GFX9-FLASTSCR-NEXT:    v_add_u32_e32 v0, 2, v1
+; GFX9-FLASTSCR-NEXT:    scratch_store_short v1, v2, off
+; GFX9-FLASTSCR-NEXT:    v_mov_b32_e32 v1, 2
+; GFX9-FLASTSCR-NEXT:    scratch_store_short v0, v1, off
 ; GFX9-FLASTSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -165,9 +202,10 @@ define void @private_store_2xi16_align2(ptr addrspace(5) %p, ptr addrspace(5) %r
 ; GFX10-FLASTSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-FLASTSCR-NEXT:    v_mov_b32_e32 v0, 1
-; GFX10-FLASTSCR-NEXT:    v_mov_b32_e32 v2, 2
+; GFX10-FLASTSCR-NEXT:    v_add_nc_u32_e32 v2, 2, v1
+; GFX10-FLASTSCR-NEXT:    v_mov_b32_e32 v3, 2
 ; GFX10-FLASTSCR-NEXT:    scratch_store_short v1, v0, off
-; GFX10-FLASTSCR-NEXT:    scratch_store_short v1, v2, off offset:2
+; GFX10-FLASTSCR-NEXT:    scratch_store_short v2, v3, off
 ; GFX10-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -175,11 +213,11 @@ define void @private_store_2xi16_align2(ptr addrspace(5) %p, ptr addrspace(5) %r
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_mov_b32_e32 v0, 1
-; GFX11-NEXT:    v_mov_b32_e32 v2, 2
+; GFX11-NEXT:    v_dual_mov_b32 v0, 1 :: v_dual_mov_b32 v3, 2
+; GFX11-NEXT:    v_add_nc_u32_e32 v2, 2, v1
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    scratch_store_b16 v1, v0, off
-; GFX11-NEXT:    scratch_store_b16 v1, v2, off offset:2
+; GFX11-NEXT:    scratch_store_b16 v2, v3, off
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -187,13 +225,45 @@ define void @private_store_2xi16_align2(ptr addrspace(5) %p, ptr addrspace(5) %r
 ; GFX11-FLASTSCR:       ; %bb.0:
 ; GFX11-FLASTSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FLASTSCR-NEXT:    v_mov_b32_e32 v0, 1
-; GFX11-FLASTSCR-NEXT:    v_mov_b32_e32 v2, 2
+; GFX11-FLASTSCR-NEXT:    v_dual_mov_b32 v0, 1 :: v_dual_mov_b32 v3, 2
+; GFX11-FLASTSCR-NEXT:    v_add_nc_u32_e32 v2, 2, v1
 ; GFX11-FLASTSCR-NEXT:    s_clause 0x1
 ; GFX11-FLASTSCR-NEXT:    scratch_store_b16 v1, v0, off
-; GFX11-FLASTSCR-NEXT:    scratch_store_b16 v1, v2, off offset:2
+; GFX11-FLASTSCR-NEXT:    scratch_store_b16 v2, v3, off
 ; GFX11-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: private_store_2xi16_align2:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 1
+; GFX12-NEXT:    v_mov_b32_e32 v2, 2
+; GFX12-NEXT:    s_clause 0x1
+; GFX12-NEXT:    scratch_store_b16 v1, v0, off
+; GFX12-NEXT:    scratch_store_b16 v1, v2, off offset:2
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-FLASTSCR-LABEL: private_store_2xi16_align2:
+; GFX12-FLASTSCR:       ; %bb.0:
+; GFX12-FLASTSCR-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_expcnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_storecnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_samplecnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FLASTSCR-NEXT:    v_mov_b32_e32 v0, 1
+; GFX12-FLASTSCR-NEXT:    v_mov_b32_e32 v2, 2
+; GFX12-FLASTSCR-NEXT:    s_clause 0x1
+; GFX12-FLASTSCR-NEXT:    scratch_store_b16 v1, v0, off
+; GFX12-FLASTSCR-NEXT:    scratch_store_b16 v1, v2, off offset:2
+; GFX12-FLASTSCR-NEXT:    s_wait_storecnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
   %gep.r = getelementptr i16, ptr addrspace(5) %r, i64 1
   store i16 1, ptr addrspace(5) %r, align 2
   store i16 2, ptr addrspace(5) %gep.r, align 2
@@ -292,6 +362,36 @@ define i32 @private_load_2xi16_align1(ptr addrspace(5) %p) #0 {
 ; GFX11-FLASTSCR-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FLASTSCR-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
 ; GFX11-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: private_load_2xi16_align1:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    scratch_load_b32 v0, v0, off
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_and_b32_e32 v1, 0xffff0000, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-FLASTSCR-LABEL: private_load_2xi16_align1:
+; GFX12-FLASTSCR:       ; %bb.0:
+; GFX12-FLASTSCR-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_expcnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_storecnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_samplecnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FLASTSCR-NEXT:    scratch_load_b32 v0, v0, off
+; GFX12-FLASTSCR-NEXT:    s_wait_loadcnt 0x0
+; GFX12-FLASTSCR-NEXT:    v_and_b32_e32 v1, 0xffff0000, v0
+; GFX12-FLASTSCR-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-FLASTSCR-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
+; GFX12-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
   %gep.p = getelementptr i16, ptr addrspace(5) %p, i64 1
   %p.0 = load i16, ptr addrspace(5) %p, align 1
   %p.1 = load i16, ptr addrspace(5) %gep.p, align 1
@@ -379,6 +479,32 @@ define void @private_store_2xi16_align1(ptr addrspace(5) %p, ptr addrspace(5) %r
 ; GFX11-FLASTSCR-NEXT:    scratch_store_b32 v1, v0, off
 ; GFX11-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: private_store_2xi16_align1:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0x20001
+; GFX12-NEXT:    scratch_store_b32 v1, v0, off
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-FLASTSCR-LABEL: private_store_2xi16_align1:
+; GFX12-FLASTSCR:       ; %bb.0:
+; GFX12-FLASTSCR-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_expcnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_storecnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_samplecnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FLASTSCR-NEXT:    v_mov_b32_e32 v0, 0x20001
+; GFX12-FLASTSCR-NEXT:    scratch_store_b32 v1, v0, off
+; GFX12-FLASTSCR-NEXT:    s_wait_storecnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
   %gep.r = getelementptr i16, ptr addrspace(5) %r, i64 1
   store i16 1, ptr addrspace(5) %r, align 1
   store i16 2, ptr addrspace(5) %gep.r, align 1
@@ -446,6 +572,30 @@ define i32 @private_load_2xi16_align4(ptr addrspace(5) %p) #0 {
 ; GFX11-FLASTSCR-NEXT:    scratch_load_b32 v0, v0, off
 ; GFX11-FLASTSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: private_load_2xi16_align4:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    scratch_load_b32 v0, v0, off
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-FLASTSCR-LABEL: private_load_2xi16_align4:
+; GFX12-FLASTSCR:       ; %bb.0:
+; GFX12-FLASTSCR-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_expcnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_storecnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_samplecnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FLASTSCR-NEXT:    scratch_load_b32 v0, v0, off
+; GFX12-FLASTSCR-NEXT:    s_wait_loadcnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
   %gep.p = getelementptr i16, ptr addrspace(5) %p, i64 1
   %p.0 = load i16, ptr addrspace(5) %p, align 4
   %p.1 = load i16, ptr addrspace(5) %gep.p, align 2
@@ -535,6 +685,32 @@ define void @private_store_2xi16_align4(ptr addrspace(5) %p, ptr addrspace(5) %r
 ; GFX11-FLASTSCR-NEXT:    scratch_store_b32 v1, v0, off
 ; GFX11-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: private_store_2xi16_align4:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0x20001
+; GFX12-NEXT:    scratch_store_b32 v1, v0, off
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-FLASTSCR-LABEL: private_store_2xi16_align4:
+; GFX12-FLASTSCR:       ; %bb.0:
+; GFX12-FLASTSCR-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_expcnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_storecnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_samplecnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FLASTSCR-NEXT:    v_mov_b32_e32 v0, 0x20001
+; GFX12-FLASTSCR-NEXT:    scratch_store_b32 v1, v0, off
+; GFX12-FLASTSCR-NEXT:    s_wait_storecnt 0x0
+; GFX12-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
   %gep.r = getelementptr i16, ptr addrspace(5) %r, i64 1
   store i16 1, ptr addrspace(5) %r, align 4
   store i16 2, ptr addrspace(5) %gep.r, align 2

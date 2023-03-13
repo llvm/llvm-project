@@ -130,7 +130,12 @@ def SDT_RISCVFPExtendOp_VL  : SDTypeProfile<1, 3, [
 
 def riscv_fpround_vl : SDNode<"RISCVISD::FP_ROUND_VL", SDT_RISCVFPRoundOp_VL>;
 def riscv_fpextend_vl : SDNode<"RISCVISD::FP_EXTEND_VL", SDT_RISCVFPExtendOp_VL>;
+def riscv_strict_fpextend_vl : SDNode<"RISCVISD::STRICT_FP_EXTEND_VL", SDT_RISCVFPExtendOp_VL, [SDNPHasChain]>;
 def riscv_fncvt_rod_vl : SDNode<"RISCVISD::VFNCVT_ROD_VL", SDT_RISCVFPRoundOp_VL>;
+
+def any_riscv_fpextend_vl : PatFrags<(ops node:$src, node:$mask, node:$vl),
+                            [(riscv_fpextend_vl node:$src, node:$mask, node:$vl),
+                             (riscv_strict_fpextend_vl node:$src, node:$mask, node:$vl)]>;
 
 def SDT_RISCVFP2IOp_VL  : SDTypeProfile<1, 3, [
   SDTCisInt<0>, SDTCisFP<1>, SDTCisSameNumEltsAs<0, 1>,
@@ -1844,9 +1849,10 @@ foreach fvti = AllFloatVectors in {
   foreach fvtiToFWti = AllWidenableFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
-    def : Pat<(fwti.Vector (riscv_fpextend_vl (fvti.Vector fvti.RegClass:$rs1),
-                                              (fvti.Mask V0),
-                                              VLOpFrag)),
+    def : Pat<(fwti.Vector (any_riscv_fpextend_vl
+                               (fvti.Vector fvti.RegClass:$rs1),
+                               (fvti.Mask V0),
+                               VLOpFrag)),
               (!cast<Instruction>("PseudoVFWCVT_F_F_V_"#fvti.LMul.MX#"_MASK")
                   (fwti.Vector (IMPLICIT_DEF)), fvti.RegClass:$rs1,
                   (fvti.Mask V0), GPR:$vl, fvti.Log2SEW, TA_MA)>;

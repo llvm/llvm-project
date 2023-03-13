@@ -27,10 +27,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 
 template <typename _Tp>
-static void __test_noexcept(_Tp) noexcept;
+void __test_noexcept(_Tp) noexcept;
 
 template<typename _Fm, typename _To>
-static bool_constant<noexcept(_VSTD::__test_noexcept<_To>(std::declval<_Fm>()))>
+bool_constant<noexcept(_VSTD::__test_noexcept<_To>(std::declval<_Fm>()))>
 __is_nothrow_convertible_test();
 
 template <typename _Fm, typename _To>

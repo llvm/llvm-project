@@ -10,15 +10,14 @@
 #include "TestAttributes.h"
 #include "TestInterfaces.h"
 #include "TestTypes.h"
+#include "mlir/Bytecode/BytecodeImplementation.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OperationSupport.h"
@@ -32,9 +31,9 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
-#include <optional>
 
 #include <numeric>
+#include <optional>
 
 // Include this before the using namespace lines below to
 // test that we don't have namespace dependencies.
@@ -46,6 +45,15 @@ using namespace test;
 void test::registerTestDialect(DialectRegistry &registry) {
   registry.insert<TestDialect>();
 }
+
+//===----------------------------------------------------------------------===//
+// TestDialect version utilities
+//===----------------------------------------------------------------------===//
+
+struct TestDialectVersion : public DialectVersion {
+  uint32_t major = 2;
+  uint32_t minor = 0;
+};
 
 //===----------------------------------------------------------------------===//
 // TestDialect Interfaces
@@ -68,6 +76,107 @@ struct TestResourceBlobManagerInterface
           TestDialectResourceBlobHandle> {
   using ResourceBlobManagerDialectInterfaceBase<
       TestDialectResourceBlobHandle>::ResourceBlobManagerDialectInterfaceBase;
+};
+
+namespace {
+enum test_encoding { k_attr_params = 0 };
+}
+
+// Test support for interacting with the Bytecode reader/writer.
+struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
+  using BytecodeDialectInterface::BytecodeDialectInterface;
+  TestBytecodeDialectInterface(Dialect *dialect)
+      : BytecodeDialectInterface(dialect) {}
+
+  LogicalResult writeAttribute(Attribute attr,
+                               DialectBytecodeWriter &writer) const final {
+    if (auto concreteAttr = llvm::dyn_cast<TestAttrParamsAttr>(attr)) {
+      writer.writeVarInt(test_encoding::k_attr_params);
+      writer.writeVarInt(concreteAttr.getV0());
+      writer.writeVarInt(concreteAttr.getV1());
+      return success();
+    }
+    writer.writeAttribute(attr);
+    return success();
+  }
+
+  Attribute readAttribute(DialectBytecodeReader &reader,
+                          const DialectVersion &version_) const final {
+    const auto &version = static_cast<const TestDialectVersion &>(version_);
+    if (version.major < 2)
+      return readAttrOldEncoding(reader);
+    if (version.major == 2 && version.minor == 0)
+      return readAttrNewEncoding(reader);
+    // Forbid reading future versions by returning nullptr.
+    return Attribute();
+  }
+
+  // Emit a specific version of the dialect.
+  void writeVersion(DialectBytecodeWriter &writer) const final {
+    auto version = TestDialectVersion();
+    writer.writeVarInt(version.major); // major
+    writer.writeVarInt(version.minor); // minor
+  }
+
+  std::unique_ptr<DialectVersion>
+  readVersion(DialectBytecodeReader &reader) const final {
+    uint64_t major, minor;
+    if (failed(reader.readVarInt(major)) || failed(reader.readVarInt(minor)))
+      return nullptr;
+    auto version = std::make_unique<TestDialectVersion>();
+    version->major = major;
+    version->minor = minor;
+    return version;
+  }
+
+  LogicalResult upgradeFromVersion(Operation *topLevelOp,
+                                   const DialectVersion &version_) const final {
+    const auto &version = static_cast<const TestDialectVersion &>(version_);
+    if ((version.major == 2) && (version.minor == 0))
+      return success();
+    if (version.major > 2 || (version.major == 2 && version.minor > 0)) {
+      return topLevelOp->emitError()
+             << "current test dialect version is 2.0, can't parse version: "
+             << version.major << "." << version.minor;
+    }
+    // Prior version 2.0, the old op supported only a single attribute called
+    // "dimensions". We can perform the upgrade.
+    topLevelOp->walk([](TestVersionedOpA op) {
+      if (auto dims = op->getAttr("dimensions")) {
+        op->removeAttr("dimensions");
+        op->setAttr("dims", dims);
+      }
+      op->setAttr("modifier", BoolAttr::get(op->getContext(), false));
+    });
+    return success();
+  }
+
+private:
+  Attribute readAttrNewEncoding(DialectBytecodeReader &reader) const {
+    uint64_t encoding;
+    if (failed(reader.readVarInt(encoding)) ||
+        encoding != test_encoding::k_attr_params)
+      return Attribute();
+    // The new encoding has v0 first, v1 second.
+    uint64_t v0, v1;
+    if (failed(reader.readVarInt(v0)) || failed(reader.readVarInt(v1)))
+      return Attribute();
+    return TestAttrParamsAttr::get(getContext(), static_cast<int>(v0),
+                                   static_cast<int>(v1));
+  }
+
+  Attribute readAttrOldEncoding(DialectBytecodeReader &reader) const {
+    uint64_t encoding;
+    if (failed(reader.readVarInt(encoding)) ||
+        encoding != test_encoding::k_attr_params)
+      return Attribute();
+    // The old encoding has v1 first, v0 second.
+    uint64_t v0, v1;
+    if (failed(reader.readVarInt(v1)) || failed(reader.readVarInt(v0)))
+      return Attribute();
+    return TestAttrParamsAttr::get(getContext(), static_cast<int>(v0),
+                                   static_cast<int>(v1));
+  }
 };
 
 // Test support for interacting with the AsmPrinter.
@@ -367,7 +476,7 @@ void TestDialect::initialize() {
   addInterface<TestOpAsmInterface>(blobInterface);
 
   addInterfaces<TestDialectFoldInterface, TestInlinerInterface,
-                TestReductionPatternInterface>();
+                TestReductionPatternInterface, TestBytecodeDialectInterface>();
   allowUnknownOperations();
 
   // Instantiate our fallback op interface that we'll use on specific
@@ -1103,9 +1212,7 @@ OpFoldResult TestOpWithRegionFold::fold(FoldAdaptor adaptor) {
   return getOperand();
 }
 
-OpFoldResult TestOpConstant::fold(FoldAdaptor adaptor) {
-  return getValue();
-}
+OpFoldResult TestOpConstant::fold(FoldAdaptor adaptor) { return getValue(); }
 
 LogicalResult TestOpWithVariadicResultsAndFolder::fold(
     FoldAdaptor adaptor, SmallVectorImpl<OpFoldResult> &results) {
@@ -1241,11 +1348,16 @@ LogicalResult OpWithResultShapePerDimInterfaceOp::reifyResultShapes(
   Location loc = getLoc();
   shapes.reserve(getNumOperands());
   for (Value operand : llvm::reverse(getOperands())) {
+    auto tensorType = operand.getType().cast<RankedTensorType>();
     auto currShape = llvm::to_vector<4>(llvm::map_range(
-        llvm::seq<int64_t>(
-            0, operand.getType().cast<RankedTensorType>().getRank()),
+        llvm::seq<int64_t>(0, tensorType.getRank()),
         [&](int64_t dim) -> OpFoldResult {
-          return builder.createOrFold<tensor::DimOp>(loc, operand, dim);
+          return tensorType.isDynamicDim(dim)
+                     ? static_cast<OpFoldResult>(
+                           builder.createOrFold<tensor::DimOp>(loc, operand,
+                                                               dim))
+                     : static_cast<OpFoldResult>(
+                           builder.getIndexAttr(tensorType.getDimSize(dim)));
         }));
     shapes.emplace_back(std::move(currShape));
   }

@@ -3,6 +3,7 @@
 from mlir.ir import *
 import mlir.dialects.builtin as builtin
 import mlir.dialects.func as func
+import numpy as np
 
 
 def run(f):
@@ -221,3 +222,17 @@ def testFuncArgumentAccess():
   # CHECK: %{{.*}}: f32 {custom_dialect.foo = "qux"},
   # CHECK: %{{.*}}: f32)
   print(module)
+
+
+# CHECK-LABEL: testDenseElementsAttr
+@run
+def testDenseElementsAttr():
+  with Context(), Location.unknown():
+    values = np.arange(4, dtype=np.int32)
+    i32 = IntegerType.get_signless(32)
+    print(DenseElementsAttr.get(values, type=i32))
+    # CHECK{LITERAL}: dense<[0, 1, 2, 3]> : tensor<4xi32>
+    print(DenseElementsAttr.get(values, type=i32, shape=(2, 2)))
+    # CHECK{LITERAL}: dense<[[0, 1], [2, 3]]> : tensor<2x2xi32>
+    print(DenseElementsAttr.get(values, type=VectorType.get((2, 2), i32)))
+    # CHECK{LITERAL}: dense<[[0, 1], [2, 3]]> : vector<2x2xi32>

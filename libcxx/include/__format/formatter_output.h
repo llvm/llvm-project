@@ -12,6 +12,7 @@
 
 #include <__algorithm/ranges_copy.h>
 #include <__algorithm/ranges_fill_n.h>
+#include <__algorithm/ranges_for_each.h>
 #include <__algorithm/ranges_transform.h>
 #include <__chrono/statically_widen.h>
 #include <__concepts/same_as.h>
@@ -503,36 +504,17 @@ __escape(basic_string<_CharT>& __str, basic_string_view<_CharT> __values, __esca
   __unicode::__code_point_view<_CharT> __view{__values.begin(), __values.end()};
 
   while (!__view.__at_end()) {
-    auto __first                                        = __view.__position();
-    typename __unicode::__consume_p2286_result __result = __view.__consume_p2286();
-    if (__result.__ill_formed_size == 0) {
-      if (!__formatter::__is_escaped_sequence_written(__str, __result.__value, __mark))
+    auto __first                                  = __view.__position();
+    typename __unicode::__consume_result __result = __view.__consume();
+    if (__result.__status == __unicode::__consume_result::__ok) {
+      if (!__formatter::__is_escaped_sequence_written(__str, __result.__code_point, __mark))
         // 2.2.1.3 - Add the character
         ranges::copy(__first, __view.__position(), std::back_insert_iterator(__str));
-
     } else {
       // 2.2.3 sequence of ill-formed code units
-      // The number of code-units in __result.__value depends on the character type being used.
-      if constexpr (sizeof(_CharT) == 1) {
-        _LIBCPP_ASSERT(__result.__ill_formed_size == 1 || __result.__ill_formed_size == 4,
-                       "illegal number of invalid code units.");
-        if (__result.__ill_formed_size == 1) // ill-formed, one code unit
-          __formatter::__write_escape_ill_formed_code_unit(__str, __result.__value & 0xff);
-        else { // out of valid range, four code units
-               // The code point was properly encoded, decode the value.
-          __formatter::__write_escape_ill_formed_code_unit(__str, __result.__value >> 18 | 0xf0);
-          __formatter::__write_escape_ill_formed_code_unit(__str, (__result.__value >> 12 & 0x3f) | 0x80);
-          __formatter::__write_escape_ill_formed_code_unit(__str, (__result.__value >> 6 & 0x3f) | 0x80);
-          __formatter::__write_escape_ill_formed_code_unit(__str, (__result.__value & 0x3f) | 0x80);
-        }
-      } else if constexpr (sizeof(_CharT) == 2) {
-        _LIBCPP_ASSERT(__result.__ill_formed_size == 1, "for UTF-16 at most one invalid code unit");
-        __formatter::__write_escape_ill_formed_code_unit(__str, __result.__value & 0xffff);
-      } else {
-        static_assert(sizeof(_CharT) == 4, "unsupported character width");
-        _LIBCPP_ASSERT(__result.__ill_formed_size == 1, "for UTF-32 one code unit is one code point");
-        __formatter::__write_escape_ill_formed_code_unit(__str, __result.__value);
-      }
+      ranges::for_each(__first, __view.__position(), [&](_CharT __value) {
+        __formatter::__write_escape_ill_formed_code_unit(__str, __formatter::__to_char32(__value));
+      });
     }
   }
 }

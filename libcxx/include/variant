@@ -214,6 +214,7 @@ namespace std {
 #include <__functional/invoke.h>
 #include <__functional/operations.h>
 #include <__functional/unary_function.h>
+#include <__memory/addressof.h>
 #include <__type_traits/add_const.h>
 #include <__type_traits/add_cv.h>
 #include <__type_traits/add_pointer.h>
@@ -231,6 +232,7 @@ namespace std {
 #include <__type_traits/remove_const.h>
 #include <__type_traits/type_identity.h>
 #include <__type_traits/void_t.h>
+#include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <__utility/in_place.h>
 #include <__utility/move.h>

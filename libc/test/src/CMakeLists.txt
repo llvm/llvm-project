@@ -60,14 +60,12 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(pthread)
 endif()
 
-if(LLVM_RUNTIMES_BUILD OR LIBC_HDRGEN_EXE OR CMAKE_COMPILER_IS_GNUCXX)
+if(LLVM_RUNTIMES_BUILD OR LIBC_HDRGEN_EXE)
   # The public API test below uses tablegen to generate the test
   # source file. Since tablegen is not available during a runtimes
   # build, we will skip the test.
   # If a different libc-hdrgen binary is being used, then also we
   # skip the api-test as we cannot generate the test source file.
-  # Additionally, this is an integration test and those only work with clang
-  # for the moment.
   return()
 endif()
 
