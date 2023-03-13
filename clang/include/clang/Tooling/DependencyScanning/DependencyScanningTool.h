@@ -265,30 +265,6 @@ private:
   LookupModuleOutputCallback LookupModuleOutput;
 };
 
-class CASFSActionController : public CallbackActionController {
-public:
-  CASFSActionController(LookupModuleOutputCallback LookupModuleOutput,
-                        llvm::cas::CachingOnDiskFileSystem &CacheFS,
-                        DepscanPrefixMapping PrefixMapping);
-
-  llvm::Error initialize(CompilerInstance &ScanInstance,
-                         CompilerInvocation &NewInvocation) override;
-  llvm::Error finalize(CompilerInstance &ScanInstance,
-                       CompilerInvocation &NewInvocation) override;
-  llvm::Error
-  initializeModuleBuild(CompilerInstance &ModuleScanInstance) override;
-  llvm::Error
-  finalizeModuleBuild(CompilerInstance &ModuleScanInstance) override;
-  llvm::Error finalizeModuleInvocation(CompilerInvocation &CI,
-                                       const ModuleDeps &MD) override;
-
-private:
-  llvm::cas::CachingOnDiskFileSystem &CacheFS;
-  DepscanPrefixMapping PrefixMapping;
-  std::optional<llvm::TreePathPrefixMapper> Mapper;
-  CASOptions CASOpts;
-};
-
 } // end namespace dependencies
 } // end namespace tooling
 } // end namespace clang

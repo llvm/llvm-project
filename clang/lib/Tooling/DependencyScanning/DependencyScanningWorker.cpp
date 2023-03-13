@@ -469,9 +469,13 @@ public:
     if (Error E = Controller.finalize(ScanInstance, OriginalInvocation))
       return reportError(std::move(E));
 
+    // Forward any CAS results to consumer.
     std::string ID = OriginalInvocation.getFileSystemOpts().CASFileSystemRootID;
     if (!ID.empty())
       Consumer.handleCASFileSystemRootID(std::move(ID));
+    ID = OriginalInvocation.getFrontendOpts().CASIncludeTreeID;
+    if (!ID.empty())
+      Consumer.handleIncludeTreeID(std::move(ID));
 
     LastCC1Arguments = OriginalInvocation.getCC1CommandLine();
 
