@@ -178,6 +178,14 @@ def UniStdAPI : PublicAPI<"unistd.h"> {
                "ssize_t", "uid_t", "__getoptargv_t"];
 }
 
+def WCharAPI : PublicAPI<"wchar.h"> {
+  let Types = [
+    "wchar_t",
+    "wint_t",
+    "size_t",
+  ];
+}
+
 def SysRandomAPI : PublicAPI<"sys/random.h"> {
   let Types = ["size_t", "ssize_t"];
 }

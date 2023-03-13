@@ -166,3 +166,9 @@ add_header(
   DEPENDS
     .linux.unistd_macros
 )
+
+add_header(
+  wchar_macros
+  HDR
+    wchar-macros.h
+)
