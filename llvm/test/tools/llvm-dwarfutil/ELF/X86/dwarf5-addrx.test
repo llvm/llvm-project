@@ -21,7 +21,7 @@
 #DWARF-CHECK: DW_TAG_compile_unit
 #DWARF-CHECK:   DW_AT_name [DW_FORM_strp]  {{.*}}     "CU1"
 #DWARF-CHECK:   DW_AT_low_pc [DW_FORM_addr]     (0x0000000000001130)
-#DWARF-CHECK:   DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000030)
+#DWARF-CHECK:   DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000060)
 #DWARF-CHECK:   DW_TAG_subprogram
 #DWARF-CHECK:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo1"
 #DWARF-CHECK:     DW_AT_low_pc [DW_FORM_addr]     (0x0000000000001130)
@@ -34,12 +34,24 @@
 #DWARF-CHECK:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo3"
 #DWARF-CHECK:     DW_AT_low_pc [DW_FORM_addr]     (0x0000000000001150)
 #DWARF-CHECK:     DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000010)
+#DWARF-CHECK:   DW_TAG_subprogram
+#DWARF-CHECK:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo4"
+#DWARF-CHECK:     DW_AT_low_pc [DW_FORM_addr]     (0x0000000000001160)
+#DWARF-CHECK:     DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000010)
+#DWARF-CHECK:   DW_TAG_subprogram
+#DWARF-CHECK:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo5"
+#DWARF-CHECK:     DW_AT_low_pc [DW_FORM_addr]     (0x0000000000001170)
+#DWARF-CHECK:     DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000010)
+#DWARF-CHECK:   DW_TAG_subprogram
+#DWARF-CHECK:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo6"
+#DWARF-CHECK:     DW_AT_low_pc [DW_FORM_addr]     (0x0000000000001180)
+#DWARF-CHECK:     DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000010)
 #DWARF-CHECK=NOT: .debug_addr contents:
 
 #UPD-DWARF-CHECK: DW_TAG_compile_unit
 #UPD-DWARF-CHECK:   DW_AT_name {{.*}}"CU1"
 #UPD-DWARF-CHECK:   DW_AT_low_pc [DW_FORM_addrx]   (indexed (00000000) address = 0x0000000000001130)
-#UPD-DWARF-CHECK:   DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000030)
+#UPD-DWARF-CHECK:   DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000060)
 #UPD-DWARF-CHECK:   DW_TAG_subprogram
 #UPD-DWARF-CHECK:     DW_AT_name  {{.*}}"foo1"
 #UPD-DWARF-CHECK:     DW_AT_low_pc [DW_FORM_addrx]   (indexed (00000000) address = 0x0000000000001130)
@@ -52,12 +64,27 @@
 #UPD-DWARF-CHECK:     DW_AT_name  {{.*}}"foo3"
 #UPD-DWARF-CHECK:     DW_AT_low_pc [DW_FORM_addrx]   (indexed (00000002) address = 0x0000000000001150)
 #UPD-DWARF-CHECK:     DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000010)
+#UPD-DWARF-CHECK:   DW_TAG_subprogram
+#UPD-DWARF-CHECK:     DW_AT_name  {{.*}}"foo4"
+#UPD-DWARF-CHECK:     DW_AT_low_pc [DW_FORM_addrx1]   (indexed (00000003) address = 0x0000000000001160)
+#UPD-DWARF-CHECK:     DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000010)
+#UPD-DWARF-CHECK:   DW_TAG_subprogram
+#UPD-DWARF-CHECK:     DW_AT_name  {{.*}}"foo5"
+#UPD-DWARF-CHECK:     DW_AT_low_pc [DW_FORM_addrx2]   (indexed (00000004) address = 0x0000000000001170)
+#UPD-DWARF-CHECK:     DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000010)
+#UPD-DWARF-CHECK:   DW_TAG_subprogram
+#UPD-DWARF-CHECK:     DW_AT_name  {{.*}}"foo6"
+#UPD-DWARF-CHECK:     DW_AT_low_pc [DW_FORM_addrx4]   (indexed (00000005) address = 0x0000000000001180)
+#UPD-DWARF-CHECK:     DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000010)
 #UPD-DWARF-CHECK: .debug_addr contents:
-#UPD-DWARF-CHECK: 0x00000000: Address table header: length = 0x0000001c, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00
+#UPD-DWARF-CHECK: 0x00000000: Address table header: length = 0x00000034, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00
 #UPD-DWARF-CHECK: Addrs: [
 #UPD-DWARF-CHECK: 0x0000000000001130
 #UPD-DWARF-CHECK: 0x0000000000001140
 #UPD-DWARF-CHECK: 0x0000000000001150
+#UPD-DWARF-CHECK: 0x0000000000001160
+#UPD-DWARF-CHECK: 0x0000000000001170
+#UPD-DWARF-CHECK: 0x0000000000001180
 #UPD-DWARF-CHECK: ]
 
 --- !ELF
@@ -71,7 +98,7 @@ Sections:
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
     Address:         0x1130
-    Size:            0x30
+    Size:            0x60
 DWARF:
   debug_abbrev:
     - Table:
@@ -101,6 +128,39 @@ DWARF:
             Form:      DW_FORM_data8
           - Attribute: DW_AT_type
             Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addrx1
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addrx2
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addrx4
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
       - Tag:      DW_TAG_base_type
         Children: DW_CHILDREN_no
         Attributes:
@@ -116,30 +176,51 @@ DWARF:
             - Value:  0x04
             - CStr: CU1
             - Value:  0x0
-            - Value:  0x30
+            - Value:  0x60
             - Value:  0x8
         - AbbrCode: 2
           Values:
             - CStr: foo1
             - Value: 0x0
             - Value: 0x10
-            - Value: 0x64
+            - Value: 0xa4
         - AbbrCode: 0
         - AbbrCode: 2
           Values:
             - CStr: foo2
             - Value: 0x01
             - Value: 0x10
-            - Value: 0x64
+            - Value: 0xa4
         - AbbrCode: 0
         - AbbrCode: 2
           Values:
             - CStr: foo3
             - Value: 0x02
             - Value: 0x10
-            - Value: 0x64
+            - Value: 0xa4
         - AbbrCode: 0
         - AbbrCode: 3
+          Values:
+            - CStr: foo4
+            - Value: 0x03
+            - Value: 0x10
+            - Value: 0xa4
+        - AbbrCode: 0
+        - AbbrCode: 4
+          Values:
+            - CStr: foo5
+            - Value: 0x04
+            - Value: 0x10
+            - Value: 0xa4
+        - AbbrCode: 0
+        - AbbrCode: 5
+          Values:
+            - CStr: foo6
+            - Value: 0x05
+            - Value: 0x10
+            - Value: 0xa4
+        - AbbrCode: 0
+        - AbbrCode: 6
           Values:
             - CStr: int
         - AbbrCode: 0
@@ -150,4 +231,7 @@ DWARF:
         - Address: 0x1130
         - Address: 0x1140
         - Address: 0x1150
+        - Address: 0x1160
+        - Address: 0x1170
+        - Address: 0x1180
 ...
