@@ -376,6 +376,10 @@ enum : unsigned {
 
   BUFFER_FAT_POINTER = 7, ///< Address space for 160-bit buffer fat pointers.
 
+  /// Internal address spaces. Can be freely renumbered.
+  STREAMOUT_REGISTER = 128, ///< Address space for GS NGG Streamout registers.
+  /// end Internal address spaces.
+
   /// Address space for direct addressable parameter memory (CONST0).
   PARAM_D_ADDRESS = 6,
   /// Address space for indirect addressable parameter memory (VTX1).
