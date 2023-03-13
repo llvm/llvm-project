@@ -90,11 +90,29 @@
 
 ; CHECK: DW_TAG_structure_type
 ; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name {{.*}}"tu_ref_non_tu"
+; CHECK: DW_AT_name {{.*}}"non_tu"
 
 ; CHECK: DW_TAG_structure_type
 ; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name {{.*}}"non_tu"
+; CHECK: DW_AT_name {{.*}}"_STN|templ_non_tu|<int>"
+
+; CHECK: DW_TAG_structure_type
+; CHECK-NOT: DW_TAG
+; CHECK: DW_AT_name      ("templ_non_tu")
+; CHECK-NOT: DW_TAG
+; CHECK: DW_TAG_template_type_parameter
+; CHECK-NEXT: DW_AT_type    {{.*}}"long"
+
+; CHECK: DW_TAG_structure_type
+; CHECK-NOT: DW_TAG
+; CHECK: DW_AT_name      ("_STN|templ_non_tu|<bool>")
+; CHECK-NOT: DW_TAG
+; CHECK: DW_TAG_template_type_parameter
+; CHECK-NEXT: DW_AT_type    {{.*}}"bool"
+
+; CHECK: DW_TAG_structure_type
+; CHECK-NOT: DW_TAG
+; CHECK: DW_AT_name {{.*}}"tu_ref_non_tu"
 
 ; CHECK: DW_TAG_structure_type
 ; CHECK-NOT: DW_TAG
@@ -115,29 +133,14 @@
 ; CHECK: DW_TAG_structure_type
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_name {{.*}}"ref_templ_non_tu"
-; CHECK: DW_TAG_structure_type
-; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name {{.*}}"_STN|templ_non_tu|<int>"
 
 ; CHECK: DW_TAG_structure_type
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_name {{.*}}"ref_templ_non_tu_simple"
-; CHECK: DW_TAG_structure_type
-; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name      ("templ_non_tu")
-; CHECK-NOT: DW_TAG
-; CHECK: DW_TAG_template_type_parameter
-; CHECK-NEXT: DW_AT_type    {{.*}}"long"
 
 ; CHECK: DW_TAG_structure_type
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_name {{.*}}"ref_templ_non_tu_mangled"
-; CHECK: DW_TAG_structure_type
-; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name      ("_STN|templ_non_tu|<bool>")
-; CHECK-NOT: DW_TAG
-; CHECK: DW_TAG_template_type_parameter
-; CHECK-NEXT: DW_AT_type    {{.*}}"bool"
 ; CHECK: DW_TAG_class_type
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_name {{.*}}"ref_internal_template"

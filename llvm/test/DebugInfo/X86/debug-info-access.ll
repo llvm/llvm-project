@@ -74,6 +74,10 @@
 ;   F f;
 ;   H h;
 
+; CHECK: DW_TAG_subprogram
+; CHECK:     DW_AT_name {{.*}}"free")
+; CHECK-NOT: DW_AT_accessibility
+
 ; CHECK: DW_TAG_member
 ; CHECK:     DW_AT_name {{.*}}"union_priv")
 ; CHECK-NOT: DW_TAG
@@ -141,10 +145,6 @@
 ; CHECK: DW_TAG_class_type
 ; CHECK:     DW_AT_name ("I")
 ; CHECK:     DW_AT_accessibility (DW_ACCESS_private)
-
-; CHECK: DW_TAG_subprogram
-; CHECK:     DW_AT_name {{.*}}"free")
-; CHECK-NOT: DW_AT_accessibility
 
 %union.U = type { i32 }
 %struct.A = type { i8 }
