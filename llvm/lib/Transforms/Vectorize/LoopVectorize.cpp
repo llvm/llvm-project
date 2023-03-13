@@ -975,14 +975,12 @@ namespace llvm {
 Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
                        int64_t Step) {
   assert(Ty->isIntegerTy() && "Expected an integer step");
-  Constant *StepVal = ConstantInt::get(Ty, Step * VF.getKnownMinValue());
-  return VF.isScalable() ? B.CreateVScale(StepVal) : StepVal;
+  return B.CreateElementCount(Ty, VF.multiplyCoefficientBy(Step));
 }
 
 /// Return the runtime value for VF.
 Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF) {
-  Constant *EC = ConstantInt::get(Ty, VF.getKnownMinValue());
-  return VF.isScalable() ? B.CreateVScale(EC) : EC;
+  return B.CreateElementCount(Ty, VF);
 }
 
 const SCEV *createTripCountSCEV(Type *IdxTy, PredicatedScalarEvolution &PSE) {

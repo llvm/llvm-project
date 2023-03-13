@@ -1518,10 +1518,7 @@ static void instrumentMaskedLoadOrStore(AddressSanitizer *Pass,
 
 
   IRBuilder<> IRB(I);
-  Constant *MinNumElem =
-    ConstantInt::get(IntptrTy, VTy->getElementCount().getKnownMinValue());
-  assert(isa<ScalableVectorType>(VTy) && "generalize if reused for fixed length");
-  Value *NumElements = IRB.CreateVScale(MinNumElem);
+  Value *NumElements = IRB.CreateElementCount(IntptrTy, VTy->getElementCount());
 
   Instruction *BodyIP;
   Value *Index;
@@ -1745,10 +1742,7 @@ void AddressSanitizer::instrumentUnusualSizeOrAlignment(
     Instruction *I, Instruction *InsertBefore, Value *Addr, TypeSize TypeStoreSize,
     bool IsWrite, Value *SizeArgument, bool UseCalls, uint32_t Exp) {
   IRBuilder<> IRB(InsertBefore);
-  Constant *MinBits =
-    ConstantInt::get(IntptrTy, TypeStoreSize.getKnownMinValue());
-  Value *NumBits =
-    !TypeStoreSize.isScalable() ? MinBits : IRB.CreateVScale(MinBits);
+  Value *NumBits = IRB.CreateTypeSize(IntptrTy, TypeStoreSize);
   Value *Size = IRB.CreateLShr(NumBits, ConstantInt::get(IntptrTy, 3));
 
   Value *AddrLong = IRB.CreatePointerCast(Addr, IntptrTy);
