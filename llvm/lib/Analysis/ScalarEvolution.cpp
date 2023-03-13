@@ -15069,9 +15069,9 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       return I != RewriteMap.end() ? I->second : S;
     };
 
-    const SCEV *RewrittenLHS = GetMaybeRewritten(LHS);
+    const SCEV *From = GetMaybeRewritten(LHS);
 
-    const SCEV *RewrittenRHS = nullptr;
+    const SCEV *To = nullptr;
     switch (Predicate) {
     case CmpInst::ICMP_ULT: {
       if (RHS->getType()->isPointerTy())
@@ -15081,41 +15081,41 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       LLVM_FALLTHROUGH;
     }
     case CmpInst::ICMP_ULE:
-      RewrittenRHS = getUMinExpr(RewrittenLHS, RHS);
+      To = getUMinExpr(From, RHS);
       break;
     case CmpInst::ICMP_SLT:
       RHS = getMinusSCEV(RHS, getOne(RHS->getType()));
       LLVM_FALLTHROUGH;
     case CmpInst::ICMP_SLE:
-      RewrittenRHS = getSMinExpr(RewrittenLHS, RHS);
+      To = getSMinExpr(From, RHS);
       break;
     case CmpInst::ICMP_UGT:
       RHS = getAddExpr(RHS, getOne(RHS->getType()));
       LLVM_FALLTHROUGH;
     case CmpInst::ICMP_UGE:
-      RewrittenRHS = getUMaxExpr(RewrittenLHS, RHS);
+      To = getUMaxExpr(From, RHS);
       break;
     case CmpInst::ICMP_SGT:
       RHS = getAddExpr(RHS, getOne(RHS->getType()));
       LLVM_FALLTHROUGH;
     case CmpInst::ICMP_SGE:
-      RewrittenRHS = getSMaxExpr(RewrittenLHS, RHS);
+      To = getSMaxExpr(From, RHS);
       break;
     case CmpInst::ICMP_EQ:
       if (isa<SCEVConstant>(RHS))
-        RewrittenRHS = RHS;
+        To = RHS;
       break;
     case CmpInst::ICMP_NE:
       if (isa<SCEVConstant>(RHS) &&
           cast<SCEVConstant>(RHS)->getValue()->isNullValue())
-        RewrittenRHS = getUMaxExpr(RewrittenLHS, getOne(RHS->getType()));
+        To = getUMaxExpr(From, getOne(RHS->getType()));
       break;
     default:
       break;
     }
 
-    if (RewrittenRHS)
-      AddRewrite(LHS, RewrittenLHS, RewrittenRHS);
+    if (To)
+      AddRewrite(LHS, From, To);
   };
 
   BasicBlock *Header = L->getHeader();
