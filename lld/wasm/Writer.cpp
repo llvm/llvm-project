@@ -567,7 +567,7 @@ void Writer::populateTargetFeatures() {
   if (config->isPic) {
     // This should not be necessary because all PIC objects should
     // contain the mutable-globals feature.
-    // TODO(https://bugs.llvm.org/show_bug.cgi?id=52339)
+    // TODO (https://github.com/llvm/llvm-project/issues/51681)
     allowed.insert("mutable-globals");
   }
 

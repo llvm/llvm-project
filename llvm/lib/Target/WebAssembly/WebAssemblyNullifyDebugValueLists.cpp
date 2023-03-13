@@ -9,7 +9,7 @@
 /// \file
 /// Nullify DBG_VALUE_LISTs instructions as a temporary measure before we
 /// implement DBG_VALUE_LIST handling in WebAssemblyDebugValueManager.
-/// See https://bugs.llvm.org/show_bug.cgi?id=50361.
+/// See https://github.com/llvm/llvm-project/issues/49705.
 /// TODO Correctly handle DBG_VALUE_LISTs
 ///
 //===----------------------------------------------------------------------===//
