@@ -152,7 +152,7 @@ struct PipeliningOption {
   // peeled. This takes the original operation, an i1 predicate value and the
   // pattern rewriter.
   using PredicateOpFn =
-      std::function<Operation *(Operation *, Value, PatternRewriter &)>;
+      std::function<Operation *(RewriterBase &, Operation *, Value)>;
   PredicateOpFn predicateFn = nullptr;
 
   // TODO: add option to decide if the prologue should be peeled.
