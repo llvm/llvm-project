@@ -2861,6 +2861,19 @@ TypeSystemSwiftTypeRef::GetClangTypeTypeNode(swift::Demangle::Demangler &dem,
   return type;
 }
 
+CompilerType
+TypeSystemSwiftTypeRef::ConvertClangTypeToSwiftType(CompilerType clang_type) {
+  assert(clang_type.GetTypeSystem().isa_and_nonnull<TypeSystemClang>() &&
+         "Unexpected type system!");
+
+  if (!clang_type.GetTypeSystem().isa_and_nonnull<TypeSystemClang>())
+    return {};
+
+  swift::Demangle::Demangler dem;
+  swift::Demangle::NodePointer node = GetClangTypeTypeNode(dem, clang_type);
+  return RemangleAsType(dem, node);
+}
+
 CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
     opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
     bool transparent_pointers, bool omit_empty_base_classes,
