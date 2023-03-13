@@ -73,7 +73,6 @@ struct Inclusion {
   int HashLine = 0;        // Line number containing the directive, 0-indexed.
   SrcMgr::CharacteristicKind FileKind = SrcMgr::C_User;
   std::optional<unsigned> HeaderID;
-  bool BehindPragmaKeep = false; // Has IWYU pragma: keep right after.
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Inclusion &);
 bool operator==(const Inclusion &LHS, const Inclusion &RHS);
@@ -155,8 +154,6 @@ public:
     return !NonSelfContained.contains(ID);
   }
 
-  bool hasIWYUExport(HeaderID ID) const { return HasIWYUExport.contains(ID); }
-
   // Return all transitively reachable files.
   llvm::ArrayRef<std::string> allHeaders() const { return RealPathNames; }
 
@@ -202,9 +199,6 @@ private:
   // Contains HeaderIDs of all non self-contained entries in the
   // IncludeStructure.
   llvm::DenseSet<HeaderID> NonSelfContained;
-  // Contains a set of headers that have either "IWYU pragma: export" or "IWYU
-  // pragma: begin_exports".
-  llvm::DenseSet<HeaderID> HasIWYUExport;
 
   // Maps written includes to indices in MainFileInclude for easier lookup by
   // spelling.
