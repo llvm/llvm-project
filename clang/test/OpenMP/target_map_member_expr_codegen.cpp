@@ -56,6 +56,9 @@ public:
        for (int i = 0; i < Csize; ++i)
           d.C[i] = 1;
      }
+     #pragma omp target map(from:d.C[0:Csize])
+       for (int i = 0; i < Csize; ++i)
+          d.C[i] = 1;
    }
 };
 
@@ -66,9 +69,11 @@ void foo() {
   descriptor<float> d;
   c.bar(d);
 }
+
 // CHECK: @.offload_sizes = private unnamed_addr constant [4 x i64] [i64 12, i64 4, i64 4, i64 4]
 // CHECK-NOT: @.offload_sizes = private unnamed_addr constant [4 x i64] [i64 0, i64 4, i64 4, i64 4]
-
+// CHECK: @.offload_sizes.4 = private unnamed_addr constant [3 x i64] [i64 4, i64 0, i64 0]
+// CHECK-NOT: @.offload_sizes.4 = private unnamed_addr constant [3 x i64] [i64 4, i64 1, i64 0]
 // CHECK-LABEL: define {{[^@]+}}@_Z3foov
 // CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
@@ -189,6 +194,12 @@ void foo() {
 // CHECK-NEXT:    [[DOTOFFLOAD_BASEPTRS9:%.*]] = alloca [2 x ptr], align 8
 // CHECK-NEXT:    [[DOTOFFLOAD_PTRS10:%.*]] = alloca [2 x ptr], align 8
 // CHECK-NEXT:    [[DOTOFFLOAD_MAPPERS11:%.*]] = alloca [2 x ptr], align 8
+// CHECK-NEXT:    [[_TMP12:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[CSIZE_CASTED13:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    [[DOTOFFLOAD_BASEPTRS18:%.*]] = alloca [3 x ptr], align 8
+// CHECK-NEXT:    [[DOTOFFLOAD_PTRS19:%.*]] = alloca [3 x ptr], align 8
+// CHECK-NEXT:    [[DOTOFFLOAD_MAPPERS20:%.*]] = alloca [3 x ptr], align 8
+// CHECK-NEXT:    [[DOTOFFLOAD_SIZES21:%.*]] = alloca [3 x i64], align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
@@ -323,6 +334,87 @@ void foo() {
 // CHECK-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP72:%.*]] = getelementptr inbounds [3 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 0
 // CHECK-NEXT:    call void @__tgt_target_data_end_mapper(ptr @[[GLOB1]], i64 -1, i32 3, ptr [[TMP70]], ptr [[TMP71]], ptr [[TMP72]], ptr @.offload_maptypes.1, ptr null, ptr null)
+// CHECK-NEXT:    [[TMP73:%.*]] = load ptr, ptr [[D_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[TMP73]], ptr [[_TMP12]], align 8
+// CHECK-NEXT:    [[TMP74:%.*]] = load i32, ptr [[CSIZE]], align 4
+// CHECK-NEXT:    store i32 [[TMP74]], ptr [[CSIZE_CASTED13]], align 4
+// CHECK-NEXT:    [[TMP75:%.*]] = load i64, ptr [[CSIZE_CASTED13]], align 8
+// CHECK-NEXT:    [[TMP76:%.*]] = load ptr, ptr [[_TMP12]], align 8
+// CHECK-NEXT:    [[TMP77:%.*]] = load ptr, ptr [[_TMP12]], align 8
+// CHECK-NEXT:    [[TMP78:%.*]] = load ptr, ptr [[_TMP12]], align 8
+// CHECK-NEXT:    [[C14:%.*]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[TMP78]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP79:%.*]] = load ptr, ptr [[_TMP12]], align 8
+// CHECK-NEXT:    [[C15:%.*]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], ptr [[TMP79]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP80:%.*]] = load ptr, ptr [[C15]], align 8
+// CHECK-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds float, ptr [[TMP80]], i64 0
+// CHECK-NEXT:    [[TMP81:%.*]] = load i32, ptr [[CSIZE]], align 4
+// CHECK-NEXT:    [[CONV17:%.*]] = zext i32 [[TMP81]] to i64
+// CHECK-NEXT:    [[TMP82:%.*]] = mul nuw i64 [[CONV17]], 4
+// CHECK-NEXT:    [[TMP83:%.*]] = getelementptr ptr, ptr [[C14]], i32 1
+// CHECK-NEXT:    [[TMP84:%.*]] = ptrtoint ptr [[TMP83]] to i64
+// CHECK-NEXT:    [[TMP85:%.*]] = ptrtoint ptr [[C14]] to i64
+// CHECK-NEXT:    [[TMP86:%.*]] = sub i64 [[TMP84]], [[TMP85]]
+// CHECK-NEXT:    [[TMP87:%.*]] = sdiv exact i64 [[TMP86]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES21]], ptr align 8 @.offload_sizes.4, i64 24, i1 false)
+// CHECK-NEXT:    [[TMP88:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS18]], i32 0, i32 0
+// CHECK-NEXT:    store i64 [[TMP75]], ptr [[TMP88]], align 8
+// CHECK-NEXT:    [[TMP89:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS19]], i32 0, i32 0
+// CHECK-NEXT:    store i64 [[TMP75]], ptr [[TMP89]], align 8
+// CHECK-NEXT:    [[TMP90:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_MAPPERS20]], i64 0, i64 0
+// CHECK-NEXT:    store ptr null, ptr [[TMP90]], align 8
+// CHECK-NEXT:    [[TMP91:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS18]], i32 0, i32 1
+// CHECK-NEXT:    store ptr [[TMP77]], ptr [[TMP91]], align 8
+// CHECK-NEXT:    [[TMP92:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS19]], i32 0, i32 1
+// CHECK-NEXT:    store ptr [[C14]], ptr [[TMP92]], align 8
+// CHECK-NEXT:    [[TMP93:%.*]] = getelementptr inbounds [3 x i64], ptr [[DOTOFFLOAD_SIZES21]], i32 0, i32 1
+// CHECK-NEXT:    store i64 [[TMP87]], ptr [[TMP93]], align 8
+// CHECK-NEXT:    [[TMP94:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_MAPPERS20]], i64 0, i64 1
+// CHECK-NEXT:    store ptr null, ptr [[TMP94]], align 8
+// CHECK-NEXT:    [[TMP95:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS18]], i32 0, i32 2
+// CHECK-NEXT:    store ptr [[C14]], ptr [[TMP95]], align 8
+// CHECK-NEXT:    [[TMP96:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS19]], i32 0, i32 2
+// CHECK-NEXT:    store ptr [[ARRAYIDX16]], ptr [[TMP96]], align 8
+// CHECK-NEXT:    [[TMP97:%.*]] = getelementptr inbounds [3 x i64], ptr [[DOTOFFLOAD_SIZES21]], i32 0, i32 2
+// CHECK-NEXT:    store i64 [[TMP82]], ptr [[TMP97]], align 8
+// CHECK-NEXT:    [[TMP98:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_MAPPERS20]], i64 0, i64 2
+// CHECK-NEXT:    store ptr null, ptr [[TMP98]], align 8
+// CHECK-NEXT:    [[TMP99:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS18]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP100:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS19]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP101:%.*]] = getelementptr inbounds [3 x i64], ptr [[DOTOFFLOAD_SIZES21]], i32 0, i32 0
+// CHECK-NEXT:    [[KERNEL_ARGS22:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
+// CHECK-NEXT:    [[TMP102:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS22]], i32 0, i32 0
+// CHECK-NEXT:    store i32 2, ptr [[TMP102]], align 4
+// CHECK-NEXT:    [[TMP103:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS22]], i32 0, i32 1
+// CHECK-NEXT:    store i32 3, ptr [[TMP103]], align 4
+// CHECK-NEXT:    [[TMP104:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS22]], i32 0, i32 2
+// CHECK-NEXT:    store ptr [[TMP99]], ptr [[TMP104]], align 8
+// CHECK-NEXT:    [[TMP105:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS22]], i32 0, i32 3
+// CHECK-NEXT:    store ptr [[TMP100]], ptr [[TMP105]], align 8
+// CHECK-NEXT:    [[TMP106:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS22]], i32 0, i32 4
+// CHECK-NEXT:    store ptr [[TMP101]], ptr [[TMP106]], align 8
+// CHECK-NEXT:    [[TMP107:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS22]], i32 0, i32 5
+// CHECK-NEXT:    store ptr @.offload_maptypes.5, ptr [[TMP107]], align 8
+// CHECK-NEXT:    [[TMP108:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS22]], i32 0, i32 6
+// CHECK-NEXT:    store ptr null, ptr [[TMP108]], align 8
+// CHECK-NEXT:    [[TMP109:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS22]], i32 0, i32 7
+// CHECK-NEXT:    store ptr null, ptr [[TMP109]], align 8
+// CHECK-NEXT:    [[TMP110:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS22]], i32 0, i32 8
+// CHECK-NEXT:    store i64 0, ptr [[TMP110]], align 8
+// CHECK-NEXT:    [[TMP111:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS22]], i32 0, i32 9
+// CHECK-NEXT:    store i64 0, ptr [[TMP111]], align 8
+// CHECK-NEXT:    [[TMP112:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS22]], i32 0, i32 10
+// CHECK-NEXT:    store [3 x i32] [i32 -1, i32 0, i32 0], ptr [[TMP112]], align 4
+// CHECK-NEXT:    [[TMP113:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS22]], i32 0, i32 11
+// CHECK-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP113]], align 4
+// CHECK-NEXT:    [[TMP114:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS22]], i32 0, i32 12
+// CHECK-NEXT:    store i32 0, ptr [[TMP114]], align 4
+// CHECK-NEXT:    [[TMP115:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 -1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN1C3barER10descriptorIfE_l59.region_id, ptr [[KERNEL_ARGS22]])
+// CHECK-NEXT:    [[TMP116:%.*]] = icmp ne i32 [[TMP115]], 0
+// CHECK-NEXT:    br i1 [[TMP116]], label [[OMP_OFFLOAD_FAILED23:%.*]], label [[OMP_OFFLOAD_CONT24:%.*]]
+// CHECK:       omp_offload.failed23:
+// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN1C3barER10descriptorIfE_l59(i64 [[TMP75]], ptr [[TMP76]]) #[[ATTR3]]
+// CHECK-NEXT:    br label [[OMP_OFFLOAD_CONT24]]
+// CHECK:       omp_offload.cont24:
 // CHECK-NEXT:    ret void
 //
 //
@@ -433,13 +525,49 @@ void foo() {
 // CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[I]], align 4
 // CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP6]], 1
 // CHECK-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP5:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP6:![0-9]+]]
+// CHECK:       for.end:
+// CHECK-NEXT:    ret void
+//
+//
+// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN1C3barER10descriptorIfE_l59
+// CHECK-SAME: (i64 noundef [[CSIZE:%.*]], ptr noundef nonnull align 8 dereferenceable(40) [[D:%.*]]) #[[ATTR2]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[CSIZE_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[TMP:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store i64 [[CSIZE]], ptr [[CSIZE_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[D_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[TMP0]], ptr [[TMP]], align 8
+// CHECK-NEXT:    store i32 0, ptr [[I]], align 4
+// CHECK-NEXT:    br label [[FOR_COND:%.*]]
+// CHECK:       for.cond:
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[I]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[CSIZE_ADDR]], align 4
+// CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], [[TMP2]]
+// CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
+// CHECK:       for.body:
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP]], align 8
+// CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_DESCRIPTOR:%.*]], ptr [[TMP3]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[C]], align 8
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[I]], align 4
+// CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP5]] to i64
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP4]], i64 [[IDXPROM]]
+// CHECK-NEXT:    store float 1.000000e+00, ptr [[ARRAYIDX]], align 4
+// CHECK-NEXT:    br label [[FOR_INC:%.*]]
+// CHECK:       for.inc:
+// CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[I]], align 4
+// CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP6]], 1
+// CHECK-NEXT:    store i32 [[INC]], ptr [[I]], align 4
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP10:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    ret void
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK-SAME: () #[[ATTR4:[0-9]+]] section ".text.startup" {
+// CHECK-SAME: () #[[ATTR5:[0-9]+]] section ".text.startup" {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK-NEXT:    ret void

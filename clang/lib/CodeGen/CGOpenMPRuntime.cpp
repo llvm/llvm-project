@@ -8378,7 +8378,8 @@ private:
       // individual members mapped. Emit an extra combined entry.
       if (PartialStruct.Base.isValid()) {
         CurInfo.NonContigInfo.Dims.push_back(0);
-        emitCombinedEntry(CombinedInfo, CurInfo.Types, PartialStruct, VD);
+        emitCombinedEntry(CombinedInfo, CurInfo.Types, PartialStruct,
+                          /*IsMapThis*/ !VD, VD);
       }
 
       // We need to append the results of this capture to what we already
@@ -8444,7 +8445,7 @@ public:
   /// individual struct members.
   void emitCombinedEntry(MapCombinedInfoTy &CombinedInfo,
                          MapFlagsArrayTy &CurTypes,
-                         const StructRangeInfoTy &PartialStruct,
+                         const StructRangeInfoTy &PartialStruct, bool IsMapThis,
                          const ValueDecl *VD = nullptr,
                          bool NotTargetParams = true) const {
     if (CurTypes.size() == 1 &&
@@ -8466,8 +8467,7 @@ public:
     const CXXMethodDecl *MD =
         CGF.CurFuncDecl ? dyn_cast<CXXMethodDecl>(CGF.CurFuncDecl) : nullptr;
     const CXXRecordDecl *RD = MD ? MD->getParent() : nullptr;
-    // When VD is not null, it is not field of class, skip generating this[:1].
-    bool HasBaseClass = RD && !VD ? RD->getNumBases() > 0 : false;
+    bool HasBaseClass = RD && IsMapThis ? RD->getNumBases() > 0 : false;
     // There should not be a mapper for a combined entry.
     if (HasBaseClass) {
       // OpenMP 5.2 148:21:
@@ -10052,8 +10052,8 @@ void CGOpenMPRuntime::emitTargetCall(
       if (PartialStruct.Base.isValid()) {
         CombinedInfo.append(PartialStruct.PreliminaryMapData);
         MEHandler.emitCombinedEntry(
-            CombinedInfo, CurInfo.Types, PartialStruct, nullptr,
-            !PartialStruct.PreliminaryMapData.BasePointers.empty());
+            CombinedInfo, CurInfo.Types, PartialStruct, CI->capturesThis(),
+            nullptr, !PartialStruct.PreliminaryMapData.BasePointers.empty());
       }
 
       // We need to append the results of this capture to what we already have.
