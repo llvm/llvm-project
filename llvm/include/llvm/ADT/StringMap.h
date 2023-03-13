@@ -249,8 +249,11 @@ public:
   /// if the key is not in the map.
   ValueTy &operator[](StringRef Key) { return try_emplace(Key).first->second; }
 
+  /// contains - Return true if the element is in the map, false otherwise.
+  bool contains(StringRef Key) const { return find(Key) != end(); }
+
   /// count - Return 1 if the element is in the map, 0 otherwise.
-  size_type count(StringRef Key) const { return find(Key) == end() ? 0 : 1; }
+  size_type count(StringRef Key) const { return contains(Key) ? 1 : 0; }
 
   template <typename InputTy>
   size_type count(const StringMapEntry<InputTy> &MapEntry) const {
