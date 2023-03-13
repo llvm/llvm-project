@@ -243,15 +243,6 @@ RISCVTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   llvm_unreachable("Unsupported register kind");
 }
 
-InstructionCost RISCVTTIImpl::getSpliceCost(VectorType *Tp, int Index) {
-  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
-
-  unsigned Cost = 2; // vslidedown+vslideup.
-  // TODO: Multiplying by LT.first implies this legalizes into multiple copies
-  // of similar code, but I think we expand through memory.
-  return Cost * LT.first * getLMULCost(LT.second);
-}
-
 InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                              VectorType *Tp, ArrayRef<int> Mask,
                                              TTI::TargetCostKind CostKind,
@@ -270,7 +261,10 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       return LT.first * 1;
     }
     case TTI::SK_Splice:
-      return getSpliceCost(Tp, Index);
+      // vslidedown+vslideup.
+      // TODO: Multiplying by LT.first implies this legalizes into multiple copies
+      // of similar code, but I think we expand through memory.
+      return 2 * LT.first * getLMULCost(LT.second);
     case TTI::SK_Reverse:
       // Most of the cost here is producing the vrgather index register
       // Example sequence:
