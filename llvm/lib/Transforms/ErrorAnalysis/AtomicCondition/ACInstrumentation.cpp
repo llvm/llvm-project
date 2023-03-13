@@ -32,9 +32,14 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction, string Functi
   Module *M = InstrumentFunction->getParent();
 
   for (auto &Global : M->getGlobalList()) {
-    if (Global.getName().str().find("ExecutionCounter") !=
+    if (Global.getName().str().find("InstructionExecutionCounter") !=
         std::string::npos) {
       ExecutionCounter = &Global;
+    }
+
+    if (Global.getName().str().find("FunctionInstanceCounter") !=
+            std::string::npos) {
+      FunctionInstanceCounter = &Global;
     }
   }
 
@@ -272,9 +277,13 @@ void ACInstrumentation::instrumentCallsForAFComputation(
   Value *AllocatedAFArray =
       createArrayInIR(AFArray, &InstructionBuilder, InstructionIterator);
 
+  Value *FunctionInstanceIdLoader = InstructionBuilder.CreateLoad(InstructionBuilder.getInt32Ty(),
+                                                                  FunctionInstanceCounter);
+
   AFArgs.push_back(InstructionACMap[BaseInstruction]);
   AFArgs.push_back(AllocatedAFArray);
   AFArgs.push_back(InstructionBuilder.getInt32(NumOperands));
+  AFArgs.push_back(FunctionInstanceIdLoader);
   AFArgs.push_back(InstructionBuilder.getInt32(InstructionID));
   AFArgs.push_back(InstructionBuilder.getInt32(Evaluations+1));
   InstructionID++;
@@ -581,6 +590,8 @@ void ACInstrumentation::instrumentMainFunction(Function *F) {
   CallInst *AFInitCallInstruction, *PrintAFPathsCallInstruction;
   CallInst *StoreACTableCallInstruction, *StoreAFTableCallInstruction;
 
+  InstructionBuilder.CreateStore(InstructionBuilder.getInt32(0), FunctionInstanceCounter);
+
   // Instrumenting Initialization call instruction
   AFInitCallInstruction =
       InstructionBuilder.CreateCall(AFInitFunction, AFInitCallArgs);
@@ -614,7 +625,8 @@ void ACInstrumentation::instrumentMainFunction(Function *F) {
 }
 
 void ACInstrumentation::instrumentFunctionInitializationInsts(Function *F) {
-  assert((ExecutionCounter != nullptr) && "GlobalVariable pointer not initialized!");
+  assert((ExecutionCounter != nullptr) &&
+         (FunctionInstanceCounter != nullptr) && "GlobalVariable pointers not initialized!");
 
   BasicBlock *BB = &(*(F->begin()));
   Instruction *Inst = BB->getFirstNonPHIOrDbg();
@@ -622,6 +634,13 @@ void ACInstrumentation::instrumentFunctionInitializationInsts(Function *F) {
   IRBuilder<> InstructionBuilder(Inst);
 
   InstructionBuilder.CreateStore(InstructionBuilder.getInt32(0), ExecutionCounter);
+
+  Value *FunctionInstanceIdLoader = InstructionBuilder.CreateLoad(InstructionBuilder.getInt32Ty(),
+                                                                  FunctionInstanceCounter);
+
+  Value *Result = InstructionBuilder.CreateAdd(FunctionInstanceIdLoader, InstructionBuilder.getInt32(1));
+  InstructionBuilder.CreateStore(Result,FunctionInstanceCounter);
+
 }
 
 Value *

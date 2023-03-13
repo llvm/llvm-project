@@ -18,6 +18,7 @@ private:
   // Function to Instrument
   int Evaluations;
   GlobalVariable *ExecutionCounter;
+  GlobalVariable *FunctionInstanceCounter;
   Function *FunctionToInstrument;
 
   Function *AFInitFunction;

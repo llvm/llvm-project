@@ -288,8 +288,9 @@ void fAFStoreAFProducts(FILE *FP, AFProduct **ObjectPointerList, uint64_t NumObj
 
 struct AFItem {
   int ItemId;
+  int FunctionEvaluationId;
   int InstructionId;
-  int ExecutionId;
+  int InstructionExecutionId;
 
   AFProduct** Components;
   int NumAFComponents;
@@ -299,8 +300,9 @@ typedef struct AFItem AFItem;
 
 void fAFCreateAFItem(AFItem **AddressToAllocateAt,
                      int ItemId,
+                     int FunctionEvaluationId,
                      int InstructionId,
-                     int ExecutionId,
+                     int InstructionExecutionId,
                      int NumAFComponents) {
   if((*AddressToAllocateAt = (AFItem *)malloc(sizeof(AFItem))) == NULL) {
     printf("#fAF: Not enough memory for AFItem!");
@@ -308,22 +310,26 @@ void fAFCreateAFItem(AFItem **AddressToAllocateAt,
   }
 
   (*AddressToAllocateAt)->ItemId = ItemId;
+  (*AddressToAllocateAt)->FunctionEvaluationId = FunctionEvaluationId;
   (*AddressToAllocateAt)->InstructionId = InstructionId;
-  (*AddressToAllocateAt)->ExecutionId = ExecutionId;
+  (*AddressToAllocateAt)->InstructionExecutionId = InstructionExecutionId;
   (*AddressToAllocateAt)->Components = NULL;
   (*AddressToAllocateAt)->NumAFComponents = NumAFComponents;
 
   return ;
 }
 
-// Gets the AFItem with InstructionId and ExecutionId from List of AFItems.
+// Gets the AFItem with FunctionEvaluationId, InstructionId and
+// InstructionExecutionId from List of AFItems.
 AFItem *fAFGetAFItemFromList(AFItem **AFItemList,
                              int NumAFItems,
+                             int FunctionEvaluationId,
                              int InstructionId,
-                             int ExecutionId) {
+                             int InstructionExecutionId) {
   for (int I = 0; I < NumAFItems; ++I)
-    if (AFItemList[I]->InstructionId == InstructionId &&
-        AFItemList[I]->ExecutionId == ExecutionId)
+    if (AFItemList[I]->FunctionEvaluationId == FunctionEvaluationId &&
+        AFItemList[I]->InstructionId == InstructionId &&
+        AFItemList[I]->InstructionExecutionId == InstructionExecutionId)
       return AFItemList[I];
 
   return NULL;
@@ -436,7 +442,8 @@ void fAFCreateAFTable(AFTable **AddressToAllocateAt) {
 int AFItemCounter;
 int AFComponentCounter;
 int PlotDataCounter;
-int ExecutionCounter;
+int InstructionExecutionCounter;
+int FunctionInstanceCounter;
 AFTable *AFs;
 AFProduct **Paths;
 
@@ -634,13 +641,15 @@ void fAFInitialize() {
 #if MEMORY_OPT
 AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
                       int NumOperands,
+                      int FunctionEvaluationId,
                       int InstructionId,
                       int NumFunctionEvaluations) {
 #if FAF_DEBUG >= 2
   printf("\n\tCreating AFItem\n");
   printf("\t\tACId: %d\n", (*AC)->ItemId);
+  printf("\t\tFunctionEvaluationId: %d\n", FunctionEvaluationId);
   printf("\t\tInstructionId: %d\n", InstructionId);
-  printf("\t\tExecutionId: %d\n", ExecutionCounter);
+  printf("\t\tInstructionExecutionId: %d\n", InstructionExecutionCounter);
   printf("\t\tNumber of Operands: %d\n", NumOperands);
   printf("\t\tRootNode: %s\n", (*AC)->ResultVar);
   printf("\t\tComponents:\n");
@@ -660,8 +669,8 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
   //  AFComponents array.
   AFItem *UpdatingAFItem = NULL;
 
-  fAFCreateAFItem(&UpdatingAFItem, AFItemCounter, InstructionId,
-                  ExecutionCounter, 0);
+  fAFCreateAFItem(&UpdatingAFItem, AFItemCounter, FunctionEvaluationId,
+                  InstructionId,InstructionExecutionCounter, 0);
   AFItemCounter++;
 
   int TotalAFComponents = 0;
@@ -758,7 +767,7 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
   //  Add AFItem to the AFTable
   AFs->AFItems[AFs->ListLength] = UpdatingAFItem;
   AFs->ListLength++;
-  ExecutionCounter++;
+  InstructionExecutionCounter++;
 
 #if FAF_DEBUG >= 2
   printf("\n\tAFItem Created\n");
@@ -774,13 +783,15 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
 #else
 AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
                       int NumOperands,
+                      int FunctionEvaluationId,
                       int InstructionId,
                       int NumFunctionEvaluations) {
 #if FAF_DEBUG >= 2
   printf("\n\tCreating AFItem\n");
   printf("\t\tACId: %d\n", (*AC)->ItemId);
+  printf("\t\tFunctionEvaluationId: %d\n", FunctionEvaluationId);
   printf("\t\tInstructionId: %d\n", InstructionId);
-  printf("\t\tExecutionId: %d\n", ExecutionCounter);
+  printf("\t\tInstructionExecutionId: %d\n", InstructionExecutionCounter);
   printf("\t\tNumber of Operands: %d\n", NumOperands);
   printf("\t\tRootNode: %s\n", (*AC)->ResultVar);
   printf("\t\tComponents:\n");
@@ -799,16 +810,19 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
   // This determines whether we create a new AFItem or update an existing one.
   int NewAFItem = 0;
 
-  // Find an existing AFItem with the same InstructionId and ExecutionId or create a new one.
+  // Find an existing AFItem with the same InstructionId and InstructionExecutionId or create a new one.
   AFItem *UpdatingAFItem = NULL;
   UpdatingAFItem = fAFGetAFItemFromList(AFs->AFItems, AFs->ListLength,
-                                        InstructionId, ExecutionCounter);
+                                        FunctionEvaluationId, InstructionId,
+                                        InstructionExecutionCounter);
   if (UpdatingAFItem == NULL) {
+#if FAF_DEBUG >= 3
     printf("Creating a new AFItem\n");
+#endif
     NewAFItem = 1;
 
-    fAFCreateAFItem(&UpdatingAFItem, AFItemCounter, InstructionId,
-                    ExecutionCounter, 0);
+    fAFCreateAFItem(&UpdatingAFItem, AFItemCounter, FunctionEvaluationId,
+                    InstructionId, InstructionExecutionCounter, 0);
     AFItemCounter++;
   }
 
@@ -940,7 +954,7 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
   //  Add AFItem to the AFTable
   AFs->AFItems[AFs->ListLength] = UpdatingAFItem;
   AFs->ListLength++;
-  ExecutionCounter++;
+  InstructionExecutionCounter++;
 
 #if FAF_DEBUG >= 2
   printf("\n\tAFItem Created\n");
