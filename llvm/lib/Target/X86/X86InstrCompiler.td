@@ -896,15 +896,15 @@ multiclass ATOMIC_LOGIC_OP<Format Form, string s> {
 multiclass ATOMIC_LOGIC_OP_RM<bits<8> Opc8, string s> {
   let Defs = [EFLAGS], mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
       SchedRW = [WriteBitTestSetRegRMW]  in {
-    def 16rm : Ii8<Opc8, MRMDestMem, (outs), (ins i16mem:$src1, GR16:$src2),
+    def 16rm : I<Opc8, MRMDestMem, (outs), (ins i16mem:$src1, GR16:$src2),
                   !strconcat(s, "{w}\t{$src2, $src1|$src1, $src2}"),
                   [(set EFLAGS, (!cast<SDNode>("x86_rm_" # s) addr:$src1, GR16:$src2))]>,
                OpSize16, TB, LOCK;
-    def 32rm : Ii8<Opc8, MRMDestMem, (outs), (ins i32mem:$src1, GR32:$src2),
+    def 32rm : I<Opc8, MRMDestMem, (outs), (ins i32mem:$src1, GR32:$src2),
                   !strconcat(s, "{l}\t{$src2, $src1|$src1, $src2}"),
                   [(set EFLAGS, (!cast<SDNode>("x86_rm_" # s) addr:$src1, GR32:$src2))]>,
                OpSize32, TB, LOCK;
-    def 64rm : RIi8<Opc8, MRMDestMem, (outs), (ins i64mem:$src1, GR64:$src2),
+    def 64rm : RI<Opc8, MRMDestMem, (outs), (ins i64mem:$src1, GR64:$src2),
                    !strconcat(s, "{q}\t{$src2, $src1|$src1, $src2}"),
                    [(set EFLAGS, (!cast<SDNode>("x86_rm_" # s) addr:$src1, GR64:$src2))]>,
                TB, LOCK;
