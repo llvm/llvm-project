@@ -9281,92 +9281,285 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
   assert(E->State == TreeEntry::NeedToGather && "Expected gather node.");
   unsigned VF = E->getVectorFactor();
 
-  ShuffleInstructionBuilder ShuffleBuilder(Builder, *this);
-  SmallVector<Value *> Gathered(
-      VF, PoisonValue::get(E->Scalars.front()->getType()));
+  auto AdjustExtracts = [&](const TreeEntry *E, ArrayRef<int> Mask) {
+    Value *VecBase = nullptr;
+    for (int I = 0, Sz = Mask.size(); I < Sz; ++I) {
+      int Idx = Mask[I];
+      if (Idx == UndefMaskElem)
+        continue;
+      auto *EI = cast<ExtractElementInst>(E->Scalars[I]);
+      VecBase = EI->getVectorOperand();
+      // TODO: EI can be erased, if all its users are vectorized. But need to
+      // emit shuffles for such extractelement instructions.
+    }
+    return VecBase;
+  };
+  auto CreateShuffle = [&](Value *V1, Value *V2, ArrayRef<int> Mask) {
+    unsigned VF1 = cast<FixedVectorType>(V1->getType())->getNumElements();
+    unsigned VF2 = cast<FixedVectorType>(V2->getType())->getNumElements();
+    unsigned VF = std::max(VF1, VF2);
+    if (VF1 != VF2) {
+      SmallVector<int> ExtMask(VF, UndefMaskElem);
+      std::iota(ExtMask.begin(), std::next(ExtMask.begin(), std::min(VF1, VF2)),
+                0);
+      if (VF1 < VF2) {
+        V1 = Builder.CreateShuffleVector(V1, ExtMask);
+        if (auto *I = dyn_cast<Instruction>(V1)) {
+          GatherShuffleExtractSeq.insert(I);
+          CSEBlocks.insert(I->getParent());
+        }
+      } else {
+        V2 = Builder.CreateShuffleVector(V2, ExtMask);
+        if (auto *I = dyn_cast<Instruction>(V2)) {
+          GatherShuffleExtractSeq.insert(I);
+          CSEBlocks.insert(I->getParent());
+        }
+      }
+    }
+    const int Limit = Mask.size() * 2;
+    if (V1 == V2 && Mask.size() == VF &&
+        all_of(Mask, [=](int Idx) { return Idx < Limit; }) &&
+        (ShuffleVectorInst::isIdentityMask(Mask) ||
+         (ShuffleVectorInst::isZeroEltSplatMask(Mask) &&
+          isa<ShuffleVectorInst>(V1) &&
+          cast<ShuffleVectorInst>(V1)->getShuffleMask() == Mask)))
+      return V1;
+    Value *Vec = V1 == V2 ? Builder.CreateShuffleVector(V1, Mask)
+                          : Builder.CreateShuffleVector(V1, V2, Mask);
+    if (auto *I = dyn_cast<Instruction>(Vec)) {
+      GatherShuffleExtractSeq.insert(I);
+      CSEBlocks.insert(I->getParent());
+    }
+    return Vec;
+  };
+  auto NeedToDelay = [=](const TreeEntry *E,
+                         ArrayRef<const TreeEntry *> Deps) -> Value * {
+    // No need to delay emission if all deps are ready.
+    if (all_of(Deps, [](const TreeEntry *TE) { return TE->VectorizedValue; }))
+      return nullptr;
+    // Postpone gather emission, will be emitted after the end of the
+    // process to keep correct order.
+    auto *VecTy = FixedVectorType::get(E->Scalars.front()->getType(),
+                                       E->getVectorFactor());
+    Value *Vec = Builder.CreateAlignedLoad(
+        VecTy, PoisonValue::get(VecTy->getPointerTo()), MaybeAlign());
+    return Vec;
+  };
+
   bool NeedFreeze = false;
-  SmallVector<Value *> VL(E->Scalars.begin(), E->Scalars.end());
-  // Build a mask out of the redorder indices and reorder scalars per this mask.
+  SmallVector<int> ReuseShuffleIndicies(E->ReuseShuffleIndices.begin(),
+                                        E->ReuseShuffleIndices.end());
+  SmallVector<Value *> GatheredScalars(E->Scalars.begin(), E->Scalars.end());
+  // Build a mask out of the reorder indices and reorder scalars per this
+  // mask.
   SmallVector<int> ReorderMask;
   inversePermutation(E->ReorderIndices, ReorderMask);
   if (!ReorderMask.empty())
-    reorderScalars(VL, ReorderMask);
-  SmallVector<int> ReuseMask(VF, UndefMaskElem);
-  if (!allConstant(VL)) {
+    reorderScalars(GatheredScalars, ReorderMask);
+
+  ShuffleInstructionBuilder ShuffleBuilder(Builder, *this);
+  Value *Vec = nullptr;
+  SmallVector<int> Mask;
+  SmallVector<int> ExtractMask;
+  SmallVector<int> ReuseMask;
+  std::optional<TargetTransformInfo::ShuffleKind> ExtractShuffle;
+  std::optional<TargetTransformInfo::ShuffleKind> GatherShuffle;
+  SmallVector<const TreeEntry *> Entries;
+  Type *ScalarTy = GatheredScalars.front()->getType();
+  if (!all_of(GatheredScalars, UndefValue::classof)) {
+    // Check for gathered extracts.
+    ExtractShuffle = tryToGatherExtractElements(GatheredScalars, ExtractMask);
+    SmallVector<Value *> IgnoredVals;
+    if (UserIgnoreList)
+      IgnoredVals.assign(UserIgnoreList->begin(), UserIgnoreList->end());
+    bool Resized = false;
+    if (Value *VecBase = AdjustExtracts(E, ExtractMask))
+      if (auto *VecBaseTy = dyn_cast<FixedVectorType>(VecBase->getType()))
+        if (VF == VecBaseTy->getNumElements() && GatheredScalars.size() != VF) {
+          Resized = true;
+          GatheredScalars.append(VF - GatheredScalars.size(),
+                                 PoisonValue::get(ScalarTy));
+        }
+    // Gather extracts after we check for full matched gathers only.
+    if (ExtractShuffle || E->getOpcode() != Instruction::Load ||
+        E->isAltShuffle() ||
+        all_of(E->Scalars, [this](Value *V) { return getTreeEntry(V); }) ||
+        isSplat(E->Scalars) ||
+        (E->Scalars != GatheredScalars && GatheredScalars.size() <= 2)) {
+      GatherShuffle = isGatherShuffledEntry(E, GatheredScalars, Mask, Entries);
+    }
+    if (GatherShuffle) {
+      if (Value *Delayed = NeedToDelay(E, Entries)) {
+        // Delay emission of gathers which are not ready yet.
+        PostponedGathers.insert(E);
+        // Postpone gather emission, will be emitted after the end of the
+        // process to keep correct order.
+        return Delayed;
+      }
+      assert((Entries.size() == 1 || Entries.size() == 2) &&
+             "Expected shuffle of 1 or 2 entries.");
+      if (!Resized) {
+        unsigned VF1 = Entries.front()->getVectorFactor();
+        unsigned VF2 = Entries.back()->getVectorFactor();
+        if ((VF == VF1 || VF == VF2) && GatheredScalars.size() != VF)
+          GatheredScalars.append(VF - GatheredScalars.size(),
+                                 PoisonValue::get(ScalarTy));
+      }
+      // Remove shuffled elements from list of gathers.
+      for (int I = 0, Sz = Mask.size(); I < Sz; ++I) {
+        if (Mask[I] != UndefMaskElem)
+          GatheredScalars[I] = PoisonValue::get(ScalarTy);
+      }
+    }
+  }
+  if ((ExtractShuffle || GatherShuffle) &&
+      all_of(GatheredScalars, PoisonValue::classof)) {
+    Value *Vec1 = nullptr;
+    if (ExtractShuffle) {
+      // Gather of extractelements can be represented as just a shuffle of
+      // a single/two vectors the scalars are extracted from.
+      // Find input vectors.
+      Value *Vec2 = nullptr;
+      for (unsigned I = 0, Sz = ExtractMask.size(); I < Sz; ++I) {
+        if (ExtractMask[I] == UndefMaskElem ||
+            (!Mask.empty() && Mask[I] != UndefMaskElem)) {
+          ExtractMask[I] = UndefMaskElem;
+          continue;
+        }
+        if (isa<UndefValue>(E->Scalars[I]))
+          continue;
+        auto *EI = cast<ExtractElementInst>(E->Scalars[I]);
+        if (!Vec1) {
+          Vec1 = EI->getVectorOperand();
+        } else if (Vec1 != EI->getVectorOperand()) {
+          assert((!Vec2 || Vec2 == EI->getVectorOperand()) &&
+                 "Expected only 1 or 2 vectors shuffle.");
+          Vec2 = EI->getVectorOperand();
+        }
+      }
+      if (Vec2)
+        Vec1 = CreateShuffle(Vec1, Vec2, ExtractMask);
+      else if (Vec1)
+        Vec1 = CreateShuffle(Vec1, Vec1, ExtractMask);
+      else
+        Vec1 = PoisonValue::get(
+            FixedVectorType::get(ScalarTy, GatheredScalars.size()));
+    }
+    if (GatherShuffle) {
+      Vec = CreateShuffle(Entries.front()->VectorizedValue,
+                          Entries.back()->VectorizedValue, Mask);
+      if (Vec1) {
+        // Build final mask.
+        for (auto [I, Idx] : enumerate(Mask)) {
+          if (ExtractMask[I] != UndefMaskElem)
+            Idx = I;
+          else if (Idx != UndefMaskElem)
+            Idx = I + VF;
+        }
+        Vec = CreateShuffle(Vec1, Vec, Mask);
+      }
+    } else {
+      Vec = Vec1;
+    }
+  } else if (!allConstant(E->Scalars)) {
+    // TODO: remove this code once able to combine shuffled vectors and build
+    // vector elements.
+    copy(E->Scalars, GatheredScalars.begin());
     // For splats with can emit broadcasts instead of gathers, so try to find
     // such sequences.
-    bool IsSplat = isSplat(VL) && (VL.size() > 2 || VL.front() == VL.back());
+    bool IsSplat = isSplat(GatheredScalars) &&
+                   (GatheredScalars.size() > 2 ||
+                    GatheredScalars.front() == GatheredScalars.back());
+    GatheredScalars.append(VF - GatheredScalars.size(),
+                           PoisonValue::get(ScalarTy));
+    ReuseMask.assign(VF, UndefMaskElem);
     SmallVector<int> UndefPos;
     DenseMap<Value *, unsigned> UniquePositions;
     // Gather unique non-const values and all constant values.
     // For repeated values, just shuffle them.
-    for (auto [I, V] : enumerate(VL)) {
+    int NumNonConsts = 0;
+    int SinglePos = 0;
+    for (auto [I, V] : enumerate(GatheredScalars)) {
       if (isa<UndefValue>(V)) {
         if (!isa<PoisonValue>(V)) {
-          Gathered[I] = V;
           ReuseMask[I] = I;
           UndefPos.push_back(I);
         }
         continue;
       }
       if (isConstant(V)) {
-        Gathered[I] = V;
         ReuseMask[I] = I;
         continue;
       }
+      ++NumNonConsts;
+      SinglePos = I;
+      Value *OrigV = V;
+      GatheredScalars[I] = PoisonValue::get(ScalarTy);
       if (IsSplat) {
-        Gathered.front() = V;
+        GatheredScalars.front() = OrigV;
         ReuseMask[I] = 0;
       } else {
-        const auto Res = UniquePositions.try_emplace(V, I);
-        Gathered[Res.first->second] = V;
+        const auto Res = UniquePositions.try_emplace(OrigV, I);
+        GatheredScalars[Res.first->second] = OrigV;
         ReuseMask[I] = Res.first->second;
       }
     }
-    if (!UndefPos.empty() && IsSplat) {
+    if (NumNonConsts == 1) {
+      // Restore single insert element.
+      if (IsSplat) {
+        ReuseMask.assign(VF, UndefMaskElem);
+        std::swap(GatheredScalars.front(), GatheredScalars[SinglePos]);
+        if (!UndefPos.empty() && UndefPos.front() == 0)
+          GatheredScalars.front() = UndefValue::get(ScalarTy);
+      }
+      ReuseMask[SinglePos] = SinglePos;
+    } else if (!UndefPos.empty() && IsSplat) {
       // For undef values, try to replace them with the simple broadcast.
       // We can do it if the broadcasted value is guaranteed to be
       // non-poisonous, or by freezing the incoming scalar value first.
-      auto *It = find_if(Gathered, [this, E](Value *V) {
+      auto *It = find_if(GatheredScalars, [this, E](Value *V) {
         return !isa<UndefValue>(V) &&
                (getTreeEntry(V) || isGuaranteedNotToBePoison(V) ||
-                any_of(V->uses(), [E](const Use &U) {
-                  // Check if the value already used in the same operation in
-                  // one of the nodes already.
-                  return E->UserTreeIndices.size() == 1 &&
-                         is_contained(
-                             E->UserTreeIndices.front().UserTE->Scalars,
-                             U.getUser()) &&
-                         E->UserTreeIndices.front().EdgeIdx != U.getOperandNo();
-                }));
+                (E->UserTreeIndices.size() == 1 &&
+                 any_of(V->uses(), [E](const Use &U) {
+                   // Check if the value already used in the same operation in
+                   // one of the nodes already.
+                   return E->UserTreeIndices.front().EdgeIdx !=
+                              U.getOperandNo() &&
+                          is_contained(
+                              E->UserTreeIndices.front().UserTE->Scalars,
+                              U.getUser());
+                 })));
       });
-      if (It != Gathered.end()) {
+      if (It != GatheredScalars.end()) {
         // Replace undefs by the non-poisoned scalars and emit broadcast.
-        int Pos = std::distance(Gathered.begin(), It);
+        int Pos = std::distance(GatheredScalars.begin(), It);
         for_each(UndefPos, [&](int I) {
           // Set the undef position to the non-poisoned scalar.
           ReuseMask[I] = Pos;
-          // Replace the undef by the poison, in the mask it is replaced by non-poisoned scalar already.
+          // Replace the undef by the poison, in the mask it is replaced by
+          // non-poisoned scalar already.
           if (I != Pos)
-            Gathered[I] = PoisonValue::get(Gathered[I]->getType());
+            GatheredScalars[I] = PoisonValue::get(ScalarTy);
         });
       } else {
         // Replace undefs by the poisons, emit broadcast and then emit
         // freeze.
         for_each(UndefPos, [&](int I) {
           ReuseMask[I] = UndefMaskElem;
-          if (isa<UndefValue>(Gathered[I]))
-            Gathered[I] = PoisonValue::get(Gathered[I]->getType());
+          if (isa<UndefValue>(GatheredScalars[I]))
+            GatheredScalars[I] = PoisonValue::get(ScalarTy);
         });
         NeedFreeze = true;
       }
     }
+    // Gather unique scalars and all constants.
+    Vec = gather(GatheredScalars);
   } else {
-    ReuseMask.clear();
-    copy(VL, Gathered.begin());
+    // Gather all constants.
+    Vec = gather(E->Scalars);
   }
-  // Gather unique scalars and all constants.
-  Value *Vec = gather(Gathered);
+
   ShuffleBuilder.add(Vec, ReuseMask);
   Vec = ShuffleBuilder.finalize(E->ReuseShuffleIndices);
   if (NeedFreeze)
@@ -9382,10 +9575,17 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     return E->VectorizedValue;
   }
 
+  if (E->State == TreeEntry::NeedToGather) {
+    if (E->getMainOp() && E->Idx == 0)
+      setInsertPointAfterBundle(E);
+    Value *Vec = createBuildVector(E);
+    E->VectorizedValue = Vec;
+    return Vec;
+  }
+
   auto FinalShuffle = [&](Value *V, const TreeEntry *E) {
     ShuffleInstructionBuilder ShuffleBuilder(Builder, *this);
-    if (E->State != TreeEntry::NeedToGather &&
-        E->getOpcode() == Instruction::Store) {
+    if (E->getOpcode() == Instruction::Store) {
       ArrayRef<int> Mask =
           ArrayRef(reinterpret_cast<const int *>(E->ReorderIndices.begin()),
                    E->ReorderIndices.size());
@@ -9395,198 +9595,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     }
     return ShuffleBuilder.finalize(E->ReuseShuffleIndices);
   };
-
-  if (E->State == TreeEntry::NeedToGather) {
-    if (E->getMainOp() && E->Idx == 0)
-      setInsertPointAfterBundle(E);
-    unsigned VF = E->getVectorFactor();
-    auto AdjustExtracts = [&](const TreeEntry *E, ArrayRef<int> Mask) {
-      Value *VecBase = nullptr;
-      for (int I = 0, Sz = Mask.size(); I < Sz; ++I) {
-        int Idx = Mask[I];
-        if (Idx == UndefMaskElem)
-          continue;
-        auto *EI = cast<ExtractElementInst>(E->Scalars[I]);
-        VecBase = EI->getVectorOperand();
-        // TODO: EI can be erased, if all its users are vectorized. But need to
-        // emit shuffles for such extractelement instructions.
-      }
-      return VecBase;
-    };
-    auto CreateShuffle = [&](Value *V1, Value *V2, ArrayRef<int> Mask) {
-      unsigned VF1 = cast<FixedVectorType>(V1->getType())->getNumElements();
-      unsigned VF2 = cast<FixedVectorType>(V2->getType())->getNumElements();
-      unsigned VF = std::max(VF1, VF2);
-      if (VF1 != VF2) {
-        SmallVector<int> ExtMask(VF, UndefMaskElem);
-        std::iota(ExtMask.begin(),
-                  std::next(ExtMask.begin(), std::min(VF1, VF2)), 0);
-        if (VF1 < VF2) {
-          V1 = Builder.CreateShuffleVector(V1, ExtMask);
-          if (auto *I = dyn_cast<Instruction>(V1)) {
-            GatherShuffleExtractSeq.insert(I);
-            CSEBlocks.insert(I->getParent());
-          }
-        } else {
-          V2 = Builder.CreateShuffleVector(V2, ExtMask);
-          if (auto *I = dyn_cast<Instruction>(V2)) {
-            GatherShuffleExtractSeq.insert(I);
-            CSEBlocks.insert(I->getParent());
-          }
-        }
-      }
-      const int Limit = Mask.size() * 2;
-      if (V1 == V2 && Mask.size() == VF &&
-          all_of(Mask, [=](int Idx) { return Idx < Limit; }) &&
-          (ShuffleVectorInst::isIdentityMask(Mask) ||
-           (ShuffleVectorInst::isZeroEltSplatMask(Mask) &&
-            isa<ShuffleVectorInst>(V1) &&
-            cast<ShuffleVectorInst>(V1)->getShuffleMask() == Mask)))
-        return V1;
-      Value *Vec = V1 == V2 ? Builder.CreateShuffleVector(V1, Mask)
-                            : Builder.CreateShuffleVector(V1, V2, Mask);
-      if (auto *I = dyn_cast<Instruction>(Vec)) {
-        GatherShuffleExtractSeq.insert(I);
-        CSEBlocks.insert(I->getParent());
-      }
-      return Vec;
-    };
-    auto NeedToDelay = [=](const TreeEntry *E,
-                           ArrayRef<const TreeEntry *> Deps) -> Value * {
-      // No need to delay emission if all deps are ready.
-      if (all_of(Deps, [](const TreeEntry *TE) { return TE->VectorizedValue; }))
-        return nullptr;
-      // Postpone gather emission, will be emitted after the end of the
-      // process to keep correct order.
-      auto *VecTy = FixedVectorType::get(E->Scalars.front()->getType(),
-                                         E->getVectorFactor());
-      Value *Vec = Builder.CreateAlignedLoad(
-          VecTy, PoisonValue::get(VecTy->getPointerTo()), MaybeAlign());
-      return Vec;
-    };
-
-    SmallVector<int>
-        ReuseShuffleIndicies(E->ReuseShuffleIndices.begin(),
-                             E->ReuseShuffleIndices.end());
-    SmallVector<Value *> GatheredScalars(E->Scalars.begin(), E->Scalars.end());
-    // Build a mask out of the reorder indices and reorder scalars per this
-    // mask.
-    SmallVector<int> ReorderMask;
-    inversePermutation(E->ReorderIndices, ReorderMask);
-    if (!ReorderMask.empty())
-      reorderScalars(GatheredScalars, ReorderMask);
-    Value *Vec = nullptr;
-    SmallVector<int> Mask;
-    SmallVector<int> ExtractMask;
-    std::optional<TargetTransformInfo::ShuffleKind> ExtractShuffle;
-    std::optional<TargetTransformInfo::ShuffleKind> GatherShuffle;
-    SmallVector<const TreeEntry *> Entries;
-    Type *ScalarTy = GatheredScalars.front()->getType();
-    if (!all_of(GatheredScalars, UndefValue::classof)) {
-      // Check for gathered extracts.
-      ExtractShuffle = tryToGatherExtractElements(GatheredScalars, ExtractMask);
-      SmallVector<Value *> IgnoredVals;
-      if (UserIgnoreList)
-        IgnoredVals.assign(UserIgnoreList->begin(), UserIgnoreList->end());
-      bool Resized = false;
-      if (Value *VecBase = AdjustExtracts(E, ExtractMask))
-        if (auto *VecBaseTy = dyn_cast<FixedVectorType>(VecBase->getType()))
-          if (VF == VecBaseTy->getNumElements() &&
-              GatheredScalars.size() != VF) {
-            Resized = true;
-            GatheredScalars.append(VF - GatheredScalars.size(),
-                                   PoisonValue::get(ScalarTy));
-          }
-      // Gather extracts after we check for full matched gathers only.
-      if (ExtractShuffle || E->getOpcode() != Instruction::Load ||
-          E->isAltShuffle() ||
-          all_of(E->Scalars, [this](Value *V) { return getTreeEntry(V); }) ||
-          isSplat(E->Scalars) ||
-          (E->Scalars != GatheredScalars && GatheredScalars.size() <= 2)) {
-        GatherShuffle =
-            isGatherShuffledEntry(E, GatheredScalars, Mask, Entries);
-      }
-      if (GatherShuffle) {
-        if (Value *Delayed = NeedToDelay(E, Entries)) {
-          E->VectorizedValue = Delayed;
-          // Delay emission of gathers which are not ready yet.
-          PostponedGathers.insert(E);
-          // Postpone gather emission, will be emitted after the end of the
-          // process to keep correct order.
-          return Delayed;
-        }
-        assert((Entries.size() == 1 || Entries.size() == 2) &&
-               "Expected shuffle of 1 or 2 entries.");
-        if (!Resized) {
-          unsigned VF1 = Entries.front()->getVectorFactor();
-          unsigned VF2 = Entries.back()->getVectorFactor();
-          if ((VF == VF1 || VF == VF2) && GatheredScalars.size() != VF)
-            GatheredScalars.append(VF - GatheredScalars.size(),
-                                   PoisonValue::get(ScalarTy));
-        }
-        // Remove shuffled elements from list of gathers.
-        for (int I = 0, Sz = Mask.size(); I < Sz; ++I) {
-          if (Mask[I] != UndefMaskElem)
-            GatheredScalars[I] = PoisonValue::get(ScalarTy);
-        }
-      }
-    }
-    if ((ExtractShuffle || GatherShuffle) &&
-        all_of(GatheredScalars, PoisonValue::classof)) {
-      Value *Vec1 = nullptr;
-      if (ExtractShuffle) {
-        // Gather of extractelements can be represented as just a shuffle of
-        // a single/two vectors the scalars are extracted from.
-        // Find input vectors.
-        Value *Vec2 = nullptr;
-        for (unsigned I = 0, Sz = ExtractMask.size(); I < Sz; ++I) {
-          if (ExtractMask[I] == UndefMaskElem ||
-              (!Mask.empty() && Mask[I] != UndefMaskElem)) {
-            ExtractMask[I] = UndefMaskElem;
-            continue;
-          }
-          if (isa<UndefValue>(E->Scalars[I]))
-            continue;
-          auto *EI = cast<ExtractElementInst>(E->Scalars[I]);
-          if (!Vec1) {
-            Vec1 = EI->getVectorOperand();
-          } else if (Vec1 != EI->getVectorOperand()) {
-            assert((!Vec2 || Vec2 == EI->getVectorOperand()) &&
-                   "Expected only 1 or 2 vectors shuffle.");
-            Vec2 = EI->getVectorOperand();
-          }
-        }
-        if (Vec2)
-          Vec1 = CreateShuffle(Vec1, Vec2, ExtractMask);
-        else if (Vec1)
-          Vec1 = CreateShuffle(Vec1, Vec1, ExtractMask);
-        else
-          Vec1 = PoisonValue::get(
-              FixedVectorType::get(ScalarTy, GatheredScalars.size()));
-      }
-      if (GatherShuffle) {
-        Vec = CreateShuffle(Entries.front()->VectorizedValue,
-                            Entries.back()->VectorizedValue, Mask);
-        if (Vec1) {
-          // Build final mask.
-          for (auto [I, Idx] : enumerate(Mask)) {
-            if (ExtractMask[I] != UndefMaskElem)
-              Idx = I;
-            else if (Idx != UndefMaskElem)
-              Idx = I + VF;
-          }
-          Vec = CreateShuffle(Vec1, Vec, Mask);
-        }
-      } else {
-        Vec = Vec1;
-      }
-      Vec = FinalShuffle(Vec, E);
-    } else {
-      Vec = createBuildVector(E);
-    }
-    E->VectorizedValue = Vec;
-    return Vec;
-  }
 
   assert((E->State == TreeEntry::Vectorize ||
           E->State == TreeEntry::ScatterVectorize) &&

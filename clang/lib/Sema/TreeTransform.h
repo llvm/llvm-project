@@ -2803,6 +2803,21 @@ public:
     R.addDecl(FoundDecl);
     R.resolveKind();
 
+    if (getSema().isUnevaluatedContext() && Base->isImplicitCXXThis() &&
+        isa<FieldDecl, IndirectFieldDecl, MSPropertyDecl>(Member)) {
+      if (auto *ThisClass = cast<CXXThisExpr>(Base)
+                                ->getType()
+                                ->getPointeeType()
+                                ->getAsCXXRecordDecl()) {
+        auto *Class = cast<CXXRecordDecl>(Member->getDeclContext());
+        // In unevaluated contexts, an expression supposed to be a member access
+        // might reference a member in an unrelated class.
+        if (!ThisClass->Equals(Class) && !ThisClass->isDerivedFrom(Class))
+          return getSema().BuildDeclRefExpr(Member, Member->getType(),
+                                            VK_LValue, Member->getLocation());
+      }
+    }
+
     return getSema().BuildMemberReferenceExpr(Base, BaseType, OpLoc, isArrow,
                                               SS, TemplateKWLoc,
                                               FirstQualifierInScope,

@@ -453,8 +453,9 @@ public:
   std::string ProductName;
 
   // Currently this is only used as part of the `-extract-api` action.
-  /// The file providing a list of APIs to ignore when extracting documentation
-  std::string ExtractAPIIgnoresFile;
+  // A comma seperated list of files providing a list of APIs to
+  // ignore when extracting documentation.
+  std::vector<std::string> ExtractAPIIgnoresFileList;
 
   /// Args to pass to the plugins
   std::map<std::string, std::vector<std::string>> PluginArgs;

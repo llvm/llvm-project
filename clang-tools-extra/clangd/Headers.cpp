@@ -25,8 +25,7 @@
 namespace clang {
 namespace clangd {
 
-class IncludeStructure::RecordHeaders : public PPCallbacks,
-                                        public CommentHandler {
+class IncludeStructure::RecordHeaders : public PPCallbacks {
 public:
   RecordHeaders(const CompilerInstance &CI, IncludeStructure *Out)
       : SM(CI.getSourceManager()),
@@ -61,8 +60,6 @@ public:
           SM.getLineNumber(SM.getFileID(HashLoc), Inc.HashOffset) - 1;
       Inc.FileKind = FileKind;
       Inc.Directive = IncludeTok.getIdentifierInfo()->getPPKeywordID();
-      if (LastPragmaKeepInMainFileLine == Inc.HashLine)
-        Inc.BehindPragmaKeep = true;
       if (File) {
         IncludeStructure::HeaderID HID = Out->getOrCreateID(*File);
         Inc.HeaderID = static_cast<unsigned>(HID);
@@ -108,64 +105,12 @@ public:
       --Level;
       if (PrevFID == BuiltinFile)
         InBuiltinFile = false;
-      // At file exit time HeaderSearchInfo is valid and can be used to
-      // determine whether the file was a self-contained header or not.
-      if (const FileEntry *FE = SM.getFileEntryForID(PrevFID)) {
-        // isSelfContainedHeader only returns true once the full header-guard
-        // structure has been seen, i.e. when exiting the *outer* copy of the
-        // file. So last result wins.
-        if (tooling::isSelfContainedHeader(FE, SM, HeaderInfo))
-          Out->NonSelfContained.erase(*Out->getID(FE));
-        else
-          Out->NonSelfContained.insert(*Out->getID(FE));
-      }
       break;
     }
     case PPCallbacks::RenameFile:
     case PPCallbacks::SystemHeaderPragma:
       break;
     }
-  }
-
-  bool HandleComment(Preprocessor &PP, SourceRange Range) override {
-    auto Pragma =
-        tooling::parseIWYUPragma(SM.getCharacterData(Range.getBegin()));
-    if (!Pragma)
-      return false;
-
-    if (inMainFile()) {
-      // Given:
-      //
-      // #include "foo.h"
-      // #include "bar.h" // IWYU pragma: keep
-      //
-      // The order in which the callbacks will be triggered:
-      //
-      // 1. InclusionDirective("foo.h")
-      // 2. handleCommentInMainFile("// IWYU pragma: keep")
-      // 3. InclusionDirective("bar.h")
-      //
-      // This code stores the last location of "IWYU pragma: keep" (or export)
-      // comment in the main file, so that when InclusionDirective is called, it
-      // will know that the next inclusion is behind the IWYU pragma.
-      // FIXME: Support "IWYU pragma: begin_exports" and "IWYU pragma:
-      // end_exports".
-      if (!Pragma->startswith("export") && !Pragma->startswith("keep"))
-        return false;
-      unsigned Offset = SM.getFileOffset(Range.getBegin());
-      LastPragmaKeepInMainFileLine =
-          SM.getLineNumber(SM.getMainFileID(), Offset) - 1;
-    } else {
-      // Memorize headers that have export pragmas in them. Include Cleaner
-      // does not support them properly yet, so they will be not marked as
-      // unused.
-      // FIXME: Once IncludeCleaner supports export pragmas, remove this.
-      if (!Pragma->startswith("export") && !Pragma->startswith("begin_exports"))
-        return false;
-      Out->HasIWYUExport.insert(
-          *Out->getID(SM.getFileEntryForID(SM.getFileID(Range.getBegin()))));
-    }
-    return false;
   }
 
 private:
@@ -181,9 +126,6 @@ private:
   bool InBuiltinFile = false;
 
   IncludeStructure *Out;
-
-  // The last line "IWYU pragma: keep" was seen in the main file, 0-indexed.
-  int LastPragmaKeepInMainFileLine = -1;
 };
 
 bool isLiteralInclude(llvm::StringRef Include) {
@@ -234,7 +176,6 @@ void IncludeStructure::collect(const CompilerInstance &CI) {
   auto &SM = CI.getSourceManager();
   MainFileEntry = SM.getFileEntryForID(SM.getMainFileID());
   auto Collector = std::make_unique<RecordHeaders>(CI, this);
-  CI.getPreprocessor().addCommentHandler(Collector.get());
   CI.getPreprocessor().addPPCallbacks(std::move(Collector));
 }
 
