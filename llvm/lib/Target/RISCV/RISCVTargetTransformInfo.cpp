@@ -257,42 +257,6 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     switch (Kind) {
     default:
       break;
-    case TargetTransformInfo::SK_Broadcast: {
-      bool HasScalar = (Args.size() > 0) && (Operator::getOpcode(Args[0]) ==
-                                             Instruction::InsertElement);
-      if (LT.second.getScalarSizeInBits() == 1) {
-        if (HasScalar) {
-          // Example sequence:
-          //   andi a0, a0, 1
-          //   vsetivli zero, 2, e8, mf8, ta, ma (ignored)
-          //   vmv.v.x v8, a0
-          //   vmsne.vi v0, v8, 0
-          return LT.first * getLMULCost(LT.second) * 3;
-        }
-        // Example sequence:
-        //   vsetivli  zero, 2, e8, mf8, ta, mu (ignored)
-        //   vmv.v.i v8, 0
-        //   vmerge.vim      v8, v8, 1, v0
-        //   vmv.x.s a0, v8
-        //   andi    a0, a0, 1
-        //   vmv.v.x v8, a0
-        //   vmsne.vi  v0, v8, 0
-
-        return LT.first * getLMULCost(LT.second) * 6;
-      }
-
-      if (HasScalar) {
-        // Example sequence:
-        //   vmv.v.x v8, a0
-        return LT.first * getLMULCost(LT.second);
-      }
-
-      // Example sequence:
-      //   vrgather.vi     v9, v8, 0
-      // TODO: vrgather could be slower than vmv.v.x. It is
-      // implementation-dependent.
-      return LT.first * getLMULCost(LT.second);
-    }
     case TTI::SK_PermuteSingleSrc: {
       if (Mask.size() >= 2 && LT.second.isFixedLengthVector()) {
         MVT EltTp = LT.second.getVectorElementType();
@@ -329,7 +293,40 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // must be implemented here.
     break;
   case TTI::SK_Broadcast: {
-    return LT.first * 1;
+    bool HasScalar = (Args.size() > 0) && (Operator::getOpcode(Args[0]) ==
+                                           Instruction::InsertElement);
+    if (LT.second.getScalarSizeInBits() == 1) {
+      if (HasScalar) {
+        // Example sequence:
+        //   andi a0, a0, 1
+        //   vsetivli zero, 2, e8, mf8, ta, ma (ignored)
+        //   vmv.v.x v8, a0
+        //   vmsne.vi v0, v8, 0
+        return LT.first * getLMULCost(LT.second) * 3;
+      }
+      // Example sequence:
+      //   vsetivli  zero, 2, e8, mf8, ta, mu (ignored)
+      //   vmv.v.i v8, 0
+      //   vmerge.vim      v8, v8, 1, v0
+      //   vmv.x.s a0, v8
+      //   andi    a0, a0, 1
+      //   vmv.v.x v8, a0
+      //   vmsne.vi  v0, v8, 0
+
+      return LT.first * getLMULCost(LT.second) * 6;
+    }
+
+    if (HasScalar) {
+      // Example sequence:
+      //   vmv.v.x v8, a0
+      return LT.first * getLMULCost(LT.second);
+    }
+
+    // Example sequence:
+    //   vrgather.vi     v9, v8, 0
+    // TODO: vrgather could be slower than vmv.v.x. It is
+    // implementation-dependent.
+    return LT.first * getLMULCost(LT.second);
   }
   case TTI::SK_Splice:
     // vslidedown+vslideup.
