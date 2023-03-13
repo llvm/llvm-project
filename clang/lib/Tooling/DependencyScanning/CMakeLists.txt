@@ -8,11 +8,13 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangDependencyScanning
+  CASFSActionController.cpp
   DependencyScanningCASFilesystem.cpp
   DependencyScanningFilesystem.cpp
   DependencyScanningService.cpp
   DependencyScanningWorker.cpp
   DependencyScanningTool.cpp
+  IncludeTreeActionController.cpp
   ModuleDepCollector.cpp
   ScanAndUpdateArgs.cpp
 

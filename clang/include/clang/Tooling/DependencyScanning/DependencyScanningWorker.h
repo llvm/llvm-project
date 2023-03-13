@@ -64,6 +64,8 @@ public:
   virtual void handleContextHash(std::string Hash) = 0;
 
   virtual void handleCASFileSystemRootID(std::string ID) {}
+
+  virtual void handleIncludeTreeID(std::string ID) {}
 };
 
 /// Dependency scanner callbacks that are used during scanning to influence the
