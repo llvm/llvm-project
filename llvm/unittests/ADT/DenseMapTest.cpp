@@ -122,6 +122,7 @@ TYPED_TEST(DenseMapTest, EmptyIntMapTest) {
 
   // Lookup tests
   EXPECT_FALSE(this->Map.count(this->getKey()));
+  EXPECT_FALSE(this->Map.contains(this->getKey()));
   EXPECT_TRUE(this->Map.find(this->getKey()) == this->Map.end());
   EXPECT_EQ(typename TypeParam::mapped_type(),
             this->Map.lookup(this->getKey()));
@@ -153,6 +154,7 @@ TYPED_TEST(DenseMapTest, SingleEntryMapTest) {
 
   // Lookup tests
   EXPECT_TRUE(this->Map.count(this->getKey()));
+  EXPECT_TRUE(this->Map.contains(this->getKey()));
   EXPECT_TRUE(this->Map.find(this->getKey()) == this->Map.begin());
   EXPECT_EQ(this->getValue(), this->Map.lookup(this->getKey()));
   EXPECT_EQ(this->getValue(), this->Map[this->getKey()]);
