@@ -118,11 +118,11 @@ public:
 
   static unsigned RelocSymbol64(const ELFRelocation &rel);
 
-  static unsigned RelocOffset32(const ELFRelocation &rel);
+  static elf_addr RelocOffset32(const ELFRelocation &rel);
 
   static elf_addr RelocOffset64(const ELFRelocation &rel);
 
-  static unsigned RelocAddend32(const ELFRelocation &rel);
+  static elf_sxword RelocAddend32(const ELFRelocation &rel);
 
   static elf_sxword RelocAddend64(const ELFRelocation &rel);
 
@@ -189,7 +189,7 @@ unsigned ELFRelocation::RelocSymbol64(const ELFRelocation &rel) {
     return ELFRela::RelocSymbol64(*rel.reloc.get<ELFRela *>());
 }
 
-unsigned ELFRelocation::RelocOffset32(const ELFRelocation &rel) {
+elf_addr ELFRelocation::RelocOffset32(const ELFRelocation &rel) {
   if (rel.reloc.is<ELFRel *>())
     return rel.reloc.get<ELFRel *>()->r_offset;
   else
@@ -203,7 +203,7 @@ elf_addr ELFRelocation::RelocOffset64(const ELFRelocation &rel) {
     return rel.reloc.get<ELFRela *>()->r_offset;
 }
 
-unsigned ELFRelocation::RelocAddend32(const ELFRelocation &rel) {
+elf_sxword ELFRelocation::RelocAddend32(const ELFRelocation &rel) {
   if (rel.reloc.is<ELFRel *>())
     return 0;
   else
