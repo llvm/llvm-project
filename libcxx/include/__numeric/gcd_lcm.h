@@ -10,7 +10,9 @@
 #ifndef _LIBCPP___NUMERIC_GCD_LCM_H
 #define _LIBCPP___NUMERIC_GCD_LCM_H
 
+#include <__algorithm/min.h>
 #include <__assert>
+#include <__bit/countr.h>
 #include <__config>
 #include <__type_traits/common_type.h>
 #include <__type_traits/is_integral.h>
@@ -50,9 +52,47 @@ struct __ct_abs<_Result, _Source, false> {
 };
 
 template <class _Tp>
-_LIBCPP_CONSTEXPR _LIBCPP_HIDDEN _Tp __gcd(_Tp __m, _Tp __n) {
+_LIBCPP_CONSTEXPR _LIBCPP_HIDDEN _Tp __gcd(_Tp __a, _Tp __b) {
   static_assert((!is_signed<_Tp>::value), "");
-  return __n == 0 ? __m : std::__gcd<_Tp>(__n, __m % __n);
+
+  // From: https://lemire.me/blog/2013/12/26/fastest-way-to-compute-the-greatest-common-divisor
+  //
+  // If power of two divides both numbers, we can push it out.
+  // - gcd( 2^x * a, 2^x * b) = 2^x * gcd(a, b)
+  //
+  // If and only if exactly one number is even, we can divide that number by that power.
+  // - if a, b are odd, then gcd(2^x * a, b) = gcd(a, b)
+  //
+  // And standard gcd algorithm where instead of modulo, minus is used.
+
+  if (__a < __b) {
+    _Tp __tmp = __b;
+    __b       = __a;
+    __a       = __tmp;
+  }
+  if (__b == 0)
+    return __a;
+  __a %= __b; // Make both argument of the same size, and early result in the easy case.
+  if (__a == 0)
+    return __b;
+
+  int __az    = std::__countr_zero(__a);
+  int __bz    = std::__countr_zero(__b);
+  int __shift = std::min(__az, __bz);
+  __a >>= __az;
+  __b >>= __bz;
+  do {
+    _Tp __diff = __a - __b;
+    if (__a > __b) {
+      __a = __b;
+      __b = __diff;
+    } else {
+      __b = __b - __a;
+    }
+    if (__diff != 0)
+      __b >>= std::__countr_zero(__diff);
+  } while (__b != 0);
+  return __a << __shift;
 }
 
 template <class _Tp, class _Up>
