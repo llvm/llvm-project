@@ -329,6 +329,11 @@ END-SCRIPT
 #include <__coroutine/trivial_awaitables.h> // expected-error@*:* {{use of private header from outside its module: '__coroutine/trivial_awaitables.h'}}
 #include <__debug_utils/randomize_range.h> // expected-error@*:* {{use of private header from outside its module: '__debug_utils/randomize_range.h'}}
 #include <__errc> // expected-error@*:* {{use of private header from outside its module: '__errc'}}
+#include <__exception/exception.h> // expected-error@*:* {{use of private header from outside its module: '__exception/exception.h'}}
+#include <__exception/exception_ptr.h> // expected-error@*:* {{use of private header from outside its module: '__exception/exception_ptr.h'}}
+#include <__exception/nested_exception.h> // expected-error@*:* {{use of private header from outside its module: '__exception/nested_exception.h'}}
+#include <__exception/operations.h> // expected-error@*:* {{use of private header from outside its module: '__exception/operations.h'}}
+#include <__exception/terminate.h> // expected-error@*:* {{use of private header from outside its module: '__exception/terminate.h'}}
 #include <__expected/bad_expected_access.h> // expected-error@*:* {{use of private header from outside its module: '__expected/bad_expected_access.h'}}
 #include <__expected/expected.h> // expected-error@*:* {{use of private header from outside its module: '__expected/expected.h'}}
 #include <__expected/unexpect.h> // expected-error@*:* {{use of private header from outside its module: '__expected/unexpect.h'}}
