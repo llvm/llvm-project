@@ -608,6 +608,19 @@ public:
     return MostUsed.GV;
   }
 
+  static void recordLDSAbsoluteAddress(Module *M, GlobalVariable *GV,
+                                       uint32_t Address) {
+    // Write the specified address into metadata where it can be retrieved by
+    // the assembler. Format is a half open range, [Address Address+1)
+    LLVMContext &Ctx = M->getContext();
+    auto *IntTy =
+        M->getDataLayout().getIntPtrType(Ctx, AMDGPUAS::LOCAL_ADDRESS);
+    auto *MinC = ConstantAsMetadata::get(ConstantInt::get(IntTy, Address));
+    auto *MaxC = ConstantAsMetadata::get(ConstantInt::get(IntTy, Address + 1));
+    GV->setMetadata(LLVMContext::MD_absolute_symbol,
+                    MDNode::get(Ctx, {MinC, MaxC}));
+  }
+
   bool runOnModule(Module &M) override {
     LLVMContext &Ctx = M.getContext();
     CallGraph CG = CallGraph(M);
@@ -708,16 +721,20 @@ public:
         kernelsThatIndirectlyAccessAnyOfPassedVariables(M, LDSUsesInfo,
                                                         TableLookupVariables);
 
+    GlobalVariable *MaybeModuleScopeStruct = nullptr;
     if (!ModuleScopeVariables.empty()) {
       LDSVariableReplacement ModuleScopeReplacement =
           createLDSVariableReplacement(M, "llvm.amdgcn.module.lds",
                                        ModuleScopeVariables);
-
+      MaybeModuleScopeStruct = ModuleScopeReplacement.SGV;
       appendToCompilerUsed(M,
                            {static_cast<GlobalValue *>(
                                ConstantExpr::getPointerBitCastOrAddrSpaceCast(
                                    cast<Constant>(ModuleScopeReplacement.SGV),
                                    Type::getInt8PtrTy(Ctx)))});
+
+      // module.lds will be allocated at zero in any kernel that allocates it
+      recordLDSAbsoluteAddress(&M, ModuleScopeReplacement.SGV, 0);
 
       // historic
       removeLocalVarsFromUsedLists(M, ModuleScopeVariables);
@@ -805,6 +822,33 @@ public:
 
       auto Replacement =
           createLDSVariableReplacement(M, VarName, KernelUsedVariables);
+
+      // This struct is allocated at a predictable address that can be
+      // calculated now, recorded in metadata then used to lower references to
+      // it during codegen.
+      {
+        // frame layout, starting from 0
+        //{
+        //  module.lds
+        //  alignment padding
+        //  kernel instance
+        //}
+
+        if (!MaybeModuleScopeStruct ||
+            Func.hasFnAttribute("amdgpu-elide-module-lds")) {
+          // There's no module.lds for this kernel so this replacement struct
+          // goes first
+          recordLDSAbsoluteAddress(&M, Replacement.SGV, 0);
+        } else {
+          const DataLayout &DL = M.getDataLayout();
+          TypeSize ModuleSize =
+              DL.getTypeAllocSize(MaybeModuleScopeStruct->getValueType());
+          GlobalVariable *KernelStruct = Replacement.SGV;
+          Align KernelAlign = AMDGPU::getAlign(DL, KernelStruct);
+          recordLDSAbsoluteAddress(&M, Replacement.SGV,
+                                   alignTo(ModuleSize, KernelAlign));
+        }
+      }
 
       // remove preserves existing codegen
       removeLocalVarsFromUsedLists(M, KernelUsedVariables);

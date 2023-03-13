@@ -391,8 +391,18 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
       --IslandIter;
 
     if (IslandIter != AddressToConstantIslandMap.end()) {
-      if (MCSymbol *IslandSym =
-              IslandIter->second->getOrCreateProxyIslandAccess(Address, BF)) {
+      // Fall-back to referencing the original constant island in the presence
+      // of dynamic relocs, as we currently do not support cloning them.
+      // Notice: we might fail to link because of this, if the original constant
+      // island we are referring would be emitted too far away.
+      if (IslandIter->second->hasDynamicRelocationAtIsland()) {
+        MCSymbol *IslandSym =
+            IslandIter->second->getOrCreateIslandAccess(Address);
+        if (IslandSym)
+          return std::make_pair(IslandSym, 0);
+      } else if (MCSymbol *IslandSym =
+                     IslandIter->second->getOrCreateProxyIslandAccess(Address,
+                                                                      BF)) {
         BF.createIslandDependency(IslandSym, IslandIter->second);
         return std::make_pair(IslandSym, 0);
       }

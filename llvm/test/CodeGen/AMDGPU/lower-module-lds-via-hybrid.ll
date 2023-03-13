@@ -11,12 +11,12 @@
 @v3 = addrspace(3) global i8 undef
 @unused = addrspace(3) global i16 undef
 
-; OPT: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t undef, align 16
+; OPT: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t undef, align 16, !absolute_symbol !0
 ; OPT: @llvm.compiler.used = appending global [1 x ptr] [ptr addrspacecast (ptr addrspace(3) @llvm.amdgcn.module.lds to ptr)], section "llvm.metadata"
-; OPT: @llvm.amdgcn.kernel.kernel_no_table.lds = internal addrspace(3) global %llvm.amdgcn.kernel.kernel_no_table.lds.t undef, align 8
-; OPT: @llvm.amdgcn.kernel.k01.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k01.lds.t undef, align 4
-; OPT: @llvm.amdgcn.kernel.k23.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k23.lds.t undef, align 8
-; OPT: @llvm.amdgcn.kernel.k123.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k123.lds.t undef, align 8
+; OPT: @llvm.amdgcn.kernel.kernel_no_table.lds = internal addrspace(3) global %llvm.amdgcn.kernel.kernel_no_table.lds.t undef, align 8, !absolute_symbol !0
+; OPT: @llvm.amdgcn.kernel.k01.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k01.lds.t undef, align 4, !absolute_symbol !1
+; OPT: @llvm.amdgcn.kernel.k23.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k23.lds.t undef, align 8, !absolute_symbol !0
+; OPT: @llvm.amdgcn.kernel.k123.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k123.lds.t undef, align 8, !absolute_symbol !2
 ; OPT{LITERAL}: @llvm.amdgcn.lds.offset.table = internal addrspace(4) constant [2 x [1 x i32]] [[1 x i32] [i32 ptrtoint (ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds to i32)], [1 x i32] [i32 ptrtoint (ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds to i32)]]
 
 ;.
@@ -234,9 +234,9 @@ define amdgpu_kernel void @k123() {
 ; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds) ]
 ; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ]
 ; OPT-NEXT:    call void @f1()
-; OPT-NEXT:    %ld = load i8, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.k123.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 8, !alias.scope !2, !noalias !5
+; OPT-NEXT:    %ld = load i8, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.k123.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 8, !alias.scope !5, !noalias !8
 ; OPT-NEXT:    %mul = mul i8 %ld, 8
-; OPT-NEXT:    store i8 %mul, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.k123.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 8, !alias.scope !2, !noalias !5
+; OPT-NEXT:    store i8 %mul, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.k123.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 8, !alias.scope !5, !noalias !8
 ; OPT-NEXT:    call void @f2()
 ; OPT-NEXT:    ret void
 ;
@@ -289,13 +289,16 @@ define amdgpu_kernel void @k123() {
 ; OPT: attributes #1 = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; OPT: attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
-; OPT: !0 = !{i32 1}
-; OPT: !1 = !{i32 0}
-; OPT: !2 = !{!3}
-; OPT: !3 = distinct !{!3, !4}
-; OPT: !4 = distinct !{!4}
+; OPT: !0 = !{i64 0, i64 1}
+; OPT: !1 = !{i64 4, i64 5}
+; OPT: !2 = !{i64 8, i64 9}
+; OPT: !3 = !{i32 1}
+; OPT: !4 = !{i32 0}
 ; OPT: !5 = !{!6}
-; OPT: !6 = distinct !{!6, !4}
+; OPT: !6 = distinct !{!6, !7}
+; OPT: !7 = distinct !{!7}
+; OPT: !8 = !{!9}
+; OPT: !9 = distinct !{!9, !7}
 ;.
 
 ; Table size length number-kernels * number-variables * sizeof(uint16_t)

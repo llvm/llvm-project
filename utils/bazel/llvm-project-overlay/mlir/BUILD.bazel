@@ -3566,7 +3566,21 @@ cc_library(
     hdrs = glob(["include/mlir/Debug/*.h"]),
     includes = ["include"],
     deps = [
+        ":IR",
         ":Support",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "BreakpointManagers",
+    srcs = glob([
+        "lib/Debug/BreakpointManagers/*.cpp",
+        "lib/Debug/BreakpointManagers/*.h",
+    ]),
+    hdrs = glob(["include/mlir/Debug/BreakpointManagers/*.h"]),
+    deps = [
+        ":Debug",
         ":IR",
         "//llvm:Support",
     ],
@@ -4116,10 +4130,10 @@ td_library(
     srcs = [
         "include/mlir/Dialect/LLVMIR/LLVMAttrDefs.td",
         "include/mlir/Dialect/LLVMIR/LLVMEnums.td",
+        "include/mlir/Dialect/LLVMIR/LLVMInterfaces.td",
         "include/mlir/Dialect/LLVMIR/LLVMIntrinsicOps.td",
         "include/mlir/Dialect/LLVMIR/LLVMOpBase.td",
         "include/mlir/Dialect/LLVMIR/LLVMOps.td",
-        "include/mlir/Dialect/LLVMIR/LLVMInterfaces.td",
         "include/mlir/Dialect/LLVMIR/LLVMTypes.td",
     ],
     includes = ["include"],
@@ -4268,9 +4282,9 @@ cc_library(
         ":ConversionPassIncGen",
         ":IR",
         ":Pass",
-        ":Support",
         ":SPIRVConversion",
         ":SPIRVDialect",
+        ":Support",
         ":Transforms",
         ":VectorDialect",
         "//llvm:Support",
