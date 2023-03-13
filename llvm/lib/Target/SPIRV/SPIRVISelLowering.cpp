@@ -27,6 +27,8 @@ unsigned SPIRVTargetLowering::getNumRegistersForCallingConv(
       (VT.getVectorElementType() == MVT::i1 ||
        VT.getVectorElementType() == MVT::i8))
     return 1;
+  if (!VT.isVector() && VT.isInteger() && VT.getSizeInBits() <= 64)
+    return 1;
   return getNumRegisters(Context, VT);
 }
 
