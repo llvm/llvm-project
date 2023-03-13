@@ -121,7 +121,7 @@ list(TRANSFORM LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL PREPEND "-I")
 # Set flags for LLVM Bitcode compilation.
 set(bc_flags -c -foffload-lto -std=c++17 -fvisibility=hidden
               ${clang_opt_flags} --offload-device-only
-             -nocudalib -nogpulib -nostdinc
+             -nocudalib -nogpulib -nogpuinc -ffreestanding
              -fopenmp -fopenmp-cuda-mode
              -Wno-unknown-cuda-version
              -I${include_directory}
