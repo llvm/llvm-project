@@ -317,7 +317,6 @@ libcxx/include/__debug_utils/randomize_range.h
 libcxx/include/deque
 libcxx/include/__errc
 libcxx/include/errno.h
-libcxx/include/exception
 libcxx/include/execution
 libcxx/include/expected
 libcxx/include/__expected/expected.h
