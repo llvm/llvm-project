@@ -2427,6 +2427,8 @@ static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
                                        Value *&LHS, Value *&RHS) {
     if (!match(C, m_OneUse(m_ICmp(P, m_Value(LHS), m_Value(RHS)))))
       return false;
+    if (!LHS->getType()->isIntegerTy())
+      return false;
     if (!ICmpInst::isRelational(P))
       return false;
     if (L.isLoopInvariant(LHS)) {
