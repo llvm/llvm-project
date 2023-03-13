@@ -19,7 +19,6 @@
  * synced up.
  *
 \*===----------------------------------------------------------------------===*/
-#include <string.h>
 
 #ifdef _MSC_VER
 #define PACKED(...) __pragma(pack(push,1)) __VA_ARGS__ __pragma(pack(pop))
@@ -33,9 +32,7 @@
    (uint64_t)'o' << 24 | (uint64_t)'f' << 16 | (uint64_t)'r' << 8 | (uint64_t)129)
 
 // The version number of the raw binary format.
-#define MEMPROF_RAW_VERSION 3ULL
-
-#define MEMPROF_BUILDID_MAX_SIZE 32ULL
+#define MEMPROF_RAW_VERSION 2ULL
 
 namespace llvm {
 namespace memprof {
@@ -49,40 +46,37 @@ PACKED(struct Header {
   uint64_t StackOffset;
 });
 
+
 // A struct describing the information necessary to describe a /proc/maps
 // segment entry for a particular binary/library identified by its build id.
 PACKED(struct SegmentEntry {
   uint64_t Start;
   uint64_t End;
   uint64_t Offset;
-  uint64_t BuildIdSize;
-  uint8_t BuildId[MEMPROF_BUILDID_MAX_SIZE] = {0};
+  // This field is unused until sanitizer procmaps support for build ids for
+  // Linux-Elf is implemented.
+  uint8_t BuildId[32] = {0};
 
-  // This constructor is only used in tests so don't set the BuildId.
-  SegmentEntry(uint64_t S, uint64_t E, uint64_t O)
-      : Start(S), End(E), Offset(O), BuildIdSize(0) {}
+  SegmentEntry(uint64_t S, uint64_t E, uint64_t O) :
+    Start(S), End(E), Offset(O) {}
 
   SegmentEntry(const SegmentEntry& S) {
     Start = S.Start;
     End = S.End;
     Offset = S.Offset;
-    BuildIdSize = S.BuildIdSize;
-    memcpy(BuildId, S.BuildId, S.BuildIdSize);
   }
 
   SegmentEntry& operator=(const SegmentEntry& S) {
     Start = S.Start;
     End = S.End;
     Offset = S.Offset;
-    BuildIdSize = S.BuildIdSize;
-    memcpy(BuildId, S.BuildId, S.BuildIdSize);
     return *this;
   }
 
   bool operator==(const SegmentEntry& S) const {
-    return Start == S.Start && End == S.End && Offset == S.Offset &&
-           BuildIdSize == S.BuildIdSize &&
-           memcmp(BuildId, S.BuildId, S.BuildIdSize) == 0;
+    return Start == S.Start &&
+           End == S.End &&
+           Offset == S.Offset;
   }
 });
 
