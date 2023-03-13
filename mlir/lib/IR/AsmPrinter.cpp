@@ -183,9 +183,8 @@ void mlir::registerAsmPrinterCLOptions() {
 /// Initialize the printing flags with default supplied by the cl::opts above.
 OpPrintingFlags::OpPrintingFlags()
     : printDebugInfoFlag(false), printDebugInfoPrettyFormFlag(false),
-      printGenericOpFormFlag(false), skipRegionsFlag(false),
-      assumeVerifiedFlag(false), printLocalScope(false),
-      printValueUsersFlag(false) {
+      printGenericOpFormFlag(false), assumeVerifiedFlag(false),
+      printLocalScope(false), printValueUsersFlag(false) {
   // Initialize based upon command line options, if they are available.
   if (!clOptions.isConstructed())
     return;
@@ -221,12 +220,6 @@ OpPrintingFlags &OpPrintingFlags::enableDebugInfo(bool enable,
 /// Always print operations in the generic form.
 OpPrintingFlags &OpPrintingFlags::printGenericOpForm() {
   printGenericOpFormFlag = true;
-  return *this;
-}
-
-/// Always skip Regions.
-OpPrintingFlags &OpPrintingFlags::skipRegions() {
-  skipRegionsFlag = true;
   return *this;
 }
 
@@ -276,9 +269,6 @@ bool OpPrintingFlags::shouldPrintDebugInfoPrettyForm() const {
 bool OpPrintingFlags::shouldPrintGenericOpForm() const {
   return printGenericOpFormFlag;
 }
-
-/// Return if Region should be skipped.
-bool OpPrintingFlags::shouldSkipRegions() const { return skipRegionsFlag; }
 
 /// Return if operation verification should be skipped.
 bool OpPrintingFlags::shouldAssumeVerified() const {
@@ -624,11 +614,9 @@ private:
   /// Print the given operation in the generic form.
   void printGenericOp(Operation *op, bool printOpName = true) override {
     // Consider nested operations for aliases.
-    if (!printerFlags.shouldSkipRegions()) {
-      for (Region &region : op->getRegions())
-        printRegion(region, /*printEntryBlockArgs=*/true,
-                    /*printBlockTerminators=*/true);
-    }
+    for (Region &region : op->getRegions())
+      printRegion(region, /*printEntryBlockArgs=*/true,
+                  /*printBlockTerminators=*/true);
 
     // Visit all the types used in the operation.
     for (Type type : op->getOperandTypes())
@@ -677,10 +665,6 @@ private:
                    bool printEmptyBlock = false) override {
     if (region.empty())
       return;
-    if (printerFlags.shouldSkipRegions()) {
-      os << "{/*skip region*/}";
-      return;
-    }
 
     auto *entryBlock = &region.front();
     print(entryBlock, printEntryBlockArgs, printBlockTerminators);
@@ -3357,14 +3341,10 @@ void OperationPrinter::printGenericOp(Operation *op, bool printOpName) {
   // Print regions.
   if (op->getNumRegions() != 0) {
     os << " (";
-    if (!printerFlags.shouldSkipRegions()) {
-      interleaveComma(op->getRegions(), [&](Region &region) {
-        printRegion(region, /*printEntryBlockArgs=*/true,
-                    /*printBlockTerminators=*/true, /*printEmptyBlock=*/true);
-      });
-    } else {
-      os << "/*skip " << op->getNumRegions() << " regions*/";
-    }
+    interleaveComma(op->getRegions(), [&](Region &region) {
+      printRegion(region, /*printEntryBlockArgs=*/true,
+                  /*printBlockTerminators=*/true, /*printEmptyBlock=*/true);
+    });
     os << ')';
   }
 
@@ -3483,10 +3463,6 @@ void OperationPrinter::printSuccessorAndUseList(Block *successor,
 void OperationPrinter::printRegion(Region &region, bool printEntryBlockArgs,
                                    bool printBlockTerminators,
                                    bool printEmptyBlock) {
-  if (printerFlags.shouldSkipRegions()) {
-    os << "{/*skip region*/}";
-    return;
-  }
   os << "{" << newLine;
   if (!region.empty()) {
     auto restoreDefaultDialect =
