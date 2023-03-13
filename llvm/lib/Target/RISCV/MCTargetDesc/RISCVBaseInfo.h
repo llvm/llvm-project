@@ -347,7 +347,6 @@ inline static bool isValidRoundingMode(unsigned Mode) {
 //
 
 namespace RISCVLoadFPImm {
-int getLoadFPImm(bool Sign, uint8_t Exp, uint8_t Mantissa);
 float getFPImm(unsigned Imm);
 
 /// getLoadFP32Imm - Return a 5-bit binary encoding of the 32-bit
