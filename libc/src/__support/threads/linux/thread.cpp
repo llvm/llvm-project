@@ -116,12 +116,15 @@ __attribute__((always_inline)) inline uintptr_t get_start_args_addr() {
          // on to the stack. So, we have to step past two 64-bit values to get
          // to the start args.
          + sizeof(uintptr_t) * 2;
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                  \
-    defined(LIBC_TARGET_ARCH_IS_RISCV64)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
   // The frame pointer after cloning the new thread in the Thread::run method
   // is set to the stack pointer where start args are stored. So, we fetch
   // from there.
   return reinterpret_cast<uintptr_t>(__builtin_frame_address(1));
+#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
+  // The current frame pointer is the previous stack pointer where the start
+  // args are stored.
+  return reinterpret_cast<uintptr_t>(__builtin_frame_address(0));
 #endif
 }
 
