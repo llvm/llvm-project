@@ -333,7 +333,12 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // TODO: Multiplying by LT.first implies this legalizes into multiple copies
     // of similar code, but I think we expand through memory.
     return 2 * LT.first * getLMULCost(LT.second);
-  case TTI::SK_Reverse:
+  case TTI::SK_Reverse: {
+    // TODO: Cases to improve here:
+    // * LMUL > 1
+    // * i64 on RV32
+    // * i1 vector
+
     // Most of the cost here is producing the vrgather index register
     // Example sequence:
     //   csrr a0, vlenb
@@ -343,10 +348,15 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     //   vid.v v9
     //   vrsub.vx v10, v9, a0
     //   vrgather.vv v9, v8, v10
+    unsigned LenCost = 3;
+    if (LT.second.isFixedLengthVector())
+      // vrsub.vi has a 5 bit immediate field, otherwise an li suffices
+      LenCost = isInt<5>(LT.second.getVectorNumElements() - 1) ? 0 : 1;
     if (Tp->getElementType()->isIntegerTy(1))
       // Mask operation additionally required extend and truncate
-      return LT.first * 9;
-    return LT.first * 6;
+      return LT.first * (LenCost + 6);
+    return LT.first * (LenCost + 3);
+  }
   }
   return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
 }
