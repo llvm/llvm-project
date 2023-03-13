@@ -829,6 +829,14 @@ module std [system] {
   module exception {
     header "exception"
     export *
+
+    module __exception {
+      module exception        { private header "__exception/exception.h" }
+      module exception_ptr    { private header "__exception/exception_ptr.h" }
+      module nested_exception { private header "__exception/nested_exception.h" }
+      module operations       { private header "__exception/operations.h" }
+      module terminate        { private header "__exception/terminate.h" }
+    }
   }
   module execution {
     header "execution"
@@ -1623,7 +1631,10 @@ module std [system] {
 
     module __utility {
       module as_const            { private header "__utility/as_const.h" }
-      module auto_cast           { private header "__utility/auto_cast.h" }
+      module auto_cast           {
+        private header "__utility/auto_cast.h"
+        export type_traits.decay
+      }
       module cmp                 { private header "__utility/cmp.h" }
       module convert_to_integral { private header "__utility/convert_to_integral.h" }
       module declval             { private header "__utility/declval.h" }

@@ -1019,7 +1019,8 @@ module polymorphic_test
 ! CHECK:  %[[LOAD_S:.*]] = fir.load %[[S]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>
 ! CHECK:  fir.select_type %[[LOAD_S]] : !fir.class<!fir.heap<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>> [#fir.type_is<!fir.type<_QMpolymorphic_testTp2{a:i32,b:i32,c:f32}>>, ^bb1, unit, ^bb2]
 ! CHECK: ^bb1:
-! CHECK:  %[[REBOX_P1:.*]] = fir.rebox %[[LOAD_S]] : (!fir.class<!fir.heap<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>) -> !fir.box<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
+! CHECK:  %[[CONV_S:.*]] = fir.convert %[[LOAD_S]] : (!fir.class<!fir.heap<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>) -> !fir.box<!fir.heap<!fir.type<_QMpolymorphic_testTp2{a:i32,b:i32,c:f32}>>>
+! CHECK:  %[[REBOX_P1:.*]] = fir.rebox %[[CONV_S]] : (!fir.box<!fir.heap<!fir.type<_QMpolymorphic_testTp2{a:i32,b:i32,c:f32}>>>) -> !fir.box<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
 ! CHECK:  %[[LOAD_P:.*]] = fir.load %[[P]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>
 ! CHECK:  %[[LHS_CONV:.*]] = fir.convert %[[REBOX_P1]] : (!fir.box<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:  %[[RHS_CONV:.*]] = fir.convert %[[LOAD_P]] : (!fir.class<!fir.heap<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>) -> !fir.box<none>

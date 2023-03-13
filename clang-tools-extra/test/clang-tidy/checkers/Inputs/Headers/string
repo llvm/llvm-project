@@ -62,7 +62,8 @@ typedef basic_string<char32> u32string;
 
 template <typename C, typename T = char_traits<C>>
 struct basic_string_view {
-  basic_string_view(const C* s);
+  const C *str;
+  constexpr basic_string_view(const C* s) : str(s) {}
 };
 typedef basic_string_view<char> string_view;
 typedef basic_string_view<wchar_t> wstring_view;
