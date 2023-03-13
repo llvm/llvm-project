@@ -150,10 +150,6 @@ public:
     return RealPathNames[static_cast<unsigned>(ID)];
   }
 
-  bool isSelfContained(HeaderID ID) const {
-    return !NonSelfContained.contains(ID);
-  }
-
   // Return all transitively reachable files.
   llvm::ArrayRef<std::string> allHeaders() const { return RealPathNames; }
 
@@ -196,9 +192,6 @@ private:
   // and RealPathName and UniqueID are not preserved in
   // the preamble.
   llvm::DenseMap<llvm::sys::fs::UniqueID, HeaderID> UIDToIndex;
-  // Contains HeaderIDs of all non self-contained entries in the
-  // IncludeStructure.
-  llvm::DenseSet<HeaderID> NonSelfContained;
 
   // Maps written includes to indices in MainFileInclude for easier lookup by
   // spelling.

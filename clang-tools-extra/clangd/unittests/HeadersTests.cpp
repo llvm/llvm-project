@@ -402,48 +402,6 @@ TEST_F(HeadersTest, PresumedLocations) {
               Contains(AllOf(includeLine(2), written("<a.h>"))));
 }
 
-TEST_F(HeadersTest, SelfContainedHeaders) {
-  // Including through non-builtin file has no effects.
-  FS.Files[MainFile] = R"cpp(
-#include "includeguarded.h"
-#include "nonguarded.h"
-#include "pp_depend.h"
-#include "pragmaguarded.h"
-#include "recursive.h"
-)cpp";
-  FS.Files["pragmaguarded.h"] = R"cpp(
-#pragma once
-)cpp";
-  FS.Files["includeguarded.h"] = R"cpp(
-#ifndef INCLUDE_GUARDED_H
-#define INCLUDE_GUARDED_H
-void foo();
-#endif // INCLUDE_GUARDED_H
-)cpp";
-  FS.Files["nonguarded.h"] = R"cpp(
-)cpp";
-  FS.Files["pp_depend.h"] = R"cpp(
-  #ifndef REQUIRED_PP_DIRECTIVE
-  # error You have to have PP directive set to include this one!
-  #endif
-)cpp";
-  FS.Files["recursive.h"] = R"cpp(
-  #ifndef RECURSIVE_H
-  #define RECURSIVE_H
-
-  #include "recursive.h"
-
-  #endif // RECURSIVE_H
-)cpp";
-
-  auto Includes = collectIncludes();
-  EXPECT_TRUE(Includes.isSelfContained(getID("pragmaguarded.h", Includes)));
-  EXPECT_TRUE(Includes.isSelfContained(getID("includeguarded.h", Includes)));
-  EXPECT_TRUE(Includes.isSelfContained(getID("recursive.h", Includes)));
-  EXPECT_FALSE(Includes.isSelfContained(getID("nonguarded.h", Includes)));
-  EXPECT_FALSE(Includes.isSelfContained(getID("pp_depend.h", Includes)));
-}
-
 } // namespace
 } // namespace clangd
 } // namespace clang
