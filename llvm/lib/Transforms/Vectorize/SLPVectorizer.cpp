@@ -6629,7 +6629,8 @@ protected:
         Op = SV->getOperand(1);
     }
     if (auto *OpTy = dyn_cast<FixedVectorType>(Op->getType());
-        !OpTy || !isIdentityMask(Mask, OpTy, SinglePermute)) {
+        !OpTy || !isIdentityMask(Mask, OpTy, SinglePermute) ||
+        ShuffleVectorInst::isZeroEltSplatMask(Mask)) {
       if (IdentityOp) {
         V = IdentityOp;
         assert(Mask.size() == IdentityMask.size() &&
@@ -6661,6 +6662,8 @@ protected:
   static Value *createShuffle(Value *V1, Value *V2, ArrayRef<int> Mask,
                               ShuffleBuilderTy &Builder) {
     assert(V1 && "Expected at least one vector value.");
+    if (V2)
+      Builder.resizeToMatch(V1, V2);
     int VF = Mask.size();
     if (auto *FTy = dyn_cast<FixedVectorType>(V1->getType()))
       VF = FTy->getNumElements();
@@ -6748,6 +6751,15 @@ protected:
           CombinedMask1[I] = CombinedMask2[I] + (Op1 == Op2 ? 0 : VF);
         }
       }
+      const int Limit = CombinedMask1.size() * 2;
+      if (Op1 == Op2 && Limit == 2 * VF &&
+          all_of(CombinedMask1, [=](int Idx) { return Idx < Limit; }) &&
+          (ShuffleVectorInst::isIdentityMask(CombinedMask1) ||
+           (ShuffleVectorInst::isZeroEltSplatMask(CombinedMask1) &&
+            isa<ShuffleVectorInst>(Op1) &&
+            cast<ShuffleVectorInst>(Op1)->getShuffleMask() ==
+                ArrayRef(CombinedMask1))))
+        return Op1;
       return Builder.createShuffleVector(
           Op1, Op1 == Op2 ? PoisonValue::get(Op1->getType()) : Op2,
           CombinedMask1);
@@ -9294,44 +9306,6 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
     }
     return VecBase;
   };
-  auto CreateShuffle = [&](Value *V1, Value *V2, ArrayRef<int> Mask) {
-    unsigned VF1 = cast<FixedVectorType>(V1->getType())->getNumElements();
-    unsigned VF2 = cast<FixedVectorType>(V2->getType())->getNumElements();
-    unsigned VF = std::max(VF1, VF2);
-    if (VF1 != VF2) {
-      SmallVector<int> ExtMask(VF, UndefMaskElem);
-      std::iota(ExtMask.begin(), std::next(ExtMask.begin(), std::min(VF1, VF2)),
-                0);
-      if (VF1 < VF2) {
-        V1 = Builder.CreateShuffleVector(V1, ExtMask);
-        if (auto *I = dyn_cast<Instruction>(V1)) {
-          GatherShuffleExtractSeq.insert(I);
-          CSEBlocks.insert(I->getParent());
-        }
-      } else {
-        V2 = Builder.CreateShuffleVector(V2, ExtMask);
-        if (auto *I = dyn_cast<Instruction>(V2)) {
-          GatherShuffleExtractSeq.insert(I);
-          CSEBlocks.insert(I->getParent());
-        }
-      }
-    }
-    const int Limit = Mask.size() * 2;
-    if (V1 == V2 && Mask.size() == VF &&
-        all_of(Mask, [=](int Idx) { return Idx < Limit; }) &&
-        (ShuffleVectorInst::isIdentityMask(Mask) ||
-         (ShuffleVectorInst::isZeroEltSplatMask(Mask) &&
-          isa<ShuffleVectorInst>(V1) &&
-          cast<ShuffleVectorInst>(V1)->getShuffleMask() == Mask)))
-      return V1;
-    Value *Vec = V1 == V2 ? Builder.CreateShuffleVector(V1, Mask)
-                          : Builder.CreateShuffleVector(V1, V2, Mask);
-    if (auto *I = dyn_cast<Instruction>(Vec)) {
-      GatherShuffleExtractSeq.insert(I);
-      CSEBlocks.insert(I->getParent());
-    }
-    return Vec;
-  };
   auto NeedToDelay = [=](const TreeEntry *E,
                          ArrayRef<const TreeEntry *> Deps) -> Value * {
     // No need to delay emission if all deps are ready.
@@ -9438,29 +9412,20 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
         }
       }
       if (Vec2)
-        Vec1 = CreateShuffle(Vec1, Vec2, ExtractMask);
+        ShuffleBuilder.add(Vec1, Vec2, ExtractMask);
       else if (Vec1)
-        Vec1 = CreateShuffle(Vec1, Vec1, ExtractMask);
+        ShuffleBuilder.add(Vec1, ExtractMask);
       else
-        Vec1 = PoisonValue::get(
-            FixedVectorType::get(ScalarTy, GatheredScalars.size()));
+        ShuffleBuilder.add(PoisonValue::get(FixedVectorType::get(
+                               ScalarTy, GatheredScalars.size())),
+                           ExtractMask);
     }
     if (GatherShuffle) {
-      Vec = CreateShuffle(Entries.front()->VectorizedValue,
-                          Entries.back()->VectorizedValue, Mask);
-      VF = Mask.size();
-      if (Vec1) {
-        // Build final mask.
-        for (auto [I, Idx] : enumerate(Mask)) {
-          if (ExtractMask[I] != UndefMaskElem)
-            Idx = I;
-          else if (Idx != UndefMaskElem)
-            Idx = I + VF;
-        }
-        Vec = CreateShuffle(Vec1, Vec, Mask);
-      }
-    } else {
-      Vec = Vec1;
+      if (Entries.size() == 1)
+        ShuffleBuilder.add(Entries.front()->VectorizedValue, Mask);
+      else
+        ShuffleBuilder.add(Entries.front()->VectorizedValue,
+                           Entries.back()->VectorizedValue, Mask);
     }
   } else if (!allConstant(E->Scalars)) {
     // TODO: remove this code once able to combine shuffled vectors and build
@@ -9556,12 +9521,13 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
     }
     // Gather unique scalars and all constants.
     Vec = gather(GatheredScalars);
+    ShuffleBuilder.add(Vec, ReuseMask);
   } else {
     // Gather all constants.
     Vec = gather(E->Scalars);
+    ShuffleBuilder.add(Vec, ReuseMask);
   }
 
-  ShuffleBuilder.add(Vec, ReuseMask);
   Vec = ShuffleBuilder.finalize(E->ReuseShuffleIndices);
   if (NeedFreeze)
     Vec = Builder.CreateFreeze(Vec);
