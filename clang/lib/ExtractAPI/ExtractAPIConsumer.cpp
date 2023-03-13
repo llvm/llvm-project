@@ -339,9 +339,9 @@ ExtractAPIAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   Policy.AnonymousTagLocations = false;
   CI.getASTContext().setPrintingPolicy(Policy);
 
-  if (!CI.getFrontendOpts().ExtractAPIIgnoresFile.empty()) {
+  if (!CI.getFrontendOpts().ExtractAPIIgnoresFileList.empty()) {
     llvm::handleAllErrors(
-        APIIgnoresList::create(CI.getFrontendOpts().ExtractAPIIgnoresFile,
+        APIIgnoresList::create(CI.getFrontendOpts().ExtractAPIIgnoresFileList,
                                CI.getFileManager())
             .moveInto(IgnoresList),
         [&CI](const IgnoresFileNotFound &Err) {
