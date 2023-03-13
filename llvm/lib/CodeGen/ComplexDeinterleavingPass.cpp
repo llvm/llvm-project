@@ -271,8 +271,6 @@ public:
   bool identifyNodes(Instruction *RootI);
 
   /// Perform the actual replacement of the underlying instruction graph.
-  /// Returns false if the deinterleaving operation should be cancelled for the
-  /// current graph.
   void replaceNodes();
 };
 
@@ -598,8 +596,16 @@ ComplexDeinterleavingGraph::identifyPartialMul(Instruction *Real,
        Rotation == ComplexDeinterleavingRotation::Rotation_270)
           ? CommonOperand
           : nullptr);
-  NodePtr CNode = identifyNodeWithImplicitAdd(
-      cast<Instruction>(CR), cast<Instruction>(CI), PartialMatch);
+
+  auto *CRInst = dyn_cast<Instruction>(CR);
+  auto *CIInst = dyn_cast<Instruction>(CI);
+
+  if (!CRInst || !CIInst) {
+    LLVM_DEBUG(dbgs() << "  - Common operands are not instructions.\n");
+    return nullptr;
+  }
+
+  NodePtr CNode = identifyNodeWithImplicitAdd(CRInst, CIInst, PartialMatch);
   if (!CNode) {
     LLVM_DEBUG(dbgs() << "  - No cnode identified\n");
     return nullptr;
@@ -788,8 +794,10 @@ ComplexDeinterleavingGraph::identifyNode(Instruction *Real, Instruction *Imag) {
     PlaceholderNode->ReplacementNode = RealShuffle->getOperand(0);
     return submitCompositeNode(PlaceholderNode);
   }
-  if (RealShuffle || ImagShuffle)
+  if (RealShuffle || ImagShuffle) {
+    LLVM_DEBUG(dbgs() << " - There's a shuffle where there shouldn't be.\n");
     return nullptr;
+  }
 
   auto *VTy = cast<FixedVectorType>(Real->getType());
   auto *NewVTy =
