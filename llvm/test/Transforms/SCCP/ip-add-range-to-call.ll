@@ -169,5 +169,25 @@ define i32 @caller5() {
   ret i32 %a
 }
 
+define internal <2 x i64> @ctlz(<2 x i64> %arg) {
+; CHECK-LABEL: @ctlz(
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> [[ARG:%.*]], i1 false)
+; CHECK-NEXT:    ret <2 x i64> [[RES]]
+;
+  %res = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %arg, i1 false)
+  ret <2 x i64> %res
+}
+
+define <2 x i64> @ctlz_caller(<2 x i64> %arg) {
+; CHECK-LABEL: @ctlz_caller(
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @ctlz(<2 x i64> [[ARG:%.*]])
+; CHECK-NEXT:    ret <2 x i64> [[RES]]
+;
+  %res = call <2 x i64> @ctlz(<2 x i64> %arg)
+  ret <2 x i64> %res
+}
+
+declare <2 x i64> @llvm.ctlz.v2i64(<2 x i64>, i1)
+
 ; CHECK: [[RNG0]] = !{i32 0, i32 21}
 ; CHECK: [[RNG1]] = !{i32 500, i32 601}
