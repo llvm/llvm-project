@@ -165,6 +165,8 @@ Improvements to Clang's diagnostics
 - Diagnostics relating to macros on the command line of a preprocessed assembly
   file are now reported as coming from the file ``<command line>`` instead of
   ``<built-in>``.
+- Clang constexpr evaluator now provides a more concise diagnostic when calling
+  function pointer that is known to be null.
 
 Bug Fixes in This Version
 -------------------------
