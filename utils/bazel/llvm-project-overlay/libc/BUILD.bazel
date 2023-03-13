@@ -209,6 +209,7 @@ libc_support_library(
     hdrs = ["src/__support/CPP/atomic.h"],
     deps = [
         ":__support_cpp_type_traits",
+        ":__support_macros_attributes",
         ":libc_root",
     ],
 )
