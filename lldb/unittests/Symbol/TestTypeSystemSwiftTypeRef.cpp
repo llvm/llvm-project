@@ -930,6 +930,8 @@ TEST_F(TestTypeSystemSwiftTypeRef, GenericSignature) {
     ASSERT_EQ(s.GetNumTypePacks(), 1);
     ASSERT_EQ(s.GetCountForValuePack(0), 0);
     ASSERT_EQ(s.GetCountForTypePack(0), 0);
+    ASSERT_TRUE(s.generic_params[0].is_pack);
+    ASSERT_FALSE(s.generic_params[1].is_pack);
   }
   {
     // public func f6<U..., V...>(us: repeat each U, more_us: repeat each U, vs: repeat each V) {}
@@ -969,6 +971,45 @@ TEST_F(TestTypeSystemSwiftTypeRef, GenericSignature) {
     ASSERT_EQ(s.GetCountForValuePack(3), 1);
     ASSERT_EQ(s.GetCountForTypePack(0), 0);
     ASSERT_EQ(s.GetCountForTypePack(1), 1);
+    ASSERT_EQ(s.num_counts, 2);
   }
 
+  // Test non-variadic functions.
+  {
+    //public class C<U> {
+    //  public func f<V>(_ v: V) {}
+    //}
+    auto maybe_signature = SwiftLanguageRuntime::GetGenericSignature(
+        "$s1t1CC1fyyqd__lF", *m_swift_ts);
+    ASSERT_TRUE(maybe_signature.hasValue());
+    auto s = *maybe_signature;
+    // "U" does not count.
+    ASSERT_EQ(s.dependent_generic_param_count, 1);
+    ASSERT_EQ(s.generic_params.size(), 1);
+    ASSERT_EQ(s.pack_expansions.size(), 0);
+    ASSERT_EQ(s.GetNumValuePacks(), 0);
+    ASSERT_EQ(s.GetNumTypePacks(), 0);
+  }
+  // Test non-variadic functions.
+  {
+    //public class C<U> {
+    //  public func f<V>(_ u: U, _ v: V) {}
+    //}
+    auto maybe_signature = SwiftLanguageRuntime::GetGenericSignature(
+        "$s1t1CC1fyyx_qd__tlF", *m_swift_ts);
+    ASSERT_TRUE(maybe_signature.hasValue());
+    auto s = *maybe_signature;
+    ASSERT_EQ(s.dependent_generic_param_count, 1);
+    ASSERT_EQ(s.generic_params.size(), 2);
+    ASSERT_EQ(s.pack_expansions.size(), 0);
+    ASSERT_EQ(s.GetNumValuePacks(), 0);
+    ASSERT_EQ(s.GetNumTypePacks(), 0);
+  }
+  // Test a non-generic function.
+  {
+    // public func f() {}
+    auto maybe_signature = SwiftLanguageRuntime::GetGenericSignature(
+        "$s1t1fyyF", *m_swift_ts);
+    ASSERT_FALSE(maybe_signature.hasValue());
+  }
 }
