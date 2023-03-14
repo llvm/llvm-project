@@ -434,19 +434,88 @@ createScanLoop(OpBuilder &builder, ModuleOp module, func::FuncOp func,
   return std::make_pair(whileOp.getResult(0), compareEq);
 }
 
-/// Creates a code block to swap the values so that data[mi] is the median among
-/// data[lo], data[hi], and data[mi].
-//  The generated code corresponds to this C-like algorithm:
-//  median = mi
-//  if (data[mi] < data[lo]).                               (if1)
-//    if (data[hi] < data[lo])                              (if2)
-//       median = data[hi] < data[mi] ? mi : hi
-//    else
-//       median = lo
-//  else
-//    if data[hi] < data[mi]                                (if3)
-//      median = data[hi] < data[lo] ? lo : hi
-//  if median != mi swap data[median] with data[mi]
+/// Creates and returns an IfOp to compare two elements and swap the elements
+/// if compareFunc(data[b], data[a]) returns true. The new insertion point is
+/// right after the swap instructions.
+static scf::IfOp createCompareThenSwap(OpBuilder &builder, Location loc,
+                                       uint64_t nx, uint64_t ny, bool isCoo,
+                                       SmallVectorImpl<Value> &swapOperands,
+                                       SmallVectorImpl<Value> &compareOperands,
+                                       Value a, Value b) {
+  // Compare(data[b], data[a]).
+  compareOperands[0] = b;
+  compareOperands[1] = a;
+  Value cond =
+      createInlinedLessThan(builder, loc, compareOperands, nx, ny, isCoo);
+  scf::IfOp ifOp = builder.create<scf::IfOp>(loc, cond, /*else=*/false);
+  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+  swapOperands[0] = b;
+  swapOperands[1] = a;
+  createSwap(builder, loc, swapOperands, nx, ny, isCoo);
+  return ifOp;
+}
+
+/// Creates code to insert the 3rd element to a list of two sorted elements.
+static void createInsert3rd(OpBuilder &builder, Location loc, uint64_t nx,
+                            uint64_t ny, bool isCoo,
+                            SmallVectorImpl<Value> &swapOperands,
+                            SmallVectorImpl<Value> &compareOperands, Value v0,
+                            Value v1, Value v2) {
+  scf::IfOp ifOp = createCompareThenSwap(builder, loc, nx, ny, isCoo,
+                                         swapOperands, compareOperands, v1, v2);
+  createCompareThenSwap(builder, loc, nx, ny, isCoo, swapOperands,
+                        compareOperands, v0, v1);
+  builder.setInsertionPointAfter(ifOp);
+}
+
+/// Creates code to sort 3 elements.
+static void createSort3(OpBuilder &builder, Location loc, uint64_t nx,
+                        uint64_t ny, bool isCoo,
+                        SmallVectorImpl<Value> &swapOperands,
+                        SmallVectorImpl<Value> &compareOperands, Value v0,
+                        Value v1, Value v2) {
+  // Sort the first 2 elements.
+  scf::IfOp ifOp1 = createCompareThenSwap(
+      builder, loc, nx, ny, isCoo, swapOperands, compareOperands, v0, v1);
+  builder.setInsertionPointAfter(ifOp1);
+
+  // Insert the 3th element.
+  createInsert3rd(builder, loc, nx, ny, isCoo, swapOperands, compareOperands,
+                  v0, v1, v2);
+}
+
+/// Creates code to sort 5 elements.
+static void createSort5(OpBuilder &builder, Location loc, uint64_t nx,
+                        uint64_t ny, bool isCoo,
+                        SmallVectorImpl<Value> &swapOperands,
+                        SmallVectorImpl<Value> &compareOperands, Value v0,
+                        Value v1, Value v2, Value v3, Value v4) {
+  // Sort the first 3 elements.
+  createSort3(builder, loc, nx, ny, isCoo, swapOperands, compareOperands, v0,
+              v1, v2);
+
+  auto insert4th = [&]() {
+    scf::IfOp ifOp = createCompareThenSwap(
+        builder, loc, nx, ny, isCoo, swapOperands, compareOperands, v2, v3);
+    createInsert3rd(builder, loc, nx, ny, isCoo, swapOperands, compareOperands,
+                    v0, v1, v2);
+    builder.setInsertionPointAfter(ifOp);
+  };
+
+  // Insert the 4th element.
+  insert4th();
+
+  // Insert the 5th element.
+  scf::IfOp ifOp = createCompareThenSwap(builder, loc, nx, ny, isCoo,
+                                         swapOperands, compareOperands, v3, v4);
+  insert4th();
+  builder.setInsertionPointAfter(ifOp);
+}
+
+/// Creates a code block to swap the values in indices lo, mi, and hi so that
+/// data[lo], data[mi] and data[hi] are sorted in non-decreasing values. When
+/// the number of values in range [lo, hi) is more than a threshold, we also
+/// include the middle of [lo, mi) and [mi, hi) and sort a total of five values.
 static void createChoosePivot(OpBuilder &builder, ModuleOp module,
                               func::FuncOp func, uint64_t nx, uint64_t ny,
                               bool isCoo, Value lo, Value hi, Value mi,
@@ -455,62 +524,35 @@ static void createChoosePivot(OpBuilder &builder, ModuleOp module,
   uint64_t numXBuffers = isCoo ? 1 : nx;
   compareOperands.append(args.begin() + xStartIdx,
                          args.begin() + xStartIdx + numXBuffers);
-  Type i1Type = IntegerType::get(module.getContext(), 1, IntegerType::Signless);
-  SmallVector<Type, 1> cmpTypes{i1Type};
-  Location loc = func.getLoc();
-  // Compare data[mi] < data[lo].
-  Value cond1 =
-      createInlinedLessThan(builder, loc, compareOperands, nx, ny, isCoo);
-  SmallVector<Type, 1> ifTypes{lo.getType()};
-  scf::IfOp ifOp1 =
-      builder.create<scf::IfOp>(loc, ifTypes, cond1, /*else=*/true);
-
-  // Generate an if-stmt to find the median value, assuming we already know that
-  // data[b] < data[a] and we haven't compare data[c] yet.
-  auto createFindMedian = [&](Value a, Value b, Value c) -> scf::IfOp {
-    compareOperands[0] = c;
-    compareOperands[1] = a;
-    // Compare data[c] < data[b].
-    Value cond2 =
-        createInlinedLessThan(builder, loc, compareOperands, nx, ny, isCoo);
-    scf::IfOp ifOp2 =
-        builder.create<scf::IfOp>(loc, ifTypes, cond2, /*else=*/true);
-    builder.setInsertionPointToStart(&ifOp2.getThenRegion().front());
-    compareOperands[0] = c;
-    compareOperands[1] = b;
-    // Compare data[c] < data[b].
-    Value cond3 =
-        createInlinedLessThan(builder, loc, compareOperands, nx, ny, isCoo);
-    builder.create<scf::YieldOp>(
-        loc, ValueRange{builder.create<arith::SelectOp>(loc, cond3, b, c)});
-    builder.setInsertionPointToStart(&ifOp2.getElseRegion().front());
-    builder.create<scf::YieldOp>(loc, ValueRange{a});
-    return ifOp2;
-  };
-
-  builder.setInsertionPointToStart(&ifOp1.getThenRegion().front());
-  scf::IfOp ifOp2 = createFindMedian(lo, mi, hi);
-  builder.setInsertionPointAfter(ifOp2);
-  builder.create<scf::YieldOp>(loc, ValueRange{ifOp2.getResult(0)});
-
-  builder.setInsertionPointToStart(&ifOp1.getElseRegion().front());
-  scf::IfOp ifOp3 = createFindMedian(mi, lo, hi);
-
-  builder.setInsertionPointAfter(ifOp3);
-  builder.create<scf::YieldOp>(loc, ValueRange{ifOp3.getResult(0)});
-
-  builder.setInsertionPointAfter(ifOp1);
-  Value median = ifOp1.getResult(0);
-  Value cond =
-      builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne, mi, median);
-  scf::IfOp ifOp =
-      builder.create<scf::IfOp>(loc, TypeRange(), cond, /*else=*/false);
-
-  SmallVector<Value> swapOperands{median, mi};
+  SmallVector<Value> swapOperands{mi, lo};
   swapOperands.append(args.begin() + xStartIdx, args.end());
-  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-  createSwap(builder, loc, swapOperands, nx, ny, isCoo);
-  builder.setInsertionPointAfter(ifOp);
+  Location loc = func.getLoc();
+  Value c1 = constantIndex(builder, loc, 1);
+  Value hiP1 = builder.create<arith::AddIOp>(loc, hi, c1);
+  Value len = builder.create<arith::SubIOp>(loc, hiP1, lo);
+  Value lenThreshold = constantIndex(builder, loc, 1000);
+  Value lenCond = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
+                                                len, lenThreshold);
+  scf::IfOp lenIf = builder.create<scf::IfOp>(loc, lenCond, /*else=*/true);
+
+  // When len < 1000, choose pivot from median of 3 values.
+  builder.setInsertionPointToStart(&lenIf.getThenRegion().front());
+  createSort3(builder, loc, nx, ny, isCoo, swapOperands, compareOperands, lo,
+              mi, hi);
+
+  // When len >= 1000, choose pivot from median of 5 values.
+  builder.setInsertionPointToStart(&lenIf.getElseRegion().front());
+  Value miP1 = builder.create<arith::AddIOp>(loc, hi, c1);
+  Value a = builder.create<arith::AddIOp>(loc, lo, miP1);
+  // Value a is the middle between [loc, mi].
+  a = builder.create<arith::ShRUIOp>(loc, a, c1);
+  Value b = builder.create<arith::AddIOp>(loc, mi, hiP1);
+  // Value b is the middle between [mi, hi].
+  b = builder.create<arith::ShRUIOp>(loc, b, c1);
+  createSort5(builder, loc, nx, ny, isCoo, swapOperands, compareOperands, lo, a,
+              mi, b, hi);
+
+  builder.setInsertionPointAfter(lenIf);
 }
 
 /// Creates a function to perform quick sort partition on the values in the
