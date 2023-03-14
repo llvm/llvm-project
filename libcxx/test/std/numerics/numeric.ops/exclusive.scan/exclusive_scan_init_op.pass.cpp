@@ -77,13 +77,13 @@ test()
     {
     std::array<unsigned char, 10> v;
     std::iota(v.begin(), v.end(), static_cast<unsigned char>(1));
-    std::array<size_t, 10> res;
+    std::array<std::size_t, 10> res;
     std::exclusive_scan(v.begin(), v.end(), res.begin(), 1, std::multiplies<>());
 
     assert(res.size() == 10);
-    size_t j = 1;
+    std::size_t j = 1;
     assert(res[0] == 1);
-    for (size_t i = 1; i < v.size(); ++i)
+    for (std::size_t i = 1; i < v.size(); ++i)
     {
         j *= i;
         assert(res[i] == j);

@@ -30,7 +30,7 @@ int main(int, char**)
       LIBCPP_ASSERT(c.max_size() == 10);
     }
     {
-      typedef limited_allocator<int, (size_t)-1> A;
+      typedef limited_allocator<int, (std::size_t)-1> A;
       typedef std::unordered_set<int, std::hash<int>, std::equal_to<int>, A> C;
       const C::size_type max_dist =
           static_cast<C::size_type>(std::numeric_limits<C::difference_type>::max());

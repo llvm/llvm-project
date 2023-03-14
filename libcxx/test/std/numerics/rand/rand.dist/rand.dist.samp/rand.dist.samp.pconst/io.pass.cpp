@@ -35,7 +35,7 @@ int main(int, char**)
         typedef std::piecewise_constant_distribution<> D;
         double b[] = {10, 14, 16, 17};
         double p[] = {25, 62.5, 12.5};
-        const size_t Np = sizeof(p) / sizeof(p[0]);
+        const std::size_t Np = sizeof(p) / sizeof(p[0]);
         D d1(b, b+Np+1, p);
         std::ostringstream os;
         os << d1;

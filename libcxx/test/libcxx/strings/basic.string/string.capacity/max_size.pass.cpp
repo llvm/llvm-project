@@ -18,48 +18,48 @@
 #include "test_macros.h"
 
 // alignment of the string heap buffer is hardcoded to 16
-static const size_t alignment = 16;
+static const std::size_t alignment = 16;
 
 template <class = int>
 TEST_CONSTEXPR_CXX20 void full_size() {
   std::string str;
-  assert(str.max_size() == std::numeric_limits<size_t>::max() - alignment);
+  assert(str.max_size() == std::numeric_limits<std::size_t>::max() - alignment);
 
 #ifndef TEST_HAS_NO_CHAR8_T
   std::u8string u8str;
-  assert(u8str.max_size() == std::numeric_limits<size_t>::max() - alignment);
+  assert(u8str.max_size() == std::numeric_limits<std::size_t>::max() - alignment);
 #endif
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   std::wstring wstr;
-  assert(wstr.max_size() == std::numeric_limits<size_t>::max() / sizeof(wchar_t) - alignment);
+  assert(wstr.max_size() == std::numeric_limits<std::size_t>::max() / sizeof(wchar_t) - alignment);
 #endif
 
   std::u16string u16str;
   std::u32string u32str;
-  assert(u16str.max_size() == std::numeric_limits<size_t>::max() / 2 - alignment);
-  assert(u32str.max_size() == std::numeric_limits<size_t>::max() / 4 - alignment);
+  assert(u16str.max_size() == std::numeric_limits<std::size_t>::max() / 2 - alignment);
+  assert(u32str.max_size() == std::numeric_limits<std::size_t>::max() / 4 - alignment);
 }
 
 template <class = int>
 TEST_CONSTEXPR_CXX20 void half_size() {
   std::string str;
-  assert(str.max_size() == std::numeric_limits<size_t>::max() / 2 - alignment);
+  assert(str.max_size() == std::numeric_limits<std::size_t>::max() / 2 - alignment);
 
 #ifndef TEST_HAS_NO_CHAR8_T
   std::u8string u8str;
-  assert(u8str.max_size() == std::numeric_limits<size_t>::max() / 2 - alignment);
+  assert(u8str.max_size() == std::numeric_limits<std::size_t>::max() / 2 - alignment);
 #endif
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   std::wstring wstr;
-  assert(wstr.max_size() == std::numeric_limits<size_t>::max() / std::max<size_t>(2ul, sizeof(wchar_t)) - alignment);
+  assert(wstr.max_size() == std::numeric_limits<std::size_t>::max() / std::max<size_t>(2ul, sizeof(wchar_t)) - alignment);
 #endif
 
   std::u16string u16str;
   std::u32string u32str;
-  assert(u16str.max_size() == std::numeric_limits<size_t>::max() / 2 - alignment);
-  assert(u32str.max_size() == std::numeric_limits<size_t>::max() / 4 - alignment);
+  assert(u16str.max_size() == std::numeric_limits<std::size_t>::max() / 2 - alignment);
+  assert(u32str.max_size() == std::numeric_limits<std::size_t>::max() / 4 - alignment);
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {

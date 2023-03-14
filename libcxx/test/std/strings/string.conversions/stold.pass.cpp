@@ -25,29 +25,29 @@ int main(int, char**)
     assert(std::stold("-10") == -10);
     assert(std::stold(" 10") == 10);
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         assert(std::stold("10g", &idx) == 10);
         assert(idx == 2);
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         assert(std::stold("1.e60", &idx) == 1.e60L);
         assert(idx == 5);
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         assert(std::stold("INF", &idx) == INFINITY);
         assert(idx == 3);
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         assert(std::isnan(std::stold("NAN", &idx)));
         assert(idx == 3);
     }
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
             (void)std::stold("", &idx);
             assert(false);
@@ -56,7 +56,7 @@ int main(int, char**)
         }
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
             (void)std::stold("  - 8", &idx);
             assert(false);
@@ -65,7 +65,7 @@ int main(int, char**)
         }
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
             (void)std::stold("a1", &idx);
             assert(false);
@@ -74,7 +74,7 @@ int main(int, char**)
         }
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
             assert(std::stold("1.e6000", &idx) == INFINITY);
             assert(false);
@@ -90,28 +90,28 @@ int main(int, char**)
     assert(std::stold(L"-10.5") == -10.5);
     assert(std::stold(L" 10") == 10);
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         assert(std::stold(L"10g", &idx) == 10);
         assert(idx == 2);
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         assert(std::stold(L"1.e60", &idx) == 1.e60L);
         assert(idx == 5);
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         assert(std::stold(L"INF", &idx) == INFINITY);
         assert(idx == 3);
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         assert(std::isnan(std::stold(L"NAN", &idx)));
         assert(idx == 3);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
             (void)std::stold(L"", &idx);
             assert(false);
@@ -120,7 +120,7 @@ int main(int, char**)
         }
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
             (void)std::stold(L"  - 8", &idx);
             assert(false);
@@ -129,7 +129,7 @@ int main(int, char**)
         }
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
             (void)std::stold(L"a1", &idx);
             assert(false);
@@ -138,7 +138,7 @@ int main(int, char**)
         }
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
             assert(std::stold(L"1.e6000", &idx) == INFINITY);
             assert(false);

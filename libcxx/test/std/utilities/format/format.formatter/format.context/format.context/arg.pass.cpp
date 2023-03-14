@@ -32,7 +32,7 @@ void test() {
   const std::basic_format_context context = test_format_context_create(OutIt{output}, args);
   LIBCPP_ASSERT(args.__size() == 4);
   ASSERT_NOEXCEPT(context.arg(0));
-  for (size_t i = 0, e = args.__size(); i != e; ++i) {
+  for (std::size_t i = 0, e = args.__size(); i != e; ++i) {
     assert(context.arg(i));
   }
   assert(!context.arg(args.__size()));

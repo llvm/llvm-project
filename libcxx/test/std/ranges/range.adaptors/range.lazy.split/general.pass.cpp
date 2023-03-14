@@ -75,13 +75,13 @@ constexpr bool is_equal(View& view, const Expected& expected) {
   return actual_it == view.end() && expected_it == expected.end();
 }
 
-template <class T, class Separator, class U, size_t M>
+template <class T, class Separator, class U, std::size_t M>
 constexpr bool test_function_call(T&& input, Separator&& separator, std::array<U, M> expected) {
   std::ranges::lazy_split_view v(input, separator);
   return is_equal(v, expected);
 }
 
-template <class T, class Separator, class U, size_t M>
+template <class T, class Separator, class U, std::size_t M>
 constexpr bool test_with_piping(T&& input, Separator&& separator, std::array<U, M> expected) {
   auto expected_it = expected.begin();
   for (auto e : input | std::ranges::views::lazy_split(separator)) {
@@ -166,7 +166,7 @@ constexpr std::string_view sv(T&& str) {
   return std::string_view(str);
 };
 
-template <class T, class Separator, class U, size_t M>
+template <class T, class Separator, class U, std::size_t M>
 constexpr void test_one(T&& input, Separator&& separator, std::array<U, M> expected) {
   assert(test_function_call(input, separator, expected));
   assert(test_with_piping(input, separator, expected));

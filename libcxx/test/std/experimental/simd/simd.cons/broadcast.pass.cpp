@@ -73,7 +73,7 @@ void compile_unsigned() {
 template <typename SimdType>
 void test_broadcast() {
   SimdType a(3);
-  for (size_t i = 0; i < a.size(); i++) {
+  for (std::size_t i = 0; i < a.size(); i++) {
     assert(a[i] == 3);
   }
 }
