@@ -426,6 +426,17 @@ void CheckHelper::Check(const Symbol &symbol) {
         " of a module"_err_en_US,
         symbol.name());
   }
+  if (IsProcedure(symbol) && !symbol.HasExplicitInterface()) {
+    if (IsAllocatable(symbol)) {
+      messages_.Say(
+          "Procedure '%s' may not be ALLOCATABLE without an explicit interface"_err_en_US,
+          symbol.name());
+    } else if (symbol.Rank() > 0) {
+      messages_.Say(
+          "Procedure '%s' may not be an array without an explicit interface"_err_en_US,
+          symbol.name());
+    }
+  }
 }
 
 void CheckHelper::CheckCommonBlock(const Symbol &symbol) {
@@ -916,7 +927,7 @@ void CheckHelper::CheckProcEntity(
     }
     CheckPassArg(symbol, details.procInterface(), details);
   }
-  if (symbol.attrs().test(Attr::POINTER)) {
+  if (IsPointer(symbol)) {
     CheckPointerInitialization(symbol);
     if (const Symbol * interface{details.procInterface()}) {
       const Symbol &ultimate{interface->GetUltimate()};
@@ -936,7 +947,7 @@ void CheckHelper::CheckProcEntity(
             symbol.name()); // C1517
       }
     }
-  } else if (symbol.attrs().test(Attr::SAVE)) {
+  } else if (IsSave(symbol)) {
     messages_.Say(
         "Procedure '%s' with SAVE attribute must also have POINTER attribute"_err_en_US,
         symbol.name());
