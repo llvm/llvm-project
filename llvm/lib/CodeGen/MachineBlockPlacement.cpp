@@ -2017,7 +2017,7 @@ MachineBlockPlacement::FallThroughGains(
      for (MachineBasicBlock *Succ : BestPred->successors()) {
        if ((Succ == NewTop) || (Succ == BestPred) || !LoopBlockSet.count(Succ))
          continue;
-       if (ComputedEdges.find(Succ) != ComputedEdges.end())
+       if (ComputedEdges.contains(Succ))
          continue;
        BlockChain *SuccChain = BlockToChain[Succ];
        if ((SuccChain && (Succ != *SuccChain->begin())) ||

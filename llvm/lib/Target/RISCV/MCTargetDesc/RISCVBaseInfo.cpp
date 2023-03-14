@@ -214,86 +214,36 @@ bool RISCVRVC::uncompress(MCInst &OutInst, const MCInst &MI,
   return uncompressInst(OutInst, MI, STI);
 }
 
-// Lookup table for fli.h for entries 1-31. Entry 0(-1.0) is handled separately.
-// NOTE: The exponent for entry 1 is larger than entry 2 and 3 because they
-// are denormals.
-static constexpr std::pair<uint8_t, uint8_t> LoadFP16ImmArr[] = {
-    {0b00001, 0b00}, {0b00000, 0b01}, {0b00000, 0b10}, {0b00111, 0b00},
-    {0b01000, 0b00}, {0b01011, 0b00}, {0b01100, 0b00}, {0b01101, 0b00},
-    {0b01101, 0b01}, {0b01101, 0b10}, {0b01101, 0b11}, {0b01110, 0b00},
-    {0b01110, 0b01}, {0b01110, 0b10}, {0b01110, 0b11}, {0b01111, 0b00},
-    {0b01111, 0b01}, {0b01111, 0b10}, {0b01111, 0b11}, {0b10000, 0b00},
-    {0b10000, 0b01}, {0b10000, 0b10}, {0b10001, 0b00}, {0b10010, 0b00},
-    {0b10011, 0b00}, {0b10110, 0b00}, {0b10111, 0b00}, {0b11110, 0b00},
-    {0b11111, 0b00}, {0b11111, 0b00}, {0b11111, 0b10},
-};
-
-// Lookup table for fli.s for entries 1-31.
+// Lookup table for fli.s for entries 2-31.
 static constexpr std::pair<uint8_t, uint8_t> LoadFP32ImmArr[] = {
-    {0b00000001, 0b00}, {0b01101111, 0b00}, {0b01110000, 0b00},
-    {0b01110111, 0b00}, {0b01111000, 0b00}, {0b01111011, 0b00},
-    {0b01111100, 0b00}, {0b01111101, 0b00}, {0b01111101, 0b01},
-    {0b01111101, 0b10}, {0b01111101, 0b11}, {0b01111110, 0b00},
-    {0b01111110, 0b01}, {0b01111110, 0b10}, {0b01111110, 0b11},
-    {0b01111111, 0b00}, {0b01111111, 0b01}, {0b01111111, 0b10},
-    {0b01111111, 0b11}, {0b10000000, 0b00}, {0b10000000, 0b01},
-    {0b10000000, 0b10}, {0b10000001, 0b00}, {0b10000010, 0b00},
-    {0b10000011, 0b00}, {0b10000110, 0b00}, {0b10000111, 0b00},
-    {0b10001110, 0b00}, {0b10001111, 0b00}, {0b11111111, 0b00},
-    {0b11111111, 0b10},
+    {0b01101111, 0b00}, {0b01110000, 0b00}, {0b01110111, 0b00},
+    {0b01111000, 0b00}, {0b01111011, 0b00}, {0b01111100, 0b00},
+    {0b01111101, 0b00}, {0b01111101, 0b01}, {0b01111101, 0b10},
+    {0b01111101, 0b11}, {0b01111110, 0b00}, {0b01111110, 0b01},
+    {0b01111110, 0b10}, {0b01111110, 0b11}, {0b01111111, 0b00},
+    {0b01111111, 0b01}, {0b01111111, 0b10}, {0b01111111, 0b11},
+    {0b10000000, 0b00}, {0b10000000, 0b01}, {0b10000000, 0b10},
+    {0b10000001, 0b00}, {0b10000010, 0b00}, {0b10000011, 0b00},
+    {0b10000110, 0b00}, {0b10000111, 0b00}, {0b10001110, 0b00},
+    {0b10001111, 0b00}, {0b11111111, 0b00}, {0b11111111, 0b10},
 };
 
-// Lookup table for fli.d for entries 1-31.
-static constexpr std::pair<uint16_t, uint8_t> LoadFP64ImmArr[] = {
-    {0b00000000001, 0b00}, {0b01111101111, 0b00}, {0b01111110000, 0b00},
-    {0b01111110111, 0b00}, {0b01111111000, 0b00}, {0b01111111011, 0b00},
-    {0b01111111100, 0b00}, {0b01111111101, 0b00}, {0b01111111101, 0b01},
-    {0b01111111101, 0b10}, {0b01111111101, 0b11}, {0b01111111110, 0b00},
-    {0b01111111110, 0b01}, {0b01111111110, 0b10}, {0b01111111110, 0b11},
-    {0b01111111111, 0b00}, {0b01111111111, 0b01}, {0b01111111111, 0b10},
-    {0b01111111111, 0b11}, {0b10000000000, 0b00}, {0b10000000000, 0b01},
-    {0b10000000000, 0b10}, {0b10000000001, 0b00}, {0b10000000010, 0b00},
-    {0b10000000011, 0b00}, {0b10000000110, 0b00}, {0b10000000111, 0b00},
-    {0b10000001110, 0b00}, {0b10000001111, 0b00}, {0b11111111111, 0b00},
-    {0b11111111111, 0b10},
-};
+int RISCVLoadFPImm::getLoadFPImm(APFloat FPImm) {
+  assert((&FPImm.getSemantics() == &APFloat::IEEEsingle() ||
+          &FPImm.getSemantics() == &APFloat::IEEEdouble() ||
+          &FPImm.getSemantics() == &APFloat::IEEEhalf()) &&
+         "Unexpected semantics");
 
-int RISCVLoadFPImm::getLoadFP16Imm(const APFloat &FPImm) {
-  assert(&FPImm.getSemantics() == &APFloat::IEEEhalf());
+  // Handle the minimum normalized value which is different for each type.
+  if (FPImm.isSmallestNormalized())
+    return 1;
 
-  APInt Imm = FPImm.bitcastToAPInt();
-
-  if (Imm.extractBitsAsZExtValue(8, 0) != 0)
+  // Convert to single precision to use its lookup table.
+  bool LosesInfo;
+  APFloat::opStatus Status = FPImm.convert(
+      APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven, &LosesInfo);
+  if (Status != APFloat::opOK || LosesInfo)
     return -1;
-
-  bool Sign = Imm.extractBitsAsZExtValue(1, 15);
-  uint8_t Mantissa = Imm.extractBitsAsZExtValue(2, 8);
-  uint8_t Exp = Imm.extractBitsAsZExtValue(5, 10);
-
-  // The array isn't sorted so we must use std::find unlike fp32 and fp64.
-  auto EMI = llvm::find(LoadFP16ImmArr, std::make_pair(Exp, Mantissa));
-  if (EMI == std::end(LoadFP16ImmArr))
-    return -1;
-
-  // Table doesn't have entry 0.
-  int Entry = std::distance(std::begin(LoadFP16ImmArr), EMI) + 1;
-
-  // The only legal negative value is -1.0(entry 0). 1.0 is entry 16.
-  if (Sign) {
-    if (Entry == 16)
-      return 0;
-    return false;
-  }
-
-  // Entry 29 and 30 are both infinity, but 30 is the real infinity.
-  if (Entry == 29)
-    ++Entry;
-
-  return Entry;
-}
-
-int RISCVLoadFPImm::getLoadFP32Imm(const APFloat &FPImm) {
-  assert(&FPImm.getSemantics() == &APFloat::IEEEsingle());
 
   APInt Imm = FPImm.bitcastToAPInt();
 
@@ -309,38 +259,8 @@ int RISCVLoadFPImm::getLoadFP32Imm(const APFloat &FPImm) {
       EMI->second != Mantissa)
     return -1;
 
-  // Table doesn't have entry 0.
-  int Entry = std::distance(std::begin(LoadFP32ImmArr), EMI) + 1;
-
-  // The only legal negative value is -1.0(entry 0). 1.0 is entry 16.
-  if (Sign) {
-    if (Entry == 16)
-      return 0;
-    return false;
-  }
-
-  return Entry;
-}
-
-int RISCVLoadFPImm::getLoadFP64Imm(const APFloat &FPImm) {
-  assert(&FPImm.getSemantics() == &APFloat::IEEEdouble());
-
-  APInt Imm = FPImm.bitcastToAPInt();
-
-  if (Imm.extractBitsAsZExtValue(50, 0) != 0)
-    return -1;
-
-  bool Sign = Imm.extractBitsAsZExtValue(1, 63);
-  uint8_t Mantissa = Imm.extractBitsAsZExtValue(2, 50);
-  uint16_t Exp = Imm.extractBitsAsZExtValue(11, 52);
-
-  auto EMI = llvm::lower_bound(LoadFP64ImmArr, std::make_pair(Exp, Mantissa));
-  if (EMI == std::end(LoadFP64ImmArr) || EMI->first != Exp ||
-      EMI->second != Mantissa)
-    return -1;
-
-  // Table doesn't have entry 0.
-  int Entry = std::distance(std::begin(LoadFP64ImmArr), EMI) + 1;
+  // Table doesn't have entry 0 or 1.
+  int Entry = std::distance(std::begin(LoadFP32ImmArr), EMI) + 2;
 
   // The only legal negative value is -1.0(entry 0). 1.0 is entry 16.
   if (Sign) {
@@ -362,8 +282,8 @@ float RISCVLoadFPImm::getFPImm(unsigned Imm) {
     Imm = 16;
   }
 
-  uint32_t Exp = LoadFP32ImmArr[Imm - 1].first;
-  uint32_t Mantissa = LoadFP32ImmArr[Imm - 1].second;
+  uint32_t Exp = LoadFP32ImmArr[Imm - 2].first;
+  uint32_t Mantissa = LoadFP32ImmArr[Imm - 2].second;
 
   uint32_t I = Sign << 31 | Exp << 23 | Mantissa << 21;
   return bit_cast<float>(I);

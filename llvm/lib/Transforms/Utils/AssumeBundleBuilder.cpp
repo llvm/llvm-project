@@ -290,17 +290,20 @@ AssumeInst *llvm::buildAssumeFromInst(Instruction *I) {
   return Builder.build();
 }
 
-void llvm::salvageKnowledge(Instruction *I, AssumptionCache *AC,
+bool llvm::salvageKnowledge(Instruction *I, AssumptionCache *AC,
                             DominatorTree *DT) {
   if (!EnableKnowledgeRetention || I->isTerminator())
-    return;
+    return false;
+  bool Changed = false;
   AssumeBuilderState Builder(I->getModule(), I, AC, DT);
   Builder.addInstruction(I);
   if (auto *Intr = Builder.build()) {
     Intr->insertBefore(I);
+    Changed = true;
     if (AC)
       AC->registerAssumption(Intr);
   }
+  return Changed;
 }
 
 AssumeInst *
@@ -563,9 +566,12 @@ PreservedAnalyses AssumeSimplifyPass::run(Function &F,
                                           FunctionAnalysisManager &AM) {
   if (!EnableKnowledgeRetention)
     return PreservedAnalyses::all();
-  simplifyAssumes(F, &AM.getResult<AssumptionAnalysis>(F),
-                  AM.getCachedResult<DominatorTreeAnalysis>(F));
-  return PreservedAnalyses::all();
+  if (!simplifyAssumes(F, &AM.getResult<AssumptionAnalysis>(F),
+                       AM.getCachedResult<DominatorTreeAnalysis>(F)))
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 namespace {
@@ -611,9 +617,14 @@ PreservedAnalyses AssumeBuilderPass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
   AssumptionCache *AC = &AM.getResult<AssumptionAnalysis>(F);
   DominatorTree* DT = AM.getCachedResult<DominatorTreeAnalysis>(F);
+  bool Changed = false;
   for (Instruction &I : instructions(F))
-    salvageKnowledge(&I, AC, DT);
-  return PreservedAnalyses::all();
+    Changed |= salvageKnowledge(&I, AC, DT);
+  if (!Changed)
+    PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 namespace {

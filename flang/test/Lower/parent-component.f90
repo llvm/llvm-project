@@ -175,4 +175,23 @@ contains
   ! CHECK: %[[C1:.*]] = arith.constant 1 : index
   ! CHECK: %[[SLICE:.*]] = fir.slice %[[C1]], %[[C2]], %[[C1]] path %[[FIELD_C]] : (index, index, index, !fir.field) -> !fir.slice<1>
   ! CHECK: %{{.*}} = fir.embox %[[ALLOCA]](%[[SHAPE]]) [%[[SLICE]]] : (!fir.ref<!fir.array<2x!fir.type<_QFTz{k:i32,c:!fir.type<_QFTc{a:i32,b:i32}>}>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<2x!fir.type<_QFTp{a:i32}>>>
+
+  subroutine parent_comp_lhs()
+    type(c) :: a
+    type(p) :: b
+
+    a%p = B
+  end subroutine
+
+! CHECK-LABEL: func.func @_QFPparent_comp_lhs()
+! CHECK: %[[BOX:.*]] = fir.alloca !fir.box<!fir.type<_QFTp{a:i32}>>
+! CHECK: %[[A:.*]] = fir.alloca !fir.type<_QFTc{a:i32,b:i32}> {bindc_name = "a", uniq_name = "_QFFparent_comp_lhsEa"}
+! CHECK: %[[B:.*]] = fir.alloca !fir.type<_QFTp{a:i32}> {bindc_name = "b", uniq_name = "_QFFparent_comp_lhsEb"}
+! CHECK: %[[EMBOX_A:.*]] = fir.embox %[[A]] : (!fir.ref<!fir.type<_QFTc{a:i32,b:i32}>>) -> !fir.box<!fir.type<_QFTp{a:i32}>>
+! CHECK: %[[EMBOX_B:.*]] = fir.embox %[[B]] : (!fir.ref<!fir.type<_QFTp{a:i32}>>) -> !fir.box<!fir.type<_QFTp{a:i32}>>
+! CHECK: fir.store %[[EMBOX_A]] to %[[BOX]] : !fir.ref<!fir.box<!fir.type<_QFTp{a:i32}>>>
+! CHECK: %[[A_NONE:.*]] = fir.convert %[[BOX]] : (!fir.ref<!fir.box<!fir.type<_QFTp{a:i32}>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[B_NONE:.*]] = fir.convert %[[EMBOX_B]] : (!fir.box<!fir.type<_QFTp{a:i32}>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranAAssign(%[[A_NONE]], %[[B_NONE]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+
 end

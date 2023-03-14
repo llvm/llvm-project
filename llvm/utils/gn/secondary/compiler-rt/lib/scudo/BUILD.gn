@@ -14,8 +14,8 @@ group("scudo") {
       "standalone/benchmarks:ScudoBenchmarks($toolchain)",
       "standalone/tests:ScudoCUnitTest($toolchain)",
       "standalone/tests:ScudoCxxUnitTest($toolchain)",
-      "standalone/tests:ScudoUnitTest($toolchain)",
       "standalone/tests:ScudoHooksUnitTest($toolchain)",
+      "standalone/tests:ScudoUnitTest($toolchain)",
     ]
   }
   testonly = true

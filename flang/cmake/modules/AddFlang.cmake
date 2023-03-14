@@ -127,4 +127,3 @@ macro(add_flang_symlink name dest)
   # Always generate install targets
   llvm_install_symlink(FLANG ${name} ${dest} ALWAYS_GENERATE)
 endmacro()
-

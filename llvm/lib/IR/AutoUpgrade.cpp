@@ -32,11 +32,17 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstring>
+
 using namespace llvm;
+
+static cl::opt<bool>
+    DisableAutoUpgradeDebugInfo("disable-auto-upgrade-debug-info",
+                                cl::desc("Disable autoupgrade of debug info"));
 
 static void rename(GlobalValue *GV) { GV->setName(GV->getName() + ".old"); }
 
@@ -4480,6 +4486,9 @@ Constant *llvm::UpgradeBitCastExpr(unsigned Opc, Constant *C, Type *DestTy) {
 /// Check the debug info version number, if it is out-dated, drop the debug
 /// info. Return true if module is modified.
 bool llvm::UpgradeDebugInfo(Module &M) {
+  if (DisableAutoUpgradeDebugInfo)
+    return false;
+
   unsigned Version = getDebugMetadataVersionFromModule(M);
   if (Version == DEBUG_METADATA_VERSION) {
     bool BrokenDebugInfo = false;
@@ -4988,7 +4997,6 @@ void llvm::UpgradeAttributes(AttrBuilder &B) {
 }
 
 void llvm::UpgradeOperandBundles(std::vector<OperandBundleDef> &Bundles) {
-
   // clang.arc.attachedcall bundles are now required to have an operand.
   // If they don't, it's okay to drop them entirely: when there is an operand,
   // the "attachedcall" is meaningful and required, but without an operand,

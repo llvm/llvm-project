@@ -105,6 +105,10 @@ lldb_plugins += [
     "ObjectFilePECOFF",
   ],
   [
+    "//lldb/source/Plugins/ObjectFile/Placeholder",
+    "ObjectFilePlaceholder",
+  ],
+  [
     "//lldb/source/Plugins/ObjectFile/wasm",
     "ObjectFileWasm",
   ],

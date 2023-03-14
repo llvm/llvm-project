@@ -104,9 +104,7 @@ private:
       return ValToVRegs.find(&V);
     }
 
-    bool contains(const Value &V) const {
-      return ValToVRegs.find(&V) != ValToVRegs.end();
-    }
+    bool contains(const Value &V) const { return ValToVRegs.contains(&V); }
 
     void reset() {
       ValToVRegs.clear();

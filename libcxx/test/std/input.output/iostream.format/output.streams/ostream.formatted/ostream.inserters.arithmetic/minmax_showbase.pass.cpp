@@ -67,9 +67,9 @@ int main(int, char**)
     test<unsigned int>(d, "4294967295");
     test<unsigned int>(x, "0xffffffff");
 
-    const bool long_is_32 = std::integral_constant<bool, sizeof(long) == sizeof(int32_t)>::value; // avoid compiler warnings
-    const bool long_is_64 = std::integral_constant<bool, sizeof(long) == sizeof(int64_t)>::value; // avoid compiler warnings
-    const bool long_long_is_64 = std::integral_constant<bool, sizeof(long long) == sizeof(int64_t)>::value; // avoid compiler warnings
+    const bool long_is_32 = std::integral_constant<bool, sizeof(long) == sizeof(std::int32_t)>::value; // avoid compiler warnings
+    const bool long_is_64 = std::integral_constant<bool, sizeof(long) == sizeof(std::int64_t)>::value; // avoid compiler warnings
+    const bool long_long_is_64 = std::integral_constant<bool, sizeof(long long) == sizeof(std::int64_t)>::value; // avoid compiler warnings
 
     if (long_is_32) {
         test<long>(o, "020000000000");

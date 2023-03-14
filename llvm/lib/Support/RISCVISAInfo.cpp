@@ -629,6 +629,10 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     break;
   }
 
+  if (Arch.back() == '_')
+    return createStringError(errc::invalid_argument,
+                             "extension name missing after separator '_'");
+
   // Skip rvxxx
   StringRef Exts = Arch.substr(5);
 
@@ -644,12 +648,10 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   }
 
   unsigned Major, Minor, ConsumeLength;
-  if (auto E = getExtensionVersion(std::string(1, Baseline), Exts, Major, Minor,
-                                   ConsumeLength, EnableExperimentalExtension,
-                                   ExperimentalExtensionVersionCheck))
-    return std::move(E);
-
   if (Baseline == 'g') {
+    // Versions for g are disallowed, and this was checked for previously.
+    ConsumeLength = 0;
+
     // No matter which version is given to `g`, we always set imafd to default
     // version since the we don't have clear version scheme for that on
     // ISA spec.
@@ -658,9 +660,15 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
         ISAInfo->addExtension(Ext, Version->Major, Version->Minor);
       else
         llvm_unreachable("Default extension version not found?");
-  } else
+  } else {
     // Baseline is `i` or `e`
+    if (auto E = getExtensionVersion(std::string(1, Baseline), Exts, Major, Minor,
+                                     ConsumeLength, EnableExperimentalExtension,
+                                     ExperimentalExtensionVersionCheck))
+      return std::move(E);
+
     ISAInfo->addExtension(std::string(1, Baseline), Major, Minor);
+  }
 
   // Consume the base ISA version number and any '_' between rvxxx and the
   // first extension

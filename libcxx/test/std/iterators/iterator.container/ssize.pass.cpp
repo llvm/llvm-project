@@ -30,7 +30,7 @@
 TEST_GCC_DIAGNOSTIC_IGNORED("-Wtype-limits")
 
 struct short_container {
-    uint16_t size() const { return 60000; } // not noexcept
+    std::uint16_t size() const { return 60000; } // not noexcept
 };
 
 template<typename C>

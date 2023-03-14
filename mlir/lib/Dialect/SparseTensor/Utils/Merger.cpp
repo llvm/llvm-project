@@ -30,7 +30,7 @@ static ExpArity getExpArity(Kind k) {
   // Leaf.
   case kTensor:
   case kInvariant:
-  case kIndex:
+  case kLoopVar:
     return ExpArity::kNullary;
   case kAbsF:
   case kAbsC:
@@ -98,20 +98,20 @@ static ExpArity getExpArity(Kind k) {
 // Constructors.
 //===----------------------------------------------------------------------===//
 
-TensorExp::TensorExp(Kind k, unsigned x, unsigned y, Value v, Operation *o)
+TensorExp::TensorExp(Kind k, unsigned x, ExprId y, Value v, Operation *o)
     : kind(k), val(v), op(o) {
   switch (kind) {
   // Leaf.
   case kTensor:
-    assert(x != -1u && y == -1u && !v && !o);
+    assert(x != kInvalidId && y == kInvalidId && !v && !o);
     tensor = x;
     break;
   case kInvariant:
-    assert(x == -1u && y == -1u && v && !o);
+    assert(x == kInvalidId && y == kInvalidId && v && !o);
     break;
-  case kIndex:
-    assert(x != -1u && y == -1u && !v && !o);
-    index = x;
+  case kLoopVar:
+    assert(x != kInvalidId && y == kInvalidId && !v && !o);
+    loop = x;
     break;
   // Unary operations.
   case kAbsF:
@@ -134,7 +134,7 @@ TensorExp::TensorExp(Kind k, unsigned x, unsigned y, Value v, Operation *o)
   case kNegI:
   case kCIm:
   case kCRe:
-    assert(x != -1u && y == -1u && !v && !o);
+    assert(x != kInvalidId && y == kInvalidId && !v && !o);
     children.e0 = x;
     children.e1 = y;
     break;
@@ -149,20 +149,20 @@ TensorExp::TensorExp(Kind k, unsigned x, unsigned y, Value v, Operation *o)
   case kCastIdx:
   case kTruncI:
   case kBitCast:
-    assert(x != -1u && y == -1u && v && !o);
+    assert(x != kInvalidId && y == kInvalidId && v && !o);
     children.e0 = x;
     children.e1 = y;
     break;
   case kBinaryBranch:
   case kSelect:
-    assert(x != -1u && y == -1u && !v && o);
+    assert(x != kInvalidId && y == kInvalidId && !v && o);
     children.e0 = x;
     children.e1 = y;
     break;
   case kUnary:
     // No assertion on y can be made, as the branching paths involve both
-    // a unary (mapSet) and binary (takeDisj) pathway.
-    assert(x != -1u && !v && o);
+    // a unary (`mapSet`) and binary (`disjSet`) pathway.
+    assert(x != kInvalidId && !v && o);
     children.e0 = x;
     children.e1 = y;
     break;
@@ -186,82 +186,89 @@ TensorExp::TensorExp(Kind k, unsigned x, unsigned y, Value v, Operation *o)
   case kShrS:
   case kShrU:
   case kShlI:
-    assert(x != -1u && y != -1u && !v && !o);
+    assert(x != kInvalidId && y != kInvalidId && !v && !o);
     children.e0 = x;
     children.e1 = y;
     break;
   case kBinary:
   case kReduce:
-    assert(x != -1u && y != -1u && !v && o);
+    assert(x != kInvalidId && y != kInvalidId && !v && o);
     children.e0 = x;
     children.e1 = y;
     break;
   }
 }
 
-LatPoint::LatPoint(unsigned n, unsigned e, unsigned b)
-    : bits(n, false), exp(e) {
+LatPoint::LatPoint(const BitVector &bits, ExprId e) : bits(bits), exp(e) {}
+
+LatPoint::LatPoint(unsigned numTensors, unsigned numLoops, TensorId t, LoopId i,
+                   ExprId e)
+    : bits(numLoops * numTensors, false), exp(e) {
+  assert(t < numTensors && i < numLoops);
+  const TensorLoopId b = numTensors * i + t;
   bits.set(b);
 }
 
-LatPoint::LatPoint(const BitVector &b, unsigned e) : bits(b), exp(e) {}
-
-Merger::Merger(unsigned t, unsigned l, unsigned fl)
-    : outTensor(t - 1), syntheticTensor(t), numTensors(t + 1),
-      numNativeLoops(l), numLoops(l + fl), hasSparseOut(false),
-      dimTypes(numTensors,
+Merger::Merger(unsigned numInputOutputTensors, unsigned numNativeLoops,
+               unsigned numFilterLoops)
+    : outTensor(numInputOutputTensors - 1),
+      syntheticTensor(numInputOutputTensors),
+      numTensors(numInputOutputTensors + 1), numNativeLoops(numNativeLoops),
+      numLoops(numNativeLoops + numFilterLoops), hasSparseOut(false),
+      lvlTypes(numTensors,
                std::vector<DimLevelType>(numLoops, DimLevelType::Undef)),
-      loopIdxToDim(numTensors, std::vector<std::optional<unsigned>>(
-                                   numLoops, std::nullopt)),
-      dimToLoopIdx(numTensors, std::vector<std::optional<unsigned>>(
-                                   numLoops, std::nullopt)) {}
+      loopToLvl(numTensors,
+                std::vector<std::optional<Level>>(numLoops, std::nullopt)),
+      lvlToLoop(numTensors,
+                std::vector<std::optional<LoopId>>(numLoops, std::nullopt)) {}
 
 //===----------------------------------------------------------------------===//
 // Lattice methods.
 //===----------------------------------------------------------------------===//
 
-unsigned Merger::addExp(Kind k, unsigned e0, unsigned e1, Value v,
-                        Operation *op) {
-  unsigned e = tensorExps.size();
-  tensorExps.push_back(TensorExp(k, e0, e1, v, op));
+ExprId Merger::addExp(Kind k, unsigned x, ExprId y, Value v, Operation *op) {
+  const ExprId e = tensorExps.size();
+  assert((k != kTensor || x < numTensors) && (k != kLoopVar || x < numLoops));
+  tensorExps.emplace_back(k, x, y, v, op);
   return e;
 }
 
-unsigned Merger::addLat(unsigned t, unsigned i, unsigned e) {
+LatPointId Merger::addLat(TensorId t, LoopId i, ExprId e) {
   assert(t < numTensors && i < numLoops);
-  unsigned p = latPoints.size();
-  latPoints.push_back(LatPoint(numLoops * numTensors, e, numTensors * i + t));
+  const LatPointId p = latPoints.size();
+  latPoints.emplace_back(numTensors, numLoops, t, i, e);
   return p;
 }
 
-unsigned Merger::addSet() {
-  unsigned s = latSets.size();
+LatSetId Merger::addSet() {
+  const LatSetId s = latSets.size();
   latSets.emplace_back();
   return s;
 }
 
-unsigned Merger::conjLatPoint(Kind kind, unsigned p0, unsigned p1,
-                              Operation *op) {
-  unsigned p = latPoints.size();
-  BitVector nb = BitVector(latPoints[p0].bits);
-  nb |= latPoints[p1].bits;
-  unsigned e = addExp(kind, latPoints[p0].exp, latPoints[p1].exp, Value(), op);
-  latPoints.push_back(LatPoint(nb, e));
+LatPointId Merger::conjLat(Kind kind, LatPointId p0, LatPointId p1,
+                           Operation *op) {
+  const LatPointId p = latPoints.size();
+  BitVector bits(latPoints[p0].bits);
+  bits |= latPoints[p1].bits;
+  const ExprId e =
+      addExp(kind, latPoints[p0].exp, latPoints[p1].exp, Value(), op);
+  latPoints.emplace_back(bits, e);
   return p;
 }
 
-unsigned Merger::takeConj(Kind kind, unsigned s0, unsigned s1, Operation *op) {
-  unsigned s = addSet();
-  for (unsigned p0 : latSets[s0])
-    for (unsigned p1 : latSets[s1])
-      latSets[s].push_back(conjLatPoint(kind, p0, p1, op));
+LatSetId Merger::conjSet(Kind kind, LatSetId s0, LatSetId s1, Operation *op) {
+  const LatSetId s = addSet();
+  for (const LatPointId p0 : latSets[s0])
+    for (const LatPointId p1 : latSets[s1])
+      latSets[s].push_back(conjLat(kind, p0, p1, op));
   return s;
 }
 
-unsigned Merger::takeDisj(Kind kind, unsigned s0, unsigned s1, Operation *op) {
-  unsigned s = takeConj(kind, s0, s1, op);
+LatSetId Merger::disjSet(Kind kind, LatSetId s0, LatSetId s1, Operation *op) {
+  const LatSetId s = conjSet(kind, s0, s1, op);
   // Followed by all in s0.
-  for (unsigned p : latSets[s0])
+  for (const LatPointId p : latSets[s0])
     latSets[s].push_back(p);
   // Map binary 0-y to unary -y.
   // TODO: move this if-else logic into buildLattices
@@ -272,56 +279,56 @@ unsigned Merger::takeDisj(Kind kind, unsigned s0, unsigned s1, Operation *op) {
   else if (kind == kSubI)
     s1 = mapSet(kNegI, s1);
   // Followed by all in s1.
-  for (unsigned p : latSets[s1])
+  for (const LatPointId p : latSets[s1])
     latSets[s].push_back(p);
   return s;
 }
 
-unsigned Merger::takeCombi(Kind kind, unsigned s0, unsigned s1, Operation *orig,
-                           bool includeLeft, Kind ltrans, Operation *opleft,
-                           bool includeRight, Kind rtrans, Operation *opright) {
-  unsigned s = takeConj(kind, s0, s1, orig);
+LatSetId Merger::combiSet(Kind kind, LatSetId s0, LatSetId s1, Operation *orig,
+                          bool includeLeft, Kind ltrans, Operation *opleft,
+                          bool includeRight, Kind rtrans, Operation *opright) {
+  const LatSetId s = conjSet(kind, s0, s1, orig);
   // Left Region.
   if (includeLeft) {
     if (opleft)
       s0 = mapSet(ltrans, s0, Value(), opleft);
-    for (unsigned p : latSets[s0])
+    for (const LatPointId p : latSets[s0])
       latSets[s].push_back(p);
   }
   // Right Region.
   if (includeRight) {
     if (opright)
       s1 = mapSet(rtrans, s1, Value(), opright);
-    for (unsigned p : latSets[s1])
+    for (const LatPointId p : latSets[s1])
       latSets[s].push_back(p);
   }
   return s;
 }
 
-unsigned Merger::mapSet(Kind kind, unsigned s0, Value v, Operation *op) {
+LatSetId Merger::mapSet(Kind kind, LatSetId s0, Value v, Operation *op) {
   assert(kAbsF <= kind && kind <= kSelect);
-  unsigned s = addSet();
-  for (unsigned p : latSets[s0]) {
-    unsigned e = addExp(kind, latPoints[p].exp, v, op);
-    latPoints.push_back(LatPoint(latPoints[p].bits, e));
+  const LatSetId s = addSet();
+  for (const LatPointId p : latSets[s0]) {
+    const ExprId e = addExp(kind, latPoints[p].exp, v, op);
+    latPoints.emplace_back(latPoints[p].bits, e);
     latSets[s].push_back(latPoints.size() - 1);
   }
   return s;
 }
 
-unsigned Merger::optimizeSet(unsigned s0) {
-  unsigned s = addSet();
+LatSetId Merger::optimizeSet(LatSetId s0) {
+  const LatSetId s = addSet();
   assert(!latSets[s0].empty());
-  unsigned p0 = latSets[s0][0];
-  for (unsigned p1 : latSets[s0]) {
+  const LatPointId p0 = latSets[s0][0];
+  for (const LatPointId p1 : latSets[s0]) {
     bool add = true;
     if (p0 != p1) {
-      // Is this a straightforward copy?
-      unsigned e = latPoints[p1].exp;
+      // Check whether this is a straightforward copy.
+      const ExprId e = latPoints[p1].exp;
       if (expIsTensor(e, outTensor))
         continue;
-      // Conjunction already covered?
-      for (unsigned p2 : latSets[s]) {
+      // Check whether this conjunction is already covered.
+      for (const LatPointId p2 : latSets[s]) {
         assert(!latGT(p1, p2)); // Lj => Li would be bad
         if (onlyDenseDiff(p2, p1)) {
           add = false;
@@ -333,30 +340,30 @@ unsigned Merger::optimizeSet(unsigned s0) {
     if (add)
       latSets[s].push_back(p1);
   }
-  for (unsigned p : latSets[s])
+  for (const LatPointId p : latSets[s])
     latPoints[p].simple = simplifyCond(s, p);
   return s;
 }
 
-BitVector Merger::simplifyCond(unsigned s0, unsigned p0) {
+BitVector Merger::simplifyCond(LatSetId s0, LatPointId p0) {
   // First determine if this lattice point is a *singleton*, i.e.,
   // the last point in a lattice, no other is less than this one.
   bool isSingleton = true;
-  for (unsigned p1 : latSets[s0]) {
+  for (const LatPointId p1 : latSets[s0]) {
     if (p0 != p1 && latGT(p0, p1)) {
       isSingleton = false;
       break;
     }
   }
 
-  BitVector simple = latPoints[p0].bits;
+  BitVector simple(latPoints[p0].bits);
   bool reset = isSingleton && hasAnySparse(simple);
-  unsigned be = simple.size();
-  unsigned offset = 0; // relative to the end
+  const TensorLoopId be = simple.size();
+  TensorLoopId offset = 0; // relative to the end
   if (!reset)
-    // Starts resetting from a dense dimension, so that the first bit (if kept)
-    // is not undefined dimension type.
-    for (unsigned b = 0; b < be; b++) {
+    // Starts resetting from a dense level, so that the first bit (if kept)
+    // is not undefined level-type.
+    for (TensorLoopId b = 0; b < be; b++) {
       if (simple[b] && isDenseDLT(getDimLevelType(b))) {
         offset = be - b - 1; // relative to the end
         break;
@@ -365,24 +372,26 @@ BitVector Merger::simplifyCond(unsigned s0, unsigned p0) {
 
   // Now apply the two basic rules. We also iterate the bits reversely to always
   // keep the rightmost bit (which could possibly be a synthetic tensor).
-  for (unsigned b = be - 1 - offset, i = 0; i < be;
+  for (TensorLoopId b = be - 1 - offset, i = 0; i < be;
        b = b == 0 ? be - 1 : b - 1, i++) {
-    if (simple[b] && (!isCompressedDLT(getDimLevelType(b)) &&
-                      !isSingletonDLT(getDimLevelType(b)))) {
-      if (reset)
-        simple.reset(b);
-      reset = true;
+    if (simple[b]) {
+      const auto dlt = getDimLevelType(b);
+      if (!isCompressedDLT(dlt) && !isSingletonDLT(dlt)) {
+        if (reset)
+          simple.reset(b);
+        reset = true;
+      }
     }
   }
   return simple;
 }
 
-bool Merger::latGT(unsigned i, unsigned j) const {
+bool Merger::latGT(LatPointId i, LatPointId j) const {
   const BitVector &bitsi = latPoints[i].bits;
   const BitVector &bitsj = latPoints[j].bits;
   assert(bitsi.size() == bitsj.size());
   if (bitsi.count() > bitsj.count()) {
-    for (unsigned b = 0, be = bitsj.size(); b < be; b++)
+    for (TensorLoopId b = 0, be = bitsj.size(); b < be; b++)
       if (bitsj[b] && !bitsi[b])
         return false;
     return true;
@@ -390,13 +399,13 @@ bool Merger::latGT(unsigned i, unsigned j) const {
   return false;
 }
 
-bool Merger::onlyDenseDiff(unsigned i, unsigned j) {
-  BitVector tmp = latPoints[j].bits;
+bool Merger::onlyDenseDiff(LatPointId i, LatPointId j) const {
+  BitVector tmp(latPoints[j].bits);
   tmp ^= latPoints[i].bits;
   return !hasAnySparse(tmp);
 }
 
-bool Merger::expContainsTensor(unsigned e, unsigned t) const {
+bool Merger::expContainsTensor(ExprId e, TensorId t) const {
   if (tensorExps[e].kind == kTensor)
     return tensorExps[e].tensor == t;
 
@@ -404,23 +413,23 @@ bool Merger::expContainsTensor(unsigned e, unsigned t) const {
   case ExpArity::kNullary:
     return false;
   case ExpArity::kUnary: {
-    unsigned op = tensorExps[e].children.e0;
-    if (expIsTensor(op, t))
+    const ExprId e0 = tensorExps[e].children.e0;
+    if (expIsTensor(e0, t))
       return true;
-    return expContainsTensor(op, t);
+    return expContainsTensor(e0, t);
   }
   case ExpArity::kBinary: {
-    unsigned op1 = tensorExps[e].children.e0;
-    unsigned op2 = tensorExps[e].children.e1;
-    if (expIsTensor(op1, t) || expIsTensor(op2, t))
+    const ExprId e0 = tensorExps[e].children.e0;
+    const ExprId e1 = tensorExps[e].children.e1;
+    if (expIsTensor(e0, t) || expIsTensor(e1, t))
       return true;
-    return expContainsTensor(op1, t) || expContainsTensor(op2, t);
+    return expContainsTensor(e0, t) || expContainsTensor(e1, t);
   }
   }
   llvm_unreachable("unexpected arity");
 }
 
-bool Merger::hasNegateOnOut(unsigned e) const {
+bool Merger::hasNegateOnOut(ExprId e) const {
   switch (tensorExps[e].kind) {
   case kNegF:
   case kNegC:
@@ -446,13 +455,14 @@ bool Merger::hasNegateOnOut(unsigned e) const {
   llvm_unreachable("unexpected kind");
 }
 
-bool Merger::isSingleCondition(unsigned t, unsigned e) const {
+bool Merger::isSingleCondition(TensorId t, ExprId e) const {
+  assert(t < numTensors && e < tensorExps.size());
   switch (tensorExps[e].kind) {
   // Leaf.
   case kTensor:
     return tensorExps[e].tensor == t;
   case kInvariant:
-  case kIndex:
+  case kLoopVar:
     return false;
   // Unary operations.
   case kAbsF:
@@ -531,10 +541,12 @@ bool Merger::isSingleCondition(unsigned t, unsigned e) const {
 }
 
 bool Merger::hasAnySparse(const BitVector &bits) const {
-  for (unsigned b = 0, be = bits.size(); b < be; b++)
-    if (bits[b] && (isCompressedDLT(getDimLevelType(b)) ||
-                    isSingletonDLT(getDimLevelType(b))))
-      return true;
+  for (TensorLoopId b = 0, be = bits.size(); b < be; b++)
+    if (bits[b]) {
+      const auto dlt = getDimLevelType(b);
+      if (isCompressedDLT(dlt) || isSingletonDLT(dlt))
+        return true;
+    }
   return false;
 }
 
@@ -551,7 +563,7 @@ static const char *kindToOpSymbol(Kind kind) {
     return "tensor";
   case kInvariant:
     return "invariant";
-  case kIndex:
+  case kLoopVar:
     return "index";
   // Unary operations.
   case kAbsF:
@@ -641,7 +653,7 @@ static const char *kindToOpSymbol(Kind kind) {
   llvm_unreachable("unexpected kind for symbol");
 }
 
-void Merger::dumpExp(unsigned e) const {
+void Merger::dumpExp(ExprId e) const {
   switch (tensorExps[e].kind) {
   // Leaf.
   case kTensor:
@@ -654,8 +666,8 @@ void Merger::dumpExp(unsigned e) const {
   case kInvariant:
     llvm::dbgs() << "invariant";
     break;
-  case kIndex:
-    llvm::dbgs() << "index_" << tensorExps[e].index;
+  case kLoopVar:
+    llvm::dbgs() << "loopvar_" << tensorExps[e].loop;
     break;
   // Unary operations.
   case kAbsF:
@@ -725,7 +737,7 @@ void Merger::dumpExp(unsigned e) const {
   }
 }
 
-void Merger::dumpLat(unsigned p) const {
+void Merger::dumpLat(LatPointId p) const {
   llvm::dbgs() << "lat(";
   dumpBits(latPoints[p].bits);
   llvm::dbgs() << " :";
@@ -735,9 +747,9 @@ void Merger::dumpLat(unsigned p) const {
   llvm::dbgs() << " )\n";
 }
 
-void Merger::dumpSet(unsigned s) const {
+void Merger::dumpSet(LatSetId s) const {
   llvm::dbgs() << "{ #" << latSets[s].size() << "\n";
-  for (unsigned p : latSets[s]) {
+  for (const LatPointId p : latSets[s]) {
     llvm::dbgs() << "  ";
     dumpLat(p);
   }
@@ -745,11 +757,11 @@ void Merger::dumpSet(unsigned s) const {
 }
 
 void Merger::dumpBits(const BitVector &bits) const {
-  for (unsigned b = 0, be = bits.size(); b < be; b++) {
+  for (TensorLoopId b = 0, be = bits.size(); b < be; b++) {
     if (bits[b]) {
-      unsigned t = tensor(b);
-      unsigned i = index(b);
-      DimLevelType dlt = dimTypes[t][i];
+      const TensorId t = tensor(b);
+      const LoopId i = loop(b);
+      const auto dlt = lvlTypes[t][i];
       llvm::dbgs() << " i_" << t << "_" << i << "_" << toMLIRString(dlt);
     }
   }
@@ -761,20 +773,20 @@ void Merger::dumpBits(const BitVector &bits) const {
 // Builder methods.
 //===----------------------------------------------------------------------===//
 
-unsigned Merger::buildLattices(unsigned e, unsigned i) {
-  Kind kind = tensorExps[e].kind;
+LatSetId Merger::buildLattices(ExprId e, LoopId i) {
+  const Kind kind = tensorExps[e].kind;
   switch (kind) {
   // Leaf.
   case kTensor:
   case kInvariant:
-  case kIndex: {
-    // Either the index is really used in the tensor expression, or it is
-    // set to the undefined index in that dimension. An invariant expression,
+  case kLoopVar: {
+    // Either the loop-var is really used in the tensor expression, or it is
+    // set to the undefined loop-var in that level. An invariant expression,
     // a proper index value, and a truly dynamic sparse output tensor are set
     // to a synthetic tensor with undefined indices only to ensure the
     // iteration space is not skipped as a result of their contents.
-    unsigned s = addSet();
-    unsigned t = syntheticTensor;
+    const LatSetId s = addSet();
+    TensorId t = syntheticTensor;
     if (kind == kTensor) {
       t = tensorExps[e].tensor;
       if (hasSparseOut && t == outTensor)
@@ -836,7 +848,7 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
     //  ----+----------+------------+
     //      | absent() | present(y) |
     {
-      unsigned child0 = buildLattices(tensorExps[e].children.e0, i);
+      const LatSetId child0 = buildLattices(tensorExps[e].children.e0, i);
       UnaryOp unop = cast<UnaryOp>(tensorExps[e].op);
       Region &absentRegion = unop.getAbsentRegion();
 
@@ -848,8 +860,8 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
       Block &absentBlock = absentRegion.front();
       YieldOp absentYield = cast<YieldOp>(absentBlock.getTerminator());
       Value absentVal = absentYield.getResult();
-      unsigned rhs = addExp(kInvariant, absentVal);
-      return takeDisj(kind, child0, buildLattices(rhs, i), unop);
+      const ExprId rhs = addExp(kInvariant, absentVal);
+      return disjSet(kind, child0, buildLattices(rhs, i), unop);
     }
   // Binary operations.
   case kMulF:
@@ -865,9 +877,8 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
     //   x | 0 |x*y|
     //
     // Note even here, 0*NaN=NaN and 0*Inf=NaN, but that is ignored.
-    return takeConj(kind, // take binary conjunction
-                    buildLattices(tensorExps[e].children.e0, i),
-                    buildLattices(tensorExps[e].children.e1, i));
+    return conjSet(kind, buildLattices(tensorExps[e].children.e0, i),
+                   buildLattices(tensorExps[e].children.e1, i));
   case kDivF:
   case kDivC:
   case kDivS:
@@ -886,9 +897,8 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
     //       rules applies (viz. x/c = x*(1/c) as far as lattice
     //       construction is concerned).
     assert(!maybeZero(tensorExps[e].children.e1));
-    return takeConj(kind, // take binary conjunction
-                    buildLattices(tensorExps[e].children.e0, i),
-                    buildLattices(tensorExps[e].children.e1, i));
+    return conjSet(kind, buildLattices(tensorExps[e].children.e0, i),
+                   buildLattices(tensorExps[e].children.e1, i));
   case kAddF:
   case kAddC:
   case kAddI:
@@ -904,9 +914,8 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
     //  ---+---+---+    ---+---+---+
     //  !x | 0 | y |    !x | 0 |-y |
     //   x | x |x+y|     x | x |x-y|
-    return takeDisj(kind, // take binary disjunction
-                    buildLattices(tensorExps[e].children.e0, i),
-                    buildLattices(tensorExps[e].children.e1, i));
+    return disjSet(kind, buildLattices(tensorExps[e].children.e0, i),
+                   buildLattices(tensorExps[e].children.e1, i));
   case kShrS:
   case kShrU:
   case kShlI:
@@ -914,9 +923,8 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
     // can only occur at the left-hand-side of the operator) can be handled
     // with the conjuction rule.
     assert(isInvariant(tensorExps[e].children.e1));
-    return takeConj(kind, // take binary conjunction
-                    buildLattices(tensorExps[e].children.e0, i),
-                    buildLattices(tensorExps[e].children.e1, i));
+    return conjSet(kind, buildLattices(tensorExps[e].children.e0, i),
+                   buildLattices(tensorExps[e].children.e1, i));
   case kBinary:
     // A custom binary operation.
     //
@@ -925,8 +933,8 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
     //    !x  |  empty  |   right(y)   |
     //     x  | left(x) | overlap(x,y) |
     {
-      unsigned child0 = buildLattices(tensorExps[e].children.e0, i);
-      unsigned child1 = buildLattices(tensorExps[e].children.e1, i);
+      const LatSetId child0 = buildLattices(tensorExps[e].children.e0, i);
+      const LatSetId child1 = buildLattices(tensorExps[e].children.e1, i);
       BinaryOp binop = cast<BinaryOp>(tensorExps[e].op);
       Region &leftRegion = binop.getLeftRegion();
       Region &rightRegion = binop.getRightRegion();
@@ -944,20 +952,20 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
       }
       bool includeLeft = binop.getLeftIdentity() || !leftRegion.empty();
       bool includeRight = binop.getRightIdentity() || !rightRegion.empty();
-      return takeCombi(kBinary, child0, child1, binop, includeLeft,
-                       kBinaryBranch, leftYield, includeRight, kBinaryBranch,
-                       rightYield);
+      return combiSet(kBinary, child0, child1, binop, includeLeft,
+                      kBinaryBranch, leftYield, includeRight, kBinaryBranch,
+                      rightYield);
     }
   case kReduce:
     // A custom reduce operation.
-    return takeConj(kind, buildLattices(tensorExps[e].children.e0, i),
-                    buildLattices(tensorExps[e].children.e1, i),
-                    tensorExps[e].op);
+    return conjSet(kind, buildLattices(tensorExps[e].children.e0, i),
+                   buildLattices(tensorExps[e].children.e1, i),
+                   tensorExps[e].op);
   }
   llvm_unreachable("unexpected expression kind");
 }
 
-std::optional<unsigned> Merger::buildTensorExpFromLinalg(linalg::GenericOp op) {
+std::optional<ExprId> Merger::buildTensorExpFromLinalg(linalg::GenericOp op) {
   // Build the linalg semantics backward from yield.
   Operation *yield = op.getRegion().front().getTerminator();
   assert(isa<linalg::YieldOp>(yield));
@@ -965,7 +973,7 @@ std::optional<unsigned> Merger::buildTensorExpFromLinalg(linalg::GenericOp op) {
 }
 
 /// Only returns false if we are certain this is a nonzero.
-bool Merger::maybeZero(unsigned e) const {
+bool Merger::maybeZero(ExprId e) const {
   if (tensorExps[e].kind == kInvariant) {
     if (auto c = tensorExps[e].val.getDefiningOp<complex::ConstantOp>()) {
       ArrayAttr arrayAttr = c.getValue();
@@ -980,11 +988,11 @@ bool Merger::maybeZero(unsigned e) const {
   return true;
 }
 
-bool Merger::isInvariant(unsigned e) const {
+bool Merger::isInvariant(ExprId e) const {
   return tensorExps[e].kind == kInvariant;
 }
 
-Type Merger::inferType(unsigned e, Value src) {
+Type Merger::inferType(ExprId e, Value src) const {
   // Obtain the destination type from the cast node.
   Type dtp = tensorExps[e].val.getType();
   // Inspect source type. For vector types, apply the same
@@ -997,7 +1005,7 @@ Type Merger::inferType(unsigned e, Value src) {
 /// Ensures that sparse compiler can generate code for expression.
 static bool isAdmissibleBranchExp(Operation *op, Block *block, Value v) {
   // Arguments are always admissible.
-  if (auto arg = v.dyn_cast<BlockArgument>())
+  if (v.isa<BlockArgument>())
     return true;
   // Accept index anywhere.
   Operation *def = v.getDefiningOp();
@@ -1024,9 +1032,9 @@ static bool isAdmissibleBranch(Operation *op, Region &region) {
   return isAdmissibleBranchExp(op, &region.front(), yield->getOperand(0));
 }
 
-std::optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
+std::optional<ExprId> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
   if (auto arg = v.dyn_cast<BlockArgument>()) {
-    unsigned argN = arg.getArgNumber();
+    const TensorId argN = arg.getArgNumber();
     // Any argument of the generic op that is not marked as a scalar
     // argument is considered a tensor, indexed by the implicit loop
     // bounds. This includes rank-0 tensor arguments.
@@ -1047,13 +1055,13 @@ std::optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
   // Construct index operations.
   if (def->getNumOperands() == 0) {
     if (auto indexOp = dyn_cast<linalg::IndexOp>(def))
-      return addExp(kIndex, indexOp.getDim());
+      return addExp(kLoopVar, indexOp.getDim());
   }
   // Construct unary operations if subexpression can be built.
   if (def->getNumOperands() == 1) {
-    auto x = buildTensorExp(op, def->getOperand(0));
+    const auto x = buildTensorExp(op, def->getOperand(0));
     if (x.has_value()) {
-      unsigned e = *x;
+      const ExprId e = *x;
       if (isa<math::AbsFOp>(def))
         return addExp(kAbsF, e);
       if (isa<complex::AbsOp>(def))
@@ -1129,11 +1137,11 @@ std::optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
   // See buildLattices() for an explanation of rejecting certain
   // division and shift operations.
   if (def->getNumOperands() == 2) {
-    auto x = buildTensorExp(op, def->getOperand(0));
-    auto y = buildTensorExp(op, def->getOperand(1));
+    const auto x = buildTensorExp(op, def->getOperand(0));
+    const auto y = buildTensorExp(op, def->getOperand(1));
     if (x.has_value() && y.has_value()) {
-      unsigned e0 = *x;
-      unsigned e1 = *y;
+      const ExprId e0 = *x;
+      const ExprId e1 = *y;
       if (isa<arith::MulFOp>(def))
         return addExp(kMulF, e0, e1);
       if (isa<complex::MulOp>(def))
@@ -1184,12 +1192,12 @@ std::optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
   }
   // Construct ternary operations if subexpressions can be built.
   if (def->getNumOperands() == 3) {
-    auto x = buildTensorExp(op, def->getOperand(0));
-    auto y = buildTensorExp(op, def->getOperand(1));
-    auto z = buildTensorExp(op, def->getOperand(2));
+    const auto x = buildTensorExp(op, def->getOperand(0));
+    const auto y = buildTensorExp(op, def->getOperand(1));
+    const auto z = buildTensorExp(op, def->getOperand(2));
     if (x.has_value() && y.has_value() && z.has_value()) {
-      unsigned e0 = *x;
-      unsigned e1 = *y;
+      const ExprId e0 = *x;
+      const ExprId e1 = *y;
       if (auto redop = dyn_cast<sparse_tensor::ReduceOp>(def)) {
         if (isAdmissibleBranch(redop, redop.getRegion()))
           return addExp(kReduce, e0, e1, Value(), def);
@@ -1245,13 +1253,13 @@ static Value buildBinaryOverlap(RewriterBase &rewriter, Location loc,
   return insertYieldOp(rewriter, loc, overlapRegion, {v0, v1});
 }
 
-Value Merger::buildExp(RewriterBase &rewriter, Location loc, unsigned e,
-                       Value v0, Value v1) {
+Value Merger::buildExp(RewriterBase &rewriter, Location loc, ExprId e, Value v0,
+                       Value v1) const {
   switch (tensorExps[e].kind) {
   // Leaf.
   case kTensor:
   case kInvariant:
-  case kIndex:
+  case kLoopVar:
     llvm_unreachable("unexpected non-op");
   // Unary operations.
   case kAbsF:

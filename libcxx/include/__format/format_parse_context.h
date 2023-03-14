@@ -59,6 +59,18 @@ public:
 
     if (__indexing_ == __unknown)
       __indexing_ = __automatic;
+
+    // Throws an exception to make the expression a non core constant
+    // expression as required by:
+    // [format.parse.ctx]/8
+    //   Remarks: Let cur-arg-id be the value of next_arg_id_ prior to this
+    //   call. Call expressions where cur-arg-id >= num_args_ is true are not
+    //   core constant expressions (7.7 [expr.const]).
+    // Note: the Throws clause [format.parse.ctx]/9 doesn't specify the
+    // behavior when id >= num_args_.
+    if (is_constant_evaluated() && __next_arg_id_ >= __num_args_)
+      std::__throw_format_error("Argument index outside the valid range");
+
     return __next_arg_id_++;
   }
   _LIBCPP_HIDE_FROM_ABI constexpr void check_arg_id(size_t __id) {
