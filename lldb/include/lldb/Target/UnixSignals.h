@@ -32,6 +32,13 @@ public:
 
   const char *GetSignalAsCString(int32_t signo) const;
 
+  std::string
+  GetSignalDescription(int32_t signo,
+                       std::optional<int32_t> code = std::nullopt,
+                       std::optional<lldb::addr_t> addr = std::nullopt,
+                       std::optional<lldb::addr_t> lower = std::nullopt,
+                       std::optional<lldb::addr_t> upper = std::nullopt) const;
+
   bool SignalIsValid(int32_t signo) const;
 
   int32_t GetSignalNumberFromName(const char *name) const;
@@ -82,6 +89,12 @@ public:
                  bool default_stop, bool default_notify,
                  const char *description, const char *alias = nullptr);
 
+  enum SignalCodePrintOption { None, Address, Bounds };
+
+  void AddSignalCode(
+      int signo, int code, const char *description,
+      SignalCodePrintOption print_option = SignalCodePrintOption::None);
+
   void RemoveSignal(int signo);
 
   /// Track how many times signals are hit as stop reasons.
@@ -111,10 +124,16 @@ public:
 protected:
   // Classes that inherit from UnixSignals can see and modify these
 
+  struct SignalCode {
+    ConstString m_description;
+    SignalCodePrintOption m_print_option;
+  };
+
   struct Signal {
     ConstString m_name;
     ConstString m_alias;
     std::string m_description;
+    std::map<int32_t, SignalCode> m_codes;
     uint32_t m_hit_count = 0;
     bool m_suppress : 1, m_stop : 1, m_notify : 1;
     bool m_default_suppress : 1, m_default_stop : 1, m_default_notify : 1;

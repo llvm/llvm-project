@@ -20,14 +20,48 @@ void LinuxSignals::Reset() {
   AddSignal(1,      "SIGHUP",       false,    true,   true,   "hangup");
   AddSignal(2,      "SIGINT",       true,     true,   true,   "interrupt");
   AddSignal(3,      "SIGQUIT",      false,    true,   true,   "quit");
+
   AddSignal(4,      "SIGILL",       false,    true,   true,   "illegal instruction");
+  AddSignalCode(4, 1 /*ILL_ILLOPC*/, "illegal opcode");
+  AddSignalCode(4, 2 /*ILL_ILLOPN*/, "illegal operand");
+  AddSignalCode(4, 3 /*ILL_ILLADR*/, "illegal addressing mode");
+  AddSignalCode(4, 4 /*ILL_ILLTRP*/, "illegal trap");
+  AddSignalCode(4, 5 /*ILL_PRVOPC*/, "privileged opcode");
+  AddSignalCode(4, 6 /*ILL_PRVREG*/, "privileged register");
+  AddSignalCode(4, 7 /*ILL_COPROC*/, "coprocessor error");
+  AddSignalCode(4, 8 /*ILL_BADSTK*/, "internal stack error");
+
   AddSignal(5,      "SIGTRAP",      true,     true,   true,   "trace trap (not reset when caught)");
   AddSignal(6,      "SIGABRT",      false,    true,   true,   "abort()/IOT trap", "SIGIOT");
+
   AddSignal(7,      "SIGBUS",       false,    true,   true,   "bus error");
+  AddSignalCode(7, 1 /*BUS_ADRALN*/, "illegal alignment");
+  AddSignalCode(7, 2 /*BUS_ADRERR*/, "illegal address");
+  AddSignalCode(7, 3 /*BUS_OBJERR*/, "hardware error");
+
   AddSignal(8,      "SIGFPE",       false,    true,   true,   "floating point exception");
+  AddSignalCode(8, 1 /*FPE_INTDIV*/, "integer divide by zero");
+  AddSignalCode(8, 2 /*FPE_INTOVF*/, "integer overflow");
+  AddSignalCode(8, 3 /*FPE_FLTDIV*/, "floating point divide by zero");
+  AddSignalCode(8, 4 /*FPE_FLTOVF*/, "floating point overflow");
+  AddSignalCode(8, 5 /*FPE_FLTUND*/, "floating point underflow");
+  AddSignalCode(8, 6 /*FPE_FLTRES*/, "floating point inexact result");
+  AddSignalCode(8, 7 /*FPE_FLTINV*/, "floating point invalid operation");
+  AddSignalCode(8, 8 /*FPE_FLTSUB*/, "subscript out of range");
+
   AddSignal(9,      "SIGKILL",      false,    true,   true,   "kill");
   AddSignal(10,     "SIGUSR1",      false,    true,   true,   "user defined signal 1");
+
   AddSignal(11,     "SIGSEGV",      false,    true,   true,   "segmentation violation");
+  AddSignalCode(11, 1 /*SEGV_MAPERR*/, "address not mapped to object", SignalCodePrintOption::Address);
+  AddSignalCode(11, 2 /*SEGV_ACCERR*/, "invalid permissions for mapped object", SignalCodePrintOption::Address);
+  AddSignalCode(11, 3 /*SEGV_BNDERR*/, "failed address bounds checks", SignalCodePrintOption::Bounds);
+  AddSignalCode(11, 8 /*SEGV_MTEAERR*/, "async tag check fault");
+  AddSignalCode(11, 9 /*SEGV_MTESERR*/, "sync tag check fault", SignalCodePrintOption::Address);
+  // Some platforms will occasionally send nonstandard spurious SI_KERNEL
+  // codes. One way to get this is via unaligned SIMD loads. Treat it as invalid address.
+  AddSignalCode(11, 0x80 /*SI_KERNEL*/, "invalid address", SignalCodePrintOption::Address);
+
   AddSignal(12,     "SIGUSR2",      false,    true,   true,   "user defined signal 2");
   AddSignal(13,     "SIGPIPE",      false,    true,   true,   "write to pipe with reading end closed");
   AddSignal(14,     "SIGALRM",      false,    false,  false,  "alarm");
