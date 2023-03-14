@@ -950,4 +950,37 @@ TEST_F(PassManagerTest, FunctionPassCFGCheckerWrapped) {
   FPM.addPass(TestSimplifyCFGWrapperPass(InnerFPM));
   FPM.run(*F, FAM);
 }
+
+#ifdef EXPENSIVE_CHECKS
+
+struct WrongFunctionPass : PassInfoMixin<WrongFunctionPass> {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM) {
+    F.getEntryBlock().begin()->eraseFromParent();
+    return PreservedAnalyses::all();
+  }
+  static StringRef name() { return "WrongFunctionPass"; }
+};
+
+TEST_F(PassManagerTest, FunctionAnalysisMissedInvalidation) {
+  LLVMContext Context;
+  auto M = parseIR(Context, "define void @foo() {\n"
+                            "  %a = add i32 0, 0\n"
+                            "  ret void\n"
+                            "}\n");
+
+  FunctionAnalysisManager FAM;
+  PassInstrumentationCallbacks PIC;
+  StandardInstrumentations SI(M->getContext(), /*DebugLogging*/ false);
+  SI.registerCallbacks(PIC, &FAM);
+  FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
+
+  FunctionPassManager FPM;
+  FPM.addPass(WrongFunctionPass());
+
+  auto *F = M->getFunction("foo");
+  EXPECT_DEATH(FPM.run(*F, FAM), "Function @foo changed by WrongFunctionPass without invalidating analyses");
+}
+
+#endif
+
 }
