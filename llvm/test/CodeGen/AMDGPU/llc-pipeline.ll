@@ -1,16 +1,15 @@
-; When EXPENSIVE_CHECKS are enabled, the machine verifier appears between each
-; pass. Ignore it with 'grep -v'.
+; UNSUPPORTED: expensive_checks
 ; RUN: llc -O0 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
-; RUN:   | grep -v 'Verify generated machine code' | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O0 %s
+; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O0 %s
 ; RUN: llc -O1 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
-; RUN:   | grep -v 'Verify generated machine code' | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O1 %s
+; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O1 %s
 ; RUN: llc -O1 -mtriple=amdgcn--amdhsa -disable-verify -amdgpu-scalar-ir-passes -amdgpu-sdwa-peephole \
 ; RUN:   -amdgpu-load-store-vectorizer -amdgpu-enable-pre-ra-optimizations -debug-pass=Structure < %s 2>&1 \
-; RUN:   | grep -v 'Verify generated machine code' | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O1-OPTS %s
+; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O1-OPTS %s
 ; RUN: llc -O2 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
-; RUN:   | grep -v 'Verify generated machine code' | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O2 %s
+; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O2 %s
 ; RUN: llc -O3 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
-; RUN:   | grep -v 'Verify generated machine code' | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O3 %s
+; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O3 %s
 
 ; REQUIRES: asserts
 
