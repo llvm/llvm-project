@@ -5003,6 +5003,8 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
 
     // ARM -- Scalable Vector Extension
     case clang::BuiltinType::SveBool:
+    case clang::BuiltinType::SveBoolx2:
+    case clang::BuiltinType::SveBoolx4:
     case clang::BuiltinType::SveCount:
     case clang::BuiltinType::SveInt8:
     case clang::BuiltinType::SveInt8x2:
