@@ -1251,7 +1251,7 @@ static bool replaceInInstruction(Value *V, Value *Old, Value *New,
   bool Changed = false;
   for (Use &U : I->operands()) {
     if (U == Old) {
-      IC.addToWorklist(IC.replaceUse(U, New));
+      IC.replaceUse(U, New);
       Changed = true;
     } else {
       Changed |= replaceInInstruction(U, Old, New, IC, Depth + 1);
