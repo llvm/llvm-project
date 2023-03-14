@@ -1390,10 +1390,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setTargetDAGCombine({ISD::TRUNCATE, ISD::SETCC, ISD::SELECT_CC});
   }
 
-  if (Subtarget.hasP9Altivec()) {
-    setTargetDAGCombine({ISD::VSELECT});
-  }
-
   setLibcallName(RTLIB::LOG_F128, "logf128");
   setLibcallName(RTLIB::LOG2_F128, "log2f128");
   setLibcallName(RTLIB::LOG10_F128, "log10f128");
@@ -16078,8 +16074,6 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
   }
   case ISD::BUILD_VECTOR:
     return DAGCombineBuildVector(N, DCI);
-  case ISD::VSELECT:
-    return combineVSelect(N, DCI);
   }
 
   return SDValue();
@@ -17703,69 +17697,6 @@ isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const {
 
   // For non-constant masks, we can always use the record-form and.
   return true;
-}
-
-// For type v4i32/v8ii16/v16i8, transform
-// from (vselect (setcc a, b, setugt), (sub a, b), (sub b, a)) to (abdu a, b)
-// from (vselect (setcc a, b, setuge), (sub a, b), (sub b, a)) to (abdu a, b)
-// from (vselect (setcc a, b, setult), (sub b, a), (sub a, b)) to (abdu a, b)
-// from (vselect (setcc a, b, setule), (sub b, a), (sub a, b)) to (abdu a, b)
-// TODO: Move this to DAGCombiner?
-SDValue PPCTargetLowering::combineVSelect(SDNode *N,
-                                          DAGCombinerInfo &DCI) const {
-  assert((N->getOpcode() == ISD::VSELECT) && "Need VSELECT node here");
-  assert(Subtarget.hasP9Altivec() &&
-         "Only combine this when P9 altivec supported!");
-
-  SelectionDAG &DAG = DCI.DAG;
-  SDLoc dl(N);
-  SDValue Cond = N->getOperand(0);
-  SDValue TrueOpnd = N->getOperand(1);
-  SDValue FalseOpnd = N->getOperand(2);
-  EVT VT = N->getOperand(1).getValueType();
-
-  if (Cond.getOpcode() != ISD::SETCC || TrueOpnd.getOpcode() != ISD::SUB ||
-      FalseOpnd.getOpcode() != ISD::SUB)
-    return SDValue();
-
-  // ABSD only available for type v4i32/v8i16/v16i8
-  if (VT != MVT::v4i32 && VT != MVT::v8i16 && VT != MVT::v16i8)
-    return SDValue();
-
-  // At least to save one more dependent computation
-  if (!(Cond.hasOneUse() || TrueOpnd.hasOneUse() || FalseOpnd.hasOneUse()))
-    return SDValue();
-
-  ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
-
-  // Can only handle unsigned comparison here
-  switch (CC) {
-  default:
-    return SDValue();
-  case ISD::SETUGT:
-  case ISD::SETUGE:
-    break;
-  case ISD::SETULT:
-  case ISD::SETULE:
-    std::swap(TrueOpnd, FalseOpnd);
-    break;
-  }
-
-  SDValue CmpOpnd1 = Cond.getOperand(0);
-  SDValue CmpOpnd2 = Cond.getOperand(1);
-
-  // SETCC CmpOpnd1 CmpOpnd2 cond
-  // TrueOpnd = CmpOpnd1 - CmpOpnd2
-  // FalseOpnd = CmpOpnd2 - CmpOpnd1
-  if (TrueOpnd.getOperand(0) == CmpOpnd1 &&
-      TrueOpnd.getOperand(1) == CmpOpnd2 &&
-      FalseOpnd.getOperand(0) == CmpOpnd2 &&
-      FalseOpnd.getOperand(1) == CmpOpnd1) {
-    return DAG.getNode(ISD::ABDU, dl, N->getOperand(1).getValueType(), CmpOpnd1,
-                       CmpOpnd2, DAG.getTargetConstant(0, dl, MVT::i32));
-  }
-
-  return SDValue();
 }
 
 /// getAddrModeForFlags - Based on the set of address flags, select the most

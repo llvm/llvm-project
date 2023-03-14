@@ -297,6 +297,8 @@ DiagnosedSilenceableFailure mlir::test::TestRemapOperandPayloadToSelfOp::apply(
   if (failed(extension->updateMapping(state.getPayloadOps(getOperand()).front(),
                                       getOperation())))
     return DiagnosedSilenceableFailure::definiteFailure();
+  if (getNumResults() > 0)
+    results.set(getResult(0).cast<OpResult>(), getOperation());
   return DiagnosedSilenceableFailure::success();
 }
 

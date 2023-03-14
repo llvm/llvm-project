@@ -47,15 +47,36 @@ module {
 
 // -----
 
-// expected-error @below {{cannot replace an op with another op producing a different number of results while tracking handles}}
-module {
-  transform.sequence failures(propagate) {
-  ^bb0(%arg0: !pdl.operation):
-    test_add_test_extension "A"
-    %dummy = test_remap_operand_to_self %arg0 : !transform.any_op
-  }
+transform.sequence failures(propagate) {
+^bb0(%arg0: !pdl.operation):
+  test_add_test_extension "A"
+   // This is okay because we are replacing the top-level module opeation
+   // (0 results) with this operation that has _more_ (1) results.
+  %dummy = test_remap_operand_to_self %arg0 : !pdl.operation
 }
 
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !pdl.operation):
+  test_add_test_extension "A"
+  %dummy = test_remap_operand_to_self %arg0 : !pdl.operation
+  // This is still okay. Even though we are replacing the previous
+  // operation with (1 result) with this operation that has less (0) results,
+  // there is no handle to the result, hence no issue with value handle update.
+  test_remap_operand_to_self %dummy
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !pdl.operation):
+  test_add_test_extension "A"
+  // expected-error @below {{cannot replace an op with another op producing less results while tracking handles}}
+  %dummy = test_remap_operand_to_self %arg0 : !pdl.operation
+  %valuehandle = transform.get_result %dummy[0] : (!pdl.operation) -> !transform.any_value
+  test_remap_operand_to_self %dummy
+}
 
 // -----
 

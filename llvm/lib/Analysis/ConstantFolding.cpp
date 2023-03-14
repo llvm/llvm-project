@@ -1052,11 +1052,15 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
     return ConstantFoldCastOperand(Opcode, Ops[0], DestTy, DL);
 
   if (auto *GEP = dyn_cast<GEPOperator>(InstOrCE)) {
+    Type *SrcElemTy = GEP->getSourceElementType();
+    if (!ConstantExpr::isSupportedGetElementPtr(SrcElemTy))
+      return nullptr;
+
     if (Constant *C = SymbolicallyEvaluateGEP(GEP, Ops, DL, TLI))
       return C;
 
-    return ConstantExpr::getGetElementPtr(GEP->getSourceElementType(), Ops[0],
-                                          Ops.slice(1), GEP->isInBounds(),
+    return ConstantExpr::getGetElementPtr(SrcElemTy, Ops[0], Ops.slice(1),
+                                          GEP->isInBounds(),
                                           GEP->getInRangeIndex());
   }
 

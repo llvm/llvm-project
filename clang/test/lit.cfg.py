@@ -282,6 +282,7 @@ elif platform.system() == 'AIX':
 
 if 'system-aix' in config.available_features:
         config.substitutions.append(('llvm-nm', 'env OBJECT_MODE=any llvm-nm'))
+        config.substitutions.append(('llvm-ar', 'env OBJECT_MODE=any llvm-ar'))
 
 # It is not realistically possible to account for all options that could
 # possibly be present in system and user configuration files, so disable

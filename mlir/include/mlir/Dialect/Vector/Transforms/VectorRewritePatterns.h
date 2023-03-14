@@ -334,6 +334,14 @@ void populateVectorUnrollPatterns(RewritePatternSet &patterns,
                                   const UnrollVectorOptions &options,
                                   PatternBenefit benefit = 1);
 
+/// Expands `vector.gather` ops into a series of conditional scalar loads
+/// (`vector.load` for memrefs or `tensor.extract` for tensors). These loads are
+/// conditional to avoid out-of-bounds memory accesses and guarded with `scf.if`
+/// ops. This lowering path is intended for targets that do not feature
+/// dedicated gather ops.
+void populateVectorGatherLoweringPatterns(RewritePatternSet &patterns,
+                                          PatternBenefit benefit = 1);
+
 //===----------------------------------------------------------------------===//
 // Finer-grained patterns exposed for more control over individual lowerings.
 //===----------------------------------------------------------------------===//

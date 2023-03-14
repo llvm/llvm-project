@@ -306,8 +306,8 @@ int main(int, char**) {
     tests<unsigned long long>();
 
 #if defined(_LIBCPP_VERSION) // extension
-    tests<int8_t>();
-    tests<uint8_t>();
+    tests<std::int8_t>();
+    tests<std::uint8_t>();
 #if !defined(TEST_HAS_NO_INT128)
     tests<__int128_t>();
     tests<__uint128_t>();
