@@ -138,7 +138,7 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
   //
   // TODO: Here is a huge amount duplicate code between the module inliner and
   // the SCC inliner, which need some refactoring.
-  auto Calls = getInlineOrder(FAM, Params);
+  auto Calls = getInlineOrder(FAM, Params, MAM, M);
   assert(Calls != nullptr && "Expected an initialized InlineOrder");
 
   // Populate the initial list of calls in this module.
