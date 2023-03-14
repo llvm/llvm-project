@@ -2720,8 +2720,14 @@ public:
                     builder.create<fir::ReboxOp>(loc, argTy, box, mlir::Value{},
                                                  /*slice=*/mlir::Value{});
               }
+            } else if (Fortran::lower::isParentComponent(*expr)) {
+              fir::ExtendedValue newExv =
+                  Fortran::lower::updateBoxForParentComponent(converter, box,
+                                                              *expr);
+              box = fir::getBase(newExv);
             }
           }
+
           caller.placeInput(arg, box);
         }
       } else if (arg.passBy == PassBy::AddressAndLength) {
