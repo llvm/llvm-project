@@ -21,6 +21,15 @@ define void @a() !a !0 {
   unreachable
 }
 
+; CHECK-DAG: define %[[HandleType:[A-Za-z]+]] @init.Handle() {
+; CHECK-DAG: declare !types ![[C:[0-9]+]] %[[HandleType]] @init.AltHandle()
+; CHECK-DAG: define void @uses.AltHandle() {
+%Handle = type { i8* }
+define %Handle @init.Handle() {
+  unreachable
+}
+
 ; CHECK-DAG: ![[A]] = !{!"a"}
 ; CHECK-DAG: ![[B]] = !{!"b"}
+; CHECK-DAG: ![[C]] = !{%[[HandleType]] undef}
 !0 = !{!"a"}
