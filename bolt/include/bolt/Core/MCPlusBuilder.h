@@ -497,15 +497,9 @@ public:
     return false;
   }
 
-  virtual bool isPrefix(const MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-    return false;
-  }
+  virtual bool isPrefix(const MCInst &Inst) const { return false; }
 
-  virtual bool isRep(const MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-    return false;
-  }
+  virtual bool isRep(const MCInst &Inst) const { return false; }
 
   virtual bool deleteREPPrefix(MCInst &Inst) const {
     llvm_unreachable("not implemented");
@@ -516,10 +510,7 @@ public:
     return Inst.getOpcode() == TargetOpcode::EH_LABEL;
   }
 
-  virtual bool isPop(const MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-    return false;
-  }
+  virtual bool isPop(const MCInst &Inst) const { return false; }
 
   /// Return true if the instruction is used to terminate an indirect branch.
   virtual bool isTerminateBranch(const MCInst &Inst) const {
@@ -556,10 +547,7 @@ public:
     return false;
   }
 
-  virtual bool isLeave(const MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-    return false;
-  }
+  virtual bool isLeave(const MCInst &Inst) const { return false; }
 
   virtual bool isADRP(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
@@ -575,10 +563,7 @@ public:
     llvm_unreachable("not implemented");
   }
 
-  virtual bool isMoveMem2Reg(const MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-    return false;
-  }
+  virtual bool isMoveMem2Reg(const MCInst &Inst) const { return false; }
 
   virtual bool isLoad(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
@@ -862,10 +847,7 @@ public:
   }
 
   /// Return true if the instruction is encoded using EVEX (AVX-512).
-  virtual bool hasEVEXEncoding(const MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-    return false;
-  }
+  virtual bool hasEVEXEncoding(const MCInst &Inst) const { return false; }
 
   /// Return true if a pair of instructions represented by \p Insts
   /// could be fused into a single uop.
