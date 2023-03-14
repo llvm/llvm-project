@@ -1044,8 +1044,9 @@ private:
 
 class StopInfoUnixSignal : public StopInfo {
 public:
-  StopInfoUnixSignal(Thread &thread, int signo, const char *description)
-      : StopInfo(thread, signo) {
+  StopInfoUnixSignal(Thread &thread, int signo, const char *description,
+                     std::optional<int> code)
+      : StopInfo(thread, signo), m_code(code) {
     SetDescription(description);
   }
 
@@ -1100,19 +1101,26 @@ public:
     if (m_description.empty()) {
       ThreadSP thread_sp(m_thread_wp.lock());
       if (thread_sp) {
+        UnixSignalsSP unix_signals = thread_sp->GetProcess()->GetUnixSignals();
         StreamString strm;
-        const char *signal_name =
-            thread_sp->GetProcess()->GetUnixSignals()->GetSignalAsCString(
-                m_value);
-        if (signal_name)
-          strm.Printf("signal %s", signal_name);
+        strm << "signal ";
+
+        std::string signal_name =
+            unix_signals->GetSignalDescription(m_value, m_code);
+        if (signal_name.size())
+          strm << signal_name;
         else
-          strm.Printf("signal %" PRIi64, m_value);
+          strm.Printf("%" PRIi64, m_value);
+
         m_description = std::string(strm.GetString());
       }
     }
     return m_description.c_str();
   }
+
+private:
+  // In siginfo_t terms, if m_value is si_signo, m_code is si_code.
+  std::optional<int> m_code;
 };
 
 // StopInfoTrace
@@ -1371,9 +1379,10 @@ StopInfo::CreateStopReasonWithWatchpointID(Thread &thread, break_id_t watch_id,
 }
 
 StopInfoSP StopInfo::CreateStopReasonWithSignal(Thread &thread, int signo,
-                                                const char *description) {
+                                                const char *description,
+                                                std::optional<int> code) {
   thread.GetProcess()->GetUnixSignals()->IncrementSignalHitCount(signo);
-  return StopInfoSP(new StopInfoUnixSignal(thread, signo, description));
+  return StopInfoSP(new StopInfoUnixSignal(thread, signo, description, code));
 }
 
 StopInfoSP StopInfo::CreateStopReasonToTrace(Thread &thread) {
