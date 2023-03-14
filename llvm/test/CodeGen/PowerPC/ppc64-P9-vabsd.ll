@@ -1834,13 +1834,20 @@ define <16 x i8> @absd_int8_ule(<16 x i8>, <16 x i8>) {
 ; Tests for ABDS icmp + sub + select sequence
 
 define <4 x i32> @absd_int32_sgt(<4 x i32>, <4 x i32>) {
-; CHECK-LABEL: absd_int32_sgt:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcmpgtsw v4, v2, v3
-; CHECK-NEXT:    vsubuwm v5, v2, v3
-; CHECK-NEXT:    vsubuwm v2, v3, v2
-; CHECK-NEXT:    xxsel v2, v2, v5, v4
-; CHECK-NEXT:    blr
+; CHECK-PWR9-LABEL: absd_int32_sgt:
+; CHECK-PWR9:       # %bb.0:
+; CHECK-PWR9-NEXT:    xvnegsp v3, v3
+; CHECK-PWR9-NEXT:    xvnegsp v2, v2
+; CHECK-PWR9-NEXT:    vabsduw v2, v2, v3
+; CHECK-PWR9-NEXT:    blr
+;
+; CHECK-PWR78-LABEL: absd_int32_sgt:
+; CHECK-PWR78:       # %bb.0:
+; CHECK-PWR78-NEXT:    vcmpgtsw v4, v2, v3
+; CHECK-PWR78-NEXT:    vsubuwm v5, v2, v3
+; CHECK-PWR78-NEXT:    vsubuwm v2, v3, v2
+; CHECK-PWR78-NEXT:    xxsel v2, v2, v5, v4
+; CHECK-PWR78-NEXT:    blr
   %3 = icmp sgt <4 x i32> %0, %1
   %4 = sub <4 x i32> %0, %1
   %5 = sub <4 x i32> %1, %0
@@ -1849,14 +1856,21 @@ define <4 x i32> @absd_int32_sgt(<4 x i32>, <4 x i32>) {
 }
 
 define <4 x i32> @absd_int32_sge(<4 x i32>, <4 x i32>) {
-; CHECK-LABEL: absd_int32_sge:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcmpgtsw v4, v3, v2
-; CHECK-NEXT:    xxlnor vs0, v4, v4
-; CHECK-NEXT:    vsubuwm v4, v2, v3
-; CHECK-NEXT:    vsubuwm v2, v3, v2
-; CHECK-NEXT:    xxsel v2, v2, v4, vs0
-; CHECK-NEXT:    blr
+; CHECK-PWR9-LABEL: absd_int32_sge:
+; CHECK-PWR9:       # %bb.0:
+; CHECK-PWR9-NEXT:    xvnegsp v3, v3
+; CHECK-PWR9-NEXT:    xvnegsp v2, v2
+; CHECK-PWR9-NEXT:    vabsduw v2, v2, v3
+; CHECK-PWR9-NEXT:    blr
+;
+; CHECK-PWR78-LABEL: absd_int32_sge:
+; CHECK-PWR78:       # %bb.0:
+; CHECK-PWR78-NEXT:    vcmpgtsw v4, v3, v2
+; CHECK-PWR78-NEXT:    xxlnor vs0, v4, v4
+; CHECK-PWR78-NEXT:    vsubuwm v4, v2, v3
+; CHECK-PWR78-NEXT:    vsubuwm v2, v3, v2
+; CHECK-PWR78-NEXT:    xxsel v2, v2, v4, vs0
+; CHECK-PWR78-NEXT:    blr
   %3 = icmp sge <4 x i32> %0, %1
   %4 = sub <4 x i32> %0, %1
   %5 = sub <4 x i32> %1, %0
@@ -1865,13 +1879,20 @@ define <4 x i32> @absd_int32_sge(<4 x i32>, <4 x i32>) {
 }
 
 define <4 x i32> @absd_int32_slt(<4 x i32>, <4 x i32>) {
-; CHECK-LABEL: absd_int32_slt:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcmpgtsw v4, v3, v2
-; CHECK-NEXT:    vsubuwm v5, v2, v3
-; CHECK-NEXT:    vsubuwm v2, v3, v2
-; CHECK-NEXT:    xxsel v2, v5, v2, v4
-; CHECK-NEXT:    blr
+; CHECK-PWR9-LABEL: absd_int32_slt:
+; CHECK-PWR9:       # %bb.0:
+; CHECK-PWR9-NEXT:    xvnegsp v3, v3
+; CHECK-PWR9-NEXT:    xvnegsp v2, v2
+; CHECK-PWR9-NEXT:    vabsduw v2, v2, v3
+; CHECK-PWR9-NEXT:    blr
+;
+; CHECK-PWR78-LABEL: absd_int32_slt:
+; CHECK-PWR78:       # %bb.0:
+; CHECK-PWR78-NEXT:    vcmpgtsw v4, v3, v2
+; CHECK-PWR78-NEXT:    vsubuwm v5, v2, v3
+; CHECK-PWR78-NEXT:    vsubuwm v2, v3, v2
+; CHECK-PWR78-NEXT:    xxsel v2, v5, v2, v4
+; CHECK-PWR78-NEXT:    blr
   %3 = icmp slt <4 x i32> %0, %1
   %4 = sub <4 x i32> %0, %1
   %5 = sub <4 x i32> %1, %0
@@ -1880,14 +1901,21 @@ define <4 x i32> @absd_int32_slt(<4 x i32>, <4 x i32>) {
 }
 
 define <4 x i32> @absd_int32_sle(<4 x i32>, <4 x i32>) {
-; CHECK-LABEL: absd_int32_sle:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcmpgtsw v4, v2, v3
-; CHECK-NEXT:    xxlnor vs0, v4, v4
-; CHECK-NEXT:    vsubuwm v4, v2, v3
-; CHECK-NEXT:    vsubuwm v2, v3, v2
-; CHECK-NEXT:    xxsel v2, v4, v2, vs0
-; CHECK-NEXT:    blr
+; CHECK-PWR9-LABEL: absd_int32_sle:
+; CHECK-PWR9:       # %bb.0:
+; CHECK-PWR9-NEXT:    xvnegsp v3, v3
+; CHECK-PWR9-NEXT:    xvnegsp v2, v2
+; CHECK-PWR9-NEXT:    vabsduw v2, v2, v3
+; CHECK-PWR9-NEXT:    blr
+;
+; CHECK-PWR78-LABEL: absd_int32_sle:
+; CHECK-PWR78:       # %bb.0:
+; CHECK-PWR78-NEXT:    vcmpgtsw v4, v2, v3
+; CHECK-PWR78-NEXT:    xxlnor vs0, v4, v4
+; CHECK-PWR78-NEXT:    vsubuwm v4, v2, v3
+; CHECK-PWR78-NEXT:    vsubuwm v2, v3, v2
+; CHECK-PWR78-NEXT:    xxsel v2, v4, v2, vs0
+; CHECK-PWR78-NEXT:    blr
   %3 = icmp sle <4 x i32> %0, %1
   %4 = sub <4 x i32> %0, %1
   %5 = sub <4 x i32> %1, %0
