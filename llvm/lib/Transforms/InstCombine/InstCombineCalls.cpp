@@ -2436,8 +2436,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       assert(isa<AssumeInst>(Assume));
       if (isAssumeWithEmptyBundle(*cast<AssumeInst>(II)))
         return eraseInstFromFunction(CI);
-      replaceUse(II->getOperandUse(0), ConstantInt::getTrue(II->getContext()));
-      return nullptr;
+      return replaceUse(II->getOperandUse(0),
+                        ConstantInt::getTrue(II->getContext()));
     };
     // Remove an assume if it is followed by an identical assume.
     // TODO: Do we need this? Unless there are conflicting assumptions, the
@@ -2964,10 +2964,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     // Can remove shuffle iff just shuffled elements, no repeats, undefs, or
     // other changes.
-    if (UsedIndices.all()) {
-      replaceUse(II->getOperandUse(ArgIdx), V);
-      return nullptr;
-    }
+    if (UsedIndices.all())
+      return replaceUse(II->getOperandUse(ArgIdx), V);
     break;
   }
   case Intrinsic::is_fpclass: {
