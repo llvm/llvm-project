@@ -593,19 +593,6 @@ BinaryBasicBlock::getBranchInfo(const BinaryBasicBlock &Succ) const {
   return std::get<1>(*Result);
 }
 
-BinaryBasicBlock::BinaryBranchInfo &
-BinaryBasicBlock::getBranchInfo(const MCSymbol *Label) {
-  auto BI = branch_info_begin();
-  for (BinaryBasicBlock *BB : successors()) {
-    if (BB->getLabel() == Label)
-      return *BI;
-    ++BI;
-  }
-
-  llvm_unreachable("Invalid successor");
-  return *BI;
-}
-
 BinaryBasicBlock *BinaryBasicBlock::splitAt(iterator II) {
   assert(II != end() && "expected iterator pointing to instruction");
 
