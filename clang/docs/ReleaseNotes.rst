@@ -167,6 +167,9 @@ Improvements to Clang's diagnostics
   ``<built-in>``.
 - Clang constexpr evaluator now provides a more concise diagnostic when calling
   function pointer that is known to be null.
+- Clang now avoids duplicate warnings on unreachable ``[[fallthrough]];`` statements
+  previously issued from ``-Wunreachable-code`` and ``-Wunreachable-code-fallthrough``
+  by prioritizing ``-Wunreachable-code-fallthrough``.
 
 Bug Fixes in This Version
 -------------------------
@@ -303,11 +306,6 @@ libclang
 - Introduced the new function ``clang_CXXMethod_isExplicit``,
   which identifies whether a constructor or conversion function cursor
   was marked with the explicit identifier.
-- Added check in ``clang_getFieldDeclBitWidth`` for whether a bit field
-  has an evaluable bit width. Fixes undefined behavior when called on a
-  bit field whose width depends on a template paramter.
-- Added function ``clang_isBitFieldDecl`` to check if a struct/class field is a
-  bit field.
 
 - Introduced the new ``CXIndex`` constructor function
   ``clang_createIndexWithOptions``, which allows overriding precompiled preamble
@@ -316,6 +314,10 @@ libclang
 - Deprecated two functions ``clang_CXIndex_setGlobalOptions`` and
   ``clang_CXIndex_setInvocationEmissionPathOption`` in favor of the new
   function ``clang_createIndexWithOptions`` in order to improve thread safety.
+
+- Added check in ``clang_getFieldDeclBitWidth`` for whether a bit-field
+  has an evaluable bit width. Fixes undefined behavior when called on a
+  bit-field whose width depends on a template paramter.
 
 Static Analyzer
 ---------------

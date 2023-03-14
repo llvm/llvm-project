@@ -349,14 +349,14 @@ define <8 x i64> @abd_cmp_v8i64(<8 x i64> %a, <8 x i64> %b) nounwind {
 ; AVX512-LABEL: abd_cmp_v8i64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpnltuq %zmm1, %zmm0, %k1
-; AVX512-NEXT:    vpsubq %zmm1, %zmm0, %zmm2
-; AVX512-NEXT:    vpsubq %zmm0, %zmm1, %zmm2 {%k1}
+; AVX512-NEXT:    vpsubq %zmm0, %zmm1, %zmm2
+; AVX512-NEXT:    vpsubq %zmm1, %zmm0, %zmm2 {%k1}
 ; AVX512-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; AVX512-NEXT:    retq
   %cmp = icmp uge <8 x i64> %a, %b
   %ab = sub <8 x i64> %a, %b
   %ba = sub <8 x i64> %b, %a
-  %sel = select <8 x i1> %cmp, <8 x i64> %ba, <8 x i64> %ab
+  %sel = select <8 x i1> %cmp, <8 x i64> %ab, <8 x i64> %ba
   ret <8 x i64> %sel
 }
 

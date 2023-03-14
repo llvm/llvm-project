@@ -248,8 +248,11 @@ def main():
       #
       # std::placeholders symbols are handled manually in StdSpecialSymbolMap.inc
       (symbol_index_root, "chrono.html", "std::chrono::"),
+      (symbol_index_root, "execution.html", "std::execution::"),
+      (symbol_index_root, "numbers.html", "std::numbers::"),
       (symbol_index_root, "filesystem.html", "std::filesystem::"),
       (symbol_index_root, "pmr.html", "std::pmr::"),
+      (symbol_index_root, "ranges.html", "std::ranges::"),
       (symbol_index_root, "regex_constants.html", "std::regex_constants::"),
       (symbol_index_root, "this_thread.html", "std::this_thread::"),
       # Zombie symbols that were available from the Standard Library, but are
