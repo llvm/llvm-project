@@ -145,7 +145,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
   { // test assigning a different type
     typedef std::string S;
-    const uint8_t p[] = "ABCD";
+    const std::uint8_t p[] = "ABCD";
 
     S s;
     s.insert(s.begin(), p, p + 4);
