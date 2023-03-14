@@ -829,6 +829,10 @@ x>)");
   }
 }
 
+MATCHER_P2(Mark, Range, Text, "") {
+  return std::tie(arg.Rng, arg.Trivia) == std::tie(Range, Text);
+}
+
 TEST(PreamblePatch, MacroAndMarkHandling) {
   Config Cfg;
   Cfg.Diagnostics.AllowStalePreamble = true;
@@ -847,13 +851,18 @@ TEST(PreamblePatch, MacroAndMarkHandling) {
 #ifndef FOO
 #define FOO
 #define BAR
-#pragma mark XX
+#pragma $x[[mark XX
+]]
+#pragma $y[[mark YY
+]]
 
 #endif)cpp");
     auto AST = createPatchedAST(Code.code(), NewCode.code());
     // FIXME: Macros and marks have locations that need to be patched.
     EXPECT_THAT(AST->getMacros().Names, IsEmpty());
-    EXPECT_THAT(AST->getMarks(), IsEmpty());
+    EXPECT_THAT(AST->getMarks(),
+                UnorderedElementsAre(Mark(NewCode.range("x"), " XX"),
+                                     Mark(NewCode.range("y"), " YY")));
   }
 }
 
