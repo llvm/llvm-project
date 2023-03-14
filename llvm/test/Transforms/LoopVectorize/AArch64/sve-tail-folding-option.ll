@@ -1,9 +1,10 @@
 ; RUN: opt -opaque-pointers=0 < %s -passes=loop-vectorize -sve-tail-folding=disabled -S | FileCheck %s -check-prefix=CHECK-NOTF
 ; RUN: opt -opaque-pointers=0 < %s -passes=loop-vectorize -sve-tail-folding=default -S | FileCheck %s -check-prefix=CHECK-NOTF
 ; RUN: opt -opaque-pointers=0 < %s -passes=loop-vectorize -sve-tail-folding=all -S | FileCheck %s -check-prefix=CHECK-TF
-; RUN: opt -opaque-pointers=0 < %s -passes=loop-vectorize -sve-tail-folding=disabled+simple+reductions+recurrences -S | FileCheck %s -check-prefix=CHECK-TF
+; RUN: opt -opaque-pointers=0 < %s -passes=loop-vectorize -sve-tail-folding=disabled+simple+reductions+recurrences+reverse -S | FileCheck %s -check-prefix=CHECK-TF
 ; RUN: opt -opaque-pointers=0 < %s -passes=loop-vectorize -sve-tail-folding=all+noreductions -S | FileCheck %s -check-prefix=CHECK-TF-NORED
 ; RUN: opt -opaque-pointers=0 < %s -passes=loop-vectorize -sve-tail-folding=all+norecurrences -S | FileCheck %s -check-prefix=CHECK-TF-NOREC
+; RUN: opt -opaque-pointers=0 < %s -passes=loop-vectorize -sve-tail-folding=all+noreverse -S | FileCheck %s -check-prefix=CHECK-TF-NOREV
 ; RUN: opt -opaque-pointers=0 < %s -passes=loop-vectorize -sve-tail-folding=reductions -S | FileCheck %s -check-prefix=CHECK-TF-ONLYRED
 
 target triple = "aarch64-unknown-linux-gnu"
@@ -32,6 +33,14 @@ define void @simple_memset(i32 %val, i32* %ptr, i64 %n) #0 {
 ; CHECK-TF-NOREC:       vector.body:
 ; CHECK-TF-NOREC:         %[[ACTIVE_LANE_MASK:.*]] = phi <vscale x 4 x i1>
 ; CHECK-TF-NOREC:         call void @llvm.masked.store.nxv4i32.p0nxv4i32(<vscale x 4 x i32> %[[SPLAT]], {{.*}} %[[ACTIVE_LANE_MASK]]
+
+; CHECK-TF-NOREV-LABEL: @simple_memset(
+; CHECK-TF-NOREV:       vector.ph:
+; CHECK-TF-NOREV:         %[[INSERT:.*]] = insertelement <vscale x 4 x i32> poison, i32 %val, i64 0
+; CHECK-TF-NOREV:         %[[SPLAT:.*]] = shufflevector <vscale x 4 x i32> %[[INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-TF-NOREV:       vector.body:
+; CHECK-TF-NOREV:         %[[ACTIVE_LANE_MASK:.*]] = phi <vscale x 4 x i1>
+; CHECK-TF-NOREV:         call void @llvm.masked.store.nxv4i32.p0nxv4i32(<vscale x 4 x i32> %[[SPLAT]], {{.*}} %[[ACTIVE_LANE_MASK]]
 
 ; CHECK-TF-LABEL: @simple_memset(
 ; CHECK-TF:       vector.ph:
@@ -90,6 +99,16 @@ define float @fadd_red_fast(float* noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-TF-NOREC:         %[[SEL:.*]] = select fast <vscale x 4 x i1> %[[ACTIVE_LANE_MASK]], <vscale x 4 x float> %[[ADD]], <vscale x 4 x float> %[[VEC_PHI]]
 ; CHECK-TF-NOREC:       middle.block:
 ; CHECK-TF-NOREC-NEXT:    call fast float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> %[[SEL]])
+
+; CHECK-TF-NOREV-LABEL: @fadd_red_fast
+; CHECK-TF-NOREV:       vector.body:
+; CHECK-TF-NOREV:         %[[ACTIVE_LANE_MASK:.*]] = phi <vscale x 4 x i1>
+; CHECK-TF-NOREV:         %[[VEC_PHI:.*]] = phi <vscale x 4 x float>
+; CHECK-TF-NOREV:         %[[LOAD:.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0nxv4f32(<vscale x 4 x float>{{.*}} %[[ACTIVE_LANE_MASK]]
+; CHECK-TF-NOREV:         %[[ADD:.*]] = fadd fast <vscale x 4 x float> %[[LOAD]]
+; CHECK-TF-NOREV:         %[[SEL:.*]] = select fast <vscale x 4 x i1> %[[ACTIVE_LANE_MASK]], <vscale x 4 x float> %[[ADD]], <vscale x 4 x float> %[[VEC_PHI]]
+; CHECK-TF-NOREV:       middle.block:
+; CHECK-TF-NOREV-NEXT:    call fast float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> %[[SEL]])
 
 ; CHECK-TF-LABEL: @fadd_red_fast
 ; CHECK-TF:       vector.body:
@@ -167,6 +186,19 @@ define void @add_recur(i32* noalias %dst, i32* noalias %src, i64 %n) #0 {
 ; CHECK-TF-NOREC:         %[[ADD:.*]] = add nsw <vscale x 4 x i32> %[[LOAD]], %[[SPLICE]]
 ; CHECK-TF-NOREC:         store <vscale x 4 x i32> %[[ADD]]
 
+; CHECK-TF-NOREV-LABEL: @add_recur
+; CHECK-TF-NOREV:       entry:
+; CHECK-TF-NOREV:         %[[PRE:.*]] = load i32, i32* %src, align 4
+; CHECK-TF-NOREV:       vector.ph:
+; CHECK-TF-NOREV:         %[[RECUR_INIT:.*]] = insertelement <vscale x 4 x i32> poison, i32 %[[PRE]]
+; CHECK-TF-NOREV:       vector.body:
+; CHECK-TF-NOREV:         %[[ACTIVE_LANE_MASK:.*]] = phi <vscale x 4 x i1>
+; CHECK-TF-NOREV:         %[[VECTOR_RECUR:.*]] = phi <vscale x 4 x i32> [ %[[RECUR_INIT]], %vector.ph ], [ %[[LOAD:.*]], %vector.body ]
+; CHECK-TF-NOREV:         %[[LOAD]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0nxv4i32(<vscale x 4 x i32>{{.*}} %[[ACTIVE_LANE_MASK]]
+; CHECK-TF-NOREV:         %[[SPLICE:.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.splice.nxv4i32(<vscale x 4 x i32> %[[VECTOR_RECUR]], <vscale x 4 x i32> %[[LOAD]], i32 -1)
+; CHECK-TF-NOREV:         %[[ADD:.*]] = add nsw <vscale x 4 x i32> %[[LOAD]], %[[SPLICE]]
+; CHECK-TF-NOREV:         call void @llvm.masked.store.nxv4i32.p0nxv4i32(<vscale x 4 x i32> %[[ADD]], {{.*}} <vscale x 4 x i1> %[[ACTIVE_LANE_MASK]])
+
 ; CHECK-TF-LABEL: @add_recur
 ; CHECK-TF:       entry:
 ; CHECK-TF:         %[[PRE:.*]] = load i32, i32* %src, align 4
@@ -238,6 +270,12 @@ define void @interleave(float* noalias %dst, float* noalias %src, i64 %n) #0 {
 ; CHECK-TF-NOREC:         %{{.*}} = shufflevector <8 x float> %[[LOAD]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-TF-NOREC:         %{{.*}} = shufflevector <8 x float> %[[LOAD]], <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 
+; CHECK-TF-NOREV-LABEL: @interleave(
+; CHECK-TF-NOREV:       vector.body:
+; CHECK-TF-NOREV:         %[[LOAD:.*]] = load <8 x float>, <8 x float>
+; CHECK-TF-NOREV:         %{{.*}} = shufflevector <8 x float> %[[LOAD]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-TF-NOREV:         %{{.*}} = shufflevector <8 x float> %[[LOAD]], <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+
 entry:
   br label %for.body
 
@@ -263,6 +301,55 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %exitcond.not, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+define void @reverse(double* noalias %dst, double* noalias %src) #0 {
+; CHECK-NOTF-LABEL: @reverse(
+; CHECK-NOTF:       vector.body:
+; CHECK-NOTF-NOT:     %{{.*}} = phi <vscale x 4 x i1>
+; CHECK-NOTF:         %[[LOAD:.*]] = load <vscale x 2 x double>, <vscale x 2 x double>* %18, align 8
+; CHECK-NOTF:         %{{.*}} = call <vscale x 2 x double> @llvm.experimental.vector.reverse.nxv2f64(<vscale x 2 x double> %[[LOAD]])
+
+; CHECK-TF-NOREV-LABEL: @reverse(
+; CHECK-TF-NOREV:       vector.body:
+; CHECK-TF-NOREV-NOT:     %{{.*}} = phi <vscale x 4 x i1>
+; CHECK-TF-NOREV:         %[[LOAD:.*]] = load <vscale x 2 x double>, <vscale x 2 x double>* %18, align 8
+; CHECK-TF-NOREV:         %{{.*}} = call <vscale x 2 x double> @llvm.experimental.vector.reverse.nxv2f64(<vscale x 2 x double> %[[LOAD]])
+
+; CHECK-TF-LABEL: @reverse(
+; CHECK-TF:       vector.body:
+; CHECK-TF:         %[[ACTIVE_LANE_MASK:.*]] = phi <vscale x 2 x i1>
+; CHECK-TF:         %[[REVERSE_MASK:.*]] = call <vscale x 2 x i1> @llvm.experimental.vector.reverse.nxv2i1(<vscale x 2 x i1> %[[ACTIVE_LANE_MASK]])
+; CHECK-TF:         %[[MASKED_LOAD:.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0nxv2f64(<vscale x 2 x double>{{.*}} <vscale x 2 x i1> %reverse
+
+; CHECK-TF-NORED-LABEL: @reverse(
+; CHECK-TF-NORED:       vector.body:
+; CHECK-TF-NORED:         %[[ACTIVE_LANE_MASK:.*]] = phi <vscale x 2 x i1>
+; CHECK-TF-NORED:         %[[REVERSE_MASK:.*]] = call <vscale x 2 x i1> @llvm.experimental.vector.reverse.nxv2i1(<vscale x 2 x i1> %[[ACTIVE_LANE_MASK]])
+; CHECK-TF-NORED:         %[[MASKED_LOAD:.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0nxv2f64(<vscale x 2 x double>{{.*}} <vscale x 2 x i1> %reverse
+
+; CHECK-TF-NOREC-LABEL: @reverse(
+; CHECK-TF-NOREC:       vector.body:
+; CHECK-TF-NOREC:         %[[ACTIVE_LANE_MASK:.*]] = phi <vscale x 2 x i1>
+; CHECK-TF-NOREC:         %[[REVERSE_MASK:.*]] = call <vscale x 2 x i1> @llvm.experimental.vector.reverse.nxv2i1(<vscale x 2 x i1> %[[ACTIVE_LANE_MASK]])
+; CHECK-TF-NOREC:         %[[MASKED_LOAD:.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0nxv2f64(<vscale x 2 x double>{{.*}} <vscale x 2 x i1> %reverse
+
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ 1023, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds double, double* %src, i64 %indvars.iv
+  %0 = load double, double* %arrayidx, align 8
+  %add = fadd double %0, 1.000000e+00
+  %arrayidx2 = getelementptr inbounds double, double* %dst, i64 %indvars.iv
+  store double %add, double* %arrayidx2, align 8
+  %indvars.iv.next = add nsw i64 %indvars.iv, -1
+  %cmp.not = icmp eq i64 %indvars.iv, 0
+  br i1 %cmp.not, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body
   ret void
 }
 
