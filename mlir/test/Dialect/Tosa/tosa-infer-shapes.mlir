@@ -1216,3 +1216,21 @@ func.func @test_dynamic_width_rfft2d(%arg0 : tensor<5x2x?xf32>) -> () {
   %output_real, %output_imag = "tosa.rfft2d"(%arg0) {} : (tensor<5x2x?xf32>) -> (tensor<?x?x?xf32>, tensor<?x?x?xf32>)
   return
 }
+
+// -----
+
+// CHECK-LABEL: @test_static_fft2d
+func.func @test_static_fft2d(%arg0: tensor<1x4x8xf32>, %arg1: tensor<1x4x8xf32>) -> (tensor<1x4x8xf32>, tensor<1x4x8xf32>) {
+  // CHECK: -> (tensor<1x4x8xf32>, tensor<1x4x8xf32>)
+  %output_real, %output_imag = "tosa.fft2d"(%arg0, %arg1) {inverse = false} : (tensor<1x4x8xf32>, tensor<1x4x8xf32>) -> (tensor<1x4x8xf32>, tensor<1x4x8xf32>)
+  return %output_real, %output_imag : tensor<1x4x8xf32>, tensor<1x4x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @test_dynamic_batch_fft2d
+func.func @test_dynamic_batch_fft2d(%arg0: tensor<?x4x8xf32>, %arg1: tensor<?x4x8xf32>) -> (tensor<?x4x8xf32>, tensor<?x4x8xf32>) {
+  // CHECK: -> (tensor<?x4x8xf32>, tensor<?x4x8xf32>)
+  %output_real, %output_imag = "tosa.fft2d"(%arg0, %arg1) {inverse = false} : (tensor<?x4x8xf32>, tensor<?x4x8xf32>) -> (tensor<?x4x8xf32>, tensor<?x4x8xf32>)
+  return %output_real, %output_imag : tensor<?x4x8xf32>, tensor<?x4x8xf32>
+}
