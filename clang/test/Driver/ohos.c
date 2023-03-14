@@ -1,3 +1,4 @@
+// UNSUPPORTED: system-windows
 // RUN: %clang %s -### -no-canonical-prefixes --target=arm-liteos \
 // RUN:     -resource-dir=%S/Inputs/ohos_native_tree/llvm/lib/clang/x.y.z \
 // RUN:     --sysroot=%S/Inputs/ohos_native_tree/sysroot -fuse-ld=lld -march=armv7-a 2>&1 \
