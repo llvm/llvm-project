@@ -4122,6 +4122,7 @@ cc_library(
         ":Parser",
         ":SCFDialect",
         ":SideEffectInterfaces",
+        ":Support",
         ":TransformDialect",
         ":TransformUtils",
         "//llvm:Support",
