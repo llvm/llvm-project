@@ -281,6 +281,7 @@ public:
       /// A vector of |generic_params| bits, indicating which other
       /// generic_params share the same shape.
       llvm::BitVector same_shape;
+      bool is_pack = false;
       GenericParam(unsigned d, unsigned i, unsigned nparams)
           : depth(d), index(i), same_shape(nparams) {}
     };
@@ -294,11 +295,12 @@ public:
     };
 
     llvm::SmallVector<GenericParam, 4> generic_params;
-    /// Indices of the shape of the pack expansions.
     llvm::SmallVector<PackExpansion> pack_expansions;
 
     llvm::SmallVector<unsigned, 4> count_for_value_pack;
     llvm::SmallVector<unsigned, 4> count_for_type_pack;
+    unsigned dependent_generic_param_count = 0;
+    unsigned num_counts = 0;
 
     unsigned GetNumValuePacks() { return count_for_value_pack.size(); }
     unsigned GetNumTypePacks() { return count_for_type_pack.size(); }
