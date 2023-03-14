@@ -1439,69 +1439,6 @@ static void doInstrumentAddress(AddressSanitizer *Pass, Instruction *I,
                                          IsWrite, nullptr, UseCalls, Exp);
 }
 
-static void SplitBlockAndInsertSimpleForLoop(Value *End,
-                                             Instruction *SplitBefore,
-                                             Instruction *&BodyIP,
-                                             Value *&Index) {
-  BasicBlock *LoopPred = SplitBefore->getParent();
-  BasicBlock *LoopBody = SplitBlock(SplitBefore->getParent(), SplitBefore);
-  BasicBlock *LoopExit = SplitBlock(SplitBefore->getParent(), SplitBefore);
-
-  auto *Ty = End->getType();
-  auto &DL = SplitBefore->getModule()->getDataLayout();
-  const unsigned Bitwidth = DL.getTypeSizeInBits(Ty);
-
-  IRBuilder<> Builder(LoopBody->getTerminator());
-  auto *IV = Builder.CreatePHI(Ty, 2, "iv");
-  auto *IVNext =
-    Builder.CreateAdd(IV, ConstantInt::get(Ty, 1), IV->getName() + ".next",
-                      /*HasNUW=*/true, /*HasNSW=*/Bitwidth != 2);
-  auto *IVCheck = Builder.CreateICmpEQ(IVNext, End,
-                                       IV->getName() + ".check");
-  Builder.CreateCondBr(IVCheck, LoopExit, LoopBody);
-  LoopBody->getTerminator()->eraseFromParent();
-
-  // Populate the IV PHI.
-  IV->addIncoming(ConstantInt::get(Ty, 0), LoopPred);
-  IV->addIncoming(IVNext, LoopBody);
-
-  BodyIP = LoopBody->getFirstNonPHI();
-  Index = IV;
-}
-
-/// Utility function for performing a given action on each lane of a vector
-/// with \p EC elements.  To simplify porting legacy code, this defaults to
-/// unrolling the implied loop for non-scalable element counts, but this is
-/// not considered to be part of the contract of this routine, and is
-/// expected to change in the future.
-static void
-SplitBlockAndInsertForEachLane(ElementCount EC,
-                               Type *IndexTy,
-                               Instruction *InsertBefore,
-                               std::function<void(IRBuilderBase&, Value*)> Func) {
-
-  IRBuilder<> IRB(InsertBefore);
-
-  if (EC.isScalable()) {
-    Value *NumElements = IRB.CreateElementCount(IndexTy, EC);
-
-    Instruction *BodyIP;
-    Value *Index;
-    SplitBlockAndInsertSimpleForLoop(NumElements, InsertBefore,
-                                     BodyIP, Index);
-
-    IRB.SetInsertPoint(BodyIP);
-    Func(IRB, Index);
-    return;
-  }
-
-  unsigned Num = EC.getFixedValue();
-  for (unsigned Idx = 0; Idx < Num; ++Idx) {
-    IRB.SetInsertPoint(InsertBefore);
-    Func(IRB, ConstantInt::get(IndexTy, Idx));
-  }
-}
-
 static void instrumentMaskedLoadOrStore(AddressSanitizer *Pass,
                                         const DataLayout &DL, Type *IntptrTy,
                                         Value *Mask, Instruction *I,

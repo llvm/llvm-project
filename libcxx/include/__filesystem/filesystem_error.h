@@ -15,6 +15,7 @@
 #include <__filesystem/path.h>
 #include <__memory/shared_ptr.h>
 #include <__utility/forward.h>
+#include <__verbose_abort>
 #include <iosfwd>
 #include <new>
 #include <system_error>
@@ -91,7 +92,7 @@ void __throw_filesystem_error(_Args&&... __args) {
 }
 #else
 void __throw_filesystem_error(_Args&&...) {
-  _VSTD::abort();
+    std::__libcpp_verbose_abort("filesystem_error was thrown in -fno-exceptions mode");
 }
 #endif
 _LIBCPP_AVAILABILITY_FILESYSTEM_POP

@@ -197,6 +197,8 @@ Bug Fixes in This Version
   be reached despite being reachable. This fixes
   `#61177 <https://github.com/llvm/llvm-project/issues/61177>`_ in anticipation
   of `CWG2699 <https://wg21.link/CWG2699>_` being accepted by WG21.
+- Fix crash when parsing fold expression containing a delayed typo correction.
+  (`#61326 <https://github.com/llvm/llvm-project/issues/61326>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -228,6 +230,14 @@ Miscellaneous Clang Crashes Fixed
 
 Target Specific Changes
 -----------------------
+
+AMDGPU Support
+^^^^^^^^^^^^^^
+
+- Linking for AMDGPU now uses ``--no-undefined`` by default. This causes
+  undefined symbols in the created module to be a linker error. To prevent this,
+  pass ``-Wl,--undefined`` if compiling directly, or ``-Xoffload-linker
+  --undefined`` if using an offloading language.
 
 X86 Support
 ^^^^^^^^^^^

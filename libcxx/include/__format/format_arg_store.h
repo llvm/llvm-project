@@ -143,21 +143,24 @@ consteval __arg_t __determine_arg_t() {
 //
 // Note this version can't be constrained avoiding ambiguous overloads.
 // That means it can be instantiated by disabled formatters. To solve this, a
-// constrained version for not formattable formatters is added. That overload
-// is marked as deleted to fail creating a storage type for disabled formatters.
+// constrained version for not formattable formatters is added.
 template <class _Context, class _Tp>
 consteval __arg_t __determine_arg_t() {
   return __arg_t::__handle;
 }
 
+// The overload for not formattable types allows triggering the static
+// assertion below.
 template <class _Context, class _Tp>
   requires(!__formattable<_Tp, typename _Context::char_type>)
-consteval __arg_t __determine_arg_t() = delete;
+consteval __arg_t __determine_arg_t() {
+  return __arg_t::__none;
+}
 
 template <class _Context, class _Tp>
 _LIBCPP_HIDE_FROM_ABI basic_format_arg<_Context> __create_format_arg(_Tp&& __value) noexcept {
   constexpr __arg_t __arg = __determine_arg_t<_Context, remove_cvref_t<_Tp>>();
-  static_assert(__arg != __arg_t::__none);
+  static_assert(__arg != __arg_t::__none, "the supplied type is not formattable");
 
   // Not all types can be used to directly initialize the
   // __basic_format_arg_value.  First handle all types needing adjustment, the

@@ -238,6 +238,7 @@ namespace std {
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <__variant/monostate.h>
+#include <__verbose_abort>
 #include <exception>
 #include <initializer_list>
 #include <limits>
@@ -290,7 +291,7 @@ void __throw_bad_variant_access() {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         throw bad_variant_access();
 #else
-        _VSTD::abort();
+    std::__libcpp_verbose_abort("bad_variant_access was thrown in -fno-exceptions mode");
 #endif
 }
 

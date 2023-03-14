@@ -61,6 +61,7 @@ public:
   // Copy-assignment would be implicitly deleted (because our fields
   // are const), so we explicitly delete it for clarity.
   SparseTensorType &operator=(const SparseTensorType &) = delete;
+  // So we must explicitly define the copy-ctor to silence -Wdeprecated-copy.
   SparseTensorType(const SparseTensorType &) = default;
 
   /// Constructs a new `SparseTensorType` with the same dimension-shape
