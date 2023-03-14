@@ -20,7 +20,7 @@ LLVM_LIBC_FUNCTION(int, nanosleep,
                    (const struct timespec *req, struct timespec *rem)) {
   int ret = __llvm_libc::syscall_impl(SYS_nanosleep, req, rem);
   if (ret < 0) {
-    errno = -ret;
+    libc_errno = -ret;
     return -1;
   }
   return ret;
