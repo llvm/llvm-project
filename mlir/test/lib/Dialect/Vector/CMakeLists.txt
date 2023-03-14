@@ -16,6 +16,7 @@ add_mlir_library(MLIRVectorTestPasses
   MLIRMemRefDialect
   MLIRPass
   MLIRSCFDialect
+  MLIRTensorDialect
   MLIRTransformUtils
   MLIRVectorDialect
   MLIRVectorToSCF
