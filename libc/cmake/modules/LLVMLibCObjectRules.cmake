@@ -83,12 +83,13 @@ function(_build_gpu_objects fq_target_name internal_target_name)
   )
 
   set(include_dirs ${LIBC_BUILD_DIR}/include ${LIBC_SOURCE_DIR} ${LIBC_BUILD_DIR})
+  set(common_compile_options ${ADD_GPU_OBJ_COMPILE_OPTIONS})
 
   # The packaged version will be built for every target GPU architecture. We do
   # this so we can support multiple accelerators on the same machine.
   foreach(gpu_arch ${LIBC_GPU_ARCHITECTURES})
     set(gpu_target_name ${fq_target_name}.${gpu_arch})
-    set(compile_options ${ADD_GPU_OBJ_COMPILE_OPTIONS})
+    set(compile_options ${common_compile_options})
     # Derive the triple from the specified architecture.
     if("${gpu_arch}" IN_LIST all_amdgpu_architectures)
       set(gpu_target_triple "amdgcn-amd-amdhsa")
