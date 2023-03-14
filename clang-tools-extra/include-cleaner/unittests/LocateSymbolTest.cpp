@@ -16,15 +16,11 @@
 #include "clang/Testing/TestAST.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Testing/Annotations/Annotations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <cstddef>
-#include <memory>
 #include <tuple>
-#include <unordered_map>
-#include <utility>
-#include <variant>
 #include <vector>
 
 namespace clang::include_cleaner {
@@ -66,8 +62,8 @@ public:
           ND = TD;
         if (ND->getName() == NameToFind) {
           EXPECT_TRUE(Out == nullptr || Out == ND->getCanonicalDecl())
-              << "Found multiple matches for " << NameToFind;
-          Out = cast<NamedDecl>(ND->getCanonicalDecl());
+              << "Found multiple matches for " << NameToFind.str();
+          Out = llvm::cast<NamedDecl>(ND->getCanonicalDecl());
         }
         return true;
       }
