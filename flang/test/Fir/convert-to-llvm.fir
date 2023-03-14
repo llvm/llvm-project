@@ -739,6 +739,16 @@ func.func @convert_from_int(%arg0 : i32) {
 // CHECK:         %{{.*}} = llvm.sext %[[ARG0]] : i32 to i64
 // CHECK:         %{{.*}} = llvm.inttoptr %{{.*}} : i64 to !llvm.ptr<i64>
 
+
+func.func @convert_from_i1(%arg0 : i1) {
+  %0 = fir.convert %arg0 : (i1) -> i32
+  return
+}
+
+// CHECK-LABEL: convert_from_i1(
+// CHECK-SAME: %[[ARG0:.*]]: i1
+// CHECK:        %{{.*}} = llvm.zext %[[ARG0]] : i1 to i32 
+
 // -----
 
 // Test `fir.convert` operation conversion from !fir.ref<> type.
