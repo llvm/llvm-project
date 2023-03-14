@@ -2266,7 +2266,11 @@ void Driver::PrintHelp(bool ShowHidden) const {
 
 void Driver::PrintVersion(const Compilation &C, raw_ostream &OS) const {
   if (IsFlangMode()) {
+#if defined(CLANG_LLVM_FLANG)
     OS << getClangToolFullVersion("flang-new") << '\n';
+#else
+    OS << getClangToolFullVersion("flang-classic") << '\n';
+#endif
   } else {
     // FIXME: The following handlers should use a callback mechanism, we don't
     // know what the client would like to do.
