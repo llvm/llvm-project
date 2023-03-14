@@ -17,8 +17,8 @@
 #include <span>
 #include <cstddef>
 
-template <class T, size_t extent>
-std::span<T, extent> createImplicitSpan(T* ptr, size_t len) {
+template <class T, std::size_t extent>
+std::span<T, extent> createImplicitSpan(T* ptr, std::size_t len) {
   return {ptr, len}; // expected-error {{chosen constructor is explicit in copy-initialization}}
 }
 

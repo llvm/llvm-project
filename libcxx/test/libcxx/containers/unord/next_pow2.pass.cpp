@@ -31,7 +31,7 @@ is_power_of_two(unsigned long n)
     return __builtin_popcount(n) == 1;
 }
 
-void test_next_pow2_val(size_t n)
+void test_next_pow2_val(std::size_t n)
 {
         std::size_t npow2 = std::__next_hash_pow2(n);
         assert(is_power_of_two(npow2) && npow2 > n);

@@ -18,7 +18,7 @@
 #include "test_macros.h"
 
 template <typename CharT>
-bool test ( const CharT *s, size_t len ) {
+bool test ( const CharT *s, std::size_t len ) {
     typedef std::basic_string_view<CharT> SV;
     SV sv ( s, len );
     ASSERT_SAME_TYPE(decltype(sv.back()), typename SV::const_reference);

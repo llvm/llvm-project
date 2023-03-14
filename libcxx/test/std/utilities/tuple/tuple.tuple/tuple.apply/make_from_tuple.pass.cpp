@@ -43,7 +43,7 @@ struct ConstructibleFromTuple<Tuple<Types...>> {
   TypeID const* arg_types;
 };
 
-template <class Tp, size_t N>
+template <class Tp, std::size_t N>
 struct ConstructibleFromTuple<std::array<Tp, N>> {
 template <class ...Args>
   explicit ConstructibleFromTuple(Args&&... xargs)

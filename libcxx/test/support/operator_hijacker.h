@@ -40,7 +40,7 @@ static_assert(std::is_trivially_copyable<operator_hijacker>::value &&     //
 
 template <>
 struct std::hash<operator_hijacker> {
-  size_t operator()(const operator_hijacker&) const { return 0; }
+  std::size_t operator()(const operator_hijacker&) const { return 0; }
 };
 
 #endif // SUPPORT_OPERATOR_HIJACKER_H

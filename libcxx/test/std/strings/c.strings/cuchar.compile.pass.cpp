@@ -24,12 +24,12 @@
 // __STDC_UTF_32__ may or may not be defined by the C standard library
 
 #if !defined(TEST_HAS_NO_C8RTOMB_MBRTOC8)
-ASSERT_SAME_TYPE(size_t, decltype(std::mbrtoc8((char8_t*)0, (const char*)0, (size_t)0, (mbstate_t*)0)));
-ASSERT_SAME_TYPE(size_t, decltype(std::c8rtomb((char*)0, (char8_t)0, (mbstate_t*)0)));
+ASSERT_SAME_TYPE(std::size_t, decltype(std::mbrtoc8((char8_t*)0, (const char*)0, (size_t)0, (mbstate_t*)0)));
+ASSERT_SAME_TYPE(std::size_t, decltype(std::c8rtomb((char*)0, (char8_t)0, (mbstate_t*)0)));
 #endif
 
-ASSERT_SAME_TYPE(size_t, decltype(std::mbrtoc16((char16_t*)0, (const char*)0, (size_t)0, (mbstate_t*)0)));
-ASSERT_SAME_TYPE(size_t, decltype(std::c16rtomb((char*)0, (char16_t)0, (mbstate_t*)0)));
+ASSERT_SAME_TYPE(std::size_t, decltype(std::mbrtoc16((char16_t*)0, (const char*)0, (size_t)0, (mbstate_t*)0)));
+ASSERT_SAME_TYPE(std::size_t, decltype(std::c16rtomb((char*)0, (char16_t)0, (mbstate_t*)0)));
 
-ASSERT_SAME_TYPE(size_t, decltype(std::mbrtoc32((char32_t*)0, (const char*)0, (size_t)0, (mbstate_t*)0)));
-ASSERT_SAME_TYPE(size_t, decltype(std::c16rtomb((char*)0, (char32_t)0, (mbstate_t*)0)));
+ASSERT_SAME_TYPE(std::size_t, decltype(std::mbrtoc32((char32_t*)0, (const char*)0, (size_t)0, (mbstate_t*)0)));
+ASSERT_SAME_TYPE(std::size_t, decltype(std::c16rtomb((char*)0, (char32_t)0, (mbstate_t*)0)));

@@ -22,7 +22,7 @@
 
 template<typename CharT>
 size_t StrLen ( const CharT *s ) {
-    size_t retVal = 0;
+    std::size_t retVal = 0;
     while ( *s != 0 ) { ++retVal; ++s; }
     return retVal;
     }

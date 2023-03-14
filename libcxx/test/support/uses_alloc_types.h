@@ -101,7 +101,7 @@ bool checkConstructionEquiv(TestType& T, TestType& U)
 ////////////////////////////////////////////////////////////////////////////////
 namespace detail {
 
-template <bool IsZero, size_t N, class ArgList, class ...Args>
+template <bool IsZero, std::size_t N, class ArgList, class ...Args>
 struct TakeNImp;
 
 template <class ArgList, class ...Args>
@@ -109,11 +109,11 @@ struct TakeNImp<true, 0, ArgList, Args...> {
   typedef ArgList type;
 };
 
-template <size_t N, class ...A1, class F, class ...R>
+template <std::size_t N, class ...A1, class F, class ...R>
 struct TakeNImp<false, N, ArgumentListID<A1...>, F, R...>
     : TakeNImp<N-1 == 0, N - 1, ArgumentListID<A1..., F>, R...> {};
 
-template <size_t N, class ...Args>
+template <std::size_t N, class ...Args>
 struct TakeNArgs : TakeNImp<N == 0, N, ArgumentListID<>, Args...> {};
 
 template <class T>
@@ -263,7 +263,7 @@ public:
     UsesAllocatorTestBaseStorage<CtorAlloc> alloc_store;
 };
 
-template <class Alloc, size_t Arity>
+template <class Alloc, std::size_t Arity>
 class UsesAllocatorV1 : public UsesAllocatorTestBase<UsesAllocatorV1<Alloc, Arity>, Alloc>
 {
 public:
@@ -297,7 +297,7 @@ public:
 };
 
 
-template <class Alloc, size_t Arity>
+template <class Alloc, std::size_t Arity>
 class UsesAllocatorV2 : public UsesAllocatorTestBase<UsesAllocatorV2<Alloc, Arity>, Alloc>
 {
 public:
@@ -323,7 +323,7 @@ public:
     {}
 };
 
-template <class Alloc, size_t Arity>
+template <class Alloc, std::size_t Arity>
 class UsesAllocatorV3 : public UsesAllocatorTestBase<UsesAllocatorV3<Alloc, Arity>, Alloc>
 {
 public:
@@ -355,7 +355,7 @@ public:
     {}
 };
 
-template <class Alloc, size_t Arity>
+template <class Alloc, std::size_t Arity>
 class NotUsesAllocator : public UsesAllocatorTestBase<NotUsesAllocator<Alloc, Arity>, Alloc>
 {
 public:
