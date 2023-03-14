@@ -299,6 +299,19 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
       funcPointer = builder.create<fir::AddrOfOp>(loc, funcOpType, symbolAttr);
     else
       funcSymbolAttr = symbolAttr;
+
+    // Issue a warning if the procedure name conflicts with
+    // a runtime function name a call to which has been already
+    // lowered (implying that the FuncOp has been created).
+    // The behavior is undefined in this case.
+    if (caller.getFuncOp()->hasAttrOfType<mlir::UnitAttr>(
+            fir::FIROpsDialect::getFirRuntimeAttrName()))
+      LLVM_DEBUG(mlir::emitWarning(
+          loc,
+          llvm::Twine("function name '") +
+              llvm::Twine(symbolAttr.getLeafReference()) +
+              llvm::Twine("' conflicts with a runtime function name used by "
+                          "Flang - this may lead to undefined behavior")));
   }
 
   mlir::FunctionType funcType =
