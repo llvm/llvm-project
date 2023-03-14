@@ -2,7 +2,7 @@
 
 ; REQUIRES: asserts
 
-; FIXME: This test is needed to make sure that the guard cost remains the same,
+; This test is needed to make sure that the guard cost remains the same,
 ; independently on guard representation form (either intrinsic call or branch with
 ; widenable condition).
 
@@ -30,7 +30,7 @@ exit:
 
 define void @test_guard_as_branch(ptr %arr, i64 %n, i64 %bound) {
 ; CHECK-LABEL: Loop Unroll: F[test_guard_as_branch] Loop %loop
-; CHECK-NEXT:    Loop Size = 9
+; CHECK-NEXT:    Loop Size = 8
 ; CHECK-NEXT:    runtime unrolling with count: 2
 entry:
   br label %loop
