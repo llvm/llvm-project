@@ -5080,6 +5080,10 @@ def flang_experimental_exec : Flag<["-"], "flang-experimental-exec">,
   Flags<[FlangOption, FlangOnlyOption, NoXarchOption, HelpHidden]>,
   HelpText<"Enable support for generating executables (experimental)">;
 
+def flang_experimental_hlfir : Flag<["-"], "flang-experimental-hlfir">,
+  Flags<[FlangOption, FC1Option, FlangOnlyOption, NoXarchOption, HelpHidden]>,
+  HelpText<"Use HLFIR lowering (experimental)">;
+
 //===----------------------------------------------------------------------===//
 // FLangOption + CoreOption + NoXarchOption
 //===----------------------------------------------------------------------===//
