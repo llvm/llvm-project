@@ -1177,6 +1177,8 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
         .add(MI.getOperand(2))
         .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
     transferImpOps(MI, MIB1, MIB1);
+    if (auto DebugNumber = MI.peekDebugInstrNum())
+      NewMI->setDebugInstrNum(DebugNumber);
     MI.eraseFromParent();
     return true;
   }

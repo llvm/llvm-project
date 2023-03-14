@@ -11,11 +11,24 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/Version.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <cstdio>
 #include <memory>
+
+using namespace llvm;
+
+static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
+
+static void PrintVersion(raw_ostream &OS) {
+  OS << clang::getClangToolFullVersion("nvptx-arch") << '\n';
+}
+// Mark all our options with this category, everything else (except for -version
+// and -help) will be hidden.
+static cl::OptionCategory NVPTXArchCategory("nvptx-arch options");
 
 #if DYNAMIC_CUDA
 typedef enum cudaError_enum {
@@ -79,6 +92,21 @@ static int handleError(CUresult Err) {
 }
 
 int main(int argc, char *argv[]) {
+  cl::HideUnrelatedOptions(NVPTXArchCategory);
+
+  cl::SetVersionPrinter(PrintVersion);
+  cl::ParseCommandLineOptions(
+      argc, argv,
+      "A tool to detect the presence of NVIDIA devices on the system. \n\n"
+      "The tool will output each detected GPU architecture separated by a\n"
+      "newline character. If multiple GPUs of the same architecture are found\n"
+      "a string will be printed for each\n");
+
+  if (Help) {
+    cl::PrintHelpMessage();
+    return 0;
+  }
+
   // Attempt to load the NVPTX driver runtime.
   if (llvm::Error Err = loadCUDA()) {
     logAllUnhandledErrors(std::move(Err), llvm::errs());

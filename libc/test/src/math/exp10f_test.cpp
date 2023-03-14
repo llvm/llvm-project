@@ -14,7 +14,6 @@
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include <math.h>
 
-#include <errno.h>
 #include <stdint.h>
 
 namespace mpfr = __llvm_libc::testing::mpfr;
@@ -120,7 +119,7 @@ TEST(LlvmLibcExp10fTest, InFloatRange) {
     // in the single-precision floating point range, then ignore comparing with
     // MPFR result as MPFR can still produce valid results because of its
     // wider precision.
-    if (isnan(result) || isinf(result) || errno != 0)
+    if (isnan(result) || isinf(result) || libc_errno != 0)
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, x,
                                    __llvm_libc::exp10f(x), 0.5);

@@ -748,17 +748,30 @@ void VPlan::print(raw_ostream &O) const {
 
   O << "VPlan '" << getName() << "' {";
 
+  bool AnyLiveIn = false;
   if (VectorTripCount.getNumUsers() > 0) {
     O << "\nLive-in ";
     VectorTripCount.printAsOperand(O, SlotTracker);
-    O << " = vector-trip-count\n";
+    O << " = vector-trip-count";
+    AnyLiveIn = true;
+  }
+
+  if (TripCount && TripCount->getNumUsers() > 0) {
+    O << "\nLive-in ";
+    TripCount->printAsOperand(O, SlotTracker);
+    O << " = original trip-count";
+    AnyLiveIn = true;
   }
 
   if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
     O << "\nLive-in ";
     BackedgeTakenCount->printAsOperand(O, SlotTracker);
-    O << " = backedge-taken count\n";
+    O << " = backedge-taken count";
+    AnyLiveIn = true;
   }
+
+  if (AnyLiveIn)
+    O << "\n";
 
   for (const VPBlockBase *Block : vp_depth_first_shallow(getEntry())) {
     O << '\n';
@@ -1101,6 +1114,8 @@ void VPSlotTracker::assignSlots(const VPlan &Plan) {
   assignSlot(&Plan.VectorTripCount);
   if (Plan.BackedgeTakenCount)
     assignSlot(Plan.BackedgeTakenCount);
+  if (Plan.TripCount)
+    assignSlot(Plan.TripCount);
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<const VPBlockBase *>>
       RPOT(VPBlockDeepTraversalWrapper<const VPBlockBase *>(Plan.getEntry()));

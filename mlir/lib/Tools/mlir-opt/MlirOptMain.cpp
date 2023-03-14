@@ -339,7 +339,7 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
   MlirOptMainConfig config = MlirOptMainConfig::createFromCLOptions();
   config.preloadDialectsInContext(preloadDialectsInContext);
 
-  // When reading from stdin and the input is a tty, it is often a user mistak
+  // When reading from stdin and the input is a tty, it is often a user mistake
   // and the process "appears to be stuck". Print a message to let the user know
   // about it!
   if (inputFilename == "-" &&

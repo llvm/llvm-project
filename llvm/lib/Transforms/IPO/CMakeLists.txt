@@ -31,7 +31,6 @@ add_llvm_component_library(LLVMipo
   ModuleInliner.cpp
   OpenMPOpt.cpp
   PartialInlining.cpp
-  PassManagerBuilder.cpp
   SampleContextTracker.cpp
   SampleProfile.cpp
   SampleProfileProbe.cpp
