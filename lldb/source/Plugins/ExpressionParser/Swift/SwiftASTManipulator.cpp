@@ -972,6 +972,7 @@ static void AddNodesToBeginningFunction(
       body->getRBraceLoc());
 
   function->setBody(new_function_body, function->getBodyKind());
+  function->setHasSingleExpressionBody(false);
 }
 
 bool SwiftASTManipulator::AddExternalVariables(
@@ -1081,9 +1082,10 @@ bool SwiftASTManipulator::AddExternalVariables(
         variable.m_decl->dump(ss);
         ss.flush();
 
-        log->Printf("[SwiftASTManipulator::AddExternalVariables] Injected "
-                    "variable %s",
-                    s.c_str());
+        LLDB_LOG(log,
+                 "[SwiftASTManipulator::AddExternalVariables] Injected "
+                 "variable {0} into {1}",
+                 s, containing_function->getName().getBaseIdentifier().str());
       }
 
       m_variables.push_back(variable);
