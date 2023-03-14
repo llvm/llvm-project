@@ -1,13 +1,10 @@
-//===-- StructuralHash.cpp - IR Hash for expensive checks -------*- C++ -*-===//
+//===-- StructuralHash.cpp - IR Hashing -------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-
-#ifdef EXPENSIVE_CHECKS
 
 #include "llvm/IR/StructuralHash.h"
 #include "llvm/IR/Function.h"
@@ -77,5 +74,3 @@ uint64_t llvm::StructuralHash(const Module &M) {
   H.update(M);
   return H.getHash();
 }
-
-#endif
