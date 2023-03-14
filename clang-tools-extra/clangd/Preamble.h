@@ -164,7 +164,7 @@ public:
   static constexpr llvm::StringLiteral HeaderName = "__preamble_patch__.h";
 
   llvm::ArrayRef<PragmaMark> marks() const;
-  MainFileMacros mainFileMacros() const;
+  const MainFileMacros &mainFileMacros() const;
 
 private:
   static PreamblePatch create(llvm::StringRef FileName,
@@ -183,6 +183,7 @@ private:
   PreambleBounds ModifiedBounds = {0, false};
   const PreambleData *Baseline = nullptr;
   std::vector<PragmaMark> PatchedMarks;
+  MainFileMacros PatchedMacros;
 };
 
 } // namespace clangd
