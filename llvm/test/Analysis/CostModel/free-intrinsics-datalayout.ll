@@ -10,8 +10,9 @@ define i32 @trivially_free() {
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.assume(i1 undef)
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.experimental.noalias.scope.decl(metadata !3)
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.sideeffect()
-; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.dbg.declare(metadata ptr undef, metadata !6, metadata !DIExpression()), !dbg !8
-; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.dbg.label(metadata !9), !dbg !8
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.dbg.assign(metadata ptr undef, metadata !6, metadata !DIExpression(), metadata !8, metadata ptr undef, metadata !DIExpression()), !dbg !9
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.dbg.declare(metadata ptr undef, metadata !6, metadata !DIExpression()), !dbg !9
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.dbg.label(metadata !10), !dbg !9
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = call ptr @llvm.invariant.start.p0(i64 1, ptr undef)
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.invariant.end.p0(ptr undef, i64 1, ptr undef)
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a2 = call ptr @llvm.launder.invariant.group.p0(ptr undef)
@@ -29,8 +30,9 @@ define i32 @trivially_free() {
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.assume(i1 undef)
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.experimental.noalias.scope.decl(metadata !3)
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.sideeffect()
-; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.dbg.declare(metadata ptr undef, metadata !6, metadata !DIExpression()), !dbg !8
-; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.dbg.label(metadata !9), !dbg !8
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.dbg.assign(metadata ptr undef, metadata !6, metadata !DIExpression(), metadata !8, metadata ptr undef, metadata !DIExpression()), !dbg !9
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.dbg.declare(metadata ptr undef, metadata !6, metadata !DIExpression()), !dbg !9
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.dbg.label(metadata !10), !dbg !9
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = call ptr @llvm.invariant.start.p0(i64 1, ptr undef)
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.invariant.end.p0(ptr undef, i64 1, ptr undef)
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a2 = call ptr @llvm.launder.invariant.group.p0(ptr undef)
@@ -47,6 +49,7 @@ define i32 @trivially_free() {
   call void @llvm.assume(i1 undef)
   call void @llvm.experimental.noalias.scope.decl(metadata !4)
   call void @llvm.sideeffect()
+  call void @llvm.dbg.assign(metadata ptr undef, metadata !0, metadata !DIExpression(), metadata !10, metadata ptr undef, metadata !DIExpression()), !dbg !8
   call void @llvm.dbg.declare(metadata ptr undef, metadata !0, metadata !DIExpression()), !dbg !8
   call void @llvm.dbg.value(metadata i64 undef, i64 undef, metadata !DIExpression(), metadata !DIExpression()), !dbg !8
   call void @llvm.dbg.label(metadata !2), !dbg !8
@@ -67,6 +70,7 @@ declare i32 @llvm.annotation.i32(i32, ptr, ptr, i32)
 declare void @llvm.assume(i1)
 declare void @llvm.experimental.noalias.scope.decl(metadata)
 declare void @llvm.sideeffect()
+declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 declare void @llvm.dbg.label(metadata)
@@ -94,3 +98,4 @@ declare void @llvm.var.annotation(ptr, ptr, ptr, i32, ptr)
 !7 = !{i32 2, !"Debug Info Version", i32 3}
 !8 = !DILocation(line: 0, scope: !1)
 !9 = distinct !DICompileUnit(language: DW_LANG_C11, file: !3, producer: "clang")
+!10 = distinct !DIAssignID()
