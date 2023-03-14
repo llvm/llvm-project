@@ -60,16 +60,16 @@ static std::vector<std::string> splitString(std::string S, char Separator) {
 void ModuleDepCollector::addOutputPaths(CompilerInvocation &CI,
                                         ModuleDeps &Deps) {
   CI.getFrontendOpts().OutputFile =
-      Consumer.lookupModuleOutput(Deps.ID, ModuleOutputKind::ModuleFile);
+      Controller.lookupModuleOutput(Deps.ID, ModuleOutputKind::ModuleFile);
   if (!CI.getDiagnosticOpts().DiagnosticSerializationFile.empty())
     CI.getDiagnosticOpts().DiagnosticSerializationFile =
-        Consumer.lookupModuleOutput(
+        Controller.lookupModuleOutput(
             Deps.ID, ModuleOutputKind::DiagnosticSerializationFile);
   if (!CI.getDependencyOutputOpts().OutputFile.empty()) {
-    CI.getDependencyOutputOpts().OutputFile =
-        Consumer.lookupModuleOutput(Deps.ID, ModuleOutputKind::DependencyFile);
+    CI.getDependencyOutputOpts().OutputFile = Controller.lookupModuleOutput(
+        Deps.ID, ModuleOutputKind::DependencyFile);
     CI.getDependencyOutputOpts().Targets =
-        splitString(Consumer.lookupModuleOutput(
+        splitString(Controller.lookupModuleOutput(
                         Deps.ID, ModuleOutputKind::DependencyTargets),
                     '\0');
     if (!CI.getDependencyOutputOpts().OutputFile.empty() &&
@@ -220,7 +220,7 @@ void ModuleDepCollector::addModuleFiles(
     CompilerInvocation &CI, ArrayRef<ModuleID> ClangModuleDeps) const {
   for (const ModuleID &MID : ClangModuleDeps) {
     std::string PCMPath =
-        Consumer.lookupModuleOutput(MID, ModuleOutputKind::ModuleFile);
+        Controller.lookupModuleOutput(MID, ModuleOutputKind::ModuleFile);
 
     ModuleDeps *MD = ModuleDepsByID.lookup(MID);
     assert(MD && "Inconsistent dependency info");
@@ -499,7 +499,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
 
   auto &Diags = MDC.ScanInstance.getDiagnostics();
 
-  if (auto E = MDC.Consumer.finalizeModuleInvocation(CI, MD))
+  if (auto E = MDC.Controller.finalizeModuleInvocation(CI, MD))
     Diags.Report(diag::err_cas_depscan_failed) << std::move(E);
 
   MDC.associateWithContextHash(CI, MD);
@@ -603,10 +603,11 @@ void ModuleDepCollectorPP::addAffectingModule(
 ModuleDepCollector::ModuleDepCollector(
     std::unique_ptr<DependencyOutputOptions> Opts,
     CompilerInstance &ScanInstance, DependencyConsumer &C,
-    CompilerInvocation OriginalCI, bool OptimizeArgs, bool EagerLoadModules)
-    : ScanInstance(ScanInstance), Consumer(C), Opts(std::move(Opts)),
-      OriginalInvocation(std::move(OriginalCI)), OptimizeArgs(OptimizeArgs),
-      EagerLoadModules(EagerLoadModules) {}
+    DependencyActionController &Controller, CompilerInvocation OriginalCI,
+    bool OptimizeArgs, bool EagerLoadModules)
+    : ScanInstance(ScanInstance), Consumer(C), Controller(Controller),
+      Opts(std::move(Opts)), OriginalInvocation(std::move(OriginalCI)),
+      OptimizeArgs(OptimizeArgs), EagerLoadModules(EagerLoadModules) {}
 
 void ModuleDepCollector::attachToPreprocessor(Preprocessor &PP) {
   PP.addPPCallbacks(std::make_unique<ModuleDepCollectorPP>(*this));

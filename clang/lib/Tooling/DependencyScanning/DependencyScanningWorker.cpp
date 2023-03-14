@@ -561,8 +561,8 @@ DependencyScanningWorker::DependencyScanningWorker(
     DependencyScanningService &Service,
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
     : Format(Service.getFormat()), OptimizeArgs(Service.canOptimizeArgs()),
-      CASOpts(Service.getCASOpts()), UseCAS(Service.useCASScanning()),
-      EagerLoadModules(Service.shouldEagerLoadModules()) {
+      EagerLoadModules(Service.shouldEagerLoadModules()),
+      CASOpts(Service.getCASOpts()), UseCAS(Service.useCASScanning()) {
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
   PCHContainerOps->registerReader(
       std::make_unique<ObjectFilePCHContainerReader>());

@@ -84,6 +84,13 @@ public:
   virtual void handleContextHash(std::string Hash) = 0;
 
   virtual void handleCASFileSystemRootID(cas::CASID ID) = 0;
+};
+
+/// Dependency scanner callbacks that are used during scanning to influence the
+/// behaviour of the scan - for example, to customize the scanned invocations.
+class DependencyActionController {
+public:
+  virtual ~DependencyActionController();
 
   virtual std::string lookupModuleOutput(const ModuleID &ID,
                                          ModuleOutputKind Kind) = 0;
@@ -152,16 +159,15 @@ public:
   bool computeDependencies(StringRef WorkingDirectory,
                            const std::vector<std::string> &CommandLine,
                            DependencyConsumer &DepConsumer,
+                           DependencyActionController &Controller,
                            DiagnosticConsumer &DiagConsumer,
                            llvm::Optional<StringRef> ModuleName = None);
   /// \returns A \c StringError with the diagnostic output if clang errors
   /// occurred, success otherwise.
-  llvm::Error computeDependencies(StringRef WorkingDirectory,
-                                  const std::vector<std::string> &CommandLine,
-                                  DependencyConsumer &Consumer,
-                                  llvm::Optional<StringRef> ModuleName = None);
-
-  ScanningOutputFormat getFormat() const { return Format; }
+  llvm::Error computeDependencies(
+      StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
+      DependencyConsumer &Consumer, DependencyActionController &Controller,
+      llvm::Optional<StringRef> ModuleName = None);
 
   /// Scan from a compiler invocation.
   /// If \p DiagGenerationAsCompilation is true it will generate error
@@ -176,7 +182,6 @@ public:
 
   ScanningOutputFormat getScanningFormat() const { return Format; }
 
-  llvm::vfs::FileSystem &getRealFS() { return *BaseFS; }
   CachingOnDiskFileSystemPtr getCASFS() { return CacheFS; }
   bool useCAS() const { return UseCAS; }
   const CASOptions &getCASOpts() const { return CASOpts; }
@@ -201,6 +206,8 @@ private:
   ScanningOutputFormat Format;
   /// Whether to optimize the modules' command-line arguments.
   bool OptimizeArgs;
+  /// Whether to set up command-lines to load PCM files eagerly.
+  bool EagerLoadModules;
 
   /// The caching file system.
   CachingOnDiskFileSystemPtr CacheFS;
@@ -208,9 +215,6 @@ private:
   llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS;
   CASOptions CASOpts;
   bool UseCAS;
-
-  /// Whether to set up command-lines to load PCM files eagerly.
-  bool EagerLoadModules;
 };
 
 } // end namespace dependencies
