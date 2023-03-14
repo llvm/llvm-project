@@ -3029,17 +3029,9 @@ CINDEX_LINKAGE unsigned long long
 clang_getEnumConstantDeclUnsignedValue(CXCursor C);
 
 /**
- * Returns non-zero if a field declaration has a bit width expression.
- *
- * If the cursor does not reference a bit field declaration 0 is returned.
- */
-CINDEX_LINKAGE unsigned clang_isBitFieldDecl(CXCursor C);
-
-/**
  * Retrieve the bit width of a bit field declaration as an integer.
  *
- * If the cursor does not reference a bit field, or if the bit field's width
- * expression cannot be evaluated, -1 is returned.
+ * If a cursor that is not a bit field declaration is passed in, -1 is returned.
  */
 CINDEX_LINKAGE int clang_getFieldDeclBitWidth(CXCursor C);
 
