@@ -45,8 +45,10 @@ public:
   InMemoryActionCache()
       : ActionCache(builtin::BuiltinCASContext::getDefaultContext()) {}
 
-  Error putImpl(ArrayRef<uint8_t> ActionKey, const CASID &Result) final;
-  Expected<Optional<CASID>> getImpl(ArrayRef<uint8_t> ActionKey) const final;
+  Error putImpl(ArrayRef<uint8_t> ActionKey, const CASID &Result,
+                bool Globally) final;
+  Expected<Optional<CASID>> getImpl(ArrayRef<uint8_t> ActionKey,
+                                    bool Globally) const final;
 
 private:
   using DataT = CacheEntry<sizeof(HashType)>;
@@ -57,8 +59,10 @@ private:
 
 class OnDiskActionCache final : public ActionCache {
 public:
-  Error putImpl(ArrayRef<uint8_t> ActionKey, const CASID &Result) final;
-  Expected<Optional<CASID>> getImpl(ArrayRef<uint8_t> ActionKey) const final;
+  Error putImpl(ArrayRef<uint8_t> ActionKey, const CASID &Result,
+                bool Globally) final;
+  Expected<Optional<CASID>> getImpl(ArrayRef<uint8_t> ActionKey,
+                                    bool Globally) const final;
 
   static Expected<std::unique_ptr<OnDiskActionCache>> create(StringRef Path);
 
@@ -73,8 +77,10 @@ private:
 
 class UnifiedOnDiskActionCache final : public ActionCache {
 public:
-  Error putImpl(ArrayRef<uint8_t> ActionKey, const CASID &Result) final;
-  Expected<Optional<CASID>> getImpl(ArrayRef<uint8_t> ActionKey) const final;
+  Error putImpl(ArrayRef<uint8_t> ActionKey, const CASID &Result,
+                bool Globally) final;
+  Expected<Optional<CASID>> getImpl(ArrayRef<uint8_t> ActionKey,
+                                    bool Globally) const final;
 
   UnifiedOnDiskActionCache(std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB);
 
@@ -102,14 +108,15 @@ static Error createResultCachePoisonedError(StringRef Key,
 }
 
 Expected<Optional<CASID>>
-InMemoryActionCache::getImpl(ArrayRef<uint8_t> Key) const {
+InMemoryActionCache::getImpl(ArrayRef<uint8_t> Key, bool /*Globally*/) const {
   auto Result = Cache.find(Key);
   if (!Result)
     return std::nullopt;
   return CASID::create(&getContext(), toStringRef(Result->Data.getValue()));
 }
 
-Error InMemoryActionCache::putImpl(ArrayRef<uint8_t> Key, const CASID &Result) {
+Error InMemoryActionCache::putImpl(ArrayRef<uint8_t> Key, const CASID &Result,
+                                   bool /*Globally*/) {
   DataT Expected(Result.getHash());
   const InMemoryCacheT::value_type &Cached = *Cache.insertLazy(
       Key, [&](auto ValueConstructor) { ValueConstructor.emplace(Expected); });
@@ -159,8 +166,8 @@ OnDiskActionCache::create(StringRef AbsPath) {
       new OnDiskActionCache(std::move(DB)));
 }
 
-Expected<Optional<CASID>>
-OnDiskActionCache::getImpl(ArrayRef<uint8_t> Key) const {
+Expected<Optional<CASID>> OnDiskActionCache::getImpl(ArrayRef<uint8_t> Key,
+                                                     bool /*Globally*/) const {
   std::optional<ArrayRef<char>> Val;
   if (Error E = DB->get(Key).moveInto(Val))
     return std::move(E);
@@ -169,7 +176,8 @@ OnDiskActionCache::getImpl(ArrayRef<uint8_t> Key) const {
   return CASID::create(&getContext(), toStringRef(*Val));
 }
 
-Error OnDiskActionCache::putImpl(ArrayRef<uint8_t> Key, const CASID &Result) {
+Error OnDiskActionCache::putImpl(ArrayRef<uint8_t> Key, const CASID &Result,
+                                 bool /*Globally*/) {
   auto ResultHash = Result.getHash();
   ArrayRef Expected((const char *)ResultHash.data(), ResultHash.size());
   ArrayRef<char> Observed;
@@ -190,7 +198,8 @@ UnifiedOnDiskActionCache::UnifiedOnDiskActionCache(
       UniDB(std::move(UniDB)) {}
 
 Expected<Optional<CASID>>
-UnifiedOnDiskActionCache::getImpl(ArrayRef<uint8_t> Key) const {
+UnifiedOnDiskActionCache::getImpl(ArrayRef<uint8_t> Key,
+                                  bool /*Globally*/) const {
   std::optional<ondisk::ObjectID> Val;
   if (Error E = UniDB->KVGet(Key).moveInto(Val))
     return std::move(E);
@@ -201,7 +210,8 @@ UnifiedOnDiskActionCache::getImpl(ArrayRef<uint8_t> Key) const {
 }
 
 Error UnifiedOnDiskActionCache::putImpl(ArrayRef<uint8_t> Key,
-                                        const CASID &Result) {
+                                        const CASID &Result,
+                                        bool /*Globally*/) {
   ondisk::ObjectID Expected =
       UniDB->getGraphDB().getReference(Result.getHash());
   std::optional<ondisk::ObjectID> Observed;

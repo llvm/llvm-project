@@ -6,6 +6,7 @@ llcas_cas_dispose
 llcas_cas_get_hash_schema_name
 llcas_cas_get_objectid
 llcas_cas_load_object
+llcas_cas_load_object_async
 llcas_cas_options_create
 llcas_cas_options_dispose
 llcas_cas_options_set_client_version

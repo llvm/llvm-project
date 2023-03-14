@@ -86,7 +86,7 @@ void CASOptions::initCache(DiagnosticsEngine &Diags) const {
   StringRef CASPath = Cache.Config.CASPath;
 
   if (!PluginPath.empty()) {
-    std::pair<std::unique_ptr<ObjectStore>, std::unique_ptr<ActionCache>> DBs;
+    std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>> DBs;
     if (llvm::Error E =
             createPluginCASDatabases(PluginPath, CASPath, PluginOptions)
                 .moveInto(DBs)) {

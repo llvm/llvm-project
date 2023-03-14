@@ -31,12 +31,8 @@ CASDependencyCollector::CASDependencyCollector(
       CAS(CAS), Callback(std::move(Callback)) {}
 
 llvm::Error CASDependencyCollector::replay(const DependencyOutputOptions &Opts,
-                                           ObjectStore &CAS, ObjectRef DepsRef,
+                                           ObjectStore &CAS, ObjectProxy Refs,
                                            llvm::raw_ostream &OS) {
-  auto Refs = CAS.getProxy(DepsRef);
-  if (!Refs)
-    return Refs.takeError();
-
   CASDependencyCollector DC(Opts, CAS, nullptr);
 
   // Add the filenames from DependencyOutputOptions::ExtraDeps. These are kept
@@ -47,7 +43,7 @@ llvm::Error CASDependencyCollector::replay(const DependencyOutputOptions &Opts,
     DC.addDependency(Dep.first);
   }
 
-  auto Err = Refs->forEachReference([&](ObjectRef Ref) -> llvm::Error {
+  auto Err = Refs.forEachReference([&](ObjectRef Ref) -> llvm::Error {
     auto PathHandle = CAS.getProxy(Ref);
     if (!PathHandle)
       return PathHandle.takeError();

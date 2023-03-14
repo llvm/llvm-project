@@ -185,6 +185,17 @@ LLCAS_PUBLIC llcas_lookup_result_t llcas_cas_load_object(
     llcas_cas_t, llcas_objectid_t, llcas_loaded_object_t *, char **error);
 
 /**
+ * Like \c llcas_cas_load_object but loading happens via a callback function.
+ * Whether the call is asynchronous or not depends on the implementation.
+ *
+ * \param ctx_cb pointer to pass to the callback function.
+ *
+ */
+LLCAS_PUBLIC void llcas_cas_load_object_async(llcas_cas_t, llcas_objectid_t,
+                                              void *ctx_cb,
+                                              llcas_cas_load_object_cb);
+
+/**
  * Stores the object with the provided data buffer and \c llcas_objectid_t
  * references, and provides its associated \c llcas_objectid_t.
  *
@@ -234,18 +245,25 @@ LLCAS_PUBLIC llcas_objectid_t llcas_object_refs_get_id(llcas_cas_t,
  * Retrieves the \c llcas_objectid_t value associated with a \p key.
  *
  * \param p_value pointer to store the returned \c llcas_objectid_t object.
+ * \param globally if true it is a hint to the underlying implementation that
+ * the lookup is profitable to be done on a distributed caching level, not just
+ * locally. The implementation is free to ignore this flag.
  * \param error optional pointer to receive an error message if an error
  * occurred. If set, the memory it points to needs to be released via
  * \c llcas_string_dispose.
  * \returns one of \c llcas_lookup_result_t.
  */
 LLCAS_PUBLIC llcas_lookup_result_t llcas_actioncache_get_for_digest(
-    llcas_cas_t, llcas_digest_t key, llcas_objectid_t *p_value, char **error);
+    llcas_cas_t, llcas_digest_t key, llcas_objectid_t *p_value, bool globally,
+    char **error);
 
 /**
  * Associates a \c llcas_objectid_t \p value with a \p key. It is invalid to set
  * a different \p value to the same \p key.
  *
+ * \param globally if true it is a hint to the underlying implementation that
+ * the association is profitable to be done on a distributed caching level, not
+ * just locally. The implementation is free to ignore this flag.
  * \param error optional pointer to receive an error message if an error
  * occurred. If set, the memory it points to needs to be released via
  * \c llcas_string_dispose.
@@ -254,7 +272,7 @@ LLCAS_PUBLIC llcas_lookup_result_t llcas_actioncache_get_for_digest(
 LLCAS_PUBLIC bool llcas_actioncache_put_for_digest(llcas_cas_t,
                                                    llcas_digest_t key,
                                                    llcas_objectid_t value,
-                                                   char **error);
+                                                   bool globally, char **error);
 
 LLVM_C_EXTERN_C_END
 

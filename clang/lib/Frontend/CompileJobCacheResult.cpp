@@ -34,6 +34,43 @@ Error CompileJobCacheResult::forEachOutput(
   return Error::success();
 }
 
+Error CompileJobCacheResult::forEachLoadedOutput(
+    llvm::function_ref<Error(Output, std::optional<ObjectProxy>)> Callback) {
+  // Kick-off materialization for all outputs concurrently.
+  SmallVector<std::future<Expected<std::optional<ObjectProxy>>>, 4>
+      FutureOutputs;
+  size_t Count = getNumOutputs();
+  for (size_t I = 0; I < Count; ++I) {
+    ObjectRef Ref = getOutputObject(I);
+    FutureOutputs.push_back(getCAS().getProxyAsync(Ref));
+  }
+
+  // Make sure all the outputs have materialized.
+  std::optional<Error> OccurredError;
+  SmallVector<std::optional<ObjectProxy>, 4> Outputs;
+  for (auto &FutureOutput : FutureOutputs) {
+    auto Obj = FutureOutput.get();
+    if (!Obj) {
+      if (!OccurredError)
+        OccurredError = Obj.takeError();
+      else
+        OccurredError =
+            llvm::joinErrors(std::move(*OccurredError), Obj.takeError());
+      continue;
+    }
+    Outputs.push_back(*Obj);
+  }
+  if (OccurredError)
+    return std::move(*OccurredError);
+
+  // Pass the loaded outputs.
+  for (size_t I = 0; I < Count; ++I) {
+    if (auto Err = Callback({getOutputObject(I), getOutputKind(I)}, Outputs[I]))
+      return Err;
+  }
+  return Error::success();
+}
+
 std::optional<CompileJobCacheResult::Output>
 CompileJobCacheResult::getOutput(OutputKind Kind) const {
   size_t Count = getNumOutputs();
@@ -45,25 +82,21 @@ CompileJobCacheResult::getOutput(OutputKind Kind) const {
   return std::nullopt;
 }
 
-static void printOutputKind(llvm::raw_ostream &OS,
-                            CompileJobCacheResult::OutputKind Kind) {
+StringRef CompileJobCacheResult::getOutputKindName(OutputKind Kind) {
   switch (Kind) {
-  case CompileJobCacheResult::OutputKind::MainOutput:
-    OS << "main   ";
-    break;
-  case CompileJobCacheResult::OutputKind::Dependencies:
-    OS << "deps   ";
-    break;
-  case CompileJobCacheResult::OutputKind::SerializedDiagnostics:
-    OS << "diags  ";
-    break;
+  case OutputKind::MainOutput:
+    return "main";
+  case OutputKind::SerializedDiagnostics:
+    return "deps";
+  case OutputKind::Dependencies:
+    return "diags";
   }
 }
 
 Error CompileJobCacheResult::print(llvm::raw_ostream &OS) {
   return forEachOutput([&](Output O) -> Error {
-    printOutputKind(OS, O.Kind);
-    OS << ' ' << getCAS().getID(O.Object) << '\n';
+    OS << getOutputKindName(O.Kind) << "    " << getCAS().getID(O.Object)
+       << '\n';
     return Error::success();
   });
 }

@@ -9,9 +9,11 @@
 #include "llvm/CAS/ObjectStore.h"
 #include "BuiltinCAS.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
@@ -56,6 +58,23 @@ void ReferenceBase::print(raw_ostream &OS, const ObjectRef &This) const {
   printReferenceBase(OS, "object-ref", InternalRef, ID);
 }
 
+void ObjectStore::loadIfExistsAsync(
+    ObjectRef Ref,
+    unique_function<void(Expected<std::optional<ObjectHandle>>)> Callback) {
+  // The default implementation is synchronous.
+  Callback(loadIfExists(Ref));
+}
+
+Expected<ObjectHandle> ObjectStore::load(ObjectRef Ref) {
+  std::optional<ObjectHandle> Handle;
+  if (Error E = loadIfExists(Ref).moveInto(Handle))
+    return std::move(E);
+  if (!Handle)
+    return createStringError(errc::invalid_argument,
+                             "missing object '" + getID(Ref).toString() + "'");
+  return *Handle;
+}
+
 std::unique_ptr<MemoryBuffer>
 ObjectStore::getMemoryBuffer(ObjectHandle Node, StringRef Name,
                              bool RequiresNullTerminator) {
@@ -86,6 +105,36 @@ Expected<ObjectProxy> ObjectStore::getProxy(ObjectRef Ref) {
     return std::move(E);
 
   return ObjectProxy::load(*this, Ref, *H);
+}
+
+Expected<std::optional<ObjectProxy>>
+ObjectStore::getProxyIfExists(ObjectRef Ref) {
+  Optional<ObjectHandle> H;
+  if (Error E = loadIfExists(Ref).moveInto(H))
+    return std::move(E);
+  if (!H)
+    return std::nullopt;
+  return ObjectProxy::load(*this, Ref, *H);
+}
+
+std::future<Expected<std::optional<ObjectProxy>>>
+ObjectStore::getProxyAsync(ObjectRef Ref) {
+  std::promise<Expected<std::optional<ObjectProxy>>> Promise;
+  auto Future = Promise.get_future();
+  // FIXME: there is potential for use-after-free for the 'this' pointer.
+  // Either we should always allocate shared pointers for \c ObjectStore objects
+  // and pass \c shared_from_this() or expect that the caller will not release
+  // the \c ObjectStore before the callback returns.
+  loadIfExistsAsync(Ref, [this, Ref, Promise = std::move(Promise)](
+                             Expected<std::optional<ObjectHandle>> H) mutable {
+    if (!H)
+      Promise.set_value(H.takeError());
+    else if (!*H)
+      Promise.set_value(std::nullopt);
+    else
+      Promise.set_value(ObjectProxy::load(*this, Ref, **H));
+  });
+  return Future;
 }
 
 Error ObjectStore::createUnknownObjectError(const CASID &ID) {

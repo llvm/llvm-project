@@ -116,7 +116,7 @@ public:
                                ArrayRef<char> Data) final;
   CASID getID(ObjectRef Ref) const final;
   Optional<ObjectRef> getReference(const CASID &ID) const final;
-  Expected<ObjectHandle> load(ObjectRef Ref) final;
+  Expected<std::optional<ObjectHandle>> loadIfExists(ObjectRef Ref) final;
   Error validate(const CASID &ID) final {
     // Not supported yet. Always return success.
     return Error::success();
@@ -214,8 +214,10 @@ class GRPCActionCache : public ActionCache {
 public:
   GRPCActionCache(StringRef Path, Error &Err);
 
-  Expected<Optional<CASID>> getImpl(ArrayRef<uint8_t> ResolvedKey) const final;
-  Error putImpl(ArrayRef<uint8_t> ResolvedKey, const CASID &Result) final;
+  Expected<Optional<CASID>> getImpl(ArrayRef<uint8_t> ResolvedKey,
+                                    bool Globally) const final;
+  Error putImpl(ArrayRef<uint8_t> ResolvedKey, const CASID &Result,
+                bool Globally) final;
 
 private:
   std::unique_ptr<remote::KeyValueDBClient> KVDB;
@@ -301,7 +303,8 @@ Optional<ObjectRef> GRPCRelayCAS::getReference(const CASID &ID) const {
   return toReference(I);
 }
 
-Expected<ObjectHandle> GRPCRelayCAS::load(ObjectRef Ref) {
+Expected<std::optional<ObjectHandle>>
+GRPCRelayCAS::loadIfExists(ObjectRef Ref) {
   auto &I = asInMemoryIndexValue(Ref);
 
   // Return the existing value if we have one.
@@ -396,7 +399,8 @@ GRPCActionCache::GRPCActionCache(StringRef Path, Error &Err)
 }
 
 Expected<Optional<CASID>>
-GRPCActionCache::getImpl(ArrayRef<uint8_t> ResolvedKey) const {
+GRPCActionCache::getImpl(ArrayRef<uint8_t> ResolvedKey,
+                         bool /*Globally*/) const {
   auto Response = KVDB->getValueSync(ResolvedKey);
   if (!Response)
     return Response.takeError();
@@ -413,7 +417,7 @@ GRPCActionCache::getImpl(ArrayRef<uint8_t> ResolvedKey) const {
 }
 
 Error GRPCActionCache::putImpl(ArrayRef<uint8_t> ResolvedKey,
-                               const CASID &Result) {
+                               const CASID &Result, bool /*Globally*/) {
   remote::KeyValueDBClient::ValueTy CompResult;
   CompResult["CASID"] = toStringRef(Result.getHash()).str();
   if (auto Err = KVDB->putValueSync(ResolvedKey, CompResult))
