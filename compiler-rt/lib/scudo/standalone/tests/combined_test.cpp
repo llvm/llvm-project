@@ -92,7 +92,7 @@ template <class TypeParam> struct ScudoCombinedTest : public Test {
     Allocator = std::make_unique<AllocatorT>();
   }
   ~ScudoCombinedTest() {
-    Allocator->releaseToOS();
+    Allocator->releaseToOS(scudo::ReleaseToOS::Force);
     UseQuarantine = true;
   }
 
@@ -412,7 +412,7 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, DisableMemoryTagging) {
     reinterpret_cast<char *>(P)[2048] = 0xaa;
     Allocator->deallocate(P, Origin);
 
-    Allocator->releaseToOS();
+    Allocator->releaseToOS(scudo::ReleaseToOS::Force);
   }
 }
 
@@ -488,7 +488,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ThreadedCombined) {
   }
   for (auto &T : Threads)
     T.join();
-  Allocator->releaseToOS();
+  Allocator->releaseToOS(scudo::ReleaseToOS::Force);
 }
 
 // Test that multiple instantiations of the allocator have not messed up the
@@ -601,7 +601,7 @@ TEST(ScudoCombinedTest, FullRegion) {
 // operation without issue.
 SCUDO_TYPED_TEST(ScudoCombinedTest, ReleaseToOS) {
   auto *Allocator = this->Allocator.get();
-  Allocator->releaseToOS();
+  Allocator->releaseToOS(scudo::ReleaseToOS::Force);
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, OddEven) {
@@ -740,7 +740,7 @@ TEST(ScudoCombinedTest, BasicTrustyConfig) {
   auto *TSD = Allocator->getTSDRegistry()->getTSDAndLock(&UnlockRequired);
   TSD->getCache().drain();
 
-  Allocator->releaseToOS();
+  Allocator->releaseToOS(scudo::ReleaseToOS::Force);
 }
 
 #endif
