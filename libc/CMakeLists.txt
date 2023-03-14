@@ -1,5 +1,12 @@
 cmake_minimum_required(VERSION 3.13.4)
 
+# Include LLVM's cmake policies.
+if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
+  set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+endif()
+include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
+  NO_POLICY_SCOPE)
+
 # Default to C++17
 set(CMAKE_CXX_STANDARD 17)
 
