@@ -7,7 +7,6 @@ add_libc_unittest(
   SRCS
     getrandom_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.math
     libc.include.sys_random
     libc.src.errno.errno

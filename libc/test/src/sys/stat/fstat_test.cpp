@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/sys/stat/fstat.h"
 #include "src/unistd/close.h"
@@ -14,7 +15,6 @@
 #include "test/UnitTest/Test.h"
 #include "utils/testutils/FDReader.h"
 
-#include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 
@@ -27,11 +27,11 @@ TEST(LlvmLibcFStatTest, CreatAndReadMode) {
   // make it readonly using chmod. We test that chmod actually succeeded by
   // trying to open the file for writing and failing.
   constexpr const char *TEST_FILE = "testdata/fstat.test";
-  errno = 0;
+  libc_errno = 0;
 
   int fd = __llvm_libc::open(TEST_FILE, O_CREAT | O_WRONLY, S_IRWXU);
   ASSERT_GT(fd, 0);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
 
   struct stat statbuf;
   ASSERT_THAT(__llvm_libc::fstat(fd, &statbuf), Succeeds(0));
@@ -43,9 +43,9 @@ TEST(LlvmLibcFStatTest, CreatAndReadMode) {
 }
 
 TEST(LlvmLibcFStatTest, NonExistentFile) {
-  errno = 0;
+  libc_errno = 0;
   using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
   struct stat statbuf;
   ASSERT_THAT(__llvm_libc::fstat(-1, &statbuf), Fails(EBADF));
-  errno = 0;
+  libc_errno = 0;
 }
