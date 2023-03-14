@@ -1710,36 +1710,30 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     return ParseResult::unrecoverable_error;
   }
 
-  if (log) {
+  auto dumpModule = [&](const char *msg) {
     std::string s;
     llvm::raw_string_ostream ss(s);
     parsed_expr->source_file.dump(ss);
     ss.flush();
+    LLDB_LOG(log, "\n{0}\n\n{1}\n", msg, s);
+  };
 
-    log->Printf("Source file before type checking:");
-    log->PutCString(s.c_str());
-  }
+  if (log)
+    dumpModule("Module before type checking:");
 
   swift::bindExtensions(parsed_expr->module);
   swift::performTypeChecking(parsed_expr->source_file);
+
+  if (log)
+    dumpModule("Module after type checking:");
 
   if (m_swift_ast_ctx.HasErrors()) {
     DiagnoseSwiftASTContextError();
     return ParseResult::unrecoverable_error;
   }
-  if (log) {
-    std::string s;
-    llvm::raw_string_ostream ss(s);
-    parsed_expr->source_file.dump(ss);
-    ss.flush();
 
-    log->Printf("Source file after type checking:");
-    log->PutCString(s.c_str());
-  }
-
-  if (repl) {
+  if (repl)
     parsed_expr->code_manipulator->MakeDeclarationsPublic();
-  }
 
   Status error;
   if (!playground) {
