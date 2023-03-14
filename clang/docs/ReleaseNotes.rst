@@ -315,6 +315,10 @@ libclang
   ``clang_CXIndex_setInvocationEmissionPathOption`` in favor of the new
   function ``clang_createIndexWithOptions`` in order to improve thread safety.
 
+- Added check in ``clang_getFieldDeclBitWidth`` for whether a bit-field
+  has an evaluable bit width. Fixes undefined behavior when called on a
+  bit-field whose width depends on a template paramter.
+
 Static Analyzer
 ---------------
 - Fix incorrect alignment attribute on the this parameter of certain
