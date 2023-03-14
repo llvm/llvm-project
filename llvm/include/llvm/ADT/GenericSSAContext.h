@@ -53,6 +53,11 @@ public:
   // indicated by the compiler.
   using FunctionT = typename _FunctionT::invalidTemplateInstanceError;
 
+  // A UseT represents a data-edge from the defining instruction to the using
+  // instruction.
+  //
+  // using UseT = ...
+
   // Initialize the SSA context with information about the FunctionT being
   // processed.
   //
