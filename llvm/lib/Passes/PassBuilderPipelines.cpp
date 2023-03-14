@@ -1685,6 +1685,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // keep one copy of each constant.
   MPM.addPass(ConstantMergePass());
 
+  // Remove unused arguments from functions.
+  MPM.addPass(DeadArgumentEliminationPass());
+
   // Reduce the code after globalopt and ipsccp.  Both can open up significant
   // simplification opportunities, and both can propagate functions through
   // function pointers.  When this happens, we often have to resolve varargs
@@ -1721,9 +1724,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // If we didn't decide to inline a function, check to see if we can
   // transform it to pass arguments by value instead of by reference.
   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(ArgumentPromotionPass()));
-
-  // Remove unused arguments from functions.
-  MPM.addPass(DeadArgumentEliminationPass());
 
   FunctionPassManager FPM;
   // The IPO Passes may leave cruft around. Clean up after them.
