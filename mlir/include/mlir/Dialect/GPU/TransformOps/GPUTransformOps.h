@@ -33,22 +33,6 @@ class DialectRegistry;
 namespace transform {
 namespace gpu {
 
-/// Search `scf.forall` ops nested under `target` and map each such op to GPU
-/// threads. Mapping is one-to-one and the induction variables of `scf.forall`
-/// are rewritten to gpu.thread_id according to the thread_dim_mapping
-/// attribute.
-/// Sibling `scf.forall` are supported in which case, the union of the number of
-/// threads is computed and may result in predication.
-/// Dynamic, `scf.forall` trip counts are currently not supported.
-/// Dynamic block dim sizes are currently not supported.
-DiagnosedSilenceableFailure mapNestedForallToThreadsImpl(
-    RewriterBase &rewriter, Operation *target,
-    const SmallVectorImpl<int64_t> &blockDim,
-    function_ref<void(RewriterBase &, scf::ForallOp, SmallVectorImpl<Value> &)>
-        threadIdGenerator,
-    bool syncAfterDistribute, std::optional<TransformOpInterface> transformOp,
-    const ArrayRef<DeviceMappingAttrInterface> &threadMappingAttributes);
-
 /// Map the top level `scf.forall` op to GPU Thread Blocks.
 /// Mapping is one-to-one and the induction variables of `scf.forall` are
 /// rewritten to gpu.block_id according to the thread_dim_apping attribute.
@@ -60,6 +44,22 @@ DiagnosedSilenceableFailure mapForallToBlocksImpl(
         blockIdGenerator,
     SmallVectorImpl<int64_t> &gridDims, TransformOpInterface transformOp,
     const ArrayRef<DeviceMappingAttrInterface> &mappingAttributes);
+
+/// Search `scf.forall` ops nested under `target` and map each such op to GPU
+/// threads. Mapping is one-to-one and the induction variables of `scf.forall`
+/// are rewritten to gpu.thread_id according to the thread_dim_mapping
+/// attribute.
+/// Sibling `scf.forall` are supported in which case, the union of the number of
+/// threads is computed and may result in predication.
+/// Dynamic, `scf.forall` trip counts are currently not supported.
+/// Dynamic block dim sizes are currently not supported.
+DiagnosedSilenceableFailure mapNestedForallToThreadsImpl(
+    RewriterBase &rewriter, Operation *target,
+    const SmallVectorImpl<int64_t> &kernelBlockDims,
+    function_ref<void(RewriterBase &, scf::ForallOp, SmallVectorImpl<Value> &)>
+        threadIdGenerator,
+    bool syncAfterDistribute, std::optional<TransformOpInterface> transformOp,
+    const ArrayRef<DeviceMappingAttrInterface> &threadMappingAttributes);
 
 /// Find the unique top level scf::ForallOp within a given target op.
 DiagnosedSilenceableFailure
