@@ -1007,6 +1007,68 @@ public:
   }
 };
 
+// OHOS target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY OHOSTargetInfo : public OSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {
+    // Linux defines; list based off of gcc output
+    DefineStd(Builder, "unix", Opts);
+
+    Builder.defineMacro("__ELF__");
+
+    // Generic OHOS target defines
+    if (Triple.isOHOSFamily()) {
+      Builder.defineMacro("__OHOS_FAMILY__", "1");
+
+      auto Version = Triple.getEnvironmentVersion();
+      this->PlatformName = "ohos";
+      this->PlatformMinVersion = Version;
+      Builder.defineMacro("__OHOS_Major__", Twine(Version.getMajor()));
+      if (auto Minor = Version.getMinor())
+        Builder.defineMacro("__OHOS_Minor__", Twine(*Minor));
+      if (auto Subminor = Version.getSubminor())
+        Builder.defineMacro("__OHOS_Micro__", Twine(*Subminor));
+    }
+
+    if (Triple.isOpenHOS())
+      Builder.defineMacro("__OHOS__");
+
+    if (Triple.isOSLinux()) {
+      DefineStd(Builder, "linux", Opts);
+    } else if (Triple.isOSLiteOS()) {
+      Builder.defineMacro("__LITEOS__");
+    }
+
+    if (Opts.POSIXThreads)
+      Builder.defineMacro("_REENTRANT");
+    if (Opts.CPlusPlus)
+      Builder.defineMacro("_GNU_SOURCE");
+    if (this->HasFloat128)
+      Builder.defineMacro("__FLOAT128__");
+  }
+
+public:
+  OHOSTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : OSTargetInfo<Target>(Triple, Opts) {
+    this->WIntType = TargetInfo::UnsignedInt;
+
+    switch (Triple.getArch()) {
+    default:
+      break;
+    case llvm::Triple::x86:
+    case llvm::Triple::x86_64:
+      this->HasFloat128 = true;
+      break;
+    }
+  }
+
+  const char *getStaticInitSectionSpecifier() const override {
+    return ".text.startup";
+  }
+};
+
 } // namespace targets
 } // namespace clang
 #endif // LLVM_CLANG_LIB_BASIC_TARGETS_OSTARGETS_H

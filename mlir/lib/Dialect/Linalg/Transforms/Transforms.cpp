@@ -857,7 +857,7 @@ PadOpTransformationPattern::matchAndRewrite(tensor::PadOp padOp,
 /// Filling `dest` using FillOp constant padding value if possible.
 /// Otherwise, generate a tensor::GenerateOp.
 Value GeneralizePadOpPattern::createFillOrGenerateOp(
-    PatternRewriter &rewriter, tensor::PadOp padOp, Value dest,
+    RewriterBase &rewriter, tensor::PadOp padOp, Value dest,
     const SmallVector<Value> &dynSizes) const {
   auto padValue = padOp.getConstantPaddingValue();
   if (padValue)

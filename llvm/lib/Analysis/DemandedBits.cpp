@@ -475,8 +475,7 @@ APInt DemandedBits::getDemandedBits(Use *U) {
 bool DemandedBits::isInstructionDead(Instruction *I) {
   performAnalysis();
 
-  return !Visited.count(I) && AliveBits.find(I) == AliveBits.end() &&
-    !isAlwaysLive(I);
+  return !Visited.count(I) && !AliveBits.contains(I) && !isAlwaysLive(I);
 }
 
 bool DemandedBits::isUseDead(Use *U) {

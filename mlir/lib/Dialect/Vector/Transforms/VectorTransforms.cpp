@@ -457,7 +457,7 @@ public:
 
     for (int64_t linearIdx = 0; linearIdx < numTransposedElements;
          ++linearIdx) {
-      auto extractIdxs = delinearize(prunedInStrides, linearIdx);
+      auto extractIdxs = delinearize(linearIdx, prunedInStrides);
       SmallVector<int64_t> insertIdxs(extractIdxs);
       applyPermutationToVector(insertIdxs, prunedTransp);
       Value extractOp =
@@ -588,8 +588,7 @@ public:
         loc, resType, rewriter.getZeroAttr(resType));
     for (int64_t d = 0, e = resType.getDimSize(0); d < e; ++d) {
       auto pos = rewriter.getI64ArrayAttr(d);
-      Value x =
-          rewriter.create<vector::ExtractOp>(loc, op.getLhs(), pos);
+      Value x = rewriter.create<vector::ExtractOp>(loc, op.getLhs(), pos);
       Value a = rewriter.create<vector::BroadcastOp>(loc, rhsType, x);
       Value r = nullptr;
       if (acc)

@@ -127,6 +127,8 @@ def note_constexpr_null_subobject : Note<
   "access array element of|perform pointer arithmetic on|"
   "access real component of|"
   "access imaginary component of}0 null pointer">;
+def note_constexpr_null_callee : Note<
+  "'%0' evaluates to a null function pointer">;
 def note_constexpr_function_param_value_unknown : Note<
   "function parameter %0 with unknown value cannot be used in a constant "
   "expression">;

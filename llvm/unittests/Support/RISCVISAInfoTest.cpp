@@ -230,7 +230,8 @@ TEST(ParseArchString, RejectsUnrecognizedExtensionNamesByDefault) {
 }
 
 TEST(ParseArchString, IgnoresUnrecognizedExtensionNamesWithIgnoreUnknown) {
-  for (StringRef Input : {"rv32ib"}) {
+  for (StringRef Input : {"rv32ib", "rv32i_zmadeup", "rv64i_smadeup",
+                          "rv32i_sxmadeup", "rv64i_xmadeup"}) {
     auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true, false, true);
     ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
     RISCVISAInfo &Info = **MaybeISAInfo;
@@ -238,13 +239,14 @@ TEST(ParseArchString, IgnoresUnrecognizedExtensionNamesWithIgnoreUnknown) {
     EXPECT_EQ(Exts.size(), 1UL);
     EXPECT_TRUE(Exts.at("i") == (RISCVExtensionInfo{"i", 2, 0}));
   }
-  // FIXME: These unrecognized extensions should be ignored just as in the
-  // case above. The below captures the current (incorrect) behaviour.
-  for (StringRef Input :
-       {"rv32i_zmadeup", "rv64i_smadeup", "rv32i_sxmadeup", "rv64i_xmadeup"}) {
-    auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true, false, true);
-    EXPECT_THAT_EXPECTED(MaybeISAInfo, Failed());
-  }
+
+  // Checks that supported extensions aren't incorrectly ignored when a
+  // version is present (an early version of the patch had this mistake).
+  auto MaybeISAInfo =
+      RISCVISAInfo::parseArchString("rv32i_zbc1p0_xmadeup", true, false, true);
+  ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+  RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
+  EXPECT_TRUE(Exts.at("zbc") == (RISCVExtensionInfo{"zbc", 1, 0}));
 }
 
 TEST(ParseArchString, AcceptsVersionInLongOrShortForm) {

@@ -439,7 +439,7 @@ IRSimilarityCandidate::IRSimilarityCandidate(unsigned StartIdx, unsigned Len,
     // Map the operand values to an unsigned integer if it does not already
     // have an unsigned integer assigned to it.
     for (Value *Arg : ID->OperVals)
-      if (ValueToNumber.find(Arg) == ValueToNumber.end()) {
+      if (!ValueToNumber.contains(Arg)) {
         ValueToNumber.try_emplace(Arg, LocalValNumber);
         NumberToValue.try_emplace(LocalValNumber, Arg);
         LocalValNumber++;
@@ -447,7 +447,7 @@ IRSimilarityCandidate::IRSimilarityCandidate(unsigned StartIdx, unsigned Len,
 
     // Mapping the instructions to an unsigned integer if it is not already
     // exist in the mapping.
-    if (ValueToNumber.find(ID->Inst) == ValueToNumber.end()) {
+    if (!ValueToNumber.contains(ID->Inst)) {
       ValueToNumber.try_emplace(ID->Inst, LocalValNumber);
       NumberToValue.try_emplace(LocalValNumber, ID->Inst);
       LocalValNumber++;
@@ -464,7 +464,7 @@ IRSimilarityCandidate::IRSimilarityCandidate(unsigned StartIdx, unsigned Len,
   DenseSet<BasicBlock *> BBSet;
   getBasicBlocks(BBSet);
   for (BasicBlock *BB : BBSet) {
-    if (ValueToNumber.find(BB) != ValueToNumber.end())
+    if (ValueToNumber.contains(BB))
       continue;
     
     ValueToNumber.try_emplace(BB, LocalValNumber);
@@ -1026,7 +1026,7 @@ void IRSimilarityCandidate::createCanonicalRelationFrom(
 
     // We can skip the BasicBlock if the canonical numbering has already been
     // found in a separate instruction.
-    if (NumberToCanonNum.find(BBGVNForCurrCand) != NumberToCanonNum.end())
+    if (NumberToCanonNum.contains(BBGVNForCurrCand))
       continue;
 
     // If the basic block is the starting block, then the shared instruction may

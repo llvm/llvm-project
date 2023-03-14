@@ -1055,6 +1055,37 @@ module polymorphic_test
 ! CHECK: %[[BOX_NONE_ARG1:.*]] = fir.convert %[[REBOX_ARG1]] : (!fir.box<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> !fir.box<none>
 ! CHECK: %{{.*}} = fir.call @_FortranASameTypeAs(%[[BOX_NONE_ARG0]], %[[BOX_NONE_ARG1]]) {{.*}} : (!fir.box<none>, !fir.box<none>) -> i1
 
+  subroutine test_parent_comp_normal(a)
+    class(p2) :: a
+
+    call print(a%p1)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPtest_parent_comp_normal(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp2{a:i32,b:i32,c:f32}>> {fir.bindc_name = "a"}) {
+! CHECK: %[[REBOX:.*]] = fir.rebox %[[ARG0]] : (!fir.class<!fir.type<_QMpolymorphic_testTp2{a:i32,b:i32,c:f32}>>) -> !fir.box<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
+! CHECK: %[[CONV:.*]] = fir.convert %[[REBOX]] : (!fir.box<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
+! CHECK: fir.call @_QMpolymorphic_testPprint(%[[CONV]]) {{.*}} : (!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> ()
+
+  subroutine takes_p1_opt(a)
+    class(p1), optional :: a
+  end subroutine
+
+  subroutine test_parent_comp_opt(p)
+    type(p2), allocatable :: p
+    allocate(p)
+    call takes_p1_opt(p%p1)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPtest_parent_comp_opt(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.type<_QMpolymorphic_testTp2{a:i32,b:i32,c:f32}>>>> {fir.bindc_name = "p"}) {
+! CHECK: %[[LOAD_ARG0:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.type<_QMpolymorphic_testTp2{a:i32,b:i32,c:f32}>>>>
+! CHECK: %[[RES:.*]] = fir.if %{{.*}} -> (!fir.box<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) {
+! CHECK:   %[[REBOX:.*]] = fir.rebox %[[LOAD_ARG0:.*]] : (!fir.box<!fir.heap<!fir.type<_QMpolymorphic_testTp2{a:i32,b:i32,c:f32}>>>) -> !fir.box<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
+! CHECK:   fir.result %[[REBOX]] : !fir.box<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
+! CHECK: %[[CONV:.*]] = fir.convert %[[RES]] : (!fir.box<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
+! CHECK: fir.call @_QMpolymorphic_testPtakes_p1_opt(%[[CONV]]) {{.*}} : (!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> ()
+
 end module
 
 program test

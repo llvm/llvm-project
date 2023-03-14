@@ -1189,6 +1189,7 @@ bool SPIRVInstructionSelector::selectConst(Register ResVReg,
         .addUse(GR.getSPIRVTypeID(ResType))
         .constrainAllUses(TII, TRI, RBI);
   if (TyOpcode == SPIRV::OpTypeInt) {
+    assert(Imm.getBitWidth() <= 64 && "Unsupported integer width!");
     Register Reg = GR.getOrCreateConstInt(Imm.getZExtValue(), I, ResType, TII);
     if (Reg == ResVReg)
       return true;

@@ -10,10 +10,12 @@ target triple = "aarch64-unknown-linux-gnu"
 
 ; VPLANS-LABEL: Checking a loop in 'simple_memset'
 ; VPLANS:      VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF>=1' {
+; VPLANS-NEXT: Live-in vp<[[TC:%[0-9]+]]> = original trip-count
+; VPLANS-EMPTY:
 ; VPLANS-NEXT: vector.ph:
 ; VPLANS-NEXT:   EMIT vp<[[VF:%[0-9]+]]> = VF * Part +  ir<0>
-; VPLANS-NEXT:   EMIT vp<[[NEWTC:%[0-9]+]]> = TC > VF ? TC - VF : 0 <badref>
-; VPLANS-NEXT:   EMIT vp<[[LANEMASK_ENTRY:%[0-9]+]]> = active lane mask vp<[[VF]]> <badref>
+; VPLANS-NEXT:   EMIT vp<[[NEWTC:%[0-9]+]]> = TC > VF ? TC - VF : 0 vp<[[TC]]>
+; VPLANS-NEXT:   EMIT vp<[[LANEMASK_ENTRY:%[0-9]+]]> = active lane mask vp<[[VF]]> vp<[[TC]]>
 ; VPLANS-NEXT: Successor(s): vector loop
 ; VPLANS-EMPTY:
 ; VPLANS-NEXT: <x1> vector loop: {
