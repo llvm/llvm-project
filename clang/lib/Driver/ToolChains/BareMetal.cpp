@@ -339,6 +339,9 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     TC.AddLinkRuntimeLib(Args, CmdArgs);
   }
 
+  if (TC.getTriple().isRISCV())
+    CmdArgs.push_back("-X");
+
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
