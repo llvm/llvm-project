@@ -10,11 +10,11 @@
 //
 //===--------------------------------------------------------------------===//
 
+#include "CXType.h"
 #include "CIndexer.h"
 #include "CXCursor.h"
 #include "CXString.h"
 #include "CXTranslationUnit.h"
-#include "CXType.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
@@ -378,7 +378,7 @@ int clang_getFieldDeclBitWidth(CXCursor C) {
     const Decl *D = getCursorDecl(C);
 
     if (const FieldDecl *FD = dyn_cast_or_null<FieldDecl>(D)) {
-      if (FD->isBitField())
+      if (FD->isBitField() && !FD->getBitWidth()->isValueDependent())
         return FD->getBitWidthValue(getCursorContext(C));
     }
   }
