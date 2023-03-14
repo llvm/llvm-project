@@ -150,8 +150,8 @@ struct TestSCFPipeliningPass
 
   /// Helper to generate "predicated" version of `op`. For simplicity we just
   /// wrap the operation in a scf.ifOp operation.
-  static Operation *predicateOp(Operation *op, Value pred,
-                                PatternRewriter &rewriter) {
+  static Operation *predicateOp(RewriterBase &rewriter, Operation *op,
+                                Value pred) {
     Location loc = op->getLoc();
     auto ifOp =
         rewriter.create<scf::IfOp>(loc, op->getResultTypes(), pred, true);
