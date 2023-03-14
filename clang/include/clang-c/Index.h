@@ -3029,17 +3029,25 @@ CINDEX_LINKAGE unsigned long long
 clang_getEnumConstantDeclUnsignedValue(CXCursor C);
 
 /**
- * Returns non-zero if a field declaration has a bit width expression.
- *
- * If the cursor does not reference a bit field declaration 0 is returned.
+ * Returns non-zero if the cursor specifies a Record member that is a bit-field.
  */
-CINDEX_LINKAGE unsigned clang_isBitFieldDecl(CXCursor C);
+CINDEX_LINKAGE unsigned clang_Cursor_isBitField(CXCursor C);
 
 /**
- * Retrieve the bit width of a bit field declaration as an integer.
+ * Retrieve the bit width of a bit-field declaration as an integer.
  *
- * If the cursor does not reference a bit field, or if the bit field's width
+ * If the cursor does not reference a bit-field, or if the bit-field's width
  * expression cannot be evaluated, -1 is returned.
+ *
+ * For example:
+ * \code
+ * if (clang_Cursor_isBitField(Cursor)) {
+ *   int Width = clang_getFieldDeclBitWidth(Cursor);
+ *   if (Width != -1) {
+ *     // The bit-field width is not value-dependent.
+ *   }
+ * }
+ * \endcode
  */
 CINDEX_LINKAGE int clang_getFieldDeclBitWidth(CXCursor C);
 
@@ -3667,12 +3675,6 @@ CINDEX_LINKAGE CXType clang_Type_getTemplateArgumentAsType(CXType T,
  * or non-C++ declarations, CXRefQualifier_None is returned.
  */
 CINDEX_LINKAGE enum CXRefQualifierKind clang_Type_getCXXRefQualifier(CXType T);
-
-/**
- * Returns non-zero if the cursor specifies a Record member that is a
- *   bitfield.
- */
-CINDEX_LINKAGE unsigned clang_Cursor_isBitField(CXCursor C);
 
 /**
  * Returns 1 if the base class specified by the cursor with kind

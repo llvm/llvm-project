@@ -14668,6 +14668,22 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
   if (N0.getOpcode() == ISD::BITCAST)
     return DAG.getBitcast(VT, N0.getOperand(0));
 
+  // fold (conv (logicop (conv x), (c))) -> (logicop x, (conv c))
+  // iff the current bitwise logicop type isn't legal
+  if (ISD::isBitwiseLogicOp(N0.getOpcode()) && VT.isInteger() &&
+      !TLI.isTypeLegal(N0.getOperand(0).getValueType())) {
+    auto IsFreeBitcast = [VT](SDValue V) {
+      return (V.getOpcode() == ISD::BITCAST &&
+              V.getOperand(0).getValueType() == VT) ||
+             (ISD::isBuildVectorOfConstantSDNodes(V.getNode()) &&
+              V->hasOneUse());
+    };
+    if (IsFreeBitcast(N0.getOperand(0)) && IsFreeBitcast(N0.getOperand(1)))
+      return DAG.getNode(N0.getOpcode(), SDLoc(N), VT,
+                         DAG.getBitcast(VT, N0.getOperand(0)),
+                         DAG.getBitcast(VT, N0.getOperand(1)));
+  }
+
   // fold (conv (load x)) -> (load (conv*)x)
   // If the resultant load doesn't need a higher alignment than the original!
   if (ISD::isNormalLoad(N0.getNode()) && N0.hasOneUse() &&

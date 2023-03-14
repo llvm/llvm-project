@@ -66,11 +66,17 @@ namespace {
   public:
     UnreachableCodeHandler(Sema &s) : S(s) {}
 
-    void HandleUnreachable(reachable_code::UnreachableKind UK,
-                           SourceLocation L,
-                           SourceRange SilenceableCondVal,
-                           SourceRange R1,
-                           SourceRange R2) override {
+    void HandleUnreachable(reachable_code::UnreachableKind UK, SourceLocation L,
+                           SourceRange SilenceableCondVal, SourceRange R1,
+                           SourceRange R2, bool HasFallThroughAttr) override {
+      // If the diagnosed code is `[[fallthrough]];` and
+      // `-Wunreachable-code-fallthrough` is  enabled, suppress `code will never
+      // be executed` warning to avoid generating diagnostic twice
+      if (HasFallThroughAttr &&
+          !S.getDiagnostics().isIgnored(diag::warn_unreachable_fallthrough_attr,
+                                        SourceLocation()))
+        return;
+
       // Avoid reporting multiple unreachable code diagnostics that are
       // triggered by the same conditional value.
       if (PreviousSilenceableCondVal.isValid() &&
