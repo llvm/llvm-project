@@ -15,7 +15,7 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
@@ -42,7 +42,7 @@ class AMDGPUAtomicOptimizer : public FunctionPass,
                               public InstVisitor<AMDGPUAtomicOptimizer> {
 private:
   SmallVector<ReplacementInfo, 8> ToReplace;
-  const LegacyDivergenceAnalysis *DA;
+  const UniformityInfo *UA;
   const DataLayout *DL;
   DominatorTree *DT;
   const GCNSubtarget *ST;
@@ -65,7 +65,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addRequired<LegacyDivergenceAnalysis>();
+    AU.addRequired<UniformityInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
   }
 
@@ -84,7 +84,7 @@ bool AMDGPUAtomicOptimizer::runOnFunction(Function &F) {
     return false;
   }
 
-  DA = &getAnalysis<LegacyDivergenceAnalysis>();
+  UA = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
   DL = &F.getParent()->getDataLayout();
   DominatorTreeWrapperPass *const DTW =
       getAnalysisIfAvailable<DominatorTreeWrapperPass>();
@@ -139,11 +139,11 @@ void AMDGPUAtomicOptimizer::visitAtomicRMWInst(AtomicRMWInst &I) {
 
   // If the pointer operand is divergent, then each lane is doing an atomic
   // operation on a different address, and we cannot optimize that.
-  if (DA->isDivergentUse(&I.getOperandUse(PtrIdx))) {
+  if (UA->isDivergentUse(I.getOperandUse(PtrIdx))) {
     return;
   }
 
-  const bool ValDivergent = DA->isDivergentUse(&I.getOperandUse(ValIdx));
+  const bool ValDivergent = UA->isDivergentUse(I.getOperandUse(ValIdx));
 
   // If the value operand is divergent, each lane is contributing a different
   // value to the atomic calculation. We can only optimize divergent values if
@@ -217,7 +217,7 @@ void AMDGPUAtomicOptimizer::visitIntrinsicInst(IntrinsicInst &I) {
 
   const unsigned ValIdx = 0;
 
-  const bool ValDivergent = DA->isDivergentUse(&I.getOperandUse(ValIdx));
+  const bool ValDivergent = UA->isDivergentUse(I.getOperandUse(ValIdx));
 
   // If the value operand is divergent, each lane is contributing a different
   // value to the atomic calculation. We can only optimize divergent values if
@@ -231,7 +231,7 @@ void AMDGPUAtomicOptimizer::visitIntrinsicInst(IntrinsicInst &I) {
   // If any of the other arguments to the intrinsic are divergent, we can't
   // optimize the operation.
   for (unsigned Idx = 1; Idx < I.getNumOperands(); Idx++) {
-    if (DA->isDivergentUse(&I.getOperandUse(Idx))) {
+    if (UA->isDivergentUse(I.getOperandUse(Idx))) {
       return;
     }
   }
@@ -705,7 +705,7 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
 
 INITIALIZE_PASS_BEGIN(AMDGPUAtomicOptimizer, DEBUG_TYPE,
                       "AMDGPU atomic optimizations", false, false)
-INITIALIZE_PASS_DEPENDENCY(LegacyDivergenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(AMDGPUAtomicOptimizer, DEBUG_TYPE,
                     "AMDGPU atomic optimizations", false, false)
