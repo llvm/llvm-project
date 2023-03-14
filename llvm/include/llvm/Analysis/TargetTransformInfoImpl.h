@@ -499,6 +499,14 @@ public:
       TTI::OperandValueInfo Opd1Info, TTI::OperandValueInfo Opd2Info,
       ArrayRef<const Value *> Args,
       const Instruction *CxtI = nullptr) const {
+    // Widenable conditions will eventually lower into constants, so some
+    // operations with them will be trivially optimized away.
+    auto IsWidenableCondition = [](const Value *V) {
+      if (auto *II = dyn_cast<IntrinsicInst>(V))
+        if (II->getIntrinsicID() == Intrinsic::experimental_widenable_condition)
+          return true;
+      return false;
+    };
     // FIXME: A number of transformation tests seem to require these values
     // which seems a little odd for how arbitary there are.
     switch (Opcode) {
@@ -512,6 +520,11 @@ public:
     case Instruction::URem:
       // FIXME: Unlikely to be true for CodeSize.
       return TTI::TCC_Expensive;
+    case Instruction::And:
+    case Instruction::Or:
+      if (any_of(Args, IsWidenableCondition))
+        return TTI::TCC_Free;
+      break;
     }
 
     // Assume a 3cy latency for fp arithmetic ops.
@@ -654,6 +667,7 @@ public:
     case Intrinsic::sideeffect:
     case Intrinsic::pseudoprobe:
     case Intrinsic::arithmetic_fence:
+    case Intrinsic::dbg_assign:
     case Intrinsic::dbg_declare:
     case Intrinsic::dbg_value:
     case Intrinsic::dbg_label:
@@ -680,6 +694,7 @@ public:
     case Intrinsic::coro_suspend:
     case Intrinsic::coro_subfn_addr:
     case Intrinsic::threadlocal_address:
+    case Intrinsic::experimental_widenable_condition:
       // These intrinsics don't actually represent code after lowering.
       return 0;
     }

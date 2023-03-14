@@ -1391,23 +1391,6 @@ InParallelOp ForallOp::getTerminator() {
   return cast<InParallelOp>(getBody()->getTerminator());
 }
 
-/// Helper to sort `values` according to matching `keys`.
-SmallVector<Value> ForallOp::getValuesSortedByKey(
-    ArrayRef<Attribute> keys, ValueRange values,
-    llvm::function_ref<bool(Attribute, Attribute)> compare) {
-  if (keys.empty())
-    return values;
-  assert(keys.size() == values.size() && "unexpected mismatching sizes");
-  auto indices = llvm::to_vector(llvm::seq<int64_t>(0, values.size()));
-  std::sort(indices.begin(), indices.end(),
-            [&](int64_t i, int64_t j) { return compare(keys[i], keys[j]); });
-  SmallVector<Value> res;
-  res.reserve(values.size());
-  for (int64_t i = 0, e = indices.size(); i < e; ++i)
-    res.push_back(values[indices[i]]);
-  return res;
-}
-
 ForallOp mlir::scf::getForallOpThreadIndexOwner(Value val) {
   auto tidxArg = val.dyn_cast<BlockArgument>();
   if (!tidxArg)

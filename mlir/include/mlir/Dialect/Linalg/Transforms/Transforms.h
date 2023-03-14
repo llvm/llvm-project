@@ -570,15 +570,15 @@ LogicalResult vectorize(RewriterBase &rewriter, LinalgOp linalgOp,
 LogicalResult vectorizeCopy(RewriterBase &builder, memref::CopyOp copyOp);
 
 /// Emit a loop nest of `scf.for` with the proper body for `linalgOp`.
-FailureOr<LinalgLoops> linalgOpToLoops(PatternRewriter &rewriter,
+FailureOr<LinalgLoops> linalgOpToLoops(RewriterBase &rewriter,
                                        LinalgOp linalgOp);
 
 /// Emit a loop nest of `scf.parallel` with the proper body for `linalgOp`.
-FailureOr<LinalgLoops> linalgOpToParallelLoops(PatternRewriter &rewriter,
+FailureOr<LinalgLoops> linalgOpToParallelLoops(RewriterBase &rewriter,
                                                LinalgOp linalgOp);
 
 /// Emit a loop nest of `affine.for` with the proper body for `linalgOp`.
-FailureOr<LinalgLoops> linalgOpToAffineLoops(PatternRewriter &rewriter,
+FailureOr<LinalgLoops> linalgOpToAffineLoops(RewriterBase &rewriter,
                                              LinalgOp linalgOp);
 
 /// Creates a number of ranges equal to the number of non-zero in `tileSizes`.
@@ -818,7 +818,7 @@ struct SplitReductionResult {
   LinalgOp resultCombiningLinalgOp;
 };
 FailureOr<SplitReductionResult>
-splitReduction(PatternRewriter &b, LinalgOp op,
+splitReduction(RewriterBase &b, LinalgOp op,
                const ControlSplitReductionFn &controlSplitReductionFn,
                bool useAlloc = false);
 
@@ -870,7 +870,7 @@ splitReduction(PatternRewriter &b, LinalgOp op,
 ///  return %4 : tensor<16x32xf32>
 /// ```
 FailureOr<SplitReductionResult>
-splitReductionByScaling(PatternRewriter &b, LinalgOp op,
+splitReductionByScaling(RewriterBase &b, LinalgOp op,
                         const ControlSplitReductionFn &controlSplitReductionFn,
                         bool useAlloc = false);
 
@@ -1097,7 +1097,7 @@ struct PadOpTransformationPattern : public OpRewritePattern<tensor::PadOp> {
 };
 
 using OptimizeCopyFn =
-    std::function<LogicalResult(PatternRewriter &, tensor::PadOp, Value)>;
+    std::function<LogicalResult(RewriterBase &, tensor::PadOp, Value)>;
 
 /// Rewrite a tensor::PadOp into a sequence of EmptyOp, FillOp and
 /// InsertSliceOp. For now, only constant padding values are supported.
@@ -1113,7 +1113,7 @@ struct GeneralizePadOpPattern : public OpRewritePattern<tensor::PadOp> {
 
 protected:
   OptimizeCopyFn optimizeCopyFn;
-  Value createFillOrGenerateOp(PatternRewriter &rewriter, tensor::PadOp padOp,
+  Value createFillOrGenerateOp(RewriterBase &rewriter, tensor::PadOp padOp,
                                Value dest,
                                const SmallVector<Value> &dynSizes) const;
 };

@@ -11,7 +11,6 @@
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
-#include "mlir/Dialect/Transform/IR/TransformUtils.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
@@ -114,7 +113,14 @@ LogicalResult PatternApplicatorExtension::findAllMatches(
   }
 
   PatternApplicator applicator(it->second);
-  transform::TrivialPatternRewriter rewriter(root->getContext());
+  // We want to discourage direct use of PatternRewriter in APIs but In this
+  // very specific case, an IRRewriter is not enough.
+  struct TrivialPatternRewriter : public PatternRewriter {
+  public:
+    explicit TrivialPatternRewriter(MLIRContext *context)
+        : PatternRewriter(context) {}
+  };
+  TrivialPatternRewriter rewriter(root->getContext());
   applicator.applyDefaultCostModel();
   root->walk([&](Operation *op) {
     if (succeeded(applicator.matchAndRewrite(op, rewriter)))
@@ -453,7 +459,7 @@ transform::GetConsumersOfResult::apply(transform::TransformResults &results,
 
 DiagnosedSilenceableFailure
 transform::GetDefiningOp::apply(transform::TransformResults &results,
-                              transform::TransformState &state) {
+                                transform::TransformState &state) {
   SmallVector<Operation *> definingOps;
   for (Value v : state.getPayloadValues(getTarget())) {
     if (v.isa<BlockArgument>()) {

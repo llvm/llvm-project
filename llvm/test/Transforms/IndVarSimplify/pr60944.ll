@@ -3,7 +3,6 @@
 
 @x = global i32 0
 
-; FIXME: This is a miscompile.
 ; %loop2 is never entered and we cannot derive any fact about %iv from it.
 define i32 @main(i32 %iv.start, i32 %arg2) mustprogress {
 ; CHECK-LABEL: define i32 @main
@@ -21,7 +20,8 @@ define i32 @main(i32 %iv.start, i32 %arg2) mustprogress {
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = sdiv i32 [[ARG2]], [[IV]]
-; CHECK-NEXT:    br i1 false, label [[LOOP_EXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[IV]], -1
+; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP_EXIT:%.*]], label [[LOOP]]
 ; CHECK:       loop.exit:
 ; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi i32 [ [[IV_NEXT]], [[LOOP_LATCH]] ]
 ; CHECK-NEXT:    ret i32 [[IV_NEXT_LCSSA]]

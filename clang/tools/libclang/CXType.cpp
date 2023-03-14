@@ -371,26 +371,13 @@ unsigned long long clang_getEnumConstantDeclUnsignedValue(CXCursor C) {
   return ULLONG_MAX;
 }
 
-unsigned clang_isBitFieldDecl(CXCursor C) {
-  using namespace cxcursor;
-
-  if (clang_isDeclaration(C.kind)) {
-    const Decl *D = getCursorDecl(C);
-
-    if (const auto *FD = dyn_cast_or_null<FieldDecl>(D))
-      return FD->isBitField();
-  }
-
-  return 0;
-}
-
 int clang_getFieldDeclBitWidth(CXCursor C) {
   using namespace cxcursor;
 
   if (clang_isDeclaration(C.kind)) {
     const Decl *D = getCursorDecl(C);
 
-    if (const auto *FD = dyn_cast_or_null<FieldDecl>(D)) {
+    if (const FieldDecl *FD = dyn_cast_or_null<FieldDecl>(D)) {
       if (FD->isBitField() && !FD->getBitWidth()->isValueDependent())
         return FD->getBitWidthValue(getCursorContext(C));
     }

@@ -2400,7 +2400,7 @@ private:
 
     if (!NextToken ||
         NextToken->isOneOf(tok::arrow, tok::equal, tok::kw_noexcept, tok::comma,
-                           tok::r_paren) ||
+                           tok::r_paren, TT_RequiresClause) ||
         NextToken->canBePointerOrReferenceQualifier() ||
         (NextToken->is(tok::l_brace) && !NextToken->getNextNonComment())) {
       return TT_PointerOrReference;
@@ -3758,8 +3758,9 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     if (Right.is(TT_BlockComment))
       return true;
     // foo() -> const Bar * override/final
-    if (Right.isOneOf(Keywords.kw_override, Keywords.kw_final,
-                      tok::kw_noexcept) &&
+    // S::foo() & noexcept/requires
+    if (Right.isOneOf(Keywords.kw_override, Keywords.kw_final, tok::kw_noexcept,
+                      TT_RequiresClause) &&
         !Right.is(TT_StartOfName)) {
       return true;
     }

@@ -31,6 +31,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
@@ -3062,45 +3063,18 @@ static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, int &EvenSrc,
     return false;
 
   int Size = Mask.size();
-  int HalfSize = Size / 2;
   assert(Size == (int)VT.getVectorNumElements() && "Unexpected mask size");
 
-  int Srcs[] = {-1, -1};
-  for (int i = 0; i != Size; ++i) {
-    // Ignore undef elements.
-    if (Mask[i] < 0)
-      continue;
+  SmallVector<unsigned, 2> StartIndexes;
+  if (!ShuffleVectorInst::isInterleaveMask(Mask, 2, Size * 2, StartIndexes))
+    return false;
 
-    // Is this an even or odd element.
-    int Pol = i % 2;
-
-    // Ensure we consistently use the same half source for this polarity.
-    int Src = alignDown(Mask[i], HalfSize);
-    if (Srcs[Pol] < 0)
-      Srcs[Pol] = Src;
-    if (Srcs[Pol] != Src)
-      return false;
-
-    // Make sure the element within the source is appropriate for this element
-    // in the destination.
-    int Elt = Mask[i] % HalfSize;
-    if (Elt != i / 2)
-      return false;
-  }
+  EvenSrc = StartIndexes[0] % 2 ? StartIndexes[1] : StartIndexes[0];
+  OddSrc = StartIndexes[0] % 2 ? StartIndexes[0] : StartIndexes[1];
 
   // One source should be low half of first vector.
-  if (Srcs[0] != 0 && Srcs[1] != 0)
+  if (EvenSrc != 0 && OddSrc != 0)
     return false;
-
-  // Other source should be the upper half of the first source or the lower
-  // half of the second source.
-  // FIXME: This is only a heuristic to avoid regressions.
-  if (Srcs[0] != HalfSize && Srcs[0] != Size && Srcs[1] != HalfSize &&
-      Srcs[1] != Size)
-    return false;
-
-  EvenSrc = Srcs[0];
-  OddSrc = Srcs[1];
 
   return true;
 }
