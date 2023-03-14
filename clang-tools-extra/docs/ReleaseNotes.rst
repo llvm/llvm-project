@@ -162,6 +162,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/suspicious-include>` check.
   Global options of the same name should be used instead.
 
+- Improved :doc:`bugprone-use-after-move
+  <clang-tidy/checks/bugprone/use-after-move>` check to also cover constructor
+  initializers.
+
 - Deprecated check-local options `HeaderFileExtensions`
   in :doc:`google-build-namespaces
   <clang-tidy/checks/google/build-namespaces>` check.
