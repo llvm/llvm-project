@@ -902,7 +902,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
   if (any_of(FixedOrderRecurrences, [LoopLatch, this](const PHINode *Phi) {
         Instruction *V =
             cast<Instruction>(Phi->getIncomingValueForBlock(LoopLatch));
-        return SinkAfter.find(V) != SinkAfter.end();
+        return SinkAfter.contains(V);
       }))
     return false;
 
