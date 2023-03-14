@@ -104,11 +104,11 @@ template <size_t Bits> struct DyadicFloat {
         sign, exponent + (Bits - 1) + FloatProperties<T>::EXPONENT_BIAS,
         output_bits_t(m_hi) & FloatProperties<T>::MANTISSA_MASK);
 
-    const MantissaType ROUND_MASK = MantissaType(1) << (Bits - PRECISION - 1);
-    const MantissaType STICKY_MASK = ROUND_MASK - MantissaType(1);
+    const MantissaType round_mask = MantissaType(1) << (Bits - PRECISION - 1);
+    const MantissaType sticky_mask = round_mask - MantissaType(1);
 
-    bool round_bit = !(mantissa & ROUND_MASK).is_zero();
-    bool sticky_bit = !(mantissa & STICKY_MASK).is_zero();
+    bool round_bit = !(mantissa & round_mask).is_zero();
+    bool sticky_bit = !(mantissa & sticky_mask).is_zero();
     int round_and_sticky = int(round_bit) * 2 + int(sticky_bit);
     auto d_lo = FPBits<T>::create_value(sign,
                                         exponent + (Bits - PRECISION - 2) +
@@ -156,7 +156,7 @@ constexpr DyadicFloat<Bits> quick_add(DyadicFloat<Bits> a,
     if (result.mantissa.add(b.mantissa)) {
       // Mantissa addition overflow.
       result.shift_right(1);
-      result.mantissa.val[DyadicFloat<Bits>::MantissaType::WordCount - 1] |=
+      result.mantissa.val[DyadicFloat<Bits>::MantissaType::WORDCOUNT - 1] |=
           (uint64_t(1) << 63);
     }
     // Result is already normalized.
@@ -183,7 +183,7 @@ constexpr DyadicFloat<Bits> quick_add(DyadicFloat<Bits> a,
 //   result.mantissa = quick_mul_hi(a.mantissa + b.mantissa)
 //                   ~ (full product a.mantissa * b.mantissa) >> Bits.
 // The errors compared to the mathematical product is bounded by:
-//   2 * errors of quick_mul_hi = 2 * (UInt<Bits>::WordCount - 1) in ULPs.
+//   2 * errors of quick_mul_hi = 2 * (UInt<Bits>::WORDCOUNT - 1) in ULPs.
 // Assume inputs are normalized (by constructors or other functions) so that we
 // don't need to normalize the inputs again in this function.  If the inputs are
 // not normalized, the results might lose precision significantly.
@@ -198,7 +198,7 @@ constexpr DyadicFloat<Bits> quick_mul(DyadicFloat<Bits> a,
     result.mantissa = a.mantissa.quick_mul_hi(b.mantissa);
     // Check the leading bit directly, should be faster than using clz in
     // normalize().
-    if (result.mantissa.val[DyadicFloat<Bits>::MantissaType::WordCount - 1] >>
+    if (result.mantissa.val[DyadicFloat<Bits>::MantissaType::WORDCOUNT - 1] >>
             63 ==
         0)
       result.shift_left(1);

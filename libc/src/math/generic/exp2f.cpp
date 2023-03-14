@@ -21,9 +21,9 @@
 
 namespace __llvm_libc {
 
-constexpr uint32_t exval1 = 0x3b42'9d37U;
-constexpr uint32_t exval2 = 0xbcf3'a937U;
-constexpr uint32_t exval_mask = exval1 & exval2;
+constexpr uint32_t EXVAL1 = 0x3b42'9d37U;
+constexpr uint32_t EXVAL2 = 0xbcf3'a937U;
+constexpr uint32_t EXVAL_MASK = EXVAL1 & EXVAL2;
 
 LLVM_LIBC_FUNCTION(float, exp2f, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
@@ -73,11 +73,11 @@ LLVM_LIBC_FUNCTION(float, exp2f, (float x)) {
   }
 
   // Check exceptional values.
-  if (LIBC_UNLIKELY((x_u & exval_mask) == exval_mask)) {
-    if (LIBC_UNLIKELY(x_u == exval1)) { // x = 0x1.853a6ep-9f
+  if (LIBC_UNLIKELY((x_u & EXVAL_MASK) == EXVAL_MASK)) {
+    if (LIBC_UNLIKELY(x_u == EXVAL1)) { // x = 0x1.853a6ep-9f
       if (fputil::get_round() == FE_TONEAREST)
         return 0x1.00870ap+0f;
-    } else if (LIBC_UNLIKELY(x_u == exval2)) { // x = -0x1.e7526ep-6f
+    } else if (LIBC_UNLIKELY(x_u == EXVAL2)) { // x = -0x1.e7526ep-6f
       if (fputil::get_round() == FE_TONEAREST)
         return 0x1.f58d62p-1f;
     }
