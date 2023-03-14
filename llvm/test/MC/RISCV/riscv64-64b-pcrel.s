@@ -4,6 +4,14 @@
 # RUN:   | FileCheck %s --check-prefix=ERROR
 
 # CHECK:      Relocations [
+# CHECK-NEXT:   Section ({{.*}}) .rela.note {
+# CHECK-NEXT:     0x0 R_RISCV_ADD64 extern 0x0
+# CHECK-NEXT:     0x0 R_RISCV_SUB64 note 0x0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Section ({{.*}}) .rela.rodata {
+# CHECK-NEXT:     0x0 R_RISCV_ADD64 extern 0x0
+# CHECK-NEXT:     0x0 R_RISCV_SUB64 rodata 0x0
+# CHECK-NEXT:   }
 # CHECK-NEXT:   Section ({{.*}}) .rela.alloc_w {
 # CHECK-NEXT:     0x0 R_RISCV_ADD64 extern 0x0
 # CHECK-NEXT:     0x0 R_RISCV_SUB64 w 0x0
@@ -24,20 +32,24 @@
 # CHECK-NEXT:     0x0 R_RISCV_ADD64 x 0x0
 # CHECK-NEXT:     0x0 R_RISCV_SUB64 y 0x0
 # CHECK-NEXT:   }
+# CHECK-NEXT:   Section ({{.*}}) .rela.nonalloc_w {
+# CHECK-NEXT:     0x0 R_RISCV_ADD64 extern 0x0
+# CHECK-NEXT:     0x0 R_RISCV_SUB64 nw 0x0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Section ({{.*}}) .rela.nonalloc_x {
+# CHECK-NEXT:     0x0 R_RISCV_ADD64 ny 0x0
+# CHECK-NEXT:     0x0 R_RISCV_SUB64 nx 0x0
+# CHECK-NEXT:   }
 # CHECK-NEXT:   Section ({{.*}}) .rela.nonalloc_y {
 # CHECK-NEXT:     0x0 R_RISCV_ADD64 nx 0x0
 # CHECK-NEXT:     0x0 R_RISCV_SUB64 ny 0x0
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
-.ifdef ERR
 .section .note,"a",@note; note:
-# ERROR: :[[#@LINE+1]]:7: error: unsupported relocation type
 .quad extern-note
 .section .rodata,"a",@progbits; rodata:
-# ERROR: :[[#@LINE+1]]:7: error: unsupported relocation type
 .quad extern-rodata
-.endif
 
 .section .alloc_w,"aw",@progbits; w:
 .quad extern-w   # extern is undefined
@@ -53,17 +65,13 @@ w1:
 .quad x-y
 
 .section .nonalloc_w; nw:
-.ifdef ERR
-# ERROR: :[[#@LINE+1]]:7: error: unsupported relocation type
 .quad extern-nw
+.ifdef ERR
 # ERROR: :[[#@LINE+1]]:7: error: symbol 'extern' can not be undefined in a subtraction expression
 .quad nw-extern
 .endif
 .section .nonalloc_x; nx:
-.ifdef ERR
-# ERROR: :[[#@LINE+1]]:7: error: unsupported relocation type
 .quad ny-nx
-.endif
 .section .nonalloc_y; ny:
 .quad nx-ny
 
