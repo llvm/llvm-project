@@ -19,6 +19,7 @@
 #include "TestFS.h"
 #include "TestTU.h"
 #include "XRefs.h"
+#include "support/Context.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -36,6 +37,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 using testing::AllOf;
@@ -826,6 +828,35 @@ x>)");
     EXPECT_THAT(*AST->getDiagnostics(), IsEmpty());
   }
 }
+
+TEST(PreamblePatch, MacroAndMarkHandling) {
+  Config Cfg;
+  Cfg.Diagnostics.AllowStalePreamble = true;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+
+  {
+    Annotations Code(R"cpp(
+#ifndef FOO
+#define FOO
+// Some comments
+#pragma mark XX
+#define BAR
+
+#endif)cpp");
+    Annotations NewCode(R"cpp(
+#ifndef FOO
+#define FOO
+#define BAR
+#pragma mark XX
+
+#endif)cpp");
+    auto AST = createPatchedAST(Code.code(), NewCode.code());
+    // FIXME: Macros and marks have locations that need to be patched.
+    EXPECT_THAT(AST->getMacros().Names, IsEmpty());
+    EXPECT_THAT(AST->getMarks(), IsEmpty());
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

@@ -9448,6 +9448,7 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
     if (GatherShuffle) {
       Vec = CreateShuffle(Entries.front()->VectorizedValue,
                           Entries.back()->VectorizedValue, Mask);
+      VF = Mask.size();
       if (Vec1) {
         // Build final mask.
         for (auto [I, Idx] : enumerate(Mask)) {

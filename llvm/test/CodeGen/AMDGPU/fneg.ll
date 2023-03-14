@@ -218,13 +218,8 @@ define half @v_fneg_i16_fp_use(i16 %in) {
   ret half %fadd
 }
 
-; FIXME: This is terrible
 ; FUNC-LABEL: {{^}}s_fneg_v2i16:
-; SI: s_and_b32 s5, s4, 0xffff0000
-; SI: s_xor_b32 s4, s4, 0x8000
-; SI: s_and_b32 s4, s4, 0xffff
-; SI: s_or_b32 s4, s4, s5
-; SI: s_add_i32 s4, s4, 0x80000000
+; SI: s_xor_b32 s4, s4, 0x80008000
 
 ; VI: s_lshr_b32 s5, s4, 16
 ; VI: s_xor_b32 s4, s4, 0x8000

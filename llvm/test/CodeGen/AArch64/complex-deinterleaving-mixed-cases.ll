@@ -353,3 +353,155 @@ entry:
   %interleaved.vec = shufflevector <2 x float> %11, <2 x float> %8, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
   ret <4 x float> %interleaved.vec
 }
+
+; Expected to transform
+define <4 x float> @mul_addequal(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
+; CHECK-LABEL: mul_addequal:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-NEXT:    fcmla v3.4s, v0.4s, v1.4s, #0
+; CHECK-NEXT:    fcmla v3.4s, v0.4s, v1.4s, #90
+; CHECK-NEXT:    fadd v0.4s, v3.4s, v2.4s
+; CHECK-NEXT:    ret
+entry:
+  %strided.vec = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 2>
+  %a.imag = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 1, i32 3>
+  %b.real = shufflevector <4 x float> %b, <4 x float> poison, <2 x i32> <i32 0, i32 2>
+  %b.imag = shufflevector <4 x float> %b, <4 x float> poison, <2 x i32> <i32 1, i32 3>
+  %0 = fmul fast <2 x float> %b.imag, %strided.vec
+  %1 = fmul fast <2 x float> %b.real, %a.imag
+  %2 = fadd fast <2 x float> %1, %0
+  %3 = fmul fast <2 x float> %b.real, %strided.vec
+  %4 = fmul fast <2 x float> %a.imag, %b.imag
+  %5 = fsub fast <2 x float> %3, %4
+  %c.real = shufflevector <4 x float> %c, <4 x float> poison, <2 x i32> <i32 0, i32 2>
+  %c.imag = shufflevector <4 x float> %c, <4 x float> poison, <2 x i32> <i32 1, i32 3>
+  %6 = fadd fast <2 x float> %5, %c.real
+  %7 = fadd fast <2 x float> %2, %c.imag
+  %interleaved.vec = shufflevector <2 x float> %6, <2 x float> %7, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  ret <4 x float> %interleaved.vec
+}
+
+; Expected to transform
+define <4 x float> @mul_subequal(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
+; CHECK-LABEL: mul_subequal:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-NEXT:    fcmla v3.4s, v0.4s, v1.4s, #0
+; CHECK-NEXT:    fcmla v3.4s, v0.4s, v1.4s, #90
+; CHECK-NEXT:    fsub v0.4s, v3.4s, v2.4s
+; CHECK-NEXT:    ret
+entry:
+  %strided.vec = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 2>
+  %a.imag = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 1, i32 3>
+  %b.real = shufflevector <4 x float> %b, <4 x float> poison, <2 x i32> <i32 0, i32 2>
+  %b.imag = shufflevector <4 x float> %b, <4 x float> poison, <2 x i32> <i32 1, i32 3>
+  %0 = fmul fast <2 x float> %b.imag, %strided.vec
+  %1 = fmul fast <2 x float> %b.real, %a.imag
+  %2 = fadd fast <2 x float> %1, %0
+  %3 = fmul fast <2 x float> %b.real, %strided.vec
+  %4 = fmul fast <2 x float> %a.imag, %b.imag
+  %5 = fsub fast <2 x float> %3, %4
+  %c.real = shufflevector <4 x float> %c, <4 x float> poison, <2 x i32> <i32 0, i32 2>
+  %c.imag = shufflevector <4 x float> %c, <4 x float> poison, <2 x i32> <i32 1, i32 3>
+  %6 = fsub fast <2 x float> %5, %c.real
+  %7 = fsub fast <2 x float> %2, %c.imag
+  %interleaved.vec = shufflevector <2 x float> %6, <2 x float> %7, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  ret <4 x float> %interleaved.vec
+}
+
+
+; Expected to transform
+define <4 x float> @mul_mulequal(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
+; CHECK-LABEL: mul_mulequal:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-NEXT:    fcmla v3.4s, v0.4s, v1.4s, #0
+; CHECK-NEXT:    fcmla v3.4s, v0.4s, v1.4s, #90
+; CHECK-NEXT:    fmul v0.4s, v3.4s, v2.4s
+; CHECK-NEXT:    ret
+entry:
+  %strided.vec = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 2>
+  %a.imag = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 1, i32 3>
+  %b.real = shufflevector <4 x float> %b, <4 x float> poison, <2 x i32> <i32 0, i32 2>
+  %b.imag = shufflevector <4 x float> %b, <4 x float> poison, <2 x i32> <i32 1, i32 3>
+  %0 = fmul fast <2 x float> %b.imag, %strided.vec
+  %1 = fmul fast <2 x float> %b.real, %a.imag
+  %2 = fadd fast <2 x float> %1, %0
+  %3 = fmul fast <2 x float> %b.real, %strided.vec
+  %4 = fmul fast <2 x float> %a.imag, %b.imag
+  %5 = fsub fast <2 x float> %3, %4
+  %c.real = shufflevector <4 x float> %c, <4 x float> poison, <2 x i32> <i32 0, i32 2>
+  %c.imag = shufflevector <4 x float> %c, <4 x float> poison, <2 x i32> <i32 1, i32 3>
+  %6 = fmul fast <2 x float> %5, %c.real
+  %7 = fmul fast <2 x float> %2, %c.imag
+  %interleaved.vec = shufflevector <2 x float> %6, <2 x float> %7, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  ret <4 x float> %interleaved.vec
+}
+
+; Expected to not transform
+define <4 x float> @mul_divequal(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
+; CHECK-LABEL: mul_divequal:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    ext v4.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    ext v16.16b, v2.16b, v2.16b, #8
+; CHECK-NEXT:    zip2 v5.2s, v1.2s, v3.2s
+; CHECK-NEXT:    zip1 v1.2s, v1.2s, v3.2s
+; CHECK-NEXT:    zip2 v6.2s, v0.2s, v4.2s
+; CHECK-NEXT:    zip1 v0.2s, v0.2s, v4.2s
+; CHECK-NEXT:    zip1 v4.2s, v2.2s, v16.2s
+; CHECK-NEXT:    zip2 v2.2s, v2.2s, v16.2s
+; CHECK-NEXT:    fmul v7.2s, v6.2s, v5.2s
+; CHECK-NEXT:    fneg v3.2s, v7.2s
+; CHECK-NEXT:    fmla v3.2s, v0.2s, v1.2s
+; CHECK-NEXT:    fmul v0.2s, v5.2s, v0.2s
+; CHECK-NEXT:    fmla v0.2s, v6.2s, v1.2s
+; CHECK-NEXT:    fdiv v3.2s, v3.2s, v4.2s
+; CHECK-NEXT:    fdiv v0.2s, v0.2s, v2.2s
+; CHECK-NEXT:    zip1 v0.4s, v3.4s, v0.4s
+; CHECK-NEXT:    ret
+entry:
+  %strided.vec = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 2>
+  %a.imag = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 1, i32 3>
+  %b.real = shufflevector <4 x float> %b, <4 x float> poison, <2 x i32> <i32 0, i32 2>
+  %b.imag = shufflevector <4 x float> %b, <4 x float> poison, <2 x i32> <i32 1, i32 3>
+  %0 = fmul fast <2 x float> %b.imag, %strided.vec
+  %1 = fmul fast <2 x float> %b.real, %a.imag
+  %2 = fadd fast <2 x float> %1, %0
+  %3 = fmul fast <2 x float> %b.real, %strided.vec
+  %4 = fmul fast <2 x float> %a.imag, %b.imag
+  %5 = fsub fast <2 x float> %3, %4
+  %c.real = shufflevector <4 x float> %c, <4 x float> poison, <2 x i32> <i32 0, i32 2>
+  %c.imag = shufflevector <4 x float> %c, <4 x float> poison, <2 x i32> <i32 1, i32 3>
+  %6 = fdiv fast <2 x float> %5, %c.real
+  %7 = fdiv fast <2 x float> %2, %c.imag
+  %interleaved.vec = shufflevector <2 x float> %6, <2 x float> %7, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  ret <4 x float> %interleaved.vec
+}
+
+; Expected to transform
+define <4 x float> @mul_negequal(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: mul_negequal:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    fcmla v2.4s, v0.4s, v1.4s, #0
+; CHECK-NEXT:    fcmla v2.4s, v0.4s, v1.4s, #90
+; CHECK-NEXT:    fneg v0.4s, v2.4s
+; CHECK-NEXT:    ret
+entry:
+  %strided.vec = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 2>
+  %a.imag = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 1, i32 3>
+  %b.real = shufflevector <4 x float> %b, <4 x float> poison, <2 x i32> <i32 0, i32 2>
+  %b.imag = shufflevector <4 x float> %b, <4 x float> poison, <2 x i32> <i32 1, i32 3>
+  %0 = fmul fast <2 x float> %b.imag, %strided.vec
+  %1 = fmul fast <2 x float> %b.real, %a.imag
+  %2 = fadd fast <2 x float> %1, %0
+  %3 = fmul fast <2 x float> %b.real, %strided.vec
+  %4 = fmul fast <2 x float> %a.imag, %b.imag
+  %5 = fsub fast <2 x float> %3, %4
+  %6 = fneg fast <2 x float> %5
+  %7 = fneg fast <2 x float> %2
+  %interleaved.vec = shufflevector <2 x float> %6, <2 x float> %7, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  ret <4 x float> %interleaved.vec
+}
