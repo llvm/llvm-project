@@ -161,6 +161,15 @@ namespace dr308 { // dr308: yes
   struct C : A {};
   struct D : B, C {};
   void f() {
+    // NB: the warning here is correct despite being the opposite of the
+    // comments in the catch handlers. The "unreachable" comment is correct
+    // because there is an ambiguous base path to A from the D that is thrown.
+    // The warnings generated are also correct because the handlers handle
+    // const B& and const A& and we don't check to see if other derived classes
+    // exist that would cause an ambiguous base path. We issue the diagnostic
+    // despite the potential for a false positive because users are not
+    // expected to have ambiguous base paths all that often, so the false
+    // positive rate should be acceptably low.
     try {
       throw D();
     } catch (const A&) { // expected-note {{for type 'const A &'}}
