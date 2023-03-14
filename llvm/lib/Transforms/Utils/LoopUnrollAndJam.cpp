@@ -757,11 +757,11 @@ checkDependencies(Loop &Root, const BasicBlockSet &SubLoopBlocks,
                   DependenceInfo &DI, LoopInfo &LI) {
   SmallVector<BasicBlockSet, 8> AllBlocks;
   for (Loop *L : Root.getLoopsInPreorder())
-    if (ForeBlocksMap.find(L) != ForeBlocksMap.end())
+    if (ForeBlocksMap.contains(L))
       AllBlocks.push_back(ForeBlocksMap.lookup(L));
   AllBlocks.push_back(SubLoopBlocks);
   for (Loop *L : Root.getLoopsInPreorder())
-    if (AftBlocksMap.find(L) != AftBlocksMap.end())
+    if (AftBlocksMap.contains(L))
       AllBlocks.push_back(AftBlocksMap.lookup(L));
 
   unsigned LoopDepth = Root.getLoopDepth();
