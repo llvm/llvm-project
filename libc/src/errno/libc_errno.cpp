@@ -9,9 +9,9 @@
 namespace __llvm_libc {
 
 extern "C" {
+#ifdef LIBC_COPT_PUBLIC_PACKAGING
 // TODO: Declare __llvmlibc_errno only under LIBC_COPT_PUBLIC_PACKAGING and
 // __llvmlibc_internal_errno otherwise.
-//
 // In overlay mode, this will be an unused thread local variable as libc_errno
 // will resolve to errno from the system libc's errno.h. In full build mode
 // however, libc_errno will resolve to this thread local variable via the errno
@@ -19,7 +19,9 @@ extern "C" {
 // TODO: Use a macro to distinguish full build and overlay build which can be
 //       used to exclude __llvmlibc_errno under overlay build.
 thread_local int __llvmlibc_errno;
+#else
 thread_local int __llvmlibc_internal_errno;
+#endif
 } // extern "C"
 
 } // namespace __llvm_libc

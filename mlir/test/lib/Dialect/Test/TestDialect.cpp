@@ -1118,10 +1118,10 @@ void PrettyPrintedRegionOp::print(OpAsmPrinter &p) {
   // Assuming that region has a single non-terminator inner-op, if the inner-op
   // meets some criteria (which in this case is a simple one  based on the name
   // of inner-op), then we can print the entire region in a succinct way.
-  // Here we assume that the prototype of "special.op" can be trivially derived
+  // Here we assume that the prototype of "test.special.op" can be trivially derived
   // while parsing it back.
-  if (innerOp.getName().getStringRef().equals("special.op")) {
-    p << " start special.op end";
+  if (innerOp.getName().getStringRef().equals("test.special.op")) {
+    p << " start test.special.op end";
   } else {
     p << " (";
     p.printRegion(getRegion());

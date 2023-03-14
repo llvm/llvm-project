@@ -140,10 +140,9 @@ public:
     return std::make_pair(begin() + I, false);
   }
 
-  size_type count(const KeyT &Key) const {
-    typename MapType::const_iterator Pos = Map.find(Key);
-    return Pos == Map.end()? 0 : 1;
-  }
+  bool contains(const KeyT &Key) const { return Map.find(Key) != Map.end(); }
+
+  size_type count(const KeyT &Key) const { return contains(Key) ? 1 : 0; }
 
   iterator find(const KeyT &Key) {
     typename MapType::const_iterator Pos = Map.find(Key);

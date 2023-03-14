@@ -654,6 +654,7 @@ public:
     case Intrinsic::sideeffect:
     case Intrinsic::pseudoprobe:
     case Intrinsic::arithmetic_fence:
+    case Intrinsic::dbg_assign:
     case Intrinsic::dbg_declare:
     case Intrinsic::dbg_value:
     case Intrinsic::dbg_label:
@@ -680,6 +681,7 @@ public:
     case Intrinsic::coro_suspend:
     case Intrinsic::coro_subfn_addr:
     case Intrinsic::threadlocal_address:
+    case Intrinsic::experimental_widenable_condition:
       // These intrinsics don't actually represent code after lowering.
       return 0;
     }

@@ -248,7 +248,7 @@ struct VPTransformState {
   }
 
   bool hasAnyVectorValue(VPValue *Def) const {
-    return Data.PerPartOutput.find(Def) != Data.PerPartOutput.end();
+    return Data.PerPartOutput.contains(Def);
   }
 
   bool hasScalarValue(VPValue *Def, VPIteration Instance) {

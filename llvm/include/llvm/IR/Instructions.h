@@ -2430,6 +2430,33 @@ public:
     }
   }
 
+  /// Return if this shuffle interleaves its two input vectors together.
+  bool isInterleave(unsigned Factor);
+
+  /// Return true if the mask interleaves one or more input vectors together.
+  ///
+  /// I.e. <0, LaneLen, ... , LaneLen*(Factor - 1), 1, LaneLen + 1, ...>
+  /// E.g. For a Factor of 2 (LaneLen=4):
+  ///   <0, 4, 1, 5, 2, 6, 3, 7>
+  /// E.g. For a Factor of 3 (LaneLen=4):
+  ///   <4, 0, 9, 5, 1, 10, 6, 2, 11, 7, 3, 12>
+  /// E.g. For a Factor of 4 (LaneLen=2):
+  ///   <0, 2, 6, 4, 1, 3, 7, 5>
+  ///
+  /// NumInputElts is the total number of elements in the input vectors.
+  ///
+  /// StartIndexes are the first indexes of each vector being interleaved,
+  /// substituting any indexes that were undef
+  /// E.g. <4, -1, 2, 5, 1, 3> (Factor=3): StartIndexes=<4, 0, 2>
+  static bool isInterleaveMask(ArrayRef<int> Mask, unsigned Factor,
+                               unsigned NumInputElts,
+                               SmallVectorImpl<unsigned> &StartIndexes);
+  static bool isInterleaveMask(ArrayRef<int> Mask, unsigned Factor,
+                               unsigned NumInputElts) {
+    SmallVector<unsigned, 8> StartIndexes;
+    return isInterleaveMask(Mask, Factor, NumInputElts, StartIndexes);
+  }
+
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::ShuffleVector;

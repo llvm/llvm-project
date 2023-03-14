@@ -39,7 +39,7 @@ StackLifetime::getLiveRange(const AllocaInst *AI) const {
 }
 
 bool StackLifetime::isReachable(const Instruction *I) const {
-  return BlockInstRange.find(I->getParent()) != BlockInstRange.end();
+  return BlockInstRange.contains(I->getParent());
 }
 
 bool StackLifetime::isAliveAfter(const AllocaInst *AI,

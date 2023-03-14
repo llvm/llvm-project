@@ -16,7 +16,6 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
-#include "mlir/Dialect/Transform/IR/TransformUtils.h"
 #include "mlir/IR/IRMapping.h"
 
 using namespace mlir;
@@ -26,13 +25,13 @@ using namespace mlir::transform;
 /// Check if given mapping attributes are one of the desired attributes
 static DiagnosedSilenceableFailure
 checkAttributeType(ArrayRef<DeviceMappingAttrInterface> threadMappingAttributes,
-                   const std::optional<ArrayAttr> &foreachMapping,
+                   const std::optional<ArrayAttr> &forallMapping,
                    std::optional<TransformOpInterface> transformOp) {
-  if (!foreachMapping.has_value())
+  if (!forallMapping.has_value())
     return transformOp->emitSilenceableError() << "mapping must be present";
 
   DenseSet<Attribute> seen;
-  for (Attribute map : foreachMapping->getValue()) {
+  for (Attribute map : forallMapping->getValue()) {
     if (!llvm::is_contained(threadMappingAttributes, map)) {
       return transformOp->emitDefiniteFailure()
              << "mapping must be one of " << threadMappingAttributes;
@@ -124,7 +123,7 @@ createGpuLaunch(RewriterBase &rewriter, Location loc,
 
 /// Alter kernel configuration of the given kernel.
 static DiagnosedSilenceableFailure
-alterGpuLaunch(TrivialPatternRewriter &rewriter, LaunchOp gpuLaunch,
+alterGpuLaunch(IRRewriter &rewriter, LaunchOp gpuLaunch,
                TransformOpInterface transformOp,
                std::optional<int64_t> gridDimX = std::nullopt,
                std::optional<int64_t> gridDimY = std::nullopt,
@@ -165,10 +164,10 @@ alterGpuLaunch(TrivialPatternRewriter &rewriter, LaunchOp gpuLaunch,
 }
 
 //===----------------------------------------------------------------------===//
-// MapForeachToBlocks
+// MapForallToBlocks
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilenceableFailure mlir::transform::gpu::mapForeachToBlocksImpl(
+DiagnosedSilenceableFailure mlir::transform::gpu::mapForallToBlocksImpl(
     RewriterBase &rewriter, scf::ForallOp forallOp,
     function_ref<void(RewriterBase &, scf::ForallOp, SmallVectorImpl<Value> &)>
         blockIdGenerator,
@@ -262,7 +261,7 @@ mlir::transform::gpu::findTopLevelForallOp(Operation *target,
     if (forallOp->getParentOfType<scf::ForallOp>())
       return WalkResult::advance();
     if (topLevelForallOp)
-      // TODO: Handle multiple foreach if there is no dependences between them
+      // TODO: Handle multiple forall if they are independent.
       return WalkResult::interrupt();
     topLevelForallOp = forallOp;
     return WalkResult::advance();
@@ -274,14 +273,13 @@ mlir::transform::gpu::findTopLevelForallOp(Operation *target,
   return DiagnosedSilenceableFailure::success();
 }
 
-/// This is a helper that is only used in
-/// rewriteTopLevelForallToGpuBlocks. It generates GPU dialects
-/// block_id.
-static void generateGpuBlockIds(RewriterBase &rewriter, scf::ForallOp foreachOp,
-                                SmallVectorImpl<Value> &blockOps) {
-  Location loc = foreachOp->getLoc();
+/// This is a helper that is only used in rewriteTopLevelForallToGpuBlocks.
+/// It generates GPU dialect block_id.
+static void createGpuBlockIds(RewriterBase &rewriter, scf::ForallOp forallOp,
+                              SmallVectorImpl<Value> &blockOps) {
+  Location loc = forallOp->getLoc();
   OpBuilder::InsertionGuard guard(rewriter);
-  rewriter.setInsertionPoint(foreachOp);
+  rewriter.setInsertionPoint(forallOp);
   IndexType indexType = rewriter.getIndexType();
   blockOps = SmallVector<Value>{
       rewriter.create<BlockIdOp>(loc, indexType, Dimension::x),
@@ -290,11 +288,11 @@ static void generateGpuBlockIds(RewriterBase &rewriter, scf::ForallOp foreachOp,
 }
 
 DiagnosedSilenceableFailure
-transform::MapForeachToBlocks::applyToOne(Operation *target,
-                                          ApplyToEachResultList &results,
-                                          transform::TransformState &state) {
+transform::MapForallToBlocks::applyToOne(Operation *target,
+                                         ApplyToEachResultList &results,
+                                         transform::TransformState &state) {
   LaunchOp gpuLaunch = dyn_cast<LaunchOp>(target);
-  TrivialPatternRewriter rewriter(getContext());
+  IRRewriter rewriter(getContext());
   auto transformOp = cast<TransformOpInterface>(getOperation());
 
   if (!getGenerateGpuLaunch() && !gpuLaunch) {
@@ -339,8 +337,8 @@ transform::MapForeachToBlocks::applyToOne(Operation *target,
   diag = checkAttributeType(blockMappingAttributes,
                             topLevelForallOp.getMapping(), transformOp);
   if (diag.succeeded())
-    diag = mlir::transform::gpu::mapForeachToBlocksImpl(
-        rewriter, topLevelForallOp, generateGpuBlockIds, gridDim, transformOp,
+    diag = mlir::transform::gpu::mapForallToBlocksImpl(
+        rewriter, topLevelForallOp, createGpuBlockIds, gridDim, transformOp,
         blockMappingAttributes);
   if (diag.succeeded()) {
     diag = alterGpuLaunch(rewriter, gpuLaunch,
@@ -353,7 +351,7 @@ transform::MapForeachToBlocks::applyToOne(Operation *target,
 }
 
 //===----------------------------------------------------------------------===//
-// MapNestedForeachToThreads
+// MapNestedForallToThreads
 //===----------------------------------------------------------------------===//
 
 /// Searches `scf.forall` ops nested under `target` and maps each such
@@ -497,7 +495,7 @@ static DiagnosedSilenceableFailure rewriteOneForallToGpuThreads(
   return DiagnosedSilenceableFailure::success();
 }
 
-DiagnosedSilenceableFailure mlir::transform::gpu::mapNestedForeachToThreadsImpl(
+DiagnosedSilenceableFailure mlir::transform::gpu::mapNestedForallToThreadsImpl(
     RewriterBase &rewriter, Operation *target,
     const SmallVectorImpl<int64_t> &blockDim,
     function_ref<void(RewriterBase &, scf::ForallOp, SmallVectorImpl<Value> &)>
@@ -527,7 +525,7 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapNestedForeachToThreadsImpl(
   return diag;
 }
 
-DiagnosedSilenceableFailure transform::MapNestedForeachToThreads::applyToOne(
+DiagnosedSilenceableFailure transform::MapNestedForallToThreads::applyToOne(
     Operation *target, ApplyToEachResultList &results, TransformState &state) {
   LaunchOp gpuLaunch = dyn_cast<LaunchOp>(target);
   auto transformOp = cast<TransformOpInterface>(getOperation());
@@ -548,7 +546,7 @@ DiagnosedSilenceableFailure transform::MapNestedForeachToThreads::applyToOne(
   }
 
   MLIRContext *ctx = getContext();
-  TrivialPatternRewriter rewriter(ctx);
+  IRRewriter rewriter(ctx);
   rewriter.setInsertionPoint(target);
 
   SmallVector<DeviceMappingAttrInterface> threadMappingAttributes = {
@@ -565,7 +563,7 @@ DiagnosedSilenceableFailure transform::MapNestedForeachToThreads::applyToOne(
                       rewriter.create<ThreadIdOp>(forallOp->getLoc(), indexType,
                                                   Dimension::z)});
   };
-  diag = mlir::transform::gpu::mapNestedForeachToThreadsImpl(
+  diag = mlir::transform::gpu::mapNestedForallToThreadsImpl(
       rewriter, target, blockDim, threadIdGenerator, getSyncAfterDistribute(),
       transformOp, threadMappingAttributes);
 

@@ -31,8 +31,8 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include <type_traits>
 #include <optional>
+#include <type_traits>
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -1535,7 +1535,7 @@ struct GenericPadOpVectorizationPattern : public GeneralizePadOpPattern {
   /// Vectorize the copying of a tensor::PadOp's source. This is possible if
   /// each dimension size is statically know in the source type or the result
   /// type (or both).
-  static LogicalResult tryVectorizeCopy(PatternRewriter &rewriter,
+  static LogicalResult tryVectorizeCopy(RewriterBase &rewriter,
                                         tensor::PadOp padOp, Value dest) {
     auto sourceType = padOp.getSourceType();
     auto resultType = padOp.getResultType();
@@ -2592,15 +2592,17 @@ struct Conv1DGenerator
     // Compute contraction: O{n, w, c} += I{n, sw * w + dw * kw, c} * F{c}
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
-        resVals[w] = depthwiseConv1dSliceAsMulAcc(
-            rewriter, loc, lhsVals[linearIndex(kw, w)], rhsVals[kw], resVals[w]);
+        resVals[w] = depthwiseConv1dSliceAsMulAcc(rewriter, loc,
+                                                  lhsVals[linearIndex(kw, w)],
+                                                  rhsVals[kw], resVals[w]);
       }
     }
 
     // Its possible we failed to create the Fma.
     if (!llvm::all_of(resVals, [](Value v) { return v; })) {
       // Manually revert (in reverse order) to avoid leaving a bad IR state.
-      for (auto &collection : {resVals, rhsVals, lhsVals, {res, rhs, lhs, zero}})
+      for (auto &collection :
+           {resVals, rhsVals, lhsVals, {res, rhs, lhs, zero}})
         for (Value v : collection)
           rewriter.eraseOp(v.getDefiningOp());
       return rewriter.notifyMatchFailure(op, "failed to create FMA");

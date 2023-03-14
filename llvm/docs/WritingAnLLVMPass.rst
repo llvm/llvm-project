@@ -194,7 +194,6 @@ As a whole, the ``.cpp`` file looks like:
   #include "llvm/Support/raw_ostream.h"
 
   #include "llvm/IR/LegacyPassManager.h"
-  #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
   using namespace llvm;
 

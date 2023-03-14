@@ -439,9 +439,7 @@ Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
       Align Alignment = cast<ConstantInt>(II.getArgOperand(2))->getAlignValue();
       VectorType *WideLoadTy = cast<VectorType>(II.getArgOperand(1)->getType());
       ElementCount VF = WideLoadTy->getElementCount();
-      Constant *EC =
-          ConstantInt::get(Builder.getInt32Ty(), VF.getKnownMinValue());
-      Value *RunTimeVF = VF.isScalable() ? Builder.CreateVScale(EC) : EC;
+      Value *RunTimeVF = Builder.CreateElementCount(Builder.getInt32Ty(), VF);
       Value *LastLane = Builder.CreateSub(RunTimeVF, Builder.getInt32(1));
       Value *Extract =
           Builder.CreateExtractElement(II.getArgOperand(0), LastLane);
@@ -599,8 +597,7 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
   }
 
   // Add range metadata since known bits can't completely reflect what we know.
-  // TODO: Handle splat vectors.
-  auto *IT = dyn_cast<IntegerType>(Op0->getType());
+  auto *IT = cast<IntegerType>(Op0->getType()->getScalarType());
   if (IT && IT->getBitWidth() != 1 && !II.getMetadata(LLVMContext::MD_range)) {
     Metadata *LowAndHigh[] = {
         ConstantAsMetadata::get(ConstantInt::get(IT, DefiniteZeros)),
@@ -683,12 +680,8 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
                                                   Constant::getNullValue(Ty)),
                             Ty);
 
-  // FIXME: Try to simplify vectors of integers.
-  auto *IT = dyn_cast<IntegerType>(Ty);
-  if (!IT)
-    return nullptr;
-
   // Add range metadata since known bits can't completely reflect what we know.
+  auto *IT = cast<IntegerType>(Ty->getScalarType());
   unsigned MinCount = Known.countMinPopulation();
   unsigned MaxCount = Known.countMaxPopulation();
   if (IT->getBitWidth() != 1 && !II.getMetadata(LLVMContext::MD_range)) {
