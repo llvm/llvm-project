@@ -1505,8 +1505,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     const DataLayout &DL = F.getParent()->getDataLayout();
     if (VectorType *VT = dyn_cast<VectorType>(OrigTy)) {
       uint32_t EltSize = DL.getTypeSizeInBits(VT->getElementType());
-      return FixedVectorType::get(IntegerType::get(*MS.C, EltSize),
-                                  cast<FixedVectorType>(VT)->getNumElements());
+      return VectorType::get(IntegerType::get(*MS.C, EltSize),
+                             VT->getElementCount());
     }
     if (ArrayType *AT = dyn_cast<ArrayType>(OrigTy)) {
       return ArrayType::get(getShadowTy(AT->getElementType()),
@@ -1597,28 +1597,28 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   Type *ptrToIntPtrType(Type *PtrTy) const {
-    if (FixedVectorType *VectTy = dyn_cast<FixedVectorType>(PtrTy)) {
-      return FixedVectorType::get(ptrToIntPtrType(VectTy->getElementType()),
-                                  VectTy->getNumElements());
+    if (VectorType *VectTy = dyn_cast<VectorType>(PtrTy)) {
+      return VectorType::get(ptrToIntPtrType(VectTy->getElementType()),
+                             VectTy->getElementCount());
     }
     assert(PtrTy->isIntOrPtrTy());
     return MS.IntptrTy;
   }
 
   Type *getPtrToShadowPtrType(Type *IntPtrTy, Type *ShadowTy) const {
-    if (FixedVectorType *VectTy = dyn_cast<FixedVectorType>(IntPtrTy)) {
-      return FixedVectorType::get(
+    if (VectorType *VectTy = dyn_cast<VectorType>(IntPtrTy)) {
+      return VectorType::get(
           getPtrToShadowPtrType(VectTy->getElementType(), ShadowTy),
-          VectTy->getNumElements());
+          VectTy->getElementCount());
     }
     assert(IntPtrTy == MS.IntptrTy);
     return ShadowTy->getPointerTo();
   }
 
   Constant *constToIntPtr(Type *IntPtrTy, uint64_t C) const {
-    if (FixedVectorType *VectTy = dyn_cast<FixedVectorType>(IntPtrTy)) {
-      return ConstantDataVector::getSplat(
-          VectTy->getNumElements(), constToIntPtr(VectTy->getElementType(), C));
+    if (VectorType *VectTy = dyn_cast<VectorType>(IntPtrTy)) {
+      return ConstantVector::getSplat(
+          VectTy->getElementCount(), constToIntPtr(VectTy->getElementType(), C));
     }
     assert(IntPtrTy == MS.IntptrTy);
     return ConstantInt::get(MS.IntptrTy, C);
@@ -2434,8 +2434,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (dstTy->isIntegerTy() && srcTy->isIntegerTy())
       return IRB.CreateIntCast(V, dstTy, Signed);
     if (dstTy->isVectorTy() && srcTy->isVectorTy() &&
-        cast<FixedVectorType>(dstTy)->getNumElements() ==
-            cast<FixedVectorType>(srcTy)->getNumElements())
+        cast<VectorType>(dstTy)->getElementCount() ==
+            cast<VectorType>(srcTy)->getElementCount())
       return IRB.CreateIntCast(V, dstTy, Signed);
     Value *V1 = IRB.CreateBitCast(V, Type::getIntNTy(*MS.C, srcSizeInBits));
     Value *V2 =
@@ -3356,7 +3356,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
 
     Type *ShadowTy = getShadowTy(&I);
-    Type *ElementShadowTy = cast<FixedVectorType>(ShadowTy)->getElementType();
+    Type *ElementShadowTy = cast<VectorType>(ShadowTy)->getElementType();
     auto [ShadowPtr, OriginPtr] =
         getShadowOriginPtr(Ptr, IRB, ElementShadowTy, {}, /*isStore*/ false);
 
@@ -3382,7 +3382,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     Value *Shadow = getShadow(Values);
     Type *ElementShadowTy =
-        getShadowTy(cast<FixedVectorType>(Values->getType())->getElementType());
+        getShadowTy(cast<VectorType>(Values->getType())->getElementType());
     auto [ShadowPtr, OriginPtrs] =
         getShadowOriginPtr(Ptr, IRB, ElementShadowTy, {}, /*isStore*/ true);
 
@@ -3415,7 +3415,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
 
     Type *ShadowTy = getShadowTy(&I);
-    Type *ElementShadowTy = cast<FixedVectorType>(ShadowTy)->getElementType();
+    Type *ElementShadowTy = cast<VectorType>(ShadowTy)->getElementType();
     auto [ShadowPtrs, OriginPtrs] = getShadowOriginPtr(
         Ptrs, IRB, ElementShadowTy, Alignment, /*isStore*/ false);
 
@@ -3448,7 +3448,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     Value *Shadow = getShadow(Values);
     Type *ElementShadowTy =
-        getShadowTy(cast<FixedVectorType>(Values->getType())->getElementType());
+        getShadowTy(cast<VectorType>(Values->getType())->getElementType());
     auto [ShadowPtrs, OriginPtrs] = getShadowOriginPtr(
         Ptrs, IRB, ElementShadowTy, Alignment, /*isStore*/ true);
 
