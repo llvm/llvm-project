@@ -92,6 +92,7 @@ void  operator delete[](void* ptr, void*) noexcept;
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/remove_cv.h>
+#include <__verbose_abort>
 #include <cstddef>
 #include <cstdlib>
 #include <exception>
@@ -176,7 +177,7 @@ void __throw_bad_array_new_length()
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw bad_array_new_length();
 #else
-    _VSTD::abort();
+    std::__libcpp_verbose_abort("bad_array_new_length was thrown in -fno-exceptions mode");
 #endif
 }
 

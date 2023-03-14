@@ -3140,6 +3140,14 @@ private:
                 fir::factory::CharacterExprHelper{*builder, loc}.createAssign(
                     lhs, rhs);
               } else if (isDerivedCategory(lhsType->category())) {
+                // Handle parent component.
+                if (Fortran::lower::isParentComponent(assign.lhs)) {
+                  if (!fir::getBase(lhs).getType().isa<fir::BaseBoxType>())
+                    lhs = fir::getBase(builder->createBox(loc, lhs));
+                  lhs = Fortran::lower::updateBoxForParentComponent(*this, lhs,
+                                                                    assign.lhs);
+                }
+
                 // Fortran 2018 10.2.1.3 p13 and p14
                 // Recursively gen an assignment on each element pair.
                 fir::factory::genRecordAssignment(*builder, loc, lhs, rhs,

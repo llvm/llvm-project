@@ -519,39 +519,6 @@ private:
   std::pair<unsigned, unsigned> hoistExpressions(Function &F);
 };
 
-class GVNHoistLegacyPass : public FunctionPass {
-public:
-  static char ID;
-
-  GVNHoistLegacyPass() : FunctionPass(ID) {
-    initializeGVNHoistLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
-    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
-    auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
-    auto &MD = getAnalysis<MemoryDependenceWrapperPass>().getMemDep();
-    auto &MSSA = getAnalysis<MemorySSAWrapperPass>().getMSSA();
-
-    GVNHoist G(&DT, &PDT, &AA, &MD, &MSSA);
-    return G.run(F);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<PostDominatorTreeWrapperPass>();
-    AU.addRequired<AAResultsWrapperPass>();
-    AU.addRequired<MemoryDependenceWrapperPass>();
-    AU.addRequired<MemorySSAWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addPreserved<MemorySSAWrapperPass>();
-    AU.addPreserved<GlobalsAAWrapperPass>();
-  }
-};
-
 bool GVNHoist::run(Function &F) {
   NumFuncArgs = F.arg_size();
   VN.setDomTree(DT);
@@ -1256,17 +1223,3 @@ PreservedAnalyses GVNHoistPass::run(Function &F, FunctionAnalysisManager &AM) {
   PA.preserve<MemorySSAAnalysis>();
   return PA;
 }
-
-char GVNHoistLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(GVNHoistLegacyPass, "gvn-hoist",
-                      "Early GVN Hoisting of Expressions", false, false)
-INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(GVNHoistLegacyPass, "gvn-hoist",
-                    "Early GVN Hoisting of Expressions", false, false)
-
-FunctionPass *llvm::createGVNHoistPass() { return new GVNHoistLegacyPass(); }

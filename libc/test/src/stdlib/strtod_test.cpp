@@ -191,4 +191,9 @@ TEST_F(LlvmLibcStrToDTest, FuzzFailures) {
            "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN?",
            0, uint64_t(0));
   run_test("0x.666E40", 9, uint64_t(0x3fd99b9000000000));
+
+  // glibc version 2.36 and higher (not tested with lower versions) disagrees
+  // with this result, but ours is correct for the nearest rounding mode. See
+  // this bug: https://sourceware.org/bugzilla/show_bug.cgi?id=30220
+  run_test("0x30000002222225p-1077", 22, uint64_t(0x0006000000444445), ERANGE);
 }

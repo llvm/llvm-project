@@ -38,12 +38,12 @@ CodegenEnv::CodegenEnv(linalg::GenericOp linop, SparsificationOptions opts,
     : linalgOp(linop), sparseOptions(opts),
       latticeMerger(numTensors, numLoops, numFilterLoops), loopEmitter(),
       topSort(), sparseOut(nullptr), outerParNest(-1u), insChain(), expValues(),
-      expFilled(), expAdded(), expCount(), redVal(), redExp(-1u),
-      redCustom(-1u), redValidLexInsert() {}
+      expFilled(), expAdded(), expCount(), redVal(), redExp(kInvalidId),
+      redCustom(kInvalidId), redValidLexInsert() {}
 
 LogicalResult CodegenEnv::initTensorExp() {
   // Builds the tensor expression for the Linalg operation in SSA form.
-  std::optional<unsigned> optExp = latticeMerger.buildTensorExpFromLinalg(op());
+  std::optional<ExprId> optExp = latticeMerger.buildTensorExpFromLinalg(op());
   if (!optExp || !isAdmissibleTensorExp(*optExp))
     return failure();
 
@@ -101,7 +101,7 @@ std::optional<Operation *> CodegenEnv::genLoopBoundary(
 // Code generation environment verify functions.
 //===----------------------------------------------------------------------===//
 
-bool CodegenEnv::isAdmissibleTensorExp(unsigned exp) {
+bool CodegenEnv::isAdmissibleTensorExp(ExprId exp) {
   // We reject any expression that makes a reduction from `-outTensor`, as those
   // expressions create a dependency between the current iteration (i) and the
   // previous iteration (i-1). It would require iterating over the whole
@@ -115,7 +115,10 @@ bool CodegenEnv::isAdmissibleTensorExp(unsigned exp) {
   }
 
   OpOperand *lhs = linalgOp.getDpsInitOperand(0);
-  unsigned tensor = lhs->getOperandNumber();
+  // That the operand number is a valid `TensorId` will be verified
+  // by the call to `isSingleCondition` below; though we may want to add
+  // assertions to check it here, in order to give better error messages.
+  const TensorId tensor = lhs->getOperandNumber();
   // An non-annotated output tensor is assumed dense, and becomes a random
   // access n-dim memref. Admissible since insertions cannot occur.
   if (getSparseTensorType(lhs->get()).isAllDense())
@@ -140,13 +143,14 @@ bool CodegenEnv::isAdmissibleTopoOrder() {
   OpOperand *lhs = linalgOp.getDpsInitOperand(0);
   // Accept "truly dynamic" if the output tensor materializes uninitialized
   // into the computation and insertions occur in lexicographic index order.
-  unsigned nest = 0;
-  auto iteratorTypes = linalgOp.getIteratorTypesArray();
-  for (unsigned i = 0, e = latticeMerger.getNumLoops(); i < e; i++) {
-    if (!latticeMerger.isFilterLoop(topSortAt(i))) {
+  LoopOrd nest = 0;
+  const auto iteratorTypes = linalgOp.getIteratorTypesArray();
+  assert(topSortSize() == latticeMerger.getNumLoops());
+  for (const LoopId i : topSort) {
+    if (!latticeMerger.isFilterLoop(i)) {
       // We only count non-filter loops as filter loops should be considered
-      // as a special type of parallel loops.
-      if (linalg::isReductionIterator(iteratorTypes[topSortAt(i)]))
+      // a special type of parallel loops.
+      if (linalg::isReductionIterator(iteratorTypes[i]))
         break; // terminate at first reduction
       nest++;
     }
@@ -154,7 +158,7 @@ bool CodegenEnv::isAdmissibleTopoOrder() {
   // Determine admissible dynamic insertion situations:
   // (1) fully injective, since there are no reductions,
   // (2) admissible 1-d expansion in innermost dimension.
-  if (nest >= linalgOp.getRank(lhs) - 1) {
+  if (static_cast<int64_t>(nest) >= linalgOp.getRank(lhs) - 1) {
     outerParNest = nest;
     return true;
   }
@@ -165,19 +169,26 @@ bool CodegenEnv::isAdmissibleTopoOrder() {
 // Code generation environment topological sort methods
 //===----------------------------------------------------------------------===//
 
-ArrayRef<unsigned> CodegenEnv::getTopSortSlice(size_t n, size_t m) const {
-  return ArrayRef<unsigned>(topSort).slice(n, m);
+ArrayRef<LoopId> CodegenEnv::getTopSortSlice(LoopOrd n, LoopOrd m) const {
+  return ArrayRef<LoopId>(topSort).slice(n, m);
 }
 
-ArrayRef<unsigned> CodegenEnv::getLoopCurStack() const {
-  return getTopSortSlice(0, loopEmitter.getCurrentDepth());
+ArrayRef<LoopId> CodegenEnv::getLoopStackUpTo(LoopOrd n) const {
+  return ArrayRef<LoopId>(topSort).take_front(n);
 }
 
-Value CodegenEnv::getLoopIdxValue(size_t loopIdx) const {
-  for (unsigned lv = 0, lve = topSort.size(); lv < lve; lv++)
-    if (topSort[lv] == loopIdx)
-      return loopEmitter.getLoopIV(lv);
-  llvm_unreachable("invalid loop index");
+ArrayRef<LoopId> CodegenEnv::getCurrentLoopStack() const {
+  return getLoopStackUpTo(loopEmitter.getCurrentDepth());
+}
+
+Value CodegenEnv::getLoopVar(LoopId i) const {
+  // TODO: this class should store the inverse of `topSort` so that
+  // it can do this conversion directly, instead of searching through
+  // `topSort` every time.  (Or else, `LoopEmitter` should handle this.)
+  for (LoopOrd n = 0, numLoops = topSortSize(); n < numLoops; n++)
+    if (topSort[n] == i)
+      return loopEmitter.getLoopIV(n);
+  llvm_unreachable("invalid loop identifier");
 }
 
 //===----------------------------------------------------------------------===//
@@ -189,8 +200,10 @@ void CodegenEnv::updateInsertionChain(Value chain) {
   insChain = chain;
 }
 
-bool CodegenEnv::atExpandLevel(OpOperand *o, unsigned rank, unsigned lv) const {
-  return sparseOut == o && outerParNest == rank - 1 && outerParNest == lv;
+// FIXME: clarify what this "rank" is really supposed to mean/be.
+bool CodegenEnv::atExpandLevel(OpOperand *o, unsigned rank, LoopOrd n) const {
+  return sparseOut == o && outerParNest == static_cast<LoopOrd>(rank - 1) &&
+         outerParNest == n;
 }
 
 void CodegenEnv::startExpand(Value values, Value filled, Value added,
@@ -216,21 +229,21 @@ void CodegenEnv::endExpand() {
 // Code generation environment reduction methods
 //===----------------------------------------------------------------------===//
 
-void CodegenEnv::startReduc(unsigned exp, Value val) {
-  assert(redExp == -1u && exp != -1u);
+void CodegenEnv::startReduc(ExprId exp, Value val) {
+  assert(!isReduc() && exp != kInvalidId);
   redExp = exp;
   updateReduc(val);
 }
 
 void CodegenEnv::updateReduc(Value val) {
-  assert(redExp != -1u);
+  assert(isReduc());
   redVal = exp(redExp).val = val;
 }
 
 Value CodegenEnv::endReduc() {
   Value val = redVal;
   updateReduc(Value());
-  redExp = -1u;
+  redExp = kInvalidId;
   return val;
 }
 
@@ -244,17 +257,17 @@ void CodegenEnv::clearValidLexInsert() {
   redValidLexInsert = Value();
 }
 
-void CodegenEnv::startCustomReduc(unsigned exp) {
-  assert(redCustom == -1u && exp != -1u);
+void CodegenEnv::startCustomReduc(ExprId exp) {
+  assert(!isCustomReduc() && exp != kInvalidId);
   redCustom = exp;
 }
 
 Value CodegenEnv::getCustomRedId() {
-  assert(redCustom != -1u);
+  assert(isCustomReduc());
   return dyn_cast<sparse_tensor::ReduceOp>(exp(redCustom).op).getIdentity();
 }
 
 void CodegenEnv::endCustomReduc() {
-  assert(redCustom != -1u);
-  redCustom = -1u;
+  assert(isCustomReduc());
+  redCustom = kInvalidId;
 }

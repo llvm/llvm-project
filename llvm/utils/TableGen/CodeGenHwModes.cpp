@@ -21,6 +21,19 @@ StringRef CodeGenHwModes::DefaultModeName = "DefaultMode";
 HwMode::HwMode(Record *R) {
   Name = R->getName();
   Features = std::string(R->getValueAsString("Features"));
+
+  std::vector<Record *> PredicateRecs = R->getValueAsListOfDefs("Predicates");
+  SmallString<128> PredicateCheck;
+  raw_svector_ostream OS(PredicateCheck);
+  ListSeparator LS(" && ");
+  for (Record *Pred : PredicateRecs) {
+    StringRef CondString = Pred->getValueAsString("CondString");
+    if (CondString.empty())
+      continue;
+    OS << LS << '(' << CondString << ')';
+  }
+
+  Predicates = std::string(PredicateCheck);
 }
 
 LLVM_DUMP_METHOD
