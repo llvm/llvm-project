@@ -1,4 +1,3 @@
-// REQUIRES: !system-windows
 // RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 typedef int * Int_ptr_t;
 typedef int Int_t;

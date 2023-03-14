@@ -166,7 +166,7 @@ private:
   FormatToken *parseIfThenElse(IfStmtKind *IfKind, bool KeepBraces = false);
   void parseTryCatch();
   void parseLoopBody(bool KeepBraces, bool WrapRightBrace);
-  void parseForOrWhileLoop();
+  void parseForOrWhileLoop(bool HasParens = true);
   void parseDoWhile();
   void parseLabel(bool LeftAlignLabel = false);
   void parseCaseLabel();

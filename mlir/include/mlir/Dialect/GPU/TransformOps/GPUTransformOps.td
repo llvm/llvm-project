@@ -15,8 +15,8 @@ include "mlir/Dialect/PDL/IR/PDLTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
-def MapNestedForeachToThreads :
-  Op<Transform_Dialect, "gpu.map_nested_foreach_to_threads",
+def MapNestedForallToThreads :
+  Op<Transform_Dialect, "gpu.map_nested_forall_to_threads",
     [FunctionalStyleTransformOpTrait,
      MemoryEffectsOpInterface,
      TransformEachOpTrait,
@@ -118,8 +118,8 @@ def MapNestedForeachToThreads :
 }
 
 
-def MapForeachToBlocks :
-  Op<Transform_Dialect, "gpu.map_foreach_to_blocks",
+def MapForallToBlocks :
+  Op<Transform_Dialect, "gpu.map_forall_to_blocks",
     [FunctionalStyleTransformOpTrait,
      MemoryEffectsOpInterface,
      TransformOpInterface,

@@ -202,86 +202,15 @@ static bool isDeInterleaveMask(ArrayRef<int> Mask, unsigned &Factor,
 /// The particular case of an RE-interleave mask is:
 /// I.e. <0, LaneLen, ... , LaneLen*(Factor - 1), 1, LaneLen + 1, ...>
 /// E.g. For a Factor of 2 (LaneLen=4): <0, 4, 1, 5, 2, 6, 3, 7>
-static bool isReInterleaveMask(ArrayRef<int> Mask, unsigned &Factor,
-                               unsigned MaxFactor, unsigned OpNumElts) {
-  unsigned NumElts = Mask.size();
+static bool isReInterleaveMask(ShuffleVectorInst *SVI, unsigned &Factor,
+                               unsigned MaxFactor) {
+  unsigned NumElts = SVI->getShuffleMask().size();
   if (NumElts < 4)
     return false;
 
   // Check potential Factors.
   for (Factor = 2; Factor <= MaxFactor; Factor++) {
-    if (NumElts % Factor)
-      continue;
-
-    unsigned LaneLen = NumElts / Factor;
-    if (!isPowerOf2_32(LaneLen))
-      continue;
-
-    // Check whether each element matches the general interleaved rule.
-    // Ignore undef elements, as long as the defined elements match the rule.
-    // Outer loop processes all factors (x, y, z in the above example)
-    unsigned I = 0, J;
-    for (; I < Factor; I++) {
-      unsigned SavedLaneValue;
-      unsigned SavedNoUndefs = 0;
-
-      // Inner loop processes consecutive accesses (x, x+1... in the example)
-      for (J = 0; J < LaneLen - 1; J++) {
-        // Lane computes x's position in the Mask
-        unsigned Lane = J * Factor + I;
-        unsigned NextLane = Lane + Factor;
-        int LaneValue = Mask[Lane];
-        int NextLaneValue = Mask[NextLane];
-
-        // If both are defined, values must be sequential
-        if (LaneValue >= 0 && NextLaneValue >= 0 &&
-            LaneValue + 1 != NextLaneValue)
-          break;
-
-        // If the next value is undef, save the current one as reference
-        if (LaneValue >= 0 && NextLaneValue < 0) {
-          SavedLaneValue = LaneValue;
-          SavedNoUndefs = 1;
-        }
-
-        // Undefs are allowed, but defined elements must still be consecutive:
-        // i.e.: x,..., undef,..., x + 2,..., undef,..., undef,..., x + 5, ....
-        // Verify this by storing the last non-undef followed by an undef
-        // Check that following non-undef masks are incremented with the
-        // corresponding distance.
-        if (SavedNoUndefs > 0 && LaneValue < 0) {
-          SavedNoUndefs++;
-          if (NextLaneValue >= 0 &&
-              SavedLaneValue + SavedNoUndefs != (unsigned)NextLaneValue)
-            break;
-        }
-      }
-
-      if (J < LaneLen - 1)
-        break;
-
-      int StartMask = 0;
-      if (Mask[I] >= 0) {
-        // Check that the start of the I range (J=0) is greater than 0
-        StartMask = Mask[I];
-      } else if (Mask[(LaneLen - 1) * Factor + I] >= 0) {
-        // StartMask defined by the last value in lane
-        StartMask = Mask[(LaneLen - 1) * Factor + I] - J;
-      } else if (SavedNoUndefs > 0) {
-        // StartMask defined by some non-zero value in the j loop
-        StartMask = SavedLaneValue - (LaneLen - 1 - SavedNoUndefs);
-      }
-      // else StartMask remains set to 0, i.e. all elements are undefs
-
-      if (StartMask < 0)
-        break;
-      // We must stay within the vectors; This case can happen with undefs.
-      if (StartMask + LaneLen > OpNumElts*2)
-        break;
-    }
-
-    // Found an interleaved mask of current factor.
-    if (I == Factor)
+    if (SVI->isInterleave(Factor))
       return true;
   }
 
@@ -500,9 +429,7 @@ bool InterleavedAccess::lowerInterleavedStore(
 
   // Check if the shufflevector is RE-interleave shuffle.
   unsigned Factor;
-  unsigned OpNumElts =
-      cast<FixedVectorType>(SVI->getOperand(0)->getType())->getNumElements();
-  if (!isReInterleaveMask(SVI->getShuffleMask(), Factor, MaxFactor, OpNumElts))
+  if (!isReInterleaveMask(SVI, Factor, MaxFactor))
     return false;
 
   LLVM_DEBUG(dbgs() << "IA: Found an interleaved store: " << *SI << "\n");

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/string_view.h"
+#include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/sys/resource/getrlimit.h"
 #include "src/sys/resource/setrlimit.h"
@@ -15,7 +16,6 @@
 #include "test/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <sys/resource.h>
 
 TEST(LlvmLibcResourceLimitsTest, SetNoFileLimit) {
@@ -28,14 +28,14 @@ TEST(LlvmLibcResourceLimitsTest, SetNoFileLimit) {
 
   constexpr const char *TEST_FILE1 = "testdata/resource_limits1.test";
   constexpr const char *TEST_FILE2 = "testdata/resource_limits2.test";
-  errno = 0;
+  libc_errno = 0;
 
   int fd1 = __llvm_libc::open(TEST_FILE1, O_CREAT | O_WRONLY, S_IRWXU);
   ASSERT_GT(fd1, 0);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   int fd2 = __llvm_libc::open(TEST_FILE2, O_CREAT | O_WRONLY, S_IRWXU);
   ASSERT_GT(fd2, 0);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
 
   ASSERT_THAT(__llvm_libc::close(fd1), Succeeds(0));
   ASSERT_THAT(__llvm_libc::close(fd2), Succeeds(0));
@@ -48,22 +48,22 @@ TEST(LlvmLibcResourceLimitsTest, SetNoFileLimit) {
   // One can now only open one of the files successfully.
   fd1 = __llvm_libc::open(TEST_FILE1, O_RDONLY);
   ASSERT_GT(fd1, 0);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   fd2 = __llvm_libc::open(TEST_FILE2, O_RDONLY);
   ASSERT_LT(fd2, 0);
-  ASSERT_NE(errno, 0);
+  ASSERT_NE(libc_errno, 0);
 
-  errno = 0;
+  libc_errno = 0;
   ASSERT_THAT(__llvm_libc::close(fd1), Succeeds(0));
 
   fd2 = __llvm_libc::open(TEST_FILE2, O_RDONLY);
   ASSERT_GT(fd2, 0);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   fd1 = __llvm_libc::open(TEST_FILE1, O_RDONLY);
   ASSERT_LT(fd1, 0);
-  ASSERT_NE(errno, 0);
+  ASSERT_NE(libc_errno, 0);
 
-  errno = 0;
+  libc_errno = 0;
   ASSERT_THAT(__llvm_libc::close(fd2), Succeeds(0));
 
   ASSERT_THAT(__llvm_libc::unlink(TEST_FILE1), Succeeds(0));

@@ -10,8 +10,8 @@ add_integration_test(
   STARTUP
     libc.startup.linux.crt1
   DEPENDS
-    libc.include.errno
     libc.src.__support.CPP.string_view
+    libc.src.errno.errno
     libc.src.stdlib.getenv
     libc.src.unistd.getcwd
 )

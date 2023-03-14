@@ -8,7 +8,7 @@ module m
   real, allocatable, bind(c) :: x3(:)
  contains
   subroutine s1(x) bind(c)
-    !ERROR: A BIND(C) VALUE dummy argument must have an interoperable type
+    !PORTABILITY: A BIND(C) LOGICAL dummy argument should have the interoperable KIND=C_BOOL
     logical(2), intent(in), value :: x
   end
   subroutine s2(x) bind(c)

@@ -157,7 +157,8 @@ std::string TweakTest::decorate(llvm::StringRef Code, unsigned Point) {
 std::string TweakTest::decorate(llvm::StringRef Code,
                                 llvm::Annotations::Range Range) {
   return (Code.substr(0, Range.Begin) + "[[" +
-          Code.substr(Range.Begin, Range.End) + "]]" + Code.substr(Range.End))
+          Code.substr(Range.Begin, Range.End - Range.Begin) + "]]" +
+          Code.substr(Range.End))
       .str();
 }
 
