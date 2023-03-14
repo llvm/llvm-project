@@ -148,7 +148,12 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
     case llvm::Triple::Fuchsia:
       return new FuchsiaTargetInfo<AArch64leTargetInfo>(Triple, Opts);
     case llvm::Triple::Linux:
-      return new LinuxTargetInfo<AArch64leTargetInfo>(Triple, Opts);
+      switch (Triple.getEnvironment()) {
+      default:
+        return new LinuxTargetInfo<AArch64leTargetInfo>(Triple, Opts);
+      case llvm::Triple::OpenHOS:
+        return new OHOSTargetInfo<AArch64leTargetInfo>(Triple, Opts);
+      }
     case llvm::Triple::NetBSD:
       return new NetBSDTargetInfo<AArch64leTargetInfo>(Triple, Opts);
     case llvm::Triple::OpenBSD:
@@ -188,7 +193,14 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
     case llvm::Triple::CloudABI:
       return new CloudABITargetInfo<ARMleTargetInfo>(Triple, Opts);
     case llvm::Triple::Linux:
-      return new LinuxTargetInfo<ARMleTargetInfo>(Triple, Opts);
+      switch (Triple.getEnvironment()) {
+      default:
+        return new LinuxTargetInfo<ARMleTargetInfo>(Triple, Opts);
+      case llvm::Triple::OpenHOS:
+        return new OHOSTargetInfo<ARMleTargetInfo>(Triple, Opts);
+      }
+    case llvm::Triple::LiteOS:
+      return new OHOSTargetInfo<ARMleTargetInfo>(Triple, Opts);
     case llvm::Triple::FreeBSD:
       return new FreeBSDTargetInfo<ARMleTargetInfo>(Triple, Opts);
     case llvm::Triple::NetBSD:
@@ -263,7 +275,12 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
   case llvm::Triple::mipsel:
     switch (os) {
     case llvm::Triple::Linux:
-      return new LinuxTargetInfo<MipsTargetInfo>(Triple, Opts);
+      switch (Triple.getEnvironment()) {
+      default:
+        return new LinuxTargetInfo<MipsTargetInfo>(Triple, Opts);
+      case llvm::Triple::OpenHOS:
+        return new OHOSTargetInfo<MipsTargetInfo>(Triple, Opts);
+      }
     case llvm::Triple::RTEMS:
       return new RTEMSTargetInfo<MipsTargetInfo>(Triple, Opts);
     case llvm::Triple::FreeBSD:
@@ -423,7 +440,12 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
     case llvm::Triple::Fuchsia:
       return new FuchsiaTargetInfo<RISCV64TargetInfo>(Triple, Opts);
     case llvm::Triple::Linux:
-      return new LinuxTargetInfo<RISCV64TargetInfo>(Triple, Opts);
+      switch (Triple.getEnvironment()) {
+      default:
+        return new LinuxTargetInfo<RISCV64TargetInfo>(Triple, Opts);
+      case llvm::Triple::OpenHOS:
+        return new OHOSTargetInfo<RISCV64TargetInfo>(Triple, Opts);
+      }
     default:
       return new RISCV64TargetInfo(Triple, Opts);
     }
@@ -561,6 +583,8 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
         return new LinuxTargetInfo<X86_64TargetInfo>(Triple, Opts);
       case llvm::Triple::Android:
         return new AndroidX86_64TargetInfo(Triple, Opts);
+      case llvm::Triple::OpenHOS:
+        return new OHOSX86_64TargetInfo(Triple, Opts);
       }
     }
     case llvm::Triple::DragonFly:
