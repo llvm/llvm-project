@@ -1,3 +1,4 @@
+// UNSUPPORTED: system-windows
 // RUN: %clangxx %s -### -no-canonical-prefixes --target=arm-liteos -march=armv7-a \
 // RUN:     -ccc-install-dir %S/Inputs/ohos_native_tree/llvm/bin \
 // RUN:     -resource-dir=%S/Inputs/ohos_native_tree/llvm/lib/clang/x.y.z \
