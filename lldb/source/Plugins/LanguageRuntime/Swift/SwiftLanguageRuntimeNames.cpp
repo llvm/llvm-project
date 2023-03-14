@@ -677,9 +677,8 @@ void SwiftLanguageRuntime::GetGenericParameterNamesForFunction(
   }
 }
 
-std::string
-SwiftLanguageRuntime::DemangleSymbolAsString(StringRef symbol, DemangleMode mode,
-                                             const SymbolContext *sc) {
+std::string SwiftLanguageRuntime::DemangleSymbolAsString(
+    StringRef symbol, DemangleMode mode, const SymbolContext *sc) {
   bool did_init = false;
   llvm::DenseMap<ArchetypePath, StringRef> dict;
   swift::Demangle::DemangleOptions options;
@@ -1231,7 +1230,8 @@ SwiftLanguageRuntime::GetGenericSignature(StringRef function_name,
     if (child->getKind() ==
             swift::Demangle::Node::Kind::DependentGenericParamCount &&
         child->hasIndex()) {
-      if (child->getIndex() != num_generic_params)
+      signature.dependent_generic_param_count = child->getIndex();
+      if (signature.dependent_generic_param_count > num_generic_params)
         return {};
       continue;
     }
@@ -1331,11 +1331,23 @@ SwiftLanguageRuntime::GetGenericSignature(StringRef function_name,
         signature.count_for_type_pack.push_back(count);
 
     // Mark all pack_expansions with the same shape for skipping.
-    auto shape = signature.generic_params[shape_idx];
+    auto &shape = signature.generic_params[shape_idx];
     skip |= shape.same_shape;
   }
+  signature.num_counts = next_count;
   assert(signature.count_for_value_pack.size() ==
          signature.pack_expansions.size());
+
+  // Fill in the is_pack field for all generic parameters.
+  for (auto pack_expansion : signature.pack_expansions) {
+    unsigned shape_idx = pack_expansion.shape;
+    auto &param = signature.generic_params[shape_idx];
+    param.is_pack = true;
+    for (unsigned idx : param.same_shape.set_bits()) {
+      auto &sibling = signature.generic_params[idx];
+      sibling.is_pack = true;
+    }
+  }
 
   return signature;
 }
