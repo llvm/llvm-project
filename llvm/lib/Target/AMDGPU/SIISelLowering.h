@@ -466,8 +466,8 @@ public:
   Align computeKnownAlignForTargetInstr(GISelKnownBits &Analysis, Register R,
                                         const MachineRegisterInfo &MRI,
                                         unsigned Depth = 0) const override;
-  bool isSDNodeSourceOfDivergence(const SDNode *N,
-    FunctionLoweringInfo *FLI, LegacyDivergenceAnalysis *DA) const override;
+  bool isSDNodeSourceOfDivergence(const SDNode *N, FunctionLoweringInfo *FLI,
+                                  UniformityInfo *UA) const override;
 
   bool hasMemSDNodeUser(SDNode *N) const;
 
