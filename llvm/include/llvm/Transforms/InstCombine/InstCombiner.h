@@ -446,10 +446,9 @@ public:
   }
 
   /// Replace use and add the previously used value to the worklist.
-  Instruction *replaceUse(Use &U, Value *NewValue) {
+  void replaceUse(Use &U, Value *NewValue) {
     Worklist.addValue(U);
     U = NewValue;
-    return cast<Instruction>(U.getUser());
   }
 
   /// Combiner aware instruction erasure.
