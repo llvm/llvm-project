@@ -167,6 +167,9 @@ Improvements to Clang's diagnostics
   ``<built-in>``.
 - Clang constexpr evaluator now provides a more concise diagnostic when calling
   function pointer that is known to be null.
+- Clang now avoids duplicate warnings on unreachable ``[[fallthrough]];`` statements
+  previously issued from ``-Wunreachable-code`` and ``-Wunreachable-code-fallthrough``
+  by prioritizing ``-Wunreachable-code-fallthrough``.
 
 Bug Fixes in This Version
 -------------------------
