@@ -30,8 +30,8 @@ exit:
 
 define void @test_guard_as_branch(ptr %arr, i64 %n, i64 %bound) {
 ; CHECK-LABEL: Loop Unroll: F[test_guard_as_branch] Loop %loop
-; CHECK-NEXT:    Loop Size = 10
-; CHECK-NEXT:    runtime unrolling with count: 1
+; CHECK-NEXT:    Loop Size = 9
+; CHECK-NEXT:    runtime unrolling with count: 2
 entry:
   br label %loop
 
