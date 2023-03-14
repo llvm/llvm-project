@@ -2159,13 +2159,11 @@ bool IndVarSimplify::run(Loop *L) {
   // Clean up dead instructions.
   Changed |= DeleteDeadPHIs(L->getHeader(), TLI, MSSAU.get());
 
-#ifndef NDEBUG
   // Check a post-condition.
   assert(L->isRecursivelyLCSSAForm(*DT, *LI) &&
          "Indvars did not preserve LCSSA!");
   if (VerifyMemorySSA && MSSAU)
     MSSAU->getMemorySSA()->verifyMemorySSA();
-#endif
 
   return Changed;
 }
