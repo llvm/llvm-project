@@ -9,6 +9,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/UInt128.h"
 #include "src/__support/str_to_float.h"
+#include "src/errno/libc_errno.h"
 
 #include "test/UnitTest/Test.h"
 
@@ -78,7 +79,7 @@ public:
     typename __llvm_libc::fputil::FPBits<T>::UIntType actual_output_mantissa =
         0;
     uint32_t actual_output_exp2 = 0;
-    errno = 0;
+    libc_errno = 0;
 
     auto result = __llvm_libc::internal::simple_decimal_conversion<T>(numStart);
 
@@ -250,7 +251,7 @@ TEST(LlvmLibcStrToFloatTest, SimpleDecimalConversionExtraTypes) {
   uint32_t float_output_mantissa = 0;
   uint32_t output_exp2 = 0;
 
-  errno = 0;
+  libc_errno = 0;
   auto float_result = __llvm_libc::internal::simple_decimal_conversion<float>(
       "123456789012345678900");
   float_output_mantissa = float_result.num.mantissa;
@@ -262,7 +263,7 @@ TEST(LlvmLibcStrToFloatTest, SimpleDecimalConversionExtraTypes) {
   uint64_t double_output_mantissa = 0;
   output_exp2 = 0;
 
-  errno = 0;
+  libc_errno = 0;
   auto double_result = __llvm_libc::internal::simple_decimal_conversion<double>(
       "123456789012345678900");
 
