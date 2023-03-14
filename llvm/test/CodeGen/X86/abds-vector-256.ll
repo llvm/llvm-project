@@ -566,9 +566,9 @@ define <4 x i64> @abd_cmp_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; AVX1-NEXT:    vpsubq %xmm1, %xmm0, %xmm6
 ; AVX1-NEXT:    vpsubq %xmm4, %xmm3, %xmm7
 ; AVX1-NEXT:    vpsubq %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendvpd %xmm2, %xmm6, %xmm0, %xmm0
+; AVX1-NEXT:    vblendvpd %xmm2, %xmm0, %xmm6, %xmm0
 ; AVX1-NEXT:    vpsubq %xmm3, %xmm4, %xmm1
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm7, %xmm1, %xmm1
+; AVX1-NEXT:    vblendvpd %xmm5, %xmm1, %xmm7, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -577,20 +577,20 @@ define <4 x i64> @abd_cmp_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; AVX2-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm2
 ; AVX2-NEXT:    vpsubq %ymm1, %ymm0, %ymm3
 ; AVX2-NEXT:    vpsubq %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vblendvpd %ymm2, %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vblendvpd %ymm2, %ymm0, %ymm3, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: abd_cmp_v4i64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpnltq %ymm1, %ymm0, %k1
-; AVX512-NEXT:    vpsubq %ymm1, %ymm0, %ymm2
-; AVX512-NEXT:    vpsubq %ymm0, %ymm1, %ymm2 {%k1}
+; AVX512-NEXT:    vpsubq %ymm0, %ymm1, %ymm2
+; AVX512-NEXT:    vpsubq %ymm1, %ymm0, %ymm2 {%k1}
 ; AVX512-NEXT:    vmovdqa %ymm2, %ymm0
 ; AVX512-NEXT:    retq
   %cmp = icmp sge <4 x i64> %a, %b
   %ab = sub <4 x i64> %a, %b
   %ba = sub <4 x i64> %b, %a
-  %sel = select <4 x i1> %cmp, <4 x i64> %ba, <4 x i64> %ab
+  %sel = select <4 x i1> %cmp, <4 x i64> %ab, <4 x i64> %ba
   ret <4 x i64> %sel
 }
 

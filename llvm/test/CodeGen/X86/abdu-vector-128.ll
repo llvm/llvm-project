@@ -843,9 +843,9 @@ define <2 x i64> @abd_cmp_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; SSE2-NEXT:    movdqa %xmm0, %xmm3
 ; SSE2-NEXT:    psubq %xmm1, %xmm3
 ; SSE2-NEXT:    psubq %xmm0, %xmm1
-; SSE2-NEXT:    pand %xmm2, %xmm3
-; SSE2-NEXT:    pandn %xmm1, %xmm2
-; SSE2-NEXT:    por %xmm3, %xmm2
+; SSE2-NEXT:    pand %xmm2, %xmm1
+; SSE2-NEXT:    pandn %xmm3, %xmm2
+; SSE2-NEXT:    por %xmm1, %xmm2
 ; SSE2-NEXT:    movdqa %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -860,8 +860,8 @@ define <2 x i64> @abd_cmp_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; SSE42-NEXT:    psubq %xmm1, %xmm3
 ; SSE42-NEXT:    psubq %xmm0, %xmm1
 ; SSE42-NEXT:    movdqa %xmm2, %xmm0
-; SSE42-NEXT:    blendvpd %xmm0, %xmm3, %xmm1
-; SSE42-NEXT:    movapd %xmm1, %xmm0
+; SSE42-NEXT:    blendvpd %xmm0, %xmm1, %xmm3
+; SSE42-NEXT:    movapd %xmm3, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX1-LABEL: abd_cmp_v2i64:
@@ -872,7 +872,7 @@ define <2 x i64> @abd_cmp_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsubq %xmm1, %xmm0, %xmm3
 ; AVX1-NEXT:    vpsubq %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendvpd %xmm2, %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vblendvpd %xmm2, %xmm0, %xmm3, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: abd_cmp_v2i64:
@@ -883,20 +883,20 @@ define <2 x i64> @abd_cmp_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; AVX2-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vpsubq %xmm1, %xmm0, %xmm3
 ; AVX2-NEXT:    vpsubq %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vblendvpd %xmm2, %xmm3, %xmm0, %xmm0
+; AVX2-NEXT:    vblendvpd %xmm2, %xmm0, %xmm3, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: abd_cmp_v2i64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpnltuq %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vpsubq %xmm1, %xmm0, %xmm2
-; AVX512-NEXT:    vpsubq %xmm0, %xmm1, %xmm2 {%k1}
+; AVX512-NEXT:    vpsubq %xmm0, %xmm1, %xmm2
+; AVX512-NEXT:    vpsubq %xmm1, %xmm0, %xmm2 {%k1}
 ; AVX512-NEXT:    vmovdqa %xmm2, %xmm0
 ; AVX512-NEXT:    retq
   %cmp = icmp uge <2 x i64> %a, %b
   %ab = sub <2 x i64> %a, %b
   %ba = sub <2 x i64> %b, %a
-  %sel = select <2 x i1> %cmp, <2 x i64> %ba, <2 x i64> %ab
+  %sel = select <2 x i1> %cmp, <2 x i64> %ab, <2 x i64> %ba
   ret <2 x i64> %sel
 }
 
