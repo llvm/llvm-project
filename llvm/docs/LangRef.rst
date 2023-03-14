@@ -6472,14 +6472,14 @@ representing the maximum relative error, for example:
 ^^^^^^^^^^^^^^^^^^^^
 
 ``range`` metadata may be attached only to ``load``, ``call`` and ``invoke`` of
-integer types. It expresses the possible ranges the loaded value or the value
-returned by the called function at this call site is in. If the loaded or
-returned value is not in the specified range, a poison value is returned
-instead. The ranges are represented with a flattened list of integers. The
-loaded value or the value returned is known to be in the union of the ranges
+integer or vector of integer types. It expresses the possible ranges the loaded
+value or the value returned by the called function at this call site is in. If
+the loaded or returned value is not in the specified range, a poison value is
+returned instead. The ranges are represented with a flattened list of integers.
+The loaded value or the value returned is known to be in the union of the ranges
 defined by each consecutive pair. Each pair has the following properties:
 
--  The type must match the type loaded by the instruction.
+-  The type must match the scalar type of the instruction.
 -  The pair ``a,b`` represents the range ``[a,b)``.
 -  Both ``a`` and ``b`` are constants.
 -  The range is allowed to wrap.
@@ -6488,6 +6488,8 @@ defined by each consecutive pair. Each pair has the following properties:
 
 In addition, the pairs must be in signed order of the lower bound and
 they must be non-contiguous.
+
+For vector-typed instructions, the range is applied element-wise.
 
 Examples:
 
@@ -6498,6 +6500,7 @@ Examples:
       %c = call i8 @foo(),       !range !2 ; Can only be 0, 1, 3, 4 or 5
       %d = invoke i8 @bar() to label %cont
              unwind label %lpad, !range !3 ; Can only be -2, -1, 3, 4 or 5
+      %e = load <2 x i8>, ptr %x, !range 0 ; Can only be <0 or 1, 0 or 1>
     ...
     !0 = !{ i8 0, i8 2 }
     !1 = !{ i8 255, i8 2 }
