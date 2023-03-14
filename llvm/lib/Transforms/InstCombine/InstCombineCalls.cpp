@@ -439,9 +439,7 @@ Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
       Align Alignment = cast<ConstantInt>(II.getArgOperand(2))->getAlignValue();
       VectorType *WideLoadTy = cast<VectorType>(II.getArgOperand(1)->getType());
       ElementCount VF = WideLoadTy->getElementCount();
-      Constant *EC =
-          ConstantInt::get(Builder.getInt32Ty(), VF.getKnownMinValue());
-      Value *RunTimeVF = VF.isScalable() ? Builder.CreateVScale(EC) : EC;
+      Value *RunTimeVF = Builder.CreateElementCount(Builder.getInt32Ty(), VF);
       Value *LastLane = Builder.CreateSub(RunTimeVF, Builder.getInt32(1));
       Value *Extract =
           Builder.CreateExtractElement(II.getArgOperand(0), LastLane);

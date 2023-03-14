@@ -804,6 +804,9 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
                                  Desc.str().c_str(), Name.str().c_str());
       }
 
+      if (IgnoreUnknown && !isSupportedExtension(Name))
+        continue;
+
       ISAInfo->addExtension(Name, Major, Minor);
       // Extension format is correct, keep parsing the extensions.
       // TODO: Save Type, Name, Major, Minor to avoid parsing them later.

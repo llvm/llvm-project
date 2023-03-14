@@ -2923,10 +2923,15 @@ enum CXTypeKind {
   CXType_OCLIntelSubgroupAVCImeResult = 169,
   CXType_OCLIntelSubgroupAVCRefResult = 170,
   CXType_OCLIntelSubgroupAVCSicResult = 171,
+  CXType_OCLIntelSubgroupAVCImeResultSingleReferenceStreamout = 172,
+  CXType_OCLIntelSubgroupAVCImeResultDualReferenceStreamout = 173,
+  CXType_OCLIntelSubgroupAVCImeSingleReferenceStreamin = 174,
+  CXType_OCLIntelSubgroupAVCImeDualReferenceStreamin = 175,
+
+  /* Old aliases for AVC OpenCL extension types. */
   CXType_OCLIntelSubgroupAVCImeResultSingleRefStreamout = 172,
   CXType_OCLIntelSubgroupAVCImeResultDualRefStreamout = 173,
   CXType_OCLIntelSubgroupAVCImeSingleRefStreamin = 174,
-
   CXType_OCLIntelSubgroupAVCImeDualRefStreamin = 175,
 
   CXType_ExtVector = 176,

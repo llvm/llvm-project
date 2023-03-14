@@ -609,8 +609,9 @@ bool findVCToolChainViaEnvironment(vfs::FileSystem &VFS, std::string &Path,
   return false;
 }
 
-bool findVCToolChainViaSetupConfig(vfs::FileSystem &VFS, std::string &Path,
-                                   ToolsetLayout &VSLayout) {
+bool findVCToolChainViaSetupConfig(vfs::FileSystem &VFS,
+                                   std::optional<StringRef> VCToolsVersion,
+                                   std::string &Path, ToolsetLayout &VSLayout) {
 #if !defined(USE_MSVC_SETUP_API)
   return false;
 #else
@@ -677,17 +678,24 @@ bool findVCToolChainViaSetupConfig(vfs::FileSystem &VFS, std::string &Path,
   std::string VCRootPath;
   convertWideToUTF8(std::wstring(VCPathWide), VCRootPath);
 
-  SmallString<256> ToolsVersionFilePath(VCRootPath);
-  sys::path::append(ToolsVersionFilePath, "Auxiliary", "Build",
-                    "Microsoft.VCToolsVersion.default.txt");
+  std::string ToolsVersion;
+  if (VCToolsVersion.has_value()) {
+    ToolsVersion = *VCToolsVersion;
+  } else {
+    SmallString<256> ToolsVersionFilePath(VCRootPath);
+    sys::path::append(ToolsVersionFilePath, "Auxiliary", "Build",
+                      "Microsoft.VCToolsVersion.default.txt");
 
-  auto ToolsVersionFile = MemoryBuffer::getFile(ToolsVersionFilePath);
-  if (!ToolsVersionFile)
-    return false;
+    auto ToolsVersionFile = MemoryBuffer::getFile(ToolsVersionFilePath);
+    if (!ToolsVersionFile)
+      return false;
+
+    ToolsVersion = ToolsVersionFile->get()->getBuffer().rtrim();
+  }
+
 
   SmallString<256> ToolchainPath(VCRootPath);
-  sys::path::append(ToolchainPath, "Tools", "MSVC",
-                    ToolsVersionFile->get()->getBuffer().rtrim());
+  sys::path::append(ToolchainPath, "Tools", "MSVC", ToolsVersion);
   auto Status = VFS.status(ToolchainPath);
   if (!Status || !Status->isDirectory())
     return false;

@@ -15069,53 +15069,93 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       return I != RewriteMap.end() ? I->second : S;
     };
 
-    const SCEV *RewrittenLHS = GetMaybeRewritten(LHS);
+    // Collect rewrites for LHS and its transitive operands based on the
+    // condition.
+    // For min/max expressions, also apply the guard to its operands:
+    //  'min(a, b) >= c'   ->   '(a >= c) and (b >= c)',
+    //  'min(a, b) >  c'   ->   '(a >  c) and (b >  c)',
+    //  'max(a, b) <= c'   ->   '(a <= c) and (b <= c)',
+    //  'max(a, b) <  c'   ->   '(a <  c) and (b <  c)'.
 
-    const SCEV *RewrittenRHS = nullptr;
+    // We cannot express strict predicates in SCEV, so instead we replace them
+    // with non-strict ones against plus or minus one of RHS depending on the
+    // predicate.
+    const SCEV *One = getOne(RHS->getType());
     switch (Predicate) {
-    case CmpInst::ICMP_ULT: {
-      if (RHS->getType()->isPointerTy())
+      case CmpInst::ICMP_ULT:
+        if (RHS->getType()->isPointerTy())
+          return;
+        RHS = getUMaxExpr(RHS, One);
+        LLVM_FALLTHROUGH;
+      case CmpInst::ICMP_SLT: {
+        RHS = getMinusSCEV(RHS, One);
         break;
-      const SCEV *One = getOne(RHS->getType());
-      RHS = getMinusSCEV(getUMaxExpr(RHS, One), One);
-      LLVM_FALLTHROUGH;
-    }
-    case CmpInst::ICMP_ULE:
-      RewrittenRHS = getUMinExpr(RewrittenLHS, RHS);
-      break;
-    case CmpInst::ICMP_SLT:
-      RHS = getMinusSCEV(RHS, getOne(RHS->getType()));
-      LLVM_FALLTHROUGH;
-    case CmpInst::ICMP_SLE:
-      RewrittenRHS = getSMinExpr(RewrittenLHS, RHS);
-      break;
-    case CmpInst::ICMP_UGT:
-      RHS = getAddExpr(RHS, getOne(RHS->getType()));
-      LLVM_FALLTHROUGH;
-    case CmpInst::ICMP_UGE:
-      RewrittenRHS = getUMaxExpr(RewrittenLHS, RHS);
-      break;
-    case CmpInst::ICMP_SGT:
-      RHS = getAddExpr(RHS, getOne(RHS->getType()));
-      LLVM_FALLTHROUGH;
-    case CmpInst::ICMP_SGE:
-      RewrittenRHS = getSMaxExpr(RewrittenLHS, RHS);
-      break;
-    case CmpInst::ICMP_EQ:
-      if (isa<SCEVConstant>(RHS))
-        RewrittenRHS = RHS;
-      break;
-    case CmpInst::ICMP_NE:
-      if (isa<SCEVConstant>(RHS) &&
-          cast<SCEVConstant>(RHS)->getValue()->isNullValue())
-        RewrittenRHS = getUMaxExpr(RewrittenLHS, getOne(RHS->getType()));
-      break;
-    default:
-      break;
+      }
+      case CmpInst::ICMP_UGT:
+      case CmpInst::ICMP_SGT:
+        RHS = getAddExpr(RHS, One);
+        break;
+      default:
+        break;
     }
 
-    if (RewrittenRHS)
-      AddRewrite(LHS, RewrittenLHS, RewrittenRHS);
+    SmallVector<const SCEV *, 16> Worklist(1, LHS);
+    SmallPtrSet<const SCEV *, 16> Visited;
+
+    auto EnqueueOperands = [&Worklist](const SCEVNAryExpr *S) {
+      append_range(Worklist, S->operands());
+    };
+
+    while (!Worklist.empty()) {
+      const SCEV *From = Worklist.pop_back_val();
+      if (isa<SCEVConstant>(From))
+        continue;
+      if (!Visited.insert(From).second)
+        continue;
+      const SCEV *FromRewritten = GetMaybeRewritten(From);
+      const SCEV *To = nullptr;
+
+      switch (Predicate) {
+      case CmpInst::ICMP_ULT:
+      case CmpInst::ICMP_ULE:
+        To = getUMinExpr(FromRewritten, RHS);
+        if (auto *UMax = dyn_cast<SCEVUMaxExpr>(FromRewritten))
+          EnqueueOperands(UMax);
+        break;
+      case CmpInst::ICMP_SLT:
+      case CmpInst::ICMP_SLE:
+        To = getSMinExpr(FromRewritten, RHS);
+        if (auto *SMax = dyn_cast<SCEVSMaxExpr>(FromRewritten))
+          EnqueueOperands(SMax);
+        break;
+      case CmpInst::ICMP_UGT:
+      case CmpInst::ICMP_UGE:
+        To = getUMaxExpr(FromRewritten, RHS);
+        if (auto *UMin = dyn_cast<SCEVUMinExpr>(FromRewritten))
+          EnqueueOperands(UMin);
+        break;
+      case CmpInst::ICMP_SGT:
+      case CmpInst::ICMP_SGE:
+        To = getSMaxExpr(FromRewritten, RHS);
+        if (auto *SMin = dyn_cast<SCEVSMinExpr>(FromRewritten))
+          EnqueueOperands(SMin);
+        break;
+      case CmpInst::ICMP_EQ:
+        if (isa<SCEVConstant>(RHS))
+          To = RHS;
+        break;
+      case CmpInst::ICMP_NE:
+        if (isa<SCEVConstant>(RHS) &&
+            cast<SCEVConstant>(RHS)->getValue()->isNullValue())
+          To = getUMaxExpr(FromRewritten, One);
+        break;
+      default:
+        break;
+      }
+
+      if (To)
+        AddRewrite(From, FromRewritten, To);
+    }
   };
 
   BasicBlock *Header = L->getHeader();

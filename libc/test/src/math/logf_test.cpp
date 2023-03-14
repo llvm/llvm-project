@@ -13,7 +13,6 @@
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include <math.h>
 
-#include <errno.h>
 #include <stdint.h>
 
 namespace mpfr = __llvm_libc::testing::mpfr;

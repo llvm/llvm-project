@@ -450,10 +450,11 @@ public:
   virtual MCPhysReg getX86R11() const { llvm_unreachable("not implemented"); }
 
   /// Create increment contents of target by 1 for Instrumentation
-  virtual void createInstrIncMemory(InstructionListType &Instrs,
-                                    const MCSymbol *Target, MCContext *Ctx,
-                                    bool IsLeaf) const {
+  virtual InstructionListType createInstrIncMemory(const MCSymbol *Target,
+                                                   MCContext *Ctx,
+                                                   bool IsLeaf) const {
     llvm_unreachable("not implemented");
+    return InstructionListType();
   }
 
   /// Return a register number that is guaranteed to not match with
