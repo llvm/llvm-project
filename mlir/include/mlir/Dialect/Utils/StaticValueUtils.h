@@ -124,6 +124,9 @@ getValuesSortedByKey(ArrayRef<Attribute> keys, ArrayRef<Value> values,
 SmallVector<OpFoldResult>
 getValuesSortedByKey(ArrayRef<Attribute> keys, ArrayRef<OpFoldResult> values,
                      llvm::function_ref<bool(Attribute, Attribute)> compare);
+SmallVector<int64_t>
+getValuesSortedByKey(ArrayRef<Attribute> keys, ArrayRef<int64_t> values,
+                     llvm::function_ref<bool(Attribute, Attribute)> compare);
 
 } // namespace mlir
 
