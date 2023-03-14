@@ -437,6 +437,11 @@ void CheckHelper::Check(const Symbol &symbol) {
           symbol.name());
     }
   }
+  if (symbol.attrs().test(Attr::ASYNCHRONOUS) &&
+      !evaluate::IsVariable(symbol)) {
+    messages_.Say(
+        "An entity may not have the ASYNCHRONOUS attribute unless it is a variable"_err_en_US);
+  }
 }
 
 void CheckHelper::CheckCommonBlock(const Symbol &symbol) {
