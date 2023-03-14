@@ -116,6 +116,10 @@ template <class T, class Container>
 template <class T, class Container>
   bool operator<=(const queue<T, Container>& x,const queue<T, Container>& y);
 
+template<class T, three_way_comparable Container>
+  compare_three_way_result_t<Container>
+    operator<=>(const queue<T, Container>& x, const queue<T, Container>& y);  // since C++20
+
 template <class T, class Container>
   void swap(queue<T, Container>& x, queue<T, Container>& y)
   noexcept(noexcept(x.swap(y)));
@@ -549,6 +553,17 @@ operator<=(const queue<_Tp, _Container>& __x,const queue<_Tp, _Container>& __y)
 {
     return !(__y < __x);
 }
+
+#if _LIBCPP_STD_VER >= 20
+
+template <class _Tp, three_way_comparable _Container>
+_LIBCPP_HIDE_FROM_ABI compare_three_way_result_t<_Container>
+operator<=>(const queue<_Tp, _Container>& __x, const queue<_Tp, _Container>& __y) {
+    // clang 16 bug: declaring `friend operator<=>` causes "use of overloaded operator '*' is ambiguous" errors
+    return __x.__get_container() <=> __y.__get_container();
+}
+
+#endif
 
 template <class _Tp, class _Container>
 inline _LIBCPP_INLINE_VISIBILITY
