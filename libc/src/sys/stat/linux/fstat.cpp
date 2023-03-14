@@ -8,6 +8,7 @@
 
 #include "src/sys/stat/fstat.h"
 #include "kernel_statx.h"
+#include "src/errno/libc_errno.h"
 
 #include "src/__support/common.h"
 
@@ -17,7 +18,12 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, fstat, (int fd, struct stat *statbuf)) {
-  return statx(fd, "", AT_EMPTY_PATH, statbuf);
+  int err = statx(fd, "", AT_EMPTY_PATH, statbuf);
+  if (err != 0) {
+    libc_errno = err;
+    return -1;
+  }
+  return 0;
 }
 
 } // namespace __llvm_libc
