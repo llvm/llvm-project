@@ -26,11 +26,11 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
+#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/AssignmentTrackingAnalysis.h"
 #include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/FastISel.h"
@@ -425,10 +425,9 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
 
   LLVM_DEBUG(dbgs() << "\n\n\n=== " << Fn.getName() << "\n");
 
-  UniformityInfo *UA = nullptr;
-  if (auto *UAPass = getAnalysisIfAvailable<UniformityInfoWrapperPass>())
-    UA = &UAPass->getUniformityInfo();
-  CurDAG->init(*MF, *ORE, this, LibInfo, UA, PSI, BFI, FnVarLocs);
+  CurDAG->init(*MF, *ORE, this, LibInfo,
+               getAnalysisIfAvailable<LegacyDivergenceAnalysis>(), PSI, BFI,
+               FnVarLocs);
   FuncInfo->set(Fn, *MF, CurDAG);
   SwiftError->setFunction(*MF);
 
