@@ -1389,6 +1389,11 @@ void UnwrappedLineParser::parseStructuralElement(
   }
 
   if (Style.isVerilog()) {
+    if (Keywords.isVerilogStructuredProcedure(*FormatTok)) {
+      parseForOrWhileLoop(/*HasParens=*/false);
+      return;
+    }
+
     // Skip things that can exist before keywords like 'if' and 'case'.
     while (true) {
       if (FormatTok->isOneOf(Keywords.kw_priority, Keywords.kw_unique,
@@ -2963,8 +2968,14 @@ void UnwrappedLineParser::parseLoopBody(bool KeepBraces, bool WrapRightBrace) {
     NestedTooDeep.pop_back();
 }
 
-void UnwrappedLineParser::parseForOrWhileLoop() {
-  assert(FormatTok->isOneOf(tok::kw_for, tok::kw_while, TT_ForEachMacro) &&
+void UnwrappedLineParser::parseForOrWhileLoop(bool HasParens) {
+  assert((FormatTok->isOneOf(tok::kw_for, tok::kw_while, TT_ForEachMacro) ||
+          (Style.isVerilog() &&
+           FormatTok->isOneOf(Keywords.kw_always, Keywords.kw_always_comb,
+                              Keywords.kw_always_ff, Keywords.kw_always_latch,
+                              Keywords.kw_final, Keywords.kw_initial,
+                              Keywords.kw_foreach, Keywords.kw_forever,
+                              Keywords.kw_repeat))) &&
          "'for', 'while' or foreach macro expected");
   const bool KeepBraces = !Style.RemoveBracesLLVM ||
                           !FormatTok->isOneOf(tok::kw_for, tok::kw_while);
@@ -2975,8 +2986,11 @@ void UnwrappedLineParser::parseForOrWhileLoop() {
     nextToken();
   if (Style.isCpp() && FormatTok->is(tok::kw_co_await))
     nextToken();
-  if (FormatTok->is(tok::l_paren))
+  if (HasParens && FormatTok->is(tok::l_paren))
     parseParens();
+  // Event control.
+  if (Style.isVerilog())
+    parseVerilogSensitivityList();
 
   handleAttributes();
   parseLoopBody(KeepBraces, /*WrapRightBrace=*/true);
