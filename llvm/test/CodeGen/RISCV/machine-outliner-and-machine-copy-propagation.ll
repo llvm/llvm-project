@@ -6,8 +6,6 @@
 ; register copy, which is at risk of being removed by MachineCopyPropagation
 ; if it can't see that the copy is used. At the time of writing this test
 ; case, MCP will remove the copy if it is run after the machine outliner.
-; FIXME: Ensure machine copy propagation is run before the machine outliner so
-; the copy in the outlined function isn't erroneously removed.
 
 define signext i32 @nge(i32 signext %a, i32 signext %b) nounwind {
 entry:
@@ -196,4 +194,5 @@ declare void @exit(i32 signext) noreturn
 ; RV64I-NEXT:    lui s0, 524288
 ; RV64I-NEXT:    addiw s0, s0, -1
 ; RV64I-NEXT:    lui a0, 524288
+; RV64I-NEXT:    mv a1, s0
 ; RV64I-NEXT:    jr t0

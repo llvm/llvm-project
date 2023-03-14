@@ -33,8 +33,7 @@ static cl::opt<InlinePriorityMode> UseInlinePriority(
                           "Use inline cost priority."),
                clEnumValN(InlinePriorityMode::CostBenefit, "cost-benefit",
                           "Use cost-benefit ratio."),
-               clEnumValN(InlinePriorityMode::ML, "ml",
-                          "Use ML.")));
+               clEnumValN(InlinePriorityMode::ML, "ml", "Use ML.")));
 
 static cl::opt<int> ModuleInlinerTopPriorityThreshold(
     "moudle-inliner-top-priority-threshold", cl::Hidden, cl::init(0),
@@ -281,8 +280,13 @@ private:
 
 } // namespace
 
+AnalysisKey llvm::PluginInlineOrderAnalysis::Key;
+bool llvm::PluginInlineOrderAnalysis::HasBeenRegistered;
+
 std::unique_ptr<InlineOrder<std::pair<CallBase *, int>>>
-llvm::getInlineOrder(FunctionAnalysisManager &FAM, const InlineParams &Params) {
+llvm::getDefaultInlineOrder(FunctionAnalysisManager &FAM,
+                            const InlineParams &Params,
+                            ModuleAnalysisManager &MAM, Module &M) {
   switch (UseInlinePriority) {
   case InlinePriorityMode::Size:
     LLVM_DEBUG(dbgs() << "    Current used priority: Size priority ---- \n");
@@ -295,11 +299,22 @@ llvm::getInlineOrder(FunctionAnalysisManager &FAM, const InlineParams &Params) {
   case InlinePriorityMode::CostBenefit:
     LLVM_DEBUG(
         dbgs() << "    Current used priority: cost-benefit priority ---- \n");
-    return std::make_unique<PriorityInlineOrder<CostBenefitPriority>>(FAM, Params);
+    return std::make_unique<PriorityInlineOrder<CostBenefitPriority>>(FAM,
+                                                                      Params);
   case InlinePriorityMode::ML:
-    LLVM_DEBUG(
-        dbgs() << "    Current used priority: ML priority ---- \n");
+    LLVM_DEBUG(dbgs() << "    Current used priority: ML priority ---- \n");
     return std::make_unique<PriorityInlineOrder<MLPriority>>(FAM, Params);
   }
   return nullptr;
+}
+
+std::unique_ptr<InlineOrder<std::pair<CallBase *, int>>>
+llvm::getInlineOrder(FunctionAnalysisManager &FAM, const InlineParams &Params,
+                     ModuleAnalysisManager &MAM, Module &M) {
+  if (llvm::PluginInlineOrderAnalysis::isRegistered()) {
+    LLVM_DEBUG(dbgs() << "    Current used priority: plugin ---- \n");
+    return MAM.getResult<PluginInlineOrderAnalysis>(M).Factory(FAM, Params, MAM,
+                                                               M);
+  }
+  return getDefaultInlineOrder(FAM, Params, MAM, M);
 }

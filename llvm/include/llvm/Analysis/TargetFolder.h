@@ -116,6 +116,9 @@ public:
 
   Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
                  bool IsInBounds = false) const override {
+    if (!ConstantExpr::isSupportedGetElementPtr(Ty))
+      return nullptr;
+
     if (auto *PC = dyn_cast<Constant>(Ptr)) {
       // Every index must be constant.
       if (any_of(IdxList, [](Value *V) { return !isa<Constant>(V); }))

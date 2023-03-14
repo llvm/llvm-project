@@ -36,6 +36,7 @@ Basic Commands
    llvm-otool
    llvm-profdata
    llvm-readobj
+   llvm-reduce
    llvm-stress
    llvm-symbolizer
    opt

@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 
 using namespace mlir;
@@ -44,53 +45,56 @@ static Value genIndexLoad(OpBuilder &builder, Location loc, Value mem,
 }
 
 static Value genSliceOffset(OpBuilder &builder, Location loc, Value tensor,
-                            unsigned lvl) {
+                            Level lvl) {
   auto enc = getSparseTensorEncoding(tensor.getType());
   // FIXME: `toOrigDim` is deprecated
   return createOrFoldSliceOffsetOp(builder, loc, tensor, toOrigDim(enc, lvl));
 }
 
 static Value genSliceStride(OpBuilder &builder, Location loc, Value tensor,
-                            unsigned lvl) {
+                            Level lvl) {
   auto enc = getSparseTensorEncoding(tensor.getType());
   // FIXME: `toOrigDim` is deprecated
   return createOrFoldSliceStrideOp(builder, loc, tensor, toOrigDim(enc, lvl));
 }
 
-// Converts a coordinate relative to the slice to the coordinate relative
-// to the underlying tensor.
-static Value toSliceCoord(OpBuilder &builder, Location loc, Value v,
-                          Value offset, Value stride, Value tensor,
-                          unsigned lvl) {
-  // iv = iv * stride + offset
-  v = builder.create<arith::MulIOp>(loc, v, stride);
-  v = builder.create<arith::AddIOp>(loc, v, offset);
-  return v;
+/// Converts a coordinate relative to the slice to the coordinate relative
+/// to the underlying tensor.
+// FIXME: that description says "sliceCrd -> tensorCrd"; but the function
+// name suggests it should be "tensorCrd -> sliceCrd".
+static Value toSliceCrd(OpBuilder &builder, Location loc, Value crd,
+                        Value offset, Value stride, Value tensor, Level lvl) {
+  // tensorCrd = sliceCrd * stride + offset
+  crd = builder.create<arith::MulIOp>(loc, crd, stride);
+  crd = builder.create<arith::AddIOp>(loc, crd, offset);
+  return crd;
 }
 
-// Converts a coordinate relative to the underlying tensor to the coordinate
-// relative to the slice, returns a extra reminder value
+/// Converts a coordinate relative to the underlying tensor to the coordinate
+/// relative to the slice, returns a extra reminder value
+// FIXME: that description says "tensorCrd -> sliceCrd"; but the function
+// name suggests it should be "sliceCrd -> tensorCrd".
 static std::pair<Value, Value> fromSliceCrd(OpBuilder &builder, Location loc,
-                                            Value iv, Value offset,
+                                            Value crd, Value offset,
                                             Value stride, Value tensor,
-                                            unsigned lvl) {
-  // iv = (iv - offset) / stride
-  iv = builder.create<arith::SubIOp>(loc, iv, offset);
-  Value rem = builder.create<arith::RemUIOp>(loc, iv, stride);
-  iv = builder.create<arith::DivUIOp>(loc, iv, stride);
-  return std::make_pair(iv, rem);
+                                            Level lvl) {
+  // sliceCrd = (tensorCrd - offset) / stride
+  crd = builder.create<arith::SubIOp>(loc, crd, offset);
+  Value rem = builder.create<arith::RemUIOp>(loc, crd, stride);
+  crd = builder.create<arith::DivUIOp>(loc, crd, stride);
+  return std::make_pair(crd, rem);
 }
 
 std::pair<Value, Value>
 LoopEmitter::genSliceLegitPredicate(OpBuilder &builder, Location loc, Value crd,
-                                    unsigned tid, unsigned lvl) {
+                                    TensorId tid, Level lvl) {
   assert(isSparseSlices[tid]);
   Value slice = tensors[tid];
   Value offset = sliceOffsets[tid][lvl];
   Value stride = sliceStrides[tid][lvl];
   auto enc = getSparseTensorEncoding(slice.getType());
 
-  std::pair<Value, Value> transformedCrd =
+  const auto [newCrd, crdRem] =
       fromSliceCrd(builder, loc, crd, offset, stride, slice, lvl);
 
   SmallVector<Value, 3> conds; // at most 3 conditions
@@ -104,16 +108,15 @@ LoopEmitter::genSliceLegitPredicate(OpBuilder &builder, Location loc, Value crd,
   }
 
   // Second, coord_in_slice < length
-  auto ltLength = builder.create<arith::CmpIOp>(
-      loc, arith::CmpIPredicate::ult, transformedCrd.first, lvlSizes[tid][lvl]);
+  auto ltLength = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
+                                                newCrd, lvlSizes[tid][lvl]);
   conds.push_back(ltLength);
 
   // Third, rem == 0 (skip the check if stride is known to be 1).
   if (auto staticStride = enc.getStaticLvlSliceStride(lvl);
       !(staticStride.has_value() && *staticStride == 1)) {
     auto fitStride = builder.create<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::eq, transformedCrd.second,
-        constantIndex(builder, loc, 0));
+        loc, arith::CmpIPredicate::eq, crdRem, constantIndex(builder, loc, 0));
     conds.push_back(fitStride);
   }
 
@@ -122,81 +125,81 @@ LoopEmitter::genSliceLegitPredicate(OpBuilder &builder, Location loc, Value crd,
   for (auto cond : ValueRange(conds).drop_front())
     pred = builder.create<arith::AndIOp>(loc, pred, cond);
 
-  return {transformedCrd.first, pred};
+  return {newCrd, pred};
 }
 
 //===----------------------------------------------------------------------===//
 // Sparse tensor loop emitter class implementations
 //===----------------------------------------------------------------------===//
 
-Value LoopEmitter::genAddress(OpBuilder &builder, Location loc, size_t tid,
-                              size_t dim, Value iv) {
-  Value p = dim == 0 ? constantIndex(builder, loc, 0) : pidxs[tid][dim - 1];
-  Value mul = builder.create<arith::MulIOp>(loc, highs[tid][dim], p);
+Value LoopEmitter::genAddress(OpBuilder &builder, Location loc, TensorId tid,
+                              Level lvl, Value crd) {
+  Value pos = lvl == 0 ? constantIndex(builder, loc, 0) : posits[tid][lvl - 1];
+  Value mul = builder.create<arith::MulIOp>(loc, highs[tid][lvl], pos);
   if (isSparseSlices[tid])
-    iv = toSliceCoord(builder, loc, iv, sliceOffsets[tid][dim],
-                      sliceStrides[tid][dim], tensors[tid], dim);
-  Value add = builder.create<arith::AddIOp>(loc, mul, iv);
+    crd = toSliceCrd(builder, loc, crd, sliceOffsets[tid][lvl],
+                     sliceStrides[tid][lvl], tensors[tid], lvl);
+  Value add = builder.create<arith::AddIOp>(loc, mul, crd);
   return add;
 }
 
-Value LoopEmitter::genSegmentHigh(OpBuilder &builder, Location loc, size_t tid,
-                                  size_t lvl, Value pos, Value pHi) {
-  Value prevCrd = genIndexLoad(builder, loc, crdBuffer[tid][lvl], pos);
-  // De-duplicates repeated elements.
-  //
-  // while (pos < pHi && coord[pos] == prev_coord)
-  //    pos++;
-  // return pos;
+Value LoopEmitter::genSegmentHigh(OpBuilder &builder, Location loc,
+                                  TensorId tid, Level lvl, Value pLo,
+                                  Value pHi) {
+  const auto coordinates = coordinatesBuffers[tid][lvl];
+  const auto sameCrd = genIndexLoad(builder, loc, coordinates, pLo);
   auto whileOp = builder.create<scf::WhileOp>(
-      loc, builder.getIndexType(), pos,
+      loc, builder.getIndexType(), pLo,
       /*beforeBuilder=*/
-      [this, tid, lvl, pHi, prevCrd](OpBuilder &builder, Location loc,
-                                     ValueRange ivs) {
+      [pHi, coordinates, sameCrd](OpBuilder &builder, Location loc,
+                                  ValueRange ivs) {
+        const auto pos = ivs[0];
         Value inBound = builder.create<arith::CmpIOp>(
-            loc, arith::CmpIPredicate::ult, ivs[0], pHi);
-        auto ifOp =
+            loc, arith::CmpIPredicate::ult, pos, pHi);
+        auto ifInBound =
             builder.create<scf::IfOp>(loc, builder.getI1Type(), inBound, true);
         {
           OpBuilder::InsertionGuard guard(builder);
           // Load the next coordinates only when inbound (to avoid OOB
           // acccesses).
-          builder.setInsertionPointToStart(ifOp.thenBlock());
-          Value nxCrd = genIndexLoad(builder, loc, crdBuffer[tid][lvl], ivs[0]);
-          Value cont = builder.create<arith::CmpIOp>(
-              loc, arith::CmpIPredicate::eq, nxCrd, prevCrd);
-          builder.create<scf::YieldOp>(loc, cont);
+          builder.setInsertionPointToStart(ifInBound.thenBlock());
+          Value crd = genIndexLoad(builder, loc, coordinates, pos);
+          Value isSameCrd = builder.create<arith::CmpIOp>(
+              loc, arith::CmpIPredicate::eq, crd, sameCrd);
+          builder.create<scf::YieldOp>(loc, isSameCrd);
           // Else, the position is out of bound, yield false to terminate the
           // loop.
-          builder.setInsertionPointToStart(ifOp.elseBlock());
+          builder.setInsertionPointToStart(ifInBound.elseBlock());
           builder.create<scf::YieldOp>(loc, constantI1(builder, loc, false));
         }
-        builder.create<scf::ConditionOp>(loc, ifOp.getResults()[0], ivs);
+        builder.create<scf::ConditionOp>(loc, ifInBound.getResults()[0], ivs);
       },
       /*afterBuilder=*/
       [](OpBuilder &builder, Location loc, ValueRange ivs) {
         // pos ++
-        Value nxPos = builder.create<arith::AddIOp>(
+        Value nextPos = builder.create<arith::AddIOp>(
             loc, ivs[0], constantIndex(builder, loc, 1));
-        builder.create<scf::YieldOp>(loc, nxPos);
+        builder.create<scf::YieldOp>(loc, nextPos);
       });
   // Return the segment high.
   return whileOp.getResult(0);
 }
 
-Value LoopEmitter::genSparseCrd(OpBuilder &builder, Location loc, size_t tid,
-                                size_t dstLvl) {
+Value LoopEmitter::genSparseCrd(OpBuilder &builder, Location loc, TensorId tid,
+                                Level dstLvl) {
   Value crd = constantIndex(builder, loc, 0);
   const auto reassoc = getCollapseReassociation(tid, dstLvl);
-  for (unsigned i = 0; i < reassoc.size(); i++) {
-    const auto srcLvl = reassoc[i];
+  const unsigned reassocSize = reassoc.size();
+  for (unsigned i = 0; i < reassocSize; i++) {
+    const Level srcLvl = reassoc[i];
     // A load on the coordinates array yields the coordinate.
-    const Value mem = crdBuffer[tid][srcLvl];
-    const Value pos = pidxs[tid][dstLvl];
+    const Value mem = coordinatesBuffers[tid][srcLvl];
+    /// FIXME: See the [CLARIFY_POSITS_LVL] note in the header.
+    const Value pos = posits[tid][dstLvl];
     const Value off = genIndexLoad(builder, loc, mem, pos);
     // Linearized the coordinates within the same collapse reassociation.
     crd = builder.create<arith::AddIOp>(loc, crd, off);
-    if (i != reassoc.size() - 1) {
+    if (i != reassocSize - 1) {
       crd = builder.create<arith::MulIOp>(loc, crd,
                                           this->lvlSizes[tid][reassoc[i + 1]]);
     }
@@ -205,35 +208,43 @@ Value LoopEmitter::genSparseCrd(OpBuilder &builder, Location loc, size_t tid,
 }
 
 LoopEmitter::LoopEmitter(ValueRange tensors, StringAttr loopTag, bool hasOutput,
-                         bool isSparseOut, ArrayRef<unsigned> topSort) {
+                         bool isSparseOut, ArrayRef<LoopId> topSort) {
   initialize(tensors, loopTag, hasOutput, isSparseOut, topSort);
 }
 
 void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
-                             bool isSparseOut, ArrayRef<unsigned> topSort) {
-  // First initializes fields.
+                             bool isSparseOut, ArrayRef<LoopId> topSort) {
+  // First initialize the top-level type of the fields.
   this->loopTag = loopTag;
   this->hasOutput = hasOutput;
   this->isSparseOut = isSparseOut;
-  this->tensors.assign(ts.begin(), ts.end());
-  this->isSparseSlices.assign(tensors.size(), false);
-  this->sliceOffsets.assign(tensors.size(), std::vector<Value>());
-  this->sliceStrides.assign(tensors.size(), std::vector<Value>());
-  this->dimTypes.assign(tensors.size(), std::vector<DimLevelType>());
-  this->pidxs.assign(tensors.size(), std::vector<Value>());
-  this->segHi.assign(tensors.size(), std::vector<Value>());
-  this->coord.assign(tensors.size(), std::vector<Value>());
-  this->highs.assign(tensors.size(), std::vector<Value>());
-  this->lvlSizes.assign(tensors.size(), std::vector<Value>());
-  this->posBuffer.assign(tensors.size(), std::vector<Value>());
-  this->crdBuffer.assign(tensors.size(), std::vector<Value>());
-  this->valBuffer.assign(tensors.size(), nullptr);
-  this->loopStack.reserve(topSort.size());
-  this->sparsiferLoopLvlMap.assign(topSort.size(), 0);
-  this->collapseReassoc.assign(tensors.size(), nullptr);
 
-  for (size_t tid = 0, e = tensors.size(); tid < e; tid++) {
-    auto t = tensors[tid];
+  const TensorId numTensors = ts.size();
+  this->tensors.assign(ts.begin(), ts.end());
+  this->lvlTypes.assign(numTensors, std::vector<DimLevelType>());
+  this->lvlSizes.assign(numTensors, std::vector<Value>());
+  this->highs.assign(numTensors, std::vector<Value>());
+  this->segHi.assign(numTensors, std::vector<Value>());
+  this->posits.assign(numTensors, std::vector<Value>());
+  this->coords.assign(numTensors, std::vector<Value>());
+  this->positionsBuffers.assign(numTensors, std::vector<Value>());
+  this->coordinatesBuffers.assign(numTensors, std::vector<Value>());
+  this->valBuffer.assign(numTensors, nullptr);
+  this->collapseReassoc.assign(numTensors, nullptr);
+  this->isSparseSlices.assign(numTensors, false);
+  this->sliceOffsets.assign(numTensors, std::vector<Value>());
+  this->sliceStrides.assign(numTensors, std::vector<Value>());
+
+  const LoopOrd numLoops = topSort.size();
+  // These zeros will be overwritten below, but we need to initialize
+  // them to something since we'll need random-access assignment.
+  this->loopIdToOrd.assign(numLoops, 0);
+  this->loopStack.reserve(numLoops);
+  this->loopSeqStack.reserve(numLoops);
+
+  // Initialize nested types of `TensorId`-indexed fields.
+  for (TensorId tid = 0; tid < numTensors; tid++) {
+    const Value t = tensors[tid];
     // a scalar or 0-dimension tensors
     if (isZeroRankedTensorOrScalar(t.getType()))
       continue;
@@ -247,46 +258,51 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
       collapseReassoc[tid] = reshape.getReassociation();
       rtp = reshape.getSrcType();
       // Overwrites the tensor to the source tensor of reshape operations.
-      tensors[tid] = t = reshape.getSrc();
+      tensors[tid] = reshape.getSrc();
     }
-    auto rank = static_cast<size_t>(rtp.getRank());
-    auto enc = getSparseTensorEncoding(rtp);
+    const SparseTensorType stt(rtp);
+    const Level lvlRank = stt.getLvlRank();
     // We always treat sparse output tensor as dense so that we always iterate
-    // it based on dim size.
-    if (enc && !(isOutputTensor(tid) && isSparseOut)) {
+    // it based on lvl size.
+    if (stt.hasEncoding() && !(isOutputTensor(tid) && isSparseOut)) {
+      const auto enc = stt.getEncoding();
       isSparseSlices[tid] = enc.isSlice();
-      for (auto dimTp : enc.getDimLevelType())
-        dimTypes[tid].push_back(dimTp);
-    } else
-      dimTypes[tid].assign(rank, DimLevelType::Dense);
+      for (auto lvlTp : enc.getDimLevelType())
+        lvlTypes[tid].push_back(lvlTp);
+    } else {
+      lvlTypes[tid].assign(lvlRank, DimLevelType::Dense);
+    }
 
     // Initialize using empty value.
-    sliceOffsets[tid].assign(rank, Value());
-    sliceStrides[tid].assign(rank, Value());
-    pidxs[tid].assign(rank, Value());
-    segHi[tid].assign(rank, Value());
-    coord[tid].assign(rank, Value());
-    highs[tid].assign(rank, Value());
-    lvlSizes[tid].assign(rank, Value());
-    posBuffer[tid].assign(rank, Value());
-    crdBuffer[tid].assign(rank, Value());
+    lvlSizes[tid].assign(lvlRank, Value());
+    highs[tid].assign(lvlRank, Value());
+    segHi[tid].assign(lvlRank, Value());
+    posits[tid].assign(lvlRank, Value());
+    coords[tid].assign(lvlRank, Value());
+    positionsBuffers[tid].assign(lvlRank, Value());
+    coordinatesBuffers[tid].assign(lvlRank, Value());
+    sliceOffsets[tid].assign(lvlRank, Value());
+    sliceStrides[tid].assign(lvlRank, Value());
   }
 
+  // Construct the inverse of the `topSort` from the sparsifier.
+  // This is needed to map `AffineDimExpr`s back to the `LoopOrd`
+  // used in loop emitter.
   // FIXME: This map should be maintained outside loop emitter.
-  for (unsigned i = 0, e = topSort.size(); i < e; i++) {
-    // This is an inverse map of the topologically sorted loop index from
-    // sparsifier. This is needed to map the AffineDimExpr back to the loopStack
-    // index used in loop emitter.
-    sparsiferLoopLvlMap[topSort[i]] = i;
-  }
+  for (LoopOrd n = 0; n < numLoops; n++)
+    loopIdToOrd[topSort[n]] = n;
 }
 
 void LoopEmitter::initializeLoopEmit(OpBuilder &builder, Location loc,
                                      LoopEmitter::OutputUpdater updater) {
-  // For every tensor, find lower and upper bound on dimensions, set the
-  // same bounds on loop indices, and obtain dense or sparse buffer(s).
-  for (size_t t = 0, e = tensors.size(); t < e; t++) {
-    const auto tensor = tensors[t];
+  // For every tensor:
+  // * get the values buffer.
+  // * For every level:
+  //   * get the positions and coordinates buffers
+  //   * get/compute the level-size, which is also used as the upper-bound
+  //     on positions.
+  for (TensorId t = 0, numTensors = getNumTensors(); t < numTensors; t++) {
+    const Value tensor = tensors[t];
     const auto rtp = tensor.getType().dyn_cast<RankedTensorType>();
     if (!rtp)
       // Skips only scalar, zero ranked tensor still need to be bufferized and
@@ -302,24 +318,27 @@ void LoopEmitter::initializeLoopEmit(OpBuilder &builder, Location loc,
     // Scan all levels of current tensor.
     for (Level l = 0; l < lvlRank; l++) {
       // This should be called only once at beginning.
-      assert(!posBuffer[t][l] && !crdBuffer[t][l] && !highs[t][l]);
-      const auto dlt = dimTypes[t][l];
+      assert(!positionsBuffers[t][l] && !coordinatesBuffers[t][l] &&
+             !highs[t][l]);
+      const auto lvlTp = lvlTypes[t][l];
       // Handle sparse storage schemes.
-      if (isCompressedDLT(dlt)) {
-        // Generate sparse primitives to obtains positions and coordinates.
-        posBuffer[t][l] = genToPositions(builder, loc, tensor, l);
-        crdBuffer[t][l] = genToCoordinates(builder, loc, tensor, l, cooStart);
-      } else if (isSingletonDLT(dlt)) {
+      if (isCompressedDLT(lvlTp)) {
+        // Generate sparse primitives to obtain positions and coordinates.
+        positionsBuffers[t][l] = genToPositions(builder, loc, tensor, l);
+        coordinatesBuffers[t][l] =
+            genToCoordinates(builder, loc, tensor, l, cooStart);
+      } else if (isSingletonDLT(lvlTp)) {
         // Singleton level, fetch coordinates.
-        crdBuffer[t][l] = genToCoordinates(builder, loc, tensor, l, cooStart);
+        coordinatesBuffers[t][l] =
+            genToCoordinates(builder, loc, tensor, l, cooStart);
       } else {
         // Dense level, nothing to fetch.
-        assert(isDenseDLT(dlt));
+        assert(isDenseDLT(lvlTp));
       }
 
-      // FIXME: `toOrigDim` is deprecated
-      // Since we do not have HigherOrdering now, we can always rely on the 1:1
-      // mapping from level to dimension to retrieve the level size.
+      // FIXME: `toOrigDim` is deprecated.  For now this relies on the
+      // 1:1 mapping between levels and dimensions, since nowhere else
+      // in the code supports HigherOrdering yet either.
       Value lvlSz = mlir::linalg::createOrFoldDimOp(builder, loc, tensor,
                                                     toOrigDim(enc, l));
       // Find upper bound in current dimension.
@@ -355,44 +374,49 @@ void LoopEmitter::initializeLoopEmit(OpBuilder &builder, Location loc,
       valBuffer[t] = denseVal;
     } else {
       // Annotated sparse tensors.
-      // We also need the value buffer for annotated all dense `sparse` tensor.
+      // We also need the value buffer for all-dense annotated "sparse" tensors.
       valBuffer[t] = genToValues(builder, loc, tensor);
     }
-    // NOTE: we can also prepare for 0 dim here in advance, this will hosit
+    // NOTE: we can also prepare for 0 lvl here in advance, this will hoist
     // some loop preparation from tensor iteration, but will also (undesirably)
-    // hosit the code ouside if conditions.
+    // hoist the code ouside if-conditions.
   }
 }
 
 void LoopEmitter::enterNewLoopSeq(OpBuilder &builder, Location loc,
-                                  ArrayRef<size_t> tids,
-                                  ArrayRef<size_t> dims) {
+                                  ArrayRef<TensorId> tids,
+                                  ArrayRef<Level> lvls) {
   // TODO: sort
   assert(loopSeqStack.size() == loopStack.size());
   // Universal Index starts from 0.
   loopSeqStack.emplace_back(constantIndex(builder, loc, 0));
   // Prepares for all the tensors used in the current loop sequence.
-  for (auto [tid, dim] : llvm::zip(tids, dims))
-    prepareLoopOverTensorAtDim(builder, loc, tid, dim);
+  assert(tids.size() == lvls.size());
+  for (auto [tid, lvl] : llvm::zip(tids, lvls))
+    prepareLoopOverTensorAtLvl(builder, loc, tid, lvl);
 }
 
-Value LoopEmitter::genAffine(OpBuilder &builder, AffineExpr a, Location loc) {
+Value LoopEmitter::genAffine(OpBuilder &builder, Location loc, AffineExpr a) {
   switch (a.getKind()) {
   case AffineExprKind::DimId: {
-    unsigned idx = a.cast<AffineDimExpr>().getPosition();
-    return loopStack[sparsiferLoopLvlMap[idx]].iv;
+    // FIXME: since the one callsite in Sparsification passes in a
+    // level-expression, the `getPosition` must in fact be a `Dimension`.
+    // However, elsewhere we have been lead to expect that `loopIdToOrd`
+    // should be indexed by `LoopId`...
+    const LoopId i = a.cast<AffineDimExpr>().getPosition();
+    return loopStack[loopIdToOrd[i]].iv;
   }
   case AffineExprKind::Add: {
     auto binOp = a.cast<AffineBinaryOpExpr>();
     return builder.create<arith::AddIOp>(
-        loc, genAffine(builder, binOp.getLHS(), loc),
-        genAffine(builder, binOp.getRHS(), loc));
+        loc, genAffine(builder, loc, binOp.getLHS()),
+        genAffine(builder, loc, binOp.getRHS()));
   }
   case AffineExprKind::Mul: {
     auto binOp = a.cast<AffineBinaryOpExpr>();
     return builder.create<arith::MulIOp>(
-        loc, genAffine(builder, binOp.getLHS(), loc),
-        genAffine(builder, binOp.getRHS(), loc));
+        loc, genAffine(builder, loc, binOp.getLHS()),
+        genAffine(builder, loc, binOp.getRHS()));
   }
   case AffineExprKind::Constant: {
     int64_t c = a.cast<AffineConstantExpr>().getValue();
@@ -403,40 +427,44 @@ Value LoopEmitter::genAffine(OpBuilder &builder, AffineExpr a, Location loc) {
   }
 }
 
-Operation *LoopEmitter::enterLoopOverTensorAtDim(
-    OpBuilder &builder, Location loc, ArrayRef<size_t> tids,
-    ArrayRef<size_t> dims, MutableArrayRef<Value> reduc, bool isParallel) {
+Operation *LoopEmitter::enterLoopOverTensorAtLvl(
+    OpBuilder &builder, Location loc, ArrayRef<TensorId> tids,
+    ArrayRef<Level> lvls, MutableArrayRef<Value> reduc, bool isParallel) {
   // TODO: support multiple return on parallel for?
   assert(!isParallel || reduc.size() <= 1);
   bool isSparseInput = false;
-  size_t tid = tids.front(), dim = dims.front();
-  for (auto [t, d] : llvm::zip(tids, dims)) {
-    assert(dimTypes[t].size() > d); // Must be a valid tid, dim pair
-    assert(!coord[t][d]);           // We cannot re-enter the same level
-    auto dimType = dimTypes[t][d];
-    // Must be a recognizable DLT.
-    assert(isDenseDLT(dimType) || isCompressedDLT(dimType) ||
-           isSingletonDLT(dimType));
-    bool isSparse = isCompressedDLT(dimType) || isSingletonDLT(dimType);
+  TensorId tid = tids.front();
+  Level dstLvl = lvls.front();
+  assert(tids.size() == lvls.size());
+  for (auto [t, l] : llvm::zip(tids, lvls)) {
+    // TODO: this check for validity of the (t,l) pairs should be
+    // checked/enforced at the callsites, if possible.
+    assert(t < lvlTypes.size() && l < lvlTypes[t].size());
+    assert(!coords[t][l]); // We cannot re-enter the same level
+    const auto lvlTp = lvlTypes[t][l];
+    const bool isSparse = isCompressedDLT(lvlTp) || isSingletonDLT(lvlTp);
+    // Must be a recognizable level-type.
+    assert(isSparse || isDenseDLT(lvlTp));
     // We can at most have one sparse input, otherwise, a while loop is required
     // to co-iterate multiple sparse tensors.
     assert(!isSparseInput || !isSparse);
     if (isSparse) {
       tid = t;
-      dim = d;
+      dstLvl = l;
     }
     isSparseInput = isSparseInput || isSparse;
   }
 
-  const auto reassoc = getCollapseReassociation(tid, dim);
+  const auto reassoc = getCollapseReassociation(tid, dstLvl);
   // TODO: support dynamic slices.
-  // Uses the first dimension here to build the loop bound (which is also the
-  // biggest range).
-  const auto fdim = reassoc.front();
-  Value step = constantIndex(builder, loc, 1);
-  Value lo = isSparseInput ? pidxs[tid][fdim]     // current offset
-                           : loopSeqStack.back(); // universal index
-  Value hi = highs[tid][fdim];
+  // Use the first source-level here to build the loop bound (which is
+  // also the biggest range).
+  const Level srcLvl = reassoc.front();
+  const Value step = constantIndex(builder, loc, 1);
+  /// FIXME: See the [CLARIFY_POSITS_LVL] note in the header.
+  const Value lo = isSparseInput ? posits[tid][srcLvl]  // current position
+                                 : loopSeqStack.back(); // universal index
+  const Value hi = highs[tid][srcLvl];
 
   Operation *loop = nullptr;
   Value iv;
@@ -450,7 +478,7 @@ Operation *LoopEmitter::enterLoopOverTensorAtDim(
 
     // In-place update on the reduction variable vector.
     // Note that the init vals is not the actual reduction variables but instead
-    // used as a `special handle` to (temporarily) represent them. The
+    // used as a "special handle" to (temporarily) represent them. The
     // expression on init vals will be moved into scf.reduce and replaced with
     // the block arguments when exiting the loop (see exitForLoop). This is
     // needed as we can not build the actual reduction block and get the actual
@@ -475,9 +503,10 @@ Operation *LoopEmitter::enterLoopOverTensorAtDim(
   if (isSparseInput) {
     assert(reassoc.size() == 1 || isUniqueCOOType(tensors[tid].getType()));
     // For COO, the position is the same across consecutive levels.
+    /// FIXME: See the [CLARIFY_POSITS_LVL] note in the header.
     llvm::for_each(reassoc,
-                   [this, tid, iv](Level lvl) { pidxs[tid][lvl] = iv; });
-    crd = genSparseCrd(builder, loc, tid, dim);
+                   [this, tid, iv](Level srcLvl) { posits[tid][srcLvl] = iv; });
+    crd = genSparseCrd(builder, loc, tid, dstLvl);
   } else {
     // Dense tensor, the coordinate is the inducation variable.
     crd = iv;
@@ -490,7 +519,7 @@ Operation *LoopEmitter::enterLoopOverTensorAtDim(
     for (Value red : reduc)
       types.push_back(red.getType());
 
-    auto [trans, pred] = genSliceLegitPredicate(builder, loc, crd, tid, dim);
+    auto [trans, pred] = genSliceLegitPredicate(builder, loc, crd, tid, srcLvl);
     bool hasReduc = !types.empty();
     scf::IfOp ifOp = builder.create<scf::IfOp>(loc, types, pred,
                                                /*else*/ hasReduc);
@@ -512,35 +541,33 @@ Operation *LoopEmitter::enterLoopOverTensorAtDim(
   }
 
   assert(crd);
-  coord[tid][dim] = crd;
-  // NOTE: we can also prepare for next dim here in advance
+  coords[tid][srcLvl] = crd;
+  // NOTE: we can also prepare for next level here in advance
   // Push the loop into stack
-  loopStack.emplace_back(ArrayRef<size_t>(tid), ArrayRef<size_t>(dim), loop,
-                         builder.getInsertionBlock(), coord[tid][dim], loopTag);
+  loopStack.emplace_back(ArrayRef<TensorId>(tid), ArrayRef<Level>(srcLvl), loop,
+                         builder.getInsertionBlock(), crd, loopTag);
   // Emit extra locals.
-  emitExtraLocalsForTensorsAtDenseDims(builder, loc, tids, dims);
+  emitExtraLocalsForTensorsAtDenseLvls(builder, loc, tids, lvls);
 
   return loop;
 }
 
-Operation *LoopEmitter::enterFilterLoopOverTensorAtDim(
-    OpBuilder &builder, Location loc, size_t tid, size_t dim, AffineExpr affine,
-    MutableArrayRef<Value> reduc) {
-  assert(!affine.isa<AffineDimExpr>() && !isDenseDLT(dimTypes[tid][dim]));
-  assert(dimTypes[tid].size() > dim);
+Operation *LoopEmitter::enterFilterLoopOverTensorAtLvl(
+    OpBuilder &builder, Location loc, TensorId tid, Level lvl,
+    AffineExpr affine, MutableArrayRef<Value> reduc) {
+  assert(tid < lvlTypes.size() && lvl < lvlTypes[tid].size());
+  assert(!affine.isa<AffineDimExpr>() && !isDenseDLT(lvlTypes[tid][lvl]));
   // We can not re-enter the same level.
-  assert(!coord[tid][dim]);
-
-  Value step = constantIndex(builder, loc, 1);
-
-  Value lo = pidxs[tid][dim];
-  Value hi = highs[tid][dim];
+  assert(!coords[tid][lvl]);
 
   // TODO: We should instead use a whileOp for filter loop to allow early
-  // break when exceeding (for ordered dimensions).
+  // break when exceeding (for ordered levels).
   // TODO: There are many other potiential opportunities that we might apply in
-  // the future. E.g., we could use binary search to located the position index.
-  scf::ForOp forOp = builder.create<scf::ForOp>(loc, lo, hi, step, reduc);
+  // the future. E.g., we could use binary search to locate positions.
+  const Value step = constantIndex(builder, loc, 1);
+  const Value pLo = posits[tid][lvl];
+  const Value pHi = highs[tid][lvl];
+  scf::ForOp forOp = builder.create<scf::ForOp>(loc, pLo, pHi, step, reduc);
 
   // In-place update on the reduction variable vector.
   assert(forOp.getNumRegionIterArgs() == reduc.size());
@@ -548,18 +575,19 @@ Operation *LoopEmitter::enterFilterLoopOverTensorAtDim(
     reduc[i] = forOp.getRegionIterArg(i);
 
   builder.setInsertionPointToStart(forOp.getBody());
-  Value iv = forOp.getInductionVar();
-
-  pidxs[tid][dim] = iv;
-  // Generating a load on the coordinates array yields the coordinate.
-  Value mem = crdBuffer[tid][dim];
-  coord[tid][dim] = genIndexLoad(builder, loc, mem, iv);
+  // The induction variable gives the position.
+  const Value pos = forOp.getInductionVar();
+  posits[tid][lvl] = pos;
+  // Generating a load on the coordinates array yields the crd.
+  const Value mem = coordinatesBuffers[tid][lvl];
+  const Value crd = genIndexLoad(builder, loc, mem, pos);
+  coords[tid][lvl] = crd;
 
   // Generate an if-condition to filter out coordinates that are not
   // equal to the result of the affine expression.
-  Value expected = genAffine(builder, affine, loc);
-  auto pred = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
-                                            coord[tid][dim], expected);
+  Value expected = genAffine(builder, loc, affine);
+  auto pred = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, crd,
+                                            expected);
   SmallVector<Type> types;
   for (Value red : reduc) {
     types.push_back(red.getType());
@@ -583,43 +611,45 @@ Operation *LoopEmitter::enterFilterLoopOverTensorAtDim(
   // Set the insert point to matched branch.
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
 
-  // NOTE: we can also prepare for next dim here in advance
+  // NOTE: we can also prepare for next lvl here in advance
   // Push the loop into stack
-  loopStack.emplace_back(ArrayRef<size_t>(tid), ArrayRef<size_t>(dim), forOp,
-                         builder.getInsertionBlock(), coord[tid][dim], nullptr);
+  loopStack.emplace_back(ArrayRef<TensorId>(tid), ArrayRef<Level>(lvl), forOp,
+                         builder.getInsertionBlock(), crd, nullptr);
   return forOp;
 }
 
-void LoopEmitter::genDenseAffineAddressAtCurLevel(OpBuilder &builder,
-                                                  Location loc, size_t tid,
-                                                  size_t dim,
-                                                  AffineExpr affine) {
-  Value affineV = genAffine(builder, affine, loc);
-  pidxs[tid][dim] = genAddress(builder, loc, tid, dim, affineV);
+void LoopEmitter::genDenseAffineAddress(OpBuilder &builder, Location loc,
+                                        TensorId tid, Level lvl,
+                                        AffineExpr lvlExpr) {
+  assert(isDenseDLT(lvlTypes[tid][lvl]));
+  // For dense levels, the level-coordinate also serves as the position.
+  Value lvlCrd = genAffine(builder, loc, lvlExpr);
+  posits[tid][lvl] = genAddress(builder, loc, tid, lvl, lvlCrd);
 }
 
-Operation *LoopEmitter::enterCoIterationOverTensorsAtDims(
-    OpBuilder &builder, Location loc, ArrayRef<size_t> tids,
-    ArrayRef<size_t> dims, bool needsUniv, MutableArrayRef<Value> reduc) {
-  assert(tids.size() == dims.size());
+Operation *LoopEmitter::enterCoIterationOverTensorsAtLvls(
+    OpBuilder &builder, Location loc, ArrayRef<TensorId> tids,
+    ArrayRef<Level> lvls, bool needsUniv, MutableArrayRef<Value> reduc) {
+  assert(tids.size() == lvls.size());
   SmallVector<Type> types;
   SmallVector<Value> operands;
   // Construct the while-loop with a parameter for each coordinate.
-  Type indexType = builder.getIndexType();
-  for (auto [tid, dim] : llvm::zip(tids, dims)) {
-    if (isCompressedDLT(dimTypes[tid][dim]) ||
-        isSingletonDLT(dimTypes[tid][dim])) {
-      const auto reassoc = getCollapseReassociation(tid, dim);
+  const Type indexType = builder.getIndexType();
+  for (auto [tid, lvl] : llvm::zip(tids, lvls)) {
+    const auto lvlTp = lvlTypes[tid][lvl];
+    if (isCompressedDLT(lvlTp) || isSingletonDLT(lvlTp)) {
+      const auto reassoc = getCollapseReassociation(tid, lvl);
       for (unsigned i = 0, e = reassoc.size() - 1; i < e; i++) {
-        if (!isUniqueDLT(dimTypes[tid][reassoc[i]])) {
+        if (!isUniqueDLT(lvlTypes[tid][reassoc[i]])) {
           // This is the segment high for each non-unique levels.
           types.push_back(indexType);
           operands.push_back(constantIndex(builder, loc, 0));
         }
       }
-      assert(pidxs[tid][dim]);
+      const auto pos = posits[tid][reassoc.front()];
+      assert(pos);
       types.push_back(indexType);
-      operands.push_back(pidxs[tid][reassoc.front()]);
+      operands.push_back(pos);
     }
   }
   // The position where user-supplied reduction variable starts.
@@ -644,14 +674,14 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtDims(
   builder.setInsertionPointToStart(&whileOp.getBefore().front());
   Value cond;
   unsigned o = 0;
-  for (auto [t, lvl] : llvm::zip(tids, dims)) {
+  for (auto [t, lvl] : llvm::zip(tids, lvls)) {
     unsigned tid = t; // Why `t` can not be captured by lambda?
-    if (isCompressedDLT(dimTypes[tid][lvl]) ||
-        isSingletonDLT(dimTypes[tid][lvl])) {
+    const auto lvlTp = lvlTypes[tid][lvl];
+    if (isCompressedDLT(lvlTp) || isSingletonDLT(lvlTp)) {
       const auto reassoc = getCollapseReassociation(tid, lvl);
       assert(reassoc.size() == 1 || isUniqueCOOType(tensors[tid].getType()));
       for (unsigned i = 0, e = reassoc.size() - 1; i < e; i++) {
-        if (!isUniqueDLT(dimTypes[tid][reassoc[i]])) {
+        if (!isUniqueDLT(lvlTypes[tid][reassoc[i]])) {
           // Links the SSA chain for segHi.
           segHi[tid][reassoc[i]] = after->getArgument(o++);
         }
@@ -665,8 +695,10 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtDims(
       // Update positions
       Value pos = after->getArgument(o++);
       // For COO, the position is the same across consecutive levels.
-      llvm::for_each(reassoc,
-                     [this, tid, pos](Level lvl) { pidxs[tid][lvl] = pos; });
+      /// FIXME: See the [CLARIFY_POSITS_LVL] note in the header.
+      llvm::for_each(reassoc, [this, tid, pos](Level srcLvl) {
+        posits[tid][srcLvl] = pos;
+      });
     }
   }
   builder.create<scf::ConditionOp>(loc, cond, before->getArguments());
@@ -676,17 +708,17 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtDims(
 
   SmallVector<std::pair<Value, unsigned>> slicesPreds;
   unsigned i = 0;
-  for (auto [tid, dim] : llvm::zip(tids, dims)) {
+  for (auto [tid, lvl] : llvm::zip(tids, lvls)) {
     // Prepares for next level.
-    if (isCompressedDLT(dimTypes[tid][dim]) ||
-        isSingletonDLT(dimTypes[tid][dim])) {
-      coord[tid][dim] = genSparseCrd(builder, loc, tid, dim);
+    const auto lvlTp = lvlTypes[tid][lvl];
+    if (isCompressedDLT(lvlTp) || isSingletonDLT(lvlTp)) {
+      coords[tid][lvl] = genSparseCrd(builder, loc, tid, lvl);
       if (isSparseSlices[tid]) {
         auto [trans, pred] =
-            genSliceLegitPredicate(builder, loc, coord[tid][dim], tid, dim);
+            genSliceLegitPredicate(builder, loc, coords[tid][lvl], tid, lvl);
         slicesPreds.emplace_back(pred, i);
         // Updates to the relative coordinate to the slice.
-        coord[tid][dim] = trans;
+        coords[tid][lvl] = trans;
       }
       i++;
     }
@@ -696,14 +728,16 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtDims(
     // Skips invalid loop iteration when slice coordinate is inapplicable.
     SmallVector<Value> yields(after->getArguments());
     // Generates a list of if statments
-    //  pidx = in_slice ? pidx : pidx + 1
-    // TODO: instead of always picking pidx + 1, we should set pidx = high to
-    // break to loop if the coordinates is larger than the slice size.
+    //  pos = in_slice ? pos : pos + 1
+    // TODO: instead of always picking pos + 1, we should set pos = high to
+    // break to loop if the coordinates are larger than the slice size.
+    //
+    // This "idx" is the index into `llvm::zip(tids, lvls)`
     for (auto [pred, idx] : slicesPreds) {
-      Value nextPidx = builder.create<arith::AddIOp>(
+      Value nextPos = builder.create<arith::AddIOp>(
           loc, yields[idx], constantIndex(builder, loc, 1));
       yields[idx] =
-          builder.create<arith::SelectOp>(loc, pred, yields[idx], nextPidx);
+          builder.create<arith::SelectOp>(loc, pred, yields[idx], nextPos);
     }
 
     Value pred = slicesPreds.front().first;
@@ -726,31 +760,32 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtDims(
   Value min;
   // Finds the minimum coordinate
   if (!needsUniv) {
-    for (auto [tid, dim] : llvm::zip(tids, dims)) {
-      if (isCompressedDLT(dimTypes[tid][dim]) ||
-          isSingletonDLT(dimTypes[tid][dim])) {
+    for (auto [tid, lvl] : llvm::zip(tids, lvls)) {
+      const auto lvlTp = lvlTypes[tid][lvl];
+      if (isCompressedDLT(lvlTp) || isSingletonDLT(lvlTp)) {
+        const auto crd = coords[tid][lvl];
         if (min) {
           Value cmp = builder.create<arith::CmpIOp>(
-              loc, arith::CmpIPredicate::ult, coord[tid][dim], min);
-          min = builder.create<arith::SelectOp>(loc, cmp, coord[tid][dim], min);
+              loc, arith::CmpIPredicate::ult, crd, min);
+          min = builder.create<arith::SelectOp>(loc, cmp, crd, min);
         } else {
-          min = coord[tid][dim];
+          min = crd;
         }
       }
     }
   } else {
     assert(!min);
-    // Otherwise, universal index is the minimal pidx.
+    // Otherwise, universal index is the minimal pos.
     min = after->getArguments().back();
   }
 
   // Sets up the loop stack.
-  loopStack.emplace_back(tids, dims, whileOp, builder.getInsertionBlock(), min,
+  loopStack.emplace_back(tids, lvls, whileOp, builder.getInsertionBlock(), min,
                          loopTag);
   assert(loopStack.size() == loopSeqStack.size());
 
-  for (auto [tid, dim] : llvm::zip(tids, dims)) {
-    const auto reassoc = getCollapseReassociation(tid, dim);
+  for (auto [tid, dstLvl] : llvm::zip(tids, lvls)) {
+    const auto reassoc = getCollapseReassociation(tid, dstLvl);
     assert(reassoc.size() == 1 || isUniqueCOOType(tensors[tid].getType()));
     // TODO: Refactors this into smaller functions.
     // NOTE: For all the collapsed level (except for the last one, that is why
@@ -767,36 +802,37 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtDims(
     // segHi[lvl=2] = 1,
     // the first iteration does not invalidate segHi[0] and segHi[1]
     for (unsigned i = 0, e = reassoc.size() - 1; i < e; i++) {
-      const auto lvl = reassoc[i];
-      if (!isUniqueDLT(dimTypes[tid][lvl])) {
-        Value pos = pidxs[tid][lvl];
-        assert(segHi[tid][lvl]);
+      const Level srcLvl = reassoc[i];
+      if (!isUniqueDLT(lvlTypes[tid][srcLvl])) {
+        const Value pos = posits[tid][srcLvl];
+        const auto oldSegHi = segHi[tid][srcLvl];
+        assert(oldSegHi);
         Value newSegHi = builder.create<arith::CmpIOp>(
-            loc, arith::CmpIPredicate::uge, pos, segHi[tid][lvl]);
-        auto ifOp = builder.create<scf::IfOp>(loc, builder.getIndexType(),
-                                              newSegHi, true);
+            loc, arith::CmpIPredicate::uge, pos, oldSegHi);
+        auto ifNewSegHi = builder.create<scf::IfOp>(loc, builder.getIndexType(),
+                                                    newSegHi, true);
         {
           OpBuilder::InsertionGuard guard(builder);
-          builder.setInsertionPointToStart(ifOp.thenBlock());
-          builder.create<scf::YieldOp>(
-              loc,
-              genSegmentHigh(builder, loc, tid, lvl, pos, highs[tid][lvl]));
+          builder.setInsertionPointToStart(ifNewSegHi.thenBlock());
+          builder.create<scf::YieldOp>(loc,
+                                       genSegmentHigh(builder, loc, tid, srcLvl,
+                                                      pos, highs[tid][srcLvl]));
           // Else, resues the same segment high.
-          builder.setInsertionPointToStart(ifOp.elseBlock());
-          builder.create<scf::YieldOp>(loc, segHi[tid][lvl]);
+          builder.setInsertionPointToStart(ifNewSegHi.elseBlock());
+          builder.create<scf::YieldOp>(loc, oldSegHi);
         }
-        highs[tid][lvl + 1] = segHi[tid][lvl] = ifOp.getResult(0);
+        highs[tid][srcLvl + 1] = segHi[tid][srcLvl] = ifNewSegHi.getResult(0);
       }
     };
-    const auto lvl = reassoc.back();
-    if (!isUniqueDLT(dimTypes[tid][lvl])) {
-      segHi[tid][lvl] = genSegmentHigh(builder, loc, tid, lvl, pidxs[tid][lvl],
-                                       highs[tid][lvl]);
+    const auto srcLvl = reassoc.back();
+    if (!isUniqueDLT(lvlTypes[tid][srcLvl])) {
+      segHi[tid][srcLvl] = genSegmentHigh(
+          builder, loc, tid, srcLvl, posits[tid][srcLvl], highs[tid][srcLvl]);
     }
   }
 
   // Emits extra locals
-  emitExtraLocalsForTensorsAtDenseDims(builder, loc, tids, dims);
+  emitExtraLocalsForTensorsAtDenseLvls(builder, loc, tids, lvls);
 
   // Updates reduction variables
   assert(after->getNumArguments() == o + reduc.size() + (needsUniv ? 1 : 0));
@@ -807,74 +843,75 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtDims(
   return whileOp;
 }
 
-void LoopEmitter::prepareLoopOverTensorAtDim(OpBuilder &builder, Location loc,
-                                             size_t tid, size_t dim) {
-  assert(dimTypes[tid].size() > dim);
-  auto dimType = dimTypes[tid][dim];
+void LoopEmitter::prepareLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
+                                             TensorId tid, Level dstLvl) {
+  assert(tid < lvlTypes.size() && dstLvl < lvlTypes[tid].size());
+  const auto lvlTp = lvlTypes[tid][dstLvl];
 
-  if (isDenseDLT(dimType))
+  if (isDenseDLT(lvlTp))
     return;
 
-  for (auto lvl : getCollapseReassociation(tid, dim)) {
+  const Value c0 = constantIndex(builder, loc, 0);
+  const Value c1 = constantIndex(builder, loc, 1);
+  for (const Level srcLvl : getCollapseReassociation(tid, dstLvl)) {
     // Either the first level, or the previous level has been set.
-    assert(lvl == 0 || pidxs[tid][lvl - 1]);
-    Value c0 = constantIndex(builder, loc, 0);
-    Value c1 = constantIndex(builder, loc, 1);
-    if (isCompressedDLT(dimType)) {
-      Value mem = posBuffer[tid][lvl];
+    /// FIXME: See the [CLARIFY_POSITS_LVL] note in the header.
+    assert(srcLvl == 0 || posits[tid][srcLvl - 1]);
+    if (!isCompressedDLT(lvlTp) && !isSingletonDLT(lvlTp))
+      continue;
+    if (isCompressedDLT(lvlTp)) {
+      const Value mem = positionsBuffers[tid][srcLvl];
 
-      Value pLo = lvl == 0 ? c0 : pidxs[tid][lvl - 1];
-      pidxs[tid][lvl] = genIndexLoad(builder, loc, mem, pLo);
+      const Value pLo = srcLvl == 0 ? c0 : posits[tid][srcLvl - 1];
+      posits[tid][srcLvl] = genIndexLoad(builder, loc, mem, pLo);
 
-      Value pHi = builder.create<arith::AddIOp>(loc, pLo, c1);
-      highs[tid][lvl] = genIndexLoad(builder, loc, mem, pHi);
+      const Value pHi = builder.create<arith::AddIOp>(loc, pLo, c1);
+      highs[tid][srcLvl] = genIndexLoad(builder, loc, mem, pHi);
       return;
     }
-    if (isSingletonDLT(dimType)) {
-      Value pLo = lvl == 0 ? c0 : pidxs[tid][lvl - 1];
-      Value pHi;
-      // If this is non-unique, the pHi is bound by the segment high of the
-      // previous level.
-      if (!isUniqueDLT(dimTypes[tid][lvl - 1]))
-        pHi = segHi[tid][lvl - 1];
+    if (isSingletonDLT(lvlTp)) {
+      const Value pLo = srcLvl == 0 ? c0 : posits[tid][srcLvl - 1];
+      posits[tid][srcLvl] = pLo;
 
-      // If pHi is still uninitialized, we set it to one as it is a singleton
-      // level.
-      // NOTE: Even if the level is non-unique, the pHi might not have been set
-      // in the previous statement, as we only compute segment high when we are
-      // coiterating non-unique levels.
-      if (!pHi)
-        pHi = builder.create<arith::AddIOp>(loc, pLo, c1);
-      pidxs[tid][lvl] = pLo;
-      highs[tid][lvl] = pHi;
+      // If we are coiterating non-unique levels, then use pHi=segHi;
+      // otherwise use pHi=pLo+1.
+      // NOTE: Just because the level is non-unique, that does not
+      // guarantee that segHi is defined: because we only generate segHi
+      // whenever coiterating, in order to improve code quality for the
+      // non-coiterating cases.
+      const auto theSegHi = segHi[tid][srcLvl - 1];
+      highs[tid][srcLvl] = (!isUniqueDLT(lvlTypes[tid][srcLvl - 1]) && theSegHi)
+                               ? theSegHi
+                               : builder.create<arith::AddIOp>(loc, pLo, c1);
       return;
     }
   }
 
-  llvm_unreachable("Unrecognizable dimesion type!");
+  llvm_unreachable("Unrecognized level-type!");
 }
 
-void LoopEmitter::emitExtraLocalsForTensorsAtDenseDims(OpBuilder &builder,
+void LoopEmitter::emitExtraLocalsForTensorsAtDenseLvls(OpBuilder &builder,
                                                        Location loc,
-                                                       ArrayRef<size_t> tids,
-                                                       ArrayRef<size_t> dims) {
+                                                       ArrayRef<TensorId> tids,
+                                                       ArrayRef<Level> lvls) {
   // Initialize dense positions. Note that we generate dense coordinates of the
   // output tensor unconditionally, since they may not appear in the lattice,
   // but may be needed for linearized codegen.
-  for (auto [tid, dim] : llvm::zip(tids, dims)) {
-    if (isDenseDLT(dimTypes[tid][dim])) {
+  assert(tids.size() == lvls.size());
+  for (auto [tid, lvl] : llvm::zip(tids, lvls)) {
+    if (isDenseDLT(lvlTypes[tid][lvl])) {
       auto enc = getSparseTensorEncoding(tensors[tid].getType());
       if (enc && !isSparseOutput(tid)) {
-        bool validPidx = dim == 0 || pidxs[tid][dim - 1];
-        if (!validPidx) {
-          // We might not find the pidx for the sparse output tensor as it is
+        bool validPos = lvl == 0 || posits[tid][lvl - 1];
+        if (!validPos) {
+          // We might not find the pos for the sparse output tensor as it is
           // unconditionally required by the sparsification.
           assert(isOutputTensor(tid));
           continue;
         }
-        pidxs[tid][dim] =
-            genAddress(builder, loc, tid, dim, loopStack.back().iv);
-        // NOTE: we can also prepare for next dim here in advance
+        posits[tid][lvl] =
+            genAddress(builder, loc, tid, lvl, loopStack.back().iv);
+        // NOTE: we can also prepare for next lvl here in advance
       }
     }
   }
@@ -882,12 +919,9 @@ void LoopEmitter::emitExtraLocalsForTensorsAtDenseDims(OpBuilder &builder,
 
 void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
                               MutableArrayRef<Value> reduc) {
-  LoopLevelInfo &loopInfo = loopStack.back();
+  const LoopInfo &loopInfo = loopStack.back();
   rewriter.setInsertionPointToEnd(loopInfo.userCodeBlock);
-  auto &dims = loopStack.back().dims;
-  auto &tids = loopStack.back().tids;
-  auto forOp = llvm::dyn_cast<scf::ForOp>(loopInfo.loop);
-  if (forOp) {
+  if (auto forOp = llvm::dyn_cast<scf::ForOp>(loopInfo.loop)) {
     if (!reduc.empty()) {
       assert(reduc.size() == forOp.getNumResults());
       rewriter.create<scf::YieldOp>(loc, reduc);
@@ -918,6 +952,7 @@ void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
       // One of the operands must be the init value (which is also the
       // previous reduction value).
       assert(curVal);
+#ifndef NDEBUG
       // The reduction expression should be the only user of the reduction val
       // inside the parallel for.
       unsigned numUsers = 0;
@@ -926,7 +961,7 @@ void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
           numUsers++;
       }
       assert(numUsers == 1);
-      (void)numUsers; // to silence unused variable warning in release build
+#endif // NDEBUG
 
       rewriter.setInsertionPointAfter(redExp);
       auto redOp = rewriter.create<scf::ReduceOp>(loc, curVal);
@@ -952,23 +987,21 @@ void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
   // Finished iterating a tensor, clean up
   // We only do the clean up on for loop as while loops do not necessarily
   // finish the iteration on a sparse tensor
-  for (auto [tid, dim] : llvm::zip(tids, dims)) {
+  for (auto [tid, lvl] : llvm::zip(loopInfo.tids, loopInfo.lvls)) {
     // Reset to null.
-    coord[tid][dim] = Value();
-    pidxs[tid][dim] = Value();
-    // Dense dimension, high is fixed.
-    if (!isDenseDLT(dimTypes[tid][dim]))
-      highs[tid][dim] = Value();
+    coords[tid][lvl] = Value();
+    posits[tid][lvl] = Value();
+    // Dense level, high is fixed.
+    if (!isDenseDLT(lvlTypes[tid][lvl]))
+      highs[tid][lvl] = Value();
   }
 }
 
 void LoopEmitter::exitCoIterationLoop(OpBuilder &builder, Location loc,
                                       MutableArrayRef<Value> reduc) {
-  const LoopLevelInfo &loopInfo = loopStack.back();
+  const LoopInfo &loopInfo = loopStack.back();
   auto whileOp = llvm::cast<scf::WhileOp>(loopInfo.loop);
   builder.setInsertionPointToEnd(loopInfo.userCodeBlock);
-  auto &dims = loopInfo.dims;
-  auto &tids = loopInfo.tids;
   Value iv = loopInfo.iv;
   // Finalize the induction. Note that the induction could be performed
   // in the individual if-branches to avoid re-evaluating the conditions.
@@ -978,41 +1011,44 @@ void LoopEmitter::exitCoIterationLoop(OpBuilder &builder, Location loc,
   unsigned o = 0;
   SmallVector<Value> operands;
   Value one = constantIndex(builder, loc, 1);
-  for (auto [tid, dim] : llvm::zip(tids, dims)) {
-    if (isCompressedDLT(dimTypes[tid][dim]) ||
-        isSingletonDLT(dimTypes[tid][dim])) {
-      const auto reassoc = getCollapseReassociation(tid, dim);
+  for (auto [tid, dstLvl] : llvm::zip(loopInfo.tids, loopInfo.lvls)) {
+    const auto lvlTp = lvlTypes[tid][dstLvl];
+    if (isCompressedDLT(lvlTp) || isSingletonDLT(lvlTp)) {
+      const auto reassoc = getCollapseReassociation(tid, dstLvl);
       assert(reassoc.size() == 1 || isUniqueCOOType(tensors[tid].getType()));
       for (unsigned i = 0, e = reassoc.size() - 1; i < e; i++) {
-        const auto lvl = reassoc[i];
-        if (!isUniqueDLT(dimTypes[tid][lvl])) {
-          operands.push_back(segHi[tid][lvl]);
+        const Level srcLvl = reassoc[i];
+        if (!isUniqueDLT(lvlTypes[tid][srcLvl])) {
+          operands.push_back(segHi[tid][srcLvl]);
           o++;
         }
       }
-      Value op1 = coord[tid][dim];
-      Value op3 = pidxs[tid][dim];
+      const Value crd = coords[tid][dstLvl];
+      const Value pos = posits[tid][dstLvl];
       Value cmp =
-          builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, op1, iv);
+          builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, crd, iv);
       // If the loop contains a coiteration with non-unique level, we fast
       // forward all the duplicated coords by setting the position to the
       // segment high.
-      // If this is a collapsed dim, we forward pidx based on the last level in
-      // the collapsed level set.
-      Value add = !isUniqueDLT(dimTypes[tid][reassoc.back()])
+      Value add = !isUniqueDLT(lvlTypes[tid][reassoc.back()])
                       ? segHi[tid][reassoc.back()]
-                      : builder.create<arith::AddIOp>(loc, op3, one);
+                      : builder.create<arith::AddIOp>(loc, pos, one);
 
-      operands.push_back(builder.create<arith::SelectOp>(loc, cmp, add, op3));
+      operands.push_back(builder.create<arith::SelectOp>(loc, cmp, add, pos));
       // Following loops continue iteration from the break point of the
       // current while loop.
-      Value pos = whileOp->getResult(o++);
-      const auto t = tid;
-      llvm::for_each(reassoc, [this, t, pos](Level l) { pidxs[t][l] = pos; });
-      // The coordinates are invalid now.
-      coord[tid][dim] = nullptr;
-      // The segment high are invalid now
-      segHi[tid][dim] = nullptr;
+      const Value newPos = whileOp->getResult(o++);
+      // We need to define a new local variable for `tid` to avoid
+      // warnings about "captured structured bindings are a C++20 extension".
+      // FIXME(wrengr): define a helper function to capture this idiom!
+      const TensorId newTid = tid;
+      llvm::for_each(reassoc, [this, newTid, newPos](Level srcLvl) {
+        posits[newTid][srcLvl] = newPos;
+      });
+      // The coordinate is invalid now.
+      coords[tid][dstLvl] = nullptr;
+      // The segment high is invalid now.
+      segHi[tid][dstLvl] = nullptr;
       // highs remains unchanged.
     }
   }
@@ -1042,8 +1078,8 @@ void LoopEmitter::exitCurrentLoop(RewriterBase &rewriter, Location loc,
                                   MutableArrayRef<Value> reduc) {
   // Clean up the values, it would help use to discover potential bug at a
   // earlier stage (instead of silently using a wrong value).
-  LoopLevelInfo &loopInfo = loopStack.back();
-  assert(loopInfo.tids.size() == loopInfo.dims.size());
+  const LoopInfo &loopInfo = loopStack.back();
+  assert(loopInfo.tids.size() == loopInfo.lvls.size());
   SmallVector<Value> red;
   if (llvm::isa<scf::WhileOp>(loopInfo.loop)) {
     exitCoIterationLoop(rewriter, loc, reduc);

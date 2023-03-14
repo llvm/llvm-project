@@ -87,6 +87,52 @@ define double @loadfpimm10() {
   ret double 0x1000000000000000
 }
 
+; Negative test. This is a qnan with payload of 1.
+define double @loadfpimm11() {
+; CHECK-LABEL: loadfpimm11:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(.LCPI10_0)
+; CHECK-NEXT:    fld fa0, %lo(.LCPI10_0)(a0)
+; CHECK-NEXT:    ret
+  ret double 0x7ff8000000000001
+}
+
+; Negative test. This is an snan with payload of 1.
+define double @loadfpimm12() {
+; CHECK-LABEL: loadfpimm12:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(.LCPI11_0)
+; CHECK-NEXT:    fld fa0, %lo(.LCPI11_0)(a0)
+; CHECK-NEXT:    ret
+  ret double 0x7ff0000000000001
+}
+
+; Negative test. This is the smallest denormal.
+define double @loadfpimm13() {
+; RV32IDZFA-LABEL: loadfpimm13:
+; RV32IDZFA:       # %bb.0:
+; RV32IDZFA-NEXT:    lui a0, %hi(.LCPI12_0)
+; RV32IDZFA-NEXT:    fld fa0, %lo(.LCPI12_0)(a0)
+; RV32IDZFA-NEXT:    ret
+;
+; RV64DZFA-LABEL: loadfpimm13:
+; RV64DZFA:       # %bb.0:
+; RV64DZFA-NEXT:    li a0, 1
+; RV64DZFA-NEXT:    fmv.d.x fa0, a0
+; RV64DZFA-NEXT:    ret
+  ret double 0x0000000000000001
+}
+
+; Negative test. This is 2^-1023, a denormal.
+define double @loadfpimm15() {
+; CHECK-LABEL: loadfpimm15:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(.LCPI13_0)
+; CHECK-NEXT:    fld fa0, %lo(.LCPI13_0)(a0)
+; CHECK-NEXT:    ret
+  ret double 0x0008000000000000
+}
+
 declare double @llvm.minimum.f64(double, double)
 
 define double @fminm_d(double %a, double %b) nounwind {

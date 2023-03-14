@@ -663,27 +663,27 @@ void format_test_signed_integer(TestFunction check, ExceptionTest check_exceptio
   format_test_integer<__int128_t, CharT>(check, check_exception);
 #endif
   // *** check the minma and maxima ***
-  check(SV("-0b10000000"), SV("{:#b}"), std::numeric_limits<int8_t>::min());
-  check(SV("-0200"), SV("{:#o}"), std::numeric_limits<int8_t>::min());
-  check(SV("-128"), SV("{:#}"), std::numeric_limits<int8_t>::min());
-  check(SV("-0x80"), SV("{:#x}"), std::numeric_limits<int8_t>::min());
+  check(SV("-0b10000000"), SV("{:#b}"), std::numeric_limits<std::int8_t>::min());
+  check(SV("-0200"), SV("{:#o}"), std::numeric_limits<std::int8_t>::min());
+  check(SV("-128"), SV("{:#}"), std::numeric_limits<std::int8_t>::min());
+  check(SV("-0x80"), SV("{:#x}"), std::numeric_limits<std::int8_t>::min());
 
-  check(SV("-0b1000000000000000"), SV("{:#b}"), std::numeric_limits<int16_t>::min());
-  check(SV("-0100000"), SV("{:#o}"), std::numeric_limits<int16_t>::min());
-  check(SV("-32768"), SV("{:#}"), std::numeric_limits<int16_t>::min());
-  check(SV("-0x8000"), SV("{:#x}"), std::numeric_limits<int16_t>::min());
+  check(SV("-0b1000000000000000"), SV("{:#b}"), std::numeric_limits<std::int16_t>::min());
+  check(SV("-0100000"), SV("{:#o}"), std::numeric_limits<std::int16_t>::min());
+  check(SV("-32768"), SV("{:#}"), std::numeric_limits<std::int16_t>::min());
+  check(SV("-0x8000"), SV("{:#x}"), std::numeric_limits<std::int16_t>::min());
 
-  check(SV("-0b10000000000000000000000000000000"), SV("{:#b}"), std::numeric_limits<int32_t>::min());
-  check(SV("-020000000000"), SV("{:#o}"), std::numeric_limits<int32_t>::min());
-  check(SV("-2147483648"), SV("{:#}"), std::numeric_limits<int32_t>::min());
-  check(SV("-0x80000000"), SV("{:#x}"), std::numeric_limits<int32_t>::min());
+  check(SV("-0b10000000000000000000000000000000"), SV("{:#b}"), std::numeric_limits<std::int32_t>::min());
+  check(SV("-020000000000"), SV("{:#o}"), std::numeric_limits<std::int32_t>::min());
+  check(SV("-2147483648"), SV("{:#}"), std::numeric_limits<std::int32_t>::min());
+  check(SV("-0x80000000"), SV("{:#x}"), std::numeric_limits<std::int32_t>::min());
 
   check(SV("-0b1000000000000000000000000000000000000000000000000000000000000000"),
         SV("{:#b}"),
-        std::numeric_limits<int64_t>::min());
-  check(SV("-01000000000000000000000"), SV("{:#o}"), std::numeric_limits<int64_t>::min());
-  check(SV("-9223372036854775808"), SV("{:#}"), std::numeric_limits<int64_t>::min());
-  check(SV("-0x8000000000000000"), SV("{:#x}"), std::numeric_limits<int64_t>::min());
+        std::numeric_limits<std::int64_t>::min());
+  check(SV("-01000000000000000000000"), SV("{:#o}"), std::numeric_limits<std::int64_t>::min());
+  check(SV("-9223372036854775808"), SV("{:#}"), std::numeric_limits<std::int64_t>::min());
+  check(SV("-0x8000000000000000"), SV("{:#x}"), std::numeric_limits<std::int64_t>::min());
 
 #ifndef TEST_HAS_NO_INT128
   check(SV("-0b1000000000000000000000000000000000000000000000000000000000000000"
@@ -695,27 +695,27 @@ void format_test_signed_integer(TestFunction check, ExceptionTest check_exceptio
   check(SV("-0x80000000000000000000000000000000"), SV("{:#x}"), std::numeric_limits<__int128_t>::min());
 #endif
 
-  check(SV("0b1111111"), SV("{:#b}"), std::numeric_limits<int8_t>::max());
-  check(SV("0177"), SV("{:#o}"), std::numeric_limits<int8_t>::max());
-  check(SV("127"), SV("{:#}"), std::numeric_limits<int8_t>::max());
-  check(SV("0x7f"), SV("{:#x}"), std::numeric_limits<int8_t>::max());
+  check(SV("0b1111111"), SV("{:#b}"), std::numeric_limits<std::int8_t>::max());
+  check(SV("0177"), SV("{:#o}"), std::numeric_limits<std::int8_t>::max());
+  check(SV("127"), SV("{:#}"), std::numeric_limits<std::int8_t>::max());
+  check(SV("0x7f"), SV("{:#x}"), std::numeric_limits<std::int8_t>::max());
 
-  check(SV("0b111111111111111"), SV("{:#b}"), std::numeric_limits<int16_t>::max());
-  check(SV("077777"), SV("{:#o}"), std::numeric_limits<int16_t>::max());
-  check(SV("32767"), SV("{:#}"), std::numeric_limits<int16_t>::max());
-  check(SV("0x7fff"), SV("{:#x}"), std::numeric_limits<int16_t>::max());
+  check(SV("0b111111111111111"), SV("{:#b}"), std::numeric_limits<std::int16_t>::max());
+  check(SV("077777"), SV("{:#o}"), std::numeric_limits<std::int16_t>::max());
+  check(SV("32767"), SV("{:#}"), std::numeric_limits<std::int16_t>::max());
+  check(SV("0x7fff"), SV("{:#x}"), std::numeric_limits<std::int16_t>::max());
 
-  check(SV("0b1111111111111111111111111111111"), SV("{:#b}"), std::numeric_limits<int32_t>::max());
-  check(SV("017777777777"), SV("{:#o}"), std::numeric_limits<int32_t>::max());
-  check(SV("2147483647"), SV("{:#}"), std::numeric_limits<int32_t>::max());
-  check(SV("0x7fffffff"), SV("{:#x}"), std::numeric_limits<int32_t>::max());
+  check(SV("0b1111111111111111111111111111111"), SV("{:#b}"), std::numeric_limits<std::int32_t>::max());
+  check(SV("017777777777"), SV("{:#o}"), std::numeric_limits<std::int32_t>::max());
+  check(SV("2147483647"), SV("{:#}"), std::numeric_limits<std::int32_t>::max());
+  check(SV("0x7fffffff"), SV("{:#x}"), std::numeric_limits<std::int32_t>::max());
 
   check(SV("0b111111111111111111111111111111111111111111111111111111111111111"),
         SV("{:#b}"),
-        std::numeric_limits<int64_t>::max());
-  check(SV("0777777777777777777777"), SV("{:#o}"), std::numeric_limits<int64_t>::max());
-  check(SV("9223372036854775807"), SV("{:#}"), std::numeric_limits<int64_t>::max());
-  check(SV("0x7fffffffffffffff"), SV("{:#x}"), std::numeric_limits<int64_t>::max());
+        std::numeric_limits<std::int64_t>::max());
+  check(SV("0777777777777777777777"), SV("{:#o}"), std::numeric_limits<std::int64_t>::max());
+  check(SV("9223372036854775807"), SV("{:#}"), std::numeric_limits<std::int64_t>::max());
+  check(SV("0x7fffffffffffffff"), SV("{:#x}"), std::numeric_limits<std::int64_t>::max());
 
 #ifndef TEST_HAS_NO_INT128
   check(SV("0b111111111111111111111111111111111111111111111111111111111111111"
@@ -739,15 +739,15 @@ void format_test_unsigned_integer(TestFunction check, ExceptionTest check_except
   format_test_integer<__uint128_t, CharT>(check, check_exception);
 #endif
   // *** test the maxima ***
-  check(SV("0b11111111"), SV("{:#b}"), std::numeric_limits<uint8_t>::max());
-  check(SV("0377"), SV("{:#o}"), std::numeric_limits<uint8_t>::max());
-  check(SV("255"), SV("{:#}"), std::numeric_limits<uint8_t>::max());
-  check(SV("0xff"), SV("{:#x}"), std::numeric_limits<uint8_t>::max());
+  check(SV("0b11111111"), SV("{:#b}"), std::numeric_limits<std::uint8_t>::max());
+  check(SV("0377"), SV("{:#o}"), std::numeric_limits<std::uint8_t>::max());
+  check(SV("255"), SV("{:#}"), std::numeric_limits<std::uint8_t>::max());
+  check(SV("0xff"), SV("{:#x}"), std::numeric_limits<std::uint8_t>::max());
 
-  check(SV("0b1111111111111111"), SV("{:#b}"), std::numeric_limits<uint16_t>::max());
-  check(SV("0177777"), SV("{:#o}"), std::numeric_limits<uint16_t>::max());
-  check(SV("65535"), SV("{:#}"), std::numeric_limits<uint16_t>::max());
-  check(SV("0xffff"), SV("{:#x}"), std::numeric_limits<uint16_t>::max());
+  check(SV("0b1111111111111111"), SV("{:#b}"), std::numeric_limits<std::uint16_t>::max());
+  check(SV("0177777"), SV("{:#o}"), std::numeric_limits<std::uint16_t>::max());
+  check(SV("65535"), SV("{:#}"), std::numeric_limits<std::uint16_t>::max());
+  check(SV("0xffff"), SV("{:#x}"), std::numeric_limits<std::uint16_t>::max());
 
   check(SV("0b11111111111111111111111111111111"), SV("{:#b}"), std::numeric_limits<std::uint32_t>::max());
   check(SV("037777777777"), SV("{:#o}"), std::numeric_limits<std::uint32_t>::max());
@@ -756,10 +756,10 @@ void format_test_unsigned_integer(TestFunction check, ExceptionTest check_except
 
   check(SV("0b1111111111111111111111111111111111111111111111111111111111111111"),
         SV("{:#b}"),
-        std::numeric_limits<uint64_t>::max());
-  check(SV("01777777777777777777777"), SV("{:#o}"), std::numeric_limits<uint64_t>::max());
-  check(SV("18446744073709551615"), SV("{:#}"), std::numeric_limits<uint64_t>::max());
-  check(SV("0xffffffffffffffff"), SV("{:#x}"), std::numeric_limits<uint64_t>::max());
+        std::numeric_limits<std::uint64_t>::max());
+  check(SV("01777777777777777777777"), SV("{:#o}"), std::numeric_limits<std::uint64_t>::max());
+  check(SV("18446744073709551615"), SV("{:#}"), std::numeric_limits<std::uint64_t>::max());
+  check(SV("0xffffffffffffffff"), SV("{:#x}"), std::numeric_limits<std::uint64_t>::max());
 
 #ifndef TEST_HAS_NO_INT128
   check(SV("0b1111111111111111111111111111111111111111111111111111111111111111"

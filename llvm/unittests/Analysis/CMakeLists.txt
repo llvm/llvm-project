@@ -39,6 +39,7 @@ set(ANALYSIS_TEST_SOURCES
   MLModelRunnerTest.cpp
   PhiValuesTest.cpp
   PluginInlineAdvisorAnalysisTest.cpp
+  PluginInlineOrderAnalysisTest.cpp
   ProfileSummaryInfoTest.cpp
   ScalarEvolutionTest.cpp
   VectorFunctionABITest.cpp
@@ -73,3 +74,4 @@ if(CMAKE_SYSTEM_NAME STREQUAL "AIX")
 endif()
 
 add_subdirectory(InlineAdvisorPlugin)
+add_subdirectory(InlineOrderPlugin)
