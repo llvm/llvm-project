@@ -17,7 +17,8 @@ x86_64 *host*.
 Configure the full cross build of the libc
 ==========================================
 
-Below is a simple recipe to configure the libc for a cross build.
+Below is a simple recipe to configure the libc for a cross build.  In this,
+we've set Ninja as the generator, and are building the full libc.
 
 .. code-block:: sh
 
@@ -25,10 +26,11 @@ Below is a simple recipe to configure the libc for a cross build.
   $> mkdir build
   $> cd build
   $> cmake ../llvm  \
-     -G Ninja \ # Generator
-     -DLLVM_ENABLE_PROJECTS=libc  \ # Enable the libc project
-     -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++  \
-     -DLLVM_LIBC_FULL_BUILD=ON   \ # We are building the full libc
+     -G Ninja \
+     -DLLVM_ENABLE_PROJECTS=libc  \
+     -DCMAKE_C_COMPILER=clang \
+     -DCMAKE_CXX_COMPILER=clang++  \
+     -DLLVM_LIBC_FULL_BUILD=ON \
      -DLIBC_TARGET_TRIPLE=<Your target triple>
 
 We will go over the special options passed to the ``cmake`` command above.

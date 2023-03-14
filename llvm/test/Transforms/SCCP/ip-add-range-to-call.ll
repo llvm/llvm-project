@@ -180,7 +180,7 @@ define internal <2 x i64> @ctlz(<2 x i64> %arg) {
 
 define <2 x i64> @ctlz_caller(<2 x i64> %arg) {
 ; CHECK-LABEL: @ctlz_caller(
-; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @ctlz(<2 x i64> [[ARG:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @ctlz(<2 x i64> [[ARG:%.*]]), !range [[RNG2:![0-9]+]]
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
   %res = call <2 x i64> @ctlz(<2 x i64> %arg)
@@ -191,3 +191,4 @@ declare <2 x i64> @llvm.ctlz.v2i64(<2 x i64>, i1)
 
 ; CHECK: [[RNG0]] = !{i32 0, i32 21}
 ; CHECK: [[RNG1]] = !{i32 500, i32 601}
+; CHECK: [[RNG2]] = !{i64 0, i64 65}

@@ -895,8 +895,7 @@ static Error checkCombinedSummaryForTesting(ModuleSummaryIndex *Summary) {
   // DevirtIndex::run, not to DevirtModule::run used by opt/runForTesting.
   const auto &ModPaths = Summary->modulePaths();
   if (ClSummaryAction != PassSummaryAction::Import &&
-      ModPaths.find(ModuleSummaryIndex::getRegularLTOModuleName()) ==
-          ModPaths.end())
+      !ModPaths.contains(ModuleSummaryIndex::getRegularLTOModuleName()))
     return createStringError(
         errc::invalid_argument,
         "combined summary should contain Regular LTO module");

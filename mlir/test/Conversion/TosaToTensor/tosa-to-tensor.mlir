@@ -195,3 +195,76 @@ func.func @pad_dyn_padding(%arg0 : tensor<1x2xf32>) -> (tensor<?x9xf32>) {
   %1 = "tosa.pad"(%arg0, %0)  : (tensor<1x2xf32>, tensor<2x2xi32>)  -> (tensor<?x9xf32>)
   return %1 : tensor<?x9xf32>
 }
+
+// -----
+
+// CHECK-LABEL: @concat
+// CHECK-SAME: %[[ARG0:.+]]: tensor<5x1xf32>
+// CHECK-SAME: %[[ARG1:.+]]: tensor<6x1xf32>
+func.func @concat(%arg0: tensor<5x1xf32>, %arg1: tensor<6x1xf32>) -> () {
+  // CHECK: [[AXIS:%.+]] = arith.constant 0
+  // CHECK: [[STRIDE:%.+]]   = arith.constant 1
+  // CHECK: [[OFFSET:%.+]] = arith.constant 0 : index
+  // CHECK: [[IDX0:%.+]] = arith.constant 0 : index
+  // CHECK: [[IDX1:%.+]] = arith.constant 1 : index
+  // CHECK: [[INIT:%.+]] = tensor.empty() : tensor<11x1xf32>
+  // CHECK: [[INSERT0:%.+]] = tensor.insert_slice %[[ARG0]] into [[INIT]][0, 0] [5, 1] [1, 1]
+  // CHECK: [[INSERT1:%.+]] = tensor.insert_slice %[[ARG1]] into [[INSERT0]][5, 0] [6, 1] [1, 1]
+  %0 = "tosa.concat"(%arg0, %arg1) { axis = 0 : i64} : (tensor<5x1xf32>, tensor<6x1xf32>)  -> (tensor<11x1xf32>)
+
+  // CHECK: [[AXIS:%.+]] = arith.constant 1
+  // CHECK: [[STRIDE:%.+]]   = arith.constant 1
+  // CHECK: [[OFFSET:%.+]] = arith.constant 0 : index
+  // CHECK: [[IDX0:%.+]] = arith.constant 0 : index
+  // CHECK: [[IDX1:%.+]] = arith.constant 1 : index
+  // CHECK: [[INIT:%.+]] = tensor.empty() : tensor<5x2xf32>
+  // CHECK: [[INSERT0:%.+]] = tensor.insert_slice %[[ARG0]] into [[INIT]][0, 0] [5, 1] [1, 1]
+  // CHECK: [[INSERT1:%.+]] = tensor.insert_slice %[[ARG0]] into [[INSERT0]][0, 1] [5, 1] [1, 1]
+  %1 = "tosa.concat"(%arg0, %arg0) { axis = 1 : i64} : (tensor<5x1xf32>, tensor<5x1xf32>)  -> (tensor<5x2xf32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @concat_non_axis_dyn
+// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]:
+// CHECK-SAME:  %[[ARG1:[0-9a-zA-Z_]*]]
+func.func @concat_non_axis_dyn(%arg0: tensor<5x?xf32>, %arg1: tensor<6x?xf32>) -> () {
+  // CHECK: %[[AXIS:.+]] = arith.constant 0
+  // CHECK: %[[STRIDE:.+]]   = arith.constant 1
+  // CHECK: %[[OFFSET:.+]] = arith.constant 0 : index
+  // CHECK: %[[IDX0:.+]] = arith.constant 0 : index
+  // CHECK: %[[IDX1:.+]] = arith.constant 1 : index
+  // CHECK: %[[SIZE:.+]] = tensor.dim %[[ARG0]], %[[IDX1]]
+  // CHECK: %[[IDX1_2:.+]] = arith.constant 1 : index
+  // CHECK: %[[DYN:.+]] = tensor.dim %[[ARG0]], %[[IDX1_2]]
+  // CHECK: %[[INIT:.+]] = tensor.empty(%[[DYN]]) : tensor<11x?xf32>
+  // CHECK: %[[INSERT0:.+]] = tensor.insert_slice %[[ARG0]] into %[[INIT]][0, 0] [5, %[[SIZE]]] [1, 1]
+  // CHECK: %[[INSERT1:.+]] = tensor.insert_slice %[[ARG1]] into %[[INSERT0]][5, 0] [6, %[[SIZE]]] [1, 1]
+  %0 = "tosa.concat"(%arg0, %arg1) { axis = 0 : i64} : (tensor<5x?xf32>, tensor<6x?xf32>)  -> (tensor<11x?xf32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @concat_axis_dyn
+// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]:
+// CHECK-SAME:  %[[ARG1:[0-9a-zA-Z_]*]]:
+func.func @concat_axis_dyn(%arg0: tensor<?x3xf32>, %arg1: tensor<?x3xf32>) -> () {
+  // CHECK: %[[AXIS:.+]] = arith.constant 0
+  // CHECK: %[[STRIDE:.+]]   = arith.constant 1
+  // CHECK: %[[OFFSET:.+]] = arith.constant 0 : index
+  // CHECK: %[[IDX0:.+]] = arith.constant 0 : index
+  // CHECK: %[[SIZE:.+]] = tensor.dim %[[ARG0]], %[[IDX0]]
+  // CHECK: %[[IDX0_2:.+]] = arith.constant 0 : index
+  // CHECK: %[[DYN:.+]] = tensor.dim %[[ARG0]], %[[IDX0_2]]
+  // CHECK: %[[IDX1:.+]] = arith.constant 1 : index
+  // CHECK: %[[INIT:.+]] = tensor.empty(%[[DYN]]) : tensor<?x3xf32>
+  // CHECK: %[[DYN1:.+]] = tensor.dim %[[ARG0]], %[[AXIS]]
+  // CHECK: %[[INSERT0:.+]] = tensor.insert_slice %[[ARG0]] into %[[INIT]][0, 0] [%[[DYN1]], 3] [1, 1]
+  // CHECK: %[[SUM:.+]]  = arith.addi %[[OFFSET]], %[[DYN1]]
+  // CHECK: %[[DYN2:.+]] = tensor.dim %[[ARG1]], %[[AXIS]]
+  // CHECK: %[[INSERT1:.+]] = tensor.insert_slice %[[ARG1]] into %[[INSERT0]][%[[SUM]], 0] [%[[DYN2]], 3] [1, 1]
+  %0 = "tosa.concat"(%arg0, %arg1) { axis = 0 : i64} : (tensor<?x3xf32>, tensor<?x3xf32>)  -> (tensor<?x3xf32>)
+  return
+}

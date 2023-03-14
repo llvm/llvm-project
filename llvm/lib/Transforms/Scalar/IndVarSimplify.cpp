@@ -93,15 +93,6 @@ STATISTIC(NumLFTR        , "Number of loop exit tests replaced");
 STATISTIC(NumElimExt     , "Number of IV sign/zero extends eliminated");
 STATISTIC(NumElimIV      , "Number of congruent IVs eliminated");
 
-// Trip count verification can be enabled by default under NDEBUG if we
-// implement a strong expression equivalence checker in SCEV. Until then, we
-// use the verify-indvars flag, which may assert in some cases.
-static cl::opt<bool> VerifyIndvars(
-    "verify-indvars", cl::Hidden,
-    cl::desc("Verify the ScalarEvolution result after running indvars. Has no "
-             "effect in release builds. (Note: this adds additional SCEV "
-             "queries potentially changing the analysis result)"));
-
 static cl::opt<ReplaceExitVal> ReplaceExitValue(
     "replexitval", cl::Hidden, cl::init(OnlyCheapRepl),
     cl::desc("Choose the strategy to replace exit value in IndVarSimplify"),
@@ -2023,16 +2014,6 @@ bool IndVarSimplify::run(Loop *L) {
   if (!L->isLoopSimplifyForm())
     return false;
 
-#ifndef NDEBUG
-  // Used below for a consistency check only
-  // Note: Since the result returned by ScalarEvolution may depend on the order
-  // in which previous results are added to its cache, the call to
-  // getBackedgeTakenCount() may change following SCEV queries.
-  const SCEV *BackedgeTakenCount;
-  if (VerifyIndvars)
-    BackedgeTakenCount = SE->getBackedgeTakenCount(L);
-#endif
-
   bool Changed = false;
   // If there are any floating-point recurrences, attempt to
   // transform them to use integer recurrences.
@@ -2181,27 +2162,8 @@ bool IndVarSimplify::run(Loop *L) {
   // Check a post-condition.
   assert(L->isRecursivelyLCSSAForm(*DT, *LI) &&
          "Indvars did not preserve LCSSA!");
-
-  // Verify that LFTR, and any other change have not interfered with SCEV's
-  // ability to compute trip count.  We may have *changed* the exit count, but
-  // only by reducing it.
-#ifndef NDEBUG
-  if (VerifyIndvars && !isa<SCEVCouldNotCompute>(BackedgeTakenCount)) {
-    SE->forgetLoop(L);
-    const SCEV *NewBECount = SE->getBackedgeTakenCount(L);
-    if (SE->getTypeSizeInBits(BackedgeTakenCount->getType()) <
-        SE->getTypeSizeInBits(NewBECount->getType()))
-      NewBECount = SE->getTruncateOrNoop(NewBECount,
-                                         BackedgeTakenCount->getType());
-    else
-      BackedgeTakenCount = SE->getTruncateOrNoop(BackedgeTakenCount,
-                                                 NewBECount->getType());
-    assert(!SE->isKnownPredicate(ICmpInst::ICMP_ULT, BackedgeTakenCount,
-                                 NewBECount) && "indvars must preserve SCEV");
-  }
   if (VerifyMemorySSA && MSSAU)
     MSSAU->getMemorySSA()->verifyMemorySSA();
-#endif
 
   return Changed;
 }

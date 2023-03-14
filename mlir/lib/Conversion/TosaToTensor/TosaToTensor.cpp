@@ -349,11 +349,74 @@ public:
   }
 };
 
+struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
+  using OpConversionPattern<tosa::ConcatOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(tosa::ConcatOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto inputType = op.getOperand(0).getType().template cast<ShapedType>();
+    auto resultType = op.getType().dyn_cast<RankedTensorType>();
+
+    Location loc = op.getLoc();
+    int axis = op.getAxis();
+    Value axisValue = rewriter.createOrFold<arith::ConstantOp>(
+        loc, rewriter.getIndexAttr(axis));
+    int rank = resultType.getRank();
+    SmallVector<Value, 3> offsets, sizes, strides;
+    sizes.reserve(rank);
+    strides.resize(rank, rewriter.create<arith::ConstantIndexOp>(loc, 1));
+    offsets.resize(rank, rewriter.create<arith::ConstantIndexOp>(loc, 0));
+
+    SmallVector<Value> dynDims;
+    for (int i = 0; i < rank; ++i) {
+      sizes.push_back(rewriter.createOrFold<tensor::DimOp>(
+          loc, adaptor.getOperands()[0], i));
+      if (inputType.isDynamicDim(i)) {
+        dynDims.push_back(
+            rewriter.create<tensor::DimOp>(loc, op.getOperand(0), i));
+      }
+    }
+
+    Value resultDimSize = sizes[axis];
+    for (auto arg : adaptor.getOperands().drop_front()) {
+      auto size = rewriter.createOrFold<tensor::DimOp>(loc, arg, axisValue);
+      resultDimSize =
+          rewriter.createOrFold<arith::AddIOp>(loc, resultDimSize, size);
+    }
+    sizes[axis] = resultDimSize;
+
+    Value emptyTensor = rewriter.create<tensor::EmptyOp>(
+        loc, resultType.getShape(), resultType.getElementType(), dynDims);
+
+    auto toOpFoldResult = [](Value v) -> OpFoldResult {
+      auto op = v.getDefiningOp<arith::ConstantIndexOp>();
+      if (!op)
+        return v;
+      return op.getValue();
+    };
+    Value result = emptyTensor;
+    for (auto arg : adaptor.getOperands()) {
+      sizes[axis] = rewriter.createOrFold<tensor::DimOp>(loc, arg, axisValue);
+      result = rewriter.createOrFold<tensor::InsertSliceOp>(
+          loc, arg, result,
+          llvm::to_vector(llvm::map_range(offsets, toOpFoldResult)),
+          llvm::to_vector(llvm::map_range(sizes, toOpFoldResult)),
+          llvm::to_vector(llvm::map_range(strides, toOpFoldResult)));
+      offsets[axis] =
+          rewriter.createOrFold<arith::AddIOp>(loc, offsets[axis], sizes[axis]);
+    }
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::tosa::populateTosaToTensorConversionPatterns(
     RewritePatternSet *patterns) {
-  patterns->add<SliceConverter, PadConverter>(patterns->getContext());
+  patterns->add<SliceConverter, PadConverter, ConcatConverter>(
+      patterns->getContext());
   patterns->add<ReshapeConverterCollapse>(patterns->getContext(),
                                           /*benefit=*/100);
   patterns->add<ReshapeConverterExpand>(patterns->getContext(),

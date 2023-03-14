@@ -547,13 +547,6 @@ int get_suspend_count_(void) {
 void set_suspend_count_(int *value) { __kmp_suspend_count = *value; }
 #endif
 
-// Symbols for MS mutual detection.
-int _You_must_link_with_exactly_one_OpenMP_library = 1;
-int _You_must_link_with_Intel_OpenMP_library = 1;
-#if KMP_OS_WINDOWS && (KMP_VERSION_MAJOR > 4)
-int _You_must_link_with_Microsoft_OpenMP_library = 1;
-#endif
-
 kmp_target_offload_kind_t __kmp_target_offload = tgt_default;
 
 // OMP Pause Resources

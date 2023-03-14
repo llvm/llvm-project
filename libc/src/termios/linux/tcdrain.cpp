@@ -21,7 +21,7 @@ namespace __llvm_libc {
 LLVM_LIBC_FUNCTION(int, tcdrain, (int fd)) {
   long ret = __llvm_libc::syscall_impl(SYS_ioctl, fd, TCSBRK, 1);
   if (ret < 0) {
-    errno = -ret;
+    libc_errno = -ret;
     return -1;
   }
   return 0;
