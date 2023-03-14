@@ -197,6 +197,8 @@ Bug Fixes in This Version
   be reached despite being reachable. This fixes
   `#61177 <https://github.com/llvm/llvm-project/issues/61177>`_ in anticipation
   of `CWG2699 <https://wg21.link/CWG2699>_` being accepted by WG21.
+- Fix crash when parsing fold expression containing a delayed typo correction.
+  (`#61326 <https://github.com/llvm/llvm-project/issues/61326>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
