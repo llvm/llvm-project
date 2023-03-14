@@ -1311,8 +1311,8 @@ SelectionDAG::SelectionDAG(const TargetMachine &tm, CodeGenOpt::Level OL)
 void SelectionDAG::init(MachineFunction &NewMF,
                         OptimizationRemarkEmitter &NewORE, Pass *PassPtr,
                         const TargetLibraryInfo *LibraryInfo,
-                        UniformityInfo *NewUA, ProfileSummaryInfo *PSIin,
-                        BlockFrequencyInfo *BFIin,
+                        LegacyDivergenceAnalysis *Divergence,
+                        ProfileSummaryInfo *PSIin, BlockFrequencyInfo *BFIin,
                         FunctionVarLocs const *VarLocs) {
   MF = &NewMF;
   SDAGISelPass = PassPtr;
@@ -1321,7 +1321,7 @@ void SelectionDAG::init(MachineFunction &NewMF,
   TSI = getSubtarget().getSelectionDAGInfo();
   LibInfo = LibraryInfo;
   Context = &MF->getFunction().getContext();
-  UA = NewUA;
+  DA = Divergence;
   PSI = PSIin;
   BFI = BFIin;
   FnVarLocs = VarLocs;
@@ -2175,7 +2175,7 @@ SDValue SelectionDAG::getRegister(unsigned RegNo, EVT VT) {
     return SDValue(E, 0);
 
   auto *N = newSDNode<RegisterSDNode>(RegNo, VT);
-  N->SDNodeBits.IsDivergent = TLI->isSDNodeSourceOfDivergence(N, FLI, UA);
+  N->SDNodeBits.IsDivergent = TLI->isSDNodeSourceOfDivergence(N, FLI, DA);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -10659,11 +10659,11 @@ public:
 
 bool SelectionDAG::calculateDivergence(SDNode *N) {
   if (TLI->isSDNodeAlwaysUniform(N)) {
-    assert(!TLI->isSDNodeSourceOfDivergence(N, FLI, UA) &&
+    assert(!TLI->isSDNodeSourceOfDivergence(N, FLI, DA) &&
            "Conflicting divergence information!");
     return false;
   }
-  if (TLI->isSDNodeSourceOfDivergence(N, FLI, UA))
+  if (TLI->isSDNodeSourceOfDivergence(N, FLI, DA))
     return true;
   for (const auto &Op : N->ops()) {
     if (Op.Val.getValueType() != MVT::Other && Op.getNode()->isDivergent())
@@ -12158,7 +12158,7 @@ void SelectionDAG::createOperands(SDNode *Node, ArrayRef<SDValue> Vals) {
   Node->NumOperands = Vals.size();
   Node->OperandList = Ops;
   if (!TLI->isSDNodeAlwaysUniform(Node)) {
-    IsDivergent |= TLI->isSDNodeSourceOfDivergence(Node, FLI, UA);
+    IsDivergent |= TLI->isSDNodeSourceOfDivergence(Node, FLI, DA);
     Node->SDNodeBits.IsDivergent = IsDivergent;
   }
   checkForCycles(Node);
