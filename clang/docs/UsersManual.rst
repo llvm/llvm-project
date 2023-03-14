@@ -2013,6 +2013,24 @@ are listed below.
    devirtualization and virtual constant propagation, for classes with
    :doc:`hidden LTO visibility <LTOVisibility>`. Requires ``-flto``.
 
+.. option:: -f[no]split-lto-unit
+
+   Controls splitting the :doc:`LTO unit <LTOVisibility>` into regular LTO and
+   :doc:`ThinLTO` portions, when compiling with -flto=thin. Defaults to false
+   unless ``-fsanitize=cfi`` or ``-fwhole-program-vtables`` are specified, in
+   which case it defaults to true. Splitting is required with ``fsanitize=cfi``,
+   and it is an error to disable via ``-fno-split-lto-unit``. Splitting is
+   optional with ``-fwhole-program-vtables``, however, it enables more
+   aggressive whole program vtable optimizations (specifically virtual constant
+   propagation).
+
+   When enabled, vtable definitions and select virtual functions are placed
+   in the split regular LTO module, enabling more aggressive whole program
+   vtable optimizations required for CFI and virtual constant propagation.
+   However, this can increase the LTO link time and memory requirements over
+   pure ThinLTO, as all split regular LTO modules are merged and LTO linked
+   with regular LTO.
+
 .. option:: -fforce-emit-vtables
 
    In order to improve devirtualization, forces emitting of vtables even in
