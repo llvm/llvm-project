@@ -367,7 +367,7 @@ char StructurizeCFGLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(StructurizeCFGLegacyPass, "structurizecfg",
                       "Structurize the CFG", false, false)
-INITIALIZE_PASS_DEPENDENCY(LegacyDivergenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LowerSwitchLegacyPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(RegionInfoPass)
@@ -1085,7 +1085,7 @@ static bool hasOnlyUniformBranches(Region *R, unsigned UniformMDKindID,
                         << " has uniform terminator\n");
     } else {
       // Explicitly refuse to treat regions as uniform if they have non-uniform
-      // subregions. We cannot rely on DivergenceAnalysis for branches in
+      // subregions. We cannot rely on UniformityAnalysis for branches in
       // subregions because those branches may have been removed and re-created,
       // so we look for our metadata instead.
       //
