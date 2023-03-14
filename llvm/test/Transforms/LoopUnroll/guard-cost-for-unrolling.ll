@@ -1,5 +1,7 @@
 ; RUN: opt -S -disable-output -unroll-partial-threshold=16 -debug-only=loop-unroll -passes='loop-unroll<runtime>' < %s 2>&1 | FileCheck %s
 
+; REQUIRES: asserts
+
 ; FIXME: This test is needed to make sure that the guard cost remains the same,
 ; independently on guard representation form (either intrinsic call or branch with
 ; widenable condition).
