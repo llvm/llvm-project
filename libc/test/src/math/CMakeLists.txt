@@ -1355,6 +1355,7 @@ add_fp_unittest(
     FModTest.h
   DEPENDS
     libc.include.math
+    libc.src.errno.errno
     libc.src.math.fmodf
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.nearest_integer_operations
@@ -1370,6 +1371,7 @@ add_fp_unittest(
     FModTest.h
   DEPENDS
     libc.include.math
+    libc.src.errno.errno
     libc.src.math.fmod
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.nearest_integer_operations
