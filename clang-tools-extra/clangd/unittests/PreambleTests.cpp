@@ -30,7 +30,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest-matchers.h"
 #include "gtest/gtest.h"
@@ -855,11 +854,12 @@ TEST(PreamblePatch, MacroAndMarkHandling) {
 ]]
 #pragma $y[[mark YY
 ]]
+#define BAZ
 
 #endif)cpp");
     auto AST = createPatchedAST(Code.code(), NewCode.code());
-    // FIXME: Macros and marks have locations that need to be patched.
-    EXPECT_THAT(AST->getMacros().Names, IsEmpty());
+    EXPECT_THAT(AST->getMacros().Names.keys(),
+                UnorderedElementsAreArray({"FOO", "BAR", "BAZ"}));
     EXPECT_THAT(AST->getMarks(),
                 UnorderedElementsAre(Mark(NewCode.range("x"), " XX"),
                                      Mark(NewCode.range("y"), " YY")));
