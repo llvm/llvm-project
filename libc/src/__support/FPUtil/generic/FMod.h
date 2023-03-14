@@ -122,9 +122,9 @@ template <typename T> struct FModExceptionalInputHandler {
   static_assert(cpp::is_floating_point_v<T>,
                 "FModCStandardWrapper instantiated with invalid type.");
 
-  LIBC_INLINE static bool PreCheck(T x, T y, T &out) {
+  LIBC_INLINE static bool pre_check(T x, T y, T &out) {
     using FPB = fputil::FPBits<T>;
-    const T quiet_NaN = FPB::build_quiet_nan(0);
+    const T quiet_nan = FPB::build_quiet_nan(0);
     FPB sx(x), sy(y);
     if (LIBC_LIKELY(!sy.is_zero() && !sy.is_inf_or_nan() &&
                     !sx.is_inf_or_nan())) {
@@ -134,14 +134,15 @@ template <typename T> struct FModExceptionalInputHandler {
     if (sx.is_nan() || sy.is_nan()) {
       if ((sx.is_nan() && !sx.is_quiet_nan()) ||
           (sy.is_nan() && !sy.is_quiet_nan()))
-        fputil::set_except(FE_INVALID);
-      out = quiet_NaN;
+        fputil::raise_except_if_required(FE_INVALID);
+      out = quiet_nan;
       return true;
     }
 
     if (sx.is_inf() || sy.is_zero()) {
-      fputil::set_except(FE_INVALID);
-      out = with_errno(quiet_NaN, EDOM);
+      fputil::raise_except_if_required(FE_INVALID);
+      fputil::set_errno_if_required(EDOM);
+      out = quiet_nan;
       return true;
     }
 
@@ -161,7 +162,7 @@ template <typename T> struct FModFastMathWrapper {
   static_assert(cpp::is_floating_point_v<T>,
                 "FModFastMathWrapper instantiated with invalid type.");
 
-  static bool PreCheck(T, T, T &) { return false; }
+  static bool pre_check(T, T, T &) { return false; }
 };
 
 template <typename T> class FModDivisionSimpleHelper {
@@ -302,7 +303,7 @@ private:
 
 public:
   LIBC_INLINE static T eval(T x, T y) {
-    if (T out; Wrapper::PreCheck(x, y, out))
+    if (T out; Wrapper::pre_check(x, y, out))
       return out;
     FPB sx(x), sy(y);
     bool sign = sx.get_sign();
