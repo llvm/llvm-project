@@ -341,6 +341,10 @@
 // CHECK-MARCH-2: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-feature" "-fp-armv8" "-target-feature" "-neon" "-target-feature" "-crc" "-target-feature" "-crypto"
 // CHECK-MARCH-3: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-feature" "-neon"
 
+// While we're checking +nofp, also make sure it stops defining __ARM_FP
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-r+nofp -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-NOFP %s
+// CHECK-NOFP-NOT: #define __ARM_FP{{ }}
+
 // Check +sm4:
 //
 // RUN: %clang -target aarch64 -march=armv8.2a+sm4 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-SM4 %s
