@@ -1052,7 +1052,7 @@ public:
   /// ExpressionEvaluationContextRecord object.
   bool isConstantEvaluatedOverride;
 
-  bool isConstantEvaluated() {
+  bool isConstantEvaluated() const {
     return ExprEvalContexts.back().isConstantEvaluated() ||
            isConstantEvaluatedOverride;
   }
@@ -1493,7 +1493,7 @@ public:
   /// Determine if VD, which must be a variable or function, is an external
   /// symbol that nonetheless can't be referenced from outside this translation
   /// unit because its type has no linkage and it's not extern "C".
-  bool isExternalWithNoLinkageType(ValueDecl *VD);
+  bool isExternalWithNoLinkageType(ValueDecl *VD) const;
 
   /// Obtain a sorted list of functions that are undefined but ODR-used.
   void getUndefinedButUsed(
@@ -3561,13 +3561,13 @@ public:
   void ActOnExitFunctionContext();
 
   /// If \p AllowLambda is true, treat lambda as function.
-  DeclContext *getFunctionLevelDeclContext(bool AllowLambda = false);
+  DeclContext *getFunctionLevelDeclContext(bool AllowLambda = false) const;
 
   /// Returns a pointer to the innermost enclosing function, or nullptr if the
   /// current context is not inside a function. If \p AllowLambda is true,
   /// this can return the call operator of an enclosing lambda, otherwise
   /// lambdas are skipped when looking for an enclosing function.
-  FunctionDecl *getCurFunctionDecl(bool AllowLambda = false);
+  FunctionDecl *getCurFunctionDecl(bool AllowLambda = false) const;
 
   /// getCurMethodDecl - If inside of a method body, this returns a pointer to
   /// the method decl for the method being parsed.  If we're currently
@@ -3577,7 +3577,7 @@ public:
   /// getCurFunctionOrMethodDecl - Return the Decl for the current ObjC method
   /// or C function we're in, otherwise return null.  If we're currently
   /// in a 'block', this returns the containing context.
-  NamedDecl *getCurFunctionOrMethodDecl();
+  NamedDecl *getCurFunctionOrMethodDecl() const;
 
   /// Add this decl to the scope shadowed decl chains.
   void PushOnScopeChains(NamedDecl *D, Scope *S, bool AddToContext = true);
@@ -3590,7 +3590,7 @@ public:
   ///        enclosing namespace set of the context, rather than contained
   ///        directly within it.
   bool isDeclInScope(NamedDecl *D, DeclContext *Ctx, Scope *S = nullptr,
-                     bool AllowInlineNamespace = false);
+                     bool AllowInlineNamespace = false) const;
 
   /// Finds the scope corresponding to the given decl context, if it
   /// happens to be an enclosing scope.  Otherwise return NULL.
@@ -4362,7 +4362,7 @@ public:
     ForExternalRedeclaration
   };
 
-  RedeclarationKind forRedeclarationInCurContext() {
+  RedeclarationKind forRedeclarationInCurContext() const {
     // A declaration with an owning module for linkage can never link against
     // anything that is not visible. We don't need to check linkage here; if
     // the context has internal linkage, redeclaration lookup won't find things
