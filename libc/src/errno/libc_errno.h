@@ -29,7 +29,7 @@ extern thread_local int __llvmlibc_internal_errno;
 // libc_errno, this header file will be "shipped" via an add_entrypoint_object
 // target. At which point libc_errno, should point to __llvmlibc_internal_errno
 // if LIBC_COPT_PUBLIC_PACKAGING is not defined.
-#define libc_errno errno
+#define libc_errno __llvm_libc::__llvmlibc_internal_errno
 
 } // namespace __llvm_libc
 #endif
