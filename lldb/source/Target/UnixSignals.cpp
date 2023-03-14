@@ -13,6 +13,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include <optional>
+#include <sstream>
 
 using namespace lldb_private;
 using namespace llvm;
@@ -112,6 +113,16 @@ void UnixSignals::AddSignal(int signo, const char *name, bool default_suppress,
   ++m_version;
 }
 
+void UnixSignals::AddSignalCode(int signo, int code, const char *description,
+                                SignalCodePrintOption print_option) {
+  collection::iterator signal = m_signals.find(signo);
+  assert(signal != m_signals.end() &&
+         "Tried to add code to signal that does not exist.");
+  signal->second.m_codes.insert(
+      std::pair{code, SignalCode{ConstString(description), print_option}});
+  ++m_version;
+}
+
 void UnixSignals::RemoveSignal(int signo) {
   collection::iterator pos = m_signals.find(signo);
   if (pos != m_signals.end())
@@ -125,6 +136,58 @@ const char *UnixSignals::GetSignalAsCString(int signo) const {
     return nullptr;
   else
     return pos->second.m_name.GetCString();
+}
+
+std::string
+UnixSignals::GetSignalDescription(int32_t signo, std::optional<int32_t> code,
+                                  std::optional<lldb::addr_t> addr,
+                                  std::optional<lldb::addr_t> lower,
+                                  std::optional<lldb::addr_t> upper) const {
+  std::string str;
+
+  collection::const_iterator pos = m_signals.find(signo);
+  if (pos != m_signals.end()) {
+    str = pos->second.m_name.GetCString();
+
+    if (code) {
+      std::map<int, SignalCode>::const_iterator cpos =
+          pos->second.m_codes.find(*code);
+      if (cpos != pos->second.m_codes.end()) {
+        const SignalCode &sc = cpos->second;
+        str += ": ";
+        if (sc.m_print_option != SignalCodePrintOption::Bounds)
+          str += sc.m_description.GetCString();
+
+        std::stringstream strm;
+        switch (sc.m_print_option) {
+        case SignalCodePrintOption::None:
+          break;
+        case SignalCodePrintOption::Address:
+          if (addr)
+            strm << " (fault address: 0x" << std::hex << *addr << ")";
+          break;
+        case SignalCodePrintOption::Bounds:
+          if (lower && upper && addr) {
+            if ((unsigned long)(*addr) < *lower)
+              strm << "lower bound violation ";
+            else
+              strm << "upper bound violation ";
+
+            strm << "(fault address: 0x" << std::hex << *addr;
+            strm << ", lower bound: 0x" << std::hex << *lower;
+            strm << ", upper bound: 0x" << std::hex << *upper;
+            strm << ")";
+          } else
+            strm << sc.m_description.GetCString();
+
+          break;
+        }
+        str += strm.str();
+      }
+    }
+  }
+
+  return str;
 }
 
 bool UnixSignals::SignalIsValid(int32_t signo) const {
