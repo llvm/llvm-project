@@ -250,38 +250,9 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                              ArrayRef<const Value *> Args) {
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
 
-  if (isa<ScalableVectorType>(Tp)) {
-    switch (Kind) {
-    default:
-      // Fallthrough to generic handling.
-      // TODO: Most of these cases will return getInvalid in generic code, and
-      // must be implemented here.
-      break;
-    case TTI::SK_Broadcast: {
-      return LT.first * 1;
-    }
-    case TTI::SK_Splice:
-      // vslidedown+vslideup.
-      // TODO: Multiplying by LT.first implies this legalizes into multiple copies
-      // of similar code, but I think we expand through memory.
-      return 2 * LT.first * getLMULCost(LT.second);
-    case TTI::SK_Reverse:
-      // Most of the cost here is producing the vrgather index register
-      // Example sequence:
-      //   csrr a0, vlenb
-      //   srli a0, a0, 3
-      //   addi a0, a0, -1
-      //   vsetvli a1, zero, e8, mf8, ta, mu (ignored)
-      //   vid.v v9
-      //   vrsub.vx v10, v9, a0
-      //   vrgather.vv v9, v8, v10
-      if (Tp->getElementType()->isIntegerTy(1))
-        // Mask operation additionally required extend and truncate
-        return LT.first * 9;
-      return LT.first * 6;
-    }
-  }
-
+  // First, handle cases where having a fixed length vector enables us to
+  // give a more accurate cost than falling back to generic scalable codegen.
+  // TODO: Each of these cases hints at a modeling gap around scalable vectors.
   if (isa<FixedVectorType>(Tp)) {
     switch (Kind) {
     default:
@@ -350,6 +321,36 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     }
   };
 
+  // Handle scalable vectors (and fixed vectors legalized to scalable vectors).
+  switch (Kind) {
+  default:
+    // Fallthrough to generic handling.
+    // TODO: Most of these cases will return getInvalid in generic code, and
+    // must be implemented here.
+    break;
+  case TTI::SK_Broadcast: {
+    return LT.first * 1;
+  }
+  case TTI::SK_Splice:
+    // vslidedown+vslideup.
+    // TODO: Multiplying by LT.first implies this legalizes into multiple copies
+    // of similar code, but I think we expand through memory.
+    return 2 * LT.first * getLMULCost(LT.second);
+  case TTI::SK_Reverse:
+    // Most of the cost here is producing the vrgather index register
+    // Example sequence:
+    //   csrr a0, vlenb
+    //   srli a0, a0, 3
+    //   addi a0, a0, -1
+    //   vsetvli a1, zero, e8, mf8, ta, mu (ignored)
+    //   vid.v v9
+    //   vrsub.vx v10, v9, a0
+    //   vrgather.vv v9, v8, v10
+    if (Tp->getElementType()->isIntegerTy(1))
+      // Mask operation additionally required extend and truncate
+      return LT.first * 9;
+    return LT.first * 6;
+  }
   return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
 }
 
