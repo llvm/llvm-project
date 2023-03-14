@@ -629,6 +629,10 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     break;
   }
 
+  if (Arch.back() == '_')
+    return createStringError(errc::invalid_argument,
+                             "extension name missing after separator '_'");
+
   // Skip rvxxx
   StringRef Exts = Arch.substr(5);
 
