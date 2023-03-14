@@ -98,7 +98,8 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   // https://www.gnu.org/software/libc/manual/html_node/Malloc-Examples.html.
   // This alignment guarantee also applies to Windows and Android. On Darwin
   // and OpenBSD, the alignment is 16 bytes on both 64-bit and 32-bit systems.
-  if (T.isGNUEnvironment() || T.isWindowsMSVCEnvironment() || T.isAndroid())
+  if (T.isGNUEnvironment() || T.isWindowsMSVCEnvironment() || T.isAndroid() ||
+      T.isOHOSFamily())
     NewAlign = Triple.isArch64Bit() ? 128 : Triple.isArch32Bit() ? 64 : 0;
   else if (T.isOSDarwin() || T.isOSOpenBSD())
     NewAlign = 128;
