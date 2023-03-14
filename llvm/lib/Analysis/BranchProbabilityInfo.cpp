@@ -1163,7 +1163,7 @@ void BranchProbabilityInfo::copyEdgeProbabilities(BasicBlock *Src,
   assert(NumSuccessors == Dst->getTerminator()->getNumSuccessors());
   if (NumSuccessors == 0)
     return; // Nothing to set.
-  if (this->Probs.find(std::make_pair(Src, 0)) == this->Probs.end())
+  if (!this->Probs.contains(std::make_pair(Src, 0)))
     return; // No probability is set for edges from Src. Keep the same for Dst.
 
   Handles.insert(BasicBlockCallbackVH(Dst, this));
