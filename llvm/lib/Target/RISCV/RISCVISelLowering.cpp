@@ -1540,21 +1540,20 @@ bool RISCVTargetLowering::isOffsetFoldingLegal(
 }
 
 bool RISCVTargetLowering::isLegalZfaFPImm(const APFloat &Imm, EVT VT) const {
-  if (!Subtarget.hasStdExtZfa() || !VT.isSimple())
+  if (!Subtarget.hasStdExtZfa())
     return false;
 
-  switch (VT.getSimpleVT().SimpleTy) {
-  default:
-    return false;
-  case MVT::f16:
-    return (Subtarget.hasStdExtZfh() || Subtarget.hasStdExtZvfh()) &&
-           RISCVLoadFPImm::getLoadFP16Imm(Imm) != -1;
-  case MVT::f32:
-    return RISCVLoadFPImm::getLoadFP32Imm(Imm) != -1;
-  case MVT::f64:
+  bool IsSupportedVT = false;
+  if (VT == MVT::f16) {
+    IsSupportedVT = Subtarget.hasStdExtZfh() || Subtarget.hasStdExtZvfh();
+  } else if (VT == MVT::f32) {
+    IsSupportedVT = true;
+  } else if (VT == MVT::f64) {
     assert(Subtarget.hasStdExtD() && "Expect D extension");
-    return RISCVLoadFPImm::getLoadFP64Imm(Imm) != -1;
+    IsSupportedVT = true;
   }
+
+  return IsSupportedVT && RISCVLoadFPImm::getLoadFPImm(Imm) != -1;
 }
 
 bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
