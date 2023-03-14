@@ -1,4 +1,4 @@
-add_llvm_library(flangOmpReport
+add_llvm_example_library(flangOmpReport
   MODULE
   FlangOmpReport.cpp
   FlangOmpReportVisitor.cpp

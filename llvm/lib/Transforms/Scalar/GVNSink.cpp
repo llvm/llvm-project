@@ -886,29 +886,6 @@ void GVNSink::sinkLastInstruction(ArrayRef<BasicBlock *> Blocks,
   NumRemoved += Insts.size() - 1;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Pass machinery / boilerplate
-
-class GVNSinkLegacyPass : public FunctionPass {
-public:
-  static char ID;
-
-  GVNSinkLegacyPass() : FunctionPass(ID) {
-    initializeGVNSinkLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
-    GVNSink G;
-    return G.run(F);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addPreserved<GlobalsAAWrapperPass>();
-  }
-};
-
 } // end anonymous namespace
 
 PreservedAnalyses GVNSinkPass::run(Function &F, FunctionAnalysisManager &AM) {
@@ -917,14 +894,3 @@ PreservedAnalyses GVNSinkPass::run(Function &F, FunctionAnalysisManager &AM) {
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }
-
-char GVNSinkLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(GVNSinkLegacyPass, "gvn-sink",
-                      "Early GVN sinking of Expressions", false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(GVNSinkLegacyPass, "gvn-sink",
-                    "Early GVN sinking of Expressions", false, false)
-
-FunctionPass *llvm::createGVNSinkPass() { return new GVNSinkLegacyPass(); }

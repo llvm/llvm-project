@@ -963,28 +963,6 @@ public:
     LongDoubleFormat = &llvm::APFloat::IEEEquad();
   }
 };
-
-// x86_32 OHOS target
-class LLVM_LIBRARY_VISIBILITY OHOSX86_32TargetInfo
-    : public OHOSTargetInfo<X86_32TargetInfo> {
-public:
-  OHOSX86_32TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : OHOSTargetInfo<X86_32TargetInfo>(Triple, Opts) {
-    SuitableAlign = 32;
-    LongDoubleWidth = 64;
-    LongDoubleFormat = &llvm::APFloat::IEEEdouble();
-  }
-};
-
-// x86_64 OHOS target
-class LLVM_LIBRARY_VISIBILITY OHOSX86_64TargetInfo
-    : public OHOSTargetInfo<X86_64TargetInfo> {
-public:
-  OHOSX86_64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : OHOSTargetInfo<X86_64TargetInfo>(Triple, Opts) {
-    LongDoubleFormat = &llvm::APFloat::IEEEquad();
-  }
-};
 } // namespace targets
 } // namespace clang
 #endif // LLVM_CLANG_LIB_BASIC_TARGETS_X86_H

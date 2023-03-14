@@ -4451,14 +4451,14 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
 
       // Fill the map entry for this mode.
       const HwMode &HM = CGH.getMode(M);
-      AppendPattern(P, M, "(MF->getSubtarget().checkFeatures(\"" + HM.Features + "\"))");
+      AppendPattern(P, M, HM.Predicates);
 
       // Add negations of the HM's predicates to the default predicate.
       if (!DefaultCheck.empty())
         DefaultCheck += " && ";
-      DefaultCheck += "(!(MF->getSubtarget().checkFeatures(\"";
-      DefaultCheck += HM.Features;
-      DefaultCheck += "\")))";
+      DefaultCheck += "!(";
+      DefaultCheck += HM.Predicates;
+      DefaultCheck += ")";
     }
 
     bool HasDefault = Modes.count(DefaultMode);
