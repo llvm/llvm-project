@@ -202,6 +202,10 @@ Bug Fixes in This Version
   of `CWG2699 <https://wg21.link/CWG2699>_` being accepted by WG21.
 - Fix crash when parsing fold expression containing a delayed typo correction.
   (`#61326 <https://github.com/llvm/llvm-project/issues/61326>`_)
+- Fix crash when dealing with some member accesses outside of class or member
+  function context.
+  (`#37792 <https://github.com/llvm/llvm-project/issues/37792>`_) and
+  (`#48405 <https://github.com/llvm/llvm-project/issues/48405>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
