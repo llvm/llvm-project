@@ -33,14 +33,12 @@ void RecordStackId(const uptr Key, UNUSED LockedMemInfoBlock *const &MIB,
 }
 } // namespace
 
-u64 SegmentSizeBytes(__sanitizer::ListOfModules &Modules) {
+u64 SegmentSizeBytes(MemoryMappingLayoutBase &Layout) {
   u64 NumSegmentsToRecord = 0;
-  for (const auto &Module : Modules) {
-    for (const auto &Segment : Module.ranges()) {
-      if (Segment.executable)
-        NumSegmentsToRecord++;
-    }
-  }
+  MemoryMappedSegment segment;
+  for (Layout.Reset(); Layout.Next(&segment);)
+    if (segment.IsReadable() && segment.IsExecutable())
+      NumSegmentsToRecord++;
 
   return sizeof(u64) // A header which stores the number of records.
          + sizeof(SegmentEntry) * NumSegmentsToRecord;
@@ -53,31 +51,28 @@ u64 SegmentSizeBytes(__sanitizer::ListOfModules &Modules) {
 // Start
 // End
 // Offset
-// UuidSize
-// Uuid 32B
+// BuildID 32B
 // ----------
 // ...
-void SerializeSegmentsToBuffer(__sanitizer::ListOfModules &Modules,
+void SerializeSegmentsToBuffer(MemoryMappingLayoutBase &Layout,
                                const u64 ExpectedNumBytes, char *&Buffer) {
   char *Ptr = Buffer;
   // Reserve space for the final count.
   Ptr += sizeof(u64);
 
   u64 NumSegmentsRecorded = 0;
+  MemoryMappedSegment segment;
 
-  for (const auto &Module : Modules) {
-    for (const auto &Segment : Module.ranges()) {
-      if (Segment.executable) {
-        SegmentEntry Entry(Segment.beg, Segment.end, Module.base_address());
-        CHECK(Module.uuid_size() <= MEMPROF_BUILDID_MAX_SIZE);
-        Entry.BuildIdSize = Module.uuid_size();
-        memcpy(Entry.BuildId, Module.uuid(), Module.uuid_size());
-        memcpy(Ptr, &Entry, sizeof(SegmentEntry));
-        Ptr += sizeof(SegmentEntry);
-        NumSegmentsRecorded++;
-      }
+  for (Layout.Reset(); Layout.Next(&segment);) {
+    if (segment.IsReadable() && segment.IsExecutable()) {
+      // TODO: Record segment.uuid when it is implemented for Linux-Elf.
+      SegmentEntry Entry(segment.start, segment.end, segment.offset);
+      memcpy(Ptr, &Entry, sizeof(SegmentEntry));
+      Ptr += sizeof(SegmentEntry);
+      NumSegmentsRecorded++;
     }
   }
+
   // Store the number of segments we recorded in the space we reserved.
   *((u64 *)Buffer) = NumSegmentsRecorded;
   CHECK(ExpectedNumBytes >= static_cast<u64>(Ptr - Buffer) &&
@@ -203,11 +198,11 @@ void SerializeMIBInfoToBuffer(MIBMapTy &MIBMap, const Vector<u64> &StackIds,
 // ----------
 // Optional Padding Bytes
 // ...
-u64 SerializeToRawProfile(MIBMapTy &MIBMap, __sanitizer::ListOfModules &Modules,
+u64 SerializeToRawProfile(MIBMapTy &MIBMap, MemoryMappingLayoutBase &Layout,
                           char *&Buffer) {
   // Each section size is rounded up to 8b since the first entry in each section
   // is a u64 which holds the number of entries in the section by convention.
-  const u64 NumSegmentBytes = RoundUpTo(SegmentSizeBytes(Modules), 8);
+  const u64 NumSegmentBytes = RoundUpTo(SegmentSizeBytes(Layout), 8);
 
   Vector<u64> StackIds;
   MIBMap.ForEach(RecordStackId, reinterpret_cast<void *>(&StackIds));
@@ -237,7 +232,7 @@ u64 SerializeToRawProfile(MIBMapTy &MIBMap, __sanitizer::ListOfModules &Modules,
                 sizeof(Header) + NumSegmentBytes + NumMIBInfoBytes};
   Ptr = WriteBytes(header, Ptr);
 
-  SerializeSegmentsToBuffer(Modules, NumSegmentBytes, Ptr);
+  SerializeSegmentsToBuffer(Layout, NumSegmentBytes, Ptr);
   Ptr += NumSegmentBytes;
 
   SerializeMIBInfoToBuffer(MIBMap, StackIds, NumMIBInfoBytes, Ptr);
