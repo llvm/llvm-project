@@ -43,14 +43,13 @@
 
 using namespace llvm;
 
-cl::opt<bool> PreservedCFGCheckerInstrumentation::VerifyPreservedCFG(
-    "verify-cfg-preserved", cl::Hidden,
+static cl::opt<bool> VerifyPreservedCFG("verify-cfg-preserved", cl::Hidden,
 #ifdef NDEBUG
-    cl::init(false)
+                                        cl::init(false)
 #else
-    cl::init(true)
+                                        cl::init(true)
 #endif
-    );
+);
 
 // An option that supports the -print-changed option.  See
 // the description for -print-changed for an explanation of the use
@@ -1064,19 +1063,6 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
 
   FAM.registerPass([&] { return PreservedCFGCheckerAnalysis(); });
 
-  auto checkCFG = [](StringRef Pass, StringRef FuncName, const CFG &GraphBefore,
-                     const CFG &GraphAfter) {
-    if (GraphAfter == GraphBefore)
-      return;
-
-    dbgs() << "Error: " << Pass
-           << " does not invalidate CFG analyses but CFG changes detected in "
-              "function @"
-           << FuncName << ":\n";
-    CFG::printDiff(dbgs(), GraphBefore, GraphAfter);
-    report_fatal_error(Twine("CFG unexpectedly changed by ", Pass));
-  };
-
   PIC.registerBeforeNonSkippedPassCallback(
       [this, &FAM](StringRef P, Any IR) {
 #ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -1100,9 +1086,8 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
         (void)this;
       });
 
-  PIC.registerAfterPassCallback([this, &FAM,
-                                 checkCFG](StringRef P, Any IR,
-                                           const PreservedAnalyses &PassPA) {
+  PIC.registerAfterPassCallback([this, &FAM](StringRef P, Any IR,
+                                             const PreservedAnalyses &PassPA) {
 #ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
     assert(PassStack.pop_back_val() == P &&
            "Before and After callbacks must correspond");
@@ -1117,9 +1102,22 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
         !PassPA.allAnalysesInSetPreserved<AllAnalysesOn<Function>>())
       return;
 
+    auto CheckCFG = [](StringRef Pass, StringRef FuncName,
+                       const CFG &GraphBefore, const CFG &GraphAfter) {
+      if (GraphAfter == GraphBefore)
+        return;
+
+      dbgs() << "Error: " << Pass
+             << " does not invalidate CFG analyses but CFG changes detected in "
+                "function @"
+             << FuncName << ":\n";
+      CFG::printDiff(dbgs(), GraphBefore, GraphAfter);
+      report_fatal_error(Twine("CFG unexpectedly changed by ", Pass));
+    };
+
     if (auto *GraphBefore = FAM.getCachedResult<PreservedCFGCheckerAnalysis>(
             *const_cast<Function *>(*F)))
-      checkCFG(P, (*F)->getName(), *GraphBefore,
+      CheckCFG(P, (*F)->getName(), *GraphBefore,
                CFG(*F, /* TrackBBLifetime */ false));
   });
 }
