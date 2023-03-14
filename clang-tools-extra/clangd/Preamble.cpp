@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Preamble.h"
+#include "CollectMacros.h"
 #include "Compiler.h"
 #include "Config.h"
 #include "Diagnostics.h"
@@ -765,6 +766,7 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
     return PreamblePatch::unmodified(Baseline);
 
   PreamblePatch PP;
+  PP.Baseline = &Baseline;
   // This shouldn't coincide with any real file name.
   llvm::SmallString<128> PatchName;
   llvm::sys::path::append(PatchName, llvm::sys::path::parent_path(FileName),
@@ -886,6 +888,7 @@ std::vector<Inclusion> PreamblePatch::preambleIncludes() const {
 
 PreamblePatch PreamblePatch::unmodified(const PreambleData &Preamble) {
   PreamblePatch PP;
+  PP.Baseline = &Preamble;
   PP.PreambleIncludes = Preamble.Includes.MainFileIncludes;
   PP.ModifiedBounds = Preamble.Preamble.getBounds();
   PP.PatchedDiags = Preamble.Diags;
@@ -895,6 +898,19 @@ PreamblePatch PreamblePatch::unmodified(const PreambleData &Preamble) {
 bool PreamblePatch::preserveDiagnostics() const {
   return PatchContents.empty() ||
          Config::current().Diagnostics.AllowStalePreamble;
+}
+llvm::ArrayRef<PragmaMark> PreamblePatch::marks() const {
+  if (PatchContents.empty())
+    return Baseline->Marks;
+  // FIXME: Patch pragma marks.
+  return {};
+}
+
+MainFileMacros PreamblePatch::mainFileMacros() const {
+  if (PatchContents.empty())
+    return Baseline->Macros;
+  // FIXME: Patch main file macros.
+  return MainFileMacros();
 }
 } // namespace clangd
 } // namespace clang
