@@ -1133,7 +1133,7 @@ public:
   /// Compute the number of times the backedge of the specified loop will
   /// execute if its exit condition were a conditional branch of ExitCond.
   ///
-  /// \p ControlsExit is true if ExitCond directly controls the exit
+  /// \p ControlsExit is true if ExitCond directly controls the only exit
   /// branch. In this case, we can assume that the loop exits only if the
   /// condition is true and can infer that failing to meet the condition prior
   /// to integer wraparound results in undefined behavior.
