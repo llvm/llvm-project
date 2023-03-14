@@ -362,16 +362,47 @@ func.func @generic_atomic_rmw(%I : memref<10xi32>, %i : index) {
     ^bb0(%old_value : i32):
       memref.atomic_yield %old_value : i32
   }
-  // CHECK: [[init:%.*]] = llvm.load %{{.*}} : !llvm.ptr -> i32
-  // CHECK-NEXT: llvm.br ^bb1([[init]] : i32)
-  // CHECK-NEXT: ^bb1([[loaded:%.*]]: i32):
-  // CHECK-NEXT: [[pair:%.*]] = llvm.cmpxchg %{{.*}}, [[loaded]], [[loaded]]
-  // CHECK-SAME:                    acq_rel monotonic : !llvm.ptr, i32
-  // CHECK-NEXT: [[new:%.*]] = llvm.extractvalue [[pair]][0]
-  // CHECK-NEXT: [[ok:%.*]] = llvm.extractvalue [[pair]][1]
-  // CHECK-NEXT: llvm.cond_br [[ok]], ^bb2, ^bb1([[new]] : i32)
   llvm.return
 }
+// CHECK:        %[[INIT:.*]] = llvm.load %{{.*}} : !llvm.ptr -> i32
+// CHECK-NEXT:   llvm.br ^bb1(%[[INIT]] : i32)
+// CHECK-NEXT: ^bb1(%[[LOADED:.*]]: i32):
+// CHECK-NEXT:   %[[PAIR:.*]] = llvm.cmpxchg %{{.*}}, %[[LOADED]], %[[LOADED]]
+// CHECK-SAME:                      acq_rel monotonic : !llvm.ptr, i32
+// CHECK-NEXT:   %[[NEW:.*]] = llvm.extractvalue %[[PAIR]][0]
+// CHECK-NEXT:   %[[OK:.*]] = llvm.extractvalue %[[PAIR]][1]
+// CHECK-NEXT:   llvm.cond_br %[[OK]], ^bb2, ^bb1(%[[NEW]] : i32)
+
+// -----
+
+// CHECK-LABEL: func @generic_atomic_rmw_in_alloca_scope
+func.func @generic_atomic_rmw_in_alloca_scope(){
+  %c1 = arith.constant 1 : index
+  %alloc = memref.alloc() : memref<2x3xi32>
+  memref.alloca_scope  {
+    %0 = memref.generic_atomic_rmw %alloc[%c1, %c1] : memref<2x3xi32> {
+    ^bb0(%arg0: i32):
+      memref.atomic_yield %arg0 : i32
+    }
+  }
+  return
+}
+// CHECK:        %[[STACK_SAVE:.*]] = llvm.intr.stacksave : !llvm.ptr
+// CHECK-NEXT:   llvm.br ^bb1
+// CHECK:      ^bb1:
+// CHECK:        %[[INIT:.*]] = llvm.load %[[BUF:.*]] : !llvm.ptr -> i32
+// CHECK-NEXT:   llvm.br ^bb2(%[[INIT]] : i32)
+// CHECK-NEXT: ^bb2(%[[LOADED:.*]]: i32):
+// CHECK-NEXT:   %[[PAIR:.*]] = llvm.cmpxchg %[[BUF]], %[[LOADED]], %[[LOADED]]
+// CHECK-SAME:     acq_rel monotonic : !llvm.ptr, i32
+// CHECK-NEXT:   %[[NEW:.*]] = llvm.extractvalue %[[PAIR]][0]
+// CHECK-NEXT:   %[[OK:.*]] = llvm.extractvalue %[[PAIR]][1]
+// CHECK-NEXT:   llvm.cond_br %[[OK]], ^bb3, ^bb2(%[[NEW]] : i32)
+// CHECK-NEXT: ^bb3:
+// CHECK-NEXT:   llvm.intr.stackrestore %[[STACK_SAVE]] : !llvm.ptr
+// CHECK-NEXT:   llvm.br ^bb4
+// CHECK-NEXT: ^bb4:
+// CHECK-NEXT:   return
 
 // -----
 

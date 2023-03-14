@@ -134,58 +134,36 @@ void collectConstantExprPaths(
   }
 }
 
-static bool isExpandableUser(User *U) {
-  return isa<ConstantExpr>(U) || isa<ConstantAggregate>(U);
-}
-
-static Instruction *expandUser(Instruction *InsertPt, Constant *C) {
-  if (auto *CE = dyn_cast<ConstantExpr>(C)) {
-    return CE->getAsInstruction(InsertPt);
-  } else if (isa<ConstantStruct>(C) || isa<ConstantArray>(C)) {
-    Value *V = PoisonValue::get(C->getType());
-    for (auto [Idx, Op] : enumerate(C->operands()))
-      V = InsertValueInst::Create(V, Op, Idx, "", InsertPt);
-    return cast<Instruction>(V);
-  } else if (isa<ConstantVector>(C)) {
-    Type *IdxTy = Type::getInt32Ty(C->getContext());
-    Value *V = PoisonValue::get(C->getType());
-    for (auto [Idx, Op] : enumerate(C->operands()))
-      V = InsertElementInst::Create(V, Op, ConstantInt::get(IdxTy, Idx), "",
-                                    InsertPt);
-    return cast<Instruction>(V);
-  } else {
-    llvm_unreachable("Not an expandable user");
-  }
-}
-
 bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts) {
-  // Find all expandable direct users of Consts.
-  SmallVector<Constant *> Stack;
+  // Find all ConstantExpr that are direct users Consts.
+  SmallVector<ConstantExpr *> Stack;
   for (Constant *C : Consts)
     for (User *U : C->users())
-      if (isExpandableUser(U))
-        Stack.push_back(cast<Constant>(U));
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(U))
+        Stack.push_back(CE);
 
-  // Include transitive users.
-  SetVector<Constant *> ExpandableUsers;
+  // Expand to include constexpr users of direct users
+  SetVector<ConstantExpr *> ConstExprUsers;
   while (!Stack.empty()) {
-    Constant *C = Stack.pop_back_val();
-    if (!ExpandableUsers.insert(C))
+    ConstantExpr *V = Stack.pop_back_val();
+    if (ConstExprUsers.contains(V))
       continue;
 
-    for (auto *Nested : C->users())
-      if (isExpandableUser(Nested))
-        Stack.push_back(cast<Constant>(Nested));
+    ConstExprUsers.insert(V);
+
+    for (auto *Nested : V->users())
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Nested))
+        Stack.push_back(CE);
   }
 
-  // Find all instructions that use any of the expandable users
+  // Find all instructions that use any of the ConstExpr users
   SetVector<Instruction *> InstructionWorklist;
-  for (Constant *C : ExpandableUsers)
-    for (User *U : C->users())
+  for (ConstantExpr *CE : ConstExprUsers)
+    for (User *U : CE->users())
       if (auto *I = dyn_cast<Instruction>(U))
         InstructionWorklist.insert(I);
 
-  // Replace those expandable operands with instructions
+  // Replace those ConstExpr operands with instructions
   bool Changed = false;
   while (!InstructionWorklist.empty()) {
     Instruction *I = InstructionWorklist.pop_back_val();
@@ -198,19 +176,17 @@ bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts) {
         BI = &*It;
       }
 
-      if (auto *C = dyn_cast<Constant>(U.get())) {
-        if (ExpandableUsers.contains(C)) {
+      if (ConstantExpr *C = dyn_cast<ConstantExpr>(U.get())) {
+        if (ConstExprUsers.contains(C)) {
           Changed = true;
-          Instruction *NI = expandUser(BI, C);
+          Instruction *NI = C->getAsInstruction(BI);
           InstructionWorklist.insert(NI);
           U.set(NI);
+          C->removeDeadConstantUsers();
         }
       }
     }
   }
-
-  for (Constant *C : Consts)
-    C->removeDeadConstantUsers();
 
   return Changed;
 }

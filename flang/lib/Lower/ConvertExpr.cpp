@@ -2693,35 +2693,45 @@ public:
 
             if (box.getType().isa<fir::BoxType>() &&
                 fir::isPolymorphicType(argTy)) {
+              mlir::Type actualTy = argTy;
+              if (Fortran::lower::isParentComponent(*expr))
+                actualTy = fir::BoxType::get(converter.genType(*expr));
               // Rebox can only be performed on a present argument.
               if (arg.isOptional()) {
                 mlir::Value isPresent =
                     genActualIsPresentTest(builder, loc, box);
                 box = builder
-                          .genIfOp(loc, {argTy}, isPresent,
+                          .genIfOp(loc, {actualTy}, isPresent,
                                    /*withElseRegion=*/true)
                           .genThen([&]() {
-                            auto rebox = builder
-                                             .create<fir::ReboxOp>(
-                                                 loc, argTy, box, mlir::Value{},
-                                                 /*slice=*/mlir::Value{})
-                                             .getResult();
+                            auto rebox =
+                                builder
+                                    .create<fir::ReboxOp>(
+                                        loc, actualTy, box, mlir::Value{},
+                                        /*slice=*/mlir::Value{})
+                                    .getResult();
                             builder.create<fir::ResultOp>(loc, rebox);
                           })
                           .genElse([&]() {
                             auto absent =
-                                builder.create<fir::AbsentOp>(loc, argTy)
+                                builder.create<fir::AbsentOp>(loc, actualTy)
                                     .getResult();
                             builder.create<fir::ResultOp>(loc, absent);
                           })
                           .getResults()[0];
               } else {
-                box =
-                    builder.create<fir::ReboxOp>(loc, argTy, box, mlir::Value{},
-                                                 /*slice=*/mlir::Value{});
+                box = builder.create<fir::ReboxOp>(loc, actualTy, box,
+                                                   mlir::Value{},
+                                                   /*slice=*/mlir::Value{});
               }
+            } else if (Fortran::lower::isParentComponent(*expr)) {
+              fir::ExtendedValue newExv =
+                  Fortran::lower::updateBoxForParentComponent(converter, box,
+                                                              *expr);
+              box = fir::getBase(newExv);
             }
           }
+
           caller.placeInput(arg, box);
         }
       } else if (arg.passBy == PassBy::AddressAndLength) {

@@ -1,6 +1,9 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -triple spir-unknown-unknown -o - -O0 | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=CL2.0 -emit-llvm -triple spir-unknown-unknown -o - -O0 | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=clc++ -emit-llvm -triple spir-unknown-unknown -o - -O0 | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -triple spir-unknown-unknown -o - -O0 | FileCheck --check-prefixes=CHECK-COMMON,CHECK-SPIR %s
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -triple spir-unknown-unknown -o - -O0 | FileCheck --check-prefixes=CHECK-COMMON,CHECK-SPIR %s
+// RUN: %clang_cc1 %s -cl-std=clc++ -emit-llvm -triple spir-unknown-unknown -o - -O0 | FileCheck --check-prefixes=CHECK-COMMON,CHECK-SPIR %s
+// RUN: %clang_cc1 %s -emit-llvm -triple x86_64-unknown-linux-gnu -o - -O0 | FileCheck --check-prefixes=CHECK-COMMON,CHECK-X86 %s
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -triple x86_64-unknown-linux-gnu -o - -O0 | FileCheck --check-prefixes=CHECK-COMMON,CHECK-X86 %s
+// RUN: %clang_cc1 %s -cl-std=clc++ -emit-llvm -triple x86_64-unknown-linux-gnu -o - -O0 | FileCheck --check-prefixes=CHECK-COMMON,CHECK-X86 %s
 //
 // This test covers 5 cases of sampler initialzation:
 //   1. function argument passing
@@ -17,74 +20,98 @@
 #define CLK_FILTER_NEAREST              0x10
 #define CLK_FILTER_LINEAR               0x20
 
-// CHECK: %opencl.sampler_t = type opaque
-
 // Case 2a
 constant sampler_t glb_smp = CLK_ADDRESS_CLAMP_TO_EDGE | CLK_NORMALIZED_COORDS_TRUE | CLK_FILTER_LINEAR;
-// CHECK-NOT: glb_smp
+// CHECK-COMMON-NOT: glb_smp
 
 // Case 2c
 const sampler_t glb_smp_const = CLK_ADDRESS_CLAMP_TO_EDGE | CLK_NORMALIZED_COORDS_TRUE | CLK_FILTER_LINEAR;
-// CHECK-NOT: glb_smp_const
+// CHECK-COMMON-NOT: glb_smp_const
 
 int get_sampler_initializer(void);
 
 void fnc4smp(sampler_t s) {}
-// CHECK: define{{.*}} spir_func void [[FUNCNAME:@.*fnc4smp.*]](%opencl.sampler_t addrspace(2)* %
+// CHECK-SPIR: define{{.*}} spir_func void [[FUNCNAME:@.*fnc4smp.*]](target("spirv.Sampler") %
+// CHECK-X86: define{{.*}} void [[FUNCNAME:@.*fnc4smp.*]](ptr %
 
 kernel void foo(sampler_t smp_par) {
-  // CHECK-LABEL: define{{.*}} spir_kernel void @foo(%opencl.sampler_t addrspace(2)* %smp_par)
-  // CHECK: [[smp_par_ptr:%[A-Za-z0-9_\.]+]] = alloca %opencl.sampler_t addrspace(2)*
+  // CHECK-SPIR-LABEL: define{{.*}} spir_kernel void @foo(target("spirv.Sampler") %smp_par)
+  // CHECK-SPIR: [[smp_par_ptr:%[A-Za-z0-9_\.]+]] = alloca target("spirv.Sampler")
+  // CHECK-X86-LABEL: define{{.*}} spir_kernel void @foo(ptr %smp_par)
+  // CHECK-X86: [[smp_par_ptr:%[A-Za-z0-9_\.]+]] = alloca ptr
 
   // Case 2b
   sampler_t smp = CLK_ADDRESS_CLAMP_TO_EDGE | CLK_NORMALIZED_COORDS_TRUE | CLK_FILTER_NEAREST;
-  // CHECK: [[smp_ptr:%[A-Za-z0-9_\.]+]] = alloca %opencl.sampler_t addrspace(2)*
-  // CHECK: [[SAMP:%[0-9]+]] = call spir_func %opencl.sampler_t addrspace(2)* @__translate_sampler_initializer(i32 19)
-  // CHECK: store %opencl.sampler_t addrspace(2)* [[SAMP]], %opencl.sampler_t addrspace(2)** [[smp_ptr]]
+  // CHECK-SPIR: [[smp_ptr:%[A-Za-z0-9_\.]+]] = alloca target("spirv.Sampler")
+  // CHECK-SPIR: [[SAMP:%[0-9]+]] = call spir_func target("spirv.Sampler") @__translate_sampler_initializer(i32 19)
+  // CHECK-SPIR: store target("spirv.Sampler") [[SAMP]], ptr [[smp_ptr]]
+  // CHECK-X86: [[smp_ptr:%[A-Za-z0-9_\.]+]] = alloca ptr
+  // CHECK-X86: [[SAMP:%[0-9]+]] = call ptr @__translate_sampler_initializer(i32 19)
+  // CHECK-X86: store ptr [[SAMP]], ptr [[smp_ptr]]
 
   // Case 1b
   fnc4smp(smp);
-  // CHECK-NOT: call %opencl.sampler_t addrspace(2)* @__translate_sampler_initializer(i32 19)
-  // CHECK: [[SAMP:%[0-9]+]] = load %opencl.sampler_t addrspace(2)*, %opencl.sampler_t addrspace(2)** [[smp_ptr]]
-  // CHECK: call spir_func void [[FUNCNAME]](%opencl.sampler_t addrspace(2)* [[SAMP]])
+  // CHECK-SPIR-NOT: call target("spirv.Sampler") @__translate_sampler_initializer(i32 19)
+  // CHECK-SPIR: [[SAMP:%[0-9]+]] = load target("spirv.Sampler"), ptr [[smp_ptr]]
+  // CHECK-SPIR: call spir_func void [[FUNCNAME]](target("spirv.Sampler") [[SAMP]])
+  // CHECK-X86-NOT: call ptr @__translate_sampler_initializer(i32 19)
+  // CHECK-X86: [[SAMP:%[0-9]+]] = load ptr, ptr [[smp_ptr]]
+  // CHECK-X86: call void [[FUNCNAME]](ptr [[SAMP]])
 
   // Case 1b
   fnc4smp(smp);
-  // CHECK-NOT: call %opencl.sampler_t addrspace(2)* @__translate_sampler_initializer(i32 19)
-  // CHECK: [[SAMP:%[0-9]+]] = load %opencl.sampler_t addrspace(2)*, %opencl.sampler_t addrspace(2)** [[smp_ptr]]
-  // CHECK: call spir_func void [[FUNCNAME]](%opencl.sampler_t addrspace(2)* [[SAMP]])
+  // CHECK-SPIR-NOT: call target("spirv.Sampler") @__translate_sampler_initializer(i32 19)
+  // CHECK-SPIR: [[SAMP:%[0-9]+]] = load target("spirv.Sampler"), ptr [[smp_ptr]]
+  // CHECK-SPIR: call spir_func void [[FUNCNAME]](target("spirv.Sampler") [[SAMP]])
+  // CHECK-X86-NOT: call ptr @__translate_sampler_initializer(i32 19)
+  // CHECK-X86: [[SAMP:%[0-9]+]] = load ptr, ptr [[smp_ptr]]
+  // CHECK-X86: call void [[FUNCNAME]](ptr [[SAMP]])
 
   // Case 1a/2a
   fnc4smp(glb_smp);
-  // CHECK: [[SAMP:%[0-9]+]] = call spir_func %opencl.sampler_t addrspace(2)* @__translate_sampler_initializer(i32 35)
-  // CHECK: call spir_func void [[FUNCNAME]](%opencl.sampler_t addrspace(2)* [[SAMP]])
+  // CHECK-SPIR: [[SAMP:%[0-9]+]] = call spir_func target("spirv.Sampler") @__translate_sampler_initializer(i32 35)
+  // CHECK-SPIR: call spir_func void [[FUNCNAME]](target("spirv.Sampler") [[SAMP]])
+  // CHECK-X86: [[SAMP:%[0-9]+]] = call ptr @__translate_sampler_initializer(i32 35)
+  // CHECK-X86: call void [[FUNCNAME]](ptr [[SAMP]])
 
   // Case 1a/2c
   fnc4smp(glb_smp_const);
-  // CHECK: [[SAMP:%[0-9]+]] = call spir_func %opencl.sampler_t addrspace(2)* @__translate_sampler_initializer(i32 35)
-  // CHECK: call spir_func void [[FUNCNAME]](%opencl.sampler_t addrspace(2)* [[SAMP]])
+  // CHECK-SPIR: [[SAMP:%[0-9]+]] = call spir_func target("spirv.Sampler") @__translate_sampler_initializer(i32 35)
+  // CHECK-SPIR: call spir_func void [[FUNCNAME]](target("spirv.Sampler") [[SAMP]])
+  // CHECK-X86: [[SAMP:%[0-9]+]] = call ptr @__translate_sampler_initializer(i32 35)
+  // CHECK-X86: call void [[FUNCNAME]](ptr [[SAMP]])
 
   // Case 1c
   fnc4smp(smp_par);
-  // CHECK: [[SAMP:%[0-9]+]] = load %opencl.sampler_t addrspace(2)*, %opencl.sampler_t addrspace(2)** [[smp_par_ptr]]
-  // CHECK: call spir_func void [[FUNCNAME]](%opencl.sampler_t addrspace(2)* [[SAMP]])
+  // CHECK-SPIR: [[SAMP:%[0-9]+]] = load target("spirv.Sampler"), ptr [[smp_par_ptr]]
+  // CHECK-SPIR: call spir_func void [[FUNCNAME]](target("spirv.Sampler") [[SAMP]])
+  // CHECK-X86: [[SAMP:%[0-9]+]] = load ptr, ptr [[smp_par_ptr]]
+  // CHECK-X86: call void [[FUNCNAME]](ptr [[SAMP]])
 
   fnc4smp(5);
-  // CHECK: [[SAMP:%[0-9]+]] = call spir_func %opencl.sampler_t addrspace(2)* @__translate_sampler_initializer(i32 5)
-  // CHECK: call spir_func void [[FUNCNAME]](%opencl.sampler_t addrspace(2)* [[SAMP]])
+  // CHECK-SPIR: [[SAMP:%[0-9]+]] = call spir_func target("spirv.Sampler") @__translate_sampler_initializer(i32 5)
+  // CHECK-SPIR: call spir_func void [[FUNCNAME]](target("spirv.Sampler") [[SAMP]])
+  // CHECK-X86: [[SAMP:%[0-9]+]] = call ptr @__translate_sampler_initializer(i32 5)
+  // CHECK-X86: call void [[FUNCNAME]](ptr [[SAMP]])
 
   const sampler_t const_smp = CLK_ADDRESS_CLAMP_TO_EDGE | CLK_NORMALIZED_COORDS_TRUE | CLK_FILTER_LINEAR;
   fnc4smp(const_smp);
-   // CHECK: [[CONST_SAMP:%[0-9]+]] = call spir_func %opencl.sampler_t addrspace(2)* @__translate_sampler_initializer(i32 35)
-  // CHECK: store %opencl.sampler_t addrspace(2)* [[CONST_SAMP]], %opencl.sampler_t addrspace(2)** [[CONST_SMP_PTR:%[a-zA-Z0-9]+]]
+  // CHECK-SPIR: [[CONST_SAMP:%[0-9]+]] = call spir_func target("spirv.Sampler") @__translate_sampler_initializer(i32 35)
+  // CHECK-SPIR: store target("spirv.Sampler") [[CONST_SAMP]], ptr [[CONST_SMP_PTR:%[a-zA-Z0-9]+]]
+  // CHECK-X86: [[CONST_SAMP:%[0-9]+]] = call ptr @__translate_sampler_initializer(i32 35)
+  // CHECK-X86: store ptr [[CONST_SAMP]], ptr [[CONST_SMP_PTR:%[a-zA-Z0-9]+]]
   fnc4smp(const_smp);
-  // CHECK: [[SAMP:%[0-9]+]] = load %opencl.sampler_t addrspace(2)*, %opencl.sampler_t addrspace(2)** [[CONST_SMP_PTR]]
-  // CHECK: call spir_func void [[FUNCNAME]](%opencl.sampler_t addrspace(2)* [[SAMP]])
+  // CHECK-SPIR: [[SAMP:%[0-9]+]] = load target("spirv.Sampler"), ptr [[CONST_SMP_PTR]]
+  // CHECK-SPIR: call spir_func void [[FUNCNAME]](target("spirv.Sampler") [[SAMP]])
+  // CHECK-X86: [[SAMP:%[0-9]+]] = load ptr, ptr [[CONST_SMP_PTR]]
+  // CHECK-X86: call void [[FUNCNAME]](ptr [[SAMP]])
 
   constant sampler_t constant_smp = CLK_ADDRESS_CLAMP_TO_EDGE | CLK_NORMALIZED_COORDS_TRUE | CLK_FILTER_LINEAR;
   fnc4smp(constant_smp);
-  // CHECK: [[SAMP:%[0-9]+]] = call spir_func %opencl.sampler_t addrspace(2)* @__translate_sampler_initializer(i32 35)
-  // CHECK: call spir_func void [[FUNCNAME]](%opencl.sampler_t addrspace(2)* [[SAMP]])
+  // CHECK-SPIR: [[SAMP:%[0-9]+]] = call spir_func target("spirv.Sampler") @__translate_sampler_initializer(i32 35)
+  // CHECK-SPIR: call spir_func void [[FUNCNAME]](target("spirv.Sampler") [[SAMP]])
+  // CHECK-X86: [[SAMP:%[0-9]+]] = call ptr @__translate_sampler_initializer(i32 35)
+  // CHECK-X86: call void [[FUNCNAME]](ptr [[SAMP]])
 
   // TODO: enable sampler initialization with non-constant integer.
   //const sampler_t const_smp_func_init = get_sampler_initializer();

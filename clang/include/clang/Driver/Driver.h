@@ -810,6 +810,16 @@ llvm::StringRef getDriverMode(StringRef ProgName, ArrayRef<const char *> Args);
 /// Checks whether the value produced by getDriverMode is for CL mode.
 bool IsClangCL(StringRef DriverMode);
 
+/// Expand response files from a clang driver or cc1 invocation.
+///
+/// \param Args The arguments that will be expanded.
+/// \param ClangCLMode Whether clang is in CL mode.
+/// \param Alloc Allocator for new arguments.
+/// \param FS Filesystem to use when expanding files.
+llvm::Error expandResponseFiles(SmallVectorImpl<const char *> &Args,
+                                bool ClangCLMode, llvm::BumpPtrAllocator &Alloc,
+                                llvm::vfs::FileSystem *FS = nullptr);
+
 /// Checks whether the value produced by getDriverMode is for 'cache' mode.
 bool isClangCache(StringRef DriverMode);
 

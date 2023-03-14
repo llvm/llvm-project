@@ -7173,21 +7173,35 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
 
 template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
   bool IsRelocatable = this->Obj.getHeader().e_type == ELF::ET_REL;
-  for (const Elf_Shdr &Sec : cantFail(this->Obj.sections())) {
-    if (Sec.sh_type != SHT_LLVM_BB_ADDR_MAP &&
-        Sec.sh_type != SHT_LLVM_BB_ADDR_MAP_V0) {
-      continue;
-    }
+  using Elf_Shdr = typename ELFT::Shdr;
+  auto IsMatch = [](const Elf_Shdr &Sec) -> bool {
+    return Sec.sh_type == ELF::SHT_LLVM_BB_ADDR_MAP ||
+           Sec.sh_type == ELF::SHT_LLVM_BB_ADDR_MAP_V0;
+  };
+  Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>> SecRelocMapOrErr =
+      this->Obj.getSectionAndRelocations(IsMatch);
+  if (!SecRelocMapOrErr) {
+    this->reportUniqueWarning(
+        "failed to get SHT_LLVM_BB_ADDR_MAP section(s): " +
+        toString(SecRelocMapOrErr.takeError()));
+    return;
+  }
+  for (auto const &[Sec, RelocSec] : *SecRelocMapOrErr) {
     std::optional<const Elf_Shdr *> FunctionSec;
     if (IsRelocatable)
       FunctionSec =
-          unwrapOrError(this->FileName, this->Obj.getSection(Sec.sh_link));
+          unwrapOrError(this->FileName, this->Obj.getSection(Sec->sh_link));
     ListScope L(W, "BBAddrMap");
+    if (IsRelocatable && !RelocSec) {
+      this->reportUniqueWarning("unable to get relocation section for " +
+                                this->describe(*Sec));
+      continue;
+    }
     Expected<std::vector<BBAddrMap>> BBAddrMapOrErr =
-        this->Obj.decodeBBAddrMap(Sec);
+        this->Obj.decodeBBAddrMap(*Sec, RelocSec);
     if (!BBAddrMapOrErr) {
-      this->reportUniqueWarning("unable to dump " + this->describe(Sec) + ": " +
-                                toString(BBAddrMapOrErr.takeError()));
+      this->reportUniqueWarning("unable to dump " + this->describe(*Sec) +
+                                ": " + toString(BBAddrMapOrErr.takeError()));
       continue;
     }
     for (const BBAddrMap &AM : *BBAddrMapOrErr) {
@@ -7199,7 +7213,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
       if (FuncSymIndex.empty())
         this->reportUniqueWarning(
             "could not identify function symbol for address (0x" +
-            Twine::utohexstr(AM.Addr) + ") in " + this->describe(Sec));
+            Twine::utohexstr(AM.Addr) + ") in " + this->describe(*Sec));
       else
         FuncName = this->getStaticSymbolName(FuncSymIndex.front());
       W.printString("Name", FuncName);
