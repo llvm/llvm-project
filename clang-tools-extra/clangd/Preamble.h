@@ -182,6 +182,7 @@ private:
   std::vector<Diag> PatchedDiags;
   PreambleBounds ModifiedBounds = {0, false};
   const PreambleData *Baseline = nullptr;
+  std::vector<PragmaMark> PatchedMarks;
 };
 
 } // namespace clangd
