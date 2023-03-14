@@ -118,6 +118,10 @@ size_t __scudo_get_ring_buffer_size(void);
 #define M_PURGE -101
 #endif
 
+#ifndef M_PURGE_ALL
+#define M_PURGE_ALL -104
+#endif
+
 // Tune the allocator's choice of memory tags to make it more likely that
 // a certain class of memory errors will be detected. The value argument should
 // be one of the M_MEMTAG_TUNING_* constants below.

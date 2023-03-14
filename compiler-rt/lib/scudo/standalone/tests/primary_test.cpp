@@ -161,7 +161,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, BasicPrimary) {
       Cache.deallocate(ClassId, Pointers[J]);
   }
   Cache.destroy(nullptr);
-  Allocator->releaseToOS();
+  Allocator->releaseToOS(scudo::ReleaseToOS::Force);
   scudo::ScopedString Str;
   Allocator->getStats(&Str);
   Str.output();
@@ -215,7 +215,7 @@ TEST(ScudoPrimaryTest, Primary64OOM) {
     Cache.deallocate(Primary::SizeClassMap::BatchClassId, B);
   }
   Cache.destroy(nullptr);
-  Allocator.releaseToOS();
+  Allocator.releaseToOS(scudo::ReleaseToOS::Force);
   scudo::ScopedString Str;
   Allocator.getStats(&Str);
   Str.output();
@@ -253,7 +253,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryIterate) {
     V.pop_back();
   }
   Cache.destroy(nullptr);
-  Allocator->releaseToOS();
+  Allocator->releaseToOS(scudo::ReleaseToOS::Force);
   scudo::ScopedString Str;
   Allocator->getStats(&Str);
   Str.output();
@@ -300,7 +300,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
   }
   for (auto &T : Threads)
     T.join();
-  Allocator->releaseToOS();
+  Allocator->releaseToOS(scudo::ReleaseToOS::Force);
   scudo::ScopedString Str;
   Allocator->getStats(&Str);
   Str.output();
@@ -322,7 +322,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, ReleaseToOS) {
   EXPECT_NE(P, nullptr);
   Cache.deallocate(ClassId, P);
   Cache.destroy(nullptr);
-  EXPECT_GT(Allocator->releaseToOS(), 0U);
+  EXPECT_GT(Allocator->releaseToOS(scudo::ReleaseToOS::Force), 0U);
 }
 
 SCUDO_TYPED_TEST(ScudoPrimaryTest, MemoryGroup) {

@@ -215,6 +215,13 @@ enum class Option : u8 {
   MaxTSDsCount,         // Number of usable TSDs for the shared registry.
 };
 
+enum class ReleaseToOS : u8 {
+  Normal, // Follow the normal rules for releasing pages to the OS
+  Force,  // Force release pages to the OS, but avoid cases that take too long.
+  ForceAll, // Force release every page possible regardless of how long it will
+            // take.
+};
+
 constexpr unsigned char PatternFillByte = 0xAB;
 
 enum FillContentsMode {
