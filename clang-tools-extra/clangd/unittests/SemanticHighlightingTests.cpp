@@ -892,7 +892,7 @@ sizeof...($TemplateParameter[[Elements]]);
 
         template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
         $TemplateParameter[[T]] $Variable_def[[x]] = {};
-        template <>
+        template $Bracket[[<]]$Bracket[[>]]
         int $Variable_def[[x]]$Bracket[[<]]int$Bracket[[>]] = (int)sizeof($Class[[Base]]);
       )cpp",
       // operator calls in template
@@ -977,7 +977,7 @@ $Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s6]];
         }
         template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]] constexpr int $Variable_def_readonly[[V]] = 42;
         constexpr int $Variable_def_readonly[[Y]] = $Variable_readonly[[V]]$Bracket[[<]]char$Bracket[[>]];
-        template <>
+        template $Bracket[[<]]$Bracket[[>]]
         constexpr int $Variable_def_readonly[[V]]$Bracket[[<]]int$Bracket[[>]] = 5;
         template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
         constexpr int $Variable_def_readonly[[V]]$Bracket[[<]]$TemplateParameter[[T]]*$Bracket[[>]] = 6;

@@ -9,7 +9,6 @@
 #include "lldb/Target/UnixSignals.h"
 #include "Plugins/Process/Utility/FreeBSDSignals.h"
 #include "Plugins/Process/Utility/LinuxSignals.h"
-#include "Plugins/Process/Utility/MipsLinuxSignals.h"
 #include "Plugins/Process/Utility/NetBSDSignals.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -33,17 +32,8 @@ UnixSignals::Signal::Signal(const char *name, bool default_suppress,
 lldb::UnixSignalsSP UnixSignals::Create(const ArchSpec &arch) {
   const auto &triple = arch.GetTriple();
   switch (triple.getOS()) {
-  case llvm::Triple::Linux: {
-    switch (triple.getArch()) {
-    case llvm::Triple::mips:
-    case llvm::Triple::mipsel:
-    case llvm::Triple::mips64:
-    case llvm::Triple::mips64el:
-      return std::make_shared<MipsLinuxSignals>();
-    default:
-      return std::make_shared<LinuxSignals>();
-    }
-  }
+  case llvm::Triple::Linux:
+    return std::make_shared<LinuxSignals>();
   case llvm::Triple::FreeBSD:
   case llvm::Triple::OpenBSD:
     return std::make_shared<FreeBSDSignals>();

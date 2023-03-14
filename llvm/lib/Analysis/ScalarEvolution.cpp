@@ -6497,7 +6497,7 @@ ScalarEvolution::getRangeRefIter(const SCEV *S,
   auto AddToWorklist = [&WorkList, &Seen, &Cache](const SCEV *Expr) {
     if (!Seen.insert(Expr).second)
       return;
-    if (Cache.find(Expr) != Cache.end())
+    if (Cache.contains(Expr))
       return;
     switch (Expr->getSCEVType()) {
     case scUnknown:

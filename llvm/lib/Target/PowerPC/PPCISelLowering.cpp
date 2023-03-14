@@ -15787,16 +15787,37 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
 
     break;
   case ISD::INTRINSIC_W_CHAIN:
-    // For little endian, VSX loads require generating lxvd2x/xxswapd.
-    // Not needed on ISA 3.0 based CPUs since we have a non-permuting load.
-    if (Subtarget.needsSwapsForVSXMemOps()) {
-      switch (cast<ConstantSDNode>(N->getOperand(1))->getZExtValue()) {
-      default:
-        break;
-      case Intrinsic::ppc_vsx_lxvw4x:
-      case Intrinsic::ppc_vsx_lxvd2x:
-        return expandVSXLoadForLE(N, DCI);
+    switch (cast<ConstantSDNode>(N->getOperand(1))->getZExtValue()) {
+    default:
+      break;
+    case Intrinsic::ppc_altivec_vsum4sbs:
+    case Intrinsic::ppc_altivec_vsum4shs:
+    case Intrinsic::ppc_altivec_vsum4ubs: {
+      // These sum-across intrinsics only have a chain due to the side effect
+      // that they may set the SAT bit. If we know the SAT bit will not be set
+      // for some inputs, we can replace any uses of their chain with the input
+      // chain.
+      if (BuildVectorSDNode *BVN =
+              dyn_cast<BuildVectorSDNode>(N->getOperand(3))) {
+        APInt APSplatBits, APSplatUndef;
+        unsigned SplatBitSize;
+        bool HasAnyUndefs;
+        bool BVNIsConstantSplat = BVN->isConstantSplat(
+            APSplatBits, APSplatUndef, SplatBitSize, HasAnyUndefs, 0,
+            !Subtarget.isLittleEndian());
+        // If the constant splat vector is 0, the SAT bit will not be set.
+        if (BVNIsConstantSplat && APSplatBits == 0)
+          DAG.ReplaceAllUsesOfValueWith(SDValue(N, 1), N->getOperand(0));
       }
+      return SDValue();
+    }
+    case Intrinsic::ppc_vsx_lxvw4x:
+    case Intrinsic::ppc_vsx_lxvd2x:
+      // For little endian, VSX loads require generating lxvd2x/xxswapd.
+      // Not needed on ISA 3.0 based CPUs since we have a non-permuting load.
+      if (Subtarget.needsSwapsForVSXMemOps())
+        return expandVSXLoadForLE(N, DCI);
+      break;
     }
     break;
   case ISD::INTRINSIC_VOID:

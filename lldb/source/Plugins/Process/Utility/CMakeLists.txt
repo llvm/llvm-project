@@ -8,7 +8,6 @@ add_lldb_library(lldbPluginProcessUtility
   LinuxProcMaps.cpp
   LinuxSignals.cpp
   MemoryTagManagerAArch64MTE.cpp
-  MipsLinuxSignals.cpp
   NativeProcessSoftwareSingleStep.cpp
   NativeRegisterContextDBReg_arm64.cpp
   NativeRegisterContextDBReg_x86.cpp

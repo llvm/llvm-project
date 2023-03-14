@@ -176,7 +176,7 @@ DWARFUnitVector::getUnitForIndexEntry(const DWARFUnitIndex::Entry &E) {
 
   auto U = Parser(Offset, DW_SECT_INFO, nullptr, &E);
   if (!U)
-    U = nullptr;
+    return nullptr;
 
   auto *NewCU = U.get();
   this->insert(CU, std::move(U));

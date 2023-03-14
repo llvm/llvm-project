@@ -187,7 +187,7 @@ void Float2IntPass::walkBackwards() {
     Instruction *I = Worklist.back();
     Worklist.pop_back();
 
-    if (SeenInsts.find(I) != SeenInsts.end())
+    if (SeenInsts.contains(I))
       // Seen already.
       continue;
 
@@ -371,7 +371,7 @@ bool Float2IntPass::validateAndTransform() {
           ConvertedToTy = I->getType();
         for (User *U : I->users()) {
           Instruction *UI = dyn_cast<Instruction>(U);
-          if (!UI || SeenInsts.find(UI) == SeenInsts.end()) {
+          if (!UI || !SeenInsts.contains(UI)) {
             LLVM_DEBUG(dbgs() << "F2I: Failing because of " << *U << "\n");
             Fail = true;
             break;
@@ -428,7 +428,7 @@ bool Float2IntPass::validateAndTransform() {
 }
 
 Value *Float2IntPass::convert(Instruction *I, Type *ToTy) {
-  if (ConvertedInsts.find(I) != ConvertedInsts.end())
+  if (ConvertedInsts.contains(I))
     // Already converted this instruction.
     return ConvertedInsts[I];
 
