@@ -54,6 +54,10 @@ module m
   !ERROR: EXTERNAL attribute not allowed on 'bar'
   external :: bar
 
+  !ERROR: An entity may not have the ASYNCHRONOUS attribute unless it is a variable
+  asynchronous :: async
+  external :: async
+
   !ERROR: PARAMETER attribute not allowed on 'm'
   parameter(m=2)
   !ERROR: PARAMETER attribute not allowed on 'foo'
