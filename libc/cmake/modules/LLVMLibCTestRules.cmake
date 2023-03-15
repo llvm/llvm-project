@@ -448,8 +448,8 @@ function(add_integration_test test_name)
       libc.src.stdlib.atexit
       libc.src.stdlib.exit
       libc.src.unistd.environ
-  )
-  list(APPEND memory_functions
+      # We always add the memory functions objects. This is because the
+      # compiler's codegen can emit calls to the C memory functions.
       libc.src.string.bcmp
       libc.src.string.bzero
       libc.src.string.memcmp
@@ -457,9 +457,6 @@ function(add_integration_test test_name)
       libc.src.string.memmove
       libc.src.string.memset
   )
-  # We remove the memory function deps because we want to explicitly add the
-  # object files which include the public symbols of the memory functions.
-  list(REMOVE_ITEM fq_deps_list ${memory_functions})
   list(REMOVE_DUPLICATES fq_deps_list)
 
   # TODO: Instead of gathering internal object files from entrypoints,
@@ -474,13 +471,6 @@ function(add_integration_test test_name)
     endif()
     return()
   endif()
-  # We add the memory functions objects explicitly. Note that we
-  # are adding objects of the targets which contain the public
-  # C symbols. This is because compiler codegen can emit calls to
-  # the C memory functions.
-  foreach(func IN LISTS memory_functions)
-    list(APPEND link_object_files $<TARGET_OBJECTS:${func}>)
-  endforeach()
   list(REMOVE_DUPLICATES link_object_files)
 
   # Make a library of all deps
