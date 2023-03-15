@@ -7580,10 +7580,10 @@ static void createPHIsForSelects(SmallVector<MachineInstr*, 8> &Selects,
     if (MI->getOperand(4).getImm() == (CCValid ^ CCMask))
       std::swap(TrueReg, FalseReg);
 
-    if (RegRewriteTable.find(TrueReg) != RegRewriteTable.end())
+    if (RegRewriteTable.contains(TrueReg))
       TrueReg = RegRewriteTable[TrueReg].first;
 
-    if (RegRewriteTable.find(FalseReg) != RegRewriteTable.end())
+    if (RegRewriteTable.contains(FalseReg))
       FalseReg = RegRewriteTable[FalseReg].second;
 
     DebugLoc DL = MI->getDebugLoc();
