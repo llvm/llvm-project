@@ -389,7 +389,7 @@ ParseResult Parser::codeCompleteDialectOrElidedOpName(SMLoc loc) {
     const char *bufBegin = state.lex.getBufferBegin();
     const char *it = loc.getPointer() - 1;
     for (; it > bufBegin && *it != '\n'; --it)
-      if (!llvm::is_contained(StringRef(" \t\r"), *it))
+      if (!StringRef(" \t\r").contains(*it))
         return true;
     return false;
   };
