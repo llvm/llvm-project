@@ -1,4 +1,5 @@
 // REQUIRES: x86-registered-target
+// REQUIRES: asserts
 // UNSUPPORTED: target={{.*}}-darwin{{.*}}, target={{.*}}-aix{{.*}}
 // REQUIRES: asserts
 
