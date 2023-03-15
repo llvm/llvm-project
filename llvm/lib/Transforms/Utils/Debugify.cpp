@@ -979,7 +979,9 @@ PreservedAnalyses NewPMDebugifyPass::run(Module &M, ModuleAnalysisManager &) {
     collectDebugInfoMetadata(M, M.functions(), *DebugInfoBeforePass,
                              "ModuleDebugify (original debuginfo)",
                               NameOfWrappedPass);
-  return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 ModulePass *createCheckDebugifyModulePass(
