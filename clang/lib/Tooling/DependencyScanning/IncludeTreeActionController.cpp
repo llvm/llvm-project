@@ -35,13 +35,6 @@ private:
   Error initialize(CompilerInstance &ScanInstance,
                    CompilerInvocation &NewInvocation) override;
 
-  void enteredInclude(Preprocessor &PP, FileID FID) override;
-
-  void exitedInclude(Preprocessor &PP, FileID IncludedBy, FileID Include,
-                     SourceLocation ExitLoc) override;
-
-  void handleHasIncludeCheck(Preprocessor &PP, bool Result) override;
-
   const DepscanPrefixMapping *getPrefixMapping() override {
     return &PrefixMapping;
   }
@@ -60,6 +53,8 @@ private:
   CASOptions CASOpts;
   DepscanPrefixMapping PrefixMapping;
   llvm::PrefixMapper PrefixMapper;
+  // IncludeTreePPCallbacks keeps a pointer to the current builder, so use a
+  // pointer so the builder cannot move when resizing.
   SmallVector<std::unique_ptr<IncludeTreeBuilder>> BuilderStack;
   std::optional<cas::IncludeTreeRoot> IncludeTreeResult;
 };
@@ -147,23 +142,22 @@ struct PPCallbacksDependencyCollector : public DependencyCollector {
 };
 
 struct IncludeTreePPCallbacks : public PPCallbacks {
-  DependencyActionController &Controller;
+  IncludeTreeBuilder &Builder;
   Preprocessor &PP;
 
 public:
-  IncludeTreePPCallbacks(DependencyActionController &Controller,
-                         Preprocessor &PP)
-      : Controller(Controller), PP(PP) {}
+  IncludeTreePPCallbacks(IncludeTreeBuilder &Builder, Preprocessor &PP)
+      : Builder(Builder), PP(PP) {}
 
   void LexedFileChanged(FileID FID, LexedFileChangeReason Reason,
                         SrcMgr::CharacteristicKind FileType, FileID PrevFID,
                         SourceLocation Loc) override {
     switch (Reason) {
     case LexedFileChangeReason::EnterFile:
-      Controller.enteredInclude(PP, FID);
+      Builder.enteredInclude(PP, FID);
       break;
     case LexedFileChangeReason::ExitFile: {
-      Controller.exitedInclude(PP, FID, PrevFID, Loc);
+      Builder.exitedInclude(PP, FID, PrevFID, Loc);
       break;
     }
     }
@@ -172,7 +166,7 @@ public:
   void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
                   OptionalFileEntryRef File,
                   SrcMgr::CharacteristicKind FileType) override {
-    Controller.handleHasIncludeCheck(PP, File.has_value());
+    Builder.handleHasIncludeCheck(PP, File.has_value());
   }
 };
 } // namespace
@@ -221,36 +215,20 @@ Error IncludeTreeActionController::initialize(
   };
   ensurePathRemapping();
 
+  BuilderStack.push_back(
+      std::make_unique<IncludeTreeBuilder>(DB, PrefixMapper));
+
   // Attach callbacks for the IncludeTree of the TU. The preprocessor
   // does not exist yet, so we need to indirect this via DependencyCollector.
   auto DC = std::make_shared<PPCallbacksDependencyCollector>(
-      [this](Preprocessor &PP) {
-        return std::make_unique<IncludeTreePPCallbacks>(*this, PP);
+      [&Builder = current()](Preprocessor &PP) {
+        return std::make_unique<IncludeTreePPCallbacks>(Builder, PP);
       });
   ScanInstance.addDependencyCollector(std::move(DC));
 
   CASOpts = ScanInstance.getCASOpts();
 
-  BuilderStack.push_back(
-      std::make_unique<IncludeTreeBuilder>(DB, PrefixMapper));
-
   return Error::success();
-}
-
-void IncludeTreeActionController::enteredInclude(Preprocessor &PP, FileID FID) {
-  current().enteredInclude(PP, FID);
-}
-
-void IncludeTreeActionController::exitedInclude(Preprocessor &PP,
-                                                FileID IncludedBy,
-                                                FileID Include,
-                                                SourceLocation ExitLoc) {
-  current().exitedInclude(PP, IncludedBy, Include, ExitLoc);
-}
-
-void IncludeTreeActionController::handleHasIncludeCheck(Preprocessor &PP,
-                                                        bool Result) {
-  current().handleHasIncludeCheck(PP, Result);
 }
 
 Error IncludeTreeActionController::finalize(CompilerInstance &ScanInstance,
