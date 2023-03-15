@@ -244,6 +244,10 @@ def HasLSE128        : Predicate<"Subtarget->hasLSE128()">,
                        AssemblerPredicateWithAll<(all_of FeatureLSE128), "lse128">;
 def HasD128          : Predicate<"Subtarget->hasD128()">,
                        AssemblerPredicateWithAll<(all_of FeatureD128), "d128">;
+def HasCHK           : Predicate<"Subtarget->hasCHK()">,
+                       AssemblerPredicateWithAll<(all_of FeatureCHK), "chk">;
+def HasGCS           : Predicate<"Subtarget->hasGCS()">,
+                       AssemblerPredicateWithAll<(all_of FeatureGCS), "gcs">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
@@ -1049,6 +1053,71 @@ def BRB_INJ:  BRBEI<0b101, "\tinj">;
 // Allow uppercase and lowercase keyword arguments for BRB IALL and BRB INJ
 def : TokenAlias<"INJ", "inj">;
 def : TokenAlias<"IALL", "iall">;
+
+
+// ARMv9.4-A Guarded Control Stack
+class GCSNoOp<bits<3> op2, string mnemonic>
+    : SimpleSystemI<0, (ins), mnemonic, "">, Sched<[]> {
+  let Inst{20-8} = 0b0100001110111;
+  let Inst{7-5} = op2;
+  let Predicates = [HasGCS];
+}
+def GCSPUSHX : GCSNoOp<0b100, "gcspushx">;
+def GCSPOPCX : GCSNoOp<0b101, "gcspopcx">;
+def GCSPOPX  : GCSNoOp<0b110, "gcspopx">;
+
+class GCSRtIn<bits<3> op1, bits<3> op2, string mnemonic,
+            list<dag> pattern = []>
+    : RtSystemI<0, (outs), (ins GPR64:$Rt), mnemonic, "\t$Rt", pattern> {
+  let Inst{20-19} = 0b01;
+  let Inst{18-16} = op1;
+  let Inst{15-8} = 0b01110111;
+  let Inst{7-5} = op2;
+  let Predicates = [HasGCS];
+}
+
+def GCSSS1   : GCSRtIn<0b011, 0b010, "gcsss1">;
+def GCSPUSHM : GCSRtIn<0b011, 0b000, "gcspushm">;
+
+class GCSRtOut<bits<3> op1, bits<3> op2, string mnemonic,
+            list<dag> pattern = []>
+    : RtSystemI<1, (outs GPR64:$Rt), (ins), mnemonic, "\t$Rt", pattern> {
+  let Inst{20-19} = 0b01;
+  let Inst{18-16} = op1;
+  let Inst{15-8} = 0b01110111;
+  let Inst{7-5} = op2;
+  let Predicates = [HasGCS];
+}
+
+def GCSSS2  : GCSRtOut<0b011, 0b011, "gcsss2">;
+def GCSPOPM : GCSRtOut<0b011, 0b001, "gcspopm">;
+def GCSPOPM_NoOp : InstAlias<"gcspopm", (GCSPOPM XZR)>, Requires<[HasGCS]>; // Rt defaults to XZR if absent
+
+def GCSB_DSYNC_disable : InstAlias<"gcsb\tdsync", (HINT 19), 0>;
+def GCSB_DSYNC         : InstAlias<"gcsb\tdsync", (HINT 19), 1>, Requires<[HasGCS]>;
+
+def : TokenAlias<"DSYNC", "dsync">;
+
+let Uses = [X16], Defs = [X16], CRm = 0b0101 in {
+  def CHKFEAT   : SystemNoOperands<0b000, "hint\t#40">;
+}
+def : InstAlias<"chkfeat\tx16", (CHKFEAT), 0>;
+def : InstAlias<"chkfeat\tx16", (CHKFEAT), 1>, Requires<[HasCHK]>;
+
+class GCSSt<string mnemonic, bits<3> op>
+    : I<(outs), (ins GPR64:$Rt, GPR64sp:$Rn), mnemonic, "\t$Rt, $Rn", "", []>, Sched<[]> {
+  bits<5> Rt;
+  bits<5> Rn;
+  let Inst{31-15} = 0b11011001000111110;
+  let Inst{14-12} = op;
+  let Inst{11-10} = 0b11;
+  let Inst{9-5} = Rn;
+  let Inst{4-0} = Rt;
+  let Predicates = [HasGCS];
+}
+def GCSSTR  : GCSSt<"gcsstr",  0b000>;
+def GCSSTTR : GCSSt<"gcssttr", 0b001>;
+
 
 // ARMv8.2-A Dot Product
 let Predicates = [HasDotProd] in {
