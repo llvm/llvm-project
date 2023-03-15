@@ -1983,7 +1983,7 @@ static void createNewOperandWithStaticSizes(
   for (unsigned i = 0; i < sourceShape.size(); i++) {
     int64_t dimShape = sourceShape[i];
     AffineExpr dimExpr = sourceMap.getResult(i);
-    if (affineExprToSize.find(dimExpr) == affineExprToSize.end() ||
+    if (!affineExprToSize.contains(dimExpr) ||
         !sourceType.isDynamicDim(i)) {
       newShape.push_back(dimShape);
       continue;
