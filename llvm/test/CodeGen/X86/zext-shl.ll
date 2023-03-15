@@ -70,7 +70,7 @@ define i64 @i64_zext_shift_i32_zext_i8(i8 %a0) nounwind {
 ; X64-LABEL: i64_zext_shift_i32_zext_i8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    shlq $3, %rax
+; X64-NEXT:    shll $3, %eax
 ; X64-NEXT:    retq
   %t0 = zext i8 %a0 to i32
   %t1 = shl i32 %t0, 3
@@ -89,7 +89,7 @@ define i64 @i64_zext_shift_i32_zext_i16(i16 %a0) nounwind {
 ; X64-LABEL: i64_zext_shift_i32_zext_i16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl %di, %eax
-; X64-NEXT:    shlq $5, %rax
+; X64-NEXT:    shll $5, %eax
 ; X64-NEXT:    retq
   %t0 = zext i16 %a0 to i32
   %t1 = shl i32 %t0, 5
