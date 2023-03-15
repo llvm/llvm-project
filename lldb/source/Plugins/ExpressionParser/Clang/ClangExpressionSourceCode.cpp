@@ -212,7 +212,7 @@ public:
   /// Returns true iff the given expression body contained a token with the
   /// given content.
   bool hasToken(llvm::StringRef token) const {
-    return m_tokens.find(token) != m_tokens.end();
+    return m_tokens.contains(token);
   }
 };
 
