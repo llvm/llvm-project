@@ -24,7 +24,7 @@ constexpr llvm::StringLiteral KDisabledTestPrefix = "DISABLED_";
 static bool isGoogletestTestMacro(StringRef MacroName) {
   static const llvm::StringSet<> MacroNames = {"TEST", "TEST_F", "TEST_P",
                                                "TYPED_TEST", "TYPED_TEST_P"};
-  return MacroNames.find(MacroName) != MacroNames.end();
+  return MacroNames.contains(MacroName);
 }
 
 namespace {
