@@ -239,15 +239,6 @@ libcxx/include/bitset
 libcxx/include/__bsd_locale_defaults.h
 libcxx/include/__bsd_locale_fallbacks.h
 libcxx/include/cctype
-libcxx/include/__charconv/chars_format.h
-libcxx/include/__charconv/from_chars_integral.h
-libcxx/include/__charconv/from_chars_result.h
-libcxx/include/__charconv/tables.h
-libcxx/include/__charconv/to_chars_base_10.h
-libcxx/include/__charconv/to_chars_floating_point.h
-libcxx/include/__charconv/to_chars_integral.h
-libcxx/include/__charconv/to_chars_result.h
-libcxx/include/__charconv/traits.h
 libcxx/include/chrono
 libcxx/include/__chrono/calendar.h
 libcxx/include/__chrono/convert_to_timespec.h
