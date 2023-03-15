@@ -117,9 +117,8 @@ ObjectStore::getProxyIfExists(ObjectRef Ref) {
   return ObjectProxy::load(*this, Ref, *H);
 }
 
-std::future<Expected<std::optional<ObjectProxy>>>
-ObjectStore::getProxyAsync(ObjectRef Ref) {
-  std::promise<Expected<std::optional<ObjectProxy>>> Promise;
+std::future<AsyncProxyValue> ObjectStore::getProxyAsync(ObjectRef Ref) {
+  std::promise<AsyncProxyValue> Promise;
   auto Future = Promise.get_future();
   // FIXME: there is potential for use-after-free for the 'this' pointer.
   // Either we should always allocate shared pointers for \c ObjectStore objects
