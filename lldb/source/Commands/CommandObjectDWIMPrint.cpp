@@ -15,11 +15,13 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
+#include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
+#include "lldb/lldb-types.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -90,8 +92,10 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
       m_expr_options.m_verbosity, m_format_options.GetFormat());
   dump_options.SetHideRootName(eval_options.GetSuppressPersistentResult());
 
+  StackFrame *frame = m_exe_ctx.GetFramePtr();
+
   // First, try `expr` as the name of a frame variable.
-  if (StackFrame *frame = m_exe_ctx.GetFramePtr()) {
+  if (frame) {
     auto valobj_sp = frame->FindVariable(ConstString(expr));
     if (valobj_sp && valobj_sp->GetError().Success()) {
       if (!eval_options.GetSuppressPersistentResult()) {
@@ -110,6 +114,47 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
       valobj_sp->Dump(result.GetOutputStream(), dump_options);
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return true;
+    }
+  }
+
+  // For Swift frames, rewrite `po 0x12345600` to use `unsafeBitCast`.
+  //
+  // This works only when the address points to an instance of a class. This
+  // matches the behavior of `po` in Objective-C frames.
+  //
+  // The following conditions are required:
+  //   1. The command is `po` (or equivalently the `-O` flag is used)
+  //   2. The current language is Swift
+  //   3. The expression is entirely a integer value (decimal or hex)
+  //   4. The integer passes sanity checks as a memory address
+  //
+  // The address sanity checks are:
+  //   1. The integer represents a readable memory address
+  //
+  // Future potential sanity checks:
+  //   1. Accept tagged pointers/values
+  //   2. Verify the isa pointer is a known class
+  //   3. Require addresses to be on the heap
+  std::string modified_expr_storage;
+  // Either Swift was explicitly specified, or the frame is Swift.
+  bool is_swift = false;
+  if (m_expr_options.language == lldb::eLanguageTypeSwift)
+    is_swift = true;
+  else if (m_expr_options.language == lldb::eLanguageTypeUnknown)
+    is_swift = frame && frame->GuessLanguage() == lldb::eLanguageTypeSwift;
+  bool is_po = m_varobj_options.use_objc;
+  if (is_swift && is_po) {
+    lldb::addr_t addr;
+    bool is_integer = !expr.getAsInteger(0, addr);
+    if (is_integer) {
+      MemoryRegionInfo mem_info;
+      m_exe_ctx.GetProcessRef().GetMemoryRegionInfo(addr, mem_info);
+      bool is_readable = mem_info.GetReadable() == MemoryRegionInfo::eYes;
+      if (is_readable) {
+        modified_expr_storage =
+            llvm::formatv("unsafeBitCast({0}, to: AnyObject.self)", expr).str();
+        expr = modified_expr_storage;
+      }
     }
   }
 
