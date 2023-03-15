@@ -128,3 +128,7 @@ trcit x0
 .arch_extension cssc
 umax x0, x1, x2
 // CHECK: umax x0, x1, x2
+
+.arch_extension gcs
+gcspushm x0
+// CHECK: gcspushm x0

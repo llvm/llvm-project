@@ -3677,6 +3677,7 @@ static const struct Extension {
     {"ite", {AArch64::FeatureITE}},
     {"cssc", {AArch64::FeatureCSSC}},
     {"rcpc3", {AArch64::FeatureRCPC3}},
+    {"gcs", {AArch64::FeatureGCS}},
     // FIXME: Unsupported extensions
     {"lor", {}},
     {"rdma", {}},
@@ -4841,11 +4842,6 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
     if (!parseOptionalMulOperand(Operands))
       return false;
 
-    // If this is an "smstart" or "smstop" instruction, parse its special
-    // keyword operand as an identifier.
-    if (Mnemonic == "smstart" || Mnemonic == "smstop")
-      return parseKeywordOperand(Operands);
-
     // This could be an optional "shift" or "extend" operand.
     OperandMatchResultTy GotShift = tryParseOptionalShiftExtend(Operands);
     // We can only continue if no tokens were eaten.
@@ -4854,7 +4850,8 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
 
     // If this is a two-word mnemonic, parse its special keyword
     // operand as an identifier.
-    if (Mnemonic == "brb")
+    if (Mnemonic == "brb" || Mnemonic == "smstart" || Mnemonic == "smstop" ||
+        Mnemonic == "gcsb")
       return parseKeywordOperand(Operands);
 
     // This was not a register so parse other operands that start with an
@@ -7621,61 +7618,21 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64AsmParser() {
 unsigned AArch64AsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
                                                       unsigned Kind) {
   AArch64Operand &Op = static_cast<AArch64Operand &>(AsmOp);
-  // If the kind is a token for a literal immediate, check if our asm
-  // operand matches. This is for InstAliases which have a fixed-value
-  // immediate in the syntax.
-  int64_t ExpectedVal;
+
+  auto MatchesOpImmediate = [&](int64_t ExpectedVal) -> MatchResultTy {
+    if (!Op.isImm())
+      return Match_InvalidOperand;
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Op.getImm());
+    if (!CE)
+      return Match_InvalidOperand;
+    if (CE->getValue() == ExpectedVal)
+      return Match_Success;
+    return Match_InvalidOperand;
+  };
+
   switch (Kind) {
   default:
     return Match_InvalidOperand;
-  case MCK__HASH_0:
-    ExpectedVal = 0;
-    break;
-  case MCK__HASH_1:
-    ExpectedVal = 1;
-    break;
-  case MCK__HASH_12:
-    ExpectedVal = 12;
-    break;
-  case MCK__HASH_16:
-    ExpectedVal = 16;
-    break;
-  case MCK__HASH_2:
-    ExpectedVal = 2;
-    break;
-  case MCK__HASH_24:
-    ExpectedVal = 24;
-    break;
-  case MCK__HASH_3:
-    ExpectedVal = 3;
-    break;
-  case MCK__HASH_32:
-    ExpectedVal = 32;
-    break;
-  case MCK__HASH_4:
-    ExpectedVal = 4;
-    break;
-  case MCK__HASH_48:
-    ExpectedVal = 48;
-    break;
-  case MCK__HASH_6:
-    ExpectedVal = 6;
-    break;
-  case MCK__HASH_64:
-    ExpectedVal = 64;
-    break;
-  case MCK__HASH_8:
-    ExpectedVal = 8;
-    break;
-  case MCK__HASH__MINUS_4:
-    ExpectedVal = -4;
-    break;
-  case MCK__HASH__MINUS_8:
-    ExpectedVal = -8;
-    break;
-  case MCK__HASH__MINUS_16:
-    ExpectedVal = -16;
-    break;
   case MCK_MPR:
     // If the Kind is a token for the MPR register class which has the "za"
     // register (SME accumulator array), check if the asm is a literal "za"
@@ -7684,15 +7641,36 @@ unsigned AArch64AsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     if (Op.isTokenEqual("za"))
       return Match_Success;
     return Match_InvalidOperand;
+
+    // If the kind is a token for a literal immediate, check if our asm
+    // operand matches. This is for InstAliases which have a fixed-value
+    // immediate in the syntax.
+#define MATCH_HASH(N)                                                          \
+  case MCK__HASH_##N:                                                          \
+    return MatchesOpImmediate(N);
+    MATCH_HASH(0)
+    MATCH_HASH(1)
+    MATCH_HASH(2)
+    MATCH_HASH(3)
+    MATCH_HASH(4)
+    MATCH_HASH(6)
+    MATCH_HASH(8)
+    MATCH_HASH(12)
+    MATCH_HASH(16)
+    MATCH_HASH(24)
+    MATCH_HASH(32)
+    MATCH_HASH(40)
+    MATCH_HASH(48)
+    MATCH_HASH(64)
+#undef MATCH_HASH
+#define MATCH_HASH_MINUS(N)                                                    \
+  case MCK__HASH__MINUS_##N:                                                   \
+    return MatchesOpImmediate(-N);
+    MATCH_HASH_MINUS(4)
+    MATCH_HASH_MINUS(8)
+    MATCH_HASH_MINUS(16)
+#undef MATCH_HASH_MINUS
   }
-  if (!Op.isImm())
-    return Match_InvalidOperand;
-  const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Op.getImm());
-  if (!CE)
-    return Match_InvalidOperand;
-  if (CE->getValue() == ExpectedVal)
-    return Match_Success;
-  return Match_InvalidOperand;
 }
 
 OperandMatchResultTy
