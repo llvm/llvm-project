@@ -6,7 +6,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
 
-class TestSTLTypes(TestBase):
+class TestSwiftForwardInteropSTLTypes(TestBase):
 
     @skipIfLinux # rdar://106532498
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false')) # rdar://106438227 (TestSTLTypes fails when clang importer is disabled)

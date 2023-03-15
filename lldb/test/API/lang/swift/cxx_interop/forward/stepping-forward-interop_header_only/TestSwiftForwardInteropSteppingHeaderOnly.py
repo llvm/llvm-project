@@ -1,12 +1,12 @@
 
 """
-Test that stepping works for forward interop
+Test that stepping works for forward interop (header only)
 """
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
 
-class TestSteppingForwardInterop(TestBase):
+class TestSwiftForwardInteropSteppingHeaderOnly(TestBase):
 
     @swiftTest
     def test_step_into_function(self):
