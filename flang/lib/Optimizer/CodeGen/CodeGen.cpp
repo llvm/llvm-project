@@ -937,6 +937,10 @@ struct ConvertOpConversion : public FIROpConversion<fir::ConvertOp> {
           rewriter.replaceOpWithNewOp<mlir::LLVM::TruncOp>(convert, toTy, op0);
           return mlir::success();
         }
+        if (fromFirTy == i1Type) {
+          rewriter.replaceOpWithNewOp<mlir::LLVM::ZExtOp>(convert, toTy, op0);
+          return mlir::success();
+        }
         rewriter.replaceOpWithNewOp<mlir::LLVM::SExtOp>(convert, toTy, op0);
         return mlir::success();
       }

@@ -47,6 +47,65 @@ entry:
   ret void
 }
 
+define void @phi(i1 %c) {
+; CHECK-LABEL: define void @phi(i1 %c) {
+; CHECK: entry:
+; CHECK:   %0 = select i1 icmp ne (ptr @f, ptr null), ptr @.cfi.jumptable, ptr null
+; CHECK:   br i1 %c, label %if, label %join
+; CHECK: if:
+; CHECK:   %1 = select i1 icmp ne (ptr @f, ptr null), ptr @.cfi.jumptable, ptr null
+; CHECK:   br label %join
+; CHECK: join:
+; CHECK:   %phi = phi ptr [ %1, %if ], [ null, %entry ]
+; CHECK:   %phi2 = phi ptr [ null, %if ], [ %0, %entry ]
+
+entry:
+  br i1 %c, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi ptr [ @f, %if ], [ null, %entry ]
+  %phi2 = phi ptr [ null, %if ], [ @f, %entry ]
+  ret void
+}
+
+define void @phi2(i1 %c, i32 %x) {
+; CHECK-LABEL: define void @phi2(i1 %c, i32 %x) {
+; CHECK: entry:
+; CHECK:   br i1 %c, label %if, label %else
+; CHECK: if:                                               ; preds = %entry
+; CHECK:   %0 = select i1 icmp ne (ptr @f, ptr null), ptr @.cfi.jumptable, ptr null
+; CHECK:   switch i32 %x, label %join [
+; CHECK:     i32 0, label %join
+; CHECK:   ]
+; CHECK: else:                                             ; preds = %entry
+; CHECK:   %1 = select i1 icmp ne (ptr @f, ptr null), ptr @.cfi.jumptable, ptr null
+; CHECK:   switch i32 %x, label %join [
+; CHECK:     i32 0, label %join
+; CHECK:   ]
+; CHECK: join:                                             ; preds = %else, %else, %if, %if
+; CHECK:   %phi2 = phi ptr [ %0, %if ], [ %0, %if ], [ %1, %else ], [ %1, %else ]
+
+entry:
+  br i1 %c, label %if, label %else
+
+if:
+  switch i32 %x, label %join [
+    i32 0, label %join
+  ]
+
+else:
+  switch i32 %x, label %join [
+    i32 0, label %join
+  ]
+
+join:
+  %phi2 = phi ptr [ @f, %if ], [ @f, %if ], [ @f, %else ], [ @f, %else ]
+  ret void
+}
+
 declare i1 @llvm.type.test(ptr %ptr, metadata %bitset) nounwind readnone
 
 define i1 @foo(ptr %p) {

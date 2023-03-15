@@ -1265,12 +1265,10 @@ SystemZTargetLowering::getRegForInlineAsmConstraint(
 Register
 SystemZTargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                          const MachineFunction &MF) const {
-  const SystemZSubtarget *Subtarget = &MF.getSubtarget<SystemZSubtarget>();
-
   Register Reg =
       StringSwitch<Register>(RegName)
-          .Case("r4", Subtarget->isTargetXPLINK64() ? SystemZ::R4D : 0)
-          .Case("r15", Subtarget->isTargetELF() ? SystemZ::R15D : 0)
+          .Case("r4", Subtarget.isTargetXPLINK64() ? SystemZ::R4D : 0)
+          .Case("r15", Subtarget.isTargetELF() ? SystemZ::R15D : 0)
           .Default(0);
 
   if (Reg)
@@ -2425,6 +2423,12 @@ static void adjustForSubtraction(SelectionDAG &DAG, const SDLoc &DL,
       if (N->getOpcode() == ISD::SUB &&
           ((N->getOperand(0) == C.Op0 && N->getOperand(1) == C.Op1) ||
            (N->getOperand(0) == C.Op1 && N->getOperand(1) == C.Op0))) {
+        // Disable the nsw and nuw flags: the backend needs to handle
+        // overflow as well during comparison elimination.
+        SDNodeFlags Flags = N->getFlags();
+        Flags.setNoSignedWrap(false);
+        Flags.setNoUnsignedWrap(false);
+        N->setFlags(Flags);
         C.Op0 = SDValue(N, 0);
         C.Op1 = DAG.getConstant(0, DL, N->getValueType(0));
         return;
@@ -4375,8 +4379,7 @@ SystemZTargetLowering::getTargetMMOFlags(const Instruction &I) const {
 SDValue SystemZTargetLowering::lowerSTACKSAVE(SDValue Op,
                                               SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
-  const SystemZSubtarget *Subtarget = &MF.getSubtarget<SystemZSubtarget>();
-  auto *Regs = Subtarget->getSpecialRegisters();
+  auto *Regs = Subtarget.getSpecialRegisters();
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     report_fatal_error("Variable-sized stack allocations are not supported "
                        "in GHC calling convention");
@@ -4387,8 +4390,7 @@ SDValue SystemZTargetLowering::lowerSTACKSAVE(SDValue Op,
 SDValue SystemZTargetLowering::lowerSTACKRESTORE(SDValue Op,
                                                  SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
-  const SystemZSubtarget *Subtarget = &MF.getSubtarget<SystemZSubtarget>();
-  auto *Regs = Subtarget->getSpecialRegisters();
+  auto *Regs = Subtarget.getSpecialRegisters();
   bool StoreBackchain = MF.getFunction().hasFnAttribute("backchain");
 
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
@@ -7578,10 +7580,10 @@ static void createPHIsForSelects(SmallVector<MachineInstr*, 8> &Selects,
     if (MI->getOperand(4).getImm() == (CCValid ^ CCMask))
       std::swap(TrueReg, FalseReg);
 
-    if (RegRewriteTable.find(TrueReg) != RegRewriteTable.end())
+    if (RegRewriteTable.contains(TrueReg))
       TrueReg = RegRewriteTable[TrueReg].first;
 
-    if (RegRewriteTable.find(FalseReg) != RegRewriteTable.end())
+    if (RegRewriteTable.contains(FalseReg))
       FalseReg = RegRewriteTable[FalseReg].second;
 
     DebugLoc DL = MI->getDebugLoc();

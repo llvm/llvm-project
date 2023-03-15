@@ -543,6 +543,18 @@ createBoxProcCharTuple(Fortran::lower::AbstractConverter &converter,
       argTy.cast<mlir::TupleType>().getType(0).cast<fir::BoxProcType>();
   mlir::Location loc = converter.getCurrentLocation();
   auto &builder = converter.getFirOpBuilder();
+
+  // While character procedure arguments are expected here, Fortran allows
+  // actual arguments of other types to be passed instead.
+  // To support this, we cast any reference to the expected type or extract
+  // procedures from their boxes if needed.
+  mlir::Type fromTy = funcAddr.getType();
+  mlir::Type toTy = boxTy.getEleTy();
+  if (fir::isa_ref_type(fromTy))
+    funcAddr = builder.createConvert(loc, toTy, funcAddr);
+  else if (fromTy.isa<fir::BoxProcType>())
+    funcAddr = builder.create<fir::BoxAddrOp>(loc, toTy, funcAddr);
+
   auto boxProc = [&]() -> mlir::Value {
     if (auto host = Fortran::lower::argumentHostAssocs(converter, funcAddr))
       return builder.create<fir::EmboxProcOp>(
@@ -2554,7 +2566,22 @@ public:
                  arg.passBy == PassBy::CharBoxValueAttribute);
           auto helper = fir::factory::CharacterExprHelper{builder, loc};
           auto boxChar = argAddr.match(
-              [&](const fir::CharBoxValue &x) { return helper.createEmbox(x); },
+              [&](const fir::CharBoxValue &x) -> mlir::Value {
+                // If a character procedure was passed instead, handle the
+                // mismatch.
+                auto funcTy =
+                    x.getAddr().getType().dyn_cast<mlir::FunctionType>();
+                if (funcTy && funcTy.getNumResults() == 1 &&
+                    funcTy.getResult(0).isa<fir::BoxCharType>()) {
+                  auto boxTy = funcTy.getResult(0).cast<fir::BoxCharType>();
+                  mlir::Value ref = builder.createConvert(
+                      loc, builder.getRefType(boxTy.getEleTy()), x.getAddr());
+                  auto len = builder.create<fir::UndefOp>(
+                      loc, builder.getCharacterLengthType());
+                  return builder.create<fir::EmboxCharOp>(loc, boxTy, ref, len);
+                }
+                return helper.createEmbox(x);
+              },
               [&](const fir::CharArrayBoxValue &x) {
                 return helper.createEmbox(x);
               },
@@ -2693,35 +2720,45 @@ public:
 
             if (box.getType().isa<fir::BoxType>() &&
                 fir::isPolymorphicType(argTy)) {
+              mlir::Type actualTy = argTy;
+              if (Fortran::lower::isParentComponent(*expr))
+                actualTy = fir::BoxType::get(converter.genType(*expr));
               // Rebox can only be performed on a present argument.
               if (arg.isOptional()) {
                 mlir::Value isPresent =
                     genActualIsPresentTest(builder, loc, box);
                 box = builder
-                          .genIfOp(loc, {argTy}, isPresent,
+                          .genIfOp(loc, {actualTy}, isPresent,
                                    /*withElseRegion=*/true)
                           .genThen([&]() {
-                            auto rebox = builder
-                                             .create<fir::ReboxOp>(
-                                                 loc, argTy, box, mlir::Value{},
-                                                 /*slice=*/mlir::Value{})
-                                             .getResult();
+                            auto rebox =
+                                builder
+                                    .create<fir::ReboxOp>(
+                                        loc, actualTy, box, mlir::Value{},
+                                        /*slice=*/mlir::Value{})
+                                    .getResult();
                             builder.create<fir::ResultOp>(loc, rebox);
                           })
                           .genElse([&]() {
                             auto absent =
-                                builder.create<fir::AbsentOp>(loc, argTy)
+                                builder.create<fir::AbsentOp>(loc, actualTy)
                                     .getResult();
                             builder.create<fir::ResultOp>(loc, absent);
                           })
                           .getResults()[0];
               } else {
-                box =
-                    builder.create<fir::ReboxOp>(loc, argTy, box, mlir::Value{},
-                                                 /*slice=*/mlir::Value{});
+                box = builder.create<fir::ReboxOp>(loc, actualTy, box,
+                                                   mlir::Value{},
+                                                   /*slice=*/mlir::Value{});
               }
+            } else if (Fortran::lower::isParentComponent(*expr)) {
+              fir::ExtendedValue newExv =
+                  Fortran::lower::updateBoxForParentComponent(converter, box,
+                                                              *expr);
+              box = fir::getBase(newExv);
             }
           }
+
           caller.placeInput(arg, box);
         }
       } else if (arg.passBy == PassBy::AddressAndLength) {

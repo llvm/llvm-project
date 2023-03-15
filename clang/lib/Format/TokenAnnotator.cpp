@@ -2400,7 +2400,7 @@ private:
 
     if (!NextToken ||
         NextToken->isOneOf(tok::arrow, tok::equal, tok::kw_noexcept, tok::comma,
-                           tok::r_paren) ||
+                           tok::r_paren, TT_RequiresClause) ||
         NextToken->canBePointerOrReferenceQualifier() ||
         (NextToken->is(tok::l_brace) && !NextToken->getNextNonComment())) {
       return TT_PointerOrReference;
@@ -3758,8 +3758,9 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     if (Right.is(TT_BlockComment))
       return true;
     // foo() -> const Bar * override/final
-    if (Right.isOneOf(Keywords.kw_override, Keywords.kw_final,
-                      tok::kw_noexcept) &&
+    // S::foo() & noexcept/requires
+    if (Right.isOneOf(Keywords.kw_override, Keywords.kw_final, tok::kw_noexcept,
+                      TT_RequiresClause) &&
         !Right.is(TT_StartOfName)) {
       return true;
     }
@@ -4348,6 +4349,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         (Left.is(TT_VerilogNumberBase) && Right.is(tok::numeric_constant))) {
       return false;
     }
+    // Don't add spaces between two at signs. Like in a coverage event.
+    // Don't add spaces between at and a sensitivity list like
+    // `@(posedge clk)`.
+    if (Left.is(tok::at) && Right.isOneOf(tok::l_paren, tok::star, tok::at))
+      return false;
     // Add space between the type name and dimension like `logic [1:0]`.
     if (Right.is(tok::l_square) &&
         Left.isOneOf(TT_VerilogDimensionedTypeName, Keywords.kw_function)) {

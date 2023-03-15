@@ -30,11 +30,13 @@ Basic Commands
    llvm-libtool-darwin
    llvm-link
    llvm-lipo
+   llvm-mc
    llvm-mca
    llvm-opt-report
    llvm-otool
    llvm-profdata
    llvm-readobj
+   llvm-reduce
    llvm-stress
    llvm-symbolizer
    opt

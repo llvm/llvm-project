@@ -2464,6 +2464,7 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
                                          Type *OnlyIfReducedTy) {
   PointerType *OrigPtrTy = cast<PointerType>(C->getType()->getScalarType());
   assert(Ty && "Must specify element type");
+  assert(isSupportedGetElementPtr(Ty) && "Element type is unsupported!");
   assert(OrigPtrTy->isOpaqueOrPointeeTypeMatches(Ty));
 
   if (Constant *FC =

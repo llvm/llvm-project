@@ -11,11 +11,24 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/Version.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
 #include <memory>
 #include <string>
 #include <vector>
+
+using namespace llvm;
+
+static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
+
+// Mark all our options with this category.
+static cl::OptionCategory AMDGPUArchCategory("amdgpu-arch options");
+
+static void PrintVersion(raw_ostream &OS) {
+  OS << clang::getClangToolFullVersion("amdgpu-arch") << '\n';
+}
 
 #if DYNAMIC_HSA
 typedef enum {
@@ -102,6 +115,21 @@ static hsa_status_t iterateAgentsCallback(hsa_agent_t Agent, void *Data) {
 }
 
 int main(int argc, char *argv[]) {
+  cl::HideUnrelatedOptions(AMDGPUArchCategory);
+
+  cl::SetVersionPrinter(PrintVersion);
+  cl::ParseCommandLineOptions(
+      argc, argv,
+      "A tool to detect the presence of AMDGPU devices on the system. \n\n"
+      "The tool will output each detected GPU architecture separated by a\n"
+      "newline character. If multiple GPUs of the same architecture are found\n"
+      "a string will be printed for each\n");
+
+  if (Help) {
+    cl::PrintHelpMessage();
+    return 0;
+  }
+
   // Attempt to load the HSA runtime.
   if (llvm::Error Err = loadHSA()) {
     logAllUnhandledErrors(std::move(Err), llvm::errs());

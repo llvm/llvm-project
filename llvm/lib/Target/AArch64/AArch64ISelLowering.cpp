@@ -1302,12 +1302,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SDIVREM, VT, Expand);
       setOperationAction(ISD::UDIVREM, VT, Expand);
 
-      if (Subtarget->hasSVE2()) {
-        setOperationAction(ISD::AVGFLOORS, VT, Custom);
-        setOperationAction(ISD::AVGFLOORU, VT, Custom);
-        setOperationAction(ISD::AVGCEILS, VT, Custom);
-        setOperationAction(ISD::AVGCEILU, VT, Custom);
-      }
+      setOperationAction(ISD::AVGFLOORS, VT, Custom);
+      setOperationAction(ISD::AVGFLOORU, VT, Custom);
+      setOperationAction(ISD::AVGCEILS, VT, Custom);
+      setOperationAction(ISD::AVGCEILU, VT, Custom);
     }
 
     // Illegal unpacked integer vector types.
@@ -5977,13 +5975,13 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::ABDU:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABDU_PRED);
   case ISD::AVGFLOORS:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::HADDS_PRED);
+    return LowerAVG(Op, DAG, AArch64ISD::HADDS_PRED);
   case ISD::AVGFLOORU:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::HADDU_PRED);
+    return LowerAVG(Op, DAG, AArch64ISD::HADDU_PRED);
   case ISD::AVGCEILS:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::RHADDS_PRED);
+    return LowerAVG(Op, DAG, AArch64ISD::RHADDS_PRED);
   case ISD::AVGCEILU:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::RHADDU_PRED);
+    return LowerAVG(Op, DAG, AArch64ISD::RHADDU_PRED);
   case ISD::BITREVERSE:
     return LowerBitreverse(Op, DAG);
   case ISD::BSWAP:
@@ -13242,6 +13240,57 @@ SDValue AArch64TargetLowering::LowerWindowsDYNAMIC_STACKALLOC(
   Size = DAG.getNode(ISD::SHL, dl, MVT::i64, Size,
                      DAG.getConstant(4, dl, MVT::i64));
   return Chain;
+}
+
+// When x and y are extended, lower:
+//   avgfloor(x, y) -> (x + y) >> 1
+//   avgceil(x, y)  -> (x + y + 1) >> 1
+
+// Otherwise, lower to:
+//   avgfloor(x, y) -> (x >> 1) + (y >> 1) + (x & y & 1)
+//   avgceil(x, y)  -> (x >> 1) + (y >> 1) + ((x || y) & 1)
+SDValue AArch64TargetLowering::LowerAVG(SDValue Op, SelectionDAG &DAG,
+                                        unsigned NewOp) const {
+  if (Subtarget->hasSVE2())
+    return LowerToPredicatedOp(Op, DAG, NewOp);
+
+  SDLoc dl(Op);
+  SDValue OpA = Op->getOperand(0);
+  SDValue OpB = Op->getOperand(1);
+  EVT VT = Op.getValueType();
+  bool IsCeil =
+      (Op->getOpcode() == ISD::AVGCEILS || Op->getOpcode() == ISD::AVGCEILU);
+  bool IsSigned =
+      (Op->getOpcode() == ISD::AVGFLOORS || Op->getOpcode() == ISD::AVGCEILS);
+  unsigned ShiftOpc = IsSigned ? ISD::SRA : ISD::SRL;
+
+  assert(VT.isScalableVector() && "Only expect to lower scalable vector op!");
+
+  auto IsZeroExtended = [&DAG](SDValue &Node) {
+    KnownBits Known = DAG.computeKnownBits(Node, 0);
+    return Known.Zero.isSignBitSet();
+  };
+
+  auto IsSignExtended = [&DAG](SDValue &Node) {
+    return (DAG.ComputeNumSignBits(Node, 0) > 1);
+  };
+
+  SDValue ConstantOne = DAG.getConstant(1, dl, VT);
+  if ((!IsSigned && IsZeroExtended(OpA) && IsZeroExtended(OpB)) ||
+      (IsSigned && IsSignExtended(OpA) && IsSignExtended(OpB))) {
+    SDValue Add = DAG.getNode(ISD::ADD, dl, VT, OpA, OpB);
+    if (IsCeil)
+      Add = DAG.getNode(ISD::ADD, dl, VT, Add, ConstantOne);
+    return DAG.getNode(ShiftOpc, dl, VT, Add, ConstantOne);
+  }
+
+  SDValue ShiftOpA = DAG.getNode(ShiftOpc, dl, VT, OpA, ConstantOne);
+  SDValue ShiftOpB = DAG.getNode(ShiftOpc, dl, VT, OpB, ConstantOne);
+
+  SDValue tmp = DAG.getNode(IsCeil ? ISD::OR : ISD::AND, dl, VT, OpA, OpB);
+  tmp = DAG.getNode(ISD::AND, dl, VT, tmp, ConstantOne);
+  SDValue Add = DAG.getNode(ISD::ADD, dl, VT, ShiftOpA, ShiftOpB);
+  return DAG.getNode(ISD::ADD, dl, VT, Add, tmp);
 }
 
 SDValue

@@ -377,6 +377,7 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>;
 #include <__utility/auto_cast.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
+#include <__verbose_abort>
 #include <exception>
 #include <mutex>
 #include <new>
@@ -532,8 +533,8 @@ void __throw_future_error(future_errc __ev)
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw future_error(make_error_code(__ev));
 #else
-    ((void)__ev);
-    _VSTD::abort();
+    (void)__ev;
+    std::__libcpp_verbose_abort("future_error was thrown in -fno-exceptions mode");
 #endif
 }
 

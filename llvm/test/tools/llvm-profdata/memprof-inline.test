@@ -5,17 +5,17 @@ RUN: llvm-profdata show --memory %p/Inputs/inline.memprofraw --profiled-binary %
 
 CHECK:  MemprofProfile:
 CHECK-NEXT:  Summary:
-CHECK-NEXT:    Version: 2
+CHECK-NEXT:    Version: 3
 CHECK-NEXT:    NumSegments: {{[0-9]+}}
 CHECK-NEXT:    NumMibInfo: 2
 CHECK-NEXT:    NumAllocFunctions: 2
 CHECK-NEXT:    NumStackOffsets: 1
 CHECK-NEXT:  Segments:
 CHECK-NEXT:  -
-CHECK-NEXT:    BuildId: <None>
-CHECK-NEXT:    Start: 0x{{[0-9]+}}
-CHECK-NEXT:    End: 0x{{[0-9]+}}
-CHECK-NEXT:    Offset: 0x{{[0-9]+}}
+CHECK-NEXT:    BuildId: {{[[:xdigit:]]+}}
+CHECK-NEXT:    Start: 0x{{[[:xdigit:]]+}}
+CHECK-NEXT:    End: 0x{{[[:xdigit:]]+}}
+CHECK-NEXT:    Offset: 0x{{[[:xdigit:]]+}}
 CHECK-NEXT:  -
 
 CHECK:  Records:

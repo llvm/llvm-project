@@ -330,6 +330,10 @@ enum NodeType : unsigned {
   // result being sign extended to 64 bit. These saturate out of range inputs.
   STRICT_FCVT_W_RV64 = ISD::FIRST_TARGET_STRICTFP_OPCODE,
   STRICT_FCVT_WU_RV64,
+  STRICT_FADD_VL,
+  STRICT_FSUB_VL,
+  STRICT_FMUL_VL,
+  STRICT_FDIV_VL,
   STRICT_FP_EXTEND_VL,
 
   // WARNING: Do not add anything in the end unless you want the node to
@@ -486,6 +490,14 @@ public:
 
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
+
+  bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
+                            bool MathUsed) const override {
+    if (VT == MVT::i8 || VT == MVT::i16)
+      return false;
+
+    return TargetLowering::shouldFormOverflowOp(Opcode, VT, MathUsed);
+  }
 
   bool convertSetCCLogicToBitwiseLogic(EVT VT) const override {
     return VT.isScalarInteger();

@@ -225,11 +225,9 @@ static unsigned getMaxLoopDepth(ArrayRef<Operation *> srcOps,
       unsigned numCommonLoops =
           getNumCommonSurroundingLoops(*srcOpInst, *dstOpInst);
       for (unsigned d = 1; d <= numCommonLoops + 1; ++d) {
-        FlatAffineValueConstraints dependenceConstraints;
         // TODO: Cache dependence analysis results, check cache here.
-        DependenceResult result = checkMemrefAccessDependence(
-            srcAccess, dstAccess, d, &dependenceConstraints,
-            /*dependenceComponents=*/nullptr);
+        DependenceResult result =
+            checkMemrefAccessDependence(srcAccess, dstAccess, d);
         if (hasDependence(result)) {
           // Store minimum loop depth and break because we want the min 'd' at
           // which there is a dependence.

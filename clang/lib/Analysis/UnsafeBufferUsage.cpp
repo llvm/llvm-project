@@ -9,8 +9,8 @@
 #include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/SmallVector.h"
 #include <memory>
 #include <optional>
@@ -113,13 +113,14 @@ private:
 
 AST_MATCHER_P(Stmt, forEveryDescendant, internal::Matcher<Stmt>, innerMatcher) {
   const DynTypedMatcher &DTM = static_cast<DynTypedMatcher>(innerMatcher);
-  
-  MatchDescendantVisitor Visitor(&DTM, Finder, Builder, ASTMatchFinder::BK_All);  
+
+  MatchDescendantVisitor Visitor(&DTM, Finder, Builder, ASTMatchFinder::BK_All);
   return Visitor.findMatch(DynTypedNode::create(Node));
 }
 
 // Matches a `Stmt` node iff the node is in a safe-buffer opt-out region
-AST_MATCHER_P(Stmt, notInSafeBufferOptOut, const UnsafeBufferUsageHandler *, Handler) {
+AST_MATCHER_P(Stmt, notInSafeBufferOptOut, const UnsafeBufferUsageHandler *,
+              Handler) {
   return !Handler->isSafeBufferOptOut(Node.getBeginLoc());
 }
 
@@ -130,7 +131,7 @@ AST_MATCHER_P(CastExpr, castSubExpr, internal::Matcher<Expr>, innerMatcher) {
 // Returns a matcher that matches any expression 'e' such that `innerMatcher`
 // matches 'e' and 'e' is in an Unspecified Lvalue Context.
 static auto isInUnspecifiedLvalueContext(internal::Matcher<Expr> innerMatcher) {
-// clang-format off
+  // clang-format off
   return
     expr(anyOf(
       implicitCastExpr(
@@ -331,7 +332,7 @@ public:
               anyOf(hasPointerType(), hasArrayType()))),
             unless(hasIndex(integerLiteral(equals(0)))))
             .bind(ArraySubscrTag));
-      // clang-format on
+    // clang-format on
   }
 
   const ArraySubscriptExpr *getBaseStmt() const override { return ASE; }
@@ -354,10 +355,10 @@ class PointerArithmeticGadget : public WarningGadget {
   static constexpr const char *const PointerArithmeticTag = "ptrAdd";
   static constexpr const char *const PointerArithmeticPointerTag = "ptrAddPtr";
   const BinaryOperator *PA; // pointer arithmetic expression
-  const Expr * Ptr;         // the pointer expression in `PA`
+  const Expr *Ptr;          // the pointer expression in `PA`
 
 public:
-    PointerArithmeticGadget(const MatchFinder::MatchResult &Result)
+  PointerArithmeticGadget(const MatchFinder::MatchResult &Result)
       : WarningGadget(Kind::PointerArithmetic),
         PA(Result.Nodes.getNodeAs<BinaryOperator>(PointerArithmeticTag)),
         Ptr(Result.Nodes.getNodeAs<Expr>(PointerArithmeticPointerTag)) {}
@@ -367,43 +368,42 @@ public:
   }
 
   static Matcher matcher() {
-    auto HasIntegerType = anyOf(
-          hasType(isInteger()), hasType(enumType()));
-    auto PtrAtRight = allOf(hasOperatorName("+"),
-                            hasRHS(expr(hasPointerType()).bind(PointerArithmeticPointerTag)),
-                            hasLHS(HasIntegerType));
-    auto PtrAtLeft = allOf(
-           anyOf(hasOperatorName("+"), hasOperatorName("-"),
-                 hasOperatorName("+="), hasOperatorName("-=")),
-           hasLHS(expr(hasPointerType()).bind(PointerArithmeticPointerTag)),
-           hasRHS(HasIntegerType));
+    auto HasIntegerType = anyOf(hasType(isInteger()), hasType(enumType()));
+    auto PtrAtRight =
+        allOf(hasOperatorName("+"),
+              hasRHS(expr(hasPointerType()).bind(PointerArithmeticPointerTag)),
+              hasLHS(HasIntegerType));
+    auto PtrAtLeft =
+        allOf(anyOf(hasOperatorName("+"), hasOperatorName("-"),
+                    hasOperatorName("+="), hasOperatorName("-=")),
+              hasLHS(expr(hasPointerType()).bind(PointerArithmeticPointerTag)),
+              hasRHS(HasIntegerType));
 
-    return stmt(binaryOperator(anyOf(PtrAtLeft, PtrAtRight)).bind(PointerArithmeticTag));
+    return stmt(binaryOperator(anyOf(PtrAtLeft, PtrAtRight))
+                    .bind(PointerArithmeticTag));
   }
 
   const Stmt *getBaseStmt() const override { return PA; }
 
   DeclUseList getClaimedVarUseSites() const override {
-    if (const auto *DRE =
-            dyn_cast<DeclRefExpr>(Ptr->IgnoreParenImpCasts())) {
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(Ptr->IgnoreParenImpCasts())) {
       return {DRE};
     }
 
     return {};
   }
   // FIXME: pointer adding zero should be fine
-  //FIXME: this gadge will need a fix-it
+  // FIXME: this gadge will need a fix-it
 };
-
 
 /// A call of a function or method that performs unchecked buffer operations
 /// over one of its pointer parameters.
 class UnsafeBufferUsageAttrGadget : public WarningGadget {
-    constexpr static const char *const OpTag = "call_expr";
-    const CallExpr *Op;
+  constexpr static const char *const OpTag = "call_expr";
+  const CallExpr *Op;
 
 public:
-    UnsafeBufferUsageAttrGadget(const MatchFinder::MatchResult &Result)
+  UnsafeBufferUsageAttrGadget(const MatchFinder::MatchResult &Result)
       : WarningGadget(Kind::UnsafeBufferUsageAttr),
         Op(Result.Nodes.getNodeAs<CallExpr>(OpTag)) {}
 
@@ -413,22 +413,20 @@ public:
 
   static Matcher matcher() {
     return stmt(callExpr(callee(functionDecl(hasAttr(attr::UnsafeBufferUsage))))
-                          .bind(OpTag));
+                    .bind(OpTag));
   }
   const Stmt *getBaseStmt() const override { return Op; }
 
-  DeclUseList getClaimedVarUseSites() const override {
-    return {};
-  }
+  DeclUseList getClaimedVarUseSites() const override { return {}; }
 };
-  
 
 // Represents expressions of the form `DRE[*]` in the Unspecified Lvalue
 // Context (see `isInUnspecifiedLvalueContext`).
 // Note here `[]` is the built-in subscript operator.
 class ULCArraySubscriptGadget : public FixableGadget {
 private:
-  static constexpr const char *const ULCArraySubscriptTag = "ArraySubscriptUnderULC";
+  static constexpr const char *const ULCArraySubscriptTag =
+      "ArraySubscriptUnderULC";
   const ArraySubscriptExpr *Node;
 
 public:
@@ -457,7 +455,8 @@ public:
   virtual const Stmt *getBaseStmt() const override { return Node; }
 
   virtual DeclUseList getClaimedVarUseSites() const override {
-    if (const auto *DRE = dyn_cast<DeclRefExpr>(Node->getBase()->IgnoreImpCasts())) {
+    if (const auto *DRE =
+            dyn_cast<DeclRefExpr>(Node->getBase()->IgnoreImpCasts())) {
       return {DRE};
     }
     return {};
@@ -530,11 +529,11 @@ namespace {
 class Strategy {
 public:
   enum class Kind {
-    Wontfix,    // We don't plan to emit a fixit for this variable.
-    Span,       // We recommend replacing the variable with std::span.
-    Iterator,   // We recommend replacing the variable with std::span::iterator.
-    Array,      // We recommend replacing the variable with std::array.
-    Vector      // We recommend replacing the variable with std::vector.
+    Wontfix,  // We don't plan to emit a fixit for this variable.
+    Span,     // We recommend replacing the variable with std::span.
+    Iterator, // We recommend replacing the variable with std::span::iterator.
+    Array,    // We recommend replacing the variable with std::array.
+    Vector    // We recommend replacing the variable with std::vector.
   };
 
 private:
@@ -547,9 +546,7 @@ public:
   Strategy(const Strategy &) = delete; // Let's avoid copies.
   Strategy(Strategy &&) = default;
 
-  void set(const VarDecl *VD, Kind K) {
-    Map[VD] = K;
-  }
+  void set(const VarDecl *VD, Kind K) { Map[VD] = K; }
 
   Kind lookup(const VarDecl *VD) const {
     auto I = Map.find(VD);
@@ -593,17 +590,17 @@ findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler) {
       // Figure out which matcher we've found, and call the appropriate
       // subclass constructor.
       // FIXME: Can we do this more logarithmically?
-#define FIXABLE_GADGET(name)                                                           \
-      if (Result.Nodes.getNodeAs<Stmt>(#name)) {                               \
-        FixableGadgets.push_back(std::make_unique<name ## Gadget>(Result));           \
-        NEXT;                                                                  \
-      }
+#define FIXABLE_GADGET(name)                                                   \
+  if (Result.Nodes.getNodeAs<Stmt>(#name)) {                                   \
+    FixableGadgets.push_back(std::make_unique<name##Gadget>(Result));          \
+    NEXT;                                                                      \
+  }
 #include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
-#define WARNING_GADGET(name)                                                           \
-      if (Result.Nodes.getNodeAs<Stmt>(#name)) {                               \
-        WarningGadgets.push_back(std::make_unique<name ## Gadget>(Result));           \
-        NEXT;                                                                  \
-      }
+#define WARNING_GADGET(name)                                                   \
+  if (Result.Nodes.getNodeAs<Stmt>(#name)) {                                   \
+    WarningGadgets.push_back(std::make_unique<name##Gadget>(Result));          \
+    NEXT;                                                                      \
+  }
 #include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
 
       assert(numFound >= 1 && "Gadgets not found in match result!");
@@ -657,11 +654,24 @@ findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler) {
     }
   }
 
-  return {std::move(CB.FixableGadgets), std::move(CB.WarningGadgets), std::move(CB.Tracker)};
+  return {std::move(CB.FixableGadgets), std::move(CB.WarningGadgets),
+          std::move(CB.Tracker)};
 }
 
+// Compares AST nodes by source locations.
+template <typename NodeTy> struct CompareNode {
+  bool operator()(const NodeTy *N1, const NodeTy *N2) const {
+    return N1->getBeginLoc().getRawEncoding() <
+           N2->getBeginLoc().getRawEncoding();
+  }
+};
+
 struct WarningGadgetSets {
-  std::map<const VarDecl *, std::set<std::unique_ptr<WarningGadget>>> byVar;
+  std::map<const VarDecl *, std::set<std::unique_ptr<WarningGadget>>,
+           // To keep keys sorted by their locations in the map so that the
+           // order is deterministic:
+           CompareNode<VarDecl>>
+      byVar;
   // These Gadgets are not related to pointer variables (e. g. temporaries).
   llvm::SmallVector<std::unique_ptr<WarningGadget>, 16> noVar;
 };
@@ -709,8 +719,8 @@ groupFixablesByVar(FixableGadgetList &&AllFixableOperations) {
   return FixablesForUnsafeVars;
 }
 
-bool clang::internal::anyConflict(
-    const SmallVectorImpl<FixItHint> &FixIts, const SourceManager &SM) {
+bool clang::internal::anyConflict(const SmallVectorImpl<FixItHint> &FixIts,
+                                  const SourceManager &SM) {
   // A simple interval overlap detection algorithm.  Sorts all ranges by their
   // begin location then finds the first overlap in one pass.
   std::vector<const FixItHint *> All; // a copy of `FixIts`
@@ -742,7 +752,8 @@ bool clang::internal::anyConflict(
 
 std::optional<FixItList>
 ULCArraySubscriptGadget::getFixits(const Strategy &S) const {
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(Node->getBase()->IgnoreImpCasts()))
+  if (const auto *DRE =
+          dyn_cast<DeclRefExpr>(Node->getBase()->IgnoreImpCasts()))
     if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
       switch (S.lookup(VD)) {
       case Strategy::Kind::Span: {
@@ -793,7 +804,7 @@ static SourceLocation getPastLoc(const NodeTy *Node, const SourceManager &SM,
 
 // Return text representation of an `Expr`.
 static StringRef getExprText(const Expr *E, const SourceManager &SM,
-                               const LangOptions &LangOpts) {
+                             const LangOptions &LangOpts) {
   SourceLocation LastCharLoc = getPastLoc(E, SM, LangOpts);
 
   return Lexer::getSourceText(
@@ -850,8 +861,8 @@ populateInitializerFixItWithSpan(const Expr *Init, const ASTContext &Ctx,
       if (AddrOfExpr->getOpcode() == UnaryOperatorKind::UO_AddrOf &&
           isa_and_present<DeclRefExpr>(AddrOfExpr->getSubExpr()))
         ExtentText = One;
-    // TODO: we can handle more cases, e.g., `&a[0]`, `&a`, `std::addressof`, and explicit casting, etc.
-    // etc.
+    // TODO: we can handle more cases, e.g., `&a[0]`, `&a`, `std::addressof`,
+    // and explicit casting, etc. etc.
   }
 
   SmallString<32> StrBuffer{};
@@ -918,7 +929,7 @@ static FixItList fixVariableWithSpan(const VarDecl *VD,
   assert(DS && "Fixing non-local variables not implemented yet!");
   if (!DS->isSingleDecl()) {
     // FIXME: to support handling multiple `VarDecl`s in a single `DeclStmt`
-    return{};
+    return {};
   }
   // Currently DS is an unused variable but we'll need it when
   // non-single decls are implemented, where the pointee type name
@@ -969,7 +980,8 @@ getFixIts(FixableGadgetSets &FixablesForUnsafeVars, const Strategy &S,
           UnsafeBufferUsageHandler &Handler) {
   std::map<const VarDecl *, FixItList> FixItsForVariable;
   for (const auto &[VD, Fixables] : FixablesForUnsafeVars.byVar) {
-    FixItsForVariable[VD] = fixVariable(VD, S.lookup(VD), Tracker, Ctx, Handler);
+    FixItsForVariable[VD] =
+        fixVariable(VD, S.lookup(VD), Tracker, Ctx, Handler);
     // If we fail to produce Fix-It for the declaration we have to skip the
     // variable entirely.
     if (FixItsForVariable[VD].empty()) {
@@ -999,7 +1011,7 @@ getFixIts(FixableGadgetSets &FixablesForUnsafeVars, const Strategy &S,
     // a fix-it conflicts with another one
     if (overlapWithMacro(FixItsForVariable[VD]) ||
         clang::internal::anyConflict(FixItsForVariable[VD],
-                                     Ctx.getSourceManager())) {      
+                                     Ctx.getSourceManager())) {
       FixItsForVariable.erase(VD);
     }
   }

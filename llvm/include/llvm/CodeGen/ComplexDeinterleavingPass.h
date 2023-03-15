@@ -38,7 +38,8 @@ enum class ComplexDeinterleavingOperation {
   CMulPartial,
   // The following 'operations' are used to represent internal states. Backends
   // are not expected to try and support these in any capacity.
-  Shuffle
+  Shuffle,
+  Symmetric
 };
 
 enum class ComplexDeinterleavingRotation {

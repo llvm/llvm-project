@@ -563,7 +563,7 @@ static Value *rewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
   // Create all the other instructions.
   for (Value *Val : Explored) {
 
-    if (NewInsts.find(Val) != NewInsts.end())
+    if (NewInsts.contains(Val))
       continue;
 
     if (auto *CI = dyn_cast<CastInst>(Val)) {
@@ -611,7 +611,7 @@ static Value *rewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
       for (unsigned I = 0, E = PHI->getNumIncomingValues(); I < E; ++I) {
         Value *NewIncoming = PHI->getIncomingValue(I);
 
-        if (NewInsts.find(NewIncoming) != NewInsts.end())
+        if (NewInsts.contains(NewIncoming))
           NewIncoming = NewInsts[NewIncoming];
 
         NewPhi->addIncoming(NewIncoming, PHI->getIncomingBlock(I));
@@ -5868,8 +5868,7 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
     return BinaryOperator::CreateOr(Builder.CreateIsNull(X), Y);
 
   const APInt *C;
-  if (match(I.getOperand(0),
-            m_OneUse(m_c_Add(m_ZExt(m_Value(X)), m_SExt(m_Value(Y))))) &&
+  if (match(I.getOperand(0), m_c_Add(m_ZExt(m_Value(X)), m_SExt(m_Value(Y)))) &&
       match(I.getOperand(1), m_APInt(C)) &&
       X->getType()->isIntOrIntVectorTy(1) &&
       Y->getType()->isIntOrIntVectorTy(1)) {
@@ -5885,38 +5884,40 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
         (C->slt(MinusOne) && Pred == ICmpInst::ICMP_SGT))
       return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
 
-    APInt NewC = *C;
-    // canonicalize predicate to eq/ne
-    if ((*C == Zero && Pred == ICmpInst::ICMP_SLT) ||
-        (*C != Zero && *C != MinusOne && Pred == ICmpInst::ICMP_UGT)) {
-      // x s< 0 in [-1, 1] --> x == -1
-      // x u> 1(or any const !=0 !=-1) in [-1, 1] --> x == -1
-      NewC = MinusOne;
-      Pred = ICmpInst::ICMP_EQ;
-    } else if ((*C == MinusOne && Pred == ICmpInst::ICMP_SGT) ||
-               (*C != Zero && *C != One && Pred == ICmpInst::ICMP_ULT)) {
-      // x s> -1 in [-1, 1] --> x != -1
-      // x u< -1 in [-1, 1] --> x != -1
-      Pred = ICmpInst::ICMP_NE;
-    } else if (*C == Zero && Pred == ICmpInst::ICMP_SGT) {
-      // x s> 0 in [-1, 1] --> x == 1
-      NewC = One;
-      Pred = ICmpInst::ICMP_EQ;
-    } else if (*C == One && Pred == ICmpInst::ICMP_SLT) {
-      // x s< 1 in [-1, 1] --> x != 1
-      Pred = ICmpInst::ICMP_NE;
-    }
+    if (I.getOperand(0)->hasOneUse()) {
+      APInt NewC = *C;
+      // canonicalize predicate to eq/ne
+      if ((*C == Zero && Pred == ICmpInst::ICMP_SLT) ||
+          (*C != Zero && *C != MinusOne && Pred == ICmpInst::ICMP_UGT)) {
+        // x s< 0 in [-1, 1] --> x == -1
+        // x u> 1(or any const !=0 !=-1) in [-1, 1] --> x == -1
+        NewC = MinusOne;
+        Pred = ICmpInst::ICMP_EQ;
+      } else if ((*C == MinusOne && Pred == ICmpInst::ICMP_SGT) ||
+                 (*C != Zero && *C != One && Pred == ICmpInst::ICMP_ULT)) {
+        // x s> -1 in [-1, 1] --> x != -1
+        // x u< -1 in [-1, 1] --> x != -1
+        Pred = ICmpInst::ICMP_NE;
+      } else if (*C == Zero && Pred == ICmpInst::ICMP_SGT) {
+        // x s> 0 in [-1, 1] --> x == 1
+        NewC = One;
+        Pred = ICmpInst::ICMP_EQ;
+      } else if (*C == One && Pred == ICmpInst::ICMP_SLT) {
+        // x s< 1 in [-1, 1] --> x != 1
+        Pred = ICmpInst::ICMP_NE;
+      }
 
-    if (NewC == MinusOne) {
-      if (Pred == ICmpInst::ICMP_EQ)
-        return BinaryOperator::CreateAnd(Builder.CreateNot(X), Y);
-      if (Pred == ICmpInst::ICMP_NE)
-        return BinaryOperator::CreateOr(X, Builder.CreateNot(Y));
-    } else if (NewC == One) {
-      if (Pred == ICmpInst::ICMP_EQ)
-        return BinaryOperator::CreateAnd(X, Builder.CreateNot(Y));
-      if (Pred == ICmpInst::ICMP_NE)
-        return BinaryOperator::CreateOr(Builder.CreateNot(X), Y);
+      if (NewC == MinusOne) {
+        if (Pred == ICmpInst::ICMP_EQ)
+          return BinaryOperator::CreateAnd(Builder.CreateNot(X), Y);
+        if (Pred == ICmpInst::ICMP_NE)
+          return BinaryOperator::CreateOr(X, Builder.CreateNot(Y));
+      } else if (NewC == One) {
+        if (Pred == ICmpInst::ICMP_EQ)
+          return BinaryOperator::CreateAnd(X, Builder.CreateNot(Y));
+        if (Pred == ICmpInst::ICMP_NE)
+          return BinaryOperator::CreateOr(Builder.CreateNot(X), Y);
+      }
     }
   }
 

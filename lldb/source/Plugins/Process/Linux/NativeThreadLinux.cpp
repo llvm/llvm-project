@@ -294,19 +294,19 @@ void NativeThreadLinux::SetStoppedBySignal(uint32_t signo,
     case SIGBUS:
     case SIGFPE:
     case SIGILL:
-      const auto reason = GetCrashReason(*info);
-      m_stop_description = GetCrashReasonString(reason, *info);
-
-      if (reason == CrashReason::eSyncTagCheckFault) {
-        AnnotateSyncTagCheckFault(info);
-      }
-
+      m_stop_description = GetCrashReasonString(*info);
+#ifndef SEGV_MTESERR
+#define SEGV_MTESERR 9
+#endif
+      if (info->si_signo == SIGSEGV && info->si_code == SEGV_MTESERR)
+        AnnotateSyncTagCheckFault(
+            reinterpret_cast<lldb::addr_t>(info->si_addr));
       break;
     }
   }
 }
 
-void NativeThreadLinux::AnnotateSyncTagCheckFault(const siginfo_t *info) {
+void NativeThreadLinux::AnnotateSyncTagCheckFault(lldb::addr_t fault_addr) {
   int32_t allocation_tag_type = 0;
   switch (GetProcess().GetArchitecture().GetMachine()) {
   // aarch64_32 deliberately not here because there's no 32 bit MTE
@@ -331,7 +331,6 @@ void NativeThreadLinux::AnnotateSyncTagCheckFault(const siginfo_t *info) {
   m_stop_description.pop_back();
 
   std::stringstream ss;
-  lldb::addr_t fault_addr = reinterpret_cast<uintptr_t>(info->si_addr);
   std::unique_ptr<MemoryTagManager> manager(std::move(details->manager));
 
   ss << " logical tag: 0x" << std::hex << manager->GetLogicalTag(fault_addr);

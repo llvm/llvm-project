@@ -1593,7 +1593,7 @@ void Sema::PushOnScopeChains(NamedDecl *D, Scope *S, bool AddToContext) {
 }
 
 bool Sema::isDeclInScope(NamedDecl *D, DeclContext *Ctx, Scope *S,
-                         bool AllowInlineNamespace) {
+                         bool AllowInlineNamespace) const {
   return IdResolver.isDeclInScope(D, Ctx, S, AllowInlineNamespace);
 }
 
@@ -7674,7 +7674,12 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
     // If we have any template parameter lists that don't directly belong to
     // the variable (matching the scope specifier), store them.
-    unsigned VDTemplateParamLists = TemplateParams ? 1 : 0;
+    // An explicit variable template specialization does not own any template
+    // parameter lists.
+    bool IsExplicitSpecialization =
+        IsVariableTemplateSpecialization && !IsPartialSpecialization;
+    unsigned VDTemplateParamLists =
+        (TemplateParams && !IsExplicitSpecialization) ? 1 : 0;
     if (TemplateParamLists.size() > VDTemplateParamLists)
       NewVD->setTemplateParameterListsInfo(
           Context, TemplateParamLists.drop_back(VDTemplateParamLists));
@@ -9273,6 +9278,12 @@ static OpenCLParamType getOpenCLKernelParameterType(Sema &S, QualType PT) {
           ParamKind == InvalidKernelParam)
         return ParamKind;
 
+      // OpenCL v3.0 s6.11.a:
+      // A restriction to pass pointers to pointers only applies to OpenCL C
+      // v1.2 or below.
+      if (S.getLangOpts().getOpenCLCompatibleVersion() > 120)
+        return ValidKernelParam;
+
       return PtrPtrKernelParam;
     }
 
@@ -9299,6 +9310,11 @@ static OpenCLParamType getOpenCLKernelParameterType(Sema &S, QualType PT) {
         !IsStandardLayoutType)
       return InvalidKernelParam;
     }
+
+    // OpenCL v1.2 s6.9.p:
+    // A restriction to pass pointers only applies to OpenCL C v1.2 or below.
+    if (S.getLangOpts().getOpenCLCompatibleVersion() > 120)
+      return ValidKernelParam;
 
     return PtrKernelParam;
   }
@@ -9366,13 +9382,8 @@ static void checkIsValidOpenCLKernelParameter(
     // OpenCL v3.0 s6.11.a:
     // A kernel function argument cannot be declared as a pointer to a pointer
     // type. [...] This restriction only applies to OpenCL C 1.2 or below.
-    if (S.getLangOpts().getOpenCLCompatibleVersion() <= 120) {
-      S.Diag(Param->getLocation(), diag::err_opencl_ptrptr_kernel_param);
-      D.setInvalidType();
-      return;
-    }
-
-    ValidTypes.insert(PT.getTypePtr());
+    S.Diag(Param->getLocation(), diag::err_opencl_ptrptr_kernel_param);
+    D.setInvalidType();
     return;
 
   case InvalidAddrSpacePtrKernelParam:
@@ -9490,7 +9501,8 @@ static void checkIsValidOpenCLKernelParameter(
       // OpenCL v1.2 s6.9.p:
       // Arguments to kernel functions that are declared to be a struct or union
       // do not allow OpenCL objects to be passed as elements of the struct or
-      // union.
+      // union. This restriction was lifted in OpenCL v2.0 with the introduction
+      // of SVM.
       if (ParamType == PtrKernelParam || ParamType == PtrPtrKernelParam ||
           ParamType == InvalidAddrSpacePtrKernelParam) {
         S.Diag(Param->getLocation(),

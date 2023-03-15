@@ -850,6 +850,7 @@ cc_library(
         "//mlir:Pass",
         "//mlir:SCFDialect",
         "//mlir:Support",
+        "//mlir:TensorDialect",
         "//mlir:TransformUtils",
         "//mlir:VectorDialect",
         "//mlir:VectorToSCF",

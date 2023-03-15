@@ -49,6 +49,7 @@
 #include <__utility/in_place.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
+#include <__verbose_abort>
 #include <cstdlib> // for std::abort
 #include <initializer_list>
 
@@ -68,7 +69,7 @@ _LIBCPP_HIDE_FROM_ABI void __throw_bad_expected_access(_Arg&& __arg) {
   throw bad_expected_access<_Err>(std::forward<_Arg>(__arg));
 #  else
   (void)__arg;
-  std::abort();
+  std::__libcpp_verbose_abort("bad_expected_access was thrown in -fno-exceptions mode");
 #  endif
 }
 

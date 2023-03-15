@@ -1087,16 +1087,54 @@ static mlir::Value genLibCall(fir::FirOpBuilder &builder, mlir::Location loc,
   LLVM_DEBUG(llvm::dbgs() << "Generating '" << libFuncName
                           << "' call with type ";
              libFuncType.dump(); llvm::dbgs() << "\n");
-  mlir::func::FuncOp funcOp =
-      builder.addNamedFunction(loc, libFuncName, libFuncType);
-  // C-interoperability rules apply to these library functions.
-  funcOp->setAttr(fir::getSymbolAttrName(),
-                  mlir::StringAttr::get(builder.getContext(), libFuncName));
-  // TODO: ensure 'strictfp' setting on the call for "precise/strict"
-  //       FP mode. Set appropriate Fast-Math Flags otherwise.
-  // TODO: we should also mark as many libm function as possible
-  //       with 'pure' attribute (of course, not in strict FP mode).
-  auto libCall = builder.create<fir::CallOp>(loc, funcOp, args);
+  mlir::func::FuncOp funcOp = builder.getNamedFunction(libFuncName);
+
+  if (!funcOp) {
+    funcOp = builder.addNamedFunction(loc, libFuncName, libFuncType);
+    // C-interoperability rules apply to these library functions.
+    funcOp->setAttr(fir::getSymbolAttrName(),
+                    mlir::StringAttr::get(builder.getContext(), libFuncName));
+    // Set fir.runtime attribute to distinguish the function that
+    // was just created from user functions with the same name.
+    funcOp->setAttr(fir::FIROpsDialect::getFirRuntimeAttrName(),
+                    builder.getUnitAttr());
+    auto libCall = builder.create<fir::CallOp>(loc, funcOp, args);
+    // TODO: ensure 'strictfp' setting on the call for "precise/strict"
+    //       FP mode. Set appropriate Fast-Math Flags otherwise.
+    // TODO: we should also mark as many libm function as possible
+    //       with 'pure' attribute (of course, not in strict FP mode).
+    LLVM_DEBUG(libCall.dump(); llvm::dbgs() << "\n");
+    return libCall.getResult(0);
+  }
+
+  // The function with the same name already exists.
+  fir::CallOp libCall;
+  mlir::Type soughtFuncType = funcOp.getFunctionType();
+
+  if (soughtFuncType == libFuncType) {
+    libCall = builder.create<fir::CallOp>(loc, funcOp, args);
+  } else {
+    // A function with the same name might have been declared
+    // before (e.g. with an explicit interface and a binding label).
+    // It is in general incorrect to use the same definition for the library
+    // call, but we have no other options. Type cast the function to match
+    // the requested signature and generate an indirect call to avoid
+    // later failures caused by the signature mismatch.
+    LLVM_DEBUG(mlir::emitWarning(
+        loc, llvm::Twine("function signature mismatch for '") +
+                 llvm::Twine(libFuncName) +
+                 llvm::Twine("' may lead to undefined behavior.")));
+    mlir::SymbolRefAttr funcSymbolAttr = builder.getSymbolRefAttr(libFuncName);
+    mlir::Value funcPointer =
+        builder.create<fir::AddrOfOp>(loc, soughtFuncType, funcSymbolAttr);
+    funcPointer = builder.createConvert(loc, libFuncType, funcPointer);
+
+    llvm::SmallVector<mlir::Value, 3> operands{funcPointer};
+    operands.append(args.begin(), args.end());
+    libCall = builder.create<fir::CallOp>(loc, libFuncType.getResults(),
+                                          nullptr, operands);
+  }
+
   LLVM_DEBUG(libCall.dump(); llvm::dbgs() << "\n");
   return libCall.getResult(0);
 }

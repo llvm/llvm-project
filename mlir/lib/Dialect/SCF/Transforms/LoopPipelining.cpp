@@ -62,13 +62,13 @@ public:
   bool initializeLoopInfo(ForOp op, const PipeliningOption &options);
   /// Emits the prologue, this creates `maxStage - 1` part which will contain
   /// operations from stages [0; i], where i is the part index.
-  void emitPrologue(PatternRewriter &rewriter);
+  void emitPrologue(RewriterBase &rewriter);
   /// Gather liverange information for Values that are used in a different stage
   /// than its definition.
   llvm::MapVector<Value, LiverangeInfo> analyzeCrossStageValues();
   scf::ForOp createKernelLoop(
       const llvm::MapVector<Value, LiverangeInfo> &crossStageValues,
-      PatternRewriter &rewriter,
+      RewriterBase &rewriter,
       llvm::DenseMap<std::pair<Value, unsigned>, unsigned> &loopArgMap);
   /// Emits the pipelined kernel. This clones loop operations following user
   /// order and remaps operands defined in a different stage as their use.
@@ -76,10 +76,10 @@ public:
       scf::ForOp newForOp,
       const llvm::MapVector<Value, LiverangeInfo> &crossStageValues,
       const llvm::DenseMap<std::pair<Value, unsigned>, unsigned> &loopArgMap,
-      PatternRewriter &rewriter);
+      RewriterBase &rewriter);
   /// Emits the epilogue, this creates `maxStage - 1` part which will contain
   /// operations from stages [i; maxStage], where i is the part index.
-  llvm::SmallVector<Value> emitEpilogue(PatternRewriter &rewriter);
+  llvm::SmallVector<Value> emitEpilogue(RewriterBase &rewriter);
 };
 
 bool LoopPipelinerInternal::initializeLoopInfo(
@@ -116,7 +116,7 @@ bool LoopPipelinerInternal::initializeLoopInfo(
 
   // All operations need to have a stage.
   for (Operation &op : forOp.getBody()->without_terminator()) {
-    if (stages.find(&op) == stages.end()) {
+    if (!stages.contains(&op)) {
       op.emitOpError("not assigned a pipeline stage");
       return false;
     }
@@ -144,7 +144,7 @@ bool LoopPipelinerInternal::initializeLoopInfo(
   if (llvm::any_of(forOp.getBody()->getTerminator()->getOperands(),
                    [this](Value operand) {
                      Operation *def = operand.getDefiningOp();
-                     return !def || stages.find(def) == stages.end();
+                     return !def || !stages.contains(def);
                    }))
     return false;
   annotateFn = options.annotateFn;
@@ -172,7 +172,7 @@ cloneAndUpdateOperands(RewriterBase &rewriter, Operation *op,
   return clone;
 }
 
-void LoopPipelinerInternal::emitPrologue(PatternRewriter &rewriter) {
+void LoopPipelinerInternal::emitPrologue(RewriterBase &rewriter) {
   // Initialize the iteration argument to the loop initiale values.
   for (BlockArgument &arg : forOp.getRegionIterArgs()) {
     OpOperand &operand = forOp.getOpOperandForRegionIterArg(arg);
@@ -244,7 +244,7 @@ LoopPipelinerInternal::analyzeCrossStageValues() {
 scf::ForOp LoopPipelinerInternal::createKernelLoop(
     const llvm::MapVector<Value, LoopPipelinerInternal::LiverangeInfo>
         &crossStageValues,
-    PatternRewriter &rewriter,
+    RewriterBase &rewriter,
     llvm::DenseMap<std::pair<Value, unsigned>, unsigned> &loopArgMap) {
   // Creates the list of initial values associated to values used across
   // stages. The initial values come from the prologue created above.
@@ -299,7 +299,7 @@ void LoopPipelinerInternal::createKernel(
     const llvm::MapVector<Value, LoopPipelinerInternal::LiverangeInfo>
         &crossStageValues,
     const llvm::DenseMap<std::pair<Value, unsigned>, unsigned> &loopArgMap,
-    PatternRewriter &rewriter) {
+    RewriterBase &rewriter) {
   valueMapping.clear();
 
   // Create the kernel, we clone instruction based on the order given by
@@ -380,7 +380,7 @@ void LoopPipelinerInternal::createKernel(
     }
 
     if (predicates[useStage]) {
-      newOp = predicateFn(newOp, predicates[useStage], rewriter);
+      newOp = predicateFn(rewriter, newOp, predicates[useStage]);
       // Remap the results to the new predicated one.
       for (auto values : llvm::zip(op->getResults(), newOp->getResults()))
         mapping.map(std::get<0>(values), std::get<1>(values));
@@ -430,7 +430,7 @@ void LoopPipelinerInternal::createKernel(
 }
 
 llvm::SmallVector<Value>
-LoopPipelinerInternal::emitEpilogue(PatternRewriter &rewriter) {
+LoopPipelinerInternal::emitEpilogue(RewriterBase &rewriter) {
   llvm::SmallVector<Value> returnValues(forOp->getNumResults());
   // Emit different versions of the induction variable. They will be
   // removed by dead code if not used.
@@ -495,9 +495,8 @@ void LoopPipelinerInternal::setValueMapping(Value key, Value el, int64_t idx) {
 
 } // namespace
 
-FailureOr<ForOp> ForLoopPipeliningPattern::returningMatchAndRewrite(
-    ForOp forOp, PatternRewriter &rewriter) const {
-
+FailureOr<ForOp> mlir::scf::pipelineForLoop(RewriterBase &rewriter, ForOp forOp,
+                                            const PipeliningOption &options) {
   LoopPipelinerInternal pipeliner;
   if (!pipeliner.initializeLoopInfo(forOp, options))
     return failure();

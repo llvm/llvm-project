@@ -866,7 +866,7 @@ MachineLICMBase::calcRegisterCost(const MachineInstr *MI, bool ConsiderSeen,
       continue;
     const int *PS = TRI->getRegClassPressureSets(RC);
     for (; *PS != -1; ++PS) {
-      if (Cost.find(*PS) == Cost.end())
+      if (!Cost.contains(*PS))
         Cost[*PS] = RCCost;
       else
         Cost[*PS] += RCCost;

@@ -464,17 +464,9 @@ void MCPlusBuilder::initAliases() {
   }
 
   // Propagate smaller alias info upwards. Skip reg 0 (mapped to NoRegister)
-  std::queue<MCPhysReg> Worklist;
   for (MCPhysReg I = 1, E = RegInfo->getNumRegs(); I < E; ++I)
-    Worklist.push(I);
-  while (!Worklist.empty()) {
-    MCPhysReg I = Worklist.front();
-    Worklist.pop();
     for (MCSubRegIterator SI(I, RegInfo); SI.isValid(); ++SI)
       SmallerAliasMap[I] |= SmallerAliasMap[*SI];
-    for (MCSuperRegIterator SI(I, RegInfo); SI.isValid(); ++SI)
-      Worklist.push(*SI);
-  }
 
   LLVM_DEBUG({
     dbgs() << "Dumping reg alias table:\n";
@@ -491,22 +483,12 @@ void MCPlusBuilder::initAliases() {
   });
 }
 
-uint8_t MCPlusBuilder::getRegSize(MCPhysReg Reg) const {
-  // SizeMap caches a mapping of registers to their sizes
-  static std::vector<uint8_t> SizeMap;
-
-  if (SizeMap.size() > 0) {
-    return SizeMap[Reg];
-  }
-  SizeMap = std::vector<uint8_t>(RegInfo->getNumRegs());
+void MCPlusBuilder::initSizeMap() {
+  SizeMap.resize(RegInfo->getNumRegs());
   // Build size map
-  for (auto I = RegInfo->regclass_begin(), E = RegInfo->regclass_end(); I != E;
-       ++I) {
-    for (MCPhysReg Reg : *I)
-      SizeMap[Reg] = I->getSizeInBits() / 8;
-  }
-
-  return SizeMap[Reg];
+  for (auto RC : RegInfo->regclasses())
+    for (MCPhysReg Reg : RC)
+      SizeMap[Reg] = RC.getSizeInBits() / 8;
 }
 
 bool MCPlusBuilder::setOperandToSymbolRef(MCInst &Inst, int OpNum,

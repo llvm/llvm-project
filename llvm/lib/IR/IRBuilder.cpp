@@ -107,6 +107,16 @@ Value *IRBuilderBase::CreateVScale(Constant *Scaling, const Twine &Name) {
              : CreateMul(CI, Scaling);
 }
 
+Value *IRBuilderBase::CreateElementCount(Type *DstType, ElementCount EC) {
+  Constant *MinEC = ConstantInt::get(DstType, EC.getKnownMinValue());
+  return EC.isScalable() ? CreateVScale(MinEC) : MinEC;
+}
+
+Value *IRBuilderBase::CreateTypeSize(Type *DstType, TypeSize Size) {
+  Constant *MinSize = ConstantInt::get(DstType, Size.getKnownMinValue());
+  return Size.isScalable() ? CreateVScale(MinSize) : MinSize;
+}
+
 Value *IRBuilderBase::CreateStepVector(Type *DstType, const Twine &Name) {
   Type *STy = DstType->getScalarType();
   if (isa<ScalableVectorType>(DstType)) {

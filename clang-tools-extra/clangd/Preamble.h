@@ -163,6 +163,9 @@ public:
 
   static constexpr llvm::StringLiteral HeaderName = "__preamble_patch__.h";
 
+  llvm::ArrayRef<PragmaMark> marks() const;
+  const MainFileMacros &mainFileMacros() const;
+
 private:
   static PreamblePatch create(llvm::StringRef FileName,
                               const ParseInputs &Modified,
@@ -178,6 +181,9 @@ private:
   // Diags that were attached to a line preserved in Modified contents.
   std::vector<Diag> PatchedDiags;
   PreambleBounds ModifiedBounds = {0, false};
+  const PreambleData *Baseline = nullptr;
+  std::vector<PragmaMark> PatchedMarks;
+  MainFileMacros PatchedMacros;
 };
 
 } // namespace clangd

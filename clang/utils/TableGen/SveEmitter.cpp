@@ -1140,7 +1140,9 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __clang_svfloat16x4_t svfloat16x4_t;\n";
   OS << "typedef __clang_svfloat32x4_t svfloat32x4_t;\n";
   OS << "typedef __clang_svfloat64x4_t svfloat64x4_t;\n";
-  OS << "typedef __SVBool_t  svbool_t;\n\n";
+  OS << "typedef __SVBool_t  svbool_t;\n";
+  OS << "typedef __clang_svboolx2_t  svboolx2_t;\n";
+  OS << "typedef __clang_svboolx4_t  svboolx4_t;\n\n";
 
   OS << "typedef __clang_svbfloat16x2_t svbfloat16x2_t;\n";
   OS << "typedef __clang_svbfloat16x3_t svbfloat16x3_t;\n";

@@ -815,7 +815,7 @@ static void propagatePattern(std::unique_ptr<MatcherNode> &node,
         std::make_unique<SuccessNode>(list.pattern, list.root, std::move(node));
 
     // If the pattern doesn't contain this predicate, ignore it.
-  } else if (list.predicates.find(*current) == list.predicates.end()) {
+  } else if (!list.predicates.contains(*current)) {
     propagatePattern(node, list, std::next(current), end);
 
     // If the current matcher node is invalid, create a new one for this

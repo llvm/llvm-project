@@ -43,8 +43,8 @@ ASSERT_NOEXCEPT(empty.line());
 ASSERT_NOEXCEPT(empty.column());
 ASSERT_NOEXCEPT(empty.file_name());
 ASSERT_NOEXCEPT(empty.function_name());
-std::same_as<uint_least32_t> auto line   = empty.line();
-std::same_as<uint_least32_t> auto column = empty.column();
+std::same_as<std::uint_least32_t> auto line   = empty.line();
+std::same_as<std::uint_least32_t> auto column = empty.column();
 std::same_as<const char*> auto file      = empty.file_name();
 std::same_as<const char*> auto function  = empty.function_name();
 

@@ -2269,7 +2269,8 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
           "A variable with BIND(C) attribute may only appear in the specification part of a module"_err_en_US);
       context_.SetError(symbol);
     }
-    if (auto shape{evaluate::GetShape(foldingContext_, symbol)}) {
+    auto shape{evaluate::GetShape(foldingContext_, symbol)};
+    if (shape) {
       if (evaluate::GetRank(*shape) == 0) { // 18.3.4
         if (isExplicitBindC && IsAllocatableOrPointer(symbol)) {
           messages_.Say(symbol.name(),
@@ -2310,6 +2311,13 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
         // ok; F'2018 18.3.6 p2(6)
       } else if (derived || IsInteroperableIntrinsicType(*type)) {
         // F'2018 18.3.6 p2(4,5)
+      } else if (type->category() == DeclTypeSpec::Logical && IsDummy(symbol) &&
+          evaluate::GetRank(*shape) == 0) {
+        // Special exception: LOGICAL scalar dummy arguments can be converted
+        // before a call -- & after if not INTENT(IN) -- without loss of
+        // information, and are accepted by some older compilers.
+        messages_.Say(symbol.name(),
+            "A BIND(C) LOGICAL dummy argument should have the interoperable KIND=C_BOOL"_port_en_US);
       } else if (symbol.attrs().test(Attr::VALUE)) {
         messages_.Say(symbol.name(),
             "A BIND(C) VALUE dummy argument must have an interoperable type"_err_en_US);

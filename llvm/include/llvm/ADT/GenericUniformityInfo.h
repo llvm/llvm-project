@@ -36,6 +36,7 @@ public:
   using FunctionT = typename ContextT::FunctionT;
   using ValueRefT = typename ContextT::ValueRefT;
   using ConstValueRefT = typename ContextT::ConstValueRefT;
+  using UseT = typename ContextT::UseT;
   using InstructionT = typename ContextT::InstructionT;
   using DominatorTreeT = typename ContextT::DominatorTreeT;
   using ThisT = GenericUniformityInfo<ContextT>;
@@ -68,6 +69,10 @@ public:
   // a Value in LLVM IR.
   bool isUniform(const InstructionT *I) const { return !isDivergent(I); };
   bool isDivergent(const InstructionT *I) const;
+
+  /// \brief Whether \p U is divergent. Uses of a uniform value can be
+  /// divergent.
+  bool isDivergentUse(const UseT &U) const;
 
   bool hasDivergentTerminator(const BlockT &B);
 

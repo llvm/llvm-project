@@ -310,6 +310,7 @@ public:
     MaxAllocatorId++;
     // Build alias map
     initAliases();
+    initSizeMap();
   }
 
   /// Create and return target-specific MC symbolizer for the \p Function.
@@ -414,6 +415,22 @@ public:
     return Info->get(Inst.getOpcode()).isPseudo();
   }
 
+  /// Return true if the relocation type needs to be registered in the function.
+  /// These code relocations are used in disassembly to better understand code.
+  ///
+  /// For ARM, they help us decode instruction operands unambiguously, but
+  /// sometimes we might discard them because we already have the necessary
+  /// information in the instruction itself (e.g. we don't need to record CALL
+  /// relocs in ARM because we can fully decode the target from the call
+  /// operand).
+  ///
+  /// For X86, they might be used in scanExternalRefs when we want to skip
+  /// a function but still patch references inside it.
+  virtual bool shouldRecordCodeRelocation(uint64_t RelType) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   /// Creates x86 pause instruction.
   virtual void createPause(MCInst &Inst) const {
     llvm_unreachable("not implemented");
@@ -450,10 +467,11 @@ public:
   virtual MCPhysReg getX86R11() const { llvm_unreachable("not implemented"); }
 
   /// Create increment contents of target by 1 for Instrumentation
-  virtual void createInstrIncMemory(InstructionListType &Instrs,
-                                    const MCSymbol *Target, MCContext *Ctx,
-                                    bool IsLeaf) const {
+  virtual InstructionListType createInstrIncMemory(const MCSymbol *Target,
+                                                   MCContext *Ctx,
+                                                   bool IsLeaf) const {
     llvm_unreachable("not implemented");
+    return InstructionListType();
   }
 
   /// Return a register number that is guaranteed to not match with
@@ -496,15 +514,9 @@ public:
     return false;
   }
 
-  virtual bool isPrefix(const MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-    return false;
-  }
+  virtual bool isPrefix(const MCInst &Inst) const { return false; }
 
-  virtual bool isRep(const MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-    return false;
-  }
+  virtual bool isRep(const MCInst &Inst) const { return false; }
 
   virtual bool deleteREPPrefix(MCInst &Inst) const {
     llvm_unreachable("not implemented");
@@ -515,10 +527,7 @@ public:
     return Inst.getOpcode() == TargetOpcode::EH_LABEL;
   }
 
-  virtual bool isPop(const MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-    return false;
-  }
+  virtual bool isPop(const MCInst &Inst) const { return false; }
 
   /// Return true if the instruction is used to terminate an indirect branch.
   virtual bool isTerminateBranch(const MCInst &Inst) const {
@@ -555,10 +564,7 @@ public:
     return false;
   }
 
-  virtual bool isLeave(const MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-    return false;
-  }
+  virtual bool isLeave(const MCInst &Inst) const { return false; }
 
   virtual bool isADRP(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
@@ -574,10 +580,7 @@ public:
     llvm_unreachable("not implemented");
   }
 
-  virtual bool isMoveMem2Reg(const MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-    return false;
-  }
+  virtual bool isMoveMem2Reg(const MCInst &Inst) const { return false; }
 
   virtual bool isLoad(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
@@ -861,10 +864,7 @@ public:
   }
 
   /// Return true if the instruction is encoded using EVEX (AVX-512).
-  virtual bool hasEVEXEncoding(const MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-    return false;
-  }
+  virtual bool hasEVEXEncoding(const MCInst &Inst) const { return false; }
 
   /// Return true if a pair of instructions represented by \p Insts
   /// could be fused into a single uop.
@@ -1193,7 +1193,10 @@ public:
                                       bool OnlySmaller = false) const;
 
   /// Initialize aliases tables.
-  virtual void initAliases();
+  void initAliases();
+
+  /// Initialize register size table.
+  void initSizeMap();
 
   /// Change \p Regs setting all registers used to pass parameters according
   /// to the host abi. Do nothing if not implemented.
@@ -1236,7 +1239,7 @@ public:
   }
 
   /// Return the register width in bytes (1, 2, 4 or 8)
-  virtual uint8_t getRegSize(MCPhysReg Reg) const;
+  uint8_t getRegSize(MCPhysReg Reg) const { return SizeMap[Reg]; }
 
   /// For aliased registers, return an alias of \p Reg that has the width of
   /// \p Size bytes
@@ -1986,6 +1989,8 @@ public:
   // alias (are sub or superregs of itself, including itself).
   std::vector<BitVector> AliasMap;
   std::vector<BitVector> SmallerAliasMap;
+  // SizeMap caches a mapping of registers to their sizes.
+  std::vector<uint8_t> SizeMap;
 };
 
 MCPlusBuilder *createX86MCPlusBuilder(const MCInstrAnalysis *,

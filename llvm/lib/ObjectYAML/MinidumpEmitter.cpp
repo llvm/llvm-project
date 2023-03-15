@@ -236,8 +236,8 @@ bool yaml2minidump(MinidumpYAML::Object &Obj, raw_ostream &Out,
   Obj.Header.StreamDirectoryRVA = File.allocateArray(ArrayRef(StreamDirectory));
   Obj.Header.NumberOfStreams = StreamDirectory.size();
 
-  for (auto &Stream : enumerate(Obj.Streams))
-    StreamDirectory[Stream.index()] = layout(File, *Stream.value());
+  for (const auto &[Index, Stream] : enumerate(Obj.Streams))
+    StreamDirectory[Index] = layout(File, *Stream);
 
   File.writeTo(Out);
   return true;

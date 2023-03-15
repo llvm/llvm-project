@@ -74,38 +74,38 @@ int main(int, char**)
     test<std::ptrdiff_t>();
     test<size_t>();
 
-    test<int8_t>();
-    test<int16_t>();
-    test<int32_t>();
-    test<int64_t>();
+    test<std::int8_t>();
+    test<std::int16_t>();
+    test<std::int32_t>();
+    test<std::int64_t>();
 
-    test<int_fast8_t>();
-    test<int_fast16_t>();
-    test<int_fast32_t>();
-    test<int_fast64_t>();
+    test<std::int_fast8_t>();
+    test<std::int_fast16_t>();
+    test<std::int_fast32_t>();
+    test<std::int_fast64_t>();
 
-    test<int_least8_t>();
-    test<int_least16_t>();
-    test<int_least32_t>();
-    test<int_least64_t>();
+    test<std::int_least8_t>();
+    test<std::int_least16_t>();
+    test<std::int_least32_t>();
+    test<std::int_least64_t>();
 
     test<intmax_t>();
     test<intptr_t>();
 
-    test<uint8_t>();
-    test<uint16_t>();
+    test<std::uint8_t>();
+    test<std::uint16_t>();
     test<std::uint32_t>();
-    test<uint64_t>();
+    test<std::uint64_t>();
 
-    test<uint_fast8_t>();
-    test<uint_fast16_t>();
-    test<uint_fast32_t>();
-    test<uint_fast64_t>();
+    test<std::uint_fast8_t>();
+    test<std::uint_fast16_t>();
+    test<std::uint_fast32_t>();
+    test<std::uint_fast64_t>();
 
-    test<uint_least8_t>();
-    test<uint_least16_t>();
-    test<uint_least32_t>();
-    test<uint_least64_t>();
+    test<std::uint_least8_t>();
+    test<std::uint_least16_t>();
+    test<std::uint_least32_t>();
+    test<std::uint_least64_t>();
 
     test<uintmax_t>();
     test<uintptr_t>();

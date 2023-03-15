@@ -1751,10 +1751,16 @@ def Vector_MaskedLoadOp :
     element is read from memory. Otherwise, the corresponding element is taken
     from a 1-D pass-through vector. Informally the semantics are:
     ```
-    result[0] := mask[0] ? base[i+0] : pass_thru[0]
-    result[1] := mask[1] ? base[i+1] : pass_thru[1]
+    result[0] := if mask[0] then base[i + 0] else pass_thru[0]
+    result[1] := if mask[1] then base[i + 1] else pass_thru[1]
     etc.
     ```
+
+    If a mask bit is set and the corresponding index is out-of-bounds for the
+    given base, the behavior is undefined. If a mask bit is not set, the value
+    comes from the pass-through vector regardless of the index, and the index is
+    allowed to be out-of-bounds.
+
     The masked load can be used directly where applicable, or can be used
     during progressively lowering to bring other memory operations closer to
     hardware ISA support for a masked load. The semantics of the operation
@@ -1811,6 +1817,12 @@ def Vector_MaskedStoreOp :
     if (mask[1]) base[i+1] = value[1]
     etc.
     ```
+
+    If a mask bit is set and the corresponding index is out-of-bounds for the
+    given base, the behavior is undefined. If a mask bit is not set, no value
+    is stored regardless of the index, and the index is allowed to be
+    out-of-bounds.
+
     The masked store can be used directly where applicable, or can be used
     during progressively lowering to bring other memory operations closer to
     hardware ISA support for a masked store. The semantics of the operation
@@ -1857,21 +1869,27 @@ def Vector_GatherOp :
 
   let summary = [{
     gathers elements from memory or ranked tensor into a vector as defined by an
-    index vector and mask
+    index vector and a mask vector
   }];
 
   let description = [{
-    The gather operation gathers elements from memory or ranked tensor into a
-    n-D vector as defined by a base with indices and an additional n-D index
-    vector (each index is a 1-D offset on the base), but only if the
-    corresponding bit is set in a n-D mask vector. Otherwise, the element is
-    taken from a n-D pass-through vector. Informally the semantics are:
+    The gather operation returns an n-D vector whose elements are either loaded
+    from memory or ranked tensor, or taken from a pass-through vector, depending
+    on the values of an n-D mask vector.
+    If a mask bit is set, the corresponding result element is defined by the base
+    with indices and the n-D index vector (each index is a 1-D offset on the base).
+    Otherwise, the corresponding element is taken from the n-D pass-through vector.
+    Informally the semantics are:
     ```
-    result[0] := mask[0] ? base[index[0]] : pass_thru[0]
-    result[1] := mask[1] ? base[index[1]] : pass_thru[1]
+    result[0] := if mask[0] then base[index[0]] else pass_thru[0]
+    result[1] := if mask[1] then base[index[1]] else pass_thru[1]
     etc.
     ```
-    The vector dialect leaves out-of-bounds behavior undefined.
+
+    If a mask bit is set and the corresponding index is out-of-bounds for the
+    given base, the behavior is undefined. If a mask bit is not set, the value
+    comes from the pass-through vector regardless of the index, and the index is
+    allowed to be out-of-bounds.
 
     The gather operation can be used directly where applicable, or can be used
     during progressively lowering to bring other memory operations closer to
@@ -1921,10 +1939,13 @@ def Vector_ScatterOp :
                VectorOfRankAndType<[1], [I1]>:$mask,
                VectorOfRank<[1]>:$valueToStore)> {
 
-  let summary = "scatters elements from a vector into memory as defined by an index vector and mask";
+  let summary = [{
+    scatters elements from a vector into memory as defined by an index vector
+    and a mask vector
+  }];
 
   let description = [{
-    The scatter operation scatters elements from a 1-D vector into memory as
+    The scatter operation stores elements from a 1-D vector into memory as
     defined by a base with indices and an additional 1-D index vector, but
     only if the corresponding bit in a 1-D mask vector is set. Otherwise, no
     action is taken for that element. Informally the semantics are:
@@ -1933,10 +1954,16 @@ def Vector_ScatterOp :
     if (mask[1]) base[index[1]] = value[1]
     etc.
     ```
-    The vector dialect leaves out-of-bounds and repeated index behavior
-    undefined. Underlying implementations may enforce strict sequential
-    semantics for the latter, though.
-    TODO: enforce the latter always?
+
+    If a mask bit is set and the corresponding index is out-of-bounds for the
+    given base, the behavior is undefined. If a mask bit is not set, no value
+    is stored regardless of the index, and the index is allowed to be
+    out-of-bounds.
+
+    If the index vector contains two or more duplicate indices, the behavior is
+    undefined. Underlying implementation may enforce strict sequential
+    semantics.
+    TODO: always enforce strict sequential semantics?
 
     The scatter operation can be used directly where applicable, or can be used
     during progressively lowering to bring other memory operations closer to
@@ -1993,11 +2020,16 @@ def Vector_ExpandLoadOp :
     is taken from a 1-D pass-through vector. Informally the semantics are:
     ```
     index = i
-    result[0] := mask[0] ? base[index++] : pass_thru[0]
-    result[1] := mask[1] ? base[index++] : pass_thru[1]
+    result[0] := if mask[0] then base[index++] else pass_thru[0]
+    result[1] := if mask[1] then base[index++] else pass_thru[1]
     etc.
     ```
     Note that the index increment is done conditionally.
+
+    If a mask bit is set and the corresponding index is out-of-bounds for the
+    given base, the behavior is undefined. If a mask bit is not set, the value
+    comes from the pass-through vector regardless of the index, and the index is
+    allowed to be out-of-bounds.
 
     The expand load can be used directly where applicable, or can be used
     during progressively lowering to bring other memory operations closer to
@@ -2056,6 +2088,11 @@ def Vector_CompressStoreOp :
     etc.
     ```
     Note that the index increment is done conditionally.
+
+    If a mask bit is set and the corresponding index is out-of-bounds for the
+    given base, the behavior is undefined. If a mask bit is not set, no value
+    is stored regardless of the index, and the index is allowed to be
+    out-of-bounds.
 
     The compress store can be used directly where applicable, or can be used
     during progressively lowering to bring other memory operations closer to

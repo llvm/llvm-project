@@ -103,7 +103,7 @@ VecOpToScalarOp<Op>::matchAndRewrite(Op op, PatternRewriter &rewriter) const {
       loc, DenseElementsAttr::get(vecType, initValueAttr));
   SmallVector<int64_t> strides = computeStrides(shape);
   for (int64_t linearIndex = 0; linearIndex < numElements; ++linearIndex) {
-    SmallVector<int64_t> positions = delinearize(strides, linearIndex);
+    SmallVector<int64_t> positions = delinearize(linearIndex, strides);
     SmallVector<Value> operands;
     for (Value input : op->getOperands())
       operands.push_back(

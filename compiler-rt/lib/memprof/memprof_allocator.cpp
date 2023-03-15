@@ -23,11 +23,11 @@
 #include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_allocator_report.h"
+#include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_errno.h"
 #include "sanitizer_common/sanitizer_file.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
-#include "sanitizer_common/sanitizer_procmaps.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 
 #include <sched.h>
@@ -295,8 +295,10 @@ struct Allocator {
       // memprof_rawprofile.h.
       char *Buffer = nullptr;
 
-      MemoryMappingLayout Layout(/*cache_enabled=*/true);
-      u64 BytesSerialized = SerializeToRawProfile(MIBMap, Layout, Buffer);
+      __sanitizer::ListOfModules List;
+      List.init();
+      ArrayRef<LoadedModule> Modules(List.begin(), List.end());
+      u64 BytesSerialized = SerializeToRawProfile(MIBMap, Modules, Buffer);
       CHECK(Buffer && BytesSerialized && "could not serialize to buffer");
       report_file.Write(Buffer, BytesSerialized);
     }

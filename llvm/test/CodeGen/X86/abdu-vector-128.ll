@@ -641,59 +641,20 @@ define <2 x i64> @abd_minmax_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 
 define <16 x i8> @abd_cmp_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
-; SSE2-LABEL: abd_cmp_v16i8:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    pminub %xmm1, %xmm2
-; SSE2-NEXT:    pcmpeqb %xmm0, %xmm2
-; SSE2-NEXT:    movdqa %xmm0, %xmm3
-; SSE2-NEXT:    psubb %xmm1, %xmm3
-; SSE2-NEXT:    psubb %xmm0, %xmm1
-; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    pandn %xmm3, %xmm2
-; SSE2-NEXT:    por %xmm1, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm0
-; SSE2-NEXT:    retq
+; SSE-LABEL: abd_cmp_v16i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    pminub %xmm1, %xmm2
+; SSE-NEXT:    pmaxub %xmm1, %xmm0
+; SSE-NEXT:    psubb %xmm2, %xmm0
+; SSE-NEXT:    retq
 ;
-; SSE42-LABEL: abd_cmp_v16i8:
-; SSE42:       # %bb.0:
-; SSE42-NEXT:    movdqa %xmm0, %xmm2
-; SSE42-NEXT:    pminub %xmm1, %xmm2
-; SSE42-NEXT:    pcmpeqb %xmm0, %xmm2
-; SSE42-NEXT:    movdqa %xmm0, %xmm3
-; SSE42-NEXT:    psubb %xmm1, %xmm3
-; SSE42-NEXT:    psubb %xmm0, %xmm1
-; SSE42-NEXT:    movdqa %xmm2, %xmm0
-; SSE42-NEXT:    pblendvb %xmm0, %xmm1, %xmm3
-; SSE42-NEXT:    movdqa %xmm3, %xmm0
-; SSE42-NEXT:    retq
-;
-; AVX1-LABEL: abd_cmp_v16i8:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpminub %xmm1, %xmm0, %xmm2
-; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm2
-; AVX1-NEXT:    vpsubb %xmm1, %xmm0, %xmm3
-; AVX1-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vpblendvb %xmm2, %xmm0, %xmm3, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: abd_cmp_v16i8:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpminub %xmm1, %xmm0, %xmm2
-; AVX2-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm2
-; AVX2-NEXT:    vpsubb %xmm1, %xmm0, %xmm3
-; AVX2-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vpblendvb %xmm2, %xmm0, %xmm3, %xmm0
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: abd_cmp_v16i8:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsubb %xmm1, %xmm0, %xmm2
-; AVX512-NEXT:    vpsubb %xmm0, %xmm1, %xmm3
-; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpblendvb %xmm0, %xmm3, %xmm2, %xmm0
-; AVX512-NEXT:    retq
+; AVX-LABEL: abd_cmp_v16i8:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpminub %xmm1, %xmm0, %xmm2
+; AVX-NEXT:    vpmaxub %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsubb %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %cmp = icmp ugt <16 x i8> %a, %b
   %ab = sub <16 x i8> %a, %b
   %ba = sub <16 x i8> %b, %a
@@ -720,42 +681,17 @@ define <8 x i16> @abd_cmp_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; SSE42-LABEL: abd_cmp_v8i16:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movdqa %xmm0, %xmm2
-; SSE42-NEXT:    pmaxuw %xmm1, %xmm2
-; SSE42-NEXT:    pcmpeqw %xmm0, %xmm2
-; SSE42-NEXT:    movdqa %xmm0, %xmm3
-; SSE42-NEXT:    psubw %xmm1, %xmm3
-; SSE42-NEXT:    psubw %xmm0, %xmm1
-; SSE42-NEXT:    movdqa %xmm2, %xmm0
-; SSE42-NEXT:    pblendvb %xmm0, %xmm3, %xmm1
-; SSE42-NEXT:    movdqa %xmm1, %xmm0
+; SSE42-NEXT:    pminuw %xmm1, %xmm2
+; SSE42-NEXT:    pmaxuw %xmm1, %xmm0
+; SSE42-NEXT:    psubw %xmm2, %xmm0
 ; SSE42-NEXT:    retq
 ;
-; AVX1-LABEL: abd_cmp_v8i16:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmaxuw %xmm1, %xmm0, %xmm2
-; AVX1-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm2
-; AVX1-NEXT:    vpsubw %xmm1, %xmm0, %xmm3
-; AVX1-NEXT:    vpsubw %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vpblendvb %xmm2, %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: abd_cmp_v8i16:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmaxuw %xmm1, %xmm0, %xmm2
-; AVX2-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm2
-; AVX2-NEXT:    vpsubw %xmm1, %xmm0, %xmm3
-; AVX2-NEXT:    vpsubw %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vpblendvb %xmm2, %xmm3, %xmm0, %xmm0
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: abd_cmp_v8i16:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsubw %xmm1, %xmm0, %xmm2
-; AVX512-NEXT:    vpsubw %xmm0, %xmm1, %xmm3
-; AVX512-NEXT:    vpmaxuw %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpblendvb %xmm0, %xmm2, %xmm3, %xmm0
-; AVX512-NEXT:    retq
+; AVX-LABEL: abd_cmp_v8i16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpminuw %xmm1, %xmm0, %xmm2
+; AVX-NEXT:    vpmaxuw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsubw %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %cmp = icmp uge <8 x i16> %a, %b
   %ab = sub <8 x i16> %a, %b
   %ba = sub <8 x i16> %b, %a
@@ -783,41 +719,17 @@ define <4 x i32> @abd_cmp_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; SSE42-LABEL: abd_cmp_v4i32:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movdqa %xmm0, %xmm2
-; SSE42-NEXT:    pmaxud %xmm1, %xmm2
-; SSE42-NEXT:    pcmpeqd %xmm0, %xmm2
-; SSE42-NEXT:    movdqa %xmm0, %xmm3
-; SSE42-NEXT:    psubd %xmm1, %xmm3
-; SSE42-NEXT:    psubd %xmm0, %xmm1
-; SSE42-NEXT:    movdqa %xmm2, %xmm0
-; SSE42-NEXT:    blendvps %xmm0, %xmm3, %xmm1
-; SSE42-NEXT:    movaps %xmm1, %xmm0
+; SSE42-NEXT:    pminud %xmm1, %xmm2
+; SSE42-NEXT:    pmaxud %xmm1, %xmm0
+; SSE42-NEXT:    psubd %xmm2, %xmm0
 ; SSE42-NEXT:    retq
 ;
-; AVX1-LABEL: abd_cmp_v4i32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmaxud %xmm1, %xmm0, %xmm2
-; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm2
-; AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm3
-; AVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendvps %xmm2, %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: abd_cmp_v4i32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmaxud %xmm1, %xmm0, %xmm2
-; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm2
-; AVX2-NEXT:    vpsubd %xmm1, %xmm0, %xmm3
-; AVX2-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vblendvps %xmm2, %xmm3, %xmm0, %xmm0
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: abd_cmp_v4i32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpltud %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vpsubd %xmm1, %xmm0, %xmm2
-; AVX512-NEXT:    vpsubd %xmm0, %xmm1, %xmm2 {%k1}
-; AVX512-NEXT:    vmovdqa %xmm2, %xmm0
-; AVX512-NEXT:    retq
+; AVX-LABEL: abd_cmp_v4i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpminud %xmm1, %xmm0, %xmm2
+; AVX-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsubd %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %cmp = icmp ult <4 x i32> %a, %b
   %ab = sub <4 x i32> %a, %b
   %ba = sub <4 x i32> %b, %a
@@ -843,18 +755,18 @@ define <2 x i64> @abd_cmp_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; SSE2-NEXT:    movdqa %xmm0, %xmm3
 ; SSE2-NEXT:    psubq %xmm1, %xmm3
 ; SSE2-NEXT:    psubq %xmm0, %xmm1
-; SSE2-NEXT:    pand %xmm2, %xmm3
-; SSE2-NEXT:    pandn %xmm1, %xmm2
-; SSE2-NEXT:    por %xmm3, %xmm2
+; SSE2-NEXT:    pand %xmm2, %xmm1
+; SSE2-NEXT:    pandn %xmm3, %xmm2
+; SSE2-NEXT:    por %xmm1, %xmm2
 ; SSE2-NEXT:    movdqa %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: abd_cmp_v2i64:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
-; SSE42-NEXT:    movdqa %xmm0, %xmm3
+; SSE42-NEXT:    movdqa %xmm1, %xmm3
 ; SSE42-NEXT:    pxor %xmm2, %xmm3
-; SSE42-NEXT:    pxor %xmm1, %xmm2
+; SSE42-NEXT:    pxor %xmm0, %xmm2
 ; SSE42-NEXT:    pcmpgtq %xmm3, %xmm2
 ; SSE42-NEXT:    movdqa %xmm0, %xmm3
 ; SSE42-NEXT:    psubq %xmm1, %xmm3
@@ -867,8 +779,8 @@ define <2 x i64> @abd_cmp_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; AVX1-LABEL: abd_cmp_v2i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
-; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm3
-; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm2
+; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm2
 ; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsubq %xmm1, %xmm0, %xmm3
 ; AVX1-NEXT:    vpsubq %xmm0, %xmm1, %xmm0
@@ -878,8 +790,8 @@ define <2 x i64> @abd_cmp_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; AVX2-LABEL: abd_cmp_v2i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
-; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm3
-; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm2
+; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm3
+; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm2
 ; AVX2-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vpsubq %xmm1, %xmm0, %xmm3
 ; AVX2-NEXT:    vpsubq %xmm0, %xmm1, %xmm0
@@ -888,15 +800,14 @@ define <2 x i64> @abd_cmp_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; AVX512-LABEL: abd_cmp_v2i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpnltuq %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vpsubq %xmm1, %xmm0, %xmm2
-; AVX512-NEXT:    vpsubq %xmm0, %xmm1, %xmm2 {%k1}
-; AVX512-NEXT:    vmovdqa %xmm2, %xmm0
+; AVX512-NEXT:    vpminuq %xmm1, %xmm0, %xmm2
+; AVX512-NEXT:    vpmaxuq %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %cmp = icmp uge <2 x i64> %a, %b
   %ab = sub <2 x i64> %a, %b
   %ba = sub <2 x i64> %b, %a
-  %sel = select <2 x i1> %cmp, <2 x i64> %ba, <2 x i64> %ab
+  %sel = select <2 x i1> %cmp, <2 x i64> %ab, <2 x i64> %ba
   ret <2 x i64> %sel
 }
 
@@ -932,50 +843,52 @@ define <2 x i64> @abd_cmp_v2i64_multiuse_cmp(<2 x i64> %a, <2 x i64> %b) nounwin
 ;
 ; SSE42-LABEL: abd_cmp_v2i64_multiuse_cmp:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movdqa %xmm0, %xmm2
-; SSE42-NEXT:    psubq %xmm1, %xmm2
+; SSE42-NEXT:    movdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
 ; SSE42-NEXT:    movdqa %xmm1, %xmm3
-; SSE42-NEXT:    psubq %xmm0, %xmm3
-; SSE42-NEXT:    movdqa {{.*#+}} xmm4 = [9223372036854775808,9223372036854775808]
-; SSE42-NEXT:    pxor %xmm4, %xmm1
-; SSE42-NEXT:    pxor %xmm4, %xmm0
-; SSE42-NEXT:    pcmpgtq %xmm1, %xmm0
-; SSE42-NEXT:    blendvpd %xmm0, %xmm2, %xmm3
-; SSE42-NEXT:    paddq %xmm3, %xmm0
+; SSE42-NEXT:    pxor %xmm2, %xmm3
+; SSE42-NEXT:    pxor %xmm0, %xmm2
+; SSE42-NEXT:    pcmpgtq %xmm3, %xmm2
+; SSE42-NEXT:    movdqa %xmm0, %xmm3
+; SSE42-NEXT:    psubq %xmm1, %xmm3
+; SSE42-NEXT:    psubq %xmm0, %xmm1
+; SSE42-NEXT:    movdqa %xmm2, %xmm0
+; SSE42-NEXT:    blendvpd %xmm0, %xmm3, %xmm1
+; SSE42-NEXT:    paddq %xmm1, %xmm2
+; SSE42-NEXT:    movdqa %xmm2, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX1-LABEL: abd_cmp_v2i64_multiuse_cmp:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpsubq %xmm1, %xmm0, %xmm2
-; AVX1-NEXT:    vpsubq %xmm0, %xmm1, %xmm3
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [9223372036854775808,9223372036854775808]
-; AVX1-NEXT:    vpxor %xmm4, %xmm1, %xmm1
-; AVX1-NEXT:    vpxor %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vblendvpd %xmm0, %xmm2, %xmm3, %xmm1
-; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm2
+; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpsubq %xmm1, %xmm0, %xmm3
+; AVX1-NEXT:    vpsubq %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vblendvpd %xmm2, %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: abd_cmp_v2i64_multiuse_cmp:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsubq %xmm1, %xmm0, %xmm2
-; AVX2-NEXT:    vpsubq %xmm0, %xmm1, %xmm3
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm4 = [9223372036854775808,9223372036854775808]
-; AVX2-NEXT:    vpxor %xmm4, %xmm1, %xmm1
-; AVX2-NEXT:    vpxor %xmm4, %xmm0, %xmm0
-; AVX2-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vblendvpd %xmm0, %xmm2, %xmm3, %xmm1
-; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm3
+; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm2
+; AVX2-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
+; AVX2-NEXT:    vpsubq %xmm1, %xmm0, %xmm3
+; AVX2-NEXT:    vpsubq %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vblendvpd %xmm2, %xmm3, %xmm0, %xmm0
+; AVX2-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: abd_cmp_v2i64_multiuse_cmp:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpnleuq %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vpsubq %xmm0, %xmm1, %xmm2
-; AVX512-NEXT:    vpsubq %xmm1, %xmm0, %xmm2 {%k1}
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vpaddq %xmm0, %xmm2, %xmm2 {%k1}
-; AVX512-NEXT:    vmovdqa %xmm2, %xmm0
+; AVX512-NEXT:    vpminuq %xmm1, %xmm0, %xmm2
+; AVX512-NEXT:    vpmaxuq %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
+; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vpaddq %xmm1, %xmm0, %xmm0 {%k1}
 ; AVX512-NEXT:    retq
   %cmp = icmp ugt <2 x i64> %a, %b
   %ab = sub <2 x i64> %a, %b
@@ -1007,46 +920,22 @@ define <8 x i16> @abd_cmp_v8i16_multiuse_sub(<8 x i16> %a, <8 x i16> %b) nounwin
 ; SSE42-LABEL: abd_cmp_v8i16_multiuse_sub:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movdqa %xmm0, %xmm2
-; SSE42-NEXT:    pmaxuw %xmm1, %xmm2
-; SSE42-NEXT:    pcmpeqw %xmm0, %xmm2
+; SSE42-NEXT:    psubw %xmm1, %xmm2
 ; SSE42-NEXT:    movdqa %xmm0, %xmm3
-; SSE42-NEXT:    psubw %xmm1, %xmm3
-; SSE42-NEXT:    psubw %xmm0, %xmm1
-; SSE42-NEXT:    movdqa %xmm2, %xmm0
-; SSE42-NEXT:    pblendvb %xmm0, %xmm3, %xmm1
-; SSE42-NEXT:    paddw %xmm1, %xmm3
-; SSE42-NEXT:    movdqa %xmm3, %xmm0
+; SSE42-NEXT:    pminuw %xmm1, %xmm3
+; SSE42-NEXT:    pmaxuw %xmm1, %xmm0
+; SSE42-NEXT:    psubw %xmm3, %xmm0
+; SSE42-NEXT:    paddw %xmm2, %xmm0
 ; SSE42-NEXT:    retq
 ;
-; AVX1-LABEL: abd_cmp_v8i16_multiuse_sub:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmaxuw %xmm1, %xmm0, %xmm2
-; AVX1-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm2
-; AVX1-NEXT:    vpsubw %xmm1, %xmm0, %xmm3
-; AVX1-NEXT:    vpsubw %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vpblendvb %xmm2, %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vpaddw %xmm0, %xmm3, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: abd_cmp_v8i16_multiuse_sub:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmaxuw %xmm1, %xmm0, %xmm2
-; AVX2-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm2
-; AVX2-NEXT:    vpsubw %xmm1, %xmm0, %xmm3
-; AVX2-NEXT:    vpsubw %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vpblendvb %xmm2, %xmm3, %xmm0, %xmm0
-; AVX2-NEXT:    vpaddw %xmm0, %xmm3, %xmm0
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: abd_cmp_v8i16_multiuse_sub:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsubw %xmm1, %xmm0, %xmm2
-; AVX512-NEXT:    vpsubw %xmm0, %xmm1, %xmm3
-; AVX512-NEXT:    vpmaxuw %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpblendvb %xmm0, %xmm2, %xmm3, %xmm0
-; AVX512-NEXT:    vpaddw %xmm0, %xmm2, %xmm0
-; AVX512-NEXT:    retq
+; AVX-LABEL: abd_cmp_v8i16_multiuse_sub:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsubw %xmm1, %xmm0, %xmm2
+; AVX-NEXT:    vpminuw %xmm1, %xmm0, %xmm3
+; AVX-NEXT:    vpmaxuw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsubw %xmm3, %xmm0, %xmm0
+; AVX-NEXT:    vpaddw %xmm0, %xmm2, %xmm0
+; AVX-NEXT:    retq
   %cmp = icmp uge <8 x i16> %a, %b
   %ab = sub <8 x i16> %a, %b
   %ba = sub <8 x i16> %b, %a

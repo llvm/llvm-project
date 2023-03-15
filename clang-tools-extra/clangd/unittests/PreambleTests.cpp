@@ -19,6 +19,7 @@
 #include "TestFS.h"
 #include "TestTU.h"
 #include "XRefs.h"
+#include "support/Context.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -29,13 +30,13 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest-matchers.h"
 #include "gtest/gtest.h"
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 using testing::AllOf;
@@ -826,6 +827,45 @@ x>)");
     EXPECT_THAT(*AST->getDiagnostics(), IsEmpty());
   }
 }
+
+MATCHER_P2(Mark, Range, Text, "") {
+  return std::tie(arg.Rng, arg.Trivia) == std::tie(Range, Text);
+}
+
+TEST(PreamblePatch, MacroAndMarkHandling) {
+  Config Cfg;
+  Cfg.Diagnostics.AllowStalePreamble = true;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+
+  {
+    Annotations Code(R"cpp(
+#ifndef FOO
+#define FOO
+// Some comments
+#pragma mark XX
+#define BAR
+
+#endif)cpp");
+    Annotations NewCode(R"cpp(
+#ifndef FOO
+#define FOO
+#define BAR
+#pragma $x[[mark XX
+]]
+#pragma $y[[mark YY
+]]
+#define BAZ
+
+#endif)cpp");
+    auto AST = createPatchedAST(Code.code(), NewCode.code());
+    EXPECT_THAT(AST->getMacros().Names.keys(),
+                UnorderedElementsAreArray({"FOO", "BAR", "BAZ"}));
+    EXPECT_THAT(AST->getMarks(),
+                UnorderedElementsAre(Mark(NewCode.range("x"), " XX"),
+                                     Mark(NewCode.range("y"), " YY")));
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

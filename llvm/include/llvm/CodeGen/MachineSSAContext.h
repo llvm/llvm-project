@@ -45,6 +45,7 @@ public:
   using ValueRefT = Register;
   using ConstValueRefT = Register;
   static const Register ValueRefNull;
+  using UseT = MachineOperand;
   using DominatorTreeT = DominatorTreeBase<BlockT, false>;
 
   void setFunction(MachineFunction &Fn);

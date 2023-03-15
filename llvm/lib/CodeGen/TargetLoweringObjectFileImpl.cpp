@@ -1202,11 +1202,7 @@ void TargetLoweringObjectFileMachO::Initialize(MCContext &Ctx,
 
 MCSection *TargetLoweringObjectFileMachO::getStaticDtorSection(
     unsigned Priority, const MCSymbol *KeySym) const {
-  // TODO(yln): Remove -lower-global-dtors-via-cxa-atexit fallback flag
-  // (LowerGlobalDtorsViaCxaAtExit) and always issue a fatal error here.
-  if (TM->Options.LowerGlobalDtorsViaCxaAtExit)
-    report_fatal_error("@llvm.global_dtors should have been lowered already");
-  return StaticDtorSection;
+  report_fatal_error("@llvm.global_dtors should have been lowered already");
 }
 
 void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,

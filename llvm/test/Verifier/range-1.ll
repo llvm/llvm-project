@@ -147,3 +147,10 @@ entry:
 }
 !18 = !{}
 ; CHECK: It should have at least one range!
+
+define <2 x i8> @vector_range_wrong_type(ptr %x) {
+  %y = load <2 x i8>, ptr %x, !range !19
+  ret <2 x i8> %y
+}
+!19 = !{i16 0, i16 10}
+; CHECK: Range types must match instruction type!
