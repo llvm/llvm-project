@@ -1027,16 +1027,22 @@ static bool isIgnoredPass(StringRef PassID) {
 }
 
 void DebugifyEachInstrumentation::registerCallbacks(
-    PassInstrumentationCallbacks &PIC) {
-  PIC.registerBeforeNonSkippedPassCallback([this](StringRef P, Any IR) {
+    PassInstrumentationCallbacks &PIC, FunctionAnalysisManager &FAM) {
+  PIC.registerBeforeNonSkippedPassCallback([this, &FAM](StringRef P, Any IR) {
     if (isIgnoredPass(P))
       return;
-    if (const auto **F = any_cast<const Function *>(&IR))
+    PreservedAnalyses PA;
+    PA.preserveSet<CFGAnalyses>();
+    if (const auto **F = any_cast<const Function *>(&IR)) {
       applyDebugify(*const_cast<Function *>(*F),
                     Mode, DebugInfoBeforePass, P);
-    else if (const auto **M = any_cast<const Module *>(&IR))
+      FAM.invalidate(*const_cast<Function *>(*F), PA);
+    } else if (const auto **M = any_cast<const Module *>(&IR)) {
       applyDebugify(*const_cast<Module *>(*M),
                     Mode, DebugInfoBeforePass, P);
+      for (Function &F : *const_cast<Module *>(*M))
+        FAM.invalidate(F, PA);
+    }
   });
   PIC.registerAfterPassCallback([this](StringRef P, Any IR,
                                        const PreservedAnalyses &PassPA) {
