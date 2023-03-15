@@ -969,7 +969,7 @@ void transform::detail::setApplyToOneResults(
       continue;
     assert(transformOp->getNumResults() == partialResults.size() &&
            "expected as many partial results as op as results");
-    for (auto &[i, value] : llvm::enumerate(partialResults))
+    for (auto [i, value] : llvm::enumerate(partialResults))
       transposed[i].push_back(value);
   }
 

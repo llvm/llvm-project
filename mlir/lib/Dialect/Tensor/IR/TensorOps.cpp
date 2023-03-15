@@ -2773,7 +2773,7 @@ struct FoldOrthogonalPaddings : public OpRewritePattern<PadOp> {
     // zero-offset and zero-padding tensor::ExtractSliceOp, tensor::PadOp pair
     // exists.
     SmallVector<OpFoldResult> newOffsets(rank, rewriter.getIndexAttr(0));
-    for (auto &en : enumerate(newOffsets)) {
+    for (auto en : enumerate(newOffsets)) {
       OpFoldResult innerOffset = innerSliceOp.getMixedOffsets()[en.index()];
       OpFoldResult outerOffset = outerSliceOp.getMixedOffsets()[en.index()];
       if (!innerDims.test(en.index()) &&
@@ -2796,7 +2796,7 @@ struct FoldOrthogonalPaddings : public OpRewritePattern<PadOp> {
     // tensor::ExtractSliceOp does not match the size of the padded dimension.
     // Otherwise, take the size of the inner tensor::ExtractSliceOp.
     SmallVector<OpFoldResult> newSizes = innerSliceOp.getMixedSizes();
-    for (auto &en : enumerate(newSizes)) {
+    for (auto en : enumerate(newSizes)) {
       if (!outerDims.test(en.index()))
         continue;
       OpFoldResult sliceSize = innerSliceOp.getMixedSizes()[en.index()];
@@ -2813,7 +2813,7 @@ struct FoldOrthogonalPaddings : public OpRewritePattern<PadOp> {
 
     // Combine the high paddings of the two tensor::PadOps.
     SmallVector<OpFoldResult> newHighPad(rank, rewriter.getIndexAttr(0));
-    for (auto &en : enumerate(newHighPad)) {
+    for (auto en : enumerate(newHighPad)) {
       if (innerDims.test(en.index()))
         newHighPad[en.index()] = padOp.getMixedHighPad()[en.index()];
       if (outerDims.test(en.index()))

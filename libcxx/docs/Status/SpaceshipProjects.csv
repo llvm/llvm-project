@@ -40,8 +40,8 @@ Section,Description,Dependencies,Assignee,Complete
 | `[forward.list.syn] <https://wg21.link/forward.list.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| `forward_list <https://reviews.llvm.org/D145172>`_,[expos.only.func],Hristo Hristov,|Complete|
 | `[list.syn] <https://wg21.link/list.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| `list <https://reviews.llvm.org/D132312>`_,[expos.only.func],Adrian Vogelsgesang,|Complete|
 | `[vector.syn] <https://wg21.link/vector.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| `vector <https://reviews.llvm.org/D132268>`_,[expos.only.func],Adrian Vogelsgesang,|In Progress|
-| `[associative.map.syn] <https://wg21.link/associative.map.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),"| map
-| multimap",[expos.only.func],Unassigned,|Not Started|
+| `[associative.map.syn] <https://wg21.link/associative.map.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),"| `map <https://reviews.llvm.org/D145976>`_
+| `multimap <https://reviews.llvm.org/D145976>`_",[expos.only.func],Hristo Hristov,|Complete|
 | `[associative.set.syn] <https://wg21.link/associative.set.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),"| multiset
 | set",[expos.only.func],Unassigned,|Not Started|
 | `[queue.ops] <https://wg21.link/queue.ops>`_,| queue,None,Unassigned,|Not Started|

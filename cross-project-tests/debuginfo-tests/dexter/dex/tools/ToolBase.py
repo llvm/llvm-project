@@ -60,7 +60,7 @@ class ToolBase(object, metaclass=abc.ABCMeta):
             '--verbose',
             action='store_true',
             default=False,
-            help='enable verbose output')
+            help='enable verbose output (overrides --no-warnings)')
         self.parser.add_argument(
             '-V',
             '--version',

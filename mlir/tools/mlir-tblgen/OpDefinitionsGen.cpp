@@ -934,15 +934,16 @@ void OpEmitter::genAttrNameGetters() {
   // Generate the <attr>AttrName methods, that expose the attribute names to
   // users.
   const char *attrNameMethodBody = "  return getAttributeNameForIndex({0});";
-  for (auto &attrIt : llvm::enumerate(llvm::make_first_range(attributes))) {
-    std::string name = op.getGetterName(attrIt.value());
+  for (auto [index, attr] :
+       llvm::enumerate(llvm::make_first_range(attributes))) {
+    std::string name = op.getGetterName(attr);
     std::string methodName = name + "AttrName";
 
     // Generate the non-static variant.
     {
       auto *method = opClass.addInlineMethod("::mlir::StringAttr", methodName);
       ERROR_IF_PRUNED(method, methodName, op);
-      method->body() << llvm::formatv(attrNameMethodBody, attrIt.index());
+      method->body() << llvm::formatv(attrNameMethodBody, index);
     }
 
     // Generate the static variant.
@@ -952,7 +953,7 @@ void OpEmitter::genAttrNameGetters() {
           MethodParameter("::mlir::OperationName", "name"));
       ERROR_IF_PRUNED(method, methodName, op);
       method->body() << llvm::formatv(attrNameMethodBody,
-                                      "name, " + Twine(attrIt.index()));
+                                      "name, " + Twine(index));
     }
   }
 }
@@ -2801,7 +2802,7 @@ void OpEmitter::genSuccessorVerifier(MethodBody &body) {
 
   body << "  {\n    unsigned index = 0; (void)index;\n";
 
-  for (auto &it : llvm::enumerate(successors)) {
+  for (auto it : llvm::enumerate(successors)) {
     const auto &successor = it.value();
     if (canSkip(successor))
       continue;

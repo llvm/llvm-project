@@ -479,6 +479,7 @@ protected:
 };
 
 class LibclangSetPreambleStoragePathTest : public LibclangPreambleStorageTest {
+  virtual bool StorePreamblesInMemory() { return false; }
   virtual const char *PreambleStoragePath() = 0;
 
 protected:
@@ -487,6 +488,7 @@ protected:
 
     CXIndexOptions Opts{};
     Opts.Size = sizeof(CXIndexOptions);
+    Opts.StorePreamblesInMemory = StorePreamblesInMemory();
     Opts.PreambleStoragePath = PreambleStoragePath();
     Index = clang_createIndexWithOptions(&Opts);
     ASSERT_TRUE(Index);
@@ -506,6 +508,19 @@ class LibclangPreambleDirPreambleStoragePathTest
   const char *PreambleStoragePath() override { return PreambleDir.c_str(); }
 };
 
+class LibclangStoreInMemoryNullPreambleStoragePathTest
+    : public LibclangNullPreambleStoragePathTest {
+  bool StorePreamblesInMemory() override { return true; }
+};
+class LibclangStoreInMemoryEmptyPreambleStoragePathTest
+    : public LibclangEmptyPreambleStoragePathTest {
+  bool StorePreamblesInMemory() override { return true; }
+};
+class LibclangStoreInMemoryPreambleDirPreambleStoragePathTest
+    : public LibclangPreambleDirPreambleStoragePathTest {
+  bool StorePreamblesInMemory() override { return true; }
+};
+
 TEST_F(LibclangNotOverriddenPreambleStoragePathTest, CountPreambles) {
   CountPreamblesInPreambleDir(0);
 }
@@ -517,6 +532,16 @@ TEST_F(LibclangEmptyPreambleStoragePathTest, CountPreambles) {
 }
 TEST_F(LibclangPreambleDirPreambleStoragePathTest, CountPreambles) {
   CountPreamblesInPreambleDir(1);
+}
+TEST_F(LibclangStoreInMemoryNullPreambleStoragePathTest, CountPreambles) {
+  CountPreamblesInPreambleDir(0);
+}
+TEST_F(LibclangStoreInMemoryEmptyPreambleStoragePathTest, CountPreambles) {
+  CountPreamblesInPreambleDir(0);
+}
+TEST_F(LibclangStoreInMemoryPreambleDirPreambleStoragePathTest,
+       CountPreambles) {
+  CountPreamblesInPreambleDir(0);
 }
 
 TEST_F(LibclangParseTest, AllSkippedRanges) {
