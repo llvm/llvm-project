@@ -17,6 +17,7 @@ executable("llvm-tblgen") {
     "CodeGenHwModes.cpp",
     "CodeGenInstAlias.cpp",
     "CodeGenInstruction.cpp",
+    "CodeGenIntrinsics.cpp",
     "CodeGenMapTable.cpp",
     "CodeGenRegisters.cpp",
     "CodeGenSchedule.cpp",

@@ -44,10 +44,10 @@
 using namespace llvm;
 
 static cl::opt<bool> VerifyPreservedCFG("verify-cfg-preserved", cl::Hidden,
-#ifdef NDEBUG
-                                        cl::init(false)
-#else
+#ifdef EXPENSIVE_CHECKS
                                         cl::init(true)
+#else
+                                        cl::init(false)
 #endif
 );
 
@@ -1096,10 +1096,6 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
 
     const auto **F = any_cast<const Function *>(&IR);
     if (!F)
-      return;
-
-    if (!PassPA.allAnalysesInSetPreserved<CFGAnalyses>() &&
-        !PassPA.allAnalysesInSetPreserved<AllAnalysesOn<Function>>())
       return;
 
     auto CheckCFG = [](StringRef Pass, StringRef FuncName,

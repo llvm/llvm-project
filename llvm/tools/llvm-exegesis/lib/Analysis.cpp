@@ -28,7 +28,7 @@ enum EscapeTag { kEscapeCsv, kEscapeHtml, kEscapeHtmlString };
 template <EscapeTag Tag> void writeEscaped(raw_ostream &OS, const StringRef S);
 
 template <> void writeEscaped<kEscapeCsv>(raw_ostream &OS, const StringRef S) {
-  if (!llvm::is_contained(S, kCsvSep)) {
+  if (!S.contains(kCsvSep)) {
     OS << S;
   } else {
     // Needs escaping.

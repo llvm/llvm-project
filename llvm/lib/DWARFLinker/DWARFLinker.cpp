@@ -928,7 +928,7 @@ void DWARFLinker::assignAbbrev(DIEAbbrev &Abbrev) {
     Abbreviations.push_back(
         std::make_unique<DIEAbbrev>(Abbrev.getTag(), Abbrev.hasChildren()));
     for (const auto &Attr : Abbrev.getData())
-      Abbreviations.back()->AddAttribute(Attr.getAttribute(), Attr.getForm());
+      Abbreviations.back()->AddAttribute(Attr);
     AbbreviationsSet.InsertNode(Abbreviations.back().get(), InsertToken);
     // Assign the unique abbreviation number.
     Abbrev.setNumber(Abbreviations.size());
@@ -1408,6 +1408,7 @@ unsigned DWARFLinker::DIECloner::cloneAttribute(
   case dwarf::DW_FORM_flag_present:
   case dwarf::DW_FORM_rnglistx:
   case dwarf::DW_FORM_loclistx:
+  case dwarf::DW_FORM_implicit_const:
     return cloneScalarAttribute(Die, InputDIE, File, Unit, AttrSpec, Val,
                                 AttrSize, Info);
   default:
@@ -1596,7 +1597,7 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
       continue;
     }
 
-    DWARFFormValue Val(AttrSpec.Form);
+    DWARFFormValue Val = AttrSpec.getFormValue();
     uint64_t AttrSize = Offset;
     Val.extractValue(Data, &Offset, U.getFormParams(), &U);
     AttrSize = Offset - AttrSize;
