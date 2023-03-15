@@ -1075,29 +1075,46 @@ bool PreservedCFGCheckerInstrumentation::CFG::invalidate(
            PAC.preservedSet<CFGAnalyses>());
 }
 
+static SmallVector<Function *, 1> GetFunctions(Any IR) {
+  SmallVector<Function *, 1> Functions;
+
+  if (const auto **MaybeF = any_cast<const Function *>(&IR)) {
+    Functions.push_back(*const_cast<Function **>(MaybeF));
+  } else if (const auto **MaybeM = any_cast<const Module *>(&IR)) {
+    for (Function &F : **const_cast<Module **>(MaybeM))
+      Functions.push_back(&F);
+  }
+  return Functions;
+}
+
 void PreservedCFGCheckerInstrumentation::registerCallbacks(
-    PassInstrumentationCallbacks &PIC, FunctionAnalysisManager &FAM) {
+    PassInstrumentationCallbacks &PIC, ModuleAnalysisManager &MAM) {
   if (!VerifyAnalysisInvalidation)
     return;
 
-  FAM.registerPass([&] { return PreservedCFGCheckerAnalysis(); });
-  FAM.registerPass([&] { return PreservedFunctionHashAnalysis(); });
-
-  PIC.registerBeforeNonSkippedPassCallback(
-      [this, &FAM](StringRef P, Any IR) {
+  bool Registered = false;
+  PIC.registerBeforeNonSkippedPassCallback([this, &MAM, Registered](
+                                               StringRef P, Any IR) mutable {
 #ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
-        assert(&PassStack.emplace_back(P));
+    assert(&PassStack.emplace_back(P));
 #endif
-        (void)this;
-        const auto **F = any_cast<const Function *>(&IR);
-        if (!F)
-          return;
+    (void)this;
 
-        // Make sure a fresh CFG snapshot is available before the pass.
-        FAM.getResult<PreservedCFGCheckerAnalysis>(*const_cast<Function *>(*F));
-        FAM.getResult<PreservedFunctionHashAnalysis>(
-            *const_cast<Function *>(*F));
-      });
+    auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(
+                       *const_cast<Module *>(unwrapModule(IR, /*Force=*/true)))
+                    .getManager();
+    if (!Registered) {
+      FAM.registerPass([&] { return PreservedCFGCheckerAnalysis(); });
+      FAM.registerPass([&] { return PreservedFunctionHashAnalysis(); });
+      Registered = true;
+    }
+
+    for (Function *F : GetFunctions(IR)) {
+      // Make sure a fresh CFG snapshot is available before the pass.
+      FAM.getResult<PreservedCFGCheckerAnalysis>(*F);
+      FAM.getResult<PreservedFunctionHashAnalysis>(*F);
+    }
+  });
 
   PIC.registerAfterPassInvalidatedCallback(
       [this](StringRef P, const PreservedAnalyses &PassPA) {
@@ -1108,7 +1125,7 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
         (void)this;
       });
 
-  PIC.registerAfterPassCallback([this, &FAM](StringRef P, Any IR,
+  PIC.registerAfterPassCallback([this, &MAM](StringRef P, Any IR,
                                              const PreservedAnalyses &PassPA) {
 #ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
     assert(PassStack.pop_back_val() == P &&
@@ -1116,36 +1133,42 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
 #endif
     (void)this;
 
-    const auto **MaybeF = any_cast<const Function *>(&IR);
-    if (!MaybeF)
-      return;
-    Function &F = *const_cast<Function *>(*MaybeF);
+    // We have to get the FAM via the MAM, rather than directly use a passed in
+    // FAM because if MAM has not cached the FAM, it won't invalidate function
+    // analyses in FAM.
+    auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(
+                       *const_cast<Module *>(unwrapModule(IR, /*Force=*/true)))
+                    .getManager();
 
-    if (auto *HashBefore =
-            FAM.getCachedResult<PreservedFunctionHashAnalysis>(F)) {
-      if (HashBefore->Hash != StructuralHash(F)) {
-        report_fatal_error(formatv(
-            "Function @{0} changed by {1} without invalidating analyses",
-            F.getName(), P));
+    for (Function *F : GetFunctions(IR)) {
+      if (auto *HashBefore =
+              FAM.getCachedResult<PreservedFunctionHashAnalysis>(*F)) {
+        if (HashBefore->Hash != StructuralHash(*F)) {
+          report_fatal_error(formatv(
+              "Function @{0} changed by {1} without invalidating analyses",
+              F->getName(), P));
+        }
       }
+
+      auto CheckCFG = [](StringRef Pass, StringRef FuncName,
+                         const CFG &GraphBefore, const CFG &GraphAfter) {
+        if (GraphAfter == GraphBefore)
+          return;
+
+        dbgs()
+            << "Error: " << Pass
+            << " does not invalidate CFG analyses but CFG changes detected in "
+               "function @"
+            << FuncName << ":\n";
+        CFG::printDiff(dbgs(), GraphBefore, GraphAfter);
+        report_fatal_error(Twine("CFG unexpectedly changed by ", Pass));
+      };
+
+      if (auto *GraphBefore =
+              FAM.getCachedResult<PreservedCFGCheckerAnalysis>(*F))
+        CheckCFG(P, F->getName(), *GraphBefore,
+                 CFG(F, /* TrackBBLifetime */ false));
     }
-
-    auto CheckCFG = [](StringRef Pass, StringRef FuncName,
-                       const CFG &GraphBefore, const CFG &GraphAfter) {
-      if (GraphAfter == GraphBefore)
-        return;
-
-      dbgs() << "Error: " << Pass
-             << " does not invalidate CFG analyses but CFG changes detected in "
-                "function @"
-             << FuncName << ":\n";
-      CFG::printDiff(dbgs(), GraphBefore, GraphAfter);
-      report_fatal_error(Twine("CFG unexpectedly changed by ", Pass));
-    };
-
-    if (auto *GraphBefore = FAM.getCachedResult<PreservedCFGCheckerAnalysis>(F))
-      CheckCFG(P, F.getName(), *GraphBefore,
-               CFG(&F, /* TrackBBLifetime */ false));
   });
 }
 
@@ -2175,7 +2198,7 @@ void PrintCrashIRInstrumentation::registerCallbacks(
 }
 
 void StandardInstrumentations::registerCallbacks(
-    PassInstrumentationCallbacks &PIC, FunctionAnalysisManager *FAM) {
+    PassInstrumentationCallbacks &PIC, ModuleAnalysisManager *MAM) {
   PrintIR.registerCallbacks(PIC);
   PrintPass.registerCallbacks(PIC);
   TimePasses.registerCallbacks(PIC);
@@ -2189,8 +2212,8 @@ void StandardInstrumentations::registerCallbacks(
   WebsiteChangeReporter.registerCallbacks(PIC);
   ChangeTester.registerCallbacks(PIC);
   PrintCrashIR.registerCallbacks(PIC);
-  if (FAM)
-    PreservedCFGChecker.registerCallbacks(PIC, *FAM);
+  if (MAM)
+    PreservedCFGChecker.registerCallbacks(PIC, *MAM);
 
   // TimeProfiling records the pass running time cost.
   // Its 'BeforePassCallback' can be appended at the tail of all the
