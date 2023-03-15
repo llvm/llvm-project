@@ -55,10 +55,7 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     }
   }
 
-  int Index = 0;
-  for (const auto &I : enumerate(zip(IIVD, Source))) {
-    const InstructionInfoViewData &IIVDEntry = std::get<0>(I.value());
-
+  for (const auto &[Index, IIVDEntry, Inst] : enumerate(IIVD, Source)) {
     TempStream << ' ' << IIVDEntry.NumMicroOpcodes << "    ";
     if (IIVDEntry.NumMicroOpcodes < 10)
       TempStream << "  ";
@@ -92,7 +89,7 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     }
 
     if (PrintEncodings) {
-      StringRef Encoding(CE.getEncoding(I.index()));
+      StringRef Encoding(CE.getEncoding(Index));
       unsigned EncodingSize = Encoding.size();
       TempStream << " " << EncodingSize
                  << (EncodingSize < 10 ? "     " : "    ");
@@ -104,9 +101,7 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
       FOS.flush();
     }
 
-    const MCInst &Inst = std::get<1>(I.value());
     TempStream << printInstructionString(Inst) << '\n';
-    ++Index;
   }
 
   TempStream.flush();
