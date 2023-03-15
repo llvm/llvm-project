@@ -1699,3 +1699,24 @@ SBDebugger::LoadTraceFromFile(SBError &error,
   LLDB_INSTRUMENT_VA(this, error, trace_description_file);
   return SBTrace::LoadTraceFromFile(error, *this, trace_description_file);
 }
+
+void SBDebugger::RequestInterrupt() {
+  LLDB_INSTRUMENT_VA(this);
+  
+  if (m_opaque_sp)
+    m_opaque_sp->RequestInterrupt();  
+}
+void SBDebugger::CancelInterruptRequest()  {
+  LLDB_INSTRUMENT_VA(this);
+  
+  if (m_opaque_sp)
+    m_opaque_sp->CancelInterruptRequest();  
+}
+
+bool SBDebugger::InterruptRequested()   {
+  LLDB_INSTRUMENT_VA(this);
+  
+  if (m_opaque_sp)
+    return m_opaque_sp->InterruptRequested();
+  return false;
+}

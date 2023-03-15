@@ -16,6 +16,7 @@
 
 #include "Utils.h"
 #include "lldb/Core/Address.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Core/ValueObjectVariable.h"
@@ -806,6 +807,7 @@ SBValueList SBFrame::GetVariables(const lldb::SBVariablesOptions &options) {
     if (stop_locker.TryLock(&process->GetRunLock())) {
       frame = exe_ctx.GetFramePtr();
       if (frame) {
+        Debugger &dbg = process->GetTarget().GetDebugger();
         VariableList *variable_list = nullptr;
         Status var_error;
         variable_list = frame->GetVariableList(true, &var_error);
@@ -815,6 +817,11 @@ SBValueList SBFrame::GetVariables(const lldb::SBVariablesOptions &options) {
           const size_t num_variables = variable_list->GetSize();
           if (num_variables) {
             for (const VariableSP &variable_sp : *variable_list) {
+              if (dbg.InterruptRequested()) {
+                Log *log = GetLog(LLDBLog::Host);
+                LLDB_LOG(log, "Interrupted SBFrame::GetVariables");
+                return {};
+              }
               if (variable_sp) {
                 bool add_variable = false;
                 switch (variable_sp->GetScope()) {
