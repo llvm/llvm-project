@@ -114,7 +114,7 @@ public:
   bool hasStdExtCOrZca() const { return HasStdExtC || HasStdExtZca; }
   bool hasStdExtZvl() const { return ZvlLen != 0; }
   bool hasStdExtZfhOrZfhmin() const { return HasStdExtZfh || HasStdExtZfhmin; }
-  bool is64Bit() const { return HasRV64; }
+  bool is64Bit() const { return IsRV64; }
   MVT getXLenVT() const { return XLenVT; }
   unsigned getXLen() const { return XLen; }
   unsigned getFLen() const {
