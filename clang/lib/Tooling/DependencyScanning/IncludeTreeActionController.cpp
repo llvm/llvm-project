@@ -83,11 +83,13 @@ public:
 
   void handleHasIncludeCheck(Preprocessor &PP, bool Result);
 
+  void moduleImport(Preprocessor &PP, const Module *M, SourceLocation EndLoc);
+
 private:
   struct FilePPState {
     SrcMgr::CharacteristicKind FileCharacteristic;
     cas::ObjectRef File;
-    SmallVector<std::pair<cas::ObjectRef, uint32_t>, 6> Includes;
+    SmallVector<cas::IncludeTree::IncludeInfo, 6> Includes;
     llvm::SmallBitVector HasIncludeChecks;
   };
 
@@ -172,6 +174,32 @@ public:
                   OptionalFileEntryRef File,
                   SrcMgr::CharacteristicKind FileType) override {
     Builder.handleHasIncludeCheck(PP, File.has_value());
+  }
+
+  void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
+                          StringRef FileName, bool IsAngled,
+                          CharSourceRange FilenameRange,
+                          OptionalFileEntryRef File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *Imported,
+                          SrcMgr::CharacteristicKind FileType) override {
+    if (!Imported)
+      return; // File includes handled by LexedFileChanged.
+
+    // Calculate EndLoc for the directive
+    // FIXME: pass EndLoc through PPCallbacks; it is already calculated
+    SourceManager &SM = PP.getSourceManager();
+    std::pair<FileID, unsigned> LocInfo = SM.getDecomposedExpansionLoc(HashLoc);
+    StringRef Buffer = SM.getBufferData(LocInfo.first);
+    Lexer L(SM.getLocForStartOfFile(LocInfo.first), PP.getLangOpts(),
+            Buffer.begin(), Buffer.begin() + LocInfo.second, Buffer.end());
+    L.setParsingPreprocessorDirective(true);
+    Token Tok;
+    do {
+      L.LexFromRawLexer(Tok);
+    } while (!Tok.isOneOf(tok::eod, tok::eof));
+    SourceLocation EndLoc = L.getSourceLocation();
+
+    Builder.moduleImport(PP, Imported, EndLoc);
   }
 };
 } // namespace
@@ -342,8 +370,8 @@ void IncludeTreeBuilder::exitedInclude(Preprocessor &PP, FileID IncludedBy,
   assert(*check(getObjectForFile(PP, IncludedBy)) == IncludeStack.back().File);
   SourceManager &SM = PP.getSourceManager();
   std::pair<FileID, unsigned> LocInfo = SM.getDecomposedExpansionLoc(ExitLoc);
-  IncludeStack.back().Includes.push_back(
-      {IncludeTree->getRef(), LocInfo.second});
+  IncludeStack.back().Includes.push_back({IncludeTree->getRef(), LocInfo.second,
+                                          cas::IncludeTree::NodeKind::Tree});
 }
 
 void IncludeTreeBuilder::handleHasIncludeCheck(Preprocessor &PP, bool Result) {
@@ -351,6 +379,20 @@ void IncludeTreeBuilder::handleHasIncludeCheck(Preprocessor &PP, bool Result) {
     return;
 
   IncludeStack.back().HasIncludeChecks.push_back(Result);
+}
+
+void IncludeTreeBuilder::moduleImport(Preprocessor &PP, const Module *M,
+                                      SourceLocation EndLoc) {
+  auto Import =
+      check(cas::IncludeTree::ModuleImport::create(DB, M->getFullModuleName()));
+  if (!Import)
+    return;
+
+  std::pair<FileID, unsigned> EndLocInfo =
+      PP.getSourceManager().getDecomposedExpansionLoc(EndLoc);
+  IncludeStack.back().Includes.push_back(
+      {Import->getRef(), EndLocInfo.second,
+       cas::IncludeTree::NodeKind::ModuleImport});
 }
 
 Expected<cas::IncludeTreeRoot>
@@ -401,20 +443,36 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
       return std::move(E);
   }
 
+  auto &FrontendOpts = NewInvocation.getFrontendOpts();
+  if (!FrontendOpts.Inputs.empty() &&
+      FrontendOpts.Inputs[0].getKind().getFormat() == InputKind::ModuleMap) {
+    // FIXME: handle inferred module maps
+    Expected<FileEntryRef> FE = FM.getFileRef(FrontendOpts.Inputs[0].getFile());
+    if (!FE)
+      return FE.takeError();
+    if (Error E = addToFileList(FM, *FE).moveInto(ModuleMapFileRef))
+      return std::move(E);
+  }
+
   auto FinishIncludeTree = [&]() -> Error {
-    PreprocessorOptions &PPOpts = NewInvocation.getPreprocessorOpts();
-    if (PPOpts.ImplicitPCHInclude.empty())
+    IntrusiveRefCntPtr<ASTReader> Reader = ScanInstance.getASTReader();
+    if (!Reader)
       return Error::success(); // no need for additional work.
 
-    // Go through all the recorded included files; we'll get additional files
-    // from the PCH that we need to include in the file list, in case they are
-    // referenced while replaying the include-tree.
+    // Go through all the recorded input files.
     SmallVector<const FileEntry *, 32> NotSeenIncludes;
-    for (const FileEntry *FE :
-         ScanInstance.getPreprocessor().getIncludedFiles()) {
-      if (FE->getUID() >= SeenIncludeFiles.size() ||
-          !SeenIncludeFiles[FE->getUID()])
-        NotSeenIncludes.push_back(FE);
+    for (serialization::ModuleFile &MF : Reader->getModuleManager()) {
+      if (hasErrorOccurred())
+        break;
+      Reader->visitInputFiles(
+          MF, /*IncludeSystem=*/true, /*Complain=*/false,
+          [&](const serialization::InputFile &IF, bool isSystem) {
+            OptionalFileEntryRef FE = IF.getFile();
+            assert(FE);
+            if (FE->getUID() >= SeenIncludeFiles.size() ||
+                !SeenIncludeFiles[FE->getUID()])
+              NotSeenIncludes.push_back(*FE);
+          });
     }
     // Sort so we can visit the files in deterministic order.
     llvm::sort(NotSeenIncludes, [](const FileEntry *LHS, const FileEntry *RHS) {
@@ -426,6 +484,10 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
       if (!FileNode)
         return FileNode.takeError();
     }
+
+    PreprocessorOptions &PPOpts = NewInvocation.getPreprocessorOpts();
+    if (PPOpts.ImplicitPCHInclude.empty())
+      return Error::success(); // no need for additional work.
 
     llvm::ErrorOr<std::optional<cas::ObjectRef>> CASContents =
         FM.getObjectRefForFileContent(PPOpts.ImplicitPCHInclude);
@@ -452,7 +514,8 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
     return FileList.takeError();
 
   return cas::IncludeTreeRoot::create(DB, MainIncludeTree->getRef(),
-                                      FileList->getRef(), PCHRef);
+                                      FileList->getRef(), PCHRef,
+                                      ModuleMapFileRef);
 }
 
 Expected<cas::ObjectRef> IncludeTreeBuilder::getObjectForFile(Preprocessor &PP,

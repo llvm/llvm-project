@@ -79,7 +79,8 @@ TEST(IncludeTree, IncludeTreeScan) {
   ASSERT_EQ(Main->getNumIncludes(), uint32_t(3));
 
   std::optional<IncludeTree> Predef;
-  ASSERT_THAT_ERROR(Main->getInclude(0).moveInto(Predef), llvm::Succeeded());
+  ASSERT_THAT_ERROR(Main->getIncludeTree(0).moveInto(Predef),
+                    llvm::Succeeded());
   EXPECT_EQ(Main->getIncludeOffset(0), uint32_t(0));
   {
     EXPECT_EQ(Predef->getFileCharacteristic(), SrcMgr::C_User);
@@ -90,7 +91,7 @@ TEST(IncludeTree, IncludeTreeScan) {
   }
 
   std::optional<IncludeTree> A1;
-  ASSERT_THAT_ERROR(Main->getInclude(1).moveInto(A1), llvm::Succeeded());
+  ASSERT_THAT_ERROR(Main->getIncludeTree(1).moveInto(A1), llvm::Succeeded());
   EXPECT_EQ(Main->getIncludeOffset(1), uint32_t(21));
   {
     ASSERT_THAT_ERROR(A1->getBaseFile().moveInto(A1File), llvm::Succeeded());
@@ -104,7 +105,7 @@ TEST(IncludeTree, IncludeTreeScan) {
 
     ASSERT_EQ(A1->getNumIncludes(), uint32_t(1));
     std::optional<IncludeTree> B1;
-    ASSERT_THAT_ERROR(A1->getInclude(0).moveInto(B1), llvm::Succeeded());
+    ASSERT_THAT_ERROR(A1->getIncludeTree(0).moveInto(B1), llvm::Succeeded());
     EXPECT_EQ(A1->getIncludeOffset(0), uint32_t(122));
     {
       ASSERT_THAT_ERROR(B1->getBaseFile().moveInto(B1File), llvm::Succeeded());
@@ -119,7 +120,7 @@ TEST(IncludeTree, IncludeTreeScan) {
   }
 
   std::optional<IncludeTree> Sys;
-  ASSERT_THAT_ERROR(Main->getInclude(2).moveInto(Sys), llvm::Succeeded());
+  ASSERT_THAT_ERROR(Main->getIncludeTree(2).moveInto(Sys), llvm::Succeeded());
   EXPECT_EQ(Main->getIncludeOffset(2), uint32_t(42));
   {
     ASSERT_THAT_ERROR(Sys->getBaseFile().moveInto(SysFile), llvm::Succeeded());

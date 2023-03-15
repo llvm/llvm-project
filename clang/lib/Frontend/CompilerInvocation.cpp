@@ -2960,12 +2960,23 @@ determineInputFromIncludeTree(StringRef IncludeTreeID, CASOptions &CASOpts,
   auto Root = cas::IncludeTreeRoot::get(*CAS, *Object);
   if (!Root)
     return reportError(Root.takeError());
-  auto MainTree = Root->getMainFileTree();
-  if (!MainTree)
-    return reportError(MainTree.takeError());
-  auto BaseFile = MainTree->getBaseFile();
-  if (!BaseFile)
-    return reportError(BaseFile.takeError());
+
+  std::optional<cas::IncludeTree::File> BaseFile;
+
+  auto MaybeModuleMap = Root->getModuleMapFile();
+  if (!MaybeModuleMap)
+    return reportError(MaybeModuleMap.takeError());
+  if (*MaybeModuleMap) {
+    // Building a module from a modulemap, the modulemap is the primary input.
+    BaseFile = *MaybeModuleMap;
+  } else {
+    auto MainTree = Root->getMainFileTree();
+    if (!MainTree)
+      return reportError(MainTree.takeError());
+    if (llvm::Error E = MainTree->getBaseFile().moveInto(BaseFile))
+      return reportError(std::move(E));
+  }
+
   auto FilenameBlob = BaseFile->getFilename();
   if (!FilenameBlob)
     return reportError(FilenameBlob.takeError());

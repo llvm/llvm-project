@@ -35,12 +35,16 @@ void tooling::dependencies::configureInvocationForCaching(
   if (ProduceIncludeTree) {
     FrontendOpts.CASIncludeTreeID = std::move(RootID);
     FrontendOpts.Inputs.clear();
-    // Preserve sysroot path to accommodate lookup for 'SDKSettings.json' during
-    // availability checking, and module files.
     HeaderSearchOptions &HSOpts = CI.getHeaderSearchOpts();
     HeaderSearchOptions OriginalHSOpts;
     std::swap(HSOpts, OriginalHSOpts);
+    // Preserve sysroot path to accommodate lookup for 'SDKSettings.json' during
+    // availability checking.
     HSOpts.Sysroot = std::move(OriginalHSOpts.Sysroot);
+    // Preserve resource-dir, which is added back by cc1_main if missing, and
+    // affects the cache key.
+    HSOpts.ResourceDir = std::move(OriginalHSOpts.ResourceDir);
+    // Preserve fmodule-file options.
     HSOpts.PrebuiltModuleFiles = std::move(OriginalHSOpts.PrebuiltModuleFiles);
     auto &PPOpts = CI.getPreprocessorOpts();
     // We don't need this because we save the contents of the PCH file in the

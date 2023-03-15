@@ -61,7 +61,7 @@ public:
 
     IncludeStackInfo &IncludeInfo = IncludeStack.back();
     Expected<cas::IncludeTree> EnteredTree =
-        IncludeInfo.Tree.getInclude(IncludeInfo.CurIncludeIndex++);
+        IncludeInfo.Tree.getIncludeTree(IncludeInfo.CurIncludeIndex++);
     if (!EnteredTree)
       return reportError(EnteredTree.takeError());
     auto FileInfo = EnteredTree->getBaseFileInfo();
@@ -84,33 +84,47 @@ public:
     return IncludeInfo.Tree.getCheckResult(Index);
   }
 
-  std::optional<FileID>
+  std::variant<std::monostate, IncludeFile, IncludeModule>
   handleIncludeDirective(Preprocessor &PP, SourceLocation IncludeLoc,
                          SourceLocation AfterDirectiveLoc) override {
     if (HasCASErrorOccurred)
-      return std::nullopt;
+      return {};
 
     IncludeStackInfo &IncludeInfo = IncludeStack.back();
     if (IncludeInfo.CurIncludeIndex >= IncludeInfo.Tree.getNumIncludes())
-      return std::nullopt;
+      return {};
 
     unsigned ExpectedOffset =
         IncludeInfo.Tree.getIncludeOffset(IncludeInfo.CurIncludeIndex);
     SourceLocation ExpectedLoc =
         IncludeInfo.FileStartLoc.getLocWithOffset(ExpectedOffset);
     if (ExpectedLoc != AfterDirectiveLoc)
-      return std::nullopt;
+      return {};
 
-    auto reportError = [&](llvm::Error &&E) -> std::optional<FileID> {
+    auto reportError = [&](llvm::Error &&E) -> std::monostate {
       this->reportError(PP, std::move(E));
-      return std::nullopt;
+      return {};
     };
 
-    Expected<cas::IncludeTree> EnteredTree =
-        IncludeInfo.Tree.getInclude(IncludeInfo.CurIncludeIndex++);
-    if (!EnteredTree)
-      return reportError(EnteredTree.takeError());
-    auto File = EnteredTree->getBaseFile();
+    Expected<cas::IncludeTree::Node> Node =
+        IncludeInfo.Tree.getIncludeNode(IncludeInfo.CurIncludeIndex++);
+    if (!Node)
+      return reportError(Node.takeError());
+
+    if (Node->getKind() == cas::IncludeTree::NodeKind::ModuleImport) {
+      cas::IncludeTree::ModuleImport Import = Node->getModuleImport();
+      SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
+      SmallVector<StringRef, 2> ModuleComponents;
+      Import.getModuleName().split(ModuleComponents, '.');
+      for (StringRef Component : ModuleComponents)
+        Path.emplace_back(PP.getIdentifierInfo(Component), IncludeLoc);
+      return IncludeModule{std::move(Path)};
+    }
+
+    assert(Node->getKind() == cas::IncludeTree::NodeKind::Tree);
+
+    cas::IncludeTree EnteredTree = Node->getIncludeTree();
+    auto File = EnteredTree.getBaseFile();
     if (!File)
       return reportError(File.takeError());
     auto FilenameBlob = File->getFilename();
@@ -124,11 +138,11 @@ public:
     if (!FE)
       return reportError(FE.takeError());
     FileID FID =
-        SM.createFileID(*FE, IncludeLoc, EnteredTree->getFileCharacteristic());
+        SM.createFileID(*FE, IncludeLoc, EnteredTree.getFileCharacteristic());
     PP.markIncluded(*FE);
     IncludeStack.push_back(
-        {std::move(*EnteredTree), SM.getLocForStartOfFile(FID)});
-    return FID;
+        {std::move(EnteredTree), SM.getLocForStartOfFile(FID)});
+    return IncludeFile{FID};
   }
 
   void exitedFile(Preprocessor &PP, FileID FID) override {

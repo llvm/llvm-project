@@ -58,8 +58,7 @@ Expected<IncludeTree::FileInfo> IncludeTree::getBaseFileInfo() {
 }
 
 llvm::Error IncludeTree::forEachInclude(
-    llvm::function_ref<llvm::Error(std::pair<IncludeTree, uint32_t>)>
-        Callback) {
+    llvm::function_ref<llvm::Error(std::pair<Node, uint32_t>)> Callback) {
   size_t RefI = 0;
   return forEachReference([&](ObjectRef Ref) -> llvm::Error {
     if (RefI == 0) {
@@ -68,19 +67,20 @@ llvm::Error IncludeTree::forEachInclude(
     }
     size_t IncludeI = RefI - 1;
     ++RefI;
-    auto Include = getInclude(Ref);
+    auto Include = getIncludeNode(Ref, getIncludeKind(IncludeI));
     if (!Include)
       return Include.takeError();
     return Callback({*Include, getIncludeOffset(IncludeI)});
   });
 }
 
-Expected<IncludeTree> IncludeTree::create(
-    ObjectStore &DB, SrcMgr::CharacteristicKind FileCharacteristic,
-    ObjectRef BaseFile, ArrayRef<std::pair<ObjectRef, uint32_t>> Includes,
-    llvm::SmallBitVector Checks) {
+Expected<IncludeTree>
+IncludeTree::create(ObjectStore &DB,
+                    SrcMgr::CharacteristicKind FileCharacteristic,
+                    ObjectRef BaseFile, ArrayRef<IncludeInfo> Includes,
+                    llvm::SmallBitVector Checks) {
   // The data buffer is composed of
-  // 1. `uint32_t` offsets of includes
+  // 1. `uint32_t` offset and `uint8_t` kind for each includes
   // 2. 1 byte for `CharacteristicKind`
   // 3. variable number of bitset bytes for `Checks`.
 
@@ -97,11 +97,14 @@ Expected<IncludeTree> IncludeTree::create(
   llvm::support::endian::Writer Writer(BufOS, llvm::support::little);
 
   for (const auto &Include : Includes) {
-    ObjectRef FileRef = Include.first;
-    uint32_t Offset = Include.second;
-    assert(IncludeTree::isValid(DB, FileRef));
-    Refs.push_back(FileRef);
-    Writer.write(Offset);
+    assert((Include.Kind == NodeKind::Tree &&
+            IncludeTree::isValid(DB, Include.Ref)) ||
+           (Include.Kind == NodeKind::ModuleImport &&
+            ModuleImport::isValid(DB, Include.Ref)));
+    Refs.push_back(Include.Ref);
+    Writer.write(Include.Offset);
+    static_assert(sizeof(uint8_t) == sizeof(Kind));
+    Writer.write(static_cast<uint8_t>(Include.Kind));
   }
 
   Buffer += Kind;
@@ -141,13 +144,21 @@ Expected<IncludeTree> IncludeTree::get(ObjectStore &DB, ObjectRef Ref) {
   return IncludeTree(std::move(*Node));
 }
 
+IncludeTree::NodeKind IncludeTree::getIncludeKind(size_t I) const {
+  assert(I < getNumIncludes());
+  StringRef Data = getData();
+  assert(Data.size() >= (I + 1) * (sizeof(uint32_t) + 1));
+  uint8_t K = *(Data.data() + I * (sizeof(uint32_t) + 1) + sizeof(uint32_t));
+  return NodeKind(K);
+}
+
 uint32_t IncludeTree::getIncludeOffset(size_t I) const {
   assert(I < getNumIncludes());
   StringRef Data = getData();
   assert(Data.size() >= (I + 1) * sizeof(uint32_t));
   uint32_t Offset =
       llvm::support::endian::read<uint32_t, llvm::support::little>(
-          Data.data() + I * sizeof(uint32_t));
+          Data.data() + I * (sizeof(uint32_t) + 1));
   return Offset;
 }
 
@@ -160,6 +171,18 @@ bool IncludeTree::getCheckResult(size_t I) const {
   return Bits & (1 << RemainingIndex);
 }
 
+Expected<IncludeTree::Node> IncludeTree::getIncludeNode(size_t I) {
+  return getIncludeNode(getIncludeRef(I), getIncludeKind(I));
+}
+
+Expected<IncludeTree::Node> IncludeTree::getIncludeNode(ObjectRef Ref,
+                                                        NodeKind K) {
+  auto N = getCAS().getProxy(Ref);
+  if (!N)
+    return N.takeError();
+  return Node(std::move(*N), K);
+}
+
 bool IncludeTree::isValid(const ObjectProxy &Node) {
   if (!IncludeTreeBase::isValid(Node))
     return false;
@@ -167,7 +190,13 @@ bool IncludeTree::isValid(const ObjectProxy &Node) {
   if (Base.getNumReferences() == 0)
     return false;
   unsigned NumIncludes = Base.getNumReferences() - 1;
-  return Base.getData().size() >= NumIncludes * sizeof(uint32_t) + 1;
+  return Base.getData().size() >= NumIncludes * (sizeof(uint32_t) + 1) + 1;
+}
+
+Expected<IncludeTree::ModuleImport>
+IncludeTree::ModuleImport::create(ObjectStore &DB, StringRef ModuleName) {
+  return IncludeTreeBase::create(DB, {},
+                                 llvm::arrayRefFromStringRef<char>(ModuleName));
 }
 
 IncludeTree::FileList::FileSizeTy
@@ -228,16 +257,30 @@ bool IncludeTree::FileList::isValid(const ObjectProxy &Node) {
          Base.getData().size() == NumFiles * sizeof(FileSizeTy);
 }
 
+static constexpr char HasPCH = 0x01;
+static constexpr char HasModuleMap = 0x02;
+
 Expected<IncludeTreeRoot>
 IncludeTreeRoot::create(ObjectStore &DB, ObjectRef MainFileTree,
-                        ObjectRef FileList, std::optional<ObjectRef> PCHRef) {
+                        ObjectRef FileList, std::optional<ObjectRef> PCHRef,
+                        std::optional<ObjectRef> ModuleMapRef) {
   assert(IncludeTree::isValid(DB, MainFileTree));
   assert(IncludeTree::FileList::isValid(DB, FileList));
-  if (PCHRef) {
-    return IncludeTreeBase::create(DB, {MainFileTree, FileList, *PCHRef}, {});
-  } else {
-    return IncludeTreeBase::create(DB, {MainFileTree, FileList}, {});
-  }
+  assert(!ModuleMapRef || IncludeTree::File::isValid(DB, *ModuleMapRef));
+
+  std::array<char, 1> Data = {0};
+  if (PCHRef)
+    Data[0] |= HasPCH;
+  if (ModuleMapRef)
+    Data[0] |= HasModuleMap;
+
+  SmallVector<ObjectRef> Refs = {MainFileTree, FileList};
+  if (PCHRef)
+    Refs.push_back(*PCHRef);
+  if (ModuleMapRef)
+    Refs.push_back(*ModuleMapRef);
+
+  return IncludeTreeBase::create(DB, Refs, Data);
 }
 
 Expected<IncludeTreeRoot> IncludeTreeRoot::get(ObjectStore &DB, ObjectRef Ref) {
@@ -248,6 +291,17 @@ Expected<IncludeTreeRoot> IncludeTreeRoot::get(ObjectStore &DB, ObjectRef Ref) {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "not a IncludeTreeRoot node kind");
   return IncludeTreeRoot(std::move(*Node));
+}
+
+std::optional<unsigned> IncludeTreeRoot::getPCHRefIndex() const {
+  if (getData()[0] & HasPCH)
+    return 2;
+  return std::nullopt;
+}
+std::optional<unsigned> IncludeTreeRoot::getModuleMapRefIndex() const {
+  if (getData()[0] & HasModuleMap)
+    return (getData()[0] & HasPCH) ? 3u : 2u;
+  return std::nullopt;
 }
 
 llvm::Error IncludeTree::File::print(llvm::raw_ostream &OS, unsigned Indent) {
@@ -274,14 +328,13 @@ llvm::Error IncludeTree::print(llvm::raw_ostream &OS, unsigned Indent) {
   auto MemBuf = llvm::MemoryBuffer::getMemBuffer(Blob->getData());
   unsigned BufID = SM.AddNewSourceBuffer(std::move(MemBuf), llvm::SMLoc());
 
-  return forEachInclude(
-      [&](std::pair<cas::IncludeTree, uint32_t> Include) -> llvm::Error {
-        llvm::SMLoc Loc = llvm::SMLoc::getFromPointer(
-            SM.getMemoryBuffer(BufID)->getBufferStart() + Include.second);
-        auto LineCol = SM.getLineAndColumn(Loc);
-        OS.indent(Indent) << LineCol.first << ':' << LineCol.second << ' ';
-        return Include.first.print(OS, Indent + 2);
-      });
+  return forEachInclude([&](std::pair<Node, uint32_t> Include) -> llvm::Error {
+    llvm::SMLoc Loc = llvm::SMLoc::getFromPointer(
+        SM.getMemoryBuffer(BufID)->getBufferStart() + Include.second);
+    auto LineCol = SM.getLineAndColumn(Loc);
+    OS.indent(Indent) << LineCol.first << ':' << LineCol.second << ' ';
+    return Include.first.print(OS, Indent + 2);
+  });
 }
 
 llvm::Error IncludeTree::FileList::print(llvm::raw_ostream &OS,
@@ -289,6 +342,21 @@ llvm::Error IncludeTree::FileList::print(llvm::raw_ostream &OS,
   return forEachFile([&](File File, FileSizeTy) -> llvm::Error {
     return File.print(OS, Indent);
   });
+}
+
+llvm::Error IncludeTree::ModuleImport::print(llvm::raw_ostream &OS,
+                                             unsigned Indent) {
+  OS << "(Module) " << getModuleName() << '\n';
+  return llvm::Error::success();
+}
+
+llvm::Error IncludeTree::Node::print(llvm::raw_ostream &OS, unsigned Indent) {
+  switch (K) {
+  case NodeKind::Tree:
+    return getIncludeTree().print(OS, Indent);
+  case NodeKind::ModuleImport:
+    return getModuleImport().print(OS, Indent);
+  }
 }
 
 llvm::Error IncludeTreeRoot::print(llvm::raw_ostream &OS, unsigned Indent) {
@@ -302,6 +370,14 @@ llvm::Error IncludeTreeRoot::print(llvm::raw_ostream &OS, unsigned Indent) {
     return E;
   if (llvm::Error E = MainTree->print(OS.indent(Indent), Indent))
     return E;
+  std::optional<IncludeTree::File> ModuleMap;
+  if (llvm::Error E = getModuleMapFile().moveInto(ModuleMap))
+    return E;
+  if (ModuleMap) {
+    OS.indent(Indent) << "Module Map: ";
+    if (llvm::Error E = ModuleMap->print(OS, Indent))
+      return E;
+  }
   OS.indent(Indent) << "Files:\n";
   std::optional<IncludeTree::FileList> List;
   if (llvm::Error E = getFileList().moveInto(List))

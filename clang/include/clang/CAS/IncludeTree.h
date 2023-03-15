@@ -42,9 +42,9 @@ protected:
   friend NodeT;
 };
 
-/// Represents a DAG of included files by the preprocessor.
-/// Each node in the DAG represents a particular inclusion of a file that
-/// encompasses inclusions of other files as sub-trees, along with all the
+/// Represents a DAG of included files by the preprocessor and module imports.
+/// Each node in the DAG represents a particular inclusion of a file or module
+/// that encompasses inclusions of other files as sub-trees, along with all the
 /// \p __has_include() preprocessor checks that occurred during preprocessing
 /// of that file.
 class IncludeTree : public IncludeTreeBase<IncludeTree> {
@@ -53,6 +53,8 @@ public:
 
   class File;
   class FileList;
+  class Node;
+  class ModuleImport;
 
   Expected<File> getBaseFile();
 
@@ -77,9 +79,21 @@ public:
     return getReference(I + 1);
   }
 
+  enum class NodeKind : uint8_t {
+    Tree,
+    ModuleImport,
+  };
+
+  /// The kind of node included at the given index.
+  NodeKind getIncludeKind(size_t I) const;
+
+  /// The sub-include-tree or module import for the given index.
+  Expected<Node> getIncludeNode(size_t I);
+
   /// The sub-include-trees of included files, in the order that they occurred.
-  Expected<IncludeTree> getInclude(size_t I) {
-    return getInclude(getIncludeRef(I));
+  Expected<IncludeTree> getIncludeTree(size_t I) {
+    assert(getIncludeKind(I) == NodeKind::Tree);
+    return getIncludeTree(getIncludeRef(I));
   }
 
   /// The source byte offset for a particular include, pointing to the beginning
@@ -104,14 +118,19 @@ public:
   /// occur in the same order.
   bool getCheckResult(size_t I) const;
 
-  /// Passes pairs of (IncludeTree, include offset) to \p Callback.
+  /// Passes pairs of (Node, include offset) to \p Callback.
   llvm::Error forEachInclude(
-      llvm::function_ref<llvm::Error(std::pair<IncludeTree, uint32_t>)>
-          Callback);
+      llvm::function_ref<llvm::Error(std::pair<Node, uint32_t>)> Callback);
+
+  struct IncludeInfo {
+    ObjectRef Ref; ///< IncludeTree or IncludeTreeModuleImport
+    uint32_t Offset;
+    NodeKind Kind;
+  };
 
   static Expected<IncludeTree>
   create(ObjectStore &DB, SrcMgr::CharacteristicKind FileCharacteristic,
-         ObjectRef BaseFile, ArrayRef<std::pair<ObjectRef, uint32_t>> Includes,
+         ObjectRef BaseFile, ArrayRef<IncludeInfo> Includes,
          llvm::SmallBitVector Checks);
 
   static Expected<IncludeTree> get(ObjectStore &DB, ObjectRef Ref);
@@ -126,15 +145,17 @@ private:
     assert(isValid(*this));
   }
 
-  Expected<IncludeTree> getInclude(ObjectRef Ref) {
+  Expected<IncludeTree> getIncludeTree(ObjectRef Ref) {
     auto Node = getCAS().getProxy(Ref);
     if (!Node)
       return Node.takeError();
     return IncludeTree(std::move(*Node));
   }
 
+  Expected<Node> getIncludeNode(ObjectRef Ref, NodeKind Kind);
+
   StringRef dataSkippingIncludes() const {
-    return getData().drop_front(getNumIncludes() * sizeof(uint32_t));
+    return getData().drop_front(getNumIncludes() * (sizeof(uint32_t) + 1));
   }
 
   static bool isValid(const ObjectProxy &Node);
@@ -173,6 +194,16 @@ public:
     if (!Contents)
       return Contents.takeError();
     return IncludeTree::FileInfo{Filename->getData(), Contents->getData()};
+  }
+
+  Expected<std::unique_ptr<llvm::MemoryBuffer>> getMemoryBuffer() {
+    auto Filename = getFilename();
+    if (!Filename)
+      return Filename.takeError();
+    auto Contents = getContents();
+    if (!Contents)
+      return Contents.takeError();
+    return Contents->getMemoryBuffer(Filename->getData());
   }
 
   static Expected<File> create(ObjectStore &DB, StringRef Filename,
@@ -268,6 +299,63 @@ private:
   }
 };
 
+/// Represents a module imported by an IncludeTree.
+class IncludeTree::ModuleImport : public IncludeTreeBase<ModuleImport> {
+public:
+  static constexpr StringRef getNodeKind() { return "ModI"; }
+
+  static Expected<ModuleImport> create(ObjectStore &DB, StringRef ModuleName);
+
+  StringRef getModuleName() { return getData(); }
+
+  llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0);
+
+  static bool isValid(const ObjectProxy &Node) {
+    if (!IncludeTreeBase::isValid(Node))
+      return false;
+    IncludeTreeBase Base(Node);
+    return Base.getNumReferences() == 0 && !Base.getData().empty();
+  }
+  static bool isValid(ObjectStore &DB, ObjectRef Ref) {
+    auto Node = DB.getProxy(Ref);
+    if (!Node) {
+      llvm::consumeError(Node.takeError());
+      return false;
+    }
+    return isValid(*Node);
+  }
+
+private:
+  friend class IncludeTreeBase<ModuleImport>;
+  friend class Node;
+
+  explicit ModuleImport(ObjectProxy Node) : IncludeTreeBase(std::move(Node)) {
+    assert(isValid(*this));
+  }
+};
+
+/// Represents an \c IncludeTree or \c ModuleImport.
+class IncludeTree::Node {
+public:
+  IncludeTree getIncludeTree() const {
+    assert(K == NodeKind::Tree);
+    return IncludeTree(N);
+  }
+  ModuleImport getModuleImport() const {
+    assert(K == NodeKind::ModuleImport);
+    return ModuleImport(N);
+  }
+  NodeKind getKind() const { return K; }
+
+  llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0);
+
+private:
+  friend class IncludeTree;
+  Node(ObjectProxy N, NodeKind K) : N(std::move(N)), K(K) {}
+  ObjectProxy N;
+  NodeKind K;
+};
+
 /// Represents the include-tree result for a translation unit.
 class IncludeTreeRoot : public IncludeTreeBase<IncludeTreeRoot> {
 public:
@@ -278,8 +366,14 @@ public:
   ObjectRef getFileListRef() const { return getReference(1); }
 
   std::optional<ObjectRef> getPCHRef() const {
-    if (getNumReferences() > 2)
-      return getReference(2);
+    if (auto Index = getPCHRefIndex())
+      return getReference(*Index);
+    return std::nullopt;
+  }
+
+  std::optional<ObjectRef> getModuleMapRef() const {
+    if (auto Index = getModuleMapRefIndex())
+      return getReference(*Index);
     return std::nullopt;
   }
 
@@ -307,10 +401,20 @@ public:
     return std::nullopt;
   }
 
-  static Expected<IncludeTreeRoot> create(ObjectStore &DB,
-                                          ObjectRef MainFileTree,
-                                          ObjectRef FileList,
-                                          std::optional<ObjectRef> PCHRef);
+  Expected<std::optional<IncludeTree::File>> getModuleMapFile() {
+    if (std::optional<ObjectRef> Ref = getModuleMapRef()) {
+      auto Node = getCAS().getProxy(*Ref);
+      if (!Node)
+        return Node.takeError();
+      return IncludeTree::File(*Node);
+    }
+    return std::nullopt;
+  }
+
+  static Expected<IncludeTreeRoot>
+  create(ObjectStore &DB, ObjectRef MainFileTree, ObjectRef FileList,
+         std::optional<ObjectRef> PCHRef,
+         std::optional<ObjectRef> ModuleMapRef);
 
   static Expected<IncludeTreeRoot> get(ObjectStore &DB, ObjectRef Ref);
 
@@ -320,8 +424,8 @@ public:
     if (!IncludeTreeBase::isValid(Node))
       return false;
     IncludeTreeBase Base(Node);
-    return (Base.getNumReferences() == 2 || Base.getNumReferences() == 3) &&
-           Base.getData().empty();
+    return (Base.getNumReferences() >= 2 && Base.getNumReferences() <= 4) &&
+           Base.getData().size() == 1;
   }
   static bool isValid(ObjectStore &DB, ObjectRef Ref) {
     auto Node = DB.getProxy(Ref);
@@ -334,6 +438,9 @@ public:
 
 private:
   friend class IncludeTreeBase<IncludeTreeRoot>;
+
+  std::optional<unsigned> getPCHRefIndex() const;
+  std::optional<unsigned> getModuleMapRefIndex() const;
 
   explicit IncludeTreeRoot(ObjectProxy Node)
       : IncludeTreeBase(std::move(Node)) {

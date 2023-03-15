@@ -859,28 +859,31 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     CI.getLangOpts().CurrentModule = CI.getLangOpts().ModuleName;
   }
 
+  auto reportError = [&](llvm::Error &&E) -> bool {
+    std::string IncludeTreeID =
+        CI.getOrCreateObjectStore().getID(Input.getIncludeTree()).toString();
+    CI.getDiagnostics().Report(diag::err_fe_unable_to_load_include_tree)
+        << IncludeTreeID << llvm::toString(std::move(E));
+    return false;
+  };
+
+  std::optional<cas::IncludeTreeRoot> IncludeTreeRoot;
   std::optional<StringRef> IncludeTreePCHBuffer;
   if (Input.isIncludeTree()) {
-    auto reportError = [&](llvm::Error &&E) -> bool {
-      std::string IncludeTreeID =
-          CI.getOrCreateObjectStore().getID(Input.getIncludeTree()).toString();
-      CI.getDiagnostics().Report(diag::err_fe_unable_to_load_include_tree)
-          << IncludeTreeID << llvm::toString(std::move(E));
-      return false;
-    };
-    auto Root = cas::IncludeTreeRoot::get(CI.getOrCreateObjectStore(),
-                                          Input.getIncludeTree());
-    if (!Root)
-      return reportError(Root.takeError());
+    if (llvm::Error E = cas::IncludeTreeRoot::get(CI.getOrCreateObjectStore(),
+                                                  Input.getIncludeTree())
+                            .moveInto(IncludeTreeRoot))
+      return reportError(std::move(E));
 
     Expected<std::unique_ptr<PPCachedActions>> PPCachedAct =
-        createPPActionsFromIncludeTree(*Root);
+        createPPActionsFromIncludeTree(*IncludeTreeRoot);
     if (!PPCachedAct)
       return reportError(PPCachedAct.takeError());
     CI.getPreprocessor().setPPCachedActions(std::move(*PPCachedAct));
     CI.getFrontendOpts().IncludeTimestamps = false;
 
-    if (llvm::Error E = Root->getPCHBuffer().moveInto(IncludeTreePCHBuffer))
+    if (llvm::Error E =
+            IncludeTreeRoot->getPCHBuffer().moveInto(IncludeTreePCHBuffer))
       return reportError(std::move(E));
   }
 
@@ -924,10 +927,25 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       // If the module contents are in the same file, skip to them.
       CI.getPreprocessor().setSkipMainFilePreamble(OffsetToContents, true);
     else {
-      // Otherwise, convert the module description to a suitable input buffer.
-      auto Buffer = getInputBufferForModule(CI, CurrentModule);
-      if (!Buffer)
-        return false;
+      std::unique_ptr<llvm::MemoryBuffer> Buffer;
+      if (Input.isIncludeTree()) {
+        // Get the existing module include buffer from the include-tree.
+        assert(IncludeTreeRoot);
+        auto MainTree = IncludeTreeRoot->getMainFileTree();
+        if (!MainTree)
+          return reportError(MainTree.takeError());
+        auto BaseFile = MainTree->getBaseFile();
+        if (!BaseFile)
+          return reportError(BaseFile.takeError());
+        if (auto E = BaseFile->getMemoryBuffer().moveInto(Buffer))
+          return reportError(std::move(E));
+        assert(Buffer);
+      } else {
+        // Otherwise, convert the module description to a suitable input buffer.
+        Buffer = getInputBufferForModule(CI, CurrentModule);
+        if (!Buffer)
+          return false;
+      }
 
       // Reinitialize the main file entry to refer to the new input.
       auto Kind = CurrentModule->IsSystem ? SrcMgr::C_System : SrcMgr::C_User;
