@@ -680,6 +680,10 @@ std::optional<unsigned> TargetTransformInfo::getVScaleForTuning() const {
   return TTIImpl->getVScaleForTuning();
 }
 
+bool TargetTransformInfo::isVScaleKnownToBeAPowerOfTwo() const {
+  return TTIImpl->isVScaleKnownToBeAPowerOfTwo();
+}
+
 bool TargetTransformInfo::shouldMaximizeVectorBandwidth(
     TargetTransformInfo::RegisterKind K) const {
   return TTIImpl->shouldMaximizeVectorBandwidth(K);
