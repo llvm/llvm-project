@@ -65,7 +65,8 @@ void mlir::getEnclosingAffineOps(Operation &op,
 LogicalResult
 ComputationSliceState::getSourceAsConstraints(FlatAffineValueConstraints &cst) {
   assert(!ivs.empty() && "Cannot have a slice without its IVs");
-  cst.reset(/*numDims=*/ivs.size(), /*numSymbols=*/0, /*numLocals=*/0, ivs);
+  cst = FlatAffineValueConstraints(/*numDims=*/ivs.size(), /*numSymbols=*/0,
+                                   /*numLocals=*/0, ivs);
   for (Value iv : ivs) {
     AffineForOp loop = getForInductionVarOwner(iv);
     assert(loop && "Expected affine for");
@@ -87,7 +88,7 @@ ComputationSliceState::getAsConstraints(FlatAffineValueConstraints *cst) {
   SmallVector<Value, 4> values(ivs);
   // Append 'ivs' then 'operands' to 'values'.
   values.append(lbOperands[0].begin(), lbOperands[0].end());
-  cst->reset(numDims, numSymbols, 0, values);
+  *cst = FlatAffineValueConstraints(numDims, numSymbols, 0, values);
 
   // Add loop bound constraints for values which are loop IVs of the destination
   // of fusion and equality constraints for symbols which are constants.
@@ -293,9 +294,9 @@ std::optional<bool> ComputationSliceState::isMaximal() const {
     return isMaximalFastCheck;
 
   // Create constraints for the src loop nest being sliced.
-  FlatAffineValueConstraints srcConstraints;
-  srcConstraints.reset(/*numDims=*/ivs.size(), /*numSymbols=*/0,
-                       /*numLocals=*/0, ivs);
+  FlatAffineValueConstraints srcConstraints(/*numDims=*/ivs.size(),
+                                            /*numSymbols=*/0,
+                                            /*numLocals=*/0, ivs);
   for (Value iv : ivs) {
     AffineForOp loop = getForInductionVarOwner(iv);
     assert(loop && "Expected affine for");
@@ -305,7 +306,7 @@ std::optional<bool> ComputationSliceState::isMaximal() const {
 
   // Create constraints for the slice using the dst loop nest information. We
   // retrieve existing dst loops from the lbOperands.
-  SmallVector<Value, 8> consumerIVs;
+  SmallVector<Value> consumerIVs;
   for (Value lbOp : lbOperands[0])
     if (getForInductionVarOwner(lbOp))
       consumerIVs.push_back(lbOp);
@@ -315,9 +316,9 @@ std::optional<bool> ComputationSliceState::isMaximal() const {
   for (int i = consumerIVs.size(), end = ivs.size(); i < end; ++i)
     consumerIVs.push_back(Value());
 
-  FlatAffineValueConstraints sliceConstraints;
-  sliceConstraints.reset(/*numDims=*/consumerIVs.size(), /*numSymbols=*/0,
-                         /*numLocals=*/0, consumerIVs);
+  FlatAffineValueConstraints sliceConstraints(/*numDims=*/consumerIVs.size(),
+                                              /*numSymbols=*/0,
+                                              /*numLocals=*/0, consumerIVs);
 
   if (failed(sliceConstraints.addDomainFromSliceMaps(lbs, ubs, lbOperands[0])))
     return std::nullopt;
@@ -464,7 +465,7 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
     // The first 'loopDepth' IVs are symbols for this region.
     ivs.resize(loopDepth);
     // A 0-d memref has a 0-d region.
-    cst.reset(rank, loopDepth, /*numLocals=*/0, ivs);
+    cst = FlatAffineValueConstraints(rank, loopDepth, /*numLocals=*/0, ivs);
     return success();
   }
 
@@ -495,7 +496,7 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
   // We'll first associate the dims and symbols of the access map to the dims
   // and symbols resp. of cst. This will change below once cst is
   // fully constructed out.
-  cst.reset(numDims, numSymbols, 0, operands);
+  cst = FlatAffineValueConstraints(numDims, numSymbols, 0, operands);
 
   // Add equality constraints.
   // Add inequalities for loop lower/upper bounds.
