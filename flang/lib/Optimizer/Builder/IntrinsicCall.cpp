@@ -1419,12 +1419,18 @@ static constexpr MathOperation ppcMathOperations[] = {
      genMathOp<mlir::math::FmaOp>},
     {"__ppc_fmsub", "llvm.ppc.fmsubs", genF32F32F32F32FuncType, genLibCall},
     {"__ppc_fmsub", "llvm.ppc.fmsub", genF64F64F64F64FuncType, genLibCall},
+    {"__ppc_fnabs", "llvm.ppc.fnabss", genF32F32FuncType, genLibCall},
+    {"__ppc_fnabs", "llvm.ppc.fnabs", genF64F64FuncType, genLibCall},
     {"__ppc_fnmadd", "llvm.ppc.fnmadds", genF32F32F32F32FuncType, genLibCall},
     {"__ppc_fnmadd", "llvm.ppc.fnmadd", genF64F64F64F64FuncType, genLibCall},
     {"__ppc_fnmsub", "llvm.ppc.fnmsub.f32", genF32F32F32F32FuncType,
      genLibCall},
     {"__ppc_fnmsub", "llvm.ppc.fnmsub.f64", genF64F64F64F64FuncType,
      genLibCall},
+    {"__ppc_fre", "llvm.ppc.fre", genF64F64FuncType, genLibCall},
+    {"__ppc_fres", "llvm.ppc.fres", genF32F32FuncType, genLibCall},
+    {"__ppc_frsqrte", "llvm.ppc.frsqrte", genF64F64FuncType, genLibCall},
+    {"__ppc_frsqrtes", "llvm.ppc.frsqrtes", genF32F32FuncType, genLibCall},
 };
 
 // This helper class computes a "distance" between two function types.
