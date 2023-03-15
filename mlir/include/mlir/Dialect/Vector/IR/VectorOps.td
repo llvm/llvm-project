@@ -1751,10 +1751,16 @@ def Vector_MaskedLoadOp :
     element is read from memory. Otherwise, the corresponding element is taken
     from a 1-D pass-through vector. Informally the semantics are:
     ```
-    result[0] := mask[0] ? base[i+0] : pass_thru[0]
-    result[1] := mask[1] ? base[i+1] : pass_thru[1]
+    result[0] := if mask[0] then base[i + 0] else pass_thru[0]
+    result[1] := if mask[1] then base[i + 1] else pass_thru[1]
     etc.
     ```
+
+    If a mask bit is set and the corresponding index is out-of-bounds for the
+    given base, the behavior is undefined. If a mask bit is not set, the value
+    comes from the pass-through vector regardless of the index, and the index is
+    allowed to be out-of-bounds.
+
     The masked load can be used directly where applicable, or can be used
     during progressively lowering to bring other memory operations closer to
     hardware ISA support for a masked load. The semantics of the operation
@@ -1811,6 +1817,12 @@ def Vector_MaskedStoreOp :
     if (mask[1]) base[i+1] = value[1]
     etc.
     ```
+
+    If a mask bit is set and the corresponding index is out-of-bounds for the
+    given base, the behavior is undefined. If a mask bit is not set, no value
+    is stored regardless of the index, and the index is allowed to be
+    out-of-bounds.
+
     The masked store can be used directly where applicable, or can be used
     during progressively lowering to bring other memory operations closer to
     hardware ISA support for a masked store. The semantics of the operation
@@ -2008,11 +2020,16 @@ def Vector_ExpandLoadOp :
     is taken from a 1-D pass-through vector. Informally the semantics are:
     ```
     index = i
-    result[0] := mask[0] ? base[index++] : pass_thru[0]
-    result[1] := mask[1] ? base[index++] : pass_thru[1]
+    result[0] := if mask[0] then base[index++] else pass_thru[0]
+    result[1] := if mask[1] then base[index++] else pass_thru[1]
     etc.
     ```
     Note that the index increment is done conditionally.
+
+    If a mask bit is set and the corresponding index is out-of-bounds for the
+    given base, the behavior is undefined. If a mask bit is not set, the value
+    comes from the pass-through vector regardless of the index, and the index is
+    allowed to be out-of-bounds.
 
     The expand load can be used directly where applicable, or can be used
     during progressively lowering to bring other memory operations closer to
@@ -2071,6 +2088,11 @@ def Vector_CompressStoreOp :
     etc.
     ```
     Note that the index increment is done conditionally.
+
+    If a mask bit is set and the corresponding index is out-of-bounds for the
+    given base, the behavior is undefined. If a mask bit is not set, no value
+    is stored regardless of the index, and the index is allowed to be
+    out-of-bounds.
 
     The compress store can be used directly where applicable, or can be used
     during progressively lowering to bring other memory operations closer to

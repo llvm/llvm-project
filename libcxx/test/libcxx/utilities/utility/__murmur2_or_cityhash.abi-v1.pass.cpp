@@ -33,14 +33,14 @@ std::string CityHash[] = {
 };
 
 int main(int, char**) {
-  const std::pair<std::string, uint64_t> TestCases[] = {
+  const std::pair<std::string, std::uint64_t> TestCases[] = {
       {CityHash[0], CHOOSE_BY_ENDIANESS(0x87c69099911bab7eULL, 0x297621d7fa436a3ULL)},
       {CityHash[1], CHOOSE_BY_ENDIANESS(0x87c69099911bab7eULL, 0xb17be531dde56e57ULL)},
       {CityHash[2], CHOOSE_BY_ENDIANESS(0x85322632e188694aULL, 0xe14f578b688e266dULL)},
       {CityHash[3], CHOOSE_BY_ENDIANESS(0x85322632e188694aULL, 0xca5a764a0450eac6ULL)},
   };
 
-  std::__murmur2_or_cityhash<uint64_t> h64;
+  std::__murmur2_or_cityhash<std::uint64_t> h64;
   for (const auto& test_case : TestCases) {
     assert(h64(test_case.first.data(), test_case.first.size()) == test_case.second);
   }

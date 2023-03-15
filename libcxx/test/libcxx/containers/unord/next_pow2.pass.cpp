@@ -68,7 +68,7 @@ fuzz_unordered_map_reserve(unsigned num_inserts,
                            unsigned num_reserve1,
                            unsigned num_reserve2)
 {
-    std::unordered_map<uint64_t, unsigned long> m;
+    std::unordered_map<std::uint64_t, unsigned long> m;
     m.reserve(num_reserve1);
     for (unsigned I = 0; I < num_inserts; ++I) m[I] = 0;
     m.reserve(num_reserve2);

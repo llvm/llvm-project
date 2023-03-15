@@ -71,7 +71,7 @@ constexpr void test() {
     // Bit-castable arithmetic types.
 
     // 8-bit types.
-    using integral_8 = types::type_list<char8_t, int8_t, uint8_t>;
+    using integral_8 = types::type_list<char8_t, std::int8_t, std::uint8_t>;
     using chars = types::type_list<char, unsigned char, signed char>;
 #if CHAR_BIT == 8
     check<true, types::concatenate_t<integral_8, chars>>();
@@ -81,7 +81,7 @@ constexpr void test() {
 #endif
 
     // 16-bit types.
-    using integral_16 = types::type_list<char16_t, int16_t, uint16_t>;
+    using integral_16 = types::type_list<char16_t, std::int16_t, std::uint16_t>;
 #if !defined(TEST_HAS_NO_WIDE_CHARACTERS) && __WCHAR_WIDTH__ == 16
     check<true, types::concatenate_t<integral_16, types::type_list<wchar_t>>>();
 #else
@@ -89,7 +89,7 @@ constexpr void test() {
 #endif
 
     // 32-bit types.
-    using integral_32 = types::type_list<char32_t, int32_t, std::uint32_t>;
+    using integral_32 = types::type_list<char32_t, std::int32_t, std::uint32_t>;
 #if !defined(TEST_HAS_NO_WIDE_CHARACTERS) && __WCHAR_WIDTH__ == 32
     check<true, types::concatenate_t<integral_32, types::type_list<wchar_t>>>();
 #else
@@ -97,7 +97,7 @@ constexpr void test() {
 #endif
 
     // 64-bit types.
-    using integral_64 = types::type_list<int64_t, uint64_t>;
+    using integral_64 = types::type_list<std::int64_t, std::uint64_t>;
     check<true, integral_64>();
 
     // 128-bit types.
