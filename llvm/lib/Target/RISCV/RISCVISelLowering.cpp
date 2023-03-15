@@ -12794,9 +12794,10 @@ static bool CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
     return false;
   }
 
-  // When a floating-point value is passed on the stack, no bit-conversion is
-  // needed.
-  if (ValVT.isFloatingPoint()) {
+  // When a scalar floating-point value is passed on the stack, no
+  // bit-conversion is needed.
+  if (ValVT.isFloatingPoint() && LocInfo != CCValAssign::Indirect) {
+    assert(!ValVT.isVector());
     LocVT = ValVT;
     LocInfo = CCValAssign::Full;
   }
