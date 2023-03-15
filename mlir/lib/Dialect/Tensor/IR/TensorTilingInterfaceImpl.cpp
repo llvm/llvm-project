@@ -479,18 +479,6 @@ Operation *tensor::bubbleUpPadSlice(OpBuilder &b, tensor::PadOp padOp,
   // Zero index-typed integer.
   OpFoldResult zero = b.getIndexAttr(0);
 
-  // Helper function for filling static/dynamic low/high padding indices
-  // vectors of PadOp.
-  auto appendIndex = [&](Value val, SmallVector<Value> &dynIndices,
-                         SmallVector<int64_t> &staticIndices) {
-    if (auto constInt = getConstantIntValue(val)) {
-      staticIndices.push_back(*constInt);
-    } else {
-      staticIndices.push_back(ShapedType::kDynamic);
-      dynIndices.push_back(val);
-    }
-  };
-
   // Compute new offsets, lengths, low padding, high padding.
   SmallVector<OpFoldResult> newOffsets, newLengths, newStrides;
   SmallVector<OpFoldResult> newLows, newHighs;
