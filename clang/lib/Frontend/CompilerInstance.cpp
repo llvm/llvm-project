@@ -2401,6 +2401,10 @@ static bool addCachedModuleFileToInMemoryCache(
       Result->getOutput(cas::CompileJobCacheResult::OutputKind::MainOutput);
   if (!Output)
     llvm::report_fatal_error("missing main output");
+  // FIXME: We wait to materialize each module file before proceeding, which
+  // introduces latency for a network CAS. Instead we should collect all the
+  // module keys and materialize them concurrently using \c getProxyAsync, for
+  // better network utilization.
   auto OutputProxy = CAS.getProxy(Output->Object);
   if (!OutputProxy) {
     Diags.Report(diag::err_cas_cannot_get_module_cache_key)

@@ -36,10 +36,10 @@ public:
   /// \param Opts Output options. Only options that affect the output format of
   ///             a dependency file are signficant.
   /// \param CAS The CAS to read the result from.
-  /// \param DepsRef The dependencies.
+  /// \param Deps The dependencies.
   /// \param OS The output stream to write the dependency file to.
   static llvm::Error replay(const DependencyOutputOptions &Opts,
-                            cas::ObjectStore &CAS, cas::ObjectRef DepsRef,
+                            cas::ObjectStore &CAS, cas::ObjectProxy Deps,
                             llvm::raw_ostream &OS);
 
 private:
