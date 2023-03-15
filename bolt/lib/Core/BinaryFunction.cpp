@@ -4517,5 +4517,21 @@ bool BinaryFunction::isAArch64Veneer() const {
   return true;
 }
 
+void BinaryFunction::addRelocation(uint64_t Address, MCSymbol *Symbol,
+                                   uint64_t RelType, uint64_t Addend,
+                                   uint64_t Value) {
+  assert(Address >= getAddress() && Address < getAddress() + getMaxSize() &&
+         "address is outside of the function");
+  uint64_t Offset = Address - getAddress();
+  LLVM_DEBUG(dbgs() << "BOLT-DEBUG: addRelocation in "
+                    << formatv("{0}@{1:x} against {2}\n", this, Offset,
+                               Symbol->getName()));
+  bool IsCI = BC.isAArch64() && isInConstantIsland(Address);
+  std::map<uint64_t, Relocation> &Rels =
+      IsCI ? Islands->Relocations : Relocations;
+  if (BC.MIB->shouldRecordCodeRelocation(RelType))
+    Rels[Offset] = Relocation{Offset, Symbol, RelType, Addend, Value};
+}
+
 } // namespace bolt
 } // namespace llvm
